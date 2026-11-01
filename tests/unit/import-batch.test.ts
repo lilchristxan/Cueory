@@ -2,21 +2,22 @@ import { describe, expect, it } from 'vitest';
 import { parsePassed, type ImportedItem } from '../../scripts/import-batch/parse';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
+// All test fixtures use neutral, non-clinical content — labeled "sample:" per CLAUDE.md rule 7.
 
 /** Builds a minimal valid items.csv text with one single-answer item (labeled sample). */
 function makeItemsCsv({
   item_id = 'sample-001',
   concept_id = 'sample-concept-a',
-  stem = 'sample: A patient asks about fluid intake. What is the priority action?',
-  choice_a = 'sample: Assess intake and output',
-  choice_b = 'sample: Restrict fluids immediately',
-  choice_c = 'sample: Document and report to the physician',
-  choice_d = 'sample: Increase fluid intake',
-  rationale_a = 'sample: Assessing intake and output is the first step in evaluation.',
-  rationale_b = 'sample: Restriction without assessment is premature.',
-  rationale_c = 'sample: Documentation alone does not address the clinical need first.',
-  rationale_d = 'sample: Increasing fluids without assessment may cause harm.',
-  rationale = 'sample: Assessment always precedes intervention.',
+  stem = 'sample: A library catalogue has four sorting methods. Which one lists items alphabetically?',
+  choice_a = 'sample: Title sort',
+  choice_b = 'sample: Date added sort',
+  choice_c = 'sample: Size sort',
+  choice_d = 'sample: Random sort',
+  rationale_a = 'sample: Title sort arranges items from A to Z by title.',
+  rationale_b = 'sample: Date added sort orders by when items were added, not alphabetically.',
+  rationale_c = 'sample: Size sort orders by file size, not alphabetically.',
+  rationale_d = 'sample: Random sort has no defined order.',
+  rationale = 'sample: Alphabetical order is produced by title sort.',
   source_ids = 's-001',
   type = '',
 } = {}): string {
@@ -32,25 +33,22 @@ function makeSataItemsCsv({
   item_id = 'sample-sata-001',
   concept_id = 'sample-concept-b',
 } = {}): string {
-  return [
-    'item_id,concept_id,stem,choice_a,choice_b,choice_c,choice_d,rationale_a,rationale_b,rationale_c,rationale_d,rationale,source_ids,type',
-    [
-      item_id,
-      concept_id,
-      'sample: Which actions are correct when documenting medication?',
-      'sample: Sign your name after each entry',
-      'sample: Use approved abbreviations',
-      'sample: Leave blank lines between entries',
-      'sample: Record the time of administration',
-      'sample: Signing identifies the nurse responsible.',
-      'sample: Approved abbreviations reduce misinterpretation.',
-      'sample: Blank lines may allow someone to add false entries.',
-      'sample: Recording time is required for accuracy.',
-      'sample: Accurate documentation protects the patient and nurse.',
-      's-002',
-      'sata',
-    ].join(','),
-  ].join('\n') + '\n';
+  return makeItemsCsv({
+    item_id,
+    concept_id,
+    stem: 'sample: Which of the following are valid file name characters?',
+    choice_a: 'sample: Letters',
+    choice_b: 'sample: Numbers',
+    choice_c: 'sample: Null bytes',
+    choice_d: 'sample: Underscores',
+    rationale_a: 'sample: Letters are universally accepted in file names.',
+    rationale_b: 'sample: Numbers are valid in most file systems.',
+    rationale_c: 'sample: Null bytes are not permitted in file names.',
+    rationale_d: 'sample: Underscores are a common safe separator character.',
+    rationale: 'sample: File names may contain letters and numbers.',
+    source_ids: 's-002',
+    type: 'sata',
+  });
 }
 
 function makeKeyCsv(item_id = 'sample-001', answer = 'A'): string {
@@ -141,7 +139,7 @@ describe('parsePassed with a valid SATA item', () => {
 
 describe('quoted cells with commas and embedded newlines', () => {
   it('parses a stem containing a comma', () => {
-    const stem = 'sample: A patient has low BP, tachycardia. What is priority?';
+    const stem = 'sample: A folder named "archive, old" contains which type of files?';
     const result = parsePassed(
       makePassedCsv(),
       { itemsCsv: makeItemsCsv({ stem }), keyCsv: makeKeyCsv() },
@@ -151,7 +149,7 @@ describe('quoted cells with commas and embedded newlines', () => {
   });
 
   it('parses a choice containing an embedded newline', () => {
-    const choice_a = 'sample: Assess the patient\nand document findings';
+    const choice_a = 'sample: Title sort\n(alphabetical)';
     const result = parsePassed(
       makePassedCsv(),
       { itemsCsv: makeItemsCsv({ choice_a }), keyCsv: makeKeyCsv() },
@@ -202,7 +200,7 @@ describe('refusals', () => {
   });
 
   it('refuses when two choices have the same text', () => {
-    const sameText = 'sample: Assess the patient first';
+    const sameText = 'sample: Title sort';
     const result = parsePassed(
       makePassedCsv(),
       {
@@ -281,10 +279,11 @@ describe('multiple items in one batch', () => {
       'sample-001,sample-concept-a\n' +
       'sample-bad,sample-concept-a\n';
 
+    // sample-bad has an empty main rationale — should be refused.
     const itemsCsvGoodAndBad =
       'item_id,concept_id,stem,choice_a,choice_b,choice_c,choice_d,rationale_a,rationale_b,rationale_c,rationale_d,rationale,source_ids,type\n' +
-      'sample-001,sample-concept-a,sample: What is priority?,sample: Assess,sample: Act,sample: Delegate,sample: Document,sample: ra,sample: rb,sample: rc,sample: rd,sample: Assess first.,s-001,\n' +
-      'sample-bad,sample-concept-a,sample: Stem for bad item,sample: A,sample: B,sample: C,sample: D,sample: ra,sample: rb,sample: rc,sample: rd,,s-001,\n'; // rationale empty
+      'sample-001,sample-concept-a,sample: Which sort is alphabetical?,sample: Title,sample: Date,sample: Size,sample: Random,sample: ra,sample: rb,sample: rc,sample: rd,sample: Title sort.,s-001,\n' +
+      'sample-bad,sample-concept-a,sample: Which sort is alphabetical?,sample: Title,sample: Date,sample: Size,sample: Random,sample: ra,sample: rb,sample: rc,sample: rd,,s-001,\n';
 
     const keyCsv = 'item_id,answer\nsample-001,A\nsample-bad,A\n';
 

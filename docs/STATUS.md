@@ -115,6 +115,12 @@ Last updated: 2026-11-01
   2026-11-01: an ordinary comment can no longer cancel a waiting merge check, and an hourly sweep re-checks every
   open pull request. It starts working once it reaches `main`.
 
+## In `staging` (pending PR #99)
+- Batch importer parser (Task 21 / Roadmap Task 2): `scripts/import-batch/parse.ts`. Reads a
+  `passed.csv` allowlist alongside the original `items.csv` and `key.csv`; returns validated
+  `ImportedItem` rows ready for the database, or plain-language problem messages for every row
+  that can't be imported. Pure functions only — no files, no network — covered by 25 unit tests.
+
 ## Done (director, 2026-11-01, midnight Phoenix)
 Merged into `staging` tonight (pulse and sort were already live; the rest reaches `main` with the next release):
 - Daily games: [the crossword](https://github.com/lilchristxan/Cueory/pull/62) (D-70) and
