@@ -99,6 +99,11 @@ Last updated: 2026-11-01
   groups, with one that fits none ("none of these"); a wrong place is a slip, and three slips end the round. Buttons
   only (tap, click or keyboard, no dragging), every result said in words and shown by ✓, and a plain-words share line.
   Seven labeled everyday samples under `content/games/triage/`, so it also waits for Christian's merge.
+- [Adaptive quiz rules](https://github.com/lilchristxan/Cueory/pull/61) (a Codex helper's, Task 10 on #11): the next
+  question comes from the student's own results, by written rules. A concept they just missed comes first, then the
+  one with the fewest tries; two right in a row move a concept up a level, and a miss moves it down. Each pick says
+  why in words, and each concept's status is a word (not started, learning, getting there, got it), never a score or
+  a chance of passing. It reaches a page once reviewed questions and `check_answer` exist (Task 2).
 
 - [Crossword engine and board](https://github.com/lilchristxan/Cueory/pull/51) (a Codex helper's, Task 3 on #11):
   numbering, typing that skips gaps, checking a word or the whole grid, three cues that lock their letters, and a
