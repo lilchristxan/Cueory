@@ -75,11 +75,14 @@ export function termsLeft(state: TriageState): string[] {
   return state.terms.filter((term) => !Object.hasOwn(state.placed, term));
 }
 
-/** What "share" copies: plain words, no squares and no grid. "cueory triage, sun 1 nov: sorted with 1 slip." */
-export function triageShareText(state: TriageState, day: string): string {
-  if (state.status !== 'sorted') return `cueory triage, ${day}: not sorted this time.`;
+/**
+ * What "share" copies: plain words, no squares and no grid. "cueory triage, sun 1 nov: sorted with 1 slip." The
+ * game's name comes from src/config/games.ts (D-66), so a rename is one edit there.
+ */
+export function triageShareText(state: TriageState, day: string, name: string): string {
+  if (state.status !== 'sorted') return `cueory ${name}, ${day}: not sorted this time.`;
   const slips = state.slips === 0 ? 'no slips' : state.slips === 1 ? '1 slip' : `${state.slips} slips`;
-  return `cueory triage, ${day}: sorted with ${slips}.`;
+  return `cueory ${name}, ${day}: sorted with ${slips}.`;
 }
 
 /** What the fourth place is called on the page. */

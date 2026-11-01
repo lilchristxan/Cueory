@@ -20,9 +20,10 @@ import {
 } from '../../src/islands/pulse';
 
 describe('daily games (D-61)', () => {
-  it("lists the four games under Christian's final names (D-64), lowercase, with pulse and triage playable", () => {
-    expect(dailyGames.map((game) => game.name)).toEqual(['pulse', 'cueword', 'triage', 'suture']);
+  it('lists the four games, each with one lowercase name kept only in the settings (D-64, D-66), two playable', () => {
+    expect(dailyGames.map((game) => game.id)).toEqual(['pulse', 'cueword', 'triage', 'suture']);
     expect(dailyGames.filter((game) => game.ready).map((game) => game.id)).toEqual(['pulse', 'triage']);
+    expect(new Set(dailyGames.map((game) => game.name)).size).toBe(4);
     for (const game of dailyGames) {
       expect(game.name).toBe(game.name.toLowerCase());
       expect(game.line).toBe(game.line.toLowerCase());
@@ -129,12 +130,17 @@ describe('pulse (D-61)', () => {
     let state = playGuess(startPulse('garden'), 'planet');
     state = takeCue(state);
     state = playGuess(state, 'garden');
-    const line = shareText(state, 'sun 1 nov');
+    const line = shareText(state, 'sun 1 nov', 'pulse');
     expect(line).toBe('cueory pulse, sun 1 nov: solved in 3 of 7 beats, with the cue.');
     expect(line).toMatch(/^[\x20-\x7e]+$/);
     let lost = startPulse('lemon');
     for (let i = 0; i < 7; i++) lost = playGuess(lost, 'apple');
-    expect(shareText(lost, 'sun 1 nov')).toBe('cueory pulse, sun 1 nov: not solved this time.');
+    expect(shareText(lost, 'sun 1 nov', 'pulse')).toBe('cueory pulse, sun 1 nov: not solved this time.');
+  });
+
+  it('takes its name from the settings, so a rename is one edit in src/config/games.ts (D-66)', () => {
+    const state = playGuess(startPulse('garden'), 'garden');
+    expect(shareText(state, 'sun 1 nov', 'heartbeat')).toBe('cueory heartbeat, sun 1 nov: solved in 1 of 7 beats.');
   });
 
   it("picks one sample a day from the visitor's own date, going round the list", () => {

@@ -20,6 +20,8 @@ import {
 interface Props {
   /** Sample puzzles (D-63): the page picks one for the visitor's own date, as pulse does. */
   puzzles: TriagePuzzle[];
+  /** The game's name as the page shows it, from src/config/games.ts (D-66). */
+  name: string;
 }
 
 const primaryButton = 'rounded-pill bg-button px-5 py-2.5 text-on-button hover:bg-button-hover';
@@ -33,7 +35,7 @@ const fromKeyboard = (event: MouseEvent) => event.detail === 0;
  * term in its group with ✓; a slip is said in words. Rendered only in the browser (client:only); without JavaScript
  * the page shows its <noscript> note instead.
  */
-export default function TriageGame({ puzzles }: Props) {
+export default function TriageGame({ puzzles, name }: Props) {
   const today = useMemo(() => new Date(), []);
   const day = useMemo(() => dayNumber(today), [today]);
   const puzzle = useMemo(() => puzzleForDay(puzzles, day), [puzzles, day]);
@@ -107,7 +109,7 @@ export default function TriageGame({ puzzles }: Props) {
   };
 
   const share = async () => {
-    const line = triageShareText(state, dayLabel(today));
+    const line = triageShareText(state, dayLabel(today), name);
     try {
       await navigator.clipboard.writeText(line);
       setCopied(`copied: ${line}`);
@@ -196,7 +198,7 @@ export default function TriageGame({ puzzles }: Props) {
               </ul>
             </>
           )}
-          <p className="mt-3 text-ink-soft">{triageShareText(state, dayLabel(today))}</p>
+          <p className="mt-3 text-ink-soft">{triageShareText(state, dayLabel(today), name)}</p>
           <button type="button" className={`${primaryButton} mt-4`} onClick={share}>
             copy my result
           </button>

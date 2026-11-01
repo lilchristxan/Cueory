@@ -1,8 +1,8 @@
 ---
 /**
- * Daily games (D-61, D-63): one page for the four games, in the lowercase brand voice. pulse and triage are playable
- * now with sample puzzles (everyday words, labeled as samples); the other two say coming soon. The names live in
- * src/config/games.ts, so a rename is one line.
+ * Daily games (D-61, D-63): one page for the four games, in the lowercase brand voice. Two are playable now with
+ * sample puzzles (everyday words, labeled as samples); the other two say coming soon. Every name the page shows comes
+ * from src/config/games.ts (D-66), so a rename is one edit there.
  */
 import { getCollection } from 'astro:content';
 import Layout from '../layouts/Layout.astro';
@@ -35,9 +35,9 @@ const later = dailyGames.filter((game) => !game.ready);
       <p class="mt-1 text-sm text-ink-soft" data-testid="sample-note">today's word is a sample.</p>
       <div class="mt-6">
         {/* client:only: nothing is pre-rendered, so without JavaScript only the note below shows. */}
-        <PulseGame client:only="react" puzzles={samples} />
+        <PulseGame client:only="react" puzzles={samples} name={pulse.name} />
         <noscript>
-          <p>pulse needs JavaScript.</p>
+          <p>{pulse.name} needs JavaScript.</p>
         </noscript>
       </div>
     </section>
@@ -47,9 +47,9 @@ const later = dailyGames.filter((game) => !game.ready);
       <p class="mt-2 text-ink-soft">{triage.line}</p>
       <p class="mt-1 text-sm text-ink-soft" data-testid="triage-sample-note">today's terms are a sample.</p>
       <div class="mt-6">
-        <TriageGame client:only="react" puzzles={triageSamples} />
+        <TriageGame client:only="react" puzzles={triageSamples} name={triage.name} />
         <noscript>
-          <p>triage needs JavaScript.</p>
+          <p>{triage.name} needs JavaScript.</p>
         </noscript>
       </div>
     </section>

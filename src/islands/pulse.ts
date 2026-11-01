@@ -121,14 +121,14 @@ export function letterMarks(guesses: readonly Guess[]): Map<string, Mark> {
 }
 
 /**
- * What "share" copies: plain words, no colored squares and no grid. "cueory pulse, sat 1 nov: solved in 4 of 7
- * beats, with the cue."
+ * What "share" copies: plain words, no colored squares and no grid. "cueory pulse, sun 1 nov: solved in 4 of 7
+ * beats, with the cue." The game's name comes from src/config/games.ts (D-66), so a rename is one edit there.
  */
-export function shareText(state: PulseState, day: string): string {
+export function shareText(state: PulseState, day: string, name: string): string {
   const used = BEATS - beatsLeft(state);
   const cue = state.cueUsed ? ', with the cue' : '';
   const result = state.status === 'solved' ? `solved in ${used} of ${BEATS} beats${cue}` : `not solved this time${cue}`;
-  return `cueory pulse, ${day}: ${result}.`;
+  return `cueory ${name}, ${day}: ${result}.`;
 }
 
 /** Days from 1 November 2026 to a calendar date, in the visitor's own time zone. */

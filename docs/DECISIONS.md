@@ -433,3 +433,10 @@ One line each, newest at the bottom. Reasons are kept short on purpose.
   from the pinned Simple Icons (Pinterest added; no new package). Only profile addresses are kept in
   `src/config/site.ts`; account emails and passwords never go in the repository (a unit test checks the settings for
   them). Reason: Christian's confirmation on the chat, 2026-11-01.
+- **D-66** Every game name the site shows comes from `src/config/games.ts` and nowhere else (the lead's request on
+  issue #4, 2026-10-31, 9:50 pm Phoenix, after a trademark screen found live filings for three of the names while
+  Christian picks replacements). The page headings, the "coming soon" list, the no-JavaScript lines and the share
+  lines all read the name there: the islands take it as a `name` prop and the share-line functions as an argument, so
+  no game's visible name is typed anywhere else. Internal ids, file names, content folders and test ids keep the
+  current words, so a rename is one edit in `games.ts`. The browser tests read the names from the same file, so they
+  follow a rename too. Reason: a rename forced by a trademark must be quick and must not miss a spot.

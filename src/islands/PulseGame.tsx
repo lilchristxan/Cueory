@@ -28,6 +28,8 @@ interface Puzzle {
 interface Props {
   /** Sample puzzles (D-61): the page picks one for the visitor's own date. */
   puzzles: Puzzle[];
+  /** The game's name as the page shows it, from src/config/games.ts (D-66). */
+  name: string;
 }
 
 const KEY_ROWS = ['qwertyuiop', 'asdfghjkl', 'zxcvbnm'];
@@ -39,7 +41,7 @@ const primaryButton = 'rounded-pill bg-button px-5 py-2.5 text-on-button hover:b
  * readers, never by color alone. The cue spends one beat. Rendered only in the browser (client:only); without
  * JavaScript the page shows its <noscript> note instead.
  */
-export default function PulseGame({ puzzles }: Props) {
+export default function PulseGame({ puzzles, name }: Props) {
   const today = useMemo(() => new Date(), []);
   const puzzle = useMemo(() => puzzleForDay(puzzles, dayNumber(today)), [puzzles, today]);
   const [state, setState] = useState<PulseState>(() => startPulse(puzzle?.word ?? ''));
@@ -96,7 +98,7 @@ export default function PulseGame({ puzzles }: Props) {
   };
 
   const share = async () => {
-    const line = shareText(state, dayLabel(today));
+    const line = shareText(state, dayLabel(today), name);
     try {
       await navigator.clipboard.writeText(line);
       setCopied(`copied: ${line}`);
@@ -177,7 +179,7 @@ export default function PulseGame({ puzzles }: Props) {
           <p className="text-lg font-medium">
             {state.status === 'solved' ? 'solved.' : `the word was ${state.answer}.`}
           </p>
-          <p className="mt-1 text-ink-soft">{shareText(state, dayLabel(today))}</p>
+          <p className="mt-1 text-ink-soft">{shareText(state, dayLabel(today), name)}</p>
           <button type="button" className={`${primaryButton} mt-4`} onClick={share}>
             copy my result
           </button>

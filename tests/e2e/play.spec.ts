@@ -1,5 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
+import { dailyGames } from '../../src/config/games';
 
 /**
  * Daily games (D-61): pulse on /play. The page's clock is set to 1 November 2026, the first day, so today's sample
@@ -16,6 +17,11 @@ test.beforeEach(async ({ page }) => {
     }
   });
 });
+
+/** A game's name as the page shows it, from src/config/games.ts (D-66), so these tests follow a rename. */
+const gameName = (id: string) => dailyGames.find((game) => game.id === id)!.name;
+const PULSE = gameName('pulse');
+const TRIAGE = gameName('triage');
 
 const axe = (page: Page) => new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa']).analyze();
 const field = (page: Page) => page.getByLabel('your guess', { exact: true });
@@ -34,10 +40,10 @@ test.describe('daily games: pulse (D-61)', () => {
 
   test('the page names the four games, says the puzzle is a sample, and passes axe', async ({ page }) => {
     await expect(page.getByRole('heading', { level: 1, name: 'daily games' })).toBeVisible();
-    await expect(page.getByRole('heading', { level: 2, name: 'pulse' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 2, name: PULSE })).toBeVisible();
     await expect(page.getByTestId('sample-note')).toHaveText("today's word is a sample.");
     await expect(page.getByText('a 6-letter word · 7 of 7 beats left')).toBeVisible();
-    for (const name of ['cueword', 'triage', 'suture']) await expect(page.getByText(name, { exact: true })).toBeVisible();
+    for (const game of dailyGames) await expect(page.getByText(game.name, { exact: true }).first()).toBeVisible();
     const results = await axe(page);
     expect(results.violations.map((v) => `${v.id}: ${v.help}`)).toEqual([]);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
@@ -82,9 +88,9 @@ test.describe('daily games: pulse (D-61)', () => {
     const result = page.getByTestId('pulse-result');
     await expect(result).toBeFocused();
     await expect(result).toContainText('solved.');
-    await expect(result).toContainText('cueory pulse, sun 1 nov: solved in 1 of 7 beats.');
+    await expect(result).toContainText(`cueory ${PULSE}, sun 1 nov: solved in 1 of 7 beats.`);
     await result.getByRole('button', { name: 'copy my result' }).click();
-    await expect(result).toContainText('cueory pulse, sun 1 nov: solved in 1 of 7 beats.');
+    await expect(result).toContainText(`cueory ${PULSE}, sun 1 nov: solved in 1 of 7 beats.`);
     await expect(result.getByText('a new word comes tomorrow.')).toBeVisible();
   });
 
@@ -95,7 +101,7 @@ test.describe('daily games: pulse (D-61)', () => {
     }
     const result = page.getByTestId('pulse-result');
     await expect(result).toContainText('the word was garden.');
-    await expect(result).toContainText('cueory pulse, sun 1 nov: not solved this time.');
+    await expect(result).toContainText(`cueory ${PULSE}, sun 1 nov: not solved this time.`);
     await expect(field(page)).toHaveCount(0);
   });
 });
@@ -182,7 +188,7 @@ test.describe('daily games: triage (D-63)', () => {
   });
 
   test('pick a term, then its group: a right place shows it there with ✓, and axe passes', async ({ page }) => {
-    await expect(page.getByRole('heading', { level: 2, name: 'triage' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 2, name: TRIAGE })).toBeVisible();
     await expect(page.getByTestId('triage-sample-note')).toHaveText("today's terms are a sample.");
     await expect(page.getByTestId('triage-status')).toHaveText('10 terms to sort · 3 slips left');
     await term(page, 'mango').click();
@@ -231,7 +237,7 @@ test.describe('daily games: triage (D-63)', () => {
       'furniture: chair, sofa, desk.',
       'none of these: violin.',
     ]);
-    await expect(result).toContainText('cueory triage, sun 1 nov: not sorted this time.');
+    await expect(result).toContainText(`cueory ${TRIAGE}, sun 1 nov: not sorted this time.`);
     await expect(page.getByRole('list', { name: 'terms to sort' })).toHaveCount(0);
     await expect(page.getByTestId('triage-status')).toHaveCount(0);
     await expect(place(page, 'fruits')).toBeDisabled();
@@ -263,9 +269,9 @@ test.describe('daily games: triage (D-63)', () => {
     const result = page.getByTestId('triage-result');
     await expect(result).toBeFocused();
     await expect(result).toContainText('sorted.');
-    await expect(result).toContainText('cueory triage, sun 1 nov: sorted with no slips.');
+    await expect(result).toContainText(`cueory ${TRIAGE}, sun 1 nov: sorted with no slips.`);
     await result.getByRole('button', { name: 'copy my result' }).click();
-    await expect(result).toContainText('cueory triage, sun 1 nov: sorted with no slips.');
+    await expect(result).toContainText(`cueory ${TRIAGE}, sun 1 nov: sorted with no slips.`);
     await expect(result.getByText('a new puzzle comes tomorrow.')).toBeVisible();
     // Each group lists its terms in the order they were dealt, each with ✓.
     for (const [group, terms] of Object.entries(answer)) {
@@ -290,7 +296,7 @@ test.describe('daily games without JavaScript', () => {
   test('pulse and triage say they need JavaScript', async ({ page }) => {
     await page.goto('/play');
     // Playwright's text matching skips <noscript>, so this uses CSS.
-    await expect(page.locator('noscript p')).toHaveText(['pulse needs JavaScript.', 'triage needs JavaScript.']);
+    await expect(page.locator('noscript p')).toHaveText([`${PULSE} needs JavaScript.`, `${TRIAGE} needs JavaScript.`]);
     await expect(page.getByTestId('sample-note')).toBeVisible();
     await expect(page.getByTestId('triage-sample-note')).toBeVisible();
   });

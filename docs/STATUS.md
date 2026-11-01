@@ -82,19 +82,21 @@ Last updated: 2026-11-01
 - In `staging` (auto-merged): the [home page polish](https://github.com/lilchristxan/Cueory/pull/42) (D-62): 16 px
   panels with a hairline and one soft shadow, a crisper glassy button, sections that fade in once, and a shorter
   launch-updates panel.
+- In `staging`: the [once-only promo panel](https://github.com/lilchristxan/Cueory/pull/34) (D-59): on marketing
+  pages a small dark panel slides down after 5 seconds or halfway down the page, with "join the launch list", "support
+  us while we build" and the social marks; once shown, it stays away for 30 days.
+- In `staging` (merged by Christian): daily games (D-61, D-63, D-64). `/play` has pulse
+  ([#41](https://github.com/lilchristxan/Cueory/pull/41)) and triage ([#45](https://github.com/lilchristxan/Cueory/pull/45)),
+  each playable on labeled sample puzzles, with the other two listed as coming soon, a link in the ☰ panel and a
+  section on the home page. How real puzzles reach the browser one day at a time is proposed in D-61 for Christian.
 
 ## In review
-- [Once-only promo panel](https://github.com/lilchristxan/Cueory/pull/34) (D-59): on marketing pages a small dark panel
-  slides down from the top after 5 seconds or halfway down the page, with "join the launch list", "support us while we
-  build" and the social marks; once shown, it stays away for 30 days. Now on brand v1.0's colors.
-- Daily games, first part (D-61): `/play` with pulse, playable with labeled sample puzzles, and cueword, triage and
-  suture listed as coming soon; a link in the ☰ panel and a section on the home page after "ways to study". It adds
-  sample puzzles under `content/`, so it waits for Christian's merge. How real puzzles reach the browser one day at a
-  time is proposed in D-61 for Christian.
-- Daily games, second game (D-63, stacked on the first part): triage on `/play`. Sort ten terms into three named
-  groups, with one that fits none ("none of these"); a wrong place is a slip, and three slips end the round. Buttons
-  only (tap, click or keyboard, no dragging), every result said in words and shown by ✓, and a plain-words share line.
-  Seven labeled everyday samples under `content/games/triage/`, so it also waits for Christian's merge.
+- Game names from one place (D-66): every game name the site shows (headings, the "coming soon" list, share lines,
+  the no-JavaScript lines) comes from `src/config/games.ts`, so renaming a game after the trademark check is one edit.
+  Tests read the names from there too.
+- Codex helpers (#11, claims on #4): [video frames for teaching diagrams](https://github.com/lilchristxan/Cueory/pull/47)
+  (Task 6); cueword and suture engines and boards (Task 7); the visuals source-file checker (Task 6); the questions
+  player with rationales (Task 4). None of them changes a page until it is wired in.
 
 ## Queued (Christian's change requests on issue #4, in his order)
 1. CI: WebKit and Firefox on Release pull requests, plus the device rule in CLAUDE.md (D-48; waits for Christian).
