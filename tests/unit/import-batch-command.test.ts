@@ -254,6 +254,25 @@ describe('import-batch --apply', () => {
     expect(v2).toMatchObject({ version: 2, status: 'published', stem: 'sample: placeholder question 1, reworded' });
   });
 
+  it('a failed publish of a new version leaves the old version live (one transaction)', async () => {
+    const input = batch();
+    const dir = write(input);
+    const { db } = await cli([dir, '--project', 'staging', '--apply', '--publish']);
+    input.items[0] = { ...input.items[0]!, stem: 'sample: placeholder question 1, reworded' };
+    write(input, true, dir);
+
+    db.failPublishMidway = true;
+    const failed = await cli([dir, '--project', 'staging', '--apply', '--publish'], db);
+    expect(failed.code).toBe(1);
+    expect(failed.out).toContain('Stopped while publishing for sample-1');
+    expect(versionsOf(db, 'sample-1').map(v => [v.version, v.status])).toEqual([[1, 'published'], [2, 'draft']]);
+
+    db.failPublishMidway = false;
+    const again = await cli([dir, '--project', 'staging', '--apply', '--publish'], db);
+    expect(again.code).toBe(0);
+    expect(versionsOf(db, 'sample-1').map(v => [v.version, v.status])).toEqual([[1, 'retired'], [2, 'published']]);
+  });
+
   it('stops at the first error, says where, and a re-run finishes the job', async () => {
     const dir = write(batch());
     const db = new FakeSupabase();

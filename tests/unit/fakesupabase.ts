@@ -8,15 +8,41 @@
 import { randomUUID } from 'node:crypto';
 import type { DbClient, DbError, DbResult, Filter, Row } from '../../scripts/import-batch/db';
 
-type Op = 'select' | 'insert' | 'update' | 'delete';
+type Op = 'select' | 'insert' | 'update' | 'delete' | 'rpc';
 export interface Write { op: Op; table: string; rows: number }
 
 export class FakeSupabase implements DbClient {
   tables: Record<string, Row[]> = { concepts: [], sources: [], items: [], item_versions: [], item_choices: [], item_answers: [] };
   writes: Write[] = [];
   reads = 0;
-  /** Return an error for a call, to test stopping. Called before the call does anything. */
+  /** Return an error for a call, to test stopping. Called before the call does anything; for rpc, `table` is the function. */
   failWith?: (op: Op, table: string) => DbError | undefined;
+  /** Fail publish_item_version after it has retired the old version, to prove the whole call is rolled back. */
+  failPublishMidway = false;
+
+  /** publish_item_version (supabase/migrations/20261102090000): retire the live version and publish a draft, all or nothing. */
+  rpc(fn: 'publish_item_version', args: { p_version_id: string }): PromiseLike<DbResult<unknown>> {
+    return Promise.resolve().then(() => {
+      const injected = this.failWith?.('rpc', fn);
+      if (injected) return { data: null, error: injected };
+      const before = structuredClone(this.tables);
+      try {
+        const versions = this.tables.item_versions!;
+        const target = versions.find(row => row.id === args.p_version_id);
+        if (!target) throw Object.assign(new Error('no such version'), { code: 'P0002' });
+        if (target.status === 'published') return { data: null, error: null };
+        if (target.status !== 'draft') throw new Error('only a draft version can be published');
+        for (const row of versions.filter(v => v.item_id === target.item_id && v.status === 'published')) this.updateOne('item_versions', row, { status: 'retired' });
+        if (this.failPublishMidway) throw Object.assign(new Error('fake: stopped inside publish_item_version'), { code: '57014' });
+        this.updateOne('item_versions', target, { status: 'published' });
+        this.writes.push({ op: 'rpc', table: fn, rows: 1 });
+        return { data: null, error: null };
+      } catch (e) {
+        this.tables = before;
+        return { data: null, error: { message: (e as Error).message, code: (e as Error & { code?: string }).code ?? '23514' } };
+      }
+    });
+  }
 
   from(table: string) {
     if (!(table in this.tables)) throw new Error(`fake: unknown table ${table}`);

@@ -1,13 +1,15 @@
 /**
  * Reads and writes the importer's tables through supabase-js (Task 139).
  *
- * Only a handful of query-builder calls are used (`from().select().in()`, `insert().select()`, `update().eq()` and
- * `delete().eq()`), described by `DbClient`, so tests can hand in a fake client with the same shape.
+ * Only a handful of calls are used (`from().select().in()`, `insert().select()`, `update().eq()`, `delete().eq()` and
+ * `rpc('publish_item_version')`), described by `DbClient`, so tests can hand in a fake client with the same shape.
  *
- * There is no transaction: Supabase's REST interface runs each call on its own, and the schema has no import function
- * (adding one is a migration, which this task does not make). So every write is one that a later run recognises: items
- * have uuids derived from their batch id, sources and concepts are found by slug, versions by (item, version), and an
- * unfinished draft is rewritten. Running the same command again after a failure finishes the job.
+ * Supabase's REST interface runs each call on its own, so most steps are not in one transaction. Instead every write
+ * is one that a later run recognises: items have uuids derived from their batch id, sources and concepts are found by
+ * slug, versions by (item, version), and an unfinished draft is rewritten. Running the same command again after a
+ * failure finishes the job. The one step that must never be half done, swapping a question's published version, goes
+ * through publish_item_version, which retires the old version and publishes the new one in a single transaction, so a
+ * failure leaves the live version live.
  */
 import type { AnswerRow, ChoiceRow, ConceptRow, ItemRow, Plan, Snapshot, SourceRow, VersionRow } from './plan.ts';
 
@@ -25,7 +27,10 @@ export interface Table {
   update(patch: Row): Filter<null>;
   delete(): Filter<null>;
 }
-export interface DbClient { from(table: string): Table }
+export interface DbClient {
+  from(table: string): Table;
+  rpc(fn: 'publish_item_version', args: { p_version_id: string }): PromiseLike<DbResult<unknown>>;
+}
 
 /** A write or read that failed: which step, and the database's own short message. */
 export class ImportFailure extends Error {
@@ -178,10 +183,10 @@ export async function applyPlan(client: DbClient, plan: Plan, db: Snapshot, prog
       await run(where('adding answers'), client.from('item_answers').insert(step.content.answers.map(a => ({ item_version_id: versionId, ...a }))));
     }
     if (step.publish) {
-      if (step.retireVersionId) {
-        await updateOne(client, where('retiring the old version'), 'item_versions', { status: 'retired' }, [['id', step.retireVersionId], ['status', 'published']]);
-      }
-      await updateOne(client, where('publishing'), 'item_versions', { status: 'published' }, [['id', versionId], ['status', 'draft']]);
+      // One transaction: the old version is retired only if the new one is published (supabase/migrations/
+      // 20261102090000_publish_item_version.sql).
+      if (!versionId) throw new ImportFailure(where('publishing'), 'there is no version to publish');
+      await run(where('publishing'), client.rpc('publish_item_version', { p_version_id: versionId }));
     }
     if ((step.action !== 'unchanged' && step.action !== 'retired-kept') || step.publish) progress(`  ${step.batchId}  done`);
   }
