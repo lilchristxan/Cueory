@@ -57,7 +57,7 @@ describe.skipIf(!existsSync(dist))('built site', () => {
       expect(hrefs, page).toContain('/fonts/bodoni-moda-latin-opsz-normal.woff2');
       for (const href of hrefs) expect(existsSync(join(dist, href)), href).toBe(true);
     }
-    expect(preloads(readFileSync(join(dist, 'index.html'), 'utf8'))).toContain('/fonts/bodoni-moda-latin-opsz-italic.woff2');
+    expect(preloads(readFileSync(join(dist, 'index.html'), 'utf8'))).not.toContain('/fonts/bodoni-moda-latin-opsz-italic.woff2');
     // Study screens stay quiet: no display font, nothing extra to download.
     expect(preloads(readFileSync(join(dist, 'learn/study-skills.html'), 'utf8'))).toEqual([]);
   });
