@@ -31,6 +31,24 @@ function walkFiles(dir, linked) {
   });
 }
 
+/**
+ * Read an audited regular file through its opened descriptor, never through a
+ * later pathname lookup. If a file changes into a symlink after directory
+ * enumeration, O_NOFOLLOW rejects it instead of reading its target.
+ */
+export function readRegularFileNoFollow(path) {
+  if (!Number.isInteger(fsConstants.O_NOFOLLOW)) {
+    throw new Error('this platform cannot safely audit symbolic links');
+  }
+  const fd = openSync(path, fsConstants.O_RDONLY | fsConstants.O_NOFOLLOW);
+  try {
+    if (!fstatSync(fd).isFile()) throw new Error('not a regular file');
+    return readFileSync(fd, 'utf8');
+  } finally {
+    closeSync(fd);
+  }
+}
+
 /** Extracts references without trusting paths from content files as filesystem paths. */
 export function modelUrls(model) {
   if (!model || typeof model !== 'object' || Array.isArray(model)) return null;
@@ -75,20 +93,12 @@ export function auditAnatomyProduction(distDir, contentDir) {
   for (const name of sources) {
     const sourcePath = join(content, name);
     let data;
-    let fd;
     try {
-      // Open without following the final symlink, atomically with the read.
-      // A separate lstat(path) followed by readFile(path) would be vulnerable
-      // if the path changed between those two operations.
-      fd = openSync(sourcePath, fsConstants.O_RDONLY | fsConstants.O_NOFOLLOW);
-      if (!fstatSync(fd).isFile()) throw new Error('not a regular anatomy source file');
-      data = JSON.parse(readFileSync(fd, 'utf8'));
+      data = JSON.parse(readRegularFileNoFollow(sourcePath));
     } catch (error) {
       const linked = error && typeof error === 'object' && 'code' in error && error.code === 'ELOOP';
       errors.push(linked ? `${name}: anatomy source must not be a symbolic link` : `${name}: cannot read valid JSON`);
       continue;
-    } finally {
-      if (fd !== undefined) closeSync(fd);
     }
     if (!data || (data.status !== 'approved' && data.status !== 'draft')) {
       errors.push(`${name}: invalid publication status`);
@@ -155,7 +165,15 @@ export function auditAnatomyProduction(distDir, contentDir) {
   const draftTokens = draftIds;
   if (draftTokens.size) {
     for (const file of textFiles) {
-      const contents = readFileSync(file, 'utf8');
+      // Directory enumeration and reading are separate operations; fail
+      // closed if a file changes into a symlink between them.
+      let contents;
+      try {
+        contents = readRegularFileNoFollow(file);
+      } catch {
+        errors.push(`cannot safely read built text: ${file.slice(dist.length + 1)}`);
+        continue;
+      }
       for (const match of contents.matchAll(/\bFMA\d{3,}\b/g)) {
         if (draftTokens.has(match[0])) {
           errors.push(`draft anatomy ID exposed in built text: ${file.slice(dist.length + 1)} (${match[0]})`);
