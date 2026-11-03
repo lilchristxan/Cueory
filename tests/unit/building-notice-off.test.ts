@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { cpSync, mkdtempSync, readdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -21,6 +21,14 @@ it('omits the building notice from every page when its copied build config disab
     // Copy the complete build inputs, never mutate the working checkout or its dist.
     for (const name of ['src', 'content', 'public', 'docs', 'scripts', 'package.json', 'package-lock.json', 'astro.config.mjs', 'tsconfig.json', 'wrangler.jsonc']) {
       cpSync(join(root, name), join(isolated, name), { recursive: true });
+    }
+    // Preview pages may import synthetic build data from tests/fixtures.
+    // Preserve those relative imports in the isolated copy without affecting
+    // branches that do not have a fixture directory.
+    const fixtures = join(root, 'tests', 'fixtures');
+    if (existsSync(fixtures)) {
+      mkdirSync(join(isolated, 'tests'), { recursive: true });
+      cpSync(fixtures, join(isolated, 'tests', 'fixtures'), { recursive: true });
     }
     symlinkSync(join(root, 'node_modules'), join(isolated, 'node_modules'), 'junction');
     expect(original.match(/showBuildingNotice:\s*(?:true|false)/g)).toHaveLength(1);
