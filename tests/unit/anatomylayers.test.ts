@@ -3,6 +3,7 @@ import type { AnatomyStructure, AnatomySystem } from '../../src/islands/anatomyl
 import {
   LAYERS,
   WHOLE_BODY_KEY,
+  anatomySystemsForView,
   isLayer,
   layerShown,
   layersOf,
@@ -86,6 +87,27 @@ describe('the whole-body view', () => {
     expect(body.status).toBe('draft');
     expect(body.model.files).toEqual(['/models/anatomy/a.glb', '/models/anatomy/b.glb']);
     expect(body.structures.map((s) => s.id)).toEqual(['x', 'y', 'z']);
+  });
+
+  it('sends one copy of each structure before opening and adds whole body only afterward', () => {
+    const singles = [system('a', ['a1', 'a2'], 'approved'), system('b', ['b1'], 'approved')];
+    const unopened = anatomySystemsForView(singles, false);
+    expect(unopened.map((s) => s.key)).toEqual(['a', 'b']);
+    expect(unopened.reduce((n, s) => n + s.structures.length, 0)).toBe(3);
+    expect(singles.map((s) => s.key)).toEqual(['a', 'b']); // source data is unchanged
+
+    const opened = anatomySystemsForView(singles, true);
+    expect(opened.map((s) => s.key)).toEqual(['a', 'b', WHOLE_BODY_KEY]);
+    expect(opened[2]!.structures.map((s) => s.id)).toEqual(['a1', 'a2', 'b1']);
+    expect(opened[2]!.status).toBe('approved');
+    expect(anatomySystemsForView(singles, false).map((s) => s.key)).toEqual(['a', 'b']);
+  });
+
+  it('does not fabricate whole body when the approved-only build has one system', () => {
+    const approvedOnly = [system('a', ['a1'], 'approved')];
+    expect(anatomySystemsForView(approvedOnly, false).map((s) => s.key)).toEqual(['a']);
+    expect(anatomySystemsForView(approvedOnly, true).map((s) => s.key)).toEqual(['a']);
+    expect(anatomySystemsForView([], true)).toEqual([]);
   });
 
   it('needs two systems of one release, and leaves the test fixture out', () => {
