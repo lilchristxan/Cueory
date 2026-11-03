@@ -583,6 +583,10 @@ export function findVisibleAnchors(
     sy: number;
     t: VisibilityTarget;
     centerVisible: boolean;
+    minX: number;
+    maxX: number;
+    minY: number;
+    maxY: number;
   }>();
   for (const [id, t] of targets) {
     const cx = Math.round(t.x);
@@ -590,7 +594,10 @@ export function findVisibleAnchors(
     const centerVisible = cx >= 0 && cy >= 0 && cx < width && cy < height && at(cx, cy) === t.index + 1;
     // Count pixels even when the projected center is visible. The minimum
     // visible area must be the same for center hits and off-center structures.
-    pending.set(t.index + 1, { id, count: 0, sx: 0, sy: 0, t, centerVisible });
+    pending.set(t.index + 1, {
+      id, count: 0, sx: 0, sy: 0, t, centerVisible,
+      minX: width, maxX: -1, minY: height, maxY: -1,
+    });
   }
   if (pending.size === 0) return out;
   for (let y = 0; y < height; y++) {
@@ -600,6 +607,10 @@ export function findVisibleAnchors(
         p.count++;
         p.sx += x;
         p.sy += y;
+        p.minX = Math.min(p.minX, x);
+        p.maxX = Math.max(p.maxX, x);
+        p.minY = Math.min(p.minY, y);
+        p.maxY = Math.max(p.maxY, y);
       }
     }
   }
@@ -619,10 +630,13 @@ export function findVisibleAnchors(
       out.set(p.id, { visible: true, x: mx, y: my });
       continue;
     }
-    // The middle of what can be seen is not on the structure (a curved or broken shape): take its nearest pixel.
+    // For a curved or disconnected structure, the centroid can land in
+    // empty space. Search only its occupied bounding rectangle, not the
+    // entire ID picture again for every such structure. The scan order and
+    // nearest-pixel tie-break remain unchanged.
     let best = { x: mx, y: my, d: Infinity };
-    for (let y = 0; y < height; y++) {
-      for (let x = 0; x < width; x++) {
+    for (let y = p.minY; y <= p.maxY; y++) {
+      for (let x = p.minX; x <= p.maxX; x++) {
         if (at(x, y) !== code) continue;
         const d = (x - mx) ** 2 + (y - my) ** 2;
         if (d < best.d) best = { x, y, d };
