@@ -8,7 +8,7 @@ import {
   type MutableRefObject,
   type PointerEvent as ReactPointerEvent,
 } from 'react';
-import { createGeneration, createOnDemandLoader, filesForLayer, firstLayer, layerNeedsReveal, lazyPeel, lazyRestore, PartialLoadError, revealTargetPlan, showAllPlan, structureLoadNote, type OnDemandLoader } from './anatomylazy';
+import { createGeneration, createOnDemandLoader, filesForLayer, firstLayer, idsForModelFiles, layerNeedsReveal, lazyPeel, lazyRestore, PartialLoadError, revealTargetPlan, showAllPlan, structureLoadNote, type OnDemandLoader } from './anatomylazy';
 import type { LabColors, LabScene, LoadResult } from './anatomyscene';
 import { checkTriangleBudget } from './bodyviewer-logic';
 import {
@@ -58,11 +58,6 @@ interface Props {
 }
 
 type Phase = 'cover' | 'opening' | 'open' | 'error';
-/** The structure ids a model file serves in the whole-body view: those of every layer that names the file. */
-function layers_idsForFile(system: AnatomySystem, layers: readonly Layer[], url: string): string[] {
-  return layers.filter((layer) => filesForLayer(system, layer.id).includes(url)).flatMap((layer) => layer.ids);
-}
-
 type SystemLoad = { state: 'loading' } | { state: 'ready'; result: LoadResult } | { state: 'error'; message: string };
 
 const primaryButton =
@@ -304,12 +299,12 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts }: Pr
     setHidden(lazyStart ? new Set(system.structures.filter((s) => !firstIds.has(s.id)).map((s) => s.id)) : new Set());
     setFilesLoaded(lazyStart ? firstFiles.length : 0);
     scene
-      .load(lazyStart ? firstFiles : (system.model.files ?? system.model.file), lazyStart ? [...firstIds] : system.structures.map((s) => s.id))
+      .load(lazyStart ? firstFiles : (system.model.files ?? system.model.file), lazyStart ? idsForModelFiles(system, wholeLayers!, firstFiles) : system.structures.map((s) => s.id))
       .then((result) => {
         if (!current || !result) return;
         if (lazyStart) {
           const loader = createOnDemandLoader<LoadResult>((url) => {
-            const ids = layers_idsForFile(system, wholeLayers!, url);
+            const ids = idsForModelFiles(system, wholeLayers!, [url]);
             return scene.add(url, ids).then((r) => {
               if (!r || !current) throw new Error('The view changed while this layer downloaded.');
               return r;
