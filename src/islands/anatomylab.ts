@@ -607,10 +607,13 @@ export function findVisibleAnchors(
         p.count++;
         p.sx += x;
         p.sy += y;
-        p.minX = Math.min(p.minX, x);
-        p.maxX = Math.max(p.maxX, x);
-        p.minY = Math.min(p.minY, y);
-        p.maxY = Math.max(p.maxY, y);
+        // Center-visible labels never need the nearest-pixel fallback.
+        if (!p.centerVisible) {
+          if (x < p.minX) p.minX = x;
+          if (x > p.maxX) p.maxX = x;
+          if (y < p.minY) p.minY = y;
+          if (y > p.maxY) p.maxY = y;
+        }
       }
     }
   }
