@@ -4,7 +4,7 @@
  *
  * Usage: node scripts/anatomy-production-audit.mjs [dist-directory] [content/visuals-directory]
  */
-import { existsSync, lstatSync, readFileSync, readdirSync, statSync } from 'node:fs';
+import { closeSync, constants as fsConstants, existsSync, fstatSync, openSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
@@ -74,18 +74,21 @@ export function auditAnatomyProduction(distDir, contentDir) {
   if (!sources.length) errors.push('no anatomy source files found');
   for (const name of sources) {
     const sourcePath = join(content, name);
-    // A source manifest must be a reviewed file in content/visuals, not an
-    // alias to data elsewhere. lstat does not follow symbolic links.
-    if (lstatSync(sourcePath).isSymbolicLink()) {
-      errors.push(`${name}: anatomy source must not be a symbolic link`);
-      continue;
-    }
     let data;
+    let fd;
     try {
-      data = JSON.parse(readFileSync(sourcePath, 'utf8'));
-    } catch {
-      errors.push(`${name}: cannot read valid JSON`);
+      // Open without following the final symlink, atomically with the read.
+      // A separate lstat(path) followed by readFile(path) would be vulnerable
+      // if the path changed between those two operations.
+      fd = openSync(sourcePath, fsConstants.O_RDONLY | fsConstants.O_NOFOLLOW);
+      if (!fstatSync(fd).isFile()) throw new Error('not a regular anatomy source file');
+      data = JSON.parse(readFileSync(fd, 'utf8'));
+    } catch (error) {
+      const linked = error && typeof error === 'object' && 'code' in error && error.code === 'ELOOP';
+      errors.push(linked ? `${name}: anatomy source must not be a symbolic link` : `${name}: cannot read valid JSON`);
       continue;
+    } finally {
+      if (fd !== undefined) closeSync(fd);
     }
     if (!data || (data.status !== 'approved' && data.status !== 'draft')) {
       errors.push(`${name}: invalid publication status`);
