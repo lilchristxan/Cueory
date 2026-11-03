@@ -576,15 +576,21 @@ export function findVisibleAnchors(
     return pixels[i]! | (pixels[i + 1]! << 8) | (pixels[i + 2]! << 16);
   };
   const out = new Map<string, VisibleAnchor>();
-  const pending = new Map<number, { id: string; count: number; sx: number; sy: number; t: VisibilityTarget }>();
+  const pending = new Map<number, {
+    id: string;
+    count: number;
+    sx: number;
+    sy: number;
+    t: VisibilityTarget;
+    centerVisible: boolean;
+  }>();
   for (const [id, t] of targets) {
     const cx = Math.round(t.x);
     const cy = Math.round(t.y);
-    if (cx >= 0 && cy >= 0 && cx < width && cy < height && at(cx, cy) === t.index + 1) {
-      out.set(id, { visible: true, x: t.x, y: t.y });
-    } else {
-      pending.set(t.index + 1, { id, count: 0, sx: 0, sy: 0, t });
-    }
+    const centerVisible = cx >= 0 && cy >= 0 && cx < width && cy < height && at(cx, cy) === t.index + 1;
+    // Count pixels even when the projected center is visible. The minimum
+    // visible area must be the same for center hits and off-center structures.
+    pending.set(t.index + 1, { id, count: 0, sx: 0, sy: 0, t, centerVisible });
   }
   if (pending.size === 0) return out;
   for (let y = 0; y < height; y++) {
@@ -598,8 +604,13 @@ export function findVisibleAnchors(
     }
   }
   for (const [code, p] of pending) {
-    if (p.count < minPixels) {
+    if (p.count === 0 || p.count < minPixels) {
       out.set(p.id, { visible: false, x: p.t.x, y: p.t.y });
+      continue;
+    }
+    // Preserve the exact projected center when enough pixels are visible.
+    if (p.centerVisible) {
+      out.set(p.id, { visible: true, x: p.t.x, y: p.t.y });
       continue;
     }
     const mx = Math.round(p.sx / p.count);
