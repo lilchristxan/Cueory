@@ -15,6 +15,8 @@ const MODEL_ASSET = /\.(?:glb|gltf|obj|stl)$/i;
 // Scan all ordinary published text assets, not just the anatomy page or hashed JavaScript chunks.
 // Site search, manifests or unrelated pages can otherwise accidentally expose a draft identifier.
 const TEXT_ASSET = /\.(?:html?|js|mjs|json|map|xml|svg|txt|css|csv|tsv|md|webmanifest)$/i;
+const SCRIPT_ESCAPES_ASSET = /\.(?:js|mjs|json|map|webmanifest|html?)$/i;
+const MARKUP_ESCAPES_ASSET = /\.(?:html?|svg|xml)$/i;
 
 /** Walk a built artifact without following links outside (or back into) the output. */
 function walkFiles(dir, linked) {
@@ -54,14 +56,18 @@ export function readRegularFileNoFollow(path) {
  * Bundlers can emit JSON/JS Unicode escapes, and HTML can use numeric entities.
  * This is read-only normalization for the audit, not a change to shipped files.
  */
-export function decodeAsciiEscapesForAudit(text) {
-  return text
-    .replace(/\\+(?:u00([0-7][0-9a-f])|x([0-7][0-9a-f])|u\{([0-7][0-9a-f])\})/gi,
-      (_match, unicode, hex, braced) => String.fromCharCode(Number.parseInt(unicode ?? hex ?? braced, 16)))
-    .replace(/&#(?:x([0-9a-f]{1,6})|([0-9]{1,7}));/gi, (match, hex, decimal) => {
+export function decodeAsciiEscapesForAudit(text, syntax) {
+  if (syntax === 'script') {
+    return text.replace(/\\+(?:u00([0-7][0-9a-f])|x([0-7][0-9a-f])|u\{([0-7][0-9a-f])\})/gi,
+      (_match, unicode, hex, braced) => String.fromCharCode(Number.parseInt(unicode ?? hex ?? braced, 16)));
+  }
+  if (syntax === 'markup') {
+    return text.replace(/&#(?:x([0-9a-f]{1,6})|([0-9]{1,7}));/gi, (match, hex, decimal) => {
       const value = hex === undefined ? Number.parseInt(decimal, 10) : Number.parseInt(hex, 16);
       return value <= 127 ? String.fromCharCode(value) : match;
     });
+  }
+  return text;
 }
 
 /** Extracts references without trusting paths from content files as filesystem paths. */
@@ -184,16 +190,29 @@ export function auditAnatomyProduction(distDir, contentDir) {
       // closed if a file changes into a symlink between them.
       let contents;
       try {
-        contents = decodeAsciiEscapesForAudit(readRegularFileNoFollow(file));
+        contents = readRegularFileNoFollow(file);
       } catch {
         errors.push(`cannot safely read built text: ${file.slice(dist.length + 1)}`);
         continue;
       }
-      for (const match of contents.matchAll(/\bFMA\d{3,}\b/g)) {
-        if (draftTokens.has(match[0])) {
-          errors.push(`draft anatomy ID exposed in built text: ${file.slice(dist.length + 1)} (${match[0]})`);
-          break;
+      // Scan original text even when additional decoding is useful. Decoding
+      // literal HTML references in JS (or JS escapes in markup) can erase a
+      // boundary and otherwise suppress a draft ID that is already visible.
+      const variants = [contents];
+      if (SCRIPT_ESCAPES_ASSET.test(file)) variants.push(decodeAsciiEscapesForAudit(contents, 'script'));
+      if (MARKUP_ESCAPES_ASSET.test(file)) variants.push(decodeAsciiEscapesForAudit(contents, 'markup'));
+      let exposed = null;
+      for (const variant of variants) {
+        for (const match of variant.matchAll(/\bFMA\d{3,}\b/g)) {
+          if (draftTokens.has(match[0])) {
+            exposed = match[0];
+            break;
+          }
         }
+        if (exposed) break;
+      }
+      if (exposed) {
+        errors.push('draft anatomy ID exposed in built text: ' + file.slice(dist.length + 1) + ' (' + exposed + ')');
       }
     }
   }
