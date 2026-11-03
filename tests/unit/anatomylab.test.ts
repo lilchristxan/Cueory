@@ -472,6 +472,58 @@ describe('what the camera can see (the ID picture)', () => {
     expect(found.get('d')).toEqual({ visible: false, x: 2, y: 1 });
     expect(findVisibleAnchors(px, 4, 3, new Map([['c', targets.get('c')!]]), 2).get('c')).toMatchObject({ visible: true, x: 3 });
   });
+
+  it('uses the same three-pixel threshold for a centered hit and an off-center hit', () => {
+    const onePixel = picture([
+      [0, 0, 0],
+      [0, 1, 0],
+      [0, 0, 0],
+    ]);
+    const centered = new Map<string, VisibilityTarget>([['center', { index: 0, x: 1, y: 1 }]]);
+    const offCenter = new Map<string, VisibilityTarget>([['off-center', { index: 0, x: 0, y: 0 }]]);
+    expect(findVisibleAnchors(onePixel, 3, 3, centered, 3).get('center')).toEqual({
+      visible: false, x: 1, y: 1,
+    });
+    expect(findVisibleAnchors(onePixel, 3, 3, offCenter, 3).get('off-center')).toEqual({
+      visible: false, x: 0, y: 0,
+    });
+    // A one-pixel minimum deliberately accepts both paths, without changing
+    // the center's preferred label position.
+    expect(findVisibleAnchors(onePixel, 3, 3, centered, 1).get('center')).toEqual({
+      visible: true, x: 1, y: 1,
+    });
+    expect(findVisibleAnchors(onePixel, 3, 3, offCenter, 1).get('off-center')).toEqual({
+      visible: true, x: 1, y: 1,
+    });
+  });
+
+  it('preserves the projected center only when the required visible area exists', () => {
+    const twoPixels = picture([
+      [0, 1, 0],
+      [0, 1, 0],
+      [0, 0, 0],
+    ]);
+    const threePixels = picture([
+      [0, 1, 0],
+      [1, 1, 0],
+      [0, 0, 0],
+    ]);
+    const center = new Map<string, VisibilityTarget>([['a', { index: 0, x: 1.2, y: 1.1 }]]);
+    expect(findVisibleAnchors(twoPixels, 3, 3, center, 3).get('a')).toEqual({
+      visible: false, x: 1.2, y: 1.1,
+    });
+    expect(findVisibleAnchors(threePixels, 3, 3, center, 3).get('a')).toEqual({
+      visible: true, x: 1.2, y: 1.1,
+    });
+  });
+
+  it('never treats an entirely absent structure as visible, even with a zero-pixel minimum', () => {
+    const empty = picture([[0, 0], [0, 0]]);
+    const absent = new Map<string, VisibilityTarget>([['a', { index: 0, x: 1, y: 1 }]]);
+    expect(findVisibleAnchors(empty, 2, 2, absent, 0).get('a')).toEqual({
+      visible: false, x: 1, y: 1,
+    });
+  });
 });
 
 describe('exported pictures', () => {
