@@ -413,7 +413,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts }: Pr
       const missingFiles = new Set(
         plan.fetch.flatMap((layer) => filesForLayer(system, layer.id).filter((url) => !loader.isLoaded(url))),
       );
-      const phone = window.matchMedia?.('(max-width: 767px)').matches ?? false;
+      const phone = typeof window.matchMedia === 'function' && window.matchMedia('(max-width: 767px)').matches;
       if (needsBulkLayerConfirmation(phone, missingFiles.size)) {
         setBulkPrompt({ systemKey: system.key, files: missingFiles.size });
         return;
