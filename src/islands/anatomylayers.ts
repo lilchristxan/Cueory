@@ -86,6 +86,8 @@ export function wholeBody(systems: readonly AnatomySystem[]): AnatomySystem | nu
   if (real.some((s) => s.model.release !== release)) return null;
   const seen = new Set<string>();
   const structures: AnatomyStructure[] = [];
+  // Several systems can describe structures from one shared GLB. Download it only once.
+  const modelFiles = [...new Set(real.map((system) => system.model.file))];
   const layerFiles: Record<string, string[]> = {};
   for (const system of real) {
     for (const structure of system.structures) {
@@ -102,7 +104,7 @@ export function wholeBody(systems: readonly AnatomySystem[]): AnatomySystem | nu
     key: WHOLE_BODY_KEY,
     title: 'whole body',
     status: real.every((s) => s.status === 'approved') ? 'approved' : 'draft',
-    model: { file: real[0]!.model.file, files: real.map((s) => s.model.file), release, layerFiles },
+    model: { file: modelFiles[0]!, files: modelFiles, release, layerFiles },
     structures,
   };
   if (real[0]!.model.via) out.model.via = real[0]!.model.via;
