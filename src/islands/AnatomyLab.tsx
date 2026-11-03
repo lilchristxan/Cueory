@@ -13,6 +13,7 @@ import type { LabColors, LabScene, LoadResult } from './anatomyscene';
 import { checkTriangleBudget } from './bodyviewer-logic';
 import {
   WHOLE_BODY_KEY,
+  anatomySystemsForView,
   type Layer,
   layerShown,
   layersOf,
@@ -131,13 +132,17 @@ function measureLabel(font: string, fontPx: number): (s: string) => number {
  * Nothing from three.js loads before the student taps "open the anatomy lab". Rendered client:only.
  */
 export default function AnatomyLab({ systems: baseSystems, fixture, drafts }: Props) {
+  const [phase, setPhase] = useState<Phase>('cover');
+  const includeWholeBody = phase !== 'cover';
   const systems = useMemo(() => {
     const wantsFixture = fixture && new URLSearchParams(window.location.search).has('fixture');
-    // The fixture comes first, so the tests open it whatever real systems the build also has.
-    return wantsFixture ? [fixture, ...baseSystems] : baseSystems;
-  }, [baseSystems, fixture]);
+    // Defer creating the whole-body catalog until the tap, and never include
+    // its duplicate structure records in Astro's initial hydration props.
+    const available = anatomySystemsForView(baseSystems, includeWholeBody);
+    // The fixture comes first, so tests open it regardless of real systems.
+    return wantsFixture ? [fixture, ...available] : available;
+  }, [baseSystems, fixture, includeWholeBody]);
 
-  const [phase, setPhase] = useState<Phase>('cover');
   const [openError, setOpenError] = useState('');
   const [systemKey, setSystemKey] = useState(systems[0]?.key ?? '');
   const [load, setLoad] = useState<SystemLoad>({ state: 'loading' });
