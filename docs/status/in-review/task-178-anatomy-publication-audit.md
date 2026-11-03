@@ -1,5 +1,7 @@
 # Task 178 — audit every shipped 3D asset
 
+status: Task 178, anatomy production audit (#433): reject unapproved public GLB, glTF, OBJ and STL files at any URL; added regression tests.
+
 ## Problem
 The production artifact audit previously inspected only `dist/models/anatomy/**/*.glb`. A draft GLB copied to another public directory or an unapproved raw `.gltf`, `.obj` or `.stl` could be downloaded from the production site without being flagged.
 
