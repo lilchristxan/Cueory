@@ -44,6 +44,31 @@ test.describe('anatomy lab', () => {
     expect(await page.locator('meta[name="robots"]').getAttribute('content')).toContain('noindex');
   });
 
+  test('camera controls are disabled until the model is ready', async ({ page }, info) => {
+    test.skip(!isDesktopOfEachEngine(info), 'one camera-loading check per browser engine');
+    const held: Array<() => void> = [];
+    await page.route('**/preview/anatomy-fixture/fixture.glb', async (route) => {
+      await new Promise<void>((resolve) => held.push(resolve));
+      await route.continue();
+    });
+    await page.goto(URL);
+    await page.getByRole('button', { name: 'open the anatomy lab' }).click();
+    // Keep the actual model download pending, rather than relying on a fast loading spinner.
+    await expect.poll(() => held.length, { timeout: 20_000 }).toBe(1);
+    const view = page.getByRole('group', { name: 'view' });
+    const controls = ['turn left', 'turn right', 'tilt up', 'tilt down', 'zoom in', 'zoom out', 'reset view'];
+    for (const name of controls) {
+      await expect(view.getByRole('button', { name, exact: true })).toBeDisabled();
+    }
+    // The controls become usable only after the matching GLB finishes loading.
+    held[0]!();
+    await expect(page.getByRole('button', { name: 'fixture cube A', exact: true }))
+      .toBeEnabled({ timeout: 20_000 });
+    for (const name of controls) {
+      await expect(view.getByRole('button', { name, exact: true })).toBeEnabled();
+    }
+  });
+
   test('without ?fixture the preview shows no fixture', async ({ page }) => {
     await page.goto('/preview/anatomy-lab');
     const open = page.getByRole('button', { name: 'open the anatomy lab' });
