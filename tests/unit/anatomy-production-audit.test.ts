@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { auditAnatomyProduction, modelUrls } from '../../scripts/anatomy-production-audit.mjs';
@@ -76,6 +76,26 @@ describe('anatomy production artifact audit', () => {
       'unapproved model exposed in production: /other/approved.glb',
       'approved model missing from production: /models/anatomy/approved.glb',
     ]));
+  });
+
+  it('rejects file and directory symlinks instead of following or silently skipping them', () => {
+    const f = setup();
+    mkdirSync(join(f.dist, 'assets'), { recursive: true });
+    symlinkSync(join(f.dist, 'models', 'anatomy', 'approved.glb'), join(f.dist, 'assets', 'alias.glb'));
+    symlinkSync(join(f.dist, 'models', 'anatomy'), join(f.dist, 'alias-models'), 'dir');
+    const result = f.check();
+    expect(result.errors).toEqual(expect.arrayContaining([
+      'symbolic link in production output: /assets/alias.glb',
+      'symbolic link in production output: /alias-models',
+    ]));
+    // The approved model counts once. An alias never becomes a reviewed asset.
+    expect(result.shippedModels).toBe(1);
+  });
+
+  it('rejects broken symlinks even if the target no longer exists', () => {
+    const f = setup();
+    symlinkSync(join(f.dist, 'missing.glb'), join(f.dist, 'ghost.glb'));
+    expect(f.check().errors).toContain('symbolic link in production output: /ghost.glb');
   });
 
   it('rejects a fixture endpoint even when no draft model is present', () => {
