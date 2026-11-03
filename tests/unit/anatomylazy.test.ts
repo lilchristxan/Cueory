@@ -2,13 +2,40 @@ import { describe, expect, it } from 'vitest';
 import type { AnatomyStructure } from '../../src/islands/anatomylab';
 import { LAYERS, wholeBody, layerShown, type Layer } from '../../src/islands/anatomylayers';
 import { onlyThis } from '../../src/islands/anatomylab';
-import { PartialLoadError, revealTargetPlan, showAllPlan, createGeneration, createOnDemandLoader, filesForLayer, firstLayer, layerNeedsReveal, lazyPeel, lazyRestore, structureLoadNote } from '../../src/islands/anatomylazy';
+import { PartialLoadError, revealTargetPlan, showAllPlan, createGeneration, createOnDemandLoader, filesForLayer, firstLayer, layerNeedsReveal, needsBulkLayerConfirmation, lazyPeel, lazyRestore, structureLoadNote } from '../../src/islands/anatomylazy';
 
 const layers: Layer[] = [
   { id: 'skin', ids: ['s1'] },
   { id: 'muscle', ids: ['m1', 'm2'] },
   { id: 'skeleton', ids: ['b1'] },
 ];
+
+describe('phone confirmation for bulk anatomy downloads', () => {
+  it('requires another explicit action only when a narrow viewport would fetch multiple files', () => {
+    expect(needsBulkLayerConfirmation(true, 10)).toBe(true);
+    expect(needsBulkLayerConfirmation(true, 2)).toBe(true);
+    expect(needsBulkLayerConfirmation(true, 1)).toBe(false);
+    expect(needsBulkLayerConfirmation(true, 0)).toBe(false);
+    expect(needsBulkLayerConfirmation(false, 10)).toBe(false);
+  });
+
+  it('does not accept invalid or fractional missing-file counts', () => {
+    for (const count of [-1, Number.NaN, Number.POSITIVE_INFINITY, 1.5]) {
+      expect(needsBulkLayerConfirmation(true, count)).toBe(false);
+    }
+  });
+
+  it('deduplicates shared URLs before deciding whether the request is bulk', () => {
+    const fileLists = [['shared.glb', 'other.glb'], ['shared.glb', 'third.glb']];
+    const downloaded = new Set(['shared.glb']);
+    const missing = new Set(fileLists.flat().filter((url) => !downloaded.has(url)));
+    expect([...missing].sort()).toEqual(['other.glb', 'third.glb']);
+    expect(needsBulkLayerConfirmation(true, missing.size)).toBe(true);
+    downloaded.add('other.glb');
+    missing.delete('other.glb');
+    expect(needsBulkLayerConfirmation(true, missing.size)).toBe(false);
+  });
+});
 
 describe('partial failures and show all', () => {
   it('hands over the files that loaded when another file of the layer fails, and retries only the failed one', async () => {
