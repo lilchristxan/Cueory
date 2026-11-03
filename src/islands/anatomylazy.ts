@@ -76,7 +76,6 @@ export async function loadModelsOrDispose<T>(
     throw error;
   }
 }
-}
 
 /** Some of a layer's files loaded and some failed: the loaded ones are kept here so the caller can still use them. */
 export class PartialLoadError<R> extends Error {
