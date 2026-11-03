@@ -402,6 +402,37 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts }: Pr
     if (load.state === 'ready') sceneRef.current?.setAppearance({ hidden, selected });
   }, [hidden, selected, load]);
 
+  // Phones may lose their WebGL context after opening (for example under GPU
+  // memory pressure). Do not leave a blank canvas claiming the model is ready.
+  // Retire active work and switch to the same searchable text fallback used
+  // when WebGL could not initialize in the first place.
+  useEffect(() => {
+    if (phase !== 'open') return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const onContextLost = (event: Event) => {
+      event.preventDefault();
+      generation.bump(); // pending picture exports must not save a stale image
+      loaderRef.current?.retire();
+      loaderRef.current = null;
+      const scene = sceneRef.current;
+      sceneRef.current = null;
+      try {
+        scene?.dispose();
+      } catch {
+        // A lost GPU context can reject disposal calls. Text access must survive.
+      }
+      setExporting(null);
+      setExportNote('');
+      setPending(new Set());
+      setLayerError(null);
+      setPhase('error');
+    };
+    canvas.addEventListener('webglcontextlost', onContextLost);
+    return () => canvas.removeEventListener('webglcontextlost', onContextLost);
+  }, [phase, generation]);
+
   useEffect(() => () => sceneRef.current?.dispose(), []);
 
   useEffect(() => {
