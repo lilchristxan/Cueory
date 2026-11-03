@@ -9,7 +9,7 @@ The whole-body `show all` action can issue several `ensure()` requests for diffe
 ## Change
 
 - `src/islands/anatomylazy.ts`: at most **two** simultaneous **on-demand** model fetches across all overlapping layer requests. Maintain unique per-file in-flight promises, cache successful files, preserve partial successes on failure, and allow retries. Retiring the loader cancels waiting work and ignores late active results.
-- `tests/unit/anatomy-loader-concurrency.test.ts`: synthetic tests for the global two-file cap, shared URLs, queued cancellation, partial failures, and a synchronously throwing fetcher.
+- `tests/unit/anatomy-loader-concurrency.test.ts`: five synthetic tests for the global two-file cap, shared URLs, queued cancellation, a queued file preloaded elsewhere, partial failures, and a synchronously throwing fetcher.
 - `docs/status/in-review/task-178-bound-on-demand-glb-downloads.md`: this status note.
 
 ## Boundaries
@@ -18,4 +18,4 @@ No clinical facts, anatomy names, model files, source licenses, approval status,
 
 ## Validation
 
-An isolated Node `--test` behavioral smoke test of the queue logic passed three cases (concurrency, retiring, and partial retry). Full project TypeScript, Vitest, Astro build, Playwright and CI have **not** been run locally because this environment cannot clone the GitHub checkout. Exact-head CI and independent review are required. Preserve Task 178's existing human approval and draft publication gates.
+GitHub CI on the previous head `4076cdd` passed `npm run check`, `npm run build`, and `npm test`, plus CodeQL, Semgrep, gitleaks and the Cloudflare preview. The browser job was canceled during the larger suite, so the complete workflow was not green. Codex review found no major issues. The fifth queued-preload regression was added afterward and requires fresh exact-head CI. The connected environment cannot clone the checkout to run full checks locally. Independent review remains required. Preserve Task 178's existing human approval and draft publication gates.
