@@ -101,6 +101,10 @@ export function parseAnatomyFile(json: unknown, path: string, options: { fixture
   if (!key) fail('an anatomy file is named anatomy-<system>.json');
   if (!isRecord(json)) fail('the file must hold one JSON object');
   const file = json as Record<string, unknown>;
+  // Every file must identify the model it describes. Do not interpret a diagram,
+  // overlay or mismatched source record as an anatomy model.
+  if (file['id'] !== `anatomy-${key}`) fail('"id" must match the anatomy source filename');
+  if (file['kind'] !== 'model') fail('"kind" must be "model"');
   if (!text(file['title'], 120)) fail('"title" must be a short line of text');
   const status = file['status'];
   if (status !== 'draft' && status !== 'approved') fail('"status" must be "draft" or "approved"');
