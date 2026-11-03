@@ -23,6 +23,7 @@ const credits = creditsFor(shown);
       {shown.map((visual) => (
         <div data-visual={visual.id}>
           <VisualDiagram client:only="react" visual={visual} credit={false} />
+          <noscript><p>this page needs javascript turned on.</p></noscript>
         </div>
       ))}
       {credits.length > 0 && (

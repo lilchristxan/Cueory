@@ -19,6 +19,7 @@ import { gameName } from '../../config/games';
       <h2 class="text-lg font-medium text-ink">a game: {gameName('pulse')}</h2>
       <div class="rounded-2xl border border-line p-6">
         <ShareSheet tool="pulse" siteUrl={site.url} client:only="react" />
+        <noscript><p>this page needs javascript turned on.</p></noscript>
       </div>
     </div>
 
@@ -26,6 +27,7 @@ import { gameName } from '../../config/games';
       <h2 class="text-lg font-medium text-ink">study skills</h2>
       <div class="rounded-2xl border border-line p-6">
         <ShareSheet tool="study" siteUrl={site.url} client:only="react" />
+        <noscript><p>this page needs javascript turned on.</p></noscript>
       </div>
     </div>
   </section>
