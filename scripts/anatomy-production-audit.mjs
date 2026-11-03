@@ -16,11 +16,16 @@ const MODEL_ASSET = /\.(?:glb|gltf|obj|stl)$/i;
 // Site search, manifests or unrelated pages can otherwise accidentally expose a draft identifier.
 const TEXT_ASSET = /\.(?:html?|js|mjs|json|map|xml|svg|txt|css|csv|tsv|md|webmanifest)$/i;
 
-function walkFiles(dir) {
+/** Walk a built artifact without following links outside (or back into) the output. */
+function walkFiles(dir, linked) {
   if (!existsSync(dir)) return [];
   return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
     const p = join(dir, entry.name);
-    if (entry.isDirectory()) return walkFiles(p);
+    if (entry.isSymbolicLink()) {
+      linked.push(p); // A link is not proof of a reviewed production asset.
+      return [];
+    }
+    if (entry.isDirectory()) return walkFiles(p, linked);
     if (entry.isFile()) return [p];
     return [];
   });
@@ -110,9 +115,13 @@ export function auditAnatomyProduction(distDir, contentDir) {
 
   // Inspect the entire output, not only dist/models/anatomy: a misplaced file is just as public.
   // The source manifest approves exact .glb URLs; any other 3D asset must be explicitly reviewed.
-  const shipped = [...new Set(walkFiles(dist)
+  const linked = [];
+  const builtFiles = walkFiles(dist, linked);
+  const toUrl = (path) => '/' + path.slice(dist.length + 1).replaceAll('\\', '/');
+  for (const path of linked) errors.push(`symbolic link in production output: ${toUrl(path)}`);
+  const shipped = [...new Set(builtFiles
     .filter((path) => MODEL_ASSET.test(path))
-    .map((path) => '/' + path.slice(dist.length + 1).replaceAll('\\', '/')))];
+    .map(toUrl))];
 
   for (const url of shipped) {
     if (!approved.has(url)) errors.push(`unapproved model exposed in production: ${url}`);
@@ -121,16 +130,18 @@ export function auditAnatomyProduction(distDir, contentDir) {
     if (!shipped.includes(url)) errors.push(`approved model missing from production: ${url}`);
   }
 
-  const fixtureRoot = join(dist, 'preview', 'anatomy-fixture');
-  for (const p of walkFiles(fixtureRoot)) {
-    errors.push(`test fixture exposed in production: /preview/anatomy-fixture/${p.slice(fixtureRoot.length + 1).replaceAll('\\', '/')}`);
+  for (const path of builtFiles) {
+    const url = toUrl(path);
+    if (url.startsWith('/preview/anatomy-fixture/')) {
+      errors.push(`test fixture exposed in production: ${url}`);
+    }
   }
 
   // Draft labels must not be baked into static HTML/JS data, even if their .glb files were pruned.
   // The identifiers are original data keys, not guessed medical wording. Only match exact token boundaries.
   // Search every static text asset, including Pagefind/search data and other public routes.
   // Token boundaries avoid confusing FMA999991 with FMA9999910. Unknown ID formats fail source validation above.
-  const textFiles = walkFiles(dist).filter((path) => TEXT_ASSET.test(path));
+  const textFiles = builtFiles.filter((path) => TEXT_ASSET.test(path));
   const draftTokens = draftIds;
   if (draftTokens.size) {
     for (const file of textFiles) {
