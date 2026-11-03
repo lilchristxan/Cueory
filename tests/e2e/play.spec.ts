@@ -1,5 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
+import { sizeOf } from './projects';
 
 /**
  * Daily games (D-61): pillo (Task 114; its id is still pulse) on /play. The page's clock is set to 1 November 2026, the
@@ -677,5 +678,43 @@ test.describe('daily games without JavaScript', () => {
     ]);
     await expect(page.getByTestId('sample-note')).toBeVisible();
     await expect(page.getByTestId('triage-sample-note')).toBeVisible();
+  });
+});
+
+test.describe('tablet keyboard walk', () => {
+  test('Tab reaches every visible /play control', async ({ page }, testInfo) => {
+    test.skip(sizeOf(testInfo) !== 'tablet', 'Task 156 runs on the tablet viewport only');
+    await page.clock.setFixedTime(new Date('2026-11-01T15:00:00'));
+    await page.goto('/play');
+    await expect(page.getByRole('heading', { level: 1, name: 'daily games' })).toBeVisible();
+
+    const selector = 'main a[href], main button, main input, main select, main textarea, main [tabindex]';
+    const controls = await page.locator(selector).evaluateAll((elements) =>
+      elements.flatMap((element, index) => {
+        const el = element as HTMLElement;
+        const style = getComputedStyle(el);
+        if (el.tabIndex < 0 || el.matches(':disabled') || el.getClientRects().length === 0 || style.visibility === 'hidden') {
+          return [];
+        }
+        return [{ index, label: el.getAttribute('aria-label') || el.textContent?.trim().slice(0, 40) || el.tagName.toLowerCase() }];
+      }),
+    );
+    expect(controls.length).toBeGreaterThan(0);
+
+    const visited = new Set<number>();
+    const firstFocus = await page.evaluate(() => document.querySelector('main') === document.activeElement);
+    expect(firstFocus).toBe(false);
+    for (let step = 0; step < controls.length * 3 + 20 && visited.size < controls.length; step++) {
+      await page.keyboard.press('Tab');
+      const index = await page.evaluate((query) => {
+        const active = document.activeElement;
+        const elements = [...document.querySelectorAll<HTMLElement>(query)];
+        return elements.findIndex((element) => element === active);
+      }, selector);
+      const expected = controls.find((control) => control.index === index);
+      if (expected) visited.add(expected.index);
+    }
+
+    expect([...visited].sort((a, b) => a - b)).toEqual(controls.map((control) => control.index).sort((a, b) => a - b));
   });
 });
