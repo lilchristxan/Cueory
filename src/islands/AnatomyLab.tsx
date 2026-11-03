@@ -8,7 +8,7 @@ import {
   type MutableRefObject,
   type PointerEvent as ReactPointerEvent,
 } from 'react';
-import { createGeneration, createOnDemandLoader, filesForLayer, firstLayer, layerNeedsReveal, lazyPeel, lazyRestore, PartialLoadError, revealTargetPlan, showAllPlan, structureLoadNote, type OnDemandLoader } from './anatomylazy';
+import { createGeneration, createOnDemandLoader, filesForLayer, firstLayer, layerNeedsReveal, needsBulkLayerConfirmation, lazyPeel, lazyRestore, PartialLoadError, revealTargetPlan, showAllPlan, structureLoadNote, type OnDemandLoader } from './anatomylazy';
 import type { LabColors, LabScene, LoadResult } from './anatomyscene';
 import { checkTriangleBudget } from './bodyviewer-logic';
 import {
@@ -154,10 +154,13 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts }: Pr
   const [pending, setPending] = useState<ReadonlySet<string>>(new Set());
   const [layerError, setLayerError] = useState<{ layer: string; message: string; retry: () => void } | null>(null);
   const [filesLoaded, setFilesLoaded] = useState(0);
+  const [bulkPrompt, setBulkPrompt] = useState<{ systemKey: string; files: number } | null>(null);
   const generation = useMemo(() => createGeneration(), []);
   const loaderRef = useRef<OnDemandLoader<LoadResult> | null>(null);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const showAllButtonRef = useRef<HTMLButtonElement>(null);
+  const confirmBulkButtonRef = useRef<HTMLButtonElement>(null);
   const sceneRef = useRef<LabScene | null>(null);
   const colorsRef = useRef<LabColors | null>(null);
   const readColorsRef = useRef<(() => LabColors) | null>(null);
@@ -189,6 +192,12 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts }: Pr
     [labelsOn, quiz, visible, selected],
   );
   labelIdsRef.current = labelIds;
+
+  // A confirmation for one body system must not follow a switch to another system.
+  useEffect(() => setBulkPrompt(null), [systemKey]);
+  useEffect(() => {
+    if (bulkPrompt?.systemKey === systemKey) confirmBulkButtonRef.current?.focus();
+  }, [bulkPrompt, systemKey]);
 
   // ── Labels follow the camera: re-laid out after every frame the scene draws ──────────────────────────────────────
   const updateLabels = useCallback(() => {
@@ -380,8 +389,8 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts }: Pr
     [system],
   );
 
-  /** Show every structure; in the lazy whole-body view, layers not fetched yet are fetched, then shown. */
-  const showAll = () => {
+  /** Actually show all: use the existing on-demand loader only after any phone confirmation. */
+  const showAllNow = () => {
     const loader = loaderRef.current;
     if (!lazy || !system || !loader) {
       setHidden(new Set());
@@ -394,6 +403,30 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts }: Pr
       return next;
     });
     for (const layer of plan.fetch) reveal(layer);
+  };
+
+  /** Never start many missing GLB requests from a single, accidental phone tap. */
+  const showAll = () => {
+    const loader = loaderRef.current;
+    if (lazy && system && loader) {
+      const plan = showAllPlan(layers, hidden, (id) => filesForLayer(system, id), (url) => loader.isLoaded(url));
+      const missingFiles = new Set(
+        plan.fetch.flatMap((layer) => filesForLayer(system, layer.id).filter((url) => !loader.isLoaded(url))),
+      );
+      const phone = window.matchMedia?.('(max-width: 767px)').matches ?? false;
+      if (needsBulkLayerConfirmation(phone, missingFiles.size)) {
+        setBulkPrompt({ systemKey: system.key, files: missingFiles.size });
+        return;
+      }
+    }
+    setBulkPrompt(null);
+    showAllNow();
+  };
+
+  const finishBulkPrompt = (confirm: boolean) => {
+    setBulkPrompt(null);
+    if (confirm) showAllNow();
+    showAllButtonRef.current?.focus();
   };
 
   useEffect(() => {
@@ -635,7 +668,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts }: Pr
             <button type="button" className={iconButton} aria-label="zoom in" onClick={() => sceneRef.current?.zoom(ZOOM_IN)}>+</button>
             <button type="button" className={iconButton} aria-label="zoom out" onClick={() => sceneRef.current?.zoom(1 / ZOOM_IN)}>−</button>
             <button type="button" className={secondaryButton} onClick={() => sceneRef.current?.resetView()}>reset view</button>
-            <button type="button" className={secondaryButton} disabled={!ready} onClick={showAll}>show all</button>
+            <button ref={showAllButtonRef} type="button" className={secondaryButton} disabled={!ready} onClick={showAll}>show all</button>
             <button
               type="button"
               className={secondaryButton}
@@ -646,6 +679,27 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts }: Pr
               labels
             </button>
           </div>
+          {bulkPrompt?.systemKey === system.key && (
+            <div
+              role="group"
+              aria-label="confirm loading every body layer"
+              className="space-y-3 rounded-lg border border-line bg-surface p-4"
+              data-testid="anatomy-bulk-confirm"
+            >
+              <p role="status" className="text-sm text-ink">
+                showing every layer would download {bulkPrompt.files} more 3D model files. on a phone, this can slow the
+                view or make it stop responding. choose whether to continue.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <button ref={confirmBulkButtonRef} type="button" className={primaryButton} onClick={() => finishBulkPrompt(true)}>
+                  load every layer
+                </button>
+                <button type="button" className={secondaryButton} onClick={() => finishBulkPrompt(false)}>
+                  keep current view
+                </button>
+              </div>
+            </div>
+          )}
           {layers.length > 1 && (
             <fieldset className="space-y-3 rounded-lg border border-line p-4">
               <legend className="px-1 text-sm text-ink-soft">layers, skin to bone</legend>
