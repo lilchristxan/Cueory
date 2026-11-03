@@ -28,6 +28,7 @@ import {
   BEHIND_MARK,
   EXPORT_SIZES,
   answerQuiz,
+  anatomyFailureMessage,
   creditFor,
   exportFileName,
   groupStructures,
@@ -371,7 +372,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts }: Pr
             if (loader.isRetired()) return;
             // Files that did arrive are already in the scene: count them, so their structures are listed and quizzable.
             if (err instanceof PartialLoadError) take(err.results as LoadResult[]);
-            setLayerError({ layer: layer.id, message: err instanceof Error ? err.message : String(err), retry: run });
+            setLayerError({ layer: layer.id, message: anatomyFailureMessage('layer', err), retry: run });
           })
           .finally(() => loader.isRetired() || setPending((p) => new Set([...p].filter((id) => id !== layer.id))));
       };
@@ -522,7 +523,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts }: Pr
       setExportNote([`saved ${fileName}.`, ...labelNotes(names, leftOut, behind.length > 0)].join(' '));
     } catch (err) {
       if (!generation.isCurrent(mine)) return;
-      setExportNote(`could not save the picture: ${err instanceof Error ? err.message : String(err)}`);
+      setExportNote(anatomyFailureMessage('picture', err));
     } finally {
       if (generation.isCurrent(mine)) setExporting(null);
     }
