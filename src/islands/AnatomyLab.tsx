@@ -413,6 +413,10 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts }: Pr
 
     const onContextLost = (event: Event) => {
       event.preventDefault();
+      // The old canvas can disappear before a touch receives pointerup.
+      // Clear its pointer IDs so taps on the new canvas are not mistaken for a pinch.
+      activePointers.current.clear();
+      pointerRef.current = null;
       generation.bump(); // pending picture exports must not save a stale image
       loaderRef.current?.retire();
       loaderRef.current = null;
