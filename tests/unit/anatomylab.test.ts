@@ -505,7 +505,8 @@ describe('exported pictures', () => {
     // A canvas fillText(..., layout.maxWidth) must bound any word that cannot wrap.
     const title = 'x'.repeat(120);
     const layout = pictureTitleLayout(title, 300, 20, 28, 1.2, (s) => s.length * 10);
-    expect(layout.lines).toEqual([title]);
+    // Compatible with the separate long-word wrapping improvement in PR #427.
+    expect(layout.lines.join('')).toBe(title);
     expect(layout.maxWidth).toBe(260);
     expect(layout.top).toBeGreaterThan(20);
   });
