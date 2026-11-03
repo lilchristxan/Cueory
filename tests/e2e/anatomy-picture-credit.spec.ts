@@ -43,6 +43,9 @@ test('exported anatomy pictures print a license URI only for real models', async
     .getByRole('button', { name: 'kidneys and urinary tract', exact: true });
   await expect(kidney).toBeVisible();
   await kidney.click();
+  // Wait for this system's actual GLB, not the previous fixture's briefly enabled export button.
+  await expect(page.getByText(/^kidneys and urinary tract: \d+ structures loaded\.$/))
+    .toHaveCount(1, { timeout: 20_000 });
   await expect(page.getByRole('button', { name: 'square 1080×1080' }))
     .toBeEnabled({ timeout: 20_000 });
   await page.evaluate(() => {
