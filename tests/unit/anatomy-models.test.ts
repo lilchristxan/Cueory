@@ -126,6 +126,36 @@ describe("reading a GLB file's JSON", () => {
   it('refuses a file that is not GLB', () => {
     expect(() => glbJson(new TextEncoder().encode('{"nodes":[]} not a glb file'))).toThrow('not a GLB version 2 file');
   });
+
+  it('rejects a GLB with an incorrect total size or incomplete JSON chunk', () => {
+    const valid = glb({ nodes: [] });
+    const wrongSize = valid.slice();
+    new DataView(wrongSize.buffer).setUint32(8, valid.byteLength + 4, true);
+    expect(() => glbJson(wrongSize)).toThrow('file length does not match');
+
+    const truncatedJson = valid.slice();
+    new DataView(truncatedJson.buffer).setUint32(12, valid.byteLength, true);
+    expect(() => glbJson(truncatedJson)).toThrow('no complete JSON chunk');
+
+    const unalignedJson = valid.slice();
+    new DataView(unalignedJson.buffer).setUint32(12, 3, true);
+    expect(() => glbJson(unalignedJson)).toThrow('no complete JSON chunk');
+  });
+
+  it('counts only triangle primitives with valid index accessors', () => {
+    const mesh = (indices: number, mode?: number) => glb({
+      meshes: [{ primitives: [{ indices, ...(mode === undefined ? {} : { mode }) }] }],
+      accessors: [{ count: 6 }],
+    });
+    expect(glbTriangles(mesh(0))).toBe(2);
+    expect(glbTriangles(mesh(0, 4))).toBe(2);
+    expect(() => glbTriangles(mesh(0, 5))).toThrow('not triangles');
+    expect(() => glbTriangles(mesh(1))).toThrow('invalid triangle index count');
+    expect(() => glbTriangles(glb({
+      meshes: [{ primitives: [{ indices: 0 }] }],
+      accessors: [{ count: 5 }],
+    }))).toThrow('invalid triangle index count');
+  });
 });
 
 describe('matching model nodes and labels', () => {

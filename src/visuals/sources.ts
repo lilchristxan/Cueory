@@ -199,7 +199,7 @@ export interface GlbJson {
   asset?: { copyright?: string };
   extensionsRequired?: string[];
   nodes?: { name?: string; mesh?: number }[];
-  meshes?: { primitives: { indices?: number }[] }[];
+  meshes?: { primitives: { indices?: number; mode?: number }[] }[];
   accessors?: { count: number }[];
 }
 
@@ -212,8 +212,13 @@ export function glbJson(bytes: Uint8Array): GlbJson {
   if (bytes.byteLength < 20 || view.getUint32(0, true) !== 0x46546c67 || view.getUint32(4, true) !== 2) {
     throw new Error('not a GLB version 2 file');
   }
+  if (view.getUint32(8, true) !== bytes.byteLength) {
+    throw new Error('the GLB file length does not match its header');
+  }
   const length = view.getUint32(12, true);
-  if (view.getUint32(16, true) !== 0x4e4f534a || 20 + length > bytes.byteLength) throw new Error('the GLB file has no JSON chunk');
+  if (view.getUint32(16, true) !== 0x4e4f534a || length === 0 || length % 4 !== 0 || 20 + length > bytes.byteLength) {
+    throw new Error('the GLB file has no complete JSON chunk');
+  }
   return JSON.parse(new TextDecoder().decode(bytes.subarray(20, 20 + length))) as GlbJson;
 }
 
@@ -228,8 +233,16 @@ export function glbTriangles(bytes: Uint8Array): number {
   let triangles = 0;
   for (const mesh of json.meshes ?? []) {
     for (const primitive of mesh.primitives) {
+      // GLB mode 4 means triangles; glTF defaults to 4 when mode is absent.
+      if (primitive.mode !== undefined && primitive.mode !== 4) {
+        throw new Error('a mesh primitive is not triangles (mode 4)');
+      }
       if (primitive.indices === undefined) throw new Error('a mesh without indices');
-      triangles += json.accessors![primitive.indices]!.count / 3;
+      const count = json.accessors?.[primitive.indices]?.count;
+      if (typeof count !== 'number' || !Number.isSafeInteger(count) || count < 3 || count % 3 !== 0) {
+        throw new Error('a mesh has an invalid triangle index count');
+      }
+      triangles += count / 3;
     }
   }
   return triangles;
