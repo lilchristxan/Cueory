@@ -417,7 +417,6 @@ test.describe('anatomy lab', () => {
     await expect(list(page).getByRole('button', { name: target, exact: true })).toHaveAttribute('aria-pressed', 'true');
     await expect(list(page).getByRole('button', { name: `hide ${target}` })).toBeDisabled();
   });
-  });
 
   test('exports a phone picture as a 1080 × 1920 PNG with the right file name', async ({ page }, info) => {
     test.skip(!isDesktopOfEachEngine(info), 'one export run per engine is enough');
@@ -477,7 +476,7 @@ test.describe('anatomy lab whole body loads layers on demand', () => {
   test('initial HTML contains each source structure once, then offers whole body after opening', async ({ page }, info) => {
     test.skip(!isDesktopOfEachEngine(info), 'one HTML payload check per browser engine');
     const heart = JSON.parse(
-      await readFile(new URL('../../content/visuals/anatomy-heart.json', import.meta.url), 'utf8'),
+      await readFile(new globalThis.URL('../../content/visuals/anatomy-heart.json', import.meta.url), 'utf8'),
     ) as { labels: Array<{ id: string }> };
     const sourceId = heart.labels[0]?.id ?? '';
     expect(sourceId).not.toBe('');
@@ -584,7 +583,6 @@ test.describe('anatomy lab whole body loads layers on demand', () => {
     await expect(note).toContainText('loaded triangles across 2 model files');
     await expect(note).toContainText('phone budget applies to each file, not their combined total');
     await expect(note).not.toContainText('Model has');
-  });
   });
 
   test('the organs button loads missing files when only the heart is visible from the vessels layer', async ({ page }, info) => {
