@@ -1,0 +1,1 @@
+status: Task 178 anatomy picture exports: long system titles wrap within picture margins, reserve the correct title-band height, and use canvas text width limits for exceptional unbroken words. Three synthetic layout regressions added; preview, CI and founder approval remain required before publishing anatomy content.
