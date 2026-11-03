@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { auditAnatomyProduction, modelUrls } from '../../scripts/anatomy-production-audit.mjs';
+import { auditAnatomyProduction, modelUrls, readRegularFileNoFollow } from '../../scripts/anatomy-production-audit.mjs';
 
 const roots: string[] = [];
 afterEach(() => roots.splice(0).forEach((p) => rmSync(p, { recursive: true, force: true })));
@@ -102,6 +102,16 @@ describe('anatomy production artifact audit', () => {
     const f = setup();
     symlinkSync(join(f.content, 'anatomy-approved.json'), join(f.content, 'anatomy-aliased.json'));
     expect(f.check().errors).toContain('anatomy-aliased.json: anatomy source must not be a symbolic link');
+  });
+
+  it('reads regular text through a descriptor and refuses symlink aliases', () => {
+    const f = setup();
+    const original = join(f.dist, 'preview', 'anatomy-lab.html');
+    expect(readRegularFileNoFollow(original)).toContain('noindex');
+    const alias = join(f.dist, 'preview', 'aliased-anatomy.html');
+    symlinkSync(original, alias);
+    expect(() => readRegularFileNoFollow(alias)).toThrow();
+    expect(() => readRegularFileNoFollow(f.dist)).toThrow('not a regular file');
   });
 
   it('rejects a fixture endpoint even when no draft model is present', () => {
