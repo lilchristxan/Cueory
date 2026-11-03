@@ -36,6 +36,18 @@ function glb(json: object): Uint8Array {
   return bytes;
 }
 
+/** Append one aligned GLB chunk, updating the header length (synthetic test data only). */
+function appendGlbChunk(bytes: Uint8Array, type: number, payload: Uint8Array): Uint8Array {
+  const out = new Uint8Array(bytes.length + 8 + payload.length);
+  out.set(bytes);
+  const view = new DataView(out.buffer);
+  view.setUint32(8, out.length, true);
+  view.setUint32(bytes.length, payload.length, true);
+  view.setUint32(bytes.length + 4, type, true);
+  out.set(payload, bytes.length + 8);
+  return out;
+}
+
 const BODYPARTS3D = allowedBooks.find((book) => book.book === 'BodyParts3D')!;
 
 /** Test data in the shape of a model's source file: the id and name are placeholders, not a real structure. */
@@ -156,6 +168,47 @@ describe("reading a GLB file's JSON", () => {
       accessors: [{ count: 5 }],
     }))).toThrow('invalid triangle index count');
   });
+  it('verifies GLB BIN chunks and allows later extension chunks', () => {
+    const withBuffer = glb({ buffers: [{ byteLength: 3 }], nodes: [] });
+    const valid = appendGlbChunk(withBuffer, 0x004e4942, new Uint8Array(4));
+    expect(glbJson(valid).buffers?.[0]?.byteLength).toBe(3);
+
+    // Unknown chunk types after standard chunks are allowed by glTF 2.0.
+    const extended = appendGlbChunk(valid, 0x58545241, new Uint8Array(4));
+    expect(glbJson(extended).buffers?.[0]?.byteLength).toBe(3);
+
+    expect(() => glbJson(withBuffer)).toThrow('missing its referenced BIN chunk');
+    expect(() => glbJson(appendGlbChunk(withBuffer, 0x58545241, new Uint8Array(4))))
+      .toThrow('missing its referenced BIN chunk');
+    const lateBin = appendGlbChunk(
+      appendGlbChunk(glb({ buffers: [{ byteLength: 4 }] }), 0x58545241, new Uint8Array(4)),
+      0x004e4942, new Uint8Array(4),
+    );
+    expect(() => glbJson(lateBin)).toThrow('BIN chunk must follow');
+  });
+
+  it('rejects truncated, unaligned or wrongly sized GLB chunks', () => {
+    const original = glb({ buffers: [{ byteLength: 4 }] });
+    const valid = appendGlbChunk(original, 0x004e4942, new Uint8Array(4));
+    const overdeclared = valid.slice();
+    new DataView(overdeclared.buffer).setUint32(original.length, 8, true);
+    expect(() => glbJson(overdeclared)).toThrow('invalid chunk length');
+
+    const unaligned = valid.slice();
+    new DataView(unaligned.buffer).setUint32(original.length, 3, true);
+    expect(() => glbJson(unaligned)).toThrow('invalid chunk length');
+
+    const partialHeader = new Uint8Array(original.length + 4);
+    partialHeader.set(original);
+    new DataView(partialHeader.buffer).setUint32(8, partialHeader.length, true);
+    expect(() => glbJson(partialHeader)).toThrow('incomplete chunk header');
+
+    expect(() => glbJson(appendGlbChunk(glb({ buffers: [{ byteLength: 8 }] }), 0x004e4942, new Uint8Array(4))))
+      .toThrow('BIN chunk length does not match');
+    expect(() => glbJson(appendGlbChunk(glb({ buffers: [{ byteLength: 0 }] }), 0x004e4942, new Uint8Array(4))))
+      .toThrow('BIN chunk length does not match');
+  });
+
 });
 
 describe('matching model nodes and labels', () => {
