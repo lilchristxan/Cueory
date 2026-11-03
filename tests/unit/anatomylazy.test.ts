@@ -1,14 +1,62 @@
 import { describe, expect, it } from 'vitest';
-import type { AnatomyStructure } from '../../src/islands/anatomylab';
-import { LAYERS, wholeBody, layerShown, type Layer } from '../../src/islands/anatomylayers';
+import type { AnatomyStructure, AnatomySystem } from '../../src/islands/anatomylab';
+import { LAYERS, wholeBody, layerShown, layersOf, type Layer } from '../../src/islands/anatomylayers';
 import { onlyThis } from '../../src/islands/anatomylab';
-import { PartialLoadError, revealTargetPlan, showAllPlan, createGeneration, createOnDemandLoader, filesForLayer, firstLayer, layerNeedsReveal, lazyPeel, lazyRestore, structureLoadNote } from '../../src/islands/anatomylazy';
+import { PartialLoadError, revealTargetPlan, showAllPlan, createGeneration, createOnDemandLoader, filesForLayer, firstLayer, idsForModelFiles, layerNeedsReveal, lazyPeel, lazyRestore, structureLoadNote } from '../../src/islands/anatomylazy';
 
 const layers: Layer[] = [
   { id: 'skin', ids: ['s1'] },
   { id: 'muscle', ids: ['m1', 'm2'] },
   { id: 'skeleton', ids: ['b1'] },
 ];
+
+describe('shared model file in the first lazy load', () => {
+  it('maps structures in every layer of the initial files while keeping deeper layers hidden', async () => {
+    const makeSystem = (key: string, structures: AnatomyStructure[]): AnatomySystem => ({
+      key,
+      title: key,
+      status: 'approved',
+      model: { file: `/models/anatomy/${key}.glb`, release: 'sample-release' },
+      structures,
+    });
+    // The first visible layer is vessels; heart.glb also contains a hidden organ.
+    const body = wholeBody([
+      makeSystem('heart', [
+        { id: 'organ-one', text: 'sample organ one', layer: 'organs' },
+        { id: 'vessel-one', text: 'sample vessel one', layer: 'vessels' },
+      ]),
+      makeSystem('vessels', [{ id: 'vessel-two', text: 'sample vessel two', layer: 'vessels' }]),
+      makeSystem('lungs', [{ id: 'organ-two', text: 'sample organ two', layer: 'organs' }]),
+    ])!;
+    const allLayers = layersOf(body.structures);
+    const first = firstLayer(allLayers)!;
+    expect(first.id).toBe('vessels');
+    const firstFiles = filesForLayer(body, first.id);
+    expect(firstFiles).toEqual(['/models/anatomy/heart.glb', '/models/anatomy/vessels.glb']);
+
+    // scene.load must receive ALL candidate IDs in the downloaded files, not
+    // just first.ids: otherwise the organ mesh becomes permanently unlabeled.
+    const initialCandidates = idsForModelFiles(body, allLayers, firstFiles);
+    expect(initialCandidates).toEqual(['vessel-one', 'vessel-two', 'organ-one', 'organ-two']);
+    expect(initialCandidates).toContain('organ-one');
+    expect(idsForModelFiles(body, allLayers, [...firstFiles, firstFiles[0]!])).toEqual(initialCandidates);
+
+    // Registration is not visibility: organs are still hidden until the student
+    // shows them. The later organs download must not fetch heart.glb twice.
+    const initialHidden = new Set(body.structures.filter((s) => !first.ids.includes(s.id)).map((s) => s.id));
+    expect(initialHidden.has('organ-one')).toBe(true);
+    expect(initialHidden.has('vessel-one')).toBe(false);
+    const requests: string[] = [];
+    const loader = createOnDemandLoader(async (url) => {
+      requests.push(url);
+      return url;
+    });
+    for (const url of firstFiles) loader.markLoaded(url);
+    expect(await loader.ensure(filesForLayer(body, 'organs'))).toEqual(['/models/anatomy/lungs.glb']);
+    expect(requests).toEqual(['/models/anatomy/lungs.glb']);
+    expect(idsForModelFiles(body, allLayers, ['/models/anatomy/lungs.glb'])).toContain('organ-two');
+  });
+});
 
 describe('partial failures and show all', () => {
   it('hands over the files that loaded when another file of the layer fails, and retries only the failed one', async () => {
