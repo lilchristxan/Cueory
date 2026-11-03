@@ -6,6 +6,7 @@ import { parseSet as parseLabelSet } from './islands/labelit';
 import { sampleChecker, type SampleItem } from './islands/questions';
 import { visualProblems } from './visuals/sources';
 import { videoSchema } from './videos/schema';
+import { cardContentProblems } from './content/card-validation';
 
 /**
  * Lessons are content, not code: they live as JSON files in /content/lessons.
@@ -57,6 +58,12 @@ const cards = defineCollection({
           }),
       )
       .min(1),
+    )
+    .superRefine(({ cards }, context) => {
+      for (const message of cardContentProblems(cards)) {
+        context.addIssue({ code: 'custom', path: ['cards'], message });
+      }
+    }),
   }),
 });
 
