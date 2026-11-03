@@ -61,9 +61,13 @@ export function releaseNoteFor(system: Pick<AnatomySystem, 'status' | 'model' | 
     : `model release: ${system.model.release}`;
 }
 
-/** The full credit drawn at the bottom of an exported picture: the credit, then the release note. */
+/**
+ * Credit printed on exported pictures. The screen has a clickable license link, but a shared PNG loses that link,
+ * so include its full URI in the picture. The synthetic fixture has no BodyParts3D attribution.
+ */
 export function pictureCreditFor(system: Pick<AnatomySystem, 'status' | 'model' | 'fixture'>): string {
-  return `${creditFor(system)} · ${releaseNoteFor(system)}`;
+  const license = system.fixture ? '' : ` · license: ${BODYPARTS3D_LICENSE_URL}`;
+  return `${creditFor(system)}${license} · ${releaseNoteFor(system)}`;
 }
 
 /** Where a structure's name comes from, shown on its name card. */
