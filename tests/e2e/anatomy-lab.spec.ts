@@ -255,6 +255,23 @@ test.describe('anatomy lab', () => {
 });
 
 test.describe('anatomy lab whole body loads layers on demand', () => {
+  test('sends each real structure once before the lab opens and still offers whole body afterward', async ({ page }, info) => {
+    test.skip(!isDesktopOfEachEngine(info), 'one hydration-payload test per browser engine');
+    const response = await page.goto('/preview/anatomy-lab');
+    expect(response).not.toBeNull();
+    const html = await response!.text();
+    // This one source ID is present in the draft heart model; the body view
+    // must not send a duplicate of it as an additional React prop.
+    const sourceId = 'FMA7088';
+    test.skip(!html.includes(sourceId), 'no real draft anatomy systems are present in this build');
+    expect(html.split(sourceId).length - 1).toBe(1);
+
+    await expect(page.getByRole('button', { name: 'whole body', exact: true })).toHaveCount(0);
+    await page.getByRole('button', { name: 'open the anatomy lab' }).click();
+    const body = page.getByRole('group', { name: 'body system' }).getByRole('button', { name: 'whole body', exact: true });
+    await expect(body).toBeVisible({ timeout: 15_000 });
+  });
+
   test('only the outer layer is requested at first; a deeper layer only when peeled to', async ({ page }) => {
     const glb: string[] = [];
     page.on('request', (req) => {
