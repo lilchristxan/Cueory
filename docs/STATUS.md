@@ -278,6 +278,7 @@ Merged into `staging`; the 30 completed pull-request notes have been consolidate
 - Task 97, word path as a themed word search ([#173](https://github.com/lilchristxan/Cueory/pull/173)): an 11 × 11 bordered grid titled by the puzzle's theme, words listed in three columns and crossed off when found, picked by tapping a word's first and last letter or by keyboard, with everyday sample themes; real diagnosis-themed puzzles wait for Christian's reviewed content.
 
 ## In review
+- Task 178, anatomy lab: proposed catalog hydration-size fix on `task-178/anatomy-catalog-single-hydration`, stacked on #290. Whole-body data is composed after the open tap instead of duplicating every structure in initial HTML. Await CI and review; release approval unchanged.
 - Task 108, guided onboarding (#189): two optional setup questions on separate accessible screens with preserved device-local progress, in review.
 - Task 74, accessibility sweep (#157): full-site keyboard and axe audit, with segmented-date regression coverage, awaiting exact-head CI and Codex review.
 - Open pull requests write their line in their own file under `docs/status/in-review/` (see its README); the director
