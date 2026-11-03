@@ -278,6 +278,7 @@ Merged into `staging`; the 30 completed pull-request notes have been consolidate
 - Task 97, word path as a themed word search ([#173](https://github.com/lilchristxan/Cueory/pull/173)): an 11 × 11 bordered grid titled by the puzzle's theme, words listed in three columns and crossed off when found, picked by tapping a word's first and last letter or by keyboard, with everyday sample themes; real diagnosis-themed puzzles wait for Christian's reviewed content.
 
 ## In review
+- Task 178, anatomy lab phone safety: a stacked review proposal in `task-178/mobile-confirm-bulk-layers` asks before bulk loading multiple new 3D files on phones. CI, review and anatomy release approval are still required.
 - Task 178, mobile whole-body preview: proposed phone confirmation before loading multiple additional 3D model files in `task-178/mobile-confirm-bulk-layers`. Awaiting CI, browser testing and lead review. Does not approve draft publication.
 - Task 108, guided onboarding (#189): two optional setup questions on separate accessible screens with preserved device-local progress, in review.
 - Task 74, accessibility sweep (#157): full-site keyboard and axe audit, with segmented-date regression coverage, awaiting exact-head CI and Codex review.
