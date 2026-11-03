@@ -72,6 +72,15 @@ export function structureLoadNote(
 }
 
 /**
+ * Phones need a deliberate confirmation before a single action starts more than
+ * one additional 3D model download. A one-file peel or an already cached view
+ * stays a one-tap action. File counts are computed from unique, unloaded URLs.
+ */
+export function needsBulkLayerConfirmation(narrowViewport: boolean, missingFiles: number): boolean {
+  return narrowViewport && Number.isSafeInteger(missingFiles) && missingFiles >= 2;
+}
+
+/**
  * "Show all" in the lazy view: the structures to unhide right away (those in layers whose files are all loaded, and any
  * in no layer) and the layers that must be fetched first, each shown only once its files are there.
  */
