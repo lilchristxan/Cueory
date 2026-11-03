@@ -592,6 +592,8 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts }: Pr
                 onClick={() => {
                   nextListFocusId.current = null;
                   setListLimit(STRUCTURE_PAGE_SIZE);
+                  // A search for one system must not make the next system appear to have no structures.
+                  setQuery('');
                   setSystemKey(s.key);
                 }}
                 className={secondaryButton}
