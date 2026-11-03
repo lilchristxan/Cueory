@@ -85,6 +85,27 @@ test.describe('anatomy lab', () => {
     expect(glb).toEqual([]);
   });
 
+  test('falls back to source names after the running 3D context is lost', async ({ page }) => {
+    await openLab(page);
+    const prevented = await page.locator('canvas').evaluate((canvas) => {
+      const lost = new Event('webglcontextlost', { cancelable: true });
+      canvas.dispatchEvent(lost);
+      return lost.defaultPrevented;
+    });
+    expect(prevented).toBe(true);
+
+    await expect(page.getByRole('alert')).toContainText('the 3D anatomy lab could not open.');
+    const catalog = page.getByRole('region', { name: 'structure names: test shapes (fixture)' });
+    await expect(catalog).toBeVisible();
+    await expect(catalog.getByRole('status')).toHaveText('showing 5 of 5 matching structures');
+    await catalog.getByLabel('find a structure').fill('cube a');
+    await expect(catalog.getByRole('listitem')).toHaveCount(1);
+    await expect(catalog.getByRole('listitem').first()).toContainText('fixture cube A');
+    // A new canvas and scene can be created from the same view without reloading the page.
+    await page.getByRole('button', { name: 'try 3D again' }).click();
+    await expect(page.getByRole('button', { name: 'fixture cube A', exact: true })).toBeEnabled({ timeout: 20_000 });
+  });
+
   test('without ?fixture the preview shows no fixture', async ({ page }) => {
     await page.goto('/preview/anatomy-lab');
     const open = page.getByRole('button', { name: 'open the anatomy lab' });
