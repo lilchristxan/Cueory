@@ -49,6 +49,21 @@ export function readRegularFileNoFollow(path) {
   }
 }
 
+/**
+ * Decode common ASCII escapes before scanning generated text for draft IDs.
+ * Bundlers can emit JSON/JS Unicode escapes, and HTML can use numeric entities.
+ * This is read-only normalization for the audit, not a change to shipped files.
+ */
+export function decodeAsciiEscapesForAudit(text) {
+  return text
+    .replace(/\\+(?:u00([0-7][0-9a-f])|x([0-7][0-9a-f])|u\{([0-7][0-9a-f])\})/gi,
+      (_match, unicode, hex, braced) => String.fromCharCode(Number.parseInt(unicode ?? hex ?? braced, 16)))
+    .replace(/&#(?:x([0-9a-f]{1,6})|([0-9]{1,7}));/gi, (match, hex, decimal) => {
+      const value = hex === undefined ? Number.parseInt(decimal, 10) : Number.parseInt(hex, 16);
+      return value <= 127 ? String.fromCharCode(value) : match;
+    });
+}
+
 /** Extracts references without trusting paths from content files as filesystem paths. */
 export function modelUrls(model) {
   if (!model || typeof model !== 'object' || Array.isArray(model)) return null;
@@ -169,7 +184,7 @@ export function auditAnatomyProduction(distDir, contentDir) {
       // closed if a file changes into a symlink between them.
       let contents;
       try {
-        contents = readRegularFileNoFollow(file);
+        contents = decodeAsciiEscapesForAudit(readRegularFileNoFollow(file));
       } catch {
         errors.push(`cannot safely read built text: ${file.slice(dist.length + 1)}`);
         continue;
