@@ -78,8 +78,9 @@ export function systemKeyFromPath(path: string): string | null {
 }
 
 const STRUCTURE_ID = /^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/;
-/** A same-site address of a .glb: starts with one slash, plain path characters only, no `..`. */
-const MODEL_FILE = /^\/(?!\/)[A-Za-z0-9/_-]+(?:\.[A-Za-z0-9_-]+)*\.glb$/;
+// The fixture's generated model has a separate, preview-only route. Real source
+// manifests each point to their own generated /models/anatomy/<system>.glb.
+const FIXTURE_MODEL_FILE = '/preview/anatomy-fixture/fixture.glb';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -111,8 +112,11 @@ export function parseAnatomyFile(json: unknown, path: string, options: { fixture
   const model = file['model'];
   if (!isRecord(model)) fail('"model" must be { file, release }');
   const m = model as Record<string, unknown>;
-  if (typeof m['file'] !== 'string' || !MODEL_FILE.test(m['file']) || m['file'].includes('..')) {
-    fail('"model.file" must be this site\'s address of a .glb, such as /models/anatomy/heart.glb');
+  // Do not let a source record bypass the draft-asset pruning directory, or
+  // accidentally attach a different system's model to otherwise valid labels.
+  const expectedModel = options.fixture ? FIXTURE_MODEL_FILE : `/models/anatomy/${key}.glb`;
+  if (m['file'] !== expectedModel) {
+    fail(`"model.file" must be ${expectedModel}`);
   }
   if (!text(m['release'], 80)) fail('"model.release" must name the model release');
   if (m['via'] !== undefined && !text(m['via'], 200)) fail('"model.via", when given, must be a short line of text');
