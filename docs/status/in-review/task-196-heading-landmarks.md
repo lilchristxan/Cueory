@@ -7,3 +7,5 @@ Adds a separate per-route heading and landmark sweep using the existing built-ro
 Validation: check passed (367 files, zero errors and warnings), build passed, 3297 unit tests passed. Phone browser execution blocked before tests run because Chromium headless shell 1248 is absent. No browser pass or page defect is claimed. CI browser execution required. No source-page changes, pushes or merges.
 
 Status: local implementation ready for coordinator publication after fresh board and branch ownership reconciliation.
+
+Round 1 correction: CI exposed the closed navigation dialog H2s being counted before the page H1 on every route. Ignore headings inside closed dialogs and explicitly hidden/inert/aria-hidden subtrees, matching the accessible page state. Visible heading hierarchy assertions remain unchanged.

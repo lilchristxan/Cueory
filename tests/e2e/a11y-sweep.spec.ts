@@ -46,6 +46,9 @@ test.describe('Task 196: headings and landmarks on every built route', () => {
         let previous = 0;
         const problems: string[] = [];
         for (const heading of headings) {
+          // Closed dialogs are absent from the accessibility tree. Their menu
+          // headings precede main in DOM order but are not part of this page state.
+          if (heading.closest('dialog:not([open]), [hidden], [inert], [aria-hidden="true"]')) continue;
           const level = Number(heading.tagName.slice(1));
           if (level > previous + 1) problems.push(`${heading.tagName}: ${heading.textContent?.trim()}`);
           previous = level;
