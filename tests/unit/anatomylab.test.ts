@@ -65,6 +65,11 @@ function file(overrides: Record<string, unknown> = {}) {
   };
 }
 
+/** Test source metadata with an id and model path matching its anatomy filename. */
+function sampleSystem(key: string, overrides: Record<string, unknown> = {}) {
+  return file({ id: `anatomy-${key}`, model: { file: `/models/anatomy/${key}.glb`, release: 'r1' }, ...overrides });
+}
+
 /** A seeded random number source, so quiz tests are repeatable. */
 function seeded(seed: number) {
   let s = seed;
@@ -190,8 +195,8 @@ describe('the draft gate (D-56)', () => {
 
   it('puts no draft and no fixture in the live site\'s page data', () => {
     const files = {
-      '../../../content/visuals/anatomy-heart.json': file({ title: 'sample heart' }),
-      '../../../content/visuals/anatomy-lungs.json': file({ title: 'sample lungs', status: 'approved' }),
+      '../../../content/visuals/anatomy-heart.json': sampleSystem('heart', { title: 'sample heart' }),
+      '../../../content/visuals/anatomy-lungs.json': sampleSystem('lungs', { title: 'sample lungs', status: 'approved' }),
     };
     const live = labDataForBuild(files, fixtureJson, { WORKERS_CI: '1', WORKERS_CI_BRANCH: 'main' });
     expect(live.drafts).toBe(false);
@@ -199,7 +204,7 @@ describe('the draft gate (D-56)', () => {
     expect(live.systems.map((s) => s.key)).toEqual(['lungs']);
     expect(JSON.stringify(live)).not.toContain('sample heart');
 
-    const none = labDataForBuild({ '../../../content/visuals/anatomy-heart.json': file() }, fixtureJson, { WORKERS_CI: '1', WORKERS_CI_BRANCH: 'main' });
+    const none = labDataForBuild({ '../../../content/visuals/anatomy-heart.json': sampleSystem('heart') }, fixtureJson, { WORKERS_CI: '1', WORKERS_CI_BRANCH: 'main' });
     expect(none.systems).toEqual([]);
 
     const staging = labDataForBuild(files, fixtureJson, { WORKERS_CI: '1', WORKERS_CI_BRANCH: 'staging' });
@@ -211,8 +216,8 @@ describe('the draft gate (D-56)', () => {
   it('builds the system list from whichever anatomy files exist, ignoring other visuals', () => {
     const data = labDataForBuild(
       {
-        '../../../content/visuals/anatomy-skeleton-limbs.json': file({ title: 'b limbs' }),
-        '../../../content/visuals/anatomy-skeleton-axial.json': file({ title: 'a axial' }),
+        '../../../content/visuals/anatomy-skeleton-limbs.json': sampleSystem('skeleton-limbs', { title: 'b limbs' }),
+        '../../../content/visuals/anatomy-skeleton-axial.json': sampleSystem('skeleton-axial', { title: 'a axial' }),
       },
       fixtureJson,
       { CUEORY_ANATOMY_DRAFTS: '1' },
