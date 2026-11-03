@@ -39,8 +39,11 @@ test.describe('Task 231 all routes without JavaScript', () => {
         expect(await localFallback.count(), `${route}: ${options.name} needs a local static alternative`).toBeGreaterThan(0);
       }
       for (const fallback of await fallbacks.all()) {
-        await expect(fallback).toContainText(/\S/);
-        await expect(fallback.locator(':scope > *').first()).toBeVisible();
+        // Playwright intentionally excludes noscript containers from its text engine.
+        // Assert the parsed child content, as the existing no-JS page tests do.
+        const content = fallback.locator(':scope > *').first();
+        await expect(content).toContainText(/\S/);
+        await expect(content).toBeVisible();
       }
     });
   }
