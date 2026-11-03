@@ -99,6 +99,12 @@ describe('anatomy files', () => {
   });
 
   it.each([
+    ['a missing source id', { id: undefined }, '"id" must match'],
+    ['a mismatched source id', { id: 'anatomy-other' }, '"id" must match'],
+    ['an unrelated visual id', { id: 'sample' }, '"id" must match'],
+    ['a missing visual kind', { kind: undefined }, '"kind" must be "model"'],
+    ['a diagram labeled as a model', { kind: 'diagram' }, '"kind" must be "model"'],
+    ['an overlay labeled as a model', { kind: 'overlay' }, '"kind" must be "model"'],
     ['a model file on another site', { model: { file: 'https://example.com/a.glb', release: 'r1' } }, 'model.file'],
     ['a model path that climbs out', { model: { file: '/models/../secret.glb', release: 'r1' } }, 'model.file'],
     ['a model that is not a .glb', { model: { file: '/models/anatomy/a.gltf', release: 'r1' } }, 'model.file'],
@@ -117,6 +123,14 @@ describe('anatomy files', () => {
   it('reads the test fixture as a fixture', () => {
     const fixture = parseAnatomyFile(fixtureJson, 'tests/fixtures/anatomy-fixture.json', { fixture: true });
     expect(fixture.fixture).toBe(true);
+    expect(() => parseAnatomyFile(
+      { ...fixtureJson, id: 'anatomy-other' },
+      'tests/fixtures/anatomy-fixture.json', { fixture: true },
+    )).toThrow('"id" must match');
+    expect(() => parseAnatomyFile(
+      { ...fixtureJson, kind: 'diagram' },
+      'tests/fixtures/anatomy-fixture.json', { fixture: true },
+    )).toThrow('"kind" must be "model"');
     expect(fixture.structures.every((s) => s.text.startsWith('fixture '))).toBe(true);
     expect(creditFor(fixture)).toBe(FIXTURE_CREDIT);
     expect(nameSourceFor(fixture)).toBe('name from the test fixture');
