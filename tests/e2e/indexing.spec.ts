@@ -27,7 +27,6 @@ const noindexPages = [
   '/start',
   '/subscribed',
   '/progress',
-  '/learn/video-sample',
   '/breaks', // until Christian approves its sample ideas
 ];
 
