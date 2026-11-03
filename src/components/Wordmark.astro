@@ -18,6 +18,8 @@ interface Props {
   sizes?: string;
   /** Accessible name, when nothing around the logo names the brand. */
   label?: string;
+  /** Loading priority for the rendered brand artwork. Header and hero marks stay eager, footer marks can be lazy. */
+  loading?: 'eager' | 'lazy';
   class?: string;
 }
 
@@ -26,7 +28,7 @@ const files = {
   emblem: { name: 'emblem', widths: [96, 192, 384], width: 384, height: 428 },
 } as const;
 
-const { variant = 'full', sizes, label, class: className } = Astro.props;
+const { variant = 'full', sizes, label, loading = 'eager', class: className } = Astro.props;
 const art = files[variant];
 const path = (mode: 'light' | 'dark', width: number) => `/brand/v1/${art.name}-${mode}-${width}.png`;
 const srcset = (mode: 'light' | 'dark') => art.widths.map((width) => `${path(mode, width)} ${width}w`).join(', ');
@@ -42,6 +44,8 @@ const shownAt = sizes ?? (variant === 'full' ? '15rem' : '2.25rem');
     width={art.width}
     height={art.height}
     alt=""
+    aria-hidden="true"
+    loading={loading}
     decoding="async"
     draggable="false"
   />
@@ -53,6 +57,8 @@ const shownAt = sizes ?? (variant === 'full' ? '15rem' : '2.25rem');
     width={art.width}
     height={art.height}
     alt=""
+    aria-hidden="true"
+    loading={loading}
     decoding="async"
     draggable="false"
   />

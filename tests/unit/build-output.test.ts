@@ -119,6 +119,36 @@ describe.skipIf(!existsSync(dist))('built site', () => {
     }
   });
 
+  it.each(pages.map((p) => [p.replace(dist, '')]))(
+    '%s: images have accessible dimensions and intentional loading behavior (Task 207)',
+    (page) => {
+      const html = readFileSync(join(dist, page), 'utf8');
+      const mainBrandingMayBeEager = ['signin.html', 'signup.html'].includes(page);
+      for (const match of html.matchAll(/<img\b[^>]*>/gi)) {
+        const image = match[0];
+        expect(image, 'every image needs alt text').toMatch(/\salt="[^"]*"/i);
+        expect(image, 'every image needs an explicit width').toMatch(/\swidth="\d+"/i);
+        expect(image, 'every image needs an explicit height').toMatch(/\sheight="\d+"/i);
+        const loading = /\sloading="([^"]+)"/i.exec(image)?.[1];
+        expect(loading === undefined || loading === 'lazy' || loading === 'eager').toBe(true);
+        if (/\salt=""/i.test(image)) {
+          expect(image, 'empty alt text is only valid for a directly hidden decorative image').toMatch(
+            /\s(?:aria-hidden|role)="(?:true|presentation)"/i,
+          );
+        }
+
+        const before = html.slice(0, (match.index ?? 0));
+        const inHeader = before.lastIndexOf('<header') > before.lastIndexOf('</header>');
+        const isHomeHero = /\ssizes="20rem"/i.test(image);
+        const isEager = loading !== 'lazy';
+        expect(
+          isEager ? inHeader || isHomeHero || mainBrandingMayBeEager : true,
+          'only above-the-fold branding may load eagerly',
+        ).toBe(true);
+      }
+    },
+  );
+
   it.runIf(site.showBuildingNotice).each(pages.map((p) => [p.replace(dist, '')]))(
     '%s shows the building notice',
     (page) => {
