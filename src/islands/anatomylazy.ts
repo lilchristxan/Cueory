@@ -72,6 +72,26 @@ export function structureLoadNote(
 }
 
 /**
+ * Count only structures that are truly absent after ALL files that could
+ * contain their layer have arrived. A per-GLB missing array is not reliable:
+ * IDs for one layer may be passed to several shared model files, and an ID
+ * absent from one file can still be present in another.
+ *
+ * A structure in a not-yet-loaded layer is pending, not missing.
+ */
+export function knownMissingStructureIds(
+  structures: readonly Pick<AnatomyStructure, 'id' | 'layer'>[],
+  found: ReadonlySet<string>,
+  filesOfLayer: (layerId: string) => readonly string[],
+  filesOfSystem: readonly string[],
+  isLoaded: (url: string) => boolean,
+): string[] {
+  return structures
+    .filter((s) => structureLoadNote(s, found, true, filesOfLayer, filesOfSystem, isLoaded) === 'not in this model')
+    .map((s) => s.id);
+}
+
+/**
  * "Show all" in the lazy view: the structures to unhide right away (those in layers whose files are all loaded, and any
  * in no layer) and the layers that must be fetched first, each shown only once its files are there.
  */
