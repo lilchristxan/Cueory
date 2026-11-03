@@ -150,11 +150,26 @@ describe('anatomy production artifact audit', () => {
     ]));
   });
 
-  it('decodes ASCII escape forms without changing unrelated or longer IDs', () => {
-    expect(decodeAsciiEscapesForAudit(String.raw`\x46MA999991`)).toBe('FMA999991');
-    expect(decodeAsciiEscapesForAudit(String.raw`\u{46}MA999991`)).toBe('FMA999991');
-    expect(decodeAsciiEscapesForAudit('FMA9999910')).toBe('FMA9999910');
-    expect(decodeAsciiEscapesForAudit('&#9999;')).toBe('&#9999;');
+  it('retains original token boundaries when a different escape format is literal text', () => {
+    const f = setup();
+    f.file('_astro/literal-entity.js', 'const id="FMA999991&#65;";');
+    f.file('literal-js.html', String.raw`<p>FMA999991\u0041</p>`);
+    const errors = f.check().errors;
+    expect(errors).toEqual(expect.arrayContaining([
+      'draft anatomy ID exposed in built text: _astro/literal-entity.js (FMA999991)',
+      'draft anatomy ID exposed in built text: literal-js.html (FMA999991)',
+    ]));
+  });
+
+  it('decodes only the escape syntax appropriate to an asset', () => {
+    expect(decodeAsciiEscapesForAudit(String.raw`\x46MA999991`, 'script')).toBe('FMA999991');
+    expect(decodeAsciiEscapesForAudit(String.raw`\u{46}MA999991`, 'script')).toBe('FMA999991');
+    expect(decodeAsciiEscapesForAudit('FMA&#57;&#57;&#57;&#57;&#57;&#49;', 'markup')).toBe('FMA999991');
+    expect(decodeAsciiEscapesForAudit('FMA999991&#65;', 'script')).toBe('FMA999991&#65;');
+    expect(decodeAsciiEscapesForAudit(String.raw`FMA999991\u0041`, 'markup'))
+      .toBe(String.raw`FMA999991\u0041`);
+    expect(decodeAsciiEscapesForAudit('FMA9999910', 'script')).toBe('FMA9999910');
+    expect(decodeAsciiEscapesForAudit('&#9999;', 'markup')).toBe('&#9999;');
   });
 
   it('rejects draft identifiers on unrelated pages, in search data and in SVG exports', () => {
