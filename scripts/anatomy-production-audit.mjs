@@ -4,7 +4,7 @@
  *
  * Usage: node scripts/anatomy-production-audit.mjs [dist-directory] [content/visuals-directory]
  */
-import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
+import { existsSync, lstatSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
@@ -73,9 +73,16 @@ export function auditAnatomyProduction(distDir, contentDir) {
   const sources = readdirSync(content).filter((n) => ANATOMY_FILE.test(n)).sort();
   if (!sources.length) errors.push('no anatomy source files found');
   for (const name of sources) {
+    const sourcePath = join(content, name);
+    // A source manifest must be a reviewed file in content/visuals, not an
+    // alias to data elsewhere. lstat does not follow symbolic links.
+    if (lstatSync(sourcePath).isSymbolicLink()) {
+      errors.push(`${name}: anatomy source must not be a symbolic link`);
+      continue;
+    }
     let data;
     try {
-      data = JSON.parse(readFileSync(join(content, name), 'utf8'));
+      data = JSON.parse(readFileSync(sourcePath, 'utf8'));
     } catch {
       errors.push(`${name}: cannot read valid JSON`);
       continue;
