@@ -302,7 +302,8 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts }: Pr
     const firstIds = new Set(first?.ids ?? []);
     // Deeper layers start out hidden and unfetched; the scene only gets the outermost layer's files.
     setHidden(lazyStart ? new Set(system.structures.filter((s) => !firstIds.has(s.id)).map((s) => s.id)) : new Set());
-    setFilesLoaded(lazyStart ? firstFiles.length : 0);
+    // No file has completed yet. Count it only after the first model load succeeds.
+    setFilesLoaded(0);
     scene
       .load(lazyStart ? firstFiles : (system.model.files ?? system.model.file), lazyStart ? [...firstIds] : system.structures.map((s) => s.id))
       .then((result) => {
@@ -318,6 +319,9 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts }: Pr
           for (const url of firstFiles) loader.markLoaded(url);
           loaderRef.current = loader;
         }
+        setFilesLoaded(
+          system.key === WHOLE_BODY_KEY ? (lazyStart ? firstFiles.length : (system.model.files?.length ?? 1)) : 0,
+        );
         setLoad({ state: 'ready', result });
         setAnnounce(`${system.title}: ${result.found.length} structures loaded.`);
       })
@@ -656,7 +660,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts }: Pr
                     type="button"
                     className={secondaryButton}
                     aria-pressed={layerShown(layer, hidden)}
-                    aria-disabled={pending.has(layer.id) || undefined}
+                    disabled={!ready || pending.has(layer.id)}
                     onClick={() => {
                       if (pending.has(layer.id)) return;
                       if (lazy && layerNeedsReveal(
@@ -673,7 +677,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts }: Pr
                 <button
                   type="button"
                   className={secondaryButton}
-                  disabled={!toPeel}
+                  disabled={!ready || !toPeel || pending.size > 0}
                   onClick={() => {
                     if (!toPeel || pending.size > 0) return;
                     if (peelPlan) {
@@ -689,7 +693,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts }: Pr
                 <button
                   type="button"
                   className={secondaryButton}
-                  disabled={!toRestore}
+                  disabled={!ready || !toRestore || pending.size > 0}
                   onClick={() => {
                     if (!toRestore || pending.size > 0) return;
                     if (lazy) reveal(toRestore);
