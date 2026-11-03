@@ -51,6 +51,33 @@ describe('anatomy on-demand download limit', () => {
     expect(loader.loadedCount()).toBe(6);
   });
 
+  it('skips a queued model that was loaded elsewhere and keeps draining later work', async () => {
+    const started: string[] = [];
+    const complete = new Map<string, (value: string) => void>();
+    const loader = createOnDemandLoader<string>((url) => {
+      started.push(url);
+      return new Promise<string>((resolve) => complete.set(url, resolve));
+    });
+
+    const first = loader.ensure(['a', 'b']);
+    const second = loader.ensure(['c', 'd']);
+    expect(started).toEqual(['a', 'b']);
+
+    // A separate completed load makes c available while both slots are occupied.
+    loader.markLoaded('c');
+    complete.get('a')!('a');
+    await flushQueue();
+    expect(started).toEqual(['a', 'b', 'd']);
+    complete.get('b')!('b');
+    complete.get('d')!('d');
+
+    expect(await first).toEqual(['a', 'b']);
+    expect(await second).toEqual(['d']);
+    expect(loader.isLoaded('c')).toBe(true);
+    expect(loader.loadedCount()).toBe(4);
+    expect(await loader.ensure(['c'])).toEqual([]);
+  });
+
   it('drops waiting downloads after a system change and does not hang callers', async () => {
     const started: string[] = [];
     const complete = new Map<string, (value: string) => void>();
