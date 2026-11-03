@@ -7,7 +7,7 @@
  * Colors come from the brand tokens at runtime (getComputedStyle), so the model follows the Daytime and Evening palettes.
  */
 import * as THREE from 'three';
-import { createDemandFrameScheduler } from './anatomyframe';
+import { createDemandFrameScheduler, remainingIdleDelay } from './anatomyframe';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
@@ -252,17 +252,23 @@ export function createLabScene({ canvas, reducedMotion, colors: initialColors, o
   };
   // OrbitControls.update() returns true while damping still moves the camera (three.js r187).
   // Only those moving frames are repeated. Camera changes reset a single delayed visibility check.
-  const tick = (time: number): boolean => {
+  const tick = (): boolean => {
     const moving = controls.enableDamping ? controls.update() : false;
-    if (visibilityDirty && root && time - lastMove >= VISIBILITY_IDLE_MS) {
-      visibilityDirty = false;
-      if (labelIds.length > 0) {
-        const w = canvas.clientWidth || 1;
-        const h = canvas.clientHeight || 1;
-        visibility = visibilityFor(camera, labelIds, w, h);
-        needsRender = true; // redraw, so the labels pick up the new anchors and marks
+    if (visibilityDirty && root) {
+      // Both clocks use performance.now(). A timer may fire early, so never lose the pending check.
+      const remaining = remainingIdleDelay(performance.now(), lastMove, VISIBILITY_IDLE_MS);
+      if (remaining > 0) {
+        if (labelIds.length > 0) scheduler.afterIdle(remaining);
       } else {
-        visibility = new Map();
+        visibilityDirty = false;
+        if (labelIds.length > 0) {
+          const w = canvas.clientWidth || 1;
+          const h = canvas.clientHeight || 1;
+          visibility = visibilityFor(camera, labelIds, w, h);
+          needsRender = true; // redraw, so the labels pick up the new anchors and marks
+        } else {
+          visibility = new Map();
+        }
       }
     }
     if (needsRender) {

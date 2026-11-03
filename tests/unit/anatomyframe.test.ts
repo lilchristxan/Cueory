@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createDemandFrameScheduler, type FrameClock } from '../../src/islands/anatomyframe';
+import { createDemandFrameScheduler, remainingIdleDelay, type FrameClock } from '../../src/islands/anatomyframe';
 
 function manualClock() {
   let id = 0;
@@ -119,4 +119,38 @@ describe('anatomy on-demand frame scheduler', () => {
     expect(draws).toBe(0);
     expect(fake.frames.size).toBe(0);
   });
+  it('re-arms an early idle wake-up so an occlusion check cannot be lost', () => {
+    const fake = manualClock();
+    let now = 1_000;
+    const lastMove = now;
+    let checked = 0;
+    const scheduler = createDemandFrameScheduler(() => {
+      const remaining = remainingIdleDelay(now, lastMove, 120);
+      if (remaining > 0) scheduler.afterIdle(remaining);
+      else checked++;
+      return false;
+    }, fake.clock);
+    scheduler.afterIdle(120);
+    fake.delay(); // the timeout fires, but the frame still sees slightly less than 120 ms
+    now = 1_119;
+    fake.frame();
+    expect(checked).toBe(0);
+    expect(fake.frames.size).toBe(0);
+    expect(fake.delays.size).toBe(1);
+    expect([...fake.delays.values()][0]!.ms).toBe(1);
+
+    now = 1_121;
+    fake.delay();
+    fake.frame();
+    expect(checked).toBe(1);
+    expect(fake.frames.size).toBe(0);
+    expect(fake.delays.size).toBe(0);
+  });
+
+  it('uses a monotonic idle deadline instead of a possibly earlier animation timestamp', () => {
+    expect(remainingIdleDelay(1_119, 1_000, 120)).toBe(1);
+    expect(remainingIdleDelay(1_120, 1_000, 120)).toBe(0);
+    expect(remainingIdleDelay(1_125, 1_000, 120)).toBe(0);
+  });
+
 });
