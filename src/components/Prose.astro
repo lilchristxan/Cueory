@@ -65,4 +65,9 @@
     box-decoration-break: clone;
     -webkit-box-decoration-break: clone;
   }
+
+  /* Storage keys and similar implementation names should not widen legal pages on small screens. */
+  .reading-copy :global(code) {
+    overflow-wrap: anywhere;
+  }
 </style>
