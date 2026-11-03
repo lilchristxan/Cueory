@@ -49,4 +49,6 @@ npm run check-batch -- content/batches/<folder>
 
 Read `docs/BATCHES.md` for the complete review and import process. Do not put private questions, answer keys, rationales, or student data in this public repository.
 
+For curriculum structure, Draft 4 data is maintained in `content/curriculum/` (`blocks-v4.csv` and `objectives-pilot-v4.csv`), mapped against the historical 19-unit Med-Surg outline via `docs/curriculum/CROSSWALK.md`. Validation can be run via `node scripts/check-curriculum.mjs`.
+
 Cueory does not accept outside pull requests. To report a security or privacy problem, use GitHub's private **Report a vulnerability** form or the address documented in `SECURITY.md`, rather than opening a public issue.
