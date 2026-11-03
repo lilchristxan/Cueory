@@ -98,6 +98,12 @@ describe('anatomy production artifact audit', () => {
     expect(f.check().errors).toContain('symbolic link in production output: /ghost.glb');
   });
 
+  it('rejects linked anatomy source manifests rather than trusting an aliased approval', () => {
+    const f = setup();
+    symlinkSync(join(f.content, 'anatomy-approved.json'), join(f.content, 'anatomy-aliased.json'));
+    expect(f.check().errors).toContain('anatomy-aliased.json: anatomy source must not be a symbolic link');
+  });
+
   it('rejects a fixture endpoint even when no draft model is present', () => {
     const f = setup();
     f.file('preview/anatomy-fixture/fixture.glb', 'fixture');
