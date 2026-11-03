@@ -260,6 +260,9 @@ test.describe('anatomy lab whole body loads layers on demand', () => {
     await page.goto('/preview/anatomy-lab');
     await page.getByRole('button', { name: 'open the anatomy lab' }).click();
     await expect(page.locator('canvas')).toBeVisible({ timeout: 15_000 });
+    // A visible canvas can still be in the opening phase. Wait for 3D startup
+    // before treating an absent whole-body picker option as missing draft data.
+    await expect(page.locator('canvas')).toBeFocused({ timeout: 15_000 });
     const whole = page.getByRole('group', { name: 'body system' }).getByRole('button', { name: 'whole body' });
     test.skip((await whole.count()) === 0, 'real whole-body draft models are not in this build');
     await whole.click();
