@@ -161,6 +161,29 @@ export function filesForLayer(system: Pick<AnatomySystem, 'model'>, layerId: str
   return system.model.layerFiles?.[layerId] ?? [];
 }
 
+/**
+ * The IDs to look for in one or more model files. A shared GLB can hold meshes from
+ * several layers (for example a model with vessels and organs). Even a layer that
+ * starts hidden must be registered in the scene when its file is first loaded.
+ *
+ * The layer-to-file map does not identify which IDs live in each file, so we pass
+ * all candidate IDs from its layers. The scene reports only meshes it actually finds.
+ */
+export function idsForModelFiles(
+  system: Pick<AnatomySystem, 'model'>,
+  layers: readonly Layer[],
+  urls: readonly string[],
+): string[] {
+  const files = new Set(urls);
+  return [
+    ...new Set(
+      layers
+        .filter((layer) => filesForLayer(system, layer.id).some((url) => files.has(url)))
+        .flatMap((layer) => layer.ids),
+    ),
+  ];
+}
+
 /** The outermost layer, which is all the whole-body view fetches at first. */
 export function firstLayer(layers: readonly Layer[]): Layer | null {
   return layers[0] ?? null;
