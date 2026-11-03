@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { auditAnatomyProduction, modelUrls, readRegularFileNoFollow } from '../../scripts/anatomy-production-audit.mjs';
+import { auditAnatomyProduction, decodeAsciiEscapesForAudit, modelUrls, readRegularFileNoFollow } from '../../scripts/anatomy-production-audit.mjs';
 
 const roots: string[] = [];
 afterEach(() => roots.splice(0).forEach((p) => rmSync(p, { recursive: true, force: true })));
@@ -135,6 +135,26 @@ describe('anatomy production artifact audit', () => {
     f.file('preview/anatomy-lab.html', '<div>FMA9999910</div>');
     f.file('other.html', '<div>FMA999992</div>');
     expect(f.check().errors).toEqual([]);
+  });
+
+  it('detects draft structure IDs hidden behind common JSON and HTML escapes', () => {
+    const f = setup();
+    f.file('_astro/unicode.js', String.raw`const id = "\u0046MA999991";`);
+    f.file('pagefind/escaped.json', String.raw`{"id":"FMA\u0039\u0039\u0039\u0039\u0039\u0031"}`);
+    f.file('escaped.html', '<span>FMA&#57;&#57;&#57;&#57;&#57;&#49;</span>');
+    const errors = f.check().errors;
+    expect(errors).toEqual(expect.arrayContaining([
+      'draft anatomy ID exposed in built text: _astro/unicode.js (FMA999991)',
+      'draft anatomy ID exposed in built text: pagefind/escaped.json (FMA999991)',
+      'draft anatomy ID exposed in built text: escaped.html (FMA999991)',
+    ]));
+  });
+
+  it('decodes ASCII escape forms without changing unrelated or longer IDs', () => {
+    expect(decodeAsciiEscapesForAudit(String.raw`\x46MA999991`)).toBe('FMA999991');
+    expect(decodeAsciiEscapesForAudit(String.raw`\u{46}MA999991`)).toBe('FMA999991');
+    expect(decodeAsciiEscapesForAudit('FMA9999910')).toBe('FMA9999910');
+    expect(decodeAsciiEscapesForAudit('&#9999;')).toBe('&#9999;');
   });
 
   it('rejects draft identifiers on unrelated pages, in search data and in SVG exports', () => {
