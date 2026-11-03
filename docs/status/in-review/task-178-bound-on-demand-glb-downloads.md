@@ -1,6 +1,8 @@
 # Task 178 assist: bound on-demand anatomy downloads
 
-Status: **in review**. Stacked on lead-owned `task-178/anatomy-lab` at `ad5304355678dbc7a806ff7b251f8c4c3167f9be`. Do not merge directly or publish anatomy models.
+status: Task 178, bounded on-demand Anatomy Lab model downloads and queued-file regression (#428), in review. No anatomy publication or merge approved.
+
+Stacked on lead-owned `task-178/anatomy-lab` at `ad5304355678dbc7a806ff7b251f8c4c3167f9be`. Do not merge directly or publish anatomy models.
 
 ## Why
 
