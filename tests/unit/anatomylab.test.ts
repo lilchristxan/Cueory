@@ -517,6 +517,44 @@ describe('what the camera can see (the ID picture)', () => {
     });
   });
 
+  it('finds the same nearest pixel for a hollow, disconnected shape without moving its anchor', () => {
+    // The centroid (3,3) is empty. Four equally close pixels remain, so the
+    // topmost and then leftmost one wins, just as in the full-image scan.
+    const rows = Array.from({ length: 12 }, () => Array<number>(12).fill(0));
+    for (const [x, y] of [[2, 2], [4, 2], [2, 4], [4, 4]]) rows[y]![x] = 1;
+    for (const [x, y] of [[9, 9], [10, 9], [9, 10]]) rows[y]![x] = 2;
+    const targets = new Map<string, VisibilityTarget>([
+      ['ring', { index: 0, x: 0, y: 0 }],
+      ['corner', { index: 1, x: 0, y: 0 }],
+    ]);
+    const visible = findVisibleAnchors(picture(rows), 12, 12, targets);
+    expect(visible.get('ring')).toEqual({ visible: true, x: 2, y: 2 });
+    expect(visible.get('corner')).toEqual({ visible: true, x: 9, y: 9 });
+  });
+
+  it('limits secondary ID-picture reads to a structure bounding box, not the entire canvas', () => {
+    // Count actual pixel-byte reads rather than timing the code: the test
+    // remains deterministic on slow and fast CI machines.
+    const width = 64;
+    const height = 64;
+    const rows = Array.from({ length: height }, () => Array<number>(width).fill(0));
+    for (const [x, y] of [[2, 2], [4, 2], [2, 4], [4, 4]]) rows[y]![x] = 1;
+    let reads = 0;
+    const measured = new Proxy(picture(rows), {
+      get(target, property) {
+        if (typeof property === 'string' && /^\\d+$/.test(property)) reads++;
+        return Reflect.get(target, property, target);
+      },
+    });
+    const targets = new Map<string, VisibilityTarget>([['ring', { index: 0, x: 0, y: 0 }]]);
+    expect(findVisibleAnchors(measured, width, height, targets).get('ring')).toEqual({
+      visible: true, x: 2, y: 2,
+    });
+    // One full 64x64 count pass, with fewer than 50 additional ID lookups.
+    // The original full-image fallback took a SECOND 64x64 pass here.
+    expect(reads).toBeLessThan((width * height + 50) * 3);
+  });
+
   it('never treats an entirely absent structure as visible, even with a zero-pixel minimum', () => {
     const empty = picture([[0, 0], [0, 0]]);
     const absent = new Map<string, VisibilityTarget>([['a', { index: 0, x: 1, y: 1 }]]);
