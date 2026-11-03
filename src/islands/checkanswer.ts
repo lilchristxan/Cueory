@@ -57,7 +57,8 @@ function problem(error?: unknown): Problem {
 
 /** SQL returns correct/key/rationales/version_id; expose only the feedback and require the requested version. */
 function feedback(data: unknown, versionId: string): AnswerFeedback | undefined {
-  if (!plain(data) || own(data, 'version_id') !== versionId) return;
+  if (!plain(data) || Object.keys(data).some((field) => !['version_id', 'correct', 'key', 'rationales'].includes(field)) ||
+      own(data, 'version_id') !== versionId) return;
   const right = own(data, 'correct');
   const key = letters(own(data, 'key'));
   const supplied = own(data, 'rationales');
