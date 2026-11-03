@@ -108,3 +108,13 @@ export function wholeBody(systems: readonly AnatomySystem[]): AnatomySystem | nu
   if (real[0]!.model.via) out.model.via = real[0]!.model.via;
   return out;
 }
+
+/**
+ * The whole-body catalog is composed in the browser only when the student
+ * opens the lab. Do not also serialize it in the Astro page: that would send
+ * a second copy of every structure in the initial hydration props.
+ */
+export function anatomySystemsForView(systems: readonly AnatomySystem[], includeWholeBody: boolean): AnatomySystem[] {
+  const body = includeWholeBody ? wholeBody(systems) : null;
+  return body ? [...systems, body] : [...systems];
+}
