@@ -547,7 +547,14 @@ describe('exported pictures', () => {
     const lines = wrapText(BODYPARTS3D_CREDIT, 400, measure);
     expect(lines.join(' ')).toBe(BODYPARTS3D_CREDIT);
     for (const line of lines) expect(measure(line)).toBeLessThanOrEqual(400);
-    expect(wrapText('averyveryverylongword short', 50, measure)).toEqual(['averyveryverylongword', 'short']);
+    const broken = wrapText('averyveryverylongword short', 50, measure);
+    expect(broken.at(-1)).toBe('short');
+    expect(broken.slice(0, -1).join('')).toBe('averyveryverylongword');
+    for (const line of broken) expect(measure(line)).toBeLessThanOrEqual(50);
+    expect(wrapText('abcdefghijkl', 40, measure)).toEqual(['abcd', 'efgh', 'ijkl']);
+    const label = labelLines('abcdefghijkl', false, 40, measure);
+    expect(label.lines.join('')).toBe('abcdefghijkl');
+    expect(label.width).toBeLessThanOrEqual(40);
   });
 
   it('frames a box seen from the front, the tighter way round deciding', () => {
