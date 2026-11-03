@@ -102,6 +102,10 @@ describe('anatomy files', () => {
     ['a model file on another site', { model: { file: 'https://example.com/a.glb', release: 'r1' } }, 'model.file'],
     ['a model path that climbs out', { model: { file: '/models/../secret.glb', release: 'r1' } }, 'model.file'],
     ['a model that is not a .glb', { model: { file: '/models/anatomy/a.gltf', release: 'r1' } }, 'model.file'],
+    ['a GLB outside the anatomy directory', { model: { file: '/models/other/sample.glb', release: 'r1' } }, 'model.file'],
+    ['a GLB in a different public directory', { model: { file: '/brand/sample.glb', release: 'r1' } }, 'model.file'],
+    ['another system\'s GLB', { model: { file: '/models/anatomy/lungs.glb', release: 'r1' } }, 'model.file'],
+    ['a nested model folder', { model: { file: '/models/anatomy/archive/sample.glb', release: 'r1' } }, 'model.file'],
     ['no release', { model: { file: '/models/anatomy/a.glb' } }, 'model.release'],
     ['an unknown status', { status: 'published' }, 'status'],
     ['no labels', { labels: [] }, 'labels'],
@@ -117,6 +121,14 @@ describe('anatomy files', () => {
   it('reads the test fixture as a fixture', () => {
     const fixture = parseAnatomyFile(fixtureJson, 'tests/fixtures/anatomy-fixture.json', { fixture: true });
     expect(fixture.fixture).toBe(true);
+    expect(fixture.model.file).toBe('/preview/anatomy-fixture/fixture.glb');
+    expect(() => parseAnatomyFile({
+      ...fixtureJson,
+      model: { ...fixtureJson.model, file: '/models/anatomy/fixture.glb' },
+    }, 'tests/fixtures/anatomy-fixture.json', { fixture: true })).toThrow('model.file');
+    expect(() => parseAnatomyFile(file({
+      model: { file: '/preview/anatomy-fixture/fixture.glb', release: 'r1' },
+    }), 'content/visuals/anatomy-sample.json')).toThrow('model.file');
     expect(fixture.structures.every((s) => s.text.startsWith('fixture '))).toBe(true);
     expect(creditFor(fixture)).toBe(FIXTURE_CREDIT);
     expect(nameSourceFor(fixture)).toBe('name from the test fixture');
