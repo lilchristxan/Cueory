@@ -1,6 +1,6 @@
 # Task 178: require source-file identity and type
 
-Status: in review
+status: Task 178 (#447), anatomy manifest identity validation: source id matches filename; kind is model; negative tests added; in review.
 
 ## Finding
 The Anatomy Lab parser checked a source record's title, publication status, model URL and labels but never checked its Visual `id` or `kind`. This could let a mismatched `anatomy-*.json` record or a diagram/overlay be treated as a 3D anatomy system. The source files and generated model naming contract already expect `id: anatomy-<system>` and `kind: model`.
