@@ -87,6 +87,9 @@ test.describe('anatomy lab', () => {
 
   test('falls back to source names after the running 3D context is lost', async ({ page }) => {
     await openLab(page);
+    // The old canvas may disappear while a finger is still held down.
+    // A later tap on the recovered canvas must not look like a two-finger gesture.
+    await page.locator('canvas').dispatchEvent('pointerdown', { pointerId: 71, clientX: 12, clientY: 12 });
     const prevented = await page.locator('canvas').evaluate((canvas) => {
       const lost = new Event('webglcontextlost', { cancelable: true });
       canvas.dispatchEvent(lost);
@@ -103,7 +106,12 @@ test.describe('anatomy lab', () => {
     await expect(catalog.getByRole('listitem').first()).toContainText('fixture cube A');
     // A new canvas and scene can be created from the same view without reloading the page.
     await page.getByRole('button', { name: 'try 3D again' }).click();
-    await expect(page.getByRole('button', { name: 'fixture cube A', exact: true })).toBeEnabled({ timeout: 20_000 });
+    const cubeA = page.getByRole('button', { name: 'fixture cube A', exact: true });
+    await expect(cubeA).toBeEnabled({ timeout: 20_000 });
+    const box = await page.locator('canvas').boundingBox();
+    expect(box).not.toBeNull();
+    await page.mouse.click(box!.x + box!.width / 2, box!.y + box!.height / 2);
+    await expect(cubeA).toHaveAttribute('aria-pressed', 'true');
   });
 
   test('without ?fixture the preview shows no fixture', async ({ page }) => {
