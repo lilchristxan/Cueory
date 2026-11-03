@@ -19,6 +19,7 @@ const { quiet = false, overlay = false } = Astro.props;
 ---
 
 <header
+  class="print:hidden"
   data-scroll-header={overlay ? undefined : ''}
   class:list={[
     'z-20 flex w-full items-center gap-4 px-gutter py-4',

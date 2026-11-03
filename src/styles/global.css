@@ -313,6 +313,27 @@
   }
 }
 
+@media print {
+  @page {
+    margin: var(--spacing);
+  }
+
+  body[data-page-variant="study"] {
+    background: var(--color-page);
+    color: var(--color-ink);
+  }
+
+  body[data-page-variant="study"] main {
+    max-width: none;
+    padding-inline: calc(var(--spacing) * 4);
+  }
+
+  body[data-page-variant="study"] main > div {
+    max-width: none;
+    padding-block: calc(var(--spacing) * 4);
+  }
+}
+
 /*
   ☰ side panel, account corner and the glassy hero button (D-46), on every page. Colors are brand tokens, some mixed
   toward transparent; tests/unit/tokens.test.ts checks the text on them at the worst point. Where a browser can't blur

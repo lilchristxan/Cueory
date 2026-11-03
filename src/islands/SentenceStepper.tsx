@@ -32,52 +32,58 @@ export default function SentenceStepper({ sentences }: Props) {
 
   return (
     <div>
-      <ol className="space-y-stack" aria-live="polite">
-        {visible.map((s, i) => (
-          <li
-            key={s.id}
-            ref={i === visible.length - 1 ? latestRef : undefined}
-            tabIndex={-1}
-            className="text-lg"
-          >
-            {s.text}
-          </li>
-        ))}
-      </ol>
+      <div className="print:hidden">
+        <ol className="space-y-stack" aria-live="polite">
+          {visible.map((s, i) => (
+            <li
+              key={s.id}
+              ref={i === visible.length - 1 ? latestRef : undefined}
+              tabIndex={-1}
+              className="text-lg"
+            >
+              {s.text}
+            </li>
+          ))}
+        </ol>
 
-      <p className="mt-stack text-sm text-ink-soft">
-        Sentence {state.shown} of {state.total}
-      </p>
+        <p className="mt-stack text-sm text-ink-soft">
+          Sentence {state.shown} of {state.total}
+        </p>
 
-      <div className="mt-stack flex flex-wrap gap-3">
-        <button
-          type="button"
-          onClick={() => setState(back)}
-          disabled={state.shown <= 1}
-          className="rounded-pill border border-line px-5 py-2.5 text-ink disabled:opacity-50"
-        >
-          Back
-        </button>
-        <button
-          type="button"
-          onClick={() => setState(next)}
-          disabled={done}
-          className="rounded-pill bg-button px-5 py-2.5 text-on-button hover:bg-button-hover disabled:opacity-50"
-        >
-          Next sentence
-        </button>
-        {!done && (
+        <div className="mt-stack flex flex-wrap gap-3">
           <button
             type="button"
-            onClick={() => setState(showAll)}
-            className="rounded-pill px-3 py-2.5 text-ink-soft underline"
+            onClick={() => setState(back)}
+            disabled={state.shown <= 1}
+            className="rounded-pill border border-line px-5 py-2.5 text-ink disabled:opacity-50"
           >
-            Show all
+            Back
           </button>
-        )}
+          <button
+            type="button"
+            onClick={() => setState(next)}
+            disabled={done}
+            className="rounded-pill bg-button px-5 py-2.5 text-on-button hover:bg-button-hover disabled:opacity-50"
+          >
+            Next sentence
+          </button>
+          {!done && (
+            <button
+              type="button"
+              onClick={() => setState(showAll)}
+              className="rounded-pill px-3 py-2.5 text-ink-soft underline"
+            >
+              Show all
+            </button>
+          )}
+        </div>
+
+        {done && <p className="mt-stack text-ink-soft">That's the whole lesson for now. More is coming soon.</p>}
       </div>
 
-      {done && <p className="mt-stack text-ink-soft">That's the whole lesson for now. More is coming soon.</p>}
+      <ol className="hidden space-y-stack print:block" data-print-lesson-content>
+        {sentences.map((s) => <li key={s.id} className="text-lg">{s.text}</li>)}
+      </ol>
     </div>
   );
 }
