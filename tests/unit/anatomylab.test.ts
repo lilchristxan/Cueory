@@ -542,7 +542,7 @@ describe('what the camera can see (the ID picture)', () => {
     let reads = 0;
     const measured = new Proxy(picture(rows), {
       get(target, property) {
-        if (typeof property === 'string' && /^\\d+$/.test(property)) reads++;
+        if (typeof property === 'string' && /^\d+$/.test(property)) reads++;
         return Reflect.get(target, property, target);
       },
     });
