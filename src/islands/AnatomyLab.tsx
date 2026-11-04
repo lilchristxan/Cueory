@@ -582,6 +582,11 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts }: Pr
                   // Invalidate an in-flight PNG immediately, before React commits the new
                   // system and its load effect runs. A pending toBlob may finish in between.
                   generation.bump();
+                  // Do not expose the prior model's actions under the new system name
+                  // while React's model-load effect is still pending.
+                  setLoad({ state: 'loading' });
+                  setSelected(null);
+                  setQuiz(null);
                   setSystemKey(s.key);
                 }}
                 className={secondaryButton}
