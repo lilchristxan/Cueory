@@ -503,7 +503,7 @@ test.describe('anatomy lab whole body loads layers on demand', () => {
     await expect(files).toContainText('model files loaded: 1 of 11', { timeout: 20_000 });
     const requests: string[] = [];
     page.on('request', (req) => {
-      if (/\\.glb(?:\\?|$)/.test(req.url())) requests.push(req.url());
+      if (req.url().split('?')[0]?.endsWith('.glb')) requests.push(req.url());
     });
     const showAll = page.getByRole('button', { name: 'show all', exact: true });
     const prompt = page.getByTestId('anatomy-bulk-confirm');
@@ -524,7 +524,7 @@ test.describe('anatomy lab whole body loads layers on demand', () => {
 
     // Verify affirmative action starts downloads but avoid decoding the entire
     // ~1.3-million-triangle body in this phone CI test.
-    await page.route(/\\/models\\/anatomy\\/[^/]+\\.glb(?:\\?|$)/, (route) => route.abort());
+    await page.route('**/models/anatomy/*.glb', (route) => route.abort());
     await showAll.click();
     await prompt.getByRole('button', { name: 'load every layer' }).click();
     await expect(prompt).toHaveCount(0);
