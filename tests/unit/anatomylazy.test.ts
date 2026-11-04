@@ -2,13 +2,67 @@ import { describe, expect, it } from 'vitest';
 import type { AnatomyStructure, AnatomySystem } from '../../src/islands/anatomylab';
 import { LAYERS, wholeBody, layersOf, layerShown, type Layer } from '../../src/islands/anatomylayers';
 import { onlyThis } from '../../src/islands/anatomylab';
-import { PartialLoadError, revealTargetPlan, showAllPlan, createGeneration, loadModelsOrDispose, createOnDemandLoader, visibilityAfterLayerDownload, filesForLayer, firstLayer, idsForFiles, initialLayerPlan, layerNeedsReveal, lazyPeel, lazyRestore, structureLoadNote } from '../../src/islands/anatomylazy';
+import { PartialLoadError, revealTargetPlan, showAllPlan, createGeneration, loadModelsOrDispose, uniqueAnatomyModelUrls, createOnDemandLoader, visibilityAfterLayerDownload, filesForLayer, firstLayer, idsForFiles, initialLayerPlan, layerNeedsReveal, lazyPeel, lazyRestore, structureLoadNote } from '../../src/islands/anatomylazy';
 
 const layers: Layer[] = [
   { id: 'skin', ids: ['s1'] },
   { id: 'muscle', ids: ['m1', 'm2'] },
   { id: 'skeleton', ids: ['b1'] },
 ];
+
+describe('initial scene GLB URL deduplication', () => {
+  it('keeps each distinct physical model once in source order', () => {
+    const urls = Object.freeze([
+      '/models/anatomy/shared.glb',
+      '/models/anatomy/other.glb',
+      '/models/anatomy/shared.glb',
+      '/models/anatomy/third.glb',
+      '/models/anatomy/other.glb',
+    ]);
+    expect(uniqueAnatomyModelUrls(urls)).toEqual([
+      '/models/anatomy/shared.glb',
+      '/models/anatomy/other.glb',
+      '/models/anatomy/third.glb',
+    ]);
+    expect(urls).toHaveLength(5); // never rewrite the source manifest
+  });
+
+  it('accepts the single-file scene API without changing its path', () => {
+    expect(uniqueAnatomyModelUrls('/models/anatomy/heart.glb'))
+      .toEqual(['/models/anatomy/heart.glb']);
+    expect(uniqueAnatomyModelUrls([])).toEqual([]);
+  });
+});
+
+describe('whole-body and scene-batch URL deduplication together', () => {
+  it('keeps one physical GLB while preserving per-file structure ownership', () => {
+    const shared = '/models/anatomy/shared.glb';
+    const systems: AnatomySystem[] = [
+      {
+        key: 'outside', title: 'sample outside', status: 'draft',
+        model: { file: shared, release: 'sample release' },
+        structures: [{ id: 'a', text: 'sample a', layer: 'vessels' }],
+      },
+      {
+        key: 'inside', title: 'sample inside', status: 'draft',
+        model: { file: shared, release: 'sample release' },
+        structures: [{ id: 'b', text: 'sample b', layer: 'organs' }],
+      },
+      {
+        key: 'other', title: 'sample other', status: 'draft',
+        model: { file: '/models/anatomy/other.glb', release: 'sample release' },
+        structures: [{ id: 'c', text: 'sample c', layer: 'organs' }],
+      },
+    ];
+    const body = wholeBody(systems)!;
+    expect(body.model.files).toEqual([shared, '/models/anatomy/other.glb']);
+    expect(uniqueAnatomyModelUrls([...(body.model.files ?? []), shared]))
+      .toEqual(body.model.files);
+    expect(body.model.fileIds?.[shared]).toEqual(['a', 'b']);
+    expect(body.model.layerFiles?.['vessels']).toEqual([shared]);
+    expect(body.model.layerFiles?.['organs']).toEqual([shared, '/models/anatomy/other.glb']);
+  });
+});
 
 describe('initial multi-file model cleanup', () => {
   it('preserves file order on success even when requests finish out of order', async () => {
