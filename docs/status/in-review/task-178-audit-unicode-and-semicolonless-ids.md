@@ -9,3 +9,5 @@ This proposal is stacked directly on #529 clean commit 03126c72ee13244196436f88b
 Exactly three files change: scripts/anatomy-production-audit.mjs, tests/unit/anatomy-production-audit.test.ts, and this lowercase status note. No real anatomy model, clinical source, license record, approval status, dependency, auth, workflow or deployment change.
 
 Require exact-head Astro check, build, Vitest, CodeQL/Semgrep/secrets, production-artifact audit, independent review and staging/source-rights/founder approval. Do not publish drafts or merge to production on this evidence alone.
+
+Additional regression: the JavaScript decoder now observes backslash parity. A literal escaped backslash (two source slashes) is not converted into an FMA/FIX ID, while a final active escape in an odd-length backslash run is decoded. Synthetic tests cover even and odd runs with ordinary, padded-braced and hexadecimal escapes. No runtime/model files are modified.
