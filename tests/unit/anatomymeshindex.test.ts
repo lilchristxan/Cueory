@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
-import { disposeAnatomyMeshResources, indexAnatomyGroup } from '../../src/islands/anatomymeshindex';
+import { disposeAnatomyMaterials, disposeAnatomyMeshResources, indexAnatomyGroup } from '../../src/islands/anatomymeshindex';
 
 /** Test-only boxes and made-up IDs, never real anatomical content. */
 function sampleGroup(id: string, meshName = ''): { group: THREE.Group; mesh: THREE.Mesh; material: THREE.Material } {
@@ -143,6 +143,22 @@ describe('anatomy GLB mesh registration', () => {
 });
 
 describe('anatomy GLB mesh cleanup', () => {
+  it('continues releasing unique ID-render materials after a GPU disposal error', () => {
+    const broken = new THREE.MeshBasicMaterial();
+    const healthy = new THREE.MeshBasicMaterial();
+    const brokenDispose = vi.spyOn(broken, 'dispose')
+      .mockImplementation(() => { throw new Error('simulated lost graphics context'); });
+    const healthyDispose = vi.spyOn(healthy, 'dispose');
+
+    expect(() => disposeAnatomyMaterials([broken, broken, healthy])).not.toThrow();
+    expect(brokenDispose).toHaveBeenCalledOnce();
+    expect(healthyDispose).toHaveBeenCalledOnce();
+  });
+
+  it('accepts an empty ID-render material list', () => {
+    expect(() => disposeAnatomyMaterials([])).not.toThrow();
+  });
+
   it('disposes shared geometry and material only once across nested meshes', () => {
     const group = new THREE.Group();
     const nested = new THREE.Group();
