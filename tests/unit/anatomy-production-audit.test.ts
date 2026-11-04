@@ -132,6 +132,32 @@ describe('anatomy production artifact audit', () => {
     expect(decodeAsciiEscapesForAudit('FIX0010', 'script')).toBe('FIX0010');
   });
 
+  it('rejects padded braced Unicode fixture IDs in JS and JSON artifacts', () => {
+    const f = setup();
+    f.file('_astro/fixture-four.js', 'const id="\\u{0046}IX001";');
+    f.file('_astro/fixture-six.js', 'const id="F\\u{000049}X002";');
+    f.file('pagefind/fixture-eight.json', '{"id":"FI\\u{00000058}003"}');
+    expect(f.check().errors).toEqual(expect.arrayContaining([
+      'test fixture ID exposed in built text: _astro/fixture-four.js (FIX001)',
+      'test fixture ID exposed in built text: _astro/fixture-six.js (FIX002)',
+      'test fixture ID exposed in built text: pagefind/fixture-eight.json (FIX003)',
+    ]));
+  });
+
+  it('rejects padded braced draft IDs but does not invent unrelated tokens', () => {
+    const f = setup();
+    f.file('_astro/draft-braced.js', 'const id="\\u{0046}MA999991";');
+    f.file('_astro/unrelated.js', 'const prefix="PRE\\u{0046}IX001"; const accent="\\u{00E9}";');
+    expect(f.check().errors).toContain(
+      'draft anatomy ID exposed in built text: _astro/draft-braced.js (FMA999991)',
+    );
+    expect(f.check().errors.some((error) => error.includes('_astro/unrelated.js'))).toBe(false);
+    expect(decodeAsciiEscapesForAudit('\\u{0046}IX001', 'script')).toBe('FIX001');
+    expect(decodeAsciiEscapesForAudit('F\\u{000049}X002', 'script')).toBe('FIX002');
+    expect(decodeAsciiEscapesForAudit('\\u{00E9}', 'script')).toBe('\\u{00E9}');
+    expect(decodeAsciiEscapesForAudit('\\u{110000}', 'script')).toBe('\\u{110000}');
+  });
+
   it('also catches escaped draft FMA IDs from the earlier audit review', () => {
     const f = setup();
     f.file('_astro/draft.js', 'const id="\\u0046MA999991";');
