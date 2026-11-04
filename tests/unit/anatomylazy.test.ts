@@ -269,6 +269,49 @@ describe('on-demand structure status', () => {
     expect(structureLoadNote({ id: 'missing', layer: 'organs' }, new Set(), false, filesOf, allFiles, isLoaded)).toBe('not in this model');
   });
 
+  it('reports a missing mesh once its own GLB is loaded, even when its layer has a pending sibling', () => {
+    const owners = {
+      'heart.glb': ['part-a'],
+      'lungs.glb': ['part-b'],
+    };
+    // Without the exact map, the old layer-wide check incorrectly said "not loaded yet".
+    expect(structureLoadNote(
+      { id: 'part-a', layer: 'organs' }, new Set(), true,
+      filesOf, allFiles, isLoaded, owners,
+    )).toBe('not in this model');
+    expect(structureLoadNote(
+      { id: 'part-b', layer: 'organs' }, new Set(), true,
+      filesOf, allFiles, isLoaded, owners,
+    )).toBe('not loaded yet');
+  });
+
+  it('waits if a structure belongs to more than one GLB and an owning file is pending', () => {
+    const owners = {
+      'heart.glb': ['shared-part'],
+      'lungs.glb': ['shared-part'],
+    };
+    const structure = { id: 'shared-part', layer: 'organs' as const };
+    expect(structureLoadNote(structure, new Set(), true, filesOf, allFiles, isLoaded, owners))
+      .toBe('not loaded yet');
+    expect(structureLoadNote(structure, new Set(), true, filesOf, allFiles, () => true, owners))
+      .toBe('not in this model');
+    expect(structureLoadNote(structure, new Set(['shared-part']), true, filesOf, allFiles, isLoaded, owners))
+      .toBeNull();
+  });
+
+  it('does not call an unrelated pending GLB the owner of an unmapped structure', () => {
+    const owners = { 'heart.glb': ['part-a'], 'lungs.glb': ['part-b'] };
+    expect(structureLoadNote(
+      { id: 'unmapped', layer: 'organs' }, new Set(), true,
+      filesOf, allFiles, isLoaded, owners,
+    )).toBe('not in this model');
+    // Older catalogs without fileIds still use the layer-wide fallback.
+    expect(structureLoadNote(
+      { id: 'unmapped', layer: 'organs' }, new Set(), true,
+      filesOf, allFiles, isLoaded,
+    )).toBe('not loaded yet');
+  });
+
   it('treats an unlayered structure as pending while whole-body files remain unfetched', () => {
     expect(structureLoadNote({ id: 'unlayered' }, new Set(), true, filesOf, allFiles, isLoaded)).toBe('not loaded yet');
   });
