@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { knownMissingStructureIds } from '../../src/islands/anatomylazy';
+import { fileReadyForStructureStatus, knownMissingStructureIds } from '../../src/islands/anatomylazy';
 import type { AnatomyStructure } from '../../src/islands/anatomylab';
 
 // Entirely synthetic IDs and GLB URLs. One file contains candidates for
@@ -41,6 +41,23 @@ describe('whole-body verified missing structure summary', () => {
     expect(missing(found, loaded)).toContain('sample-absent');
     found.add('sample-absent');
     expect(missing(found, loaded)).toEqual(['sample-unlayered']);
+  });
+
+  it('waits for found IDs to be committed after an overlapping GLB batch finishes', () => {
+    const loaded = new Set(allFiles);
+    // A shared file completed downloading, but its structure IDs are still
+    // held by a second pending file in that same layer's ensure() batch.
+    const staged = new Set(['sample-a', 'sample-c']);
+    const pendingStatus = (url: string) => fileReadyForStructureStatus(loaded.has(url), 1);
+    expect(fileReadyForStructureStatus(true, 1)).toBe(false);
+    expect(knownMissingStructureIds(structures, staged, filesFor, allFiles, pendingStatus)).toEqual([]);
+
+    // The batch settles and publishes both the shared file's ID and the rest.
+    staged.add('sample-b');
+    const settledStatus = (url: string) => fileReadyForStructureStatus(loaded.has(url), 0);
+    expect(fileReadyForStructureStatus(true, 0)).toBe(true);
+    expect(knownMissingStructureIds(structures, staged, filesFor, allFiles, settledStatus))
+      .toEqual(['sample-absent', 'sample-unlayered']);
   });
 
   it('waits for every system file before reporting an unlayered missing ID', () => {
