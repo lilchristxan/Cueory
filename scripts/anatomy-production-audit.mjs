@@ -33,12 +33,14 @@ function walkFiles(dir) {
  */
 export function decodeAsciiEscapesForAudit(text, syntax) {
   if (syntax === 'script') {
-    // Padded braced code points (for example \u{0046}) are valid JS too.
-    // Decode only ASCII: other Unicode characters cannot be part of an FMA/FIX ID.
-    return text.replace(/\\+(?:u00([0-7][0-9a-f])|x([0-7][0-9a-f])|u\{([0-9a-f]{1,16})\})/gi,
-      (match, unicode, hex, braced) => {
+    // Decode only active JS escapes. An even run of backslashes means the
+    // slash was itself escaped, so "\\u0046" is text, not the letter F.
+    // Preserve preceding escaped slash pairs while decoding a final odd slash.
+    // Padded code-point escapes such as \u{0046} are valid JavaScript too.
+    return text.replace(/(?<!\\)((?:\\\\)*)\\(?:u00([0-7][0-9a-f])|x([0-7][0-9a-f])|u\{([0-9a-f]{1,16})\})/gi,
+      (match, pairs, unicode, hex, braced) => {
         const value = Number.parseInt(unicode ?? hex ?? braced, 16);
-        return Number.isInteger(value) && value <= 127 ? String.fromCharCode(value) : match;
+        return Number.isInteger(value) && value <= 127 ? pairs + String.fromCharCode(value) : match;
       });
   }
   if (syntax === 'markup') {
