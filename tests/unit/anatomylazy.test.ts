@@ -73,6 +73,26 @@ describe('initial multi-file GLB resource cleanup', () => {
   });
 });
 
+describe('initial multi-file GLB sync failure recovery', () => {
+  it('rejects synchronous decoder errors, then loads a fresh successful batch', async () => {
+    const disposed: string[] = [];
+    await expect(loadModelsOrDispose(
+      [
+        () => Promise.resolve('decoded-before-error'),
+        () => { throw new Error('decoder unavailable'); },
+      ],
+      (value) => disposed.push(value),
+    )).rejects.toThrow('decoder unavailable');
+    expect(disposed).toEqual(['decoded-before-error']);
+
+    await expect(loadModelsOrDispose(
+      [() => Promise.resolve('fresh-model')],
+      (value) => disposed.push(value),
+    )).resolves.toEqual(['fresh-model']);
+    expect(disposed).toEqual(['decoded-before-error']);
+  });
+});
+
 describe('partial failures and show all', () => {
   it('hands over the files that loaded when another file of the layer fails, and retries only the failed one', async () => {
     let failB = true;
