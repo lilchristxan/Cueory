@@ -87,6 +87,20 @@ export function auditAnatomyProduction(distDir, contentDir) {
       urls.forEach((url) => approved.add(url));
       // A production-style audit must also reject a damaged *approved* record.
       // Otherwise a stale dist/ can pass despite having no reviewed source names.
+      // An approved label's source ID must resolve in the exact same manifest.
+      const citationIds = new Set();
+      if (!Array.isArray(data.sources) || data.sources.length === 0) {
+        errors.push(`${name}: approved citation sources are missing`);
+      } else {
+        for (const source of data.sources) {
+          if (!source || typeof source.id !== 'string' || source.id.trim().length === 0) {
+            errors.push(`${name}: invalid approved citation source`);
+            continue;
+          }
+          if (citationIds.has(source.id)) errors.push(`${name}: duplicate approved citation source ${source.id}`);
+          citationIds.add(source.id);
+        }
+      }
       if (!Array.isArray(data.labels) || data.labels.length === 0) {
         errors.push(`${name}: approved labels are missing`);
       } else {
@@ -103,6 +117,8 @@ export function auditAnatomyProduction(distDir, contentDir) {
           }
           if (typeof label.source !== 'string' || label.source.trim().length === 0) {
             errors.push(`${name}: approved label ${label.id} has no source citation`);
+          } else if (!citationIds.has(label.source)) {
+            errors.push(`${name}: approved label ${label.id} references unknown source ${label.source}`);
           }
         }
       }
