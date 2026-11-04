@@ -339,6 +339,9 @@ test.describe('anatomy lab system switch', () => {
     await buttons.nth(1).click();
     // Held download of the new system: the old model must already be gone, and the loading state shown.
     await expect(page.getByText(/^loading /).first()).toBeVisible();
+    // The new system must not expose actions that still reference the old model.
+    await expect(page.getByRole('button', { name: 'square 1080×1080' })).toBeDisabled();
+    await expect(page.getByRole('button', { name: 'start the quiz' })).toBeDisabled();
     await expect(list(page).getByRole('button').first()).toBeDisabled();
     release.splice(0).forEach((r) => r());
     await expect(page.getByText(/^loading /)).toHaveCount(0, { timeout: 20_000 });
