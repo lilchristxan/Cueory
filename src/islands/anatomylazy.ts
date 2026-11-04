@@ -100,6 +100,38 @@ export function layerNeedsReveal(
   return !layerShown(layer, hidden) || files.some((url) => !isLoaded(url));
 }
 
+/**
+ * The whole-body catalog can list thousands of IDs across several GLBs.
+ * Build the reverse lookup once per immutable source map instead of scanning
+ * every model's ID array for every row and missing-count calculation.
+ * Weak keys let old body-system catalogs be collected after a view change.
+ */
+const fileOwnerIndexes = new WeakMap<
+  Readonly<Record<string, readonly string[]>>,
+  ReadonlyMap<string, readonly string[]>
+>();
+
+function filesOwningStructure(
+  fileIds: Readonly<Record<string, readonly string[]>>,
+  structureId: string,
+): readonly string[] {
+  let index = fileOwnerIndexes.get(fileIds);
+  if (!index) {
+    const owners = new Map<string, string[]>();
+    for (const [url, ids] of Object.entries(fileIds)) {
+      // Shared IDs may have more than one owning GLB; keep every distinct owner.
+      for (const id of new Set(ids)) {
+        const paths = owners.get(id);
+        if (paths) paths.push(url);
+        else owners.set(id, [url]);
+      }
+    }
+    index = owners;
+    fileOwnerIndexes.set(fileIds, index);
+  }
+  return index.get(structureId) ?? [];
+}
+
 /** A missing mesh can be waiting for a download, or truly absent after its model file loaded. */
 export function structureLoadNote(
   structure: Pick<AnatomyStructure, 'id' | 'layer'>,
@@ -117,7 +149,7 @@ export function structureLoadNote(
     // an already-loaded GLB pending again.
     const layerFiles = structure.layer ? filesOfLayer(structure.layer) : [];
     const files = fileIds
-      ? Object.entries(fileIds).filter(([, ids]) => ids.includes(structure.id)).map(([url]) => url)
+      ? filesOwningStructure(fileIds, structure.id)
       : layerFiles.length ? layerFiles : filesOfSystem;
     if (files.some((url) => !isLoaded(url))) return 'not loaded yet';
   }
