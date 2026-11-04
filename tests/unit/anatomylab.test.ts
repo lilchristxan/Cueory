@@ -34,6 +34,8 @@ import {
   revealQuiz,
   slugify,
   startQuiz,
+  textFallbackItems,
+  TEXT_FALLBACK_BATCH,
   systemKeyFromPath,
   toggleHidden,
   visibleSelection,
@@ -204,6 +206,33 @@ describe('the draft gate (D-56)', () => {
       { CUEORY_ANATOMY_DRAFTS: '1' },
     );
     expect(data.systems.map((s) => s.key)).toEqual(['skeleton-axial', 'skeleton-limbs']);
+  });
+});
+
+describe('fallback structure names when 3D cannot start', () => {
+  const sample = [
+    { id: 'x1', text: 'fixture apple', group: 'first' },
+    { id: 'x2', text: 'fixture pear', group: 'first' },
+    { id: 'x3', text: 'fixture peach', group: 'second' },
+  ];
+
+  it('shows a bounded first batch in original grouped order', () => {
+    const groups = groupStructures(sample);
+    expect(textFallbackItems(groups, 2).map((item) => item.id)).toEqual(['x1', 'x2']);
+    expect(textFallbackItems(groups, TEXT_FALLBACK_BATCH)).toEqual(sample);
+  });
+
+  it('searches the whole catalog before applying the display limit', () => {
+    const groups = groupStructures(sample, 'peach');
+    expect(textFallbackItems(groups, 1).map((item) => item.id)).toEqual(['x3']);
+    expect(textFallbackItems(groups, 1)[0]?.text).toBe('fixture peach');
+  });
+
+  it('returns no rows for invalid limits rather than allocating an unlimited list', () => {
+    const groups = groupStructures(sample);
+    for (const limit of [0, -1, 1.5, Number.NaN, Number.POSITIVE_INFINITY]) {
+      expect(textFallbackItems(groups, limit)).toEqual([]);
+    }
   });
 });
 

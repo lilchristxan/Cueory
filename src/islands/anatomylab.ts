@@ -252,6 +252,22 @@ export function groupStructures(structures: readonly AnatomyStructure[], query =
   return [...groups].map(([group, items]) => ({ group, items }));
 }
 
+/** Limit the failed-WebGL text view so large catalogs remain usable on phones. */
+export const TEXT_FALLBACK_BATCH = 40;
+
+/** The first matching items, in group order. Search still considers the full catalog. */
+export function textFallbackItems(groups: readonly StructureGroup[], limit: number): AnatomyStructure[] {
+  if (!Number.isSafeInteger(limit) || limit < 1) return [];
+  const items: AnatomyStructure[] = [];
+  for (const group of groups) {
+    for (const item of group.items) {
+      if (items.length >= limit) return items;
+      items.push(item);
+    }
+  }
+  return items;
+}
+
 // ---------------------------------------------------------------------------------------------------------------------
 // Visibility
 // ---------------------------------------------------------------------------------------------------------------------
