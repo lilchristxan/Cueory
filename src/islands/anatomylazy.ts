@@ -176,6 +176,9 @@ export function createOnDemandLoader<R>(
 ): OnDemandLoader<R> {
   const done = new Set<string>();
   const inFlight = new Map<string, Promise<R | null>>();
+  // Active downloads may never settle. Retiring a system must release their
+  // batch callers now, while late fetch results are still ignored safely.
+  const cancelInFlight = new Map<string, () => void>();
   const waiting: Array<{ url: string; start: () => void; cancel: () => void }> = [];
   let active = 0;
   let retired = false;
@@ -187,6 +190,7 @@ export function createOnDemandLoader<R>(
       // Another path might have marked a queued file loaded (for example, the first view).
       if (done.has(job.url)) {
         inFlight.delete(job.url);
+        cancelInFlight.delete(job.url);
         job.cancel();
         continue;
       }
@@ -208,6 +212,7 @@ export function createOnDemandLoader<R>(
     });
     // Register before enqueueing: overlapping layers must share the same download.
     inFlight.set(url, promise);
+    cancelInFlight.set(url, () => resolve(null));
     waiting.push({
       url,
       cancel: () => resolve(null),
@@ -221,6 +226,7 @@ export function createOnDemandLoader<R>(
         void fetch.then(
           (result) => {
             inFlight.delete(url);
+            cancelInFlight.delete(url);
             if (retired) resolve(null);
             else {
               done.add(url);
@@ -244,6 +250,7 @@ export function createOnDemandLoader<R>(
           (err: unknown) => {
             // Failure is not cached, so a later layer action can retry.
             inFlight.delete(url);
+            cancelInFlight.delete(url);
             if (retired) resolve(null);
             else reject(err);
           },
@@ -275,8 +282,12 @@ export function createOnDemandLoader<R>(
     retire() {
       retired = true;
       done.clear();
+      // Resolve outstanding batches even if a request is stalled indefinitely.
+      // The underlying fetch may still finish, but its retired result cannot
+      // reach the UI and the shared queue will not launch more downloads.
+      for (const cancel of cancelInFlight.values()) cancel();
+      cancelInFlight.clear();
       inFlight.clear();
-      // Queued work must never start after changing systems, and callers must not hang.
       for (const job of waiting.splice(0)) job.cancel();
     },
   };
