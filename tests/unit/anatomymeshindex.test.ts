@@ -16,6 +16,70 @@ function sampleGroup(id: string, meshName = ''): { group: THREE.Group; mesh: THR
 }
 
 describe('anatomy GLB mesh registration', () => {
+  it('recognizes a reviewed node ID when glTF extras contain a descriptive alias', () => {
+    const group = new THREE.Group();
+    const named = new THREE.Group();
+    named.name = 'TEST_CANONICAL_NODE';
+    named.userData['name'] = 'unreviewed display alias';
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(), new THREE.MeshBasicMaterial());
+    named.add(mesh);
+    group.add(named);
+    const indexed = new Map<string, THREE.Mesh[]>();
+    const unlabeled: THREE.Mesh[] = [];
+
+    expect(indexAnatomyGroup(group, ['TEST_CANONICAL_NODE'], indexed, unlabeled))
+      .toEqual({ touched: ['TEST_CANONICAL_NODE'], triangles: 12 });
+    expect(indexed.get('TEST_CANONICAL_NODE')).toEqual([mesh]);
+    expect(mesh.userData['structureId']).toBe('TEST_CANONICAL_NODE');
+    expect(unlabeled).toEqual([]);
+  });
+
+  it('keeps an exactly reviewed extras ID authoritative over another reviewed node name', () => {
+    const group = new THREE.Group();
+    const named = new THREE.Group();
+    named.name = 'TEST_NODE_ALIAS';
+    named.userData['name'] = 'TEST_REVIEWED_EXTRAS';
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(), new THREE.MeshBasicMaterial());
+    named.add(mesh);
+    group.add(named);
+    const indexed = new Map<string, THREE.Mesh[]>();
+    const unlabeled: THREE.Mesh[] = [];
+
+    expect(indexAnatomyGroup(group, ['TEST_REVIEWED_EXTRAS', 'TEST_NODE_ALIAS'], indexed, unlabeled))
+      .toEqual({ touched: ['TEST_REVIEWED_EXTRAS'], triangles: 12 });
+    expect(indexed.get('TEST_REVIEWED_EXTRAS')).toEqual([mesh]);
+    expect(indexed.has('TEST_NODE_ALIAS')).toBe(false);
+    expect(mesh.userData['structureId']).toBe('TEST_REVIEWED_EXTRAS');
+  });
+
+  it('combines node-ID fallback with shared viewer material and source-texture cleanup', () => {
+    const group = new THREE.Group();
+    const named = new THREE.Group();
+    named.name = 'TEST_REVIEWED_OWNER';
+    named.userData['name'] = 'non-ID description';
+    const originalTexture = new THREE.Texture();
+    const disposedTexture = vi.spyOn(originalTexture, 'dispose');
+    const original = new THREE.MeshBasicMaterial({ map: originalTexture });
+    const disposedMaterial = vi.spyOn(original, 'dispose');
+    const first = new THREE.Mesh(new THREE.BoxGeometry(), original);
+    const second = new THREE.Mesh(new THREE.BoxGeometry(), original);
+    named.add(first, second);
+    group.add(named);
+    const indexed = new Map<string, THREE.Mesh[]>();
+    const unlabeled: THREE.Mesh[] = [];
+
+    expect(indexAnatomyGroup(group, ['TEST_REVIEWED_OWNER'], indexed, unlabeled))
+      .toEqual({ touched: ['TEST_REVIEWED_OWNER'], triangles: 24 });
+    expect(indexed.get('TEST_REVIEWED_OWNER')).toEqual([first, second]);
+    expect(unlabeled).toEqual([]);
+    expect(disposedMaterial).toHaveBeenCalledOnce();
+    expect(disposedTexture).toHaveBeenCalledOnce();
+    expect(first.userData['structureId']).toBe('TEST_REVIEWED_OWNER');
+    expect(second.userData['structureId']).toBe('TEST_REVIEWED_OWNER');
+    expect(first.material).toBeInstanceOf(THREE.MeshLambertMaterial);
+    expect(first.material).toBe(second.material);
+  });
+
   it('skips a placeholder without positions but still indexes a valid sibling', () => {
     const group = new THREE.Group();
     const emptyOwner = new THREE.Group();
