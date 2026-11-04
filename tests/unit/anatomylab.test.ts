@@ -417,6 +417,30 @@ describe('labels with leader lines', () => {
     for (const a of placed) for (const b of placed) if (a !== b) expect(overlap(a, b)).toBe(false);
   });
 
+  it.each([0, 1, 8, 15, 16, -1, Number.NaN])(
+    'does not throw or invent labels with collapsed view height %s',
+    (height) => {
+      const anchors: LabelAnchor[] = [
+        { id: 'a', x: 70, y: 45, width: 80, height: 24 },
+        { id: 'b', x: 230, y: 65, width: 80, height: 24 },
+      ];
+      expect(placeLabels([], { width: 320, height })).toEqual({ placed: [], leftOut: [] });
+      expect(placeLabels(anchors, { width: 320, height })).toEqual({ placed: [], leftOut: ['a', 'b'] });
+    },
+  );
+
+  it('reports repeated labels once in original order when the canvas is collapsed', () => {
+    const anchors: LabelAnchor[] = [
+      { id: 'b', x: 70, y: 45, width: 80, height: 24 },
+      { id: 'a', x: 230, y: 65, width: 80, height: 24 },
+    ];
+    expect(placeLabels([anchors[0]!, anchors[1]!, anchors[0]!], { width: 320, height: 0 }))
+      .toEqual({ placed: [], leftOut: ['b', 'a'] });
+    const normal = placeLabels(anchors, { width: 320, height: 140 });
+    expect(normal.leftOut).toEqual([]);
+    expect(normal.placed.map((label) => label.id).sort()).toEqual(['a', 'b']);
+  });
+
   it('gives the same layout whatever order the anchors come in', () => {
     const anchors: LabelAnchor[] = [
       { id: 'a', x: 50, y: 40, width: 60, height: 24 },
