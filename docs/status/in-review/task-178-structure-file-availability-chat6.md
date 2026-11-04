@@ -1,6 +1,6 @@
 # Task 178 — accurate per-file structure availability
 
-status: Task 178 (#pending): distinguish a missing mesh in a completed GLB from another unrequested GLB in the same anatomy layer; source-map and synthetic unit regressions in review.
+status: Task 178 (#516): distinguish a missing mesh in a completed GLB from another unrequested GLB in the same anatomy layer; source-map and synthetic unit regressions in review.
 
 ## Reproduced code-level defect
 The whole-body list currently calls `structureLoadNote` with an entire layer's GLB paths. For example, if `heart.glb` has completed and contains no mesh for a listed synthetic structure, but `lungs.glb` has not loaded, that synthetic structure still appears as **not loaded yet**. The label reflects an unrelated file's status, even though the exact source-to-file ownership map is available in `system.model.fileIds`. This can also happen after one file fails permanently while another has completed.
