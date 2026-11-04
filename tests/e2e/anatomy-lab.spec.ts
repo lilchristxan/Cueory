@@ -103,6 +103,151 @@ test.describe('anatomy lab', () => {
     expect(glb).toEqual([]);
   });
 
+  test('retains searchable structure names after WebGL context loss and can reopen 3D', async ({ page }) => {
+    await openLab(page);
+    // A phone may lose its GPU context while a pointer remains down on the canvas.
+    await page.locator('canvas').dispatchEvent('pointerdown', { pointerId: 71, clientX: 12, clientY: 12 });
+    const prevented = await page.locator('canvas').evaluate((canvas) => {
+      const event = new Event('webglcontextlost', { cancelable: true });
+      canvas.dispatchEvent(event);
+      return event.defaultPrevented;
+    });
+    expect(prevented).toBe(true);
+
+    await expect(page.getByRole('alert')).toContainText('the 3D anatomy lab could not open.');
+    const catalog = page.getByRole('region', { name: 'structure names: test shapes (fixture)' });
+    await expect(catalog).toBeVisible();
+    await expect(catalog.getByRole('status')).toHaveText('showing 5 of 5 matching structures');
+    await catalog.getByLabel('find a structure').fill('cube a');
+    await expect(catalog.getByRole('listitem')).toHaveCount(1);
+    await expect(catalog.getByRole('listitem').first()).toContainText('fixture cube A');
+    // This must remain identified as a synthetic test model, not reviewed clinical anatomy.
+    await expect(page.getByText('test shapes made in code for automated tests: not anatomy, not from BodyParts3D')).toBeVisible();
+
+    await page.getByRole('button', { name: 'try 3D again' }).click();
+    await expect(page.locator('canvas')).toBeVisible({ timeout: 15_000 });
+    const cubeA = list(page).getByRole('button', { name: 'fixture cube A', exact: true });
+    await expect(cubeA).toBeEnabled({ timeout: 20_000 });
+    await cubeA.click();
+    await expect(cubeA).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  test('clears stale readiness before the WebGL retry model-load effect runs', async ({ page }, info) => {
+    test.skip(!isDesktopOfEachEngine(info), 'one retry-state check per browser engine');
+    await openLab(page);
+    const cube = page.getByRole('region', { name: 'structures' })
+      .getByRole('button', { name: 'fixture cube A', exact: true });
+    await cube.click();
+    await expect(page.getByRole('region', { name: 'fixture cube A' })).toBeVisible();
+    const prevented = await page.locator('canvas').evaluate((canvas) => {
+      const lost = new Event('webglcontextlost', { cancelable: true });
+      canvas.dispatchEvent(lost);
+      return lost.defaultPrevented;
+    });
+    expect(prevented).toBe(true);
+    await expect(page.getByRole('button', { name: 'try 3D again' })).toBeVisible();
+
+    // Freeze only the retry's scheduled open-frame callback and its 250 ms
+    // background-tab fallback. The new model-load effect cannot run until we
+    // explicitly release that frame, so the following assertions fail on the
+    // old implementation even though its later effect also resets the state.
+    await page.evaluate(() => {
+      type RetryWindow = Window & {
+        __anatomyOpeningFrameHeld?: boolean;
+        __anatomyResumeOpening?: () => void;
+      };
+      const realRaf = window.requestAnimationFrame.bind(window);
+      const realTimeout = window.setTimeout.bind(window);
+      let heldFrame: FrameRequestCallback | null = null;
+      let heldFallback: (() => void) | null = null;
+      window.requestAnimationFrame = (callback) => {
+        if (!heldFrame) {
+          heldFrame = callback;
+          (window as RetryWindow).__anatomyOpeningFrameHeld = true;
+          return 1_000_000;
+        }
+        return realRaf(callback);
+      };
+      window.setTimeout = ((handler: TimerHandler, ms?: number, ...args: unknown[]) => {
+        if (ms === 250 && !heldFallback) {
+          heldFallback = () => {
+            if (typeof handler === 'function') handler(...args);
+          };
+          return 1_000_001;
+        }
+        return realTimeout(handler, ms, ...args);
+      }) as typeof window.setTimeout;
+      (window as RetryWindow).__anatomyResumeOpening = () => {
+        window.requestAnimationFrame = realRaf;
+        window.setTimeout = realTimeout;
+        if (heldFrame) realRaf(heldFrame);
+        else heldFallback?.();
+      };
+      const retry = [...document.querySelectorAll('button')]
+        .find((button) => button.textContent?.trim() === 'try 3D again');
+      if (!retry) throw new Error('No 3D retry button is available');
+      // Native click avoids Playwright actionability waits needing the held RAF.
+      retry.click();
+    });
+    try {
+      await expect.poll(
+        () => page.evaluate(() => (window as Window & { __anatomyOpeningFrameHeld?: boolean }).__anatomyOpeningFrameHeld),
+      ).toBe(true);
+      await expect(page.locator('canvas')).toBeVisible();
+      await expect(page.getByRole('region', { name: 'fixture cube A' })).toHaveCount(0);
+      await expect(page.getByRole('button', { name: 'start the quiz' })).toBeDisabled();
+      await expect(page.getByRole('region', { name: 'structures' })
+        .getByRole('button', { name: 'fixture cube A', exact: true })).toBeDisabled();
+    } finally {
+      // Do not leave a frozen requestAnimationFrame even if an assertion fails.
+      await page.evaluate(() => {
+        (window as Window & { __anatomyResumeOpening?: () => void }).__anatomyResumeOpening?.();
+      });
+    }
+    await expect(page.getByRole('button', { name: 'start the quiz' }))
+      .toBeEnabled({ timeout: 20_000 });
+    await expect(page.getByRole('region', { name: 'structures' })
+      .getByRole('button', { name: 'fixture cube A', exact: true })).toBeEnabled();
+  });
+
+
+  test('never saves a delayed picture after WebGL context loss', async ({ page }, info) => {
+    test.skip(!isDesktopOfEachEngine(info), 'one context-loss export race per browser engine');
+    await page.addInitScript(() => {
+      const original = HTMLCanvasElement.prototype.toBlob;
+      HTMLCanvasElement.prototype.toBlob = function (callback, type, quality) {
+        if (this.width === 1080 && this.height === 1080 && type === 'image/png') {
+          (window as Window & { __finishLostContextPicture?: () => void }).__finishLostContextPicture =
+            () => callback(new Blob(['synthetic image bytes'], { type: 'image/png' }));
+          return;
+        }
+        return original.call(this, callback, type, quality);
+      };
+    });
+    await openLab(page);
+    const downloads: string[] = [];
+    page.on('download', (download) => downloads.push(download.suggestedFilename()));
+    await page.getByRole('button', { name: 'square 1080×1080' }).click();
+    await expect.poll(() => page.evaluate(
+      () => typeof (window as Window & { __finishLostContextPicture?: () => void }).__finishLostContextPicture,
+    )).toBe('function');
+
+    // Lose the GPU and finish the held PNG within one browser task.
+    await page.evaluate(() => {
+      const canvas = document.querySelector('canvas');
+      const finish = (window as Window & { __finishLostContextPicture?: () => void }).__finishLostContextPicture;
+      if (!canvas || !finish) throw new Error('Missing the active 3D view or held export.');
+      const event = new Event('webglcontextlost', { cancelable: true });
+      canvas.dispatchEvent(event);
+      if (!event.defaultPrevented) throw new Error('WebGL context loss was not handled.');
+      finish();
+    });
+    await expect(page.getByRole('alert')).toContainText('the 3D anatomy lab could not open.');
+    await page.waitForTimeout(100);
+    expect(downloads).toEqual([]);
+    await expect(page.getByText(/^saved cueory-fixture-square/)).toHaveCount(0);
+  });
+
   test('without ?fixture the preview shows no fixture', async ({ page }) => {
     await page.goto('/preview/anatomy-lab');
     const open = page.getByRole('button', { name: 'open the anatomy lab' });
@@ -172,7 +317,7 @@ test.describe('anatomy lab', () => {
     const search = page.getByLabel('find a structure');
     const picker = page.getByRole('group', { name: 'body system' });
     const whole = picker.getByRole('button', { name: 'whole body', exact: true });
-    test.skip((await whole.count()) === 0, 'the real whole-body catalog is not included in this build');
+    await expect(whole).toBeVisible({ timeout: 15_000 });
 
     await search.fill('fixture cube B');
     await expect(list(page).getByRole('button', { name: 'fixture cube B', exact: true })).toBeVisible();
@@ -547,7 +692,7 @@ test.describe('anatomy lab whole body loads layers on demand', () => {
     const response = await page.goto('/preview/anatomy-lab');
     expect(response).not.toBeNull();
     const html = await response!.text();
-    test.skip(!html.includes(sourceId), 'no draft anatomy sources in this build');
+    expect(html).toContain(sourceId);
     expect(html.split(sourceId).length - 1).toBe(1);
 
     await expect(page.getByRole('button', { name: 'whole body', exact: true })).toHaveCount(0);
@@ -555,6 +700,111 @@ test.describe('anatomy lab whole body loads layers on demand', () => {
     await expect(
       page.getByRole('group', { name: 'body system' }).getByRole('button', { name: 'whole body', exact: true }),
     ).toBeVisible({ timeout: 15_000 });
+  });
+
+  test('counts the first GLB only after it arrives and disables layer actions during its download', async ({ page }, info) => {
+    test.skip(!isDesktopOfEachEngine(info), 'one delayed-initial-model regression per browser engine');
+    await page.goto('/preview/anatomy-lab');
+    await page.getByRole('button', { name: 'open the anatomy lab' }).click();
+    // The canvas exists before WebGL startup completes. Wait until the viewer is actually open.
+    await expect(page.locator('canvas')).toBeFocused({ timeout: 15_000 });
+    const whole = page.getByRole('group', { name: 'body system' }).getByRole('button', { name: 'whole body' });
+    await expect(whole).toBeVisible({ timeout: 15_000 });
+
+    let requested!: () => void;
+    let release!: () => void;
+    const reached = new Promise<void>(resolve => { requested = resolve; });
+    const blocked = new Promise<void>(resolve => { release = resolve; });
+    await page.route(/\/models\/anatomy\/skin\.glb(?:\?|$)/, async route => {
+      requested();
+      await blocked;
+      await route.continue();
+    });
+
+    await whole.click();
+    const files = page.getByTestId('anatomy-files');
+    const layers = page.getByRole('group', { name: 'layers, skin to bone' });
+    const skin = layers.getByRole('button', { name: /^skin \(/ });
+    const vessels = layers.getByRole('button', { name: /^vessels \(/ });
+    const peel = layers.getByRole('button', { name: /^peel a layer/ });
+    const restore = layers.getByRole('button', { name: /^put a layer back/ });
+    try {
+      await reached;
+      await expect(files).toContainText('model files loaded: 0 of 11');
+      for (const button of [skin, vessels, peel, restore]) await expect(button).toBeDisabled();
+      await expect(page.getByTestId('anatomy-layer-loading')).toHaveCount(0);
+    } finally {
+      // Always release the pending network request, even if an assertion fails.
+      release();
+    }
+
+    await expect(files).toContainText('model files loaded: 1 of 11', { timeout: 20_000 });
+    await expect(vessels).toBeEnabled();
+    await expect(peel).toBeEnabled();
+
+    // A later on-demand download must also prevent conflicting peel/restore actions.
+    let vesselRequested!: () => void;
+    let releaseVessel!: () => void;
+    const reachedVessel = new Promise<void>(resolve => { vesselRequested = resolve; });
+    const blockedVessel = new Promise<void>(resolve => { releaseVessel = resolve; });
+    await page.route('**/models/anatomy/vessels.glb', async route => {
+      vesselRequested();
+      await blockedVessel;
+      await route.continue();
+    });
+    await vessels.click();
+    try {
+      await reachedVessel;
+      await expect(vessels).toBeDisabled();
+      await expect(peel).toBeDisabled();
+      await expect(restore).toBeDisabled();
+    } finally {
+      releaseVessel();
+    }
+    await expect(vessels).toBeEnabled({ timeout: 20_000 });
+  });
+
+  test('keeps initial file count at zero after a failed first GLB and recovers on retry', async ({ page }, info) => {
+    test.skip(!isDesktopOfEachEngine(info), 'one initial-GLB failure/retry check per browser engine');
+    await page.goto('/preview/anatomy-lab');
+    await page.getByRole('button', { name: 'open the anatomy lab' }).click();
+    await expect(page.locator('canvas')).toBeFocused({ timeout: 15_000 });
+    const whole = page.getByRole('group', { name: 'body system' })
+      .getByRole('button', { name: 'whole body', exact: true });
+    await expect(whole).toBeVisible({ timeout: 15_000 });
+
+    let attempts = 0;
+    let releaseFirst!: () => void;
+    let firstRequested!: () => void;
+    const reached = new Promise<void>(resolve => { firstRequested = resolve; });
+    const blocked = new Promise<void>(resolve => { releaseFirst = resolve; });
+    await page.route('**/models/anatomy/skin.glb', async route => {
+      attempts++;
+      if (attempts === 1) {
+        firstRequested();
+        await blocked;
+        await route.abort('failed');
+      } else {
+        await route.continue();
+      }
+    });
+
+    await whole.click();
+    const files = page.getByTestId('anatomy-files');
+    try {
+      await reached;
+      await expect(files).toContainText('model files loaded: 0 of 11');
+    } finally {
+      // The held request must always be released, including if the assertion fails.
+      releaseFirst();
+    }
+    await expect(page.getByRole('alert').filter({ hasText: 'could not load whole body.' }))
+      .toBeVisible({ timeout: 20_000 });
+    await expect(files).toContainText('model files loaded: 0 of 11');
+
+    await page.getByRole('button', { name: 'try loading again' }).click();
+    await expect(files).toContainText('model files loaded: 1 of 11', { timeout: 20_000 });
+    expect(attempts).toBe(2);
   });
 
   test('only the outer layer is requested at first; a deeper layer only when peeled to', async ({ page }) => {
@@ -568,7 +818,7 @@ test.describe('anatomy lab whole body loads layers on demand', () => {
     // The canvas exists during "opening" too. Focus is set only after the viewer reaches "open".
     await expect(page.locator('canvas')).toBeFocused({ timeout: 15_000 });
     const picker = page.getByRole('group', { name: 'body system' });
-    test.skip((await picker.getByRole('button', { name: 'whole body' }).count()) === 0, 'no real whole-body models in this build');
+    await expect(picker.getByRole('button', { name: 'whole body' })).toBeVisible({ timeout: 15_000 });
     await page.waitForLoadState('networkidle');
     glb.length = 0;
     await picker.getByRole('button', { name: 'whole body' }).click();
@@ -591,7 +841,7 @@ test.describe('anatomy lab whole body loads layers on demand', () => {
     await page.getByRole('button', { name: 'open the anatomy lab' }).click();
     await expect(page.locator('canvas')).toBeVisible({ timeout: 15_000 });
     const whole = page.getByRole('group', { name: 'body system' }).getByRole('button', { name: 'whole body' });
-    test.skip((await whole.count()) === 0, 'whole-body draft model is absent from this build');
+    await expect(whole).toBeVisible({ timeout: 15_000 });
     await whole.click();
     const files = page.getByTestId('anatomy-files');
     await expect(files).toContainText('model files loaded: 1 of 11', { timeout: 20_000 });
@@ -631,7 +881,7 @@ test.describe('anatomy lab whole body loads layers on demand', () => {
     await page.getByRole('button', { name: 'open the anatomy lab' }).click();
     await expect(page.locator('canvas')).toBeVisible({ timeout: 15_000 });
     const wholeBody = page.getByRole('group', { name: 'body system' }).getByRole('button', { name: 'whole body' });
-    test.skip((await wholeBody.count()) === 0, 'real whole-body models are not included in this build');
+    await expect(wholeBody).toBeVisible({ timeout: 15_000 });
     await wholeBody.click();
     const files = page.getByTestId('anatomy-files');
     await expect(files).toContainText('model files loaded: 1 of 11', { timeout: 20_000 });
@@ -656,7 +906,7 @@ test.describe('anatomy lab whole body loads layers on demand', () => {
     // Do not treat an unfinished WebGL startup as evidence that the combined system is absent.
     await expect(page.locator('canvas')).toBeFocused({ timeout: 15_000 });
     const wholeBody = page.getByRole('group', { name: 'body system' }).getByRole('button', { name: 'whole body' });
-    test.skip((await wholeBody.count()) === 0, 'real whole-body draft models are not included in this build');
+    await expect(wholeBody).toBeVisible({ timeout: 15_000 });
     await wholeBody.click();
 
     const files = page.getByTestId('anatomy-files');
@@ -704,7 +954,7 @@ test.describe('anatomy lab system switch', () => {
     await expect(page.locator('canvas')).toBeVisible({ timeout: 15_000 });
     const picker = page.getByRole('group', { name: 'body system' });
     const buttons = picker.getByRole('button');
-    test.skip((await buttons.count()) < 2, 'no real models in this build');
+    await expect.poll(() => buttons.count()).toBeGreaterThanOrEqual(2);
     await expect.poll(() => release.length).toBeGreaterThan(0);
     release.splice(0).forEach((r) => r());
     await expect(page.getByText(/^loading /)).toHaveCount(0, { timeout: 20_000 });
