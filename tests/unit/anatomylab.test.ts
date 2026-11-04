@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   BEHIND_MARK,
   BODYPARTS3D_CREDIT,
+  BODYPARTS3D_LICENSE_URL,
   EXPORT_PAD,
   EXPORT_SIZES,
   FIT_MARGIN,
@@ -136,11 +137,32 @@ describe('the release note', () => {
   it('says a draft model is a draft, built from its release, under the view and on every picture', () => {
     const draft = parseAnatomyFile(file({ model: { file: '/models/anatomy/sample.glb', release: 'BodyParts3D 3.0 (2011-09-15)' } }), 'content/visuals/anatomy-sample.json');
     expect(releaseNoteFor(draft)).toBe('draft model, built from BodyParts3D 3.0 (2011-09-15)');
-    expect(pictureCreditFor(draft)).toBe(`${BODYPARTS3D_CREDIT} · draft model, built from BodyParts3D 3.0 (2011-09-15)`);
+    expect(pictureCreditFor(draft)).toBe(
+      `${BODYPARTS3D_CREDIT} · license: ${BODYPARTS3D_LICENSE_URL} · draft model, built from BodyParts3D 3.0 (2011-09-15)`,
+    );
     const approved = { ...draft, status: 'approved' as const };
     expect(releaseNoteFor(approved)).toBe('model release: BodyParts3D 3.0 (2011-09-15)');
+    expect(pictureCreditFor(approved)).toContain(`license: ${BODYPARTS3D_LICENSE_URL}`);
     const fixture = parseAnatomyFile(fixtureJson, 'tests/fixtures/anatomy-fixture.json', { fixture: true });
     expect(releaseNoteFor(fixture)).toBe('model release: fixture 1 (made in code)');
+    expect(pictureCreditFor(fixture)).toBe(`${FIXTURE_CREDIT} · model release: fixture 1 (made in code)`);
+    expect(pictureCreditFor(fixture)).not.toContain(BODYPARTS3D_LICENSE_URL);
+  });
+});
+
+describe('exported picture license text wrapping', () => {
+  it('keeps a long license address intact and within narrow credit lines', () => {
+    const measure = (value: string) => value.length * 10;
+    const maxWidth = 120;
+    const urlLines = wrapText(BODYPARTS3D_LICENSE_URL, maxWidth, measure);
+    expect(urlLines.join('')).toBe(BODYPARTS3D_LICENSE_URL);
+    expect(urlLines.length).toBeGreaterThan(1);
+    for (const line of urlLines) expect(measure(line)).toBeLessThanOrEqual(maxWidth);
+
+    const draft = parseAnatomyFile(file(), 'content/visuals/anatomy-sample.json');
+    const credit = wrapText(pictureCreditFor(draft), maxWidth, measure);
+    expect(credit.some((line) => line.length > 0)).toBe(true);
+    for (const line of credit) expect(measure(line)).toBeLessThanOrEqual(maxWidth);
   });
 });
 
@@ -547,7 +569,14 @@ describe('exported pictures', () => {
     const lines = wrapText(BODYPARTS3D_CREDIT, 400, measure);
     expect(lines.join(' ')).toBe(BODYPARTS3D_CREDIT);
     for (const line of lines) expect(measure(line)).toBeLessThanOrEqual(400);
-    expect(wrapText('averyveryverylongword short', 50, measure)).toEqual(['averyveryverylongword', 'short']);
+    const broken = wrapText('averyveryverylongword short', 50, measure);
+    expect(broken.at(-1)).toBe('short');
+    expect(broken.slice(0, -1).join('')).toBe('averyveryverylongword');
+    for (const line of broken) expect(measure(line)).toBeLessThanOrEqual(50);
+    expect(wrapText('abcdefghijkl', 40, measure)).toEqual(['abcd', 'efgh', 'ijkl']);
+    const label = labelLines('abcdefghijkl', false, 40, measure);
+    expect(label.lines.join('')).toBe('abcdefghijkl');
+    expect(label.width).toBeLessThanOrEqual(40);
   });
 
   it('frames a box seen from the front, the tighter way round deciding', () => {

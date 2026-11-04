@@ -61,9 +61,14 @@ export function releaseNoteFor(system: Pick<AnatomySystem, 'status' | 'model' | 
     : `model release: ${system.model.release}`;
 }
 
-/** The full credit drawn at the bottom of an exported picture: the credit, then the release note. */
+/**
+ * A shared PNG cannot retain the clickable license link beneath the viewer.
+ * Include the existing license URI in the picture's credit for real anatomy models.
+ * The test fixture must not claim a BodyParts3D license.
+ */
 export function pictureCreditFor(system: Pick<AnatomySystem, 'status' | 'model' | 'fixture'>): string {
-  return `${creditFor(system)} · ${releaseNoteFor(system)}`;
+  const license = system.fixture ? '' : ` · license: ${BODYPARTS3D_LICENSE_URL}`;
+  return `${creditFor(system)}${license} · ${releaseNoteFor(system)}`;
 }
 
 /** Where a structure's name comes from, shown on its name card. */
@@ -718,17 +723,34 @@ export function labelRoomFor(
   return { left: share(widest(anchors.filter((a) => a.x < mid))), right: share(widest(anchors.filter((a) => a.x >= mid))) };
 }
 
-/** Splits text into lines no wider than `maxWidth`, by words. `measure` gives a string's width. */
+/** Wraps words and, only when needed, splits long unbroken names so labels stay within the picture. */
 export function wrapText(value: string, maxWidth: number, measure: (s: string) => number): string[] {
   const words = value.split(/\s+/).filter(Boolean);
   const lines: string[] = [];
   let line = '';
   for (const word of words) {
     const candidate = line ? `${line} ${word}` : word;
-    if (!line || measure(candidate) <= maxWidth) line = candidate;
-    else {
+    if (measure(candidate) <= maxWidth) {
+      line = candidate;
+      continue;
+    }
+    if (line) {
       lines.push(line);
+      line = '';
+    }
+    if (measure(word) <= maxWidth) {
       line = word;
+      continue;
+    }
+    // Preserve the exact source spelling. Break only a word that cannot fit by itself,
+    // and never split a surrogate pair (for example an extended character).
+    for (const character of Array.from(word)) {
+      if (line && measure(line + character) > maxWidth) {
+        lines.push(line);
+        line = character;
+      } else {
+        line += character;
+      }
     }
   }
   if (line) lines.push(line);
