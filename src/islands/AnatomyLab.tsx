@@ -1073,6 +1073,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts }: Pr
                     const loadNote = structureLoadNote(
                       item, foundSet, lazy, (id) => filesForLayer(system, id),
                       system.model.files ?? [], (url) => loaderRef.current?.isLoaded(url) ?? false,
+                      system.model.fileIds,
                     );
                     return (
                       <li
