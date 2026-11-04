@@ -491,6 +491,48 @@ test.describe('anatomy lab', () => {
 });
 
 test.describe('anatomy lab whole body loads layers on demand', () => {
+  test('phone show all confirms bulk downloads, cancel and Escape load nothing', async ({ page }) => {
+    test.skip((page.viewportSize()?.width ?? 1024) >= 768, 'phone-only bulk-load protection');
+    await page.goto('/preview/anatomy-lab');
+    await page.getByRole('button', { name: 'open the anatomy lab' }).click();
+    await expect(page.locator('canvas')).toBeFocused({ timeout: 15_000 });
+    const whole = page.getByRole('group', { name: 'body system' }).getByRole('button', { name: 'whole body' });
+    test.skip((await whole.count()) === 0, 'draft whole-body model unavailable');
+    await whole.click();
+    const files = page.getByTestId('anatomy-files');
+    await expect(files).toContainText('model files loaded: 1 of 11', { timeout: 20_000 });
+    const requests: string[] = [];
+    page.on('request', (req) => {
+      if (/\\.glb(?:\\?|$)/.test(req.url())) requests.push(req.url());
+    });
+    const showAll = page.getByRole('button', { name: 'show all', exact: true });
+    const prompt = page.getByTestId('anatomy-bulk-confirm');
+
+    await showAll.click();
+    await expect(prompt).toContainText('10 more 3D model files');
+    await expect(prompt.getByRole('button', { name: 'load every layer' })).toBeFocused();
+    expect(requests).toEqual([]);
+    await page.keyboard.press('Escape');
+    await expect(prompt).toHaveCount(0);
+    await expect(showAll).toBeFocused();
+    expect(requests).toEqual([]);
+
+    await showAll.click();
+    await prompt.getByRole('button', { name: 'keep current view' }).click();
+    await expect(showAll).toBeFocused();
+    expect(requests).toEqual([]);
+
+    // Verify affirmative action starts downloads but avoid decoding the entire
+    // ~1.3-million-triangle body in this phone CI test.
+    await page.route(/\\/models\\/anatomy\\/[^/]+\\.glb(?:\\?|$)/, (route) => route.abort());
+    await showAll.click();
+    await prompt.getByRole('button', { name: 'load every layer' }).click();
+    await expect(prompt).toHaveCount(0);
+    await expect(showAll).toBeFocused();
+    await expect.poll(() => requests.length).toBeGreaterThan(0);
+  });
+
+
   test('initial HTML contains each source structure once, then offers whole body after opening', async ({ page }, info) => {
     test.skip(!isDesktopOfEachEngine(info), 'one HTML payload check per browser engine');
     const heart = JSON.parse(

@@ -258,6 +258,20 @@ export function createOnDemandLoader<R>(fetchOne: (url: string) => Promise<R>): 
   };
 }
 
+/** Distinct model files not yet cached for the layers a command would reveal. */
+export function filesNeededForLayers(
+  layers: readonly Layer[],
+  filesOf: (layerId: string) => readonly string[],
+  isLoaded: (url: string) => boolean,
+): string[] {
+  return [...new Set(layers.flatMap((layer) => filesOf(layer.id)).filter((url) => !isLoaded(url)))];
+}
+
+/** A phone must explicitly confirm before two or more additional model downloads. */
+export function needsBulkLayerConfirmation(narrowViewport: boolean, count: number): boolean {
+  return narrowViewport && Number.isSafeInteger(count) && count >= 2;
+}
+
 /** The model files a layer needs; empty when the system has no per-layer map (then everything loads up front). */
 export function filesForLayer(system: Pick<AnatomySystem, 'model'>, layerId: string): string[] {
   return system.model.layerFiles?.[layerId] ?? [];

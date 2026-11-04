@@ -2,13 +2,50 @@ import { describe, expect, it } from 'vitest';
 import type { AnatomyStructure, AnatomySystem } from '../../src/islands/anatomylab';
 import { LAYERS, wholeBody, layersOf, layerShown, type Layer } from '../../src/islands/anatomylayers';
 import { onlyThis } from '../../src/islands/anatomylab';
-import { PartialLoadError, revealTargetPlan, showAllPlan, createGeneration, loadModelsOrDispose, createOnDemandLoader, visibilityAfterLayerDownload, filesForLayer, firstLayer, idsForFiles, initialLayerPlan, layerNeedsReveal, lazyPeel, lazyRestore, structureLoadNote } from '../../src/islands/anatomylazy';
+import { PartialLoadError, revealTargetPlan, showAllPlan, createGeneration, loadModelsOrDispose, createOnDemandLoader, visibilityAfterLayerDownload, filesForLayer, filesNeededForLayers, firstLayer, needsBulkLayerConfirmation, idsForFiles, initialLayerPlan, layerNeedsReveal, lazyPeel, lazyRestore, structureLoadNote } from '../../src/islands/anatomylazy';
 
 const layers: Layer[] = [
   { id: 'skin', ids: ['s1'] },
   { id: 'muscle', ids: ['m1', 'm2'] },
   { id: 'skeleton', ids: ['b1'] },
 ];
+
+describe('phone confirmation for many anatomy model files', () => {
+  const files: Record<string, string[]> = {
+    skin: ['skin.glb'],
+    vessels: ['shared.glb', 'vessels.glb'],
+    organs: ['shared.glb', 'lungs.glb'],
+  };
+  const layers: Layer[] = [
+    { id: 'skin', ids: ['skin'] },
+    { id: 'vessels', ids: ['vein'] },
+    { id: 'organs', ids: ['heart', 'lung'] },
+  ];
+  const filesOf = (id: string) => files[id] ?? [];
+
+  it('requires confirmation for two or more files on a narrow viewport only', () => {
+    expect(needsBulkLayerConfirmation(true, 2)).toBe(true);
+    expect(needsBulkLayerConfirmation(true, 10)).toBe(true);
+    expect(needsBulkLayerConfirmation(true, 1)).toBe(false);
+    expect(needsBulkLayerConfirmation(true, 0)).toBe(false);
+    expect(needsBulkLayerConfirmation(false, 10)).toBe(false);
+  });
+
+  it('rejects bad counts without changing normal one-file behavior', () => {
+    for (const count of [Number.NaN, Number.POSITIVE_INFINITY, -1, 1.5]) {
+      expect(needsBulkLayerConfirmation(true, count)).toBe(false);
+    }
+  });
+
+  it('counts distinct pending URLs, not layer references, and excludes cached files', () => {
+    const cached = new Set(['skin.glb', 'shared.glb']);
+    expect(filesNeededForLayers(layers, filesOf, (url) => cached.has(url)))
+      .toEqual(['vessels.glb', 'lungs.glb']);
+    expect(needsBulkLayerConfirmation(true, filesNeededForLayers(layers, filesOf, (url) => cached.has(url)).length)).toBe(true);
+    cached.add('vessels.glb');
+    expect(filesNeededForLayers(layers, filesOf, (url) => cached.has(url))).toEqual(['lungs.glb']);
+  });
+});
 
 describe('initial multi-file model cleanup', () => {
   it('preserves file order on success even when requests finish out of order', async () => {
