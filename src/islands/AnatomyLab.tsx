@@ -348,6 +348,15 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts }: Pr
                     },
                   });
             },
+            () => {
+              // The downloaded model is valid. Surface a recoverable list
+              // problem rather than reporting a false network/model failure.
+              setLayerError({
+                layer: 'structure list',
+                message: 'a model loaded, but its names could not be updated. reload the system to recover.',
+                retry: () => setInitialRetry((count) => count + 1),
+              });
+            },
           );
           for (const url of initial.files) loader.markLoaded(url);
           loaderRef.current = loader;

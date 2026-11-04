@@ -497,7 +497,9 @@ test.describe('anatomy lab whole body loads layers on demand', () => {
     await page.getByRole('button', { name: 'open the anatomy lab' }).click();
     await expect(page.locator('canvas')).toBeFocused({ timeout: 15_000 });
     const whole = page.getByRole('group', { name: 'body system' }).getByRole('button', { name: 'whole body' });
-    test.skip((await whole.count()) === 0, 'whole-body draft models are unavailable');
+    // This browser fixture has draft models enabled. If the whole-body picker
+    // disappears, that is a regression, not a reason to skip the assertion.
+    await expect(whole).toBeVisible({ timeout: 15_000 });
     await whole.click();
     const files = page.getByTestId('anatomy-files');
     await expect(files).toContainText('model files loaded: 1 of 11', { timeout: 20_000 });

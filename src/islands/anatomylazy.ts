@@ -172,6 +172,7 @@ export const MAX_CONCURRENT_ANATOMY_MODELS = 2;
 export function createOnDemandLoader<R>(
   fetchOne: (url: string) => Promise<R>,
   onFileLoaded?: (url: string, result: R) => void,
+  onNotificationError?: (error: unknown) => void,
 ): OnDemandLoader<R> {
   const done = new Set<string>();
   const inFlight = new Map<string, Promise<R | null>>();
@@ -223,14 +224,21 @@ export function createOnDemandLoader<R>(
             if (retired) resolve(null);
             else {
               done.add(url);
-              // The result belongs to this URL's single actual download.
-              // Publish it before a slower sibling URL settles its layer batch.
+              // A successful GLB is already integrated in the scene. The
+              // optional UI progress observer must never turn that success
+              // into a failed download (or a cached URL that cannot retry).
               try {
                 onFileLoaded?.(url, result);
-                resolve(result);
               } catch (error) {
-                reject(error);
+                // Keep the observer fault separate from model fetch errors.
+                // Even a faulty error handler cannot invalidate this GLB.
+                try {
+                  onNotificationError?.(error);
+                } catch {
+                  // No-op: do not reject a successful model download.
+                }
               }
+              resolve(result);
             }
           },
           (err: unknown) => {

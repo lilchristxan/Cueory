@@ -117,6 +117,34 @@ describe('progressive on-demand model results', () => {
     expect(seen).toEqual(['shared.glb']);
   });
 
+  it('keeps an integrated GLB successful if its UI progress callback throws', async () => {
+    const observerFault = new Error('simulated UI listener exception');
+    const observed: unknown[] = [];
+    let fetches = 0;
+    const loader = createOnDemandLoader(
+      async (url: string) => { fetches++; return url; },
+      () => { throw observerFault; },
+      (error) => { observed.push(error); },
+    );
+    await expect(loader.ensure(['done.glb'])).resolves.toEqual(['done.glb']);
+    expect(loader.isLoaded('done.glb')).toBe(true);
+    expect(loader.loadedCount()).toBe(1);
+    expect(observed).toEqual([observerFault]);
+    await expect(loader.ensure(['done.glb'])).resolves.toEqual([]);
+    expect(fetches).toBe(1);
+    expect(observed).toHaveLength(1);
+  });
+
+  it('keeps the GLB successful even if the fault reporter also throws', async () => {
+    const loader = createOnDemandLoader(
+      async (url: string) => url,
+      () => { throw new Error('listener'); },
+      () => { throw new Error('fault reporter'); },
+    );
+    await expect(loader.ensure(['done.glb'])).resolves.toEqual(['done.glb']);
+    expect(loader.isLoaded('done.glb')).toBe(true);
+  });
+
   it('never publishes a result that finishes after its system loader retires', async () => {
     let release!: (result: string) => void;
     const seen: string[] = [];
