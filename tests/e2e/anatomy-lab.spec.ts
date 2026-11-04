@@ -785,7 +785,7 @@ test.describe('anatomy lab system switch', () => {
     let holdRequests = true;
     // Hold models only for the current phase. Once a batch has been released,
     // late sibling GLBs must not remain blocked by an obsolete release list.
-    await page.route(/\\.glb(\\?|$)/, async (route) => {
+    await page.route(/\.glb(\?|$)/, async (route) => {
       if (holdRequests) await new Promise<void>((resolve) => release.push(resolve));
       await route.continue();
     });
