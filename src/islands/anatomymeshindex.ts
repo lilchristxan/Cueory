@@ -91,6 +91,24 @@ export function indexAnatomyGroup(
  * Geometry and material objects can be shared by several meshes in one GLB.
  * Each distinct resource is disposed at most once.
  */
+/**
+ * Release temporary ID-render materials without allowing one failed GPU
+ * disposal to interrupt model replacement. A material may be reused, so
+ * dispose each object at most once.
+ */
+export function disposeAnatomyMaterials(materials: Iterable<THREE.Material>): void {
+  const seen = new Set<THREE.Material>();
+  for (const material of materials) {
+    if (seen.has(material)) continue;
+    seen.add(material);
+    try {
+      material.dispose();
+    } catch {
+      // A failed disposal must not strand the remaining ID-render materials.
+    }
+  }
+}
+
 export function disposeAnatomyMeshResources(group: THREE.Object3D): void {
   const geometries = new Set<THREE.BufferGeometry>();
   const materials = new Set<THREE.Material>();
