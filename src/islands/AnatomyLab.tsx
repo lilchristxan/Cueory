@@ -302,7 +302,8 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts }: Pr
     const firstIds = new Set(first?.ids ?? []);
     // Deeper layers start out hidden and unfetched; the scene only gets the outermost layer's files.
     setHidden(lazyStart ? new Set(system.structures.filter((s) => !firstIds.has(s.id)).map((s) => s.id)) : new Set());
-    setFilesLoaded(lazyStart ? firstFiles.length : 0);
+    // A requested file is not loaded until scene.load succeeds.
+    setFilesLoaded(0);
     scene
       .load(lazyStart ? firstFiles : (system.model.files ?? system.model.file), lazyStart ? [...firstIds] : system.structures.map((s) => s.id))
       .then((result) => {
@@ -317,6 +318,10 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts }: Pr
           });
           for (const url of firstFiles) loader.markLoaded(url);
           loaderRef.current = loader;
+          setFilesLoaded(loader.loadedCount());
+        } else {
+          // The non-lazy path has loaded every system file by this point.
+          setFilesLoaded((system.model.files ?? [system.model.file]).length);
         }
         setLoad({ state: 'ready', result });
         setAnnounce(`${system.title}: ${result.found.length} structures loaded.`);
