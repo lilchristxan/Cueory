@@ -256,7 +256,7 @@ test.describe('anatomy lab', () => {
     await expect(picker.getByRole('button').nth(1)).toHaveAttribute('aria-pressed', 'true');
     await page.waitForTimeout(350);
     expect(downloads).toEqual([]);
-    await expect(page.getByText(/^saved cueory-fixture-square\\.png\\./)).toHaveCount(0);
+    await expect(page.getByText(/^saved cueory-fixture-square/)).toHaveCount(0);
   });
 
   test('exports a phone picture as a 1080 × 1920 PNG with the right file name', async ({ page }, info) => {
