@@ -8,7 +8,7 @@ import {
   type MutableRefObject,
   type PointerEvent as ReactPointerEvent,
 } from 'react';
-import { createGeneration, createOnDemandLoader, filesForLayer, knownMissingStructureIds, idsForFiles, initialLayerPlan, firstLayer, layerNeedsReveal, visibilityAfterLayerDownload, lazyPeel, lazyRestore, PartialLoadError, revealTargetPlan, showAllPlan, structureLoadNote, type OnDemandLoader } from './anatomylazy';
+import { createGeneration, createOnDemandLoader, filesForLayer, fileReadyForStructureStatus, knownMissingStructureIds, idsForFiles, initialLayerPlan, firstLayer, layerNeedsReveal, visibilityAfterLayerDownload, lazyPeel, lazyRestore, PartialLoadError, revealTargetPlan, showAllPlan, structureLoadNote, type OnDemandLoader } from './anatomylazy';
 import type { LabColors, LabScene, LoadResult } from './anatomyscene';
 import { STRUCTURE_PAGE_SIZE, visibleStructureGroups } from './anatomy-list-window';
 import { anatomyTriangleNote } from './anatomybudget';
@@ -680,6 +680,10 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts }: Pr
   const selectedGroup = selected ? system.structures.find((s) => s.id === selected)?.group : undefined;
   const budget = load.state === 'ready' ? anatomyTriangleNote(load.result.triangles, filesLoaded, lazy) : null;
   const ready = load.state === 'ready';
+  // The downloader marks a GLB complete before a multi-file layer's found IDs
+  // are committed to state. Do not claim an ID is absent during that gap.
+  const fileIntegratedForStatus = (url: string) =>
+    fileReadyForStructureStatus(loaderRef.current?.isLoaded(url) ?? false, pending.size);
   // A shared layer may span several GLBs. Only call a mesh missing once
   // every file that could contain it has loaded and the scene still lacks it.
   const missingCount = !ready
@@ -690,7 +694,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts }: Pr
           foundSet,
           (layerId) => filesForLayer(system, layerId),
           system.model.files ?? [system.model.file],
-          (url) => loaderRef.current?.isLoaded(url) ?? false,
+          fileIntegratedForStatus,
         ).length
       : load.result.missing.length;
   const targetName = quiz?.target ? (names.get(quiz.target) ?? quiz.target) : null;
@@ -1058,7 +1062,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts }: Pr
                     const isHidden = hidden.has(item.id);
                     const loadNote = structureLoadNote(
                       item, foundSet, lazy, (id) => filesForLayer(system, id),
-                      system.model.files ?? [], (url) => loaderRef.current?.isLoaded(url) ?? false,
+                      system.model.files ?? [], fileIntegratedForStatus,
                     );
                     return (
                       <li
