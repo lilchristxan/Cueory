@@ -182,6 +182,22 @@ describe('anatomy production artifact audit', () => {
     expect(decodeAsciiEscapesForAudit('\\u{110000}', 'script')).toBe('\\u{110000}');
   });
 
+  it('does not misclassify escaped literal backslashes as fixture IDs', () => {
+    const f = setup();
+    f.file('_astro/escaped-backslashes.js', String.raw`const text="\\u0046IX001"; const padded="\\u{0046}IX002"; const hex="\\x46IX003";`);
+    expect(f.check().errors).toEqual([]);
+    expect(decodeAsciiEscapesForAudit(String.raw`\\u0046IX001`, 'script')).toBe(String.raw`\\u0046IX001`);
+    expect(decodeAsciiEscapesForAudit(String.raw`\\u{0046}IX002`, 'script')).toBe(String.raw`\\u{0046}IX002`);
+    expect(decodeAsciiEscapesForAudit(String.raw`\\x46IX003`, 'script')).toBe(String.raw`\\x46IX003`);
+  });
+
+  it('still finds an active Unicode escape following a literal backslash pair', () => {
+    const f = setup();
+    f.file('_astro/odd-slashes.js', String.raw`const id="\\\u0046IX004";`);
+    expect(decodeAsciiEscapesForAudit(String.raw`\\\u0046IX004`, 'script')).toBe(String.raw`\\FIX004`);
+    expect(f.check().errors).toContain('test fixture ID exposed in built text: _astro/odd-slashes.js (FIX004)');
+  });
+
   it('also catches escaped draft FMA IDs from the earlier audit review', () => {
     const f = setup();
     f.file('_astro/draft.js', 'const id="\\u0046MA999991";');
