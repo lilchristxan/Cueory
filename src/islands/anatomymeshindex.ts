@@ -23,6 +23,24 @@ export interface IndexedAnatomyMeshes {
  * Previously indexed IDs are deliberately accepted: their new meshes need the
  * same pick, hide, highlight and label behavior as the original meshes.
  */
+/**
+ * Three.js leaves texture disposal to callers even after Material.dispose().
+ * Converted glTF materials and discarded GLB groups own their textures here.
+ * Track shared texture identities across the entire group, not per mesh.
+ * https://threejs.org/manual/pages/how-to-dispose-of-objects.html
+ */
+function disposeMaterialTextures(material: THREE.Material, seen: Set<THREE.Texture>): void {
+  for (const value of Object.values(material)) {
+    if (!(value instanceof THREE.Texture) || seen.has(value)) continue;
+    seen.add(value);
+    try {
+      value.dispose();
+    } catch {
+      // Keep cleaning other textures and meshes if a GPU resource fails.
+    }
+  }
+}
+
 export function indexAnatomyGroup(
   group: THREE.Object3D,
   ids: readonly string[],
@@ -46,6 +64,7 @@ export function indexAnatomyGroup(
   // glTF meshes often share their original materials. Release each material
   // at most once as all meshes receive the lab's own Lambert materials.
   const originalMaterials = new Set<THREE.Material>();
+  const originalTextures = new Set<THREE.Texture>();
 
   group.traverse((object) => {
     const mesh = object as THREE.Mesh;
@@ -59,6 +78,7 @@ export function indexAnatomyGroup(
     for (const material of ([] as THREE.Material[]).concat(mesh.material)) {
       if (originalMaterials.has(material)) continue;
       originalMaterials.add(material);
+      disposeMaterialTextures(material, originalTextures);
       try {
         material.dispose();
       } catch {
@@ -94,6 +114,7 @@ export function indexAnatomyGroup(
 export function disposeAnatomyMeshResources(group: THREE.Object3D): void {
   const geometries = new Set<THREE.BufferGeometry>();
   const materials = new Set<THREE.Material>();
+  const textures = new Set<THREE.Texture>();
   group.traverse((object) => {
     const mesh = object as THREE.Mesh;
     if (!mesh.isMesh) return;
@@ -108,6 +129,7 @@ export function disposeAnatomyMeshResources(group: THREE.Object3D): void {
     for (const material of ([] as THREE.Material[]).concat(mesh.material)) {
       if (materials.has(material)) continue;
       materials.add(material);
+      disposeMaterialTextures(material, textures);
       try {
         material.dispose();
       } catch {
