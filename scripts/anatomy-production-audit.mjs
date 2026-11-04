@@ -13,6 +13,8 @@ const MODEL_URL = /^\/models\/anatomy\/[a-z0-9][a-z0-9_-]*\.glb$/;
 // Scan all ordinary published text assets, not just the anatomy page or hashed JavaScript chunks.
 // Site search, manifests or unrelated pages can otherwise accidentally expose a draft identifier.
 const TEXT_ASSET = /\.(?:html?|js|mjs|json|map|xml|svg|txt|css|csv|tsv|md|webmanifest)$/i;
+const SCRIPT_ESCAPES_ASSET = /\.(?:js|mjs|json|map|webmanifest|html?)$/i;
+const MARKUP_ESCAPES_ASSET = /\.(?:html?|svg|xml)$/i;
 
 function walkFiles(dir) {
   if (!existsSync(dir)) return [];
@@ -22,6 +24,25 @@ function walkFiles(dir) {
     if (entry.isFile()) return [p];
     return [];
   });
+}
+
+/**
+ * Decode common ASCII escapes before scanning generated text for draft IDs.
+ * Bundlers can emit JSON/JS Unicode escapes, and HTML can use numeric entities.
+ * This is read-only normalization for the audit, not a change to shipped files.
+ */
+export function decodeAsciiEscapesForAudit(text, syntax) {
+  if (syntax === 'script') {
+    return text.replace(/\\+(?:u00([0-7][0-9a-f])|x([0-7][0-9a-f])|u\{([0-7][0-9a-f])\})/gi,
+      (_match, unicode, hex, braced) => String.fromCharCode(Number.parseInt(unicode ?? hex ?? braced, 16)));
+  }
+  if (syntax === 'markup') {
+    return text.replace(/&#(?:x([0-9a-f]{1,6})|([0-9]{1,7}));/gi, (match, hex, decimal) => {
+      const value = hex === undefined ? Number.parseInt(decimal, 10) : Number.parseInt(hex, 16);
+      return value <= 127 ? String.fromCharCode(value) : match;
+    });
+  }
+  return text;
 }
 
 /** Extracts references without trusting paths from content files as filesystem paths. */
@@ -131,20 +152,38 @@ export function auditAnatomyProduction(distDir, contentDir) {
   const draftTokens = draftIds;
   for (const file of textFiles) {
     const contents = readFileSync(file, 'utf8');
+    // Both the original bytes and their context-appropriate decoded versions
+    // must be checked. This recognizes encoded IDs without erasing raw token boundaries.
+    const variants = [contents];
+    if (SCRIPT_ESCAPES_ASSET.test(file)) variants.push(decodeAsciiEscapesForAudit(contents, 'script'));
+    if (MARKUP_ESCAPES_ASSET.test(file)) variants.push(decodeAsciiEscapesForAudit(contents, 'markup'));
     if (draftTokens.size) {
-      for (const match of contents.matchAll(/\bFMA\d{3,}\b/g)) {
-        if (draftTokens.has(match[0])) {
-          errors.push(`draft anatomy ID exposed in built text: ${file.slice(dist.length + 1)} (${match[0]})`);
-          break;
+      let exposedDraft = null;
+      for (const variant of variants) {
+        for (const match of variant.matchAll(/\bFMA\d{3,}\b/g)) {
+          if (draftTokens.has(match[0])) {
+            exposedDraft = match[0];
+            break;
+          }
         }
+        if (exposedDraft) break;
+      }
+      if (exposedDraft) {
+        errors.push('draft anatomy ID exposed in built text: ' + file.slice(dist.length + 1) + ' (' + exposedDraft + ')');
       }
     }
-    // The code-made test shapes use reserved FIX IDs, not real FMA IDs.
-    // Reject fixture data in production HTML, JS and search outputs even when
-    // every real anatomy source record is already approved.
-    const fixtureId = /\bFIX\d{3,}\b/.exec(contents);
-    if (fixtureId) {
-      errors.push(`test fixture ID exposed in built text: ${file.slice(dist.length + 1)} (${fixtureId[0]})`);
+    // Reserved synthetic shape IDs are forbidden in public HTML, JS, and search
+    // assets even if every real source record is approved.
+    let exposedFixture = null;
+    for (const variant of variants) {
+      const match = /\bFIX\d{3,}\b/.exec(variant);
+      if (match) {
+        exposedFixture = match[0];
+        break;
+      }
+    }
+    if (exposedFixture) {
+      errors.push('test fixture ID exposed in built text: ' + file.slice(dist.length + 1) + ' (' + exposedFixture + ')');
     }
   }
 
