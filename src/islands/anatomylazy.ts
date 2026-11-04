@@ -118,6 +118,19 @@ export function structureLoadNote(
   return 'not in this model';
 }
 
+/** A missing ID is only confirmed absent after all files for its layer have loaded. */
+export function knownMissingStructureIds(
+  structures: readonly Pick<AnatomyStructure, 'id' | 'layer'>[],
+  found: ReadonlySet<string>,
+  filesOfLayer: (layerId: string) => readonly string[],
+  filesOfSystem: readonly string[],
+  isLoaded: (url: string) => boolean,
+): string[] {
+  return structures
+    .filter((s) => structureLoadNote(s, found, true, filesOfLayer, filesOfSystem, isLoaded) === 'not in this model')
+    .map((s) => s.id);
+}
+
 /**
  * "Show all" in the lazy view: the structures to unhide right away (those in layers whose files are all loaded, and any
  * in no layer) and the layers that must be fetched first, each shown only once its files are there.

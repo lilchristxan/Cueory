@@ -8,7 +8,7 @@ import {
   type MutableRefObject,
   type PointerEvent as ReactPointerEvent,
 } from 'react';
-import { createGeneration, createOnDemandLoader, filesForLayer, idsForFiles, initialLayerPlan, firstLayer, layerNeedsReveal, visibilityAfterLayerDownload, lazyPeel, lazyRestore, PartialLoadError, revealTargetPlan, showAllPlan, structureLoadNote, type OnDemandLoader } from './anatomylazy';
+import { createGeneration, createOnDemandLoader, filesForLayer, idsForFiles, initialLayerPlan, firstLayer, knownMissingStructureIds, layerNeedsReveal, visibilityAfterLayerDownload, lazyPeel, lazyRestore, PartialLoadError, revealTargetPlan, showAllPlan, structureLoadNote, type OnDemandLoader } from './anatomylazy';
 import type { LabColors, LabScene, LoadResult } from './anatomyscene';
 import { STRUCTURE_PAGE_SIZE, visibleStructureGroups } from './anatomy-list-window';
 import { anatomyTriangleNote } from './anatomybudget';
@@ -680,6 +680,20 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts }: Pr
   const selectedGroup = selected ? system.structures.find((s) => s.id === selected)?.group : undefined;
   const budget = load.state === 'ready' ? anatomyTriangleNote(load.result.triangles, filesLoaded, lazy) : null;
   const ready = load.state === 'ready';
+  // Missing results from individual shared GLBs are not a whole-body
+  // inventory. Count only structures still absent after every relevant
+  // model file has finished loading.
+  const missingCount = !ready
+    ? 0
+    : lazy
+      ? knownMissingStructureIds(
+          system.structures,
+          foundSet,
+          (id) => filesForLayer(system, id),
+          system.model.files ?? [system.model.file],
+          (url) => loaderRef.current?.isLoaded(url) ?? false,
+        ).length
+      : load.result.missing.length;
   const targetName = quiz?.target ? (names.get(quiz.target) ?? quiz.target) : null;
 
   return (
@@ -881,8 +895,10 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts }: Pr
             </p>
             <p>{releaseNoteFor(system)}</p>
             {budget && <p className="text-ink" data-testid="anatomy-budget-note">{budget}</p>}
-            {ready && load.result.missing.length > 0 && (
-              <p>{load.result.missing.length} listed structures aren't in this model file.</p>
+            {ready && missingCount > 0 && (
+              <p data-testid="anatomy-missing-count">
+                {missingCount} listed structures were not found in the loaded model files.
+              </p>
             )}
           </div>
 

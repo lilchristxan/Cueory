@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { AnatomyStructure, AnatomySystem } from '../../src/islands/anatomylab';
 import { LAYERS, wholeBody, layersOf, layerShown, type Layer } from '../../src/islands/anatomylayers';
 import { onlyThis } from '../../src/islands/anatomylab';
-import { PartialLoadError, revealTargetPlan, showAllPlan, createGeneration, loadModelsOrDispose, createOnDemandLoader, visibilityAfterLayerDownload, filesForLayer, firstLayer, idsForFiles, initialLayerPlan, layerNeedsReveal, lazyPeel, lazyRestore, structureLoadNote } from '../../src/islands/anatomylazy';
+import { knownMissingStructureIds, PartialLoadError, revealTargetPlan, showAllPlan, createGeneration, loadModelsOrDispose, createOnDemandLoader, visibilityAfterLayerDownload, filesForLayer, firstLayer, idsForFiles, initialLayerPlan, layerNeedsReveal, lazyPeel, lazyRestore, structureLoadNote } from '../../src/islands/anatomylazy';
 
 const layers: Layer[] = [
   { id: 'skin', ids: ['s1'] },
@@ -180,6 +180,38 @@ describe('on-demand structure status', () => {
 
   it('treats an unlayered structure as pending while whole-body files remain unfetched', () => {
     expect(structureLoadNote({ id: 'unlayered' }, new Set(), true, filesOf, allFiles, isLoaded)).toBe('not loaded yet');
+  });
+});
+
+describe('verified missing structures across shared model files', () => {
+  const files: Record<string, string[]> = {
+    vessels: ['heart.glb', 'vessels.glb'],
+    organs: ['heart.glb', 'lungs.glb'],
+  };
+  const allFiles = ['heart.glb', 'vessels.glb', 'lungs.glb'];
+  const structures = [
+    { id: 'heart', layer: 'organs' as const },
+    { id: 'lung', layer: 'organs' as const },
+    { id: 'unavailable-organ', layer: 'organs' as const },
+    { id: 'vein', layer: 'vessels' as const },
+    { id: 'unlayered' },
+  ];
+  const filesOf = (id: string) => files[id] ?? [];
+
+  it('does not mistake structures from a later GLB for missing on the first GLB', () => {
+    const loaded = new Set(['heart.glb', 'vessels.glb']);
+    const found = new Set(['heart', 'vein']);
+    expect(knownMissingStructureIds(structures, found, filesOf, allFiles, (url) => loaded.has(url))).toEqual([]);
+  });
+
+  it('counts absent meshes only after the relevant files load, then clears a later-found ID', () => {
+    const loaded = new Set(allFiles);
+    const found = new Set(['heart', 'lung', 'vein']);
+    expect(knownMissingStructureIds(structures, found, filesOf, allFiles, (url) => loaded.has(url)))
+      .toEqual(['unavailable-organ', 'unlayered']);
+    found.add('unavailable-organ');
+    expect(knownMissingStructureIds(structures, found, filesOf, allFiles, (url) => loaded.has(url)))
+      .toEqual(['unlayered']);
   });
 });
 
