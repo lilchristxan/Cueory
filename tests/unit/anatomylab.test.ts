@@ -247,6 +247,26 @@ describe('the draft gate (D-56)', () => {
     expect(staging.fixture?.fixture).toBe(true);
   });
 
+  it('treats a full main ref as production, including with local drafts enabled', () => {
+    const env = { WORKERS_CI: '1', WORKERS_CI_BRANCH: ' refs/heads/main ', CUEORY_ANATOMY_DRAFTS: '1' };
+    expect(draftsAllowed(env)).toBe(false);
+    const data = labDataForBuild({
+      '../../../content/visuals/anatomy-heart.json': sampleSystem('heart', { title: 'draft study anatomy' }),
+      '../../../content/visuals/anatomy-lungs.json': sampleSystem('lungs', { title: 'approved study anatomy', status: 'approved' }),
+    }, fixtureJson, env);
+    expect(data.drafts).toBe(false);
+    expect(data.fixture).toBeNull();
+    expect(data.systems.map((system) => system.key)).toEqual(['lungs']);
+    expect(JSON.stringify(data)).not.toContain('draft study anatomy');
+  });
+
+  it('allows full refs for previews but not an empty or production full ref', () => {
+    expect(draftsAllowed({ WORKERS_CI: '1', WORKERS_CI_BRANCH: 'refs/heads/staging' })).toBe(true);
+    expect(draftsAllowed({ WORKERS_CI: '1', WORKERS_CI_BRANCH: 'refs/heads/task-178/anatomy-lab' })).toBe(true);
+    expect(draftsAllowed({ WORKERS_CI: '1', WORKERS_CI_BRANCH: 'refs/heads/' })).toBe(false);
+    expect(draftsAllowed({ WORKERS_CI: '1', WORKERS_CI_BRANCH: 'refs/heads/main' })).toBe(false);
+  });
+
   it('builds the system list from whichever anatomy files exist, ignoring other visuals', () => {
     const data = labDataForBuild(
       {
