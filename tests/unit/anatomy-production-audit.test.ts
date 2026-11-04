@@ -104,6 +104,30 @@ describe('anatomy production artifact audit', () => {
     ]));
   });
 
+  it('detects numeric HTML references without a semicolon in both decimal and hex', () => {
+    expect(decodeAsciiEscapesForAudit('&#70IX001', 'markup')).toBe('FIX001');
+    expect(decodeAsciiEscapesForAudit('&#x46IX002', 'markup')).toBe('FIX002');
+    expect(decodeAsciiEscapesForAudit('FIX&#48&#48&#53', 'markup')).toBe('FIX005');
+    expect(decodeAsciiEscapesForAudit('FMA&#57&#57&#57&#57&#57&#49', 'markup')).toBe('FMA999991');
+  });
+
+  it('rejects decoded fixture and draft IDs from built HTML even when references omit semicolons', () => {
+    const f = setup();
+    f.file('preview/fixture.html', '<span data-anatomy="&#70IX001">synthetic</span>');
+    f.file('index.html', '<div>FIX&#48&#48&#53</div><span>FMA&#57&#57&#57&#57&#57&#49</span>');
+    expect(f.check().errors).toEqual(expect.arrayContaining([
+      'test fixture ID exposed in built text: preview/fixture.html (FIX001)',
+      'test fixture ID exposed in built text: index.html (FIX005)',
+      'draft anatomy ID exposed in built text: index.html (FMA999991)',
+    ]));
+  });
+
+  it('does not flag a longer unrelated identifier after decoding semicolonless references', () => {
+    const f = setup();
+    f.file('index.html', '<div>FIX&#48&#48&#49extra</div>');
+    expect(f.check().errors).toEqual([]);
+  });
+
   it('detects encoded fixtures even if no real draft FMA label remains', () => {
     const f = setup();
     rmSync(join(f.content, 'anatomy-draft.json'));
