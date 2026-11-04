@@ -22,7 +22,7 @@ own licenses, noted where they are used. We don't take outside pull requests. To
 | See the brand rules (colors, fonts, logo) | [docs/BRAND.md](docs/BRAND.md) |
 | Remove the "We're still building" notice, or change the tip link, contact email or signup form | [src/config/site.ts](src/config/site.ts) |
 | Edit lesson text | [content/lessons/](content/lessons/) |
-| Curriculum and learning objectives | [content/curriculum/](content/curriculum/) and [docs/curriculum/CROSSWALK.md](docs/curriculum/CROSSWALK.md) |
+| Draft 4 curriculum plan (files and crosswalk awaiting review) | [docs/ROADMAP.md](docs/ROADMAP.md) |
 | Read the project rules | [CLAUDE.md](CLAUDE.md), [SECURITY.md](SECURITY.md) |
 | Read why things were built this way | [docs/DECISIONS.md](docs/DECISIONS.md) |
 
