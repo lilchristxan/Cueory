@@ -47,6 +47,11 @@ export function visibilityAfterLayerDownload(
   return next;
 }
 
+/** A GLB URL is decoded only once per scene batch, even if a manifest repeats it. */
+export function uniqueAnatomyModelUrls(urls: string | readonly string[]): string[] {
+  return [...new Set(typeof urls === 'string' ? [urls] : urls)];
+}
+
 /**
  * An initial multi-file scene is all-or-nothing. If any model request fails,
  * dispose decoded models that already arrived, including requests that finish
