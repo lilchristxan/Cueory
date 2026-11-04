@@ -47,8 +47,10 @@ export function decodeAsciiEscapesForAudit(text, syntax) {
       });
   }
   if (syntax === 'markup') {
-    // HTML numeric references may omit the semicolon. Scan both forms.
-    return text.replace(/&#(?:x([0-9a-f]{1,6})|([0-9]{1,7}));?/gi, (match, hex, decimal) => {
+    // HTML numeric references may omit the semicolon and may contain any
+    // number of leading zeroes (for example &#00000070IX001 is FIX001).
+    // Consume the complete digit run or padded encodings bypass the audit.
+    return text.replace(/&#(?:x([0-9a-f]+)|([0-9]+));?/gi, (match, hex, decimal) => {
       const value = hex === undefined ? Number.parseInt(decimal, 10) : Number.parseInt(hex, 16);
       return value <= 127 ? String.fromCharCode(value) : match;
     });

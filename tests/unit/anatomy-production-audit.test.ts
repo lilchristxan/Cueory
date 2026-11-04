@@ -111,6 +111,19 @@ describe('anatomy production artifact audit', () => {
     expect(decodeAsciiEscapesForAudit('FMA&#57&#57&#57&#57&#57&#49', 'markup')).toBe('FMA999991');
   });
 
+  it('detects valid numeric references with more than seven decimal or six hex digits', () => {
+    expect(decodeAsciiEscapesForAudit('&#00000070IX001', 'markup')).toBe('FIX001');
+    expect(decodeAsciiEscapesForAudit('&#x00000046IX002', 'markup')).toBe('FIX002');
+    expect(decodeAsciiEscapesForAudit('&#00000070MA999991', 'markup')).toBe('FMA999991');
+
+    const f = setup();
+    f.file('index.html', '<span>&#00000070IX001 &#x00000046IX002 &#00000070MA999991</span>');
+    expect(f.check().errors).toEqual(expect.arrayContaining([
+      'test fixture ID exposed in built text: index.html (FIX001)',
+      'draft anatomy ID exposed in built text: index.html (FMA999991)',
+    ]));
+  });
+
   it('rejects decoded fixture and draft IDs from built HTML even when references omit semicolons', () => {
     const f = setup();
     f.file('preview/fixture.html', '<span data-anatomy="&#70IX001">synthetic</span>');
