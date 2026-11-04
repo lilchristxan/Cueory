@@ -646,6 +646,44 @@ test.describe('anatomy lab whole body loads layers on demand', () => {
 
 });
 
+test.describe('anatomy whole-body initial file count', () => {
+  test('counts a whole-body file only after success, including after retry', async ({ page }, info) => {
+    test.skip(!isDesktopOfEachEngine(info), 'one first-load check per browser engine');
+    await page.goto('/preview/anatomy-lab');
+    await page.getByRole('button', { name: 'open the anatomy lab' }).click();
+    // Focus establishes that the deferred system picker has been assembled.
+    await expect(page.locator('canvas')).toBeFocused({ timeout: 15_000 });
+    const whole = page.getByRole('group', { name: 'body system' })
+      .getByRole('button', { name: 'whole body', exact: true });
+    test.skip((await whole.count()) === 0, 'draft whole-body models are not in this build');
+
+    let attempts = 0;
+    const releases: Array<() => void> = [];
+    await page.route('**/models/anatomy/skin.glb', async (route) => {
+      attempts++;
+      if (attempts === 1) {
+        await new Promise<void>((resolve) => releases.push(resolve));
+        await route.abort('failed');
+      } else {
+        await route.continue();
+      }
+    });
+    await whole.click();
+    await expect.poll(() => releases.length, { timeout: 20_000 }).toBe(1);
+    const files = page.getByTestId('anatomy-files');
+    await expect(files).toContainText('model files loaded: 0 of 11');
+    releases[0]!();
+    await expect(page.getByRole('alert').filter({ hasText: 'could not load whole body.' }))
+      .toBeVisible({ timeout: 20_000 });
+    await expect(files).toContainText('model files loaded: 0 of 11');
+
+    await page.getByRole('button', { name: 'try loading again' }).click();
+    await expect(files).toContainText('model files loaded: 1 of 11', { timeout: 20_000 });
+    expect(attempts).toBe(2);
+  });
+
+});
+
 test.describe('anatomy lab system switch', () => {
   test('the old model is not shown after switching, and a late layer from the old system changes nothing', async ({ page }) => {
     const release: Array<() => void> = [];
