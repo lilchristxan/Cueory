@@ -319,6 +319,26 @@ test.describe('anatomy lab whole body loads layers on demand', () => {
 
 });
 
+test.describe('anatomy whole-body initial file count', () => {
+  test('does not report a failed first model request as loaded', async ({ page }, info) => {
+    test.skip(!isDesktopOfEachEngine(info), 'one initial-load failure check per browser engine');
+    await page.goto('/preview/anatomy-lab');
+    await page.getByRole('button', { name: 'open the anatomy lab' }).click();
+    await expect(page.locator('canvas')).toBeVisible({ timeout: 15_000 });
+    const wholeBody = page.getByRole('group', { name: 'body system' })
+      .getByRole('button', { name: 'whole body', exact: true });
+    test.skip((await wholeBody.count()) === 0, 'real draft models not in this build');
+    // Let the default system finish, so only the whole-body skin request is intercepted.
+    await page.waitForLoadState('networkidle');
+    await page.route('**/models/anatomy/skin.glb', (route) => route.abort('failed'));
+    await wholeBody.click();
+    await expect(page.getByRole('alert').filter({ hasText: 'Could not load whole body.' }))
+      .toBeVisible({ timeout: 20_000 });
+    // A requested GLB that failed to download is not one loaded model file.
+    await expect(page.getByTestId('anatomy-files')).toContainText('model files loaded: 0 of 11');
+  });
+});
+
 test.describe('anatomy lab system switch', () => {
   test('the old model is not shown after switching, and a late layer from the old system changes nothing', async ({ page }) => {
     const release: Array<() => void> = [];
