@@ -71,6 +71,31 @@ describe('anatomy production artifact audit', () => {
     ]));
   });
 
+  it('rejects synthetic fixture IDs from produced HTML, JS and search JSON', () => {
+    const f = setup();
+    f.file('preview/anatomy-lab.html', '<div data-test="FIX001">fixture shapes</div>');
+    f.file('_astro/view.js', 'const id="FIX002";');
+    f.file('pagefind/pagefind-entry.json', '{"id":"FIX003"}');
+    expect(f.check().errors).toEqual(expect.arrayContaining([
+      'test fixture ID exposed in built text: preview/anatomy-lab.html (FIX001)',
+      'test fixture ID exposed in built text: _astro/view.js (FIX002)',
+      'test fixture ID exposed in built text: pagefind/pagefind-entry.json (FIX003)',
+    ]));
+  });
+
+  it('detects fixture IDs even when no draft FMA source labels exist', () => {
+    const f = setup();
+    rmSync(join(f.content, 'anatomy-draft.json'));
+    f.file('index.html', '<span>FIX004</span>');
+    expect(f.check().errors).toContain('test fixture ID exposed in built text: index.html (FIX004)');
+  });
+
+  it('does not confuse fixture IDs with longer unrelated tokens', () => {
+    const f = setup();
+    f.file('index.html', '<span>BEFOREFIX001 FIX001extra FIX </span>');
+    expect(f.check().errors).toEqual([]);
+  });
+
   it('avoids false positives from longer or unrelated structure identifiers', () => {
     const f = setup();
     f.file('preview/anatomy-lab.html', '<div>FMA9999910</div>');

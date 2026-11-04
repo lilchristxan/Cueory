@@ -129,15 +129,22 @@ export function auditAnatomyProduction(distDir, contentDir) {
   // Token boundaries avoid confusing FMA999991 with FMA9999910. Unknown ID formats fail source validation above.
   const textFiles = walkFiles(dist).filter((path) => TEXT_ASSET.test(path));
   const draftTokens = draftIds;
-  if (draftTokens.size) {
-    for (const file of textFiles) {
-      const contents = readFileSync(file, 'utf8');
+  for (const file of textFiles) {
+    const contents = readFileSync(file, 'utf8');
+    if (draftTokens.size) {
       for (const match of contents.matchAll(/\bFMA\d{3,}\b/g)) {
         if (draftTokens.has(match[0])) {
           errors.push(`draft anatomy ID exposed in built text: ${file.slice(dist.length + 1)} (${match[0]})`);
           break;
         }
       }
+    }
+    // The code-made test shapes use reserved FIX IDs, not real FMA IDs.
+    // Reject fixture data in production HTML, JS and search outputs even when
+    // every real anatomy source record is already approved.
+    const fixtureId = /\bFIX\d{3,}\b/.exec(contents);
+    if (fixtureId) {
+      errors.push(`test fixture ID exposed in built text: ${file.slice(dist.length + 1)} (${fixtureId[0]})`);
     }
   }
 
