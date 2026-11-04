@@ -24,6 +24,7 @@ function setup() {
       status,
       model: { file: urls[0], files: urls.slice(1) },
       labels: ids.map((id) => ({ id, text: 'fixture label', source: 'synthetic-test-source' })),
+      sources: [{ id: 'synthetic-test-source' }], // synthetic source reference, not a medical claim
     }));
   };
   system('draft', 'draft', ['/models/anatomy/draft.glb'], ['FMA999991']);
@@ -63,6 +64,38 @@ describe('anatomy production artifact audit', () => {
     expect(f.check().errors).toEqual(expect.arrayContaining([
       'anatomy-approved.json: approved label FMA999992 has no official name',
       'anatomy-approved.json: approved label FMA999993 has no source citation',
+    ]));
+  });
+
+  it('rejects an approved label pointing to an unknown source record', () => {
+    const f = setup();
+    writeFileSync(join(f.content, 'anatomy-approved.json'), JSON.stringify({
+      status: 'approved', model: { file: '/models/anatomy/approved.glb' },
+      labels: [{ id: 'FMA999992', text: 'fixture label', source: 'wrong-source' }],
+      sources: [{ id: 'synthetic-test-source' }],
+    }));
+    expect(f.check().errors).toContain(
+      'anatomy-approved.json: approved label FMA999992 references unknown source wrong-source',
+    );
+  });
+
+  it('rejects missing, invalid and duplicate approved source IDs', () => {
+    const f = setup();
+    writeFileSync(join(f.content, 'anatomy-approved.json'), JSON.stringify({
+      status: 'approved', model: { file: '/models/anatomy/approved.glb' },
+      labels: [{ id: 'FMA999992', text: 'fixture label', source: 'synthetic-test-source' }],
+      sources: [],
+    }));
+    expect(f.check().errors).toContain('anatomy-approved.json: approved citation sources are missing');
+
+    writeFileSync(join(f.content, 'anatomy-approved.json'), JSON.stringify({
+      status: 'approved', model: { file: '/models/anatomy/approved.glb' },
+      labels: [{ id: 'FMA999992', text: 'fixture label', source: 'synthetic-test-source' }],
+      sources: [{ id: '' }, { id: 'synthetic-test-source' }, { id: 'synthetic-test-source' }],
+    }));
+    expect(f.check().errors).toEqual(expect.arrayContaining([
+      'anatomy-approved.json: invalid approved citation source',
+      'anatomy-approved.json: duplicate approved citation source synthetic-test-source',
     ]));
   });
 
