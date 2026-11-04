@@ -16,7 +16,7 @@ You are one of several agents working on Cueory under Christian's direction. The
    `astro.config.mjs`, `package.json` dependencies, `public/models/*.glb`, anything about auth, sign-in,
    two-factor, payments, secrets or deployment. If a task seems to need one of these, stop and say so.
 6. Design: every color, size and spacing is a token in `src/styles/tokens.css`; no inline `<script>` or `style=""`.
-   Use self-hosted Lato for body, interface, buttons and study-screen headings, with line spacing at least 1.5.
+   Use self-hosted Inter for body, interface, buttons and study-screen headings, following the existing design tokens.
    Bodoni Moda is for marketing headings only, as specified in `CLAUDE.md` and `docs/BRAND.md`. Provide keyboard
    and tap alternatives for dragging, respect reduced motion, and never use color alone for right or wrong.
 7. Content: never invent clinical or nursing facts. Use only Christian's reviewed content and approved, cited
