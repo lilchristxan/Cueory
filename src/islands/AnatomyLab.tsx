@@ -813,6 +813,12 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts }: Pr
               aria-label="confirm loading every body layer"
               className="space-y-3 rounded-lg border border-line bg-surface p-4"
               data-testid="anatomy-bulk-confirm"
+              onKeyDown={(event) => {
+                if (event.key === 'Escape') {
+                  event.preventDefault();
+                  finishBulkPrompt(false);
+                }
+              }}
             >
               <p role="status" className="text-sm text-ink">
                 showing every layer would download {bulkPrompt.files} more 3D model files. on a phone, this can slow

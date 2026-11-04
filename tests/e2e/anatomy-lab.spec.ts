@@ -519,6 +519,14 @@ test.describe('anatomy lab whole body loads layers on demand', () => {
     await expect(files).toContainText('model files loaded: 1 of 11');
     expect(requests).toEqual([]);
 
+    // The focused confirmation can also be dismissed without a mouse.
+    await page.keyboard.press('Escape');
+    await expect(prompt).toHaveCount(0);
+    await expect(showAll).toBeFocused();
+    expect(requests).toEqual([]);
+
+    await showAll.click();
+    await expect(prompt).toBeVisible();
     await prompt.getByRole('button', { name: 'keep current view' }).click();
     await expect(prompt).toHaveCount(0);
     await expect(showAll).toBeFocused();
