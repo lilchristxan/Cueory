@@ -117,8 +117,15 @@ export function auditAnatomyProduction(distDir, contentDir) {
           }
           if (typeof label.source !== 'string' || label.source.trim().length === 0) {
             errors.push(`${name}: approved label ${label.id} has no source citation`);
-          } else if (!citationIds.has(label.source)) {
-            errors.push(`${name}: approved label ${label.id} references unknown source ${label.source}`);
+          } else {
+            // A citation must both exist in this manifest and belong to the
+            // same reviewed BodyParts3D structure. Either check alone is insufficient.
+            if (label.source !== `bp3d-${label.id}`) {
+              errors.push(`${name}: approved label ${label.id} source does not match structure ID`);
+            }
+            if (!citationIds.has(label.source)) {
+              errors.push(`${name}: approved label ${label.id} references unknown source ${label.source}`);
+            }
           }
         }
       }
