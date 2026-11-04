@@ -108,14 +108,41 @@ export function structureLoadNote(
   filesOfLayer: (layerId: string) => readonly string[],
   filesOfSystem: readonly string[],
   isLoaded: (url: string) => boolean,
+  fileIds?: Readonly<Record<string, readonly string[]>>,
 ): 'not loaded yet' | 'not in this model' | null {
   if (found.has(structure.id)) return null;
   if (lazy) {
+    // The whole-body manifest records the exact structures in each GLB.
+    // Another pending file in the same layer does not make a structure from
+    // an already-loaded GLB pending again.
     const layerFiles = structure.layer ? filesOfLayer(structure.layer) : [];
-    const files = layerFiles.length ? layerFiles : filesOfSystem;
+    const files = fileIds
+      ? Object.entries(fileIds).filter(([, ids]) => ids.includes(structure.id)).map(([url]) => url)
+      : layerFiles.length ? layerFiles : filesOfSystem;
     if (files.some((url) => !isLoaded(url))) return 'not loaded yet';
   }
   return 'not in this model';
+}
+
+/**
+ * The whole-body missing count only includes models that actually finished
+ * loading. Each ID is checked against its owning GLB paths, not every file
+ * in the same layer. Call after the current batch has settled to avoid
+ * showing a missing count before React receives the finished file's IDs.
+ */
+export function knownMissingStructureIds(
+  structures: readonly Pick<AnatomyStructure, 'id' | 'layer'>[],
+  found: ReadonlySet<string>,
+  filesOfLayer: (layerId: string) => readonly string[],
+  filesOfSystem: readonly string[],
+  isLoaded: (url: string) => boolean,
+  fileIds?: Readonly<Record<string, readonly string[]>>,
+): string[] {
+  return structures
+    .filter((structure) =>
+      structureLoadNote(structure, found, true, filesOfLayer, filesOfSystem, isLoaded, fileIds) === 'not in this model',
+    )
+    .map((structure) => structure.id);
 }
 
 /**
