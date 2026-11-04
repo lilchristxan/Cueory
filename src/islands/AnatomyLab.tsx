@@ -709,6 +709,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts }: Pr
           (layerId) => filesForLayer(system, layerId),
           system.model.files ?? [system.model.file],
           fileIntegratedForStatus,
+          system.model.fileIds,
         ).length
       : load.result.missing.length;
   const targetName = quiz?.target ? (names.get(quiz.target) ?? quiz.target) : null;
@@ -1089,7 +1090,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts }: Pr
                     const isHidden = hidden.has(item.id);
                     const loadNote = structureLoadNote(
                       item, foundSet, lazy, (id) => filesForLayer(system, id),
-                      system.model.files ?? [], fileIntegratedForStatus,
+                      system.model.files ?? [], fileIntegratedForStatus, system.model.fileIds,
                     );
                     return (
                       <li
