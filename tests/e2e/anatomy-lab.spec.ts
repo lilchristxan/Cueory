@@ -626,6 +626,8 @@ test.describe('anatomy lab whole body loads layers on demand', () => {
     await layers.getByRole('button', { name: /^vessels \(/ }).press('Enter');
     // The vessels layer needs heart.glb as well as vessels.glb.
     await expect(files).toContainText('model files loaded: 3 of 11', { timeout: 20_000 });
+    // No missing summary until every file eligible for each absent mesh has loaded.
+    await expect(page.getByTestId('anatomy-missing-count')).toHaveCount(0);
     // Once heart.glb arrived via vessels, the name is present and its list
     // button is enabled (though it stays hidden until chosen).
     await expect(list(page).getByRole('button', { name: 'heart (hidden)', exact: true })).toBeEnabled();
@@ -640,6 +642,9 @@ test.describe('anatomy lab whole body loads layers on demand', () => {
     // models are loaded. The organs button must fetch them, not hide heart.
     await organs.press('Enter');
     await expect(files).toContainText('model files loaded: 6 of 11', { timeout: 20_000 });
+    // All source GLB nodes match the reviewed ID catalog in this fixture.
+    // A mesh absent from one of several shared files is not a genuine miss.
+    await expect(page.getByTestId('anatomy-missing-count')).toHaveCount(0);
     await expect(organs).toHaveAttribute('aria-pressed', 'true');
     await expect(list(page).getByRole('button', { name: 'hide heart', exact: true })).toBeVisible();
   });
