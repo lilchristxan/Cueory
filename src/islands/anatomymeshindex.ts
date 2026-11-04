@@ -51,6 +51,13 @@ export function indexAnatomyGroup(
     const mesh = object as THREE.Mesh;
     if (!mesh.isMesh) return;
 
+    // Empty or malformed glTF placeholders have no drawable triangles.
+    // Do not count them as found structures or let missing POSITION crash
+    // registration of the valid meshes later in the same GLB.
+    const position = mesh.geometry.getAttribute('position');
+    const index = mesh.geometry.getIndex();
+    if (!position || position.count < 3 || (index !== null && index.count < 3)) return;
+
     let owner: string | undefined;
     for (let at: THREE.Object3D | null = mesh; at && !owner; at = at.parent) {
       owner = owners.get(at);
@@ -68,8 +75,7 @@ export function indexAnatomyGroup(
     if (!mesh.geometry.getAttribute('normal')) mesh.geometry.computeVertexNormals();
     mesh.material = new THREE.MeshLambertMaterial();
 
-    const index = mesh.geometry.getIndex();
-    triangles += (index ? index.count : mesh.geometry.getAttribute('position').count) / 3;
+    triangles += (index ? index.count : position.count) / 3;
 
     if (owner) {
       mesh.userData['structureId'] = owner;
