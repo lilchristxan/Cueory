@@ -1,6 +1,8 @@
 # Task 178: collapsed label canvas merge safety
 
-Status: In review. Stacked directly on the full-ref production-guard integration [PR #491](https://github.com/lilchristxan/Cueory/pull/491), exact base head `727299408a6747ff518f802068cc150ad043e2c0`, which already includes #481's PNG attribution, validated model-source fields, offscreen label checking, failed-GLB cleanup and synthetic fixture build repair.
+status: Task 178 (#495) prevents collapsed Anatomy Lab label-layout crashes, with synthetic zero-height, non-finite-height and normal-size regressions. In review.
+
+Stacked directly on the full-ref production-guard integration [PR #491](https://github.com/lilchristxan/Cueory/pull/491), exact base head `727299408a6747ff518f802068cc150ad043e2c0`, which already includes #481's PNG attribution, validated model-source fields, offscreen label checking, failed-GLB cleanup and synthetic fixture build repair.
 
 ## Bug
 `placeLabels()` calculates `room = height - 2 * margin`. When the 3D canvas is collapsed and the room is nonpositive, its rebalancing `while` loop runs even for an empty column, because `need([]) = 0`. The next statement accesses an undefined label and crashes instead of returning omitted names.
