@@ -125,6 +125,27 @@ export function structureLoadNote(
 }
 
 /**
+ * The whole-body missing count only includes models that actually finished
+ * loading. Each ID is checked against its owning GLB paths, not every file
+ * in the same layer. Call after the current batch has settled to avoid
+ * showing a missing count before React receives the finished file's IDs.
+ */
+export function knownMissingStructureIds(
+  structures: readonly Pick<AnatomyStructure, 'id' | 'layer'>[],
+  found: ReadonlySet<string>,
+  filesOfLayer: (layerId: string) => readonly string[],
+  filesOfSystem: readonly string[],
+  isLoaded: (url: string) => boolean,
+  fileIds?: Readonly<Record<string, readonly string[]>>,
+): string[] {
+  return structures
+    .filter((structure) =>
+      structureLoadNote(structure, found, true, filesOfLayer, filesOfSystem, isLoaded, fileIds) === 'not in this model',
+    )
+    .map((structure) => structure.id);
+}
+
+/**
  * "Show all" in the lazy view: the structures to unhide right away (those in layers whose files are all loaded, and any
  * in no layer) and the layers that must be fetched first, each shown only once its files are there.
  */
