@@ -511,7 +511,7 @@ test.describe('anatomy lab whole body loads layers on demand', () => {
     await page.getByLabel('find a structure').fill('heart');
     await expect(list(page).getByRole('button', { name: 'heart (not loaded yet)', exact: true })).toBeDisabled();
     const layers = page.getByRole('group', { name: 'layers, skin to bone' });
-    await layers.getByRole('button', { name: /^vessels \\(/ }).click();
+    await layers.getByRole('button', { name: /^vessels \(/ }).click();
     await expect.poll(() => held.length, { timeout: 20_000 }).toBe(1);
     await expect(files).toContainText('model files loaded: 2 of 11', { timeout: 20_000 });
     await expect(list(page).getByRole('button', { name: 'heart (hidden)', exact: true }))
