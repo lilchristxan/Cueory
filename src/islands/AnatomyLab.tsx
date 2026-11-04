@@ -266,6 +266,17 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts }: Pr
 
   // ── Open: load three.js and the scene module only now ─────────────────────────────────────────────────────────────
   const open = useCallback(async () => {
+    // Clear stale model and interaction state before showing a retry canvas.
+    // Otherwise a previously loaded structure can appear usable before the new GLB request starts.
+    setLoad({ state: 'loading' });
+    setSelected(null);
+    setQuiz(null);
+    setPending(new Set());
+    setLayerError(null);
+    setFilesLoaded(0);
+    setExporting(null);
+    setExportNote('');
+    setAnnounce('');
     setPhase('opening');
     try {
       const { createLabScene, readColors } = await import('./anatomyscene');
@@ -317,7 +328,8 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts }: Pr
     // Files can hold structures in several layers. Map all of their IDs now, while showing only the first layer.
     const initial = wholeLayers ? initialLayerPlan(system, wholeLayers) : null;
     setHidden(initial?.hidden ?? new Set());
-    setFilesLoaded(initial?.files.length ?? 0);
+    // Do not count an initial GLB as loaded until the scene confirms it has decoded successfully.
+    setFilesLoaded(0);
     scene
       .load(initial?.files ?? (system.model.files ?? system.model.file), initial?.ids ?? system.structures.map((s) => s.id))
       .then((result) => {
@@ -334,6 +346,11 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts }: Pr
           });
           for (const url of initial.files) loader.markLoaded(url);
           loaderRef.current = loader;
+          // Count actual cached GLBs after the initial lazy batch completes.
+          setFilesLoaded(loader.loadedCount());
+        } else {
+          // The eager path also counts its model files, but only after successful decoding.
+          setFilesLoaded((system.model.files ?? [system.model.file]).length);
         }
         setLoad({ state: 'ready', result });
         setAnnounce(`${system.title}: ${result.found.length} structures loaded.`);
@@ -438,6 +455,39 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts }: Pr
   useEffect(() => {
     if (load.state === 'ready') sceneRef.current?.setAppearance({ hidden, selected });
   }, [hidden, selected, load]);
+
+  // Mobile devices may lose their WebGL context after the scene is open.
+  // Retire GPU work immediately, but keep the accessible structure-name catalog available.
+  useEffect(() => {
+    if (phase !== 'open') return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const onContextLost = (event: Event) => {
+      event.preventDefault();
+      activePointers.current.clear();
+      pointerRef.current = null;
+      generation.bump();
+      visibilityIntent.bump();
+      loaderRef.current?.retire();
+      loaderRef.current = null;
+      const lostScene = sceneRef.current;
+      sceneRef.current = null;
+      try {
+        lostScene?.dispose();
+      } catch {
+        // A lost GPU resource may throw during disposal. Text access must still work.
+      }
+      setExporting(null);
+      setExportNote('');
+      setPending(new Set());
+      setLayerError(null);
+      setPhase('error');
+    };
+
+    canvas.addEventListener('webglcontextlost', onContextLost);
+    return () => canvas.removeEventListener('webglcontextlost', onContextLost);
+  }, [phase, generation, visibilityIntent]);
 
   useEffect(() => () => sceneRef.current?.dispose(), []);
 
@@ -680,12 +730,10 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts }: Pr
   const selectedGroup = selected ? system.structures.find((s) => s.id === selected)?.group : undefined;
   const budget = load.state === 'ready' ? anatomyTriangleNote(load.result.triangles, filesLoaded, lazy) : null;
   const ready = load.state === 'ready';
-  // The downloader marks a GLB complete before a multi-file layer's found IDs
-  // are committed to state. Do not claim an ID is absent during that gap.
+  // A completed download is not yet part of the found-ID set while a layer batch settles.
   const fileIntegratedForStatus = (url: string) =>
     fileReadyForStructureStatus(loaderRef.current?.isLoaded(url) ?? false, pending.size);
-  // A shared layer may span several GLBs. Only call a mesh missing once
-  // every file that could contain it has loaded and the scene still lacks it.
+  // Check all eligible model files before reporting a missing structure.
   const missingCount = !ready
     ? 0
     : lazy
@@ -714,6 +762,8 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts }: Pr
                 aria-pressed={s.key === system.key}
                 onClick={() => {
                   if (s.key === system.key) return;
+                  // Invalidate a pending PNG before React's system-change effect runs.
+                  generation.bump();
                   nextListFocusId.current = null;
                   setListLimit(STRUCTURE_PAGE_SIZE);
                   // A search for one system must not make the next system appear to have no structures.
@@ -799,7 +849,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts }: Pr
                     type="button"
                     className={secondaryButton}
                     aria-pressed={layerShown(layer, hidden)}
-                    aria-disabled={pending.has(layer.id) || undefined}
+                    disabled={!ready || pending.has(layer.id)}
                     onClick={() => {
                       if (pending.has(layer.id)) return;
                       visibilityIntent.bump();
@@ -817,7 +867,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts }: Pr
                 <button
                   type="button"
                   className={secondaryButton}
-                  disabled={!toPeel}
+                  disabled={!ready || !toPeel || pending.size > 0}
                   onClick={() => {
                     if (!toPeel || pending.size > 0) return;
                     visibilityIntent.bump();
@@ -834,7 +884,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts }: Pr
                 <button
                   type="button"
                   className={secondaryButton}
-                  disabled={!toRestore}
+                  disabled={!ready || !toRestore || pending.size > 0}
                   onClick={() => {
                     if (!toRestore || pending.size > 0) return;
                     visibilityIntent.bump();

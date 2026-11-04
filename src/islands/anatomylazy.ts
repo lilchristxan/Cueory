@@ -62,17 +62,26 @@ export async function loadModelsOrDispose<T>(
 ): Promise<T[]> {
   const completed: T[] = [];
   let failed = false;
+  // A graphics-context failure can throw during disposal. This cleanup is
+  // best effort: preserve the original GLB failure and try every other group.
+  const disposeBestEffort = (value: T): void => {
+    try {
+      dispose(value);
+    } catch {
+      // Resource cleanup errors must not prevent the other groups from being freed.
+    }
+  };
   try {
     // Promise.all preserves input order even when model requests finish out of order.
     return await Promise.all(loads.map(async (load) => {
       const value = await load();
-      if (failed) dispose(value);
+      if (failed) disposeBestEffort(value);
       else completed.push(value);
       return value;
     }));
   } catch (error) {
     failed = true;
-    for (const value of completed) dispose(value);
+    for (const value of completed) disposeBestEffort(value);
     throw error;
   }
 }
@@ -119,19 +128,17 @@ export function structureLoadNote(
 }
 
 /**
- * A downloaded GLB is not yet committed to React's combined found-ID list
- * while any lazy layer batch is settling. Wait for all active batches before
- * using per-file completion to assert that a structure is truly missing.
+ * A downloaded GLB can be marked complete before its found IDs are integrated.
+ * Delay absence decisions until every outstanding layer batch has settled.
  */
 export function fileReadyForStructureStatus(isLoaded: boolean, pendingLayerBatches: number): boolean {
   return isLoaded && pendingLayerBatches === 0;
 }
 
 /**
- * Count only genuinely absent structure IDs once every file eligible to hold
- * their mesh has finished loading. A GLB's individual "missing" report can
- * include IDs that actually live in another model sharing the same layer.
- * Unfetched structures are pending, not missing.
+ * Count only IDs absent from the combined scene once all their candidate
+ * GLB files are loaded. Shared model files can make per-file missing lists
+ * misleading until every eligible file has finished.
  */
 export function knownMissingStructureIds(
   structures: readonly Pick<AnatomyStructure, 'id' | 'layer'>[],
