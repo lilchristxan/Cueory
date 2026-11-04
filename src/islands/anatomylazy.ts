@@ -108,11 +108,16 @@ export function structureLoadNote(
   filesOfLayer: (layerId: string) => readonly string[],
   filesOfSystem: readonly string[],
   isLoaded: (url: string) => boolean,
+  fileIds?: Readonly<Record<string, readonly string[]>>,
 ): 'not loaded yet' | 'not in this model' | null {
   if (found.has(structure.id)) return null;
   if (lazy) {
+    // The whole-body source records which GLB owns each mesh. Unrelated
+    // model files in the same layer do not delay this structure's status.
     const layerFiles = structure.layer ? filesOfLayer(structure.layer) : [];
-    const files = layerFiles.length ? layerFiles : filesOfSystem;
+    const files = fileIds
+      ? Object.entries(fileIds).filter(([, ids]) => ids.includes(structure.id)).map(([url]) => url)
+      : layerFiles.length ? layerFiles : filesOfSystem;
     if (files.some((url) => !isLoaded(url))) return 'not loaded yet';
   }
   return 'not in this model';
@@ -136,10 +141,11 @@ export function knownMissingStructureIds(
   filesOfLayer: (layerId: string) => readonly string[],
   filesOfSystem: readonly string[],
   isLoaded: (url: string) => boolean,
+  fileIds?: Readonly<Record<string, readonly string[]>>,
 ): string[] {
   return structures
     .filter((structure) =>
-      structureLoadNote(structure, found, true, filesOfLayer, filesOfSystem, isLoaded) === 'not in this model',
+      structureLoadNote(structure, found, true, filesOfLayer, filesOfSystem, isLoaded, fileIds) === 'not in this model',
     )
     .map((structure) => structure.id);
 }
