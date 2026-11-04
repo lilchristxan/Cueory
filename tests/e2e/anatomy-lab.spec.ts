@@ -513,10 +513,15 @@ test.describe('anatomy lab whole body loads layers on demand', () => {
     const layers = page.getByRole('group', { name: 'layers, skin to bone' });
     await layers.getByRole('button', { name: /^vessels \(/ }).click();
     await expect.poll(() => held.length, { timeout: 20_000 }).toBe(1);
-    await expect(files).toContainText('model files loaded: 2 of 11', { timeout: 20_000 });
-    await expect(list(page).getByRole('button', { name: 'heart (hidden)', exact: true }))
-      .toBeEnabled({ timeout: 20_000 });
-    held[0]!();
+    try {
+      await expect(files).toContainText('model files loaded: 2 of 11', { timeout: 20_000 });
+      await expect(list(page).getByRole('button', { name: 'heart (hidden)', exact: true }))
+        .toBeEnabled({ timeout: 20_000 });
+    } finally {
+      // Even if a regression assertion fails, do not leave a model request
+      // pending into browser teardown or hold up unrelated tests.
+      held.splice(0).forEach((release) => release());
+    }
     await expect(files).toContainText('model files loaded: 3 of 11', { timeout: 20_000 });
   });
 
