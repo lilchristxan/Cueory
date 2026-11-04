@@ -608,6 +608,10 @@ export function createLabScene({ canvas, reducedMotion, colors: initialColors, o
   }
 
   async function exportPicture(request: ExportRequest): Promise<ExportResult> {
+    // Font loading is asynchronous. If the student selects another system
+    // during that wait, its previous picture must not render the new or empty
+    // scene under the old system's title and credit.
+    const pictureLoadId = loadId;
     const { width, height } = EXPORT_SIZES[request.size];
     // Type is set for the picture's shorter side (1080 in every size), so a wide picture's labels are no taller than
     // a phone picture's and as many fit down its side.
@@ -624,6 +628,9 @@ export function createLabScene({ canvas, reducedMotion, colors: initialColors, o
         document.fonts.load(`400 ${labelSize}px ${font}`),
       ]);
     }
+    // scene.clear() and scene.dispose() both advance loadId synchronously.
+    // Check before allocating a large export canvas or a second GPU renderer.
+    if (pictureLoadId !== loadId) throw new Error('The anatomy model changed during picture preparation.');
 
     const out = document.createElement('canvas');
     out.width = width;
