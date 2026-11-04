@@ -168,6 +168,24 @@ describe('anatomy production artifact audit', () => {
     ]));
   });
 
+  it('detects BP and suffixed FMA draft IDs inside encoded built text', () => {
+    const f = setup();
+    f.system('draft', 'draft', ['/models/anatomy/draft.glb'], ['BP24', 'FMA7198nsn']);
+    f.file('_astro/bp-draft.js', String.raw`const id="\u0042P24";`);
+    f.file('preview/fma-draft.html', '<span>FMA7198&#110;sn</span>');
+    expect(f.check().errors).toEqual(expect.arrayContaining([
+      'draft anatomy ID exposed in built text: _astro/bp-draft.js (BP24)',
+      'draft anatomy ID exposed in built text: preview/fma-draft.html (FMA7198nsn)',
+    ]));
+  });
+
+  it('does not flag longer BodyParts3D IDs as the shorter draft ID', () => {
+    const f = setup();
+    f.system('draft', 'draft', ['/models/anatomy/draft.glb'], ['BP24', 'FMA7198nsn']);
+    f.file('index.html', '<div>BP240 FMA7198nsnextra</div>');
+    expect(f.check().errors).toEqual([]);
+  });
+
   it('rejects padded braced draft IDs but does not invent unrelated tokens', () => {
     const f = setup();
     f.file('_astro/draft-braced.js', 'const id="\\u{0046}MA999991";');
