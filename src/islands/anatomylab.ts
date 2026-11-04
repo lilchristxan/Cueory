@@ -474,6 +474,12 @@ export function placeLabels(anchors: readonly LabelAnchor[], options: LayoutOpti
   const top = margin;
   const bottom = height - margin;
   const room = bottom - top;
+  // A collapsed/hidden canvas can be shorter than both margins. Even an
+  // empty column then has need=0 > room, which would enter the overflow loop
+  // and try to move an undefined label. Report the unplaced names instead.
+  if (!Number.isFinite(room) || room <= 0) {
+    return { placed: [], leftOut: [...new Set(anchors.map((a) => a.id))] };
+  }
   const mid = columns ? (columns.left + columns.right) / 2 : width / 2;
   const byOrder = (a: LabelAnchor, b: LabelAnchor) => a.y - b.y || a.x - b.x || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
   const usable = anchors
