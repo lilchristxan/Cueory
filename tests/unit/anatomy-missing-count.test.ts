@@ -60,6 +60,23 @@ describe('whole-body verified missing structure summary', () => {
       .toEqual(['sample-absent', 'sample-unlayered']);
   });
 
+  it('uses exact owners instead of treating unrelated GLBs as prerequisites', () => {
+    const owners = {
+      'shared.glb': ['sample-a', 'sample-b', 'sample-unlayered'],
+      'vessels.glb': ['sample-a'],
+      'other.glb': ['sample-c', 'sample-absent'],
+    };
+    const loaded = new Set(['shared.glb']);
+    const found = new Set(['sample-a', 'sample-b']);
+    expect(knownMissingStructureIds(structures, found, filesFor, allFiles, (url) => loaded.has(url), owners))
+      .toEqual(['sample-unlayered']);
+    // Do not treat a cached GLB as integrated while its React callback is
+    // still publishing found IDs for an active layer batch.
+    const pending = (url: string) => fileReadyForStructureStatus(loaded.has(url), 1);
+    expect(knownMissingStructureIds(structures, found, filesFor, allFiles, pending, owners))
+      .toEqual([]);
+  });
+
   it('waits for every system file before reporting an unlayered missing ID', () => {
     const found = new Set(['sample-a', 'sample-b', 'sample-c', 'sample-absent']);
     expect(missing(found, new Set(['shared.glb', 'other.glb']))).toEqual([]);
