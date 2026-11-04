@@ -44,6 +44,48 @@ test.describe('anatomy lab', () => {
     expect(await page.locator('meta[name="robots"]').getAttribute('content')).toContain('noindex');
   });
 
+  test('disables camera view controls until the matching fixture model is ready', async ({ page }, info) => {
+    test.skip(!isDesktopOfEachEngine(info), 'one readiness check per browser engine');
+    const releases: Array<() => void> = [];
+    await page.route('**/preview/anatomy-fixture/fixture.glb', async (route) => {
+      await new Promise<void>((resolve) => releases.push(resolve));
+      await route.continue();
+    });
+    await page.goto(URL);
+    await page.getByRole('button', { name: 'open the anatomy lab' }).click();
+    await expect.poll(() => releases.length, { timeout: 20_000 }).toBe(1);
+    const view = page.getByRole('group', { name: 'view' });
+    const names = ['turn left', 'turn right', 'tilt up', 'tilt down', 'zoom in', 'zoom out', 'reset view'];
+    for (const name of names) {
+      await expect(view.getByRole('button', { name, exact: true })).toBeDisabled();
+    }
+    releases[0]!();
+    await expect(page.getByRole('button', { name: 'fixture cube A', exact: true }))
+      .toBeEnabled({ timeout: 20_000 });
+    for (const name of names) {
+      await expect(view.getByRole('button', { name, exact: true })).toBeEnabled();
+    }
+  });
+
+  test('keeps camera controls disabled after an anatomy model request fails', async ({ page }, info) => {
+    test.skip(!isDesktopOfEachEngine(info), 'one failed-fetch check per browser engine');
+    await page.route('**/preview/anatomy-fixture/fixture.glb', (route) => route.abort('failed'));
+    await page.goto(URL);
+    await page.getByRole('button', { name: 'open the anatomy lab' }).click();
+    await expect(page.getByRole('alert').filter({ hasText: 'could not load test shapes (fixture).' }))
+      .toBeVisible({ timeout: 20_000 });
+    const view = page.getByRole('group', { name: 'view' });
+    for (const name of ['turn left', 'turn right', 'tilt up', 'tilt down', 'zoom in', 'zoom out', 'reset view']) {
+      await expect(view.getByRole('button', { name, exact: true })).toBeDisabled();
+    }
+    const consumed = await page.locator('canvas').evaluate((canvas) => {
+      const event = new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true, cancelable: true });
+      canvas.dispatchEvent(event);
+      return event.defaultPrevented;
+    });
+    expect(consumed).toBe(false);
+  });
+
   test('keeps a searchable, keyboard-accessible text catalog if WebGL is unavailable', async ({ page }) => {
     // Simulate a device whose canvas can render text but cannot create a 3D context.
     await page.addInitScript(() => {
