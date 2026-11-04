@@ -84,14 +84,6 @@ export function indexAnatomyGroup(
 }
 
 /**
- * Release decoded GLB mesh resources after replacement, cancellation, or
- * failure. A corrupted/lost GPU resource may throw in dispose(), but that
- * must not prevent the remaining mesh resources from being released.
- *
- * Geometry and material objects can be shared by several meshes in one GLB.
- * Each distinct resource is disposed at most once.
- */
-/**
  * Release temporary ID-render materials without allowing one failed GPU
  * disposal to interrupt model replacement. A material may be reused, so
  * dispose each object at most once.
@@ -109,6 +101,14 @@ export function disposeAnatomyMaterials(materials: Iterable<THREE.Material>): vo
   }
 }
 
+/**
+ * Release decoded GLB mesh resources after replacement, cancellation, or
+ * failure. A corrupted/lost GPU resource may throw in dispose(), but that
+ * must not prevent the remaining mesh resources from being released.
+ *
+ * Geometry and material objects can be shared by several meshes in one GLB.
+ * Each distinct resource is disposed at most once.
+ */
 export function disposeAnatomyMeshResources(group: THREE.Object3D): void {
   const geometries = new Set<THREE.BufferGeometry>();
   const materials = new Set<THREE.Material>();
