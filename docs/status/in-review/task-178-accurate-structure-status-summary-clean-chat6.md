@@ -1,6 +1,6 @@
 # Task 178 — file-owner-aware structure availability and missing totals
 
-status: Task 178 (#pending): use exact owning GLBs for student-facing not-loaded/absent structure labels and the whole-body missing count; in review.
+status: Task 178 (#521): use exact owning GLBs for student-facing not-loaded/absent structure labels and the whole-body missing count; in review.
 
 ## Why
 The Anatomy Lab source manifest already provides a `fileIds` map of structure IDs to the specific model GLBs containing them. However, the structure list labels a missing ID as `not loaded yet` whenever *any file in the same layer* is pending, even if its sole owning model file already finished. Meanwhile, the whole-body missing count only uses `load.result.missing` from the initial GLB load and misses absent IDs verified when later lazy files finish.
