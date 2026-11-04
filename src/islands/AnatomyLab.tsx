@@ -467,7 +467,9 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts }: Pr
 
   const onCanvasKey = (e: ReactKeyboardEvent<HTMLCanvasElement>) => {
     const scene = sceneRef.current;
-    if (!scene) return;
+    // A camera can exist before its GLB arrives (or after loading fails).
+    // Match the disabled view buttons instead of moving an empty scene.
+    if (!scene || load.state !== 'ready') return;
     switch (e.key) {
       case 'ArrowLeft': scene.orbit(-STEP, 0); break;
       case 'ArrowRight': scene.orbit(STEP, 0); break;
