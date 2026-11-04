@@ -11,12 +11,22 @@ test('anatomy canvas keeps touch-action from its stylesheet, not only inline sty
 
   const canvas = page.locator('canvas');
   await expect(canvas).toBeVisible({ timeout: 15_000 });
+  // The canvas appears during lazy loading, before OrbitControls is ready.
+  // Wait for a usable fixture structure so scene setup cannot race this check.
+  await expect(page.getByRole('button', { name: 'fixture cube A', exact: true }))
+    .toBeEnabled({ timeout: 20_000 });
   await expect(canvas).toHaveClass(/(?:^|\s)touch-none(?:\s|$)/);
 
-  // OrbitControls may also set canvas.style.touchAction at runtime.
-  // Remove that inline declaration to prove the authored CSS still works.
-  await canvas.evaluate((element) => {
-    (element as HTMLCanvasElement).style.removeProperty('touch-action');
+  // Remove any inline touch-action installed by OrbitControls. Read the
+  // inline and computed styles in the same browser task so this test cannot
+  // pass just because the scene adds an inline declaration afterward.
+  const touchAction = await canvas.evaluate((element) => {
+    const target = element as HTMLCanvasElement;
+    target.style.removeProperty('touch-action');
+    return {
+      inline: target.style.getPropertyValue('touch-action'),
+      computed: getComputedStyle(target).touchAction,
+    };
   });
-  await expect(canvas).toHaveCSS('touch-action', 'none');
+  expect(touchAction).toEqual({ inline: '', computed: 'none' });
 });
