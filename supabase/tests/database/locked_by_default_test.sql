@@ -36,17 +36,16 @@ create temporary view anon_reach as
 
 -- What the website (anon or authenticated) can run in public, also as effective privileges. Only the functions on the
 -- allowed list: check_answer (D-86), submit_flag and my_flags (D-88), record_study_events (Task 140),
--- delete_my_account (Task 60), update_display_name (Task 59), and the three admin inbox functions (Task 65).
--- The admin functions require an admin signed in with two-factor; their access checks have separate database tests.
+-- delete_my_account (Task 60), update_display_name (Task 59), my_sessions (Task 309), and the Task 65 admin
+-- flag-inbox functions. Each has its own permission tests, including the required two-factor admin check.
 create temporary view website_functions as
   select 'public.' || p.proname || '(' || pg_get_function_identity_arguments(p.oid) || ')' as function
   from pg_proc p join pg_namespace n on n.oid = p.pronamespace
   where n.nspname = 'public'
     and (has_function_privilege('anon', p.oid, 'execute')
          or has_function_privilege('authenticated', p.oid, 'execute'))
-    and p.proname <> all (array['check_answer', 'submit_flag', 'my_flags', 'record_study_events',
-                            'delete_my_account', 'update_display_name', 'admin_list_flags',
-                            'admin_mark_flag_handled', 'admin_reopen_flag']::name[]);
+    and p.proname <> all (array['check_answer', 'submit_flag', 'my_flags', 'record_study_events', 'delete_my_account', 'update_display_name', 'my_sessions',
+                            'admin_list_flags', 'admin_mark_flag_handled', 'admin_reopen_flag']::name[]);
 
 select is_empty(
   $$ select c.relname
