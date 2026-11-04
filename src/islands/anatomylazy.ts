@@ -163,7 +163,16 @@ export function revealTargetPlan(
 /** At most two on-demand GLBs decode at once, including requests from different layer buttons. */
 export const MAX_CONCURRENT_ANATOMY_MODELS = 2;
 
-export function createOnDemandLoader<R>(fetchOne: (url: string) => Promise<R>): OnDemandLoader<R> {
+/**
+ * Emit each newly completed file once, as soon as its scene.add finishes.
+ * Other callers may be awaiting slower files in the same layer; the callback
+ * allows the structure catalog to use completed meshes without waiting.
+ * Never invoke it for cached URLs, shared in-flight followers or retired loads.
+ */
+export function createOnDemandLoader<R>(
+  fetchOne: (url: string) => Promise<R>,
+  onFileLoaded?: (url: string, result: R) => void,
+): OnDemandLoader<R> {
   const done = new Set<string>();
   const inFlight = new Map<string, Promise<R | null>>();
   const waiting: Array<{ url: string; start: () => void; cancel: () => void }> = [];
@@ -214,7 +223,14 @@ export function createOnDemandLoader<R>(fetchOne: (url: string) => Promise<R>): 
             if (retired) resolve(null);
             else {
               done.add(url);
-              resolve(result);
+              // The result belongs to this URL's single actual download.
+              // Publish it before a slower sibling URL settles its layer batch.
+              try {
+                onFileLoaded?.(url, result);
+                resolve(result);
+              } catch (error) {
+                reject(error);
+              }
             }
           },
           (err: unknown) => {
