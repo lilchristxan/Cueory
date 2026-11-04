@@ -19,3 +19,6 @@ This is a stacked **CI/merge rehearsal**, not release approval. Verify this exac
 
 ## Verification
 Source/test anchors were matched and the final unified code inspected. Full local `npm run verify` is unavailable from this GitHub-connected workspace. Exact-head GitHub CI is the validation source, and browser tests may exceed the existing time limit. No success is claimed before checks complete.
+
+## Exact-head comparison
+This stacked PR is #468. GitHub verified that its comparison against #458 contains exactly three files: the source helper, its unit tests and this note. The unrelated automatic staging merge was discarded without changing the intended source or test bytes. Full exact-head validation remains required.
