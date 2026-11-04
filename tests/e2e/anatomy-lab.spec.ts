@@ -780,6 +780,47 @@ test.describe('anatomy whole-body initial file count', () => {
 });
 
 test.describe('anatomy lab system switch', () => {
+  test('clears old layer progress and messages when changing body systems', async ({ page }, info) => {
+    test.skip(!isDesktopOfEachEngine(info), 'one old-layer-state regression per browser engine');
+    await page.goto('/preview/anatomy-lab');
+    await page.getByRole('button', { name: 'open the anatomy lab' }).click();
+    // The picker includes whole body only after the lab finishes opening.
+    await expect(page.locator('canvas')).toBeFocused({ timeout: 15_000 });
+    const picker = page.getByRole('group', { name: 'body system' });
+    const whole = picker.getByRole('button', { name: 'whole body', exact: true });
+    await expect(whole).toBeVisible({ timeout: 15_000 });
+    await whole.click();
+    await expect(page.getByTestId('anatomy-files')).toContainText('model files loaded: 1 of 11', {
+      timeout: 20_000,
+    });
+
+    // A slow layer from the old system must not carry its loading message
+    // into a newly selected system. Retire old requests even if they finish late.
+    const held: Array<() => void> = [];
+    await page.route('**/models/anatomy/vessels.glb', async (route) => {
+      await new Promise<void>((resolve) => held.push(resolve));
+      await route.continue();
+    });
+    try {
+      const vesselLayer = page.getByRole('group', { name: 'layers, skin to bone' })
+        .getByRole('button', { name: /^vessels \(/ });
+      await vesselLayer.click();
+      await expect.poll(() => held.length, { timeout: 20_000 }).toBeGreaterThan(0);
+      await expect(page.getByTestId('anatomy-layer-loading')).toBeVisible();
+
+      const anotherSystem = picker.getByRole('button').first();
+      await anotherSystem.click();
+      await expect(anotherSystem).toHaveAttribute('aria-pressed', 'true');
+      await expect(page.getByTestId('anatomy-layer-loading')).toHaveCount(0);
+      await expect(page.getByRole('button', { name: 'try vessels again' })).toHaveCount(0);
+      await expect(page.getByTestId('anatomy-label-note')).toHaveCount(0);
+    } finally {
+      // An assertion failure must not strand intercepted GLBs or block teardown.
+      held.splice(0).forEach((release) => release());
+    }
+  });
+
+
   test('the old model is not shown after switching, and a late layer from the old system changes nothing', async ({ page }) => {
     const release: Array<() => void> = [];
     // Hold every model file until the test lets it go, so the order of arrival is ours.
