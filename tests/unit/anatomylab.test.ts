@@ -30,6 +30,7 @@ import {
   onlyThis,
   parseAnatomyFile,
   pictureCreditFor,
+  preparePictureFonts,
   pickedStructure,
   placeLabels,
   releaseNoteFor,
@@ -594,6 +595,26 @@ describe('what the camera can see (the ID picture)', () => {
     expect(found.get('c')).toEqual({ visible: false, x: 1, y: 1 });
     expect(found.get('d')).toEqual({ visible: false, x: 2, y: 1 });
     expect(findVisibleAnchors(px, 4, 3, new Map([['c', targets.get('c')!]]), 2).get('c')).toMatchObject({ visible: true, x: 3 });
+  });
+});
+
+describe('picture export font fallback', () => {
+  it('requests both fonts before drawing when the browser can load them', async () => {
+    const requested: string[] = [];
+    await expect(preparePictureFonts(['700 title', '400 labels'], async (face) => {
+      requested.push(face);
+    })).resolves.toBeUndefined();
+    expect(requested).toEqual(['700 title', '400 labels']);
+  });
+
+  it('still allows export when a font rejects or synchronously throws', async () => {
+    const requested: string[] = [];
+    await expect(preparePictureFonts(['700 title', '400 labels'], (face) => {
+      requested.push(face);
+      if (face === '700 title') throw new Error('synthetic font setup failure');
+      return Promise.reject(new Error('synthetic font network failure'));
+    })).resolves.toBeUndefined();
+    expect(requested).toEqual(['700 title', '400 labels']);
   });
 });
 

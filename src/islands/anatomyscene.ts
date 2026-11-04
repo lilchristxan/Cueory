@@ -23,6 +23,7 @@ import {
   labelRoomFor,
   placeLabels,
   pickedStructure,
+  preparePictureFonts,
   wrapText,
   type ExportSize,
   type Rect,
@@ -650,10 +651,12 @@ export function createLabScene({ canvas, reducedMotion, colors: initialColors, o
     const pad = Math.round(tk.pad * scale);
     const font = colors.font;
     if (document.fonts) {
-      await Promise.all([
-        document.fonts.load(`700 ${titleSize}px ${font}`),
-        document.fonts.load(`400 ${labelSize}px ${font}`),
-      ]);
+      // FontFaceSet.load() can reject when offline. Canvas font fallback still works,
+      // so never block an otherwise valid picture (including its source credit).
+      await preparePictureFonts(
+        [`700 ${titleSize}px ${font}`, `400 ${labelSize}px ${font}`],
+        (declaration) => document.fonts.load(declaration),
+      );
     }
 
     const out = document.createElement('canvas');
