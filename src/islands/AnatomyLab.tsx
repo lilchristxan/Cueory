@@ -317,7 +317,8 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts }: Pr
     // Files can hold structures in several layers. Map all of their IDs now, while showing only the first layer.
     const initial = wholeLayers ? initialLayerPlan(system, wholeLayers) : null;
     setHidden(initial?.hidden ?? new Set());
-    setFilesLoaded(initial?.files.length ?? 0);
+    // A requested GLB is not counted as loaded until its batch succeeds.
+    setFilesLoaded(0);
     scene
       .load(initial?.files ?? (system.model.files ?? system.model.file), initial?.ids ?? system.structures.map((s) => s.id))
       .then((result) => {
@@ -334,6 +335,10 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts }: Pr
           });
           for (const url of initial.files) loader.markLoaded(url);
           loaderRef.current = loader;
+          setFilesLoaded(loader.loadedCount());
+        } else {
+          // The eager path has loaded all of its model files only now.
+          setFilesLoaded((system.model.files ?? [system.model.file]).length);
         }
         setLoad({ state: 'ready', result });
         setAnnounce(`${system.title}: ${result.found.length} structures loaded.`);
