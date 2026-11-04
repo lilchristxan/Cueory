@@ -697,6 +697,8 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts }: Pr
                 aria-pressed={s.key === system.key}
                 onClick={() => {
                   if (s.key === system.key) return;
+                  // Cancel an old PNG immediately: the system-loading effect runs later.
+                  generation.bump();
                   nextListFocusId.current = null;
                   setListLimit(STRUCTURE_PAGE_SIZE);
                   // A search for one system must not make the next system appear to have no structures.
