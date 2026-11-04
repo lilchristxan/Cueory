@@ -48,4 +48,19 @@ describe('whole-body verified missing structure summary', () => {
     expect(missing(found, new Set(['shared.glb', 'other.glb']))).toEqual([]);
     expect(missing(found, new Set(allFiles))).toEqual(['sample-unlayered']);
   });
+  it('waits while cached GLBs have not been reflected in the combined found set', () => {
+    // In an overlapping load the loader may have cached all URLs while an
+    // earlier layer's ensure() is still waiting for a sibling GLB. The scene
+    // has sample-b, but the React found set has not received the batch yet.
+    const loaded = new Set(allFiles);
+    const staleFound = new Set(['sample-a', 'sample-c', 'sample-absent', 'sample-unlayered']);
+    expect(missing(staleFound, loaded)).toEqual(['sample-b']);
+    expect(knownMissingStructureIds(
+      structures, staleFound, filesFor, allFiles, (url) => loaded.has(url), true,
+    )).toEqual([]);
+    const committed = new Set([...staleFound, 'sample-b']);
+    expect(knownMissingStructureIds(
+      structures, committed, filesFor, allFiles, (url) => loaded.has(url), false,
+    )).toEqual([]);
+  });
 });

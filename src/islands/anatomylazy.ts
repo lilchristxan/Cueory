@@ -130,7 +130,12 @@ export function knownMissingStructureIds(
   filesOfLayer: (layerId: string) => readonly string[],
   filesOfSystem: readonly string[],
   isLoaded: (url: string) => boolean,
+  resultsPending = false,
 ): string[] {
+  // The loader marks a GLB cached as soon as scene.add resolves, but the
+  // combined React found set is updated only after its whole layer batch.
+  // Until every pending batch publishes results, never declare an ID missing.
+  if (resultsPending) return [];
   return structures
     .filter((structure) =>
       structureLoadNote(structure, found, true, filesOfLayer, filesOfSystem, isLoaded) === 'not in this model',

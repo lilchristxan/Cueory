@@ -691,6 +691,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts }: Pr
           (layerId) => filesForLayer(system, layerId),
           system.model.files ?? [system.model.file],
           (url) => loaderRef.current?.isLoaded(url) ?? false,
+          pending.size > 0,
         ).length
       : load.result.missing.length;
   const targetName = quiz?.target ? (names.get(quiz.target) ?? quiz.target) : null;
