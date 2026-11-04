@@ -303,6 +303,9 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts }: Pr
     loaderRef.current?.retire();
     loaderRef.current = null;
     generation.bump();
+    // This token is invalidated synchronously by the next system-picker click,
+    // before the previous effect cleanup can run.
+    const initialLoadToken = generation.token();
     visibilityIntent.bump();
     setExporting(null);
     setExportNote('');
@@ -322,7 +325,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts }: Pr
     scene
       .load(initial?.files ?? (system.model.files ?? system.model.file), initial?.ids ?? system.structures.map((s) => s.id))
       .then((result) => {
-        if (!current || !result) return;
+        if (!current || !generation.isCurrent(initialLoadToken) || !result) return;
         if (initial) {
           // Apply the first-layer visibility before the React ready-state effect runs.
           scene.setAppearance({ hidden: initial.hidden, selected: null });
@@ -330,7 +333,9 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts }: Pr
             (url) => {
               const ids = idsForFiles(system, wholeLayers!, [url]);
               return scene.add(url, ids).then((r) => {
-                if (!r || !current) throw new Error('The view changed while this layer downloaded.');
+                if (!r || !current || !generation.isCurrent(initialLoadToken)) {
+                  throw new Error('The view changed while this layer downloaded.');
+                }
                 return r;
               });
             },
@@ -370,7 +375,9 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts }: Pr
         setAnnounce(`${system.title}: ${result.found.length} structures loaded.`);
       })
       .catch((err: unknown) => {
-        if (!current) return;
+        // A rejected old GLB can settle after the click invalidates its scene,
+        // but before React executes the old effect's passive cleanup.
+        if (!current || !generation.isCurrent(initialLoadToken)) return;
         setLoad({ state: 'error', message: err instanceof Error ? err.message : String(err) });
       });
     return () => {
