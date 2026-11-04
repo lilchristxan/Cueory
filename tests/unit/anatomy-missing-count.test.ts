@@ -78,7 +78,7 @@ describe('whole-body verified missing structure summary', () => {
       .toEqual(['sample-c', 'sample-absent', 'sample-unlayered']);
   });
 
-  it('does not retract a confirmed missing ID while an unrelated layer downloads', () => {
+  it('keeps confirmed missing IDs and adds newly verified owners as files finish', () => {
     const ownership = {
       'shared.glb': ['sample-a'],
       'vessels.glb': ['sample-b'],
@@ -90,9 +90,26 @@ describe('whole-body verified missing structure summary', () => {
     // The real owner is published; two unrelated URLs remain pending.
     expect(knownMissingStructureIds(structures, found, filesFor, allFiles, fileReady, ownership))
       .toEqual(['sample-absent', 'sample-unlayered']);
-    published.add('vessels.glb'); // another layer completes
+    // Nothing about the existing confirmed absences changes while an unrelated
+    // GLB has not published its result.
     expect(knownMissingStructureIds(structures, found, filesFor, allFiles, fileReady, ownership))
       .toEqual(['sample-absent', 'sample-unlayered']);
+
+    published.add('vessels.glb');
+    // That GLB owns sample-b. Since sample-b is still not in found, it is now
+    // a newly verified missing mesh. The previously confirmed IDs remain.
+    expect(knownMissingStructureIds(structures, found, filesFor, allFiles, fileReady, ownership))
+      .toEqual(['sample-b', 'sample-absent', 'sample-unlayered']);
+
+    published.add('shared.glb');
+    expect(knownMissingStructureIds(structures, found, filesFor, allFiles, fileReady, ownership))
+      .toEqual(['sample-a', 'sample-b', 'sample-absent', 'sample-unlayered']);
+
+    // A later scene-state update can retract a missing ID only when that mesh
+    // is actually published into the combined found set.
+    found.add('sample-b');
+    expect(knownMissingStructureIds(structures, found, filesFor, allFiles, fileReady, ownership))
+      .toEqual(['sample-a', 'sample-absent', 'sample-unlayered']);
   });
 
   it('waits for every system file before reporting an unlayered missing ID', () => {
