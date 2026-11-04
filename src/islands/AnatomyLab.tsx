@@ -439,6 +439,41 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts }: Pr
     if (load.state === 'ready') sceneRef.current?.setAppearance({ hidden, selected });
   }, [hidden, selected, load]);
 
+  // A phone may lose WebGL after loading due to GPU memory pressure. Retire
+  // downloads and exports immediately, then keep the original names available
+  // in the same searchable text fallback used for failed WebGL startup.
+  useEffect(() => {
+    if (phase !== 'open') return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const onContextLost = (event: Event) => {
+      event.preventDefault();
+      // A pointer may still be down when the old canvas disappears.
+      activePointers.current.clear();
+      pointerRef.current = null;
+      generation.bump();
+      visibilityIntent.bump();
+      loaderRef.current?.retire();
+      loaderRef.current = null;
+      const lostScene = sceneRef.current;
+      sceneRef.current = null;
+      try {
+        lostScene?.dispose();
+      } catch {
+        // Lost GPU resources can throw during disposal; text study must survive.
+      }
+      setExporting(null);
+      setExportNote('');
+      setPending(new Set());
+      setLayerError(null);
+      setPhase('error');
+    };
+
+    canvas.addEventListener('webglcontextlost', onContextLost);
+    return () => canvas.removeEventListener('webglcontextlost', onContextLost);
+  }, [phase, generation, visibilityIntent]);
+
   useEffect(() => () => sceneRef.current?.dispose(), []);
 
   useEffect(() => {
