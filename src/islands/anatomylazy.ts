@@ -163,7 +163,17 @@ export function revealTargetPlan(
 /** At most two on-demand GLBs decode at once, including requests from different layer buttons. */
 export const MAX_CONCURRENT_ANATOMY_MODELS = 2;
 
-export function createOnDemandLoader<R>(fetchOne: (url: string) => Promise<R>): OnDemandLoader<R> {
+/**
+ * Emit each newly completed file once, as soon as its scene.add finishes.
+ * Other callers may be awaiting slower files in the same layer; the callback
+ * allows the structure catalog to use completed meshes without waiting.
+ * Never invoke it for cached URLs, shared in-flight followers or retired loads.
+ */
+export function createOnDemandLoader<R>(
+  fetchOne: (url: string) => Promise<R>,
+  onFileLoaded?: (url: string, result: R) => void,
+  onNotificationError?: (error: unknown) => void,
+): OnDemandLoader<R> {
   const done = new Set<string>();
   const inFlight = new Map<string, Promise<R | null>>();
   const waiting: Array<{ url: string; start: () => void; cancel: () => void }> = [];
@@ -214,6 +224,20 @@ export function createOnDemandLoader<R>(fetchOne: (url: string) => Promise<R>): 
             if (retired) resolve(null);
             else {
               done.add(url);
+              // A successful GLB is already integrated in the scene. The
+              // optional UI progress observer must never turn that success
+              // into a failed download (or a cached URL that cannot retry).
+              try {
+                onFileLoaded?.(url, result);
+              } catch (error) {
+                // Keep the observer fault separate from model fetch errors.
+                // Even a faulty error handler cannot invalidate this GLB.
+                try {
+                  onNotificationError?.(error);
+                } catch {
+                  // No-op: do not reject a successful model download.
+                }
+              }
               resolve(result);
             }
           },
