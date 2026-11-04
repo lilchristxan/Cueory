@@ -94,6 +94,35 @@ describe('the whole-body view', () => {
     });
   });
 
+  it('dedupes a shared GLB without losing structure IDs or layer-file ownership', () => {
+    const sharedFile = '/models/anatomy/shared.glb';
+    const outer: AnatomySystem = {
+      ...system('outer', ['a']),
+      model: { file: sharedFile, release: 'sample release' },
+      structures: [{ id: 'a', text: 'sample outer', layer: 'vessels' }],
+    };
+    const inner: AnatomySystem = {
+      ...system('inner', ['b']),
+      model: { file: sharedFile, release: 'sample release' },
+      structures: [{ id: 'b', text: 'sample inner', layer: 'organs' }],
+    };
+    const separate = system('other', ['c']);
+    const body = wholeBody([outer, inner, separate])!;
+
+    // There are three source systems but only two physical model files.
+    expect(body.model.file).toBe(sharedFile);
+    expect(body.model.files).toEqual([sharedFile, '/models/anatomy/other.glb']);
+    expect(body.structures.map((structure) => structure.id)).toEqual(['a', 'b', 'c']);
+    // The consolidated viewer uses this exact map to register every mesh on
+    // the first shared-file fetch and to determine per-structure load status.
+    expect(body.model.fileIds).toEqual({
+      [sharedFile]: ['a', 'b'],
+      '/models/anatomy/other.glb': ['c'],
+    });
+    expect(body.model.layerFiles?.['vessels']).toEqual([sharedFile]);
+    expect(body.model.layerFiles?.['organs']).toEqual([sharedFile, '/models/anatomy/other.glb']);
+  });
+
   it('does not blame the source model for layers excluded from an approved-only build', () => {
     // Production keeps only approved systems. Other layers can still exist in
     // the source release as drafts but are not published to this lab.
