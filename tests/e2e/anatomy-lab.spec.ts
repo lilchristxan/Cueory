@@ -491,6 +491,64 @@ test.describe('anatomy lab', () => {
 });
 
 test.describe('anatomy lab whole body loads layers on demand', () => {
+  test('disables whole-body layer actions until the first model is ready', async ({ page }, info) => {
+    test.skip(!isDesktopOfEachEngine(info), 'one initial-layer controls check per browser engine');
+    await page.goto('/preview/anatomy-lab');
+    await page.getByRole('button', { name: 'open the anatomy lab' }).click();
+    // The 3D canvas can be visible before the full system picker is assembled.
+    await expect(page.locator('canvas')).toBeFocused({ timeout: 15_000 });
+    const whole = page.getByRole('group', { name: 'body system' })
+      .getByRole('button', { name: 'whole body', exact: true });
+    test.skip((await whole.count()) === 0, 'draft whole-body model files are not available in this build');
+
+    const held: Array<() => void> = [];
+    await page.route('**/models/anatomy/skin.glb', async (route) => {
+      await new Promise<void>((resolve) => held.push(resolve));
+      await route.continue();
+    });
+    await whole.click();
+
+    const layers = page.getByRole('group', { name: 'layers, skin to bone' });
+    const skin = layers.getByRole('button', { name: /^skin \(/ });
+    const vessels = layers.getByRole('button', { name: /^vessels \(/ });
+    const peel = layers.getByRole('button', { name: /^peel a layer/ });
+    const restore = layers.getByRole('button', { name: /^put a layer back/ });
+
+    try {
+      await expect.poll(() => held.length, { timeout: 20_000 }).toBe(1);
+      for (const button of [skin, vessels, peel, restore]) {
+        await expect(button).toBeDisabled();
+      }
+    } finally {
+      // Always release the held network request if an assertion fails.
+      held.splice(0).forEach((release) => release());
+    }
+    await expect(vessels).toBeEnabled({ timeout: 20_000 });
+    await expect(skin).toBeEnabled();
+    await expect(peel).toBeEnabled();
+    // Nothing has been peeled away yet, so there is no outer layer to restore.
+    await expect(restore).toBeDisabled();
+
+    // A second layer is allowed to load without making the other controls
+    // appear usable while the peel action is still pending.
+    const vesselHold: Array<() => void> = [];
+    await page.route('**/models/anatomy/vessels.glb', async (route) => {
+      await new Promise<void>((resolve) => vesselHold.push(resolve));
+      await route.continue();
+    });
+    await vessels.click();
+    try {
+      await expect.poll(() => vesselHold.length, { timeout: 20_000 }).toBe(1);
+      await expect(vessels).toBeDisabled();
+      await expect(peel).toBeDisabled();
+      await expect(restore).toBeDisabled();
+    } finally {
+      vesselHold.splice(0).forEach((release) => release());
+    }
+    await expect(vessels).toBeEnabled({ timeout: 20_000 });
+  });
+
+
   test('initial HTML contains each source structure once, then offers whole body after opening', async ({ page }, info) => {
     test.skip(!isDesktopOfEachEngine(info), 'one HTML payload check per browser engine');
     const heart = JSON.parse(

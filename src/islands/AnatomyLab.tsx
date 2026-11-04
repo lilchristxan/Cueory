@@ -782,7 +782,9 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts }: Pr
                     type="button"
                     className={secondaryButton}
                     aria-pressed={layerShown(layer, hidden)}
-                    aria-disabled={pending.has(layer.id) || undefined}
+                    // A layer has no usable scene while its first model is pending.
+                    // Use native disabled semantics for mouse, touch and keyboard.
+                    disabled={!ready || pending.has(layer.id)}
                     onClick={() => {
                       if (pending.has(layer.id)) return;
                       visibilityIntent.bump();
@@ -800,7 +802,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts }: Pr
                 <button
                   type="button"
                   className={secondaryButton}
-                  disabled={!toPeel}
+                  disabled={!ready || !toPeel || pending.size > 0}
                   onClick={() => {
                     if (!toPeel || pending.size > 0) return;
                     visibilityIntent.bump();
@@ -817,7 +819,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts }: Pr
                 <button
                   type="button"
                   className={secondaryButton}
-                  disabled={!toRestore}
+                  disabled={!ready || !toRestore || pending.size > 0}
                   onClick={() => {
                     if (!toRestore || pending.size > 0) return;
                     visibilityIntent.bump();
