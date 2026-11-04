@@ -1,0 +1,1 @@
+status: Task 178 anatomy initial file count (#457): display zero until the initial GLB request succeeds and count successfully integrated files after load, with failed-download browser regression. Stacked on #290 pending #416 CI fixture-copy repair and human anatomy release approval.
