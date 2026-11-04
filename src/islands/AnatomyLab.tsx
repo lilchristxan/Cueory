@@ -577,7 +577,13 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts }: Pr
                 key={s.key}
                 type="button"
                 aria-pressed={s.key === system.key}
-                onClick={() => setSystemKey(s.key)}
+                onClick={() => {
+                  if (s.key === system.key) return;
+                  // Invalidate an in-flight PNG before React schedules the system-change effect.
+                  // Otherwise a delayed toBlob callback could save the previous system's picture.
+                  generation.bump();
+                  setSystemKey(s.key);
+                }}
                 className={secondaryButton}
               >
                 {s.title}
