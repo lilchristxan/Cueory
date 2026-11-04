@@ -16,7 +16,12 @@ export interface PruneEnv {
 
 export function keepsDrafts(env: PruneEnv): boolean {
   if (env.WORKERS_CI !== '1') return env.CUEORY_ANATOMY_DRAFTS === '1';
-  const branch = env.WORKERS_CI_BRANCH?.trim();
+  const rawBranch = env.WORKERS_CI_BRANCH?.trim();
+  // Match the page-data draft gate: refs/heads/main is production too.
+  // Otherwise a full-ref main build could hide labels but retain draft GLBs.
+  const branch = rawBranch?.startsWith('refs/heads/')
+    ? rawBranch.slice('refs/heads/'.length)
+    : rawBranch;
   return Boolean(branch) && branch !== 'main';
 }
 
