@@ -127,7 +127,36 @@ export function structureLoadNote(
   return 'not in this model';
 }
 
-/** Ask before downloading two or more unique uncached model GLBs at phone widths. */
+/**
+ * A downloaded GLB can be marked complete before its found IDs are integrated.
+ * Delay absence decisions until every outstanding layer batch has settled.
+ */
+export function fileReadyForStructureStatus(isLoaded: boolean, pendingLayerBatches: number): boolean {
+  return isLoaded && pendingLayerBatches === 0;
+}
+
+/**
+ * Count only IDs absent from the combined scene once all their candidate
+ * GLB files are loaded. Shared model files can make per-file missing lists
+ * misleading until every eligible file has finished.
+ */
+export function knownMissingStructureIds(
+  structures: readonly Pick<AnatomyStructure, 'id' | 'layer'>[],
+  found: ReadonlySet<string>,
+  filesOfLayer: (layerId: string) => readonly string[],
+  filesOfSystem: readonly string[],
+  isLoaded: (url: string) => boolean,
+): string[] {
+  return structures
+    .filter((structure) =>
+      structureLoadNote(structure, found, true, filesOfLayer, filesOfSystem, isLoaded) === 'not in this model',
+    )
+    .map((structure) => structure.id);
+}
+
+/**
+ * Ask before downloading two or more unique uncached model GLBs at phone widths.
+ */
 export function needsBulkLayerConfirmation(narrowViewport: boolean, missingFiles: number): boolean {
   return narrowViewport && Number.isSafeInteger(missingFiles) && missingFiles >= 2;
 }
