@@ -90,7 +90,13 @@ describe('whole-body verified missing structure summary', () => {
     // The real owner is published; two unrelated URLs remain pending.
     expect(knownMissingStructureIds(structures, found, filesFor, allFiles, fileReady, ownership))
       .toEqual(['sample-absent', 'sample-unlayered']);
-    published.add('vessels.glb'); // another layer completes
+    published.add('vessels.glb'); // a second owner's model is now complete
+    // Its sample-b mesh was not found, so this is a new confirmed missing ID.
+    // The prior sample-absent notice must remain visible, not be retracted.
+    expect(knownMissingStructureIds(structures, found, filesFor, allFiles, fileReady, ownership))
+      .toEqual(['sample-b', 'sample-absent', 'sample-unlayered']);
+    // If that mesh is later integrated, remove only its missing status.
+    found.add('sample-b');
     expect(knownMissingStructureIds(structures, found, filesFor, allFiles, fileReady, ownership))
       .toEqual(['sample-absent', 'sample-unlayered']);
   });
