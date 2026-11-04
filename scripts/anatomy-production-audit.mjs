@@ -40,7 +40,9 @@ export function decodeAsciiEscapesForAudit(text, syntax) {
     // slash was itself escaped, so "\\u0046" is text, not the letter F.
     // Preserve preceding escaped slash pairs while decoding a final odd slash.
     // Padded code-point escapes such as \u{0046} are valid JavaScript too.
-    return text.replace(/(?<!\\)((?:\\\\)*)\\(?:u00([0-7][0-9a-f])|x([0-7][0-9a-f])|u\{([0-9a-f]{1,16})\})/gi,
+    // V8 accepts arbitrarily many leading zeroes inside braces, so do not
+    // cap the hex digit count or a legal encoded draft ID can evade the gate.
+    return text.replace(/(?<!\\)((?:\\\\)*)\\(?:u00([0-7][0-9a-f])|x([0-7][0-9a-f])|u\{([0-9a-f]+)\})/gi,
       (match, pairs, unicode, hex, braced) => {
         const value = Number.parseInt(unicode ?? hex ?? braced, 16);
         return Number.isInteger(value) && value <= 127 ? pairs + String.fromCharCode(value) : match;

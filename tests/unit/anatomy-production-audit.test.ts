@@ -213,6 +213,16 @@ describe('anatomy production artifact audit', () => {
     expect(decodeAsciiEscapesForAudit('\\u{110000}', 'script')).toBe('\\u{110000}');
   });
 
+  it('detects JavaScript code-point escapes with more than sixteen padded hex digits', () => {
+    const padded = String.raw`\u{0000000000000000000046}IX001`;
+    expect(decodeAsciiEscapesForAudit(padded, 'script')).toBe('FIX001');
+    const f = setup();
+    f.file('_astro/long-codepoint.js', `const id = "${padded}";`);
+    expect(f.check().errors).toContain(
+      'test fixture ID exposed in built text: _astro/long-codepoint.js (FIX001)',
+    );
+  });
+
   it('does not misclassify escaped literal backslashes as fixture IDs', () => {
     const f = setup();
     f.file('_astro/escaped-backslashes.js', String.raw`const text="\\u0046IX001"; const padded="\\u{0046}IX002"; const hex="\\x46IX003";`);
