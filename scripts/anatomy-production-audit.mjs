@@ -33,8 +33,13 @@ function walkFiles(dir) {
  */
 export function decodeAsciiEscapesForAudit(text, syntax) {
   if (syntax === 'script') {
-    return text.replace(/\\+(?:u00([0-7][0-9a-f])|x([0-7][0-9a-f])|u\{([0-7][0-9a-f])\})/gi,
-      (_match, unicode, hex, braced) => String.fromCharCode(Number.parseInt(unicode ?? hex ?? braced, 16)));
+    // Padded braced code points (for example \u{0046}) are valid JS too.
+    // Decode only ASCII: other Unicode characters cannot be part of an FMA/FIX ID.
+    return text.replace(/\\+(?:u00([0-7][0-9a-f])|x([0-7][0-9a-f])|u\{([0-9a-f]{1,16})\})/gi,
+      (match, unicode, hex, braced) => {
+        const value = Number.parseInt(unicode ?? hex ?? braced, 16);
+        return Number.isInteger(value) && value <= 127 ? String.fromCharCode(value) : match;
+      });
   }
   if (syntax === 'markup') {
     return text.replace(/&#(?:x([0-9a-f]{1,6})|([0-9]{1,7}));/gi, (match, hex, decimal) => {
