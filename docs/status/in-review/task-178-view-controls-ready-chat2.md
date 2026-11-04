@@ -1,0 +1,1 @@
+status: Task 178 anatomy controls (#450): disable the seven camera view buttons and canvas camera keys until the GLB is ready, with held-load and failed-fetch browser regressions. Stacked on #290 pending #416 CI fixture-copy repair and human anatomy release approval.
