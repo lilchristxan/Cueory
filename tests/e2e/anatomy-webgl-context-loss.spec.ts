@@ -39,6 +39,44 @@ test.describe('anatomy lab: late WebGL context loss', () => {
     await expect(cubeA).toHaveAttribute('aria-pressed', 'true');
   });
 
+  test('clears stale selection and readiness while WebGL retry is still downloading', async ({ page }, info) => {
+    test.skip(!isDesktopOfEachEngine(info), 'one retry-state check per browser engine');
+    await openFixtureLab(page);
+    const cube = page.getByRole('region', { name: 'structures' })
+      .getByRole('button', { name: 'fixture cube A', exact: true });
+    await cube.click();
+    await expect(page.getByRole('region', { name: 'fixture cube A' })).toBeVisible();
+    const prevented = await page.locator('canvas').evaluate((canvas) => {
+      const lost = new Event('webglcontextlost', { cancelable: true });
+      canvas.dispatchEvent(lost);
+      return lost.defaultPrevented;
+    });
+    expect(prevented).toBe(true);
+    await expect(page.getByRole('button', { name: 'try 3D again' })).toBeVisible();
+
+    // Hold the retry's actual GLB, not a timer. A former model must never
+    // remain selectable or quiz-ready while the replacement is pending.
+    const release: Array<() => void> = [];
+    await page.route('**/preview/anatomy-fixture/fixture.glb', async (route) => {
+      await new Promise<void>((resolve) => { release.push(resolve); });
+      await route.continue();
+    });
+    await page.getByRole('button', { name: 'try 3D again' }).click();
+    await expect.poll(() => release.length, { timeout: 20_000 }).toBe(1);
+    try {
+      await expect(page.getByRole('region', { name: 'fixture cube A' })).toHaveCount(0);
+      await expect(page.getByRole('button', { name: 'start the quiz' })).toBeDisabled();
+      await expect(page.getByRole('region', { name: 'structures' })
+        .getByRole('button', { name: 'fixture cube A', exact: true })).toBeDisabled();
+    } finally {
+      release.splice(0).forEach((unblock) => unblock());
+    }
+    await expect(page.getByRole('button', { name: 'start the quiz' }))
+      .toBeEnabled({ timeout: 20_000 });
+    await expect(page.getByRole('region', { name: 'structures' })
+      .getByRole('button', { name: 'fixture cube A', exact: true })).toBeEnabled();
+  });
+
   test('cancels a PNG that finishes after context loss in the same browser task', async ({ page }, info) => {
     test.skip(!isDesktopOfEachEngine(info), 'one delayed-export regression per browser engine');
     await page.addInitScript(() => {
