@@ -2,6 +2,7 @@ import { mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
+import { draftsAllowed } from '../../src/islands/anatomylab';
 import { keepsDrafts, pruneDraftModels } from '../../src/visuals/prunedrafts';
 
 const roots: string[] = [];
@@ -31,6 +32,38 @@ describe('pruning draft anatomy models from a build', () => {
       expect(removed.sort()).toEqual(['/models/anatomy/b.glb', '/models/anatomy/c1.glb', '/models/anatomy/c2.glb', '/models/anatomy/stray.glb']);
       expect(readdirSync(models)).toEqual(['a.glb']);
     }
+  });
+
+  it('prunes draft model binaries on a full Git production ref despite a draft override', () => {
+    for (const branch of ['refs/heads/main', ' refs/heads/main ']) {
+      const env = { WORKERS_CI: '1', WORKERS_CI_BRANCH: branch, CUEORY_ANATOMY_DRAFTS: '1' };
+      expect(keepsDrafts(env)).toBe(false);
+      const { dist, content, models } = setup();
+      expect(pruneDraftModels(dist, content, env).sort()).toEqual([
+        '/models/anatomy/b.glb',
+        '/models/anatomy/c1.glb',
+        '/models/anatomy/c2.glb',
+        '/models/anatomy/stray.glb',
+      ]);
+      expect(readdirSync(models)).toEqual(['a.glb']);
+    }
+  });
+
+  it('keeps the page-data and downloadable-model publication gates aligned', () => {
+    const refs = ['main', 'refs/heads/main', ' refs/heads/main ', 'staging', 'refs/heads/staging',
+      'task-178/anatomy-lab', 'refs/heads/task-178/anatomy-lab', 'refs/heads/', '  ', undefined];
+    for (const ref of refs) {
+      for (const localDraft of ['0', '1']) {
+        const env = { WORKERS_CI: '1', WORKERS_CI_BRANCH: ref, CUEORY_ANATOMY_DRAFTS: localDraft };
+        expect(keepsDrafts(env), `model gate differs from page gate on ${String(ref)}`).toBe(draftsAllowed(env));
+      }
+    }
+
+    const fullPreview = { WORKERS_CI: '1', WORKERS_CI_BRANCH: 'refs/heads/staging' };
+    const { dist, content, models } = setup();
+    expect(keepsDrafts(fullPreview)).toBe(true);
+    expect(pruneDraftModels(dist, content, fullPreview)).toEqual([]);
+    expect(readdirSync(models)).toHaveLength(5);
   });
 
   it('keeps drafts in a preview build and with the explicit local flag', () => {
