@@ -437,6 +437,11 @@ export function placeLabels(anchors: readonly LabelAnchor[], options: LayoutOpti
   const top = margin;
   const bottom = height - margin;
   const room = bottom - top;
+  // A collapsed or hidden canvas can leave negative room. Even an empty list then
+  // enters the overflow loop and its nonexistent nearest label would throw.
+  if (!Number.isFinite(room) || room <= 0) {
+    return { placed: [], leftOut: [...new Set(anchors.map((a) => a.id))] };
+  }
   const mid = columns ? (columns.left + columns.right) / 2 : width / 2;
   const byOrder = (a: LabelAnchor, b: LabelAnchor) => a.y - b.y || a.x - b.x || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
   const usable = anchors
