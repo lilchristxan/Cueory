@@ -12,6 +12,9 @@ const ANATOMY_FILE = /^anatomy-[a-z0-9-]+\.json$/;
 const MODEL_URL = /^\/models\/anatomy\/[a-z0-9][a-z0-9_-]*\.glb$/;
 // Scan all ordinary published text assets, not just the anatomy page or hashed JavaScript chunks.
 // Site search, manifests or unrelated pages can otherwise accidentally expose a draft identifier.
+// Keep the production audit aligned with src/content.config.ts. BP IDs and lowercase FMA suffixes are valid.
+const STRUCTURE_ID = /^(?:FMA|BP)\d+[a-z]*$/;
+const STRUCTURE_TOKEN = /\b(?:FMA|BP)\d+[a-z]*\b/g;
 const TEXT_ASSET = /\.(?:html?|js|mjs|json|map|xml|svg|txt|css|csv|tsv|md|webmanifest)$/i;
 const SCRIPT_ESCAPES_ASSET = /\.(?:js|mjs|json|map|webmanifest|html?)$/i;
 const MARKUP_ESCAPES_ASSET = /\.(?:html?|svg|xml)$/i;
@@ -121,7 +124,7 @@ export function auditAnatomyProduction(distDir, contentDir) {
         errors.push(`${name}: draft labels are missing`);
       } else {
         for (const label of data.labels) {
-          if (!label || typeof label.id !== 'string' || !/^FMA\d{3,}$/.test(label.id)) {
+          if (!label || typeof label.id !== 'string' || !STRUCTURE_ID.test(label.id)) {
             errors.push(`${name}: invalid draft label ID`);
           } else {
             draftIds.add(label.id);
@@ -155,7 +158,7 @@ export function auditAnatomyProduction(distDir, contentDir) {
   // Draft labels must not be baked into static HTML/JS data, even if their .glb files were pruned.
   // The identifiers are original data keys, not guessed medical wording. Only match exact token boundaries.
   // Search every static text asset, including Pagefind/search data and other public routes.
-  // Token boundaries avoid confusing FMA999991 with FMA9999910. Unknown ID formats fail source validation above.
+  // Token boundaries avoid confusing BP24 with BP240 or FMA7198nsn with FMA7198nsn0. Unknown ID formats fail source validation above.
   const textFiles = walkFiles(dist).filter((path) => TEXT_ASSET.test(path));
   const draftTokens = draftIds;
   for (const file of textFiles) {
@@ -168,7 +171,7 @@ export function auditAnatomyProduction(distDir, contentDir) {
     if (draftTokens.size) {
       let exposedDraft = null;
       for (const variant of variants) {
-        for (const match of variant.matchAll(/\bFMA\d{3,}\b/g)) {
+        for (const match of variant.matchAll(STRUCTURE_TOKEN)) {
           if (draftTokens.has(match[0])) {
             exposedDraft = match[0];
             break;
