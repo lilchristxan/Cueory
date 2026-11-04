@@ -132,6 +132,44 @@ test.describe('anatomy lab', () => {
     await expect(cubeA).toHaveAttribute('aria-pressed', 'true');
   });
 
+  test('does not save a delayed picture after WebGL is lost', async ({ page }, info) => {
+    test.skip(!isDesktopOfEachEngine(info), 'one delayed-export test per browser engine is enough');
+    await page.addInitScript(() => {
+      const original = HTMLCanvasElement.prototype.toBlob;
+      HTMLCanvasElement.prototype.toBlob = function (callback, type, quality) {
+        if (this.width === 1080 && this.height === 1080) {
+          (window as Window & { __finishLostContextPicture?: () => void }).__finishLostContextPicture =
+            () => callback(new Blob(['synthetic image bytes'], { type: 'image/png' }));
+          return;
+        }
+        return original.call(this, callback, type, quality);
+      };
+    });
+    await openLab(page);
+    const downloads: string[] = [];
+    page.on('download', (download) => downloads.push(download.suggestedFilename()));
+    await page.getByRole('button', { name: 'square 1080×1080' }).click();
+    await expect.poll(() => page.evaluate(
+      () => typeof (window as Window & { __finishLostContextPicture?: () => void }).__finishLostContextPicture,
+    )).toBe('function');
+
+    // In the same browser task, lose the GPU context and release a delayed PNG.
+    // The generation bump in the loss handler must win before the Blob callback.
+    await page.evaluate(() => {
+      const canvas = document.querySelector('canvas');
+      const finish = (window as Window & { __finishLostContextPicture?: () => void }).__finishLostContextPicture;
+      if (!canvas || !finish) throw new Error('Missing the active 3D view or held export.');
+      const event = new Event('webglcontextlost', { cancelable: true });
+      canvas.dispatchEvent(event);
+      if (!event.defaultPrevented) throw new Error('WebGL context loss was not handled.');
+      finish();
+    });
+    await expect(page.getByRole('alert')).toContainText('the 3D anatomy lab could not open.');
+    await page.waitForTimeout(100);
+    expect(downloads).toEqual([]);
+    await expect(page.getByText(/^saved cueory-fixture-square/)).toHaveCount(0);
+  });
+
   test('without ?fixture the preview shows no fixture', async ({ page }) => {
     await page.goto('/preview/anatomy-lab');
     const open = page.getByRole('button', { name: 'open the anatomy lab' });
