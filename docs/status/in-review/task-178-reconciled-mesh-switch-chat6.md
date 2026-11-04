@@ -1,6 +1,6 @@
 # Task 178 — reconciled viewer integration: mesh IDs and system switching
 
-Status: in review. Branch begins at the exact head of PR #414, `5085cce47985d6ecacb94ab5408a78bac5604efa`. This is an optional alternative to applying the same changes from PR #494 to a different base.
+status: Task 178 (#500): preserve shared-GLB mesh IDs and cancel stale system-switch actions, with synthetic and browser regressions; in review. Branch begins at the exact head of PR #414, `5085cce47985d6ecacb94ab5408a78bac5604efa`. This is an optional alternative to applying the same changes from PR #494 to a different base.
 
 ## Fixes
 - Register later GLB meshes under their already-known structure ID and refresh bounds for every touched ID. The isolated `anatomymeshindex.ts` helper and synthetic Vitest cases are copied from the previously reviewed mesh correction in PR #494/#482.
