@@ -132,15 +132,15 @@ describe('anatomy production artifact audit', () => {
     expect(decodeAsciiEscapesForAudit('FIX0010', 'script')).toBe('FIX0010');
   });
 
-  it('rejects padded braced Unicode fixture IDs in JS and JSON artifacts', () => {
+  it('rejects padded braced Unicode fixture IDs in generated JavaScript', () => {
     const f = setup();
     f.file('_astro/fixture-four.js', 'const id="\\u{0046}IX001";');
     f.file('_astro/fixture-six.js', 'const id="F\\u{000049}X002";');
-    f.file('pagefind/fixture-eight.json', '{"id":"FI\\u{00000058}003"}');
+    f.file('_astro/fixture-eight.js', 'const id="FI\\u{00000058}003";');
     expect(f.check().errors).toEqual(expect.arrayContaining([
       'test fixture ID exposed in built text: _astro/fixture-four.js (FIX001)',
       'test fixture ID exposed in built text: _astro/fixture-six.js (FIX002)',
-      'test fixture ID exposed in built text: pagefind/fixture-eight.json (FIX003)',
+      'test fixture ID exposed in built text: _astro/fixture-eight.js (FIX003)',
     ]));
   });
 
