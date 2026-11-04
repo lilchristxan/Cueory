@@ -30,6 +30,35 @@ export function createGeneration() {
   };
 }
 
+/**
+ * Initial multi-file loads are all-or-nothing. If one request fails, release
+ * any decoded models that succeeded, including models that finish after the
+ * first failure. These models were never installed in the scene, so the next
+ * attempt should fetch fresh copies rather than reuse partial results.
+ *
+ * Promise.all retains input order on success and rejects promptly on failure.
+ * Each late success releases its own resources after the failure is known.
+ */
+export async function loadModelsOrDispose<T>(
+  loads: readonly (() => Promise<T>)[],
+  dispose: (value: T) => void,
+): Promise<T[]> {
+  const completed: T[] = [];
+  let failed = false;
+  try {
+    return await Promise.all(loads.map(async (load) => {
+      const value = await load();
+      if (failed) dispose(value);
+      else completed.push(value);
+      return value;
+    }));
+  } catch (error) {
+    failed = true;
+    for (const value of completed) dispose(value);
+    throw error;
+  }
+}
+
 /** Some of a layer's files loaded and some failed: the loaded ones are kept here so the caller can still use them. */
 export class PartialLoadError<R> extends Error {
   constructor(
