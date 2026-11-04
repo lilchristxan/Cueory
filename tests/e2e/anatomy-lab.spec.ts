@@ -545,6 +545,9 @@ test.describe('anatomy lab whole body loads layers on demand', () => {
     await page.goto('/preview/anatomy-lab');
     await page.getByRole('button', { name: 'open the anatomy lab' }).click();
     await expect(page.locator('canvas')).toBeVisible({ timeout: 15_000 });
+    // The canvas is visible during 'opening'; focus means the viewer reached 'open'
+    // and assembled the deferred whole-body option before evaluating the skip guard.
+    await expect(page.locator('canvas')).toBeFocused({ timeout: 15_000 });
     const whole = page.getByRole('group', { name: 'body system' }).getByRole('button', { name: 'whole body' });
     test.skip((await whole.count()) === 0, 'whole-body draft model is absent from this build');
     await whole.click();
@@ -585,6 +588,8 @@ test.describe('anatomy lab whole body loads layers on demand', () => {
     await page.goto('/preview/anatomy-lab');
     await page.getByRole('button', { name: 'open the anatomy lab' }).click();
     await expect(page.locator('canvas')).toBeVisible({ timeout: 15_000 });
+    // Wait for the post-hydration body-system picker; its whole-body choice is added on Open.
+    await expect(page.locator('canvas')).toBeFocused({ timeout: 15_000 });
     const wholeBody = page.getByRole('group', { name: 'body system' }).getByRole('button', { name: 'whole body' });
     test.skip((await wholeBody.count()) === 0, 'real whole-body models are not included in this build');
     await wholeBody.click();
@@ -657,6 +662,8 @@ test.describe('anatomy lab system switch', () => {
     await page.goto('/preview/anatomy-lab');
     await page.getByRole('button', { name: 'open the anatomy lab' }).click();
     await expect(page.locator('canvas')).toBeVisible({ timeout: 15_000 });
+    // Do not mistake the 'opening' phase's incomplete picker for missing real models.
+    await expect(page.locator('canvas')).toBeFocused({ timeout: 15_000 });
     const picker = page.getByRole('group', { name: 'body system' });
     const buttons = picker.getByRole('button');
     test.skip((await buttons.count()) < 2, 'no real models in this build');
