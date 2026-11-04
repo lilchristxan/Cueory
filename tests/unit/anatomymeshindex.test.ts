@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
-import { disposeAnatomyMeshResources, indexAnatomyGroup } from '../../src/islands/anatomymeshindex';
+import { disposeAnatomyMaterials, disposeAnatomyMeshResources, indexAnatomyGroup } from '../../src/islands/anatomymeshindex';
 
 /** Test-only boxes and made-up IDs, never real anatomical content. */
 function sampleGroup(id: string, meshName = ''): { group: THREE.Group; mesh: THREE.Mesh; material: THREE.Material } {
@@ -139,6 +139,28 @@ describe('anatomy GLB mesh registration', () => {
     expect(indexed.has('TEST_OUTER')).toBe(true);
     expect(mesh.userData['structureId']).toBe('TEST_INNER');
     expect(oldDispose).toHaveBeenCalledOnce();
+  });
+});
+
+
+describe('anatomy ID-pass material cleanup', () => {
+  it('releases each temporary material once and continues after a GPU disposal error', () => {
+    const broken = new THREE.MeshBasicMaterial();
+    const shared = new THREE.MeshBasicMaterial();
+    const last = new THREE.MeshBasicMaterial();
+    const brokenDispose = vi.spyOn(broken, 'dispose')
+      .mockImplementation(() => { throw new Error('WebGL context lost'); });
+    const sharedDispose = vi.spyOn(shared, 'dispose');
+    const lastDispose = vi.spyOn(last, 'dispose');
+
+    expect(() => disposeAnatomyMaterials([broken, shared, shared, last])).not.toThrow();
+    expect(brokenDispose).toHaveBeenCalledOnce();
+    expect(sharedDispose).toHaveBeenCalledOnce();
+    expect(lastDispose).toHaveBeenCalledOnce();
+  });
+
+  it('allows clearing an empty ID-pass material array', () => {
+    expect(() => disposeAnatomyMaterials([])).not.toThrow();
   });
 });
 

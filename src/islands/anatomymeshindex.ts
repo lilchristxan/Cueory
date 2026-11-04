@@ -116,3 +116,21 @@ export function disposeAnatomyMeshResources(group: THREE.Object3D): void {
     }
   });
 }
+
+/**
+ * Release temporary materials used for the flat-color ID/occlusion pass.
+ * Disposal can throw during a lost WebGL context. Keep releasing the others
+ * so switching systems cannot be interrupted by one broken resource.
+ */
+export function disposeAnatomyMaterials(materials: readonly THREE.Material[]): void {
+  const seen = new Set<THREE.Material>();
+  for (const material of materials) {
+    if (seen.has(material)) continue;
+    seen.add(material);
+    try {
+      material.dispose();
+    } catch {
+      // Best-effort GPU cleanup must not break system switching.
+    }
+  }
+}
