@@ -103,6 +103,35 @@ test.describe('anatomy lab', () => {
     expect(glb).toEqual([]);
   });
 
+  test('recovers original structure names when WebGL is lost after loading', async ({ page }) => {
+    await openLab(page);
+    // A pointer may be down when a phone's GPU evicts its WebGL context.
+    await page.locator('canvas').dispatchEvent('pointerdown', { pointerId: 71, clientX: 12, clientY: 12 });
+    const prevented = await page.locator('canvas').evaluate((canvas) => {
+      const event = new Event('webglcontextlost', { cancelable: true });
+      canvas.dispatchEvent(event);
+      return event.defaultPrevented;
+    });
+    expect(prevented).toBe(true);
+
+    await expect(page.getByRole('alert')).toContainText('the 3D anatomy lab could not open.');
+    const catalog = page.getByRole('region', { name: 'structure names: test shapes (fixture)' });
+    await expect(catalog).toBeVisible();
+    await expect(catalog.getByRole('status')).toHaveText('showing 5 of 5 matching structures');
+    await catalog.getByLabel('find a structure').fill('cube a');
+    await expect(catalog.getByRole('listitem')).toHaveCount(1);
+    await expect(catalog.getByRole('listitem').first()).toContainText('fixture cube A');
+    // The synthetic fixture must remain identified as a test source, not a real anatomy model.
+    await expect(page.getByText('test shapes made in code for automated tests: not anatomy, not from BodyParts3D')).toBeVisible();
+
+    await page.getByRole('button', { name: 'try 3D again' }).click();
+    await expect(page.locator('canvas')).toBeVisible({ timeout: 15_000 });
+    const cubeA = list(page).getByRole('button', { name: 'fixture cube A', exact: true });
+    await expect(cubeA).toBeEnabled({ timeout: 20_000 });
+    await cubeA.click();
+    await expect(cubeA).toHaveAttribute('aria-pressed', 'true');
+  });
+
   test('without ?fixture the preview shows no fixture', async ({ page }) => {
     await page.goto('/preview/anatomy-lab');
     const open = page.getByRole('button', { name: 'open the anatomy lab' });
