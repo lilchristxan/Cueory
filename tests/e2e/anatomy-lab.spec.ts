@@ -476,7 +476,7 @@ test.describe('anatomy lab whole body loads layers on demand', () => {
   test('initial HTML contains each source structure once, then offers whole body after opening', async ({ page }, info) => {
     test.skip(!isDesktopOfEachEngine(info), 'one HTML payload check per browser engine');
     const heart = JSON.parse(
-      await readFile(new URL('../../content/visuals/anatomy-heart.json', import.meta.url), 'utf8'),
+      await readFile(new globalThis.URL('../../content/visuals/anatomy-heart.json', import.meta.url), 'utf8'),
     ) as { labels: Array<{ id: string }> };
     const sourceId = heart.labels[0]?.id ?? '';
     expect(sourceId).not.toBe('');
