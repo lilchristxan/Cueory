@@ -22,3 +22,6 @@ Source/test anchors were matched and the final unified code inspected. Full loca
 
 ## Exact-head comparison
 This stacked PR is #468. GitHub verified that its comparison against #458 contains exactly three files: the source helper, its unit tests and this note. The unrelated automatic staging merge was discarded without changing the intended source or test bytes. Full exact-head validation remains required.
+
+## Additional collapsed-canvas safety (from #476)
+A zero-height or hidden canvas previously let the label overflow loop select an undefined anchor, throwing even with no labels. This stacked patch incorporates #476's early guard into the existing pure helper and adds synthetic unit checks for tiny, negative and non-finite heights, unique omitted names, and normal-size placement. Do not apply the same guard twice when reconciling #414.
