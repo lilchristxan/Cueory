@@ -103,6 +103,10 @@ export function auditAnatomyProduction(distDir, contentDir) {
           }
           if (typeof label.source !== 'string' || label.source.trim().length === 0) {
             errors.push(`${name}: approved label ${label.id} has no source citation`);
+          } else if (label.source !== `bp3d-${label.id}`) {
+            // Every approved BodyParts3D label must cite its own reviewed FMA ID.
+            // A nonempty citation for another structure must not pass release QA.
+            errors.push(`${name}: approved label ${label.id} source does not match structure ID`);
           }
         }
       }
