@@ -69,6 +69,26 @@ test.describe('anatomy lab', () => {
     }
   });
 
+  test('camera controls stay disabled after a model download fails', async ({ page }, info) => {
+    test.skip(!isDesktopOfEachEngine(info), 'one failed-download check per browser engine');
+    await page.route('**/preview/anatomy-fixture/fixture.glb', (route) => route.abort('failed'));
+    await page.goto(URL);
+    await page.getByRole('button', { name: 'open the anatomy lab' }).click();
+    await expect(page.getByRole('alert').filter({ hasText: 'Could not load test shapes (fixture).' }))
+      .toBeVisible({ timeout: 20_000 });
+    const view = page.getByRole('group', { name: 'view' });
+    for (const name of ['turn left', 'turn right', 'tilt up', 'tilt down', 'zoom in', 'zoom out', 'reset view']) {
+      await expect(view.getByRole('button', { name, exact: true })).toBeDisabled();
+    }
+    // The canvas cannot consume camera hotkeys without a ready model.
+    const consumed = await page.locator('canvas').evaluate((canvas) => {
+      const key = new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true, cancelable: true });
+      canvas.dispatchEvent(key);
+      return key.defaultPrevented;
+    });
+    expect(consumed).toBe(false);
+  });
+
   test('without ?fixture the preview shows no fixture', async ({ page }) => {
     await page.goto('/preview/anatomy-lab');
     const open = page.getByRole('button', { name: 'open the anatomy lab' });
