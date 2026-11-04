@@ -119,6 +119,15 @@ export function structureLoadNote(
 }
 
 /**
+ * A downloaded GLB is not yet committed to React's combined found-ID list
+ * while any lazy layer batch is settling. Wait for all active batches before
+ * using per-file completion to assert that a structure is truly missing.
+ */
+export function fileReadyForStructureStatus(isLoaded: boolean, pendingLayerBatches: number): boolean {
+  return isLoaded && pendingLayerBatches === 0;
+}
+
+/**
  * Count only genuinely absent structure IDs once every file eligible to hold
  * their mesh has finished loading. A GLB's individual "missing" report can
  * include IDs that actually live in another model sharing the same layer.
