@@ -63,6 +63,67 @@ describe('anatomy GLB mesh registration', () => {
     expect(second.material).toBeInstanceOf(THREE.MeshBasicMaterial);
   });
 
+  it('recognizes a reviewed node ID when glTF extras provide an unrelated label', () => {
+    const group = new THREE.Group();
+    const structure = new THREE.Group();
+    structure.name = 'TEST_OFFICIAL_NODE';
+    structure.userData['name'] = 'display label from glTF extras';
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(), new THREE.MeshBasicMaterial());
+    structure.add(mesh);
+    group.add(structure);
+    const indexed = new Map<string, THREE.Mesh[]>();
+    const unlabeled: THREE.Mesh[] = [];
+
+    expect(indexAnatomyGroup(group, ['TEST_OFFICIAL_NODE'], indexed, unlabeled))
+      .toEqual({ touched: ['TEST_OFFICIAL_NODE'], triangles: 12 });
+    expect(indexed.get('TEST_OFFICIAL_NODE')).toEqual([mesh]);
+    expect(mesh.userData['structureId']).toBe('TEST_OFFICIAL_NODE');
+    expect(unlabeled).toEqual([]);
+  });
+
+  it('keeps a recognized extras ID authoritative when both names are catalog IDs', () => {
+    const group = new THREE.Group();
+    const structure = new THREE.Group();
+    structure.name = 'TEST_NODE_ALIAS';
+    structure.userData['name'] = 'TEST_REVIEWED_ID';
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(), new THREE.MeshBasicMaterial());
+    structure.add(mesh);
+    group.add(structure);
+    const indexed = new Map<string, THREE.Mesh[]>();
+    const unlabeled: THREE.Mesh[] = [];
+
+    expect(indexAnatomyGroup(group, ['TEST_REVIEWED_ID', 'TEST_NODE_ALIAS'], indexed, unlabeled))
+      .toEqual({ touched: ['TEST_REVIEWED_ID'], triangles: 12 });
+    expect(indexed.get('TEST_REVIEWED_ID')).toEqual([mesh]);
+    expect(indexed.has('TEST_NODE_ALIAS')).toBe(false);
+    expect(mesh.userData['structureId']).toBe('TEST_REVIEWED_ID');
+  });
+
+  it('combines valid node-ID fallback with one viewer material per structure', () => {
+    const scene = new THREE.Group();
+    const named = new THREE.Group();
+    named.name = 'TEST_REVIEWED_OWNER';
+    named.userData['name'] = 'non-ID description';
+    const original = new THREE.MeshBasicMaterial();
+    const disposed = vi.spyOn(original, 'dispose');
+    const first = new THREE.Mesh(new THREE.BoxGeometry(), original);
+    const second = new THREE.Mesh(new THREE.BoxGeometry(), original);
+    named.add(first, second);
+    scene.add(named);
+    const indexed = new Map<string, THREE.Mesh[]>();
+    const unlabeled: THREE.Mesh[] = [];
+
+    expect(indexAnatomyGroup(scene, ['TEST_REVIEWED_OWNER'], indexed, unlabeled))
+      .toEqual({ touched: ['TEST_REVIEWED_OWNER'], triangles: 24 });
+    expect(indexed.get('TEST_REVIEWED_OWNER')).toEqual([first, second]);
+    expect(unlabeled).toEqual([]);
+    expect(disposed).toHaveBeenCalledOnce();
+    expect(first.userData['structureId']).toBe('TEST_REVIEWED_OWNER');
+    expect(second.userData['structureId']).toBe('TEST_REVIEWED_OWNER');
+    expect(first.material).toBeInstanceOf(THREE.MeshLambertMaterial);
+    expect(first.material).toBe(second.material);
+  });
+
   it('converts a glTF material shared by nested meshes without disposing it twice', () => {
     const group = new THREE.Group();
     const structure = new THREE.Group();
