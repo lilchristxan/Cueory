@@ -7,6 +7,7 @@
  * Colors come from the brand tokens at runtime (getComputedStyle), so the model follows the Daytime and Evening palettes.
  */
 import * as THREE from 'three';
+import { loadModelsOrDispose } from './anatomylazy';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
@@ -443,7 +444,12 @@ export function createLabScene({ canvas, reducedMotion, colors: initialColors, o
     const loader = new GLTFLoader();
     loader.setMeshoptDecoder(MeshoptDecoder);
     const list = typeof urls === 'string' ? [urls] : [...urls];
-    const scenes = await Promise.all(list.map((url) => loader.loadAsync(url).then((gltf) => gltf.scene)));
+    // If any model fails, free the other decoded groups instead of leaking GPU memory.
+    // This also handles models finishing after the first request has already failed.
+    const scenes = await loadModelsOrDispose(
+      list.map((url) => () => loader.loadAsync(url).then((gltf) => gltf.scene)),
+      disposeGroup,
+    );
     const group = new THREE.Group();
     for (const part of scenes) group.add(part);
     return group;

@@ -30,6 +30,32 @@ export function createGeneration() {
   };
 }
 
+
+/**
+ * Multi-file scene downloads are all-or-nothing. A failed file must not leak
+ * the decoded groups from successful files, even if they finish after rejection.
+ * Successful batches preserve their requested file order.
+ */
+export async function loadModelsOrDispose<T>(
+  loads: readonly (() => Promise<T>)[],
+  dispose: (value: T) => void,
+): Promise<T[]> {
+  const completed: T[] = [];
+  let failed = false;
+  try {
+    return await Promise.all(loads.map(async (load) => {
+      const value = await load();
+      if (failed) dispose(value);
+      else completed.push(value);
+      return value;
+    }));
+  } catch (error) {
+    failed = true;
+    for (const value of completed) dispose(value);
+    throw error;
+  }
+}
+
 /** Some of a layer's files loaded and some failed: the loaded ones are kept here so the caller can still use them. */
 export class PartialLoadError<R> extends Error {
   constructor(

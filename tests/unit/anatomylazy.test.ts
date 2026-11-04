@@ -2,13 +2,74 @@ import { describe, expect, it } from 'vitest';
 import type { AnatomyStructure } from '../../src/islands/anatomylab';
 import { LAYERS, wholeBody, layerShown, type Layer } from '../../src/islands/anatomylayers';
 import { onlyThis } from '../../src/islands/anatomylab';
-import { PartialLoadError, revealTargetPlan, showAllPlan, createGeneration, createOnDemandLoader, filesForLayer, firstLayer, layerNeedsReveal, lazyPeel, lazyRestore, structureLoadNote } from '../../src/islands/anatomylazy';
+import { PartialLoadError, revealTargetPlan, showAllPlan, createGeneration, loadModelsOrDispose, createOnDemandLoader, filesForLayer, firstLayer, layerNeedsReveal, lazyPeel, lazyRestore, structureLoadNote } from '../../src/islands/anatomylazy';
 
 const layers: Layer[] = [
   { id: 'skin', ids: ['s1'] },
   { id: 'muscle', ids: ['m1', 'm2'] },
   { id: 'skeleton', ids: ['b1'] },
 ];
+
+describe('multi-file scene download cleanup', () => {
+  it('keeps input order when files finish out of order', async () => {
+    let finishFirst!: (value: string) => void;
+    const disposed: string[] = [];
+    const loading = loadModelsOrDispose(
+      [
+        () => new Promise<string>((resolve) => { finishFirst = resolve; }),
+        () => Promise.resolve('second'),
+      ],
+      (value) => disposed.push(value),
+    );
+    finishFirst('first');
+    await expect(loading).resolves.toEqual(['first', 'second']);
+    expect(disposed).toEqual([]);
+  });
+
+  it('disposes already decoded models when any file fails', async () => {
+    const disposed: string[] = [];
+    const failure = new Error('model unavailable');
+    const loading = loadModelsOrDispose(
+      [
+        () => Promise.resolve('first'),
+        () => Promise.resolve('second'),
+        () => Promise.reject(failure),
+      ],
+      (value) => disposed.push(value),
+    );
+    await expect(loading).rejects.toBe(failure);
+    expect(disposed.sort()).toEqual(['first', 'second']);
+  });
+
+  it('disposes a late successful model after an early failure without waiting to reject', async () => {
+    let finishLate!: (value: string) => void;
+    const disposed: string[] = [];
+    const failure = new Error('GLB failed');
+    const loading = loadModelsOrDispose(
+      [
+        () => Promise.reject(failure),
+        () => new Promise<string>((resolve) => { finishLate = resolve; }),
+      ],
+      (value) => disposed.push(value),
+    );
+    await expect(loading).rejects.toBe(failure);
+    expect(disposed).toEqual([]);
+    finishLate('late');
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(disposed).toEqual(['late']);
+    await expect(loadModelsOrDispose([() => Promise.resolve('retry')], (v) => disposed.push(v)))
+      .resolves.toEqual(['retry']);
+    expect(disposed).toEqual(['late']);
+  });
+
+  it('rejects and permits a clean retry when a loader throws synchronously', async () => {
+    await expect(loadModelsOrDispose([() => { throw new Error('decoder error'); }], () => {}))
+      .rejects.toThrow('decoder error');
+    await expect(loadModelsOrDispose([() => Promise.resolve('new model')], () => {}))
+      .resolves.toEqual(['new model']);
+  });
+});
 
 describe('partial failures and show all', () => {
   it('hands over the files that loaded when another file of the layer fails, and retries only the failed one', async () => {
