@@ -503,6 +503,23 @@ describe('labels with leader lines', () => {
     expect(placeLabels([{ id: 'wide', x: 10, y: 10, width: 500, height: 20 }], { width: 320, height: 200 }).leftOut).toEqual(['wide']);
   });
 
+  it('omits offscreen or invalid anchors without drawing a false leader line', () => {
+    const anchors: LabelAnchor[] = [
+      { id: 'left', x: -1, y: 50, width: 40, height: 20 },
+      { id: 'right', x: 320, y: 50, width: 40, height: 20 },
+      { id: 'above', x: 150, y: -1, width: 40, height: 20 },
+      { id: 'below', x: 150, y: 200, width: 40, height: 20 },
+      { id: 'bad-width', x: 100, y: 40, width: Number.NaN, height: 20 },
+      { id: 'bad-height', x: 100, y: 40, width: 40, height: Infinity },
+      { id: 'zero-width', x: 100, y: 40, width: 0, height: 20 },
+      { id: 'visible', x: 160, y: 80, width: 50, height: 24 },
+    ];
+    const result = placeLabels(anchors, { width: 320, height: 200 });
+    expect(result.placed.map((label) => label.id)).toEqual(['visible']);
+    expect(result.leftOut).toEqual(anchors.filter((a) => a.id !== 'visible').map((a) => a.id));
+    expect(result.placed[0]).toMatchObject({ anchorX: 160, anchorY: 80 });
+  });
+
   it('labels all seven structures of the wide lungs picture that used to lose one (QA, Task 178)', () => {
     // The geometry of the old wide export (/tmp/t178-shots/15): a 1920 × 589 view, 96 px boxes, seven anchors, four of
     // them right of the model's middle. The old slot search left "lower lobe of right lung" (lrl) out.

@@ -487,8 +487,13 @@ export function placeLabels(anchors: readonly LabelAnchor[], options: LayoutOpti
   const mid = columns ? (columns.left + columns.right) / 2 : width / 2;
   const byOrder = (a: LabelAnchor, b: LabelAnchor) => a.y - b.y || a.x - b.x || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
   const usable = anchors
-    .filter((a) => Number.isFinite(a.x) && Number.isFinite(a.y))
-    .filter((a) => a.width + 2 * margin <= width && a.height + 2 * margin <= height)
+    // An offscreen anchor should be omitted and reported rather than receiving
+    // a clamped label pointing to a structure the student cannot see.
+    .filter((a) => Number.isFinite(a.x) && Number.isFinite(a.y) &&
+      a.x >= 0 && a.x < width && a.y >= 0 && a.y < height)
+    .filter((a) => Number.isFinite(a.width) && Number.isFinite(a.height) &&
+      a.width > 0 && a.height > 0 &&
+      a.width + 2 * margin <= width && a.height + 2 * margin <= height)
     .sort(byOrder);
   const side = { left: usable.filter((a) => a.x < mid), right: usable.filter((a) => a.x >= mid) };
   const need = (list: LabelAnchor[]) => list.reduce((sum, a) => sum + a.height, 0) + gap * Math.max(0, list.length - 1);
