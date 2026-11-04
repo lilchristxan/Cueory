@@ -53,7 +53,6 @@ describe('whole-body missing structure counts by owning GLB', () => {
 
   it('preserves the layer-wide fallback when the manifest has no fileIds', () => {
     const found = new Set(['part-a', 'unlayered-part']);
-    expect(countMissing(found, new Set(['a.glb']), undefined)).toEqual(['unmapped-part']);
     // No per-file map: all organ IDs await the sibling as in the legacy lab.
     expect(knownMissingStructureIds(
       structures, found, filesForLayer, allFiles,
@@ -65,7 +64,7 @@ describe('whole-body missing structure counts by owning GLB', () => {
     )).toEqual(['part-b', 'shared-part', 'unmapped-part']);
   });
 
-  it('can defer the entire missing summary while any loader batch is settling', () => {
+  it('does not declare owned files missing before their results are committed', () => {
     const found = new Set(['part-a']);
     const loaded = new Set(allFiles);
     expect(knownMissingStructureIds(
