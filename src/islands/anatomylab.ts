@@ -74,8 +74,23 @@ export function pictureCreditFor(system: Pick<AnatomySystem, 'status' | 'model' 
 export async function preparePictureFonts(
   declarations: readonly string[],
   load: (declaration: string) => Promise<unknown>,
+  maxWaitMs = 1_500,
 ): Promise<void> {
-  await Promise.allSettled(declarations.map((declaration) => Promise.resolve().then(() => load(declaration))));
+  // A font request can stay pending indefinitely. Give both faces a short
+  // chance to load, then let Canvas use a fallback so exporting still works.
+  // allSettled also observes late rejections after the deadline.
+  const finished = Promise.allSettled(
+    declarations.map((declaration) => Promise.resolve().then(() => load(declaration))),
+  ).then(() => {});
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    await Promise.race([
+      finished,
+      new Promise<void>((resolve) => { timer = setTimeout(resolve, maxWaitMs); }),
+    ]);
+  } finally {
+    if (timer !== undefined) clearTimeout(timer);
+  }
 }
 
 /**
