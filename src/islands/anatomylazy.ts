@@ -123,14 +123,6 @@ export function structureLoadNote(
   return 'not in this model';
 }
 
-/**
- * Download completion can precede the React render that publishes the file's
- * mesh IDs. Suppress missing warnings during a pending layer batch.
- */
-export function fileReadyForStructureStatus(isLoaded: boolean, pendingLayerBatches: number): boolean {
-  return isLoaded && pendingLayerBatches === 0;
-}
-
 /** Count only verified missing IDs using the same owning-file rule as the list. */
 export function knownMissingStructureIds(
   structures: readonly Pick<AnatomyStructure, 'id' | 'layer'>[],

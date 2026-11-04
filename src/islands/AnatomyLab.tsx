@@ -8,7 +8,7 @@ import {
   type MutableRefObject,
   type PointerEvent as ReactPointerEvent,
 } from 'react';
-import { createGeneration, createOnDemandLoader, fileReadyForStructureStatus, knownMissingStructureIds, filesForLayer, idsForFiles, initialLayerPlan, firstLayer, layerNeedsReveal, visibilityAfterLayerDownload, lazyPeel, lazyRestore, revealTargetPlan, showAllPlan, structureLoadNote, type OnDemandLoader } from './anatomylazy';
+import { createGeneration, createOnDemandLoader, knownMissingStructureIds, filesForLayer, idsForFiles, initialLayerPlan, firstLayer, layerNeedsReveal, visibilityAfterLayerDownload, lazyPeel, lazyRestore, revealTargetPlan, showAllPlan, structureLoadNote, type OnDemandLoader } from './anatomylazy';
 import type { LabColors, LabScene, LoadResult } from './anatomyscene';
 import { STRUCTURE_PAGE_SIZE, visibleStructureGroups } from './anatomy-list-window';
 import { anatomyTriangleNote } from './anatomybudget';
@@ -64,7 +64,7 @@ interface Props {
 }
 
 type Phase = 'cover' | 'opening' | 'open' | 'error';
-type SystemLoad = { state: 'loading' } | { state: 'ready'; result: LoadResult } | { state: 'error'; message: string };
+type SystemLoad = { state: 'loading' } | { state: 'ready'; result: LoadResult; publishedFiles: ReadonlySet<string> } | { state: 'error'; message: string };
 
 const primaryButton =
   'min-h-11 rounded-pill bg-button px-5 py-2.5 text-on-button hover:bg-button-hover disabled:opacity-60';
@@ -334,9 +334,10 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts }: Pr
                 return r;
               });
             },
-            (_url, result) => {
-              // Publish every completed file immediately. A sibling GLB may
-              // be slow or fail, but this file's meshes are already available.
+            (url, result) => {
+              // The GLB's found IDs and ready URL enter the same React state
+              // update, so an unrelated pending layer cannot retract a known
+              // missing status, nor can a download outrun publication.
               setFilesLoaded((count) => count + 1);
               setLoad((prev) => prev.state !== 'ready'
                 ? prev
@@ -347,6 +348,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts }: Pr
                       missing: prev.result.missing.filter((id) => !result.found.includes(id)),
                       triangles: prev.result.triangles + result.triangles,
                     },
+                    publishedFiles: new Set([...prev.publishedFiles, url]),
                   });
             },
             () => {
@@ -366,7 +368,8 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts }: Pr
           // Eager model counts are also based on completed, not requested, files.
           setFilesLoaded((system.model.files ?? [system.model.file]).length);
         }
-        setLoad({ state: 'ready', result });
+        // The initial/eager files are published only after scene.load succeeds.
+        setLoad({ state: 'ready', result, publishedFiles: new Set(initial?.files ?? (system.model.files ?? [system.model.file])) });
         setAnnounce(`${system.title}: ${result.found.length} structures loaded.`);
       })
       .catch((err: unknown) => {
@@ -696,10 +699,10 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts }: Pr
   const selectedGroup = selected ? system.structures.find((s) => s.id === selected)?.group : undefined;
   const budget = load.state === 'ready' ? anatomyTriangleNote(load.result.triangles, filesLoaded, lazy) : null;
   const ready = load.state === 'ready';
-  // A downloaded URL is not enough to label a mesh genuinely absent while
-  // another batch may still be publishing its found IDs to React state.
+  // Read the URLs committed together with their structure IDs. Already
+  // published files remain ready while unrelated layers download.
   const fileIntegratedForStatus = (url: string) =>
-    fileReadyForStructureStatus(loaderRef.current?.isLoaded(url) ?? false, pending.size);
+    load.state === 'ready' && load.publishedFiles.has(url);
   const missingCount = !ready
     ? 0
     : lazy
