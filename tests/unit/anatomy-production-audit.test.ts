@@ -23,7 +23,7 @@ function setup() {
     writeFileSync(join(content, `anatomy-${name}.json`), JSON.stringify({
       status,
       model: { file: urls[0], files: urls.slice(1) },
-      labels: ids.map((id) => ({ id, text: 'fixture label', source: 'synthetic-test-source' })),
+      labels: ids.map((id) => ({ id, text: 'fixture label', source: `bp3d-${id}` })),
     }));
   };
   system('draft', 'draft', ['/models/anatomy/draft.glb'], ['FMA999991']);
@@ -56,7 +56,7 @@ describe('anatomy production artifact audit', () => {
       status: 'approved',
       model: { file: '/models/anatomy/approved.glb' },
       labels: [
-        { id: 'FMA999992', text: ' ', source: 'synthetic-test-source' },
+        { id: 'FMA999992', text: ' ', source: 'bp3d-FMA999992' },
         { id: 'FMA999993', text: 'fixture only', source: '' },
       ],
     }));
@@ -64,6 +64,22 @@ describe('anatomy production artifact audit', () => {
       'anatomy-approved.json: approved label FMA999992 has no official name',
       'anatomy-approved.json: approved label FMA999993 has no source citation',
     ]));
+  });
+
+  it('rejects nonempty citations that belong to a different or unreviewed source ID', () => {
+    const f = setup();
+    writeFileSync(join(f.content, 'anatomy-approved.json'), JSON.stringify({
+      status: 'approved',
+      model: { file: '/models/anatomy/approved.glb' },
+      labels: [
+        { id: 'FMA999992', text: 'fixture only', source: 'bp3d-FMA999993' },
+        { id: 'FMA999993', text: 'fixture only', source: 'synthetic-placeholder' },
+      ],
+    }));
+    expect(f.check().errors).toEqual([
+      'anatomy-approved.json: approved label FMA999992 source does not match structure ID',
+      'anatomy-approved.json: approved label FMA999993 source does not match structure ID',
+    ]);
   });
 
   it('rejects a directly fetchable draft model even if the anatomy page is clean', () => {
