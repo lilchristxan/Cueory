@@ -6,10 +6,10 @@ status: in review. Stacked on lead-owned Anatomy Lab PR #290 at 09ea433c0bbbbcf4
 The six camera movement/zoom buttons and "reset view" remained clickable while a model was downloading or after its load failed. They appeared usable even though a ready model was unavailable. Switching systems could also leave controls enabled during the next model's load.
 
 ## Fix
-All seven view buttons now use the same `ready` state that already gates "show all", labels, quizzes, and picture exports. Disabled buttons receive the existing muted appearance treatment. The three-dimensional view, model data, and normal controls after load are unchanged.
+All seven view buttons now use the same `ready` state that already gates "show all", labels, quizzes, and picture exports. Canvas arrow-key and +/- zoom actions also stop when there is no ready model. Disabled buttons receive the existing muted appearance treatment. The three-dimensional view, model data, and normal controls after load are unchanged.
 
 ## Regression
-The browser test deliberately holds the synthetic fixture GLB request, checks all seven controls are disabled while loading, then releases the request and confirms all seven are enabled after a real successful load.
+Browser tests deliberately hold the synthetic fixture GLB request, check all seven controls are disabled while loading, then release the request and confirm all seven are enabled after a real successful load. A separate fixture-download failure test verifies controls remain disabled and canvas camera hotkeys are not consumed after the failure.
 
 ## Review and integration
 Only the React lab UI, its fixture-based browser test, and this status note change. No anatomical names, clinical content, GLB files, licensing/approval flags, authentication, CSP, deployments, workflows, or dependencies change. This branch is a reviewable assist for Claude, not a direct update to #290.
