@@ -17,13 +17,6 @@ export interface IndexedAnatomyMeshes {
 }
 
 /**
- * Register the meshes in one decoded GLB group with the scene's existing index.
- *
- * The nearest named ancestor owns each mesh, matching the glTF node hierarchy.
- * Previously indexed IDs are deliberately accepted: their new meshes need the
- * same pick, hide, highlight and label behavior as the original meshes.
- */
-/**
  * Three.js leaves texture disposal to callers even after Material.dispose().
  * Converted glTF materials and discarded GLB groups own their textures here.
  * Track shared texture identities across the entire group, not per mesh.
@@ -41,6 +34,13 @@ function disposeMaterialTextures(material: THREE.Material, seen: Set<THREE.Textu
   }
 }
 
+/**
+ * Register the meshes in one decoded GLB group with the scene's existing index.
+ *
+ * The nearest named ancestor owns each mesh, matching the glTF node hierarchy.
+ * Previously indexed IDs are deliberately accepted: their new meshes need the
+ * same pick, hide, highlight and label behavior as the original meshes.
+ */
 export function indexAnatomyGroup(
   group: THREE.Object3D,
   ids: readonly string[],
