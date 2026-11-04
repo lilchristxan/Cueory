@@ -214,6 +214,51 @@ test.describe('anatomy lab', () => {
     await expect(quiz.getByText('score: 1 of 3')).toBeVisible();
   });
 
+  test('switching systems cancels a picture export before its delayed completion', async ({ page }, info) => {
+    test.skip(!isDesktopOfEachEngine(info), 'one delayed-export run per browser engine is enough');
+    // Hold only the saved square picture's toBlob completion; use synthetic bytes so the
+    // test isolates the generation guard instead of relying on PNG encoding speed.
+    await page.addInitScript(() => {
+      const original = HTMLCanvasElement.prototype.toBlob;
+      HTMLCanvasElement.prototype.toBlob = function (callback, type, quality) {
+        if (this.width === 1080 && this.height === 1080) {
+          (window as Window & { __finishAnatomyPicture?: () => void }).__finishAnatomyPicture =
+            () => callback(new Blob(['delayed fixture export'], { type: 'image/png' }));
+          return;
+        }
+        return original.call(this, callback, type, quality);
+      };
+    });
+    await openLab(page);
+    const picker = page.getByRole('group', { name: 'body system' });
+    test.skip((await picker.getByRole('button').count()) < 2, 'no second body system in this draft build');
+
+    const downloads: string[] = [];
+    page.on('download', (download) => downloads.push(download.suggestedFilename()));
+    await page.getByRole('button', { name: 'square 1080×1080' }).click();
+    await expect.poll(() => page.evaluate(
+      () => typeof (window as Window & { __finishAnatomyPicture?: () => void }).__finishAnatomyPicture,
+    )).toBe('function');
+
+    // Perform the switch and complete the pending export in the SAME browser task.
+    // This tests the gap before the system-change useEffect can invalidate old work.
+    await page.evaluate(() => {
+      const group = [...document.querySelectorAll('fieldset')].find(
+        (fieldset) => fieldset.querySelector('legend')?.textContent?.trim() === 'body system',
+      );
+      const next = group?.querySelectorAll('button')[1] as HTMLButtonElement | undefined;
+      const finish = (window as Window & { __finishAnatomyPicture?: () => void }).__finishAnatomyPicture;
+      if (!next || !finish) throw new Error('The test could not locate the switch or held picture.');
+      next.click();
+      finish();
+    });
+
+    await expect(picker.getByRole('button').nth(1)).toHaveAttribute('aria-pressed', 'true');
+    await page.waitForTimeout(350);
+    expect(downloads).toEqual([]);
+    await expect(page.getByText(/^saved cueory-fixture-square\\.png\\./)).toHaveCount(0);
+  });
+
   test('exports a phone picture as a 1080 × 1920 PNG with the right file name', async ({ page }, info) => {
     test.skip(!isDesktopOfEachEngine(info), 'one export run per engine is enough');
     await openLab(page);
