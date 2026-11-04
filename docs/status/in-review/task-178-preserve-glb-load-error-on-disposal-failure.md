@@ -1,0 +1,5 @@
+status: Task 178 Anatomy Lab GLB cleanup resilience: prevent disposal errors from overriding the original model-download failure, and continue attempting cleanup of every completed or late-arriving scene. Tests use synthetic model values and throwing disposal callbacks. In review.
+
+This focused stacked PR follows #469, and changes only the loader helper, its existing synthetic unit tests, and this status note. It preserves successful result order, early failure reporting, late-arrival disposal, fresh retry behavior and the existing model loader API. A disposal failure can still mean a resource was not fully released, but must not mask the first network/decoder error or stop best-effort cleanup of others. No real 3D assets, anatomy sources, clinical text, licenses, draft publication flags, dependencies, security, workflows or deployment changes.
+
+Exact-head GitHub CI, independent review, staged preview and founder anatomy-content/rights approvals remain required. Claude should reconcile this narrow helper correction into #414 or the chosen combined #469 tree only once; this is not permission to publish draft models.
