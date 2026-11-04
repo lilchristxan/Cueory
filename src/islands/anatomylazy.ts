@@ -118,6 +118,11 @@ export function structureLoadNote(
   return 'not in this model';
 }
 
+/** A phone tap must confirm before fetching two or more distinct uncached anatomy GLBs at once. */
+export function needsBulkLayerConfirmation(narrowViewport: boolean, missingFiles: number): boolean {
+  return narrowViewport && Number.isSafeInteger(missingFiles) && missingFiles >= 2;
+}
+
 /**
  * "Show all" in the lazy view: the structures to unhide right away (those in layers whose files are all loaded, and any
  * in no layer) and the layers that must be fetched first, each shown only once its files are there.
