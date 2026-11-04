@@ -16,6 +16,53 @@ function sampleGroup(id: string, meshName = ''): { group: THREE.Group; mesh: THR
 }
 
 describe('anatomy GLB mesh registration', () => {
+  it('skips a placeholder without positions but still indexes a valid sibling', () => {
+    const group = new THREE.Group();
+    const emptyOwner = new THREE.Group();
+    emptyOwner.name = 'TEST_EMPTY_PLACEHOLDER';
+    const drawableOwner = new THREE.Group();
+    drawableOwner.name = 'TEST_DRAWABLE_SIBLING';
+    const emptyMaterial = new THREE.MeshBasicMaterial();
+    const emptyDispose = vi.spyOn(emptyMaterial, 'dispose');
+    const empty = new THREE.Mesh(new THREE.BufferGeometry(), emptyMaterial);
+    const drawable = new THREE.Mesh(new THREE.BoxGeometry(), new THREE.MeshBasicMaterial());
+    emptyOwner.add(empty);
+    drawableOwner.add(drawable);
+    group.add(emptyOwner, drawableOwner);
+    const indexed = new Map<string, THREE.Mesh[]>();
+    const unlabeled: THREE.Mesh[] = [];
+
+    expect(indexAnatomyGroup(group, ['TEST_EMPTY_PLACEHOLDER', 'TEST_DRAWABLE_SIBLING'], indexed, unlabeled))
+      .toEqual({ touched: ['TEST_DRAWABLE_SIBLING'], triangles: 12 });
+    expect(indexed.get('TEST_EMPTY_PLACEHOLDER')).toEqual([]);
+    expect(indexed.get('TEST_DRAWABLE_SIBLING')).toEqual([drawable]);
+    expect(unlabeled).toEqual([]);
+    expect(empty.material).toBe(emptyMaterial);
+    expect(emptyDispose).not.toHaveBeenCalled();
+    expect(drawable.material).toBeInstanceOf(THREE.MeshLambertMaterial);
+  });
+
+  it('does not mark zero-index and fewer-than-three-vertex meshes as found', () => {
+    const group = new THREE.Group();
+    group.name = 'TEST_NO_TRIANGLES';
+    const zeroIndex = new THREE.BoxGeometry();
+    zeroIndex.setIndex([]);
+    const twoPoints = new THREE.BufferGeometry();
+    twoPoints.setAttribute('position', new THREE.Float32BufferAttribute([0, 0, 0, 1, 0, 0], 3));
+    const first = new THREE.Mesh(zeroIndex, new THREE.MeshBasicMaterial());
+    const second = new THREE.Mesh(twoPoints, new THREE.MeshBasicMaterial());
+    group.add(first, second);
+    const indexed = new Map<string, THREE.Mesh[]>();
+    const unlabeled: THREE.Mesh[] = [];
+
+    expect(indexAnatomyGroup(group, ['TEST_NO_TRIANGLES'], indexed, unlabeled))
+      .toEqual({ touched: [], triangles: 0 });
+    expect(indexed.get('TEST_NO_TRIANGLES')).toEqual([]);
+    expect(unlabeled).toEqual([]);
+    expect(first.material).toBeInstanceOf(THREE.MeshBasicMaterial);
+    expect(second.material).toBeInstanceOf(THREE.MeshBasicMaterial);
+  });
+
   it('converts a glTF material shared by nested meshes without disposing it twice', () => {
     const group = new THREE.Group();
     const structure = new THREE.Group();
