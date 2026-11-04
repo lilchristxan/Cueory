@@ -73,6 +73,48 @@ describe('initial multi-file GLB resource cleanup', () => {
   });
 });
 
+describe('initial GLB cleanup errors', () => {
+  it('preserves the original load failure and attempts every completed scene', async () => {
+    const failure = new Error('network model unavailable');
+    const disposed: string[] = [];
+    await expect(loadModelsOrDispose(
+      [
+        () => Promise.resolve('first'),
+        () => Promise.resolve('second'),
+        () => Promise.reject(failure),
+      ],
+      (value) => {
+        disposed.push(value);
+        if (value === 'first') throw new Error('GPU cleanup failed');
+      },
+    )).rejects.toBe(failure);
+    expect(disposed).toEqual(['first', 'second']);
+  });
+
+  it('absorbs a late disposal failure after rejecting promptly', async () => {
+    const failure = new Error('failed sibling GLB');
+    let finishLate!: (value: string) => void;
+    let afterCleanup!: () => void;
+    const cleanupAttempted = new Promise<void>((resolve) => { afterCleanup = resolve; });
+    const disposed: string[] = [];
+    const loading = loadModelsOrDispose(
+      [
+        () => Promise.reject(failure),
+        () => new Promise<string>((resolve) => { finishLate = resolve; }),
+      ],
+      (value) => {
+        disposed.push(value);
+        afterCleanup();
+        throw new Error('GPU teardown failed');
+      },
+    );
+    await expect(loading).rejects.toBe(failure);
+    finishLate('late scene');
+    await cleanupAttempted;
+    expect(disposed).toEqual(['late scene']);
+  });
+});
+
 describe('initial multi-file GLB sync failure recovery', () => {
   it('rejects synchronous decoder errors, then loads a fresh successful batch', async () => {
     const disposed: string[] = [];
