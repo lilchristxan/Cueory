@@ -33,7 +33,9 @@ describe('Anatomy Lab ID-pass mesh appearance restoration', () => {
     const firstOriginal = new THREE.MeshBasicMaterial();
     const secondOriginal = [new THREE.MeshBasicMaterial(), new THREE.MeshBasicMaterial()];
     const first = new THREE.Mesh(new THREE.BoxGeometry(), firstOriginal);
-    const second = new THREE.Mesh(new THREE.BoxGeometry(), secondOriginal);
+    const second = new THREE.Mesh<THREE.BufferGeometry, THREE.Material | THREE.Material[]>(
+      new THREE.BoxGeometry(), secondOriginal,
+    );
     first.renderOrder = 2;
     second.renderOrder = 7;
     const flat = new THREE.MeshBasicMaterial();
