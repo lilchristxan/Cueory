@@ -114,9 +114,15 @@ describe('anatomy production artifact audit', () => {
   it('preserves token boundaries in encoded and unencoded anatomy data', () => {
     const f = setup();
     f.file('_astro/fixture.js', 'const a="FFIX001"; const b="FIX001extra";');
-    f.file('pagefind/other.json', '{"id":"FIX0010"}');
-    f.file('index.html', '<span>FIX&#48;&#48;10</span>');
+    f.file('pagefind/other.json', '{"id":"FIX0010extra"}');
+    f.file('index.html', '<span>FIX&#48;&#48;1extra</span>');
     expect(f.check().errors).toEqual([]);
+  });
+
+  it('rejects reserved FIX IDs even when the number contains more than three digits', () => {
+    const f = setup();
+    f.file('pagefind/long-fixture.json', '{"id":"FIX0010"}');
+    expect(f.check().errors).toContain('test fixture ID exposed in built text: pagefind/long-fixture.json (FIX0010)');
   });
 
   it('uses existing context-aware ASCII decoding for both FMA and FIX identifiers', () => {
@@ -135,6 +141,7 @@ describe('anatomy production artifact audit', () => {
       'draft anatomy ID exposed in built text: draft.html (FMA999991)',
     ]));
   });
+
   it('does not confuse fixture IDs with longer unrelated tokens', () => {
     const f = setup();
     f.file('index.html', '<span>BEFOREFIX001 FIX001extra FIX </span>');
