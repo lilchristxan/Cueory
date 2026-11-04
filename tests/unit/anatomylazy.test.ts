@@ -2,13 +2,37 @@ import { describe, expect, it } from 'vitest';
 import type { AnatomyStructure, AnatomySystem } from '../../src/islands/anatomylab';
 import { LAYERS, wholeBody, layersOf, layerShown, type Layer } from '../../src/islands/anatomylayers';
 import { onlyThis } from '../../src/islands/anatomylab';
-import { PartialLoadError, revealTargetPlan, showAllPlan, createGeneration, loadModelsOrDispose, createOnDemandLoader, visibilityAfterLayerDownload, filesForLayer, firstLayer, idsForFiles, initialLayerPlan, layerNeedsReveal, lazyPeel, lazyRestore, structureLoadNote } from '../../src/islands/anatomylazy';
+import { PartialLoadError, revealTargetPlan, showAllPlan, createGeneration, loadModelsOrDispose, uniqueAnatomyModelUrls, createOnDemandLoader, visibilityAfterLayerDownload, filesForLayer, firstLayer, idsForFiles, initialLayerPlan, layerNeedsReveal, lazyPeel, lazyRestore, structureLoadNote } from '../../src/islands/anatomylazy';
 
 const layers: Layer[] = [
   { id: 'skin', ids: ['s1'] },
   { id: 'muscle', ids: ['m1', 'm2'] },
   { id: 'skeleton', ids: ['b1'] },
 ];
+
+describe('initial scene GLB URL deduplication', () => {
+  it('keeps each distinct physical model once in source order', () => {
+    const urls = Object.freeze([
+      '/models/anatomy/shared.glb',
+      '/models/anatomy/other.glb',
+      '/models/anatomy/shared.glb',
+      '/models/anatomy/third.glb',
+      '/models/anatomy/other.glb',
+    ]);
+    expect(uniqueAnatomyModelUrls(urls)).toEqual([
+      '/models/anatomy/shared.glb',
+      '/models/anatomy/other.glb',
+      '/models/anatomy/third.glb',
+    ]);
+    expect(urls).toHaveLength(5); // never rewrite the source manifest
+  });
+
+  it('accepts the single-file scene API without changing its path', () => {
+    expect(uniqueAnatomyModelUrls('/models/anatomy/heart.glb'))
+      .toEqual(['/models/anatomy/heart.glb']);
+    expect(uniqueAnatomyModelUrls([])).toEqual([]);
+  });
+});
 
 describe('initial multi-file model cleanup', () => {
   it('preserves file order on success even when requests finish out of order', async () => {
