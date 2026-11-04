@@ -75,8 +75,10 @@ test('switching systems during font preparation skips the obsolete PNG render', 
     document.fonts.load = (font: string, text?: string): Promise<FontFace[]> => {
       if ((state.__cueoryFontHolds ?? 0) < 2) {
         state.__cueoryFontHolds = (state.__cueoryFontHolds ?? 0) + 1;
-        return new Promise<FontFace[]>((resolve, reject) => {
-          releases.push(() => { void originalLoad(font, text).then(resolve, reject); });
+        return new Promise<FontFace[]>((resolve) => {
+          // Finish the held requests immediately after switching systems.
+          // Waiting for real fonts could let a broken export pass this test by accident.
+          releases.push(() => resolve([]));
         });
       }
       return originalLoad(font, text);
