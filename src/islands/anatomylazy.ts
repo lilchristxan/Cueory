@@ -45,16 +45,26 @@ export async function loadModelsOrDispose<T>(
 ): Promise<T[]> {
   const completed: T[] = [];
   let failed = false;
+  // A failed GPU disposal must not replace the original download/decoder
+  // failure or prevent cleanup attempts for the remaining decoded scenes.
+  const disposeBestEffort = (value: T) => {
+    try {
+      dispose(value);
+    } catch {
+      // A lost graphics context can make disposal fail. Keep the first load
+      // error so the existing retry UI can explain the actual problem.
+    }
+  };
   try {
     return await Promise.all(loads.map(async (load) => {
       const value = await load();
-      if (failed) dispose(value);
+      if (failed) disposeBestEffort(value);
       else completed.push(value);
       return value;
     }));
   } catch (error) {
     failed = true;
-    for (const value of completed) dispose(value);
+    for (const value of completed) disposeBestEffort(value);
     throw error;
   }
 }
