@@ -45,16 +45,21 @@ export async function loadModelsOrDispose<T>(
 ): Promise<T[]> {
   const completed: T[] = [];
   let failed = false;
+  // If the GPU context is lost, disposal may throw. Cleanup must remain best effort:
+  // do not mask the original download error or skip other decoded models.
+  const disposeSafely = (value: T) => {
+    try { dispose(value); } catch { /* Continue releasing the remaining models. */ }
+  };
   try {
     return await Promise.all(loads.map(async (load) => {
       const value = await load();
-      if (failed) dispose(value);
+      if (failed) disposeSafely(value);
       else completed.push(value);
       return value;
     }));
   } catch (error) {
     failed = true;
-    for (const value of completed) dispose(value);
+    for (const value of completed) disposeSafely(value);
     throw error;
   }
 }

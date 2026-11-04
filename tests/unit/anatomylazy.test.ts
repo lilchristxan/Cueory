@@ -71,6 +71,40 @@ describe('initial multi-file GLB resource cleanup', () => {
     )).resolves.toEqual(['retry']);
     expect(disposed).toEqual(['late']);
   });
+
+  it('preserves the original load failure and attempts all cleanup when a GPU dispose throws', async () => {
+    const failure = new Error('GLB download failed');
+    const disposed: string[] = [];
+    const loading = loadModelsOrDispose(
+      [() => Promise.resolve('first'), () => Promise.resolve('second'), () => Promise.reject(failure)],
+      (value) => {
+        disposed.push(value);
+        if (value === 'first') throw new Error('WebGL context lost');
+      },
+    );
+    await expect(loading).rejects.toBe(failure);
+    expect(disposed).toEqual(['first', 'second']);
+  });
+
+  it('does not turn a late cleanup exception into an unhandled loading error', async () => {
+    const failure = new Error('GLB request failed');
+    const disposed: string[] = [];
+    let finishLate!: (value: string) => void;
+    let cleanupDone!: () => void;
+    const cleaned = new Promise<void>((resolve) => { cleanupDone = resolve; });
+    const loading = loadModelsOrDispose(
+      [() => Promise.reject(failure), () => new Promise<string>((resolve) => { finishLate = resolve; })],
+      (value) => {
+        disposed.push(value);
+        cleanupDone();
+        throw new Error('late GPU cleanup failed');
+      },
+    );
+    await expect(loading).rejects.toBe(failure);
+    finishLate('late');
+    await cleaned;
+    expect(disposed).toEqual(['late']);
+  });
 });
 
 describe('initial multi-file GLB sync failure recovery', () => {
