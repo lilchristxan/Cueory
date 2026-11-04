@@ -119,6 +119,23 @@ export function structureLoadNote(
 }
 
 /**
+ * Confirm missing IDs only after every model file capable of supplying the
+ * structure's layer has been loaded. A shared GLB may omit an ID that another
+ * file still contains, and an unfetched layer is not evidence of a missing mesh.
+ */
+export function knownMissingStructureIds(
+  structures: readonly Pick<AnatomyStructure, 'id' | 'layer'>[],
+  found: ReadonlySet<string>,
+  filesOfLayer: (layerId: string) => readonly string[],
+  filesOfSystem: readonly string[],
+  isLoaded: (url: string) => boolean,
+): string[] {
+  return structures
+    .filter((item) => structureLoadNote(item, found, true, filesOfLayer, filesOfSystem, isLoaded) === 'not in this model')
+    .map((item) => item.id);
+}
+
+/**
  * "Show all" in the lazy view: the structures to unhide right away (those in layers whose files are all loaded, and any
  * in no layer) and the layers that must be fetched first, each shown only once its files are there.
  */
