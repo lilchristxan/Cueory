@@ -782,34 +782,49 @@ test.describe('anatomy whole-body initial file count', () => {
 test.describe('anatomy lab system switch', () => {
   test('the old model is not shown after switching, and a late layer from the old system changes nothing', async ({ page }) => {
     const release: Array<() => void> = [];
-    // Hold every model file until the test lets it go, so the order of arrival is ours.
+    let holdRequests = true;
+    // Hold only the current phase. Later sibling requests may arrive after a
+    // release, so they must not remain stuck behind the previous barrier.
     await page.route(/\.glb(\?|$)/, async (route) => {
-      await new Promise<void>((resolve) => release.push(resolve));
+      if (holdRequests) await new Promise<void>((resolve) => release.push(resolve));
       await route.continue();
     });
-    await page.goto('/preview/anatomy-lab');
-    await page.getByRole('button', { name: 'open the anatomy lab' }).click();
-    await expect(page.locator('canvas')).toBeVisible({ timeout: 15_000 });
-    const picker = page.getByRole('group', { name: 'body system' });
-    const buttons = picker.getByRole('button');
-    test.skip((await buttons.count()) < 2, 'no real models in this build');
-    await expect.poll(() => release.length).toBeGreaterThan(0);
-    release.splice(0).forEach((r) => r());
-    await expect(page.getByText(/^loading /)).toHaveCount(0, { timeout: 20_000 });
-    await buttons.nth(1).click();
-    // Held download of the new system: the old model must already be gone, and the loading state shown.
-    await expect(page.getByText(/^loading /).first()).toBeVisible();
-    // The previous model's quiz and export must not be enabled for the new system.
-    // Camera actions must also stay disabled until the newly chosen GLB is ready.
-    const cameraControls = page.getByRole('group', { name: 'view' });
-    for (const name of ['turn left', 'turn right', 'tilt up', 'tilt down', 'zoom in', 'zoom out', 'reset view']) {
-      await expect(cameraControls.getByRole('button', { name, exact: true })).toBeDisabled();
+    try {
+      await page.goto('/preview/anatomy-lab');
+      await page.getByRole('button', { name: 'open the anatomy lab' }).click();
+      await expect(page.locator('canvas')).toBeVisible({ timeout: 15_000 });
+      const picker = page.getByRole('group', { name: 'body system' });
+      const buttons = picker.getByRole('button');
+      test.skip((await buttons.count()) < 2, 'no real models in this build');
+      await expect.poll(() => release.length).toBeGreaterThan(0);
+      holdRequests = false;
+      release.splice(0).forEach((r) => r());
+      await expect(page.getByText(/^loading /)).toHaveCount(0, { timeout: 20_000 });
+
+      // Re-arm the barrier for the replacement system's model.
+      holdRequests = true;
+      await buttons.nth(1).click();
+      await expect(page.getByText(/^loading /).first()).toBeVisible();
+      // Existing camera, quiz, picture and structure readiness checks stay intact.
+      const cameraControls = page.getByRole('group', { name: 'view' });
+      for (const name of ['turn left', 'turn right', 'tilt up', 'tilt down', 'zoom in', 'zoom out', 'reset view']) {
+        await expect(cameraControls.getByRole('button', { name, exact: true })).toBeDisabled();
+      }
+      await expect(page.getByRole('button', { name: 'square 1080×1080' })).toBeDisabled();
+      await expect(page.getByRole('button', { name: 'start the quiz' })).toBeDisabled();
+      await expect(list(page).getByRole('button').first()).toBeDisabled();
+
+      // The React loading overlay may appear before GLTFLoader starts its
+      // request. Wait until Playwright actually intercepts the new GLB.
+      await expect.poll(() => release.length, { timeout: 20_000 }).toBeGreaterThan(0);
+      holdRequests = false;
+      release.splice(0).forEach((r) => r());
+      await expect(page.getByText(/^loading /)).toHaveCount(0, { timeout: 20_000 });
+    } finally {
+      // If an assertion fails, do not strand an intercepted request.
+      holdRequests = false;
+      release.splice(0).forEach((r) => r());
     }
-    await expect(page.getByRole('button', { name: 'square 1080×1080' })).toBeDisabled();
-    await expect(page.getByRole('button', { name: 'start the quiz' })).toBeDisabled();
-    await expect(list(page).getByRole('button').first()).toBeDisabled();
-    release.splice(0).forEach((r) => r());
-    await expect(page.getByText(/^loading /)).toHaveCount(0, { timeout: 20_000 });
   });
 });
 
