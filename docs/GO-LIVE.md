@@ -124,7 +124,8 @@ If a later pull request adds a file with an earlier date than one you've already
 **Migration history note (for Claude, nothing for you to do):** the SQL Editor doesn't record runs in Supabase's
 migration history (`supabase_migrations.schema_migrations`), so the command-line tool would think nothing has run.
 Before anyone uses the command-line tool on `cueory-staging` or `cueory-prod`, every file run by hand there is
-marked as run, without running it again: `supabase migration repair <version> … --status applied --linked`, for
+marked as run, without running it again (on `cueory-staging`, files 1 to 9 were applied on 5 November 2026 through
+the Supabase tool, which records its own runs, so only hand-run files need marking): `supabase migration repair <version> … --status applied --linked`, for
 example `supabase migration repair 20261101060000 20261101060100 --status applied --linked`. It only updates the
 history table; it doesn't apply or undo any SQL. [SB migrations] [SB repair]
 
@@ -199,7 +200,7 @@ key that starts with `sb_publishable_`, never a secret key. [SB API keys]
    You should see the sign-in form. If it says "accounts open soon", find the `staging` preview's own build settings
    in the **Previews** section, or tell Claude.
 
-After PR #239 merges, a wrong value (only one of the two, a bad address, or a secret key) stops the build with a
+Since PR #239, a wrong value (only one of the two, a bad address, or a secret key) stops the build with a
 reason, and the site keeps its previous version.
 
 ### 1.9 The email question (your decision)
@@ -247,7 +248,7 @@ Do these in order. After each step, check the live site as it says.
    - `/signin` shows the sign-in form, not "accounts open soon";
    - **Sign in with Google** works with your business Gmail and returns you to cueory.app, showing your initials;
    - `/account` opens with your name, **download my data** gives a file, and **sign out** works;
-   - the flag button on a lesson page sends (after PR #237 merges);
+   - the flag button on a lesson page sends;
    - `/privacy`, `/terms` and `/disclaimer` show final text, with no "paste your … here" box.
 7. **Check the lock is still on staging.** Open the staging preview address in a new private window.
    You should see the Cloudflare sign-in page.

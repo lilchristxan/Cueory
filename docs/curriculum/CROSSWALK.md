@@ -2,7 +2,7 @@
 
 Proposed mapping of legacy 19-unit Med-Surg lessons (`docs/curriculum/medsurg-lesson-map.csv`) to Draft 4 Curriculum blocks (`content/curriculum/blocks-v4.csv`).
 
-> **Review draft, not an approved mapping.** The Draft 4 target catalog is proposed in [PR #415 at the pinned `c052d7a` commit](https://github.com/lilchristxan/Cueory/blob/c052d7aeb671e788de1be8cc7c9ef4207195f096/content/curriculum/blocks-v4.csv), but is not yet in `staging`. All retained mappings require source verification and founder approval before lesson migration.
+> **Review draft, not an approved mapping.** The Draft 4 target catalog is proposed in [PR #415 at the pinned `c052d7a` commit](https://github.com/lilchristxan/Cueory/blob/c052d7aeb671e788de1be8cc7c9ef4207195f096/content/curriculum/blocks-v4.csv), and is on `staging` as a review draft since #415 merged. All retained mappings require source verification and founder approval before lesson migration.
 
 Actions: **retain** (direct 1:1 or close scope match), **split** (divided across multiple blocks), **merge** (combined into one block), **move** (relocated to another track/module), **retire** (legacy topic not included in core draft 4), or **?** (unresolved mapping awaiting lead decision).
 

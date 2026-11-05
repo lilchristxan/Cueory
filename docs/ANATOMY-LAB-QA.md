@@ -2,7 +2,7 @@
 
 This is the acceptance checklist for the anatomy models (Task 177) and interactive lab (Task 178). It is **not** approval to publish. The lab is a draft until its source data, interaction, accessibility and release gates are checked by a human.
 
-The product plan and source restrictions remain in [VISUALS.md](VISUALS.md). The current implementation and its open review are in [PR #290](https://github.com/lilchristxan/Cueory/pull/290).
+The product plan and source restrictions remain in [VISUALS.md](VISUALS.md). The lab first merged in [PR #290](https://github.com/lilchristxan/Cueory/pull/290); later changes arrive in the task-178 pull requests (see `docs/status/in-review/`).
 
 ## Release rule
 

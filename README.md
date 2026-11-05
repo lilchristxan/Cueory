@@ -48,7 +48,8 @@ You can edit any of these files right on GitHub: open the file, click the pencil
 - **Cloudflare Access**: locks the staging site and every preview to your email.
 - **Kit**: launch-update emails and signups (free up to 10,000 subscribers).
 - **GitHub**: the code, automated tests and security scans.
-- From Task 2: **Supabase** (accounts and study progress) and **Resend** (sign-in emails).
+- From Task 2: **Supabase** (accounts, sign-in and study progress); **Resend** for account emails is planned,
+  pending Christian's decision (GO-LIVE 1.9).
 
 Monthly cost: $0 apart from the domain. Nothing paid is added without your written approval.
 

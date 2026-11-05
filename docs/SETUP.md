@@ -286,7 +286,9 @@ file run out of order or twice fails or leaves a gap.
 
 Supabase's docs prefer the command-line tool for migrations; the SQL Editor is used here because it needs no terminal.
 Running SQL there skips Supabase's migration history, so before anyone uses the command-line tool on this project,
-Claude marks only migrations confirmed to have **succeeded in the specific hosted project** as applied (`supabase migration repair <version> --status applied`). Seventeen files exist in Git, but the hosted database may have fewer applied versions. Never mark a failed, pending, or unrun migration as applied. Sources:
+Claude marks only migrations run by hand and confirmed to have **succeeded in the specific hosted project** as applied
+(files 1 to 9 were applied to `cueory-staging` on 5 November 2026 through the Supabase tool, which did record them,
+so they need no marking there) (`supabase migration repair <version> --status applied`). Seventeen files exist in Git, but the hosted database may have fewer applied versions. Never mark a failed, pending, or unrun migration as applied. Sources:
 [Supabase: Database functions](https://supabase.com/docs/guides/database/functions) (SQL Editor, **New Query**,
 **Run**), [Supabase: Use Supabase with Next.js](https://supabase.com/docs/guides/getting-started/quickstarts/nextjs)
 (paste into the SQL Editor, then **Run**),
@@ -368,7 +370,8 @@ the exact wording: if what you see doesn't match, stop and tell Claude what it s
 26. In the project's left menu, click **Multi-Factor** (**check on screen**). Make sure the authenticator-app option
     (TOTP) is on. Supabase's docs say it's free and on by default. Leave the phone (text message) option **off**:
     Cueory doesn't use text messages.
-    Two-factor inside Cueory's own admin area needs code that isn't built yet; Claude will tell you when to set it up.
+    Two-factor inside Cueory itself is the `/account/two-factor` page (on `staging` since #337; the admin inbox at
+    `/admin/flags` requires it, #338); Claude will tell you when to enrol.
 
 Tell Claude "Part M done", or which step didn't match.
 
