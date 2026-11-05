@@ -27,7 +27,8 @@ export function deployProduction({ distDir = 'dist', contentDir = 'content/visua
     const response = runDeploy();
     return {
       attempted: true,
-      exitCode: Number.isInteger(response?.status) && response.status >= 0 ? response.status : 1,
+      // A spawn error must fail the CLI even if an unusual runner also reports status 0.
+      exitCode: response?.error ? 1 : Number.isInteger(response?.status) && response.status >= 0 ? response.status : 1,
       errors: response?.error ? ['Wrangler deployment command could not start'] : [],
     };
   } catch {

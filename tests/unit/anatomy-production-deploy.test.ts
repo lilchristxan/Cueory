@@ -71,6 +71,10 @@ describe('production pre-upload anatomy gate', () => {
   it('propagates a failed Wrangler exit status or launch failure', () => {
     const f = fixture();
     expect(deployProduction({ ...f, runDeploy: () => ({ status: 23 }) })).toMatchObject({ attempted: true, exitCode: 23 });
+    // An underlying spawn failure cannot become a successful shell exit even
+    // if an injected runner supplies a contradictory zero status.
+    expect(deployProduction({ ...f, runDeploy: () => ({ status: 0, error: new Error('synthetic spawn error') }) }))
+      .toMatchObject({ attempted: true, exitCode: 1, errors: ['Wrangler deployment command could not start'] });
     expect(deployProduction({ ...f, runDeploy: () => { throw new Error('synthetic failure'); } })).toMatchObject({ attempted: true, exitCode: 1 });
   });
 
