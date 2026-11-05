@@ -115,8 +115,9 @@ function embeddedArchiveFixtures(): Array<[string, Buffer]> {
   sevenZip.writeBigUInt64LE(0n, 12);
   sevenZip.writeBigUInt64LE(2n, 20);
   Buffer.from([0x01, 0x00]).copy(sevenZip, 32);
-  sevenZip.writeUInt32LE(testCrc32(sevenZip.subarray(12, 32)), 8);
+  // The StartHeader CRC covers the NextHeader CRC field at bytes 28..31.
   sevenZip.writeUInt32LE(testCrc32(sevenZip.subarray(32)), 28);
+  sevenZip.writeUInt32LE(testCrc32(sevenZip.subarray(12, 32)), 8);
   fixtures.push(['7z', sevenZip]);
 
   // RAR4 main-header CRC and RAR5 header CRC/varint framing.
@@ -283,20 +284,34 @@ describe('anatomy production artifact audit', () => {
     });
     const fragment = gzipSync(Buffer.concat([prefix, Buffer.from(fragmentPayload)]));
     const wasm = gzipSync(Buffer.concat([prefix, Buffer.from([0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00])]));
-    // Valid WebAssembly can still smuggle an archive in a custom section.
-    const wasmWithZip = gzipSync(Buffer.concat([prefix, Buffer.from([
-      0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00,
-      0x00, 0x05, 0x00, 0x50, 0x4b, 0x03, 0x04,
-    ])]));
+    const wasmHeader = Buffer.from([0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00]);
+    const hiddenZip = makeStoredZip();
+    const encodeWasmU32 = (value: number): Buffer => {
+      const bytes: number[] = [];
+      do {
+        let byte = value & 0x7f;
+        value >>>= 7;
+        if (value > 0) byte |= 0x80;
+        bytes.push(byte);
+      } while (value > 0);
+      return Buffer.from(bytes);
+    };
+    // A valid WebAssembly custom section can still smuggle a complete ZIP.
+    const wasmCustomName = Buffer.from('archive', 'ascii');
+    const wasmZipCustomPayload = Buffer.concat([
+      encodeWasmU32(wasmCustomName.length), wasmCustomName, hiddenZip,
+    ]);
+    const wasmWithZip = gzipSync(Buffer.concat([
+      prefix, wasmHeader, Buffer.from([0x00]),
+      encodeWasmU32(wasmZipCustomPayload.length), wasmZipCustomPayload,
+    ]));
     // A normal WebAssembly custom-section string may contain the word "ustar";
-    // it is not a tar archive unless the complete header/checksum is present.
+    // it is not a tar archive unless the complete 512-byte header/checksum exists.
     const wasmCustomData = Buffer.alloc(300, 0x61);
     wasmCustomData.write('ustar', 257, 'ascii');
     const wasmCustomPayload = Buffer.concat([Buffer.from([0x01, 0x78]), wasmCustomData]);
     const wasmWithUstarWord = gzipSync(Buffer.concat([
-      prefix,
-      Buffer.from([0x00, 0xae, 0x02]),
-      wasmCustomPayload,
+      prefix, wasmHeader, Buffer.from([0x00, 0xae, 0x02]), wasmCustomPayload,
     ]));
     // WASM custom-section bytes are opaque binary payload, not student-facing
     // anatomy text. ID-shaped bytes must not cause a false release rejection.
@@ -421,29 +436,48 @@ describe('anatomy production artifact audit', () => {
     ])));
     // Even a correctly prefixed Pagefind envelope must not hide a model/container payload.
     f.file('pagefind/index/en_prefixed_model.pf_index', gzipSync(Buffer.concat([prefix, Buffer.from('glTF' + 'x'.repeat(32))])));
-    f.file('pagefind/index/en_hidden_archive.pf_index', gzipSync(Buffer.concat([prefix, Buffer.from([0x50, 0x4b, 0x03, 0x04, 0x00])])));
-    // Structurally valid WordIndex -> PackedWord -> UTF-8 text string containing ZIP magic.
-    const textStringZip = Buffer.from([0x81, 0x81, 0x83, 0x64, 0x50, 0x4b, 0x03, 0x04, 0x80, 0x80]);
-    f.file('pagefind/index/en_text_string_archive.pf_index', gzipSync(Buffer.concat([prefix, textStringZip])));
+    // A full ZIP entry is rejected in CBOR byte strings, even after harmless data.
+    const zipByteString = Buffer.concat([Buffer.from([0x81, 0x58, hiddenZip.length]), hiddenZip]);
+    f.file('pagefind/index/en_hidden_archive.pf_index', gzipSync(Buffer.concat([prefix, zipByteString])));
+    // A complete 512-byte TAR header in a CBOR text string is also an archive.
+    const textTar = Buffer.alloc(1536, 0);
+    textTar.write('hidden-model.bin', 0, 'ascii');
+    textTar.write('0000644\\0', 100, 'ascii');
+    textTar.write('0000000\\0', 108, 'ascii');
+    textTar.write('0000000\\0', 116, 'ascii');
+    textTar.write('00000000000\\0', 124, 'ascii');
+    textTar.write('00000000000\\0', 136, 'ascii');
+    textTar.fill(0x20, 148, 156);
+    textTar.write('0', 156, 'ascii');
+    textTar.write('ustar\\0', 257, 'ascii');
+    textTar.write('00', 263, 'ascii');
+    let textTarChecksum = 0;
+    for (let index = 0; index < 512; index += 1) textTarChecksum += index >= 148 && index < 156 ? 0x20 : textTar[index];
+    textTar.write(`${textTarChecksum.toString(8).padStart(6, '0')}\\0 `, 148, 'ascii');
+    const textStringTar = Buffer.concat([Buffer.from([0x81, 0x79, 0x06, 0x00]), textTar]);
+    f.file('pagefind/index/en_text_string_archive.pf_index', gzipSync(Buffer.concat([prefix, textStringTar])));
     f.file('pagefind/filter/en_hidden_model.pf_filter', gzipSync(Buffer.concat([prefix, Buffer.from('glTF' + 'x'.repeat(32))])));
-    // A valid CBOR array with a ZIP byte string after 700 bytes must still be scanned.
-    const lateZip = Buffer.from([0x50, 0x4b, 0x03, 0x04, 0x00]);
+    // A valid CBOR array with a complete ZIP byte string after 700 bytes is still scanned.
     const lateZipCbor = Buffer.concat([
-      Buffer.from([0x82, 0x79, 0x02, 0xbc]),
+      Buffer.from([0x82, 0x59, 0x02, 0xbc]),
       Buffer.alloc(700, 0x61),
-      Buffer.from([0x45]),
-      lateZip,
+      Buffer.from([0x58, hiddenZip.length]),
+      hiddenZip,
     ]);
     f.file('pagefind/index/en_late_archive.pf_index', gzipSync(Buffer.concat([prefix, lateZipCbor])));
     f.file('pagefind/index/en_raw_prefixed_model.pf_index', Buffer.concat([prefix, Buffer.from('glTF' + 'x'.repeat(32))]));
-    f.file('pagefind/fragment/en_hidden_zstd.pf_fragment', Buffer.from([0x28, 0xb5, 0x2f, 0xfd, 0x00]));
+    const zstdFrame = embeddedArchiveFixtures().find(([format]) => format === 'zstd')?.[1];
+    if (!zstdFrame) throw new Error('Missing Zstandard archive fixture.');
+    f.file('pagefind/index/en_hidden_zstd.pf_index', gzipSync(Buffer.concat([
+      prefix, Buffer.from([0x81, 0x58, zstdFrame.length]), zstdFrame,
+    ])));
     // A complete, correctly framed GLB hidden in a valid CBOR byte string must fail.
     const model = readFileSync(join(f.dist, 'models', 'anatomy', 'approved.glb'));
     const modelLength = Buffer.alloc(4);
     modelLength.writeUInt32BE(model.length);
     const cborWithModel = Buffer.concat([Buffer.from([0x81, 0x5a]), modelLength, model]);
     f.file('pagefind/index/en_embedded_model.pf_index', gzipSync(Buffer.concat([prefix, cborWithModel])));
-    const cborWithZip = Buffer.concat([Buffer.from([0x81, 0x45]), lateZip]);
+    const cborWithZip = zipByteString;
     f.file('pagefind/filter/en_embedded_zip.pf_filter', gzipSync(Buffer.concat([prefix, cborWithZip])));
     // Bytes after a valid gzip member must not be silently ignored by gunzip.
     f.file('pagefind/index/en_trailing_bytes.pf_index', Buffer.concat([gzipSync(Buffer.concat([prefix, Buffer.from('safe index payload')])), Buffer.from('glTF' + 'x'.repeat(32))]));
@@ -460,7 +494,7 @@ describe('anatomy production artifact audit', () => {
       'archive/container in production output requires explicit review: /pagefind/index/en_embedded_model.pf_index',
       'archive/container in production output requires explicit review: /pagefind/filter/en_embedded_zip.pf_filter',
       'archive/container in production output requires explicit review: /pagefind/index/en_raw_prefixed_model.pf_index',
-      'archive/container in production output requires explicit review: /pagefind/fragment/en_hidden_zstd.pf_fragment',
+      'archive/container in production output requires explicit review: /pagefind/index/en_hidden_zstd.pf_index',
       'archive/container in production output requires explicit review: /pagefind/index/en_trailing_bytes.pf_index',
     ]));
   });
