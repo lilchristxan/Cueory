@@ -59,11 +59,16 @@ export async function runAutomerge({
     const pull = await gh.pull(n);
     const relevant = pull.state === 'open' && pull.base.ref === BASE_BRANCH;
     let decision: Decision;
+    // Keep the file/dependency snapshots available for the final pre-merge recheck below.
+    // They are populated only after a complete read; a failed/truncated read always waits.
+    let files: ChangedFile[] = [];
+    let dependencies: DependencyFile[] = [];
     try {
-      const [files, checks, comments] = relevant
+      const [currentFiles, checks, comments] = relevant
         ? await Promise.all([gh.files(n), gh.checks(pull.head.sha), gh.comments(n)])
         : [[], [], []];
-      const dependencies = relevant ? await readDependencies(gh, pull, files) : [];
+      files = currentFiles;
+      dependencies = relevant ? await readDependencies(gh, pull, files) : [];
       decision = decide({ repo, mode, pr: pull, files, dependencies, checks, comments });
     } catch (e) {
       // Fail closed: a list too long to read in full is never judged from part of it.
