@@ -253,6 +253,27 @@ describe('anatomy production artifact audit', () => {
     );
   });
 
+  it('rejects official-looking links that resolve outside the BodyParts3D source directory', () => {
+    const f = setup();
+    const file = join(f.content, 'anatomy-approved.json');
+    const record = JSON.parse(readFileSync(file, 'utf8'));
+    const error = 'anatomy-approved.json: approved source bp3d-FMA999992 has incomplete or incompatible citation and rights evidence';
+    for (const url of [
+      'https://dbarchive.biosciencedbc.jp/data/bodyparts3d/../outside',
+      'https://dbarchive.biosciencedbc.jp/data/bodyparts3d/%2e%2e/outside',
+      'https://dbarchive.biosciencedbc.jp/data/bodyparts3d/%2e%2e%2foutside',
+      'https://dbarchive.biosciencedbc.jp/data/bodyparts3d/?source=other',
+      'https://dbarchive.biosciencedbc.jp/data/bodyparts3d/#other',
+    ]) {
+      record.sources[0].url = url;
+      writeFileSync(file, JSON.stringify(record));
+      expect(f.check().errors, url).toContain(error);
+    }
+    record.sources[0].url = 'https://dbarchive.biosciencedbc.jp/data/bodyparts3d/LATEST/README_e.html';
+    writeFileSync(file, JSON.stringify(record));
+    expect(f.check().errors).toEqual([]);
+  });
+
   it('rejects an approved source with unapproved licensing or off-site evidence', () => {
     const f = setup();
     writeFileSync(join(f.content, 'anatomy-approved.json'), JSON.stringify({
