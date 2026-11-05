@@ -197,6 +197,12 @@ describe('anatomy production artifact audit', () => {
       (j: any) => { j.asset.version = '1.0'; },
       (j: any) => { delete j.asset.version; },
       (j: any) => { j.extensionsRequired = ['KHR_mesh_quantization']; },
+      (j: any) => { delete j.meshes[0].primitives[0].attributes; },
+      (j: any) => { delete j.meshes[0].primitives[0].attributes.POSITION; },
+      (j: any) => { delete j.accessors[0].componentType; },
+      (j: any) => { delete j.accessors[0].type; },
+      (j: any) => { j.accessors[1].componentType = 5123; },
+      (j: any) => { j.accessors[1].type = 'SCALAR'; },
       (j: any) => { j.accessors[0].count = 450003; },
       (j: any) => { j.buffers[0].byteLength = 50; },
     ]) {
