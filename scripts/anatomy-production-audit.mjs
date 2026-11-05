@@ -70,7 +70,7 @@ function hasGlbMagic(path) {
  * cannot see into ZIP/TAR/compressed package payloads. This deliberately
  * fails closed rather than trying to unpack untrusted build artifacts.
  */
-function hasArchiveMagic(path, allowPagefindZstd = false) {
+function hasArchiveMagic(path, allowPagefindGzip = false) {
   if (!Number.isInteger(fsConstants.O_NOFOLLOW)) throw new Error('this platform cannot safely audit symbolic links');
   const fd = openSync(path, fsConstants.O_RDONLY | fsConstants.O_NOFOLLOW);
   try {
@@ -82,9 +82,9 @@ function hasArchiveMagic(path, allowPagefindZstd = false) {
     // ZIP (including empty/spanned archives), gzip, bzip2, xz, zstd, 7-Zip,
     // RAR, Microsoft CAB, and Unix ar (used by several package containers).
     if (starts([0x50, 0x4b, 0x03, 0x04]) || starts([0x50, 0x4b, 0x05, 0x06]) ||
-        starts([0x50, 0x4b, 0x07, 0x08]) || starts([0x1f, 0x8b]) ||
+        starts([0x50, 0x4b, 0x07, 0x08]) || (!allowPagefindGzip && starts([0x1f, 0x8b])) ||
         starts([0x42, 0x5a, 0x68]) || starts([0xfd, 0x37, 0x7a, 0x58, 0x5a, 0x00]) ||
-        (!allowPagefindZstd && starts([0x28, 0xb5, 0x2f, 0xfd])) || starts([0x37, 0x7a, 0xbc, 0xaf, 0x27, 0x1c]) ||
+        starts([0x28, 0xb5, 0x2f, 0xfd]) || starts([0x37, 0x7a, 0xbc, 0xaf, 0x27, 0x1c]) ||
         starts([0x52, 0x61, 0x72, 0x21, 0x1a, 0x07]) || starts([0x4d, 0x53, 0x43, 0x46]) ||
         starts([0x21, 0x3c, 0x61, 0x72, 0x63, 0x68, 0x3e, 0x0a])) return true;
     // POSIX tar stores its ustar marker at byte offset 257.
@@ -604,7 +604,7 @@ export function auditAnatomyProduction(distDir, contentDir) {
   for (const path of linked) errors.push(`symbolic link in production output: ${toUrl(path)}`);
   for (const path of builtFiles) {
     const url = toUrl(path);
-    // Pagefind's generated index fragments are Zstandard-compressed search text,
+    // Pagefind's generated index fragments are gzip-compressed search text,
     // not opaque user archives. Keep this exception to its exact output paths
     // and signature; ZIP/TAR and archive suffixes remain rejected everywhere.
     const pagefindIndex = /^\/pagefind\/(?:fragment\/[^/]+\.pf_fragment|index\/[^/]+\.pf_index|[^/]+\.pf_meta|wasm\.[^/]+\.pagefind)$/i.test(url);
