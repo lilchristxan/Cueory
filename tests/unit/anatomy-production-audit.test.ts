@@ -281,6 +281,22 @@ describe('anatomy production artifact audit', () => {
     );
   });
 
+  it('rejects source traversal that the URL parser normalizes back into the current archive', () => {
+    const f = setup();
+    const file = join(f.content, 'anatomy-approved.json');
+    const original = JSON.parse(readFileSync(file, 'utf8'));
+    for (const url of [
+      'https://dbarchive.biosciencedbc.jp/data/bodyparts3d/LATEST/../LATEST/README_e.html',
+      'https://dbarchive.biosciencedbc.jp/data/bodyparts3d/LATEST/%2e%2e/LATEST/README_e.html',
+    ]) {
+      const edited = { ...original, sources: [{ ...original.sources[0], url }] };
+      writeFileSync(file, JSON.stringify(edited));
+      expect(f.check().errors, url).toContain(
+        'anatomy-approved.json: approved source bp3d-FMA999992 has incomplete or incompatible citation and rights evidence',
+      );
+    }
+  });
+
   it('rejects a directly fetchable draft model even if the anatomy page is clean', () => {
     const f = setup();
     f.file('models/anatomy/draft.glb', 'fixture');
