@@ -106,6 +106,10 @@ function validRetrievedDay(value) {
 /** Validate the resolved origin and path, not an attacker-controlled raw text prefix. */
 function validBodyParts3dSourceUrl(value) {
   if (typeof value !== 'string') return false;
+  // URL() removes literal and encoded dot segments before exposing pathname.
+  // Reject the unnormalized source path so it cannot leave then re-enter LATEST.
+  const rawPath = value.split(/[?#]/, 1)[0] ?? '';
+  if (rawPath.includes('%') || /[\\/]\.{1,2}(?:[\\/]|$)/.test(rawPath)) return false;
   try {
     const page = new URL(value);
     const archive = new URL(BODYPARTS3D_URL_PREFIX);
