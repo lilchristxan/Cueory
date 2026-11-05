@@ -27,6 +27,8 @@ const BODYPARTS3D_SECTION_FILES = new Map([
 // Fail closed on any publicly shipped 3D geometry, including misplaced copies and raw source meshes.
 // Include common alternative mesh formats so a renamed draft cannot bypass the production gate.
 const MODEL_ASSET = /\.(?:glb|gltf|obj|stl|fbx|ply|dae|3mf|usd|usdz|blend)$/i;
+// Archives can conceal otherwise unapproved model files from a path/GLB-signature scan.
+const ARCHIVE_ASSET = /\.(?:zip|tar|tgz|gz|bz2|xz|zst|7z|rar|cab|jar|war|ear|apk|ipa|iso|dmg)$/i;
 // Scan all ordinary published text assets, not just the anatomy page or hashed JavaScript chunks.
 // Site search, manifests or unrelated pages can otherwise accidentally expose a draft identifier.
 const TEXT_ASSET = /\.(?:html?|js|mjs|json|map|xml|svg|txt|css|csv|tsv|md|webmanifest)$/i;
@@ -57,6 +59,36 @@ function hasGlbMagic(path) {
     if (!fstatSync(fd).isFile()) throw new Error('not a regular file');
     const magic = Buffer.alloc(4);
     return readSync(fd, magic, 0, magic.length, 0) === magic.length && magic.toString('ascii') === 'glTF';
+  } finally {
+    closeSync(fd);
+  }
+}
+
+/**
+ * Reject common archive/container formats in production output. A nested GLB
+ * or OBJ is just as public as a loose mesh, but walking the outer dist tree
+ * cannot see into ZIP/TAR/compressed package payloads. This deliberately
+ * fails closed rather than trying to unpack untrusted build artifacts.
+ */
+function hasArchiveMagic(path) {
+  if (!Number.isInteger(fsConstants.O_NOFOLLOW)) throw new Error('this platform cannot safely audit symbolic links');
+  const fd = openSync(path, fsConstants.O_RDONLY | fsConstants.O_NOFOLLOW);
+  try {
+    if (!fstatSync(fd).isFile()) throw new Error('not a regular file');
+    const size = fstatSync(fd).size;
+    const header = Buffer.alloc(Math.min(size, 512));
+    if (header.length) readSync(fd, header, 0, header.length, 0);
+    const starts = (bytes) => header.length >= bytes.length && header.subarray(0, bytes.length).equals(Buffer.from(bytes));
+    // ZIP (including empty/spanned archives), gzip, bzip2, xz, zstd, 7-Zip,
+    // RAR, Microsoft CAB, and Unix ar (used by several package containers).
+    if (starts([0x50, 0x4b, 0x03, 0x04]) || starts([0x50, 0x4b, 0x05, 0x06]) ||
+        starts([0x50, 0x4b, 0x07, 0x08]) || starts([0x1f, 0x8b]) ||
+        starts([0x42, 0x5a, 0x68]) || starts([0xfd, 0x37, 0x7a, 0x58, 0x5a, 0x00]) ||
+        starts([0x28, 0xb5, 0x2f, 0xfd]) || starts([0x37, 0x7a, 0xbc, 0xaf, 0x27, 0x1c]) ||
+        starts([0x52, 0x61, 0x72, 0x21, 0x1a, 0x07]) || starts([0x4d, 0x53, 0x43, 0x46]) ||
+        starts([0x21, 0x3c, 0x61, 0x72, 0x63, 0x68, 0x3e, 0x0a])) return true;
+    // POSIX tar stores its ustar marker at byte offset 257.
+    return header.length >= 262 && header.toString('ascii', 257, 262) === 'ustar';
   } finally {
     closeSync(fd);
   }
@@ -570,6 +602,11 @@ export function auditAnatomyProduction(distDir, contentDir) {
   const builtFiles = walkFiles(dist, linked);
   const toUrl = (path) => '/' + path.slice(dist.length + 1).replaceAll('\\', '/');
   for (const path of linked) errors.push(`symbolic link in production output: ${toUrl(path)}`);
+  for (const path of builtFiles) {
+    if (ARCHIVE_ASSET.test(path) || hasArchiveMagic(path)) {
+      errors.push(`archive/container in production output requires explicit review: ${toUrl(path)}`);
+    }
+  }
   const shipped = [...new Set(builtFiles
     .filter((path) => MODEL_ASSET.test(path) || hasGlbMagic(path))
     .map(toUrl))];
