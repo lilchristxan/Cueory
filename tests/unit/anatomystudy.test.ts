@@ -240,7 +240,7 @@ describe('createAnatomyStudy', () => {
       my_anatomy_views: { data: views, error: null },
       delete_anatomy_view: { data: false, error: null },
     } });
-    expect(await study.clearMiss('heart', 'FMA1')).toEqual({ ok: true, value: true });
+    expect(await study.clearMiss('heart', 'FMA1', 'student-1')).toEqual({ ok: true, value: true });
     expect(rpc).toHaveBeenLastCalledWith('clear_anatomy_miss', { system_key: 'heart', structure_id: 'FMA1' });
     expect(await study.reviewQueue('student-1')).toEqual({ ok: true, value: queue });
     expect(rpc).toHaveBeenLastCalledWith('my_anatomy_review_queue');
