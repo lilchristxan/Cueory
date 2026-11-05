@@ -103,9 +103,9 @@ describe('loadExport — personal data boundaries', () => {
       sessions,
       anatomyReviewQueue: [
         { systemKey: 'heart', structureId: 'FMA7204', missedCount: 3, firstMissedAt: when,
-          lastMissedAt: '2026-11-02T08:00:00+00:00', clearedAt: null },
+          lastMissedAt: '2026-11-02T08:00:00.000Z', clearedAt: null },
         { systemKey: 'lungs', structureId: 'FMA7205', missedCount: 1, firstMissedAt: when,
-          lastMissedAt: when, clearedAt: '2026-11-03T08:00:00+00:00' },
+          lastMissedAt: when, clearedAt: '2026-11-03T08:00:00.000Z' },
       ],
       anatomyViews: [{ systemKey: 'heart', name: 'front view', camera: { position: [1, 2, 3], target: [0, 0, 0] },
         hidden: ['FMA1'], faded: ['FMA2'], selected: 'FMA3', createdAt: when, updatedAt: when }],

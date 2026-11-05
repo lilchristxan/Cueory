@@ -1,5 +1,4 @@
--- Anatomy Lab study tools, part C: the database (Task 178). AWAITING CHRISTIAN'S APPROVAL: do not apply this file to
--- any hosted database until the Database workflow passes and he approves it.
+-- Anatomy Lab study tools, part C: the database (Task 178; awaiting Christian's explicit approval).
 --
 -- Two tables, both the signed-in student's own study progress (CLAUDE.md rule 2), and six functions:
 --
@@ -114,7 +113,7 @@ create policy "opt-in MFA required for anatomy_saved_views" on public.anatomy_sa
 -- The limit: a student can put at most 600 structures an hour into their queue, counted as rows whose last_missed_at
 -- is within the hour. Missing a structure again inside that hour does not count twice, so the queue never grows by
 -- more than 600 rows an hour for one person, and the whole call is refused if it would.
-create function public.record_anatomy_misses(system_key text, structure_ids text[], expected_user_id uuid default null)
+create function public.record_anatomy_misses(system_key text, structure_ids text[], expected_user_id uuid)
 returns integer
 language plpgsql
 security definer
@@ -130,10 +129,11 @@ begin
   if uid is null then
     raise exception 'sign in to record what you missed' using errcode = '28000';
   end if;
-  -- The caller names the student the action was started for: if another account is signed in by now (a switch in
-  -- another tab), nothing is written under it.
-  if record_anatomy_misses.expected_user_id is not null and record_anatomy_misses.expected_user_id <> uid then
-    raise exception 'the signed-in account changed; please try again' using errcode = '28000';
+
+  -- The UI passes the user id captured when the action began. Recheck it in the
+  -- SECURITY DEFINER function so a cross-tab session change cannot redirect a write.
+  if record_anatomy_misses.expected_user_id is null or record_anatomy_misses.expected_user_id <> uid then
+    raise exception 'study account changed; reload before continuing' using errcode = '28000';
   end if;
 
   -- Task 169: only a confirmed, permanent account. A script could otherwise make throwaway unconfirmed or anonymous
@@ -208,7 +208,7 @@ grant execute on function public.record_anatomy_misses(text, text[], uuid) to au
 
 -- Takes one structure off the caller's review list (sets cleared_at). The row stays, so a later miss shows the whole
 -- history. Returns true when a row was cleared, false when there was nothing of the caller's to clear.
-create function public.clear_anatomy_miss(system_key text, structure_id text, expected_user_id uuid default null)
+create function public.clear_anatomy_miss(system_key text, structure_id text, expected_user_id uuid)
 returns boolean
 language plpgsql
 security definer
@@ -221,10 +221,11 @@ begin
   if uid is null then
     raise exception 'sign in to change your review list' using errcode = '28000';
   end if;
-  -- The caller names the student the action was started for: if another account is signed in by now (a switch in
-  -- another tab), nothing is written under it.
-  if clear_anatomy_miss.expected_user_id is not null and clear_anatomy_miss.expected_user_id <> uid then
-    raise exception 'the signed-in account changed; please try again' using errcode = '28000';
+
+  -- The UI passes the user id captured when the action began. Recheck it in the
+  -- SECURITY DEFINER function so a cross-tab session change cannot redirect a write.
+  if clear_anatomy_miss.expected_user_id is null or clear_anatomy_miss.expected_user_id <> uid then
+    raise exception 'study account changed; reload before continuing' using errcode = '28000';
   end if;
   if not exists (
        select 1 from auth.users u
@@ -313,7 +314,7 @@ create function public.save_anatomy_view(
   hidden text[],
   faded text[],
   selected text,
-  expected_user_id uuid default null
+  expected_user_id uuid
 )
 returns uuid
 language plpgsql
@@ -334,8 +335,11 @@ begin
   if uid is null then
     raise exception 'sign in to save a view' using errcode = '28000';
   end if;
-  if save_anatomy_view.expected_user_id is not null and save_anatomy_view.expected_user_id <> uid then
-    raise exception 'the signed-in account changed; please try again' using errcode = '28000';
+
+  -- The UI passes the user id captured when the action began. Recheck it in the
+  -- SECURITY DEFINER function so a cross-tab session change cannot redirect a write.
+  if save_anatomy_view.expected_user_id is null or save_anatomy_view.expected_user_id <> uid then
+    raise exception 'study account changed; reload before continuing' using errcode = '28000';
   end if;
   if not exists (
        select 1 from auth.users u
@@ -424,7 +428,7 @@ grant execute on function public.save_anatomy_view(text, text, jsonb, text[], te
 
 -- Deletes one of the caller's own views. Returns true when a row was deleted, false when there was none of theirs
 -- with that id, so an id can't be used to find out whether another student's view exists.
-create function public.delete_anatomy_view(id uuid, expected_user_id uuid default null)
+create function public.delete_anatomy_view(id uuid, expected_user_id uuid)
 returns boolean
 language plpgsql
 security definer
@@ -437,10 +441,11 @@ begin
   if uid is null then
     raise exception 'sign in to delete a view' using errcode = '28000';
   end if;
-  -- The caller names the student the action was started for: if another account is signed in by now (a switch in
-  -- another tab), nothing is written under it.
-  if delete_anatomy_view.expected_user_id is not null and delete_anatomy_view.expected_user_id <> uid then
-    raise exception 'the signed-in account changed; please try again' using errcode = '28000';
+
+  -- The UI passes the user id captured when the action began. Recheck it in the
+  -- SECURITY DEFINER function so a cross-tab session change cannot redirect a write.
+  if delete_anatomy_view.expected_user_id is null or delete_anatomy_view.expected_user_id <> uid then
+    raise exception 'study account changed; reload before continuing' using errcode = '28000';
   end if;
   if not exists (
        select 1 from auth.users u

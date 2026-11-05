@@ -159,8 +159,6 @@ export const SIGNED_OUT_MESSAGES = [
   'sign in to save a view', 'sign in to delete a view', 'sign in to see your saved views',
 ] as const;
 export const CONFIRM_EMAIL_MESSAGE = 'confirm your email to use this';
-/** Raised when the account signed in at the database is not the one the action was started for (an account switch in another tab). */
-export const ACCOUNT_CHANGED_MESSAGE = 'the signed-in account changed; please try again';
 export const TWO_FACTOR_MESSAGE = 'complete two-factor sign-in to continue';
 export const VIEW_LIMIT_MESSAGE = 'you can keep up to 50 saved views; delete one first';
 export const MISS_LIMIT_MESSAGE = 'too many misses recorded recently; try again later';
@@ -172,7 +170,7 @@ export function anatomyStudyMessage(error: unknown): string {
     : '';
   if ((SIGNED_OUT_MESSAGES as readonly string[]).includes(message)) return 'please sign in to use this.';
   if (message === CONFIRM_EMAIL_MESSAGE) return 'please confirm your email first. the link is in the email we sent you.';
-  if (message === ACCOUNT_CHANGED_MESSAGE) return 'your account changed. please try again.';
+  if (message === 'study account changed; reload before continuing') return 'your account changed. reload the anatomy lab before continuing.';
   if (message === TWO_FACTOR_MESSAGE) return 'please finish two-factor sign-in to use this.';
   if (message === VIEW_LIMIT_MESSAGE) return `you can keep up to ${SAVED_VIEW_LIMIT} saved views. delete one to save another.`;
   if (message === MISS_LIMIT_MESSAGE) return "you've recorded a lot of misses recently. they'll be kept again in a little while.";

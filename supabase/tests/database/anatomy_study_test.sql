@@ -5,7 +5,7 @@
 -- only inside this test.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(129);
+select plan(127);
 
 insert into auth.users (id, email, email_confirmed_at, is_anonymous) values
   -- One and two: confirmed students.
@@ -69,7 +69,7 @@ set local role anon;
 set local "request.jwt.claims" to '{"role": "anon"}';
 set local "request.jwt.claim.sub" to '';
 select throws_ok(
-  $$ select public.record_anatomy_misses('heart', array['FMA1']) $$, '42501', null,
+  $$ select public.record_anatomy_misses('heart', array['FMA1'], (select auth.uid())) $$, '42501', null,
   'a signed-out visitor cannot record a miss'
 );
 select throws_ok($$ select id from public.anatomy_review_queue $$, '42501', null, 'a signed-out visitor cannot read the review queue');
@@ -81,26 +81,26 @@ set local role authenticated;
 set local "request.jwt.claims" to '{"role": "authenticated"}';
 set local "request.jwt.claim.sub" to '';
 select throws_ok(
-  $$ select public.record_anatomy_misses('heart', array['FMA1']) $$, '28000', 'sign in to record what you missed',
+  $$ select public.record_anatomy_misses('heart', array['FMA1'], (select auth.uid())) $$, '28000', 'sign in to record what you missed',
   'with no one signed in, recording a miss asks to sign in'
 );
 select throws_ok(
-  $$ select public.save_anatomy_view('heart', 'front', current_setting('t.camera')::jsonb, '{}', '{}', null) $$,
+  $$ select public.save_anatomy_view('heart', 'front', current_setting('t.camera')::jsonb, '{}', '{}', null, (select auth.uid())) $$,
   '28000', 'sign in to save a view', 'with no one signed in, saving a view asks to sign in'
 );
 
 -- ---- Student three: email not confirmed. Every function refuses before checking its input.
 set local "request.jwt.claims" to '{"sub": "00000000-0000-4000-8000-000000000003", "role": "authenticated"}';
 set local "request.jwt.claim.sub" to '00000000-0000-4000-8000-000000000003';
-select throws_ok($$ select public.record_anatomy_misses(null, null) $$, '28000', 'confirm your email to use this',
+select throws_ok($$ select public.record_anatomy_misses(null, null, (select auth.uid())) $$, '28000', 'confirm your email to use this',
   'an unconfirmed student cannot record a miss');
-select throws_ok($$ select public.clear_anatomy_miss(null, null) $$, '28000', 'confirm your email to use this',
+select throws_ok($$ select public.clear_anatomy_miss(null, null, (select auth.uid())) $$, '28000', 'confirm your email to use this',
   'an unconfirmed student cannot clear a miss');
 select throws_ok($$ select * from public.my_anatomy_review_queue() $$, '28000', 'confirm your email to use this',
   'an unconfirmed student cannot list their review queue');
-select throws_ok($$ select public.save_anatomy_view(null, null, null, null, null, null) $$, '28000', 'confirm your email to use this',
+select throws_ok($$ select public.save_anatomy_view(null, null, null, null, null, null, (select auth.uid())) $$, '28000', 'confirm your email to use this',
   'an unconfirmed student cannot save a view');
-select throws_ok($$ select public.delete_anatomy_view(null) $$, '28000', 'confirm your email to use this',
+select throws_ok($$ select public.delete_anatomy_view(null, (select auth.uid())) $$, '28000', 'confirm your email to use this',
   'an unconfirmed student cannot delete a view');
 select throws_ok($$ select * from public.my_anatomy_views(null) $$, '28000', 'confirm your email to use this',
   'an unconfirmed student cannot list their views');
@@ -108,10 +108,10 @@ select throws_ok($$ select * from public.my_anatomy_views(null) $$, '28000', 'co
 -- ---- Student four: marked anonymous in auth.users.
 set local "request.jwt.claims" to '{"sub": "00000000-0000-4000-8000-000000000004", "role": "authenticated"}';
 set local "request.jwt.claim.sub" to '00000000-0000-4000-8000-000000000004';
-select throws_ok($$ select public.record_anatomy_misses('heart', array['FMA1']) $$, '28000', 'confirm your email to use this',
+select throws_ok($$ select public.record_anatomy_misses('heart', array['FMA1'], (select auth.uid())) $$, '28000', 'confirm your email to use this',
   'an account marked anonymous in auth.users cannot record a miss');
 select throws_ok(
-  $$ select public.save_anatomy_view('heart', 'front', current_setting('t.camera')::jsonb, '{}', '{}', null) $$,
+  $$ select public.save_anatomy_view('heart', 'front', current_setting('t.camera')::jsonb, '{}', '{}', null, (select auth.uid())) $$,
   '28000', 'confirm your email to use this', 'an account marked anonymous in auth.users cannot save a view'
 );
 
@@ -119,18 +119,18 @@ select throws_ok(
 set local "request.jwt.claims" to
   '{"sub": "00000000-0000-4000-8000-000000000001", "role": "authenticated", "is_anonymous": true}';
 set local "request.jwt.claim.sub" to '00000000-0000-4000-8000-000000000001';
-select throws_ok($$ select public.record_anatomy_misses('heart', array['FMA1']) $$, '28000', 'confirm your email to use this',
+select throws_ok($$ select public.record_anatomy_misses('heart', array['FMA1'], (select auth.uid())) $$, '28000', 'confirm your email to use this',
   'a JWT with is_anonymous cannot record a miss');
 
 -- ---- Student five: a verified second factor needs an aal2 token (Task 301).
 set local "request.jwt.claims" to '{"sub": "00000000-0000-4000-8000-000000000005", "role": "authenticated", "aal": "aal1"}';
 set local "request.jwt.claim.sub" to '00000000-0000-4000-8000-000000000005';
-select throws_ok($$ select public.record_anatomy_misses('heart', array['FMA1']) $$, '28000', 'complete two-factor sign-in to continue',
+select throws_ok($$ select public.record_anatomy_misses('heart', array['FMA1'], (select auth.uid())) $$, '28000', 'complete two-factor sign-in to continue',
   'a verified-factor student at aal1 cannot record a miss');
 select results_eq($$ select count(*)::int from public.anatomy_review_queue $$, $$ values (0) $$,
   'a verified-factor student at aal1 sees none of their own rows');
 set local "request.jwt.claims" to '{"sub": "00000000-0000-4000-8000-000000000005", "role": "authenticated", "aal": "aal2"}';
-select results_eq($$ select public.record_anatomy_misses('heart', array['FMA500']) $$, $$ values (1) $$,
+select results_eq($$ select public.record_anatomy_misses('heart', array['FMA500'], (select auth.uid())) $$, $$ values (1) $$,
   'the same student at aal2 can record a miss');
 select results_eq($$ select missed_count from public.anatomy_review_queue $$, $$ values (2) $$,
   'and reads their own row, counted up');
@@ -138,12 +138,33 @@ select results_eq($$ select missed_count from public.anatomy_review_queue $$, $$
 -- ---- Student one: the review queue.
 set local "request.jwt.claims" to '{"sub": "00000000-0000-4000-8000-000000000001", "role": "authenticated"}';
 set local "request.jwt.claim.sub" to '00000000-0000-4000-8000-000000000001';
+-- A tab may switch to another confirmed account after the client preflight. Every mutating
+-- SECURITY DEFINER function compares the action-bound id to auth.uid() before writing.
+select throws_ok(
+  $ select public.record_anatomy_misses('heart', array['FMA701'], '00000000-0000-4000-8000-000000000002'::uuid) $,
+  '28000', 'study account changed; reload before continuing', 'recording misses refuses a different action-bound account'
+);
+select throws_ok(
+  $ select public.clear_anatomy_miss('heart', 'FMA1', '00000000-0000-4000-8000-000000000002'::uuid) $,
+  '28000', 'study account changed; reload before continuing', 'clearing a miss refuses a different action-bound account'
+);
+select throws_ok(
+  $ select public.save_anatomy_view('heart', 'wrong account', current_setting('t.camera')::jsonb, '{}', '{}', null,
+       '00000000-0000-4000-8000-000000000002'::uuid) $,
+  '28000', 'study account changed; reload before continuing', 'saving a view refuses a different action-bound account'
+);
+select throws_ok(
+  $ select public.delete_anatomy_view('00000000-0000-4000-8000-000000000001'::uuid,
+       '00000000-0000-4000-8000-000000000002'::uuid) $,
+  '28000', 'study account changed; reload before continuing', 'deleting a view refuses a different action-bound account'
+);
+
 select results_eq(
-  $$ select public.record_anatomy_misses('heart', array['FMA1', 'FMA2', 'FMA1']) $$, $$ values (2) $$,
+  $$ select public.record_anatomy_misses('heart', array['FMA1', 'FMA2', 'FMA1'], (select auth.uid())) $$, $$ values (2) $$,
   'a student records two misses; the same id twice in one call counts once'
 );
 select results_eq(
-  $$ select public.record_anatomy_misses('heart', array['FMA1']) $$, $$ values (1) $$,
+  $$ select public.record_anatomy_misses('heart', array['FMA1'], (select auth.uid())) $$, $$ values (1) $$,
   'missing a structure again is recorded'
 );
 select results_eq(
@@ -155,9 +176,9 @@ select results_eq(
   $$ select bool_and(first_missed_at <= last_missed_at and system_key = 'heart') from public.my_anatomy_review_queue() $$,
   $$ values (true) $$, 'each row keeps its system and its first and last miss times'
 );
-select results_eq($$ select public.clear_anatomy_miss('heart', 'FMA2') $$, $$ values (true) $$, 'a student clears a miss');
-select results_eq($$ select public.clear_anatomy_miss('heart', 'FMA2') $$, $$ values (false) $$, 'clearing it again changes nothing');
-select results_eq($$ select public.clear_anatomy_miss('lungs', 'FMA1') $$, $$ values (false) $$,
+select results_eq($$ select public.clear_anatomy_miss('heart', 'FMA2', (select auth.uid())) $$, $$ values (true) $$, 'a student clears a miss');
+select results_eq($$ select public.clear_anatomy_miss('heart', 'FMA2', (select auth.uid())) $$, $$ values (false) $$, 'clearing it again changes nothing');
+select results_eq($$ select public.clear_anatomy_miss('lungs', 'FMA1', (select auth.uid())) $$, $$ values (false) $$,
   'clearing a structure in another system changes nothing');
 select results_eq(
   $$ select structure_id from public.my_anatomy_review_queue() $$, $$ values ('FMA1') $$,
@@ -168,7 +189,7 @@ select results_eq(
   'the student still reads both of their rows from the table, one of them cleared'
 );
 select results_eq(
-  $$ select public.record_anatomy_misses('heart', array['FMA2']) $$, $$ values (1) $$,
+  $$ select public.record_anatomy_misses('heart', array['FMA2'], (select auth.uid())) $$, $$ values (1) $$,
   'missing a cleared structure again'
 );
 select results_eq(
@@ -191,39 +212,39 @@ set local "request.jwt.claim.sub" to '00000000-0000-4000-8000-000000000002';
 select results_eq($$ select count(*)::int from public.anatomy_review_queue $$, $$ values (0) $$,
   'another student reads none of those rows');
 select is_empty($$ select * from public.my_anatomy_review_queue() $$, 'and their own list is empty');
-select results_eq($$ select public.clear_anatomy_miss('heart', 'FMA1') $$, $$ values (false) $$,
+select results_eq($$ select public.clear_anatomy_miss('heart', 'FMA1', (select auth.uid())) $$, $$ values (false) $$,
   'and cannot clear another student''s miss');
 
 -- ---- Refused before anything is written (student one).
 set local "request.jwt.claims" to '{"sub": "00000000-0000-4000-8000-000000000001", "role": "authenticated"}';
 set local "request.jwt.claim.sub" to '00000000-0000-4000-8000-000000000001';
-select throws_ok($$ select public.record_anatomy_misses(null, array['FMA1']) $$, '22023', 'that anatomy system was not found',
+select throws_ok($$ select public.record_anatomy_misses(null, array['FMA1'], (select auth.uid())) $$, '22023', 'that anatomy system was not found',
   'no system is refused');
-select throws_ok($$ select public.record_anatomy_misses('Heart!', array['FMA1']) $$, '22023', 'that anatomy system was not found',
+select throws_ok($$ select public.record_anatomy_misses('Heart!', array['FMA1'], (select auth.uid())) $$, '22023', 'that anatomy system was not found',
   'a system key that is not lowercase letters, digits and dashes is refused');
-select throws_ok($$ select public.record_anatomy_misses(repeat('a', 41), array['FMA1']) $$, '22023', 'that anatomy system was not found',
+select throws_ok($$ select public.record_anatomy_misses(repeat('a', 41), array['FMA1'], (select auth.uid())) $$, '22023', 'that anatomy system was not found',
   'a system key over 40 characters is refused');
-select throws_ok($$ select public.record_anatomy_misses('heart', null) $$, '22023', 'send between 1 and 50 structures',
+select throws_ok($$ select public.record_anatomy_misses('heart', null, (select auth.uid())) $$, '22023', 'send between 1 and 50 structures',
   'no structures is refused');
-select throws_ok($$ select public.record_anatomy_misses('heart', '{}') $$, '22023', 'send between 1 and 50 structures',
+select throws_ok($$ select public.record_anatomy_misses('heart', '{}', (select auth.uid())) $$, '22023', 'send between 1 and 50 structures',
   'an empty list is refused');
 select throws_ok(
-  $$ select public.record_anatomy_misses('heart', (select array_agg('FMA' || n) from generate_series(1, 51) n)) $$,
+  $$ select public.record_anatomy_misses('heart', (select array_agg('FMA' || n) from generate_series(1, 51) n), (select auth.uid())) $$,
   '22023', 'send between 1 and 50 structures', 'more than 50 structures at once is refused'
 );
-select throws_ok($$ select public.record_anatomy_misses('heart', array['BAD001']) $$, '22023', 'a structure id has the wrong shape',
+select throws_ok($$ select public.record_anatomy_misses('heart', array['BAD001'], (select auth.uid())) $$, '22023', 'a structure id has the wrong shape',
   'an id that is not an FMA or fixture id is refused');
-select throws_ok($$ select public.record_anatomy_misses('heart', array['FMA1', null]) $$, '22023', 'a structure id has the wrong shape',
+select throws_ok($$ select public.record_anatomy_misses('heart', array['FMA1', null], (select auth.uid())) $$, '22023', 'a structure id has the wrong shape',
   'a null id refuses the whole call');
-select throws_ok($$ select public.record_anatomy_misses('heart', array['FMA' || repeat('1', 58)]) $$, '22023', 'a structure id has the wrong shape',
+select throws_ok($$ select public.record_anatomy_misses('heart', array['FMA' || repeat('1', 58)], (select auth.uid())) $$, '22023', 'a structure id has the wrong shape',
   'an id over 60 characters is refused');
-select throws_ok($$ select public.clear_anatomy_miss('heart', 'fma1') $$, '22023', 'a structure id has the wrong shape',
+select throws_ok($$ select public.clear_anatomy_miss('heart', 'fma1', (select auth.uid())) $$, '22023', 'a structure id has the wrong shape',
   'clearing with a lowercase id is refused');
 select throws_ok($$ select * from public.my_anatomy_views('Heart') $$, '22023', 'that anatomy system was not found',
   'listing views needs a valid system key');
-select results_eq($$ select public.record_anatomy_misses('heart', array['fixture-cube-a']) $$, $$ values (1) $$,
+select results_eq($$ select public.record_anatomy_misses('heart', array['fixture-cube-a'], (select auth.uid())) $$, $$ values (1) $$,
   'a labeled test fixture id is accepted');
-select results_eq($$ select public.record_anatomy_misses('heart', array['FIX001']) $$, $$ values (1) $$,
+select results_eq($$ select public.record_anatomy_misses('heart', array['FIX001'], (select auth.uid())) $$, $$ values (1) $$,
   'the browser tests'' fixture id (FIX001) is accepted');
 reset role;
 select results_eq(
@@ -239,23 +260,23 @@ set local role authenticated;
 set local "request.jwt.claims" to '{"sub": "00000000-0000-4000-8000-000000000002", "role": "authenticated"}';
 set local "request.jwt.claim.sub" to '00000000-0000-4000-8000-000000000002';
 select throws_ok(
-  $$ select public.record_anatomy_misses('vessels', (select array_agg('FMA' || n) from generate_series(591, 601) n)) $$,
+  $$ select public.record_anatomy_misses('vessels', (select array_agg('FMA' || n) from generate_series(591, 601) n), (select auth.uid())) $$,
   '54000', 'too many misses recorded recently; try again later', 'a call that would pass 600 in an hour is refused whole'
 );
 select results_eq(
-  $$ select public.record_anatomy_misses('vessels', (select array_agg('FMA' || n) from generate_series(591, 600) n)) $$,
+  $$ select public.record_anatomy_misses('vessels', (select array_agg('FMA' || n) from generate_series(591, 600) n), (select auth.uid())) $$,
   $$ values (10) $$, 'a call that reaches exactly 600 in an hour is allowed'
 );
 select throws_ok(
-  $$ select public.record_anatomy_misses('vessels', array['FMA601']) $$,
+  $$ select public.record_anatomy_misses('vessels', array['FMA601'], (select auth.uid())) $$,
   '54000', 'too many misses recorded recently; try again later', 'the 601st structure in an hour is refused'
 );
 select throws_ok(
-  $$ select public.record_anatomy_misses('heart', array['FMA1']) $$,
+  $$ select public.record_anatomy_misses('heart', array['FMA1'], (select auth.uid())) $$,
   '54000', 'too many misses recorded recently; try again later', 'the limit counts every system together'
 );
 select results_eq(
-  $$ select public.record_anatomy_misses('vessels', array['FMA1', 'FMA600']) $$, $$ values (2) $$,
+  $$ select public.record_anatomy_misses('vessels', array['FMA1', 'FMA600'], (select auth.uid())) $$, $$ values (2) $$,
   'at the limit, missing structures already recorded this hour again is allowed: it adds no rows'
 );
 select results_eq($$ select count(*)::int from public.anatomy_review_queue $$, $$ values (600) $$,
@@ -263,7 +284,7 @@ select results_eq($$ select count(*)::int from public.anatomy_review_queue $$, $
 -- Another student is not affected.
 set local "request.jwt.claims" to '{"sub": "00000000-0000-4000-8000-000000000001", "role": "authenticated"}';
 set local "request.jwt.claim.sub" to '00000000-0000-4000-8000-000000000001';
-select results_eq($$ select public.record_anatomy_misses('heart', array['FMA3']) $$, $$ values (1) $$,
+select results_eq($$ select public.record_anatomy_misses('heart', array['FMA3'], (select auth.uid())) $$, $$ values (1) $$,
   'one student being at the limit does not stop another');
 -- Rows last missed more than an hour ago stop counting.
 reset role;
@@ -272,10 +293,10 @@ update public.anatomy_review_queue set first_missed_at = now() - interval '2 hou
 set local role authenticated;
 set local "request.jwt.claims" to '{"sub": "00000000-0000-4000-8000-000000000002", "role": "authenticated"}';
 set local "request.jwt.claim.sub" to '00000000-0000-4000-8000-000000000002';
-select results_eq($$ select public.record_anatomy_misses('vessels', array['FMA601']) $$, $$ values (1) $$,
+select results_eq($$ select public.record_anatomy_misses('vessels', array['FMA601'], (select auth.uid())) $$, $$ values (1) $$,
   'structures last missed more than an hour ago do not count toward the hourly limit');
 select throws_ok(
-  $$ select public.record_anatomy_misses('vessels', array['FMA1', 'FMA602']) $$,
+  $$ select public.record_anatomy_misses('vessels', array['FMA1', 'FMA602'], (select auth.uid())) $$,
   '54000', 'too many misses recorded recently; try again later',
   'missing one of those old structures again counts as new, and with another new one passes the limit'
 );
@@ -293,7 +314,7 @@ select results_eq(
   'the view is stored with its name trimmed, each hidden id once, and the camera as sent'
 );
 select results_eq(
-  $$ select public.save_anatomy_view('heart', 'front view', '{"position": [1, 2, 3], "target": [0, 0, 0]}', '{}', '{}', null)
+  $$ select public.save_anatomy_view('heart', 'front view', '{"position": [1, 2, 3], "target": [0, 0, 0]}', '{}', '{}', null, (select auth.uid()))
        = (select id from public.my_anatomy_views('heart')) $$,
   $$ values (true) $$, 'saving under the same name replaces that view and keeps its id'
 );
@@ -329,74 +350,74 @@ set local "request.jwt.claims" to '{"sub": "00000000-0000-4000-8000-000000000002
 set local "request.jwt.claim.sub" to '00000000-0000-4000-8000-000000000002';
 select is_empty($$ select * from public.my_anatomy_views('heart') $$, 'another student lists none of those views');
 select results_eq($$ select count(*)::int from public.anatomy_saved_views $$, $$ values (0) $$, 'and reads none from the table');
-select results_eq($$ select public.delete_anatomy_view(current_setting('t.view_one')::uuid) $$, $$ values (false) $$,
+select results_eq($$ select public.delete_anatomy_view(current_setting('t.view_one')::uuid, (select auth.uid())) $$, $$ values (false) $$,
   'and cannot delete one, and is told only that nothing of theirs was deleted');
 
 -- ---- Student one deletes.
 set local "request.jwt.claims" to '{"sub": "00000000-0000-4000-8000-000000000001", "role": "authenticated"}';
 set local "request.jwt.claim.sub" to '00000000-0000-4000-8000-000000000001';
 select results_eq($$ select count(*)::int from public.my_anatomy_views('heart') $$, $$ values (1) $$, 'the view is still there');
-select results_eq($$ select public.delete_anatomy_view(current_setting('t.view_one')::uuid) $$, $$ values (true) $$,
+select results_eq($$ select public.delete_anatomy_view(current_setting('t.view_one')::uuid, (select auth.uid())) $$, $$ values (true) $$,
   'the owner deletes it');
-select results_eq($$ select public.delete_anatomy_view(current_setting('t.view_one')::uuid) $$, $$ values (false) $$,
+select results_eq($$ select public.delete_anatomy_view(current_setting('t.view_one')::uuid, (select auth.uid())) $$, $$ values (false) $$,
   'deleting it again changes nothing');
 select is_empty($$ select * from public.my_anatomy_views('heart') $$, 'and it is gone');
 
 -- ---- Refused before anything is written (views).
-select throws_ok($$ select public.save_anatomy_view('heart', '', current_setting('t.camera')::jsonb, '{}', '{}', null) $$,
+select throws_ok($$ select public.save_anatomy_view('heart', '', current_setting('t.camera')::jsonb, '{}', '{}', null, (select auth.uid())) $$,
   '22023', 'a view name is 1 to 60 characters of plain text', 'an empty name is refused');
-select throws_ok($$ select public.save_anatomy_view('heart', '   ', current_setting('t.camera')::jsonb, '{}', '{}', null) $$,
+select throws_ok($$ select public.save_anatomy_view('heart', '   ', current_setting('t.camera')::jsonb, '{}', '{}', null, (select auth.uid())) $$,
   '22023', 'a view name is 1 to 60 characters of plain text', 'a name of spaces is refused');
-select throws_ok($$ select public.save_anatomy_view('heart', null, current_setting('t.camera')::jsonb, '{}', '{}', null) $$,
+select throws_ok($$ select public.save_anatomy_view('heart', null, current_setting('t.camera')::jsonb, '{}', '{}', null, (select auth.uid())) $$,
   '22023', 'a view name is 1 to 60 characters of plain text', 'no name is refused');
-select throws_ok($$ select public.save_anatomy_view('heart', repeat('n', 61), current_setting('t.camera')::jsonb, '{}', '{}', null) $$,
+select throws_ok($$ select public.save_anatomy_view('heart', repeat('n', 61), current_setting('t.camera')::jsonb, '{}', '{}', null, (select auth.uid())) $$,
   '22023', 'a view name is 1 to 60 characters of plain text', 'a name over 60 characters is refused');
-select throws_ok($$ select public.save_anatomy_view('heart', E'front\tview', current_setting('t.camera')::jsonb, '{}', '{}', null) $$,
+select throws_ok($$ select public.save_anatomy_view('heart', E'front\tview', current_setting('t.camera')::jsonb, '{}', '{}', null, (select auth.uid())) $$,
   '22023', 'a view name is 1 to 60 characters of plain text', 'a name with a control character is refused');
-select throws_ok($$ select public.save_anatomy_view('heart', 'front', null, '{}', '{}', null) $$,
+select throws_ok($$ select public.save_anatomy_view('heart', 'front', null, '{}', '{}', null, (select auth.uid())) $$,
   '22023', 'the camera has the wrong shape', 'no camera is refused');
-select throws_ok($$ select public.save_anatomy_view('heart', 'front', '[0, 0, 3]', '{}', '{}', null) $$,
+select throws_ok($$ select public.save_anatomy_view('heart', 'front', '[0, 0, 3]', '{}', '{}', null, (select auth.uid())) $$,
   '22023', 'the camera has the wrong shape', 'a camera that is not an object is refused');
-select throws_ok($$ select public.save_anatomy_view('heart', 'front', '{"position": [0, 0, 3]}', '{}', '{}', null) $$,
+select throws_ok($$ select public.save_anatomy_view('heart', 'front', '{"position": [0, 0, 3]}', '{}', '{}', null, (select auth.uid())) $$,
   '22023', 'the camera has the wrong shape', 'a camera without its target is refused');
 select throws_ok(
-  $$ select public.save_anatomy_view('heart', 'front', '{"position": [0, 0, 3], "target": [0, 0, 0], "zoom": 2}', '{}', '{}', null) $$,
+  $$ select public.save_anatomy_view('heart', 'front', '{"position": [0, 0, 3], "target": [0, 0, 0], "zoom": 2}', '{}', '{}', null, (select auth.uid())) $$,
   '22023', 'the camera has the wrong shape', 'a camera with a key that is not part of the shape is refused'
 );
 select throws_ok(
-  $$ select public.save_anatomy_view('heart', 'front', '{"position": [0, 3], "target": [0, 0, 0]}', '{}', '{}', null) $$,
+  $$ select public.save_anatomy_view('heart', 'front', '{"position": [0, 3], "target": [0, 0, 0]}', '{}', '{}', null, (select auth.uid())) $$,
   '22023', 'the camera has the wrong shape', 'a position with two numbers is refused'
 );
 select throws_ok(
-  $$ select public.save_anatomy_view('heart', 'front', '{"position": [0, 0, "3"], "target": [0, 0, 0]}', '{}', '{}', null) $$,
+  $$ select public.save_anatomy_view('heart', 'front', '{"position": [0, 0, "3"], "target": [0, 0, 0]}', '{}', '{}', null, (select auth.uid())) $$,
   '22023', 'the camera has the wrong shape', 'a position with text in it is refused'
 );
 select throws_ok(
-  $$ select public.save_anatomy_view('heart', 'front', '{"position": {"x": 0}, "target": [0, 0, 0]}', '{}', '{}', null) $$,
+  $$ select public.save_anatomy_view('heart', 'front', '{"position": {"x": 0}, "target": [0, 0, 0]}', '{}', '{}', null, (select auth.uid())) $$,
   '22023', 'the camera has the wrong shape', 'a position that is not a list is refused'
 );
 select throws_ok(
   $$ select public.save_anatomy_view('heart', 'front',
        jsonb_build_object('position', jsonb_build_array(repeat('1', 1500)::numeric, repeat('2', 1500)::numeric, repeat('3', 1500)::numeric),
-                          'target', '[0, 0, 0]'::jsonb), '{}', '{}', null) $$,
+                          'target', '[0, 0, 0]'::jsonb), '{}', '{}', null, (select auth.uid())) $$,
   '22023', 'the camera has the wrong shape', 'a camera over 2 KB is refused'
 );
-select throws_ok($$ select public.save_anatomy_view('heart', 'front', current_setting('t.camera')::jsonb, array['BAD001'], '{}', null) $$,
+select throws_ok($$ select public.save_anatomy_view('heart', 'front', current_setting('t.camera')::jsonb, array['BAD001'], '{}', null, (select auth.uid())) $$,
   '22023', 'a structure id has the wrong shape', 'a hidden id with the wrong shape is refused');
-select throws_ok($$ select public.save_anatomy_view('heart', 'front', current_setting('t.camera')::jsonb, '{}', null, null) $$,
+select throws_ok($$ select public.save_anatomy_view('heart', 'front', current_setting('t.camera')::jsonb, '{}', null, null, (select auth.uid())) $$,
   '22023', 'a structure id has the wrong shape', 'a null faded list is refused');
-select throws_ok($$ select public.save_anatomy_view('heart', 'front', current_setting('t.camera')::jsonb, '{}', array['FMA1', null], null) $$,
+select throws_ok($$ select public.save_anatomy_view('heart', 'front', current_setting('t.camera')::jsonb, '{}', array['FMA1', null], null, (select auth.uid())) $$,
   '22023', 'a structure id has the wrong shape', 'a null faded id is refused');
-select throws_ok($$ select public.save_anatomy_view('heart', 'front', current_setting('t.camera')::jsonb, '{}', '{}', 'fma1') $$,
+select throws_ok($$ select public.save_anatomy_view('heart', 'front', current_setting('t.camera')::jsonb, '{}', '{}', 'fma1', (select auth.uid())) $$,
   '22023', 'a structure id has the wrong shape', 'a selected id with the wrong shape is refused');
 select throws_ok(
   $$ select public.save_anatomy_view('heart', 'front', current_setting('t.camera')::jsonb,
-       (select array_agg('FMA' || n) from generate_series(1, 1001) n), '{}', null) $$,
+       (select array_agg('FMA' || n) from generate_series(1, 1001) n), '{}', null, (select auth.uid())) $$,
   '22023', 'a structure id has the wrong shape', 'more than 1,000 hidden ids is refused'
 );
-select throws_ok($$ select public.save_anatomy_view('Heart', 'front', current_setting('t.camera')::jsonb, '{}', '{}', null) $$,
+select throws_ok($$ select public.save_anatomy_view('Heart', 'front', current_setting('t.camera')::jsonb, '{}', '{}', null, (select auth.uid())) $$,
   '22023', 'that anatomy system was not found', 'a bad system key is refused');
-select throws_ok($$ select public.delete_anatomy_view(null) $$, '22023', 'that view was not found', 'deleting with no id is refused');
+select throws_ok($$ select public.delete_anatomy_view(null, (select auth.uid())) $$, '22023', 'that view was not found', 'deleting with no id is refused');
 reset role;
 select results_eq(
   $$ select count(*)::int from public.anatomy_saved_views where user_id = '00000000-0000-4000-8000-000000000001' $$,
@@ -411,11 +432,11 @@ set local role authenticated;
 set local "request.jwt.claims" to '{"sub": "00000000-0000-4000-8000-000000000002", "role": "authenticated"}';
 set local "request.jwt.claim.sub" to '00000000-0000-4000-8000-000000000002';
 select throws_ok(
-  $$ select public.save_anatomy_view('heart', 'view 51', current_setting('t.camera')::jsonb, '{}', '{}', null) $$,
+  $$ select public.save_anatomy_view('heart', 'view 51', current_setting('t.camera')::jsonb, '{}', '{}', null, (select auth.uid())) $$,
   '54000', 'you can keep up to 50 saved views; delete one first', 'the 51st view is refused'
 );
 select throws_ok(
-  $$ select public.save_anatomy_view('lungs', 'view 1', current_setting('t.camera')::jsonb, '{}', '{}', null) $$,
+  $$ select public.save_anatomy_view('lungs', 'view 1', current_setting('t.camera')::jsonb, '{}', '{}', null, (select auth.uid())) $$,
   '54000', 'you can keep up to 50 saved views; delete one first', 'the cap counts every system together'
 );
 select isnt(
@@ -424,7 +445,7 @@ select isnt(
 );
 select results_eq($$ select count(*)::int from public.my_anatomy_views('heart') $$, $$ values (50) $$, 'and the count stays 50');
 select results_eq(
-  $$ select public.delete_anatomy_view((select id from public.my_anatomy_views('heart') where name = 'view 50')) $$,
+  $$ select public.delete_anatomy_view((select id from public.my_anatomy_views('heart') where name = 'view 50'), (select auth.uid())) $$,
   $$ values (true) $$, 'deleting one'
 );
 select isnt(
@@ -437,32 +458,6 @@ set local "request.jwt.claim.sub" to '00000000-0000-4000-8000-000000000001';
 select isnt(
   public.save_anatomy_view('heart', 'side view', current_setting('t.camera')::jsonb, '{}', '{}', null),
   null, 'one student being at the cap does not stop another'
-);
-
--- ---- An action started for another account is refused before anything changes (an account switch in another tab).
-select throws_ok(
-  $$ select public.record_anatomy_misses('heart', array['FMA901'], '00000000-0000-4000-8000-000000000002') $$,
-  '28000', 'the signed-in account changed; please try again', 'a miss started for student two is refused under student one'
-);
-select throws_ok(
-  $$ select public.clear_anatomy_miss('heart', 'FMA1', '00000000-0000-4000-8000-000000000002') $$,
-  '28000', 'the signed-in account changed; please try again', 'a clear started for student two is refused under student one'
-);
-select throws_ok(
-  $$ select public.save_anatomy_view('heart', 'switched', current_setting('t.camera')::jsonb, '{}', '{}', null, '00000000-0000-4000-8000-000000000002') $$,
-  '28000', 'the signed-in account changed; please try again', 'a save started for student two is refused under student one'
-);
-select throws_ok(
-  $$ select public.delete_anatomy_view('00000000-0000-4000-8000-000000000099', '00000000-0000-4000-8000-000000000002') $$,
-  '28000', 'the signed-in account changed; please try again', 'a delete started for student two is refused under student one'
-);
-select results_eq(
-  $$ select public.record_anatomy_misses('heart', array['FMA1'], '00000000-0000-4000-8000-000000000001') $$, $$ values (1) $$,
-  'the same student naming themselves is accepted'
-);
-select results_eq(
-  $$ select count(*)::int from public.anatomy_review_queue where structure_id = 'FMA901' $$, $$ values (0) $$,
-  'and the refused miss wrote nothing'
 );
 
 -- ---- The tables' own checks, for any writer (as the owner).
