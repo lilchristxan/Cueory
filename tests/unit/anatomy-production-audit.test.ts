@@ -647,6 +647,16 @@ describe('anatomy production artifact audit', () => {
     tar.write(checksum.toString(8).padStart(6, '0') + nul + ' ', 148, 'ascii');
     f.file('downloads/hidden-model.bin', tar);
     f.file('downloads/prefixed-tar.dat', Buffer.concat([Buffer.alloc(64 * 1024 - 100, 0x61), tar]));
+    // Pre-ustar V7 has no "ustar" marker. Its checksum still identifies a
+    // complete 512-byte header embedded under a benign file extension.
+    const v7Tar = Buffer.from(tar);
+    v7Tar.fill(0, 257, 265);
+    v7Tar.fill(0x20, 148, 156);
+    let v7Checksum = 0;
+    for (let index = 0; index < 512; index += 1) v7Checksum += v7Tar[index]!;
+    v7Tar.write(v7Checksum.toString(8).padStart(6, '0') + nul + ' ', 148, 'ascii');
+    f.file('downloads/v7-hidden-model.bin', v7Tar);
+    f.file('downloads/prefixed-v7-tar.dat', Buffer.concat([Buffer.alloc(257, 0x61), v7Tar]));
     f.file('downloads/unrecognized.zip', Buffer.from('opaque archive payload'));
     // Long prefixes and chunk boundaries must not hide a valid GLB or ZIP signature.
     const approvedGlb = readFileSync(join(f.dist, 'models', 'anatomy', 'approved.glb'));
@@ -672,6 +682,8 @@ describe('anatomy production artifact audit', () => {
       'archive/container in production output requires explicit review: /downloads/zip-bomb-hidden-model.dat',
       'archive/container in production output requires explicit review: /downloads/hidden-model.bin',
       'archive/container in production output requires explicit review: /downloads/prefixed-tar.dat',
+      'archive/container in production output requires explicit review: /downloads/v7-hidden-model.bin',
+      'archive/container in production output requires explicit review: /downloads/prefixed-v7-tar.dat',
       'archive/container in production output requires explicit review: /downloads/unrecognized.zip',
       'archive/container in production output requires explicit review: /downloads/prefixed-model.bin',
       'archive/container in production output requires explicit review: /downloads/prefixed-archive.dat',
