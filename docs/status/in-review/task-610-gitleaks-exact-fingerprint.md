@@ -1,0 +1,1 @@
+status: Task 610: propose one exact Gitleaks 8.30.1 false-positive fingerprint for the literal auth-path string introduced in closed PR #608, with a regression that preserves redacted fail-closed full-history scanning. Requires full CI, security review, and founder approval; no production, database, DNS, or other PR changes.
