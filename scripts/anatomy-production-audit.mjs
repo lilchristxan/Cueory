@@ -136,6 +136,35 @@ function containsGlbHeaderAtOffset(bytes, baseOffset, fileSize) {
   return false;
 }
 
+function hasZipLocalHeaderAt(bytes, offset, baseOffset, fileSize) {
+  if (offset < 0 || offset + 30 > bytes.length ||
+      bytes.readUInt32LE(offset) !== 0x04034b50) return false;
+  const versionNeeded = bytes.readUInt16LE(offset + 4);
+  const flags = bytes.readUInt16LE(offset + 6);
+  const method = bytes.readUInt16LE(offset + 8);
+  const compressedSize = bytes.readUInt32LE(offset + 18);
+  const uncompressedSize = bytes.readUInt32LE(offset + 22);
+  const nameLength = bytes.readUInt16LE(offset + 26);
+  const extraLength = bytes.readUInt16LE(offset + 28);
+  if (versionNeeded < 10 || versionNeeded > 63 || (flags & 0x0008) !== 0 ||
+      ![0, 8, 9, 12, 14, 93, 95, 98].includes(method) ||
+      nameLength < 1 || nameLength > 240 || extraLength > 200 ||
+      compressedSize > fileSize || uncompressedSize > fileSize) return false;
+  const nameStart = offset + 30;
+  const dataStart = nameStart + nameLength + extraLength;
+  if (dataStart > bytes.length || baseOffset + dataStart + compressedSize > fileSize) return false;
+  const name = bytes.subarray(nameStart, nameStart + nameLength);
+  return !name.some((byte) => byte === 0 || byte < 0x20);
+}
+
+function containsZipLocalHeader(bytes, baseOffset, fileSize) {
+  const marker = Buffer.from([0x50, 0x4b, 0x03, 0x04]);
+  for (let offset = bytes.indexOf(marker); offset >= 0; offset = bytes.indexOf(marker, offset + 1)) {
+    if (hasZipLocalHeaderAt(bytes, offset, baseOffset, fileSize)) return true;
+  }
+  return false;
+}
+
 function hasArchiveMagic(path, includeEmbeddedGlb = true) {
   if (!Number.isInteger(fsConstants.O_NOFOLLOW)) throw new Error('this platform cannot safely audit symbolic links');
   const fd = openSync(path, fsConstants.O_RDONLY | fsConstants.O_NOFOLLOW);
@@ -160,7 +189,11 @@ function hasArchiveMagic(path, includeEmbeddedGlb = true) {
         ? Buffer.concat([carry, chunk.subarray(0, bytesRead)])
         : chunk.subarray(0, bytesRead);
       const windowStart = position - carry.length;
-      if (hasArchiveMagicBytes(window, includeAsciiMarkers, false) ||
+      // Arbitrary signature bytes naturally occur in compressed images, fonts
+      // and media. Nested archives need a plausible ZIP entry or a complete
+      // TAR header/checksum; nested models need full GLB framing.
+      if (containsZipLocalHeader(window, windowStart, size) ||
+          containsTarHeader(window) ||
           (includeEmbeddedGlb && containsGlbHeaderAtOffset(window, windowStart, size))) return true;
       carry = window.subarray(Math.max(0, window.length - overlapSize));
       position += bytesRead;
