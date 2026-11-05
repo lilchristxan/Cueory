@@ -133,7 +133,7 @@ function containsGlbHeaderAtOffset(bytes, baseOffset, fileSize) {
   return false;
 }
 
-function hasArchiveMagic(path) {
+function hasArchiveMagic(path, includeEmbeddedGlb = true) {
   if (!Number.isInteger(fsConstants.O_NOFOLLOW)) throw new Error('this platform cannot safely audit symbolic links');
   const fd = openSync(path, fsConstants.O_RDONLY | fsConstants.O_NOFOLLOW);
   try {
@@ -158,7 +158,7 @@ function hasArchiveMagic(path) {
         : chunk.subarray(0, bytesRead);
       const windowStart = position - carry.length;
       if (hasArchiveMagicBytes(window, includeAsciiMarkers) ||
-          containsGlbHeaderAtOffset(window, windowStart, size)) return true;
+          (includeEmbeddedGlb && containsGlbHeaderAtOffset(window, windowStart, size))) return true;
       carry = window.subarray(Math.max(0, window.length - overlapSize));
       position += bytesRead;
     }
@@ -844,7 +844,7 @@ export function auditAnatomyProduction(distDir, contentDir) {
     const url = toUrl(path);
     const pagefindKind = pagefindArtifactKind(url);
     if (ARCHIVE_ASSET.test(path) ||
-        (pagefindKind ? !validPagefindArtifact(path, pagefindKind) : hasArchiveMagic(path))) {
+        (pagefindKind ? !validPagefindArtifact(path, pagefindKind) : hasArchiveMagic(path, !MODEL_ASSET.test(path)))) {
       errors.push(`archive/container in production output requires explicit review: ${url}`);
     }
   }
