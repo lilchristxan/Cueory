@@ -74,11 +74,11 @@ interface Reply<T = unknown> { data: T | null; error: unknown }
 
 /** The parts of the shared Supabase client this module uses, so tests can pass a fake. */
 export interface AnatomyStudyClient extends SessionReader {
-  rpc(fn: 'record_anatomy_misses', args: { system_key: string; structure_ids: string[] }): PromiseLike<Reply<number>>;
-  rpc(fn: 'clear_anatomy_miss', args: { system_key: string; structure_id: string }): PromiseLike<Reply<boolean>>;
+  rpc(fn: 'record_anatomy_misses', args: { system_key: string; structure_ids: string[]; expected_user_id: string }): PromiseLike<Reply<number>>;
+  rpc(fn: 'clear_anatomy_miss', args: { system_key: string; structure_id: string; expected_user_id: string }): PromiseLike<Reply<boolean>>;
   rpc(fn: 'my_anatomy_review_queue'): PromiseLike<Reply<ReviewQueueRow[]>>;
-  rpc(fn: 'save_anatomy_view', args: SaveViewArgs): PromiseLike<Reply<string>>;
-  rpc(fn: 'delete_anatomy_view', args: { id: string }): PromiseLike<Reply<boolean>>;
+  rpc(fn: 'save_anatomy_view', args: SaveViewArgs & { expected_user_id: string }): PromiseLike<Reply<string>>;
+  rpc(fn: 'delete_anatomy_view', args: { id: string; expected_user_id: string }): PromiseLike<Reply<boolean>>;
   rpc(fn: 'my_anatomy_views', args: { system_key: string }): PromiseLike<Reply<SavedViewRow[]>>;
 }
 
@@ -267,7 +267,7 @@ export function createAnatomyStudy(getClient: () => Promise<AnatomyStudyClient |
       if (!client) return { ok: true, value: 0 };
       let recorded = 0;
       for (const batch of missBatches(ids)) {
-        const outcome = settle(await client.rpc('record_anatomy_misses', { system_key: systemKey, structure_ids: batch }), isNumber);
+        const outcome = settle(await client.rpc('record_anatomy_misses', { system_key: systemKey, structure_ids: batch, expected_user_id: expectedUserId }), isNumber);
         if (!outcome.ok) return outcome;
         recorded += outcome.value;
       }
@@ -276,7 +276,7 @@ export function createAnatomyStudy(getClient: () => Promise<AnatomyStudyClient |
     async clearMiss(systemKey, structureId, expectedUserId) {
       const client = await signedIn(expectedUserId);
       if (!client) return { ok: false, message: NOT_SIGNED_IN };
-      return settle(await client.rpc('clear_anatomy_miss', { system_key: systemKey, structure_id: structureId }), isBoolean);
+      return settle(await client.rpc('clear_anatomy_miss', { system_key: systemKey, structure_id: structureId, expected_user_id: expectedUserId }), isBoolean);
     },
     async reviewQueue(expectedUserId) {
       const client = await signedIn(expectedUserId);
@@ -288,12 +288,12 @@ export function createAnatomyStudy(getClient: () => Promise<AnatomyStudyClient |
       if (!snapshot.ok) return snapshot;
       const client = await signedIn(expectedUserId);
       if (!client) return { ok: false, message: NOT_SIGNED_IN };
-      return settle(await client.rpc('save_anatomy_view', snapshot.args), isString);
+      return settle(await client.rpc('save_anatomy_view', { ...snapshot.args, expected_user_id: expectedUserId }), isString);
     },
     async deleteView(id, expectedUserId) {
       const client = await signedIn(expectedUserId);
       if (!client) return { ok: false, message: NOT_SIGNED_IN };
-      return settle(await client.rpc('delete_anatomy_view', { id }), isBoolean);
+      return settle(await client.rpc('delete_anatomy_view', { id, expected_user_id: expectedUserId }), isBoolean);
     },
     async views(systemKey, expectedUserId) {
       if (!SYSTEM_KEY.test(systemKey)) return { ok: true, value: [] };
