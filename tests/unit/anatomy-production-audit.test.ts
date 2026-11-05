@@ -850,6 +850,15 @@ describe('anatomy production artifact audit', () => {
     ]));
   });
 
+  it('rejects one GLB approved by two different systems', () => {
+    const f = setup();
+    // Both approved manifests point at the same binary, despite different labels.
+    f.system('another', 'approved', ['/models/anatomy/approved.glb'], ['FMA999993']);
+    expect(f.check().errors).toContain(
+      'ambiguous approval: /models/anatomy/approved.glb is claimed by multiple approved systems',
+    );
+  });
+
   it('rejects a model shared by an approved and a draft record', () => {
     const f = setup();
     f.system('draft', 'draft', ['/models/anatomy/approved.glb'], ['FMA999991']);

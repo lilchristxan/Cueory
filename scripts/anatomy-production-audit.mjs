@@ -268,8 +268,15 @@ export function auditAnatomyProduction(distDir, contentDir) {
     }
     if (data.status === 'approved') {
       approvedSystems++;
-      urls.forEach((url) => approved.add(url));
-      urls.forEach((url) => approvedModels.set(url, data));
+      // A binary cannot be independently approved as two different system models.
+      // Overwriting this map would hide the first system's node/credit checks.
+      for (const url of urls) {
+        if (approvedModels.has(url)) {
+          errors.push(`ambiguous approval: ${url} is claimed by multiple approved systems`);
+        }
+        approved.add(url);
+        approvedModels.set(url, data);
+      }
       // A reviewed CC BY 4.0 source record is not enough if the actual model
       // claims an older or unknown archive release with different rights.
       if (data.model.release !== 'BodyParts3D 4.0') {
