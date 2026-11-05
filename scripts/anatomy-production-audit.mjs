@@ -195,6 +195,11 @@ export function auditAnatomyProduction(distDir, contentDir) {
     if (data.status === 'approved') {
       approvedSystems++;
       urls.forEach((url) => approved.add(url));
+      // A reviewed CC BY 4.0 source record is not enough if the actual model
+      // claims an older or unknown archive release with different rights.
+      if (data.model.release !== 'BodyParts3D 4.0') {
+        errors.push(`${name}: approved model must use reviewed BodyParts3D 4.0 release`);
+      }
       // Independently verify the source links even when dist/ is older than the
       // current manifest. A nonempty citation string is not proof of a source.
       const sourceIds = new Set();

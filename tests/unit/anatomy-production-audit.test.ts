@@ -23,7 +23,7 @@ function setup() {
   const system = (name: string, status: 'draft' | 'approved' | 'other', urls: string[], ids: string[] = []) => {
     writeFileSync(join(content, `anatomy-${name}.json`), JSON.stringify({
       status,
-      model: { file: urls[0], files: urls.slice(1) },
+      model: { file: urls[0], files: urls.slice(1), release: 'BodyParts3D 4.0' },
       labels: ids.map((id) => ({ id, text: 'fixture label', source: `bp3d-${id}` })),
       // Fake, test-only evidence. Never used as an anatomy quotation.
       sources: ids.map((id) => ({
@@ -103,7 +103,7 @@ describe('anatomy production artifact audit', () => {
     const f = setup();
     writeFileSync(join(f.content, 'anatomy-approved.json'), JSON.stringify({
       status: 'approved',
-      model: { file: '/models/anatomy/approved.glb' },
+      model: { file: '/models/anatomy/approved.glb', release: 'BodyParts3D 4.0' },
       labels: [{ id: 'FMA999992', text: 'fixture label', source: 'bp3d-FMA999992' }],
       sources: [
         null, 7, [],
@@ -154,7 +154,7 @@ describe('anatomy production artifact audit', () => {
     const f = setup();
     writeFileSync(join(f.content, 'anatomy-approved.json'), JSON.stringify({
       status: 'approved',
-      model: { file: '/models/anatomy/approved.glb' },
+      model: { file: '/models/anatomy/approved.glb', release: 'BodyParts3D 4.0' },
       labels: [
         { id: 'FMA999992', text: ' ', source: 'bp3d-FMA999992' },
         { id: 'FMA999993', text: 'fixture only', source: '' },
@@ -171,7 +171,7 @@ describe('anatomy production artifact audit', () => {
     const f = setup();
     writeFileSync(join(f.content, 'anatomy-approved.json'), JSON.stringify({
       status: 'approved',
-      model: { file: '/models/anatomy/approved.glb' },
+      model: { file: '/models/anatomy/approved.glb', release: 'BodyParts3D 4.0' },
       labels: [{ id: 'FMA999992', text: 'fixture label', source: 'orphan-source' }],
     }));
     expect(f.check().errors).toEqual(expect.arrayContaining([
@@ -181,7 +181,7 @@ describe('anatomy production artifact audit', () => {
 
     writeFileSync(join(f.content, 'anatomy-approved.json'), JSON.stringify({
       status: 'approved',
-      model: { file: '/models/anatomy/approved.glb' },
+      model: { file: '/models/anatomy/approved.glb', release: 'BodyParts3D 4.0' },
       labels: [{ id: 'FMA999992', text: 'fixture label', source: 'orphan-source' }],
       sources: [{ id: 'valid-source' }],
     }));
@@ -194,7 +194,7 @@ describe('anatomy production artifact audit', () => {
     const f = setup();
     writeFileSync(join(f.content, 'anatomy-approved.json'), JSON.stringify({
       status: 'approved',
-      model: { file: '/models/anatomy/approved.glb' },
+      model: { file: '/models/anatomy/approved.glb', release: 'BodyParts3D 4.0' },
       labels: [{ id: 'FMA999992', text: 'fixture label', source: 'valid-source' }],
       // A corrupt null record must be reported instead of crashing the audit.
       sources: [null, { id: 'valid-source' }, { id: 'valid-source' }, { id: '' }],
@@ -209,7 +209,7 @@ describe('anatomy production artifact audit', () => {
     const f = setup();
     writeFileSync(join(f.content, 'anatomy-approved.json'), JSON.stringify({
       status: 'approved',
-      model: { file: '/models/anatomy/approved.glb' },
+      model: { file: '/models/anatomy/approved.glb', release: 'BodyParts3D 4.0' },
       labels: [
         { id: 'FMA999992', text: 'fixture only', source: 'bp3d-FMA999993' },
       ],
@@ -224,7 +224,7 @@ describe('anatomy production artifact audit', () => {
     const f = setup();
     writeFileSync(join(f.content, 'anatomy-approved.json'), JSON.stringify({
       status: 'approved',
-      model: { file: '/models/anatomy/approved.glb' },
+      model: { file: '/models/anatomy/approved.glb', release: 'BodyParts3D 4.0' },
       labels: [
         { id: 'FMA999992', text: 'fixture only', source: 'bp3d-FMA999992' },
       ],
@@ -240,7 +240,7 @@ describe('anatomy production artifact audit', () => {
     const f = setup();
     writeFileSync(join(f.content, 'anatomy-approved.json'), JSON.stringify({
       status: 'approved',
-      model: { file: '/models/anatomy/approved.glb' },
+      model: { file: '/models/anatomy/approved.glb', release: 'BodyParts3D 4.0' },
       labels: [{ id: 'FMA999992', text: 'fixture label', source: 'bp3d-FMA999992' }],
       sources: [{
         id: 'bp3d-FMA999992', quote: '', book: 'BodyParts3D', section: '',
@@ -257,7 +257,7 @@ describe('anatomy production artifact audit', () => {
     const f = setup();
     writeFileSync(join(f.content, 'anatomy-approved.json'), JSON.stringify({
       status: 'approved',
-      model: { file: '/models/anatomy/approved.glb' },
+      model: { file: '/models/anatomy/approved.glb', release: 'BodyParts3D 4.0' },
       labels: [{ id: 'FMA999992', text: 'fixture label', source: 'bp3d-FMA999992' }],
       sources: [{
         id: 'bp3d-FMA999992', quote: 'synthetic words', book: 'Other Atlas',
@@ -279,6 +279,22 @@ describe('anatomy production artifact audit', () => {
     expect(f.check().errors).toContain(
       'anatomy-approved.json: approved source bp3d-FMA999992 has incomplete or incompatible citation and rights evidence',
     );
+  });
+
+  it('rejects an approved model with a missing or older BodyParts3D release', () => {
+    const f = setup();
+    const path = join(f.content, 'anatomy-approved.json');
+    const original = JSON.parse(readFileSync(path, 'utf8'));
+    const problem = 'anatomy-approved.json: approved model must use reviewed BodyParts3D 4.0 release';
+    for (const release of [undefined, 'BodyParts3D 3.0', 'Unreviewed atlas release']) {
+      const model = { ...original.model };
+      if (release === undefined) delete model.release;
+      else model.release = release;
+      writeFileSync(path, JSON.stringify({ ...original, model }));
+      expect(f.check().errors, String(release)).toContain(problem);
+    }
+    writeFileSync(path, JSON.stringify(original));
+    expect(f.check().errors).toEqual([]);
   });
 
   it('rejects source traversal that the URL parser normalizes back into the current archive', () => {
