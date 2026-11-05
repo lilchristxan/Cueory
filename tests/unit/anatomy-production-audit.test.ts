@@ -104,19 +104,25 @@ describe('anatomy production artifact audit', () => {
   it('validates Pagefind gzip envelopes and rejects compressed models or nested archives', () => {
     const f = setup();
     const prefix = Buffer.from('pagefind_dcd', 'ascii');
-    const cbor = Buffer.from([0xa0]); // Valid empty CBOR map, used as a bounded structural fixture.
-    const gzip = gzipSync(Buffer.concat([prefix, cbor]));
+    // Pagefind 1.5.2 derives these records as positional CBOR arrays:
+    // WordIndex=[words], FilterIndex=[filter, values], MetaIndex=[version, pages, chunks, filters, sorts, fields].
+    const indexCbor = Buffer.from([0x81, 0x80]);
+    const filterCbor = Buffer.from([0x82, 0x61, 0x66, 0x80]);
+    const metaCbor = Buffer.from([0x86, 0x65, 0x31, 0x2e, 0x35, 0x2e, 0x32, 0x80, 0x80, 0x80, 0x80, 0x80]);
+    const gzipIndex = gzipSync(Buffer.concat([prefix, indexCbor]));
+    const gzipFilter = gzipSync(Buffer.concat([prefix, filterCbor]));
+    const gzipMeta = gzipSync(Buffer.concat([prefix, metaCbor]));
     const fragment = gzipSync(Buffer.concat([prefix, Buffer.from(JSON.stringify({ url: '/', content: 'safe search text' }))]));
     const wasm = gzipSync(Buffer.concat([prefix, Buffer.from([0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00])]));
     f.file('pagefind/fragment/en_test.pf_fragment', fragment);
-    f.file('pagefind/index/en_test.pf_index', gzip);
-    f.file('pagefind/filter/en_test.pf_filter', gzip);
-    f.file('pagefind/pagefind.en_test.pf_meta', gzip);
+    f.file('pagefind/index/en_test.pf_index', gzipIndex);
+    f.file('pagefind/filter/en_test.pf_filter', gzipFilter);
+    f.file('pagefind/pagefind.en_test.pf_meta', gzipMeta);
     f.file('pagefind/wasm.en.pagefind', wasm);
     // Pagefind also accepts already-decompressed data with the same marker.
     f.file('pagefind/fragment/en_raw_test.pf_fragment', Buffer.concat([prefix, Buffer.from(JSON.stringify({ url: '/', content: 'safe raw search text' }))]));
-    f.file('pagefind/index/en_raw_test.pf_index', Buffer.concat([prefix, cbor]));
-    f.file('pagefind/filter/en_raw_test.pf_filter', Buffer.concat([prefix, cbor]));
+    f.file('pagefind/index/en_raw_test.pf_index', Buffer.concat([prefix, indexCbor]));
+    f.file('pagefind/filter/en_raw_test.pf_filter', Buffer.concat([prefix, filterCbor]));
     f.file('pagefind/wasm.en_raw.pagefind', Buffer.concat([prefix, Buffer.from([0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00])]));
     expect(f.check().errors).toEqual([]);
 
