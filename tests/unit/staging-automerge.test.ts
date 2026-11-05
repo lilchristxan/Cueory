@@ -1054,6 +1054,32 @@ describe('the auto-merge run', () => {
     expect(found.calls.filter((c) => c.method !== 'GET')).toEqual([]);
   });
 
+  it('rechecks the latest Codex summary and retry budget before asking for another review', async () => {
+    const one = { 7: { pr: pull(), files: ['src/x.ts'] } };
+    for (const later of [clean(), findings(), running()]) {
+      const latest = fakeGitHub(one, {
+        comments: [codexComment(failed())],
+        laterComments: [codexComment(later)],
+      });
+      const outcome = await runAutomerge({ gh: latest.gh, repo: REPO, mode: 'prelaunch', dryRun: false, log: () => {} });
+      expect(outcome[0]!.done).toBe('nothing');
+      expect(latest.calls.filter((c) => c.method !== 'GET')).toEqual([]);
+    }
+
+    const exhausted = fakeGitHub(one, {
+      comments: [codexComment(failed())],
+      laterComments: [
+        retryComment(HEAD, '2026-10-31T10:00:00Z'),
+        retryComment(HEAD, '2026-10-31T11:00:00Z'),
+        retryComment(HEAD, '2026-10-31T12:00:00Z'),
+        codexComment(failed()),
+      ],
+    });
+    const outcome = await runAutomerge({ gh: exhausted.gh, repo: REPO, mode: 'prelaunch', dryRun: false, log: () => {} });
+    expect(outcome[0]!.done).toBe('nothing');
+    expect(exhausted.calls.filter((c) => c.method !== 'GET')).toEqual([]);
+  });
+
   it('stops with exit code 2 when the token or repository is missing', () => {
     let status = 0;
     try {
