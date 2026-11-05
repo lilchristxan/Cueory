@@ -5,7 +5,7 @@
 -- only inside this test.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(130);
+select plan(129);
 
 insert into auth.users (id, email, email_confirmed_at, is_anonymous) values
   -- One and two: confirmed students.
