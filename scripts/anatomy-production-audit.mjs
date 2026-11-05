@@ -786,7 +786,7 @@ export function auditAnatomyProduction(distDir, contentDir) {
     const pagefindKind = pagefindArtifactKind(url);
     if (ARCHIVE_ASSET.test(path) ||
         (pagefindKind ? !validPagefindArtifact(path, pagefindKind) : hasArchiveMagic(path))) {
-      errors.push(\`archive/container in production output requires explicit review: \${url}\`);
+      errors.push(`archive/container in production output requires explicit review: ${url}`);
     }
   }
   const shipped = [...new Set(builtFiles
