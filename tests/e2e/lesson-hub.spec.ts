@@ -27,8 +27,13 @@ test('the hub uses seven canonical modes and preserves every existing destinatio
     expect(mode?.link?.href).toBeTruthy();
     const tile = grid.locator('[data-mode-tile="' + id + '"]');
     await expect(tile.getByRole('heading', { level: 3 })).toHaveText(mode!.name);
-    await expect(tile.locator('p')).toHaveText(mode!.text);
-    await expect(tile.locator('svg[aria-hidden="true"]')).toHaveCount(1);
+    // The mode's line waits behind the ⓘ beside its name (Christian, 2026-11-02).
+    await expect(tile.locator('p')).toHaveCount(0);
+    const info = tile.getByRole('button', { name: `more about ${mode!.name}` });
+    await expect(info).toHaveAttribute('aria-expanded', 'false');
+    await expect(tile.locator('[data-infotip-panel]')).toBeHidden();
+    await expect(tile.locator('[data-infotip-panel]')).toHaveText(mode!.text);
+    await expect(tile.locator('.mode-art svg[aria-hidden="true"]')).toHaveCount(1);
     const link = tile.getByRole('link', { name: oldLinkLabels[id] });
     await expect(link).toHaveAttribute('href', mode!.link!.href);
     const target = await page.request.get(mode!.link!.href);
@@ -40,10 +45,10 @@ test('the original sentence-by-sentence reader and its keyboard controls remain'
   await page.goto('/learn/study-skills');
   await expect(page.locator('main h1')).toHaveCount(1);
   await expect(page.getByTestId('study-reader').getByRole('heading', { level: 2, name: 'read the lesson' })).toBeVisible();
-  await expect(page.getByText('Sentence 1 of')).toBeVisible();
-  await page.getByRole('button', { name: 'Next sentence' }).focus();
+  await expect(page.getByText('sentence 1 of')).toBeVisible();
+  await page.getByRole('button', { name: 'next sentence' }).focus();
   await page.keyboard.press('Enter');
-  await expect(page.getByText('Sentence 2 of')).toBeVisible();
+  await expect(page.getByText('sentence 2 of')).toBeVisible();
   await expect(page.getByText('this lesson is a placeholder.', { exact: false })).toBeVisible();
   await expect(page.locator('main iframe')).toHaveCount(0);
 });
@@ -56,7 +61,13 @@ test('keyboard navigation follows the visual order of the seven modes', async ({
   for (let index = 0; index < modeOrder.length; index++) {
     await expect(links.nth(index)).toBeFocused();
     await expect(links.nth(index)).toContainText(oldLinkLabels[modeOrder[index]]!);
-    if (index + 1 < modeOrder.length) await page.keyboard.press('Tab');
+    if (index + 1 < modeOrder.length) {
+      // Each tile's ⓘ, beside its name, comes before its link.
+      await page.keyboard.press('Tab');
+      const next = studyModes.find((mode) => mode.id === modeOrder[index + 1])!;
+      await expect(page.getByRole('button', { name: `more about ${next.name}` })).toBeFocused();
+      await page.keyboard.press('Tab');
+    }
   }
 });
 
@@ -98,4 +109,15 @@ test.describe('without JavaScript', () => {
     await expect(page.getByTestId('mode-grid').getByRole('link')).toHaveCount(modeOrder.length);
     await expect(page.locator('main noscript ol li')).toHaveCount(3);
   });
+});
+
+
+test('learn mode navigation uses lowercase interface wording', async ({ page }) => {
+  await page.goto('/learn/study-skills/learn-mode');
+  await expect(page.getByText('how to study for nursing school · lesson 1', { exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: 'learn mode' })).toBeVisible();
+  await expect(page.getByText('how to study for nursing school · lesson 1 · learn mode')).toHaveCount(0);
+  await expect(page.locator('meta[name="description"]')).toHaveAttribute(
+    'content', 'learn mode for lesson 1 of how to study for nursing school.',
+  );
 });

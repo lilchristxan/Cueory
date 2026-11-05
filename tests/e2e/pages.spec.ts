@@ -2,6 +2,7 @@ import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 import { socials } from '../../src/config/site';
 import { isDesktopOfEachEngine } from './projects';
+import { lessonRoutes } from '../lessonroutes';
 
 // The once-only promo panel (D-59) slides down after 5 seconds and takes keyboard focus, which would interrupt these
 // tests part-way, so every page here starts as if it had already been shown. tests/e2e/promo.spec.ts tests the panel.
@@ -55,9 +56,11 @@ const pages = [
   '/start',
   '/progress',
   '/learn/video-sample',
+  // Every lesson page generated from /content (Task 300), so a new lesson is checked without editing this list.
+  ...lessonRoutes,
 ];
 
-for (const path of pages) {
+for (const path of [...new Set(pages)]) {
   test(`${path} loads, shows the notice, and passes accessibility checks`, async ({ page }) => {
     const errors: string[] = [];
     page.on('console', (msg) => msg.type() === 'error' && errors.push(msg.text()));
@@ -77,15 +80,15 @@ for (const path of pages) {
 
 test('lesson can be stepped through with the keyboard', async ({ page }) => {
   await page.goto('/learn/study-skills');
-  await expect(page.getByText('Sentence 1 of')).toBeVisible();
+  await expect(page.getByText('sentence 1 of')).toBeVisible();
 
-  const nextButton = page.getByRole('button', { name: 'Next sentence' });
+  const nextButton = page.getByRole('button', { name: 'next sentence' });
   await nextButton.focus();
   await page.keyboard.press('Enter');
-  await expect(page.getByText('Sentence 2 of')).toBeVisible();
+  await expect(page.getByText('sentence 2 of')).toBeVisible();
 
-  await page.getByRole('button', { name: 'Show all' }).click();
-  await expect(page.getByText("That's the whole lesson for now.")).toBeVisible();
+  await page.getByRole('button', { name: 'show all' }).click();
+  await expect(page.getByText("that's the whole lesson for now.")).toBeVisible();
 });
 
 test('cards can be sorted with the keyboard, and "Still learning" cards come back next round', async ({ page }) => {
@@ -300,8 +303,8 @@ test.describe('without JavaScript', () => {
 
   test('the lesson shows every sentence once and no stepper controls', async ({ page }) => {
     await page.goto('/learn/study-skills');
-    await expect(page.getByText('Sentence 1 of')).toHaveCount(0);
-    await expect(page.getByRole('button', { name: 'Next sentence' })).toHaveCount(0);
+    await expect(page.getByText('sentence 1 of')).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'next sentence' })).toHaveCount(0);
     const items = page.locator('ol > li');
     const texts = await items.allTextContents();
     expect(texts.length).toBeGreaterThan(1);
@@ -448,7 +451,8 @@ test.describe('marketing look (D-41)', () => {
     await expect(page.getByText('Short, clear lessons')).toHaveCount(0);
     const button = page.getByRole('link', { name: 'create your free account', exact: true });
     await expect(button).toHaveAttribute('href', '/#signup');
-    await expect(page.getByText('save your progress and pick up where you left off.')).toBeVisible();
+    // No line under the button restates it (Christian, 2026-11-02).
+    await expect(page.getByText('save your progress and pick up where you left off.')).toHaveCount(0);
     // A calmer hero (D-55): no course link, no motto line and no embossed logo behind the headline.
     const hero = page.locator('.scene-hero');
     await expect(hero.getByRole('link')).toHaveCount(1);
@@ -610,9 +614,6 @@ test.describe('"ways to study" merry-go-round (D-50, D-60)', () => {
           .map((card) => (card as HTMLElement).dataset.name),
       );
 
-  /** True when the window is wide enough for two cards on each side (64rem, src/styles/global.css), in any project. */
-  const wide = (page: Page) => page.evaluate(() => window.matchMedia('(min-width: 64rem)').matches);
-
   test('the card in the middle has neighbours on both sides, and the arrows, keys and side cards turn it, endlessly', async ({
     page,
   }) => {
@@ -621,14 +622,11 @@ test.describe('"ways to study" merry-go-round (D-50, D-60)', () => {
     await expect(section(page)).toHaveAttribute('role', 'region');
     await expect(section(page)).toHaveAttribute('aria-roledescription', 'carousel');
     await expect(page.getByRole('heading', { name: 'ways to study' })).toBeVisible();
-    // The first card in the middle, with the last card as its left neighbour: one on each side, two on wider screens.
+    // The first vial in front, with the last one as its left neighbour: four on each side stand on the arc (Task 109;
+    // on phones the outer ones run past the window's edges), and the one straight behind is hidden.
     await expect
       .poll(() => onScreen(page))
-      .toEqual(
-        (await wide(page))
-          ? ['adaptive quiz', 'level test', 'video', 'cards', 'learn']
-          : ['level test', 'video', 'cards'],
-      );
+      .toEqual(['review', 'label it', 'adaptive quiz', 'level test', 'video', 'cards', 'learn', 'fill-in', 'matching']);
     await expect(section(page).getByRole('group', { name: '1 of 11', exact: true })).toHaveAttribute('data-active', '');
 
     // Previous from the first card goes round to the last, and next from the last comes back to the first.
@@ -638,8 +636,11 @@ test.describe('"ways to study" merry-go-round (D-50, D-60)', () => {
     await section(page).getByRole('button', { name: 'next study mode' }).click();
     await expect.poll(() => middleCard(page)).toBe('cards');
 
-    // A tap on a side card brings it to the middle (on phones only its edge shows, so the tap is near its edge).
-    await section(page).getByRole('button', { name: 'show learn' }).click({ position: { x: 16, y: 120 } });
+    // A tap on a side vial brings it to the front (the front vial overlaps its inner edge, so the tap is near its
+    // outer edge).
+    const learn = section(page).getByRole('button', { name: 'show learn' });
+    const learnBox = (await learn.boundingBox())!;
+    await learn.click({ position: { x: learnBox.width - 16, y: learnBox.height / 2 } });
     await expect.poll(() => middleCard(page)).toBe('learn');
     await expect(section(page).getByRole('button', { name: 'preview learn' })).toBeVisible();
 
@@ -670,35 +671,39 @@ test.describe('"ways to study" merry-go-round (D-50, D-60)', () => {
     expect(axe.violations.map((v) => `${v.id}: ${v.help}`)).toEqual([]);
   });
 
-  test("neighbours step back, smaller, turned away and quieter, but no card's words are ever faded", async ({
+  test("neighbours step back, smaller, higher, further back and dimmer, but no vial's words are ever faded", async ({
     page,
   }) => {
     await page.goto('/');
     await section(page).scrollIntoViewIfNeeded();
     await section(page).getByRole('button', { name: 'next study mode' }).click();
     await expect.poll(() => middleCard(page)).toBe('cards');
+    // Let the 700 ms glide finish (Task 109).
     await waitForCardTurn(page);
     const look = (id: string) =>
-      page.locator(`#mode-${id}`).evaluate((card) => ({
-        width: card.getBoundingClientRect().width,
-        turn: (card as HTMLElement).style.getPropertyValue('--ring-turn'),
-        heading: getComputedStyle(card.querySelector('h3')!).color,
-        shadow: getComputedStyle(card).boxShadow,
-      }));
+      page.locator(`#mode-${id}`).evaluate((card) => {
+        const box = card.getBoundingClientRect();
+        return {
+          width: box.width,
+          bottom: box.bottom,
+          bright: (card as HTMLElement).style.getPropertyValue('--ring-bright'),
+          glass: getComputedStyle(card.querySelector('.vial-img')!).filter,
+        };
+      });
     const front = await look('cards');
     const near = await look('learn');
     const left = await look('video');
+    const far = await look('fill-in');
     expect(near.width / front.width).toBeGreaterThan(0.78);
     expect(near.width / front.width).toBeLessThan(0.9);
-    expect([front.turn, near.turn, left.turn]).toEqual(['0', '10', '-10']);
-    expect(near.heading).not.toBe(front.heading);
-    expect(near.shadow).toBe('none');
-    // The second card out shows only on wide windows.
-    if (await wide(page)) {
-      const far = await look('fill-in');
-      expect(far.width / front.width).toBeGreaterThan(0.6);
-      expect(far.width / front.width).toBeLessThan(0.78);
-    }
+    expect(far.width / front.width).toBeGreaterThan(0.6);
+    expect(far.width / front.width).toBeLessThan(0.78);
+    // The arc: each step out stands higher.
+    expect(near.bottom).toBeLessThan(front.bottom);
+    expect(far.bottom).toBeLessThan(near.bottom);
+    // Quieter: the glass (only the bottle image, never the words) is dimmer per step out.
+    expect([front.bright, near.bright, left.bright, far.bright]).toEqual(['1', '0.95', '0.95', '0.9']);
+    expect(near.glass).not.toBe(front.glass);
 
     // Nothing fades a card's words: from each card's words up to the page there is no mask, no filter and full
     // opacity, so the text keeps the frosted-panel contrast checked in tests/unit/tokens.test.ts. (First the section's
@@ -853,41 +858,43 @@ test.describe('"ways to study" merry-go-round (D-50, D-60)', () => {
     }
   });
 
-  test('the pause button stops the motion, and with reduced motion it just switches, without a glide or a turn', async ({
+  test('the pause button stops the motion, and with reduced motion it just switches, without a glide', async ({
     page,
   }) => {
     await page.goto('/');
-    const press = section(page).locator('#mode-video .ill-video-press');
-    await expect.poll(() => press.evaluate((el) => getComputedStyle(el).animationName)).toBe('ill-video-press');
+    // The pause button stops the auto-advance (the vials have no loops of their own: Task 109).
     await section(page).getByRole('button', { name: 'pause the slideshow' }).click();
     await expect(section(page).getByRole('button', { name: 'play the slideshow' })).toBeVisible();
-    expect(await press.evaluate((el) => getComputedStyle(el).animationName)).toBe('none');
+    await expect(section(page)).toHaveAttribute('data-paused', '');
     await section(page).getByRole('button', { name: 'play the slideshow' }).click();
     await expect(section(page).getByRole('button', { name: 'pause the slideshow' })).toBeVisible();
+    await expect(section(page)).not.toHaveAttribute('data-paused', '');
 
-    // A turn glides, and the side cards are turned away.
+    // A turn glides, in the approved 700 ms, and the side vials step back.
     await section(page).getByRole('button', { name: 'next study mode' }).click();
     const learn = section(page).locator('#mode-learn');
-    expect(await learn.evaluate((el) => getComputedStyle(el).transitionDuration)).toContain('0.24s');
-    expect(await learn.evaluate((el) => el.style.getPropertyValue('--ring-turn'))).toBe('10');
+    expect(await learn.evaluate((el) => getComputedStyle(el).transitionDuration)).toContain('0.7s');
+    expect(await learn.evaluate((el) => el.style.getPropertyValue('--ring-scale'))).toBe('0.87');
 
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await page.reload();
     await expect(section(page).getByRole('button', { name: 'next study mode' })).toBeVisible();
     await expect(section(page).locator('[data-modes-pause]')).toBeHidden();
-    expect(
-      await section(page)
-        .locator('#mode-video .ill-video-press')
-        .evaluate((el) => getComputedStyle(el).animationName),
-    ).toBe('none');
     await section(page).getByRole('button', { name: 'next study mode' }).click();
     await expect.poll(() => middleCard(page)).toBe('cards');
     const still = await section(page)
       .locator('#mode-learn')
-      .evaluate((el) => [getComputedStyle(el).transitionDuration, el.style.getPropertyValue('--ring-turn')]);
+      .evaluate((el) => [
+        getComputedStyle(el).transitionDuration,
+        getComputedStyle(el.querySelector('.vial-img')!).transitionDuration,
+        el.style.getPropertyValue('--ring-scale'),
+      ]);
     // Instant: no transition at all (the site-wide reduced-motion rule leaves 0.01 ms at most).
-    expect(Math.max(...still[0]!.split(',').map((d) => parseFloat(d)))).toBeLessThan(0.001);
-    expect(still[1]).toBe('0');
+    for (const durations of still.slice(0, 2)) {
+      expect(Math.max(...durations!.split(',').map((d) => parseFloat(d)))).toBeLessThan(0.001);
+    }
+    // The vials still step back; they just don't glide there.
+    expect(still[2]).toBe('0.87');
   });
 
   test('auto-advance moves on after about six seconds, pauses on the cards, and stops once the visitor takes over', async ({
@@ -1008,19 +1015,20 @@ test.describe('study-mode preview (D-51)', () => {
     await bringToMiddle(page, 'cards');
     // Let the turn finish, so the card has come to rest before it is measured.
     await waitForCardTurn(page);
-    // The grow starts with the panel exactly over the card it came from. (A click without moving the mouse there, so
-    // the hover zoom doesn't change the card while it is measured.)
+    // The grow starts with the preview's bottle exactly over the vial it came from (Task 109: the same bottle moves
+    // forward). (A click without moving the mouse there, so the hover lift doesn't change the vial while it is
+    // measured.)
     const start = await page.evaluate(() => {
-      const card = document.querySelector('#mode-cards')!.getBoundingClientRect();
+      const vial = document.querySelector('#mode-cards [data-vial]')!.getBoundingClientRect();
       document.querySelector<HTMLButtonElement>('#mode-cards [data-mode-open]')!.click();
-      const panel = document.querySelector<HTMLElement>('[data-mode-preview-panel]')!;
-      const [grow] = panel.getAnimations();
+      const bottle = document.querySelector<HTMLElement>('[data-mode-preview-vial]')!;
+      const [grow] = bottle.getAnimations();
       if (!grow) return undefined;
       grow.pause();
       grow.currentTime = 0;
-      const box = panel.getBoundingClientRect();
+      const box = bottle.getBoundingClientRect();
       grow.play();
-      return [box.left - card.left, box.top - card.top, box.width - card.width, box.height - card.height];
+      return [box.left - vial.left, box.top - vial.top, box.width - vial.width, box.height - vial.height];
     });
     expect(start).toBeDefined();
     for (const gap of start!) expect(Math.abs(gap)).toBeLessThan(2);
@@ -1028,18 +1036,20 @@ test.describe('study-mode preview (D-51)', () => {
     const preview = page.getByRole('dialog', { name: 'cards' });
     await expect(preview).toBeVisible();
     await expect(preview.getByRole('heading', { level: 2, name: 'cards' })).toBeVisible();
-    await expect(preview.getByText('flip a card to check yourself')).toBeVisible();
-    await expect(preview.getByRole('link', { name: 'try it' })).toHaveAttribute('href', '/learn/study-skills/cards');
-    await expect(preview.getByRole('link', { name: 'create your free account to save progress' })).toHaveAttribute(
+    // Its feature rows wait behind the ⓘ beside the name (Christian, 2026-11-02).
+    await expect(preview.getByRole('button', { name: 'more about cards' })).toHaveAttribute('aria-expanded', 'false');
+    await expect(preview.getByRole('link', { name: 'start cards' })).toHaveAttribute('href', '/learn/study-skills/cards');
+    await expect(preview.getByRole('link', { name: 'create your free account', exact: true })).toHaveAttribute(
       'href',
       '/#signup',
     );
     await expect(preview.getByRole('button', { name: 'close preview' })).toBeFocused();
-    // Its illustration plays in the preview too.
+    // The same bottle, with its label, stands in the preview; its four feature rows are behind the ⓘ.
+    await expect(preview.locator('[data-mode-preview-vial] .vial-name')).toHaveText('cards');
+    await expect(preview.locator('[data-mode-preview-features="cards"] li')).toHaveCount(4);
     await expect
-      .poll(() => preview.locator('.ill-flip-front').evaluate((el) => getComputedStyle(el).animationName))
-      .toBe('ill-flip-front');
-    await expect.poll(() => page.evaluate(() => document.querySelector('[data-mode-preview-panel]')!.getAnimations().length)).toBe(0);
+      .poll(() => page.evaluate(() => document.querySelector('[data-mode-preview]')!.getAnimations({ subtree: true }).length))
+      .toBe(0);
 
     const axe = await new AxeBuilder({ page })
       .include('#mode-preview')
@@ -1059,14 +1069,14 @@ test.describe('study-mode preview (D-51)', () => {
     const preview = dialog(page);
     await preview.getByRole('button', { name: 'next study mode' }).click();
     await expect(page.getByRole('dialog', { name: 'learn' })).toBeVisible();
-    await expect(preview.getByRole('link', { name: 'try it' })).toHaveAttribute('href', '/learn/study-skills/learn-mode');
+    await expect(preview.getByRole('link', { name: 'start learn' })).toHaveAttribute('href', '/learn/study-skills/learn-mode');
     await expect(preview.locator('[data-mode-preview-live]')).toHaveText('learn, 3 of 11');
 
     await preview.getByRole('button', { name: 'previous study mode' }).click();
     await preview.getByRole('button', { name: 'previous study mode' }).click();
     await expect(page.getByRole('dialog', { name: 'video' })).toBeVisible();
     await expect(preview.getByText('coming soon')).toBeVisible();
-    await expect(preview.getByRole('link', { name: 'try it' })).toBeHidden();
+    await expect(preview.locator('[data-mode-preview-try]')).toBeHidden();
     await expect(preview.locator('[data-mode-preview-live]')).toHaveText('video, 1 of 11');
     // The merry-go-round behind follows, so closing shrinks the preview into the video card.
     await expect(page.locator('#mode-video')).toHaveAttribute('data-active', '');
@@ -1081,10 +1091,10 @@ test.describe('study-mode preview (D-51)', () => {
     await expect(preview).toBeHidden();
   });
 
-  test('moving to a mode that is not open yet keeps focus in the preview when "try it" had it', async ({ page }) => {
+  test('moving to a mode that is not open yet keeps focus in the preview when "start …" had it', async ({ page }) => {
     await openPreview(page, 'cards');
     const preview = dialog(page);
-    await preview.getByRole('link', { name: 'try it' }).focus();
+    await preview.getByRole('link', { name: 'start cards' }).focus();
     await page.keyboard.press('ArrowLeft');
     await expect(page.getByRole('dialog', { name: 'video' })).toBeVisible();
     await expect(preview.getByRole('button', { name: 'previous study mode' })).toBeFocused();
@@ -1093,16 +1103,16 @@ test.describe('study-mode preview (D-51)', () => {
     await expect(page.getByRole('dialog', { name: 'level test' })).toBeVisible();
   });
 
-  test('closing in the middle of the grow still shrinks the preview exactly back into its card', async ({ page }) => {
+  test('closing in the middle of the grow still shrinks the bottle exactly back into its vial', async ({ page }) => {
     await page.goto('/');
     await page.locator('#ways-to-study').scrollIntoViewIfNeeded();
     const gaps = await page.evaluate(async () => {
       document.querySelector<HTMLButtonElement>('#mode-video [data-mode-open]')!.click();
       // Escape a tenth of a second into the 320 ms grow.
       await new Promise((resolve) => setTimeout(resolve, 100));
-      const card = document.querySelector('#mode-video')!.getBoundingClientRect();
+      const card = document.querySelector('#mode-video [data-vial]')!.getBoundingClientRect();
       document.activeElement!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
-      const panel = document.querySelector<HTMLElement>('[data-mode-preview-panel]')!;
+      const panel = document.querySelector<HTMLElement>('[data-mode-preview-vial]')!;
       const [shrink] = panel.getAnimations();
       if (!shrink) return undefined;
       shrink.pause();
@@ -1125,7 +1135,7 @@ test.describe('study-mode preview (D-51)', () => {
   test('with reduced motion it opens and closes at once', async ({ page }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await openPreview(page, 'video');
-    expect(await page.evaluate(() => document.querySelector('[data-mode-preview-panel]')!.getAnimations().length)).toBe(0);
+    expect(await page.evaluate(() => document.querySelector('[data-mode-preview]')!.getAnimations({ subtree: true }).length)).toBe(0);
     await page.keyboard.press('Escape');
     expect(await dialog(page).evaluate((el) => (el as HTMLDialogElement).open)).toBe(false);
   });
@@ -1169,13 +1179,13 @@ test.describe('☰ side panel and account corner (D-46)', () => {
   for (const path of ['/', '/privacy', '/learn/study-skills']) {
     test(`☰ opens the side panel on ${path}, keeps focus inside, and Escape brings focus back`, async ({ page }) => {
       await page.goto(path);
-      const open = page.getByRole('button', { name: 'menu', exact: true });
+      const open = page.getByRole('button', { name: 'open site menu', exact: true });
       await expect(open).toHaveAttribute('aria-expanded', 'false');
       await open.click();
       const panel = page.getByTestId('site-menu');
       await expect(panel).toBeVisible();
       await expect(open).toHaveAttribute('aria-expanded', 'true');
-      await expect(panel.getByRole('button', { name: 'close menu' })).toBeFocused();
+      await expect(panel.getByRole('button', { name: 'close site menu' })).toBeFocused();
 
       const nav = panel.getByRole('navigation', { name: 'site' });
       for (const name of ['home', 'ways to study', 'lessons', 'daily games', 'my progress', 'support cueory']) {
@@ -1202,7 +1212,7 @@ test.describe('☰ side panel and account corner (D-46)', () => {
 
   test('the current page is marked in the side panel by more than color', async ({ page }) => {
     await page.goto('/learn/study-skills/cards');
-    await page.getByRole('button', { name: 'menu', exact: true }).click();
+    await page.getByRole('button', { name: 'open site menu', exact: true }).click();
     const current = page.getByTestId('site-menu').locator('[aria-current="page"]');
     await expect(current).toHaveCount(1);
     await expect(current).toHaveText('lessons');
@@ -1212,10 +1222,10 @@ test.describe('☰ side panel and account corner (D-46)', () => {
 
   test('the close button and a tap on the dimmed page close the side panel', async ({ page }) => {
     await page.goto('/');
-    const open = page.getByRole('button', { name: 'menu', exact: true });
+    const open = page.getByRole('button', { name: 'open site menu', exact: true });
     const panel = page.getByTestId('site-menu');
     await open.click();
-    await panel.getByRole('button', { name: 'close menu' }).click();
+    await panel.getByRole('button', { name: 'close site menu' }).click();
     await expect(panel).toBeHidden();
     await expect(open).toBeFocused();
 
@@ -1228,7 +1238,7 @@ test.describe('☰ side panel and account corner (D-46)', () => {
 
   test('a side-panel link to a spot on the home page closes the panel and goes there', async ({ page }) => {
     await page.goto('/');
-    await page.getByRole('button', { name: 'menu', exact: true }).click();
+    await page.getByRole('button', { name: 'open site menu', exact: true }).click();
     await page.getByTestId('site-menu').getByRole('link', { name: 'ways to study' }).click();
     await expect(page.getByTestId('site-menu')).toBeHidden();
     await expect(page).toHaveURL(/#ways-to-study$/);
@@ -1237,13 +1247,15 @@ test.describe('☰ side panel and account corner (D-46)', () => {
 
   test('the account corner offers "create free account" and "sign in", both coming soon', async ({ page }) => {
     await page.goto('/');
-    const account = page.getByRole('button', { name: 'account', exact: true });
+    const account = page.locator('[data-account-toggle]');
     const menu = page.getByTestId('account-menu');
     await expect(menu).toBeHidden();
+    await expect(account).toHaveAttribute('aria-label', 'open account menu');
     await account.focus();
     await page.keyboard.press('Enter');
     await expect(menu).toBeVisible();
     await expect(account).toHaveAttribute('aria-expanded', 'true');
+    await expect(account).toHaveAttribute('aria-label', 'close account menu');
     await expect(menu.getByRole('link', { name: /create free account/ })).toHaveAttribute('href', '/#signup');
     await expect(menu.getByRole('link', { name: /sign in/ })).toHaveAttribute('href', '/#signup');
     await expect(menu.getByText('coming soon')).toHaveCount(2);
@@ -1265,18 +1277,21 @@ test.describe('☰ side panel and account corner (D-46)', () => {
     await page.keyboard.press('Escape');
     await expect(menu).toBeHidden();
     await expect(account).toBeFocused();
+    await expect(account).toHaveAttribute('aria-label', 'open account menu');
 
     // A tap anywhere else closes it too.
     await account.click();
     await expect(menu).toBeVisible();
+    await expect(account).toHaveAttribute('aria-label', 'close account menu');
     await page.getByRole('heading', { level: 1 }).click();
     await expect(menu).toBeHidden();
+    await expect(account).toHaveAttribute('aria-label', 'open account menu');
   });
 
   test('corner buttons are at least 44 by 44 px', async ({ page }) => {
     for (const path of ['/', '/learn/study-skills']) {
       await page.goto(path);
-      for (const name of ['menu', 'account']) {
+      for (const name of ['open site menu', 'open account menu']) {
         const box = (await page.getByRole('button', { name, exact: true }).boundingBox())!;
         expect(box.width).toBeGreaterThanOrEqual(44);
         expect(box.height).toBeGreaterThanOrEqual(44);
@@ -1288,7 +1303,7 @@ test.describe('☰ side panel and account corner (D-46)', () => {
 test.describe('site search in the ☰ panel (D-49)', () => {
   test('finds pages as you type, works by keyboard, and goes to the result', async ({ page }) => {
     await page.goto('/');
-    await page.getByRole('button', { name: 'menu', exact: true }).click();
+    await page.getByRole('button', { name: 'open site menu', exact: true }).click();
     const panel = page.getByTestId('site-menu');
     const field = panel.getByRole('searchbox', { name: 'search the site' });
     await expect(field).toHaveAttribute('placeholder', 'search');
@@ -1320,7 +1335,7 @@ test.describe('site search in the ☰ panel (D-49)', () => {
 
   test('a new search while a result has keyboard focus keeps focus in the panel', async ({ page }) => {
     await page.goto('/');
-    await page.getByRole('button', { name: 'menu', exact: true }).click();
+    await page.getByRole('button', { name: 'open site menu', exact: true }).click();
     const panel = page.getByTestId('site-menu');
     const field = panel.getByRole('searchbox', { name: 'search the site' });
     const results = panel.getByRole('list', { name: 'search results' });
@@ -1349,7 +1364,7 @@ test.describe('site search in the ☰ panel (D-49)', () => {
 
   test('says "no results" plainly, and clearing the field clears the results', async ({ page }) => {
     await page.goto('/learn/study-skills');
-    await page.getByRole('button', { name: 'menu', exact: true }).click();
+    await page.getByRole('button', { name: 'open site menu', exact: true }).click();
     const panel = page.getByTestId('site-menu');
     const field = panel.getByRole('searchbox', { name: 'search the site' });
     const status = panel.locator('#site-search-status');
@@ -1388,7 +1403,7 @@ test.describe('social links (D-54)', () => {
     }
     await expect(footer.getByRole('link', { name: 'cueory on Instagram (opens in a new tab)' })).toBeVisible();
 
-    await page.getByRole('button', { name: 'menu' }).click();
+    await page.getByRole('button', { name: 'open site menu' }).click();
     await expect(page.getByTestId('site-menu').locator('[data-social]')).toHaveCount(Object.keys(expected).length);
     const axe = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa']).analyze();
     expect(axe.violations.map((v) => `${v.id}: ${v.help}`)).toEqual([]);
@@ -1400,8 +1415,8 @@ test.describe('without JavaScript, the corners', () => {
 
   test('stay hidden but keep their space, so nothing moves', async ({ page }) => {
     await page.goto('/privacy');
-    await expect(page.getByRole('button', { name: 'menu', exact: true })).toBeHidden();
-    await expect(page.getByRole('button', { name: 'account', exact: true })).toBeHidden();
+    await expect(page.getByRole('button', { name: 'open site menu', exact: true })).toBeHidden();
+    await expect(page.getByRole('button', { name: 'open account menu', exact: true })).toBeHidden();
     await expect(page.getByRole('navigation', { name: 'footer' }).getByRole('link', { name: 'support cueory' })).toBeVisible();
   });
 });
@@ -1496,6 +1511,8 @@ test.describe('fill-in at 320 px', () => {
     await expect(page.getByTestId('fill-in-sample-note')).toBeVisible();
 
     const board = page.getByTestId('fill-in');
+    // Switch to type mode to test typing and keyboard flow
+    await board.getByRole('button', { name: 'type instead' }).click();
     const field = board.getByRole('textbox', { name: 'the missing word' });
     const next = board.getByRole('button', { name: 'next' });
     const axe = async () => {

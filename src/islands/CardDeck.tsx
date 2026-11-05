@@ -57,7 +57,7 @@ function packIds(ids: readonly string[]): string[] | null {
 }
 
 /** Only the student's marks and the public sample card IDs; never the front or back of a card. */
-function draftOf(state: CardsState, cards: readonly Card[], deckId: string, shuffle: boolean, starredOnly: boolean): ResumeDraft | null {
+function draftOf(state: CardsState, cards: readonly Card[], deckId: string, shuffle: boolean, starredOnly: boolean, page: string): ResumeDraft | null {
   if (!state.round.length) return null;
   const finished = isRoundOver(state);
   const itemIndex = finished ? state.round.length - 1 : state.pos;
@@ -69,7 +69,7 @@ function draftOf(state: CardsState, cards: readonly Card[], deckId: string, shuf
     roundIds.slice(0, state.pos).map((id, i) => [id, state.marks[i]!]));
   answers[ROUND_KEY] = packed;
   return {
-    tool: 'cards', page: RESUME_PAGE, module: deckId,
+    tool: 'cards', page, module: deckId,
     step: `r${state.roundNumber}-s${shuffle ? 1 : 0}-t${starredOnly ? 1 : 0}`,
     itemIndex, itemId, totalItems: state.round.length, answers, timer: null,
     phase: finished ? 'results' : 'working',
@@ -86,9 +86,9 @@ function marksStillSaved(storage: KeyValueStorage | undefined, deckId: string, d
 }
 
 /** Rebuilds the exact round from its saved card IDs; the marks must match the round's first cards, in order. */
-function restoreFrom(snapshot: ResumeSnapshot, deckId: string, cards: readonly Card[]
+function restoreFrom(snapshot: ResumeSnapshot, deckId: string, cards: readonly Card[], page: string
 ): { state: CardsState; shuffle: boolean; starredOnly: boolean } | null {
-  if (snapshot.tool !== 'cards' || snapshot.page !== RESUME_PAGE || snapshot.module !== deckId) return null;
+  if (snapshot.tool !== 'cards' || snapshot.page !== page || snapshot.module !== deckId) return null;
   const flags = /^r([1-9]\d*)-s([01])-t([01])$/.exec(snapshot.step ?? '');
   if (!flags || !cards.length || snapshot.totalItems > cards.length) return null;
   const roundNumber = Number(flags[1]);
@@ -118,6 +118,8 @@ interface Props {
   /** The deck's file name in content/cards, without .json. Stars are saved under it. */
   deckId: string;
   cards: Card[];
+  /** This page's own address, for the saved place (Task 300: every lesson has its own cards page). */
+  page?: string;
 }
 
 // Big, comfortable tap targets (at least 44 px, --tap-min) that press in slightly when tapped (.press, Task 77).
@@ -183,7 +185,7 @@ function Key({ children }: { children: string }) {
  * flips by tap, click, Enter or Space, and the keys in cardkeys.ts work anywhere on the page outside other controls.
  * Rendered only in the browser (client:only); without JavaScript the page shows its <noscript> list instead.
  */
-export default function CardDeck({ deckId, cards }: Props) {
+export default function CardDeck({ deckId, cards, page = RESUME_PAGE }: Props) {
   const allCards = cards.map((_, i) => i);
   const [storage] = useState(() => {
     const found = browserStorage();
@@ -197,7 +199,7 @@ export default function CardDeck({ deckId, cards }: Props) {
   const [hasAnswered, setHasAnswered] = useState(false);
   const [resumePending, setResumePending] = useState(() => {
     const saved = readResume(storage);
-    return saved?.tool === 'cards' && saved.page === RESUME_PAGE && saved.module === deckId;
+    return saved?.tool === 'cards' && saved.page === page && saved.module === deckId;
   });
   // Study actions move keyboard focus to the card; changing an option doesn't.
   const [focusRequest, setFocusRequest] = useState(0);
@@ -206,7 +208,7 @@ export default function CardDeck({ deckId, cards }: Props) {
   const faceRef = useRef<HTMLDivElement>(null);
   const fillRef = useRef<HTMLDivElement>(null);
   const draftRef = useRef<ResumeDraft | null>(null);
-  draftRef.current = !resumePending && hasAnswered ? draftOf(state, cards, deckId, shuffle, starredOnly) : null;
+  draftRef.current = !resumePending && hasAnswered ? draftOf(state, cards, deckId, shuffle, starredOnly, page) : null;
   useEffect(() => attachResumeLifecycle(storage, () => {
     const draft = draftRef.current;
     return draft && marksStillSaved(storage, deckId, draft) ? draft : null;
@@ -409,8 +411,8 @@ export default function CardDeck({ deckId, cards }: Props) {
   // fresh (its own save replaces the old one), so ignoring the offer never blocks studying.
   const resumeChoice = resumePending && (
     <div className="mb-stack">
-      <ResumePrompt page={RESUME_PAGE} onContinue={snapshot => {
-        const saved = restoreFrom(snapshot, deckId, cards);
+      <ResumePrompt page={page} onContinue={snapshot => {
+        const saved = restoreFrom(snapshot, deckId, cards, page);
         sorts.current = [];
         if (saved) {
           setState(saved.state);
@@ -471,7 +473,7 @@ export default function CardDeck({ deckId, cards }: Props) {
   const isStarred = starred.has(card.id);
   const round = state.roundNumber > 1 ? `Round ${state.roundNumber} · ` : '';
   const position = `${round}Card ${state.pos + 1} of ${state.round.length}`;
-  const face = 'col-start-1 row-start-1 flex min-h-56 flex-col justify-center rounded-xl border border-line bg-surface px-6 py-10 shadow-card sm:px-10';
+  const face = 'col-start-1 row-start-1 flex min-h-56 min-w-0 flex-col justify-center rounded-xl border border-line bg-surface px-6 py-10 shadow-card sm:px-10';
 
   return (
     <>
@@ -501,16 +503,16 @@ export default function CardDeck({ deckId, cards }: Props) {
         className={`flip mt-stack cursor-pointer touch-manipulation rounded-xl${state.flipped ? ' is-flipped' : ''}`}
         data-testid="flashcard"
       >
-        <div className="flip-inner grid">
+        <div className="flip-inner grid min-w-0 grid-cols-1">
           <div className={`flip-face ${face}`} aria-hidden={state.flipped || undefined}>
             <p className="text-sm text-ink-soft">Question</p>
-            <p data-testid="card-text" className="mt-3 text-xl">
+            <p data-testid="card-text" className="mt-3 wrap-anywhere text-xl">
               {card.front}
             </p>
           </div>
           <div className={`flip-back relative ${face}`} aria-hidden={!state.flipped || undefined}>
             <p className="text-sm text-ink-soft">Answer</p>
-            <p className="mt-3 text-xl">{card.back}</p>
+            <p className="mt-3 wrap-anywhere text-xl">{card.back}</p>
           </div>
         </div>
       </div>

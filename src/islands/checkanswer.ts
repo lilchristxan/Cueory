@@ -50,13 +50,16 @@ export function checkArguments(item: unknown, picked: unknown): CheckedArguments
   }
 }
 
+const sameLetters = (left: ChoiceId[], right: ChoiceId[]): boolean =>
+  left.length === right.length && left.every((letter, index) => letter === right[index]);
+
 function problem(error?: unknown): Problem {
   try { return { ok: false, message: studentMessage('check_answer', error) }; }
   catch { return { ok: false, message: studentMessage('check_answer', undefined) }; }
 }
 
 /** SQL returns correct/key/rationales/version_id; expose only the feedback and require the requested version. */
-function feedback(data: unknown, versionId: string): AnswerFeedback | undefined {
+function feedback(data: unknown, versionId: string, picked: ChoiceId[]): AnswerFeedback | undefined {
   if (!plain(data) || Object.keys(data).some((field) => !['version_id', 'correct', 'key', 'rationales'].includes(field)) ||
       own(data, 'version_id') !== versionId) return;
   const right = own(data, 'correct');
@@ -70,6 +73,7 @@ function feedback(data: unknown, versionId: string): AnswerFeedback | undefined 
     rationales[name as ChoiceId] = text;
   }
   if (key.some(letter => !Object.hasOwn(rationales, letter))) return;
+  if (right !== sameLetters(picked, key)) return;
   return { right, key, rationales };
 }
 
@@ -81,7 +85,7 @@ export async function checkAnswer(transport: AnswerTransport, item: unknown, pic
     if (!plain(response)) return problem();
     const error = own(response, 'error');
     if (error !== null && error !== undefined) return problem(error);
-    const result = feedback(own(response, 'data'), checked.args.version_id);
+    const result = feedback(own(response, 'data'), checked.args.version_id, checked.args.picked);
     return result ? { ok: true, result } : problem();
   } catch (error) {
     return problem(error);

@@ -3,11 +3,12 @@ import { attachResumeLifecycle, clearResume, readResume, saveResume, type Resume
 import { browserStorage } from '../scripts/storage';
 import ResumePrompt from './ResumePrompt';
 import {
-  answerCurrent, boundTyped, currentIndex, isCheckKey, nextItem, normalizeAnswer, parseItems, sentenceParts, showHint,
+  answerCurrent, blankOptions, boundTyped, currentIndex, isCheckKey, nextItem, normalizeAnswer, parseItems, sentenceParts, showHint,
   MAX_TYPED, startFillIn, summary, type FillInItem, type FillInState,
 } from './fillin';
 
-interface Props { items: FillInItem[] }
+/** `page` is this page's own address, for the saved place (Task 300: every lesson has its own fill-in page). */
+interface Props { items: FillInItem[]; page?: string }
 
 const primaryButton =
   'min-h-11 rounded-pill bg-button px-5 py-2.5 text-on-button hover:bg-button-hover disabled:opacity-50';
@@ -39,11 +40,11 @@ function appendAttempt(history: readonly string[], entry: string, previousWasClo
 }
 
 /** Only typed submissions and whether the student used a hint are saved. */
-function fillInDraft(items: readonly FillInItem[], state: FillInState, attempts: Attempts, moves: number): ResumeDraft | null {
+function fillInDraft(items: readonly FillInItem[], state: FillInState, attempts: Attempts, moves: number, page: string): ResumeDraft | null {
   if (!items.length) return null;
   const index = currentIndex(state) ?? items.length - 1;
   return {
-    tool: 'fill-in', page: FILL_IN_PAGE, step: `advance-${moves}`,
+    tool: 'fill-in', page, step: `advance-${moves}`,
     itemIndex: index, ...(state.done ? {} : { itemId: itemKey(index) }),
     totalItems: items.length,
     answers: {
@@ -60,10 +61,10 @@ function fillInDraft(items: readonly FillInItem[], state: FillInState, attempts:
  * trust a saved verdict, sentence, answer key, item ID or arbitrary engine state.
  * Multiple attempts on the same item also support close spelling and later rounds.
  */
-function restoreFillIn(items: readonly FillInItem[], snapshot: ResumeSnapshot): {
+function restoreFillIn(items: readonly FillInItem[], snapshot: ResumeSnapshot, page: string): {
   state: FillInState; typed: string; attempts: Attempts; moves: number;
 } | null {
-  if (snapshot.tool !== 'fill-in' || snapshot.page !== FILL_IN_PAGE || snapshot.module !== undefined ||
+  if (snapshot.tool !== 'fill-in' || snapshot.page !== page || snapshot.module !== undefined ||
       snapshot.timer !== null || !items.length || snapshot.totalItems !== items.length) return null;
   const marker = /^advance-(0|[1-9]\d*)$/.exec(snapshot.step ?? '');
   if (!marker) return null;
@@ -126,7 +127,7 @@ function restoreFillIn(items: readonly FillInItem[], snapshot: ResumeSnapshot): 
         state.result === 'right' || state.result === 'wrong') return null;
     if (!state.hinted || state.result !== null) state = showHint(state);
   }
-  const expected = fillInDraft(items, state, attempts, moves);
+  const expected = fillInDraft(items, state, attempts, moves, page);
   if (!expected || expected.itemIndex !== snapshot.itemIndex || expected.itemId !== snapshot.itemId ||
       expected.phase !== snapshot.phase) return null;
   return { state, typed, attempts, moves };
@@ -134,17 +135,18 @@ function restoreFillIn(items: readonly FillInItem[], snapshot: ResumeSnapshot): 
 
 /** The key starts a fresh session when a parent replaces the items. */
 export default function FillInBoard(props: Props) {
-  return <Session key={JSON.stringify(props.items)} items={props.items} />;
+  return <Session key={JSON.stringify(props.items)} items={props.items} page={props.page ?? FILL_IN_PAGE} />;
 }
 
-function Session({ items: suppliedItems }: Props) {
+function Session({ items: suppliedItems, page = FILL_IN_PAGE }: Props) {
   const [items] = useState(() => parseItems(suppliedItems));
   const [state, setState] = useState(() => startFillIn(items));
   const [typed, setTyped] = useState('');
+  const [inputMode, setInputMode] = useState<'dropdown' | 'type'>('dropdown');
   const [focusInput, setFocusInput] = useState(0);
   const [resumePending, setResumePending] = useState(() => {
     const saved = readResume(browserStorage());
-    return saved?.tool === 'fill-in' && saved.page === FILL_IN_PAGE;
+    return saved?.tool === 'fill-in' && saved.page === page;
   });
   const attempts = useRef<Attempts>({});
   // The item whose last saved entry is a close try that is still open (a hint in between doesn't close it).
@@ -152,6 +154,7 @@ function Session({ items: suppliedItems }: Props) {
   const moves = useRef(0);
   const latestDraft = useRef<ResumeDraft | null>(null);
   const input = useRef<HTMLInputElement>(null);
+  const select = useRef<HTMLSelectElement>(null);
   const nextButton = useRef<HTMLButtonElement>(null);
   const end = useRef<HTMLDivElement>(null);
   const id = useId();
@@ -160,17 +163,39 @@ function Session({ items: suppliedItems }: Props) {
   const parts = item ? sentenceParts(item.sentence) : undefined;
   const answered = state.result === 'right' || state.result === 'wrong';
 
+  // Extract all other answers across the deck as fallback distractors
+  const allAnswers = items
+    .map((it) => {
+      try {
+        return sentenceParts(it.sentence).answer;
+      } catch {
+        return '';
+      }
+    })
+    .filter(Boolean);
+
+  const options = parts && item
+    ? blankOptions(parts.answer, item.distractors, allAnswers, (index ?? 0) + state.roundNumber * 7)
+    : [];
+
+  // A resumed free-text attempt may not be one of the dropdown's options.
+  // Never enable checking an answer the student cannot see selected.
+  const canSubmit = normalizeAnswer(typed) !== '' && (inputMode === 'type' || options.includes(typed));
+
   // Do not overwrite a different mode's save merely by visiting this page.
   useEffect(() => attachResumeLifecycle(browserStorage(), () => latestDraft.current), []);
 
   useEffect(() => {
     if (state.done) end.current?.focus();
     else if (answered) nextButton.current?.focus();
-    else if (focusInput > 0) input.current?.focus();
-  }, [answered, focusInput, state.done]);
+    else if (focusInput > 0) {
+      if (inputMode === 'type') input.current?.focus();
+      else select.current?.focus();
+    }
+  }, [answered, focusInput, inputMode, state.done]);
 
   const persist = (next: FillInState) => {
-    const draft = fillInDraft(items, next, attempts.current, moves.current);
+    const draft = fillInDraft(items, next, attempts.current, moves.current, page);
     if (!draft) return;
     if (Object.values(attempts.current).some((entries) => entries.length > MAX_HISTORY)) {
       // Too many rounds on one item to save in a form replay can trust: stop saving rather than keep a broken save.
@@ -185,7 +210,7 @@ function Session({ items: suppliedItems }: Props) {
   const check = () => {
     // Check exactly the text that will be saved, so a resumed replay reaches the same verdict.
     const submitted = boundTyped(typed);
-    if (index === undefined || !parts || normalizeAnswer(submitted) === '' || answered) return;
+    if (index === undefined || !parts || !canSubmit || answered) return;
     const next = answerCurrent(state, items, submitted);
     if (next === state) return;
     const key = itemKey(index);
@@ -230,7 +255,7 @@ function Session({ items: suppliedItems }: Props) {
   };
 
   const continueSaved = (snapshot: ResumeSnapshot) => {
-    const saved = restoreFillIn(items, snapshot);
+    const saved = restoreFillIn(items, snapshot, page);
     if (!saved) {
       startOver();
       return;
@@ -239,7 +264,7 @@ function Session({ items: suppliedItems }: Props) {
     openClose.current = saved.state.result === 'close' && saved.state.done === false
       ? itemKey(currentIndex(saved.state) ?? -1) : null;
     moves.current = saved.moves;
-    latestDraft.current = fillInDraft(items, saved.state, saved.attempts, saved.moves);
+    latestDraft.current = fillInDraft(items, saved.state, saved.attempts, saved.moves, page);
     setState(saved.state);
     setTyped(saved.typed);
     setResumePending(false);
@@ -259,7 +284,7 @@ function Session({ items: suppliedItems }: Props) {
 
   return (
     <div className="text-ink">
-      <ResumePrompt page={FILL_IN_PAGE} onContinue={continueSaved} onStartOver={startOver} />
+      <ResumePrompt page={page} onContinue={continueSaved} onStartOver={startOver} />
       <div inert={resumePending} data-testid="fill-in-session">
         {state.done ? (
           <div ref={end} tabIndex={-1}>
@@ -278,26 +303,63 @@ function Session({ items: suppliedItems }: Props) {
             </p>
 
             <div className="mt-6">
-              <label htmlFor={`${id}-answer`} className="block text-sm font-medium">the missing word</label>
-              <input
-                ref={input}
-                id={`${id}-answer`}
-                value={typed}
-                readOnly={answered}
-                // The sentence describes the field, so moving to the next item reads the new sentence too (Codex on #56).
-                aria-describedby={message ? `${id}-sentence ${id}-message` : `${id}-sentence`}
-                maxLength={MAX_TYPED}
-                onChange={(event) => setTyped(boundTyped(event.currentTarget.value))}
-                onKeyDown={(event) => {
-                  // Not while an input method is still composing the word (Codex on #56).
-                  if (isCheckKey({ key: event.key, isComposing: event.nativeEvent.isComposing, keyCode: event.keyCode })) {
-                    event.preventDefault();
-                    check();
-                  }
-                }}
-                className="mt-2 min-h-11 w-full rounded-md border border-control bg-surface px-4 py-2.5 text-ink"
-                autoComplete="off"
-              />
+              <div className="flex items-center justify-between">
+                <label htmlFor={`${id}-answer`} className="block text-sm font-medium">the missing word</label>
+                <button
+                  type="button"
+                  className="min-h-11 px-2 text-xs leading-relaxed text-ink-soft underline hover:text-ink"
+                  onClick={() => {
+                    // A select can only submit one of its visible options. Do not retain
+                    // an unseen free-text answer when changing back to dropdown mode.
+                    if (inputMode === 'type' && typed !== '' && !options.includes(typed)) {
+                      setTyped('');
+                    }
+                    setInputMode(inputMode === 'dropdown' ? 'type' : 'dropdown');
+                    setFocusInput((req) => req + 1);
+                  }}
+                >
+                  {inputMode === 'dropdown' ? 'type instead' : 'choose from options'}
+                </button>
+              </div>
+
+              {inputMode === 'dropdown' ? (
+                <select
+                  ref={select}
+                  id={`${id}-answer`}
+                  value={typed}
+                  disabled={answered}
+                  aria-describedby={message ? `${id}-sentence ${id}-message` : `${id}-sentence`}
+                  onChange={(event) => setTyped(event.currentTarget.value)}
+                  className="mt-2 min-h-11 w-full rounded-md border border-control bg-surface px-4 py-2.5 text-ink"
+                >
+                  <option value="">choose an answer...</option>
+                  {options.map((option, optIdx) => (
+                    <option key={`${option}-${optIdx}`} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <input
+                  ref={input}
+                  id={`${id}-answer`}
+                  value={typed}
+                  readOnly={answered}
+                  // The sentence describes the field, so moving to the next item reads the new sentence too (Codex on #56).
+                  aria-describedby={message ? `${id}-sentence ${id}-message` : `${id}-sentence`}
+                  maxLength={MAX_TYPED}
+                  onChange={(event) => setTyped(boundTyped(event.currentTarget.value))}
+                  onKeyDown={(event) => {
+                    // Not while an input method is still composing the word (Codex on #56).
+                    if (isCheckKey({ key: event.key, isComposing: event.nativeEvent.isComposing, keyCode: event.keyCode })) {
+                      event.preventDefault();
+                      check();
+                    }
+                  }}
+                  className="mt-2 min-h-11 w-full rounded-md border border-control bg-surface px-4 py-2.5 text-ink"
+                  autoComplete="off"
+                />
+              )}
             </div>
 
             <p id={`${id}-message`} className="mt-4 min-h-6" aria-live="polite" aria-atomic="true">{message}</p>
@@ -307,7 +369,7 @@ function Session({ items: suppliedItems }: Props) {
                 <button ref={nextButton} type="button" className={primaryButton} onClick={advance}>next</button>
               ) : (
                 <>
-                  <button type="button" className={primaryButton} disabled={normalizeAnswer(typed) === ''} onClick={check}>check</button>
+                  <button type="button" className={primaryButton} disabled={!canSubmit} onClick={check}>check</button>
                   <button type="button" className={secondaryButton} disabled={state.hinted} onClick={hint}>hint</button>
                 </>
               )}
