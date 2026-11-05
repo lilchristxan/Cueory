@@ -15,8 +15,8 @@ import AnatomyLabCover from './AnatomyLabCover';
 import { breadcrumb, siblings } from './anatomyhierarchy';
 import { boxesFromMeshes, expandNearby, nearbyStructures } from './anatomynearby';
 import { canSpeak, speak, stop as stopSpeaking } from './anatomyspeech';
-import { createAnatomyStudy, createSavedViewsRequestGuard, queueFromQuizMisses, type AnatomyStudyClient, type ReviewQueueRow, type SavedViewRow } from './anatomystudy';
-import { getSessionState, getSupabase } from './supabaseclient';
+import { createAnatomyStudy, createSavedViewsRequestGuard, createStudyIdentityGuard, queueFromQuizMisses, type AnatomyStudyClient, type ReviewQueueRow, type SavedViewRow } from './anatomystudy';
+import { getSupabase } from './supabaseclient';
 import { STRUCTURE_PAGE_SIZE, visibleStructureGroups } from './anatomy-list-window';
 import { anatomyTriangleNote } from './anatomybudget';
 import {
@@ -218,6 +218,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
   // Study tools (Task 178, integration): the review queue and saved views exist only for a signed-in student.
   const study = useMemo(defaultStudy, []);
   const savedViewsRequestGuard = useMemo(createSavedViewsRequestGuard, []);
+  const identityGuard = useMemo(createStudyIdentityGuard, []);
   const [signedIn, setSignedIn] = useState(false);
   const [reviewRows, setReviewRows] = useState<ReviewQueueRow[]>([]);
   const [savedViews, setSavedViews] = useState<SavedViewRow[]>([]);
@@ -642,36 +643,64 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
 
   // ── Study tools: who is signed in, their review queue and saved views for this system ─────────────────────────────
   useEffect(() => {
-    if (phase !== 'open') return;
     let live = true;
-    getSessionState().then(
-      (state) => { if (live) setSignedIn(state.signedIn); },
-      () => { if (live) setSignedIn(false); },
-    );
-    return () => { live = false; };
-  }, [phase]);
+    let unsubscribe: (() => void) | null = null;
+    const applyIdentity = (userId: string | null) => {
+      if (!live || !identityGuard.update(userId)) return;
+      // Supabase broadcasts auth changes to other tabs using the same origin. Clear personal data in this tab
+      // immediately and retire every in-flight operation before exposing the next identity.
+      savedViewsRequestGuard.invalidate();
+      setSignedIn(userId !== null);
+      setReviewRows([]);
+      setSavedViews([]);
+      setViewName('');
+      setSavingView(false);
+      setAnnounce('');
+    };
+    void getSupabase().then((client) => {
+      if (!live || !client) {
+        applyIdentity(null);
+        return;
+      }
+      const { data: { subscription } } = client.auth.onAuthStateChange((_event, session) => {
+        applyIdentity(typeof session?.user?.id === 'string' ? session.user.id : null);
+      });
+      unsubscribe = () => subscription.unsubscribe();
+    }).catch(() => applyIdentity(null));
+    return () => {
+      live = false;
+      unsubscribe?.();
+      identityGuard.update(null);
+      savedViewsRequestGuard.invalidate();
+    };
+  }, [identityGuard, savedViewsRequestGuard]);
 
   const studyReady = signedIn && load.state === 'ready';
   const refreshReviewQueue = useCallback(() => {
-    if (!signedIn) return;
+    const identity = identityGuard.snapshot();
+    if (!signedIn || !identity.userId) return;
     void study.reviewQueue().then((outcome) => {
+      if (!identityGuard.isCurrent(identity)) return;
       if (outcome.ok) setReviewRows(outcome.value);
       else setAnnounce(outcome.message);
-    }).catch(() => { /* a failed read never breaks the lab */ });
-  }, [signedIn, study]);
+    }).catch(() => {
+      if (identityGuard.isCurrent(identity)) setAnnounce('could not load your review queue. please try again.');
+    });
+  }, [signedIn, study, identityGuard]);
   const refreshSavedViews = useCallback((key: string) => {
-    if (!signedIn) return;
+    const identity = identityGuard.snapshot();
+    if (!signedIn || !identity.userId) return;
     const request = savedViewsRequestGuard.begin(key);
     void study.views(key).then((outcome) => {
-      if (!savedViewsRequestGuard.isCurrent(request, activeSystemKeyRef.current)) return;
+      if (!identityGuard.isCurrent(identity) || !savedViewsRequestGuard.isCurrent(request, activeSystemKeyRef.current)) return;
       if (outcome.ok) setSavedViews(outcome.value);
       else setAnnounce(outcome.message);
     }).catch(() => {
-      if (savedViewsRequestGuard.isCurrent(request, activeSystemKeyRef.current)) {
+      if (identityGuard.isCurrent(identity) && savedViewsRequestGuard.isCurrent(request, activeSystemKeyRef.current)) {
         setAnnounce('could not load saved views. please try again.');
       }
     });
-  }, [signedIn, study, savedViewsRequestGuard]);
+  }, [signedIn, study, savedViewsRequestGuard, identityGuard]);
   useEffect(() => {
     // Clear old-system rows before the next request. Cleanup retires pending reads on switch or unmount.
     savedViewsRequestGuard.invalidate();
@@ -684,14 +713,16 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
 
   /** Records one missed structure (Task 178 decision: at the moment of the first wrong pick or "show me"). */
   const recordMiss = useCallback((structureId: string) => {
-    if (!signedIn || !system) return;
+    const identity = identityGuard.snapshot();
+    if (!signedIn || !identity.userId || !system) return;
     void study.recordMisses(system.key, queueFromQuizMisses([{ target: structureId, feedback: { kind: 'shown' } }]))
       .then((outcome) => {
+        if (!identityGuard.isCurrent(identity)) return;
         if (!outcome.ok) setAnnounce(outcome.message);
         else if (outcome.value > 0) refreshReviewQueue();
       })
       .catch(() => { /* never block or break the quiz */ });
-  }, [signedIn, system, study, refreshReviewQueue]);
+  }, [signedIn, system, study, refreshReviewQueue, identityGuard]);
 
   // ── Speech: a selection change or unmount stops a name still being said ──────────────────────────────────────────
   useEffect(() => {
@@ -1104,14 +1135,20 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
   };
 
   const clearMiss = (structureId: string) => {
-    void study.clearMiss(system.key, structureId).then((outcome) => {
+    const identity = identityGuard.snapshot();
+    if (!signedIn || !identity.userId) return;
+    const key = system.key;
+    void study.clearMiss(key, structureId).then((outcome) => {
+      if (!identityGuard.isCurrent(identity)) return;
       if (!outcome.ok) {
         setAnnounce(outcome.message);
         return;
       }
-      setReviewRows((rows) => rows.filter((row) => !(row.system_key === system.key && row.structure_id === structureId)));
+      setReviewRows((rows) => rows.filter((row) => !(row.system_key === key && row.structure_id === structureId)));
       setAnnounce(`${names.get(structureId) ?? structureId} left your review queue.`);
-    }).catch(() => setAnnounce('something went wrong — please try again.'));
+    }).catch(() => {
+      if (identityGuard.isCurrent(identity)) setAnnounce('something went wrong — please try again.');
+    });
   };
 
   /** A "find it" round over the review queue only: every queued structure is shown first, then asked about. */
@@ -1127,11 +1164,13 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
     const scene = sceneRef.current;
     if (!scene || !ready || savingView) return;
     const key = system.key;
+    const identity = identityGuard.snapshot();
+    if (!signedIn || !identity.userId) return;
     const name = viewName.trim();
     setSavingView(true);
     void study.saveView({ systemKey: key, name, camera: scene.cameraState(), hidden, faded, selected })
       .then((outcome) => {
-        if (activeSystemKeyRef.current !== key) return;
+        if (!identityGuard.isCurrent(identity) || activeSystemKeyRef.current !== key) return;
         if (!outcome.ok) {
           setAnnounce(outcome.message);
           return;
@@ -1140,8 +1179,12 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
         setAnnounce(`saved the view "${name}".`);
         refreshSavedViews(key);
       })
-      .catch(() => setAnnounce('something went wrong — please try again.'))
-      .finally(() => setSavingView(false));
+      .catch(() => {
+        if (identityGuard.isCurrent(identity) && activeSystemKeyRef.current === key) setAnnounce('something went wrong — please try again.');
+      })
+      .finally(() => {
+        if (identityGuard.isCurrent(identity) && activeSystemKeyRef.current === key) setSavingView(false);
+      });
   };
 
   const openView = (view: SavedViewRow) => {
@@ -1160,9 +1203,10 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
 
   const deleteView = (view: SavedViewRow) => {
     const key = system.key;
-    if (view.system_key !== key) return;
+    const identity = identityGuard.snapshot();
+    if (!signedIn || !identity.userId || view.system_key !== key) return;
     void study.deleteView(view.id).then((outcome) => {
-      if (activeSystemKeyRef.current !== key) return;
+      if (!identityGuard.isCurrent(identity) || activeSystemKeyRef.current !== key) return;
       if (!outcome.ok) {
         setAnnounce(outcome.message);
         return;
@@ -1170,7 +1214,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
       setSavedViews((views) => views.filter((v) => !(v.id === view.id && v.system_key === key)));
       setAnnounce(`deleted the view "${view.name}".`);
     }).catch(() => {
-      if (activeSystemKeyRef.current === key) setAnnounce('something went wrong — please try again.');
+      if (identityGuard.isCurrent(identity) && activeSystemKeyRef.current === key) setAnnounce('something went wrong — please try again.');
     });
   };
 

@@ -187,6 +187,25 @@ export function anatomyStudyMessage(error: unknown): string {
 export type Outcome<T> = { ok: true; value: T } | { ok: false; message: string; cause?: unknown };
 
 /** Retires saved-view reads when a newer request or system switch supersedes them. */
+/** Identity token for an asynchronous study-data operation. */
+export interface StudyIdentitySnapshot { readonly userId: string | null; readonly generation: number }
+export function createStudyIdentityGuard() {
+  let userId: string | null = null;
+  let generation = 0;
+  return {
+    update(nextUserId: string | null): boolean {
+      if (nextUserId === userId) return false;
+      userId = nextUserId;
+      generation += 1;
+      return true;
+    },
+    snapshot(): StudyIdentitySnapshot { return { userId, generation }; },
+    isCurrent(snapshot: StudyIdentitySnapshot): boolean {
+      return snapshot.userId !== null && snapshot.userId === userId && snapshot.generation === generation;
+    },
+  };
+}
+
 export interface SavedViewsRequest { readonly systemKey: string; readonly generation: number }
 export function createSavedViewsRequestGuard() {
   let generation = 0;

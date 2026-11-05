@@ -3,6 +3,7 @@ import {
   anatomyStudyMessage,
   createAnatomyStudy,
   createSavedViewsRequestGuard,
+  createStudyIdentityGuard,
   isViewCamera,
   missBatches,
   queueFromQuizMisses,
@@ -26,6 +27,22 @@ function fakeClient(options: { signedIn?: boolean; replies?: Partial<Record<stri
   } as unknown as AnatomyStudyClient;
   return { client, rpc, study: createAnatomyStudy(async () => client) };
 }
+
+describe('study identity changes', () => {
+  it('retires in-flight personal-data completions on sign-out and account switching', () => {
+    const identity = createStudyIdentityGuard();
+    expect(identity.update('student-a')).toBe(true);
+    const a = identity.snapshot();
+    expect(identity.isCurrent(a)).toBe(true);
+    expect(identity.update('student-b')).toBe(true);
+    expect(identity.isCurrent(a)).toBe(false);
+    const b = identity.snapshot();
+    expect(identity.isCurrent(b)).toBe(true);
+    expect(identity.update(null)).toBe(true);
+    expect(identity.isCurrent(b)).toBe(false);
+    expect(identity.snapshot().userId).toBeNull();
+  });
+});
 
 describe('saved-view request ordering', () => {
   it('ignores an older system response that resolves after the newer system response', async () => {
