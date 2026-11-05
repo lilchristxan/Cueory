@@ -1,0 +1,1 @@
+status: Task 39 follow-up (Christian's 5 Nov full-audit approval): `.node-version` now waits for Christian in both modes, not only after launch. The 5 Nov workflow audit found it was the one dependency-shaped file the bot neither held nor read before launch (package.json and the lockfile are already read line by line before launch, D-42). Tests moved accordingly.
