@@ -187,15 +187,32 @@ export function parseApprovedGlb(bytes) {
       throw new Error('GLB meshopt range or decoder metadata invalid');
     }
   }
+  // Validate the *full* typed accessor span, not only its starting offset.
+  // Cueory's generator emits scalar indices and vector attributes, with the
+  // meshopt fallback view describing their decompressed, virtual byte ranges.
+  const componentBytes = { 5120: 1, 5121: 1, 5122: 2, 5123: 2, 5125: 4, 5126: 4 };
+  const components = { SCALAR: 1, VEC2: 2, VEC3: 3, VEC4: 4 };
   for (const accessor of json.accessors) {
     if (!accessor || !Number.isSafeInteger(accessor.bufferView) ||
         accessor.bufferView < 0 || accessor.bufferView >= json.bufferViews.length) {
       throw new Error('GLB accessor references a missing buffer view');
     }
-    if (accessor.byteOffset !== undefined &&
-        (!Number.isSafeInteger(accessor.byteOffset) || accessor.byteOffset < 0 ||
-         accessor.byteOffset >= json.bufferViews[accessor.bufferView].byteLength)) {
-      throw new Error('GLB accessor offset outside buffer view');
+    const view = json.bufferViews[accessor.bufferView];
+    const unit = componentBytes[accessor.componentType];
+    const count = components[accessor.type];
+    if (!unit || !count || !Number.isSafeInteger(accessor.count) || accessor.count < 1 ||
+        accessor.sparse !== undefined) {
+      throw new Error('GLB accessor has unsupported typed data');
+    }
+    const elementBytes = unit * count;
+    const stride = view.byteStride ?? elementBytes;
+    const offset = accessor.byteOffset ?? 0;
+    const span = (accessor.count - 1) * stride + elementBytes;
+    if (!Number.isSafeInteger(offset) || offset < 0 || offset % unit !== 0 ||
+        !Number.isSafeInteger(stride) || stride < elementBytes || stride % unit !== 0 ||
+        !Number.isSafeInteger(span) || offset > view.byteLength ||
+        span > view.byteLength - offset) {
+      throw new Error('GLB typed accessor exceeds its buffer view');
     }
   }
   return json;

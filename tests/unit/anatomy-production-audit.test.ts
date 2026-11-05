@@ -28,21 +28,30 @@ function setup() {
       nodes: ids.map((id, mesh) => ({ name: id, mesh })),
       meshes: ids.map(() => ({ primitives: [{ indices: 0, attributes: { POSITION: 1 } }] })),
       accessors: [{ count: 3, componentType: 5123, type: 'SCALAR', bufferView: 0 },
-        { count: 3, componentType: 5126, type: 'VEC3', bufferView: 0 }],
-      bufferViews: [{ buffer: 0, byteOffset: 0, byteLength: 4 }],
-      buffers: [{ byteLength: 4 }],
+        { count: 3, componentType: 5126, type: 'VEC3', bufferView: 1 }],
+      bufferViews: [{ buffer: 0, byteOffset: 0, byteLength: 6 },
+        { buffer: 0, byteOffset: 8, byteLength: 36 }],
+      buffers: [{ byteLength: 44 }],
     };
     const bytes = Buffer.from(JSON.stringify(modelJson), 'utf8');
     const padded = Buffer.concat([bytes, Buffer.alloc((4 - bytes.length % 4) % 4, 0x20)]);
-    const glb = Buffer.alloc(20 + padded.length + 12);
+    const bin = Buffer.alloc(44);
+    bin.writeUInt16LE(0, 0);
+    bin.writeUInt16LE(1, 2);
+    bin.writeUInt16LE(2, 4);
+    // A real triangle: three FLOAT VEC3 positions, with 4-byte alignment.
+    bin.writeFloatLE(1, 20);
+    bin.writeFloatLE(1, 36);
+    const glb = Buffer.alloc(20 + padded.length + 8 + bin.length);
     glb.write('glTF', 0, 'ascii');
     glb.writeUInt32LE(2, 4);
     glb.writeUInt32LE(glb.length, 8);
     glb.writeUInt32LE(padded.length, 12);
     glb.writeUInt32LE(0x4e4f534a, 16);
     padded.copy(glb, 20);
-    glb.writeUInt32LE(4, 20 + padded.length);
+    glb.writeUInt32LE(bin.length, 20 + padded.length);
     glb.writeUInt32LE(0x004e4942, 24 + padded.length);
+    bin.copy(glb, 28 + padded.length);
     return glb;
   };
   const system = (name: string, status: 'draft' | 'approved' | 'other', urls: string[], ids: string[] = []) => {
@@ -169,15 +178,18 @@ describe('anatomy production artifact audit', () => {
       change(json);
       const encoded = Buffer.from(JSON.stringify(json), 'utf8');
       const padded = Buffer.concat([encoded, Buffer.alloc((4 - encoded.length % 4) % 4, 0x20)]);
-      const output = Buffer.alloc(20 + padded.length + 12);
+      const binLength = original.readUInt32LE(20 + jsonLength);
+      const bin = original.subarray(28 + jsonLength, 28 + jsonLength + binLength);
+      const output = Buffer.alloc(20 + padded.length + 8 + bin.length);
       output.write('glTF', 0, 'ascii');
       output.writeUInt32LE(2, 4);
       output.writeUInt32LE(output.length, 8);
       output.writeUInt32LE(padded.length, 12);
       output.writeUInt32LE(0x4e4f534a, 16);
       padded.copy(output, 20);
-      output.writeUInt32LE(4, 20 + padded.length);
+      output.writeUInt32LE(bin.length, 20 + padded.length);
       output.writeUInt32LE(0x004e4942, 24 + padded.length);
+      bin.copy(output, 28 + padded.length);
       writeFileSync(path, output);
       expect(f.check().errors).toContain(
         'approved model failed built GLB geometry, identity or credit verification: /models/anatomy/approved.glb',
@@ -185,6 +197,9 @@ describe('anatomy production artifact audit', () => {
     };
     mutate((json) => { delete json.bufferViews; });
     mutate((json) => { json.accessors[0].bufferView = 9; });
+    mutate((json) => { json.accessors[1].count = 100; });
+    mutate((json) => { json.accessors[0].byteOffset = 5; });
+    mutate((json) => { json.bufferViews[1].byteStride = 4; });
     mutate((json) => { json.bufferViews[0].byteLength = 999; });
     mutate((json) => { json.bufferViews[0].buffer = 1; });
     mutate((json) => { json.bufferViews[0].extensions = { EXT_meshopt_compression:
