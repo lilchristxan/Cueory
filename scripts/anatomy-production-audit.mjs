@@ -72,11 +72,22 @@ function hasGlbMagic(path) {
  * fails closed rather than trying to unpack untrusted build artifacts.
  */
 function hasTarHeaderAt(bytes, offset) {
-  if (offset < 0 || offset + 512 > bytes.length ||
-      bytes.toString('ascii', offset + 257, offset + 262) !== 'ustar') return false;
+  if (offset < 0 || offset + 512 > bytes.length) return false;
+  const magic = bytes.subarray(offset + 257, offset + 263);
+  const isUstar = magic.toString('ascii', 0, 5) === 'ustar';
+  // The original V7 header predates the ustar magic field; those six bytes
+  // are all NUL. Validate its numeric fields and checksum before accepting it.
+  const isV7 = magic.every((byte) => byte === 0);
+  if (!isUstar && !isV7) return false;
   const checksumField = bytes.toString('ascii', offset + 148, offset + 156);
-  const checksumDigits = checksumField.replace(/[\0 ]+$/u, '').trim();
-  if (!/^[0-7]{1,7}$/u.test(checksumDigits)) return false;
+  const checksumDigits = checksumField.replace(/[\\0 ]+$/u, '').trim();
+  if (!/^[0-7]{6}$/u.test(checksumDigits)) return false;
+  if (isV7) {
+    for (const [start, end] of [[100, 108], [108, 116], [116, 124], [124, 136], [136, 148]]) {
+      const field = bytes.toString('ascii', offset + start, offset + end).replace(/[\\0 ]+$/u, '').trim();
+      if (!/^[0-7]+$/u.test(field)) return false;
+    }
+  }
   const expected = Number.parseInt(checksumDigits, 8);
   let actual = 0;
   for (let i = 0; i < 512; i += 1) actual += i >= 148 && i < 156 ? 0x20 : bytes[offset + i];
@@ -84,9 +95,20 @@ function hasTarHeaderAt(bytes, offset) {
 }
 
 function containsTarHeader(bytes) {
-  const marker = Buffer.from('ustar', 'ascii');
-  for (let markerOffset = bytes.indexOf(marker); markerOffset >= 0; markerOffset = bytes.indexOf(marker, markerOffset + 1)) {
-    if (hasTarHeaderAt(bytes, markerOffset - 257)) return true;
+  // POSIX ustar and pre-ustar V7 both carry a six-digit octal checksum at
+  // byte 148. Scan for that narrow candidate field, then validate the full
+  // 512-byte header; V7 has no magic marker to search for.
+  for (let checksumOffset = 148; checksumOffset + 8 <= bytes.length; checksumOffset += 1) {
+    let octal = true;
+    for (let digit = 0; digit < 6; digit += 1) {
+      const value = bytes[checksumOffset + digit]!;
+      if (value < 0x30 || value > 0x37) { octal = false; break; }
+    }
+    if (!octal) continue;
+    const terminator = bytes[checksumOffset + 6]!;
+    const padding = bytes[checksumOffset + 7]!;
+    if ((terminator !== 0 && terminator !== 0x20) || (padding !== 0 && padding !== 0x20)) continue;
+    if (hasTarHeaderAt(bytes, checksumOffset - 148)) return true;
   }
   return false;
 }
