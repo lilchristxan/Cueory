@@ -161,3 +161,41 @@ describe('the compare view follows the main camera to where it settles', () => {
     }
   });
 });
+
+describe('the save button is busy only in the system that is saving', () => {
+  it('a save started in one system does not disable another, and finishing clears only its own mark', async () => {
+    const { savingViewAfter, savingViewBusy } = await import('../../src/islands/anatomylab');
+    let saving: string | null = 'heart';
+    expect(savingViewBusy(saving, 'heart')).toBe(true);
+    expect(savingViewBusy(saving, 'lungs')).toBe(false); // switched systems while the first save is pending
+    // A save started in the new system, then the old one finishes late: the new one stays busy.
+    saving = 'lungs';
+    saving = savingViewAfter(saving, 'heart');
+    expect(saving).toBe('lungs');
+    saving = savingViewAfter(saving, 'lungs');
+    expect(saving).toBeNull();
+    expect(savingViewBusy(saving, 'lungs')).toBe(false);
+  });
+});
+
+describe('the whole body keeps each structure\'s own hierarchy relation', () => {
+  const system = (key: string, tree: 'partof' | 'isa', id: string) => ({
+    key, title: key, status: 'draft' as const, hierarchyTree: tree,
+    model: { file: `/models/anatomy/${key}.glb`, release: 'sample release' },
+    structures: [{ id, text: `part ${id}`, group: `group ${key}`, parents: ['sample root', `group ${key}`] }],
+  });
+  it('shows a trail for the PART-OF structure and none for the IS-A one', async () => {
+    const { structureTree } = await import('../../src/islands/anatomylab');
+    const { wholeBody } = await import('../../src/islands/anatomylayers');
+    const { breadcrumb } = await import('../../src/islands/anatomyhierarchy');
+    const body = wholeBody([system('heart', 'partof', 'FMA1'), system('muscle', 'isa', 'FMA2')])!;
+    expect(body.hierarchyTree).toBeUndefined();
+    const trail = (id: string) => {
+      const structure = body.structures.find((s) => s.id === id);
+      return breadcrumb(body.structures, id, structureTree(body, structure));
+    };
+    expect(trail('FMA1')).toEqual(['sample root', 'group heart', 'part FMA1']);
+    expect(trail('FMA2')).toEqual([]);
+    expect(structureTree(body, body.structures[1])).toBe('isa');
+  });
+});

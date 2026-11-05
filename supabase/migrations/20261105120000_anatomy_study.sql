@@ -125,6 +125,10 @@ declare
   n_ids integer;
   n_new integer;
   hourly_limit constant integer := 600;
+  -- A student's whole review history (cleared rows included) stays under this, so export-my-data, which reads at most
+  -- 10,000 rows, can always return all of it. A real history is a few thousand structures at most.
+  lifetime_limit constant integer := 5000;
+  n_brand_new integer;
 begin
   if uid is null then
     raise exception 'sign in to record what you missed' using errcode = '28000';
@@ -184,6 +188,17 @@ begin
   if n_new > 0 and (select count(*) from public.anatomy_review_queue q
                     where q.user_id = uid and q.last_missed_at > now() - interval '1 hour') + n_new > hourly_limit then
     raise exception 'too many misses recorded recently; try again later' using errcode = '54000';
+  end if;
+
+  -- Structures this student has never missed would add rows; missing one already in the history adds none.
+  select count(*) into n_brand_new
+  from unnest(ids) i
+  where not exists (
+    select 1 from public.anatomy_review_queue q
+    where q.user_id = uid and q.system_key = record_anatomy_misses.system_key and q.structure_id = i
+  );
+  if n_brand_new > 0 and (select count(*) from public.anatomy_review_queue q where q.user_id = uid) + n_brand_new > lifetime_limit then
+    raise exception 'your review history is full' using errcode = '54000';
   end if;
 
   insert into public.anatomy_review_queue (user_id, system_key, structure_id)

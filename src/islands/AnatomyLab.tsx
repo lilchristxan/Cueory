@@ -77,6 +77,9 @@ import {
   revealedQuizTarget,
   reviewQuizPool,
   savedCamera,
+  savingViewAfter,
+  savingViewBusy,
+  structureTree,
   savedVisibility,
   showSiblings,
   startQuiz,
@@ -224,7 +227,8 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
   const [reviewRows, setReviewRows] = useState<ReviewQueueRow[]>([]);
   const [savedViews, setSavedViews] = useState<SavedViewRow[]>([]);
   const [viewName, setViewName] = useState('');
-  const [savingView, setSavingView] = useState(false);
+  // The system a save is running for (null: none), so switching systems never leaves the button stuck.
+  const [savingViewKey, setSavingViewKey] = useState<string | null>(null);
   const [compareKey, setCompareKey] = useState('');
   const [compareState, setCompareState] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
   const speechOn = useMemo(() => canSpeak(), []);
@@ -649,7 +653,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
       setReviewRows([]);
       setSavedViews([]);
       setViewName('');
-      setSavingView(false);
+      setSavingViewKey(null);
       setAnnounce('');
     };
     void getSupabase().then((client) => {
@@ -1079,9 +1083,9 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
   }
 
   const selectedName = selected ? (names.get(selected) ?? selected) : null;
-  const selectedGroup = selected && (system.hierarchyTree ?? 'partof') === 'partof'
-    ? system.structures.find((s) => s.id === selected)?.group
-    : undefined;
+  const selectedStructure = selected ? system.structures.find((s) => s.id === selected) : undefined;
+  const selectedTree = structureTree(system, selectedStructure);
+  const selectedGroup = selectedTree === 'partof' ? selectedStructure?.group : undefined;
   const budget = load.state === 'ready' ? anatomyTriangleNote(load.result.triangles, filesLoaded, lazy) : null;
   const ready = load.state === 'ready';
   // Only files whose meshes and IDs were committed to this exact ready state
@@ -1107,7 +1111,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
 
   // ── Study tools on the name card and around it (Task 178, integration) ───────────────────────────────────────────
   const crumbs = selected
-    ? breadcrumbRows(breadcrumb(system.structures, selected, system.hierarchyTree ?? 'partof'), system.structures, selected)
+    ? breadcrumbRows(breadcrumb(system.structures, selected, selectedTree), system.structures, selected)
     : [];
   const siblingList = selected ? siblings(system.structures, selected) : [];
   const queued = queuedForSystem(reviewRows, system.key);
@@ -1163,12 +1167,12 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
 
   const saveView = () => {
     const scene = sceneRef.current;
-    if (!scene || !ready || savingView) return;
+    if (!scene || !ready || savingViewBusy(savingViewKey, system.key)) return;
     const key = system.key;
     const identity = identityGuard.snapshot();
     if (!signedIn || !identity.userId) return;
     const name = viewName.trim();
-    setSavingView(true);
+    setSavingViewKey(key);
     void study.saveView({ systemKey: key, name, camera: scene.cameraState(), hidden, faded, selected }, identity.userId)
       .then((outcome) => {
         if (!identityGuard.isCurrent(identity) || activeSystemKeyRef.current !== key) return;
@@ -1184,7 +1188,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
         if (identityGuard.isCurrent(identity) && activeSystemKeyRef.current === key) setAnnounce('something went wrong — please try again.');
       })
       .finally(() => {
-        if (identityGuard.isCurrent(identity) && activeSystemKeyRef.current === key) setSavingView(false);
+        if (identityGuard.isCurrent(identity)) setSavingViewKey((current) => savingViewAfter(current, key));
       });
   };
 
@@ -1503,7 +1507,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
                           className="mt-1 block min-h-11 w-full rounded-md border border-control bg-page px-3 text-ink"
                         />
                       </label>
-                      <button type="submit" className={secondaryButton} disabled={!ready || savingView || viewName.trim().length === 0}>
+                      <button type="submit" className={secondaryButton} disabled={!ready || savingViewBusy(savingViewKey, system.key) || viewName.trim().length === 0}>
                         save this view
                       </button>
                     </form>

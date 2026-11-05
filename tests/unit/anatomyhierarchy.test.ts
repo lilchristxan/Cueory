@@ -94,7 +94,8 @@ describe('the lab shows a location trail only for the PART-OF tree', () => {
 
   it('is wired: the name card passes the open system\'s tree to breadcrumb', async () => {
     const source = await readText('src/islands/AnatomyLab.tsx');
-    expect(source).toMatch(/breadcrumb\(system\.structures, selected, system\.hierarchyTree \?\? 'partof'\)/);
+    expect(source).toMatch(/breadcrumb\(system\.structures, selected, selectedTree\)/);
+    expect(source).toMatch(/const selectedTree = structureTree\(system, selectedStructure\);/);
     expect([...source.matchAll(/\bbreadcrumb\(/g)]).toHaveLength(1);
   });
 });

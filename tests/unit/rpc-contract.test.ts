@@ -299,13 +299,18 @@ describe('anatomy study contract (Task 178)', () => {
     expect([...anatomySql.matchAll(/app_private\.mfa_access_allowed\(\)/g)]).toHaveLength(6 + 2 * 2);
     expect(anatomySql).toContain('hourly_limit constant integer := 600;');
     expect(anatomySql).toContain('max_views constant integer := 50;');
+    // The write cap on a student's whole review history sits strictly below what export-my-data reads.
+    const writeCap = Number(/lifetime_limit constant integer := (\d+);/.exec(anatomySql)![1]);
+    const exportCap = Number(/anatomy_review_queue: ([\d_]+),/.exec(readFileSync(new URL('../../src/islands/exportload.ts', import.meta.url), 'utf8'))![1]!.replace(/_/g, ''));
+    expect(writeCap).toBe(5000);
+    expect(writeCap).toBeLessThan(exportCap);
   });
 
   it('raises exactly these literal refusals, which the browser module maps to student sentences', () => {
     const expected: Record<keyof typeof signatures, string[]> = {
       record_anatomy_misses: ['sign in to record what you missed', 'study account changed; reload before continuing', 'confirm your email to use this', 'complete two-factor sign-in to continue',
         'that anatomy system was not found', 'send between 1 and 50 structures', 'a structure id has the wrong shape',
-        'too many misses recorded recently; try again later'],
+        'too many misses recorded recently; try again later', 'your review history is full'],
       clear_anatomy_miss: ['sign in to change your review list', 'study account changed; reload before continuing', 'confirm your email to use this', 'complete two-factor sign-in to continue',
         'that anatomy system was not found', 'a structure id has the wrong shape'],
       my_anatomy_review_queue: ['sign in to see your review list', 'confirm your email to use this', 'complete two-factor sign-in to continue'],

@@ -264,3 +264,9 @@ describe('createAnatomyStudy', () => {
     expect((await study.recordMisses('heart', ['FMA1'], 'student-1')).ok).toBe(false);
   });
 });
+
+describe('the review history cap message', () => {
+  it('reads as a plain sentence', () => {
+    expect(anatomyStudyMessage({ message: 'your review history is full' })).toBe("your review history is full, so new misses can't be kept.");
+  });
+});

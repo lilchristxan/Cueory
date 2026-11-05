@@ -5,7 +5,7 @@
 -- only inside this test.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(127);
+select plan(132);
 
 insert into auth.users (id, email, email_confirmed_at, is_anonymous) values
   -- One and two: confirmed students.
@@ -300,6 +300,34 @@ select throws_ok(
   '54000', 'too many misses recorded recently; try again later',
   'missing one of those old structures again counts as new, and with another new one passes the limit'
 );
+
+-- ---- The lifetime cap: 5,000 rows of review history a person (cleared ones count), so export-my-data can return all of it.
+reset role;
+insert into auth.users (id, email, email_confirmed_at, is_anonymous)
+  values ('00000000-0000-4000-8000-000000000006', 'six@example.com', now(), false);
+insert into public.anatomy_review_queue (user_id, system_key, structure_id, first_missed_at, last_missed_at, cleared_at)
+  select '00000000-0000-4000-8000-000000000006', 'bulk', 'FMA' || n, now() - interval '3 hours', now() - interval '3 hours', now() - interval '2 hours'
+  from generate_series(1, 4999) n;
+set local role authenticated;
+set local "request.jwt.claims" to '{"sub": "00000000-0000-4000-8000-000000000006", "role": "authenticated"}';
+set local "request.jwt.claim.sub" to '00000000-0000-4000-8000-000000000006';
+select results_eq(
+  $$ select public.record_anatomy_misses('bulk', array['FMA90001'], (select auth.uid())) $$, $$ values (1) $$,
+  'the 5,000th row of history is recorded'
+);
+select throws_ok(
+  $$ select public.record_anatomy_misses('bulk', array['FMA90002'], (select auth.uid())) $$,
+  '54000', 'your review history is full', 'a 5,001st structure is refused'
+);
+select throws_ok(
+  $$ select public.record_anatomy_misses('bulk', array['FMA1', 'FMA90003'], (select auth.uid())) $$,
+  '54000', 'your review history is full', 'a call that would add a row past the cap is refused whole'
+);
+select results_eq(
+  $$ select public.record_anatomy_misses('bulk', array['FMA1', 'FMA2'], (select auth.uid())) $$, $$ values (2) $$,
+  'missing structures already in the history (cleared ones too) adds no row and is still recorded'
+);
+select results_eq($$ select count(*)::int from public.anatomy_review_queue $$, $$ values (5000) $$, 'and the history stays at 5,000');
 
 -- ---- Student one: saved views.
 set local "request.jwt.claims" to '{"sub": "00000000-0000-4000-8000-000000000001", "role": "authenticated"}';

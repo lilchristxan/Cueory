@@ -161,6 +161,8 @@ export const SIGNED_OUT_MESSAGES = [
 export const CONFIRM_EMAIL_MESSAGE = 'confirm your email to use this';
 export const TWO_FACTOR_MESSAGE = 'complete two-factor sign-in to continue';
 export const VIEW_LIMIT_MESSAGE = 'you can keep up to 50 saved views; delete one first';
+/** Raised when a student already holds the most review rows the database keeps (5,000, below the export's 10,000). */
+export const HISTORY_FULL_MESSAGE = 'your review history is full';
 export const MISS_LIMIT_MESSAGE = 'too many misses recorded recently; try again later';
 
 /** One calm sentence for a database refusal, in the lowercase voice (D-47). Never echoes raw database text. */
@@ -173,6 +175,7 @@ export function anatomyStudyMessage(error: unknown): string {
   if (message === 'study account changed; reload before continuing') return 'your account changed. reload the anatomy lab before continuing.';
   if (message === TWO_FACTOR_MESSAGE) return 'please finish two-factor sign-in to use this.';
   if (message === VIEW_LIMIT_MESSAGE) return `you can keep up to ${SAVED_VIEW_LIMIT} saved views. delete one to save another.`;
+  if (message === HISTORY_FULL_MESSAGE) return "your review history is full, so new misses can't be kept.";
   if (message === MISS_LIMIT_MESSAGE) return "you've recorded a lot of misses recently. they'll be kept again in a little while.";
   if (message === 'a view name is 1 to 60 characters of plain text') return `a view name is 1 to ${VIEW_NAME_LIMIT} characters of plain text.`;
   if (message === 'that anatomy system was not found') return 'that anatomy system could not be found.';

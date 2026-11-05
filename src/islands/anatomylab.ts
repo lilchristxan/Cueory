@@ -28,6 +28,11 @@ export interface AnatomyStructure {
   parents?: string[];
   /** Alternative names from the source file, searched like the official name (Task 178). Never written by the lab. */
   also?: string[];
+  /**
+   * Which BodyParts3D tree this structure's `group` and `parents` come from. Set only on the whole-body aggregate, which
+   * mixes systems of both trees; a single system's structures use the system's `hierarchyTree`.
+   */
+  tree?: 'partof' | 'isa';
 }
 
 /** What the island gets for one body system: only what it shows (sources stay at build time). */
@@ -1393,3 +1398,18 @@ export function createCompareSync(copy: () => void, clock: CompareSyncClock = {
     cancel,
   };
 }
+
+/** The tree a structure's group and ancestry come from: its own (whole body), else its system's, else PART-OF. */
+export function structureTree(
+  system: Pick<AnatomySystem, 'hierarchyTree'>,
+  structure: Pick<AnatomyStructure, 'tree'> | undefined,
+): 'partof' | 'isa' {
+  return structure?.tree ?? system.hierarchyTree ?? 'partof';
+}
+
+/** Which system a "save this view" request is running for: the save button is busy only in that system. */
+export const savingViewBusy = (savingKey: string | null, systemKey: string): boolean => savingKey === systemKey;
+
+/** After a save finishes for `finishedKey`: clears the busy mark only if it is that system's, so a newer save is kept. */
+export const savingViewAfter = (savingKey: string | null, finishedKey: string): string | null =>
+  savingKey === finishedKey ? null : savingKey;

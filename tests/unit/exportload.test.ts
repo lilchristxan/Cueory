@@ -554,3 +554,21 @@ describe('a study history longer than 200,000 events (Task 140)', () => {
     expect(await files.find(file => file.fileName === 'attempts.csv')!.blob.text()).toContain(versionId);
   }, 120_000);
 });
+
+describe('anatomy review history size (Task 178)', () => {
+  const history = (count: number) => Array.from({ length: count }, (_, i) => ({
+    ...rows.anatomy_review_queue[0], id: id(i + 1), structure_id: 'FMA' + (i + 1),
+  }));
+
+  it('exports a full 5,000-row history, the most the database lets a student keep, complete', async () => {
+    const { client } = supabase({ ...rows, anatomy_review_queue: history(5000) });
+    const result = await loadExport(fromSupabase(client));
+    expect(result.ok && result.data.anatomyReviewQueue).toHaveLength(5000);
+  });
+
+  it('still exports at the 10,000-row read cap and fails closed one row past it', async () => {
+    const at = await loadExport(fromSupabase(supabase({ ...rows, anatomy_review_queue: history(10_000) }).client));
+    expect(at.ok && at.data.anatomyReviewQueue).toHaveLength(10_000);
+    expect(await loadExport(fromSupabase(supabase({ ...rows, anatomy_review_queue: history(10_001) }).client))).toEqual(failed);
+  });
+});
