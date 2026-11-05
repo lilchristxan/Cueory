@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, readdirSync, renameSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { auditAnatomyProduction, decodeAsciiEscapesForAudit, modelUrls, readRegularFileNoFollow } from '../../scripts/anatomy-production-audit.mjs';
+import { auditAnatomyProduction, decodeAsciiEscapesForAudit, modelUrls, parseApprovedGlb, readRegularFileNoFollow } from '../../scripts/anatomy-production-audit.mjs';
 import { keepsDrafts } from '../../src/visuals/prunedrafts';
 
 const roots: string[] = [];
@@ -277,6 +277,32 @@ describe('anatomy production artifact audit', () => {
     expect(f.check().errors).toContain(
       'approved model failed built GLB geometry, identity or credit verification: /models/anatomy/approved.glb',
     );
+  });
+
+  it('parses all eleven real draft GLBs with the exact release decoder without approving them', () => {
+    const modelDir = new URL('../../public/models/anatomy/', import.meta.url);
+    const files = readdirSync(modelDir).filter((name) => name.endsWith('.glb')).sort();
+    expect(files).toHaveLength(11);
+
+    for (const file of files) {
+      const system = file.slice(0, -'.glb'.length);
+      const manifest = JSON.parse(readFileSync(
+        new URL(`../../content/visuals/anatomy-${system}.json`, import.meta.url), 'utf8',
+      ));
+      // A parser compatibility test must never approve source content by changing its status.
+      expect(manifest.status, system).toBe('draft');
+      const json = parseApprovedGlb(readFileSync(new URL(
+        `../../public/models/anatomy/${file}`, import.meta.url,
+      )));
+      expect(json.buffers, system).toHaveLength(2);
+      expect(json.buffers[1].extensions?.EXT_meshopt_compression?.fallback, system).toBe(true);
+      expect(json.bufferViews.length, system).toBeGreaterThan(0);
+      expect(json.bufferViews.every((view) =>
+        view.buffer === 1 && view.extensions?.EXT_meshopt_compression?.buffer === 0
+      ), system).toBe(true);
+      expect(json.nodes.map((node) => node.name).sort(), system)
+        .toEqual(manifest.labels.map((label) => label.id).sort());
+    }
   });
 
   it('accepts the checked-in gltfpack meshopt fallback format, but refuses a forged fallback marker', () => {
