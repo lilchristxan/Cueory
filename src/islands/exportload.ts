@@ -289,7 +289,7 @@ function anatomyStringIds(value: unknown): string[] {
   return ids;
 }
 
-function anatomyCamera(value: unknown): unknown {
+function anatomyCamera(value: unknown): JsonObject {
   const camera = row(value);
   const keys = Object.keys(camera);
   if (keys.some((key) => !['position', 'target', 'up'].includes(key))) throw new Error('invalid anatomy camera');
@@ -303,7 +303,7 @@ function anatomyCamera(value: unknown): unknown {
   };
   if (!vector(field(camera, 'position')) || !vector(field(camera, 'target'))) throw new Error('invalid anatomy camera');
   if (maybe(camera, 'up') !== undefined && !vector(field(camera, 'up'))) throw new Error('invalid anatomy camera');
-  return camera;
+  return camera as unknown as JsonObject;
 }
 
 function entries<T>(data: unknown, map: (value: Record<string, unknown>) => T): T[] {
@@ -420,7 +420,8 @@ export async function loadExport(reader: ExportReader): Promise<ExportLoadResult
       uuid(r, 'id');
       const firstMissedAt = timestamp(r, 'first_missed_at');
       const lastMissedAt = timestamp(r, 'last_missed_at');
-      const clearedAt = optionalTimestamp(r, 'cleared_at');
+      const clearedValue = field(r, 'cleared_at');
+      const clearedAt = clearedValue === null ? null : timestamp(r, 'cleared_at');
       const missedCount = field(r, 'missed_count');
       if (typeof missedCount !== 'number' || !Number.isSafeInteger(missedCount) || missedCount < 1 || missedCount > 2_147_483_647 ||
           Date.parse(lastMissedAt) < Date.parse(firstMissedAt)) throw new Error('invalid anatomy review row');
@@ -436,7 +437,7 @@ export async function loadExport(reader: ExportReader): Promise<ExportLoadResult
     const anatomyViews = entries(await fetchRows(reader, 'anatomy_saved_views'), (r) => {
       uuid(r, 'id');
       const name = text(r, 'name');
-      if (name.length < 1 || name.length > 60 || /[\u0000-\u001f\u007f]/.test(name)) throw new Error('invalid anatomy view name');
+      if (name.trim().length < 1 || name.length > 60 || /[\u0000-\u001f\u007f]/.test(name)) throw new Error('invalid anatomy view name');
       const selectedValue = field(r, 'selected');
       return {
         systemKey: anatomySystemKey(r),
