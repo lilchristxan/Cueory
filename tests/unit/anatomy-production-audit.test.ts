@@ -100,6 +100,22 @@ function setup() {
 }
 
 describe('anatomy production artifact audit', () => {
+  it('rejects archive containers that could conceal unapproved model assets', () => {
+    const f = setup();
+    // ZIP and TAR payloads are deliberately opaque to the outer dist walker.
+    // Test both content sniffing under misleading suffixes and archive suffixes.
+    f.file('downloads/hidden-model.dat', Buffer.from([0x50, 0x4b, 0x03, 0x04, 0x00, 0x00]));
+    const tar = Buffer.alloc(512);
+    tar.write('ustar', 257, 'ascii');
+    f.file('downloads/hidden-model.bin', tar);
+    f.file('downloads/unrecognized.zip', Buffer.from('opaque archive payload'));
+    expect(f.check().errors).toEqual(expect.arrayContaining([
+      'archive/container in production output requires explicit review: /downloads/hidden-model.dat',
+      'archive/container in production output requires explicit review: /downloads/hidden-model.bin',
+      'archive/container in production output requires explicit review: /downloads/unrecognized.zip',
+    ]));
+  });
+
   it('rejects corrupted built compressed bytes despite unchanged GLB metadata', () => {
     const f = setup();
     const builtPath = join(f.dist, 'models', 'anatomy', 'approved.glb');
