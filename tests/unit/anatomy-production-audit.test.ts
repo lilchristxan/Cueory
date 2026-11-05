@@ -39,16 +39,27 @@ function setup() {
   };
   system('draft', 'draft', ['/models/anatomy/draft.glb'], ['FMA999991']);
   system('approved', 'approved', ['/models/anatomy/approved.glb'], ['FMA999992']);
-  // Minimal synthetic GLB v2 used by the positive audit fixtures, never real anatomy.
-  const json = Buffer.from('{"asset":{"version":"2.0"},"nodes":[]}', 'utf8');
+  // Synthetic GLB v2 with one mesh node, the required license and
+  // quantization/meshopt decoder declarations, and an aligned BIN chunk.
+  const modelJson = {
+    asset: { version: '2.0', copyright: 'BodyParts3D, © The Database Center for Life Science licensed under CC Attribution 4.0 International' },
+    extensionsRequired: ['EXT_meshopt_compression', 'KHR_mesh_quantization'],
+    nodes: [{ name: 'FMA999992', mesh: 0 }],
+    meshes: [{ primitives: [{ indices: 0 }] }],
+    accessors: [{ count: 3 }],
+    buffers: [{ byteLength: 4 }],
+  };
+  const json = Buffer.from(JSON.stringify(modelJson), 'utf8');
   const padded = Buffer.concat([json, Buffer.alloc((4 - json.length % 4) % 4, 0x20)]);
-  const validGlb = Buffer.alloc(20 + padded.length);
+  const validGlb = Buffer.alloc(20 + padded.length + 12);
   validGlb.write('glTF', 0, 'ascii');
   validGlb.writeUInt32LE(2, 4);
   validGlb.writeUInt32LE(validGlb.length, 8);
   validGlb.writeUInt32LE(padded.length, 12);
   validGlb.writeUInt32LE(0x4e4f534a, 16);
   padded.copy(validGlb, 20);
+  validGlb.writeUInt32LE(4, 20 + padded.length);
+  validGlb.writeUInt32LE(0x004e4942, 24 + padded.length);
   file('models/anatomy/approved.glb', validGlb);
   file('preview/anatomy-lab.html', '<html><meta name="robots" content="noindex"></html>');
   return { dist, content, file, system, check: () => auditAnatomyProduction(dist, content) };
@@ -134,6 +145,43 @@ describe('anatomy production artifact audit', () => {
     expect(f.check().errors).toContain(
       'approved model is not a valid GLB v2 header: /models/anatomy/approved.glb',
     );
+  });
+
+  it('rejects an approved GLB with missing node identity, credit, or decoder extension', () => {
+    const f = setup();
+    const path = join(f.dist, 'models', 'anatomy', 'approved.glb');
+    const original = readFileSync(path);
+    const edit = (mutate: (j: any) => void) => {
+      const length = original.readUInt32LE(12);
+      const json = JSON.parse(original.toString('utf8', 20, 20 + length));
+      mutate(json);
+      const raw = Buffer.from(JSON.stringify(json));
+      const padded = Buffer.concat([raw, Buffer.alloc((4 - raw.length % 4) % 4, 0x20)]);
+      const out = Buffer.alloc(20 + padded.length + 12);
+      out.write('glTF', 0, 'ascii');
+      out.writeUInt32LE(2, 4);
+      out.writeUInt32LE(out.length, 8);
+      out.writeUInt32LE(padded.length, 12);
+      out.writeUInt32LE(0x4e4f534a, 16);
+      padded.copy(out, 20);
+      out.writeUInt32LE(4, 20 + padded.length);
+      out.writeUInt32LE(0x004e4942, 24 + padded.length);
+      writeFileSync(path, out);
+    };
+    for (const mutate of [
+      (j: any) => { j.nodes[0].name = 'FMA999993'; },
+      (j: any) => { j.asset.copyright = 'unapproved credit'; },
+      (j: any) => { j.extensionsRequired = ['KHR_mesh_quantization']; },
+      (j: any) => { j.accessors[0].count = 450003; },
+      (j: any) => { j.buffers[0].byteLength = 50; },
+    ]) {
+      edit(mutate);
+      expect(f.check().errors).toContain(
+        'approved model failed built GLB geometry, identity or credit verification: /models/anatomy/approved.glb',
+      );
+    }
+    writeFileSync(path, original);
+    expect(f.check().errors).toEqual([]);
   });
 
   it('rejects a GLB whose declared length mismatches the actual file', () => {
