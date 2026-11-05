@@ -1,1 +1,1 @@
-status: Lane 1 marketing accessibility audit: finish active study-mode preview animations when reduced motion is enabled mid-transition, and expose the selected footer theme with a non-color checkmark; add regression tests.
+status: Lane 1 marketing accessibility audit: resolve active reduced-motion transitions, mark the selected theme without color alone, and keep the focused skip link above both marketing header variants; regression tests added.
