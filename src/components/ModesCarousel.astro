@@ -454,11 +454,16 @@ const icons: Record<StudyFeatureIcon, string> = {
       showPaused();
     });
 
+    // A preference change can happen while the preview is using the Web Animations API. CSS reduced-motion
+    // rules do not stop those animations, so the preview installs a finish hook below.
+    let finishPreviewAnimations: () => void = () => {};
+
     const applyMotion = () => {
       state.reducedMotion = reducedMotion.matches;
       root.toggleAttribute('data-motion', !state.reducedMotion);
       // With reduced motion nothing moves by itself, so there is nothing to pause: the button keeps its space only.
       pauseButton?.classList.toggle('invisible', state.reducedMotion);
+      if (state.reducedMotion) finishPreviewAnimations();
       place();
     };
     reducedMotion.addEventListener('change', applyMotion);
@@ -539,6 +544,12 @@ const icons: Record<StudyFeatureIcon, string> = {
 
       const moving = () => [bottle, surface, scrim, panel, ...fades];
       const animations = () => moving().flatMap((element) => element.getAnimations());
+
+      // Finish the current visual state as soon as reduced motion is enabled, including an opening,
+      // closing or next/previous nudge already in flight.
+      finishPreviewAnimations = () => {
+        for (const animation of animations()) animation.finish();
+      };
 
       /**
        * Stops whatever the preview is doing (a grow, a shrink or a nudge) where it is now, so the next animation starts
