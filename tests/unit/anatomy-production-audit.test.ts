@@ -123,6 +123,16 @@ describe('anatomy production artifact audit', () => {
       0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00,
       0x00, 0x05, 0x00, 0x50, 0x4b, 0x03, 0x04,
     ])]));
+    // A normal WebAssembly custom-section string may contain the word "ustar";
+    // it is not a tar archive unless the complete header/checksum is present.
+    const wasmCustomData = Buffer.alloc(300, 0x61);
+    wasmCustomData.write('ustar', 257, 'ascii');
+    const wasmCustomPayload = Buffer.concat([Buffer.from([0x01, 0x78]), wasmCustomData]);
+    const wasmWithUstarWord = gzipSync(Buffer.concat([
+      prefix,
+      Buffer.from([0x00, 0xae, 0x02]),
+      wasmCustomPayload,
+    ]));
     f.file('pagefind/fragment/en_test.pf_fragment', fragment);
     f.file('pagefind/index/en_test.pf_index', gzipIndex);
     f.file('pagefind/filter/en_test.pf_filter', gzipFilter);
@@ -143,6 +153,7 @@ describe('anatomy production artifact audit', () => {
     expect(f.check().errors).toEqual([]);
 
     f.file('pagefind/wasm.en_hidden_archive.pagefind', wasmWithZip);
+    f.file('pagefind/wasm.en_ustar_word.pagefind', wasmWithUstarWord);
     f.file('pagefind/fragment/en_corrupt.pf_fragment', Buffer.from([0x1f, 0x8b, 0x08, 0x00]));
     // A raw compressed GLB is not a Pagefind data envelope.
     f.file('pagefind/fragment/en_hidden_model.pf_fragment', gzipSync(Buffer.from('glTF' + 'x'.repeat(32))));
