@@ -104,7 +104,8 @@ describe('anatomy production artifact audit', () => {
   it('validates Pagefind gzip envelopes and rejects compressed models or nested archives', () => {
     const f = setup();
     const prefix = Buffer.from('pagefind_dcd', 'ascii');
-    const gzip = gzipSync(Buffer.concat([prefix, Buffer.from('synthetic Pagefind index payload')]));
+    const cbor = Buffer.from([0xa0]); // Valid empty CBOR map, used as a bounded structural fixture.
+    const gzip = gzipSync(Buffer.concat([prefix, cbor]));
     const fragment = gzipSync(Buffer.concat([prefix, Buffer.from(JSON.stringify({ url: '/', content: 'safe search text' }))]));
     const wasm = gzipSync(Buffer.concat([prefix, Buffer.from([0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00])]));
     f.file('pagefind/fragment/en_test.pf_fragment', fragment);
@@ -114,8 +115,8 @@ describe('anatomy production artifact audit', () => {
     f.file('pagefind/wasm.en.pagefind', wasm);
     // Pagefind also accepts already-decompressed data with the same marker.
     f.file('pagefind/fragment/en_raw_test.pf_fragment', Buffer.concat([prefix, Buffer.from(JSON.stringify({ url: '/', content: 'safe raw search text' }))]));
-    f.file('pagefind/index/en_raw_test.pf_index', Buffer.concat([prefix, Buffer.from('raw index bytes')]));
-    f.file('pagefind/filter/en_raw_test.pf_filter', Buffer.concat([prefix, Buffer.from('raw filter bytes')]));
+    f.file('pagefind/index/en_raw_test.pf_index', Buffer.concat([prefix, cbor]));
+    f.file('pagefind/filter/en_raw_test.pf_filter', Buffer.concat([prefix, cbor]));
     f.file('pagefind/wasm.en_raw.pagefind', Buffer.concat([prefix, Buffer.from([0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00])]));
     expect(f.check().errors).toEqual([]);
 
