@@ -25,6 +25,7 @@ function setup() {
     const modelJson = {
       asset: { version: '2.0', copyright: 'BodyParts3D, © The Database Center for Life Science licensed under CC Attribution 4.0 International' },
       extensionsRequired: ['EXT_meshopt_compression', 'KHR_mesh_quantization'],
+      extensionsUsed: ['EXT_meshopt_compression', 'KHR_mesh_quantization'],
       scene: 0,
       scenes: [{ nodes: ids.map((_, i) => i) }],
       nodes: ids.map((id, mesh) => ({ name: id, mesh })),
