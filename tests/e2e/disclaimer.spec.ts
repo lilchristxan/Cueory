@@ -20,15 +20,16 @@ const viewports = [
 
 for (const viewport of viewports) {
   test.describe(`/disclaimer at ${viewport.name} size`, () => {
-    test(`shows its disclaimer heading, placeholder, and legal links`, async ({ page }) => {
+    test(`shows its disclaimer heading, real text, and legal links`, async ({ page }) => {
       await page.setViewportSize({ width: viewport.width, height: viewport.height });
 
       const response = await page.goto('/disclaimer');
       expect(response?.status()).toBe(200);
       await expect(page).toHaveTitle('disclaimer · cueory');
       await expect(page.getByRole('heading', { level: 1, name: 'disclaimer' })).toBeVisible();
-      await expect(page.getByText('Placeholder: Disclaimer text')).toBeVisible();
-      await expect(page.getByText('Christian: paste your disclaimer here.')).toBeVisible();
+      await expect(page.getByRole('heading', { level: 2, name: 'Study help, not medical advice' })).toBeVisible();
+      await expect(page.getByText(/^Last updated: \d{1,2} [A-Z][a-z]+ \d{4}$/)).toBeVisible();
+      await expect(page.locator('[data-placeholder="CHRISTIAN-TEXT"]')).toHaveCount(0);
 
       const footer = page.getByRole('contentinfo');
       // The site's footer links are intentionally closed until the visitor opens them.
