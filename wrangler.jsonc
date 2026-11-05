@@ -11,6 +11,12 @@
     // /privacy, not /privacy/ (matches trailingSlash: 'never' in astro.config.mjs).
     "html_handling": "drop-trailing-slash"
   },
+  // A direct local Wrangler deploy can upload previously built dist/ without npm postbuild.
+  // Recheck the exact files before upload. Normal local preview/dev is not a release.
+  // Cloudflare Workers Builds ignores this hook, so its separate npm postbuild gate stays required.
+  "build": {
+    "command": "node scripts/anatomy-wrangler-upload-gate.mjs"
+  },
   // Branch previews (every branch except main). Required by `wrangler preview`; it may stay empty.
   "previews": {}
 }
