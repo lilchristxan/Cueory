@@ -115,6 +115,24 @@ function hasArchiveMagicHeader(header, includeAsciiMarkers = true) {
   return hasTarHeaderAt(header, 0);
 }
 
+/** Detect a framed GLB embedded after byte zero in an ordinary output file. */
+function containsGlbHeaderAtOffset(bytes, baseOffset, fileSize) {
+  const magic = Buffer.from('glTF', 'ascii');
+  for (let offset = bytes.indexOf(magic); offset >= 0; offset = bytes.indexOf(magic, offset + 1)) {
+    const absoluteOffset = baseOffset + offset;
+    // A top-level GLB is handled by the approved-model parser and byte-parity
+    // checks. Only non-zero offsets indicate a nested/hidden model payload.
+    if (absoluteOffset === 0 || offset + 20 > bytes.length) continue;
+    const version = bytes.readUInt32LE(offset + 4);
+    const totalLength = bytes.readUInt32LE(offset + 8);
+    const jsonLength = bytes.readUInt32LE(offset + 12);
+    const jsonType = bytes.readUInt32LE(offset + 16);
+    if (version === 2 && totalLength >= 20 && absoluteOffset + totalLength <= fileSize &&
+        jsonLength >= 2 && jsonLength <= totalLength - 20 && jsonType === 0x4e4f534a) return true;
+  }
+  return false;
+}
+
 function hasArchiveMagic(path) {
   if (!Number.isInteger(fsConstants.O_NOFOLLOW)) throw new Error('this platform cannot safely audit symbolic links');
   const fd = openSync(path, fsConstants.O_RDONLY | fsConstants.O_NOFOLLOW);
