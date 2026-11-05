@@ -12,6 +12,7 @@ import { pathToFileURL } from 'node:url';
 import { resolve } from 'node:path';
 import { auditAnatomyProduction } from './anatomy-production-audit.mjs';
 
+/** @returns {{ status: number | null, error?: Error }} */
 function runWranglerDeploy() {
   return spawnSync(process.platform === 'win32' ? 'npx.cmd' : 'npx',
     ['--no-install', 'wrangler', 'deploy'], { stdio: 'inherit' });
