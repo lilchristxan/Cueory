@@ -91,12 +91,15 @@ function containsTarHeader(bytes) {
   return false;
 }
 
-function hasArchiveMagicBytes(bytes, includeAsciiMarkers = true) {
+function hasArchiveMagicBytes(bytes, includeAsciiMarkers = true, includeInteriorGzip = true) {
   const contains = (signature) => bytes.indexOf(Buffer.from(signature)) !== -1;
-  // Binary signatures are safe to search throughout both text and binary
-  // payloads. A tar marker is accepted only with a valid header checksum.
+  // Multi-byte archive signatures can be searched within opaque payloads.
+  // Gzip's two-byte magic is too short to be meaningful at arbitrary offsets:
+  // ordinary PNG/WOFF2/WebP compressed data naturally contains 1f 8b.
+  // Check gzip at offset zero in hasArchiveMagicHeader(), and validate the
+  // actual bounded gzip envelope for Pagefind artifacts before accepting them.
   if (contains([0x50, 0x4b, 0x03, 0x04]) || contains([0x50, 0x4b, 0x05, 0x06]) ||
-      contains([0x50, 0x4b, 0x07, 0x08]) || contains([0x1f, 0x8b]) ||
+      contains([0x50, 0x4b, 0x07, 0x08]) || (includeInteriorGzip && contains([0x1f, 0x8b])) ||
       contains([0x42, 0x5a, 0x68]) || contains([0xfd, 0x37, 0x7a, 0x58, 0x5a, 0x00]) ||
       contains([0x28, 0xb5, 0x2f, 0xfd]) || contains([0x37, 0x7a, 0xbc, 0xaf, 0x27, 0x1c]) ||
       contains([0x52, 0x61, 0x72, 0x21, 0x1a, 0x07]) || contains([0x4d, 0x53, 0x43, 0x46])) return true;
@@ -157,7 +160,7 @@ function hasArchiveMagic(path, includeEmbeddedGlb = true) {
         ? Buffer.concat([carry, chunk.subarray(0, bytesRead)])
         : chunk.subarray(0, bytesRead);
       const windowStart = position - carry.length;
-      if (hasArchiveMagicBytes(window, includeAsciiMarkers) ||
+      if (hasArchiveMagicBytes(window, includeAsciiMarkers, false) ||
           (includeEmbeddedGlb && containsGlbHeaderAtOffset(window, windowStart, size))) return true;
       carry = window.subarray(Math.max(0, window.length - overlapSize));
       position += bytesRead;
