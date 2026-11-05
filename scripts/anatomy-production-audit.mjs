@@ -241,16 +241,31 @@ function decodePagefindPayload(bytes) {
 
 /** Validate Pagefind's actual generated formats; a matching filename alone is never trusted. */
 function validPagefindArtifact(path, kind) {
-  const payload = decodePagefindPayload(readRegularBytesNoFollow(path));
-  if (!payload) return false;
-  if (kind === 'wasm') {
-    try {
-      return WebAssembly.validate(payload) && !containsGlbHeader(payload);
-    } catch {
-      return false;
-    }
+  const bytes = readRegularBytesNoFollow(path);
+  if (bytes.length > 64 * 1024 * 1024) return false;
+  const isGzip = bytes.length >= 2 && bytes[0] === 0x1f && bytes[1] === 0x8b;
+  let decoded;
+  try {
+    decoded = isGzip
+      ? gunzipSync(bytes, {
+          maxOutputLength: MAX_PAGEFIND_DECOMPRESSED_BYTES,
+          rejectGarbageAfterEnd: true,
+        })
+      : bytes;
+  } catch {
+    return false;
   }
-  if (kind === 'fragment') {
+  if (decoded.length <= PAGEFIND_SIGNATURE.length ||
+      !decoded.subarray(0, PAGEFIND_SIGNATURE.length).equals(PAGEFIND_SIGNATURE)) return false;
+  const payload = decoded.subarray(PAGEFIND_SIGNATURE.length);
+  if (containsGlbHeader(payload)) return false;
+  if (kind === 'wasm') {
+    return payload.length >= 8 &&
+      payload.subarray(0, 4).equals(Buffer.from([0x00, 0x61, 0x73, 0x6d])) &&
+      payload.readUInt32LE(4) === 1 &&
+      WebAssembly.validate(payload);
+  }
+  if (path.endsWith('.pf_fragment')) {
     try {
       const fragment = JSON.parse(payload.toString('utf8'));
       return fragment !== null && typeof fragment === 'object' && !Array.isArray(fragment);
