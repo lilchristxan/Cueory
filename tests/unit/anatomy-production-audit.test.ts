@@ -388,11 +388,25 @@ describe('anatomy production artifact audit', () => {
     f.file('downloads/source.gltf', '{"asset":{"version":"2.0"}}');
     f.file('backup/source.obj', 'v 0 0 0');
     f.file('backup/source.stl', 'solid sample');
+    f.file('assets/source.fbx', 'synthetic only');
+    f.file('assets/source.ply', 'synthetic only');
+    f.file('assets/source.dae', 'synthetic only');
+    f.file('assets/source.3mf', 'synthetic only');
+    f.file('assets/source.usdz', 'synthetic only');
+    f.file('assets/source.blend', 'synthetic only');
+    f.file('assets/source.USD', 'synthetic only');
     expect(f.check().errors).toEqual(expect.arrayContaining([
       'unapproved model exposed in production: /assets/copied-draft.glb',
       'unapproved model exposed in production: /downloads/source.gltf',
       'unapproved model exposed in production: /backup/source.obj',
       'unapproved model exposed in production: /backup/source.stl',
+      'unapproved model exposed in production: /assets/source.fbx',
+      'unapproved model exposed in production: /assets/source.ply',
+      'unapproved model exposed in production: /assets/source.dae',
+      'unapproved model exposed in production: /assets/source.3mf',
+      'unapproved model exposed in production: /assets/source.usdz',
+      'unapproved model exposed in production: /assets/source.blend',
+      'unapproved model exposed in production: /assets/source.USD',
     ]));
   });
 
