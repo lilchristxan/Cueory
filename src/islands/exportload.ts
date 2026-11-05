@@ -268,7 +268,7 @@ function anatomySystemKey(value: Record<string, unknown>): string {
 
 function anatomyStructureId(value: Record<string, unknown>, name: string): string {
   const id = text(value, name);
-  if (id.length > 60 || !/^(FMA\\d+|FIX\\d+|fixture-[a-z0-9-]+)$/.test(id)) throw new Error('invalid anatomy structure');
+  if (id.length > 60 || !/^(FMA\d+|FIX\d+|fixture-[a-z0-9-]+)$/.test(id)) throw new Error('invalid anatomy structure');
   return id;
 }
 
@@ -280,7 +280,7 @@ function anatomyStringIds(value: unknown): string[] {
   for (let index = 0; index < value.length; index++) {
     const descriptor = Object.getOwnPropertyDescriptor(value, String(index));
     if (!descriptor || !('value' in descriptor) || typeof descriptor.value !== 'string' ||
-        descriptor.value.length > 60 || !/^(FMA\\d+|FIX\\d+|fixture-[a-z0-9-]+)$/.test(descriptor.value) ||
+        descriptor.value.length > 60 || !/^(FMA\d+|FIX\d+|fixture-[a-z0-9-]+)$/.test(descriptor.value) ||
         ids.includes(descriptor.value)) throw new Error('invalid anatomy structure list');
     ids.push(descriptor.value);
   }
@@ -434,7 +434,7 @@ export async function loadExport(reader: ExportReader): Promise<ExportLoadResult
     const anatomyViews = entries(await fetchRows(reader, 'anatomy_saved_views'), (r) => {
       uuid(r, 'id');
       const name = text(r, 'name');
-      if (name.length < 1 || name.length > 60 || /[\\u0000-\\u001f\\u007f]/.test(name)) throw new Error('invalid anatomy view name');
+      if (name.length < 1 || name.length > 60 || /[\u0000-\u001f\u007f]/.test(name)) throw new Error('invalid anatomy view name');
       const selectedValue = field(r, 'selected');
       return {
         systemKey: anatomySystemKey(r),
