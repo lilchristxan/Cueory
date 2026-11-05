@@ -332,7 +332,7 @@ function hasRarAt(bytes, offset) {
       crc16Rar(bytes.subarray(header + 2, header + size)) === bytes.readUInt16LE(header);
   }
   const rar5 = Buffer.from([0x52, 0x61, 0x72, 0x21, 0x1a, 0x07, 0x01, 0x00]);
-  if (offset < 0 || offset + 16 > bytes.length || !bytes.subarray(offset, offset + 8).equals(rar5)) return false;
+  if (offset < 0 || offset + 15 > bytes.length || !bytes.subarray(offset, offset + 8).equals(rar5)) return false;
   const crc = bytes.readUInt32LE(offset + 8);
   const size = readVarint(bytes, offset + 12);
   if (!size || size.value < 2n || size.value > 1_000_000n) return false;
@@ -532,7 +532,7 @@ function validPagefindCbor(bytes, draftIds = new Set()) {
     if (major === 2 || major === 3) {
       if (!Number.isSafeInteger(argument) || argument < 0 || offset + argument > bytes.length) return false;
       const value = bytes.subarray(offset, offset + argument);
-      if (major === 2 && (containsGlbHeader(value) || hasArchiveMagicBytes(value) ||
+      if (major === 2 && (containsGlbHeader(value) ||
         containsReservedAnatomyId(value.toString('utf8'), draftIds))) return false;
       if (major === 3) {
         let decodedText;
@@ -544,8 +544,10 @@ function validPagefindCbor(bytes, draftIds = new Set()) {
         // Pagefind index/filter/meta text is publicly searchable data too.
         // Never allow a draft structure ID or synthetic fixture ID into it.
         if (containsReservedAnatomyId(decodedText, draftIds)) return false;
-        // UTF-8-valid control bytes can still carry ZIP/TAR or GLB signatures.
-        if (containsGlbHeader(value) || hasArchiveMagicBytes(value, false)) return false;
+        // The complete decompressed Pagefind payload was structurally checked
+        // before CBOR parsing; do not treat incidental short magic bytes in
+        // otherwise valid text strings as proof of an embedded archive.
+        if (containsGlbHeader(value)) return false;
       }
       offset += argument;
       return true;
@@ -604,14 +606,17 @@ function validPagefindArtifact(path, kind, draftIds = new Set()) {
       !decoded.subarray(0, PAGEFIND_SIGNATURE.length).equals(PAGEFIND_SIGNATURE)) return false;
   const payload = decoded.subarray(PAGEFIND_SIGNATURE.length);
   // CBOR byte strings and WebAssembly custom sections are public bytes too.
-  // Reject draft/fixture tokens before format-specific parsing, including raw shards.
-  if (containsGlbHeader(payload) || containsReservedAnatomyId(payload.toString('utf8'), draftIds)) return false;
+  // Validate the complete decompressed payload structurally before parsing it;
+  // this catches embedded containers without rejecting incidental short markers.
+  // Also reject draft/fixture tokens before format-specific parsing, including raw shards.
+  if (containsGlbHeader(payload) || containsValidatedArchive(payload) ||
+      containsReservedAnatomyId(payload.toString('utf8'), draftIds)) return false;
   if (kind === 'wasm') {
     return payload.length >= 8 &&
       payload.subarray(0, 4).equals(Buffer.from([0x00, 0x61, 0x73, 0x6d])) &&
       payload.readUInt32LE(4) === 1 &&
       WebAssembly.validate(payload) &&
-      !hasArchiveMagicBytes(payload, false);
+      !containsValidatedArchive(payload);
   }
   if (path.endsWith('.pf_fragment')) {
     try {
