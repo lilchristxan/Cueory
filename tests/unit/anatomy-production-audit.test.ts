@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { mkdirSync, mkdtempSync, readFileSync, readdirSync, renameSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { gzipSync } from 'node:zlib';
 import { auditAnatomyProduction, decodeAsciiEscapesForAudit, modelUrls, parseApprovedGlb, readRegularFileNoFollow } from '../../scripts/anatomy-production-audit.mjs';
 import { keepsDrafts } from '../../src/visuals/prunedrafts';
 
@@ -100,26 +101,24 @@ function setup() {
 }
 
 describe('anatomy production artifact audit', () => {
-  it('allows only Pagefind gzip index output while still rejecting disguised archives there', () => {
+  it('validates Pagefind gzip streams and rejects compressed models or nested archives', () => {
     const f = setup();
-    const gzip = Buffer.from([0x1f, 0x8b, 0x08, 0x00, 0x00]);
+    const gzip = gzipSync(Buffer.from('synthetic Pagefind index payload'));
     f.file('pagefind/fragment/en_test.pf_fragment', gzip);
     f.file('pagefind/index/en_test.pf_index', gzip);
-    f.file('pagefind/wasm.en.pagefind', gzip);
+    f.file('pagefind/pagefind.en_test.pf_meta', gzip);
+    // Pagefind's WASM runtime is raw WebAssembly, not a gzip-compressed index.
+    f.file('pagefind/wasm.en.pagefind', Buffer.from([0x00, 0x61, 0x73, 0x6d]));
     expect(f.check().errors).toEqual([]);
 
-    // The exception is only for Pagefind's gzip output signature.
-    f.file('pagefind/fragment/en_hidden.pf_fragment', Buffer.from([0x50, 0x4b, 0x03, 0x04, 0x00]));
-    expect(f.check().errors).toContain(
-      'archive/container in production output requires explicit review: /pagefind/fragment/en_hidden.pf_fragment',
-    );
-
-    // Pagefind's exact output path must not exempt Zstandard containers:
-    // a disguised GLB or another archive could otherwise hide behind .pf_fragment.
-    f.file('pagefind/fragment/en_zstd_hidden.pf_fragment', Buffer.from([0x28, 0xb5, 0x2f, 0xfd, 0x00]));
-    expect(f.check().errors).toContain(
-      'archive/container in production output requires explicit review: /pagefind/fragment/en_zstd_hidden.pf_fragment',
-    );
+    f.file('pagefind/fragment/en_corrupt.pf_fragment', Buffer.from([0x1f, 0x8b, 0x08, 0x00]));
+    f.file('pagefind/fragment/en_hidden_model.pf_fragment', gzipSync(Buffer.from('glTF' + 'x'.repeat(32))));
+    f.file('pagefind/index/en_hidden_archive.pf_index', gzipSync(Buffer.from([0x50, 0x4b, 0x03, 0x04, 0x00])));
+    expect(f.check().errors).toEqual(expect.arrayContaining([
+      'archive/container in production output requires explicit review: /pagefind/fragment/en_corrupt.pf_fragment',
+      'archive/container in production output requires explicit review: /pagefind/fragment/en_hidden_model.pf_fragment',
+      'archive/container in production output requires explicit review: /pagefind/index/en_hidden_archive.pf_index',
+    ]));
   });
 
   it('rejects archive containers that could conceal unapproved model assets', () => {
