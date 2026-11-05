@@ -75,7 +75,7 @@ function hasTarHeaderAt(bytes, offset) {
   if (offset < 0 || offset + 512 > bytes.length ||
       bytes.toString('ascii', offset + 257, offset + 262) !== 'ustar') return false;
   const checksumField = bytes.toString('ascii', offset + 148, offset + 156);
-  const checksumDigits = checksumField.replace(/[\\0 ]+$/u, '').trim();
+  const checksumDigits = checksumField.replace(/[\0 ]+$/u, '').trim();
   if (!/^[0-7]{1,7}$/u.test(checksumDigits)) return false;
   const expected = Number.parseInt(checksumDigits, 8);
   let actual = 0;
