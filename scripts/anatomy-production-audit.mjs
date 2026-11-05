@@ -86,7 +86,7 @@ function hasArchiveMagicBytes(bytes) {
   return bytes.indexOf(Buffer.from('ustar', 'ascii')) !== -1;
 }
 
-function hasArchiveMagicBytes(header) {
+function hasArchiveMagicHeader(header) {
   const starts = (bytes) => header.length >= bytes.length && header.subarray(0, bytes.length).equals(Buffer.from(bytes));
   if (starts([0x50, 0x4b, 0x03, 0x04]) || starts([0x50, 0x4b, 0x05, 0x06]) ||
       starts([0x50, 0x4b, 0x07, 0x08]) || starts([0x1f, 0x8b]) ||
@@ -105,7 +105,7 @@ function hasArchiveMagic(path) {
     const size = fstatSync(fd).size;
     const header = Buffer.alloc(Math.min(size, 512));
     if (header.length) readSync(fd, header, 0, header.length, 0);
-    return hasArchiveMagicBytes(header);
+    return hasArchiveMagicHeader(header);
   } finally {
     closeSync(fd);
   }
