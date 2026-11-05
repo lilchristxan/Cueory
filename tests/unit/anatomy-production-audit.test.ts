@@ -601,6 +601,10 @@ describe('anatomy production artifact audit', () => {
     // Test both content sniffing under misleading suffixes and archive suffixes.
     const hiddenZip = makeStoredZip();
     f.file('downloads/hidden-model.dat', hiddenZip);
+    // POSIX permits newlines in filenames; ZIP byte-string names remain valid.
+    f.file('downloads/control-name-hidden-model.dat', makeStoredZip(
+      'hidden\\nmodel.bin', Buffer.from('archive with control-character filename'),
+    ));
     // Every supported embedded archive format must be recognized after a
     // harmless prefix and under a non-archive suffix.
     for (const [format, archive] of embeddedArchiveFixtures()) {
@@ -655,6 +659,7 @@ describe('anatomy production artifact audit', () => {
     f.file('docs/ustar-at-header-offset.txt', textTarMarker);
     expect(f.check().errors).toEqual(expect.arrayContaining([
       'archive/container in production output requires explicit review: /downloads/hidden-model.dat',
+      'archive/container in production output requires explicit review: /downloads/control-name-hidden-model.dat',
       ...embeddedArchiveFixtures().map(([format]) =>
         `archive/container in production output requires explicit review: /downloads/embedded-${format}.dat`,
       ),
