@@ -76,7 +76,7 @@ export function duplicateDecisionNumbers(markdown: string): string[] {
   markdown.split(/\r?\n/).forEach((line, i) => {
     const match = /^- \*\*D-(\d+)\*\*/.exec(line);
     if (!match) return;
-    const id = `D-${match[1]}`;
+    const id = `D-${Number(match[1])}`; // D-01 and D-1 are the same decision number
     const firstLine = seen.get(id);
     if (firstLine !== undefined) {
       problems.push(`docs/DECISIONS.md:${i + 1}: ${id} is already defined on line ${firstLine}; use the next free number`);
@@ -125,6 +125,12 @@ describe('docs/DECISIONS.md', () => {
   it('names the duplicate and both lines', () => {
     expect(duplicateDecisionNumbers('- **D-1** a\n- **D-2** b\n- **D-1** c\n')).toEqual([
       'docs/DECISIONS.md:3: D-1 is already defined on line 1; use the next free number',
+    ]);
+  });
+
+  it('treats a zero-padded number as the same decision', () => {
+    expect(duplicateDecisionNumbers('- **D-01** a\n- **D-1** b\n')).toEqual([
+      'docs/DECISIONS.md:2: D-1 is already defined on line 1; use the next free number',
     ]);
   });
 });
