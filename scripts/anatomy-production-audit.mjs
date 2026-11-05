@@ -214,6 +214,7 @@ export function auditAnatomyProduction(distDir, contentDir) {
       // current manifest. A nonempty citation string is not proof of a source.
       const sourceIds = new Set();
       const sourceSections = new Map();
+      const sourceQuotes = new Map();
       if (!Array.isArray(data.sources) || data.sources.length === 0) {
         errors.push(`${name}: approved source records are missing`);
       } else {
@@ -232,6 +233,7 @@ export function auditAnatomyProduction(distDir, contentDir) {
           } else {
             sourceIds.add(source.id);
             sourceSections.set(source.id, source.section);
+            sourceQuotes.set(source.id, source.quote);
           }
           // Resolving the ID is insufficient when the cited record no longer
           // contains the open-source quote and rights evidence required by the
@@ -280,6 +282,16 @@ export function auditAnatomyProduction(distDir, contentDir) {
           } else if (!/^(?:partof|isa)_parts_list_e\.txt, Release 4\.0$/.test(sourceSections.get(label.source) ?? '')) {
             // The overview README cannot be used as evidence for an individual structure name.
             errors.push(`${name}: approved label ${label.id} must cite a Release 4.0 parts-list table`);
+          } else {
+            // Compare the actual recorded FMA/BP/name row to the public label.
+            // A valid URL with a name from another structure is not a safe citation.
+            const quote = sourceQuotes.get(label.source);
+            const original = typeof quote === 'string'
+              ? /^(FMA\d+[a-z]*)\s+(BP\d+[a-z]*)\s+(.+)$/.exec(quote)
+              : null;
+            if (!original || original[1] !== label.id || original[3] !== label.text) {
+              errors.push(`${name}: approved label ${label.id} does not match its cited source row`);
+            }
           }
         }
       }

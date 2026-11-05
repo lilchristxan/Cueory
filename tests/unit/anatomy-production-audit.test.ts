@@ -28,7 +28,7 @@ function setup() {
       // Fake, test-only evidence. Never used as an anatomy quotation.
       sources: ids.map((id) => ({
         id: `bp3d-${id}`,
-        quote: 'synthetic test words only',
+        quote: `${id} BP999999 fixture label`,
         book: 'BodyParts3D',
         section: 'partof_parts_list_e.txt, Release 4.0',
         url: 'https://dbarchive.biosciencedbc.jp/data/bodyparts3d/LATEST/partof_parts_list_e.txt',
@@ -80,6 +80,26 @@ describe('anatomy production artifact audit', () => {
     f.file('_astro/escaped-literals.css', String.raw`.literal::before { content: "\\46 MA999991"; } .invalid::after { content: "\00000046IX001"; }`);
     expect(f.check().errors).toEqual([]);
   });
+  it('refuses a displayed approved label with a mismatched FMA source name or identity', () => {
+    const f = setup();
+    const path = join(f.content, 'anatomy-approved.json');
+    const record = JSON.parse(readFileSync(path, 'utf8'));
+    const finding = 'anatomy-approved.json: approved label FMA999992 does not match its cited source row';
+
+    record.labels[0].text = 'incorrect synthetic name';
+    writeFileSync(path, JSON.stringify(record));
+    expect(f.check().errors).toContain(finding);
+
+    record.labels[0].text = 'fixture label';
+    record.sources[0].quote = 'FMA999990 BP999999 fixture label';
+    writeFileSync(path, JSON.stringify(record));
+    expect(f.check().errors).toContain(finding);
+
+    record.sources[0].quote = 'FMA999992 BP999999 fixture label';
+    writeFileSync(path, JSON.stringify(record));
+    expect(f.check().errors).toEqual([]);
+  });
+
   it('accepts a build with approved models and no exposed drafts', () => {
     expect(setup().check()).toEqual({ errors: [], approvedSystems: 1, draftSystems: 1, shippedModels: 1 });
   });
