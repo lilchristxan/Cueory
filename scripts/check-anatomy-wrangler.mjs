@@ -12,18 +12,21 @@ import { auditAnatomyProduction, builtSiteEntrypointErrors } from './anatomy-pro
 export function shouldAuditWranglerUpload(env) {
   const command = typeof env.WRANGLER_COMMAND === 'string'
     ? env.WRANGLER_COMMAND.trim() : '';
-  // Deploy and version upload must verify assets regardless of draft flags,
-  // GitHub refs, or the current Workers Builds branch.
-  if (env.CUEORY_WRANGLER_PREVIEW === '1' && command !== 'deploy' && command !== 'versions upload') return false;
-  if (command === 'deploy' || command === 'versions upload') return true;
-  if (command === 'dev' || command === 'types' || command === 'preview') return false;
-  // Cloudflare Workers Previews invoke Wrangler custom builds without a
-  // guaranteed WRANGLER_COMMAND value. A Workers Builds non-main branch
-  // is a preview, not a production upload. Never use CUEORY_ANATOMY_DRAFTS
-  // alone for this decision: it can be set on a stale local dist.
+  // Version uploads always require the production artifact audit.
+  if (command === 'versions upload') return true;
   const branch = typeof env.WORKERS_CI_BRANCH === 'string'
     ? env.WORKERS_CI_BRANCH.trim().replace(/^refs\/heads\//, '') : '';
-  if (env.WORKERS_CI === '1' && branch && branch !== 'main') return false;
+  const validBuildId = typeof env.WORKERS_CI_BUILD_UUID === 'string'
+    && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(env.WORKERS_CI_BUILD_UUID);
+  const workersCI = env.WORKERS_CI === '1' || env.WORKERS_CI === 'true';
+  // Wrangler 4.156 can report WRANGLER_COMMAND=deploy within a preview.
+  // Accept it as a preview only with the complete Workers Builds non-main
+  // context. Draft mode by itself never bypasses this audit.
+  if ((command === 'deploy' || command === '') && workersCI
+      && validBuildId && branch && branch !== 'main') return false;
+  if (command === 'deploy') return true;
+  if (env.CUEORY_WRANGLER_PREVIEW === '1' && command !== 'deploy') return false;
+  if (command === 'dev' || command === 'types' || command === 'preview') return false;
   // An unknown invocation without a verified preview context fails closed.
   return true;
 }

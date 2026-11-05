@@ -38,10 +38,33 @@ describe('Wrangler direct-upload anatomy safety gate', () => {
     for (const command of ['dev', 'types', 'preview']) {
       expect(shouldAuditWranglerUpload({ WRANGLER_COMMAND: command })).toBe(false);
     }
-    expect(shouldAuditWranglerUpload({ WORKERS_CI: '1', WORKERS_CI_BRANCH: 'task-178/preview' })).toBe(false);
+    expect(shouldAuditWranglerUpload({ WORKERS_CI: '1', WORKERS_CI_BRANCH: 'task-178/preview' })).toBe(true);
     // Real Cloudflare previews may not supply WRANGLER_COMMAND at all.
-    expect(shouldAuditWranglerUpload({ WORKERS_CI: '1', WORKERS_CI_BRANCH: 'task-178/preview', CUEORY_ANATOMY_DRAFTS: '1' })).toBe(false);
+    expect(shouldAuditWranglerUpload({ WORKERS_CI: '1', WORKERS_CI_BRANCH: 'task-178/preview', CUEORY_ANATOMY_DRAFTS: '1' })).toBe(true);
     expect(shouldAuditWranglerUpload({ WORKERS_CI: '1', WORKERS_CI_BRANCH: 'main' })).toBe(true);
+  });
+
+  it('recognizes managed Cloudflare preview even when Wrangler reports deploy', () => {
+    const preview = {
+      WRANGLER_COMMAND: 'deploy',
+      WORKERS_CI: '1',
+      WORKERS_CI_BUILD_UUID: '11111111-2222-4333-8444-555555555555',
+      WORKERS_CI_BRANCH: 'task-178/preview',
+      CUEORY_ANATOMY_DRAFTS: '1',
+    };
+    expect(shouldAuditWranglerUpload(preview)).toBe(false);
+    expect(shouldAuditWranglerUpload({ ...preview, WORKERS_CI: 'true' })).toBe(false);
+    expect(shouldAuditWranglerUpload({ ...preview, WORKERS_CI_BRANCH: 'main' })).toBe(true);
+    expect(shouldAuditWranglerUpload({ ...preview, WORKERS_CI_BUILD_UUID: '' })).toBe(true);
+    expect(shouldAuditWranglerUpload({ ...preview, WORKERS_CI: '0' })).toBe(true);
+    expect(shouldAuditWranglerUpload({ ...preview, WRANGLER_COMMAND: 'versions upload' })).toBe(true);
+
+    const f = fixture();
+    writeFileSync(join(f.dist, 'models', 'anatomy', 'draft.glb'), 'synthetic preview bytes');
+    expect(checkAnatomyWranglerUpload(preview, f.dist, f.content))
+      .toEqual({ skipped: true, errors: [] });
+    expect(checkAnatomyWranglerUpload({ ...preview, WORKERS_CI_BRANCH: 'main' }, f.dist, f.content).errors)
+      .toContain('unapproved model exposed in production: /models/anatomy/draft.glb');
   });
 
   it('rejects a stale draft GLB in dist before Wrangler uploads it', () => {
