@@ -254,8 +254,16 @@ function validPagefindArtifact(path, kind) {
   }
   if (path.endsWith('.pf_fragment')) {
     try {
-      const fragment = JSON.parse(payload.toString('utf8'));
-      return fragment !== null && typeof fragment === 'object' && !Array.isArray(fragment);
+      const fragment = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(payload));
+      // These are the serialized fields Pagefind 1.5.2 consumes from a
+      // fragment. Requiring the shape prevents a valid glTF JSON document
+      // from being accepted merely because it is wrapped in Pagefind's header.
+      return fragment !== null && typeof fragment === 'object' && !Array.isArray(fragment) &&
+        typeof fragment.url === 'string' && typeof fragment.content === 'string' &&
+        Number.isFinite(fragment.word_count) && fragment.word_count >= 0 &&
+        fragment.filters !== null && typeof fragment.filters === 'object' && !Array.isArray(fragment.filters) &&
+        fragment.meta !== null && typeof fragment.meta === 'object' && !Array.isArray(fragment.meta) &&
+        Array.isArray(fragment.anchors);
     } catch {
       return false;
     }
