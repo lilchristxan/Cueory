@@ -1,1 +1,1 @@
-status: Task 13–14 island logic tests: cover flag-item validation, snapshots and subscriptions, plus anatomy scene palette and export token readers. No runtime behavior changed.
+status: Add unit regression coverage for flag-item state and anatomy scene palette/export-token readers. Tests only; no runtime behavior changed.
