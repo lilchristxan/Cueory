@@ -12,9 +12,10 @@ import { resolve } from 'node:path';
 import { auditAnatomyProduction } from './anatomy-production-audit.mjs';
 
 export function shouldAuditAnatomyBuild(env) {
-  // A release PR or main push must never bypass the audit.
-  if ((env.GITHUB_EVENT_NAME === 'pull_request' && env.GITHUB_BASE_REF === 'main') ||
-      (env.GITHUB_EVENT_NAME === 'push' && env.GITHUB_REF === 'refs/heads/main')) return true;
+  // Any build on main must be audited, including manual and scheduled
+  // GitHub workflows, not only push events. Release PR builds also audit.
+  if (env.GITHUB_REF === 'refs/heads/main' ||
+      (env.GITHUB_EVENT_NAME === 'pull_request' && env.GITHUB_BASE_REF === 'main')) return true;
   if (env.WORKERS_CI === '1') {
     const raw = env.WORKERS_CI_BRANCH?.trim();
     const branch = raw?.startsWith('refs/heads/') ? raw.slice('refs/heads/'.length) : raw;
