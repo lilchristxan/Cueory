@@ -195,8 +195,8 @@ describe('createAnatomyStudy', () => {
     expect(await study.recordMisses('heart', [...ids, 'FMA0', 'BAD001'], 'student-1')).toEqual({ ok: true, value: 14 });
     expect(rpc).toHaveBeenCalledTimes(2);
     expect(rpc.mock.calls[0]![0]).toBe('record_anatomy_misses');
-    expect(rpc.mock.calls[0]![1]).toEqual({ system_key: 'heart', structure_ids: ids.slice(0, 50) });
-    expect(rpc.mock.calls[1]![1]).toEqual({ system_key: 'heart', structure_ids: ids.slice(50) });
+    expect(rpc.mock.calls[0]![1]).toEqual({ system_key: 'heart', structure_ids: ids.slice(0, 50), expected_user_id: 'student-1' });
+    expect(rpc.mock.calls[1]![1]).toEqual({ system_key: 'heart', structure_ids: ids.slice(50), expected_user_id: 'student-1' });
   });
 
   it('sends nothing when accounts are off, nobody is signed in, or there is nothing valid to send', async () => {
@@ -241,15 +241,15 @@ describe('createAnatomyStudy', () => {
       delete_anatomy_view: { data: false, error: null },
     } });
     expect(await study.clearMiss('heart', 'FMA1', 'student-1')).toEqual({ ok: true, value: true });
-    expect(rpc).toHaveBeenLastCalledWith('clear_anatomy_miss', { system_key: 'heart', structure_id: 'FMA1' });
+    expect(rpc).toHaveBeenLastCalledWith('clear_anatomy_miss', { system_key: 'heart', structure_id: 'FMA1', expected_user_id: 'student-1' });
     expect(await study.reviewQueue('student-1')).toEqual({ ok: true, value: queue });
     expect(rpc).toHaveBeenLastCalledWith('my_anatomy_review_queue');
     expect(await study.saveView({ systemKey: 'heart', name: ' front view ', camera, hidden: ['FMA1'] }, 'student-1')).toEqual({ ok: true, value: views[0]!.id });
-    expect(rpc).toHaveBeenLastCalledWith('save_anatomy_view', { system_key: 'heart', name: 'front view', camera, hidden: ['FMA1'], faded: [], selected: null });
+    expect(rpc).toHaveBeenLastCalledWith('save_anatomy_view', { system_key: 'heart', name: 'front view', camera, hidden: ['FMA1'], faded: [], selected: null, expected_user_id: 'student-1' });
     expect(await study.views('heart', 'student-1')).toEqual({ ok: true, value: views });
     expect(rpc).toHaveBeenLastCalledWith('my_anatomy_views', { system_key: 'heart' });
     expect(await study.deleteView(views[0]!.id, 'student-1')).toEqual({ ok: true, value: false });
-    expect(rpc).toHaveBeenLastCalledWith('delete_anatomy_view', { id: views[0]!.id });
+    expect(rpc).toHaveBeenLastCalledWith('delete_anatomy_view', { id: views[0]!.id, expected_user_id: 'student-1' });
   });
 
   it('refuses a view the database would refuse before calling it', async () => {
