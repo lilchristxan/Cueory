@@ -10,6 +10,7 @@
  */
 
 import { LAYERS, isLayer, type LayerId } from './anatomylayers';
+import { ALL_WORDS, scoreLabel, searchStructures } from './anatomysearch';
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Systems
@@ -319,14 +320,30 @@ export interface StructureGroup {
   items: AnatomyStructure[];
 }
 
-/** The list as shown: groups in the order they first appear, items in file order, filtered by the search. */
+/**
+ * The list as shown. With no search: groups in the order they first appear, items in file order. With a search: the
+ * names ranked by `searchStructures` (an exact name first, then names holding every word of the query; ties in file
+ * order; alternative names in `also` searched too, plurals forgiven), plus any structure whose source id starts with
+ * the typed id ("FMA-7204", "fma 720"), after the ranked names in file order. Names holding only some of the query's
+ * words are not listed (D-pending, Task 178): on a thousand-structure list, "of" or "left" alone would list hundreds.
+ * Groups then follow the order their first item earns.
+ */
 export function groupStructures(structures: readonly AnatomyStructure[], query = ''): StructureGroup[] {
   const groups = new Map<string | null, AnatomyStructure[]>();
+  const byId = new Map(structures.map((structure) => [structure.id, structure]));
+  const ranked = searchStructures(structures, query).filter((id) => scoreLabel(byId.get(id)!, query).tier >= ALL_WORDS);
+  const listed = new Set(ranked);
   // Source IDs may be typed or pasted with separators, such as "FMA-7204".
-  // Match their alphanumeric prefix without changing the existing name-word search.
+  // Match their alphanumeric prefix as well, without changing the ranked name search.
   const sourceIdQuery = normalizeSearch(query).replaceAll(' ', '');
-  for (const structure of structures) {
-    if (!matchesSearch(structure.text, query) && !normalizeSearch(structure.id).replaceAll(' ', '').startsWith(sourceIdQuery)) continue;
+  const order: AnatomyStructure[] = ranked.map((id) => byId.get(id)!);
+  if (sourceIdQuery) {
+    for (const structure of structures) {
+      if (listed.has(structure.id)) continue;
+      if (normalizeSearch(structure.id).replaceAll(' ', '').startsWith(sourceIdQuery)) order.push(structure);
+    }
+  }
+  for (const structure of order) {
     const key = structure.group ?? null;
     const list = groups.get(key);
     if (list) list.push(structure);

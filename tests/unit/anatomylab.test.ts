@@ -356,6 +356,24 @@ describe('the structure list', () => {
     expect(groupStructures(source, '').flatMap((g) => g.items)).toHaveLength(3);
   });
 
+  it('ranks an exact name first, lists only names holding every word, and searches alternative names (Task 178)', () => {
+    const source = [
+      { id: 'FMA1', text: 'left ventricle of heart', group: 'heart' },
+      { id: 'FMA2', text: 'ventricle, left', group: 'heart', also: ['sinister chamber'] },
+      { id: 'FMA3', text: 'right ventricle', group: 'heart' },
+      { id: 'FMA4', text: 'left atrium', group: 'heart' },
+    ];
+    const ids = (query: string) => groupStructures(source, query).flatMap((g) => g.items.map((s) => s.id));
+    // The exact name (same words, any order) comes before the name that merely contains both words.
+    expect(ids('left ventricle')).toEqual(['FMA2', 'FMA1']);
+    expect(ids('ventricles left')).toEqual(['FMA2', 'FMA1']);
+    // "right ventricle" and "left atrium" hold only one of the two words: not listed.
+    expect(ids('left ventricle')).not.toContain('FMA3');
+    expect(ids('sinister')).toEqual(['FMA2']);
+    // The ranked order decides the group order too, and the id prefix match still comes after the names.
+    expect(groupStructures([...source, { id: 'FMA50', text: 'aorta', group: 'vessels' }], 'fma').map((g) => g.group)).toEqual(['heart', 'vessels']);
+  });
+
   it('keeps the full text-only catalog searchable while showing a bounded first page', () => {
     const structures = Array.from({ length: TEXT_FALLBACK_BATCH + 3 }, (_, i) => ({
       id: `TEST${i}`,
