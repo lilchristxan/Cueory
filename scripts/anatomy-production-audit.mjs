@@ -238,7 +238,12 @@ export function auditAnatomyProduction(distDir, contentDir) {
           const hasQuote = typeof source.quote === 'string' && source.quote.trim().length > 0;
           const hasSection = typeof source.section === 'string' && source.section.trim().length > 0;
           const sourceFile = BODYPARTS3D_SECTION_FILES.get(source.section);
+          const sourceTypeMatches = source.id === 'bp3d-readme'
+            ? sourceFile === 'README_e.html'
+            : /^bp3d-(?:FMA|BP)\d+[a-z]*$/.test(source.id) &&
+              (sourceFile === 'partof_parts_list_e.txt' || sourceFile === 'isa_parts_list_e.txt');
           const hasPage = typeof sourceFile === 'string' &&
+            sourceTypeMatches &&
             source.url === BODYPARTS3D_URL_PREFIX + sourceFile &&
             validBodyParts3dSourceUrl(source.url);
           const hasDate = validRetrievedDay(source.retrieved);
