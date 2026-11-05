@@ -29,8 +29,9 @@ describe('Wrangler direct-upload anatomy safety gate', () => {
     expect(shouldAuditWranglerUpload({ ...previewEnv, WRANGLER_COMMAND: 'deploy' })).toBe(true);
     expect(shouldAuditWranglerUpload({ ...previewEnv, WRANGLER_COMMAND: 'versions upload' })).toBe(true);
     expect(shouldAuditWranglerUpload({ WRANGLER_COMMAND: 'deploy', CUEORY_ANATOMY_DRAFTS: '1' })).toBe(true);
-    expect(shouldAuditWranglerUpload({ CUEORY_WRANGLER_PREVIEW: '1' })).toBe(false);
+    expect(shouldAuditWranglerUpload({ CUEORY_WRANGLER_PREVIEW: '1' })).toBe(true);
     expect(shouldAuditWranglerUpload({ CUEORY_WRANGLER_PREVIEW: '1', WRANGLER_COMMAND: 'deploy' })).toBe(true);
+    expect(shouldAuditWranglerUpload({ CUEORY_WRANGLER_PREVIEW: '1', WRANGLER_COMMAND: 'versions upload' })).toBe(true);
     expect(shouldAuditWranglerUpload({})).toBe(true);
   });
 
