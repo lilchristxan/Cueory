@@ -1,0 +1,270 @@
+/**
+ * The anatomy lab's study tools, browser side (Task 178, part C): the review queue of structures a student missed in
+ * the "Find it" quiz, and the views a student chooses to save. Everything is stored by the six functions in
+ * `supabase/migrations/20261105120000_anatomy_study.sql`, which check every input, limit how much one person can
+ * write, and refuse signed-out, unconfirmed and anonymous callers. Nothing is sent when accounts are off (the shared
+ * client is `null`) or nobody is signed in: anonymous play records nothing.
+ *
+ * No DOM and no client of its own: the island passes in the shared client (`getSupabase`) or a fake in tests. Two
+ * pure helpers prepare what the lab already has: `queueFromQuizMisses` turns finished quiz questions into the ids to
+ * record, and `viewSnapshot` turns the lab's state into the arguments `save_anatomy_view` takes.
+ *
+ * RPC call: https://supabase.com/docs/reference/javascript/rpc
+ */
+import type { QuizState } from './anatomylab';
+import { sessionStateFrom, type SessionReader } from './supabaseclient';
+
+// ── Shapes shared with the migration ──────────────────────────────────────────
+
+/** A lab system key (content/visuals/anatomy-<key>.json), as the migration checks it. */
+export const SYSTEM_KEY = /^[a-z0-9-]{1,40}$/;
+/** A structure id the database accepts: a BodyParts3D FMA id or a labeled test fixture. */
+export const STRUCTURE_ID = /^(FMA\d+|fixture-[a-z0-9-]+)$/;
+/** The most structures one record_anatomy_misses call takes. */
+export const MISS_BATCH_LIMIT = 50;
+/** How many views a student can keep (save_anatomy_view refuses the 51st with SQLSTATE 54000). */
+export const SAVED_VIEW_LIMIT = 50;
+/** The longest view name, after trimming. */
+export const VIEW_NAME_LIMIT = 60;
+
+export type Vector3 = readonly [number, number, number];
+
+/** The camera exactly as save_anatomy_view accepts it: no other keys. */
+export interface ViewCamera {
+  position: Vector3;
+  target: Vector3;
+  up?: Vector3;
+}
+
+/** One row of public.anatomy_review_queue, as my_anatomy_review_queue returns it. */
+export interface ReviewQueueRow {
+  id: string;
+  system_key: string;
+  structure_id: string;
+  missed_count: number;
+  first_missed_at: string;
+  last_missed_at: string;
+  cleared_at: string | null;
+}
+
+/** One row of public.anatomy_saved_views, as my_anatomy_views returns it. */
+export interface SavedViewRow {
+  id: string;
+  system_key: string;
+  name: string;
+  camera: ViewCamera;
+  hidden: string[];
+  faded: string[];
+  selected: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+/** The arguments of save_anatomy_view, in the migration's order. */
+export interface SaveViewArgs {
+  system_key: string;
+  name: string;
+  camera: ViewCamera;
+  hidden: string[];
+  faded: string[];
+  selected: string | null;
+}
+
+interface Reply<T = unknown> { data: T | null; error: unknown }
+
+/** The parts of the shared Supabase client this module uses, so tests can pass a fake. */
+export interface AnatomyStudyClient extends SessionReader {
+  rpc(fn: 'record_anatomy_misses', args: { system_key: string; structure_ids: string[] }): PromiseLike<Reply<number>>;
+  rpc(fn: 'clear_anatomy_miss', args: { system_key: string; structure_id: string }): PromiseLike<Reply<boolean>>;
+  rpc(fn: 'my_anatomy_review_queue'): PromiseLike<Reply<ReviewQueueRow[]>>;
+  rpc(fn: 'save_anatomy_view', args: SaveViewArgs): PromiseLike<Reply<string>>;
+  rpc(fn: 'delete_anatomy_view', args: { id: string }): PromiseLike<Reply<boolean>>;
+  rpc(fn: 'my_anatomy_views', args: { system_key: string }): PromiseLike<Reply<SavedViewRow[]>>;
+}
+
+// ── Pure helpers ──────────────────────────────────────────────────────────────
+
+/** True for a camera the database would accept: position and target (and up, if given) are three finite numbers. */
+export function isViewCamera(value: unknown): value is ViewCamera {
+  if (typeof value !== 'object' || value === null) return false;
+  const keys = Object.keys(value);
+  if (keys.some((key) => key !== 'position' && key !== 'target' && key !== 'up')) return false;
+  const record = value as Record<string, unknown>;
+  const vector = (v: unknown) => Array.isArray(v) && v.length === 3 && v.every((n) => typeof n === 'number' && Number.isFinite(n));
+  return vector(record.position) && vector(record.target) && (record.up === undefined || vector(record.up));
+}
+
+/** The structure ids a student missed in finished quiz questions: a wrong first pick or "show me". Each id once, in order. */
+export function queueFromQuizMisses(quizHistory: readonly Pick<QuizState, 'target' | 'feedback'>[]): string[] {
+  const ids: string[] = [];
+  for (const question of quizHistory) {
+    if (!question.target || !question.feedback) continue;
+    if (question.feedback.kind !== 'wrong' && question.feedback.kind !== 'shown') continue;
+    if (!STRUCTURE_ID.test(question.target) || ids.includes(question.target)) continue;
+    ids.push(question.target);
+  }
+  return ids;
+}
+
+/** Splits ids into the batches record_anatomy_misses takes (at most 50 each). */
+export function missBatches(ids: readonly string[]): string[][] {
+  const batches: string[][] = [];
+  for (let i = 0; i < ids.length; i += MISS_BATCH_LIMIT) batches.push(ids.slice(i, i + MISS_BATCH_LIMIT));
+  return batches;
+}
+
+export interface ViewState {
+  systemKey: string;
+  name: string;
+  camera: ViewCamera;
+  hidden: Iterable<string>;
+  faded?: Iterable<string>;
+  selected?: string | null;
+}
+
+/**
+ * The lab's state as save_anatomy_view takes it, or a plain message when it would be refused. Trims the name, keeps each
+ * id once, and drops ids the database would not accept rather than failing the whole save on one odd id. A selected id
+ * with the wrong shape is saved as no selection.
+ */
+export function viewSnapshot(state: ViewState): { ok: true; args: SaveViewArgs } | { ok: false; message: string } {
+  if (!SYSTEM_KEY.test(state.systemKey)) return { ok: false, message: 'that anatomy system could not be found.' };
+  const name = state.name.trim();
+  if (name.length < 1 || name.length > VIEW_NAME_LIMIT || /[\u0000-\u001f\u007f]/.test(name)) {
+    return { ok: false, message: `a view name is 1 to ${VIEW_NAME_LIMIT} characters of plain text.` };
+  }
+  if (!isViewCamera(state.camera)) return { ok: false, message: 'the camera could not be read. move the view and try again.' };
+  const ids = (list: Iterable<string> | undefined) => [...new Set(list ?? [])].filter((id) => STRUCTURE_ID.test(id));
+  const camera: ViewCamera = state.camera.up
+    ? { position: [...state.camera.position], target: [...state.camera.target], up: [...state.camera.up] }
+    : { position: [...state.camera.position], target: [...state.camera.target] };
+  return {
+    ok: true,
+    args: {
+      system_key: state.systemKey,
+      name,
+      camera,
+      hidden: ids(state.hidden),
+      faded: ids(state.faded),
+      selected: state.selected && STRUCTURE_ID.test(state.selected) ? state.selected : null,
+    },
+  };
+}
+
+// ── Messages ──────────────────────────────────────────────────────────────────
+
+/** What the migration raises, verbatim (20261105120000_anatomy_study.sql). */
+export const SIGNED_OUT_MESSAGES = [
+  'sign in to record what you missed', 'sign in to change your review list', 'sign in to see your review list',
+  'sign in to save a view', 'sign in to delete a view', 'sign in to see your saved views',
+] as const;
+export const CONFIRM_EMAIL_MESSAGE = 'confirm your email to use this';
+export const TWO_FACTOR_MESSAGE = 'complete two-factor sign-in to continue';
+export const VIEW_LIMIT_MESSAGE = 'you can keep up to 50 saved views; delete one first';
+export const MISS_LIMIT_MESSAGE = 'too many misses recorded recently; try again later';
+
+/** One calm sentence for a database refusal, in the lowercase voice (D-47). Never echoes raw database text. */
+export function anatomyStudyMessage(error: unknown): string {
+  const message = typeof error === 'object' && error !== null && typeof (error as { message?: unknown }).message === 'string'
+    ? (error as { message: string }).message
+    : '';
+  if ((SIGNED_OUT_MESSAGES as readonly string[]).includes(message)) return 'please sign in to use this.';
+  if (message === CONFIRM_EMAIL_MESSAGE) return 'please confirm your email first. the link is in the email we sent you.';
+  if (message === TWO_FACTOR_MESSAGE) return 'please finish two-factor sign-in to use this.';
+  if (message === VIEW_LIMIT_MESSAGE) return `you can keep up to ${SAVED_VIEW_LIMIT} saved views. delete one to save another.`;
+  if (message === MISS_LIMIT_MESSAGE) return "you've recorded a lot of misses recently. they'll be kept again in a little while.";
+  if (message === 'a view name is 1 to 60 characters of plain text') return `a view name is 1 to ${VIEW_NAME_LIMIT} characters of plain text.`;
+  if (message === 'that anatomy system was not found') return 'that anatomy system could not be found.';
+  if (message === 'the camera has the wrong shape' || message === 'a structure id has the wrong shape'
+      || message === 'send between 1 and 50 structures' || message === 'that view was not found') {
+    return 'something went wrong — please reload the page and try again.';
+  }
+  return 'something went wrong — please try again.';
+}
+
+// ── The client ────────────────────────────────────────────────────────────────
+
+export type Outcome<T> = { ok: true; value: T } | { ok: false; message: string; cause?: unknown };
+
+export interface AnatomyStudy {
+  /** Records misses for the signed-in student, in batches of 50. Resolves with how many were recorded; `0` when signed out or accounts are off. */
+  recordMisses(systemKey: string, structureIds: readonly string[]): Promise<Outcome<number>>;
+  /** Takes one structure off the review list. */
+  clearMiss(systemKey: string, structureId: string): Promise<Outcome<boolean>>;
+  /** The student's uncleared misses, most recent first; `[]` when signed out or accounts are off. */
+  reviewQueue(): Promise<Outcome<ReviewQueueRow[]>>;
+  /** Saves or replaces a view and resolves with its id. */
+  saveView(state: ViewState): Promise<Outcome<string>>;
+  deleteView(id: string): Promise<Outcome<boolean>>;
+  /** The student's saved views for one system, by name; `[]` when signed out or accounts are off. */
+  views(systemKey: string): Promise<Outcome<SavedViewRow[]>>;
+}
+
+const NOT_SIGNED_IN = 'please sign in to use this.';
+
+/**
+ * Builds the client over the shared lazy Supabase client (`getSupabase`), or a fake in tests. Every call checks the
+ * local session first so a signed-out student never sends a request; the database checks the token itself. Methods are
+ * always called on the client object, because supabase-js relies on the receiver.
+ */
+export function createAnatomyStudy(getClient: () => Promise<AnatomyStudyClient | null>): AnatomyStudy {
+  async function signedIn(): Promise<AnatomyStudyClient | null> {
+    const client = await getClient();
+    if (!client) return null;
+    const session = await sessionStateFrom(client);
+    return session.signedIn ? client : null;
+  }
+  function settle<T>(reply: Reply<T>, check: (data: unknown) => data is T): Outcome<T> {
+    if (reply.error != null) return { ok: false, message: anatomyStudyMessage(reply.error), cause: reply.error };
+    if (!check(reply.data)) return { ok: false, message: 'something went wrong — please try again.' };
+    return { ok: true, value: reply.data };
+  }
+  const isNumber = (d: unknown): d is number => typeof d === 'number';
+  const isBoolean = (d: unknown): d is boolean => typeof d === 'boolean';
+  const isString = (d: unknown): d is string => typeof d === 'string';
+  const isRows = <T>(d: unknown): d is T[] => Array.isArray(d);
+
+  return {
+    async recordMisses(systemKey, structureIds) {
+      const ids = [...new Set(structureIds)].filter((id) => STRUCTURE_ID.test(id));
+      if (!SYSTEM_KEY.test(systemKey) || ids.length === 0) return { ok: true, value: 0 };
+      const client = await signedIn();
+      if (!client) return { ok: true, value: 0 };
+      let recorded = 0;
+      for (const batch of missBatches(ids)) {
+        const outcome = settle(await client.rpc('record_anatomy_misses', { system_key: systemKey, structure_ids: batch }), isNumber);
+        if (!outcome.ok) return outcome;
+        recorded += outcome.value;
+      }
+      return { ok: true, value: recorded };
+    },
+    async clearMiss(systemKey, structureId) {
+      const client = await signedIn();
+      if (!client) return { ok: false, message: NOT_SIGNED_IN };
+      return settle(await client.rpc('clear_anatomy_miss', { system_key: systemKey, structure_id: structureId }), isBoolean);
+    },
+    async reviewQueue() {
+      const client = await signedIn();
+      if (!client) return { ok: true, value: [] };
+      return settle(await client.rpc('my_anatomy_review_queue'), isRows<ReviewQueueRow>);
+    },
+    async saveView(state) {
+      const snapshot = viewSnapshot(state);
+      if (!snapshot.ok) return snapshot;
+      const client = await signedIn();
+      if (!client) return { ok: false, message: NOT_SIGNED_IN };
+      return settle(await client.rpc('save_anatomy_view', snapshot.args), isString);
+    },
+    async deleteView(id) {
+      const client = await signedIn();
+      if (!client) return { ok: false, message: NOT_SIGNED_IN };
+      return settle(await client.rpc('delete_anatomy_view', { id }), isBoolean);
+    },
+    async views(systemKey) {
+      if (!SYSTEM_KEY.test(systemKey)) return { ok: true, value: [] };
+      const client = await signedIn();
+      if (!client) return { ok: true, value: [] };
+      return settle(await client.rpc('my_anatomy_views', { system_key: systemKey }), isRows<SavedViewRow>);
+    },
+  };
+}

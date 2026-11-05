@@ -106,6 +106,7 @@ Use exactly the steps of SETUP Part L, with three changes:
 | 15 | `20261102160000_fresh_sign_in_and_name_rules` | only after staging tests and specific founder auth/database approval |
 | 16 | `20261102170000_my_sessions` | only after staging session-isolation tests and specific founder privacy approval |
 | 17 | `20261104170500_enforce_opt_in_mfa` | only after staging MFA/policy tests and specific founder auth/database approval |
+| 18 | `20261105120000_anatomy_study` | only after staging tests and specific founder database approval |
 
 1. Open https://github.com/lilchristxan/Cueory/tree/staging/supabase/migrations.
    You should see exactly the seventeen files above, including `20261102153000_admin_flag_rpcs.sql` from merged PR #338. Its position is determined by its timestamp, not by merge order. If the list differs, or an earlier-versioned file has not yet been applied on staging, stop for a reviewed database migration plan before any production SQL.

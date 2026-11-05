@@ -5,6 +5,9 @@ import { exportCsv, exportJson, type ExportData } from '../../src/islands/export
 import { checkReport } from '../../src/islands/flag';
 import { flagArguments } from '../../src/islands/flagsubmit';
 import { adaptersFor, type AccountClient } from '../../src/islands/accountsettings';
+import {
+  anatomyStudyMessage, createAnatomyStudy, viewSnapshot, type AnatomyStudyClient, type ReviewQueueRow, type SavedViewRow,
+} from '../../src/islands/anatomystudy';
 import { studentMessage } from '../../src/islands/rpcerrors';
 
 const sql = [
@@ -16,10 +19,13 @@ const sql = [
   '20261102135000_confirmed_accounts_only.sql',
   '20261102140000_update_display_name.sql',
   '20261102170000_my_sessions.sql',
+  '20261105120000_anatomy_study.sql',
 ].map(name => readFileSync(new URL(`../../supabase/migrations/${name}`, import.meta.url), 'utf8')).join('\n');
 
 type FunctionName =
-  | 'submit_flag' | 'check_answer' | 'my_flags' | 'record_study_events' | 'delete_my_account' | 'update_display_name' | 'my_sessions';
+  | 'submit_flag' | 'check_answer' | 'my_flags' | 'record_study_events' | 'delete_my_account' | 'update_display_name' | 'my_sessions'
+  | 'record_anatomy_misses' | 'clear_anatomy_miss' | 'my_anatomy_review_queue' | 'save_anatomy_view' | 'delete_anatomy_view'
+  | 'my_anatomy_views';
 
 /** Read the actual declarations and dollar-quoted bodies, rather than copying their contracts into a fixture. */
 function declaration(name: FunctionName) {
@@ -246,5 +252,114 @@ describe('my_sessions contract (Task 309)', () => {
     expect(sessionsSql).toContain('grant execute on function public.my_sessions() to authenticated;');
     expect(sessionsSql).not.toMatch(/grant\s+execute[^;]*to\s+(anon|public)\b/i);
     expect(sessionsSql).toMatch(/where s\.user_id = \(select auth\.uid\(\)\)/);
+  });
+});
+
+describe('anatomy study contract (Task 178)', () => {
+  const anatomySql = readFileSync(new URL('../../supabase/migrations/20261105120000_anatomy_study.sql', import.meta.url), 'utf8');
+  const camera = { position: [0, 0, 3] as [number, number, number], target: [0, 0, 0] as [number, number, number] };
+  const signatures = {
+    record_anatomy_misses: 'text, text[]', clear_anatomy_miss: 'text, text', my_anatomy_review_queue: '',
+    save_anatomy_view: 'text, text, jsonb, text[], text[], text', delete_anatomy_view: 'uuid', my_anatomy_views: 'text',
+  } as const;
+
+  it('declares the six functions with the agreed argument names, in order', () => {
+    expect(declaration('record_anatomy_misses').arguments).toEqual(['system_key', 'structure_ids']);
+    expect(declaration('clear_anatomy_miss').arguments).toEqual(['system_key', 'structure_id']);
+    expect(declaration('my_anatomy_review_queue').arguments).toEqual([]);
+    expect(declaration('save_anatomy_view').arguments).toEqual(['system_key', 'name', 'camera', 'hidden', 'faded', 'selected']);
+    expect(declaration('delete_anatomy_view').arguments).toEqual(['id']);
+    expect(declaration('my_anatomy_views').arguments).toEqual(['system_key']);
+    expect(anatomySql).toMatch(/create function public\.record_anatomy_misses\(system_key text, structure_ids text\[\]\)\s+returns integer\s/);
+    expect(anatomySql).toMatch(/create function public\.clear_anatomy_miss\(system_key text, structure_id text\)\s+returns boolean\s/);
+    expect(anatomySql).toMatch(/create function public\.my_anatomy_review_queue\(\)\s+returns setof public\.anatomy_review_queue\s/);
+    expect(anatomySql).toMatch(/returns uuid\s+language plpgsql\s+security definer\s+set search_path = ''/);
+    expect(anatomySql).toMatch(/create function public\.delete_anatomy_view\(id uuid\)\s+returns boolean\s/);
+    expect(anatomySql).toMatch(/create function public\.my_anatomy_views\(system_key text\)\s+returns setof public\.anatomy_saved_views\s/);
+  });
+
+  it('is signed-in only, security definer with an empty search_path, and the only way to write', () => {
+    for (const [name, args] of Object.entries(signatures)) {
+      expect(anatomySql).toContain(`revoke execute on function public.${name}(${args}) from public, anon, authenticated;`);
+      expect(anatomySql).toContain(`grant execute on function public.${name}(${args}) to authenticated;`);
+    }
+    expect([...anatomySql.matchAll(/security definer\s+set search_path = ''/g)]).toHaveLength(6);
+    expect(anatomySql).not.toMatch(/grant\s+execute[^;]*to\s+(anon|public)\b/i);
+    expect(anatomySql).not.toMatch(/grant\s+(insert|update|delete)[^;]*to\s+authenticated/i);
+    for (const table of ['anatomy_review_queue', 'anatomy_saved_views']) {
+      expect(anatomySql).toContain(`grant select on table public.${table} to authenticated;`);
+      expect(anatomySql).toContain(`alter table public.${table} enable row level security;`);
+      expect(anatomySql).toMatch(new RegExp(`on public\\.${table}\\s+for select\\s+to authenticated\\s+using \\(\\(select auth\\.uid\\(\\)\\) = user_id\\)`));
+      expect(anatomySql).toMatch(new RegExp(`user_id uuid not null references auth\\.users \\(id\\) on delete cascade[\\s\\S]*?\\n\\);[\\s\\S]*?comment on table public\\.${table}`));
+    }
+    // Each writer takes its own lock and refuses confirmed-account and MFA failures the same way the others do.
+    expect(anatomySql).toMatch(/pg_advisory_xact_lock\(hashtextextended\('anatomy_misses:' \|\| uid::text, 0\)\)/);
+    expect(anatomySql).toMatch(/pg_advisory_xact_lock\(hashtextextended\('anatomy_views:' \|\| uid::text, 0\)\)/);
+    expect([...anatomySql.matchAll(/u\.email_confirmed_at is not null and u\.is_anonymous is not true/g)]).toHaveLength(6);
+    expect([...anatomySql.matchAll(/app_private\.mfa_access_allowed\(\)/g)]).toHaveLength(6 + 2 * 2);
+    expect(anatomySql).toContain('hourly_limit constant integer := 600;');
+    expect(anatomySql).toContain('max_views constant integer := 50;');
+  });
+
+  it('raises exactly these literal refusals, which the browser module maps to student sentences', () => {
+    const expected: Record<keyof typeof signatures, string[]> = {
+      record_anatomy_misses: ['sign in to record what you missed', 'confirm your email to use this', 'complete two-factor sign-in to continue',
+        'that anatomy system was not found', 'send between 1 and 50 structures', 'a structure id has the wrong shape',
+        'too many misses recorded recently; try again later'],
+      clear_anatomy_miss: ['sign in to change your review list', 'confirm your email to use this', 'complete two-factor sign-in to continue',
+        'that anatomy system was not found', 'a structure id has the wrong shape'],
+      my_anatomy_review_queue: ['sign in to see your review list', 'confirm your email to use this', 'complete two-factor sign-in to continue'],
+      save_anatomy_view: ['sign in to save a view', 'confirm your email to use this', 'complete two-factor sign-in to continue',
+        'that anatomy system was not found', 'a view name is 1 to 60 characters of plain text', 'the camera has the wrong shape',
+        'a structure id has the wrong shape', 'you can keep up to 50 saved views; delete one first'],
+      delete_anatomy_view: ['sign in to delete a view', 'confirm your email to use this', 'complete two-factor sign-in to continue',
+        'that view was not found'],
+      my_anatomy_views: ['sign in to see your saved views', 'confirm your email to use this', 'complete two-factor sign-in to continue',
+        'that anatomy system was not found'],
+    };
+    const fallback = anatomyStudyMessage({ message: 'sample: an unmapped database refusal' });
+    for (const [name, messages] of Object.entries(expected) as [keyof typeof signatures, string[]][]) {
+      expect(declaration(name).messages, name).toEqual(messages);
+      for (const message of messages) {
+        expect(anatomyStudyMessage({ message }), `Add an anatomyStudyMessage mapping for ${name}: ${message}`).not.toBe(fallback);
+      }
+    }
+  });
+
+  it('sends the SQL argument names from the browser module', async () => {
+    const rpc = vi.fn(async (fn: string, _args?: unknown) => {
+      const replies: Record<string, unknown> = {
+        record_anatomy_misses: 1, clear_anatomy_miss: true, my_anatomy_review_queue: [] as ReviewQueueRow[],
+        save_anatomy_view: '00000000-0000-4000-8000-000000000001', delete_anatomy_view: true, my_anatomy_views: [] as SavedViewRow[],
+      };
+      return { data: replies[fn], error: null };
+    });
+    const client = { auth: { getSession: async () => ({ data: { session: { user: { id: 'student-1' } } }, error: null }) }, rpc } as unknown as AnatomyStudyClient;
+    const study = createAnatomyStudy(async () => client);
+    await study.recordMisses('heart', ['FMA1']);
+    await study.clearMiss('heart', 'FMA1');
+    await study.reviewQueue();
+    await study.saveView({ systemKey: 'heart', name: 'front', camera, hidden: [] });
+    await study.deleteView('00000000-0000-4000-8000-000000000001');
+    await study.views('heart');
+    const sent = Object.fromEntries(rpc.mock.calls.map(([fn, args]) => [fn, args ? Object.keys(args as object) : []]));
+    for (const name of Object.keys(signatures) as (keyof typeof signatures)[]) {
+      expect(sent[name], name).toEqual(declaration(name).arguments);
+    }
+    const snapshot = viewSnapshot({ systemKey: 'heart', name: 'front', camera, hidden: [] });
+    expect(snapshot.ok && Object.keys(snapshot.args)).toEqual(declaration('save_anatomy_view').arguments);
+  });
+
+  it('the review row and saved view types name exactly the table columns the functions return', () => {
+    const columns = (table: string) => [...new RegExp(`create table public\\.${table} \\(([\\s\\S]*?)\\n\\);`).exec(anatomySql)![1]!
+      .matchAll(/^\s{2}([a-z_]+) /gm)].map((m) => m[1]!).filter((c) => c !== 'constraint');
+    const queueRow: ReviewQueueRow = {
+      id: '', system_key: '', structure_id: '', missed_count: 1, first_missed_at: '', last_missed_at: '', cleared_at: null,
+    };
+    const viewRow: SavedViewRow = {
+      id: '', system_key: '', name: '', camera, hidden: [], faded: [], selected: null, created_at: '', updated_at: '',
+    };
+    expect(Object.keys(queueRow).sort()).toEqual(columns('anatomy_review_queue').filter((c) => c !== 'user_id').sort());
+    expect(Object.keys(viewRow).sort()).toEqual(columns('anatomy_saved_views').filter((c) => c !== 'user_id').sort());
   });
 });
