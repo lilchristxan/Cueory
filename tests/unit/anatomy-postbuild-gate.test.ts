@@ -81,6 +81,17 @@ describe('postbuild anatomy release audit', () => {
     }
   });
 
+  it('isolates the draft Playwright fixture without weakening the main release audit', () => {
+    const config = readFileSync(new URL('../../playwright.config.ts', import.meta.url), 'utf8');
+    // A release PR's process environment is inherited by the Playwright web server.
+    // Clear only that subprocess's release context so its intentional draft fixture can build.
+    expect(config).toContain(
+      'env -u GITHUB_EVENT_NAME -u GITHUB_BASE_REF -u GITHUB_REF CUEORY_ANATOMY_DRAFTS=1 npm run build',
+    );
+    expect(shouldAuditAnatomyBuild({ GITHUB_EVENT_NAME: 'pull_request', GITHUB_BASE_REF: 'main' })).toBe(true);
+    expect(shouldAuditAnatomyBuild({ CUEORY_ANATOMY_DRAFTS: '1' })).toBe(false);
+  });
+
   it('keeps the audit after the complete site and Pagefind build through npm postbuild', () => {
     const pkg = JSON.parse(readFileSync(new URL('../../package.json', import.meta.url), 'utf8'));
     expect(pkg.scripts.build).toContain('pagefind --site dist');
