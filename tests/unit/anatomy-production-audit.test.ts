@@ -118,11 +118,17 @@ describe('anatomy production artifact audit', () => {
     });
     const fragment = gzipSync(Buffer.concat([prefix, Buffer.from(fragmentPayload)]));
     const wasm = gzipSync(Buffer.concat([prefix, Buffer.from([0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00])]));
+    // Valid WebAssembly can still smuggle an archive in a custom section.
+    const wasmWithZip = gzipSync(Buffer.concat([prefix, Buffer.from([
+      0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00,
+      0x00, 0x05, 0x00, 0x50, 0x4b, 0x03, 0x04,
+    ])]));
     f.file('pagefind/fragment/en_test.pf_fragment', fragment);
     f.file('pagefind/index/en_test.pf_index', gzipIndex);
     f.file('pagefind/filter/en_test.pf_filter', gzipFilter);
     f.file('pagefind/pagefind.en_test.pf_meta', gzipMeta);
     f.file('pagefind/wasm.en.pagefind', wasm);
+    f.file('pagefind/wasm.en_hidden_archive.pagefind', wasmWithZip);
     // Pagefind also accepts already-decompressed data with the same marker.
     f.file('pagefind/fragment/en_raw_test.pf_fragment', Buffer.concat([prefix, Buffer.from(JSON.stringify({
       url: '/', content: 'safe raw search text', word_count: 4,
@@ -174,6 +180,7 @@ describe('anatomy production artifact audit', () => {
     // Bytes after a valid gzip member must not be silently ignored by gunzip.
     f.file('pagefind/index/en_trailing_bytes.pf_index', Buffer.concat([gzipSync(Buffer.concat([prefix, Buffer.from('safe index payload')])), Buffer.from('glTF' + 'x'.repeat(32))]));
     expect(f.check().errors).toEqual(expect.arrayContaining([
+      'archive/container in production output requires explicit review: /pagefind/wasm.en_hidden_archive.pagefind',
       'archive/container in production output requires explicit review: /pagefind/fragment/en_corrupt.pf_fragment',
       'archive/container in production output requires explicit review: /pagefind/fragment/en_hidden_model.pf_fragment',
       'archive/container in production output requires explicit review: /pagefind/fragment/en_glb_json.pf_fragment',
