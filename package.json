@@ -9,6 +9,7 @@
     "dev": "astro dev",
     "prebuild": "node scripts/check-legal-release.mjs",
     "build": "astro build && pagefind --site dist",
+    "postbuild": "node scripts/anatomy-postbuild-audit.mjs",
     "preview": "astro preview",
     "astro": "astro",
     "check": "astro check",
