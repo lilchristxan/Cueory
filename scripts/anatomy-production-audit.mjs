@@ -104,6 +104,12 @@ export function parseApprovedGlb(bytes) {
       !Array.isArray(json.accessors) || !Array.isArray(json.extensionsRequired)) {
     throw new Error('required model metadata missing');
   }
+  // Every required extension must also be declared as used by the GLB.
+  // A synthetic string in extensionsRequired alone is not a valid glTF declaration.
+  if (!Array.isArray(json.extensionsUsed) ||
+      json.extensionsRequired.some((extension) => !json.extensionsUsed.includes(extension))) {
+    throw new Error('required GLB extension missing from extensionsUsed');
+  }
   // Cueory's BodyParts3D pipeline produces untextured geometry. An approved
   // model with embedded or external image references would import unreviewed
   // visual content and could make network requests outside the local GLB.
@@ -192,6 +198,24 @@ export function parseApprovedGlb(bytes) {
          (compressed.filter !== undefined &&
           !['NONE', 'OCTAHEDRAL', 'QUATERNION', 'EXPONENTIAL'].includes(compressed.filter)))) {
       throw new Error('GLB meshopt range or decoder metadata invalid');
+    }
+  }
+  // EXT_meshopt_compression mode and filter combinations must be decodable.
+  // The fallback/byte-range checks above are necessary but not sufficient.
+  for (const view of json.bufferViews) {
+    const ext = view.extensions?.EXT_meshopt_compression;
+    if (!ext) continue;
+    const stride = ext.byteStride;
+    const filter = ext.filter ?? 'NONE';
+    if ((ext.mode === 'ATTRIBUTES' && stride % 4 !== 0) ||
+        (ext.mode === 'TRIANGLES' &&
+          (ext.count % 3 !== 0 || ![2, 4].includes(stride))) ||
+        (ext.mode === 'INDICES' && ![2, 4].includes(stride)) ||
+        ((ext.mode === 'TRIANGLES' || ext.mode === 'INDICES') && filter !== 'NONE') ||
+        (filter === 'OCTAHEDRAL' && ![4, 8].includes(stride)) ||
+        (filter === 'QUATERNION' && stride !== 8) ||
+        (filter === 'EXPONENTIAL' && stride % 4 !== 0)) {
+      throw new Error('GLB meshopt mode/stride/filter combination is invalid');
     }
   }
   // Validate the *full* typed accessor span, not only its starting offset.
@@ -558,6 +582,12 @@ export function auditAnatomyProduction(distDir, contentDir) {
       if (json.nodes.some((node) =>
         !Number.isSafeInteger(node.mesh) || node.mesh < 0 || node.mesh >= json.meshes.length)) {
         throw new Error('approved structure node is missing an attached mesh');
+      }
+      // Every reviewed structure owns one distinct mesh, with no missing or
+      // unreferenced meshes. This is the exact Task 177 generator contract.
+      if (json.nodes.length !== json.meshes.length ||
+          new Set(json.nodes.map((node) => node.mesh)).size !== json.nodes.length) {
+        throw new Error('approved structures have duplicate or unused meshes');
       }
       if (json.asset?.copyright !== BODYPARTS3D_CREDIT) {
         throw new Error('BodyParts3D copyright is missing');
