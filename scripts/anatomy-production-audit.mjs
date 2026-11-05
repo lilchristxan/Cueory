@@ -158,19 +158,26 @@ export function parseApprovedGlb(bytes) {
   if (!Array.isArray(json.bufferViews) || json.bufferViews.length === 0) {
     throw new Error('GLB mesh buffer views are missing');
   }
-  const validRange = (offset, length) =>
+  const validRange = (offset, length, limit) =>
     Number.isSafeInteger(offset) && offset >= 0 &&
     Number.isSafeInteger(length) && length > 0 &&
-    offset <= buffer.byteLength && length <= buffer.byteLength - offset;
+    Number.isSafeInteger(limit) && limit > 0 &&
+    offset <= limit && length <= limit - offset;
   for (const view of json.bufferViews) {
-    if (!view || view.buffer !== 0 ||
-        !validRange(view.byteOffset ?? 0, view.byteLength)) {
-      throw new Error('GLB buffer view outside embedded BIN');
+    // gltfpack's virtual fallback views point at buffer 1, while their meshopt
+    // extensions must point at the actually embedded compressed buffer 0.
+    const onEmbeddedBuffer = view?.buffer === 0;
+    const onMeshoptFallback = taggedFallback && view?.buffer === 1 &&
+      view.extensions?.EXT_meshopt_compression != null;
+    const holderLength = json.buffers?.[view?.buffer]?.byteLength;
+    if (!view || (!onEmbeddedBuffer && !onMeshoptFallback) ||
+        !validRange(view.byteOffset ?? 0, view.byteLength, holderLength)) {
+      throw new Error('GLB buffer view outside embedded BIN or meshopt fallback');
     }
     const compressed = view.extensions?.EXT_meshopt_compression;
     if (compressed !== undefined &&
         (!compressed || compressed.buffer !== 0 ||
-         !validRange(compressed.byteOffset ?? 0, compressed.byteLength) ||
+         !validRange(compressed.byteOffset ?? 0, compressed.byteLength, buffer.byteLength) ||
          !Number.isSafeInteger(compressed.count) || compressed.count < 1 ||
          !Number.isSafeInteger(compressed.byteStride) || compressed.byteStride < 1 ||
          compressed.byteStride > 255 ||
