@@ -1247,13 +1247,15 @@ test.describe('☰ side panel and account corner (D-46)', () => {
 
   test('the account corner offers "create free account" and "sign in", both coming soon', async ({ page }) => {
     await page.goto('/');
-    const account = page.getByRole('button', { name: 'account', exact: true });
+    const account = page.locator('[data-account-toggle]');
     const menu = page.getByTestId('account-menu');
     await expect(menu).toBeHidden();
+    await expect(account).toHaveAttribute('aria-label', 'open account menu');
     await account.focus();
     await page.keyboard.press('Enter');
     await expect(menu).toBeVisible();
     await expect(account).toHaveAttribute('aria-expanded', 'true');
+    await expect(account).toHaveAttribute('aria-label', 'close account menu');
     await expect(menu.getByRole('link', { name: /create free account/ })).toHaveAttribute('href', '/#signup');
     await expect(menu.getByRole('link', { name: /sign in/ })).toHaveAttribute('href', '/#signup');
     await expect(menu.getByText('coming soon')).toHaveCount(2);
@@ -1275,18 +1277,21 @@ test.describe('☰ side panel and account corner (D-46)', () => {
     await page.keyboard.press('Escape');
     await expect(menu).toBeHidden();
     await expect(account).toBeFocused();
+    await expect(account).toHaveAttribute('aria-label', 'open account menu');
 
     // A tap anywhere else closes it too.
     await account.click();
     await expect(menu).toBeVisible();
+    await expect(account).toHaveAttribute('aria-label', 'close account menu');
     await page.getByRole('heading', { level: 1 }).click();
     await expect(menu).toBeHidden();
+    await expect(account).toHaveAttribute('aria-label', 'open account menu');
   });
 
   test('corner buttons are at least 44 by 44 px', async ({ page }) => {
     for (const path of ['/', '/learn/study-skills']) {
       await page.goto(path);
-      for (const name of ['open site menu', 'account']) {
+      for (const name of ['open site menu', 'open account menu']) {
         const box = (await page.getByRole('button', { name, exact: true }).boundingBox())!;
         expect(box.width).toBeGreaterThanOrEqual(44);
         expect(box.height).toBeGreaterThanOrEqual(44);
@@ -1411,7 +1416,7 @@ test.describe('without JavaScript, the corners', () => {
   test('stay hidden but keep their space, so nothing moves', async ({ page }) => {
     await page.goto('/privacy');
     await expect(page.getByRole('button', { name: 'open site menu', exact: true })).toBeHidden();
-    await expect(page.getByRole('button', { name: 'account', exact: true })).toBeHidden();
+    await expect(page.getByRole('button', { name: 'open account menu', exact: true })).toBeHidden();
     await expect(page.getByRole('navigation', { name: 'footer' }).getByRole('link', { name: 'support cueory' })).toBeVisible();
   });
 });
@@ -1506,6 +1511,8 @@ test.describe('fill-in at 320 px', () => {
     await expect(page.getByTestId('fill-in-sample-note')).toBeVisible();
 
     const board = page.getByTestId('fill-in');
+    // Switch to type mode to test typing and keyboard flow
+    await board.getByRole('button', { name: 'type instead' }).click();
     const field = board.getByRole('textbox', { name: 'the missing word' });
     const next = board.getByRole('button', { name: 'next' });
     const axe = async () => {
