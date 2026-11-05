@@ -214,7 +214,18 @@ describe('anatomy production artifact audit', () => {
     // Test both content sniffing under misleading suffixes and archive suffixes.
     f.file('downloads/hidden-model.dat', Buffer.from([0x50, 0x4b, 0x03, 0x04, 0x00, 0x00]));
     const tar = Buffer.alloc(512);
-    tar.write('ustar', 257, 'ascii');
+    tar.write('hidden-model.bin', 0, 'ascii');
+    tar.write('0000644\\0', 100, 'ascii');
+    tar.write('0000000\\0', 108, 'ascii');
+    tar.write('0000000\\0', 116, 'ascii');
+    tar.write('00000000000\\0', 124, 'ascii');
+    tar.write('00000000000\\0', 136, 'ascii');
+    tar.fill(0x20, 148, 156);
+    tar[156] = 0x30;
+    tar.write('ustar\\0', 257, 'ascii');
+    tar.write('00', 263, 'ascii');
+    const checksum = tar.reduce((sum, byte) => sum + byte, 0);
+    tar.write(checksum.toString(8).padStart(6, '0') + '\\0 ', 148, 'ascii');
     f.file('downloads/hidden-model.bin', tar);
     f.file('downloads/unrecognized.zip', Buffer.from('opaque archive payload'));
     // Long prefixes and chunk boundaries must not hide a valid GLB or ZIP signature.
@@ -224,6 +235,7 @@ describe('anatomy production artifact audit', () => {
       Buffer.alloc(64 * 1024 - 2, 0x61), Buffer.from([0x50, 0x4b, 0x03, 0x04, 0x00]),
     ]));
     f.file('docs/archive-reference.txt', 'The word ustar is discussed here, but this is ordinary text.');
+    f.file('docs/ar-reference.txt', '!<arch>\\n is discussed in ordinary text.');
     const textTarMarker = Buffer.alloc(300, 0x61);
     textTarMarker.write('ustar', 257, 'ascii');
     f.file('docs/ustar-at-header-offset.txt', textTarMarker);
