@@ -102,7 +102,7 @@ function hasArchiveMagic(path, allowPagefindGzip = false) {
       if (size > 64 * 1024 * 1024) return true;
       try {
         const expanded = isGzip
-          ? gunzipSync(readFileSync(fd), { maxOutputLength: 64 * 1024 * 1024 })
+          ? gunzipSync(readFileSync(fd), { maxOutputLength: 64 * 1024 * 1024, rejectGarbageAfterEnd: true })
           : readFileSync(fd);
         const signature = Buffer.from('pagefind_dcd', 'ascii');
         if (expanded.length <= signature.length ||
