@@ -318,8 +318,7 @@ describe('anatomy production artifact audit', () => {
     const wasmOpaqueData = Buffer.alloc(300, 0x61);
     wasmOpaqueData.write('FMA999991 FIX001', 32, 'ascii');
     const wasmWithOpaqueIds = gzipSync(Buffer.concat([
-      prefix,
-      Buffer.from([0x00, 0xae, 0x02]),
+      prefix, wasmHeader, Buffer.from([0x00, 0xae, 0x02]),
       Buffer.concat([Buffer.from([0x01, 0x78]), wasmOpaqueData]),
     ]));
     f.file('pagefind/fragment/en_test.pf_fragment', fragment);
