@@ -1352,3 +1352,44 @@ export function compareSyncDue(now: number, last: number | null, interval = COMP
 export function compareSyncDelay(now: number, last: number | null, interval = COMPARE_SYNC_MS): number {
   return last === null ? 0 : Math.max(0, interval - (now - last));
 }
+
+export interface CompareSyncClock {
+  now(): number;
+  setTimeout(run: () => void, ms: number): unknown;
+  clearTimeout(handle: unknown): void;
+}
+
+/**
+ * Copies the main camera to the comparison at most every COMPARE_SYNC_MS, and never loses the last one: a request that
+ * arrives inside the window schedules one trailing copy, which reads the camera when it runs, so the comparison ends on
+ * the camera the main view settled at even when it draws no further frame. `cancel` drops a pending copy (teardown).
+ */
+export function createCompareSync(copy: () => void, clock: CompareSyncClock = {
+  now: () => performance.now(),
+  setTimeout: (run, ms) => setTimeout(run, ms),
+  clearTimeout: (handle) => clearTimeout(handle as ReturnType<typeof setTimeout>),
+}) {
+  let last: number | null = null;
+  let timer: unknown = null;
+  const cancel = () => {
+    if (timer !== null) clock.clearTimeout(timer);
+    timer = null;
+  };
+  return {
+    request() {
+      const now = clock.now();
+      if (compareSyncDue(now, last)) {
+        cancel();
+        last = now;
+        copy();
+      } else if (timer === null) {
+        timer = clock.setTimeout(() => {
+          timer = null;
+          last = clock.now();
+          copy();
+        }, compareSyncDelay(now, last));
+      }
+    },
+    cancel,
+  };
+}

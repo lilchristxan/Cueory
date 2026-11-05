@@ -115,7 +115,7 @@ create policy "opt-in MFA required for anatomy_saved_views" on public.anatomy_sa
 -- The limit: a student can put at most 600 structures an hour into their queue, counted as rows whose last_missed_at
 -- is within the hour. Missing a structure again inside that hour does not count twice, so the queue never grows by
 -- more than 600 rows an hour for one person, and the whole call is refused if it would.
-create function public.record_anatomy_misses(system_key text, structure_ids text[])
+create function public.record_anatomy_misses(system_key text, structure_ids text[], expected_user_id uuid default null)
 returns integer
 language plpgsql
 security definer
@@ -130,6 +130,11 @@ declare
 begin
   if uid is null then
     raise exception 'sign in to record what you missed' using errcode = '28000';
+  end if;
+  -- The caller names the student the action was started for: if another account is signed in by now (a switch in
+  -- another tab), nothing is written under it.
+  if record_anatomy_misses.expected_user_id is not null and record_anatomy_misses.expected_user_id <> uid then
+    raise exception 'the signed-in account changed; please try again' using errcode = '28000';
   end if;
 
   -- Task 169: only a confirmed, permanent account. A script could otherwise make throwaway unconfirmed or anonymous
@@ -193,18 +198,18 @@ begin
 end;
 $$;
 
-comment on function public.record_anatomy_misses(text, text[]) is
+comment on function public.record_anatomy_misses(text, text[], uuid) is
   'Records 1 to 50 structures a signed-in student missed in the anatomy lab quiz, within the limit; returns how many were recorded (Task 178).';
 
 -- Nobody can run it until it is granted back by name (D-73), and then only signed-in students.
-revoke execute on function public.record_anatomy_misses(text, text[]) from public, anon, authenticated;
-grant execute on function public.record_anatomy_misses(text, text[]) to authenticated;
+revoke execute on function public.record_anatomy_misses(text, text[], uuid) from public, anon, authenticated;
+grant execute on function public.record_anatomy_misses(text, text[], uuid) to authenticated;
 
 -- ---------------------------------------------------------------- clear_anatomy_miss
 
 -- Takes one structure off the caller's review list (sets cleared_at). The row stays, so a later miss shows the whole
 -- history. Returns true when a row was cleared, false when there was nothing of the caller's to clear.
-create function public.clear_anatomy_miss(system_key text, structure_id text)
+create function public.clear_anatomy_miss(system_key text, structure_id text, expected_user_id uuid default null)
 returns boolean
 language plpgsql
 security definer
@@ -216,6 +221,11 @@ declare
 begin
   if uid is null then
     raise exception 'sign in to change your review list' using errcode = '28000';
+  end if;
+  -- The caller names the student the action was started for: if another account is signed in by now (a switch in
+  -- another tab), nothing is written under it.
+  if clear_anatomy_miss.expected_user_id is not null and clear_anatomy_miss.expected_user_id <> uid then
+    raise exception 'the signed-in account changed; please try again' using errcode = '28000';
   end if;
   if not exists (
        select 1 from auth.users u
@@ -244,11 +254,11 @@ begin
 end;
 $$;
 
-comment on function public.clear_anatomy_miss(text, text) is
+comment on function public.clear_anatomy_miss(text, text, uuid) is
   'Takes one structure off a signed-in student''s anatomy review list; true when a row was cleared (Task 178).';
 
-revoke execute on function public.clear_anatomy_miss(text, text) from public, anon, authenticated;
-grant execute on function public.clear_anatomy_miss(text, text) to authenticated;
+revoke execute on function public.clear_anatomy_miss(text, text, uuid) from public, anon, authenticated;
+grant execute on function public.clear_anatomy_miss(text, text, uuid) to authenticated;
 
 -- ---------------------------------------------------------------- my_anatomy_review_queue
 
@@ -303,7 +313,8 @@ create function public.save_anatomy_view(
   camera jsonb,
   hidden text[],
   faded text[],
-  selected text
+  selected text,
+  expected_user_id uuid default null
 )
 returns uuid
 language plpgsql
@@ -323,6 +334,9 @@ declare
 begin
   if uid is null then
     raise exception 'sign in to save a view' using errcode = '28000';
+  end if;
+  if save_anatomy_view.expected_user_id is not null and save_anatomy_view.expected_user_id <> uid then
+    raise exception 'the signed-in account changed; please try again' using errcode = '28000';
   end if;
   if not exists (
        select 1 from auth.users u
@@ -401,17 +415,17 @@ begin
 end;
 $$;
 
-comment on function public.save_anatomy_view(text, text, jsonb, text[], text[], text) is
+comment on function public.save_anatomy_view(text, text, jsonb, text[], text[], text, uuid) is
   'Saves or replaces one of a signed-in student''s anatomy lab views (up to 50), after checking it; returns the view id (Task 178).';
 
-revoke execute on function public.save_anatomy_view(text, text, jsonb, text[], text[], text) from public, anon, authenticated;
-grant execute on function public.save_anatomy_view(text, text, jsonb, text[], text[], text) to authenticated;
+revoke execute on function public.save_anatomy_view(text, text, jsonb, text[], text[], text, uuid) from public, anon, authenticated;
+grant execute on function public.save_anatomy_view(text, text, jsonb, text[], text[], text, uuid) to authenticated;
 
 -- ---------------------------------------------------------------- delete_anatomy_view
 
 -- Deletes one of the caller's own views. Returns true when a row was deleted, false when there was none of theirs
 -- with that id, so an id can't be used to find out whether another student's view exists.
-create function public.delete_anatomy_view(id uuid)
+create function public.delete_anatomy_view(id uuid, expected_user_id uuid default null)
 returns boolean
 language plpgsql
 security definer
@@ -423,6 +437,11 @@ declare
 begin
   if uid is null then
     raise exception 'sign in to delete a view' using errcode = '28000';
+  end if;
+  -- The caller names the student the action was started for: if another account is signed in by now (a switch in
+  -- another tab), nothing is written under it.
+  if delete_anatomy_view.expected_user_id is not null and delete_anatomy_view.expected_user_id <> uid then
+    raise exception 'the signed-in account changed; please try again' using errcode = '28000';
   end if;
   if not exists (
        select 1 from auth.users u
@@ -444,11 +463,11 @@ begin
 end;
 $$;
 
-comment on function public.delete_anatomy_view(uuid) is
+comment on function public.delete_anatomy_view(uuid, uuid) is
   'Deletes one of a signed-in student''s own anatomy lab views; true when a row was deleted (Task 178).';
 
-revoke execute on function public.delete_anatomy_view(uuid) from public, anon, authenticated;
-grant execute on function public.delete_anatomy_view(uuid) to authenticated;
+revoke execute on function public.delete_anatomy_view(uuid, uuid) from public, anon, authenticated;
+grant execute on function public.delete_anatomy_view(uuid, uuid) to authenticated;
 
 -- ---------------------------------------------------------------- my_anatomy_views
 

@@ -45,8 +45,7 @@ import {
   anatomyFailureMessage,
   breadcrumbRows,
   canRedo,
-  compareSyncDue,
-  compareSyncDelay,
+  createCompareSync,
   COMPARE_SYNC_MS,
   canUndo,
   createHistory,
@@ -252,8 +251,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
   const measureRef = useRef<{ font: string; measure: (s: string) => number; metrics: LabelMetrics } | null>(null);
   const compareCanvasRef = useRef<HTMLCanvasElement>(null);
   const compareSceneRef = useRef<LabScene | null>(null);
-  const compareSyncedAt = useRef<number | null>(null);
-  const compareSyncTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const compareSyncRef = useRef<ReturnType<typeof createCompareSync> | null>(null);
 
   // A pending phone consent never survives a body-system change.
   useEffect(() => setBulkPrompt(null), [systemKey]);
@@ -304,30 +302,8 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
     const ids = labelIdsRef.current;
     const setPlaced = setPlacedRef.current;
     // The compare view follows this camera: copied at most every COMPARE_SYNC_MS, so a drag never doubles the work.
-    const compare = compareSceneRef.current;
-    if (scene && compare) {
-      const now = performance.now();
-      if (compareSyncDue(now, compareSyncedAt.current)) {
-        if (compareSyncTimer.current !== null) {
-          clearTimeout(compareSyncTimer.current);
-          compareSyncTimer.current = null;
-        }
-        compareSyncedAt.current = now;
-        compare.applyCameraState(scene.cameraState());
-      } else if (compareSyncTimer.current === null) {
-        // A throttled final frame may be the last render after a quick gesture. Schedule one trailing copy so the
-        // comparison cannot remain at the penultimate camera position when the main renderer goes idle.
-        compareSyncTimer.current = setTimeout(() => {
-          compareSyncTimer.current = null;
-          const latestMain = sceneRef.current;
-          const latestCompare = compareSceneRef.current;
-          if (latestMain && latestCompare === compare) {
-            compareSyncedAt.current = performance.now();
-            latestCompare.applyCameraState(latestMain.cameraState());
-          }
-        }, compareSyncDelay(now, compareSyncedAt.current));
-      }
-    }
+    // A copy that comes inside the window is sent once, trailing, so the comparison ends on the settled camera.
+    if (scene) compareSyncRef.current?.request();
     if (!setPlaced) return;
     // Always tell the scene which labels are wanted (none too), so it checks what the camera sees only when needed.
     const points = scene && canvas ? scene.project(ids) : [];
@@ -698,7 +674,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
   const refreshReviewQueue = useCallback(() => {
     const identity = identityGuard.snapshot();
     if (!signedIn || !identity.userId) return;
-    void study.reviewQueue().then((outcome) => {
+    void study.reviewQueue(identity.userId).then((outcome) => {
       if (!identityGuard.isCurrent(identity)) return;
       if (outcome.ok) setReviewRows(outcome.value);
       else setAnnounce(outcome.message);
@@ -710,7 +686,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
     const identity = identityGuard.snapshot();
     if (!signedIn || !identity.userId) return;
     const request = savedViewsRequestGuard.begin(key);
-    void study.views(key).then((outcome) => {
+    void study.views(key, identity.userId).then((outcome) => {
       if (!identityGuard.isCurrent(identity) || !savedViewsRequestGuard.isCurrent(request, activeSystemKeyRef.current)) return;
       if (outcome.ok) setSavedViews(outcome.value);
       else setAnnounce(outcome.message);
@@ -734,7 +710,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
   const recordMiss = useCallback((structureId: string) => {
     const identity = identityGuard.snapshot();
     if (!signedIn || !identity.userId || !system) return;
-    void study.recordMisses(system.key, queueFromQuizMisses([{ target: structureId, feedback: { kind: 'shown' } }]))
+    void study.recordMisses(system.key, queueFromQuizMisses([{ target: structureId, feedback: { kind: 'shown' } }]), identity.userId)
       .then((outcome) => {
         if (!identityGuard.isCurrent(identity)) return;
         if (!outcome.ok) setAnnounce(outcome.message);
@@ -770,7 +746,11 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
         if (!live) return;
         scene = createLabScene({ canvas, reducedMotion: prefersReducedMotion(), colors, onRender: () => {} });
         compareSceneRef.current = scene;
-        compareSyncedAt.current = null;
+        compareSyncRef.current = createCompareSync(() => {
+          const main = sceneRef.current;
+          const other = compareSceneRef.current;
+          if (main && other && other === scene) other.applyCameraState(main.cameraState());
+        });
         return scene
           .load(compareSystem.model.files ?? compareSystem.model.file, compareSystem.structures.map((s) => s.id))
           .then((result) => {
@@ -786,10 +766,8 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
       });
     return () => {
       live = false;
-      if (compareSyncTimer.current !== null) {
-        clearTimeout(compareSyncTimer.current);
-        compareSyncTimer.current = null;
-      }
+      compareSyncRef.current?.cancel();
+      compareSyncRef.current = null;
       compareSceneRef.current = null;
       scene?.dispose();
       scene = null;
@@ -1161,7 +1139,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
     const identity = identityGuard.snapshot();
     if (!signedIn || !identity.userId) return;
     const key = system.key;
-    void study.clearMiss(key, structureId).then((outcome) => {
+    void study.clearMiss(key, structureId, identity.userId).then((outcome) => {
       if (!identityGuard.isCurrent(identity)) return;
       if (!outcome.ok) {
         setAnnounce(outcome.message);
@@ -1191,7 +1169,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
     if (!signedIn || !identity.userId) return;
     const name = viewName.trim();
     setSavingView(true);
-    void study.saveView({ systemKey: key, name, camera: scene.cameraState(), hidden, faded, selected })
+    void study.saveView({ systemKey: key, name, camera: scene.cameraState(), hidden, faded, selected }, identity.userId)
       .then((outcome) => {
         if (!identityGuard.isCurrent(identity) || activeSystemKeyRef.current !== key) return;
         if (!outcome.ok) {
@@ -1228,7 +1206,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
     const key = system.key;
     const identity = identityGuard.snapshot();
     if (!signedIn || !identity.userId || view.system_key !== key) return;
-    void study.deleteView(view.id).then((outcome) => {
+    void study.deleteView(view.id, identity.userId).then((outcome) => {
       if (!identityGuard.isCurrent(identity) || activeSystemKeyRef.current !== key) return;
       if (!outcome.ok) {
         setAnnounce(outcome.message);

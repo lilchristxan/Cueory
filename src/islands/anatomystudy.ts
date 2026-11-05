@@ -74,11 +74,11 @@ interface Reply<T = unknown> { data: T | null; error: unknown }
 
 /** The parts of the shared Supabase client this module uses, so tests can pass a fake. */
 export interface AnatomyStudyClient extends SessionReader {
-  rpc(fn: 'record_anatomy_misses', args: { system_key: string; structure_ids: string[] }): PromiseLike<Reply<number>>;
-  rpc(fn: 'clear_anatomy_miss', args: { system_key: string; structure_id: string }): PromiseLike<Reply<boolean>>;
+  rpc(fn: 'record_anatomy_misses', args: { system_key: string; structure_ids: string[]; expected_user_id?: string }): PromiseLike<Reply<number>>;
+  rpc(fn: 'clear_anatomy_miss', args: { system_key: string; structure_id: string; expected_user_id?: string }): PromiseLike<Reply<boolean>>;
   rpc(fn: 'my_anatomy_review_queue'): PromiseLike<Reply<ReviewQueueRow[]>>;
-  rpc(fn: 'save_anatomy_view', args: SaveViewArgs): PromiseLike<Reply<string>>;
-  rpc(fn: 'delete_anatomy_view', args: { id: string }): PromiseLike<Reply<boolean>>;
+  rpc(fn: 'save_anatomy_view', args: SaveViewArgs & { expected_user_id?: string }): PromiseLike<Reply<string>>;
+  rpc(fn: 'delete_anatomy_view', args: { id: string; expected_user_id?: string }): PromiseLike<Reply<boolean>>;
   rpc(fn: 'my_anatomy_views', args: { system_key: string }): PromiseLike<Reply<SavedViewRow[]>>;
 }
 
@@ -159,6 +159,8 @@ export const SIGNED_OUT_MESSAGES = [
   'sign in to save a view', 'sign in to delete a view', 'sign in to see your saved views',
 ] as const;
 export const CONFIRM_EMAIL_MESSAGE = 'confirm your email to use this';
+/** Raised when the account signed in at the database is not the one the action was started for (an account switch in another tab). */
+export const ACCOUNT_CHANGED_MESSAGE = 'the signed-in account changed; please try again';
 export const TWO_FACTOR_MESSAGE = 'complete two-factor sign-in to continue';
 export const VIEW_LIMIT_MESSAGE = 'you can keep up to 50 saved views; delete one first';
 export const MISS_LIMIT_MESSAGE = 'too many misses recorded recently; try again later';
@@ -170,6 +172,7 @@ export function anatomyStudyMessage(error: unknown): string {
     : '';
   if ((SIGNED_OUT_MESSAGES as readonly string[]).includes(message)) return 'please sign in to use this.';
   if (message === CONFIRM_EMAIL_MESSAGE) return 'please confirm your email first. the link is in the email we sent you.';
+  if (message === ACCOUNT_CHANGED_MESSAGE) return 'your account changed. please try again.';
   if (message === TWO_FACTOR_MESSAGE) return 'please finish two-factor sign-in to use this.';
   if (message === VIEW_LIMIT_MESSAGE) return `you can keep up to ${SAVED_VIEW_LIMIT} saved views. delete one to save another.`;
   if (message === MISS_LIMIT_MESSAGE) return "you've recorded a lot of misses recently. they'll be kept again in a little while.";
@@ -220,16 +223,16 @@ export function createSavedViewsRequestGuard() {
 
 export interface AnatomyStudy {
   /** Records misses for the signed-in student, in batches of 50. Resolves with how many were recorded; `0` when signed out or accounts are off. */
-  recordMisses(systemKey: string, structureIds: readonly string[]): Promise<Outcome<number>>;
+  recordMisses(systemKey: string, structureIds: readonly string[], expectedUserId?: string): Promise<Outcome<number>>;
   /** Takes one structure off the review list. */
-  clearMiss(systemKey: string, structureId: string): Promise<Outcome<boolean>>;
+  clearMiss(systemKey: string, structureId: string, expectedUserId?: string): Promise<Outcome<boolean>>;
   /** The student's uncleared misses, most recent first; `[]` when signed out or accounts are off. */
-  reviewQueue(): Promise<Outcome<ReviewQueueRow[]>>;
+  reviewQueue(expectedUserId?: string): Promise<Outcome<ReviewQueueRow[]>>;
   /** Saves or replaces a view and resolves with its id. */
-  saveView(state: ViewState): Promise<Outcome<string>>;
-  deleteView(id: string): Promise<Outcome<boolean>>;
+  saveView(state: ViewState, expectedUserId?: string): Promise<Outcome<string>>;
+  deleteView(id: string, expectedUserId?: string): Promise<Outcome<boolean>>;
   /** The student's saved views for one system, by name; `[]` when signed out or accounts are off. */
-  views(systemKey: string): Promise<Outcome<SavedViewRow[]>>;
+  views(systemKey: string, expectedUserId?: string): Promise<Outcome<SavedViewRow[]>>;
 }
 
 const NOT_SIGNED_IN = 'please sign in to use this.';
@@ -240,11 +243,18 @@ const NOT_SIGNED_IN = 'please sign in to use this.';
  * always called on the client object, because supabase-js relies on the receiver.
  */
 export function createAnatomyStudy(getClient: () => Promise<AnatomyStudyClient | null>): AnatomyStudy {
-  async function signedIn(): Promise<AnatomyStudyClient | null> {
+  /**
+   * The client, only while a student is signed in. When the caller names the student the action was started for
+   * (`expectedUserId`), a session that now belongs to someone else (an account switch in another tab) reads as signed
+   * out, so nothing is sent under the other account.
+   */
+  async function signedIn(expectedUserId?: string): Promise<AnatomyStudyClient | null> {
     const client = await getClient();
     if (!client) return null;
     const session = await sessionStateFrom(client);
-    return session.signedIn ? client : null;
+    if (!session.signedIn) return null;
+    if (expectedUserId !== undefined && session.userId !== expectedUserId) return null;
+    return client;
   }
   function settle<T>(reply: Reply<T>, check: (data: unknown) => data is T): Outcome<T> {
     if (reply.error != null) return { ok: false, message: anatomyStudyMessage(reply.error), cause: reply.error };
@@ -257,44 +267,49 @@ export function createAnatomyStudy(getClient: () => Promise<AnatomyStudyClient |
   const isRows = <T>(d: unknown): d is T[] => Array.isArray(d);
 
   return {
-    async recordMisses(systemKey, structureIds) {
+    async recordMisses(systemKey, structureIds, expectedUserId) {
       const ids = [...new Set(structureIds)].filter((id) => STRUCTURE_ID.test(id));
       if (!SYSTEM_KEY.test(systemKey) || ids.length === 0) return { ok: true, value: 0 };
-      const client = await signedIn();
+      let client = await signedIn(expectedUserId);
       if (!client) return { ok: true, value: 0 };
       let recorded = 0;
+      let first = true;
       for (const batch of missBatches(ids)) {
-        const outcome = settle(await client.rpc('record_anatomy_misses', { system_key: systemKey, structure_ids: batch }), isNumber);
+        // Later batches check who is signed in again, so a switch between batches stops the rest.
+        if (!first) client = await signedIn(expectedUserId);
+        if (!client) return { ok: true, value: recorded };
+        first = false;
+        const outcome = settle(await client.rpc('record_anatomy_misses', { system_key: systemKey, structure_ids: batch, ...(expectedUserId === undefined ? {} : { expected_user_id: expectedUserId }) }), isNumber);
         if (!outcome.ok) return outcome;
         recorded += outcome.value;
       }
       return { ok: true, value: recorded };
     },
-    async clearMiss(systemKey, structureId) {
-      const client = await signedIn();
+    async clearMiss(systemKey, structureId, expectedUserId) {
+      const client = await signedIn(expectedUserId);
       if (!client) return { ok: false, message: NOT_SIGNED_IN };
-      return settle(await client.rpc('clear_anatomy_miss', { system_key: systemKey, structure_id: structureId }), isBoolean);
+      return settle(await client.rpc('clear_anatomy_miss', { system_key: systemKey, structure_id: structureId, ...(expectedUserId === undefined ? {} : { expected_user_id: expectedUserId }) }), isBoolean);
     },
-    async reviewQueue() {
-      const client = await signedIn();
+    async reviewQueue(expectedUserId) {
+      const client = await signedIn(expectedUserId);
       if (!client) return { ok: true, value: [] };
       return settle(await client.rpc('my_anatomy_review_queue'), isRows<ReviewQueueRow>);
     },
-    async saveView(state) {
+    async saveView(state, expectedUserId) {
       const snapshot = viewSnapshot(state);
       if (!snapshot.ok) return snapshot;
-      const client = await signedIn();
+      const client = await signedIn(expectedUserId);
       if (!client) return { ok: false, message: NOT_SIGNED_IN };
-      return settle(await client.rpc('save_anatomy_view', snapshot.args), isString);
+      return settle(await client.rpc('save_anatomy_view', expectedUserId === undefined ? snapshot.args : { ...snapshot.args, expected_user_id: expectedUserId }), isString);
     },
-    async deleteView(id) {
-      const client = await signedIn();
+    async deleteView(id, expectedUserId) {
+      const client = await signedIn(expectedUserId);
       if (!client) return { ok: false, message: NOT_SIGNED_IN };
-      return settle(await client.rpc('delete_anatomy_view', { id }), isBoolean);
+      return settle(await client.rpc('delete_anatomy_view', expectedUserId === undefined ? { id } : { id, expected_user_id: expectedUserId }), isBoolean);
     },
-    async views(systemKey) {
+    async views(systemKey, expectedUserId) {
       if (!SYSTEM_KEY.test(systemKey)) return { ok: true, value: [] };
-      const client = await signedIn();
+      const client = await signedIn(expectedUserId);
       if (!client) return { ok: true, value: [] };
       return settle(await client.rpc('my_anatomy_views', { system_key: systemKey }), isRows<SavedViewRow>);
     },

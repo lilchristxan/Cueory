@@ -243,3 +243,42 @@ describe('createAnatomyStudy', () => {
     expect((await study.recordMisses('heart', ['FMA1'])).ok).toBe(false);
   });
 });
+
+describe('an account switch while the session check is pending (Task 178)', () => {
+  /** getSession() waits until the test releases it, answering with whoever is signed in by then. */
+  function switching() {
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => { release = resolve; });
+    let user = 'student-a';
+    const rpc = vi.fn(async (_fn: string, _args?: unknown) => ({ data: null, error: null }));
+    const client = {
+      auth: { getSession: async () => { await gate; return { data: { session: { user: { id: user } } }, error: null }; } },
+      rpc,
+    } as unknown as AnatomyStudyClient;
+    return { rpc, study: createAnatomyStudy(async () => client), switchTo: (next: string) => { user = next; release(); } };
+  }
+  const state = { systemKey: 'heart', name: 'front', camera, hidden: [], faded: [], selected: null };
+
+  it.each([
+    ['recordMisses', (s: ReturnType<typeof switching>['study']) => s.recordMisses('heart', ['FMA1'], 'student-a')],
+    ['clearMiss', (s: ReturnType<typeof switching>['study']) => s.clearMiss('heart', 'FMA1', 'student-a')],
+    ['saveView', (s: ReturnType<typeof switching>['study']) => s.saveView(state, 'student-a')],
+    ['deleteView', (s: ReturnType<typeof switching>['study']) => s.deleteView('00000000-0000-4000-8000-000000000001', 'student-a')],
+    ['reviewQueue', (s: ReturnType<typeof switching>['study']) => s.reviewQueue('student-a')],
+    ['views', (s: ReturnType<typeof switching>['study']) => s.views('heart', 'student-a')],
+  ])('%s sends nothing when student A\'s action finds student B signed in', async (_name, run) => {
+    const { rpc, study, switchTo } = switching();
+    const pending = run(study);
+    switchTo('student-b');
+    await pending;
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it('still sends when the same student is signed in', async () => {
+    const { rpc, study, switchTo } = switching();
+    const pending = study.clearMiss('heart', 'FMA1', 'student-a');
+    switchTo('student-a');
+    await pending;
+    expect(rpc).toHaveBeenCalledTimes(1);
+  });
+});

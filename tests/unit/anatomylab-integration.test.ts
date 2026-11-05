@@ -112,3 +112,52 @@ describe('saved views in the lab', () => {
     expect(compareSyncDue(1050, 1000)).toBe(true);
   });
 });
+
+describe('the compare view follows the main camera to where it settles', () => {
+  async function setup() {
+    const { createCompareSync } = await import('../../src/islands/anatomylab');
+    const { vi } = await import('vitest');
+    vi.useFakeTimers();
+    let main = 'start';
+    const compare: string[] = [];
+    const sync = createCompareSync(() => compare.push(main), {
+      now: () => performance.now(),
+      setTimeout: (run, ms) => setTimeout(run, ms),
+      clearTimeout: (h) => clearTimeout(h as ReturnType<typeof setTimeout>),
+    });
+    return { vi, sync, compare, move: (camera: string) => { main = camera; sync.request(); } };
+  }
+
+  it('copies the final camera after a fast event inside the 50 ms window, once', async () => {
+    const { vi, compare, move } = await setup();
+    try {
+      move('first');
+      vi.advanceTimersByTime(10);
+      move('settled'); // the last frame the main view draws; it is inside the window, so no copy yet
+      expect(compare).toEqual(['first']);
+      vi.advanceTimersByTime(39);
+      expect(compare).toEqual(['first']);
+      vi.advanceTimersByTime(1);
+      expect(compare).toEqual(['first', 'settled']);
+      vi.advanceTimersByTime(1000);
+      expect(compare).toEqual(['first', 'settled']);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('cancels the pending copy on teardown', async () => {
+    const { vi, sync, compare, move } = await setup();
+    try {
+      move('first');
+      vi.advanceTimersByTime(5);
+      move('settled');
+      sync.cancel();
+      vi.advanceTimersByTime(1000);
+      expect(compare).toEqual(['first']);
+      expect(vi.getTimerCount()).toBe(0);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});

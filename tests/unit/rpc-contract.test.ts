@@ -259,22 +259,22 @@ describe('anatomy study contract (Task 178)', () => {
   const anatomySql = readFileSync(new URL('../../supabase/migrations/20261105120000_anatomy_study.sql', import.meta.url), 'utf8');
   const camera = { position: [0, 0, 3] as [number, number, number], target: [0, 0, 0] as [number, number, number] };
   const signatures = {
-    record_anatomy_misses: 'text, text[]', clear_anatomy_miss: 'text, text', my_anatomy_review_queue: '',
-    save_anatomy_view: 'text, text, jsonb, text[], text[], text', delete_anatomy_view: 'uuid', my_anatomy_views: 'text',
+    record_anatomy_misses: 'text, text[], uuid', clear_anatomy_miss: 'text, text, uuid', my_anatomy_review_queue: '',
+    save_anatomy_view: 'text, text, jsonb, text[], text[], text, uuid', delete_anatomy_view: 'uuid, uuid', my_anatomy_views: 'text',
   } as const;
 
   it('declares the six functions with the agreed argument names, in order', () => {
-    expect(declaration('record_anatomy_misses').arguments).toEqual(['system_key', 'structure_ids']);
-    expect(declaration('clear_anatomy_miss').arguments).toEqual(['system_key', 'structure_id']);
+    expect(declaration('record_anatomy_misses').arguments).toEqual(['system_key', 'structure_ids', 'expected_user_id']);
+    expect(declaration('clear_anatomy_miss').arguments).toEqual(['system_key', 'structure_id', 'expected_user_id']);
     expect(declaration('my_anatomy_review_queue').arguments).toEqual([]);
-    expect(declaration('save_anatomy_view').arguments).toEqual(['system_key', 'name', 'camera', 'hidden', 'faded', 'selected']);
-    expect(declaration('delete_anatomy_view').arguments).toEqual(['id']);
+    expect(declaration('save_anatomy_view').arguments).toEqual(['system_key', 'name', 'camera', 'hidden', 'faded', 'selected', 'expected_user_id']);
+    expect(declaration('delete_anatomy_view').arguments).toEqual(['id', 'expected_user_id']);
     expect(declaration('my_anatomy_views').arguments).toEqual(['system_key']);
-    expect(anatomySql).toMatch(/create function public\.record_anatomy_misses\(system_key text, structure_ids text\[\]\)\s+returns integer\s/);
-    expect(anatomySql).toMatch(/create function public\.clear_anatomy_miss\(system_key text, structure_id text\)\s+returns boolean\s/);
+    expect(anatomySql).toMatch(/create function public\.record_anatomy_misses\(system_key text, structure_ids text\[\], expected_user_id uuid default null\)\s+returns integer\s/);
+    expect(anatomySql).toMatch(/create function public\.clear_anatomy_miss\(system_key text, structure_id text, expected_user_id uuid default null\)\s+returns boolean\s/);
     expect(anatomySql).toMatch(/create function public\.my_anatomy_review_queue\(\)\s+returns setof public\.anatomy_review_queue\s/);
     expect(anatomySql).toMatch(/returns uuid\s+language plpgsql\s+security definer\s+set search_path = ''/);
-    expect(anatomySql).toMatch(/create function public\.delete_anatomy_view\(id uuid\)\s+returns boolean\s/);
+    expect(anatomySql).toMatch(/create function public\.delete_anatomy_view\(id uuid, expected_user_id uuid default null\)\s+returns boolean\s/);
     expect(anatomySql).toMatch(/create function public\.my_anatomy_views\(system_key text\)\s+returns setof public\.anatomy_saved_views\s/);
   });
 
@@ -312,16 +312,16 @@ describe('anatomy study contract (Task 178)', () => {
 
   it('raises exactly these literal refusals, which the browser module maps to student sentences', () => {
     const expected: Record<keyof typeof signatures, string[]> = {
-      record_anatomy_misses: ['sign in to record what you missed', 'confirm your email to use this', 'complete two-factor sign-in to continue',
+      record_anatomy_misses: ['sign in to record what you missed', 'the signed-in account changed; please try again', 'confirm your email to use this', 'complete two-factor sign-in to continue',
         'that anatomy system was not found', 'send between 1 and 50 structures', 'a structure id has the wrong shape',
         'too many misses recorded recently; try again later'],
-      clear_anatomy_miss: ['sign in to change your review list', 'confirm your email to use this', 'complete two-factor sign-in to continue',
+      clear_anatomy_miss: ['sign in to change your review list', 'the signed-in account changed; please try again', 'confirm your email to use this', 'complete two-factor sign-in to continue',
         'that anatomy system was not found', 'a structure id has the wrong shape'],
       my_anatomy_review_queue: ['sign in to see your review list', 'confirm your email to use this', 'complete two-factor sign-in to continue'],
-      save_anatomy_view: ['sign in to save a view', 'confirm your email to use this', 'complete two-factor sign-in to continue',
+      save_anatomy_view: ['sign in to save a view', 'the signed-in account changed; please try again', 'confirm your email to use this', 'complete two-factor sign-in to continue',
         'that anatomy system was not found', 'a view name is 1 to 60 characters of plain text', 'the camera has the wrong shape',
         'a structure id has the wrong shape', 'you can keep up to 50 saved views; delete one first'],
-      delete_anatomy_view: ['sign in to delete a view', 'confirm your email to use this', 'complete two-factor sign-in to continue',
+      delete_anatomy_view: ['sign in to delete a view', 'the signed-in account changed; please try again', 'confirm your email to use this', 'complete two-factor sign-in to continue',
         'that view was not found'],
       my_anatomy_views: ['sign in to see your saved views', 'confirm your email to use this', 'complete two-factor sign-in to continue',
         'that anatomy system was not found'],
@@ -345,18 +345,18 @@ describe('anatomy study contract (Task 178)', () => {
     });
     const client = { auth: { getSession: async () => ({ data: { session: { user: { id: 'student-1' } } }, error: null }) }, rpc } as unknown as AnatomyStudyClient;
     const study = createAnatomyStudy(async () => client);
-    await study.recordMisses('heart', ['FMA1']);
-    await study.clearMiss('heart', 'FMA1');
+    await study.recordMisses('heart', ['FMA1'], 'student-1');
+    await study.clearMiss('heart', 'FMA1', 'student-1');
     await study.reviewQueue();
-    await study.saveView({ systemKey: 'heart', name: 'front', camera, hidden: [] });
-    await study.deleteView('00000000-0000-4000-8000-000000000001');
+    await study.saveView({ systemKey: 'heart', name: 'front', camera, hidden: [] }, 'student-1');
+    await study.deleteView('00000000-0000-4000-8000-000000000001', 'student-1');
     await study.views('heart');
     const sent = Object.fromEntries(rpc.mock.calls.map(([fn, args]) => [fn, args ? Object.keys(args as object) : []]));
     for (const name of Object.keys(signatures) as (keyof typeof signatures)[]) {
       expect(sent[name], name).toEqual(declaration(name).arguments);
     }
     const snapshot = viewSnapshot({ systemKey: 'heart', name: 'front', camera, hidden: [] });
-    expect(snapshot.ok && Object.keys(snapshot.args)).toEqual(declaration('save_anatomy_view').arguments);
+    expect(snapshot.ok && [...Object.keys(snapshot.args), 'expected_user_id']).toEqual(declaration('save_anatomy_view').arguments);
   });
 
   it('the review row and saved view types name exactly the table columns the functions return', () => {

@@ -5,7 +5,7 @@
 -- only inside this test.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(130);
+select plan(136);
 
 insert into auth.users (id, email, email_confirmed_at, is_anonymous) values
   -- One and two: confirmed students.
@@ -43,18 +43,18 @@ select ok(
 );
 select ok(
   (select bool_and(has_function_privilege('authenticated', f, 'execute') and not has_function_privilege('anon', f, 'execute'))
-   from unnest(array['public.record_anatomy_misses(text, text[])', 'public.clear_anatomy_miss(text, text)',
-                     'public.my_anatomy_review_queue()', 'public.save_anatomy_view(text, text, jsonb, text[], text[], text)',
-                     'public.delete_anatomy_view(uuid)', 'public.my_anatomy_views(text)']) f),
+   from unnest(array['public.record_anatomy_misses(text, text[], uuid)', 'public.clear_anatomy_miss(text, text, uuid)',
+                     'public.my_anatomy_review_queue()', 'public.save_anatomy_view(text, text, jsonb, text[], text[], text, uuid)',
+                     'public.delete_anatomy_view(uuid, uuid)', 'public.my_anatomy_views(text)']) f),
   'signed-in students can run all six functions and signed-out visitors cannot'
 );
 select ok(
   (select bool_and(p.prosecdef and p.proconfig @> array['search_path=""'])
    from pg_proc p
-   where p.oid in ('public.record_anatomy_misses(text, text[])'::regprocedure, 'public.clear_anatomy_miss(text, text)'::regprocedure,
+   where p.oid in ('public.record_anatomy_misses(text, text[], uuid)'::regprocedure, 'public.clear_anatomy_miss(text, text, uuid)'::regprocedure,
                    'public.my_anatomy_review_queue()'::regprocedure,
-                   'public.save_anatomy_view(text, text, jsonb, text[], text[], text)'::regprocedure,
-                   'public.delete_anatomy_view(uuid)'::regprocedure, 'public.my_anatomy_views(text)'::regprocedure)),
+                   'public.save_anatomy_view(text, text, jsonb, text[], text[], text, uuid)'::regprocedure,
+                   'public.delete_anatomy_view(uuid, uuid)'::regprocedure, 'public.my_anatomy_views(text)'::regprocedure)),
   'all six are security definer with an empty search_path'
 );
 select results_eq(
@@ -437,6 +437,32 @@ set local "request.jwt.claim.sub" to '00000000-0000-4000-8000-000000000001';
 select isnt(
   public.save_anatomy_view('heart', 'side view', current_setting('t.camera')::jsonb, '{}', '{}', null),
   null, 'one student being at the cap does not stop another'
+);
+
+-- ---- An action started for another account is refused before anything changes (an account switch in another tab).
+select throws_ok(
+  $$ select public.record_anatomy_misses('heart', array['FMA901'], '00000000-0000-4000-8000-000000000002') $$,
+  '28000', 'the signed-in account changed; please try again', 'a miss started for student two is refused under student one'
+);
+select throws_ok(
+  $$ select public.clear_anatomy_miss('heart', 'FMA1', '00000000-0000-4000-8000-000000000002') $$,
+  '28000', 'the signed-in account changed; please try again', 'a clear started for student two is refused under student one'
+);
+select throws_ok(
+  $$ select public.save_anatomy_view('heart', 'switched', current_setting('t.camera')::jsonb, '{}', '{}', null, '00000000-0000-4000-8000-000000000002') $$,
+  '28000', 'the signed-in account changed; please try again', 'a save started for student two is refused under student one'
+);
+select throws_ok(
+  $$ select public.delete_anatomy_view('00000000-0000-4000-8000-000000000099', '00000000-0000-4000-8000-000000000002') $$,
+  '28000', 'the signed-in account changed; please try again', 'a delete started for student two is refused under student one'
+);
+select results_eq(
+  $$ select public.record_anatomy_misses('heart', array['FMA1'], '00000000-0000-4000-8000-000000000001') $$, $$ values (1) $$,
+  'the same student naming themselves is accepted'
+);
+select results_eq(
+  $$ select count(*)::int from public.anatomy_review_queue where structure_id = 'FMA901' $$, $$ values (0) $$,
+  'and the refused miss wrote nothing'
 );
 
 -- ---- Export-my-data reads (student one is signed in).
