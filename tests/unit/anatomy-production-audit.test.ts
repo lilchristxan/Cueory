@@ -442,18 +442,20 @@ describe('anatomy production artifact audit', () => {
     // A complete 512-byte TAR header in a CBOR text string is also an archive.
     const textTar = Buffer.alloc(1536, 0);
     textTar.write('hidden-model.bin', 0, 'ascii');
-    textTar.write('0000644\\0', 100, 'ascii');
-    textTar.write('0000000\\0', 108, 'ascii');
-    textTar.write('0000000\\0', 116, 'ascii');
-    textTar.write('00000000000\\0', 124, 'ascii');
-    textTar.write('00000000000\\0', 136, 'ascii');
+    textTar.write('0000644', 100, 'ascii');
+    textTar.write('0000000', 108, 'ascii');
+    textTar.write('0000000', 116, 'ascii');
+    textTar.write('00000000000', 124, 'ascii');
+    textTar.write('00000000000', 136, 'ascii');
     textTar.fill(0x20, 148, 156);
     textTar.write('0', 156, 'ascii');
-    textTar.write('ustar\\0', 257, 'ascii');
+    textTar.write('ustar', 257, 'ascii'); // zero-filled byte 262 is the NUL terminator
     textTar.write('00', 263, 'ascii');
     let textTarChecksum = 0;
     for (let index = 0; index < 512; index += 1) textTarChecksum += index >= 148 && index < 156 ? 0x20 : textTar[index];
-    textTar.write(`${textTarChecksum.toString(8).padStart(6, '0')}\\0 `, 148, 'ascii');
+    textTar.write(textTarChecksum.toString(8).padStart(6, '0'), 148, 'ascii');
+    textTar[154] = 0;
+    textTar[155] = 0x20;
     const textStringTar = Buffer.concat([Buffer.from([0x81, 0x79, 0x06, 0x00]), textTar]);
     f.file('pagefind/index/en_text_string_archive.pf_index', gzipSync(Buffer.concat([prefix, textStringTar])));
     f.file('pagefind/filter/en_hidden_model.pf_filter', gzipSync(Buffer.concat([prefix, Buffer.from('glTF' + 'x'.repeat(32))])));
