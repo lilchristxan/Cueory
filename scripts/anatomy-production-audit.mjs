@@ -119,6 +119,9 @@ export function parseApprovedGlb(bytes) {
       throw new Error('invalid GLB chunk length');
     }
     if (type === 0x4e4f534a) throw new Error('unexpected additional JSON chunk');
+    // Cueory's reviewed generator writes exactly one JSON and one BIN chunk.
+    // Any extra chunk carries unreviewed bytes and must not be published.
+    if (type !== 0x004e4942) throw new Error('unexpected non-BIN GLB chunk');
     if (type === 0x004e4942) {
       if (pos !== jsonEnd || binLength !== null) throw new Error('BIN chunk out of order');
       binLength = size;

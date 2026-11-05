@@ -322,6 +322,25 @@ describe('anatomy production artifact audit', () => {
     expect(f.check().errors).toEqual([]);
   });
 
+  it('rejects an unreviewed extra chunk after an otherwise valid approved GLB', () => {
+    const f = setup();
+    const path = join(f.dist, 'models', 'anatomy', 'approved.glb');
+    const original = readFileSync(path);
+    expect(f.check().errors).toEqual([]);
+    // A self-consistent GLB header plus a valid JSON/BIN pair must not
+    // conceal extra data in a third, nonstandard chunk.
+    const altered = Buffer.alloc(original.length + 12);
+    original.copy(altered);
+    altered.writeUInt32LE(altered.length, 8);
+    altered.writeUInt32LE(4, original.length);
+    altered.write('HIDE', original.length + 4, 'ascii');
+    altered.write('DATA', original.length + 8, 'ascii');
+    writeFileSync(path, altered);
+    expect(f.check().errors).toContain(
+      'approved model failed built GLB geometry, identity or credit verification: /models/anatomy/approved.glb',
+    );
+  });
+
   it('rejects a GLB whose declared length mismatches the actual file', () => {
     const f = setup();
     const path = join(f.dist, 'models', 'anatomy', 'approved.glb');
