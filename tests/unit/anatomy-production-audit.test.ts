@@ -30,8 +30,8 @@ function setup() {
         id: `bp3d-${id}`,
         quote: 'synthetic test words only',
         book: 'BodyParts3D',
-        section: 'synthetic test section',
-        url: 'https://dbarchive.biosciencedbc.jp/data/bodyparts3d/LATEST/synthetic-test-only',
+        section: 'partof_parts_list_e.txt, Release 4.0',
+        url: 'https://dbarchive.biosciencedbc.jp/data/bodyparts3d/LATEST/partof_parts_list_e.txt',
         license: 'CC BY 4.0',
         retrieved: '2026-11-04',
       })),
@@ -109,8 +109,8 @@ describe('anatomy production artifact audit', () => {
         null, 7, [],
         {
           id: 'bp3d-FMA999992', quote: 'synthetic test words only',
-          book: 'BodyParts3D', section: 'synthetic test section',
-          url: 'https://dbarchive.biosciencedbc.jp/data/bodyparts3d/LATEST/synthetic-test-only',
+          book: 'BodyParts3D', section: 'partof_parts_list_e.txt, Release 4.0',
+          url: 'https://dbarchive.biosciencedbc.jp/data/bodyparts3d/LATEST/partof_parts_list_e.txt',
           license: 'CC BY 4.0', retrieved: '2026-11-04',
         },
       ],
@@ -244,7 +244,7 @@ describe('anatomy production artifact audit', () => {
       labels: [{ id: 'FMA999992', text: 'fixture label', source: 'bp3d-FMA999992' }],
       sources: [{
         id: 'bp3d-FMA999992', quote: '', book: 'BodyParts3D', section: '',
-        url: 'https://dbarchive.biosciencedbc.jp/data/bodyparts3d/LATEST/synthetic-test-only',
+        url: 'https://dbarchive.biosciencedbc.jp/data/bodyparts3d/LATEST/partof_parts_list_e.txt',
         license: 'CC BY 4.0', retrieved: '2026-11-04',
       }],
     }));
@@ -261,13 +261,35 @@ describe('anatomy production artifact audit', () => {
       labels: [{ id: 'FMA999992', text: 'fixture label', source: 'bp3d-FMA999992' }],
       sources: [{
         id: 'bp3d-FMA999992', quote: 'synthetic words', book: 'Other Atlas',
-        section: 'synthetic test section', url: 'https://example.org/unverified',
+        section: 'partof_parts_list_e.txt, Release 4.0', url: 'https://example.org/unverified',
         license: 'CC BY-NC 4.0', retrieved: 'invalid date',
       }],
     }));
     expect(f.check().errors).toContain(
       'anatomy-approved.json: approved source bp3d-FMA999992 has incomplete or incompatible citation and rights evidence',
     );
+  });
+
+  it('rejects a wrong official citation target despite a valid LATEST archive URL', () => {
+    const f = setup();
+    const file = join(f.content, 'anatomy-approved.json');
+    const original = JSON.parse(readFileSync(file, 'utf8'));
+    const problem = 'anatomy-approved.json: approved source bp3d-FMA999992 has incomplete or incompatible citation and rights evidence';
+    for (const url of [
+      'https://dbarchive.biosciencedbc.jp/data/bodyparts3d/LATEST/README_e.html',
+      'https://dbarchive.biosciencedbc.jp/data/bodyparts3d/LATEST/isa_parts_list_e.txt',
+    ]) {
+      writeFileSync(file, JSON.stringify({
+        ...original, sources: [{ ...original.sources[0], url }],
+      }));
+      expect(f.check().errors, url).toContain(problem);
+    }
+    writeFileSync(file, JSON.stringify({
+      ...original, sources: [{ ...original.sources[0], section: 'unreviewed source file' }],
+    }));
+    expect(f.check().errors).toContain(problem);
+    writeFileSync(file, JSON.stringify(original));
+    expect(f.check().errors).toEqual([]);
   });
 
   it('rejects an archived BodyParts3D citation despite a claimed current CC BY license', () => {

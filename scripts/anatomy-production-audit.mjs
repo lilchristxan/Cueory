@@ -14,6 +14,15 @@ const MODEL_URL = /^\/models\/anatomy\/[a-z0-9][a-z0-9_-]*\.glb$/;
 const STRUCTURE_ID = /^(?:FMA|BP)\d+[a-z]*$/;
 const STRUCTURE_TOKEN = /\b(?:FMA|BP)\d+[a-z]*\b/g;
 const BODYPARTS3D_URL_PREFIX = 'https://dbarchive.biosciencedbc.jp/data/bodyparts3d/LATEST/';
+/** The release gate must verify the actual file containing each quoted anatomy name.
+ * A valid archive origin alone is not proof that a README citation points to a parts-list row.
+ */
+const BODYPARTS3D_SECTION_FILES = new Map([
+  ['README_e.html, Release 4.0', 'README_e.html'],
+  ['partof_parts_list_e.txt, Release 4.0', 'partof_parts_list_e.txt'],
+  ['isa_parts_list_e.txt, Release 4.0', 'isa_parts_list_e.txt'],
+]);
+
 // Fail closed on any publicly shipped 3D geometry, including misplaced copies and raw source meshes.
 const MODEL_ASSET = /\.(?:glb|gltf|obj|stl)$/i;
 // Scan all ordinary published text assets, not just the anatomy page or hashed JavaScript chunks.
@@ -226,7 +235,10 @@ export function auditAnatomyProduction(distDir, contentDir) {
           // visuals-kit contract. Production audits also check stale dist/.
           const hasQuote = typeof source.quote === 'string' && source.quote.trim().length > 0;
           const hasSection = typeof source.section === 'string' && source.section.trim().length > 0;
-          const hasPage = validBodyParts3dSourceUrl(source.url);
+          const sourceFile = BODYPARTS3D_SECTION_FILES.get(source.section);
+          const hasPage = typeof sourceFile === 'string' &&
+            source.url === BODYPARTS3D_URL_PREFIX + sourceFile &&
+            validBodyParts3dSourceUrl(source.url);
           const hasDate = validRetrievedDay(source.retrieved);
           if (!hasQuote || !hasSection || !hasPage || !hasDate ||
               source.book !== 'BodyParts3D' || source.license !== 'CC BY 4.0') {
