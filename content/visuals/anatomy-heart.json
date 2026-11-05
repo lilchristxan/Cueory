@@ -4,6 +4,7 @@
   "kind": "model",
   "lessonIds": ["U04-T01-L01", "U04-T03-L02", "U04-T06-L02"],
   "status": "draft",
+  "hierarchyTree": "partof",
   "model": { "file": "/models/anatomy/heart.glb", "release": "BodyParts3D 4.0", "via": "official download from dbarchive.biosciencedbc.jp" },
   "labels": [
     { "id": "FMA7088", "text": "heart", "group": "human body", "layer": "organs", "source": "bp3d-FMA7088" },

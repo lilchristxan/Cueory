@@ -4,6 +4,7 @@
   "kind": "model",
   "lessonIds": ["U11-T01-L01", "U11-T01-L05"],
   "status": "draft",
+  "hierarchyTree": "isa",
   "model": { "file": "/models/anatomy/skeleton-limbs.glb", "release": "BodyParts3D 4.0", "via": "official download from dbarchive.biosciencedbc.jp" },
   "labels": [
     { "id": "FMA13322", "text": "right clavicle", "group": "clavicle", "layer": "skeleton", "source": "bp3d-FMA13322" },

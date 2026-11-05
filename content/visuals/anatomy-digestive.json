@@ -4,6 +4,7 @@
   "kind": "model",
   "lessonIds": ["U08-T01-L02", "U08-T03-L02", "U08-T04-L02"],
   "status": "draft",
+  "hierarchyTree": "partof",
   "model": { "file": "/models/anatomy/digestive.glb", "release": "BodyParts3D 4.0", "via": "official download from dbarchive.biosciencedbc.jp" },
   "labels": [
     { "id": "FMA7131", "text": "esophagus", "group": "gastrointestinal tract", "layer": "organs", "source": "bp3d-FMA7131" },
