@@ -19,7 +19,7 @@ import {
   type PullRequest,
 } from '../../scripts/automerge/decide.ts';
 import { createGitHub, type Fetch } from '../../scripts/automerge/github.ts';
-import { runAutomerge } from '../../scripts/staging_automerge.ts';
+import { eventPullNumbers, runAutomerge } from '../../scripts/staging_automerge.ts';
 
 const REPO = 'owner/site';
 const HEAD = 'a1b2c3d4';
@@ -532,6 +532,35 @@ describe('decide', () => {
   });
 });
 
+describe('event-scoped PR selection', () => {
+  it('keeps intentional scheduled, manual and local runs as full reconciliations', () => {
+    expect(eventPullNumbers('schedule', {})).toBeUndefined();
+    expect(eventPullNumbers('workflow_dispatch', {})).toBeUndefined();
+    expect(eventPullNumbers(undefined, {})).toBeUndefined();
+  });
+
+  it('checks only the pull request attached to a Codex issue comment', () => {
+    expect(eventPullNumbers('issue_comment', { issue: { number: 42, pull_request: {} } })).toEqual([42]);
+    expect(eventPullNumbers('issue_comment', { issue: { number: 42 } })).toEqual([]);
+    expect(eventPullNumbers('issue_comment', { issue: { number: -1, pull_request: {} } })).toEqual([]);
+  });
+
+  it('selects deduplicated pull requests from CI and Workers check events', () => {
+    expect(eventPullNumbers('workflow_run', { workflow_run: { pull_requests: [{ number: 7 }, { number: 8 }, { number: 7 }] } })).toEqual([7, 8]);
+    expect(eventPullNumbers('check_run', { check_run: { pull_requests: [{ number: 8 }] } })).toEqual([8]);
+  });
+
+  it('never turns missing, invalid, ambiguous or unassociated webhook data into a broad scan', () => {
+    expect(eventPullNumbers('workflow_run', { workflow_run: { pull_requests: [] } })).toEqual([]);
+    expect(eventPullNumbers('check_run', { check_run: {} })).toEqual([]);
+    expect(eventPullNumbers('check_run', { check_run: { pull_requests: [{ number: '7' }] } })).toEqual([]);
+    expect(eventPullNumbers('check_run', { check_run: { pull_requests: [{ number: 3 }, null] } })).toEqual([]);
+    expect(eventPullNumbers('check_run', { check_run: { pull_requests: Array.from({ length: 11 }, (_, i) => ({ number: i + 1 })) } })).toEqual([]);
+    expect(eventPullNumbers('push', { pull_requests: [{ number: 7 }] })).toEqual([]);
+    expect(eventPullNumbers('workflow_run', null)).toEqual([]);
+  });
+});
+
 /** A pretend GitHub that records every call, so nothing touches the network. */
 function fakeGitHub(
   pulls: Record<number, { pr: PullRequest; files: string[] }>,
@@ -598,6 +627,44 @@ describe('the auto-merge run', () => {
     expect(calls.filter((c) => c.method !== 'GET')).toEqual([]);
     expect(lines[0]).toBe('Rules: launched (automation.json)');
     expect(lines[2]).toContain('needs Christian: changes public/_headers');
+  });
+
+  it('handles only event-associated PRs without enumerating all open requests', async () => {
+    const one = fakeGitHub(pulls());
+    const outcomes = await runAutomerge({ gh: one.gh, repo: REPO, mode: 'launched', eventPrs: [7], dryRun: true, log: () => {} });
+    expect(outcomes.map((x) => x.pr)).toEqual([7]);
+    expect(one.calls.some((c) => c.path.startsWith('/pulls?state=open'))).toBe(false);
+
+    const none = fakeGitHub(pulls());
+    const skipped = await runAutomerge({ gh: none.gh, repo: REPO, mode: 'launched', eventPrs: [], dryRun: false, log: () => {} });
+    expect(skipped).toEqual([]);
+    expect(none.calls).toEqual([]);
+  });
+
+  it.each([403, 429])('fails closed on GitHub API quota response %i', async (status) => {
+    const fetch: Fetch = async () => new Response(JSON.stringify({ message: 'API rate limit exceeded' }), { status });
+    const gh = createGitHub({ token: 'test-token', repo: REPO, fetch });
+    await expect(runAutomerge({ gh, repo: REPO, mode: 'launched', dryRun: false, log: () => {} }))
+      .rejects.toMatchObject({ status });
+  });
+
+  it('refuses to scan all PRs if a webhook event payload cannot be read', () => {
+    let exitStatus = 0;
+    try {
+      execFileSync(process.execPath, ['scripts/staging_automerge.ts'], {
+        env: {
+          PATH: process.env.PATH,
+          GITHUB_TOKEN: 'synthetic-token',
+          GITHUB_REPOSITORY: REPO,
+          GITHUB_EVENT_NAME: 'check_run',
+          GITHUB_EVENT_PATH: '/missing-cueory-github-event.json',
+        },
+        stdio: 'pipe',
+      });
+    } catch (e) {
+      exitStatus = (e as { status: number }).status;
+    }
+    expect(exitStatus).toBe(1);
   });
 
   it('merges with a merge commit pinned to the checked head, and labels the sensitive one', async () => {
