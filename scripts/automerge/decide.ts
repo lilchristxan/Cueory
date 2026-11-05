@@ -77,6 +77,7 @@ const ALWAYS_HELD_FILES = new Set([
   'scripts/anatomy-production-audit.mjs',
   'scripts/anatomy-production-deploy.mjs', // Pre-upload production gate must never change without founder approval.
   'scripts/check-anatomy-build.mjs',
+  'scripts/check-anatomy-wrangler.mjs', // Wrangler custom-build upload audit must remain founder-held.
   'scripts/anatomy-postbuild-audit.mjs', // alternative production postbuild wrapper in PR #626
   'src/islands/anatomylab.ts', // Chooses draft versus approved data for build output.
   'src/islands/AnatomyLab.tsx', // Shows draft warnings, model attribution and export credits.
