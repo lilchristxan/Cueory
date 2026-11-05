@@ -100,6 +100,19 @@ describe('anatomy production artifact audit', () => {
     expect(f.check().errors).toEqual([]);
   });
 
+  it('rejects a malformed BodyParts3D row with BP in the FMA column', () => {
+    const f = setup();
+    const path = join(f.content, 'anatomy-approved.json');
+    const record = JSON.parse(readFileSync(path, 'utf8'));
+    // A BodyParts3D parts-list row is FMA ID, BP ID, then exact source name.
+    // Treating BP as either column accepts a synthetic row the publisher never defines.
+    record.sources[0].quote = 'BP999992 BP999999 fixture label';
+    writeFileSync(path, JSON.stringify(record));
+    expect(f.check().errors).toContain(
+      'anatomy-approved.json: approved label FMA999992 does not match its cited source row',
+    );
+  });
+
   it('accepts a build with approved models and no exposed drafts', () => {
     expect(setup().check()).toEqual({ errors: [], approvedSystems: 1, draftSystems: 1, shippedModels: 1 });
   });
