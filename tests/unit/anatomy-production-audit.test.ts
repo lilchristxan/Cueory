@@ -311,10 +311,23 @@ describe('anatomy production artifact audit', () => {
     f.file('pagefind/index/en_raw_test.pf_index', Buffer.concat([prefix, indexCbor]));
     f.file('pagefind/filter/en_raw_test.pf_filter', Buffer.concat([prefix, filterCbor]));
     f.file('pagefind/wasm.en_raw.pagefind', Buffer.concat([prefix, Buffer.from([0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00])]));
-    // Plain format names in indexed text are not binary model payloads.
-    const safeMention = Buffer.from('glTF is text only');
-    const safeMentionCbor = Buffer.concat([Buffer.from([0x81, 0x60 + safeMention.length]), safeMention]);
+    // Incidental short signatures inside valid CBOR byte/text strings are
+    // not proof of a complete embedded archive. Only structurally validated
+    // containers should be rejected from these Pagefind payloads.
+    const incidentalBinaryMarkers = Buffer.from([
+      0x1f, 0x8b, 0x42, 0x5a, 0x68, 0x50, 0x4b, 0x03, 0x04,
+    ]);
+    const incidentalTextMarkers = Buffer.concat([
+      Buffer.from('BZh PK'),
+      Buffer.from([0x03, 0x04]),
+      Buffer.from(' are text markers'),
+    ]);
+    const safeMentionCbor = Buffer.concat([
+      Buffer.from([0x82, 0x49]), incidentalBinaryMarkers,
+      Buffer.from([0x78, incidentalTextMarkers.length]), incidentalTextMarkers,
+    ]);
     f.file('pagefind/index/en_safe_glb_mention.pf_index', gzipSync(Buffer.concat([prefix, safeMentionCbor])));
+    f.file('pagefind/index/en_safe_glb_mention_raw.pf_index', Buffer.concat([prefix, safeMentionCbor]));
     expect(f.check().errors).toEqual([]);
 
     // Draft IDs in a valid compressed fragment must be rejected, including
