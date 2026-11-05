@@ -34,10 +34,9 @@ test.describe('once-only promo panel (D-59)', () => {
 
     // The promo intentionally allows focus to leave. The skip link must remain visibly above its z-40 panel.
     await skip.focus();
-    const appearance = await skip.evaluate((element) => {
+    const unobscured = await skip.evaluate((element) => {
       const rect = element.getBoundingClientRect();
       const hit = document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2);
-      const style = getComputedStyle(element);
       return hit === element || (hit !== null && element.contains(hit));
     });
     expect(unobscured).toBe(true);
