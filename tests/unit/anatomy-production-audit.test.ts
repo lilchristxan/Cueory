@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { mkdirSync, mkdtempSync, readFileSync, readdirSync, renameSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { gzipSync } from 'node:zlib';
+import { deflateRawSync, gzipSync } from 'node:zlib';
 import { auditAnatomyProduction, decodeAsciiEscapesForAudit, modelUrls, parseApprovedGlb, readRegularFileNoFollow } from '../../scripts/anatomy-production-audit.mjs';
 import { keepsDrafts } from '../../src/visuals/prunedrafts';
 
@@ -62,6 +62,57 @@ function makeStoredZip(
   return Buffer.concat([localRecord, centralRecord, end]);
 }
 
+
+/** A complete deflated ZIP whose decoded file is much larger than its archive. */
+function makeDeflatedZip(name: string, payload: Buffer, zip64Uncompressed = false): Buffer {
+  const filename = Buffer.from(name, 'utf8');
+  const data = Buffer.from(payload);
+  const compressed = deflateRawSync(data);
+  const crc = testCrc32(data);
+  const localExtra = zip64Uncompressed ? Buffer.alloc(12) : Buffer.alloc(0);
+  if (zip64Uncompressed) {
+    localExtra.writeUInt16LE(0x0001, 0);
+    localExtra.writeUInt16LE(8, 2);
+    localExtra.writeBigUInt64LE(BigInt(data.length), 4);
+  }
+
+  const local = Buffer.alloc(30);
+  local.writeUInt32LE(0x04034b50, 0);
+  local.writeUInt16LE(zip64Uncompressed ? 45 : 20, 4);
+  local.writeUInt16LE(8, 8); // Deflate.
+  local.writeUInt32LE(crc, 14);
+  local.writeUInt32LE(compressed.length, 18);
+  local.writeUInt32LE(zip64Uncompressed ? 0xffffffff : data.length, 22);
+  local.writeUInt16LE(filename.length, 26);
+  local.writeUInt16LE(localExtra.length, 28);
+  const localRecord = Buffer.concat([local, filename, localExtra, compressed]);
+
+  const centralExtra = zip64Uncompressed ? Buffer.alloc(12) : Buffer.alloc(0);
+  if (zip64Uncompressed) {
+    centralExtra.writeUInt16LE(0x0001, 0);
+    centralExtra.writeUInt16LE(8, 2);
+    centralExtra.writeBigUInt64LE(BigInt(data.length), 4);
+  }
+  const central = Buffer.alloc(46);
+  central.writeUInt32LE(0x02014b50, 0);
+  central.writeUInt16LE(zip64Uncompressed ? 45 : 20, 4);
+  central.writeUInt16LE(zip64Uncompressed ? 45 : 20, 6);
+  central.writeUInt16LE(8, 10);
+  central.writeUInt32LE(crc, 16);
+  central.writeUInt32LE(compressed.length, 20);
+  central.writeUInt32LE(zip64Uncompressed ? 0xffffffff : data.length, 24);
+  central.writeUInt16LE(filename.length, 28);
+  central.writeUInt16LE(centralExtra.length, 30);
+  const centralRecord = Buffer.concat([central, filename, centralExtra]);
+
+  const end = Buffer.alloc(22);
+  end.writeUInt32LE(0x06054b50, 0);
+  end.writeUInt16LE(1, 8);
+  end.writeUInt16LE(1, 10);
+  end.writeUInt32LE(centralRecord.length, 12);
+  end.writeUInt32LE(localRecord.length, 16);
+  return Buffer.concat([localRecord, centralRecord, end]);
+}
 
 function testCrc32(bytes: Buffer): number {
   let value = 0xffffffff;
@@ -562,6 +613,13 @@ describe('anatomy production artifact audit', () => {
     f.file('downloads/streaming-hidden-model.dat', makeStoredZip(
       'streaming-model.bin', Buffer.from('streamed archive payload'), true,
     ));
+    // ZIP bombs are still valid ZIP containers: their decoded data can be
+    // far larger than the complete archive. Cover ordinary and ZIP64 sizes.
+    const repetitivePayload = Buffer.alloc(1024 * 1024, 0x61);
+    f.file('downloads/deflated-hidden-model.dat',
+      makeDeflatedZip('deflated-hidden-model.bin', repetitivePayload));
+    f.file('downloads/zip64-deflated-hidden-model.dat',
+      makeDeflatedZip('zip64-deflated-hidden-model.bin', repetitivePayload, true));
     // ZIP64 sentinels and AES method 99 must not bypass local-header detection.
     f.file('downloads/zip64-aes-hidden-model.dat', makeZip64AesLocalHeader());
     const tar = Buffer.alloc(512);
@@ -598,6 +656,8 @@ describe('anatomy production artifact audit', () => {
         `archive/container in production output requires explicit review: /downloads/embedded-${format}.dat`,
       ),
       'archive/container in production output requires explicit review: /downloads/streaming-hidden-model.dat',
+      'archive/container in production output requires explicit review: /downloads/deflated-hidden-model.dat',
+      'archive/container in production output requires explicit review: /downloads/zip64-deflated-hidden-model.dat',
       'archive/container in production output requires explicit review: /downloads/zip64-aes-hidden-model.dat',
       'archive/container in production output requires explicit review: /downloads/hidden-model.bin',
       'archive/container in production output requires explicit review: /downloads/prefixed-tar.dat',
