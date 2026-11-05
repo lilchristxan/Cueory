@@ -206,10 +206,19 @@ describe('anatomy production artifact audit', () => {
     tar.write('ustar', 257, 'ascii');
     f.file('downloads/hidden-model.bin', tar);
     f.file('downloads/unrecognized.zip', Buffer.from('opaque archive payload'));
+    // Long prefixes and chunk boundaries must not hide a valid GLB or ZIP signature.
+    const approvedGlb = readFileSync(join(f.dist, 'models', 'anatomy', 'approved.glb'));
+    f.file('downloads/prefixed-model.bin', Buffer.concat([Buffer.alloc(700, 0x61), approvedGlb]));
+    f.file('downloads/prefixed-archive.dat', Buffer.concat([
+      Buffer.alloc(64 * 1024 - 2, 0x61), Buffer.from([0x50, 0x4b, 0x03, 0x04, 0x00]),
+    ]));
+    f.file('docs/archive-reference.txt', 'The word ustar is discussed here, but this is ordinary text.');
     expect(f.check().errors).toEqual(expect.arrayContaining([
       'archive/container in production output requires explicit review: /downloads/hidden-model.dat',
       'archive/container in production output requires explicit review: /downloads/hidden-model.bin',
       'archive/container in production output requires explicit review: /downloads/unrecognized.zip',
+      'archive/container in production output requires explicit review: /downloads/prefixed-model.bin',
+      'archive/container in production output requires explicit review: /downloads/prefixed-archive.dat',
     ]));
   });
 
