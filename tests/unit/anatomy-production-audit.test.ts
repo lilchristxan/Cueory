@@ -127,9 +127,25 @@ describe('anatomy production artifact audit', () => {
     f.file('pagefind/index/en_prefixed_model.pf_index', gzipSync(Buffer.concat([prefix, Buffer.from('glTF' + 'x'.repeat(32))])));
     f.file('pagefind/index/en_hidden_archive.pf_index', gzipSync(Buffer.concat([prefix, Buffer.from([0x50, 0x4b, 0x03, 0x04, 0x00])])));
     f.file('pagefind/filter/en_hidden_model.pf_filter', gzipSync(Buffer.concat([prefix, Buffer.from('glTF' + 'x'.repeat(32))])));
-    f.file('pagefind/index/en_late_archive.pf_index', gzipSync(Buffer.concat([prefix, Buffer.alloc(700, 0x61), Buffer.from([0x50, 0x4b, 0x03, 0x04, 0x00])])));
+    // A valid CBOR array with a ZIP byte string after 700 bytes must still be scanned.
+    const lateZip = Buffer.from([0x50, 0x4b, 0x03, 0x04, 0x00]);
+    const lateZipCbor = Buffer.concat([
+      Buffer.from([0x82, 0x79, 0x02, 0xbc]),
+      Buffer.alloc(700, 0x61),
+      Buffer.from([0x45]),
+      lateZip,
+    ]);
+    f.file('pagefind/index/en_late_archive.pf_index', gzipSync(Buffer.concat([prefix, lateZipCbor])));
     f.file('pagefind/index/en_raw_prefixed_model.pf_index', Buffer.concat([prefix, Buffer.from('glTF' + 'x'.repeat(32))]));
     f.file('pagefind/fragment/en_hidden_zstd.pf_fragment', Buffer.from([0x28, 0xb5, 0x2f, 0xfd, 0x00]));
+    // A complete, correctly framed GLB hidden in a valid CBOR byte string must fail.
+    const model = readFileSync(join(f.dist, 'models', 'anatomy', 'approved.glb'));
+    const modelLength = Buffer.alloc(4);
+    modelLength.writeUInt32BE(model.length);
+    const cborWithModel = Buffer.concat([Buffer.from([0x81, 0x5a]), modelLength, model]);
+    f.file('pagefind/index/en_embedded_model.pf_index', gzipSync(Buffer.concat([prefix, cborWithModel])));
+    const cborWithZip = Buffer.concat([Buffer.from([0x81, 0x45]), lateZip]);
+    f.file('pagefind/filter/en_embedded_zip.pf_filter', gzipSync(Buffer.concat([prefix, cborWithZip])));
     // Bytes after a valid gzip member must not be silently ignored by gunzip.
     f.file('pagefind/index/en_trailing_bytes.pf_index', Buffer.concat([gzipSync(Buffer.concat([prefix, Buffer.from('safe index payload')])), Buffer.from('glTF' + 'x'.repeat(32))]));
     expect(f.check().errors).toEqual(expect.arrayContaining([
@@ -139,6 +155,8 @@ describe('anatomy production artifact audit', () => {
       'archive/container in production output requires explicit review: /pagefind/index/en_hidden_archive.pf_index',
       'archive/container in production output requires explicit review: /pagefind/filter/en_hidden_model.pf_filter',
       'archive/container in production output requires explicit review: /pagefind/index/en_late_archive.pf_index',
+      'archive/container in production output requires explicit review: /pagefind/index/en_embedded_model.pf_index',
+      'archive/container in production output requires explicit review: /pagefind/filter/en_embedded_zip.pf_filter',
       'archive/container in production output requires explicit review: /pagefind/index/en_raw_prefixed_model.pf_index',
       'archive/container in production output requires explicit review: /pagefind/fragment/en_hidden_zstd.pf_fragment',
       'archive/container in production output requires explicit review: /pagefind/index/en_trailing_bytes.pf_index',
