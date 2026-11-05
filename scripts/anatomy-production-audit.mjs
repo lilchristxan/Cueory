@@ -284,12 +284,13 @@ export function auditAnatomyProduction(distDir, contentDir) {
             errors.push(`${name}: approved label ${label.id} must cite a Release 4.0 parts-list table`);
           } else {
             // Compare the actual recorded FMA/BP/name row to the public label.
+            // A canonical structure ID may be either the FMA concept or its BP element ID.
             // A valid URL with a name from another structure is not a safe citation.
             const quote = sourceQuotes.get(label.source);
             const original = typeof quote === 'string'
               ? /^((?:FMA|BP)\d+[a-z]*)\s+(BP\d+[a-z]*)\s+(.+)$/.exec(quote)
               : null;
-            if (!original || original[1] !== label.id || original[3] !== label.text) {
+            if (!original || (original[1] !== label.id && original[2] !== label.id) || original[3] !== label.text) {
               errors.push(`${name}: approved label ${label.id} does not match its cited source row`);
             }
           }
