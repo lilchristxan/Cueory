@@ -24,14 +24,8 @@ export interface AnatomyStructure {
   group?: string;
   /** Its layer for peeling (skin … skeleton), from the source file, which takes it from BodyParts3D's hierarchy. */
   layer?: LayerId;
-  /** Ancestry in the structure's own `tree`, names only, root first, as the source file gives it. Body location only when `tree` is "partof". */
+  /** Full PART-OF ancestry, names only, root first, as the source file gives it (Task 178: the breadcrumb). */
   parents?: string[];
-  /**
-   * Which BodyParts3D tree `group` and `parents` come from, from the file's "hierarchy": "partof" says what a structure
-   * is part of (where it sits), "isa" sorts structures by kind. Missing (a file built before this field): unknown, so
-   * the lab never calls it a location.
-   */
-  tree?: 'partof' | 'isa';
   /** Alternative names from the source file, searched like the official name (Task 178). Never written by the lab. */
   also?: string[];
 }
@@ -42,6 +36,8 @@ export interface AnatomySystem {
   key: string;
   title: string;
   status: 'draft' | 'approved';
+  /** The BodyParts3D relation for groups/parents; IS-A classification is not physical location. */
+  hierarchyTree?: 'partof' | 'isa';
   /** `files`: the whole-body view loads several systems' models together (src/islands/anatomylayers.ts). */
   model: { file: string; files?: string[]; release: string; via?: string; layerFiles?: Record<string, string[]>; fileIds?: Record<string, string[]> };
   structures: AnatomyStructure[];
@@ -177,6 +173,8 @@ export function parseAnatomyFile(json: unknown, path: string, options: { fixture
   if (file['id'] !== `anatomy-${key}`) fail('"id" must match the anatomy source filename');
   if (file['kind'] !== 'model') fail('"kind" must be "model"');
   if (!text(file['title'], 120)) fail('"title" must be a short line of text');
+  const hierarchyTree = file['hierarchyTree'] ?? 'partof';
+  if (hierarchyTree !== 'partof' && hierarchyTree !== 'isa') fail('"hierarchyTree" must be "partof" or "isa"');
   const status = file['status'];
   if (status !== 'draft' && status !== 'approved') fail('"status" must be "draft" or "approved"');
   const model = file['model'];
@@ -188,8 +186,6 @@ export function parseAnatomyFile(json: unknown, path: string, options: { fixture
   if (m['file'] !== expectedModel) fail(`"model.file" must be ${expectedModel}`);
   if (!text(m['release'], 80)) fail('"model.release" must name the model release');
   if (m['via'] !== undefined && !text(m['via'], 200)) fail('"model.via", when given, must be a short line of text');
-  const tree = file['hierarchy'];
-  if (tree !== undefined && tree !== 'partof' && tree !== 'isa') fail('"hierarchy", when given, is "partof" or "isa"');
   const labels = file['labels'];
   if (!Array.isArray(labels) || labels.length === 0) fail('"labels" must list at least one structure');
   const seen = new Set<string>();
@@ -210,7 +206,6 @@ export function parseAnatomyFile(json: unknown, path: string, options: { fixture
     const also = label['also'];
     if (also !== undefined && !nameList(also)) return fail(`label "${id}": "also", when given, is a list of names`);
     const structure: AnatomyStructure = { id, text: label['text'] as string };
-    if (tree === 'partof' || tree === 'isa') structure.tree = tree;
     if (typeof group === 'string') structure.group = group;
     if (isLayer(layer)) structure.layer = layer;
     if (Array.isArray(parents)) structure.parents = [...(parents as string[])];
@@ -221,6 +216,7 @@ export function parseAnatomyFile(json: unknown, path: string, options: { fixture
     key: key!,
     title: file['title'] as string,
     status: status as AnatomySystem['status'],
+    hierarchyTree: hierarchyTree as NonNullable<AnatomySystem['hierarchyTree']>,
     model: { file: m['file'] as string, release: m['release'] as string },
     structures,
   };

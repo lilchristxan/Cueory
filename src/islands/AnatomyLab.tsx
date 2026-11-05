@@ -12,7 +12,7 @@ import { createGeneration, createOnDemandLoader, publishAnatomyFile, knownMissin
 import type { CameraState, LabColors, LabScene, LoadResult } from './anatomyscene';
 import { createAnatomyOpenGate } from './anatomyopen';
 import AnatomyLabCover from './AnatomyLabCover';
-import { locationTrail, siblings } from './anatomyhierarchy';
+import { breadcrumb, siblings } from './anatomyhierarchy';
 import { boxesFromMeshes, expandNearby, nearbyStructures } from './anatomynearby';
 import { canSpeak, speak, stop as stopSpeaking } from './anatomyspeech';
 import { createAnatomyStudy, queueFromQuizMisses, type AnatomyStudyClient, type ReviewQueueRow, type SavedViewRow } from './anatomystudy';
@@ -191,6 +191,8 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
     return systemsForView(baseSystems, phase === 'open' || phase === 'error', wantsFixture ? fixture : null);
   }, [baseSystems, fixture, phase]);
   const [systemKey, setSystemKey] = useState(systems[0]?.key ?? '');
+  const activeSystemKeyRef = useRef(systemKey);
+  activeSystemKeyRef.current = systemKey;
   const [load, setLoad] = useState<SystemLoad>({ state: 'loading' });
   const [initialRetry, setInitialRetry] = useState(0);
   const [hidden, setHidden] = useState<ReadonlySet<string>>(new Set());
@@ -992,7 +994,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
               {systems.map((choice) => (
                 <button key={choice.key} type="button" className={secondaryButton}
                   aria-pressed={choice.key === system.key}
-                  onClick={() => { setSystemKey(choice.key); setQuery(''); setTextLimit(TEXT_FALLBACK_BATCH); }}>
+                  onClick={() => { activeSystemKeyRef.current = choice.key; setSystemKey(choice.key); setQuery(''); setTextLimit(TEXT_FALLBACK_BATCH); }}>
                   {choice.title}
                 </button>
               ))}
@@ -1055,9 +1057,9 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
   }
 
   const selectedName = selected ? (names.get(selected) ?? selected) : null;
-  const selectedGroup = selected ? system.structures.find((s) => s.id === selected)?.group : undefined;
-  // A heading from the IS-A tree is a kind, not a place: it is labelled as one and never joins the location trail.
-  const selectedKind = selected ? system.structures.find((s) => s.id === selected)?.tree === 'isa' : false;
+  const selectedGroup = selected && (system.hierarchyTree ?? 'partof') === 'partof'
+    ? system.structures.find((s) => s.id === selected)?.group
+    : undefined;
   const budget = load.state === 'ready' ? anatomyTriangleNote(load.result.triangles, filesLoaded, lazy) : null;
   const ready = load.state === 'ready';
   // Only files whose meshes and IDs were committed to this exact ready state
@@ -1082,7 +1084,9 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
   const canFocus = ready && selected !== null && foundSet.has(selected) && !hidden.has(selected);
 
   // ── Study tools on the name card and around it (Task 178, integration) ───────────────────────────────────────────
-  const crumbs = selected ? breadcrumbRows(locationTrail(system.structures, selected), system.structures, selected) : [];
+  const crumbs = selected
+    ? breadcrumbRows(breadcrumb(system.structures, selected, system.hierarchyTree ?? 'partof'), system.structures, selected)
+    : [];
   const siblingList = selected ? siblings(system.structures, selected) : [];
   const queued = queuedForSystem(reviewRows, system.key);
   // Only this system's views are listed, opened or counted, whatever an earlier read left in state.
@@ -1133,11 +1137,13 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
   const saveView = () => {
     const scene = sceneRef.current;
     if (!scene || !ready || savingView) return;
+    const key = system.key;
     const name = viewName.trim();
     setSavingView(true);
     const stillCurrent = studyScope.ticket();
-    void study.saveView({ systemKey: system.key, name, camera: scene.cameraState(), hidden, faded, selected })
+    void study.saveView({ systemKey: key, name, camera: scene.cameraState(), hidden, faded, selected })
       .then((outcome) => {
+        if (activeSystemKeyRef.current !== key) return;
         if (!outcome.ok) {
           setAnnounce(outcome.message);
           return;
@@ -1146,7 +1152,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
         if (!stillCurrent()) return;
         setViewName('');
         setAnnounce(`saved the view "${name}".`);
-        refreshSavedViews(system.key);
+        refreshSavedViews(key);
       })
       .catch(() => setAnnounce('something went wrong — please try again.'))
       .finally(() => setSavingView(false));
@@ -1154,8 +1160,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
 
   const openView = (view: SavedViewRow) => {
     const scene = sceneRef.current;
-    if (!scene || !ready) return;
-    if (view.system_key !== system.key) return;
+    if (!scene || !ready || view.system_key !== system.key) return;
     const camera = savedCamera(view.camera);
     if (!camera) {
       setAnnounce('this view could not be read. delete it and save it again.');
@@ -1168,14 +1173,19 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
   };
 
   const deleteView = (view: SavedViewRow) => {
+    const key = system.key;
+    if (view.system_key !== key) return;
     void study.deleteView(view.id).then((outcome) => {
+      if (activeSystemKeyRef.current !== key) return;
       if (!outcome.ok) {
         setAnnounce(outcome.message);
         return;
       }
-      setSavedViews((views) => views.filter((v) => v.id !== view.id));
+      setSavedViews((views) => views.filter((v) => !(v.id === view.id && v.system_key === key)));
       setAnnounce(`deleted the view "${view.name}".`);
-    }).catch(() => setAnnounce('something went wrong — please try again.'));
+    }).catch(() => {
+      if (activeSystemKeyRef.current === key) setAnnounce('something went wrong — please try again.');
+    });
   };
 
   return (
@@ -1219,7 +1229,8 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
                   setExportNote('');
                   setLabelNote([]);
                   setAnnounce('');
-                  setSystemKey(s.key);
+                  activeSystemKeyRef.current = s.key;
+                   setSystemKey(s.key);
                 }}
                 className={secondaryButton}
               >
@@ -1725,7 +1736,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
                   </ol>
                 </nav>
               ) : (
-                selectedGroup && <p className="text-sm text-ink-soft">{selectedKind ? `kind of: ${selectedGroup}` : selectedGroup}</p>
+                selectedGroup && <p className="text-sm text-ink-soft">{selectedGroup}</p>
               )}
               <p className="mt-1 text-sm text-ink-soft">{nameSourceFor(system)}</p>
               {showSiblings(siblingList.length) && (

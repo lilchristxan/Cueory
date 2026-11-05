@@ -321,6 +321,7 @@ const visuals = defineCollection({
       kind: z.enum(['diagram', 'model', 'overlay']),
       lessonIds: z.array(z.string().regex(/^U\d{2}-T\d{2}-L\d{2}$/, 'a lesson id looks like U01-T01-L01')).min(1),
       status: z.enum(['draft', 'approved']),
+      hierarchyTree: z.enum(['partof', 'isa']).optional(),
       labels: z.array(
         z.object({
           id: visualId.or(structureId),

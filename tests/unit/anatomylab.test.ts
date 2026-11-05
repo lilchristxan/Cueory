@@ -101,6 +101,7 @@ describe('anatomy files', () => {
       key: 'sample',
       title: 'sample system',
       status: 'draft',
+      hierarchyTree: 'partof',
       model: { file: '/models/anatomy/sample.glb', release: 'r1', via: 'gltfpack' },
       structures: [
         { id: 'FMA1', text: 'sample part one', group: 'set x' },
@@ -127,6 +128,7 @@ describe('anatomy files', () => {
     ['a nested model folder', { model: { file: '/models/anatomy/archive/sample.glb', release: 'r1' } }, 'model.file'],
     ['no release', { model: { file: '/models/anatomy/sample.glb' } }, 'model.release'],
     ['an unknown status', { status: 'published' }, 'status'],
+    ['an unknown hierarchy tree', { hierarchyTree: 'location' }, '"hierarchyTree" must be "partof" or "isa"'],
     ['no labels', { labels: [] }, 'labels'],
     ['a duplicate id', { labels: [{ id: 'FMA1', text: 'a', source: 's' }, { id: 'FMA1', text: 'b', source: 's' }] }, 'two labels'],
     ['an id with a space', { labels: [{ id: 'FMA 1', text: 'a', source: 's' }] }, 'id'],
@@ -151,6 +153,11 @@ describe('anatomy files', () => {
     expect(system.structures[0]).toEqual({ id: 'FMA1', text: 'sample part one', group: 'set x', parents, also });
     expect(system.structures[0]!.parents).not.toBe(parents);
     expect(system.structures[1]).toEqual({ id: 'FMA2', text: 'two' });
+  });
+
+  it('preserves the PART-OF or IS-A source relation', () => {
+    expect(parseAnatomyFile(file({ hierarchyTree: 'partof' }), 'content/visuals/anatomy-sample.json').hierarchyTree).toBe('partof');
+    expect(parseAnatomyFile(file({ hierarchyTree: 'isa' }), 'content/visuals/anatomy-sample.json').hierarchyTree).toBe('isa');
   });
 
   it('reads the test fixture as a fixture', () => {
@@ -927,19 +934,5 @@ describe('the test fixture model', () => {
 
   it('names only obvious test shapes, never anatomy', () => {
     for (const label of fixtureJson.labels) expect(label.text).toMatch(/^fixture (cube|block|point|slab) [A-E]$/);
-  });
-});
-
-describe('parseAnatomyFile keeps which tree the labels come from', () => {
-  const file = (hierarchy?: unknown) => ({
-    id: 'anatomy-heart', kind: 'model', title: 'sample', status: 'draft', ...(hierarchy === undefined ? {} : { hierarchy }),
-    model: { file: '/models/anatomy/heart.glb', release: 'sample release' },
-    labels: [{ id: 'FMA1', text: 'part a', source: 'src' }],
-  });
-  it('records "partof" and "isa" on every structure, leaves an unmarked file unmarked, and refuses anything else', () => {
-    expect(parseAnatomyFile(file('partof'), 'content/visuals/anatomy-heart.json').structures[0]!.tree).toBe('partof');
-    expect(parseAnatomyFile(file('isa'), 'content/visuals/anatomy-heart.json').structures[0]!.tree).toBe('isa');
-    expect(parseAnatomyFile(file(), 'content/visuals/anatomy-heart.json').structures[0]!.tree).toBeUndefined();
-    expect(() => parseAnatomyFile(file('other'), 'content/visuals/anatomy-heart.json')).toThrow(/hierarchy/);
   });
 });

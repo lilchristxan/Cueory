@@ -100,6 +100,8 @@ export interface Visual {
   kind: VisualKind;
   lessonIds: readonly string[];
   status: VisualStatus;
+  /** BodyParts3D relation used for this anatomy model's grouping and ancestry. */
+  hierarchyTree?: 'partof' | 'isa';
   labels: readonly VisualLabel[];
   depictions: readonly VisualDepiction[];
   sources: readonly VisualSource[];

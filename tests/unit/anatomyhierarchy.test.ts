@@ -13,6 +13,10 @@ const labels: HierarchyLabel[] = [
 ];
 
 describe('breadcrumb', () => {
+  it('does not present IS-A classification as a physical body location', () => {
+    expect(breadcrumb(labels, 'S4', 'isa')).toEqual([]);
+    expect(breadcrumb(labels, 'S4', 'partof')).toEqual(breadcrumb(labels, 'S4'));
+  });
   it('walks the group chain from the root to the structure', () => {
     expect(breadcrumb(labels, 'S4')).toEqual(['root body', 'organ one', 'part a of organ one', 'piece of part a']);
     expect(breadcrumb(labels, 'S1')).toEqual(['root body', 'organ one']);
@@ -72,15 +76,25 @@ describe('siblings', () => {
   });
 });
 
-describe('locationTrail: only the PART-OF tree is body location', () => {
-  const kind = [
-    { id: 'K1', text: 'sample muscle a', group: 'sample kind', parents: ['sample root', 'sample kind'] },
-  ];
-  it('gives a trail for a "partof" label and nothing for "isa" or an unmarked label', async () => {
-    const { locationTrail } = await import('../../src/islands/anatomyhierarchy');
-    expect(locationTrail(kind.map((l) => ({ ...l, tree: 'partof' as const })), 'K1')).toEqual(['sample root', 'sample kind', 'sample muscle a']);
-    expect(locationTrail(kind.map((l) => ({ ...l, tree: 'isa' as const })), 'K1')).toEqual([]);
-    expect(locationTrail(kind, 'K1')).toEqual([]);
-    expect(locationTrail([], 'nope')).toEqual([]);
+describe('the lab shows a location trail only for the PART-OF tree', () => {
+  const readText = async (path: string) => (await import('node:fs')).readFileSync(path, 'utf8');
+  const ISA = ['skeleton-axial', 'skeleton-limbs', 'muscle', 'vessels', 'nerves', 'skin'];
+  const PARTOF = ['heart', 'lungs', 'kidneys', 'digestive', 'nervous'];
+
+  it('tags all six IS-A systems "isa" and the others "partof" in the committed files', async () => {
+    for (const key of ISA) expect(JSON.parse(await readText(`content/visuals/anatomy-${key}.json`)).hierarchyTree, key).toBe('isa');
+    for (const key of PARTOF) expect(JSON.parse(await readText(`content/visuals/anatomy-${key}.json`)).hierarchyTree, key).toBe('partof');
+  });
+
+  it('gives a trail in a PART-OF system and none in an IS-A system, for the same labels', () => {
+    const labels = [{ id: 'S1', text: 'sample part', group: 'sample whole', parents: ['sample body', 'sample whole'] }];
+    expect(breadcrumb(labels, 'S1', 'partof')).toEqual(['sample body', 'sample whole', 'sample part']);
+    expect(breadcrumb(labels, 'S1', 'isa')).toEqual([]);
+  });
+
+  it('is wired: the name card passes the open system\'s tree to breadcrumb', async () => {
+    const source = await readText('src/islands/AnatomyLab.tsx');
+    expect(source).toMatch(/breadcrumb\(system\.structures, selected, system\.hierarchyTree \?\? 'partof'\)/);
+    expect([...source.matchAll(/\bbreadcrumb\(/g)]).toHaveLength(1);
   });
 });
