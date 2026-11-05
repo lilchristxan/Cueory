@@ -126,6 +126,7 @@ describe('held paths', () => {
     'scripts/anatomy-production-audit.mjs',
     'scripts/anatomy-production-deploy.mjs',
     'scripts/check-anatomy-build.mjs',
+    'scripts/check-anatomy-wrangler.mjs',
     'scripts/anatomy-postbuild-audit.mjs',
     'src/islands/anatomylab.ts',
     'src/islands/AnatomyLab.tsx',
@@ -186,6 +187,8 @@ describe('held paths', () => {
     for (const mode of ['prelaunch', 'launched'] as const) {
       expect(heldPaths([{ filename: 'docs/retired-upload.md', previous_filename: 'scripts/anatomy-production-deploy.mjs' }], mode))
         .toEqual(['scripts/anatomy-production-deploy.mjs']);
+      expect(heldPaths([{ filename: 'docs/retired-wrangler.md', previous_filename: 'scripts/check-anatomy-wrangler.mjs' }], mode))
+        .toEqual(['scripts/check-anatomy-wrangler.mjs']);
     }
     expect(heldPaths([{ filename: 'src/islands/cards.ts', previous_filename: 'src/islands/AnatomyLab.tsx' }], 'prelaunch'))
       .toEqual(['src/islands/AnatomyLab.tsx']);
