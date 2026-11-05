@@ -100,13 +100,13 @@ export function parseApprovedGlb(bytes) {
     pos += 8 + size;
   }
   const json = JSON.parse(bytes.toString('utf8', 20, jsonEnd));
-  if (!json || !Array.isArray(json.nodes) || !Array.isArray(json.meshes) ||
+  if (!json || json.asset?.version !== '2.0' || !Array.isArray(json.nodes) || !Array.isArray(json.meshes) ||
       !Array.isArray(json.accessors) || !Array.isArray(json.extensionsRequired)) {
     throw new Error('required model metadata missing');
   }
   const buffer = json.buffers?.[0];
   if (!buffer || buffer.uri !== undefined || binLength === null ||
-      !Number.isSafeInteger(buffer.byteLength) ||
+      !Number.isSafeInteger(buffer.byteLength) || buffer.byteLength <= 0 ||
       binLength < buffer.byteLength || binLength > buffer.byteLength + 3) {
     throw new Error('GLB BIN buffer missing or incomplete');
   }
