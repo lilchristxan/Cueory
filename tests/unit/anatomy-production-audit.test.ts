@@ -100,6 +100,19 @@ function setup() {
 }
 
 describe('anatomy production artifact audit', () => {
+  it('allows only Pagefind zstd index output while still rejecting disguised archives there', () => {
+    const f = setup();
+    f.file('pagefind/fragment/en_test.pf_fragment', Buffer.from([0x28, 0xb5, 0x2f, 0xfd, 0x00]));
+    f.file('pagefind/index/en_test.pf_index', Buffer.from([0x28, 0xb5, 0x2f, 0xfd, 0x00]));
+    expect(f.check().errors).toEqual([]);
+
+    // The exception is only for Pagefind's Zstandard output signature.
+    f.file('pagefind/fragment/en_hidden.pf_fragment', Buffer.from([0x50, 0x4b, 0x03, 0x04, 0x00]));
+    expect(f.check().errors).toContain(
+      'archive/container in production output requires explicit review: /pagefind/fragment/en_hidden.pf_fragment',
+    );
+  });
+
   it('rejects archive containers that could conceal unapproved model assets', () => {
     const f = setup();
     // ZIP and TAR payloads are deliberately opaque to the outer dist walker.
