@@ -34,6 +34,8 @@ function reader({ fails = false, events = [] as unknown[] } = {}): ExportReader 
     attempts: [],
     exam_plans: [{ id: eventId, course: 'med-surg-1', exam_date: '2026-12-15', created_at: when }],
     review_state: [],
+    anatomy_review_queue: [],
+    anatomy_saved_views: [],
   };
   return {
     select: async (table) => fails && table === 'attempts' ? { data: null, error: { message: 'private detail' } } : { data: rows[table], error: null },
