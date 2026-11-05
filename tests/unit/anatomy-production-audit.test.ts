@@ -216,7 +216,7 @@ function embeddedArchiveFixtures(): Array<[string, Buffer]> {
   return fixtures;
 }
 
-function makeZip64AesLocalHeader(): Buffer {
+function makeZip64AesLocalHeader(uncompressedSize = 0n): Buffer {
   const name = Buffer.from('zip64-hidden-model.bin', 'ascii');
   const payload = Buffer.from('encrypted model archive payload', 'ascii');
   // ZIP64 sizes are stored in extra field 0x0001 (uncompressed, then compressed).
@@ -224,7 +224,7 @@ function makeZip64AesLocalHeader(): Buffer {
   const extra = Buffer.alloc(4 + 16 + 4 + 7);
   extra.writeUInt16LE(0x0001, 0);
   extra.writeUInt16LE(16, 2);
-  extra.writeBigUInt64LE(BigInt(payload.length), 4);
+  extra.writeBigUInt64LE(uncompressedSize || BigInt(payload.length), 4);
   extra.writeBigUInt64LE(BigInt(payload.length), 12);
   extra.writeUInt16LE(0x9901, 20);
   extra.writeUInt16LE(7, 22);
@@ -622,6 +622,9 @@ describe('anatomy production artifact audit', () => {
       makeDeflatedZip('zip64-deflated-hidden-model.bin', repetitivePayload, true));
     // ZIP64 sentinels and AES method 99 must not bypass local-header detection.
     f.file('downloads/zip64-aes-hidden-model.dat', makeZip64AesLocalHeader());
+    // A tiny compressed member may advertise an enormous expansion size;
+    // the production gate must still recognize and reject the archive.
+    f.file('downloads/zip-bomb-hidden-model.dat', makeZip64AesLocalHeader(1n << 40n));
     const tar = Buffer.alloc(512);
     const nul = String.fromCharCode(0);
     tar.write('hidden-model.bin', 0, 'ascii');
@@ -659,6 +662,7 @@ describe('anatomy production artifact audit', () => {
       'archive/container in production output requires explicit review: /downloads/deflated-hidden-model.dat',
       'archive/container in production output requires explicit review: /downloads/zip64-deflated-hidden-model.dat',
       'archive/container in production output requires explicit review: /downloads/zip64-aes-hidden-model.dat',
+      'archive/container in production output requires explicit review: /downloads/zip-bomb-hidden-model.dat',
       'archive/container in production output requires explicit review: /downloads/hidden-model.bin',
       'archive/container in production output requires explicit review: /downloads/prefixed-tar.dat',
       'archive/container in production output requires explicit review: /downloads/unrecognized.zip',
