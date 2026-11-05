@@ -101,6 +101,16 @@ function setup() {
 }
 
 describe('anatomy production artifact audit', () => {
+  it('accepts approved GLB bytes while detecting a copied model under a misleading extension', () => {
+    const f = setup();
+    expect(f.check().errors).toEqual([]);
+    const approvedBytes = readFileSync(join(f.dist, 'models', 'anatomy', 'approved.glb'));
+    f.file('downloads/disguised-model.dat', approvedBytes);
+    expect(f.check().errors).toContain(
+      'unapproved model exposed in production: /downloads/disguised-model.dat',
+    );
+  });
+
   it('validates Pagefind gzip envelopes and rejects compressed models or nested archives', () => {
     const f = setup();
     const prefix = Buffer.from('pagefind_dcd', 'ascii');
