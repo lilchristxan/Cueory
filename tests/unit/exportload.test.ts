@@ -15,6 +15,8 @@ const fields = {
   exam_plans: 'id,course,exam_date,created_at',
   review_state: 'item_id,level,last_reviewed,next_review,updated_at',
   study_events: 'id,item_id,item_version_id,kind,ms_on_item,mark,at,created_at',
+  anatomy_review_queue: 'id,system_key,structure_id,missed_count,first_missed_at,last_missed_at,cleared_at',
+  anatomy_saved_views: 'id,system_key,name,camera,hidden,faded,selected,created_at,updated_at',
 } as const;
 const rows = {
   profiles: [{ display_name: 'Sample', created_at: when, name_change_window_start: when, name_changes_in_window: 2, user_id: 'private' }],
@@ -29,14 +31,17 @@ const rows = {
   ],
   my_flags: [{ id: reportId, page: '/learn/study-skills', item_id: null, item_version_id: null,
     reason: 'confusing', comment: 'Sample report', created_at: when, status: 'private' }],
-  export_my_anatomy_review_queue: [
-    { id: id(6), system_key: 'heart', structure_id: 'FMA7204', missed_count: 2, first_missed_at: when, last_missed_at: when, cleared_at: null, user_id: 'private' },
-    { id: id(7), system_key: 'heart', structure_id: 'FIX001', missed_count: 1, first_missed_at: when, last_missed_at: when, cleared_at: when },
-  ],
-  export_my_anatomy_views: [{ id: id(8), system_key: 'heart', name: 'front view', camera: { position: [0, 0, 3], target: [0, 0, 0] },
-    hidden: ['FMA1'], faded: [], selected: null, created_at: when, updated_at: when, user_id: 'private' }],
   my_sessions: [{ id: id(5), created_at: when, updated_at: '2026-11-01T09:00:00+00:00', not_after: null,
     user_agent: 'sample browser', ip: '203.0.113.5', user_id: 'private' }],
+  anatomy_review_queue: [
+    { id: id(6), system_key: 'heart', structure_id: 'FMA7204', missed_count: 3, first_missed_at: when,
+      last_missed_at: '2026-11-02T08:00:00+00:00', cleared_at: null, user_id: 'private' },
+    { id: id(7), system_key: 'lungs', structure_id: 'FMA7205', missed_count: 1, first_missed_at: when,
+      last_missed_at: when, cleared_at: '2026-11-03T08:00:00+00:00', user_id: 'private' },
+  ],
+  anatomy_saved_views: [{ id: id(8), system_key: 'heart', name: 'front view',
+    camera: { position: [1, 2, 3], target: [0, 0, 0] }, hidden: ['FMA1'], faded: ['FMA2'],
+    selected: 'FMA3', created_at: when, updated_at: when, user_id: 'private' }],
 };
 /** A sample of what auth.getUser() returns for a Google account: made-up values, no real person. */
 const googleData = {
@@ -97,11 +102,13 @@ describe('loadExport — personal data boundaries', () => {
       account,
       sessions,
       anatomyReviewQueue: [
-        { systemKey: 'heart', structureId: 'FMA7204', missedCount: 2, firstMissedAt: when, lastMissedAt: when, clearedAt: null },
-        { systemKey: 'heart', structureId: 'FIX001', missedCount: 1, firstMissedAt: when, lastMissedAt: when, clearedAt: when },
+        { systemKey: 'heart', structureId: 'FMA7204', missedCount: 3, firstMissedAt: when,
+          lastMissedAt: '2026-11-02T08:00:00+00:00', clearedAt: null },
+        { systemKey: 'lungs', structureId: 'FMA7205', missedCount: 1, firstMissedAt: when,
+          lastMissedAt: when, clearedAt: '2026-11-03T08:00:00+00:00' },
       ],
-      anatomyViews: [{ systemKey: 'heart', name: 'front view', camera: { position: [0, 0, 3], target: [0, 0, 0] },
-        hidden: ['FMA1'], faded: [], selected: null, createdAt: when, updatedAt: when }],
+      anatomyViews: [{ systemKey: 'heart', name: 'front view', camera: { position: [1, 2, 3], target: [0, 0, 0] },
+        hidden: ['FMA1'], faded: ['FMA2'], selected: 'FMA3', createdAt: when, updatedAt: when }],
     });
     expect(studyEvents).toBeInstanceOf(StudyEventPages);
     expect((studyEvents as StudyEventPages).count).toBe(2);
@@ -110,11 +117,21 @@ describe('loadExport — personal data boundaries', () => {
     expect(exported.dropped).toEqual([]);
     expect(exported.attempts).toEqual(result.data.attempts);
     expect(exported.reports).toEqual(result.data.reports);
+    // The download writes every time in UTC; the loader passes the database's text through.
+    const utc = (value: unknown) => (typeof value === 'string' ? new Date(value).toISOString() : value);
+    expect(exported.anatomyReviewQueue).toEqual((result.data.anatomyReviewQueue ?? []).map(r => ({
+      ...r, firstMissedAt: utc(r.firstMissedAt), lastMissedAt: utc(r.lastMissedAt), clearedAt: utc(r.clearedAt),
+    })));
+    expect(exported.anatomyViews).toEqual((result.data.anatomyViews ?? []).map(v => ({
+      ...v, createdAt: utc(v.createdAt), updatedAt: utc(v.updatedAt),
+    })));
     expect(exported.account).toEqual(account);
     expect(exported.signInDetails).toContainEqual({ name: 'full_name', value: 'Sample Student' });
     expect(exported.signInDetails).toContainEqual({ name: 'email_verified', value: true });
     expect(exported.signInDetails).not.toContainEqual(expect.objectContaining({ name: 'custom_claims' }));
     expect(exported.sessions).toEqual([{ ...sessions[0], updatedAt: '2026-11-01T09:00:00.000Z' }]);
+    expect(exported.anatomyReviewQueue[1]!.clearedAt).toBe('2026-11-03T08:00:00.000Z');
+    expect(exported.anatomyViews[0]!.camera).toEqual({ position: [1, 2, 3], target: [0, 0, 0] });
     expect(exported.studyEvents).toEqual([
       { itemId, itemVersionId: versionId, kind: 'marked', msOnItem: 4200, mark: 'learning',
         at: '2026-11-01T07:59:58.500Z', createdAt: when },
@@ -125,7 +142,7 @@ describe('loadExport — personal data boundaries', () => {
       'profiles:' + fields.profiles, 'attempts:' + fields.attempts,
       'exam_plans:' + fields.exam_plans, 'review_state:' + fields.review_state,
       'study_events:' + fields.study_events, 'rpc:my_flags', 'rpc:my_sessions',
-      'rpc:export_my_anatomy_review_queue', 'rpc:export_my_anatomy_views', 'user',
+      'anatomy_review_queue:' + fields.anatomy_review_queue, 'anatomy_saved_views:' + fields.anatomy_saved_views, 'user',
     ]);
   });
 
@@ -201,7 +218,7 @@ describe('loadExport — personal data boundaries', () => {
     expect(JSON.parse(await exportJsonBlob(result.data, when).text()).studyEvents).toEqual([]);
   });
 
-  it.each(['profiles', 'attempts', 'exam_plans', 'review_state', 'study_events', 'my_flags', 'my_sessions', 'export_my_anatomy_review_queue', 'export_my_anatomy_views', 'user'] as const)(
+  it.each(['profiles', 'attempts', 'exam_plans', 'review_state', 'study_events', 'my_flags', 'my_sessions', 'anatomy_review_queue', 'anatomy_saved_views', 'user'] as const)(
     'fails closed on a %s refusal without returning any personal data', async table => {
       const response = { data: table === 'user' ? { user } : rows[table], error: { message: 'private SQL error' } };
       expect(await loadExport(reader({ [table]: response }).db)).toEqual(failed);
@@ -237,12 +254,6 @@ describe('loadExport — personal data boundaries', () => {
     ['my_sessions', { ...rows.my_sessions[0], ip: 203 }],
     ['my_sessions', { ...rows.my_sessions[0], created_at: '2026-02-30T08:00:00Z' }],
     ['my_sessions', { ...rows.my_sessions[0], id: 'private' }],
-    ['export_my_anatomy_review_queue', { ...rows.export_my_anatomy_review_queue[0], structure_id: 'bad id' }],
-    ['export_my_anatomy_review_queue', { ...rows.export_my_anatomy_review_queue[0], missed_count: 0 }],
-    ['export_my_anatomy_review_queue', { ...rows.export_my_anatomy_review_queue[0], cleared_at: '2026-02-30T08:00:00Z' }],
-    ['export_my_anatomy_views', { ...rows.export_my_anatomy_views[0], camera: { position: [0, 0, 3], target: [0, 0, 0], zoom: 2 } }],
-    ['export_my_anatomy_views', { ...rows.export_my_anatomy_views[0], hidden: ['bad'] }],
-    ['export_my_anatomy_views', { ...rows.export_my_anatomy_views[0], selected: 'bad' }],
   ] as const)('does not silently drop invalid %s records', async (table, record) => {
     expect(await loadExport(reader({ [table]: { data: [record], error: null } }).db)).toEqual(failed);
   });
@@ -383,6 +394,33 @@ describe('fromSupabase — no silent row truncation', () => {
       'my_sessions:0-499:id.gt(' + id(500) + ')',
       'my_sessions:0-499:id.gt(' + id(1000) + ')',
     ]);
+  });
+
+  it('pages the entire owner-scoped anatomy history and uses the row id only as a cursor', async () => {
+    const many = { ...rows, anatomy_review_queue: Array.from({ length: 1001 }, (_, i) => ({
+      ...rows.anatomy_review_queue[0], id: id(i + 1), structure_id: 'FMA' + (7204 + i),
+    })) };
+    const { client, calls } = supabase(many);
+    const result = await loadExport(fromSupabase(client));
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.data.anatomyReviewQueue).toHaveLength(1001);
+    expect(calls.filter(x => x.startsWith('anatomy_review_queue:'))).toEqual([
+      'anatomy_review_queue:0-499:id',
+      'anatomy_review_queue:0-499:id.gt(' + id(500) + ')',
+      'anatomy_review_queue:0-499:id.gt(' + id(1000) + ')',
+    ]);
+    expect(JSON.stringify(result.data.anatomyReviewQueue)).not.toContain('private');
+  });
+
+  it('refuses malformed anatomy rows and later-page failures instead of returning partial account data', async () => {
+    expect(await loadExport(reader({ anatomy_review_queue: { data: [{ ...rows.anatomy_review_queue[0], structure_id: 'private' }], error: null } }).db)).toEqual(failed);
+    expect(await loadExport(reader({ anatomy_saved_views: { data: [{ ...rows.anatomy_saved_views[0], camera: { position: [1, 2], target: [0, 0, 0] } }], error: null } }).db)).toEqual(failed);
+    const many = { ...rows, anatomy_review_queue: Array.from({ length: 1001 }, (_, i) => ({
+      ...rows.anatomy_review_queue[0], id: id(i + 1), structure_id: 'FMA' + (7204 + i),
+    })) };
+    const { client } = supabase(many, { name: 'anatomy_review_queue', page: 2 });
+    expect(await loadExport(fromSupabase(client))).toEqual(failed);
   });
 
   it('refuses an incomplete session export when a later API page fails', async () => {

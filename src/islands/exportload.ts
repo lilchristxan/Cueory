@@ -1,8 +1,8 @@
 /**
- * Read a signed-in student's own export data (D-86, D-87, D-88, Task 140).
+ * Read a signed-in student's own export data (D-86, D-87, D-88, Task 140, Task 178).
  *
- * The database's row-level security restricts the five table reads to the
- * current student. Reports must come from my_flags(), never from flags:
+ * The database's row-level security restricts all seven table reads to the
+ * current student. Task 178's anatomy tables also require the configured MFA policy. Reports must come from my_flags(), never from flags:
  * that table also contains private moderation fields.
  *
  * The caller adds browser-only progress, game stats and onboarding, and may
@@ -15,6 +15,8 @@
  * identity_data (with Google: name, profile-photo link, Google account id, email
  * and whether it is verified). The sessions, with their browser and IP address,
  * come from my_sessions(), because the browser can't read auth.sessions.
+ * The full anatomy review history (including cleared rows) and saved views come from their own tables under owner-only
+ * SELECT policies; the row id is only a cursor and user_id is never selected or exported.
  *
  * study_events has no cap: it is read page by page and each checked page is
  * written straight into StudyEventPages, so a long history never sits in memory
@@ -22,7 +24,7 @@
  */
 import { jsonCopy, StudyEventPages, type ExportData, type JsonObject } from './exportdata';
 
-export type ExportTable = 'profiles' | 'attempts' | 'exam_plans' | 'review_state' | 'study_events';
+export type ExportTable = 'profiles' | 'attempts' | 'exam_plans' | 'review_state' | 'study_events' | 'anatomy_review_queue' | 'anatomy_saved_views';
 
 interface ReadResult {
   data: unknown;
@@ -41,7 +43,7 @@ export interface ExportReader {
   user(): PromiseLike<ReadResult>;
 }
 
-export type ExportRpc = 'my_flags' | 'my_sessions' | 'export_my_anatomy_review_queue' | 'export_my_anatomy_views';
+export type ExportRpc = 'my_flags' | 'my_sessions';
 
 export type ExportLoadResult =
   | { ok: true; data: ExportData }
@@ -58,8 +60,8 @@ const LIMITS = {
   review_state: 50_000,
   my_flags: 10_000,
   my_sessions: 10_000,
-  export_my_anatomy_review_queue: 10_000,
-  export_my_anatomy_views: 50,
+  anatomy_review_queue: 10_000,
+  anatomy_saved_views: 50,
   identities: 20,
 } as const;
 
@@ -70,6 +72,10 @@ const COLUMNS = {
   exam_plans: 'id,course,exam_date,created_at',
   review_state: 'item_id,level,last_reviewed,next_review,updated_at',
   study_events: 'id,item_id,item_version_id,kind,ms_on_item,mark,at,created_at',
+  // Direct SELECT is filtered by the tables' owner-only RLS policy and restrictive MFA policy.
+  // The row id is only the keyset cursor; user_id is deliberately never selected or exported.
+  anatomy_review_queue: 'id,system_key,structure_id,missed_count,first_missed_at,last_missed_at,cleared_at',
+  anatomy_saved_views: 'id,system_key,name,camera,hidden,faded,selected,created_at,updated_at',
 } as const;
 
 function row(value: unknown): Record<string, unknown> {
@@ -256,46 +262,48 @@ function studyEvent(value: Record<string, unknown>) {
   };
 }
 
-const ANATOMY_ID = /^(FMA[0-9]+|FIX[0-9]+|fixture-[a-z0-9-]+)$/;
-function anatomySystem(value: Record<string, unknown>): string {
-  const v = text(value, 'system_key');
-  if (!/^[a-z0-9-]{1,40}$/.test(v)) throw new Error('invalid anatomy system');
-  return v;
+function anatomySystemKey(value: Record<string, unknown>): string {
+  const key = text(value, 'system_key');
+  if (!/^[a-z0-9-]{1,40}$/.test(key)) throw new Error('invalid anatomy system');
+  return key;
 }
-function anatomyStructure(v: unknown): string {
-  if (typeof v !== 'string' || v.length > 60 || !ANATOMY_ID.test(v)) throw new Error('invalid anatomy structure');
-  return v;
+
+function anatomyStructureId(value: Record<string, unknown>, name: string): string {
+  const id = text(value, name);
+  if (id.length > 60 || !/^(FMA\d+|FIX\d+|fixture-[a-z0-9-]+)$/.test(id)) throw new Error('invalid anatomy structure');
+  return id;
 }
-function anatomyIds(value: Record<string, unknown>, name: string): string[] {
-  const ids = field(value, name);
-  if (!Array.isArray(ids) || ids.length > 1000 || Object.keys(ids).length !== ids.length) throw new Error('invalid anatomy list');
-  const result: string[] = [];
-  for (let index = 0; index < ids.length; index++) {
-    const descriptor = Object.getOwnPropertyDescriptor(ids, String(index));
-    result.push(anatomyStructure(descriptor && 'value' in descriptor ? descriptor.value : undefined));
+
+function anatomyStringIds(value: unknown): string[] {
+  if (!Array.isArray(value) || value.length > 1000 || Object.keys(value).length !== value.length) {
+    throw new Error('invalid anatomy structure list');
   }
-  return result;
-}
-function anatomyVector(v: unknown): number[] {
-  if (!Array.isArray(v) || v.length !== 3 || Object.keys(v).length !== 3) throw new Error('invalid anatomy camera');
-  const result: number[] = [];
-  for (let index = 0; index < 3; index++) {
-    const descriptor = Object.getOwnPropertyDescriptor(v, String(index));
-    const n = descriptor && 'value' in descriptor ? descriptor.value : undefined;
-    if (typeof n !== 'number' || !Number.isFinite(n)) throw new Error('invalid anatomy camera');
-    result.push(n);
+  const ids: string[] = [];
+  for (let index = 0; index < value.length; index++) {
+    const descriptor = Object.getOwnPropertyDescriptor(value, String(index));
+    if (!descriptor || !('value' in descriptor) || typeof descriptor.value !== 'string' ||
+        descriptor.value.length > 60 || !/^(FMA\d+|FIX\d+|fixture-[a-z0-9-]+)$/.test(descriptor.value) ||
+        ids.includes(descriptor.value)) throw new Error('invalid anatomy structure list');
+    ids.push(descriptor.value);
   }
-  return result;
+  return ids;
 }
-function anatomyCamera(value: Record<string, unknown>): JsonObject {
-  const camera = row(field(value, 'camera'));
-  if (Object.keys(camera).some((key) => !['position', 'target', 'up'].includes(key))) throw new Error('invalid anatomy camera');
-  const copy: Record<string, number[]> = {
-    position: anatomyVector(field(camera, 'position')),
-    target: anatomyVector(field(camera, 'target')),
+
+function anatomyCamera(value: unknown): JsonObject {
+  const camera = row(value);
+  const keys = Object.keys(camera);
+  if (keys.some((key) => !['position', 'target', 'up'].includes(key))) throw new Error('invalid anatomy camera');
+  const vector = (input: unknown) => {
+    if (!Array.isArray(input) || input.length !== 3 || Object.keys(input).length !== 3) return false;
+    for (let i = 0; i < 3; i++) {
+      const descriptor = Object.getOwnPropertyDescriptor(input, String(i));
+      if (!descriptor || !('value' in descriptor) || typeof descriptor.value !== 'number' || !Number.isFinite(descriptor.value)) return false;
+    }
+    return true;
   };
-  if (Object.hasOwn(camera, 'up')) copy.up = anatomyVector(field(camera, 'up'));
-  return copy;
+  if (!vector(field(camera, 'position')) || !vector(field(camera, 'target'))) throw new Error('invalid anatomy camera');
+  if (maybe(camera, 'up') !== undefined && !vector(field(camera, 'up'))) throw new Error('invalid anatomy camera');
+  return camera as unknown as JsonObject;
 }
 
 function entries<T>(data: unknown, map: (value: Record<string, unknown>) => T): T[] {
@@ -406,43 +414,38 @@ export async function loadExport(reader: ExportReader): Promise<ExportLoadResult
         ip: nullableText(r, 'ip'),
       };
     });
-    // The caller's own anatomy lab rows, from the two export functions: cleared review history included.
-    const queueReply = await reader.rpc('export_my_anatomy_review_queue');
-    if (!queueReply || queueReply.error != null || !Array.isArray(queueReply.data) ||
-        queueReply.data.length > LIMITS.export_my_anatomy_review_queue) {
-      throw new Error('anatomy review export read failed');
-    }
-    // The row id is only the read cursor and is not exported.
-    const anatomyReviewQueue = entries(queueReply.data, (r) => {
+    // These tables are read directly under their SELECT-only, owner-scoped RLS and restrictive MFA policies.
+    // Read the entire review history (including cleared rows); id is solely a pagination cursor.
+    const anatomyReviewQueue = entries(await fetchRows(reader, 'anatomy_review_queue'), (r) => {
       uuid(r, 'id');
+      const firstMissedAt = timestamp(r, 'first_missed_at');
+      const lastMissedAt = timestamp(r, 'last_missed_at');
+      const clearedValue = field(r, 'cleared_at');
+      const clearedAt = clearedValue === null ? null : timestamp(r, 'cleared_at');
       const missedCount = field(r, 'missed_count');
-      if (typeof missedCount !== 'number' || !Number.isSafeInteger(missedCount) || missedCount < 1) {
-        throw new Error('invalid anatomy miss count');
-      }
+      if (typeof missedCount !== 'number' || !Number.isSafeInteger(missedCount) || missedCount < 1 || missedCount > 2_147_483_647 ||
+          Date.parse(lastMissedAt) < Date.parse(firstMissedAt)) throw new Error('invalid anatomy review row');
       return {
-        systemKey: anatomySystem(r),
-        structureId: anatomyStructure(field(r, 'structure_id')),
+        systemKey: anatomySystemKey(r),
+        structureId: anatomyStructureId(r, 'structure_id'),
         missedCount,
-        firstMissedAt: timestamp(r, 'first_missed_at'),
-        lastMissedAt: timestamp(r, 'last_missed_at'),
-        clearedAt: field(r, 'cleared_at') === null ? null : timestamp(r, 'cleared_at'),
+        firstMissedAt,
+        lastMissedAt,
+        clearedAt,
       };
     });
-    const viewReply = await reader.rpc('export_my_anatomy_views');
-    if (!viewReply || viewReply.error != null || !Array.isArray(viewReply.data) ||
-        viewReply.data.length > LIMITS.export_my_anatomy_views) {
-      throw new Error('anatomy views export read failed');
-    }
-    const anatomyViews = entries(viewReply.data, (r) => {
+    const anatomyViews = entries(await fetchRows(reader, 'anatomy_saved_views'), (r) => {
       uuid(r, 'id');
-      const selected = field(r, 'selected');
+      const name = text(r, 'name');
+      if (name.trim().length < 1 || name.length > 60 || /[\u0000-\u001f\u007f]/.test(name)) throw new Error('invalid anatomy view name');
+      const selectedValue = field(r, 'selected');
       return {
-        systemKey: anatomySystem(r),
-        name: text(r, 'name'),
-        camera: anatomyCamera(r),
-        hidden: anatomyIds(r, 'hidden'),
-        faded: anatomyIds(r, 'faded'),
-        selected: selected === null ? null : anatomyStructure(selected),
+        systemKey: anatomySystemKey(r),
+        name,
+        camera: anatomyCamera(field(r, 'camera')),
+        hidden: anatomyStringIds(field(r, 'hidden')),
+        faded: anatomyStringIds(field(r, 'faded')),
+        selected: selectedValue === null ? null : anatomyStructureId({ selected: selectedValue }, 'selected'),
         createdAt: timestamp(r, 'created_at'),
         updatedAt: timestamp(r, 'updated_at'),
       };
@@ -463,8 +466,7 @@ export async function loadExport(reader: ExportReader): Promise<ExportLoadResult
       ok: true,
       data: {
         profile: profiles[0] ?? {}, signInDetails, account: ownAccount,
-        attempts, examPlans, reviewRows, reports, sessions, studyEvents,
-        anatomyReviewQueue, anatomyViews,
+        attempts, examPlans, reviewRows, reports, sessions, studyEvents, anatomyReviewQueue, anatomyViews,
       },
     };
   } catch {
@@ -495,8 +497,8 @@ const CURSOR_COLUMN: Record<ExportTable | ExportRpc, string | null> = {
   study_events: 'id',
   my_flags: 'id',
   my_sessions: 'id',
-  export_my_anatomy_review_queue: 'id',
-  export_my_anatomy_views: 'id',
+  anatomy_review_queue: 'id',
+  anatomy_saved_views: 'id',
 };
 
 /**
@@ -542,7 +544,7 @@ async function allPages(makeQuery: () => SupabaseQuery, which: WholeTable | Expo
 
 /**
  * Uses only the tables and RPC explicitly allowed by Task 61 (and study_events, Task 140; my_sessions and
- * auth.getUser(), Task 309).
+ * auth.getUser(), Task 309; the two owner-scoped anatomy tables, Task 178).
  */
 export function fromSupabase(client: SupabaseExportClient): ExportReader {
   return {

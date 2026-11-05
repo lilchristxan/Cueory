@@ -19,10 +19,10 @@ import { answerQuiz, revealQuiz, startQuiz } from '../../src/islands/anatomylab'
 const camera: ViewCamera = { position: [0, 0, 3], target: [0, 0, 0], up: [0, 1, 0] };
 
 /** A fake of the shared client: a session (or none) and one canned reply per function. */
-function fakeClient(options: { signedIn?: boolean; replies?: Partial<Record<string, { data: unknown; error: unknown }>> } = {}) {
+function fakeClient(options: { signedIn?: boolean; userId?: string; replies?: Partial<Record<string, { data: unknown; error: unknown }>> } = {}) {
   const rpc = vi.fn(async (fn: string, _args?: unknown) => options.replies?.[fn] ?? { data: null, error: null });
   const client = {
-    auth: { getSession: async () => ({ data: { session: options.signedIn === false ? null : { user: { id: 'student-1' } } }, error: null }) },
+    auth: { getSession: async () => ({ data: { session: options.signedIn === false ? null : { user: { id: options.userId ?? 'student-1' } } }, error: null }) },
     rpc,
   } as unknown as AnatomyStudyClient;
   return { client, rpc, study: createAnatomyStudy(async () => client) };
@@ -168,30 +168,51 @@ describe('anatomyStudyMessage', () => {
 });
 
 describe('createAnatomyStudy', () => {
+  it('does not send an operation captured under A when the delayed session check resolves as B', async () => {
+    let started!: () => void;
+    let resolveSession!: (value: { data: { session: { user: { id: string } } | null }; error: unknown }) => void;
+    const sessionStarted = new Promise<void>((resolve) => { started = resolve; });
+    const pendingSession = new Promise<{ data: { session: { user: { id: string } } | null }; error: unknown }>((resolve) => {
+      resolveSession = resolve;
+    });
+    const rpc = vi.fn(async () => ({ data: 1, error: null }));
+    const client = {
+      auth: { getSession: () => { started(); return pendingSession; } },
+      rpc,
+    } as unknown as AnatomyStudyClient;
+    const study = createAnatomyStudy(async () => client);
+    const operation = study.recordMisses('heart', ['FMA7204'], 'student-a');
+    await sessionStarted;
+    // A second tab signed into B while A's operation was awaiting its session check.
+    resolveSession({ data: { session: { user: { id: 'student-b' } } }, error: null });
+    expect(await operation).toEqual({ ok: true, value: 0 });
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
   it('records misses in batches of 50 with the SQL argument names, and adds up what was recorded', async () => {
     const { study, rpc } = fakeClient({ replies: { record_anatomy_misses: { data: 7, error: null } } });
     const ids = Array.from({ length: 60 }, (_unused, i) => `FMA${i}`);
-    expect(await study.recordMisses('heart', [...ids, 'FMA0', 'BAD001'])).toEqual({ ok: true, value: 14 });
+    expect(await study.recordMisses('heart', [...ids, 'FMA0', 'BAD001'], 'student-1')).toEqual({ ok: true, value: 14 });
     expect(rpc).toHaveBeenCalledTimes(2);
     expect(rpc.mock.calls[0]![0]).toBe('record_anatomy_misses');
-    expect(rpc.mock.calls[0]![1]).toEqual({ system_key: 'heart', structure_ids: ids.slice(0, 50) });
-    expect(rpc.mock.calls[1]![1]).toEqual({ system_key: 'heart', structure_ids: ids.slice(50) });
+    expect(rpc.mock.calls[0]![1]).toEqual({ system_key: 'heart', structure_ids: ids.slice(0, 50), expected_user_id: 'student-1' });
+    expect(rpc.mock.calls[1]![1]).toEqual({ system_key: 'heart', structure_ids: ids.slice(50), expected_user_id: 'student-1' });
   });
 
   it('sends nothing when accounts are off, nobody is signed in, or there is nothing valid to send', async () => {
     const off = createAnatomyStudy(async () => null);
-    expect(await off.recordMisses('heart', ['FMA1'])).toEqual({ ok: true, value: 0 });
-    expect(await off.reviewQueue()).toEqual({ ok: true, value: [] });
-    expect(await off.views('heart')).toEqual({ ok: true, value: [] });
-    expect(await off.saveView({ systemKey: 'heart', name: 'front', camera, hidden: [] })).toEqual({ ok: false, message: 'please sign in to use this.' });
+    expect(await off.recordMisses('heart', ['FMA1'], 'student-1')).toEqual({ ok: true, value: 0 });
+    expect(await off.reviewQueue('student-1')).toEqual({ ok: true, value: [] });
+    expect(await off.views('heart', 'student-1')).toEqual({ ok: true, value: [] });
+    expect(await off.saveView({ systemKey: 'heart', name: 'front', camera, hidden: [] }, 'student-1')).toEqual({ ok: false, message: 'please sign in to use this.' });
     const { study, rpc } = fakeClient({ signedIn: false });
-    expect(await study.recordMisses('heart', ['FMA1'])).toEqual({ ok: true, value: 0 });
-    expect(await study.clearMiss('heart', 'FMA1')).toEqual({ ok: false, message: 'please sign in to use this.' });
-    expect(await study.deleteView('00000000-0000-4000-8000-000000000001')).toEqual({ ok: false, message: 'please sign in to use this.' });
+    expect(await study.recordMisses('heart', ['FMA1'], 'student-1')).toEqual({ ok: true, value: 0 });
+    expect(await study.clearMiss('heart', 'FMA1', 'student-1')).toEqual({ ok: false, message: 'please sign in to use this.' });
+    expect(await study.deleteView('00000000-0000-4000-8000-000000000001', 'student-1')).toEqual({ ok: false, message: 'please sign in to use this.' });
     const signedIn = fakeClient();
-    expect(await signedIn.study.recordMisses('heart', ['BAD001'])).toEqual({ ok: true, value: 0 });
-    expect(await signedIn.study.recordMisses('Heart', ['FMA1'])).toEqual({ ok: true, value: 0 });
-    expect(await signedIn.study.views('Heart')).toEqual({ ok: true, value: [] });
+    expect(await signedIn.study.recordMisses('heart', ['BAD001'], 'student-1')).toEqual({ ok: true, value: 0 });
+    expect(await signedIn.study.recordMisses('Heart', ['FMA1'], 'student-1')).toEqual({ ok: true, value: 0 });
+    expect(await signedIn.study.views('Heart', 'student-1')).toEqual({ ok: true, value: [] });
     expect(rpc).not.toHaveBeenCalled();
     expect(signedIn.rpc).not.toHaveBeenCalled();
   });
@@ -199,7 +220,7 @@ describe('createAnatomyStudy', () => {
   it('turns a database refusal into a student message and keeps the cause', async () => {
     const error = { message: 'too many misses recorded recently; try again later', code: '54000' };
     const { study } = fakeClient({ replies: { record_anatomy_misses: { data: null, error } } });
-    const outcome = await study.recordMisses('heart', ['FMA1']);
+    const outcome = await study.recordMisses('heart', ['FMA1'], 'student-1');
     expect(outcome).toEqual({ ok: false, message: "you've recorded a lot of misses recently. they'll be kept again in a little while.", cause: error });
   });
 
@@ -219,66 +240,27 @@ describe('createAnatomyStudy', () => {
       my_anatomy_views: { data: views, error: null },
       delete_anatomy_view: { data: false, error: null },
     } });
-    expect(await study.clearMiss('heart', 'FMA1')).toEqual({ ok: true, value: true });
-    expect(rpc).toHaveBeenLastCalledWith('clear_anatomy_miss', { system_key: 'heart', structure_id: 'FMA1' });
-    expect(await study.reviewQueue()).toEqual({ ok: true, value: queue });
+    expect(await study.clearMiss('heart', 'FMA1', 'student-1')).toEqual({ ok: true, value: true });
+    expect(rpc).toHaveBeenLastCalledWith('clear_anatomy_miss', { system_key: 'heart', structure_id: 'FMA1', expected_user_id: 'student-1' });
+    expect(await study.reviewQueue('student-1')).toEqual({ ok: true, value: queue });
     expect(rpc).toHaveBeenLastCalledWith('my_anatomy_review_queue');
-    expect(await study.saveView({ systemKey: 'heart', name: ' front view ', camera, hidden: ['FMA1'] })).toEqual({ ok: true, value: views[0]!.id });
-    expect(rpc).toHaveBeenLastCalledWith('save_anatomy_view', { system_key: 'heart', name: 'front view', camera, hidden: ['FMA1'], faded: [], selected: null });
-    expect(await study.views('heart')).toEqual({ ok: true, value: views });
+    expect(await study.saveView({ systemKey: 'heart', name: ' front view ', camera, hidden: ['FMA1'] }, 'student-1')).toEqual({ ok: true, value: views[0]!.id });
+    expect(rpc).toHaveBeenLastCalledWith('save_anatomy_view', { system_key: 'heart', name: 'front view', camera, hidden: ['FMA1'], faded: [], selected: null, expected_user_id: 'student-1' });
+    expect(await study.views('heart', 'student-1')).toEqual({ ok: true, value: views });
     expect(rpc).toHaveBeenLastCalledWith('my_anatomy_views', { system_key: 'heart' });
-    expect(await study.deleteView(views[0]!.id)).toEqual({ ok: true, value: false });
-    expect(rpc).toHaveBeenLastCalledWith('delete_anatomy_view', { id: views[0]!.id });
+    expect(await study.deleteView(views[0]!.id, 'student-1')).toEqual({ ok: true, value: false });
+    expect(rpc).toHaveBeenLastCalledWith('delete_anatomy_view', { id: views[0]!.id, expected_user_id: 'student-1' });
   });
 
   it('refuses a view the database would refuse before calling it', async () => {
     const { study, rpc } = fakeClient();
-    expect(await study.saveView({ systemKey: 'heart', name: '', camera, hidden: [] })).toEqual({ ok: false, message: 'a view name is 1 to 60 characters of plain text.' });
+    expect(await study.saveView({ systemKey: 'heart', name: '', camera, hidden: [] }, 'student-1')).toEqual({ ok: false, message: 'a view name is 1 to 60 characters of plain text.' });
     expect(rpc).not.toHaveBeenCalled();
   });
 
   it('treats a reply of the wrong shape as a failure', async () => {
     const { study } = fakeClient({ replies: { my_anatomy_views: { data: 'not rows', error: null }, record_anatomy_misses: { data: '3', error: null } } });
-    expect((await study.views('heart')).ok).toBe(false);
-    expect((await study.recordMisses('heart', ['FMA1'])).ok).toBe(false);
-  });
-});
-
-describe('an account switch while the session check is pending (Task 178)', () => {
-  /** getSession() waits until the test releases it, answering with whoever is signed in by then. */
-  function switching() {
-    let release!: () => void;
-    const gate = new Promise<void>((resolve) => { release = resolve; });
-    let user = 'student-a';
-    const rpc = vi.fn(async (_fn: string, _args?: unknown) => ({ data: null, error: null }));
-    const client = {
-      auth: { getSession: async () => { await gate; return { data: { session: { user: { id: user } } }, error: null }; } },
-      rpc,
-    } as unknown as AnatomyStudyClient;
-    return { rpc, study: createAnatomyStudy(async () => client), switchTo: (next: string) => { user = next; release(); } };
-  }
-  const state = { systemKey: 'heart', name: 'front', camera, hidden: [], faded: [], selected: null };
-
-  it.each([
-    ['recordMisses', (s: ReturnType<typeof switching>['study']) => s.recordMisses('heart', ['FMA1'], 'student-a')],
-    ['clearMiss', (s: ReturnType<typeof switching>['study']) => s.clearMiss('heart', 'FMA1', 'student-a')],
-    ['saveView', (s: ReturnType<typeof switching>['study']) => s.saveView(state, 'student-a')],
-    ['deleteView', (s: ReturnType<typeof switching>['study']) => s.deleteView('00000000-0000-4000-8000-000000000001', 'student-a')],
-    ['reviewQueue', (s: ReturnType<typeof switching>['study']) => s.reviewQueue('student-a')],
-    ['views', (s: ReturnType<typeof switching>['study']) => s.views('heart', 'student-a')],
-  ])('%s sends nothing when student A\'s action finds student B signed in', async (_name, run) => {
-    const { rpc, study, switchTo } = switching();
-    const pending = run(study);
-    switchTo('student-b');
-    await pending;
-    expect(rpc).not.toHaveBeenCalled();
-  });
-
-  it('still sends when the same student is signed in', async () => {
-    const { rpc, study, switchTo } = switching();
-    const pending = study.clearMiss('heart', 'FMA1', 'student-a');
-    switchTo('student-a');
-    await pending;
-    expect(rpc).toHaveBeenCalledTimes(1);
+    expect((await study.views('heart', 'student-1')).ok).toBe(false);
+    expect((await study.recordMisses('heart', ['FMA1'], 'student-1')).ok).toBe(false);
   });
 });

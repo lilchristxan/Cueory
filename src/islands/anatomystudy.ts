@@ -74,11 +74,11 @@ interface Reply<T = unknown> { data: T | null; error: unknown }
 
 /** The parts of the shared Supabase client this module uses, so tests can pass a fake. */
 export interface AnatomyStudyClient extends SessionReader {
-  rpc(fn: 'record_anatomy_misses', args: { system_key: string; structure_ids: string[]; expected_user_id?: string }): PromiseLike<Reply<number>>;
-  rpc(fn: 'clear_anatomy_miss', args: { system_key: string; structure_id: string; expected_user_id?: string }): PromiseLike<Reply<boolean>>;
+  rpc(fn: 'record_anatomy_misses', args: { system_key: string; structure_ids: string[]; expected_user_id: string }): PromiseLike<Reply<number>>;
+  rpc(fn: 'clear_anatomy_miss', args: { system_key: string; structure_id: string; expected_user_id: string }): PromiseLike<Reply<boolean>>;
   rpc(fn: 'my_anatomy_review_queue'): PromiseLike<Reply<ReviewQueueRow[]>>;
-  rpc(fn: 'save_anatomy_view', args: SaveViewArgs & { expected_user_id?: string }): PromiseLike<Reply<string>>;
-  rpc(fn: 'delete_anatomy_view', args: { id: string; expected_user_id?: string }): PromiseLike<Reply<boolean>>;
+  rpc(fn: 'save_anatomy_view', args: SaveViewArgs & { expected_user_id: string }): PromiseLike<Reply<string>>;
+  rpc(fn: 'delete_anatomy_view', args: { id: string; expected_user_id: string }): PromiseLike<Reply<boolean>>;
   rpc(fn: 'my_anatomy_views', args: { system_key: string }): PromiseLike<Reply<SavedViewRow[]>>;
 }
 
@@ -223,38 +223,34 @@ export function createSavedViewsRequestGuard() {
 
 export interface AnatomyStudy {
   /** Records misses for the signed-in student, in batches of 50. Resolves with how many were recorded; `0` when signed out or accounts are off. */
-  recordMisses(systemKey: string, structureIds: readonly string[], expectedUserId?: string): Promise<Outcome<number>>;
+  recordMisses(systemKey: string, structureIds: readonly string[], expectedUserId: string): Promise<Outcome<number>>;
   /** Takes one structure off the review list. */
-  clearMiss(systemKey: string, structureId: string, expectedUserId?: string): Promise<Outcome<boolean>>;
+  clearMiss(systemKey: string, structureId: string, expectedUserId: string): Promise<Outcome<boolean>>;
   /** The student's uncleared misses, most recent first; `[]` when signed out or accounts are off. */
-  reviewQueue(expectedUserId?: string): Promise<Outcome<ReviewQueueRow[]>>;
+  reviewQueue(expectedUserId: string): Promise<Outcome<ReviewQueueRow[]>>;
   /** Saves or replaces a view and resolves with its id. */
-  saveView(state: ViewState, expectedUserId?: string): Promise<Outcome<string>>;
-  deleteView(id: string, expectedUserId?: string): Promise<Outcome<boolean>>;
+  saveView(state: ViewState, expectedUserId: string): Promise<Outcome<string>>;
+  deleteView(id: string, expectedUserId: string): Promise<Outcome<boolean>>;
   /** The student's saved views for one system, by name; `[]` when signed out or accounts are off. */
-  views(systemKey: string, expectedUserId?: string): Promise<Outcome<SavedViewRow[]>>;
+  views(systemKey: string, expectedUserId: string): Promise<Outcome<SavedViewRow[]>>;
 }
 
 const NOT_SIGNED_IN = 'please sign in to use this.';
 
 /**
- * Builds the client over the shared lazy Supabase client (`getSupabase`), or a fake in tests. Every call checks the
- * local session first so a signed-out student never sends a request; the database checks the token itself. Methods are
- * always called on the client object, because supabase-js relies on the receiver.
+ * Builds the client over the shared lazy Supabase client (`getSupabase`), or a fake in tests. Every operation is bound
+ * to the user id captured at the UI event boundary. After loading the shared client and reading the current session,
+ * it refuses the operation unless that session still belongs to the captured user. This prevents a request started
+ * under A from being sent with B's token after a cross-tab account switch. Methods remain called on the client object,
+ * because supabase-js relies on the receiver.
  */
 export function createAnatomyStudy(getClient: () => Promise<AnatomyStudyClient | null>): AnatomyStudy {
-  /**
-   * The client, only while a student is signed in. When the caller names the student the action was started for
-   * (`expectedUserId`), a session that now belongs to someone else (an account switch in another tab) reads as signed
-   * out, so nothing is sent under the other account.
-   */
-  async function signedIn(expectedUserId?: string): Promise<AnatomyStudyClient | null> {
+  async function signedIn(expectedUserId: string): Promise<AnatomyStudyClient | null> {
+    if (typeof expectedUserId !== 'string' || expectedUserId.length === 0) return null;
     const client = await getClient();
     if (!client) return null;
     const session = await sessionStateFrom(client);
-    if (!session.signedIn) return null;
-    if (expectedUserId !== undefined && session.userId !== expectedUserId) return null;
-    return client;
+    return session.signedIn && session.userId === expectedUserId ? client : null;
   }
   function settle<T>(reply: Reply<T>, check: (data: unknown) => data is T): Outcome<T> {
     if (reply.error != null) return { ok: false, message: anatomyStudyMessage(reply.error), cause: reply.error };
@@ -270,16 +266,11 @@ export function createAnatomyStudy(getClient: () => Promise<AnatomyStudyClient |
     async recordMisses(systemKey, structureIds, expectedUserId) {
       const ids = [...new Set(structureIds)].filter((id) => STRUCTURE_ID.test(id));
       if (!SYSTEM_KEY.test(systemKey) || ids.length === 0) return { ok: true, value: 0 };
-      let client = await signedIn(expectedUserId);
+      const client = await signedIn(expectedUserId);
       if (!client) return { ok: true, value: 0 };
       let recorded = 0;
-      let first = true;
       for (const batch of missBatches(ids)) {
-        // Later batches check who is signed in again, so a switch between batches stops the rest.
-        if (!first) client = await signedIn(expectedUserId);
-        if (!client) return { ok: true, value: recorded };
-        first = false;
-        const outcome = settle(await client.rpc('record_anatomy_misses', { system_key: systemKey, structure_ids: batch, ...(expectedUserId === undefined ? {} : { expected_user_id: expectedUserId }) }), isNumber);
+        const outcome = settle(await client.rpc('record_anatomy_misses', { system_key: systemKey, structure_ids: batch, expected_user_id: expectedUserId }), isNumber);
         if (!outcome.ok) return outcome;
         recorded += outcome.value;
       }
@@ -288,7 +279,7 @@ export function createAnatomyStudy(getClient: () => Promise<AnatomyStudyClient |
     async clearMiss(systemKey, structureId, expectedUserId) {
       const client = await signedIn(expectedUserId);
       if (!client) return { ok: false, message: NOT_SIGNED_IN };
-      return settle(await client.rpc('clear_anatomy_miss', { system_key: systemKey, structure_id: structureId, ...(expectedUserId === undefined ? {} : { expected_user_id: expectedUserId }) }), isBoolean);
+      return settle(await client.rpc('clear_anatomy_miss', { system_key: systemKey, structure_id: structureId, expected_user_id: expectedUserId }), isBoolean);
     },
     async reviewQueue(expectedUserId) {
       const client = await signedIn(expectedUserId);
@@ -300,12 +291,12 @@ export function createAnatomyStudy(getClient: () => Promise<AnatomyStudyClient |
       if (!snapshot.ok) return snapshot;
       const client = await signedIn(expectedUserId);
       if (!client) return { ok: false, message: NOT_SIGNED_IN };
-      return settle(await client.rpc('save_anatomy_view', expectedUserId === undefined ? snapshot.args : { ...snapshot.args, expected_user_id: expectedUserId }), isString);
+      return settle(await client.rpc('save_anatomy_view', { ...snapshot.args, expected_user_id: expectedUserId }), isString);
     },
     async deleteView(id, expectedUserId) {
       const client = await signedIn(expectedUserId);
       if (!client) return { ok: false, message: NOT_SIGNED_IN };
-      return settle(await client.rpc('delete_anatomy_view', expectedUserId === undefined ? { id } : { id, expected_user_id: expectedUserId }), isBoolean);
+      return settle(await client.rpc('delete_anatomy_view', { id, expected_user_id: expectedUserId }), isBoolean);
     },
     async views(systemKey, expectedUserId) {
       if (!SYSTEM_KEY.test(systemKey)) return { ok: true, value: [] };
