@@ -89,16 +89,18 @@ describe('flag item subscriptions', () => {
   });
 
   it('sends listener copies and isolates a listener that throws', () => {
-    const first = vi.fn((item: FlagItem | undefined) => {
+    let firstReceived: FlagItem | undefined;
+    const first = (item: FlagItem | undefined) => {
+      firstReceived = item && { ...item };
       if (item) item.itemId = 'mutated-by-listener';
       throw new Error('listener failure');
-    });
+    };
     const second = vi.fn();
     subscribe(first);
     subscribe(second);
 
     expect(() => setFlagItem(FIRST)).not.toThrow();
-    expect(first).toHaveBeenCalledWith(FIRST);
+    expect(firstReceived).toEqual(FIRST);
     expect(second).toHaveBeenCalledWith(FIRST);
     expect(currentFlagItem()).toEqual(FIRST);
   });
