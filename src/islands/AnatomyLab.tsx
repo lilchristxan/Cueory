@@ -11,6 +11,7 @@ import {
 import { createGeneration, createOnDemandLoader, publishAnatomyFile, knownMissingStructureIds, filesForLayer, idsForFiles, initialLayerPlan, firstLayer, layerNeedsReveal, visibilityAfterLayerDownload, lazyPeel, lazyRestore, revealTargetPlan, needsBulkLayerConfirmation, showAllPlan, structureLoadNote, type OnDemandLoader } from './anatomylazy';
 import type { CameraState, LabColors, LabScene, LoadResult } from './anatomyscene';
 import { createAnatomyOpenGate } from './anatomyopen';
+import AnatomyLabCover from './AnatomyLabCover';
 import { breadcrumb, siblings } from './anatomyhierarchy';
 import { boxesFromMeshes, expandNearby, nearbyStructures } from './anatomynearby';
 import { canSpeak, speak, stop as stopSpeaking } from './anatomyspeech';
@@ -93,13 +94,17 @@ import {
   type Visibility,
 } from './anatomylab';
 
-interface Props {
+export interface AnatomyLabProps {
   systems: AnatomySystem[];
   /** The tests' fixture system, shown first and only when the address has ?fixture (never on the live site's build). */
   fixture?: AnatomySystem | null;
   /** True on builds that show drafts: draft systems then carry the "draft · labels waiting for review" note. */
   drafts: boolean;
+  /** True when the small cover island (`AnatomyLabOpen.tsx`) already took the tap: open at once instead of showing the cover. */
+  autoOpen?: boolean;
 }
+
+type Props = AnatomyLabProps;
 
 type Phase = 'cover' | 'opening' | 'open' | 'error';
 type SystemLoad = { state: 'loading' } | { state: 'ready'; result: LoadResult; publishedFiles: ReadonlySet<string> } | { state: 'error'; message: string };
@@ -175,8 +180,8 @@ function measureLabel(font: string, fontPx: number): (s: string) => number {
  * or from the list, labels with leader lines, a "find it" quiz and picture export for Christian's posts and videos.
  * Nothing from three.js loads before the student taps "open the anatomy lab". Rendered client:only.
  */
-export default function AnatomyLab({ systems: baseSystems, fixture, drafts }: Props) {
-  const [phase, setPhase] = useState<Phase>('cover');
+export default function AnatomyLab({ systems: baseSystems, fixture, drafts, autoOpen = false }: Props) {
+  const [phase, setPhase] = useState<Phase>(autoOpen ? 'opening' : 'cover');
   const [textLimit, setTextLimit] = useState(TEXT_FALLBACK_BATCH);
   const systems = useMemo(() => {
     const wantsFixture = fixture && new URLSearchParams(window.location.search).has('fixture');
@@ -782,6 +787,13 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts }: Pr
     };
   }, [openGate, speechOn]);
 
+  // The cover island already took the tap: open on mount (after the gate's mount effect above).
+  const openRef = useRef(open);
+  openRef.current = open;
+  useEffect(() => {
+    if (autoOpen) void openRef.current();
+  }, [autoOpen]);
+
   useEffect(() => {
     if (phase === 'open') canvasRef.current?.focus();
     if (phase === 'error') fallbackHeadingRef.current?.focus();
@@ -933,24 +945,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts }: Pr
 
   if (!system) return <p className="text-ink-soft">no body systems yet.</p>;
 
-  if (phase === 'cover') {
-    return (
-      <div className="space-y-3">
-        <button
-          type="button"
-          onClick={open}
-          className="flex min-h-14 w-full items-center justify-center gap-3 rounded-lg border border-line bg-surface px-5 py-3 text-ink hover:bg-button-hover hover:text-on-button"
-        >
-          <svg viewBox="0 0 24 24" className="size-6 shrink-0" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.5">
-            <path d="M12 3L21 8.5V15.5L12 21L3 15.5V8.5L12 3Z" />
-            <path d="M12 3V21M3 8.5L12 14L21 8.5" />
-          </svg>
-          open the anatomy lab
-        </button>
-        <p className="text-sm text-ink-soft">loads the 3D viewer, then one body system at a time.</p>
-      </div>
-    );
-  }
+  if (phase === 'cover') return <AnatomyLabCover onOpen={() => void open()} />;
 
   if (phase === 'error') {
     const rows = textFallbackItems(groups, textLimit);
@@ -1394,7 +1389,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts }: Pr
                   <div className="flex flex-wrap items-center gap-2">
                     <select
                       id="anatomy-compare-pick"
-                      className="min-h-11 rounded-md border border-control bg-page px-3 text-sm text-ink"
+                      className="min-h-11 w-full max-w-full min-w-0 rounded-md border border-control bg-page px-3 text-sm text-ink sm:w-auto"
                       value={compareSystem ? compareSystem.key : ''}
                       disabled={!ready}
                       onChange={(e) => setCompareKey(e.target.value)}
