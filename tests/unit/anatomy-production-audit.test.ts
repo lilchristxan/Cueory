@@ -437,7 +437,7 @@ describe('anatomy production artifact audit', () => {
       .find((view: { buffer: number; byteOffset: number; byteLength: number } | undefined) =>
         view?.buffer === 0 && Number.isSafeInteger(view.byteOffset) &&
         Number.isSafeInteger(view.byteLength) && view.byteLength > 0);
-    expect(compressed).toBeDefined();
+    if (!compressed) throw new Error('real GLB has no compressed meshopt payload');
 
     // The GLB BIN chunk starts after the 12-byte header and 8-byte JSON chunk header.
     // Corrupt the middle of a real compressed payload, not JSON metadata or fallback bytes.
