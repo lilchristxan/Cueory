@@ -55,12 +55,19 @@ test('exported anatomy picture credit is complete, visible and model-specific', 
   expect(fixtureText).toContain('test shapes made in code for automated tests');
   expect(fixtureText).not.toContain(LICENSE_URL);
   expect(fixtureText).not.toContain('© The Database Center for Life Science');
+  await expect(page.getByTestId('anatomy-model-scope')).toHaveCount(0);
 
   // The existing small kidneys model exercises the real draft source-credit path.
   const kidney = page.getByRole('group', { name: 'body system' })
     .getByRole('button', { name: 'kidneys and urinary tract', exact: true });
   await expect(kidney).toBeVisible();
   await kidney.click();
+  const scope = page.getByTestId('anatomy-model-scope');
+  await expect(scope).toContainText('source model: adult human male reference geometry');
+  await expect(scope.getByRole('link', { name: 'publisher source description' })).toHaveAttribute(
+    'href',
+    'https://dbarchive.biosciencedbc.jp/data/bodyparts3d/LATEST/README_e.html',
+  );
   // Wait for the real model load, not the previous fixture's briefly enabled export control.
   await expect(page.getByText(/^kidneys and urinary tract: \d+ structures loaded\.$/))
     .toHaveCount(1, { timeout: 20_000 });
@@ -75,6 +82,7 @@ test('exported anatomy picture credit is complete, visible and model-specific', 
   expect(anatomyText).toContain('BodyParts3D');
   expect(anatomyText).toContain('© The Database Center for Life Science');
   expect(anatomyText).toContain('draft model, built from BodyParts3D 4.0');
+  expect(anatomyText).toContain('source model: adult human male reference geometry');
   expect(anatomyText).not.toContain('test shapes made in code');
 
   // A long URI can span multiple credit lines. Read the uninterrupted drawn characters,
