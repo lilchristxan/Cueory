@@ -250,7 +250,8 @@ function validPagefindCbor(bytes, draftIds = new Set()) {
     if (major === 2 || major === 3) {
       if (!Number.isSafeInteger(argument) || argument < 0 || offset + argument > bytes.length) return false;
       const value = bytes.subarray(offset, offset + argument);
-      if (major === 2 && (containsGlbHeader(value) || hasArchiveMagicBytes(value))) return false;
+      if (major === 2 && (containsGlbHeader(value) || hasArchiveMagicBytes(value) ||
+        containsReservedAnatomyId(value.toString('utf8'), draftIds))) return false;
       if (major === 3) {
         let decodedText;
         try {
