@@ -131,7 +131,9 @@ files one for one. One caveat remains until Christian pastes it in the SQL Edito
 file 17 (the only statement in that file the tool refuses to run) was not yet applied, so row 17 is recorded ahead of
 that one function. `cueory-prod` has no history rows and no schema. Before any `db push` or `repair` on either project,
 compare the live history, the live schema and the files version by version, and get Christian's approval for the
-plan. A `migration repair` changes history, not the schema. [SB migrations] [SB repair]
+plan. A `migration repair` changes history, not the schema. The same hold covers running migration files by hand in the SQL Editor: on either project, a file is run there only
+when Christian says so for that file, and its exact file version is then recorded in the history table, so
+history never says less, or more, than what has run. [SB migrations] [SB repair]
 
 ### 1.6 Sign-in settings on cueory-prod (25 minutes)
 
