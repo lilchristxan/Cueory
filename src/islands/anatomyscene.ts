@@ -17,19 +17,29 @@ import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.j
 import {
   BEHIND_MARK,
   EXPORT_SIZES,
+  cameraForPreset,
+  cameraMoveDuration,
   encodeId,
   exportRegion,
   findVisibleAnchors,
   fitDistance,
+  focusCamera,
+  homePreset,
   labelLines,
   labelRoomFor,
+  lerpVec3,
+  moveProgress,
   placeLabels,
   pickedStructure,
   pictureTitleLayout,
+  postureAngleX,
   preparePictureFonts,
   wrapText,
   type ExportSize,
+  type Posture,
   type Rect,
+  type Vec3,
+  type ViewPreset,
   type VisibilityTarget,
   visibleSelection,
 } from './anatomylab';
@@ -46,6 +56,8 @@ export interface LabColors {
   modelSelected: string;
   /** How opaque the other structures are while one is selected. */
   dimAlpha: number;
+  /** How opaque a faded structure is (--anatomy-faded-opacity). */
+  fadedOpacity: number;
   /** The interface font (--font-body). */
   font: string;
 }
@@ -54,6 +66,7 @@ export function readColors(root: HTMLElement = document.documentElement): LabCol
   const style = getComputedStyle(root);
   const get = (name: string) => style.getPropertyValue(name).trim();
   const alpha = Number.parseFloat(get('--model-dim-alpha'));
+  const faded = Number.parseFloat(get('--anatomy-faded-opacity'));
   return {
     page: get('--color-page'),
     surface: get('--color-surface'),
@@ -64,6 +77,7 @@ export function readColors(root: HTMLElement = document.documentElement): LabCol
     modelAlt: get('--color-model-alt'),
     modelSelected: get('--color-model-selected'),
     dimAlpha: Number.isFinite(alpha) ? alpha : 0.2,
+    fadedOpacity: Number.isFinite(faded) ? faded : 0.35,
     font: get('--font-body') || 'sans-serif',
   };
 }
@@ -121,6 +135,8 @@ export function readExportTokens(root: HTMLElement = document.documentElement): 
 export interface Appearance {
   hidden: ReadonlySet<string>;
   selected: string | null;
+  /** Faded structures: drawn semi-transparent (--anatomy-faded-opacity) but still there to tap and label. */
+  faded?: ReadonlySet<string>;
 }
 
 export interface LoadResult {
@@ -172,6 +188,12 @@ export interface LabScene {
   orbit(yaw: number, pitch: number): void;
   zoom(factor: number): void;
   resetView(): void;
+  /** One of the six standard views of the visible model (animated unless reduced motion is on). */
+  viewPreset(preset: ViewPreset): void;
+  /** Frames one structure's box; false when it is not in the model or is hidden. */
+  focusOn(id: string): boolean;
+  /** Turns the whole model to stand or lie on its back, then shows it from that posture's home view. */
+  setPosture(posture: Posture): void;
   exportPicture(request: ExportRequest): Promise<ExportResult>;
   dispose(): void;
 }
@@ -245,8 +267,11 @@ export function createLabScene({ canvas, reducedMotion, colors: initialColors, o
   let boxes = new Map<string, THREE.Box3>();
   let unlabeled: THREE.Mesh[] = [];
   let appearance: Appearance = { hidden: new Set(), selected: null };
-  const home = { position: new THREE.Vector3(0, 0, 5), target: new THREE.Vector3() };
+  const home = { position: new THREE.Vector3(0, 0, 5), target: new THREE.Vector3(), distance: 5 };
+  let posture: Posture = 'standing';
   let loadId = 0;
+  /** A camera move in progress (none with reduced motion: the camera jumps). */
+  let move: { from: { position: THREE.Vector3; target: THREE.Vector3 }; to: { position: Vec3; target: Vec3 }; start: number; duration: number } | null = null;
 
   const resize = () => {
     const width = canvas.clientWidth || 1;
@@ -259,8 +284,19 @@ export function createLabScene({ canvas, reducedMotion, colors: initialColors, o
   };
   // OrbitControls.update() returns true while damping still moves the camera (three.js r187).
   // Only those moving frames are repeated. Camera changes reset a single delayed visibility check.
-  const tick = (): boolean => {
-    const moving = controls.enableDamping ? controls.update() : false;
+  const tick = (time: number): boolean => {
+    let moving = controls.enableDamping ? controls.update() : false;
+    if (move) {
+      const t = moveProgress(time - move.start, move.duration);
+      const position = lerpVec3(move.from.position, move.to.position, t);
+      const target = lerpVec3(move.from.target, move.to.target, t);
+      camera.position.set(position.x, position.y, position.z);
+      controls.target.set(target.x, target.y, target.z);
+      if (t >= 1) move = null;
+      else moving = true;
+      camera.lookAt(controls.target);
+      onCameraChange();
+    }
     if (visibilityDirty && root) {
       // Both timestamps use performance.now(). A delayed frame that fires early
       // must re-arm the visibility check rather than leaving stale occlusion labels.
@@ -315,20 +351,24 @@ export function createLabScene({ canvas, reducedMotion, colors: initialColors, o
 
   function applyAppearance() {
     const { hidden, selected } = appearance;
+    const faded = appearance.faded ?? new Set<string>();
     const highlighted = visibleSelection(selected, hidden);
     order.forEach((id, index) => {
       const isSelected = id === highlighted;
       const dim = highlighted !== null && !isSelected;
+      // A faded structure stays see-through even while selected; dimming (another one selected) goes further.
+      const fade = faded.has(id);
+      const opacity = dim ? Math.min(colors.dimAlpha, fade ? colors.fadedOpacity : 1) : fade ? colors.fadedOpacity : 1;
       const color = isSelected ? colors.modelSelected : index % 2 === 0 ? colors.model : colors.modelAlt;
       for (const mesh of meshesById.get(id) ?? []) {
         mesh.visible = !hidden.has(id);
         const material = mesh.material as THREE.MeshLambertMaterial;
         material.color.set(color);
-        material.transparent = dim;
-        material.opacity = dim ? colors.dimAlpha : 1;
-        material.depthWrite = !dim;
+        material.transparent = opacity < 1;
+        material.opacity = opacity;
+        material.depthWrite = opacity >= 1;
         material.needsUpdate = true;
-        mesh.renderOrder = dim ? 1 : 0;
+        mesh.renderOrder = opacity < 1 ? 1 : 0;
       }
     });
     for (const mesh of unlabeled) {
@@ -441,20 +481,41 @@ export function createLabScene({ canvas, reducedMotion, colors: initialColors, o
     return out;
   }
 
-  function frame() {
+  /** The visible model's box in world space (the whole model when everything is hidden), or null with no model. */
+  function visibleBox(): THREE.Box3 | null {
     const box = new THREE.Box3();
     for (const [id, meshes] of meshesById) {
       if (appearance.hidden.has(id)) continue;
       for (const mesh of meshes) box.expandByObject(mesh);
     }
     if (box.isEmpty() && root) box.setFromObject(root);
-    if (box.isEmpty()) return;
+    return box.isEmpty() ? null : box;
+  }
+
+  /** Every structure's world box and center, worked out again (after a posture change turns the whole model). */
+  function recomputeBounds() {
+    root?.updateMatrixWorld(true);
+    for (const [id, meshes] of meshesById) {
+      const box = new THREE.Box3();
+      for (const mesh of meshes) box.expandByObject(mesh);
+      centers.set(id, box.getCenter(new THREE.Vector3()));
+      boxes.set(id, box);
+    }
+    visibilityDirty = true;
+  }
+
+  function frame() {
+    const box = visibleBox();
+    if (!box) return;
     const sphere = box.getBoundingSphere(new THREE.Sphere());
     const distance = fitDistance(box.getSize(new THREE.Vector3()), camera.fov, camera.aspect);
-    // glTF's convention: the front of an asset faces +Z, with +Y up. The lab starts with a front view.
+    // glTF's convention: the front of an asset faces +Z, with +Y up. The lab starts with a front view; a model lying
+    // on its back (setPosture) is shown from above.
     const center = box.getCenter(new THREE.Vector3());
     home.target.copy(center);
-    home.position.copy(center).add(new THREE.Vector3(0, 0, distance));
+    home.distance = distance;
+    const position = cameraForPreset(homePreset(posture), center, distance);
+    home.position.set(position.x, position.y, position.z);
     camera.near = Math.max(distance / 200, 1e-3);
     camera.far = distance * 20;
     camera.updateProjectionMatrix();
@@ -462,12 +523,55 @@ export function createLabScene({ canvas, reducedMotion, colors: initialColors, o
     controls.maxDistance = distance * 6;
   }
 
-  function resetView() {
-    camera.position.copy(home.position);
-    controls.target.copy(home.target);
+  /** Moves the camera to `position`, looking at `target`: at once with reduced motion, else over CAMERA_MOVE_MS. */
+  function moveCamera(position: Vec3, target: Vec3) {
     camera.up.copy(UP);
-    controls.update();
+    const duration = cameraMoveDuration(reducedMotion);
+    if (duration === 0) {
+      move = null;
+      camera.position.set(position.x, position.y, position.z);
+      controls.target.set(target.x, target.y, target.z);
+      controls.update();
+      requestRender();
+      return;
+    }
+    move = {
+      from: { position: camera.position.clone(), target: controls.target.clone() },
+      to: { position, target },
+      start: performance.now(),
+      duration,
+    };
     requestRender();
+  }
+
+  function resetView() {
+    moveCamera(home.position, home.target);
+  }
+
+  function viewPreset(preset: ViewPreset) {
+    const box = visibleBox();
+    if (!box) return;
+    const center = box.getCenter(new THREE.Vector3());
+    const distance = fitDistance(box.getSize(new THREE.Vector3()), camera.fov, camera.aspect);
+    moveCamera(cameraForPreset(preset, center, distance), center);
+  }
+
+  function focusOn(id: string): boolean {
+    const box = boxes.get(id);
+    if (!box || appearance.hidden.has(id) || (meshesById.get(id)?.length ?? 0) === 0) return false;
+    const center = box.getCenter(new THREE.Vector3());
+    const distance = Math.max(controls.minDistance, fitDistance(box.getSize(new THREE.Vector3()), camera.fov, camera.aspect));
+    moveCamera(focusCamera(camera.position, controls.target, center, distance), center);
+    return true;
+  }
+
+  function setPosture(next: Posture) {
+    posture = next;
+    if (!root) return;
+    root.rotation.set(postureAngleX(next), 0, 0);
+    recomputeBounds();
+    frame();
+    resetView();
   }
 
   async function fetchGroup(urls: string | readonly string[]): Promise<THREE.Group> {
@@ -531,9 +635,17 @@ export function createLabScene({ canvas, reducedMotion, colors: initialColors, o
     // its result, but reassigning from raw ids here would undo that guarantee.
     order = [...new Set(ids)].filter((id) => (meshesById.get(id)?.length ?? 0) > 0);
     appearance = { hidden: new Set(), selected: null };
+    // A new model takes the posture already chosen (its root is fresh, so the turn is applied, not added).
+    root!.rotation.set(postureAngleX(posture), 0, 0);
+    recomputeBounds();
     applyAppearance();
     frame();
-    resetView();
+    move = null;
+    camera.position.copy(home.position);
+    controls.target.copy(home.target);
+    camera.up.copy(UP);
+    controls.update();
+    requestRender();
     return result;
   }
 
@@ -545,6 +657,9 @@ export function createLabScene({ canvas, reducedMotion, colors: initialColors, o
       return null;
     }
     const result = integrate(group, ids, false);
+    // The boxes integrate() worked out used the group's own matrices; with the model turned (lying), work them out
+    // again from the world.
+    if (posture !== 'standing') recomputeBounds();
     applyAppearance();
     requestRender();
     return result;
@@ -603,6 +718,7 @@ export function createLabScene({ canvas, reducedMotion, colors: initialColors, o
   }
 
   function orbit(yaw: number, pitch: number) {
+    move = null;
     const offset = camera.position.clone().sub(controls.target);
     if (yaw) offset.applyAxisAngle(UP, yaw);
     if (pitch) {
@@ -615,6 +731,7 @@ export function createLabScene({ canvas, reducedMotion, colors: initialColors, o
   }
 
   function zoom(factor: number) {
+    move = null;
     const offset = camera.position.clone().sub(controls.target);
     const length = Math.min(controls.maxDistance, Math.max(controls.minDistance, offset.length() * factor));
     camera.position.copy(controls.target).add(offset.setLength(length));
@@ -832,9 +949,13 @@ export function createLabScene({ canvas, reducedMotion, colors: initialColors, o
     orbit,
     zoom,
     resetView,
+    viewPreset,
+    focusOn,
+    setPosture,
     exportPicture,
     clear() {
       loadId++;
+      move = null;
       disposeModel();
       appearance = { hidden: new Set(), selected: null };
       requestRender();

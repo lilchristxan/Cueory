@@ -29,31 +29,55 @@ import {
   BODYPARTS3D_LICENSE_NAME,
   BODYPARTS3D_LICENSE_URL,
   BEHIND_MARK,
+  DEFAULT_MODE,
+  FADED_MARK,
+  LAB_MODES,
   TEXT_FALLBACK_BATCH,
   EXPORT_SIZES,
+  VIEW_PRESETS,
   answerQuiz,
   anatomyFailureMessage,
+  canRedo,
+  canUndo,
+  createHistory,
   creditFor,
   exportFileName,
+  fadeStructure,
   groupStructures,
+  hideStructure,
+  historyShortcut,
   labelLines,
+  labelTextFor,
   labelsToShow,
   leftOutNote,
+  modeLabel,
   nameSourceFor,
   nextQuiz,
   pictureCreditFor,
   placeLabels,
+  push,
+  recallLegend,
+  recallNumbers,
+  redo,
   releaseNoteFor,
   onlyThis,
+  restoreAll,
   revealQuiz,
   revealedQuizTarget,
   startQuiz,
+  structureState,
+  tapAction,
   textFallbackItems,
-  toggleHidden,
+  undo,
+  visibilityEquals,
   type AnatomySystem,
   type ExportSize,
+  type History,
+  type LabMode,
   type PlacedLabel,
+  type Posture,
   type QuizState,
+  type Visibility,
 } from './anatomylab';
 
 interface Props {
@@ -145,6 +169,12 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts }: Pr
   const [load, setLoad] = useState<SystemLoad>({ state: 'loading' });
   const [initialRetry, setInitialRetry] = useState(0);
   const [hidden, setHidden] = useState<ReadonlySet<string>>(new Set());
+  const [faded, setFaded] = useState<ReadonlySet<string>>(new Set());
+  const [history, setHistory] = useState<History<Visibility>>(() => createHistory({ hidden: new Set(), faded: new Set() }));
+  const [mode, setMode] = useState<LabMode>(DEFAULT_MODE);
+  const [posture, setPosture] = useState<Posture>('standing');
+  const [recallOn, setRecallOn] = useState(false);
+  const [recallRevealed, setRecallRevealed] = useState(false);
   const [selected, setSelected] = useState<string | null>(null);
   const [query, setQuery] = useState('');
   const [listLimit, setListLimit] = useState(STRUCTURE_PAGE_SIZE);
@@ -189,6 +219,10 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts }: Pr
 
   const system = systems.find((s) => s.key === systemKey) ?? systems[0];
   const names = useMemo(() => new Map(system?.structures.map((s) => [s.id, s.text]) ?? []), [system]);
+  // Recall mode's numbers: one per structure in the system's own order, so a number never changes while hiding.
+  const numbers = useMemo(() => recallNumbers(system?.structures.map((s) => s.id) ?? []), [system]);
+  const recallNumbersRef = useRef<ReadonlyMap<string, number> | null>(null);
+  recallNumbersRef.current = recallOn ? numbers : null;
   const found = load.state === 'ready' ? load.result.found : [];
   const foundSet = useMemo(() => new Set(found), [found]);
   const visible = useMemo(() => found.filter((id) => !hidden.has(id)), [found, hidden]);
@@ -249,7 +283,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts }: Pr
     const maxText = Math.min(240, Math.max(120, canvas.clientWidth * 0.42));
     const text = new Map<string, ReturnType<typeof labelLines>>();
     const anchors = points.map((point) => {
-      const lines = labelLines(names.get(point.id) ?? point.id, point.behind, maxText, measure);
+      const lines = labelLines(labelTextFor(point.id, names, recallNumbersRef.current), point.behind, maxText, measure);
       text.set(point.id, lines);
       const count = lines.lines.length + (lines.mark === 'line' ? 1 : 0);
       return {
@@ -273,7 +307,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts }: Pr
   }, [names]);
   const updateLabelsRef = useRef(updateLabels);
   updateLabelsRef.current = updateLabels;
-  useEffect(() => updateLabels(), [labelIds, updateLabels]);
+  useEffect(() => updateLabels(), [labelIds, updateLabels, recallOn]);
 
   // ── Open: load three.js and the scene module only now ─────────────────────────────────────────────────────────────
   const open = useCallback(async () => {
@@ -358,6 +392,9 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts }: Pr
     // Files can hold structures in several layers. Map all of their IDs now, while showing only the first layer.
     const initial = wholeLayers ? initialLayerPlan(system, wholeLayers) : null;
     setHidden(initial?.hidden ?? new Set());
+    // A new model starts a fresh visibility history: nothing to undo back into the previous system.
+    setFaded(new Set());
+    setHistory(createHistory({ hidden: initial?.hidden ?? new Set(), faded: new Set() }));
     // Requested files are not counted until the first model batch succeeds.
     setFilesLoaded(0);
     scene
@@ -514,8 +551,45 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts }: Pr
   }, [revealedTarget, hidden, selected]);
 
   useEffect(() => {
-    if (load.state === 'ready') sceneRef.current?.setAppearance({ hidden, selected });
-  }, [hidden, selected, load]);
+    if (load.state === 'ready') sceneRef.current?.setAppearance({ hidden, selected, faded });
+  }, [hidden, selected, faded, load]);
+
+  // ── Visibility history: every change to hidden or faded is recorded; undo and redo put a recorded state back ──────
+  // `push` ignores a state equal to the present one, so an undo (which sets hidden and faded to the present) records
+  // nothing, and a new model's reset (history and sets changed together) records nothing either.
+  useEffect(() => {
+    setHistory((h) => push(h, { hidden, faded }, visibilityEquals));
+  }, [hidden, faded]);
+
+  const applyHistory = (next: History<Visibility>, what: 'undo' | 'redo') => {
+    if (next === history) return;
+    visibilityIntent.bump();
+    setHistory(next);
+    setHidden(next.present.hidden);
+    setFaded(next.present.faded);
+    setAnnounce(`${what === 'undo' ? 'undid' : 'redid'} the last change: ${next.present.hidden.size} hidden, ${next.present.faded.size} faded.`);
+  };
+  const undoVisibility = () => applyHistory(undo(history), 'undo');
+  const redoVisibility = () => applyHistory(redo(history), 'redo');
+
+  /** The lab's own shortcuts while focus is inside it: Ctrl/Cmd+Z undoes, Shift+Ctrl/Cmd+Z redoes (not in text fields). */
+  const onLabKey = (e: ReactKeyboardEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLElement | null;
+    const inTextField = !!target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable);
+    const action = historyShortcut(e, inTextField);
+    if (!action || load.state !== 'ready') return;
+    e.preventDefault();
+    if (action === 'undo') undoVisibility();
+    else redoVisibility();
+  };
+
+  /** One student-made change to what is shown, faded or hidden (recorded in the history by the effect above). */
+  const changeVisibility = (change: (current: Visibility) => Visibility) => {
+    visibilityIntent.bump();
+    const next = change({ hidden, faded });
+    setHidden(next.hidden);
+    setFaded(next.faded);
+  };
 
   // Mobile GPUs can lose their WebGL context after the viewer opens.
   // Retire asynchronous work and preserve the accessible text catalog.
@@ -636,6 +710,12 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts }: Pr
     if (!p || p.id !== e.pointerId || p.moved || e.button !== 0) return;
     // In quizzes, choose the nearest hit rather than favoring a previous selection.
     const id = sceneRef.current?.pick(e.clientX, e.clientY, quiz === null) ?? null;
+    if (id && tapAction(mode, quiz !== null && quiz.target !== null) === 'hide') {
+      // Hide mode: the tap hides the structure and selects nothing. Undo brings it back.
+      changeVisibility((v) => hideStructure(v, id));
+      setAnnounce(`hid ${names.get(id) ?? id}. undo brings it back.`);
+      return;
+    }
     pickStructure(id);
   };
   const onPointerCancel = (e: ReactPointerEvent<HTMLCanvasElement>) => {
@@ -687,7 +767,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts }: Pr
         transparent,
         title: system.title,
         credit: pictureCreditFor(system),
-        labels: ids.map((id) => ({ id, text: names.get(id) ?? id })),
+        labels: ids.map((id) => ({ id, text: labelTextFor(id, names, recallOn && labelsOn ? numbers : null) })),
       });
       if (!generation.isCurrent(mine)) return; // the system changed while the picture was drawn
       const fileName = exportFileName(system.key, selected && !hidden.has(selected) ? (names.get(selected) ?? null) : null, size);
@@ -837,9 +917,12 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts }: Pr
       : load.result.missing.length;
   const targetName = quiz?.target ? (names.get(quiz.target) ?? quiz.target) : null;
 
+  const legend = recallOn && labelsOn && !quiz ? recallLegend(labelIds, numbers, names, recallRevealed) : [];
+  const canFocus = ready && selected !== null && foundSet.has(selected) && !hidden.has(selected);
+
   return (
-    <div className="space-y-6">
-      <p className="sr-only" aria-live="polite">{announce}</p>
+    <div className="space-y-6" onKeyDown={onLabKey}>
+      <p className="sr-only" aria-live="polite" data-testid="anatomy-announce">{announce}</p>
 
       {systems.length > 1 && (
         <fieldset>
@@ -926,7 +1009,8 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts }: Pr
           </div>
           <p id="anatomy-lab-help" className="sr-only">
             Turn the model by dragging or with the arrow keys; zoom by pinching, scrolling or pressing plus and minus.
-            Tap a structure to select it. The list of structures does the same as tapping in 3D.
+            In navigate mode a tap selects a structure; in hide mode a tap hides it. The list of structures does the
+            same as tapping in 3D. Control or Command plus Z undoes a change to what is shown; add Shift to redo.
           </p>
 
           <div className="flex flex-wrap items-center gap-2" role="group" aria-label="view">
@@ -948,6 +1032,175 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts }: Pr
               labels
             </button>
           </div>
+
+          <details open className="rounded-lg border border-line" data-testid="anatomy-tools">
+            <summary className="flex min-h-11 cursor-pointer items-center px-4 text-sm text-ink-soft">tools</summary>
+            <div className="space-y-3 px-4 pb-4">
+              <div className="space-y-1">
+                <p id="anatomy-mode-heading" className="text-sm text-ink-soft">what a tap does</p>
+                <div role="group" aria-labelledby="anatomy-mode-heading" className="flex flex-wrap gap-2">
+                  {LAB_MODES.map((m) => (
+                    <button
+                      key={m}
+                      type="button"
+                      className={secondaryButton}
+                      aria-pressed={mode === m}
+                      disabled={!ready}
+                      onClick={() => {
+                        setMode(m);
+                        setAnnounce(`${modeLabel(m)}.`);
+                      }}
+                    >
+                      {modeLabel(m)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <p id="anatomy-history-heading" className="text-sm text-ink-soft">changes to what is shown</p>
+                <div role="group" aria-labelledby="anatomy-history-heading" className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    className={`${secondaryButton} aria-disabled:opacity-60`}
+                    aria-disabled={!ready || !canUndo(history)}
+                    aria-keyshortcuts="Control+Z Meta+Z"
+                    onClick={() => { if (ready && canUndo(history)) undoVisibility(); }}
+                  >
+                    undo
+                  </button>
+                  <button
+                    type="button"
+                    className={`${secondaryButton} aria-disabled:opacity-60`}
+                    aria-disabled={!ready || !canRedo(history)}
+                    aria-keyshortcuts="Shift+Control+Z Shift+Meta+Z"
+                    onClick={() => { if (ready && canRedo(history)) redoVisibility(); }}
+                  >
+                    redo
+                  </button>
+                  <button
+                    type="button"
+                    className={secondaryButton}
+                    disabled={!ready}
+                    onClick={() => {
+                      // The whole-body view may still have layers to download: "show all" fetches them (and asks first
+                      // on a phone). Elsewhere, one plain step: everything shown in full.
+                      if (lazy) {
+                        visibilityIntent.bump();
+                        setFaded(new Set());
+                        showAll();
+                      } else {
+                        changeVisibility(restoreAll);
+                      }
+                      setAnnounce('restored all structures. undo brings the last view back.');
+                    }}
+                  >
+                    restore all
+                  </button>
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <p id="anatomy-views-heading" className="text-sm text-ink-soft">views</p>
+                <div role="group" aria-labelledby="anatomy-views-heading" className="flex flex-wrap gap-2">
+                  {VIEW_PRESETS.map((preset) => (
+                    <button
+                      key={preset}
+                      type="button"
+                      className={secondaryButton}
+                      disabled={!ready}
+                      onClick={() => {
+                        sceneRef.current?.viewPreset(preset);
+                        setAnnounce(`view: ${preset}.`);
+                      }}
+                    >
+                      {preset}
+                    </button>
+                  ))}
+                  <button
+                    type="button"
+                    className={secondaryButton}
+                    disabled={!canFocus}
+                    onClick={() => {
+                      if (!selected || !sceneRef.current?.focusOn(selected)) return;
+                      setAnnounce(`focused on ${names.get(selected) ?? selected}.`);
+                    }}
+                  >
+                    focus on selected
+                  </button>
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <p id="anatomy-posture-heading" className="text-sm text-ink-soft">posture</p>
+                <div role="group" aria-labelledby="anatomy-posture-heading" className="flex flex-wrap gap-2">
+                  {(['standing', 'lying'] as const).map((p) => (
+                    <button
+                      key={p}
+                      type="button"
+                      className={secondaryButton}
+                      aria-pressed={posture === p}
+                      disabled={!ready}
+                      onClick={() => {
+                        setPosture(p);
+                        sceneRef.current?.setPosture(p);
+                        setAnnounce(p === 'lying' ? 'the model lies on its back, seen from above.' : 'the model stands, seen from the front.');
+                      }}
+                    >
+                      {p === 'lying' ? 'lying down' : 'standing'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <p id="anatomy-recall-heading" className="text-sm text-ink-soft">recall: blank the names, number the dots</p>
+                <div role="group" aria-labelledby="anatomy-recall-heading" className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    className={secondaryButton}
+                    aria-pressed={recallOn}
+                    disabled={!ready || quiz !== null}
+                    onClick={() => {
+                      const on = !recallOn;
+                      setRecallOn(on);
+                      setRecallRevealed(false);
+                      if (on) setLabelsOn(true);
+                      setAnnounce(on ? 'labels show numbers instead of names. the legend lists the numbers.' : 'labels show names again.');
+                    }}
+                  >
+                    recall mode
+                  </button>
+                  {recallOn && (
+                    <button
+                      type="button"
+                      className={secondaryButton}
+                      aria-pressed={recallRevealed}
+                      disabled={!ready || quiz !== null}
+                      onClick={() => {
+                        setRecallRevealed((r) => !r);
+                        setAnnounce(recallRevealed ? 'names hidden in the legend.' : 'names shown in the legend.');
+                      }}
+                    >
+                      {recallRevealed ? 'hide names' : 'reveal'}
+                    </button>
+                  )}
+                </div>
+                {legend.length > 0 && (
+                  <ol className="mt-2 columns-2 text-sm text-ink" aria-label="legend" data-testid="anatomy-legend">
+                    {legend.map((row) => (
+                      <li key={row.id} className="min-h-6">
+                        {row.number}{row.name ? `: ${row.name}` : ''}
+                      </li>
+                    ))}
+                  </ol>
+                )}
+                {recallOn && labelsOn && !quiz && legend.length === 0 && (
+                  <p className="text-sm text-ink-soft">no labels on screen to number yet.</p>
+                )}
+              </div>
+            </div>
+          </details>
           {bulkPrompt?.systemKey === system.key && (
             <div
               role="group"
@@ -1100,8 +1353,19 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts }: Pr
                 <button type="button" className={secondaryButton} onClick={() => { visibilityIntent.bump(); setHidden(onlyThis(system.structures.map((s) => s.id), selected!)); }}>
                   show only this
                 </button>
-                <button type="button" className={secondaryButton} onClick={() => { visibilityIntent.bump(); setHidden((h) => toggleHidden(h, selected!)); }}>
+                <button type="button" className={secondaryButton} onClick={() => changeVisibility((v) => hideStructure(v, selected!))}>
                   {hidden.has(selected!) ? 'show it' : 'hide it'}
+                </button>
+                <button
+                  type="button"
+                  className={secondaryButton}
+                  aria-pressed={structureState({ hidden, faded }, selected!) === 'faded'}
+                  onClick={() => {
+                    changeVisibility((v) => fadeStructure(v, selected!));
+                    setAnnounce(faded.has(selected!) && !hidden.has(selected!) ? `${selectedName} shown in full.` : `${selectedName} faded.`);
+                  }}
+                >
+                  {structureState({ hidden, faded }, selected!) === 'faded' ? 'unfade' : 'fade this'}
                 </button>
                 <button type="button" className={secondaryButton} onClick={() => setSelected(null)}>clear selection</button>
               </div>
@@ -1256,6 +1520,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts }: Pr
                   {group.items.map((item) => {
                     const inModel = foundSet.has(item.id);
                     const isHidden = hidden.has(item.id);
+                    const isFaded = !isHidden && faded.has(item.id);
                     const loadNote = structureLoadNote(
                       item, foundSet, lazy, (id) => filesForLayer(system, id),
                       system.model.files ?? [], fileIntegratedForStatus, system.model.fileIds,
@@ -1276,6 +1541,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts }: Pr
                         >
                           {item.text}
                           {isHidden && inModel && <span> (hidden)</span>}
+                          {isFaded && inModel && <span> {FADED_MARK}</span>}
                           {ready && !inModel && loadNote && <span> ({loadNote})</span>}
                         </button>
                         {inModel && (
@@ -1283,7 +1549,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts }: Pr
                             type="button"
                             aria-label={`${isHidden ? 'show' : 'hide'} ${item.text}`}
                             disabled={revealedTarget === item.id}
-                            onClick={() => { visibilityIntent.bump(); setHidden((h) => toggleHidden(h, item.id)); }}
+                            onClick={() => changeVisibility((v) => hideStructure(v, item.id))}
                             className="min-h-11 min-w-14 rounded-md border border-line px-2 text-sm text-ink"
                           >
                             {isHidden ? 'show' : 'hide'}

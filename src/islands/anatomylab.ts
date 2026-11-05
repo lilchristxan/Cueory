@@ -933,3 +933,291 @@ export function fitDistance(size: { x: number; y: number; z: number }, fovDeg: n
   const fit = Math.max(size.y / 2 / tanV, size.x / 2 / tanH, 1e-6);
   return fit * FIT_MARGIN + size.z / 2;
 }
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Interaction modes (Task 178, study tools A): what a tap on the 3D view does
+// ---------------------------------------------------------------------------------------------------------------------
+
+/** `navigate`: dragging and the arrow keys turn the model, a tap selects (never hides). `hide`: a tap hides the tapped structure. */
+export type LabMode = 'navigate' | 'hide';
+
+export const LAB_MODES: readonly LabMode[] = ['navigate', 'hide'];
+
+/** The lab starts in navigate mode, so a first tap can never make a structure disappear (D-pending, Task 178). */
+export const DEFAULT_MODE: LabMode = 'navigate';
+
+export function isLabMode(value: unknown): value is LabMode {
+  return value === 'navigate' || value === 'hide';
+}
+
+/** The words on the mode switch: the mode is named, never shown by color alone. */
+export function modeLabel(mode: LabMode): string {
+  return mode === 'hide' ? 'hide: tap hides' : 'navigate: tap selects';
+}
+
+/** What a tap on a structure does: in a quiz round it always answers, whatever the mode. */
+export function tapAction(mode: LabMode, inQuiz: boolean): 'select' | 'hide' {
+  if (inQuiz) return 'select';
+  return mode === 'hide' ? 'hide' : 'select';
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Visibility with fading: every structure is shown, faded (semi-transparent, still selectable) or hidden
+// ---------------------------------------------------------------------------------------------------------------------
+
+export interface Visibility {
+  hidden: ReadonlySet<string>;
+  faded: ReadonlySet<string>;
+}
+
+export const EMPTY_VISIBILITY: Visibility = { hidden: new Set(), faded: new Set() };
+
+export type StructureState = 'shown' | 'faded' | 'hidden';
+
+/** What a label marked "(faded)" says in the structure list, like "(hidden)". */
+export const FADED_MARK = '(faded)';
+
+/** A hidden structure is hidden even if it is also in the faded set (fading survives a hide, for "show it" to bring back). */
+export function structureState(visibility: Visibility, id: string): StructureState {
+  if (visibility.hidden.has(id)) return 'hidden';
+  return visibility.faded.has(id) ? 'faded' : 'shown';
+}
+
+export function toggleFaded(faded: ReadonlySet<string>, id: string): Set<string> {
+  return toggleHidden(faded, id);
+}
+
+/** "fade this" / "unfade": a faded structure is never hidden at the same time. */
+export function fadeStructure(visibility: Visibility, id: string): Visibility {
+  const hidden = new Set(visibility.hidden);
+  hidden.delete(id);
+  return { hidden, faded: toggleFaded(visibility.faded, id) };
+}
+
+/** "hide this" / "show it": hiding drops the fade, so "show it" brings the structure back in full. */
+export function hideStructure(visibility: Visibility, id: string): Visibility {
+  const faded = new Set(visibility.faded);
+  faded.delete(id);
+  return { hidden: toggleHidden(visibility.hidden, id), faded };
+}
+
+/** "restore all": every structure shown in full. */
+export function restoreAll(_visibility: Visibility): Visibility {
+  return { hidden: new Set(), faded: new Set() };
+}
+
+function sameSet(a: ReadonlySet<string>, b: ReadonlySet<string>): boolean {
+  if (a === b) return true;
+  if (a.size !== b.size) return false;
+  for (const id of a) if (!b.has(id)) return false;
+  return true;
+}
+
+export function visibilityEquals(a: Visibility, b: Visibility): boolean {
+  return sameSet(a.hidden, b.hidden) && sameSet(a.faded, b.faded);
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Visibility history: undo, redo, capped
+// ---------------------------------------------------------------------------------------------------------------------
+
+export interface History<T> {
+  /** Earlier states, oldest first. */
+  past: readonly T[];
+  present: T;
+  /** States undone, the next one to redo last. */
+  future: readonly T[];
+}
+
+/** At most this many earlier states are kept; the oldest is dropped first (D-pending, Task 178). */
+export const HISTORY_CAP = 100;
+
+export function createHistory<T>(initial: T): History<T> {
+  return { past: [], present: initial, future: [] };
+}
+
+/**
+ * Records `next` as the present state and forgets any redo states. A state equal to the present (by `equals`) changes
+ * nothing, so a no-op never fills the history. With more than `cap` earlier states, the oldest is dropped.
+ */
+export function push<T>(
+  history: History<T>,
+  next: T,
+  equals: (a: T, b: T) => boolean = (a, b) => a === b,
+  cap: number = HISTORY_CAP,
+): History<T> {
+  if (equals(history.present, next)) return history;
+  const past = [...history.past, history.present];
+  const over = Math.max(0, past.length - Math.max(0, cap));
+  return { past: over > 0 ? past.slice(over) : past, present: next, future: [] };
+}
+
+export function canUndo<T>(history: History<T>): boolean {
+  return history.past.length > 0;
+}
+
+export function canRedo<T>(history: History<T>): boolean {
+  return history.future.length > 0;
+}
+
+export function undo<T>(history: History<T>): History<T> {
+  if (!canUndo(history)) return history;
+  const past = history.past.slice(0, -1);
+  return { past, present: history.past[history.past.length - 1]!, future: [...history.future, history.present] };
+}
+
+export function redo<T>(history: History<T>): History<T> {
+  if (!canRedo(history)) return history;
+  const future = history.future.slice(0, -1);
+  return { past: [...history.past, history.present], present: history.future[history.future.length - 1]!, future };
+}
+
+/**
+ * The undo and redo shortcuts while focus is inside the lab: Ctrl/Cmd+Z undoes, Shift+Ctrl/Cmd+Z redoes. Text fields
+ * keep their own undo, so a key pressed in one is never taken.
+ */
+export function historyShortcut(
+  key: { key: string; ctrlKey: boolean; metaKey: boolean; shiftKey: boolean; altKey: boolean },
+  inTextField: boolean,
+): 'undo' | 'redo' | null {
+  if (inTextField || key.altKey || !(key.ctrlKey || key.metaKey)) return null;
+  if (key.key !== 'z' && key.key !== 'Z') return null;
+  return key.shiftKey ? 'redo' : 'undo';
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Camera presets and posture
+// ---------------------------------------------------------------------------------------------------------------------
+
+export type ViewPreset = 'front' | 'back' | 'left' | 'right' | 'top' | 'bottom';
+
+export const VIEW_PRESETS: readonly ViewPreset[] = ['front', 'back', 'left', 'right', 'top', 'bottom'];
+
+export type Posture = 'standing' | 'lying';
+
+export interface Vec3 {
+  x: number;
+  y: number;
+  z: number;
+}
+
+/**
+ * The top and bottom views lean this little toward the front, so the camera is never exactly on the up axis (where
+ * "which way is up on screen" has no answer) and the model's front is always at the bottom of the screen there.
+ */
+export const POLE_TILT = 0.001;
+
+/**
+ * The direction from the model's center to the camera for each view, in the model's own frame (glTF: the model's
+ * front faces +Z, up is +Y). "left" and "right" are the model's own sides: the camera stands on that side of it.
+ */
+export function presetDirection(preset: ViewPreset): Vec3 {
+  switch (preset) {
+    case 'front': return { x: 0, y: 0, z: 1 };
+    case 'back': return { x: 0, y: 0, z: -1 };
+    case 'left': return { x: 1, y: 0, z: 0 };
+    case 'right': return { x: -1, y: 0, z: 0 };
+    case 'top': return { x: 0, y: 1, z: POLE_TILT };
+    case 'bottom': return { x: 0, y: -1, z: POLE_TILT };
+  }
+}
+
+/** Where the camera stands to look at `center` from `direction` (a unit vector) at `distance`. */
+export function cameraPosition(center: Vec3, direction: Vec3, distance: number): Vec3 {
+  const length = Math.hypot(direction.x, direction.y, direction.z) || 1;
+  const d = Math.max(distance, 1e-6) / length;
+  return { x: center.x + direction.x * d, y: center.y + direction.y * d, z: center.z + direction.z * d };
+}
+
+/** The camera's position for a preset view of a model centered at `center`, `distance` away. */
+export function cameraForPreset(preset: ViewPreset, center: Vec3, distance: number): Vec3 {
+  return cameraPosition(center, presetDirection(preset), distance);
+}
+
+/**
+ * "focus on selected": the camera keeps its direction (from `target` to `position`) and moves to look at `center` from
+ * `distance` away, so the structure fills the view without a jump in angle.
+ */
+export function focusCamera(position: Vec3, target: Vec3, center: Vec3, distance: number): Vec3 {
+  const offset = { x: position.x - target.x, y: position.y - target.y, z: position.z - target.z };
+  const direction = Math.hypot(offset.x, offset.y, offset.z) > 1e-9 ? offset : presetDirection('front');
+  return cameraPosition(center, direction, distance);
+}
+
+/**
+ * The whole model's turn about its X axis for a posture: 0 standing; lying on its back means the front (+Z) turns up
+ * (+Y) and the top of the model (+Y) turns away from the front (−Z), so a camera above (top view) looks at the front.
+ */
+export function postureAngleX(posture: Posture): number {
+  return posture === 'lying' ? -Math.PI / 2 : 0;
+}
+
+/** A point turned about the X axis by `angle` (the right-hand rule), for checking `postureAngleX`. */
+export function rotateX(point: Vec3, angle: number): Vec3 {
+  const c = Math.cos(angle);
+  const s = Math.sin(angle);
+  return { x: point.x, y: point.y * c - point.z * s, z: point.y * s + point.z * c };
+}
+
+/** The view a posture's "home" uses: above a lying model, in front of a standing one. */
+export function homePreset(posture: Posture): ViewPreset {
+  return posture === 'lying' ? 'top' : 'front';
+}
+
+/** How long a camera move takes, in milliseconds; 0 with reduced motion, so the view changes at once. */
+export const CAMERA_MOVE_MS = 320;
+
+export function cameraMoveDuration(reducedMotion: boolean): number {
+  return reducedMotion ? 0 : CAMERA_MOVE_MS;
+}
+
+/** Where a move is between its start (0) and end (1) at `elapsed` of `duration` milliseconds, eased at both ends. */
+export function moveProgress(elapsed: number, duration: number): number {
+  if (!(duration > 0) || elapsed >= duration) return 1;
+  const t = Math.max(0, elapsed / duration);
+  return t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2;
+}
+
+export function lerpVec3(from: Vec3, to: Vec3, t: number): Vec3 {
+  return { x: from.x + (to.x - from.x) * t, y: from.y + (to.y - from.y) * t, z: from.z + (to.z - from.z) * t };
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Recall mode: blank labels, numbered, with a legend
+// ---------------------------------------------------------------------------------------------------------------------
+
+/** A stable number for every structure, 1-based in the system's own order, so a number never changes while hiding. */
+export function recallNumbers(ids: readonly string[]): Map<string, number> {
+  const out = new Map<string, number>();
+  for (const id of ids) if (!out.has(id)) out.set(id, out.size + 1);
+  return out;
+}
+
+/** What a label says: its number in recall mode, else the official name (the id when the name is unknown). */
+export function labelTextFor(id: string, names: ReadonlyMap<string, string>, numbers: ReadonlyMap<string, number> | null): string {
+  if (numbers) {
+    const n = numbers.get(id);
+    if (n !== undefined) return String(n);
+  }
+  return names.get(id) ?? id;
+}
+
+export interface LegendRow {
+  id: string;
+  number: number;
+  /** The name, only once revealed. */
+  name: string | null;
+}
+
+/** The legend's rows for the labels on screen, in number order; names only when `revealed`. */
+export function recallLegend(
+  labeled: readonly string[],
+  numbers: ReadonlyMap<string, number>,
+  names: ReadonlyMap<string, string>,
+  revealed: boolean,
+): LegendRow[] {
+  return labeled
+    .filter((id) => numbers.has(id))
+    .map((id) => ({ id, number: numbers.get(id)!, name: revealed ? (names.get(id) ?? id) : null }))
+    .sort((a, b) => a.number - b.number);
+}
