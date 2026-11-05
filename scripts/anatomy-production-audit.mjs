@@ -93,14 +93,16 @@ function hasArchiveMagic(path, allowPagefindGzip = false) {
     const header = Buffer.alloc(Math.min(size, 512));
     if (header.length) readSync(fd, header, 0, header.length, 0);
     const isGzip = header.length >= 2 && header[0] === 0x1f && header[1] === 0x8b;
-    if (isGzip && allowPagefindGzip) {
-      // Pagefind's runtime requires the 12-byte pagefind_dcd marker after
-      // gzip decompression. Check the real payload after that marker: checking
-      // offset zero would miss a model/container placed immediately after it.
+    if (allowPagefindGzip) {
+      // Pagefind's runtime accepts either an already-decompressed payload or
+      // a gzip stream. Both must contain its 12-byte marker, and checks must
+      // inspect bytes after that marker rather than trusting a filename.
       // See Pagefind's coupled_search.ts decompress() implementation.
       if (size > 64 * 1024 * 1024) return true;
       try {
-        const expanded = gunzipSync(readFileSync(fd), { maxOutputLength: 64 * 1024 * 1024 });
+        const expanded = isGzip
+          ? gunzipSync(readFileSync(fd), { maxOutputLength: 64 * 1024 * 1024 })
+          : readFileSync(fd);
         const signature = Buffer.from('pagefind_dcd', 'ascii');
         if (expanded.length <= signature.length ||
             !expanded.subarray(0, signature.length).equals(signature)) return true;
