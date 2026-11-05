@@ -202,6 +202,17 @@ describe('anatomy production artifact audit', () => {
       'archive/container in production output requires explicit review: /pagefind/fragment/en_fixture_id.pf_fragment',
     );
 
+    // Valid CBOR *byte* strings can also carry literal unpublished IDs.
+    // They must not bypass the validator just because they are not CBOR text.
+    const byteIndex = setup();
+    const byteWord = Buffer.from('FMA999991', 'ascii');
+    byteIndex.file('pagefind/index/en_byte_draft_ids.pf_index', gzipSync(Buffer.concat([
+      prefix, Buffer.from([0x81, 0x40 + byteWord.length]), byteWord,
+    ])));
+    expect(byteIndex.check().errors).toContain(
+      'archive/container in production output requires explicit review: /pagefind/index/en_byte_draft_ids.pf_index',
+    );
+
     // CBOR text strings in the word index are public searchable content too.
     const draftIndex = setup();
     const draftWord = Buffer.from('FMA999991');
