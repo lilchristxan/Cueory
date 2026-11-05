@@ -8,7 +8,8 @@ import { describe, expect, it } from 'vitest';
 import { groupStructures } from '../../src/islands/anatomylab.ts';
 import { validateUrl } from '../../src/islands/supabaseenv.ts';
 import { selectEventPullRequest } from '../../scripts/automerge/event.ts';
-import { REQUIRED_CHECKS } from '../../scripts/automerge/decide.ts';
+import { REQUIRED_CHECKS, isHeldPath } from '../../scripts/automerge/decide.ts';
+import { indexablePages } from '../../src/config/routes.ts';
 
 describe('staging merge integration', () => {
   it('preserves original anatomy structure ID lookup and name lookup together', () => {
@@ -33,6 +34,39 @@ describe('staging merge integration', () => {
     expect(selectEventPullRequest('check_run', { check_run: { pull_requests: [] } }))
       .toEqual({ kind: 'none' });
     expect(selectEventPullRequest('schedule', {})).toEqual({ kind: 'sweep' });
+  });
+
+  it('holds legal release controls and account data-access boundaries in both automation modes', () => {
+    const protectedPaths = [
+      'src/pages/privacy.astro',
+      'src/pages/terms.astro',
+      'src/pages/disclaimer.astro',
+      'src/config/routes.ts',
+      'src/pages/auth/callback.astro',
+      'src/pages/admin/flags.astro',
+      'src/islands/supabaseclient.ts',
+      'src/islands/checkanswer.ts',
+      'src/islands/examplansync.ts',
+      'src/islands/reviewsync.ts',
+      'src/islands/studyrecorder.ts',
+    ];
+    for (const path of protectedPaths) {
+      expect(isHeldPath(path, 'prelaunch'), path).toBe(true);
+      expect(isHeldPath(path, 'launched'), path).toBe(true);
+    }
+    expect(isHeldPath('src/islands/cards.ts', 'prelaunch')).toBe(false);
+  });
+
+  it('keeps unfinished legal pages out of public and in-site indexes', () => {
+    for (const name of ['privacy', 'terms', 'disclaimer']) {
+      expect(indexablePages).not.toContain(`/${name}`);
+      const page = readFileSync(new URL(`../../src/pages/${name}.astro`, import.meta.url), 'utf8');
+      expect(page).toMatch(/<Layout\b[^>]*\bnoindex\b/);
+    }
+    const layout = readFileSync(new URL('../../src/layouts/Layout.astro', import.meta.url), 'utf8');
+    expect(layout).toContain("data-pagefind-body={noindex ? undefined : ''}");
+    expect(layout).toContain('content="noindex, nofollow"');
+    expect(indexablePages).toContain('/support');
   });
 
   it('retains the production legal-copy prebuild guard and CodeQL merge requirement', () => {
