@@ -26,6 +26,13 @@ describe('postbuild anatomy release audit', () => {
     expect(shouldAuditAnatomyBuild({
       GITHUB_EVENT_NAME: 'push', GITHUB_REF: 'refs/heads/main', CUEORY_ANATOMY_DRAFTS: '1',
     })).toBe(true);
+    // A manual main release has the same publication risk as a push.
+    expect(shouldAuditAnatomyBuild({
+      GITHUB_EVENT_NAME: 'workflow_dispatch', GITHUB_REF: 'refs/heads/main', CUEORY_ANATOMY_DRAFTS: '1',
+    })).toBe(true);
+    expect(shouldAuditAnatomyBuild({
+      GITHUB_EVENT_NAME: 'schedule', GITHUB_REF: 'refs/heads/main', CUEORY_ANATOMY_DRAFTS: '1',
+    })).toBe(true);
     expect(shouldAuditAnatomyBuild({
       GITHUB_EVENT_NAME: 'pull_request', GITHUB_BASE_REF: 'main', CUEORY_ANATOMY_DRAFTS: '1',
     })).toBe(true);
