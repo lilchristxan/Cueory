@@ -1047,7 +1047,9 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
   }
 
   const selectedName = selected ? (names.get(selected) ?? selected) : null;
-  const selectedGroup = selected ? system.structures.find((s) => s.id === selected)?.group : undefined;
+  const selectedGroup = selected && (system.hierarchyTree ?? 'partof') === 'partof'
+    ? system.structures.find((s) => s.id === selected)?.group
+    : undefined;
   const budget = load.state === 'ready' ? anatomyTriangleNote(load.result.triangles, filesLoaded, lazy) : null;
   const ready = load.state === 'ready';
   // Only files whose meshes and IDs were committed to this exact ready state
@@ -1072,7 +1074,9 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
   const canFocus = ready && selected !== null && foundSet.has(selected) && !hidden.has(selected);
 
   // ── Study tools on the name card and around it (Task 178, integration) ───────────────────────────────────────────
-  const crumbs = selected ? breadcrumbRows(breadcrumb(system.structures, selected), system.structures, selected) : [];
+  const crumbs = selected
+    ? breadcrumbRows(breadcrumb(system.structures, selected, system.hierarchyTree ?? 'partof'), system.structures, selected)
+    : [];
   const siblingList = selected ? siblings(system.structures, selected) : [];
   const queued = queuedForSystem(reviewRows, system.key);
   const currentSavedViews = savedViews.filter((view) => view.system_key === system.key);

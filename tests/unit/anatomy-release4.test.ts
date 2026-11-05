@@ -269,6 +269,7 @@ describe('building from a 4.0 download, end to end', () => {
     const glb = new Uint8Array(readFileSync(join(repo, 'public', 'models', 'anatomy', 'sample.glb')));
     expect(glbNodeNames(glb)).toEqual(['FMA90002', 'FMA90004', 'FMA90003']);
     const visual = JSON.parse(readFileSync(join(repo, 'content', 'visuals', 'anatomy-sample.json'), 'utf8'));
+    expect(visual.hierarchyTree).toBe('partof');
     expect(visual.model).toEqual({ file: '/models/anatomy/sample.glb', release: 'BodyParts3D 4.0', via: 'official download from dbarchive.biosciencedbc.jp' });
     expect(visual.labels).toEqual([
       // Task 178: parents is the whole PART-OF ancestry, names only, root first.
@@ -320,6 +321,8 @@ describe('building from a 4.0 download, end to end', () => {
     expect(result.status).toBe(0);
     const one = new Uint8Array(readFileSync(join(repo, 'public', 'models', 'anatomy', 'sample.glb')));
     const two = new Uint8Array(readFileSync(join(repo, 'public', 'models', 'anatomy', 'sample2.glb')));
+    const isaVisual = JSON.parse(readFileSync(join(repo, 'content', 'visuals', 'anatomy-sample2.json'), 'utf8'));
+    expect(isaVisual.hierarchyTree).toBe('isa');
     expect(glbNodeNames(one)).toEqual(['FMA90003']);
     expect(glbNodeNames(two)).toEqual(['FMA90002', 'FMA90004']);
     const visual = JSON.parse(readFileSync(join(repo, 'content', 'visuals', 'anatomy-sample2.json'), 'utf8'));

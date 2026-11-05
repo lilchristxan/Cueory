@@ -101,6 +101,7 @@ describe('anatomy files', () => {
       key: 'sample',
       title: 'sample system',
       status: 'draft',
+      hierarchyTree: 'partof',
       model: { file: '/models/anatomy/sample.glb', release: 'r1', via: 'gltfpack' },
       structures: [
         { id: 'FMA1', text: 'sample part one', group: 'set x' },
@@ -127,6 +128,7 @@ describe('anatomy files', () => {
     ['a nested model folder', { model: { file: '/models/anatomy/archive/sample.glb', release: 'r1' } }, 'model.file'],
     ['no release', { model: { file: '/models/anatomy/sample.glb' } }, 'model.release'],
     ['an unknown status', { status: 'published' }, 'status'],
+    ['an unknown hierarchy tree', { hierarchyTree: 'location' }, '"hierarchyTree" must be "partof" or "isa"'],
     ['no labels', { labels: [] }, 'labels'],
     ['a duplicate id', { labels: [{ id: 'FMA1', text: 'a', source: 's' }, { id: 'FMA1', text: 'b', source: 's' }] }, 'two labels'],
     ['an id with a space', { labels: [{ id: 'FMA 1', text: 'a', source: 's' }] }, 'id'],
@@ -151,6 +153,11 @@ describe('anatomy files', () => {
     expect(system.structures[0]).toEqual({ id: 'FMA1', text: 'sample part one', group: 'set x', parents, also });
     expect(system.structures[0]!.parents).not.toBe(parents);
     expect(system.structures[1]).toEqual({ id: 'FMA2', text: 'two' });
+  });
+
+  it('preserves the PART-OF or IS-A source relation', () => {
+    expect(parseAnatomyFile(file({ hierarchyTree: 'partof' }), 'content/visuals/anatomy-sample.json').hierarchyTree).toBe('partof');
+    expect(parseAnatomyFile(file({ hierarchyTree: 'isa' }), 'content/visuals/anatomy-sample.json').hierarchyTree).toBe('isa');
   });
 
   it('reads the test fixture as a fixture', () => {
