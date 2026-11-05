@@ -237,6 +237,29 @@ test('reduced motion: no glide, and the preview opens and closes at once', async
   expect(await page.locator('#mode-preview').evaluate((el) => (el as HTMLDialogElement).open)).toBe(false);
 });
 
+test('enabling reduced motion during the preview finishes its Web Animations immediately', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await showRing(page);
+
+  const trigger = page.locator('#mode-video [data-mode-open]');
+  await trigger.focus();
+  await page.keyboard.press('Enter');
+
+  const dialog = page.locator('#mode-preview');
+  await expect(dialog).toBeVisible();
+  const runningAnimations = () => dialog.evaluate((element) =>
+    element.getAnimations({ subtree: true }).filter((animation) => animation.playState === 'running').length,
+  );
+  await expect.poll(runningAnimations).toBeGreaterThan(0);
+
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await expect.poll(runningAnimations).toBe(0);
+  await expect(dialog.getByRole('heading', { name: 'video' })).toBeVisible();
+
+  await page.keyboard.press('Escape');
+  await expect(dialog).toBeHidden();
+});
+
 test('the vials pass axe', async ({ page }) => {
   await showRing(page);
   const axe = await new AxeBuilder({ page }).include('#ways-to-study').withTags(axeTags).analyze();
