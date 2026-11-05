@@ -71,17 +71,18 @@ function hasGlbMagic(path) {
  * cannot see into ZIP/TAR/compressed package payloads. This deliberately
  * fails closed rather than trying to unpack untrusted build artifacts.
  */
-function hasArchiveMagicBytes(bytes) {
+function hasArchiveMagicBytes(bytes, includeAsciiMarkers = true) {
   const contains = (signature) => bytes.indexOf(Buffer.from(signature)) !== -1;
-  // Search throughout Pagefind's decompressed payload: valid data may begin
-  // with its own envelope marker before any embedded model/container bytes.
+  // Binary signatures are safe to search throughout both text and binary
+  // payloads; ASCII-only tar/ar markers are restricted to binary artifacts.
   if (contains([0x50, 0x4b, 0x03, 0x04]) || contains([0x50, 0x4b, 0x05, 0x06]) ||
       contains([0x50, 0x4b, 0x07, 0x08]) || contains([0x1f, 0x8b]) ||
       contains([0x42, 0x5a, 0x68]) || contains([0xfd, 0x37, 0x7a, 0x58, 0x5a, 0x00]) ||
       contains([0x28, 0xb5, 0x2f, 0xfd]) || contains([0x37, 0x7a, 0xbc, 0xaf, 0x27, 0x1c]) ||
-      contains([0x52, 0x61, 0x72, 0x21, 0x1a, 0x07]) || contains([0x4d, 0x53, 0x43, 0x46]) ||
-      contains([0x21, 0x3c, 0x61, 0x72, 0x63, 0x68, 0x3e, 0x0a])) return true;
-  return bytes.indexOf(Buffer.from('ustar', 'ascii')) !== -1;
+      contains([0x52, 0x61, 0x72, 0x21, 0x1a, 0x07]) || contains([0x4d, 0x53, 0x43, 0x46])) return true;
+  return includeAsciiMarkers &&
+    (contains([0x21, 0x3c, 0x61, 0x72, 0x63, 0x68, 0x3e, 0x0a]) ||
+      bytes.indexOf(Buffer.from('ustar', 'ascii')) !== -1);
 }
 
 function hasArchiveMagicHeader(header) {
@@ -95,15 +96,55 @@ function hasArchiveMagicHeader(header) {
   return header.length >= 262 && header.toString('ascii', 257, 262) === 'ustar';
 }
 
+/** Detect a GLB header whose declared bytes fit in the whole file, even across read chunks. */
+function containsGlbHeaderAtOffset(bytes, baseOffset, fileSize) {
+  const magic = Buffer.from('glTF', 'ascii');
+  for (let offset = bytes.indexOf(magic); offset >= 0; offset = bytes.indexOf(magic, offset + 1)) {
+    if (offset + 20 > bytes.length) continue;
+    const version = bytes.readUInt32LE(offset + 4);
+    const totalLength = bytes.readUInt32LE(offset + 8);
+    const jsonLength = bytes.readUInt32LE(offset + 12);
+    const jsonType = bytes.readUInt32LE(offset + 16);
+    if (version === 2 && totalLength >= 20 && baseOffset + offset + totalLength <= fileSize &&
+        jsonLength >= 2 && jsonLength <= totalLength - 20 && jsonType === 0x4e4f534a) return true;
+  }
+  return false;
+}
+
+/**
+ * Stream ordinary built artifacts in bounded chunks. A benign extension or
+ * a long prefix must not hide a GLB/archive beyond the initial file header.
+ */
 function hasArchiveMagic(path) {
   if (!Number.isInteger(fsConstants.O_NOFOLLOW)) throw new Error('this platform cannot safely audit symbolic links');
   const fd = openSync(path, fsConstants.O_RDONLY | fsConstants.O_NOFOLLOW);
   try {
-    if (!fstatSync(fd).isFile()) throw new Error('not a regular file');
-    const size = fstatSync(fd).size;
+    const stats = fstatSync(fd);
+    if (!stats.isFile()) throw new Error('not a regular file');
+    const size = stats.size;
     const header = Buffer.alloc(Math.min(size, 512));
     if (header.length) readSync(fd, header, 0, header.length, 0);
-    return hasArchiveMagicHeader(header);
+    if (hasArchiveMagicHeader(header)) return true;
+
+    const includeAsciiMarkers = !TEXT_ASSET.test(path);
+    const chunkSize = 64 * 1024;
+    const overlapSize = 19; // Largest GLB header is 20 bytes; retain boundary bytes.
+    let position = 0;
+    let carry = Buffer.alloc(0);
+    while (position < size) {
+      const chunk = Buffer.alloc(Math.min(chunkSize, size - position));
+      const bytesRead = readSync(fd, chunk, 0, chunk.length, position);
+      if (bytesRead <= 0) break;
+      const window = carry.length
+        ? Buffer.concat([carry, chunk.subarray(0, bytesRead)])
+        : chunk.subarray(0, bytesRead);
+      const windowStart = position - carry.length;
+      if (hasArchiveMagicBytes(window, includeAsciiMarkers) ||
+          containsGlbHeaderAtOffset(window, windowStart, size)) return true;
+      carry = window.subarray(Math.max(0, window.length - overlapSize));
+      position += bytesRead;
+    }
+    return false;
   } finally {
     closeSync(fd);
   }
@@ -188,7 +229,7 @@ function validPagefindCbor(bytes) {
           return false;
         }
         // UTF-8-valid control bytes can still carry ZIP/TAR or GLB signatures.
-        if (containsGlbHeader(value) || hasArchiveMagicBytes(value)) return false;
+        if (containsGlbHeader(value) || hasArchiveMagicBytes(value, false)) return false;
       }
       offset += argument;
       return true;
