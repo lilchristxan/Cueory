@@ -193,8 +193,9 @@ function hasZipLocalHeaderAt(bytes, offset, baseOffset, fileSize) {
   // after the entry data, not in the local header. ZIP64 sentinel sizes are
   // resolved from the extra field above when no data descriptor is present.
   if (usesDataDescriptor && baseOffset + dataStart >= fileSize) return false;
-  const name = bytes.subarray(nameStart, nameStart + nameLength);
-  return !name.some((byte) => byte === 0 || byte < 0x20);
+  // ZIP filenames are byte strings; control characters (including newlines)
+  // do not invalidate the container and must not create an archive-detection bypass.
+  return true;
 }
 
 function containsZipLocalHeader(bytes, baseOffset, fileSize) {
