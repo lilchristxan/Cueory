@@ -112,7 +112,11 @@ describe('anatomy production artifact audit', () => {
     const gzipIndex = gzipSync(Buffer.concat([prefix, indexCbor]));
     const gzipFilter = gzipSync(Buffer.concat([prefix, filterCbor]));
     const gzipMeta = gzipSync(Buffer.concat([prefix, metaCbor]));
-    const fragment = gzipSync(Buffer.concat([prefix, Buffer.from(JSON.stringify({ url: '/', content: 'safe search text' }))]));
+    const fragmentPayload = JSON.stringify({
+      url: '/', content: 'safe search text', word_count: 3,
+      filters: {}, meta: {}, anchors: [],
+    });
+    const fragment = gzipSync(Buffer.concat([prefix, Buffer.from(fragmentPayload)]));
     const wasm = gzipSync(Buffer.concat([prefix, Buffer.from([0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00])]));
     f.file('pagefind/fragment/en_test.pf_fragment', fragment);
     f.file('pagefind/index/en_test.pf_index', gzipIndex);
@@ -120,7 +124,10 @@ describe('anatomy production artifact audit', () => {
     f.file('pagefind/pagefind.en_test.pf_meta', gzipMeta);
     f.file('pagefind/wasm.en.pagefind', wasm);
     // Pagefind also accepts already-decompressed data with the same marker.
-    f.file('pagefind/fragment/en_raw_test.pf_fragment', Buffer.concat([prefix, Buffer.from(JSON.stringify({ url: '/', content: 'safe raw search text' }))]));
+    f.file('pagefind/fragment/en_raw_test.pf_fragment', Buffer.concat([prefix, Buffer.from(JSON.stringify({
+      url: '/', content: 'safe raw search text', word_count: 4,
+      filters: {}, meta: {}, anchors: [],
+    }))]));
     f.file('pagefind/index/en_raw_test.pf_index', Buffer.concat([prefix, indexCbor]));
     f.file('pagefind/filter/en_raw_test.pf_filter', Buffer.concat([prefix, filterCbor]));
     f.file('pagefind/wasm.en_raw.pagefind', Buffer.concat([prefix, Buffer.from([0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00])]));
@@ -129,6 +136,11 @@ describe('anatomy production artifact audit', () => {
     f.file('pagefind/fragment/en_corrupt.pf_fragment', Buffer.from([0x1f, 0x8b, 0x08, 0x00]));
     // A raw compressed GLB is not a Pagefind data envelope.
     f.file('pagefind/fragment/en_hidden_model.pf_fragment', gzipSync(Buffer.from('glTF' + 'x'.repeat(32))));
+    // A valid glTF JSON document is not a Pagefind search fragment.
+    f.file('pagefind/fragment/en_glb_json.pf_fragment', gzipSync(Buffer.concat([
+      prefix,
+      Buffer.from(JSON.stringify({ asset: { version: '2.0' }, scene: 0, scenes: [], nodes: [], meshes: [], accessors: [] })),
+    ])));
     // Even a correctly prefixed Pagefind envelope must not hide a model/container payload.
     f.file('pagefind/index/en_prefixed_model.pf_index', gzipSync(Buffer.concat([prefix, Buffer.from('glTF' + 'x'.repeat(32))])));
     f.file('pagefind/index/en_hidden_archive.pf_index', gzipSync(Buffer.concat([prefix, Buffer.from([0x50, 0x4b, 0x03, 0x04, 0x00])])));
@@ -157,6 +169,7 @@ describe('anatomy production artifact audit', () => {
     expect(f.check().errors).toEqual(expect.arrayContaining([
       'archive/container in production output requires explicit review: /pagefind/fragment/en_corrupt.pf_fragment',
       'archive/container in production output requires explicit review: /pagefind/fragment/en_hidden_model.pf_fragment',
+      'archive/container in production output requires explicit review: /pagefind/fragment/en_glb_json.pf_fragment',
       'archive/container in production output requires explicit review: /pagefind/index/en_prefixed_model.pf_index',
       'archive/container in production output requires explicit review: /pagefind/index/en_hidden_archive.pf_index',
       'archive/container in production output requires explicit review: /pagefind/filter/en_hidden_model.pf_filter',
