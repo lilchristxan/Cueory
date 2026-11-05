@@ -165,6 +165,34 @@ function embeddedArchiveFixtures(): Array<[string, Buffer]> {
   return fixtures;
 }
 
+function makeZip64AesLocalHeader(): Buffer {
+  const name = Buffer.from('zip64-hidden-model.bin', 'ascii');
+  const payload = Buffer.from('encrypted model archive payload', 'ascii');
+  // ZIP64 sizes are stored in extra field 0x0001 (uncompressed, then compressed).
+  // AES method 99 is declared by extra field 0x9901 and is a valid ZIP method.
+  const extra = Buffer.alloc(4 + 16 + 4 + 7);
+  extra.writeUInt16LE(0x0001, 0);
+  extra.writeUInt16LE(16, 2);
+  extra.writeBigUInt64LE(BigInt(payload.length), 4);
+  extra.writeBigUInt64LE(BigInt(payload.length), 12);
+  extra.writeUInt16LE(0x9901, 20);
+  extra.writeUInt16LE(7, 22);
+  extra.writeUInt16LE(2, 24);
+  extra.write('AE', 26, 'ascii');
+  extra[28] = 3;
+  extra.writeUInt16LE(8, 29);
+
+  const header = Buffer.alloc(30);
+  header.writeUInt32LE(0x04034b50, 0);
+  header.writeUInt16LE(51, 4);
+  header.writeUInt16LE(99, 8);
+  header.writeUInt32LE(0xffffffff, 18);
+  header.writeUInt32LE(0xffffffff, 22);
+  header.writeUInt16LE(name.length, 26);
+  header.writeUInt16LE(extra.length, 28);
+  return Buffer.concat([header, name, extra, payload]);
+}
+
 function setup() {
   const root = mkdtempSync(join(tmpdir(), 'cueory-anatomy-publish-'));
   roots.push(root);
@@ -534,6 +562,8 @@ describe('anatomy production artifact audit', () => {
     f.file('downloads/streaming-hidden-model.dat', makeStoredZip(
       'streaming-model.bin', Buffer.from('streamed archive payload'), true,
     ));
+    // ZIP64 sentinels and AES method 99 must not bypass local-header detection.
+    f.file('downloads/zip64-aes-hidden-model.dat', makeZip64AesLocalHeader());
     const tar = Buffer.alloc(512);
     const nul = String.fromCharCode(0);
     tar.write('hidden-model.bin', 0, 'ascii');
@@ -568,6 +598,7 @@ describe('anatomy production artifact audit', () => {
         `archive/container in production output requires explicit review: /downloads/embedded-${format}.dat`,
       ),
       'archive/container in production output requires explicit review: /downloads/streaming-hidden-model.dat',
+      'archive/container in production output requires explicit review: /downloads/zip64-aes-hidden-model.dat',
       'archive/container in production output requires explicit review: /downloads/hidden-model.bin',
       'archive/container in production output requires explicit review: /downloads/prefixed-tar.dat',
       'archive/container in production output requires explicit review: /downloads/unrecognized.zip',
