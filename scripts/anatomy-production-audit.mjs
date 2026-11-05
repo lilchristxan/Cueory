@@ -101,12 +101,12 @@ function containsTarHeader(bytes) {
   for (let checksumOffset = 148; checksumOffset + 8 <= bytes.length; checksumOffset += 1) {
     let octal = true;
     for (let digit = 0; digit < 6; digit += 1) {
-      const value = bytes[checksumOffset + digit]!;
+      const value = bytes[checksumOffset + digit];
       if (value < 0x30 || value > 0x37) { octal = false; break; }
     }
     if (!octal) continue;
-    const terminator = bytes[checksumOffset + 6]!;
-    const padding = bytes[checksumOffset + 7]!;
+    const terminator = bytes[checksumOffset + 6];
+    const padding = bytes[checksumOffset + 7];
     if ((terminator !== 0 && terminator !== 0x20) || (padding !== 0 && padding !== 0x20)) continue;
     if (hasTarHeaderAt(bytes, checksumOffset - 148)) return true;
   }
