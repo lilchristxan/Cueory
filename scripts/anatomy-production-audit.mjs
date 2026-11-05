@@ -202,7 +202,7 @@ function containsGlbHeader(bytes) {
 
 /** Parse one definite-length CBOR value, rejecting embedded model/archive byte strings. */
 function containsReservedAnatomyId(text, draftIds) {
-  if (/\\bFIX\\d+\\b/u.test(text)) return true;
+  if (/\bFIX\d+\b/u.test(text)) return true;
   for (const match of text.matchAll(STRUCTURE_TOKEN)) {
     if (draftIds.has(match[0])) return true;
   }
