@@ -293,7 +293,7 @@ function validPagefindArtifact(path, kind) {
       payload.subarray(0, 4).equals(Buffer.from([0x00, 0x61, 0x73, 0x6d])) &&
       payload.readUInt32LE(4) === 1 &&
       WebAssembly.validate(payload) &&
-      !hasArchiveMagicBytes(payload);
+      !hasArchiveMagicBytes(payload, false);
   }
   if (path.endsWith('.pf_fragment')) {
     try {
