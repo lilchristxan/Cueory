@@ -305,7 +305,7 @@ select throws_ok(
 set local "request.jwt.claims" to '{"sub": "00000000-0000-4000-8000-000000000001", "role": "authenticated"}';
 set local "request.jwt.claim.sub" to '00000000-0000-4000-8000-000000000001';
 select isnt(
-  public.save_anatomy_view('heart', '  front view ', current_setting('t.camera')::jsonb, array['FMA1', 'FMA1'], array['FMA3'], 'FMA2'),
+  public.save_anatomy_view('heart', '  front view ', current_setting('t.camera')::jsonb, array['FMA1', 'FMA1'], array['FMA3'], 'FMA2', (select auth.uid())),
   null, 'a student saves a view and gets its id'
 );
 select results_eq(
@@ -325,7 +325,7 @@ select results_eq(
   $$ values (1, '[1, 2, 3]', 0, true, true) $$, 'with the new camera, lists and selection'
 );
 select isnt(
-  public.save_anatomy_view('lungs', 'front view', current_setting('t.camera')::jsonb, '{}', '{}', null),
+  public.save_anatomy_view('lungs', 'front view', current_setting('t.camera')::jsonb, '{}', '{}', null, (select auth.uid())),
   null, 'the same name in another system is another view'
 );
 select results_eq($$ select system_key from public.my_anatomy_views('lungs') $$, $$ values ('lungs') $$,
@@ -440,7 +440,7 @@ select throws_ok(
   '54000', 'you can keep up to 50 saved views; delete one first', 'the cap counts every system together'
 );
 select isnt(
-  public.save_anatomy_view('heart', 'view 1', '{"position": [1, 1, 1], "target": [0, 0, 0]}', '{}', '{}', null),
+  public.save_anatomy_view('heart', 'view 1', '{"position": [1, 1, 1], "target": [0, 0, 0]}', '{}', '{}', null, (select auth.uid())),
   null, 'replacing one of the 50 always fits'
 );
 select results_eq($$ select count(*)::int from public.my_anatomy_views('heart') $$, $$ values (50) $$, 'and the count stays 50');
@@ -449,14 +449,14 @@ select results_eq(
   $$ values (true) $$, 'deleting one'
 );
 select isnt(
-  public.save_anatomy_view('heart', 'view 51', current_setting('t.camera')::jsonb, '{}', '{}', null),
+  public.save_anatomy_view('heart', 'view 51', current_setting('t.camera')::jsonb, '{}', '{}', null, (select auth.uid())),
   null, 'makes room for a new one'
 );
 -- Student one is not affected by student two's cap.
 set local "request.jwt.claims" to '{"sub": "00000000-0000-4000-8000-000000000001", "role": "authenticated"}';
 set local "request.jwt.claim.sub" to '00000000-0000-4000-8000-000000000001';
 select isnt(
-  public.save_anatomy_view('heart', 'side view', current_setting('t.camera')::jsonb, '{}', '{}', null),
+  public.save_anatomy_view('heart', 'side view', current_setting('t.camera')::jsonb, '{}', '{}', null, (select auth.uid())),
   null, 'one student being at the cap does not stop another'
 );
 
