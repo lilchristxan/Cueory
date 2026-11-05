@@ -643,7 +643,7 @@ export function auditAnatomyProduction(distDir, contentDir) {
     // Pagefind's generated index fragments are gzip-compressed search text,
     // not opaque user archives. Keep this exception to its exact output paths
     // and signature; ZIP/TAR and archive suffixes remain rejected everywhere.
-    const pagefindIndex = /^\/pagefind\/(?:fragment\/[^/]+\.pf_fragment|index\/[^/]+\.pf_index|[^/]+\.pf_meta|wasm\.[^/]+\.pagefind)$/i.test(url);
+    const pagefindIndex = /^\/pagefind\/(?:fragment\/[^/]+\.pf_fragment|index\/[^/]+\.pf_index|filter\/[^/]+\.pf_filter|[^/]+\.pf_meta|wasm\.[^/]+\.pagefind)$/i.test(url);
     if (ARCHIVE_ASSET.test(path) || hasArchiveMagic(path, pagefindIndex)) {
       errors.push(`archive/container in production output requires explicit review: ${url}`);
     }
