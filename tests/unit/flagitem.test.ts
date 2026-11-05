@@ -88,6 +88,23 @@ describe('flag item subscriptions', () => {
     expect(listener).toHaveBeenCalledWith(FIRST);
   });
 
+  it('finishes the current notification snapshot when a listener unsubscribes itself', () => {
+    const calls: string[] = [];
+    let unsubscribeFirst = () => {};
+    const first = () => {
+      calls.push('first');
+      unsubscribeFirst();
+    };
+    const second = () => calls.push('second');
+    unsubscribeFirst = subscribe(first);
+    subscribe(second);
+
+    setFlagItem(FIRST);
+    setFlagItem(SECOND);
+
+    expect(calls).toEqual(['first', 'second', 'second']);
+  });
+
   it('sends listener copies and isolates a listener that throws', () => {
     let firstReceived: FlagItem | undefined;
     const first = (item: FlagItem | undefined) => {
