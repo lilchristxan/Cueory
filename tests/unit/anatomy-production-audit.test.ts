@@ -32,8 +32,20 @@ function setup() {
       meshes: ids.map(() => ({ primitives: [{ indices: 0, attributes: { POSITION: 1 } }] })),
       accessors: [{ count: 3, componentType: 5123, type: 'SCALAR', bufferView: 0 },
         { count: 3, componentType: 5126, type: 'VEC3', bufferView: 1 }],
-      bufferViews: [{ buffer: 0, byteOffset: 0, byteLength: 6 },
-        { buffer: 0, byteOffset: 8, byteLength: 36 }],
+      // Synthetic metadata contract only. Binary bytes here are NOT a genuine
+      // meshopt payload. Real checked-in GLBs are decoded in a separate test.
+      bufferViews: [
+        { buffer: 0, byteOffset: 0, byteLength: 6,
+          extensions: { EXT_meshopt_compression: {
+            buffer: 0, byteOffset: 0, byteLength: 6,
+            count: 3, byteStride: 2, mode: 'TRIANGLES',
+          } } },
+        { buffer: 0, byteOffset: 8, byteLength: 36,
+          extensions: { EXT_meshopt_compression: {
+            buffer: 0, byteOffset: 8, byteLength: 36,
+            count: 3, byteStride: 12, mode: 'ATTRIBUTES',
+          } } },
+      ],
       buffers: [{ byteLength: 44 }],
     };
     const bytes = Buffer.from(JSON.stringify(modelJson), 'utf8');
