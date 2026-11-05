@@ -112,3 +112,53 @@ describe('saved views in the lab', () => {
     expect(compareSyncDue(1050, 1000)).toBe(true);
   });
 });
+
+describe('the compare view follows the main camera to where it settles', () => {
+  it('copies at most every 50 ms and always sends one trailing copy of the final camera', async () => {
+    const { createCompareSync } = await import('../../src/islands/anatomylab');
+    const { vi } = await import('vitest');
+    vi.useFakeTimers();
+    try {
+      let camera = 0;
+      const copied: number[] = [];
+      let clock = 0;
+      const sync = createCompareSync(() => copied.push(camera), 50, {
+        now: () => clock,
+        setTimeout: (run, ms) => setTimeout(run, ms),
+        clearTimeout: (h) => clearTimeout(h as ReturnType<typeof setTimeout>),
+      });
+      camera = 1; clock = 0; sync.request();
+      camera = 2; clock = 10; sync.request();
+      camera = 3; clock = 20; sync.request();
+      expect(copied).toEqual([1]);
+      // The main view settles at 3 and draws no more frames; the comparison still gets it.
+      clock = 50; vi.advanceTimersByTime(40);
+      expect(copied).toEqual([1, 3]);
+      vi.advanceTimersByTime(1000);
+      expect(copied).toEqual([1, 3]);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('drops the trailing copy on cancel (close or unmount) and copies at once after reset', async () => {
+    const { createCompareSync } = await import('../../src/islands/anatomylab');
+    const { vi } = await import('vitest');
+    vi.useFakeTimers();
+    try {
+      const copied: number[] = [];
+      let clock = 0;
+      const sync = createCompareSync(() => copied.push(clock), 50, {
+        now: () => clock, setTimeout: (run, ms) => setTimeout(run, ms), clearTimeout: (h) => clearTimeout(h as ReturnType<typeof setTimeout>),
+      });
+      sync.request(); clock = 5; sync.request();
+      sync.cancel();
+      vi.advanceTimersByTime(500);
+      expect(copied).toEqual([0]);
+      sync.reset(); clock = 6; sync.request();
+      expect(copied).toEqual([0, 6]);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});

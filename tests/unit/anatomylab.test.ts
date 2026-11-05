@@ -929,3 +929,17 @@ describe('the test fixture model', () => {
     for (const label of fixtureJson.labels) expect(label.text).toMatch(/^fixture (cube|block|point|slab) [A-E]$/);
   });
 });
+
+describe('parseAnatomyFile keeps which tree the labels come from', () => {
+  const file = (hierarchy?: unknown) => ({
+    id: 'anatomy-heart', kind: 'model', title: 'sample', status: 'draft', ...(hierarchy === undefined ? {} : { hierarchy }),
+    model: { file: '/models/anatomy/heart.glb', release: 'sample release' },
+    labels: [{ id: 'FMA1', text: 'part a', source: 'src' }],
+  });
+  it('records "partof" and "isa" on every structure, leaves an unmarked file unmarked, and refuses anything else', () => {
+    expect(parseAnatomyFile(file('partof'), 'content/visuals/anatomy-heart.json').structures[0]!.tree).toBe('partof');
+    expect(parseAnatomyFile(file('isa'), 'content/visuals/anatomy-heart.json').structures[0]!.tree).toBe('isa');
+    expect(parseAnatomyFile(file(), 'content/visuals/anatomy-heart.json').structures[0]!.tree).toBeUndefined();
+    expect(() => parseAnatomyFile(file('other'), 'content/visuals/anatomy-heart.json')).toThrow(/hierarchy/);
+  });
+});

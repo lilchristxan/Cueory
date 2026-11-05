@@ -4,6 +4,7 @@
   "kind": "model",
   "lessonIds": ["U01-T01-L01"],
   "status": "draft",
+  "hierarchy": "partof",
   "model": { "file": "/preview/anatomy-fixture/fixture.glb", "release": "fixture 1 (made in code)", "via": "tests/fixtures/anatomyfixture.ts" },
   "labels": [
     { "id": "FIX001", "text": "fixture cube A", "source": "fixture", "group": "fixture group one", "layer": "organs" },

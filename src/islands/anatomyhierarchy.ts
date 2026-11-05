@@ -2,10 +2,13 @@
  * Where a structure sits in the body (Task 178, part B). Pure functions over a system's labels; no three.js, no DOM.
  *
  * Every name here comes from the source file (BodyParts3D's own names): nothing is invented. A label's `group` is the
- * PART-OF concept that heads it in the list, and an optional `parents` field (written by scripts/build-anatomy.mjs on
- * a rebuild) gives the full PART-OF ancestry, root first. Until a rebuild supplies `parents`, the breadcrumb is built
- * by following the `group` chain: a group that is itself a label continues the chain; one that is not is the root
- * (for example "human body").
+ * concept that heads it in the list, and an optional `parents` field (written by scripts/build-anatomy.mjs on a
+ * rebuild) gives its whole ancestry, root first, both in the tree named by the label's `tree`. In the PART-OF tree
+ * that ancestry is where the structure sits in the body; in the IS-A tree it is a classification (a kind of muscle),
+ * which is not a location. So `breadcrumb` is the raw trail in either tree, and only `locationTrail` says "where it
+ * sits": it gives a trail for a "partof" label and nothing otherwise. Until a rebuild supplies `parents`, the trail is
+ * built by following the `group` chain: a group that is itself a label continues the chain; one that is not is the
+ * root (for example "human body").
  */
 
 export interface HierarchyLabel {
@@ -14,6 +17,8 @@ export interface HierarchyLabel {
   group?: string;
   /** Full PART-OF ancestry, names only, root first, as the source file gives it. */
   parents?: readonly string[];
+  /** The tree `group` and `parents` come from; only "partof" is body location. */
+  tree?: 'partof' | 'isa';
 }
 
 /** Labels by id, and by exact name (the first label with a name wins, so the result is stable). */
@@ -47,6 +52,11 @@ export function breadcrumb(labels: readonly HierarchyLabel[], id: string): strin
     group = byText.get(group)?.group;
   }
   return trail;
+}
+
+/** The trail to show as where the structure sits in the body: empty unless its hierarchy is the PART-OF tree. */
+export function locationTrail(labels: readonly HierarchyLabel[], id: string): string[] {
+  return labels.find((label) => label.id === id)?.tree === 'partof' ? breadcrumb(labels, id) : [];
 }
 
 /**

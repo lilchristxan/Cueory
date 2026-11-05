@@ -196,7 +196,8 @@ function resolveSystem(system, data, claimed) {
 }
 
 /**
- * The structure's whole PART-OF ancestry as concept ids, root first (Task 178: the label's `parents`). It is the
+ * The structure's whole ancestry in the system's tree (PART-OF: where it sits; IS-A: what kind it is, the file's
+ * "hierarchy" says which) as concept ids, root first (Task 178: the label's `parents`). It is the
  * build's path from the system's root concept down to (not including) the structure, with the concepts above that root
  * climbed one parent at a time until a concept with no parent. Where a concept is part of several wholes, the one that
  * leads to the structure's list heading is taken, so the heading is always on the chain; otherwise the first in file
@@ -532,6 +533,8 @@ function visualFor(system, structures, partsLines, release, { retrieved, tree })
     kind: 'model',
     lessonIds: system.lessonIds,
     status: 'draft',
+    // Which tree the labels' `group` and `parents` come from: only "partof" is where a structure sits in the body.
+    hierarchy: tree,
     model: { file: `/models/anatomy/${system.id}.glb`, release: release.label, via: release.via },
     labels: structures.map((s) => ({ id: s.id, text: s.name, group: s.group, layer: s.layer, parents: s.parents, source: `bp3d-${s.id}` })),
     depictions: [

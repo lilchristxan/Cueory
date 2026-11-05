@@ -71,3 +71,16 @@ describe('siblings', () => {
     expect(siblings(labels, 'nope')).toEqual([]);
   });
 });
+
+describe('locationTrail: only the PART-OF tree is body location', () => {
+  const kind = [
+    { id: 'K1', text: 'sample muscle a', group: 'sample kind', parents: ['sample root', 'sample kind'] },
+  ];
+  it('gives a trail for a "partof" label and nothing for "isa" or an unmarked label', async () => {
+    const { locationTrail } = await import('../../src/islands/anatomyhierarchy');
+    expect(locationTrail(kind.map((l) => ({ ...l, tree: 'partof' as const })), 'K1')).toEqual(['sample root', 'sample kind', 'sample muscle a']);
+    expect(locationTrail(kind.map((l) => ({ ...l, tree: 'isa' as const })), 'K1')).toEqual([]);
+    expect(locationTrail(kind, 'K1')).toEqual([]);
+    expect(locationTrail([], 'nope')).toEqual([]);
+  });
+});

@@ -29,6 +29,12 @@ const rows = {
   ],
   my_flags: [{ id: reportId, page: '/learn/study-skills', item_id: null, item_version_id: null,
     reason: 'confusing', comment: 'Sample report', created_at: when, status: 'private' }],
+  export_my_anatomy_review_queue: [
+    { id: id(6), system_key: 'heart', structure_id: 'FMA7204', missed_count: 2, first_missed_at: when, last_missed_at: when, cleared_at: null, user_id: 'private' },
+    { id: id(7), system_key: 'heart', structure_id: 'FIX001', missed_count: 1, first_missed_at: when, last_missed_at: when, cleared_at: when },
+  ],
+  export_my_anatomy_views: [{ id: id(8), system_key: 'heart', name: 'front view', camera: { position: [0, 0, 3], target: [0, 0, 0] },
+    hidden: ['FMA1'], faded: [], selected: null, created_at: when, updated_at: when, user_id: 'private' }],
   my_sessions: [{ id: id(5), created_at: when, updated_at: '2026-11-01T09:00:00+00:00', not_after: null,
     user_agent: 'sample browser', ip: '203.0.113.5', user_id: 'private' }],
 };
@@ -90,6 +96,12 @@ describe('loadExport — personal data boundaries', () => {
         .map(([name, value]) => ({ name, value })),
       account,
       sessions,
+      anatomyReviewQueue: [
+        { systemKey: 'heart', structureId: 'FMA7204', missedCount: 2, firstMissedAt: when, lastMissedAt: when, clearedAt: null },
+        { systemKey: 'heart', structureId: 'FIX001', missedCount: 1, firstMissedAt: when, lastMissedAt: when, clearedAt: when },
+      ],
+      anatomyViews: [{ systemKey: 'heart', name: 'front view', camera: { position: [0, 0, 3], target: [0, 0, 0] },
+        hidden: ['FMA1'], faded: [], selected: null, createdAt: when, updatedAt: when }],
     });
     expect(studyEvents).toBeInstanceOf(StudyEventPages);
     expect((studyEvents as StudyEventPages).count).toBe(2);
@@ -112,7 +124,8 @@ describe('loadExport — personal data boundaries', () => {
     expect(calls).toEqual([
       'profiles:' + fields.profiles, 'attempts:' + fields.attempts,
       'exam_plans:' + fields.exam_plans, 'review_state:' + fields.review_state,
-      'study_events:' + fields.study_events, 'rpc:my_flags', 'rpc:my_sessions', 'user',
+      'study_events:' + fields.study_events, 'rpc:my_flags', 'rpc:my_sessions',
+      'rpc:export_my_anatomy_review_queue', 'rpc:export_my_anatomy_views', 'user',
     ]);
   });
 
@@ -179,6 +192,7 @@ describe('loadExport — personal data boundaries', () => {
       data: {
         profile: {}, account, signInDetails: expectedSignInDetails,
         attempts: [], examPlans: [], reviewRows: [], reports: [], sessions: [],
+        anatomyReviewQueue: [], anatomyViews: [],
         studyEvents: expect.any(StudyEventPages),
       },
     });
@@ -187,7 +201,7 @@ describe('loadExport — personal data boundaries', () => {
     expect(JSON.parse(await exportJsonBlob(result.data, when).text()).studyEvents).toEqual([]);
   });
 
-  it.each(['profiles', 'attempts', 'exam_plans', 'review_state', 'study_events', 'my_flags', 'my_sessions', 'user'] as const)(
+  it.each(['profiles', 'attempts', 'exam_plans', 'review_state', 'study_events', 'my_flags', 'my_sessions', 'export_my_anatomy_review_queue', 'export_my_anatomy_views', 'user'] as const)(
     'fails closed on a %s refusal without returning any personal data', async table => {
       const response = { data: table === 'user' ? { user } : rows[table], error: { message: 'private SQL error' } };
       expect(await loadExport(reader({ [table]: response }).db)).toEqual(failed);
@@ -223,6 +237,12 @@ describe('loadExport — personal data boundaries', () => {
     ['my_sessions', { ...rows.my_sessions[0], ip: 203 }],
     ['my_sessions', { ...rows.my_sessions[0], created_at: '2026-02-30T08:00:00Z' }],
     ['my_sessions', { ...rows.my_sessions[0], id: 'private' }],
+    ['export_my_anatomy_review_queue', { ...rows.export_my_anatomy_review_queue[0], structure_id: 'bad id' }],
+    ['export_my_anatomy_review_queue', { ...rows.export_my_anatomy_review_queue[0], missed_count: 0 }],
+    ['export_my_anatomy_review_queue', { ...rows.export_my_anatomy_review_queue[0], cleared_at: '2026-02-30T08:00:00Z' }],
+    ['export_my_anatomy_views', { ...rows.export_my_anatomy_views[0], camera: { position: [0, 0, 3], target: [0, 0, 0], zoom: 2 } }],
+    ['export_my_anatomy_views', { ...rows.export_my_anatomy_views[0], hidden: ['bad'] }],
+    ['export_my_anatomy_views', { ...rows.export_my_anatomy_views[0], selected: 'bad' }],
   ] as const)('does not silently drop invalid %s records', async (table, record) => {
     expect(await loadExport(reader({ [table]: { data: [record], error: null } }).db)).toEqual(failed);
   });

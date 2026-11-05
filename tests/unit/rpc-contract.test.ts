@@ -283,7 +283,16 @@ describe('anatomy study contract (Task 178)', () => {
       expect(anatomySql).toContain(`revoke execute on function public.${name}(${args}) from public, anon, authenticated;`);
       expect(anatomySql).toContain(`grant execute on function public.${name}(${args}) to authenticated;`);
     }
-    expect([...anatomySql.matchAll(/security definer\s+set search_path = ''/g)]).toHaveLength(6);
+    expect([...anatomySql.matchAll(/security definer\s+set search_path = ''/g)]).toHaveLength(8);
+    // The two export reads (my_flags' pattern): own rows only, no user id in the result, nobody but students.
+    for (const name of ['export_my_anatomy_review_queue', 'export_my_anatomy_views']) {
+      expect(anatomySql).toContain(`revoke execute on function public.${name}() from public, anon, authenticated;`);
+      expect(anatomySql).toContain(`grant execute on function public.${name}() to authenticated;`);
+      const body = anatomySql.split(`create function public.${name}()`)[1]!.split('$$;')[0]!;
+      expect(body).toContain('= (select auth.uid())');
+      expect(body).toContain('app_private.mfa_access_allowed()');
+      expect(body).not.toMatch(/user_id,|\buser_id\b\s+uuid/);
+    }
     expect(anatomySql).not.toMatch(/grant\s+execute[^;]*to\s+(anon|public)\b/i);
     expect(anatomySql).not.toMatch(/grant\s+(insert|update|delete)[^;]*to\s+authenticated/i);
     for (const table of ['anatomy_review_queue', 'anatomy_saved_views']) {
@@ -296,7 +305,7 @@ describe('anatomy study contract (Task 178)', () => {
     expect(anatomySql).toMatch(/pg_advisory_xact_lock\(hashtextextended\('anatomy_misses:' \|\| uid::text, 0\)\)/);
     expect(anatomySql).toMatch(/pg_advisory_xact_lock\(hashtextextended\('anatomy_views:' \|\| uid::text, 0\)\)/);
     expect([...anatomySql.matchAll(/u\.email_confirmed_at is not null and u\.is_anonymous is not true/g)]).toHaveLength(6);
-    expect([...anatomySql.matchAll(/app_private\.mfa_access_allowed\(\)/g)]).toHaveLength(6 + 2 * 2);
+    expect([...anatomySql.matchAll(/app_private\.mfa_access_allowed\(\)/g)]).toHaveLength(6 + 2 * 2 + 2);
     expect(anatomySql).toContain('hourly_limit constant integer := 600;');
     expect(anatomySql).toContain('max_views constant integer := 50;');
   });

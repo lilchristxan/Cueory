@@ -1,11 +1,11 @@
 -- Anatomy lab study tools (Task 178): the review queue and saved views. Only a confirmed, signed-in student can use the
--- six functions, every input is checked before anything is written, each student reads only their own rows and writes
+-- six functions (and a signed-in student the two export reads), every input is checked before anything is written, each student reads only their own rows and writes
 -- none directly, a miss recorded again counts up, the hourly limit and the 50-view cap hold, and deleting an account
 -- deletes both tables' rows. Run by `supabase test db` on a throwaway local database; the students and rows below exist
 -- only inside this test.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(123);
+select plan(130);
 
 insert into auth.users (id, email, email_confirmed_at, is_anonymous) values
   -- One and two: confirmed students.
@@ -437,6 +437,38 @@ set local "request.jwt.claim.sub" to '00000000-0000-4000-8000-000000000001';
 select isnt(
   public.save_anatomy_view('heart', 'side view', current_setting('t.camera')::jsonb, '{}', '{}', null),
   null, 'one student being at the cap does not stop another'
+);
+
+-- ---- Export-my-data reads (student one is signed in).
+select results_eq($$ select public.clear_anatomy_miss('heart', 'FMA3') $$, $$ values (true) $$, 'student one clears one more miss for the export');
+select results_eq(
+  $$ select count(*)::int, count(cleared_at)::int from public.export_my_anatomy_review_queue() $$, $$ values (5, 1) $$,
+  'the export lists all five of their review rows, the cleared one included, and none of student two''s 601'
+);
+select results_eq(
+  $$ select name, system_key, hidden, selected from public.export_my_anatomy_views() order by system_key $$,
+  $$ values ('side view', 'heart', '{}'::text[], null::text), ('front view', 'lungs', '{}'::text[], null::text) $$,
+  'the views export lists their own views from every system, and none of student two''s 50'
+);
+select ok(
+  (select bool_and(not (to_jsonb(e) ? 'user_id'))
+   from (select * from public.export_my_anatomy_review_queue()) e)
+  and (select bool_and(not (to_jsonb(e) ? 'user_id')) from (select * from public.export_my_anatomy_views()) e),
+  'neither export carries a user id'
+);
+-- A verified second factor needs an aal2 token here too (Task 301).
+set local "request.jwt.claims" to '{"sub": "00000000-0000-4000-8000-000000000005", "role": "authenticated", "aal": "aal1"}';
+set local "request.jwt.claim.sub" to '00000000-0000-4000-8000-000000000005';
+select is_empty($$ select * from public.export_my_anatomy_review_queue() $$, 'an aal1 token exports nothing for a student with a second factor');
+set local "request.jwt.claims" to '{"sub": "00000000-0000-4000-8000-000000000005", "role": "authenticated", "aal": "aal2"}';
+select results_eq($$ select structure_id from public.export_my_anatomy_review_queue() $$, $$ values ('FMA500') $$,
+  'and the aal2 token exports their one row');
+reset role;
+select ok(
+  (select bool_and(has_function_privilege('authenticated', f, 'execute') and not has_function_privilege('anon', f, 'execute')
+                   and not has_function_privilege('public', f, 'execute'))
+   from unnest(array['public.export_my_anatomy_review_queue()', 'public.export_my_anatomy_views()']) f),
+  'only signed-in students can run the two export functions'
 );
 
 -- ---- The tables' own checks, for any writer (as the owner).

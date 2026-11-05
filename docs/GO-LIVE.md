@@ -117,7 +117,7 @@ Use exactly the steps of SETUP Part L, with three changes:
 5. If a file shows an error or a box asks you to confirm something: stop, don't run it again, don't run the next
    one, and send Claude the error text and the file's number (SETUP Part L explains why).
 6. Run the check query from SETUP Part L, step 10.
-   If all eighteen migrations have passed and been approved for production, the SETUP Part L public-schema query should show 16 tables (all `RLS on`) and 25 public functions, including the restricted `admins` table, four admin-inbox functions, the two anatomy study tables and their six functions. The MFA helper in the private schema is not included. Verify policy behavior, migration history, and the database regression suite as well as names and counts. If anything differs, stop before proceeding.
+   If all eighteen migrations have passed and been approved for production, the SETUP Part L public-schema query should show 16 tables (all `RLS on`) and 27 public functions, including the restricted `admins` table, four admin-inbox functions, the two anatomy study tables and their eight functions. The MFA helper in the private schema is not included. Verify policy behavior, migration history, and the database regression suite as well as names and counts. If anything differs, stop before proceeding.
 7. Tell Claude "prod database done through file N".
 
 If a later pull request adds a file with an earlier date than one you've already run, tell Claude before running it.

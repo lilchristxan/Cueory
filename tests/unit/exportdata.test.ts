@@ -33,7 +33,7 @@ function sampleGuest() {
 
 describe('JSON export', () => {
   it('round-trips every allowed sample section with a caller-supplied date and format', () => {
-    expect(json(sample)).toEqual({ format: 'cueory-export-1', exportDate, ...sample, signInDetails: [], account: {}, attempts: [], examPlans: [], reviewRows: [], reports: [], sessions: [], studyEvents: [], dropped: [] });
+    expect(json(sample)).toEqual({ format: 'cueory-export-1', exportDate, ...sample, signInDetails: [], account: {}, attempts: [], examPlans: [], reviewRows: [], reports: [], sessions: [], studyEvents: [], anatomyReviewQueue: [], anatomyViews: [], dropped: [] });
     expect(exportJson(sample, exportDate)).toContain('\n  "profile": {\n    "displayName": "Sample Student",');
   });
 
@@ -178,7 +178,7 @@ describe('JSON export', () => {
       profile: { createdAt: '2026-10-01T12:00:00.000Z', email: 'sample@example.invalid', displayName: 'Sample Student' },
     };
     expect(exportJson(reordered, exportDate)).toBe(exportJson(sample, exportDate));
-    expect(Object.keys(json(sample))).toEqual(['format', 'exportDate', 'profile', 'signInDetails', 'account', 'onboarding', 'progress', 'reviewState', 'gameStats', 'attempts', 'examPlans', 'reviewRows', 'reports', 'sessions', 'studyEvents', 'dropped']);
+    expect(Object.keys(json(sample))).toEqual(['format', 'exportDate', 'profile', 'signInDetails', 'account', 'onboarding', 'progress', 'reviewState', 'gameStats', 'attempts', 'examPlans', 'reviewRows', 'reports', 'sessions', 'studyEvents', 'anatomyReviewQueue', 'anatomyViews', 'dropped']);
   });
 
   it('preserves attempt and history row order, false, zero, null and Unicode', () => {
@@ -196,7 +196,7 @@ describe('JSON export', () => {
 
   it('makes empty sections explicit without inventing profile values or records', () => {
     expect(json({})).toEqual({
-      format: 'cueory-export-1', exportDate, profile: {}, signInDetails: [], account: {}, onboarding: {}, progress: [], reviewState: [], gameStats: [], attempts: [], examPlans: [], reviewRows: [], reports: [], sessions: [], studyEvents: [], dropped: [],
+      format: 'cueory-export-1', exportDate, profile: {}, signInDetails: [], account: {}, onboarding: {}, progress: [], reviewState: [], gameStats: [], attempts: [], examPlans: [], reviewRows: [], reports: [], sessions: [], studyEvents: [], anatomyReviewQueue: [], anatomyViews: [], dropped: [],
     });
   });
 
@@ -305,7 +305,7 @@ describe('JSON export', () => {
 describe('CSV export', () => {
   it('returns section files in fixed order with RFC 4180 record endings', () => {
     const files = exportCsv(sample);
-    expect(files.map(entry => entry.fileName)).toEqual(['profile.csv', 'signInDetails.csv', 'account.csv', 'onboarding.csv', 'progress.csv', 'reviewState.csv', 'gameStats.csv', 'attempts.csv', 'examPlans.csv', 'reviewRows.csv', 'reports.csv', 'sessions.csv', 'studyEvents.csv', 'dropped.csv']);
+    expect(files.map(entry => entry.fileName)).toEqual(['profile.csv', 'signInDetails.csv', 'account.csv', 'onboarding.csv', 'progress.csv', 'reviewState.csv', 'gameStats.csv', 'attempts.csv', 'examPlans.csv', 'reviewRows.csv', 'reports.csv', 'sessions.csv', 'studyEvents.csv', 'anatomyReviewQueue.csv', 'anatomyViews.csv', 'dropped.csv']);
     expect(files.every(entry => entry.text.endsWith('\r\n'))).toBe(true);
     expect(parseRows(file(sample, 'progress'))).toEqual([
       ['id', 'result', 'date', 'deckId', 'progressVersion', 'course', 'examDate', 'done'],
@@ -348,9 +348,9 @@ describe('CSV export', () => {
 
   it('includes only headers for empty sections and the empty dropped report', () => {
     const files = exportCsv({});
-    expect(files).toHaveLength(14);
+    expect(files).toHaveLength(16);
     expect(files.every(entry => parseRows(entry.text).length === 1)).toBe(true);
-    expect(files[13]).toEqual({ fileName: 'dropped.csv', text: 'dropped\r\n' });
+    expect(files[15]).toEqual({ fileName: 'dropped.csv', text: 'dropped\r\n' });
   });
 
   it('returns fresh files and the same stable output for repeated exports', () => {
@@ -790,5 +790,62 @@ describe('the sign-in record and sessions (Task 309)', () => {
     const result = json({ account: { identities: Array(21).fill(account.identities[0]) } });
     expect(result.account.identities).toHaveLength(20);
     expect(result.dropped).toEqual(['account.identities[20+]']);
+  });
+});
+
+describe('anatomy lab sections (Task 178)', () => {
+  const at = '2026-11-01T08:00:00.000Z';
+  const queue = [
+    { systemKey: 'heart', structureId: 'FMA7204', missedCount: 2, firstMissedAt: at, lastMissedAt: '2026-11-01T09:00:00+00:00', clearedAt: null },
+    { systemKey: 'heart', structureId: 'FIX001', missedCount: 1, firstMissedAt: at, lastMissedAt: at, clearedAt: at },
+  ];
+  const views = [{
+    systemKey: 'heart', name: 'front, "view"', camera: { position: [0, 0, 3], target: [0, 0, 0], up: [0, 1, 0] },
+    hidden: ['FMA1', 'FMA2'], faded: [], selected: 'FMA1', createdAt: at, updatedAt: at,
+  }];
+
+  it('exports every row, cleared history included, in JSON with UTC times and in two CSV files', () => {
+    const result = json({ anatomyReviewQueue: queue, anatomyViews: views });
+    expect(result.anatomyReviewQueue).toEqual([{ ...queue[0], lastMissedAt: '2026-11-01T09:00:00.000Z' }, queue[1]]);
+    expect(result.anatomyViews).toEqual(views);
+    expect(result.dropped).toEqual([]);
+    expect(parseRows(file({ anatomyReviewQueue: queue }, 'anatomyReviewQueue'))).toEqual([
+      ['systemKey', 'structureId', 'missedCount', 'firstMissedAt', 'lastMissedAt', 'clearedAt'],
+      ['heart', 'FMA7204', '2', at, '2026-11-01T09:00:00.000Z', ''],
+      ['heart', 'FIX001', '1', at, at, at],
+    ]);
+    expect(parseRows(file({ anatomyViews: views }, 'anatomyViews'))).toEqual([
+      ['systemKey', 'name', 'camera', 'hidden', 'faded', 'selected', 'createdAt', 'updatedAt'],
+      ['heart', 'front, "view"', JSON.stringify(views[0]!.camera), 'FMA1;FMA2', '', 'FMA1', at, at],
+    ]);
+  });
+
+  it('drops a user id or any unknown field by name, and rows that break the database rules', () => {
+    const result = json({
+      anatomyReviewQueue: [{ ...queue[0], userId: 'private', user_id: 'private' }, { ...queue[0], structureId: 'bad id' }, { ...queue[0], missedCount: 0 }],
+      anatomyViews: [
+        { ...views[0], userId: 'private' },
+        { ...views[0], camera: { position: [0, 0, 3], target: [0, 0, 0], zoom: 2 } },
+        { ...views[0], camera: { position: [0, 0], target: [0, 0, 0] } },
+        { ...views[0], name: '' }, { ...views[0], name: 'x'.repeat(61) }, { ...views[0], hidden: ['bad'] },
+      ],
+    });
+    expect(result.anatomyReviewQueue).toHaveLength(1);
+    expect(result.anatomyViews).toHaveLength(1);
+    expect(JSON.stringify(result)).not.toContain('private');
+    expect(result.dropped).toEqual(expect.arrayContaining([
+      'anatomyReviewQueue[0].user_id', 'anatomyReviewQueue[0].userId', 'anatomyReviewQueue[1]', 'anatomyReviewQueue[1].structureId',
+      'anatomyReviewQueue[2]', 'anatomyReviewQueue[2].missedCount', 'anatomyViews[0].userId', 'anatomyViews[1].camera', 'anatomyViews[5].hidden',
+    ]));
+  });
+
+  it('keeps the first 10,000 queue rows and the first 50 views and reports the rest', () => {
+    const result = json({
+      anatomyReviewQueue: Array.from({ length: 10_001 }, () => queue[0]),
+      anatomyViews: Array.from({ length: 51 }, () => views[0]),
+    });
+    expect(result.anatomyReviewQueue).toHaveLength(10_000);
+    expect(result.anatomyViews).toHaveLength(50);
+    expect(result.dropped).toEqual(['anatomyReviewQueue[10000+]', 'anatomyViews[50+]']);
   });
 });

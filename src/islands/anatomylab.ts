@@ -24,8 +24,14 @@ export interface AnatomyStructure {
   group?: string;
   /** Its layer for peeling (skin … skeleton), from the source file, which takes it from BodyParts3D's hierarchy. */
   layer?: LayerId;
-  /** Full PART-OF ancestry, names only, root first, as the source file gives it (Task 178: the breadcrumb). */
+  /** Ancestry in the structure's own `tree`, names only, root first, as the source file gives it. Body location only when `tree` is "partof". */
   parents?: string[];
+  /**
+   * Which BodyParts3D tree `group` and `parents` come from, from the file's "hierarchy": "partof" says what a structure
+   * is part of (where it sits), "isa" sorts structures by kind. Missing (a file built before this field): unknown, so
+   * the lab never calls it a location.
+   */
+  tree?: 'partof' | 'isa';
   /** Alternative names from the source file, searched like the official name (Task 178). Never written by the lab. */
   also?: string[];
 }
@@ -182,6 +188,8 @@ export function parseAnatomyFile(json: unknown, path: string, options: { fixture
   if (m['file'] !== expectedModel) fail(`"model.file" must be ${expectedModel}`);
   if (!text(m['release'], 80)) fail('"model.release" must name the model release');
   if (m['via'] !== undefined && !text(m['via'], 200)) fail('"model.via", when given, must be a short line of text');
+  const tree = file['hierarchy'];
+  if (tree !== undefined && tree !== 'partof' && tree !== 'isa') fail('"hierarchy", when given, is "partof" or "isa"');
   const labels = file['labels'];
   if (!Array.isArray(labels) || labels.length === 0) fail('"labels" must list at least one structure');
   const seen = new Set<string>();
@@ -202,6 +210,7 @@ export function parseAnatomyFile(json: unknown, path: string, options: { fixture
     const also = label['also'];
     if (also !== undefined && !nameList(also)) return fail(`label "${id}": "also", when given, is a list of names`);
     const structure: AnatomyStructure = { id, text: label['text'] as string };
+    if (tree === 'partof' || tree === 'isa') structure.tree = tree;
     if (typeof group === 'string') structure.group = group;
     if (isLayer(layer)) structure.layer = layer;
     if (Array.isArray(parents)) structure.parents = [...(parents as string[])];
@@ -1341,4 +1350,50 @@ export const COMPARE_SYNC_MS = 50;
 /** True when a camera copy is due: the first ever, or COMPARE_SYNC_MS after the last. */
 export function compareSyncDue(now: number, last: number | null, interval = COMPARE_SYNC_MS): boolean {
   return last === null || now - last >= interval;
+}
+
+export interface CompareSyncClock {
+  now(): number;
+  setTimeout(run: () => void, ms: number): unknown;
+  clearTimeout(handle: unknown): void;
+}
+
+/**
+ * Copies the main camera to the comparison at most every COMPARE_SYNC_MS, and never loses the last one: a request that
+ * arrives too soon schedules one trailing copy, which reads the camera when it runs, so the comparison always ends on
+ * the camera the main view settled at (a scene that draws only on demand draws no frame after the last move).
+ * `cancel` drops a pending copy (close, unmount, lost context); `reset` also makes the next request copy at once.
+ */
+export function createCompareSync(copy: () => void, interval = COMPARE_SYNC_MS, clock: CompareSyncClock = {
+  now: () => performance.now(),
+  setTimeout: (run, ms) => setTimeout(run, ms),
+  clearTimeout: (handle) => clearTimeout(handle as ReturnType<typeof setTimeout>),
+}) {
+  let last: number | null = null;
+  let timer: unknown = null;
+  const cancel = () => {
+    if (timer !== null) clock.clearTimeout(timer);
+    timer = null;
+  };
+  return {
+    request() {
+      const now = clock.now();
+      if (compareSyncDue(now, last, interval)) {
+        cancel();
+        last = now;
+        copy();
+      } else if (timer === null) {
+        timer = clock.setTimeout(() => {
+          timer = null;
+          last = clock.now();
+          copy();
+        }, Math.max(0, interval - (now - (last ?? now))));
+      }
+    },
+    cancel,
+    reset() {
+      cancel();
+      last = null;
+    },
+  };
 }

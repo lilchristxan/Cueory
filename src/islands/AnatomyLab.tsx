@@ -12,11 +12,12 @@ import { createGeneration, createOnDemandLoader, publishAnatomyFile, knownMissin
 import type { CameraState, LabColors, LabScene, LoadResult } from './anatomyscene';
 import { createAnatomyOpenGate } from './anatomyopen';
 import AnatomyLabCover from './AnatomyLabCover';
-import { breadcrumb, siblings } from './anatomyhierarchy';
+import { locationTrail, siblings } from './anatomyhierarchy';
 import { boxesFromMeshes, expandNearby, nearbyStructures } from './anatomynearby';
 import { canSpeak, speak, stop as stopSpeaking } from './anatomyspeech';
 import { createAnatomyStudy, queueFromQuizMisses, type AnatomyStudyClient, type ReviewQueueRow, type SavedViewRow } from './anatomystudy';
 import { getSessionState, getSupabase } from './supabaseclient';
+import { createStudyScope, guardedRead, subscribeIdentity, viewsForSystem } from './anatomyguard';
 import { STRUCTURE_PAGE_SIZE, visibleStructureGroups } from './anatomy-list-window';
 import { anatomyTriangleNote } from './anatomybudget';
 import {
@@ -45,7 +46,7 @@ import {
   anatomyFailureMessage,
   breadcrumbRows,
   canRedo,
-  compareSyncDue,
+  createCompareSync,
   canUndo,
   createHistory,
   creditFor,
@@ -215,7 +216,10 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
   const [bulkPrompt, setBulkPrompt] = useState<{ systemKey: string; files: number } | null>(null);
   // Study tools (Task 178, integration): the review queue and saved views exist only for a signed-in student.
   const study = useMemo(defaultStudy, []);
-  const [signedIn, setSignedIn] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
+  const signedIn = userId !== null;
+  // One scope for the student and the open system: any answer that arrives after either changed is discarded.
+  const studyScope = useMemo(createStudyScope, []);
   const [reviewRows, setReviewRows] = useState<ReviewQueueRow[]>([]);
   const [savedViews, setSavedViews] = useState<SavedViewRow[]>([]);
   const [viewName, setViewName] = useState('');
@@ -246,7 +250,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
   const measureRef = useRef<{ font: string; measure: (s: string) => number; metrics: LabelMetrics } | null>(null);
   const compareCanvasRef = useRef<HTMLCanvasElement>(null);
   const compareSceneRef = useRef<LabScene | null>(null);
-  const compareSyncedAt = useRef<number | null>(null);
+  const compareSyncRef = useRef<ReturnType<typeof createCompareSync> | null>(null);
 
   // A pending phone consent never survives a body-system change.
   useEffect(() => setBulkPrompt(null), [systemKey]);
@@ -297,14 +301,8 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
     const ids = labelIdsRef.current;
     const setPlaced = setPlacedRef.current;
     // The compare view follows this camera: copied at most every COMPARE_SYNC_MS, so a drag never doubles the work.
-    const compare = compareSceneRef.current;
-    if (scene && compare) {
-      const now = performance.now();
-      if (compareSyncDue(now, compareSyncedAt.current)) {
-        compareSyncedAt.current = now;
-        compare.applyCameraState(scene.cameraState());
-      }
-    }
+    // A copy that comes too soon is sent once, trailing, so the comparison ends on the camera this view settled at.
+    if (scene) compareSyncRef.current?.request();
     if (!setPlaced) return;
     // Always tell the scene which labels are wanted (none too), so it checks what the camera sees only when needed.
     const points = scene && canvas ? scene.project(ids) : [];
@@ -641,28 +639,43 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
   useEffect(() => {
     if (phase !== 'open') return;
     let live = true;
+    // Who is signed in, now and for as long as the lab is open: a sign-out or another account in another tab clears
+    // the queue and the saved views at once, and ends every read still on its way.
+    const change = (id: string | null) => {
+      if (!live || id === studyScope.userId()) return;
+      studyScope.set(id, studyScope.systemKey());
+      setReviewRows([]);
+      setSavedViews([]);
+      setUserId(id);
+    };
     getSessionState().then(
-      (state) => { if (live) setSignedIn(state.signedIn); },
-      () => { if (live) setSignedIn(false); },
+      (state) => change(state.signedIn ? state.userId : null),
+      () => change(null),
     );
-    return () => { live = false; };
-  }, [phase]);
+    const stop = subscribeIdentity(getSupabase as unknown as Parameters<typeof subscribeIdentity>[0], change);
+    return () => { live = false; stop(); };
+  }, [phase, studyScope]);
+  // The open system joins the scope before any read below starts (effects run in order).
+  useEffect(() => {
+    studyScope.set(studyScope.userId(), system?.key ?? '');
+    setSavedViews([]);
+  }, [system?.key, studyScope]);
 
   const studyReady = signedIn && load.state === 'ready';
   const refreshReviewQueue = useCallback(() => {
     if (!signedIn) return;
-    void study.reviewQueue().then((outcome) => {
+    void guardedRead(studyScope, () => study.reviewQueue(), (outcome) => {
       if (outcome.ok) setReviewRows(outcome.value);
       else setAnnounce(outcome.message);
     }).catch(() => { /* a failed read never breaks the lab */ });
-  }, [signedIn, study]);
+  }, [signedIn, study, studyScope]);
   const refreshSavedViews = useCallback((key: string) => {
     if (!signedIn) return;
-    void study.views(key).then((outcome) => {
+    void guardedRead(studyScope, () => study.views(key), (outcome) => {
       if (outcome.ok) setSavedViews(outcome.value);
       else setAnnounce(outcome.message);
     }).catch(() => { /* a failed read never breaks the lab */ });
-  }, [signedIn, study]);
+  }, [signedIn, study, studyScope]);
   useEffect(() => {
     if (!studyReady || !system) return;
     refreshReviewQueue();
@@ -707,7 +720,11 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
         if (!live) return;
         scene = createLabScene({ canvas, reducedMotion: prefersReducedMotion(), colors, onRender: () => {} });
         compareSceneRef.current = scene;
-        compareSyncedAt.current = null;
+        compareSyncRef.current = createCompareSync(() => {
+          const main = sceneRef.current;
+          const other = compareSceneRef.current;
+          if (main && other) other.applyCameraState(main.cameraState());
+        });
         return scene
           .load(compareSystem.model.files ?? compareSystem.model.file, compareSystem.structures.map((s) => s.id))
           .then((result) => {
@@ -723,6 +740,8 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
       });
     return () => {
       live = false;
+      compareSyncRef.current?.cancel();
+      compareSyncRef.current = null;
       compareSceneRef.current = null;
       scene?.dispose();
       scene = null;
@@ -747,6 +766,8 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
       const lostScene = sceneRef.current;
       sceneRef.current = null;
       const lostCompare = compareSceneRef.current;
+      compareSyncRef.current?.cancel();
+      compareSyncRef.current = null;
       compareSceneRef.current = null;
       try {
         lostScene?.dispose();
@@ -1035,6 +1056,8 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
 
   const selectedName = selected ? (names.get(selected) ?? selected) : null;
   const selectedGroup = selected ? system.structures.find((s) => s.id === selected)?.group : undefined;
+  // A heading from the IS-A tree is a kind, not a place: it is labelled as one and never joins the location trail.
+  const selectedKind = selected ? system.structures.find((s) => s.id === selected)?.tree === 'isa' : false;
   const budget = load.state === 'ready' ? anatomyTriangleNote(load.result.triangles, filesLoaded, lazy) : null;
   const ready = load.state === 'ready';
   // Only files whose meshes and IDs were committed to this exact ready state
@@ -1059,9 +1082,11 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
   const canFocus = ready && selected !== null && foundSet.has(selected) && !hidden.has(selected);
 
   // ── Study tools on the name card and around it (Task 178, integration) ───────────────────────────────────────────
-  const crumbs = selected ? breadcrumbRows(breadcrumb(system.structures, selected), system.structures, selected) : [];
+  const crumbs = selected ? breadcrumbRows(locationTrail(system.structures, selected), system.structures, selected) : [];
   const siblingList = selected ? siblings(system.structures, selected) : [];
   const queued = queuedForSystem(reviewRows, system.key);
+  // Only this system's views are listed, opened or counted, whatever an earlier read left in state.
+  const shownViews = viewsForSystem(savedViews, system.key);
   const reviewPool = reviewQuizPool(queued, foundSet);
   // The whole body is never a comparison: it is several models at once, past the per-model budget twice over.
   const compareOptions = systems.filter((s) => s.key !== system.key && s.key !== WHOLE_BODY_KEY && !s.model.layerFiles);
@@ -1110,12 +1135,15 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
     if (!scene || !ready || savingView) return;
     const name = viewName.trim();
     setSavingView(true);
+    const stillCurrent = studyScope.ticket();
     void study.saveView({ systemKey: system.key, name, camera: scene.cameraState(), hidden, faded, selected })
       .then((outcome) => {
         if (!outcome.ok) {
           setAnnounce(outcome.message);
           return;
         }
+        // The account or the system changed while it saved: say nothing of this view and show nothing from it.
+        if (!stillCurrent()) return;
         setViewName('');
         setAnnounce(`saved the view "${name}".`);
         refreshSavedViews(system.key);
@@ -1127,6 +1155,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
   const openView = (view: SavedViewRow) => {
     const scene = sceneRef.current;
     if (!scene || !ready) return;
+    if (view.system_key !== system.key) return;
     const camera = savedCamera(view.camera);
     if (!camera) {
       setAnnounce('this view could not be read. delete it and save it again.');
@@ -1411,7 +1440,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
               {studyReady && (
                 <details className="rounded-md border border-line" data-testid="anatomy-saved-views">
                   <summary className="flex min-h-11 cursor-pointer items-center px-3 text-sm text-ink-soft">
-                    saved views ({savedViews.length})
+                    saved views ({shownViews.length})
                   </summary>
                   <div className="space-y-3 px-3 pb-3">
                     <form
@@ -1434,11 +1463,11 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
                         save this view
                       </button>
                     </form>
-                    {savedViews.length === 0 ? (
+                    {shownViews.length === 0 ? (
                       <p className="text-sm text-ink-soft">no saved views for {system.title} yet.</p>
                     ) : (
                       <ul className="space-y-1">
-                        {savedViews.map((view) => (
+                        {shownViews.map((view) => (
                           <li key={view.id} className="flex flex-wrap items-center gap-2 text-sm text-ink">
                             <span className="min-w-0 flex-1 break-words">{view.name}</span>
                             <button type="button" className={secondaryButton} disabled={!ready} onClick={() => openView(view)} aria-label={`open the view ${view.name}`}>
@@ -1696,7 +1725,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
                   </ol>
                 </nav>
               ) : (
-                selectedGroup && <p className="text-sm text-ink-soft">{selectedGroup}</p>
+                selectedGroup && <p className="text-sm text-ink-soft">{selectedKind ? `kind of: ${selectedGroup}` : selectedGroup}</p>
               )}
               <p className="mt-1 text-sm text-ink-soft">{nameSourceFor(system)}</p>
               {showSiblings(siblingList.length) && (

@@ -41,7 +41,7 @@ export interface ExportReader {
   user(): PromiseLike<ReadResult>;
 }
 
-export type ExportRpc = 'my_flags' | 'my_sessions';
+export type ExportRpc = 'my_flags' | 'my_sessions' | 'export_my_anatomy_review_queue' | 'export_my_anatomy_views';
 
 export type ExportLoadResult =
   | { ok: true; data: ExportData }
@@ -58,6 +58,8 @@ const LIMITS = {
   review_state: 50_000,
   my_flags: 10_000,
   my_sessions: 10_000,
+  export_my_anatomy_review_queue: 10_000,
+  export_my_anatomy_views: 50,
   identities: 20,
 } as const;
 
@@ -254,6 +256,48 @@ function studyEvent(value: Record<string, unknown>) {
   };
 }
 
+const ANATOMY_ID = /^(FMA[0-9]+|FIX[0-9]+|fixture-[a-z0-9-]+)$/;
+function anatomySystem(value: Record<string, unknown>): string {
+  const v = text(value, 'system_key');
+  if (!/^[a-z0-9-]{1,40}$/.test(v)) throw new Error('invalid anatomy system');
+  return v;
+}
+function anatomyStructure(v: unknown): string {
+  if (typeof v !== 'string' || v.length > 60 || !ANATOMY_ID.test(v)) throw new Error('invalid anatomy structure');
+  return v;
+}
+function anatomyIds(value: Record<string, unknown>, name: string): string[] {
+  const ids = field(value, name);
+  if (!Array.isArray(ids) || ids.length > 1000 || Object.keys(ids).length !== ids.length) throw new Error('invalid anatomy list');
+  const result: string[] = [];
+  for (let index = 0; index < ids.length; index++) {
+    const descriptor = Object.getOwnPropertyDescriptor(ids, String(index));
+    result.push(anatomyStructure(descriptor && 'value' in descriptor ? descriptor.value : undefined));
+  }
+  return result;
+}
+function anatomyVector(v: unknown): number[] {
+  if (!Array.isArray(v) || v.length !== 3 || Object.keys(v).length !== 3) throw new Error('invalid anatomy camera');
+  const result: number[] = [];
+  for (let index = 0; index < 3; index++) {
+    const descriptor = Object.getOwnPropertyDescriptor(v, String(index));
+    const n = descriptor && 'value' in descriptor ? descriptor.value : undefined;
+    if (typeof n !== 'number' || !Number.isFinite(n)) throw new Error('invalid anatomy camera');
+    result.push(n);
+  }
+  return result;
+}
+function anatomyCamera(value: Record<string, unknown>): JsonObject {
+  const camera = row(field(value, 'camera'));
+  if (Object.keys(camera).some((key) => !['position', 'target', 'up'].includes(key))) throw new Error('invalid anatomy camera');
+  const copy: Record<string, number[]> = {
+    position: anatomyVector(field(camera, 'position')),
+    target: anatomyVector(field(camera, 'target')),
+  };
+  if (Object.hasOwn(camera, 'up')) copy.up = anatomyVector(field(camera, 'up'));
+  return copy;
+}
+
 function entries<T>(data: unknown, map: (value: Record<string, unknown>) => T): T[] {
   if (!Array.isArray(data) || Object.keys(data).length !== data.length) throw new Error('invalid export result');
   const mapped: T[] = [];
@@ -362,6 +406,47 @@ export async function loadExport(reader: ExportReader): Promise<ExportLoadResult
         ip: nullableText(r, 'ip'),
       };
     });
+    // The caller's own anatomy lab rows, from the two export functions: cleared review history included.
+    const queueReply = await reader.rpc('export_my_anatomy_review_queue');
+    if (!queueReply || queueReply.error != null || !Array.isArray(queueReply.data) ||
+        queueReply.data.length > LIMITS.export_my_anatomy_review_queue) {
+      throw new Error('anatomy review export read failed');
+    }
+    // The row id is only the read cursor and is not exported.
+    const anatomyReviewQueue = entries(queueReply.data, (r) => {
+      uuid(r, 'id');
+      const missedCount = field(r, 'missed_count');
+      if (typeof missedCount !== 'number' || !Number.isSafeInteger(missedCount) || missedCount < 1) {
+        throw new Error('invalid anatomy miss count');
+      }
+      return {
+        systemKey: anatomySystem(r),
+        structureId: anatomyStructure(field(r, 'structure_id')),
+        missedCount,
+        firstMissedAt: timestamp(r, 'first_missed_at'),
+        lastMissedAt: timestamp(r, 'last_missed_at'),
+        clearedAt: field(r, 'cleared_at') === null ? null : timestamp(r, 'cleared_at'),
+      };
+    });
+    const viewReply = await reader.rpc('export_my_anatomy_views');
+    if (!viewReply || viewReply.error != null || !Array.isArray(viewReply.data) ||
+        viewReply.data.length > LIMITS.export_my_anatomy_views) {
+      throw new Error('anatomy views export read failed');
+    }
+    const anatomyViews = entries(viewReply.data, (r) => {
+      uuid(r, 'id');
+      const selected = field(r, 'selected');
+      return {
+        systemKey: anatomySystem(r),
+        name: text(r, 'name'),
+        camera: anatomyCamera(r),
+        hidden: anatomyIds(r, 'hidden'),
+        faded: anatomyIds(r, 'faded'),
+        selected: selected === null ? null : anatomyStructure(selected),
+        createdAt: timestamp(r, 'created_at'),
+        updatedAt: timestamp(r, 'updated_at'),
+      };
+    });
     const who = await reader.user();
     if (!who || who.error != null) throw new Error('sign-in record read failed');
     const ownAccount = account(who.data);
@@ -379,6 +464,7 @@ export async function loadExport(reader: ExportReader): Promise<ExportLoadResult
       data: {
         profile: profiles[0] ?? {}, signInDetails, account: ownAccount,
         attempts, examPlans, reviewRows, reports, sessions, studyEvents,
+        anatomyReviewQueue, anatomyViews,
       },
     };
   } catch {
@@ -409,6 +495,8 @@ const CURSOR_COLUMN: Record<ExportTable | ExportRpc, string | null> = {
   study_events: 'id',
   my_flags: 'id',
   my_sessions: 'id',
+  export_my_anatomy_review_queue: 'id',
+  export_my_anatomy_views: 'id',
 };
 
 /**
