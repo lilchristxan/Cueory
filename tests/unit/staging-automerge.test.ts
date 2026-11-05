@@ -84,8 +84,10 @@ describe('required checks match the emitted CI workflow', () => {
 
     // The checks job alone omits browser tests. Auto-merge must wait for the
     // verify job, whose exact check-run name is the first required CI check.
-    expect(workflow).toMatch(/verify:\s*\n\s*name:\s*Type check, build and test/u);
+    expect(workflow).toMatch(/verify:\s*\n\s*name:\s*Type check, build and test\s*\n\s*needs:\s*\[checks, browser, engines\]/u);
     expect(workflow).toMatch(/checks:\s*\n\s*name:\s*Type check, build and unit tests/u);
+    expect(workflow).toMatch(/shard:\s*\[1, 2, 3, 4\]/u);
+    expect(workflow).toContain('if [ "$BROWSER" != "success" ]');
     expect(REQUIRED_CHECKS).toContain('Type check, build and test');
     expect(REQUIRED_CHECKS).not.toContain('Type check, build and unit tests');
   });
@@ -553,10 +555,16 @@ describe('checks', () => {
     ]);
   });
 
-  it('blocks on a failed part of the browser tests, which is not itself a required check (Task 308)', () => {
+  it('waits for observed non-required checks and blocks a late browser-shard failure', () => {
+    for (const status of ['queued', 'in_progress']) {
+      expect(checkProblems([...greenChecks(), run('Browser tests, part 2', null, status)])).toEqual([
+        '"Browser tests, part 2" is still running',
+      ]);
+    }
     expect(checkProblems([...greenChecks(), run('Browser tests, part 2', 'failure')])).toEqual([
       '"Browser tests, part 2" ended as failure',
     ]);
+    expect(checkProblems([...greenChecks(), run('Optional diagnostic', 'success')])).toEqual([]);
   });
 
   it('uses the newest run when a check was re-run', () => {
