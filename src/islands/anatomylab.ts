@@ -1348,48 +1348,7 @@ export function compareSyncDue(now: number, last: number | null, interval = COMP
   return last === null || now - last >= interval;
 }
 
-export interface CompareSyncClock {
-  now(): number;
-  setTimeout(run: () => void, ms: number): unknown;
-  clearTimeout(handle: unknown): void;
-}
-
-/**
- * Copies the main camera to the comparison at most every COMPARE_SYNC_MS, and never loses the last one: a request that
- * arrives too soon schedules one trailing copy, which reads the camera when it runs, so the comparison always ends on
- * the camera the main view settled at (a scene that draws only on demand draws no frame after the last move).
- * `cancel` drops a pending copy (close, unmount, lost context); `reset` also makes the next request copy at once.
- */
-export function createCompareSync(copy: () => void, interval = COMPARE_SYNC_MS, clock: CompareSyncClock = {
-  now: () => performance.now(),
-  setTimeout: (run, ms) => setTimeout(run, ms),
-  clearTimeout: (handle) => clearTimeout(handle as ReturnType<typeof setTimeout>),
-}) {
-  let last: number | null = null;
-  let timer: unknown = null;
-  const cancel = () => {
-    if (timer !== null) clock.clearTimeout(timer);
-    timer = null;
-  };
-  return {
-    request() {
-      const now = clock.now();
-      if (compareSyncDue(now, last, interval)) {
-        cancel();
-        last = now;
-        copy();
-      } else if (timer === null) {
-        timer = clock.setTimeout(() => {
-          timer = null;
-          last = clock.now();
-          copy();
-        }, Math.max(0, interval - (now - (last ?? now))));
-      }
-    },
-    cancel,
-    reset() {
-      cancel();
-      last = null;
-    },
-  };
+/** Delay until a trailing camera copy is due, even when the main renderer stops producing frames. */
+export function compareSyncDelay(now: number, last: number | null, interval = COMPARE_SYNC_MS): number {
+  return last === null ? 0 : Math.max(0, interval - (now - last));
 }

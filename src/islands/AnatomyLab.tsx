@@ -45,7 +45,9 @@ import {
   anatomyFailureMessage,
   breadcrumbRows,
   canRedo,
-  createCompareSync,
+  compareSyncDue,
+  compareSyncDelay,
+  COMPARE_SYNC_MS,
   canUndo,
   createHistory,
   creditFor,
@@ -250,7 +252,8 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
   const measureRef = useRef<{ font: string; measure: (s: string) => number; metrics: LabelMetrics } | null>(null);
   const compareCanvasRef = useRef<HTMLCanvasElement>(null);
   const compareSceneRef = useRef<LabScene | null>(null);
-  const compareSyncRef = useRef<ReturnType<typeof createCompareSync> | null>(null);
+  const compareSyncedAt = useRef<number | null>(null);
+  const compareSyncTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // A pending phone consent never survives a body-system change.
   useEffect(() => setBulkPrompt(null), [systemKey]);
@@ -301,8 +304,30 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
     const ids = labelIdsRef.current;
     const setPlaced = setPlacedRef.current;
     // The compare view follows this camera: copied at most every COMPARE_SYNC_MS, so a drag never doubles the work.
-    // A copy that comes too soon is sent once, trailing, so the comparison ends on the camera this view settled at.
-    if (scene) compareSyncRef.current?.request();
+    const compare = compareSceneRef.current;
+    if (scene && compare) {
+      const now = performance.now();
+      if (compareSyncDue(now, compareSyncedAt.current)) {
+        if (compareSyncTimer.current !== null) {
+          clearTimeout(compareSyncTimer.current);
+          compareSyncTimer.current = null;
+        }
+        compareSyncedAt.current = now;
+        compare.applyCameraState(scene.cameraState());
+      } else if (compareSyncTimer.current === null) {
+        // A throttled final frame may be the last render after a quick gesture. Schedule one trailing copy so the
+        // comparison cannot remain at the penultimate camera position when the main renderer goes idle.
+        compareSyncTimer.current = setTimeout(() => {
+          compareSyncTimer.current = null;
+          const latestMain = sceneRef.current;
+          const latestCompare = compareSceneRef.current;
+          if (latestMain && latestCompare === compare) {
+            compareSyncedAt.current = performance.now();
+            latestCompare.applyCameraState(latestMain.cameraState());
+          }
+        }, compareSyncDelay(now, compareSyncedAt.current));
+      }
+    }
     if (!setPlaced) return;
     // Always tell the scene which labels are wanted (none too), so it checks what the camera sees only when needed.
     const points = scene && canvas ? scene.project(ids) : [];
@@ -745,11 +770,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
         if (!live) return;
         scene = createLabScene({ canvas, reducedMotion: prefersReducedMotion(), colors, onRender: () => {} });
         compareSceneRef.current = scene;
-        compareSyncRef.current = createCompareSync(() => {
-          const main = sceneRef.current;
-          const other = compareSceneRef.current;
-          if (main && other) other.applyCameraState(main.cameraState());
-        });
+        compareSyncedAt.current = null;
         return scene
           .load(compareSystem.model.files ?? compareSystem.model.file, compareSystem.structures.map((s) => s.id))
           .then((result) => {
@@ -765,8 +786,10 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
       });
     return () => {
       live = false;
-      compareSyncRef.current?.cancel();
-      compareSyncRef.current = null;
+      if (compareSyncTimer.current !== null) {
+        clearTimeout(compareSyncTimer.current);
+        compareSyncTimer.current = null;
+      }
       compareSceneRef.current = null;
       scene?.dispose();
       scene = null;
@@ -791,8 +814,6 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
       const lostScene = sceneRef.current;
       sceneRef.current = null;
       const lostCompare = compareSceneRef.current;
-      compareSyncRef.current?.cancel();
-      compareSyncRef.current = null;
       compareSceneRef.current = null;
       try {
         lostScene?.dispose();

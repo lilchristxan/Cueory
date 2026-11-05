@@ -2,6 +2,9 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import {
   CAMERA_MOVE_MS,
+  COMPARE_SYNC_MS,
+  compareSyncDelay,
+  compareSyncDue,
   DEFAULT_MODE,
   EMPTY_VISIBILITY,
   FADED_MARK,
@@ -42,6 +45,17 @@ import {
 } from '../../src/islands/anatomylab';
 
 const vis = (hidden: string[] = [], faded: string[] = []): Visibility => ({ hidden: new Set(hidden), faded: new Set(faded) });
+
+describe('compare camera trailing sync', () => {
+  it('schedules a final camera copy when the last rendered frame falls inside the throttle window', () => {
+    expect(COMPARE_SYNC_MS).toBe(50);
+    expect(compareSyncDue(125, 100)).toBe(false);
+    expect(compareSyncDelay(125, 100)).toBe(25);
+    expect(compareSyncDue(150, 100)).toBe(true);
+    expect(compareSyncDelay(150, 100)).toBe(0);
+    expect(compareSyncDelay(125, null)).toBe(0);
+  });
+});
 
 describe('interaction modes (Task 178 study tools)', () => {
   it('starts in navigate mode, and knows both modes', () => {
