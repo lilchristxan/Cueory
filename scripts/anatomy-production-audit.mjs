@@ -146,7 +146,7 @@ function hasArchiveMagic(path) {
     if (hasArchiveMagicHeader(header, includeAsciiMarkers)) return true;
 
     const chunkSize = 64 * 1024;
-    const overlapSize = 19; // Largest GLB header is 20 bytes; retain boundary bytes.
+    const overlapSize = 511; // Retain a full 512-byte TAR header across chunk boundaries.
     let position = 0;
     let carry = Buffer.alloc(0);
     while (position < size) {
