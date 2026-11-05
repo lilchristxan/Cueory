@@ -26,8 +26,8 @@ function setup() {
       asset: { version: '2.0', copyright: 'BodyParts3D, © The Database Center for Life Science licensed under CC Attribution 4.0 International' },
       extensionsRequired: ['EXT_meshopt_compression', 'KHR_mesh_quantization'],
       nodes: ids.map((id, mesh) => ({ name: id, mesh })),
-      meshes: ids.map(() => ({ primitives: [{ indices: 0 }] })),
-      accessors: [{ count: 3 }],
+      meshes: ids.map(() => ({ primitives: [{ indices: 0, attributes: { POSITION: 1 } }] })),
+      accessors: [{ count: 3, componentType: 5123, type: 'SCALAR' }, { count: 3, componentType: 5126, type: 'VEC3' }],
       buffers: [{ byteLength: 4 }],
     };
     const bytes = Buffer.from(JSON.stringify(modelJson), 'utf8');
