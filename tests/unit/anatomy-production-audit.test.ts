@@ -479,6 +479,13 @@ describe('anatomy production artifact audit', () => {
     // Test both content sniffing under misleading suffixes and archive suffixes.
     const hiddenZip = makeStoredZip();
     f.file('downloads/hidden-model.dat', hiddenZip);
+    // Every supported embedded archive format must be recognized after a
+    // harmless prefix and under a non-archive suffix.
+    for (const [format, archive] of embeddedArchiveFixtures()) {
+      f.file(`downloads/embedded-${format}.dat`, Buffer.concat([
+        Buffer.from('ordinary prefix: '), archive,
+      ]));
+    }
     // Streaming ZIP writers use general-purpose bit 3 and put sizes/CRC in
     // a data descriptor after the entry; this is still an archive container.
     f.file('downloads/streaming-hidden-model.dat', makeStoredZip(
@@ -514,6 +521,9 @@ describe('anatomy production artifact audit', () => {
     f.file('docs/ustar-at-header-offset.txt', textTarMarker);
     expect(f.check().errors).toEqual(expect.arrayContaining([
       'archive/container in production output requires explicit review: /downloads/hidden-model.dat',
+      ...embeddedArchiveFixtures().map(([format]) =>
+        `archive/container in production output requires explicit review: /downloads/embedded-${format}.dat`,
+      ),
       'archive/container in production output requires explicit review: /downloads/streaming-hidden-model.dat',
       'archive/container in production output requires explicit review: /downloads/hidden-model.bin',
       'archive/container in production output requires explicit review: /downloads/prefixed-tar.dat',
