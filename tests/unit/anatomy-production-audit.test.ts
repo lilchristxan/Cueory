@@ -162,6 +162,40 @@ describe('anatomy production artifact audit', () => {
     f.file('pagefind/index/en_safe_glb_mention.pf_index', gzipSync(Buffer.concat([prefix, safeMentionCbor])));
     expect(f.check().errors).toEqual([]);
 
+    // Draft IDs in a valid compressed fragment must be rejected, including
+    // JSON-escaped content and nested metadata/anchor strings. Fixture IDs are
+    // never real anatomy and must also stay out of the public search index.
+    const draftFragment = setup();
+    const leakedFragment = JSON.stringify({
+      url: '/', content: 'FMA999991', word_count: 1,
+      filters: {}, meta: { source: 'FIX001' }, anchors: ['FMA999991'],
+    }).replace('FMA999991', '\\u0046MA999991');
+    draftFragment.file('pagefind/fragment/en_draft_ids.pf_fragment',
+      gzipSync(Buffer.concat([prefix, Buffer.from(leakedFragment)])));
+    expect(draftFragment.check().errors).toContain(
+      'archive/container in production output requires explicit review: /pagefind/fragment/en_draft_ids.pf_fragment',
+    );
+
+    // CBOR text strings in the word index are public searchable content too.
+    const draftIndex = setup();
+    const draftWord = Buffer.from('FMA999991');
+    const draftWordCbor = Buffer.concat([Buffer.from([0x81, 0x69]), draftWord]);
+    draftIndex.file('pagefind/index/en_draft_ids.pf_index', gzipSync(Buffer.concat([prefix, draftWordCbor])));
+    expect(draftIndex.check().errors).toContain(
+      'archive/container in production output requires explicit review: /pagefind/index/en_draft_ids.pf_index',
+    );
+
+    // A reviewed/approved ID remains valid and is not confused with a draft.
+    const approvedFragment = setup();
+    approvedFragment.file('pagefind/fragment/en_approved_id.pf_fragment', gzipSync(Buffer.concat([
+      prefix,
+      Buffer.from(JSON.stringify({
+        url: '/', content: 'FMA999992', word_count: 1,
+        filters: {}, meta: {}, anchors: [],
+      })),
+    ])));
+    expect(approvedFragment.check().errors).toEqual([]);
+
     f.file('pagefind/wasm.en_hidden_archive.pagefind', wasmWithZip);
     f.file('pagefind/wasm.en_ustar_word.pagefind', wasmWithUstarWord);
     f.file('pagefind/fragment/en_corrupt.pf_fragment', Buffer.from([0x1f, 0x8b, 0x08, 0x00]));
