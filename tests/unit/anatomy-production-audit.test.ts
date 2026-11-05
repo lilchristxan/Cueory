@@ -109,11 +109,13 @@ describe('anatomy production artifact audit', () => {
     const wasm = gzipSync(Buffer.concat([prefix, Buffer.from([0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00])]));
     f.file('pagefind/fragment/en_test.pf_fragment', fragment);
     f.file('pagefind/index/en_test.pf_index', gzip);
+    f.file('pagefind/filter/en_test.pf_filter', gzip);
     f.file('pagefind/pagefind.en_test.pf_meta', gzip);
     f.file('pagefind/wasm.en.pagefind', wasm);
     // Pagefind also accepts already-decompressed data with the same marker.
     f.file('pagefind/fragment/en_raw_test.pf_fragment', Buffer.concat([prefix, Buffer.from(JSON.stringify({ url: '/', content: 'safe raw search text' }))]));
     f.file('pagefind/index/en_raw_test.pf_index', Buffer.concat([prefix, Buffer.from('raw index bytes')]));
+    f.file('pagefind/filter/en_raw_test.pf_filter', Buffer.concat([prefix, Buffer.from('raw filter bytes')]));
     f.file('pagefind/wasm.en_raw.pagefind', Buffer.concat([prefix, Buffer.from([0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00])]));
     expect(f.check().errors).toEqual([]);
 
@@ -123,6 +125,7 @@ describe('anatomy production artifact audit', () => {
     // Even a correctly prefixed Pagefind envelope must not hide a model/container payload.
     f.file('pagefind/index/en_prefixed_model.pf_index', gzipSync(Buffer.concat([prefix, Buffer.from('glTF' + 'x'.repeat(32))])));
     f.file('pagefind/index/en_hidden_archive.pf_index', gzipSync(Buffer.concat([prefix, Buffer.from([0x50, 0x4b, 0x03, 0x04, 0x00])])));
+    f.file('pagefind/filter/en_hidden_model.pf_filter', gzipSync(Buffer.concat([prefix, Buffer.from('glTF' + 'x'.repeat(32))])));
     f.file('pagefind/index/en_late_archive.pf_index', gzipSync(Buffer.concat([prefix, Buffer.alloc(700, 0x61), Buffer.from([0x50, 0x4b, 0x03, 0x04, 0x00])])));
     f.file('pagefind/index/en_raw_prefixed_model.pf_index', Buffer.concat([prefix, Buffer.from('glTF' + 'x'.repeat(32))]));
     f.file('pagefind/fragment/en_hidden_zstd.pf_fragment', Buffer.from([0x28, 0xb5, 0x2f, 0xfd, 0x00]));
@@ -133,6 +136,7 @@ describe('anatomy production artifact audit', () => {
       'archive/container in production output requires explicit review: /pagefind/fragment/en_hidden_model.pf_fragment',
       'archive/container in production output requires explicit review: /pagefind/index/en_prefixed_model.pf_index',
       'archive/container in production output requires explicit review: /pagefind/index/en_hidden_archive.pf_index',
+      'archive/container in production output requires explicit review: /pagefind/filter/en_hidden_model.pf_filter',
       'archive/container in production output requires explicit review: /pagefind/index/en_late_archive.pf_index',
       'archive/container in production output requires explicit review: /pagefind/index/en_raw_prefixed_model.pf_index',
       'archive/container in production output requires explicit review: /pagefind/fragment/en_hidden_zstd.pf_fragment',
