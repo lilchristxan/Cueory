@@ -13,7 +13,7 @@ const MODEL_URL = /^\/models\/anatomy\/[a-z0-9][a-z0-9_-]*\.glb$/;
 // Match the canonical BodyParts3D IDs accepted by src/content.config.ts.
 const STRUCTURE_ID = /^(?:FMA|BP)\d+[a-z]*$/;
 const STRUCTURE_TOKEN = /\b(?:FMA|BP)\d+[a-z]*\b/g;
-const BODYPARTS3D_URL_PREFIX = 'https://dbarchive.biosciencedbc.jp/data/bodyparts3d/';
+const BODYPARTS3D_URL_PREFIX = 'https://dbarchive.biosciencedbc.jp/data/bodyparts3d/LATEST/';
 // Fail closed on any publicly shipped 3D geometry, including misplaced copies and raw source meshes.
 const MODEL_ASSET = /\.(?:glb|gltf|obj|stl)$/i;
 // Scan all ordinary published text assets, not just the anatomy page or hashed JavaScript chunks.
