@@ -583,6 +583,21 @@ export function auditAnatomyProduction(distDir, contentDir) {
         throw new Error('invalid or oversized GLB');
       }
       const bytes = readFileSync(fd);
+      // Validate the exact bytes that Wrangler would upload. A GLB's JSON and
+      // meshopt ranges can be intact while its compressed BIN bytes are corrupt.
+      // The checked-in public model is separately decoded in CI. Astro must
+      // copy it into dist without modifying the reviewed payload.
+      const checkedInPath = join(resolve(content, '..', '..', 'public'), url.slice(1));
+      const referenceFd = openSync(checkedInPath, fsConstants.O_RDONLY | fsConstants.O_NOFOLLOW);
+      try {
+        const reference = fstatSync(referenceFd);
+        if (!reference.isFile() || reference.size !== stats.size ||
+            !readFileSync(referenceFd).equals(bytes)) {
+          throw new Error('built approved GLB bytes differ from checked-in source');
+        }
+      } finally {
+        closeSync(referenceFd);
+      }
       const json = parseApprovedGlb(bytes);
       const expectedNames = manifest.labels.map((label) => label.id);
       const nodeNames = json.nodes.map((node) => node.name);

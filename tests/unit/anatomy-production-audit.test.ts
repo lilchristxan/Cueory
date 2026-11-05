@@ -15,6 +15,8 @@ function setup() {
   const content = join(root, 'content', 'visuals');
   mkdirSync(dist, { recursive: true });
   mkdirSync(content, { recursive: true });
+  const sourceModels = join(root, 'public', 'models', 'anatomy');
+  mkdirSync(sourceModels, { recursive: true });
   const file = (path: string, body: string | Buffer = '') => {
     const dest = join(dist, path);
     mkdirSync(join(dest, '..'), { recursive: true });
@@ -86,7 +88,9 @@ function setup() {
       })),
     }));
     if (status === 'approved' && urls[0]?.startsWith('/models/anatomy/')) {
-      file(urls[0].slice(1), makeApprovedGlb(ids));
+      const original = makeApprovedGlb(ids);
+      file(urls[0].slice(1), original);
+      writeFileSync(join(root, 'public', urls[0].slice(1)), original);
     }
   };
   system('draft', 'draft', ['/models/anatomy/draft.glb'], ['FMA999991']);
@@ -96,6 +100,18 @@ function setup() {
 }
 
 describe('anatomy production artifact audit', () => {
+  it('rejects corrupted built compressed bytes despite unchanged GLB metadata', () => {
+    const f = setup();
+    const builtPath = join(f.dist, 'models', 'anatomy', 'approved.glb');
+    const corrupt = Buffer.from(readFileSync(builtPath));
+    // A one-byte BIN change preserves file size, JSON, node IDs and citation.
+    corrupt[corrupt.length - 1] ^= 1;
+    writeFileSync(builtPath, corrupt);
+    expect(f.check().errors).toContain(
+      'approved model failed built GLB geometry, identity or credit verification: /models/anatomy/approved.glb',
+    );
+  });
+
   it('rejects CSS hex-escaped draft and fixture IDs in published stylesheets', () => {
     const f = setup();
     f.file('_astro/escaped-anatomy.css', String.raw`.draft::before { content: "\46 MA999991"; } .fixture::after { content: "\46 IX001"; }`);

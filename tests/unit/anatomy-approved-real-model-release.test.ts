@@ -32,8 +32,10 @@ describe('production anatomy audit against all real model files', () => {
     const dist = join(root, 'dist');
     const content = join(root, 'content', 'visuals');
     const distModels = join(dist, 'models', 'anatomy');
+    const checkedInModels = join(root, 'public', 'models', 'anatomy');
     mkdirSync(content, { recursive: true });
     mkdirSync(distModels, { recursive: true });
+    mkdirSync(checkedInModels, { recursive: true });
     try {
       writeFileSync(join(dist, 'index.html'), '<!doctype html><html><body>Test-only site</body></html>');
 
@@ -47,8 +49,10 @@ describe('production anatomy audit against all real model files', () => {
 
         const temporaryManifest = join(content, `anatomy-${system}.json`);
         const temporaryModel = join(distModels, file);
+        const temporarySource = join(checkedInModels, file);
         writeFileSync(temporaryManifest, JSON.stringify({ ...stored, status: 'approved' }));
-        copyFileSync(new URL(file, modelDirectory), temporaryModel);
+        copyFileSync(new URL(file, modelDirectory), temporarySource);
+        copyFileSync(temporarySource, temporaryModel);
 
         const result = auditAnatomyProduction(dist, content);
         expect(result.errors, `${system}: ${result.errors.join(' | ')}`).toEqual([]);
@@ -58,6 +62,7 @@ describe('production anatomy audit against all real model files', () => {
 
         unlinkSync(temporaryManifest);
         unlinkSync(temporaryModel);
+        unlinkSync(temporarySource);
       }
     } finally {
       rmSync(root, { recursive: true, force: true });
