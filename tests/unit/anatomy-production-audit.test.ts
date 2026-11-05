@@ -420,6 +420,41 @@ describe('anatomy production artifact audit', () => {
     );
   });
 
+  it('rejects corrupted compressed meshopt bytes in the built GLB while preserving its JSON and framing', () => {
+    const f = setup();
+    const manifest = JSON.parse(readFileSync(new URL('../../content/visuals/anatomy-kidneys.json', import.meta.url), 'utf8'));
+    expect(manifest.status).toBe('draft');
+    manifest.status = 'approved';
+    writeFileSync(join(f.content, 'anatomy-kidneys.json'), JSON.stringify(manifest));
+
+    const filename = 'models/anatomy/kidneys.glb';
+    const source = readFileSync(new URL('../../public/models/anatomy/kidneys.glb', import.meta.url));
+    const jsonLength = source.readUInt32LE(12);
+    const json = JSON.parse(source.toString('utf8', 20, 20 + jsonLength));
+    const compressed = json.bufferViews
+      .map((view: { extensions?: { EXT_meshopt_compression?: { buffer: number; byteOffset: number; byteLength: number } } }) =>
+        view.extensions?.EXT_meshopt_compression)
+      .find((view: { buffer: number; byteOffset: number; byteLength: number } | undefined) =>
+        view?.buffer === 0 && Number.isSafeInteger(view.byteOffset) &&
+        Number.isSafeInteger(view.byteLength) && view.byteLength > 0);
+    expect(compressed).toBeDefined();
+
+    // The GLB BIN chunk starts after the 12-byte header and 8-byte JSON chunk header.
+    // Corrupt the middle of a real compressed payload, not JSON metadata or fallback bytes.
+    const payloadOffset = 28 + jsonLength + compressed.byteOffset + Math.floor(compressed.byteLength / 2);
+    expect(payloadOffset).toBeLessThan(source.length);
+    const corrupted = Buffer.from(source);
+    corrupted[payloadOffset] = (corrupted[payloadOffset] ?? 0) ^ 0xff;
+    expect(corrupted.subarray(0, 28 + jsonLength)).toEqual(source.subarray(0, 28 + jsonLength));
+    expect(corrupted.readUInt32LE(8)).toBe(source.readUInt32LE(8));
+
+    f.file(filename, corrupted);
+    writeFileSync(join(f.dist, '..', 'public', filename), source);
+    expect(f.check().errors).toContain(
+      'approved model failed built GLB geometry, identity or credit verification: /models/anatomy/kidneys.glb',
+    );
+  });
+
   it('parses all eleven real draft GLBs with the exact release decoder without approving them', () => {
     const modelDir = new URL('../../public/models/anatomy/', import.meta.url);
     const files = readdirSync(modelDir).filter((name) => name.endsWith('.glb')).sort();
