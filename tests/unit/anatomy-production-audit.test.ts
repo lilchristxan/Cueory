@@ -602,9 +602,11 @@ describe('anatomy production artifact audit', () => {
     const hiddenZip = makeStoredZip();
     f.file('downloads/hidden-model.dat', hiddenZip);
     // POSIX permits newlines in filenames; ZIP byte-string names remain valid.
-    f.file('downloads/control-name-hidden-model.dat', makeStoredZip(
-      'hidden\\nmodel.bin', Buffer.from('archive with control-character filename'),
-    ));
+    const controlNameZip = makeStoredZip(
+      'hidden\nmodel.bin', Buffer.from('archive with control-character filename'),
+    );
+    expect(controlNameZip.includes(Buffer.from([0x0a]))).toBe(true);
+    f.file('downloads/control-name-hidden-model.dat', controlNameZip);
     // Every supported embedded archive format must be recognized after a
     // harmless prefix and under a non-archive suffix.
     for (const [format, archive] of embeddedArchiveFixtures()) {
