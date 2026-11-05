@@ -126,6 +126,8 @@ describe('anatomy production artifact audit', () => {
     f.file('pagefind/index/en_late_archive.pf_index', gzipSync(Buffer.concat([prefix, Buffer.alloc(700, 0x61), Buffer.from([0x50, 0x4b, 0x03, 0x04, 0x00])])));
     f.file('pagefind/index/en_raw_prefixed_model.pf_index', Buffer.concat([prefix, Buffer.from('glTF' + 'x'.repeat(32))]));
     f.file('pagefind/fragment/en_hidden_zstd.pf_fragment', Buffer.from([0x28, 0xb5, 0x2f, 0xfd, 0x00]));
+    // Bytes after a valid gzip member must not be silently ignored by gunzip.
+    f.file('pagefind/index/en_trailing_bytes.pf_index', Buffer.concat([gzipSync(Buffer.concat([prefix, Buffer.from('safe index payload')])), Buffer.from('glTF' + 'x'.repeat(32))]));
     expect(f.check().errors).toEqual(expect.arrayContaining([
       'archive/container in production output requires explicit review: /pagefind/fragment/en_corrupt.pf_fragment',
       'archive/container in production output requires explicit review: /pagefind/fragment/en_hidden_model.pf_fragment',
@@ -134,6 +136,7 @@ describe('anatomy production artifact audit', () => {
       'archive/container in production output requires explicit review: /pagefind/index/en_late_archive.pf_index',
       'archive/container in production output requires explicit review: /pagefind/index/en_raw_prefixed_model.pf_index',
       'archive/container in production output requires explicit review: /pagefind/fragment/en_hidden_zstd.pf_fragment',
+      'archive/container in production output requires explicit review: /pagefind/index/en_trailing_bytes.pf_index',
     ]));
   });
 
