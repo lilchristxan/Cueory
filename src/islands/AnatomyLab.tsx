@@ -15,7 +15,7 @@ import AnatomyLabCover from './AnatomyLabCover';
 import { breadcrumb, siblings } from './anatomyhierarchy';
 import { boxesFromMeshes, expandNearby, nearbyStructures } from './anatomynearby';
 import { canSpeak, speak, stop as stopSpeaking } from './anatomyspeech';
-import { createAnatomyStudy, queueFromQuizMisses, type AnatomyStudyClient, type ReviewQueueRow, type SavedViewRow } from './anatomystudy';
+import { createAnatomyStudy, createSavedViewsRequestGuard, queueFromQuizMisses, type AnatomyStudyClient, type ReviewQueueRow, type SavedViewRow } from './anatomystudy';
 import { getSessionState, getSupabase } from './supabaseclient';
 import { STRUCTURE_PAGE_SIZE, visibleStructureGroups } from './anatomy-list-window';
 import { anatomyTriangleNote } from './anatomybudget';
@@ -190,6 +190,8 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
     return systemsForView(baseSystems, phase === 'open' || phase === 'error', wantsFixture ? fixture : null);
   }, [baseSystems, fixture, phase]);
   const [systemKey, setSystemKey] = useState(systems[0]?.key ?? '');
+  const activeSystemKeyRef = useRef(systemKey);
+  activeSystemKeyRef.current = systemKey;
   const [load, setLoad] = useState<SystemLoad>({ state: 'loading' });
   const [initialRetry, setInitialRetry] = useState(0);
   const [hidden, setHidden] = useState<ReadonlySet<string>>(new Set());
@@ -215,6 +217,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
   const [bulkPrompt, setBulkPrompt] = useState<{ systemKey: string; files: number } | null>(null);
   // Study tools (Task 178, integration): the review queue and saved views exist only for a signed-in student.
   const study = useMemo(defaultStudy, []);
+  const savedViewsRequestGuard = useMemo(createSavedViewsRequestGuard, []);
   const [signedIn, setSignedIn] = useState(false);
   const [reviewRows, setReviewRows] = useState<ReviewQueueRow[]>([]);
   const [savedViews, setSavedViews] = useState<SavedViewRow[]>([]);
@@ -658,16 +661,26 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
   }, [signedIn, study]);
   const refreshSavedViews = useCallback((key: string) => {
     if (!signedIn) return;
+    const request = savedViewsRequestGuard.begin(key);
     void study.views(key).then((outcome) => {
+      if (!savedViewsRequestGuard.isCurrent(request, activeSystemKeyRef.current)) return;
       if (outcome.ok) setSavedViews(outcome.value);
       else setAnnounce(outcome.message);
-    }).catch(() => { /* a failed read never breaks the lab */ });
-  }, [signedIn, study]);
+    }).catch(() => {
+      if (savedViewsRequestGuard.isCurrent(request, activeSystemKeyRef.current)) {
+        setAnnounce('could not load saved views. please try again.');
+      }
+    });
+  }, [signedIn, study, savedViewsRequestGuard]);
   useEffect(() => {
+    // Clear old-system rows before the next request. Cleanup retires pending reads on switch or unmount.
+    savedViewsRequestGuard.invalidate();
+    setSavedViews([]);
     if (!studyReady || !system) return;
     refreshReviewQueue();
     refreshSavedViews(system.key);
-  }, [studyReady, system?.key, refreshReviewQueue, refreshSavedViews]);
+    return () => { savedViewsRequestGuard.invalidate(); };
+  }, [studyReady, system?.key, refreshReviewQueue, refreshSavedViews, savedViewsRequestGuard]);
 
   /** Records one missed structure (Task 178 decision: at the moment of the first wrong pick or "show me"). */
   const recordMiss = useCallback((structureId: string) => {
@@ -971,7 +984,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
               {systems.map((choice) => (
                 <button key={choice.key} type="button" className={secondaryButton}
                   aria-pressed={choice.key === system.key}
-                  onClick={() => { setSystemKey(choice.key); setQuery(''); setTextLimit(TEXT_FALLBACK_BATCH); }}>
+                  onClick={() => { activeSystemKeyRef.current = choice.key; savedViewsRequestGuard.invalidate(); setSavedViews([]); setSystemKey(choice.key); setQuery(''); setTextLimit(TEXT_FALLBACK_BATCH); }}>
                   {choice.title}
                 </button>
               ))}
@@ -1062,6 +1075,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
   const crumbs = selected ? breadcrumbRows(breadcrumb(system.structures, selected), system.structures, selected) : [];
   const siblingList = selected ? siblings(system.structures, selected) : [];
   const queued = queuedForSystem(reviewRows, system.key);
+  const currentSavedViews = savedViews.filter((view) => view.system_key === system.key);
   const reviewPool = reviewQuizPool(queued, foundSet);
   // The whole body is never a comparison: it is several models at once, past the per-model budget twice over.
   const compareOptions = systems.filter((s) => s.key !== system.key && s.key !== WHOLE_BODY_KEY && !s.model.layerFiles);
@@ -1108,17 +1122,19 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
   const saveView = () => {
     const scene = sceneRef.current;
     if (!scene || !ready || savingView) return;
+    const key = system.key;
     const name = viewName.trim();
     setSavingView(true);
-    void study.saveView({ systemKey: system.key, name, camera: scene.cameraState(), hidden, faded, selected })
+    void study.saveView({ systemKey: key, name, camera: scene.cameraState(), hidden, faded, selected })
       .then((outcome) => {
+        if (activeSystemKeyRef.current !== key) return;
         if (!outcome.ok) {
           setAnnounce(outcome.message);
           return;
         }
         setViewName('');
         setAnnounce(`saved the view "${name}".`);
-        refreshSavedViews(system.key);
+        refreshSavedViews(key);
       })
       .catch(() => setAnnounce('something went wrong — please try again.'))
       .finally(() => setSavingView(false));
@@ -1126,7 +1142,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
 
   const openView = (view: SavedViewRow) => {
     const scene = sceneRef.current;
-    if (!scene || !ready) return;
+    if (!scene || !ready || view.system_key !== system.key) return;
     const camera = savedCamera(view.camera);
     if (!camera) {
       setAnnounce('this view could not be read. delete it and save it again.');
@@ -1139,14 +1155,19 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
   };
 
   const deleteView = (view: SavedViewRow) => {
+    const key = system.key;
+    if (view.system_key !== key) return;
     void study.deleteView(view.id).then((outcome) => {
+      if (activeSystemKeyRef.current !== key) return;
       if (!outcome.ok) {
         setAnnounce(outcome.message);
         return;
       }
-      setSavedViews((views) => views.filter((v) => v.id !== view.id));
+      setSavedViews((views) => views.filter((v) => !(v.id === view.id && v.system_key === key)));
       setAnnounce(`deleted the view "${view.name}".`);
-    }).catch(() => setAnnounce('something went wrong — please try again.'));
+    }).catch(() => {
+      if (activeSystemKeyRef.current === key) setAnnounce('something went wrong — please try again.');
+    });
   };
 
   return (
@@ -1190,7 +1211,10 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
                   setExportNote('');
                   setLabelNote([]);
                   setAnnounce('');
-                  setSystemKey(s.key);
+                  activeSystemKeyRef.current = s.key;
+                   savedViewsRequestGuard.invalidate();
+                   setSavedViews([]);
+                   setSystemKey(s.key);
                 }}
                 className={secondaryButton}
               >
@@ -1411,7 +1435,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
               {studyReady && (
                 <details className="rounded-md border border-line" data-testid="anatomy-saved-views">
                   <summary className="flex min-h-11 cursor-pointer items-center px-3 text-sm text-ink-soft">
-                    saved views ({savedViews.length})
+                    saved views ({currentSavedViews.length})
                   </summary>
                   <div className="space-y-3 px-3 pb-3">
                     <form
@@ -1434,11 +1458,11 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
                         save this view
                       </button>
                     </form>
-                    {savedViews.length === 0 ? (
+                    {currentSavedViews.length === 0 ? (
                       <p className="text-sm text-ink-soft">no saved views for {system.title} yet.</p>
                     ) : (
                       <ul className="space-y-1">
-                        {savedViews.map((view) => (
+                        {currentSavedViews.map((view) => (
                           <li key={view.id} className="flex flex-wrap items-center gap-2 text-sm text-ink">
                             <span className="min-w-0 flex-1 break-words">{view.name}</span>
                             <button type="button" className={secondaryButton} disabled={!ready} onClick={() => openView(view)} aria-label={`open the view ${view.name}`}>

@@ -186,6 +186,19 @@ export function anatomyStudyMessage(error: unknown): string {
 
 export type Outcome<T> = { ok: true; value: T } | { ok: false; message: string; cause?: unknown };
 
+/** Retires saved-view reads when a newer request or system switch supersedes them. */
+export interface SavedViewsRequest { readonly systemKey: string; readonly generation: number }
+export function createSavedViewsRequestGuard() {
+  let generation = 0;
+  return {
+    begin(systemKey: string): SavedViewsRequest { return { systemKey, generation: ++generation }; },
+    invalidate(): void { generation += 1; },
+    isCurrent(request: SavedViewsRequest, activeSystemKey: string): boolean {
+      return request.generation === generation && request.systemKey === activeSystemKey;
+    },
+  };
+}
+
 export interface AnatomyStudy {
   /** Records misses for the signed-in student, in batches of 50. Resolves with how many were recorded; `0` when signed out or accounts are off. */
   recordMisses(systemKey: string, structureIds: readonly string[]): Promise<Outcome<number>>;

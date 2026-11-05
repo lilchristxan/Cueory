@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   anatomyStudyMessage,
   createAnatomyStudy,
+  createSavedViewsRequestGuard,
   isViewCamera,
   missBatches,
   queueFromQuizMisses,
@@ -25,6 +26,33 @@ function fakeClient(options: { signedIn?: boolean; replies?: Partial<Record<stri
   } as unknown as AnatomyStudyClient;
   return { client, rpc, study: createAnatomyStudy(async () => client) };
 }
+
+describe('saved-view request ordering', () => {
+  it('ignores an older system response that resolves after the newer system response', async () => {
+    const guard = createSavedViewsRequestGuard();
+    let activeSystem = 'heart';
+    const applied: string[] = [];
+    let resolveOld!: (value: string) => void;
+    let resolveNew!: (value: string) => void;
+    const oldResponse = new Promise<string>((resolve) => { resolveOld = resolve; });
+    const newResponse = new Promise<string>((resolve) => { resolveNew = resolve; });
+    const refresh = (key: string, response: Promise<string>) => {
+      const request = guard.begin(key);
+      return response.then((value) => {
+        if (guard.isCurrent(request, activeSystem)) applied.push(value);
+      });
+    };
+    const oldLoad = refresh('heart', oldResponse);
+    activeSystem = 'lungs';
+    guard.invalidate();
+    const newLoad = refresh('lungs', newResponse);
+    resolveNew('lungs saved views');
+    await newLoad;
+    resolveOld('heart saved views');
+    await oldLoad;
+    expect(applied).toEqual(['lungs saved views']);
+  });
+});
 
 describe('queueFromQuizMisses', () => {
   it('collects the targets of wrong first picks and "show me", each once, and skips right answers and unfinished questions', () => {
