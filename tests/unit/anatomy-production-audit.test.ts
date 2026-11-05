@@ -176,6 +176,32 @@ describe('anatomy production artifact audit', () => {
       'archive/container in production output requires explicit review: /pagefind/fragment/en_draft_ids.pf_fragment',
     );
 
+    // The same protection applies to uncompressed Pagefind envelopes.
+    const rawDraftFragment = setup();
+    rawDraftFragment.file('pagefind/fragment/en_raw_draft_id.pf_fragment', Buffer.concat([
+      prefix,
+      Buffer.from(JSON.stringify({
+        url: '/', content: 'FMA999991', word_count: 1,
+        filters: {}, meta: {}, anchors: [],
+      })),
+    ]));
+    expect(rawDraftFragment.check().errors).toContain(
+      'archive/container in production output requires explicit review: /pagefind/fragment/en_raw_draft_id.pf_fragment',
+    );
+
+    // Fixture IDs are independently blocked even when no draft FMA/BP ID is present.
+    const fixtureFragment = setup();
+    fixtureFragment.file('pagefind/fragment/en_fixture_id.pf_fragment', gzipSync(Buffer.concat([
+      prefix,
+      Buffer.from(JSON.stringify({
+        url: '/', content: 'FIX001', word_count: 1,
+        filters: {}, meta: {}, anchors: [],
+      })),
+    ])));
+    expect(fixtureFragment.check().errors).toContain(
+      'archive/container in production output requires explicit review: /pagefind/fragment/en_fixture_id.pf_fragment',
+    );
+
     // CBOR text strings in the word index are public searchable content too.
     const draftIndex = setup();
     const draftWord = Buffer.from('FMA999991');
