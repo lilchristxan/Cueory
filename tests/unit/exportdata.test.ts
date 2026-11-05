@@ -841,8 +841,8 @@ describe('anatomy lab account data (Task 178)', () => {
       anatomyReviewQueue: [{ ...review, id: hidden, userId: hidden, user_id: hidden }],
       anatomyViews: [{ ...view, id: hidden, user_id: hidden }],
     });
-    expect(result.anatomyReviewQueue).toEqual([review]);
-    expect(result.anatomyViews).toEqual([view]);
+    expect(result.anatomyReviewQueue).toEqual([{ ...review, firstMissedAt: '2026-11-01T08:00:00.000Z', lastMissedAt: '2026-11-02T09:30:00.000Z' }]);
+    expect(result.anatomyViews).toEqual([{ ...view, createdAt: '2026-11-01T08:00:00.000Z', updatedAt: '2026-11-02T09:30:00.000Z' }]);
     expect(result.dropped).toEqual([
       'anatomyReviewQueue[0].id', 'anatomyReviewQueue[0].userId', 'anatomyReviewQueue[0].user_id',
       'anatomyViews[0].id', 'anatomyViews[0].user_id',
@@ -855,7 +855,7 @@ describe('anatomy lab account data (Task 178)', () => {
     ['anatomyReviewQueue', { ...review, lastMissedAt: 'not-a-date' }],
     ['anatomyReviewQueue', { ...review, systemKey: '../outside' }],
     ['anatomyReviewQueue', { ...review, structureId: 'private-id' }],
-    ['anatomyViews', { ...view, name: 'bad\\nname' }],
+    ['anatomyViews', { ...view, name: 'bad\nname' }],
     ['anatomyViews', { ...view, camera: { position: [1, 2], target: [0, 0, 0] } }],
     ['anatomyViews', { ...view, camera: { position: [1, 2, 3], target: [0, 0, 0], extra: true } }],
     ['anatomyViews', { ...view, hidden: ['FMA1', 'FMA1'] }],
