@@ -144,6 +144,9 @@ describe('anatomy production artifact audit', () => {
     // Even a correctly prefixed Pagefind envelope must not hide a model/container payload.
     f.file('pagefind/index/en_prefixed_model.pf_index', gzipSync(Buffer.concat([prefix, Buffer.from('glTF' + 'x'.repeat(32))])));
     f.file('pagefind/index/en_hidden_archive.pf_index', gzipSync(Buffer.concat([prefix, Buffer.from([0x50, 0x4b, 0x03, 0x04, 0x00])])));
+    // Structurally valid WordIndex -> PackedWord -> UTF-8 text string containing ZIP magic.
+    const textStringZip = Buffer.from([0x81, 0x81, 0x83, 0x64, 0x50, 0x4b, 0x03, 0x04, 0x80, 0x80]);
+    f.file('pagefind/index/en_text_string_archive.pf_index', gzipSync(Buffer.concat([prefix, textStringZip])));
     f.file('pagefind/filter/en_hidden_model.pf_filter', gzipSync(Buffer.concat([prefix, Buffer.from('glTF' + 'x'.repeat(32))])));
     // A valid CBOR array with a ZIP byte string after 700 bytes must still be scanned.
     const lateZip = Buffer.from([0x50, 0x4b, 0x03, 0x04, 0x00]);
@@ -172,6 +175,7 @@ describe('anatomy production artifact audit', () => {
       'archive/container in production output requires explicit review: /pagefind/fragment/en_glb_json.pf_fragment',
       'archive/container in production output requires explicit review: /pagefind/index/en_prefixed_model.pf_index',
       'archive/container in production output requires explicit review: /pagefind/index/en_hidden_archive.pf_index',
+      'archive/container in production output requires explicit review: /pagefind/index/en_text_string_archive.pf_index',
       'archive/container in production output requires explicit review: /pagefind/filter/en_hidden_model.pf_filter',
       'archive/container in production output requires explicit review: /pagefind/index/en_late_archive.pf_index',
       'archive/container in production output requires explicit review: /pagefind/index/en_embedded_model.pf_index',
