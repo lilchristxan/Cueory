@@ -447,12 +447,21 @@ export function auditAnatomyProduction(distDir, contentDir) {
       let triangles = 0;
       for (const mesh of json.meshes) {
         for (const primitive of mesh.primitives) {
-          if (primitive.mode !== undefined && primitive.mode !== 4 ||
+          const indexAccessor = json.accessors[primitive.indices];
+          const positionAccessor = json.accessors[primitive.attributes?.POSITION];
+          if ((primitive.mode !== undefined && primitive.mode !== 4) ||
               !Number.isInteger(primitive.indices) ||
-              !Number.isSafeInteger(json.accessors[primitive.indices]?.count) ||
-              json.accessors[primitive.indices].count < 3 ||
-              json.accessors[primitive.indices].count % 3 !== 0) {
-            throw new Error('invalid triangle index accessor');
+              !Number.isSafeInteger(indexAccessor?.count) ||
+              indexAccessor.count < 3 ||
+              indexAccessor.count % 3 !== 0 ||
+              ![5121, 5123, 5125].includes(indexAccessor.componentType) ||
+              indexAccessor.type !== 'SCALAR' ||
+              !Number.isInteger(primitive.attributes?.POSITION) ||
+              !Number.isSafeInteger(positionAccessor?.count) ||
+              positionAccessor.count < 3 ||
+              positionAccessor.componentType !== 5126 ||
+              positionAccessor.type !== 'VEC3') {
+            throw new Error('invalid mesh primitive or glTF accessors');
           }
           triangles += json.accessors[primitive.indices].count / 3;
         }
