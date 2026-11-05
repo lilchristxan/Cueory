@@ -84,9 +84,12 @@ export async function runAutomerge({
         // Look again right before merging: the merge call goes to whatever base the pull request has now, and only
         // the head commit can be pinned in it. Anything that moved since the checks means: wait for the next event.
         const now = await gh.pull(n);
-        if (now.state !== 'open' || now.base.ref !== BASE_BRANCH || now.head.sha !== pull.head.sha) {
+        if (now.state !== 'open' || now.draft || now.base.ref !== BASE_BRANCH ||
+            now.head.sha !== pull.head.sha || now.head.repo?.full_name !== repo) {
           done = 'merge refused';
-          decision.reasons.push(`changed while it was being checked (now ${now.state}, into ${now.base.ref})`);
+          if (now.draft) decision.reasons.push('pull request became a draft while it was being checked');
+          else if (now.head.repo?.full_name !== repo) decision.reasons.push('head repository changed while it was being checked');
+          else decision.reasons.push(`changed while it was being checked (now ${now.state}, into ${now.base.ref})`);
         } else if (!pull.base.sha || now.base.sha !== pull.base.sha) {
           // A clean PR head is not enough if staging moved after the merge-test checks were gathered.
           done = 'merge refused';
@@ -96,15 +99,26 @@ export async function runAutomerge({
           done = 'merge refused';
           decision.reasons.push(`labelled ${NEEDS_CHRISTIAN_LABEL} while it was being checked`);
         } else {
-          try {
-            await gh.merge(n, pull.head.sha);
-            done = 'merged';
-          } catch (e) {
-            // 405: not mergeable after all; 409: a new commit arrived since the checks. Both wait for the next event.
-            if (e instanceof GitHubError && (e.status === 405 || e.status === 409)) {
-              done = 'merge refused';
-              decision.reasons.push(e.message);
-            } else throw e;
+          // Checks and Codex comments can change without the PR head changing (for example, a rerun or a
+          // newly queued diagnostic). Re-read both at the last possible point before the merge.
+          const [latestChecks, latestComments] = await Promise.all([gh.checks(now.head.sha), gh.comments(n)]);
+          const latestDecision = decide({
+            repo, mode, pr: now, files, dependencies, checks: latestChecks, comments: latestComments,
+          });
+          if (latestDecision.action !== 'merge') {
+            done = 'merge refused';
+            decision.reasons.push(...latestDecision.reasons.map((reason) => `latest gate recheck: ${reason}`));
+          } else {
+            try {
+              await gh.merge(n, pull.head.sha);
+              done = 'merged';
+            } catch (e) {
+              // 405: not mergeable after all; 409: a new commit arrived since the checks. Both wait for the next event.
+              if (e instanceof GitHubError && (e.status === 405 || e.status === 409)) {
+                done = 'merge refused';
+                decision.reasons.push(e.message);
+              } else throw e;
+            }
           }
         }
       }
