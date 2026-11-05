@@ -8,6 +8,7 @@ import { closeSync, constants as fsConstants, existsSync, fstatSync, lstatSync, 
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { gunzipSync } from 'node:zlib';
+import { gunzipSync } from 'node:zlib';
 
 const ANATOMY_FILE = /^anatomy-[a-z0-9-]+\.json$/;
 const MODEL_URL = /^\/models\/anatomy\/[a-z0-9][a-z0-9_-]*\.glb$/;
@@ -85,7 +86,18 @@ function hasArchiveMagicBytes(bytes) {
   return bytes.indexOf(Buffer.from('ustar', 'ascii')) !== -1;
 }
 
-function hasArchiveMagic(path, allowPagefindGzip = false) {
+function hasArchiveMagicBytes(header) {
+  const starts = (bytes) => header.length >= bytes.length && header.subarray(0, bytes.length).equals(Buffer.from(bytes));
+  if (starts([0x50, 0x4b, 0x03, 0x04]) || starts([0x50, 0x4b, 0x05, 0x06]) ||
+      starts([0x50, 0x4b, 0x07, 0x08]) || starts([0x1f, 0x8b]) ||
+      starts([0x42, 0x5a, 0x68]) || starts([0xfd, 0x37, 0x7a, 0x58, 0x5a, 0x00]) ||
+      starts([0x28, 0xb5, 0x2f, 0xfd]) || starts([0x37, 0x7a, 0xbc, 0xaf, 0x27, 0x1c]) ||
+      starts([0x52, 0x61, 0x72, 0x21, 0x1a, 0x07]) || starts([0x4d, 0x53, 0x43, 0x46]) ||
+      starts([0x21, 0x3c, 0x61, 0x72, 0x63, 0x68, 0x3e, 0x0a])) return true;
+  return header.length >= 262 && header.toString('ascii', 257, 262) === 'ustar';
+}
+
+function hasArchiveMagic(path) {
   if (!Number.isInteger(fsConstants.O_NOFOLLOW)) throw new Error('this platform cannot safely audit symbolic links');
   const fd = openSync(path, fsConstants.O_RDONLY | fsConstants.O_NOFOLLOW);
   try {
@@ -93,41 +105,150 @@ function hasArchiveMagic(path, allowPagefindGzip = false) {
     const size = fstatSync(fd).size;
     const header = Buffer.alloc(Math.min(size, 512));
     if (header.length) readSync(fd, header, 0, header.length, 0);
-    const isGzip = header.length >= 2 && header[0] === 0x1f && header[1] === 0x8b;
-    if (allowPagefindGzip) {
-      // Pagefind's runtime accepts either an already-decompressed payload or
-      // a gzip stream. Both must contain its 12-byte marker, and checks must
-      // inspect bytes after that marker rather than trusting a filename.
-      // See Pagefind's coupled_search.ts decompress() implementation.
-      if (size > 64 * 1024 * 1024) return true;
-      try {
-        const expanded = isGzip
-          ? gunzipSync(readFileSync(fd), { maxOutputLength: 64 * 1024 * 1024, rejectGarbageAfterEnd: true })
-          : readFileSync(fd);
-        const signature = Buffer.from('pagefind_dcd', 'ascii');
-        if (expanded.length <= signature.length ||
-            !expanded.subarray(0, signature.length).equals(signature)) return true;
-        const payload = expanded.subarray(signature.length);
-        // Search the entire bounded Pagefind payload, not only its header:
-        // a container or GLB can be padded after the format marker.
-        if (hasArchiveMagicBytes(payload)) return true;
-        // Fragments are JSON parsed by Pagefind after decompression.
-        if (path.endsWith('.pf_fragment')) {
-          const fragment = JSON.parse(payload.toString('utf8'));
-          if (!fragment || typeof fragment !== 'object' || Array.isArray(fragment)) return true;
-        }
-        // The Pagefind worker bundle is WebAssembly after the same prefix.
-        if (path.endsWith('.pagefind') &&
-            !payload.subarray(0, 4).equals(Buffer.from([0x00, 0x61, 0x73, 0x6d]))) return true;
-        return false;
-      } catch {
-        return true;
-      }
-    }
     return hasArchiveMagicBytes(header);
   } finally {
     closeSync(fd);
   }
+}
+
+/** Read bytes from a regular file through its opened descriptor, without following symlinks. */
+function readRegularBytesNoFollow(path) {
+  if (!Number.isInteger(fsConstants.O_NOFOLLOW)) throw new Error('this platform cannot safely audit symbolic links');
+  const fd = openSync(path, fsConstants.O_RDONLY | fsConstants.O_NOFOLLOW);
+  try {
+    if (!fstatSync(fd).isFile()) throw new Error('not a regular file');
+    return readFileSync(fd);
+  } finally {
+    closeSync(fd);
+  }
+}
+
+/** Detect a fully framed GLB embedded in a Pagefind payload, not merely the text "glTF". */
+function containsGlbHeader(bytes) {
+  const magic = Buffer.from('glTF', 'ascii');
+  for (let offset = bytes.indexOf(magic); offset >= 0; offset = bytes.indexOf(magic, offset + 1)) {
+    if (offset + 20 > bytes.length) continue;
+    const version = bytes.readUInt32LE(offset + 4);
+    const totalLength = bytes.readUInt32LE(offset + 8);
+    const jsonLength = bytes.readUInt32LE(offset + 12);
+    const jsonType = bytes.readUInt32LE(offset + 16);
+    if (version === 2 && totalLength >= 20 && offset + totalLength <= bytes.length &&
+        jsonLength >= 2 && jsonLength <= totalLength - 20 && jsonType === 0x4e4f534a) return true;
+  }
+  return false;
+}
+
+/** Parse one definite-length CBOR value, rejecting embedded model/archive byte strings. */
+function validPagefindCbor(bytes) {
+  let offset = 0;
+  let values = 0;
+  const readArgument = (additional) => {
+    if (additional < 24) return additional;
+    if (additional === 24) {
+      if (offset + 1 > bytes.length) return null;
+      return bytes[offset++];
+    }
+    if (additional === 25) {
+      if (offset + 2 > bytes.length) return null;
+      const value = bytes.readUInt16BE(offset);
+      offset += 2;
+      return value;
+    }
+    if (additional === 26) {
+      if (offset + 4 > bytes.length) return null;
+      const value = bytes.readUInt32BE(offset);
+      offset += 4;
+      return value;
+    }
+    if (additional === 27) {
+      if (offset + 8 > bytes.length) return null;
+      const value = bytes.readBigUInt64BE(offset);
+      offset += 8;
+      return value <= BigInt(Number.MAX_SAFE_INTEGER) ? Number(value) : null;
+    }
+    return null;
+  };
+  const parseValue = (depth) => {
+    if (depth > 64 || ++values > 1_000_000 || offset >= bytes.length) return false;
+    const initial = bytes[offset++];
+    const major = initial >> 5;
+    const additional = initial & 31;
+    if (additional === 31) return false;
+    const argument = readArgument(additional);
+    if (argument === null) return false;
+    if (major === 0 || major === 1 || major === 7) return true;
+    if (major === 2 || major === 3) {
+      if (!Number.isSafeInteger(argument) || argument < 0 || offset + argument > bytes.length) return false;
+      const value = bytes.subarray(offset, offset + argument);
+      if (major === 2 && (containsGlbHeader(value) || hasArchiveMagicBytes(value))) return false;
+      if (major === 3) {
+        try {
+          new TextDecoder('utf-8', { fatal: true }).decode(value);
+        } catch {
+          return false;
+        }
+      }
+      offset += argument;
+      return true;
+    }
+    if (major === 4) {
+      if (argument > 1_000_000) return false;
+      for (let i = 0; i < argument; i += 1) if (!parseValue(depth + 1)) return false;
+      return true;
+    }
+    if (major === 5) {
+      if (argument > 1_000_000) return false;
+      for (let i = 0; i < argument * 2; i += 1) if (!parseValue(depth + 1)) return false;
+      return true;
+    }
+    if (major === 6) return parseValue(depth + 1);
+    return false;
+  };
+  const rootMajor = bytes.length ? bytes[0] >> 5 : -1;
+  return (rootMajor === 4 || rootMajor === 5) && parseValue(0) && offset === bytes.length;
+}
+
+const PAGEFIND_SIGNATURE = Buffer.from('pagefind_dcd', 'ascii');
+const PAGEFIND_GZIP_PATH = /^\/pagefind\/(?:fragment\/[^/]+\.pf_fragment|index\/[^/]+\.pf_index|filter\/[^/]+\.pf_filter|[^/]+\.pf_meta)$/i;
+const PAGEFIND_WASM_PATH = /^\/pagefind\/wasm\.[^/]+\.pagefind$/i;
+const MAX_PAGEFIND_DECOMPRESSED_BYTES = 128 * 1024 * 1024;
+
+function pagefindArtifactKind(url) {
+  if (PAGEFIND_GZIP_PATH.test(url)) return 'gzip';
+  if (PAGEFIND_WASM_PATH.test(url)) return 'wasm';
+  return null;
+}
+
+/** Validate Pagefind's actual generated formats; a matching filename alone is never trusted. */
+function validPagefindArtifact(path, kind) {
+  const bytes = readRegularBytesNoFollow(path);
+  if (kind === 'wasm') {
+    return bytes.length >= 8 &&
+      bytes.subarray(0, 4).equals(Buffer.from([0x00, 0x61, 0x73, 0x6d])) &&
+      bytes.readUInt32LE(4) === 1 &&
+      WebAssembly.validate(bytes) &&
+      !containsGlbHeader(bytes);
+  }
+  if (bytes.length < 2 || bytes[0] !== 0x1f || bytes[1] !== 0x8b) return false;
+  let decoded;
+  try {
+    decoded = gunzipSync(bytes, { maxOutputLength: MAX_PAGEFIND_DECOMPRESSED_BYTES });
+  } catch {
+    return false;
+  }
+  if (decoded.length <= PAGEFIND_SIGNATURE.length ||
+      !decoded.subarray(0, PAGEFIND_SIGNATURE.length).equals(PAGEFIND_SIGNATURE)) return false;
+  const payload = decoded.subarray(PAGEFIND_SIGNATURE.length);
+  if (containsGlbHeader(payload)) return false;
+  if (path.endsWith('.pf_fragment')) {
+    try {
+      const fragment = JSON.parse(payload.toString('utf8'));
+      return fragment !== null && typeof fragment === 'object' && !Array.isArray(fragment);
+    } catch {
+      return false;
+    }
+  }
+  return validPagefindCbor(payload);
 }
 
 /**
@@ -640,12 +761,10 @@ export function auditAnatomyProduction(distDir, contentDir) {
   for (const path of linked) errors.push(`symbolic link in production output: ${toUrl(path)}`);
   for (const path of builtFiles) {
     const url = toUrl(path);
-    // Pagefind's generated index fragments are gzip-compressed search text,
-    // not opaque user archives. Keep this exception to its exact output paths
-    // and signature; ZIP/TAR and archive suffixes remain rejected everywhere.
-    const pagefindIndex = /^\/pagefind\/(?:fragment\/[^/]+\.pf_fragment|index\/[^/]+\.pf_index|filter\/[^/]+\.pf_filter|[^/]+\.pf_meta|wasm\.[^/]+\.pagefind)$/i.test(url);
-    if (ARCHIVE_ASSET.test(path) || hasArchiveMagic(path, pagefindIndex)) {
-      errors.push(`archive/container in production output requires explicit review: ${url}`);
+    const pagefindKind = pagefindArtifactKind(url);
+    if (ARCHIVE_ASSET.test(path) ||
+        (pagefindKind ? !validPagefindArtifact(path, pagefindKind) : hasArchiveMagic(path))) {
+      errors.push(\`archive/container in production output requires explicit review: \${url}\`);
     }
   }
   const shipped = [...new Set(builtFiles
