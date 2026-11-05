@@ -227,6 +227,7 @@ describe('anatomy production artifact audit', () => {
     const checksum = tar.reduce((sum, byte) => sum + byte, 0);
     tar.write(checksum.toString(8).padStart(6, '0') + '\\0 ', 148, 'ascii');
     f.file('downloads/hidden-model.bin', tar);
+    f.file('downloads/prefixed-tar.dat', Buffer.concat([Buffer.alloc(64 * 1024 - 100, 0x61), tar]));
     f.file('downloads/unrecognized.zip', Buffer.from('opaque archive payload'));
     // Long prefixes and chunk boundaries must not hide a valid GLB or ZIP signature.
     const approvedGlb = readFileSync(join(f.dist, 'models', 'anatomy', 'approved.glb'));
@@ -242,6 +243,7 @@ describe('anatomy production artifact audit', () => {
     expect(f.check().errors).toEqual(expect.arrayContaining([
       'archive/container in production output requires explicit review: /downloads/hidden-model.dat',
       'archive/container in production output requires explicit review: /downloads/hidden-model.bin',
+      'archive/container in production output requires explicit review: /downloads/prefixed-tar.dat',
       'archive/container in production output requires explicit review: /downloads/unrecognized.zip',
       'archive/container in production output requires explicit review: /downloads/prefixed-model.bin',
       'archive/container in production output requires explicit review: /downloads/prefixed-archive.dat',
