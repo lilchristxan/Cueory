@@ -188,6 +188,8 @@ function validPagefindCbor(bytes) {
         } catch {
           return false;
         }
+        // UTF-8-valid control bytes can still carry ZIP/TAR or GLB signatures.
+        if (containsGlbHeader(value) || hasArchiveMagicBytes(value)) return false;
       }
       offset += argument;
       return true;
