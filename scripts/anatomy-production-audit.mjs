@@ -104,14 +104,53 @@ export function parseApprovedGlb(bytes) {
       !Array.isArray(json.accessors) || !Array.isArray(json.extensionsRequired)) {
     throw new Error('required model metadata missing');
   }
-  // Published GLBs are self-contained. Reject additional external buffers that
-  // can escape the audited file through glTF URIs.
+  // gltfpack's EXT_meshopt_compression output uses a real GLB BIN at buffer 0
+  // and a VIRTUAL fallback buffer at index 1 for the uncompressed bufferViews.
+  // Khronos permits this required-extension fallback to have no stored bytes.
+  // Reject external or arbitrary extra buffers, but do not reject this real format.
   const buffer = json.buffers?.[0];
-  if (!Array.isArray(json.buffers) || json.buffers.length !== 1 ||
+  const fallback = json.buffers?.[1];
+  const taggedFallback = json.buffers?.length === 2 &&
+    fallback?.extensions?.EXT_meshopt_compression?.fallback === true &&
+    fallback.uri === undefined &&
+    Number.isSafeInteger(fallback.byteLength) && fallback.byteLength > 0 &&
+    json.extensionsRequired.includes('EXT_meshopt_compression');
+  if (!Array.isArray(json.buffers) ||
+      (json.buffers.length !== 1 && !taggedFallback) ||
       !buffer || buffer.uri !== undefined || binLength === null ||
       !Number.isSafeInteger(buffer.byteLength) || buffer.byteLength <= 0 ||
       binLength < buffer.byteLength || binLength > buffer.byteLength + 3) {
     throw new Error('GLB BIN buffer missing or incomplete');
+  }
+  // The fallback is never fetched. Its views must be meshopt-compressed,
+  // and every compressed byte range must stay inside the actual embedded BIN.
+  if (taggedFallback) {
+    if (!Array.isArray(json.bufferViews) || !json.bufferViews.length) {
+      throw new Error('GLB meshopt fallback views are missing');
+    }
+    for (const view of json.bufferViews) {
+      const holder = json.buffers[view?.buffer];
+      const offset = view?.byteOffset ?? 0;
+      const compression = view?.extensions?.EXT_meshopt_compression;
+      if (!holder || !Number.isSafeInteger(offset) || offset < 0 ||
+          !Number.isSafeInteger(view.byteLength) || view.byteLength <= 0 ||
+          offset + view.byteLength > holder.byteLength ||
+          (view.buffer === 1 && !compression)) {
+        throw new Error('GLB fallback view is invalid');
+      }
+      if (compression) {
+        const compressedOffset = compression.byteOffset ?? 0;
+        if (compression.buffer !== 0 ||
+            !Number.isSafeInteger(compressedOffset) || compressedOffset < 0 ||
+            !Number.isSafeInteger(compression.byteLength) || compression.byteLength <= 0 ||
+            compressedOffset + compression.byteLength > buffer.byteLength ||
+            !Number.isSafeInteger(compression.count) || compression.count <= 0 ||
+            !Number.isSafeInteger(compression.byteStride) || compression.byteStride <= 0 ||
+            view.byteLength !== compression.count * compression.byteStride) {
+          throw new Error('GLB compressed buffer view is invalid');
+        }
+      }
+    }
   }
   // Every typed mesh accessor must resolve to the single embedded BIN buffer.
   // Validate both ordinary glTF byte ranges and meshopt-compressed byte ranges.
