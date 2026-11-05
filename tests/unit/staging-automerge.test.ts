@@ -767,6 +767,8 @@ function fakeGitHub(
     endlessComments = false,
     /** What GET /pulls/N returns from its second call on (someone changed the pull request mid-run). */
     later = undefined as Partial<PullRequest> | undefined,
+    /** What GET /pulls/N returns after the final checks and comment reads. */
+    final = undefined as Partial<PullRequest> | undefined,
     /** File texts by "ref:path", for GET /contents. */
     contents = {} as Record<string, string>,
     /** Number of staging commits missing from the checked PR head. */
@@ -794,7 +796,9 @@ function fakeGitHub(
     if (method === 'GET' && (m = path.match(/^\/pulls\/(\d+)$/))) {
       const n = Number(m[1]);
       seen.set(n, (seen.get(n) ?? 0) + 1);
-      return json(seen.get(n)! > 1 && later ? { ...pr(m[1]!)!.pr, ...later } : pr(m[1]!)!.pr);
+      const snapshot = seen.get(n)! > 2 && final ? { ...pr(m[1]!)!.pr, ...later, ...final }
+        : seen.get(n)! > 1 && later ? { ...pr(m[1]!)!.pr, ...later } : pr(m[1]!)!.pr;
+      return json(snapshot);
     }
     if (method === 'GET' && (m = path.match(/^\/pulls\/(\d+)\/files$/))) return json(pr(m[1]!)!.files.map((filename) => ({ filename })));
     if (method === 'GET' && path.startsWith('/commits/')) {
@@ -953,6 +957,17 @@ describe('the auto-merge run', () => {
     const outcomes = await runAutomerge({ gh, repo: REPO, mode: 'launched', dryRun: false, log: () => {} });
     expect(outcomes[0]!.done).toBe('merge refused');
     expect(outcomes[0]!.decision.reasons.at(-1)).toBe('pull request became a draft while it was being checked');
+    expect(calls.filter((c) => c.method !== 'GET')).toEqual([]);
+  });
+
+  it('refuses to merge if staging advances while the final checks and comments are being read', async () => {
+    const { gh, calls } = fakeGitHub(
+      { 7: { pr: pull(), files: ['src/x.ts'] } },
+      { final: { base: { ref: 'staging', sha: 'staging-new' } } },
+    );
+    const outcomes = await runAutomerge({ gh, repo: REPO, mode: 'launched', dryRun: false, log: () => {} });
+    expect(outcomes[0]!.done).toBe('merge refused');
+    expect(outcomes[0]!.decision.reasons).toContain('staging changed during the final gate recheck; retry with fresh checks');
     expect(calls.filter((c) => c.method !== 'GET')).toEqual([]);
   });
 
