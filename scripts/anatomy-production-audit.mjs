@@ -288,7 +288,7 @@ export function auditAnatomyProduction(distDir, contentDir) {
             // A valid URL with a name from another structure is not a safe citation.
             const quote = sourceQuotes.get(label.source);
             const original = typeof quote === 'string'
-              ? /^((?:FMA|BP)\d+[a-z]*)\s+(BP\d+[a-z]*)\s+(.+)$/.exec(quote)
+              ? /^(FMA\d+[a-z]*)\s+(BP\d+[a-z]*)\s+(.+)$/.exec(quote)
               : null;
             if (!original || (original[1] !== label.id && original[2] !== label.id) || original[3] !== label.text) {
               errors.push(`${name}: approved label ${label.id} does not match its cited source row`);
