@@ -76,6 +76,34 @@ describe('postbuild anatomy release audit', () => {
       });
       expect(preview.status).toBe(0);
       expect(preview.stdout).toContain('skipped for explicitly draft-enabled preview');
+
+      // A real release-PR build still fails closed on draft geometry even
+      // when its fixture flag was accidentally enabled.
+      const releaseWithDraft = run({
+        WORKERS_CI: '', WORKERS_CI_BRANCH: '',
+        GITHUB_EVENT_NAME: 'pull_request', GITHUB_BASE_REF: 'main',
+        GITHUB_REF: 'refs/pull/12/merge', CUEORY_ANATOMY_DRAFTS: '1',
+      });
+      expect(releaseWithDraft.status).toBe(1);
+      expect(releaseWithDraft.stderr).toContain('unapproved model exposed in production');
+
+      // Playwright's webServer uses env -u on the three GitHub release
+      // variables. Execute that same subprocess boundary, not only a
+      // source-string assertion, so browser fixtures remain testable.
+      const browserInRelease = spawnSync('env', [
+        '-u', 'GITHUB_EVENT_NAME', '-u', 'GITHUB_BASE_REF', '-u', 'GITHUB_REF',
+        process.execPath, script,
+      ], {
+        cwd: root,
+        env: {
+          ...process.env, WORKERS_CI: '', WORKERS_CI_BRANCH: '',
+          GITHUB_EVENT_NAME: 'pull_request', GITHUB_BASE_REF: 'main',
+          GITHUB_REF: 'refs/pull/12/merge', CUEORY_ANATOMY_DRAFTS: '1',
+        },
+        encoding: 'utf8',
+      });
+      expect(browserInRelease.status).toBe(0);
+      expect(browserInRelease.stdout).toContain('skipped for explicitly draft-enabled preview');
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
