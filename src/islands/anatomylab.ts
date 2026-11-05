@@ -1253,3 +1253,92 @@ export function recallLegend(
     .map((id) => ({ id, number: numbers.get(id)!, name: revealed ? (names.get(id) ?? id) : null }))
     .sort((a, b) => a.number - b.number);
 }
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Study tools wired into the lab (Task 178, integration): breadcrumb rows, misses worth recording, saved-view state
+// ---------------------------------------------------------------------------------------------------------------------
+
+export interface BreadcrumbRow {
+  /** The name, exactly as the source file writes it. */
+  name: string;
+  /** The structure with that exact name, when the list has one: the row is then a button that selects it. */
+  id: string | null;
+  /** True for the last row: the selected structure itself. */
+  current: boolean;
+}
+
+/**
+ * The breadcrumb's rows from root to the selected structure: `trail` is `breadcrumb()`'s output (names, root first,
+ * the structure's own name last). An ancestor whose exact name is a structure in the list gets that structure's id.
+ */
+export function breadcrumbRows(trail: readonly string[], structures: readonly Pick<AnatomyStructure, 'id' | 'text'>[], selected: string): BreadcrumbRow[] {
+  const byText = new Map<string, string>();
+  for (const structure of structures) if (!byText.has(structure.text)) byText.set(structure.text, structure.id);
+  return trail.map((name, index) => {
+    const current = index === trail.length - 1;
+    const id = current ? selected : (byText.get(name) ?? null);
+    return { name, id: id === selected && !current ? null : id, current };
+  });
+}
+
+/** Siblings are listed only when there are between MIN and MAX of them: one is no list, dozens is the list itself. */
+export const SIBLINGS_MIN = 2;
+export const SIBLINGS_MAX = 30;
+
+export function showSiblings(count: number): boolean {
+  return count >= SIBLINGS_MIN && count <= SIBLINGS_MAX;
+}
+
+/**
+ * The structure id to record as a miss when a quiz question goes from `before` to `after`: the first wrong pick, or
+ * "show me" before any pick (the Task 178 decision: a miss is recorded the moment it happens, not at the round's end,
+ * so closing the tab mid-round loses nothing). A second wrong pick, a right pick, "show me" after a wrong pick, or a
+ * question already scored records nothing. Null when there is nothing to record.
+ */
+export function missToRecord(before: Pick<QuizState, 'target' | 'scored'>, after: Pick<QuizState, 'target' | 'feedback' | 'scored'>): string | null {
+  if (!before.target || before.scored || !after.scored || after.target !== before.target) return null;
+  const kind = after.feedback?.kind;
+  return kind === 'wrong' || kind === 'shown' ? before.target : null;
+}
+
+/** The queued (uncleared) structure ids for one system, most recent miss first, as the review list shows them. */
+export function queuedForSystem(
+  rows: readonly { system_key: string; structure_id: string; cleared_at: string | null; last_missed_at: string }[],
+  systemKey: string,
+): string[] {
+  return rows
+    .filter((row) => row.system_key === systemKey && row.cleared_at === null)
+    .sort((a, b) => (a.last_missed_at < b.last_missed_at ? 1 : a.last_missed_at > b.last_missed_at ? -1 : 0))
+    .map((row) => row.structure_id);
+}
+
+/** The queued structures a "find it" round over the queue can ask about: those the loaded model has. */
+export function reviewQuizPool(queued: readonly string[], found: ReadonlySet<string>): string[] {
+  return queued.filter((id) => found.has(id));
+}
+
+/** A saved view's camera as the scene applies it: `up` defaults to +Y when the row has none. */
+export function savedCamera(camera: { position: readonly number[]; target: readonly number[]; up?: readonly number[] }): {
+  position: [number, number, number]; target: [number, number, number]; up: [number, number, number];
+} | null {
+  const triple = (v: readonly number[] | undefined): v is [number, number, number] =>
+    Array.isArray(v) && v.length === 3 && v.every((n) => typeof n === 'number' && Number.isFinite(n));
+  if (!triple(camera.position) || !triple(camera.target)) return null;
+  const up: [number, number, number] = triple(camera.up) ? [camera.up[0], camera.up[1], camera.up[2]] : [0, 1, 0];
+  return { position: [...camera.position], target: [...camera.target], up };
+}
+
+/** The visibility a saved view puts back: ids the loaded model has, hidden winning over faded. */
+export function savedVisibility(view: { hidden: readonly string[]; faded: readonly string[] }, found: ReadonlySet<string>): Visibility {
+  const hidden = new Set(view.hidden.filter((id) => found.has(id)));
+  const faded = new Set(view.faded.filter((id) => found.has(id) && !hidden.has(id)));
+  return { hidden, faded };
+}
+
+/** How often the compare view copies the camera to the second scene: at most once per this many milliseconds. */
+export const COMPARE_SYNC_MS = 50;
+
+/** True when a camera copy is due: the first ever, or COMPARE_SYNC_MS after the last. */
+export function compareSyncDue(now: number, last: number | null, interval = COMPARE_SYNC_MS): boolean {
+  return last === null || now - last >= interval;
+}
