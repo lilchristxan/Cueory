@@ -877,7 +877,7 @@ describe('anatomy lab account data (Task 178)', () => {
   });
 
   it('keeps explicit empty anatomy CSV files in the account export bundle', () => {
-    expect(file({}, 'anatomyReviewQueue')).toBe('systemKey,structureId,missedCount,firstMissedAt,lastMissedAt,clearedAt\\r\\n');
-    expect(file({}, 'anatomyViews')).toBe('systemKey,name,camera,hidden,faded,selected,createdAt,updatedAt\\r\\n');
+    expect(file({}, 'anatomyReviewQueue')).toBe('systemKey,structureId,missedCount,firstMissedAt,lastMissedAt,clearedAt\r\n');
+    expect(file({}, 'anatomyViews')).toBe('systemKey,name,camera,hidden,faded,selected,createdAt,updatedAt\r\n');
   });
 });
