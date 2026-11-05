@@ -16,3 +16,6 @@ Release hold: all 11 models remain `draft`. Require exact-head type/build/unit, 
 
 
 2026-11-05 Pagefind payload-scan hardening: a correctly prefixed Pagefind gzip envelope could still hide a container after the first 512 decompressed bytes. The audit now scans the entire bounded decompressed payload, and a regression places a ZIP signature after a 700-byte prefix. Exact-head CI/review remain required; do not treat the test-only fixtures as publication evidence.
+
+
+2026-11-05 Pagefind audit clarification: the current validator caps each Pagefind source file at 64 MiB and decompressed payloads at 128 MiB (the earlier 64 MiB input/output wording was imprecise). It requires the Pagefind envelope, rejects trailing/concatenated gzip data, validates fragment JSON shape, parses bounded definite-length CBOR for index/filter/metadata shards, scans both CBOR byte and UTF-8 text strings for embedded model/container signatures, validates the WASM module, and scans its custom-section bytes for archive signatures. The regression suite includes valid-WASM-with-ZIP, CBOR text-string ZIP, embedded GLB, late ZIP, malformed/trailing gzip and ordinary production image false-positive coverage. Exact latest-head CI, independent Codex review, founder approval, and manual acceptance remain mandatory.
