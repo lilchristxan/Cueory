@@ -113,6 +113,13 @@ describe('anatomy production artifact audit', () => {
     expect(f.check().errors).toContain(
       'archive/container in production output requires explicit review: /pagefind/fragment/en_hidden.pf_fragment',
     );
+
+    // Pagefind's exact output path must not exempt Zstandard containers:
+    // a disguised GLB or another archive could otherwise hide behind .pf_fragment.
+    f.file('pagefind/fragment/en_zstd_hidden.pf_fragment', Buffer.from([0x28, 0xb5, 0x2f, 0xfd, 0x00]));
+    expect(f.check().errors).toContain(
+      'archive/container in production output requires explicit review: /pagefind/fragment/en_zstd_hidden.pf_fragment',
+    );
   });
 
   it('rejects archive containers that could conceal unapproved model assets', () => {
