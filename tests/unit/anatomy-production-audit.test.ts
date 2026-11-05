@@ -28,7 +28,7 @@ function setup() {
       // Fake, test-only evidence. Never used as an anatomy quotation.
       sources: ids.map((id) => ({
         id: `bp3d-${id}`,
-        quote: `${id} BP999999 fixture label`,
+        quote: id.startsWith('BP') ? `FMA999999 ${id} fixture label` : `${id} BP999999 fixture label`,
         book: 'BodyParts3D',
         section: 'partof_parts_list_e.txt, Release 4.0',
         url: 'https://dbarchive.biosciencedbc.jp/data/bodyparts3d/LATEST/partof_parts_list_e.txt',
