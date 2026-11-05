@@ -101,23 +101,31 @@ function setup() {
 }
 
 describe('anatomy production artifact audit', () => {
-  it('validates Pagefind gzip streams and rejects compressed models or nested archives', () => {
+  it('validates Pagefind gzip envelopes and rejects compressed models or nested archives', () => {
     const f = setup();
-    const gzip = gzipSync(Buffer.from('synthetic Pagefind index payload'));
-    f.file('pagefind/fragment/en_test.pf_fragment', gzip);
+    const prefix = Buffer.from('pagefind_dcd', 'ascii');
+    const gzip = gzipSync(Buffer.concat([prefix, Buffer.from('synthetic Pagefind index payload')]));
+    const fragment = gzipSync(Buffer.concat([prefix, Buffer.from(JSON.stringify({ url: '/', content: 'safe search text' }))]));
+    const wasm = gzipSync(Buffer.concat([prefix, Buffer.from([0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00])]));
+    f.file('pagefind/fragment/en_test.pf_fragment', fragment);
     f.file('pagefind/index/en_test.pf_index', gzip);
     f.file('pagefind/pagefind.en_test.pf_meta', gzip);
-    // Pagefind's WASM runtime is raw WebAssembly, not a gzip-compressed index.
-    f.file('pagefind/wasm.en.pagefind', Buffer.from([0x00, 0x61, 0x73, 0x6d]));
+    f.file('pagefind/wasm.en.pagefind', wasm);
     expect(f.check().errors).toEqual([]);
 
     f.file('pagefind/fragment/en_corrupt.pf_fragment', Buffer.from([0x1f, 0x8b, 0x08, 0x00]));
+    // A raw compressed GLB is not a Pagefind data envelope.
     f.file('pagefind/fragment/en_hidden_model.pf_fragment', gzipSync(Buffer.from('glTF' + 'x'.repeat(32))));
-    f.file('pagefind/index/en_hidden_archive.pf_index', gzipSync(Buffer.from([0x50, 0x4b, 0x03, 0x04, 0x00])));
+    // Even a correctly prefixed Pagefind envelope must not hide a model/container payload.
+    f.file('pagefind/index/en_prefixed_model.pf_index', gzipSync(Buffer.concat([prefix, Buffer.from('glTF' + 'x'.repeat(32))])));
+    f.file('pagefind/index/en_hidden_archive.pf_index', gzipSync(Buffer.concat([prefix, Buffer.from([0x50, 0x4b, 0x03, 0x04, 0x00])])));
+    f.file('pagefind/fragment/en_hidden_zstd.pf_fragment', Buffer.from([0x28, 0xb5, 0x2f, 0xfd, 0x00]));
     expect(f.check().errors).toEqual(expect.arrayContaining([
       'archive/container in production output requires explicit review: /pagefind/fragment/en_corrupt.pf_fragment',
       'archive/container in production output requires explicit review: /pagefind/fragment/en_hidden_model.pf_fragment',
+      'archive/container in production output requires explicit review: /pagefind/index/en_prefixed_model.pf_index',
       'archive/container in production output requires explicit review: /pagefind/index/en_hidden_archive.pf_index',
+      'archive/container in production output requires explicit review: /pagefind/fragment/en_hidden_zstd.pf_fragment',
     ]));
   });
 
