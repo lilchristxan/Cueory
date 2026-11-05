@@ -312,11 +312,11 @@ describe('anatomy production artifact audit', () => {
       expect(json.buffers, system).toHaveLength(2);
       expect(json.buffers[1].extensions?.EXT_meshopt_compression?.fallback, system).toBe(true);
       expect(json.bufferViews.length, system).toBeGreaterThan(0);
-      expect(json.bufferViews.every((view) =>
+      expect(json.bufferViews.every((view: { buffer: number, extensions?: { EXT_meshopt_compression?: { buffer: number } } }) =>
         view.buffer === 1 && view.extensions?.EXT_meshopt_compression?.buffer === 0
       ), system).toBe(true);
-      expect(json.nodes.map((node) => node.name).sort(), system)
-        .toEqual(manifest.labels.map((label) => label.id).sort());
+      expect(json.nodes.map((node: { name: string }) => node.name).sort(), system)
+        .toEqual(manifest.labels.map((label: { id: string }) => label.id).sort());
     }
   });
 
