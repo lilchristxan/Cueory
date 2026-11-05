@@ -38,15 +38,30 @@ const options = [
   <div class="segmented">
     {
       options.map((option) => (
-        <label class="segmented-option relative">
+        <label class="segmented-option theme-option relative">
           <input type="radio" name="theme" value={option.value} class="absolute inset-0 cursor-pointer opacity-0 focus-visible:outline-hidden" />
           <Fragment set:html={option.icon} />
           <span>{option.label}</span>
+          <span class="theme-option-check" aria-hidden="true">✓</span>
         </label>
       ))
     }
   </div>
 </fieldset>
+
+<style>
+  /* Selected state has a persistent text shape as well as the palette change. */
+  .theme-option-check {
+    inline-size: 0.9em;
+    visibility: hidden;
+    font-weight: 700;
+    text-align: center;
+  }
+
+  .theme-option:has(:checked) .theme-option-check {
+    visibility: visible;
+  }
+</style>
 
 <script>
   import { applyChoice, browserStorage, isThemeChoice, readChoice, saveChoice } from '../scripts/theme';
