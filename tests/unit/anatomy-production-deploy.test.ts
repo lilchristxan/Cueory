@@ -16,6 +16,7 @@ function fixture() {
   const contentDir = join(root, 'content', 'visuals');
   mkdirSync(distDir, { recursive: true });
   mkdirSync(contentDir, { recursive: true });
+  writeFileSync(join(distDir, 'index.html'), '<!doctype html><html><body>synthetic only</body></html>');
   writeFileSync(join(contentDir, 'anatomy-test.json'), JSON.stringify({
     status: 'draft',
     model: { file: '/models/anatomy/draft.glb', release: 'BodyParts3D 4.0' },
@@ -52,6 +53,18 @@ describe('production pre-upload anatomy gate', () => {
     const result = deployProduction({ ...f, runDeploy });
     expect(result.attempted).toBe(false);
     expect(result.exitCode).toBe(1);
+    expect(runDeploy).not.toHaveBeenCalled();
+  });
+
+  it('blocks missing or invalid website entrypoints even when anatomy files are clean', () => {
+    const f = fixture();
+    const runDeploy = vi.fn(() => ({ status: 0 }));
+    rmSync(join(f.distDir, 'index.html'));
+    expect(deployProduction({ ...f, runDeploy }).errors)
+      .toContain('production site entry point is missing or unreadable: /index.html');
+    writeFileSync(join(f.distDir, 'index.html'), 'synthetic broken page');
+    expect(deployProduction({ ...f, runDeploy }).errors)
+      .toContain('production site entry point is invalid: /index.html');
     expect(runDeploy).not.toHaveBeenCalled();
   });
 

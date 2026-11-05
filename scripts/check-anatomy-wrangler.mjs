@@ -7,7 +7,7 @@
  */
 import { pathToFileURL } from 'node:url';
 import { resolve } from 'node:path';
-import { auditAnatomyProduction } from './anatomy-production-audit.mjs';
+import { auditAnatomyProduction, builtSiteEntrypointErrors } from './anatomy-production-audit.mjs';
 
 export function shouldAuditWranglerUpload(env) {
   const command = typeof env.WRANGLER_COMMAND === 'string'
@@ -29,7 +29,8 @@ export function shouldAuditWranglerUpload(env) {
 
 export function checkAnatomyWranglerUpload(env = process.env, dist = 'dist', content = 'content/visuals') {
   if (!shouldAuditWranglerUpload(env)) return { skipped: true, errors: [] };
-  return { skipped: false, ...auditAnatomyProduction(dist, content) };
+  const audit = auditAnatomyProduction(dist, content);
+  return { skipped: false, ...audit, errors: [...audit.errors, ...builtSiteEntrypointErrors(dist)] };
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {

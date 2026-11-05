@@ -67,6 +67,22 @@ export function readRegularFileNoFollow(path) {
 }
 
 /**
+ * Verify that production has a readable Astro HTML entry point.
+ * An empty dist directory must never pass a release-upload check merely
+ * because it contains no draft anatomy files.
+ */
+export function builtSiteEntrypointErrors(distDir) {
+  const entry = join(resolve(distDir), 'index.html');
+  try {
+    const html = readRegularFileNoFollow(entry);
+    if (/<html(?:\s|>)/i.test(html) && /<body(?:\s|>)/i.test(html)) return [];
+    return ['production site entry point is invalid: /index.html'];
+  } catch {
+    return ['production site entry point is missing or unreadable: /index.html'];
+  }
+}
+
+/**
  * Decode common ASCII escapes before scanning generated text for draft IDs.
  * Bundlers can emit JSON/JS Unicode escapes, and HTML can use numeric entities.
  * This is read-only normalization for the audit, not a change to shipped files.

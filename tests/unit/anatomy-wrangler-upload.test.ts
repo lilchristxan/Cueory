@@ -14,6 +14,7 @@ function fixture() {
   const content = join(root, 'content', 'visuals');
   mkdirSync(join(dist, 'models', 'anatomy'), { recursive: true });
   mkdirSync(content, { recursive: true });
+  writeFileSync(join(dist, 'index.html'), '<!doctype html><html><body>synthetic only</body></html>');
   writeFileSync(join(content, 'anatomy-draft.json'), JSON.stringify({
     status: 'draft',
     model: { file: '/models/anatomy/draft.glb', release: 'BodyParts3D 4.0' },
@@ -60,6 +61,16 @@ describe('Wrangler direct-upload anatomy safety gate', () => {
     rmSync(f.dist, { recursive: true, force: true });
     expect(checkAnatomyWranglerUpload({ WRANGLER_COMMAND: 'deploy' }, f.dist, f.content).errors[0])
       .toMatch(/production output does not exist/);
+  });
+
+  it('blocks missing or invalid site entrypoints before a direct production upload', () => {
+    const f = fixture();
+    rmSync(join(f.dist, 'index.html'));
+    expect(checkAnatomyWranglerUpload({ WRANGLER_COMMAND: 'deploy' }, f.dist, f.content).errors)
+      .toContain('production site entry point is missing or unreadable: /index.html');
+    writeFileSync(join(f.dist, 'index.html'), 'synthetic broken page');
+    expect(checkAnatomyWranglerUpload({ WRANGLER_COMMAND: 'deploy' }, f.dist, f.content).errors)
+      .toContain('production site entry point is invalid: /index.html');
   });
 
   it('is wired into Wrangler custom builds, not just the optional npm deploy command', () => {

@@ -10,7 +10,7 @@
 import { spawnSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
 import { resolve } from 'node:path';
-import { auditAnatomyProduction } from './anatomy-production-audit.mjs';
+import { auditAnatomyProduction, builtSiteEntrypointErrors } from './anatomy-production-audit.mjs';
 
 /** @returns {{ status: number | null, error?: Error }} */
 function runWranglerDeploy() {
@@ -21,7 +21,8 @@ function runWranglerDeploy() {
 /** The injected runner is for tests; production always uses Wrangler. */
 export function deployProduction({ distDir = 'dist', contentDir = 'content/visuals', runDeploy = runWranglerDeploy } = {}) {
   const audit = auditAnatomyProduction(distDir, contentDir);
-  if (audit.errors.length) return { attempted: false, exitCode: 1, errors: audit.errors };
+  const errors = [...audit.errors, ...builtSiteEntrypointErrors(distDir)];
+  if (errors.length) return { attempted: false, exitCode: 1, errors };
   try {
     const response = runDeploy();
     return {
