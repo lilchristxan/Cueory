@@ -104,8 +104,11 @@ export function parseApprovedGlb(bytes) {
       !Array.isArray(json.accessors) || !Array.isArray(json.extensionsRequired)) {
     throw new Error('required model metadata missing');
   }
+  // Published GLBs are self-contained. Reject additional external buffers that
+  // can escape the audited file through glTF URIs.
   const buffer = json.buffers?.[0];
-  if (!buffer || buffer.uri !== undefined || binLength === null ||
+  if (!Array.isArray(json.buffers) || json.buffers.length !== 1 ||
+      !buffer || buffer.uri !== undefined || binLength === null ||
       !Number.isSafeInteger(buffer.byteLength) || buffer.byteLength <= 0 ||
       binLength < buffer.byteLength || binLength > buffer.byteLength + 3) {
     throw new Error('GLB BIN buffer missing or incomplete');
