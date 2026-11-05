@@ -422,6 +422,13 @@ export function auditAnatomyProduction(distDir, contentDir) {
           expectedNames.some((id, i) => nodeNames[i] !== id)) {
         throw new Error('node identifiers do not match approved labels');
       }
+      // A named node without a linked mesh can have matching metadata while
+      // rendering no anatomy. The release check must inspect the shipped GLB,
+      // not just count triangles in unrelated, unreferenced meshes.
+      if (json.nodes.some((node) =>
+        !Number.isSafeInteger(node.mesh) || node.mesh < 0 || node.mesh >= json.meshes.length)) {
+        throw new Error('approved structure node is missing an attached mesh');
+      }
       if (json.asset?.copyright !== BODYPARTS3D_CREDIT) {
         throw new Error('BodyParts3D copyright is missing');
       }
