@@ -7,6 +7,7 @@
 import { closeSync, constants as fsConstants, existsSync, fstatSync, lstatSync, openSync, readFileSync, readSync, readdirSync, statSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { gunzipSync } from 'node:zlib';
 
 const ANATOMY_FILE = /^anatomy-[a-z0-9-]+\.json$/;
 const MODEL_URL = /^\/models\/anatomy\/[a-z0-9][a-z0-9_-]*\.glb$/;
@@ -70,6 +71,19 @@ function hasGlbMagic(path) {
  * cannot see into ZIP/TAR/compressed package payloads. This deliberately
  * fails closed rather than trying to unpack untrusted build artifacts.
  */
+function hasArchiveMagicBytes(header) {
+  const starts = (bytes) => header.length >= bytes.length && header.subarray(0, bytes.length).equals(Buffer.from(bytes));
+  // A compressed Pagefind file must not smuggle a model or second container through the release gate.
+  if (starts([0x67, 0x6c, 0x54, 0x46]) ||
+      starts([0x50, 0x4b, 0x03, 0x04]) || starts([0x50, 0x4b, 0x05, 0x06]) ||
+      starts([0x50, 0x4b, 0x07, 0x08]) || starts([0x1f, 0x8b]) ||
+      starts([0x42, 0x5a, 0x68]) || starts([0xfd, 0x37, 0x7a, 0x58, 0x5a, 0x00]) ||
+      starts([0x28, 0xb5, 0x2f, 0xfd]) || starts([0x37, 0x7a, 0xbc, 0xaf, 0x27, 0x1c]) ||
+      starts([0x52, 0x61, 0x72, 0x21, 0x1a, 0x07]) || starts([0x4d, 0x53, 0x43, 0x46]) ||
+      starts([0x21, 0x3c, 0x61, 0x72, 0x63, 0x68, 0x3e, 0x0a])) return true;
+  return header.length >= 262 && header.toString('ascii', 257, 262) === 'ustar';
+}
+
 function hasArchiveMagic(path, allowPagefindGzip = false) {
   if (!Number.isInteger(fsConstants.O_NOFOLLOW)) throw new Error('this platform cannot safely audit symbolic links');
   const fd = openSync(path, fsConstants.O_RDONLY | fsConstants.O_NOFOLLOW);
@@ -78,17 +92,20 @@ function hasArchiveMagic(path, allowPagefindGzip = false) {
     const size = fstatSync(fd).size;
     const header = Buffer.alloc(Math.min(size, 512));
     if (header.length) readSync(fd, header, 0, header.length, 0);
-    const starts = (bytes) => header.length >= bytes.length && header.subarray(0, bytes.length).equals(Buffer.from(bytes));
-    // ZIP (including empty/spanned archives), gzip, bzip2, xz, zstd, 7-Zip,
-    // RAR, Microsoft CAB, and Unix ar (used by several package containers).
-    if (starts([0x50, 0x4b, 0x03, 0x04]) || starts([0x50, 0x4b, 0x05, 0x06]) ||
-        starts([0x50, 0x4b, 0x07, 0x08]) || (!allowPagefindGzip && starts([0x1f, 0x8b])) ||
-        starts([0x42, 0x5a, 0x68]) || starts([0xfd, 0x37, 0x7a, 0x58, 0x5a, 0x00]) ||
-        starts([0x28, 0xb5, 0x2f, 0xfd]) || starts([0x37, 0x7a, 0xbc, 0xaf, 0x27, 0x1c]) ||
-        starts([0x52, 0x61, 0x72, 0x21, 0x1a, 0x07]) || starts([0x4d, 0x53, 0x43, 0x46]) ||
-        starts([0x21, 0x3c, 0x61, 0x72, 0x63, 0x68, 0x3e, 0x0a])) return true;
-    // POSIX tar stores its ustar marker at byte offset 257.
-    return header.length >= 262 && header.toString('ascii', 257, 262) === 'ustar';
+    const isGzip = header.length >= 2 && header[0] === 0x1f && header[1] === 0x8b;
+    if (isGzip && allowPagefindGzip) {
+      // Pagefind's generated data chunks are gzip-compressed. Validate the
+      // complete stream and inspect the decompressed header; path+magic alone
+      // would allow a gzip-compressed GLB/ZIP to bypass the production gate.
+      if (size > 64 * 1024 * 1024) return true;
+      try {
+        const expanded = gunzipSync(readFileSync(fd), { maxOutputLength: 64 * 1024 * 1024 });
+        return hasArchiveMagicBytes(expanded.subarray(0, 512));
+      } catch {
+        return true;
+      }
+    }
+    return hasArchiveMagicBytes(header);
   } finally {
     closeSync(fd);
   }
