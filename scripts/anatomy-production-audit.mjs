@@ -85,15 +85,16 @@ function hasArchiveMagicBytes(bytes, includeAsciiMarkers = true) {
       bytes.indexOf(Buffer.from('ustar', 'ascii')) !== -1);
 }
 
-function hasArchiveMagicHeader(header) {
+function hasArchiveMagicHeader(header, includeAsciiMarkers = true) {
   const starts = (bytes) => header.length >= bytes.length && header.subarray(0, bytes.length).equals(Buffer.from(bytes));
   if (starts([0x50, 0x4b, 0x03, 0x04]) || starts([0x50, 0x4b, 0x05, 0x06]) ||
       starts([0x50, 0x4b, 0x07, 0x08]) || starts([0x1f, 0x8b]) ||
       starts([0x42, 0x5a, 0x68]) || starts([0xfd, 0x37, 0x7a, 0x58, 0x5a, 0x00]) ||
       starts([0x28, 0xb5, 0x2f, 0xfd]) || starts([0x37, 0x7a, 0xbc, 0xaf, 0x27, 0x1c]) ||
-      starts([0x52, 0x61, 0x72, 0x21, 0x1a, 0x07]) || starts([0x4d, 0x53, 0x43, 0x46]) ||
-      starts([0x21, 0x3c, 0x61, 0x72, 0x63, 0x68, 0x3e, 0x0a])) return true;
-  return header.length >= 262 && header.toString('ascii', 257, 262) === 'ustar';
+      starts([0x52, 0x61, 0x72, 0x21, 0x1a, 0x07]) || starts([0x4d, 0x53, 0x43, 0x46])) return true;
+  return includeAsciiMarkers &&
+    (starts([0x21, 0x3c, 0x61, 0x72, 0x63, 0x68, 0x3e, 0x0a]) ||
+      (header.length >= 262 && header.toString('ascii', 257, 262) === 'ustar'));
 }
 
 /** Detect a GLB header whose declared bytes fit in the whole file, even across read chunks. */
@@ -124,9 +125,9 @@ function hasArchiveMagic(path) {
     const size = stats.size;
     const header = Buffer.alloc(Math.min(size, 512));
     if (header.length) readSync(fd, header, 0, header.length, 0);
-    if (hasArchiveMagicHeader(header)) return true;
-
     const includeAsciiMarkers = !TEXT_ASSET.test(path);
+    if (hasArchiveMagicHeader(header, includeAsciiMarkers)) return true;
+
     const chunkSize = 64 * 1024;
     const overlapSize = 19; // Largest GLB header is 20 bytes; retain boundary bytes.
     let position = 0;
