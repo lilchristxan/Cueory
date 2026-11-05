@@ -430,6 +430,47 @@ describe('anatomy production artifact audit', () => {
     );
   });
 
+  it('rejects declared meshopt without compressed index or position data', () => {
+    const f = setup();
+    const path = join(f.dist, 'models', 'anatomy', 'approved.glb');
+    const original = readFileSync(path);
+    const jsonLength = original.readUInt32LE(12);
+    const originalJson = JSON.parse(original.toString('utf8', 20, 20 + jsonLength));
+    const bin = original.subarray(28 + jsonLength);
+    expect(f.check().errors).toEqual([]);
+
+    const saveMutation = (mutate: (json: any) => void) => {
+      const json = structuredClone(originalJson);
+      mutate(json);
+      const encoded = Buffer.from(JSON.stringify(json));
+      const padded = Buffer.concat([encoded, Buffer.alloc((4 - encoded.length % 4) % 4, 0x20)]);
+      const glb = Buffer.alloc(20 + padded.length + 8 + bin.length);
+      glb.write('glTF', 0, 'ascii');
+      glb.writeUInt32LE(2, 4);
+      glb.writeUInt32LE(glb.length, 8);
+      glb.writeUInt32LE(padded.length, 12);
+      glb.writeUInt32LE(0x4e4f534a, 16);
+      padded.copy(glb, 20);
+      glb.writeUInt32LE(bin.length, 20 + padded.length);
+      glb.writeUInt32LE(0x004e4942, 24 + padded.length);
+      bin.copy(glb, 28 + padded.length);
+      writeFileSync(path, glb);
+    };
+    const error = 'approved model failed built GLB geometry, identity or credit verification: /models/anatomy/approved.glb';
+
+    for (const accessorIndex of [0, 1]) {
+      saveMutation((json) => {
+        delete json.bufferViews[json.accessors[accessorIndex].bufferView].extensions;
+      });
+      expect(f.check().errors, 'uncompressed accessor ' + accessorIndex).toContain(error);
+    }
+
+    saveMutation((json) => {
+      for (const view of json.bufferViews) delete view.extensions;
+    });
+    expect(f.check().errors, 'extension declared but never used').toContain(error);
+  });
+
   it('accepts a build with approved models and no exposed drafts', () => {
     expect(setup().check()).toEqual({ errors: [], approvedSystems: 1, draftSystems: 1, shippedModels: 1 });
   });
