@@ -257,6 +257,8 @@ describe('anatomy production artifact audit', () => {
       (j: any) => { j.accessors[0].count = 450003; },
       (j: any) => { j.buffers[0].byteLength = 50; },
       (j: any) => { j.buffers.push({ byteLength: 4, uri: 'https://example.invalid/external.bin' }); },
+      (j: any) => { j.images = [{ uri: 'https://example.invalid/unreviewed.png' }]; },
+      (j: any) => { j.images = [{ uri: 'data:image/png;base64,ZmFrZQ==' }]; j.textures = [{ source: 0 }]; },
     ]) {
       edit(mutate);
       expect(f.check().errors).toContain(
