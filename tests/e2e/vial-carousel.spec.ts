@@ -256,7 +256,11 @@ test('enabling reduced motion during the preview finishes its Web Animations imm
   await expect.poll(runningAnimations).toBe(0);
   await expect(dialog.getByRole('heading', { name: 'video' })).toBeVisible();
 
+  // The same live preference change must also finish a close already in progress.
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
   await page.keyboard.press('Escape');
+  await expect.poll(runningAnimations).toBeGreaterThan(0);
+  await page.emulateMedia({ reducedMotion: 'reduce' });
   await expect(dialog).toBeHidden();
 });
 
