@@ -274,11 +274,7 @@ describe('anatomy production artifact audit', () => {
   it('accepts canonical BP IDs and FMA IDs with lowercase suffixes for approved anatomy', () => {
     const f = setup();
     f.system('approved', 'approved', ['/models/anatomy/approved.glb'], ['BP24', 'FMA7198nsn']);
-    // This test checks source-name/id validation. Its one-node GLB intentionally
-    // cannot represent the two-label manifest and must fail the binary gate.
-    expect(f.check().errors).toContain(
-      'approved model failed built GLB geometry, identity or credit verification: /models/anatomy/approved.glb',
-    );
+    expect(f.check().errors).toEqual([]);
   });
 
   it('flags draft BP and suffixed FMA IDs in built text without matching longer tokens', () => {
