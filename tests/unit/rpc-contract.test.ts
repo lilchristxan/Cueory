@@ -259,16 +259,16 @@ describe('anatomy study contract (Task 178)', () => {
   const anatomySql = readFileSync(new URL('../../supabase/migrations/20261105120000_anatomy_study.sql', import.meta.url), 'utf8');
   const camera = { position: [0, 0, 3] as [number, number, number], target: [0, 0, 0] as [number, number, number] };
   const signatures = {
-    record_anatomy_misses: 'text, text[]', clear_anatomy_miss: 'text, text', my_anatomy_review_queue: '',
-    save_anatomy_view: 'text, text, jsonb, text[], text[], text', delete_anatomy_view: 'uuid', my_anatomy_views: 'text',
+    record_anatomy_misses: 'text, text[], uuid', clear_anatomy_miss: 'text, text, uuid', my_anatomy_review_queue: '',
+    save_anatomy_view: 'text, text, jsonb, text[], text[], text, uuid', delete_anatomy_view: 'uuid, uuid', my_anatomy_views: 'text',
   } as const;
 
   it('declares the six functions with the agreed argument names, in order', () => {
-    expect(declaration('record_anatomy_misses').arguments).toEqual(['system_key', 'structure_ids']);
-    expect(declaration('clear_anatomy_miss').arguments).toEqual(['system_key', 'structure_id']);
+    expect(declaration('record_anatomy_misses').arguments).toEqual(['system_key', 'structure_ids', 'expected_user_id']);
+    expect(declaration('clear_anatomy_miss').arguments).toEqual(['system_key', 'structure_id', 'expected_user_id']);
     expect(declaration('my_anatomy_review_queue').arguments).toEqual([]);
-    expect(declaration('save_anatomy_view').arguments).toEqual(['system_key', 'name', 'camera', 'hidden', 'faded', 'selected']);
-    expect(declaration('delete_anatomy_view').arguments).toEqual(['id']);
+    expect(declaration('save_anatomy_view').arguments).toEqual(['system_key', 'name', 'camera', 'hidden', 'faded', 'selected', 'expected_user_id']);
+    expect(declaration('delete_anatomy_view').arguments).toEqual(['id', 'expected_user_id']);
     expect(declaration('my_anatomy_views').arguments).toEqual(['system_key']);
     expect(anatomySql).toMatch(/create function public\.record_anatomy_misses\(system_key text, structure_ids text\[\]\)\s+returns integer\s/);
     expect(anatomySql).toMatch(/create function public\.clear_anatomy_miss\(system_key text, structure_id text\)\s+returns boolean\s/);
@@ -305,15 +305,15 @@ describe('anatomy study contract (Task 178)', () => {
     const expected: Record<keyof typeof signatures, string[]> = {
       record_anatomy_misses: ['sign in to record what you missed', 'confirm your email to use this', 'complete two-factor sign-in to continue',
         'that anatomy system was not found', 'send between 1 and 50 structures', 'a structure id has the wrong shape',
-        'too many misses recorded recently; try again later'],
+        'too many misses recorded recently; try again later', 'study account changed; reload before continuing'],
       clear_anatomy_miss: ['sign in to change your review list', 'confirm your email to use this', 'complete two-factor sign-in to continue',
-        'that anatomy system was not found', 'a structure id has the wrong shape'],
+        'that anatomy system was not found', 'a structure id has the wrong shape', 'study account changed; reload before continuing'],
       my_anatomy_review_queue: ['sign in to see your review list', 'confirm your email to use this', 'complete two-factor sign-in to continue'],
       save_anatomy_view: ['sign in to save a view', 'confirm your email to use this', 'complete two-factor sign-in to continue',
         'that anatomy system was not found', 'a view name is 1 to 60 characters of plain text', 'the camera has the wrong shape',
-        'a structure id has the wrong shape', 'you can keep up to 50 saved views; delete one first'],
+        'a structure id has the wrong shape', 'you can keep up to 50 saved views; delete one first', 'study account changed; reload before continuing'],
       delete_anatomy_view: ['sign in to delete a view', 'confirm your email to use this', 'complete two-factor sign-in to continue',
-        'that view was not found'],
+        'that view was not found', 'study account changed; reload before continuing'],
       my_anatomy_views: ['sign in to see your saved views', 'confirm your email to use this', 'complete two-factor sign-in to continue',
         'that anatomy system was not found'],
     };
@@ -347,7 +347,7 @@ describe('anatomy study contract (Task 178)', () => {
       expect(sent[name], name).toEqual(declaration(name).arguments);
     }
     const snapshot = viewSnapshot({ systemKey: 'heart', name: 'front', camera, hidden: [] });
-    expect(snapshot.ok && Object.keys(snapshot.args)).toEqual(declaration('save_anatomy_view').arguments);
+    expect(snapshot.ok && Object.keys(snapshot.args)).toEqual(declaration('save_anatomy_view').arguments.filter(name => name !== 'expected_user_id'));
   });
 
   it('the review row and saved view types name exactly the table columns the functions return', () => {
