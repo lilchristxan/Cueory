@@ -309,6 +309,20 @@ describe('anatomy production artifact audit', () => {
     expect(f.check().errors).toEqual([]);
   });
 
+  it('rejects a structure-specific source that cites only the general README', () => {
+    const f = setup();
+    const path = join(f.content, 'anatomy-approved.json');
+    const original = JSON.parse(readFileSync(path, 'utf8'));
+    const source = { ...original.sources[0], section: 'README_e.html, Release 4.0',
+      url: 'https://dbarchive.biosciencedbc.jp/data/bodyparts3d/LATEST/README_e.html' };
+    writeFileSync(path, JSON.stringify({ ...original, sources: [source] }));
+    expect(f.check().errors).toContain(
+      'anatomy-approved.json: approved source bp3d-FMA999992 has incomplete or incompatible citation and rights evidence',
+    );
+    writeFileSync(path, JSON.stringify(original));
+    expect(f.check().errors).toEqual([]);
+  });
+
   it('rejects an archived BodyParts3D citation despite a claimed current CC BY license', () => {
     const f = setup();
     const file = join(f.content, 'anatomy-approved.json');
