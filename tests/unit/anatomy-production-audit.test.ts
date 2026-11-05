@@ -147,6 +147,17 @@ describe('anatomy production artifact audit', () => {
     );
   });
 
+  it('rejects invalid GLB JSON even when its header and byte lengths are correct', () => {
+    const f = setup();
+    const path = join(f.dist, 'models', 'anatomy', 'approved.glb');
+    const bytes = Buffer.from(readFileSync(path));
+    bytes.write('!', 20, 'ascii');
+    writeFileSync(path, bytes);
+    expect(f.check().errors).toContain(
+      'approved model is not a valid GLB v2 header: /models/anatomy/approved.glb',
+    );
+  });
+
   it('accepts a build with approved models and no exposed drafts', () => {
     expect(setup().check()).toEqual({ errors: [], approvedSystems: 1, draftSystems: 1, shippedModels: 1 });
   });
