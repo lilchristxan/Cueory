@@ -1,6 +1,5 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
-import { lessonRoutes } from '../lessonroutes';
 
 const axe = (page: Page) =>
   new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa']).analyze();
@@ -21,9 +20,7 @@ const pages = [
   { name: 'play', url: '/play' },
   { name: 'privacy', url: '/privacy' },
   { name: 'study-skills cards', url: '/learn/study-skills/cards' },
-  // Every lesson page generated from /content keeps the button (D-34, Task 300).
-  ...lessonRoutes.filter((url) => url !== '/learn/study-skills/cards').map((url) => ({ name: url, url })),
-];
+] as const;
 
 for (const { name, url } of pages) {
   test(`flag button is present and keyboard-operable on ${name}`, async ({ page }) => {

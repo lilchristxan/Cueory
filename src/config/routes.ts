@@ -1,7 +1,4 @@
-/**
- * Pages that may be listed in the public sitemap. Noindex and preview pages stay out. Lesson pages generated from
- * /content are added to the sitemap at build time (src/pages/sitemap.xml.ts, Task 300); study-skills is listed here too.
- */
+/** Pages that may be listed in the public sitemap. Noindex and preview pages stay out. */
 export const indexablePages = [
   '/',
   '/learn',
