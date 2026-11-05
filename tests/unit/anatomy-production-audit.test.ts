@@ -139,11 +139,11 @@ describe('anatomy production artifact audit', () => {
     const path = join(f.dist, 'models', 'anatomy', 'approved.glb');
     writeFileSync(path, 'synthetic malformed model, not a GLB');
     expect(f.check().errors).toContain(
-      'approved model is not a valid GLB v2 header: /models/anatomy/approved.glb',
+      'approved model failed built GLB geometry, identity or credit verification: /models/anatomy/approved.glb',
     );
     writeFileSync(path, Buffer.from('glTF'));
     expect(f.check().errors).toContain(
-      'approved model is not a valid GLB v2 header: /models/anatomy/approved.glb',
+      'approved model failed built GLB geometry, identity or credit verification: /models/anatomy/approved.glb',
     );
   });
 
@@ -191,7 +191,7 @@ describe('anatomy production artifact audit', () => {
     original.writeUInt32LE(original.length + 4, 8);
     writeFileSync(path, original);
     expect(f.check().errors).toContain(
-      'approved model is not a valid GLB v2 header: /models/anatomy/approved.glb',
+      'approved model failed built GLB geometry, identity or credit verification: /models/anatomy/approved.glb',
     );
   });
 
@@ -202,7 +202,7 @@ describe('anatomy production artifact audit', () => {
     bytes.write('!', 20, 'ascii');
     writeFileSync(path, bytes);
     expect(f.check().errors).toContain(
-      'approved model is not a valid GLB v2 header: /models/anatomy/approved.glb',
+      'approved model failed built GLB geometry, identity or credit verification: /models/anatomy/approved.glb',
     );
   });
 
