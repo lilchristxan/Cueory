@@ -12,14 +12,14 @@ import { courses } from '../config/courses';
       </p>
     </div>
 
-    <div class="grid min-w-0 gap-4 sm:grid-cols-2">
+    <div class="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2">
       {courses.map((course) => {
         const isAvailable = course.status === 'available';
         return (
-          <div class="flex min-w-0 flex-col justify-between rounded-lg border border-line bg-surface p-5">
+          <div class="flex min-w-0 flex-col justify-between rounded-lg border border-line bg-surface p-3 sm:p-5">
             <div class="space-y-2">
               <div class="flex flex-wrap items-center justify-between gap-2">
-                <h2 class="min-w-0 text-lg text-ink">{course.title}</h2>
+                <h2 class="min-w-0 break-words text-lg text-ink">{course.title}</h2>
                 {!isAvailable && (
                   <span class="rounded bg-line px-2 py-0.5 text-sm leading-relaxed text-ink">
                     coming soon
@@ -33,7 +33,7 @@ import { courses } from '../config/courses';
               {isAvailable ? (
                 <a
                   href={course.href}
-                  class="inline-flex min-h-11 items-center justify-center rounded-md border border-control bg-page px-4 text-sm text-ink hover:border-ink focus-visible:outline-2"
+                  class="inline-flex min-h-11 max-w-full items-center justify-center whitespace-normal break-words rounded-md border border-control bg-page px-3 text-sm text-ink hover:border-ink focus-visible:outline-2 sm:px-4"
                 >
                   open course
                 </a>
