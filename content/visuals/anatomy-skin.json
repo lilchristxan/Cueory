@@ -13,6 +13,6 @@
   ],
   "sources": [
     { "id": "bp3d-readme", "quote": "The dictionary-type database for anatomy in which anatomical concepts are represented by 3D structure data", "book": "BodyParts3D", "section": "README_e.html, Release 4.0", "url": "https://dbarchive.biosciencedbc.jp/data/bodyparts3d/LATEST/README_e.html", "license": "CC BY 4.0", "retrieved": "2026-11-02" },
-    { "id": "bp3d-FMA7163", "quote": "FMA7163 BP9115 skin", "book": "BodyParts3D", "section": "isa_parts_list_e.txt, Release 4.0", "url": "https://dbarchive.biosciencedbc.jp/data/bodyparts3d/LATEST/README_e.html", "license": "CC BY 4.0", "retrieved": "2026-11-02" }
+    { "id": "bp3d-FMA7163", "quote": "FMA7163 BP9115 skin", "book": "BodyParts3D", "section": "isa_parts_list_e.txt, Release 4.0", "url": "https://dbarchive.biosciencedbc.jp/data/bodyparts3d/LATEST/isa_parts_list_e.txt", "license": "CC BY 4.0", "retrieved": "2026-11-02" }
   ]
 }
