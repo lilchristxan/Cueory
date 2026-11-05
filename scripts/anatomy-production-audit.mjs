@@ -8,7 +8,6 @@ import { closeSync, constants as fsConstants, existsSync, fstatSync, lstatSync, 
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { gunzipSync } from 'node:zlib';
-import { gunzipSync } from 'node:zlib';
 
 const ANATOMY_FILE = /^anatomy-[a-z0-9-]+\.json$/;
 const MODEL_URL = /^\/models\/anatomy\/[a-z0-9][a-z0-9_-]*\.glb$/;
