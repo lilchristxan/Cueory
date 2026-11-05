@@ -1379,6 +1379,22 @@ describe('anatomy production artifact audit', () => {
     expect(modelUrls({ file: '/models/anatomy/../../secret.glb' })).toBeNull();
     expect(modelUrls({ file: '/models/anatomy/a.glb', files: 'other.glb' })).toBeNull();
   });
+
+  it('does not mistake incidental gzip bytes in real compressed site assets for nested archives', () => {
+    const f = setup();
+    // These checked-in production assets contain incidental 1f 8b byte pairs
+    // inside their own compressed image/font data; they are not gzip members.
+    for (const asset of [
+      'brand/v1/logo-full-light-1440.png',
+      'brand/v1/icon-512.png',
+      'fonts/lato-latin-400-italic.woff2',
+      'gloves/glove-green.webp',
+    ]) {
+      f.file(asset, readFileSync(join(process.cwd(), 'public', asset)));
+    }
+    expect(f.check().errors).toEqual([]);
+  });
+
 });
 
 /** Keep the built-output audit on the same branch gate as GLB pruning. */
