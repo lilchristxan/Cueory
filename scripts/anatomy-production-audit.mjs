@@ -182,8 +182,12 @@ function hasZipLocalHeaderAt(bytes, offset, baseOffset, fileSize) {
     }
     if (!foundZip64) return false;
   }
+  // A highly-compressible ZIP entry may legitimately expand beyond the
+  // entire archive size. That is not malformed: it is precisely the ZIP-bomb
+  // case the gate must reject, not a reason to treat the header as harmless.
+  // Only the compressed byte range must fit in the inspected outer file.
   if (!usesDataDescriptor &&
-      (compressedSizeValue > BigInt(fileSize) || uncompressedSizeValue > BigInt(fileSize) ||
+      (compressedSizeValue > BigInt(fileSize) ||
        BigInt(baseOffset + dataStart) + compressedSizeValue > BigInt(fileSize))) return false;
   // Bit 3 is valid ZIP streaming mode: sizes/CRC live in a data descriptor
   // after the entry data, not in the local header. ZIP64 sentinel sizes are
