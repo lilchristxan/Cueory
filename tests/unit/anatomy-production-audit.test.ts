@@ -9,7 +9,11 @@ import { keepsDrafts } from '../../src/visuals/prunedrafts';
 const roots: string[] = [];
 afterEach(() => roots.splice(0).forEach((p) => rmSync(p, { recursive: true, force: true })));
 
-function makeStoredZip(name = 'hidden-model.bin', payload = Buffer.from('synthetic archive payload')): Buffer {
+function makeStoredZip(
+  name = 'hidden-model.bin',
+  payload = Buffer.from('synthetic archive payload'),
+  dataDescriptor = false,
+): Buffer {
   const filename = Buffer.from(name, 'utf8');
   const data = Buffer.from(payload);
   let crc = 0xffffffff;
@@ -22,21 +26,32 @@ function makeStoredZip(name = 'hidden-model.bin', payload = Buffer.from('synthet
   const local = Buffer.alloc(30);
   local.writeUInt32LE(0x04034b50, 0);
   local.writeUInt16LE(20, 4);
-  local.writeUInt32LE(crc, 14);
-  local.writeUInt32LE(data.length, 18);
-  local.writeUInt32LE(data.length, 22);
+  local.writeUInt16LE(dataDescriptor ? 0x0008 : 0, 6);
+  if (!dataDescriptor) {
+    local.writeUInt32LE(crc, 14);
+    local.writeUInt32LE(data.length, 18);
+    local.writeUInt32LE(data.length, 22);
+  }
   local.writeUInt16LE(filename.length, 26);
 
   const central = Buffer.alloc(46);
   central.writeUInt32LE(0x02014b50, 0);
   central.writeUInt16LE(20, 4);
   central.writeUInt16LE(20, 6);
+  central.writeUInt16LE(dataDescriptor ? 0x0008 : 0, 8);
   central.writeUInt32LE(crc, 16);
   central.writeUInt32LE(data.length, 20);
   central.writeUInt32LE(data.length, 24);
   central.writeUInt16LE(filename.length, 28);
 
-  const localRecord = Buffer.concat([local, filename, data]);
+  const descriptor = Buffer.alloc(dataDescriptor ? 16 : 0);
+  if (dataDescriptor) {
+    descriptor.writeUInt32LE(0x08074b50, 0);
+    descriptor.writeUInt32LE(crc, 4);
+    descriptor.writeUInt32LE(data.length, 8);
+    descriptor.writeUInt32LE(data.length, 12);
+  }
+  const localRecord = Buffer.concat([local, filename, data, descriptor]);
   const centralRecord = Buffer.concat([central, filename]);
   const end = Buffer.alloc(22);
   end.writeUInt32LE(0x06054b50, 0);
@@ -265,7 +280,7 @@ describe('anatomy production artifact audit', () => {
     approvedFragment.file('pagefind/fragment/en_approved_id.pf_fragment', gzipSync(Buffer.concat([
       prefix,
       Buffer.from(JSON.stringify({
-        url: '/', content: 'FMA999992', word_count: 1,
+        url: '/', content: 'FMA999992 FIX1', word_count: 1,
         filters: {}, meta: {}, anchors: [],
       })),
     ])));
@@ -333,6 +348,11 @@ describe('anatomy production artifact audit', () => {
     // Test both content sniffing under misleading suffixes and archive suffixes.
     const hiddenZip = makeStoredZip();
     f.file('downloads/hidden-model.dat', hiddenZip);
+    // Streaming ZIP writers use general-purpose bit 3 and put sizes/CRC in
+    // a data descriptor after the entry; this is still an archive container.
+    f.file('downloads/streaming-hidden-model.dat', makeStoredZip(
+      'streaming-model.bin', Buffer.from('streamed archive payload'), true,
+    ));
     const tar = Buffer.alloc(512);
     const nul = String.fromCharCode(0);
     tar.write('hidden-model.bin', 0, 'ascii');
@@ -363,6 +383,7 @@ describe('anatomy production artifact audit', () => {
     f.file('docs/ustar-at-header-offset.txt', textTarMarker);
     expect(f.check().errors).toEqual(expect.arrayContaining([
       'archive/container in production output requires explicit review: /downloads/hidden-model.dat',
+      'archive/container in production output requires explicit review: /downloads/streaming-hidden-model.dat',
       'archive/container in production output requires explicit review: /downloads/hidden-model.bin',
       'archive/container in production output requires explicit review: /downloads/prefixed-tar.dat',
       'archive/container in production output requires explicit review: /downloads/unrecognized.zip',
