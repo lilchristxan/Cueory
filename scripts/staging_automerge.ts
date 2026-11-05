@@ -16,6 +16,7 @@ import { pathToFileURL } from 'node:url';
 import { parseArgs } from 'node:util';
 import {
   BASE_BRANCH,
+  codexRetry,
   codexRetryComment,
   decide,
   dependencyPaths,
@@ -151,8 +152,17 @@ export async function runAutomerge({
         } else if (now.labels.some((l) => l.name === NEEDS_CHRISTIAN_LABEL)) {
           decision.reasons.push(`labelled ${NEEDS_CHRISTIAN_LABEL} while it was being checked; no retry asked`);
         } else {
-          await gh.createComment(n, codexRetryComment(decision.codexRetry.headSha));
-          done = 'codex retry asked';
+          // The Codex summary and retry markers can change while the PR head stays the same.
+          // Re-read them at the final boundary so a completed/finding-bearing review or exhausted
+          // per-head retry budget is never acted on using the first snapshot.
+          const latestRetry = codexRetry(await gh.comments(n), now.head.sha);
+          if (!latestRetry) {
+            decision.reasons.push('latest Codex summary no longer qualifies for a retry; no retry asked');
+          } else {
+            await gh.createComment(n, codexRetryComment(latestRetry.headSha));
+            done = 'codex retry asked';
+            decision.reasons.push(`latest Codex retry ${latestRetry.attempt}/${latestRetry.limit}`);
+          }
         }
       }
     }
