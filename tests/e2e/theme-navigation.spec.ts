@@ -36,6 +36,19 @@ for (const choice of ['light', 'dark'] as const) {
   });
 }
 
+test('selected theme is marked by a visible check, not palette color alone', async ({ page }) => {
+  await page.goto('/');
+  const picker = await openPicker(page);
+  for (const choice of ['light', 'dark', 'follow device'] as const) {
+    const radio = picker.getByRole('radio', { name: choice, exact: true });
+    await radio.check();
+    await expect(radio).toBeChecked();
+    const label = picker.locator('label').filter({ has: radio });
+    await expect(label.locator('.theme-option-check')).toBeVisible();
+    await expect(picker.locator('.theme-option-check:visible')).toHaveCount(1);
+  }
+});
+
 test('with no saved choice, device changes apply across page types and reloads', async ({ page }) => {
   await page.emulateMedia({ colorScheme: 'dark' });
   await page.goto('/learn/study-skills');
