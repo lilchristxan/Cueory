@@ -16,8 +16,10 @@ export function shouldAuditWranglerUpload(env) {
   // GitHub refs, or the current Workers Builds branch.
   if (command === 'deploy' || command === 'versions upload') return true;
   if (command === 'dev' || command === 'types' || command === 'preview') return false;
-  // Workers preview builds are not production uploads. Wrangler may not set
-  // WRANGLER_COMMAND for the preview subcommand on all CLI versions.
+  // Cloudflare Workers Previews invoke Wrangler custom builds without a
+  // guaranteed WRANGLER_COMMAND value. A Workers Builds non-main branch
+  // is a preview, not a production upload. Never use CUEORY_ANATOMY_DRAFTS
+  // alone for this decision: it can be set on a stale local dist.
   const branch = typeof env.WORKERS_CI_BRANCH === 'string'
     ? env.WORKERS_CI_BRANCH.trim().replace(/^refs\/heads\//, '') : '';
   if (env.WORKERS_CI === '1' && branch && branch !== 'main') return false;

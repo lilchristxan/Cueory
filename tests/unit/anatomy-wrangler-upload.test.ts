@@ -36,6 +36,8 @@ describe('Wrangler direct-upload anatomy safety gate', () => {
       expect(shouldAuditWranglerUpload({ WRANGLER_COMMAND: command })).toBe(false);
     }
     expect(shouldAuditWranglerUpload({ WORKERS_CI: '1', WORKERS_CI_BRANCH: 'task-178/preview' })).toBe(false);
+    // Real Cloudflare previews may not supply WRANGLER_COMMAND at all.
+    expect(shouldAuditWranglerUpload({ WORKERS_CI: '1', WORKERS_CI_BRANCH: 'task-178/preview', CUEORY_ANATOMY_DRAFTS: '1' })).toBe(false);
     expect(shouldAuditWranglerUpload({ WORKERS_CI: '1', WORKERS_CI_BRANCH: 'main' })).toBe(true);
   });
 
