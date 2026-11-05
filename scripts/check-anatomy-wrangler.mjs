@@ -17,7 +17,7 @@ export function shouldAuditWranglerUpload(env) {
   // CI variables are forgeable and cannot authenticate a preview invocation.
   // The optional standalone checker must never exempt an upload labeled deploy.
   if (command === 'deploy') return true;
-  if (env.CUEORY_WRANGLER_PREVIEW === '1' && command !== 'deploy') return false;
+  // A user-provided preview flag is not trusted release evidence.
   if (command === 'dev' || command === 'types' || command === 'preview') return false;
   // An unknown invocation without a verified preview context fails closed.
   return true;
