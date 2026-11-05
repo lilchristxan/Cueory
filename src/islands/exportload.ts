@@ -1,8 +1,8 @@
 /**
- * Read a signed-in student's own export data (D-86, D-87, D-88, Task 140).
+ * Read a signed-in student's own export data (D-86, D-87, D-88, Task 140, Task 178).
  *
- * The database's row-level security restricts the five table reads to the
- * current student. Reports must come from my_flags(), never from flags:
+ * The database's row-level security restricts all seven table reads to the
+ * current student. Task 178's anatomy tables also require the configured MFA policy. Reports must come from my_flags(), never from flags:
  * that table also contains private moderation fields.
  *
  * The caller adds browser-only progress, game stats and onboarding, and may
@@ -15,6 +15,8 @@
  * identity_data (with Google: name, profile-photo link, Google account id, email
  * and whether it is verified). The sessions, with their browser and IP address,
  * come from my_sessions(), because the browser can't read auth.sessions.
+ * The full anatomy review history (including cleared rows) and saved views come from their own tables under owner-only
+ * SELECT policies; the row id is only a cursor and user_id is never selected or exported.
  *
  * study_events has no cap: it is read page by page and each checked page is
  * written straight into StudyEventPages, so a long history never sits in memory
@@ -541,7 +543,7 @@ async function allPages(makeQuery: () => SupabaseQuery, which: WholeTable | Expo
 
 /**
  * Uses only the tables and RPC explicitly allowed by Task 61 (and study_events, Task 140; my_sessions and
- * auth.getUser(), Task 309).
+ * auth.getUser(), Task 309; the two owner-scoped anatomy tables, Task 178).
  */
 export function fromSupabase(client: SupabaseExportClient): ExportReader {
   return {
