@@ -39,7 +39,17 @@ function setup() {
   };
   system('draft', 'draft', ['/models/anatomy/draft.glb'], ['FMA999991']);
   system('approved', 'approved', ['/models/anatomy/approved.glb'], ['FMA999992']);
-  file('models/anatomy/approved.glb', 'fixture only');
+  // Minimal synthetic GLB v2 used by the positive audit fixtures, never real anatomy.
+  const json = Buffer.from('{"asset":{"version":"2.0"},"nodes":[]}', 'utf8');
+  const padded = Buffer.concat([json, Buffer.alloc((4 - json.length % 4) % 4, 0x20)]);
+  const validGlb = Buffer.alloc(20 + padded.length);
+  validGlb.write('glTF', 0, 'ascii');
+  validGlb.writeUInt32LE(2, 4);
+  validGlb.writeUInt32LE(validGlb.length, 8);
+  validGlb.writeUInt32LE(padded.length, 12);
+  validGlb.writeUInt32LE(0x4e4f534a, 16);
+  padded.copy(validGlb, 20);
+  file('models/anatomy/approved.glb', validGlb);
   file('preview/anatomy-lab.html', '<html><meta name="robots" content="noindex"></html>');
   return { dist, content, file, system, check: () => auditAnatomyProduction(dist, content) };
 }
@@ -110,6 +120,30 @@ describe('anatomy production artifact audit', () => {
     writeFileSync(path, JSON.stringify(record));
     expect(f.check().errors).toContain(
       'anatomy-approved.json: approved label FMA999992 does not match its cited source row',
+    );
+  });
+
+  it('rejects a forged approved GLB filename with invalid or truncated model bytes', () => {
+    const f = setup();
+    const path = join(f.dist, 'models', 'anatomy', 'approved.glb');
+    writeFileSync(path, 'synthetic malformed model, not a GLB');
+    expect(f.check().errors).toContain(
+      'approved model is not a valid GLB v2 header: /models/anatomy/approved.glb',
+    );
+    writeFileSync(path, Buffer.from('glTF'));
+    expect(f.check().errors).toContain(
+      'approved model is not a valid GLB v2 header: /models/anatomy/approved.glb',
+    );
+  });
+
+  it('rejects a GLB whose declared length mismatches the actual file', () => {
+    const f = setup();
+    const path = join(f.dist, 'models', 'anatomy', 'approved.glb');
+    const original = Buffer.from(readFileSync(path));
+    original.writeUInt32LE(original.length + 4, 8);
+    writeFileSync(path, original);
+    expect(f.check().errors).toContain(
+      'approved model is not a valid GLB v2 header: /models/anatomy/approved.glb',
     );
   });
 
