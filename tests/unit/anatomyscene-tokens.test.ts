@@ -113,18 +113,21 @@ describe('anatomy picture export tokens', () => {
     expect(getPropertyValue).toHaveBeenCalledTimes(Object.keys(EXPORT_TOKEN_NAMES).length);
   });
 
-  it('names the missing or invalid token when an export size cannot be read', () => {
+  it.each([
+    ['--export-gap', 'not-a-number'],
+    ['--export-title', ''],
+  ])('names the missing or invalid token %s when an export size cannot be read', (token, value) => {
     const values = Object.fromEntries(
       (Object.keys(EXPORT_TOKEN_NAMES) as Array<keyof ExportTokens>).map((key) => [
         EXPORT_TOKEN_NAMES[key],
         '1',
       ]),
     );
-    values['--export-gap'] = 'not-a-number';
+    values[token] = value;
     stubComputedStyle(values);
 
     expect(() => readExportTokens(root)).toThrow(
-      'The picture sizes are missing (--export-gap).',
+      `The picture sizes are missing (${token}).`,
     );
   });
 });
