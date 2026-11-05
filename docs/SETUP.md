@@ -293,7 +293,8 @@ that the `delete_my_account` rewrite in file 17 still has to be pasted into the 
 refuses that statement), so row 17 is recorded ahead of that function until then. `cueory-prod` has no history rows
 and no schema. Before any CLI migration action, verify each project's SQL, schema and history version by version. The same hold covers running migration files by hand in the SQL Editor: on either project, a file is run there only
 when Christian says so for that file, and its exact file version is then recorded in the history table, so
-history never says less, or more, than what has run.
+history never says less, or more, than what has run (the one exception today is the caveat above: staging's row 17
+is ahead of the `delete_my_account` rewrite until Christian pastes it).
 Never rerun already-applied SQL or mark a failed, pending, or unrun migration as applied. Sources:
 [Supabase: Database functions](https://supabase.com/docs/guides/database/functions) (SQL Editor, **New Query**,
 **Run**), [Supabase: Use Supabase with Next.js](https://supabase.com/docs/guides/getting-started/quickstarts/nextjs)

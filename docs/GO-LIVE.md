@@ -133,7 +133,8 @@ that one function. `cueory-prod` has no history rows and no schema. Before any `
 compare the live history, the live schema and the files version by version, and get Christian's approval for the
 plan. A `migration repair` changes history, not the schema. The same hold covers running migration files by hand in the SQL Editor: on either project, a file is run there only
 when Christian says so for that file, and its exact file version is then recorded in the history table, so
-history never says less, or more, than what has run. [SB migrations] [SB repair]
+history never says less, or more, than what has run (the one exception today is the caveat above: staging's row 17
+is ahead of the `delete_my_account` rewrite until Christian pastes it). [SB migrations] [SB repair]
 
 ### 1.6 Sign-in settings on cueory-prod (25 minutes)
 

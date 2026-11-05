@@ -120,7 +120,7 @@ the names Christian chose (D-64, Task 113/114, `src/config/games.ts`): pillo (gu
 blister-pack look; id `pulse`), crossword (a mini crossword; id `cueword`), sort (sort ten terms into three named
 groups, one of them fitting none; three slips end the round; id `triage`) and word path (trace hidden words through a
 letter grid; id `suture`). pillo is first (D-61), then
-triage (D-63). Words and clues come only from approved lesson content and go through the
+sort (id `triage`, D-63). Words and clues come only from approved lesson content and go through the
 same review pipeline; only today's puzzle ever reaches the browser (D-61 proposes how). Results share as plain words,
 stats are optional and private, there is no streak guilt, it works offline once loaded, and every puzzle gets the
 "Flag or comment" button. Original game names, rules and visual design. Never the names Wordle, Connections, Strands
