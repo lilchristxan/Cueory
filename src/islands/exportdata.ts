@@ -160,7 +160,7 @@ const studyEventKinds = ['answered', 'marked', 'skipped'];
 const studyEventMarks = ['know', 'learning'];
 const anatomySystemKey = (value: unknown) => typeof value === 'string' && /^[a-z0-9-]{1,40}$/.test(value);
 const anatomyStructureId = (value: unknown) =>
-  typeof value === 'string' && value.length <= 60 && /^(FMA\\d+|FIX\\d+|fixture-[a-z0-9-]+)$/.test(value);
+  typeof value === 'string' && value.length <= 60 && /^(FMA\d+|FIX\d+|fixture-[a-z0-9-]+)$/.test(value);
 function anatomyIdList(value: unknown): boolean {
   if (!Array.isArray(value) || value.length > 1000 || Object.keys(value).length !== value.length) return false;
   const seen = new Set<string>();
@@ -192,7 +192,7 @@ const anatomyReviewQueueSchema: Schema = {
 };
 const anatomySavedViewSchema: Schema = {
   systemKey: anatomySystemKey,
-  name: value => typeof value === 'string' && value.length >= 1 && value.length <= 60 && !/[\\u0000-\\u001f\\u007f]/.test(value),
+  name: value => typeof value === 'string' && value.length >= 1 && value.length <= 60 && !/[\u0000-\u001f\u007f]/.test(value),
   camera: anatomyCamera, hidden: anatomyIdList, faded: anatomyIdList,
   selected: value => value === null || anatomyStructureId(value), createdAt: date, updatedAt: date,
 };
