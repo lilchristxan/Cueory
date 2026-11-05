@@ -15,7 +15,7 @@ function setup() {
   const content = join(root, 'content', 'visuals');
   mkdirSync(dist, { recursive: true });
   mkdirSync(content, { recursive: true });
-  const file = (path: string, body = '') => {
+  const file = (path: string, body: string | Buffer = '') => {
     const dest = join(dist, path);
     mkdirSync(join(dest, '..'), { recursive: true });
     writeFileSync(dest, body);
