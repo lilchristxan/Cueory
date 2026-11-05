@@ -111,11 +111,13 @@ function hasArchiveMagic(path) {
 }
 
 /** Read bytes from a regular file through its opened descriptor, without following symlinks. */
-function readRegularBytesNoFollow(path) {
+function readRegularBytesNoFollow(path, maxBytes = 64 * 1024 * 1024) {
   if (!Number.isInteger(fsConstants.O_NOFOLLOW)) throw new Error('this platform cannot safely audit symbolic links');
   const fd = openSync(path, fsConstants.O_RDONLY | fsConstants.O_NOFOLLOW);
   try {
-    if (!fstatSync(fd).isFile()) throw new Error('not a regular file');
+    const stats = fstatSync(fd);
+    if (!stats.isFile()) throw new Error('not a regular file');
+    if (stats.size > maxBytes) throw new Error('oversized Pagefind artifact');
     return readFileSync(fd);
   } finally {
     closeSync(fd);
@@ -218,30 +220,16 @@ function pagefindArtifactKind(url) {
   return null;
 }
 
-/** Validate Pagefind's actual generated formats; a matching filename alone is never trusted. */
-function decodePagefindPayload(bytes) {
-  let decoded = bytes;
-  if (bytes.length >= 2 && bytes[0] === 0x1f && bytes[1] === 0x8b) {
-    let result;
-    try {
-      result = gunzipSync(bytes, { maxOutputLength: MAX_PAGEFIND_DECOMPRESSED_BYTES, info: true });
-    } catch {
-      return null;
-    }
-    // Reject trailing bytes and concatenated gzip members; Pagefind writes one member per asset.
-    if (result.engine.bytesWritten !== bytes.length) return null;
-    decoded = result.buffer;
-  }
-  if (decoded.length <= PAGEFIND_SIGNATURE.length ||
-      !decoded.subarray(0, PAGEFIND_SIGNATURE.length).equals(PAGEFIND_SIGNATURE)) return null;
-  const payload = decoded.subarray(PAGEFIND_SIGNATURE.length);
-  return payload.length <= MAX_PAGEFIND_DECOMPRESSED_BYTES ? payload : null;
-}
+
 
 /** Validate Pagefind's actual generated formats; a matching filename alone is never trusted. */
 function validPagefindArtifact(path, kind) {
-  const bytes = readRegularBytesNoFollow(path);
-  if (bytes.length > 64 * 1024 * 1024) return false;
+  let bytes;
+  try {
+    bytes = readRegularBytesNoFollow(path, 64 * 1024 * 1024);
+  } catch {
+    return false;
+  }
   const isGzip = bytes.length >= 2 && bytes[0] === 0x1f && bytes[1] === 0x8b;
   let decoded;
   try {
