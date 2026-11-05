@@ -141,11 +141,11 @@ set local "request.jwt.claim.sub" to '00000000-0000-4000-8000-000000000001';
 -- A tab may switch to another confirmed account after the client preflight. Every mutating
 -- SECURITY DEFINER function compares the action-bound id to auth.uid() before writing.
 select throws_ok(
-  $$ select public.record_anatomy_misses('heart', array['FMA701'], '00000000-0000-4000-8000-000000000002'::uuid) $,
+  $$ select public.record_anatomy_misses('heart', array['FMA701'], '00000000-0000-4000-8000-000000000002'::uuid) $$,
   '28000', 'study account changed; reload before continuing', 'recording misses refuses a different action-bound account'
 );
 select throws_ok(
-  $$ select public.clear_anatomy_miss('heart', 'FMA1', '00000000-0000-4000-8000-000000000002'::uuid) $,
+  $$ select public.clear_anatomy_miss('heart', 'FMA1', '00000000-0000-4000-8000-000000000002'::uuid) $$,
   '28000', 'study account changed; reload before continuing', 'clearing a miss refuses a different action-bound account'
 );
 select throws_ok(
