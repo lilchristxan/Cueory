@@ -178,7 +178,7 @@ describe('JSON export', () => {
       profile: { createdAt: '2026-10-01T12:00:00.000Z', email: 'sample@example.invalid', displayName: 'Sample Student' },
     };
     expect(exportJson(reordered, exportDate)).toBe(exportJson(sample, exportDate));
-    expect(Object.keys(json(sample))).toEqual(['format', 'exportDate', 'profile', 'signInDetails', 'account', 'onboarding', 'progress', 'reviewState', 'gameStats', 'attempts', 'examPlans', 'reviewRows', 'reports', 'sessions', 'studyEvents', 'dropped']);
+    expect(Object.keys(json(sample))).toEqual(['format', 'exportDate', 'profile', 'signInDetails', 'account', 'onboarding', 'progress', 'reviewState', 'gameStats', 'attempts', 'examPlans', 'reviewRows', 'reports', 'sessions', 'anatomyReviewQueue', 'anatomyViews', 'studyEvents', 'dropped']);
   });
 
   it('preserves attempt and history row order, false, zero, null and Unicode', () => {
