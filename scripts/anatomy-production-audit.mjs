@@ -72,6 +72,32 @@ export function readRegularFileNoFollow(path) {
  * is needed. The stricter published-asset check rejects malformed or stale
  * blobs before Wrangler can upload an approved model.
  */
+/**
+ * Validate the mode-dependent layout mandated by the ratified
+ * EXT_meshopt_compression spec. Independent enum checks are insufficient:
+ * e.g. an OCTAHEDRAL filter must never be used on TRIANGLES.
+ */
+export function validMeshoptLayout(view, compression) {
+  const stride = compression?.byteStride;
+  const count = compression?.count;
+  const mode = compression?.mode;
+  const filter = compression?.filter ?? 'NONE';
+  if (!view || !Number.isSafeInteger(stride) || stride < 1 || stride > 256 ||
+      !Number.isSafeInteger(count) || count < 1 ||
+      !Number.isSafeInteger(count * stride) || view.byteLength !== count * stride ||
+      (view.byteStride !== undefined && view.byteStride !== stride)) return false;
+
+  if (mode === 'ATTRIBUTES') {
+    if (stride % 4 !== 0) return false;
+    if (filter === 'NONE' || filter === 'EXPONENTIAL') return true;
+    if (filter === 'OCTAHEDRAL') return stride === 4 || stride === 8;
+    return filter === 'QUATERNION' && stride === 8;
+  }
+  return (mode === 'TRIANGLES' || mode === 'INDICES') &&
+    (stride === 2 || stride === 4) && filter === 'NONE' &&
+    (mode !== 'TRIANGLES' || count % 3 === 0);
+}
+
 export function parseApprovedGlb(bytes) {
   if (!Buffer.isBuffer(bytes) || bytes.length < 20) throw new Error('invalid GLB size');
   if (bytes.toString('ascii', 0, 4) !== 'glTF' ||
@@ -193,10 +219,7 @@ export function parseApprovedGlb(bytes) {
          !validRange(compressed.byteOffset ?? 0, compressed.byteLength, buffer.byteLength) ||
          !Number.isSafeInteger(compressed.count) || compressed.count < 1 ||
          !Number.isSafeInteger(compressed.byteStride) || compressed.byteStride < 1 ||
-         compressed.byteStride > 255 ||
-         !['ATTRIBUTES', 'TRIANGLES', 'INDICES'].includes(compressed.mode) ||
-         (compressed.filter !== undefined &&
-          !['NONE', 'OCTAHEDRAL', 'QUATERNION', 'EXPONENTIAL'].includes(compressed.filter)))) {
+         !validMeshoptLayout(view, compressed))) {
       throw new Error('GLB meshopt range or decoder metadata invalid');
     }
   }
