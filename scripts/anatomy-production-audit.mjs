@@ -898,7 +898,12 @@ export function auditAnatomyProduction(distDir, contentDir) {
     const url = toUrl(path);
     const pagefindKind = pagefindArtifactKind(url);
     if (ARCHIVE_ASSET.test(path) ||
-        (pagefindKind ? !validPagefindArtifact(path, pagefindKind, draftIds) : hasArchiveMagic(path, !MODEL_ASSET.test(path)))) {
+        (pagefindKind
+          ? !validPagefindArtifact(path, pagefindKind, draftIds)
+          // Top-level model assets use the stricter approved-manifest parser,
+          // checked-in byte parity, and real MeshoptDecoder regression. Their
+          // opaque compressed BIN bytes are not scanned as nested archives.
+          : (!MODEL_ASSET.test(path) && hasArchiveMagic(path))) {
       errors.push(`archive/container in production output requires explicit review: ${url}`);
     }
   }
