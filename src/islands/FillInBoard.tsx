@@ -7,8 +7,7 @@ import {
   MAX_TYPED, startFillIn, summary, type FillInItem, type FillInState,
 } from './fillin';
 
-/** `page` is this page's own address, for the saved place (Task 300: every lesson has its own fill-in page). */
-interface Props { items: FillInItem[]; page?: string }
+interface Props { items: FillInItem[] }
 
 const primaryButton =
   'min-h-11 rounded-pill bg-button px-5 py-2.5 text-on-button hover:bg-button-hover disabled:opacity-50';
@@ -40,11 +39,11 @@ function appendAttempt(history: readonly string[], entry: string, previousWasClo
 }
 
 /** Only typed submissions and whether the student used a hint are saved. */
-function fillInDraft(items: readonly FillInItem[], state: FillInState, attempts: Attempts, moves: number, page: string): ResumeDraft | null {
+function fillInDraft(items: readonly FillInItem[], state: FillInState, attempts: Attempts, moves: number): ResumeDraft | null {
   if (!items.length) return null;
   const index = currentIndex(state) ?? items.length - 1;
   return {
-    tool: 'fill-in', page, step: `advance-${moves}`,
+    tool: 'fill-in', page: FILL_IN_PAGE, step: `advance-${moves}`,
     itemIndex: index, ...(state.done ? {} : { itemId: itemKey(index) }),
     totalItems: items.length,
     answers: {
@@ -61,10 +60,10 @@ function fillInDraft(items: readonly FillInItem[], state: FillInState, attempts:
  * trust a saved verdict, sentence, answer key, item ID or arbitrary engine state.
  * Multiple attempts on the same item also support close spelling and later rounds.
  */
-function restoreFillIn(items: readonly FillInItem[], snapshot: ResumeSnapshot, page: string): {
+function restoreFillIn(items: readonly FillInItem[], snapshot: ResumeSnapshot): {
   state: FillInState; typed: string; attempts: Attempts; moves: number;
 } | null {
-  if (snapshot.tool !== 'fill-in' || snapshot.page !== page || snapshot.module !== undefined ||
+  if (snapshot.tool !== 'fill-in' || snapshot.page !== FILL_IN_PAGE || snapshot.module !== undefined ||
       snapshot.timer !== null || !items.length || snapshot.totalItems !== items.length) return null;
   const marker = /^advance-(0|[1-9]\d*)$/.exec(snapshot.step ?? '');
   if (!marker) return null;
@@ -127,7 +126,7 @@ function restoreFillIn(items: readonly FillInItem[], snapshot: ResumeSnapshot, p
         state.result === 'right' || state.result === 'wrong') return null;
     if (!state.hinted || state.result !== null) state = showHint(state);
   }
-  const expected = fillInDraft(items, state, attempts, moves, page);
+  const expected = fillInDraft(items, state, attempts, moves);
   if (!expected || expected.itemIndex !== snapshot.itemIndex || expected.itemId !== snapshot.itemId ||
       expected.phase !== snapshot.phase) return null;
   return { state, typed, attempts, moves };
@@ -135,17 +134,17 @@ function restoreFillIn(items: readonly FillInItem[], snapshot: ResumeSnapshot, p
 
 /** The key starts a fresh session when a parent replaces the items. */
 export default function FillInBoard(props: Props) {
-  return <Session key={JSON.stringify(props.items)} items={props.items} page={props.page ?? FILL_IN_PAGE} />;
+  return <Session key={JSON.stringify(props.items)} items={props.items} />;
 }
 
-function Session({ items: suppliedItems, page = FILL_IN_PAGE }: Props) {
+function Session({ items: suppliedItems }: Props) {
   const [items] = useState(() => parseItems(suppliedItems));
   const [state, setState] = useState(() => startFillIn(items));
   const [typed, setTyped] = useState('');
   const [focusInput, setFocusInput] = useState(0);
   const [resumePending, setResumePending] = useState(() => {
     const saved = readResume(browserStorage());
-    return saved?.tool === 'fill-in' && saved.page === page;
+    return saved?.tool === 'fill-in' && saved.page === FILL_IN_PAGE;
   });
   const attempts = useRef<Attempts>({});
   // The item whose last saved entry is a close try that is still open (a hint in between doesn't close it).
@@ -171,7 +170,7 @@ function Session({ items: suppliedItems, page = FILL_IN_PAGE }: Props) {
   }, [answered, focusInput, state.done]);
 
   const persist = (next: FillInState) => {
-    const draft = fillInDraft(items, next, attempts.current, moves.current, page);
+    const draft = fillInDraft(items, next, attempts.current, moves.current);
     if (!draft) return;
     if (Object.values(attempts.current).some((entries) => entries.length > MAX_HISTORY)) {
       // Too many rounds on one item to save in a form replay can trust: stop saving rather than keep a broken save.
@@ -231,7 +230,7 @@ function Session({ items: suppliedItems, page = FILL_IN_PAGE }: Props) {
   };
 
   const continueSaved = (snapshot: ResumeSnapshot) => {
-    const saved = restoreFillIn(items, snapshot, page);
+    const saved = restoreFillIn(items, snapshot);
     if (!saved) {
       startOver();
       return;
@@ -240,7 +239,7 @@ function Session({ items: suppliedItems, page = FILL_IN_PAGE }: Props) {
     openClose.current = saved.state.result === 'close' && saved.state.done === false
       ? itemKey(currentIndex(saved.state) ?? -1) : null;
     moves.current = saved.moves;
-    latestDraft.current = fillInDraft(items, saved.state, saved.attempts, saved.moves, page);
+    latestDraft.current = fillInDraft(items, saved.state, saved.attempts, saved.moves);
     setState(saved.state);
     setTyped(saved.typed);
     setResumePending(false);
@@ -260,7 +259,7 @@ function Session({ items: suppliedItems, page = FILL_IN_PAGE }: Props) {
 
   return (
     <div className="text-ink">
-      <ResumePrompt page={page} onContinue={continueSaved} onStartOver={startOver} />
+      <ResumePrompt page={FILL_IN_PAGE} onContinue={continueSaved} onStartOver={startOver} />
       <div inert={resumePending} data-testid="fill-in-session">
         {state.done ? (
           <div ref={end} tabIndex={-1}>

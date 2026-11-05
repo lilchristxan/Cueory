@@ -214,8 +214,7 @@ export function createStudyEventQueue(options: StudyEventQueueOptions): StudyEve
       } catch (error) {
         if (signedOut || revision !== generation) return report('signed-out');
         const message = errorMessage(error);
-        // An unconfirmed or anonymous account is refused the same way every time (Task 169), so stop as for sign-out.
-        if (message === 'sign in to record study activity' || message === 'confirm your email to use this') {
+        if (message === 'sign in to record study activity') {
           signOut();
           return report('signed-out');
         }
