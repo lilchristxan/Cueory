@@ -141,24 +141,54 @@ function hasZipLocalHeaderAt(bytes, offset, baseOffset, fileSize) {
       bytes.readUInt32LE(offset) !== 0x04034b50) return false;
   const versionNeeded = bytes.readUInt16LE(offset + 4);
   const flags = bytes.readUInt16LE(offset + 6);
-  const method = bytes.readUInt16LE(offset + 8);
   const compressedSize = bytes.readUInt32LE(offset + 18);
   const uncompressedSize = bytes.readUInt32LE(offset + 22);
   const nameLength = bytes.readUInt16LE(offset + 26);
   const extraLength = bytes.readUInt16LE(offset + 28);
   const usesDataDescriptor = (flags & 0x0008) !== 0;
-  if (versionNeeded < 10 || versionNeeded > 63 ||
-      ![0, 8, 9, 12, 14, 93, 95, 98].includes(method) ||
-      nameLength < 1 || nameLength > 240 || extraLength > 200 ||
-      (!usesDataDescriptor && (compressedSize > fileSize || uncompressedSize > fileSize))) return false;
+  if (versionNeeded < 10 || versionNeeded > 99 || nameLength < 1) return false;
   const nameStart = offset + 30;
-  const dataStart = nameStart + nameLength + extraLength;
+  const extraStart = nameStart + nameLength;
+  const dataStart = extraStart + extraLength;
+  if (dataStart > bytes.length) return false;
+
+  // ZIP64 stores sentinel 0xffffffff sizes in the local header and carries
+  // the real 64-bit values in extra field 0x0001 (uncompressed then compressed).
+  let compressedSizeValue = BigInt(compressedSize);
+  let uncompressedSizeValue = BigInt(uncompressedSize);
+  if (!usesDataDescriptor && (compressedSize === 0xffffffff || uncompressedSize === 0xffffffff)) {
+    let foundZip64 = false;
+    for (let cursor = extraStart; cursor + 4 <= dataStart;) {
+      const fieldId = bytes.readUInt16LE(cursor);
+      const fieldLength = bytes.readUInt16LE(cursor + 2);
+      const fieldStart = cursor + 4;
+      const fieldEnd = fieldStart + fieldLength;
+      if (fieldEnd > dataStart) return false;
+      if (fieldId === 0x0001) {
+        let valueOffset = fieldStart;
+        if (uncompressedSize === 0xffffffff) {
+          if (valueOffset + 8 > fieldEnd) return false;
+          uncompressedSizeValue = bytes.readBigUInt64LE(valueOffset);
+          valueOffset += 8;
+        }
+        if (compressedSize === 0xffffffff) {
+          if (valueOffset + 8 > fieldEnd) return false;
+          compressedSizeValue = bytes.readBigUInt64LE(valueOffset);
+        }
+        foundZip64 = true;
+        break;
+      }
+      cursor = fieldEnd;
+    }
+    if (!foundZip64) return false;
+  }
+  if (!usesDataDescriptor &&
+      (compressedSizeValue > BigInt(fileSize) || uncompressedSizeValue > BigInt(fileSize) ||
+       BigInt(baseOffset + dataStart) + compressedSizeValue > BigInt(fileSize))) return false;
   // Bit 3 is valid ZIP streaming mode: sizes/CRC live in a data descriptor
-  // after the entry data, not in the local header. The structurally plausible
-  // local header is still enough to reject this opaque archive from production.
-  if (dataStart > bytes.length ||
-      (!usesDataDescriptor && baseOffset + dataStart + compressedSize > fileSize) ||
-      (usesDataDescriptor && baseOffset + dataStart >= fileSize)) return false;
+  // after the entry data, not in the local header. ZIP64 sentinel sizes are
+  // resolved from the extra field above when no data descriptor is present.
+  if (usesDataDescriptor && baseOffset + dataStart >= fileSize) return false;
   const name = bytes.subarray(nameStart, nameStart + nameLength);
   return !name.some((byte) => byte === 0 || byte < 0x20);
 }
