@@ -146,13 +146,19 @@ function hasZipLocalHeaderAt(bytes, offset, baseOffset, fileSize) {
   const uncompressedSize = bytes.readUInt32LE(offset + 22);
   const nameLength = bytes.readUInt16LE(offset + 26);
   const extraLength = bytes.readUInt16LE(offset + 28);
-  if (versionNeeded < 10 || versionNeeded > 63 || (flags & 0x0008) !== 0 ||
+  const usesDataDescriptor = (flags & 0x0008) !== 0;
+  if (versionNeeded < 10 || versionNeeded > 63 ||
       ![0, 8, 9, 12, 14, 93, 95, 98].includes(method) ||
       nameLength < 1 || nameLength > 240 || extraLength > 200 ||
-      compressedSize > fileSize || uncompressedSize > fileSize) return false;
+      (!usesDataDescriptor && (compressedSize > fileSize || uncompressedSize > fileSize))) return false;
   const nameStart = offset + 30;
   const dataStart = nameStart + nameLength + extraLength;
-  if (dataStart > bytes.length || baseOffset + dataStart + compressedSize > fileSize) return false;
+  // Bit 3 is valid ZIP streaming mode: sizes/CRC live in a data descriptor
+  // after the entry data, not in the local header. The structurally plausible
+  // local header is still enough to reject this opaque archive from production.
+  if (dataStart > bytes.length ||
+      (!usesDataDescriptor && baseOffset + dataStart + compressedSize > fileSize) ||
+      (usesDataDescriptor && baseOffset + dataStart >= fileSize)) return false;
   const name = bytes.subarray(nameStart, nameStart + nameLength);
   return !name.some((byte) => byte === 0 || byte < 0x20);
 }
@@ -478,7 +484,7 @@ function containsGlbHeader(bytes) {
 
 /** Parse one definite-length CBOR value, rejecting embedded model/archive byte strings. */
 function containsReservedAnatomyId(text, draftIds) {
-  if (/\bFIX\d+\b/u.test(text)) return true;
+  if (/\bFIX\d{3,}\b/u.test(text)) return true;
   for (const match of text.matchAll(STRUCTURE_TOKEN)) {
     if (draftIds.has(match[0])) return true;
   }
