@@ -1,1 +1,1 @@
-STATUS: Task 178, Anatomy Lab production artifact audit (#625): production builds fail closed on unapproved models, draft IDs and fixtures; protected previews remain draft-enabled. Founder-held; all 11 models remain draft.
+status: Task 178, Anatomy Lab production artifact audit (#625): production builds fail closed on unapproved models, draft IDs and fixtures; protected previews remain draft-enabled. Founder-held; all 11 models remain draft.
