@@ -80,11 +80,11 @@ function hasTarHeaderAt(bytes, offset) {
   const isV7 = magic.every((byte) => byte === 0);
   if (!isUstar && !isV7) return false;
   const checksumField = bytes.toString('ascii', offset + 148, offset + 156);
-  const checksumDigits = checksumField.replace(/[\\0 ]+$/u, '').trim();
+  const checksumDigits = checksumField.replace(/[\0 ]+$/u, '').trim();
   if (!/^[0-7]{6}$/u.test(checksumDigits)) return false;
   if (isV7) {
     for (const [start, end] of [[100, 108], [108, 116], [116, 124], [124, 136], [136, 148]]) {
-      const field = bytes.toString('ascii', offset + start, offset + end).replace(/[\\0 ]+$/u, '').trim();
+      const field = bytes.toString('ascii', offset + start, offset + end).replace(/[\0 ]+$/u, '').trim();
       if (!/^[0-7]+$/u.test(field)) return false;
     }
   }
