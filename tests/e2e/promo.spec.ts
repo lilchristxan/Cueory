@@ -19,6 +19,38 @@ test.describe('once-only promo panel (D-59)', () => {
     await page.clock.install();
   });
 
+  test('the focused skip link stays above the non-modal promo panel', async ({ page }) => {
+    await page.goto('/');
+    const skip = page.getByRole('link', { name: 'skip to content' });
+
+    // Establish keyboard navigation before the delayed panel takes focus.
+    await page.keyboard.press('Tab');
+    await expect(skip).toBeFocused();
+    await wait(page, 5_500);
+
+    const panel = promoPanel(page);
+    await expect(panel).toBeVisible();
+    await expect(panel.getByRole('button', { name: 'close' })).toBeFocused();
+
+    // The promo intentionally allows focus to leave. The skip link must remain visibly above its z-40 panel.
+    await skip.focus();
+    const appearance = await skip.evaluate((element) => {
+      const rect = element.getBoundingClientRect();
+      const hit = document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2);
+      const style = getComputedStyle(element);
+      return {
+        unobscured: hit === element || (hit !== null && element.contains(hit)),
+        focusVisible: element.matches(':focus-visible'),
+        outlineStyle: style.outlineStyle,
+        outlineWidth: style.outlineWidth,
+      };
+    });
+    expect(appearance.unobscured).toBe(true);
+    expect(appearance.focusVisible).toBe(true);
+    expect(appearance.outlineStyle).not.toBe('none');
+    expect(parseFloat(appearance.outlineWidth)).toBeGreaterThan(0);
+  });
+
   test('slides down after 5 seconds, takes focus without scrolling, moves nothing and passes axe', async ({ page }) => {
     await page.goto('/');
     await page.evaluate(() => document.fonts.ready);
