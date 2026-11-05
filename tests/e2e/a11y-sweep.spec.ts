@@ -199,6 +199,12 @@ test.describe('Task 74: full-site accessibility sweep', () => {
           problems.push('Skip link is not first in the keyboard tab order');
         } else {
           if (!(await skip.isVisible())) problems.push('Focused skip link is not visible');
+          const unobscured = await skip.evaluate((element) => {
+            const rect = element.getBoundingClientRect();
+            const hit = document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2);
+            return hit === element || (hit !== null && element.contains(hit));
+          });
+          if (!unobscured) problems.push('Focused skip link is obscured by another element');
           await page.keyboard.press('Enter');
           const hash = await page.evaluate(() => location.hash);
           if (hash !== '#main') problems.push(`Skip link did not navigate to #main (hash: ${hash})`);
