@@ -14,6 +14,7 @@ const MODEL_URL = /^\/models\/anatomy\/[a-z0-9][a-z0-9_-]*\.glb$/;
 const STRUCTURE_ID = /^(?:FMA|BP)\d+[a-z]*$/;
 const STRUCTURE_TOKEN = /\b(?:FMA|BP)\d+[a-z]*\b/g;
 const BODYPARTS3D_URL_PREFIX = 'https://dbarchive.biosciencedbc.jp/data/bodyparts3d/LATEST/';
+const BODYPARTS3D_CREDIT = 'BodyParts3D, © The Database Center for Life Science licensed under CC Attribution 4.0 International';
 /** The release gate must verify the actual file containing each quoted anatomy name.
  * A valid archive origin alone is not proof that a README citation points to a parts-list row.
  */
@@ -64,6 +65,52 @@ export function readRegularFileNoFollow(path) {
   } finally {
     closeSync(fd);
   }
+}
+
+/**
+ * Validate a full built GLB, including its JSON/BIN framing. No 3D runtime
+ * is needed. The stricter published-asset check rejects malformed or stale
+ * blobs before Wrangler can upload an approved model.
+ */
+export function parseApprovedGlb(bytes) {
+  if (!Buffer.isBuffer(bytes) || bytes.length < 20) throw new Error('invalid GLB size');
+  if (bytes.toString('ascii', 0, 4) !== 'glTF' ||
+      bytes.readUInt32LE(4) !== 2 || bytes.readUInt32LE(8) !== bytes.length) {
+    throw new Error('invalid GLB v2 header');
+  }
+  const len = bytes.readUInt32LE(12);
+  if (bytes.readUInt32LE(16) !== 0x4e4f534a ||
+      len === 0 || len % 4 !== 0 || 20 + len > bytes.length) {
+    throw new Error('incomplete GLB JSON chunk');
+  }
+  const jsonEnd = 20 + len;
+  let binLength = null;
+  for (let pos = jsonEnd; pos < bytes.length;) {
+    if (pos + 8 > bytes.length) throw new Error('truncated GLB chunk header');
+    const size = bytes.readUInt32LE(pos);
+    const type = bytes.readUInt32LE(pos + 4);
+    if (size % 4 !== 0 || pos + 8 + size > bytes.length) {
+      throw new Error('invalid GLB chunk length');
+    }
+    if (type === 0x4e4f534a) throw new Error('unexpected additional JSON chunk');
+    if (type === 0x004e4942) {
+      if (pos !== jsonEnd || binLength !== null) throw new Error('BIN chunk out of order');
+      binLength = size;
+    }
+    pos += 8 + size;
+  }
+  const json = JSON.parse(bytes.toString('utf8', 20, jsonEnd));
+  if (!json || !Array.isArray(json.nodes) || !Array.isArray(json.meshes) ||
+      !Array.isArray(json.accessors) || !Array.isArray(json.extensionsRequired)) {
+    throw new Error('required model metadata missing');
+  }
+  const buffer = json.buffers?.[0];
+  if (!buffer || buffer.uri !== undefined || binLength === null ||
+      !Number.isSafeInteger(buffer.byteLength) ||
+      binLength < buffer.byteLength || binLength > buffer.byteLength + 3) {
+    throw new Error('GLB BIN buffer missing or incomplete');
+  }
+  return json;
 }
 
 /**
@@ -178,6 +225,7 @@ export function auditAnatomyProduction(distDir, contentDir) {
   const approved = new Set();
   const draft = new Set();
   const draftIds = new Set();
+  const approvedModels = new Map();
   let approvedSystems = 0;
   let draftSystems = 0;
 
@@ -221,6 +269,7 @@ export function auditAnatomyProduction(distDir, contentDir) {
     if (data.status === 'approved') {
       approvedSystems++;
       urls.forEach((url) => approved.add(url));
+      urls.forEach((url) => approvedModels.set(url, data));
       // A reviewed CC BY 4.0 source record is not enough if the actual model
       // claims an older or unknown archive release with different rights.
       if (data.model.release !== 'BodyParts3D 4.0') {
@@ -350,41 +399,53 @@ export function auditAnatomyProduction(distDir, contentDir) {
     if (!shipped.includes(url)) errors.push(`approved model missing from production: ${url}`);
   }
 
-  // Production release requires genuine GLB v2 bytes, not merely a file with
-  // an approved name. The separate full model suite checks node/mesh geometry.
-  // Use O_NOFOLLOW to avoid reading replaced symlink targets after enumeration.
-  for (const url of approved) {
+  // A review of source GLBs alone cannot validate the exact deployed bytes.
+  // Check the shipped approved file's framing, source identity, mandatory
+  // compression, copyright, and per-model budget before publication.
+  for (const [url, manifest] of approvedModels) {
     if (!shipped.includes(url)) continue;
     const path = join(dist, url.slice(1));
     let fd;
     try {
       if (!Number.isInteger(fsConstants.O_NOFOLLOW)) throw new Error('no symlink guard');
       fd = openSync(path, fsConstants.O_RDONLY | fsConstants.O_NOFOLLOW);
-      const size = fstatSync(fd).size;
-      if (!fstatSync(fd).isFile() || size < 20) throw new Error('invalid GLB header');
-      const header = Buffer.alloc(20);
-      const read = readSync(fd, header, 0, 20, 0);
-      const jsonLength = header.readUInt32LE(12);
-      if (read !== 20 || header.toString('ascii', 0, 4) !== 'glTF' ||
-          header.readUInt32LE(4) !== 2 || header.readUInt32LE(8) !== size ||
-          jsonLength < 2 || jsonLength % 4 !== 0 ||
-          header.readUInt32LE(16) !== 0x4e4f534a ||
-          20 + jsonLength > size || size > 3 * 1024 * 1024) {
-        throw new Error('invalid GLB v2 header/JSON chunk');
+      const stats = fstatSync(fd);
+      if (!stats.isFile() || stats.size < 20 || stats.size > 3 * 1024 * 1024) {
+        throw new Error('invalid or oversized GLB');
       }
-      // A valid header is insufficient: the JSON chunk itself can be corrupt.
-      const chunk = Buffer.alloc(jsonLength);
-      let offset = 0;
-      while (offset < jsonLength) {
-        const n = readSync(fd, chunk, offset, jsonLength - offset, 20 + offset);
-        if (n <= 0) throw new Error('incomplete GLB JSON chunk');
-        offset += n;
+      const bytes = readFileSync(fd);
+      const json = parseApprovedGlb(bytes);
+      const expectedNames = manifest.labels.map((label) => label.id);
+      const nodeNames = json.nodes.map((node) => node.name);
+      if (nodeNames.length !== expectedNames.length ||
+          new Set(nodeNames).size !== nodeNames.length ||
+          expectedNames.some((id, i) => nodeNames[i] !== id)) {
+        throw new Error('node identifiers do not match approved labels');
       }
-      const metadata = JSON.parse(chunk.toString('utf8'));
-      if (!metadata || metadata.asset?.version !== '2.0' ||
-          !Array.isArray(metadata.nodes)) throw new Error('invalid GLB v2 metadata');
+      if (json.asset?.copyright !== BODYPARTS3D_CREDIT) {
+        throw new Error('BodyParts3D copyright is missing');
+      }
+      if (json.extensionsRequired.length !== 2 ||
+          !json.extensionsRequired.includes('EXT_meshopt_compression') ||
+          !json.extensionsRequired.includes('KHR_mesh_quantization')) {
+        throw new Error('meshopt/quantization decoder contract mismatch');
+      }
+      let triangles = 0;
+      for (const mesh of json.meshes) {
+        for (const primitive of mesh.primitives) {
+          if (primitive.mode !== undefined && primitive.mode !== 4 ||
+              !Number.isInteger(primitive.indices) ||
+              !Number.isSafeInteger(json.accessors[primitive.indices]?.count) ||
+              json.accessors[primitive.indices].count < 3 ||
+              json.accessors[primitive.indices].count % 3 !== 0) {
+            throw new Error('invalid triangle index accessor');
+          }
+          triangles += json.accessors[primitive.indices].count / 3;
+        }
+      }
+      if (triangles < 1 || triangles > 150000) throw new Error('model triangle budget exceeded');
     } catch {
-      errors.push(`approved model is not a valid GLB v2 header: ${url}`);
+      errors.push(`approved model failed built GLB geometry, identity or credit verification: ${url}`);
     } finally {
       if (fd !== undefined) closeSync(fd);
     }
