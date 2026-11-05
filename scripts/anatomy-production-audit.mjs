@@ -541,6 +541,17 @@ export function auditAnatomyProduction(distDir, contentDir) {
           expectedNames.some((id, i) => nodeNames[i] !== id)) {
         throw new Error('node identifiers do not match approved labels');
       }
+      // Cueory's BodyParts3D generator emits a single active scene with
+      // every reviewed structure as an ordered root. A glTF can contain named
+      // meshes without attaching any of them to the scene loaded by GLTFLoader.
+      const roots = json.scenes?.[0]?.nodes;
+      if (json.scene !== 0 || !Array.isArray(json.scenes) ||
+          json.scenes.length !== 1 || !Array.isArray(roots) ||
+          roots.length !== json.nodes.length ||
+          roots.some((nodeIndex, i) => nodeIndex !== i) ||
+          json.nodes.some((node) => node.children !== undefined)) {
+        throw new Error('approved structure nodes are not attached to the active scene');
+      }
       // A named node without a linked mesh can have matching metadata while
       // rendering no anatomy. The release check must inspect the shipped GLB,
       // not just count triangles in unrelated, unreferenced meshes.

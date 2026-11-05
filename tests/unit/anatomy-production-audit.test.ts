@@ -25,6 +25,8 @@ function setup() {
     const modelJson = {
       asset: { version: '2.0', copyright: 'BodyParts3D, © The Database Center for Life Science licensed under CC Attribution 4.0 International' },
       extensionsRequired: ['EXT_meshopt_compression', 'KHR_mesh_quantization'],
+      scene: 0,
+      scenes: [{ nodes: ids.map((_, i) => i) }],
       nodes: ids.map((id, mesh) => ({ name: id, mesh })),
       meshes: ids.map(() => ({ primitives: [{ indices: 0, attributes: { POSITION: 1 } }] })),
       accessors: [{ count: 3, componentType: 5123, type: 'SCALAR', bufferView: 0 },
@@ -168,7 +170,7 @@ describe('anatomy production artifact audit', () => {
     }
   });
 
-  it('rejects missing and out-of-range embedded geometry data references', () => {
+  it('rejects missing scenes, orphaned nodes and out-of-range embedded geometry references', () => {
     const f = setup();
     const path = join(f.dist, 'models', 'anatomy', 'approved.glb');
     const original = readFileSync(path);
@@ -195,6 +197,14 @@ describe('anatomy production artifact audit', () => {
         'approved model failed built GLB geometry, identity or credit verification: /models/anatomy/approved.glb',
       );
     };
+    // The viewer reads gltf.scene, so orphaned meshes are never publication-safe.
+    mutate((json) => { delete json.scene; });
+    mutate((json) => { delete json.scenes; });
+    mutate((json) => { json.scene = 1; });
+    mutate((json) => { json.scenes[0].nodes = []; });
+    mutate((json) => { json.scenes[0].nodes = [1]; });
+    mutate((json) => { json.scenes[0].nodes = [0, 0]; });
+    mutate((json) => { json.nodes[0].children = [0]; });
     mutate((json) => { delete json.bufferViews; });
     mutate((json) => { json.accessors[0].bufferView = 9; });
     mutate((json) => { json.accessors[1].count = 100; });
