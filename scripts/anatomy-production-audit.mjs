@@ -320,7 +320,9 @@ function validPagefindArtifact(path, kind, draftIds = new Set()) {
   if (decoded.length <= PAGEFIND_SIGNATURE.length ||
       !decoded.subarray(0, PAGEFIND_SIGNATURE.length).equals(PAGEFIND_SIGNATURE)) return false;
   const payload = decoded.subarray(PAGEFIND_SIGNATURE.length);
-  if (containsGlbHeader(payload)) return false;
+  // CBOR byte strings and WebAssembly custom sections are public bytes too.
+  // Reject draft/fixture tokens before format-specific parsing, including raw shards.
+  if (containsGlbHeader(payload) || containsReservedAnatomyId(payload.toString('utf8'), draftIds)) return false;
   if (kind === 'wasm') {
     return payload.length >= 8 &&
       payload.subarray(0, 4).equals(Buffer.from([0x00, 0x61, 0x73, 0x6d])) &&
