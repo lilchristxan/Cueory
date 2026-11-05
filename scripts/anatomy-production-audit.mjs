@@ -569,6 +569,12 @@ export function auditAnatomyProduction(distDir, contentDir) {
       }
       let triangles = 0;
       for (const mesh of json.meshes) {
+        // An otherwise valid scene may have a named structure pointing at an
+        // empty mesh while another structure supplies all the triangles.
+        // Every approved structure must have drawable geometry of its own.
+        if (!Array.isArray(mesh?.primitives) || mesh.primitives.length === 0) {
+          throw new Error('approved structure mesh has no triangle primitives');
+        }
         for (const primitive of mesh.primitives) {
           const indexAccessor = json.accessors[primitive.indices];
           const positionAccessor = json.accessors[primitive.attributes?.POSITION];
