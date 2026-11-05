@@ -14,6 +14,7 @@ export function shouldAuditWranglerUpload(env) {
     ? env.WRANGLER_COMMAND.trim() : '';
   // Deploy and version upload must verify assets regardless of draft flags,
   // GitHub refs, or the current Workers Builds branch.
+  if (env.CUEORY_WRANGLER_PREVIEW === '1' && command !== 'deploy' && command !== 'versions upload') return false;
   if (command === 'deploy' || command === 'versions upload') return true;
   if (command === 'dev' || command === 'types' || command === 'preview') return false;
   // Cloudflare Workers Previews invoke Wrangler custom builds without a
