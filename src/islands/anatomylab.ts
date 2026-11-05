@@ -1347,3 +1347,8 @@ export const COMPARE_SYNC_MS = 50;
 export function compareSyncDue(now: number, last: number | null, interval = COMPARE_SYNC_MS): boolean {
   return last === null || now - last >= interval;
 }
+
+/** Delay until a trailing camera copy is due, even when the main renderer stops producing frames. */
+export function compareSyncDelay(now: number, last: number | null, interval = COMPARE_SYNC_MS): number {
+  return last === null ? 0 : Math.max(0, interval - (now - last));
+}

@@ -46,6 +46,8 @@ import {
   breadcrumbRows,
   canRedo,
   compareSyncDue,
+  compareSyncDelay,
+  COMPARE_SYNC_MS,
   canUndo,
   createHistory,
   creditFor,
@@ -251,6 +253,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
   const compareCanvasRef = useRef<HTMLCanvasElement>(null);
   const compareSceneRef = useRef<LabScene | null>(null);
   const compareSyncedAt = useRef<number | null>(null);
+  const compareSyncTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // A pending phone consent never survives a body-system change.
   useEffect(() => setBulkPrompt(null), [systemKey]);
@@ -305,8 +308,24 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
     if (scene && compare) {
       const now = performance.now();
       if (compareSyncDue(now, compareSyncedAt.current)) {
+        if (compareSyncTimer.current !== null) {
+          clearTimeout(compareSyncTimer.current);
+          compareSyncTimer.current = null;
+        }
         compareSyncedAt.current = now;
         compare.applyCameraState(scene.cameraState());
+      } else if (compareSyncTimer.current === null) {
+        // A throttled final frame may be the last render after a quick gesture. Schedule one trailing copy so the
+        // comparison cannot remain at the penultimate camera position when the main renderer goes idle.
+        compareSyncTimer.current = setTimeout(() => {
+          compareSyncTimer.current = null;
+          const latestMain = sceneRef.current;
+          const latestCompare = compareSceneRef.current;
+          if (latestMain && latestCompare === compare) {
+            compareSyncedAt.current = performance.now();
+            latestCompare.applyCameraState(latestMain.cameraState());
+          }
+        }, compareSyncDelay(now, compareSyncedAt.current));
       }
     }
     if (!setPlaced) return;
@@ -767,6 +786,10 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
       });
     return () => {
       live = false;
+      if (compareSyncTimer.current !== null) {
+        clearTimeout(compareSyncTimer.current);
+        compareSyncTimer.current = null;
+      }
       compareSceneRef.current = null;
       scene?.dispose();
       scene = null;
