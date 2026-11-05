@@ -285,14 +285,13 @@ file run out of order or twice fails or leaves a gap.
 12. Tell Claude "staging database done".
 
 Supabase's docs prefer the command-line tool for migrations; the SQL Editor is used here because it needs no terminal.
-**Stop before any `supabase db push`, `supabase migration repair`, or other CLI migration action until the database
-owner has reconciled the exact version history and Christian has approved the plan.** SQL Editor runs do not create
-matching migration-history entries. The connected Supabase tool did record migration applications to `cueory-staging`
-on 5 November 2026, but its generated **version IDs are different from the Git filenames**. For example, the remote
-`20261105184848_profiles` record is not the same version number as `20261101060100_profiles.sql`. The read-only
-5 November audit found 16 differently versioned records on staging, no recorded migrations on `cueory-prod`, and
-17 canonical migration files in Git. A matching migration **name** alone is not proof its Git version was recorded.
-Verify each project's SQL, schema and migration history version by version before proposing a documented repair.
+**Stop before any `supabase db push`, `supabase migration repair`, or other CLI migration action until Christian has
+approved the plan.** SQL Editor runs create no migration-history entries, and the connected Supabase tool records its
+runs under its own timestamp versions rather than the file versions. On `cueory-staging` those rows were renamed on
+5 November 2026 (evening) to the 17 exact file versions, so history and files match one for one; the one caveat is
+that the `delete_my_account` rewrite in file 17 still has to be pasted into the SQL Editor by Christian (the tool
+refuses that statement), so row 17 is recorded ahead of that function until then. `cueory-prod` has no history rows
+and no schema. Before any CLI migration action, verify each project's SQL, schema and history version by version.
 Never rerun already-applied SQL or mark a failed, pending, or unrun migration as applied. Sources:
 [Supabase: Database functions](https://supabase.com/docs/guides/database/functions) (SQL Editor, **New Query**,
 **Run**), [Supabase: Use Supabase with Next.js](https://supabase.com/docs/guides/getting-started/quickstarts/nextjs)

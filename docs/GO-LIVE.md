@@ -121,18 +121,17 @@ Use exactly the steps of SETUP Part L, with three changes:
 
 If a later pull request adds a file with an earlier date than one you've already run, tell Claude before running it.
 
-**Migration history safety gate (for Claude; founder sign-off required):** Do not run `supabase db push`,
-`supabase migration repair`, or other CLI migration actions against staging or production until the database owner
-reconciles the **exact migration version numbers** in the hosted history with the canonical filenames in
-`supabase/migrations/`. The SQL Editor does not record corresponding history entries. The connected Supabase tool
-did record the schema migrations applied on `cueory-staging` on 5 November 2026, but with **different version IDs**:
-for example, remote history has `20261105184816_locked_by_default` while the checked-in file is
-`20261101060000_locked_by_default.sql`. A matching migration **name** does not mean its Git file version is
-recorded as applied. At the 5 November read-only audit, staging had 16 tool-generated migration records, production
-had none, and Git contained 17 canonical files. Never reapply already-executed SQL or blindly mark an unrun migration
-as applied. Independently compare each project's actual schema, SQL files and version history, then seek the
-founder's approval for a version-by-version reconciliation plan before any CLI migration action. A documented
-`migration repair` changes history, not the database schema itself. [SB migrations] [SB repair]
+**Migration history (for Claude; founder sign-off required before any CLI migration action):** the hosted history
+table (`supabase_migrations.schema_migrations`) must list exactly the version numbers of the files in
+`supabase/migrations/`, or `supabase db push` would try to run files again and `migration repair` could misstate
+history. The SQL Editor records nothing there, and the connected Supabase tool records runs under its own timestamp
+versions, not the file versions. On `cueory-staging`, as of 5 November 2026 (evening), the 17 history rows were renamed
+to the 17 file versions (`20261101060000_locked_by_default` … `20261104170500_enforce_opt_in_mfa`), so they match the
+files one for one. One caveat remains until Christian pastes it in the SQL Editor: the `delete_my_account` rewrite in
+file 17 (the only statement in that file the tool refuses to run) was not yet applied, so row 17 is recorded ahead of
+that one function. `cueory-prod` has no history rows and no schema. Before any `db push` or `repair` on either project,
+compare the live history, the live schema and the files version by version, and get Christian's approval for the
+plan. A `migration repair` changes history, not the schema. [SB migrations] [SB repair]
 
 ### 1.6 Sign-in settings on cueory-prod (25 minutes)
 
