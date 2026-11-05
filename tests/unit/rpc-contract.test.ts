@@ -336,12 +336,12 @@ describe('anatomy study contract (Task 178)', () => {
     });
     const client = { auth: { getSession: async () => ({ data: { session: { user: { id: 'student-1' } } }, error: null }) }, rpc } as unknown as AnatomyStudyClient;
     const study = createAnatomyStudy(async () => client);
-    await study.recordMisses('heart', ['FMA1']);
-    await study.clearMiss('heart', 'FMA1');
-    await study.reviewQueue();
-    await study.saveView({ systemKey: 'heart', name: 'front', camera, hidden: [] });
-    await study.deleteView('00000000-0000-4000-8000-000000000001');
-    await study.views('heart');
+    await study.recordMisses('heart', ['FMA1'], 'student-1');
+    await study.clearMiss('heart', 'FMA1', 'student-1');
+    await study.reviewQueue('student-1');
+    await study.saveView({ systemKey: 'heart', name: 'front', camera, hidden: [] }, 'student-1');
+    await study.deleteView('00000000-0000-4000-8000-000000000001', 'student-1');
+    await study.views('heart', 'student-1');
     const sent = Object.fromEntries(rpc.mock.calls.map(([fn, args]) => [fn, args ? Object.keys(args as object) : []]));
     for (const name of Object.keys(signatures) as (keyof typeof signatures)[]) {
       expect(sent[name], name).toEqual(declaration(name).arguments);
