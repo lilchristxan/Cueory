@@ -119,15 +119,38 @@ export async function runAutomerge({
             done = 'merge refused';
             decision.reasons.push(...latestDecision.reasons.map((reason) => `latest gate recheck: ${reason}`));
           } else {
-            try {
-              await gh.merge(n, pull.head.sha);
-              done = 'merged';
-            } catch (e) {
-              // 405: not mergeable after all; 409: a new commit arrived since the checks. Both wait for the next event.
-              if (e instanceof GitHubError && (e.status === 405 || e.status === 409)) {
+            // The final checks/comments can take time. Re-read the pull request after them so a
+            // staging move during those reads cannot make the bot merge against an unchecked base.
+            const final = await gh.pull(n);
+            if (final.state !== 'open' || final.draft || final.base.ref !== BASE_BRANCH ||
+                final.head.sha !== now.head.sha || final.head.repo?.full_name !== repo) {
+              done = 'merge refused';
+              if (final.draft) decision.reasons.push('pull request became a draft during the final gate recheck');
+              else if (final.head.repo?.full_name !== repo) decision.reasons.push('head repository changed during the final gate recheck');
+              else decision.reasons.push('pull request changed during the final gate recheck');
+            } else if (!now.base.sha || final.base.sha !== now.base.sha) {
+              done = 'merge refused';
+              decision.reasons.push('staging changed during the final gate recheck; retry with fresh checks');
+            } else if (final.labels.some((l) => l.name === NEEDS_CHRISTIAN_LABEL)) {
+              done = 'merge refused';
+              decision.reasons.push(`labelled ${NEEDS_CHRISTIAN_LABEL} during the final gate recheck`);
+            } else {
+              const finalAncestry = await gh.compare(BASE_BRANCH, final.head.sha);
+              if (finalAncestry.behind_by !== 0) {
                 done = 'merge refused';
-                decision.reasons.push(e.message);
-              } else throw e;
+                decision.reasons.push('staging is not an ancestor after the final gate recheck');
+              } else {
+                try {
+                  await gh.merge(n, final.head.sha);
+                  done = 'merged';
+                } catch (e) {
+              // 405: not mergeable after all; 409: a new commit arrived since the checks. Both wait for the next event.
+                  if (e instanceof GitHubError && (e.status === 405 || e.status === 409)) {
+                    done = 'merge refused';
+                    decision.reasons.push(e.message);
+                  } else throw e;
+                }
+              }
             }
           }
         }
