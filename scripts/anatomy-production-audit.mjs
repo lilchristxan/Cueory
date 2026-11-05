@@ -103,6 +103,22 @@ function validRetrievedDay(value) {
   return Number.isFinite(time) && new Date(time).toISOString().slice(0, 10) === value;
 }
 
+/** Validate the resolved origin and path, not an attacker-controlled raw text prefix. */
+function validBodyParts3dSourceUrl(value) {
+  if (typeof value !== 'string') return false;
+  try {
+    const page = new URL(value);
+    const archive = new URL(BODYPARTS3D_URL_PREFIX);
+    return page.origin === archive.origin &&
+      page.pathname.startsWith(archive.pathname) &&
+      page.pathname.length > archive.pathname.length &&
+      !page.pathname.includes('%') &&
+      !page.username && !page.password && !page.port;
+  } catch {
+    return false;
+  }
+}
+
 /** Extracts references without trusting paths from content files as filesystem paths. */
 export function modelUrls(model) {
   if (!model || typeof model !== 'object' || Array.isArray(model)) return null;
@@ -201,9 +217,7 @@ export function auditAnatomyProduction(distDir, contentDir) {
           // visuals-kit contract. Production audits also check stale dist/.
           const hasQuote = typeof source.quote === 'string' && source.quote.trim().length > 0;
           const hasSection = typeof source.section === 'string' && source.section.trim().length > 0;
-          const hasPage = typeof source.url === 'string' &&
-            source.url.startsWith(BODYPARTS3D_URL_PREFIX) &&
-            source.url.length > BODYPARTS3D_URL_PREFIX.length;
+          const hasPage = validBodyParts3dSourceUrl(source.url);
           const hasDate = validRetrievedDay(source.retrieved);
           if (!hasQuote || !hasSection || !hasPage || !hasDate ||
               source.book !== 'BodyParts3D' || source.license !== 'CC BY 4.0') {
