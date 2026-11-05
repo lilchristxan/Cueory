@@ -170,6 +170,7 @@ export function anatomyStudyMessage(error: unknown): string {
     : '';
   if ((SIGNED_OUT_MESSAGES as readonly string[]).includes(message)) return 'please sign in to use this.';
   if (message === CONFIRM_EMAIL_MESSAGE) return 'please confirm your email first. the link is in the email we sent you.';
+  if (message === 'study account changed; reload before continuing') return 'your account changed. reload the anatomy lab before continuing.';
   if (message === TWO_FACTOR_MESSAGE) return 'please finish two-factor sign-in to use this.';
   if (message === VIEW_LIMIT_MESSAGE) return `you can keep up to ${SAVED_VIEW_LIMIT} saved views. delete one to save another.`;
   if (message === MISS_LIMIT_MESSAGE) return "you've recorded a lot of misses recently. they'll be kept again in a little while.";
