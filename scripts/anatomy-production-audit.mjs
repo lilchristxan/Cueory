@@ -532,8 +532,10 @@ function validPagefindCbor(bytes, draftIds = new Set()) {
     if (major === 2 || major === 3) {
       if (!Number.isSafeInteger(argument) || argument < 0 || offset + argument > bytes.length) return false;
       const value = bytes.subarray(offset, offset + argument);
-      if (major === 2 && (containsGlbHeader(value) ||
-        containsReservedAnatomyId(value.toString('utf8'), draftIds))) return false;
+      // CBOR major-type-2 values are opaque bytes, not searchable prose.
+      // The complete Pagefind payload was already checked for real GLB/archive
+      // framing; only major-type-3 text strings are scanned for anatomy IDs.
+      if (major === 2 && containsGlbHeader(value)) return false;
       if (major === 3) {
         let decodedText;
         try {
@@ -605,18 +607,16 @@ function validPagefindArtifact(path, kind, draftIds = new Set()) {
   if (decoded.length <= PAGEFIND_SIGNATURE.length ||
       !decoded.subarray(0, PAGEFIND_SIGNATURE.length).equals(PAGEFIND_SIGNATURE)) return false;
   const payload = decoded.subarray(PAGEFIND_SIGNATURE.length);
-  // CBOR byte strings and WebAssembly custom sections are public bytes too.
-  // Validate the complete decompressed payload structurally before parsing it;
-  // this catches embedded containers without rejecting incidental short markers.
-  // Also reject draft/fixture tokens before format-specific parsing, including raw shards.
-  if (containsGlbHeader(payload) || containsValidatedArchive(payload) ||
-      containsReservedAnatomyId(payload.toString('utf8'), draftIds)) return false;
+  // Inspect the complete payload for structurally valid embedded GLBs/archives.
+  // Do not reinterpret opaque CBOR byte strings or WASM code/data as UTF-8
+  // prose: reserved anatomy IDs are checked only in JSON and CBOR text strings.
+  if (payload.length > MAX_ARCHIVE_INSPECTION_BYTES ||
+      containsGlbHeader(payload) || containsValidatedArchive(payload)) return false;
   if (kind === 'wasm') {
     return payload.length >= 8 &&
       payload.subarray(0, 4).equals(Buffer.from([0x00, 0x61, 0x73, 0x6d])) &&
       payload.readUInt32LE(4) === 1 &&
-      WebAssembly.validate(payload) &&
-      !containsValidatedArchive(payload);
+      WebAssembly.validate(payload);
   }
   if (path.endsWith('.pf_fragment')) {
     try {
