@@ -648,6 +648,15 @@ export function auditAnatomyProduction(distDir, contentDir) {
               positionAccessor.type !== 'VEC3') {
             throw new Error('invalid mesh primitive or glTF accessors');
           }
+          // A declared decoder extension is not proof that the actual rendered
+          // geometry uses it. The approved BodyParts3D gltfpack pipeline
+          // compresses both index and position data with meshopt.
+          const indexView = json.bufferViews[indexAccessor.bufferView];
+          const positionView = json.bufferViews[positionAccessor.bufferView];
+          if (indexView?.extensions?.EXT_meshopt_compression == null ||
+              positionView?.extensions?.EXT_meshopt_compression == null) {
+            throw new Error('approved primitive index and position data must be meshopt-compressed');
+          }
           triangles += json.accessors[primitive.indices].count / 3;
         }
       }
