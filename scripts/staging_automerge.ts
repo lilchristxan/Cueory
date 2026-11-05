@@ -35,11 +35,49 @@ export interface Outcome {
   done: Done;
 }
 
+/**
+ * Choose only the PRs associated with a GitHub webhook.
+ * undefined means an intentional full sweep (schedule, workflow_dispatch or local invocation).
+ * [] means no trustworthy PR association: do nothing and let the hourly sweep reconcile it.
+ */
+export function eventPullNumbers(eventName: string | undefined, payload: unknown): number[] | undefined {
+  if (!eventName || eventName === 'schedule' || eventName === 'workflow_dispatch') return undefined;
+  if (!payload || typeof payload !== 'object') return [];
+  const event = payload as Record<string, unknown>;
+  const validNumber = (value: unknown): value is number => Number.isSafeInteger(value) && (value as number) > 0;
+
+  if (eventName === 'issue_comment') {
+    const issue = event.issue;
+    if (!issue || typeof issue !== 'object') return [];
+    const fields = issue as Record<string, unknown>;
+    return fields.pull_request && validNumber(fields.number) ? [fields.number] : [];
+  }
+
+  if (eventName === 'workflow_run' || eventName === 'check_run') {
+    const source = event[eventName];
+    if (!source || typeof source !== 'object') return [];
+    const refs = (source as Record<string, unknown>).pull_requests;
+    // Unbounded or malformed associations are never a reason to scan all PRs.
+    if (!Array.isArray(refs) || refs.length > 10) return [];
+    const numbers: number[] = [];
+    for (const ref of refs) {
+      if (!ref || typeof ref !== 'object') return [];
+      const number = (ref as Record<string, unknown>).number;
+      if (!validNumber(number)) return [];
+      if (!numbers.includes(number)) numbers.push(number);
+    }
+    return numbers;
+  }
+
+  return [];
+}
+
 export async function runAutomerge({
   gh,
   repo,
   mode,
   pr,
+  eventPrs,
   dryRun,
   log = console.log,
 }: {
@@ -47,11 +85,13 @@ export async function runAutomerge({
   repo: string;
   mode: Mode;
   pr?: number;
+  /** Webhook-associated PRs. An empty list skips API calls; undefined preserves the hourly/manual sweep. */
+  eventPrs?: readonly number[];
   dryRun: boolean;
   log?: (line: string) => void;
 }): Promise<Outcome[]> {
   log(`Rules: ${mode === 'prelaunch' ? 'pre-launch' : 'launched'} (automation.json)`);
-  const numbers = pr === undefined ? (await gh.openPulls(BASE_BRANCH)).map((p) => p.number) : [pr];
+  const numbers = pr !== undefined ? [pr] : eventPrs ?? (await gh.openPulls(BASE_BRANCH)).map((p) => p.number);
   const outcomes: Outcome[] = [];
 
   for (const n of numbers) {
@@ -121,7 +161,7 @@ export async function runAutomerge({
     log(`#${n}: ${decision.action} (${done}) - ${decision.reasons.join('; ')}`);
     outcomes.push({ pr: n, decision, done });
   }
-  if (numbers.length === 0) log(`No open pull requests into ${BASE_BRANCH}.`);
+  if (numbers.length === 0) log(eventPrs !== undefined ? 'No PR associated with this event; hourly sweep will reconcile.' : `No open pull requests into ${BASE_BRANCH}.`);
   return outcomes;
 }
 
@@ -166,8 +206,27 @@ async function main(): Promise<number> {
   }
   const { mode, note } = parseAutomation(text);
   if (note) console.log(note);
+  // GitHub Actions supplies the event payload path. Never broaden a webhook to an
+  // all-PR sweep when its association is absent or its payload cannot be read.
+  let eventPrs: number[] | undefined;
+  if (pr === undefined) {
+    const eventName = process.env.GITHUB_EVENT_NAME;
+    if (eventName && eventName !== 'schedule' && eventName !== 'workflow_dispatch') {
+      const eventPath = process.env.GITHUB_EVENT_PATH;
+      if (!eventPath) {
+        console.error('GitHub event payload path is missing; refusing a broad PR scan.');
+        return 1;
+      }
+      try {
+        eventPrs = eventPullNumbers(eventName, JSON.parse(readFileSync(eventPath, 'utf8')));
+      } catch {
+        console.error('Cannot read GitHub event payload; refusing a broad PR scan.');
+        return 1;
+      }
+    }
+  }
   try {
-    await runAutomerge({ gh: createGitHub({ token, repo }), repo, mode, pr, dryRun: values['dry-run'] ?? false });
+    await runAutomerge({ gh: createGitHub({ token, repo }), repo, mode, pr, eventPrs, dryRun: values['dry-run'] ?? false });
     return 0;
   } catch (e) {
     console.error((e as Error).message);
