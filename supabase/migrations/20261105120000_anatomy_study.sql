@@ -1,4 +1,4 @@
--- Anatomy Lab study tools, part C: the database (Task 178; Christian approved the new tables on 2026-11-05).
+-- Anatomy Lab study tools, part C: the database (Task 178; awaiting Christian's explicit approval).
 --
 -- Two tables, both the signed-in student's own study progress (CLAUDE.md rule 2), and six functions:
 --
