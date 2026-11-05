@@ -49,6 +49,19 @@ function walkFiles(dir, linked) {
   });
 }
 
+/** A GLB is still unpublished model data if it is renamed to .bin or another suffix. */
+function hasGlbMagic(path) {
+  if (!Number.isInteger(fsConstants.O_NOFOLLOW)) throw new Error('this platform cannot safely audit symbolic links');
+  const fd = openSync(path, fsConstants.O_RDONLY | fsConstants.O_NOFOLLOW);
+  try {
+    if (!fstatSync(fd).isFile()) throw new Error('not a regular file');
+    const magic = Buffer.alloc(4);
+    return readSync(fd, magic, 0, magic.length, 0) === magic.length && magic.toString('ascii') === 'glTF';
+  } finally {
+    closeSync(fd);
+  }
+}
+
 /**
  * Read an audited regular file through its opened descriptor, never through a
  * later pathname lookup. If a file changes into a symlink after directory
@@ -558,7 +571,7 @@ export function auditAnatomyProduction(distDir, contentDir) {
   const toUrl = (path) => '/' + path.slice(dist.length + 1).replaceAll('\\', '/');
   for (const path of linked) errors.push(`symbolic link in production output: ${toUrl(path)}`);
   const shipped = [...new Set(builtFiles
-    .filter((path) => MODEL_ASSET.test(path))
+    .filter((path) => MODEL_ASSET.test(path) || hasGlbMagic(path))
     .map(toUrl))];
 
   for (const url of shipped) {

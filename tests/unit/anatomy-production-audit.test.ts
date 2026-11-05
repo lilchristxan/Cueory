@@ -849,6 +849,18 @@ describe('anatomy production artifact audit', () => {
     ]));
   });
 
+  it('rejects a renamed GLB even when its extension is not on the model file list', () => {
+    const f = setup();
+    const source = readFileSync(join(f.dist, 'models', 'anatomy', 'approved.glb'));
+    f.file('downloads/copied-anatomy.bin', source);
+    f.file('assets/misnamed-model.dat', source);
+    f.file('assets/ordinary.bin', Buffer.from([0, 1, 2, 3, 4]));
+    const errors = f.check().errors;
+    expect(errors).toContain('unapproved model exposed in production: /downloads/copied-anatomy.bin');
+    expect(errors).toContain('unapproved model exposed in production: /assets/misnamed-model.dat');
+    expect(errors).not.toContain('unapproved model exposed in production: /assets/ordinary.bin');
+  });
+
   it('does not treat an approved model copied to a different URL as published approval', () => {
     const f = setup();
     rmSync(join(f.dist, 'models', 'anatomy', 'approved.glb'));
