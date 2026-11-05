@@ -124,6 +124,7 @@ describe('held paths', () => {
     'astro.config.mjs',
     'scripts/check-legal-release.mjs',
     'scripts/anatomy-production-audit.mjs',
+    'scripts/anatomy-production-deploy.mjs',
     'scripts/check-anatomy-build.mjs',
     'scripts/anatomy-postbuild-audit.mjs',
     'src/islands/anatomylab.ts',
@@ -182,6 +183,10 @@ describe('held paths', () => {
       .toEqual(['src/content.config.ts']);
     expect(heldPaths([{ filename: 'scripts/deleted-gate.mjs', previous_filename: 'scripts/check-legal-release.mjs' }], 'prelaunch'))
       .toEqual(['scripts/check-legal-release.mjs']);
+    for (const mode of ['prelaunch', 'launched'] as const) {
+      expect(heldPaths([{ filename: 'docs/retired-upload.md', previous_filename: 'scripts/anatomy-production-deploy.mjs' }], mode))
+        .toEqual(['scripts/anatomy-production-deploy.mjs']);
+    }
     expect(heldPaths([{ filename: 'src/islands/cards.ts', previous_filename: 'src/islands/AnatomyLab.tsx' }], 'prelaunch'))
       .toEqual(['src/islands/AnatomyLab.tsx']);
     expect(heldPaths([{ filename: 'docs/old-report.mjs', previous_filename: 'scripts/anatomy-review-report.mjs' }], 'prelaunch'))
