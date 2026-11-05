@@ -128,7 +128,6 @@ describe('anatomy production artifact audit', () => {
     f.file('pagefind/filter/en_test.pf_filter', gzipFilter);
     f.file('pagefind/pagefind.en_test.pf_meta', gzipMeta);
     f.file('pagefind/wasm.en.pagefind', wasm);
-    f.file('pagefind/wasm.en_hidden_archive.pagefind', wasmWithZip);
     // Pagefind also accepts already-decompressed data with the same marker.
     f.file('pagefind/fragment/en_raw_test.pf_fragment', Buffer.concat([prefix, Buffer.from(JSON.stringify({
       url: '/', content: 'safe raw search text', word_count: 4,
@@ -143,6 +142,7 @@ describe('anatomy production artifact audit', () => {
     f.file('pagefind/index/en_safe_glb_mention.pf_index', gzipSync(Buffer.concat([prefix, safeMentionCbor])));
     expect(f.check().errors).toEqual([]);
 
+    f.file('pagefind/wasm.en_hidden_archive.pagefind', wasmWithZip);
     f.file('pagefind/fragment/en_corrupt.pf_fragment', Buffer.from([0x1f, 0x8b, 0x08, 0x00]));
     // A raw compressed GLB is not a Pagefind data envelope.
     f.file('pagefind/fragment/en_hidden_model.pf_fragment', gzipSync(Buffer.from('glTF' + 'x'.repeat(32))));
