@@ -9,6 +9,44 @@ import { keepsDrafts } from '../../src/visuals/prunedrafts';
 const roots: string[] = [];
 afterEach(() => roots.splice(0).forEach((p) => rmSync(p, { recursive: true, force: true })));
 
+function makeStoredZip(name = 'hidden-model.bin', payload = Buffer.from('synthetic archive payload')): Buffer {
+  const filename = Buffer.from(name, 'utf8');
+  const data = Buffer.from(payload);
+  let crc = 0xffffffff;
+  for (const byte of data) {
+    crc ^= byte;
+    for (let bit = 0; bit < 8; bit += 1) crc = (crc >>> 1) ^ (crc & 1 ? 0xedb88320 : 0);
+  }
+  crc = (crc ^ 0xffffffff) >>> 0;
+
+  const local = Buffer.alloc(30);
+  local.writeUInt32LE(0x04034b50, 0);
+  local.writeUInt16LE(20, 4);
+  local.writeUInt32LE(crc, 14);
+  local.writeUInt32LE(data.length, 18);
+  local.writeUInt32LE(data.length, 22);
+  local.writeUInt16LE(filename.length, 26);
+
+  const central = Buffer.alloc(46);
+  central.writeUInt32LE(0x02014b50, 0);
+  central.writeUInt16LE(20, 4);
+  central.writeUInt16LE(20, 6);
+  central.writeUInt32LE(crc, 16);
+  central.writeUInt32LE(data.length, 20);
+  central.writeUInt32LE(data.length, 24);
+  central.writeUInt16LE(filename.length, 28);
+
+  const localRecord = Buffer.concat([local, filename, data]);
+  const centralRecord = Buffer.concat([central, filename]);
+  const end = Buffer.alloc(22);
+  end.writeUInt32LE(0x06054b50, 0);
+  end.writeUInt16LE(1, 8);
+  end.writeUInt16LE(1, 10);
+  end.writeUInt32LE(centralRecord.length, 12);
+  end.writeUInt32LE(localRecord.length, 16);
+  return Buffer.concat([localRecord, centralRecord, end]);
+}
+
 function setup() {
   const root = mkdtempSync(join(tmpdir(), 'cueory-anatomy-publish-'));
   roots.push(root);
@@ -293,7 +331,8 @@ describe('anatomy production artifact audit', () => {
     const f = setup();
     // ZIP and TAR payloads are deliberately opaque to the outer dist walker.
     // Test both content sniffing under misleading suffixes and archive suffixes.
-    f.file('downloads/hidden-model.dat', Buffer.from([0x50, 0x4b, 0x03, 0x04, 0x00, 0x00]));
+    const hiddenZip = makeStoredZip();
+    f.file('downloads/hidden-model.dat', hiddenZip);
     const tar = Buffer.alloc(512);
     const nul = String.fromCharCode(0);
     tar.write('hidden-model.bin', 0, 'ascii');
@@ -315,7 +354,7 @@ describe('anatomy production artifact audit', () => {
     const approvedGlb = readFileSync(join(f.dist, 'models', 'anatomy', 'approved.glb'));
     f.file('downloads/prefixed-model.bin', Buffer.concat([Buffer.alloc(700, 0x61), approvedGlb]));
     f.file('downloads/prefixed-archive.dat', Buffer.concat([
-      Buffer.alloc(64 * 1024 - 2, 0x61), Buffer.from([0x50, 0x4b, 0x03, 0x04, 0x00]),
+      Buffer.alloc(64 * 1024 - 100, 0x61), hiddenZip,
     ]));
     f.file('docs/archive-reference.txt', 'The word ustar is discussed here, but this is ordinary text.');
     f.file('docs/ar-reference.txt', '!<arch>' + String.fromCharCode(10) + ' is discussed in ordinary text.');
