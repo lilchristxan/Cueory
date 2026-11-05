@@ -7,7 +7,7 @@
 import { closeSync, constants as fsConstants, existsSync, fstatSync, lstatSync, openSync, readFileSync, readSync, readdirSync, statSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { gunzipSync } from 'node:zlib';
+import { gunzipSync, inflateRawSync } from 'node:zlib';
 
 const ANATOMY_FILE = /^anatomy-[a-z0-9-]+\.json$/;
 const MODEL_URL = /^\/models\/anatomy\/[a-z0-9][a-z0-9_-]*\.glb$/;
@@ -165,6 +165,244 @@ function containsZipLocalHeader(bytes, baseOffset, fileSize) {
   return false;
 }
 
+const MAX_ARCHIVE_INSPECTION_BYTES = 64 * 1024 * 1024;
+const MAX_ARCHIVE_DECOMPRESSED_BYTES = 128 * 1024 * 1024;
+const CRC32_TABLE = (() => {
+  const table = new Uint32Array(256);
+  for (let i = 0; i < table.length; i += 1) {
+    let value = i;
+    for (let bit = 0; bit < 8; bit += 1) value = (value >>> 1) ^ (value & 1 ? 0xedb88320 : 0);
+    table[i] = value >>> 0;
+  }
+  return table;
+})();
+
+function crc32(bytes) {
+  let value = 0xffffffff;
+  for (const byte of bytes) value = CRC32_TABLE[(value ^ byte) & 0xff] ^ (value >>> 8);
+  return (value ^ 0xffffffff) >>> 0;
+}
+
+function crc16Rar(bytes) {
+  let value = 0;
+  for (const byte of bytes) {
+    value ^= byte;
+    for (let bit = 0; bit < 8; bit += 1) value = (value >>> 1) ^ (value & 1 ? 0xa001 : 0);
+  }
+  return value & 0xffff;
+}
+
+function hasGzipAt(bytes, offset) {
+  if (offset < 0 || offset + 10 > bytes.length ||
+      bytes[offset] !== 0x1f || bytes[offset + 1] !== 0x8b ||
+      bytes[offset + 2] !== 8 || (bytes[offset + 3] & 0xe0) !== 0) return false;
+  const flags = bytes[offset + 3];
+  let cursor = offset + 10;
+  if (flags & 0x04) {
+    if (cursor + 2 > bytes.length) return false;
+    const extraLength = bytes.readUInt16LE(cursor);
+    cursor += 2 + extraLength;
+  }
+  const skipTerminated = () => {
+    while (cursor < bytes.length && bytes[cursor] !== 0) cursor += 1;
+    if (cursor >= bytes.length) return false;
+    cursor += 1;
+    return true;
+  };
+  if (flags & 0x08 && !skipTerminated()) return false;
+  if (flags & 0x10 && !skipTerminated()) return false;
+  if (flags & 0x02) {
+    if (cursor + 2 > bytes.length || (crc32(bytes.subarray(offset, cursor)) & 0xffff) !== bytes.readUInt16LE(cursor)) {
+      return false;
+    }
+    cursor += 2;
+  }
+  if (cursor >= bytes.length) return false;
+  try {
+    const result = inflateRawSync(bytes.subarray(cursor), {
+      info: true,
+      maxOutputLength: MAX_ARCHIVE_DECOMPRESSED_BYTES,
+    });
+    const footer = cursor + result.engine.bytesWritten;
+    return footer + 8 <= bytes.length &&
+      crc32(result.buffer) === bytes.readUInt32LE(footer) &&
+      (result.buffer.length >>> 0) === bytes.readUInt32LE(footer + 4);
+  } catch (error) {
+    // A syntactically valid stream that exceeds the inspection budget is still
+    // an opaque container and must not silently pass the production gate.
+    return error?.code === 'ERR_BUFFER_TOO_LARGE';
+  }
+}
+
+function hasBzip2At(bytes, offset) {
+  if (offset < 0 || offset + 14 > bytes.length ||
+      bytes.toString('ascii', offset, offset + 3) !== 'BZh' ||
+      bytes[offset + 3] < 0x31 || bytes[offset + 3] > 0x39 ||
+      !bytes.subarray(offset + 4, offset + 10).equals(Buffer.from([0x31, 0x41, 0x59, 0x26, 0x53, 0x59]))) return false;
+  const end = bytes.indexOf(Buffer.from([0x17, 0x72, 0x45, 0x38, 0x50, 0x90]), offset + 10);
+  return end >= offset + 14 && end + 10 <= bytes.length;
+}
+
+function hasXzAt(bytes, offset) {
+  const magic = Buffer.from([0xfd, 0x37, 0x7a, 0x58, 0x5a, 0x00]);
+  if (offset < 0 || offset + 12 > bytes.length ||
+      !bytes.subarray(offset, offset + 6).equals(magic)) return false;
+  const flags = bytes.subarray(offset + 6, offset + 8);
+  if (flags[0] !== 0 || (flags[1] & 0xf0) !== 0 ||
+      crc32(flags) !== bytes.readUInt32LE(offset + 8)) return false;
+  const footerMagic = Buffer.from([0x59, 0x5a]);
+  for (let end = bytes.indexOf(footerMagic, offset + 14); end >= 0; end = bytes.indexOf(footerMagic, end + 1)) {
+    const footer = end - 10;
+    if (footer < offset + 12 || footer + 12 > bytes.length) continue;
+    if (crc32(bytes.subarray(footer + 4, footer + 10)) !== bytes.readUInt32LE(footer) ||
+        !bytes.subarray(footer + 8, footer + 10).equals(flags)) continue;
+    const indexSize = (bytes.readUInt32LE(footer + 4) + 1) * 4;
+    if (Number.isSafeInteger(indexSize) && footer - indexSize >= offset + 12) return true;
+  }
+  return false;
+}
+
+function hasZstdAt(bytes, offset) {
+  if (offset < 0 || offset + 6 > bytes.length ||
+      !bytes.subarray(offset, offset + 4).equals(Buffer.from([0x28, 0xb5, 0x2f, 0xfd]))) return false;
+  const descriptor = bytes[offset + 4];
+  if ((descriptor & 0x18) !== 0) return false;
+  const singleSegment = (descriptor & 0x20) !== 0;
+  const contentSizeFlag = descriptor >>> 6;
+  const dictionarySize = [0, 1, 2, 4][descriptor & 0x03];
+  const contentSize = contentSizeFlag === 0 ? (singleSegment ? 1 : 0) :
+    contentSizeFlag === 1 ? 2 : contentSizeFlag === 2 ? 4 : 8;
+  let cursor = offset + 5;
+  if (!singleSegment) cursor += 1; // Window descriptor.
+  cursor += dictionarySize + contentSize;
+  if (cursor > bytes.length) return false;
+  for (let blocks = 0; blocks < 1_000_000; blocks += 1) {
+    if (cursor + 3 > bytes.length) return false;
+    const header = bytes[cursor] | (bytes[cursor + 1] << 8) | (bytes[cursor + 2] << 16);
+    cursor += 3;
+    const last = (header & 1) !== 0;
+    const type = (header >>> 1) & 3;
+    const blockSize = header >>> 3;
+    if (type === 3 || blockSize > 128 * 1024) return false;
+    cursor += type === 1 ? 1 : blockSize;
+    if (cursor > bytes.length) return false;
+    if (last) {
+      if (descriptor & 0x04) cursor += 4; // Optional frame checksum.
+      return cursor <= bytes.length;
+    }
+  }
+  return false;
+}
+
+function has7zAt(bytes, offset) {
+  const magic = Buffer.from([0x37, 0x7a, 0xbc, 0xaf, 0x27, 0x1c]);
+  if (offset < 0 || offset + 32 > bytes.length || !bytes.subarray(offset, offset + 6).equals(magic)) return false;
+  const nextOffset = bytes.readBigUInt64LE(offset + 12);
+  const nextSize = bytes.readBigUInt64LE(offset + 20);
+  if (crc32(bytes.subarray(offset + 12, offset + 32)) !== bytes.readUInt32LE(offset + 8) ||
+      nextSize < 1n || nextOffset > BigInt(Number.MAX_SAFE_INTEGER) ||
+      nextSize > BigInt(Number.MAX_SAFE_INTEGER)) return false;
+  const start = offset + 32 + Number(nextOffset);
+  const end = start + Number(nextSize);
+  return end <= bytes.length && crc32(bytes.subarray(start, end)) === bytes.readUInt32LE(offset + 28);
+}
+
+function readVarint(bytes, offset) {
+  let value = 0n;
+  for (let index = 0; index < 10 && offset + index < bytes.length; index += 1) {
+    const byte = bytes[offset + index];
+    value |= BigInt(byte & 0x7f) << BigInt(index * 7);
+    if ((byte & 0x80) === 0) return { value, next: offset + index + 1 };
+  }
+  return null;
+}
+
+function hasRarAt(bytes, offset) {
+  const rar4 = Buffer.from([0x52, 0x61, 0x72, 0x21, 0x1a, 0x07, 0x00]);
+  if (offset >= 0 && offset + 20 <= bytes.length && bytes.subarray(offset, offset + 7).equals(rar4)) {
+    const header = offset + 7;
+    const size = bytes.readUInt16LE(header + 5);
+    return bytes[header + 2] === 0x73 && size >= 13 && header + size <= bytes.length &&
+      crc16Rar(bytes.subarray(header + 2, header + size)) === bytes.readUInt16LE(header);
+  }
+  const rar5 = Buffer.from([0x52, 0x61, 0x72, 0x21, 0x1a, 0x07, 0x01, 0x00]);
+  if (offset < 0 || offset + 16 > bytes.length || !bytes.subarray(offset, offset + 8).equals(rar5)) return false;
+  const crc = bytes.readUInt32LE(offset + 8);
+  const size = readVarint(bytes, offset + 12);
+  if (!size || size.value < 2n || size.value > 1_000_000n) return false;
+  const end = size.next + Number(size.value);
+  if (end > bytes.length || crc32(bytes.subarray(offset + 12, end)) !== crc) return false;
+  const type = readVarint(bytes, size.next);
+  return Boolean(type && type.value === 1n);
+}
+
+function hasCabAt(bytes, offset) {
+  if (offset < 0 || offset + 44 > bytes.length || bytes.toString('ascii', offset, offset + 4) !== 'MSCF') return false;
+  const cabinetSize = bytes.readUInt32LE(offset + 8);
+  const filesOffset = bytes.readUInt32LE(offset + 16);
+  const minor = bytes[offset + 24];
+  const major = bytes[offset + 25];
+  const folders = bytes.readUInt16LE(offset + 26);
+  const files = bytes.readUInt16LE(offset + 28);
+  const flags = bytes.readUInt16LE(offset + 30);
+  if (cabinetSize < 44 || offset + cabinetSize > bytes.length ||
+      filesOffset < 36 || filesOffset >= cabinetSize ||
+      major !== 1 || minor > 3 || folders < 1 || (flags & ~0x0007) !== 0) return false;
+  const folderTableStart = offset + 36;
+  return folderTableStart + folders * 8 <= offset + filesOffset &&
+    (files === 0 || filesOffset + files * 16 <= offset + cabinetSize);
+}
+
+function hasArAt(bytes, offset) {
+  if (offset < 0 || offset + 68 > bytes.length ||
+      bytes.toString('ascii', offset, offset + 8) !== '!<arch>\n') return false;
+  let cursor = offset + 8;
+  let members = 0;
+  while (cursor + 60 <= bytes.length && bytes.toString('ascii', cursor + 58, cursor + 60) === '`\n') {
+    const name = bytes.toString('ascii', cursor, cursor + 16).trim();
+    const sizeField = bytes.toString('ascii', cursor + 48, cursor + 58).trim();
+    if (!name || !/^\d+$/u.test(sizeField)) return false;
+    const size = Number(sizeField);
+    if (!Number.isSafeInteger(size) || size < 0 || cursor + 60 + size > bytes.length) return false;
+    cursor += 60 + size + (size & 1);
+    members += 1;
+    if (members > 100_000) return false;
+  }
+  return members > 0;
+}
+
+function hasZipEndRecordAt(bytes, offset) {
+  if (offset < 0 || offset + 22 > bytes.length || bytes.readUInt32LE(offset) !== 0x06054b50) return false;
+  const commentLength = bytes.readUInt16LE(offset + 20);
+  return offset + 22 + commentLength <= bytes.length &&
+    bytes.readUInt16LE(offset + 4) === 0 && bytes.readUInt16LE(offset + 6) === 0;
+}
+
+function containsValidatedArchive(bytes) {
+  if (containsTarHeader(bytes) || containsZipLocalHeader(bytes, 0, bytes.length)) return true;
+  const checks = [
+    { signature: [0x1f, 0x8b], test: hasGzipAt },
+    { signature: [0x42, 0x5a, 0x68], test: hasBzip2At },
+    { signature: [0xfd, 0x37, 0x7a, 0x58, 0x5a, 0x00], test: hasXzAt },
+    { signature: [0x28, 0xb5, 0x2f, 0xfd], test: hasZstdAt },
+    { signature: [0x37, 0x7a, 0xbc, 0xaf, 0x27, 0x1c], test: has7zAt },
+    { signature: [0x52, 0x61, 0x72, 0x21, 0x1a, 0x07], test: hasRarAt },
+    { signature: [0x4d, 0x53, 0x43, 0x46], test: hasCabAt },
+    { signature: [0x21, 0x3c, 0x61, 0x72, 0x63, 0x68, 0x3e, 0x0a], test: hasArAt },
+  ];
+  for (const { signature, test } of checks) {
+    const marker = Buffer.from(signature);
+    for (let offset = bytes.indexOf(marker); offset >= 0; offset = bytes.indexOf(marker, offset + 1)) {
+      if (test(bytes, offset)) return true;
+    }
+  }
+  const emptyZip = Buffer.from([0x50, 0x4b, 0x05, 0x06]);
+  for (let offset = bytes.indexOf(emptyZip); offset >= 0; offset = bytes.indexOf(emptyZip, offset + 1)) {
+    if (hasZipEndRecordAt(bytes, offset)) return true;
+  }
+  return false;
+}
+
 function hasArchiveMagic(path, includeEmbeddedGlb = true) {
   if (!Number.isInteger(fsConstants.O_NOFOLLOW)) throw new Error('this platform cannot safely audit symbolic links');
   const fd = openSync(path, fsConstants.O_RDONLY | fsConstants.O_NOFOLLOW);
@@ -175,7 +413,7 @@ function hasArchiveMagic(path, includeEmbeddedGlb = true) {
     const header = Buffer.alloc(Math.min(size, 512));
     if (header.length) readSync(fd, header, 0, header.length, 0);
     const includeAsciiMarkers = !TEXT_ASSET.test(path);
-    if (hasArchiveMagicHeader(header, includeAsciiMarkers)) return true;
+    let archiveCandidate = hasArchiveMagicHeader(header, includeAsciiMarkers);
 
     const chunkSize = 64 * 1024;
     const overlapSize = 511; // Retain a full 512-byte TAR header across chunk boundaries.
@@ -192,13 +430,18 @@ function hasArchiveMagic(path, includeEmbeddedGlb = true) {
       // Arbitrary signature bytes naturally occur in compressed images, fonts
       // and media. Nested archives need a plausible ZIP entry or a complete
       // TAR header/checksum; nested models need full GLB framing.
-      if (containsZipLocalHeader(window, windowStart, size) ||
-          containsTarHeader(window) ||
-          (includeEmbeddedGlb && containsGlbHeaderAtOffset(window, windowStart, size))) return true;
+      if (hasArchiveMagicBytes(window, includeAsciiMarkers, true)) archiveCandidate = true;
+      if ((includeEmbeddedGlb && containsGlbHeaderAtOffset(window, windowStart, size))) return true;
       carry = window.subarray(Math.max(0, window.length - overlapSize));
       position += bytesRead;
     }
-    return false;
+    if (!archiveCandidate) return false;
+    try {
+      return containsValidatedArchive(readRegularBytesNoFollow(path, MAX_ARCHIVE_INSPECTION_BYTES));
+    } catch {
+      // Oversized or unreadable files with an archive-looking envelope fail closed.
+      return true;
+    }
   } finally {
     closeSync(fd);
   }
