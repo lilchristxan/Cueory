@@ -903,7 +903,7 @@ export function auditAnatomyProduction(distDir, contentDir) {
           // Top-level model assets use the stricter approved-manifest parser,
           // checked-in byte parity, and real MeshoptDecoder regression. Their
           // opaque compressed BIN bytes are not scanned as nested archives.
-          : (!MODEL_ASSET.test(path) && hasArchiveMagic(path))) {
+          : (!MODEL_ASSET.test(path) && hasArchiveMagic(path)))) {
       errors.push(`archive/container in production output requires explicit review: ${url}`);
     }
   }
