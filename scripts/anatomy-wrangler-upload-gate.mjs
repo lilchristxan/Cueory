@@ -45,6 +45,13 @@ if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1]
   if (result.skipped) {
     process.stdout.write('anatomy Wrangler upload audit: local non-upload command\n');
   } else if (result.errors.length) {
+    // Non-sensitive diagnostic for Wrangler's undocumented preview hook context.
+    const branch = process.env.WORKERS_CI_BRANCH ?? '';
+    process.stderr.write('anatomy hook context: command=' +
+      JSON.stringify(process.env.WRANGLER_COMMAND ?? null) +
+      ', workers_ci=' + String(process.env.WORKERS_CI === '1') +
+      ', build_uuid_format=' + String(WORKERS_BUILD_ID.test(process.env.WORKERS_CI_BUILD_UUID ?? '')) +
+      ', branch=' + (branch ? (branch === 'main' ? 'main' : 'non-main') : 'missing') + '\n');
     process.stderr.write('anatomy Wrangler upload audit FAILED:\n');
     for (const error of result.errors) process.stderr.write('- ' + error + '\n');
     process.exitCode = 1;
