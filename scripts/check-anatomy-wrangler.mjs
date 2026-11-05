@@ -14,16 +14,8 @@ export function shouldAuditWranglerUpload(env) {
     ? env.WRANGLER_COMMAND.trim() : '';
   // Version uploads always require the production artifact audit.
   if (command === 'versions upload') return true;
-  const branch = typeof env.WORKERS_CI_BRANCH === 'string'
-    ? env.WORKERS_CI_BRANCH.trim().replace(/^refs\/heads\//, '') : '';
-  const validBuildId = typeof env.WORKERS_CI_BUILD_UUID === 'string'
-    && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(env.WORKERS_CI_BUILD_UUID);
-  const workersCI = env.WORKERS_CI === '1' || env.WORKERS_CI === 'true';
-  // Wrangler 4.156 can report WRANGLER_COMMAND=deploy within a preview.
-  // Accept it as a preview only with the complete Workers Builds non-main
-  // context. Draft mode by itself never bypasses this audit.
-  if ((command === 'deploy' || command === '') && workersCI
-      && validBuildId && branch && branch !== 'main') return false;
+  // CI variables are forgeable and cannot authenticate a preview invocation.
+  // The optional standalone checker must never exempt an upload labeled deploy.
   if (command === 'deploy') return true;
   if (env.CUEORY_WRANGLER_PREVIEW === '1' && command !== 'deploy') return false;
   if (command === 'dev' || command === 'types' || command === 'preview') return false;
