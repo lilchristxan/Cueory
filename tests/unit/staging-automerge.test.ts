@@ -701,9 +701,15 @@ function fakeGitHub(
     contents = {} as Record<string, string>,
     /** Number of staging commits missing from the checked PR head. */
     behind = 0,
+    /** Replacement check-run list returned by the final pre-merge recheck. */
+    laterChecks = undefined as CheckRun[] | undefined,
+    /** Replacement comments returned by the final pre-merge recheck. */
+    laterComments = undefined as IssueComment[] | undefined,
   } = {},
 ) {
   const seen = new Map<number, number>();
+  let checkReads = 0;
+  let commentReads = 0;
   const calls: { method: string; path: string; body?: unknown }[] = [];
   const json = (data: unknown, status = 200) => new Response(JSON.stringify(data), { status });
   const fetch: Fetch = async (url, init) => {
@@ -719,7 +725,10 @@ function fakeGitHub(
       return json(seen.get(n)! > 1 && later ? { ...pr(m[1]!)!.pr, ...later } : pr(m[1]!)!.pr);
     }
     if (method === 'GET' && (m = path.match(/^\/pulls\/(\d+)\/files$/))) return json(pr(m[1]!)!.files.map((filename) => ({ filename })));
-    if (method === 'GET' && path.startsWith('/commits/')) return json({ total_count: 5, check_runs: greenChecks() });
+    if (method === 'GET' && path.startsWith('/commits/')) {
+      checkReads += 1;
+      return json({ total_count: 5, check_runs: checkReads > 1 && laterChecks ? laterChecks : greenChecks() });
+    }
     if (method === 'GET' && path.startsWith('/compare/')) return json({ behind_by: behind });
     if (method === 'GET' && (m = path.match(/^\/contents\/(.+)\?ref=(.+)$/))) {
       const text = contents[`${decodeURIComponent(m[2]!)}:${decodeURIComponent(m[1]!)}`];
@@ -727,7 +736,10 @@ function fakeGitHub(
       return json({ type: 'file', encoding: 'base64', content: Buffer.from(text).toString('base64') });
     }
     if (method === 'GET' && path.match(/^\/issues\/\d+\/comments$/)) {
-      return json(endlessComments ? Array.from({ length: 100 }, () => codexComment(clean())) : [codexComment(clean())]);
+      commentReads += 1;
+      return json(endlessComments
+        ? Array.from({ length: 100 }, () => codexComment(clean()))
+        : commentReads > 1 && laterComments ? laterComments : [codexComment(clean())]);
     }
     if (method === 'GET' && path.startsWith('/labels/')) return labelExists ? json({ name: 'needs-christian' }) : json({ message: 'Not Found' }, 404);
     if (method === 'PUT' && path.match(/^\/pulls\/\d+\/merge$/)) return json({ merged: true });
@@ -858,6 +870,47 @@ describe('the auto-merge run', () => {
     const outcomes = await runAutomerge({ gh, repo: REPO, mode: 'prelaunch', dryRun: false, log: () => {} });
     expect(outcomes[0]!.done).toBe('merge refused');
     expect(outcomes[0]!.decision.reasons.at(-1)).toBe('labelled needs-christian while it was being checked');
+    expect(calls.filter((c) => c.method !== 'GET')).toEqual([]);
+  });
+
+  it('stops if the pull request becomes a draft while checks are being revalidated', async () => {
+    const { gh, calls } = fakeGitHub(
+      { 7: { pr: pull(), files: ['src/x.ts'] } },
+      { later: { draft: true } },
+    );
+    const outcomes = await runAutomerge({ gh, repo: REPO, mode: 'launched', dryRun: false, log: () => {} });
+    expect(outcomes[0]!.done).toBe('merge refused');
+    expect(outcomes[0]!.decision.reasons.at(-1)).toBe('pull request became a draft while it was being checked');
+    expect(calls.filter((c) => c.method !== 'GET')).toEqual([]);
+  });
+
+  it('rechecks all observed check runs immediately before merging', async () => {
+    const { gh, calls } = fakeGitHub(
+      { 7: { pr: pull(), files: ['src/x.ts'] } },
+      { laterChecks: [...greenChecks(), run('Late diagnostic', null, 'in_progress')] },
+    );
+    const outcomes = await runAutomerge({ gh, repo: REPO, mode: 'launched', dryRun: false, log: () => {} });
+    expect(outcomes[0]!.done).toBe('merge refused');
+    expect(outcomes[0]!.decision.reasons.at(-1)).toBe('latest gate recheck: "Late diagnostic" is still running');
+    expect(calls.filter((c) => c.method !== 'GET')).toEqual([]);
+  });
+
+  it('rechecks the exact-head Codex summary immediately before merging', async () => {
+    const unresolved = codexComment({
+      code_review: {
+        commit_sha: HEAD,
+        status: 'completed',
+        has_any_findings: true,
+        has_unresolved_findings: true,
+      },
+    });
+    const { gh, calls } = fakeGitHub(
+      { 7: { pr: pull(), files: ['src/x.ts'] } },
+      { laterComments: [unresolved] },
+    );
+    const outcomes = await runAutomerge({ gh, repo: REPO, mode: 'launched', dryRun: false, log: () => {} });
+    expect(outcomes[0]!.done).toBe('merge refused');
+    expect(outcomes[0]!.decision.reasons).toContain('latest gate recheck: Codex found something to look at');
     expect(calls.filter((c) => c.method !== 'GET')).toEqual([]);
   });
 
