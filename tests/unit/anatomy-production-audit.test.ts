@@ -112,6 +112,35 @@ describe('anatomy production artifact audit', () => {
     );
   });
 
+  it('still checks GLB scene, node identity and accessors when built and source bytes match', () => {
+    const f = setup();
+    const built = join(f.dist, 'models', 'anatomy', 'approved.glb');
+    const source = join(f.dist, '..', 'public', 'models', 'anatomy', 'approved.glb');
+    const valid = readFileSync(built);
+    expect(f.check().errors).toEqual([]);
+
+    // Mutating only dist now fails the byte-parity check, even if the deeper
+    // GLB validator is accidentally removed. Keep both test-only files equal
+    // so these cases exercise the actual publication metadata checks.
+    for (const [before, after] of [
+      ['"scene":0', '"scene":1'],
+      ['"name":"FMA999992"', '"name":"FMA999993"'],
+      ['"bufferView":0', '"bufferView":9'],
+    ]) {
+      expect(after).toHaveLength(before.length);
+      const changed = Buffer.from(valid);
+      const offset = changed.indexOf(before, 20, 'utf8');
+      expect(offset).toBeGreaterThanOrEqual(20);
+      changed.write(after, offset, 'utf8');
+      writeFileSync(built, changed);
+      writeFileSync(source, changed);
+      expect(readFileSync(built).equals(readFileSync(source))).toBe(true);
+      expect(f.check().errors).toContain(
+        'approved model failed built GLB geometry, identity or credit verification: /models/anatomy/approved.glb',
+      );
+    }
+  });
+
   it('rejects CSS hex-escaped draft and fixture IDs in published stylesheets', () => {
     const f = setup();
     f.file('_astro/escaped-anatomy.css', String.raw`.draft::before { content: "\46 MA999991"; } .fixture::after { content: "\46 IX001"; }`);
