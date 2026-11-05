@@ -75,6 +75,7 @@ const ALWAYS_HELD_FILES = new Set([
   // These legal/anatomy release gates decide whether draft material is shipped publicly.
   'scripts/check-legal-release.mjs',
   'scripts/anatomy-production-audit.mjs',
+  'scripts/anatomy-wrangler-upload-gate.mjs', // Blocks unapproved assets during direct Wrangler uploads.
   'scripts/check-anatomy-build.mjs',
   'scripts/anatomy-postbuild-audit.mjs', // alternative production postbuild wrapper in PR #626
   'src/islands/anatomylab.ts', // Chooses draft versus approved data for build output.
