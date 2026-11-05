@@ -298,11 +298,21 @@ describe('anatomy production artifact audit', () => {
       Buffer.from([0x00, 0xae, 0x02]),
       wasmCustomPayload,
     ]));
+    // WASM custom-section bytes are opaque binary payload, not student-facing
+    // anatomy text. ID-shaped bytes must not cause a false release rejection.
+    const wasmOpaqueData = Buffer.alloc(300, 0x61);
+    wasmOpaqueData.write('FMA999991 FIX001', 32, 'ascii');
+    const wasmWithOpaqueIds = gzipSync(Buffer.concat([
+      prefix,
+      Buffer.from([0x00, 0xae, 0x02]),
+      Buffer.concat([Buffer.from([0x01, 0x78]), wasmOpaqueData]),
+    ]));
     f.file('pagefind/fragment/en_test.pf_fragment', fragment);
     f.file('pagefind/index/en_test.pf_index', gzipIndex);
     f.file('pagefind/filter/en_test.pf_filter', gzipFilter);
     f.file('pagefind/pagefind.en_test.pf_meta', gzipMeta);
     f.file('pagefind/wasm.en.pagefind', wasm);
+    f.file('pagefind/wasm.en_opaque_ids.pagefind', wasmWithOpaqueIds);
     // Pagefind also accepts already-decompressed data with the same marker.
     f.file('pagefind/fragment/en_raw_test.pf_fragment', Buffer.concat([prefix, Buffer.from(JSON.stringify({
       url: '/', content: 'safe raw search text', word_count: 4,
@@ -370,16 +380,14 @@ describe('anatomy production artifact audit', () => {
       'archive/container in production output requires explicit review: /pagefind/fragment/en_fixture_id.pf_fragment',
     );
 
-    // Valid CBOR *byte* strings can also carry literal unpublished IDs.
-    // They must not bypass the validator just because they are not CBOR text.
+    // CBOR byte strings are opaque binary data, not searchable prose. An ID-shaped
+    // sequence is allowed there; the equivalent major-type-3 text string below is not.
     const byteIndex = setup();
-    const byteWord = Buffer.from('FMA999991', 'ascii');
-    byteIndex.file('pagefind/index/en_byte_draft_ids.pf_index', gzipSync(Buffer.concat([
+    const byteWord = Buffer.from('FMA999991 FIX001', 'ascii');
+    byteIndex.file('pagefind/index/en_opaque_id_bytes.pf_index', gzipSync(Buffer.concat([
       prefix, Buffer.from([0x81, 0x40 + byteWord.length]), byteWord,
     ])));
-    expect(byteIndex.check().errors).toContain(
-      'archive/container in production output requires explicit review: /pagefind/index/en_byte_draft_ids.pf_index',
-    );
+    expect(byteIndex.check().errors).toEqual([]);
 
     // CBOR text strings in the word index are public searchable content too.
     const draftIndex = setup();
