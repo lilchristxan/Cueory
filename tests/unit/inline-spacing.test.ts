@@ -23,7 +23,7 @@ describe('no line break is left to vanish before an inline tag or expression', (
     for (let i = 0; i < lines.length - 1; i++) {
       const a = lines[i].trimEnd();
       const b = lines[i + 1].trimStart();
-      if (wordEnd.test(a) && !a.endsWith("{' '}") && !/-->$/.test(a) && inlineStart.test(b)) bad.push(`line ${i + 1}: …${a.slice(-30)} ⏎ ${b.slice(0, 30)}…`);
+      if (wordEnd.test(a) && !a.endsWith("{' '}") && inlineStart.test(b)) bad.push(`line ${i + 1}: …${a.slice(-30)} ⏎ ${b.slice(0, 30)}…`);
     }
     expect(bad, 'end the first line with {\' \'} or join the lines').toEqual([]);
   });
