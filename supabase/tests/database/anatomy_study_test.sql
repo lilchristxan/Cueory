@@ -5,7 +5,7 @@
 -- only inside this test.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(122);
+select plan(123);
 
 insert into auth.users (id, email, email_confirmed_at, is_anonymous) values
   -- One and two: confirmed students.
@@ -211,7 +211,7 @@ select throws_ok(
   $$ select public.record_anatomy_misses('heart', (select array_agg('FMA' || n) from generate_series(1, 51) n)) $$,
   '22023', 'send between 1 and 50 structures', 'more than 50 structures at once is refused'
 );
-select throws_ok($$ select public.record_anatomy_misses('heart', array['FIX001']) $$, '22023', 'a structure id has the wrong shape',
+select throws_ok($$ select public.record_anatomy_misses('heart', array['BAD001']) $$, '22023', 'a structure id has the wrong shape',
   'an id that is not an FMA or fixture id is refused');
 select throws_ok($$ select public.record_anatomy_misses('heart', array['FMA1', null]) $$, '22023', 'a structure id has the wrong shape',
   'a null id refuses the whole call');
@@ -223,10 +223,12 @@ select throws_ok($$ select * from public.my_anatomy_views('Heart') $$, '22023', 
   'listing views needs a valid system key');
 select results_eq($$ select public.record_anatomy_misses('heart', array['fixture-cube-a']) $$, $$ values (1) $$,
   'a labeled test fixture id is accepted');
+select results_eq($$ select public.record_anatomy_misses('heart', array['FIX001']) $$, $$ values (1) $$,
+  'the browser tests'' fixture id (FIX001) is accepted');
 reset role;
 select results_eq(
   $$ select count(*)::int from public.anatomy_review_queue where user_id = '00000000-0000-4000-8000-000000000001' $$,
-  $$ values (3) $$, 'refused calls wrote nothing'
+  $$ values (4) $$, 'refused calls wrote nothing'
 );
 
 -- ---- The hourly limit (600 structures a person), counted by last_missed_at. Student two has 590 from 10 minutes ago.
@@ -379,7 +381,7 @@ select throws_ok(
                           'target', '[0, 0, 0]'::jsonb), '{}', '{}', null) $$,
   '22023', 'the camera has the wrong shape', 'a camera over 2 KB is refused'
 );
-select throws_ok($$ select public.save_anatomy_view('heart', 'front', current_setting('t.camera')::jsonb, array['FIX001'], '{}', null) $$,
+select throws_ok($$ select public.save_anatomy_view('heart', 'front', current_setting('t.camera')::jsonb, array['BAD001'], '{}', null) $$,
   '22023', 'a structure id has the wrong shape', 'a hidden id with the wrong shape is refused');
 select throws_ok($$ select public.save_anatomy_view('heart', 'front', current_setting('t.camera')::jsonb, '{}', null, null) $$,
   '22023', 'a structure id has the wrong shape', 'a null faded list is refused');
@@ -446,7 +448,7 @@ select throws_ok(
 );
 select throws_ok(
   $$ insert into public.anatomy_review_queue (user_id, system_key, structure_id)
-     values ('00000000-0000-4000-8000-000000000001', 'heart', 'FIX001') $$,
+     values ('00000000-0000-4000-8000-000000000001', 'heart', 'BAD001') $$,
   '23514', null, 'the table refuses a structure id with the wrong shape'
 );
 select throws_ok(
@@ -471,7 +473,7 @@ select throws_ok(
 );
 select throws_ok(
   $$ insert into public.anatomy_saved_views (user_id, system_key, name, camera, selected)
-     values ('00000000-0000-4000-8000-000000000001', 'heart', 'bad selection', current_setting('t.camera')::jsonb, 'FIX001') $$,
+     values ('00000000-0000-4000-8000-000000000001', 'heart', 'bad selection', current_setting('t.camera')::jsonb, 'BAD001') $$,
   '23514', null, 'the table refuses a selected id with the wrong shape'
 );
 select throws_ok(

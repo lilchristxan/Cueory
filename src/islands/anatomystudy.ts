@@ -18,8 +18,8 @@ import { sessionStateFrom, type SessionReader } from './supabaseclient';
 
 /** A lab system key (content/visuals/anatomy-<key>.json), as the migration checks it. */
 export const SYSTEM_KEY = /^[a-z0-9-]{1,40}$/;
-/** A structure id the database accepts: a BodyParts3D FMA id or a labeled test fixture. */
-export const STRUCTURE_ID = /^(FMA\d+|fixture-[a-z0-9-]+)$/;
+/** A structure id the database accepts: a BodyParts3D FMA id, a labeled test fixture, or the browser tests' fixture (FIX001). */
+export const STRUCTURE_ID = /^(FMA\d+|FIX\d+|fixture-[a-z0-9-]+)$/;
 /** The most structures one record_anatomy_misses call takes. */
 export const MISS_BATCH_LIMIT = 50;
 /** How many views a student can keep (save_anatomy_view refuses the 51st with SQLSTATE 54000). */

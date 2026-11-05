@@ -5,6 +5,7 @@ import {
   isViewCamera,
   missBatches,
   queueFromQuizMisses,
+  STRUCTURE_ID,
   viewSnapshot,
   type AnatomyStudyClient,
   type ReviewQueueRow,
@@ -38,12 +39,18 @@ describe('queueFromQuizMisses', () => {
     expect(queueFromQuizMisses([wrong, shown, right, open, wrongThenRight, wrong])).toEqual(['FMA1', 'FMA3']);
   });
 
+  it('accepts FMA ids, labeled fixture ids and the browser tests\' FIX ids, nothing else', () => {
+    for (const id of ['FMA7204', 'FIX001', 'fixture-cube-a']) expect(STRUCTURE_ID.test(id), id).toBe(true);
+    for (const id of ['fma1', 'FIX', 'FIX-1', 'BAD001', 'fixture-', 'FMA1 ', '']) expect(STRUCTURE_ID.test(id), id).toBe(false);
+  });
+
   it('drops ids the database would refuse and an empty round', () => {
     expect(queueFromQuizMisses([
-      { target: 'FIX001', feedback: { kind: 'wrong', picked: 'FIX002' } },
+      { target: 'BAD001', feedback: { kind: 'wrong', picked: 'FIX002' } },
       { target: 'fixture-cube-a', feedback: { kind: 'shown' } },
+      { target: 'FIX001', feedback: { kind: 'shown' } },
       { target: null, feedback: null },
-    ])).toEqual(['fixture-cube-a']);
+    ])).toEqual(['fixture-cube-a', 'FIX001']);
     expect(queueFromQuizMisses([])).toEqual([]);
   });
 });
@@ -73,7 +80,7 @@ describe('isViewCamera and viewSnapshot', () => {
   it('builds the save_anatomy_view arguments: trimmed name, each id once, bad ids dropped, copies of the camera', () => {
     const result = viewSnapshot({
       systemKey: 'heart', name: '  front view ', camera,
-      hidden: new Set(['FMA1', 'FMA1', 'FIX001']), faded: ['FMA2'], selected: 'FMA3',
+      hidden: new Set(['FMA1', 'FMA1', 'BAD001']), faded: ['FMA2'], selected: 'FMA3',
     });
     expect(result).toEqual({
       ok: true,
@@ -85,7 +92,7 @@ describe('isViewCamera and viewSnapshot', () => {
   });
 
   it('saves no selection for a missing or odd selected id, no faded list and no up', () => {
-    const result = viewSnapshot({ systemKey: 'heart', name: 'a', camera: { position: [1, 2, 3], target: [0, 0, 0] }, hidden: [], selected: 'FIX001' });
+    const result = viewSnapshot({ systemKey: 'heart', name: 'a', camera: { position: [1, 2, 3], target: [0, 0, 0] }, hidden: [], selected: 'BAD001' });
     expect(result).toEqual({ ok: true, args: { system_key: 'heart', name: 'a', camera: { position: [1, 2, 3], target: [0, 0, 0] }, hidden: [], faded: [], selected: null } });
   });
 
@@ -119,7 +126,7 @@ describe('createAnatomyStudy', () => {
   it('records misses in batches of 50 with the SQL argument names, and adds up what was recorded', async () => {
     const { study, rpc } = fakeClient({ replies: { record_anatomy_misses: { data: 7, error: null } } });
     const ids = Array.from({ length: 60 }, (_unused, i) => `FMA${i}`);
-    expect(await study.recordMisses('heart', [...ids, 'FMA0', 'FIX001'])).toEqual({ ok: true, value: 14 });
+    expect(await study.recordMisses('heart', [...ids, 'FMA0', 'BAD001'])).toEqual({ ok: true, value: 14 });
     expect(rpc).toHaveBeenCalledTimes(2);
     expect(rpc.mock.calls[0]![0]).toBe('record_anatomy_misses');
     expect(rpc.mock.calls[0]![1]).toEqual({ system_key: 'heart', structure_ids: ids.slice(0, 50) });
@@ -137,7 +144,7 @@ describe('createAnatomyStudy', () => {
     expect(await study.clearMiss('heart', 'FMA1')).toEqual({ ok: false, message: 'please sign in to use this.' });
     expect(await study.deleteView('00000000-0000-4000-8000-000000000001')).toEqual({ ok: false, message: 'please sign in to use this.' });
     const signedIn = fakeClient();
-    expect(await signedIn.study.recordMisses('heart', ['FIX001'])).toEqual({ ok: true, value: 0 });
+    expect(await signedIn.study.recordMisses('heart', ['BAD001'])).toEqual({ ok: true, value: 0 });
     expect(await signedIn.study.recordMisses('Heart', ['FMA1'])).toEqual({ ok: true, value: 0 });
     expect(await signedIn.study.views('Heart')).toEqual({ ok: true, value: [] });
     expect(rpc).not.toHaveBeenCalled();

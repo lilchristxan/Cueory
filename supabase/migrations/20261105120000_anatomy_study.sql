@@ -23,10 +23,10 @@ create table public.anatomy_review_queue (
   user_id uuid not null references auth.users (id) on delete cascade,
   -- The lab system (content/visuals/anatomy-<system_key>.json), such as heart or skeleton-limbs.
   system_key text not null constraint anatomy_review_queue_system_key check (system_key ~ '^[a-z0-9-]{1,40}$'),
-  -- The structure's id in the model: a BodyParts3D FMA id, or a labeled test fixture.
+  -- The structure's id in the model: a BodyParts3D FMA id, or a test fixture (FIX001 in the browser tests, fixture-… in labeled samples).
   structure_id text not null
     constraint anatomy_review_queue_structure_id
-    check (char_length(structure_id) <= 60 and structure_id ~ '^(FMA[0-9]+|fixture-[a-z0-9-]+)$'),
+    check (char_length(structure_id) <= 60 and structure_id ~ '^(FMA[0-9]+|FIX[0-9]+|fixture-[a-z0-9-]+)$'),
   missed_count integer not null default 1 constraint anatomy_review_queue_missed_count check (missed_count >= 1),
   first_missed_at timestamptz not null default now(),
   last_missed_at timestamptz not null default now(),
@@ -77,7 +77,7 @@ create table public.anatomy_saved_views (
   faded text[] not null default '{}' constraint anatomy_saved_views_faded check (cardinality(faded) <= 1000),
   selected text
     constraint anatomy_saved_views_selected
-    check (selected is null or (char_length(selected) <= 60 and selected ~ '^(FMA[0-9]+|fixture-[a-z0-9-]+)$')),
+    check (selected is null or (char_length(selected) <= 60 and selected ~ '^(FMA[0-9]+|FIX[0-9]+|fixture-[a-z0-9-]+)$')),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   -- Saving again under the same name in the same system replaces that view.
@@ -159,7 +159,7 @@ begin
   end if;
   if exists (
     select 1 from unnest(record_anatomy_misses.structure_ids) i
-    where i is null or char_length(i) > 60 or i !~ '^(FMA[0-9]+|fixture-[a-z0-9-]+)$'
+    where i is null or char_length(i) > 60 or i !~ '^(FMA[0-9]+|FIX[0-9]+|fixture-[a-z0-9-]+)$'
   ) then
     raise exception 'a structure id has the wrong shape' using errcode = '22023';
   end if;
@@ -229,7 +229,7 @@ begin
     raise exception 'that anatomy system was not found' using errcode = '22023';
   end if;
   if clear_anatomy_miss.structure_id is null or char_length(clear_anatomy_miss.structure_id) > 60
-     or clear_anatomy_miss.structure_id !~ '^(FMA[0-9]+|fixture-[a-z0-9-]+)$' then
+     or clear_anatomy_miss.structure_id !~ '^(FMA[0-9]+|FIX[0-9]+|fixture-[a-z0-9-]+)$' then
     raise exception 'a structure id has the wrong shape' using errcode = '22023';
   end if;
 
@@ -316,7 +316,7 @@ declare
   key text;
   vector jsonb;
   view_id uuid;
-  id_shape constant text := '^(FMA[0-9]+|fixture-[a-z0-9-]+)$';
+  id_shape constant text := '^(FMA[0-9]+|FIX[0-9]+|fixture-[a-z0-9-]+)$';
   max_views constant integer := 50;
 begin
   if uid is null then
