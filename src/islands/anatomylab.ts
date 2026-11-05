@@ -45,6 +45,9 @@ export const BODYPARTS3D_CREDIT_LEAD =
 export const BODYPARTS3D_LICENSE_NAME = 'CC Attribution 4.0 International';
 export const BODYPARTS3D_CREDIT = `${BODYPARTS3D_CREDIT_LEAD} ${BODYPARTS3D_LICENSE_NAME}`;
 export const BODYPARTS3D_LICENSE_URL = 'https://creativecommons.org/licenses/by/4.0/';
+/** Publisher-described population for this source geometry, not a clinical generalization. */
+export const BODYPARTS3D_SOURCE_MODEL_NOTE = 'source model: adult human male reference geometry';
+export const BODYPARTS3D_SOURCE_MODEL_URL = 'https://dbarchive.biosciencedbc.jp/data/bodyparts3d/LATEST/README_e.html';
 export const FIXTURE_CREDIT = 'test shapes made in code for automated tests: not anatomy, not from BodyParts3D';
 
 export function creditFor(system: Pick<AnatomySystem, 'fixture'>): string {
@@ -67,7 +70,8 @@ export function releaseNoteFor(system: Pick<AnatomySystem, 'status' | 'model' | 
  */
 export function pictureCreditFor(system: Pick<AnatomySystem, 'status' | 'model' | 'fixture'>): string {
   const license = system.fixture ? '' : ` · license: ${BODYPARTS3D_LICENSE_URL}`;
-  return `${creditFor(system)}${license} · ${releaseNoteFor(system)}`;
+  const sourceScope = system.fixture ? '' : ` · ${BODYPARTS3D_SOURCE_MODEL_NOTE}`;
+  return `${creditFor(system)}${license} · ${releaseNoteFor(system)}${sourceScope}`;
 }
 
 /**
