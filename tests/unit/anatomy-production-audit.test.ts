@@ -138,6 +138,25 @@ describe('anatomy production artifact audit', () => {
     );
   });
 
+  it('rejects an approved structure node that has no attached mesh or an invalid mesh index', () => {
+    const f = setup();
+    const path = join(f.dist, 'models', 'anatomy', 'approved.glb');
+    const valid = readFileSync(path);
+    const jsonLength = valid.readUInt32LE(12);
+    const json = valid.toString('utf8', 20, 20 + jsonLength);
+    expect(json).toContain('"mesh":0');
+    for (const replacement of ['"void":0', '"mesh":9']) {
+      // These replacements preserve GLB framing and JSON length. Only the
+      // link from the named structure node to a renderable mesh is broken.
+      const corrupted = Buffer.from(valid);
+      corrupted.write(json.replace('"mesh":0', replacement), 20, 'utf8');
+      writeFileSync(path, corrupted);
+      expect(f.check().errors, replacement).toContain(
+        'approved model failed built GLB geometry, identity or credit verification: /models/anatomy/approved.glb',
+      );
+    }
+  });
+
   it('rejects a forged approved GLB filename with invalid or truncated model bytes', () => {
     const f = setup();
     const path = join(f.dist, 'models', 'anatomy', 'approved.glb');
