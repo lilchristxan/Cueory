@@ -94,13 +94,27 @@ function hasArchiveMagic(path, allowPagefindGzip = false) {
     if (header.length) readSync(fd, header, 0, header.length, 0);
     const isGzip = header.length >= 2 && header[0] === 0x1f && header[1] === 0x8b;
     if (isGzip && allowPagefindGzip) {
-      // Pagefind's generated data chunks are gzip-compressed. Validate the
-      // complete stream and inspect the decompressed header; path+magic alone
-      // would allow a gzip-compressed GLB/ZIP to bypass the production gate.
+      // Pagefind's runtime requires the 12-byte pagefind_dcd marker after
+      // gzip decompression. Check the real payload after that marker: checking
+      // offset zero would miss a model/container placed immediately after it.
+      // See Pagefind's coupled_search.ts decompress() implementation.
       if (size > 64 * 1024 * 1024) return true;
       try {
         const expanded = gunzipSync(readFileSync(fd), { maxOutputLength: 64 * 1024 * 1024 });
-        return hasArchiveMagicBytes(expanded.subarray(0, 512));
+        const signature = Buffer.from('pagefind_dcd', 'ascii');
+        if (expanded.length <= signature.length ||
+            !expanded.subarray(0, signature.length).equals(signature)) return true;
+        const payload = expanded.subarray(signature.length);
+        if (hasArchiveMagicBytes(payload.subarray(0, 512))) return true;
+        // Fragments are JSON parsed by Pagefind after decompression.
+        if (path.endsWith('.pf_fragment')) {
+          const fragment = JSON.parse(payload.toString('utf8'));
+          if (!fragment || typeof fragment !== 'object' || Array.isArray(fragment)) return true;
+        }
+        // The Pagefind worker bundle is WebAssembly after the same prefix.
+        if (path.endsWith('.pagefind') &&
+            !payload.subarray(0, 4).equals(Buffer.from([0x00, 0x61, 0x73, 0x6d]))) return true;
+        return false;
       } catch {
         return true;
       }
