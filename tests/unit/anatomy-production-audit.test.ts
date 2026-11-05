@@ -170,6 +170,39 @@ describe('anatomy production artifact audit', () => {
     }
   });
 
+  it('rejects duplicate ownership of a structure mesh or an unused extra mesh', () => {
+    const f = setup();
+    const path = join(f.dist, 'models', 'anatomy', 'approved.glb');
+    f.system('approved', 'approved', ['/models/anatomy/approved.glb'], ['FMA999992', 'FMA999993']);
+    const original = readFileSync(path);
+    const decode = () => JSON.parse(original.toString('utf8', 20, 20 + original.readUInt32LE(12)));
+    const edit = (change: (json: any) => void) => {
+      const json = decode();
+      change(json);
+      const bytes = Buffer.from(JSON.stringify(json), 'utf8');
+      const padded = Buffer.concat([bytes, Buffer.alloc((4 - bytes.length % 4) % 4, 0x20)]);
+      const payload = original.subarray(20 + original.readUInt32LE(12));
+      const rebuilt = Buffer.alloc(20 + padded.length + payload.length);
+      rebuilt.write('glTF', 0, 'ascii');
+      rebuilt.writeUInt32LE(2, 4);
+      rebuilt.writeUInt32LE(rebuilt.length, 8);
+      rebuilt.writeUInt32LE(padded.length, 12);
+      rebuilt.writeUInt32LE(0x4e4f534a, 16);
+      padded.copy(rebuilt, 20);
+      payload.copy(rebuilt, 20 + padded.length);
+      writeFileSync(path, rebuilt);
+    };
+    expect(f.check().errors).toEqual([]);
+    edit((json) => { json.nodes[1].mesh = 0; });
+    expect(f.check().errors).toContain(
+      'approved model failed built GLB geometry, identity or credit verification: /models/anatomy/approved.glb',
+    );
+    edit((json) => { json.meshes.push({ primitives: [{ indices: 0, attributes: { POSITION: 1 } }] }); });
+    expect(f.check().errors).toContain(
+      'approved model failed built GLB geometry, identity or credit verification: /models/anatomy/approved.glb',
+    );
+  });
+
   it('rejects missing scenes, orphaned nodes, empty structure meshes and invalid geometry references', () => {
     const f = setup();
     // Two approved structures: one mesh may remain valid while the other has
