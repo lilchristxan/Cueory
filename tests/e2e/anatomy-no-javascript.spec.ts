@@ -26,5 +26,10 @@ test('anatomy structure names remain reachable and credited without JavaScript',
     'href',
     'https://creativecommons.org/licenses/by/4.0/',
   );
+  await expect(first.getByTestId('anatomy-model-scope')).toContainText('source model: adult human male reference geometry');
+  await expect(first.getByRole('link', { name: 'publisher source description' })).toHaveAttribute(
+    'href',
+    'https://dbarchive.biosciencedbc.jp/data/bodyparts3d/LATEST/README_e.html',
+  );
   expect(modelRequests).toEqual([]);
 });
