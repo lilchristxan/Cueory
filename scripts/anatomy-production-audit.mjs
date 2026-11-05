@@ -24,7 +24,8 @@ const BODYPARTS3D_SECTION_FILES = new Map([
 ]);
 
 // Fail closed on any publicly shipped 3D geometry, including misplaced copies and raw source meshes.
-const MODEL_ASSET = /\.(?:glb|gltf|obj|stl)$/i;
+// Include common alternative mesh formats so a renamed draft cannot bypass the production gate.
+const MODEL_ASSET = /\.(?:glb|gltf|obj|stl|fbx|ply|dae|3mf|usd|usdz|blend)$/i;
 // Scan all ordinary published text assets, not just the anatomy page or hashed JavaScript chunks.
 // Site search, manifests or unrelated pages can otherwise accidentally expose a draft identifier.
 const TEXT_ASSET = /\.(?:html?|js|mjs|json|map|xml|svg|txt|css|csv|tsv|md|webmanifest)$/i;
