@@ -62,6 +62,108 @@ function makeStoredZip(
   return Buffer.concat([localRecord, centralRecord, end]);
 }
 
+
+function testCrc32(bytes: Buffer): number {
+  let value = 0xffffffff;
+  for (const byte of bytes) {
+    value ^= byte;
+    for (let bit = 0; bit < 8; bit += 1) value = (value >>> 1) ^ (value & 1 ? 0xedb88320 : 0);
+  }
+  return (value ^ 0xffffffff) >>> 0;
+}
+
+function embeddedArchiveFixtures(): Array<[string, Buffer]> {
+  const fixtures: Array<[string, Buffer]> = [];
+
+  // A real gzip member with a valid deflate stream, CRC32 and ISIZE footer.
+  fixtures.push(['gzip', gzipSync(Buffer.from('glTF synthetic hidden model payload'))]);
+
+  // Minimal marker-complete BZip2 stream envelope. The release gate's BZip2
+  // sniff validates block/end markers; it does not decompress BZip2 payloads.
+  fixtures.push(['bzip2', Buffer.concat([
+    Buffer.from('BZh9', 'ascii'),
+    Buffer.from([0x31, 0x41, 0x59, 0x26, 0x53, 0x59]),
+    Buffer.from('payload'),
+    Buffer.from([0x17, 0x72, 0x45, 0x38, 0x50, 0x90]),
+    Buffer.alloc(4),
+  ])]);
+
+  // Header/footer CRC and backward-size framing for an XZ stream envelope.
+  const xzFlags = Buffer.from([0, 0]);
+  const xzHeader = Buffer.alloc(12);
+  Buffer.from([0xfd, 0x37, 0x7a, 0x58, 0x5a, 0x00]).copy(xzHeader, 0);
+  xzFlags.copy(xzHeader, 6);
+  xzHeader.writeUInt32LE(testCrc32(xzFlags), 8);
+  const xzFooter = Buffer.alloc(12);
+  xzFooter.writeUInt32LE(testCrc32(xzFooter.subarray(4, 10)), 0);
+  xzFooter.writeUInt32LE(0, 4); // Four-byte Index field.
+  xzFlags.copy(xzFooter, 8);
+  xzFooter.write('YZ', 10, 'ascii');
+  fixtures.push(['xz', Buffer.concat([xzHeader, Buffer.alloc(4), xzFooter])]);
+
+  // A single-segment Zstandard frame with one final raw block.
+  fixtures.push(['zstd', Buffer.from([
+    0x28, 0xb5, 0x2f, 0xfd, // frame magic
+    0x20, 0x04, // single segment, four-byte content size
+    0x21, 0x00, 0x00, // last raw block, four bytes
+    0x67, 0x6c, 0x54, 0x46, // "glTF"
+  ])]);
+
+  // 7z StartHeader CRCs and a two-byte NextHeader ("Header", "End").
+  const sevenZip = Buffer.alloc(34);
+  Buffer.from([0x37, 0x7a, 0xbc, 0xaf, 0x27, 0x1c, 0x00, 0x04]).copy(sevenZip, 0);
+  sevenZip.writeBigUInt64LE(0n, 12);
+  sevenZip.writeBigUInt64LE(2n, 20);
+  Buffer.from([0x01, 0x00]).copy(sevenZip, 32);
+  sevenZip.writeUInt32LE(testCrc32(sevenZip.subarray(12, 32)), 8);
+  sevenZip.writeUInt32LE(testCrc32(sevenZip.subarray(32)), 28);
+  fixtures.push(['7z', sevenZip]);
+
+  // RAR4 main-header CRC and RAR5 header CRC/varint framing.
+  const rar4 = Buffer.alloc(20);
+  Buffer.from([0x52, 0x61, 0x72, 0x21, 0x1a, 0x07, 0x00]).copy(rar4, 0);
+  rar4[9] = 0x73; // Main archive header.
+  rar4.writeUInt16LE(13, 12);
+  let rarCrc = 0;
+  for (const byte of rar4.subarray(9)) {
+    rarCrc ^= byte;
+    for (let bit = 0; bit < 8; bit += 1) rarCrc = (rarCrc >>> 1) ^ (rarCrc & 1 ? 0xa001 : 0);
+  }
+  rar4.writeUInt16LE(rarCrc & 0xffff, 7);
+  fixtures.push(['rar4', rar4]);
+
+  const rar5 = Buffer.alloc(15);
+  Buffer.from([0x52, 0x61, 0x72, 0x21, 0x1a, 0x07, 0x01, 0x00]).copy(rar5, 0);
+  rar5[12] = 2; // Two bytes in the header: type and flags.
+  rar5[13] = 1; // Archive header.
+  rar5[14] = 0; // No flags.
+  rar5.writeUInt32LE(testCrc32(rar5.subarray(12)), 8);
+  fixtures.push(['rar5', rar5]);
+
+  // Cabinet header and one folder record, with all offsets inside the cabinet.
+  const cab = Buffer.alloc(52);
+  cab.write('MSCF', 0, 'ascii');
+  cab.writeUInt32LE(cab.length, 8);
+  cab.writeUInt32LE(44, 16);
+  cab[24] = 3;
+  cab[25] = 1;
+  cab.writeUInt16LE(1, 26);
+  fixtures.push(['cab', cab]);
+
+  // One empty ar member with the required fixed-width header trailer.
+  const ar = Buffer.alloc(68, 0x20);
+  ar.write('!<arch>\n', 0, 'ascii');
+  ar.write('hidden.o/', 8, 'ascii');
+  ar.write('0', 24, 'ascii');
+  ar.write('0', 36, 'ascii');
+  ar.write('100644', 48, 'ascii');
+  ar.write('0', 56, 'ascii');
+  ar.write('`\n', 66, 'ascii');
+  fixtures.push(['ar', ar]);
+
+  return fixtures;
+}
+
 function setup() {
   const root = mkdtempSync(join(tmpdir(), 'cueory-anatomy-publish-'));
   roots.push(root);
@@ -340,6 +442,22 @@ describe('anatomy production artifact audit', () => {
       'archive/container in production output requires explicit review: /pagefind/fragment/en_hidden_zstd.pf_fragment',
       'archive/container in production output requires explicit review: /pagefind/index/en_trailing_bytes.pf_index',
     ]));
+  });
+
+
+  it('rejects framed embedded archive formats under benign file extensions', () => {
+    const f = setup();
+    const cases = embeddedArchiveFixtures();
+    for (const [name, archive] of cases) {
+      // Prefixes prove the format recognizers do not rely on offset-zero magic.
+      f.file(`downloads/embedded-${name}.dat`, Buffer.concat([Buffer.alloc(900, 0x61), archive]));
+    }
+    const errors = f.check().errors;
+    for (const [name] of cases) {
+      expect(errors).toContain(
+        `archive/container in production output requires explicit review: /downloads/embedded-${name}.dat`,
+      );
+    }
   });
 
   it('rejects archive containers that could conceal unapproved model assets', () => {
