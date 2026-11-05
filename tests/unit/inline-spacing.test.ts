@@ -13,7 +13,7 @@ function astroFiles(dir: string): string[] {
 }
 
 const root = new URL('../../src/', import.meta.url).pathname;
-const inlineStart = /^(<(code|a |strong|em|kbd|abbr)|\{[a-zA-Z_][\w.]*\})/;
+const inlineStart = /^(<(?:code|a\s|strong|em|kbd|abbr)(?:\s|>)|\{[a-zA-Z_][\w.]*\})/;
 const wordEnd = /[A-Za-z0-9,.)"']$/;
 
 describe('no line break is left to vanish before an inline tag or expression', () => {
