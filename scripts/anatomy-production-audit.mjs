@@ -4,7 +4,7 @@
  *
  * Usage: node scripts/anatomy-production-audit.mjs [dist-directory] [content/visuals-directory]
  */
-import { closeSync, constants as fsConstants, existsSync, fstatSync, lstatSync, openSync, readFileSync, readdirSync, statSync } from 'node:fs';
+import { closeSync, constants as fsConstants, existsSync, fstatSync, lstatSync, openSync, readFileSync, readSync, readdirSync, statSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
@@ -348,6 +348,34 @@ export function auditAnatomyProduction(distDir, contentDir) {
   }
   for (const url of approved) {
     if (!shipped.includes(url)) errors.push(`approved model missing from production: ${url}`);
+  }
+
+  // Production release requires genuine GLB v2 bytes, not merely a file with
+  // an approved name. The separate full model suite checks node/mesh geometry.
+  // Use O_NOFOLLOW to avoid reading replaced symlink targets after enumeration.
+  for (const url of approved) {
+    if (!shipped.includes(url)) continue;
+    const path = join(dist, url.slice(1));
+    let fd;
+    try {
+      if (!Number.isInteger(fsConstants.O_NOFOLLOW)) throw new Error('no symlink guard');
+      fd = openSync(path, fsConstants.O_RDONLY | fsConstants.O_NOFOLLOW);
+      const size = fstatSync(fd).size;
+      if (!fstatSync(fd).isFile() || size < 20) throw new Error('invalid GLB header');
+      const header = Buffer.alloc(20);
+      const read = readSync(fd, header, 0, 20, 0);
+      if (read !== 20 || header.toString('ascii', 0, 4) !== 'glTF' ||
+          header.readUInt32LE(4) !== 2 || header.readUInt32LE(8) !== size ||
+          header.readUInt32LE(12) < 2 || header.readUInt32LE(12) % 4 !== 0 ||
+          header.readUInt32LE(16) !== 0x4e4f534a ||
+          20 + header.readUInt32LE(12) > size) {
+        throw new Error('invalid GLB v2 header/JSON chunk');
+      }
+    } catch {
+      errors.push(`approved model is not a valid GLB v2 header: ${url}`);
+    } finally {
+      if (fd !== undefined) closeSync(fd);
+    }
   }
 
   for (const path of builtFiles) {
