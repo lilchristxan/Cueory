@@ -446,7 +446,11 @@ export function checkProblems(checks: readonly CheckRun[]): string[] {
   }
   for (const [name, run] of latest) {
     if ((REQUIRED_CHECKS as readonly string[]).includes(name)) continue;
-    if (run.status === 'completed' && !OK_CONCLUSIONS.has(run.conclusion ?? '')) {
+    // Do not merge while an observed non-required check is queued or running:
+    // an eventual failure must be known before staging receives the change.
+    if (run.status !== 'completed') {
+      problems.push(`"${name}" is still running`);
+    } else if (!OK_CONCLUSIONS.has(run.conclusion ?? '')) {
       problems.push(`"${name}" ended as ${run.conclusion ?? 'unknown'}`);
     }
   }
