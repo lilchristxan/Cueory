@@ -78,6 +78,19 @@ const input = (over: Partial<Parameters<typeof decide>[0]> = {}) => ({
   ...over,
 });
 
+describe('required checks match the emitted CI workflow', () => {
+  it('requires the aggregate job that gates build, unit and browser tests', () => {
+    const workflow = readFileSync(new URL('../../.github/workflows/ci.yml', import.meta.url), 'utf8');
+
+    // The checks job alone omits browser tests. Auto-merge must wait for the
+    // verify job, whose exact check-run name is the first required CI check.
+    expect(workflow).toMatch(/verify:\s*\n\s*name:\s*Type check, build and test/u);
+    expect(workflow).toMatch(/checks:\s*\n\s*name:\s*Type check, build and unit tests/u);
+    expect(REQUIRED_CHECKS).toContain('Type check, build and test');
+    expect(REQUIRED_CHECKS).not.toContain('Type check, build and unit tests');
+  });
+});
+
 describe('automation.json', () => {
   it('turns on the pre-launch rules only for a clear "prelaunch": true', () => {
     expect(parseAutomation('{"prelaunch": true}')).toEqual({ mode: 'prelaunch' });
