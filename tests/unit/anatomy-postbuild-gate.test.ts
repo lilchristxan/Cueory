@@ -1,4 +1,8 @@
-import { readFileSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { shouldAuditAnatomyBuild, checkAnatomyBuild } from '../../scripts/check-anatomy-build.mjs';
 import { keepsDrafts } from '../../src/visuals/prunedrafts';
@@ -39,6 +43,42 @@ describe('postbuild anatomy release audit', () => {
       '/nonexistent-anatomy-production-output', '/nonexistent-content',
     );
     expect(out).toEqual({ skipped: true, errors: [] });
+  });
+
+  it('fails the actual postbuild CLI for leaked draft geometry but keeps previews usable', () => {
+    const root = mkdtempSync(join(tmpdir(), 'cueory-anatomy-postbuild-'));
+    const script = fileURLToPath(new URL('../../scripts/check-anatomy-build.mjs', import.meta.url));
+    const dist = join(root, 'dist', 'models', 'anatomy');
+    const content = join(root, 'content', 'visuals');
+    try {
+      mkdirSync(dist, { recursive: true });
+      mkdirSync(content, { recursive: true });
+      writeFileSync(join(dist, 'draft.glb'), 'synthetic fixture bytes only');
+      writeFileSync(join(content, 'anatomy-draft.json'), JSON.stringify({
+        status: 'draft',
+        model: { file: '/models/anatomy/draft.glb' },
+        labels: [{ id: 'FMA999991', text: 'synthetic fixture only' }],
+      }));
+      const run = (env: Record<string, string>) => spawnSync(process.execPath, [script], {
+        cwd: root, env: { ...process.env, ...env }, encoding: 'utf8',
+      });
+      const main = run({
+        WORKERS_CI: '1', WORKERS_CI_BRANCH: 'main', CUEORY_ANATOMY_DRAFTS: '',
+      });
+      expect(main.status).toBe(1);
+      expect(main.stderr).toContain('unapproved model exposed in production');
+      const unknown = run({
+        WORKERS_CI: '', WORKERS_CI_BRANCH: '', CUEORY_ANATOMY_DRAFTS: '',
+      });
+      expect(unknown.status).toBe(1);
+      const preview = run({
+        WORKERS_CI: '1', WORKERS_CI_BRANCH: 'staging', CUEORY_ANATOMY_DRAFTS: '',
+      });
+      expect(preview.status).toBe(0);
+      expect(preview.stdout).toContain('skipped for explicitly draft-enabled preview');
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 
   it('keeps the audit after the complete site and Pagefind build through npm postbuild', () => {
