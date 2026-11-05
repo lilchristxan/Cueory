@@ -429,6 +429,9 @@ describe('anatomy production artifact audit', () => {
     const actualGlb = readFileSync(new URL('../../public/models/anatomy/kidneys.glb', import.meta.url));
     const filename = 'models/anatomy/kidneys.glb';
     f.file(filename, actualGlb);
+    // Match the new release gate's checked-in source byte check. Only the
+    // temporary dist copy is corrupted in the negative case below.
+    writeFileSync(join(f.dist, '..', 'public', filename), actualGlb);
     // gltfpack writes a real BIN buffer and a virtual EXT_meshopt_compression
     // fallback buffer. Rejecting every GLB with two buffers rejects the actual source models.
     expect(f.check().errors).toEqual([]);
