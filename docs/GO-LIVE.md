@@ -121,13 +121,18 @@ Use exactly the steps of SETUP Part L, with three changes:
 
 If a later pull request adds a file with an earlier date than one you've already run, tell Claude before running it.
 
-**Migration history note (for Claude, nothing for you to do):** the SQL Editor doesn't record runs in Supabase's
-migration history (`supabase_migrations.schema_migrations`), so the command-line tool would think nothing has run.
-Before anyone uses the command-line tool on `cueory-staging` or `cueory-prod`, every file run by hand there is
-marked as run, without running it again (on `cueory-staging`, files 1 to 9 were applied on 5 November 2026 through
-the Supabase tool, which records its own runs, so only hand-run files need marking): `supabase migration repair <version> … --status applied --linked`, for
-example `supabase migration repair 20261101060000 20261101060100 --status applied --linked`. It only updates the
-history table; it doesn't apply or undo any SQL. [SB migrations] [SB repair]
+**Migration history safety gate (for Claude; founder sign-off required):** Do not run `supabase db push`,
+`supabase migration repair`, or other CLI migration actions against staging or production until the database owner
+reconciles the **exact migration version numbers** in the hosted history with the canonical filenames in
+`supabase/migrations/`. The SQL Editor does not record corresponding history entries. The connected Supabase tool
+did record the schema migrations applied on `cueory-staging` on 5 November 2026, but with **different version IDs**:
+for example, remote history has `20261105184816_locked_by_default` while the checked-in file is
+`20261101060000_locked_by_default.sql`. A matching migration **name** does not mean its Git file version is
+recorded as applied. At the 5 November read-only audit, staging had 16 tool-generated migration records, production
+had none, and Git contained 17 canonical files. Never reapply already-executed SQL or blindly mark an unrun migration
+as applied. Independently compare each project's actual schema, SQL files and version history, then seek the
+founder's approval for a version-by-version reconciliation plan before any CLI migration action. A documented
+`migration repair` changes history, not the database schema itself. [SB migrations] [SB repair]
 
 ### 1.6 Sign-in settings on cueory-prod (25 minutes)
 
