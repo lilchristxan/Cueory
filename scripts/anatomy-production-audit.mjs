@@ -107,7 +107,9 @@ function hasArchiveMagic(path, allowPagefindGzip = false) {
         if (expanded.length <= signature.length ||
             !expanded.subarray(0, signature.length).equals(signature)) return true;
         const payload = expanded.subarray(signature.length);
-        if (hasArchiveMagicBytes(payload.subarray(0, 512))) return true;
+        // Search the entire bounded Pagefind payload, not only its header:
+        // a container or GLB can be padded after the format marker.
+        if (hasArchiveMagicBytes(payload)) return true;
         // Fragments are JSON parsed by Pagefind after decompression.
         if (path.endsWith('.pf_fragment')) {
           const fragment = JSON.parse(payload.toString('utf8'));
