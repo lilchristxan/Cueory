@@ -31,7 +31,7 @@ function setup() {
         quote: 'synthetic test words only',
         book: 'BodyParts3D',
         section: 'synthetic test section',
-        url: 'https://dbarchive.biosciencedbc.jp/data/bodyparts3d/synthetic-test-only',
+        url: 'https://dbarchive.biosciencedbc.jp/data/bodyparts3d/LATEST/synthetic-test-only',
         license: 'CC BY 4.0',
         retrieved: '2026-11-04',
       })),
@@ -110,7 +110,7 @@ describe('anatomy production artifact audit', () => {
         {
           id: 'bp3d-FMA999992', quote: 'synthetic test words only',
           book: 'BodyParts3D', section: 'synthetic test section',
-          url: 'https://dbarchive.biosciencedbc.jp/data/bodyparts3d/synthetic-test-only',
+          url: 'https://dbarchive.biosciencedbc.jp/data/bodyparts3d/LATEST/synthetic-test-only',
           license: 'CC BY 4.0', retrieved: '2026-11-04',
         },
       ],
@@ -244,7 +244,7 @@ describe('anatomy production artifact audit', () => {
       labels: [{ id: 'FMA999992', text: 'fixture label', source: 'bp3d-FMA999992' }],
       sources: [{
         id: 'bp3d-FMA999992', quote: '', book: 'BodyParts3D', section: '',
-        url: 'https://dbarchive.biosciencedbc.jp/data/bodyparts3d/synthetic-test-only',
+        url: 'https://dbarchive.biosciencedbc.jp/data/bodyparts3d/LATEST/synthetic-test-only',
         license: 'CC BY 4.0', retrieved: '2026-11-04',
       }],
     }));
@@ -265,6 +265,17 @@ describe('anatomy production artifact audit', () => {
         license: 'CC BY-NC 4.0', retrieved: 'invalid date',
       }],
     }));
+    expect(f.check().errors).toContain(
+      'anatomy-approved.json: approved source bp3d-FMA999992 has incomplete or incompatible citation and rights evidence',
+    );
+  });
+
+  it('rejects an archived BodyParts3D citation despite a claimed current CC BY license', () => {
+    const f = setup();
+    const file = join(f.content, 'anatomy-approved.json');
+    const data = JSON.parse(readFileSync(file, 'utf8'));
+    data.sources[0].url = 'https://dbarchive.biosciencedbc.jp/data/bodyparts3d/20110915/README_e.html';
+    writeFileSync(file, JSON.stringify(data));
     expect(f.check().errors).toContain(
       'anatomy-approved.json: approved source bp3d-FMA999992 has incomplete or incompatible citation and rights evidence',
     );
