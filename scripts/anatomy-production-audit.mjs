@@ -343,7 +343,9 @@ export function auditAnatomyProduction(distDir, contentDir) {
 
   // Draft labels must not be baked into static HTML/JS data, even if their .glb files were pruned.
   // The identifiers are original data keys, not guessed medical wording. Only match exact token boundaries.
-  // Search every static text asset, including Pagefind/search data and other public routes.
+  // Search static text assets, including Pagefind's readable JSON and other public routes.
+  // Pagefind's binary .pf_fragment/.pf_index/.pf_meta files are not decoded here.
+  // The separate generated-index regression enforces exclusion of noindex preview pages.
   // Token boundaries avoid confusing BP24 with BP240 or FMA7198nsn with FMA7198nsn0. Unknown ID formats fail source validation above.
   const textFiles = builtFiles.filter((path) => TEXT_ASSET.test(path));
   const draftTokens = draftIds;
