@@ -532,6 +532,7 @@ function visualFor(system, structures, partsLines, release, { retrieved, tree })
     kind: 'model',
     lessonIds: system.lessonIds,
     status: 'draft',
+    hierarchyTree: tree,
     model: { file: `/models/anatomy/${system.id}.glb`, release: release.label, via: release.via },
     labels: structures.map((s) => ({ id: s.id, text: s.name, group: s.group, layer: s.layer, parents: s.parents, source: `bp3d-${s.id}` })),
     depictions: [

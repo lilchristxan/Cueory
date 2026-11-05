@@ -13,6 +13,10 @@ const labels: HierarchyLabel[] = [
 ];
 
 describe('breadcrumb', () => {
+  it('does not present IS-A classification as a physical body location', () => {
+    expect(breadcrumb(labels, 'S4', 'isa')).toEqual([]);
+    expect(breadcrumb(labels, 'S4', 'partof')).toEqual(breadcrumb(labels, 'S4'));
+  });
   it('walks the group chain from the root to the structure', () => {
     expect(breadcrumb(labels, 'S4')).toEqual(['root body', 'organ one', 'part a of organ one', 'piece of part a']);
     expect(breadcrumb(labels, 'S1')).toEqual(['root body', 'organ one']);

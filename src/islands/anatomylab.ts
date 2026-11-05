@@ -36,6 +36,8 @@ export interface AnatomySystem {
   key: string;
   title: string;
   status: 'draft' | 'approved';
+  /** The BodyParts3D relation for groups/parents; IS-A classification is not physical location. */
+  hierarchyTree?: 'partof' | 'isa';
   /** `files`: the whole-body view loads several systems' models together (src/islands/anatomylayers.ts). */
   model: { file: string; files?: string[]; release: string; via?: string; layerFiles?: Record<string, string[]>; fileIds?: Record<string, string[]> };
   structures: AnatomyStructure[];
@@ -171,6 +173,8 @@ export function parseAnatomyFile(json: unknown, path: string, options: { fixture
   if (file['id'] !== `anatomy-${key}`) fail('"id" must match the anatomy source filename');
   if (file['kind'] !== 'model') fail('"kind" must be "model"');
   if (!text(file['title'], 120)) fail('"title" must be a short line of text');
+  const hierarchyTree = file['hierarchyTree'] ?? 'partof';
+  if (hierarchyTree !== 'partof' && hierarchyTree !== 'isa') fail('"hierarchyTree" must be "partof" or "isa"');
   const status = file['status'];
   if (status !== 'draft' && status !== 'approved') fail('"status" must be "draft" or "approved"');
   const model = file['model'];
@@ -212,6 +216,7 @@ export function parseAnatomyFile(json: unknown, path: string, options: { fixture
     key: key!,
     title: file['title'] as string,
     status: status as AnatomySystem['status'],
+    hierarchyTree: hierarchyTree as NonNullable<AnatomySystem['hierarchyTree']>,
     model: { file: m['file'] as string, release: m['release'] as string },
     structures,
   };

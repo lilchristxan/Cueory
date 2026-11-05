@@ -1,18 +1,16 @@
 /**
- * Where a structure sits in the body (Task 178, part B). Pure functions over a system's labels; no three.js, no DOM.
- *
- * Every name here comes from the source file (BodyParts3D's own names): nothing is invented. A label's `group` is the
- * PART-OF concept that heads it in the list, and an optional `parents` field (written by scripts/build-anatomy.mjs on
- * a rebuild) gives the full PART-OF ancestry, root first. Until a rebuild supplies `parents`, the breadcrumb is built
- * by following the `group` chain: a group that is itself a label continues the chain; one that is not is the root
- * (for example "human body").
+ * Source hierarchy helpers for the Anatomy Lab (Task 178, part B). Pure functions over labels; no three.js or DOM.
+ * BodyParts3D has two distinct relations: PART-OF describes containment; IS-A classifies by kind. Only PART-OF is
+ * suitable for a body-location breadcrumb. IS-A paths must not be presented as physical location.
  */
+
+export type HierarchyTree = 'partof' | 'isa';
 
 export interface HierarchyLabel {
   id: string;
   text: string;
   group?: string;
-  /** Full PART-OF ancestry, names only, root first, as the source file gives it. */
+  /** Ancestry names in the declared source tree, root first; the relation is on AnatomySystem.hierarchyTree. */
   parents?: readonly string[];
 }
 
@@ -32,7 +30,9 @@ function indexLabels(labels: readonly HierarchyLabel[]): { byId: Map<string, Hie
  * `parents` when the file has them; otherwise follows the `group` chain. Unknown id: an empty array. A cycle in the
  * group chain (bad data) stops the walk rather than looping.
  */
-export function breadcrumb(labels: readonly HierarchyLabel[], id: string): string[] {
+export function breadcrumb(labels: readonly HierarchyLabel[], id: string, tree: HierarchyTree = 'partof'): string[] {
+  // IS-A ancestors are kinds/classes, not physical locations. Omit this trail instead of mislabeling it.
+  if (tree === 'isa') return [];
   const { byId, byText } = indexLabels(labels);
   const label = byId.get(id);
   if (!label) return [];
