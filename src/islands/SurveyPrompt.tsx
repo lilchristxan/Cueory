@@ -138,7 +138,7 @@ export default function SurveyPrompt({
           type="button"
           onClick={handleDismiss}
           aria-label="dismiss survey"
-          className="min-h-11 max-w-full px-2 text-xs leading-relaxed text-ink-soft hover:text-ink"
+          className="min-h-11 max-w-full min-w-0 whitespace-normal break-words px-2 text-xs leading-relaxed text-ink-soft hover:text-ink"
         >
           dismiss
         </button>
