@@ -231,7 +231,8 @@ export const PRODUCTION_BRANCH = 'main';
  * drafts unless CUEORY_ANATOMY_DRAFTS=1 says so on purpose.
  */
 export function draftsAllowed(env: BuildEnv): boolean {
-  if (env.WORKERS_CI !== '1') return env.CUEORY_ANATOMY_DRAFTS === '1';
+  // Cloudflare Workers Builds also uses the literal string 'true'.
+  if (env.WORKERS_CI !== '1' && env.WORKERS_CI !== 'true') return env.CUEORY_ANATOMY_DRAFTS === '1';
   const rawBranch = env.WORKERS_CI_BRANCH?.trim();
   // Cloudflare normally supplies a short branch name. A full Git ref for
   // refs/heads/main must also be recognized as production.

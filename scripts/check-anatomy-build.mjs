@@ -16,7 +16,8 @@ export function shouldAuditAnatomyBuild(env) {
   // GitHub workflows, not only push events. Release PR builds also audit.
   if (env.GITHUB_REF === 'refs/heads/main' ||
       (env.GITHUB_EVENT_NAME === 'pull_request' && env.GITHUB_BASE_REF === 'main')) return true;
-  if (env.WORKERS_CI === '1') {
+  // Workers Builds has emitted WORKERS_CI=true as well as 1. Both must honor the main-branch gate.
+  if (env.WORKERS_CI === '1' || env.WORKERS_CI === 'true') {
     const raw = env.WORKERS_CI_BRANCH?.trim();
     const branch = raw?.startsWith('refs/heads/') ? raw.slice('refs/heads/'.length) : raw;
     return !branch || branch === 'main';

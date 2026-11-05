@@ -6,10 +6,15 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { shouldAuditAnatomyBuild, checkAnatomyBuild } from '../../scripts/check-anatomy-build.mjs';
 import { keepsDrafts } from '../../src/visuals/prunedrafts';
+import { draftsAllowed } from '../../src/islands/anatomylab';
 
 describe('postbuild anatomy release audit', () => {
   const cases = [
     { WORKERS_CI: '1', WORKERS_CI_BRANCH: 'main' },
+    { WORKERS_CI: 'true', WORKERS_CI_BRANCH: 'main', CUEORY_ANATOMY_DRAFTS: '1' },
+    { WORKERS_CI: 'true', WORKERS_CI_BRANCH: 'staging' },
+    { WORKERS_CI: 'true', WORKERS_CI_BRANCH: 'refs/heads/task-178/anatomy-lab' },
+    { WORKERS_CI: 'true', CUEORY_ANATOMY_DRAFTS: '1' },
     { WORKERS_CI: '1', WORKERS_CI_BRANCH: ' refs/heads/main ', CUEORY_ANATOMY_DRAFTS: '1' },
     { WORKERS_CI: '1', WORKERS_CI_BRANCH: 'staging' },
     { WORKERS_CI: '1', WORKERS_CI_BRANCH: 'refs/heads/task-178/anatomy-lab' },
@@ -20,6 +25,22 @@ describe('postbuild anatomy release audit', () => {
   ];
   it.each(cases)('uses the same draft boundary as the built-model pruning guard: %j', (env) => {
     expect(shouldAuditAnatomyBuild(env)).toBe(!keepsDrafts(env));
+    expect(keepsDrafts(env)).toBe(draftsAllowed(env));
+  });
+
+  it('does not treat WORKERS_CI=true on main as an opt-in local draft build', () => {
+    const production = { WORKERS_CI: 'true', WORKERS_CI_BRANCH: 'main', CUEORY_ANATOMY_DRAFTS: '1' };
+    expect(draftsAllowed(production)).toBe(false);
+    expect(keepsDrafts(production)).toBe(false);
+    expect(shouldAuditAnatomyBuild(production)).toBe(true);
+    const preview = { WORKERS_CI: 'true', WORKERS_CI_BRANCH: 'staging' };
+    expect(draftsAllowed(preview)).toBe(true);
+    expect(keepsDrafts(preview)).toBe(true);
+    expect(shouldAuditAnatomyBuild(preview)).toBe(false);
+    const missingBranch = { WORKERS_CI: 'true', CUEORY_ANATOMY_DRAFTS: '1' };
+    expect(draftsAllowed(missingBranch)).toBe(false);
+    expect(keepsDrafts(missingBranch)).toBe(false);
+    expect(shouldAuditAnatomyBuild(missingBranch)).toBe(true);
   });
 
   it('always audits a GitHub main release regardless of a draft override', () => {
@@ -74,6 +95,14 @@ describe('postbuild anatomy release audit', () => {
       });
       expect(main.status).toBe(1);
       expect(main.stderr).toContain('unapproved model exposed in production');
+      // Actual Workers Builds sets WORKERS_CI=true in some preview/deploy paths.
+      // A mislabeled main artifact must still fail before public upload.
+      const cloudflareMain = run({
+        WORKERS_CI: 'true', WORKERS_CI_BRANCH: 'main', CUEORY_ANATOMY_DRAFTS: '1',
+        GITHUB_EVENT_NAME: '', GITHUB_REF: '', GITHUB_BASE_REF: '',
+      });
+      expect(cloudflareMain.status).toBe(1);
+      expect(cloudflareMain.stderr).toContain('unapproved model exposed in production');
       const unknown = run({
         WORKERS_CI: '', WORKERS_CI_BRANCH: '', CUEORY_ANATOMY_DRAFTS: '',
       });

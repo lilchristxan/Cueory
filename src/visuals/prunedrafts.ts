@@ -15,7 +15,8 @@ export interface PruneEnv {
 }
 
 export function keepsDrafts(env: PruneEnv): boolean {
-  if (env.WORKERS_CI !== '1') return env.CUEORY_ANATOMY_DRAFTS === '1';
+  // Mirror the page-data gate for both Workers CI environment spellings.
+  if (env.WORKERS_CI !== '1' && env.WORKERS_CI !== 'true') return env.CUEORY_ANATOMY_DRAFTS === '1';
   const rawBranch = env.WORKERS_CI_BRANCH?.trim();
   // Match the page-data gate: refs/heads/main must never keep draft GLBs.
   const branch = rawBranch?.startsWith('refs/heads/')
