@@ -170,8 +170,11 @@ describe('anatomy production artifact audit', () => {
     }
   });
 
-  it('rejects missing scenes, orphaned nodes and out-of-range embedded geometry references', () => {
+  it('rejects missing scenes, orphaned nodes, empty structure meshes and invalid geometry references', () => {
     const f = setup();
+    // Two approved structures: one mesh may remain valid while the other has
+    // no primitives. Aggregate triangle counts must not hide that empty node.
+    f.system('approved', 'approved', ['/models/anatomy/approved.glb'], ['FMA999992', 'FMA999993']);
     const path = join(f.dist, 'models', 'anatomy', 'approved.glb');
     const original = readFileSync(path);
     const mutate = (change: (json: any) => void) => {
@@ -205,6 +208,7 @@ describe('anatomy production artifact audit', () => {
     mutate((json) => { json.scenes[0].nodes = [1]; });
     mutate((json) => { json.scenes[0].nodes = [0, 0]; });
     mutate((json) => { json.nodes[0].children = [0]; });
+    mutate((json) => { json.meshes[1].primitives = []; });
     mutate((json) => { delete json.bufferViews; });
     mutate((json) => { json.accessors[0].bufferView = 9; });
     mutate((json) => { json.accessors[1].count = 100; });
