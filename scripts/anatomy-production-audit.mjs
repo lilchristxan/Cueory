@@ -364,13 +364,25 @@ export function auditAnatomyProduction(distDir, contentDir) {
       if (!fstatSync(fd).isFile() || size < 20) throw new Error('invalid GLB header');
       const header = Buffer.alloc(20);
       const read = readSync(fd, header, 0, 20, 0);
+      const jsonLength = header.readUInt32LE(12);
       if (read !== 20 || header.toString('ascii', 0, 4) !== 'glTF' ||
           header.readUInt32LE(4) !== 2 || header.readUInt32LE(8) !== size ||
-          header.readUInt32LE(12) < 2 || header.readUInt32LE(12) % 4 !== 0 ||
+          jsonLength < 2 || jsonLength % 4 !== 0 ||
           header.readUInt32LE(16) !== 0x4e4f534a ||
-          20 + header.readUInt32LE(12) > size) {
+          20 + jsonLength > size || size > 3 * 1024 * 1024) {
         throw new Error('invalid GLB v2 header/JSON chunk');
       }
+      // A valid header is insufficient: the JSON chunk itself can be corrupt.
+      const chunk = Buffer.alloc(jsonLength);
+      let offset = 0;
+      while (offset < jsonLength) {
+        const n = readSync(fd, chunk, offset, jsonLength - offset, 20 + offset);
+        if (n <= 0) throw new Error('incomplete GLB JSON chunk');
+        offset += n;
+      }
+      const metadata = JSON.parse(chunk.toString('utf8'));
+      if (!metadata || metadata.asset?.version !== '2.0' ||
+          !Array.isArray(metadata.nodes)) throw new Error('invalid GLB v2 metadata');
     } catch {
       errors.push(`approved model is not a valid GLB v2 header: ${url}`);
     } finally {
