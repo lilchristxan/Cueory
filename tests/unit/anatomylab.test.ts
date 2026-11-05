@@ -133,8 +133,24 @@ describe('anatomy files', () => {
     ['a label without a name', { labels: [{ id: 'FMA1', text: ' ', source: 's' }] }, 'official name'],
     ['a label without a source', { labels: [{ id: 'FMA1', text: 'a' }] }, 'source'],
     ['an unknown layer', { labels: [{ id: 'FMA1', text: 'a', source: 's', layer: 'bones' }] }, '"layer", when given'],
+    ['parents that are not a list', { labels: [{ id: 'FMA1', text: 'a', source: 's', parents: 'body' }] }, '"parents", when given'],
+    ['an empty parent name', { labels: [{ id: 'FMA1', text: 'a', source: 's', parents: ['body', ' '] }] }, '"parents", when given'],
+    ['also-names that are not a list', { labels: [{ id: 'FMA1', text: 'a', source: 's', also: 'b' }] }, '"also", when given'],
+    ['an also-name that is not text', { labels: [{ id: 'FMA1', text: 'a', source: 's', also: [1] }] }, '"also", when given'],
   ])('stops the build on %s', (_, overrides, message) => {
     expect(() => parseAnatomyFile(file(overrides), 'content/visuals/anatomy-sample.json')).toThrow(message);
+  });
+
+  it('passes a label\'s parents and alternative names through, as copies (Task 178)', () => {
+    const parents = ['sample body', 'set x'];
+    const also = ['part one, sample'];
+    const system = parseAnatomyFile(
+      file({ labels: [{ id: 'FMA1', text: 'sample part one', source: 's', group: 'set x', parents, also }, { id: 'FMA2', text: 'two', source: 's' }] }),
+      'content/visuals/anatomy-sample.json',
+    );
+    expect(system.structures[0]).toEqual({ id: 'FMA1', text: 'sample part one', group: 'set x', parents, also });
+    expect(system.structures[0]!.parents).not.toBe(parents);
+    expect(system.structures[1]).toEqual({ id: 'FMA2', text: 'two' });
   });
 
   it('reads the test fixture as a fixture', () => {

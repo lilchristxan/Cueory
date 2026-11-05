@@ -23,6 +23,10 @@ export interface AnatomyStructure {
   group?: string;
   /** Its layer for peeling (skin … skeleton), from the source file, which takes it from BodyParts3D's hierarchy. */
   layer?: LayerId;
+  /** Full PART-OF ancestry, names only, root first, as the source file gives it (Task 178: the breadcrumb). */
+  parents?: string[];
+  /** Alternative names from the source file, searched like the official name (Task 178). Never written by the lab. */
+  also?: string[];
 }
 
 /** What the island gets for one body system: only what it shows (sources stay at build time). */
@@ -145,6 +149,11 @@ function text(value: unknown, max: number): value is string {
   return typeof value === 'string' && value.trim().length > 0 && value.length <= max && !/[\u0000-\u001f]/.test(value);
 }
 
+/** A list of short names (the optional `parents` and `also` fields): every entry non-empty text, at most 120 chars. */
+function nameList(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every((entry) => text(entry, 120));
+}
+
 /**
  * Reads one anatomy source file. Throws a plain message naming the file when it doesn't fit the contract, so the build
  * stops instead of showing a broken lab.
@@ -187,9 +196,15 @@ export function parseAnatomyFile(json: unknown, path: string, options: { fixture
     if (group !== undefined && !text(group, 120)) return fail(`label "${id}": "group", when given, must be text`);
     const layer = label['layer'];
     if (layer !== undefined && !isLayer(layer)) return fail(`label "${id}": "layer", when given, is one of ${LAYERS.join(', ')}`);
+    const parents = label['parents'];
+    if (parents !== undefined && !nameList(parents)) return fail(`label "${id}": "parents", when given, is a list of names`);
+    const also = label['also'];
+    if (also !== undefined && !nameList(also)) return fail(`label "${id}": "also", when given, is a list of names`);
     const structure: AnatomyStructure = { id, text: label['text'] as string };
     if (typeof group === 'string') structure.group = group;
     if (isLayer(layer)) structure.layer = layer;
+    if (Array.isArray(parents)) structure.parents = [...(parents as string[])];
+    if (Array.isArray(also)) structure.also = [...(also as string[])];
     return structure;
   });
   const out: AnatomySystem = {
