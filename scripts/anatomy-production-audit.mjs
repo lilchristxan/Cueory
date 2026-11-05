@@ -201,7 +201,15 @@ function containsGlbHeader(bytes) {
 }
 
 /** Parse one definite-length CBOR value, rejecting embedded model/archive byte strings. */
-function validPagefindCbor(bytes) {
+function containsReservedAnatomyId(text, draftIds) {
+  if (/\\bFIX\\d+\\b/u.test(text)) return true;
+  for (const match of text.matchAll(STRUCTURE_TOKEN)) {
+    if (draftIds.has(match[0])) return true;
+  }
+  return false;
+}
+
+function validPagefindCbor(bytes, draftIds = new Set()) {
   let offset = 0;
   let values = 0;
   const readArgument = (additional) => {
@@ -244,11 +252,15 @@ function validPagefindCbor(bytes) {
       const value = bytes.subarray(offset, offset + argument);
       if (major === 2 && (containsGlbHeader(value) || hasArchiveMagicBytes(value))) return false;
       if (major === 3) {
+        let decodedText;
         try {
-          new TextDecoder('utf-8', { fatal: true }).decode(value);
+          decodedText = new TextDecoder('utf-8', { fatal: true }).decode(value);
         } catch {
           return false;
         }
+        // Pagefind index/filter/meta text is publicly searchable data too.
+        // Never allow a draft structure ID or synthetic fixture ID into it.
+        if (containsReservedAnatomyId(decodedText, draftIds)) return false;
         // UTF-8-valid control bytes can still carry ZIP/TAR or GLB signatures.
         if (containsGlbHeader(value) || hasArchiveMagicBytes(value, false)) return false;
       }
@@ -286,7 +298,7 @@ function pagefindArtifactKind(url) {
 
 
 /** Validate Pagefind's actual generated formats; a matching filename alone is never trusted. */
-function validPagefindArtifact(path, kind) {
+function validPagefindArtifact(path, kind, draftIds = new Set()) {
   let bytes;
   try {
     bytes = readRegularBytesNoFollow(path, 64 * 1024 * 1024);
@@ -322,17 +334,20 @@ function validPagefindArtifact(path, kind) {
       // These are the serialized fields Pagefind 1.5.2 consumes from a
       // fragment. Requiring the shape prevents a valid glTF JSON document
       // from being accepted merely because it is wrapped in Pagefind's header.
-      return fragment !== null && typeof fragment === 'object' && !Array.isArray(fragment) &&
+      const validShape = fragment !== null && typeof fragment === 'object' && !Array.isArray(fragment) &&
         typeof fragment.url === 'string' && typeof fragment.content === 'string' &&
         Number.isFinite(fragment.word_count) && fragment.word_count >= 0 &&
         fragment.filters !== null && typeof fragment.filters === 'object' && !Array.isArray(fragment.filters) &&
         fragment.meta !== null && typeof fragment.meta === 'object' && !Array.isArray(fragment.meta) &&
         Array.isArray(fragment.anchors);
+      // JSON.parse decodes escaped text before this full-field scan, including
+      // content, metadata, anchors, URLs and nested filter values.
+      return validShape && !containsReservedAnatomyId(JSON.stringify(fragment), draftIds);
     } catch {
       return false;
     }
   }
-  return validPagefindCbor(payload);
+  return validPagefindCbor(payload, draftIds);
 }
 
 /**
@@ -847,7 +862,7 @@ export function auditAnatomyProduction(distDir, contentDir) {
     const url = toUrl(path);
     const pagefindKind = pagefindArtifactKind(url);
     if (ARCHIVE_ASSET.test(path) ||
-        (pagefindKind ? !validPagefindArtifact(path, pagefindKind) : hasArchiveMagic(path, !MODEL_ASSET.test(path)))) {
+        (pagefindKind ? !validPagefindArtifact(path, pagefindKind, draftIds) : hasArchiveMagic(path, !MODEL_ASSET.test(path)))) {
       errors.push(`archive/container in production output requires explicit review: ${url}`);
     }
   }
