@@ -24,6 +24,9 @@ export const site = {
 
   /** Shown in the footer and on the privacy page. */
   contactEmail: 'hello@cueory.app',
+
+  /** Student-facing status of nursing-content review (Task 520). */
+  contentNotice: 'some lessons are samples or placeholders. content may not have citations or licensed-nurse review',
 } as const;
 
 /**
@@ -54,17 +57,27 @@ export const socials = [
 ] as const;
 
 export const footerLinks = [
+  { href: '/courses', label: 'courses' },
+  { href: '/coming-soon', label: 'coming soon' },
   { href: '/privacy', label: 'privacy' },
   { href: '/terms', label: 'terms' },
   { href: '/disclaimer', label: 'disclaimer' },
   { href: '/support', label: 'support cueory' },
 ] as const;
 
-/**
- * Where the "create your free account" buttons go until accounts exist (ROADMAP Task 2): the launch-updates signup
- * on the home page.
- */
-export const accountHref = '/#signup';
+/** Public launch wording only. This never enables authentication or changes access control. */
+export const accountsOpen: boolean = false;
+
+/** Keep the account links and the already-planned promo label together for either launch state. */
+export function accountLaunch(open: boolean) {
+  return {
+    accountHref: open ? '/signup' : '/#signup',
+    signInHref: open ? '/signin' : '/#signup',
+    promoJoinLabel: open ? 'create your free account' : 'join the launch list',
+  };
+}
+
+export const accountHref = accountLaunch(accountsOpen).accountHref;
 
 /**
  * The ☰ side panel (D-46). Lowercase on purpose (D-47). A link with a note shows it beside the label, for things
@@ -72,6 +85,7 @@ export const accountHref = '/#signup';
  */
 export const menuLinks = [
   { href: '/', label: 'home' },
+  { href: '/courses', label: 'courses' },
   { href: '/#ways-to-study', label: 'ways to study' },
   { href: '/learn/study-skills', label: 'lessons' },
   { href: '/play', label: 'daily games' },
@@ -99,7 +113,7 @@ export const promo = {
   rememberDays: 30,
   heading: 'welcome to cueory.',
   text: "we're still building. get a few emails about new lessons and the launch.",
-  joinLabel: 'join the launch list',
+  joinLabel: accountLaunch(accountsOpen).promoJoinLabel,
   /** Goes to the supporting-our-mission page (`site.tipPageUrl`, Ko-fi); hidden when that is empty (D-94). */
   supportLabel: 'supporting our mission',
 } as const;

@@ -1,6 +1,7 @@
 import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { dayLabel } from './daily';
 import { localDay, reportRound } from './gameresults';
+import ResultBrandMark from './ResultBrandMark';
 import {
   checkAll, checkWord, currentWord, emptyState, erase, isSolved, move, nextWord, numbering,
   parsePuzzle, previousWord, revealCue, selectCell, shareLine, toggleDirection, type, words,
@@ -62,13 +63,15 @@ function Board({ puzzle, name }: Props) {
   };
 
   const key = (event: KeyboardEvent<HTMLDivElement>) => {
-    if (solved || event.altKey || event.ctrlKey || event.metaKey) return;
+    if (solved || event.ctrlKey || event.metaKey) return;
     let next: CuewordState;
-    if (/^[a-z]$/i.test(event.key)) next = type(state, event.key);
+    if (event.altKey && event.key === 'ArrowLeft') next = previousWord(state);
+    else if (event.altKey && event.key === 'ArrowRight') next = nextWord(state);
+    else if (event.altKey) return;
+    else if (/^[a-z]$/i.test(event.key)) next = type(state, event.key);
     else if (event.key === 'Backspace' || event.key === 'Delete') next = erase(state);
     else if (event.key === 'ArrowLeft' || event.key === 'ArrowRight' || event.key === 'ArrowUp' || event.key === 'ArrowDown') next = move(state, event.key);
     else if (event.key === ' ') next = toggleDirection(state);
-    else if (event.key === 'Tab') next = event.shiftKey ? previousWord(state) : nextWord(state);
     else if (event.key === 'Escape') {
       event.preventDefault();
       checkButton.current?.focus();
@@ -113,12 +116,12 @@ function Board({ puzzle, name }: Props) {
         {active.number} {active.direction}: {clue.text}
       </p>
       <p id={help} className="mt-2 text-sm text-ink-soft">
-        type letters. arrows move, space switches direction, and tab or shift+tab changes word. escape leaves the grid.
+        type letters. arrows move, space switches direction, alt+left or alt+right changes word, and tab leaves the grid.
         the outlined and underlined cells are the current word.
       </p>
 
       <div className="mt-4 max-w-full overflow-x-auto">
-        <div role="grid" aria-label={`${name} grid`} aria-describedby={help} aria-rowcount={puzzle.grid.length} aria-colcount={width} className="mx-auto flex w-max flex-col gap-1 p-1" onKeyDown={key}>
+        <div role="grid" aria-label={`${name} grid`} aria-describedby={help} aria-keyshortcuts="Alt+ArrowLeft Alt+ArrowRight" aria-rowcount={puzzle.grid.length} aria-colcount={width} className="mx-auto flex w-max flex-col gap-1 p-1" onKeyDown={key}>
           {puzzle.grid.map((row, r) => (
             <div role="row" aria-rowindex={r + 1} key={r} className="flex gap-1">
               {[...row].map((answer, c) => {
@@ -191,6 +194,7 @@ function Board({ puzzle, name }: Props) {
           <p className="mt-2">{shared}</p>
           <button type="button" className={`${button} mt-3`} onClick={share}>copy my result</button>
           {copied && <p className="mt-2 text-sm text-ink-soft" aria-live="polite">{copied}</p>}
+          <ResultBrandMark path="/play" />
         </div>
       )}
       <p className="mt-3 text-sm text-ink-soft" aria-live="polite" aria-atomic="true" data-testid="cueword-live">{said}</p>

@@ -1,26 +1,40 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
-import { browserStorage } from '../../src/scripts/storage';
+import { afterEach, describe, expect, it } from 'vitest';
+import { browserStorage, type KeyValueStorage } from '../../src/scripts/storage';
+
+const originalWindow = Object.getOwnPropertyDescriptor(globalThis, 'window');
 
 afterEach(() => {
-  vi.unstubAllGlobals();
+  if (originalWindow) Object.defineProperty(globalThis, 'window', originalWindow);
+  else delete (globalThis as { window?: unknown }).window;
 });
 
+function setWindow(localStorage: KeyValueStorage): void {
+  Object.defineProperty(globalThis, 'window', { configurable: true, value: { localStorage } });
+}
+
 describe('browserStorage', () => {
-  it('returns the browser local storage object', () => {
-    const storage = {
+  it('returns the browser local storage when it is available', () => {
+    const storage: KeyValueStorage = {
       getItem: () => null,
       setItem: () => undefined,
       removeItem: () => undefined,
     };
-    vi.stubGlobal('window', { localStorage: storage });
+    setWindow(storage);
 
     expect(browserStorage()).toBe(storage);
   });
 
-  it('returns undefined when browser storage is blocked', () => {
-    vi.stubGlobal('window', {
-      get localStorage() {
-        throw new Error('blocked');
+  it('returns no storage when the browser does not expose a window', () => {
+    expect(browserStorage()).toBeUndefined();
+  });
+
+  it('returns no storage when accessing local storage throws', () => {
+    Object.defineProperty(globalThis, 'window', {
+      configurable: true,
+      value: {
+        get localStorage(): never {
+          throw new Error('storage blocked');
+        },
       },
     });
 

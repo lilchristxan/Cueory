@@ -1,6 +1,9 @@
 # Status
 
-Last updated: 2026-11-01 (Task 42)
+Last updated: 2026-11-03 (Task 244)
+
+## Recent documentation
+- Added [docs/TESTING.md](TESTING.md), a plain-language map of the available type, build, unit, browser and batch checks.
 
 ## Done
 - Static site: Astro + React islands + TypeScript + Tailwind, static output, tested at phone and desktop sizes.
@@ -244,8 +247,61 @@ Merged into `staging`:
 - The review-clip exporter for Christian's private review of the drawings (#111, Tasks C7 and C10), and the
   `check_answer` contract test against the real request helper (#142, Task 48).
 
+## Done (director, 2026-11-02, Task 118 status-note batch)
+Merged into `staging`; the 30 completed pull-request notes have been consolidated:
+- Task 101, studying together plan ([#176](https://github.com/lilchristxan/Cueory/pull/176)): `docs/TOGETHER.md` lays out leaderboards, profiles and badges, silent focus rooms, text chat and camera rooms, with a decision checklist for each step before any code starts.
+- Task 103, share achievements ([#190](https://github.com/lilchristxan/Cueory/pull/190)): a share sheet with three card styles (scene, editorial, coin) that shares the chosen card's image, a plain line and a link to the exact tool (system share, Instagram where image sharing works, a plain X post link, copy link); six build-time 1200×630 cards in `public/share/` drawn with the self-hosted fonts and Christian's official logo artwork; noindex preview at `/preview/share`. Wiring into result screens and `og:image` tags in `Layout.astro` are follow-ups.
+- Task 104, continue and resume ([#187](https://github.com/lilchristxan/Cueory/pull/187)): device-local 14-day snapshot helpers and UI pieces, not yet wired into study modes; account deletion now clears the resume key and guest-import markers, and /privacy lists `cueory-resume`.
+- Task 112, status notes per pull request ([#192](https://github.com/lilchristxan/Cueory/pull/192)): each pull request writes its STATUS line in its own file under docs/status/in-review/, so parallel pull requests stop clashing. Approved and merged (rules-file change).
+- Task 113, pillo design approved ([#197](https://github.com/lilchristxan/Cueory/pull/197)): blister-pack mockups for the guess-the-word game saved in `docs/screenshots/approved-2026-11-01/`; the build is Task 114.
+- Task 114, pillo ([#198](https://github.com/lilchristxan/Cueory/pull/198)): the word game on /play (id still pulse) now uses Christian's classic rules (a five-letter word, six guesses, no cue) on its own blister-pack board: brand-color pills with a symbol on every letter (● in place, ○ elsewhere, · not in the word), a guesses-left blister strip, pill keys, both palettes, and a one-line share ("cueory pillo, sun 1 nov: solved in 3 of 6"). Game mark with the cruet not included yet.
+- Task 115, one flag per page ([#200](https://github.com/lilchristxan/Cueory/pull/200)): the footer flag opens the report form in a panel above the bar (an email link without JavaScript), the extra flag under page content is gone, and the flag tests match the signed-out email fallback.
+- Task 116, CLAUDE.md matches the pillo decision ([#201](https://github.com/lilchristxan/Cueory/pull/201)): the daily-puzzle rule now allows pillo's classic guess-the-word rules (Christian's choice, Task 113) while look, name, colors and share stay original.
+- Task 117, staging test fixes ([#202](https://github.com/lilchristxan/Cueory/pull/202)): the loading-states test opens the footer panel first, the footer "tap anywhere" test taps inside the pill instead of its rounded corner, and the sign-in test ignores only Chromium's harmless aborted-view-transition rejection.
+- Task 123, offline private-page regression tests ([#210](https://github.com/lilchristxan/Cueory/pull/210)): account, authentication, preview and private routes and token queries are refused, while home and lesson pages remain eligible and the worker excludes /play and all query strings.
+- Task 127, indexing audit ([#204](https://github.com/lilchristxan/Cueory/pull/204)): a new spec checks that every preview, auth, setup, progress and /breaks page is noindex, that lessons, games and public pages are indexable, that robots.txt allows the site, and that no noindex page is in a sitemap if one is built. /start is a known gap (test.fixme).
+- Task 129, the accessibility sweep waits for islands ([#203](https://github.com/lilchristxan/Cueory/pull/203)): the Tab audit takes its snapshot only after every island has hydrated and the page's requests have settled, removing the "Tab did not reach … eligible controls" flake on learn mode, questions and Label it.
+- Task 130, tucked sticky headers no longer intercept page taps, keyboard focus brings navigation back, and reduced-motion users keep header links clickable; new phone and desktop regression tests cover those cases. ([#208](https://github.com/lilchristxan/Cueory/pull/208))
+- Task 132, browser account-deletion cleanup plan includes persistent glove and sound preferences plus separate session-only keys, and the privacy page precisely lists game stats and legacy star keys with regression tests. ([#206](https://github.com/lilchristxan/Cueory/pull/206))
+- Task 133, onboarding search exclusion ([#207](https://github.com/lilchristxan/Cueory/pull/207)): /start is marked noindex and the indexing browser test now enforces it instead of skipping it.
+- Task 134, align AGENTS.md typography with the approved brand ([#205](https://github.com/lilchristxan/Cueory/pull/205)): Lato for body and interface text with line spacing at least 1.5, Bodoni Moda only for marketing headings, and plain upright Lato accent lines without italic or script.
+- Task 136, AGENTS.md matches the pillo decision ([#211](https://github.com/lilchristxan/Cueory/pull/211)): the daily-puzzle rule Codex reviews against now records the same exception as CLAUDE.md (pillo uses classic guess-the-word rules by Christian's choice); names, look, colors and shares stay original.
+- Task 54, break note snooze ([#151](https://github.com/lilchristxan/Cueory/pull/151)): closing a break note while the break timer says a break is due snoozes the timer for its own 5 minutes, so the note doesn't come back at the next pause. Logic only; nothing visible changes.
+- Task 63, safe Flag or comment submission ([#193](https://github.com/lilchristxan/Cueory/pull/193)): validates report context, calls the restricted submit_flag function, handles rate limits, and offers an email fallback when signed out.
+- Task 64, "flag or comment" on every page ([#181](https://github.com/lilchristxan/Cueory/pull/181)): one site-wide report form, later moved into the footer by Task 115.
+- Task 71, sample break ideas ([#196](https://github.com/lilchristxan/Cueory/pull/196)): /breaks lists twenty everyday samples with keyboard and tap shuffle and single picks; noindex and held for Christian's content approval.
+- Task 76, break timer between study pages ([#154](https://github.com/lilchristxan/Cueory/pull/154)): the break timer is kept for the browser tab in session storage (key `cueory-break-timer`), so moving between lesson pages doesn't restart it; old, broken or blocked saves start it off. Logic only; nothing visible changes. The new key goes on the privacy page (Task 72).
+- Task 78, flashcards modern ([#162](https://github.com/lilchristxan/Cueory/pull/162)): the card is a real card now, turning over with Task 77's 3D flip (a fade with reduced motion) when tapped, clicked or on Space, with a progress bar, big "Know it" and "Still learning" buttons with icons, Shuffle and "Only starred cards" in one pill, and keys (Space, arrows, 1, 2, S) with a hint that can be hidden; every existing card behavior and test is unchanged.
+- Task 79, learn mode modern ([#167](https://github.com/lilchristxan/Cueory/pull/167)): slim progress bar, each prompt on a soft card that rises in after each step, large answer buttons marked with a tick or cross plus words, a roomy typed field, and a calm summary card with "start again" and "back to the lesson"; keyboard-only, axe and reduced-motion tests at three sizes.
+- Task 80, modern matching and organizer study boards ([#209](https://github.com/lilchristxan/Cueory/pull/209)): token-based soft cards, selected text, matched-item settle animation, accessible progress, tidy destination chips, and keyboard/phone/desktop regression tests; verified and merged to staging.
+- Task 82, course library ([#175](https://github.com/lilchristxan/Cueory/pull/175)): /learn shows the open study-skills sample with on-device progress, then every planned med-surg I unit from the curriculum map (unit and topic titles only, each marked coming soon) in keyboard-friendly expandable cards.
+- Task 84, sticky reading header ([#182](https://github.com/lilchristxan/Cueory/pull/182)): a frosted header tucks away on downward scroll, comes back on upward scroll, stays visible during keyboard focus, an open menu or reduced motion, and reserves scroll clearance so focused controls never sit under it.
+- Task 85, footer and theme switch ([#152](https://github.com/lilchristxan/Cueory/pull/152)): the footer is one slim bar at the end of every page (flag, small logo home, chevron); the chevron opens the links, socials, copyright and the light / dark / follow device pill above it.
+- Task 91, loading and empty states ([#170](https://github.com/lilchristxan/Cueory/pull/170)): reusable skeletons (lines, card, ring; one hidden "loading" message per group, still under reduced motion) and an empty state with an optional icon and action, shown on the noindex /preview/states page; not wired into other pages yet.
+- Task 97, word path as a themed word search ([#173](https://github.com/lilchristxan/Cueory/pull/173)): an 11 × 11 bordered grid titled by the puzzle's theme, words listed in three columns and crossed off when found, picked by tapping a word's first and last letter or by keyboard, with everyday sample themes; real diagnosis-themed puzzles wait for Christian's reviewed content.
+
 ## In review
-- Open pull requests add their own lines here. Waiting now: Release browser tests (#55).
+- Task 108, guided onboarding (#189): two optional setup questions on separate accessible screens with preserved device-local progress, in review.
+- Task 74, accessibility sweep (#157): full-site keyboard and axe audit, with segmented-date regression coverage, awaiting exact-head CI and Codex review.
+- Open pull requests write their line in their own file under `docs/status/in-review/` (see its README); the director
+  moves them here in batches. Older pull requests still add their own lines here. Waiting now: Release browser tests (#55).
+- Task 81, study-skills hub (#195): seven illustrated study options with accessible direct links, preserving the existing lesson reader and draft-content notice.
+- Task 111, reminder choices preview (#191): non-sending phone and email choices open only after a completed review and a deliberate tap, with keyboard/privacy checks while real opt-in and delivery remain future work.
+- Task 106, review-reminder email (#185): non-sending branded HTML, plain-text alternative and noindex sample preview, awaiting CI and Codex review.
+- Task 105, quiet result marks (#188): official emblem and real Cueory page address appear only on completed pulse, sort and crossword result cards and the progress summary; answer areas and printing stay clear.
+- Task 56, account screens (#164): Google and email/password screens now use Task 55’s shared client, with accounts-off and retry handling. Callback, profile-name persistence and verified recovery remain held for their integration owner and Christian’s approval.
+- Task 100, points, streaks and achievements (#180): deterministic local-only rewards with weekly free passes and test coverage, awaiting CI and Codex review.
+- Task 110 start, cruet loading animation (#184): the four layers cut from Christian's emblem and the lead's working prototype in `docs/prototypes/`; the island comes next.
+- Vial images for the ways-to-study carousel (Task 109, files only): ten blank-label vials from Christian's own AI-made image; the carousel task uses them.
+- Task 95, modern sample questions page (#174): passed full CI and Codex review, merged into `staging` and awaiting the next production release.
+- Task 73, break-idea sharing proposal (#177): private submissions, moderation, reporting, export and account-deletion safeguards proposed for Christian's decisions.
+- Approved designs (#178): Christian's approved mockups saved in `docs/screenshots/approved-2026-11-01/` for the builders.
+- Glove photos and the Kalam font (#163): Christian's nine glove colors cut out as WebP files, and the handwriting he
+  picked. Files only; the glove note (Task 70) uses them and stays off until he checks it.
+- Task 99, Lato body font (#172): Lato for body and interface text, line spacing at least 1.5, plain accent line under the home headline. Waits for Christian (it edits CLAUDE.md).
+- Task 67, server-checked questions (#194): injected authenticated check_answer path with version/refusal validation and sample behavior preserved, awaiting CI, lead review and Christian's approval.
+- Task 55, Supabase client (#156): Supabase's sign-in library, loaded only on pages that need an account; the security policy gains the project address only when accounts are on. Waits for Christian (sign-in and security policy).
+- Task 58, signed-in account corner (#186): initials avatar and account actions from the student's own session, with no client load before idle and the accounts-off menu unchanged.
 
 ## Queued (Christian's change requests on issue #4, in his order)
 1. CI: WebKit and Firefox on Release pull requests, plus the device rule in CLAUDE.md (D-48; waits for Christian).
@@ -253,6 +309,8 @@ Merged into `staging`:
 3. Christian's 31 Oct evening requests ([the lead's note on issue #4](https://github.com/lilchristxan/Cueory/issues/4#issuecomment-6551841155)),
    now first: brand v1.0 (the lead's branch), then the home page polish pass, then the rest of daily games (the home
    page section, pulse and sort are in `staging`; the crossword and word path are in review).
+- Task 61, private student export loader (#169): safely reads an account's own saved data for download, with CI verified and lead/Codex review plus Christian's approval required.
+- Task 77, motion and depth foundation (#153): shared tokens and classes for lift, press, card flip, progress bars, loading shimmer, entrances, segmented controls and page transitions, all off with reduced motion. Finished by the lead; the vial carousel, palettes and scenes build on it.
 
 ## Visuals kit (Task 6, D-56)
 Targets: first visuals by about 14 November, the full kit by about 12 December ([plan](VISUALS.md)).
@@ -291,10 +349,9 @@ Targets: first visuals by about 14 November, the full kit by about 12 December (
 - [ ] Lesson videos (#97, live but unlinked): the iPhone check needs a real video. When your first lesson video is on
   Cueory's YouTube channel, send its link; then on a real iPhone, tap its cover once on the staging site and the video
   should start right away. Until then `/learn/video-sample` only shows the cover and the player loading.
-- [ ] Glove-note pop-ups ([your request on #4](https://github.com/lilchristxan/Cueory/issues/4#issuecomment-6560268260)
-  and its addenda): five photos of your own gloved hand (palm toward the camera, blank palm, the five angles and
-  colors listed there, plain background, no jewelry, cropped at the wrist) and two short recordings, a glove snap and a
-  stretch. Nothing visible changes until they arrive; the logic is being built now (Tasks 50 to 53).
+- [x] Glove-note pop-ups: Christian sent his glove image (made with an AI image tool) on 2026-11-01 and chose nine
+  colors, Kalam handwriting and all text inside the palm (#163, Task 70). Still to come: two short sounds, a glove snap
+  and a stretch, if he wants sound.
 - [x] Study modes on pages (#77): merged by Christian with "Ok" on 2026-11-01, read as allowing labeled everyday
   samples with their answers in the browser (D-92). If that reading is wrong, say so and the questions page comes off.
 - [ ] Real questions need a free account (D-86): `check_answer` reveals the key after one try, so signed-out visitors

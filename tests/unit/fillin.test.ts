@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
-  answerCurrent, checkAnswer, currentIndex, editDistance, isCheckKey, nextItem, normalizeAnswer, parseItems,
-  sentenceParts, showHint, startFillIn, summary, type FillInItem,
+  answerCurrent, blankOptions, boundTyped, checkAnswer, currentIndex, editDistance, isCheckKey, nextItem, normalizeAnswer, parseItems,
+  MAX_TYPED, sentenceParts, showHint, startFillIn, summary, type FillInItem,
 } from '../../src/islands/fillin';
+import { MAX_ANSWER_TEXT, parseResume } from '../../src/scripts/resume';
 
 const items: FillInItem[] = [
   { id: 'bees', sentence: 'Bees make [[honey]] from flowers.' },
@@ -119,5 +120,65 @@ describe('fill-in rounds', () => {
     expect(state.done).toBe(true);
     expect(currentIndex(state)).toBeUndefined();
     expect(summary(state)).toBe('all 0 recalled in 0 rounds.');
+  });
+});
+
+describe('fill-in submission bounds (Codex on #219)', () => {
+  it('keeps a saved attempt with its prefix inside the resume answer limit', () => {
+    expect(MAX_TYPED + 2).toBe(MAX_ANSWER_TEXT);
+    const long = boundTyped('a'.repeat(600));
+    expect([...long]).toHaveLength(MAX_TYPED);
+    const now = 1_800_000_000_000;
+    const raw = JSON.stringify({
+      version: 1, tool: 'fill-in', page: '/learn/study-skills/fill-in', step: 'advance-0', itemIndex: 0,
+      itemId: 'item-0', totalItems: 1, answers: { 'item-0': [`h:${long}`] }, timer: null, phase: 'working', savedAt: now,
+    });
+    expect(parseResume(raw, now)).not.toBeNull();
+  });
+
+  it('counts characters, not code units, and drops control characters the resume format rejects', () => {
+    expect([...boundTyped('\u{1F600}'.repeat(600))]).toHaveLength(MAX_TYPED);
+    expect(boundTyped('ho\u0001ney\u007f')).toBe('honey');
+    expect(boundTyped('honey')).toBe('honey');
+  });
+});
+
+describe('blank options construction', () => {
+  it('prefers deck distractors when present and returns 4 options containing the answer', () => {
+    const opts = blankOptions('honey', ['nectar', 'syrup', 'sugar']);
+    expect(opts).toHaveLength(4);
+    expect(opts).toContain('honey');
+    expect(opts).toContain('nectar');
+    expect(opts).toContain('syrup');
+    expect(opts).toContain('sugar');
+  });
+
+  it('draws from other answers when distractors are absent or insufficient', () => {
+    const otherAnswers = ['blue', 'nest', 'tree'];
+    const opts = blankOptions('honey', undefined, otherAnswers);
+    expect(opts).toHaveLength(4);
+    expect(opts).toContain('honey');
+    expect(opts).toContain('blue');
+    expect(opts).toContain('nest');
+    expect(opts).toContain('tree');
+  });
+
+  it('combines item distractors and other answers up to 4 options without duplicates', () => {
+    const itemDistractors = ['nectar'];
+    const otherAnswers = ['honey', 'nectar', 'blue', 'nest'];
+    const opts = blankOptions('honey', itemDistractors, otherAnswers);
+    expect(opts).toHaveLength(4);
+    expect(opts).toContain('honey');
+    expect(opts).toContain('nectar');
+    expect(opts).toContain('blue');
+    expect(opts).toContain('nest');
+    expect(new Set(opts).size).toBe(4);
+  });
+
+  it('uses generic fallbacks when fewer than 3 distractors and other answers exist', () => {
+    const opts = blankOptions('honey', [], []);
+    expect(opts).toHaveLength(4);
+    expect(opts).toContain('honey');
+    expect(new Set(opts).size).toBe(4);
   });
 });
