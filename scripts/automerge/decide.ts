@@ -57,6 +57,36 @@ export type Mode = 'prelaunch' | 'launched';
  *   for Christian.
  */
 const ALWAYS_HELD_PREFIXES = ['.github/', 'scripts/automerge/', 'content/', 'supabase/'];
+
+/**
+ * Authentication and privileged account operations must wait for the founder
+ * in BOTH modes. Protect route directories and the current client modules,
+ * including case variants (React islands use PascalCase). Do not hold unrelated
+ * study islands or marketing components.
+ */
+const AUTH_HELD_PREFIXES = [
+  'src/pages/auth/',
+  'src/pages/account/',
+  'src/pages/admin/',
+  'src/islands/supabase',
+  'src/islands/auth',
+  'src/islands/signin',
+  'src/islands/resetpassword',
+  'src/islands/twofactor',
+  'src/islands/account',
+  'src/islands/admin',
+  'src/islands/deleteaccount',
+  'src/islands/exportdata',
+  'src/islands/flagsend',
+  'src/islands/flagsubmit',
+];
+const AUTH_HELD_FILES = new Set([
+  'src/pages/account.astro',
+  'src/pages/signin.astro',
+  'src/pages/signup.astro',
+  'src/pages/reset-password.astro',
+  'src/pages/preview/admin-flags.astro',
+]);
 const ALWAYS_HELD_FILES = new Set([
   'automation.json',
   'scripts/staging_automerge.ts',
@@ -146,6 +176,8 @@ export function parseAutomation(text: string | undefined): { mode: Mode; note?: 
 
 export function isHeldPath(path: string, mode: Mode): boolean {
   if (ALWAYS_HELD_FILES.has(path) || ALWAYS_HELD_PREFIXES.some((prefix) => path.startsWith(prefix))) return true;
+  const lowered = path.toLowerCase();
+  if (AUTH_HELD_FILES.has(lowered) || AUTH_HELD_PREFIXES.some((prefix) => lowered.startsWith(prefix))) return true;
   if (mode === 'prelaunch') return false;
   if (LAUNCHED_HELD_FILES.has(path) || LAUNCHED_HELD_PREFIXES.some((prefix) => path.startsWith(prefix))) return true;
   return LAUNCHED_HELD_BASENAMES.has(path.slice(path.lastIndexOf('/') + 1));

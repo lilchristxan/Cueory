@@ -141,6 +141,57 @@ describe('held paths', () => {
     expect(isHeldPath(path, 'launched')).toBe(false);
   });
 
+  const authAndAccountSources = [
+    'src/islands/supabaseenv.ts',
+    'src/islands/supabaseclient.ts',
+    'src/islands/supabasebuildcheck.ts',
+    'src/islands/AuthCallback.tsx',
+    'src/islands/authcallback.ts',
+    'src/islands/SignIn.tsx',
+    'src/islands/signin.ts',
+    'src/islands/AccountSettings.tsx',
+    'src/islands/accountsettings.ts',
+    'src/islands/TwoFactor.tsx',
+    'src/islands/twofactor.ts',
+    'src/islands/ResetPassword.tsx',
+    'src/islands/deleteaccount.ts',
+    'src/islands/exportdata.ts',
+    'src/islands/adminflagsrpc.ts',
+    'src/islands/AdminFlags.tsx',
+    'src/islands/flagsubmit.ts',
+    'src/pages/signin.astro',
+    'src/pages/signup.astro',
+    'src/pages/reset-password.astro',
+    'src/pages/account.astro',
+    'src/pages/account/two-factor.astro',
+    'src/pages/auth/callback.astro',
+    'src/pages/admin/flags.astro',
+    'src/pages/preview/admin-flags.astro',
+  ];
+
+  it.each(authAndAccountSources)('%s cannot auto-merge in either mode', (path) => {
+    expect(isHeldPath(path, 'prelaunch')).toBe(true);
+    expect(isHeldPath(path, 'launched')).toBe(true);
+    for (const mode of ['prelaunch', 'launched'] as const) {
+      const decision = decide(input({ mode, files: [{ filename: path }] }));
+      expect(decision.action).toBe('label');
+      expect(decision.reasons.join(' ')).toContain(path);
+    }
+  });
+
+  it('holds both sides of an auth-source rename, even when the new location looks harmless', () => {
+    const renamed = [{ filename: 'docs/old-auth.txt', previous_filename: 'src/islands/SupabaseClient.ts' }];
+    expect(heldPaths(renamed, 'prelaunch')).toEqual(['src/islands/SupabaseClient.ts']);
+    expect(heldPaths(renamed, 'launched')).toEqual(['src/islands/SupabaseClient.ts']);
+  });
+
+  it('keeps unrelated study islands and ordinary pages eligible for normal review', () => {
+    for (const path of ['src/islands/cards.ts', 'src/islands/LearnSession.tsx', 'src/pages/learn.astro', 'src/components/SiteFooter.astro']) {
+      expect(isHeldPath(path, 'prelaunch')).toBe(false);
+      expect(isHeldPath(path, 'launched')).toBe(false);
+    }
+  });
+
   it('counts both sides of a rename', () => {
     const renamed = [{ filename: 'docs/old-headers.txt', previous_filename: 'public/_headers' }];
     expect(heldPaths(renamed, 'launched')).toEqual(['public/_headers']);
