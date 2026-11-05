@@ -54,6 +54,32 @@ describe('direct Wrangler anatomy upload safety', () => {
     }
   });
 
+  it('allows only an identified non-main Workers Build preview with no upload command', () => {
+    const previewEnv = {
+      WRANGLER_COMMAND: undefined,
+      WORKERS_CI: '1',
+      WORKERS_CI_BUILD_UUID: '5e927d83-6f61-4ba1-b412-4c2b1b6f991a',
+      WORKERS_CI_BRANCH: 'task-178/wrangler-anatomy-upload-gate-20261105',
+      CUEORY_ANATOMY_DRAFTS: '1',
+    };
+    expect(shouldAuditWranglerUpload(previewEnv)).toBe(false);
+    // Never exempt an explicit upload even if someone sets preview build variables.
+    expect(shouldAuditWranglerUpload({ ...previewEnv, WRANGLER_COMMAND: 'deploy' })).toBe(true);
+    expect(shouldAuditWranglerUpload({ ...previewEnv, WRANGLER_COMMAND: 'versions upload' })).toBe(true);
+    expect(shouldAuditWranglerUpload({ ...previewEnv, WORKERS_CI_BRANCH: 'main' })).toBe(true);
+    expect(shouldAuditWranglerUpload({ ...previewEnv, WORKERS_CI_BUILD_UUID: '' })).toBe(true);
+    expect(shouldAuditWranglerUpload({ ...previewEnv, WORKERS_CI: '0' })).toBe(true);
+
+    const { root } = fixture();
+    const result = spawnSync(process.execPath, [cli], {
+      cwd: root,
+      encoding: 'utf8',
+      env: { ...process.env, ...previewEnv },
+    });
+    expect(result.status, result.stderr).toBe(0);
+    expect(result.stdout).toContain('local non-upload command');
+  });
+
   it('rejects a real draft .glb in dist before standard direct deploy', () => {
     const { root } = fixture();
     for (const command of ['deploy', 'versions upload']) {
