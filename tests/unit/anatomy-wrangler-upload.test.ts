@@ -98,8 +98,10 @@ describe('Wrangler direct-upload anatomy safety gate', () => {
       .toContain('production site entry point is invalid: /index.html');
   });
 
-  it('is wired into Wrangler custom builds, not just the optional npm deploy command', () => {
+  it('does not install the spoofable custom build hook in Wrangler configuration', () => {
     const config = readFileSync(new URL('../../wrangler.jsonc', import.meta.url), 'utf8');
-    expect(config).toContain('"command": "node scripts/check-anatomy-wrangler.mjs"');
+    expect(config).not.toContain('"command": "node scripts/check-anatomy-wrangler.mjs"');
+    const pkg = JSON.parse(readFileSync(new URL('../../package.json', import.meta.url), 'utf8'));
+    expect(pkg.scripts['deploy:production']).toBe('node scripts/anatomy-production-deploy.mjs');
   });
 });
