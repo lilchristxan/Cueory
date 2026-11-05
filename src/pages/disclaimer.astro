@@ -1,14 +1,66 @@
 ---
 import Layout from '../layouts/Layout.astro';
-import PlaceholderBlock from '../components/PlaceholderBlock.astro';
 import Prose from '../components/Prose.astro';
+import { site } from '../config/site';
+
+/** Shown under the heading. Change it whenever the disclaimer changes. */
+const lastUpdated = '5 November 2026';
 ---
 
 <Layout title="disclaimer" description="Cueory is a study aid, not medical advice." noindex>
   <Prose>
     <h1>disclaimer</h1>
-    <PlaceholderBlock label="Disclaimer text">
-      <p>Christian: paste your disclaimer here.</p>
-    </PlaceholderBlock>
+    <p class="text-sm text-ink-soft">Last updated: {lastUpdated}</p>
+
+    <h2>Study help, not medical advice</h2>
+    <p>
+      {site.name} exists to help nursing students learn and prepare for exams. Nothing on this site is medical, nursing
+      or clinical advice, a diagnosis, or a treatment recommendation, and nothing here creates a clinician–patient
+      relationship. It is not a substitute for your nursing program, your instructors, your textbooks, your facility's
+      policies or the judgment of a licensed clinician.
+    </p>
+    <p>
+      <strong class="key-term">Never use {site.name} to make a decision about a real patient.</strong> In a real
+      situation, follow your program's and facility's policies, the orders you are given and your scope of practice. In
+      an emergency, call your local emergency number.
+    </p>
+
+    <h2>Accuracy</h2>
+    <p>
+      We review our content and we correct it when we learn it is wrong, but we can't promise it is complete, current or
+      free of mistakes. Clinical guidance, drug information, normal ranges and exam blueprints change over time, and
+      sources sometimes disagree. Where a lesson shows a notice that it is a sample or has not yet been reviewed, treat
+      it that way. Always check important points against your current course materials and a trusted reference, and
+      study with more than one source.
+    </p>
+    <p>
+      If you spot something wrong, please use the "Flag or comment" button on that page. Reports are how we find and
+      fix errors.
+    </p>
+
+    <h2>Exams</h2>
+    <p>
+      {site.name} is not affiliated with, endorsed by or connected to any nursing school, licensing board, testing
+      organization or textbook publisher. Using this site does not guarantee a grade, a passing score or a license.
+    </p>
+
+    <h2>Visual anatomy</h2>
+    <p>
+      Three-dimensional anatomy models are simplified teaching models. Shapes, sizes and positions can differ from any
+      real person, and the models are not for clinical planning or diagnosis. The source and license of each model are
+      named where it appears.
+    </p>
+
+    <h2>Links and videos</h2>
+    <p>
+      Some pages link to or embed material from other sites, such as lesson videos. We don't control those sites and are
+      not responsible for their content or their privacy practices.
+    </p>
+
+    <h2>Your responsibility</h2>
+    <p>
+      You use {site.name} at your own risk. Our <a href="/terms">terms of use</a> describe the limits on our liability.
+      Questions: <a href={`mailto:${site.contactEmail}`}>{site.contactEmail}</a>.
+    </p>
   </Prose>
 </Layout>

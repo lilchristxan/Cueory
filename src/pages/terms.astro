@@ -1,14 +1,117 @@
 ---
 import Layout from '../layouts/Layout.astro';
-import PlaceholderBlock from '../components/PlaceholderBlock.astro';
 import Prose from '../components/Prose.astro';
+import { site } from '../config/site';
+
+/** Shown under the heading. Change it whenever the terms change. */
+const lastUpdated = '5 November 2026';
 ---
 
 <Layout title="terms" description="The terms for using Cueory." noindex>
   <Prose>
     <h1>terms of use</h1>
-    <PlaceholderBlock label="Terms of use">
-      <p>Christian: paste your terms of use here. Have a qualified person review them before launch.</p>
-    </PlaceholderBlock>
+    <p class="text-sm text-ink-soft">Last updated: {lastUpdated}</p>
+
+    <h2>The short version</h2>
+    <p>
+      {site.name} is a free study site for nursing students. Use it to study. Don't copy it, break it or use it to harm
+      anyone. It is a study aid, not medical advice, and we can't promise it is error-free. If you don't agree with these
+      terms, please don't use the site.
+    </p>
+
+    <h2>Who these terms are between</h2>
+    <p>
+      These terms are an agreement between you and {site.name} ("we", "us"). They cover the website at
+      <a href={site.url}>{site.url}</a> and everything on it: lessons, cards, questions, the anatomy lab, daily games and
+      accounts. By using the site you accept them. If we change them, we update the date above; if a change matters, we
+      say so on the site before it takes effect.
+    </p>
+
+    <h2>Who may use the site</h2>
+    <p>
+      You must be at least 16 years old to use {site.name}. You may use it for your own study. If you are a teacher or a
+      program, you may point your students to it; please don't copy it into your own materials without asking us first.
+    </p>
+
+    <h2>Your account</h2>
+    <p>
+      An account is optional. If you create one, keep your sign-in to yourself and tell us if you think someone else has
+      used it. You are responsible for what happens under your account. You may delete it at any time from the
+      <a href="/account">account page</a>; deleting it removes your account and the study data linked to it, as the
+      <a href="/privacy">privacy page</a> explains.
+    </p>
+
+    <h2>Our content</h2>
+    <p>
+      The lessons, questions, cards, puzzles, artwork and the {site.name} name and logo belong to us or to the people who
+      let us use them. You may read, study and share links to our pages. You may not copy, scrape, resell or republish
+      our content, build another product on it, or remove notices from it, without our written permission. Some
+      material is used under its own license, named where it appears, and keeps that license.
+    </p>
+
+    <h2>What you send us</h2>
+    <p>
+      When you send a report with the "Flag or comment" button or write to us, you give us permission to use what you
+      send to fix and improve the site. Don't send anything you don't have the right to share, or anything about a
+      real patient.
+    </p>
+
+    <h2>Fair use of the site</h2>
+    <p>You agree not to:</p>
+    <ul>
+      <li>try to get around sign-in, rate limits, answer checking or any other protection;</li>
+      <li>use scripts or bots to pull answers, questions or other content in bulk;</li>
+      <li>probe, overload or interfere with the site or the services behind it;</li>
+      <li>upload harmful code, or use the site to harass, impersonate or deceive anyone;</li>
+      <li>use the site in a way that breaks the law.</li>
+    </ul>
+    <p>If you find a security problem, please tell us at
+      <a href={`mailto:${site.contactEmail}`}>{site.contactEmail}</a> rather than using it.
+    </p>
+
+    <h2>Not medical advice</h2>
+    <p>
+      {site.name} helps you study. It is not medical, nursing or clinical advice, and it is not a substitute for your
+      program, your instructors, your textbooks or a licensed clinician. Never make a decision about a real patient
+      based on something you read here. Our <a href="/disclaimer">disclaimer</a> says more.
+    </p>
+
+    <h2>No promises about accuracy or availability</h2>
+    <p>
+      We work hard to keep the content right and the site up, but we provide {site.name} "as is", without warranties of
+      any kind. Content may be incomplete, out of date or wrong; exam blueprints and clinical guidance change. Features
+      may change or stop, and the site may be unavailable sometimes. Study with more than one source.
+    </p>
+
+    <h2>Limits on our liability</h2>
+    <p>
+      To the fullest extent the law allows, {site.name} and the people who run it are not liable for any indirect,
+      incidental or consequential loss, or for any loss arising from your use of the site or your reliance on its
+      content, including exam results and clinical outcomes. Where the law does not allow this limit, our liability is
+      limited to the smallest amount it permits. Nothing here limits rights the law gives you that cannot be waived.
+    </p>
+
+    <h2>Support and tips</h2>
+    <p>
+      {site.name} is free. If you choose to support it with a tip, that is a gift, not a purchase: it buys no features,
+      services or promises, and it isn't refundable except where the law requires.
+    </p>
+
+    <h2>Ending</h2>
+    <p>
+      You may stop using the site at any time and delete your account. We may suspend or close an account that breaks
+      these terms, and we may stop offering the site or any part of it.
+    </p>
+
+    <h2>Which law applies</h2>
+    <p>
+      These terms are governed by the laws of the State of Arizona, United States, without regard to conflict-of-law
+      rules. If a part of these terms turns out to be unenforceable, the rest still applies.
+    </p>
+
+    <h2>Questions</h2>
+    <p>
+      Email <a href={`mailto:${site.contactEmail}`}>{site.contactEmail}</a>.
+    </p>
   </Prose>
 </Layout>
