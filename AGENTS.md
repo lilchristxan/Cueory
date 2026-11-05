@@ -111,8 +111,9 @@ A checklist of the rules above and in CLAUDE.md that reviews most often trip on.
   `npx vitest run tests/unit/status-notes.test.ts` checks every note and names the file and line to fix.
 - Say what the pull request does, not what you hope happens next: don't write that it is merged or that another pull
   request is open unless that is already true.
-- Don't edit `docs/STATUS.md` or `docs/DECISIONS.md`; the director's docs batch copies the notes in and numbers the
-  decisions, so never pick a D number yourself.
+- Don't edit `docs/DECISIONS.md`, and normally not `docs/STATUS.md` either (a pull request that already edits it
+  directly is still fine, as above); the director's docs batch copies the notes in and numbers the decisions, so never
+  pick a D number yourself.
 - Know when the pull request waits for Christian. `scripts/automerge/decide.ts` labels it `needs-christian` when it
   touches a held path: `.github/`, `scripts/automerge/`, `content/`, `supabase/`, the auth, account, admin and
   anatomy-fixture pages, `CLAUDE.md`, `AGENTS.md`, `SECURITY.md`, `wrangler.jsonc`, `public/_headers`,
