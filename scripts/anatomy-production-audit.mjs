@@ -104,6 +104,13 @@ export function parseApprovedGlb(bytes) {
       !Array.isArray(json.accessors) || !Array.isArray(json.extensionsRequired)) {
     throw new Error('required model metadata missing');
   }
+  // Cueory's BodyParts3D pipeline produces untextured geometry. An approved
+  // model with embedded or external image references would import unreviewed
+  // visual content and could make network requests outside the local GLB.
+  if ((json.images !== undefined && (!Array.isArray(json.images) || json.images.length !== 0)) ||
+      (json.textures !== undefined && (!Array.isArray(json.textures) || json.textures.length !== 0))) {
+    throw new Error('unreviewed GLB images or textures');
+  }
   // gltfpack's EXT_meshopt_compression output uses a real GLB BIN at buffer 0
   // and a VIRTUAL fallback buffer at index 1 for the uncompressed bufferViews.
   // Khronos permits this required-extension fallback to have no stored bytes.
