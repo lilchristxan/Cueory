@@ -46,7 +46,9 @@ export function boxesFromMeshes(
 }
 
 function toTriple(point: Vec3 | { x: number; y: number; z: number }): Vec3 {
-  return Array.isArray(point) ? (point as Vec3) : [point.x, point.y, point.z];
+  if (Array.isArray(point)) return point as Vec3;
+  const { x, y, z } = point as { x: number; y: number; z: number };
+  return [x, y, z];
 }
 
 /**
