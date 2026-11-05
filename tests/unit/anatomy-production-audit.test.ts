@@ -279,6 +279,35 @@ describe('anatomy production artifact audit', () => {
     );
   });
 
+  it('accepts the checked-in gltfpack meshopt fallback format, but refuses a forged fallback marker', () => {
+    // Use real generator output, NOT a newly invented clinical or anatomical model.
+    // The source manifest remains draft in Git. Approval exists only in this temporary test directory.
+    const f = setup();
+    const manifest = JSON.parse(readFileSync(new URL('../../content/visuals/anatomy-kidneys.json', import.meta.url), 'utf8'));
+    expect(manifest.status).toBe('draft');
+    manifest.status = 'approved';
+    writeFileSync(join(f.content, 'anatomy-kidneys.json'), JSON.stringify(manifest));
+
+    const actualGlb = readFileSync(new URL('../../public/models/anatomy/kidneys.glb', import.meta.url));
+    const filename = 'models/anatomy/kidneys.glb';
+    f.file(filename, actualGlb);
+    // gltfpack writes a real BIN buffer and a virtual EXT_meshopt_compression
+    // fallback buffer. Rejecting every GLB with two buffers rejects the actual source models.
+    expect(f.check().errors).toEqual([]);
+
+    const jsonLength = actualGlb.readUInt32LE(12);
+    const json = actualGlb.toString('utf8', 20, 20 + jsonLength);
+    expect(json).toContain('"fallback":true');
+    const changed = json.replace('"fallback":true', '"fallback":null');
+    expect(Buffer.byteLength(changed, 'utf8')).toBe(jsonLength);
+    const forgedGlb = Buffer.from(actualGlb);
+    Buffer.from(changed, 'utf8').copy(forgedGlb, 20);
+    f.file(filename, forgedGlb);
+    expect(f.check().errors).toContain(
+      'approved model failed built GLB geometry, identity or credit verification: /models/anatomy/kidneys.glb',
+    );
+  });
+
   it('accepts a build with approved models and no exposed drafts', () => {
     expect(setup().check()).toEqual({ errors: [], approvedSystems: 1, draftSystems: 1, shippedModels: 1 });
   });
