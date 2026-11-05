@@ -212,6 +212,7 @@ export function auditAnatomyProduction(distDir, contentDir) {
       // Independently verify the source links even when dist/ is older than the
       // current manifest. A nonempty citation string is not proof of a source.
       const sourceIds = new Set();
+      const sourceSections = new Map();
       if (!Array.isArray(data.sources) || data.sources.length === 0) {
         errors.push(`${name}: approved source records are missing`);
       } else {
@@ -229,6 +230,7 @@ export function auditAnatomyProduction(distDir, contentDir) {
             errors.push(`${name}: duplicate approved source ID ${source.id}`);
           } else {
             sourceIds.add(source.id);
+            sourceSections.set(source.id, source.section);
           }
           // Resolving the ID is insufficient when the cited record no longer
           // contains the open-source quote and rights evidence required by the
@@ -269,6 +271,9 @@ export function auditAnatomyProduction(distDir, contentDir) {
           } else if (label.source !== `bp3d-${label.id}`) {
             // Each approved BodyParts3D label must cite its own reviewed ID.
             errors.push(`${name}: approved label ${label.id} source does not match structure ID`);
+          } else if (!/^(?:partof|isa)_parts_list_e\.txt, Release 4\.0$/.test(sourceSections.get(label.source) ?? '')) {
+            // The overview README cannot be used as evidence for an individual structure name.
+            errors.push(`${name}: approved label ${label.id} must cite a Release 4.0 parts-list table`);
           }
         }
       }
