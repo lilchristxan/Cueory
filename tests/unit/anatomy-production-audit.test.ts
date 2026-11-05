@@ -213,6 +213,9 @@ describe('anatomy production artifact audit', () => {
       Buffer.alloc(64 * 1024 - 2, 0x61), Buffer.from([0x50, 0x4b, 0x03, 0x04, 0x00]),
     ]));
     f.file('docs/archive-reference.txt', 'The word ustar is discussed here, but this is ordinary text.');
+    const textTarMarker = Buffer.alloc(300, 0x61);
+    textTarMarker.write('ustar', 257, 'ascii');
+    f.file('docs/ustar-at-header-offset.txt', textTarMarker);
     expect(f.check().errors).toEqual(expect.arrayContaining([
       'archive/container in production output requires explicit review: /downloads/hidden-model.dat',
       'archive/container in production output requires explicit review: /downloads/hidden-model.bin',
