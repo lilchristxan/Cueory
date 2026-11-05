@@ -71,51 +71,50 @@ function hasGlbMagic(path) {
  * cannot see into ZIP/TAR/compressed package payloads. This deliberately
  * fails closed rather than trying to unpack untrusted build artifacts.
  */
+function hasTarHeaderAt(bytes, offset) {
+  if (offset < 0 || offset + 512 > bytes.length ||
+      bytes.toString('ascii', offset + 257, offset + 262) !== 'ustar') return false;
+  const checksumField = bytes.toString('ascii', offset + 148, offset + 156);
+  const checksumDigits = checksumField.replace(/[\\0 ]+$/u, '').trim();
+  if (!/^[0-7]{1,7}$/u.test(checksumDigits)) return false;
+  const expected = Number.parseInt(checksumDigits, 8);
+  let actual = 0;
+  for (let i = 0; i < 512; i += 1) actual += i >= 148 && i < 156 ? 0x20 : bytes[offset + i];
+  return actual === expected;
+}
+
+function containsTarHeader(bytes) {
+  const marker = Buffer.from('ustar', 'ascii');
+  for (let markerOffset = bytes.indexOf(marker); markerOffset >= 0; markerOffset = bytes.indexOf(marker, markerOffset + 1)) {
+    if (hasTarHeaderAt(bytes, markerOffset - 257)) return true;
+  }
+  return false;
+}
+
 function hasArchiveMagicBytes(bytes, includeAsciiMarkers = true) {
   const contains = (signature) => bytes.indexOf(Buffer.from(signature)) !== -1;
   // Binary signatures are safe to search throughout both text and binary
-  // payloads; ASCII-only tar/ar markers are restricted to binary artifacts.
+  // payloads. A tar marker is accepted only with a valid header checksum.
   if (contains([0x50, 0x4b, 0x03, 0x04]) || contains([0x50, 0x4b, 0x05, 0x06]) ||
       contains([0x50, 0x4b, 0x07, 0x08]) || contains([0x1f, 0x8b]) ||
       contains([0x42, 0x5a, 0x68]) || contains([0xfd, 0x37, 0x7a, 0x58, 0x5a, 0x00]) ||
       contains([0x28, 0xb5, 0x2f, 0xfd]) || contains([0x37, 0x7a, 0xbc, 0xaf, 0x27, 0x1c]) ||
       contains([0x52, 0x61, 0x72, 0x21, 0x1a, 0x07]) || contains([0x4d, 0x53, 0x43, 0x46])) return true;
-  return includeAsciiMarkers &&
-    (contains([0x21, 0x3c, 0x61, 0x72, 0x63, 0x68, 0x3e, 0x0a]) ||
-      bytes.indexOf(Buffer.from('ustar', 'ascii')) !== -1);
+  if (containsTarHeader(bytes)) return true;
+  return includeAsciiMarkers && contains([0x21, 0x3c, 0x61, 0x72, 0x63, 0x68, 0x3e, 0x0a]);
 }
 
-function hasArchiveMagicHeader(header, includeAsciiMarkers = true) {
+function hasArchiveMagicHeader(header) {
   const starts = (bytes) => header.length >= bytes.length && header.subarray(0, bytes.length).equals(Buffer.from(bytes));
   if (starts([0x50, 0x4b, 0x03, 0x04]) || starts([0x50, 0x4b, 0x05, 0x06]) ||
       starts([0x50, 0x4b, 0x07, 0x08]) || starts([0x1f, 0x8b]) ||
       starts([0x42, 0x5a, 0x68]) || starts([0xfd, 0x37, 0x7a, 0x58, 0x5a, 0x00]) ||
       starts([0x28, 0xb5, 0x2f, 0xfd]) || starts([0x37, 0x7a, 0xbc, 0xaf, 0x27, 0x1c]) ||
-      starts([0x52, 0x61, 0x72, 0x21, 0x1a, 0x07]) || starts([0x4d, 0x53, 0x43, 0x46])) return true;
-  return includeAsciiMarkers &&
-    (starts([0x21, 0x3c, 0x61, 0x72, 0x63, 0x68, 0x3e, 0x0a]) ||
-      (header.length >= 262 && header.toString('ascii', 257, 262) === 'ustar'));
+      starts([0x52, 0x61, 0x72, 0x21, 0x1a, 0x07]) || starts([0x4d, 0x53, 0x43, 0x46]) ||
+      starts([0x21, 0x3c, 0x61, 0x72, 0x63, 0x68, 0x3e, 0x0a])) return true;
+  return hasTarHeaderAt(header, 0);
 }
 
-/** Detect a GLB header whose declared bytes fit in the whole file, even across read chunks. */
-function containsGlbHeaderAtOffset(bytes, baseOffset, fileSize) {
-  const magic = Buffer.from('glTF', 'ascii');
-  for (let offset = bytes.indexOf(magic); offset >= 0; offset = bytes.indexOf(magic, offset + 1)) {
-    if (offset + 20 > bytes.length) continue;
-    const version = bytes.readUInt32LE(offset + 4);
-    const totalLength = bytes.readUInt32LE(offset + 8);
-    const jsonLength = bytes.readUInt32LE(offset + 12);
-    const jsonType = bytes.readUInt32LE(offset + 16);
-    if (version === 2 && totalLength >= 20 && baseOffset + offset + totalLength <= fileSize &&
-        jsonLength >= 2 && jsonLength <= totalLength - 20 && jsonType === 0x4e4f534a) return true;
-  }
-  return false;
-}
-
-/**
- * Stream ordinary built artifacts in bounded chunks. A benign extension or
- * a long prefix must not hide a GLB/archive beyond the initial file header.
- */
 function hasArchiveMagic(path) {
   if (!Number.isInteger(fsConstants.O_NOFOLLOW)) throw new Error('this platform cannot safely audit symbolic links');
   const fd = openSync(path, fsConstants.O_RDONLY | fsConstants.O_NOFOLLOW);
