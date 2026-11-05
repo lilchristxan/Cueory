@@ -4,6 +4,8 @@
  * Sections (JSON key and CSV file share the name): profile, onboarding, progress, reviewState and gameStats come from
  * the account page or this browser; attempts, examPlans and reviewRows mirror the student's own rows in the database
  * tables `attempts`, `exam_plans` and `review_state` (supabase/migrations 20261101100000 and 20261101110000), and
+ * anatomyReviewQueue and anatomyViews hold the student's own Task 178 study data: the full review history including cleared
+ * misses, and saved cameras/visibility state; the reader omits database row and owner ids and relies on RLS + MFA.
  * reports holds the student's own "Flag or comment" reports as the database function `my_flags()` returns them (D-88):
  * never the admin fields (user, status, handled time), which are dropped by name like any other unknown field.
  * studyEvents mirrors the student's own rows in `study_events` (supabase/migrations/20261102100000, Task 140). A
@@ -20,7 +22,8 @@
  * sign-in sessions as `my_sessions()` returns them (supabase/migrations/20261102160000): when, browser and IP address,
  * without the session id, which is only the read cursor.
  * Row caps: attempts and reviewRows keep their first 50,000 rows, examPlans its first 10, reports and sessions their
- * first 10,000 and account.identities its first 20; the rest is reported in `dropped` as `<section>[<cap>+]`.
+ * first 10,000, anatomyReviewQueue its first 10,000, anatomyViews its first 50 and account.identities its first 20;
+ * the rest is reported in `dropped` as `<section>[<cap>+]`.
  * studyEvents has no cap: the whole history is exported.
  */
 import { dailyGames } from '../config/games';
