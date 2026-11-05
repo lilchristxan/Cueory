@@ -20,6 +20,29 @@ function setup() {
     mkdirSync(join(dest, '..'), { recursive: true });
     writeFileSync(dest, body);
   };
+  /** Realistic synthetic GLB for tests only. Node identities follow the manifest currently being tested. */
+  const makeApprovedGlb = (ids: string[]): Buffer => {
+    const modelJson = {
+      asset: { version: '2.0', copyright: 'BodyParts3D, © The Database Center for Life Science licensed under CC Attribution 4.0 International' },
+      extensionsRequired: ['EXT_meshopt_compression', 'KHR_mesh_quantization'],
+      nodes: ids.map((id, mesh) => ({ name: id, mesh })),
+      meshes: ids.map(() => ({ primitives: [{ indices: 0 }] })),
+      accessors: [{ count: 3 }],
+      buffers: [{ byteLength: 4 }],
+    };
+    const bytes = Buffer.from(JSON.stringify(modelJson), 'utf8');
+    const padded = Buffer.concat([bytes, Buffer.alloc((4 - bytes.length % 4) % 4, 0x20)]);
+    const glb = Buffer.alloc(20 + padded.length + 12);
+    glb.write('glTF', 0, 'ascii');
+    glb.writeUInt32LE(2, 4);
+    glb.writeUInt32LE(glb.length, 8);
+    glb.writeUInt32LE(padded.length, 12);
+    glb.writeUInt32LE(0x4e4f534a, 16);
+    padded.copy(glb, 20);
+    glb.writeUInt32LE(4, 20 + padded.length);
+    glb.writeUInt32LE(0x004e4942, 24 + padded.length);
+    return glb;
+  };
   const system = (name: string, status: 'draft' | 'approved' | 'other', urls: string[], ids: string[] = []) => {
     writeFileSync(join(content, `anatomy-${name}.json`), JSON.stringify({
       status,
@@ -36,31 +59,12 @@ function setup() {
         retrieved: '2026-11-04',
       })),
     }));
+    if (status === 'approved' && urls[0]?.startsWith('/models/anatomy/')) {
+      file(urls[0].slice(1), makeApprovedGlb(ids));
+    }
   };
   system('draft', 'draft', ['/models/anatomy/draft.glb'], ['FMA999991']);
   system('approved', 'approved', ['/models/anatomy/approved.glb'], ['FMA999992']);
-  // Synthetic GLB v2 with one mesh node, the required license and
-  // quantization/meshopt decoder declarations, and an aligned BIN chunk.
-  const modelJson = {
-    asset: { version: '2.0', copyright: 'BodyParts3D, © The Database Center for Life Science licensed under CC Attribution 4.0 International' },
-    extensionsRequired: ['EXT_meshopt_compression', 'KHR_mesh_quantization'],
-    nodes: [{ name: 'FMA999992', mesh: 0 }],
-    meshes: [{ primitives: [{ indices: 0 }] }],
-    accessors: [{ count: 3 }],
-    buffers: [{ byteLength: 4 }],
-  };
-  const json = Buffer.from(JSON.stringify(modelJson), 'utf8');
-  const padded = Buffer.concat([json, Buffer.alloc((4 - json.length % 4) % 4, 0x20)]);
-  const validGlb = Buffer.alloc(20 + padded.length + 12);
-  validGlb.write('glTF', 0, 'ascii');
-  validGlb.writeUInt32LE(2, 4);
-  validGlb.writeUInt32LE(validGlb.length, 8);
-  validGlb.writeUInt32LE(padded.length, 12);
-  validGlb.writeUInt32LE(0x4e4f534a, 16);
-  padded.copy(validGlb, 20);
-  validGlb.writeUInt32LE(4, 20 + padded.length);
-  validGlb.writeUInt32LE(0x004e4942, 24 + padded.length);
-  file('models/anatomy/approved.glb', validGlb);
   file('preview/anatomy-lab.html', '<html><meta name="robots" content="noindex"></html>');
   return { dist, content, file, system, check: () => auditAnatomyProduction(dist, content) };
 }
