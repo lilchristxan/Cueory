@@ -27,7 +27,9 @@ function setup() {
       extensionsRequired: ['EXT_meshopt_compression', 'KHR_mesh_quantization'],
       nodes: ids.map((id, mesh) => ({ name: id, mesh })),
       meshes: ids.map(() => ({ primitives: [{ indices: 0, attributes: { POSITION: 1 } }] })),
-      accessors: [{ count: 3, componentType: 5123, type: 'SCALAR' }, { count: 3, componentType: 5126, type: 'VEC3' }],
+      accessors: [{ count: 3, componentType: 5123, type: 'SCALAR', bufferView: 0 },
+        { count: 3, componentType: 5126, type: 'VEC3', bufferView: 0 }],
+      bufferViews: [{ buffer: 0, byteOffset: 0, byteLength: 4 }],
       buffers: [{ byteLength: 4 }],
     };
     const bytes = Buffer.from(JSON.stringify(modelJson), 'utf8');
@@ -155,6 +157,40 @@ describe('anatomy production artifact audit', () => {
         'approved model failed built GLB geometry, identity or credit verification: /models/anatomy/approved.glb',
       );
     }
+  });
+
+  it('rejects missing and out-of-range embedded geometry data references', () => {
+    const f = setup();
+    const path = join(f.dist, 'models', 'anatomy', 'approved.glb');
+    const original = readFileSync(path);
+    const mutate = (change: (json: any) => void) => {
+      const jsonLength = original.readUInt32LE(12);
+      const json = JSON.parse(original.toString('utf8', 20, 20 + jsonLength));
+      change(json);
+      const encoded = Buffer.from(JSON.stringify(json), 'utf8');
+      const padded = Buffer.concat([encoded, Buffer.alloc((4 - encoded.length % 4) % 4, 0x20)]);
+      const output = Buffer.alloc(20 + padded.length + 12);
+      output.write('glTF', 0, 'ascii');
+      output.writeUInt32LE(2, 4);
+      output.writeUInt32LE(output.length, 8);
+      output.writeUInt32LE(padded.length, 12);
+      output.writeUInt32LE(0x4e4f534a, 16);
+      padded.copy(output, 20);
+      output.writeUInt32LE(4, 20 + padded.length);
+      output.writeUInt32LE(0x004e4942, 24 + padded.length);
+      writeFileSync(path, output);
+      expect(f.check().errors).toContain(
+        'approved model failed built GLB geometry, identity or credit verification: /models/anatomy/approved.glb',
+      );
+    };
+    mutate((json) => { delete json.bufferViews; });
+    mutate((json) => { json.accessors[0].bufferView = 9; });
+    mutate((json) => { json.bufferViews[0].byteLength = 999; });
+    mutate((json) => { json.bufferViews[0].buffer = 1; });
+    mutate((json) => { json.bufferViews[0].extensions = { EXT_meshopt_compression:
+      { buffer: 0, byteOffset: 1000, byteLength: 10, byteStride: 2, count: 3, mode: 'ATTRIBUTES' } }; });
+    writeFileSync(path, original);
+    expect(f.check().errors).toEqual([]);
   });
 
   it('rejects a forged approved GLB filename with invalid or truncated model bytes', () => {

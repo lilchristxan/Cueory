@@ -113,6 +113,45 @@ export function parseApprovedGlb(bytes) {
       binLength < buffer.byteLength || binLength > buffer.byteLength + 3) {
     throw new Error('GLB BIN buffer missing or incomplete');
   }
+  // Every typed mesh accessor must resolve to the single embedded BIN buffer.
+  // Validate both ordinary glTF byte ranges and meshopt-compressed byte ranges.
+  // A declared meshopt extension alone does not make the geometry decodable.
+  if (!Array.isArray(json.bufferViews) || json.bufferViews.length === 0) {
+    throw new Error('GLB mesh buffer views are missing');
+  }
+  const validRange = (offset, length) =>
+    Number.isSafeInteger(offset) && offset >= 0 &&
+    Number.isSafeInteger(length) && length > 0 &&
+    offset <= buffer.byteLength && length <= buffer.byteLength - offset;
+  for (const view of json.bufferViews) {
+    if (!view || view.buffer !== 0 ||
+        !validRange(view.byteOffset ?? 0, view.byteLength)) {
+      throw new Error('GLB buffer view outside embedded BIN');
+    }
+    const compressed = view.extensions?.EXT_meshopt_compression;
+    if (compressed !== undefined &&
+        (!compressed || compressed.buffer !== 0 ||
+         !validRange(compressed.byteOffset ?? 0, compressed.byteLength) ||
+         !Number.isSafeInteger(compressed.count) || compressed.count < 1 ||
+         !Number.isSafeInteger(compressed.byteStride) || compressed.byteStride < 1 ||
+         compressed.byteStride > 255 ||
+         !['ATTRIBUTES', 'TRIANGLES', 'INDICES'].includes(compressed.mode) ||
+         (compressed.filter !== undefined &&
+          !['NONE', 'OCTAHEDRAL', 'QUATERNION', 'EXPONENTIAL'].includes(compressed.filter)))) {
+      throw new Error('GLB meshopt range or decoder metadata invalid');
+    }
+  }
+  for (const accessor of json.accessors) {
+    if (!accessor || !Number.isSafeInteger(accessor.bufferView) ||
+        accessor.bufferView < 0 || accessor.bufferView >= json.bufferViews.length) {
+      throw new Error('GLB accessor references a missing buffer view');
+    }
+    if (accessor.byteOffset !== undefined &&
+        (!Number.isSafeInteger(accessor.byteOffset) || accessor.byteOffset < 0 ||
+         accessor.byteOffset >= json.bufferViews[accessor.bufferView].byteLength)) {
+      throw new Error('GLB accessor offset outside buffer view');
+    }
+  }
   return json;
 }
 
