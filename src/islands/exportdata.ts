@@ -121,6 +121,7 @@ function utcDate(value: unknown): string | undefined {
   return iso.slice(0, -1) + micros + 'Z';
 }
 const date = (value: unknown) => utcDate(value) !== undefined;
+const nullableDate = (value: unknown) => value === null || date(value);
 const profileSchema: Schema = {
   displayName: nullableText, email: nullableText, createdAt: value => value === null || date(value),
   nameChangeWindowStart: value => value === null || date(value),
@@ -243,7 +244,6 @@ export function jsonCopy(value: unknown, depth = 0): JsonValue | undefined {
   return Object.fromEntries(entries);
 }
 const jsonObject = (value: unknown) => plain(value) && jsonCopy(value) !== undefined;
-const nullableDate = (value: unknown) => value === null || date(value);
 /** A Supabase Auth provider name, such as google or email. */
 const providerName = (value: unknown) => typeof value === 'string' && /^[a-z0-9_-]{1,40}$/.test(value);
 function providerList(value: unknown): boolean {
