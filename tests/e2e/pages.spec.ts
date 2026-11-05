@@ -78,6 +78,20 @@ for (const path of [...new Set(pages)]) {
   });
 }
 
+test('skip to content stays above both the sticky and overlaid headers when focused', async ({ page }) => {
+  for (const route of ['/', '/privacy']) {
+    await page.goto(route);
+    const skip = page.getByRole('link', { name: 'skip to content' });
+    await page.keyboard.press('Tab');
+    await expect(skip).toBeFocused();
+    const isTopmost = await skip.evaluate((element) => {
+      const rect = element.getBoundingClientRect();
+      return document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2) === element;
+    });
+    expect(isTopmost, `skip link is obscured on ${route}`).toBe(true);
+  }
+});
+
 test('lesson can be stepped through with the keyboard', async ({ page }) => {
   await page.goto('/learn/study-skills');
   await expect(page.getByText('sentence 1 of')).toBeVisible();
