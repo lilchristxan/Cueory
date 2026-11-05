@@ -194,8 +194,20 @@ export interface LabScene {
   focusOn(id: string): boolean;
   /** Turns the whole model to stand or lie on its back, then shows it from that posture's home view. */
   setPosture(posture: Posture): void;
+  /** Every loaded structure's world-space box (min and max corners), for "what is nearby" (Task 178). */
+  boundsById(): Map<string, { min: { x: number; y: number; z: number }; max: { x: number; y: number; z: number } }>;
+  /** Where the camera is, what it looks at and which way is up, as plain number triples (saved views, compare view). */
+  cameraState(): CameraState;
+  /** Puts the camera exactly where `state` says, at once (no animation); ignores a state with non-finite numbers. */
+  applyCameraState(state: CameraState): void;
   exportPicture(request: ExportRequest): Promise<ExportResult>;
   dispose(): void;
+}
+
+export interface CameraState {
+  position: [number, number, number];
+  target: [number, number, number];
+  up: [number, number, number];
 }
 
 interface Options {
@@ -563,6 +575,35 @@ export function createLabScene({ canvas, reducedMotion, colors: initialColors, o
     const distance = Math.max(controls.minDistance, fitDistance(box.getSize(new THREE.Vector3()), camera.fov, camera.aspect));
     moveCamera(focusCamera(camera.position, controls.target, center, distance), center);
     return true;
+  }
+
+  function boundsById() {
+    const out = new Map<string, { min: { x: number; y: number; z: number }; max: { x: number; y: number; z: number } }>();
+    for (const [id, box] of boxes) {
+      if ((meshesById.get(id)?.length ?? 0) === 0) continue;
+      out.set(id, { min: { x: box.min.x, y: box.min.y, z: box.min.z }, max: { x: box.max.x, y: box.max.y, z: box.max.z } });
+    }
+    return out;
+  }
+
+  function cameraState(): CameraState {
+    return {
+      position: [camera.position.x, camera.position.y, camera.position.z],
+      target: [controls.target.x, controls.target.y, controls.target.z],
+      up: [camera.up.x, camera.up.y, camera.up.z],
+    };
+  }
+
+  function applyCameraState(state: CameraState) {
+    const triple = (v: readonly number[]) => v.length === 3 && v.every((n) => Number.isFinite(n));
+    if (!triple(state.position) || !triple(state.target) || !triple(state.up)) return;
+    move = null;
+    camera.up.set(state.up[0], state.up[1], state.up[2]);
+    camera.position.set(state.position[0], state.position[1], state.position[2]);
+    controls.target.set(state.target[0], state.target[1], state.target[2]);
+    camera.lookAt(controls.target);
+    controls.update();
+    requestRender();
   }
 
   function setPosture(next: Posture) {
@@ -952,6 +993,9 @@ export function createLabScene({ canvas, reducedMotion, colors: initialColors, o
     viewPreset,
     focusOn,
     setPosture,
+    boundsById,
+    cameraState,
+    applyCameraState,
     exportPicture,
     clear() {
       loadId++;
