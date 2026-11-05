@@ -220,27 +220,37 @@ function pagefindArtifactKind(url) {
 }
 
 /** Validate Pagefind's actual generated formats; a matching filename alone is never trusted. */
-function validPagefindArtifact(path, kind) {
-  const bytes = readRegularBytesNoFollow(path);
-  if (kind === 'wasm') {
-    return bytes.length >= 8 &&
-      bytes.subarray(0, 4).equals(Buffer.from([0x00, 0x61, 0x73, 0x6d])) &&
-      bytes.readUInt32LE(4) === 1 &&
-      WebAssembly.validate(bytes) &&
-      !containsGlbHeader(bytes);
-  }
-  if (bytes.length < 2 || bytes[0] !== 0x1f || bytes[1] !== 0x8b) return false;
-  let decoded;
-  try {
-    decoded = gunzipSync(bytes, { maxOutputLength: MAX_PAGEFIND_DECOMPRESSED_BYTES });
-  } catch {
-    return false;
+function decodePagefindPayload(bytes) {
+  let decoded = bytes;
+  if (bytes.length >= 2 && bytes[0] === 0x1f && bytes[1] === 0x8b) {
+    let result;
+    try {
+      result = gunzipSync(bytes, { maxOutputLength: MAX_PAGEFIND_DECOMPRESSED_BYTES, info: true });
+    } catch {
+      return null;
+    }
+    // Reject trailing bytes and concatenated gzip members; Pagefind writes one member per asset.
+    if (result.engine.bytesWritten !== bytes.length) return null;
+    decoded = result.buffer;
   }
   if (decoded.length <= PAGEFIND_SIGNATURE.length ||
-      !decoded.subarray(0, PAGEFIND_SIGNATURE.length).equals(PAGEFIND_SIGNATURE)) return false;
+      !decoded.subarray(0, PAGEFIND_SIGNATURE.length).equals(PAGEFIND_SIGNATURE)) return null;
   const payload = decoded.subarray(PAGEFIND_SIGNATURE.length);
-  if (containsGlbHeader(payload)) return false;
-  if (path.endsWith('.pf_fragment')) {
+  return payload.length <= MAX_PAGEFIND_DECOMPRESSED_BYTES ? payload : null;
+}
+
+/** Validate Pagefind's actual generated formats; a matching filename alone is never trusted. */
+function validPagefindArtifact(path, kind) {
+  const payload = decodePagefindPayload(readRegularBytesNoFollow(path));
+  if (!payload) return false;
+  if (kind === 'wasm') {
+    try {
+      return WebAssembly.validate(payload) && !containsGlbHeader(payload);
+    } catch {
+      return false;
+    }
+  }
+  if (kind === 'fragment') {
     try {
       const fragment = JSON.parse(payload.toString('utf8'));
       return fragment !== null && typeof fragment === 'object' && !Array.isArray(fragment);
