@@ -494,6 +494,8 @@ const CURSOR_COLUMN: Record<ExportTable | ExportRpc, string | null> = {
   study_events: 'id',
   my_flags: 'id',
   my_sessions: 'id',
+  anatomy_review_queue: 'id',
+  anatomy_saved_views: 'id',
 };
 
 /**
