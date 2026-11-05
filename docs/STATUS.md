@@ -335,6 +335,9 @@ Targets: first visuals by about 14 November, the full kit by about 12 December (
   under `public/` at 3 MB.
 - Next: the three drawings (Task C5), made only from those files.
 
+## In review (2026-11-04)
+- Task 280: correct the 32px root-text phone overflow in `/courses` and `/preview/survey` (issue #582). The existing large-text browser test must pass before staging integration. Production release remains separate.
+
 ## Planning
 - [Med-surg lesson map](curriculum/README.md) ([#31](https://github.com/lilchristxan/Cueory/pull/31)): the master
   list of 351 lessons in 19 units, in build order, each with a stable `lesson_id`; ROADMAP points to it. It is an
