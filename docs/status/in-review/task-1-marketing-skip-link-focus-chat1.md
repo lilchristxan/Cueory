@@ -1,1 +1,1 @@
-status: Task 1, marketing skip-link layering: raise the focused skip link above the sticky header and detect visual obstruction in the route-wide keyboard accessibility sweep. Verification pending: npm run verify could not run because this environment cannot resolve github.com.
+status: Task 1, marketing skip-link layering: place the focused skip link above the sticky header and non-modal launch promo, and test both unobscured hit-testing and keyboard focus visibility. Verification pending: npm run verify could not run because this environment cannot resolve github.com.
