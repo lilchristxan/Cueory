@@ -26,6 +26,13 @@ describe('footer theme picker contract', () => {
     expect(source).toContain('<span>{option.label}</span>');
   });
 
+  it('marks the selected option with a visible non-color cue', () => {
+    expect(source).toContain('class="segmented-option theme-option relative"');
+    expect(source).toContain('<span class="theme-option-check" aria-hidden="true">✓</span>');
+    expect(source).toContain('.theme-option:has(:checked) .theme-option-check');
+    expect(source).toContain('visibility: visible');
+  });
+
   it('applies the selected theme and restores original browser bar colors for device mode', () => {
     expect(source).toContain('applyChoice(root, current)');
     expect(source).toContain('saveChoice(storage, value)');
