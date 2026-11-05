@@ -698,7 +698,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
   const refreshReviewQueue = useCallback(() => {
     const identity = identityGuard.snapshot();
     if (!signedIn || !identity.userId) return;
-    void study.reviewQueue().then((outcome) => {
+    void study.reviewQueue(identity.userId).then((outcome) => {
       if (!identityGuard.isCurrent(identity)) return;
       if (outcome.ok) setReviewRows(outcome.value);
       else setAnnounce(outcome.message);
@@ -710,7 +710,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
     const identity = identityGuard.snapshot();
     if (!signedIn || !identity.userId) return;
     const request = savedViewsRequestGuard.begin(key);
-    void study.views(key).then((outcome) => {
+    void study.views(key, identity.userId).then((outcome) => {
       if (!identityGuard.isCurrent(identity) || !savedViewsRequestGuard.isCurrent(request, activeSystemKeyRef.current)) return;
       if (outcome.ok) setSavedViews(outcome.value);
       else setAnnounce(outcome.message);
@@ -734,7 +734,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
   const recordMiss = useCallback((structureId: string) => {
     const identity = identityGuard.snapshot();
     if (!signedIn || !identity.userId || !system) return;
-    void study.recordMisses(system.key, queueFromQuizMisses([{ target: structureId, feedback: { kind: 'shown' } }]))
+    void study.recordMisses(system.key, queueFromQuizMisses([{ target: structureId, feedback: { kind: 'shown' } }]), identity.userId)
       .then((outcome) => {
         if (!identityGuard.isCurrent(identity)) return;
         if (!outcome.ok) setAnnounce(outcome.message);
@@ -1161,7 +1161,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
     const identity = identityGuard.snapshot();
     if (!signedIn || !identity.userId) return;
     const key = system.key;
-    void study.clearMiss(key, structureId).then((outcome) => {
+    void study.clearMiss(key, structureId, identity.userId).then((outcome) => {
       if (!identityGuard.isCurrent(identity)) return;
       if (!outcome.ok) {
         setAnnounce(outcome.message);
@@ -1191,7 +1191,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
     if (!signedIn || !identity.userId) return;
     const name = viewName.trim();
     setSavingView(true);
-    void study.saveView({ systemKey: key, name, camera: scene.cameraState(), hidden, faded, selected })
+    void study.saveView({ systemKey: key, name, camera: scene.cameraState(), hidden, faded, selected }, identity.userId)
       .then((outcome) => {
         if (!identityGuard.isCurrent(identity) || activeSystemKeyRef.current !== key) return;
         if (!outcome.ok) {
@@ -1228,7 +1228,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
     const key = system.key;
     const identity = identityGuard.snapshot();
     if (!signedIn || !identity.userId || view.system_key !== key) return;
-    void study.deleteView(view.id).then((outcome) => {
+    void study.deleteView(view.id, identity.userId).then((outcome) => {
       if (!identityGuard.isCurrent(identity) || activeSystemKeyRef.current !== key) return;
       if (!outcome.ok) {
         setAnnounce(outcome.message);

@@ -220,31 +220,34 @@ export function createSavedViewsRequestGuard() {
 
 export interface AnatomyStudy {
   /** Records misses for the signed-in student, in batches of 50. Resolves with how many were recorded; `0` when signed out or accounts are off. */
-  recordMisses(systemKey: string, structureIds: readonly string[]): Promise<Outcome<number>>;
+  recordMisses(systemKey: string, structureIds: readonly string[], expectedUserId: string): Promise<Outcome<number>>;
   /** Takes one structure off the review list. */
-  clearMiss(systemKey: string, structureId: string): Promise<Outcome<boolean>>;
+  clearMiss(systemKey: string, structureId: string, expectedUserId: string): Promise<Outcome<boolean>>;
   /** The student's uncleared misses, most recent first; `[]` when signed out or accounts are off. */
-  reviewQueue(): Promise<Outcome<ReviewQueueRow[]>>;
+  reviewQueue(expectedUserId: string): Promise<Outcome<ReviewQueueRow[]>>;
   /** Saves or replaces a view and resolves with its id. */
-  saveView(state: ViewState): Promise<Outcome<string>>;
-  deleteView(id: string): Promise<Outcome<boolean>>;
+  saveView(state: ViewState, expectedUserId: string): Promise<Outcome<string>>;
+  deleteView(id: string, expectedUserId: string): Promise<Outcome<boolean>>;
   /** The student's saved views for one system, by name; `[]` when signed out or accounts are off. */
-  views(systemKey: string): Promise<Outcome<SavedViewRow[]>>;
+  views(systemKey: string, expectedUserId: string): Promise<Outcome<SavedViewRow[]>>;
 }
 
 const NOT_SIGNED_IN = 'please sign in to use this.';
 
 /**
- * Builds the client over the shared lazy Supabase client (`getSupabase`), or a fake in tests. Every call checks the
- * local session first so a signed-out student never sends a request; the database checks the token itself. Methods are
- * always called on the client object, because supabase-js relies on the receiver.
+ * Builds the client over the shared lazy Supabase client (`getSupabase`), or a fake in tests. Every operation is bound
+ * to the user id captured at the UI event boundary. After loading the shared client and reading the current session,
+ * it refuses the operation unless that session still belongs to the captured user. This prevents a request started
+ * under A from being sent with B's token after a cross-tab account switch. Methods remain called on the client object,
+ * because supabase-js relies on the receiver.
  */
 export function createAnatomyStudy(getClient: () => Promise<AnatomyStudyClient | null>): AnatomyStudy {
-  async function signedIn(): Promise<AnatomyStudyClient | null> {
+  async function signedIn(expectedUserId: string): Promise<AnatomyStudyClient | null> {
+    if (typeof expectedUserId !== 'string' || expectedUserId.length === 0) return null;
     const client = await getClient();
     if (!client) return null;
     const session = await sessionStateFrom(client);
-    return session.signedIn ? client : null;
+    return session.signedIn && session.userId === expectedUserId ? client : null;
   }
   function settle<T>(reply: Reply<T>, check: (data: unknown) => data is T): Outcome<T> {
     if (reply.error != null) return { ok: false, message: anatomyStudyMessage(reply.error), cause: reply.error };
@@ -257,10 +260,10 @@ export function createAnatomyStudy(getClient: () => Promise<AnatomyStudyClient |
   const isRows = <T>(d: unknown): d is T[] => Array.isArray(d);
 
   return {
-    async recordMisses(systemKey, structureIds) {
+    async recordMisses(systemKey, structureIds, expectedUserId) {
       const ids = [...new Set(structureIds)].filter((id) => STRUCTURE_ID.test(id));
       if (!SYSTEM_KEY.test(systemKey) || ids.length === 0) return { ok: true, value: 0 };
-      const client = await signedIn();
+      const client = await signedIn(expectedUserId);
       if (!client) return { ok: true, value: 0 };
       let recorded = 0;
       for (const batch of missBatches(ids)) {
@@ -270,31 +273,31 @@ export function createAnatomyStudy(getClient: () => Promise<AnatomyStudyClient |
       }
       return { ok: true, value: recorded };
     },
-    async clearMiss(systemKey, structureId) {
-      const client = await signedIn();
+    async clearMiss(systemKey, structureId, expectedUserId) {
+      const client = await signedIn(expectedUserId);
       if (!client) return { ok: false, message: NOT_SIGNED_IN };
       return settle(await client.rpc('clear_anatomy_miss', { system_key: systemKey, structure_id: structureId }), isBoolean);
     },
-    async reviewQueue() {
-      const client = await signedIn();
+    async reviewQueue(expectedUserId) {
+      const client = await signedIn(expectedUserId);
       if (!client) return { ok: true, value: [] };
       return settle(await client.rpc('my_anatomy_review_queue'), isRows<ReviewQueueRow>);
     },
-    async saveView(state) {
+    async saveView(state, expectedUserId) {
       const snapshot = viewSnapshot(state);
       if (!snapshot.ok) return snapshot;
-      const client = await signedIn();
+      const client = await signedIn(expectedUserId);
       if (!client) return { ok: false, message: NOT_SIGNED_IN };
       return settle(await client.rpc('save_anatomy_view', snapshot.args), isString);
     },
-    async deleteView(id) {
-      const client = await signedIn();
+    async deleteView(id, expectedUserId) {
+      const client = await signedIn(expectedUserId);
       if (!client) return { ok: false, message: NOT_SIGNED_IN };
       return settle(await client.rpc('delete_anatomy_view', { id }), isBoolean);
     },
-    async views(systemKey) {
+    async views(systemKey, expectedUserId) {
       if (!SYSTEM_KEY.test(systemKey)) return { ok: true, value: [] };
-      const client = await signedIn();
+      const client = await signedIn(expectedUserId);
       if (!client) return { ok: true, value: [] };
       return settle(await client.rpc('my_anatomy_views', { system_key: systemKey }), isRows<SavedViewRow>);
     },
