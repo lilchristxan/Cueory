@@ -100,6 +100,28 @@ Read [CLAUDE.md](CLAUDE.md) (project rules) and [SECURITY.md](SECURITY.md) first
   (Christian, 2026-11-01). A pull request that already edits `docs/STATUS.md` directly is also fine.
 - Nothing reaches `main` without first being on the locked staging site.
 
+#### Before opening a pull request
+
+A checklist of the rules above and in CLAUDE.md that reviews most often trip on. Nothing here is new.
+
+- Run `npm run verify` (type check, build, unit tests, browser tests) and fix what fails.
+- One topic per pull request, branched from `staging` and aimed at `staging`.
+- Add exactly one status note, `docs/status/in-review/<branch-with-dashes>.md`: one `status:` line, at most one
+  `decision:` line (`D-pending (Task N) ...` or `D-<number> ...`), lowercase keys, no headings, nothing else.
+  `npx vitest run tests/unit/status-notes.test.ts` checks every note and names the file and line to fix.
+- Say what the pull request does, not what you hope happens next: don't write that it is merged or that another pull
+  request is open unless that is already true.
+- Don't edit `docs/DECISIONS.md`, and normally not `docs/STATUS.md` either (a pull request that already edits it
+  directly is still fine, as above); the director's docs batch copies the notes in and numbers the decisions, so never
+  pick a D number yourself.
+- Know when the pull request waits for Christian. `scripts/automerge/decide.ts` labels it `needs-christian` when it
+  touches a held path: `.github/`, `scripts/automerge/`, `content/`, `supabase/`, the auth, account, admin and
+  anatomy-fixture pages, `CLAUDE.md`, `AGENTS.md`, `SECURITY.md`, `wrangler.jsonc`, `public/_headers`,
+  `astro.config.mjs`, `automation.json`, the gitleaks files, the legal pages and `src/config/routes.ts`,
+  `src/config/site.ts`, the account-corner and newsletter-form code, and the listed anatomy release scripts and
+  islands. Read the file for the full list before you touch anything near it.
+- If Codex answers "Setup repeatedly failed", comment `@codex review` on the pull request to start the review again.
+
 ## Sensitive areas (Christian approves)
 
 Auth and accounts, database schema and policies (`/supabase`), payments, `.github/workflows`, deployment and hosting
