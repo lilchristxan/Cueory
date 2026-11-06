@@ -387,7 +387,9 @@ begin
        or jsonb_typeof(vector) <> 'array' or jsonb_array_length(vector) <> 3
        or exists (
          select 1 from jsonb_array_elements(vector) v
-         where jsonb_typeof(v) <> 'number' or (v #>> '{}') !~ '^-?[0-9]+([.][0-9]+)?([eE][-+]?[0-9]+)?$'
+         where jsonb_typeof(v) <> 'number' or (v #>> '{}') !~ '^-?[0-9]+([.][0-9]+)?([eE][-+]?[0-9]{1,4})?$'
+            -- Within what a browser reads as a finite number (1e309 reads as Infinity and would break the lab and the export).
+            or abs((v #>> '{}')::numeric) > 1e300
        ) then
       raise exception 'the camera has the wrong shape' using errcode = '22023';
     end if;

@@ -572,3 +572,20 @@ describe('anatomy review history size (Task 178)', () => {
     expect(await loadExport(fromSupabase(supabase({ ...rows, anatomy_review_queue: history(10_001) }).client))).toEqual(failed);
   });
 });
+
+describe('a saved camera the browser reads as Infinity (Task 178)', () => {
+  const bad = { ...rows.anatomy_saved_views[0], camera: { position: [Infinity, 0, 3], target: [0, 0, 0] } };
+
+  it('does not fail the download: the view is left out and named in dropped', async () => {
+    const result = await loadExport(reader({ anatomy_saved_views: { data: [bad, { ...rows.anatomy_saved_views[0], id: id(99) }], error: null } }).db);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const exported = JSON.parse(await exportJsonBlob(result.data, when).text());
+    expect(exported.anatomyViews).toHaveLength(1);
+    expect(exported.dropped).toContain('anatomyViews[0].camera');
+  });
+
+  it('still fails closed when the camera is not an object at all', async () => {
+    expect(await loadExport(reader({ anatomy_saved_views: { data: [{ ...bad, camera: 'x' }], error: null } }).db)).toEqual(failed);
+  });
+});

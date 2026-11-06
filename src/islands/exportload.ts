@@ -289,7 +289,7 @@ function anatomyStringIds(value: unknown): string[] {
   return ids;
 }
 
-function anatomyCamera(value: unknown): JsonObject {
+function anatomyCamera(value: unknown, allowNonFinite = false): JsonObject {
   const camera = row(value);
   const keys = Object.keys(camera);
   if (keys.some((key) => !['position', 'target', 'up'].includes(key))) throw new Error('invalid anatomy camera');
@@ -297,7 +297,7 @@ function anatomyCamera(value: unknown): JsonObject {
     if (!Array.isArray(input) || input.length !== 3 || Object.keys(input).length !== 3) return false;
     for (let i = 0; i < 3; i++) {
       const descriptor = Object.getOwnPropertyDescriptor(input, String(i));
-      if (!descriptor || !('value' in descriptor) || typeof descriptor.value !== 'number' || !Number.isFinite(descriptor.value)) return false;
+      if (!descriptor || !('value' in descriptor) || typeof descriptor.value !== 'number' || (!allowNonFinite && !Number.isFinite(descriptor.value))) return false;
     }
     return true;
   };
@@ -442,7 +442,12 @@ export async function loadExport(reader: ExportReader): Promise<ExportLoadResult
       return {
         systemKey: anatomySystemKey(r),
         name,
-        camera: anatomyCamera(field(r, 'camera')),
+        // A camera the export cannot represent (a number the browser reads as Infinity) must not fail the whole download:
+        // keep the row's plain object and let the export drop that view by name in `dropped`.
+        camera: (() => {
+          const raw = field(r, 'camera');
+          try { return anatomyCamera(raw); } catch { return anatomyCamera(raw, true); }
+        })(),
         hidden: anatomyStringIds(field(r, 'hidden')),
         faded: anatomyStringIds(field(r, 'faded')),
         selected: selectedValue === null ? null : anatomyStructureId({ selected: selectedValue }, 'selected'),

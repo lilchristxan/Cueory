@@ -5,7 +5,7 @@
 -- only inside this test.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(132);
+select plan(134);
 
 insert into auth.users (id, email, email_confirmed_at, is_anonymous) values
   -- One and two: confirmed students.
@@ -429,6 +429,14 @@ select throws_ok(
        jsonb_build_object('position', jsonb_build_array(repeat('1', 1500)::numeric, repeat('2', 1500)::numeric, repeat('3', 1500)::numeric),
                           'target', '[0, 0, 0]'::jsonb), '{}', '{}', null, (select auth.uid())) $$,
   '22023', 'the camera has the wrong shape', 'a camera over 2 KB is refused'
+);
+select throws_ok(
+  $$ select public.save_anatomy_view('heart', 'front', '{"position": [1e309, 0, 3], "target": [0, 0, 0]}', '{}', '{}', null, (select auth.uid())) $$,
+  '22023', 'the camera has the wrong shape', 'a camera number a browser reads as Infinity (1e309) is refused'
+);
+select throws_ok(
+  $$ select public.save_anatomy_view('heart', 'front', '{"position": [0, 0, 1e12345], "target": [0, 0, 0]}', '{}', '{}', null, (select auth.uid())) $$,
+  '22023', 'the camera has the wrong shape', 'an absurd exponent is refused with the same plain message'
 );
 select throws_ok($$ select public.save_anatomy_view('heart', 'front', current_setting('t.camera')::jsonb, array['BAD001'], '{}', null, (select auth.uid())) $$,
   '22023', 'a structure id has the wrong shape', 'a hidden id with the wrong shape is refused');
