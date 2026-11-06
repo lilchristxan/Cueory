@@ -162,19 +162,29 @@ describe('the compare view follows the main camera to where it settles', () => {
   });
 });
 
-describe('the save button is busy only in the system that is saving', () => {
-  it('a save started in one system does not disable another, and finishing clears only its own mark', async () => {
-    const { savingViewAfter, savingViewBusy } = await import('../../src/islands/anatomylab');
-    let saving: string | null = 'heart';
+describe('the save button is busy only in systems with a save in flight', () => {
+  it('A pending, B saves and settles first: A stays disabled until A settles', async () => {
+    const { savingViewBusy, savingViewSettled, savingViewStarted } = await import('../../src/islands/anatomylab');
+    let saving: ReadonlySet<string> = new Set();
+    saving = savingViewStarted(saving, 'heart');
     expect(savingViewBusy(saving, 'heart')).toBe(true);
-    expect(savingViewBusy(saving, 'lungs')).toBe(false); // switched systems while the first save is pending
-    // A save started in the new system, then the old one finishes late: the new one stays busy.
-    saving = 'lungs';
-    saving = savingViewAfter(saving, 'heart');
-    expect(saving).toBe('lungs');
-    saving = savingViewAfter(saving, 'lungs');
-    expect(saving).toBeNull();
+    expect(savingViewBusy(saving, 'lungs')).toBe(false); // switched systems while A's save is pending
+    saving = savingViewStarted(saving, 'lungs');
+    saving = savingViewSettled(saving, 'lungs'); // B settles first
     expect(savingViewBusy(saving, 'lungs')).toBe(false);
+    expect(savingViewBusy(saving, 'heart')).toBe(true); // back on A: still disabled
+    saving = savingViewSettled(saving, 'heart');
+    expect(savingViewBusy(saving, 'heart')).toBe(false);
+    expect(saving.size).toBe(0);
+  });
+
+  it('settling a system that was not saving changes nothing, and each step is a new set', async () => {
+    const { savingViewSettled, savingViewStarted } = await import('../../src/islands/anatomylab');
+    const start: ReadonlySet<string> = new Set(['heart']);
+    const same = savingViewSettled(start, 'lungs');
+    expect([...same]).toEqual(['heart']);
+    expect(same).not.toBe(start);
+    expect(savingViewStarted(start, 'heart')).not.toBe(start);
   });
 });
 

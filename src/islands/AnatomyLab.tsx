@@ -77,8 +77,9 @@ import {
   revealedQuizTarget,
   reviewQuizPool,
   savedCamera,
-  savingViewAfter,
   savingViewBusy,
+  savingViewSettled,
+  savingViewStarted,
   structureTree,
   savedVisibility,
   showSiblings,
@@ -227,8 +228,8 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
   const [reviewRows, setReviewRows] = useState<ReviewQueueRow[]>([]);
   const [savedViews, setSavedViews] = useState<SavedViewRow[]>([]);
   const [viewName, setViewName] = useState('');
-  // The system a save is running for (null: none), so switching systems never leaves the button stuck.
-  const [savingViewKey, setSavingViewKey] = useState<string | null>(null);
+  // The systems with a save in flight, so switching systems never leaves the button stuck and never frees it early.
+  const [savingViews, setSavingViews] = useState<ReadonlySet<string>>(new Set());
   const [compareKey, setCompareKey] = useState('');
   const [compareState, setCompareState] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
   const speechOn = useMemo(() => canSpeak(), []);
@@ -653,7 +654,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
       setReviewRows([]);
       setSavedViews([]);
       setViewName('');
-      setSavingViewKey(null);
+      setSavingViews(new Set());
       setAnnounce('');
     };
     void getSupabase().then((client) => {
@@ -1167,12 +1168,12 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
 
   const saveView = () => {
     const scene = sceneRef.current;
-    if (!scene || !ready || savingViewBusy(savingViewKey, system.key)) return;
+    if (!scene || !ready || savingViewBusy(savingViews, system.key)) return;
     const key = system.key;
     const identity = identityGuard.snapshot();
     if (!signedIn || !identity.userId) return;
     const name = viewName.trim();
-    setSavingViewKey(key);
+    setSavingViews((current) => savingViewStarted(current, key));
     void study.saveView({ systemKey: key, name, camera: scene.cameraState(), hidden, faded, selected }, identity.userId)
       .then((outcome) => {
         if (!identityGuard.isCurrent(identity) || activeSystemKeyRef.current !== key) return;
@@ -1188,7 +1189,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
         if (identityGuard.isCurrent(identity) && activeSystemKeyRef.current === key) setAnnounce('something went wrong — please try again.');
       })
       .finally(() => {
-        if (identityGuard.isCurrent(identity)) setSavingViewKey((current) => savingViewAfter(current, key));
+        if (identityGuard.isCurrent(identity)) setSavingViews((current) => savingViewSettled(current, key));
       });
   };
 
@@ -1507,7 +1508,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
                           className="mt-1 block min-h-11 w-full rounded-md border border-control bg-page px-3 text-ink"
                         />
                       </label>
-                      <button type="submit" className={secondaryButton} disabled={!ready || savingViewBusy(savingViewKey, system.key) || viewName.trim().length === 0}>
+                      <button type="submit" className={secondaryButton} disabled={!ready || savingViewBusy(savingViews, system.key) || viewName.trim().length === 0}>
                         save this view
                       </button>
                     </form>

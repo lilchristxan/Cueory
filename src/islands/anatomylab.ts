@@ -1407,9 +1407,23 @@ export function structureTree(
   return structure?.tree ?? system.hierarchyTree ?? 'partof';
 }
 
-/** Which system a "save this view" request is running for: the save button is busy only in that system. */
-export const savingViewBusy = (savingKey: string | null, systemKey: string): boolean => savingKey === systemKey;
+/**
+ * The systems with a "save this view" request in flight. The save button is busy only in those systems, and a system
+ * stays busy until its own save settles, however many other systems save and settle in between: a second save of the
+ * same named view can never race the first.
+ */
+export const savingViewBusy = (saving: ReadonlySet<string>, systemKey: string): boolean => saving.has(systemKey);
 
-/** After a save finishes for `finishedKey`: clears the busy mark only if it is that system's, so a newer save is kept. */
-export const savingViewAfter = (savingKey: string | null, finishedKey: string): string | null =>
-  savingKey === finishedKey ? null : savingKey;
+/** A save started for `systemKey`: a fresh set, so React sees the change. */
+export function savingViewStarted(saving: ReadonlySet<string>, systemKey: string): Set<string> {
+  const next = new Set(saving);
+  next.add(systemKey);
+  return next;
+}
+
+/** A save for `systemKey` settled (saved, refused or failed): that system alone is free again. */
+export function savingViewSettled(saving: ReadonlySet<string>, systemKey: string): Set<string> {
+  const next = new Set(saving);
+  next.delete(systemKey);
+  return next;
+}
