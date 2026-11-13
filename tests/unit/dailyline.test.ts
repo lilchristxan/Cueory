@@ -26,6 +26,18 @@ describe('home daily games device-local date (W01-2)', () => {
     }
   });
 
+  it('does not schedule an overflowing timer for a clock in years 1–99', () => {
+    for (const year of [1, 25, 99]) {
+      const historical = new Date(0);
+      historical.setFullYear(year, 4, 6);
+      historical.setHours(12, 0, 0, 0);
+      const before = historical.getTime();
+      expect(historical.getFullYear()).toBe(year);
+      expect(msUntilLocalMidnight(historical)).toBe(12 * 60 * 60 * 1000);
+      expect(historical.getTime()).toBe(before);
+    }
+  });
+
   it('leaves a truthful fallback on invalid or blocked clocks', () => {
     expect(dailyLine(null)).toBe("your device's date is unavailable. " + MIDNIGHT_MESSAGE);
     expect(dailyLine(new Date(Number.NaN))).toBe("your device's date is unavailable. " + MIDNIGHT_MESSAGE);
