@@ -1,11 +1,11 @@
-import { mkdtempSync, mkdirSync, copyFileSync, writeFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, copyFileSync, writeFileSync, rmSync, symlinkSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import {
-  findShortRunways, gameName, MIN_RUNWAY_DAYS, parseRunwayArgs, runwayCheckLines,
+  findShortRunways, gameName, MIN_RUNWAY_DAYS, parseRunwayArgs, requireCompleteRunway, runwayCheckLines,
 } from '../../scripts/check-puzzle-runway.mjs';
 
 const row = (game: string, daysLeft: number | null, source = 'rotating-samples') => ({ game, source, daysLeft });
@@ -13,6 +13,32 @@ const healthy = () => [
   row('pulse', 30), row('cueword-easy', 14), row('cueword-mid', 20), row('cueword-hard', 15),
   row('sudoku', null, 'generated'), row('suture', 40), row('triage', 0, 'legacy-samples'),
 ];
+
+describe('complete tracked daily-game inventory', () => {
+  it('requires all six tracked games, while retired sort is optional', () => {
+    const report = healthy();
+    expect(requireCompleteRunway(report)).toBe(report);
+    expect(requireCompleteRunway(report.filter((item) => item.game !== 'triage'))).toHaveLength(6);
+    for (const game of ['pulse', 'cueword-easy', 'cueword-mid', 'cueword-hard', 'sudoku', 'suture']) {
+      expect(() => requireCompleteRunway(report.filter((item) => item.game !== game)))
+        .toThrow(/missing an active game/);
+    }
+  });
+
+  it('fails closed for duplicate, unexpected and falsely generated game rows', () => {
+    const report = healthy();
+    expect(() => requireCompleteRunway([])).toThrow(/empty/);
+    expect(() => requireCompleteRunway([...report, report[0]!])).toThrow(/repeats a game/);
+    expect(() => requireCompleteRunway([...report, row('new-daily-game', 40)]))
+      .toThrow(/unrecognized game or source/);
+    expect(() => requireCompleteRunway(report.map((item) =>
+      item.game === 'pulse' ? row('pulse', 40, 'generated') : item)))
+      .toThrow(/unrecognized game or source/);
+    expect(() => requireCompleteRunway(report.map((item) =>
+      item.game === 'sudoku' ? row('sudoku', null, 'rotating-samples') : item)))
+      .toThrow(/unrecognized game or source/);
+  });
+});
 
 describe('puzzle runway launch check (L4)', () => {
   it('needs 14 days by default', () => {
@@ -106,6 +132,64 @@ describe('puzzle runway launch check (L4)', () => {
 
 
 describe('runway report failure at the real CLI boundary', () => {
+
+  it('runs through a symbolic entry link instead of silently exiting 0', () => {
+    const temporary = mkdtempSync(join(tmpdir(), 'cueory-runway-link-'));
+    try {
+      const script = join(temporary, 'check-puzzle-runway.mjs');
+      const linked = join(temporary, 'runway-link.mjs');
+      copyFileSync(fileURLToPath(new URL('../../scripts/check-puzzle-runway.mjs', import.meta.url)), script);
+      symlinkSync(script, linked);
+      const run = spawnSync(process.execPath, [linked, '--days', 'ten'], { encoding: 'utf8' });
+      expect(run.status).toBe(2);
+      expect(run.stdout).toBe('');
+      expect(run.stderr).toBe('Puzzle runway check could not run: --days must be a whole number\n');
+    } finally {
+      rmSync(temporary, { recursive: true, force: true });
+    }
+  });
+
+  it('stays import-safe when argv points to a missing entry file', () => {
+    const temporary = mkdtempSync(join(tmpdir(), 'cueory-runway-import-'));
+    try {
+      const missing = join(temporary, 'unavailable-entry.mjs');
+      const moduleUrl = new URL('../../scripts/check-puzzle-runway.mjs', import.meta.url).href;
+      const program = 'process.argv[1] = ' + JSON.stringify(missing) + '; await import(' + JSON.stringify(moduleUrl) + ');';
+      const run = spawnSync(process.execPath, ['--input-type=module', '-e', program], { encoding: 'utf8' });
+      expect(run.status).toBe(0);
+      expect(run.stdout).toBe('');
+      expect(run.stderr).toBe('');
+    } finally {
+      rmSync(temporary, { recursive: true, force: true });
+    }
+  });
+
+  it('exits 2 if an otherwise healthy report silently omits a live daily game', () => {
+    const temporary = mkdtempSync(join(tmpdir(), 'cueory-runway-inventory-'));
+    try {
+      mkdirSync(join(temporary, 'scripts'));
+      mkdirSync(join(temporary, 'src', 'content'), { recursive: true });
+      const script = join(temporary, 'scripts', 'check-puzzle-runway.mjs');
+      const fixture = join(temporary, 'src', 'content', 'runway.ts');
+      copyFileSync(fileURLToPath(new URL('../../scripts/check-puzzle-runway.mjs', import.meta.url)), script);
+      const rows = healthy().filter((item) => item.game !== 'suture');
+      writeFileSync(fixture, 'export function puzzleRunways() { return ' + JSON.stringify(rows) + '; }');
+      const missing = spawnSync(process.execPath, [script], { encoding: 'utf8' });
+      expect(missing.status).toBe(2);
+      expect(missing.stdout).toBe('');
+      expect(missing.stderr).toBe('Puzzle runway check could not run: runway report failed.\n');
+
+      // Restoring the missing row proves the refusal is from report completeness.
+      writeFileSync(fixture, 'export function puzzleRunways() { return ' + JSON.stringify(healthy()) + '; }');
+      const complete = spawnSync(process.execPath, [script], { encoding: 'utf8' });
+      expect(complete.status).toBe(0);
+      expect(complete.stdout).toBe('Puzzle runway OK: every daily game has at least 14 days of puzzles scheduled ahead.\n');
+      expect(complete.stderr).toBe('');
+    } finally {
+      rmSync(temporary, { recursive: true, force: true });
+    }
+  });
+
   it('returns one sanitized line and exit 2 when report generation throws', () => {
     const temporary = mkdtempSync(join(tmpdir(), 'cueory-runway-failure-'));
     try {

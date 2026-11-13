@@ -1,0 +1,2 @@
+status: L4 CLI now resolves symbolic entry paths, tolerates harmless ESM imports and refuses incomplete or mislabeled active sample-game reports. Added strict symlink, import, missing-game and complete-report CLI regressions. No new game data, device storage, test skips or changed clinical material. Node 22 isolated completeness assertions passed; exact-head Node 24 project checks pending.
+decision: D-pending (L4) Missing, duplicate or unrecognized tracked sample-game rows make the CLI fail closed. Public sample counts do not verify real reviewed launch puzzles.

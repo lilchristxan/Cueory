@@ -10,6 +10,7 @@
  * by how many days. Exit 2: the check could not run (bad option, missing report).
  * Prints game names and counts only, never puzzle text, answers or clues.
  */
+import { realpathSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -41,6 +42,39 @@ function checkMinimum(value) {
     throw new RangeError('the minimum runway must be a whole number of days, 1 or more');
   }
   return /** @type {number} */ (value);
+}
+
+/** Exactly which active sample-game rows the public report must contain. Retired sort is optional. */
+const RUNWAY_SOURCES = Object.freeze({
+  pulse: 'rotating-samples',
+  'cueword-easy': 'rotating-samples',
+  'cueword-mid': 'rotating-samples',
+  'cueword-hard': 'rotating-samples',
+  sudoku: 'generated',
+  suture: 'rotating-samples',
+  triage: 'legacy-samples',
+});
+const REQUIRED_RUNWAY = Object.freeze(Object.keys(RUNWAY_SOURCES).filter((game) => game !== 'triage'));
+
+/**
+ * Never report a healthy runway when an active game was silently omitted.
+ * Reject duplicate, newly unrecognized or misclassified game rows as well.
+ * @param {readonly RunwayRow[]} rows
+ */
+export function requireCompleteRunway(rows) {
+  if (!Array.isArray(rows) || rows.length === 0) throw new RangeError('the runway report is empty');
+  const seen = new Set();
+  for (const row of rows) {
+    const expectedSource = row && typeof row.game === 'string' && Object.hasOwn(RUNWAY_SOURCES, row.game)
+      ? RUNWAY_SOURCES[/** @type {keyof typeof RUNWAY_SOURCES} */ (row.game)] : undefined;
+    if (!expectedSource || row.source !== expectedSource) {
+      throw new RangeError('the runway report contains an unrecognized game or source');
+    }
+    if (seen.has(row.game)) throw new RangeError('the runway report repeats a game');
+    seen.add(row.game);
+  }
+  if (REQUIRED_RUNWAY.some((game) => !seen.has(game))) throw new RangeError('the runway report is missing an active game');
+  return rows;
 }
 
 /**
@@ -134,7 +168,7 @@ async function main(args) {
     return 2;
   }
   try {
-    const short = findShortRunways(runway.puzzleRunways(options.asOf), options.minDays);
+    const short = findShortRunways(requireCompleteRunway(runway.puzzleRunways(options.asOf)), options.minDays);
     const output = runwayCheckLines(short, options.minDays).join('\n') + '\n';
     if (short.length) process.stderr.write(output);
     else process.stdout.write(output);
@@ -145,6 +179,17 @@ async function main(args) {
   }
 }
 
-if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+// Symbolic entry aliases (including macOS /var -> /private/var) must run the CLI.
+// An import must not throw if the caller's argv points to a now-missing file.
+function isCliEntry() {
+  if (!process.argv[1]) return false;
+  try {
+    return realpathSync(resolve(process.argv[1])) === realpathSync(fileURLToPath(import.meta.url));
+  } catch {
+    return false;
+  }
+}
+
+if (isCliEntry()) {
   process.exitCode = await main(process.argv.slice(2));
 }
