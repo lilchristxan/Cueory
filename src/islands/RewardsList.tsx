@@ -1,4 +1,4 @@
-import type { RewardsPreview } from './rewardslist';
+import type { RewardsPreview } from './rewards-list';
 
 /** Static presentation only. Astro renders this without a client hydration directive. */
 export default function RewardsList({ preview }: { preview: RewardsPreview }) {

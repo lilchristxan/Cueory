@@ -11,7 +11,7 @@ import {
   nextStarter,
   startersFor,
   type HelloStarter,
-} from './hellocards';
+} from './hello-cards';
 
 const faceClass =
   'col-start-1 row-start-1 flex min-h-56 min-w-0 flex-col items-center justify-center rounded-xl border border-line bg-surface px-6 py-10 text-center shadow-card sm:px-10';

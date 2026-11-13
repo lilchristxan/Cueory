@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { readResume, type ResumeSnapshot } from '../scripts/resume';
 import { browserStorage } from '../scripts/storage';
-import { continueBarView, type ContinueBarView } from './continuebar';
+import { continueBarView, type ContinueBarView } from './continue-bar';
 
 /**
  * A quiet, one-line link placed by the director just below BuildingNotice on

@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { parseItems, STATUS_ORDER } from '../../src/islands/conceptmap.ts';
+import { parseItems, STATUS_ORDER } from '../../src/islands/concept-map.ts';
 
 const page = readFileSync(new URL('../../src/pages/preview/concept-map.astro', import.meta.url), 'utf8');
 
@@ -44,7 +44,7 @@ describe('concept map preview page', () => {
     expect(imported).toEqual([
       '../../layouts/Layout.astro',
       '../../islands/ConceptMap',
-      '../../islands/conceptmap.ts',
+      '../../islands/concept-map.ts',
     ]);
     expect(page).not.toMatch(/\b(?:fetch|localStorage|sessionStorage|createClient|supabase)\s*\(/i);
     expect(page).not.toMatch(/<form\b/i);

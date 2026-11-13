@@ -4,7 +4,7 @@
  * React boundaries work in the browser, not during server-side rendering.
  */
 import { Component, useState, type ReactNode } from 'react';
-import { errorBoundaryView } from './errorboundary';
+import { errorBoundaryView } from './error-boundary';
 
 interface ErrorBoundaryProps {
   children: ReactNode;
