@@ -1,0 +1,1 @@
+status: Launch task L3, printable sudoku pack: /print/sudoku-pack (kept out of search) prints 30 puzzles from the daily game's generator (fixed seed, easy/medium/hard taking turns), one per page by Christian's decision, then the answers six per page: 35 pages on letter or A4. The print button uses a bundled external module.
