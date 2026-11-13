@@ -25,7 +25,10 @@ describe('story result text fitting', () => {
       expect(css).toContain(`${token}: ${weight};`);
       expect(source).toContain(`number('${token}')`);
     }
-    expect(source).not.toMatch(/context\\.font\\s*=\\s*`(?:400|500|700) /);
+    expect(source).not.toMatch(/context\.font\s*=\s*`(?:400|500|700) /);
+    const fontLines = source.match(/context\.font\s*=\s*`[^`]*`;/g) ?? [];
+    expect(fontLines).toHaveLength(5);
+    for (const fontLine of fontLines) expect(fontLine).toMatch(/\$\{(?:displayWeight|emphasisWeight|siteWeight)\}/);
   });
 
   it('normalizes whitespace, wraps complete words and preserves all text', () => {
