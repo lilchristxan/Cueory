@@ -27,6 +27,20 @@ describe('sitemap', () => {
     for (const page of noindexPages) expect(listed).not.toContain(`https://cueory.app${page}`);
   });
 
+  it('lists each public game share landing page but not draft-only games', () => {
+    const published = ['/play/pillo', '/play/crossword', '/play/sudoku', '/play/word-path'] as const;
+    const xml = sitemapXml();
+    for (const path of published) {
+      expect(indexablePages).toContain(path);
+      expect(routeDeclaresNoindex(path)).toBe(false);
+      expect(xml).toContain(`<loc>https://cueory.app${path}</loc>`);
+    }
+    for (const path of ['/play/stat', '/play/hello-cards']) {
+      expect(indexablePages).not.toContain(path);
+      expect(xml).not.toContain(`<loc>https://cueory.app${path}</loc>`);
+    }
+  });
+
   it('rejects noindex routes even when someone mistakenly supplies them to the sitemap', () => {
     const xml = sitemapXml(['/', '/signin', '/privacy', '/preview/states']);
     expect([...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((match) => match[1]))

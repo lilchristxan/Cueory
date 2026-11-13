@@ -7,10 +7,220 @@
  * turning them off deletes it. Nothing here is ever sent anywhere.
  */
 import type { KeyValueStorage } from '../scripts/storage';
+import { dayLabel } from './daily';
+import type { SudokuResult } from './sudoku';
+import type { StatRoundResult } from './stat';
+import { statGame } from '../config/games';
 import { parseStats, serialize, type GameId, type GameStats } from './gamestats';
 
 /** The event a game sends on `window` when a round ends. */
 export const GAME_RESULT_EVENT = 'cueory:game-result';
+
+/** The separate event that opens the shared finished-game dialog. */
+export const GAME_RESULT_CARD_EVENT = 'cueory:game-result-card';
+
+/** Worker 1's additive Sudoku completion event; the Sudoku island can dispatch it without importing this host. */
+export const SUDOKU_SOLVED_EVENT = 'cueory:sudoku-solved';
+
+/** Backward-compatible name for the game's canonical completion payload. */
+export type SudokuSolvedDetail = SudokuResult;
+
+declare global {
+  interface WindowEventMap {
+    'cueory:sudoku-solved': CustomEvent<SudokuSolvedDetail>;
+  }
+}
+
+function resultDayLabel(day: string): string {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(day);
+  if (!match) return day;
+  const date = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+  return Number.isNaN(date.getTime()) ? day : dayLabel(date);
+}
+
+export type ResultGame = GameId | 'hello-cards' | 'sudoku' | 'stat';
+
+export interface ResultStat {
+  label: string;
+  value: string;
+}
+
+/** Display-only result data. It contains no puzzle answer, personal data or tracking value. */
+export interface GameResultCard {
+  game: ResultGame;
+  name: string;
+  date: string;
+  level?: string;
+  result: string;
+  /** Optional detailed outcome for sharing, while the card heading stays short. */
+  shareResult?: string;
+  summary: string;
+  /** Optional game-specific follow-up, without promising unpublished daily content. */
+  nextMessage?: string;
+  stats: readonly ResultStat[];
+  path: string;
+  /** Optional official game wordmark asset. Omit it when the approved file is unavailable. */
+  wordmarkPath?: string;
+}
+
+/** Maps Worker 1's completion payload into the same display-only result card as every other game. */
+export function sudokuResultCard(detail: SudokuResult): GameResultCard {
+  const errors = `${detail.errors} ${detail.errors === 1 ? 'error' : 'errors'}`;
+  return {
+    game: 'sudoku',
+    name: 'sudoku',
+    date: resultDayLabel(detail.day),
+    level: detail.level,
+    result: detail.solved ? 'solved' : 'not solved',
+    shareResult: `${detail.level} · ${detail.solved ? '' : 'not solved · '}${detail.time} · ${errors}`,
+    summary: detail.solved
+      ? `${detail.level} completed in ${detail.time} with ${errors}.`
+      : `${detail.level} ended after ${detail.time} with ${errors}.`,
+    stats: [
+      { label: 'time', value: detail.time },
+      { label: 'errors', value: String(detail.errors) },
+    ],
+    path: '/play/sudoku',
+  };
+}
+
+/** Display-only Stat result. Questions, keys and private stats are never included. */
+export function statResultCard(detail: StatRoundResult): GameResultCard {
+  return {
+    game: 'stat', name: statGame.name, date: resultDayLabel(detail.day),
+    result: `${detail.score}/${detail.total}`,
+    summary: detail.practice ? 'practice round complete.' : 'round complete.',
+    nextMessage: 'reviewed daily sets will come later.',
+    stats: [
+      { label: 'questions', value: String(detail.total) },
+      { label: 'average answer time', value: `${detail.averageSeconds} s` },
+      { label: 'round', value: detail.practice ? 'practice' : 'today' },
+    ],
+    path: '/play/stat',
+  };
+}
+
+/** Hello cards shares the prompt of the day itself; the dialog heading stays short. */
+export function helloResultCard(detail: { prompt: string; date: string; deck: string }): GameResultCard {
+  return {
+    game: 'hello-cards',
+    name: 'hello cards',
+    date: detail.date,
+    result: "today's card",
+    shareResult: detail.prompt,
+    summary: 'share the prompt, then start a conversation.',
+    stats: [{ label: 'deck', value: detail.deck }],
+    path: '/play/hello-cards',
+  };
+}
+
+interface InertNode {
+  inert: boolean;
+  parentElement: InertNode | null;
+  readonly children: ArrayLike<unknown>;
+}
+
+/**
+ * Makes everything outside the open dialog unreachable (no focus, clicks or screen-reader browsing) by setting
+ * `inert` on each sibling branch from the dialog up to the body. Returns a function that restores exactly the
+ * branches it changed, so anything that was already inert stays inert.
+ */
+export function inertOutside(dialog: InertNode, body: InertNode): () => void {
+  const changed: InertNode[] = [];
+  for (let node: InertNode | null = dialog; node && node !== body; node = node.parentElement) {
+    const parent: InertNode | null = node.parentElement;
+    if (!parent) break;
+    const siblings: InertNode[] = Array.from(parent.children) as InertNode[];
+    for (const sibling of siblings) {
+      if (sibling === node || sibling.inert) continue;
+      sibling.inert = true;
+      changed.push(sibling);
+    }
+  }
+  return () => {
+    for (const node of changed) node.inert = false;
+  };
+}
+
+interface ScrollRoot {
+  style: Pick<CSSStyleDeclaration, 'overflow' | 'overscrollBehavior'>;
+}
+
+interface ScrollBody {
+  style: Pick<CSSStyleDeclaration, 'position' | 'top' | 'left' | 'right' | 'width' | 'overflow' | 'overscrollBehavior'>;
+}
+
+interface ScrollView {
+  readonly scrollX: number;
+  readonly scrollY: number;
+  scrollTo(x: number, y: number): void;
+}
+
+/** Prevents wheel and touch scrolling behind a dialog, including iOS, then restores the exact inline state. */
+export function lockPageScroll(root: ScrollRoot, body: ScrollBody, view: ScrollView): () => void {
+  const x = view.scrollX;
+  const y = view.scrollY;
+  const rootBefore = { overflow: root.style.overflow, overscrollBehavior: root.style.overscrollBehavior };
+  const bodyBefore = {
+    position: body.style.position,
+    top: body.style.top,
+    left: body.style.left,
+    right: body.style.right,
+    width: body.style.width,
+    overflow: body.style.overflow,
+    overscrollBehavior: body.style.overscrollBehavior,
+  };
+
+  root.style.overflow = 'hidden';
+  root.style.overscrollBehavior = 'none';
+  body.style.position = 'fixed';
+  body.style.top = `${-y}px`;
+  body.style.left = `${-x}px`;
+  body.style.right = '0';
+  body.style.width = '100%';
+  body.style.overflow = 'hidden';
+  body.style.overscrollBehavior = 'none';
+
+  let active = true;
+  return () => {
+    if (!active) return;
+    active = false;
+    root.style.overflow = rootBefore.overflow;
+    root.style.overscrollBehavior = rootBefore.overscrollBehavior;
+    body.style.position = bodyBefore.position;
+    body.style.top = bodyBefore.top;
+    body.style.left = bodyBefore.left;
+    body.style.right = bodyBefore.right;
+    body.style.width = bodyBefore.width;
+    body.style.overflow = bodyBefore.overflow;
+    body.style.overscrollBehavior = bodyBefore.overscrollBehavior;
+    view.scrollTo(x, y);
+  };
+}
+
+/** The exact, plain one-line share format approved for finished games. */
+export function buildResultShareLine(card: Pick<GameResultCard, 'name' | 'date' | 'result' | 'shareResult'>): string {
+  const clean = (value: string) => value.replace(/\s+/g, ' ').trim();
+  return `${clean(card.name)} · ${clean(card.date)} · ${clean(card.shareResult ?? card.result)} · cueory.app`;
+}
+
+/** Opens the shared result dialog without adding anything to private browser stats. */
+export function showResultCard(card: GameResultCard): void {
+  if (typeof window === 'undefined') return;
+  pendingCards.push(card);
+  window.dispatchEvent(new CustomEvent<GameResultCard>(GAME_RESULT_CARD_EVENT, { detail: card }));
+}
+
+/** Consume display-only cards that finished before the result host hydrated. */
+export function takePendingResultCards(): GameResultCard[] {
+  return pendingCards.splice(0, pendingCards.length);
+}
+
+/** Remove the event's queued copy when a live host receives it. */
+export function discardPendingResultCard(card: GameResultCard): void {
+  const index = pendingCards.indexOf(card);
+  if (index >= 0) pendingCards.splice(index, 1);
+}
 
 /** Where the stats record is kept, when the student has turned stats on. */
 export const STATS_STORAGE_KEY = 'cueory-game-stats';
@@ -22,6 +232,8 @@ export interface RoundResult {
   solved: boolean;
   /** Guesses for pillo, slips for the retired sort record, cues for the crossword and loose stitches for word path. */
   tries: number;
+  /** When present, the same completion also opens the shared finished-game dialog. */
+  card?: GameResultCard;
 }
 
 /** A date as YYYY-MM-DD in the visitor's own time zone: the same day the games pick their puzzle by. */
@@ -36,6 +248,7 @@ export function localDay(date: Date): string {
  * shares this module, so they share the list.
  */
 const held: RoundResult[] = [];
+const pendingCards: GameResultCard[] = [];
 
 /** Drops the waiting rounds of one game, or of every game, so none of them can be kept later. */
 export function forgetHeldRounds(game?: GameId): void {
@@ -61,6 +274,7 @@ export function reportRound(result: RoundResult): void {
   held.push(result);
   if (typeof window === 'undefined') return;
   window.dispatchEvent(new CustomEvent<RoundResult>(GAME_RESULT_EVENT, { detail: result }));
+  if (result.card) showResultCard(result.card);
 }
 
 /** The rounds waiting to be kept, oldest first. Reading them leaves them waiting; forget them once they're kept. */

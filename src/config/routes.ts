@@ -15,5 +15,9 @@ export const indexablePages = [
   '/learn/study-skills/organizer',
   '/learn/study-skills/questions',
   '/play',
+  '/play/crossword',
+  '/play/pillo',
+  '/play/sudoku',
+  '/play/word-path',
   '/support',
 ] as const;
