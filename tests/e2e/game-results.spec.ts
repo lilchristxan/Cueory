@@ -57,6 +57,27 @@ test('finished-game result announces the exact card and traps focus', async ({ p
   await expect(returnTo).toBeFocused();
 });
 
+test('result footer stays truthful for repeating samples and respects explicit game copy', async ({ page }) => {
+  const dialog = await openResult(page);
+  const nextMessage = dialog.getByTestId('game-result-next-message');
+  await expect(nextMessage).toHaveText('thanks for playing.');
+  await expect(nextMessage).not.toContainText('tomorrow');
+
+  await page.evaluate((detail) => {
+    window.dispatchEvent(new CustomEvent('cueory:game-result-card', {
+      detail: { ...detail, game: 'hello-cards', name: 'hello cards', result: "today's card" },
+    }));
+  }, card);
+  await expect(nextMessage).toHaveText('thanks for playing.');
+
+  await page.evaluate((detail) => {
+    window.dispatchEvent(new CustomEvent('cueory:game-result-card', {
+      detail: { ...detail, nextMessage: 'reviewed daily sets will come later.' },
+    }));
+  }, card);
+  await expect(nextMessage).toHaveText('reviewed daily sets will come later.');
+});
+
 test('the page behind an open result cannot be reached, and comes back on close', async ({ page }) => {
   const behind = page.getByTestId('pulse').getByRole('button', { name: 'a', exact: true });
   await behind.focus();
