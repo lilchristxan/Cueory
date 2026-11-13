@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import data from '../../content/games/hello-cards/starters.json' with { type: 'json' };
 import { fitStoryText } from '../../src/islands/share';
@@ -13,6 +14,20 @@ const options = {
 };
 
 describe('story result text fitting', () => {
+  it('reads every story-canvas font weight from a named token', () => {
+    const source = readFileSync(new URL('../../src/islands/share.ts', import.meta.url), 'utf8');
+    const css = readFileSync(new URL('../../src/styles/tokens.css', import.meta.url), 'utf8');
+    for (const [token, weight] of [
+      ['--share-story-display-weight', 500],
+      ['--share-story-emphasis-weight', 700],
+      ['--share-story-site-weight', 400],
+    ] as const) {
+      expect(css).toContain(`${token}: ${weight};`);
+      expect(source).toContain(`number('${token}')`);
+    }
+    expect(source).not.toMatch(/context\\.font\\s*=\\s*`(?:400|500|700) /);
+  });
+
   it('normalizes whitespace, wraps complete words and preserves all text', () => {
     const layout = fitStoryText('  hello   from\ncueory today  ', { ...options, maxWidth: 500 });
     expect(layout).not.toBeNull();

@@ -265,6 +265,9 @@ async function renderStoryFile(input: StoryImageInput): Promise<File | null> {
     const soft = tokens.getPropertyValue('--color-ink-soft').trim();
     const bodyFont = tokens.getPropertyValue('--font-body').trim();
     const displayFont = tokens.getPropertyValue('--font-display').trim();
+    const displayWeight = number('--share-story-display-weight');
+    const emphasisWeight = number('--share-story-emphasis-weight');
+    const siteWeight = number('--share-story-site-weight');
     const width = number('--share-story-width');
     const height = number('--share-story-height');
     const logoWidth = number('--share-story-logo-width');
@@ -276,6 +279,7 @@ async function renderStoryFile(input: StoryImageInput): Promise<File | null> {
       number('--share-story-result-line-height'), number('--share-story-result-max-lines'),
       number('--share-story-challenge-size'), number('--share-story-site-size'),
       number('--share-story-dark-logo'),
+      displayWeight, emphasisWeight, siteWeight,
     ];
     const resultSize = number('--share-story-result-size');
     const resultMinSize = number('--share-story-result-min-size');
@@ -284,7 +288,8 @@ async function renderStoryFile(input: StoryImageInput): Promise<File | null> {
     const resultMaxLines = number('--share-story-result-max-lines');
     if (!page || !ink || !soft || !bodyFont || !displayFont || values.some((value) => !Number.isFinite(value))
       || resultMinSize <= 0 || resultMinSize > resultSize || resultMaxWidth <= 0 || resultLineHeight <= 0
-      || !Number.isInteger(resultMaxLines) || resultMaxLines < 1) return null;
+      || !Number.isInteger(resultMaxLines) || resultMaxLines < 1
+      || [displayWeight, emphasisWeight, siteWeight].some((weight) => !Number.isInteger(weight) || weight < 100 || weight > 900)) return null;
 
     const canvas = document.createElement('canvas');
     canvas.width = width;
@@ -300,7 +305,7 @@ async function renderStoryFile(input: StoryImageInput): Promise<File | null> {
       minSize: resultMinSize,
       lineHeightRatio: resultLineHeight,
       measure: (text, fontSize) => {
-        context.font = `500 ${fontSize}px ${displayFont}`;
+        context.font = `${displayWeight} ${fontSize}px ${displayFont}`;
         return context.measureText(text).width;
       },
     });
@@ -324,21 +329,21 @@ async function renderStoryFile(input: StoryImageInput): Promise<File | null> {
 
     context.textAlign = 'center';
     context.fillStyle = soft;
-    context.font = `700 ${number('--share-story-label-size')}px ${bodyFont}`;
+    context.font = `${emphasisWeight} ${number('--share-story-label-size')}px ${bodyFont}`;
     context.fillText(`today's ${input.name} · ${input.date}`, width / 2, number('--share-story-label-y'));
 
     context.fillStyle = ink;
-    context.font = `500 ${resultLayout.fontSize}px ${displayFont}`;
+    context.font = `${displayWeight} ${resultLayout.fontSize}px ${displayFont}`;
     const resultY = number('--share-story-result-y');
     const firstResultY = resultY - ((resultLayout.lines.length - 1) * resultLayout.lineHeight) / 2;
     resultLayout.lines.forEach((line, index) => {
       context.fillText(line, width / 2, firstResultY + index * resultLayout.lineHeight);
     });
 
-    context.font = `700 ${number('--share-story-challenge-size')}px ${bodyFont}`;
+    context.font = `${emphasisWeight} ${number('--share-story-challenge-size')}px ${bodyFont}`;
     context.fillText('can you beat me?', width / 2, number('--share-story-challenge-y'));
     context.fillStyle = soft;
-    context.font = `400 ${number('--share-story-site-size')}px ${bodyFont}`;
+    context.font = `${siteWeight} ${number('--share-story-site-size')}px ${bodyFont}`;
     context.fillText('cueory.app', width / 2, number('--share-story-site-y'));
 
     const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'));
