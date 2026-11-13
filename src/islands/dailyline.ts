@@ -59,6 +59,10 @@ function mountDailyLine(): void {
   window.addEventListener('pageshow', (event) => {
     if (event.persisted) refresh();
   });
+  // Switching back to this window also reconciles device clock or time-zone changes.
+  window.addEventListener('focus', () => {
+    if (!document.hidden) refresh();
+  });
 }
 
 if (typeof document !== 'undefined') {

@@ -133,6 +133,12 @@ test('a restored home page refreshes after midnight without waiting for a suspen
     // The browser emits persisted pageshow after restoring a page from the back/forward cache.
     await page.evaluate(() => window.dispatchEvent(new PageTransitionEvent('pageshow', { persisted: true })));
     await expect(day).toContainText("today's set: thu 12 nov.");
+
+    // A window can regain focus after the device clock changes without a visibility event.
+    await page.clock.setFixedTime(new Date('2026-11-13T00:02:00-05:00'));
+    await expect(day).toContainText("today's set: thu 12 nov.");
+    await page.evaluate(() => window.dispatchEvent(new Event('focus')));
+    await expect(day).toContainText("today's set: fri 13 nov.");
   } finally {
     await context.close();
   }
