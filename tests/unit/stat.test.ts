@@ -531,8 +531,10 @@ describe('stat grading and results', () => {
     expect(verdict(10)).toBe('solid shift.');
     expect(verdict(9)).toBe('warming up.');
     expect(verdict(6)).toBe('warming up.');
-    expect(verdict(5)).toBe('a hard set today. a new one comes tomorrow.');
+    expect(verdict(5)).toBe('a hard set today. you can practice again.');
     expect(verdict(0)).toBe(verdict(5));
+    // Sample sets may repeat. No score promises an unpublished new set tomorrow.
+    expect(Array.from({ length: 16 }, (_, score) => verdict(score)).join(' ')).not.toMatch(/tomorrow|new set|new one/i);
   });
 
   it('average time counts every question, timeouts as 20', () => {

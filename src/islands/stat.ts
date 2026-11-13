@@ -272,7 +272,7 @@ export function verdict(score: number): string {
   if (score >= 13) return 'top of the unit today.';
   if (score >= 10) return 'solid shift.';
   if (score >= 6) return 'warming up.';
-  return 'a hard set today. a new one comes tomorrow.';
+  return 'a hard set today. you can practice again.';
 }
 
 /** The plain one-line share: no colored squares, nothing personal. */

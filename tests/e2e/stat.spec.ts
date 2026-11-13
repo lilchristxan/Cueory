@@ -619,7 +619,8 @@ for (const scheme of ['light', 'dark'] as const) {
     await big(['stat-choice-a', 'stat-choice-b', 'stat-choice-c', 'stat-choice-d', 'stat-next']);
     const shown = Number((await progress(page).textContent())!.match(/\d+/)![0]);
     await finish(page, shown - 1, () => null);
-    await expect(page.getByTestId('stat-verdict')).toHaveText('a hard set today. a new one comes tomorrow.');
+    await expect(page.getByTestId('stat-verdict')).toHaveText('a hard set today. you can practice again.');
+    await expect(page.getByTestId('stat-verdict')).not.toContainText('tomorrow');
     await check();
     await big(['stat-copy', 'stat-again']);
   });
