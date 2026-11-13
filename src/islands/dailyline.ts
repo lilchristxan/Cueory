@@ -55,6 +55,10 @@ function mountDailyLine(): void {
   document.addEventListener('visibilitychange', () => {
     if (!document.hidden) refresh();
   });
+  // Restored pages can skip visibilitychange while their midnight timer was suspended.
+  window.addEventListener('pageshow', (event) => {
+    if (event.persisted) refresh();
+  });
 }
 
 if (typeof document !== 'undefined') {

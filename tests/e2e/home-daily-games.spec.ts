@@ -95,14 +95,44 @@ test('the visitor day changes at local midnight, even without a page reload', as
     // Start well before midnight, then freeze the clock before making assertions.
     // This prevents a slow page load from advancing to the next day first.
     await page.clock.install({ time: new Date('2026-11-11T23:59:00-05:00') });
+    await page.clock.pauseAt(new Date('2026-11-11T23:59:58-05:00'));
     const response = await page.goto('/');
     expect(response?.status()).toBe(200);
-    await page.clock.pauseAt(new Date('2026-11-11T23:59:58-05:00'));
     const day = page.getByTestId('daily-games-day');
     await expect(day).toContainText("today's set: wed 11 nov.");
     await page.clock.runFor(3_000);
     await expect(day).toContainText("today's set: thu 12 nov.");
     await expect(day).toContainText('new puzzles arrive at midnight on your device.');
+  } finally {
+    await context.close();
+  }
+});
+
+test('a restored home page refreshes after midnight without waiting for a suspended timer', async ({ browser }, testInfo) => {
+  test.skip(!isDesktopOfEachEngine(testInfo), 'a clock test runs once per browser engine');
+  const context = await browser.newContext({
+    baseURL: testInfo.project.use.baseURL,
+    timezoneId: 'America/New_York',
+    reducedMotion: 'reduce',
+  });
+  try {
+    const page = await context.newPage();
+    await page.clock.install({ time: new Date('2026-11-11T23:59:00-05:00') });
+    await page.clock.pauseAt(new Date('2026-11-11T23:59:58-05:00'));
+    const response = await page.goto('/');
+    expect(response?.status()).toBe(200);
+    const day = page.getByTestId('daily-games-day');
+    await expect(day).toContainText("today's set: wed 11 nov.");
+
+    // Jump the device date without firing scheduled timers or a visibility event.
+    await page.clock.setFixedTime(new Date('2026-11-12T00:02:00-05:00'));
+    await expect(day).toContainText("today's set: wed 11 nov.");
+    await page.evaluate(() => window.dispatchEvent(new PageTransitionEvent('pageshow', { persisted: false })));
+    await expect(day).toContainText("today's set: wed 11 nov.");
+
+    // The browser emits persisted pageshow after restoring a page from the back/forward cache.
+    await page.evaluate(() => window.dispatchEvent(new PageTransitionEvent('pageshow', { persisted: true })));
+    await expect(day).toContainText("today's set: thu 12 nov.");
   } finally {
     await context.close();
   }
