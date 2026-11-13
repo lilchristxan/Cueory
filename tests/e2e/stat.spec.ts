@@ -477,6 +477,25 @@ test('a keyboard pick after a sleeping-tab deadline cannot select a later questi
   await expect(said(page)).not.toHaveText('D selected.');
 });
 
+test('a restored page reconciles expired Stat questions without waiting for throttled intervals', async ({ page }) => {
+  await start(page);
+  await page.evaluate(() => {
+    const originalNow = Date.now;
+    try {
+      // A restored bfcache page can have no scheduled interval callback yet.
+      // Keep this clock change inside the pageshow event, testing its listener.
+      Date.now = () => originalNow() + 31_000;
+      window.dispatchEvent(new PageTransitionEvent('pageshow', { persisted: true }));
+    } finally {
+      Date.now = originalNow;
+    }
+  });
+  await expect(progress(page)).toHaveText('question 2 of 15');
+  await expect(seconds(page)).toHaveText('9 seconds left');
+  await expect(said(page)).toHaveText('time ran out. question 2 of 15. 9 seconds.');
+  await expect(choice(page, 'a')).toHaveAttribute('aria-pressed', 'false');
+});
+
 test('returning to a timed round after tab sleep announces the real seconds left', async ({ page }) => {
   await start(page);
   // Simulate a suspended tab without running every 200 ms interval.

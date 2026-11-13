@@ -128,9 +128,13 @@ export default function StatGame({ questions, sampleKey }: Props) {
     };
     const timer = setInterval(read, READ_EVERY_MS);
     document.addEventListener('visibilitychange', read);
+    // A back/forward-cache restore may not fire visibilitychange, and timers
+    // can still be suspended. Reconcile the deadline immediately on pageshow.
+    window.addEventListener('pageshow', read);
     return () => {
       clearInterval(timer);
       document.removeEventListener('visibilitychange', read);
+      window.removeEventListener('pageshow', read);
     };
   }, [phase, questions]);
 
