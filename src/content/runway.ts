@@ -299,10 +299,26 @@ export function analyzePuzzleRunway(
 }
 
 /** Read, but never edit, the public game files. */
-export function readGameSampleFiles(game: SampleFolder): SampleFile[] {
-  const directory = new URL('../../content/games/' + game + '/', import.meta.url);
-  return readdirSync(directory)
-    .filter((name) => name.endsWith('.json'))
+export function readGameSampleFiles(
+  game: SampleFolder, directory: URL = new URL('../../content/games/' + game + '/', import.meta.url),
+): SampleFile[] {
+  // Astro's **/*.json glob also loads subdirectories. Until the runway mirrors
+  // nested collection IDs and their exact sort order, reject nested JSON rather
+  // than silently reporting too many safe days from an incomplete inventory.
+  const filenames: string[] = [];
+  const scan = (location: URL, nested: boolean): void => {
+    for (const entry of readdirSync(location, { withFileTypes: true })) {
+      if (entry.isSymbolicLink()) throw new Error(`symlinked ${game} samples are not supported by the runway`);
+      if (entry.isDirectory()) {
+        scan(new URL(encodeURIComponent(entry.name) + '/', location), true);
+      } else if (entry.isFile() && entry.name.endsWith('.json')) {
+        if (nested) throw new Error(`nested JSON samples are not supported by the ${game} runway`);
+        filenames.push(entry.name);
+      }
+    }
+  };
+  scan(directory, false);
+  return filenames
     .sort((a, b) => a.localeCompare(b))
     .map((name) => {
       try {
@@ -348,7 +364,15 @@ export function runwayLines(asOf: Date = new Date()): string[] {
 }
 
 // Canonicalize symlinks (including macOS temporary-directory aliases) before deciding whether this file is the CLI entry point.
-// A false mismatch would silently exit 0 without producing the runway report.
-if (process.argv[1] && realpathSync(resolve(process.argv[1])) === realpathSync(fileURLToPath(import.meta.url))) {
+// An import with a missing caller argv path must remain harmless and inert.
+function isRunwayEntry(argvPath: string | undefined): boolean {
+  if (!argvPath) return false;
+  try {
+    return realpathSync(resolve(argvPath)) === realpathSync(fileURLToPath(import.meta.url));
+  } catch {
+    return false;
+  }
+}
+if (isRunwayEntry(process.argv[1])) {
   process.stdout.write(runwayLines().join('\n') + '\n');
 }

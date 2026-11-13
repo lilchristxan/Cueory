@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, rmSync, symlinkSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { parsePuzzle as parseCrossword } from '../../src/islands/cueword';
 import { parsePuzzle as parseWordPath } from '../../src/islands/suture';
 import { dayNumber, puzzleForDay } from '../../src/islands/pulse';
@@ -204,6 +204,31 @@ describe('bad sample fixture detection', () => {
 });
 
 describe('tracked public folders', () => {
+  it('fails closed if an Astro-loadable nested JSON sample is present', () => {
+    const temporary = mkdtempSync(join(tmpdir(), 'cueory-runway-nested-'));
+    try {
+      const folder = join(temporary, 'pulse');
+      mkdirSync(folder);
+      const sample = JSON.stringify({ status: 'sample', word: 'stone', cue: '[sample clue]' });
+      writeFileSync(join(folder, 'sample-01.json'), sample);
+      const directory = pathToFileURL(folder + '/');
+      expect(readGameSampleFiles('pulse', directory)).toHaveLength(1);
+
+      // Nested non-JSON files do not change Astro's game collection.
+      const nested = join(folder, 'future');
+      mkdirSync(nested);
+      writeFileSync(join(nested, 'notes.txt'), 'not a puzzle');
+      expect(readGameSampleFiles('pulse', directory)).toHaveLength(1);
+
+      // Astro's **/*.json loader would include this sample in the live rotation.
+      // The audit must not quietly report only the flat file as a safe runway.
+      writeFileSync(join(nested, 'sample-02.json'), sample);
+      expect(() => readGameSampleFiles('pulse', directory)).toThrow(/nested JSON samples/);
+    } finally {
+      rmSync(temporary, { recursive: true, force: true });
+    }
+  });
+
   it('reads all active sample collections without a gap, duplicate, repeated puzzle or invalid file', () => {
     const reports = puzzleRunways(at(1));
     expect(reports.map((row) => row.game)).toEqual(['pulse', 'cueword-easy', 'cueword-mid', 'cueword-hard', 'sudoku', 'suture', 'triage']);
@@ -315,6 +340,20 @@ describe('runway edge cases and accessible status text', () => {
 
 
 describe('runway entry point does not silently skip a symlinked CLI', () => {
+  it('can be imported when the caller argv path no longer exists', () => {
+    const temporary = mkdtempSync(join(tmpdir(), 'cueory-runway-import-'));
+    try {
+      const entry = fileURLToPath(new URL('../../src/content/runway.ts', import.meta.url));
+      const source = `process.argv[1] = ${JSON.stringify(join(temporary, 'missing-entry.ts'))}; await import(${JSON.stringify(pathToFileURL(entry).href)});`;
+      const run = spawnSync(process.execPath, [
+        '--experimental-strip-types', '--input-type=module', '--eval', source,
+      ], { encoding: 'utf8' });
+      expect(run.status, run.stderr).toBe(0);
+      expect(run.stdout).toBe('');
+    } finally {
+      rmSync(temporary, { recursive: true, force: true });
+    }
+  });
   it('prints the public sample report when launched through a symlink', () => {
     const temporary = mkdtempSync(join(tmpdir(), 'cueory-runway-entry-'));
     try {

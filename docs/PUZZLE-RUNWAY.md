@@ -27,6 +27,8 @@ The site offers three separate crossword difficulty choices: easy (5 × 5), mid 
 
 The old `triage` folder has **7** sorting-game samples, with a first window of **November 1–7, 2026**. Those files are **not** used by the current Sudoku game. `stat` and `hello-cards` are other games and are not part of this four-game daily puzzle runway.
 
+**Nested sample safety:** Astro can load JSON in subfolders, but this runway currently uses only flat sample filenames. If a nested JSON sample is added, the report and its tests deliberately fail instead of silently omitting that puzzle. Keep public samples flat until the loader's full nested-ID sort order is supported. Symlinked samples are also rejected.
+
 ## How this works
 
 - The sample rotation starts on **November 1, 2026**, using the visitor's local calendar date.
