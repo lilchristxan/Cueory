@@ -149,6 +149,26 @@ export function pickVisibleAnswer(
   return pickAnswer(current, letter);
 }
 
+/** A Next action belongs to the question the visitor actually saw.
+ * Do not let a stale click or Enter event skip another question or round.
+ */
+export function nextVisibleQuestion(
+  state: StatState,
+  questions: readonly StatQuestion[],
+  now: number,
+  visibleIndex: number,
+  visibleQuestionId: string,
+  visibleStartedAt: number,
+): StatState {
+  const current = advanceTime(state, questions, now);
+  // A deadline can advance multiple questions before React updates its screen.
+  // Returning current preserves timeout answers without skipping the new one.
+  if (current !== state || current.status !== 'playing' ||
+      current.index !== visibleIndex || current.startedAt !== visibleStartedAt ||
+      questions[current.index]?.id !== visibleQuestionId) return current;
+  return nextQuestion(current, questions, now);
+}
+
 /** Ring progress from 1 (full, 20 seconds left) to 0. */
 export function ringFraction(left: number): number {
   return Math.min(1, Math.max(0, left / STAT_SECONDS));

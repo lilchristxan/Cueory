@@ -10,7 +10,7 @@ import {
   getResult,
   gradeRound,
   letterLabel,
-  nextQuestion,
+  nextVisibleQuestion,
   pickVisibleAnswer,
   reviewWords,
   ringFraction,
@@ -195,10 +195,15 @@ export default function StatGame({ questions, sampleKey }: Props) {
   };
 
   const next = () => {
-    if (phase !== 'playing') return;
+    if (phase !== 'playing' || !question) return;
+    // Enter and the Next button use the same rendered-question guard as answer picks.
+    const visibleIndex = state.index;
+    const visibleQuestionId = question.id;
+    const visibleStartedAt = state.startedAt;
     const time = Date.now();
     setNow(time);
-    setState((current) => nextQuestion(current, questions, time));
+    setState((current) => nextVisibleQuestion(current, questions, time,
+      visibleIndex, visibleQuestionId, visibleStartedAt));
   };
 
   // Give visible dialogs, menus and search their own keyboard handling. Only the pure helper decides a shortcut.

@@ -403,6 +403,42 @@ test('it sends nothing off the site and saves nothing', async ({ page }) => {
   expect(await page.evaluate(() => Object.keys(localStorage).filter((name) => /stat/i.test(name)))).toEqual([]);
 });
 
+test('the Next button at the deadline times out the old question without skipping the next', async ({ page }) => {
+  await start(page);
+  await page.evaluate(() => {
+    const originalNow = Date.now;
+    try {
+      Date.now = () => originalNow() + 20_000;
+      (document.querySelector('[data-testid="stat-next"]') as HTMLButtonElement | null)?.click();
+    } finally {
+      Date.now = originalNow;
+    }
+  });
+  await expect(progress(page)).toHaveText('question 2 of 15');
+  await expect(seconds(page)).toHaveText('20 seconds left');
+  await expect(choice(page, 'a')).toHaveAttribute('aria-pressed', 'false');
+  // A valid answer and Next on the new question must still behave normally.
+  await choice(page, 'c').click();
+  await expect(choice(page, 'c')).toHaveAttribute('aria-pressed', 'true');
+  await next(page).click();
+  await expect(progress(page)).toHaveText('question 3 of 15');
+});
+
+test('Enter after a sleeping-tab deadline does not skip extra questions', async ({ page }) => {
+  await start(page);
+  await page.evaluate(() => {
+    const originalNow = Date.now;
+    try {
+      Date.now = () => originalNow() + 65_000;
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    } finally {
+      Date.now = originalNow;
+    }
+  });
+  await expect(progress(page)).toHaveText('question 4 of 15');
+  await expect(choice(page, 'a')).toHaveAttribute('aria-pressed', 'false');
+});
+
 test('a mouse click at the deadline cannot answer the next question', async ({ page }) => {
   await start(page);
   // Advance the event's wall clock without firing the 200 ms interval. The

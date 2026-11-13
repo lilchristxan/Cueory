@@ -10,6 +10,7 @@ import {
   getResult,
   gradeRound,
   nextQuestion,
+  nextVisibleQuestion,
   parseStatSample,
   pickAnswer,
   pickVisibleAnswer,
@@ -301,6 +302,63 @@ describe('stat selection is bound to the visible question', () => {
     expect(valid.answers).toEqual([]);
   });
 
+});
+
+describe('stat next is bound to the visible question', () => {
+  it('records a normal early Next without changing the existing answer policy', () => {
+    const started = startStat(T0);
+    const picked = pickAnswer(started, 'c');
+    const result = nextVisibleQuestion(picked, questions, T0 + 3 * S,
+      0, questions[0]!.id, T0);
+    expect(result.index).toBe(1);
+    expect(result.picked).toBeNull();
+    expect(result.answers).toEqual([{
+      questionId: questions[0]!.id, picked: 'c', seconds: 3, timedOut: false,
+    }]);
+  });
+
+  it('does not skip the fresh question when Next lands exactly on or after the deadline', () => {
+    const start = pickAnswer(startStat(T0), 'b');
+    for (const elapsed of [STAT_SECONDS * S, STAT_SECONDS * S + 1]) {
+      const state = nextVisibleQuestion(start, questions, T0 + elapsed, 0,
+        questions[0]!.id, T0);
+      expect(state.index).toBe(1);
+      expect(state.picked).toBeNull();
+      expect(state.answers).toEqual([{
+        questionId: questions[0]!.id,
+        picked: TIMEOUT_KEEPS_PICK ? 'b' : null,
+        seconds: STAT_SECONDS, timedOut: true,
+      }]);
+    }
+  });
+
+  it('ignores stale Next actions from the previous question or an earlier round', () => {
+    const first = startStat(T0);
+    const second = advanceTime(first, questions, T0 + STAT_SECONDS * S);
+    expect(second.index).toBe(1);
+    expect(nextVisibleQuestion(second, questions, T0 + STAT_SECONDS * S + 1,
+      0, questions[0]!.id, first.startedAt)).toBe(second);
+
+    const newRound = startStat(T0 + 200_000);
+    expect(nextVisibleQuestion(newRound, questions, T0 + 200_001,
+      0, questions[0]!.id, first.startedAt)).toBe(newRound);
+    expect(nextVisibleQuestion(newRound, questions, T0 + 200_001,
+      0, questions[0]!.id, newRound.startedAt).index).toBe(1);
+  });
+
+  it('preserves every timed-out question after tab sleep instead of skipping the next playable one', () => {
+    const first = startStat(T0);
+    const state = nextVisibleQuestion(first, questions, T0 + 65 * S,
+      0, questions[0]!.id, T0);
+    expect(state.index).toBe(3);
+    expect(state.picked).toBeNull();
+    expect(state.answers).toHaveLength(3);
+    expect(state.answers.every((answer) => answer.timedOut && answer.picked === null)).toBe(true);
+    const over = nextVisibleQuestion(first, questions, T0 + STAT_SECONDS * S * STAT_QUESTIONS,
+      0, questions[0]!.id, T0);
+    expect(over.status).toBe('over');
+    expect(over.answers).toHaveLength(STAT_QUESTIONS);
+  });
 });
 
 describe('stat answers', () => {
