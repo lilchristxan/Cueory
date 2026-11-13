@@ -12,6 +12,9 @@ for (const name of ['width', 'height', 'logo-width', 'logo-top', 'label-y', 'res
   'label-size', 'result-size', 'result-min-size', 'result-max-width', 'result-line-height', 'result-max-lines',
   'challenge-size', 'site-size', 'dark-logo']) tokens[`--share-story-${name}`] = '1';
 Object.assign(tokens, {
+  '--share-story-display-weight': '500',
+  '--share-story-emphasis-weight': '700',
+  '--share-story-site-weight': '400',
   '--share-story-result-size': '132',
   '--share-story-result-min-size': '56',
   '--share-story-result-max-width': '880',
@@ -133,6 +136,20 @@ describe('story image never hangs the share flow', () => {
     expect(vi.getTimerCount()).toBe(0);
   });
 
+  it.each(['', 'bold', '99', '901', '425.5'])('returns null for an invalid canvas font weight (%s)', async (weight) => {
+    const token = '--share-story-display-weight';
+    const before = tokens[token];
+    try {
+      tokens[token] = weight;
+      stubPage(Promise.resolve());
+      const imageLoad = vi.fn();
+      vi.stubGlobal('Image', imageLoad);
+      await expect(createStoryFile({ name: 'pillo', date: 'nov 11', result: '[sample result]' })).resolves.toBeNull();
+      expect(imageLoad).not.toHaveBeenCalled();
+    } finally {
+      tokens[token] = before!;
+    }
+  });
   it('waits about four seconds at most', () => {
     expect(STORY_ASSET_TIMEOUT_MS).toBe(4000);
   });
