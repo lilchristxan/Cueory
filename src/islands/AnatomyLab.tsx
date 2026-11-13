@@ -11,6 +11,7 @@ import {
 import { createGeneration, createOnDemandLoader, publishAnatomyFile, knownMissingStructureIds, filesForLayer, idsForFiles, initialLayerPlan, firstLayer, layerNeedsReveal, visibilityAfterLayerDownload, lazyPeel, lazyRestore, revealTargetPlan, needsBulkLayerConfirmation, showAllPlan, structureLoadNote, type OnDemandLoader } from './anatomylazy';
 import type { LabColors, LabScene, LoadResult } from './anatomyscene';
 import { createAnatomyOpenGate } from './anatomyopen';
+import AnatomyTextRecall from './AnatomyTextRecall';
 import { STRUCTURE_PAGE_SIZE, visibleStructureGroups } from './anatomy-list-window';
 import { anatomyTriangleNote } from './anatomybudget';
 import {
@@ -21,6 +22,7 @@ import {
   focusFromSearch,
   formatDownloadSize,
   initialSystemKey,
+  linkedStructureId,
   presetDirection,
   type ViewPreset,
 } from './anatomyviews';
@@ -121,7 +123,7 @@ function blobToDataUrl(blob: Blob): Promise<string> {
 }
 
 type Phase = 'cover' | 'opening' | 'open' | 'error';
-type SystemLoad = { state: 'loading' } | { state: 'ready'; result: LoadResult; publishedFiles: ReadonlySet<string> } | { state: 'error'; message: string };
+type SystemLoad = { state: 'loading' } | { state: 'ready'; systemKey: string; result: LoadResult; publishedFiles: ReadonlySet<string> } | { state: 'error'; message: string };
 
 const primaryButton =
   'min-h-11 rounded-pill bg-button px-5 py-2.5 text-on-button hover:bg-button-hover disabled:opacity-60';
@@ -188,7 +190,20 @@ function measureLabel(font: string, fontPx: number): (s: string) => number {
  * or from the list, labels with leader lines, a "find it" quiz and picture export for Christian's posts and videos.
  * Nothing from three.js loads before the student taps "open the anatomy lab". Rendered client:only.
  */
-export default function AnatomyLab({ systems: baseSystems, fixture, drafts, modelBytes = {} }: Props) {
+export default function AnatomyLab(props: Props) {
+  const textSystems = useMemo(() => {
+    const wantsFixture = props.fixture && new URLSearchParams(window.location.search).has('fixture');
+    return systemsForView(props.systems, false, wantsFixture ? props.fixture : null);
+  }, [props.systems, props.fixture]);
+  return (
+    <div className="space-y-6">
+      <AnatomyLabView {...props} />
+      <AnatomyTextRecall systems={textSystems} drafts={props.drafts} />
+    </div>
+  );
+}
+
+function AnatomyLabView({ systems: baseSystems, fixture, drafts, modelBytes = {} }: Props) {
   const [phase, setPhase] = useState<Phase>('cover');
   const [textLimit, setTextLimit] = useState(TEXT_FALLBACK_BATCH);
   const systems = useMemo(() => {
@@ -463,7 +478,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, mode
               setFilesLoaded((count) => count + 1);
               setLoad((prev) => prev.state !== 'ready'
                 ? prev
-                : { state: 'ready', ...publishAnatomyFile(prev, url, result) });
+                : { state: 'ready', systemKey: prev.systemKey, ...publishAnatomyFile(prev, url, result) });
             },
             () => {
               // The downloaded model is valid. Surface a recoverable list
@@ -483,7 +498,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, mode
           setFilesLoaded((system.model.files ?? [system.model.file]).length);
         }
         // The initial GLBs become published only after scene.load succeeds.
-        setLoad({ state: 'ready', result, publishedFiles: new Set(initial?.files ?? (system.model.files ?? [system.model.file])) });
+        setLoad({ state: 'ready', systemKey: system.key, result, publishedFiles: new Set(initial?.files ?? (system.model.files ?? [system.model.file])) });
         setAnnounce(`${system.title}: ${result.found.length} structures loaded.`);
       })
       .catch((err: unknown) => {
@@ -613,10 +628,9 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, mode
   // A linked structure is selected once, when its system's model is ready and really contains it.
   useEffect(() => {
     if (focusStructureDone.current || !focus.structure || load.state !== 'ready' || !system) return;
-    if (focus.system && focus.system !== system.key && !focusSystemDone.current) return;
+    const id = linkedStructureId(focus, system.key, load.systemKey, load.result.found);
+    if (!id) return;
     focusStructureDone.current = true;
-    const id = focus.structure;
-    if (!load.result.found.includes(id)) return;
     setHidden((current) => {
       if (!current.has(id)) return current;
       const next = new Set(current);
