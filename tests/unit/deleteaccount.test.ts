@@ -21,6 +21,8 @@ import {
 import { PROMO_STORAGE_KEY } from '../../src/scripts/promo';
 import { THEME_STORAGE_KEY } from '../../src/scripts/theme';
 import { STATS_STORAGE_KEY } from '../../src/islands/gameresults';
+import { HOME_TIP_STORAGE_KEY } from '../../src/islands/homescreentip';
+import { SUDOKU_SETTINGS_KEY } from '../../src/islands/sudoku';
 import type { KeyValueStorage } from '../../src/scripts/storage';
 
 class MemoryStorage implements KeyValueStorage {
@@ -211,6 +213,12 @@ describe('afterDeletion', () => {
 
   it('includes the game stats storage key', () => {
     expect(afterDeletion(new MemoryStorage())).toContain(STATS_STORAGE_KEY);
+  });
+
+  it('includes the home-screen tip and Sudoku settings', () => {
+    const keys = afterDeletion(new MemoryStorage());
+    expect(keys).toContain(HOME_TIP_STORAGE_KEY);
+    expect(keys).toContain(SUDOKU_SETTINGS_KEY);
   });
 
   it('includes the study resume key (Task 104)', () => {

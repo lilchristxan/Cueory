@@ -19,6 +19,7 @@ export type RpcFunction = 'check_answer' | 'submit_flag' | 'delete_my_account' |
 /** delete_my_account's refusals (20261102160000_fresh_sign_in_and_name_rules.sql). */
 export const DELETE_SIGNED_OUT = 'sign in to delete your account';
 export const DELETE_REAUTH = 'please sign in again to delete your account';
+export const DELETE_IDENTITY_CHANGED = 'the signed-in account changed; reload and try again';
 /** The SQLSTATE delete_my_account raises when the sign-in is older than 10 minutes. */
 export const DELETE_REAUTH_CODE = '28R01';
 
@@ -85,6 +86,7 @@ export function studentMessage(fn: RpcFunction, error: unknown): string {
     if (msg === DELETE_REAUTH || error.code === DELETE_REAUTH_CODE) {
       return 'for your safety, please sign in again to delete your account.';
     }
+    if (msg === DELETE_IDENTITY_CHANGED) return 'the account signed in on this device changed, so nothing was deleted. please reload and try again.';
   }
 
   if (fn === 'update_display_name') {
@@ -98,6 +100,9 @@ export function studentMessage(fn: RpcFunction, error: unknown): string {
   }
 
   // All other RPCs keep the general confirmed-email explanation, after the specific action messages above.
+  if (msg === 'complete two-factor sign-in to continue') {
+    return 'please complete two-factor sign-in to continue.';
+  }
   if (msg === 'confirm your email to use this') {
     return 'please confirm your email first. the link is in the email we sent you.';
   }

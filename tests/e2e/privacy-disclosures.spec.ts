@@ -6,6 +6,7 @@ test('privacy data disclosures remain readable and accessible', async ({ page })
   await page.goto('/privacy');
   await expect(page.getByRole('heading', { name: 'privacy, in plain language' })).toBeVisible();
   await expect(page.locator('code').filter({ hasText: /^cueory-sudoku-settings$/ })).toBeVisible();
+  await expect(page.locator('code').filter({ hasText: /^cueory-home-screen-tip$/ })).toBeVisible();
   await expect(page.locator('code').filter({ hasText: /^cueory-finals-survey-dismissed$/ })).toBeVisible();
   for (const table of ['profiles', 'exam_plans', 'attempts', 'review_state', 'study_events', 'concepts', 'items', 'item_versions', 'item_choices']) {
     await expect(page.locator(`[data-privacy-table="${table}"]`)).toBeVisible();

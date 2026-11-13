@@ -6,6 +6,8 @@ import {
 import { afterDeletion, SESSION_KEYS_AFTER_DELETION } from '../../src/islands/deleteaccount';
 import type { ExportReader } from '../../src/islands/exportload';
 import { STATS_STORAGE_KEY } from '../../src/islands/gameresults';
+import { HOME_TIP_STORAGE_KEY } from '../../src/islands/homescreentip';
+import { DEFAULT_SUDOKU_SETTINGS, SUDOKU_SETTINGS_KEY } from '../../src/islands/sudoku';
 import { AUTH_STORAGE_KEY } from '../../src/islands/supabaseclient';
 import { BREAK_STORAGE_KEY } from '../../src/scripts/breakstore';
 import { legacyStarsKey, PROGRESS_STORAGE_KEY } from '../../src/scripts/progress';
@@ -107,6 +109,40 @@ describe('download my data', () => {
     expect(result.data.gameStats).toEqual([]);
   });
 
+  it('exports the home-screen tip and Sudoku settings without changing browser storage', async () => {
+    const local = new MemoryStorage();
+    local.setItem(HOME_TIP_STORAGE_KEY, JSON.stringify({ days: ['2026-11-01', '2026-11-02'], dismissed: true }));
+    local.setItem(SUDOKU_SETTINGS_KEY, JSON.stringify(DEFAULT_SUDOKU_SETTINGS));
+    const before = [...local.values];
+    const result = await gatherExport(reader(), { email: '', storage: local, today });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.data.homeScreenTip).toEqual({ days: ['2026-11-01', '2026-11-02'], dismissed: true });
+    expect(result.data.sudokuSettings).toEqual(DEFAULT_SUDOKU_SETTINGS);
+    expect([...local.values]).toEqual(before);
+    const files = downloadFiles(result.data, today);
+    expect(files.ok).toBe(true);
+    if (!files.ok) return;
+    const json = JSON.parse(await files.json.blob.text());
+    expect(json.homeScreenTip).toEqual(result.data.homeScreenTip);
+    expect(json.sudokuSettings).toEqual(DEFAULT_SUDOKU_SETTINGS);
+    expect(files.csv.map(file => file.fileName)).toEqual(expect.arrayContaining([
+      `cueory-data-${today}-homeScreenTip.csv`, `cueory-data-${today}-sudokuSettings.csv`,
+    ]));
+  });
+
+  it('fails closed when browser storage refuses a read', async () => {
+    const blocked: KeyValueStorage = {
+      length: 1,
+      key: () => HOME_TIP_STORAGE_KEY,
+      getItem: () => { throw new Error('sample: storage blocked'); },
+      setItem: () => {},
+      removeItem: () => {},
+    };
+    expect(await gatherExport(reader(), { email: '', storage: blocked, today }))
+      .toEqual({ ok: false, message: accountMessage('export-failed') });
+  });
+
   it("adds the sign-in provider's details from the session, one row per field in name order, without running getters", async () => {
     const details = { full_name: 'Sample Student', avatar_url: 'https://example.invalid/sample.png', email_verified: true };
     Object.defineProperty(details, 'secret', { enumerable: true, get: () => { throw new Error('getter ran'); } });
@@ -196,7 +232,10 @@ function refusingClient() {
   };
   return { client: client as unknown as AccountClient };
 }
-const pick = ({ deleteAccount, signOut }: ReturnType<typeof adaptersFor>) => ({ deleteAccount, signOut });
+const pick = ({ deleteAccount, signOut }: ReturnType<typeof adaptersFor>) => ({
+  deleteAccount: deleteAccount ? () => deleteAccount('user-1') : null,
+  signOut,
+});
 
 describe('delete my account', () => {
   const seeded = () => {
@@ -394,17 +433,17 @@ describe('adaptersFor', () => {
     await expect(adaptersFor(fakeClient({ error: refusal }).client).writeName('Sample')).rejects.toMatchObject({ cause: refusal });
   });
 
-  it('deletes through delete_my_account() with no arguments and signs out this device only', async () => {
+  it('binds delete_my_account to the confirmed user and signs out this device only', async () => {
     const { client, calls } = fakeClient();
     const adapters = adaptersFor(client);
-    await adapters.deleteAccount!();
+    await adapters.deleteAccount!('user-1');
     await adapters.signOut();
-    expect(calls).toEqual([['rpc', 'delete_my_account'], ['signOut', { scope: 'local' }]]);
+    expect(calls).toEqual([['rpc', 'delete_my_account', { expected_user_id: 'user-1' }], ['signOut', { scope: 'local' }]]);
   });
 
   it('rejects when the server returns an error', async () => {
     const adapters = adaptersFor(fakeClient({ error: { message: 'private' } }).client);
-    await expect(adapters.deleteAccount!()).rejects.toThrow('account deletion failed');
+    await expect(adapters.deleteAccount!('user-1')).rejects.toThrow('account deletion failed');
     await expect(adapters.signOut()).rejects.toThrow('sign out failed');
     expect(await adapters.readName('user-1')).toBeNull();
   });

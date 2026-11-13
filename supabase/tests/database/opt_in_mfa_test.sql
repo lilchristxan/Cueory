@@ -49,7 +49,7 @@ set local "request.jwt.claim.sub" to '00000000-0000-4000-8000-000000000001';
 select is((select app_private.mfa_access_allowed()), false, 'verified factor rejects aal1');
 select is_empty($$ select id from public.profiles $$, 'verified student cannot read a profile at aal1');
 select is_empty($$ select id from public.my_flags() $$, 'verified student cannot export flags at aal1');
-select throws_ok($$ select public.delete_my_account() $$,
+select throws_ok($$ select public.delete_my_account('00000000-0000-4000-8000-000000000001') $$,
   '28000', 'complete two-factor sign-in to continue',
   'aal1 cannot permanently delete a verified-factor account');
 select throws_ok($$ select public.update_display_name('try change') $$,
@@ -87,32 +87,32 @@ select results_eq($$ select display_name from public.profiles $$,
 -- Check the later MFA migration also preserves the Task 302 recent-token gate.
 select ok(
   (select prosrc like '%max_age_seconds constant integer := 600%'
-     from pg_proc where oid = 'public.delete_my_account()'::regprocedure),
+     from pg_proc where oid = 'public.delete_my_account(uuid)'::regprocedure),
   'the MFA delete RPC retains the ten-minute token check');
 select ok(
   (select prosrc like '%public.display_name_ok(clean_name)%'
      from pg_proc where oid = 'public.update_display_name(text)'::regprocedure),
   'the MFA name RPC retains the single server-side validation rule');
-select throws_ok($$ select public.delete_my_account() $$,
+select throws_ok($$ select public.delete_my_account('00000000-0000-4000-8000-000000000001') $$,
   '28R01', 'please sign in again to delete your account',
   'aal2 without a token issue time cannot delete an account');
 select set_config('request.jwt.claims', jsonb_build_object(
   'sub', '00000000-0000-4000-8000-000000000001', 'role', 'authenticated',
   'aal', 'aal2', 'iat', extract(epoch from now())::bigint - 601)::text, true);
-select throws_ok($$ select public.delete_my_account() $$,
+select throws_ok($$ select public.delete_my_account('00000000-0000-4000-8000-000000000001') $$,
   '28R01', 'please sign in again to delete your account',
   'aal2 with an eleven-minute-old token cannot delete an account');
 select set_config('request.jwt.claims', jsonb_build_object(
   'sub', '00000000-0000-4000-8000-000000000001', 'role', 'authenticated',
   'aal', 'aal2', 'iat', 'invalid')::text, true);
-select throws_ok($$ select public.delete_my_account() $$,
+select throws_ok($$ select public.delete_my_account('00000000-0000-4000-8000-000000000001') $$,
   '28R01', 'please sign in again to delete your account',
   'aal2 with a nonnumeric token issue time cannot delete an account');
 -- A recently issued token plus verified MFA can still delete this test account.
 select set_config('request.jwt.claims', jsonb_build_object(
   'sub', '00000000-0000-4000-8000-000000000001', 'role', 'authenticated',
   'aal', 'aal2', 'iat', extract(epoch from now())::bigint - 540)::text, true);
-select lives_ok($$ select public.delete_my_account() $$,
+select lives_ok($$ select public.delete_my_account('00000000-0000-4000-8000-000000000001') $$,
   'aal2 can still delete its own account');
 
 -- The other account's unverified TOTP setup cannot lock that account out or leak the first account.
@@ -176,7 +176,7 @@ select throws_ok($$ select public.record_study_events('[]'::jsonb) $$,
 
 reset role;
 set local role anon;
-select throws_ok($$ select public.delete_my_account() $$, '42501', null,
+select throws_ok($$ select public.delete_my_account('00000000-0000-4000-8000-000000000002') $$, '42501', null,
   'an anonymous visitor still cannot invoke account deletion');
 reset role;
 select results_eq($$ select count(*)::int from auth.users $$,

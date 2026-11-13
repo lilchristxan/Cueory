@@ -301,6 +301,7 @@ test.describe('/account signed in (fake client)', () => {
     await page.evaluate(() => {
       for (const key of [
         'cueory-auth', 'cueory-progress', 'cueory-theme', 'cueory-stars-old-deck',
+        'cueory-home-screen-tip', 'cueory-sudoku-settings',
         'cueory-auth-code-verifier', 'cueory-auth-flow-abc-code-verifier', 'cueory-auth-flows-code-verifier',
       ]) localStorage.setItem(key, '1');
       localStorage.setItem('not-cueory', 'kept');

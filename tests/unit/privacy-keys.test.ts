@@ -18,6 +18,8 @@ import { NOTE_SOUND_STORAGE_KEY } from '../../src/scripts/notesound';
 import { THEME_STORAGE_KEY } from '../../src/scripts/theme';
 import { PROMO_STORAGE_KEY } from '../../src/scripts/promo';
 import { RESUME_STORAGE_KEY } from '../../src/scripts/resume';
+import { HOME_TIP_STORAGE_KEY } from '../../src/islands/homescreentip';
+import { SUDOKU_SETTINGS_KEY } from '../../src/islands/sudoku';
 
 const privacyPath = fileURLToPath(new URL('../../dist/privacy.html', import.meta.url));
 
@@ -42,6 +44,8 @@ describe.skipIf(!existsSync(privacyPath))('privacy page browser storage disclosu
     PROMO_STORAGE_KEY,
     RESUME_STORAGE_KEY,
     STATS_STORAGE_KEY,
+    HOME_TIP_STORAGE_KEY,
+    SUDOKU_SETTINGS_KEY,
     legacyStarsKey('<deck>'),
   ])('includes the exported browser key %s in built markup', (key) => {
     expect(visibleCodeKeys(privacyHtml())).toContain(key);

@@ -245,7 +245,9 @@ function DeleteSection({ adapters, userId, email, busy, onStale, onDeleted }: {
     busy.current = true;
     setMessage('');
     const result = await deleteMyAccount({
-      typed, stillSame: () => sameIdentity(adapters, userId), deleteAccount: adapters.deleteAccount, signOut: adapters.signOut, local: browserStorage(), session: tabStorage(),
+      typed, stillSame: () => sameIdentity(adapters, userId),
+      deleteAccount: adapters.deleteAccount ? () => adapters.deleteAccount!(userId) : null,
+      signOut: adapters.signOut, local: browserStorage(), session: tabStorage(),
     });
     busy.current = false;
     setDeleting(false);

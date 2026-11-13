@@ -164,21 +164,25 @@ export function migrateLegacyStars(storage: KeyValueStorage | undefined): Progre
   let progress = readProgress(storage);
   if (!storage) return progress;
   const keys = legacyStarKeys(storage);
+  const migrated: string[] = [];
   for (const key of keys) {
     const deckId = key.slice(LEGACY_STARS_PREFIX.length);
-    let old: string[] = [];
+    if (!ID.test(deckId)) continue;
     try {
-      old = idList(JSON.parse(storage.getItem(key) ?? '[]'));
-    } catch {
-      // Unreadable: nothing to move, and the key is removed below.
-    }
-    if (ID.test(deckId) && old.length) {
+      const saved = storage.getItem(key);
+      if (saved === null) continue;
+      const parsed: unknown = JSON.parse(saved);
+      if (!Array.isArray(parsed)) continue;
+      const old = idList(parsed);
       progress = withStars(progress, deckId, [...deckProgress(progress, deckId).starred, ...old]);
+      migrated.push(key);
+    } catch {
+      // Keep anything that could not be read and parsed. Deleting it would lose data that was never migrated.
     }
   }
-  if (keys.length && saveProgress(storage, progress)) {
+  if (migrated.length && saveProgress(storage, progress)) {
     try {
-      for (const key of keys) storage.removeItem(key);
+      for (const key of migrated) storage.removeItem(key);
     } catch {
       // The old keys stay; the next visit moves them again, and joining is harmless.
     }

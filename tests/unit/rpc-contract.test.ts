@@ -16,6 +16,7 @@ const sql = [
   '20261102135000_confirmed_accounts_only.sql',
   '20261102140000_update_display_name.sql',
   '20261102170000_my_sessions.sql',
+  '20261113050000_bind_delete_my_account_identity.sql',
 ].map(name => readFileSync(new URL(`../../supabase/migrations/${name}`, import.meta.url), 'utf8')).join('\n');
 
 type FunctionName =
@@ -168,23 +169,30 @@ describe('record_study_events contract (Task 140)', () => {
 
 describe('delete_my_account contract (Task 60)', () => {
   const deleteSql = readFileSync(
-    new URL('../../supabase/migrations/20261102110000_delete_my_account.sql', import.meta.url), 'utf8',
+    new URL('../../supabase/migrations/20261113050000_bind_delete_my_account_identity.sql', import.meta.url), 'utf8',
   );
 
-  it('takes no arguments and returns nothing, so the browser calls supabase.rpc(\'delete_my_account\')', () => {
-    expect(declaration('delete_my_account').arguments).toEqual([]);
-    expect(deleteSql).toMatch(/create\s+function\s+public\.delete_my_account\(\)\s+returns void\s/i);
+  it('takes the confirmed account id and returns nothing, so a later session swap cannot redirect deletion', () => {
+    expect(declaration('delete_my_account').arguments).toEqual(['expected_user_id']);
+    expect(deleteSql).toMatch(/create\s+function\s+public\.delete_my_account\(expected_user_id uuid\)\s+returns void\s/i);
+    expect(deleteSql).toContain('expected_user_id is distinct from uid');
+    expect(deleteSql).toContain('where u.id = expected_user_id');
   });
 
   it('raises exactly this literal refusal, which the account page handles', () => {
     // A change here is a contract change for the /account page: update it in the same pull request.
-    expect(declaration('delete_my_account').messages).toEqual(['sign in to delete your account']);
+    expect(declaration('delete_my_account').messages).toEqual([
+      'sign in to delete your account',
+      'the signed-in account changed; reload and try again',
+      'complete two-factor sign-in to continue',
+      'please sign in again to delete your account',
+    ]);
   });
 
   it('is signed-in only and security definer with an empty search_path', () => {
     expect(deleteSql).toMatch(/returns void\s+language plpgsql\s+security definer\s+set search_path = ''/i);
-    expect(deleteSql).toContain('revoke execute on function public.delete_my_account() from public, anon, authenticated;');
-    expect(deleteSql).toContain('grant execute on function public.delete_my_account() to authenticated;');
+    expect(deleteSql).toContain('revoke execute on function public.delete_my_account(uuid) from public, anon, authenticated;');
+    expect(deleteSql).toContain('grant execute on function public.delete_my_account(uuid) to authenticated;');
     expect(deleteSql).not.toMatch(/grant\s+execute[^;]*to\s+(anon|public)\b/i);
   });
 });

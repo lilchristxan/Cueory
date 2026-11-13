@@ -33,7 +33,7 @@ function sampleGuest() {
 
 describe('JSON export', () => {
   it('round-trips every allowed sample section with a caller-supplied date and format', () => {
-    expect(json(sample)).toEqual({ format: 'cueory-export-1', exportDate, ...sample, signInDetails: [], account: {}, attempts: [], examPlans: [], reviewRows: [], reports: [], sessions: [], studyEvents: [], dropped: [] });
+    expect(json(sample)).toEqual({ format: 'cueory-export-1', exportDate, ...sample, signInDetails: [], account: {}, homeScreenTip: {}, sudokuSettings: {}, attempts: [], examPlans: [], reviewRows: [], reports: [], sessions: [], studyEvents: [], dropped: [] });
     expect(exportJson(sample, exportDate)).toContain('\n  "profile": {\n    "displayName": "Sample Student",');
   });
 
@@ -178,7 +178,7 @@ describe('JSON export', () => {
       profile: { createdAt: '2026-10-01T12:00:00.000Z', email: 'sample@example.invalid', displayName: 'Sample Student' },
     };
     expect(exportJson(reordered, exportDate)).toBe(exportJson(sample, exportDate));
-    expect(Object.keys(json(sample))).toEqual(['format', 'exportDate', 'profile', 'signInDetails', 'account', 'onboarding', 'progress', 'reviewState', 'gameStats', 'attempts', 'examPlans', 'reviewRows', 'reports', 'sessions', 'studyEvents', 'dropped']);
+    expect(Object.keys(json(sample))).toEqual(['format', 'exportDate', 'profile', 'signInDetails', 'account', 'onboarding', 'progress', 'reviewState', 'gameStats', 'homeScreenTip', 'sudokuSettings', 'attempts', 'examPlans', 'reviewRows', 'reports', 'sessions', 'studyEvents', 'dropped']);
   });
 
   it('preserves attempt and history row order, false, zero, null and Unicode', () => {
@@ -196,7 +196,7 @@ describe('JSON export', () => {
 
   it('makes empty sections explicit without inventing profile values or records', () => {
     expect(json({})).toEqual({
-      format: 'cueory-export-1', exportDate, profile: {}, signInDetails: [], account: {}, onboarding: {}, progress: [], reviewState: [], gameStats: [], attempts: [], examPlans: [], reviewRows: [], reports: [], sessions: [], studyEvents: [], dropped: [],
+      format: 'cueory-export-1', exportDate, profile: {}, signInDetails: [], account: {}, onboarding: {}, progress: [], reviewState: [], gameStats: [], homeScreenTip: {}, sudokuSettings: {}, attempts: [], examPlans: [], reviewRows: [], reports: [], sessions: [], studyEvents: [], dropped: [],
     });
   });
 
@@ -305,7 +305,7 @@ describe('JSON export', () => {
 describe('CSV export', () => {
   it('returns section files in fixed order with RFC 4180 record endings', () => {
     const files = exportCsv(sample);
-    expect(files.map(entry => entry.fileName)).toEqual(['profile.csv', 'signInDetails.csv', 'account.csv', 'onboarding.csv', 'progress.csv', 'reviewState.csv', 'gameStats.csv', 'attempts.csv', 'examPlans.csv', 'reviewRows.csv', 'reports.csv', 'sessions.csv', 'studyEvents.csv', 'dropped.csv']);
+    expect(files.map(entry => entry.fileName)).toEqual(['profile.csv', 'signInDetails.csv', 'account.csv', 'onboarding.csv', 'progress.csv', 'reviewState.csv', 'gameStats.csv', 'homeScreenTip.csv', 'sudokuSettings.csv', 'attempts.csv', 'examPlans.csv', 'reviewRows.csv', 'reports.csv', 'sessions.csv', 'studyEvents.csv', 'dropped.csv']);
     expect(files.every(entry => entry.text.endsWith('\r\n'))).toBe(true);
     expect(parseRows(file(sample, 'progress'))).toEqual([
       ['id', 'result', 'date', 'deckId', 'progressVersion', 'course', 'examDate', 'done'],
@@ -348,9 +348,9 @@ describe('CSV export', () => {
 
   it('includes only headers for empty sections and the empty dropped report', () => {
     const files = exportCsv({});
-    expect(files).toHaveLength(14);
+    expect(files).toHaveLength(16);
     expect(files.every(entry => parseRows(entry.text).length === 1)).toBe(true);
-    expect(files[13]).toEqual({ fileName: 'dropped.csv', text: 'dropped\r\n' });
+    expect(files[15]).toEqual({ fileName: 'dropped.csv', text: 'dropped\r\n' });
   });
 
   it('returns fresh files and the same stable output for repeated exports', () => {

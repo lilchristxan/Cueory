@@ -143,7 +143,7 @@ describe('guest progress record (D-69)', () => {
     expect(deckProgress(progress, 'deck-a').starred).toEqual(['c1', 'c2']);
     expect(deckProgress(progress, 'retired-deck').starred).toEqual(['x9']);
     expect(readProgress(storage)).toEqual(progress);
-    expect(Object.keys(storage.data).sort()).toEqual([PROGRESS_STORAGE_KEY, 'cueory-theme']);
+    expect(Object.keys(storage.data).sort()).toEqual([PROGRESS_STORAGE_KEY, 'cueory-theme', legacyStarsKey('broken')].sort());
   });
 
   it('treats deck ids that are also built-in JavaScript names as ordinary decks (Codex on #74)', () => {
@@ -160,6 +160,19 @@ describe('guest progress record (D-69)', () => {
   it('keeps the old keys when the record cannot be saved, and never throws', () => {
     expect(migrateLegacyStars(undefined)).toEqual(emptyProgress());
     expect(migrateLegacyStars(blockedStorage)).toEqual(emptyProgress());
+  });
+
+  it('keeps each old key unless its contents were successfully read and migrated', () => {
+    const key = legacyStarsKey('deck-a');
+    const corrupt = memoryStorage({ [key]: '{broken' });
+    migrateLegacyStars(corrupt);
+    expect(corrupt.data[key]).toBe('{broken');
+
+    const blocked = memoryStorage({ [key]: '["c1"]' });
+    const read = blocked.getItem.bind(blocked);
+    blocked.getItem = name => name === key ? (() => { throw new Error('blocked'); })() : read(name);
+    migrateLegacyStars(blocked);
+    expect(blocked.data[key]).toBe('["c1"]');
   });
 
   it('forgets stars kept under old keys for decks no longer on the site', () => {

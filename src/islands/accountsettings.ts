@@ -12,6 +12,8 @@ import { checkDisplayName } from './displayname';
 import { exportCsvBlobs, exportJsonBlob, type ExportData } from './exportdata';
 import { fromSupabase, loadExport, type ExportReader, type SupabaseExportClient } from './exportload';
 import { loadStats } from './gameresults';
+import { HOME_TIP_STORAGE_KEY, parseTipState } from './homescreentip';
+import { parseSudokuSettings, SUDOKU_SETTINGS_KEY } from './sudoku';
 import { studentMessage } from './rpcerrors';
 import { AUTH_STORAGE_KEY, sessionStateFrom, type SessionReader, type SessionState } from './supabaseclient';
 import { migrateLegacyStars } from '../scripts/progress';
@@ -65,7 +67,7 @@ export type AccountClient = {
   from(table: 'profiles'): {
     select(columns: 'display_name'): { eq(column: 'id', value: string): { maybeSingle(): PromiseLike<Reply> } };
   };
-  rpc(name: 'delete_my_account'): PromiseLike<{ error: unknown }>;
+  rpc(name: 'delete_my_account', args: { expected_user_id: string }): PromiseLike<{ error: unknown }>;
   rpc(name: 'update_display_name', args: { new_name: string }): PromiseLike<Reply>;
 } & SupabaseExportClient & SessionReader;
 
@@ -79,7 +81,7 @@ export interface AccountAdapters {
   /** The signed-in session's `user.user_metadata` (the sign-in provider's profile details), for the download. */
   signInDetails?(): Promise<unknown>;
   /** Deletes the signed-in student's account, or rejects with the database error as `cause`. Null while deletion isn't open. */
-  deleteAccount: (() => Promise<void>) | null;
+  deleteAccount: ((expectedUserId: string) => Promise<void>) | null;
   /** Signs out this device only, or rejects. */
   signOut(): Promise<void>;
   /** Calls back with the signed-in user id (null when signed out) on every sign-in state change, including from other tabs. Returns the unsubscribe. */
@@ -99,7 +101,7 @@ export async function sameIdentity(adapters: Pick<AccountAdapters, 'session'>, u
 /**
  * Adapters over the shared client. writeName calls `update_display_name(new_name)` (20261102140000_update_display_name.sql),
  * the only way to change the name: it changes the caller's own row and limits how often. deleteAccount calls Task 60's
- * `delete_my_account()` (no arguments; it deletes the caller's own auth user). Methods are always called on their
+ * `delete_my_account(expected_user_id)`, binding confirmation to that exact account. Methods are always called on their
  * objects, because supabase-js relies on the receiver.
  */
 export function adaptersFor(client: AccountClient): AccountAdapters {
@@ -125,8 +127,8 @@ export function adaptersFor(client: AccountClient): AccountAdapters {
       const user: unknown = data?.session?.user;
       return typeof user === 'object' && user !== null ? (user as { user_metadata?: unknown }).user_metadata : undefined;
     },
-    async deleteAccount() {
-      const { error } = await client.rpc('delete_my_account');
+    async deleteAccount(expectedUserId) {
+      const { error } = await client.rpc('delete_my_account', { expected_user_id: expectedUserId });
       if (error != null) throw new Error('account deletion failed', { cause: error });
     },
     onIdentityChange(callback) {
@@ -188,6 +190,37 @@ export interface GatherOptions {
 export type GatherResult = { ok: true; data: ExportData } | { ok: false; message: string };
 
 /**
+ * Takes one read-only copy of browser storage. Export works from that copy, so legacy migration cannot mutate the
+ * browser, and any refused key/list read aborts the whole export instead of quietly returning an incomplete file.
+ */
+function exportStorage(storage: KeyValueStorage | undefined): KeyValueStorage | undefined {
+  if (!storage) return;
+  const values = new Map<string, string>();
+  const read = (key: string) => {
+    const value = storage.getItem(key);
+    if (value !== null) values.set(key, value);
+  };
+  if (typeof storage.length === 'number' && typeof storage.key === 'function') {
+    if (!Number.isSafeInteger(storage.length) || storage.length < 0) throw new Error('browser storage inventory unavailable');
+    const length = storage.length;
+    for (let index = 0; index < length; index++) {
+      const key = storage.key(index);
+      if (key !== null) read(key);
+    }
+  } else {
+    // Simple storage adapters cannot list keys, but these fixed records still must be readable.
+    for (const key of [HOME_TIP_STORAGE_KEY, SUDOKU_SETTINGS_KEY]) read(key);
+  }
+  return {
+    get length() { return values.size; },
+    key: index => [...values.keys()][index] ?? null,
+    getItem: key => values.get(key) ?? null,
+    setItem: (key, value) => { values.set(key, value); },
+    removeItem: key => { values.delete(key); },
+  };
+}
+
+/**
  * Everything the student has saved: the database's sections (all or nothing, from loadExport), the signed-in email,
  * the sign-in provider's profile details from the session, and this browser's own progress and game stats. A partial
  * load is never returned.
@@ -195,9 +228,17 @@ export type GatherResult = { ok: true; data: ExportData } | { ok: false; message
 export async function gatherExport(reader: ExportReader, { email, signInDetails, storage, today }: GatherOptions): Promise<GatherResult> {
   const loaded = await loadExport(reader);
   if (!loaded.ok) return { ok: false, message: loaded.message };
-  // The same reading /progress uses: older per-deck stars move into the record first, so the file has all of it.
-  const progress = migrateLegacyStars(storage);
-  const stats = loadStats(storage, today);
+  let device: KeyValueStorage | undefined;
+  try {
+    device = exportStorage(storage);
+  } catch {
+    return { ok: false, message: accountMessage('export-failed') };
+  }
+  // The same reading /progress uses: older per-deck stars are represented in the copied record, never changed here.
+  const progress = migrateLegacyStars(device);
+  const stats = loadStats(device, today);
+  const homeScreenTipSaved = device?.getItem(HOME_TIP_STORAGE_KEY);
+  const sudokuSettingsSaved = device?.getItem(SUDOKU_SETTINGS_KEY);
   return {
     ok: true,
     data: {
@@ -206,6 +247,10 @@ export async function gatherExport(reader: ExportReader, { email, signInDetails,
       signInDetails: detailRows(signInDetails),
       progress,
       ...(stats.on ? { gameStats: stats.stats } : {}),
+      ...(homeScreenTipSaved !== null && homeScreenTipSaved !== undefined
+        ? { homeScreenTip: parseTipState(homeScreenTipSaved) } : {}),
+      ...(sudokuSettingsSaved !== null && sudokuSettingsSaved !== undefined
+        ? { sudokuSettings: parseSudokuSettings(sudokuSettingsSaved) } : {}),
     },
   };
 }
@@ -308,7 +353,8 @@ export interface DeleteOptions {
   /** Re-reads the current session just before deleting; false (or a throw) means the account changed, so nothing is deleted. */
   stillSame?: () => Promise<boolean>;
   typed: string;
-  deleteAccount: AccountAdapters['deleteAccount'];
+  /** Already bound to the account that completed confirmation. */
+  deleteAccount: (() => Promise<void>) | null;
   signOut: AccountAdapters['signOut'];
   local: KeyValueStorage | undefined;
   session: KeyValueStorage | undefined;

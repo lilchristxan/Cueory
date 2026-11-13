@@ -26,6 +26,8 @@
 import { dailyGames } from '../config/games';
 import { isCourse, isExamDate, PROGRESS_VERSION, type DeckProgress, type Progress } from '../scripts/progress';
 import type { GameStats } from './gamestats';
+import type { HomeTipState } from './homescreentip';
+import type { SudokuSettings } from './sudoku';
 
 /** Plain JSON, as Supabase Auth returns `user_metadata` and `identity_data`. */
 export type JsonValue = string | number | boolean | null | readonly JsonValue[] | JsonObject;
@@ -56,6 +58,10 @@ export interface ExportData {
   reviewState?: readonly { id: string; nextDueDate: string; interval: number }[];
   /** Supplied from this browser's storage, never fetched from an account or a server. */
   gameStats?: GameStats;
+  /** The on-device home-screen suggestion history, when this browser has saved it. */
+  homeScreenTip?: HomeTipState;
+  /** The on-device Sudoku preferences, when this browser has saved them. */
+  sudokuSettings?: SudokuSettings;
   /** The student's own `attempts` rows, as the account page read them. */
   attempts?: readonly { itemVersionId: string; picked: readonly string[]; correct: boolean; createdAt: string }[];
   /** The student's own `exam_plans` rows (at most 10). */
@@ -212,7 +218,15 @@ const identitySchema: Schema = { provider: providerName, identityData: jsonObjec
 const sessionSchema: Schema = {
   createdAt: nullableDate, updatedAt: nullableDate, notAfter: nullableDate, userAgent: nullableText, ip: nullableText,
 };
-const sections = ['profile', 'signInDetails', 'account', 'onboarding', 'progress', 'reviewState', 'gameStats', 'attempts', 'examPlans', 'reviewRows', 'reports', 'sessions', 'studyEvents'] as const;
+const homeScreenTipSchema: Schema = {
+  days: value => Array.isArray(value) && value.length <= 3 && value.every(day),
+  dismissed: bool,
+};
+const sudokuSettingsSchema: Schema = {
+  checkGuesses: bool, autoCandidates: bool, showErrors: bool, showTimer: bool, highlightConflicts: bool,
+  highlightRowColumn: bool, highlightBox: bool, highlightIdentical: bool, playSound: bool,
+};
+const sections = ['profile', 'signInDetails', 'account', 'onboarding', 'progress', 'reviewState', 'gameStats', 'homeScreenTip', 'sudokuSettings', 'attempts', 'examPlans', 'reviewRows', 'reports', 'sessions', 'studyEvents'] as const;
 const rowCaps: Partial<Record<Section, number>> = {
   signInDetails: 100,
   attempts: 50_000, examPlans: 10, reviewRows: 50_000, reports: 10_000, sessions: 10_000,
@@ -233,6 +247,8 @@ interface Sections {
   progress: Row[] | GuestSnapshot;
   reviewState: Row[];
   gameStats: Row[];
+  homeScreenTip: Row;
+  sudokuSettings: Row;
   attempts: Row[];
   examPlans: Row[];
   reviewRows: Row[];
@@ -444,6 +460,8 @@ function prepare(data: unknown): { data: Sections; dropped: string[] } {
       progress,
       reviewState: listSection('reviewState', reviewSchema),
       gameStats: listSection('gameStats', gameSchema),
+      homeScreenTip: recordSection('homeScreenTip', homeScreenTipSchema),
+      sudokuSettings: recordSection('sudokuSettings', sudokuSettingsSchema),
       attempts,
       examPlans,
       reviewRows,
@@ -551,6 +569,8 @@ function csvParts(data: unknown): { fileName: string; parts: (string | Blob)[] }
     file('progress.csv', [...Object.keys(progressSchema), 'deckId', 'progressVersion', 'course', 'examDate', 'done'], progressRows),
     file('reviewState.csv', Object.keys(reviewSchema), clean.data.reviewState),
     file('gameStats.csv', Object.keys(gameSchema), clean.data.gameStats),
+    file('homeScreenTip.csv', Object.keys(homeScreenTipSchema), recordRows(clean.data.homeScreenTip)),
+    file('sudokuSettings.csv', Object.keys(sudokuSettingsSchema), recordRows(clean.data.sudokuSettings)),
     file('attempts.csv', Object.keys(attemptSchema), clean.data.attempts),
     file('examPlans.csv', Object.keys(examPlanSchema), clean.data.examPlans),
     file('reviewRows.csv', Object.keys(reviewRowSchema), clean.data.reviewRows),

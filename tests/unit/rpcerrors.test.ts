@@ -193,6 +193,10 @@ describe('confirmed-email refusal (Task 169)', () => {
 // ── delete_my_account (Task 302) ─────────────────────────────────────────────
 
 describe('delete_my_account errors', () => {
+  it('maps the two-factor refusal', () => {
+    expect(studentMessage('delete_my_account', { message: 'complete two-factor sign-in to continue', code: '28000' }))
+      .toBe('please complete two-factor sign-in to continue.');
+  });
   it('maps the signed-out refusal', () => {
     expect(studentMessage('delete_my_account', { message: 'sign in to delete your account', code: '28000' }))
       .toBe('please sign in again to delete your account.');
@@ -202,6 +206,12 @@ describe('delete_my_account errors', () => {
     const expected = 'for your safety, please sign in again to delete your account.';
     expect(studentMessage('delete_my_account', { message: 'please sign in again to delete your account', code: '28R01' })).toBe(expected);
     expect(studentMessage('delete_my_account', { code: '28R01' })).toBe(expected);
+  });
+
+  it('maps an account swap without echoing an identifier', () => {
+    expect(studentMessage('delete_my_account', {
+      message: 'the signed-in account changed; reload and try again', code: '28000',
+    })).toBe('the account signed in on this device changed, so nothing was deleted. please reload and try again.');
   });
 
   it('never echoes other database text', () => {
