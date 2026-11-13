@@ -11,7 +11,7 @@ import {
   gradeRound,
   letterLabel,
   nextQuestion,
-  pickAnswer,
+  pickVisibleAnswer,
   reviewWords,
   ringFraction,
   sampleGrader,
@@ -149,6 +149,13 @@ export default function StatGame({ questions, sampleKey }: Props) {
     if (line) setSaid(line);
   }, [phase, state.index, state.status, left]);
 
+  // Announce only a committed pick. A stale mouse or keyboard event that advances
+  // an expired question must never announce a selection on the next one.
+  useEffect(() => {
+    if (phase !== 'playing' || state.status !== 'playing' || !state.picked) return;
+    setSaid(`${letterLabel(state.picked)} selected.`);
+  }, [phase, state.index, state.status, state.picked]);
+
   // The round is over: grade it (only now), then show the results.
   useEffect(() => {
     if (phase !== 'playing' || state.status !== 'over') return;
@@ -176,9 +183,14 @@ export default function StatGame({ questions, sampleKey }: Props) {
   }, [phase]);
 
   const pick = (letter: StatLetter) => {
-    if (phase !== 'playing') return;
-    setState((current) => pickAnswer(advanceTime(current, questions, Date.now()), letter));
-    setSaid(`${letterLabel(letter)} selected.`);
+    if (phase !== 'playing' || !question) return;
+    // Bind this input to the rendered question, even if the clock expires before
+    // the state update is applied. All timeouts and transitions stay in stat.ts.
+    const visibleIndex = state.index;
+    const visibleQuestionId = question.id;
+    const time = Date.now();
+    setNow(time);
+    setState((current) => pickVisibleAnswer(current, questions, time, visibleIndex, visibleQuestionId, letter));
   };
 
   const next = () => {

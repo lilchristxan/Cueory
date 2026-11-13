@@ -129,6 +129,24 @@ export function advanceTime(state: StatState, questions: readonly StatQuestion[]
   return current;
 }
 
+/** The visible question owns its pick. Do not apply a late event to the next timed question. */
+export function pickVisibleAnswer(
+  state: StatState,
+  questions: readonly StatQuestion[],
+  now: number,
+  visibleIndex: number,
+  visibleQuestionId: string,
+  letter: StatLetter,
+): StatState {
+  // Catch up on deadlines first, including an entire round elapsed in a sleeping tab.
+  const current = advanceTime(state, questions, now);
+  // The UI may still display an old question when a timer or React update is pending.
+  // An expired pick must not become the first answer to the next question.
+  if (current !== state || current.status !== 'playing' ||
+      current.index !== visibleIndex || questions[current.index]?.id !== visibleQuestionId) return current;
+  return pickAnswer(current, letter);
+}
+
 /** Ring progress from 1 (full, 20 seconds left) to 0. */
 export function ringFraction(left: number): number {
   return Math.min(1, Math.max(0, left / STAT_SECONDS));

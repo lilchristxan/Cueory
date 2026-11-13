@@ -403,6 +403,44 @@ test('it sends nothing off the site and saves nothing', async ({ page }) => {
   expect(await page.evaluate(() => Object.keys(localStorage).filter((name) => /stat/i.test(name)))).toEqual([]);
 });
 
+test('a mouse click at the deadline cannot answer the next question', async ({ page }) => {
+  await start(page);
+  // Advance the event's wall clock without firing the 200 ms interval. The
+  // expired question is still rendered when its old button receives the click.
+  await page.evaluate(() => {
+    const previousNow = Date.now;
+    try {
+      Date.now = () => previousNow() + 20_000;
+      (document.querySelector('[data-testid="stat-choice-a"]') as HTMLButtonElement | null)?.click();
+    } finally {
+      Date.now = previousNow;
+    }
+  });
+  await expect(progress(page)).toHaveText('question 2 of 15');
+  await expect(choice(page, 'a')).toHaveAttribute('aria-pressed', 'false');
+  await expect(said(page)).not.toHaveText('A selected.');
+  // The first real selection on question 2 still works.
+  await choice(page, 'b').click();
+  await expect(choice(page, 'b')).toHaveAttribute('aria-pressed', 'true');
+  await expect(said(page)).toHaveText('B selected.');
+});
+
+test('a keyboard pick after a sleeping-tab deadline cannot select a later question', async ({ page }) => {
+  await start(page);
+  await page.evaluate(() => {
+    const previousNow = Date.now;
+    try {
+      Date.now = () => previousNow() + 65_000;
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'd', bubbles: true }));
+    } finally {
+      Date.now = previousNow;
+    }
+  });
+  await expect(progress(page)).toHaveText('question 4 of 15');
+  await expect(choice(page, 'd')).toHaveAttribute('aria-pressed', 'false');
+  await expect(said(page)).not.toHaveText('D selected.');
+});
+
 test('returning to a timed round after tab sleep announces the real seconds left', async ({ page }) => {
   await start(page);
   // Simulate a suspended tab without running every 200 ms interval.
