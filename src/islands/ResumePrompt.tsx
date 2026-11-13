@@ -3,7 +3,7 @@ import { clearResume, readResume, type ResumeSnapshot } from '../scripts/resume'
 import { browserStorage } from '../scripts/storage';
 import {
   matchingResumePage, resumeDecision, resumePromptText, restoreResumeChoiceFocus,
-} from './resumeprompt';
+} from './resume-prompt';
 
 export interface ResumePromptProps {
   /** The study page's own path. The resume record is never a redirect URL. */

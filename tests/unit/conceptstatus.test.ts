@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { statusesFrom, type ConceptAttempt, type ConceptDefinition } from '../../src/islands/conceptstatus';
 import { conceptStatus, type AdaptiveQuestion } from '../../src/islands/adaptive';
-import { parseItems } from '../../src/islands/conceptmap';
+import { parseItems } from '../../src/islands/concept-map';
 
 const concepts: ConceptDefinition[] = [
   { id: 'sample-colors', concept: 'sample: colors' },

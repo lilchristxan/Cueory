@@ -2,7 +2,7 @@ import { createElement } from 'react';
 import { renderToString } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import ErrorBoundary, { ErrorBoundaryDemo, ErrorBoundaryFallback } from '../../src/islands/ErrorBoundary';
-import { ERROR_BOUNDARY_COPY, errorBoundaryView, shouldShowErrorDetails } from '../../src/islands/errorboundary';
+import { ERROR_BOUNDARY_COPY, errorBoundaryView, shouldShowErrorDetails } from '../../src/islands/error-boundary';
 
 // Assertions inspect serialized HTML, where React escapes punctuation in text and attributes.
 const titleHTML = renderToString(ERROR_BOUNDARY_COPY.title);

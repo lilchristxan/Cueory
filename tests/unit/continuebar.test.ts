@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import { readResume, RESUME_STORAGE_KEY, RESUME_TTL_MS, type ResumeSnapshot } from '../../src/scripts/resume';
 import { ContinueStrip } from '../../src/islands/ContinueBar';
-import { continueBarView } from '../../src/islands/continuebar';
+import { continueBarView } from '../../src/islands/continue-bar';
 
 const NOW = Date.UTC(2026, 10, 11, 18, 0);
 const today = () => new Date(NOW);

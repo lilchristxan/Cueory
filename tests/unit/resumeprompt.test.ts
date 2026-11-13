@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { ResumeChoices } from '../../src/islands/ResumePrompt';
-import { matchingResumePage, resumeDecision, resumePromptText, restoreResumeChoiceFocus, savedDayWords, shouldRecoverResumeFocus } from '../../src/islands/resumeprompt';
+import { matchingResumePage, resumeDecision, resumePromptText, restoreResumeChoiceFocus, savedDayWords, shouldRecoverResumeFocus } from '../../src/islands/resume-prompt';
 import type { ResumeSnapshot, ResumeTool } from '../../src/scripts/resume';
 
 const NOW = new Date(2026, 10, 11, 12, 0, 0).getTime();

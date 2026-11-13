@@ -1,7 +1,7 @@
 import { useEffect, useId, useState } from 'react';
 import { browserStorage } from '../scripts/storage';
 import { GAME_RESULT_EVENT, localDay } from './gameresults';
-import { dismissTip, loadTipState, recordFinishDay, shouldShowTip, updateTipState } from './homescreentip';
+import { dismissTip, loadTipState, recordFinishDay, shouldShowTip, updateTipState } from './home-screen-tip';
 
 /** Sudoku reports its finish with its own event. */
 const SUDOKU_SOLVED_EVENT = 'cueory:sudoku-solved';
@@ -14,7 +14,7 @@ function isStandalone(): boolean {
   }
 }
 
-/** Renders only: the show rule and storage live in ./homescreentip. */
+/** Renders only: the show rule and storage live in ./home-screen-tip. */
 export default function HomeScreenTip() {
   const [visible, setVisible] = useState(false);
   const headingId = useId();

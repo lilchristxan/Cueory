@@ -2,7 +2,7 @@ import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import RewardsList from '../../src/islands/RewardsList';
-import { buildRewardsPreview, type LabeledSampleEvent } from '../../src/islands/rewardslist';
+import { buildRewardsPreview, type LabeledSampleEvent } from '../../src/islands/rewards-list';
 
 const TODAY = '2026-11-11';
 const game = (
