@@ -6,7 +6,7 @@
  * 2026-11-01, then wrap with modulo. Sudoku instead generates a daily board.
  * The old triage/sort samples are audited but are NOT used by today's sudoku.
  */
-import { readdirSync, readFileSync } from 'node:fs';
+import { readdirSync, readFileSync, realpathSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -347,6 +347,8 @@ export function runwayLines(asOf: Date = new Date()): string[] {
   });
 }
 
-if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+// Canonicalize symlinks (including macOS temporary-directory aliases) before deciding whether this file is the CLI entry point.
+// A false mismatch would silently exit 0 without producing the runway report.
+if (process.argv[1] && realpathSync(resolve(process.argv[1])) === realpathSync(fileURLToPath(import.meta.url))) {
   process.stdout.write(runwayLines().join('\n') + '\n');
 }

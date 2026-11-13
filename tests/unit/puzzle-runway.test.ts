@@ -1,4 +1,9 @@
 import { describe, expect, it } from 'vitest';
+import { spawnSync } from 'node:child_process';
+import { mkdtempSync, rmSync, symlinkSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { parsePuzzle as parseCrossword } from '../../src/islands/cueword';
 import { parsePuzzle as parseWordPath } from '../../src/islands/suture';
 import { dayNumber, puzzleForDay } from '../../src/islands/pulse';
@@ -304,6 +309,28 @@ describe('runway edge cases and accessible status text', () => {
       expect(line).toMatch(/fresh sample days left|generated each day/);
       expect(line).toMatch(/issue\(s\)/);
       expect(line).not.toMatch(/\x1b\[[0-9;]*m/);
+    }
+  });
+});
+
+
+describe('runway entry point does not silently skip a symlinked CLI', () => {
+  it('prints the public sample report when launched through a symlink', () => {
+    const temporary = mkdtempSync(join(tmpdir(), 'cueory-runway-entry-'));
+    try {
+      const entry = fileURLToPath(new URL('../../src/content/runway.ts', import.meta.url));
+      const alias = join(temporary, 'runway-link.ts');
+      symlinkSync(entry, alias);
+      const run = spawnSync(process.execPath, ['--experimental-strip-types', alias], {
+        encoding: 'utf8',
+      });
+      expect(run.status, run.stderr).toBe(0);
+      // A skipped entry guard would return exit 0 with empty output.
+      expect(run.stdout).toContain('pulse (rotating-samples):');
+      expect(run.stdout).toContain('sudoku (generated):');
+      expect(run.stdout.trim().split('\n')).toHaveLength(7);
+    } finally {
+      rmSync(temporary, { recursive: true, force: true });
     }
   });
 });
