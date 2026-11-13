@@ -30,5 +30,11 @@ describe('home daily games device-local date (W01-2)', () => {
     expect(dailyLineFromClock(() => { throw new Error('clock blocked'); })).toBe("your device's date is unavailable. " + MIDNIGHT_MESSAGE);
     expect(msUntilLocalMidnight(new Date(Number.NaN))).toBeNull();
     expect(msUntilLocalMidnight(null)).toBeNull();
+    // A Date may have an unreadable method (for example a blocked/proxied clock).
+    // Both helpers must return their truthful fallback instead of escaping the error.
+    const blocked = new Date(2026, 10, 11);
+    Object.defineProperty(blocked, 'getTime', { value: () => { throw new Error('date read blocked'); } });
+    expect(dailyLine(blocked)).toBe("your device's date is unavailable. " + MIDNIGHT_MESSAGE);
+    expect(msUntilLocalMidnight(blocked)).toBeNull();
   });
 });

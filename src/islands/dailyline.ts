@@ -7,8 +7,8 @@ const RETRY_MS = 60_000;
 
 /** Pure text formatter. Never present an invented date if the device clock is unavailable. */
 export function dailyLine(date: Date | null): string {
-  if (!(date instanceof Date) || !Number.isFinite(date.getTime())) return UNAVAILABLE_MESSAGE;
   try {
+    if (!(date instanceof Date) || !Number.isFinite(date.getTime())) return UNAVAILABLE_MESSAGE;
     return "today's set: " + dayLabel(date) + '. ' + MIDNIGHT_MESSAGE;
   } catch {
     return UNAVAILABLE_MESSAGE;
@@ -26,8 +26,8 @@ export function dailyLineFromClock(clock: () => Date): string {
 
 /** The local Date constructor accounts for 23-hour and 25-hour DST days. */
 export function msUntilLocalMidnight(date: Date | null): number | null {
-  if (!(date instanceof Date) || !Number.isFinite(date.getTime())) return null;
   try {
+    if (!(date instanceof Date) || !Number.isFinite(date.getTime())) return null;
     const next = new Date(date.getFullYear(), date.getMonth(), date.getDate() + 1);
     const remaining = next.getTime() - date.getTime();
     return Number.isFinite(remaining) && remaining > 0 ? remaining : null;
