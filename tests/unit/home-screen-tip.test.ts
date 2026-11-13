@@ -11,7 +11,7 @@ import {
   shouldShowTip,
   updateTipState,
   type HomeTipState,
-} from '../../src/islands/homescreentip';
+} from '../../src/islands/home-screen-tip';
 import type { KeyValueStorage } from '../../src/scripts/storage';
 
 function memory(): KeyValueStorage & { data: Map<string, string> } {

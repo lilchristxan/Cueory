@@ -1,4 +1,4 @@
-STATUS: in review — L2 "add cueory to your home screen" tip on /play (task-L2/home-screen-tip).
+status: in review — L2 "add cueory to your home screen" tip on /play (task-L2/home-screen-tip).
 
 - The tip shows only after puzzles were finished on 3 different days, counted on this device only
   (`cueory-home-screen-tip` in localStorage: up to 3 dates and a dismissed flag; nothing is sent anywhere).
