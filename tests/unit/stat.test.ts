@@ -238,12 +238,12 @@ describe('stat selection is bound to the visible question', () => {
   it('accepts picks before the deadline but not at the deadline or a millisecond later', () => {
     const initial = startStat(T0);
     const visibleId = questions[0]!.id;
-    const before = pickVisibleAnswer(initial, questions, T0 + STAT_SECONDS * S - 1, 0, visibleId, 'a');
+    const before = pickVisibleAnswer(initial, questions, T0 + STAT_SECONDS * S - 1, 0, visibleId, T0, 'a');
     expect(before).toMatchObject({ index: 0, picked: 'a', status: 'playing' });
     expect(before.answers).toHaveLength(0);
 
     for (const elapsed of [STAT_SECONDS * S, STAT_SECONDS * S + 1]) {
-      const expired = pickVisibleAnswer(initial, questions, T0 + elapsed, 0, visibleId, 'a');
+      const expired = pickVisibleAnswer(initial, questions, T0 + elapsed, 0, visibleId, T0, 'a');
       expect(expired).toMatchObject({ index: 1, picked: null, status: 'playing' });
       expect(expired.answers).toEqual([{
         questionId: visibleId, picked: null, seconds: STAT_SECONDS, timedOut: true,
@@ -254,26 +254,26 @@ describe('stat selection is bound to the visible question', () => {
   it('does not leak an expired pick from an old screen into another question after tab sleep', () => {
     const initial = startStat(T0);
     const elapsed = STAT_SECONDS * S * 3 + 5 * S;
-    const advanced = pickVisibleAnswer(initial, questions, T0 + elapsed, 0, questions[0]!.id, 'c');
+    const advanced = pickVisibleAnswer(initial, questions, T0 + elapsed, 0, questions[0]!.id, T0, 'c');
     expect(advanced.index).toBe(3);
     expect(advanced.picked).toBeNull();
     expect(advanced.answers).toHaveLength(3);
     expect(advanced.answers.every((answer) => answer.timedOut && answer.picked === null)).toBe(true);
 
-    const currentPick = pickVisibleAnswer(advanced, questions, T0 + elapsed, 3, questions[3]!.id, 'b');
+    const currentPick = pickVisibleAnswer(advanced, questions, T0 + elapsed, 3, questions[3]!.id, T0 + 60_000, 'b');
     expect(currentPick.picked).toBe('b');
     expect(currentPick.index).toBe(3);
     // A queued event from the previous rendered question stays inert.
-    expect(pickVisibleAnswer(currentPick, questions, T0 + elapsed, 0, questions[0]!.id, 'a'))
+    expect(pickVisibleAnswer(currentPick, questions, T0 + elapsed, 0, questions[0]!.id, T0, 'a'))
       .toBe(currentPick);
-    expect(pickVisibleAnswer(currentPick, questions, T0 + elapsed, 3, 'stale-id', 'a'))
+    expect(pickVisibleAnswer(currentPick, questions, T0 + elapsed, 3, 'stale-id', T0 + 60_000, 'a'))
       .toBe(currentPick);
   });
 
   it('keeps only an earlier valid pick on timeout, never the late replacement', () => {
     const start = startStat(T0);
-    const picked = pickVisibleAnswer(start, questions, T0 + S, 0, questions[0]!.id, 'b');
-    const late = pickVisibleAnswer(picked, questions, T0 + STAT_SECONDS * S, 0, questions[0]!.id, 'd');
+    const picked = pickVisibleAnswer(start, questions, T0 + S, 0, questions[0]!.id, T0, 'b');
+    const late = pickVisibleAnswer(picked, questions, T0 + STAT_SECONDS * S, 0, questions[0]!.id, T0, 'd');
     expect(late.index).toBe(1);
     expect(late.picked).toBeNull();
     expect(late.answers[0]).toMatchObject({
@@ -283,11 +283,24 @@ describe('stat selection is bound to the visible question', () => {
     });
 
     const over = pickVisibleAnswer(start, questions, T0 + STAT_QUESTIONS * STAT_SECONDS * S,
-      0, questions[0]!.id, 'a');
+      0, questions[0]!.id, T0, 'a');
     expect(over.status).toBe('over');
     expect(over.picked).toBeNull();
     expect(over.answers).toHaveLength(STAT_QUESTIONS);
   });
+  it('does not let a delayed event from an older round select the same first question after restart', () => {
+    const earlier = startStat(T0);
+    const later = startStat(T0 + 100_000);
+    const sameQuestionId = questions[0]!.id;
+    expect(pickVisibleAnswer(later, questions, T0 + 100_001, 0, sameQuestionId,
+      earlier.startedAt, 'a')).toBe(later);
+    const valid = pickVisibleAnswer(later, questions, T0 + 100_001, 0, sameQuestionId,
+      later.startedAt, 'b');
+    expect(valid.index).toBe(0);
+    expect(valid.picked).toBe('b');
+    expect(valid.answers).toEqual([]);
+  });
+
 });
 
 describe('stat answers', () => {

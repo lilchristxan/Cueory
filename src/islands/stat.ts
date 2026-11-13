@@ -136,6 +136,7 @@ export function pickVisibleAnswer(
   now: number,
   visibleIndex: number,
   visibleQuestionId: string,
+  visibleStartedAt: number,
   letter: StatLetter,
 ): StatState {
   // Catch up on deadlines first, including an entire round elapsed in a sleeping tab.
@@ -143,7 +144,8 @@ export function pickVisibleAnswer(
   // The UI may still display an old question when a timer or React update is pending.
   // An expired pick must not become the first answer to the next question.
   if (current !== state || current.status !== 'playing' ||
-      current.index !== visibleIndex || questions[current.index]?.id !== visibleQuestionId) return current;
+      current.index !== visibleIndex || current.startedAt !== visibleStartedAt ||
+      questions[current.index]?.id !== visibleQuestionId) return current;
   return pickAnswer(current, letter);
 }
 

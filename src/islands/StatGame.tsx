@@ -188,9 +188,10 @@ export default function StatGame({ questions, sampleKey }: Props) {
     // the state update is applied. All timeouts and transitions stay in stat.ts.
     const visibleIndex = state.index;
     const visibleQuestionId = question.id;
+    const visibleStartedAt = state.startedAt;
     const time = Date.now();
     setNow(time);
-    setState((current) => pickVisibleAnswer(current, questions, time, visibleIndex, visibleQuestionId, letter));
+    setState((current) => pickVisibleAnswer(current, questions, time, visibleIndex, visibleQuestionId, visibleStartedAt, letter));
   };
 
   const next = () => {
