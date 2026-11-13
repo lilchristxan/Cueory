@@ -10,6 +10,8 @@ describe('home daily games device-local date (W01-2)', () => {
     expect(msUntilLocalMidnight(before)).toBe(1);
     expect(msUntilLocalMidnight(after)).toBe(24 * 60 * 60 * 1000);
     expect(dailyLine(after)).toContain(MIDNIGHT_MESSAGE);
+    expect(MIDNIGHT_MESSAGE).toBe('the date changes at midnight on your device. some sample puzzles repeat.');
+    expect(MIDNIGHT_MESSAGE).not.toContain('new puzzles arrive');
   });
 
   it('uses local midnight on daylight-saving transitions, rather than adding 24 hours', () => {

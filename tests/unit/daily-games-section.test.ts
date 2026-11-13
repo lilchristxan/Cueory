@@ -38,7 +38,7 @@ describe('home daily games summary', () => {
     const dayTag = section.match(/<p\b(?=[^>]*\bdata-testid="daily-games-day")[^>]*>/)?.[0];
     expect(dayTag).toContain('aria-live="polite"');
     expect(dayTag).toContain('aria-atomic="true"');
-    expect(section).toContain('new puzzles arrive at midnight on your device.');
+    expect(section).toContain('the date changes at midnight on your device. some sample puzzles repeat.');
   });
 
   it('keeps the single call to action on /play, without a direct stat link', () => {

@@ -40,7 +40,7 @@ for (const width of widths) {
         await expect(link).toHaveAttribute('href', '/play');
         await expect(day).toBeVisible();
         await expect(day).toContainText(/today's set: [a-z]{3} \d{1,2} [a-z]{3}/);
-        await expect(day).toContainText('new puzzles arrive at midnight on your device.');
+        await expect(day).toContainText('the date changes at midnight on your device. some sample puzzles repeat.');
 
         const bounds = await link.boundingBox();
         expect(bounds?.width ?? 0).toBeGreaterThanOrEqual(44);
@@ -117,7 +117,7 @@ test('the visitor day changes at local midnight, even without a page reload', as
     await expect(day).toHaveAttribute('data-day-dom-updates', '1');
     await page.evaluate(() => window.dispatchEvent(new Event('focus')));
     await expect(day).toHaveAttribute('data-day-dom-updates', '1');
-    await expect(day).toContainText('new puzzles arrive at midnight on your device.');
+    await expect(day).toContainText('the date changes at midnight on your device. some sample puzzles repeat.');
   } finally {
     await context.close();
   }

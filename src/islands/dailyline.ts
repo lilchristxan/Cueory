@@ -1,7 +1,7 @@
 /** The home-page date is local to the visitor, never frozen at build time (W01-2). */
 import { dayLabel } from './daily';
 
-export const MIDNIGHT_MESSAGE = 'new puzzles arrive at midnight on your device.';
+export const MIDNIGHT_MESSAGE = 'the date changes at midnight on your device. some sample puzzles repeat.';
 const UNAVAILABLE_MESSAGE = "your device's date is unavailable. " + MIDNIGHT_MESSAGE;
 const RETRY_MS = 60_000;
 
