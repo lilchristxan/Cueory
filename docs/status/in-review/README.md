@@ -3,7 +3,7 @@
 Every pull request adds **one new file** here instead of editing `docs/STATUS.md` or `docs/DECISIONS.md`, so dozens of
 pull requests can be open at once without clashing (Christian, 2026-11-01).
 
-- **File name:** the branch name with `/` replaced by `-`, ending in `.md`. Example: `task-77-motion-foundation.md`.
+- **File name:** the lowercased branch name with `/` replaced by `-`, ending in `.md`. Example: `task-77-motion-foundation.md`.
 - **Content:** one `status:` line and, only if the pull request makes a decision, one `decision:` line. Use these
   lowercase labels as specified in `AGENTS.md`:
 
