@@ -35,6 +35,9 @@ describe('home daily games summary', () => {
     const section = gamesSection();
     expect(section).toContain('data-testid="daily-games-day"');
     expect(section).toContain('data-daily-games-date');
+    const dayTag = section.match(/<p\b(?=[^>]*\bdata-testid="daily-games-day")[^>]*>/)?.[0];
+    expect(dayTag).toContain('aria-live="polite"');
+    expect(dayTag).toContain('aria-atomic="true"');
     expect(section).toContain('new puzzles arrive at midnight on your device.');
   });
 

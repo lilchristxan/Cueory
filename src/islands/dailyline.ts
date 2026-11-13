@@ -46,7 +46,9 @@ function mountDailyLine(): void {
     if (timeout !== undefined) window.clearTimeout(timeout);
     let now: Date | null = null;
     try { now = new Date(); } catch { /* A blocked clock must not break the homepage. */ }
-    target.textContent = dailyLine(now);
+    const line = dailyLine(now);
+    // A same-day focus or visibility event must not repeat a live announcement.
+    if (target.textContent !== line) target.textContent = line;
     timeout = window.setTimeout(refresh, msUntilLocalMidnight(now) ?? RETRY_MS);
   };
 

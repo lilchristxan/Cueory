@@ -100,8 +100,23 @@ test('the visitor day changes at local midnight, even without a page reload', as
     expect(response?.status()).toBe(200);
     const day = page.getByTestId('daily-games-day');
     await expect(day).toContainText("today's set: wed 11 nov.");
+    await expect(day).toHaveAttribute('aria-live', 'polite');
+    await expect(day).toHaveAttribute('aria-atomic', 'true');
+    // Count DOM text changes, not timer callbacks. Repeated same-day focus must be silent.
+    await day.evaluate((element) => {
+      element.setAttribute('data-day-dom-updates', '0');
+      new MutationObserver((mutations) => {
+        element.setAttribute('data-day-dom-updates',
+          String(Number(element.getAttribute('data-day-dom-updates') ?? '0') + mutations.length));
+      }).observe(element, { childList: true });
+    });
+    await page.evaluate(() => window.dispatchEvent(new Event('focus')));
+    await expect(day).toHaveAttribute('data-day-dom-updates', '0');
     await page.clock.runFor(3_000);
     await expect(day).toContainText("today's set: thu 12 nov.");
+    await expect(day).toHaveAttribute('data-day-dom-updates', '1');
+    await page.evaluate(() => window.dispatchEvent(new Event('focus')));
+    await expect(day).toHaveAttribute('data-day-dom-updates', '1');
     await expect(day).toContainText('new puzzles arrive at midnight on your device.');
   } finally {
     await context.close();
