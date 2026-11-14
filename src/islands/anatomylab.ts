@@ -243,7 +243,9 @@ export function draftsAllowed(env: BuildEnv): boolean {
   const branch = rawBranch?.startsWith('refs/heads/')
     ? rawBranch.slice('refs/heads/'.length)
     : rawBranch;
-  return Boolean(branch) && branch !== PRODUCTION_BRANCH;
+  // Workers Builds may deploy from the connected GitLab legacy/main
+  // production branch. Its published assets must also exclude drafts.
+  return Boolean(branch) && branch !== PRODUCTION_BRANCH && branch !== 'legacy/main';
 }
 
 /** The systems a build may show: approved ones always, drafts only where `draftsAllowed`. */
