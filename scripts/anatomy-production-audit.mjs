@@ -8,6 +8,7 @@ import { closeSync, constants as fsConstants, existsSync, fstatSync, lstatSync, 
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { gunzipSync, inflateRawSync } from 'node:zlib';
+import { unreviewedMediaPayload } from './anatomy-output-media.mjs';
 
 const ANATOMY_FILE = /^anatomy-[a-z0-9-]+\.json$/;
 const MODEL_URL = /^\/models\/anatomy\/[a-z0-9][a-z0-9_-]*\.glb$/;
@@ -1577,6 +1578,10 @@ export function auditAnatomyProduction(distDir, contentDir) {
     if (!pagefindKind && !REVIEWED_OUTPUT_TYPE.test(path) && !MODEL_ASSET.test(path) &&
         !REVIEWED_EXTENSIONLESS_OUTPUT.has(url)) {
       errors.push(`unreviewed output asset type requires explicit review: ${url}`);
+    }
+    // Reject source meshes hidden beneath a trusted-looking media suffix.
+    if (!pagefindKind && unreviewedMediaPayload(path)) {
+      errors.push(`unreviewed media payload or raw geometry in production output: ${url}`);
     }
     try {
       if (!MODEL_ASSET.test(path) && hasTextGltfModel(path)) {
