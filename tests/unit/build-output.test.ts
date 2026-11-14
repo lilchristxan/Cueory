@@ -216,6 +216,8 @@ describe.skipIf(!existsSync(dist))('built site', () => {
   });
 
   it('excludes every unapproved anatomy review route and source name from production-style artifacts', () => {
+    // This build-output test must inspect a production-style dist. Tests that
+    // need draft assets run in a separate explicit preview build.
     const index = readFileSync(join(dist, 'preview/anatomy-review.html'), 'utf8');
     // Reuse the validated, source-backed inventory rather than guessing a
     // manifest file name. This remains a real check of the compiled dist.
