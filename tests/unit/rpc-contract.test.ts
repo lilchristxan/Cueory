@@ -332,12 +332,17 @@ describe('anatomy study contract (Task 178)', () => {
   });
 
   it('sends the SQL argument names from the browser module', async () => {
-    const rpc = vi.fn(async (fn: string, _args?: unknown) => {
+    // Supabase's RPC builder supports range() for paginated set-returning functions.
+    // Keep the test double faithful to that chain without changing the SQL argument checks.
+    const rpc = vi.fn((fn: string, _args?: unknown) => {
       const replies: Record<string, unknown> = {
         record_anatomy_misses: 1, clear_anatomy_miss: true, my_anatomy_review_queue: [] as ReviewQueueRow[],
         save_anatomy_view: '00000000-0000-4000-8000-000000000001', delete_anatomy_view: true, my_anatomy_views: [] as SavedViewRow[],
       };
-      return { data: replies[fn], error: null };
+      const response = { data: replies[fn], error: null };
+      return fn === 'my_anatomy_review_queue'
+        ? { range: (_from: number, _to: number) => Promise.resolve(response) }
+        : Promise.resolve(response);
     });
     const client = { auth: { getSession: async () => ({ data: { session: { user: { id: 'student-1' } } }, error: null }) }, rpc } as unknown as AnatomyStudyClient;
     const study = createAnatomyStudy(async () => client);
