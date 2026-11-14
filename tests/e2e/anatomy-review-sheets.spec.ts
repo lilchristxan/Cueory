@@ -165,6 +165,43 @@ test('a failed model request shows a retry and a new renderer can export both pi
   expect(attempts).toBe(2);
 });
 
+test('a stalled GLB request restores retry and does not corrupt a later successful picture', async ({ page }, info) => {
+  test.skip(!isDesktopOfEachEngine(info), 'one real stalled GLB per browser engine');
+  test.setTimeout(105_000);
+  let attempts = 0;
+  let releaseFirst: (() => Promise<void>) | undefined;
+  await page.route('**/models/anatomy/kidneys.glb', async (route) => {
+    attempts += 1;
+    if (attempts === 1) {
+      await new Promise<void>((resolve) => {
+        releaseFirst = async () => {
+          await route.continue();
+          resolve();
+        };
+      });
+    } else {
+      await route.continue();
+    }
+  });
+  await page.goto(PATH);
+  await page.getByRole('button', { name: 'make front and side pictures' }).click();
+  await expect.poll(() => attempts).toBe(1);
+  // Even a request which never settles must not trap the controls in loading.
+  await expect(page.getByRole('alert').filter({ hasText: 'pictures could not be made' }))
+    .toBeVisible({ timeout: 35_000 });
+  const group = page.locator('[data-review-group]').first();
+  await group.locator('summary').click();
+  await expect(group.locator('[data-review-structure]').first().getByRole('checkbox')).toBeVisible();
+  await page.getByRole('button', { name: 'try making pictures again' }).click();
+  await expect(page.getByRole('img', { name: 'kidneys and urinary tract: front view, model review only' }))
+    .toBeVisible({ timeout: 60_000 });
+  if (!releaseFirst) throw new Error('stalled first model request did not start');
+  await releaseFirst();
+  await expect(page.getByRole('img', { name: 'kidneys and urinary tract: side view, model review only' }))
+    .toBeVisible();
+  expect(attempts).toBe(2);
+});
+
 test('the anatomy review sheet is keyboard accessible without serious or critical violations', async ({ page }) => {
   await page.goto(PATH);
   const firstGroup = page.locator('[data-review-group]').first();
