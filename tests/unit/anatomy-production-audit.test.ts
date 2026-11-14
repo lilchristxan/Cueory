@@ -439,6 +439,24 @@ describe('anatomy production artifact audit', () => {
     f.file('pagefind/index/en_safe_glb_mention_raw.pf_index', Buffer.concat([prefix, safeMentionCbor]));
     expect(f.check().errors).toEqual([]);
 
+    // A gzip member can hide public data in optional header fields that
+    // gunzipSync strips before Pagefind JSON/CBOR inspection. These fields
+    // must not be allowed even when the decoded fragment is safe.
+    for (const [name, flag, metadata] of [
+      ['filename', 0x08, Buffer.from('FMA999991\\0', 'utf8')],
+      ['comment', 0x10, Buffer.from('FIX001\\0', 'utf8')],
+      ['extra', 0x04, Buffer.from([0x09, 0x00, 0x46, 0x4d, 0x41, 0x39, 0x39, 0x39, 0x39, 0x39, 0x31])],
+    ] as const) {
+      const altered = Buffer.concat([fragment.subarray(0, 10), metadata, fragment.subarray(10)]);
+      altered[3] = flag;
+      f.file(`pagefind/fragment/en_header_${name}.pf_fragment`, altered);
+    }
+    for (const name of ['filename', 'comment', 'extra']) {
+      expect(f.check().errors).toContain(
+        `archive/container in production output requires explicit review: /pagefind/fragment/en_header_${name}.pf_fragment`,
+      );
+    }
+
     // Draft IDs in a valid compressed fragment must be rejected, including
     // JSON-escaped content and nested metadata/anchor strings. Fixture IDs are
     // never real anatomy and must also stay out of the public search index.
