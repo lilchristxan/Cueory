@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   anatomyStudyMessage,
   createAnatomyStudy,
+  createReviewQueueRequestGuard,
   createSavedViewsRequestGuard,
   createStudyIdentityGuard,
   isViewCamera,
@@ -41,6 +42,47 @@ describe('study identity changes', () => {
     expect(identity.update(null)).toBe(true);
     expect(identity.isCurrent(b)).toBe(false);
     expect(identity.snapshot().userId).toBeNull();
+  });
+});
+
+describe('review-queue request ordering', () => {
+  it('ignores a stale response from the same account after a newer response', async () => {
+    const guard = createReviewQueueRequestGuard();
+    const applied: string[] = [];
+    let finishOld!: (value: string) => void;
+    let finishNew!: (value: string) => void;
+    const oldRead = new Promise<string>((resolve) => { finishOld = resolve; });
+    const newRead = new Promise<string>((resolve) => { finishNew = resolve; });
+    const read = (response: Promise<string>) => {
+      const request = guard.begin();
+      return response.then((value) => { if (guard.isCurrent(request)) applied.push(value); });
+    };
+    const first = read(oldRead);
+    const second = read(newRead);
+    finishNew('newly recorded miss');
+    await second;
+    finishOld('old empty queue');
+    await first;
+    expect(applied).toEqual(['newly recorded miss']);
+  });
+
+  it('retires a pending read when a miss is cleared, and across account A to B', () => {
+    const guard = createReviewQueueRequestGuard();
+    const identities = createStudyIdentityGuard();
+    identities.update('student-a');
+    const accountA = identities.snapshot();
+    const beforeClear = guard.begin();
+    guard.invalidate(); // a successful clear must cancel the pending read
+    expect(guard.isCurrent(beforeClear)).toBe(false);
+    const afterClear = guard.begin();
+    expect(guard.isCurrent(afterClear)).toBe(true);
+    identities.update('student-b');
+    guard.invalidate(); // a direct authenticated account switch
+    const accountB = identities.snapshot();
+    const bRead = guard.begin();
+    expect(identities.isCurrent(accountA)).toBe(false);
+    expect(guard.isCurrent(afterClear)).toBe(false);
+    expect(identities.isCurrent(accountB) && guard.isCurrent(bRead)).toBe(true);
   });
 });
 

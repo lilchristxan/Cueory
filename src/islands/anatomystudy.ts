@@ -210,6 +210,16 @@ export function createStudyIdentityGuard() {
   };
 }
 
+/** Retires old review-queue responses when a newer read, account switch or mutation supersedes them. */
+export function createReviewQueueRequestGuard() {
+  let generation = 0;
+  return {
+    begin(): number { return ++generation; },
+    invalidate(): void { generation += 1; },
+    isCurrent(request: number): boolean { return request === generation; },
+  };
+}
+
 export interface SavedViewsRequest { readonly systemKey: string; readonly generation: number }
 export function createSavedViewsRequestGuard() {
   let generation = 0;
