@@ -1,0 +1,1 @@
+status: Task 616, reject invalid calendar dates in reviewqueue before ISO conversion and preserve the intended field-specific validation errors. Regression tests cover invalid months, normalized impossible days, leap days, today, both row date fields and synthetic history.
