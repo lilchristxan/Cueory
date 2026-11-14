@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { exportCsvBlobs, exportJsonBlob, StudyEventPages } from '../../src/islands/exportdata';
 import {
   fromSupabase, loadExport, type ExportReader, type ExportRpc, type ExportTable, type SupabaseExportClient,
@@ -126,6 +126,60 @@ describe('loadExport — MFA assurance and complete data', () => {
     expect(await loadExport(db)).toEqual({ ok: false, message: stepUpMessage });
     expect(checks).toBe(2);
     expect(calls).toContain('anatomy_saved_views:' + fields.anatomy_saved_views);
+  });
+
+  it('refuses an export when same-account MFA drops and recovers during a pending anatomy SELECT', async () => {
+    const { db } = reader();
+    let checks = 0;
+    db.assurance = async () => {
+      checks += 1;
+      return { data: { currentLevel: 'aal2', nextLevel: 'aal2' }, error: null };
+    };
+    let sendEvent!: (event: string) => void;
+    const unsubscribe = vi.fn();
+    db.onAuthEvent = callback => { sendEvent = callback; return unsubscribe; };
+    const select = db.select.bind(db);
+    let selectStarted!: () => void;
+    let resumeSelect!: () => void;
+    const started = new Promise<void>(resolve => { selectStarted = resolve; });
+    const released = new Promise<void>(resolve => { resumeSelect = resolve; });
+    db.select = async (table, columns) => {
+      if (table === 'anatomy_saved_views') {
+        selectStarted();
+        await released;
+        // Under aal1 the restrictive RLS policy returns an empty successful read.
+        return { data: [], error: null };
+      }
+      return select(table, columns);
+    };
+    const exportPromise = loadExport(db);
+    await started;
+    sendEvent('TOKEN_REFRESHED'); // other tab's refreshed aal1 token
+    sendEvent('TOKEN_REFRESHED'); // second factor restored to aal2 before final check
+    resumeSelect();
+    expect(await exportPromise).toEqual(failed);
+    expect(checks).toBe(2); // first and final assurance both report aal2
+    expect(unsubscribe).toHaveBeenCalledOnce();
+  });
+
+  it('fails closed when auth event registration returns no cleanup function', async () => {
+    const { db, calls } = reader();
+    db.onAuthEvent = () => undefined as unknown as () => void;
+    expect(await loadExport(db)).toEqual(failed);
+    expect(calls).toEqual([]);
+  });
+  it('ignores INITIAL_SESSION and always unsubscribes, including after a failed export', async () => {
+    for (const fail of [false, true]) {
+      const { db } = reader(fail ? { attempts: new Error('private') } : {});
+      const unsubscribe = vi.fn();
+      db.onAuthEvent = callback => {
+        callback('INITIAL_SESSION');
+        return unsubscribe;
+      };
+      const result = await loadExport(db);
+      expect(result.ok).toBe(!fail);
+      expect(unsubscribe).toHaveBeenCalledOnce();
+    }
   });
 });
 
@@ -412,6 +466,35 @@ function supabase(dataset: Record<string, unknown[]>, failure?: { name: string; 
 }
 
 describe('fromSupabase — no silent row truncation', () => {
+
+  it('refuses a Supabase export when auth event monitoring is unavailable', async () => {
+    const { client } = supabase(rows);
+    const disconnected: SupabaseExportClient = client;
+    disconnected.auth.onAuthStateChange = undefined;
+    expect(await loadExport(fromSupabase(client))).toEqual(failed);
+  });
+  it('passes SDK auth events through to export monitoring and unsubscribes with the same receiver', () => {
+    const { client: base } = supabase(rows);
+    const client: SupabaseExportClient = base;
+    let listener!: (event: string) => void;
+    const unsubscribe = vi.fn();
+    let subscribedWithCorrectReceiver = false;
+    client.auth.onAuthStateChange = function (this: unknown, callback) {
+      subscribedWithCorrectReceiver = this === client.auth;
+      listener = callback;
+      return { data: { subscription: { unsubscribe } } };
+    };
+    const events: string[] = [];
+    const stop = fromSupabase(client).onAuthEvent!(event => events.push(event));
+    listener('INITIAL_SESSION');
+    listener('TOKEN_REFRESHED');
+    listener('SIGNED_OUT');
+    expect(subscribedWithCorrectReceiver).toBe(true);
+    expect(events).toEqual(['INITIAL_SESSION', 'TOKEN_REFRESHED', 'SIGNED_OUT']);
+    stop();
+    expect(unsubscribe).toHaveBeenCalledOnce();
+  });
+
   it('loads more than the default 1,000 rows using stable, bounded pages', async () => {
     const many = { ...rows,
       attempts: Array.from({ length: 1002 }, (_, i) => ({ ...rows.attempts[0], id: id(i + 1) })),

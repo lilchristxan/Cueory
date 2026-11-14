@@ -43,6 +43,8 @@ export interface ExportReader {
   user(): PromiseLike<ReadResult>;
   /** Auth assurance, so restrictive MFA RLS cannot silently hide the student's data from an export. */
   assurance(): PromiseLike<ReadResult>;
+  /** Observe auth changes for the whole export. A transient AAL downgrade can hide rows even when both assurance checks see aal2. */
+  onAuthEvent?(callback: (event: string) => void): () => void;
 }
 
 export type ExportRpc = 'my_flags' | 'my_sessions';
@@ -360,7 +362,22 @@ async function exportAssurance(reader: ExportReader): Promise<'ready' | 'step-up
 
 /** Returns every section supplied by the database, or nothing if a read fails. */
 export async function loadExport(reader: ExportReader): Promise<ExportLoadResult> {
+  let sessionChanged = false;
+  let stopAuthEvents = () => {};
   try {
+    // INITIAL_SESSION only reports the existing session. Every later auth event
+    // invalidates the read, including same-account token refresh and MFA changes:
+    // aal2 -> aal1 -> aal2 can return a successful but incomplete owner-RLS SELECT.
+    const onAuthEvent = reader.onAuthEvent;
+    if (onAuthEvent) {
+      const stop = onAuthEvent((event) => {
+        if (event !== 'INITIAL_SESSION') sessionChanged = true;
+      });
+      // Refuse an incomplete subscription setup, rather than silently
+      // producing an export without session-change detection.
+      if (typeof stop !== 'function') throw new Error('invalid auth subscription');
+      stopAuthEvents = stop;
+    }
     if (await exportAssurance(reader) === 'step-up') {
       return { ok: false, message: MFA_STEP_UP_MESSAGE };
     }
@@ -481,6 +498,7 @@ export async function loadExport(reader: ExportReader): Promise<ExportLoadResult
     if (await exportAssurance(reader) === 'step-up') {
       return { ok: false, message: MFA_STEP_UP_MESSAGE };
     }
+    if (sessionChanged) throw new Error('auth event during export');
     const who = await reader.user();
     if (!who || who.error != null) throw new Error('sign-in record read failed');
     const ownAccount = account(who.data);
@@ -493,6 +511,7 @@ export async function loadExport(reader: ExportReader): Promise<ExportLoadResult
             (typeof value === 'string' && value.length <= 2048))) return [];
       return [{ name, value }];
     }).slice(0, 100);
+    if (sessionChanged) throw new Error('auth event during export');
     return {
       ok: true,
       data: {
@@ -503,6 +522,8 @@ export async function loadExport(reader: ExportReader): Promise<ExportLoadResult
   } catch {
     // Never show or log a database error. It could contain another person's data or SQL internals.
     return { ok: false, message: ERROR_MESSAGE };
+  } finally {
+    stopAuthEvents();
   }
 }
 
@@ -519,6 +540,8 @@ export interface SupabaseExportClient {
   auth: {
     getUser(): PromiseLike<ReadResult>;
     mfa: { getAuthenticatorAssuranceLevel(): PromiseLike<ReadResult> };
+    /** https://supabase.com/docs/reference/javascript/auth-onauthstatechange */
+    onAuthStateChange?(callback: (event: string) => void): { data: { subscription: { unsubscribe(): void } } };
   };
 }
 
@@ -587,5 +610,13 @@ export function fromSupabase(client: SupabaseExportClient): ExportReader {
     rpc: (name) => allPages(() => client.rpc(name), name),
     user: () => client.auth.getUser(),
     assurance: () => client.auth.mfa.getAuthenticatorAssuranceLevel(),
+    onAuthEvent(callback) {
+      const subscribe = client.auth.onAuthStateChange;
+      if (typeof subscribe !== 'function') throw new Error('auth event monitoring unavailable');
+      const response = subscribe.call(client.auth, callback);
+      const unsubscribe = response?.data?.subscription?.unsubscribe;
+      if (typeof unsubscribe !== 'function') throw new Error('auth event monitoring unavailable');
+      return () => unsubscribe.call(response.data.subscription);
+    },
   };
 }
