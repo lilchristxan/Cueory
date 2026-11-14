@@ -246,18 +246,16 @@ export function writeAnatomyReviewSheets(entries, destination) {
     throw new Error('an explicit review output directory is required');
   }
   const folder = resolve(destination);
-  // A symlink in an existing parent can redirect an apparently external output
-  // directory inside this public repository. Canonicalize the existing path
-  // components before deciding whether a write is safe.
+  // A symlinked parent can redirect an apparently external destination into
+  // this public repository. Resolve the deepest existing ancestor, then append
+  // only the components that do not exist yet.
   let ancestor = folder;
-  const tail = [];
   while (!existsSync(ancestor)) {
     const parent = dirname(ancestor);
     if (parent === ancestor) throw new Error('review output directory has no existing ancestor');
-    tail.unshift(ancestor.slice(parent.length + (parent.endsWith(sep) ? 0 : 1)));
     ancestor = parent;
   }
-  const canonicalFolder = resolve(realpathSync(ancestor), ...tail);
+  const canonicalFolder = resolve(realpathSync(ancestor), folder.slice(ancestor.length).replace(/^[/\\]+/, ''));
   const canonicalRoot = realpathSync(DEFAULT_ROOT);
   if (canonicalFolder === canonicalRoot || canonicalFolder.startsWith(canonicalRoot + sep)) {
     throw new Error('write review sheets outside the project repository');
