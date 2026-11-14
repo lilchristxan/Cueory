@@ -1,0 +1,132 @@
+---
+/**
+ * Individual founder review sheet for one published-or-preview-allowed model.
+ * Paths are generated only from the same approval/draft gate as the lab itself.
+ * The checked boxes are local form controls, not publication approvals.
+ */
+import Layout from '../../../layouts/Layout.astro';
+import AnatomyReviewPictures from '../../../islands/AnatomyReviewPictures';
+import {
+  BODYPARTS3D_CREDIT_LEAD,
+  BODYPARTS3D_LICENSE_NAME,
+  BODYPARTS3D_LICENSE_URL,
+  BODYPARTS3D_REFERENCE_NOTE,
+  BODYPARTS3D_REFERENCE_URL,
+  labDataForBuild,
+  type AnatomySystem,
+} from '../../../islands/anatomylab';
+import { anatomyInventory } from '../../../../scripts/anatomy-review-report.mjs';
+import fixtureJson from '../../../../tests/fixtures/anatomy-fixture.json';
+
+export function getStaticPaths() {
+  const files = import.meta.glob('../../../../content/visuals/anatomy-*.json', { eager: true, import: 'default' });
+  const lab = labDataForBuild(files, fixtureJson, {
+    WORKERS_CI: process.env.WORKERS_CI,
+    WORKERS_CI_BRANCH: process.env.WORKERS_CI_BRANCH,
+    CUEORY_ANATOMY_DRAFTS: process.env.CUEORY_ANATOMY_DRAFTS,
+  });
+  const allowed = new Map(lab.systems.map((system) => [system.key, system]));
+  // Unknown/main builds may not create a draft review page or serialize its names.
+  if (!allowed.size) return [];
+  return anatomyInventory()
+    .filter((entry) => allowed.has(entry.id))
+    .map((entry) => ({
+      params: { system: entry.id },
+      props: { entry, system: allowed.get(entry.id)! },
+    }));
+}
+
+type ReviewEntry = ReturnType<typeof anatomyInventory>[number];
+const { entry, system } = Astro.props as { entry: ReviewEntry; system: AnatomySystem };
+---
+
+<Layout title={`preview: review ${entry.title}`} description="Founder-only BodyParts3D anatomy model review sheet." variant="study" noindex>
+  <div class="mx-auto max-w-page space-y-8 pt-8 pb-section">
+    <header class="space-y-3">
+      <p class="text-sm text-ink-soft">preview · founder review only</p>
+      <h1 class="text-2xl text-ink">{entry.title}: model review sheet</h1>
+      <p class="text-sm text-ink">
+        {entry.labels.length} structures · {entry.status} · {entry.release}
+      </p>
+      <p class="max-w-prose text-sm text-ink-soft">
+        these names and source lines are copied from the existing BodyParts3D records.
+        neither making a picture nor checking a box approves a model.
+      </p>
+      <p>
+        <a href="/preview/anatomy-review" class="underline text-ink">all review sheets</a>
+      </p>
+    </header>
+
+    <AnatomyReviewPictures client:only="react" systems={[system]} />
+    <noscript>
+      <p class="rounded-lg border border-line p-4 text-ink">
+        model pictures need JavaScript and 3D. the complete source-name review checklist below works without them.
+      </p>
+    </noscript>
+
+    <section class="space-y-3" aria-labelledby="source-evidence">
+      <h2 id="source-evidence" class="text-xl text-ink">model source and rights</h2>
+      <p class="text-sm text-ink">
+        {BODYPARTS3D_CREDIT_LEAD}{' '}
+        <a href={BODYPARTS3D_LICENSE_URL} rel="license noopener" class="underline">
+          {BODYPARTS3D_LICENSE_NAME}
+        </a>
+      </p>
+      <p class="text-sm text-ink">
+        {BODYPARTS3D_REFERENCE_NOTE}{' '}
+        <a href={BODYPARTS3D_REFERENCE_URL} rel="noopener noreferrer" class="underline">source details</a>
+      </p>
+      <p class="text-sm text-ink-soft">model file: {entry.path} · model size: {(entry.bytes / 1024).toFixed(1)} KiB</p>
+    </section>
+
+    <section aria-labelledby="structures-heading" class="space-y-4">
+      <h2 id="structures-heading" class="text-xl text-ink">check each original structure name and source</h2>
+      <p class="text-sm text-ink-soft">
+        {entry.labels.length} source records. check a row only after comparing the model shape,
+        name, group, layer, and quoted source line. these boxes are not saved.
+      </p>
+      <ol class="space-y-3" data-testid="anatomy-review-checklist">
+        {entry.labels.map((label, i) => (
+          <li class="min-w-0 space-y-2 rounded-lg border border-line p-3">
+            <label class="flex min-w-0 items-start gap-3 text-ink">
+              <input
+                type="checkbox"
+                class="mt-1 h-5 w-5 shrink-0"
+                aria-label={`reviewed ${label.id}: ${label.name}`}
+              />
+              <span class="min-w-0 break-words">
+                <strong>{i + 1}. {label.name}</strong>
+                <span class="block text-sm text-ink-soft">{label.id}</span>
+              </span>
+            </label>
+            <p class="break-words text-sm text-ink-soft">
+              group: {label.group} · layer: {label.layer}
+            </p>
+            <p class="break-words text-sm text-ink">
+              source line: {label.source.quote}
+            </p>
+            <p class="break-all text-sm">
+              <a href={label.source.url} rel="noopener noreferrer" class="underline text-ink">
+                {label.source.book}: {label.source.section}
+              </a>
+            </p>
+          </li>
+        ))}
+      </ol>
+    </section>
+
+    <section class="space-y-3 rounded-lg border border-line p-4" aria-labelledby="approval-heading">
+      <h2 id="approval-heading" class="text-xl text-ink">review before separate approval</h2>
+      <div class="space-y-3">
+        <label class="flex items-start gap-3 text-sm text-ink"><input type="checkbox" class="mt-1 h-5 w-5 shrink-0" />shape and placement checked against the original model</label>
+        <label class="flex items-start gap-3 text-sm text-ink"><input type="checkbox" class="mt-1 h-5 w-5 shrink-0" />source names, groups and layers checked</label>
+        <label class="flex items-start gap-3 text-sm text-ink"><input type="checkbox" class="mt-1 h-5 w-5 shrink-0" />source credit and picture license checked</label>
+        <label class="flex items-start gap-3 text-sm text-ink"><input type="checkbox" class="mt-1 h-5 w-5 shrink-0" />phone layout and keyboard use checked on staging</label>
+      </div>
+      <p class="text-sm text-ink-soft">
+        the model remains {entry.status}. publication requires a separate, explicit founder approval and a reviewed status change.
+      </p>
+    </section>
+    <p><a href="/preview/anatomy-review" class="underline text-ink">back to all review sheets</a></p>
+  </div>
+</Layout>
