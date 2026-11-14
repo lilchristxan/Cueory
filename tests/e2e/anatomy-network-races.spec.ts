@@ -84,4 +84,36 @@ test.describe('anatomy whole-body network races', () => {
       held.splice(0).forEach((release) => release());
     }
   });
+
+  test('phone bulk consent cannot reappear after switching away and back to whole body', async ({ page }) => {
+    test.skip((page.viewportSize()?.width ?? 1024) >= 768, 'this confirmation exists only at phone widths');
+    await openWholeBody(page);
+
+    const picker = page.getByRole('group', { name: 'body system' });
+    const whole = picker.getByRole('button', { name: 'whole body', exact: true });
+    const prompt = page.getByTestId('anatomy-bulk-confirm');
+    const showAll = page.getByRole('button', { name: 'show all', exact: true });
+
+    await showAll.click();
+    await expect(prompt).toBeVisible();
+    await expect(prompt).toContainText('10 more 3D model files');
+
+    // Leaving the system withdraws the pending consent immediately, not only
+    // after the next GLB finishes. A return to the same key must not resurrect it.
+    const another = picker.getByRole('button').first();
+    await another.click();
+    await expect(another).toHaveAttribute('aria-pressed', 'true');
+    await expect(prompt).toHaveCount(0);
+    await whole.click();
+    await expect(page.getByTestId('anatomy-files'))
+      .toContainText('model files loaded: 1 of 11', { timeout: 20_000 });
+    await expect(prompt).toHaveCount(0);
+
+    // Any eventual bulk load requires a *fresh* explicit request and consent.
+    await showAll.click();
+    await expect(prompt).toBeVisible();
+    await expect(prompt).toContainText('10 more 3D model files');
+    await prompt.getByRole('button', { name: 'keep current view' }).click();
+    await expect(prompt).toHaveCount(0);
+  });
 });
