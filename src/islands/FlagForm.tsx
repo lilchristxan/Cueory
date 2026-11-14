@@ -58,7 +58,7 @@ function ReportForm({ page, itemId, itemVersionId, signedIn, send, onOpen, varia
   const [pending, setPending] = useState(false);
   const [announcement, setAnnouncement] = useState('');
   const trigger = useRef<HTMLButtonElement>(null), firstReason = useRef<HTMLInputElement>(null);
-  const panel = useRef<HTMLDivElement>(null), context = useRef<HTMLParagraphElement>(null), commentBox = useRef<HTMLTextAreaElement>(null);
+  const panel = useRef<HTMLDivElement>(null), contextRef = useRef<HTMLParagraphElement>(null), commentBox = useRef<HTMLTextAreaElement>(null);
   const busy = useRef(false), isOpen = useRef(false), mounted = useRef(false);
 
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
@@ -67,7 +67,7 @@ function ReportForm({ page, itemId, itemVersionId, signedIn, send, onOpen, varia
   }, [open, signedIn]);
   useEffect(() => {
     const field = problems[0]?.field;
-    if (field) (field === 'reason' ? firstReason.current : field === 'comment' ? commentBox.current : context.current)?.focus();
+    if (field) (field === 'reason' ? firstReason.current : field === 'comment' ? commentBox.current : contextRef.current)?.focus();
   }, [problems]);
 
   const close = () => { isOpen.current = false; setOpen(false); trigger.current?.focus(); };
@@ -128,7 +128,7 @@ function ReportForm({ page, itemId, itemVersionId, signedIn, send, onOpen, varia
           rows={4} className="mt-2 block min-h-11 w-full max-w-full rounded-md border border-control bg-page p-3 text-ink" />
         <p id={countId} className="mt-2 text-sm text-ink-soft">{Math.max(0, charactersLeft(comment) - [...reportContextPrefix(context)].length).toLocaleString('en-US')} characters left</p>
         {problemText('comment')}
-        <p ref={context} tabIndex={-1} className="mt-4 break-all text-sm text-ink-soft"
+        <p ref={contextRef} tabIndex={-1} className="mt-4 break-all text-sm text-ink-soft"
           aria-describedby={(['page', 'itemId', 'itemVersionId'] as const).filter(field => error(field)).map(errorId).join(' ') || undefined}>
           this report includes this page's address ({page}){itemId !== undefined ? `, item ${itemId}` : ''}{itemVersionId !== undefined ? `, version ${itemVersionId}` : ''}.
         </p>
