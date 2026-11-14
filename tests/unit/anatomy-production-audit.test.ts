@@ -511,8 +511,9 @@ describe('anatomy production artifact audit', () => {
     const wasmWithUstarWord = gzipSync(Buffer.concat([
       prefix, wasmHeader, Buffer.from([0x00, 0xae, 0x02]), wasmCustomPayload,
     ]));
-    // WASM custom-section bytes are opaque binary payload, not student-facing
-    // anatomy text. ID-shaped bytes must not cause a false release rejection.
+    // WASM custom-section data is shipped publicly. Valid modules can carry
+    // exact draft/fixture identifiers in otherwise opaque custom-section bytes.
+    // Reject these IDs, even though ordinary executable opcodes stay opaque.
     const wasmOpaqueData = Buffer.alloc(300, 0x61);
     wasmOpaqueData.write('FMA999991 FIX001', 32, 'ascii');
     const wasmWithDraftId = gzipSync(Buffer.concat([
@@ -557,7 +558,10 @@ describe('anatomy production artifact audit', () => {
       Buffer.from([0x78, incidentalTextMarkers.length]), incidentalTextMarkers,
     ]);
     f.file('pagefind/index/en_safe_glb_mention.pf_index', gzipSync(Buffer.concat([prefix, safeMentionCbor])));
-    f.file('pagefind/index/en_safe_glb_mention_raw.pf_index', Buffer.concat([prefix, safeMentionCbor]));
+    f.file('pagefind/index/    expect(f.check().errors).toEqual([
+      'archive/container in production output requires explicit review: /pagefind/wasm.en_opaque_ids.pagefind',
+    ]);
+concat([prefix, safeMentionCbor]));
     expect(f.check().errors).toEqual([]);
 
     // A gzip text hint is harmless: the body still has to validate as an
