@@ -93,7 +93,12 @@ const studyQuestions = new Map(systems.map((system) => [
                 <div class="space-y-2">
                   {group.group && <h3 class="text-sm text-ink-soft">{group.group}</h3>}
                   <ul class="list-disc space-y-1 pl-5 text-ink">
-                    {group.items.map((item) => <li class="break-words">{item.text}</li>)}
+                    {group.items.map((item) => (
+                      <li class="break-words">
+                        <span>{item.text}</span>{' '}
+                        <span class="text-sm text-ink-soft">(ID: {item.id})</span>
+                      </li>
+                    ))}
                   </ul>
                 </div>
               ))}
