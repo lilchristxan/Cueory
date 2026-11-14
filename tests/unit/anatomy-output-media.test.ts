@@ -29,7 +29,7 @@ function fixture() {
     writeFileSync(path, bytes);
     return path;
   };
-  return { file, audit: () => auditAnatomyProduction(dist, content) };
+  return { root, file, audit: () => auditAnatomyProduction(dist, content) };
 }
 
 const OBJ = '# synthetic 3D data, not an image\nv 0 0 0\nv 1 0 0\nv 0 1 0\nf 1 2 3\n';
@@ -93,7 +93,7 @@ describe('production media signatures and renamed anatomy geometry', () => {
 
   it('fails closed on a linked media asset rather than following a symlink', () => {
     const f = fixture();
-    const missing = join(tmpdir(), 'nonexistent-cueory-image-' + process.pid + '.jpg');
+    const missing = join(f.root, 'nonexistent-image.jpg');
     expect(unreviewedMediaPayload(missing)).toBe(true);
     // The artifact scanner separately refuses symlinks, including broken ones.
     f.file('assets/normal.css', 'body { color: black }');
