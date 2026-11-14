@@ -104,12 +104,20 @@ describe('postbuild anatomy release audit', () => {
         '<!doctype html><html><head></head><body></body></html>',
         '<!doctype html><html><head></head><!-- <body><main>not rendered</main></body></html>',
         '<!doctype html><html><head></head><!-<!--x-->- <body><main>not rendered</main></body></html>',
+        '<!doctype html><html><head><script>const fake = "<body><main>not rendered</main></body></html>"</script></head>',
+        '<!doctype html><html><head><style>/* <body><main>not rendered</main></body></html> */</style></head>',
       ]) {
         writeFileSync(join(dist, 'index.html'), malformed);
         expect(checkAnatomyBuild(env, dist, content).errors).toContain(
           'production site entry point is invalid: /index.html',
         );
       }
+      // A real body still counts when head scripts and styles mention fake tags.
+      writeFileSync(join(dist, 'index.html'),
+        '<!doctype html><html><head><script>const fake = "<body><main>no</main></body>"</script>' +
+        '<style>/* <body><main>no</main></body> */</style></head>' +
+        '<body><main data-note="1 > 0">real body</main></body></html>');
+      expect(checkAnatomyBuild(env, dist, content).errors).toEqual([]);
       // Complete ordinary comments must not invalidate otherwise sound Astro HTML.
       writeFileSync(join(dist, 'index.html'), '<!doctype html><html><head><title>Site</title></head><!-- ordinary comment --><body><main>test</main></body></html>');
       expect(checkAnatomyBuild(env, dist, content).errors).toEqual([]);
