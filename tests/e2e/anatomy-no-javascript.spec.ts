@@ -30,29 +30,34 @@ test('anatomy structure names remain reachable and credited without JavaScript',
     'href',
     'https://creativecommons.org/licenses/by/4.0/',
   );
-  // Source-only Find It does not require scripts, WebGL, or any model fetch.
-  const practice = first.getByRole('region', { name: 'find it in words' });
+  // The source-ID catalog and the keyboard-operable, source-only Find It both
+  // work without JavaScript, WebGL or a model request.
+  const practice = first.locator('[data-anatomy-text-practice]');
+  const practiceToggle = practice.locator(':scope > summary');
   await expect(practice).toBeVisible();
-  const prompts = practice.locator('details');
-  await expect(prompts).toHaveCount(5);
-  // A source ID beyond the five practice prompts must still be findable with no JavaScript.
-  // Confirm a known BodyParts3D ID beyond the first five practice questions,
-  // regardless of how the source catalog groups its structures.
-  const catalogSystem = page.locator('[data-anatomy-system="heart"]');
-  await expect(catalogSystem).toBeVisible();
-  const later = catalogSystem.getByText('(ID: FMA7098)', { exact: true });
-  await expect(later).toBeVisible();
-  await expect(later).toHaveText('(ID: FMA7098)');
-  const firstPrompt = prompts.first();
-  const sourceId = await firstPrompt.locator('summary').textContent();
-  expect(sourceId).toMatch(/which structure has ID [A-Za-z0-9_-]+\? show answer/);
-  const answer = firstPrompt.locator('p').first();
-  await expect(answer).toBeHidden();
-  await firstPrompt.locator('summary').click();
-  await expect(firstPrompt).toHaveAttribute('open', '');
-  await expect(answer).toBeVisible();
-  expect((await answer.textContent())?.trim()).toBeTruthy();
-  await firstPrompt.locator('summary').click();
-  await expect(answer).toBeHidden();
+  await practiceToggle.focus();
+  await page.keyboard.press('Enter');
+  await expect(practice).toHaveAttribute('open', '');
+  await expect(practice.locator('ol > li')).toHaveCount(5);
+
+  // A real source ID beyond the first five prompts remains available in the
+  // full catalog with its exact source name.
+  const heart = page.locator('[data-anatomy-system="heart"]');
+  await expect(heart).toBeVisible();
+  await expect(heart.getByText('(ID: FMA7098)', { exact: true })).toBeVisible();
+
+  const check = practice.locator('ol > li details').first();
+  await check.locator('summary').focus();
+  await page.keyboard.press('Enter');
+  await expect(check).toHaveAttribute('open', '');
+  await expect(check.getByText(/^trail:/)).toBeVisible();
+  const link = check.getByRole('link', { name: 'go to catalog entry' });
+  const target = await link.getAttribute('href');
+  expect(target).toMatch(/^#structure-/);
+  await link.click();
+  await expect(page.locator(target!)).toBeVisible();
+
+  await check.locator('summary').click();
+  await expect(check).not.toHaveAttribute('open', '');
   expect(modelRequests).toEqual([]);
 });
