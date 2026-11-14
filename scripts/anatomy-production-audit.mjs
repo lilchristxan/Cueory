@@ -653,9 +653,9 @@ function validPagefindArtifact(path, kind, draftIds = new Set()) {
   // reject them before verifying the decompressed search data. Otherwise an
   // FNAME/FCOMMENT/FEXTRA field could hide draft labels from the release audit.
   // Reject FEXTRA (bit 2), FNAME (bit 3), FCOMMENT (bit 4)
-  // and reserved gzip flag bits. Harmless FTEXT (bit 0) and FHCRC
-  // (bit 1) are permitted, including in Pagefind's WASM artifacts.
-  if (isGzip && (bytes.length < 18 || bytes[2] !== 8 || (bytes[3] & 0xfc) !== 0)) return false;
+  // and reserved gzip flag bits (5-7). Harmless FTEXT (bit 0)
+  // and FHCRC (bit 1) are permitted, including in Pagefind WASM.
+  if (isGzip && (bytes.length < 18 || bytes[2] !== 8 || (bytes[3] & 0xf4) !== 0)) return false;
   let decoded;
   try {
     decoded = isGzip
