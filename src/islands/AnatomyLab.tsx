@@ -701,6 +701,9 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
       setCompareKey('');
       setCompareState('idle');
       setPosture('standing');
+      // An export started by the outgoing account must not download after
+      // a different account becomes active.
+      generation.bump();
       setExportNote('');
       setExporting(null);
       sceneRef.current?.resetView();
