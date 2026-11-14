@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { mkdirSync, mkdtempSync, readFileSync, readdirSync, renameSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { deflateRawSync, gzipSync } from 'node:zlib';
@@ -340,6 +341,22 @@ function setup() {
   file('preview/anatomy-lab.html', '<html><meta name="robots" content="noindex"></html>');
   return { dist, content, file, system, check: () => auditAnatomyProduction(dist, content) };
 }
+
+describe('anatomy audit CLI entry point', () => {
+  it('runs through a symlink and fails closed for a missing production dist', () => {
+    const root = mkdtempSync(join(tmpdir(), 'cueory-anatomy-cli-'));
+    roots.push(root);
+    const script = new URL('../../scripts/anatomy-production-audit.mjs', import.meta.url);
+    const link = join(root, 'audit-link.mjs');
+    symlinkSync(script, link);
+    const result = spawnSync(process.execPath, [link, join(root, 'missing-dist'), join(root, 'missing-source')], {
+      encoding: 'utf8',
+    });
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain('anatomy production audit FAILED');
+    expect(result.stderr).toContain('production output does not exist');
+  });
+});
 
 describe('anatomy production artifact audit', () => {
   it('accepts approved GLB bytes while detecting a copied model under a misleading extension', () => {
