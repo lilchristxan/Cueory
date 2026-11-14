@@ -63,3 +63,43 @@ test('a failed layer keeps its successful GLB and retries only the failed file',
   expect(heartRequests, 'retry must reuse the successful heart GLB').toBe(1);
   expect(vesselRequests, 'retry must fetch the failed vessels GLB exactly once more').toBe(2);
 });
+
+test('a newer show-only choice survives an older show-all download', async ({ page }, info) => {
+  test.skip(!isDesktopOfEachEngine(info), 'one real-model visibility race per browser engine');
+  test.setTimeout(60_000);
+  await page.goto('/preview/anatomy-lab');
+  await page.getByRole('button', { name: 'open the anatomy lab' }).click();
+  await expect(page.locator('canvas')).toBeFocused({ timeout: 15_000 });
+  const whole = page.getByRole('group', { name: 'body system' })
+    .getByRole('button', { name: 'whole body', exact: true });
+  await whole.click();
+  const files = page.getByTestId('anatomy-files');
+  await expect(files).toContainText('model files loaded: 1 of 11', { timeout: 20_000 });
+
+  const releases: Array<() => void> = [];
+  await page.route('**/models/anatomy/heart.glb', async (route) => {
+    await new Promise<void>((resolve) => releases.push(resolve));
+    await route.continue();
+  });
+  try {
+    await page.getByRole('button', { name: 'show all', exact: true }).click();
+    await expect.poll(() => releases.length, { timeout: 20_000 }).toBe(1);
+    await page.getByLabel('find a structure').fill('skin');
+    const skin = page.getByRole('region', { name: 'structures' })
+      .getByRole('button', { name: 'skin', exact: true });
+    await expect(skin).toBeEnabled();
+    await skin.click();
+    await page.getByRole('region', { name: 'skin' })
+      .getByRole('button', { name: 'show only this' }).click();
+    await expect(skin).toHaveAttribute('aria-pressed', 'true');
+  } finally {
+    releases.splice(0).forEach((release) => release());
+  }
+  await expect(files).toContainText('model files loaded: 11 of 11', { timeout: 30_000 });
+  await page.getByLabel('find a structure').fill('heart');
+  await expect(page.getByRole('region', { name: 'structures' })
+    .getByRole('button', { name: 'heart (hidden)', exact: true })).toBeEnabled();
+  await page.getByLabel('find a structure').fill('skin');
+  await expect(page.getByRole('region', { name: 'structures' })
+    .getByRole('button', { name: 'skin', exact: true })).toHaveAttribute('aria-pressed', 'true');
+});
