@@ -7,6 +7,7 @@
  */
 import { pathToFileURL } from 'node:url';
 import { resolve } from 'node:path';
+import { realpathSync } from 'node:fs';
 import { auditAnatomyProduction, builtSiteEntrypointErrors } from './anatomy-production-audit.mjs';
 
 export function shouldAuditWranglerUpload(env) {
@@ -29,7 +30,7 @@ export function checkAnatomyWranglerUpload(env = process.env, dist = 'dist', con
   return { skipped: false, ...audit, errors: [...audit.errors, ...builtSiteEntrypointErrors(dist)] };
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
+if (process.argv[1] && import.meta.url === pathToFileURL(realpathSync(resolve(process.argv[1]))).href) {
   const checked = checkAnatomyWranglerUpload();
   if (checked.skipped) {
     process.stdout.write('anatomy Wrangler upload audit: skipped for development/preview\n');
