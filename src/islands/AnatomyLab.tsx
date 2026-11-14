@@ -724,6 +724,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
       setQuery('');
       setListLimit(STRUCTURE_PAGE_SIZE);
       nextListFocusId.current = null;
+      nextListItemRef.current = null;
       setSavingViews(new Set());
       setAnnounce('');
     };
