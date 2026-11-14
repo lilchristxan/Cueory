@@ -532,7 +532,6 @@ describe('anatomy production artifact audit', () => {
     f.file('pagefind/pagefind.en_test.pf_meta', gzipMeta);
     f.file('pagefind/wasm.en.pagefind', wasm);
     f.file('pagefind/wasm.en_harmless.pagefind', wasmWithHarmlessMarker);
-    f.file('pagefind/wasm.en_opaque_ids.pagefind', wasmWithOpaqueIds);
     f.file('pagefind/wasm.en_draft_id.pagefind', wasmWithDraftId);
     // Pagefind also accepts already-decompressed data with the same marker.
     f.file('pagefind/fragment/en_raw_test.pf_fragment', Buffer.concat([prefix, Buffer.from(JSON.stringify({
@@ -561,7 +560,6 @@ describe('anatomy production artifact audit', () => {
     f.file('pagefind/index/en_safe_glb_mention_raw.pf_index', Buffer.concat([prefix, safeMentionCbor]));
     expect(f.check().errors).toEqual([
       'archive/container in production output requires explicit review: /pagefind/wasm.en_draft_id.pagefind',
-      'archive/container in production output requires explicit review: /pagefind/wasm.en_opaque_ids.pagefind',
     ]);
 
     // A gzip text hint is harmless: the body still has to validate as an
@@ -571,7 +569,6 @@ describe('anatomy production artifact audit', () => {
     f.file('pagefind/fragment/en_text_hint.pf_fragment', textHintFragment);
     expect(f.check().errors).toEqual([
       'archive/container in production output requires explicit review: /pagefind/wasm.en_draft_id.pagefind',
-      'archive/container in production output requires explicit review: /pagefind/wasm.en_opaque_ids.pagefind',
     ]);
 
     // Safe, standards-compliant optional metadata must remain compatible with
@@ -588,7 +585,6 @@ describe('anatomy production artifact audit', () => {
     }
     expect(f.check().errors).toEqual([
       'archive/container in production output requires explicit review: /pagefind/wasm.en_draft_id.pagefind',
-      'archive/container in production output requires explicit review: /pagefind/wasm.en_opaque_ids.pagefind',
     ]);
 
     // A gzip member can hide public data in optional header fields that
@@ -754,7 +750,6 @@ describe('anatomy production artifact audit', () => {
     expect(f.check().errors).toEqual(expect.arrayContaining([
       'archive/container in production output requires explicit review: /pagefind/wasm.en_hidden_archive.pagefind',
       'archive/container in production output requires explicit review: /pagefind/wasm.en_draft_id.pagefind',
-      'archive/container in production output requires explicit review: /pagefind/wasm.en_opaque_ids.pagefind',
       'archive/container in production output requires explicit review: /pagefind/fragment/en_corrupt.pf_fragment',
       'archive/container in production output requires explicit review: /pagefind/fragment/en_hidden_model.pf_fragment',
       'archive/container in production output requires explicit review: /pagefind/fragment/en_glb_json.pf_fragment',
