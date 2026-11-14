@@ -1915,6 +1915,36 @@ describe('anatomy production artifact audit', () => {
     }
   });
 
+  it('reconstructs adjacent constant Base64 pieces before atob without tainting unrelated code', () => {
+    const f = setup();
+    const sourcePath = join(f.content, 'anatomy-draft.json');
+    const manifest = JSON.parse(readFileSync(sourcePath, 'utf8'));
+    manifest.labels[0].id = 'FMA7088';
+    writeFileSync(sourcePath, JSON.stringify(manifest));
+    f.file('assets/split-id.js', "const id = atob('Rk1B' + 'NzA4OA==');");
+
+    const glb = readFileSync(join(f.dist, 'models', 'anatomy', 'approved.glb')).toString('base64');
+    const middle = Math.floor(glb.length / 2);
+    f.file('assets/split-model.js', `const model = atob('${glb.slice(0, middle)}' + "${glb.slice(middle)}");`);
+    // A preceding decoder must not cause a later, unrelated identifier to
+    // be mistaken for malformed Base64 and block a real production build.
+    f.file('assets/safe-decoder.js',
+      "const value = atob('aGVsbG8='); document.querySelector('main').textContent = value;");
+    const errors = f.check().errors;
+    for (const path of ['assets/split-id.js', 'assets/split-model.js']) {
+      expect(errors).toContain('encoded geometry, archive or reserved anatomy ID in built text requires review: ' + path);
+    }
+    expect(errors.some((message) => message.includes('assets/safe-decoder.js'))).toBe(false);
+  });
+
+  it('fails closed for partially static atob concatenations', () => {
+    const f = setup();
+    f.file('assets/dynamic-piece.js', "const value = atob('Rk1B' + variablePart);");
+    expect(f.check().errors).toContain(
+      'encoded geometry, archive or reserved anatomy ID in built text requires review: assets/dynamic-piece.js',
+    );
+  });
+
   it('rejects escaped synthetic IDs in generated JS, JSON, HTML and SVG', () => {
     const f = setup();
     f.file('_astro/fixture.js', 'const id="\\u0046IX001";');
