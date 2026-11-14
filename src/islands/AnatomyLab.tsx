@@ -347,6 +347,8 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts }: Pr
     // A system-picker click invalidates this initial load before React effect cleanup runs.
     const initialLoadToken = generation.token();
     visibilityIntent.bump();
+    // A retry or system switch must never retain consent from an older model load.
+    setBulkPrompt(null);
     setExporting(null);
     setExportNote('');
     scene.clear();
@@ -863,6 +865,9 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts }: Pr
                   setListLimit(STRUCTURE_PAGE_SIZE);
                   // A search for one system must not make the next system appear to have no structures.
                   setQuery('');
+                  // Invalidate a phone bulk confirmation in the click itself; the old
+                  // prompt must not come back if the student switches to this system later.
+                  setBulkPrompt(null);
                   // Invalidate the old picture and any pending layer-visibility intent now,
                   // before React's passive load-effect cleanup can run.
                   generation.bump();
