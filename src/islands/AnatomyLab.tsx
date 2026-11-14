@@ -9,6 +9,7 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from 'react';
 import { createGeneration, createOnDemandLoader, publishAnatomyFile, knownMissingStructureIds, filesForLayer, idsForFiles, initialLayerPlan, firstLayer, layerNeedsReveal, visibilityAfterLayerDownload, lazyPeel, lazyRestore, revealTargetPlan, needsBulkLayerConfirmation, showAllPlan, structureLoadNote, type OnDemandLoader } from './anatomylazy';
+import FlagMount from './FlagMount';
 import type { LabColors, LabScene, LoadResult } from './anatomyscene';
 import { createAnatomyOpenGate } from './anatomyopen';
 import { STRUCTURE_PAGE_SIZE, visibleStructureGroups } from './anatomy-list-window';
@@ -1116,6 +1117,14 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts }: Pr
                   {hidden.has(selected!) ? 'show it' : 'hide it'}
                 </button>
                 <button type="button" className={secondaryButton} onClick={() => setSelected(null)}>clear selection</button>
+              </div>
+              {/* Source IDs belong in the report's plain-text context, never the UUID-only item fields. */}
+              <div className="mt-3">
+                <FlagMount
+                  key={`${system.key}:${selected}`}
+                  page="/preview/anatomy-lab"
+                  context={`anatomy structure ${selected} in ${system.title}`}
+                />
               </div>
             </section>
           )}
