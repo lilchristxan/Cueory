@@ -56,6 +56,12 @@ describe('pruning draft anatomy models from a build', () => {
     }
   });
 
+  it('removes unpublished anatomy on the connected legacy/main production build', () => {
+    const env = { WORKERS_CI: 'true', WORKERS_CI_BRANCH: 'legacy/main', CUEORY_ANATOMY_DRAFTS: '1' };
+    expect(keepsDrafts(env)).toBe(false);
+    expect(draftsAllowed(env)).toBe(false);
+  });
+
   it('recognizes WORKERS_CI=true for both locked previews and production pruning', () => {
     // Cloudflare can set WORKERS_CI to "true" instead of "1".
     // A manual draft override must not expose test models on main or an unknown branch.
