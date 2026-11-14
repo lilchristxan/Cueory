@@ -594,6 +594,33 @@ function containsReservedAnatomyId(text, draftIds) {
  * A suspicious overlarge encoded run is not evidence of a safe asset. Refuse
  * it instead of skipping a potentially unpublished multi-megabyte model.
  */
+/**
+ * Detect source-form geometry within an already bounded decoded Base64 value.
+ * This parallels the raw OBJ/STL/PLY publication gate without trusting a
+ * filename or requiring a draft ID to appear inside the model.
+ */
+function containsDecodedRawGeometry(bytes) {
+  if (bytes.length < 20) return false;
+  // Binary STL: 80-byte header, uint32 triangle count and exactly 50 bytes
+  // per triangle. This is the format's actual framing, not arbitrary "solid".
+  if (bytes.length >= 134) {
+    const triangles = bytes.readUInt32LE(80);
+    if (triangles > 0 && 84 + triangles * 50 === bytes.length) return true;
+  }
+  const text = bytes.toString('utf8', 0, Math.min(bytes.length, 128 * 1024)).replace(/^\uFEFF/u, '');
+  if (/^ply\r?\nformat\s+(?:ascii|binary_little_endian|binary_big_endian)\s+1\.0\b/m.test(text) &&
+      /^element\s+vertex\s+[1-9]\d*/m.test(text)) return true;
+  if (/^solid(?:\s+[^\r\n]*)?\r?\n/m.test(text) &&
+      /\bfacet\s+normal\s+[-+\d.eE]+\s+[-+\d.eE]+\s+[-+\d.eE]+/m.test(text) &&
+      /\bvertex\s+[-+\d.eE]+\s+[-+\d.eE]+\s+[-+\d.eE]+/m.test(text)) return true;
+  // A bare "v" in prose is not enough. Wavefront source geometry needs at
+  // least three vertex records and a triangle face declaration.
+  const vertex = /^v\s+[-+\d.eE]+\s+[-+\d.eE]+\s+[-+\d.eE]+(?:\s|$)/gm;
+  const vertices = [...text.matchAll(vertex)];
+  if (vertices.length < 3) return false;
+  return /^f\s+\d+(?:\/\d*)?(?:\/\d*)?\s+\d+(?:\/\d*)?(?:\/\d*)?\s+\d+(?:\/\d*)?(?:\/\d*)?(?:\s|$)/m.test(text);
+}
+
 function hasUnsafeEncodedAnatomyPayload(text, draftIds, budget = { examined: 0 }) {
   const MAX_ENCODED_RUN = 24 * 1024 * 1024;
   const MAX_TOTAL_ENCODED = 48 * 1024 * 1024;
@@ -609,7 +636,7 @@ function hasUnsafeEncodedAnatomyPayload(text, draftIds, budget = { examined: 0 }
     // Node's decoder silently ignores invalid characters. Demand exact
     // round-trip bytes before trusting a candidate as benign.
     if (bytes.toString('base64').replace(/=+$/u, '') !== normalized.replace(/=+$/u, '')) return explicit;
-    if (containsGlbHeader(bytes) || containsValidatedArchive(bytes)) return true;
+    if (containsGlbHeader(bytes) || containsValidatedArchive(bytes) || containsDecodedRawGeometry(bytes)) return true;
     const decoded = bytes.toString('utf8');
     if (containsReservedAnatomyId(decoded, draftIds)) return true;
     // Binary GLBs are not the only geometry form: data URI text glTF is also
