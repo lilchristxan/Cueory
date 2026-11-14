@@ -415,6 +415,45 @@ describe('anatomy production artifact audit', () => {
     );
   });
 
+  it('rejects a valid text glTF triangle disguised as an ordinary .dat file', () => {
+    const f = setup();
+    const binary = Buffer.alloc(42);
+    binary.writeUInt16LE(0, 0);
+    binary.writeUInt16LE(1, 2);
+    binary.writeUInt16LE(2, 4);
+    binary.writeFloatLE(0, 6);
+    binary.writeFloatLE(0, 10);
+    binary.writeFloatLE(0, 14);
+    binary.writeFloatLE(1, 18);
+    binary.writeFloatLE(0, 22);
+    binary.writeFloatLE(0, 26);
+    binary.writeFloatLE(0, 30);
+    binary.writeFloatLE(1, 34);
+    binary.writeFloatLE(0, 38);
+    const gltf = JSON.stringify({
+      asset: { version: '2.0' },
+      buffers: [{ uri: `data:application/octet-stream;base64,${binary.toString('base64')}`, byteLength: binary.length }],
+      bufferViews: [
+        { buffer: 0, byteOffset: 0, byteLength: 6, target: 34963 },
+        { buffer: 0, byteOffset: 6, byteLength: 36, target: 34962 },
+      ],
+      accessors: [
+        { bufferView: 0, componentType: 5123, count: 3, type: 'SCALAR' },
+        { bufferView: 1, componentType: 5126, count: 3, type: 'VEC3', min: [0, 0, 0], max: [1, 1, 0] },
+      ],
+      meshes: [{ primitives: [{ attributes: { POSITION: 1 }, indices: 0 }] }],
+      nodes: [{ mesh: 0 }],
+      scenes: [{ nodes: [0] }],
+      scene: 0,
+    });
+    expect(f.check().errors).toEqual([]);
+    f.file('downloads/hidden.dat', gltf);
+    f.file('downloads/obvious.gltf', gltf);
+    const errors = f.check().errors;
+    expect(errors).toContain('unapproved model exposed in production: /downloads/hidden.dat');
+    expect(errors).toContain('unapproved model exposed in production: /downloads/obvious.gltf');
+  });
+
   it('validates Pagefind gzip envelopes and rejects compressed models or nested archives', () => {
     const f = setup();
     const prefix = Buffer.from('pagefind_dcd', 'ascii');
