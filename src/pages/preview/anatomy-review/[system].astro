@@ -9,14 +9,12 @@ import AnatomyReviewPictures from '../../../islands/AnatomyReviewPictures.tsx';
 import { BODYPARTS3D_LICENSE_NAME, BODYPARTS3D_LICENSE_URL, BODYPARTS3D_REFERENCE_NOTE, BODYPARTS3D_REFERENCE_URL, draftsAllowed, pictureCreditFor } from '../../../islands/anatomylab';
 import { anatomyInventory, anatomyReviewSheets } from '../../../../scripts/anatomy-review-report.mjs';
 
-const env = {
-  WORKERS_CI: process.env.WORKERS_CI,
-  WORKERS_CI_BRANCH: process.env.WORKERS_CI_BRANCH,
-  CUEORY_ANATOMY_DRAFTS: process.env.CUEORY_ANATOMY_DRAFTS,
-};
-
 export function getStaticPaths() {
-  const mayShowDrafts = draftsAllowed(env);
+  const mayShowDrafts = draftsAllowed({
+    WORKERS_CI: process.env.WORKERS_CI,
+    WORKERS_CI_BRANCH: process.env.WORKERS_CI_BRANCH,
+    CUEORY_ANATOMY_DRAFTS: process.env.CUEORY_ANATOMY_DRAFTS,
+  });
   return anatomyReviewSheets(anatomyInventory())
     .filter((sheet) => sheet.status === 'approved' || mayShowDrafts)
     .map((sheet) => ({ params: { system: sheet.id }, props: { sheet } }));
