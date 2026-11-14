@@ -274,3 +274,74 @@ describe('flagItemContext', () => {
     expect(() => flagItemContext(flagItem)).toThrow('database uuids');
   });
 });
+
+describe('flag reports are bound to the account that pressed Send (Task 178)', () => {
+  const accountChanged = {
+    message: 'your account changed before this report was sent. please open the form again.',
+  };
+
+  it('tracks account A -> B even though both sessions are signed in', async () => {
+    const fake = switchableClient();
+    const identities: Array<{ signedIn: boolean; userId: string | null }> = [];
+    const watch = watchFlagSession(async () => fake.client, (signedIn, userId) => {
+      identities.push({ signedIn, userId });
+    });
+    watch.check();
+    await settle();
+    fake.announce('account-A');
+    fake.announce('account-B');
+    fake.announce(null);
+    expect(identities).toEqual([
+      { signedIn: false, userId: null },
+      { signedIn: true, userId: 'account-A' },
+      { signedIn: true, userId: 'account-B' },
+      { signedIn: false, userId: null },
+    ]);
+    watch.stop();
+  });
+
+  it('will not send account A\'s drafted report as B when client loading is delayed', async () => {
+    const { client, calls } = fakeClient();
+    let active = 'account-A';
+    client.auth.getSession = vi.fn(async () => ({
+      data: { session: { user: { id: active, email: 'synthetic@example.test' } } },
+      error: null,
+    }));
+    let release: (client: FlagClient) => void = () => {};
+    const deferred = new Promise<FlagClient>((resolve) => { release = resolve; });
+    const pending = makeFlagSend(async () => deferred, active)(good);
+    // Simulate an auth broadcast from another tab *after* Send was pressed
+    // but before the same shared Supabase client becomes available.
+    active = 'account-B';
+    release(client);
+    expect(await pending).toEqual(accountChanged);
+    expect(calls, 'B must never submit A\'s text').toEqual([]);
+    expect(client.auth.getSession).toHaveBeenCalledTimes(1);
+  });
+
+  it('sends with the original user, without affecting ordinary flag RPC arguments', async () => {
+    const { client, calls, load } = fakeClient();
+    expect(await makeFlagSend(load, 'user-1')({ ...good, itemId, itemVersionId: versionId }))
+      .toBe('sent');
+    expect(client.auth.getSession).toHaveBeenCalledTimes(1);
+    expect(calls).toHaveLength(1);
+    expect(calls[0]?.args).toEqual({
+      page: good.page,
+      item_id: itemId,
+      item_version_id: versionId,
+      reason: 'confusing',
+      comment: good.comment,
+    });
+  });
+
+  it('fails closed if the account is missing or cannot be checked before dispatch', async () => {
+    for (const options of [{ session: null }, { sessionError: { message: 'offline' } }]) {
+      const { calls, load } = fakeClient(options);
+      expect(await makeFlagSend(load, 'account-A')(good)).toEqual(accountChanged);
+      expect(calls).toEqual([]);
+    }
+    const { calls, load } = fakeClient();
+    expect(await makeFlagSend(load, null)(good)).toEqual(accountChanged);
+    expect(calls).toEqual([]);
+  });
+});
