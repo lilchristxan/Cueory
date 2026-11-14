@@ -10,7 +10,10 @@ import {
 } from 'react';
 import { createGeneration, createOnDemandLoader, publishAnatomyFile, knownMissingStructureIds, filesForLayer, idsForFiles, initialLayerPlan, firstLayer, layerNeedsReveal, visibilityAfterLayerDownload, lazyPeel, lazyRestore, revealTargetPlan, needsBulkLayerConfirmation, showAllPlan, structureLoadNote, type OnDemandLoader } from './anatomylazy';
 import FlagMount from './FlagMount';
+import { watchFlagSession, type FlagClient } from './flagconnect';
+import { createFlagReceiptGate } from './flagreceipts';
 import type { SendResult } from './flagsend';
+import { getSupabase } from './supabaseclient';
 import type { LabColors, LabScene, LoadResult } from './anatomyscene';
 import { createAnatomyOpenGate } from './anatomyopen';
 import { STRUCTURE_PAGE_SIZE, visibleStructureGroups } from './anatomy-list-window';
@@ -71,7 +74,7 @@ interface Props {
 }
 
 type Phase = 'cover' | 'opening' | 'open' | 'error';
-type ReportNotice = { id: number; context: string; status: 'sending' | SendResult };
+type ReportNotice = { id: number; ownerId: string; context: string; status: 'sending' | SendResult };
 type SystemLoad = { state: 'loading' } | { state: 'ready'; result: LoadResult; publishedFiles: ReadonlySet<string> } | { state: 'error'; message: string };
 
 const primaryButton =
@@ -156,13 +159,42 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, repo
   // Sending is an intentional snapshot: switching structures clears the draft,
   // never silently cancels an already submitted RPC. Keep a receipt outside the card.
   const [reportNotices, setReportNotices] = useState<ReportNotice[]>([]);
+  const [receiptViewerId, setReceiptViewerId] = useState<string | null>(null);
   const nextReportNoticeId = useRef(0);
-  const onReportStart = useCallback((context: string) => {
+  const receiptGate = useMemo(createFlagReceiptGate, []);
+  const hasReportNotices = reportNotices.length > 0;
+
+  // Keep monitoring while a receipt exists, even if the student deselects
+  // a structure and its FlagMount unmounts. A new account must never inherit
+  // the previous account's reporting activity or an eventual RPC receipt.
+  const receiptIdentityChanged = useCallback((signedIn: boolean, userId: string | null) => {
+    const currentUserId = signedIn ? userId : null;
+    setReceiptViewerId(currentUserId);
+    if (receiptGate.observeIdentity(currentUserId)) setReportNotices([]);
+  }, [receiptGate]);
+  useEffect(() => {
+    if (!hasReportNotices) return;
+    const watch = watchFlagSession(
+      async () => (await getSupabase()) as unknown as FlagClient | null,
+      receiptIdentityChanged,
+    );
+    watch.check();
+    return () => watch.stop();
+  }, [hasReportNotices, receiptIdentityChanged]);
+
+  const onReportStart = useCallback((context: string, ownerId: string) => {
+    const { ticket, reset } = receiptGate.begin(ownerId);
+    if (reset) setReportNotices([]);
     const id = ++nextReportNoticeId.current;
-    setReportNotices((notices) => [...notices, { id, context, status: 'sending' as const }].slice(-4));
+    setReportNotices((notices) => [
+      ...notices.filter((notice) => notice.ownerId === ownerId),
+      { id, ownerId, context, status: 'sending' as const },
+    ].slice(-4));
     return (status: SendResult) => setReportNotices((notices) =>
-      notices.map((notice) => notice.id === id ? { ...notice, status } : notice));
-  }, []);
+      receiptGate.isCurrent(ticket)
+        ? notices.map((notice) => notice.id === id ? { ...notice, status } : notice)
+        : notices);
+  }, [receiptGate]);
   const [query, setQuery] = useState('');
   const [listLimit, setListLimit] = useState(STRUCTURE_PAGE_SIZE);
   const [labelsOn, setLabelsOn] = useState(false);
@@ -839,6 +871,9 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, repo
 
   const selectedName = selected ? (names.get(selected) ?? selected) : null;
   const activeReportContext = selectedName && !quiz ? `anatomy structure ${selected} in ${system.title}` : null;
+  // Never render another account's receipt, even before React has flushed
+  // the notice-clear update after a cross-tab authentication event.
+  const accountReportNotices = reportNotices.filter((notice) => notice.ownerId === receiptViewerId);
   const selectedGroup = selected ? system.structures.find((s) => s.id === selected)?.group : undefined;
   const budget = load.state === 'ready' ? anatomyTriangleNote(load.result.triangles, filesLoaded, lazy) : null;
   const ready = load.state === 'ready';
@@ -1119,9 +1154,9 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, repo
             )}
           </div>
 
-          {reportNotices.some((notice) => notice.context !== activeReportContext) && (
+          {accountReportNotices.some((notice) => notice.context !== activeReportContext) && (
             <div className="space-y-2" aria-live="polite" aria-relevant="additions text" data-testid="anatomy-report-notices">
-              {reportNotices.filter((notice) => notice.context !== activeReportContext).map(({ id, context, status }) => (
+              {accountReportNotices.filter((notice) => notice.context !== activeReportContext).map(({ id, context, status }) => (
                 <div key={id} className="flex flex-wrap items-center gap-2 rounded-md border border-line p-3">
                   <p className="min-w-0 flex-1 break-words text-sm text-ink">
                     report about {context}: {status === 'sending'
