@@ -7,21 +7,20 @@
 import { existsSync, readdirSync, readFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { approvedOnly } from './sources';
+import { draftsAllowed } from '../islands/anatomylab';
 
 export interface PruneEnv {
   WORKERS_CI?: string | undefined;
   WORKERS_CI_BRANCH?: string | undefined;
+  GITHUB_REF?: string | undefined;
+  GITHUB_BASE_REF?: string | undefined;
+  GITHUB_EVENT_NAME?: string | undefined;
   CUEORY_ANATOMY_DRAFTS?: string | undefined;
 }
 
+/** Use the same publication decision for HTML and copied GLB build artifacts. */
 export function keepsDrafts(env: PruneEnv): boolean {
-  if (env.WORKERS_CI !== '1') return env.CUEORY_ANATOMY_DRAFTS === '1';
-  const rawBranch = env.WORKERS_CI_BRANCH?.trim();
-  // Match the page-data gate: refs/heads/main must never keep draft GLBs.
-  const branch = rawBranch?.startsWith('refs/heads/')
-    ? rawBranch.slice('refs/heads/'.length)
-    : rawBranch;
-  return Boolean(branch) && branch !== 'main';
+  return draftsAllowed(env);
 }
 
 interface SystemFile {
