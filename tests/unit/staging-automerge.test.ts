@@ -154,6 +154,7 @@ describe('held paths', () => {
     'src/pages/anatomy/index.astro',
     'src/islands/anatomypublic.ts',
     'src/islands/AnatomyReviewPictures.tsx',
+    'src/components/AnatomyPublicText.astro',
     'src/components/SiteMenu.astro',
     'scripts/build-anatomy.mjs',
     'scripts/anatomy-review-report.mjs',
@@ -202,6 +203,7 @@ describe('held paths', () => {
       'src/pages/anatomy.astro',
       'src/pages/anatomy/index.astro',
       'src/islands/anatomypublic.ts',
+      'src/components/AnatomyPublicText.astro',
       'src/components/SiteMenu.astro',
       'src/pages/preview/anatomy-review/index.astro',
       'src/pages/preview/anatomy-review/[system].astro',
@@ -218,6 +220,12 @@ describe('held paths', () => {
       filename: 'src/islands/cards.ts',
       previous_filename: 'src/pages/preview/anatomy-review/[system].astro',
     }], 'prelaunch')).toEqual(['src/pages/preview/anatomy-review/[system].astro']);
+    for (const mode of ['prelaunch', 'launched'] as const) {
+      expect(heldPaths([{
+        filename: 'src/islands/cards.ts',
+        previous_filename: 'src/components/AnatomyPublicText.astro',
+      }], mode)).toEqual(['src/components/AnatomyPublicText.astro']);
+    }
   });
 
   it('counts both sides of a rename', () => {
