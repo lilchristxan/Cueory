@@ -80,6 +80,22 @@ describe('production media signatures and renamed anatomy geometry', () => {
     expect(f.audit().errors).toEqual([]);
   });
 
+  it('rejects media payloads whose header claims the wrong binary format', () => {
+    const f = fixture();
+    const jpegHeader = Buffer.from([255, 216, 255, 224]);
+    const pngHeader = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
+    const wrongJpeg = f.file('assets/png-as-jpeg.jpg', pngHeader);
+    const wrongPng = f.file('assets/jpeg-as-png.png', jpegHeader);
+    expect(unreviewedMediaPayload(wrongJpeg)).toBe(true);
+    expect(unreviewedMediaPayload(wrongPng)).toBe(true);
+    expect(f.audit().errors).toContain(
+      'unreviewed media payload or raw geometry in production output: /assets/png-as-jpeg.jpg',
+    );
+    expect(f.audit().errors).toContain(
+      'unreviewed media payload or raw geometry in production output: /assets/jpeg-as-png.png',
+    );
+  });
+
   it('rejects an unsupported media signature while leaving unrelated source text unaffected', () => {
     const f = fixture();
     f.file('assets/normal.css', 'body { color: black }');
