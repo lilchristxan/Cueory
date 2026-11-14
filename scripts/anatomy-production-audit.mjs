@@ -701,14 +701,41 @@ function validPagefindArtifact(path, kind, draftIds = new Set()) {
   // Inspect the complete payload for structurally valid embedded GLBs/archives.
   // Do not reinterpret opaque CBOR byte strings or WASM code/data as UTF-8
   // prose: reserved anatomy IDs are checked only in JSON and CBOR text strings.
-  if (payload.length > MAX_ARCHIVE_INSPECTION_BYTES ||
-      containsGlbHeader(payload) || containsValidatedArchive(payload)) return false;
+  if (payload.length > MAX_ARCHIVE_INSPECTION_BYTES || containsGlbHeader(payload)) return false;
   if (kind === 'wasm') {
-    return payload.length >= 8 &&
-      payload.subarray(0, 4).equals(Buffer.from([0x00, 0x61, 0x73, 0x6d])) &&
-      payload.readUInt32LE(4) === 1 &&
-      WebAssembly.validate(payload);
+    // Executable WASM instruction bytes may resemble container signatures by
+    // coincidence. Validate the module and inspect custom sections rather than
+    // treating arbitrary opcode bytes as a complete hidden archive.
+    if (payload.length < 8 ||
+        !payload.subarray(0, 4).equals(Buffer.from([0x00, 0x61, 0x73, 0x6d])) ||
+        payload.readUInt32LE(4) !== 1 || !WebAssembly.validate(payload)) return false;
+    let cursor = 8;
+    const readLeb = () => {
+      let value = 0;
+      for (let i = 0; i < 5 && cursor < payload.length; i += 1) {
+        const byte = payload[cursor++];
+        value += (byte & 0x7f) * 2 ** (7 * i);
+        if (!(byte & 0x80)) return Number.isSafeInteger(value) ? value : null;
+      }
+      return null;
+    };
+    while (cursor < payload.length) {
+      const type = payload[cursor++];
+      const size = readLeb();
+      if (size === null || size > payload.length - cursor) return false;
+      const end = cursor + size;
+      if (type === 0) {
+        const nameSize = readLeb();
+        if (nameSize === null || nameSize > end - cursor) return false;
+        cursor += nameSize;
+        const opaque = payload.subarray(cursor, end);
+        if (containsGlbHeader(opaque) || containsValidatedArchive(opaque)) return false;
+      }
+      cursor = end;
+    }
+    return true;
   }
+  if (containsValidatedArchive(payload)) return false;
   if (path.endsWith('.pf_fragment')) {
     try {
       const fragment = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(payload));
