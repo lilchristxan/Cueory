@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 
+// Use a nonexistent route to exercise the branded 404 page.
 const missingPage = '/task-401-page-that-does-not-exist';
 
 test.describe('404 page-specific behavior', () => {
