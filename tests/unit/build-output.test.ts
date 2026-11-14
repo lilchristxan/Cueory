@@ -68,6 +68,8 @@ const initialJsBudget = {
   'preview/admin-flags.html': 92161,
   'preview/anatomy-text.html': 89104,
   'preview/anatomy-lab.html': 89027,
+  // New review-sheet index: measured 89,662 gzip bytes in exact-head CI run 43558098075.
+  'preview/anatomy-review.html': 89662,
   'preview/body-viewer.html': 151504,
   'preview/email.html': 146752,
   'preview/prose.html': 146752,
