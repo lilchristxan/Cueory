@@ -214,6 +214,33 @@ describe.skipIf(!existsSync(dist))('built site', () => {
     ).toEqual([]);
   });
 
+  it('excludes every unapproved anatomy review route and source name from production-style artifacts', () => {
+    const manifestDir = fileURLToPath(new URL('../../content/visuals/', import.meta.url));
+    const index = readFileSync(join(dist, 'preview/anatomy-review.html'), 'utf8');
+    const draftPaths = readdirSync(manifestDir)
+      .filter((name) => /^anatomy-[a-z0-9-]+\\.json$/.test(name))
+      .flatMap((name) => {
+        const manifest = JSON.parse(readFileSync(join(manifestDir, name), 'utf8')) as {
+          status: string;
+          title: string;
+          labels: Array<{ id: string; text: string }>;
+        };
+        return manifest.status === 'draft'
+          ? [{ path: name.replace(/^anatomy-/, '').replace(/\\.json$/, ''), manifest }]
+          : [];
+      });
+    expect(draftPaths.length).toBeGreaterThan(0);
+    const generated = htmlFiles(dist).map((file) => relative(dist, file).replaceAll('\\\\', '/'));
+    for (const { path, manifest } of draftPaths) {
+      expect(generated).not.toContain(`preview/anatomy-review/${path}.html`);
+      expect(index).not.toContain(manifest.title);
+      for (const label of manifest.labels) {
+        expect(index).not.toContain(label.id);
+        expect(index).not.toContain(label.text);
+      }
+    }
+  });
+
   it('marketing pages preload the self-hosted serif (D-41), and every preloaded file exists', () => {
     const preloads = (html: string) =>
       [...html.matchAll(/<link\b[^>]*rel="preload"[^>]*>/g)].map((m) => /href="([^"]+)"/.exec(m[0])![1]!);
