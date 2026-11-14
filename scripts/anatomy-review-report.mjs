@@ -150,7 +150,7 @@ export function draftReviewSheetsAllowed(env) {
   const raw = env.WORKERS_CI_BRANCH?.trim() ?? '';
   const branch = raw.startsWith('refs/heads/') ? raw.slice('refs/heads/'.length) : raw;
   // Reject main, legacy/main, refs/heads/main and any other main alias.
-  if (/(?:^|\\/)main$/i.test(branch)) return false;
+  if (branch.toLowerCase().split('/').at(-1) === 'main') return false;
 
   const ci = env.WORKERS_CI?.trim().toLowerCase() ?? '';
   if (ci === '1' || ci === 'true') {
