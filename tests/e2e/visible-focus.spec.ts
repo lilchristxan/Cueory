@@ -36,6 +36,58 @@ async function waitForIslands(page: Page, route: string): Promise<void> {
 }
 
 test.describe('Task 210: visible keyboard focus', () => {
+  test('closed review groups expose summaries but not hidden links or checkboxes to the Tab audit', async ({ page }) => {
+    await page.goto('/preview/anatomy-review/nervous');
+    await waitForIslands(page, '/preview/anatomy-review/nervous');
+    const group = page.locator('[data-review-group]').first();
+    const summary = group.locator(':scope > summary');
+    const checkbox = group.locator('[data-review-structure] input[type="checkbox"]').first();
+    const link = group.locator('[data-review-structure] a[href]').first();
+
+    await expect(group).not.toHaveAttribute('open', '');
+    const before = await page.evaluate(() => {
+      const section = document.querySelector<HTMLDetailsElement>('[data-review-group]');
+      if (!section) throw new Error('missing review group');
+      const summary = section.querySelector('summary');
+      const checkbox = section.querySelector('input[type="checkbox"]');
+      const link = section.querySelector('a[href]');
+      if (!summary || !checkbox || !link) throw new Error('missing review controls');
+      const eligible = (el: Element) =>
+        (el as HTMLElement).tabIndex >= 0 &&
+        !(el.closest('details:not([open])') &&
+          el !== el.closest('details:not([open])')?.querySelector(':scope > summary'));
+      return [eligible(summary), eligible(checkbox), eligible(link)];
+    });
+    expect(before).toEqual([true, false, false]);
+    await summary.focus();
+    await expect(summary).toBeFocused();
+    await page.keyboard.press('Enter');
+    await expect(group).toHaveAttribute('open', '');
+    await expect(checkbox).toBeVisible();
+    await expect(link).toBeVisible();
+    await checkbox.focus();
+    await expect(checkbox).toBeFocused();
+    const focusAppearance = await checkbox.evaluate((element) => {
+      const style = getComputedStyle(element);
+      return { visible: element.matches(':focus-visible'), outline: style.outlineStyle, width: Number.parseFloat(style.outlineWidth) };
+    });
+    expect(focusAppearance.visible).toBe(true);
+    expect(focusAppearance.outline).not.toBe('none');
+    expect(focusAppearance.width).toBeGreaterThan(0);
+    await page.keyboard.press('Space');
+    await expect(checkbox).toBeChecked();
+    const after = await page.evaluate(() => {
+      const section = document.querySelector<HTMLDetailsElement>('[data-review-group]');
+      if (!section) throw new Error('missing review group');
+      const checkbox = section.querySelector('input[type="checkbox"]');
+      const link = section.querySelector('a[href]');
+      if (!checkbox || !link) throw new Error('missing review controls');
+      return [checkbox, link].map((el) =>
+        (el as HTMLElement).tabIndex >= 0 && !el.closest('details:not([open])'));
+    });
+    expect(after).toEqual([true, true]);
+  });
+
   for (const route of routes) {
     test(`${route} gives each Tab stop a visible focus indicator`, async ({ page }) => {
       await page.addInitScript(() => {
@@ -55,7 +107,8 @@ test.describe('Task 210: visible keyboard focus', () => {
           el.tabIndex >= 0 &&
           !el.matches(':disabled') &&
           !el.closest('[hidden], [inert]') &&
-          !(el.closest('details:not([open])') && !el.matches('details:not([open]) > summary:first-of-type')) &&
+          !(el.closest('details:not([open])') &&
+            el !== el.closest('details:not([open])')?.querySelector(':scope > summary')) &&
           el.getClientRects().length > 0 &&
           getComputedStyle(el).display !== 'none' &&
           getComputedStyle(el).visibility === 'visible';
