@@ -28,6 +28,12 @@ function looksLikeRawMesh(bytes) {
   // A valid-looking media header can precede otherwise recognizable mesh
   // records. Search the bounded text rather than trusting just its prefix.
   const text = bytes.toString('utf8').replace(/^\uFEFF/u, '');
+  // A handful of binary-format signature bytes can be attached directly to
+  // the first OBJ vertex with no newline separator. Inspect that first line
+  // independently rather than allowing a JPEG/PNG magic prefix to hide it.
+  const firstLine = text.split(/\r?\n/, 1)[0] ?? '';
+  const embeddedVertex = /v\s+[-+\d.eE]+\s+[-+\d.eE]+\s+[-+\d.eE]+\s*$/.test(firstLine);
+  if (embeddedVertex && /^f\s+\d+(?:\/\d*)?(?:\/\d*)?\s+\d+(?:\/\d*)?(?:\/\d*)?\s+\d+(?:\/\d*)?(?:\/\d*)?(?:\s|$)/m.test(text)) return true;
   if (/^ply\r?\nformat\s+(?:ascii|binary_little_endian|binary_big_endian)\s+1\.0\b/m.test(text) &&
       /\belement\s+vertex\s+\d+\b/.test(text)) return true;
   if (/^solid(?:\s+[^\r\n]*)?\r?\n/m.test(text) &&
