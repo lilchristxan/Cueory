@@ -145,7 +145,7 @@ describe('contextual report question isolation', () => {
       report: {
         page: '/preview/anatomy-lab',
         reason: 'typo',
-        comment: 'about: anatomy structure FIX001 in test shapes (fixture)\\nwrong label',
+        comment: 'about: anatomy structure FIX001 in test shapes (fixture)\nwrong label',
       },
     });
   });
