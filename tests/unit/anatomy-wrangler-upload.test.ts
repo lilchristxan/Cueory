@@ -14,7 +14,7 @@ function fixture() {
   const content = join(root, 'content', 'visuals');
   mkdirSync(join(dist, 'models', 'anatomy'), { recursive: true });
   mkdirSync(content, { recursive: true });
-  writeFileSync(join(dist, 'index.html'), '<!doctype html><html><body>synthetic only</body></html>');
+  writeFileSync(join(dist, 'index.html'), '<!doctype html><html><head><title>synthetic anatomy gate test</title></head><body><main>synthetic only</main></body></html>');
   writeFileSync(join(content, 'anatomy-draft.json'), JSON.stringify({
     status: 'draft',
     model: { file: '/models/anatomy/draft.glb', release: 'BodyParts3D 4.0' },
