@@ -79,12 +79,6 @@ Each row below has either its **exact test file and test name** or an explicit g
 | Conflicting actions | [`anatomy-show-all-visibility-race.spec.ts`](../tests/e2e/anatomy-show-all-visibility-race.spec.ts) — “show all cannot undo a newer show-only selection when a deeper model arrives late” (this PR) | New real-model network-race test. Await exact-head CI. |
 | Find It guided practice | [`anatomy-lab.spec.ts`](../tests/e2e/anatomy-lab.spec.ts) — “"find it": unscored feedback, next, and show me” / [`anatomy-lab.spec.ts`](../tests/e2e/anatomy-lab.spec.ts) — “a named-list keyboard answer is guided practice, not a scored anatomy identification” | Mapped for feedback, reveal, next and keyboard. |
 | Picture export | [`anatomy-picture-credit.spec.ts`](../tests/e2e/anatomy-picture-credit.spec.ts) — “exported anatomy picture credit is complete, visible and model-specific” / [`anatomy-export-switch.spec.ts`](../tests/e2e/anatomy-export-switch.spec.ts) — “switching systems invalidates the previous PNG before React effects” | Mapped for three picture dimensions and delayed export. Manual visual inspection remains. |
-| Preset views | [`anatomy-lab-study-tools.spec.ts`](../tests/e2e/anatomy-lab-study-tools.spec.ts) — “camera presets: six views, focus on selected, and lying down, with reduced motion” ([PR #651](https://github.com/lilchristxan/Cueory/pull/651)) | Partial and unmerged. Number-key 1–5 and 0 behavior lacks an explicit mapped browser assertion. |
-| Keys panel | No matching staging browser test located. | Gap: open by keyboard, Escape, full key list and return focus. |
-| Name it guided practice | No matching staging browser test located. | Gap: wrong, right, typed answer, reveal, see alone, next and no score. |
-| Worksheet | No matching staging browser test located. | Gap: bounds of 1–12, printing, numbering, credits and picture need tests. |
-| Download notes | No matching staging browser test located. | Gap: built-size disclosure and absence for fixture need a browser test. |
-| Lesson link | No matching staging browser test located. | Gap: valid and malformed system/structure deep links need browser tests. |
 
 ### Section 3 — Access and performance
 
