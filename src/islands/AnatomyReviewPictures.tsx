@@ -46,6 +46,25 @@ export function waitForReviewCanvasLayout(
   });
 }
 
+
+/** A stalled model request must not permanently hide the picture retry button. */
+const MODEL_LOAD_DEADLINE_MS = 20_000;
+
+/**
+ * Reject after a bounded delay and always clear the timer. This does not
+ * abort GLTFLoader internally: a timed-out renderer is retired immediately,
+ * and late results cannot overwrite the next attempt's pictures.
+ */
+function boundedModelLoad<T>(request: Promise<T>, timeoutMs = MODEL_LOAD_DEADLINE_MS): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error('The model took too long to load.')), timeoutMs);
+  });
+  return Promise.race([request, timeout]).finally(() => {
+    if (timer !== undefined) clearTimeout(timer);
+  });
+}
+
 /** The site's CSP allows data: pictures but intentionally disallows blob: images. */
 function pictureDataUrl(blob: Blob): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -107,7 +126,7 @@ export default function AnatomyReviewPictures({ modelPath, structureIds, title, 
         onRender: () => {},
       });
       sceneRef.current = scene;
-      const result = await scene.load(modelPath, structureIds);
+      const result = await boundedModelLoad(scene.load(modelPath, structureIds));
       if (!mounted.current) return;
       if (!result || result.found.length === 0) throw new Error('No model geometry was available.');
 
