@@ -251,11 +251,13 @@ const format = (value: number) => value.toLocaleString('en-US');
       sends those emails; we plan to send them through Resend later, and this page will say so when that changes.
     </p>
     <p>
-      If you choose Google sign-in, you are sent to Google to finish signing in. Google then gives Supabase your name,
-      a link to your profile photo, your Google account id, your email address and whether Google has checked it.
-      Supabase keeps them with your account and updates them each time you sign in with Google. {site.name} does not
-      display your Google profile photo, but your account data export includes the photo URL that Google shares at
-      sign-in.
+      If you choose Google sign-in, you are sent to Google to finish signing in. Google gives Supabase profile
+      information such as your name, a link to your profile photo, your Google account id, your email address and
+      whether Google has checked it. Depending on the profile and provider response, the identity record can contain
+      additional provider profile fields. Supabase keeps the identity details with your account and may refresh them
+      on later sign-ins. {site.name} does not display your Google profile photo, but your account data export includes
+      the photo URL and the other provider identity details Supabase returns.{' '}
+      <LegalPlaceholder what="Christian: verify which optional Google profile fields this project's Supabase configuration stores and exports using a safe test account, then list those categories before approving the privacy page" />
     </p>
     <p>
       Each time you sign in, Supabase keeps a sign-in session with your IP address and the kind of browser and device
@@ -304,26 +306,30 @@ const format = (value: number) => value.toLocaleString('en-US');
 
     <h2>Your rights: download or delete</h2>
     <p>
-      On the <code>/account</code> page you can, at any time and without asking us:
+      On the <code>/account</code> page you can download your data or request deletion without emailing us. Deleting
+      an account may require you to sign in again if your sign-in is not recent enough, so we can check that it is you.
     </p>
     <ul>
       <li>
-        <strong class="key-term">Download your account data.</strong> The download includes your profile (display name,
-        when it was created, and the name-change counters), your email address, your attempts, exam plans, review
-        schedules, study events, reports and sign-in sessions, and your sign-in record from Supabase: when the account
-        was created, when you last signed in, which sign-in methods it has, and for each one (such as Google) the
-        details that provider shared and when. It comes as JSON or as CSV files.
+        <strong class="key-term">Download your account data.</strong> The account-held part includes your profile
+        (display name, when it was created, and the name-change counters), your email address, your attempts, exam
+        plans, review schedules, study events, reports and sign-in sessions, and your Supabase sign-in record: account
+        creation and last sign-in dates, sign-in methods and the details each provider shared.
+        The same download also includes data saved only in the browser you are using: your course and exam setup,
+        card piles and stars, plus saved daily-game results if you turned on game stats. Those browser-only records are
+        read from this device to create the file, not uploaded to Cueory just to make the download, and may differ
+        on another device. The download is available as JSON or CSV files.
       </li>
       <li>
         <strong class="key-term">Change your display name</strong>, a few times an hour.
       </li>
       <li>
-        <strong class="key-term">Delete your account.</strong> This removes your account and all study data linked to
-        it in one step, all or nothing, and signs you out of this browser. It can't be undone. Cueory then tries to
-        clear the progress and settings it saved in this browser; if the browser blocks that, the page tells you so and
-        asks you to clear this site's data yourself. The offline copies of pages hold only public files and are not
-        removed by deleting an account; clearing the site's data removes them. Supabase's service logs, described
-        above, expire on their own schedule.
+        <strong class="key-term">Delete your account.</strong> After any required fresh sign-in, confirming deletion
+        removes your account and all study data linked to it in one step, all or nothing, and signs you out of this
+        browser. It can't be undone. Cueory then tries to clear the progress and settings it saved in this browser; if
+        the browser blocks that, the page tells you so and asks you to clear this site's data yourself. The offline
+        copies of pages hold only public files and are not removed by deleting an account; clearing the site's data
+        removes them. Supabase's service logs, described above, expire on their own schedule.
       </li>
     </ul>
     <p>
@@ -357,14 +363,18 @@ const format = (value: number) => value.toLocaleString('en-US');
     <p>
       {site.name} is for nursing students. Nobody under 13 may create an account or send us personal information, and
       our <a href="/terms">terms</a> set a higher minimum age for accounts. If you believe a child has given us
-      personal information, email us and we will delete it.
+      personal information, email us so we can investigate the report without exposing anyone else's records.{' '}
+      <LegalPlaceholder what="Christian and counsel: document how to verify a parent or guardian, locate a child's records when they cannot sign in, and securely carry out any legally required removal before promising a deletion process or deadline" />
     </p>
 
     <h2>Keeping it safe</h2>
     <p>
-      Every page is served over HTTPS. Account data is protected by row-level security, so a signed-in student can
-      only ever read their own rows, and answer keys and admin data never reach the browser except through
-      permission-checked functions. Today we keep no backup copies of account data beyond what Supabase itself keeps;
+      Every page is served over HTTPS. Private account and study rows are protected by row-level security, so students
+      can read only their own private records. Real published-question answer keys are checked through
+      permission-controlled database functions rather than included with the public question data. Public demonstration
+      questions are different: they include local-checking data and sample keys in the browser, and those sample keys
+      are not confidential. Administrative records remain access-controlled. Today we keep no backup copies of account
+      data beyond what Supabase itself keeps;
       if we start making our own, this page will say where they are kept and for how long. If personal data were ever
       exposed, we would tell the people affected and the authorities as the law requires.
     </p>

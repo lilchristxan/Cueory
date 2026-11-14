@@ -92,6 +92,24 @@ describe.skipIf(!existsSync(privacyPath))('privacy page browser storage disclosu
     expect(copyright).not.toContain('we have not registered a designated agent');
   });
 
+  it('explains local export sections, safe deletion, sample keys and private copyright reports', () => {
+    const privacy = privacyHtml().replace(/\s+/g, ' ');
+    const terms = readFileSync(new URL('../../dist/terms.html', import.meta.url), 'utf8').replace(/\s+/g, ' ');
+    const copyright = readFileSync(new URL('../../dist/copyright.html', import.meta.url), 'utf8').replace(/\s+/g, ' ');
+    expect(privacy).toContain('data saved only in the browser you are using');
+    expect(privacy).toContain('saved daily-game results if you turned on game stats');
+    expect(privacy).toContain('not uploaded to Cueory just to make the download');
+    expect(privacy).toContain('may require you to sign in again');
+    expect(privacy).toContain('Public demonstration questions are different');
+    expect(privacy).toContain('sample keys in the browser');
+    expect(privacy).toContain('additional provider profile fields');
+    expect(terms).toContain('sign in again if your current sign-in is not recent enough');
+    expect(copyright).toContain('privacy page');
+    expect(copyright).toContain('not posted for other visitors');
+    expect(copyright).not.toContain('The only things a student can send us');
+    expect(copyright).not.toContain('while we review and tell that user');
+  });
+
   it('covers every named Cueory browser key with local cleanup, session cleanup or Task 59 sign-out', () => {
     const legacy = legacyStarsKey('<deck>');
     const imported = `${GUEST_IMPORT_MARKER_PREFIX}<id>`;

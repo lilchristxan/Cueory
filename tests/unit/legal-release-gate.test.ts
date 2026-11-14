@@ -78,11 +78,14 @@ describe('legal digest (Task 200)', () => {
     expect(visibleText('<a href="x" title="a > b">link</a> end', { attributes: true })).toContain('a > b');
     expect(visibleText('<img alt="x > y"> text')).toBe('text');
     expect(visibleText('<img alt="x > y"> text', { attributes: true })).toContain('x > y');
+    expect(visibleText('<img alt="[[CHRISTIAN: unresolved > date]]">', { attributes: true }))
+      .toContain('[[CHRISTIAN: unresolved > date]]');
   });
 
   it('decodes named entities without a trailing semicolon (htmlparser2 regression)', () => {
     expect(visibleText('<p>a&amp b</p>')).toBe('a& b');
     expect(visibleText('<p>1&lt2&gt3</p>')).toBe('1<2>3');
+    expect(visibleText('<p>&#91&#91CHRISTIAN: address]]</p>')).toBe('[[CHRISTIAN: address]]');
   });
 
   it('reads user-facing attributes: alt, title, aria-label, aria-description, placeholder', () => {
@@ -159,6 +162,7 @@ describe('legal release gate (Task 200)', () => {
     for (const evasion of [
       'Venue: [[</span><span>CHRISTIAN: split', 'Venue: &lbrack;&lbrack;CHRISTIAN: entities', 'Venue: [ [ CHRISTIAN: spaced',
       '<img alt="[[CHRISTIAN: alt]]">', '<span title="[[CHRISTIAN: title]]">x</span>', '<button aria-label="[[CHRISTIAN: label]]">x</button>',
+      '<img alt="[[CHRISTIAN: unresolved > date]]">', '&#91&#91CHRISTIAN: address]]',
     ]) {
       expect(renderedProblems({ terms: approvedHtml(evasion) }), evasion).toEqual(['terms still shows placeholder or draft copy.']);
     }
