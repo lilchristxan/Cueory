@@ -231,6 +231,54 @@ describe('createAnatomyStudy', () => {
     expect(rpc).not.toHaveBeenCalled();
   });
 
+  it.each(['my_anatomy_review_queue', 'my_anatomy_views'] as const)(
+    'discards %s when another tab switches from account A to B during the RPC',
+    async (functionName) => {
+      let userId = 'student-a';
+      let releaseRead!: (reply: { data: unknown; error: null }) => void;
+      let readStarted!: () => void;
+      const started = new Promise<void>((resolve) => { readStarted = resolve; });
+      const pending = new Promise<{ data: unknown; error: null }>((resolve) => { releaseRead = resolve; });
+      const rpc = vi.fn((name: string) => {
+        expect(name).toBe(functionName);
+        readStarted();
+        return pending;
+      });
+      const client = {
+        auth: { getSession: async () => ({ data: { session: { user: { id: userId } } }, error: null }) },
+        rpc,
+      } as unknown as AnatomyStudyClient;
+      const study = createAnatomyStudy(async () => client);
+      const read = functionName === 'my_anatomy_review_queue'
+        ? study.reviewQueue('student-a')
+        : study.views('heart', 'student-a');
+      await started;
+      userId = 'student-b';
+      releaseRead({ data: [{ id: 'belongs-to-student-b' }], error: null });
+      expect(await read).toEqual({ ok: false, message: 'please sign in to use this.' });
+      expect(rpc).toHaveBeenCalledTimes(1);
+      expect(await study.reviewQueue('student-a')).toEqual({ ok: true, value: [] });
+      expect(rpc).toHaveBeenCalledTimes(1);
+    },
+  );
+
+  it('rejects an after-read session error instead of returning potentially cross-account data', async () => {
+    let checks = 0;
+    const rpc = vi.fn(async () => ({ data: [{ id: 'untrusted-row' }], error: null }));
+    const client = {
+      auth: { getSession: async () => {
+        checks += 1;
+        return checks === 1
+          ? { data: { session: { user: { id: 'student-a' } } }, error: null }
+          : { data: { session: null }, error: { message: 'session unavailable' } };
+      } },
+      rpc,
+    } as unknown as AnatomyStudyClient;
+    const study = createAnatomyStudy(async () => client);
+    expect(await study.reviewQueue('student-a')).toEqual({ ok: false, message: 'please sign in to use this.' });
+    expect(rpc).toHaveBeenCalledTimes(1);
+  });
+
   it('records misses in batches of 50 with the SQL argument names, and adds up what was recorded', async () => {
     const { study, rpc } = fakeClient({ replies: { record_anatomy_misses: { data: 7, error: null } } });
     const ids = Array.from({ length: 60 }, (_unused, i) => `FMA${i}`);
