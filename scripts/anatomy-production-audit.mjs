@@ -603,8 +603,10 @@ function hasUnsafeEncodedAnatomyPayload(text, draftIds) {
   const runs = /(?:^|[^A-Za-z0-9+/_=-])([A-Za-z0-9+/_-]{12,}={0,2})(?=$|[^A-Za-z0-9+/_=-])/g;
   for (const match of text.matchAll(runs)) {
     const encoded = match[1];
-    if (encoded.length % 4 === 1) continue;
+    // Invalid lengths must not let an oversized suspicious token bypass the
+    // audit before the byte budget is checked.
     if (encoded.length > MAX_ENCODED_RUN || (examined += encoded.length) > MAX_TOTAL_ENCODED) return true;
+    if (encoded.length % 4 === 1) continue;
     const normalized = encoded.replaceAll('-', '+').replaceAll('_', '/');
     const bytes = Buffer.from(normalized, 'base64');
     // Buffer.from(base64) accepts malformed data by silently discarding parts.
