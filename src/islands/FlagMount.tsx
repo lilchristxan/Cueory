@@ -24,8 +24,12 @@ const loadShared: LoadFlagClient = () => getSupabase() as unknown as Promise<Fla
 export default function FlagMount({ page, itemId, itemVersionId, variant, context }: Props) {
   const [signedIn, setSignedIn] = useState<boolean | null>(null);
   // Pages whose items load in the browser (the real questions) publish the current one; it wins over the fixed props.
-  const [published, setPublished] = useState<FlagItem | undefined>(currentFlagItem);
-  useEffect(() => { setPublished(currentFlagItem()); return onFlagItem(setPublished); }, []);
+  const [published, setPublished] = useState<FlagItem | undefined>(() => context ? undefined : currentFlagItem());
+  useEffect(() => {
+    if (context) return;
+    setPublished(currentFlagItem());
+    return onFlagItem(setPublished);
+  }, [context]);
   const watch = useRef<FlagSessionWatch | null>(null);
   const send = useMemo(() => makeFlagSend(loadShared), []);
   const check = useCallback(() => watch.current?.check(), []);
