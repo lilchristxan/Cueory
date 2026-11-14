@@ -85,6 +85,8 @@ const ALWAYS_HELD_FILES = new Set([
   'scripts/anatomy-production-audit.mjs',
   'scripts/check-anatomy-build.mjs',
   'scripts/anatomy-postbuild-audit.mjs', // alternative production postbuild wrapper in PR #626
+  'scripts/anatomy-production-deploy.mjs', // Re-audits built artifacts before optional production uploads.
+  'scripts/check-anatomy-wrangler.mjs', // Checks Wrangler release commands for unsafe anatomy uploads.
   'src/islands/anatomylab.ts', // Chooses draft versus approved data for build output.
   'src/islands/AnatomyLab.tsx', // Shows draft warnings, model attribution and export credits.
   'src/islands/anatomyscene.ts', // Renders mandatory source credits in exported anatomy PNGs.
@@ -94,6 +96,7 @@ const ALWAYS_HELD_FILES = new Set([
   'src/pages/anatomy.astro', // Public-facing route may expose only founder-approved models.
   'src/islands/anatomypublic.ts', // The production-only model selection gate for that route and navigation.
   'src/islands/AnatomyReviewPictures.tsx', // Generates credit-bearing review pictures from unpublished models.
+  'src/components/AnatomyPublicText.astro', // Approved-only no-JS structure list and mandatory model attribution.
   'src/components/SiteMenu.astro', // Controls when the public Anatomy Lab navigation is visible.
   'scripts/build-anatomy.mjs', // Source-driven geometry and label generation.
   'scripts/anatomy-review-report.mjs',

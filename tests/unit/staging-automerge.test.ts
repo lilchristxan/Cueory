@@ -142,6 +142,8 @@ describe('held paths', () => {
     'scripts/anatomy-production-audit.mjs',
     'scripts/check-anatomy-build.mjs',
     'scripts/anatomy-postbuild-audit.mjs',
+    'scripts/anatomy-production-deploy.mjs',
+    'scripts/check-anatomy-wrangler.mjs',
     'src/islands/anatomylab.ts',
     'src/islands/AnatomyLab.tsx',
     'src/islands/anatomyscene.ts',
@@ -154,6 +156,7 @@ describe('held paths', () => {
     'src/pages/anatomy/index.astro',
     'src/islands/anatomypublic.ts',
     'src/islands/AnatomyReviewPictures.tsx',
+    'src/components/AnatomyPublicText.astro',
     'src/components/SiteMenu.astro',
     'scripts/build-anatomy.mjs',
     'scripts/anatomy-review-report.mjs',
@@ -202,6 +205,7 @@ describe('held paths', () => {
       'src/pages/anatomy.astro',
       'src/pages/anatomy/index.astro',
       'src/islands/anatomypublic.ts',
+      'src/components/AnatomyPublicText.astro',
       'src/components/SiteMenu.astro',
       'src/pages/preview/anatomy-review/index.astro',
       'src/pages/preview/anatomy-review/[system].astro',
@@ -218,6 +222,26 @@ describe('held paths', () => {
       filename: 'src/islands/cards.ts',
       previous_filename: 'src/pages/preview/anatomy-review/[system].astro',
     }], 'prelaunch')).toEqual(['src/pages/preview/anatomy-review/[system].astro']);
+    for (const mode of ['prelaunch', 'launched'] as const) {
+      expect(heldPaths([{
+        filename: 'src/islands/cards.ts',
+        previous_filename: 'src/components/AnatomyPublicText.astro',
+      }], mode)).toEqual(['src/components/AnatomyPublicText.astro']);
+    }
+  });
+
+  it('requires founder review for anatomy upload wrappers, including clean checks and renamed-away files', () => {
+    const paths = ['scripts/anatomy-production-deploy.mjs', 'scripts/check-anatomy-wrangler.mjs'];
+    for (const mode of ['prelaunch', 'launched'] as const) {
+      for (const path of paths) {
+        expect(isHeldPath(path, mode)).toBe(true);
+        const decision = decide(input({ mode, files: [{ filename: path }] }));
+        expect(decision.action, `${mode}: ${path}`).toBe('label');
+        expect(decision.reasons.join(' ')).toContain(path);
+        expect(heldPaths([{ filename: 'docs/replaced-script.md', previous_filename: path }], mode))
+          .toEqual([path]);
+      }
+    }
   });
 
   it('counts both sides of a rename', () => {
