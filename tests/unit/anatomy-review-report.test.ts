@@ -1,4 +1,5 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -42,6 +43,25 @@ function writeSystem(root: string, id: string, data = visual(id)) {
 }
 
 describe('read-only anatomy review inventory', () => {
+  it('runs help through the real script and a symlinked CLI path', () => {
+    const root = setup();
+    const script = join(process.cwd(), 'scripts', 'anatomy-review-report.mjs');
+    const alias = join(root, 'review-report-alias.mjs');
+    symlinkSync(script, alias);
+
+    // Node normally resolves the symlink for import.meta.url but preserves
+    // the caller's link in argv[1]. The CLI must recognize both paths.
+    for (const entry of [script, alias]) {
+      const run = spawnSync(process.execPath, [entry, '--help'], {
+        encoding: 'utf8', timeout: 10_000,
+      });
+      expect(run.error, entry).toBeUndefined();
+      expect(run.status, entry).toBe(0);
+      expect(run.stdout, entry).toContain('Usage: node scripts/anatomy-review-report.mjs [--system heart]');
+      expect(run.stderr, entry).toBe('');
+    }
+  });
+
   it('reads a draft and its cited label without altering the name, quote or status', () => {
     const root = setup();
     writeSystem(root, 'sample');
