@@ -46,18 +46,18 @@ test('anatomy structure names remain reachable and credited without JavaScript',
   await expect(heart).toBeVisible();
   await expect(heart.getByText('(ID: FMA7098)', { exact: true })).toBeVisible();
 
-  const check = practice.locator('ol > li details').first();
-  await check.locator('summary').focus();
-  await page.keyboard.press('Enter');
-  await expect(check).toHaveAttribute('open', '');
-  await expect(check.locator('p').filter({ hasText: /^trail:/ })).toBeVisible();
-  const link = check.getByRole('link', { name: 'go to catalog entry' });
+  const firstQuestion = practice.locator('ol > li').first();
+  await expect(firstQuestion.locator('p').filter({ hasText: /^trail:/ })).toBeVisible();
+  const link = firstQuestion.getByRole('link', { name: 'go to catalog entry' });
   const target = await link.getAttribute('href');
   expect(target).toMatch(/^#structure-/);
   await link.click();
   await expect(page.locator(target!)).toBeVisible();
 
-  await check.locator('summary').click();
-  await expect(check).not.toHaveAttribute('open', '');
+  // A single native disclosure is enough for keyboard access. The practice
+  // list does not add dozens of separate hidden Tab stops to the full-page sweep.
+  await practiceToggle.focus();
+  await page.keyboard.press('Enter');
+  await expect(practice).not.toHaveAttribute('open', '');
   expect(modelRequests).toEqual([]);
 });
