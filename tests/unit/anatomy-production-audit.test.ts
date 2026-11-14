@@ -359,6 +359,30 @@ describe('anatomy audit CLI entry point', () => {
 });
 
 describe('anatomy production artifact audit', () => {
+  it('rejects structurally valid Unix ar archives disguised as text without flagging prose', () => {
+    const f = setup();
+    // A genuine archive header and an OBJ triangle member, not just a magic
+    // string in prose. The first member extends beyond the 512-byte preview.
+    const payload = Buffer.from(
+      ('v 0 0 0\nv 1 0 0\nv 0 1 0\nf 1 2 3\n').padEnd(900, ' '),
+      'ascii',
+    );
+    const member = Buffer.alloc(60, 0x20);
+    member.write('mesh.obj/', 0, 'ascii');
+    member.write(String(payload.length), 48, 'ascii');
+    member.write('`\n', 58, 'ascii');
+    const archive = Buffer.concat([Buffer.from('!<arch>\n', 'ascii'), member, payload]);
+    f.file('_astro/geometry.js', archive);
+    f.file('styles/geometry.css', archive);
+    f.file('_astro/ordinary.js', "const note = '!<arch>\\n is archive syntax';");
+    f.file('styles/ordinary.css', "/* !<arch>\\n in prose is not an archive */");
+
+    const errors = f.check().errors;
+    expect(errors).toContain('archive/container in production output requires explicit review: /_astro/geometry.js');
+    expect(errors).toContain('archive/container in production output requires explicit review: /styles/geometry.css');
+    expect(errors.some((error) => error.includes('ordinary.js') || error.includes('ordinary.css'))).toBe(false);
+  });
+
   it('rejects a valid JSON glTF triangle under .dat and falsely safe web extensions', () => {
     const f = setup();
     expect(f.check().errors).toEqual([]);
