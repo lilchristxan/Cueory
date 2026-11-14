@@ -25,6 +25,8 @@ function textAt(bytes, position, value) {
 
 /** High-confidence Wavefront OBJ, ASCII STL and PLY syntax, regardless of suffix. */
 function looksLikeRawMesh(bytes) {
+  // A valid-looking media header can precede otherwise recognizable mesh
+  // records. Search the bounded text rather than trusting just its prefix.
   const text = bytes.toString('utf8').replace(/^\uFEFF/u, '');
   if (/^ply\r?\nformat\s+(?:ascii|binary_little_endian|binary_big_endian)\s+1\.0\b/m.test(text) &&
       /\belement\s+vertex\s+\d+\b/.test(text)) return true;
