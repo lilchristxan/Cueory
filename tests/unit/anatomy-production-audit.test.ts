@@ -1887,6 +1887,12 @@ describe('anatomy production artifact audit', () => {
     expect(errors.some((message) => message.includes('assets/ordinary.js'))).toBe(false);
   });
 
+  it('does not treat code following a harmless atob call as the encoded payload', () => {
+    const f = setup();
+    f.file('assets/benign-after-atob.js',
+      "const value = atob('aGVsbG8='); document.querySelector('main').textContent = value;");
+    expect(f.check().errors.some((message) => message.includes('assets/benign-after-atob.js'))).toBe(false);
+  });
   it('finds short Base64-encoded reserved anatomy IDs in generated scripts', () => {
     const f = setup();
     const path = join(f.content, 'anatomy-draft.json');
