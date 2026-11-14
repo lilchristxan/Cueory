@@ -261,12 +261,23 @@ test.describe('daily games: sudoku (Task 625)', () => {
     await expect(grid(page).locator('[data-given="true"]')).toHaveCount(26);
   });
 
-  test('pause hides all 81 squares and gameboard settings persist separately from the site theme', async ({ page }) => {
+  test('pause keeps original givens visible, conceals private entries and preserves theme settings', async ({ page }) => {
     const pause = game(page).getByRole('button', { name: 'pause puzzle' });
     await pause.click();
     const before = await game(page).locator('.sudoku-time').innerText();
-    await expect(cells(page).filter({ hasText: /^x$/ })).toHaveCount(81);
-    await expect(cells(page).first()).toHaveAttribute('aria-label', /hidden while paused/);
+    await expect(grid(page).locator('[data-given="true"]')).toHaveCount(40);
+    for (const [index, given] of daily.puzzle.entries()) {
+      const cell = cells(page).nth(index);
+      if (given) {
+        await expect(cell).toHaveText(String(given));
+        await expect(cell).toHaveAttribute('aria-label', new RegExp(`, ${given}, given$`));
+      } else {
+        await expect(cell).toBeEmpty();
+        await expect(cell).toHaveAttribute('aria-label', /hidden until resumed/);
+      }
+    }
+    await expect(game(page).locator('.is-entered, .is-conflict, .is-identical, .sudoku-mark, .sudoku-candidates')).toHaveCount(0);
+    await expect(game(page).locator('.sudoku-cell.is-selected, [role="gridcell"][aria-selected="true"]')).toHaveCount(0);
     await expect(game(page).locator('.sudoku-time')).toHaveText(before);
     await game(page).getByRole('button', { name: 'resume puzzle' }).click();
 

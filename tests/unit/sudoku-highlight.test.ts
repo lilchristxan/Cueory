@@ -68,6 +68,40 @@ describe('sudoku highlight classes (Christian, 2026-11-12)', () => {
     }
   });
 
+  it('during pause preserves givens but does not reveal private selected, entered or conflicting cells', () => {
+    const paused = { ...base, selected: 40, paused: true, conflicts: new Set([40]) };
+    expect(has(0, 'is-given', paused)).toBe(true);
+    for (const index of [0, 40, 80]) {
+      const classes = sudokuCellClasses(index, paused);
+      expect(classes).not.toContain('is-selected');
+      expect(classes).not.toContain('is-entered');
+      expect(classes).not.toContain('is-conflict');
+      expect(classes).not.toContain('is-identical');
+      expect(classes).not.toContain('is-related');
+      expect(classes).not.toContain('is-box-related');
+    }
+    expect(has(40, 'is-given', paused)).toBe(false);
+  });
+
+  it('keeps paused CSS independent of stored entries, conflicts and the last selected square across the whole board', () => {
+    const publicGivens = Array<number>(81).fill(0);
+    publicGivens[0] = 5; publicGivens[11] = 3; publicGivens[37] = 9; publicGivens[76] = 8;
+    const visibleOnly: SudokuHighlightState = { ...base, selected: -1, entries: publicGivens, givens: publicGivens, conflicts: new Set(), paused: true };
+    const expected = Array.from({ length: 81 }, (_, index) => sudokuCellClasses(index, visibleOnly));
+    // Changes to any private field must not change a public paused cell's class list.
+    for (const selected of [0, 1, 40, 80]) {
+      for (let step = 0; step < 12; step++) {
+        const privateEntries = publicGivens.map((given, index) => given || (index % (step + 2) === 0 ? (index + step) % 9 + 1 : 0));
+        const state: SudokuHighlightState = {
+          ...visibleOnly, selected, entries: privateEntries,
+          conflicts: new Set([selected, 0, 11, 37, 40, 76, 80]),
+        };
+        for (let index = 0; index < 81; index++) {
+          expect(sudokuCellClasses(index, state), `selected ${selected}, variation ${step}, cell ${index}`).toEqual(expected[index]);
+        }
+      }
+    }
+  });
   it('draws the thick 3 × 3 box lines after columns 3 and 6 and rows 3 and 6', () => {
     expect(has(2, 'sudoku-box-right')).toBe(true);
     expect(has(5, 'sudoku-box-right')).toBe(true);

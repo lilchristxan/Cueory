@@ -4,7 +4,7 @@ import { printGame } from './gameprint';
 import { localDay, showResultCard, sudokuResultCard } from './gameresults';
 import { THEME_ROWS, chooseSiteTheme, currentSiteTheme } from './sitetheme';
 import { sudokuCellClasses } from './sudokuhighlight';
-import { DEFAULT_SUDOKU_SETTINGS, LEVEL_RULES, applySudokuEdit, candidates, conflictIndices, dailySudokuSeed, generateSudoku, getResult, loadSudokuSettings, saveSudokuSettings, sudokuKeyAction, type SudokuLevel, type SudokuSettings } from './sudoku';
+import { DEFAULT_SUDOKU_SETTINGS, LEVEL_RULES, advanceSudokuSeconds, applySudokuEdit, candidates, conflictIndices, dailySudokuSeed, generateSudoku, getResult, loadSudokuSettings, saveSudokuSettings, sudokuCellPresentation, sudokuKeyAction, type SudokuLevel, type SudokuSettings } from './sudoku';
 
 const LEVELS: SudokuLevel[] = ['easy', 'medium', 'hard'];
 const NUMBERS = [1, 2, 3, 4, 5, 6, 7, 8, 9];
@@ -60,7 +60,7 @@ export default function SudokuGame() {
 
   useEffect(() => {
     if (paused || solved) return;
-    const timer = window.setInterval(() => setSeconds((value) => value + 1), 1000);
+    const timer = window.setInterval(() => setSeconds((value) => advanceSudokuSeconds(value, paused, solved)), 1000);
     return () => window.clearInterval(timer);
   }, [paused, solved]);
 
@@ -99,6 +99,11 @@ export default function SudokuGame() {
     document.addEventListener('keydown', onKey);
     return () => { document.removeEventListener('keydown', onKey); (previous ?? settingsButton.current)?.focus(); };
   }, [settingsOpen]);
+
+  const togglePause = () => {
+    setPaused((current) => !current);
+    setSaid(paused ? 'puzzle resumed.' : 'puzzle paused. given numbers remain visible.');
+  };
 
   const enter = (value: number) => {
     if (paused || solved) return;
@@ -159,32 +164,35 @@ export default function SudokuGame() {
       </div>
       {howOpen && <div className="sudoku-how" role="region" aria-label="how to play sudoku">
         <p className="font-medium">how to play</p>
-        <ol><li>fill each row, column and 3 by 3 box with 1 to 9, with no repeats.</li><li>pick a square, then type or tap a number. arrow keys move between squares.</li><li>use x for your own mark and hints to show possible numbers.</li><li>pause hides the puzzle until you resume.</li></ol>
+        <ol><li>fill each row, column and 3 by 3 box with 1 to 9, with no repeats.</li><li>pick a square, then type or tap a number. arrow keys move between squares.</li><li>use x for your own mark and hints to show possible numbers.</li><li>pause hides your entries and x marks. the original numbers stay visible until you resume.</li></ol>
       </div>}
     </div>
     <div className="sudoku-panel">
       <div className="sudoku-toolbar">
-        <div className="sudoku-time">{settings.showTimer && <span>time: <strong>{elapsed}</strong></span>}{settings.showTimer && ' '}<button type="button" className="sudoku-small-button" aria-label={paused ? 'resume puzzle' : 'pause puzzle'} onClick={() => setPaused((value) => !value)}><span aria-hidden="true">{paused ? '▶' : 'Ⅱ'}</span></button></div>
-        <div className="segmented" aria-label="difficulty">{LEVELS.map((choice) => <button key={choice} type="button" className="segmented-option" aria-pressed={level === choice} onClick={() => setLevel(choice)}>{level === choice && <span className="segmented-check" aria-hidden="true">✓</span>}{choice}</button>)}</div>
+        <div className="sudoku-time">{settings.showTimer && <span>time: <strong>{elapsed}</strong></span>}{settings.showTimer && ' '}<button type="button" className="sudoku-small-button" aria-label={paused ? 'resume puzzle' : 'pause puzzle'} onClick={togglePause}><span aria-hidden="true">{paused ? '▶' : 'Ⅱ'}</span></button></div>
+        <div className="segmented" aria-label="difficulty">{LEVELS.map((choice) => <button key={choice} type="button" className="segmented-option" aria-pressed={level === choice} disabled={paused} onClick={() => { if (!paused) setLevel(choice); }}>{level === choice && <span className="segmented-check" aria-hidden="true">✓</span>}{choice}</button>)}</div>
         <span className="sudoku-errors">{settings.showErrors ? <>error: <strong>{errors}</strong></> : null}</span>
       </div>
       <div className="sudoku-board-scroll">
         <div className={`sudoku-board${paused ? ' is-paused' : ''}`} role="grid" aria-label="sudoku grid" aria-rowcount={9} aria-colcount={9}>
         {Array.from({ length: 9 }, (_, row) => <div key={row} className="sudoku-row" role="row">
-          {entries.slice(row * 9, row * 9 + 9).map((value, column) => {
-          const index = row * 9 + column; const given = puzzle.puzzle[index] !== 0;
-          const options = !value && !marks.has(index) && hints ? candidates(entries, index) : [];
+          {entries.slice(row * 9, row * 9 + 9).map((_, column) => {
+          const index = row * 9 + column;
+          const display = sudokuCellPresentation(entries, puzzle.puzzle, marks, index, paused);
+          const { given, value } = display;
+          const options = !paused && !value && !display.marked && hints ? candidates(entries, index) : [];
+          // Keep all styling in the pure highlighter; its pause guard must fail closed for private entries.
           const classes = sudokuCellClasses(index, { selected, entries, givens: puzzle.puzzle, conflicts, paused, settings }).join(' ');
-          const spoken = paused ? 'hidden while paused' : marks.has(index) ? 'x mark' : value ? String(value) : options.length ? `empty, candidates ${options.join(', ')}` : 'empty';
-          return <button ref={(element) => { if (element) cells.current.set(index, element); else cells.current.delete(index); }} key={index} type="button" role="gridcell" tabIndex={selected === index ? 0 : -1} className={classes} aria-rowindex={row + 1} aria-colindex={column + 1} aria-selected={selected === index} aria-label={`row ${row + 1}, column ${column + 1}, ${spoken}${given ? ', given' : ''}`} data-given={given ? 'true' : 'false'} onClick={() => setSelected(index)}>
-            {paused ? <span aria-hidden="true">x</span> : marks.has(index) ? <span className="sudoku-mark" aria-hidden="true">x</span> : value ? <span>{value}</span> : options.length ? <span className="sudoku-candidates" aria-hidden="true">{NUMBERS.map((number) => <i key={number}>{options.includes(number) ? number : ''}</i>)}</span> : null}
+          const spoken = display.hidden ? 'hidden until resumed' : display.marked ? 'x mark' : value ? String(value) : options.length ? `empty, candidates ${options.join(', ')}` : 'empty';
+          return <button ref={(element) => { if (element) cells.current.set(index, element); else cells.current.delete(index); }} key={index} type="button" role="gridcell" tabIndex={paused ? -1 : selected === index ? 0 : -1} className={classes} aria-rowindex={row + 1} aria-colindex={column + 1} aria-selected={!paused && selected === index} aria-label={`row ${row + 1}, column ${column + 1}, ${spoken}${given ? ', given' : ''}`} data-given={given ? 'true' : 'false'} onClick={() => { if (!paused) setSelected(index); }}>
+            {display.marked ? <span className="sudoku-mark" aria-hidden="true">x</span> : value ? <span>{value}</span> : options.length ? <span className="sudoku-candidates" aria-hidden="true">{NUMBERS.map((number) => <i key={number}>{options.includes(number) ? number : ''}</i>)}</span> : null}
           </button>;
           })}
         </div>)}
         </div>
       </div>
       <div className="sudoku-pad-wrap">
-        <button type="button" className="sudoku-setting-button sudoku-hints" role="checkbox" aria-checked={hints} onClick={() => setHints((value) => !value)}><span aria-hidden="true">{hints ? '☑' : '☐'}</span> hints</button>
+        <button type="button" className="sudoku-setting-button sudoku-hints" role="checkbox" aria-checked={hints} disabled={paused} onClick={() => { if (!paused) setHints((value) => !value); }}><span aria-hidden="true">{hints ? '☑' : '☐'}</span> hints</button>
         <div className="sudoku-number-row" aria-label="numbers">{NUMBERS.map((number) => <button key={number} type="button" onClick={() => enter(number)} disabled={paused || solved}>{number}</button>)}<button type="button" onClick={mark} aria-label="add or remove x mark" disabled={paused || solved}>x</button></div>
         <button ref={settingsButton} type="button" className="sudoku-setting-button sudoku-settings-trigger" aria-haspopup="dialog" onClick={() => setSettingsOpen(true)}><span aria-hidden="true">⚙</span> settings</button>
       </div>

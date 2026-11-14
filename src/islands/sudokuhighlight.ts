@@ -25,8 +25,8 @@ export function sudokuCellClasses(index: number, state: SudokuHighlightState): s
   const selectedRow = Math.floor(selected / 9); const selectedColumn = selected % 9;
   const value = entries[index] ?? 0; const selectedValue = entries[selected] ?? 0;
   const given = (givens[index] ?? 0) !== 0;
-  const isSelected = index === selected;
-  // While paused every square is hidden, so nothing may hint at where numbers sit.
+  const isSelected = !paused && index === selected;
+  // While paused original givens remain visible, but selection and student content must not leak through classes.
   const show = !paused && !isSelected;
   const related = show && settings.highlightRowColumn && (row === selectedRow || column === selectedColumn);
   const box = show && settings.highlightBox && Math.floor(row / 3) === Math.floor(selectedRow / 3) &&
@@ -34,12 +34,12 @@ export function sudokuCellClasses(index: number, state: SudokuHighlightState): s
   const identical = !paused && settings.highlightIdentical && selectedValue !== 0 && value === selectedValue;
   const classes = ['sudoku-cell'];
   if (given) classes.push('is-given');
-  else if (value) classes.push('is-entered');
+  else if (!paused && value) classes.push('is-entered');
   if (isSelected) classes.push('is-selected');
   if (related) classes.push('is-related');
   if (box) classes.push('is-box-related');
   if (identical) classes.push('is-identical');
-  if (settings.highlightConflicts && conflicts.has(index)) classes.push('is-conflict');
+  if (!paused && settings.highlightConflicts && conflicts.has(index)) classes.push('is-conflict');
   if (column === 2 || column === 5) classes.push('sudoku-box-right');
   if (row === 2 || row === 5) classes.push('sudoku-box-bottom');
   return classes;
