@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { isDesktopOfEachEngine } from './projects';
+import { isDesktopOfEachEngine, sizeOf } from './projects';
 
 /**
  * Issue #662 / Anatomy Lab QA section 2, "Conflicting actions".
@@ -62,4 +62,37 @@ test('show all cannot undo a newer show-only selection when a deeper model arriv
   await search.fill('skin');
   await expect(structures.getByRole('button', { name: 'skin', exact: true }))
     .toHaveAttribute('aria-pressed', 'true');
+});
+
+/**
+ * Issue #662 / Anatomy Lab QA section 3, "Phone layout".
+ * Exercise the real 1,255-name catalog, not just the five-name fixture.
+ * Avoid downloading any deeper GLBs while checking both narrow widths.
+ */
+test('the real whole-body catalog remains searchable without horizontal overflow at 320 and 390 px', async ({ page }, info) => {
+  test.skip(sizeOf(info) !== 'phone', 'narrow source-catalog check on both phone themes');
+  test.setTimeout(90_000);
+
+  for (const width of [320, 390]) {
+    await page.setViewportSize({ width, height: width === 320 ? 700 : 844 });
+    await page.goto('/preview/anatomy-lab');
+    await page.getByRole('button', { name: 'open the anatomy lab' }).click();
+    await expect(page.locator('canvas')).toBeFocused({ timeout: 15_000 });
+    const whole = page.getByRole('group', { name: 'body system' })
+      .getByRole('button', { name: 'whole body', exact: true });
+    await expect(whole).toBeVisible({ timeout: 15_000 });
+    await whole.click();
+    await expect(page.getByTestId('anatomy-files'))
+      .toContainText('model files loaded: 1 of 11', { timeout: 20_000 });
+
+    const search = page.getByLabel('find a structure');
+    await search.fill('heart');
+    const heart = page.getByRole('region', { name: 'structures' })
+      .getByRole('button', { name: 'heart (not loaded yet)', exact: true });
+    await expect(heart).toBeVisible();
+    await expect(heart).toBeDisabled();
+    await expect(page.getByRole('button', { name: 'show 40 more structures' })).toHaveCount(0);
+    const scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);
+    expect(scrollWidth, `horizontal overflow at ${width}px`).toBeLessThanOrEqual(width);
+  }
 });
