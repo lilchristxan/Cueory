@@ -162,7 +162,7 @@ describe.skipIf(!existsSync(privacyPath))('privacy page browser storage disclosu
     expect(html).toContain('the reason you picked and your comment');
     expect(html).toContain('until your');
     expect(html).toContain('account is deleted');
-    expect(html).toContain('Supabase keeps them with');
+    expect(html.replace(/\s+/g, ' ')).toContain('Supabase keeps the identity details with your account');
     expect(html).toContain('deleting an account won\'t take you off it');
     expect(html).toContain('unsubscribe link');
     expect(html.replace(/\s+/g, ' ')).toContain('Signing out removes them.');
@@ -184,7 +184,7 @@ describe.skipIf(!existsSync(privacyPath))('privacy page browser storage disclosu
     // Task 200: the password hash, the PKCE code verifier and the export's account timestamps are disclosed.
     expect(text).toContain('a bcrypt hash');
     expect(text).toContain('PKCE code verifier');
-    expect(text).toContain('when the account was created, when you last signed in, which sign-in methods it has');
+    expect(text).toContain('account creation and last sign-in dates, sign-in methods and the details each provider shared');
     expect(text).toContain('The download is all or nothing, and it has limits');
   });
 
