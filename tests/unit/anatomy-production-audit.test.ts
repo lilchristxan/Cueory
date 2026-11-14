@@ -1887,6 +1887,20 @@ describe('anatomy production artifact audit', () => {
     expect(errors.some((message) => message.includes('assets/ordinary.js'))).toBe(false);
   });
 
+  it('rejects long OBJ source models and relative-index faces encoded as Base64', () => {
+    const f = setup();
+    const longObj = 'v 0 0 0\n'.repeat(17_003) + 'f 1 2 3\n';
+    const relativeObj = 'v 0 0 0\nv 1 0 0\nv 0 1 0\nf -3 -2 -1\n';
+    f.file('assets/long-obj.js', `const model = atob('${Buffer.from(longObj).toString('base64')}');`);
+    f.file('assets/relative-obj.js', `const model = atob('${Buffer.from(relativeObj).toString('base64')}');`);
+    const errors = f.check().errors;
+    for (const name of ['long-obj.js', 'relative-obj.js']) {
+      expect(errors).toContain(
+        'encoded geometry, archive or reserved anatomy ID in built text requires review: assets/' + name,
+      );
+    }
+  });
+
   it('does not treat code following a harmless atob call as the encoded payload', () => {
     const f = setup();
     f.file('assets/benign-after-atob.js',
