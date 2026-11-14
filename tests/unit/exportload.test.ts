@@ -469,7 +469,8 @@ describe('fromSupabase — no silent row truncation', () => {
 
   it('refuses a Supabase export when auth event monitoring is unavailable', async () => {
     const { client } = supabase(rows);
-    delete client.auth.onAuthStateChange;
+    const disconnected: SupabaseExportClient = client;
+    disconnected.auth.onAuthStateChange = undefined;
     expect(await loadExport(fromSupabase(client))).toEqual(failed);
   });
   it('passes SDK auth events through to export monitoring and unsubscribes with the same receiver', () => {
