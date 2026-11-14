@@ -27,8 +27,13 @@ if (!Number.isInteger(rounds) || rounds < 1 || rounds > 10) {
   throw new Error('ANATOMY_BENCH_ROUNDS must be an integer from 1 to 10.');
 }
 if (!/^https?:\/\//i.test(url)) throw new Error('ANATOMY_BENCH_URL must be an HTTP(S) address.');
-if (new URL(url).pathname !== '/preview/anatomy-lab') {
-  throw new Error('Only the unpublished /preview/anatomy-lab route may be benchmarked.');
+const target = new URL(url);
+// This benchmark deliberately loads the unpublished GLBs. Restrict it to the
+// developer's own loopback server, not a lookalike remote or public origin.
+if (!['127.0.0.1', 'localhost', '[::1]'].includes(target.hostname) ||
+    target.username || target.password || target.search || target.hash ||
+    target.pathname !== '/preview/anatomy-lab') {
+  throw new Error('Only the unpublished /preview/anatomy-lab route on loopback may be benchmarked.');
 }
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
