@@ -462,7 +462,7 @@ select throws_ok($$ select public.save_anatomy_view('heart', 'front', current_se
   '22023', 'a structure id has the wrong shape', 'a selected id with the wrong shape is refused');
 select throws_ok(
   $$ select public.save_anatomy_view('heart', 'front', current_setting('t.camera')::jsonb,
-       (select array_agg('FMA' || n) from generate_series(1, 2001) n), '{}', null, (select auth.uid())) $,
+       (select array_agg('FMA' || n) from generate_series(1, 2001) n), '{}', null, (select auth.uid())) $$,
   '22023', 'a structure id has the wrong shape', 'more than 2,000 hidden ids is refused'
 );
 select throws_ok($$ select public.save_anatomy_view('Heart', 'front', current_setting('t.camera')::jsonb, '{}', '{}', null, (select auth.uid())) $$,
