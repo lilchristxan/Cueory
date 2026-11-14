@@ -28,6 +28,10 @@ const BODYPARTS3D_SECTION_FILES = new Map([
 // Fail closed on any publicly shipped 3D geometry, including misplaced copies and raw source meshes.
 // Include common alternative mesh formats so a renamed draft cannot bypass the production gate.
 const MODEL_ASSET = /\.(?:glb|gltf|obj|stl|fbx|ply|dae|3mf|usd|usdz|blend)$/i;
+// Published file types have to be explicitly reviewed. A hidden model can be a
+// plain JSON glTF renamed .dat, which has neither .gltf suffix nor GLB magic.
+const REVIEWED_OUTPUT_TYPE = /\.(?:html?|js|mjs|cjs|css|json|map|xml|svg|txt|csv|tsv|md|webmanifest|ico|png|jpe?g|gif|webp|avif|bmp|tiff?|woff2?|ttf|otf|eot|wasm|pdf|mp4|webm|mp3|m4a|wav|ogg|vtt)$/i;
+const REVIEWED_EXTENSIONLESS_OUTPUT = new Set(['/_headers', '/_redirects']);
 // Archives can conceal otherwise unapproved model files from a path/GLB-signature scan.
 const ARCHIVE_ASSET = /\.(?:zip|tar|tgz|gz|bz2|xz|zst|7z|rar|cab|jar|war|ear|apk|ipa|iso|dmg)$/i;
 // Scan all ordinary published text assets, not just the anatomy page or hashed JavaScript chunks.
@@ -60,6 +64,36 @@ function hasGlbMagic(path) {
     if (!fstatSync(fd).isFile()) throw new Error('not a regular file');
     const magic = Buffer.alloc(4);
     return readSync(fd, magic, 0, magic.length, 0) === magic.length && magic.toString('ascii') === 'glTF';
+  } finally {
+    closeSync(fd);
+  }
+}
+
+/**
+ * Detect a drawable, plain-text glTF 2.0 payload regardless of its filename.
+ * Large JSON objects are indeterminate under the bounded 16 MiB scan and must
+ * fail closed, rather than silently certifying possibly hidden geometry.
+ */
+function hasTextGltfModel(path) {
+  if (!Number.isInteger(fsConstants.O_NOFOLLOW)) throw new Error('this platform cannot safely audit symbolic links');
+  const fd = openSync(path, fsConstants.O_RDONLY | fsConstants.O_NOFOLLOW);
+  try {
+    const stats = fstatSync(fd);
+    if (!stats.isFile()) throw new Error('not a regular file');
+    const prefix = Buffer.alloc(Math.min(stats.size, 4096));
+    if (prefix.length) readSync(fd, prefix, 0, prefix.length, 0);
+    const start = prefix.toString('utf8').replace(/^\uFEFF/u, '').trimStart();
+    if (!start.startsWith('{')) return false;
+    if (stats.size > 16 * 1024 * 1024) return true;
+    let json;
+    try { json = JSON.parse(readFileSync(fd, 'utf8').replace(/^\uFEFF/u, '')); }
+    catch { return false; }
+    return json !== null && typeof json === 'object' && !Array.isArray(json) &&
+      json.asset?.version === '2.0' &&
+      Array.isArray(json.meshes) && json.meshes.some((mesh) => Array.isArray(mesh?.primitives) && mesh.primitives.length > 0) &&
+      Array.isArray(json.accessors) && json.accessors.length > 0 &&
+      Array.isArray(json.buffers) && json.buffers.length > 0 &&
+      Array.isArray(json.bufferViews) && json.bufferViews.length > 0;
   } finally {
     closeSync(fd);
   }
@@ -1283,6 +1317,19 @@ export function auditAnatomyProduction(distDir, contentDir) {
   for (const path of builtFiles) {
     const url = toUrl(path);
     const pagefindKind = pagefindArtifactKind(url);
+    // Pagefind's binary extensions are already validated by their own format parser.
+    // No other arbitrary output extension is implicitly safe for publication.
+    if (!pagefindKind && !REVIEWED_OUTPUT_TYPE.test(path) && !MODEL_ASSET.test(path) &&
+        !REVIEWED_EXTENSIONLESS_OUTPUT.has(url)) {
+      errors.push(`unreviewed output asset type requires explicit review: ${url}`);
+    }
+    try {
+      if (!MODEL_ASSET.test(path) && hasTextGltfModel(path)) {
+        errors.push(`unapproved text glTF model exposed in production: ${url}`);
+      }
+    } catch {
+      errors.push(`cannot safely inspect output asset: ${url}`);
+    }
     if (ARCHIVE_ASSET.test(path) ||
         (pagefindKind
           ? !validPagefindArtifact(path, pagefindKind, draftIds)
