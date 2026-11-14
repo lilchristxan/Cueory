@@ -94,6 +94,7 @@ const ALWAYS_HELD_FILES = new Set([
   'src/pages/anatomy.astro', // Public-facing route may expose only founder-approved models.
   'src/islands/anatomypublic.ts', // The production-only model selection gate for that route and navigation.
   'src/islands/AnatomyReviewPictures.tsx', // Generates credit-bearing review pictures from unpublished models.
+  'src/components/AnatomyPublicText.astro', // Approved-only no-JS structure list and mandatory model attribution.
   'src/components/SiteMenu.astro', // Controls when the public Anatomy Lab navigation is visible.
   'scripts/build-anatomy.mjs', // Source-driven geometry and label generation.
   'scripts/anatomy-review-report.mjs',
