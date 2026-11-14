@@ -308,6 +308,32 @@ describe('read-only anatomy review inventory', () => {
       .toBe(false);
   });
 
+  it('rejects GitHub main releases and main-target PRs even with an opt-in preview flag', () => {
+    const releaseContexts = [
+      { GITHUB_EVENT_NAME: 'push', GITHUB_REF: 'refs/heads/main' },
+      { GITHUB_EVENT_NAME: 'push', GITHUB_REF: 'refs/heads/legacy/main' },
+      { GITHUB_EVENT_NAME: 'pull_request', GITHUB_BASE_REF: 'main' },
+      { GITHUB_EVENT_NAME: 'pull_request', GITHUB_BASE_REF: 'legacy/main' },
+      { GITHUB_EVENT_NAME: 'workflow_dispatch', GITHUB_REF: 'refs/heads/main' },
+    ];
+    for (const release of releaseContexts) {
+      expect(draftReviewSheetsAllowed({ ...release, CUEORY_ANATOMY_DRAFTS: '1' }), JSON.stringify(release))
+        .toBe(false);
+      expect(draftReviewSheetsAllowed({
+        ...release,
+        WORKERS_CI: '1',
+        WORKERS_CI_BRANCH: 'task-178/staging-preview',
+        CUEORY_ANATOMY_DRAFTS: '1',
+      }), JSON.stringify(release)).toBe(false);
+    }
+    expect(draftReviewSheetsAllowed({
+      GITHUB_EVENT_NAME: 'push',
+      GITHUB_REF: 'refs/heads/task-178/review-sheets',
+      CUEORY_ANATOMY_DRAFTS: '1',
+    })).toBe(true);
+    expect(draftReviewSheetsAllowed({ CUEORY_ANATOMY_DRAFTS: '1' })).toBe(true);
+  });
+
   it('only offers draft review names and routes for an explicitly nonproduction build', () => {
     const root = setup();
     writeSystem(root, 'sample');
