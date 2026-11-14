@@ -275,7 +275,7 @@ function anatomyStructureId(value: Record<string, unknown>, name: string): strin
 }
 
 function anatomyStringIds(value: unknown): string[] {
-  if (!Array.isArray(value) || value.length > 1000 || Object.keys(value).length !== value.length) {
+  if (!Array.isArray(value) || value.length > 2000 || Object.keys(value).length !== value.length) {
     throw new Error('invalid anatomy structure list');
   }
   const ids: string[] = [];

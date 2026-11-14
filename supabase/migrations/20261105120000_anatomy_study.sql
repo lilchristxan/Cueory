@@ -71,10 +71,10 @@ create table public.anatomy_saved_views (
   -- The camera, as the lab saves it: a small JSON object (position, target and up), never more than 2 KB.
   camera jsonb not null
     constraint anatomy_saved_views_camera check (jsonb_typeof(camera) = 'object' and pg_column_size(camera) < 2048),
-  -- Structure ids hidden or faded in the view, and the selected one, if any. The whole-body list has about 900
-  -- structures, so 1,000 bounds any one view.
-  hidden text[] not null default '{}' constraint anatomy_saved_views_hidden check (cardinality(hidden) <= 1000),
-  faded text[] not null default '{}' constraint anatomy_saved_views_faded check (cardinality(faded) <= 1000),
+  -- Structure ids hidden or faded in the view. The current full catalog has 1,255 source labels,
+  -- so a normal whole-body view can hide 1,254. Keep the bounded maximum at 2,000 per list.
+  hidden text[] not null default '{}' constraint anatomy_saved_views_hidden check (cardinality(hidden) <= 2000),
+  faded text[] not null default '{}' constraint anatomy_saved_views_faded check (cardinality(faded) <= 2000),
   selected text
     constraint anatomy_saved_views_selected
     check (selected is null or (char_length(selected) <= 60 and selected ~ '^(FMA[0-9]+|FIX[0-9]+|fixture-[a-z0-9-]+)$')),
@@ -397,7 +397,7 @@ begin
 
   -- The structure lists and the selection.
   if save_anatomy_view.hidden is null or save_anatomy_view.faded is null
-     or cardinality(save_anatomy_view.hidden) > 1000 or cardinality(save_anatomy_view.faded) > 1000
+     or cardinality(save_anatomy_view.hidden) > 2000 or cardinality(save_anatomy_view.faded) > 2000
      or exists (
        select 1 from unnest(save_anatomy_view.hidden || save_anatomy_view.faded) i
        where i is null or char_length(i) > 60 or i !~ id_shape

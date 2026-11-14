@@ -166,7 +166,7 @@ const anatomySystemKey = (value: unknown) => typeof value === 'string' && /^[a-z
 const anatomyStructureId = (value: unknown) =>
   typeof value === 'string' && value.length <= 60 && /^(FMA\d+|FIX\d+|fixture-[a-z0-9-]+)$/.test(value);
 function anatomyIdList(value: unknown): boolean {
-  if (!Array.isArray(value) || value.length > 1000 || Object.keys(value).length !== value.length) return false;
+  if (!Array.isArray(value) || value.length > 2000 || Object.keys(value).length !== value.length) return false;
   const seen = new Set<string>();
   for (let i = 0; i < value.length; i++) {
     const item = own(value, String(i));

@@ -835,6 +835,15 @@ describe('anatomy lab account data (Task 178)', () => {
     ]);
   });
 
+  it('exports all 1,254 hidden IDs in a default whole-body view to JSON and CSV', () => {
+    const hidden = Array.from({ length: 1254 }, (_unused, i) => 'FMA' + (i + 1));
+    const wholeBody = { ...view, systemKey: 'whole-body', hidden };
+    const result = json({ anatomyViews: [wholeBody] });
+    expect(result.anatomyViews[0]?.hidden).toEqual(hidden);
+    expect(result.dropped).toEqual([]);
+    expect(file({ anatomyViews: [wholeBody] }, 'anatomyViews')).toContain('FMA1254');
+  });
+
   it('drops internal ids and owner fields by name without exposing their values', () => {
     const hidden = 'sample-private-owner-value';
     const result = json({

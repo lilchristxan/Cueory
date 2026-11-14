@@ -5,7 +5,7 @@
 -- only inside this test.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(134);
+select plan(137);
 
 insert into auth.users (id, email, email_confirmed_at, is_anonymous) values
   -- One and two: confirmed students.
@@ -341,6 +341,20 @@ select results_eq(
   $$ values ('front view', array['FMA1'], array['FMA3'], 'FMA2', current_setting('t.camera')::jsonb) $$,
   'the view is stored with its name trimmed, each hidden id once, and the camera as sent'
 );
+-- With one skin structure among 1,255 source labels, the normal whole-body view hides 1,254.
+select isnt(
+  public.save_anatomy_view('whole-body', 'skin-only', current_setting('t.camera')::jsonb,
+    (select array_agg('FMA' || n) from generate_series(1, 1254) n), '{}', null, (select auth.uid())),
+  null, 'a default whole-body view accepts all 1,254 hidden structure IDs'
+);
+select results_eq(
+  $ select cardinality(hidden)::int from public.my_anatomy_views('whole-body') where name = 'skin-only' $,
+  $ values (1254) $, 'the full set of hidden structure IDs is read back unchanged'
+);
+select is(
+  public.delete_anatomy_view((select id from public.my_anatomy_views('whole-body') where name = 'skin-only'), (select auth.uid())),
+  true, 'the test whole-body view is removed before the 50-view cap checks'
+);
 select results_eq(
   $$ select public.save_anatomy_view('heart', 'front view', '{"position": [1, 2, 3], "target": [0, 0, 0]}', '{}', '{}', null, (select auth.uid()))
        = (select id from public.my_anatomy_views('heart')) $$,
@@ -448,8 +462,8 @@ select throws_ok($$ select public.save_anatomy_view('heart', 'front', current_se
   '22023', 'a structure id has the wrong shape', 'a selected id with the wrong shape is refused');
 select throws_ok(
   $$ select public.save_anatomy_view('heart', 'front', current_setting('t.camera')::jsonb,
-       (select array_agg('FMA' || n) from generate_series(1, 1001) n), '{}', null, (select auth.uid())) $$,
-  '22023', 'a structure id has the wrong shape', 'more than 1,000 hidden ids is refused'
+       (select array_agg('FMA' || n) from generate_series(1, 2001) n), '{}', null, (select auth.uid())) $,
+  '22023', 'a structure id has the wrong shape', 'more than 2,000 hidden ids is refused'
 );
 select throws_ok($$ select public.save_anatomy_view('Heart', 'front', current_setting('t.camera')::jsonb, '{}', '{}', null, (select auth.uid())) $$,
   '22023', 'that anatomy system was not found', 'a bad system key is refused');

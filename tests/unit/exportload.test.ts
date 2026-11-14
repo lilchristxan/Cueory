@@ -413,6 +413,15 @@ describe('fromSupabase — no silent row truncation', () => {
     expect(JSON.stringify(result.data.anatomyReviewQueue)).not.toContain('private');
   });
 
+  it('retains every hidden ID in the normal 1,254-structure whole-body export', async () => {
+    const hidden = Array.from({ length: 1254 }, (_unused, i) => 'FMA' + (i + 1));
+    const saved = { ...rows.anatomy_saved_views[0], system_key: 'whole-body', hidden };
+    const result = await loadExport(reader({ anatomy_saved_views: { data: [saved], error: null } }).db);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.data.anatomyViews[0]?.hidden).toEqual(hidden);
+  });
+
   it('refuses malformed anatomy rows and later-page failures instead of returning partial account data', async () => {
     expect(await loadExport(reader({ anatomy_review_queue: { data: [{ ...rows.anatomy_review_queue[0], structure_id: 'private' }], error: null } }).db)).toEqual(failed);
     expect(await loadExport(reader({ anatomy_saved_views: { data: [{ ...rows.anatomy_saved_views[0], camera: { position: [1, 2], target: [0, 0, 0] } }], error: null } }).db)).toEqual(failed);
