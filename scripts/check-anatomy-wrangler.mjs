@@ -35,15 +35,15 @@ if (process.argv[1]) {
   try { invokedScript = realpathSync(resolve(process.argv[1])); }
   catch { /* Node reports an invalid CLI path before evaluating it; imports remain side-effect-free. */ }
   if (invokedScript && import.meta.url === pathToFileURL(invokedScript).href) {
-  const checked = checkAnatomyWranglerUpload();
-  if (checked.skipped) {
-    process.stdout.write('anatomy Wrangler upload audit: skipped for development/preview\n');
-  } else if (checked.errors.length) {
-    process.stderr.write('anatomy Wrangler upload audit FAILED:\n');
-    for (const problem of checked.errors) process.stderr.write('- ' + problem + '\n');
-    process.exitCode = 1;
-  } else {
-    process.stdout.write('anatomy Wrangler upload audit PASS\n');
-  }
+    const checked = checkAnatomyWranglerUpload();
+    if (checked.skipped) {
+      process.stdout.write('anatomy Wrangler upload audit: skipped for development/preview\n');
+    } else if (checked.errors.length) {
+      process.stderr.write('anatomy Wrangler upload audit FAILED:\n');
+      for (const problem of checked.errors) process.stderr.write('- ' + problem + '\n');
+      process.exitCode = 1;
+    } else {
+      process.stdout.write('anatomy Wrangler upload audit PASS\n');
+    }
   }
 }
