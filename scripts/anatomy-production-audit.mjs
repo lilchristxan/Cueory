@@ -1095,6 +1095,8 @@ function hasUsableSiteEntrypoint(html) {
     const next = html.indexOf('<', cursor);
     const end = next === -1 ? html.length : next;
     // Text outside the document is not evidence of a valid entrypoint.
+    // Astro may append valid deferred module scripts after </html>. Such
+    // scripts are not evidence of the page body, which must be verified first.
     if (['doctype', 'html-open', 'done'].includes(state) && html.slice(cursor, end).trim()) return reject();
     cursor = end;
     if (next === -1) break;
@@ -1135,6 +1137,14 @@ function hasUsableSiteEntrypoint(html) {
     if (!match) return reject();
     const tag = match[1].toLowerCase();
 
+    if (state === 'done' && tag === 'script' && !closing) {
+      // Pagefind/Astro may place deferred module scripts after the complete
+      // document. Allow only a syntactically complete script, never extra HTML.
+      const close = /<\/script\s*>/i.exec(html.slice(cursor));
+      if (!close) return reject();
+      cursor += close.index + close[0].length;
+      continue;
+    }
     if (tag === 'html') {
       if (closing && state === 'html-close') state = 'done';
       else if (!closing && state === 'html-open') state = 'head-open';
