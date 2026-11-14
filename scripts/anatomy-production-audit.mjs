@@ -1072,16 +1072,6 @@ function hasUsableSiteEntrypoint(html) {
   let cursor = 0;
   let state = 'doctype';
   let bodyHasElement = false;
-  // Temporary bounded CI diagnostic for unexpected Astro-generated markup.
-  const reject = () => {
-    if (process.env.GITHUB_ACTIONS === 'true' && html.length > 10000) {
-      const excerpt = html.slice(Math.max(0, cursor - 40), Math.min(html.length, cursor + 40))
-        .replace(/\s+/g, ' ');
-      process.stderr.write('[anatomy-entrypoint] offset=' + cursor +
-        ' state=' + state + ' fragment=' + JSON.stringify(excerpt) + '\n');
-    }
-    return false;
-  };
   const allowedInside = () => state === 'head-content' || state === 'body-content';
   const rawTags = new Set([
     'script', 'style', 'title', 'textarea', 'template', 'noscript',
@@ -1102,26 +1092,26 @@ function hasUsableSiteEntrypoint(html) {
     // Text outside the document is not evidence of a valid entrypoint.
     // Astro may append valid deferred module scripts after </html>. Such
     // scripts are not evidence of the page body, which must be verified first.
-    if (['doctype', 'html-open', 'done'].includes(state) && html.slice(cursor, end).trim()) return reject();
+    if (['doctype', 'html-open', 'done'].includes(state) && html.slice(cursor, end).trim()) return false;
     cursor = end;
     if (next === -1) break;
 
     if (state === 'done' && html.startsWith('<script', cursor)) {
       const trailing = afterDocumentScript.exec(html.slice(cursor));
-      if (!trailing) return reject();
+      if (!trailing) return false;
       cursor += trailing[0].length;
       continue;
     }
 
     if (html.startsWith('<!--', cursor)) {
       const closing = html.indexOf('-->', cursor + 4);
-      if (closing < 0) return reject();
+      if (closing < 0) return false;
       cursor = closing + 3;
       continue;
     }
     if (html.startsWith('<!', cursor)) {
       const doctype = /^<!doctype\s+html\s*>/i.exec(html.slice(cursor));
-      if (!doctype || state !== 'doctype') return reject();
+      if (!doctype || state !== 'doctype') return false;
       cursor += doctype[0].length;
       state = 'html-open';
       continue;
@@ -1135,59 +1125,70 @@ function hasUsableSiteEntrypoint(html) {
       if (quote) {
         if (char === quote) quote = '';
       } else if (char === '"' || char === "'") quote = char;
-      else if (char === '<') return reject();
+      else if (char === '<') return false;
       else if (char === '>') break;
       ending++;
     }
-    if (ending >= html.length || quote) return reject();
+    if (ending >= html.length || quote) return false;
     const token = html.slice(cursor, ending + 1);
     cursor = ending + 1;
     const closing = token.startsWith('</');
     const match = closing
       ? /^<\/([a-z][a-z\d:-]*)\s*>$/i.exec(token)
       : /^<([a-z][a-z\d:-]*)(?:\s[\s\S]*?)?\s*\/?>$/i.exec(token);
-    if (!match) return reject();
+    if (!match) return false;
     const tag = match[1].toLowerCase();
 
     if (state === 'done' && tag === 'script' && !closing) {
       // Pagefind/Astro may place deferred module scripts after the complete
       // document. Allow only a syntactically complete script, never extra HTML.
       const close = /<\/script\s*>/i.exec(html.slice(cursor));
-      if (!close) return reject();
+      if (!close) return false;
       cursor += close.index + close[0].length;
       continue;
     }
     if (tag === 'html') {
       if (closing && state === 'html-close') state = 'done';
       else if (!closing && state === 'html-open') state = 'head-open';
-      else return reject();
+      else return false;
       continue;
     }
     if (tag === 'head') {
       if (closing && state === 'head-content') state = 'body-open';
       else if (!closing && state === 'head-open') state = 'head-content';
-      else return reject();
+      else return false;
       continue;
     }
     if (tag === 'body') {
       if (closing && state === 'body-content') state = 'html-close';
       else if (!closing && state === 'body-open') state = 'body-content';
-      else return reject();
+      else return false;
       continue;
     }
-    if (!allowedInside()) return reject();
+    // Astro can append its hoisted module script after the literal
+    // </html> tag. Browsers still execute that script as document content.
+    // Accept only this narrow, well-formed module-script case, and never
+    // use its raw JS text as evidence of a rendered page.
+    if (state === 'done' && !closing && tag === 'script' &&
+        /\s+type\s*=\s*(["'])module\1(?=\s|>)/i.test(token)) {
+      const close = /<\/script\s*>/i.exec(html.slice(cursor));
+      if (!close) return false;
+      cursor += close.index + close[0].length;
+      continue;
+    }
+    if (!allowedInside()) return false;
 
     if (!closing && rawTags.has(tag)) {
       // HTML treats these elements' contents as opaque text. In particular,
       // literal <body> strings in JS and CSS must not satisfy the release gate.
       const close = new RegExp('</' + tag + '\\s*>', 'i').exec(html.slice(cursor));
-      if (!close) return reject();
+      if (!close) return false;
       cursor += close.index + close[0].length;
       continue;
     }
     if (!closing && state === 'body-content' && !notRendered.has(tag)) bodyHasElement = true;
   }
-  return state === 'done' && bodyHasElement ? true : reject();
+  return state === 'done' && bodyHasElement;
 }
 
 export function builtSiteEntrypointErrors(distDir) {
