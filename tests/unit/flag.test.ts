@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { flagItemForContext } from '../../src/islands/FlagMount';
 import { charactersLeft, checkReport, checkReportWithContext, reportContextPrefix, PATIENT_INFO_WARNING, REASONS, reasonInWords, type FlagReport } from '../../src/islands/flag';
 
 const SAMPLE_UUID = '00000000-0000-0000-0000-000000000001';
@@ -123,5 +124,36 @@ describe('anatomy structure flag context', () => {
       ok: true,
       report: { ...input, comment: `about: ${context}` },
     });
+  });
+});
+
+describe('contextual report question isolation', () => {
+  const question = {
+    itemId: '22222222-2222-4222-8222-222222222222',
+    itemVersionId: '33333333-3333-4333-8333-333333333333',
+  };
+
+  it('never includes published or fixed question UUIDs in an anatomy report', () => {
+    const scoped = flagItemForContext('anatomy structure FIX001 in test shapes (fixture)',
+      question, question.itemId, question.itemVersionId);
+    expect(scoped).toEqual({});
+    const checked = checkReportWithContext({
+      page: '/preview/anatomy-lab', ...scoped, reason: 'typo', comment: 'wrong label',
+    }, 'anatomy structure FIX001 in test shapes (fixture)');
+    expect(checked).toEqual({
+      ok: true,
+      report: {
+        page: '/preview/anatomy-lab',
+        reason: 'typo',
+        comment: 'about: anatomy structure FIX001 in test shapes (fixture)\\nwrong label',
+      },
+    });
+  });
+
+  it('keeps the published question on ordinary lessons and falls back to fixed IDs', () => {
+    expect(flagItemForContext(undefined, question, undefined, undefined)).toEqual(question);
+    expect(flagItemForContext(undefined, undefined, question.itemId, question.itemVersionId)).toEqual(question);
+    expect(flagItemForContext(undefined, undefined, undefined, undefined))
+      .toEqual({ itemId: undefined, itemVersionId: undefined });
   });
 });
