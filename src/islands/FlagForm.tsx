@@ -35,13 +35,16 @@ export default function FlagForm(props: Props) {
   // Initial identification (unknown -> A) and sign-in (signed out -> A)
   // must not close an open panel. Only replacing a known signed-in account
   // resets the draft. A sign-out still clears any former account's text.
-  const identity = useRef<string | null>(null);
+  const identity = useRef<{ userId: string | null; wasSignedOut: boolean }>({ userId: null, wasSignedOut: false });
   if (props.signedIn !== null) {
     if (props.signedIn && props.userId) {
-      if (identity.current !== null && identity.current !== props.userId) account.current.changes += 1;
-      identity.current = props.userId;
+      // An unknown account or a signed-out form becoming signed in does not
+      // remount the panel. A direct A -> B switch does clear the old draft.
+      if (!identity.current.wasSignedOut && identity.current.userId !== null &&
+          identity.current.userId !== props.userId) account.current.changes += 1;
+      identity.current = { userId: props.userId, wasSignedOut: false };
     } else if (!props.signedIn) {
-      identity.current = null;
+      identity.current = { userId: null, wasSignedOut: true };
     }
   }
   return <ReportForm key={JSON.stringify([
