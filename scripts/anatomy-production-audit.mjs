@@ -1127,10 +1127,9 @@ function hasUsableSiteEntrypoint(html) {
           value = tag.slice(pos, closing);
           pos = closing + 1;
         } else {
-          const unquoted = /^[^\s"'=<>`]+/.exec(tag.slice(pos));
-          if (!unquoted) return false;
-          value = unquoted[0];
-          pos += value.length;
+          // Production hoisted scripts use quoted attributes. Ambiguous
+          // unquoted values are rejected rather than certified.
+          return false;
         }
       }
       if (name === 'type') {
