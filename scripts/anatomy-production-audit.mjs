@@ -600,7 +600,7 @@ function hasUnsafeEncodedAnatomyPayload(text, draftIds) {
   let examined = 0;
   // Treat quoted/URI base64 as a separate token, not an incidental substring
   // of a longer JavaScript identifier. Include base64url's '-' and '_'.
-  const runs = /(?:^|[^A-Za-z0-9+/_=-])([A-Za-z0-9+/_-]{12,}={0,2})(?=$|[^A-Za-z0-9+/_=-])/g;
+  const runs = /(?:^|[^A-Za-z0-9+/_=-])([A-Za-z0-9+/_-]{8,}={0,2})(?=$|[^A-Za-z0-9+/_=-])/g;
   for (const match of text.matchAll(runs)) {
     const encoded = match[1];
     // Invalid lengths must not let an oversized suspicious token bypass the
