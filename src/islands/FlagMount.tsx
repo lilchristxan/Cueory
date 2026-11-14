@@ -14,7 +14,7 @@ interface Props {
   /** Optional public study context, stored in the report comment rather than UUID-only item fields. */
   context?: string;
   /** The parent keeps the completion receipt visible when this structure is deselected. */
-  onReportStart?: (context: string) => (result: SendResult) => void;
+  onReportStart?: (context: string, userId: string) => (result: SendResult) => void;
 }
 
 /** Contextual anatomy reports must never inherit a question selected elsewhere on the page. */
@@ -49,8 +49,16 @@ export default function FlagMount({ page, itemId, itemVersionId, variant, contex
   // never retarget an older draft to a newly signed-in account.
   const send = useMemo(() => makeFlagSend(loadShared, sendingUserId), [sendingUserId]);
   const sendWithReceipt = useCallback(
-    (report: FlagReport) => sendReportWithReceipt(send, report, context, onReportStart),
-    [send, context, onReportStart],
+    (report: FlagReport) => sendReportWithReceipt(
+      send, report, context,
+      // The parent receipt persists after selection changes, so it must know
+      // which account owns this immutable send. An unknown identity is never
+      // allowed to create a cross-account parent notification.
+      onReportStart && sendingUserId
+        ? (label) => onReportStart(label, sendingUserId)
+        : undefined,
+    ),
+    [send, context, onReportStart, sendingUserId],
   );
   const check = useCallback(() => watch.current?.check(), []);
 
