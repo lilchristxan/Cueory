@@ -221,7 +221,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
   const [pending, setPending] = useState<ReadonlySet<string>>(new Set());
   const [layerError, setLayerError] = useState<{ layer: string; message: string; retry: () => void } | null>(null);
   const [filesLoaded, setFilesLoaded] = useState(0);
-  const [bulkPrompt, setBulkPrompt] = useState<{ systemKey: string; files: number } | null>(null);
+  const [bulkPrompt, setBulkPrompt] = useState<{ systemKey: string; files: number; restoreFades: boolean } | null>(null);
   // Study tools (Task 178, integration): the review queue and saved views exist only for a signed-in student.
   const study = useMemo(defaultStudy, []);
   const savedViewsRequestGuard = useMemo(createSavedViewsRequestGuard, []);
@@ -247,6 +247,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
   const fallbackHeadingRef = useRef<HTMLHeadingElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const showAllButtonRef = useRef<HTMLButtonElement>(null);
+  const restoreAllButtonRef = useRef<HTMLButtonElement>(null);
   const confirmBulkButtonRef = useRef<HTMLButtonElement>(null);
   const sceneRef = useRef<LabScene | null>(null);
   const colorsRef = useRef<LabColors | null>(null);
@@ -550,8 +551,12 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
   );
 
   /** Show every structure; in the lazy whole-body view, layers not fetched yet are fetched, then shown. */
-  const showAllNow = () => {
+  const showAllNow = (restoreFades = false) => {
     visibilityIntent.bump();
+    if (restoreFades) {
+      setFaded(new Set());
+      setAnnounce('restoring all structures. remaining layers may still be loading.');
+    }
     const loader = loaderRef.current;
     if (!lazy || !system || !loader) {
       setHidden(new Set());
@@ -567,7 +572,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
   };
 
   /** Require consent for bulk whole-body GLB downloads on phones. */
-  const showAll = () => {
+  const showAll = (restoreFades = false) => {
     const loader = loaderRef.current;
     if (lazy && system && loader) {
       const plan = showAllPlan(layers, hidden, (id) => filesForLayer(system, id), (url) => loader.isLoaded(url));
@@ -576,20 +581,22 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
       );
       const narrow = typeof window.matchMedia === 'function' && window.matchMedia('(max-width: 767px)').matches;
       if (needsBulkLayerConfirmation(narrow, missingFiles.size)) {
-        setBulkPrompt({ systemKey: system.key, files: missingFiles.size });
+        setBulkPrompt({ systemKey: system.key, files: missingFiles.size, restoreFades });
         return;
       }
     }
     setBulkPrompt(null);
-    showAllNow();
+    showAllNow(restoreFades);
   };
 
   const finishBulkPrompt = (confirm: boolean) => {
     const valid = bulkPrompt?.systemKey === system?.key && load.state === 'ready'
       && loaderRef.current !== null && !loaderRef.current.isRetired();
+    const restoreFades = bulkPrompt?.restoreFades ?? false;
     setBulkPrompt(null);
-    if (confirm && valid) showAllNow();
-    showAllButtonRef.current?.focus();
+    if (confirm && valid) showAllNow(restoreFades);
+    if (restoreFades) restoreAllButtonRef.current?.focus();
+    else showAllButtonRef.current?.focus();
   };
 
   // Once the correct target is found or revealed, it must remain visible and selected.
@@ -1384,7 +1391,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
             <button type="button" className={iconButton} aria-label="zoom in" disabled={!ready} onClick={() => sceneRef.current?.zoom(ZOOM_IN)}>+</button>
             <button type="button" className={iconButton} aria-label="zoom out" disabled={!ready} onClick={() => sceneRef.current?.zoom(1 / ZOOM_IN)}>−</button>
             <button type="button" className={secondaryButton} disabled={!ready} onClick={() => sceneRef.current?.resetView()}>reset view</button>
-            <button ref={showAllButtonRef} type="button" className={secondaryButton} disabled={!ready} onClick={showAll}>show all</button>
+            <button ref={showAllButtonRef} type="button" className={secondaryButton} disabled={!ready} onClick={() => showAll()}>show all</button>
             <button
               type="button"
               className={secondaryButton}
@@ -1442,20 +1449,17 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
                     redo
                   </button>
                   <button
+                    ref={restoreAllButtonRef}
                     type="button"
                     className={secondaryButton}
                     disabled={!ready}
                     onClick={() => {
-                      // The whole-body view may still have layers to download: "show all" fetches them (and asks first
-                      // on a phone). Elsewhere, one plain step: everything shown in full.
-                      if (lazy) {
-                        visibilityIntent.bump();
-                        setFaded(new Set());
-                        showAll();
-                      } else {
+                      // Ask for consent before changing either hidden or faded when a phone needs more GLBs.
+                      if (lazy) showAll(true);
+                      else {
                         changeVisibility(restoreAll);
+                        setAnnounce('restored all structures. undo brings the last view back.');
                       }
-                      setAnnounce('restored all structures. undo brings the last view back.');
                     }}
                   >
                     restore all

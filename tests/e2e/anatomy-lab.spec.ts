@@ -871,6 +871,43 @@ test.describe('anatomy lab whole body loads layers on demand', () => {
     await expect.poll(() => requests.length).toBeGreaterThan(0);
   });
 
+  test('phone restore all keeps fades on cancellation and changes them only after consent', async ({ page }) => {
+    test.skip((page.viewportSize()?.width ?? 1024) >= 768, 'phone-width safety check');
+    await page.goto('/preview/anatomy-lab');
+    await page.getByRole('button', { name: 'open the anatomy lab' }).click();
+    await expect(page.locator('canvas')).toBeFocused({ timeout: 15_000 });
+    const whole = page.getByRole('group', { name: 'body system' }).getByRole('button', { name: 'whole body', exact: true });
+    await expect(whole).toBeVisible({ timeout: 15_000 });
+    await whole.click();
+    await expect(page.getByTestId('anatomy-files')).toContainText('model files loaded: 1 of 11', { timeout: 20_000 });
+
+    await page.getByLabel('find a structure').fill('FMA7163');
+    const skin = page.getByRole('region', { name: 'structures' }).getByRole('button', { name: /^skin/ });
+    await skin.click();
+    await page.getByRole('region', { name: 'skin' }).getByRole('button', { name: 'fade this' }).click();
+    await expect(skin).toContainText('(faded)');
+    const restore = page.getByRole('button', { name: 'restore all', exact: true });
+    await restore.click();
+    const prompt = page.getByTestId('anatomy-bulk-confirm');
+    await expect(prompt).toBeVisible();
+    await expect(skin).toContainText('(faded)');
+
+    await prompt.getByRole('button', { name: 'keep current view' }).click();
+    await expect(prompt).toHaveCount(0);
+    await expect(restore).toBeFocused();
+    await expect(skin).toContainText('(faded)');
+    await expect(page.getByTestId('anatomy-announce')).not.toContainText('restored all structures.');
+
+    // Block the heavy models after consent, so CI does not render the full body on a phone.
+    await page.route(/\/models\/anatomy\/[^/]+\.glb(?:\?|$)/, (route) => route.abort());
+    await restore.click();
+    await expect(prompt).toBeVisible();
+    await prompt.getByRole('button', { name: 'load every layer' }).click();
+    await expect(prompt).toHaveCount(0);
+    await expect(restore).toBeFocused();
+    await expect(skin).not.toContainText('(faded)');
+  });
+
   test('disables whole-body layer actions until the first model is ready', async ({ page }, info) => {
     test.skip(!isDesktopOfEachEngine(info), 'one initial-layer controls check per browser engine');
     await page.goto('/preview/anatomy-lab');
