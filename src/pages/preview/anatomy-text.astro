@@ -26,13 +26,26 @@ const lab = labDataForBuild(files, fixtureJson, {
 });
 // The five-shape test fixture is intentionally not a real anatomy system.
 const systems = lab.systems.map((system) => ({ ...system, groups: groupStructures(system.structures) }));
+// Every challenge points to a real source label. No answer keys or new anatomy names are authored here.
+// The student can use the native <details> reveal without scripts, WebGL or drag gestures.
+const studyQuestions = systems.map((system) => ({
+  key: system.key,
+  title: system.title,
+  prompts: system.structures.slice(0, 5).map((structure) => ({
+    id: structure.id,
+    name: structure.text,
+    group: structure.group ?? null,
+    layer: structure.layer ?? null,
+  })),
+}));
 ---
 
 <Layout title="preview: anatomy lab text" description="Text-only anatomy structure names." variant="study" noindex>
   <div class="mx-auto max-w-page space-y-6 pt-8 pb-section">
     <p class="text-sm text-ink-soft">preview · text-only</p>
     <h1 class="text-2xl text-ink">anatomy lab: structure names</h1>
-    <p class="text-sm text-ink-soft">browse the names without loading 3D models or running JavaScript. Use your browser's find-in-page feature to search.</p>
+    <p class="text-sm text-ink-soft">browse source names without loading 3D models or running JavaScript. Use your browser's find-in-page feature to search names or structure IDs.</p>
+    <p class="text-sm text-ink-soft">find it in words: read each source ID, recall the matching structure name, then open the answer. No scores are saved.</p>
     <p><a class="underline text-ink" href="/preview/anatomy-lab">back to the 3D view</a></p>
 
     {
@@ -61,6 +74,22 @@ const systems = lab.systems.map((system) => ({ ...system, groups: groupStructure
                 <p class="text-sm text-ink">draft · labels waiting for review</p>
               )}
               <p class="text-sm text-ink-soft">{nameSourceFor(system)}</p>
+              <section class="space-y-3 rounded-lg border border-line p-4" aria-labelledby={`practice-${system.key}`}>
+                <h3 id={`practice-${system.key}`} class="text-lg text-ink">find it in words</h3>
+                <p class="text-sm text-ink-soft">think of the source name for each ID, then open its answer. These are practice prompts, not a score.</p>
+                <ol class="list-decimal space-y-3 pl-5">
+                  {studyQuestions.find((study) => study.key === system.key)?.prompts.map((prompt) => (
+                    <li class="break-words">
+                      <details class="rounded-lg border border-line p-3">
+                        <summary class="cursor-pointer text-ink">which structure has ID {prompt.id}? show answer</summary>
+                        <p class="mt-2 text-ink">{prompt.name}</p>
+                        {prompt.group && <p class="text-sm text-ink-soft">group: {prompt.group}</p>}
+                        {prompt.layer && <p class="text-sm text-ink-soft">layer: {prompt.layer}</p>}
+                      </details>
+                    </li>
+                  ))}
+                </ol>
+              </section>
               {system.groups.map((group) => (
                 <div class="space-y-2">
                   {group.group && <h3 class="text-sm text-ink-soft">{group.group}</h3>}
