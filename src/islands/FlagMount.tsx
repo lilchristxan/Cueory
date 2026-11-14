@@ -26,7 +26,10 @@ export default function FlagMount({ page, itemId, itemVersionId, variant, contex
   // Pages whose items load in the browser (the real questions) publish the current one; it wins over the fixed props.
   const [published, setPublished] = useState<FlagItem | undefined>(() => context ? undefined : currentFlagItem());
   useEffect(() => {
-    if (context) return;
+    if (context) {
+      setPublished(undefined);
+      return;
+    }
     setPublished(currentFlagItem());
     return onFlagItem(setPublished);
   }, [context]);
