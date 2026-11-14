@@ -497,6 +497,22 @@ describe('anatomy production artifact audit', () => {
     );
   });
 
+  it('rejects a draft ID hidden at the beginning of a standalone WASM custom-section name', () => {
+    const f = setup();
+    const header = Buffer.from([0, 97, 115, 109, 1, 0, 0, 0]);
+    const id = 'FMA999991';
+    f.system('wasm-named-draft', 'draft', ['/models/anatomy/wasm-named-draft.glb'], [id]);
+    const name = Buffer.from(id + '.' + 'x'.repeat(65 - id.length - 1));
+    expect(name.length).toBe(65);
+    const payload = Buffer.concat([Buffer.from([name.length]), name]);
+    const wasm = Buffer.concat([header, Buffer.from([0, payload.length]), payload]);
+    expect(WebAssembly.validate(wasm)).toBe(true);
+    f.file('assets/named-draft.wasm', wasm);
+    expect(f.check().errors).toContain(
+      'unreviewed WASM payload or draft identifiers in production output: /assets/named-draft.wasm',
+    );
+  });
+
   it('validates Pagefind gzip envelopes and rejects compressed models or nested archives', () => {
     const f = setup();
     const prefix = Buffer.from('pagefind_dcd', 'ascii');
