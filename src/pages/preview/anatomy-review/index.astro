@@ -15,7 +15,7 @@ const lab = labDataForBuild(files, fixtureJson, {
   CUEORY_ANATOMY_DRAFTS: process.env.CUEORY_ANATOMY_DRAFTS,
 });
 const allowed = new Set(lab.systems.map((system) => system.key));
-const entries = allowed.size ? anatomyInventory().filter((entry) => allowed.has(entry.id)) : [];
+const entries = allowed.size ? anatomyInventory(process.cwd()).filter((entry) => allowed.has(entry.id)) : [];
 ---
 <Layout title="preview: anatomy review sheets" description="Founder-only BodyParts3D draft review sheets." variant="study" noindex>
   <div class="mx-auto max-w-page space-y-6 pt-8 pb-section">
