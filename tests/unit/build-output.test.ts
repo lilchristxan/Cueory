@@ -218,7 +218,7 @@ describe.skipIf(!existsSync(dist))('built site', () => {
     const manifestDir = fileURLToPath(new URL('../../content/visuals/', import.meta.url));
     const index = readFileSync(join(dist, 'preview/anatomy-review.html'), 'utf8');
     const draftPaths = readdirSync(manifestDir)
-      .filter((name) => /^anatomy-[a-z0-9-]+\\.json$/.test(name))
+      .filter((name) => /^anatomy-[a-z0-9-]+\.json$/.test(name))
       .flatMap((name) => {
         const manifest = JSON.parse(readFileSync(join(manifestDir, name), 'utf8')) as {
           status: string;
@@ -226,7 +226,7 @@ describe.skipIf(!existsSync(dist))('built site', () => {
           labels: Array<{ id: string; text: string }>;
         };
         return manifest.status === 'draft'
-          ? [{ path: name.replace(/^anatomy-/, '').replace(/\\.json$/, ''), manifest }]
+          ? [{ path: name.replace(/^anatomy-/, '').replace(/\.json$/, ''), manifest }]
           : [];
       });
     expect(draftPaths.length).toBeGreaterThan(0);
