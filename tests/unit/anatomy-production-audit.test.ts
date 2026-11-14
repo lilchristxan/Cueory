@@ -480,6 +480,22 @@ describe('anatomy production artifact audit', () => {
     expect(errors).toContain('unapproved model exposed in production: /downloads/obvious.gltf');
   });
 
+  it('rejects draft IDs in ordinary WASM custom sections, not only Pagefind files', () => {
+    const f = setup();
+    const header = Buffer.from([0, 97, 115, 109, 1, 0, 0, 0]);
+    const name = Buffer.from('meta');
+    const draftId = Buffer.from('FMA999991');
+    const section = Buffer.concat([Buffer.from([name.length]), name, draftId]);
+    const wasm = Buffer.concat([header, Buffer.from([0, section.length]), section]);
+    expect(WebAssembly.validate(wasm)).toBe(true);
+    f.file('assets/clean.wasm', header);
+    expect(f.check().errors).toEqual([]);
+    f.file('assets/hidden-draft.wasm', wasm);
+    expect(f.check().errors).toContain(
+      'unreviewed WASM payload or draft identifiers in production output: /assets/hidden-draft.wasm',
+    );
+  });
+
   it('validates Pagefind gzip envelopes and rejects compressed models or nested archives', () => {
     const f = setup();
     const prefix = Buffer.from('pagefind_dcd', 'ascii');
