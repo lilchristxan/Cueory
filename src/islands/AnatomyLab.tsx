@@ -635,11 +635,12 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
     // Auth transitions reset history deliberately. Ignore the matching reset
     // state, not a later legitimate visibility choice made by the new account.
     const reset = identityResetPendingRef.current;
-    if (reset && visibilityEquals(reset, { hidden, faded })) {
-      identityResetPendingRef.current = null;
+    if (reset) {
+      // A delayed outgoing-account effect must not reintroduce A's state into
+      // B's undo stack. Wait for the reset baseline to be committed first.
+      if (visibilityEquals(reset, { hidden, faded })) identityResetPendingRef.current = null;
       return;
     }
-    identityResetPendingRef.current = null;
     setHistory((h) => push(h, { hidden, faded }, visibilityEquals));
   }, [hidden, faded]);
 
