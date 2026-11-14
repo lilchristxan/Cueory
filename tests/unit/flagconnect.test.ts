@@ -10,25 +10,38 @@ const good: FlagReport = { page: '/learn/study-skills/questions', reason: 'confu
 
 /** A fake shared client. It never touches the network. */
 function fakeClient(options: {
-  session?: { user: { id: string; email?: string | null } } | null;
+  session?: { user: { id: string; email?: string | null }; access_token?: string } | null;
   sessionError?: unknown;
   reply?: { data: unknown; error: unknown };
 } = {}) {
   const calls: { name: string; args: FlagArgs; receiver: unknown }[] = [];
+  const requestHeaders: Array<{ name: string; value: string }> = [];
+  const requestSignals: AbortSignal[] = [];
   const client: FlagClient = {
     auth: {
       getSession: vi.fn(async () => ({
-        data: { session: options.session === undefined ? { user: { id: 'user-1', email: 'student@example.test' } } : options.session },
+        data: { session: options.session === undefined ? { user: { id: 'user-1', email: 'student@example.test' }, access_token: 'synthetic-user-1-token' } : options.session },
         error: options.sessionError ?? null,
       })),
       onAuthStateChange: vi.fn(() => ({ data: { subscription: { unsubscribe: vi.fn() } } })),
     },
     rpc(name, args) {
       calls.push({ name, args, receiver: this });
-      return Promise.resolve(options.reply ?? { data: reportId, error: null });
+      // Supabase PostgREST v2.118 builder executes lazily and supports these
+      // per-query modifiers. Keep fake modifiers scoped to this operation.
+      return Object.assign(Promise.resolve(options.reply ?? { data: reportId, error: null }), {
+        setHeader(name: string, value: string) {
+          requestHeaders.push({ name, value });
+          return this;
+        },
+        abortSignal(signal: AbortSignal) {
+          requestSignals.push(signal);
+          return this;
+        },
+      });
     },
   };
-  return { client, calls, load: vi.fn(async () => client) };
+  return { client, calls, requestHeaders, requestSignals, load: vi.fn(async () => client) };
 }
 
 describe('flagSignedIn', () => {
@@ -46,7 +59,7 @@ describe('flagSignedIn', () => {
 
 /** A client whose session can change between reads, and which announces sign-ins and sign-outs like supabase-js. */
 function switchableClient() {
-  let session: { user: { id: string } } | null = null;
+  let session: { user: { id: string }; access_token: string } | null = null;
   const listeners = new Set<(event: string, session: { user: { id: string } } | null) => void>();
   const unsubscribed = vi.fn();
   const client: FlagClient = {
@@ -64,9 +77,9 @@ function switchableClient() {
     unsubscribed,
     listeners,
     /** Changes the stored session without announcing it (another tab wrote it). */
-    store: (id: string | null) => { session = id ? { user: { id } } : null; },
+    store: (id: string | null) => { session = id ? { user: { id }, access_token: `synthetic-${id}-token` } : null; },
     /** Announces a change, as supabase-js does for this tab and, by broadcast, for other tabs. */
-    announce: (id: string | null) => { session = id ? { user: { id } } : null; for (const l of listeners) l(id ? 'SIGNED_IN' : 'SIGNED_OUT', session); },
+    announce: (id: string | null) => { session = id ? { user: { id }, access_token: `synthetic-${id}-token` } : null; for (const l of listeners) l(id ? 'SIGNED_IN' : 'SIGNED_OUT', session); },
   };
 }
 const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
@@ -305,7 +318,7 @@ describe('flag reports are bound to the account that pressed Send (Task 178)', (
     const { client, calls } = fakeClient();
     let active = 'account-A';
     client.auth.getSession = vi.fn(async () => ({
-      data: { session: { user: { id: active, email: 'synthetic@example.test' } } },
+      data: { session: { user: { id: active, email: 'synthetic@example.test' }, access_token: `synthetic-${active}-token` } },
       error: null,
     }));
     let release: (client: FlagClient) => void = () => {};
