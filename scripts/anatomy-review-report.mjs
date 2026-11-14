@@ -3,13 +3,13 @@
  *
  * Prints the labels and source lines that already exist in content/visuals/anatomy-*.json.
  * This is evidence for a HUMAN visual/clinical and rights review, never automatic approval.
- * No dependencies, network requests, model rendering, content edits, or publication changes.
+ * No dependencies, network requests, model rendering, source edits, or publication changes.\n * Individual Markdown review sheets may be written only with the explicit --out-dir flag.
  *
  * Usage:
  *   node scripts/anatomy-review-report.mjs --system heart > /tmp/heart-review.md
- *   node scripts/anatomy-review-report.mjs > /tmp/all-anatomy-review.md
+ *   node scripts/anatomy-review-report.mjs > /tmp/all-anatomy-review.md\n *   node scripts/anatomy-review-report.mjs --out-dir /tmp/anatomy-review-sheets
  */
-import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -176,17 +176,42 @@ export function anatomyReviewMarkdown(entries) {
   return `${lines.join('\n')}\n`;
 }
 
+/** One Markdown source-review sheet per system. Does not grant approval. */
+export function anatomyReviewSheets(entries) {
+  return entries.map((entry) => ({
+    filename: `anatomy-${entry.id}-review.md`,
+    markdown: anatomyReviewMarkdown([entry]),
+  }));
+}
+
+/** Explicit local write only. No model, source, status, or public asset is changed. */
+export function writeAnatomyReviewSheets(entries, outDir) {
+  const directory = resolve(outDir);
+  const sheets = anatomyReviewSheets(entries);
+  mkdirSync(directory, { recursive: true });
+  for (const sheet of sheets) writeFileSync(join(directory, sheet.filename), sheet.markdown, 'utf8');
+  return sheets.map((sheet) => join(directory, sheet.filename));
+}
 function cli(args) {
   let selectedSystem = null;
+  let outDir = null;
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '--system' && args[i + 1]) {
       if (selectedSystem !== null) throw new Error('Only one --system is allowed');
       selectedSystem = args[++i];
+    } else if (args[i] === '--out-dir' && args[i + 1]) {
+      if (outDir !== null) throw new Error('Only one --out-dir is allowed');
+      outDir = args[++i];
     } else if (args[i] === '--help') {
-      return 'Usage: node scripts/anatomy-review-report.mjs [--system heart]\nPrints Markdown; redirect it to a .md file if desired.\n';
+      return 'Usage: node scripts/anatomy-review-report.mjs [--system heart] [--out-dir path]\\nPrints Markdown by default; --out-dir writes separate review sheets.\\n';
     } else throw new Error(`Unknown or incomplete argument: ${args[i]}`);
   }
-  return anatomyReviewMarkdown(anatomyInventory(DEFAULT_ROOT, selectedSystem));
+  const entries = anatomyInventory(DEFAULT_ROOT, selectedSystem);
+  if (outDir !== null) {
+    const files = writeAnatomyReviewSheets(entries, outDir);
+    return `wrote ${files.length} anatomy review sheet(s) to ${resolve(outDir)}\n`;
+  }
+  return anatomyReviewMarkdown(entries);
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
