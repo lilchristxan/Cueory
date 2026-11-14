@@ -32,7 +32,7 @@ const credit = pictureCreditFor({
 ---
 
 <Layout title={`preview: ${sheet.title} review sheet`} description="Private draft anatomy review checklist." variant="study" noindex>
-  <div class="mx-auto max-w-page space-y-8 pt-8 pb-section">
+  <div class="mx-auto min-w-0 max-w-page space-y-8 pt-8 pb-section">
     <p class="text-sm text-ink-soft">preview · founder review · not published</p>
     <p><a href="/preview/anatomy-review" class="underline text-ink">all model review sheets</a></p>
     <header class="space-y-3">
@@ -54,7 +54,7 @@ const credit = pictureCreditFor({
       <p class="rounded-lg border border-line p-4 text-ink">front and side pictures need JavaScript. The official structure list and review checkboxes below work without it.</p>
     </noscript>
 
-    <section aria-labelledby="review-gates" class="space-y-3 rounded-lg border border-line p-4">
+    <section aria-labelledby="review-gates" class="min-w-0 space-y-3 rounded-lg border border-line p-4">
       <h2 id="review-gates" class="text-xl text-ink">Human review checklist</h2>
       <p class="text-sm text-ink-soft">These checkboxes are only for a screenshot. They are not stored or submitted.</p>
       <ul class="space-y-2">
@@ -66,7 +66,7 @@ const credit = pictureCreditFor({
           'The founder will approve this system in a separate pull request.',
         ].map((task, index) => (
           <li>
-            <label class="flex min-w-0 items-center gap-3 text-ink">
+            <label class="flex min-w-0 max-w-full items-center gap-3 text-ink">
               <input class="h-11 w-11 shrink-0 accent-button" type="checkbox" value={index + 1} />
               <span class="min-w-0 break-words">{task}</span>
             </label>
@@ -75,13 +75,13 @@ const credit = pictureCreditFor({
       </ul>
     </section>
 
-    <section aria-labelledby="review-structures" class="space-y-4">
+    <section aria-labelledby="review-structures" class="min-w-0 space-y-4">
       <h2 id="review-structures" class="text-xl text-ink">Official names and cited source lines</h2>
       <p class="text-sm text-ink-soft">All {sheet.structureCount} structures below are copied from the existing BodyParts3D source manifests. No clinical explanations are added.</p>
       <ol class="space-y-3">
         {sheet.labels.map((label, index) => (
-          <li class="min-w-0 space-y-3 rounded-lg border border-line p-4" data-review-structure={label.id}>
-            <div class="flex min-w-0 items-start gap-3">
+          <li class="min-w-0 max-w-full space-y-3 overflow-hidden rounded-lg border border-line p-4" data-review-structure={label.id}>
+            <div class="flex min-w-0 max-w-full items-start gap-3">
               <input
                 id={`review-${sheet.id}-${label.id}`}
                 class="h-11 w-11 shrink-0 accent-button"
@@ -101,13 +101,13 @@ const credit = pictureCreditFor({
               <div><dt class="inline font-semibold">source line: </dt><dd class="inline">{label.source.quote}</dd></div>
               <div><dt class="inline font-semibold">source file: </dt><dd class="inline">{label.source.section}</dd></div>
             </dl>
-            <p class="break-words text-sm"><a class="underline text-ink" href={label.source.url} rel="noopener noreferrer">original BodyParts3D source file</a></p>
+            <p class="min-w-0 break-all text-sm"><a class="underline text-ink" href={label.source.url} rel="noopener noreferrer">original BodyParts3D source file</a></p>
           </li>
         ))}
       </ol>
     </section>
 
-    <footer class="space-y-2 border-t border-line pt-4 text-sm text-ink-soft">
+    <footer class="min-w-0 space-y-2 break-words border-t border-line pt-4 text-sm text-ink-soft">
       <p>{credit}</p>
       <p>
         <a class="underline" href={BODYPARTS3D_LICENSE_URL} rel="license noopener">{BODYPARTS3D_LICENSE_NAME}</a>
