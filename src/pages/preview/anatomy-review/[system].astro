@@ -51,7 +51,7 @@ const credit = pictureCreditFor({
       credit={credit}
     />
     <noscript>
-      <p class="rounded-lg border border-line p-4 text-ink">front and side pictures need JavaScript. The official structure list and review checkboxes below work without it.</p>
+      <p class="rounded-lg border border-line p-4 text-ink"><span>front and side pictures need JavaScript</span>. The official structure list and review checkboxes below work without it.</p>
     </noscript>
 
     <section aria-labelledby="review-gates" class="min-w-0 space-y-3 rounded-lg border border-line p-4">
@@ -108,7 +108,7 @@ const credit = pictureCreditFor({
     </section>
 
     <footer class="min-w-0 space-y-2 break-words border-t border-line pt-4 text-sm text-ink-soft">
-      <p>{credit}</p>
+      <p class="min-w-0 break-all">{credit}</p>
       <p>
         <a class="underline" href={BODYPARTS3D_LICENSE_URL} rel="license noopener">{BODYPARTS3D_LICENSE_NAME}</a>
         {' · '}
