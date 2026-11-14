@@ -134,6 +134,8 @@ describe('postbuild anatomy release audit', () => {
         '<section>unreviewed markup after the document</section>',
         '<script>const notModule = true;</script>',
         '<script data-type="module">const noRealModuleAttribute = true;</script>',
+        '<script data-context="type=\'module\'">const fakeTypeInValue = true;</script>',
+        '<script type="text/plain" data-type="module">const conflictingType = true;</script>',
         '<script type="module">unterminated module body',
       ]) {
         writeFileSync(join(dist, 'index.html'), goodPage + badTail);
