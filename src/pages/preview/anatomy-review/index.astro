@@ -1,0 +1,48 @@
+---
+/**
+ * Private staging index for independent BodyParts3D model review sheets.
+ * The draft publication gate also decides which names may be in the HTML.
+ */
+import Layout from '../../../layouts/Layout.astro';
+import { anatomyInventory, anatomyReviewSheets, draftReviewSheetsAllowed } from '../../../../scripts/anatomy-review-report.mjs';
+
+const mayShowDrafts = draftReviewSheetsAllowed({
+  WORKERS_CI: process.env.WORKERS_CI,
+  WORKERS_CI_BRANCH: process.env.WORKERS_CI_BRANCH,
+  CUEORY_ANATOMY_DRAFTS: process.env.CUEORY_ANATOMY_DRAFTS,
+  GITHUB_REF: process.env.GITHUB_REF,
+  GITHUB_EVENT_NAME: process.env.GITHUB_EVENT_NAME,
+  GITHUB_BASE_REF: process.env.GITHUB_BASE_REF,
+});
+const sheets = anatomyReviewSheets(anatomyInventory(process.cwd()))
+  .filter((sheet) => sheet.status === 'approved' || mayShowDrafts);
+---
+
+<Layout title="preview: anatomy model review sheets" description="Unpublished anatomy review checklist." variant="study" noindex>
+  <div class="mx-auto max-w-page space-y-6 pt-8 pb-section">
+    <p class="text-sm text-ink-soft">preview · founder review · not published</p>
+    <h1 class="text-2xl text-ink">anatomy model review sheets</h1>
+    <p class="max-w-prose text-sm text-ink-soft">
+      Each sheet lists the official BodyParts3D structure names, source lines, layers, groups,
+      and a checkbox for every item. Front and side model pictures are made only after you tap to load them.
+      These sheets cannot approve or publish anatomy.
+    </p>
+    {sheets.length === 0 ? (
+      <p class="rounded-lg border border-line p-4 text-ink">No approved model review sheets are available on this build.</p>
+    ) : (
+      <ul class="space-y-3">
+        {sheets.map((sheet) => (
+          <li class="min-w-0 rounded-lg border border-line p-4">
+            <a href={sheet.url} class="flex min-h-11 min-w-0 items-center break-words text-lg underline text-ink">
+              {sheet.title}
+            </a>
+            <p class="mt-2 text-sm text-ink-soft">
+              {sheet.structureCount} structures · {sheet.status} · {sheet.release}
+            </p>
+          </li>
+        ))}
+      </ul>
+    )}
+    <p class="text-sm"><a href="/preview/anatomy-lab" class="underline text-ink">back to the anatomy lab</a></p>
+  </div>
+</Layout>

@@ -1,8 +1,8 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { anatomyInventory, anatomyReviewMarkdown } from '../../scripts/anatomy-review-report.mjs';
+import { anatomyInventory, anatomyReviewMarkdown, anatomyReviewSheets, draftReviewSheetsAllowed, writeAnatomyReviewSheets } from '../../scripts/anatomy-review-report.mjs';
 
 /** Fake model names and source lines only; no clinical content or answer keys in a public test. */
 const roots: string[] = [];
@@ -186,4 +186,169 @@ describe('read-only anatomy review inventory', () => {
     expect(report).not.toContain('| skin | 0 |');
     expect(report).toContain('Keep the source status as `draft` until the founder approves publication.');
   });
+
+  it('creates individual review-sheet routes with unchanged source quotes and a front/side picture plan', () => {
+    const root = setup();
+    writeSystem(root, 'zeta', visual('zeta', 'FMA2'));
+    writeSystem(root, 'alpha', visual('alpha', 'FMA1'));
+    const sheets = anatomyReviewSheets(anatomyInventory(root));
+    expect(sheets.map((sheet: { url: string }) => sheet.url)).toEqual([
+      '/preview/anatomy-review/alpha',
+      '/preview/anatomy-review/zeta',
+    ]);
+    for (const sheet of sheets) {
+      expect(sheet.structureCount).toBe(1);
+      expect(sheet.pictureViews).toEqual(['front', 'side']);
+      expect(sheet.status).toBe('draft');
+      expect(sheet.labels[0]?.source.quote).toBe('FMA1 BP1 sample part | with punctuation');
+      expect(sheet.labels[0]?.name).toBe('sample part | exact');
+      expect(sheet.labels[0]?.source.url).toBe('https://dbarchive.biosciencedbc.jp/data/bodyparts3d/LATEST/synthetic-test-only');
+    }
+  });
+
+  it('does not generate an unsafe link from a malformed review sheet identifier', () => {
+    const entry = {
+      id: 'sample',
+      title: 'synthetic model',
+      status: 'draft' as const,
+      release: 'sample release',
+      path: '/models/anatomy/sample.glb',
+      bytes: 1,
+      labels: [],
+    };
+    expect(() => anatomyReviewSheets([{ ...entry, id: '../private' }])).toThrow('invalid anatomy review sheet data');
+    expect(() => anatomyReviewSheets([{ ...entry, id: 'SAFE' }])).toThrow('invalid anatomy review sheet data');
+  });
+
+
+  it('writes one independent checklist per source model without overwriting human edits', () => {
+    const root = setup();
+    writeSystem(root, 'alpha', visual('alpha', 'FMA1'));
+    writeSystem(root, 'zeta', visual('zeta', 'FMA2'));
+    // The CLI deliberately permits export directories under temporary fixture
+    // roots only when those roots are outside the actual public repository.
+    const target = join(root, 'exported-review');
+    const files = writeAnatomyReviewSheets(anatomyInventory(root), target);
+    expect(files.map((file: string) => file.split('/').pop())).toEqual([
+      'anatomy-alpha-review.md',
+      'anatomy-zeta-review.md',
+    ]);
+    expect(readdirSync(target).sort()).toEqual([
+      'anatomy-alpha-review.md',
+      'anatomy-zeta-review.md',
+    ]);
+    for (const file of files) {
+      const text = readFileSync(file, 'utf8');
+      expect(text).toContain('sample part \\| exact');
+      expect(text).toContain('FMA1 BP1 sample part');
+      expect(text).toContain('Human review before approval');
+      expect(text).toContain('Keep the source status as `draft` until the founder approves publication.');
+    }
+    const first = readFileSync(files[0]!, 'utf8');
+    expect(() => writeAnatomyReviewSheets(anatomyInventory(root), target))
+      .toThrow('review output already exists');
+    expect(readFileSync(files[0]!, 'utf8')).toBe(first);
+    expect(existsSync(join(root, 'content', 'visuals', 'anatomy-alpha.json'))).toBe(true);
+  });
+
+  it('refuses review exports redirected through a symlinked parent into the public repository', () => {
+    const root = setup();
+    writeSystem(root, 'sample');
+    const outside = mkdtempSync(join(tmpdir(), 'cueory-review-link-'));
+    roots.push(outside);
+    symlinkSync(join(process.cwd(), 'docs'), join(outside, 'redirected'), 'dir');
+    const destination = join(outside, 'redirected', 'status', 'review-output');
+    const canonicalTarget = join(process.cwd(), 'docs', 'status', 'review-output');
+    // The actual repository root is protected, not just the temporary fixture.
+    const existed = existsSync(canonicalTarget);
+    expect(() => writeAnatomyReviewSheets(anatomyInventory(root), destination))
+      .toThrow('write review sheets outside the project repository');
+    expect(existsSync(canonicalTarget)).toBe(existed);
+  });
+
+  it('refuses an occupied review filename even when it is a dangling symlink', () => {
+    const root = setup();
+    writeSystem(root, 'alpha');
+    const output = join(root, 'reviews');
+    mkdirSync(output);
+    const symlink = join(output, 'anatomy-alpha-review.md');
+    symlinkSync(join(root, 'nonexistent-target.md'), symlink);
+    expect(() => writeAnatomyReviewSheets(anatomyInventory(root), output))
+      .toThrow('review output already exists');
+    expect(existsSync(join(root, 'nonexistent-target.md'))).toBe(false);
+  });
+
+  it('refuses a file path as a review output directory', () => {
+    const root = setup();
+    writeSystem(root, 'alpha');
+    const file = join(root, 'existing-file.txt');
+    writeFileSync(file, 'human review');
+    expect(() => writeAnatomyReviewSheets(anatomyInventory(root), file))
+      .toThrow('review output directory must be a real directory');
+    expect(readFileSync(file, 'utf8')).toBe('human review');
+  });
+
+
+  it('fails closed on production branch aliases even when preview opt-in is set', () => {
+    for (const ci of ['1', 'true', 'TRUE']) {
+      for (const branch of ['main', 'legacy/main', 'refs/heads/main', 'refs/heads/legacy/main', 'other/main']) {
+        const env = {
+          WORKERS_CI: ci,
+          WORKERS_CI_BRANCH: branch,
+          CUEORY_ANATOMY_DRAFTS: '1',
+        };
+        expect(draftReviewSheetsAllowed(env), `${ci} ${branch}`).toBe(false);
+      }
+    }
+    expect(draftReviewSheetsAllowed({ WORKERS_CI_BRANCH: 'legacy/main', CUEORY_ANATOMY_DRAFTS: '1' }))
+      .toBe(false);
+    expect(draftReviewSheetsAllowed({ WORKERS_CI: 'true', CUEORY_ANATOMY_DRAFTS: '1' }))
+      .toBe(false);
+    expect(draftReviewSheetsAllowed({ WORKERS_CI: 'unknown', WORKERS_CI_BRANCH: 'task-178/test', CUEORY_ANATOMY_DRAFTS: '1' }))
+      .toBe(false);
+  });
+
+  it('rejects GitHub main releases and main-target PRs even with an opt-in preview flag', () => {
+    const releaseContexts = [
+      { GITHUB_EVENT_NAME: 'push', GITHUB_REF: 'refs/heads/main' },
+      { GITHUB_EVENT_NAME: 'push', GITHUB_REF: 'refs/heads/legacy/main' },
+      { GITHUB_EVENT_NAME: 'pull_request', GITHUB_BASE_REF: 'main' },
+      { GITHUB_EVENT_NAME: 'pull_request', GITHUB_BASE_REF: 'legacy/main' },
+      { GITHUB_EVENT_NAME: 'workflow_dispatch', GITHUB_REF: 'refs/heads/main' },
+    ];
+    for (const release of releaseContexts) {
+      expect(draftReviewSheetsAllowed({ ...release, CUEORY_ANATOMY_DRAFTS: '1' }), JSON.stringify(release))
+        .toBe(false);
+      expect(draftReviewSheetsAllowed({
+        ...release,
+        WORKERS_CI: '1',
+        WORKERS_CI_BRANCH: 'task-178/staging-preview',
+        CUEORY_ANATOMY_DRAFTS: '1',
+      }), JSON.stringify(release)).toBe(false);
+    }
+    expect(draftReviewSheetsAllowed({
+      GITHUB_EVENT_NAME: 'push',
+      GITHUB_REF: 'refs/heads/task-178/review-sheets',
+      CUEORY_ANATOMY_DRAFTS: '1',
+    })).toBe(true);
+    expect(draftReviewSheetsAllowed({ CUEORY_ANATOMY_DRAFTS: '1' })).toBe(true);
+  });
+
+  it('only offers draft review names and routes for an explicitly nonproduction build', () => {
+    const root = setup();
+    writeSystem(root, 'sample');
+    const source = anatomyReviewSheets(anatomyInventory(root));
+    const shown = (env: Parameters<typeof draftReviewSheetsAllowed>[0]) =>
+      source.filter((sheet) => sheet.status === 'approved' || draftReviewSheetsAllowed(env));
+    expect(shown({ WORKERS_CI: '1', WORKERS_CI_BRANCH: 'legacy/main' })).toEqual([]);
+    expect(shown({ WORKERS_CI: 'true', WORKERS_CI_BRANCH: 'refs/heads/main' })).toEqual([]);
+    expect(shown({ WORKERS_CI: '1', WORKERS_CI_BRANCH: '' })).toEqual([]);
+    expect(shown({ WORKERS_CI: '1', WORKERS_CI_BRANCH: 'task-178/review-sheets' })
+      .map((sheet) => sheet.url)).toEqual(['/preview/anatomy-review/sample']);
+    expect(shown({ WORKERS_CI: 'true', WORKERS_CI_BRANCH: 'refs/heads/task-178/review-sheets' })
+      .map((sheet) => sheet.labels[0]!.name)).toEqual(['sample part | exact']);
+    expect(shown({ CUEORY_ANATOMY_DRAFTS: '1' }).length).toBe(1);
+    expect(shown({}).length).toBe(0);
+  });
+
 });

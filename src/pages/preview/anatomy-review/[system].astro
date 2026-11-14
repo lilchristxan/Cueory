@@ -1,0 +1,142 @@
+---
+/**
+ * One human review sheet per original BodyParts3D system.
+ * Draft sheets are generated only for the existing locked preview build.
+ * Production builds produce no route or HTML for an unapproved system.
+ */
+import Layout from '../../../layouts/Layout.astro';
+import AnatomyReviewPictures from '../../../islands/AnatomyReviewPictures.tsx';
+import { BODYPARTS3D_LICENSE_NAME, BODYPARTS3D_LICENSE_URL, BODYPARTS3D_REFERENCE_NOTE, BODYPARTS3D_REFERENCE_URL, pictureCreditFor } from '../../../islands/anatomylab';
+import { anatomyInventory, anatomyReviewSheets, draftReviewSheetsAllowed } from '../../../../scripts/anatomy-review-report.mjs';
+
+interface Props {
+  sheet: ReturnType<typeof anatomyReviewSheets>[number];
+}
+
+export function getStaticPaths() {
+  const mayShowDrafts = draftReviewSheetsAllowed({
+    WORKERS_CI: process.env.WORKERS_CI,
+    WORKERS_CI_BRANCH: process.env.WORKERS_CI_BRANCH,
+    CUEORY_ANATOMY_DRAFTS: process.env.CUEORY_ANATOMY_DRAFTS,
+  GITHUB_REF: process.env.GITHUB_REF,
+  GITHUB_EVENT_NAME: process.env.GITHUB_EVENT_NAME,
+  GITHUB_BASE_REF: process.env.GITHUB_BASE_REF,
+  });
+  return anatomyReviewSheets(anatomyInventory(process.cwd()))
+    .filter((sheet) => sheet.status === 'approved' || mayShowDrafts)
+    .map((sheet) => ({ params: { system: sheet.id }, props: { sheet } }));
+}
+
+const { sheet } = Astro.props;
+const credit = pictureCreditFor({
+  status: sheet.status,
+  model: { file: sheet.path, release: sheet.release },
+});
+---
+
+<Layout title={`preview: ${sheet.title} review sheet`} description="Private draft anatomy review checklist." variant="study" noindex>
+  <div class="mx-auto min-w-0 max-w-page space-y-8 pt-8 pb-section">
+    <p class="text-sm text-ink-soft">preview · founder review · not published</p>
+    <p><a href="/preview/anatomy-review" class="underline text-ink">all model review sheets</a></p>
+    <header class="space-y-3">
+      <h1 class="break-words text-2xl text-ink">{sheet.title}: model review sheet</h1>
+      <p class="text-sm text-ink">{sheet.status === 'draft' ? 'draft · labels waiting for review' : 'approved source record · verify before any new release'}</p>
+      <p class="text-ink"><strong>{sheet.structureCount}</strong> official source structure names · {sheet.release}</p>
+      <p class="text-sm text-ink-soft">This page is for manual model and name review. Checkmarks are local to this open page, are not saved, and never approve a model.</p>
+      <p class="text-sm text-ink-soft">{BODYPARTS3D_REFERENCE_NOTE}</p>
+    </header>
+
+    <AnatomyReviewPictures
+      client:only="react"
+      title={sheet.title}
+      modelPath={sheet.path}
+      structureIds={sheet.labels.map((label) => label.id)}
+      credit={credit}
+    />
+    <noscript>
+      <p class="rounded-lg border border-line p-4 text-ink"><span>front and side pictures need JavaScript</span>. The official structure list and review checkboxes below work without it.</p>
+    </noscript>
+
+    <section aria-labelledby="review-gates" class="min-w-0 space-y-3 rounded-lg border border-line p-4">
+      <h2 id="review-gates" class="text-xl text-ink">Human review checklist</h2>
+      <p class="text-sm text-ink-soft">These checkboxes are only for a screenshot. They are not stored or submitted.</p>
+      <ul class="space-y-2">
+        {[
+          'I checked the front picture against the original BodyParts3D reference.',
+          'I checked the side picture against the original BodyParts3D reference.',
+          'I checked each official structure name, cited source line, layer and group.',
+          'I checked the visible credit and license on both pictures.',
+          'The founder will approve this system in a separate pull request.',
+        ].map((task, index) => (
+          <li>
+            <label class="flex min-w-0 max-w-full items-center gap-3 text-ink">
+              <input class="h-11 w-11 shrink-0 accent-button" type="checkbox" value={index + 1} />
+              <span class="min-w-0 break-words">{task}</span>
+            </label>
+          </li>
+        ))}
+      </ul>
+    </section>
+
+    <section aria-labelledby="review-structures" class="min-w-0 space-y-4">
+      <h2 id="review-structures" class="text-xl text-ink">Official names and cited source lines</h2>
+      <p class="text-sm text-ink-soft">
+        All {sheet.structureCount} structures below are copied from the existing BodyParts3D source manifests.
+        Open a numbered group to review its source lines and checkboxes. No clinical explanations are added.
+      </p>
+      <div class="space-y-4">
+        {Array.from({ length: Math.ceil(sheet.labels.length / 25) }, (_, groupIndex) => {
+          const start = groupIndex * 25;
+          const labels = sheet.labels.slice(start, start + 25);
+          return (
+            <details class="min-w-0 rounded-lg border border-line p-4" data-review-group={groupIndex + 1}>
+              <summary class="min-h-11 cursor-pointer break-words py-2 font-semibold text-ink">
+                Structures {start + 1}–{start + labels.length} ({labels.length} official source names)
+              </summary>
+              <ol start={start + 1} class="mt-4 space-y-3">
+                {labels.map((label, offset) => {
+                  const index = start + offset;
+                  return (
+                    <li class="min-w-0 max-w-full space-y-3 overflow-hidden rounded-lg border border-line p-4" data-review-structure={label.id}>
+                      <div class="flex min-w-0 max-w-full items-start gap-3">
+                        <input
+                          id={`review-${sheet.id}-${label.id}`}
+                          class="h-11 w-11 shrink-0 accent-button"
+                          type="checkbox"
+                          aria-label={`review structure ${index + 1}: ${label.name}`}
+                        />
+                        <div class="min-w-0 flex-1 space-y-1">
+                          <label for={`review-${sheet.id}-${label.id}`} class="block break-words font-semibold text-ink">
+                            {index + 1}. {label.name}
+                          </label>
+                          <p class="break-words text-sm text-ink-soft">ID: {label.id}</p>
+                        </div>
+                      </div>
+                      <dl class="space-y-1 break-words text-sm text-ink">
+                        <div><dt class="inline font-semibold">layer: </dt><dd class="inline">{label.layer}</dd></div>
+                        <div><dt class="inline font-semibold">group: </dt><dd class="inline">{label.group}</dd></div>
+                        <div><dt class="inline font-semibold">source line: </dt><dd class="inline">{label.source.quote}</dd></div>
+                        <div><dt class="inline font-semibold">source file: </dt><dd class="inline">{label.source.section}</dd></div>
+                      </dl>
+                      <p class="min-w-0 break-all text-sm"><a class="underline text-ink" href={label.source.url} rel="noopener noreferrer">original BodyParts3D source file</a></p>
+                    </li>
+                  );
+                })}
+              </ol>
+            </details>
+          );
+        })}
+      </div>
+    </section>
+
+    <footer class="min-w-0 space-y-2 break-words border-t border-line pt-4 text-sm text-ink-soft">
+      <p class="min-w-0 break-all">{credit}</p>
+      <p>
+        <a class="underline" href={BODYPARTS3D_LICENSE_URL} rel="license noopener">{BODYPARTS3D_LICENSE_NAME}</a>
+        {' · '}
+        <a class="underline" href={BODYPARTS3D_REFERENCE_URL} rel="noopener noreferrer">original model scope and source</a>
+      </p>
+      <p><a class="underline text-ink" href="/preview/anatomy-review">back to all review sheets</a></p>
+    </footer>
+  </div>
+</Layout>

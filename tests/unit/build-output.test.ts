@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url';
 import { gzipSync } from 'node:zlib';
 import { describe, expect, it } from 'vitest';
 import { newsletter, site } from '../../src/config/site';
+import { anatomyInventory } from '../../scripts/anatomy-review-report.mjs';
 
 const dist = fileURLToPath(new URL('../../dist/', import.meta.url));
 
@@ -68,6 +69,8 @@ const initialJsBudget = {
   'preview/admin-flags.html': 92161,
   'preview/anatomy-text.html': 89104,
   'preview/anatomy-lab.html': 89027,
+  // New review-sheet index: measured 89,662 gzip bytes in exact-head CI run 43558098075.
+  'preview/anatomy-review.html': 89662,
   'preview/body-viewer.html': 151504,
   'preview/email.html': 146752,
   'preview/prose.html': 146752,
@@ -210,6 +213,34 @@ describe.skipIf(!existsSync(dist))('built site', () => {
         'Representative 404-page external module sizes (largest first): ' +
         JSON.stringify(baselineDiagnostic),
     ).toEqual([]);
+  });
+
+  it('excludes every unapproved anatomy review route and source name from production-style artifacts', () => {
+    // This build-output test must inspect a production-style dist. Tests that
+    // need draft assets run in a separate explicit preview build.
+    const index = readFileSync(join(dist, 'preview/anatomy-review.html'), 'utf8');
+    // Reuse the validated, source-backed inventory rather than guessing a
+    // manifest file name. This remains a real check of the compiled dist.
+    const sourceRoot = fileURLToPath(new URL('../../', import.meta.url));
+    const draftPaths = anatomyInventory(sourceRoot)
+      .filter((sheet) => sheet.status === 'draft')
+      .map((sheet) => ({
+        path: sheet.id,
+        manifest: {
+          title: sheet.title,
+          labels: sheet.labels.map((label: { id: string; name: string }) => ({ id: label.id, text: label.name })),
+        },
+      }));
+    expect(draftPaths.length).toBeGreaterThan(0);
+    const generated = htmlFiles(dist).map((file) => relative(dist, file).replaceAll('\\\\', '/'));
+    for (const { path, manifest } of draftPaths) {
+      expect(generated).not.toContain(`preview/anatomy-review/${path}.html`);
+      expect(index).not.toContain(manifest.title);
+      for (const label of manifest.labels) {
+        expect(index).not.toContain(label.id);
+        expect(index).not.toContain(label.text);
+      }
+    }
   });
 
   it('marketing pages preload the self-hosted serif (D-41), and every preloaded file exists', () => {

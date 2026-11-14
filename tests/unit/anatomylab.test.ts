@@ -212,6 +212,20 @@ describe('the draft gate (D-56)', () => {
     expect(draftsAllowed({ WORKERS_CI: '1', WORKERS_CI_BRANCH: 'main' })).toBe(false);
   });
 
+  it('fails closed on both production Workers branches, including fully qualified refs and CI=true', () => {
+    for (const ci of ['1', 'true']) {
+      for (const branch of ['main', 'legacy/main', 'refs/heads/main', 'refs/heads/legacy/main']) {
+        expect(draftsAllowed({
+          WORKERS_CI: ci,
+          WORKERS_CI_BRANCH: branch,
+          CUEORY_ANATOMY_DRAFTS: '1',
+        }), `${ci} ${branch}`).toBe(false);
+      }
+      expect(draftsAllowed({ WORKERS_CI: ci, CUEORY_ANATOMY_DRAFTS: '1' })).toBe(false);
+      expect(draftsAllowed({ WORKERS_CI: ci, WORKERS_CI_BRANCH: 'staging' })).toBe(true);
+    }
+  });
+
   it('hides drafts on a Workers build that does not name its branch', () => {
     expect(draftsAllowed({ WORKERS_CI: '1' })).toBe(false);
     expect(draftsAllowed({ WORKERS_CI: '1', WORKERS_CI_BRANCH: '  ' })).toBe(false);
@@ -229,6 +243,12 @@ describe('the draft gate (D-56)', () => {
 
   it('shows drafts only with the explicit local flag outside Workers Builds', () => {
     expect(draftsAllowed({ CUEORY_ANATOMY_DRAFTS: '1' })).toBe(true);
+    expect(draftsAllowed({ GITHUB_REF: 'refs/heads/main', CUEORY_ANATOMY_DRAFTS: '1' })).toBe(false);
+    expect(draftsAllowed({ GITHUB_REF: 'refs/heads/legacy/main', WORKERS_CI: '1', WORKERS_CI_BRANCH: 'staging' })).toBe(false);
+    expect(draftsAllowed({ GITHUB_BASE_REF: 'main', GITHUB_EVENT_NAME: 'pull_request', CUEORY_ANATOMY_DRAFTS: '1' })).toBe(false);
+    expect(draftsAllowed({ GITHUB_BASE_REF: 'legacy/main', GITHUB_EVENT_NAME: 'pull_request', WORKERS_CI: 'true', WORKERS_CI_BRANCH: 'staging' })).toBe(false);
+    expect(draftsAllowed({ GITHUB_REF: 'refs/heads/staging', CUEORY_ANATOMY_DRAFTS: '1' })).toBe(true);
+
     expect(draftsAllowed({ WORKERS_CI: '1', WORKERS_CI_BRANCH: 'main', CUEORY_ANATOMY_DRAFTS: '1' })).toBe(false);
   });
 

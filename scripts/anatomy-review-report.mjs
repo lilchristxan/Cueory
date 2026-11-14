@@ -8,9 +8,10 @@
  * Usage:
  *   node scripts/anatomy-review-report.mjs --system heart > /tmp/heart-review.md
  *   node scripts/anatomy-review-report.mjs > /tmp/all-anatomy-review.md
+ *   node scripts/anatomy-review-report.mjs --out-dir /tmp/anatomy-review-sheets
  */
-import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
+import { existsSync, lstatSync, mkdirSync, realpathSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
+import { dirname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const SYSTEM_FILE = /^anatomy-([a-z0-9]+(?:-[a-z0-9]+)*)\.json$/;
@@ -134,6 +135,72 @@ export function anatomyInventory(root = DEFAULT_ROOT, selectedSystem = null) {
   return entries;
 }
 
+/**
+ * Fail-closed publication gate for review-sheet HTML and routes.
+ *
+ * The existing lab gate predates the connected Workers production branch
+ * legacy/main. A review page containing all original draft names must not
+ * rely on the staging-wide gate until its production alias fix is merged.
+ * The recognized Workers CI values are 1 and true; unknown values are
+ * rejected, even when local preview opt-in is also supplied.
+ *
+ * @param {{WORKERS_CI?:string, WORKERS_CI_BRANCH?:string, CUEORY_ANATOMY_DRAFTS?:string,
+ *   GITHUB_REF?:string, GITHUB_EVENT_NAME?:string, GITHUB_BASE_REF?:string}} env
+ */
+export function draftReviewSheetsAllowed(env) {
+  const raw = env.WORKERS_CI_BRANCH?.trim() ?? '';
+  const branch = raw.startsWith('refs/heads/') ? raw.slice('refs/heads/'.length) : raw;
+  // Reject production builds even when a local preview opt-in is accidentally set.
+  // GitHub release workflows may not set WORKERS_CI or WORKERS_CI_BRANCH.
+  const githubRef = env.GITHUB_REF?.trim() ?? '';
+  const githubBranch = githubRef.startsWith('refs/heads/')
+    ? githubRef.slice('refs/heads/'.length)
+    : '';
+  const githubTarget = env.GITHUB_BASE_REF?.trim() ?? '';
+  if ([branch, githubBranch, githubTarget].some(
+    (candidate) => candidate.toLowerCase().split('/').at(-1) === 'main',
+  )) return false;
+
+  const ci = env.WORKERS_CI?.trim().toLowerCase() ?? '';
+  if (ci === '1' || ci === 'true') {
+    // Workers preview builds must identify a real non-production branch.
+    return branch.length > 0 && /^[A-Za-z0-9][A-Za-z0-9._/-]*$/.test(branch);
+  }
+  if (ci !== '' && ci !== '0' && ci !== 'false') return false;
+  return env.CUEORY_ANATOMY_DRAFTS === '1';
+}
+
+/**
+ * @typedef {{id:string, name:string, group:string, layer:string,
+ *   source:{quote:string, url:string, section:string, book:string, license:string}}} ReviewLabel
+ * @typedef {{id:string, title:string, status:'draft'|'approved', release:string,
+ *   path:string, bytes:number, labels:ReviewLabel[]}} ReviewEntry
+ * @typedef {ReviewEntry & {url:string, structureCount:number, pictureViews:string[]}} ReviewSheet
+ */
+
+/**
+ * Make independently addressable, source-backed review sheets for the locked preview.
+ * The structure text, source quote and URL are passed through unchanged.
+ * Front/side pictures are rendered on demand in the browser from the existing GLB,
+ * rather than asserting that a generated picture is a human-approved model.
+ * No statuses are changed and no assets are written by this function.
+ * @param {ReviewEntry[]} entries
+ * @returns {ReviewSheet[]}
+ */
+export function anatomyReviewSheets(entries) {
+  return entries.map((entry) => {
+    if (!entry || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(entry.id) || !Array.isArray(entry.labels)) {
+      throw new Error('invalid anatomy review sheet data');
+    }
+    return {
+      ...entry,
+      url: `/preview/anatomy-review/${entry.id}`,
+      structureCount: entry.labels.length,
+      pictureViews: ['front', 'side'],
+    };
+  });
+}
+
 /** Markdown for manual inspection. No model or teaching content is authored by this script. */
 export function anatomyReviewMarkdown(entries) {
   const total = entries.reduce((n, entry) => n + entry.labels.length, 0);
@@ -176,17 +243,83 @@ export function anatomyReviewMarkdown(entries) {
   return `${lines.join('\n')}\n`;
 }
 
+/**
+ * Write separate review sheets only with explicit opt-in. Existing files
+ * are never overwritten, to preserve a human's earlier annotations.
+ * @param {ReviewEntry[]} entries
+ * @param {string} destination
+ * @returns {string[]} Written file paths
+ */
+export function writeAnatomyReviewSheets(entries, destination) {
+  if (typeof destination !== 'string' || !destination.trim()) {
+    throw new Error('an explicit review output directory is required');
+  }
+  const folder = resolve(destination);
+  // A symlinked parent can redirect an apparently external destination into
+  // this public repository. Resolve the deepest existing ancestor, then append
+  // only the components that do not exist yet.
+  let ancestor = folder;
+  while (!existsSync(ancestor)) {
+    const parent = dirname(ancestor);
+    if (parent === ancestor) throw new Error('review output directory has no existing ancestor');
+    ancestor = parent;
+  }
+  const canonicalFolder = resolve(realpathSync(ancestor), relative(ancestor, folder));
+  const canonicalRoot = realpathSync(DEFAULT_ROOT);
+  if (canonicalFolder === canonicalRoot || canonicalFolder.startsWith(canonicalRoot + sep)) {
+    throw new Error('write review sheets outside the project repository');
+  }
+  if (existsSync(folder)) {
+    if (!lstatSync(folder).isDirectory() || lstatSync(folder).isSymbolicLink()) {
+      throw new Error('review output directory must be a real directory');
+    }
+  } else {
+    // Only the explicitly requested export directory may be created. Its
+    // canonical destination was checked above before touching the filesystem.
+    mkdirSync(folder, { recursive: true });
+  }
+  const paths = anatomyReviewSheets(entries)
+    .map((entry) => ({ file: join(folder, `anatomy-${entry.id}-review.md`), entry }));
+  // Fail before writing any file if an existing human review occupies its
+  // name. lstat detects dangling symlinks that existsSync would miss.
+  const occupied = ({ file }) => {
+    try {
+      lstatSync(file);
+      return true;
+    } catch (error) {
+      if (error?.code === 'ENOENT') return false;
+      throw error;
+    }
+  };
+  if (paths.some(occupied)) {
+    throw new Error('review output already exists; choose a fresh output directory');
+  }
+  for (const { file, entry } of paths) {
+    writeFileSync(file, anatomyReviewMarkdown([entry]), { flag: 'wx', mode: 0o600 });
+  }
+  return paths.map(({ file }) => file);
+}
+
 function cli(args) {
   let selectedSystem = null;
+  let outDir = null;
   for (let i = 0; i < args.length; i++) {
-    if (args[i] === '--system' && args[i + 1]) {
+    if (args[i] === '--system' && args[i + 1] && !args[i + 1].startsWith('--')) {
       if (selectedSystem !== null) throw new Error('Only one --system is allowed');
       selectedSystem = args[++i];
+    } else if (args[i] === '--out-dir' && args[i + 1] && !args[i + 1].startsWith('--')) {
+      if (outDir !== null) throw new Error('Only one --out-dir is allowed');
+      outDir = args[++i];
     } else if (args[i] === '--help') {
-      return 'Usage: node scripts/anatomy-review-report.mjs [--system heart]\nPrints Markdown; redirect it to a .md file if desired.\n';
+      return 'Usage: node scripts/anatomy-review-report.mjs [--system heart] [--out-dir /tmp/anatomy-review-sheets]\nWithout --out-dir, print Markdown. With --out-dir, write independent review files without overwriting them.\n';
     } else throw new Error(`Unknown or incomplete argument: ${args[i]}`);
   }
-  return anatomyReviewMarkdown(anatomyInventory(DEFAULT_ROOT, selectedSystem));
+  const entries = anatomyInventory(DEFAULT_ROOT, selectedSystem);
+  if (outDir) {
+    const paths = writeAnatomyReviewSheets(entries, outDir);
+    return `Created ${paths.length} independent review sheet(s) in ${resolve(outDir)}. No model statuses changed.\n`;
+  }
+  return anatomyReviewMarkdown(entries);
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

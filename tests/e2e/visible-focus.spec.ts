@@ -42,6 +42,9 @@ test.describe('Task 210: visible keyboard focus', () => {
         try { localStorage.setItem('cueory-promo-seen', String(Date.now())); } catch { /* storage unavailable */ }
       });
 
+      // A review sheet may contain hundreds of reviewer checkboxes.
+      // Keep checking every keyboard stop instead of excluding long sheets.
+      if (route.startsWith('/preview/anatomy-review/')) test.setTimeout(120_000);
       const response = await page.goto(route);
       expect(response?.status()).toBe(route === '/visible-focus-page-does-not-exist' ? 404 : 200);
       await waitForIslands(page, route);
@@ -52,6 +55,7 @@ test.describe('Task 210: visible keyboard focus', () => {
           el.tabIndex >= 0 &&
           !el.matches(':disabled') &&
           !el.closest('[hidden], [inert]') &&
+          !(el.closest('details:not([open])') && !el.matches('details:not([open]) > summary:first-of-type')) &&
           el.getClientRects().length > 0 &&
           getComputedStyle(el).display !== 'none' &&
           getComputedStyle(el).visibility === 'visible';

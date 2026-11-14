@@ -85,9 +85,17 @@ test.describe('640 CSS px reflow', () => {
         problems.push(...await horizontalClipping(opener));
       }
     }
-    for (const control of await controls.all()) {
+    // A closed native details panel retains its review fields in the DOM but
+    // its descendants cannot be scrolled into view. Filter them in one browser
+    // pass before the per-control geometry checks. Its summary stays testable.
+    const reachable = await controls.evaluateAll((elements) => elements.flatMap((element, index) => {
+      if (element.closest('[inert], [hidden], [aria-hidden="true"], details:not([open])')) return [];
+      if (!element.getClientRects().length || getComputedStyle(element).visibility !== 'visible') return [];
+      return [index];
+    }));
+    for (const index of reachable) {
+      const control = controls.nth(index);
       if (!(await control.isVisible())) continue;
-      if (await control.evaluate((element) => !!element.closest('[inert], [hidden], [aria-hidden="true"]'))) continue;
       if (await control.evaluate((element) => element.matches('[data-modes][data-ring] [data-mode-open]'))) continue;
       await control.scrollIntoViewIfNeeded();
       problems.push(...await horizontalClipping(control));
