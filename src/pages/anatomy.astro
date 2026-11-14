@@ -1,0 +1,35 @@
+---
+/**
+ * Founder-held public address for the Anatomy Lab (Task 178 package 8).
+ * Drafts cannot appear here even on staging or in draft-enabled test builds:
+ * both this page and the site menu use the production manifest gate.
+ * /preview/anatomy-lab remains independent and unchanged.
+ */
+import Layout from '../layouts/Layout.astro';
+import AnatomyLab from '../islands/AnatomyLab.tsx';
+import { publicAnatomySystems } from '../islands/anatomypublic';
+
+const files = import.meta.glob('../../content/visuals/anatomy-*.json', { eager: true, import: 'default' });
+const systems = publicAnatomySystems(files);
+const ready = systems.length > 0;
+---
+
+<Layout title="anatomy lab" description="Explore the anatomy lab." variant="study" noindex={!ready}>
+  <div class="mx-auto max-w-page space-y-8 pt-8 pb-section">
+    <h1 class="text-2xl text-ink">anatomy lab</h1>
+    {
+      ready ? (
+        <>
+          <AnatomyLab client:only="react" systems={systems} fixture={null} drafts={false} />
+          <noscript>
+            <p class="rounded-lg border border-line p-4 text-ink">
+              the 3D anatomy lab needs JavaScript. <a href="/preview/anatomy-text" class="underline">read structure names without JavaScript</a> instead.
+            </p>
+          </noscript>
+        </>
+      ) : (
+        <p class="rounded-lg border border-line p-4 text-ink">the anatomy lab is coming soon.</p>
+      )
+    }
+  </div>
+</Layout>
