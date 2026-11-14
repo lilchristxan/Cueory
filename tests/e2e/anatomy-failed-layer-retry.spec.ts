@@ -57,8 +57,11 @@ test('a failed layer keeps its successful GLB and retries only the missing file'
   await page.getByRole('button', { name: 'try vessels again' }).click();
   await expect(loaded).toContainText('model files loaded: 3 of 11', { timeout: 20_000 });
   await expect(page.getByRole('button', { name: 'try vessels again' })).toHaveCount(0);
-  await expect(structures.getByRole('button', { name: 'heart', exact: true }))
+  // Revealing the vessels layer must not unhide the heart: its source layer
+  // is organs, even though heart.glb also contains vessel structures.
+  await expect(structures.getByRole('button', { name: 'heart (hidden)', exact: true }))
     .toBeEnabled();
+  await expect(vessels).toHaveAttribute('aria-pressed', 'true');
   expect(vesselsRequests).toBe(2);
   expect(heartRequests).toBe(1);
 });
