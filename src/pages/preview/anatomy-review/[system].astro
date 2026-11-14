@@ -18,6 +18,9 @@ export function getStaticPaths() {
     WORKERS_CI: process.env.WORKERS_CI,
     WORKERS_CI_BRANCH: process.env.WORKERS_CI_BRANCH,
     CUEORY_ANATOMY_DRAFTS: process.env.CUEORY_ANATOMY_DRAFTS,
+  GITHUB_REF: process.env.GITHUB_REF,
+  GITHUB_EVENT_NAME: process.env.GITHUB_EVENT_NAME,
+  GITHUB_BASE_REF: process.env.GITHUB_BASE_REF,
   });
   return anatomyReviewSheets(anatomyInventory(process.cwd()))
     .filter((sheet) => sheet.status === 'approved' || mayShowDrafts)
