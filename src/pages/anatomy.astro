@@ -13,9 +13,8 @@ import { publicAnatomySystems } from '../islands/anatomypublic';
 const files = import.meta.glob('../../content/visuals/anatomy-*.json', { eager: true, import: 'default' });
 const systems = publicAnatomySystems(files);
 const ready = systems.length > 0;
-// Carry the public report route through when the separate Flag or comment
-// package (#684) lands. In the current staging viewer this extra property is
-// ignored, while the future viewer requires it for correct report context.
+// The public viewer accepts only its current, typed props. Report-page context
+// from the separate flag package will be integrated after its review.
 const viewerProps = { systems, fixture: null, drafts: false };
 ---
 
