@@ -1,0 +1,1 @@
+status: Task 178 production draft isolation (#662, stacked on #625): reject public media files whose bytes do not match the claimed format or contain recognizable raw OBJ/STL/PLY mesh data, including JPEG-disguised geometry; verify on exact-head CI before founder approval. No model publication, migration or deployment.
