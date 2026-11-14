@@ -67,7 +67,7 @@ describe('production media signatures and renamed anatomy geometry', () => {
     const f = fixture();
     const payload = Buffer.concat([
       Buffer.from([0xff, 0xd8, 0xff, 0xe0]),
-      Buffer.from('v 0 0 0\\nv 1 0 0\\nv 0 1 0\\nf 1 2 3\\n'),
+      Buffer.from('v 0 0 0\nv 1 0 0\nv 0 1 0\nf 1 2 3\n'),
     ]);
     const path = f.file('assets/triangle.jpg', payload);
     expect(unreviewedMediaPayload(path)).toBe(true);
