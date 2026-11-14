@@ -2,7 +2,7 @@
  * Keeps draft anatomy models off the live site (D-56). Astro copies public/ into dist/, so a draft's .glb would be
  * fetchable on the live site even though its page is hidden. After a build that may not show drafts, every .glb under
  * dist/models/anatomy that no approved system names is deleted. Fails closed: only a Workers preview build of a branch
- * other than `main`, or an explicit CUEORY_ANATOMY_DRAFTS=1 (local and test builds), keeps drafts.
+ * other than production `main` or GitLab `legacy/main`, or an explicit CUEORY_ANATOMY_DRAFTS=1 (local/test builds), keeps drafts.
  */
 import { existsSync, readdirSync, readFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
