@@ -1,0 +1,1 @@
+status: Accessibility audit: exclude controls hidden by closed ancestor disclosures while preserving their first summary; cover nested open/closed states and genuine keyboard traps in summaries and open disclosure bodies.

@@ -40,10 +40,20 @@ async function tabAudit(page: Page): Promise<string[]> {
   // count as a keyboard focus indicator if it looks identical when focused.
   const eligible = await page.evaluate((query) => {
     const controls = [...document.querySelectorAll<HTMLElement>(query)];
+    const isHiddenByDisclosure = (el: HTMLElement) => {
+      // Chromium can give closed details descendants layout rectangles and
+      // visibility: visible. Only its first summary (and that summary's
+      // descendants) stays exposed. Check every ancestor for nested details.
+      for (let details = el.parentElement?.closest('details'); details; details = details.parentElement?.closest('details')) {
+        if (!details.open && !details.querySelector(':scope > summary')?.contains(el)) return true;
+      }
+      return false;
+    };
     const isReachable = (el: HTMLElement) =>
       el.tabIndex >= 0 &&
       !el.matches(':disabled') &&
       !el.closest('[inert]') &&
+      !isHiddenByDisclosure(el) &&
       el.getClientRects().length > 0 &&
       getComputedStyle(el).visibility === 'visible';
 
@@ -232,6 +242,53 @@ test.describe('Task 74: full-site accessibility sweep', () => {
 
 
 test.describe('keyboard traversal regression cases', () => {
+  for (const outerOpen of [false, true]) {
+    for (const innerOpen of [false, true]) {
+      test(`nested disclosures: outer ${outerOpen ? 'open' : 'closed'}, inner ${innerOpen ? 'open' : 'closed'}`, async ({ page }) => {
+        await page.setContent(
+          '<style>:focus-visible { outline: 2px solid black; }</style>' +
+          `<details ${outerOpen ? 'open' : ''}><summary id="outer">practice</summary>` +
+          '<button id="outer-action">outer action</button>' +
+          `<details ${innerOpen ? 'open' : ''}><summary id="inner">check location</summary>` +
+          '<a id="answer" href="#after">go to catalog entry</a></details></details>' +
+          '<button id="after">after disclosures</button>',
+        );
+        await page.evaluate(() => {
+          for (const el of document.querySelectorAll<HTMLElement>('[id]')) {
+            el.addEventListener('focus', () => { el.dataset.visited = 'yes'; });
+          }
+        });
+
+        expect(await tabAudit(page)).toEqual([]);
+        await expect(page.locator('#outer')).toHaveAttribute('data-visited', 'yes');
+        await expect(page.locator('#after')).toHaveAttribute('data-visited', 'yes');
+        for (const id of ['outer-action', 'inner']) {
+          expect(await page.locator('#' + id).getAttribute('data-visited')).toBe(outerOpen ? 'yes' : null);
+        }
+        expect(await page.locator('#answer').getAttribute('data-visited')).toBe(outerOpen && innerOpen ? 'yes' : null);
+      });
+    }
+  }
+
+  for (const open of [false, true]) {
+    test(`a keyboard trap in a ${open ? 'disclosure body' : 'closed disclosure summary'} is still reported`, async ({ page }) => {
+      await page.setContent(
+        '<style>:focus-visible { outline: 2px solid black; }</style>' +
+        `<details ${open ? 'open' : ''}><summary id="summary">practice</summary>` +
+        '<button id="inside">inside disclosure</button></details><button id="after">after disclosure</button>',
+      );
+      await page.locator(open ? '#inside' : '#summary').evaluate((el) => {
+        el.addEventListener('keydown', (event) => {
+          if ((event as KeyboardEvent).key === 'Tab') event.preventDefault();
+        });
+      });
+
+      const problems = await tabAudit(page);
+      expect(problems.some((problem) => problem.includes('keyboard focus did not advance'))).toBe(true);
+      expect(problems.some((problem) => problem.includes('did not reach') && problem.includes('#after'))).toBe(true);
+    });
+  }
+
   test('repeated native date-control stops do not skip buttons after the date', async ({ page }) => {
     await page.setContent(
       '<style>:focus-visible { outline: 2px solid black; }</style>' +
