@@ -1828,8 +1828,8 @@ describe('anatomy production artifact audit', () => {
     const f = setup();
     expect(f.check().errors).toEqual([]);
     f.file('_astro/draft.cjs', 'exports.id = "FMA999991";');
-    f.file('_astro/escaped.cjs', 'exports.id = "\\\\u0046IX005";');
-    f.file('captions/draft.vtt', 'WEBVTT\\n\\n00:00:00.000 --> 00:00:01.000\\nFMA999991 FIX002');
+    f.file('_astro/escaped.cjs', 'exports.id = "\\u0046IX005";');
+    f.file('captions/draft.vtt', 'WEBVTT\n\n00:00:00.000 --> 00:00:01.000\nFMA999991 FIX002');
     const errors = f.check().errors;
     expect(errors).toContain('draft anatomy ID exposed in built text: _astro/draft.cjs (FMA999991)');
     expect(errors).toContain('test fixture ID exposed in built text: _astro/escaped.cjs (FIX005)');
