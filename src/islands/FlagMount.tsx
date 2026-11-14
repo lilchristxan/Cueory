@@ -51,8 +51,8 @@ export default function FlagMount({ page, itemId, itemVersionId, variant, contex
   return (
     <FlagForm
       page={page}
-      itemId={published ? published.itemId : itemId}
-      itemVersionId={published ? published.itemVersionId : itemVersionId}
+      itemId={context ? undefined : published ? published.itemId : itemId}
+      itemVersionId={context ? undefined : published ? published.itemVersionId : itemVersionId}
       signedIn={signedIn}
       send={send}
       onOpen={check}
