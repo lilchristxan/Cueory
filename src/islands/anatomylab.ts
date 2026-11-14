@@ -227,6 +227,9 @@ export interface BuildEnv {
 
 /** The live site's branch (wrangler.jsonc: production branch `main`). */
 export const PRODUCTION_BRANCH = 'main';
+// The currently connected Cloudflare Workers Builds production branch lives on GitLab.
+// Release builds must fail closed on both the GitHub and GitLab production names.
+export const LEGACY_PRODUCTION_BRANCH = 'legacy/main';
 
 /**
  * May this build show drafts? Workers Builds (WORKERS_CI=1) builds every branch: drafts only when it names a branch and
@@ -243,7 +246,7 @@ export function draftsAllowed(env: BuildEnv): boolean {
   const branch = rawBranch?.startsWith('refs/heads/')
     ? rawBranch.slice('refs/heads/'.length)
     : rawBranch;
-  return Boolean(branch) && branch !== PRODUCTION_BRANCH;
+  return Boolean(branch) && branch !== PRODUCTION_BRANCH && branch !== LEGACY_PRODUCTION_BRANCH;
 }
 
 /** The systems a build may show: approved ones always, drafts only where `draftsAllowed`. */
