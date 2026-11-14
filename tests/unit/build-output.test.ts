@@ -228,7 +228,7 @@ describe.skipIf(!existsSync(dist))('built site', () => {
         path: sheet.id,
         manifest: {
           title: sheet.title,
-          labels: sheet.labels.map((label) => ({ id: label.id, text: label.name })),
+          labels: sheet.labels.map((label: { id: string; name: string }) => ({ id: label.id, text: label.name })),
         },
       }));
     expect(draftPaths.length).toBeGreaterThan(0);
