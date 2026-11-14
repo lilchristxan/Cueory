@@ -837,6 +837,16 @@ function validStandaloneWasmPayload(payload, draftIds = new Set()) {
     if (type === 0) {
       const nameSize = readLeb();
       if (nameSize === null || nameSize > end - cursor) return false;
+      // A length byte such as 0x41 ('A') can join with a reserved ID at
+      // the beginning of the name and hide its word boundary. Scan the
+      // name itself before advancing over its bytes.
+      const sectionName = payload.subarray(cursor, cursor + nameSize).toString('latin1');
+      if ([
+        sectionName,
+        decodeAsciiEscapesForAudit(sectionName, 'script'),
+        decodeAsciiEscapesForAudit(sectionName, 'markup'),
+        decodeAsciiEscapesForAudit(sectionName, 'css'),
+      ].some(value => containsReservedAnatomyId(value, draftIds))) return false;
       cursor += nameSize;
       const opaque = payload.subarray(cursor, end);
       if (containsGlbHeader(opaque) || containsValidatedArchive(opaque)) return false;
