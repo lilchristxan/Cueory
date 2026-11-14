@@ -1,0 +1,1 @@
+status: Task 616, review-queue validation now rejects invalid ISO calendar dates before calling toISOString, preserving field-specific errors in dueItems and syntheticHistory. Added regression tests for invalid today, last_reviewed and next_review months; impossible February dates still follow the existing validation. No database, auth, deployment or model data changed.
