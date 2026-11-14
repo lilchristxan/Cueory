@@ -82,9 +82,12 @@ describe('dueItems', () => {
     expect(dueItems(rows, '2026-11-01')).toEqual([]);
   });
 
-  it('accepts a real leap day and rejects a non-leap day', () => {
-    const leap = row('leap', { last_reviewed: '2024-02-29', next_review: '2024-03-01' });
-    expect(dueItems([leap], '2024-03-01')).toEqual(['leap']);
+  it.each(['2000', '2024'])('accepts a real leap day in %s', (year) => {
+    const leap = row('leap', { last_reviewed: `${year}-02-29`, next_review: `${year}-03-01` });
+    expect(dueItems([leap], `${year}-03-01`)).toEqual(['leap']);
+  });
+
+  it('rejects February 29 in a century that is not a leap year', () => {
     expect(() => dueItems([row('bad', { last_reviewed: '1900-02-29' })], '2026-11-01')).toThrow(
       new Error('Row 0: last_reviewed must be a real calendar day YYYY-MM-DD.'),
     );
