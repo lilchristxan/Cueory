@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { charactersLeft, checkReport, PATIENT_INFO_WARNING, REASONS, reasonInWords, type FlagReport } from '../../src/islands/flag';
+import { charactersLeft, checkReport, checkReportWithContext, reportContextPrefix, PATIENT_INFO_WARNING, REASONS, reasonInWords, type FlagReport } from '../../src/islands/flag';
 
 const SAMPLE_UUID = '00000000-0000-0000-0000-000000000001';
 const valid: FlagReport = { page: '/learn/study-skills', itemId: 'sample_1', itemVersionId: SAMPLE_UUID, reason: 'typo', comment: 'a sample note' };
@@ -86,5 +86,42 @@ describe('patient information warning', () => {
     for (const phrase of ['patient names', 'dates of birth', 'medical record numbers', 'identify a real person']) {
       expect(PATIENT_INFO_WARNING).toContain(phrase);
     }
+  });
+});
+
+describe('anatomy structure flag context', () => {
+  const context = 'anatomy structure FMA7204 in whole body';
+  const input = { page: '/preview/anatomy-lab', reason: 'typo', comment: 'the name looks wrong' };
+
+  it('records the selected source ID in the ordinary comment, not question UUID fields', () => {
+    expect(checkReportWithContext(input, context)).toEqual({
+      ok: true,
+      report: {
+        ...input,
+        comment: `about: ${context}\nthe name looks wrong`,
+      },
+    });
+    expect(checkReportWithContext(input)).toEqual(checkReport(input));
+  });
+
+  it('retains the requirement for a student explanation when reason is other', () => {
+    const result = checkReportWithContext({ ...input, reason: 'other', comment: '' }, context);
+    expect(result).toEqual({ ok: false, problems: [{ field: 'comment', message: 'add a comment for something else.' }] });
+  });
+
+  it('applies the 1,000-character limit to both the context and student comment', () => {
+    const room = 1_000 - [...reportContextPrefix(context)].length;
+    expect(checkReportWithContext({ ...input, comment: 'a'.repeat(room) }, context).ok).toBe(true);
+    expect(checkReportWithContext({ ...input, comment: 'a'.repeat(room + 1) }, context))
+      .toEqual({ ok: false, problems: [{ field: 'comment', message: 'keep the comment to 1,000 characters or fewer.' }] });
+  });
+
+  it('preserves normal form validation and does not use a context as a page path', () => {
+    expect(checkReportWithContext({ ...input, page: '//offsite' }, context))
+      .toEqual(checkReport({ ...input, page: '//offsite' }));
+    expect(checkReportWithContext({ ...input, comment: '' }, context)).toEqual({
+      ok: true,
+      report: { ...input, comment: `about: ${context}` },
+    });
   });
 });
