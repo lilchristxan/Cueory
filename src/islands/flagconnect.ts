@@ -106,6 +106,29 @@ export function makeFlagSend(load: LoadFlagClient): (report: FlagReport) => Prom
   };
 }
 
+/**
+ * A report is an immutable snapshot of the structure the learner submitted.
+ * Keep the acknowledgement outside a short-lived name card, even if the
+ * student changes structures or systems while the RPC is pending.
+ * Only public structure context and a redacted result reach the receipt.
+ */
+export async function sendReportWithReceipt(
+  send: (report: FlagReport) => Promise<SendResult>,
+  report: FlagReport,
+  context?: string,
+  onReportStart?: (context: string) => (result: SendResult) => void,
+): Promise<SendResult> {
+  const finish = context && onReportStart ? onReportStart(context) : undefined;
+  let result: SendResult;
+  try {
+    result = await send(report);
+  } catch {
+    result = 'failed';
+  }
+  finish?.(result);
+  return result;
+}
+
 const UUID = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
 
 /**

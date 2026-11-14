@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { FlagReport } from '../../src/islands/flag';
-import { flagItemContext, flagSignedIn, makeFlagSend, watchFlagSession, type FlagClient } from '../../src/islands/flagconnect';
+import { flagItemContext, flagSignedIn, makeFlagSend, sendReportWithReceipt, watchFlagSession, type FlagClient } from '../../src/islands/flagconnect';
 import type { FlagArgs } from '../../src/islands/flagsubmit';
 
 const reportId = '11111111-1111-4111-8111-111111111111';
@@ -209,6 +209,54 @@ describe('makeFlagSend', () => {
     const { calls, load } = fakeClient();
     expect(await makeFlagSend(load)({ ...good, itemId: 'sample_1', itemVersionId: versionId })).toBe('failed');
     expect(calls).toEqual([]);
+  });
+});
+
+describe('contextual flag send receipts', () => {
+  const contextA = 'anatomy structure FIX001 in test shapes (fixture)';
+  const reportA: FlagReport = { page: '/preview/anatomy-lab', reason: 'typo', comment: `about: ${contextA}\nthe label looks wrong` };
+
+  it('reports an immutable original structure after a deferred RPC, even when selection switches', async () => {
+    const calls: FlagArgs[] = [];
+    let finishRpc: (reply: { data: unknown; error: unknown }) => void = () => {};
+    const deferred = new Promise<{ data: unknown; error: unknown }>((resolve) => { finishRpc = resolve; });
+    const { client } = fakeClient();
+    client.rpc = (name, args) => { calls.push(args); return deferred; };
+    const events: string[] = [];
+    const selected = { current: contextA };
+    const sending = sendReportWithReceipt(makeFlagSend(async () => client), reportA, selected.current, (context) => {
+      events.push(`sending: ${context}`);
+      return (result) => events.push(`finished: ${context}: ${result}`);
+    });
+    await settle();
+    expect(calls).toEqual([{
+      page: '/preview/anatomy-lab', item_id: null, item_version_id: null,
+      reason: 'typo', comment: reportA.comment,
+    }]);
+    selected.current = 'anatomy structure FIX002 in test shapes (fixture)';
+    expect(events).toEqual([`sending: ${contextA}`]);
+    finishRpc({ data: reportId, error: null });
+    expect(await sending).toBe('sent');
+    expect(events).toEqual([`sending: ${contextA}`, `finished: ${contextA}: sent`]);
+    expect(selected.current).toContain('FIX002');
+  });
+
+  it('also completes its independent receipt for an RPC failure', async () => {
+    const notifications: string[] = [];
+    const result = await sendReportWithReceipt(
+      async () => { throw new Error('private network detail'); },
+      reportA,
+      contextA,
+      (context) => (outcome) => notifications.push(`${context}: ${outcome}`),
+    );
+    expect(result).toBe('failed');
+    expect(notifications).toEqual([`${contextA}: failed`]);
+  });
+
+  it('preserves ordinary unscoped footer sending without extra receipts', async () => {
+    const spy = vi.fn();
+    expect(await sendReportWithReceipt(async () => 'sent', good, undefined, spy)).toBe('sent');
+    expect(spy).not.toHaveBeenCalled();
   });
 });
 

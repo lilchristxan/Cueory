@@ -9,6 +9,8 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from 'react';
 import { createGeneration, createOnDemandLoader, publishAnatomyFile, knownMissingStructureIds, filesForLayer, idsForFiles, initialLayerPlan, firstLayer, layerNeedsReveal, visibilityAfterLayerDownload, lazyPeel, lazyRestore, revealTargetPlan, needsBulkLayerConfirmation, showAllPlan, structureLoadNote, type OnDemandLoader } from './anatomylazy';
+import FlagMount from './FlagMount';
+import type { SendResult } from './flagsend';
 import type { LabColors, LabScene, LoadResult } from './anatomyscene';
 import { createAnatomyOpenGate } from './anatomyopen';
 import { STRUCTURE_PAGE_SIZE, visibleStructureGroups } from './anatomy-list-window';
@@ -64,9 +66,12 @@ interface Props {
   fixture?: AnatomySystem | null;
   /** True on builds that show drafts: draft systems then carry the "draft · labels waiting for review" note. */
   drafts: boolean;
+  /** This viewer appears on both a private preview and an approved public route. */
+  reportPage: '/preview/anatomy-lab' | '/anatomy';
 }
 
 type Phase = 'cover' | 'opening' | 'open' | 'error';
+type ReportNotice = { id: number; context: string; status: 'sending' | SendResult };
 type SystemLoad = { state: 'loading' } | { state: 'ready'; result: LoadResult; publishedFiles: ReadonlySet<string> } | { state: 'error'; message: string };
 
 const primaryButton =
@@ -134,7 +139,7 @@ function measureLabel(font: string, fontPx: number): (s: string) => number {
  * or from the list, labels with leader lines, a "find it" quiz and picture export for Christian's posts and videos.
  * Nothing from three.js loads before the student taps "open the anatomy lab". Rendered client:only.
  */
-export default function AnatomyLab({ systems: baseSystems, fixture, drafts }: Props) {
+export default function AnatomyLab({ systems: baseSystems, fixture, drafts, reportPage }: Props) {
   const [phase, setPhase] = useState<Phase>('cover');
   const [textLimit, setTextLimit] = useState(TEXT_FALLBACK_BATCH);
   const systems = useMemo(() => {
@@ -148,6 +153,16 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts }: Pr
   const [initialRetry, setInitialRetry] = useState(0);
   const [hidden, setHidden] = useState<ReadonlySet<string>>(new Set());
   const [selected, setSelected] = useState<string | null>(null);
+  // Sending is an intentional snapshot: switching structures clears the draft,
+  // never silently cancels an already submitted RPC. Keep a receipt outside the card.
+  const [reportNotices, setReportNotices] = useState<ReportNotice[]>([]);
+  const nextReportNoticeId = useRef(0);
+  const onReportStart = useCallback((context: string) => {
+    const id = ++nextReportNoticeId.current;
+    setReportNotices((notices) => [...notices, { id, context, status: 'sending' as const }].slice(-4));
+    return (status: SendResult) => setReportNotices((notices) =>
+      notices.map((notice) => notice.id === id ? { ...notice, status } : notice));
+  }, []);
   const [query, setQuery] = useState('');
   const [listLimit, setListLimit] = useState(STRUCTURE_PAGE_SIZE);
   const [labelsOn, setLabelsOn] = useState(false);
@@ -823,6 +838,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts }: Pr
   }
 
   const selectedName = selected ? (names.get(selected) ?? selected) : null;
+  const activeReportContext = selectedName && !quiz ? `anatomy structure ${selected} in ${system.title}` : null;
   const selectedGroup = selected ? system.structures.find((s) => s.id === selected)?.group : undefined;
   const budget = load.state === 'ready' ? anatomyTriangleNote(load.result.triangles, filesLoaded, lazy) : null;
   const ready = load.state === 'ready';
@@ -1103,6 +1119,28 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts }: Pr
             )}
           </div>
 
+          {reportNotices.some((notice) => notice.context !== activeReportContext) && (
+            <div className="space-y-2" aria-live="polite" aria-relevant="additions text" data-testid="anatomy-report-notices">
+              {reportNotices.filter((notice) => notice.context !== activeReportContext).map(({ id, context, status }) => (
+                <div key={id} className="flex flex-wrap items-center gap-2 rounded-md border border-line p-3">
+                  <p className="min-w-0 flex-1 break-words text-sm text-ink">
+                    report about {context}: {status === 'sending'
+                      ? 'sending…'
+                      : status === 'sent'
+                        ? 'sent. thank you.'
+                        : status === 'too-many'
+                          ? "not sent. you've sent too many reports recently."
+                          : status === 'failed'
+                            ? 'not sent. select that structure again to retry.'
+                            : status.message}
+                  </p>
+                  <button type="button" className={secondaryButton} onClick={() => setReportNotices((notices) => notices.filter((notice) => notice.id !== id))}>
+                    dismiss report update
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
           {selectedName && !quiz && (
             <section className="rounded-lg border border-line bg-surface p-4" aria-labelledby="anatomy-name-card">
               <h2 id="anatomy-name-card" className="text-lg text-ink">{selectedName}</h2>
@@ -1116,6 +1154,14 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts }: Pr
                   {hidden.has(selected!) ? 'show it' : 'hide it'}
                 </button>
                 <button type="button" className={secondaryButton} onClick={() => setSelected(null)}>clear selection</button>
+              </div>
+              {/* Keep the account watcher mounted. FlagForm resets its draft when context changes. */}
+              <div className="mt-3">
+                <FlagMount
+                  page={reportPage}
+                  context={activeReportContext ?? undefined}
+                  onReportStart={onReportStart}
+                />
               </div>
             </section>
           )}
