@@ -305,7 +305,8 @@ begin
   return query
     select q.* from public.anatomy_review_queue q
     where q.user_id = uid and q.cleared_at is null
-    order by q.last_missed_at desc, q.structure_id;
+    -- Stable tie breakers prevent overlapping offset pages when misses share a timestamp.
+    order by q.last_missed_at desc, q.structure_id, q.system_key, q.id;
 end;
 $$;
 
@@ -319,7 +320,7 @@ grant execute on function public.my_anatomy_review_queue() to authenticated;
 
 -- Saves a view, or replaces the caller's view of the same name in the same system. `camera` is exactly
 --   { position: [x, y, z], target: [x, y, z], up?: [x, y, z] }
--- with finite numbers; any other key is refused. `hidden` and `faded` are structure ids (each up to 1,000, no
+-- with finite numbers; any other key is refused. `hidden` and `faded` are structure ids (each up to 2,000, no
 -- duplicates stored), `selected` a structure id or null. A student keeps at most 50 views; the 51st is refused with
 -- SQLSTATE 54000 and a plain message, and replacing an existing view always fits. Returns the view's id.
 create function public.save_anatomy_view(
