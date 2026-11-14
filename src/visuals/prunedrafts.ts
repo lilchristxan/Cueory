@@ -22,7 +22,10 @@ export function keepsDrafts(env: PruneEnv): boolean {
   const branch = rawBranch?.startsWith('refs/heads/')
     ? rawBranch.slice('refs/heads/'.length)
     : rawBranch;
-  return Boolean(branch) && branch !== 'main';
+  // The connected Cloudflare production build currently follows GitLab
+  // legacy/main, while GitHub's production/release branch is main.
+  // Both must strip all draft geometry even if a preview opt-in is set.
+  return Boolean(branch) && branch !== 'main' && branch !== 'legacy/main';
 }
 
 interface SystemFile {
