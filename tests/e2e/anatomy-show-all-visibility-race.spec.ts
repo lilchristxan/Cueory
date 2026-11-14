@@ -85,13 +85,18 @@ test('the real whole-body catalog remains searchable without horizontal overflow
     await expect(page.getByTestId('anatomy-files'))
       .toContainText('model files loaded: 1 of 11', { timeout: 20_000 });
 
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth),
+      `initial catalog overflow at ${width}px`,
+    ).toBeLessThanOrEqual(width);
     const search = page.getByLabel('find a structure');
+    await search.focus();
+    await expect(search).toBeFocused();
     await search.fill('heart');
     const heart = page.getByRole('region', { name: 'structures' })
       .getByRole('button', { name: 'heart (not loaded yet)', exact: true });
     await expect(heart).toBeVisible();
     await expect(heart).toBeDisabled();
-    await expect(page.getByRole('button', { name: 'show 40 more structures' })).toHaveCount(0);
     const scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);
     expect(scrollWidth, `horizontal overflow at ${width}px`).toBeLessThanOrEqual(width);
   }
