@@ -652,9 +652,10 @@ function validPagefindArtifact(path, kind, draftIds = new Set()) {
   // Optional header fields are public but not present after gunzipSync, so
   // reject them before verifying the decompressed search data. Otherwise an
   // FNAME/FCOMMENT/FEXTRA field could hide draft labels from the release audit.
-  // FNAME/FCOMMENT/FEXTRA are unreviewed publicly exposed metadata.
-  // FHCRC is only a header checksum and is safe when Node validates it.
-  if (isGzip && (bytes.length < 18 || bytes[2] !== 8 || (bytes[3] & 0x1c) !== 0)) return false;
+  // Reject FEXTRA (bit 2), FNAME (bit 3), FCOMMENT (bit 4)
+  // and reserved gzip flag bits. Harmless FTEXT (bit 0) and FHCRC
+  // (bit 1) are permitted, including in Pagefind's WASM artifacts.
+  if (isGzip && (bytes.length < 18 || bytes[2] !== 8 || (bytes[3] & 0xfc) !== 0)) return false;
   let decoded;
   try {
     decoded = isGzip
