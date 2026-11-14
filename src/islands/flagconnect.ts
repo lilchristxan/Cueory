@@ -114,16 +114,47 @@ export function makeFlagSend(
       return 'failed';
     }
     if (!client) return { message: studentMessage('submit_flag', { message: 'sign in to send a report' }) };
+    const identityChanged = () => ({
+      message: 'your account changed before this report was sent. please open the form again.',
+    });
+    let changedDuringSend = false;
+    let unsubscribe = () => {};
     if (expectedUserId !== undefined) {
-      // A new browser session or an unsuccessful session read cannot
-      // authorize the old form's report. This check must follow load().
-      const current = await sessionStateFrom(client);
-      if (!current.signedIn || !expectedUserId || current.userId !== expectedUserId) {
-        return { message: 'your account changed before this report was sent. please open the form again.' };
+      const onAuth = client.auth.onAuthStateChange;
+      // An A -> B -> A switch would pass an end-state-only session check.
+      // Require a subscription for browser-originated reports so every
+      // intervening account change invalidates the pending submission.
+      if (typeof onAuth !== 'function') return identityChanged();
+      try {
+        const observer = onAuth.call(client.auth, (_event, session) => {
+          if (session?.user?.id !== expectedUserId) changedDuringSend = true;
+        }).data.subscription;
+        unsubscribe = () => observer.unsubscribe();
+      } catch {
+        return identityChanged();
       }
     }
-    // Called on the client itself: supabase-js's rpc needs its receiver.
-    return makeSend((name, args) => client.rpc(name, args))(report);
+    try {
+      if (expectedUserId !== undefined) {
+        const current = await sessionStateFrom(client);
+        if (changedDuringSend || !current.signedIn ||
+            !expectedUserId || current.userId !== expectedUserId) return identityChanged();
+      }
+      // Revalidate as the actual RPC is dispatched. A successful check made
+      // before report validation is not an authorization for a later request.
+      return await makeSend(async (name, args) => {
+        if (expectedUserId !== undefined) {
+          const current = await sessionStateFrom(client);
+          if (changedDuringSend || !current.signedIn ||
+              !expectedUserId || current.userId !== expectedUserId) {
+            throw new Error('report identity changed');
+          }
+        }
+        return client.rpc(name, args);
+      })(report);
+    } finally {
+      unsubscribe();
+    }
   };
 }
 
