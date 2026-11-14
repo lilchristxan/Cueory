@@ -129,15 +129,16 @@ function embeddedArchiveFixtures(): Array<[string, Buffer]> {
   // A real gzip member with a valid deflate stream, CRC32 and ISIZE footer.
   fixtures.push(['gzip', gzipSync(Buffer.from('glTF synthetic hidden model payload'))]);
 
-  // Minimal marker-complete BZip2 stream envelope. The release gate's BZip2
-  // sniff validates block/end markers; it does not decompress BZip2 payloads.
-  fixtures.push(['bzip2', Buffer.concat([
-    Buffer.from('BZh9', 'ascii'),
-    Buffer.from([0x31, 0x41, 0x59, 0x26, 0x53, 0x59]),
-    Buffer.from('payload'),
-    Buffer.from([0x17, 0x72, 0x45, 0x38, 0x50, 0x90]),
-    Buffer.alloc(4),
-  ])]);
+  // Genuine bzip2.compress() output of a 48-byte, JSON-only glTF v2 GLB.
+  // Its EOS marker is bit-aligned, NOT present as six consecutive bytes.
+  // A hand-built byte-aligned footer previously hid a real bypass.
+  fixtures.push(['bzip2', Buffer.from(
+    'QlpoOTFBWSZTWbyemjgAABD/gFAAAARQAVAQARGMACKlnQogADFGhoAAACifqjTah6jEGT2pHIBz0gdvfy5F1VX1FK0tEnyF2ZsyQhtcYF3JFOFCQvJ6aOA=',
+    'base64',
+  )]);
+  // Real bzip2 compressor output for the empty input has an EOS marker at
+  // offset four, without the block-start marker used by nonempty streams.
+  fixtures.push(['bzip2-empty', Buffer.from('QlpoORdyRThQkAAAAAA=', 'base64')]);
 
   // Header/footer CRC and backward-size framing for an XZ stream envelope.
   const xzFlags = Buffer.from([0, 0]);
@@ -176,12 +177,9 @@ function embeddedArchiveFixtures(): Array<[string, Buffer]> {
   Buffer.from([0x52, 0x61, 0x72, 0x21, 0x1a, 0x07, 0x00]).copy(rar4, 0);
   rar4[9] = 0x73; // Main archive header.
   rar4.writeUInt16LE(13, 12);
-  let rarCrc = 0;
-  for (const byte of rar4.subarray(9)) {
-    rarCrc ^= byte;
-    for (let bit = 0; bit < 8; bit += 1) rarCrc = (rarCrc >>> 1) ^ (rarCrc & 1 ? 0xa001 : 0);
-  }
-  rar4.writeUInt16LE(rarCrc & 0xffff, 7);
+  // RAR4 MAIN_HEAD stores the low 16 bits of CRC-32 over bytes 2..HEAD_SIZE.
+  // The previous fixture used the same incorrect CRC-16 as the parser.
+  rar4.writeUInt16LE(testCrc32(rar4.subarray(9)) & 0xffff, 7);
   fixtures.push(['rar4', rar4]);
 
   const rar5 = Buffer.alloc(15);
@@ -191,6 +189,10 @@ function embeddedArchiveFixtures(): Array<[string, Buffer]> {
   rar5[14] = 0; // No flags.
   rar5.writeUInt32LE(testCrc32(rar5.subarray(12)), 8);
   fixtures.push(['rar5', rar5]);
+  const rar5Encrypted = Buffer.from(rar5);
+  rar5Encrypted[13] = 4; // RAR5 archive-encryption header, preceding opaque data.
+  rar5Encrypted.writeUInt32LE(testCrc32(rar5Encrypted.subarray(12)), 8);
+  fixtures.push(['rar5-encrypted', rar5Encrypted]);
 
   // Cabinet header and one folder record, with all offsets inside the cabinet.
   const cab = Buffer.alloc(52);
@@ -579,6 +581,37 @@ describe('anatomy production artifact audit', () => {
     ]));
   });
 
+
+  it('rejects a real bzip2-compressed draft GLB without byte-aligned footer under a renamed path', () => {
+    const f = setup();
+    const archive = embeddedArchiveFixtures().find(([format]) => format === 'bzip2')?.[1];
+    if (!archive) throw new Error('Missing real bzip2-compressed GLB test vector.');
+    expect(archive.subarray(0, 10)).toEqual(Buffer.from([0x42, 0x5a, 0x68, 0x39, 0x31, 0x41, 0x59, 0x26, 0x53, 0x59]));
+    // Regression: the former recognizer incorrectly demanded this byte-aligned EOS sequence.
+    expect(archive.indexOf(Buffer.from([0x17, 0x72, 0x45, 0x38, 0x50, 0x90]))).toBe(-1);
+    f.file('downloads/renamed-bzip2-model.dat', archive);
+    f.file('downloads/prefixed-bzip2-model.dat', Buffer.concat([Buffer.from('benign prefix'), archive]));
+    expect(f.check().errors).toEqual(expect.arrayContaining([
+      'archive/container in production output requires explicit review: /downloads/renamed-bzip2-model.dat',
+      'archive/container in production output requires explicit review: /downloads/prefixed-bzip2-model.dat',
+    ]));
+  });
+
+  it('uses real RAR4 CRC32-low16 and rejects RAR5 encrypted headers', () => {
+    const f = setup();
+    const archives = embeddedArchiveFixtures();
+    const rar4 = archives.find(([format]) => format === 'rar4')?.[1];
+    const encrypted = archives.find(([format]) => format === 'rar5-encrypted')?.[1];
+    if (!rar4 || !encrypted) throw new Error('Missing valid RAR regression vectors.');
+    expect(rar4.readUInt16LE(7)).toBe(0x90cf);
+    expect(encrypted[13]).toBe(4);
+    f.file('downloads/rar4-valid.dat', rar4);
+    f.file('downloads/rar5-encrypted.dat', encrypted);
+    expect(f.check().errors).toEqual(expect.arrayContaining([
+      'archive/container in production output requires explicit review: /downloads/rar4-valid.dat',
+      'archive/container in production output requires explicit review: /downloads/rar5-encrypted.dat',
+    ]));
+  });
 
   it('rejects framed embedded archive formats under benign file extensions', () => {
     const f = setup();
