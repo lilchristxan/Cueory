@@ -246,15 +246,6 @@ function crc32(bytes) {
   return (value ^ 0xffffffff) >>> 0;
 }
 
-function crc16Rar(bytes) {
-  let value = 0;
-  for (const byte of bytes) {
-    value ^= byte;
-    for (let bit = 0; bit < 8; bit += 1) value = (value >>> 1) ^ (value & 1 ? 0xa001 : 0);
-  }
-  return value & 0xffff;
-}
-
 function hasGzipAt(bytes, offset) {
   if (offset < 0 || offset + 10 > bytes.length ||
       bytes[offset] !== 0x1f || bytes[offset + 1] !== 0x8b ||
@@ -298,12 +289,15 @@ function hasGzipAt(bytes, offset) {
 }
 
 function hasBzip2At(bytes, offset) {
+  // BZip2 is a bitstream: its end-of-stream marker can start between bytes.
+  // A byte-aligned footer search wrongly accepted real compressed draft GLBs.
+  // This is an opaque-container *rejection* gate, not a decompressor: a BZh
+  // level followed by the 48-bit block marker is enough to fail closed.
   if (offset < 0 || offset + 14 > bytes.length ||
       bytes.toString('ascii', offset, offset + 3) !== 'BZh' ||
-      bytes[offset + 3] < 0x31 || bytes[offset + 3] > 0x39 ||
-      !bytes.subarray(offset + 4, offset + 10).equals(Buffer.from([0x31, 0x41, 0x59, 0x26, 0x53, 0x59]))) return false;
-  const end = bytes.indexOf(Buffer.from([0x17, 0x72, 0x45, 0x38, 0x50, 0x90]), offset + 10);
-  return end >= offset + 14 && end + 10 <= bytes.length;
+      bytes[offset + 3] < 0x31 || bytes[offset + 3] > 0x39) return false;
+  return bytes.subarray(offset + 4, offset + 10)
+    .equals(Buffer.from([0x31, 0x41, 0x59, 0x26, 0x53, 0x59]));
 }
 
 function hasXzAt(bytes, offset) {
@@ -386,7 +380,8 @@ function hasRarAt(bytes, offset) {
     const header = offset + 7;
     const size = bytes.readUInt16LE(header + 5);
     return bytes[header + 2] === 0x73 && size >= 13 && header + size <= bytes.length &&
-      crc16Rar(bytes.subarray(header + 2, header + size)) === bytes.readUInt16LE(header);
+      // RAR4 HEAD_CRC is the low 16 bits of CRC32, not CRC16/A001.
+      (crc32(bytes.subarray(header + 2, header + size)) & 0xffff) === bytes.readUInt16LE(header);
   }
   const rar5 = Buffer.from([0x52, 0x61, 0x72, 0x21, 0x1a, 0x07, 0x01, 0x00]);
   if (offset < 0 || offset + 15 > bytes.length || !bytes.subarray(offset, offset + 8).equals(rar5)) return false;
@@ -396,7 +391,10 @@ function hasRarAt(bytes, offset) {
   const end = size.next + Number(size.value);
   if (end > bytes.length || crc32(bytes.subarray(offset + 12, end)) !== crc) return false;
   const type = readVarint(bytes, size.next);
-  return Boolean(type && type.value === 1n);
+  // Header-encrypted RAR5 archives begin with type 4, before the encrypted
+  // main header. Both types must be treated as opaque production containers.
+  // https://www.rarlab.com/technote.htm#arcenc
+  return Boolean(type && (type.value === 1n || type.value === 4n));
 }
 
 function hasCabAt(bytes, offset) {
