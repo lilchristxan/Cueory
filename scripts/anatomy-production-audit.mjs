@@ -1836,7 +1836,7 @@ export function auditAnatomyProduction(distDir, contentDir) {
     }
     // Whole, valid draft models can be concealed as base64 in public JS or
     // HTML without a literal glTF header or visible BodyParts3D identifier.
-    if (hasUnsafeEncodedAnatomyPayload(contents, draftTokens)) {
+    if (variants.some((value) => hasUnsafeEncodedAnatomyPayload(value, draftTokens))) {
       errors.push('encoded geometry, archive or reserved anatomy ID in built text requires review: ' + file.slice(dist.length + 1));
     }
   }
