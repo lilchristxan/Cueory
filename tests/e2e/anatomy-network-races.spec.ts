@@ -67,7 +67,7 @@ test.describe('anatomy whole-body network races', () => {
     await expect(structures(page).getByRole('button', { name: 'heart', exact: true }))
       .toBeEnabled();
     await expect(page.getByRole('group', { name: 'layers, skin to bone' })
-      .getByRole('button', { name: /^vessels \\(/ })).toHaveAttribute('aria-pressed', 'true');
+      .getByRole('button', { name: /^vessels \(/ })).toHaveAttribute('aria-pressed', 'true');
   });
 
   test('a late successful show-all GLB cannot override a newer show-only choice', async ({ page }, info) => {
