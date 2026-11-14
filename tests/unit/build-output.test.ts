@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url';
 import { gzipSync } from 'node:zlib';
 import { describe, expect, it } from 'vitest';
 import { newsletter, site } from '../../src/config/site';
+import { anatomyInventory } from '../../scripts/anatomy-review-report.mjs';
 
 const dist = fileURLToPath(new URL('../../dist/', import.meta.url));
 
@@ -215,20 +216,19 @@ describe.skipIf(!existsSync(dist))('built site', () => {
   });
 
   it('excludes every unapproved anatomy review route and source name from production-style artifacts', () => {
-    const manifestDir = fileURLToPath(new URL('../../content/visuals/', import.meta.url));
     const index = readFileSync(join(dist, 'preview/anatomy-review.html'), 'utf8');
-    const draftPaths = readdirSync(manifestDir)
-      .filter((name) => /^anatomy-[a-z0-9-]+\.json$/.test(name))
-      .flatMap((name) => {
-        const manifest = JSON.parse(readFileSync(join(manifestDir, name), 'utf8')) as {
-          status: string;
-          title: string;
-          labels: Array<{ id: string; text: string }>;
-        };
-        return manifest.status === 'draft'
-          ? [{ path: name.replace(/^anatomy-/, '').replace(/\.json$/, ''), manifest }]
-          : [];
-      });
+    // Reuse the validated, source-backed inventory rather than guessing a
+    // manifest file name. This remains a real check of the compiled dist.
+    const sourceRoot = fileURLToPath(new URL('../../', import.meta.url));
+    const draftPaths = anatomyInventory(sourceRoot)
+      .filter((sheet) => sheet.status === 'draft')
+      .map((sheet) => ({
+        path: sheet.id,
+        manifest: {
+          title: sheet.title,
+          labels: sheet.labels.map((label) => ({ id: label.id, text: label.name })),
+        },
+      }));
     expect(draftPaths.length).toBeGreaterThan(0);
     const generated = htmlFiles(dist).map((file) => relative(dist, file).replaceAll('\\\\', '/'));
     for (const { path, manifest } of draftPaths) {
