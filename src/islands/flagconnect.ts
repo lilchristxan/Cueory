@@ -142,16 +142,21 @@ export function makeFlagSend(
       }
       // Revalidate as the actual RPC is dispatched. A successful check made
       // before report validation is not an authorization for a later request.
-      return await makeSend(async (name, args) => {
+      let invalidatedBeforeRpc = false;
+      const result = await makeSend(async (name, args) => {
         if (expectedUserId !== undefined) {
           const current = await sessionStateFrom(client);
           if (changedDuringSend || !current.signedIn ||
               !expectedUserId || current.userId !== expectedUserId) {
+            invalidatedBeforeRpc = true;
             throw new Error('report identity changed');
           }
         }
         return client.rpc(name, args);
       })(report);
+      // makeSend deliberately masks low-level RPC errors. Preserve the public,
+      // actionable account-switch message instead of showing a generic failure.
+      return invalidatedBeforeRpc ? identityChanged() : result;
     } finally {
       unsubscribe();
     }
