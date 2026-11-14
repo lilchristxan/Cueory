@@ -264,6 +264,9 @@ test.describe('flag form account identity, deterministic browser checks', () => 
     // a session: A's unsent note cannot become B's draft.
     await identity(page, true, 'account-B');
     await expect(trigger).toHaveAttribute('aria-expanded', 'false');
+    // The replaced panel's focused controls vanish on account switch.
+    // Keyboard focus should move to the new trigger, not the document body.
+    await expect(trigger).toBeFocused();
     await trigger.click();
     await expect(page.getByRole('radio', { name: 'something confusing' })).not.toBeChecked();
     await expect(page.getByLabel('anything to add? (optional)')).toHaveValue('');
