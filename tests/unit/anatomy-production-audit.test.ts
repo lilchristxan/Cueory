@@ -505,6 +505,20 @@ describe('anatomy production artifact audit', () => {
       );
     }
 
+    // A second empty gzip member does not alter gunzipSync's output. Its
+    // separate filename header must never bypass the draft-ID release gate.
+    const emptyMember = gzipSync(Buffer.alloc(0));
+    const second = Buffer.concat([
+      emptyMember.subarray(0, 10), Buffer.concat([Buffer.from('FMA999991'), Buffer.from([0])]), emptyMember.subarray(10),
+    ]);
+    second[3] = 0x08;
+    const concatenated = Buffer.concat([fragment, second]);
+    expect(gunzipSync(concatenated)).toEqual(gunzipSync(fragment));
+    f.file('pagefind/fragment/en_second_member.pf_fragment', concatenated);
+    expect(f.check().errors).toContain(
+      'archive/container in production output requires explicit review: /pagefind/fragment/en_second_member.pf_fragment',
+    );
+
     // Draft IDs in a valid compressed fragment must be rejected, including
     // JSON-escaped content and nested metadata/anchor strings. Fixture IDs are
     // never real anatomy and must also stay out of the public search index.
