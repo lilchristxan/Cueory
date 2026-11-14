@@ -600,6 +600,27 @@ function hasUnsafeEncodedAnatomyPayload(text, draftIds) {
   let examined = 0;
   // Treat quoted/URI base64 as a separate token, not an incidental substring
   // of a longer JavaScript identifier. Include base64url's '-' and '_'.
+  // Browser atob() accepts ASCII whitespace between Base64 groups. Scan
+  // the actual decoded argument as one payload, not its short fragments.
+  const wrappedAtob = /atob\s*\(\s*(['"])([A-Za-z0-9+/_=\t\n\r\f -]+)\1/g;
+  for (const match of text.matchAll(wrappedAtob)) {
+    const encoded = match[2].replace(/[\t\n\r\f ]/g, '');
+    if (encoded.length > MAX_ENCODED_RUN || (examined += encoded.length) > MAX_TOTAL_ENCODED) return true;
+    if (encoded.length < 8 || encoded.length % 4 === 1) continue;
+    const normalized = encoded.replaceAll('-', '+').replaceAll('_', '/');
+    const bytes = Buffer.from(normalized, 'base64');
+    if (bytes.toString('base64').replace(/=+$/u, '') !== normalized.replace(/=+$/u, '')) continue;
+    if (containsGlbHeader(bytes) || containsValidatedArchive(bytes) ||
+        containsReservedAnatomyId(bytes.toString('utf8'), draftIds)) return true;
+    if (bytes.length <= 16 * 1024 * 1024) {
+      try {
+        const json = JSON.parse(bytes.toString('utf8'));
+        if (json?.asset?.version === '2.0' && Array.isArray(json?.meshes) &&
+            json.meshes.length && Array.isArray(json?.accessors) &&
+            Array.isArray(json?.buffers)) return true;
+      } catch { /* Other encoded strings are allowed. */ }
+    }
+  }
   const runs = /(?:^|[^A-Za-z0-9+/_=-])([A-Za-z0-9+/_-]{8,}={0,2})(?=$|[^A-Za-z0-9+/_=-])/g;
   for (const match of text.matchAll(runs)) {
     const encoded = match[1];
