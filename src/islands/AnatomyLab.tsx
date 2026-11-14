@@ -1244,13 +1244,55 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
       setAnnounce('this view could not be read. delete it and save it again.');
       return;
     }
-    // A whole-body view may include source IDs whose mesh has not downloaded yet.
-    // Keep their saved visibility/selection so lazy downloads can apply the same view.
+    // Keep saved visibility and selection for source-valid IDs even if their
+    // lazy meshes have not downloaded. Geometry publication is separate.
     const eligibleIds = lazy ? new Set(system.structures.map((structure) => structure.id)) : foundSet;
-    changeVisibility(() => savedVisibility(view, eligibleIds));
-    setSelected(view.selected && eligibleIds.has(view.selected) ? view.selected : null);
+    const restored = savedVisibility(view, eligibleIds);
+    const selectedId = view.selected && eligibleIds.has(view.selected) ? view.selected : null;
+    const loader = lazy ? loaderRef.current : null;
+    // Exact manifest ownership avoids fetching unrelated organs in the same layer.
+    const visibleIds = new Set(system.structures
+      .filter((structure) => eligibleIds.has(structure.id) && !restored.hidden.has(structure.id))
+      .map((structure) => structure.id));
+    const missingFiles = loader && system.model.fileIds
+      ? (system.model.files ?? []).filter((url) =>
+          !loader.isLoaded(url) && (system.model.fileIds?.[url] ?? []).some((id) => visibleIds.has(id)))
+      : [];
+    // An absent file ownership manifest is not permission to guess which
+    // whole-body files should be downloaded.
+    if (loader && !system.model.fileIds) {
+      setAnnounce('this saved view needs a verified model file list before its layers can load.');
+      return;
+    }
+    const narrow = typeof window.matchMedia === 'function' && window.matchMedia('(max-width: 767px)').matches;
+    if (loader && needsBulkLayerConfirmation(narrow, missingFiles.length)) {
+      setAnnounce('this saved view needs more model files. open its layers individually on this phone.');
+      return;
+    }
+    changeVisibility(() => restored);
+    setSelected(selectedId);
     scene.applyCameraState(camera);
-    setAnnounce(`opened the view "${view.name}".`);
+    if (!loader || missingFiles.length === 0) {
+      setAnnounce(`opened the view "${view.name}".`);
+      return;
+    }
+    const intent = visibilityIntent.token();
+    const systemToken = generation.token();
+    setPending((current) => new Set([...current, 'saved view']));
+    setLayerError(null);
+    setAnnounce(`opening the view "${view.name}" and loading its model files.`);
+    void loader.ensure(missingFiles).then(() => {
+      if (loader.isRetired() || !generation.isCurrent(systemToken) || !visibilityIntent.isCurrent(intent)) return;
+      setAnnounce(`opened the view "${view.name}".`);
+    }).catch((error: unknown) => {
+      if (loader.isRetired() || !generation.isCurrent(systemToken) || !visibilityIntent.isCurrent(intent)) return;
+      setLayerError({ layer: 'saved view', message: anatomyFailureMessage('layer', error), retry: () => openView(view) });
+      setAnnounce('some saved-view models could not load. try opening the saved view again.');
+    }).finally(() => {
+      if (!loader.isRetired() && generation.isCurrent(systemToken)) {
+        setPending((current) => new Set([...current].filter((id) => id !== 'saved view')));
+      }
+    });
   };
 
   const deleteView = (view: SavedViewRow) => {
