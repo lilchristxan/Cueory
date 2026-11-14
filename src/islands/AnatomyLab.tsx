@@ -2021,8 +2021,8 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
               </div>
 
               <div className="space-y-1">
-                <p id="anatomy-recall-heading" className="text-sm text-ink-soft">recall: blank the names, number the dots</p>
-                <div role="group" aria-labelledby="anatomy-recall-heading" className="flex flex-wrap gap-2">
+                <p id="anatomy-numbered-recall-heading" className="text-sm text-ink-soft">recall: blank the names, number the dots</p>
+                <div role="group" aria-labelledby="anatomy-numbered-recall-heading" className="flex flex-wrap gap-2">
                   <button
                     type="button"
                     className={secondaryButton}
@@ -2586,7 +2586,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
               ))}
             </div>
             <label className="flex min-h-11 items-center gap-2 text-sm text-ink">
-              <input type="checkbox" className="size-5" checked={transparent} onChange={(e) => setTransparent(e.target.checked)} />
+              <input type="checkbox" className="size-6 shrink-0" checked={transparent} onChange={(e) => setTransparent(e.target.checked)} />
               transparent background
             </label>
             <p className="text-sm text-ink-soft" aria-live="polite">{exporting ? 'drawing the picture…' : exportNote}</p>
