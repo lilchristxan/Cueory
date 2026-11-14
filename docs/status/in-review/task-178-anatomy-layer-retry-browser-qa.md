@@ -1,0 +1,1 @@
+status: Task 178 Anatomy Lab QA coverage (#662): added real-GLB browser regressions for a partially failed layer retry, shared files across two layers, and a newer visibility choice after a delayed download; mapped section 2 and 3 checks to named tests while leaving unverified release gates explicitly open.
