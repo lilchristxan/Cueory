@@ -624,14 +624,16 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
   // ── Visibility history: every change to hidden or faded is recorded; undo and redo put a recorded state back ──────
   // `push` ignores a state equal to the present one, so an undo (which sets hidden and faded to the present) records
   // nothing, and a new model's reset (history and sets changed together) records nothing either.
-  const identityResetPendingRef = useRef(false);
+  const identityResetPendingRef = useRef<Visibility | null>(null);
   useEffect(() => {
-    // Auth transitions reset history deliberately. This effect normally adds
-    // visibility changes to undo, but must not re-add the outgoing user's view.
-    if (identityResetPendingRef.current) {
-      identityResetPendingRef.current = false;
+    // Auth transitions reset history deliberately. Ignore the matching reset
+    // state, not a later legitimate visibility choice made by the new account.
+    const reset = identityResetPendingRef.current;
+    if (reset && visibilityEquals(reset, { hidden, faded })) {
+      identityResetPendingRef.current = null;
       return;
     }
+    identityResetPendingRef.current = null;
     setHistory((h) => push(h, { hidden, faded }, visibilityEquals));
   }, [hidden, faded]);
 
@@ -684,7 +686,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
       const firstLayers = latestSystem?.key === WHOLE_BODY_KEY && latestSystem.model.layerFiles
         ? initialLayerPlan(latestSystem, layersOf(latestSystem.structures)) : null;
       const baseline: Visibility = { hidden: firstLayers?.hidden ?? new Set<string>(), faded: new Set<string>() };
-      identityResetPendingRef.current = true;
+      identityResetPendingRef.current = baseline;
       setHistory(createHistory(baseline));
       setHidden(baseline.hidden);
       setFaded(baseline.faded);
