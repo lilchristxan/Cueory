@@ -91,11 +91,10 @@ describe('production media signatures and renamed anatomy geometry', () => {
     expect(unreviewedMediaPayload(join(dirname(wrong), 'normal.css'))).toBe(false);
   });
 
-  it('fails closed on a linked media asset rather than following a symlink', () => {
+  it('fails closed on a missing media asset within a private fixture directory', () => {
     const f = fixture();
     const missing = join(f.root, 'nonexistent-image.jpg');
     expect(unreviewedMediaPayload(missing)).toBe(true);
-    // The artifact scanner separately refuses symlinks, including broken ones.
     f.file('assets/normal.css', 'body { color: black }');
     expect(f.audit().errors).toEqual([]);
   });
