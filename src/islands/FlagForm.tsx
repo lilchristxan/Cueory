@@ -32,9 +32,21 @@ export default function FlagForm(props: Props) {
     if (account.current.known === true && !props.signedIn) account.current.changes += 1;
     account.current.known = props.signedIn;
   }
+  // Initial identification (unknown -> A) and sign-in (signed out -> A)
+  // must not close an open panel. Only replacing a known signed-in account
+  // resets the draft. A sign-out still clears any former account's text.
+  const identity = useRef<string | null>(null);
+  if (props.signedIn !== null) {
+    if (props.signedIn && props.userId) {
+      if (identity.current !== null && identity.current !== props.userId) account.current.changes += 1;
+      identity.current = props.userId;
+    } else if (!props.signedIn) {
+      identity.current = null;
+    }
+  }
   return <ReportForm key={JSON.stringify([
     props.page, props.itemId, props.itemVersionId, props.context,
-    props.userId, account.current.changes,
+    account.current.changes,
   ])} {...props} />;
 }
 
