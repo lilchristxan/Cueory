@@ -1107,7 +1107,7 @@ function hasUsableSiteEntrypoint(html) {
     cursor = end;
     if (next === -1) break;
 
-    if (state === 'done' && /^<script\\b/i.test(html.slice(cursor))) {
+    if (state === 'done' && /^<script\b/i.test(html.slice(cursor))) {
       const trailing = afterDocumentScript.exec(html.slice(cursor));
       if (!trailing) return debugEntrypointFailure();
       cursor += trailing[0].length;
