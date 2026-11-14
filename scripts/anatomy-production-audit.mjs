@@ -40,6 +40,16 @@ const TEXT_ASSET = /\.(?:html?|js|mjs|cjs|json|map|xml|svg|txt|css|csv|tsv|md|we
 const SCRIPT_ESCAPES_ASSET = /\.(?:js|mjs|cjs|json|map|webmanifest|html?)$/i;
 const MARKUP_ESCAPES_ASSET = /\.(?:html?|svg|xml)$/i;
 const CSS_ESCAPES_ASSET = /\.css$/i;
+/** A bounded pass over URL-encoded public text, including mixed literal and %HH IDs. */
+export function decodePercentEscapesForAudit(text) {
+  // ASCII URL percent-escapes are decoded as bytes, with no URI authority,
+  // percent-decoding rounds, or Unicode normalization. Preserve all other
+  // characters verbatim so an encoded reserved ID cannot evade an exact match.
+  return text.replace(/%([0-7][0-9a-f])/gi, (_match, byte) =>
+    String.fromCharCode(Number.parseInt(byte, 16)));
+}
+
+
 
 /** Walk a built artifact without following links outside (or back into) the output. */
 function walkFiles(dir, linked) {
@@ -1750,13 +1760,16 @@ export function auditAnatomyProduction(distDir, contentDir) {
     }
     // Both the original bytes and their context-appropriate decoded versions
     // must be checked. This recognizes encoded IDs without erasing raw token boundaries.
-    const variants = [contents];
+    const variants = [contents, decodePercentEscapesForAudit(contents)];
     if (SCRIPT_ESCAPES_ASSET.test(file)) variants.push(decodeAsciiEscapesForAudit(contents, 'script'));
     if (MARKUP_ESCAPES_ASSET.test(file)) variants.push(decodeAsciiEscapesForAudit(contents, 'markup'));
     // Inline <style> and style attributes in HTML/SVG can carry active CSS escapes too.
     if (CSS_ESCAPES_ASSET.test(file) || MARKUP_ESCAPES_ASSET.test(file)) variants.push(decodeAsciiEscapesForAudit(contents, 'css'));
     // HTML style attributes decode numeric entities before parsing their CSS escapes.
     if (MARKUP_ESCAPES_ASSET.test(file)) variants.push(decodeAsciiEscapesForAudit(decodeAsciiEscapesForAudit(contents, 'markup'), 'css'));
+    // Decode URL percent escapes after other syntaxes, too: e.g. a JS Unicode
+    // escape followed by %4d%41, or markup entities within a percent string.
+    for (const variant of [...variants]) variants.push(decodePercentEscapesForAudit(variant));
     if (draftTokens.size) {
       let exposedDraft = null;
       for (const variant of variants) {
