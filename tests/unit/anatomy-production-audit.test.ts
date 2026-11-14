@@ -359,6 +359,52 @@ describe('anatomy audit CLI entry point', () => {
 });
 
 describe('anatomy production artifact audit', () => {
+  it('rejects a valid JSON glTF triangle under .dat and falsely safe web extensions', () => {
+    const f = setup();
+    expect(f.check().errors).toEqual([]);
+    const buffer = Buffer.alloc(42);
+    buffer.writeFloatLE(1, 12);
+    buffer.writeFloatLE(1, 28);
+    buffer.writeUInt16LE(0, 36);
+    buffer.writeUInt16LE(1, 38);
+    buffer.writeUInt16LE(2, 40);
+    // A complete drawable glTF 2.0 file: inline base64 bytes, views, accessors,
+    // mesh primitive, node and active scene. This is not a binary GLB.
+    const gltf = JSON.stringify({
+      asset: { version: '2.0' },
+      buffers: [{ byteLength: 42, uri: 'data:application/octet-stream;base64,' + buffer.toString('base64') }],
+      bufferViews: [{ buffer: 0, byteOffset: 0, byteLength: 36 }, { buffer: 0, byteOffset: 36, byteLength: 6 }],
+      accessors: [
+        { bufferView: 0, componentType: 5126, count: 3, type: 'VEC3', min: [0, 0, 0], max: [1, 1, 0] },
+        { bufferView: 1, componentType: 5123, count: 3, type: 'SCALAR' },
+      ],
+      meshes: [{ primitives: [{ attributes: { POSITION: 0 }, indices: 1, mode: 4 }] }],
+      nodes: [{ mesh: 0 }], scenes: [{ nodes: [0] }], scene: 0,
+    });
+    f.file('assets/triangle.dat', gltf);
+    f.file('assets/triangle.gltf', gltf);
+    f.file('assets/triangle.jpg', gltf);
+    f.file('assets/ordinary.dat', 'unreviewed file type even if not a model');
+    const errors = f.check().errors;
+    expect(errors).toContain('unapproved model exposed in production: /assets/triangle.gltf');
+    for (const url of ['/assets/triangle.dat', '/assets/triangle.jpg']) {
+      expect(errors).toContain(`unapproved text glTF model exposed in production: ${url}`);
+    }
+    expect(errors).toContain('unreviewed output asset type requires explicit review: /assets/triangle.dat');
+    expect(errors).toContain('unreviewed output asset type requires explicit review: /assets/ordinary.dat');
+  });
+
+  it('allows reviewed web asset types and fails closed on an unknown suffix', () => {
+    const f = setup();
+    f.file('assets/ordinary.json', JSON.stringify({ title: 'site data', version: 1 }));
+    f.file('assets/style.css', 'body { color: black }');
+    f.file('assets/icon.svg', '<svg xmlns="http://www.w3.org/2000/svg"></svg>');
+    f.file('_headers', '/preview/*\n  X-Robots-Tag: noindex');
+    expect(f.check().errors).toEqual([]);
+    f.file('assets/unknown.opaque', 'unreviewed payload');
+    expect(f.check().errors).toContain('unreviewed output asset type requires explicit review: /assets/unknown.opaque');
+  });
+
   it('accepts approved GLB bytes while detecting a copied model under a misleading extension', () => {
     const f = setup();
     expect(f.check().errors).toEqual([]);
