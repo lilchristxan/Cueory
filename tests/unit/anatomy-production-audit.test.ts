@@ -398,6 +398,15 @@ describe('anatomy production artifact audit', () => {
       } while (value > 0);
       return Buffer.from(bytes);
     };
+    // A valid custom section may contain either a harmless magic-shaped byte
+    // sequence or a complete hidden archive. Only the archive is rejected.
+    const harmlessWasmCustom = Buffer.concat([
+      Buffer.from([0x01, 0x78]), Buffer.from('BZh ordinary WASM custom data', 'ascii'),
+    ]);
+    const wasmWithHarmlessMarker = gzipSync(Buffer.concat([
+      prefix, wasmHeader, Buffer.from([0x00]),
+      encodeWasmU32(harmlessWasmCustom.length), harmlessWasmCustom,
+    ]));
     // A valid WebAssembly custom section can still smuggle a complete ZIP.
     const wasmCustomName = Buffer.from('archive', 'ascii');
     const wasmZipCustomPayload = Buffer.concat([
@@ -428,6 +437,7 @@ describe('anatomy production artifact audit', () => {
     f.file('pagefind/filter/en_test.pf_filter', gzipFilter);
     f.file('pagefind/pagefind.en_test.pf_meta', gzipMeta);
     f.file('pagefind/wasm.en.pagefind', wasm);
+    f.file('pagefind/wasm.en_harmless.pagefind', wasmWithHarmlessMarker);
     f.file('pagefind/wasm.en_opaque_ids.pagefind', wasmWithOpaqueIds);
     // Pagefind also accepts already-decompressed data with the same marker.
     f.file('pagefind/fragment/en_raw_test.pf_fragment', Buffer.concat([prefix, Buffer.from(JSON.stringify({
