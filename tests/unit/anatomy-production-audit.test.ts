@@ -1908,9 +1908,11 @@ describe('anatomy production artifact audit', () => {
     const binary = readFileSync(join(f.dist, 'models', 'anatomy', 'approved.glb'));
     const encoded = (binary.toString('base64').match(/.{1,76}/g) ?? []).join(' ');
     f.file('assets/wrapped-model.js', `const model = atob('${encoded}');`);
-    expect(f.check().errors).toContain(
-      'encoded geometry, archive or reserved anatomy ID in built text requires review: assets/wrapped-model.js',
-    );
+    f.file('assets/wrapped-model.json', JSON.stringify({ model: 'data:model/gltf-binary;base64,' + encoded }));
+    const errors = f.check().errors;
+    for (const path of ['assets/wrapped-model.js', 'assets/wrapped-model.json']) {
+      expect(errors).toContain('encoded geometry, archive or reserved anatomy ID in built text requires review: ' + path);
+    }
   });
 
   it('rejects escaped synthetic IDs in generated JS, JSON, HTML and SVG', () => {
