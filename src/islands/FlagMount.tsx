@@ -37,12 +37,17 @@ const loadShared: LoadFlagClient = () => getSupabase() as unknown as Promise<Fla
  * loaded, a sign-in or sign-out in this tab or another one updates the form too, so it is never stuck on the first answer.
  */
 export default function FlagMount({ page, itemId, itemVersionId, variant, context, onReportStart }: Props) {
-  const [signedIn, setSignedIn] = useState<boolean | null>(null);
+  // Retain the actual account identity, not just a signed-in boolean:
+  // account A -> B is a real change even when both are authenticated.
+  const [session, setSession] = useState<{ signedIn: boolean; userId: string | null } | null>(null);
   // Pages whose items load in the browser (the real questions) publish the current one; it wins over the fixed props.
   const [published, setPublished] = useState<FlagItem | undefined>(currentFlagItem);
   useEffect(() => { setPublished(currentFlagItem()); return onFlagItem(setPublished); }, []);
   const watch = useRef<FlagSessionWatch | null>(null);
-  const send = useMemo(() => makeFlagSend(loadShared), []);
+  const sendingUserId = session?.userId ?? null;
+  // The sender is captured by the form at Send time. A slow client load can
+  // never retarget an older draft to a newly signed-in account.
+  const send = useMemo(() => makeFlagSend(loadShared, sendingUserId), [sendingUserId]);
   const sendWithReceipt = useCallback(
     (report: FlagReport) => sendReportWithReceipt(send, report, context, onReportStart),
     [send, context, onReportStart],
@@ -50,7 +55,9 @@ export default function FlagMount({ page, itemId, itemVersionId, variant, contex
   const check = useCallback(() => watch.current?.check(), []);
 
   useEffect(() => {
-    const current = watchFlagSession(loadShared, setSignedIn);
+    const current = watchFlagSession(loadShared, (signedIn, userId) =>
+      setSession({ signedIn, userId }),
+    );
     watch.current = current;
     let cancelIdle: () => void;
     if ('requestIdleCallback' in window) {
@@ -73,7 +80,8 @@ export default function FlagMount({ page, itemId, itemVersionId, variant, contex
       page={page}
       itemId={scopedItem.itemId}
       itemVersionId={scopedItem.itemVersionId}
-      signedIn={signedIn}
+      signedIn={session?.signedIn ?? null}
+      userId={sendingUserId}
       send={sendWithReceipt}
       onOpen={check}
       variant={variant}
