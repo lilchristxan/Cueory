@@ -368,9 +368,16 @@ export async function loadExport(reader: ExportReader): Promise<ExportLoadResult
     // INITIAL_SESSION only reports the existing session. Every later auth event
     // invalidates the read, including same-account token refresh and MFA changes:
     // aal2 -> aal1 -> aal2 can return a successful but incomplete owner-RLS SELECT.
-    stopAuthEvents = reader.onAuthEvent?.((event) => {
-      if (event !== 'INITIAL_SESSION') sessionChanged = true;
-    }) ?? stopAuthEvents;
+    const onAuthEvent = reader.onAuthEvent;
+    if (onAuthEvent) {
+      const stop = onAuthEvent((event) => {
+        if (event !== 'INITIAL_SESSION') sessionChanged = true;
+      });
+      // Refuse an incomplete subscription setup, rather than silently
+      // producing an export without session-change detection.
+      if (typeof stop !== 'function') throw new Error('invalid auth subscription');
+      stopAuthEvents = stop;
+    }
     if (await exportAssurance(reader) === 'step-up') {
       return { ok: false, message: MFA_STEP_UP_MESSAGE };
     }
