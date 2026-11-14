@@ -30,7 +30,10 @@ const BODYPARTS3D_SECTION_FILES = new Map([
 const MODEL_ASSET = /\.(?:glb|gltf|obj|stl|fbx|ply|dae|3mf|usd|usdz|blend)$/i;
 // Published file types have to be explicitly reviewed. A hidden model can be a
 // plain JSON glTF renamed .dat, which has neither .gltf suffix nor GLB magic.
-const REVIEWED_OUTPUT_TYPE = /\.(?:html?|js|mjs|cjs|css|json|map|xml|svg|txt|csv|tsv|md|webmanifest|ico|png|jpe?g|gif|webp|avif|bmp|tiff?|woff2?|ttf|otf|eot|wasm|pdf|mp4|webm|mp3|m4a|wav|ogg|vtt)$/i;
+// Standalone .wasm files require explicit review: their opaque custom/data
+// sections can carry draft model identifiers without looking like text or GLB.
+// The named Pagefind wasm.*.pagefind assets are verified by their own parser.
+const REVIEWED_OUTPUT_TYPE = /\.(?:html?|js|mjs|cjs|css|json|map|xml|svg|txt|csv|tsv|md|webmanifest|ico|png|jpe?g|gif|webp|avif|bmp|tiff?|woff2?|ttf|otf|eot|pdf|mp4|webm|mp3|m4a|wav|ogg|vtt)$/i;
 const REVIEWED_EXTENSIONLESS_OUTPUT = new Set(['/_headers', '/_redirects']);
 // Archives can conceal otherwise unapproved model files from a path/GLB-signature scan.
 const ARCHIVE_ASSET = /\.(?:zip|tar|tgz|gz|bz2|xz|zst|7z|rar|cab|jar|war|ear|apk|ipa|iso|dmg)$/i;

@@ -1,0 +1,1 @@
+status: Task 178 (#662, #625), production output guard: standalone WASM is founder-held because opaque sections can expose draft IDs; official Pagefind WASM stays on its specifically validated path. Stacked safety fix, not model approval, deployment or a merge.

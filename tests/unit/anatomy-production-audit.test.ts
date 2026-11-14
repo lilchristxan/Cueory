@@ -407,6 +407,26 @@ describe('anatomy production artifact audit', () => {
     expect(f.check().errors).toContain('unreviewed output asset type requires explicit review: /assets/unknown.opaque');
   });
 
+  it('holds standalone WASM for explicit review even when its custom section hides a draft ID', () => {
+    const f = setup();
+    const header = Buffer.from([0, 97, 115, 109, 1, 0, 0, 0]);
+    const draftId = Buffer.from('FMA999991', 'ascii');
+    const custom = Buffer.concat([
+      Buffer.from([0, draftId.length + 2, 1, 120]), draftId,
+    ]);
+    const hiddenDraft = Buffer.concat([header, custom]);
+    expect(WebAssembly.validate(hiddenDraft)).toBe(true);
+
+    // A standalone WASM file bypassed text scanning while its suffix was allowed.
+    // Fail closed on this opaque format, including otherwise harmless modules.
+    f.file('_astro/hidden-draft.wasm', hiddenDraft);
+    f.file('_astro/ordinary.wasm', header);
+    expect(f.check().errors).toEqual(expect.arrayContaining([
+      'unreviewed output asset type requires explicit review: /_astro/hidden-draft.wasm',
+      'unreviewed output asset type requires explicit review: /_astro/ordinary.wasm',
+    ]));
+  });
+
   it('accepts approved GLB bytes while detecting a copied model under a misleading extension', () => {
     const f = setup();
     expect(f.check().errors).toEqual([]);
