@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -247,6 +247,18 @@ describe('read-only anatomy review inventory', () => {
       .toThrow('review output already exists');
     expect(readFileSync(files[0]!, 'utf8')).toBe(first);
     expect(existsSync(join(root, 'content', 'visuals', 'anatomy-alpha.json'))).toBe(true);
+  });
+
+  it('refuses review exports redirected through a symlinked parent into the public repository', () => {
+    const root = setup();
+    writeSystem(root, 'sample');
+    const outside = mkdtempSync(join(tmpdir(), 'cueory-review-link-'));
+    roots.push(outside);
+    symlinkSync(join(process.cwd(), 'docs'), join(outside, 'redirected'), 'dir');
+    const destination = join(outside, 'redirected', 'status', 'review-output');
+    expect(() => writeAnatomyReviewSheets(anatomyInventory(root), destination))
+      .toThrow('write review sheets outside the project repository');
+    expect(existsSync(join(process.cwd(), 'docs', 'status', 'review-output'))).toBe(false);
   });
 
   it('refuses a file path as a review output directory', () => {
