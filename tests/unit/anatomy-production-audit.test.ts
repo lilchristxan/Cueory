@@ -547,7 +547,7 @@ describe('anatomy production artifact audit', () => {
     // LEB length looks like the ASCII letter A, so scanning the serialized
     // module as one string can hide the otherwise exact token boundary.
     const lengthBoundaryData = Buffer.concat([
-      Buffer.from('FMA999991 ', 'ascii'), Buffer.alloc(55, 0x2e),
+      Buffer.from('FMA999991', 'ascii'), Buffer.alloc(56, 0x2e),
     ]);
     if (lengthBoundaryData.length !== 65) throw new Error('invalid synthetic WASM fixture size');
     const lengthBoundarySection = Buffer.concat([
@@ -1909,6 +1909,21 @@ describe('anatomy production artifact audit', () => {
     rmSync(join(f.content, 'anatomy-draft.json'));
     f.file('index.html', '<span>FIX004</span>');
     expect(f.check().errors).toContain('test fixture ID exposed in built text: index.html (FIX004)');
+  });
+
+  it('scans reviewed CommonJS and WebVTT assets for unpublished and fixture IDs, including active CJS escapes', () => {
+    const f = setup();
+    expect(f.check().errors).toEqual([]);
+    f.file('_astro/draft.cjs', 'exports.id = "FMA999991";');
+    f.file('_astro/escaped.cjs', 'exports.id = "\\u0046IX005";');
+    f.file('captions/draft.vtt', 'WEBVTT\n\n00:00:00.000 --> 00:00:01.000\nFMA999991 FIX002');
+    const errors = f.check().errors;
+    expect(errors).toContain('draft anatomy ID exposed in built text: _astro/draft.cjs (FMA999991)');
+    expect(errors).toContain('test fixture ID exposed in built text: _astro/escaped.cjs (FIX005)');
+    expect(errors).toContain('draft anatomy ID exposed in built text: captions/draft.vtt (FMA999991)');
+    expect(errors).toContain('test fixture ID exposed in built text: captions/draft.vtt (FIX002)');
+    expect(errors).not.toContain('unreviewed output asset type requires explicit review: /_astro/draft.cjs');
+    expect(errors).not.toContain('unreviewed output asset type requires explicit review: /captions/draft.vtt');
   });
 
   it('rejects escaped synthetic IDs in generated JS, JSON, HTML and SVG', () => {

@@ -36,8 +36,8 @@ const REVIEWED_EXTENSIONLESS_OUTPUT = new Set(['/_headers', '/_redirects']);
 const ARCHIVE_ASSET = /\.(?:zip|tar|tgz|gz|bz2|xz|zst|7z|rar|cab|jar|war|ear|apk|ipa|iso|dmg)$/i;
 // Scan all ordinary published text assets, not just the anatomy page or hashed JavaScript chunks.
 // Site search, manifests or unrelated pages can otherwise accidentally expose a draft identifier.
-const TEXT_ASSET = /\.(?:html?|js|mjs|json|map|xml|svg|txt|css|csv|tsv|md|webmanifest)$/i;
-const SCRIPT_ESCAPES_ASSET = /\.(?:js|mjs|json|map|webmanifest|html?)$/i;
+const TEXT_ASSET = /\.(?:html?|js|mjs|cjs|json|map|xml|svg|txt|css|csv|tsv|md|webmanifest|vtt)$/i;
+const SCRIPT_ESCAPES_ASSET = /\.(?:js|mjs|cjs|json|map|webmanifest|html?)$/i;
 const MARKUP_ESCAPES_ASSET = /\.(?:html?|svg|xml)$/i;
 const CSS_ESCAPES_ASSET = /\.css$/i;
 
@@ -800,25 +800,7 @@ function validPagefindArtifact(path, kind, draftIds = new Set()) {
         decodeAsciiEscapesForAudit(sectionText, 'markup'),
         decodeAsciiEscapesForAudit(sectionText, 'css'),
       ].some((value) => containsReservedAnatomyId(value, draftIds))) return false;
-      if ((type === 0 || type === 11) &&
-          (containsGlbHeader(sectionBytes) || containsValidatedArchive(sectionBytes))) return false;
-      if (type === 0) {
-        const nameSize = readLeb();
-        if (nameSize === null || nameSize > end - cursor) return false;
-        cursor += nameSize;
-        const opaque = payload.subarray(cursor, end);
-        if (containsGlbHeader(opaque) || containsValidatedArchive(opaque)) return false;
-        // WASM custom sections are public byte arrays. Their metadata can carry
-        // source identifiers even when the rest of the module is executable code.
-        // Reject escaped and unescaped draft/fixture IDs just as in text assets.
-        const customText = opaque.toString('latin1');
-        if ([
-          customText,
-          decodeAsciiEscapesForAudit(customText, 'script'),
-          decodeAsciiEscapesForAudit(customText, 'markup'),
-          decodeAsciiEscapesForAudit(customText, 'css'),
-        ].some((value) => containsReservedAnatomyId(value, draftIds))) return false;
-      } else if (type === 11) {
+      if (type === 11) {
         // A WASM data-section byte vector is an independent downloadable
         // payload. Scanning the section as serialized bytes is not enough:
         // the vector length 0x41 ('A') immediately before "FMA..." joins
@@ -874,6 +856,25 @@ function validPagefindArtifact(path, kind, draftIds = new Set()) {
           cursor += byteLength;
         }
         if (cursor !== end) return false;
+      }
+      if ((type === 0 || type === 11) &&
+          (containsGlbHeader(sectionBytes) || containsValidatedArchive(sectionBytes))) return false;
+      if (type === 0) {
+        const nameSize = readLeb();
+        if (nameSize === null || nameSize > end - cursor) return false;
+        cursor += nameSize;
+        const opaque = payload.subarray(cursor, end);
+        if (containsGlbHeader(opaque) || containsValidatedArchive(opaque)) return false;
+        // WASM custom sections are public byte arrays. Their metadata can carry
+        // source identifiers even when the rest of the module is executable code.
+        // Reject escaped and unescaped draft/fixture IDs just as in text assets.
+        const customText = opaque.toString('latin1');
+        if ([
+          customText,
+          decodeAsciiEscapesForAudit(customText, 'script'),
+          decodeAsciiEscapesForAudit(customText, 'markup'),
+          decodeAsciiEscapesForAudit(customText, 'css'),
+        ].some((value) => containsReservedAnatomyId(value, draftIds))) return false;
       }
       cursor = end;
     }
@@ -1157,7 +1158,44 @@ function hasUsableSiteEntrypoint(html) {
   // are permitted after </html>, never arbitrary trailing markup or text.
   // Only Astro's hoisted module scripts are permitted beyond </html>.
   // Ordinary scripts and malformed tags must not pass the release gate.
-  const afterDocumentScript = /^<script\s+type\s*=\s*(["'])module\1(?:\s[^<>]*)?>[\s\S]*?<\/script\s*>/i;
+  const afterDocumentScript = /^<script\b/i;
+  const validTrailingModuleTag = (tag) => {
+    if (!/^<script\b/i.test(tag) || !tag.endsWith('>')) return false;
+    let pos = 7; // After the "script" tag name.
+    let moduleType = false;
+    while (pos < tag.length - 1) {
+      if (!/\s/.test(tag[pos])) return false;
+      while (/\s/.test(tag[pos] ?? '')) pos++;
+      if (pos === tag.length - 1) break;
+      const nameMatch = /^[^\s=/>"'<>]+/.exec(tag.slice(pos));
+      if (!nameMatch) return false;
+      const name = nameMatch[0].toLowerCase();
+      pos += nameMatch[0].length;
+      while (/\s/.test(tag[pos] ?? '')) pos++;
+      let value = '';
+      if (tag[pos] === '=') {
+        pos++;
+        while (/\s/.test(tag[pos] ?? '')) pos++;
+        const quote = tag[pos];
+        if (quote === '"' || quote === "'") {
+          pos++;
+          const closing = tag.indexOf(quote, pos);
+          if (closing < 0 || closing >= tag.length - 1) return false;
+          value = tag.slice(pos, closing);
+          pos = closing + 1;
+        } else {
+          // Production hoisted scripts use quoted attributes. Ambiguous
+          // unquoted values are rejected rather than certified.
+          return false;
+        }
+      }
+      if (name === 'type') {
+        if (moduleType || value !== 'module') return false;
+        moduleType = true;
+      }
+    }
+    return moduleType;
+  };
 
   while (cursor < html.length) {
     const next = html.indexOf('<', cursor);
@@ -1169,10 +1207,24 @@ function hasUsableSiteEntrypoint(html) {
     cursor = end;
     if (next === -1) break;
 
-    if (state === 'done' && /^<script\b/i.test(html.slice(cursor))) {
-      const trailing = afterDocumentScript.exec(html.slice(cursor));
-      if (!trailing) return false;
-      cursor += trailing[0].length;
+    if (state === 'done' && afterDocumentScript.test(html.slice(cursor))) {
+      // A regex over [^<>]* accepts a '>' or type='module' inside an
+      // unterminated quoted attribute. Scan the opening tag quote-aware.
+      let tagEnd = cursor + 1;
+      let quote = '';
+      for (; tagEnd < html.length; tagEnd++) {
+        const char = html[tagEnd];
+        if (quote) {
+          if (char === quote) quote = '';
+        } else if (char === '"' || char === "'") quote = char;
+        else if (char === '<') return false;
+        else if (char === '>') break;
+      }
+      if (tagEnd >= html.length || quote ||
+          !validTrailingModuleTag(html.slice(cursor, tagEnd + 1))) return false;
+      const closing = /<\/script\s*>/i.exec(html.slice(tagEnd + 1));
+      if (!closing) return false;
+      cursor = tagEnd + 1 + closing.index + closing[0].length;
       continue;
     }
 
