@@ -16,7 +16,8 @@ const DAY_RE = /^\d{4}-\d{2}-\d{2}$/;
 function isValidDay(day: unknown): day is string {
   if (typeof day !== 'string' || !DAY_RE.test(day)) return false;
   const d = new Date(`${day}T00:00:00.000Z`);
-  return d.toISOString().slice(0, 10) === day;
+  // Invalid months produce Invalid Date. Check before toISOString(), which would throw RangeError.
+  return Number.isFinite(d.getTime()) && d.toISOString().slice(0, 10) === day;
 }
 
 function validateRow(row: ReviewStateRow, index: number): void {

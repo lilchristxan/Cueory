@@ -96,7 +96,15 @@ describe('dueItems — validation', () => {
   });
 
   it('throws for an impossible today date', () => {
-    expect(() => dueItems([], '2026-02-30')).toThrow();
+    expect(() => dueItems([], '2026-02-30'))
+      .toThrow('today must be a real calendar day YYYY-MM-DD, got "2026-02-30".');
+  });
+
+  it('reports invalid calendar months in today without a RangeError', () => {
+    for (const today of ['2026-00-01', '2026-13-01', '2026-99-01']) {
+      expect(() => dueItems([], today))
+        .toThrow(`today must be a real calendar day YYYY-MM-DD, got "${today}".`);
+    }
   });
 
   it('throws for an empty item_id', () => {
@@ -109,11 +117,18 @@ describe('dueItems — validation', () => {
   });
 
   it('throws for an invalid last_reviewed', () => {
-    expect(() => dueItems([row('a', { last_reviewed: '2026-13-01' })], '2026-11-01')).toThrow();
+    expect(() => dueItems([row('a', { last_reviewed: '2026-13-01' })], '2026-11-01'))
+      .toThrow('Row 0: last_reviewed must be a real calendar day YYYY-MM-DD.');
   });
 
   it('throws for an invalid next_review', () => {
-    expect(() => dueItems([row('a', { next_review: 'bad-date' })], '2026-11-01')).toThrow();
+    expect(() => dueItems([row('a', { next_review: 'bad-date' })], '2026-11-01'))
+      .toThrow('Row 0: next_review must be a real calendar day YYYY-MM-DD.');
+  });
+
+  it('reports invalid calendar months in next_review with the right field error', () => {
+    expect(() => dueItems([row('a', { next_review: '2026-13-01' })], '2026-11-01'))
+      .toThrow('Row 0: next_review must be a real calendar day YYYY-MM-DD.');
   });
 
   it('throws when next_review is not after last_reviewed', () => {
@@ -167,5 +182,10 @@ describe('syntheticHistory', () => {
   it('throws for invalid row', () => {
     // @ts-expect-error intentional
     expect(() => syntheticHistory(null)).toThrow();
+  });
+
+  it('reports invalid calendar months in syntheticHistory with the right field error', () => {
+    expect(() => syntheticHistory(row('a', { last_reviewed: '2026-99-01' })))
+      .toThrow('Row 0: last_reviewed must be a real calendar day YYYY-MM-DD.');
   });
 });
