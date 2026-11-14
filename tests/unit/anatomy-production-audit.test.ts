@@ -1851,9 +1851,19 @@ describe('anatomy production artifact audit', () => {
     expect(encoded).not.toContain('glTF');
     f.file('_astro/hidden.js', `const source = Uint8Array.from(atob('${encoded}'), c => c.charCodeAt(0));`);
     f.file('assets/hidden.json', JSON.stringify({ model: 'data:model/gltf-binary;base64,' + encoded }));
+    // JavaScript hex/unicode escapes can conceal the first character of a
+    // base64 literal. The build audit must decode the JS before scanning it.
+    const escaped = encoded.replace(/^Z/, String.raw`\u005a`);
+    f.file('assets/escaped.js', `const encoded = atob('${escaped}');`);
+    // Support base64url data too, including '_' in the actual encoded bytes.
+    const base64Url = Buffer.concat([draft, Buffer.from([255, 255, 255])]).toString('base64url');
+    expect(base64Url).toContain('_');
+    f.file('assets/hidden-url.cjs', `exports.model = '${base64Url}';`);
     const errors = f.check().errors;
     expect(errors).toContain('encoded geometry, archive or reserved anatomy ID in built text requires review: _astro/hidden.js');
     expect(errors).toContain('encoded geometry, archive or reserved anatomy ID in built text requires review: assets/hidden.json');
+    expect(errors).toContain('encoded geometry, archive or reserved anatomy ID in built text requires review: assets/escaped.js');
+    expect(errors).toContain('encoded geometry, archive or reserved anatomy ID in built text requires review: assets/hidden-url.cjs');
   });
 
   it('rejects base64 model archives, source-only IDs and encoded text glTF while keeping harmless encodings', () => {
