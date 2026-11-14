@@ -365,7 +365,17 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts }: Pr
     scene
       .load(initial?.files ?? (system.model.files ?? system.model.file), initial?.ids ?? system.structures.map((s) => s.id))
       .then((result) => {
-        if (!current || !generation.isCurrent(initialLoadToken) || !result) return;
+        if (!result) {
+          // Fixture-only QA synchronization point: scene.load() resolves null
+          // AFTER a superseded, fully decoded GLB has been disposed. Waiting
+          // for the network alone does not prove that decoding has settled.
+          // Live builds have no fixture, and the event carries no model data.
+          if (fixture && new URLSearchParams(window.location.search).has('fixture')) {
+            window.dispatchEvent(new Event('cueory:qa:anatomy-obsolete-load-discarded'));
+          }
+          return;
+        }
+        if (!current || !generation.isCurrent(initialLoadToken)) return;
         if (initial) {
           // Apply the first-layer visibility before the React ready-state effect runs.
           scene.setAppearance({ hidden: initial.hidden, selected: null });
