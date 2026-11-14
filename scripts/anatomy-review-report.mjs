@@ -134,6 +134,27 @@ export function anatomyInventory(root = DEFAULT_ROOT, selectedSystem = null) {
   return entries;
 }
 
+/**
+ * Make independently addressable, source-backed review sheets for the locked preview.
+ * The structure text, source quote and URL are passed through unchanged.
+ * Front/side pictures are rendered on demand in the browser from the existing GLB,
+ * rather than asserting that a generated picture is a human-approved model.
+ * No statuses are changed and no assets are written by this function.
+ */
+export function anatomyReviewSheets(entries) {
+  return entries.map((entry) => {
+    if (!entry || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(entry.id) || !Array.isArray(entry.labels)) {
+      throw new Error('invalid anatomy review sheet data');
+    }
+    return {
+      ...entry,
+      url: `/preview/anatomy-review/${entry.id}`,
+      structureCount: entry.labels.length,
+      pictureViews: ['front', 'side'],
+    };
+  });
+}
+
 /** Markdown for manual inspection. No model or teaching content is authored by this script. */
 export function anatomyReviewMarkdown(entries) {
   const total = entries.reduce((n, entry) => n + entry.labels.length, 0);
