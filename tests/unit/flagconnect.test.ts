@@ -384,7 +384,7 @@ describe('flag reports are bound to the account that pressed Send (Task 178)', (
     fake.announce('account-A');
     releaseSecond();
 
-    expect(await sending).not.toBe('sent');
+    expect(await sending).toEqual(accountChanged);
     expect(rpc, 'no account may receive a stale draft').not.toHaveBeenCalled();
     expect(reads).toBe(2);
   });
