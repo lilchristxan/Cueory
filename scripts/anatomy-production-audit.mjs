@@ -1086,7 +1086,7 @@ function hasUsableSiteEntrypoint(html) {
   // are permitted after </html>, never arbitrary trailing markup or text.
   // Only Astro's hoisted module scripts are permitted beyond </html>.
   // Ordinary scripts and malformed tags must not pass the release gate.
-  const afterDocumentScript = /^<script\b(?=[^<>]*\btype\s*=\s*(["'])module\1(?=\s|>))[^<>]*>[\s\S]*?<\/script\s*>/i;
+  const afterDocumentScript = /^<script\b(?=[^<>]*\s+type\s*=\s*(["'])module\1(?=\s|>))[^<>]*>[\s\S]*?<\/script\s*>/i;
 
   while (cursor < html.length) {
     const next = html.indexOf('<', cursor);
@@ -1157,17 +1157,6 @@ function hasUsableSiteEntrypoint(html) {
       if (closing && state === 'body-content') state = 'html-close';
       else if (!closing && state === 'body-open') state = 'body-content';
       else return false;
-      continue;
-    }
-    // Astro can append its hoisted module script after the literal
-    // </html> tag. Browsers still execute that script as document content.
-    // Accept only this narrow, well-formed module-script case, and never
-    // use its raw JS text as evidence of a rendered page.
-    if (state === 'done' && !closing && tag === 'script' &&
-        /\s+type\s*=\s*(["'])module\1(?=\s|>)/i.test(token)) {
-      const close = /<\/script\s*>/i.exec(html.slice(cursor));
-      if (!close) return false;
-      cursor += close.index + close[0].length;
       continue;
     }
     if (!allowedInside()) return false;
