@@ -12,7 +12,7 @@ const mayShowDrafts = draftsAllowed({
   WORKERS_CI_BRANCH: process.env.WORKERS_CI_BRANCH,
   CUEORY_ANATOMY_DRAFTS: process.env.CUEORY_ANATOMY_DRAFTS,
 });
-const sheets = anatomyReviewSheets(anatomyInventory())
+const sheets = anatomyReviewSheets(anatomyInventory(process.cwd()))
   .filter((sheet) => sheet.status === 'approved' || mayShowDrafts);
 ---
 
