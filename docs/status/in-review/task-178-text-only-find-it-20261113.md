@@ -1,0 +1,1 @@
+status: Task 178 Anatomy Lab text route: added five source-name Find It prompts per system, native keyboard disclosure of each source-based text trail, and direct catalog anchors, with no-JavaScript responsive regression tests. Drafts stay draft; no WebGL or third-party scripts.
