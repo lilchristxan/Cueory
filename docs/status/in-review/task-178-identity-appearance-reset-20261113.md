@@ -1,0 +1,1 @@
+status: Task 178 (#662, #651): clear an old signed-in account's applied anatomy saved-view appearance, camera, quiz and undo history when browser identity changes. Preserve whole-body lazy first-layer visibility; no anatomical data, migration or publication change.

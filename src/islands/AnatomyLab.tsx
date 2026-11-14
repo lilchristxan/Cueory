@@ -666,6 +666,25 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
       // immediately and retire every in-flight operation before exposing the next identity.
       savedViewsRequestGuard.invalidate();
       reviewQueueRequestGuard.invalidate();
+      // Saved-view appearance belongs to the previous account too, not only
+      // the review queue and the list of saved views. Discard that person's
+      // selection, fade, visibility history and camera before B can use the lab.
+      // Preserve the initial whole-body outer-layer-only state, not show-all.
+      visibilityIntent.bump();
+      const firstLayers = system?.key === WHOLE_BODY_KEY && system.model.layerFiles
+        ? initialLayerPlan(system, layersOf(system.structures)) : null;
+      const baseline: Visibility = { hidden: firstLayers?.hidden ?? new Set<string>(), faded: new Set<string>() };
+      setHistory(createHistory(baseline));
+      setHidden(baseline.hidden);
+      setFaded(baseline.faded);
+      setSelected(null);
+      setQuiz(null);
+      setRecallRevealed(false);
+      setPending(new Set());
+      setBulkPrompt(null);
+      setExportNote('');
+      setExporting(null);
+      sceneRef.current?.resetView();
       setActiveUserId(userId);
       setReviewRows([]);
       setSavedViews([]);
