@@ -1,0 +1,1 @@
+STATUS: Task 178 (#662, package 2): Stacked founder-held production audit repair scans exact byte-vector boundaries inside validated WASM data sections to reject hidden draft IDs and compressed GLB payloads, with passive and active mode regressions. Not merged, published or deployed; full verify and independent review remain required.
