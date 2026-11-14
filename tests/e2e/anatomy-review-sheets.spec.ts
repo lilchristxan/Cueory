@@ -192,10 +192,10 @@ test('all source records remain present inside bounded native disclosures', asyn
   const groups = page.locator('[data-review-group]');
   await expect(groups).toHaveCount(Math.ceil(data.labels.length / 25));
   await expect(page.locator('[data-review-structure]')).toHaveCount(data.labels.length);
-  const summaries = groups.locator('summary');
-  for (let i = 0; i < await groups.count(); i++) {
+  const groupCount = await groups.count();
+  for (let i = 0; i < groupCount; i++) {
     const group = groups.nth(i);
-    const summary = summaries.nth(i);
+    const summary = group.locator('summary');
     await summary.focus();
     await page.keyboard.press('Enter');
     await expect(group).toHaveAttribute('open', '');
