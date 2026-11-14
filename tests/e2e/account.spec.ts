@@ -118,7 +118,7 @@ test.beforeAll(async () => {
       };
       const client = {
         auth: {
-          getSession: async () => ({ data: { session: params.has('signed-out') || !activeUser ? null : { user: { id: activeUser, email: 'student@example.test', user_metadata: { full_name: 'Sample Student' } } } }, error: null }),
+          getSession: async () => ({ data: { session: params.has('signed-out') || !activeUser ? null : { user: { id: activeUser, email: 'student@example.test', user_metadata: { full_name: 'Sample Student' } } } }, error: params.has('session-read-error') ? { message: 'unavailable' } : null }),
           signOut: async options => { calls.push('signOut:' + options.scope); return { error: null }; },
           onAuthStateChange(callback) {
             subscribers.add(callback);
@@ -203,6 +203,17 @@ test.beforeAll(async () => {
           const user = data.session && data.session.user;
           return user ? { signedIn: true, userId: user.id, email: user.email } : { signedIn: false };
         }
+        export async function sessionCheckFrom(client) {
+          if (!client) return { signedIn: false };
+          try {
+            const { data, error } = await client.auth.getSession();
+            if (error) return { error: true };
+            const user = data.session && data.session.user;
+            return user ? { signedIn: true, userId: user.id, email: user.email } : { signedIn: false };
+          } catch {
+            return { error: true };
+          }
+        }
       `, loader: 'js' }));
     } }],
   });
@@ -237,6 +248,14 @@ test.describe('/account signed out and accounts off (fake client)', () => {
     await expect(page.getByTestId('account-signed-out')).toHaveText("you're signed out. sign in");
     await expect(page.getByRole('link', { name: 'sign in', exact: true })).toHaveAttribute('href', '/signin?next=%2Faccount');
     await keyboardWalk(page);
+    await axe(page);
+  });
+
+  test('a failed session read never presents the old account as deletable', async ({ page }) => {
+    await fixture(page, '&session-read-error');
+    await expect(page.getByRole('alert')).toHaveText('your account could not load. please try again.');
+    await expect(page.getByRole('button', { name: 'delete my account', exact: true })).toHaveCount(0);
+    expect(await calls(page)).toEqual([]);
     await axe(page);
   });
 

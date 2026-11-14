@@ -395,6 +395,28 @@ describe('adaptersFor', () => {
     await expect(adaptersFor(fakeClient({ error: refusal }).client).writeName('Sample')).rejects.toMatchObject({ cause: refusal });
   });
 
+  it('refuses browser cleanup when the current session cannot be verified', async () => {
+    const client = { auth: { getSession: async () => ({
+      data: { session: null }, error: { message: 'session read failed' },
+    }) } } as unknown as AccountClient;
+    const adapters = adaptersFor(client);
+    await expect(adapters.session()).rejects.toThrow('could not verify the current account');
+    expect(await sameIdentity(adapters, 'a')).toBe(false);
+    expect(await otherAccountNow(adapters, 'a')).toBe(true);
+    const local = new MemoryStorage();
+    local.setItem(AUTH_STORAGE_KEY, 'a-token');
+    local.setItem(PROGRESS_STORAGE_KEY, 'a-progress');
+    const signOut = vi.fn(async () => {});
+    const outcome = await deleteMyAccount({
+      userId: 'a', typed: 'delete', signOut, local, session: new MemoryStorage(),
+      deleteAccount: async () => {}, otherAccountNow: () => otherAccountNow(adapters, 'a'),
+    });
+    expect(outcome).toEqual({ kind: 'deleted', next: '/', message: accountMessage('deleted-other-account') });
+    expect(signOut).not.toHaveBeenCalled();
+    expect(local.getItem(AUTH_STORAGE_KEY)).toBe('a-token');
+    expect(local.getItem(PROGRESS_STORAGE_KEY)).toBe('a-progress');
+  });
+
   it('deletes through delete_my_account(expected_user_id) and signs out this device only', async () => {
     const { client, calls } = fakeClient();
     const adapters = adaptersFor(client);

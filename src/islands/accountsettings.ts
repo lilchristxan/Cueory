@@ -13,7 +13,7 @@ import { exportCsvBlobs, exportJsonBlob, type ExportData } from './exportdata';
 import { fromSupabase, loadExport, type ExportReader, type SupabaseExportClient } from './exportload';
 import { loadStats } from './gameresults';
 import { DELETE_IDENTITY, studentMessage } from './rpcerrors';
-import { AUTH_STORAGE_KEY, sessionStateFrom, type SessionReader, type SessionState } from './supabaseclient';
+import { AUTH_STORAGE_KEY, sessionCheckFrom, type SessionReader, type SessionState } from './supabaseclient';
 import { migrateLegacyStars } from '../scripts/progress';
 import type { KeyValueStorage } from '../scripts/storage';
 
@@ -119,7 +119,12 @@ export async function sameIdentity(adapters: Pick<AccountAdapters, 'session'>, u
  */
 export function adaptersFor(client: AccountClient): AccountAdapters {
   return {
-    session: () => sessionStateFrom(client),
+    async session() {
+      // Display-only sessionStateFrom swallows read errors. Account deletion must not.
+      const current = await sessionCheckFrom(client);
+      if ('error' in current) throw new Error('could not verify the current account');
+      return current;
+    },
     async readName(userId) {
       const { data, error } = await client.from('profiles').select('display_name').eq('id', userId).maybeSingle();
       if (error != null || typeof data !== 'object' || data === null) return null;
