@@ -45,7 +45,7 @@ export interface FlagSessionWatch {
  * session again, and once the client has loaded, sign-ins and sign-outs (from any tab) are followed as they happen.
  * A check that was already running when a newer sign-in or sign-out arrived is dropped, so the newest state wins.
  */
-export function watchFlagSession(load: LoadFlagClient, report: (signedIn: boolean) => void): FlagSessionWatch {
+export function watchFlagSession(load: LoadFlagClient, report: (signedIn: boolean, userId: string | null) => void): FlagSessionWatch {
   let stopped = false;
   let running = false;
   let latest = 0;
@@ -57,7 +57,8 @@ export function watchFlagSession(load: LoadFlagClient, report: (signedIn: boolea
       subscription = client.auth.onAuthStateChange((_event, session) => {
         if (stopped) return;
         latest += 1;
-        report(typeof session?.user?.id === 'string' && session.user.id !== '');
+        const userId = typeof session?.user?.id === 'string' && session.user.id !== '' ? session.user.id : null;
+        report(userId !== null, userId);
       }).data.subscription;
     } catch {
       // Rechecking when the form opens still keeps it current.
@@ -76,10 +77,10 @@ export function watchFlagSession(load: LoadFlagClient, report: (signedIn: boolea
         } catch {
           client = null;
         }
-        const signedIn = await flagSignedIn(async () => client);
+        const state = await sessionStateFrom(client);
         running = false;
         if (stopped) return;
-        if (mine === latest) report(signedIn);
+        if (mine === latest) report(state.signedIn, state.signedIn ? state.userId : null);
         listen(client);
       })();
     },
@@ -91,8 +92,20 @@ export function watchFlagSession(load: LoadFlagClient, report: (signedIn: boolea
   };
 }
 
-/** The FlagForm send callback, using the shared client. */
-export function makeFlagSend(load: LoadFlagClient): (report: FlagReport) => Promise<SendResult> {
+/**
+ * Send using the identity that was active when the student pressed Send.
+ * Another tab can switch accounts while the Supabase module/client is loading.
+ * Verify the same user on that exact client immediately before dispatching
+ * submit_flag, rather than allowing account B to submit account A's draft.
+ * The database still authenticates and rate-limits the RPC independently.
+ *
+ * An omitted expectedUserId is retained only for legacy callers and focused
+ * transport tests. Browser flag forms always bind a session identity.
+ */
+export function makeFlagSend(
+  load: LoadFlagClient,
+  expectedUserId?: string | null,
+): (report: FlagReport) => Promise<SendResult> {
   return async (report) => {
     let client: FlagClient | null;
     try {
@@ -101,6 +114,14 @@ export function makeFlagSend(load: LoadFlagClient): (report: FlagReport) => Prom
       return 'failed';
     }
     if (!client) return { message: studentMessage('submit_flag', { message: 'sign in to send a report' }) };
+    if (expectedUserId !== undefined) {
+      // A new browser session or an unsuccessful session read cannot
+      // authorize the old form's report. This check must follow load().
+      const current = await sessionStateFrom(client);
+      if (!current.signedIn || !expectedUserId || current.userId !== expectedUserId) {
+        return { message: 'your account changed before this report was sent. please open the form again.' };
+      }
+    }
     // Called on the client itself: supabase-js's rpc needs its receiver.
     return makeSend((name, args) => client.rpc(name, args))(report);
   };
