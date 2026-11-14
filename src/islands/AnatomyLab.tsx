@@ -698,6 +698,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
       setRecallOn(false);
       setRecallRevealed(false);
       setPending(new Set());
+      setLayerError(null);
       setBulkPrompt(null);
       // A comparison pane and its camera/posture are part of the outgoing
       // account's applied view. The comparison effect disposes its scene.
