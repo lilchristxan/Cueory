@@ -66,10 +66,15 @@ test('two rapid system switches discard the older in-flight 3D model', async ({ 
     // replace the pending heart or display kidney structure names.
     pendingKidneys.splice(0).forEach((resume) => resume());
     await expect.poll(() => finishedKidneys.length, { timeout: 20_000 }).toBe(1);
+    // A completed network request can precede asynchronous GLB decoding.
+    // Keep C's request blocked during a bounded settling window so a late
+    // obsolete integration cannot temporarily publish B as the ready view.
+    await page.waitForTimeout(400);
     await expect(loadingHeart).toBeVisible();
     await expect(heartSystem).toHaveAttribute('aria-pressed', 'true');
     await expect(catalog.getByRole('button', { name: /kidney/i })).toHaveCount(0);
     await expect(catalog.getByRole('button', { name: 'heart', exact: true })).toBeDisabled();
+    await expect(page.getByRole('button', { name: 'start the quiz' })).toBeDisabled();
     await expect(page.getByRole('alert').filter({ hasText: 'could not load' })).toHaveCount(0);
 
     // Only C becomes ready. The old B must not restore its controls, quiz
@@ -81,6 +86,7 @@ test('two rapid system switches discard the older in-flight 3D model', async ({ 
       .toHaveCount(1, { timeout: 20_000 });
     await expect(catalog.getByRole('button', { name: /kidney/i })).toHaveCount(0);
     await expect(heartSystem).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.getByRole('button', { name: 'square 1080×1080' })).toBeEnabled();
     expect(kidneyRequests).toBe(1);
     expect(heartRequests).toBe(1);
   } finally {
