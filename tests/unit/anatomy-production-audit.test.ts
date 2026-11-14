@@ -129,15 +129,13 @@ function embeddedArchiveFixtures(): Array<[string, Buffer]> {
   // A real gzip member with a valid deflate stream, CRC32 and ISIZE footer.
   fixtures.push(['gzip', gzipSync(Buffer.from('glTF synthetic hidden model payload'))]);
 
-  // Minimal marker-complete BZip2 stream envelope. The release gate's BZip2
-  // sniff validates block/end markers; it does not decompress BZip2 payloads.
-  fixtures.push(['bzip2', Buffer.concat([
-    Buffer.from('BZh9', 'ascii'),
-    Buffer.from([0x31, 0x41, 0x59, 0x26, 0x53, 0x59]),
-    Buffer.from('payload'),
-    Buffer.from([0x17, 0x72, 0x45, 0x38, 0x50, 0x90]),
-    Buffer.alloc(4),
-  ])]);
+  // Real BZip2 stream from Python bz2.compress(minimal glTF 2.0 GLB).
+  // It decompresses to a 124-byte valid GLB envelope. Critically, the
+  // 48-bit BZip2 EOS marker is not byte-aligned in this real stream.
+  fixtures.push(['bzip2', Buffer.from(
+    'QlpoOTFBWSZTWQQvPkMAACbfgFAAEAdQEAERjAou550uIABoRqTQDQ9QeoNpGhoGqepvSg0DQAAyabSa0g50NyiO5C4UzH0zj6qCJYqERLm9XnWLzYlsUD5Hr7iPpQzOfurAg8Qg+1yhBF1gvUBQ2LSULZ2Ex5Gjl8RPxdyRThQkAQvPkMA=',
+    'base64',
+  )]);
 
   // Header/footer CRC and backward-size framing for an XZ stream envelope.
   const xzFlags = Buffer.from([0, 0]);
@@ -171,17 +169,13 @@ function embeddedArchiveFixtures(): Array<[string, Buffer]> {
   sevenZip.writeUInt32LE(testCrc32(sevenZip.subarray(12, 32)), 8);
   fixtures.push(['7z', sevenZip]);
 
-  // RAR4 main-header CRC and RAR5 header CRC/varint framing.
+  // RAR4 MAIN_HEAD uses the low 16 bits of CRC32 over bytes after HEAD_CRC.
+  // The minimal standards-shaped header's checksum is 0x90cf.
   const rar4 = Buffer.alloc(20);
   Buffer.from([0x52, 0x61, 0x72, 0x21, 0x1a, 0x07, 0x00]).copy(rar4, 0);
   rar4[9] = 0x73; // Main archive header.
   rar4.writeUInt16LE(13, 12);
-  let rarCrc = 0;
-  for (const byte of rar4.subarray(9)) {
-    rarCrc ^= byte;
-    for (let bit = 0; bit < 8; bit += 1) rarCrc = (rarCrc >>> 1) ^ (rarCrc & 1 ? 0xa001 : 0);
-  }
-  rar4.writeUInt16LE(rarCrc & 0xffff, 7);
+  rar4.writeUInt16LE(testCrc32(rar4.subarray(9)) & 0xffff, 7);
   fixtures.push(['rar4', rar4]);
 
   const rar5 = Buffer.alloc(15);
@@ -191,6 +185,18 @@ function embeddedArchiveFixtures(): Array<[string, Buffer]> {
   rar5[14] = 0; // No flags.
   rar5.writeUInt32LE(testCrc32(rar5.subarray(12)), 8);
   fixtures.push(['rar5', rar5]);
+
+  // RAR5 header-encrypted archives start with an unencrypted type-4 header.
+  // Header fields: type, flags, encryption version, encryption flags, KDF
+  // count and a 16-byte salt (official RAR5 technote, Archive encryption).
+  const rar5Encrypted = Buffer.alloc(34);
+  Buffer.from([0x52, 0x61, 0x72, 0x21, 0x1a, 0x07, 0x01, 0x00]).copy(rar5Encrypted, 0);
+  rar5Encrypted[12] = 21; // Header payload size after this vint.
+  rar5Encrypted[13] = 4; // Archive encryption header.
+  rar5Encrypted[17] = 15; // KDF count, all other flags/version are zero.
+  Buffer.from('00112233445566778899aabbccddeeff', 'hex').copy(rar5Encrypted, 18);
+  rar5Encrypted.writeUInt32LE(testCrc32(rar5Encrypted.subarray(12)), 8);
+  fixtures.push(['rar5-encrypted', rar5Encrypted]);
 
   // Cabinet header and one folder record, with all offsets inside the cabinet.
   const cab = Buffer.alloc(52);
@@ -582,6 +588,10 @@ describe('anatomy production artifact audit', () => {
 
   it('rejects framed embedded archive formats under benign file extensions', () => {
     const f = setup();
+    const realBzip2 = embeddedArchiveFixtures().find(([name]) => name === 'bzip2')![1];
+    // Unlike the old hand-built fixture, this actual BZip2 stream has
+    // no byte-aligned EOS marker, so the old scanner would have missed it.
+    expect(realBzip2.indexOf(Buffer.from([0x17, 0x72, 0x45, 0x38, 0x50, 0x90]))).toBe(-1);
     const cases = embeddedArchiveFixtures();
     for (const [name, archive] of cases) {
       // Prefixes prove the format recognizers do not rely on offset-zero magic.
