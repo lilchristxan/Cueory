@@ -39,6 +39,10 @@ export function awaitAbortable<T>(
       },
     );
     if (signal.aborted) onAbort();
-    else signal.addEventListener('abort', onAbort, { once: true });
+    else {
+      signal.addEventListener('abort', onAbort, { once: true });
+      // A late abort must not slip between checking and subscribing.
+      if (signal.aborted) onAbort();
+    }
   });
 }
