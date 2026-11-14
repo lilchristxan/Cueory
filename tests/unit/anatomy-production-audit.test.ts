@@ -443,8 +443,8 @@ describe('anatomy production artifact audit', () => {
     // gunzipSync strips before Pagefind JSON/CBOR inspection. These fields
     // must not be allowed even when the decoded fragment is safe.
     for (const [name, flag, metadata] of [
-      ['filename', 0x08, Buffer.from('FMA999991\\0', 'utf8')],
-      ['comment', 0x10, Buffer.from('FIX001\\0', 'utf8')],
+      ['filename', 0x08, Buffer.concat([Buffer.from('FMA999991', 'utf8'), Buffer.from([0])])],
+      ['comment', 0x10, Buffer.concat([Buffer.from('FIX001', 'utf8'), Buffer.from([0])])],
       ['extra', 0x04, Buffer.from([0x09, 0x00, 0x46, 0x4d, 0x41, 0x39, 0x39, 0x39, 0x39, 0x39, 0x31])],
     ] as const) {
       const altered = Buffer.concat([fragment.subarray(0, 10), metadata, fragment.subarray(10)]);
