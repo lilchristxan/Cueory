@@ -100,6 +100,8 @@ describe('production media signatures and renamed anatomy geometry', () => {
     for (const [name, bytes] of safe) {
       expect(unreviewedMediaPayload(f.file(name, bytes)), name).toBe(false);
     }
+    // Standalone WASM is intentionally founder-held by the release auditor,
+    // even though the format-specific signature helper recognizes it.
     expect(f.audit().errors).toEqual([]);
   });
 
