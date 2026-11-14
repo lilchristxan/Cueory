@@ -742,6 +742,120 @@ function safePagefindGzipHeader(bytes, draftIds) {
 }
 
 /** Validate Pagefind's actual generated formats; a matching filename alone is never trusted. */
+/** Validate ordinary WASM with the same section-level draft gate as Pagefind. */
+function validStandaloneWasmPayload(payload, draftIds = new Set()) {
+  if (payload.length > MAX_ARCHIVE_INSPECTION_BYTES || containsGlbHeader(payload)) return false;
+  // Executable WASM instruction bytes may resemble container signatures by
+  // coincidence. Validate the module and inspect custom sections rather than
+  // treating arbitrary opcode bytes as a complete hidden archive.
+  if (payload.length < 8 ||
+      !payload.subarray(0, 4).equals(Buffer.from([0x00, 0x61, 0x73, 0x6d])) ||
+      payload.readUInt32LE(4) !== 1 || !WebAssembly.validate(payload)) return false;
+  // Every WASM section is downloadable, not only named custom sections.
+  // A data section can contain the same reserved source identifier, so
+  // scan the validated module's complete bytes before accepting it.
+  const publicBytes = payload.toString('latin1');
+  if ([
+    publicBytes,
+    decodeAsciiEscapesForAudit(publicBytes, 'script'),
+    decodeAsciiEscapesForAudit(publicBytes, 'markup'),
+    decodeAsciiEscapesForAudit(publicBytes, 'css'),
+  ].some((value) => containsReservedAnatomyId(value, draftIds))) return false;
+  let cursor = 8;
+  const readLeb = () => {
+    let value = 0;
+    for (let i = 0; i < 5 && cursor < payload.length; i += 1) {
+      const byte = payload[cursor++];
+      value += (byte & 0x7f) * 2 ** (7 * i);
+      if (!(byte & 0x80)) return Number.isSafeInteger(value) ? value : null;
+    }
+    return null;
+  };
+  while (cursor < payload.length) {
+    const type = payload[cursor++];
+    const size = readLeb();
+    if (size === null || size > payload.length - cursor) return false;
+    const end = cursor + size;
+    // Each section has its own length-delimited public payload. Scanning
+    // only the complete serialized module can swallow a source-ID boundary:
+    // e.g. an LEB length of 65 is ASCII 'A' immediately before FMA24497.
+    // Inspect each section independently and reject embedded GLB/archive
+    // containers in data segments, not just custom sections.
+    const sectionBytes = payload.subarray(cursor, end);
+    const sectionText = sectionBytes.toString('latin1');
+    if ([
+      sectionText,
+      decodeAsciiEscapesForAudit(sectionText, 'script'),
+      decodeAsciiEscapesForAudit(sectionText, 'markup'),
+      decodeAsciiEscapesForAudit(sectionText, 'css'),
+    ].some((value) => containsReservedAnatomyId(value, draftIds))) return false;
+    if (type === 11) {
+      // Passive/active WASM data entries are length-framed within their
+      // section. Scan those payloads independently: the preceding LEB length
+      // can be an ASCII word byte and mask a leading draft ID (e.g. 0x41 +
+      // FMA999991). A serialized-section scan is insufficient.
+      let dataCursor = cursor;
+      const readDataLeb = () => {
+        let value = 0;
+        for (let i = 0; i < 5 && dataCursor < end; i += 1) {
+          const byte = payload[dataCursor++];
+          value += (byte & 0x7f) * 2 ** (7 * i);
+          if (!(byte & 0x80)) return Number.isSafeInteger(value) ? value : null;
+        }
+        return null;
+      };
+      const segments = readDataLeb();
+      if (segments === null || segments > 100000) return false;
+      for (let segment = 0; segment < segments; segment += 1) {
+        const flags = readDataLeb();
+        if (flags === null || flags > 2) return false;
+        // Active segments contain an init expression ending in end opcode.
+        // Only integer-constant offsets are accepted by this conservative
+        // audit; any unsupported expression fails closed.
+        if (flags !== 1) {
+          if (flags === 2 && readDataLeb() === null) return false; // memory index
+          if (dataCursor >= end || ![0x41, 0x42].includes(payload[dataCursor++])) return false;
+          if (readDataLeb() === null || payload[dataCursor++] !== 0x0b) return false;
+        }
+        const length = readDataLeb();
+        if (length === null || length > end - dataCursor) return false;
+        const segmentBytes = payload.subarray(dataCursor, dataCursor + length);
+        dataCursor += length;
+        const segmentText = segmentBytes.toString('latin1');
+        if ([
+          segmentText,
+          decodeAsciiEscapesForAudit(segmentText, 'script'),
+          decodeAsciiEscapesForAudit(segmentText, 'markup'),
+          decodeAsciiEscapesForAudit(segmentText, 'css'),
+        ].some((value) => containsReservedAnatomyId(value, draftIds))) return false;
+        if (containsGlbHeader(segmentBytes) || containsValidatedArchive(segmentBytes)) return false;
+      }
+      if (dataCursor !== end) return false;
+    }
+    if ((type === 0 || type === 11) &&
+        (containsGlbHeader(sectionBytes) || containsValidatedArchive(sectionBytes))) return false;
+    if (type === 0) {
+      const nameSize = readLeb();
+      if (nameSize === null || nameSize > end - cursor) return false;
+      cursor += nameSize;
+      const opaque = payload.subarray(cursor, end);
+      if (containsGlbHeader(opaque) || containsValidatedArchive(opaque)) return false;
+      // WASM custom sections are public byte arrays. Their metadata can carry
+      // source identifiers even when the rest of the module is executable code.
+      // Reject escaped and unescaped draft/fixture IDs just as in text assets.
+      const customText = opaque.toString('latin1');
+      if ([
+        customText,
+        decodeAsciiEscapesForAudit(customText, 'script'),
+        decodeAsciiEscapesForAudit(customText, 'markup'),
+        decodeAsciiEscapesForAudit(customText, 'css'),
+      ].some((value) => containsReservedAnatomyId(value, draftIds))) return false;
+    }
+    cursor = end;
+  }
+  return true;
+}
+
 function validPagefindArtifact(path, kind, draftIds = new Set()) {
   let bytes;
   try {
@@ -769,117 +883,7 @@ function validPagefindArtifact(path, kind, draftIds = new Set()) {
   // Do not reinterpret opaque CBOR byte strings or WASM code/data as UTF-8
   // prose: reserved anatomy IDs are checked only in JSON and CBOR text strings.
   if (payload.length > MAX_ARCHIVE_INSPECTION_BYTES || containsGlbHeader(payload)) return false;
-  if (kind === 'wasm') {
-    // Executable WASM instruction bytes may resemble container signatures by
-    // coincidence. Validate the module and inspect custom sections rather than
-    // treating arbitrary opcode bytes as a complete hidden archive.
-    if (payload.length < 8 ||
-        !payload.subarray(0, 4).equals(Buffer.from([0x00, 0x61, 0x73, 0x6d])) ||
-        payload.readUInt32LE(4) !== 1 || !WebAssembly.validate(payload)) return false;
-    // Every WASM section is downloadable, not only named custom sections.
-    // A data section can contain the same reserved source identifier, so
-    // scan the validated module's complete bytes before accepting it.
-    const publicBytes = payload.toString('latin1');
-    if ([
-      publicBytes,
-      decodeAsciiEscapesForAudit(publicBytes, 'script'),
-      decodeAsciiEscapesForAudit(publicBytes, 'markup'),
-      decodeAsciiEscapesForAudit(publicBytes, 'css'),
-    ].some((value) => containsReservedAnatomyId(value, draftIds))) return false;
-    let cursor = 8;
-    const readLeb = () => {
-      let value = 0;
-      for (let i = 0; i < 5 && cursor < payload.length; i += 1) {
-        const byte = payload[cursor++];
-        value += (byte & 0x7f) * 2 ** (7 * i);
-        if (!(byte & 0x80)) return Number.isSafeInteger(value) ? value : null;
-      }
-      return null;
-    };
-    while (cursor < payload.length) {
-      const type = payload[cursor++];
-      const size = readLeb();
-      if (size === null || size > payload.length - cursor) return false;
-      const end = cursor + size;
-      // Each section has its own length-delimited public payload. Scanning
-      // only the complete serialized module can swallow a source-ID boundary:
-      // e.g. an LEB length of 65 is ASCII 'A' immediately before FMA24497.
-      // Inspect each section independently and reject embedded GLB/archive
-      // containers in data segments, not just custom sections.
-      const sectionBytes = payload.subarray(cursor, end);
-      const sectionText = sectionBytes.toString('latin1');
-      if ([
-        sectionText,
-        decodeAsciiEscapesForAudit(sectionText, 'script'),
-        decodeAsciiEscapesForAudit(sectionText, 'markup'),
-        decodeAsciiEscapesForAudit(sectionText, 'css'),
-      ].some((value) => containsReservedAnatomyId(value, draftIds))) return false;
-      if (type === 11) {
-        // Passive/active WASM data entries are length-framed within their
-        // section. Scan those payloads independently: the preceding LEB length
-        // can be an ASCII word byte and mask a leading draft ID (e.g. 0x41 +
-        // FMA999991). A serialized-section scan is insufficient.
-        let dataCursor = cursor;
-        const readDataLeb = () => {
-          let value = 0;
-          for (let i = 0; i < 5 && dataCursor < end; i += 1) {
-            const byte = payload[dataCursor++];
-            value += (byte & 0x7f) * 2 ** (7 * i);
-            if (!(byte & 0x80)) return Number.isSafeInteger(value) ? value : null;
-          }
-          return null;
-        };
-        const segments = readDataLeb();
-        if (segments === null || segments > 100000) return false;
-        for (let segment = 0; segment < segments; segment += 1) {
-          const flags = readDataLeb();
-          if (flags === null || flags > 2) return false;
-          // Active segments contain an init expression ending in end opcode.
-          // Only integer-constant offsets are accepted by this conservative
-          // audit; any unsupported expression fails closed.
-          if (flags !== 1) {
-            if (flags === 2 && readDataLeb() === null) return false; // memory index
-            if (dataCursor >= end || ![0x41, 0x42].includes(payload[dataCursor++])) return false;
-            if (readDataLeb() === null || payload[dataCursor++] !== 0x0b) return false;
-          }
-          const length = readDataLeb();
-          if (length === null || length > end - dataCursor) return false;
-          const segmentBytes = payload.subarray(dataCursor, dataCursor + length);
-          dataCursor += length;
-          const segmentText = segmentBytes.toString('latin1');
-          if ([
-            segmentText,
-            decodeAsciiEscapesForAudit(segmentText, 'script'),
-            decodeAsciiEscapesForAudit(segmentText, 'markup'),
-            decodeAsciiEscapesForAudit(segmentText, 'css'),
-          ].some((value) => containsReservedAnatomyId(value, draftIds))) return false;
-          if (containsGlbHeader(segmentBytes) || containsValidatedArchive(segmentBytes)) return false;
-        }
-        if (dataCursor !== end) return false;
-      }
-      if ((type === 0 || type === 11) &&
-          (containsGlbHeader(sectionBytes) || containsValidatedArchive(sectionBytes))) return false;
-      if (type === 0) {
-        const nameSize = readLeb();
-        if (nameSize === null || nameSize > end - cursor) return false;
-        cursor += nameSize;
-        const opaque = payload.subarray(cursor, end);
-        if (containsGlbHeader(opaque) || containsValidatedArchive(opaque)) return false;
-        // WASM custom sections are public byte arrays. Their metadata can carry
-        // source identifiers even when the rest of the module is executable code.
-        // Reject escaped and unescaped draft/fixture IDs just as in text assets.
-        const customText = opaque.toString('latin1');
-        if ([
-          customText,
-          decodeAsciiEscapesForAudit(customText, 'script'),
-          decodeAsciiEscapesForAudit(customText, 'markup'),
-          decodeAsciiEscapesForAudit(customText, 'css'),
-        ].some((value) => containsReservedAnatomyId(value, draftIds))) return false;
-      }
-      cursor = end;
-    }
-    return true;
-  }
+  if (kind === 'wasm') return validStandaloneWasmPayload(payload, draftIds);
   if (containsValidatedArchive(payload)) return false;
   if (path.endsWith('.pf_fragment')) {
     try {
@@ -1591,6 +1595,16 @@ export function auditAnatomyProduction(distDir, contentDir) {
     if (!pagefindKind && !REVIEWED_OUTPUT_TYPE.test(path) && !MODEL_ASSET.test(path) &&
         !REVIEWED_EXTENSIONLESS_OUTPUT.has(url)) {
       errors.push(`unreviewed output asset type requires explicit review: ${url}`);
+    }
+    if (!pagefindKind && /\\.wasm$/i.test(path)) {
+      try {
+        const wasm = readRegularBytesNoFollow(path, MAX_ARCHIVE_INSPECTION_BYTES);
+        if (!validStandaloneWasmPayload(wasm, draftIds)) {
+          errors.push(`unreviewed WASM payload or draft identifiers in production output: ${url}`);
+        }
+      } catch {
+        errors.push(`cannot safely inspect WASM output asset: ${url}`);
+      }
     }
     try {
       if (!MODEL_ASSET.test(path) && hasTextGltfModel(path)) {
