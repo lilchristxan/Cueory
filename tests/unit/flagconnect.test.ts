@@ -21,6 +21,7 @@ function fakeClient(options: {
         data: { session: options.session === undefined ? { user: { id: 'user-1', email: 'student@example.test' } } : options.session },
         error: options.sessionError ?? null,
       })),
+      onAuthStateChange: vi.fn(() => ({ data: { subscription: { unsubscribe: vi.fn() } } })),
     },
     rpc(name, args) {
       calls.push({ name, args, receiver: this });
