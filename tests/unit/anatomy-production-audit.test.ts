@@ -547,7 +547,7 @@ describe('anatomy production artifact audit', () => {
     // LEB length looks like the ASCII letter A, so scanning the serialized
     // module as one string can hide the otherwise exact token boundary.
     const lengthBoundaryData = Buffer.concat([
-      Buffer.from('FMA999991 ', 'ascii'), Buffer.alloc(55, 0x2e),
+      Buffer.from('FMA999991', 'ascii'), Buffer.alloc(56, 0x2e),
     ]);
     if (lengthBoundaryData.length !== 65) throw new Error('invalid synthetic WASM fixture size');
     const lengthBoundarySection = Buffer.concat([
