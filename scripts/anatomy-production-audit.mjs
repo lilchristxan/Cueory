@@ -1086,7 +1086,7 @@ function hasUsableSiteEntrypoint(html) {
   // are permitted after </html>, never arbitrary trailing markup or text.
   // Only Astro's hoisted module scripts are permitted beyond </html>.
   // Ordinary scripts and malformed tags must not pass the release gate.
-  const afterDocumentScript = /^<script\b(?=[^<>]*\s+type\s*=\s*(["'])module\1(?=\s|>))[^<>]*>[\s\S]*?<\/script\s*>/i;
+  const afterDocumentScript = /^<script\s+type\s*=\s*(["'])module\1(?:\s[^<>]*)?>[\s\S]*?<\/script\s*>/i;
 
   while (cursor < html.length) {
     const next = html.indexOf('<', cursor);
