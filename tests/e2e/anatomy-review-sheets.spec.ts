@@ -187,7 +187,7 @@ test.describe('no JavaScript review', () => {
     await expect(first).toContainText('FMA15900 BP9803 urinary bladder');
     await first.getByRole('checkbox').check();
     await expect(first.getByRole('checkbox')).toBeChecked();
-    await expect(page.getByText('front and side pictures need JavaScript')).toBeVisible();
+    await expect(page.locator('noscript').getByText('front and side pictures need JavaScript', { exact: false })).toBeVisible();
     expect(glbs).toEqual([]);
   });
 });
