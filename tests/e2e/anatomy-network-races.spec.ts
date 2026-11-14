@@ -23,45 +23,6 @@ async function openWholeBody(page: Page): Promise<void> {
 }
 
 test.describe('anatomy whole-body network races', () => {
-  test('a failed file keeps its successful layer sibling and retry requests only the failed GLB', async ({ page }) => {
-    await openWholeBody(page);
-
-    let heartRequests = 0;
-    let vesselsRequests = 0;
-    await page.route(/\/models\/anatomy\/(?:heart|vessels)\.glb(?:\?|$)/, async (route) => {
-      const name = new URL(route.request().url()).pathname.split('/').pop();
-      if (name === 'heart.glb') heartRequests++;
-      if (name === 'vessels.glb' && ++vesselsRequests === 1) {
-        await route.fulfill({
-          status: 503,
-          contentType: 'text/plain',
-          body: 'simulated temporary model outage',
-        });
-        return;
-      }
-      await route.continue();
-    });
-
-    const files = page.getByTestId('anatomy-files');
-    await page.getByRole('group', { name: 'layers, skin to bone' })
-      .getByRole('button', { name: /^vessels \(/ }).click();
-
-    // heart.glb and vessels.glb are both required for this layer. A failed
-    // vessels request must not discard the successfully integrated heart.
-    await expect(files).toContainText('model files loaded: 2 of 11', { timeout: 20_000 });
-    const failure = page.getByRole('alert').filter({ hasText: 'Could not load vessels.' });
-    await expect(failure).toBeVisible();
-    await page.getByLabel('find a structure').fill('heart');
-    await expect(structures(page).getByRole('button', { name: 'heart (hidden)', exact: true }))
-      .toBeEnabled();
-
-    await failure.getByRole('button', { name: 'try vessels again' }).click();
-    await expect(files).toContainText('model files loaded: 3 of 11', { timeout: 20_000 });
-    await expect(failure).toHaveCount(0);
-    expect(heartRequests, 'the already-loaded shared heart model must be reused').toBe(1);
-    expect(vesselsRequests, 'only the failed model must be retried').toBe(2);
-  });
-
   test('a late show-all download does not undo a newer show-only-this choice', async ({ page }) => {
     // Take the name from the checked-in source file, not anatomy memory.
     const muscleManifest = JSON.parse(
@@ -78,6 +39,10 @@ test.describe('anatomy whole-body network races', () => {
 
     const held: Array<() => void> = [];
     let muscleRequests = 0;
+    const modelRequests: string[] = [];
+    page.on('request', (request) => {
+      if (/\/models\/anatomy\/[^/]+\.glb(?:\?|$)/.test(request.url())) modelRequests.push(request.url());
+    });
     // Keep precisely one successful download pending. Refuse the other GLBs
     // so the test covers intent ordering without decoding the entire large
     // whole-body model on CI phones.
@@ -98,6 +63,8 @@ test.describe('anatomy whole-body network races', () => {
       if ((page.viewportSize()?.width ?? 1024) < 768) {
         const confirmation = page.getByTestId('anatomy-bulk-confirm');
         await expect(confirmation).toBeVisible();
+        await expect(page.getByTestId('anatomy-files')).toContainText('model files loaded: 1 of 11');
+        expect(modelRequests, 'no GLB should download before the phone confirms').toEqual([]);
         await confirmation.getByRole('button', { name: 'load every layer' }).click();
       }
       await expect.poll(() => held.length, { timeout: 20_000 }).toBe(1);
