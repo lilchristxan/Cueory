@@ -43,6 +43,38 @@ test('the preview gives each source system an independent, unindexed phone revie
   await expect(page.getByText('draft · labels waiting for review')).toBeVisible();
 });
 
+test('review sheets fit phone, tablet and desktop in Light and Evening', async ({ page }, info) => {
+  test.skip(!isDesktopOfEachEngine(info), 'one responsive sweep per browser engine');
+  test.setTimeout(90_000);
+  for (const colorScheme of ['light', 'dark'] as const) {
+    await page.emulateMedia({ colorScheme });
+    await page.goto(PATH);
+    for (const width of [320, 390, 820, 1440]) {
+      await page.setViewportSize({ width, height: width < 600 ? 844 : width < 1200 ? 1180 : 900 });
+      await expect(page.getByRole('heading', { level: 1 })).toContainText('kidneys and urinary tract');
+      const first = page.locator('[data-review-structure]').first().getByRole('checkbox');
+      await expect(first).toBeVisible();
+      const layout = await page.evaluate(() => {
+        const checkbox = document.querySelector('[data-review-structure] input[type="checkbox"]');
+        if (!checkbox) throw new Error('review checkbox missing');
+        const bounds = checkbox.getBoundingClientRect();
+        return {
+          pageWidth: document.documentElement.scrollWidth,
+          viewportWidth: document.documentElement.clientWidth,
+          left: bounds.left,
+          right: bounds.right,
+          height: bounds.height,
+        };
+      });
+      expect(layout.pageWidth, `${colorScheme} ${width}px: horizontal overflow`)
+        .toBeLessThanOrEqual(layout.viewportWidth + 1);
+      expect(layout.left).toBeGreaterThanOrEqual(0);
+      expect(layout.right).toBeLessThanOrEqual(width);
+      expect(layout.height).toBeGreaterThanOrEqual(44);
+    }
+  }
+});
+
 test('a credited front and side picture is generated on request, from one GLB', async ({ page }, info) => {
   test.skip(!isDesktopOfEachEngine(info), 'one actual export per browser engine');
   test.setTimeout(90_000);
