@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import FlagForm from './FlagForm';
 import { currentFlagItem, onFlagItem, type FlagItem } from './flagitem';
-import { makeFlagSend, watchFlagSession, type FlagClient, type FlagSessionWatch, type LoadFlagClient } from './flagconnect';
+import { makeFlagSend, sendReportWithReceipt, watchFlagSession, type FlagClient, type FlagSessionWatch, type LoadFlagClient } from './flagconnect';
+import type { FlagReport } from './flag';
+import type { SendResult } from './flagsend';
 import { getSupabase } from './supabaseclient';
 
 interface Props {
@@ -11,6 +13,8 @@ interface Props {
   variant?: 'text' | 'icon';
   /** Optional public study context, stored in the report comment rather than UUID-only item fields. */
   context?: string;
+  /** The parent keeps the completion receipt visible when this structure is deselected. */
+  onReportStart?: (context: string) => (result: SendResult) => void;
 }
 
 /** Contextual anatomy reports must never inherit a question selected elsewhere on the page. */
@@ -32,13 +36,17 @@ const loadShared: LoadFlagClient = () => getSupabase() as unknown as Promise<Fla
  * browser is idle (like the account corner) and again every time the student opens the form. Once the client has
  * loaded, a sign-in or sign-out in this tab or another one updates the form too, so it is never stuck on the first answer.
  */
-export default function FlagMount({ page, itemId, itemVersionId, variant, context }: Props) {
+export default function FlagMount({ page, itemId, itemVersionId, variant, context, onReportStart }: Props) {
   const [signedIn, setSignedIn] = useState<boolean | null>(null);
   // Pages whose items load in the browser (the real questions) publish the current one; it wins over the fixed props.
   const [published, setPublished] = useState<FlagItem | undefined>(currentFlagItem);
   useEffect(() => { setPublished(currentFlagItem()); return onFlagItem(setPublished); }, []);
   const watch = useRef<FlagSessionWatch | null>(null);
   const send = useMemo(() => makeFlagSend(loadShared), []);
+  const sendWithReceipt = useCallback(
+    (report: FlagReport) => sendReportWithReceipt(send, report, context, onReportStart),
+    [send, context, onReportStart],
+  );
   const check = useCallback(() => watch.current?.check(), []);
 
   useEffect(() => {
@@ -66,7 +74,7 @@ export default function FlagMount({ page, itemId, itemVersionId, variant, contex
       itemId={scopedItem.itemId}
       itemVersionId={scopedItem.itemVersionId}
       signedIn={signedIn}
-      send={send}
+      send={sendWithReceipt}
       onOpen={check}
       variant={variant}
       context={context}
