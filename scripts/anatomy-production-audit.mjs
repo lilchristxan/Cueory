@@ -4,7 +4,7 @@
  *
  * Usage: node scripts/anatomy-production-audit.mjs [dist-directory] [content/visuals-directory]
  */
-import { closeSync, constants as fsConstants, existsSync, fstatSync, lstatSync, openSync, readFileSync, readSync, readdirSync, statSync } from 'node:fs';
+import { closeSync, constants as fsConstants, existsSync, fstatSync, lstatSync, openSync, readFileSync, readSync, readdirSync, realpathSync, statSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { gunzipSync, inflateRawSync } from 'node:zlib';
@@ -1428,4 +1428,11 @@ function runCli() {
   }
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) runCli();
+// Resolve the invoked script path before comparing it with Node's canonical
+// module URL. Symlinked launch paths and macOS /var -> /private/var aliases
+// must not silently skip the production audit.
+if (process.argv[1]) {
+  let invokedScript;
+  try { invokedScript = realpathSync(process.argv[1]); } catch { /* An invalid entrypoint is not this module. */ }
+  if (invokedScript && import.meta.url === pathToFileURL(invokedScript).href) runCli();
+}
