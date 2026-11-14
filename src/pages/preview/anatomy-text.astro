@@ -28,16 +28,15 @@ const lab = labDataForBuild(files, fixtureJson, {
 const systems = lab.systems.map((system) => ({ ...system, groups: groupStructures(system.structures) }));
 // Every challenge points to a real source label. No answer keys or new anatomy names are authored here.
 // The student can use the native <details> reveal without scripts, WebGL or drag gestures.
-const studyQuestions = systems.map((system) => ({
-  key: system.key,
-  title: system.title,
-  prompts: system.structures.slice(0, 5).map((structure) => ({
+const studyQuestions = new Map(systems.map((system) => [
+  system.key,
+  system.structures.slice(0, 5).map((structure) => ({
     id: structure.id,
     name: structure.text,
     group: structure.group ?? null,
     layer: structure.layer ?? null,
   })),
-}));
+]));
 ---
 
 <Layout title="preview: anatomy lab text" description="Text-only anatomy structure names." variant="study" noindex>
@@ -78,7 +77,7 @@ const studyQuestions = systems.map((system) => ({
                 <h3 id={`practice-${system.key}`} class="text-lg text-ink">find it in words</h3>
                 <p class="text-sm text-ink-soft">think of the source name for each ID, then open its answer. These are practice prompts, not a score.</p>
                 <ol class="list-decimal space-y-3 pl-5">
-                  {studyQuestions.find((study) => study.key === system.key)?.prompts.map((prompt) => (
+                  {(studyQuestions.get(system.key) ?? []).map((prompt) => (
                     <li class="break-words">
                       <details class="rounded-lg border border-line p-3">
                         <summary class="cursor-pointer text-ink">which structure has ID {prompt.id}? show answer</summary>
