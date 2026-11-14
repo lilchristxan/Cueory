@@ -141,9 +141,12 @@ async function oneRound(name, index) {
     beforeTap = false;
     const startOpen = performance.now();
     await page.getByRole('button', { name: 'open the anatomy lab' }).click();
+    // An enabled orbit button is not enough: the GLB must have reached the
+    // ready state before first-model timing and heap measurement are recorded.
+    await page.getByRole('button', { name: 'turn right' }).waitFor({ state: 'visible', timeout });
     await page.waitForFunction(() => {
       const button = document.querySelector('button[aria-label="turn right"]');
-      return button && !button.disabled;
+      return button instanceof HTMLButtonElement && !button.disabled;
     }, undefined, { timeout });
     const firstSystemMs = performance.now() - startOpen;
     const firstSystemHeapBytes = await heapBytes(session);
