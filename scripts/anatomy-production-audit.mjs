@@ -1084,7 +1084,9 @@ function hasUsableSiteEntrypoint(html) {
   // Astro/Vite may append hoisted module scripts after the closed document.
   // Keep these strict: only actual script elements with a matching closing tag
   // are permitted after </html>, never arbitrary trailing markup or text.
-  const afterDocumentScript = /^<script\b(?:\s[^<>]*)?>[\s\S]*?<\/script\s*>/i;
+  // Only Astro's hoisted module scripts are permitted beyond </html>.
+  // Ordinary scripts and malformed tags must not pass the release gate.
+  const afterDocumentScript = /^<script\b(?=[^<>]*\btype\s*=\s*(["'])module\1(?:\s|>))(?:(?!>).)*>[\s\S]*?<\/script\s*>/i;
 
   while (cursor < html.length) {
     const next = html.indexOf('<', cursor);
