@@ -37,7 +37,19 @@ describe('Anatomy Lab manual phone benchmark safety', () => {
   it('will not benchmark the production site address by mistake', () => {
     const result = invalidRun({ ANATOMY_BENCH_URL: 'https://cueory.app/' });
     expect(result.status).toBe(1);
-    expect(result.stderr).toContain('Only the unpublished /preview/anatomy-lab route may be benchmarked.');
+    expect(result.stderr).toContain('Only the unpublished /preview/anatomy-lab route on loopback may be benchmarked.');
+  });
+
+  it('rejects remote preview lookalikes and query-bearing URLs', () => {
+    for (const address of [
+      'https://example.com/preview/anatomy-lab',
+      'http://127.0.0.1:4322/preview/anatomy-lab?publish=1',
+      'http://user:secret@localhost:4322/preview/anatomy-lab',
+    ]) {
+      const result = invalidRun({ ANATOMY_BENCH_URL: address });
+      expect(result.status, address).toBe(1);
+      expect(result.stderr, address).toContain('on loopback may be benchmarked.');
+    }
   });
 
   it('rejects non-web URLs', () => {
