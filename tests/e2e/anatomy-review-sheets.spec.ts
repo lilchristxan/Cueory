@@ -77,7 +77,7 @@ test('review pictures wait for a nonzero canvas layout before requesting the mod
   test.setTimeout(90_000);
   const requests: string[] = [];
   page.on('request', (request) => {
-    if (/\\.glb(?:[?#]|$)/.test(request.url())) requests.push(request.url());
+    if (/\.glb(?:[?#]|$)/.test(request.url())) requests.push(request.url());
   });
   await page.goto(PATH);
   const canvas = page.locator('canvas');
