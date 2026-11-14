@@ -151,7 +151,10 @@ async function oneRound(name, index) {
     const showAllStart = performance.now();
     await page.getByRole('button', { name: 'show all', exact: true }).click();
     const confirm = page.getByRole('button', { name: 'load every layer', exact: true });
-    if (await confirm.isVisible()) await confirm.click();
+    // On a phone, the bulk download requires explicit consent. Wait for React
+    // to present that consent rather than racing its next render.
+    await confirm.waitFor({ state: 'visible', timeout: 15_000 });
+    await confirm.click();
     await waitForWholeBodyFiles(page, 11);
     const showAllMs = performance.now() - showAllStart;
     const allLayersHeapBytes = await heapBytes(session);
