@@ -46,6 +46,12 @@ test('show all cannot undo a newer show-only selection when a deeper model arriv
     // The student's newer decision must supersede every pending layer reveal.
     await nameCard.getByRole('button', { name: 'show only this' }).press('Enter');
     await expect(skin).toHaveAttribute('aria-pressed', 'true');
+    // This exact BodyParts3D source label belongs to muscle.glb, the held
+    // request. It cannot become visible or even selectable until that GLB
+    // finishes. Checking heart alone would not prove the delayed-file race.
+    await search.fill('diaphragm');
+    await expect(structures.getByRole('button', { name: 'diaphragm (not loaded yet)', exact: true }))
+      .toBeDisabled();
   } finally {
     // Always unblock the network, including on assertion failure.
     held.splice(0).forEach((release) => release());
@@ -55,6 +61,10 @@ test('show all cannot undo a newer show-only selection when a deeper model arriv
   // without making any hidden non-skin structure visible again.
   await expect(files).toContainText('model files loaded: 11 of 11', { timeout: 80_000 });
   await expect(page.getByTestId('anatomy-layer-loading')).toHaveCount(0);
+  // The delayed muscle file has now been integrated, but its source-backed
+  // structure must remain hidden under the newer show-only choice.
+  await expect(structures.getByRole('button', { name: 'diaphragm (hidden)', exact: true }))
+    .toBeEnabled({ timeout: 20_000 });
   await search.fill('heart');
   await expect(structures.getByRole('button', { name: 'heart (hidden)', exact: true }))
     .toBeEnabled({ timeout: 20_000 });
