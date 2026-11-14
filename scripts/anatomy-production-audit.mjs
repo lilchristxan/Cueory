@@ -1825,6 +1825,11 @@ export function auditAnatomyProduction(distDir, contentDir) {
     if (exposedFixture) {
       errors.push('test fixture ID exposed in built text: ' + file.slice(dist.length + 1) + ' (' + exposedFixture + ')');
     }
+    // Whole, valid draft models can be concealed as base64 in public JS or
+    // HTML without a literal glTF header or visible BodyParts3D identifier.
+    if (hasUnsafeEncodedAnatomyPayload(contents, draftTokens)) {
+      errors.push('encoded geometry, archive or reserved anatomy ID in built text requires review: ' + file.slice(dist.length + 1));
+    }
   }
 
   return { errors, approvedSystems, draftSystems, shippedModels: shipped.length };
