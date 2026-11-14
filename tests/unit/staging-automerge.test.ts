@@ -142,6 +142,8 @@ describe('held paths', () => {
     'scripts/anatomy-production-audit.mjs',
     'scripts/check-anatomy-build.mjs',
     'scripts/anatomy-postbuild-audit.mjs',
+    'scripts/anatomy-production-deploy.mjs',
+    'scripts/check-anatomy-wrangler.mjs',
     'src/islands/anatomylab.ts',
     'src/islands/AnatomyLab.tsx',
     'src/islands/anatomyscene.ts',
@@ -225,6 +227,20 @@ describe('held paths', () => {
         filename: 'src/islands/cards.ts',
         previous_filename: 'src/components/AnatomyPublicText.astro',
       }], mode)).toEqual(['src/components/AnatomyPublicText.astro']);
+    }
+  });
+
+  it('requires founder review for anatomy upload wrappers, including clean checks and renamed-away files', () => {
+    const paths = ['scripts/anatomy-production-deploy.mjs', 'scripts/check-anatomy-wrangler.mjs'];
+    for (const mode of ['prelaunch', 'launched'] as const) {
+      for (const path of paths) {
+        expect(isHeldPath(path, mode)).toBe(true);
+        const decision = decide(input({ mode, files: [{ filename: path }] }));
+        expect(decision.action, `${mode}: ${path}`).toBe('label');
+        expect(decision.reasons.join(' ')).toContain(path);
+        expect(heldPaths([{ filename: 'docs/replaced-script.md', previous_filename: path }], mode))
+          .toEqual([path]);
+      }
     }
   });
 
