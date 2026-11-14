@@ -595,7 +595,7 @@ function containsGlbHeader(bytes) {
  * and a byte-exact round trip. This is a release gate, not a general decoder.
  */
 function containsLiteralBase64Model(text) {
-  const literal = /(?:atob\s*\(\s*(['"])([A-Za-z0-9+/]+={0,2})\1\s*\)|data:model\/(?:gltf-binary|gltf\+json)(?:;[a-z0-9!#data:model\/(?:gltf-binary|gltf\+json);base64,^_.+\-]+=[a-z0-9!#data:model\/(?:gltf-binary|gltf\+json);base64,^_.+\-]+)*;base64,([A-Za-z0-9+/]+={0,2}))/gi;
+  const literal = /(?:atob\s*\(\s*(['"])([A-Za-z0-9+/]+={0,2})\1\s*\)|data:model\/(?:gltf-binary|gltf\+json)(?:;[a-z0-9._+-]+=[a-z0-9._+-]+)*;base64,([A-Za-z0-9+/]+={0,2}))/gi;
   for (const match of text.matchAll(literal)) {
     const encoded = match[2] ?? match[3];
     // Explicitly named model data URIs are never harmless opaque data,
