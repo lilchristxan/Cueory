@@ -38,6 +38,8 @@ const requiredPages = [
 // gzip sizes from the exact-head CI merge build in run 41864993683.
 // Added routes below were measured in exact-head CI run 41933505423.
 // Newly integrated routes measured with the same current scanner in exact-head CI run 41945246600.
+// Public /anatomy measured at 89,662 gzip bytes on exact-head CI run 43557775443,
+// checks job 132334423942 (2026-11-14); no other route budget changed.
 // This includes external scripts in the HTML, Astro island components and renderers,
 // their static imports, and inline scripts. Dynamic imports are intentionally excluded.
 const initialJsBudget = {
@@ -46,6 +48,7 @@ const initialJsBudget = {
   'account.html': 123795,
   'account/two-factor.html': 110576,
   'admin/flags.html': 92161,
+  'anatomy.html': 89662,
   'auth/callback.html': 148073,
   'breaks.html': 151899,
   'coming-soon.html': 90627,
