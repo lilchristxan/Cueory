@@ -480,6 +480,27 @@ describe('anatomy production artifact audit', () => {
     expect(errors).toContain('unapproved model exposed in production: /downloads/obvious.gltf');
   });
 
+  it('permits harmless short Base64 text but rejects a declared text glTF data URI', () => {
+    const f = setup();
+    f.file('_astro/harmless-base64.js', "const title = atob('SGVsbG8gV29ybGQ=');");
+    expect(f.check().errors).toEqual([]);
+    const json = JSON.stringify({
+      asset: { version: '2.0' },
+      scene: 0, scenes: [{ nodes: [0] }],
+      nodes: [{ mesh: 0 }],
+      meshes: [{ primitives: [{ attributes: { POSITION: 0 } }] }],
+      accessors: [{ bufferView: 0, componentType: 5126, count: 3, type: 'VEC3' }],
+      bufferViews: [{ buffer: 0, byteLength: 36 }],
+      buffers: [{ byteLength: 36, uri: 'data:application/octet-stream;base64,' +
+        Buffer.alloc(36).toString('base64') }],
+    });
+    f.file('assets/text-model.html',
+      `<a href="data:model/gltf+json;base64,${Buffer.from(json).toString('base64')}">synthetic</a>`);
+    expect(f.check().errors).toContain(
+      'embedded Base64 anatomy model in built text: assets/text-model.html',
+    );
+  });
+
   it('rejects literal Base64 model framing in HTML data URIs and JavaScript atob calls', () => {
     const f = setup();
     const source = Buffer.alloc(28);
