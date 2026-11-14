@@ -36,8 +36,12 @@ async function waitForIslands(page: Page, route: string): Promise<void> {
 }
 
 test.describe('Task 210: visible keyboard focus', () => {
-  for (const route of routes) {
-    test(`${route} gives each Tab stop a visible focus indicator`, async ({ page }) => {
+  const cases = routes.flatMap((route) => {
+    const states = route === '/preview/anatomy-text' ? ['closed', 'outer-open', 'all-open'] : ['closed'];
+    return states.map((disclosureState) => ({ route, disclosureState }));
+  });
+  for (const { route, disclosureState } of cases) {
+    test(`${route} gives each Tab stop a visible focus indicator (${disclosureState})`, async ({ page }) => {
       await page.addInitScript(() => {
         try { localStorage.setItem('cueory-promo-seen', String(Date.now())); } catch { /* storage unavailable */ }
       });
@@ -46,12 +50,36 @@ test.describe('Task 210: visible keyboard focus', () => {
       expect(response?.status()).toBe(route === '/visible-focus-page-does-not-exist' ? 404 : 200);
       await waitForIslands(page, route);
 
+      if (disclosureState !== 'closed') {
+        for (const summary of await page.locator('[data-anatomy-text-practice] > summary').all()) {
+          await summary.focus();
+          await page.keyboard.press('Enter');
+        }
+        if (disclosureState === 'all-open') {
+          for (const summary of await page.locator('[data-anatomy-text-practice] ol details > summary').all()) {
+            await summary.focus();
+            await page.keyboard.press('Enter');
+          }
+        }
+        await page.locator('a[href="#main"]').focus();
+        await page.keyboard.press('Shift+Tab');
+      }
+
       const controls = await page.evaluate((query) => {
         const elements = [...document.querySelectorAll<HTMLElement>(query)];
+        const isHiddenByDisclosure = (el: HTMLElement) => {
+          // Layout rectangles and CSS visibility can include closed details content.
+          // Each closed ancestor exposes only its first summary and that summary's descendants.
+          for (let details = el.parentElement?.closest('details'); details; details = details.parentElement?.closest('details')) {
+            if (!details.open && !details.querySelector(':scope > summary')?.contains(el)) return true;
+          }
+          return false;
+        };
         const isReachable = (el: HTMLElement) =>
           el.tabIndex >= 0 &&
           !el.matches(':disabled') &&
           !el.closest('[hidden], [inert]') &&
+          !isHiddenByDisclosure(el) &&
           el.getClientRects().length > 0 &&
           getComputedStyle(el).display !== 'none' &&
           getComputedStyle(el).visibility === 'visible';

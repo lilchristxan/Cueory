@@ -59,10 +59,29 @@ test.describe('Task 270: sticky header overlap', () => {
     });
   });
 
-  for (const route of routes) {
-    test(`${route}: first heading and focused controls stay below the header`, async ({ page }) => {
+  const cases = routes.flatMap((route) => {
+    const states = route === '/preview/anatomy-text' ? ['closed', 'outer-open', 'all-open'] : ['closed'];
+    return states.map((disclosureState) => ({ route, disclosureState }));
+  });
+  for (const { route, disclosureState } of cases) {
+    test(`${route}: first heading and focused controls stay below the header (${disclosureState})`, async ({ page }) => {
       await page.goto(route);
       await waitForIslands(page, route);
+
+      if (disclosureState !== 'closed') {
+        for (const summary of await page.locator('[data-anatomy-text-practice] > summary').all()) {
+          await summary.focus();
+          await page.keyboard.press('Enter');
+        }
+        if (disclosureState === 'all-open') {
+          for (const summary of await page.locator('[data-anatomy-text-practice] ol details > summary').all()) {
+            await summary.focus();
+            await page.keyboard.press('Enter');
+          }
+        }
+        await page.locator('a[href="#main"]').focus();
+        await page.keyboard.press('Shift+Tab');
+      }
 
       const header = page.locator('header[data-scroll-header]');
       const heading = page.locator('main :is(h1, h2, h3, h4, h5, h6)').first();
@@ -87,14 +106,22 @@ test.describe('Task 270: sticky header overlap', () => {
         const stickyHeader = document.querySelector<HTMLElement>('header[data-scroll-header]');
         if (!stickyHeader) throw new Error('Sticky header disappeared before the control scan');
         const controls = Array.from(document.querySelectorAll<HTMLElement>(
-          'main a[href], main button, main input, main select, main textarea, main [tabindex]:not([tabindex="-1"])',
+          'main a[href], main button, main input, main select, main textarea, main [tabindex]:not([tabindex="-1"]), main details > summary:first-of-type',
         ));
+        const isHiddenByDisclosure = (el: HTMLElement) => {
+          // Layout rectangles and CSS visibility can include closed details content.
+          // Each closed ancestor exposes only its first summary and that summary's descendants.
+          for (let details = el.parentElement?.closest('details'); details; details = details.parentElement?.closest('details')) {
+            if (!details.open && !details.querySelector(':scope > summary')?.contains(el)) return true;
+          }
+          return false;
+        };
         const failures: string[] = [];
         let checked = 0;
         for (const [index, control] of controls.entries()) {
           if (!control.isConnected || control.getClientRects().length === 0 ||
               getComputedStyle(control).visibility === 'hidden' || control.matches(':disabled') ||
-              control.closest('[inert], [aria-disabled="true"]')) continue;
+              control.closest('[inert], [aria-disabled="true"]') || isHiddenByDisclosure(control)) continue;
           control.scrollIntoView({ block: 'start', inline: 'nearest', behavior: 'instant' });
           control.focus({ preventScroll: true });
           checked++;
