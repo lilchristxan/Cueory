@@ -1072,6 +1072,16 @@ function hasUsableSiteEntrypoint(html) {
   let cursor = 0;
   let state = 'doctype';
   let bodyHasElement = false;
+  // Temporary bounded CI diagnostic for unexpected Astro-generated markup.
+  const reject = () => {
+    if (process.env.GITHUB_ACTIONS === 'true' && html.length > 10000) {
+      const excerpt = html.slice(Math.max(0, cursor - 40), Math.min(html.length, cursor + 40))
+        .replace(/\s+/g, ' ');
+      process.stderr.write('[anatomy-entrypoint] offset=' + cursor +
+        ' state=' + state + ' fragment=' + JSON.stringify(excerpt) + '\n');
+    }
+    return false;
+  };
   const allowedInside = () => state === 'head-content' || state === 'body-content';
   const rawTags = new Set([
     'script', 'style', 'title', 'textarea', 'template', 'noscript',
@@ -1085,19 +1095,19 @@ function hasUsableSiteEntrypoint(html) {
     const next = html.indexOf('<', cursor);
     const end = next === -1 ? html.length : next;
     // Text outside the document is not evidence of a valid entrypoint.
-    if (['doctype', 'html-open', 'done'].includes(state) && html.slice(cursor, end).trim()) return false;
+    if (['doctype', 'html-open', 'done'].includes(state) && html.slice(cursor, end).trim()) return reject();
     cursor = end;
     if (next === -1) break;
 
     if (html.startsWith('<!--', cursor)) {
       const closing = html.indexOf('-->', cursor + 4);
-      if (closing < 0) return false;
+      if (closing < 0) return reject();
       cursor = closing + 3;
       continue;
     }
     if (html.startsWith('<!', cursor)) {
       const doctype = /^<!doctype\s+html\s*>/i.exec(html.slice(cursor));
-      if (!doctype || state !== 'doctype') return false;
+      if (!doctype || state !== 'doctype') return reject();
       cursor += doctype[0].length;
       state = 'html-open';
       continue;
@@ -1111,51 +1121,51 @@ function hasUsableSiteEntrypoint(html) {
       if (quote) {
         if (char === quote) quote = '';
       } else if (char === '"' || char === "'") quote = char;
-      else if (char === '<') return false;
+      else if (char === '<') return reject();
       else if (char === '>') break;
       ending++;
     }
-    if (ending >= html.length || quote) return false;
+    if (ending >= html.length || quote) return reject();
     const token = html.slice(cursor, ending + 1);
     cursor = ending + 1;
     const closing = token.startsWith('</');
     const match = closing
       ? /^<\/([a-z][a-z\d:-]*)\s*>$/i.exec(token)
       : /^<([a-z][a-z\d:-]*)(?:\s[\s\S]*?)?\s*\/?>$/i.exec(token);
-    if (!match) return false;
+    if (!match) return reject();
     const tag = match[1].toLowerCase();
 
     if (tag === 'html') {
       if (closing && state === 'html-close') state = 'done';
       else if (!closing && state === 'html-open') state = 'head-open';
-      else return false;
+      else return reject();
       continue;
     }
     if (tag === 'head') {
       if (closing && state === 'head-content') state = 'body-open';
       else if (!closing && state === 'head-open') state = 'head-content';
-      else return false;
+      else return reject();
       continue;
     }
     if (tag === 'body') {
       if (closing && state === 'body-content') state = 'html-close';
       else if (!closing && state === 'body-open') state = 'body-content';
-      else return false;
+      else return reject();
       continue;
     }
-    if (!allowedInside()) return false;
+    if (!allowedInside()) return reject();
 
     if (!closing && rawTags.has(tag)) {
       // HTML treats these elements' contents as opaque text. In particular,
       // literal <body> strings in JS and CSS must not satisfy the release gate.
       const close = new RegExp('</' + tag + '\\s*>', 'i').exec(html.slice(cursor));
-      if (!close) return false;
+      if (!close) return reject();
       cursor += close.index + close[0].length;
       continue;
     }
     if (!closing && state === 'body-content' && !notRendered.has(tag)) bodyHasElement = true;
   }
-  return state === 'done' && bodyHasElement;
+  return state === 'done' && bodyHasElement ? true : reject();
 }
 
 export function builtSiteEntrypointErrors(distDir) {
