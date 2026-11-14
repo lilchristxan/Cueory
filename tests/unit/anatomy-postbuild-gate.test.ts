@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -240,6 +240,37 @@ describe('postbuild anatomy release audit', () => {
       });
       expect(browserInRelease.status).toBe(0);
       expect(browserInRelease.stdout).toContain('skipped for explicitly draft-enabled preview');
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('executes all three release-audit CLI wrappers when invoked through symbolic links', () => {
+    const root = mkdtempSync(join(tmpdir(), 'cueory-anatomy-cli-link-'));
+    try {
+      const cases = [
+        { file: 'check-anatomy-build.mjs', message: 'anatomy production artifact audit FAILED' },
+        { file: 'check-anatomy-wrangler.mjs', message: 'anatomy Wrangler upload audit FAILED' },
+        { file: 'anatomy-production-deploy.mjs', message: 'anatomy production upload blocked' },
+      ];
+      for (const [index, item] of cases.entries()) {
+        const source = fileURLToPath(new URL('../../scripts/' + item.file, import.meta.url));
+        const alias = join(root, 'alias-' + index + '.mjs');
+        symlinkSync(source, alias);
+        const env = {
+          ...process.env,
+          WORKERS_CI: 'true',
+          WORKERS_CI_BRANCH: 'legacy/main',
+          CUEORY_ANATOMY_DRAFTS: '1',
+          WRANGLER_COMMAND: 'deploy',
+        };
+        const actual = spawnSync(process.execPath, [alias], { cwd: root, env, encoding: 'utf8' });
+        expect(actual.status, item.file).toBe(1);
+        expect(actual.stderr, item.file).toContain(item.message);
+        expect(actual.stderr, item.file).toContain('production output does not exist');
+        // Under no circumstances should a symlinked helper attempt a real upload.
+        expect(actual.stdout, item.file).not.toContain('upload');
+      }
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
