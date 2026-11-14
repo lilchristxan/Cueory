@@ -68,6 +68,8 @@ const initialJsBudget = {
   'preview/admin-flags.html': 92161,
   'preview/anatomy-text.html': 89104,
   'preview/anatomy-lab.html': 89027,
+  // New founder review index: exact-head CI 43557921475, job 132334874012 (Node 24).
+  'preview/anatomy-review.html': 89662,
   'preview/body-viewer.html': 151504,
   'preview/email.html': 146752,
   'preview/prose.html': 146752,
