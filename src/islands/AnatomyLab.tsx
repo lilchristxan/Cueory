@@ -715,6 +715,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
       pictureExportGeneration.bump();
       setExportNote('');
       setExporting(null);
+      setLabelNote([]);
       sceneRef.current?.resetView();
       setActiveUserId(userId);
       setReviewRows([]);
