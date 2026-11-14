@@ -1,8 +1,8 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { anatomyInventory, anatomyReviewMarkdown } from '../../scripts/anatomy-review-report.mjs';
+import { anatomyInventory, anatomyReviewMarkdown, anatomyReviewSheets, writeAnatomyReviewSheets } from '../../scripts/anatomy-review-report.mjs';
 
 /** Fake model names and source lines only; no clinical content or answer keys in a public test. */
 const roots: string[] = [];
@@ -178,6 +178,32 @@ describe('read-only anatomy review inventory', () => {
     }
   });
 
+  it('makes one independent screenshot-ready source sheet per system without approving any draft', () => {
+    const root = setup();
+    writeSystem(root, 'zeta', visual('zeta', 'FMA2'));
+    writeSystem(root, 'alpha', visual('alpha', 'FMA1'));
+    const inventory = anatomyInventory(root);
+    const sheets = anatomyReviewSheets(inventory);
+    expect(sheets.map((sheet: { filename: string }) => sheet.filename)).toEqual([
+      'anatomy-alpha-review.md', 'anatomy-zeta-review.md',
+    ]);
+    for (const sheet of sheets) {
+      expect(sheet.markdown).toContain('Review aid only.');
+      expect(sheet.markdown).toContain('Systems: **1**. Listed structures: **1**.');
+      expect(sheet.markdown).toContain('Keep the source status as `draft`');
+    }
+    expect(sheets[0]!.markdown).not.toContain('sample zeta');
+    expect(sheets[1]!.markdown).not.toContain('sample alpha');
+    const output = join(root, 'review-sheets');
+    const names = writeAnatomyReviewSheets(inventory, output);
+    expect(names).toEqual([
+      join(output, 'anatomy-alpha-review.md'), join(output, 'anatomy-zeta-review.md'),
+    ]);
+    expect(readFileSync(names[0]!, 'utf8')).toBe(sheets[0]!.markdown);
+    expect(readFileSync(names[1]!, 'utf8')).toBe(sheets[1]!.markdown);
+    // Generating review sheets must never rewrite model rights or status.
+    expect(anatomyInventory(root).map((item: { status: string }) => item.status)).toEqual(['draft', 'draft']);
+  });
   it('keeps zero-count layers out and lists reviewer gates without granting approval', () => {
     const root = setup();
     writeSystem(root, 'sample');
