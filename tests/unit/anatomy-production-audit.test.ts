@@ -2051,6 +2051,16 @@ describe('anatomy production artifact audit', () => {
     expect(f.check().errors).toEqual([]);
   });
 
+  it('rejects percent-encoded JavaScript escapes that reconstruct hidden draft and fixture IDs', () => {
+    const f = setup();
+    f.file('_astro/mixed-draft.js', String.raw`const id = JSON.parse('"' + decodeURIComponent('%5Cu0046MA999991') + '"');`);
+    f.file('_astro/mixed-fixture.js', String.raw`const id = JSON.parse('"' + decodeURIComponent('%5Cu0046IX001') + '"');`);
+    expect(f.check().errors).toEqual(expect.arrayContaining([
+      'draft anatomy ID exposed in built text: _astro/mixed-draft.js (FMA999991)',
+      'test fixture ID exposed in built text: _astro/mixed-fixture.js (FIX001)',
+    ]));
+  });
+
   it('rejects draft identifiers on unrelated pages, in search data and in SVG exports', () => {
     const f = setup();
     f.file('index.html', '<div>FMA999991</div>');
