@@ -1,0 +1,1 @@
+status: Task 178 (#662, PR #651): reject incomplete account exports if a same-user Supabase token/MFA change happens during paged reads, even when initial and final assurance are both aal2. Auth event monitoring is unsubscribed; all models stay draft; no migration or deployment.
