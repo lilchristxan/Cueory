@@ -59,7 +59,10 @@ test('a failed layer keeps its successful GLB and retries only the failed file',
   await retry.press('Enter');
   await expect(files).toContainText('model files loaded: 3 of 11', { timeout: 20_000 });
   await expect(error).toHaveCount(0);
-  await expect(heart).toBeEnabled();
+  // The retry now reveals the completed vessels layer, changing the heart's
+  // accessible name from "heart (hidden)" to "heart" without refetching it.
+  await expect(page.getByRole('region', { name: 'structures' })
+    .getByRole('button', { name: 'heart', exact: true })).toBeEnabled();
   expect(heartRequests, 'retry must reuse the successful heart GLB').toBe(1);
   expect(vesselRequests, 'retry must fetch the failed vessels GLB exactly once more').toBe(2);
 });
