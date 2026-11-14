@@ -456,6 +456,13 @@ describe('anatomy production artifact audit', () => {
     f.file('pagefind/index/en_safe_glb_mention_raw.pf_index', Buffer.concat([prefix, safeMentionCbor]));
     expect(f.check().errors).toEqual([]);
 
+    // A gzip text hint is harmless: the body still has to validate as an
+    // ordinary Pagefind fragment. Gzip optional metadata is rejected below.
+    const textHintFragment = Buffer.from(fragment);
+    textHintFragment[3] |= 0x01;
+    f.file('pagefind/fragment/en_text_hint.pf_fragment', textHintFragment);
+    expect(f.check().errors).toEqual([]);
+
     // A gzip member can hide public data in optional header fields that
     // gunzipSync strips before Pagefind JSON/CBOR inspection. These fields
     // must not be allowed even when the decoded fragment is safe.
