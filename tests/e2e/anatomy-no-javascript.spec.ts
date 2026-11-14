@@ -36,10 +36,11 @@ test('anatomy structure names remain reachable and credited without JavaScript',
   const prompts = practice.locator('details');
   await expect(prompts).toHaveCount(5);
   // A source ID beyond the five practice prompts must still be findable with no JavaScript.
-  const catalogItems = first.locator('div.space-y-2 li');
-  // Not every body system has six structures. Find a real catalog entry past the
-  // practice subset, rather than assuming the first system has six.
-  const catalogSystem = systems.filter({ has: page.locator('div.space-y-2 li:nth-child(6)') }).first();
+  // Not every body system has six structures. Find one with a later catalog
+  // entry; the first five names alone do not prove complete ID search.
+  const catalogSystem = systems.filter({
+    has: page.locator('div.space-y-2 li:nth-child(6)'),
+  }).first();
   await expect(catalogSystem).toBeVisible();
   const fullCatalog = catalogSystem.locator('div.space-y-2 li');
   expect(await fullCatalog.count()).toBeGreaterThan(5);
