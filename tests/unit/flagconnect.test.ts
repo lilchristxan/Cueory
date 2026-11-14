@@ -10,24 +10,38 @@ const good: FlagReport = { page: '/learn/study-skills/questions', reason: 'confu
 
 /** A fake shared client. It never touches the network. */
 function fakeClient(options: {
-  session?: { user: { id: string; email?: string | null } } | null;
+  session?: { user: { id: string; email?: string | null }; access_token?: string } | null;
   sessionError?: unknown;
   reply?: { data: unknown; error: unknown };
 } = {}) {
   const calls: { name: string; args: FlagArgs; receiver: unknown }[] = [];
+  const requestHeaders: Array<{ name: string; value: string }> = [];
+  const requestSignals: AbortSignal[] = [];
   const client: FlagClient = {
     auth: {
       getSession: vi.fn(async () => ({
-        data: { session: options.session === undefined ? { user: { id: 'user-1', email: 'student@example.test' } } : options.session },
+        data: { session: options.session === undefined ? { user: { id: 'user-1', email: 'student@example.test' }, access_token: 'synthetic-user-1-token' } : options.session },
         error: options.sessionError ?? null,
       })),
+      onAuthStateChange: vi.fn(() => ({ data: { subscription: { unsubscribe: vi.fn() } } })),
     },
     rpc(name, args) {
       calls.push({ name, args, receiver: this });
-      return Promise.resolve(options.reply ?? { data: reportId, error: null });
+      // Supabase PostgREST v2.118 builder executes lazily and supports these
+      // per-query modifiers. Keep fake modifiers scoped to this operation.
+      return Object.assign(Promise.resolve(options.reply ?? { data: reportId, error: null }), {
+        setHeader(name: string, value: string) {
+          requestHeaders.push({ name, value });
+          return this;
+        },
+        abortSignal(signal: AbortSignal) {
+          requestSignals.push(signal);
+          return this;
+        },
+      });
     },
   };
-  return { client, calls, load: vi.fn(async () => client) };
+  return { client, calls, requestHeaders, requestSignals, load: vi.fn(async () => client) };
 }
 
 describe('flagSignedIn', () => {
@@ -45,7 +59,7 @@ describe('flagSignedIn', () => {
 
 /** A client whose session can change between reads, and which announces sign-ins and sign-outs like supabase-js. */
 function switchableClient() {
-  let session: { user: { id: string } } | null = null;
+  let session: { user: { id: string }; access_token: string } | null = null;
   const listeners = new Set<(event: string, session: { user: { id: string } } | null) => void>();
   const unsubscribed = vi.fn();
   const client: FlagClient = {
@@ -63,9 +77,9 @@ function switchableClient() {
     unsubscribed,
     listeners,
     /** Changes the stored session without announcing it (another tab wrote it). */
-    store: (id: string | null) => { session = id ? { user: { id } } : null; },
+    store: (id: string | null) => { session = id ? { user: { id }, access_token: `synthetic-${id}-token` } : null; },
     /** Announces a change, as supabase-js does for this tab and, by broadcast, for other tabs. */
-    announce: (id: string | null) => { session = id ? { user: { id } } : null; for (const l of listeners) l(id ? 'SIGNED_IN' : 'SIGNED_OUT', session); },
+    announce: (id: string | null) => { session = id ? { user: { id }, access_token: `synthetic-${id}-token` } : null; for (const l of listeners) l(id ? 'SIGNED_IN' : 'SIGNED_OUT', session); },
   };
 }
 const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
@@ -272,5 +286,220 @@ describe('flagItemContext', () => {
     { itemId: '', itemVersionId: versionId },
   ])('fails the build for a slug or half a pair', flagItem => {
     expect(() => flagItemContext(flagItem)).toThrow('database uuids');
+  });
+});
+
+describe('flag reports are bound to the account that pressed Send (Task 178)', () => {
+  const accountChanged = {
+    message: 'your account changed before this report was sent. please open the form again.',
+  };
+
+  it('tracks account A -> B even though both sessions are signed in', async () => {
+    const fake = switchableClient();
+    const identities: Array<{ signedIn: boolean; userId: string | null }> = [];
+    const watch = watchFlagSession(async () => fake.client, (signedIn, userId) => {
+      identities.push({ signedIn, userId });
+    });
+    watch.check();
+    await settle();
+    fake.announce('account-A');
+    fake.announce('account-B');
+    fake.announce(null);
+    expect(identities).toEqual([
+      { signedIn: false, userId: null },
+      { signedIn: true, userId: 'account-A' },
+      { signedIn: true, userId: 'account-B' },
+      { signedIn: false, userId: null },
+    ]);
+    watch.stop();
+  });
+
+  it('will not send account A\'s drafted report as B when client loading is delayed', async () => {
+    const { client, calls } = fakeClient();
+    let active = 'account-A';
+    client.auth.getSession = vi.fn(async () => ({
+      data: { session: { user: { id: active, email: 'synthetic@example.test' }, access_token: `synthetic-${active}-token` } },
+      error: null,
+    }));
+    let release: (client: FlagClient) => void = () => {};
+    const deferred = new Promise<FlagClient>((resolve) => { release = resolve; });
+    const pending = makeFlagSend(async () => deferred, active)(good);
+    // Simulate an auth broadcast from another tab *after* Send was pressed
+    // but before the same shared Supabase client becomes available.
+    active = 'account-B';
+    release(client);
+    expect(await pending).toEqual(accountChanged);
+    expect(calls, 'B must never submit A\'s text').toEqual([]);
+    expect(client.auth.getSession).toHaveBeenCalledTimes(1);
+  });
+
+  it('sends with the original user, pinning the bearer only on that RPC builder', async () => {
+    const { client, calls, requestHeaders, requestSignals, load } = fakeClient();
+    expect(await makeFlagSend(load, 'user-1')({ ...good, itemId, itemVersionId: versionId }))
+      .toBe('sent');
+    expect(client.auth.getSession).toHaveBeenCalledTimes(2);
+    expect(requestHeaders).toEqual([
+      { name: 'Authorization', value: 'Bearer synthetic-user-1-token' },
+    ]);
+    expect(requestSignals).toHaveLength(1);
+    expect(requestSignals[0]?.aborted).toBe(false);
+    expect(calls).toHaveLength(1);
+    expect(calls[0]?.args).toEqual({
+      page: good.page,
+      item_id: itemId,
+      item_version_id: versionId,
+      reason: 'confusing',
+      comment: good.comment,
+    });
+  });
+
+  it('rejects an A to B to A auth switch while the first identity read is pending', async () => {
+    const fake = switchableClient();
+    fake.store('account-A');
+    let release: () => void = () => {};
+    const held = new Promise<void>(resolve => { release = resolve; });
+    const initial = fake.client.auth.getSession;
+    fake.client.auth.getSession = vi.fn(async () => {
+      await held;
+      return initial();
+    });
+    const rpc = vi.fn(() => Promise.resolve({ data: reportId, error: null }));
+    fake.client.rpc = rpc;
+    const pending = makeFlagSend(async () => fake.client, 'account-A')(good);
+    await settle(); // subscription is active before this auth broadcast
+    fake.announce('account-B');
+    fake.announce('account-A');
+    release();
+    expect(await pending).toEqual(accountChanged);
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it('blocks a rapid A to B to A switch during the final pre-RPC session read', async () => {
+    const fake = switchableClient();
+    fake.store('account-A');
+    const originalRead = fake.client.auth.getSession;
+    let reads = 0;
+    let signalSecond: () => void = () => {};
+    let releaseSecond: () => void = () => {};
+    const secondReadStarted = new Promise<void>((resolve) => { signalSecond = resolve; });
+    const heldSecondRead = new Promise<void>((resolve) => { releaseSecond = resolve; });
+    fake.client.auth.getSession = vi.fn(async () => {
+      reads += 1;
+      if (reads === 2) {
+        signalSecond();
+        await heldSecondRead;
+      }
+      return originalRead();
+    });
+    const rpc = vi.fn(() => Promise.resolve({ data: reportId, error: null }));
+    fake.client.rpc = rpc;
+
+    const sending = makeFlagSend(async () => fake.client, 'account-A')(good);
+    await secondReadStarted;
+    // Initial identity check succeeded for A, but the RPC callback must
+    // invalidate a subsequent transient account switch even when A returns.
+    fake.announce('account-B');
+    fake.announce('account-A');
+    releaseSecond();
+
+    expect(await sending).toEqual(accountChanged);
+    expect(rpc, 'no account may receive a stale draft').not.toHaveBeenCalled();
+    expect(reads).toBe(2);
+  });
+
+  it('aborts the lazy RPC when another tab switches to B after the per-request header is pinned', async () => {
+    const fake = switchableClient();
+    fake.store('account-A');
+    const signalState: { value: AbortSignal | null } = { value: null };
+    let pinnedAuthorization = '';
+    const sent: string[] = [];
+    let releaseFetch: () => void = () => {};
+    let notifyStarted: () => void = () => {};
+    const heldFetch = new Promise<void>((resolve) => { releaseFetch = resolve; });
+    const started = new Promise<void>((resolve) => { notifyStarted = resolve; });
+    const rpc = vi.fn(() => {
+      const work = (async () => {
+        notifyStarted();
+        // The lazy HTTP fetch does not start until after the caller has built
+        // the query. Another tab may change the shared Supabase session here.
+        await heldFetch;
+        if (signalState.value?.aborted) throw new Error('request cancelled before HTTP dispatch');
+        sent.push(pinnedAuthorization);
+        return { data: reportId, error: null };
+      })();
+      return Object.assign(work, {
+        setHeader(name: string, value: string) {
+          if (name === 'Authorization') pinnedAuthorization = value;
+          return this;
+        },
+        abortSignal(value: AbortSignal) {
+          signalState.value = value;
+          return this;
+        },
+      });
+    });
+    fake.client.rpc = rpc;
+
+    const sending = makeFlagSend(async () => fake.client, 'account-A')(good);
+    await started;
+    expect(pinnedAuthorization).toBe('Bearer synthetic-account-A-token');
+    expect(signalState.value?.aborted).toBe(false);
+    fake.announce('account-B');
+    expect(signalState.value?.aborted).toBe(true);
+    releaseFetch();
+    expect(await sending).toEqual(accountChanged);
+    expect(rpc).toHaveBeenCalledTimes(1); // builder constructed, but no HTTP POST
+    expect(sent).toEqual([]);
+  });
+
+  it('pins A authorization even when shared token acquisition later observes B without an auth event', async () => {
+    const fake = switchableClient();
+    fake.store('account-A');
+    let authorization = '';
+    let releaseFetch: () => void = () => {};
+    let notifyStarted: () => void = () => {};
+    const heldFetch = new Promise<void>((resolve) => { releaseFetch = resolve; });
+    const started = new Promise<void>((resolve) => { notifyStarted = resolve; });
+    const dispatched: string[] = [];
+    fake.client.rpc = () => {
+      const work = (async () => {
+        notifyStarted();
+        await heldFetch;
+        // Reproduce fetchWithAuth reading the *current* shared session
+        // after rpc() returned its lazy PostgREST builder.
+        const latest = await fake.client.auth.getSession();
+        const token = (latest.data.session as { access_token?: string } | null)?.access_token ?? '';
+        dispatched.push(authorization || `Bearer ${token}`);
+        return { data: reportId, error: null };
+      })();
+      return Object.assign(work, {
+        setHeader(name: string, value: string) {
+          if (name === 'Authorization') authorization = value;
+          return this;
+        },
+        abortSignal(_signal: AbortSignal) {
+          return this;
+        },
+      });
+    };
+    const sending = makeFlagSend(async () => fake.client, 'account-A')(good);
+    await started;
+    // The shared client silently changes to B after all A-side preflight
+    // checks. A per-request Authorization must not become B's bearer.
+    fake.store('account-B');
+    releaseFetch();
+    expect(await sending).toBe('sent');
+    expect(dispatched).toEqual(['Bearer synthetic-account-A-token']);
+  });
+
+  it('fails closed if the account is missing or cannot be checked before dispatch', async () => {
+    for (const options of [{ session: null }, { sessionError: { message: 'offline' } }]) {
+      const { calls, load } = fakeClient(options);
+      expect(await makeFlagSend(load, 'account-A')(good)).toEqual(accountChanged);
+      expect(calls).toEqual([]);
+    }
+    const { calls, load } = fakeClient();
+    expect(await makeFlagSend(load, null)(good)).toEqual(accountChanged);
+    expect(calls).toEqual([]);
   });
 });

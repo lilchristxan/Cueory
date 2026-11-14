@@ -45,7 +45,7 @@ export interface FlagSessionWatch {
  * session again, and once the client has loaded, sign-ins and sign-outs (from any tab) are followed as they happen.
  * A check that was already running when a newer sign-in or sign-out arrived is dropped, so the newest state wins.
  */
-export function watchFlagSession(load: LoadFlagClient, report: (signedIn: boolean) => void): FlagSessionWatch {
+export function watchFlagSession(load: LoadFlagClient, report: (signedIn: boolean, userId: string | null) => void): FlagSessionWatch {
   let stopped = false;
   let running = false;
   let latest = 0;
@@ -57,7 +57,8 @@ export function watchFlagSession(load: LoadFlagClient, report: (signedIn: boolea
       subscription = client.auth.onAuthStateChange((_event, session) => {
         if (stopped) return;
         latest += 1;
-        report(typeof session?.user?.id === 'string' && session.user.id !== '');
+        const userId = typeof session?.user?.id === 'string' && session.user.id !== '' ? session.user.id : null;
+        report(userId !== null, userId);
       }).data.subscription;
     } catch {
       // Rechecking when the form opens still keeps it current.
@@ -76,10 +77,10 @@ export function watchFlagSession(load: LoadFlagClient, report: (signedIn: boolea
         } catch {
           client = null;
         }
-        const signedIn = await flagSignedIn(async () => client);
+        const state = await sessionStateFrom(client);
         running = false;
         if (stopped) return;
-        if (mine === latest) report(signedIn);
+        if (mine === latest) report(state.signedIn, state.signedIn ? state.userId : null);
         listen(client);
       })();
     },
@@ -91,8 +92,54 @@ export function watchFlagSession(load: LoadFlagClient, report: (signedIn: boolea
   };
 }
 
-/** The FlagForm send callback, using the shared client. */
-export function makeFlagSend(load: LoadFlagClient): (report: FlagReport) => Promise<SendResult> {
+/**
+ * A single PostgREST query builder can pin Authorization for this request.
+ * In supabase-js 2.118.0, client.rpc() is lazy and fetchWithAuth() reads
+ * the shared session again only when the returned builder is awaited. Without
+ * a per-query header that later read could attach account B's JWT to account
+ * A's draft after our final identity check.
+ */
+type FlagRpcRequest = PromiseLike<{ data: unknown; error: unknown }> & {
+  setHeader?: (name: string, value: string) => unknown;
+  abortSignal?: (signal: AbortSignal) => unknown;
+};
+
+async function currentFlagAccessSession(client: FlagClient): Promise<{ userId: string; accessToken: string } | null> {
+  try {
+    const reply = await client.auth.getSession();
+    if (reply.error) return null;
+    const session = reply.data?.session as {
+      user?: { id?: unknown } | null;
+      access_token?: unknown;
+    } | null | undefined;
+    const userId = session?.user?.id;
+    const accessToken = session?.access_token;
+    return typeof userId === 'string' && userId !== '' &&
+      typeof accessToken === 'string' && accessToken !== ''
+      ? { userId, accessToken }
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Sends a report as the user who pressed Send. The per-request Authorization
+ * header is explicitly frozen to that user's JWT. Even if the shared
+ * Supabase client switches accounts during lazy token acquisition, it cannot
+ * turn an A-origin report into a B-authenticated submission.
+ *
+ * An auth change also aborts the specific PostgREST builder before/in flight,
+ * without modifying the shared client or any unrelated request. The database
+ * still checks authentication, permissions and rate limits independently.
+ *
+ * Omitted expectedUserId is retained for older isolated transport callers.
+ * Actual browser FlagMount always supplies the initiating account identity.
+ */
+export function makeFlagSend(
+  load: LoadFlagClient,
+  expectedUserId?: string | null,
+): (report: FlagReport) => Promise<SendResult> {
   return async (report) => {
     let client: FlagClient | null;
     try {
@@ -101,8 +148,68 @@ export function makeFlagSend(load: LoadFlagClient): (report: FlagReport) => Prom
       return 'failed';
     }
     if (!client) return { message: studentMessage('submit_flag', { message: 'sign in to send a report' }) };
-    // Called on the client itself: supabase-js's rpc needs its receiver.
-    return makeSend((name, args) => client.rpc(name, args))(report);
+    const identityChanged = () => ({
+      message: 'your account changed before this report was sent. please open the form again.',
+    });
+    let changedDuringSend = false;
+    let unsubscribe = () => {};
+    const abort = new AbortController();
+    if (expectedUserId !== undefined) {
+      const onAuth = client.auth.onAuthStateChange;
+      // An A -> B -> A switch would pass an end-state-only session check.
+      // Cancel this particular write on any intermediate identity change.
+      if (typeof onAuth !== 'function') return identityChanged();
+      try {
+        const observer = onAuth.call(client.auth, (_event, session) => {
+          if (session?.user?.id !== expectedUserId) {
+            changedDuringSend = true;
+            abort.abort();
+          }
+        }).data.subscription;
+        unsubscribe = () => observer.unsubscribe();
+      } catch {
+        return identityChanged();
+      }
+    }
+    try {
+      if (expectedUserId !== undefined) {
+        const initial = await currentFlagAccessSession(client);
+        if (changedDuringSend || !initial ||
+            !expectedUserId || initial.userId !== expectedUserId) return identityChanged();
+      }
+      let invalidatedBeforeRpc = false;
+      const result = await makeSend(async (name, args) => {
+        if (expectedUserId === undefined) return client.rpc(name, args);
+        // The final session check immediately precedes construction of the
+        // lazy builder. Do not let its later auth lookup override this token.
+        const current = await currentFlagAccessSession(client);
+        if (changedDuringSend || !current || current.userId !== expectedUserId) {
+          invalidatedBeforeRpc = true;
+          throw new Error('report identity changed');
+        }
+        const query = client.rpc(name, args) as FlagRpcRequest;
+        // Fail closed if a substitute client lacks the pinned-version builder
+        // API. Never send with the unbound shared-session token in that case.
+        if (typeof query.setHeader !== 'function' || typeof query.abortSignal !== 'function') {
+          invalidatedBeforeRpc = true;
+          throw new Error('report identity could not be bound');
+        }
+        query.setHeader('Authorization', `Bearer ${current.accessToken}`);
+        query.abortSignal(abort.signal);
+        if (changedDuringSend || abort.signal.aborted) {
+          invalidatedBeforeRpc = true;
+          throw new Error('report identity changed');
+        }
+        return query;
+      })(report);
+      // makeSend masks low-level exceptions. Keep its public refusal specific
+      // when an identity switch or missing request guard stopped dispatch.
+      return invalidatedBeforeRpc || (changedDuringSend && result === 'failed')
+        ? identityChanged()
+        : result;
+    } finally {
+      unsubscribe();
+    }
   };
 }
 
