@@ -67,6 +67,7 @@ const ALWAYS_HELD_PREFIXES = [
   'public/models/anatomy/', // Founder reviews every 3D model binary before it reaches staging.
   'src/pages/preview/anatomy-fixture/', // Test fixture endpoint must never become an unattended production route.
   'src/pages/preview/anatomy-review/', // Draft-only founder review sheets, including future per-system routes.
+  'src/pages/anatomy/', // Alternate public anatomy route files could otherwise bypass the gate.
   'src/pages/auth/', 'src/pages/account/', 'src/pages/admin/', 'src/pages/preview/admin-',
 ];
 const ALWAYS_HELD_FILES = new Set([
