@@ -2,7 +2,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, 
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { anatomyInventory, anatomyReviewMarkdown, anatomyReviewSheets, writeAnatomyReviewSheets } from '../../scripts/anatomy-review-report.mjs';
+import { anatomyInventory, anatomyReviewMarkdown, anatomyReviewSheets, draftReviewSheetsAllowed, writeAnatomyReviewSheets } from '../../scripts/anatomy-review-report.mjs';
 
 /** Fake model names and source lines only; no clinical content or answer keys in a public test. */
 const roots: string[] = [];
@@ -257,6 +257,43 @@ describe('read-only anatomy review inventory', () => {
     expect(() => writeAnatomyReviewSheets(anatomyInventory(root), file))
       .toThrow('review output directory must be a real directory');
     expect(readFileSync(file, 'utf8')).toBe('human review');
+  });
+
+
+  it('fails closed on production branch aliases even when preview opt-in is set', () => {
+    for (const ci of ['1', 'true', 'TRUE']) {
+      for (const branch of ['main', 'legacy/main', 'refs/heads/main', 'refs/heads/legacy/main', 'other/main']) {
+        const env = {
+          WORKERS_CI: ci,
+          WORKERS_CI_BRANCH: branch,
+          CUEORY_ANATOMY_DRAFTS: '1',
+        };
+        expect(draftReviewSheetsAllowed(env), `${ci} ${branch}`).toBe(false);
+      }
+    }
+    expect(draftReviewSheetsAllowed({ WORKERS_CI_BRANCH: 'legacy/main', CUEORY_ANATOMY_DRAFTS: '1' }))
+      .toBe(false);
+    expect(draftReviewSheetsAllowed({ WORKERS_CI: 'true', CUEORY_ANATOMY_DRAFTS: '1' }))
+      .toBe(false);
+    expect(draftReviewSheetsAllowed({ WORKERS_CI: 'unknown', WORKERS_CI_BRANCH: 'task-178/test', CUEORY_ANATOMY_DRAFTS: '1' }))
+      .toBe(false);
+  });
+
+  it('only offers draft review names and routes for an explicitly nonproduction build', () => {
+    const root = setup();
+    writeSystem(root, 'sample');
+    const source = anatomyReviewSheets(anatomyInventory(root));
+    const shown = (env: Parameters<typeof draftReviewSheetsAllowed>[0]) =>
+      source.filter((sheet) => sheet.status === 'approved' || draftReviewSheetsAllowed(env));
+    expect(shown({ WORKERS_CI: '1', WORKERS_CI_BRANCH: 'legacy/main' })).toEqual([]);
+    expect(shown({ WORKERS_CI: 'true', WORKERS_CI_BRANCH: 'refs/heads/main' })).toEqual([]);
+    expect(shown({ WORKERS_CI: '1', WORKERS_CI_BRANCH: '' })).toEqual([]);
+    expect(shown({ WORKERS_CI: '1', WORKERS_CI_BRANCH: 'task-178/review-sheets' })
+      .map((sheet) => sheet.url)).toEqual(['/preview/anatomy-review/sample']);
+    expect(shown({ WORKERS_CI: 'true', WORKERS_CI_BRANCH: 'refs/heads/task-178/review-sheets' })
+      .map((sheet) => sheet.labels[0]!.name)).toEqual(['sample part | exact']);
+    expect(shown({ CUEORY_ANATOMY_DRAFTS: '1' }).length).toBe(1);
+    expect(shown({}).length).toBe(0);
   });
 
 });
