@@ -484,6 +484,7 @@ describe('anatomy production artifact audit', () => {
     const f = setup();
     const header = Buffer.from([0, 97, 115, 109, 1, 0, 0, 0]);
     const name = Buffer.from('meta');
+    f.system('wasm-draft', 'draft', ['/models/anatomy/wasm-draft.glb'], ['FMA999991']);
     const draftId = Buffer.from('FMA999991');
     const section = Buffer.concat([Buffer.from([name.length]), name, draftId]);
     const wasm = Buffer.concat([header, Buffer.from([0, section.length]), section]);
