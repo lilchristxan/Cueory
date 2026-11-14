@@ -558,11 +558,11 @@ describe('anatomy production artifact audit', () => {
       Buffer.from([0x78, incidentalTextMarkers.length]), incidentalTextMarkers,
     ]);
     f.file('pagefind/index/en_safe_glb_mention.pf_index', gzipSync(Buffer.concat([prefix, safeMentionCbor])));
-    f.file('pagefind/index/    expect(f.check().errors).toEqual([
+    f.file('pagefind/index/en_safe_glb_mention_raw.pf_index', Buffer.concat([prefix, safeMentionCbor]));
+    expect(f.check().errors).toEqual([
       'archive/container in production output requires explicit review: /pagefind/wasm.en_opaque_ids.pagefind',
+      'archive/container in production output requires explicit review: /pagefind/wasm.en_draft_id.pagefind',
     ]);
-concat([prefix, safeMentionCbor]));
-    expect(f.check().errors).toEqual([]);
 
     // A gzip text hint is harmless: the body still has to validate as an
     // ordinary Pagefind fragment. Gzip optional metadata is rejected below.
