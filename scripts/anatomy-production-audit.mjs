@@ -590,6 +590,23 @@ function containsGlbHeader(bytes) {
   return false;
 }
 
+/** Recognize complete literal Base64-encoded GLBs in generated site text.
+ * Only explicit, unbroken Base64 tokens are decoded, with a strict size bound
+ * and a byte-exact round trip. This is a release gate, not a general decoder.
+ */
+function containsLiteralBase64Model(text) {
+  const literal = /(?:atob\s*\(\s*(['"])([A-Za-z0-9+/]+={0,2})\1\s*\)|data:model\/(?:gltf-binary|gltf\+json);base64,([A-Za-z0-9+/]+={0,2}))/gi;
+  for (const match of text.matchAll(literal)) {
+    const encoded = match[2] ?? match[3];
+    if (encoded.length < 24 || encoded.length > 8 * 1024 * 1024 || encoded.length % 4 !== 0) return true;
+    let bytes;
+    try { bytes = Buffer.from(encoded, 'base64'); } catch { return true; }
+    if (bytes.toString('base64') !== encoded) return true;
+    if (containsGlbHeader(bytes) || bytes.subarray(0, 4).toString('ascii') === 'glTF') return true;
+  }
+  return false;
+}
+
 /** Parse one definite-length CBOR value, rejecting embedded model/archive byte strings. */
 function containsReservedAnatomyId(text, draftIds) {
   if (/\bFIX\d{3,}\b/u.test(text)) return true;
@@ -1781,6 +1798,9 @@ export function auditAnatomyProduction(distDir, contentDir) {
     } catch {
       errors.push(`cannot safely read built text: ${file.slice(dist.length + 1)}`);
       continue;
+    }
+    if (containsLiteralBase64Model(contents)) {
+      errors.push('embedded Base64 anatomy model in built text: ' + file.slice(dist.length + 1));
     }
     // Both the original bytes and their context-appropriate decoded versions
     // must be checked. This recognizes encoded IDs without erasing raw token boundaries.
