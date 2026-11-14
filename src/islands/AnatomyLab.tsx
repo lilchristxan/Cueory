@@ -627,6 +627,9 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
   // ── Visibility history: every change to hidden or faded is recorded; undo and redo put a recorded state back ──────
   // `push` ignores a state equal to the present one, so an undo (which sets hidden and faded to the present) records
   // nothing, and a new model's reset (history and sets changed together) records nothing either.
+  // The auth reset's target visibility must be the first history state under the
+  // replacement identity. Delayed effects from the outgoing view may still
+  // run, so keep the target until React has rendered that baseline.
   const identityResetPendingRef = useRef<Visibility | null>(null);
   useEffect(() => {
     // Auth transitions reset history deliberately. Ignore the matching reset
