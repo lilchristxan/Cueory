@@ -11,6 +11,7 @@
  * Prints game names and counts only, never puzzle text, answers or clues.
  */
 import { resolve } from 'node:path';
+import { realpathSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
 export const MIN_RUNWAY_DAYS = 14;
@@ -145,6 +146,6 @@ async function main(args) {
   }
 }
 
-if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (process.argv[1] && realpathSync(resolve(process.argv[1])) === fileURLToPath(import.meta.url)) {
   process.exitCode = await main(process.argv.slice(2));
 }

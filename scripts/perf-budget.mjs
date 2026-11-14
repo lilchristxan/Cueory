@@ -4,7 +4,7 @@
  * Only HTML and local JavaScript/CSS are counted. Anatomy models have a
  * separate 3 MB budget and are deliberately outside this check.
  */
-import { lstatSync, readFileSync, readdirSync } from 'node:fs';
+import { constants, openSync, closeSync, fstatSync, lstatSync, readFileSync, readdirSync } from 'node:fs';
 import { dirname, extname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { gzipSync } from 'node:zlib';
@@ -321,9 +321,13 @@ export function budgetBreaches(sizes, budgets = BUDGETS) {
 }
 
 function readableFile(file) {
-  const stat = lstatSync(file);
-  if (!stat.isFile()) throw new Error(`Not a regular build file: ${file}`);
-  return readFileSync(file);
+  const fd = openSync(file, constants.O_RDONLY | constants.O_NOFOLLOW);
+  try {
+    if (!fstatSync(fd).isFile()) throw new Error(`Not a regular build file: ${file}`);
+    return readFileSync(fd);
+  } finally {
+    closeSync(fd);
+  }
 }
 
 function htmlPages(dir, root = dir) {

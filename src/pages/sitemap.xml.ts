@@ -14,7 +14,7 @@ function escapeXml(value: string): string {
 export function layoutOpeningProps(source: string): string | undefined {
   const markup = source
     .replace(/^---[\s\S]*?---/, '')
-    .replace(/<!--[\s\S]*?-->/g, '')
+    .replace(/<!--[\s\S]*?-->/g, ' ')
     .replace(/\{\/\*[\s\S]*?\*\/\}/g, '');
   const start = /<Layout(?=[\s/>])/.exec(markup)?.index;
   if (start === undefined) return undefined;

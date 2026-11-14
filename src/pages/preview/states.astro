@@ -95,6 +95,7 @@ import Layout from '../../layouts/Layout.astro';
       <h2 id="error-heading" class="text-xl font-semibold text-ink">when an interactive part fails</h2>
       <p class="text-sm text-ink-soft">choose the sample button to simulate a failed part. the rest of the page stays usable.</p>
       <ErrorBoundaryDemo client:only="react" />
+      <noscript><p>the interactive error preview needs JavaScript. the rest of this page remains available.</p></noscript>
     </section>
   </div>
 </Layout>

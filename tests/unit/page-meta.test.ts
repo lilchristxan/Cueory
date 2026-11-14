@@ -41,7 +41,7 @@ interface PageMeta {
 
 /** Inspect the rendered head, not title-looking strings in a body, comment or script. */
 function pageMeta(html: string): PageMeta {
-  const uncommented = html.replace(/<!--[\s\S]*?-->/g, '');
+  const uncommented = html.replace(/<!--[\s\S]*?-->/g, ' ');
   const head = uncommented.match(/<head\b[^>]*>([\s\S]*?)<\/head\s*>/i)?.[1] ?? '';
   const titles = [...head.matchAll(/<title\b[^>]*>([\s\S]*?)<\/title\s*>/gi)]
     .map((match) => decoded(match[1].trim()));
@@ -103,7 +103,7 @@ const DEFAULT_DESCRIPTION_PAGES = new Set([
 
 /** Preserve keyboard access to the primary content on every page, even if it is noindex. */
 function skipNavigationProblems(html: string): string[] {
-  const markup = html.replace(/<!--[\s\S]*?-->/g, '');
+  const markup = html.replace(/<!--[\s\S]*?-->/g, ' ');
   const skip = /<a\b[^>]*\shref\s*=\s*(["'])#main\1[^>]*>[\s\S]*?<\/a\s*>/i.exec(markup);
   const main = /<main\b[^>]*>/i.exec(markup);
   const problems: string[] = [];

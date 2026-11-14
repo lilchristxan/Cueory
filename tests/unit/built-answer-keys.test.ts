@@ -110,7 +110,7 @@ function shippedKeys(text: string, javascript = true): string[] {
     // Hidden answer pages are still public HTML. Match hooks and headings, not privacy-page prose.
     if (/\bdata-(?:worksheet-answers|answer-key)\b/i.test(text) ||
         /<h[1-6]\b[^>]*>\s*answer\s+key\s*<\/h[1-6]>/i.test(text)) found.add('answer-key markup');
-    for (const match of text.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script\s*>/gi)) {
+    for (const match of text.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script\b[^>]*>/gi)) {
       inspectJs(match[1]!);
       inspectJson(match[1]!, 0);
     }
@@ -156,6 +156,7 @@ describe('built answer-key guard (T16)', () => {
     ['nested serialized JSON', 'const text=JSON.stringify({rationales:{a:"[sample]"}});', true],
     ['JSON.parse payload', 'JSON.parse(\'{"correct":true}\');', true],
     ['JSON script payload', '<script type="application/json">{"correct":true}</script>', false],
+    ['script end tag with whitespace and attributes', '<script type="application/json">{"correct":true}</script\t\n bar>', false],
     ['hydrated props', '<astro-island props="{&quot;items&quot;:[1,[[0,{&quot;correct&quot;:[0,true]}]]]}"></astro-island>', false],
     ['numeric HTML entities', '<div data-items="{&#34;rationale&#34;:&#34;[sample]&#34;}"></div>', false],
     ['hidden answer markup', '<section hidden data-worksheet-answers>sample</section>', false],

@@ -44,4 +44,5 @@ const { shown, starters } = page;
     </a>
   </article>
   {shown && <GameResultsHost client:only="react" />}
+  {shown && <noscript><p>game results and sharing need JavaScript.</p></noscript>}
 </Layout>

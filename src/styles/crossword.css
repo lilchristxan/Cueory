@@ -8,8 +8,8 @@
 */
 @layer components {
   .crossword-panel { position: relative; }
-  .crossword-toolbar { display: flex; justify-content: flex-end; gap: var(--spacing); }
-  .crossword-help { position: relative; }
+  .crossword-toolbar { position: relative; display: flex; justify-content: flex-end; gap: var(--spacing); }
+  .crossword-help { position: static; }
   .crossword-help summary { list-style: none; font-weight: 700; cursor: pointer; }
   .crossword-help summary::-webkit-details-marker { display: none; }
   .crossword-help-panel {
@@ -18,6 +18,7 @@
     inset-block-start: calc(100% + var(--spacing));
     inset-inline-end: 0;
     inline-size: var(--crossword-help);
+    max-inline-size: 100%;
     padding: calc(var(--spacing) * 4);
     border: var(--crossword-line) solid var(--color-control);
     border-radius: var(--radius-lg);
@@ -26,7 +27,7 @@
     box-shadow: var(--shadow-card);
   }
   .crossword-board-wrap { container-type: inline-size; max-inline-size: 100%; overflow: clip; }
-  .crossword-board-wrap[data-level="hard"] {
+  .crossword-board-wrap {
     position: relative;
     inset-inline-start: 50%;
     inline-size: calc(100vw - var(--spacing) * 4);
@@ -34,8 +35,8 @@
     transform: translateX(-50%);
     overflow: visible;
   }
-  .crossword-board { --crossword-cell: var(--crossword-cell-easy); display: flex; inline-size: max-content; max-inline-size: 100%; margin-inline: auto; flex-direction: column; gap: var(--crossword-gap); }
-  .crossword-board[data-level="mid"] { --crossword-cell: var(--crossword-cell-mid); }
+  .crossword-board { --crossword-cell: min(var(--crossword-cell-easy), calc((100cqw - 4 * var(--crossword-gap)) / 5)); display: flex; inline-size: max-content; max-inline-size: 100%; margin-inline: auto; flex-direction: column; gap: var(--crossword-gap); }
+  .crossword-board[data-level="mid"] { --crossword-cell: min(var(--crossword-cell-mid), calc((100cqw - 6 * var(--crossword-gap)) / 7)); }
   .crossword-board[data-level="hard"] { --crossword-cell: var(--crossword-cell-hard); }
   .crossword-row { display: flex; gap: var(--crossword-gap); }
   .crossword-cell, .crossword-gap { inline-size: var(--crossword-cell); block-size: var(--crossword-cell); flex: none; }

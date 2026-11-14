@@ -109,6 +109,8 @@ describe('sitemap', () => {
     expect(sourceDeclaresNoindex('<Layout title="private" noindex={page.noindex} />')).toBe(true);
     expect(sourceDeclaresNoindex('<Layout title="public" noindex={false} />')).toBe(false);
     expect(sourceDeclaresNoindex('<Layout title="public" description="noindex is a word" />')).toBe(false);
+    // Removing a comment must not join the surrounding text into a new comment opener.
+    expect(sourceDeclaresNoindex('<<!-- sample -->!--<Layout noindex />')).toBe(true);
   });
 
   it('ignores > inside attribute values and recognizes a tight noindex/> attribute', () => {
