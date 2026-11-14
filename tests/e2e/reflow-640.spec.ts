@@ -85,9 +85,20 @@ test.describe('640 CSS px reflow', () => {
         problems.push(...await horizontalClipping(opener));
       }
     }
-    for (const control of await controls.all()) {
+    // Native closed disclosures keep their controls in the DOM, but those
+    // controls cannot receive focus and must not be scrolled into view.
+    // Filter on the page once to avoid hundreds of Playwright round trips.
+    // Keep the disclosure's own summary in scope as a reachable control.
+    const reachable = await controls.evaluateAll((elements) => elements.flatMap((element, index) => {
+      if (element.closest('[inert], [hidden], [aria-hidden="true"]')) return [];
+      const collapsed = element.closest('details:not([open])');
+      if (collapsed && element !== collapsed.querySelector(':scope > summary')) return [];
+      if (!element.getClientRects().length || getComputedStyle(element).visibility !== 'visible') return [];
+      return [index];
+    }));
+    for (const index of reachable) {
+      const control = controls.nth(index);
       if (!(await control.isVisible())) continue;
-      if (await control.evaluate((element) => !!element.closest('[inert], [hidden], [aria-hidden="true"]'))) continue;
       if (await control.evaluate((element) => element.matches('[data-modes][data-ring] [data-mode-open]'))) continue;
       await control.scrollIntoViewIfNeeded();
       problems.push(...await horizontalClipping(control));
