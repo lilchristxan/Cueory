@@ -63,7 +63,8 @@ export default function AnatomyReviewPictures({ modelPath, structureIds, title, 
       });
       sceneRef.current = scene;
       const result = await scene.load(modelPath, structureIds);
-      if (!mounted.current || !result || result.found.length === 0) return;
+      if (!mounted.current) return;
+      if (!result || result.found.length === 0) throw new Error('No model geometry was available.');
 
       const front = await scene.exportPicture({
         size: 'square', title: `${title} — front view`, credit,
