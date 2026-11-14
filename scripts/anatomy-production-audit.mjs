@@ -800,6 +800,49 @@ function validPagefindArtifact(path, kind, draftIds = new Set()) {
         decodeAsciiEscapesForAudit(sectionText, 'markup'),
         decodeAsciiEscapesForAudit(sectionText, 'css'),
       ].some((value) => containsReservedAnatomyId(value, draftIds))) return false;
+      if (type === 11) {
+        // Passive/active WASM data entries are length-framed within their
+        // section. Scan those payloads independently: the preceding LEB length
+        // can be an ASCII word byte and mask a leading draft ID (e.g. 0x41 +
+        // FMA999991). A serialized-section scan is insufficient.
+        let dataCursor = cursor;
+        const readDataLeb = () => {
+          let value = 0;
+          for (let i = 0; i < 5 && dataCursor < end; i += 1) {
+            const byte = payload[dataCursor++];
+            value += (byte & 0x7f) * 2 ** (7 * i);
+            if (!(byte & 0x80)) return Number.isSafeInteger(value) ? value : null;
+          }
+          return null;
+        };
+        const segments = readDataLeb();
+        if (segments === null || segments > 100000) return false;
+        for (let segment = 0; segment < segments; segment += 1) {
+          const flags = readDataLeb();
+          if (flags === null || flags > 2) return false;
+          // Active segments contain an init expression ending in end opcode.
+          // Only integer-constant offsets are accepted by this conservative
+          // audit; any unsupported expression fails closed.
+          if (flags !== 1) {
+            if (flags === 2 && readDataLeb() === null) return false; // memory index
+            if (dataCursor >= end || ![0x41, 0x42].includes(payload[dataCursor++])) return false;
+            if (readDataLeb() === null || payload[dataCursor++] !== 0x0b) return false;
+          }
+          const length = readDataLeb();
+          if (length === null || length > end - dataCursor) return false;
+          const segmentBytes = payload.subarray(dataCursor, dataCursor + length);
+          dataCursor += length;
+          const segmentText = segmentBytes.toString('latin1');
+          if ([
+            segmentText,
+            decodeAsciiEscapesForAudit(segmentText, 'script'),
+            decodeAsciiEscapesForAudit(segmentText, 'markup'),
+            decodeAsciiEscapesForAudit(segmentText, 'css'),
+          ].some((value) => containsReservedAnatomyId(value, draftIds))) return false;
+          if (containsGlbHeader(segmentBytes) || containsValidatedArchive(segmentBytes)) return false;
+        }
+        if (dataCursor !== end) return false;
+      }
       if ((type === 0 || type === 11) &&
           (containsGlbHeader(sectionBytes) || containsValidatedArchive(sectionBytes))) return false;
       if (type === 0) {
