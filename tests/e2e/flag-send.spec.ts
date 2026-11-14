@@ -25,11 +25,24 @@ test.beforeAll(async () => {
       import React from 'react';
       import { createRoot } from 'react-dom/client';
       import FlagMount from './src/islands/FlagMount.tsx';
+      import FlagForm from './src/islands/FlagForm.tsx';
       import { setFlagItem } from './src/islands/flagitem.ts';
       window.__setFlagItem = setFlagItem;
+      // A controlled real FlagForm allows the browser to deterministically
+      // exercise initial identity discovery and direct A-to-B account switches.
+      function IdentityHarness() {
+        const [identity, setIdentity] = React.useState({ signedIn: null, userId: null });
+        window.__setFlagIdentity = (signedIn, userId) => setIdentity({ signedIn, userId });
+        return <FlagForm page="${PAGE_PATH}" variant="icon" signedIn={identity.signedIn}
+          userId={identity.userId} send={async () => 'sent'} />;
+      }
       const params = new URLSearchParams(location.search);
       const item = params.has('item') ? { itemId: '${ITEM_ID}', itemVersionId: '${VERSION_ID}' } : {};
-      createRoot(document.getElementById('fixture')).render(<FlagMount page="${PAGE_PATH}" variant="icon" {...item} />);
+      createRoot(document.getElementById('fixture')).render(
+        params.has('identity')
+          ? <IdentityHarness />
+          : <FlagMount page="${PAGE_PATH}" variant="icon" {...item} />,
+      );
     `, resolveDir: process.cwd(), loader: 'tsx' },
     bundle: true, write: false, format: 'iife', platform: 'browser', jsx: 'automatic',
     resolveExtensions: ['.ts', '.tsx', '.js', '.jsx', '.json'],
@@ -221,5 +234,49 @@ test.describe('flag or comment with accounts on', () => {
     await expect(panel.getByRole('button', { name: 'send', exact: true })).toHaveCount(0);
     expect(rpcCalls).toEqual([]);
     expect(otherCalls).toEqual([]);
+  });
+});
+
+test.describe('flag form account identity, deterministic browser checks', () => {
+  const identity = (page: Page, signedIn: boolean | null, userId: string | null) =>
+    page.evaluate(([status, id]) => {
+      (window as typeof window & { __setFlagIdentity?: (signedIn: boolean | null, userId: string | null) => void })
+        .__setFlagIdentity?.(status, id);
+    }, [signedIn, userId] as const);
+
+  test('keeps the focused panel open when an initial account is discovered, then clears it on direct A-to-B sign-in', async ({ page }) => {
+    const { rpcCalls } = await fixture(page, { signedIn: false, query: 'identity=1' });
+    const trigger = flagButton(page);
+    await trigger.click();
+    await expect(trigger).toHaveAttribute('aria-expanded', 'true');
+    await expect(page.getByTestId('flag-form')).toContainText('checking your account');
+
+    // The first account answer is not a change of account. An open panel
+    // must remain open and its first radio should receive keyboard focus.
+    await identity(page, true, 'account-A');
+    await expect(trigger).toHaveAttribute('aria-expanded', 'true');
+    const firstReason = page.getByRole('radio', { name: 'a wrong fact' });
+    await expect(firstReason).toBeFocused();
+    await page.getByRole('radio', { name: 'something confusing' }).check();
+    await page.getByLabel('anything to add? (optional)').fill('A private draft');
+
+    // A direct account switch is materially different from first identifying
+    // a session: A's unsent note cannot become B's draft.
+    await identity(page, true, 'account-B');
+    await expect(trigger).toHaveAttribute('aria-expanded', 'false');
+    await trigger.click();
+    await expect(page.getByRole('radio', { name: 'something confusing' })).not.toBeChecked();
+    await expect(page.getByLabel('anything to add? (optional)')).toHaveValue('');
+    expect(rpcCalls).toEqual([]);
+  });
+
+  test('keeps a signed-out help panel open when the student signs in', async ({ page }) => {
+    await fixture(page, { signedIn: false, query: 'identity=1' });
+    await identity(page, false, null);
+    await flagButton(page).click();
+    await expect(page.getByTestId('flag-form')).toContainText('a free account is needed to send a report');
+    await identity(page, true, 'account-A');
+    await expect(flagButton(page)).toHaveAttribute('aria-expanded', 'true');
+    await expect(page.getByRole('radio', { name: 'a wrong fact' })).toBeFocused();
   });
 });
