@@ -109,6 +109,12 @@ test.beforeAll(async () => {
         auth: {
           getSession: async () => ({ data: { session: params.has('signed-out') ? null : { user: { id: uuid(9), email: 'student@example.test', user_metadata: { full_name: 'Sample Student' } } } }, error: null }),
           signOut: async options => { calls.push('signOut:' + options.scope); return { error: null }; },
+          // Match Supabase's auth subscription contract. The account export listens for
+          // cross-tab identity events and always unsubscribes after its last session check.
+          onAuthStateChange(callback) {
+            const listener = { callback };
+            return { data: { subscription: { unsubscribe() { listener.callback = null; } } } };
+          },
           // Task 309 requires the authenticated user's own Auth record in addition to the five data tables.
           getUser: async () => ({ data: { user: {
             id: uuid(9), created_at: when, last_sign_in_at: when,
