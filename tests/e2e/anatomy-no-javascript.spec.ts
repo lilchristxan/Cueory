@@ -53,11 +53,11 @@ for (const width of [320, 390, 820, 1440]) {
       await expect(practice).toHaveAttribute('open', '');
 
       const check = practice.locator('ol > li details').first();
-      await expect(check.getByText('trail:')).toBeHidden();
+      await expect(check.getByText(/^trail:/)).toBeHidden();
       await check.locator('summary').focus();
       await page.keyboard.press('Enter');
       await expect(check).toHaveAttribute('open', '');
-      await expect(check.getByText('trail:')).toBeVisible();
+      await expect(check.getByText(/^trail:/)).toBeVisible();
 
       const link = check.getByRole('link', { name: 'go to catalog entry' });
       const target = await link.getAttribute('href');
