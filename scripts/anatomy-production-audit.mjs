@@ -1210,6 +1210,9 @@ function hasUsableSiteEntrypoint(html) {
           !validTrailingModuleTag(html.slice(cursor, tagEnd + 1))) return false;
       const closing = /<\/script\s*>/i.exec(html.slice(tagEnd + 1));
       if (!closing) return false;
+      // A nested opening script is not a safely closed trailing module.
+      // Preserve the release gate if malformed output contains one.
+      if (/<script\b/i.test(html.slice(tagEnd + 1, tagEnd + 1 + closing.index))) return false;
       cursor = tagEnd + 1 + closing.index + closing[0].length;
       continue;
     }
