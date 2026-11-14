@@ -515,6 +515,12 @@ describe('anatomy production artifact audit', () => {
     // anatomy text. ID-shaped bytes must not cause a false release rejection.
     const wasmOpaqueData = Buffer.alloc(300, 0x61);
     wasmOpaqueData.write('FMA999991 FIX001', 32, 'ascii');
+    const wasmWithDraftId = gzipSync(Buffer.concat([
+      prefix, wasmHeader, Buffer.from([0x00, 0x0c, 0x01, 0x78]),
+      Buffer.from('FMA999991', 'ascii'),
+    ]));
+    // No archive magic is required: a valid custom section can leak the
+    // draft ID by itself, and must fail the production release gate.
     const wasmWithOpaqueIds = gzipSync(Buffer.concat([
       prefix, wasmHeader, Buffer.from([0x00, 0xae, 0x02]),
       Buffer.concat([Buffer.from([0x01, 0x78]), wasmOpaqueData]),
@@ -526,6 +532,7 @@ describe('anatomy production artifact audit', () => {
     f.file('pagefind/wasm.en.pagefind', wasm);
     f.file('pagefind/wasm.en_harmless.pagefind', wasmWithHarmlessMarker);
     f.file('pagefind/wasm.en_opaque_ids.pagefind', wasmWithOpaqueIds);
+    f.file('pagefind/wasm.en_draft_id.pagefind', wasmWithDraftId);
     // Pagefind also accepts already-decompressed data with the same marker.
     f.file('pagefind/fragment/en_raw_test.pf_fragment', Buffer.concat([prefix, Buffer.from(JSON.stringify({
       url: '/', content: 'safe raw search text', word_count: 4,
@@ -736,6 +743,7 @@ describe('anatomy production artifact audit', () => {
     f.file('pagefind/index/en_trailing_bytes.pf_index', Buffer.concat([gzipSync(Buffer.concat([prefix, Buffer.from('safe index payload')])), Buffer.from('glTF' + 'x'.repeat(32))]));
     expect(f.check().errors).toEqual(expect.arrayContaining([
       'archive/container in production output requires explicit review: /pagefind/wasm.en_hidden_archive.pagefind',
+      'archive/container in production output requires explicit review: /pagefind/wasm.en_draft_id.pagefind',
       'archive/container in production output requires explicit review: /pagefind/fragment/en_corrupt.pf_fragment',
       'archive/container in production output requires explicit review: /pagefind/fragment/en_hidden_model.pf_fragment',
       'archive/container in production output requires explicit review: /pagefind/fragment/en_glb_json.pf_fragment',
