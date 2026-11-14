@@ -243,6 +243,12 @@ describe('the draft gate (D-56)', () => {
 
   it('shows drafts only with the explicit local flag outside Workers Builds', () => {
     expect(draftsAllowed({ CUEORY_ANATOMY_DRAFTS: '1' })).toBe(true);
+    expect(draftsAllowed({ GITHUB_REF: 'refs/heads/main', CUEORY_ANATOMY_DRAFTS: '1' })).toBe(false);
+    expect(draftsAllowed({ GITHUB_REF: 'refs/heads/legacy/main', WORKERS_CI: '1', WORKERS_CI_BRANCH: 'staging' })).toBe(false);
+    expect(draftsAllowed({ GITHUB_BASE_REF: 'main', GITHUB_EVENT_NAME: 'pull_request', CUEORY_ANATOMY_DRAFTS: '1' })).toBe(false);
+    expect(draftsAllowed({ GITHUB_BASE_REF: 'legacy/main', GITHUB_EVENT_NAME: 'pull_request', WORKERS_CI: 'true', WORKERS_CI_BRANCH: 'staging' })).toBe(false);
+    expect(draftsAllowed({ GITHUB_REF: 'refs/heads/staging', CUEORY_ANATOMY_DRAFTS: '1' })).toBe(true);
+
     expect(draftsAllowed({ WORKERS_CI: '1', WORKERS_CI_BRANCH: 'main', CUEORY_ANATOMY_DRAFTS: '1' })).toBe(false);
   });
 
