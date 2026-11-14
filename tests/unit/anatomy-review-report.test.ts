@@ -207,8 +207,17 @@ describe('read-only anatomy review inventory', () => {
   });
 
   it('does not generate an unsafe link from a malformed review sheet identifier', () => {
-    expect(() => anatomyReviewSheets([{ id: '../private', labels: [] }])).toThrow('invalid anatomy review sheet data');
-    expect(() => anatomyReviewSheets([{ id: 'SAFE', labels: [] }])).toThrow('invalid anatomy review sheet data');
+    const entry = {
+      id: 'sample',
+      title: 'synthetic model',
+      status: 'draft' as const,
+      release: 'sample release',
+      path: '/models/anatomy/sample.glb',
+      bytes: 1,
+      labels: [],
+    };
+    expect(() => anatomyReviewSheets([{ ...entry, id: '../private' }])).toThrow('invalid anatomy review sheet data');
+    expect(() => anatomyReviewSheets([{ ...entry, id: 'SAFE' }])).toThrow('invalid anatomy review sheet data');
   });
 
 });
