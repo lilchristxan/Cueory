@@ -1839,6 +1839,44 @@ describe('anatomy production artifact audit', () => {
     expect(errors).not.toContain('unreviewed output asset type requires explicit review: /captions/draft.vtt');
   });
 
+  it('blocks a full draft GLB hidden in base64 atob or data URI text', () => {
+    const f = setup();
+    const draft = Buffer.from(readFileSync(join(f.dist, 'models', 'anatomy', 'approved.glb')));
+    const original = draft.indexOf('FMA999992', 0, 'ascii');
+    expect(original).toBeGreaterThan(0);
+    // Same-length synthetic test ID: GLB framing remains intact.
+    draft.write('FMA999991', original, 'ascii');
+    const encoded = draft.toString('base64');
+    expect(encoded).not.toContain('FMA999991');
+    expect(encoded).not.toContain('glTF');
+    f.file('_astro/hidden.js', `const source = Uint8Array.from(atob('${encoded}'), c => c.charCodeAt(0));`);
+    f.file('assets/hidden.json', JSON.stringify({ model: 'data:model/gltf-binary;base64,' + encoded }));
+    const errors = f.check().errors;
+    expect(errors).toContain('encoded geometry, archive or reserved anatomy ID in built text requires review: _astro/hidden.js');
+    expect(errors).toContain('encoded geometry, archive or reserved anatomy ID in built text requires review: assets/hidden.json');
+  });
+
+  it('rejects base64 model archives, source-only IDs and encoded text glTF while keeping harmless encodings', () => {
+    const f = setup();
+    const draftId = Buffer.from('FMA999991', 'ascii').toString('base64');
+    f.file('_astro/short-token.mjs', `const source = atob('${draftId}');`);
+    const encodedArchive = gzipSync(readFileSync(join(f.dist, 'models', 'anatomy', 'approved.glb'))).toString('base64');
+    f.file('assets/compressed.css', `body::after { content: 'data:application/gzip;base64,${encodedArchive}'; }`);
+    const gltf = {
+      asset: { version: '2.0' },
+      meshes: [{ primitives: [{ attributes: { POSITION: 0 }, indices: 1 }] }],
+      accessors: [{ count: 3, componentType: 5126, type: 'VEC3' }, { count: 3, componentType: 5123, type: 'SCALAR' }],
+      buffers: [{ byteLength: 42, uri: 'data:application/octet-stream;base64,AAAA' }],
+    };
+    f.file('assets/embedded-gltf.js', `const raw = atob('${Buffer.from(JSON.stringify(gltf)).toString('base64')}');`);
+    f.file('assets/ordinary.js', `const harmless = atob('${Buffer.from('ordinary source-independent placeholder').toString('base64')}');`);
+    const errors = f.check().errors;
+    for (const url of ['_astro/short-token.mjs', 'assets/compressed.css', 'assets/embedded-gltf.js']) {
+      expect(errors).toContain('encoded geometry, archive or reserved anatomy ID in built text requires review: ' + url);
+    }
+    expect(errors.some((message) => message.includes('assets/ordinary.js'))).toBe(false);
+  });
+
   it('rejects escaped synthetic IDs in generated JS, JSON, HTML and SVG', () => {
     const f = setup();
     f.file('_astro/fixture.js', 'const id="\\u0046IX001";');
