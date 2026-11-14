@@ -95,6 +95,19 @@ test.beforeAll(async () => {
         }],
       };
       let name = 'Sample Student';
+      const firstUser = uuid(9);
+      const secondUser = uuid(8);
+      let activeUser = firstUser;
+      const subscribers = new Set();
+      window.fixtureOriginalUserId = firstUser;
+      window.fixtureOtherUserId = secondUser;
+      window.fixtureServerDeletes = 0;
+      window.fixtureSwitchUser = next => {
+        activeUser = next;
+        for (const listener of subscribers) {
+          listener(next ? 'SIGNED_IN' : 'SIGNED_OUT', next ? { user: { id: next } } : null);
+        }
+      };
       const query = table => {
         const q = {
           order: () => q, gt: () => q,
@@ -105,8 +118,12 @@ test.beforeAll(async () => {
       };
       const client = {
         auth: {
-          getSession: async () => ({ data: { session: params.has('signed-out') ? null : { user: { id: uuid(9), email: 'student@example.test', user_metadata: { full_name: 'Sample Student' } } } }, error: null }),
+          getSession: async () => ({ data: { session: params.has('signed-out') || !activeUser ? null : { user: { id: activeUser, email: 'student@example.test', user_metadata: { full_name: 'Sample Student' } } } }, error: null }),
           signOut: async options => { calls.push('signOut:' + options.scope); return { error: null }; },
+          onAuthStateChange(callback) {
+            subscribers.add(callback);
+            return { data: { subscription: { unsubscribe: () => subscribers.delete(callback) } } };
+          },
           // Task 309 requires the authenticated user's own Auth record in addition to the five data tables.
           getUser: async () => ({ data: { user: {
             id: uuid(9), created_at: when, last_sign_in_at: when,
@@ -118,7 +135,9 @@ test.beforeAll(async () => {
           return {
             select() {
               const q = query(table);
-              q.eq = () => ({ maybeSingle: async () => ({ data: { display_name: name }, error: null }) });
+              q.eq = (_column, ownerId) => ({ maybeSingle: async () => ({
+                data: { display_name: ownerId === firstUser ? name : 'Second Student' }, error: null,
+              }) });
               return q;
             },
 
@@ -136,6 +155,23 @@ test.beforeAll(async () => {
             return Promise.resolve({ data: name, error: null });
           }
           calls.push('rpc:' + fn);
+          if (fn === 'delete_my_account' && params.has('delete-held')) {
+            let signal;
+            let finish;
+            const held = new Promise(resolve => {
+              finish = () => {
+                const succeeded = params.has('force-delete-success') || !signal?.aborted;
+                if (succeeded) window.fixtureServerDeletes += 1;
+                resolve(succeeded
+                  ? { data: null, error: null }
+                  : { data: null, error: { message: 'request was cancelled before dispatch' } });
+              };
+            });
+            window.fixtureReleaseDelete = finish;
+            // Models the abortSignal method on the PostgREST request builder.
+            held.abortSignal = nextSignal => { signal = nextSignal; return held; };
+            return held;
+          }
           return Promise.resolve(params.has('delete-refused')
             ? { data: null, error: { message: 'sign in to delete your account', code: '28000' } } : { data: null, error: null });
         },
@@ -296,7 +332,7 @@ test.describe('/account signed in (fake client)', () => {
     expect((await urls(page)).made).toBe(0);
   });
 
-  test('delete stays disabled until "delete" is typed, then deletes, signs out and clears this device', async ({ page }) => {
+  test('delete stays disabled until "delete" is typed, then deletes and clears only this device', async ({ page }) => {
     await fixture(page);
     await page.evaluate(() => {
       for (const key of [
@@ -329,9 +365,68 @@ test.describe('/account signed in (fake client)', () => {
     const done = page.getByText('your account is deleted, and this device no longer keeps your cueory data.');
     await expect(done).toBeFocused();
     await expect(page.getByRole('link', { name: 'go to the home page' })).toHaveAttribute('href', '/');
-    expect(await calls(page)).toEqual(['rpc:delete_my_account', 'signOut:local']);
+    expect(await calls(page)).toEqual(['rpc:delete_my_account']); // Never sign out a replacement account.
     expect(await page.evaluate(() => Object.keys(localStorage))).toEqual(['not-cueory']);
     expect(await page.evaluate(() => sessionStorage.getItem('cueory-break-timer'))).toBeNull();
+    await axe(page);
+  });
+
+  test('switching A to B during the deletion response never clears B after A is deleted', async ({ page }) => {
+    await fixture(page, '&delete-held&force-delete-success');
+    await page.evaluate(() => {
+      localStorage.setItem('cueory-auth', 'a-session');
+      localStorage.setItem('cueory-progress', 'a-progress');
+    });
+    await page.getByRole('button', { name: 'delete my account', exact: true }).click();
+    await page.getByLabel('type delete to confirm').fill('delete');
+    await deleteButton(page).click();
+    await expect.poll(() => calls(page)).toContain('rpc:delete_my_account');
+    await page.evaluate(() => {
+      const w = window as unknown as {
+        fixtureSwitchUser: (userId: string) => void;
+        fixtureOtherUserId: string;
+      };
+      localStorage.setItem('cueory-auth', 'b-session');
+      localStorage.setItem('cueory-progress', 'b-progress');
+      w.fixtureSwitchUser(w.fixtureOtherUserId);
+    });
+    await page.evaluate(() => (window as unknown as { fixtureReleaseDelete: () => void }).fixtureReleaseDelete());
+    await expect(page.getByText('your account is deleted, but this browser changed or could not confirm its sign-in, so its saved data was left alone.')).toBeVisible();
+    expect(await page.evaluate(() => (window as unknown as { fixtureServerDeletes: number }).fixtureServerDeletes)).toBe(1);
+    expect(await calls(page)).toEqual(['rpc:delete_my_account']);
+    expect(await page.evaluate(() => [localStorage.getItem('cueory-auth'), localStorage.getItem('cueory-progress')]))
+      .toEqual(['b-session', 'b-progress']);
+    await axe(page);
+  });
+
+  test('switching A to B to A before delayed dispatch cancels deletion and reloads account settings', async ({ page }) => {
+    await fixture(page, '&delete-held');
+    await page.evaluate(() => {
+      localStorage.setItem('cueory-auth', 'a-session');
+      localStorage.setItem('cueory-progress', 'a-progress');
+    });
+    await page.getByRole('button', { name: 'delete my account', exact: true }).click();
+    await page.getByLabel('type delete to confirm').fill('delete');
+    await deleteButton(page).click();
+    await expect.poll(() => calls(page)).toContain('rpc:delete_my_account');
+    await page.evaluate(() => {
+      const w = window as unknown as {
+        fixtureSwitchUser: (userId: string) => void;
+        fixtureOtherUserId: string;
+        fixtureOriginalUserId: string;
+      };
+      w.fixtureSwitchUser(w.fixtureOtherUserId);
+      localStorage.setItem('cueory-auth', 'b-session');
+      w.fixtureSwitchUser(w.fixtureOriginalUserId);
+      localStorage.setItem('cueory-auth', 'a-new-session');
+    });
+    await page.evaluate(() => (window as unknown as { fixtureReleaseDelete: () => void }).fixtureReleaseDelete());
+    await expect(page.getByRole('alert')).toContainText('we could not confirm deletion after the sign-in changed');
+    await expect(page.getByRole('button', { name: 'delete my account', exact: true })).toBeVisible();
+    expect(await page.evaluate(() => (window as unknown as { fixtureServerDeletes: number }).fixtureServerDeletes)).toBe(0);
+    expect(await calls(page)).toEqual(['rpc:delete_my_account']);
+    expect(await page.evaluate(() => [localStorage.getItem('cueory-auth'), localStorage.getItem('cueory-progress')]))
+      .toEqual(['a-new-session', 'a-progress']);
     await axe(page);
   });
 
