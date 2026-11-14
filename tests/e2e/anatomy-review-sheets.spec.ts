@@ -40,6 +40,7 @@ test('the preview gives each source system an independent, unindexed phone revie
 
   // Reviewer checkmarks are never stored, and cannot grant model approval.
   await page.reload();
+  await page.locator('[data-review-group]').first().locator('summary').click();
   await expect(items.first().getByRole('checkbox')).not.toBeChecked();
   await expect(page.getByText('draft · labels waiting for review')).toBeVisible();
 });
@@ -53,7 +54,10 @@ test('review sheets fit phone, tablet and desktop in Light and Evening', async (
     for (const width of [320, 390, 820, 1440]) {
       await page.setViewportSize({ width, height: width < 600 ? 844 : width < 1200 ? 1180 : 900 });
       await expect(page.getByRole('heading', { level: 1 })).toContainText('kidneys and urinary tract');
-      await page.locator('[data-review-group]').first().locator('summary').click();
+      const firstGroup = page.locator('[data-review-group]').first();
+      if (!(await firstGroup.evaluate((el) => (el as HTMLDetailsElement).open))) {
+        await firstGroup.locator('summary').click();
+      }
       const first = page.locator('[data-review-structure]').first().getByRole('checkbox');
       await expect(first).toBeVisible();
       const layout = await page.evaluate(() => {
