@@ -212,6 +212,19 @@ describe('the draft gate (D-56)', () => {
     expect(draftsAllowed({ WORKERS_CI: '1', WORKERS_CI_BRANCH: 'main' })).toBe(false);
   });
 
+  it('does not serialize unreviewed anatomy for the connected legacy/main production branch', () => {
+    const env = { WORKERS_CI: 'true', WORKERS_CI_BRANCH: 'refs/heads/legacy/main', CUEORY_ANATOMY_DRAFTS: '1' };
+    const data = labDataForBuild({
+      '../../../content/visuals/anatomy-heart.json': sampleSystem('heart', { title: 'unreviewed anatomy' }),
+      '../../../content/visuals/anatomy-lungs.json': sampleSystem('lungs', { title: 'reviewed anatomy', status: 'approved' }),
+    }, fixtureJson, env);
+    expect(draftsAllowed(env)).toBe(false);
+    expect(data.drafts).toBe(false);
+    expect(data.fixture).toBeNull();
+    expect(data.systems.map((system) => system.key)).toEqual(['lungs']);
+    expect(JSON.stringify(data)).not.toContain('unreviewed anatomy');
+  });
+
   it('hides drafts on a Workers build that does not name its branch', () => {
     expect(draftsAllowed({ WORKERS_CI: '1' })).toBe(false);
     expect(draftsAllowed({ WORKERS_CI: '1', WORKERS_CI_BRANCH: '  ' })).toBe(false);
