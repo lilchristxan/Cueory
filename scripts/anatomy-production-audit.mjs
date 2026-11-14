@@ -630,7 +630,7 @@ function hasUnsafeEncodedAnatomyPayload(text, draftIds, budget = { examined: 0 }
   // atob ignores ASCII whitespace inside its string argument. A base64 GLB
   // broken into 76-character lines would evade scanning each run separately.
   // Restrict joining to the contents of one quoted literal.
-  const atobLiterals = /\batob\s*\(\s*(['"\x60])([A-Za-z0-9+/_=\s-]{4,})\1\s*\)/g;
+  const atobLiterals = /\batob\s*\(\s*(['"\x60])([A-Za-z0-9+/_=\t\n\r\f -]{4,})\1\s*\)/g;
   for (const match of text.matchAll(atobLiterals)) {
     if (inspect(match[2], true)) return true;
   }
