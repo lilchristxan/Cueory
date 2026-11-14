@@ -36,7 +36,22 @@ export function getStaticPaths() {
     }));
 }
 
-type ReviewEntry = ReturnType<typeof anatomyInventory>[number];
+type ReviewLabel = {
+  id: string;
+  name: string;
+  group: string;
+  layer: string;
+  source: { quote: string; url: string; book: string; section: string };
+};
+type ReviewEntry = {
+  id: string;
+  title: string;
+  status: 'draft' | 'approved';
+  release: string;
+  path: string;
+  bytes: number;
+  labels: ReviewLabel[];
+};
 const { entry, system } = Astro.props as { entry: ReviewEntry; system: AnatomySystem };
 ---
 
