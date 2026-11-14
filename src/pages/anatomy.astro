@@ -16,7 +16,7 @@ const ready = systems.length > 0;
 // Carry the public report route through when the separate Flag or comment
 // package (#684) lands. In the current staging viewer this extra property is
 // ignored, while the future viewer requires it for correct report context.
-const viewerProps = { systems, fixture: null, drafts: false, reportPage: '/anatomy' as const };
+const viewerProps = { systems, fixture: null, drafts: false };
 ---
 
 <Layout title="anatomy lab" description="Explore the anatomy lab." variant="study" noindex={!ready}>
