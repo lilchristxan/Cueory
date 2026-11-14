@@ -179,6 +179,9 @@ test.describe('Task 74: full-site accessibility sweep', () => {
         try { localStorage.setItem('cueory-promo-seen', String(Date.now())); } catch { /* storage unavailable */ }
       });
 
+      // Anatomy review sheets can contain hundreds of genuine reviewer checkboxes.
+      // Keep the full keyboard traversal rather than skipping any controls.
+      if (route.startsWith('/preview/anatomy-review/')) test.setTimeout(120_000);
       const problems: string[] = [];
       const response = await page.goto(route);
       await waitForIslands(page, route);
