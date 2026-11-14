@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { auditAnatomyProduction } from '../../scripts/anatomy-production-audit.mjs';
@@ -89,6 +89,15 @@ describe('production media signatures and renamed anatomy geometry', () => {
       'unreviewed media payload or raw geometry in production output: /assets/a-photo.jpg',
     );
     expect(unreviewedMediaPayload(join(dirname(wrong), 'normal.css'))).toBe(false);
+  });
+
+  it('rejects media symlinks even when their targets have valid signatures', () => {
+    const f = fixture();
+    const validTarget = f.file('assets/valid.png', Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]));
+    const link = join(f.root, 'dist', 'assets', 'linked.png');
+    symlinkSync(validTarget, link);
+    expect(unreviewedMediaPayload(link)).toBe(true);
+    expect(f.audit().errors).toContain('symbolic link in production output: /assets/linked.png');
   });
 
   it('fails closed on a missing media asset within a private fixture directory', () => {
