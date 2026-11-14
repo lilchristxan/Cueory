@@ -49,7 +49,9 @@ export function SignedOutReportHelp() {
 
 function ReportForm({ page, itemId, itemVersionId, signedIn, send, onOpen, variant = 'text', context }: Props) {
   const icon = variant === 'icon';
-  const id = useId();
+  const reactId = useId();
+  // A contextual anatomy form can share a page with the footer's independently hydrated React root.
+  const id = context ? `scoped-${reactId}` : reactId;
   const panelId = `${id}-panel`, commentId = `${id}-comment`, countId = `${id}-count`, warningId = `${id}-patient-warning`;
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState<Reason | undefined>();
