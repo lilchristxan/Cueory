@@ -24,6 +24,10 @@ export const STRUCTURE_ID = /^(FMA\d+|FIX\d+|fixture-[a-z0-9-]+)$/;
 export const MISS_BATCH_LIMIT = 50;
 /** How many views a student can keep (save_anatomy_view refuses the 51st with SQLSTATE 54000). */
 export const SAVED_VIEW_LIMIT = 50;
+/** Limit each RPC range below PostgREST's normal 1,000-row maximum. */
+export const REVIEW_PAGE_SIZE = 500;
+/** The SQL review-history cap also bounds the active review list. */
+export const REVIEW_QUEUE_MAX_ROWS = 5_000;
 /** The longest view name, after trimming. */
 export const VIEW_NAME_LIMIT = 60;
 
@@ -76,7 +80,9 @@ interface Reply<T = unknown> { data: T | null; error: unknown }
 export interface AnatomyStudyClient extends SessionReader {
   rpc(fn: 'record_anatomy_misses', args: { system_key: string; structure_ids: string[]; expected_user_id: string }): PromiseLike<Reply<number>>;
   rpc(fn: 'clear_anatomy_miss', args: { system_key: string; structure_id: string; expected_user_id: string }): PromiseLike<Reply<boolean>>;
-  rpc(fn: 'my_anatomy_review_queue'): PromiseLike<Reply<ReviewQueueRow[]>>;
+  rpc(fn: 'my_anatomy_review_queue'): {
+    range(from: number, to: number): PromiseLike<Reply<ReviewQueueRow[]>>;
+  };
   rpc(fn: 'save_anatomy_view', args: SaveViewArgs & { expected_user_id: string }): PromiseLike<Reply<string>>;
   rpc(fn: 'delete_anatomy_view', args: { id: string; expected_user_id: string }): PromiseLike<Reply<boolean>>;
   rpc(fn: 'my_anatomy_views', args: { system_key: string }): PromiseLike<Reply<SavedViewRow[]>>;
@@ -305,9 +311,28 @@ export function createAnatomyStudy(getClient: () => Promise<AnatomyStudyClient |
     async reviewQueue(expectedUserId) {
       const client = await signedIn(expectedUserId);
       if (!client) return { ok: true, value: [] };
-      const reply = await client.rpc('my_anatomy_review_queue');
-      if (!await sameUserAfterRead(client, expectedUserId)) return { ok: false, message: NOT_SIGNED_IN };
-      return settle(reply, isRows<ReviewQueueRow>);
+      // Default PostgREST RPC reads stop at 1,000 rows, even though SQL permits more.
+      // Fetch bounded pages; never return a partial list after an error or account switch.
+      const rows: ReviewQueueRow[] = [];
+      const seen = new Set<string>();
+      for (let from = 0; from <= REVIEW_QUEUE_MAX_ROWS; from += REVIEW_PAGE_SIZE) {
+        const reply = await client.rpc('my_anatomy_review_queue').range(from, from + REVIEW_PAGE_SIZE - 1);
+        if (!await sameUserAfterRead(client, expectedUserId)) return { ok: false, message: NOT_SIGNED_IN };
+        const outcome = settle(reply, isRows<ReviewQueueRow>);
+        if (!outcome.ok) return outcome;
+        if (outcome.value.length > REVIEW_PAGE_SIZE || rows.length + outcome.value.length > REVIEW_QUEUE_MAX_ROWS) {
+          return { ok: false, message: 'could not load your full review queue. please try again.' };
+        }
+        for (const item of outcome.value) {
+          if (typeof item?.id !== 'string' || seen.has(item.id)) {
+            return { ok: false, message: 'could not load your full review queue. please try again.' };
+          }
+          seen.add(item.id);
+        }
+        rows.push(...outcome.value);
+        if (outcome.value.length < REVIEW_PAGE_SIZE) return { ok: true, value: rows };
+      }
+      return { ok: false, message: 'could not load your full review queue. please try again.' };
     },
     async saveView(state, expectedUserId) {
       const snapshot = viewSnapshot(state);
