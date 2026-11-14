@@ -9,6 +9,8 @@ interface Props {
   itemVersionId?: string;
   /** null while the browser's session is still being checked. */
   signedIn: boolean | null;
+  /** The bound session identity; changes even when a second account stays signed in. */
+  userId?: string | null;
   send: (report: FlagReport) => Promise<SendResult>;
   /** Called when the student opens the form, so a session check that hasn't started yet starts now. */
   onOpen?: () => void;
@@ -30,7 +32,10 @@ export default function FlagForm(props: Props) {
     if (account.current.known === true && !props.signedIn) account.current.changes += 1;
     account.current.known = props.signedIn;
   }
-  return <ReportForm key={JSON.stringify([props.page, props.itemId, props.itemVersionId, props.context, account.current.changes])} {...props} />;
+  return <ReportForm key={JSON.stringify([
+    props.page, props.itemId, props.itemVersionId, props.context,
+    props.userId, account.current.changes,
+  ])} {...props} />;
 }
 
 
