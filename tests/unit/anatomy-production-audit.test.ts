@@ -1951,6 +1951,26 @@ describe('anatomy production artifact audit', () => {
     );
   });
 
+  it('rejects Base64 source-form OBJ, PLY and STL geometry while allowing ordinary encoded prose', () => {
+    const f = setup();
+    const obj = '# synthetic mesh\\nv 0 0 0\\nv 1 0 0\\nv 0 1 0\\nf 1 2 3\\n';
+    const ply = 'ply\\nformat ascii 1.0\\nelement vertex 3\\nproperty float x\\nproperty float y\\nproperty float z\\nend_header\\n';
+    const stl = Buffer.alloc(134);
+    stl.write('synthetic binary STL', 0, 'ascii');
+    stl.writeUInt32LE(1, 80);
+    stl.writeFloatLE(1, 84 + 12 + 12);
+    const encoded = (value: string | Buffer) => Buffer.from(value).toString('base64');
+    f.file('assets/embedded-obj.js', `const model = atob('${encoded(obj)}');`);
+    f.file('assets/embedded-ply.js', `const model = atob('${encoded(ply)}');`);
+    f.file('assets/embedded-stl.js', `const model = atob('${encoded(stl)}');`);
+    f.file('assets/benign-prose.js', `const text = atob('${encoded('this is an ordinary study text without 3D content')}');`);
+    const errors = f.check().errors;
+    for (const path of ['assets/embedded-obj.js', 'assets/embedded-ply.js', 'assets/embedded-stl.js']) {
+      expect(errors).toContain('encoded geometry, archive or reserved anatomy ID in built text requires review: ' + path);
+    }
+    expect(errors.some((message) => message.includes('assets/benign-prose.js'))).toBe(false);
+  });
+
   it('rejects escaped synthetic IDs in generated JS, JSON, HTML and SVG', () => {
     const f = setup();
     f.file('_astro/fixture.js', 'const id="\\u0046IX001";');
