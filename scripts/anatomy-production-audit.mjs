@@ -598,10 +598,15 @@ function containsLiteralBase64Model(text) {
   const literal = /(?:atob\s*\(\s*(['"])([A-Za-z0-9+/]+={0,2})\1\s*\)|data:model\/(?:gltf-binary|gltf\+json);base64,([A-Za-z0-9+/]+={0,2}))/gi;
   for (const match of text.matchAll(literal)) {
     const encoded = match[2] ?? match[3];
-    if (encoded.length < 24 || encoded.length > 8 * 1024 * 1024 || encoded.length % 4 !== 0) return true;
+    // Explicitly named model data URIs are never harmless opaque data,
+    // including text glTF and malformed/oversized encoded candidates.
+    const declaredModel = match[3] !== undefined;
+    if (encoded.length > 8 * 1024 * 1024) return true;
+    if (encoded.length % 4 !== 0) return declaredModel;
     let bytes;
-    try { bytes = Buffer.from(encoded, 'base64'); } catch { return true; }
-    if (bytes.toString('base64') !== encoded) return true;
+    try { bytes = Buffer.from(encoded, 'base64'); } catch { return declaredModel; }
+    if (bytes.toString('base64') !== encoded) return declaredModel;
+    if (declaredModel) return true;
     if (containsGlbHeader(bytes) || bytes.subarray(0, 4).toString('ascii') === 'glTF') return true;
   }
   return false;
