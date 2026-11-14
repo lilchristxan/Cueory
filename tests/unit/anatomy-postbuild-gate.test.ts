@@ -136,6 +136,11 @@ describe('postbuild anatomy release audit', () => {
         '<script data-type="module">const noRealModuleAttribute = true;</script>',
         '<script data-context="type=\'module\'">const fakeTypeInValue = true;</script>',
         '<script type="text/plain" data-type="module">const conflictingType = true;</script>',
+        '<script data-note=\' type="module" \' >ordinary script</script>',
+        '<script type="module" data-note=\'>unterminated attribute</script>',
+        '<script type="module" src="unterminated>code</script>',
+        '<script type="module" data-note=\'valid > content\' src="unterminated>code</script>',
+        '<script type="module" type="module">duplicated type</script>',
         '<script type="module">unterminated module body',
       ]) {
         writeFileSync(join(dist, 'index.html'), goodPage + badTail);
