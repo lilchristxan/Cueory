@@ -3,11 +3,13 @@
  *
  * Prints the labels and source lines that already exist in content/visuals/anatomy-*.json.
  * This is evidence for a HUMAN visual/clinical and rights review, never automatic approval.
- * No dependencies, network requests, model rendering, source edits, or publication changes.\n * Individual Markdown review sheets may be written only with the explicit --out-dir flag.
+ * No dependencies, network requests, model rendering, source edits, or publication changes.
+ * Individual Markdown review sheets may be written only with the explicit --out-dir flag.
  *
  * Usage:
  *   node scripts/anatomy-review-report.mjs --system heart > /tmp/heart-review.md
- *   node scripts/anatomy-review-report.mjs > /tmp/all-anatomy-review.md\n *   node scripts/anatomy-review-report.mjs --out-dir /tmp/anatomy-review-sheets
+ *   node scripts/anatomy-review-report.mjs > /tmp/all-anatomy-review.md
+ *   node scripts/anatomy-review-report.mjs --out-dir /tmp/anatomy-review-sheets
  */
 import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
@@ -203,7 +205,7 @@ function cli(args) {
       if (outDir !== null) throw new Error('Only one --out-dir is allowed');
       outDir = args[++i];
     } else if (args[i] === '--help') {
-      return 'Usage: node scripts/anatomy-review-report.mjs [--system heart] [--out-dir path]\\nPrints Markdown by default; --out-dir writes separate review sheets.\\n';
+      return 'Usage: node scripts/anatomy-review-report.mjs [--system heart] [--out-dir path]\\nPrints Markdown by default; --out-dir writes separate review sheets.\n';
     } else throw new Error(`Unknown or incomplete argument: ${args[i]}`);
   }
   const entries = anatomyInventory(DEFAULT_ROOT, selectedSystem);
