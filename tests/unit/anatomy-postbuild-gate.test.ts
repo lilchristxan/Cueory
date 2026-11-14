@@ -65,6 +65,34 @@ describe('postbuild anatomy release audit', () => {
     expect(out.errors[0]).toMatch(/production output does not exist/);
   });
 
+  it('rejects empty, missing-entrypoint and malformed production output', () => {
+    const root = mkdtempSync(join(tmpdir(), 'cueory-anatomy-entry-'));
+    const dist = join(root, 'dist');
+    const content = join(root, 'content', 'visuals');
+    const env = { WORKERS_CI: '1', WORKERS_CI_BRANCH: 'main' };
+    try {
+      mkdirSync(dist, { recursive: true });
+      mkdirSync(content, { recursive: true });
+      // Valid, synthetic draft-only source. With no index.html the old
+      // postbuild gate would have returned errors: [] for an empty dist.
+      writeFileSync(join(content, 'anatomy-draft.json'), JSON.stringify({
+        status: 'draft', model: { file: '/models/anatomy/draft.glb' },
+        labels: [{ id: 'FMA999991', text: 'synthetic test label' }],
+      }));
+      expect(checkAnatomyBuild(env, dist, content).errors).toContain(
+        'production site entry point is missing or unreadable: /index.html',
+      );
+      writeFileSync(join(dist, 'index.html'), 'not an HTML document');
+      expect(checkAnatomyBuild(env, dist, content).errors).toContain(
+        'production site entry point is invalid: /index.html',
+      );
+      writeFileSync(join(dist, 'index.html'), '<!doctype html><html><body>test</body></html>');
+      expect(checkAnatomyBuild(env, dist, content).errors).toEqual([]);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   it('never audits a known preview build using the production-only artifact rule', () => {
     const out = checkAnatomyBuild(
       { WORKERS_CI: '1', WORKERS_CI_BRANCH: 'staging' },
