@@ -27,6 +27,15 @@ const control = 'min-h-11 min-w-11 rounded-md border border-control px-4 py-2 te
  * Neither is signing in after being signed out: the signed-out panel has no draft, so an open panel simply shows the form.
  */
 export default function FlagForm(props: Props) {
+  const wrapper = useRef<HTMLDivElement>(null);
+  const restoreFocus = useRef(false);
+  // When a known account changes, React remounts the form. Keep keyboard
+  // focus on the replacement trigger instead of leaving it on the body.
+  useEffect(() => {
+    if (!restoreFocus.current) return;
+    restoreFocus.current = false;
+    wrapper.current?.querySelector<HTMLButtonElement>('button[aria-controls]')?.focus();
+  });
   const account = useRef<{ known: boolean | null; changes: number }>({ known: null, changes: 0 });
   if (props.signedIn !== null) {
     if (account.current.known === true && !props.signedIn) account.current.changes += 1;
@@ -41,16 +50,21 @@ export default function FlagForm(props: Props) {
       // An unknown account or a signed-out form becoming signed in does not
       // remount the panel. A direct A -> B switch does clear the old draft.
       if (!identity.current.wasSignedOut && identity.current.userId !== null &&
-          identity.current.userId !== props.userId) account.current.changes += 1;
+          identity.current.userId !== props.userId) {
+        if (typeof document !== 'undefined' && wrapper.current?.contains(document.activeElement)) {
+          restoreFocus.current = true;
+        }
+        account.current.changes += 1;
+      }
       identity.current = { userId: props.userId, wasSignedOut: false };
     } else if (!props.signedIn) {
       identity.current = { userId: null, wasSignedOut: true };
     }
   }
-  return <ReportForm key={JSON.stringify([
+  return <div ref={wrapper}><ReportForm key={JSON.stringify([
     props.page, props.itemId, props.itemVersionId, props.context,
     account.current.changes,
-  ])} {...props} />;
+  ])} {...props} /></div>;
 }
 
 
