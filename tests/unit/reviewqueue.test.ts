@@ -96,7 +96,15 @@ describe('dueItems — validation', () => {
   });
 
   it('throws for an impossible today date', () => {
-    expect(() => dueItems([], '2026-02-30')).toThrow();
+    expect(() => dueItems([], '2026-02-30')).toThrow('today must be a real calendar day YYYY-MM-DD, got "2026-02-30".');
+    expect(() => dueItems([], '2026-13-01')).toThrow('today must be a real calendar day YYYY-MM-DD, got "2026-13-01".');
+  });
+
+  it('accepts leap day only in an actual leap year', () => {
+    expect(dueItems([row('leap', { last_reviewed: '2024-02-29', next_review: '2024-03-01' })], '2024-03-01'))
+      .toEqual(['leap']);
+    expect(() => dueItems([], '2026-02-29'))
+      .toThrow('today must be a real calendar day YYYY-MM-DD, got "2026-02-29".');
   });
 
   it('throws for an empty item_id', () => {
@@ -109,11 +117,15 @@ describe('dueItems — validation', () => {
   });
 
   it('throws for an invalid last_reviewed', () => {
-    expect(() => dueItems([row('a', { last_reviewed: '2026-13-01' })], '2026-11-01')).toThrow();
+    expect(() => dueItems([row('a', { last_reviewed: '2026-13-01' })], '2026-11-01'))
+      .toThrow('Row 0: last_reviewed must be a real calendar day YYYY-MM-DD.');
   });
 
   it('throws for an invalid next_review', () => {
-    expect(() => dueItems([row('a', { next_review: 'bad-date' })], '2026-11-01')).toThrow();
+    expect(() => dueItems([row('a', { next_review: 'bad-date' })], '2026-11-01'))
+      .toThrow('Row 0: next_review must be a real calendar day YYYY-MM-DD.');
+    expect(() => dueItems([row('a', { next_review: '2026-13-01' })], '2026-11-01'))
+      .toThrow('Row 0: next_review must be a real calendar day YYYY-MM-DD.');
   });
 
   it('throws when next_review is not after last_reviewed', () => {
@@ -162,6 +174,13 @@ describe('syntheticHistory', () => {
       const h = syntheticHistory(row('a', { level, last_reviewed: last, next_review: next }));
       expect(nextReview(h)).toBe(next);
     }
+  });
+
+  it('preserves date-field validation errors for invalid history rows', () => {
+    expect(() => syntheticHistory(row('a', { last_reviewed: '2026-13-01' })))
+      .toThrow('Row 0: last_reviewed must be a real calendar day YYYY-MM-DD.');
+    expect(() => syntheticHistory(row('a', { next_review: '2026-13-01' })))
+      .toThrow('Row 0: next_review must be a real calendar day YYYY-MM-DD.');
   });
 
   it('throws for invalid row', () => {
