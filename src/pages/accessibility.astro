@@ -1,0 +1,67 @@
+---
+/**
+ * Accessibility statement (Task 200). It states a target (WCAG 2.2 AA, the level the browser tests check with axe,
+ * docs/ACCESSIBILITY.md) and the commitments CLAUDE.md rule 6 and D-48 already make, and it never claims a
+ * conformance certification: automated checks are not an audit. Not legal advice; attorney review pending.
+ */
+import Layout from '../layouts/Layout.astro';
+import LegalApproval from '../components/LegalApproval.astro';
+import { isLegalPageApproved } from '../config/legalapproval';
+import Prose from '../components/Prose.astro';
+import { site } from '../config/site';
+---
+
+<Layout title="accessibility" description="How Cueory works for everyone, what we test, and how to tell us when it doesn't." noindex={!isLegalPageApproved("accessibility")}>
+  <Prose>
+    <h1>accessibility</h1>
+    <LegalApproval page="accessibility" />
+
+    <h2>Our goal</h2>
+    <p>
+      We want every nursing student to be able to use {site.name}, whatever device or assistive technology they use.
+      Our target is the Web Content Accessibility Guidelines (WCAG) 2.2 at level AA. We are not there on every page yet,
+      and we don't claim a certified conformance level; this page says what we do and how to reach us when something
+      is in the way.
+    </p>
+
+    <h2>What we build in</h2>
+    <ul>
+      <li>Everything you can drag you can also do by tapping or with the keyboard.</li>
+      <li>The keyboard focus is always visible, and the tab order follows the page.</li>
+      <li>Right and wrong are never shown by colour alone; a word or a symbol always goes with it.</li>
+      <li>Text colours meet WCAG AA contrast against every background they sit on, in both the light and dark looks.</li>
+      <li>Animation and motion are reduced or removed when your device asks for reduced motion.</li>
+      <li>Text reflows when you enlarge it, and no page scrolls sideways on a phone, a tablet or a desktop.</li>
+      <li>Buttons are real buttons with real names, and corner buttons are at least 44 by 44 pixels.</li>
+      <li>Every page has a skip link, a single main heading, headings in order and a page language.</li>
+      <li>Lessons and study tools keep working without JavaScript where they can, or say plainly when they can't.</li>
+      <li>Light and dark looks follow your device, and you can override them at the bottom of any page.</li>
+    </ul>
+
+    <h2>How we check</h2>
+    <p>
+      These are targets we test for, not a certified result. On every pull request that changes the site, automated
+      browser tests run the axe accessibility rules for WCAG 2.0 A and AA, 2.1 AA and 2.2 AA on a representative set of
+      pages at phone and desktop sizes, with further checks for reduced motion and enlarged text, and a high-contrast
+      check of the home page; before a release to the live site they also run at tablet size, in the dark look on the
+      pages covered by the dark-mode audit, and in Safari's and Firefox's engines.
+      Changes that touch only documentation skip them. Automated checks catch many problems but not all of them: manual
+      checks with a keyboard and with assistive technology are still needed, and the site has not yet had a full audit
+      by an independent accessibility specialist.
+    </p>
+
+    <h2>Known limits</h2>
+    <ul>
+      <li>Lesson videos play in YouTube's player, whose controls and captions are YouTube's.</li>
+      <li>The 3D anatomy lab has a text alternative for its structures, but a 3D scene itself can't be fully described in words.</li>
+      <li>Some lessons are samples or drafts and may still have gaps we haven't found.</li>
+    </ul>
+
+    <h2>Tell us</h2>
+    <p>
+      If a page is hard to use, email <a href={`mailto:${site.contactEmail}`}>{site.contactEmail}</a> or use the "Flag
+      or comment" button at the bottom of the page. Tell us the page, what you were trying to do, and the device,
+      browser and assistive technology you were using. We read every report and aim to reply within ten business days.
+    </p>
+  </Prose>
+</Layout>

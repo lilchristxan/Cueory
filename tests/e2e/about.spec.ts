@@ -10,9 +10,8 @@ const headings = [
 ] as const;
 
 test.describe('about page', () => {
-  test('shows the design sections with founder-owned copy, without publishing unfinished text', async ({ page }) => {
+  test('shows the design sections with published draft copy but no empty placeholders', async ({ page }) => {
     await page.goto('/about');
-
     await expect(page.locator('main h1')).toHaveCount(1);
     await expect(page.locator('main h1, main h2')).toHaveText([...headings]);
     await expect(page.locator('main section')).toHaveCount(4);
@@ -20,11 +19,14 @@ test.describe('about page', () => {
     const paragraphs = page.locator('main p');
     await expect(paragraphs).toHaveCount(8);
     for (const paragraph of await paragraphs.all()) {
-      await expect(paragraph).toHaveAttribute('data-placeholder', 'CHRISTIAN-TEXT');
-      await expect(paragraph).toHaveText('[Christian writes this]');
+      await expect(paragraph).not.toHaveAttribute('data-placeholder', 'CHRISTIAN-TEXT');
+      await expect(paragraph).not.toHaveText('[Christian writes this]');
+      await expect(paragraph).not.toBeEmpty();
     }
-
+    await expect(page.locator('[data-placeholder="CHRISTIAN-TEXT"]')).toHaveCount(0);
+    await expect(page.getByText('Some content may not have citations or a licensed-nurse review.', { exact: false })).toBeVisible();
     await expect(page.locator('main section').nth(1).locator('li')).toHaveCount(3);
+    // The About wording is still awaiting Christian's review before being indexed.
     await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', 'noindex, nofollow');
     await expect(page.getByRole('link', { name: 'get launch updates' })).toHaveAttribute('href', '/#signup');
     await expect(page.getByRole('link', { name: 'support our mission' })).toHaveAttribute('href', '/support');

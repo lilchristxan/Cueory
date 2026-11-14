@@ -1,27 +1,28 @@
 ---
 import Layout from '../layouts/Layout.astro';
+import { site } from '../config/site';
 ---
 
 <Layout
   title="about us"
-  description="about cueory: founder information and page sections are being prepared."
+  description="About Cueory, how its learning content is prepared, and how to support the free study site."
   noindex
 >
   <div class="mx-auto flex w-full max-w-page flex-col gap-8 py-section">
     <header class="mx-auto w-full max-w-hero space-y-5">
-      <p class="text-sm font-bold tracking-label text-ink-soft" data-placeholder="CHRISTIAN-TEXT">
-        [Christian writes this]
+      <p class="text-sm font-bold tracking-label text-ink-soft">
+        {site.tagline}
       </p>
       <h1 class="display text-display text-ink sm:text-display-lg">about cueory</h1>
-      <p class="text-lg text-ink" data-placeholder="CHRISTIAN-TEXT">
-        [Christian writes this]
+      <p class="text-lg text-ink">
+        {site.description} A free place to explore lessons, review cards, practice questions, an anatomy lab and daily games.
       </p>
     </header>
 
     <section class="veil min-w-0 p-6 sm:p-10" aria-labelledby="mission-heading">
       <h2 id="mission-heading" class="display text-2xl text-ink sm:text-title">our mission</h2>
-      <p class="mt-4 text-ink" data-placeholder="CHRISTIAN-TEXT">
-        [Christian writes this]
+      <p class="mt-4 text-ink">
+        Cueory is meant to make independent study a little clearer. You can study in short sessions and check each lesson's notice to see what is ready and what is still being built.
       </p>
     </section>
 
@@ -31,13 +32,13 @@ import Layout from '../layouts/Layout.astro';
       </h2>
       <ul class="mt-4 list-disc space-y-3 pl-6 text-ink">
         <li>
-          <p data-placeholder="CHRISTIAN-TEXT">[Christian writes this]</p>
+          <p>Some lessons and activities are samples, drafts or placeholders while the site is being built.</p>
         </li>
         <li>
-          <p data-placeholder="CHRISTIAN-TEXT">[Christian writes this]</p>
+          <p>Some content may not have citations or a licensed-nurse review. Check important information against your current course materials and other trusted sources.</p>
         </li>
         <li>
-          <p data-placeholder="CHRISTIAN-TEXT">[Christian writes this]</p>
+          <p>Use the "Flag or comment" option to report confusing material or possible mistakes. Do not send anyone's private or patient information.</p>
         </li>
       </ul>
     </section>
@@ -45,8 +46,8 @@ import Layout from '../layouts/Layout.astro';
     <section class="veil flex min-w-0 flex-col gap-6 p-6 sm:flex-row sm:items-center sm:p-10" aria-labelledby="coming-heading">
       <div class="min-w-0 flex-1">
         <h2 id="coming-heading" class="display text-2xl text-ink sm:text-title">what's coming</h2>
-        <p class="mt-3 text-ink" data-placeholder="CHRISTIAN-TEXT">
-          [Christian writes this]
+        <p class="mt-3 text-ink">
+          More lessons, study tools and daily games are being prepared. Launch-update emails are not open yet. The home page will show when the list is available.
         </p>
       </div>
       <a href="/#signup" class="glass-button inline-flex min-h-11 shrink-0 items-center justify-center text-center">
@@ -73,8 +74,8 @@ import Layout from '../layouts/Layout.astro';
           <h2 id="support-heading" class="display text-2xl text-ink sm:text-title">
             help keep cueory free.
           </h2>
-          <p class="mt-3 text-ink" data-placeholder="CHRISTIAN-TEXT">
-            [Christian writes this]
+          <p class="mt-3 text-ink">
+            Studying on Cueory is free. You can help by sharing the site or leaving an optional tip through the separate Ko-fi website. Tips do not buy access, influence the material or guarantee results.
           </p>
         </div>
         <a href="/support" class="glass-button inline-flex min-h-11 shrink-0 items-center justify-center text-center">

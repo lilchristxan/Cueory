@@ -1,11 +1,15 @@
 import { expect, test, type Page } from '@playwright/test';
 import { existsSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { isRouteIndexable } from '../../src/config/legalapproval';
+import { legalRoutes } from '../../src/config/legal';
 import { indexablePages as fixedPages } from '../../src/config/routes';
 import { lessonRoutes } from '../lessonroutes';
 
 // The fixed pages plus every lesson page generated from /content (Task 300), as the sitemap lists them.
-const indexablePages = [...new Set([...fixedPages, ...lessonRoutes])];
+// Legal pages are noindex until Christian sets their approval date in src/config/legal.ts (Task 200).
+const indexablePages = [...new Set([...fixedPages, ...lessonRoutes])].filter((page) => isRouteIndexable(page));
+const unapprovedLegalPages = Object.keys(legalRoutes).filter((route) => !isRouteIndexable(route));
 
 /**
  * Task 127: which pages search engines may index. `Layout.astro` writes
@@ -24,9 +28,7 @@ const previewPages = existsSync(previewDir)
 
 const noindexPages = [
   ...previewPages,
-  '/privacy', // draft policy, until the owner approves final wording
-  '/terms', // placeholder text, not launch-ready
-  '/disclaimer', // placeholder text, not launch-ready
+  ...unapprovedLegalPages,
   '/auth/callback',
   '/reset-password',
   '/signin',
@@ -103,12 +105,13 @@ test.describe('Task 127: indexing', () => {
     }
   });
 
-  test('draft legal pages stay out of external and site search while public support remains searchable', async ({ page }) => {
-    for (const path of ['/privacy', '/terms', '/disclaimer']) {
-      const response = await page.goto(path);
+  test('legal pages are indexable and searchable once approved, noindex and unsearchable before, like sign-in', async ({ page }) => {
+    for (const route of Object.keys(legalRoutes)) {
+      const response = await page.goto(route);
       expect(response?.status()).toBe(200);
-      await expect(robots(page)).toHaveAttribute('content', /\bnoindex\b/);
-      await expect(page.locator('main[data-pagefind-body]')).toHaveCount(0);
+      const approved = isRouteIndexable(route);
+      await expect(robots(page)).toHaveCount(approved ? 0 : 1);
+      await expect(page.locator('main[data-pagefind-body]')).toHaveCount(approved ? 1 : 0);
     }
     await page.goto('/support');
     await expect(robots(page)).toHaveCount(0);

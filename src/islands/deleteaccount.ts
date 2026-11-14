@@ -10,8 +10,11 @@ import { PROMO_STORAGE_KEY } from '../scripts/promo';
 import { THEME_STORAGE_KEY } from '../scripts/theme';
 import type { KeyValueStorage } from '../scripts/storage';
 import { STATS_STORAGE_KEY } from './gameresults';
+import { HOME_TIP_STORAGE_KEY } from './home-screen-tip';
+import { SUDOKU_SETTINGS_KEY } from './sudoku';
 import { GUEST_IMPORT_MARKER_PREFIX } from './guestimportrun';
 import { LAST_WELCOME_STORAGE_KEY, VISIT_STORAGE_KEY } from './stickynote';
+import { SURVEY_STORAGE_KEYS } from './surveykeys';
 import { RESUME_STORAGE_KEY } from '../scripts/resume';
 import type { ExportData } from './exportdata';
 import { isPkceVerifierKey, PKCE_FLOW_LIST_STORAGE_KEY, PKCE_VERIFIER_STORAGE_KEY } from './supabaseclient';
@@ -121,11 +124,14 @@ export function afterDeletion(storage: KeyValueStorage | undefined): DeletionSto
     PROMO_STORAGE_KEY,
     THEME_STORAGE_KEY,
     STATS_STORAGE_KEY,
+    HOME_TIP_STORAGE_KEY,
+    SUDOKU_SETTINGS_KEY,
     RESUME_STORAGE_KEY,
     LAST_WELCOME_STORAGE_KEY,
     NOTE_SOUND_STORAGE_KEY,
     PKCE_VERIFIER_STORAGE_KEY,
     PKCE_FLOW_LIST_STORAGE_KEY,
+    ...SURVEY_STORAGE_KEYS,
   ]);
   const prefix = legacyStarsKey('');
   const length = storage.length;

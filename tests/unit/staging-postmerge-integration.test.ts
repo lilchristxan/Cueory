@@ -10,9 +10,9 @@ import { isHeldPath } from '../../scripts/automerge/decide.ts';
 import { indexablePages } from '../../src/config/routes.ts';
 
 describe('integrated staging after legal and security merges', () => {
-  it('keeps unfinished legal pages excluded from the public sitemap', () => {
+  it('lists the legal pages in the public sitemap, behind the release gate (Task 200)', () => {
     for (const page of ['/privacy', '/terms', '/disclaimer']) {
-      expect(indexablePages).not.toContain(page);
+      expect(indexablePages).toContain(page);
     }
     expect(indexablePages).toContain('/support');
   });

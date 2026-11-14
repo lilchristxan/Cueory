@@ -12,6 +12,8 @@ import {
 } from '../../src/islands/supabaseclient';
 import { GUEST_IMPORT_MARKER_PREFIX } from '../../src/islands/guestimportrun';
 import { STATS_STORAGE_KEY } from '../../src/islands/gameresults';
+import { HOME_TIP_STORAGE_KEY } from '../../src/islands/home-screen-tip';
+import { SUDOKU_SETTINGS_KEY } from '../../src/islands/sudoku';
 import { afterDeletion } from '../../src/islands/deleteaccount';
 import { VISIT_STORAGE_KEY, LAST_WELCOME_STORAGE_KEY } from '../../src/islands/stickynote';
 import { NOTE_SOUND_STORAGE_KEY } from '../../src/scripts/notesound';
@@ -42,6 +44,8 @@ describe.skipIf(!existsSync(privacyPath))('privacy page browser storage disclosu
     PROMO_STORAGE_KEY,
     RESUME_STORAGE_KEY,
     STATS_STORAGE_KEY,
+    HOME_TIP_STORAGE_KEY,
+    SUDOKU_SETTINGS_KEY,
     legacyStarsKey('<deck>'),
   ])('includes the exported browser key %s in built markup', (key) => {
     expect(visibleCodeKeys(privacyHtml())).toContain(key);
@@ -73,7 +77,8 @@ describe.skipIf(!existsSync(privacyPath))('privacy page browser storage disclosu
     const html = privacyHtml();
     expect(visibleCodeKeys(html)).toContain(legacyStarsKey('<deck>'));
     expect(html).toContain('until they are moved into');
-    expect(html).toContain('Deleting it removes your account and all study data linked to it, and clears Cueory progress and');
+    expect(html.replace(/\s+/g, ' ')).toContain('removes your account and all study data linked to it in one step, all or nothing, and signs you out of this browser');
+    expect(html.replace(/\s+/g, ' ')).toContain('tries to clear the progress and settings it saved in this browser; if the browser blocks that, the page tells you so');
   });
 
   it('covers every named Cueory browser key with local cleanup, session cleanup or Task 59 sign-out', () => {
@@ -99,7 +104,9 @@ describe.skipIf(!existsSync(privacyPath))('privacy page browser storage disclosu
 
   it('lists study resume as in use now, in the "It is only:" list, and words its answers truthfully', () => {
     const html = privacyHtml();
-    const [inUse, building] = html.split('Features that are still being built');
+    // The still-being-built section runs to its next heading; later sections (sign-out, Task 200) may name live keys.
+    const [inUse, rest] = html.split('Features that are still being built');
+    const building = rest?.split('<h2>')[0];
     expect(building, 'missing the still-being-built section').toBeDefined();
     expect(inUse).toContain(`<code>${RESUME_STORAGE_KEY}</code>`);
     expect(building).not.toContain(RESUME_STORAGE_KEY);
@@ -127,9 +134,11 @@ describe.skipIf(!existsSync(privacyPath))('privacy page browser storage disclosu
     expect(html).toContain('until your');
     expect(html).toContain('account is deleted');
     expect(html).toContain('Supabase keeps them with');
-    expect(html).toContain('deleting an account doesn\'t take you off it');
+    expect(html).toContain('deleting an account won\'t take you off it');
     expect(html).toContain('unsubscribe link');
-    expect(html).toContain('Signing out removes them.');
+    expect(html.replace(/\s+/g, ' ')).toContain('Signing out removes them.');
+    // Task 200: the list is not live (src/config/site.ts formAction is empty), so the page must not say it is.
+    expect(html).toContain('The launch-updates list is not open yet');
   });
 
   it('names each detail Google shares, the sign-in sessions and the service logs (Task 309, CLAUDE.md rule 2)', () => {
@@ -138,18 +147,24 @@ describe.skipIf(!existsSync(privacyPath))('privacy page browser storage disclosu
       'whether Google has checked it']) {
       expect(text).toContain(detail);
     }
-    expect(text).toContain('never reads or shows your photo');
-    expect(text).toContain('Supabase keeps a sign-in session with your IP address and the kind of browser and device you used, until you sign out');
-    expect(text).toContain('which also include IP addresses, are kept for about a day');
-    expect(text).toContain('Your sign-in sessions, with the IP address and browser of each, until you sign out.');
+    expect(text).toContain('does not display your Google profile photo');
+    expect(text).toContain('your account data export includes the photo URL');
+    expect(text).toContain('Supabase keeps a sign-in session with your IP address and the kind of browser and device you used. A session lasts until you sign out or until it expires');
+    expect(text).toContain('which include IP addresses, are kept for a short period');
+    expect(text).toContain('Your sign-in sessions, with the IP address and browser of each, until you sign out or the session expires.');
+    // Task 200: the password hash, the PKCE code verifier and the export's account timestamps are disclosed.
+    expect(text).toContain('a bcrypt hash');
+    expect(text).toContain('PKCE code verifier');
+    expect(text).toContain('when the account was created, when you last signed in, which sign-in methods it has');
+    expect(text).toContain('The download is all or nothing, and it has limits');
   });
 
   it('describes live account export and deletion without hiding the Google sign-in disclosures', () => {
     const html = privacyHtml();
     const account = html.slice(html.indexOf('If you create an account'));
     expect(account).toContain('<code>/account</code>');
-    expect(account).toContain('download your account data');
-    expect(account).toContain('delete your');
+    expect(account.toLowerCase()).toContain('download your account data');
+    expect(account.toLowerCase()).toContain('delete your account');
     expect(html).toContain('Google sign-in');
     expect(html).not.toContain('request deletion of your account');
   });
@@ -157,7 +172,7 @@ describe.skipIf(!existsSync(privacyPath))('privacy page browser storage disclosu
   it('preserves the newer staging explanation of local and signed-in progress', () => {
     const html = privacyHtml();
     expect(html).not.toContain('It never reaches us. It is only:');
-    expect(html).toContain('Without an account, nothing you do on a');
+    expect(html.replace(/\s+/g, ' ')).toContain('Without an account, your study progress, your answers and anything you type stay in your browser; none of it is sent to us');
     expect(html).toContain('Unless you choose to bring it into your account, your study progress is kept by your browser');
     expect(html).toContain('your work on real questions is also saved to your account');
     expect(html).toContain('stars stay on this device');

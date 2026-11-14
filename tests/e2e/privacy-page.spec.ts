@@ -26,6 +26,7 @@ test.describe('Task 422: privacy page', () => {
       'Lesson videos',
       'Visit statistics',
       'If you create an account',
+      'Your rights: download or delete',
       'Who handles data for us',
       'Questions',
     ]) {
@@ -40,6 +41,7 @@ test.describe('Task 422: privacy page', () => {
       'cueory-resume',
       'cueory-game-stats',
       'cueory-auth',
+      'cueory-auth-code-verifier',
     ]) {
       expect(storageKeys, `missing privacy disclosure for ${key}`).toContain(key);
     }
@@ -79,8 +81,10 @@ test.describe('Task 422: privacy page', () => {
 
     await page.goto('/privacy');
     const main = page.getByRole('main');
+    // The address appears twice since Task 200 (under "Who is responsible" and "Questions"); each shows the address.
     const email = main.locator(`a[href="mailto:${site.contactEmail}"]`);
-    await expect(email).toHaveText(site.contactEmail);
+    expect(await email.count()).toBeGreaterThan(0);
+    for (const text of await email.allTextContents()) expect(text).toBe(site.contactEmail);
     await expect(main.locator('iframe')).toHaveCount(0);
     expect(videoRequests).toEqual([]);
   });
