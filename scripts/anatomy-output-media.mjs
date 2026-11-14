@@ -9,7 +9,7 @@ import { extname } from 'node:path';
 
 const MEDIA = new Set([
   '.png', '.jpg', '.jpeg', '.gif', '.webp', '.avif', '.ico', '.bmp', '.tif', '.tiff',
-  '.woff', '.woff2', '.ttf', '.otf', '.eot', '.wasm', '.pdf', '.mp4', '.m4a',
+  '.woff', '.woff2', '.ttf', '.otf', '.eot', '.pdf', '.mp4', '.m4a',
   '.webm', '.mp3', '.wav', '.ogg', '.vtt',
 ]);
 const SCAN_BYTES = 64 * 1024;
