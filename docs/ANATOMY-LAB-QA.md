@@ -59,6 +59,43 @@ Do not mark these as passed merely because an existing fixture test succeeds. Ne
 | Whole-body budget | Only the outer layer loads initially. Test a full **show all** on a mid-range phone before accepting its cumulative size and triangle cost. |
 | Browser coverage | Chromium phone, tablet and desktop. Include WebKit and Firefox at the release gate when supported by the repository configuration. |
 
+## Automated coverage map (Task 178, package 3)
+
+This is a **test inventory**, not a pass report. A named test does not replace running it on the exact PR head or the hands-on checks on the locked staging site. In particular, a unit test alone does not satisfy a required browser test. All checks in the tables above remain open until their evidence is recorded.
+
+### Section 2 — student flows
+
+| QA case | Browser test that exercises it | Remaining check |
+| --- | --- | --- |
+| Open the lab | `tests/e2e/anatomy-lab.spec.ts` — “loads nothing from three.js before the tap” and “opens the fixture with its draft note” | Check actual request timings and loading announcement on locked staging |
+| Change systems | `anatomy-lab.spec.ts` — “the old model is not shown after switching, and a late layer from the old system changes nothing”; `anatomy-stale-initial-error.spec.ts` — “ignores an initial model failure from the previous body system” | Repeat a three-system race on staging |
+| Recover from failed model load | `anatomy-lab.spec.ts` — “recovers from a failed first anatomy model request without refreshing” | Manual failed-network/retry check |
+| Recover from unavailable 3D | `anatomy-lab.spec.ts` — “keeps a searchable, keyboard-accessible text catalog if WebGL is unavailable” and “retains searchable structure names after WebGL context loss and can reopen 3D” | Manual WebGL-disabled and screen-reader check |
+| Search and select | `anatomy-lab.spec.ts` — “keyboard path: search, select from the list” and “tapping the structure in the middle of the view selects it” | Source-name verification on staging |
+| Open deeper layers | `anatomy-lab.spec.ts` — “only the outer layer is requested at first; a deeper layer only when peeled to” | Confirm no repeated GLB download after revisiting a loaded layer |
+| Mixed-file layers | `anatomy-lab.spec.ts` — “the organs button loads missing files when only the heart is visible from the vessels layer”; `tests/unit/anatomylazy.test.ts` — “still fetches the organs layer when only the heart ... is loaded and shown” | Explicit staging check with a partially loaded layer |
+| Load-state wording | `anatomy-lab.spec.ts` — organs-button test checks “heart (not loaded yet)”; `anatomylazy.test.ts` — “reserves not in this model for files whose download finished but mesh is absent” | **Browser gap:** no direct browser assertion for the final “not in this model” state |
+| A failed layer request | **New:** `tests/e2e/anatomy-failed-layer-retry.spec.ts` — “a failed layer keeps its successful GLB and retries only the missing file”; `anatomylazy.test.ts` — “hands over the files that loaded when another file of the layer fails, and retries only the failed one” | Verify this test passes on each configured browser/device |
+| Conflicting actions | `anatomylazy.test.ts` — “keeps successful downloads but preserves show-only when an older reveal finishes later” | **Browser gap:** simulate delayed show-all followed by show-only and assert the final visible structures |
+| Find It guided practice | `anatomy-lab.spec.ts` — “find it: unscored feedback, next, and show me”; “a named-list keyboard answer is guided practice”; “show me restores a hidden quiz target” | Manual keyboard, tap and screen-reader check |
+| Picture export | `anatomy-picture-credit.spec.ts` — “exported anatomy picture credit is complete, visible and model-specific” checks phone/wide/square canvas text; `anatomy-export-switch.spec.ts` tests two delayed-system-switch races | Check actual saved PNG dimensions and appearance on staging |
+
+### Section 3 — access and performance
+
+| QA check | Automated evidence | Remaining check |
+| --- | --- | --- |
+| Phone layout | `anatomy-lab.spec.ts` — “fits a 320 px screen without sideways scrolling”; Playwright phone projects cover 390 px | Inspect all controls and clipped long names at both widths, Light and Evening |
+| Large structure catalog | `anatomy-list-window.spec.ts` — “whole-body catalog shows a bounded list, then moves focus to the first newly revealed structure” | Manual keyboard navigation and full-source search |
+| Keyboard and tap | `anatomy-lab.spec.ts` — keyboard search/selection, keyboard layer peeling, tap raycast and quiz flows | Manual parity check for all orbit, zoom, reset and quiz controls |
+| Reduced motion | Existing component behavior requires separate evidence | **Browser gap:** a reduced-motion browser test for the 3D lab is not identified |
+| Screen reader | `anatomy-lab.spec.ts` — “has no accessibility violations, closed and open”; WebGL-unavailable and missing-load tests check words | Manual assistive-technology check of dynamic announcements |
+| No JavaScript or WebGL | `anatomy-no-javascript.spec.ts` — “anatomy structure names remain reachable and credited without JavaScript”; `anatomy-lab.spec.ts` checks WebGL failure | Text-only Find It practice and manual keyboard checks are still pending |
+| Single-system budget | `tests/unit/anatomy-models.test.ts` and `tests/unit/anatomybudget.test.ts` check model budgets and warning logic | Check exact published-file bytes and triangle count for every approved model |
+| Whole-body budget | `anatomy-lab.spec.ts` — “phone show all asks before fetching the remaining models and supports cancel” aborts the actual bulk fetch | **Performance gap:** run a real full show-all and record time, memory and frames on throttled Chromium and WebKit phone profiles |
+| Browser coverage | `playwright.config.ts` configures Chromium phone (390), tablet (820), desktop (1440), and WebKit/Firefox for release PRs | Record passing CI results on the exact head, plus the separate 320 px check and locked-staging manual evidence |
+
+Where a row still has a browser or performance gap, the case is **not complete**. Do not turn this inventory into release approval.
+
 ## 4. Verification and handoff
 
 From an environment with the repository's pinned Node version and installed dependencies:
