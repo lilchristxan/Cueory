@@ -1,0 +1,1 @@
+status: Task 178 Anatomy Lab release-gate repair: fail closed on valid BZip2 bitstream archives with non-byte-aligned footers. This is a review-only dependent patch for #625; all anatomy models remain draft and founder release approval is still required.

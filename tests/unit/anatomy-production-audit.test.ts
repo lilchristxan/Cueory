@@ -690,6 +690,25 @@ describe('anatomy production artifact audit', () => {
     ]));
   });
 
+  it('fails closed on real BZip2 archives with bit-shifted end markers', () => {
+    const f = setup();
+    // Python stdlib: bz2.compress(b'glTF' + b'x' * 4096). Verified round-trip.
+    // The stream is valid but does NOT contain byte-aligned BZip2 EOS magic.
+    const bzip2 = Buffer.from(
+      'QlpoOTFBWSZTWY/janAAAAHHgIAEAQAEAACEAEAACCAAIKqaZoIYCXLme0N+Bwu5IpwoSEfxtTgA',
+      'base64',
+    );
+    expect(bzip2.includes(Buffer.from([0x17, 0x72, 0x45, 0x38, 0x50, 0x90]))).toBe(false);
+    f.file('downloads/valid-bzip2-hidden-model.dat', bzip2);
+    f.file('downloads/prefixed-valid-bzip2-hidden-model.dat', Buffer.concat([
+      Buffer.from('ordinary content: ', 'ascii'), bzip2,
+    ]));
+    expect(f.check().errors).toEqual(expect.arrayContaining([
+      'archive/container in production output requires explicit review: /downloads/valid-bzip2-hidden-model.dat',
+      'archive/container in production output requires explicit review: /downloads/prefixed-valid-bzip2-hidden-model.dat',
+    ]));
+  });
+
   it('rejects corrupted built compressed bytes despite unchanged GLB metadata', () => {
     const f = setup();
     const builtPath = join(f.dist, 'models', 'anatomy', 'approved.glb');

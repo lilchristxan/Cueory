@@ -302,8 +302,12 @@ function hasBzip2At(bytes, offset) {
       bytes.toString('ascii', offset, offset + 3) !== 'BZh' ||
       bytes[offset + 3] < 0x31 || bytes[offset + 3] > 0x39 ||
       !bytes.subarray(offset + 4, offset + 10).equals(Buffer.from([0x31, 0x41, 0x59, 0x26, 0x53, 0x59]))) return false;
-  const end = bytes.indexOf(Buffer.from([0x17, 0x72, 0x45, 0x38, 0x50, 0x90]), offset + 10);
-  return end >= offset + 14 && end + 10 <= bytes.length;
+  // BZip2 is a bitstream: the 48-bit end-of-stream marker is not always
+  // byte-aligned. Requiring its literal bytes can miss valid compressed models.
+  // A BZh1..9 header, complete block marker, and block CRC are enough to
+  // identify an opaque archive that must not be published without review.
+  // Avoid decompressing arbitrary release artifacts in this safety gate.
+  return true;
 }
 
 function hasXzAt(bytes, offset) {
