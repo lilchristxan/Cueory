@@ -665,6 +665,20 @@ function safePagefindGzipHeader(bytes, draftIds) {
 
   const metadata = bytes.subarray(10, cursor);
   if (containsGlbHeader(metadata) || containsValidatedArchive(metadata)) return false;
+  // Node's gunzip accepts concatenated members. Without this exact-end check,
+  // a second empty member could conceal draft IDs in a second FNAME header
+  // while leaving the decompressed Pagefind payload unchanged.
+  try {
+    const first = inflateRawSync(bytes.subarray(cursor), {
+      info: true, maxOutputLength: MAX_PAGEFIND_DECOMPRESSED_BYTES,
+    });
+    const footer = cursor + first.engine.bytesWritten;
+    if (footer + 8 !== bytes.length ||
+        crc32(first.buffer) !== bytes.readUInt32LE(footer) ||
+        (first.buffer.length >>> 0) !== bytes.readUInt32LE(footer + 4)) return false;
+  } catch {
+    return false;
+  }
   const raw = metadata.toString('latin1');
   return ![
     raw,
