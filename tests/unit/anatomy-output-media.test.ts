@@ -115,6 +115,21 @@ describe('production media signatures and renamed anatomy geometry', () => {
     );
   });
 
+  it('rejects a raw OBJ when its vertex and face declarations are separated by a full scan window', () => {
+    const f = fixture();
+    const hidden = Buffer.concat([
+      Buffer.from([0xff, 0xd8, 0xff, 0xe0]),
+      Buffer.from('v 0 0 0\nv 1 0 0\nv 0 1 0\n'),
+      Buffer.alloc(129 * 1024, 0),
+      Buffer.from('f 1 2 3\n'),
+    ]);
+    const file = f.file('assets/separated-model.jpg', hidden);
+    expect(unreviewedMediaPayload(file)).toBe(true);
+    expect(f.audit().errors).toContain(
+      'unreviewed media payload or raw geometry in production output: /assets/separated-model.jpg',
+    );
+  });
+
   it('accepts known compatible media signatures without certifying a full decoder pass', () => {
     const f = fixture();
     const safe: Array<[string, Buffer]> = [
