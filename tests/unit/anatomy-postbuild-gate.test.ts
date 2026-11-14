@@ -141,6 +141,7 @@ describe('postbuild anatomy release audit', () => {
         '<script type="module" src="unterminated>code</script>',
         '<script type="module" data-note=\'valid > content\' src="unterminated>code</script>',
         '<script type="module" type="module">duplicated type</script>',
+        '<script type="module" src="first.js" src="second.js"></script>',
         '<script type="module">unterminated module body',
         '<script type="module">const ignored = 1;<script type="module">const second = 2;</script>',
       ]) {
