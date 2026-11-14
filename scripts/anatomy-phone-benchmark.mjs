@@ -59,13 +59,17 @@ async function heapBytes(session) {
 
 async function sampleTurning(page) {
   // Browser rAF cadence is a responsiveness proxy, NOT 3D render FPS.
-  const trace = page.evaluate(() => new Promise((resolve) => {
+  // Bound the observation even in suspended or backgrounded tabs where rAF
+  // may never fire, so a failed sample is reported instead of hanging.
+  const trace = page.evaluate(() => new Promise((resolve, reject) => {
     const times = [];
     const start = performance.now();
+    const deadline = window.setTimeout(() => reject(new Error('rAF cadence unavailable on this tab')), 8_000);
     const tick = (at) => {
       times.push(at);
       if (performance.now() - start < 3000) requestAnimationFrame(tick);
       else {
+        window.clearTimeout(deadline);
         const elapsed = Math.max(1, at - times[0]);
         const gaps = times.slice(1).map((time, i) => time - times[i]);
         gaps.sort((a, b) => a - b);
