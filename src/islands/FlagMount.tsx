@@ -9,6 +9,8 @@ interface Props {
   itemId?: string;
   itemVersionId?: string;
   variant?: 'text' | 'icon';
+  /** Optional public study context, stored in the report comment rather than UUID-only item fields. */
+  context?: string;
 }
 
 /** The page's shared client. With accounts off it is null and the Supabase package is never downloaded. */
@@ -19,7 +21,7 @@ const loadShared: LoadFlagClient = () => getSupabase() as unknown as Promise<Fla
  * browser is idle (like the account corner) and again every time the student opens the form. Once the client has
  * loaded, a sign-in or sign-out in this tab or another one updates the form too, so it is never stuck on the first answer.
  */
-export default function FlagMount({ page, itemId, itemVersionId, variant }: Props) {
+export default function FlagMount({ page, itemId, itemVersionId, variant, context }: Props) {
   const [signedIn, setSignedIn] = useState<boolean | null>(null);
   // Pages whose items load in the browser (the real questions) publish the current one; it wins over the fixed props.
   const [published, setPublished] = useState<FlagItem | undefined>(currentFlagItem);
@@ -55,6 +57,7 @@ export default function FlagMount({ page, itemId, itemVersionId, variant }: Prop
       send={send}
       onOpen={check}
       variant={variant}
+      context={context}
     />
   );
 }
