@@ -31,6 +31,16 @@ describe('home daily games summary', () => {
     expect(summary).toBe(summary.toLowerCase());
   });
 
+  it('has a no-JavaScript midnight message without a build-time date', () => {
+    const section = gamesSection();
+    expect(section).toContain('data-testid="daily-games-day"');
+    expect(section).toContain('data-daily-games-date');
+    const dayTag = section.match(/<p\b(?=[^>]*\bdata-testid="daily-games-day")[^>]*>/)?.[0];
+    expect(dayTag).toContain('aria-live="polite"');
+    expect(dayTag).toContain('aria-atomic="true"');
+    expect(section).toContain('the date changes at midnight on your device. some sample puzzles repeat.');
+  });
+
   it('keeps the single call to action on /play, without a direct stat link', () => {
     const section = gamesSection();
     const links = [...section.matchAll(/<a\b[^>]*\bhref="([^"]+)"[^>]*>/g)].map((match) => match[1]);
