@@ -118,6 +118,9 @@ function hasTextGltfModel(path) {
     const prefix = Buffer.alloc(Math.min(stats.size, 4096));
     if (prefix.length) readSync(fd, prefix, 0, prefix.length, 0);
     const start = prefix.toString('utf8').replace(/^\uFEFF/u, '').trimStart();
+    // A JSON model may legally begin with many kilobytes of whitespace.
+    // If the bounded prefix has not reached the first token, fail closed.
+    if (start.length === 0 && stats.size > prefix.length) return true;
     if (!start.startsWith('{')) return false;
     if (stats.size > 16 * 1024 * 1024) return true;
     let json;
