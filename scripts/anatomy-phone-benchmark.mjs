@@ -17,7 +17,7 @@ const url = process.env.ANATOMY_BENCH_URL || 'http://127.0.0.1:4322/preview/anat
 const allowed = new Set(['chromium', 'webkit']);
 const engines = (process.env.ANATOMY_BENCH_ENGINES || 'chromium,webkit')
   .split(',').map((name) => name.trim()).filter(Boolean);
-const rounds = Number(process.env.ANATOMY_BENCH_ROUNDS || '3');
+const rounds = Number(process.env.ANATOMY_BENCH_ROUNDS ?? '3');
 const timeout = 120_000;
 
 if (!engines.length || engines.some((name) => !allowed.has(name))) {
