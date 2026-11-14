@@ -1,0 +1,1 @@
+status: Task 178 (#662, #625): fail closed on standalone .wasm release artifacts with unchecked custom/data bytes, while retaining the dedicated Pagefind .pagefind validation. Founder-held; no anatomy model is approved or published.

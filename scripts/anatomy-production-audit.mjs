@@ -28,9 +28,13 @@ const BODYPARTS3D_SECTION_FILES = new Map([
 // Fail closed on any publicly shipped 3D geometry, including misplaced copies and raw source meshes.
 // Include common alternative mesh formats so a renamed draft cannot bypass the production gate.
 const MODEL_ASSET = /\.(?:glb|gltf|obj|stl|fbx|ply|dae|3mf|usd|usdz|blend)$/i;
-// Published file types have to be explicitly reviewed. A hidden model can be a
+// Published file types have to be explicitly reviewed. Standalone .wasm is
+// denied until it has a dedicated payload audit: valid modules may contain
+// draft identifiers in public custom or data sections. Pagefind's wrapped
+// WASM .pagefind files instead pass through their existing bounded validator.
+// A hidden model can be a
 // plain JSON glTF renamed .dat, which has neither .gltf suffix nor GLB magic.
-const REVIEWED_OUTPUT_TYPE = /\.(?:html?|js|mjs|cjs|css|json|map|xml|svg|txt|csv|tsv|md|webmanifest|ico|png|jpe?g|gif|webp|avif|bmp|tiff?|woff2?|ttf|otf|eot|wasm|pdf|mp4|webm|mp3|m4a|wav|ogg|vtt)$/i;
+const REVIEWED_OUTPUT_TYPE = /\.(?:html?|js|mjs|cjs|css|json|map|xml|svg|txt|csv|tsv|md|webmanifest|ico|png|jpe?g|gif|webp|avif|bmp|tiff?|woff2?|ttf|otf|eot|pdf|mp4|webm|mp3|m4a|wav|ogg|vtt)$/i;
 const REVIEWED_EXTENSIONLESS_OUTPUT = new Set(['/_headers', '/_redirects']);
 // Archives can conceal otherwise unapproved model files from a path/GLB-signature scan.
 const ARCHIVE_ASSET = /\.(?:zip|tar|tgz|gz|bz2|xz|zst|7z|rar|cab|jar|war|ear|apk|ipa|iso|dmg)$/i;

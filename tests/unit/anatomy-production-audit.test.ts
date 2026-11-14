@@ -420,6 +420,28 @@ describe('anatomy production artifact audit', () => {
     expect(errors).toContain('unreviewed output asset type requires explicit review: /assets/ordinary.dat');
   });
 
+  it('rejects valid standalone WebAssembly modules including embedded draft identifiers', () => {
+    const f = setup();
+    expect(f.check().errors).toEqual([]);
+    const wasmHeader = Buffer.from([0, 97, 115, 109, 1, 0, 0, 0]);
+    const sectionName = Buffer.from('audit', 'ascii');
+    const draftSection = Buffer.concat([
+      Buffer.from([sectionName.length]),
+      sectionName,
+      Buffer.from('FMA999991', 'ascii'),
+    ]);
+    const withDraftId = Buffer.concat([wasmHeader, Buffer.from([0, draftSection.length]), draftSection]);
+    // These are legitimate WASM modules: extension-only allowlisting used to
+    // pass them despite the uninspected publicly downloadable custom payload.
+    expect(WebAssembly.validate(wasmHeader)).toBe(true);
+    expect(WebAssembly.validate(withDraftId)).toBe(true);
+    f.file('_astro/ordinary.wasm', wasmHeader);
+    f.file('_astro/unreviewed-draft.wasm', withDraftId);
+    const errors = f.check().errors;
+    expect(errors).toContain('unreviewed output asset type requires explicit review: /_astro/ordinary.wasm');
+    expect(errors).toContain('unreviewed output asset type requires explicit review: /_astro/unreviewed-draft.wasm');
+  });
+
   it('allows reviewed web asset types and fails closed on an unknown suffix', () => {
     const f = setup();
     f.file('assets/ordinary.json', JSON.stringify({ title: 'site data', version: 1 }));
