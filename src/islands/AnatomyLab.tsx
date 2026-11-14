@@ -712,9 +712,6 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
       savedViewsRequestGuard.invalidate();
       reviewQueueRequestGuard.invalidate();
     };
-  // Updating the visible system must not tear down the auth listener or
-  // invalidate a signed-in student's personal data. Read the latest system
-  // through a ref inside the stable subscription instead.
   }, [identityGuard, savedViewsRequestGuard, reviewQueueRequestGuard, visibilityIntent]);
 
   const studyReady = signedIn && load.state === 'ready';
