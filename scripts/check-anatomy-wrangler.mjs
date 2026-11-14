@@ -5,6 +5,7 @@
  * This script validates prebuilt assets. It intentionally does not rebuild,
  * so Cloudflare Workers Builds can still run npm build followed by deploy.
  */
+import { realpathSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 import { resolve } from 'node:path';
 import { auditAnatomyProduction, builtSiteEntrypointErrors } from './anatomy-production-audit.mjs';
@@ -29,7 +30,11 @@ export function checkAnatomyWranglerUpload(env = process.env, dist = 'dist', con
   return { skipped: false, ...audit, errors: [...audit.errors, ...builtSiteEntrypointErrors(dist)] };
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
+if (process.argv[1]) {
+  let invokedScript;
+  try { invokedScript = realpathSync(resolve(process.argv[1])); }
+  catch { /* Node reports an invalid CLI path before evaluating it; imports remain side-effect-free. */ }
+  if (invokedScript && import.meta.url === pathToFileURL(invokedScript).href) {
   const checked = checkAnatomyWranglerUpload();
   if (checked.skipped) {
     process.stdout.write('anatomy Wrangler upload audit: skipped for development/preview\n');
@@ -39,5 +44,6 @@ if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1]
     process.exitCode = 1;
   } else {
     process.stdout.write('anatomy Wrangler upload audit PASS\n');
+  }
   }
 }
