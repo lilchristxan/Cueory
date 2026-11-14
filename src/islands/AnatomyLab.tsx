@@ -697,6 +697,10 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
       setQuiz(null);
       setRecallOn(false);
       setRecallRevealed(false);
+      // A saved view's presentation choices must not survive an A-to-B sign-in.
+      setLabelsOn(false);
+      setTransparent(false);
+      setTextLimit(TEXT_FALLBACK_BATCH);
       setPending(new Set());
       setLayerError(null);
       setBulkPrompt(null);
