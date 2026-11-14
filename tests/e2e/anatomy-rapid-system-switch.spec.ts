@@ -1,13 +1,11 @@
 import { expect, test } from '@playwright/test';
-import { isDesktopOfEachEngine } from './projects';
 
 /**
  * Task 178 release QA: switching twice while initial GLBs are in flight.
  * An obsolete decoded system must not appear as the newer system is loading.
  * These are only the existing, draft-enabled source models; no model is released.
  */
-test('two rapid system switches discard the older in-flight 3D model', async ({ page }, info) => {
-  test.skip(!isDesktopOfEachEngine(info), 'one three-system network race per browser engine');
+test('two rapid system switches discard the older in-flight 3D model', async ({ page }) => {
   test.setTimeout(90_000);
 
   // Load the code-made fixture first. Neither real source GLB is cached.
