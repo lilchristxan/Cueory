@@ -1,0 +1,1 @@
+status: Task 178 Anatomy Lab founder review sheets (#662 package 4): separate, draft-gated phone pages for each BodyParts3D system with exact names, source lines, layers, groups, screenshot checkboxes and on-demand credited front/side GLB pictures; no approval, model publication, deployment or hosted database change.
