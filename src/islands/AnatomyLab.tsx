@@ -1118,10 +1118,9 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts }: Pr
                 </button>
                 <button type="button" className={secondaryButton} onClick={() => setSelected(null)}>clear selection</button>
               </div>
-              {/* Source IDs belong in the report's plain-text context, never the UUID-only item fields. */}
+              {/* Keep the account watcher mounted. FlagForm resets its draft when context changes. */}
               <div className="mt-3">
                 <FlagMount
-                  key={`${system.key}:${selected}`}
                   page="/preview/anatomy-lab"
                   context={`anatomy structure ${selected} in ${system.title}`}
                 />
