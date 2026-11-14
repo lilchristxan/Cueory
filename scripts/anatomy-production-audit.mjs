@@ -773,9 +773,9 @@ function validPagefindArtifact(path, kind, draftIds = new Set()) {
       decodeAsciiEscapesForAudit(publicBytes, 'css'),
     ].some((value) => containsReservedAnatomyId(value, draftIds))) return false;
     let cursor = 8;
-    const readLeb = () => {
+    const readLeb = (limit = payload.length) => {
       let value = 0;
-      for (let i = 0; i < 5 && cursor < payload.length; i += 1) {
+      for (let i = 0; i < 5 && cursor < limit; i += 1) {
         const byte = payload[cursor++];
         value += (byte & 0x7f) * 2 ** (7 * i);
         if (!(byte & 0x80)) return Number.isSafeInteger(value) ? value : null;
@@ -818,6 +818,62 @@ function validPagefindArtifact(path, kind, draftIds = new Set()) {
           decodeAsciiEscapesForAudit(customText, 'markup'),
           decodeAsciiEscapesForAudit(customText, 'css'),
         ].some((value) => containsReservedAnatomyId(value, draftIds))) return false;
+      } else if (type === 11) {
+        // A WASM data-section byte vector is an independent downloadable
+        // payload. Scanning the section as serialized bytes is not enough:
+        // the vector length 0x41 ('A') immediately before "FMA..." joins
+        // the two words and conceals an otherwise exact draft ID.
+        const count = readLeb(end);
+        if (count === null || count > end - cursor) return false;
+        const skipLebBytes = (maxBytes) => {
+          for (let i = 0; i < maxBytes && cursor < end; i += 1) {
+            if (!(payload[cursor++] & 0x80)) return true;
+          }
+          return false;
+        };
+        const skipOffsetExpression = () => {
+          // Only read the immediate forms of ordinary constant expressions.
+          // Unknown instructions fail closed rather than guessing where a
+          // segment's byte vector starts. WebAssembly.validate() runs first.
+          while (cursor < end) {
+            const opcode = payload[cursor++];
+            if (opcode === 0x0b) return true;
+            if (opcode === 0x41 || opcode === 0x23 || opcode === 0xd0 || opcode === 0xd2) {
+              if (!skipLebBytes(5)) return false;
+            } else if (opcode === 0x42) {
+              if (!skipLebBytes(10)) return false;
+            } else if (opcode === 0x43 || opcode === 0x44) {
+              cursor += opcode === 0x43 ? 4 : 8;
+              if (cursor > end) return false;
+            } else if (opcode !== 0x6a && opcode !== 0x6b && opcode !== 0x6c &&
+                       opcode !== 0x7c && opcode !== 0x7d && opcode !== 0x7e) {
+              return false;
+            }
+          }
+          return false;
+        };
+        for (let i = 0; i < count; i += 1) {
+          // MVP and bulk-memory WASM data modes: active (0), passive (1),
+          // and active with explicit memory index (2).
+          const mode = readLeb(end);
+          if (mode === 0 || mode === 2) {
+            if (mode === 2 && readLeb(end) === null) return false;
+            if (!skipOffsetExpression()) return false;
+          } else if (mode !== 1) return false;
+          const byteLength = readLeb(end);
+          if (byteLength === null || byteLength > end - cursor) return false;
+          const bytes = payload.subarray(cursor, cursor + byteLength);
+          if (containsGlbHeader(bytes) || containsValidatedArchive(bytes)) return false;
+          const text = bytes.toString('latin1');
+          if ([
+            text,
+            decodeAsciiEscapesForAudit(text, 'script'),
+            decodeAsciiEscapesForAudit(text, 'markup'),
+            decodeAsciiEscapesForAudit(text, 'css'),
+          ].some((value) => containsReservedAnatomyId(value, draftIds))) return false;
+          cursor += byteLength;
+        }
+        if (cursor !== end) return false;
       }
       cursor = end;
     }
