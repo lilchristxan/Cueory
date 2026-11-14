@@ -618,7 +618,7 @@ function containsDecodedRawGeometry(bytes) {
   const vertex = /^v\s+[-+\d.eE]+\s+[-+\d.eE]+\s+[-+\d.eE]+(?:\s|$)/gm;
   const vertices = [...text.matchAll(vertex)];
   if (vertices.length < 3) return false;
-  return /^f\s+\d+(?:\/\d*)?(?:\/\d*)?\s+\d+(?:\/\d*)?(?:\/\d*)?\s+\d+(?:\/\d*)?(?:\/\d*)?(?:\s|$)/m.test(text);
+  return /^f\s+-?\d+(?:\/-?\d*)?(?:\/-?\d*)?\s+-?\d+(?:\/-?\d*)?(?:\/-?\d*)?\s+-?\d+(?:\/-?\d*)?(?:\/-?\d*)?(?:\s|$)/m.test(text);
 }
 
 function hasUnsafeEncodedAnatomyPayload(text, draftIds, budget = { examined: 0 }) {
