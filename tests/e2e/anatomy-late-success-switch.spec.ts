@@ -5,6 +5,7 @@ import { isDesktopOfEachEngine } from './projects';
 test('a late successful old-system GLB cannot replace the newly selected body system', async ({ page }, info) => {
   test.skip(!isDesktopOfEachEngine(info), 'one late-success network race per browser engine');
   test.setTimeout(60_000);
+  await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.goto('/preview/anatomy-lab');
   await page.getByRole('button', { name: 'open the anatomy lab' }).click();
   await expect(page.locator('canvas')).toBeFocused({ timeout: 20_000 });
@@ -54,26 +55,32 @@ test('a late successful old-system GLB cannot replace the newly selected body sy
     { timeout: 20_000 }).toBe(true);
 
     const kidneys = picker.getByRole('button', { name: 'kidneys and urinary tract', exact: true });
-    await kidneys.evaluate((button) => {
-      (button as HTMLButtonElement).click();
-      (window as Window & { __cueoryReleaseHeart?: () => void }).__cueoryReleaseHeart?.();
-    });
-    released = true;
+    // Change systems while the old heart request is pending. First let the
+    // replacement geometry fully load, then deliver the *successful* old
+    // response and compare the rendered canvas within the same browser.
+    await kidneys.click();
     await expect(kidneys).toHaveAttribute('aria-pressed', 'true');
-    expect(await page.evaluate(() =>
-      (window as Window & { __cueoryHeartDelivered?: boolean }).__cueoryHeartDelivered)).toBe(true);
-
-    // Kidney names come from the actual checked-in system's source records.
     const list = page.getByRole('region', { name: 'structures' });
     await expect(list.getByRole('button', { name: 'right kidney', exact: true }))
       .toBeEnabled({ timeout: 20_000 });
+    await page.waitForTimeout(200); // settle the replacement's final render
+    const before = await page.locator('canvas').screenshot();
+    await page.evaluate(() =>
+      (window as Window & { __cueoryReleaseHeart?: () => void }).__cueoryReleaseHeart?.());
+    released = true;
+    expect(await page.evaluate(() =>
+      (window as Window & { __cueoryHeartDelivered?: boolean }).__cueoryHeartDelivered)).toBe(true);
+    await page.waitForTimeout(350); // obsolete decoder and React effects can complete
+    const after = await page.locator('canvas').screenshot();
+    expect(after.equals(before), 'a late obsolete model must not alter the new 3D scene').toBe(true);
+
+    // The replacement's source-backed catalog, loaded state and selection
+    // must remain intact. An old successful GLB must not appear or be counted.
     await expect(list.getByRole('button', { name: 'heart', exact: true })).toHaveCount(0);
     await expect(page.getByTestId('anatomy-files')).toHaveCount(0);
     await expect(page.getByRole('alert').filter({ hasText: 'could not load' })).toHaveCount(0);
-    await page.waitForTimeout(250); // allow the obsolete promise and model decoder to settle
     await expect(kidneys).toHaveAttribute('aria-pressed', 'true');
     await expect(list.getByRole('button', { name: 'right kidney', exact: true })).toBeEnabled();
-    await expect(list.getByRole('button', { name: 'heart', exact: true })).toHaveCount(0);
   } finally {
     // An assertion failure must never leave the old system's fetch pending.
     if (!released) await page.evaluate(() =>
