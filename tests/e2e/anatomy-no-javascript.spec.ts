@@ -50,7 +50,7 @@ test('anatomy structure names remain reachable and credited without JavaScript',
   await check.locator('summary').focus();
   await page.keyboard.press('Enter');
   await expect(check).toHaveAttribute('open', '');
-  await expect(check.getByText(/^trail:/)).toBeVisible();
+  await expect(check.locator('p').filter({ hasText: /^trail:/ })).toBeVisible();
   const link = check.getByRole('link', { name: 'go to catalog entry' });
   const target = await link.getAttribute('href');
   expect(target).toMatch(/^#structure-/);
