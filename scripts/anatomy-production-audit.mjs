@@ -1098,12 +1098,9 @@ function hasUsableSiteEntrypoint(html) {
     cursor = end;
     if (next === -1) break;
 
-    if (state === 'done' && html.startsWith('<script', cursor)) {
+    if (state === 'done' && /^<script\\b/i.test(html.slice(cursor))) {
       const trailing = afterDocumentScript.exec(html.slice(cursor));
-      // Only Astro's complete hoisted module scripts are permitted outside
-      // the document. Arbitrary scripts or other markup cannot count as valid.
-      if (!trailing ||
-          !/^<script\\b[^>]*\\btype\\s*=\\s*(["'])module\\1(?=\\s|>)/i.test(trailing[0])) return false;
+      if (!trailing) return false;
       cursor += trailing[0].length;
       continue;
     }
