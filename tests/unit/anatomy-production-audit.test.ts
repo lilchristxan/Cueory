@@ -532,6 +532,17 @@ describe('anatomy production artifact audit', () => {
     f.file('pagefind/pagefind.en_test.pf_meta', gzipMeta);
     f.file('pagefind/wasm.en.pagefind', wasm);
     f.file('pagefind/wasm.en_harmless.pagefind', wasmWithHarmlessMarker);
+    // A valid WASM data section is also downloadable binary data. Its
+    // reserved source ID must not escape inspection merely because the
+    // section is not a custom section.
+    const dataSectionBody = Buffer.concat([
+      Buffer.from([0x01, 0x01, 0x09]), Buffer.from('FMA999991', 'ascii'),
+    ]);
+    const wasmWithDataId = Buffer.concat([
+      wasmHeader, Buffer.from([0x0b, dataSectionBody.length]), dataSectionBody,
+    ]);
+    expect(WebAssembly.validate(wasmWithDataId)).toBe(true);
+    f.file('pagefind/wasm.en_data_id.pagefind', gzipSync(Buffer.concat([prefix, wasmWithDataId])));
     f.file('pagefind/wasm.en_draft_id.pagefind', wasmWithDraftId);
     // Pagefind also accepts already-decompressed data with the same marker.
     f.file('pagefind/fragment/en_raw_test.pf_fragment', Buffer.concat([prefix, Buffer.from(JSON.stringify({
@@ -559,6 +570,7 @@ describe('anatomy production artifact audit', () => {
     f.file('pagefind/index/en_safe_glb_mention.pf_index', gzipSync(Buffer.concat([prefix, safeMentionCbor])));
     f.file('pagefind/index/en_safe_glb_mention_raw.pf_index', Buffer.concat([prefix, safeMentionCbor]));
     expect(f.check().errors).toEqual([
+      'archive/container in production output requires explicit review: /pagefind/wasm.en_data_id.pagefind',
       'archive/container in production output requires explicit review: /pagefind/wasm.en_draft_id.pagefind',
     ]);
 
@@ -568,6 +580,7 @@ describe('anatomy production artifact audit', () => {
     textHintFragment[3] |= 0x01;
     f.file('pagefind/fragment/en_text_hint.pf_fragment', textHintFragment);
     expect(f.check().errors).toEqual([
+      'archive/container in production output requires explicit review: /pagefind/wasm.en_data_id.pagefind',
       'archive/container in production output requires explicit review: /pagefind/wasm.en_draft_id.pagefind',
     ]);
 
@@ -584,6 +597,7 @@ describe('anatomy production artifact audit', () => {
       f.file(`pagefind/fragment/en_safe_header_${name}.pf_fragment`, ordinary);
     }
     expect(f.check().errors).toEqual([
+      'archive/container in production output requires explicit review: /pagefind/wasm.en_data_id.pagefind',
       'archive/container in production output requires explicit review: /pagefind/wasm.en_draft_id.pagefind',
     ]);
 
@@ -749,6 +763,7 @@ describe('anatomy production artifact audit', () => {
     f.file('pagefind/index/en_trailing_bytes.pf_index', Buffer.concat([gzipSync(Buffer.concat([prefix, Buffer.from('safe index payload')])), Buffer.from('glTF' + 'x'.repeat(32))]));
     expect(f.check().errors).toEqual(expect.arrayContaining([
       'archive/container in production output requires explicit review: /pagefind/wasm.en_hidden_archive.pagefind',
+      'archive/container in production output requires explicit review: /pagefind/wasm.en_data_id.pagefind',
       'archive/container in production output requires explicit review: /pagefind/wasm.en_draft_id.pagefind',
       'archive/container in production output requires explicit review: /pagefind/fragment/en_corrupt.pf_fragment',
       'archive/container in production output requires explicit review: /pagefind/fragment/en_hidden_model.pf_fragment',
