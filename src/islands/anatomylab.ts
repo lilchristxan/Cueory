@@ -233,7 +233,7 @@ export const LEGACY_PRODUCTION_BRANCH = 'legacy/main';
 
 /**
  * May this build show drafts? Workers Builds (WORKERS_CI=1) builds every branch: drafts only when it names a branch and
- * that branch isn't `main`. A Workers build that doesn't say which branch counts as the live site, so a missing
+ * that branch isn't a known production branch (`main` or GitLab `legacy/main`). Missing branch metadata is treated as live, so a missing
  * variable can never leak drafts. Fails closed: any other build (a plain `npm run build`, an uploaded dist/) excludes
  * drafts unless CUEORY_ANATOMY_DRAFTS=1 says so on purpose.
  */
