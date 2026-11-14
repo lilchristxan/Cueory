@@ -262,6 +262,9 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
   const measureRef = useRef<{ font: string; measure: (s: string) => number; metrics: LabelMetrics } | null>(null);
   const compareCanvasRef = useRef<HTMLCanvasElement>(null);
   const compareSceneRef = useRef<LabScene | null>(null);
+  // Async comparison loads and camera callbacks must use the latest chosen posture.
+  const postureRef = useRef(posture);
+  postureRef.current = posture;
   const compareSyncRef = useRef<ReturnType<typeof createCompareSync> | null>(null);
 
   // A pending phone consent never survives a body-system change.
@@ -779,14 +782,21 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
         compareSyncRef.current = createCompareSync(() => {
           const main = sceneRef.current;
           const other = compareSceneRef.current;
-          if (main && other && other === scene) other.applyCameraState(main.cameraState());
+          if (main && other && other === scene) {
+            // Posture rotates the model root, not the camera. Keep both aligned.
+            other.setPosture(postureRef.current);
+            other.applyCameraState(main.cameraState());
+          }
         });
         return scene
           .load(compareSystem.model.files ?? compareSystem.model.file, compareSystem.structures.map((s) => s.id))
           .then((result) => {
             if (!live || !result || !scene) return;
             const main = sceneRef.current;
-            if (main) scene.applyCameraState(main.cameraState());
+            if (main) {
+              scene.setPosture(postureRef.current);
+              scene.applyCameraState(main.cameraState());
+            }
             setCompareState('ready');
             setAnnounce(`comparing with ${compareSystem.title}: ${result.found.length} structures loaded.`);
           });
@@ -1583,6 +1593,12 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
                       onClick={() => {
                         setPosture(p);
                         sceneRef.current?.setPosture(p);
+                  // Both meshes must have the same root rotation before copying the camera.
+                  const comparison = compareSceneRef.current;
+                  if (comparison) {
+                    comparison.setPosture(p);
+                    if (sceneRef.current) comparison.applyCameraState(sceneRef.current.cameraState());
+                  }
                         setAnnounce(p === 'lying' ? 'the model lies on its back, seen from above.' : 'the model stands, seen from the front.');
                       }}
                     >
