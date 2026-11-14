@@ -136,6 +136,32 @@ export function anatomyInventory(root = DEFAULT_ROOT, selectedSystem = null) {
 }
 
 /**
+ * Fail-closed publication gate for review-sheet HTML and routes.
+ *
+ * The existing lab gate predates the connected Workers production branch
+ * legacy/main. A review page containing all original draft names must not
+ * rely on the staging-wide gate until its production alias fix is merged.
+ * The recognized Workers CI values are 1 and true; unknown values are
+ * rejected, even when local preview opt-in is also supplied.
+ *
+ * @param {{WORKERS_CI?:string, WORKERS_CI_BRANCH?:string, CUEORY_ANATOMY_DRAFTS?:string}} env
+ */
+export function draftReviewSheetsAllowed(env) {
+  const raw = env.WORKERS_CI_BRANCH?.trim() ?? '';
+  const branch = raw.startsWith('refs/heads/') ? raw.slice('refs/heads/'.length) : raw;
+  // Reject main, legacy/main, refs/heads/main and any other main alias.
+  if (/(?:^|\\/)main$/i.test(branch)) return false;
+
+  const ci = env.WORKERS_CI?.trim().toLowerCase() ?? '';
+  if (ci === '1' || ci === 'true') {
+    // Workers preview builds must identify a real non-production branch.
+    return branch.length > 0 && /^[A-Za-z0-9][A-Za-z0-9._/-]*$/.test(branch);
+  }
+  if (ci !== '' && ci !== '0' && ci !== 'false') return false;
+  return env.CUEORY_ANATOMY_DRAFTS === '1';
+}
+
+/**
  * @typedef {{id:string, name:string, group:string, layer:string,
  *   source:{quote:string, url:string, section:string, book:string, license:string}}} ReviewLabel
  * @typedef {{id:string, title:string, status:'draft'|'approved', release:string,
