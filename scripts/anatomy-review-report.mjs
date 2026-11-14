@@ -265,6 +265,8 @@ export function writeAnatomyReviewSheets(entries, destination) {
       throw new Error('review output directory must be a real directory');
     }
   } else {
+    // Only the explicitly requested export directory may be created. Its
+    // canonical destination was checked above before touching the filesystem.
     mkdirSync(folder, { recursive: true });
   }
   const paths = anatomyReviewSheets(entries)
