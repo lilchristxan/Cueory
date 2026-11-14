@@ -1,0 +1,1 @@
+status: Task 178 QA coverage (#662): map all 21 student-flow and access/performance rows to existing test assertions or explicit gaps; add real-model browser regression for selective failed-layer retry. Await exact-head CI, other package-3 gap tests, independent review and locked-staging manual/device acceptance; all 11 models remain draft.
