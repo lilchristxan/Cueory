@@ -20,7 +20,9 @@ export function shouldAuditAnatomyBuild(env) {
   if (env.WORKERS_CI === '1' || env.WORKERS_CI === 'true') {
     const raw = env.WORKERS_CI_BRANCH?.trim();
     const branch = raw?.startsWith('refs/heads/') ? raw.slice('refs/heads/'.length) : raw;
-    return !branch || branch === 'main';
+    // Workers Builds is currently connected to GitLab's legacy/main for production.
+    // Do not skip this gate when that release branch is built.
+    return !branch || branch === 'main' || branch === 'legacy/main';
   }
   // Local tests may explicitly build the locked draft fixture. Otherwise,
   // including an unknown environment, a built artifact must be release-safe.
