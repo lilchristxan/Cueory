@@ -249,13 +249,25 @@ export async function prepareDownload(reader: ExportReader, options: GatherOptio
 
 /** Like prepareDownload, but for the account the page was opened for: no file if the signed-in account differs before or after reading. */
 export async function prepareDownloadFor(
-  adapters: Pick<AccountAdapters, 'session' | 'reader'>, userId: string, options: GatherOptions,
+  adapters: Pick<AccountAdapters, 'session' | 'reader' | 'onIdentityChange'>, userId: string, options: GatherOptions,
 ): Promise<DownloadResult | { ok: false; message: string; changed: true }> {
   const changed = { ok: false as const, message: accountMessage('identity-changed'), changed: true as const };
-  if (!(await sameIdentity(adapters, userId))) return changed;
-  const files = await prepareDownload(adapters.reader, options);
-  if (files.ok && !(await sameIdentity(adapters, userId))) return changed;
-  return files;
+  // A->B->A within one export must not pass checks that sample only the first
+  // and final session. Track every delivered auth event during the read.
+  let accountChanged = false;
+  let listening = true;
+  const stop = adapters.onIdentityChange?.((nextId) => {
+    if (listening && nextId !== userId) accountChanged = true;
+  }) ?? (() => {});
+  try {
+    if (accountChanged || !(await sameIdentity(adapters, userId)) || accountChanged) return changed;
+    const files = await prepareDownload(adapters.reader, options);
+    if (accountChanged || !(await sameIdentity(adapters, userId)) || accountChanged) return changed;
+    return files;
+  } finally {
+    listening = false;
+    stop();
+  }
 }
 
 export interface DownloadDom {
