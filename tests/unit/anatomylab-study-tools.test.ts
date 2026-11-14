@@ -36,6 +36,7 @@ import {
   redo,
   restoreAll,
   rotateX,
+  savedVisibility,
   structureState,
   tapAction,
   toggleFaded,
@@ -45,6 +46,18 @@ import {
 } from '../../src/islands/anatomylab';
 
 const vis = (hidden: string[] = [], faded: string[] = []): Visibility => ({ hidden: new Set(hidden), faded: new Set(faded) });
+
+describe('saved visibility in lazy whole-body views', () => {
+  it('preserves source-valid but unloaded hidden and faded IDs while dropping nonexistent ones', () => {
+    const sourceIds = new Set(['FIX001', 'FIX002', 'FIX003']);
+    const snapshot = { hidden: ['FIX002', 'invalid'], faded: ['FIX003', 'FIX002', 'invalid'] };
+    expect(savedVisibility(snapshot, sourceIds)).toEqual({
+      hidden: new Set(['FIX002']), faded: new Set(['FIX003']),
+    });
+    // Loaded-only filtering used to drop the saved intent for both deeper-layer IDs.
+    expect(savedVisibility(snapshot, new Set(['FIX001']))).toEqual(vis());
+  });
+});
 
 describe('compare camera trailing sync', () => {
   it('schedules a final camera copy when the last rendered frame falls inside the throttle window', () => {

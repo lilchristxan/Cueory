@@ -121,6 +121,17 @@ test.describe('anatomy lab study tools, integration', () => {
     await expect(pick).toHaveValue('');
   });
 
+  test('switching to whole body disposes comparison and does not offer a second WebGL view', async ({ page }) => {
+    await openLab(page);
+    const comparison = tools(page).getByLabel('compare with…');
+    await comparison.selectOption({ index: 1 });
+    await expect(page.getByTestId('anatomy-compare')).toBeVisible();
+    await page.getByRole('button', { name: 'whole body', exact: true }).click();
+    await expect(page.getByTestId('anatomy-compare')).toHaveCount(0);
+    await expect(tools(page).getByLabel('compare with…')).toHaveCount(0);
+    await expect(page.locator('canvas')).toHaveCount(1);
+  });
+
   test('the new controls are at least 44 px and the card has no accessibility violations', async ({ page }) => {
     await openLab(page);
     const width = page.viewportSize()?.width ?? 1440;

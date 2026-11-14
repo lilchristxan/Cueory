@@ -1342,7 +1342,7 @@ export function savedCamera(camera: { position: readonly number[]; target: reado
   return { position: [...camera.position], target: [...camera.target], up };
 }
 
-/** The visibility a saved view puts back: ids the loaded model has, hidden winning over faded. */
+/** Restores source-valid IDs, even on lazy layers that have not downloaded. Hidden wins over faded. */
 export function savedVisibility(view: { hidden: readonly string[]; faded: readonly string[] }, found: ReadonlySet<string>): Visibility {
   const hidden = new Set(view.hidden.filter((id) => found.has(id)));
   const faded = new Set(view.faded.filter((id) => found.has(id) && !hidden.has(id)));

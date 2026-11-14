@@ -749,7 +749,8 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
 
   // ── Compare view (Task 178): a second scene with another system, following this camera; disposed on close ─────────
   const compareSystem = useMemo(
-    () => (compareKey && compareKey !== system?.key ? systems.find((s) => s.key === compareKey) ?? null : null),
+    () => (system?.key !== WHOLE_BODY_KEY && compareKey && compareKey !== system?.key && compareKey !== WHOLE_BODY_KEY
+      ? systems.find((s) => s.key === compareKey) ?? null : null),
     [compareKey, system?.key, systems],
   );
   useEffect(() => {
@@ -1141,7 +1142,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
   const currentSavedViews = savedViews.filter((view) => view.system_key === system.key);
   const reviewPool = reviewQuizPool(queued, foundSet);
   // The whole body is never a comparison: it is several models at once, past the per-model budget twice over.
-  const compareOptions = systems.filter((s) => s.key !== system.key && s.key !== WHOLE_BODY_KEY && !s.model.layerFiles);
+  const compareOptions = system.key === WHOLE_BODY_KEY ? [] : systems.filter((s) => s.key !== system.key && s.key !== WHOLE_BODY_KEY && !s.model.layerFiles);
 
   /** Reveals the structures nearest the selected one (by box centers), as one undoable change. */
   const showNearby = () => {
@@ -1226,8 +1227,11 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
       setAnnounce('this view could not be read. delete it and save it again.');
       return;
     }
-    changeVisibility(() => savedVisibility(view, foundSet));
-    setSelected(view.selected && foundSet.has(view.selected) ? view.selected : null);
+    // A whole-body view may include source IDs whose mesh has not downloaded yet.
+    // Keep their saved visibility/selection so lazy downloads can apply the same view.
+    const eligibleIds = lazy ? new Set(system.structures.map((structure) => structure.id)) : foundSet;
+    changeVisibility(() => savedVisibility(view, eligibleIds));
+    setSelected(view.selected && eligibleIds.has(view.selected) ? view.selected : null);
     scene.applyCameraState(camera);
     setAnnounce(`opened the view "${view.name}".`);
   };
@@ -1284,6 +1288,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
                   // retry controls, export feedback or label notes under the new title.
                   setLoad({ state: 'loading' });
                   setSelected(null);
+                  setCompareKey('');
                   setQuiz(null);
                   setPending(new Set());
                   setLayerError(null);
@@ -1293,9 +1298,10 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
                   setLabelNote([]);
                   setAnnounce('');
                   activeSystemKeyRef.current = s.key;
-                   savedViewsRequestGuard.invalidate();
-                   setSavedViews([]);
-                   setSystemKey(s.key);
+                  savedViewsRequestGuard.invalidate();
+                  reviewQueueRequestGuard.invalidate();
+                  setSavedViews([]);
+                  setSystemKey(s.key);
                 }}
                 className={secondaryButton}
               >
