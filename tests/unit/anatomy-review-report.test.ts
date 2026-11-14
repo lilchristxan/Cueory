@@ -266,6 +266,18 @@ describe('read-only anatomy review inventory', () => {
     expect(existsSync(canonicalTarget)).toBe(false);
   });
 
+  it('refuses an occupied review filename even when it is a dangling symlink', () => {
+    const root = setup();
+    writeSystem(root, 'alpha');
+    const output = join(root, 'reviews');
+    mkdirSync(output);
+    const symlink = join(output, 'anatomy-alpha-review.md');
+    symlinkSync(join(root, 'nonexistent-target.md'), symlink);
+    expect(() => writeAnatomyReviewSheets(anatomyInventory(root), output))
+      .toThrow('review output already exists');
+    expect(existsSync(join(root, 'nonexistent-target.md'))).toBe(false);
+  });
+
   it('refuses a file path as a review output directory', () => {
     const root = setup();
     writeSystem(root, 'alpha');
