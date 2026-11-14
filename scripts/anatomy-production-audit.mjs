@@ -1139,14 +1139,6 @@ function hasUsableSiteEntrypoint(html) {
     if (!match) return false;
     const tag = match[1].toLowerCase();
 
-    if (state === 'done' && tag === 'script' && !closing) {
-      // Pagefind/Astro may place deferred module scripts after the complete
-      // document. Allow only a syntactically complete script, never extra HTML.
-      const close = /<\/script\s*>/i.exec(html.slice(cursor));
-      if (!close) return false;
-      cursor += close.index + close[0].length;
-      continue;
-    }
     if (tag === 'html') {
       if (closing && state === 'html-close') state = 'done';
       else if (!closing && state === 'html-open') state = 'head-open';
