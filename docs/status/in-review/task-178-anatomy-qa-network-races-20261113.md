@@ -1,0 +1,1 @@
+status: Task 178 QA coverage: real-model browser tests for partial multi-file layer failures and stale show-all visibility, plus a named-test coverage index for all 21 student-flow and access/performance QA rows. Model approval, full-phone measurements, founder-locked staging checks, and release evidence remain pending.
