@@ -263,6 +263,16 @@ export function createAnatomyStudy(getClient: () => Promise<AnatomyStudyClient |
     const session = await sessionStateFrom(client);
     return session.signedIn && session.userId === expectedUserId ? client : null;
   }
+  // Account A can switch to B after preflight but before a read RPC settles.
+  // Do not return B's owner-scoped records to a caller that started under A.
+  async function sameUserAfterRead(client: AnatomyStudyClient, expectedUserId: string): Promise<boolean> {
+    try {
+      const current = await sessionStateFrom(client);
+      return current.signedIn && current.userId === expectedUserId;
+    } catch {
+      return false;
+    }
+  }
   function settle<T>(reply: Reply<T>, check: (data: unknown) => data is T): Outcome<T> {
     if (reply.error != null) return { ok: false, message: anatomyStudyMessage(reply.error), cause: reply.error };
     if (!check(reply.data)) return { ok: false, message: 'something went wrong — please try again.' };
@@ -295,7 +305,9 @@ export function createAnatomyStudy(getClient: () => Promise<AnatomyStudyClient |
     async reviewQueue(expectedUserId) {
       const client = await signedIn(expectedUserId);
       if (!client) return { ok: true, value: [] };
-      return settle(await client.rpc('my_anatomy_review_queue'), isRows<ReviewQueueRow>);
+      const reply = await client.rpc('my_anatomy_review_queue');
+      if (!await sameUserAfterRead(client, expectedUserId)) return { ok: false, message: NOT_SIGNED_IN };
+      return settle(reply, isRows<ReviewQueueRow>);
     },
     async saveView(state, expectedUserId) {
       const snapshot = viewSnapshot(state);
@@ -313,7 +325,9 @@ export function createAnatomyStudy(getClient: () => Promise<AnatomyStudyClient |
       if (!SYSTEM_KEY.test(systemKey)) return { ok: true, value: [] };
       const client = await signedIn(expectedUserId);
       if (!client) return { ok: true, value: [] };
-      return settle(await client.rpc('my_anatomy_views', { system_key: systemKey }), isRows<SavedViewRow>);
+      const reply = await client.rpc('my_anatomy_views', { system_key: systemKey });
+      if (!await sameUserAfterRead(client, expectedUserId)) return { ok: false, message: NOT_SIGNED_IN };
+      return settle(reply, isRows<SavedViewRow>);
     },
   };
 }
