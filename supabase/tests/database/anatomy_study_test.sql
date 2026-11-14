@@ -348,8 +348,8 @@ select isnt(
   null, 'a default whole-body view accepts all 1,254 hidden structure IDs'
 );
 select results_eq(
-  $ select cardinality(hidden)::int from public.my_anatomy_views('whole-body') where name = 'skin-only' $,
-  $ values (1254) $, 'the full set of hidden structure IDs is read back unchanged'
+  $ select cardinality(hidden)::int from public.my_anatomy_views('whole-body') where name = 'skin-only' $$,
+  $ values (1254) $$, 'the full set of hidden structure IDs is read back unchanged'
 );
 select is(
   public.delete_anatomy_view((select id from public.my_anatomy_views('whole-body') where name = 'skin-only'), (select auth.uid())),
