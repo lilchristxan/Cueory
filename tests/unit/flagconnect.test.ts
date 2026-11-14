@@ -356,6 +356,39 @@ describe('flag reports are bound to the account that pressed Send (Task 178)', (
     expect(rpc).not.toHaveBeenCalled();
   });
 
+  it('blocks a rapid A to B to A switch during the final pre-RPC session read', async () => {
+    const fake = switchableClient();
+    fake.store('account-A');
+    const originalRead = fake.client.auth.getSession;
+    let reads = 0;
+    let signalSecond: () => void = () => {};
+    let releaseSecond: () => void = () => {};
+    const secondReadStarted = new Promise<void>((resolve) => { signalSecond = resolve; });
+    const heldSecondRead = new Promise<void>((resolve) => { releaseSecond = resolve; });
+    fake.client.auth.getSession = vi.fn(async () => {
+      reads += 1;
+      if (reads === 2) {
+        signalSecond();
+        await heldSecondRead;
+      }
+      return originalRead();
+    });
+    const rpc = vi.fn(() => Promise.resolve({ data: reportId, error: null }));
+    fake.client.rpc = rpc;
+
+    const sending = makeFlagSend(async () => fake.client, 'account-A')(good);
+    await secondReadStarted;
+    // Initial identity check succeeded for A, but the RPC callback must
+    // invalidate a subsequent transient account switch even when A returns.
+    fake.announce('account-B');
+    fake.announce('account-A');
+    releaseSecond();
+
+    expect(await sending).not.toBe('sent');
+    expect(rpc, 'no account may receive a stale draft').not.toHaveBeenCalled();
+    expect(reads).toBe(2);
+  });
+
   it('fails closed if the account is missing or cannot be checked before dispatch', async () => {
     for (const options of [{ session: null }, { sessionError: { message: 'offline' } }]) {
       const { calls, load } = fakeClient(options);
