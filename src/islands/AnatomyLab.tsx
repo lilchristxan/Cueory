@@ -705,6 +705,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
       setCompareKey('');
       setCompareState('idle');
       setPosture('standing');
+      sceneRef.current?.setPosture('standing');
       // Retire outgoing account picture exports without invalidating a
       // permitted current-system model download.
       pictureExportGeneration.bump();
@@ -715,6 +716,9 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
       setReviewRows([]);
       setSavedViews([]);
       setViewName('');
+      setQuery('');
+      setListLimit(STRUCTURE_PAGE_SIZE);
+      nextListFocusId.current = null;
       setSavingViews(new Set());
       setAnnounce('');
     };
