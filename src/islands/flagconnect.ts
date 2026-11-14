@@ -93,14 +93,48 @@ export function watchFlagSession(load: LoadFlagClient, report: (signedIn: boolea
 }
 
 /**
- * Send using the identity that was active when the student pressed Send.
- * Another tab can switch accounts while the Supabase module/client is loading.
- * Verify the same user on that exact client immediately before dispatching
- * submit_flag, rather than allowing account B to submit account A's draft.
- * The database still authenticates and rate-limits the RPC independently.
+ * A single PostgREST query builder can pin Authorization for this request.
+ * In supabase-js 2.118.0, client.rpc() is lazy and fetchWithAuth() reads
+ * the shared session again only when the returned builder is awaited. Without
+ * a per-query header that later read could attach account B's JWT to account
+ * A's draft after our final identity check.
+ */
+type FlagRpcRequest = PromiseLike<{ data: unknown; error: unknown }> & {
+  setHeader?: (name: string, value: string) => unknown;
+  abortSignal?: (signal: AbortSignal) => unknown;
+};
+
+async function currentFlagAccessSession(client: FlagClient): Promise<{ userId: string; accessToken: string } | null> {
+  try {
+    const reply = await client.auth.getSession();
+    if (reply.error) return null;
+    const session = reply.data?.session as {
+      user?: { id?: unknown } | null;
+      access_token?: unknown;
+    } | null | undefined;
+    const userId = session?.user?.id;
+    const accessToken = session?.access_token;
+    return typeof userId === 'string' && userId !== '' &&
+      typeof accessToken === 'string' && accessToken !== ''
+      ? { userId, accessToken }
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Sends a report as the user who pressed Send. The per-request Authorization
+ * header is explicitly frozen to that user's JWT. Even if the shared
+ * Supabase client switches accounts during lazy token acquisition, it cannot
+ * turn an A-origin report into a B-authenticated submission.
  *
- * An omitted expectedUserId is retained only for legacy callers and focused
- * transport tests. Browser flag forms always bind a session identity.
+ * An auth change also aborts the specific PostgREST builder before/in flight,
+ * without modifying the shared client or any unrelated request. The database
+ * still checks authentication, permissions and rate limits independently.
+ *
+ * Omitted expectedUserId is retained for older isolated transport callers.
+ * Actual browser FlagMount always supplies the initiating account identity.
  */
 export function makeFlagSend(
   load: LoadFlagClient,
@@ -119,15 +153,18 @@ export function makeFlagSend(
     });
     let changedDuringSend = false;
     let unsubscribe = () => {};
+    const abort = new AbortController();
     if (expectedUserId !== undefined) {
       const onAuth = client.auth.onAuthStateChange;
       // An A -> B -> A switch would pass an end-state-only session check.
-      // Require a subscription for browser-originated reports so every
-      // intervening account change invalidates the pending submission.
+      // Cancel this particular write on any intermediate identity change.
       if (typeof onAuth !== 'function') return identityChanged();
       try {
         const observer = onAuth.call(client.auth, (_event, session) => {
-          if (session?.user?.id !== expectedUserId) changedDuringSend = true;
+          if (session?.user?.id !== expectedUserId) {
+            changedDuringSend = true;
+            abort.abort();
+          }
         }).data.subscription;
         unsubscribe = () => observer.unsubscribe();
       } catch {
@@ -136,27 +173,40 @@ export function makeFlagSend(
     }
     try {
       if (expectedUserId !== undefined) {
-        const current = await sessionStateFrom(client);
-        if (changedDuringSend || !current.signedIn ||
-            !expectedUserId || current.userId !== expectedUserId) return identityChanged();
+        const initial = await currentFlagAccessSession(client);
+        if (changedDuringSend || !initial ||
+            !expectedUserId || initial.userId !== expectedUserId) return identityChanged();
       }
-      // Revalidate as the actual RPC is dispatched. A successful check made
-      // before report validation is not an authorization for a later request.
       let invalidatedBeforeRpc = false;
       const result = await makeSend(async (name, args) => {
-        if (expectedUserId !== undefined) {
-          const current = await sessionStateFrom(client);
-          if (changedDuringSend || !current.signedIn ||
-              !expectedUserId || current.userId !== expectedUserId) {
-            invalidatedBeforeRpc = true;
-            throw new Error('report identity changed');
-          }
+        if (expectedUserId === undefined) return client.rpc(name, args);
+        // The final session check immediately precedes construction of the
+        // lazy builder. Do not let its later auth lookup override this token.
+        const current = await currentFlagAccessSession(client);
+        if (changedDuringSend || !current || current.userId !== expectedUserId) {
+          invalidatedBeforeRpc = true;
+          throw new Error('report identity changed');
         }
-        return client.rpc(name, args);
+        const query = client.rpc(name, args) as FlagRpcRequest;
+        // Fail closed if a substitute client lacks the pinned-version builder
+        // API. Never send with the unbound shared-session token in that case.
+        if (typeof query.setHeader !== 'function' || typeof query.abortSignal !== 'function') {
+          invalidatedBeforeRpc = true;
+          throw new Error('report identity could not be bound');
+        }
+        query.setHeader('Authorization', `Bearer ${current.accessToken}`);
+        query.abortSignal(abort.signal);
+        if (changedDuringSend || abort.signal.aborted) {
+          invalidatedBeforeRpc = true;
+          throw new Error('report identity changed');
+        }
+        return query;
       })(report);
-      // makeSend deliberately masks low-level RPC errors. Preserve the public,
-      // actionable account-switch message instead of showing a generic failure.
-      return invalidatedBeforeRpc ? identityChanged() : result;
+      // makeSend masks low-level exceptions. Keep its public refusal specific
+      // when an identity switch or missing request guard stopped dispatch.
+      return invalidatedBeforeRpc || (changedDuringSend && result === 'failed')
+        ? identityChanged()
+        : result;
     } finally {
       unsubscribe();
     }
