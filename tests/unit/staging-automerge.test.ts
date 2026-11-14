@@ -151,6 +151,7 @@ describe('held paths', () => {
     'src/pages/preview/anatomy-review/[system].astro',
     'src/pages/preview/anatomy-review.astro',
     'src/pages/anatomy.astro',
+    'src/pages/anatomy/index.astro',
     'src/islands/anatomypublic.ts',
     'src/islands/AnatomyReviewPictures.tsx',
     'src/components/SiteMenu.astro',
@@ -199,6 +200,7 @@ describe('held paths', () => {
     // before those PRs merge, so an unattended later edit cannot expose drafts.
     const paths = [
       'src/pages/anatomy.astro',
+    'src/pages/anatomy/index.astro',
       'src/islands/anatomypublic.ts',
       'src/components/SiteMenu.astro',
       'src/pages/preview/anatomy-review/index.astro',
