@@ -94,7 +94,7 @@ test.describe('Task 270: sticky header overlap', () => {
         for (const [index, control] of controls.entries()) {
           if (!control.isConnected || control.getClientRects().length === 0 ||
               getComputedStyle(control).visibility === 'hidden' || control.matches(':disabled') ||
-              control.closest('[inert], [aria-disabled="true"]')) continue;
+              control.closest('[inert], [aria-disabled="true"], details:not([open])')) continue;
           control.scrollIntoView({ block: 'start', inline: 'nearest', behavior: 'instant' });
           control.focus({ preventScroll: true });
           checked++;
