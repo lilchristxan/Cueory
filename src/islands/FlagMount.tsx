@@ -13,6 +13,17 @@ interface Props {
   context?: string;
 }
 
+/** Contextual anatomy reports must never inherit a question selected elsewhere on the page. */
+export function flagItemForContext(
+  context: string | undefined,
+  published: FlagItem | undefined,
+  itemId: string | undefined,
+  itemVersionId: string | undefined,
+): { itemId?: string; itemVersionId?: string } {
+  if (context) return {};
+  return published ?? { itemId, itemVersionId };
+}
+
 /** The page's shared client. With accounts off it is null and the Supabase package is never downloaded. */
 const loadShared: LoadFlagClient = () => getSupabase() as unknown as Promise<FlagClient | null>;
 
@@ -55,11 +66,12 @@ export default function FlagMount({ page, itemId, itemVersionId, variant, contex
     };
   }, []);
 
+  const scopedItem = flagItemForContext(context, published, itemId, itemVersionId);
   return (
     <FlagForm
       page={page}
-      itemId={context ? undefined : published ? published.itemId : itemId}
-      itemVersionId={context ? undefined : published ? published.itemVersionId : itemVersionId}
+      itemId={scopedItem.itemId}
+      itemVersionId={scopedItem.itemVersionId}
       signedIn={signedIn}
       send={send}
       onOpen={check}
