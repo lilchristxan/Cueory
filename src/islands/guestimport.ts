@@ -31,8 +31,10 @@ export interface ImportResult {
 export type IdMap = ReadonlyMap<string, ReadonlyMap<string, string>>;
 
 function isValidDay(day: unknown): day is string {
-  if (typeof day !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(day)) return false;
+  if (typeof day !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(day) || day.startsWith('0000-')) return false;
   const d = new Date(`${day}T00:00:00.000Z`);
+  // Out-of-range months produce Invalid Date; toISOString() would throw RangeError.
+  if (!Number.isFinite(d.getTime())) return false;
   return d.toISOString().slice(0, 10) === day;
 }
 
