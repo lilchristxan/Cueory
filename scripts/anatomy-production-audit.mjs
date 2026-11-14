@@ -647,7 +647,7 @@ function hasUnsafeEncodedAnatomyPayload(text, draftIds, budget = { examined: 0 }
   const runs = /(?:^|[^A-Za-z0-9+/_=-])([A-Za-z0-9+/_-]{4,}={0,2})(?=$|[^A-Za-z0-9+/_=-])/g;
   for (const match of text.matchAll(runs)) {
     const encoded = match[1];
-    if (encoded.length < 12 && !/^(?:Rk1B|RklY|QlA)/.test(encoded)) continue;
+    if (encoded.length < 8 && !/^(?:Rk1B|RklY|QlA)/.test(encoded)) continue;
     // Invalid candidate lengths used deliberately with an active decoder
     // cannot be silently treated as approved published content.
     const before = text.slice(Math.max(0, match.index - 64), match.index + match[0].length - encoded.length);
