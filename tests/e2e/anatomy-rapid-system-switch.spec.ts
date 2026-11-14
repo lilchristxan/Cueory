@@ -80,7 +80,7 @@ test('two rapid system switches discard the older in-flight 3D model', async ({ 
     await expect(catalog.getByRole('button', { name: 'heart', exact: true }))
       .toBeEnabled({ timeout: 20_000 });
     await expect(page.getByText(/^heart and great vessels: \d+ structures loaded\.$/))
-      .toBeVisible({ timeout: 20_000 });
+      .toHaveCount(1, { timeout: 20_000 });
     await expect(catalog.getByRole('button', { name: /kidney/i })).toHaveCount(0);
     await expect(heartSystem).toHaveAttribute('aria-pressed', 'true');
     expect(kidneyRequests).toBe(1);
