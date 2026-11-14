@@ -247,13 +247,13 @@ function cli(args) {
       if (outDir !== null) throw new Error('Only one --out-dir is allowed');
       outDir = args[++i];
     } else if (args[i] === '--help') {
-      return 'Usage: node scripts/anatomy-review-report.mjs [--system heart] [--out-dir /tmp/anatomy-review-sheets]\\nWithout --out-dir, print Markdown. With --out-dir, write independent review files without overwriting them.\\n';
+      return 'Usage: node scripts/anatomy-review-report.mjs [--system heart] [--out-dir /tmp/anatomy-review-sheets]\nWithout --out-dir, print Markdown. With --out-dir, write independent review files without overwriting them.\n';
     } else throw new Error(`Unknown or incomplete argument: ${args[i]}`);
   }
   const entries = anatomyInventory(DEFAULT_ROOT, selectedSystem);
   if (outDir) {
     const paths = writeAnatomyReviewSheets(entries, outDir);
-    return `Created ${paths.length} independent review sheet(s) in ${resolve(outDir)}. No model statuses changed.\\n`;
+    return `Created ${paths.length} independent review sheet(s) in ${resolve(outDir)}. No model statuses changed.\n`;
   }
   return anatomyReviewMarkdown(entries);
 }
