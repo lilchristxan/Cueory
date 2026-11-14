@@ -335,6 +335,27 @@ describe('flag reports are bound to the account that pressed Send (Task 178)', (
     });
   });
 
+  it('rejects an A to B to A auth switch while the first identity read is pending', async () => {
+    const fake = switchableClient();
+    fake.store('account-A');
+    let release: () => void = () => {};
+    const held = new Promise<void>(resolve => { release = resolve; });
+    const initial = fake.client.auth.getSession;
+    fake.client.auth.getSession = vi.fn(async () => {
+      await held;
+      return initial();
+    });
+    const rpc = vi.fn(() => Promise.resolve({ data: reportId, error: null }));
+    fake.client.rpc = rpc;
+    const pending = makeFlagSend(async () => fake.client, 'account-A')(good);
+    await settle(); // subscription is active before this auth broadcast
+    fake.announce('account-B');
+    fake.announce('account-A');
+    release();
+    expect(await pending).toEqual(accountChanged);
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
   it('fails closed if the account is missing or cannot be checked before dispatch', async () => {
     for (const options of [{ session: null }, { sessionError: { message: 'offline' } }]) {
       const { calls, load } = fakeClient(options);
