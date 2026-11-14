@@ -648,6 +648,11 @@ function validPagefindArtifact(path, kind, draftIds = new Set()) {
     return false;
   }
   const isGzip = bytes.length >= 2 && bytes[0] === 0x1f && bytes[1] === 0x8b;
+  // Pagefind's reviewed output uses the plain RFC 1952 gzip envelope.
+  // Optional header fields are public but not present after gunzipSync, so
+  // reject them before verifying the decompressed search data. Otherwise an
+  // FNAME/FCOMMENT/FEXTRA field could hide draft labels from the release audit.
+  if (isGzip && (bytes.length < 18 || bytes[2] !== 8 || bytes[3] !== 0)) return false;
   let decoded;
   try {
     decoded = isGzip
