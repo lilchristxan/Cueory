@@ -517,7 +517,7 @@ function hasArchiveMagic(path, includeEmbeddedGlb = true) {
     // with a reviewed text suffix. The eight-byte marker is meaningful at
     // offset zero, but not as a stray reference in ordinary prose.
     let archiveCandidate = hasArchiveMagicHeader(header, includeAsciiMarkers) ||
-      (header.subarray(0, 8).equals(Buffer.from('!<arch>\n', 'ascii')) && hasArAt(header, 0));
+      header.subarray(0, 8).equals(Buffer.from('!<arch>\n', 'ascii'));
 
     const chunkSize = 64 * 1024;
     const overlapSize = 511; // Retain a full 512-byte TAR header across chunk boundaries.
