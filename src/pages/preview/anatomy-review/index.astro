@@ -4,10 +4,9 @@
  * The draft publication gate also decides which names may be in the HTML.
  */
 import Layout from '../../../layouts/Layout.astro';
-import { draftsAllowed } from '../../../islands/anatomylab';
-import { anatomyInventory, anatomyReviewSheets } from '../../../../scripts/anatomy-review-report.mjs';
+import { anatomyInventory, anatomyReviewSheets, draftReviewSheetsAllowed } from '../../../../scripts/anatomy-review-report.mjs';
 
-const mayShowDrafts = draftsAllowed({
+const mayShowDrafts = draftReviewSheetsAllowed({
   WORKERS_CI: process.env.WORKERS_CI,
   WORKERS_CI_BRANCH: process.env.WORKERS_CI_BRANCH,
   CUEORY_ANATOMY_DRAFTS: process.env.CUEORY_ANATOMY_DRAFTS,
