@@ -269,16 +269,18 @@ export function writeAnatomyReviewSheets(entries, destination) {
   }
   const paths = anatomyReviewSheets(entries)
     .map((entry) => ({ file: join(folder, `anatomy-${entry.id}-review.md`), entry }));
-  // Fail before creating any file if an earlier human review sheet exists.
-  // A dangling symlink also occupies a filename even though existsSync()
-  // returns false, and must never be replaced or followed.
-  if (paths.some(({ file }) => {
-    try { lstatSync(file); return true; }
-    catch (error) {
+  // Fail before writing any file if an existing human review occupies its
+  // name. lstat detects dangling symlinks that existsSync would miss.
+  const occupied = ({ file }) => {
+    try {
+      lstatSync(file);
+      return true;
+    } catch (error) {
       if (error?.code === 'ENOENT') return false;
       throw error;
     }
-  })) {
+  };
+  if (paths.some(occupied)) {
     throw new Error('review output already exists; choose a fresh output directory');
   }
   for (const { file, entry } of paths) {
