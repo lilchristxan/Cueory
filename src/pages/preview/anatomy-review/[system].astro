@@ -28,7 +28,7 @@ export function getStaticPaths() {
   const allowed = new Map(lab.systems.map((system) => [system.key, system]));
   // Unknown/main builds may not create a draft review page or serialize its names.
   if (!allowed.size) return [];
-  return anatomyInventory()
+  return anatomyInventory(process.cwd())
     .filter((entry) => allowed.has(entry.id))
     .map((entry) => ({
       params: { system: entry.id },
