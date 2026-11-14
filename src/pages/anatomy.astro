@@ -21,7 +21,7 @@ const ready = systems.length > 0;
     {
       ready ? (
         <>
-          <AnatomyLab client:only="react" systems={systems} fixture={null} drafts={false} />
+          <AnatomyLab client:only="react" systems={systems} fixture={null} drafts={false} reportPage="/anatomy" />
           <noscript>
             <div class="space-y-4 rounded-lg border border-line p-4 text-ink">
               <p>the 3D anatomy lab needs JavaScript. You can study every approved structure in words below.</p>
