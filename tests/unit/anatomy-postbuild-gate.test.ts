@@ -123,6 +123,23 @@ describe('postbuild anatomy release audit', () => {
       expect(checkAnatomyBuild(env, dist, content).errors).toEqual([]);
       writeFileSync(join(dist, 'index.html'), '<!doctype html><html><head><title>Site</title></head><body><main>test</main></body></html>');
       expect(checkAnatomyBuild(env, dist, content).errors).toEqual([]);
+      // Astro hoists entrypoint module scripts after </html> in its built
+      // output. They must be accepted without treating JS strings as DOM.
+      const goodPage = '<!doctype html><html><head><title>Site</title></head>' +
+        '<body><main>real body</main></body></html>';
+      writeFileSync(join(dist, 'index.html'), goodPage +
+        '<script type="module">const fake = "<body><main>fake</main></body>";</script>');
+      expect(checkAnatomyBuild(env, dist, content).errors).toEqual([]);
+      for (const badTail of [
+        '<section>unreviewed markup after the document</section>',
+        '<script>const notModule = true;</script>',
+        '<script type="module">unterminated module body',
+      ]) {
+        writeFileSync(join(dist, 'index.html'), goodPage + badTail);
+        expect(checkAnatomyBuild(env, dist, content).errors).toContain(
+          'production site entry point is invalid: /index.html',
+        );
+      }
       // Astro's production output appends deferred module scripts after the
       // closing html tag. Their text is not allowed to invent a body.
       writeFileSync(join(dist, 'index.html'),
