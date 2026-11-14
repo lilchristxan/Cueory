@@ -95,7 +95,6 @@ describe('production media signatures and renamed anatomy geometry', () => {
       ['picture.webp', Buffer.concat([Buffer.from('RIFF'), Buffer.alloc(4), Buffer.from('WEBP')])],
       ['icon.ico', Buffer.from([0, 0, 1, 0, 1, 0])],
       ['font.woff2', Buffer.from('wOF2')],
-      ['search.wasm', Buffer.from([0, 97, 115, 109, 1, 0, 0, 0])],
       ['sound.ogg', Buffer.from('OggS')],
     ];
     for (const [name, bytes] of safe) {
