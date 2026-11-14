@@ -22,6 +22,16 @@ test('each selected structure has an accessible flag button and the existing pat
   await expect(trigger).toBeVisible();
   await expect(trigger).toHaveAttribute('aria-expanded', 'false');
 
+  // The footer is a separate React island. Contextual and footer aria-controls
+  // must never point at the same panel even if both roots start with useId().
+  const footer = page.locator('[data-footer-flag] button[aria-label="flag or comment"]');
+  await expect(footer).toBeVisible();
+  const cardPanelId = await trigger.getAttribute('aria-controls');
+  const footerPanelId = await footer.getAttribute('aria-controls');
+  expect(cardPanelId).toBeTruthy();
+  expect(footerPanelId).toBeTruthy();
+  expect(cardPanelId).not.toBe(footerPanelId);
+
   await trigger.focus();
   await page.keyboard.press('Enter');
   await expect(trigger).toHaveAttribute('aria-expanded', 'true');
