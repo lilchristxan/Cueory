@@ -159,7 +159,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, repo
   const nextReportNoticeId = useRef(0);
   const onReportStart = useCallback((context: string) => {
     const id = ++nextReportNoticeId.current;
-    setReportNotices((notices) => [...notices, { id, context, status: 'sending' }].slice(-4));
+    setReportNotices((notices) => [...notices, { id, context, status: 'sending' as const }].slice(-4));
     return (status: SendResult) => setReportNotices((notices) =>
       notices.map((notice) => notice.id === id ? { ...notice, status } : notice));
   }, []);
