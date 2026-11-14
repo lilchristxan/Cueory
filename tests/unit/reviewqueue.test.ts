@@ -144,6 +144,16 @@ describe('dueItems — validation', () => {
     );
   });
 
+  it.each(['0000-02-29', '0000-12-31'])('rejects any date in unsupported year zero (%s)', (today) => {
+    expect(() => dueItems([], today)).toThrow(
+      'today must be a real calendar day YYYY-MM-DD, got "' + today + '".',
+    );
+  });
+
+  it('accepts the first supported calendar year', () => {
+    expect(dueItems([], '0001-01-01')).toEqual([]);
+  });
+
   it('throws when next_review is not after last_reviewed', () => {
     expect(() => dueItems([row('a', { last_reviewed: '2026-10-28', next_review: '2026-10-28' })], '2026-11-01')).toThrow();
   });
