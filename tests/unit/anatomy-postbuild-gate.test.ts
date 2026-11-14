@@ -142,6 +142,7 @@ describe('postbuild anatomy release audit', () => {
         '<script type="module" data-note=\'valid > content\' src="unterminated>code</script>',
         '<script type="module" type="module">duplicated type</script>',
         '<script type="module">unterminated module body',
+        '<script type="module">const ignored = 1;<script type="module">const second = 2;</script>',
       ]) {
         writeFileSync(join(dist, 'index.html'), goodPage + badTail);
         expect(checkAnatomyBuild(env, dist, content).errors).toContain(
