@@ -692,6 +692,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
       setFaded(baseline.faded);
       setSelected(null);
       setQuiz(null);
+      setRecallOn(false);
       setRecallRevealed(false);
       setPending(new Set());
       setBulkPrompt(null);
