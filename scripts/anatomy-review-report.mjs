@@ -11,7 +11,7 @@
  *   node scripts/anatomy-review-report.mjs --out-dir /tmp/anatomy-review-sheets
  */
 import { existsSync, lstatSync, mkdirSync, realpathSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
-import { dirname, join, resolve, sep } from 'node:path';
+import { dirname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const SYSTEM_FILE = /^anatomy-([a-z0-9]+(?:-[a-z0-9]+)*)\.json$/;
@@ -255,7 +255,7 @@ export function writeAnatomyReviewSheets(entries, destination) {
     if (parent === ancestor) throw new Error('review output directory has no existing ancestor');
     ancestor = parent;
   }
-  const canonicalFolder = resolve(realpathSync(ancestor), folder.slice(ancestor.length).replace(/^[/\\]+/, ''));
+  const canonicalFolder = resolve(realpathSync(ancestor), relative(ancestor, folder));
   const canonicalRoot = realpathSync(DEFAULT_ROOT);
   if (canonicalFolder === canonicalRoot || canonicalFolder.startsWith(canonicalRoot + sep)) {
     throw new Error('write review sheets outside the project repository');
