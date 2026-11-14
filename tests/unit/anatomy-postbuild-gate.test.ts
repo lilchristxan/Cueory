@@ -12,6 +12,8 @@ describe('postbuild anatomy release audit', () => {
   const cases = [
     { WORKERS_CI: '1', WORKERS_CI_BRANCH: 'main' },
     { WORKERS_CI: 'true', WORKERS_CI_BRANCH: 'main', CUEORY_ANATOMY_DRAFTS: '1' },
+    { WORKERS_CI: 'true', WORKERS_CI_BRANCH: 'legacy/main', CUEORY_ANATOMY_DRAFTS: '1' },
+    { WORKERS_CI: '1', WORKERS_CI_BRANCH: 'refs/heads/legacy/main', CUEORY_ANATOMY_DRAFTS: '1' },
     { WORKERS_CI: 'true', WORKERS_CI_BRANCH: 'staging' },
     { WORKERS_CI: 'true', WORKERS_CI_BRANCH: 'refs/heads/task-178/anatomy-lab' },
     { WORKERS_CI: 'true', CUEORY_ANATOMY_DRAFTS: '1' },
@@ -41,6 +43,15 @@ describe('postbuild anatomy release audit', () => {
     expect(draftsAllowed(missingBranch)).toBe(false);
     expect(keepsDrafts(missingBranch)).toBe(false);
     expect(shouldAuditAnatomyBuild(missingBranch)).toBe(true);
+  });
+
+  it('treats the connected legacy/main as a production branch, not a preview', () => {
+    for (const name of ['legacy/main', 'refs/heads/legacy/main', ' refs/heads/legacy/main ']) {
+      const env = { WORKERS_CI: 'true', WORKERS_CI_BRANCH: name, CUEORY_ANATOMY_DRAFTS: '1' };
+      expect(shouldAuditAnatomyBuild(env)).toBe(true);
+      expect(keepsDrafts(env)).toBe(false);
+      expect(draftsAllowed(env)).toBe(false);
+    }
   });
 
   it('always audits a GitHub main release regardless of a draft override', () => {
