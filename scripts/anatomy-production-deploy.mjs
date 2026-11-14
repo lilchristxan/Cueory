@@ -42,11 +42,11 @@ if (process.argv[1]) {
   try { invokedScript = realpathSync(resolve(process.argv[1])); }
   catch { /* Node reports an invalid CLI path before evaluating it; imports remain side-effect-free. */ }
   if (invokedScript && import.meta.url === pathToFileURL(invokedScript).href) {
-  const result = deployProduction();
-  if (result.errors.length) {
-    process.stderr.write('anatomy production upload blocked:\n');
-    for (const problem of result.errors) process.stderr.write('- ' + problem + '\n');
-  }
-  process.exitCode = result.exitCode;
+    const result = deployProduction();
+    if (result.errors.length) {
+      process.stderr.write('anatomy production upload blocked:\n');
+      for (const problem of result.errors) process.stderr.write('- ' + problem + '\n');
+    }
+    process.exitCode = result.exitCode;
   }
 }
