@@ -119,6 +119,11 @@ describe('dueItems — validation', () => {
   });
 
   it('throws for an invalid next_review', () => {
+    expect(() => dueItems([row('a', { next_review: 'bad-date' })], '2026-11-01'))
+      .toThrow('Row 0: next_review must be a real calendar day YYYY-MM-DD.');
+  });
+
+  it('reports a field-specific error for an out-of-range next_review month', () => {
     expect(() => dueItems([row('a', { next_review: '2026-13-01' })], '2026-11-01'))
       .toThrow('Row 0: next_review must be a real calendar day YYYY-MM-DD.');
   });
