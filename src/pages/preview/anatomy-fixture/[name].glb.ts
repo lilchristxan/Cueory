@@ -10,6 +10,9 @@ import { fixtureGlb } from '../../../../tests/fixtures/anatomyfixture';
 export function getStaticPaths() {
   const env = { WORKERS_CI: process.env.WORKERS_CI, WORKERS_CI_BRANCH: process.env.WORKERS_CI_BRANCH,
     CUEORY_ANATOMY_DRAFTS: process.env.CUEORY_ANATOMY_DRAFTS,
+    GITHUB_REF: process.env.GITHUB_REF,
+    GITHUB_BASE_REF: process.env.GITHUB_BASE_REF,
+    GITHUB_EVENT_NAME: process.env.GITHUB_EVENT_NAME,
   };
   return draftsAllowed(env) ? [{ params: { name: 'fixture' } }] : [];
 }
