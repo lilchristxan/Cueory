@@ -1,0 +1,1 @@
+status: Task 616 (reviewqueue date validation): reject invalid UTC calendar dates before ISO formatting and assert descriptive today, last_reviewed and next_review errors in unit tests. PR remains in review pending full hosted checks.
