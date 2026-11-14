@@ -840,6 +840,16 @@ function validStandaloneWasmPayload(payload, draftIds = new Set()) {
       cursor += nameSize;
       const opaque = payload.subarray(cursor, end);
       if (containsGlbHeader(opaque) || containsValidatedArchive(opaque)) return false;
+      // The section name is followed immediately by public opaque bytes.
+      // A reserved ID at the start of those bytes can be hidden by the name
+      // or name-length characters when scanning the serialized section.
+      const opaqueText = opaque.toString('latin1');
+      if ([
+        opaqueText,
+        decodeAsciiEscapesForAudit(opaqueText, 'script'),
+        decodeAsciiEscapesForAudit(opaqueText, 'markup'),
+        decodeAsciiEscapesForAudit(opaqueText, 'css'),
+      ].some(value => containsReservedAnatomyId(value, draftIds))) return false;
       // WASM custom sections are public byte arrays. Their metadata can carry
       // source identifiers even when the rest of the module is executable code.
       // Reject escaped and unescaped draft/fixture IDs just as in text assets.
