@@ -30,7 +30,7 @@ const sheets = anatomyReviewSheets(anatomyInventory(process.cwd()))
       <ul class="space-y-3">
         {sheets.map((sheet) => (
           <li class="min-w-0 rounded-lg border border-line p-4">
-            <a href={sheet.url} class="block break-words text-lg underline text-ink">
+            <a href={sheet.url} class="flex min-h-11 min-w-0 items-center break-words text-lg underline text-ink">
               {sheet.title}
             </a>
             <p class="mt-2 text-sm text-ink-soft">
