@@ -176,12 +176,10 @@ function embeddedArchiveFixtures(): Array<[string, Buffer]> {
   Buffer.from([0x52, 0x61, 0x72, 0x21, 0x1a, 0x07, 0x00]).copy(rar4, 0);
   rar4[9] = 0x73; // Main archive header.
   rar4.writeUInt16LE(13, 12);
-  let rarCrc = 0;
-  for (const byte of rar4.subarray(9)) {
-    rarCrc ^= byte;
-    for (let bit = 0; bit < 8; bit += 1) rarCrc = (rarCrc >>> 1) ^ (rarCrc & 1 ? 0xa001 : 0);
-  }
-  rar4.writeUInt16LE(rarCrc & 0xffff, 7);
+  // Golden RAR4 MAIN_HEAD checksum: low 16 bits of finalized CRC32,
+  // independently verified as 0x90cf for this 13-byte header.
+  rar4.writeUInt16LE(0x90cf, 7);
+  expect(testCrc32(rar4.subarray(9)) & 0xffff).toBe(0x90cf);
   fixtures.push(['rar4', rar4]);
 
   const rar5 = Buffer.alloc(15);
@@ -191,6 +189,24 @@ function embeddedArchiveFixtures(): Array<[string, Buffer]> {
   rar5[14] = 0; // No flags.
   rar5.writeUInt32LE(testCrc32(rar5.subarray(12)), 8);
   fixtures.push(['rar5', rar5]);
+
+  // RAR5 header-encrypted archives begin with header type 4, then
+  // an IV and opaque encrypted header data instead of a plain main header.
+  // From the RARLab format: type=4, flags=0, AES version=0,
+  // encryption flags=0, KDF count=15, and a 16-byte salt.
+  const encryptedHeader = Buffer.concat([
+    Buffer.from([4, 0, 0, 0, 15]), Buffer.alloc(16, 0x37),
+  ]);
+  const encryptedRar5 = Buffer.concat([
+    Buffer.from([0x52, 0x61, 0x72, 0x21, 0x1a, 0x07, 0x01, 0x00]),
+    Buffer.alloc(4), Buffer.from([encryptedHeader.length]), encryptedHeader,
+    Buffer.alloc(16, 0x31), // IV of the first encrypted header.
+    Buffer.alloc(16, 0x56), // Opaque encrypted header data.
+  ]);
+  encryptedRar5.writeUInt32LE(
+    testCrc32(encryptedRar5.subarray(12, 13 + encryptedHeader.length)), 8,
+  );
+  fixtures.push(['rar5-encrypted-header', encryptedRar5]);
 
   // Cabinet header and one folder record, with all offsets inside the cabinet.
   const cab = Buffer.alloc(52);

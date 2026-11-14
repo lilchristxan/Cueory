@@ -246,15 +246,6 @@ function crc32(bytes) {
   return (value ^ 0xffffffff) >>> 0;
 }
 
-function crc16Rar(bytes) {
-  let value = 0;
-  for (const byte of bytes) {
-    value ^= byte;
-    for (let bit = 0; bit < 8; bit += 1) value = (value >>> 1) ^ (value & 1 ? 0xa001 : 0);
-  }
-  return value & 0xffff;
-}
-
 function hasGzipAt(bytes, offset) {
   if (offset < 0 || offset + 10 > bytes.length ||
       bytes[offset] !== 0x1f || bytes[offset + 1] !== 0x8b ||
@@ -390,7 +381,7 @@ function hasRarAt(bytes, offset) {
     const header = offset + 7;
     const size = bytes.readUInt16LE(header + 5);
     return bytes[header + 2] === 0x73 && size >= 13 && header + size <= bytes.length &&
-      crc16Rar(bytes.subarray(header + 2, header + size)) === bytes.readUInt16LE(header);
+      (crc32(bytes.subarray(header + 2, header + size)) & 0xffff) === bytes.readUInt16LE(header);
   }
   const rar5 = Buffer.from([0x52, 0x61, 0x72, 0x21, 0x1a, 0x07, 0x01, 0x00]);
   if (offset < 0 || offset + 15 > bytes.length || !bytes.subarray(offset, offset + 8).equals(rar5)) return false;
@@ -400,7 +391,9 @@ function hasRarAt(bytes, offset) {
   const end = size.next + Number(size.value);
   if (end > bytes.length || crc32(bytes.subarray(offset + 12, end)) !== crc) return false;
   const type = readVarint(bytes, size.next);
-  return Boolean(type && type.value === 1n);
+  // RAR5 may begin with a header-encryption record (type 4) instead of
+  // a readable main archive header (type 1). Either is an opaque container.
+  return Boolean(type && (type.value === 1n || type.value === 4n));
 }
 
 function hasCabAt(bytes, offset) {
