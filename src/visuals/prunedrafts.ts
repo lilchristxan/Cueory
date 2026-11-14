@@ -22,7 +22,8 @@ export function keepsDrafts(env: PruneEnv): boolean {
   const branch = rawBranch?.startsWith('refs/heads/')
     ? rawBranch.slice('refs/heads/'.length)
     : rawBranch;
-  return Boolean(branch) && branch !== 'main';
+  // Both production branches prune drafts, regardless of preview-style opt-ins.
+  return Boolean(branch) && branch !== 'main' && branch !== 'legacy/main';
 }
 
 interface SystemFile {
