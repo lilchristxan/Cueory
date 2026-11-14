@@ -1,0 +1,46 @@
+---
+/**
+ * Founder-only read-through of BodyParts3D model review sheets.
+ * Draft systems are never serialized into a production build.
+ */
+import Layout from '../../../layouts/Layout.astro';
+import { labDataForBuild } from '../../../islands/anatomylab';
+import { anatomyInventory } from '../../../../scripts/anatomy-review-report.mjs';
+import fixtureJson from '../../../../tests/fixtures/anatomy-fixture.json';
+
+const files = import.meta.glob('../../../../content/visuals/anatomy-*.json', { eager: true, import: 'default' });
+const lab = labDataForBuild(files, fixtureJson, {
+  WORKERS_CI: process.env.WORKERS_CI,
+  WORKERS_CI_BRANCH: process.env.WORKERS_CI_BRANCH,
+  CUEORY_ANATOMY_DRAFTS: process.env.CUEORY_ANATOMY_DRAFTS,
+});
+const allowed = new Set(lab.systems.map((system) => system.key));
+const entries = allowed.size ? anatomyInventory().filter((entry) => allowed.has(entry.id)) : [];
+---
+<Layout title="preview: anatomy review sheets" description="Founder-only BodyParts3D draft review sheets." variant="study" noindex>
+  <div class="mx-auto max-w-page space-y-6 pt-8 pb-section">
+    <p class="text-sm text-ink-soft">preview · founder review only</p>
+    <h1 class="text-2xl text-ink">anatomy lab review sheets</h1>
+    <p class="max-w-prose text-sm text-ink">
+      one sheet per model, with source names, source lines, groups, layers, and front and side pictures
+      that you can make on this device. checking a box does not approve any model.
+    </p>
+    {
+      entries.length ? (
+        <ol class="space-y-3">
+          {entries.map((entry) => (
+            <li class="rounded-lg border border-line p-4">
+              <a class="underline text-ink" href={`/preview/anatomy-review/${entry.id}`}>{entry.title}</a>
+              <p class="mt-2 text-sm text-ink-soft">
+                {entry.labels.length} structures · {entry.status} · {entry.release}
+              </p>
+            </li>
+          ))}
+        </ol>
+      ) : (
+        <p class="rounded-lg border border-line p-4 text-ink">the anatomy review sheets are coming soon.</p>
+      )
+    }
+    <p><a href="/preview/anatomy-lab" class="underline text-ink">back to the anatomy lab preview</a></p>
+  </div>
+</Layout>
