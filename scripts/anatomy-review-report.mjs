@@ -9,7 +9,7 @@
  *   node scripts/anatomy-review-report.mjs --system heart > /tmp/heart-review.md
  *   node scripts/anatomy-review-report.mjs > /tmp/all-anatomy-review.md
  */
-import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, realpathSync, statSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -189,7 +189,13 @@ function cli(args) {
   return anatomyReviewMarkdown(anatomyInventory(DEFAULT_ROOT, selectedSystem));
 }
 
-if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+// Node resolves module symlinks (and macOS /var aliases) before setting import.meta.url.
+// Compare canonical paths so the manual review CLI still runs from those entry points.
+if (
+  process.argv[1] &&
+  existsSync(resolve(process.argv[1])) &&
+  realpathSync(resolve(process.argv[1])) === realpathSync(fileURLToPath(import.meta.url))
+) {
   try { process.stdout.write(cli(process.argv.slice(2))); }
   catch (err) { process.stderr.write(`${err instanceof Error ? err.message : String(err)}\n`); process.exitCode = 1; }
 }
