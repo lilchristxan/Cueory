@@ -135,11 +135,21 @@ export function anatomyInventory(root = DEFAULT_ROOT, selectedSystem = null) {
 }
 
 /**
+ * @typedef {{id:string, name:string, group:string, layer:string,
+ *   source:{quote:string, url:string, section:string, book:string, license:string}}} ReviewLabel
+ * @typedef {{id:string, title:string, status:'draft'|'approved', release:string,
+ *   path:string, bytes:number, labels:ReviewLabel[]}} ReviewEntry
+ * @typedef {ReviewEntry & {url:string, structureCount:number, pictureViews:string[]}} ReviewSheet
+ */
+
+/**
  * Make independently addressable, source-backed review sheets for the locked preview.
  * The structure text, source quote and URL are passed through unchanged.
  * Front/side pictures are rendered on demand in the browser from the existing GLB,
  * rather than asserting that a generated picture is a human-approved model.
  * No statuses are changed and no assets are written by this function.
+ * @param {ReviewEntry[]} entries
+ * @returns {ReviewSheet[]}
  */
 export function anatomyReviewSheets(entries) {
   return entries.map((entry) => {
