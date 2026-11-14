@@ -259,8 +259,7 @@ describe('read-only anatomy review inventory', () => {
     symlinkSync(join(process.cwd(), 'docs'), join(outside, 'redirected'), 'dir');
     const destination = join(outside, 'redirected', 'status', 'review-output');
     const canonicalTarget = join(process.cwd(), 'docs', 'status', 'review-output');
-    // Use the actual repository root rather than the temporary fixture root.
-    expect(existsSync(canonicalTarget)).toBe(false);
+    // The actual repository root is protected, not just the temporary fixture.
     expect(() => writeAnatomyReviewSheets(anatomyInventory(root), destination))
       .toThrow('write review sheets outside the project repository');
     expect(existsSync(canonicalTarget)).toBe(false);
