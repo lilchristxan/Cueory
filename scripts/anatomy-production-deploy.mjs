@@ -10,6 +10,7 @@
 import { spawnSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
 import { resolve } from 'node:path';
+import { realpathSync } from 'node:fs';
 import { auditAnatomyProduction, builtSiteEntrypointErrors } from './anatomy-production-audit.mjs';
 
 /** @returns {{ status: number | null, error?: Error }} */
@@ -36,7 +37,7 @@ export function deployProduction({ distDir = 'dist', contentDir = 'content/visua
   }
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
+if (process.argv[1] && import.meta.url === pathToFileURL(realpathSync(resolve(process.argv[1]))).href) {
   const result = deployProduction();
   if (result.errors.length) {
     process.stderr.write('anatomy production upload blocked:\n');
