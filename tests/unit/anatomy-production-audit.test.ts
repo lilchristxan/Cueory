@@ -1887,6 +1887,22 @@ describe('anatomy production artifact audit', () => {
     expect(errors.some((message) => message.includes('assets/ordinary.js'))).toBe(false);
   });
 
+  it('finds short Base64-encoded reserved anatomy IDs in generated scripts', () => {
+    const f = setup();
+    const path = join(f.content, 'anatomy-draft.json');
+    const data = JSON.parse(readFileSync(path, 'utf8'));
+    data.labels[0].id = 'FMA7088';
+    writeFileSync(path, JSON.stringify(data));
+    f.file('assets/short-anatomy.js', "const id = atob('Rk1BNzA4OA==');");
+    f.file('assets/short-fixture.js', "const id = atob('RklYMDAx');");
+    const errors = f.check().errors;
+    for (const name of ['short-anatomy.js', 'short-fixture.js']) {
+      expect(errors).toContain(
+        'encoded geometry, archive or reserved anatomy ID in built text requires review: assets/' + name,
+      );
+    }
+  });
+
   it('rejects escaped synthetic IDs in generated JS, JSON, HTML and SVG', () => {
     const f = setup();
     f.file('_astro/fixture.js', 'const id="\\u0046IX001";');
