@@ -1072,6 +1072,15 @@ function hasUsableSiteEntrypoint(html) {
   let cursor = 0;
   let state = 'doctype';
   let bodyHasElement = false;
+  const debugEntrypointFailure = () => {
+    if (process.env.GITHUB_ACTIONS === 'true' && html.length > 10000) {
+      const excerpt = html.slice(Math.max(0, cursor - 40), Math.min(html.length, cursor + 120))
+        .replace(/\s+/g, ' ');
+      process.stderr.write('[anatomy-entrypoint] pos=' + cursor + ' state=' + state +
+        ' snippet=' + JSON.stringify(excerpt) + '\n');
+    }
+    return false;
+  };
   const allowedInside = () => state === 'head-content' || state === 'body-content';
   const rawTags = new Set([
     'script', 'style', 'title', 'textarea', 'template', 'noscript',
@@ -1094,26 +1103,26 @@ function hasUsableSiteEntrypoint(html) {
     // Text outside the document is not evidence of a valid entrypoint.
     // Astro may append valid deferred module scripts after </html>. Such
     // scripts are not evidence of the page body, which must be verified first.
-    if (['doctype', 'html-open', 'done'].includes(state) && html.slice(cursor, end).trim()) return false;
+    if (['doctype', 'html-open', 'done'].includes(state) && html.slice(cursor, end).trim()) return debugEntrypointFailure();
     cursor = end;
     if (next === -1) break;
 
     if (state === 'done' && /^<script\\b/i.test(html.slice(cursor))) {
       const trailing = afterDocumentScript.exec(html.slice(cursor));
-      if (!trailing) return false;
+      if (!trailing) return debugEntrypointFailure();
       cursor += trailing[0].length;
       continue;
     }
 
     if (html.startsWith('<!--', cursor)) {
       const closing = html.indexOf('-->', cursor + 4);
-      if (closing < 0) return false;
+      if (closing < 0) return debugEntrypointFailure();
       cursor = closing + 3;
       continue;
     }
     if (html.startsWith('<!', cursor)) {
       const doctype = /^<!doctype\s+html\s*>/i.exec(html.slice(cursor));
-      if (!doctype || state !== 'doctype') return false;
+      if (!doctype || state !== 'doctype') return debugEntrypointFailure();
       cursor += doctype[0].length;
       state = 'html-open';
       continue;
@@ -1127,36 +1136,36 @@ function hasUsableSiteEntrypoint(html) {
       if (quote) {
         if (char === quote) quote = '';
       } else if (char === '"' || char === "'") quote = char;
-      else if (char === '<') return false;
+      else if (char === '<') return debugEntrypointFailure();
       else if (char === '>') break;
       ending++;
     }
-    if (ending >= html.length || quote) return false;
+    if (ending >= html.length || quote) return debugEntrypointFailure();
     const token = html.slice(cursor, ending + 1);
     cursor = ending + 1;
     const closing = token.startsWith('</');
     const match = closing
       ? /^<\/([a-z][a-z\d:-]*)\s*>$/i.exec(token)
       : /^<([a-z][a-z\d:-]*)(?:\s[\s\S]*?)?\s*\/?>$/i.exec(token);
-    if (!match) return false;
+    if (!match) return debugEntrypointFailure();
     const tag = match[1].toLowerCase();
 
     if (tag === 'html') {
       if (closing && state === 'html-close') state = 'done';
       else if (!closing && state === 'html-open') state = 'head-open';
-      else return false;
+      else return debugEntrypointFailure();
       continue;
     }
     if (tag === 'head') {
       if (closing && state === 'head-content') state = 'body-open';
       else if (!closing && state === 'head-open') state = 'head-content';
-      else return false;
+      else return debugEntrypointFailure();
       continue;
     }
     if (tag === 'body') {
       if (closing && state === 'body-content') state = 'html-close';
       else if (!closing && state === 'body-open') state = 'body-content';
-      else return false;
+      else return debugEntrypointFailure();
       continue;
     }
     // Astro can append its hoisted module script after the literal
@@ -1166,23 +1175,23 @@ function hasUsableSiteEntrypoint(html) {
     if (state === 'done' && !closing && tag === 'script' &&
         /\s+type\s*=\s*(["'])module\1(?=\s|>)/i.test(token)) {
       const close = /<\/script\s*>/i.exec(html.slice(cursor));
-      if (!close) return false;
+      if (!close) return debugEntrypointFailure();
       cursor += close.index + close[0].length;
       continue;
     }
-    if (!allowedInside()) return false;
+    if (!allowedInside()) return debugEntrypointFailure();
 
     if (!closing && rawTags.has(tag)) {
       // HTML treats these elements' contents as opaque text. In particular,
       // literal <body> strings in JS and CSS must not satisfy the release gate.
       const close = new RegExp('</' + tag + '\\s*>', 'i').exec(html.slice(cursor));
-      if (!close) return false;
+      if (!close) return debugEntrypointFailure();
       cursor += close.index + close[0].length;
       continue;
     }
     if (!closing && state === 'body-content' && !notRendered.has(tag)) bodyHasElement = true;
   }
-  return state === 'done' && bodyHasElement;
+  return state === 'done' && bodyHasElement ? true : debugEntrypointFailure();
 }
 
 export function builtSiteEntrypointErrors(distDir) {
