@@ -208,19 +208,19 @@ select throws_ok($$ delete from public.anatomy_review_queue $$, '42501', null, '
 
 -- A read RPC is bound to the initiating identity just like the four write RPCs.
 select throws_ok(
-  $ select * from public.my_anatomy_review_queue(null) $,
+  $$ select * from public.my_anatomy_review_queue(null) $$,
   '28000', 'study account changed; reload before continuing', 'review queue refuses a missing initiating id'
 );
 select throws_ok(
-  $ select * from public.my_anatomy_views('heart', null) $,
+  $$ select * from public.my_anatomy_views('heart', null) $$,
   '28000', 'study account changed; reload before continuing', 'saved views refuse a missing initiating id'
 );
 select throws_ok(
-  $ select * from public.my_anatomy_review_queue('00000000-0000-4000-8000-000000000002') $,
+  $$ select * from public.my_anatomy_review_queue('00000000-0000-4000-8000-000000000002') $$,
   '28000', 'study account changed; reload before continuing', 'review queue refuses a B identity under A session'
 );
 select throws_ok(
-  $ select * from public.my_anatomy_views('heart', '00000000-0000-4000-8000-000000000002') $,
+  $$ select * from public.my_anatomy_views('heart', '00000000-0000-4000-8000-000000000002') $$,
   '28000', 'study account changed; reload before continuing', 'saved views refuse a B identity under A session'
 );
 
@@ -229,14 +229,14 @@ set local "request.jwt.claims" to '{"sub": "00000000-0000-4000-8000-000000000002
 set local "request.jwt.claim.sub" to '00000000-0000-4000-8000-000000000002';
 select results_eq($$ select count(*)::int from public.anatomy_review_queue $$, $$ values (0) $$,
   'another student reads none of those rows');
-select is_empty($ select * from public.my_anatomy_review_queue((select auth.uid())) $, 'and their own list is empty');
+select is_empty($$ select * from public.my_anatomy_review_queue((select auth.uid())) $$, 'and their own list is empty');
 -- A began this read, but another tab changed the authenticated request to B before execution.
 select throws_ok(
-  $ select * from public.my_anatomy_review_queue('00000000-0000-4000-8000-000000000001') $,
+  $$ select * from public.my_anatomy_review_queue('00000000-0000-4000-8000-000000000001') $$,
   '28000', 'study account changed; reload before continuing', 'delayed queue read captured under A cannot read under B'
 );
 select throws_ok(
-  $ select * from public.my_anatomy_views('heart', '00000000-0000-4000-8000-000000000001') $,
+  $$ select * from public.my_anatomy_views('heart', '00000000-0000-4000-8000-000000000001') $$,
   '28000', 'study account changed; reload before continuing', 'delayed saved-view read captured under A cannot read under B'
 );
 select results_eq($$ select public.clear_anatomy_miss('heart', 'FMA1', (select auth.uid())) $$, $$ values (false) $$,
