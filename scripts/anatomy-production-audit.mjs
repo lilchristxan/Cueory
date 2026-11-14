@@ -606,7 +606,14 @@ function hasUnsafeEncodedAnatomyPayload(text, draftIds) {
     // Invalid lengths must not let an oversized suspicious token bypass the
     // audit before the byte budget is checked.
     if (encoded.length > MAX_ENCODED_RUN || (examined += encoded.length) > MAX_TOTAL_ENCODED) return true;
-    if (encoded.length % 4 === 1) continue;
+    // A run with invalid base64 length might still be a deliberate payload.
+    // Refuse it when it is explicitly presented to a decoder or data URI,
+    // rather than letting a malformed encoded model pass without review.
+    if (encoded.length % 4 === 1) {
+      const before = text.slice(Math.max(0, match.index - 64), match.index + match[0].length - encoded.length);
+      if (/(?:atob\s*\(\s*['"]|base64\s*,\s*|from\s*\([^)]*['"])/i.test(before)) return true;
+      continue;
+    }
     const normalized = encoded.replaceAll('-', '+').replaceAll('_', '/');
     const bytes = Buffer.from(normalized, 'base64');
     // Buffer.from(base64) accepts malformed data by silently discarding parts.
