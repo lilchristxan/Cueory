@@ -162,6 +162,12 @@ describe('loadExport — MFA assurance and complete data', () => {
     expect(unsubscribe).toHaveBeenCalledOnce();
   });
 
+  it('fails closed when auth event registration returns no cleanup function', async () => {
+    const { db, calls } = reader();
+    db.onAuthEvent = () => undefined as unknown as () => void;
+    expect(await loadExport(db)).toEqual(failed);
+    expect(calls).toEqual([]);
+  });
   it('ignores INITIAL_SESSION and always unsubscribes, including after a failed export', async () => {
     for (const fail of [false, true]) {
       const { db } = reader(fail ? { attempts: new Error('private') } : {});
