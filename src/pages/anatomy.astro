@@ -6,6 +6,7 @@
  * /preview/anatomy-lab remains independent and unchanged.
  */
 import Layout from '../layouts/Layout.astro';
+import AnatomyPublicText from '../components/AnatomyPublicText.astro';
 import AnatomyLab from '../islands/AnatomyLab.tsx';
 import { publicAnatomySystems } from '../islands/anatomypublic';
 
@@ -22,9 +23,10 @@ const ready = systems.length > 0;
         <>
           <AnatomyLab client:only="react" systems={systems} fixture={null} drafts={false} />
           <noscript>
-            <p class="rounded-lg border border-line p-4 text-ink">
-              the 3D anatomy lab needs JavaScript. <a href="/preview/anatomy-text" class="underline">read structure names without JavaScript</a> instead.
-            </p>
+            <div class="space-y-4 rounded-lg border border-line p-4 text-ink">
+              <p>the 3D anatomy lab needs JavaScript. You can study every approved structure in words below.</p>
+              <AnatomyPublicText systems={systems} />
+            </div>
           </noscript>
         </>
       ) : (
