@@ -1336,7 +1336,8 @@ html:has(dialog.menu-panel[open]) {
   .vial-img,
   .vial-shine,
   .vial-shadow,
-  .modes-dot {
+  .modes-dot,
+  .mode-preview a {
     transition: none;
   }
 }
@@ -1965,9 +1966,9 @@ html:has(dialog.mode-preview[open]) {
     color: var(--color-ink-soft);
     font-size: var(--text-sm);
     user-select: none;
-    transition:
-      background-color var(--duration-fast) var(--ease-soft),
-      color var(--duration-fast) var(--ease-soft);
+    /* Switch the foreground and fill together: interpolating either can lose
+       text contrast when a palette or selected option changes. */
+    transition: none;
   }
 
   .segmented-option:has(:checked) {

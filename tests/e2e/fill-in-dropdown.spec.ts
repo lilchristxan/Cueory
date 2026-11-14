@@ -105,7 +105,9 @@ for (const [size, width, height] of [['phone', 390, 844], ['tablet', 820, 1180],
       await dropdown.focus();
       await expect(dropdown).toBeFocused();
       await dropdown.press('Home');
-      for (let n = 0; n < wrongIndex; n++) await dropdown.press('ArrowDown');
+      // Native select popup arrows are handled by the OS on macOS; typeahead
+      // exercises real keyboard selection in both headless macOS and Linux.
+      await dropdown.pressSequentially(choices[wrongIndex]!);
       await expect(dropdown).toHaveValue(choices[wrongIndex]!);
       await board.getByRole('button', { name: 'check' }).press('Enter');
       await expect(board.getByText('the word was honey.')).toBeVisible();
