@@ -151,6 +151,8 @@ test.beforeAll(async () => {
     resolveExtensions: ['.ts', '.tsx', '.js', '.jsx', '.json'],
     define: { 'process.env.NODE_ENV': '"production"' },
     plugins: [{ name: 'fixture-client', setup(builder) {
+      // The account code now checks the active auth generation. Give the fake client the same
+      // synchronous auth-event interface as Supabase so browser acceptance exercises that path.
       builder.onResolve({ filter: /\/supabaseclient(?:\.ts)?$/ }, () => ({ path: 'client', namespace: 'fixture' }));
       builder.onLoad({ filter: /.*/, namespace: 'fixture' }, () => ({ contents: `
         export const AUTH_STORAGE_KEY = 'cueory-auth';
