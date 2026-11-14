@@ -1906,7 +1906,7 @@ describe('anatomy production artifact audit', () => {
   it('rejects whitespace-wrapped Base64 draft model passed to atob', () => {
     const f = setup();
     const binary = readFileSync(join(f.dist, 'models', 'anatomy', 'approved.glb'));
-    const encoded = binary.toString('base64').replace(/.{1,76}/g, '  it('rejects escaped synthetic IDs in generated JS, JSON, HTML and SVG', () => { ');
+    const encoded = binary.toString('base64').replace(/.{1,76}/g, 'const encoded = binary.toString('base64').replace(/.{1,76}/g, '  it('rejects escaped synthetic IDs in generated JS, JSON, HTML and SVG', () => { '); ');
     f.file('assets/wrapped-model.js', `const model = atob('${encoded}');`);
     expect(f.check().errors).toContain(
       'encoded geometry, archive or reserved anatomy ID in built text requires review: assets/wrapped-model.js',
