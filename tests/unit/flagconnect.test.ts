@@ -410,7 +410,7 @@ describe('flag reports are bound to the account that pressed Send (Task 178)', (
   it('aborts the lazy RPC when another tab switches to B after the per-request header is pinned', async () => {
     const fake = switchableClient();
     fake.store('account-A');
-    let signal: AbortSignal | null = null;
+    const signalState: { value: AbortSignal | null } = { value: null };
     let pinnedAuthorization = '';
     const sent: string[] = [];
     let releaseFetch: () => void = () => {};
@@ -423,7 +423,7 @@ describe('flag reports are bound to the account that pressed Send (Task 178)', (
         // The lazy HTTP fetch does not start until after the caller has built
         // the query. Another tab may change the shared Supabase session here.
         await heldFetch;
-        if (signal?.aborted) throw new Error('request cancelled before HTTP dispatch');
+        if (signalState.value?.aborted) throw new Error('request cancelled before HTTP dispatch');
         sent.push(pinnedAuthorization);
         return { data: reportId, error: null };
       })();
@@ -433,7 +433,7 @@ describe('flag reports are bound to the account that pressed Send (Task 178)', (
           return this;
         },
         abortSignal(value: AbortSignal) {
-          signal = value;
+          signalState.value = value;
           return this;
         },
       });
@@ -443,9 +443,9 @@ describe('flag reports are bound to the account that pressed Send (Task 178)', (
     const sending = makeFlagSend(async () => fake.client, 'account-A')(good);
     await started;
     expect(pinnedAuthorization).toBe('Bearer synthetic-account-A-token');
-    expect(signal?.aborted).toBe(false);
+    expect(signalState.value?.aborted).toBe(false);
     fake.announce('account-B');
-    expect(signal?.aborted).toBe(true);
+    expect(signalState.value?.aborted).toBe(true);
     releaseFetch();
     expect(await sending).toEqual(accountChanged);
     expect(rpc).toHaveBeenCalledTimes(1); // builder constructed, but no HTTP POST
@@ -468,7 +468,7 @@ describe('flag reports are bound to the account that pressed Send (Task 178)', (
         // Reproduce fetchWithAuth reading the *current* shared session
         // after rpc() returned its lazy PostgREST builder.
         const latest = await fake.client.auth.getSession();
-        const token = latest.data.session?.access_token ?? '';
+        const token = (latest.data.session as { access_token?: string } | null)?.access_token ?? '';
         dispatched.push(authorization || `Bearer ${token}`);
         return { data: reportId, error: null };
       })();
