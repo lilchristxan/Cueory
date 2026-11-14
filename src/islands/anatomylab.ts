@@ -235,14 +235,18 @@ export const PRODUCTION_BRANCH = 'main';
  * drafts unless CUEORY_ANATOMY_DRAFTS=1 says so on purpose.
  */
 export function draftsAllowed(env: BuildEnv): boolean {
-  if (env.WORKERS_CI !== '1') return env.CUEORY_ANATOMY_DRAFTS === '1';
+  // Both forms are emitted by real Workers build environments. Never let a
+  // Workers build fall through to the local preview opt-in.
+  if (env.WORKERS_CI !== '1' && env.WORKERS_CI !== 'true') {
+    return env.CUEORY_ANATOMY_DRAFTS === '1';
+  }
   const rawBranch = env.WORKERS_CI_BRANCH?.trim();
-  // Cloudflare normally supplies a short branch name. A full Git ref for
-  // refs/heads/main must also be recognized as production.
   const branch = rawBranch?.startsWith('refs/heads/')
     ? rawBranch.slice('refs/heads/'.length)
     : rawBranch;
-  return Boolean(branch) && branch !== PRODUCTION_BRANCH;
+  // The connected production trigger uses legacy/main. A literal main or
+  // either fully-qualified production ref must also fail closed.
+  return Boolean(branch) && branch !== PRODUCTION_BRANCH && branch !== 'legacy/main';
 }
 
 /** The systems a build may show: approved ones always, drafts only where `draftsAllowed`. */
