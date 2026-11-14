@@ -9,6 +9,7 @@
  */
 import { pathToFileURL } from 'node:url';
 import { resolve } from 'node:path';
+import { realpathSync } from 'node:fs';
 import { auditAnatomyProduction, builtSiteEntrypointErrors } from './anatomy-production-audit.mjs';
 
 export function shouldAuditAnatomyBuild(env) {
@@ -35,7 +36,7 @@ export function checkAnatomyBuild(env = process.env, dist = 'dist', content = 'c
   return { skipped: false, ...result, errors: [...result.errors, ...builtSiteEntrypointErrors(dist)] };
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
+if (process.argv[1] && import.meta.url === pathToFileURL(realpathSync(resolve(process.argv[1]))).href) {
   const result = checkAnatomyBuild();
   if (result.skipped) {
     process.stdout.write('anatomy release audit: skipped for explicitly draft-enabled preview\n');
