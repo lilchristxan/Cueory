@@ -112,12 +112,12 @@ export function unreviewedMediaPayload(path) {
       filled += read;
     }
     if (!matchesMediaSignature(ext, header) || looksLikeRawMesh(header)) return true;
-    // Preserve mesh evidence across distant chunks, not only adjacent ones.
-    // A renamed OBJ can put its vertices in one 64 KiB window and faces many
-    // windows later. Tracking the two records is bounded and cannot retain
-    // private assets or large file contents.
-    let sawObjVertices = /^v\\s+[-+\\d.eE]+\\s+[-+\\d.eE]+\\s+[-+\\d.eE]+(?:\\s|$)/m.test(header.toString('utf8'));
-    let sawObjFaces = /^f\\s+\\d+(?:\\/\\d*)?(?:\\/\\d*)?\\s+\\d+(?:\\/\\d*)?(?:\\/\\d*)?\\s+\\d+(?:\\/\\d*)?(?:\\/\\d*)?(?:\\s|$)/m.test(header.toString('utf8'));
+    // Preserve independent OBJ declarations even when file content separates
+    // vertices and faces by many scan windows. Keep only bounded evidence.
+    const objVertex = /^v\s+[-+\d.eE]+\s+[-+\d.eE]+\s+[-+\d.eE]+(?:\s|$)/m;
+    const objFace = /^f\s+\d+(?:\/\d*)?(?:\/\d*)?\s+\d+(?:\/\d*)?(?:\/\d*)?\s+\d+(?:\/\d*)?(?:\/\d*)?(?:\s|$)/m;
+    let sawObjVertices = objVertex.test(header.toString('utf8'));
+    let sawObjFaces = objFace.test(header.toString('utf8'));
     let offset = headerSize;
     let preceding = header;
     while (offset < info.size) {
@@ -131,8 +131,8 @@ export function unreviewedMediaPayload(path) {
       const combined = Buffer.concat([preceding, bytes]);
       if (looksLikeRawMesh(combined)) return true;
       const windowText = combined.toString('utf8');
-      sawObjVertices ||= /^v\\s+[-+\\d.eE]+\\s+[-+\\d.eE]+\\s+[-+\\d.eE]+(?:\\s|$)/m.test(windowText);
-      sawObjFaces ||= /^f\\s+\\d+(?:\\/\\d*)?(?:\\/\\d*)?\\s+\\d+(?:\\/\\d*)?(?:\\/\\d*)?\\s+\\d+(?:\\/\\d*)?(?:\\/\\d*)?(?:\\s|$)/m.test(windowText);
+      sawObjVertices ||= objVertex.test(windowText);
+      sawObjFaces ||= objFace.test(windowText);
       if (sawObjVertices && sawObjFaces) return true;
       preceding = combined.subarray(Math.max(0, combined.length - SCAN_BYTES));
       offset += bytes.length;
