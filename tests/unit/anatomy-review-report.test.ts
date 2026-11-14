@@ -225,6 +225,8 @@ describe('read-only anatomy review inventory', () => {
     const root = setup();
     writeSystem(root, 'alpha', visual('alpha', 'FMA1'));
     writeSystem(root, 'zeta', visual('zeta', 'FMA2'));
+    // The CLI deliberately permits export directories under temporary fixture
+    // roots only when those roots are outside the actual public repository.
     const target = join(root, 'exported-review');
     const files = writeAnatomyReviewSheets(anatomyInventory(root), target);
     expect(files.map((file: string) => file.split('/').pop())).toEqual([
