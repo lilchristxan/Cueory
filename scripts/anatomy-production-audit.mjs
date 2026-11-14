@@ -598,53 +598,15 @@ function hasUnsafeEncodedAnatomyPayload(text, draftIds) {
   const MAX_ENCODED_RUN = 24 * 1024 * 1024;
   const MAX_TOTAL_ENCODED = 48 * 1024 * 1024;
   let examined = 0;
-  // Treat quoted/URI base64 as a separate token, not an incidental substring
-  // of a longer JavaScript identifier. Include base64url's '-' and '_'.
-  // Browser atob() accepts ASCII whitespace between Base64 groups. Scan
-  // the actual decoded argument as one payload, not its short fragments.
-  const wrappedAtob = /atob\s*\(\s*(['"])([A-Za-z0-9+/_=\t\n\r\f -]+)\1/g;
-  for (const match of text.matchAll(wrappedAtob)) {
-    const encoded = match[2].replace(/[\t\n\r\f ]/g, '');
+  const checkEncoded = (encoded, decoderContext = false) => {
     if (encoded.length > MAX_ENCODED_RUN || (examined += encoded.length) > MAX_TOTAL_ENCODED) return true;
-    if (encoded.length < 8 || encoded.length % 4 === 1) continue;
+    if (encoded.length % 4 === 1) return decoderContext;
     const normalized = encoded.replaceAll('-', '+').replaceAll('_', '/');
     const bytes = Buffer.from(normalized, 'base64');
-    if (bytes.toString('base64').replace(/=+$/u, '') !== normalized.replace(/=+$/u, '')) continue;
-    if (containsGlbHeader(bytes) || containsValidatedArchive(bytes) ||
-        containsReservedAnatomyId(bytes.toString('utf8'), draftIds)) return true;
-    if (bytes.length <= 16 * 1024 * 1024) {
-      try {
-        const json = JSON.parse(bytes.toString('utf8'));
-        if (json?.asset?.version === '2.0' && Array.isArray(json?.meshes) &&
-            json.meshes.length && Array.isArray(json?.accessors) &&
-            Array.isArray(json?.buffers)) return true;
-      } catch { /* Other encoded strings are allowed. */ }
-    }
-  }
-  const runs = /(?:^|[^A-Za-z0-9+/_=-])([A-Za-z0-9+/_-]{8,}={0,2})(?=$|[^A-Za-z0-9+/_=-])/g;
-  for (const match of text.matchAll(runs)) {
-    const encoded = match[1];
-    // Invalid lengths must not let an oversized suspicious token bypass the
-    // audit before the byte budget is checked.
-    if (encoded.length > MAX_ENCODED_RUN || (examined += encoded.length) > MAX_TOTAL_ENCODED) return true;
-    // A run with invalid base64 length might still be a deliberate payload.
-    // Refuse it when it is explicitly presented to a decoder or data URI,
-    // rather than letting a malformed encoded model pass without review.
-    if (encoded.length % 4 === 1) {
-      const before = text.slice(Math.max(0, match.index - 64), match.index + match[0].length - encoded.length);
-      if (/(?:atob\s*\(\s*['"]|base64\s*,\s*|from\s*\([^)]*['"])/i.test(before)) return true;
-      continue;
-    }
-    const normalized = encoded.replaceAll('-', '+').replaceAll('_', '/');
-    const bytes = Buffer.from(normalized, 'base64');
-    // Buffer.from(base64) accepts malformed data by silently discarding parts.
-    // Only canonical, lossless encodings count as actual embedded payloads.
-    if (bytes.toString('base64').replace(/=+$/u, '') !== normalized.replace(/=+$/u, '')) continue;
+    if (bytes.toString('base64').replace(/=+$/u, '') !== normalized.replace(/=+$/u, '')) return decoderContext;
     if (containsGlbHeader(bytes) || containsValidatedArchive(bytes)) return true;
     const decoded = bytes.toString('utf8');
     if (containsReservedAnatomyId(decoded, draftIds)) return true;
-    // A glTF 2.0 JSON model can also be embedded as a base64 data URI
-    // without containing the binary GLB header or an unescaped source ID.
     if (bytes.length > 0 && bytes.length <= 16 * 1024 * 1024 && decoded.trimStart().startsWith('{')) {
       try {
         const json = JSON.parse(decoded);
@@ -652,9 +614,24 @@ function hasUnsafeEncodedAnatomyPayload(text, draftIds) {
             Array.isArray(json.meshes) && json.meshes.length > 0 &&
             Array.isArray(json.accessors) && Array.isArray(json.buffers)) return true;
       } catch {
-        // Non-JSON media and unrelated encoded text are harmless here.
+        // Unrelated encoded JSON is not anatomy geometry.
       }
     }
+    return false;
+  };
+  const runs = /(?:^|[^A-Za-z0-9+/_=-])([A-Za-z0-9+/_-]{8,}={0,2})(?=$|[^A-Za-z0-9+/_=-])/g;
+  for (const match of text.matchAll(runs)) {
+    const encoded = match[1];
+    const before = text.slice(Math.max(0, match.index - 64), match.index + match[0].length - encoded.length);
+    const decoderContext = /(?:atob\s*\(\s*['"]|base64\s*,\s*|from\s*\([^)]*['"])/i.test(before);
+    if (checkEncoded(encoded, decoderContext)) return true;
+  }
+  // atob permits whitespace in a quoted argument. A long GLB can be split
+  // across many lines without ever containing a contiguous GLB Base64 token.
+  const wrapped = /(?:atob\s*\(\s*['"]|base64,)([A-Za-z0-9+/_=\t\n\r\f ]{8,})(?=['"]|\s*[)"'<>])/gi;
+  for (const match of text.matchAll(wrapped)) {
+    const compact = match[1].replace(/[\t\n\r\f ]/g, '');
+    if (checkEncoded(compact, true)) return true;
   }
   return false;
 }
