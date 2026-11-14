@@ -1767,9 +1767,27 @@ export function auditAnatomyProduction(distDir, contentDir) {
     if (CSS_ESCAPES_ASSET.test(file) || MARKUP_ESCAPES_ASSET.test(file)) variants.push(decodeAsciiEscapesForAudit(contents, 'css'));
     // HTML style attributes decode numeric entities before parsing their CSS escapes.
     if (MARKUP_ESCAPES_ASSET.test(file)) variants.push(decodeAsciiEscapesForAudit(decodeAsciiEscapesForAudit(contents, 'markup'), 'css'));
-    // Decode URL percent escapes after other syntaxes, too: e.g. a JS Unicode
-    // escape followed by %4d%41, or markup entities within a percent string.
-    for (const variant of [...variants]) variants.push(decodePercentEscapesForAudit(variant));
+    // Normalization order matters: percent-encoded backslashes can become
+    // active JavaScript, CSS or markup escapes only after URL decoding.
+    // Expand both orders twice (bounded), so nested source-ID encodings
+    // cannot evade the production gate through composition.
+    const expand = (value) => {
+      const decoded = [decodePercentEscapesForAudit(value)];
+      if (SCRIPT_ESCAPES_ASSET.test(file)) decoded.push(decodeAsciiEscapesForAudit(value, 'script'));
+      if (MARKUP_ESCAPES_ASSET.test(file)) decoded.push(decodeAsciiEscapesForAudit(value, 'markup'));
+      if (CSS_ESCAPES_ASSET.test(file) || MARKUP_ESCAPES_ASSET.test(file)) {
+        decoded.push(decodeAsciiEscapesForAudit(value, 'css'));
+      }
+      return decoded;
+    };
+    for (let pass = 0; pass < 2; pass++) {
+      const current = [...new Set(variants)];
+      for (const variant of current) {
+        for (const decoded of expand(variant)) {
+          if (!variants.includes(decoded)) variants.push(decoded);
+        }
+      }
+    }
     if (draftTokens.size) {
       let exposedDraft = null;
       for (const variant of variants) {
