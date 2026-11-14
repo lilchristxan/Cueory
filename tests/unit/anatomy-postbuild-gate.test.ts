@@ -97,7 +97,18 @@ describe('postbuild anatomy release audit', () => {
       expect(checkAnatomyBuild(env, dist, content).errors).toContain(
         'production site entry point is invalid: /index.html',
       );
-      writeFileSync(join(dist, 'index.html'), '<!doctype html><html><body>test</body></html>');
+      for (const malformed of [
+        '<!-- <html><body> -->',
+        '<!doctype html><html><body>',
+        '<html><body><p>not completed</p>',
+        '<!doctype html><html><head></head><body></body></html>',
+      ]) {
+        writeFileSync(join(dist, 'index.html'), malformed);
+        expect(checkAnatomyBuild(env, dist, content).errors).toContain(
+          'production site entry point is invalid: /index.html',
+        );
+      }
+      writeFileSync(join(dist, 'index.html'), '<!doctype html><html><head><title>Site</title></head><body><main>test</main></body></html>');
       expect(checkAnatomyBuild(env, dist, content).errors).toEqual([]);
     } finally {
       rmSync(root, { recursive: true, force: true });
