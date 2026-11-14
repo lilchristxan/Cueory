@@ -65,6 +65,8 @@ interface Props {
   fixture?: AnatomySystem | null;
   /** True on builds that show drafts: draft systems then carry the "draft · labels waiting for review" note. */
   drafts: boolean;
+  /** This viewer appears on both a private preview and an approved public route. */
+  reportPage: '/preview/anatomy-lab' | '/anatomy';
 }
 
 type Phase = 'cover' | 'opening' | 'open' | 'error';
@@ -135,7 +137,7 @@ function measureLabel(font: string, fontPx: number): (s: string) => number {
  * or from the list, labels with leader lines, a "find it" quiz and picture export for Christian's posts and videos.
  * Nothing from three.js loads before the student taps "open the anatomy lab". Rendered client:only.
  */
-export default function AnatomyLab({ systems: baseSystems, fixture, drafts }: Props) {
+export default function AnatomyLab({ systems: baseSystems, fixture, drafts, reportPage }: Props) {
   const [phase, setPhase] = useState<Phase>('cover');
   const [textLimit, setTextLimit] = useState(TEXT_FALLBACK_BATCH);
   const systems = useMemo(() => {
@@ -1121,7 +1123,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts }: Pr
               {/* Keep the account watcher mounted. FlagForm resets its draft when context changes. */}
               <div className="mt-3">
                 <FlagMount
-                  page="/preview/anatomy-lab"
+                  page={reportPage}
                   context={`anatomy structure ${selected} in ${system.title}`}
                 />
               </div>
