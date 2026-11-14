@@ -652,8 +652,8 @@ function validPagefindArtifact(path, kind, draftIds = new Set()) {
   // Optional header fields are public but not present after gunzipSync, so
   // reject them before verifying the decompressed search data. Otherwise an
   // FNAME/FCOMMENT/FEXTRA field could hide draft labels from the release audit.
-  // FHCRC is a two-byte checksum of the gzip header, not arbitrary metadata.
-  // Node's gzip reader accepts it, but no unreviewed FEXTRA/FNAME/FCOMMENT.
+  // FNAME/FCOMMENT/FEXTRA are unreviewed publicly exposed metadata.
+  // FHCRC is only a header checksum and is safe when Node validates it.
   if (isGzip && (bytes.length < 18 || bytes[2] !== 8 || (bytes[3] & 0xf8) !== 0)) return false;
   let decoded;
   try {
