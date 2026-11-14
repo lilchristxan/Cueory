@@ -81,6 +81,14 @@ describe('dueItems', () => {
     ];
     expect(dueItems(rows, '2026-11-01')).toEqual([]);
   });
+
+  it('accepts a real leap day and rejects a non-leap day', () => {
+    const leap = row('leap', { last_reviewed: '2024-02-29', next_review: '2024-03-01' });
+    expect(dueItems([leap], '2024-03-01')).toEqual(['leap']);
+    expect(() => dueItems([row('bad', { last_reviewed: '1900-02-29' })], '2026-11-01')).toThrow(
+      new Error('Row 0: last_reviewed must be a real calendar day YYYY-MM-DD.'),
+    );
+  });
 });
 
 // ── dueItems input validation ──────────────────────────────────────────────────
@@ -95,9 +103,14 @@ describe('dueItems — validation', () => {
     expect(() => dueItems([], 'not-a-date')).toThrow();
   });
 
-  it('throws for an impossible today date', () => {
-    expect(() => dueItems([], '2026-02-30')).toThrow();
-  });
+  it.each(['2026-02-30', '2026-13-01', '2026-99-01', '2026-00-01'])(
+    'reports an invalid today date (%s) without a RangeError',
+    (today) => {
+      expect(() => dueItems([], today)).toThrow(
+        new Error('today must be a real calendar day YYYY-MM-DD, got "' + today + '".'),
+      );
+    },
+  );
 
   it('throws for an empty item_id', () => {
     expect(() => dueItems([row('', { next_review: '2026-11-01' })], '2026-11-01')).toThrow();
@@ -108,13 +121,23 @@ describe('dueItems — validation', () => {
     expect(() => dueItems([row('a', { level: 5 })], '2026-11-01')).toThrow();
   });
 
-  it('throws for an invalid last_reviewed', () => {
-    expect(() => dueItems([row('a', { last_reviewed: '2026-13-01' })], '2026-11-01')).toThrow();
-  });
+  it.each(['2026-13-01', '2026-99-01', '2026-02-30'])(
+    'reports invalid last_reviewed (%s) by field name',
+    (last_reviewed) => {
+      expect(() => dueItems([row('a', { last_reviewed })], '2026-11-01')).toThrow(
+        new Error('Row 0: last_reviewed must be a real calendar day YYYY-MM-DD.'),
+      );
+    },
+  );
 
-  it('throws for an invalid next_review', () => {
-    expect(() => dueItems([row('a', { next_review: 'bad-date' })], '2026-11-01')).toThrow();
-  });
+  it.each(['bad-date', '2026-13-01', '2026-99-01', '2026-02-30'])(
+    'reports invalid next_review (%s) by field name',
+    (next_review) => {
+      expect(() => dueItems([row('a', { next_review })], '2026-11-01')).toThrow(
+        new Error('Row 0: next_review must be a real calendar day YYYY-MM-DD.'),
+      );
+    },
+  );
 
   it('throws when next_review is not after last_reviewed', () => {
     expect(() => dueItems([row('a', { last_reviewed: '2026-10-28', next_review: '2026-10-28' })], '2026-11-01')).toThrow();
@@ -167,5 +190,11 @@ describe('syntheticHistory', () => {
   it('throws for invalid row', () => {
     // @ts-expect-error intentional
     expect(() => syntheticHistory(null)).toThrow();
+  });
+
+  it('reports invalid calendar dates without exposing RangeError', () => {
+    expect(() => syntheticHistory(row('a', { next_review: '2026-13-01' }))).toThrow(
+      new Error('Row 0: next_review must be a real calendar day YYYY-MM-DD.'),
+    );
   });
 });
