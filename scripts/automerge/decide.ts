@@ -85,6 +85,8 @@ const ALWAYS_HELD_FILES = new Set([
   'scripts/anatomy-production-audit.mjs',
   'scripts/check-anatomy-build.mjs',
   'scripts/anatomy-postbuild-audit.mjs', // alternative production postbuild wrapper in PR #626
+  'scripts/anatomy-production-deploy.mjs', // Re-audits built artifacts before optional production uploads.
+  'scripts/check-anatomy-wrangler.mjs', // Checks Wrangler release commands for unsafe anatomy uploads.
   'src/islands/anatomylab.ts', // Chooses draft versus approved data for build output.
   'src/islands/AnatomyLab.tsx', // Shows draft warnings, model attribution and export credits.
   'src/islands/anatomyscene.ts', // Renders mandatory source credits in exported anatomy PNGs.
