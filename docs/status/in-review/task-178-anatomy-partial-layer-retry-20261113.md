@@ -1,0 +1,1 @@
+status: Task 178 QA (#662): browser coverage for partial multi-file anatomy layer failure, retained successful geometry, retrying only the failed GLB, and loading missing organ files. Requires exact-head CI and locked staging manual check.
