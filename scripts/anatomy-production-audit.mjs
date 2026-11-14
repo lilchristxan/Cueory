@@ -816,6 +816,16 @@ function validPagefindArtifact(path, kind, draftIds = new Set()) {
         cursor += nameSize;
         const opaque = payload.subarray(cursor, end);
         if (containsGlbHeader(opaque) || containsValidatedArchive(opaque)) return false;
+        // WASM custom sections are public byte arrays. Their metadata can carry
+        // source identifiers even when the rest of the module is executable code.
+        // Reject escaped and unescaped draft/fixture IDs just as in text assets.
+        const customText = opaque.toString('latin1');
+        if ([
+          customText,
+          decodeAsciiEscapesForAudit(customText, 'script'),
+          decodeAsciiEscapesForAudit(customText, 'markup'),
+          decodeAsciiEscapesForAudit(customText, 'css'),
+        ].some((value) => containsReservedAnatomyId(value, draftIds))) return false;
       }
       cursor = end;
     }
