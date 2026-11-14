@@ -9,7 +9,7 @@ test.describe('founder anatomy review sheets', () => {
   test('index lists the draft-gated sheets with counts and no 3D download', async ({ page }) => {
     const models: string[] = [];
     page.on('request', (request) => {
-      if (/\\.glb(?:\\?|$)/.test(request.url())) models.push(request.url());
+      if (/\.glb(?:\?|$)/.test(request.url())) models.push(request.url());
     });
     await page.goto(INDEX);
     await expect(page.getByRole('heading', { name: 'anatomy lab review sheets' })).toBeVisible();
@@ -22,7 +22,7 @@ test.describe('founder anatomy review sheets', () => {
   test('each sheet shows original names, counts, source lines, layer, group and checkboxes', async ({ page }) => {
     const models: string[] = [];
     page.on('request', (request) => {
-      if (/\\.glb(?:\\?|$)/.test(request.url())) models.push(request.url());
+      if (/\.glb(?:\?|$)/.test(request.url())) models.push(request.url());
     });
     await page.goto(SHEET);
     await expect(page.getByRole('heading', { name: /kidneys and urinary tract: model review sheet/i })).toBeVisible();
