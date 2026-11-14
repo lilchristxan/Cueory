@@ -180,6 +180,11 @@ export function anatomyReviewMarkdown(entries) {
 
 /** One Markdown source-review sheet per system. Does not grant approval. */
 export function anatomyReviewSheets(entries) {
+  for (const entry of entries) {
+    if (!entry || typeof entry.id !== 'string' || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(entry.id)) {
+      throw new Error('review sheet system ID must be a lowercase anatomy file ID');
+    }
+  }
   return entries.map((entry) => ({
     filename: `anatomy-${entry.id}-review.md`,
     markdown: anatomyReviewMarkdown([entry]),
@@ -205,7 +210,7 @@ function cli(args) {
       if (outDir !== null) throw new Error('Only one --out-dir is allowed');
       outDir = args[++i];
     } else if (args[i] === '--help') {
-      return 'Usage: node scripts/anatomy-review-report.mjs [--system heart] [--out-dir path]\\nPrints Markdown by default; --out-dir writes separate review sheets.\n';
+      return 'Usage: node scripts/anatomy-review-report.mjs [--system heart] [--out-dir path]\nPrints Markdown by default; --out-dir writes separate review sheets.\n';
     } else throw new Error(`Unknown or incomplete argument: ${args[i]}`);
   }
   const entries = anatomyInventory(DEFAULT_ROOT, selectedSystem);
