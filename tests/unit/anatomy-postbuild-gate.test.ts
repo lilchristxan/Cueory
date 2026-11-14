@@ -12,6 +12,10 @@ describe('postbuild anatomy release audit', () => {
   const cases = [
     { WORKERS_CI: '1', WORKERS_CI_BRANCH: 'main' },
     { WORKERS_CI: 'true', WORKERS_CI_BRANCH: 'main', CUEORY_ANATOMY_DRAFTS: '1' },
+    { WORKERS_CI: 'true', WORKERS_CI_BRANCH: 'legacy/main', CUEORY_ANATOMY_DRAFTS: '1' },
+    { WORKERS_CI: '1', WORKERS_CI_BRANCH: 'legacy/main' },
+    { WORKERS_CI: 'true', WORKERS_CI_BRANCH: 'refs/heads/legacy/main' },
+    { WORKERS_CI: '1', WORKERS_CI_BRANCH: ' refs/heads/legacy/main ', CUEORY_ANATOMY_DRAFTS: '1' },
     { WORKERS_CI: 'true', WORKERS_CI_BRANCH: 'staging' },
     { WORKERS_CI: 'true', WORKERS_CI_BRANCH: 'refs/heads/task-178/anatomy-lab' },
     { WORKERS_CI: 'true', CUEORY_ANATOMY_DRAFTS: '1' },
@@ -26,6 +30,20 @@ describe('postbuild anatomy release audit', () => {
   it.each(cases)('uses the same draft boundary as the built-model pruning guard: %j', (env) => {
     expect(shouldAuditAnatomyBuild(env)).toBe(!keepsDrafts(env));
     expect(keepsDrafts(env)).toBe(draftsAllowed(env));
+  });
+
+  it('fails closed across all three gates on the connected legacy/main production branch', () => {
+    for (const branch of ['legacy/main', 'refs/heads/legacy/main']) {
+      for (const workers of ['1', 'true']) {
+        const env = { WORKERS_CI: workers, WORKERS_CI_BRANCH: branch, CUEORY_ANATOMY_DRAFTS: '1' };
+        expect(draftsAllowed(env)).toBe(false);
+        expect(keepsDrafts(env)).toBe(false);
+        expect(shouldAuditAnatomyBuild(env)).toBe(true);
+        const built = checkAnatomyBuild(env, '/nonexistent-anatomy-production-output', 'content/visuals');
+        expect(built.skipped).toBe(false);
+        expect(built.errors[0]).toMatch(/production output does not exist/);
+      }
+    }
   });
 
   it('does not treat WORKERS_CI=true on main as an opt-in local draft build', () => {
