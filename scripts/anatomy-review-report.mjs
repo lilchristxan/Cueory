@@ -11,7 +11,7 @@
  *   node scripts/anatomy-review-report.mjs --out-dir /tmp/anatomy-review-sheets
  */
 import { existsSync, lstatSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
+import { dirname, join, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const SYSTEM_FILE = /^anatomy-([a-z0-9]+(?:-[a-z0-9]+)*)\.json$/;
@@ -220,6 +220,10 @@ export function writeAnatomyReviewSheets(entries, destination) {
     throw new Error('an explicit review output directory is required');
   }
   const folder = resolve(destination);
+  // Generated drafts must not be accidentally written into the public repo.
+  if (folder === DEFAULT_ROOT || folder.startsWith(DEFAULT_ROOT + sep)) {
+    throw new Error('write review sheets outside the project repository');
+  }
   if (existsSync(folder)) {
     if (!lstatSync(folder).isDirectory() || lstatSync(folder).isSymbolicLink()) {
       throw new Error('review output directory must be a real directory');
@@ -227,13 +231,16 @@ export function writeAnatomyReviewSheets(entries, destination) {
   } else {
     mkdirSync(folder, { recursive: true });
   }
-  const paths = [];
-  for (const entry of anatomyReviewSheets(entries)) {
-    const file = join(folder, `anatomy-${entry.id}-review.md`);
-    writeFileSync(file, anatomyReviewMarkdown([entry]), { flag: 'wx', mode: 0o600 });
-    paths.push(file);
+  const paths = anatomyReviewSheets(entries)
+    .map((entry) => ({ file: join(folder, `anatomy-${entry.id}-review.md`), entry }));
+  // Fail before creating any file if an earlier human review sheet exists.
+  if (paths.some(({ file }) => existsSync(file))) {
+    throw new Error('review output already exists; choose a fresh output directory');
   }
-  return paths;
+  for (const { file, entry } of paths) {
+    writeFileSync(file, anatomyReviewMarkdown([entry]), { flag: 'wx', mode: 0o600 });
+  }
+  return paths.map(({ file }) => file);
 }
 
 function cli(args) {
