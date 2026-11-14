@@ -77,34 +77,53 @@ const credit = pictureCreditFor({
 
     <section aria-labelledby="review-structures" class="min-w-0 space-y-4">
       <h2 id="review-structures" class="text-xl text-ink">Official names and cited source lines</h2>
-      <p class="text-sm text-ink-soft">All {sheet.structureCount} structures below are copied from the existing BodyParts3D source manifests. No clinical explanations are added.</p>
-      <ol class="space-y-3">
-        {sheet.labels.map((label, index) => (
-          <li class="min-w-0 max-w-full space-y-3 overflow-hidden rounded-lg border border-line p-4" data-review-structure={label.id}>
-            <div class="flex min-w-0 max-w-full items-start gap-3">
-              <input
-                id={`review-${sheet.id}-${label.id}`}
-                class="h-11 w-11 shrink-0 accent-button"
-                type="checkbox"
-                aria-label={`review structure ${index + 1}: ${label.name}`}
-              />
-              <div class="min-w-0 flex-1 space-y-1">
-                <label for={`review-${sheet.id}-${label.id}`} class="block break-words font-semibold text-ink">
-                  {index + 1}. {label.name}
-                </label>
-                <p class="break-words text-sm text-ink-soft">ID: {label.id}</p>
-              </div>
-            </div>
-            <dl class="space-y-1 break-words text-sm text-ink">
-              <div><dt class="inline font-semibold">layer: </dt><dd class="inline">{label.layer}</dd></div>
-              <div><dt class="inline font-semibold">group: </dt><dd class="inline">{label.group}</dd></div>
-              <div><dt class="inline font-semibold">source line: </dt><dd class="inline">{label.source.quote}</dd></div>
-              <div><dt class="inline font-semibold">source file: </dt><dd class="inline">{label.source.section}</dd></div>
-            </dl>
-            <p class="min-w-0 break-all text-sm"><a class="underline text-ink" href={label.source.url} rel="noopener noreferrer">original BodyParts3D source file</a></p>
-          </li>
-        ))}
-      </ol>
+      <p class="text-sm text-ink-soft">
+        All {sheet.structureCount} structures below are copied from the existing BodyParts3D source manifests.
+        Open a numbered group to review its source lines and checkboxes. No clinical explanations are added.
+      </p>
+      <div class="space-y-4">
+        {Array.from({ length: Math.ceil(sheet.labels.length / 25) }, (_, groupIndex) => {
+          const start = groupIndex * 25;
+          const labels = sheet.labels.slice(start, start + 25);
+          return (
+            <details class="min-w-0 rounded-lg border border-line p-4" data-review-group={groupIndex + 1}>
+              <summary class="min-h-11 cursor-pointer break-words py-2 font-semibold text-ink">
+                Structures {start + 1}–{start + labels.length} ({labels.length} official source names)
+              </summary>
+              <ol start={start + 1} class="mt-4 space-y-3">
+                {labels.map((label, offset) => {
+                  const index = start + offset;
+                  return (
+                    <li class="min-w-0 max-w-full space-y-3 overflow-hidden rounded-lg border border-line p-4" data-review-structure={label.id}>
+                      <div class="flex min-w-0 max-w-full items-start gap-3">
+                        <input
+                          id={`review-${sheet.id}-${label.id}`}
+                          class="h-11 w-11 shrink-0 accent-button"
+                          type="checkbox"
+                          aria-label={`review structure ${index + 1}: ${label.name}`}
+                        />
+                        <div class="min-w-0 flex-1 space-y-1">
+                          <label for={`review-${sheet.id}-${label.id}`} class="block break-words font-semibold text-ink">
+                            {index + 1}. {label.name}
+                          </label>
+                          <p class="break-words text-sm text-ink-soft">ID: {label.id}</p>
+                        </div>
+                      </div>
+                      <dl class="space-y-1 break-words text-sm text-ink">
+                        <div><dt class="inline font-semibold">layer: </dt><dd class="inline">{label.layer}</dd></div>
+                        <div><dt class="inline font-semibold">group: </dt><dd class="inline">{label.group}</dd></div>
+                        <div><dt class="inline font-semibold">source line: </dt><dd class="inline">{label.source.quote}</dd></div>
+                        <div><dt class="inline font-semibold">source file: </dt><dd class="inline">{label.source.section}</dd></div>
+                      </dl>
+                      <p class="min-w-0 break-all text-sm"><a class="underline text-ink" href={label.source.url} rel="noopener noreferrer">original BodyParts3D source file</a></p>
+                    </li>
+                  );
+                })}
+              </ol>
+            </details>
+          );
+        })}
+      </div>
     </section>
 
     <footer class="min-w-0 space-y-2 break-words border-t border-line pt-4 text-sm text-ink-soft">
