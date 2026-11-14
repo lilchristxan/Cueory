@@ -639,6 +639,41 @@ function pagefindArtifactKind(url) {
 
 
 
+/**
+ * Gzip optional headers are public bytes but disappear after decompression.
+ * Inspect the metadata rather than reject safe Pagefind WASM filenames.
+ */
+function safePagefindGzipHeader(bytes, draftIds) {
+  if (bytes.length < 18 || bytes[0] !== 0x1f || bytes[1] !== 0x8b ||
+      bytes[2] !== 8 || (bytes[3] & 0xe0) !== 0) return false;
+  const flags = bytes[3];
+  let cursor = 10;
+  if (flags & 0x04) {
+    if (cursor + 2 > bytes.length) return false;
+    const size = bytes.readUInt16LE(cursor);
+    cursor += 2 + size;
+    if (cursor > bytes.length) return false;
+  }
+  for (const present of [0x08, 0x10]) {
+    if (!(flags & present)) continue;
+    const nul = bytes.indexOf(0, cursor);
+    if (nul < 0) return false;
+    cursor = nul + 1;
+  }
+  if (flags & 0x02) cursor += 2;
+  if (cursor > bytes.length - 8) return false;
+
+  const metadata = bytes.subarray(10, cursor);
+  if (containsGlbHeader(metadata) || containsValidatedArchive(metadata)) return false;
+  const raw = metadata.toString('latin1');
+  return ![
+    raw,
+    decodeAsciiEscapesForAudit(raw, 'script'),
+    decodeAsciiEscapesForAudit(raw, 'markup'),
+    decodeAsciiEscapesForAudit(raw, 'css'),
+  ].some((value) => containsReservedAnatomyId(value, draftIds));
+}
+
 /** Validate Pagefind's actual generated formats; a matching filename alone is never trusted. */
 function validPagefindArtifact(path, kind, draftIds = new Set()) {
   let bytes;
@@ -648,13 +683,7 @@ function validPagefindArtifact(path, kind, draftIds = new Set()) {
     return false;
   }
   const isGzip = bytes.length >= 2 && bytes[0] === 0x1f && bytes[1] === 0x8b;
-  // Pagefind's reviewed output uses the plain RFC 1952 gzip envelope.
-  // Optional header fields are public but not present after gunzipSync, so
-  // reject them before verifying the decompressed search data. Otherwise an
-  // FNAME/FCOMMENT/FEXTRA field could hide draft labels from the release audit.
-  // Reject optional FEXTRA/FNAME/FCOMMENT and reserved gzip flag bits.
-  // Standard FTEXT and FHCRC are retained for generated Pagefind assets.
-  if (isGzip && (bytes.length < 18 || bytes[2] !== 8 || (bytes[3] & 0xf8) !== 0)) return false;
+  if (isGzip && !safePagefindGzipHeader(bytes, draftIds)) return false;
   let decoded;
   try {
     decoded = isGzip
@@ -672,14 +701,41 @@ function validPagefindArtifact(path, kind, draftIds = new Set()) {
   // Inspect the complete payload for structurally valid embedded GLBs/archives.
   // Do not reinterpret opaque CBOR byte strings or WASM code/data as UTF-8
   // prose: reserved anatomy IDs are checked only in JSON and CBOR text strings.
-  if (payload.length > MAX_ARCHIVE_INSPECTION_BYTES ||
-      containsGlbHeader(payload) || containsValidatedArchive(payload)) return false;
+  if (payload.length > MAX_ARCHIVE_INSPECTION_BYTES || containsGlbHeader(payload)) return false;
   if (kind === 'wasm') {
-    return payload.length >= 8 &&
-      payload.subarray(0, 4).equals(Buffer.from([0x00, 0x61, 0x73, 0x6d])) &&
-      payload.readUInt32LE(4) === 1 &&
-      WebAssembly.validate(payload);
+    // Executable WASM instruction bytes may resemble container signatures by
+    // coincidence. Validate the module and inspect custom sections rather than
+    // treating arbitrary opcode bytes as a complete hidden archive.
+    if (payload.length < 8 ||
+        !payload.subarray(0, 4).equals(Buffer.from([0x00, 0x61, 0x73, 0x6d])) ||
+        payload.readUInt32LE(4) !== 1 || !WebAssembly.validate(payload)) return false;
+    let cursor = 8;
+    const readLeb = () => {
+      let value = 0;
+      for (let i = 0; i < 5 && cursor < payload.length; i += 1) {
+        const byte = payload[cursor++];
+        value += (byte & 0x7f) * 2 ** (7 * i);
+        if (!(byte & 0x80)) return Number.isSafeInteger(value) ? value : null;
+      }
+      return null;
+    };
+    while (cursor < payload.length) {
+      const type = payload[cursor++];
+      const size = readLeb();
+      if (size === null || size > payload.length - cursor) return false;
+      const end = cursor + size;
+      if (type === 0) {
+        const nameSize = readLeb();
+        if (nameSize === null || nameSize > end - cursor) return false;
+        cursor += nameSize;
+        const opaque = payload.subarray(cursor, end);
+        if (containsGlbHeader(opaque) || containsValidatedArchive(opaque)) return false;
+      }
+      cursor = end;
+    }
+    return true;
   }
+  if (containsValidatedArchive(payload)) return false;
   if (path.endsWith('.pf_fragment')) {
     try {
       const fragment = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(payload));

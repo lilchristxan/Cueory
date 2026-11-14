@@ -3,7 +3,7 @@ import { mkdirSync, mkdtempSync, readFileSync, readdirSync, renameSync, rmSync, 
 import { spawnSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { deflateRawSync, gzipSync } from 'node:zlib';
+import { deflateRawSync, gunzipSync, gzipSync } from 'node:zlib';
 import { auditAnatomyProduction, decodeAsciiEscapesForAudit, modelUrls, parseApprovedGlb, readRegularFileNoFollow } from '../../scripts/anatomy-production-audit.mjs';
 import { keepsDrafts } from '../../src/visuals/prunedrafts';
 
@@ -398,6 +398,15 @@ describe('anatomy production artifact audit', () => {
       } while (value > 0);
       return Buffer.from(bytes);
     };
+    // A valid custom section may contain either a harmless magic-shaped byte
+    // sequence or a complete hidden archive. Only the archive is rejected.
+    const harmlessWasmCustom = Buffer.concat([
+      Buffer.from([0x01, 0x78]), Buffer.from('BZh ordinary WASM custom data', 'ascii'),
+    ]);
+    const wasmWithHarmlessMarker = gzipSync(Buffer.concat([
+      prefix, wasmHeader, Buffer.from([0x00]),
+      encodeWasmU32(harmlessWasmCustom.length), harmlessWasmCustom,
+    ]));
     // A valid WebAssembly custom section can still smuggle a complete ZIP.
     const wasmCustomName = Buffer.from('archive', 'ascii');
     const wasmZipCustomPayload = Buffer.concat([
@@ -428,6 +437,7 @@ describe('anatomy production artifact audit', () => {
     f.file('pagefind/filter/en_test.pf_filter', gzipFilter);
     f.file('pagefind/pagefind.en_test.pf_meta', gzipMeta);
     f.file('pagefind/wasm.en.pagefind', wasm);
+    f.file('pagefind/wasm.en_harmless.pagefind', wasmWithHarmlessMarker);
     f.file('pagefind/wasm.en_opaque_ids.pagefind', wasmWithOpaqueIds);
     // Pagefind also accepts already-decompressed data with the same marker.
     f.file('pagefind/fragment/en_raw_test.pf_fragment', Buffer.concat([prefix, Buffer.from(JSON.stringify({
@@ -454,6 +464,27 @@ describe('anatomy production artifact audit', () => {
     ]);
     f.file('pagefind/index/en_safe_glb_mention.pf_index', gzipSync(Buffer.concat([prefix, safeMentionCbor])));
     f.file('pagefind/index/en_safe_glb_mention_raw.pf_index', Buffer.concat([prefix, safeMentionCbor]));
+    expect(f.check().errors).toEqual([]);
+
+    // A gzip text hint is harmless: the body still has to validate as an
+    // ordinary Pagefind fragment. Gzip optional metadata is rejected below.
+    const textHintFragment = Buffer.from(fragment);
+    textHintFragment[3] |= 0x01;
+    f.file('pagefind/fragment/en_text_hint.pf_fragment', textHintFragment);
+    expect(f.check().errors).toEqual([]);
+
+    // Safe, standards-compliant optional metadata must remain compatible with
+    // Pagefind's real gzip-wrapped search artifacts, including the WASM path.
+    for (const [name, flag, metadata] of [
+      ['filename', 0x08, Buffer.concat([Buffer.from('pagefind-index'), Buffer.from([0])])],
+      ['comment', 0x10, Buffer.concat([Buffer.from('safe search data'), Buffer.from([0])])],
+      ['extra', 0x04, Buffer.from([0x04, 0x00, 0x10, 0x20, 0x30, 0x40])],
+    ] as const) {
+      const ordinary = Buffer.concat([fragment.subarray(0, 10), metadata, fragment.subarray(10)]);
+      ordinary[3] = flag;
+      expect(gunzipSync(ordinary)).toEqual(gunzipSync(fragment));
+      f.file(`pagefind/fragment/en_safe_header_${name}.pf_fragment`, ordinary);
+    }
     expect(f.check().errors).toEqual([]);
 
     // A gzip member can hide public data in optional header fields that
