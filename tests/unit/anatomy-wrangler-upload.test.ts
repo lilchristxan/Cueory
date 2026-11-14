@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
+import { spawnSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 import { join } from 'node:path';
 import { checkAnatomyWranglerUpload, shouldAuditWranglerUpload } from '../../scripts/check-anatomy-wrangler.mjs';
 
@@ -106,4 +108,27 @@ describe('Wrangler direct-upload anatomy safety gate', () => {
     const pkg = JSON.parse(readFileSync(new URL('../../package.json', import.meta.url), 'utf8'));
     expect(pkg.scripts['deploy:production']).toBe('node scripts/anatomy-production-deploy.mjs');
   });
+  it('runs the production audit when its CLI path is a symlink', () => {
+    const scratch = mkdtempSync(join(tmpdir(), 'cueory-anatomy-symlink-cli-'));
+    try {
+      const script = fileURLToPath(new URL('../../scripts/check-anatomy-wrangler.mjs', import.meta.url));
+      const linked = join(scratch, 'linked-guard.mjs');
+      symlinkSync(script, linked);
+      // An empty working directory has no dist/ to certify. Direct and linked
+      // invocation must both fail closed, without a real Wrangler upload.
+      const result = spawnSync(process.execPath, [linked], {
+        cwd: scratch,
+        env: { ...process.env, WRANGLER_COMMAND: 'deploy' },
+        encoding: 'utf8',
+        timeout: 20_000,
+      });
+      expect(result.error).toBeUndefined();
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain('anatomy Wrangler upload audit FAILED:');
+      expect(result.stderr).toContain('production output does not exist');
+    } finally {
+      rmSync(scratch, { recursive: true, force: true });
+    }
+  });
+
 });
