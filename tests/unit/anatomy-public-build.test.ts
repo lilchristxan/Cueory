@@ -71,7 +71,7 @@ it('renders only a simulated approved source on /anatomy and a complete no-JavaS
     expect(draftIds.length).toBeGreaterThan(0);
     expect(approvedLabels.length).toBeGreaterThan(0);
 
-    const env = { ...process.env, CUEORY_ANATOMY_DRAFTS: '1' };
+    const env: NodeJS.ProcessEnv = { ...process.env, CUEORY_ANATOMY_DRAFTS: '1' };
     delete env.WORKERS_CI;
     delete env.WORKERS_CI_BRANCH;
     execFileSync('npm', ['run', 'build'], {
