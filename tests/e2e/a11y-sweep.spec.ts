@@ -43,7 +43,7 @@ async function tabAudit(page: Page): Promise<string[]> {
     const isReachable = (el: HTMLElement) =>
       el.tabIndex >= 0 &&
       !el.matches(':disabled') &&
-      !el.closest('[inert]') &&
+      !el.closest('[inert], details:not([open])') &&
       el.getClientRects().length > 0 &&
       getComputedStyle(el).visibility === 'visible';
 
