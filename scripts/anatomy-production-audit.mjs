@@ -1149,6 +1149,7 @@ function hasUsableSiteEntrypoint(html) {
     if (!/^<script\b/i.test(tag) || !tag.endsWith('>')) return false;
     let pos = 7; // After the "script" tag name.
     let moduleType = false;
+    const attributes = new Set();
     while (pos < tag.length - 1) {
       if (!/\s/.test(tag[pos])) return false;
       while (/\s/.test(tag[pos] ?? '')) pos++;
@@ -1156,6 +1157,8 @@ function hasUsableSiteEntrypoint(html) {
       const nameMatch = /^[^\s=/>"'<>]+/.exec(tag.slice(pos));
       if (!nameMatch) return false;
       const name = nameMatch[0].toLowerCase();
+      if (attributes.has(name)) return false;
+      attributes.add(name);
       pos += nameMatch[0].length;
       while (/\s/.test(tag[pos] ?? '')) pos++;
       let value = '';
