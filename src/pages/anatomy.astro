@@ -13,9 +13,10 @@ import { publicAnatomySystems } from '../islands/anatomypublic';
 const files = import.meta.glob('../../content/visuals/anatomy-*.json', { eager: true, import: 'default' });
 const systems = publicAnatomySystems(files);
 const ready = systems.length > 0;
-// The public viewer accepts only its current, typed props. Report-page context
-// from the separate flag package will be integrated after its review.
-const viewerProps = { systems, fixture: null, drafts: false };
+// Preserve the public route identity when the structure-reporting package is integrated.
+// A single props object stays type-compatible with the existing viewer and the
+// stricter reportPage contract in #684.
+const viewerProps = { systems, fixture: null, drafts: false, reportPage: '/anatomy' as const };
 ---
 
 <Layout title="anatomy lab" description="Explore the anatomy lab." variant="study" noindex={!ready}>
