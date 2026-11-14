@@ -256,9 +256,12 @@ describe('read-only anatomy review inventory', () => {
     roots.push(outside);
     symlinkSync(join(process.cwd(), 'docs'), join(outside, 'redirected'), 'dir');
     const destination = join(outside, 'redirected', 'status', 'review-output');
+    const canonicalTarget = join(process.cwd(), 'docs', 'status', 'review-output');
+    // Use the actual repository root rather than the temporary fixture root.
+    expect(existsSync(canonicalTarget)).toBe(false);
     expect(() => writeAnatomyReviewSheets(anatomyInventory(root), destination))
       .toThrow('write review sheets outside the project repository');
-    expect(existsSync(join(process.cwd(), 'docs', 'status', 'review-output'))).toBe(false);
+    expect(existsSync(canonicalTarget)).toBe(false);
   });
 
   it('refuses a file path as a review output directory', () => {
