@@ -88,6 +88,18 @@ describe('Cloudflare Workers Builds release gate', () => {
   });
 });
 
+describe('accessibility wording remains a tested goal, not a certification or service-level promise', () => {
+  it('does not claim universal reflow or a response time that has not been confirmed', () => {
+    const page = source('accessibility');
+    expect(page).toContain('These are design goals we work toward and check in tests');
+    expect(page).toContain('page-wide horizontal scrolling');
+    expect(page).toContain('keyboard-accessible scrolling area');
+    expect(page).toContain('cannot promise');
+    expect(page).not.toContain('no page scrolls sideways');
+    expect(page).not.toContain('within ten business days');
+  });
+});
+
 describe.skipIf(!shouldAuditLegalCopy(process.env))('legal pages ready for a main release', () => {
   it('contains approved Terms of Use instead of instructions to paste terms', () => {
     expect(source('terms')).not.toMatch(/<PlaceholderBlock\b/i);

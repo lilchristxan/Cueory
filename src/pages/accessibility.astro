@@ -25,15 +25,22 @@ import { site } from '../config/site';
     </p>
 
     <h2>What we build in</h2>
+    <p>
+      These are design goals we work toward and check in tests, not a guarantee that every page already meets every
+      point. Please tell us about barriers that our tests missed.
+    </p>
     <ul>
-      <li>Everything you can drag you can also do by tapping or with the keyboard.</li>
-      <li>The keyboard focus is always visible, and the tab order follows the page.</li>
-      <li>Right and wrong are never shown by colour alone; a word or a symbol always goes with it.</li>
-      <li>Text colours meet WCAG AA contrast against every background they sit on, in both the light and dark looks.</li>
-      <li>Animation and motion are reduced or removed when your device asks for reduced motion.</li>
-      <li>Text reflows when you enlarge it, and no page scrolls sideways on a phone, a tablet or a desktop.</li>
-      <li>Buttons are real buttons with real names, and corner buttons are at least 44 by 44 pixels.</li>
-      <li>Every page has a skip link, a single main heading, headings in order and a page language.</li>
+      <li>We design dragging activities with alternatives for tapping and using a keyboard.</li>
+      <li>We work toward visible keyboard focus and a logical tab order.</li>
+      <li>We use words or symbols alongside colour to show right and wrong.</li>
+      <li>We test text contrast against WCAG AA targets in both the light and dark looks.</li>
+      <li>We test key animations and transitions with reduced-motion preferences enabled.</li>
+      <li>
+        We test text reflow when it is enlarged and aim to avoid page-wide horizontal scrolling. Large two-dimensional
+        games may need their own keyboard-accessible scrolling area.
+      </li>
+      <li>Buttons are real buttons with real names, and corner buttons are designed to be at least 44 by 44 pixels.</li>
+      <li>Our pages are built with a skip link, a main heading, headings in order and a page language.</li>
       <li>Lessons and study tools keep working without JavaScript where they can, or say plainly when they can't.</li>
       <li>Light and dark looks follow your device, and you can override them at the bottom of any page.</li>
     </ul>
@@ -55,13 +62,15 @@ import { site } from '../config/site';
       <li>Lesson videos play in YouTube's player, whose controls and captions are YouTube's.</li>
       <li>The 3D anatomy lab has a text alternative for its structures, but a 3D scene itself can't be fully described in words.</li>
       <li>Some lessons are samples or drafts and may still have gaps we haven't found.</li>
+      <li>Wide game grids can need a contained scrolling area at enlarged text sizes, and their layouts still need testing.</li>
     </ul>
 
     <h2>Tell us</h2>
     <p>
       If a page is hard to use, email <a href={`mailto:${site.contactEmail}`}>{site.contactEmail}</a> or use the "Flag
       or comment" button at the bottom of the page. Tell us the page, what you were trying to do, and the device,
-      browser and assistive technology you were using. We read every report and aim to reply within ten business days.
+      browser and assistive technology you were using. We use these details to investigate problems, but cannot promise
+      a particular reply time.
     </p>
   </Prose>
 </Layout>
