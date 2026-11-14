@@ -634,6 +634,55 @@ function hasUnsafeEncodedAnatomyPayload(text, draftIds, budget = { examined: 0 }
   for (const match of text.matchAll(atobLiterals)) {
     if (inspect(match[2], true)) return true;
   }
+  // Constant JavaScript may split one model's base64 into ordinary quoted
+  // pieces. Reconstruct only the narrowly supported string + string form;
+  // never execute generated JS or evaluate arbitrary expressions.
+  const atobCalls = /\batob\s*\(\s*([^)]*)\)/g;
+  for (const call of text.matchAll(atobCalls)) {
+    const argument = call[1];
+    if (!argument.includes('+')) continue;
+    if (argument.length > MAX_ENCODED_RUN) return true;
+    const pieces = [];
+    let cursor = 0;
+    let ambiguous = false;
+    while (cursor < argument.length) {
+      while (cursor < argument.length && /\s/.test(argument[cursor])) cursor++;
+      if (cursor === argument.length) break;
+      const quote = argument[cursor];
+      if (quote !== "'" && quote !== '"' && quote !== '\x60') {
+        ambiguous = true;
+        break;
+      }
+      cursor++;
+      const start = cursor;
+      while (cursor < argument.length && argument[cursor] !== quote) {
+        // Escape sequences are handled by the pre-decoded source variants.
+        // An unknown escape in a concatenation cannot be approved.
+        if (argument[cursor] === '\\') {
+          ambiguous = true;
+          break;
+        }
+        cursor++;
+      }
+      if (ambiguous || cursor >= argument.length) {
+        ambiguous = true;
+        break;
+      }
+      pieces.push(argument.slice(start, cursor));
+      cursor++;
+      while (cursor < argument.length && /\s/.test(argument[cursor])) cursor++;
+      if (cursor >= argument.length) break;
+      if (argument[cursor] !== '+') {
+        ambiguous = true;
+        break;
+      }
+      cursor++;
+    }
+    // A partially static decoder expression may construct a hidden model
+    // at runtime. Refuse it instead of certifying an unknown payload.
+    if (ambiguous && pieces.length > 0) return true;
+    if (!ambiguous && pieces.length > 1 && inspect(pieces.join(''), true)) return true;
+  }
   // The same wrapping may appear in a base64 data URI. Its MIME header is
   // bounded so unrelated prose cannot be joined into a made-up payload.
   const dataUris = /data:[^'"\x60<>\s,;]{1,100}(?:;[^'"\x60<>\s,;]{1,100})*;base64,([A-Za-z0-9+/_= \t\n\r\f-]{4,})/gi;
@@ -650,9 +699,10 @@ function hasUnsafeEncodedAnatomyPayload(text, draftIds, budget = { examined: 0 }
     if (encoded.length < 8 && !/^(?:Rk1B|RklY|QlA)/.test(encoded)) continue;
     // Invalid candidate lengths used deliberately with an active decoder
     // cannot be silently treated as approved published content.
-    const before = text.slice(Math.max(0, match.index - 64), match.index + match[0].length - encoded.length);
-    const explicit = /(?:atob\s*\(\s*['"]|base64\s*,\s*|from\s*\([^)]*['"])/i.test(before);
-    if (inspect(encoded, explicit)) return true;
+    // The atob/data-URI passes above already identify actual decoder
+    // arguments. Never mark an unrelated identifier as explicit merely
+    // because a decoder call occurred earlier on the same source line.
+    if (inspect(encoded)) return true;
   }
   return false;
 }
