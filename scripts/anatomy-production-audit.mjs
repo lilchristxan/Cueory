@@ -654,7 +654,10 @@ function validPagefindArtifact(path, kind, draftIds = new Set()) {
   // FNAME/FCOMMENT/FEXTRA field could hide draft labels from the release audit.
   // Reject optional FEXTRA/FNAME/FCOMMENT and reserved gzip flag bits.
   // Standard FTEXT and FHCRC are retained for generated Pagefind assets.
-  if (isGzip && (bytes.length < 18 || bytes[2] !== 8 || (bytes[3] & 0xf8) !== 0)) return false;
+  // Pagefind's shipped WebAssembly members may use a gzip header hint;
+  // reject the optional metadata fields that can conceal draft IDs while
+  // allowing the harmless FTEXT bit emitted by its actual compressor.
+  if (isGzip && (bytes.length < 18 || bytes[2] !== 8 || (bytes[3] & 0xfc) !== 0)) return false;
   let decoded;
   try {
     decoded = isGzip
