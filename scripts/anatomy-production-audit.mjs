@@ -787,6 +787,21 @@ function validPagefindArtifact(path, kind, draftIds = new Set()) {
       const size = readLeb();
       if (size === null || size > payload.length - cursor) return false;
       const end = cursor + size;
+      // Each section has its own length-delimited public payload. Scanning
+      // only the complete serialized module can swallow a source-ID boundary:
+      // e.g. an LEB length of 65 is ASCII 'A' immediately before FMA24497.
+      // Inspect each section independently and reject embedded GLB/archive
+      // containers in data segments, not just custom sections.
+      const sectionBytes = payload.subarray(cursor, end);
+      const sectionText = sectionBytes.toString('latin1');
+      if ([
+        sectionText,
+        decodeAsciiEscapesForAudit(sectionText, 'script'),
+        decodeAsciiEscapesForAudit(sectionText, 'markup'),
+        decodeAsciiEscapesForAudit(sectionText, 'css'),
+      ].some((value) => containsReservedAnatomyId(value, draftIds))) return false;
+      if ((type === 0 || type === 11) &&
+          (containsGlbHeader(sectionBytes) || containsValidatedArchive(sectionBytes))) return false;
       if (type === 0) {
         const nameSize = readLeb();
         if (nameSize === null || nameSize > end - cursor) return false;
