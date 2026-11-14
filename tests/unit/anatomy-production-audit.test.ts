@@ -480,6 +480,24 @@ describe('anatomy production artifact audit', () => {
     expect(errors).toContain('unapproved model exposed in production: /downloads/obvious.gltf');
   });
 
+  it('rejects literal Base64 model framing in HTML data URIs and JavaScript atob calls', () => {
+    const f = setup();
+    const source = Buffer.alloc(28);
+    source.write('glTF', 0, 'ascii');
+    source.writeUInt32LE(2, 4);
+    source.writeUInt32LE(source.length, 8);
+    source.writeUInt32LE(8, 12);
+    source.writeUInt32LE(0x4e4f534a, 16);
+    source.write('{"a":1} ', 20);
+    const encoded = source.toString('base64');
+    f.file('_astro/embedded-model.js', `const model = atob('${encoded}');`);
+    f.file('assets/embedded-model.html', `<a href="data:model/gltf-binary;base64,${encoded}">synthetic test</a>`);
+    expect(f.check().errors).toEqual(expect.arrayContaining([
+      'embedded Base64 anatomy model in built text: _astro/embedded-model.js',
+      'embedded Base64 anatomy model in built text: assets/embedded-model.html',
+    ]));
+  });
+
   it('rejects draft IDs in ordinary WASM custom sections, not only Pagefind files', () => {
     const f = setup();
     const header = Buffer.from([0, 97, 115, 109, 1, 0, 0, 0]);
