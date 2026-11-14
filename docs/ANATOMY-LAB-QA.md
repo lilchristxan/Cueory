@@ -59,6 +59,36 @@ Do not mark these as passed merely because an existing fixture test succeeds. Ne
 | Whole-body budget | Only the outer layer loads initially. Test a full **show all** on a mid-range phone before accepting its cumulative size and triangle cost. |
 | Browser coverage | Chromium phone, tablet and desktop. Include WebKit and Firefox at the release gate when supported by the repository configuration. |
 
+## Automated coverage map for sections 2 and 3
+
+This table maps each acceptance row to a named test in the **staging baseline**, or identifies missing proof. It records **test presence**, not test success, performance acceptance or permission to publish. Every section 2 row still needs a separate manual check on locked staging using the real source data. The new partial-layer retry test is not proven until exact-head CI passes.
+
+| QA row | Named automated evidence | Unproved acceptance |
+| --- | --- | --- |
+| §2 Open the lab | `tests/e2e/anatomy-lab.spec.ts`: “loads nothing from three.js before the tap, and is kept out of search engines” and “keeps camera controls disabled until the fixture GLB finishes loading” | Locked-preview manual check |
+| §2 Change systems | `tests/e2e/anatomy-lab.spec.ts`: “the old model is not shown after switching, and a late layer from the old system changes nothing”; `tests/e2e/anatomy-stale-initial-error.spec.ts`: “ignores an initial model failure from the previous body system” | Locked-preview manual check |
+| §2 Recover from failed model load | `tests/e2e/anatomy-lab.spec.ts`: “recovers from a failed first anatomy model request without refreshing” and “does not count a pending or failed first GLB, then counts its successful retry” | Locked-preview manual check |
+| §2 Recover from unavailable 3D | `tests/e2e/anatomy-lab.spec.ts`: “keeps a searchable, keyboard-accessible text catalog if WebGL is unavailable” and “retains searchable structure names after WebGL context loss and can reopen 3D” | Locked-preview manual check |
+| §2 Search and select | `tests/e2e/anatomy-lab.spec.ts`: “keyboard path: search, select from the list, name card, hide, show only, show all” and “tapping the structure in the middle of the view selects it (raycasting)” | Locked-preview manual check |
+| §2 Open deeper layers | `tests/e2e/anatomy-lab.spec.ts`: “only the outer layer is requested at first; a deeper layer only when peeled to” and “layers: buttons show and hide each layer, and peel goes from the outside in, by keyboard” | Explicit browser check of repeat requests, and locked-preview manual check |
+| §2 Mixed-file layers | `tests/e2e/anatomy-lab.spec.ts`: “the organs button loads missing files when only the heart is visible from the vessels layer”; `tests/unit/anatomylazy.test.ts`: “maps deeper structures in the initial files, keeps them hidden and reuses already downloaded files” | Second partially loaded mixed-file layer browser case, and manual check |
+| §2 Load-state wording | `tests/e2e/anatomy-lab.spec.ts`: “the organs button loads missing files when only the heart is visible from the vessels layer”; `tests/unit/anatomylazy.test.ts`: “says not loaded yet for an absent-looking structure whose file has not been fetched” and “reserves not in this model for files whose download finished but mesh is absent” | Explicit browser assertions distinguishing both states, and manual check |
+| §2 A failed layer request | **New** `tests/e2e/anatomy-partial-layer-retry.spec.ts`: “a failed layer keeps its successful GLB and retries only the failed file”; `tests/unit/anatomylazy.test.ts`: “hands over the files that loaded when another file of the layer fails, and retries only the failed one” | New test needs exact-head CI, plus manual check |
+| §2 Conflicting actions | `tests/unit/anatomylazy.test.ts`: “keeps successful downloads but preserves show-only when an older reveal finishes later” | Browser race missing: release older show-all after newer show-only, then manual check |
+| §2 Find It guided practice | `tests/e2e/anatomy-lab.spec.ts`: “a named-list keyboard answer is guided practice, not a scored anatomy identification” and “show me restores a hidden quiz target and keeps it highlighted through later controls” | Locked-preview manual check of all answer outcomes |
+| §2 Picture export | `tests/e2e/anatomy-lab.spec.ts`: “exports a phone picture as a 1080 × 1920 PNG with the right file name”; `tests/e2e/anatomy-picture-credit.spec.ts`: “exported anatomy picture credit is complete, visible and model-specific”; `tests/e2e/anatomy-export-switch.spec.ts`: “switching systems invalidates the previous PNG before React effects” | Manual check all three export sizes and stale cancellation |
+| §3 Phone layout | `tests/e2e/anatomy-lab.spec.ts`: “fits a 320 px screen without sideways scrolling”; `playwright.config.ts` runs a 390 × 844 phone project | Check clipping and navigation at both widths in both themes |
+| §3 Large structure catalog | `tests/e2e/anatomy-list-window.spec.ts`: “whole-body catalog shows a bounded list, then moves focus to the first newly revealed structure” | Manual full-catalog search and keyboard check |
+| §3 Keyboard and tap | `tests/e2e/anatomy-lab.spec.ts`: “keyboard path: search, select from the list, name card, hide, show only, show all” and “layers: buttons show and hide each layer, and peel goes from the outside in, by keyboard” | Manual tap/orbit/zoom/quiz on device sizes |
+| §3 Reduced motion | No dedicated Anatomy Lab browser test on this baseline asserts absence of forced animation | Add browser assertion under `prefers-reduced-motion: reduce`, then manual check |
+| §3 Screen reader | `tests/e2e/anatomy-lab.spec.ts`: “has no accessibility violations, closed and open”; other tests check visible state wording | Manual screen-reader verification of loading, errors, pending, hidden and quiz feedback |
+| §3 No JavaScript or WebGL | `tests/e2e/anatomy-no-javascript.spec.ts`: “anatomy structure names remain reachable and credited without JavaScript”; `tests/e2e/anatomy-lab.spec.ts`: “keeps a searchable, keyboard-accessible text catalog if WebGL is unavailable” | Manual no-3D and screen-reader route acceptance |
+| §3 Single-system budget | `tests/unit/anatomy-models.test.ts`: each system “fits the phone budget, uses only the extensions the viewer decodes, and carries the credit” | Recheck each system size/triangle count before approval |
+| §3 Whole-body budget | `tests/e2e/anatomy-lab.spec.ts`: “phone show all asks before fetching the remaining models and supports cancel” and “only the outer layer is requested at first; a deeper layer only when peeled to” | Throttled phone and WebKit show-all timing, FPS, peak memory, stall/crash test |
+| §3 Browser coverage | `playwright.config.ts`: Chromium phone, phone-evening, tablet, desktop; opt-in WebKit phone/desktop and Firefox desktop under `ALL_ENGINES=1` | Record exact-head run IDs, especially all-engine release CI |
+
+**Not a release sign-off:** all manual staging checks, outstanding browser gaps, independent model-name/rights review, phone performance figures, production asset inspection and explicit founder approval remain required.
+
 ## 4. Verification and handoff
 
 From an environment with the repository's pinned Node version and installed dependencies:
