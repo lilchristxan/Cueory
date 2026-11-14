@@ -87,14 +87,16 @@ test.describe('Task 270: sticky header overlap', () => {
         const stickyHeader = document.querySelector<HTMLElement>('header[data-scroll-header]');
         if (!stickyHeader) throw new Error('Sticky header disappeared before the control scan');
         const controls = Array.from(document.querySelectorAll<HTMLElement>(
-          'main a[href], main button, main input, main select, main textarea, main [tabindex]:not([tabindex="-1"])',
+          'main a[href], main button, main input, main select, main textarea, main [tabindex]:not([tabindex="-1"]), main details > summary:first-of-type',
         ));
         const failures: string[] = [];
         let checked = 0;
         for (const [index, control] of controls.entries()) {
           if (!control.isConnected || control.getClientRects().length === 0 ||
               getComputedStyle(control).visibility === 'hidden' || control.matches(':disabled') ||
-              control.closest('[inert], [aria-disabled="true"], details:not([open])')) continue;
+              control.closest('[inert], [aria-disabled="true"]') ||
+              (control.closest('details:not([open])') &&
+                control !== control.closest('details:not([open])')?.querySelector(':scope > summary'))) continue;
           control.scrollIntoView({ block: 'start', inline: 'nearest', behavior: 'instant' });
           control.focus({ preventScroll: true });
           checked++;
