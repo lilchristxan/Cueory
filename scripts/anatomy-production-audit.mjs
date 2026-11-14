@@ -762,6 +762,16 @@ function validPagefindArtifact(path, kind, draftIds = new Set()) {
     if (payload.length < 8 ||
         !payload.subarray(0, 4).equals(Buffer.from([0x00, 0x61, 0x73, 0x6d])) ||
         payload.readUInt32LE(4) !== 1 || !WebAssembly.validate(payload)) return false;
+    // Every WASM section is downloadable, not only named custom sections.
+    // A data section can contain the same reserved source identifier, so
+    // scan the validated module's complete bytes before accepting it.
+    const publicBytes = payload.toString('latin1');
+    if ([
+      publicBytes,
+      decodeAsciiEscapesForAudit(publicBytes, 'script'),
+      decodeAsciiEscapesForAudit(publicBytes, 'markup'),
+      decodeAsciiEscapesForAudit(publicBytes, 'css'),
+    ].some((value) => containsReservedAnatomyId(value, draftIds))) return false;
     let cursor = 8;
     const readLeb = () => {
       let value = 0;
@@ -1058,7 +1068,12 @@ export function builtSiteEntrypointErrors(distDir) {
     const html = readRegularFileNoFollow(entry);
     // The entry point must be a complete HTML document, not tag text inside
     // an HTML comment or an unfinished document with no closing body.
-    const markup = html.replace(/<!--[\s\S]*?-->/g, '');
+    const markup = html.replace(/<!--[\s\S]*?-->/g, ' ');
+    // A leftover comment opener or closer means the visible body is not
+    // trustworthy. Never validate tags hidden in an unterminated comment.
+    if (markup.includes('<!--') || markup.includes('-->')) {
+      return ['production site entry point is invalid: /index.html'];
+    }
     const bodyMatch = /<body(?:\s[^<>]*)?>([\s\S]*?)<\/body\s*>/i.exec(markup);
     if (/<!doctype\s+html\s*>/i.test(markup) &&
         /<html(?:\s[^<>]*)?>[\s\S]*<\/html\s*>/i.test(markup) &&
