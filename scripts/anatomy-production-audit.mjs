@@ -1121,7 +1121,7 @@ function hasUsableSiteEntrypoint(html) {
     const closing = token.startsWith('</');
     const match = closing
       ? /^<\/([a-z][a-z\d:-]*)\s*>$/i.exec(token)
-      : /^<([a-z][a-z\d:-]*)(?:\s[\s\S]*)?>$/i.exec(token);
+      : /^<([a-z][a-z\d:-]*)(?:\s[\s\S]*?)?\s*\/?>$/i.exec(token);
     if (!match) return false;
     const tag = match[1].toLowerCase();
 
