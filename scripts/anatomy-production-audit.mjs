@@ -1090,7 +1090,14 @@ export function builtSiteEntrypointErrors(distDir) {
   const entry = join(resolve(distDir), 'index.html');
   try {
     const html = readRegularFileNoFollow(entry);
-    if (/<html(?:\s|>)/i.test(html) && /<body(?:\s|>)/i.test(html)) return [];
+    // The entry point must be a complete HTML document, not tag text inside
+    // an HTML comment or an unfinished document with no closing body.
+    const markup = html.replace(/<!--[\s\S]*?-->/g, '');
+    const bodyMatch = /<body(?:\s[^<>]*)?>([\s\S]*?)<\/body\s*>/i.exec(markup);
+    if (/<!doctype\s+html\s*>/i.test(markup) &&
+        /<html(?:\s[^<>]*)?>[\s\S]*<\/html\s*>/i.test(markup) &&
+        /<head(?:\s[^<>]*)?>[\s\S]*<\/head\s*>/i.test(markup) &&
+        bodyMatch && /<[^>]+>/.test(bodyMatch[1])) return [];
     return ['production site entry point is invalid: /index.html'];
   } catch {
     return ['production site entry point is missing or unreadable: /index.html'];
