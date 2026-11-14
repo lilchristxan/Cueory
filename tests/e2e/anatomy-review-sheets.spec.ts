@@ -143,6 +143,52 @@ test('review pictures wait for a nonzero canvas layout before requesting the mod
   expect(requests).toHaveLength(1);
 });
 
+test('a stalled review GLB fetch aborts within the deadline and a fresh retry succeeds', async ({ page }, info) => {
+  test.skip(!isDesktopOfEachEngine(info), 'one stalled real-model request per browser engine');
+  test.setTimeout(100_000);
+  // Hold only the first real GLB fetch. This checks that the request gets an
+  // actual AbortSignal, rather than merely changing a loading label while a
+  // decoder or a network call remains attached to an obsolete renderer.
+  await page.addInitScript(() => {
+    const originalFetch = window.fetch.bind(window);
+    let modelAttempts = 0;
+    window.fetch = (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+      const url = input instanceof Request ? input.url : String(input);
+      if (new URL(url, document.baseURI).pathname !== '/models/anatomy/kidneys.glb') {
+        return originalFetch(input, init);
+      }
+      modelAttempts += 1;
+      if (modelAttempts > 1) return originalFetch(input, init);
+      document.documentElement.setAttribute('data-review-held-fetch', 'yes');
+      const signal = init?.signal ?? (input instanceof Request ? input.signal : undefined);
+      return new Promise<Response>((_resolve, reject) => {
+        const onAbort = () => {
+          document.documentElement.setAttribute('data-review-aborted-fetch', 'yes');
+          reject(new DOMException('Aborted', 'AbortError'));
+        };
+        if (signal?.aborted) onAbort();
+        else signal?.addEventListener('abort', onAbort, { once: true });
+      });
+    };
+  });
+
+  await page.goto(PATH);
+  await page.getByRole('button', { name: 'make front and side pictures' }).click();
+  await expect(page.locator('html')).toHaveAttribute('data-review-held-fetch', 'yes');
+  await expect(page.getByRole('alert').filter({ hasText: 'pictures could not be made' }))
+    .toBeVisible({ timeout: 26_000 });
+  await expect(page.locator('html')).toHaveAttribute('data-review-aborted-fetch', 'yes');
+  // The original source inventory stays available while the renderer retries.
+  await expect(page.locator('[data-review-structure]')).toHaveCount(6);
+  await page.getByRole('button', { name: 'try making pictures again' }).click();
+  await expect(page.getByRole('img', { name: 'kidneys and urinary tract: front view, model review only' }))
+    .toBeVisible({ timeout: 60_000 });
+  await expect(page.getByRole('img', { name: 'kidneys and urinary tract: side view, model review only' }))
+    .toBeVisible();
+  await expect(page.getByRole('alert').filter({ hasText: 'pictures could not be made' }))
+    .toHaveCount(0);
+});
+
 test('a failed model request shows a retry and a new renderer can export both pictures', async ({ page }, info) => {
   test.skip(!isDesktopOfEachEngine(info), 'one real WebGL failure/retry per browser engine');
   test.setTimeout(90_000);

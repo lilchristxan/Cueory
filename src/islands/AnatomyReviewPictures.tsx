@@ -47,23 +47,8 @@ export function waitForReviewCanvasLayout(
 }
 
 
-/** A stalled model request must not permanently hide the picture retry button. */
+/** Bounded review-only fetch/decode. A timeout aborts the actual GLB request. */
 const MODEL_LOAD_DEADLINE_MS = 20_000;
-
-/**
- * Reject after a bounded delay and always clear the timer. This does not
- * abort GLTFLoader internally: a timed-out renderer is retired immediately,
- * and late results cannot overwrite the next attempt's pictures.
- */
-function boundedModelLoad<T>(request: Promise<T>, timeoutMs = MODEL_LOAD_DEADLINE_MS): Promise<T> {
-  let timer: ReturnType<typeof setTimeout> | undefined;
-  const timeout = new Promise<never>((_, reject) => {
-    timer = setTimeout(() => reject(new Error('The model took too long to load.')), timeoutMs);
-  });
-  return Promise.race([request, timeout]).finally(() => {
-    if (timer !== undefined) clearTimeout(timer);
-  });
-}
 
 /** The site's CSP allows data: pictures but intentionally disallows blob: images. */
 function pictureDataUrl(blob: Blob): Promise<string> {
@@ -89,6 +74,7 @@ function pictureDataUrl(blob: Blob): Promise<string> {
 export default function AnatomyReviewPictures({ modelPath, structureIds, title, credit }: Props) {
   const canvas = useRef<HTMLCanvasElement>(null);
   const sceneRef = useRef<LabScene | null>(null);
+  const modelRequest = useRef<AbortController | null>(null);
   const mounted = useRef(false);
   const [state, setState] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
   const [pictures, setPictures] = useState<{ front: string; side: string } | null>(null);
@@ -97,6 +83,10 @@ export default function AnatomyReviewPictures({ modelPath, structureIds, title, 
     mounted.current = true;
     return () => {
       mounted.current = false;
+      // Cancel the network request as well as retiring its WebGL scene.
+      // A decoder that finishes later disposes its result without rendering.
+      modelRequest.current?.abort();
+      modelRequest.current = null;
       sceneRef.current?.dispose();
       sceneRef.current = null;
     };
@@ -126,7 +116,13 @@ export default function AnatomyReviewPictures({ modelPath, structureIds, title, 
         onRender: () => {},
       });
       sceneRef.current = scene;
-      const result = await boundedModelLoad(scene.load(modelPath, structureIds));
+      const controller = new AbortController();
+      modelRequest.current = controller;
+      const timeout = window.setTimeout(() => controller.abort(), MODEL_LOAD_DEADLINE_MS);
+      const result = await scene.load(modelPath, structureIds, controller.signal).finally(() => {
+        window.clearTimeout(timeout);
+        if (modelRequest.current === controller) modelRequest.current = null;
+      });
       if (!mounted.current) return;
       if (!result || result.found.length === 0) throw new Error('No model geometry was available.');
 

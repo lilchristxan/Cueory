@@ -11,6 +11,7 @@ import { disposeAnatomyMaterials, disposeAnatomyMeshResources, indexAnatomyGroup
 import { withTemporaryMeshAppearance } from './anatomyidpass';
 import { createDemandFrameScheduler, remainingIdleDelay } from './anatomyframe';
 import { loadModelsOrDispose, uniqueAnatomyModelUrls } from './anatomylazy';
+import { awaitAbortable } from './anatomyabort';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
@@ -157,7 +158,7 @@ export interface ExportRequest {
 
 export interface LabScene {
   /** Loads one model file, or several that share one coordinate frame (the whole-body view), as one model. */
-  load(urls: string | readonly string[], ids: readonly string[]): Promise<LoadResult | null>;
+  load(urls: string | readonly string[], ids: readonly string[], signal?: AbortSignal): Promise<LoadResult | null>;
   /** Adds more model files to the loaded view (the whole body's deeper layers); null if a newer load replaced it. */
   add(urls: string | readonly string[], ids: readonly string[]): Promise<LoadResult | null>;
   /** Removes the shown model at once and drops any download still in flight (a system change calls this first). */
@@ -470,8 +471,9 @@ export function createLabScene({ canvas, reducedMotion, colors: initialColors, o
     requestRender();
   }
 
-  async function fetchGroup(urls: string | readonly string[]): Promise<THREE.Group> {
-    await MeshoptDecoder.ready;
+  async function fetchGroup(urls: string | readonly string[], signal?: AbortSignal): Promise<THREE.Group> {
+    if (signal) await awaitAbortable(Promise.resolve(MeshoptDecoder.ready), signal, () => {});
+    else await MeshoptDecoder.ready;
     const loader = new GLTFLoader();
     loader.setMeshoptDecoder(MeshoptDecoder);
     // Repeated shared GLB URLs must not trigger a second physical decode.
@@ -479,7 +481,23 @@ export function createLabScene({ canvas, reducedMotion, colors: initialColors, o
     // A failed file cannot leave earlier or later decoded meshes in memory.
     // Scene.add has not run yet, so failed initial loads must release all parts.
     const scenes = await loadModelsOrDispose(
-      list.map((url) => () => loader.loadAsync(url).then((gltf) => gltf.scene)),
+      list.map((url) => () => {
+        // The founder's on-demand review pictures are the only caller passing
+        // a signal. GLTFLoader.loadAsync itself does not expose that signal.
+        // Use abortable fetch + the documented parseAsync(data, basePath).
+        // A decoder finishing after abort frees its own late geometry.
+        if (signal) {
+          const work = (async (): Promise<THREE.Group> => {
+            const response = await fetch(url, { signal });
+            if (!response.ok) throw new Error('The model file could not be downloaded.');
+            const bytes = await response.arrayBuffer();
+            const basePath = new URL('.', new URL(url, document.baseURI)).href;
+            return (await loader.parseAsync(bytes, basePath)).scene;
+          })();
+          return awaitAbortable(work, signal, disposeGroup);
+        }
+        return loader.loadAsync(url).then((gltf) => gltf.scene);
+      }),
       disposeGroup,
     );
     const group = new THREE.Group();
@@ -518,9 +536,9 @@ export function createLabScene({ canvas, reducedMotion, colors: initialColors, o
     return { found: added, missing, triangles: Math.round(triangles) };
   }
 
-  async function load(urls: string | readonly string[], ids: readonly string[]): Promise<LoadResult | null> {
+  async function load(urls: string | readonly string[], ids: readonly string[], signal?: AbortSignal): Promise<LoadResult | null> {
     const myLoad = ++loadId;
-    const group = await fetchGroup(urls);
+    const group = await fetchGroup(urls, signal);
     if (myLoad !== loadId) {
       // A newer system was picked while this one downloaded: throw this one away.
       disposeGroup(group);
