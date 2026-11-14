@@ -3,7 +3,7 @@ import { mkdirSync, mkdtempSync, readFileSync, readdirSync, renameSync, rmSync, 
 import { spawnSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { deflateRawSync, gzipSync } from 'node:zlib';
+import { deflateRawSync, gunzipSync, gzipSync } from 'node:zlib';
 import { auditAnatomyProduction, decodeAsciiEscapesForAudit, modelUrls, parseApprovedGlb, readRegularFileNoFollow } from '../../scripts/anatomy-production-audit.mjs';
 import { keepsDrafts } from '../../src/visuals/prunedrafts';
 
@@ -461,6 +461,20 @@ describe('anatomy production artifact audit', () => {
     const textHintFragment = Buffer.from(fragment);
     textHintFragment[3] |= 0x01;
     f.file('pagefind/fragment/en_text_hint.pf_fragment', textHintFragment);
+    expect(f.check().errors).toEqual([]);
+
+    // Safe, standards-compliant optional metadata must remain compatible with
+    // Pagefind's real gzip-wrapped search artifacts, including the WASM path.
+    for (const [name, flag, metadata] of [
+      ['filename', 0x08, Buffer.concat([Buffer.from('pagefind-index'), Buffer.from([0])])],
+      ['comment', 0x10, Buffer.concat([Buffer.from('safe search data'), Buffer.from([0])])],
+      ['extra', 0x04, Buffer.from([0x04, 0x00, 0x10, 0x20, 0x30, 0x40])],
+    ] as const) {
+      const ordinary = Buffer.concat([fragment.subarray(0, 10), metadata, fragment.subarray(10)]);
+      ordinary[3] = flag;
+      expect(gunzipSync(ordinary)).toEqual(gunzipSync(fragment));
+      f.file(`pagefind/fragment/en_safe_header_${name}.pf_fragment`, ordinary);
+    }
     expect(f.check().errors).toEqual([]);
 
     // A gzip member can hide public data in optional header fields that
