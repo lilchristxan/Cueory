@@ -1062,26 +1062,107 @@ export function parseApprovedGlb(bytes) {
  * An empty dist directory must never pass a release-upload check merely
  * because it contains no draft anatomy files.
  */
+/**
+ * Inspect the actual document structure rather than treating HTML-looking
+ * text inside scripts, styles or comments as real elements. This intentionally
+ * accepts a conservative subset of Astro's generated HTML: ambiguous syntax
+ * fails closed instead of certifying a broken release artifact.
+ */
+function hasUsableSiteEntrypoint(html) {
+  let cursor = 0;
+  let state = 'doctype';
+  let bodyHasElement = false;
+  const allowedInside = () => state === 'head-content' || state === 'body-content';
+  const rawTags = new Set([
+    'script', 'style', 'title', 'textarea', 'template', 'noscript',
+    'xmp', 'iframe', 'noembed', 'noframes',
+  ]);
+  const notRendered = new Set([
+    'script', 'style', 'template', 'noscript', 'link', 'meta', 'source', 'track',
+  ]);
+
+  while (cursor < html.length) {
+    const next = html.indexOf('<', cursor);
+    const end = next === -1 ? html.length : next;
+    // Text outside the document is not evidence of a valid entrypoint.
+    if (['doctype', 'html-open', 'done'].includes(state) && html.slice(cursor, end).trim()) return false;
+    cursor = end;
+    if (next === -1) break;
+
+    if (html.startsWith('<!--', cursor)) {
+      const closing = html.indexOf('-->', cursor + 4);
+      if (closing < 0) return false;
+      cursor = closing + 3;
+      continue;
+    }
+    if (html.startsWith('<!', cursor)) {
+      const doctype = /^<!doctype\s+html\s*>/i.exec(html.slice(cursor));
+      if (!doctype || state !== 'doctype') return false;
+      cursor += doctype[0].length;
+      state = 'html-open';
+      continue;
+    }
+
+    // A > inside quoted attributes does not close the tag.
+    let ending = cursor + 1;
+    let quote = '';
+    while (ending < html.length) {
+      const char = html[ending];
+      if (quote) {
+        if (char === quote) quote = '';
+      } else if (char === '"' || char === "'") quote = char;
+      else if (char === '<') return false;
+      else if (char === '>') break;
+      ending++;
+    }
+    if (ending >= html.length || quote) return false;
+    const token = html.slice(cursor, ending + 1);
+    cursor = ending + 1;
+    const closing = token.startsWith('</');
+    const match = closing
+      ? /^<\/([a-z][a-z\d:-]*)\s*>$/i.exec(token)
+      : /^<([a-z][a-z\d:-]*)(?:\s[\s\S]*)?>$/i.exec(token);
+    if (!match) return false;
+    const tag = match[1].toLowerCase();
+
+    if (tag === 'html') {
+      if (closing && state === 'html-close') state = 'done';
+      else if (!closing && state === 'html-open') state = 'head-open';
+      else return false;
+      continue;
+    }
+    if (tag === 'head') {
+      if (closing && state === 'head-content') state = 'body-open';
+      else if (!closing && state === 'head-open') state = 'head-content';
+      else return false;
+      continue;
+    }
+    if (tag === 'body') {
+      if (closing && state === 'body-content') state = 'html-close';
+      else if (!closing && state === 'body-open') state = 'body-content';
+      else return false;
+      continue;
+    }
+    if (!allowedInside()) return false;
+
+    if (!closing && rawTags.has(tag)) {
+      // HTML treats these elements' contents as opaque text. In particular,
+      // literal <body> strings in JS and CSS must not satisfy the release gate.
+      const close = new RegExp('</' + tag + '\\s*>', 'i').exec(html.slice(cursor));
+      if (!close) return false;
+      cursor += close.index + close[0].length;
+      continue;
+    }
+    if (!closing && state === 'body-content' && !notRendered.has(tag)) bodyHasElement = true;
+  }
+  return state === 'done' && bodyHasElement;
+}
+
 export function builtSiteEntrypointErrors(distDir) {
   const entry = join(resolve(distDir), 'index.html');
   try {
     const html = readRegularFileNoFollow(entry);
-    // The entry point must be a complete HTML document, not tag text inside
-    // an HTML comment or an unfinished document with no closing body.
-    const markup = html.replace(/<!--[\s\S]*?-->/g, ' ');
-    // A partial '<!-' adjacent to a completed comment can become a comment
-    // opener in parsed HTML. Fail closed rather than interpreting its body.
-    if (markup.includes('<!-')) return ['production site entry point is invalid: /index.html'];
-    // A leftover comment opener or closer means the visible body is not
-    // trustworthy. Never validate tags hidden in an unterminated comment.
-    if (markup.includes('<!--') || markup.includes('-->')) {
-      return ['production site entry point is invalid: /index.html'];
-    }
-    const bodyMatch = /<body(?:\s[^<>]*)?>([\s\S]*?)<\/body\s*>/i.exec(markup);
-    if (/<!doctype\s+html\s*>/i.test(markup) &&
-        /<html(?:\s[^<>]*)?>[\s\S]*<\/html\s*>/i.test(markup) &&
-        /<head(?:\s[^<>]*)?>[\s\S]*<\/head\s*>/i.test(markup) &&
-        bodyMatch && /<[^>]+>/.test(bodyMatch[1])) return [];
+    if (hasUsableSiteEntrypoint(html)) return [];
     return ['production site entry point is invalid: /index.html'];
   } catch {
     return ['production site entry point is missing or unreadable: /index.html'];
