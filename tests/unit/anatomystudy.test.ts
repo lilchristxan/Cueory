@@ -3,6 +3,7 @@ import {
   anatomyStudyMessage,
   createAnatomyStudy,
   createReviewQueueRequestGuard,
+  REVIEW_PAGE_SIZE,
   createSavedViewsRequestGuard,
   createStudyIdentityGuard,
   isViewCamera,
@@ -21,7 +22,15 @@ const camera: ViewCamera = { position: [0, 0, 3], target: [0, 0, 0], up: [0, 1, 
 
 /** A fake of the shared client: a session (or none) and one canned reply per function. */
 function fakeClient(options: { signedIn?: boolean; userId?: string; replies?: Partial<Record<string, { data: unknown; error: unknown }>> } = {}) {
-  const rpc = vi.fn(async (fn: string, _args?: unknown) => options.replies?.[fn] ?? { data: null, error: null });
+  const rpc = vi.fn((fn: string, _args?: unknown) => {
+    const reply = options.replies?.[fn] ?? { data: null, error: null };
+    const promise = Promise.resolve(reply);
+    return fn === 'my_anatomy_review_queue'
+      ? Object.assign(promise, { range: async (from: number, to: number) => ({
+          ...reply, data: Array.isArray(reply.data) ? reply.data.slice(from, to + 1) : reply.data,
+        }) })
+      : promise;
+  });
   const client = {
     auth: { getSession: async () => ({ data: { session: options.signedIn === false ? null : { user: { id: options.userId ?? 'student-1' } } }, error: null }) },
     rpc,
@@ -242,7 +251,9 @@ describe('createAnatomyStudy', () => {
       const rpc = vi.fn((name: string) => {
         expect(name).toBe(functionName);
         readStarted();
-        return pending;
+        return name === 'my_anatomy_review_queue'
+          ? Object.assign(pending, { range: () => pending })
+          : pending;
       });
       const client = {
         auth: { getSession: async () => ({ data: { session: { user: { id: userId } } }, error: null }) },
@@ -264,7 +275,7 @@ describe('createAnatomyStudy', () => {
 
   it('rejects an after-read session error instead of returning potentially cross-account data', async () => {
     let checks = 0;
-    const rpc = vi.fn(async () => ({ data: [{ id: 'untrusted-row' }], error: null }));
+    const rpc = vi.fn(() => ({ range: async () => ({ data: [{ id: 'untrusted-row' }], error: null }) }));
     const client = {
       auth: { getSession: async () => {
         checks += 1;
@@ -312,6 +323,49 @@ describe('createAnatomyStudy', () => {
     const { study } = fakeClient({ replies: { record_anatomy_misses: { data: null, error } } });
     const outcome = await study.recordMisses('heart', ['FMA1'], 'student-1');
     expect(outcome).toEqual({ ok: false, message: "you've recorded a lot of misses recently. they'll be kept again in a little while.", cause: error });
+  });
+
+  it('reads all 1,254 active whole-body rows in bounded RPC ranges, not only the first 1,000', async () => {
+    const all: ReviewQueueRow[] = Array.from({ length: 1254 }, (_, i) => ({
+      id: `00000000-0000-4000-8000-${String(i + 1).padStart(12, '0')}`,
+      system_key: 'whole-body', structure_id: `FMA${i + 1}`, missed_count: 1,
+      first_missed_at: '2026-11-05T10:00:00Z', last_missed_at: '2026-11-05T10:00:00Z', cleared_at: null,
+    }));
+    const ranges: Array<[number, number]> = [];
+    const client = {
+      auth: { getSession: async () => ({ data: { session: { user: { id: 'student-1' } } }, error: null }) },
+      rpc: (name: string) => {
+        expect(name).toBe('my_anatomy_review_queue');
+        return { range: async (from: number, to: number) => {
+          ranges.push([from, to]);
+          return { data: all.slice(from, to + 1), error: null };
+        } };
+      },
+    } as unknown as AnatomyStudyClient;
+    const response = await createAnatomyStudy(async () => client).reviewQueue('student-1');
+    expect(response).toEqual({ ok: true, value: all });
+    expect(ranges).toEqual([[0, REVIEW_PAGE_SIZE - 1], [500, 999], [1000, 1499]]);
+  });
+
+  it('rejects a full review queue when a later page fails or repeats an earlier row', async () => {
+    const first: ReviewQueueRow[] = Array.from({ length: REVIEW_PAGE_SIZE }, (_, i) => ({
+      id: `00000000-0000-4000-8000-${String(i + 1).padStart(12, '0')}`,
+      system_key: 'heart', structure_id: `FMA${i + 1}`, missed_count: 1,
+      first_missed_at: '2026-11-05T10:00:00Z', last_missed_at: '2026-11-05T10:00:00Z', cleared_at: null,
+    }));
+    const create = (second: { data: ReviewQueueRow[] | null; error: unknown }) => {
+      const client = {
+        auth: { getSession: async () => ({ data: { session: { user: { id: 'student-1' } } }, error: null }) },
+        rpc: () => ({ range: async (from: number) => from === 0
+          ? { data: first, error: null } : second }),
+      } as unknown as AnatomyStudyClient;
+      return createAnatomyStudy(async () => client);
+    };
+    const failed = await create({ data: null, error: { message: 'private network detail' } }).reviewQueue('student-1');
+    expect(failed.ok).toBe(false);
+    expect(await create({ data: [first[499]!], error: null }).reviewQueue('student-1')).toEqual({
+      ok: false, message: 'could not load your full review queue. please try again.',
+    });
   });
 
   it('clears a miss, lists the queue, saves, lists and deletes views with the SQL argument names', async () => {
