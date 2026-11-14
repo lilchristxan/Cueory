@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import { site } from '../config/site';
 import type { SendResult } from './flagsend';
-import { charactersLeft, checkReport, PATIENT_INFO_WARNING, REASONS, reasonInWords, type FlagProblem, type FlagReport, type Reason } from './flag';
+import { charactersLeft, checkReportWithContext, reportContextPrefix, PATIENT_INFO_WARNING, REASONS, reasonInWords, type FlagProblem, type FlagReport, type Reason } from './flag';
 
 interface Props {
   page: string;
@@ -14,6 +14,8 @@ interface Props {
   onOpen?: () => void;
   /** 'icon': the footer's flag icon opens the form in a panel above the bar (Task 115). */
   variant?: 'text' | 'icon';
+  /** Public context for study items without database question UUIDs. */
+  context?: string;
 }
 const control = 'min-h-11 min-w-11 rounded-md border border-control px-4 py-2 text-ink disabled:opacity-50';
 
@@ -28,7 +30,7 @@ export default function FlagForm(props: Props) {
     if (account.current.known === true && !props.signedIn) account.current.changes += 1;
     account.current.known = props.signedIn;
   }
-  return <ReportForm key={JSON.stringify([props.page, props.itemId, props.itemVersionId, account.current.changes])} {...props} />;
+  return <ReportForm key={JSON.stringify([props.page, props.itemId, props.itemVersionId, props.context, account.current.changes])} {...props} />;
 }
 
 
@@ -45,7 +47,7 @@ export function SignedOutReportHelp() {
   </div>;
 }
 
-function ReportForm({ page, itemId, itemVersionId, signedIn, send, onOpen, variant = 'text' }: Props) {
+function ReportForm({ page, itemId, itemVersionId, signedIn, send, onOpen, variant = 'text', context }: Props) {
   const icon = variant === 'icon';
   const id = useId();
   const panelId = `${id}-panel`, commentId = `${id}-comment`, countId = `${id}-count`, warningId = `${id}-patient-warning`;
@@ -75,7 +77,7 @@ function ReportForm({ page, itemId, itemVersionId, signedIn, send, onOpen, varia
 
   const submit = async () => {
     if (busy.current || !signedIn) return;
-    const checked = checkReport({ page, itemId, itemVersionId, reason, comment });
+    const checked = checkReportWithContext({ page, itemId, itemVersionId, reason, comment }, context);
     if (!checked.ok) { setProblems(checked.problems); return; }
     setProblems([]); setAnnouncement(''); busy.current = true; setPending(true);
     let result: SendResult;
@@ -106,6 +108,7 @@ function ReportForm({ page, itemId, itemVersionId, signedIn, send, onOpen, varia
         ? 'absolute bottom-full left-0 z-10 mb-2 max-h-96 w-flag-panel overflow-y-auto rounded-md border border-line bg-page p-4 shadow-lift'
         : 'mt-3 rounded-md border border-line bg-page p-4'}
       onKeyDown={event => { if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); close(); } }}>
+      {context && <p className="mb-3 break-words text-sm text-ink" data-testid="flag-report-context">this report is about {context}.</p>}
       {signedIn === null ? <p className="text-ink">checking your account…</p> : !signedIn ? <SignedOutReportHelp /> : <form noValidate onSubmit={event => { event.preventDefault(); void submit(); }}>
         <fieldset disabled={pending} aria-describedby={error('reason') ? errorId('reason') : undefined}>
           <legend className="font-medium">what's wrong?</legend>
@@ -123,7 +126,7 @@ function ReportForm({ page, itemId, itemVersionId, signedIn, send, onOpen, varia
         <textarea ref={commentBox} id={commentId} value={comment} onChange={event => setComment(event.target.value)} required={reason === 'other'} readOnly={pending}
           aria-invalid={error('comment') ? true : undefined} aria-describedby={[warningId, countId, error('comment') ? errorId('comment') : ''].filter(Boolean).join(' ')}
           rows={4} className="mt-2 block min-h-11 w-full max-w-full rounded-md border border-control bg-page p-3 text-ink" />
-        <p id={countId} className="mt-2 text-sm text-ink-soft">{charactersLeft(comment).toLocaleString('en-US')} characters left</p>
+        <p id={countId} className="mt-2 text-sm text-ink-soft">{Math.max(0, charactersLeft(comment) - [...reportContextPrefix(context)].length).toLocaleString('en-US')} characters left</p>
         {problemText('comment')}
         <p ref={context} tabIndex={-1} className="mt-4 break-all text-sm text-ink-soft"
           aria-describedby={(['page', 'itemId', 'itemVersionId'] as const).filter(field => error(field)).map(errorId).join(' ') || undefined}>
