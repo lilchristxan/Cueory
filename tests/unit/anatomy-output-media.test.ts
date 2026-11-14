@@ -87,6 +87,20 @@ describe('production media signatures and renamed anatomy geometry', () => {
     expect(unreviewedMediaPayload(f.file('assets/prose.jpg', bytes))).toBe(false);
   });
 
+  it('rejects OBJ geometry appended after the initial media scan window', () => {
+    const f = fixture();
+    const disguised = Buffer.concat([
+      Buffer.from([0xff, 0xd8, 0xff, 0xe0]),
+      Buffer.alloc(65 * 1024, 0),
+      Buffer.from(OBJ),
+    ]);
+    const path = f.file('assets/late-geometry.jpg', disguised);
+    expect(unreviewedMediaPayload(path)).toBe(true);
+    expect(f.audit().errors).toContain(
+      'unreviewed media payload or raw geometry in production output: /assets/late-geometry.jpg',
+    );
+  });
+
   it('accepts known compatible media signatures without certifying a full decoder pass', () => {
     const f = fixture();
     const safe: Array<[string, Buffer]> = [
