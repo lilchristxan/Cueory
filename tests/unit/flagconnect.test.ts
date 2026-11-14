@@ -324,7 +324,7 @@ describe('flag reports are bound to the account that pressed Send (Task 178)', (
     const { client, calls, load } = fakeClient();
     expect(await makeFlagSend(load, 'user-1')({ ...good, itemId, itemVersionId: versionId }))
       .toBe('sent');
-    expect(client.auth.getSession).toHaveBeenCalledTimes(1);
+    expect(client.auth.getSession).toHaveBeenCalledTimes(2);
     expect(calls).toHaveLength(1);
     expect(calls[0]?.args).toEqual({
       page: good.page,
