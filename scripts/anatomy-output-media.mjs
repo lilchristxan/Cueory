@@ -100,15 +100,34 @@ export function unreviewedMediaPayload(path) {
     fd = openSync(path, constants.O_RDONLY | constants.O_NOFOLLOW);
     const info = fstatSync(fd);
     if (!info.isFile() || info.size <= 0) return true;
-    const count = Math.min(info.size, SCAN_BYTES);
-    const bytes = Buffer.alloc(count);
-    let offset = 0;
-    while (offset < count) {
-      const received = readSync(fd, bytes, offset, count - offset, offset);
-      if (received === 0) return true;
-      offset += received;
+    // Verify the claimed media magic at offset zero, then inspect the entire
+    // file for raw meshes with overlapping, bounded windows. Geometry may be
+    // appended beyond the initial 64 KiB without changing the media header.
+    const headerSize = Math.min(info.size, SCAN_BYTES);
+    const header = Buffer.alloc(headerSize);
+    let filled = 0;
+    while (filled < headerSize) {
+      const read = readSync(fd, header, filled, headerSize - filled, filled);
+      if (read === 0) return true;
+      filled += read;
     }
-    return looksLikeRawMesh(bytes) || !matchesMediaSignature(ext, bytes);
+    if (!matchesMediaSignature(ext, header) || looksLikeRawMesh(header)) return true;
+    let offset = headerSize;
+    let preceding = header;
+    while (offset < info.size) {
+      const bytes = Buffer.alloc(Math.min(SCAN_BYTES, info.size - offset));
+      let filledChunk = 0;
+      while (filledChunk < bytes.length) {
+        const read = readSync(fd, bytes, filledChunk, bytes.length - filledChunk, offset + filledChunk);
+        if (read === 0) return true;
+        filledChunk += read;
+      }
+      const combined = Buffer.concat([preceding, bytes]);
+      if (looksLikeRawMesh(combined)) return true;
+      preceding = combined.subarray(Math.max(0, combined.length - SCAN_BYTES));
+      offset += bytes.length;
+    }
+    return false;
   } catch {
     return true;
   } finally {
