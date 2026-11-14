@@ -419,7 +419,7 @@ describe('fromSupabase — no silent row truncation', () => {
     const result = await loadExport(reader({ anatomy_saved_views: { data: [saved], error: null } }).db);
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    expect(result.data.anatomyViews[0]?.hidden).toEqual(hidden);
+    expect(result.data.anatomyViews?.[0]?.hidden).toEqual(hidden);
   });
 
   it('refuses malformed anatomy rows and later-page failures instead of returning partial account data', async () => {
