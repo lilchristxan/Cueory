@@ -76,6 +76,17 @@ describe('production media signatures and renamed anatomy geometry', () => {
     );
   });
 
+  it('does not flag printable prose ending in a vertex-shaped phrase as a binary-prefixed mesh', () => {
+    const f = fixture();
+    const bytes = Buffer.concat([
+      Buffer.from([0xff, 0xd8, 0xff, 0xe0]),
+      Buffer.from('ordinary prose ending with v 0 0 0\nf 1 2 3\n'),
+    ]);
+    // A genuine OBJ vertex directly after the media magic is blocked by the
+    // neighboring regression. A printable preamble is not such a vertex.
+    expect(unreviewedMediaPayload(f.file('assets/prose.jpg', bytes))).toBe(false);
+  });
+
   it('accepts known compatible media signatures without certifying a full decoder pass', () => {
     const f = fixture();
     const safe: Array<[string, Buffer]> = [
