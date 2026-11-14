@@ -1,8 +1,8 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { anatomyInventory, anatomyReviewMarkdown, anatomyReviewSheets } from '../../scripts/anatomy-review-report.mjs';
+import { anatomyInventory, anatomyReviewMarkdown, anatomyReviewSheets, writeAnatomyReviewSheets } from '../../scripts/anatomy-review-report.mjs';
 
 /** Fake model names and source lines only; no clinical content or answer keys in a public test. */
 const roots: string[] = [];
@@ -218,6 +218,45 @@ describe('read-only anatomy review inventory', () => {
     };
     expect(() => anatomyReviewSheets([{ ...entry, id: '../private' }])).toThrow('invalid anatomy review sheet data');
     expect(() => anatomyReviewSheets([{ ...entry, id: 'SAFE' }])).toThrow('invalid anatomy review sheet data');
+  });
+
+
+  it('writes one independent checklist per source model without overwriting human edits', () => {
+    const root = setup();
+    writeSystem(root, 'alpha', visual('alpha', 'FMA1'));
+    writeSystem(root, 'zeta', visual('zeta', 'FMA2'));
+    const target = join(root, 'exported-review');
+    const files = writeAnatomyReviewSheets(anatomyInventory(root), target);
+    expect(files.map((file: string) => file.split('/').pop())).toEqual([
+      'anatomy-alpha-review.md',
+      'anatomy-zeta-review.md',
+    ]);
+    expect(readdirSync(target).sort()).toEqual([
+      'anatomy-alpha-review.md',
+      'anatomy-zeta-review.md',
+    ]);
+    for (const file of files) {
+      const text = readFileSync(file, 'utf8');
+      expect(text).toContain('sample part \\| exact');
+      expect(text).toContain('FMA1 BP1 sample part');
+      expect(text).toContain('Human review before approval');
+      expect(text).toContain('Keep the source status as `draft` until the founder approves publication.');
+    }
+    const first = readFileSync(files[0]!, 'utf8');
+    expect(() => writeAnatomyReviewSheets(anatomyInventory(root), target))
+      .toThrow('review output already exists');
+    expect(readFileSync(files[0]!, 'utf8')).toBe(first);
+    expect(existsSync(join(root, 'content', 'visuals', 'anatomy-alpha.json'))).toBe(true);
+  });
+
+  it('refuses a file path as a review output directory', () => {
+    const root = setup();
+    writeSystem(root, 'alpha');
+    const file = join(root, 'existing-file.txt');
+    writeFileSync(file, 'human review');
+    expect(() => writeAnatomyReviewSheets(anatomyInventory(root), file))
+      .toThrow('review output directory must be a real directory');
+    expect(readFileSync(file, 'utf8')).toBe('human review');
   });
 
 });
