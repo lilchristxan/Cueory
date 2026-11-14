@@ -239,6 +239,9 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
   const [compareState, setCompareState] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
   const speechOn = useMemo(() => canSpeak(), []);
   const generation = useMemo(() => createGeneration(), []);
+  // A new account cancels its predecessor's picture exports without retiring
+  // current-system model downloads that are safe for both accounts to view.
+  const pictureExportGeneration = useMemo(() => createGeneration(), []);
   const openGate = useMemo(() => createAnatomyOpenGate(), []);
   // Every explicit show/hide choice supersedes the visibility effect of earlier downloads.
   const visibilityIntent = useMemo(() => createGeneration(), []);
@@ -701,9 +704,9 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
       setCompareKey('');
       setCompareState('idle');
       setPosture('standing');
-      // Retire model-lifecycle work and a previously started picture export
-      // before the replacement account may use the same scene.
-      generation.bump();
+      // Retire outgoing account picture exports without invalidating a
+      // permitted current-system model download.
+      pictureExportGeneration.bump();
       setExportNote('');
       setExporting(null);
       sceneRef.current?.resetView();
@@ -1037,7 +1040,8 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
   const exportPicture = async (size: ExportSize) => {
     const scene = sceneRef.current;
     if (!scene || !system) return;
-    const mine = generation.token();
+    const mine = pictureExportGeneration.token();
+    const modelToken = generation.token();
     setExporting(size);
     setExportNote('');
     try {
@@ -1050,7 +1054,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
         credit: pictureCreditFor(system),
         labels: ids.map((id) => ({ id, text: labelTextFor(id, names, recallOn && labelsOn ? numbers : null) })),
       });
-      if (!generation.isCurrent(mine)) return; // the system changed while the picture was drawn
+      if (!pictureExportGeneration.isCurrent(mine) || !generation.isCurrent(modelToken)) return;
       const fileName = exportFileName(system.key, selected && !hidden.has(selected) ? (names.get(selected) ?? null) : null, size);
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
@@ -1062,10 +1066,10 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
       setTimeout(() => URL.revokeObjectURL(url), 10_000);
       setExportNote([`saved ${fileName}.`, ...labelNotes(names, leftOut, behind.length > 0)].join(' '));
     } catch (err) {
-      if (!generation.isCurrent(mine)) return;
+      if (!pictureExportGeneration.isCurrent(mine) || !generation.isCurrent(modelToken)) return;
       setExportNote(anatomyFailureMessage('picture', err));
     } finally {
-      if (generation.isCurrent(mine)) setExporting(null);
+      if (pictureExportGeneration.isCurrent(mine) && generation.isCurrent(modelToken)) setExporting(null);
     }
   };
 
