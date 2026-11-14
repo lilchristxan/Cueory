@@ -88,7 +88,8 @@ test('review pictures wait for a nonzero canvas layout before requesting the mod
   });
   expect(await canvas.evaluate((element) => element.clientWidth)).toBe(0);
   await page.getByRole('button', { name: 'make front and side pictures' }).click();
-  await expect(page.getByRole('status')).toContainText('loading the model and making pictures');
+  await expect(page.getByRole('region', { name: 'Front and side pictures' }).getByRole('status'))
+    .toContainText('loading the model and making pictures');
 
   // A frame or a timer must never start Three.js using a 1px canvas.
   await page.waitForTimeout(250);
@@ -115,7 +116,8 @@ test('a failed model request shows a retry and a new renderer can export both pi
   });
   await page.goto(PATH);
   await page.getByRole('button', { name: 'make front and side pictures' }).click();
-  await expect(page.getByRole('alert')).toContainText('pictures could not be made');
+  await expect(page.getByRole('alert').filter({ hasText: 'pictures could not be made' }))
+    .toBeVisible();
   await expect(page.getByRole('img', { name: /model review only/ })).toHaveCount(0);
   await page.getByRole('button', { name: 'try making pictures again' }).click();
   await expect(page.getByRole('img', { name: 'kidneys and urinary tract: front view, model review only' }))
