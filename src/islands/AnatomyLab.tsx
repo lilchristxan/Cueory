@@ -274,6 +274,8 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
   }, [bulkPrompt, systemKey]);
 
   const system = systems.find((s) => s.key === systemKey) ?? systems[0];
+  const identitySystemRef = useRef(system);
+  identitySystemRef.current = system;
   const names = useMemo(() => new Map(system?.structures.map((s) => [s.id, s.text]) ?? []), [system]);
   // Recall mode's numbers: one per structure in the system's own order, so a number never changes while hiding.
   const numbers = useMemo(() => recallNumbers(system?.structures.map((s) => s.id) ?? []), [system]);
@@ -671,8 +673,9 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
       // selection, fade, visibility history and camera before B can use the lab.
       // Preserve the initial whole-body outer-layer-only state, not show-all.
       visibilityIntent.bump();
-      const firstLayers = system?.key === WHOLE_BODY_KEY && system.model.layerFiles
-        ? initialLayerPlan(system, layersOf(system.structures)) : null;
+      const latestSystem = identitySystemRef.current;
+      const firstLayers = latestSystem?.key === WHOLE_BODY_KEY && latestSystem.model.layerFiles
+        ? initialLayerPlan(latestSystem, layersOf(latestSystem.structures)) : null;
       const baseline: Visibility = { hidden: firstLayers?.hidden ?? new Set<string>(), faded: new Set<string>() };
       setHistory(createHistory(baseline));
       setHidden(baseline.hidden);
@@ -709,7 +712,10 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
       savedViewsRequestGuard.invalidate();
       reviewQueueRequestGuard.invalidate();
     };
-  }, [identityGuard, savedViewsRequestGuard, reviewQueueRequestGuard, system, visibilityIntent]);
+  // Updating the visible system must not tear down the auth listener or
+  // invalidate a signed-in student's personal data. Read the latest system
+  // through a ref inside the stable subscription instead.
+  }, [identityGuard, savedViewsRequestGuard, reviewQueueRequestGuard, visibilityIntent]);
 
   const studyReady = signedIn && load.state === 'ready';
   const refreshReviewQueue = useCallback(() => {
