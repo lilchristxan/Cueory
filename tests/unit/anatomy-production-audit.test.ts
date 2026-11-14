@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
+import { spawnSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, readFileSync, readdirSync, renameSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -342,6 +343,30 @@ function setup() {
 }
 
 describe('anatomy production artifact audit', () => {
+  it('cannot silently pass a missing production build through a symlinked CLI entry', () => {
+    const temporary = mkdtempSync(join(tmpdir(), 'cueory-anatomy-audit-cli-'));
+    roots.push(temporary);
+    const original = join(process.cwd(), 'scripts', 'anatomy-production-audit.mjs');
+    const alias = join(temporary, 'release-audit-alias.mjs');
+    symlinkSync(original, alias);
+    const missingDist = join(temporary, 'missing-build');
+    const missingSources = join(temporary, 'missing-content');
+
+    // Node's module URL resolves the symlink but argv[1] retains the alias.
+    // Even through an alias the release audit MUST execute and reject the
+    // missing build, never exit successfully without doing any checks.
+    for (const executable of [original, alias]) {
+      const run = spawnSync(process.execPath, [executable, missingDist, missingSources], {
+        encoding: 'utf8', timeout: 10_000,
+      });
+      expect(run.error, executable).toBeUndefined();
+      expect(run.status, executable).toBe(1);
+      expect(run.stderr, executable).toContain('anatomy production audit FAILED');
+      expect(run.stderr, executable).toContain('production output does not exist:');
+      expect(run.stdout, executable).toBe('');
+    }
+  });
+
   it('accepts approved GLB bytes while detecting a copied model under a misleading extension', () => {
     const f = setup();
     expect(f.check().errors).toEqual([]);
