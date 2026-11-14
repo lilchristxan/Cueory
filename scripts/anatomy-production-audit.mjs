@@ -594,19 +594,26 @@ function containsReservedAnatomyId(text, draftIds) {
  * A suspicious overlarge encoded run is not evidence of a safe asset. Refuse
  * it instead of skipping a potentially unpublished multi-megabyte model.
  */
-function hasUnsafeEncodedAnatomyPayload(text, draftIds) {
+function hasUnsafeEncodedAnatomyPayload(text, draftIds, budget = { examined: 0 }) {
   const MAX_ENCODED_RUN = 24 * 1024 * 1024;
   const MAX_TOTAL_ENCODED = 48 * 1024 * 1024;
-  let examined = 0;
-  const checkEncoded = (encoded, decoderContext = false) => {
-    if (encoded.length > MAX_ENCODED_RUN || (examined += encoded.length) > MAX_TOTAL_ENCODED) return true;
-    if (encoded.length % 4 === 1) return decoderContext;
-    const normalized = encoded.replaceAll('-', '+').replaceAll('_', '/');
+
+  const inspect = (candidate, explicit = false) => {
+    // Count whitespace as well: space-wrapped encoded models must not evade
+    // the bounded inspection budget.
+    if (candidate.length > MAX_ENCODED_RUN ||
+        (budget.examined += candidate.length) > MAX_TOTAL_ENCODED) return true;
+    const normalized = candidate.replace(/[ \t\n\r\f]/g, '').replaceAll('-', '+').replaceAll('_', '/');
+    if (!normalized || normalized.length % 4 === 1) return explicit;
     const bytes = Buffer.from(normalized, 'base64');
-    if (bytes.toString('base64').replace(/=+$/u, '') !== normalized.replace(/=+$/u, '')) return decoderContext;
+    // Node's decoder silently ignores invalid characters. Demand exact
+    // round-trip bytes before trusting a candidate as benign.
+    if (bytes.toString('base64').replace(/=+$/u, '') !== normalized.replace(/=+$/u, '')) return explicit;
     if (containsGlbHeader(bytes) || containsValidatedArchive(bytes)) return true;
     const decoded = bytes.toString('utf8');
     if (containsReservedAnatomyId(decoded, draftIds)) return true;
+    // Binary GLBs are not the only geometry form: data URI text glTF is also
+    // an unreviewed model even if no original source ID appears in it.
     if (bytes.length > 0 && bytes.length <= 16 * 1024 * 1024 && decoded.trimStart().startsWith('{')) {
       try {
         const json = JSON.parse(decoded);
@@ -614,24 +621,38 @@ function hasUnsafeEncodedAnatomyPayload(text, draftIds) {
             Array.isArray(json.meshes) && json.meshes.length > 0 &&
             Array.isArray(json.accessors) && Array.isArray(json.buffers)) return true;
       } catch {
-        // Unrelated encoded JSON is not anatomy geometry.
+        // Unrelated encoded JSON is permitted when it contains no model.
       }
     }
     return false;
   };
-  const runs = /(?:^|[^A-Za-z0-9+/_=-])([A-Za-z0-9+/_-]{8,}={0,2})(?=$|[^A-Za-z0-9+/_=-])/g;
+
+  // atob ignores ASCII whitespace inside its string argument. A base64 GLB
+  // broken into 76-character lines would evade scanning each run separately.
+  // Restrict joining to the contents of one quoted literal.
+  const atobLiterals = /\batob\s*\(\s*(['"\x60])([A-Za-z0-9+/_=\s-]{4,})\1\s*\)/g;
+  for (const match of text.matchAll(atobLiterals)) {
+    if (inspect(match[2], true)) return true;
+  }
+  // The same wrapping may appear in a base64 data URI. Its MIME header is
+  // bounded so unrelated prose cannot be joined into a made-up payload.
+  const dataUris = /data:[^'"\x60<>\s,;]{1,100}(?:;[^'"\x60<>\s,;]{1,100})*;base64,([A-Za-z0-9+/_= \t\n\r\f-]{4,})/gi;
+  for (const match of text.matchAll(dataUris)) {
+    if (inspect(match[1], true)) return true;
+  }
+
+  // Ordinary unwrapped literals also need inspection. Tiny runs are skipped
+  // unless they begin with the base64 representation of a reserved FMA, BP
+  // or FIX prefix. FMA7088 and FIX001 need only 10 and 8 encoded characters.
+  const runs = /(?:^|[^A-Za-z0-9+/_=-])([A-Za-z0-9+/_-]{4,}={0,2})(?=$|[^A-Za-z0-9+/_=-])/g;
   for (const match of text.matchAll(runs)) {
     const encoded = match[1];
+    if (encoded.length < 12 && !/^(?:Rk1B|RklY|QlA)/.test(encoded)) continue;
+    // Invalid candidate lengths used deliberately with an active decoder
+    // cannot be silently treated as approved published content.
     const before = text.slice(Math.max(0, match.index - 64), match.index + match[0].length - encoded.length);
-    const decoderContext = /(?:atob\s*\(\s*['"]|base64\s*,\s*|from\s*\([^)]*['"])/i.test(before);
-    if (checkEncoded(encoded, decoderContext)) return true;
-  }
-  // atob permits whitespace in a quoted argument. A long GLB can be split
-  // across many lines without ever containing a contiguous GLB Base64 token.
-  const wrapped = /(?:atob\s*\(\s*['"]|base64,)([A-Za-z0-9+/_=\t\n\r\f ]{8,})(?=['"]|\s*[)"'<>])/gi;
-  for (const match of text.matchAll(wrapped)) {
-    const compact = match[1].replace(/[\t\n\r\f ]/g, '');
-    if (checkEncoded(compact, true)) return true;
+    const explicit = /(?:atob\s*\(\s*['"]|base64\s*,\s*|from\s*\([^)]*['"])/i.test(before);
+    if (inspect(encoded, explicit)) return true;
   }
   return false;
 }
@@ -1834,7 +1855,8 @@ export function auditAnatomyProduction(distDir, contentDir) {
     }
     // Whole, valid draft models can be concealed as base64 in public JS or
     // HTML without a literal glTF header or visible BodyParts3D identifier.
-    if (variants.some((value) => hasUnsafeEncodedAnatomyPayload(value, draftTokens))) {
+    const encodedBudget = { examined: 0 };
+    if (variants.some((value) => hasUnsafeEncodedAnatomyPayload(value, draftTokens, encodedBudget))) {
       errors.push('encoded geometry, archive or reserved anatomy ID in built text requires review: ' + file.slice(dist.length + 1));
     }
   }
