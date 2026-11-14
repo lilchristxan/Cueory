@@ -103,6 +103,7 @@ describe('anatomy files', () => {
       key: 'sample',
       title: 'sample system',
       status: 'draft',
+      hierarchyTree: 'partof',
       model: { file: '/models/anatomy/sample.glb', release: 'r1', via: 'gltfpack' },
       structures: [
         { id: 'FMA1', text: 'sample part one', group: 'set x' },
@@ -129,14 +130,36 @@ describe('anatomy files', () => {
     ['a nested model folder', { model: { file: '/models/anatomy/archive/sample.glb', release: 'r1' } }, 'model.file'],
     ['no release', { model: { file: '/models/anatomy/sample.glb' } }, 'model.release'],
     ['an unknown status', { status: 'published' }, 'status'],
+    ['an unknown hierarchy tree', { hierarchyTree: 'location' }, '"hierarchyTree" must be "partof" or "isa"'],
     ['no labels', { labels: [] }, 'labels'],
     ['a duplicate id', { labels: [{ id: 'FMA1', text: 'a', source: 's' }, { id: 'FMA1', text: 'b', source: 's' }] }, 'two labels'],
     ['an id with a space', { labels: [{ id: 'FMA 1', text: 'a', source: 's' }] }, 'id'],
     ['a label without a name', { labels: [{ id: 'FMA1', text: ' ', source: 's' }] }, 'official name'],
     ['a label without a source', { labels: [{ id: 'FMA1', text: 'a' }] }, 'source'],
     ['an unknown layer', { labels: [{ id: 'FMA1', text: 'a', source: 's', layer: 'bones' }] }, '"layer", when given'],
+    ['parents that are not a list', { labels: [{ id: 'FMA1', text: 'a', source: 's', parents: 'body' }] }, '"parents", when given'],
+    ['an empty parent name', { labels: [{ id: 'FMA1', text: 'a', source: 's', parents: ['body', ' '] }] }, '"parents", when given'],
+    ['also-names that are not a list', { labels: [{ id: 'FMA1', text: 'a', source: 's', also: 'b' }] }, '"also", when given'],
+    ['an also-name that is not text', { labels: [{ id: 'FMA1', text: 'a', source: 's', also: [1] }] }, '"also", when given'],
   ])('stops the build on %s', (_, overrides, message) => {
     expect(() => parseAnatomyFile(file(overrides), 'content/visuals/anatomy-sample.json')).toThrow(message);
+  });
+
+  it('passes a label\'s parents and alternative names through, as copies (Task 178)', () => {
+    const parents = ['sample body', 'set x'];
+    const also = ['part one, sample'];
+    const system = parseAnatomyFile(
+      file({ labels: [{ id: 'FMA1', text: 'sample part one', source: 's', group: 'set x', parents, also }, { id: 'FMA2', text: 'two', source: 's' }] }),
+      'content/visuals/anatomy-sample.json',
+    );
+    expect(system.structures[0]).toEqual({ id: 'FMA1', text: 'sample part one', group: 'set x', parents, also });
+    expect(system.structures[0]!.parents).not.toBe(parents);
+    expect(system.structures[1]).toEqual({ id: 'FMA2', text: 'two' });
+  });
+
+  it('preserves the PART-OF or IS-A source relation', () => {
+    expect(parseAnatomyFile(file({ hierarchyTree: 'partof' }), 'content/visuals/anatomy-sample.json').hierarchyTree).toBe('partof');
+    expect(parseAnatomyFile(file({ hierarchyTree: 'isa' }), 'content/visuals/anatomy-sample.json').hierarchyTree).toBe('isa');
   });
 
   it('reads the test fixture as a fixture', () => {
@@ -343,6 +366,24 @@ describe('the structure list', () => {
     expect(groupStructures(source, '7204')).toEqual([]);
     expect(groupStructures(source, 'FMA999')).toEqual([]);
     expect(groupStructures(source, '').flatMap((g) => g.items)).toHaveLength(3);
+  });
+
+  it('ranks an exact name first, lists only names holding every word, and searches alternative names (Task 178)', () => {
+    const source = [
+      { id: 'FMA1', text: 'left ventricle of heart', group: 'heart' },
+      { id: 'FMA2', text: 'ventricle, left', group: 'heart', also: ['sinister chamber'] },
+      { id: 'FMA3', text: 'right ventricle', group: 'heart' },
+      { id: 'FMA4', text: 'left atrium', group: 'heart' },
+    ];
+    const ids = (query: string) => groupStructures(source, query).flatMap((g) => g.items.map((s) => s.id));
+    // The exact name (same words, any order) comes before the name that merely contains both words.
+    expect(ids('left ventricle')).toEqual(['FMA2', 'FMA1']);
+    expect(ids('ventricles left')).toEqual(['FMA2', 'FMA1']);
+    // "right ventricle" and "left atrium" hold only one of the two words: not listed.
+    expect(ids('left ventricle')).not.toContain('FMA3');
+    expect(ids('sinister')).toEqual(['FMA2']);
+    // The ranked order decides the group order too, and the id prefix match still comes after the names.
+    expect(groupStructures([...source, { id: 'FMA50', text: 'aorta', group: 'vessels' }], 'fma').map((g) => g.group)).toEqual(['heart', 'vessels']);
   });
 
   it('keeps the full text-only catalog searchable while showing a bounded first page', () => {

@@ -4,6 +4,7 @@
   "kind": "model",
   "lessonIds": ["U03-T03-L01", "U03-T04-L02"],
   "status": "draft",
+  "hierarchyTree": "partof",
   "model": { "file": "/models/anatomy/lungs.glb", "release": "BodyParts3D 4.0", "via": "official download from dbarchive.biosciencedbc.jp" },
   "labels": [
     { "id": "FMA7394", "text": "trachea", "group": "tracheobronchial tree", "layer": "organs", "source": "bp3d-FMA7394" },

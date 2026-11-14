@@ -93,6 +93,8 @@ test.beforeAll(async () => {
           id: uuid(5), created_at: when, updated_at: when, not_after: null,
           user_agent: 'sample browser', ip: '203.0.113.5',
         }],
+        // Task 178: the new owner-scoped tables are empty for this made-up account.
+        anatomy_review_queue: [], anatomy_saved_views: [],
       };
       let name = 'Sample Student';
       const query = table => {
@@ -106,7 +108,20 @@ test.beforeAll(async () => {
       const client = {
         auth: {
           getSession: async () => ({ data: { session: params.has('signed-out') ? null : { user: { id: uuid(9), email: 'student@example.test', user_metadata: { full_name: 'Sample Student' } } } }, error: null }),
+          mfa: {
+            // The real export checks assurance both before and after reading.
+            // A fixture with no verified factors stays at aal1, not an MFA step-up.
+            getAuthenticatorAssuranceLevel: async () => ({
+              data: { currentLevel: 'aal1', nextLevel: 'aal1' }, error: null,
+            }),
+          },
           signOut: async options => { calls.push('signOut:' + options.scope); return { error: null }; },
+          // Match Supabase's auth subscription contract. The account export listens for
+          // cross-tab identity events and always unsubscribes after its last session check.
+          onAuthStateChange(callback) {
+            const listener = { callback };
+            return { data: { subscription: { unsubscribe() { listener.callback = null; } } } };
+          },
           // Task 309 requires the authenticated user's own Auth record in addition to the five data tables.
           getUser: async () => ({ data: { user: {
             id: uuid(9), created_at: when, last_sign_in_at: when,
@@ -149,6 +164,8 @@ test.beforeAll(async () => {
     resolveExtensions: ['.ts', '.tsx', '.js', '.jsx', '.json'],
     define: { 'process.env.NODE_ENV': '"production"' },
     plugins: [{ name: 'fixture-client', setup(builder) {
+      // The account code now checks the active auth generation. Give the fake client the same
+      // synchronous auth-event interface as Supabase so browser acceptance exercises that path.
       builder.onResolve({ filter: /\/supabaseclient(?:\.ts)?$/ }, () => ({ path: 'client', namespace: 'fixture' }));
       builder.onLoad({ filter: /.*/, namespace: 'fixture' }, () => ({ contents: `
         export const AUTH_STORAGE_KEY = 'cueory-auth';
@@ -263,6 +280,8 @@ test.describe('/account signed in (fake client)', () => {
     // The display-name limit's two profile fields are personal data too (Codex on #230).
     expect(saved.profile).toMatchObject({ nameChangeWindowStart: '2026-11-01T08:00:00.000Z', nameChangesInWindow: 1 });
     expect(saved.studyEvents).toHaveLength(1);
+    expect(saved.anatomyReviewQueue).toEqual([]);
+    expect(saved.anatomyViews).toEqual([]);
     // The session's user_metadata: what the sign-in provider shared.
     expect(saved.signInDetails).toEqual([{ name: 'full_name', value: 'Sample Student' }]);
     expect(saved.account).toMatchObject({
@@ -278,10 +297,13 @@ test.describe('/account signed in (fake client)', () => {
     page.on('download', download => files.push(download));
     await page.getByRole('button', { name: 'download spreadsheet files', exact: true }).click();
     await expect(page.getByText('your spreadsheet files are downloading.')).toBeVisible();
-    await expect.poll(() => files.length, { timeout: 15_000 }).toBe(14);
-    expect(files.map(download => download.suggestedFilename())).toContain(`${file.suggestedFilename().slice(0, -5)}-studyEvents.csv`);
-    await expect.poll(async () => (await urls(page)).revoked, { timeout: 15_000 }).toBe(15);
-    expect((await urls(page)).made).toBe(15);
+    await expect.poll(() => files.length, { timeout: 15_000 }).toBe(16);
+    const names = files.map(download => download.suggestedFilename());
+    expect(names).toContain(`${file.suggestedFilename().slice(0, -5)}-studyEvents.csv`);
+    expect(names).toContain(`${file.suggestedFilename().slice(0, -5)}-anatomyReviewQueue.csv`);
+    expect(names).toContain(`${file.suggestedFilename().slice(0, -5)}-anatomyViews.csv`);
+    await expect.poll(async () => (await urls(page)).revoked, { timeout: 15_000 }).toBe(17);
+    expect((await urls(page)).made).toBe(17);
   });
 
   test('offers no file when a read fails, and never shows provider detail', async ({ page }) => {

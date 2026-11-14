@@ -1,8 +1,8 @@
 /**
- * Read a signed-in student's own export data (D-86, D-87, D-88, Task 140).
+ * Read a signed-in student's own export data (D-86, D-87, D-88, Task 140, Task 178).
  *
- * The database's row-level security restricts the five table reads to the
- * current student. Reports must come from my_flags(), never from flags:
+ * The database's row-level security restricts all seven table reads to the
+ * current student. Task 178's anatomy tables also require the configured MFA policy. Reports must come from my_flags(), never from flags:
  * that table also contains private moderation fields.
  *
  * The caller adds browser-only progress, game stats and onboarding, and may
@@ -15,6 +15,8 @@
  * identity_data (with Google: name, profile-photo link, Google account id, email
  * and whether it is verified). The sessions, with their browser and IP address,
  * come from my_sessions(), because the browser can't read auth.sessions.
+ * The full anatomy review history (including cleared rows) and saved views come from their own tables under owner-only
+ * SELECT policies; the row id is only a cursor and user_id is never selected or exported.
  *
  * study_events has no cap: it is read page by page and each checked page is
  * written straight into StudyEventPages, so a long history never sits in memory
@@ -22,7 +24,7 @@
  */
 import { jsonCopy, StudyEventPages, type ExportData, type JsonObject } from './exportdata';
 
-export type ExportTable = 'profiles' | 'attempts' | 'exam_plans' | 'review_state' | 'study_events';
+export type ExportTable = 'profiles' | 'attempts' | 'exam_plans' | 'review_state' | 'study_events' | 'anatomy_review_queue' | 'anatomy_saved_views';
 
 interface ReadResult {
   data: unknown;
@@ -39,6 +41,8 @@ export interface ExportReader {
   rpc(name: ExportRpc): PromiseLike<ReadResult>;
   /** The signed-in student's own sign-in record: `{ user }`, as Supabase's auth.getUser() returns it. */
   user(): PromiseLike<ReadResult>;
+  /** Auth assurance, so restrictive MFA RLS cannot silently hide the student's data from an export. */
+  assurance(): PromiseLike<ReadResult>;
 }
 
 export type ExportRpc = 'my_flags' | 'my_sessions';
@@ -48,6 +52,7 @@ export type ExportLoadResult =
   | { ok: false; message: string };
 
 const ERROR_MESSAGE = "we couldn't load all your saved data. please try again.";
+const MFA_STEP_UP_MESSAGE = 'please complete two-factor sign-in before downloading your data.';
 const PAGE_SIZE = 500;
 
 /** ExportData's caps. Refuse oversize sets instead of quietly dropping rows. study_events has none (see above). */
@@ -58,6 +63,8 @@ const LIMITS = {
   review_state: 50_000,
   my_flags: 10_000,
   my_sessions: 10_000,
+  anatomy_review_queue: 10_000,
+  anatomy_saved_views: 50,
   identities: 20,
 } as const;
 
@@ -68,6 +75,10 @@ const COLUMNS = {
   exam_plans: 'id,course,exam_date,created_at',
   review_state: 'item_id,level,last_reviewed,next_review,updated_at',
   study_events: 'id,item_id,item_version_id,kind,ms_on_item,mark,at,created_at',
+  // Direct SELECT is filtered by the tables' owner-only RLS policy and restrictive MFA policy.
+  // The row id is only the keyset cursor; user_id is deliberately never selected or exported.
+  anatomy_review_queue: 'id,system_key,structure_id,missed_count,first_missed_at,last_missed_at,cleared_at',
+  anatomy_saved_views: 'id,system_key,name,camera,hidden,faded,selected,created_at,updated_at',
 } as const;
 
 function row(value: unknown): Record<string, unknown> {
@@ -254,6 +265,50 @@ function studyEvent(value: Record<string, unknown>) {
   };
 }
 
+function anatomySystemKey(value: Record<string, unknown>): string {
+  const key = text(value, 'system_key');
+  if (!/^[a-z0-9-]{1,40}$/.test(key)) throw new Error('invalid anatomy system');
+  return key;
+}
+
+function anatomyStructureId(value: Record<string, unknown>, name: string): string {
+  const id = text(value, name);
+  if (id.length > 60 || !/^(FMA\d+|FIX\d+|fixture-[a-z0-9-]+)$/.test(id)) throw new Error('invalid anatomy structure');
+  return id;
+}
+
+function anatomyStringIds(value: unknown): string[] {
+  if (!Array.isArray(value) || value.length > 2000 || Object.keys(value).length !== value.length) {
+    throw new Error('invalid anatomy structure list');
+  }
+  const ids: string[] = [];
+  for (let index = 0; index < value.length; index++) {
+    const descriptor = Object.getOwnPropertyDescriptor(value, String(index));
+    if (!descriptor || !('value' in descriptor) || typeof descriptor.value !== 'string' ||
+        descriptor.value.length > 60 || !/^(FMA\d+|FIX\d+|fixture-[a-z0-9-]+)$/.test(descriptor.value) ||
+        ids.includes(descriptor.value)) throw new Error('invalid anatomy structure list');
+    ids.push(descriptor.value);
+  }
+  return ids;
+}
+
+function anatomyCamera(value: unknown, allowNonFinite = false): JsonObject {
+  const camera = row(value);
+  const keys = Object.keys(camera);
+  if (keys.some((key) => !['position', 'target', 'up'].includes(key))) throw new Error('invalid anatomy camera');
+  const vector = (input: unknown) => {
+    if (!Array.isArray(input) || input.length !== 3 || Object.keys(input).length !== 3) return false;
+    for (let i = 0; i < 3; i++) {
+      const descriptor = Object.getOwnPropertyDescriptor(input, String(i));
+      if (!descriptor || !('value' in descriptor) || typeof descriptor.value !== 'number' || (!allowNonFinite && !Number.isFinite(descriptor.value))) return false;
+    }
+    return true;
+  };
+  if (!vector(field(camera, 'position')) || !vector(field(camera, 'target'))) throw new Error('invalid anatomy camera');
+  if (maybe(camera, 'up') !== undefined && !vector(field(camera, 'up'))) throw new Error('invalid anatomy camera');
+  return camera as unknown as JsonObject;
+}
+
 function entries<T>(data: unknown, map: (value: Record<string, unknown>) => T): T[] {
   if (!Array.isArray(data) || Object.keys(data).length !== data.length) throw new Error('invalid export result');
   const mapped: T[] = [];
@@ -287,9 +342,28 @@ function pickedLetters(value: Record<string, unknown>): string[] {
   return result;
 }
 
+/**
+ * Restrictive MFA policies return an empty successful SELECT when a verified factor is present
+ * but the current JWT is only aal1. Never label such a partial result a complete export.
+ * Unexpected/missing assurance also fails closed rather than guessing no data exists.
+ */
+async function exportAssurance(reader: ExportReader): Promise<'ready' | 'step-up'> {
+  const reply = await reader.assurance();
+  if (!reply || reply.error != null) throw new Error('assurance read failed');
+  const levels = row(reply.data);
+  const current = field(levels, 'currentLevel');
+  const next = field(levels, 'nextLevel');
+  if (current === 'aal1' && next === 'aal2') return 'step-up';
+  if ((current === 'aal1' && next === 'aal1') || (current === 'aal2' && next === 'aal2')) return 'ready';
+  throw new Error('invalid authentication assurance');
+}
+
 /** Returns every section supplied by the database, or nothing if a read fails. */
 export async function loadExport(reader: ExportReader): Promise<ExportLoadResult> {
   try {
+    if (await exportAssurance(reader) === 'step-up') {
+      return { ok: false, message: MFA_STEP_UP_MESSAGE };
+    }
     const profiles = entries(await fetchRows(reader, 'profiles'), (r) => {
       // Preserve current staging's display-name change-history fields.
       const changes = field(r, 'name_changes_in_window');
@@ -362,6 +436,51 @@ export async function loadExport(reader: ExportReader): Promise<ExportLoadResult
         ip: nullableText(r, 'ip'),
       };
     });
+    // These tables are read directly under their SELECT-only, owner-scoped RLS and restrictive MFA policies.
+    // Read the entire review history (including cleared rows); id is solely a pagination cursor.
+    const anatomyReviewQueue = entries(await fetchRows(reader, 'anatomy_review_queue'), (r) => {
+      uuid(r, 'id');
+      const firstMissedAt = timestamp(r, 'first_missed_at');
+      const lastMissedAt = timestamp(r, 'last_missed_at');
+      const clearedValue = field(r, 'cleared_at');
+      const clearedAt = clearedValue === null ? null : timestamp(r, 'cleared_at');
+      const missedCount = field(r, 'missed_count');
+      if (typeof missedCount !== 'number' || !Number.isSafeInteger(missedCount) || missedCount < 1 || missedCount > 2_147_483_647 ||
+          Date.parse(lastMissedAt) < Date.parse(firstMissedAt)) throw new Error('invalid anatomy review row');
+      return {
+        systemKey: anatomySystemKey(r),
+        structureId: anatomyStructureId(r, 'structure_id'),
+        missedCount,
+        firstMissedAt,
+        lastMissedAt,
+        clearedAt,
+      };
+    });
+    const anatomyViews = entries(await fetchRows(reader, 'anatomy_saved_views'), (r) => {
+      uuid(r, 'id');
+      const name = text(r, 'name');
+      if (name.trim().length < 1 || name.length > 60 || /[\u0000-\u001f\u007f]/.test(name)) throw new Error('invalid anatomy view name');
+      const selectedValue = field(r, 'selected');
+      return {
+        systemKey: anatomySystemKey(r),
+        name,
+        // A camera the export cannot represent (a number the browser reads as Infinity) must not fail the whole download:
+        // keep the row's plain object and let the export drop that view by name in `dropped`.
+        camera: (() => {
+          const raw = field(r, 'camera');
+          try { return anatomyCamera(raw); } catch { return anatomyCamera(raw, true); }
+        })(),
+        hidden: anatomyStringIds(field(r, 'hidden')),
+        faded: anatomyStringIds(field(r, 'faded')),
+        selected: selectedValue === null ? null : anatomyStructureId({ selected: selectedValue }, 'selected'),
+        createdAt: timestamp(r, 'created_at'),
+        updatedAt: timestamp(r, 'updated_at'),
+      };
+    });
+    // A session can lose its assurance during a long paged export. Refuse its result too.
+    if (await exportAssurance(reader) === 'step-up') {
+      return { ok: false, message: MFA_STEP_UP_MESSAGE };
+    }
     const who = await reader.user();
     if (!who || who.error != null) throw new Error('sign-in record read failed');
     const ownAccount = account(who.data);
@@ -378,7 +497,7 @@ export async function loadExport(reader: ExportReader): Promise<ExportLoadResult
       ok: true,
       data: {
         profile: profiles[0] ?? {}, signInDetails, account: ownAccount,
-        attempts, examPlans, reviewRows, reports, sessions, studyEvents,
+        attempts, examPlans, reviewRows, reports, sessions, studyEvents, anatomyReviewQueue, anatomyViews,
       },
     };
   } catch {
@@ -397,7 +516,10 @@ interface SupabaseQuery {
 export interface SupabaseExportClient {
   from(table: ExportTable): { select(columns: string): SupabaseQuery };
   rpc(name: ExportRpc): SupabaseQuery;
-  auth: { getUser(): PromiseLike<ReadResult> };
+  auth: {
+    getUser(): PromiseLike<ReadResult>;
+    mfa: { getAuthenticatorAssuranceLevel(): PromiseLike<ReadResult> };
+  };
 }
 
 /** Stable unique row keys for keyset pagination. profiles has at most one row. */
@@ -409,6 +531,8 @@ const CURSOR_COLUMN: Record<ExportTable | ExportRpc, string | null> = {
   study_events: 'id',
   my_flags: 'id',
   my_sessions: 'id',
+  anatomy_review_queue: 'id',
+  anatomy_saved_views: 'id',
 };
 
 /**
@@ -454,7 +578,7 @@ async function allPages(makeQuery: () => SupabaseQuery, which: WholeTable | Expo
 
 /**
  * Uses only the tables and RPC explicitly allowed by Task 61 (and study_events, Task 140; my_sessions and
- * auth.getUser(), Task 309).
+ * auth.getUser(), Task 309; the two owner-scoped anatomy tables, Task 178).
  */
 export function fromSupabase(client: SupabaseExportClient): ExportReader {
   return {
@@ -462,5 +586,6 @@ export function fromSupabase(client: SupabaseExportClient): ExportReader {
     selectPages: (table, columns) => pages(() => client.from(table).select(columns), table),
     rpc: (name) => allPages(() => client.rpc(name), name),
     user: () => client.auth.getUser(),
+    assurance: () => client.auth.mfa.getAuthenticatorAssuranceLevel(),
   };
 }

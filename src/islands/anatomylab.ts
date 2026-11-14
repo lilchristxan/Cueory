@@ -10,6 +10,7 @@
  */
 
 import { LAYERS, isLayer, type LayerId } from './anatomylayers';
+import { ALL_WORDS, scoreLabel, searchStructures } from './anatomysearch';
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Systems
@@ -23,6 +24,15 @@ export interface AnatomyStructure {
   group?: string;
   /** Its layer for peeling (skin … skeleton), from the source file, which takes it from BodyParts3D's hierarchy. */
   layer?: LayerId;
+  /** Full PART-OF ancestry, names only, root first, as the source file gives it (Task 178: the breadcrumb). */
+  parents?: string[];
+  /** Alternative names from the source file, searched like the official name (Task 178). Never written by the lab. */
+  also?: string[];
+  /**
+   * Which BodyParts3D tree this structure's `group` and `parents` come from. Set only on the whole-body aggregate, which
+   * mixes systems of both trees; a single system's structures use the system's `hierarchyTree`.
+   */
+  tree?: 'partof' | 'isa';
 }
 
 /** What the island gets for one body system: only what it shows (sources stay at build time). */
@@ -31,6 +41,8 @@ export interface AnatomySystem {
   key: string;
   title: string;
   status: 'draft' | 'approved';
+  /** The BodyParts3D relation for groups/parents; IS-A classification is not physical location. */
+  hierarchyTree?: 'partof' | 'isa';
   /** `files`: the whole-body view loads several systems' models together (src/islands/anatomylayers.ts). */
   model: { file: string; files?: string[]; release: string; via?: string; layerFiles?: Record<string, string[]>; fileIds?: Record<string, string[]> };
   structures: AnatomyStructure[];
@@ -149,6 +161,11 @@ function text(value: unknown, max: number): value is string {
   return typeof value === 'string' && value.trim().length > 0 && value.length <= max && !/[\u0000-\u001f]/.test(value);
 }
 
+/** A list of short names (the optional `parents` and `also` fields): every entry non-empty text, at most 120 chars. */
+function nameList(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every((entry) => text(entry, 120));
+}
+
 /**
  * Reads one anatomy source file. Throws a plain message naming the file when it doesn't fit the contract, so the build
  * stops instead of showing a broken lab.
@@ -165,6 +182,8 @@ export function parseAnatomyFile(json: unknown, path: string, options: { fixture
   if (file['id'] !== `anatomy-${key}`) fail('"id" must match the anatomy source filename');
   if (file['kind'] !== 'model') fail('"kind" must be "model"');
   if (!text(file['title'], 120)) fail('"title" must be a short line of text');
+  const hierarchyTree = file['hierarchyTree'] ?? 'partof';
+  if (hierarchyTree !== 'partof' && hierarchyTree !== 'isa') fail('"hierarchyTree" must be "partof" or "isa"');
   const status = file['status'];
   if (status !== 'draft' && status !== 'approved') fail('"status" must be "draft" or "approved"');
   const model = file['model'];
@@ -191,15 +210,22 @@ export function parseAnatomyFile(json: unknown, path: string, options: { fixture
     if (group !== undefined && !text(group, 120)) return fail(`label "${id}": "group", when given, must be text`);
     const layer = label['layer'];
     if (layer !== undefined && !isLayer(layer)) return fail(`label "${id}": "layer", when given, is one of ${LAYERS.join(', ')}`);
+    const parents = label['parents'];
+    if (parents !== undefined && !nameList(parents)) return fail(`label "${id}": "parents", when given, is a list of names`);
+    const also = label['also'];
+    if (also !== undefined && !nameList(also)) return fail(`label "${id}": "also", when given, is a list of names`);
     const structure: AnatomyStructure = { id, text: label['text'] as string };
     if (typeof group === 'string') structure.group = group;
     if (isLayer(layer)) structure.layer = layer;
+    if (Array.isArray(parents)) structure.parents = [...(parents as string[])];
+    if (Array.isArray(also)) structure.also = [...(also as string[])];
     return structure;
   });
   const out: AnatomySystem = {
     key: key!,
     title: file['title'] as string,
     status: status as AnatomySystem['status'],
+    hierarchyTree: hierarchyTree as NonNullable<AnatomySystem['hierarchyTree']>,
     model: { file: m['file'] as string, release: m['release'] as string },
     structures,
   };
@@ -308,14 +334,30 @@ export interface StructureGroup {
   items: AnatomyStructure[];
 }
 
-/** The list as shown: groups in the order they first appear, items in file order, filtered by the search. */
+/**
+ * The list as shown. With no search: groups in the order they first appear, items in file order. With a search: the
+ * names ranked by `searchStructures` (an exact name first, then names holding every word of the query; ties in file
+ * order; alternative names in `also` searched too, plurals forgiven), plus any structure whose source id starts with
+ * the typed id ("FMA-7204", "fma 720"), after the ranked names in file order. Names holding only some of the query's
+ * words are not listed (D-pending, Task 178): on a thousand-structure list, "of" or "left" alone would list hundreds.
+ * Groups then follow the order their first item earns.
+ */
 export function groupStructures(structures: readonly AnatomyStructure[], query = ''): StructureGroup[] {
   const groups = new Map<string | null, AnatomyStructure[]>();
+  const byId = new Map(structures.map((structure) => [structure.id, structure]));
+  const ranked = searchStructures(structures, query).filter((id) => scoreLabel(byId.get(id)!, query).tier >= ALL_WORDS);
+  const listed = new Set(ranked);
   // Source IDs may be typed or pasted with separators, such as "FMA-7204".
-  // Match their alphanumeric prefix without changing the existing name-word search.
+  // Match their alphanumeric prefix as well, without changing the ranked name search.
   const sourceIdQuery = normalizeSearch(query).replaceAll(' ', '');
-  for (const structure of structures) {
-    if (!matchesSearch(structure.text, query) && !normalizeSearch(structure.id).replaceAll(' ', '').startsWith(sourceIdQuery)) continue;
+  const order: AnatomyStructure[] = ranked.map((id) => byId.get(id)!);
+  if (sourceIdQuery) {
+    for (const structure of structures) {
+      if (listed.has(structure.id)) continue;
+      if (normalizeSearch(structure.id).replaceAll(' ', '').startsWith(sourceIdQuery)) order.push(structure);
+    }
+  }
+  for (const structure of order) {
     const key = structure.group ?? null;
     const list = groups.get(key);
     if (list) list.push(structure);
@@ -936,4 +978,456 @@ export function fitDistance(size: { x: number; y: number; z: number }, fovDeg: n
   const tanH = tanV * Math.max(aspect, 1e-3);
   const fit = Math.max(size.y / 2 / tanV, size.x / 2 / tanH, 1e-6);
   return fit * FIT_MARGIN + size.z / 2;
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Interaction modes (Task 178, study tools A): what a tap on the 3D view does
+// ---------------------------------------------------------------------------------------------------------------------
+
+/** `navigate`: dragging and the arrow keys turn the model, a tap selects (never hides). `hide`: a tap hides the tapped structure. */
+export type LabMode = 'navigate' | 'hide';
+
+export const LAB_MODES: readonly LabMode[] = ['navigate', 'hide'];
+
+/** The lab starts in navigate mode, so a first tap can never make a structure disappear (D-pending, Task 178). */
+export const DEFAULT_MODE: LabMode = 'navigate';
+
+export function isLabMode(value: unknown): value is LabMode {
+  return value === 'navigate' || value === 'hide';
+}
+
+/** The words on the mode switch: the mode is named, never shown by color alone. */
+export function modeLabel(mode: LabMode): string {
+  return mode === 'hide' ? 'hide: tap hides' : 'navigate: tap selects';
+}
+
+/** What a tap on a structure does: in a quiz round it always answers, whatever the mode. */
+export function tapAction(mode: LabMode, inQuiz: boolean): 'select' | 'hide' {
+  if (inQuiz) return 'select';
+  return mode === 'hide' ? 'hide' : 'select';
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Visibility with fading: every structure is shown, faded (semi-transparent, still selectable) or hidden
+// ---------------------------------------------------------------------------------------------------------------------
+
+export interface Visibility {
+  hidden: ReadonlySet<string>;
+  faded: ReadonlySet<string>;
+}
+
+export const EMPTY_VISIBILITY: Visibility = { hidden: new Set(), faded: new Set() };
+
+export type StructureState = 'shown' | 'faded' | 'hidden';
+
+/** What a label marked "(faded)" says in the structure list, like "(hidden)". */
+export const FADED_MARK = '(faded)';
+
+/** A hidden structure is hidden even if it is also in the faded set (fading survives a hide, for "show it" to bring back). */
+export function structureState(visibility: Visibility, id: string): StructureState {
+  if (visibility.hidden.has(id)) return 'hidden';
+  return visibility.faded.has(id) ? 'faded' : 'shown';
+}
+
+export function toggleFaded(faded: ReadonlySet<string>, id: string): Set<string> {
+  return toggleHidden(faded, id);
+}
+
+/** "fade this" / "unfade": a faded structure is never hidden at the same time. */
+export function fadeStructure(visibility: Visibility, id: string): Visibility {
+  const hidden = new Set(visibility.hidden);
+  hidden.delete(id);
+  return { hidden, faded: toggleFaded(visibility.faded, id) };
+}
+
+/** "hide this" / "show it": hiding drops the fade, so "show it" brings the structure back in full. */
+export function hideStructure(visibility: Visibility, id: string): Visibility {
+  const faded = new Set(visibility.faded);
+  faded.delete(id);
+  return { hidden: toggleHidden(visibility.hidden, id), faded };
+}
+
+/** "restore all": every structure shown in full. */
+export function restoreAll(_visibility: Visibility): Visibility {
+  return { hidden: new Set(), faded: new Set() };
+}
+
+function sameSet(a: ReadonlySet<string>, b: ReadonlySet<string>): boolean {
+  if (a === b) return true;
+  if (a.size !== b.size) return false;
+  for (const id of a) if (!b.has(id)) return false;
+  return true;
+}
+
+export function visibilityEquals(a: Visibility, b: Visibility): boolean {
+  return sameSet(a.hidden, b.hidden) && sameSet(a.faded, b.faded);
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Visibility history: undo, redo, capped
+// ---------------------------------------------------------------------------------------------------------------------
+
+export interface History<T> {
+  /** Earlier states, oldest first. */
+  past: readonly T[];
+  present: T;
+  /** States undone, the next one to redo last. */
+  future: readonly T[];
+}
+
+/** At most this many earlier states are kept; the oldest is dropped first (D-pending, Task 178). */
+export const HISTORY_CAP = 100;
+
+export function createHistory<T>(initial: T): History<T> {
+  return { past: [], present: initial, future: [] };
+}
+
+/**
+ * Records `next` as the present state and forgets any redo states. A state equal to the present (by `equals`) changes
+ * nothing, so a no-op never fills the history. With more than `cap` earlier states, the oldest is dropped.
+ */
+export function push<T>(
+  history: History<T>,
+  next: T,
+  equals: (a: T, b: T) => boolean = (a, b) => a === b,
+  cap: number = HISTORY_CAP,
+): History<T> {
+  if (equals(history.present, next)) return history;
+  const past = [...history.past, history.present];
+  const over = Math.max(0, past.length - Math.max(0, cap));
+  return { past: over > 0 ? past.slice(over) : past, present: next, future: [] };
+}
+
+export function canUndo<T>(history: History<T>): boolean {
+  return history.past.length > 0;
+}
+
+export function canRedo<T>(history: History<T>): boolean {
+  return history.future.length > 0;
+}
+
+export function undo<T>(history: History<T>): History<T> {
+  if (!canUndo(history)) return history;
+  const past = history.past.slice(0, -1);
+  return { past, present: history.past[history.past.length - 1]!, future: [...history.future, history.present] };
+}
+
+export function redo<T>(history: History<T>): History<T> {
+  if (!canRedo(history)) return history;
+  const future = history.future.slice(0, -1);
+  return { past: [...history.past, history.present], present: history.future[history.future.length - 1]!, future };
+}
+
+/**
+ * The undo and redo shortcuts while focus is inside the lab: Ctrl/Cmd+Z undoes, Shift+Ctrl/Cmd+Z redoes. Text fields
+ * keep their own undo, so a key pressed in one is never taken.
+ */
+export function historyShortcut(
+  key: { key: string; ctrlKey: boolean; metaKey: boolean; shiftKey: boolean; altKey: boolean },
+  inTextField: boolean,
+): 'undo' | 'redo' | null {
+  if (inTextField || key.altKey || !(key.ctrlKey || key.metaKey)) return null;
+  if (key.key !== 'z' && key.key !== 'Z') return null;
+  return key.shiftKey ? 'redo' : 'undo';
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Camera presets and posture
+// ---------------------------------------------------------------------------------------------------------------------
+
+export type ViewPreset = 'front' | 'back' | 'left' | 'right' | 'top' | 'bottom';
+
+export const VIEW_PRESETS: readonly ViewPreset[] = ['front', 'back', 'left', 'right', 'top', 'bottom'];
+
+export type Posture = 'standing' | 'lying';
+
+export interface Vec3 {
+  x: number;
+  y: number;
+  z: number;
+}
+
+/**
+ * The top and bottom views lean this little toward the front, so the camera is never exactly on the up axis (where
+ * "which way is up on screen" has no answer) and the model's front is always at the bottom of the screen there.
+ */
+export const POLE_TILT = 0.001;
+
+/**
+ * The direction from the model's center to the camera for each view, in the model's own frame (glTF: the model's
+ * front faces +Z, up is +Y). "left" and "right" are the model's own sides: the camera stands on that side of it.
+ */
+export function presetDirection(preset: ViewPreset): Vec3 {
+  switch (preset) {
+    case 'front': return { x: 0, y: 0, z: 1 };
+    case 'back': return { x: 0, y: 0, z: -1 };
+    case 'left': return { x: 1, y: 0, z: 0 };
+    case 'right': return { x: -1, y: 0, z: 0 };
+    case 'top': return { x: 0, y: 1, z: POLE_TILT };
+    case 'bottom': return { x: 0, y: -1, z: POLE_TILT };
+  }
+}
+
+/** Where the camera stands to look at `center` from `direction` (a unit vector) at `distance`. */
+export function cameraPosition(center: Vec3, direction: Vec3, distance: number): Vec3 {
+  const length = Math.hypot(direction.x, direction.y, direction.z) || 1;
+  const d = Math.max(distance, 1e-6) / length;
+  return { x: center.x + direction.x * d, y: center.y + direction.y * d, z: center.z + direction.z * d };
+}
+
+/** The camera's position for a preset view of a model centered at `center`, `distance` away. */
+export function cameraForPreset(preset: ViewPreset, center: Vec3, distance: number): Vec3 {
+  return cameraPosition(center, presetDirection(preset), distance);
+}
+
+/**
+ * "focus on selected": the camera keeps its direction (from `target` to `position`) and moves to look at `center` from
+ * `distance` away, so the structure fills the view without a jump in angle.
+ */
+export function focusCamera(position: Vec3, target: Vec3, center: Vec3, distance: number): Vec3 {
+  const offset = { x: position.x - target.x, y: position.y - target.y, z: position.z - target.z };
+  const direction = Math.hypot(offset.x, offset.y, offset.z) > 1e-9 ? offset : presetDirection('front');
+  return cameraPosition(center, direction, distance);
+}
+
+/**
+ * The whole model's turn about its X axis for a posture: 0 standing; lying on its back means the front (+Z) turns up
+ * (+Y) and the top of the model (+Y) turns away from the front (−Z), so a camera above (top view) looks at the front.
+ */
+export function postureAngleX(posture: Posture): number {
+  return posture === 'lying' ? -Math.PI / 2 : 0;
+}
+
+/** A point turned about the X axis by `angle` (the right-hand rule), for checking `postureAngleX`. */
+export function rotateX(point: Vec3, angle: number): Vec3 {
+  const c = Math.cos(angle);
+  const s = Math.sin(angle);
+  return { x: point.x, y: point.y * c - point.z * s, z: point.y * s + point.z * c };
+}
+
+/** The view a posture's "home" uses: above a lying model, in front of a standing one. */
+export function homePreset(posture: Posture): ViewPreset {
+  return posture === 'lying' ? 'top' : 'front';
+}
+
+/** How long a camera move takes, in milliseconds; 0 with reduced motion, so the view changes at once. */
+export const CAMERA_MOVE_MS = 320;
+
+export function cameraMoveDuration(reducedMotion: boolean): number {
+  return reducedMotion ? 0 : CAMERA_MOVE_MS;
+}
+
+/** Where a move is between its start (0) and end (1) at `elapsed` of `duration` milliseconds, eased at both ends. */
+export function moveProgress(elapsed: number, duration: number): number {
+  if (!(duration > 0) || elapsed >= duration) return 1;
+  const t = Math.max(0, elapsed / duration);
+  return t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2;
+}
+
+export function lerpVec3(from: Vec3, to: Vec3, t: number): Vec3 {
+  return { x: from.x + (to.x - from.x) * t, y: from.y + (to.y - from.y) * t, z: from.z + (to.z - from.z) * t };
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Recall mode: blank labels, numbered, with a legend
+// ---------------------------------------------------------------------------------------------------------------------
+
+/** A stable number for every structure, 1-based in the system's own order, so a number never changes while hiding. */
+export function recallNumbers(ids: readonly string[]): Map<string, number> {
+  const out = new Map<string, number>();
+  for (const id of ids) if (!out.has(id)) out.set(id, out.size + 1);
+  return out;
+}
+
+/** What a label says: its number in recall mode, else the official name (the id when the name is unknown). */
+export function labelTextFor(id: string, names: ReadonlyMap<string, string>, numbers: ReadonlyMap<string, number> | null): string {
+  if (numbers) {
+    const n = numbers.get(id);
+    if (n !== undefined) return String(n);
+  }
+  return names.get(id) ?? id;
+}
+
+export interface LegendRow {
+  id: string;
+  number: number;
+  /** The name, only once revealed. */
+  name: string | null;
+}
+
+/** The legend's rows for the labels on screen, in number order; names only when `revealed`. */
+export function recallLegend(
+  labeled: readonly string[],
+  numbers: ReadonlyMap<string, number>,
+  names: ReadonlyMap<string, string>,
+  revealed: boolean,
+): LegendRow[] {
+  return labeled
+    .filter((id) => numbers.has(id))
+    .map((id) => ({ id, number: numbers.get(id)!, name: revealed ? (names.get(id) ?? id) : null }))
+    .sort((a, b) => a.number - b.number);
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Study tools wired into the lab (Task 178, integration): breadcrumb rows, misses worth recording, saved-view state
+// ---------------------------------------------------------------------------------------------------------------------
+
+export interface BreadcrumbRow {
+  /** The name, exactly as the source file writes it. */
+  name: string;
+  /** The structure with that exact name, when the list has one: the row is then a button that selects it. */
+  id: string | null;
+  /** True for the last row: the selected structure itself. */
+  current: boolean;
+}
+
+/**
+ * The breadcrumb's rows from root to the selected structure: `trail` is `breadcrumb()`'s output (names, root first,
+ * the structure's own name last). An ancestor whose exact name is a structure in the list gets that structure's id.
+ */
+export function breadcrumbRows(trail: readonly string[], structures: readonly Pick<AnatomyStructure, 'id' | 'text'>[], selected: string): BreadcrumbRow[] {
+  const byText = new Map<string, string>();
+  for (const structure of structures) if (!byText.has(structure.text)) byText.set(structure.text, structure.id);
+  return trail.map((name, index) => {
+    const current = index === trail.length - 1;
+    const id = current ? selected : (byText.get(name) ?? null);
+    return { name, id: id === selected && !current ? null : id, current };
+  });
+}
+
+/** Siblings are listed only when there are between MIN and MAX of them: one is no list, dozens is the list itself. */
+export const SIBLINGS_MIN = 2;
+export const SIBLINGS_MAX = 30;
+
+export function showSiblings(count: number): boolean {
+  return count >= SIBLINGS_MIN && count <= SIBLINGS_MAX;
+}
+
+/**
+ * The structure id to record as a miss when a quiz question goes from `before` to `after`: the first wrong pick, or
+ * "show me" before any pick (the Task 178 decision: a miss is recorded the moment it happens, not at the round's end,
+ * so closing the tab mid-round loses nothing). A second wrong pick, a right pick, "show me" after a wrong pick, or a
+ * question already scored records nothing. Null when there is nothing to record.
+ */
+export function missToRecord(before: Pick<QuizState, 'target' | 'scored'>, after: Pick<QuizState, 'target' | 'feedback' | 'scored'>): string | null {
+  if (!before.target || before.scored || !after.scored || after.target !== before.target) return null;
+  const kind = after.feedback?.kind;
+  return kind === 'wrong' || kind === 'shown' ? before.target : null;
+}
+
+/** The queued (uncleared) structure ids for one system, most recent miss first, as the review list shows them. */
+export function queuedForSystem(
+  rows: readonly { system_key: string; structure_id: string; cleared_at: string | null; last_missed_at: string }[],
+  systemKey: string,
+): string[] {
+  return rows
+    .filter((row) => row.system_key === systemKey && row.cleared_at === null)
+    .sort((a, b) => (a.last_missed_at < b.last_missed_at ? 1 : a.last_missed_at > b.last_missed_at ? -1 : 0))
+    .map((row) => row.structure_id);
+}
+
+/** The queued structures a "find it" round over the queue can ask about: those the loaded model has. */
+export function reviewQuizPool(queued: readonly string[], found: ReadonlySet<string>): string[] {
+  return queued.filter((id) => found.has(id));
+}
+
+/** A saved view's camera as the scene applies it: `up` defaults to +Y when the row has none. */
+export function savedCamera(camera: { position: readonly number[]; target: readonly number[]; up?: readonly number[] }): {
+  position: [number, number, number]; target: [number, number, number]; up: [number, number, number];
+} | null {
+  const triple = (v: readonly number[] | undefined): v is [number, number, number] =>
+    Array.isArray(v) && v.length === 3 && v.every((n) => typeof n === 'number' && Number.isFinite(n));
+  if (!triple(camera.position) || !triple(camera.target)) return null;
+  const up: [number, number, number] = triple(camera.up) ? [camera.up[0], camera.up[1], camera.up[2]] : [0, 1, 0];
+  return { position: [...camera.position], target: [...camera.target], up };
+}
+
+/** Restores source-valid IDs, even on lazy layers that have not downloaded. Hidden wins over faded. */
+export function savedVisibility(view: { hidden: readonly string[]; faded: readonly string[] }, found: ReadonlySet<string>): Visibility {
+  const hidden = new Set(view.hidden.filter((id) => found.has(id)));
+  const faded = new Set(view.faded.filter((id) => found.has(id) && !hidden.has(id)));
+  return { hidden, faded };
+}
+
+/** How often the compare view copies the camera to the second scene: at most once per this many milliseconds. */
+export const COMPARE_SYNC_MS = 50;
+
+/** True when a camera copy is due: the first ever, or COMPARE_SYNC_MS after the last. */
+export function compareSyncDue(now: number, last: number | null, interval = COMPARE_SYNC_MS): boolean {
+  return last === null || now - last >= interval;
+}
+
+/** Delay until a trailing camera copy is due, even when the main renderer stops producing frames. */
+export function compareSyncDelay(now: number, last: number | null, interval = COMPARE_SYNC_MS): number {
+  return last === null ? 0 : Math.max(0, interval - (now - last));
+}
+
+export interface CompareSyncClock {
+  now(): number;
+  setTimeout(run: () => void, ms: number): unknown;
+  clearTimeout(handle: unknown): void;
+}
+
+/**
+ * Copies the main camera to the comparison at most every COMPARE_SYNC_MS, and never loses the last one: a request that
+ * arrives inside the window schedules one trailing copy, which reads the camera when it runs, so the comparison ends on
+ * the camera the main view settled at even when it draws no further frame. `cancel` drops a pending copy (teardown).
+ */
+export function createCompareSync(copy: () => void, clock: CompareSyncClock = {
+  now: () => performance.now(),
+  setTimeout: (run, ms) => setTimeout(run, ms),
+  clearTimeout: (handle) => clearTimeout(handle as ReturnType<typeof setTimeout>),
+}) {
+  let last: number | null = null;
+  let timer: unknown = null;
+  const cancel = () => {
+    if (timer !== null) clock.clearTimeout(timer);
+    timer = null;
+  };
+  return {
+    request() {
+      const now = clock.now();
+      if (compareSyncDue(now, last)) {
+        cancel();
+        last = now;
+        copy();
+      } else if (timer === null) {
+        timer = clock.setTimeout(() => {
+          timer = null;
+          last = clock.now();
+          copy();
+        }, compareSyncDelay(now, last));
+      }
+    },
+    cancel,
+  };
+}
+
+/** The tree a structure's group and ancestry come from: its own (whole body), else its system's, else PART-OF. */
+export function structureTree(
+  system: Pick<AnatomySystem, 'hierarchyTree'>,
+  structure: Pick<AnatomyStructure, 'tree'> | undefined,
+): 'partof' | 'isa' {
+  return structure?.tree ?? system.hierarchyTree ?? 'partof';
+}
+
+/**
+ * The systems with a "save this view" request in flight. The save button is busy only in those systems, and a system
+ * stays busy until its own save settles, however many other systems save and settle in between: a second save of the
+ * same named view can never race the first.
+ */
+export const savingViewBusy = (saving: ReadonlySet<string>, systemKey: string): boolean => saving.has(systemKey);
+
+/** A save started for `systemKey`: a fresh set, so React sees the change. */
+export function savingViewStarted(saving: ReadonlySet<string>, systemKey: string): Set<string> {
+  const next = new Set(saving);
+  next.add(systemKey);
+  return next;
+}
+
+/** A save for `systemKey` settled (saved, refused or failed): that system alone is free again. */
+export function savingViewSettled(saving: ReadonlySet<string>, systemKey: string): Set<string> {
+  const next = new Set(saving);
+  next.delete(systemKey);
+  return next;
 }
