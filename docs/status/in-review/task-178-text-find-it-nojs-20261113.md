@@ -1,0 +1,1 @@
+status: Task 178 text-only Anatomy Lab: add five source-ID recall prompts per approved or preview-visible system using HTML details, with no JavaScript or model download; preserve source names, rights, draft isolation and release hold. Browser test covers no-script reveal, hide and zero GLB requests.
