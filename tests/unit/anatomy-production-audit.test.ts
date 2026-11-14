@@ -384,9 +384,11 @@ describe('anatomy production artifact audit', () => {
     f.file('assets/triangle.dat', gltf);
     f.file('assets/triangle.gltf', gltf);
     f.file('assets/triangle.jpg', gltf);
+    f.file('assets/padded-triangle.json', ' '.repeat(5000) + gltf);
     f.file('assets/ordinary.dat', 'unreviewed file type even if not a model');
     const errors = f.check().errors;
     expect(errors).toContain('unapproved model exposed in production: /assets/triangle.gltf');
+    expect(errors).toContain('unapproved text glTF model exposed in production: /assets/padded-triangle.json');
     for (const url of ['/assets/triangle.dat', '/assets/triangle.jpg']) {
       expect(errors).toContain(`unapproved text glTF model exposed in production: ${url}`);
     }
