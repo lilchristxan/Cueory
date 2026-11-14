@@ -60,3 +60,22 @@ export function checkReport(input: unknown): CheckedReport {
     },
   };
 }
+
+/**
+ * Add public study-item context to the ordinary flag comment without changing
+ * submit_flag's UUID-only question fields. Validate the student's own words
+ * first, so "something else" still requires their explanation. Re-validate
+ * the combined text to preserve the database's 1,000-character limit.
+ */
+export function reportContextPrefix(context?: string): string {
+  return context ? `about: ${context}\n` : '';
+}
+
+export function checkReportWithContext(input: unknown, context?: string): CheckedReport {
+  const checked = checkReport(input);
+  if (!checked.ok || !context) return checked;
+  return checkReport({
+    ...checked.report,
+    comment: reportContextPrefix(context) + checked.report.comment,
+  });
+}
