@@ -10,13 +10,24 @@ import type { LabScene } from './anatomyscene';
 type Status = 'idle' | 'loading' | 'ready' | 'error';
 type Pictures = { key: string; front: string; side: string };
 
+/** The current site's strict img-src permits data: but not blob: URLs. */
+function imageDataUrl(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('picture could not be read'));
+    reader.onload = () => typeof reader.result === 'string'
+      ? resolve(reader.result)
+      : reject(new Error('picture data is unavailable'));
+    reader.readAsDataURL(blob);
+  });
+}
+
 export default function AnatomyReviewPictures({ systems }: { systems: AnatomySystem[] }) {
   const [systemKey, setSystemKey] = useState(systems[0]?.key ?? '');
   const [status, setStatus] = useState<Status>('idle');
   const [pictures, setPictures] = useState<Pictures | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const sceneRef = useRef<LabScene | null>(null);
-  const urlsRef = useRef<string[]>([]);
   const generation = useRef(0);
   const current = systems.find((system) => system.key === systemKey);
 
@@ -25,8 +36,6 @@ export default function AnatomyReviewPictures({ systems }: { systems: AnatomySys
     generation.current += 1;
     sceneRef.current?.dispose();
     sceneRef.current = null;
-    for (const url of urlsRef.current) URL.revokeObjectURL(url);
-    urlsRef.current = [];
   }, []);
   useEffect(() => () => clear(), [clear]);
 
@@ -83,9 +92,11 @@ export default function AnatomyReviewPictures({ systems }: { systems: AnatomySys
       scene.orbit(Math.PI / 2, 0);
       const side = await scene.exportPicture({ ...shared, title: `${requested.title}: side view` });
       if (requestId !== generation.current) return;
-      const frontUrl = URL.createObjectURL(front.blob);
-      const sideUrl = URL.createObjectURL(side.blob);
-      urlsRef.current = [frontUrl, sideUrl];
+      // Respect the existing strict CSP; never loosen img-src for this review tool.
+      const frontUrl = await imageDataUrl(front.blob);
+      if (requestId !== generation.current) return;
+      const sideUrl = await imageDataUrl(side.blob);
+      if (requestId !== generation.current) return;
       setPictures({ key: requested.key, front: frontUrl, side: sideUrl });
       setStatus('ready');
     } catch {
