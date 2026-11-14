@@ -543,6 +543,33 @@ describe('anatomy production artifact audit', () => {
     ]);
     expect(WebAssembly.validate(wasmWithDataId)).toBe(true);
     f.file('pagefind/wasm.en_data_id.pagefind', gzipSync(Buffer.concat([prefix, wasmWithDataId])));
+    // A 65-byte passive data payload begins with a reserved ID. Its 0x41
+    // LEB length looks like the ASCII letter A, so scanning the serialized
+    // module as one string can hide the otherwise exact token boundary.
+    const lengthBoundaryData = Buffer.concat([
+      Buffer.from('FMA999991 ', 'ascii'), Buffer.alloc(55, 0x2e),
+    ]);
+    if (lengthBoundaryData.length !== 65) throw new Error('invalid synthetic WASM fixture size');
+    const lengthBoundarySection = Buffer.concat([
+      Buffer.from([0x01, 0x01, 0x41]), lengthBoundaryData,
+    ]);
+    const lengthBoundaryWasm = Buffer.concat([
+      wasmHeader, Buffer.from([0x0b, lengthBoundarySection.length]), lengthBoundarySection,
+    ]);
+    expect(WebAssembly.validate(lengthBoundaryWasm)).toBe(true);
+    f.file('pagefind/wasm.en_data_length_boundary.pagefind',
+      gzipSync(Buffer.concat([prefix, lengthBoundaryWasm])));
+    // A complete valid ZIP stored as passive data must be rejected even if
+    // it is not adjacent to a custom-section header or a plain source ID.
+    const zipDataSection = Buffer.concat([
+      Buffer.from([0x01, 0x01]), encodeWasmU32(hiddenZip.length), hiddenZip,
+    ]);
+    const zipDataWasm = Buffer.concat([
+      wasmHeader, Buffer.from([0x0b]), encodeWasmU32(zipDataSection.length), zipDataSection,
+    ]);
+    expect(WebAssembly.validate(zipDataWasm)).toBe(true);
+    f.file('pagefind/wasm.en_data_archive.pagefind',
+      gzipSync(Buffer.concat([prefix, zipDataWasm])));
     f.file('pagefind/wasm.en_draft_id.pagefind', wasmWithDraftId);
     // Pagefind also accepts already-decompressed data with the same marker.
     f.file('pagefind/fragment/en_raw_test.pf_fragment', Buffer.concat([prefix, Buffer.from(JSON.stringify({
@@ -570,7 +597,9 @@ describe('anatomy production artifact audit', () => {
     f.file('pagefind/index/en_safe_glb_mention.pf_index', gzipSync(Buffer.concat([prefix, safeMentionCbor])));
     f.file('pagefind/index/en_safe_glb_mention_raw.pf_index', Buffer.concat([prefix, safeMentionCbor]));
     expect(f.check().errors).toEqual([
+      'archive/container in production output requires explicit review: /pagefind/wasm.en_data_archive.pagefind',
       'archive/container in production output requires explicit review: /pagefind/wasm.en_data_id.pagefind',
+      'archive/container in production output requires explicit review: /pagefind/wasm.en_data_length_boundary.pagefind',
       'archive/container in production output requires explicit review: /pagefind/wasm.en_draft_id.pagefind',
     ]);
 
@@ -580,7 +609,9 @@ describe('anatomy production artifact audit', () => {
     textHintFragment[3] |= 0x01;
     f.file('pagefind/fragment/en_text_hint.pf_fragment', textHintFragment);
     expect(f.check().errors).toEqual([
+      'archive/container in production output requires explicit review: /pagefind/wasm.en_data_archive.pagefind',
       'archive/container in production output requires explicit review: /pagefind/wasm.en_data_id.pagefind',
+      'archive/container in production output requires explicit review: /pagefind/wasm.en_data_length_boundary.pagefind',
       'archive/container in production output requires explicit review: /pagefind/wasm.en_draft_id.pagefind',
     ]);
 
@@ -597,7 +628,9 @@ describe('anatomy production artifact audit', () => {
       f.file(`pagefind/fragment/en_safe_header_${name}.pf_fragment`, ordinary);
     }
     expect(f.check().errors).toEqual([
+      'archive/container in production output requires explicit review: /pagefind/wasm.en_data_archive.pagefind',
       'archive/container in production output requires explicit review: /pagefind/wasm.en_data_id.pagefind',
+      'archive/container in production output requires explicit review: /pagefind/wasm.en_data_length_boundary.pagefind',
       'archive/container in production output requires explicit review: /pagefind/wasm.en_draft_id.pagefind',
     ]);
 
@@ -763,7 +796,9 @@ describe('anatomy production artifact audit', () => {
     f.file('pagefind/index/en_trailing_bytes.pf_index', Buffer.concat([gzipSync(Buffer.concat([prefix, Buffer.from('safe index payload')])), Buffer.from('glTF' + 'x'.repeat(32))]));
     expect(f.check().errors).toEqual(expect.arrayContaining([
       'archive/container in production output requires explicit review: /pagefind/wasm.en_hidden_archive.pagefind',
+      'archive/container in production output requires explicit review: /pagefind/wasm.en_data_archive.pagefind',
       'archive/container in production output requires explicit review: /pagefind/wasm.en_data_id.pagefind',
+      'archive/container in production output requires explicit review: /pagefind/wasm.en_data_length_boundary.pagefind',
       'archive/container in production output requires explicit review: /pagefind/wasm.en_draft_id.pagefind',
       'archive/container in production output requires explicit review: /pagefind/fragment/en_corrupt.pf_fragment',
       'archive/container in production output requires explicit review: /pagefind/fragment/en_hidden_model.pf_fragment',
