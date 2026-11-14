@@ -221,6 +221,9 @@ export function sortSystems(systems: readonly AnatomySystem[]): AnatomySystem[] 
 export interface BuildEnv {
   WORKERS_CI?: string | undefined;
   WORKERS_CI_BRANCH?: string | undefined;
+  GITHUB_REF?: string | undefined;
+  GITHUB_BASE_REF?: string | undefined;
+  GITHUB_EVENT_NAME?: string | undefined;
   /** Explicit opt-in for local and test builds (the Playwright config sets it); never set on a deployed build. */
   CUEORY_ANATOMY_DRAFTS?: string | undefined;
 }
@@ -229,24 +232,30 @@ export interface BuildEnv {
 export const PRODUCTION_BRANCH = 'main';
 
 /**
- * May this build show drafts? Workers Builds (WORKERS_CI=1) builds every branch: drafts only when it names a branch and
- * that branch isn't `main`. A Workers build that doesn't say which branch counts as the live site, so a missing
- * variable can never leak drafts. Fails closed: any other build (a plain `npm run build`, an uploaded dist/) excludes
- * drafts unless CUEORY_ANATOMY_DRAFTS=1 says so on purpose.
+ * Reject production build and release PR contexts before considering a local
+ * override or Workers preview flags. Only a named non-production Workers
+ * branch or deliberate local/test opt-in can include draft models.
  */
 export function draftsAllowed(env: BuildEnv): boolean {
-  // Both forms are emitted by real Workers build environments. Never let a
-  // Workers build fall through to the local preview opt-in.
-  if (env.WORKERS_CI !== '1' && env.WORKERS_CI !== 'true') {
-    return env.CUEORY_ANATOMY_DRAFTS === '1';
+  const branchName = (raw?: string) => {
+    const value = raw?.trim() ?? '';
+    return value.startsWith('refs/heads/') ? value.slice('refs/heads/'.length) : value;
+  };
+  const production = (name: string) => name.toLowerCase().split('/').at(-1) === PRODUCTION_BRANCH;
+  const branch = branchName(env.WORKERS_CI_BRANCH);
+  const githubRef = env.GITHUB_REF?.trim() ?? '';
+  const githubBranch = githubRef.startsWith('refs/heads/')
+    ? branchName(githubRef)
+    : '';
+  const githubTarget = env.GITHUB_BASE_REF?.trim() ?? '';
+  if ([branch, githubBranch, githubTarget].some(production)) return false;
+
+  const ci = env.WORKERS_CI?.trim().toLowerCase() ?? '';
+  if (ci === '1' || ci === 'true') {
+    return branch.length > 0 && /^[A-Za-z0-9][A-Za-z0-9._/-]*$/.test(branch);
   }
-  const rawBranch = env.WORKERS_CI_BRANCH?.trim();
-  const branch = rawBranch?.startsWith('refs/heads/')
-    ? rawBranch.slice('refs/heads/'.length)
-    : rawBranch;
-  // The connected production trigger uses legacy/main. A literal main or
-  // either fully-qualified production ref must also fail closed.
-  return Boolean(branch) && branch !== PRODUCTION_BRANCH && branch !== 'legacy/main';
+  if (ci !== '' && ci !== '0' && ci !== 'false') return false;
+  return env.CUEORY_ANATOMY_DRAFTS === '1';
 }
 
 /** The systems a build may show: approved ones always, drafts only where `draftsAllowed`. */
