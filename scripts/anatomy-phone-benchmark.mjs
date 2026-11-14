@@ -144,8 +144,11 @@ async function oneRound(name, index) {
     const firstSystemMs = performance.now() - startOpen;
     const firstSystemHeapBytes = await heapBytes(session);
 
-    const whole = page.getByRole('group', { name: 'body system' })
-      .getByRole('button', { name: 'whole body', exact: true });
+    // Body-system choices live inside a fieldset/legend, which is not a
+    // reliable ARIA group role. Use the visible button directly and ensure
+    // only the intended system choice is selected.
+    const whole = page.getByRole('button', { name: 'whole body', exact: true });
+    if (await whole.count() !== 1) throw new Error('Expected one whole-body system choice.');
     const startWhole = performance.now();
     await whole.click();
     await waitForWholeBodyFiles(page, 1);
