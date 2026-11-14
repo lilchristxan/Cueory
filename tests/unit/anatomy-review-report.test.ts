@@ -260,9 +260,10 @@ describe('read-only anatomy review inventory', () => {
     const destination = join(outside, 'redirected', 'status', 'review-output');
     const canonicalTarget = join(process.cwd(), 'docs', 'status', 'review-output');
     // The actual repository root is protected, not just the temporary fixture.
+    const existed = existsSync(canonicalTarget);
     expect(() => writeAnatomyReviewSheets(anatomyInventory(root), destination))
       .toThrow('write review sheets outside the project repository');
-    expect(existsSync(canonicalTarget)).toBe(false);
+    expect(existsSync(canonicalTarget)).toBe(existed);
   });
 
   it('refuses an occupied review filename even when it is a dangling symlink', () => {
