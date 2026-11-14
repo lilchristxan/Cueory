@@ -1,3 +1,4 @@
+import AxeBuilder from '@axe-core/playwright';
 import { readFile } from 'node:fs/promises';
 import { expect, test } from '@playwright/test';
 import { isDesktopOfEachEngine } from './projects';
@@ -68,6 +69,74 @@ test('a credited front and side picture is generated on request, from one GLB', 
   }
   expect(glbs.length).toBe(1);
   expect(new URL(glbs[0]!).pathname).toBe('/models/anatomy/kidneys.glb');
+});
+
+
+test('review pictures wait for a nonzero canvas layout before requesting the model', async ({ page }, info) => {
+  test.skip(!isDesktopOfEachEngine(info), 'one canvas-layout race per browser engine');
+  test.setTimeout(90_000);
+  const requests: string[] = [];
+  page.on('request', (request) => {
+    if (/\\.glb(?:[?#]|$)/.test(request.url())) requests.push(request.url());
+  });
+  await page.goto(PATH);
+  const canvas = page.locator('canvas');
+  await expect(canvas).toBeVisible();
+  await canvas.evaluate((element) => {
+    element.style.setProperty('width', '0px', 'important');
+    element.style.setProperty('height', '0px', 'important');
+  });
+  expect(await canvas.evaluate((element) => element.clientWidth)).toBe(0);
+  await page.getByRole('button', { name: 'make front and side pictures' }).click();
+  await expect(page.getByRole('status')).toContainText('loading the model and making pictures');
+
+  // A frame or a timer must never start Three.js using a 1px canvas.
+  await page.waitForTimeout(250);
+  expect(requests).toEqual([]);
+  await canvas.evaluate((element) => {
+    element.style.removeProperty('width');
+    element.style.removeProperty('height');
+  });
+  await expect.poll(() => canvas.evaluate((element) => element.clientWidth))
+    .toBeGreaterThan(0);
+  await expect(page.getByRole('img', { name: 'kidneys and urinary tract: front view, model review only' }))
+    .toBeVisible({ timeout: 60_000 });
+  expect(requests).toHaveLength(1);
+});
+
+test('a failed model request shows a retry and a new renderer can export both pictures', async ({ page }, info) => {
+  test.skip(!isDesktopOfEachEngine(info), 'one real WebGL failure/retry per browser engine');
+  test.setTimeout(90_000);
+  let attempts = 0;
+  await page.route('**/models/anatomy/kidneys.glb', async (route) => {
+    attempts += 1;
+    if (attempts === 1) await route.abort('failed');
+    else await route.continue();
+  });
+  await page.goto(PATH);
+  await page.getByRole('button', { name: 'make front and side pictures' }).click();
+  await expect(page.getByRole('alert')).toContainText('pictures could not be made');
+  await expect(page.getByRole('img', { name: /model review only/ })).toHaveCount(0);
+  await page.getByRole('button', { name: 'try making pictures again' }).click();
+  await expect(page.getByRole('img', { name: 'kidneys and urinary tract: front view, model review only' }))
+    .toBeVisible({ timeout: 60_000 });
+  await expect(page.getByRole('img', { name: 'kidneys and urinary tract: side view, model review only' }))
+    .toBeVisible();
+  expect(attempts).toBe(2);
+});
+
+test('the anatomy review sheet is keyboard accessible without serious or critical violations', async ({ page }) => {
+  await page.goto(PATH);
+  const first = page.locator('[data-review-structure]').first().getByRole('checkbox');
+  await first.focus();
+  await expect(first).toBeFocused();
+  await page.keyboard.press('Space');
+  await expect(first).toBeChecked();
+  const results = await new AxeBuilder({ page }).withTags([
+    'wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa',
+  ]).analyze();
+  expect(results.violations.filter((violation) => violation.impact === 'serious' || violation.impact === 'critical'))
+    .toEqual([]);
 });
 
 test.describe('no JavaScript review', () => {
