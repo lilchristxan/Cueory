@@ -9,7 +9,7 @@
  */
 import { pathToFileURL } from 'node:url';
 import { resolve } from 'node:path';
-import { auditAnatomyProduction } from './anatomy-production-audit.mjs';
+import { auditAnatomyProduction, builtSiteEntrypointErrors } from './anatomy-production-audit.mjs';
 
 export function shouldAuditAnatomyBuild(env) {
   // Any build on main must be audited, including manual and scheduled
@@ -30,7 +30,7 @@ export function shouldAuditAnatomyBuild(env) {
 export function checkAnatomyBuild(env = process.env, dist = 'dist', content = 'content/visuals') {
   if (!shouldAuditAnatomyBuild(env)) return { skipped: true, errors: [] };
   const result = auditAnatomyProduction(dist, content);
-  return { skipped: false, ...result };
+  return { skipped: false, ...result, errors: [...result.errors, ...builtSiteEntrypointErrors(dist)] };
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
