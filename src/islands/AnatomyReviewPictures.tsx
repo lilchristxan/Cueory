@@ -8,6 +8,44 @@ interface Props {
   credit: string;
 }
 
+/**
+ * WebGL projections must be based on the canvas's real laid-out dimensions.
+ * A background tab can throttle animation frames, so do not use a single rAF
+ * as evidence of layout readiness. Timeout is bounded and always cleans up.
+ */
+export function waitForReviewCanvasLayout(
+  canvas: HTMLCanvasElement,
+  timeoutMs = 5_000,
+): Promise<void> {
+  return new Promise<void>((resolve, reject) => {
+    if (canvas.isConnected && canvas.clientWidth > 0 && canvas.clientHeight > 0) {
+      resolve();
+      return;
+    }
+    let settled = false;
+    let observer: ResizeObserver | null = null;
+    let timeout = 0;
+    const finish = (error?: Error) => {
+      if (settled) return;
+      settled = true;
+      observer?.disconnect();
+      window.clearTimeout(timeout);
+      if (error) reject(error);
+      else resolve();
+    };
+    const check = () => {
+      if (canvas.isConnected && canvas.clientWidth > 0 && canvas.clientHeight > 0) finish();
+    };
+    observer = new ResizeObserver(check);
+    observer.observe(canvas);
+    timeout = window.setTimeout(
+      () => finish(new Error('The model picture canvas is not visible or has no size.')),
+      timeoutMs,
+    );
+    check();
+  });
+}
+
 /** The site's CSP allows data: pictures but intentionally disallows blob: images. */
 function pictureDataUrl(blob: Blob): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -52,9 +90,16 @@ export default function AnatomyReviewPictures({ modelPath, structureIds, title, 
     setState('loading');
     let scene: LabScene | null = null;
     try {
+      // Wait for measured dimensions, not a guessed frame delay: a hidden
+      // browser tab may render its first React frame much later than the tap.
+      await waitForReviewCanvasLayout(target);
+      if (!mounted.current) return;
       // Keep three.js and all GLB downloads out of the unopened review page.
       const { createLabScene, readColors } = await import('./anatomyscene');
       if (!mounted.current) return;
+      if (!target.isConnected || target.clientWidth === 0 || target.clientHeight === 0) {
+        throw new Error('The picture view became unavailable.');
+      }
       scene = createLabScene({
         canvas: target,
         colors: readColors(),
@@ -92,8 +137,12 @@ export default function AnatomyReviewPictures({ modelPath, structureIds, title, 
       // The complete source-backed structure list remains available below.
       if (mounted.current) setState('error');
     } finally {
-      scene?.dispose();
-      if (sceneRef.current === scene) sceneRef.current = null;
+      // Error and unmount must both release the GPU resources. If unmount
+      // already disposed this scene, do not dispose it a second time.
+      if (scene && sceneRef.current === scene) {
+        sceneRef.current = null;
+        scene.dispose();
+      }
     }
   };
 
