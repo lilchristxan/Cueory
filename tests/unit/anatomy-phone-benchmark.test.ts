@@ -27,7 +27,7 @@ describe('Anatomy Lab manual phone benchmark safety', () => {
   });
 
   it('bounds repeated test rounds instead of running indefinitely', () => {
-    for (const count of ['0', '11', '2.5', 'NaN']) {
+    for (const count of ['', '0', '11', '2.5', 'NaN']) {
       const result = invalidRun({ ANATOMY_BENCH_ROUNDS: count });
       expect(result.status, count).toBe(1);
       expect(result.stderr, count).toContain('ANATOMY_BENCH_ROUNDS must be an integer from 1 to 10.');
