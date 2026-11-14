@@ -56,6 +56,41 @@ function walkFiles(dir, linked) {
   });
 }
 
+/**
+ * Detect a complete text glTF model even when its .gltf extension was
+ * replaced with a benign name. Parse only bounded JSON files and validate
+ * the actual mesh/buffer contract, not an arbitrary occurrence of "meshes".
+ */
+function hasDisguisedTextGltf(path) {
+  if (!Number.isInteger(fsConstants.O_NOFOLLOW)) throw new Error('this platform cannot safely audit symbolic links');
+  const fd = openSync(path, fsConstants.O_RDONLY | fsConstants.O_NOFOLLOW);
+  try {
+    const stat = fstatSync(fd);
+    if (!stat.isFile()) throw new Error('not a regular file');
+    if (stat.size < 60 || stat.size > 8 * 1024 * 1024) return false;
+    const header = Buffer.alloc(Math.min(stat.size, 512));
+    readSync(fd, header, 0, header.length, 0);
+    const prefix = header.toString('utf8').trimStart();
+    if (!prefix.startsWith('{') || !prefix.includes('"asset"')) return false;
+    const bytes = readFileSync(fd);
+    let json;
+    try { json = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes)); } catch { return false; }
+    if (!json || typeof json !== 'object' || Array.isArray(json) ||
+        json.asset?.version !== '2.0' ||
+        !Array.isArray(json.meshes) || json.meshes.length < 1 ||
+        !Array.isArray(json.accessors) || json.accessors.length < 1 ||
+        !Array.isArray(json.buffers) || json.buffers.length < 1 ||
+        !Array.isArray(json.bufferViews) || json.bufferViews.length < 1) return false;
+    return json.meshes.some((mesh) => Array.isArray(mesh?.primitives) &&
+      mesh.primitives.some((primitive) =>
+        Number.isInteger(primitive?.attributes?.POSITION) &&
+        primitive.attributes.POSITION >= 0 &&
+        primitive.attributes.POSITION < json.accessors.length));
+  } finally {
+    closeSync(fd);
+  }
+}
+
 /** A GLB is still unpublished model data if it is renamed to .bin or another suffix. */
 function hasGlbMagic(path) {
   if (!Number.isInteger(fsConstants.O_NOFOLLOW)) throw new Error('this platform cannot safely audit symbolic links');
@@ -1341,7 +1376,7 @@ export function auditAnatomyProduction(distDir, contentDir) {
     }
   }
   const shipped = [...new Set(builtFiles
-    .filter((path) => MODEL_ASSET.test(path) || hasGlbMagic(path))
+    .filter((path) => MODEL_ASSET.test(path) || hasGlbMagic(path) || hasDisguisedTextGltf(path))
     .map(toUrl))];
 
   for (const url of shipped) {
