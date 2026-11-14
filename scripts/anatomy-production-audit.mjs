@@ -607,7 +607,7 @@ function containsDecodedRawGeometry(bytes) {
     const triangles = bytes.readUInt32LE(80);
     if (triangles > 0 && 84 + triangles * 50 === bytes.length) return true;
   }
-  const text = bytes.toString('utf8', 0, Math.min(bytes.length, 128 * 1024)).replace(/^\uFEFF/u, '');
+  const text = bytes.toString('utf8').replace(/^\uFEFF/u, '');
   if (/^ply\r?\nformat\s+(?:ascii|binary_little_endian|binary_big_endian)\s+1\.0\b/m.test(text) &&
       /^element\s+vertex\s+[1-9]\d*/m.test(text)) return true;
   if (/^solid(?:\s+[^\r\n]*)?\r?\n/m.test(text) &&
