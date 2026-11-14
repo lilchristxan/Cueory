@@ -13,6 +13,10 @@ import { publicAnatomySystems } from '../islands/anatomypublic';
 const files = import.meta.glob('../../content/visuals/anatomy-*.json', { eager: true, import: 'default' });
 const systems = publicAnatomySystems(files);
 const ready = systems.length > 0;
+// Carry the public report route through when the separate Flag or comment
+// package (#684) lands. In the current staging viewer this extra property is
+// ignored, while the future viewer requires it for correct report context.
+const viewerProps = { systems, fixture: null, drafts: false, reportPage: '/anatomy' as const };
 ---
 
 <Layout title="anatomy lab" description="Explore the anatomy lab." variant="study" noindex={!ready}>
@@ -21,7 +25,7 @@ const ready = systems.length > 0;
     {
       ready ? (
         <>
-          <AnatomyLab client:only="react" systems={systems} fixture={null} drafts={false} reportPage="/anatomy" />
+          <AnatomyLab client:only="react" {...viewerProps} />
           <noscript>
             <div class="space-y-4 rounded-lg border border-line p-4 text-ink">
               <p>the 3D anatomy lab needs JavaScript. You can study every approved structure in words below.</p>
