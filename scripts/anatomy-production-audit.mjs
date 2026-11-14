@@ -513,7 +513,11 @@ function hasArchiveMagic(path, includeEmbeddedGlb = true) {
     const header = Buffer.alloc(Math.min(size, 512));
     if (header.length) readSync(fd, header, 0, header.length, 0);
     const includeAsciiMarkers = !TEXT_ASSET.test(path);
-    let archiveCandidate = hasArchiveMagicHeader(header, includeAsciiMarkers);
+    // A structurally valid Unix ar archive is still an archive when served
+    // with a reviewed text suffix. The eight-byte marker is meaningful at
+    // offset zero, but not as a stray reference in ordinary prose.
+    let archiveCandidate = hasArchiveMagicHeader(header, includeAsciiMarkers) ||
+      (header.subarray(0, 8).equals(Buffer.from('!<arch>\n', 'ascii')) && hasArAt(header, 0));
 
     const chunkSize = 64 * 1024;
     const overlapSize = 511; // Retain a full 512-byte TAR header across chunk boundaries.
