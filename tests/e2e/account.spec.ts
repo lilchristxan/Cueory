@@ -108,6 +108,13 @@ test.beforeAll(async () => {
       const client = {
         auth: {
           getSession: async () => ({ data: { session: params.has('signed-out') ? null : { user: { id: uuid(9), email: 'student@example.test', user_metadata: { full_name: 'Sample Student' } } } }, error: null }),
+          mfa: {
+            // The real export checks assurance both before and after reading.
+            // A fixture with no verified factors stays at aal1, not an MFA step-up.
+            getAuthenticatorAssuranceLevel: async () => ({
+              data: { currentLevel: 'aal1', nextLevel: 'aal1' }, error: null,
+            }),
+          },
           signOut: async options => { calls.push('signOut:' + options.scope); return { error: null }; },
           // Match Supabase's auth subscription contract. The account export listens for
           // cross-tab identity events and always unsubscribes after its last session check.
