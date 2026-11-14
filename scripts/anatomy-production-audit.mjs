@@ -36,8 +36,8 @@ const REVIEWED_EXTENSIONLESS_OUTPUT = new Set(['/_headers', '/_redirects']);
 const ARCHIVE_ASSET = /\.(?:zip|tar|tgz|gz|bz2|xz|zst|7z|rar|cab|jar|war|ear|apk|ipa|iso|dmg)$/i;
 // Scan all ordinary published text assets, not just the anatomy page or hashed JavaScript chunks.
 // Site search, manifests or unrelated pages can otherwise accidentally expose a draft identifier.
-const TEXT_ASSET = /\.(?:html?|js|mjs|json|map|xml|svg|txt|css|csv|tsv|md|webmanifest)$/i;
-const SCRIPT_ESCAPES_ASSET = /\.(?:js|mjs|json|map|webmanifest|html?)$/i;
+const TEXT_ASSET = /\.(?:html?|js|mjs|cjs|json|map|xml|svg|txt|css|csv|tsv|md|webmanifest|vtt)$/i;
+const SCRIPT_ESCAPES_ASSET = /\.(?:js|mjs|cjs|json|map|webmanifest|html?)$/i;
 const MARKUP_ESCAPES_ASSET = /\.(?:html?|svg|xml)$/i;
 const CSS_ESCAPES_ASSET = /\.css$/i;
 
