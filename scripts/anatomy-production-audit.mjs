@@ -639,6 +639,41 @@ function pagefindArtifactKind(url) {
 
 
 
+/**
+ * Gzip optional headers are public bytes but disappear after decompression.
+ * Inspect the metadata rather than reject safe Pagefind WASM filenames.
+ */
+function safePagefindGzipHeader(bytes, draftIds) {
+  if (bytes.length < 18 || bytes[0] !== 0x1f || bytes[1] !== 0x8b ||
+      bytes[2] !== 8 || (bytes[3] & 0xe0) !== 0) return false;
+  const flags = bytes[3];
+  let cursor = 10;
+  if (flags & 0x04) {
+    if (cursor + 2 > bytes.length) return false;
+    const size = bytes.readUInt16LE(cursor);
+    cursor += 2 + size;
+    if (cursor > bytes.length) return false;
+  }
+  for (const present of [0x08, 0x10]) {
+    if (!(flags & present)) continue;
+    const nul = bytes.indexOf(0, cursor);
+    if (nul < 0) return false;
+    cursor = nul + 1;
+  }
+  if (flags & 0x02) cursor += 2;
+  if (cursor > bytes.length - 8) return false;
+
+  const metadata = bytes.subarray(10, cursor);
+  if (containsGlbHeader(metadata) || containsValidatedArchive(metadata)) return false;
+  const raw = metadata.toString('latin1');
+  return ![
+    raw,
+    decodeAsciiEscapesForAudit(raw, 'script'),
+    decodeAsciiEscapesForAudit(raw, 'markup'),
+    decodeAsciiEscapesForAudit(raw, 'css'),
+  ].some((value) => containsReservedAnatomyId(value, draftIds));
+}
+
 /** Validate Pagefind's actual generated formats; a matching filename alone is never trusted. */
 function validPagefindArtifact(path, kind, draftIds = new Set()) {
   let bytes;
@@ -648,16 +683,7 @@ function validPagefindArtifact(path, kind, draftIds = new Set()) {
     return false;
   }
   const isGzip = bytes.length >= 2 && bytes[0] === 0x1f && bytes[1] === 0x8b;
-  // Pagefind's reviewed output uses the plain RFC 1952 gzip envelope.
-  // Optional header fields are public but not present after gunzipSync, so
-  // reject them before verifying the decompressed search data. Otherwise an
-  // FNAME/FCOMMENT/FEXTRA field could hide draft labels from the release audit.
-  // Reject optional FEXTRA/FNAME/FCOMMENT and reserved gzip flag bits.
-  // Standard FTEXT and FHCRC are retained for generated Pagefind assets.
-  // Pagefind's shipped WebAssembly members may use a gzip header hint;
-  // reject the optional metadata fields that can conceal draft IDs while
-  // allowing the harmless FTEXT bit emitted by its actual compressor.
-  if (isGzip && (bytes.length < 18 || bytes[2] !== 8 || (bytes[3] & 0xfc) !== 0)) return false;
+  if (isGzip && !safePagefindGzipHeader(bytes, draftIds)) return false;
   let decoded;
   try {
     decoded = isGzip
