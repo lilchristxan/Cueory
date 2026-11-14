@@ -144,13 +144,22 @@ export function anatomyInventory(root = DEFAULT_ROOT, selectedSystem = null) {
  * The recognized Workers CI values are 1 and true; unknown values are
  * rejected, even when local preview opt-in is also supplied.
  *
- * @param {{WORKERS_CI?:string, WORKERS_CI_BRANCH?:string, CUEORY_ANATOMY_DRAFTS?:string}} env
+ * @param {{WORKERS_CI?:string, WORKERS_CI_BRANCH?:string, CUEORY_ANATOMY_DRAFTS?:string,
+ *   GITHUB_REF?:string, GITHUB_EVENT_NAME?:string, GITHUB_BASE_REF?:string}} env
  */
 export function draftReviewSheetsAllowed(env) {
   const raw = env.WORKERS_CI_BRANCH?.trim() ?? '';
   const branch = raw.startsWith('refs/heads/') ? raw.slice('refs/heads/'.length) : raw;
-  // Reject main, legacy/main, refs/heads/main and any other main alias.
-  if (branch.toLowerCase().split('/').at(-1) === 'main') return false;
+  // Reject production builds even when a local preview opt-in is accidentally set.
+  // GitHub release workflows may not set WORKERS_CI or WORKERS_CI_BRANCH.
+  const githubRef = env.GITHUB_REF?.trim() ?? '';
+  const githubBranch = githubRef.startsWith('refs/heads/')
+    ? githubRef.slice('refs/heads/'.length)
+    : '';
+  const githubTarget = env.GITHUB_BASE_REF?.trim() ?? '';
+  if ([branch, githubBranch, githubTarget].some(
+    (candidate) => candidate.toLowerCase().split('/').at(-1) === 'main',
+  )) return false;
 
   const ci = env.WORKERS_CI?.trim().toLowerCase() ?? '';
   if (ci === '1' || ci === 'true') {
