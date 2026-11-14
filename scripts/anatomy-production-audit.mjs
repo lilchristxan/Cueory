@@ -585,6 +585,50 @@ function containsReservedAnatomyId(text, draftIds) {
   return false;
 }
 
+/**
+ * Production JS/HTML/JSON may embed entire draft GLBs in base64 literals
+ * (atob(), data: URIs, or JSON fields). Raw-file magic and visible-ID scans
+ * cannot see those bytes. Decode bounded, canonical base64 runs and inspect
+ * their actual contents, including source IDs, real GLB framing and archives.
+ *
+ * A suspicious overlarge encoded run is not evidence of a safe asset. Refuse
+ * it instead of skipping a potentially unpublished multi-megabyte model.
+ */
+function hasUnsafeEncodedAnatomyPayload(text, draftIds) {
+  const MAX_ENCODED_RUN = 24 * 1024 * 1024;
+  const MAX_TOTAL_ENCODED = 48 * 1024 * 1024;
+  let examined = 0;
+  // Treat quoted/URI base64 as a separate token, not an incidental substring
+  // of a longer JavaScript identifier. Include base64url's '-' and '_'.
+  const runs = /(?:^|[^A-Za-z0-9+/_=-])([A-Za-z0-9+/_-]{12,}={0,2})(?=$|[^A-Za-z0-9+/_=-])/g;
+  for (const match of text.matchAll(runs)) {
+    const encoded = match[1];
+    if (encoded.length % 4 === 1) continue;
+    if (encoded.length > MAX_ENCODED_RUN || (examined += encoded.length) > MAX_TOTAL_ENCODED) return true;
+    const normalized = encoded.replaceAll('-', '+').replaceAll('_', '/');
+    const bytes = Buffer.from(normalized, 'base64');
+    // Buffer.from(base64) accepts malformed data by silently discarding parts.
+    // Only canonical, lossless encodings count as actual embedded payloads.
+    if (bytes.toString('base64').replace(/=+$/u, '') !== normalized.replace(/=+$/u, '')) continue;
+    if (containsGlbHeader(bytes) || containsValidatedArchive(bytes)) return true;
+    const decoded = bytes.toString('utf8');
+    if (containsReservedAnatomyId(decoded, draftIds)) return true;
+    // A glTF 2.0 JSON model can also be embedded as a base64 data URI
+    // without containing the binary GLB header or an unescaped source ID.
+    if (bytes.length > 0 && bytes.length <= 16 * 1024 * 1024 && decoded.trimStart().startsWith('{')) {
+      try {
+        const json = JSON.parse(decoded);
+        if (json && !Array.isArray(json) && json.asset?.version === '2.0' &&
+            Array.isArray(json.meshes) && json.meshes.length > 0 &&
+            Array.isArray(json.accessors) && Array.isArray(json.buffers)) return true;
+      } catch {
+        // Non-JSON media and unrelated encoded text are harmless here.
+      }
+    }
+  }
+  return false;
+}
+
 function validPagefindCbor(bytes, draftIds = new Set()) {
   let offset = 0;
   let values = 0;
