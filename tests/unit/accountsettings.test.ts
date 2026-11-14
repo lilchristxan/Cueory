@@ -454,6 +454,53 @@ describe('a different account signed in from another tab (Codex on #230)', () =>
     expect((await prepareDownloadFor({ session: session('a'), reader: reader() }, 'a', options)).ok).toBe(true);
   });
 
+  it('refuses an A-to-B-to-A export even when the initial and final session both say A', async () => {
+    const options = { email: 'a@example.test', signInDetails: undefined, storage: new MemoryStorage(), today };
+    const source = reader();
+    let started!: () => void;
+    let resume!: () => void;
+    const readStarted = new Promise<void>((resolve) => { started = resolve; });
+    const release = new Promise<void>((resolve) => { resume = resolve; });
+    let listener: ((id: string | null) => void) | undefined;
+    const unsubscribe = vi.fn();
+    const wrapped = {
+      session: session('a'),
+      reader: {
+        ...source,
+        // Hold a database read mid-export so a different tab can switch A to B and back.
+        async select(table: Parameters<typeof source.select>[0], columns: Parameters<typeof source.select>[1]) {
+          if (table === 'profiles') { started(); await release; }
+          return source.select(table, columns);
+        },
+      },
+      onIdentityChange(callback: (id: string | null) => void) {
+        listener = callback;
+        return unsubscribe;
+      },
+    };
+    const exportPromise = prepareDownloadFor(wrapped, 'a', options);
+    await readStarted;
+    listener?.('b');
+    listener?.('a');
+    resume();
+    expect(await exportPromise).toEqual({
+      ok: false, changed: true, message: accountMessage('identity-changed'),
+    });
+    expect(unsubscribe).toHaveBeenCalledTimes(1);
+  });
+
+  it('unsubscribes export auth monitoring when a database read fails', async () => {
+    const options = { email: 'a@example.test', signInDetails: undefined, storage: new MemoryStorage(), today };
+    const unsubscribe = vi.fn();
+    const result = await prepareDownloadFor({
+      session: session('a'),
+      reader: reader({ fails: true }),
+      onIdentityChange: () => unsubscribe,
+    }, 'a', options);
+    expect(result.ok).toBe(false);
+    expect(unsubscribe).toHaveBeenCalledTimes(1);
+  });
+
   it('onIdentityChange reports the new user id (or null) and unsubscribes', () => {
     let listener: ((event: string, next: { user?: { id?: unknown } | null } | null) => void) | undefined;
     const unsubscribe = vi.fn();
