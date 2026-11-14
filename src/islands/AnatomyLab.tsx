@@ -1593,12 +1593,12 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
                       onClick={() => {
                         setPosture(p);
                         sceneRef.current?.setPosture(p);
-                  // Both meshes must have the same root rotation before copying the camera.
-                  const comparison = compareSceneRef.current;
-                  if (comparison) {
-                    comparison.setPosture(p);
-                    if (sceneRef.current) comparison.applyCameraState(sceneRef.current.cameraState());
-                  }
+                        // Both models need matching root rotations before the camera is copied.
+                        const comparison = compareSceneRef.current;
+                        if (comparison) {
+                          comparison.setPosture(p);
+                          if (sceneRef.current) comparison.applyCameraState(sceneRef.current.cameraState());
+                        }
                         setAnnounce(p === 'lying' ? 'the model lies on its back, seen from above.' : 'the model stands, seen from the front.');
                       }}
                     >
