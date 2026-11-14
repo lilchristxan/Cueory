@@ -1069,6 +1069,9 @@ export function builtSiteEntrypointErrors(distDir) {
     // The entry point must be a complete HTML document, not tag text inside
     // an HTML comment or an unfinished document with no closing body.
     const markup = html.replace(/<!--[\s\S]*?-->/g, ' ');
+    // A partial '<!-' adjacent to a completed comment can become a comment
+    // opener in parsed HTML. Fail closed rather than interpreting its body.
+    if (markup.includes('<!-')) return ['production site entry point is invalid: /index.html'];
     // A leftover comment opener or closer means the visible body is not
     // trustworthy. Never validate tags hidden in an unterminated comment.
     if (markup.includes('<!--') || markup.includes('-->')) {
