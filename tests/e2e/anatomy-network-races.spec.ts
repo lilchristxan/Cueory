@@ -62,9 +62,10 @@ test.describe('anatomy whole-body network races', () => {
     // A retry cannot discard or re-fetch the heart that was already decoded.
     expect(heartRequests).toBe(1);
     expect(vesselsRequests).toBe(2);
-    // The retry finishes the layer reveal: the previously hidden heart is now
-    // visible, without another heart request or a second decoded GLB.
-    await expect(structures(page).getByRole('button', { name: 'heart', exact: true }))
+    // Heart belongs to the organs layer even though its GLB is shared with
+    // vessels. Retrying vessels must preserve the decoded heart *and* keep
+    // its independently hidden layer hidden until the student opens it.
+    await expect(structures(page).getByRole('button', { name: 'heart (hidden)', exact: true }))
       .toBeEnabled();
     await expect(page.getByRole('group', { name: 'layers, skin to bone' })
       .getByRole('button', { name: /^vessels \(/ })).toHaveAttribute('aria-pressed', 'true');
