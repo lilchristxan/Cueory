@@ -105,6 +105,20 @@ describe('anatomy structure flag context', () => {
     expect(checkReportWithContext(input)).toEqual(checkReport(input));
   });
 
+  it('retains the actual preview or public page path and never creates an unrelated question UUID', () => {
+    for (const page of ['/preview/anatomy-lab', '/anatomy'] as const) {
+      const checked = checkReportWithContext({ ...input, page }, context);
+      expect(checked).toEqual({
+        ok: true,
+        report: { ...input, page, comment: `about: ${context}\nthe name looks wrong` },
+      });
+      if (checked.ok) {
+        expect(checked.report.itemId).toBeUndefined();
+        expect(checked.report.itemVersionId).toBeUndefined();
+      }
+    }
+  });
+
   it('retains the requirement for a student explanation when reason is other', () => {
     const result = checkReportWithContext({ ...input, reason: 'other', comment: '' }, context);
     expect(result).toEqual({ ok: false, problems: [{ field: 'comment', message: 'add a comment for something else.' }] });
