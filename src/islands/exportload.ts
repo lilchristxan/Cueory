@@ -41,6 +41,8 @@ export interface ExportReader {
   rpc(name: ExportRpc): PromiseLike<ReadResult>;
   /** The signed-in student's own sign-in record: `{ user }`, as Supabase's auth.getUser() returns it. */
   user(): PromiseLike<ReadResult>;
+  /** Auth assurance, so restrictive MFA RLS cannot silently hide the student's data from an export. */
+  assurance(): PromiseLike<ReadResult>;
 }
 
 export type ExportRpc = 'my_flags' | 'my_sessions';
@@ -50,6 +52,7 @@ export type ExportLoadResult =
   | { ok: false; message: string };
 
 const ERROR_MESSAGE = "we couldn't load all your saved data. please try again.";
+const MFA_STEP_UP_MESSAGE = 'please complete two-factor sign-in before downloading your data.';
 const PAGE_SIZE = 500;
 
 /** ExportData's caps. Refuse oversize sets instead of quietly dropping rows. study_events has none (see above). */
@@ -339,9 +342,28 @@ function pickedLetters(value: Record<string, unknown>): string[] {
   return result;
 }
 
+/**
+ * Restrictive MFA policies return an empty successful SELECT when a verified factor is present
+ * but the current JWT is only aal1. Never label such a partial result a complete export.
+ * Unexpected/missing assurance also fails closed rather than guessing no data exists.
+ */
+async function exportAssurance(reader: ExportReader): Promise<'ready' | 'step-up'> {
+  const reply = await reader.assurance();
+  if (!reply || reply.error != null) throw new Error('assurance read failed');
+  const levels = row(reply.data);
+  const current = field(levels, 'currentLevel');
+  const next = field(levels, 'nextLevel');
+  if (current === 'aal1' && next === 'aal2') return 'step-up';
+  if ((current === 'aal1' && next === 'aal1') || (current === 'aal2' && next === 'aal2')) return 'ready';
+  throw new Error('invalid authentication assurance');
+}
+
 /** Returns every section supplied by the database, or nothing if a read fails. */
 export async function loadExport(reader: ExportReader): Promise<ExportLoadResult> {
   try {
+    if (await exportAssurance(reader) === 'step-up') {
+      return { ok: false, message: MFA_STEP_UP_MESSAGE };
+    }
     const profiles = entries(await fetchRows(reader, 'profiles'), (r) => {
       // Preserve current staging's display-name change-history fields.
       const changes = field(r, 'name_changes_in_window');
@@ -455,6 +477,10 @@ export async function loadExport(reader: ExportReader): Promise<ExportLoadResult
         updatedAt: timestamp(r, 'updated_at'),
       };
     });
+    // A session can lose its assurance during a long paged export. Refuse its result too.
+    if (await exportAssurance(reader) === 'step-up') {
+      return { ok: false, message: MFA_STEP_UP_MESSAGE };
+    }
     const who = await reader.user();
     if (!who || who.error != null) throw new Error('sign-in record read failed');
     const ownAccount = account(who.data);
@@ -490,7 +516,10 @@ interface SupabaseQuery {
 export interface SupabaseExportClient {
   from(table: ExportTable): { select(columns: string): SupabaseQuery };
   rpc(name: ExportRpc): SupabaseQuery;
-  auth: { getUser(): PromiseLike<ReadResult> };
+  auth: {
+    getUser(): PromiseLike<ReadResult>;
+    mfa: { getAuthenticatorAssuranceLevel(): PromiseLike<ReadResult> };
+  };
 }
 
 /** Stable unique row keys for keyset pagination. profiles has at most one row. */
@@ -557,5 +586,6 @@ export function fromSupabase(client: SupabaseExportClient): ExportReader {
     selectPages: (table, columns) => pages(() => client.from(table).select(columns), table),
     rpc: (name) => allPages(() => client.rpc(name), name),
     user: () => client.auth.getUser(),
+    assurance: () => client.auth.mfa.getAuthenticatorAssuranceLevel(),
   };
 }

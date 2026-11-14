@@ -64,7 +64,7 @@ const account = {
 };
 const sessions = [{ createdAt: when, updatedAt: '2026-11-01T09:00:00+00:00', notAfter: null, userAgent: 'sample browser', ip: '203.0.113.5' }];
 type Table = keyof typeof fields;
-type Source = Table | ExportRpc | 'user';
+type Source = Table | ExportRpc | 'user' | 'assurance';
 type Reply = { data: unknown; error: unknown };
 const failed = { ok: false, message: "we couldn't load all your saved data. please try again." };
 
@@ -72,16 +72,62 @@ function reader(overrides: Partial<Record<Source, Reply | Error>> = {}) {
   const calls: string[] = [];
   const fetch = (table: Source) => {
     if (overrides[table] instanceof Error) throw overrides[table];
-    return overrides[table] ?? { data: table === 'user' ? { user } : rows[table], error: null };
+    return overrides[table] ?? { data: table === 'user' ? { user }
+      : table === 'assurance' ? { currentLevel: 'aal1', nextLevel: 'aal1' } : rows[table], error: null };
   };
   const db: ExportReader = {
     async select(table, columns) { calls.push(table + ':' + columns); return fetch(table) as Reply; },
     async *selectPages(table, columns) { calls.push(table + ':' + columns); yield fetch(table) as Reply; },
     async rpc(name) { calls.push('rpc:' + name); return fetch(name) as Reply; },
     async user() { calls.push('user'); return fetch('user') as Reply; },
+    async assurance() { return fetch('assurance') as Reply; },
   };
   return { db, calls };
 }
+
+describe('loadExport — MFA assurance and complete data', () => {
+  const stepUpMessage = 'please complete two-factor sign-in before downloading your data.';
+
+  it('refuses the whole export before querying rows when aal1 must step up to aal2', async () => {
+    const { db, calls } = reader({ assurance: { data: { currentLevel: 'aal1', nextLevel: 'aal2' }, error: null } });
+    expect(await loadExport(db)).toEqual({ ok: false, message: stepUpMessage });
+    expect(calls).toEqual([]);
+  });
+
+  it('fails closed if the assurance API errors, is absent, or returns an unexpected level', async () => {
+    for (const override of [
+      { data: null, error: { message: 'private authentication detail' } },
+      { data: null, error: null },
+      { data: { currentLevel: 'aal1' }, error: null },
+      { data: { currentLevel: null, nextLevel: 'aal1' }, error: null },
+      { data: { currentLevel: 'aal2', nextLevel: 'aal1' }, error: null },
+    ]) {
+      const { db, calls } = reader({ assurance: override });
+      expect(await loadExport(db)).toEqual(failed);
+      expect(calls).toEqual([]);
+    }
+  });
+
+  it('permits an aal2 session for a student with a verified factor', async () => {
+    const { db } = reader({ assurance: { data: { currentLevel: 'aal2', nextLevel: 'aal2' }, error: null } });
+    const result = await loadExport(db);
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.data.anatomyViews).toHaveLength(1);
+  });
+
+  it('refuses an export when MFA assurance drops partway through paging', async () => {
+    const { db, calls } = reader();
+    let checks = 0;
+    db.assurance = async () => ({
+      data: ++checks === 1 ? { currentLevel: 'aal2', nextLevel: 'aal2' }
+        : { currentLevel: 'aal1', nextLevel: 'aal2' },
+      error: null,
+    });
+    expect(await loadExport(db)).toEqual({ ok: false, message: stepUpMessage });
+    expect(checks).toBe(2);
+    expect(calls).toContain('anatomy_saved_views:' + fields.anatomy_saved_views);
+  });
+});
 
 describe('loadExport — personal data boundaries', () => {
   it('maps the five owned tables, my_flags, my_sessions and the sign-in record with no extra fields or lost records', async () => {
@@ -357,7 +403,10 @@ function supabase(dataset: Record<string, unknown[]>, failure?: { name: string; 
       expect(columns).toBe(fields[name]); return query(name);
     } }),
     rpc: (name: ExportRpc) => query(name),
-    auth: { getUser: async () => ({ data: { user }, error: null }) },
+    auth: {
+      getUser: async () => ({ data: { user }, error: null }),
+      mfa: { getAuthenticatorAssuranceLevel: async () => ({ data: { currentLevel: 'aal1', nextLevel: 'aal1' }, error: null }) },
+    },
   } satisfies SupabaseExportClient;
   return { client, calls };
 }

@@ -42,6 +42,7 @@ function reader({ fails = false, events = [] as unknown[] } = {}): ExportReader 
     async *selectPages() { yield { data: events, error: null }; },
     rpc: async () => ({ data: [], error: null }),
     user: async () => ({ data: { user: { created_at: when } }, error: null }),
+    assurance: async () => ({ data: { currentLevel: 'aal1', nextLevel: 'aal1' }, error: null }),
   };
 }
 
