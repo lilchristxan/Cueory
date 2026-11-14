@@ -1953,8 +1953,8 @@ describe('anatomy production artifact audit', () => {
 
   it('rejects Base64 source-form OBJ, PLY and STL geometry while allowing ordinary encoded prose', () => {
     const f = setup();
-    const obj = '# synthetic mesh\\nv 0 0 0\\nv 1 0 0\\nv 0 1 0\\nf 1 2 3\\n';
-    const ply = 'ply\\nformat ascii 1.0\\nelement vertex 3\\nproperty float x\\nproperty float y\\nproperty float z\\nend_header\\n';
+    const obj = '# synthetic mesh\nv 0 0 0\nv 1 0 0\nv 0 1 0\nf 1 2 3\n';
+    const ply = 'ply\nformat ascii 1.0\nelement vertex 3\nproperty float x\nproperty float y\nproperty float z\nend_header\n';
     const stl = Buffer.alloc(134);
     stl.write('synthetic binary STL', 0, 'ascii');
     stl.writeUInt32LE(1, 80);
