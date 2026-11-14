@@ -388,9 +388,9 @@ describe('anatomy production artifact audit', () => {
     f.file('assets/ordinary.dat', 'unreviewed file type even if not a model');
     const errors = f.check().errors;
     expect(errors).toContain('unapproved model exposed in production: /assets/triangle.gltf');
-    expect(errors).toContain('unapproved text glTF model exposed in production: /assets/padded-triangle.json');
+    expect(errors).toContain('unapproved model exposed in production: /assets/padded-triangle.json');
     for (const url of ['/assets/triangle.dat', '/assets/triangle.jpg']) {
-      expect(errors).toContain(`unapproved text glTF model exposed in production: ${url}`);
+      expect(errors).toContain(`unapproved model exposed in production: ${url}`);
     }
     expect(errors).toContain('unreviewed output asset type requires explicit review: /assets/triangle.dat');
     expect(errors).toContain('unreviewed output asset type requires explicit review: /assets/ordinary.dat');
