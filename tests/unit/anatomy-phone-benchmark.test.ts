@@ -26,6 +26,12 @@ describe('Anatomy Lab manual phone benchmark safety', () => {
     expect(result.stderr).toContain('ANATOMY_BENCH_ENGINES must contain chromium and/or webkit.');
   });
 
+  it('rejects an explicitly empty browser-engine setting', () => {
+    const result = invalidRun({ ANATOMY_BENCH_ENGINES: '' });
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain('ANATOMY_BENCH_ENGINES must contain chromium and/or webkit.');
+  });
+
   it('bounds repeated test rounds instead of running indefinitely', () => {
     for (const count of ['', '0', '11', '2.5', 'NaN']) {
       const result = invalidRun({ ANATOMY_BENCH_ROUNDS: count });
