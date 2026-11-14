@@ -709,7 +709,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
       savedViewsRequestGuard.invalidate();
       reviewQueueRequestGuard.invalidate();
     };
-  }, [identityGuard, savedViewsRequestGuard, reviewQueueRequestGuard]);
+  }, [identityGuard, savedViewsRequestGuard, reviewQueueRequestGuard, system, visibilityIntent]);
 
   const studyReady = signedIn && load.state === 'ready';
   const refreshReviewQueue = useCallback(() => {
