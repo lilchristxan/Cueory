@@ -652,7 +652,7 @@ function validPagefindArtifact(path, kind, draftIds = new Set()) {
   // Optional header fields are public but not present after gunzipSync, so
   // reject them before verifying the decompressed search data. Otherwise an
   // FNAME/FCOMMENT/FEXTRA field could hide draft labels from the release audit.
-  if (isGzip && (bytes.length < 18 || bytes[2] !== 8 || bytes[3] !== 0)) return false;
+  if (isGzip && (bytes.length < 18 || bytes[2] !== 8 || (bytes[3] & 0xfc) !== 0)) return false;
   let decoded;
   try {
     decoded = isGzip
