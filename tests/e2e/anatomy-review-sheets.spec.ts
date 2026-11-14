@@ -22,6 +22,7 @@ test('the preview gives each source system an independent, unindexed phone revie
 
   const items = page.locator('[data-review-structure]');
   await expect(items).toHaveCount(raw.labels.length);
+  await page.locator('[data-review-group]').first().locator('summary').click();
   const first = raw.labels[0]!;
   const original = raw.sources.find((s) => s.id === first.source)!;
   await expect(items.first()).toContainText(first.text);
@@ -52,6 +53,7 @@ test('review sheets fit phone, tablet and desktop in Light and Evening', async (
     for (const width of [320, 390, 820, 1440]) {
       await page.setViewportSize({ width, height: width < 600 ? 844 : width < 1200 ? 1180 : 900 });
       await expect(page.getByRole('heading', { level: 1 })).toContainText('kidneys and urinary tract');
+      await page.locator('[data-review-group]').first().locator('summary').click();
       const first = page.locator('[data-review-structure]').first().getByRole('checkbox');
       await expect(first).toBeVisible();
       const layout = await page.evaluate(() => {
@@ -161,7 +163,12 @@ test('a failed model request shows a retry and a new renderer can export both pi
 
 test('the anatomy review sheet is keyboard accessible without serious or critical violations', async ({ page }) => {
   await page.goto(PATH);
-  const first = page.locator('[data-review-structure]').first().getByRole('checkbox');
+  const firstGroup = page.locator('[data-review-group]').first();
+  const disclosure = firstGroup.locator('summary');
+  await disclosure.focus();
+  await page.keyboard.press('Enter');
+  await expect(firstGroup).toHaveAttribute('open', '');
+  const first = firstGroup.locator('[data-review-structure]').first().getByRole('checkbox');
   await first.focus();
   await expect(first).toBeFocused();
   await page.keyboard.press('Space');
@@ -171,6 +178,34 @@ test('the anatomy review sheet is keyboard accessible without serious or critica
   ]).analyze();
   expect(results.violations.filter((violation) => violation.impact === 'serious' || violation.impact === 'critical'))
     .toEqual([]);
+});
+
+test('all source records remain present inside bounded native disclosures', async ({ page }) => {
+  await page.goto('/preview/anatomy-review/muscle');
+  const data = JSON.parse(await readFile(new URL('../../content/visuals/anatomy-muscle.json', import.meta.url), 'utf8')) as {
+    labels: Array<{ id: string; text: string }>;
+  };
+  const groups = page.locator('[data-review-group]');
+  await expect(groups).toHaveCount(Math.ceil(data.labels.length / 25));
+  await expect(page.locator('[data-review-structure]')).toHaveCount(data.labels.length);
+  const summaries = groups.locator('summary');
+  for (let i = 0; i < await groups.count(); i++) {
+    const group = groups.nth(i);
+    const summary = summaries.nth(i);
+    await summary.focus();
+    await page.keyboard.press('Enter');
+    await expect(group).toHaveAttribute('open', '');
+    const item = group.locator('[data-review-structure]').first();
+    await expect(item.getByRole('checkbox')).toBeVisible();
+    const original = data.labels[i * 25]!;
+    await expect(item).toContainText(original.text);
+    await item.getByRole('checkbox').focus();
+    await page.keyboard.press('Space');
+    await expect(item.getByRole('checkbox')).toBeChecked();
+    await summary.focus();
+    await page.keyboard.press('Enter');
+    await expect(group).not.toHaveAttribute('open');
+  }
 });
 
 test.describe('no JavaScript review', () => {
@@ -183,6 +218,7 @@ test.describe('no JavaScript review', () => {
     await page.goto(PATH);
     await expect(page.getByRole('heading', { name: /kidneys and urinary tract: model review sheet/ })).toBeVisible();
     await expect(page.locator('[data-review-structure]')).toHaveCount(6);
+    await page.locator('[data-review-group]').first().locator('summary').click();
     const first = page.locator('[data-review-structure]').first();
     await expect(first).toContainText('FMA15900 BP9803 urinary bladder');
     await first.getByRole('checkbox').check();
