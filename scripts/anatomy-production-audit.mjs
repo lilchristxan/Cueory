@@ -1596,7 +1596,7 @@ export function auditAnatomyProduction(distDir, contentDir) {
         !REVIEWED_EXTENSIONLESS_OUTPUT.has(url)) {
       errors.push(`unreviewed output asset type requires explicit review: ${url}`);
     }
-    if (!pagefindKind && /\\.wasm$/i.test(path)) {
+    if (!pagefindKind && /\.wasm$/i.test(path)) {
       try {
         const wasm = readRegularBytesNoFollow(path, MAX_ARCHIVE_INSPECTION_BYTES);
         if (!validStandaloneWasmPayload(wasm, draftIds)) {
