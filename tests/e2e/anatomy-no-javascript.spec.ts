@@ -30,5 +30,21 @@ test('anatomy structure names remain reachable and credited without JavaScript',
     'href',
     'https://creativecommons.org/licenses/by/4.0/',
   );
+  // Source-only Find It does not require scripts, WebGL, or any model fetch.
+  const practice = first.getByRole('region', { name: 'find it in words' });
+  await expect(practice).toBeVisible();
+  const prompts = practice.locator('details');
+  await expect(prompts).toHaveCount(5);
+  const firstPrompt = prompts.first();
+  const sourceId = await firstPrompt.locator('summary').textContent();
+  expect(sourceId).toMatch(/which structure has ID [A-Za-z0-9_-]+\? show answer/);
+  const answer = firstPrompt.locator('p').first();
+  await expect(answer).toBeHidden();
+  await firstPrompt.locator('summary').click();
+  await expect(firstPrompt).toHaveAttribute('open', '');
+  await expect(answer).toBeVisible();
+  expect((await answer.textContent())?.trim()).toBeTruthy();
+  await firstPrompt.locator('summary').click();
+  await expect(answer).toBeHidden();
   expect(modelRequests).toEqual([]);
 });
