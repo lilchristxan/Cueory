@@ -333,11 +333,16 @@ describe('flag reports are bound to the account that pressed Send (Task 178)', (
     expect(client.auth.getSession).toHaveBeenCalledTimes(1);
   });
 
-  it('sends with the original user, without affecting ordinary flag RPC arguments', async () => {
-    const { client, calls, load } = fakeClient();
+  it('sends with the original user, pinning the bearer only on that RPC builder', async () => {
+    const { client, calls, requestHeaders, requestSignals, load } = fakeClient();
     expect(await makeFlagSend(load, 'user-1')({ ...good, itemId, itemVersionId: versionId }))
       .toBe('sent');
     expect(client.auth.getSession).toHaveBeenCalledTimes(2);
+    expect(requestHeaders).toEqual([
+      { name: 'Authorization', value: 'Bearer synthetic-user-1-token' },
+    ]);
+    expect(requestSignals).toHaveLength(1);
+    expect(requestSignals[0]?.aborted).toBe(false);
     expect(calls).toHaveLength(1);
     expect(calls[0]?.args).toEqual({
       page: good.page,
@@ -400,6 +405,91 @@ describe('flag reports are bound to the account that pressed Send (Task 178)', (
     expect(await sending).toEqual(accountChanged);
     expect(rpc, 'no account may receive a stale draft').not.toHaveBeenCalled();
     expect(reads).toBe(2);
+  });
+
+  it('aborts the lazy RPC when another tab switches to B after the per-request header is pinned', async () => {
+    const fake = switchableClient();
+    fake.store('account-A');
+    let signal: AbortSignal | null = null;
+    let pinnedAuthorization = '';
+    const sent: string[] = [];
+    let releaseFetch: () => void = () => {};
+    let notifyStarted: () => void = () => {};
+    const heldFetch = new Promise<void>((resolve) => { releaseFetch = resolve; });
+    const started = new Promise<void>((resolve) => { notifyStarted = resolve; });
+    const rpc = vi.fn(() => {
+      const work = (async () => {
+        notifyStarted();
+        // The lazy HTTP fetch does not start until after the caller has built
+        // the query. Another tab may change the shared Supabase session here.
+        await heldFetch;
+        if (signal?.aborted) throw new Error('request cancelled before HTTP dispatch');
+        sent.push(pinnedAuthorization);
+        return { data: reportId, error: null };
+      })();
+      return Object.assign(work, {
+        setHeader(name: string, value: string) {
+          if (name === 'Authorization') pinnedAuthorization = value;
+          return this;
+        },
+        abortSignal(value: AbortSignal) {
+          signal = value;
+          return this;
+        },
+      });
+    });
+    fake.client.rpc = rpc;
+
+    const sending = makeFlagSend(async () => fake.client, 'account-A')(good);
+    await started;
+    expect(pinnedAuthorization).toBe('Bearer synthetic-account-A-token');
+    expect(signal?.aborted).toBe(false);
+    fake.announce('account-B');
+    expect(signal?.aborted).toBe(true);
+    releaseFetch();
+    expect(await sending).toEqual(accountChanged);
+    expect(rpc).toHaveBeenCalledTimes(1); // builder constructed, but no HTTP POST
+    expect(sent).toEqual([]);
+  });
+
+  it('pins A authorization even when shared token acquisition later observes B without an auth event', async () => {
+    const fake = switchableClient();
+    fake.store('account-A');
+    let authorization = '';
+    let releaseFetch: () => void = () => {};
+    let notifyStarted: () => void = () => {};
+    const heldFetch = new Promise<void>((resolve) => { releaseFetch = resolve; });
+    const started = new Promise<void>((resolve) => { notifyStarted = resolve; });
+    const dispatched: string[] = [];
+    fake.client.rpc = () => {
+      const work = (async () => {
+        notifyStarted();
+        await heldFetch;
+        // Reproduce fetchWithAuth reading the *current* shared session
+        // after rpc() returned its lazy PostgREST builder.
+        const latest = await fake.client.auth.getSession();
+        const token = latest.data.session?.access_token ?? '';
+        dispatched.push(authorization || `Bearer ${token}`);
+        return { data: reportId, error: null };
+      })();
+      return Object.assign(work, {
+        setHeader(name: string, value: string) {
+          if (name === 'Authorization') authorization = value;
+          return this;
+        },
+        abortSignal(_signal: AbortSignal) {
+          return this;
+        },
+      });
+    };
+    const sending = makeFlagSend(async () => fake.client, 'account-A')(good);
+    await started;
+    // The shared client silently changes to B after all A-side preflight
+    // checks. A per-request Authorization must not become B's bearer.
+    fake.store('account-B');
+    releaseFetch();
+    expect(await sending).toBe('sent');
+    expect(dispatched).toEqual(['Bearer synthetic-account-A-token']);
   });
 
   it('fails closed if the account is missing or cannot be checked before dispatch', async () => {
