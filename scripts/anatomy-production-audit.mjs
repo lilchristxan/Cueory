@@ -1101,7 +1101,45 @@ function hasUsableSiteEntrypoint(html) {
   // are permitted after </html>, never arbitrary trailing markup or text.
   // Only Astro's hoisted module scripts are permitted beyond </html>.
   // Ordinary scripts and malformed tags must not pass the release gate.
-  const afterDocumentScript = /^<script\s+type\s*=\s*(["'])module\1(?:\s[^<>]*)?>[\s\S]*?<\/script\s*>/i;
+  const afterDocumentScript = /^<script\b/i;
+  const validTrailingModuleTag = (tag) => {
+    if (!/^<script\b/i.test(tag) || !tag.endsWith('>')) return false;
+    let pos = 7; // After the "script" tag name.
+    let moduleType = false;
+    while (pos < tag.length - 1) {
+      if (!/\s/.test(tag[pos])) return false;
+      while (/\s/.test(tag[pos] ?? '')) pos++;
+      if (pos === tag.length - 1) break;
+      const nameMatch = /^[^\s=/>"'<>]+/.exec(tag.slice(pos));
+      if (!nameMatch) return false;
+      const name = nameMatch[0].toLowerCase();
+      pos += nameMatch[0].length;
+      while (/\s/.test(tag[pos] ?? '')) pos++;
+      let value = '';
+      if (tag[pos] === '=') {
+        pos++;
+        while (/\s/.test(tag[pos] ?? '')) pos++;
+        const quote = tag[pos];
+        if (quote === '"' || quote === "'") {
+          pos++;
+          const closing = tag.indexOf(quote, pos);
+          if (closing < 0 || closing >= tag.length - 1) return false;
+          value = tag.slice(pos, closing);
+          pos = closing + 1;
+        } else {
+          const unquoted = /^[^\s"'=<>`]+/.exec(tag.slice(pos));
+          if (!unquoted) return false;
+          value = unquoted[0];
+          pos += value.length;
+        }
+      }
+      if (name === 'type') {
+        if (moduleType || value !== 'module') return false;
+        moduleType = true;
+      }
+    }
+    return moduleType;
+  };
 
   while (cursor < html.length) {
     const next = html.indexOf('<', cursor);
@@ -1113,10 +1151,24 @@ function hasUsableSiteEntrypoint(html) {
     cursor = end;
     if (next === -1) break;
 
-    if (state === 'done' && /^<script\b/i.test(html.slice(cursor))) {
-      const trailing = afterDocumentScript.exec(html.slice(cursor));
-      if (!trailing) return false;
-      cursor += trailing[0].length;
+    if (state === 'done' && afterDocumentScript.test(html.slice(cursor))) {
+      // A regex over [^<>]* accepts a '>' or type='module' inside an
+      // unterminated quoted attribute. Scan the opening tag quote-aware.
+      let tagEnd = cursor + 1;
+      let quote = '';
+      for (; tagEnd < html.length; tagEnd++) {
+        const char = html[tagEnd];
+        if (quote) {
+          if (char === quote) quote = '';
+        } else if (char === '"' || char === "'") quote = char;
+        else if (char === '<') return false;
+        else if (char === '>') break;
+      }
+      if (tagEnd >= html.length || quote ||
+          !validTrailingModuleTag(html.slice(cursor, tagEnd + 1))) return false;
+      const closing = /<\/script\s*>/i.exec(html.slice(tagEnd + 1));
+      if (!closing) return false;
+      cursor = tagEnd + 1 + closing.index + closing[0].length;
       continue;
     }
 
