@@ -654,7 +654,7 @@ function validPagefindArtifact(path, kind, draftIds = new Set()) {
   // FNAME/FCOMMENT/FEXTRA field could hide draft labels from the release audit.
   // FNAME/FCOMMENT/FEXTRA are unreviewed publicly exposed metadata.
   // FHCRC is only a header checksum and is safe when Node validates it.
-  if (isGzip && (bytes.length < 18 || bytes[2] !== 8 || (bytes[3] & 0xf8) !== 0)) return false;
+  if (isGzip && (bytes.length < 18 || bytes[2] !== 8 || (bytes[3] & 0x1c) !== 0)) return false;
   let decoded;
   try {
     decoded = isGzip
