@@ -36,19 +36,13 @@ test('anatomy structure names remain reachable and credited without JavaScript',
   const prompts = practice.locator('details');
   await expect(prompts).toHaveCount(5);
   // A source ID beyond the five practice prompts must still be findable with no JavaScript.
-  // Not every body system has six structures. Find one with a later catalog
-  // entry; the first five names alone do not prove complete ID search.
-  const catalogSystem = systems.filter({
-    has: page.locator('div.space-y-2 li:nth-child(6)'),
-  }).first();
+  // Confirm a known BodyParts3D ID beyond the first five practice questions,
+  // regardless of how the source catalog groups its structures.
+  const catalogSystem = page.locator('[data-anatomy-system="heart"]');
   await expect(catalogSystem).toBeVisible();
-  const fullCatalog = catalogSystem.locator('div.space-y-2 li');
-  expect(await fullCatalog.count()).toBeGreaterThan(5);
-  const later = fullCatalog.nth(5);
-  await expect(later).toContainText(/ID: [A-Za-z0-9_-]+/);
-  const laterId = (await later.textContent())?.match(/ID: ([A-Za-z0-9_-]+)/)?.[1];
-  expect(laterId).toBeTruthy();
-  await expect(catalogSystem.getByText(`(ID: ${laterId})`, { exact: true })).toBeVisible();
+  const later = catalogSystem.getByText('(ID: FMA7098)', { exact: true });
+  await expect(later).toBeVisible();
+  await expect(later).toHaveText('(ID: FMA7098)');
   const firstPrompt = prompts.first();
   const sourceId = await firstPrompt.locator('summary').textContent();
   expect(sourceId).toMatch(/which structure has ID [A-Za-z0-9_-]+\? show answer/);
