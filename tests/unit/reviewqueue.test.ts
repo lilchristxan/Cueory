@@ -91,6 +91,45 @@ describe('dueItems — validation', () => {
     expect(() => dueItems(null, '2026-11-01')).toThrow();
   });
 
+  it('accepts a real leap day and rejects a leap day in a non-leap year', () => {
+    expect(dueItems([
+      row('leap', { last_reviewed: '2028-02-28', next_review: '2028-02-29' }),
+    ], '2028-02-29')).toEqual(['leap']);
+    expect(() => dueItems([], '2027-02-29')).toThrow(
+      'today must be a real calendar day YYYY-MM-DD, got "2027-02-29".',
+    );
+  });
+
+  it.each(['2026-00-01', '2026-13-01', '2026-99-01', '2026-02-30', '2026-11-31'])(
+    'reports an invalid today value %s without leaking RangeError', (day) => {
+      expect(() => dueItems([], day)).toThrow(
+        `today must be a real calendar day YYYY-MM-DD, got "${day}".`,
+      );
+    },
+  );
+
+  it.each(['2026-00-01', '2026-13-01', '2026-99-01', '2026-02-30', '2026-11-31'])(
+    'reports invalid last_reviewed value %s with the correct field', (day) => {
+      expect(() => dueItems([row('a', { last_reviewed: day })], '2026-12-01')).toThrow(
+        'Row 0: last_reviewed must be a real calendar day YYYY-MM-DD.',
+      );
+    },
+  );
+
+  it.each(['2026-00-01', '2026-13-01', '2026-99-01', '2026-02-30', '2026-11-31'])(
+    'reports invalid next_review value %s with the correct field', (day) => {
+      expect(() => dueItems([row('a', { next_review: day })], '2026-12-01')).toThrow(
+        'Row 0: next_review must be a real calendar day YYYY-MM-DD.',
+      );
+    },
+  );
+
+  it('reports an invalid syntheticHistory review date as last_reviewed', () => {
+    expect(() => syntheticHistory(row('a', { last_reviewed: '2026-13-01' }))).toThrow(
+      'Row 0: last_reviewed must be a real calendar day YYYY-MM-DD.',
+    );
+  });
+
   it('throws for an invalid today format', () => {
     expect(() => dueItems([], 'not-a-date')).toThrow();
   });

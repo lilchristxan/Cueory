@@ -1,0 +1,1 @@
+STATUS: Task 616, review queue calendar dates: invalid months and days now produce the correct field-specific validation error rather than a raw RangeError; added leap-year and date-boundary regressions. Proposed for staging only.
