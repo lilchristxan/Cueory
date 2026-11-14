@@ -1863,6 +1863,22 @@ describe('anatomy production artifact audit', () => {
     expect(errors).not.toContain('unreviewed output asset type requires explicit review: /captions/draft.vtt');
   });
 
+  it('rejects percent-encoded draft and fixture identifiers in shipped assets', () => {
+    const f = setup();
+    expect(f.check().errors).toEqual([]);
+    f.file('_astro/encoded.js', "const id = decodeURIComponent('%46%4D%41%39%39%39%39%39%31');");
+    f.file('content/encoded.json', '{"url":"/item/%46%49%58%30%30%31"}');
+    f.file('docs/mixed.html', '<a href="/%46MA999991">test</a>');
+    f.file('_astro/partial.cjs', "exports.id = 'FMA%39%39%39%39%39%31';");
+    f.file('docs/unrelated.html', '<span>%46%49%58%30%30%31extra</span>');
+    const errors = f.check().errors;
+    expect(errors).toContain('draft anatomy ID exposed in built text: _astro/encoded.js (FMA999991)');
+    expect(errors).toContain('test fixture ID exposed in built text: content/encoded.json (FIX001)');
+    expect(errors).toContain('draft anatomy ID exposed in built text: docs/mixed.html (FMA999991)');
+    expect(errors).toContain('draft anatomy ID exposed in built text: _astro/partial.cjs (FMA999991)');
+    expect(errors).not.toContain('test fixture ID exposed in built text: docs/unrelated.html (FIX001)');
+  });
+
   it('rejects escaped synthetic IDs in generated JS, JSON, HTML and SVG', () => {
     const f = setup();
     f.file('_astro/fixture.js', 'const id="\\u0046IX001";');
