@@ -754,6 +754,7 @@ describe('anatomy production artifact audit', () => {
     expect(f.check().errors).toEqual(expect.arrayContaining([
       'archive/container in production output requires explicit review: /pagefind/wasm.en_hidden_archive.pagefind',
       'archive/container in production output requires explicit review: /pagefind/wasm.en_draft_id.pagefind',
+      'archive/container in production output requires explicit review: /pagefind/wasm.en_opaque_ids.pagefind',
       'archive/container in production output requires explicit review: /pagefind/fragment/en_corrupt.pf_fragment',
       'archive/container in production output requires explicit review: /pagefind/fragment/en_hidden_model.pf_fragment',
       'archive/container in production output requires explicit review: /pagefind/fragment/en_glb_json.pf_fragment',
