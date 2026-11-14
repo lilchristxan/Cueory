@@ -817,6 +817,93 @@ describe('anatomy production artifact audit', () => {
   });
 
 
+  it('checks logical WASM data bytes when a vector length hides a draft ID boundary', () => {
+    const f = setup();
+    const prefix = Buffer.from('pagefind_dcd', 'ascii');
+    const header = Buffer.from([0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00]);
+    const encodeU32 = (initial: number): Buffer => {
+      let value = initial;
+      const parts: number[] = [];
+      do {
+        let byte = value & 0x7f;
+        value >>>= 7;
+        if (value) byte |= 0x80;
+        parts.push(byte);
+      } while (value);
+      return Buffer.from(parts);
+    };
+    const asWasm = (data: Buffer, mode: 'passive' | 'active' | 'indexed'): Buffer => {
+      const memory = mode === 'passive' ? Buffer.alloc(0) : Buffer.from([0x05, 0x03, 0x01, 0x00, 0x01]);
+      const flagsAndOffset = mode === 'passive'
+        ? Buffer.from([0x01])
+        : mode === 'active'
+          ? Buffer.from([0x00, 0x41, 0x00, 0x0b])
+          : Buffer.from([0x02, 0x00, 0x41, 0x00, 0x0b]);
+      const segment = Buffer.concat([flagsAndOffset, encodeU32(data.length), data]);
+      const section = Buffer.concat([Buffer.from([0x01]), segment]);
+      const wasm = Buffer.concat([header, memory, Buffer.from([0x0b]), encodeU32(section.length), section]);
+      expect(WebAssembly.validate(wasm)).toBe(true);
+      return gzipSync(Buffer.concat([prefix, wasm]));
+    };
+
+    // 65 encodes as ASCII 'A'. The section's raw bytes contain "AFMA999991",
+    // which must not cause the reserved FMA999991 at data offset zero to vanish.
+    const boundaryId = Buffer.concat([Buffer.from('FMA999991 ', 'ascii'), Buffer.alloc(55, 0x2e)]);
+    expect(boundaryId.length).toBe(65);
+
+    // A framed, gzip-compressed synthetic GLB inside WASM must also be refused.
+    // No real BodyParts3D source geometry or label is used in this test.
+    const gltf = Buffer.from(JSON.stringify({
+      asset: { version: '2.0' },
+      scene: 0, scenes: [{ nodes: [0] }], nodes: [{ mesh: 0 }],
+      meshes: [{ primitives: [{ attributes: { POSITION: 0 }, indices: 1 }] }],
+      buffers: [{ byteLength: 44 }],
+      bufferViews: [
+        { buffer: 0, byteOffset: 0, byteLength: 36 },
+        { buffer: 0, byteOffset: 36, byteLength: 6 },
+      ],
+      accessors: [
+        { bufferView: 0, componentType: 5126, count: 3, type: 'VEC3' },
+        { bufferView: 1, componentType: 5123, count: 3, type: 'SCALAR' },
+      ],
+    }));
+    const json = Buffer.concat([gltf, Buffer.alloc((4 - gltf.length % 4) % 4, 0x20)]);
+    const bin = Buffer.alloc(44);
+    bin.writeUInt16LE(1, 38);
+    bin.writeUInt16LE(2, 40);
+    const glb = Buffer.alloc(20 + json.length + 8 + bin.length);
+    glb.write('glTF', 0, 'ascii');
+    glb.writeUInt32LE(2, 4);
+    glb.writeUInt32LE(glb.length, 8);
+    glb.writeUInt32LE(json.length, 12);
+    glb.writeUInt32LE(0x4e4f534a, 16);
+    json.copy(glb, 20);
+    glb.writeUInt32LE(bin.length, 20 + json.length);
+    glb.writeUInt32LE(0x004e4942, 24 + json.length);
+    bin.copy(glb, 28 + json.length);
+    const compressedGlb = gzipSync(glb);
+    expect(gunzipSync(compressedGlb)).toEqual(glb);
+
+    for (const mode of ['passive', 'active', 'indexed'] as const) {
+      f.file(`pagefind/wasm.en_${mode}_boundary.pagefind`, asWasm(boundaryId, mode));
+      f.file(`pagefind/wasm.en_${mode}_compressed.pagefind`, asWasm(compressedGlb, mode));
+      f.file(`pagefind/wasm.en_${mode}_safe.pagefind`, asWasm(Buffer.from('ordinary Pagefind data'), mode));
+    }
+    const errors = f.check().errors;
+    for (const mode of ['passive', 'active', 'indexed'] as const) {
+      expect(errors).toContain(
+        `archive/container in production output requires explicit review: /pagefind/wasm.en_${mode}_boundary.pagefind`,
+      );
+      expect(errors).toContain(
+        `archive/container in production output requires explicit review: /pagefind/wasm.en_${mode}_compressed.pagefind`,
+      );
+      expect(errors).not.toContain(
+        `archive/container in production output requires explicit review: /pagefind/wasm.en_${mode}_safe.pagefind`,
+      );
+    }
+    expect(errors).toHaveLength(6);
+  });
+
   it('rejects framed embedded archive formats under benign file extensions', () => {
     const f = setup();
     const realBzip2 = embeddedArchiveFixtures().find(([name]) => name === 'bzip2')![1];
