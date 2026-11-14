@@ -612,9 +612,11 @@ export function fromSupabase(client: SupabaseExportClient): ExportReader {
     assurance: () => client.auth.mfa.getAuthenticatorAssuranceLevel(),
     onAuthEvent(callback) {
       const subscribe = client.auth.onAuthStateChange;
-      if (typeof subscribe !== 'function') return () => {};
-      const { data } = subscribe.call(client.auth, callback);
-      return () => data.subscription.unsubscribe();
+      if (typeof subscribe !== 'function') throw new Error('auth event monitoring unavailable');
+      const response = subscribe.call(client.auth, callback);
+      const unsubscribe = response?.data?.subscription?.unsubscribe;
+      if (typeof unsubscribe !== 'function') throw new Error('auth event monitoring unavailable');
+      return () => unsubscribe.call(response.data.subscription);
     },
   };
 }
