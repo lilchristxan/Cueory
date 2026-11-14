@@ -212,6 +212,20 @@ describe('the draft gate (D-56)', () => {
     expect(draftsAllowed({ WORKERS_CI: '1', WORKERS_CI_BRANCH: 'main' })).toBe(false);
   });
 
+  it('fails closed on both production Workers branches, including fully qualified refs and CI=true', () => {
+    for (const ci of ['1', 'true']) {
+      for (const branch of ['main', 'legacy/main', 'refs/heads/main', 'refs/heads/legacy/main']) {
+        expect(draftsAllowed({
+          WORKERS_CI: ci,
+          WORKERS_CI_BRANCH: branch,
+          CUEORY_ANATOMY_DRAFTS: '1',
+        }), `${ci} ${branch}`).toBe(false);
+      }
+      expect(draftsAllowed({ WORKERS_CI: ci, CUEORY_ANATOMY_DRAFTS: '1' })).toBe(false);
+      expect(draftsAllowed({ WORKERS_CI: ci, WORKERS_CI_BRANCH: 'staging' })).toBe(true);
+    }
+  });
+
   it('hides drafts on a Workers build that does not name its branch', () => {
     expect(draftsAllowed({ WORKERS_CI: '1' })).toBe(false);
     expect(draftsAllowed({ WORKERS_CI: '1', WORKERS_CI_BRANCH: '  ' })).toBe(false);
