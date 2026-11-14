@@ -39,7 +39,7 @@ test('a failed layer keeps its successful GLB and retries only the failed file',
   await expect(files).toContainText('model files loaded: 1 of 11', { timeout: 20_000 });
 
   const vessels = page.getByRole('group', { name: 'layers, skin to bone' })
-    .getByRole('button', { name: /^vessels \\(/ });
+    .getByRole('button', { name: /^vessels \(/ });
   await vessels.press('Enter');
 
   // The heart GLB succeeds even though vessels.glb failed in the same layer.
