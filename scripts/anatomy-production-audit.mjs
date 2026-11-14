@@ -1091,6 +1091,11 @@ function hasUsableSiteEntrypoint(html) {
     'script', 'style', 'template', 'noscript', 'link', 'meta', 'source', 'track',
   ]);
 
+  // Astro/Vite may append hoisted module scripts after the closed document.
+  // Keep these strict: only actual script elements with a matching closing tag
+  // are permitted after </html>, never arbitrary trailing markup or text.
+  const afterDocumentScript = /^<script\b(?:\s[^<>]*)?>[\s\S]*?<\/script\s*>/i;
+
   while (cursor < html.length) {
     const next = html.indexOf('<', cursor);
     const end = next === -1 ? html.length : next;
@@ -1100,6 +1105,13 @@ function hasUsableSiteEntrypoint(html) {
     if (['doctype', 'html-open', 'done'].includes(state) && html.slice(cursor, end).trim()) return reject();
     cursor = end;
     if (next === -1) break;
+
+    if (state === 'done' && html.startsWith('<script', cursor)) {
+      const trailing = afterDocumentScript.exec(html.slice(cursor));
+      if (!trailing) return reject();
+      cursor += trailing[0].length;
+      continue;
+    }
 
     if (html.startsWith('<!--', cursor)) {
       const closing = html.indexOf('-->', cursor + 4);
