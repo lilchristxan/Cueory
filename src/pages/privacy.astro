@@ -200,8 +200,9 @@ const format = (value: number) => value.toLocaleString('en-US');
       it, you leave {site.name}, and everything you do there is handled by Ko-fi under Ko-fi's own privacy policy, with
       the payment itself taken by PayPal or Stripe. Ko-fi's help pages say a supporter gives Ko-fi a display name and an
       email address, and may leave a message that is public on the Ko-fi page or private to the creator; Ko-fi shows us,
-      as the creator, your email address and any message, and the payment provider shows us your legal name and email
-      (Stripe can also show a card-linked address). We never see your card number, and the site has no payments of its
+      as the creator, your email address and any message. Depending on the provider and payment method, PayPal or
+      Stripe may also share payment-account details such as a name and email address, and Stripe may show part of the
+      card-linked address. We never see your card number, and the site has no payments of its
       own. We use what Ko-fi shows us only to thank you and to keep our accounts; we don't add supporters to any mailing
       list. <LegalPlaceholder what="how long Ko-fi and PayPal/Stripe keep the supporter record on your account, and whether you keep any copy outside those dashboards" />
     </p>
@@ -263,9 +264,11 @@ const format = (value: number) => value.toLocaleString('en-US');
       session records about a day later. <LegalPlaceholder what="confirm the session limits under Authentication > Sessions in the Supabase dashboard (time-box, inactivity timeout, single session) and state them here, or say 'no limit is set'" />{' '}
       Supabase's own service logs, which include IP addresses, are kept for a short period set by Supabase's plan;{' '}
       <LegalPlaceholder what="confirm the log retention period for the project's plan on supabase.com/pricing and in the dashboard (the Free plan's documented retention is 1 day)" />.
-      Supabase Auth also keeps an audit trail of sign-in events (such as sign-ups, sign-ins and password resets) inside
-      the database. Deleting your account removes your account rows but may not remove those audit entries;{' '}
-      <LegalPlaceholder what="confirm with Supabase whether auth.audit_log_entries is kept for your project, for how long, and whether it is cleared on account deletion; then state it here" />.
+      Supabase Auth also logs account security events such as sign-ups, sign-ins and password resets. Supabase stores
+      those audit logs separately from your account. The project may optionally write audit entries to a database table,{' '}
+      <code>auth.audit_log_entries</code>. We have not confirmed whether that setting is enabled for Cueory. Deleting
+      your account may not remove those separate audit records;{' '}
+      <LegalPlaceholder what="Christian: check Supabase Authentication > Audit Logs for the optional Write audit logs to the database setting, confirm audit-log retention and whether deletion removes those records, and update this paragraph before approving the privacy page" />.
     </p>
     <p>
       If you turn on two-factor sign-in at <a href="/account/two-factor">/account/two-factor</a>, Supabase keeps your

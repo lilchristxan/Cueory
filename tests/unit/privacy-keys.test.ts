@@ -81,6 +81,17 @@ describe.skipIf(!existsSync(privacyPath))('privacy page browser storage disclosu
     expect(html.replace(/\s+/g, ' ')).toContain('tries to clear the progress and settings it saved in this browser; if the browser blocks that, the page tells you so');
   });
 
+  it('does not assert optional audit-table storage or copyright-agent registration is already configured', () => {
+    const privacy = privacyHtml().replace(/\s+/g, ' ');
+    const copyright = readFileSync(new URL('../../dist/copyright.html', import.meta.url), 'utf8').replace(/\s+/g, ' ');
+    expect(privacy).toContain('The project may optionally write audit entries to a database table');
+    expect(privacy).toContain('auth.audit_log_entries');
+    expect(privacy).toContain('We have not confirmed whether that setting is enabled for Cueory');
+    expect(privacy).toContain('Depending on the provider and payment method');
+    expect(copyright).toContain('We have not verified whether a designated agent is registered');
+    expect(copyright).not.toContain('we have not registered a designated agent');
+  });
+
   it('covers every named Cueory browser key with local cleanup, session cleanup or Task 59 sign-out', () => {
     const legacy = legacyStarsKey('<deck>');
     const imported = `${GUEST_IMPORT_MARKER_PREFIX}<id>`;
