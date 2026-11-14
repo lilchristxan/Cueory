@@ -560,8 +560,8 @@ describe('anatomy production artifact audit', () => {
     f.file('pagefind/index/en_safe_glb_mention.pf_index', gzipSync(Buffer.concat([prefix, safeMentionCbor])));
     f.file('pagefind/index/en_safe_glb_mention_raw.pf_index', Buffer.concat([prefix, safeMentionCbor]));
     expect(f.check().errors).toEqual([
-      'archive/container in production output requires explicit review: /pagefind/wasm.en_opaque_ids.pagefind',
       'archive/container in production output requires explicit review: /pagefind/wasm.en_draft_id.pagefind',
+      'archive/container in production output requires explicit review: /pagefind/wasm.en_opaque_ids.pagefind',
     ]);
 
     // A gzip text hint is harmless: the body still has to validate as an
@@ -569,7 +569,10 @@ describe('anatomy production artifact audit', () => {
     const textHintFragment = Buffer.from(fragment);
     textHintFragment[3] |= 0x01;
     f.file('pagefind/fragment/en_text_hint.pf_fragment', textHintFragment);
-    expect(f.check().errors).toEqual([]);
+    expect(f.check().errors).toEqual([
+      'archive/container in production output requires explicit review: /pagefind/wasm.en_draft_id.pagefind',
+      'archive/container in production output requires explicit review: /pagefind/wasm.en_opaque_ids.pagefind',
+    ]);
 
     // Safe, standards-compliant optional metadata must remain compatible with
     // Pagefind's real gzip-wrapped search artifacts, including the WASM path.
@@ -583,7 +586,10 @@ describe('anatomy production artifact audit', () => {
       expect(gunzipSync(ordinary)).toEqual(gunzipSync(fragment));
       f.file(`pagefind/fragment/en_safe_header_${name}.pf_fragment`, ordinary);
     }
-    expect(f.check().errors).toEqual([]);
+    expect(f.check().errors).toEqual([
+      'archive/container in production output requires explicit review: /pagefind/wasm.en_draft_id.pagefind',
+      'archive/container in production output requires explicit review: /pagefind/wasm.en_opaque_ids.pagefind',
+    ]);
 
     // A gzip member can hide public data in optional header fields that
     // gunzipSync strips before Pagefind JSON/CBOR inspection. These fields
