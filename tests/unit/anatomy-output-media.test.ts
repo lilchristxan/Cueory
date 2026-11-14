@@ -101,6 +101,20 @@ describe('production media signatures and renamed anatomy geometry', () => {
     );
   });
 
+  it('rejects raw OBJ split between two streaming media windows', () => {
+    const f = fixture();
+    const prefix = Buffer.concat([
+      Buffer.from([0xff, 0xd8, 0xff, 0xe0]),
+      Buffer.alloc(64 * 1024 - 8, 0),
+    ]);
+    const model = Buffer.from(OBJ);
+    const path = f.file('assets/split-model.jpg', Buffer.concat([prefix, model]));
+    expect(unreviewedMediaPayload(path)).toBe(true);
+    expect(f.audit().errors).toContain(
+      'unreviewed media payload or raw geometry in production output: /assets/split-model.jpg',
+    );
+  });
+
   it('accepts known compatible media signatures without certifying a full decoder pass', () => {
     const f = fixture();
     const safe: Array<[string, Buffer]> = [
