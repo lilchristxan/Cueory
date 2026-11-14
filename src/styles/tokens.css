@@ -55,12 +55,37 @@
   --color-model: #8b6f5b;          /* Mocha    — a structure */
   --color-model-alt: #d3b7a1;      /* Taupe    — every other structure */
   --color-model-selected: #3e2c23; /* Espresso — the selected structure */
+  --color-board-tint: color-mix(in srgb, #d3b7a1 50%, #8b6f5b); /* Taupe + Mocha — sudoku row, column and box of the selected square */
+  --color-board-given: color-mix(in srgb, #eadccf 50%, #f9f5ef); /* Linen + Ivory — sudoku given numbers, far lighter than the tint */
+  --color-board-match: #6b5243;    /* Bronze   — sudoku squares holding the selected number */
+  --color-on-board-match: #f9f5ef; /* Ivory    — numbers on those squares */
 
   /* ---------- Fonts ---------- */
   --font-body: "Lato", system-ui, -apple-system, "Segoe UI", sans-serif; /* headings, body, UI, buttons */
   /* Marketing headings and the italic accent line only (brand spec section 4; D-41). Self-hosted in public/fonts. */
   --font-display: "Bodoni Moda", "Bodoni 72", Didot, Georgia, serif;
   --font-mono: ui-monospace, "SF Mono", Menlo, monospace;
+  /* Finished-game story image canvas (Task 626). Unitless pixels because CanvasRenderingContext2D requires pixels. */
+  --share-story-display-weight: 500;
+  --share-story-emphasis-weight: 700;
+  --share-story-site-weight: 400;
+  --share-story-width: 1080;
+  --share-story-height: 1920;
+  --share-story-logo-width: 480;
+  --share-story-logo-top: 120;
+  --share-story-label-y: 690;
+  --share-story-result-y: 960;
+  --share-story-challenge-y: 1240;
+  --share-story-site-y: 1680;
+  --share-story-label-size: 34;
+  --share-story-result-size: 132;
+  --share-story-result-min-size: 56;
+  --share-story-result-max-width: 880;
+  --share-story-result-line-height: 1.15;
+  --share-story-result-max-lines: 3;
+  --share-story-challenge-size: 52;
+  --share-story-site-size: 42;
+  --share-story-dark-logo: 0;  /* Daytime uses the Espresso artwork; Evening overrides this to Ivory. */
   /* The logo is Christian's PNG artwork (Wordmark.astro, public/brand/v1/), never typed in a font (D-55). */
 
   /* ---------- Type scale (mobile first; large and readable) ----------
@@ -171,6 +196,17 @@
   /* ---------- Word path board (Task 97) ---------- */
   --border-board: 2.5px;        /* the frame around the word search grid (Christian's design, 2026-11-01) */
 
+  /* ---------- Printed puzzles (Task 641) ---------- */
+  /* Paper, not a screen palette: a printed puzzle is black ink on white paper in Daytime and Evening alike. These are
+     CSS color keywords, not --color-* tokens, so no utility class can put them on screen. */
+  --print-paper: white;
+  --print-ink: black;
+  --print-board: 16cm;          /* the word path grid's width on paper: fits letter and A4 inside default margins */
+  --print-letter: 16pt;         /* a letter in the printed grid, large enough to read at arm's length */
+  --print-gap: 0.5cm;           /* space between the grid, the word list and the footer on paper */
+  --print-figure: 13cm;         /* an anatomy worksheet's picture on paper: leaves room for the numbered list below */
+  --worksheet-blank: 1.75rem;   /* the height of a write-in line on an anatomy worksheet */
+
   /* ---------- Motion (D-41 brand bar: 150–400 ms, soft not bouncy, always off under reduced-motion) ---------- */
   --ease-soft: cubic-bezier(0.4, 0, 0.2, 1);     /* gentle UI transitions */
   --ease-emphasis: cubic-bezier(0.2, 0, 0, 1);   /* snappier entrances */
@@ -193,6 +229,17 @@
   --segmented-pad-y: 0.375rem;        /* .segmented-option */
   --segmented-pad-x: 0.875rem;        /* .segmented-option */
   --tap-min: 2.75rem;                 /* 44 px minimum tap target */
+
+  /* ---------- Crossword levels (Task 627) ---------- */
+  --crossword-cell-easy: clamp(2.75rem, 12vw, 4.5rem);
+  --crossword-cell-mid: clamp(2.75rem, 7vw, 3.875rem);
+  --crossword-cell-hard: clamp(1.25rem, calc((100cqw - 0.875rem) / 15), 2.5rem);
+  --crossword-gap: 0.0625rem;
+  --crossword-line: 0.0625rem;
+  --crossword-number: clamp(0.45rem, 1.5vw, 0.75rem);
+  --crossword-letter: clamp(0.75rem, 3vw, 1.5rem);
+  --crossword-help: min(20rem, calc(100vw - var(--spacing-gutter) - var(--spacing-gutter)));
+  --crossword-print-cell: 2rem;      /* a printed square; colors on paper use --print-paper / --print-ink (Task 641) */
 }
 
 /* Pillo rules are a separate entry: always emit their shared theme variables. */
@@ -307,6 +354,7 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --color-page: #1c1917;      /* Charcoal      — page background */
+    --share-story-dark-logo: 1;
     --color-surface: #3a2d24;   /* Walnut        — cards and panels */
     --color-soft: #3a2d24;      /* Walnut        — notice bar */
     --color-highlight: #6b5243; /* Bronze        — accents and highlights (not for text) */
@@ -332,6 +380,10 @@
     --color-model: #cbb8a4;          /* Sand */
     --color-model-alt: #6b5243;      /* Bronze */
     --color-model-selected: #f9f5ef; /* Ivory */
+    --color-board-tint: color-mix(in srgb, #6b5243 30%, #8b6f5b); /* Bronze + Mocha */
+    --color-board-given: color-mix(in srgb, #3a2d24 50%, #1c1917); /* Walnut + Charcoal */
+    --color-board-match: #cbb8a4;    /* Sand */
+    --color-on-board-match: #1c1917; /* Charcoal */
     --shadow-tint: 28 25 23;      /* Charcoal */
     --silk-fold-rgb: 58 45 36;    /* Walnut */
     --silk-fold-alpha: 0.7;
@@ -376,6 +428,7 @@
 
 :root[data-theme="dark"] {
   --color-page: #1c1917;      /* Charcoal      — page background */
+  --share-story-dark-logo: 1;
   --color-surface: #3a2d24;   /* Walnut        — cards and panels */
   --color-soft: #3a2d24;      /* Walnut        — notice bar */
   --color-highlight: #6b5243; /* Bronze        — accents and highlights (not for text) */
@@ -401,6 +454,10 @@
   --color-model: #cbb8a4;          /* Sand */
   --color-model-alt: #6b5243;      /* Bronze */
   --color-model-selected: #f9f5ef; /* Ivory */
+  --color-board-tint: color-mix(in srgb, #6b5243 30%, #8b6f5b); /* Bronze + Mocha */
+  --color-board-given: color-mix(in srgb, #3a2d24 50%, #1c1917); /* Walnut + Charcoal */
+  --color-board-match: #cbb8a4;    /* Sand */
+  --color-on-board-match: #1c1917; /* Charcoal */
   --shadow-tint: 28 25 23;      /* Charcoal */
   --silk-fold-rgb: 58 45 36;    /* Walnut */
   --silk-fold-alpha: 0.7;
@@ -440,4 +497,29 @@
   /* Evening: --shadow-tint is Charcoal (darker), so raise opacity for visible depth. */
   --shadow-card: 0 1px 3px rgb(var(--shadow-tint) / 0.18), 0 4px 12px rgb(var(--shadow-tint) / 0.28);
   --shadow-card-hover: 0 2px 8px rgb(var(--shadow-tint) / 0.28), 0 12px 28px rgb(var(--shadow-tint) / 0.40);
+}
+
+
+@theme static {
+  /* ---------- Sudoku (Task 625) ---------- */
+  --sudoku-cell-min: 2.75rem;
+  --sudoku-cell-max: 5.25rem;
+  --sudoku-height-reserve: 28.75rem;
+  --sudoku-width-reserve: 9.375rem;
+  --sudoku-line: 1px;
+  --sudoku-box-line: 3px;
+  --sudoku-board-frame: calc(var(--sudoku-box-line) * 2 + 1px); /* outer box lines + 1px so rounding never overflows */
+  --sudoku-candidate-size: 0.625rem;
+  --sudoku-entered-line: 2px;
+  --sudoku-selected-line: 3px;                       /* the selected square's outline */
+  /* Highlights (Christian, 2026-11-12): the row, column and box tint is clearly darker than the given-number shading;
+     squares with the selected number are the strongest fill plus bold; numbers keep 4.5:1 on every fill. */
+  --color-sudoku-given: var(--color-board-given);
+  --color-sudoku-related: var(--color-board-tint);
+  --color-sudoku-box-related: var(--color-board-tint);
+  --color-sudoku-identical: var(--color-board-match);
+  --color-on-sudoku-identical: var(--color-on-board-match);
+  --color-sudoku-selected: var(--color-ink);
+  --color-sudoku-entered: var(--color-ink);
+  --color-sudoku-conflict: currentColor;
 }

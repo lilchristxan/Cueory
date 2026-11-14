@@ -1,0 +1,2 @@
+status: Task 750, Sudoku pause and resume (#53): givens remain visible while paused, student entries and X marks are hidden without loss, and elapsed time stops until resumed. Pure rules and browser tests cover the behavior.
+decision: D-pending (W08-2) Prevent changes to difficulty and hint settings while paused so an active board cannot reset unnoticed; controls become usable after resume. Reversible if Christian chooses otherwise.

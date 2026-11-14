@@ -1,9 +1,13 @@
+import '../styles/wordpath.css';
 import { useEffect, useId, useRef, useState, type KeyboardEvent, type PointerEvent } from 'react';
 import { dayLabel } from './daily';
 import { localDay, reportRound } from './gameresults';
-import { cellLabel, clearPick, foundWord, isDone, moveCursor, outcomeInWords, parsePuzzle, pick, selection, shareLine, startSuture, type Cell, type SuturePuzzle } from './suture';
+import { printGame } from './gameprint';
+import { site } from '../config/site';
+import { cellLabel, clearPick, foundWord, isDone, moveCursor, outcomeInWords, parsePuzzle, pick, printableWords, selection, shareLine, startSuture, type Cell, type SuturePuzzle } from './suture';
 
 interface Props { puzzle: SuturePuzzle; name: string }
+const printFoot = new URL(site.url).host;
 const button = 'min-h-11 min-w-11 rounded-md border border-control bg-page px-4 py-2 text-ink disabled:opacity-50';
 // Whole class names, so Tailwind sees each one (grids are 3 to 11 letters wide).
 const columns: Record<number, string> = {
@@ -17,13 +21,22 @@ const columns: Record<number, string> = {
  */
 function shake(element: HTMLElement | null) {
   if (!element || typeof element.animate !== 'function') return;
-  if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
+  const motion = window.matchMedia?.('(prefers-reduced-motion: reduce)');
+  if (motion?.matches) return;
   const tokens = getComputedStyle(element);
   const step = tokens.getPropertyValue('--spacing').trim();
   const duration = Number.parseFloat(tokens.getPropertyValue('--duration-base'));
   if (!step || !Number.isFinite(duration)) return;
   const away = (sign: number) => ({ translate: `calc(${step} * ${sign}) 0` });
-  element.animate([{ translate: '0 0' }, away(-1), away(1), away(-1), { translate: '0 0' }], { duration, easing: 'ease-in-out' });
+  const animation = element.animate([{ translate: '0 0' }, away(-1), away(1), away(-1), { translate: '0 0' }], { duration, easing: 'ease-in-out' });
+  // A preference change must also stop a shake that has already started.
+  const stop = (event: MediaQueryListEvent) => {
+    if (event.matches) animation.cancel();
+  };
+  const cleanup = () => motion?.removeEventListener('change', stop);
+  motion?.addEventListener('change', stop);
+  // Cancellation rejects finished; handle both paths and release the media listener.
+  void animation.finished.then(cleanup, cleanup);
 }
 
 function Board({ puzzle, name }: Props) {
@@ -49,7 +62,25 @@ function Board({ puzzle, name }: Props) {
   useEffect(() => {
     if (!done || reported.current) return;
     reported.current = true;
-    reportRound({ game: 'suture', day: localDay(today), solved: true, tries: state.misses });
+    reportRound({
+      game: 'suture',
+      day: localDay(today),
+      solved: true,
+      tries: state.misses,
+      card: {
+        game: 'suture',
+        name,
+        date: dayLabel(today),
+        result: `${state.found.length} / ${state.totalWords}`,
+        shareResult: `${state.found.length} of ${state.totalWords} words`,
+        summary: 'you found every word in today\'s path.',
+        stats: [
+          { label: 'words found', value: `${state.found.length}` },
+          { label: 'wrong picks', value: `${state.misses}` },
+        ],
+        path: '/play/word-path',
+      },
+    });
   }, [done]);
 
   const choose = (cell: Cell) => {
@@ -99,10 +130,20 @@ function Board({ puzzle, name }: Props) {
   };
 
   return (
-    <section aria-labelledby={puzzle.theme ? title : undefined} aria-label={puzzle.theme ? undefined : `${name} puzzle`} data-testid="suture">
+    <section aria-labelledby={puzzle.theme ? title : undefined} aria-label={puzzle.theme ? undefined : `${name} puzzle`} data-testid="suture" data-print-area="suture" className="wordpath">
+      {/* The round corner buttons (Task 641): print first, then the "?" (how to play) when the game has one. */}
+      <div className="wordpath-corner" data-print-hidden>
+        <button type="button" className="wordpath-round" aria-label="print" data-testid="suture-print" onClick={() => printGame('suture')}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
+            <path d="M6 9V3h12v6" />
+            <rect x="3" y="9" width="18" height="9" rx="2" />
+            <path d="M7 14h10v7H7z" />
+          </svg>
+        </button>
+      </div>
       {puzzle.theme && <h3 id={title} className="display text-center text-2xl text-ink sm:text-3xl" data-testid="suture-theme">{puzzle.theme}</h3>}
-      <p className="mt-2 text-center text-ink-soft">find all {state.totalWords} words. they run up, down, left or right.</p>
-      <p id={help} className="mt-2 text-center text-sm text-ink-soft">
+      <p className="mt-2 text-center text-ink-soft" data-print-hidden>find all {state.totalWords} words. they run up, down, left or right.</p>
+      <p id={help} className="mt-2 text-center text-sm text-ink-soft" data-print-hidden>
         tap a word's first letter, then its last letter. tap the first letter again to start over. on a keyboard, arrows
         move, enter or space picks, and escape clears.
       </p>
@@ -117,7 +158,7 @@ function Board({ puzzle, name }: Props) {
         aria-describedby={help}
         aria-rowcount={puzzle.grid.length}
         aria-colcount={width}
-        className="-mx-6 mt-6 flex flex-col border-(length:--border-board) border-ink bg-page text-ink sm:mx-0 sm:p-3"
+        className="wordpath-board -mx-6 mt-6 flex flex-col border-(length:--border-board) border-ink bg-page text-ink sm:mx-0 sm:p-3"
       >
         {puzzle.grid.map((row, r) => (
           <div key={r} role="row" aria-rowindex={r + 1} className={`grid ${columns[width]}`}>
@@ -157,7 +198,7 @@ function Board({ puzzle, name }: Props) {
           </div>
         ))}
       </div>
-      <ul className="mt-6 columns-3 gap-x-4 text-sm font-bold sm:text-lg" aria-label="words to find" data-testid="suture-words">
+      <ul className="mt-6 columns-3 gap-x-4 text-sm font-bold sm:text-lg" aria-label="words to find" data-testid="suture-words" data-print-hidden>
         {puzzle.words.map((word, i) => {
           const isFound = state.found.includes(i);
           return (
@@ -169,19 +210,27 @@ function Board({ puzzle, name }: Props) {
           );
         })}
       </ul>
-      <div className="mt-4 flex flex-wrap justify-between gap-2 text-sm text-ink-soft">
+      {/* On paper only: every word to find, never crossed out, and where the puzzle came from. */}
+      <div className="wordpath-print-words" data-print-only data-testid="suture-print-words">
+        <p className="text-center font-bold">words to find</p>
+        <ul className="mt-2 columns-3 gap-x-4 text-lg font-bold">
+          {printableWords(puzzle).map((word, i) => <li key={i} className="break-inside-avoid break-words">{word}</li>)}
+        </ul>
+      </div>
+      <p className="wordpath-print-foot text-sm" data-print-only data-testid="suture-print-foot">{printFoot}</p>
+      <div className="mt-4 flex flex-wrap justify-between gap-2 text-sm text-ink-soft" data-print-hidden>
         <p data-testid="suture-count">{state.found.length} of {state.totalWords} found</p>
         {puzzle.sample && <p>sample puzzle</p>}
       </div>
       {done && (
-        <div ref={result} tabIndex={-1} className="mt-6 rounded-md border border-control p-4" data-testid="suture-result">
+        <div ref={result} tabIndex={-1} className="mt-6 rounded-md border border-control p-4" data-testid="suture-result" data-print-hidden>
           <p className="text-lg font-medium">all words found.</p>
           <p className="mt-2">{shared}</p>
           <button type="button" className={`${button} mt-3`} onClick={share}>copy my result</button>
           {copied && <p className="mt-2 text-sm text-ink-soft" aria-live="polite">{copied}</p>}
         </div>
       )}
-      <p className="mt-3 text-sm text-ink-soft" aria-live="polite" aria-atomic="true" data-testid="suture-live">{said}</p>
+      <p className="mt-3 text-sm text-ink-soft" aria-live="polite" aria-atomic="true" data-testid="suture-live" data-print-hidden>{said}</p>
     </section>
   );
 }
