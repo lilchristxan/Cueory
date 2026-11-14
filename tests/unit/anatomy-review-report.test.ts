@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { anatomyInventory, anatomyReviewMarkdown } from '../../scripts/anatomy-review-report.mjs';
+import { anatomyInventory, anatomyReviewMarkdown, anatomyReviewSheets } from '../../scripts/anatomy-review-report.mjs';
 
 /** Fake model names and source lines only; no clinical content or answer keys in a public test. */
 const roots: string[] = [];
@@ -186,4 +186,29 @@ describe('read-only anatomy review inventory', () => {
     expect(report).not.toContain('| skin | 0 |');
     expect(report).toContain('Keep the source status as `draft` until the founder approves publication.');
   });
+
+  it('creates individual review-sheet routes with unchanged source quotes and a front/side picture plan', () => {
+    const root = setup();
+    writeSystem(root, 'zeta', visual('zeta', 'FMA2'));
+    writeSystem(root, 'alpha', visual('alpha', 'FMA1'));
+    const sheets = anatomyReviewSheets(anatomyInventory(root));
+    expect(sheets.map((sheet: { url: string }) => sheet.url)).toEqual([
+      '/preview/anatomy-review/alpha',
+      '/preview/anatomy-review/zeta',
+    ]);
+    for (const sheet of sheets) {
+      expect(sheet.structureCount).toBe(1);
+      expect(sheet.pictureViews).toEqual(['front', 'side']);
+      expect(sheet.status).toBe('draft');
+      expect(sheet.labels[0]?.source.quote).toBe('FMA1 BP1 sample part | with punctuation');
+      expect(sheet.labels[0]?.name).toBe('sample part | exact');
+      expect(sheet.labels[0]?.source.url).toBe('https://dbarchive.biosciencedbc.jp/data/bodyparts3d/LATEST/synthetic-test-only');
+    }
+  });
+
+  it('does not generate an unsafe link from a malformed review sheet identifier', () => {
+    expect(() => anatomyReviewSheets([{ id: '../private', labels: [] }])).toThrow('invalid anatomy review sheet data');
+    expect(() => anatomyReviewSheets([{ id: 'SAFE', labels: [] }])).toThrow('invalid anatomy review sheet data');
+  });
+
 });
