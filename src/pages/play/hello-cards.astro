@@ -7,8 +7,9 @@
 import { getCollection } from 'astro:content';
 import Layout from '../../layouts/Layout.astro';
 import HelloCards from '../../islands/HelloCards';
+import GameResultsHost from '../../islands/GameResultsHost';
 import { helloCardsGame, helloCardsIndexWhenApproved } from '../../config/games';
-import { helloCardsPage } from '../../islands/hellocards';
+import { helloCardsPage } from '../../islands/hello-cards';
 
 const entries = await getCollection('hello-cards');
 // Draft samples are only built into the page where drafts may show (staging, previews, local); the live build gets a
@@ -42,4 +43,6 @@ const { shown, starters } = page;
       back to daily games
     </a>
   </article>
+  {shown && <GameResultsHost client:only="react" />}
+  {shown && <noscript><p>game results and sharing need JavaScript.</p></noscript>}
 </Layout>

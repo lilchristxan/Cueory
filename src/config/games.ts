@@ -29,13 +29,13 @@ export const dailyGames: readonly DailyGame[] = [
   {
     id: 'cueword',
     name: 'crossword',
-    line: 'a small crossword. up to three cues, and each one fills in a letter for you.',
+    line: 'choose an easy, mid or hard crossword, then solve each crossing clue.',
     ready: true,
   },
   {
     id: 'triage',
-    name: 'sort',
-    line: 'sort ten terms into three groups. one fits none of them. three slips end the round.',
+    name: 'sudoku',
+    line: 'fill every row, column and box with the numbers one through nine. choose a level and solve today\'s puzzle.',
     ready: true,
   },
   {
@@ -51,6 +51,9 @@ export function gameName(id: DailyGame['id']): string {
   return dailyGames.find((game) => game.id === id)!.name;
 }
 
+/** Names retained only for unmounted legacy game logic and its regression tests. */
+export const retiredGameNames = { triage: 'sort' } as const;
+
 /** Names and words the games must never use (CLAUDE.md). */
 export const forbiddenGameWords = ['wordle', 'connections', 'strands', 'nyt', 'new york times'] as const;
 
@@ -62,6 +65,16 @@ export const helloCardsGame = {
   name: 'hello cards',
   href: '/play/hello-cards',
   line: 'flip a card for a friendly conversation starter, for anyone you work or study with. choose small talk or a deeper conversation.',
+} as const;
+
+/**
+ * stat (Task 640): fifteen hard clinical questions in a row, 20 seconds each, score at the end. It has its own page and
+ * sits outside dailyGames for now, so the stats panel and share cards (Task 626) can add it on purpose.
+ */
+export const statGame = {
+  name: 'stat',
+  href: '/play/stat',
+  line: 'fifteen hard clinical questions, 20 seconds each. your score shows at the end.',
 } as const;
 
 /** Keep the hello cards page out of search until Christian says otherwise, even once its wording is approved. */

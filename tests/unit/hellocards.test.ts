@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import data from '../../content/games/hello-cards/starters.json';
-import { HELLO_CATEGORIES, HELLO_DEPTHS, dayIndex, isHelloCategory, isReflective, nextStarter, HELLO_PENDING_LABEL, helloCardsPage, helloCardsShown, msUntilNextDay, promptOfTheDay, startersFor, type HelloStarter } from '../../src/islands/hellocards';
+import { HELLO_CATEGORIES, HELLO_DEPTHS, dayIndex, isHelloCategory, isReflective, nextStarter, HELLO_PENDING_LABEL, helloCardsPage, helloCardsShown, msUntilNextDay, promptOfTheDay, startersFor, type HelloStarter } from '../../src/islands/hello-cards';
 
 const starters = data.starters as HelloStarter[];
 const seeded = (values: number[]) => {
@@ -260,7 +260,7 @@ describe('release gate: draft samples never become a linked live page', () => {
     for (const file of ['src/pages/play/hello-cards.astro', 'src/pages/play.astro']) {
       expect(readFileSync(file, 'utf8'), file).toContain('helloCardsPage(');
     }
-    expect(readFileSync('src/pages/play.astro', 'utf8')).toMatch(/showHello && <section/);
+    expect(readFileSync('src/pages/play.astro', 'utf8')).toMatch(/showHello && <p/);
     expect(readFileSync('src/pages/play/hello-cards.astro', 'utf8')).toContain('const { shown, starters } = page;');
   });
 });
