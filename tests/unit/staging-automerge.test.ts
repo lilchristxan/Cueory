@@ -94,6 +94,21 @@ const input = (over: Partial<Parameters<typeof decide>[0]> = {}) => ({
   ...over,
 });
 
+describe('required checks match the emitted CI workflow', () => {
+  it('requires the aggregate job that gates build, unit and browser tests', () => {
+    const workflow = readFileSync(new URL('../../.github/workflows/ci.yml', import.meta.url), 'utf8');
+
+    // The checks job alone omits browser tests. Auto-merge must wait for the
+    // verify job, whose exact check-run name is the first required CI check.
+    expect(workflow).toMatch(/verify:\s*\n\s*name:\s*Type check, build and test\s*\n\s*needs:\s*\[checks, browser, engines\]/u);
+    expect(workflow).toMatch(/checks:\s*\n\s*name:\s*Type check, build and unit tests/u);
+    expect(workflow).toMatch(/shard:\s*\[1, 2, 3, 4\]/u);
+    expect(workflow).toContain('if [ "$BROWSER" != "success" ]');
+    expect(REQUIRED_CHECKS).toContain('Type check, build and test');
+    expect(REQUIRED_CHECKS).not.toContain('Type check, build and unit tests');
+  });
+});
+
 describe('automation.json', () => {
   it('turns on the pre-launch rules only for a clear "prelaunch": true', () => {
     expect(parseAutomation('{"prelaunch": true}')).toEqual({ mode: 'prelaunch' });
@@ -140,7 +155,9 @@ describe('held paths', () => {
     'astro.config.mjs',
     'scripts/check-legal-release.mjs',
     'scripts/anatomy-production-audit.mjs',
+    'scripts/anatomy-production-deploy.mjs',
     'scripts/check-anatomy-build.mjs',
+    'scripts/check-anatomy-wrangler.mjs',
     'scripts/anatomy-postbuild-audit.mjs',
     'src/islands/anatomylab.ts',
     'src/islands/AnatomyLab.tsx',
@@ -198,6 +215,12 @@ describe('held paths', () => {
       .toEqual(['src/content.config.ts']);
     expect(heldPaths([{ filename: 'scripts/deleted-gate.mjs', previous_filename: 'scripts/check-legal-release.mjs' }], 'prelaunch'))
       .toEqual(['scripts/check-legal-release.mjs']);
+    for (const mode of ['prelaunch', 'launched'] as const) {
+      expect(heldPaths([{ filename: 'docs/retired-upload.md', previous_filename: 'scripts/anatomy-production-deploy.mjs' }], mode))
+        .toEqual(['scripts/anatomy-production-deploy.mjs']);
+      expect(heldPaths([{ filename: 'docs/retired-wrangler.md', previous_filename: 'scripts/check-anatomy-wrangler.mjs' }], mode))
+        .toEqual(['scripts/check-anatomy-wrangler.mjs']);
+    }
     expect(heldPaths([{ filename: 'src/islands/cards.ts', previous_filename: 'src/islands/AnatomyLab.tsx' }], 'prelaunch'))
       .toEqual(['src/islands/AnatomyLab.tsx']);
     expect(heldPaths([{ filename: 'docs/old-report.mjs', previous_filename: 'scripts/anatomy-review-report.mjs' }], 'prelaunch'))
@@ -548,10 +571,16 @@ describe('checks', () => {
     ]);
   });
 
-  it('blocks on a failed part of the browser tests, which is not itself a required check (Task 308)', () => {
+  it('waits for observed non-required checks and blocks a late browser-shard failure', () => {
+    for (const status of ['queued', 'in_progress']) {
+      expect(checkProblems([...greenChecks(), run('Browser tests, part 2', null, status)])).toEqual([
+        '"Browser tests, part 2" is still running',
+      ]);
+    }
     expect(checkProblems([...greenChecks(), run('Browser tests, part 2', 'failure')])).toEqual([
       '"Browser tests, part 2" ended as failure',
     ]);
+    expect(checkProblems([...greenChecks(), run('Optional diagnostic', 'success')])).toEqual([]);
   });
 
   it('uses the newest run when a check was re-run', () => {
@@ -738,15 +767,23 @@ function fakeGitHub(
     endlessComments = false,
     /** What GET /pulls/N returns from its second call on (someone changed the pull request mid-run). */
     later = undefined as Partial<PullRequest> | undefined,
+    /** What GET /pulls/N returns after the final checks and comment reads. */
+    final = undefined as Partial<PullRequest> | undefined,
     /** File texts by "ref:path", for GET /contents. */
     contents = {} as Record<string, string>,
     /** Number of staging commits missing from the checked PR head. */
     behind = 0,
+    /** Replacement check-run list returned by the final pre-merge recheck. */
+    laterChecks = undefined as CheckRun[] | undefined,
+    /** Replacement comments returned by the final pre-merge recheck. */
+    laterComments = undefined as IssueComment[] | undefined,
     /** What GET /issues/N/comments returns (default: one clean Codex summary). */
     comments = undefined as IssueComment[] | undefined,
   } = {},
 ) {
   const seen = new Map<number, number>();
+  let checkReads = 0;
+  let commentReads = 0;
   const calls: { method: string; path: string; body?: unknown }[] = [];
   const json = (data: unknown, status = 200) => new Response(JSON.stringify(data), { status });
   const fetch: Fetch = async (url, init) => {
@@ -759,10 +796,15 @@ function fakeGitHub(
     if (method === 'GET' && (m = path.match(/^\/pulls\/(\d+)$/))) {
       const n = Number(m[1]);
       seen.set(n, (seen.get(n) ?? 0) + 1);
-      return json(seen.get(n)! > 1 && later ? { ...pr(m[1]!)!.pr, ...later } : pr(m[1]!)!.pr);
+      const snapshot = seen.get(n)! > 2 && final ? { ...pr(m[1]!)!.pr, ...later, ...final }
+        : seen.get(n)! > 1 && later ? { ...pr(m[1]!)!.pr, ...later } : pr(m[1]!)!.pr;
+      return json(snapshot);
     }
     if (method === 'GET' && (m = path.match(/^\/pulls\/(\d+)\/files$/))) return json(pr(m[1]!)!.files.map((filename) => ({ filename })));
-    if (method === 'GET' && path.startsWith('/commits/')) return json({ total_count: 5, check_runs: greenChecks() });
+    if (method === 'GET' && path.startsWith('/commits/')) {
+      checkReads += 1;
+      return json({ total_count: 5, check_runs: checkReads > 1 && laterChecks ? laterChecks : greenChecks() });
+    }
     if (method === 'GET' && path.startsWith('/compare/')) return json({ behind_by: behind });
     if (method === 'GET' && (m = path.match(/^\/contents\/(.+)\?ref=(.+)$/))) {
       const text = contents[`${decodeURIComponent(m[2]!)}:${decodeURIComponent(m[1]!)}`];
@@ -770,7 +812,10 @@ function fakeGitHub(
       return json({ type: 'file', encoding: 'base64', content: Buffer.from(text).toString('base64') });
     }
     if (method === 'GET' && path.match(/^\/issues\/\d+\/comments$/)) {
-      return json(endlessComments ? Array.from({ length: 100 }, () => codexComment(clean())) : comments ?? [codexComment(clean())]);
+      commentReads += 1;
+      return json(endlessComments
+        ? Array.from({ length: 100 }, () => codexComment(clean()))
+        : commentReads > 1 && laterComments ? laterComments : comments ?? [codexComment(clean())]);
     }
     if (method === 'GET' && path.startsWith('/labels/')) return labelExists ? json({ name: 'needs-christian' }) : json({ message: 'Not Found' }, 404);
     if (method === 'PUT' && path.match(/^\/pulls\/\d+\/merge$/)) return json({ merged: true });
@@ -904,6 +949,58 @@ describe('the auto-merge run', () => {
     expect(calls.filter((c) => c.method !== 'GET')).toEqual([]);
   });
 
+  it('stops if the pull request becomes a draft while checks are being revalidated', async () => {
+    const { gh, calls } = fakeGitHub(
+      { 7: { pr: pull(), files: ['src/x.ts'] } },
+      { later: { draft: true } },
+    );
+    const outcomes = await runAutomerge({ gh, repo: REPO, mode: 'launched', dryRun: false, log: () => {} });
+    expect(outcomes[0]!.done).toBe('merge refused');
+    expect(outcomes[0]!.decision.reasons.at(-1)).toBe('pull request became a draft while it was being checked');
+    expect(calls.filter((c) => c.method !== 'GET')).toEqual([]);
+  });
+
+  it('refuses to merge if staging advances while the final checks and comments are being read', async () => {
+    const { gh, calls } = fakeGitHub(
+      { 7: { pr: pull(), files: ['src/x.ts'] } },
+      { final: { base: { ref: 'staging', sha: 'staging-new' } } },
+    );
+    const outcomes = await runAutomerge({ gh, repo: REPO, mode: 'launched', dryRun: false, log: () => {} });
+    expect(outcomes[0]!.done).toBe('merge refused');
+    expect(outcomes[0]!.decision.reasons).toContain('staging changed during the final gate recheck; retry with fresh checks');
+    expect(calls.filter((c) => c.method !== 'GET')).toEqual([]);
+  });
+
+  it('rechecks all observed check runs immediately before merging', async () => {
+    const { gh, calls } = fakeGitHub(
+      { 7: { pr: pull(), files: ['src/x.ts'] } },
+      { laterChecks: [...greenChecks(), run('Late diagnostic', null, 'in_progress')] },
+    );
+    const outcomes = await runAutomerge({ gh, repo: REPO, mode: 'launched', dryRun: false, log: () => {} });
+    expect(outcomes[0]!.done).toBe('merge refused');
+    expect(outcomes[0]!.decision.reasons.at(-1)).toBe('latest gate recheck: "Late diagnostic" is still running');
+    expect(calls.filter((c) => c.method !== 'GET')).toEqual([]);
+  });
+
+  it('rechecks the exact-head Codex summary immediately before merging', async () => {
+    const unresolved = codexComment({
+      code_review: {
+        commit_sha: HEAD,
+        status: 'completed',
+        has_any_findings: true,
+        has_unresolved_findings: true,
+      },
+    });
+    const { gh, calls } = fakeGitHub(
+      { 7: { pr: pull(), files: ['src/x.ts'] } },
+      { laterComments: [unresolved] },
+    );
+    const outcomes = await runAutomerge({ gh, repo: REPO, mode: 'launched', dryRun: false, log: () => {} });
+    expect(outcomes[0]!.done).toBe('merge refused');
+    expect(outcomes[0]!.decision.reasons).toContain('latest gate recheck: Codex found something to look at');
+    expect(calls.filter((c) => c.method !== 'GET')).toEqual([]);
+  });
+
   it('stops if a new commit arrived between the checks and the merge', async () => {
     const { gh, calls } = fakeGitHub({ 7: { pr: pull(), files: ['src/x.ts'] } }, { later: { head: { sha: 'ffff', ref: 'x', repo: { full_name: REPO } } } });
     expect((await runAutomerge({ gh, repo: REPO, mode: 'launched', dryRun: false, log: () => {} }))[0]!.done).toBe('merge refused');
@@ -970,6 +1067,32 @@ describe('the auto-merge run', () => {
     const found = fakeGitHub(one, { comments: [codexComment(findings())] });
     expect((await runAutomerge({ gh: found.gh, repo: REPO, mode: 'prelaunch', dryRun: false, log: () => {} }))[0]!.done).toBe('nothing');
     expect(found.calls.filter((c) => c.method !== 'GET')).toEqual([]);
+  });
+
+  it('rechecks the latest Codex summary and retry budget before asking for another review', async () => {
+    const one = { 7: { pr: pull(), files: ['src/x.ts'] } };
+    for (const later of [clean(), findings(), running()]) {
+      const latest = fakeGitHub(one, {
+        comments: [codexComment(failed())],
+        laterComments: [codexComment(later)],
+      });
+      const outcome = await runAutomerge({ gh: latest.gh, repo: REPO, mode: 'prelaunch', dryRun: false, log: () => {} });
+      expect(outcome[0]!.done).toBe('nothing');
+      expect(latest.calls.filter((c) => c.method !== 'GET')).toEqual([]);
+    }
+
+    const exhausted = fakeGitHub(one, {
+      comments: [codexComment(failed())],
+      laterComments: [
+        retryComment(HEAD, '2026-10-31T10:00:00Z'),
+        retryComment(HEAD, '2026-10-31T11:00:00Z'),
+        retryComment(HEAD, '2026-10-31T12:00:00Z'),
+        codexComment(failed()),
+      ],
+    });
+    const outcome = await runAutomerge({ gh: exhausted.gh, repo: REPO, mode: 'prelaunch', dryRun: false, log: () => {} });
+    expect(outcome[0]!.done).toBe('nothing');
+    expect(exhausted.calls.filter((c) => c.method !== 'GET')).toEqual([]);
   });
 
   it('stops with exit code 2 when the token or repository is missing', () => {

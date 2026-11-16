@@ -16,6 +16,7 @@ import { pathToFileURL } from 'node:url';
 import { parseArgs } from 'node:util';
 import {
   BASE_BRANCH,
+  codexRetry,
   codexRetryComment,
   decide,
   dependencyPaths,
@@ -63,11 +64,16 @@ export async function runAutomerge({
     const pull = await gh.pull(n);
     const relevant = pull.state === 'open' && pull.base.ref === BASE_BRANCH;
     let decision: Decision;
+    // Keep the file/dependency snapshots available for the final pre-merge recheck below.
+    // They are populated only after a complete read; a failed/truncated read always waits.
+    let files: ChangedFile[] = [];
+    let dependencies: DependencyFile[] = [];
     try {
-      const [files, checks, comments] = relevant
+      const [currentFiles, checks, comments] = relevant
         ? await Promise.all([gh.files(n), gh.checks(pull.head.sha), gh.comments(n)])
         : [[], [], []];
-      const dependencies = relevant ? await readDependencies(gh, pull, files) : [];
+      files = currentFiles;
+      dependencies = relevant ? await readDependencies(gh, pull, files) : [];
       decision = decide({ repo, mode, pr: pull, files, dependencies, checks, comments });
     } catch (e) {
       // Fail closed: a list too long to read in full is never judged from part of it.
@@ -88,9 +94,12 @@ export async function runAutomerge({
         // Look again right before merging: the merge call goes to whatever base the pull request has now, and only
         // the head commit can be pinned in it. Anything that moved since the checks means: wait for the next event.
         const now = await gh.pull(n);
-        if (now.state !== 'open' || now.draft || now.base.ref !== BASE_BRANCH || now.head.sha !== pull.head.sha) {
+        if (now.state !== 'open' || now.draft || now.base.ref !== BASE_BRANCH ||
+            now.head.sha !== pull.head.sha || now.head.repo?.full_name !== repo) {
           done = 'merge refused';
-          decision.reasons.push(`changed while it was being checked (now ${now.state}, into ${now.base.ref})`);
+          if (now.draft) decision.reasons.push('pull request became a draft while it was being checked');
+          else if (now.head.repo?.full_name !== repo) decision.reasons.push('head repository changed while it was being checked');
+          else decision.reasons.push(`changed while it was being checked (now ${now.state}, into ${now.base.ref})`);
         } else if (!pull.base.sha || now.base.sha !== pull.base.sha) {
           // A clean PR head is not enough if staging moved after the merge-test checks were gathered.
           done = 'merge refused';
@@ -100,15 +109,49 @@ export async function runAutomerge({
           done = 'merge refused';
           decision.reasons.push(`labelled ${NEEDS_CHRISTIAN_LABEL} while it was being checked`);
         } else {
-          try {
-            await gh.merge(n, pull.head.sha);
-            done = 'merged';
-          } catch (e) {
-            // 405: not mergeable after all; 409: a new commit arrived since the checks. Both wait for the next event.
-            if (e instanceof GitHubError && (e.status === 405 || e.status === 409)) {
+          // Checks and Codex comments can change without the PR head changing (for example, a rerun or a
+          // newly queued diagnostic). Re-read both at the last possible point before the merge.
+          const [latestChecks, latestComments] = await Promise.all([gh.checks(now.head.sha), gh.comments(n)]);
+          const latestDecision = decide({
+            repo, mode, pr: now, files, dependencies, checks: latestChecks, comments: latestComments,
+          });
+          if (latestDecision.action !== 'merge') {
+            done = 'merge refused';
+            decision.reasons.push(...latestDecision.reasons.map((reason) => `latest gate recheck: ${reason}`));
+          } else {
+            // The final checks/comments can take time. Re-read the pull request after them so a
+            // staging move during those reads cannot make the bot merge against an unchecked base.
+            const final = await gh.pull(n);
+            if (final.state !== 'open' || final.draft || final.base.ref !== BASE_BRANCH ||
+                final.head.sha !== now.head.sha || final.head.repo?.full_name !== repo) {
               done = 'merge refused';
-              decision.reasons.push(e.message);
-            } else throw e;
+              if (final.draft) decision.reasons.push('pull request became a draft during the final gate recheck');
+              else if (final.head.repo?.full_name !== repo) decision.reasons.push('head repository changed during the final gate recheck');
+              else decision.reasons.push('pull request changed during the final gate recheck');
+            } else if (!now.base.sha || final.base.sha !== now.base.sha) {
+              done = 'merge refused';
+              decision.reasons.push('staging changed during the final gate recheck; retry with fresh checks');
+            } else if (final.labels.some((l) => l.name === NEEDS_CHRISTIAN_LABEL)) {
+              done = 'merge refused';
+              decision.reasons.push(`labelled ${NEEDS_CHRISTIAN_LABEL} during the final gate recheck`);
+            } else {
+              const finalAncestry = await gh.compare(BASE_BRANCH, final.head.sha);
+              if (finalAncestry.behind_by !== 0) {
+                done = 'merge refused';
+                decision.reasons.push('staging is not an ancestor after the final gate recheck');
+              } else {
+                try {
+                  await gh.merge(n, final.head.sha);
+                  done = 'merged';
+                } catch (e) {
+              // 405: not mergeable after all; 409: a new commit arrived since the checks. Both wait for the next event.
+                  if (e instanceof GitHubError && (e.status === 405 || e.status === 409)) {
+                    done = 'merge refused';
+                    decision.reasons.push(e.message);
+                  } else throw e;
+                }
+              }
+            }
           }
         }
       }
@@ -132,8 +175,17 @@ export async function runAutomerge({
         } else if (now.labels.some((l) => l.name === NEEDS_CHRISTIAN_LABEL)) {
           decision.reasons.push(`labelled ${NEEDS_CHRISTIAN_LABEL} while it was being checked; no retry asked`);
         } else {
-          await gh.createComment(n, codexRetryComment(decision.codexRetry.headSha));
-          done = 'codex retry asked';
+          // The Codex summary and retry markers can change while the PR head stays the same.
+          // Re-read them at the final boundary so a completed/finding-bearing review or exhausted
+          // per-head retry budget is never acted on using the first snapshot.
+          const latestRetry = codexRetry(await gh.comments(n), now.head.sha);
+          if (!latestRetry) {
+            decision.reasons.push('latest Codex summary no longer qualifies for a retry; no retry asked');
+          } else {
+            await gh.createComment(n, codexRetryComment(latestRetry.headSha));
+            done = 'codex retry asked';
+            decision.reasons.push(`latest Codex retry ${latestRetry.attempt}/${latestRetry.limit}`);
+          }
         }
       }
     }

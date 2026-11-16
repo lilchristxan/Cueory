@@ -56,6 +56,43 @@ describe('pruning draft anatomy models from a build', () => {
     }
   });
 
+  it('removes unpublished anatomy on the connected legacy/main production build', () => {
+    const env = { WORKERS_CI: 'true', WORKERS_CI_BRANCH: 'legacy/main', CUEORY_ANATOMY_DRAFTS: '1' };
+    expect(keepsDrafts(env)).toBe(false);
+    expect(draftsAllowed(env)).toBe(false);
+  });
+
+  it('recognizes WORKERS_CI=true for both locked previews and production pruning', () => {
+    // Cloudflare can set WORKERS_CI to "true" instead of "1".
+    // A manual draft override must not expose test models on main or an unknown branch.
+    for (const [branch, allowDrafts] of [
+      ['main', false],
+      [' refs/heads/main ', false],
+      [undefined, false],
+      ['refs/heads/', false],
+      ['staging', true],
+      ['refs/heads/task-178/anatomy-lab', true],
+    ] as const) {
+      const env = { WORKERS_CI: 'true', WORKERS_CI_BRANCH: branch, CUEORY_ANATOMY_DRAFTS: '1' };
+      expect(draftsAllowed(env), String(branch)).toBe(allowDrafts);
+      expect(keepsDrafts(env), String(branch)).toBe(allowDrafts);
+      const { dist, content, models } = setup();
+      const removed = pruneDraftModels(dist, content, env);
+      if (allowDrafts) {
+        expect(removed, String(branch)).toEqual([]);
+        expect(readdirSync(models), String(branch)).toHaveLength(5);
+      } else {
+        expect(removed.sort(), String(branch)).toEqual([
+          '/models/anatomy/b.glb',
+          '/models/anatomy/c1.glb',
+          '/models/anatomy/c2.glb',
+          '/models/anatomy/stray.glb',
+        ]);
+        expect(readdirSync(models), String(branch)).toEqual(['a.glb']);
+      }
+    }
+  });
+
   it('keeps drafts in a preview build and with the explicit local flag', () => {
     expect(keepsDrafts({ WORKERS_CI: '1', WORKERS_CI_BRANCH: 'staging' })).toBe(true);
     expect(keepsDrafts({ WORKERS_CI: '1', WORKERS_CI_BRANCH: 'refs/heads/staging' })).toBe(true);

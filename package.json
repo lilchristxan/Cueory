@@ -9,6 +9,7 @@
     "dev": "astro dev",
     "prebuild": "node scripts/check-legal-release.mjs",
     "build": "astro build && pagefind --site dist",
+    "postbuild": "node scripts/check-anatomy-build.mjs",
     "preview": "astro preview",
     "astro": "astro",
     "check": "astro check",
@@ -17,7 +18,8 @@
     "check-sample-content": "node --experimental-strip-types scripts/check-sample-content.ts",
     "check-batch": "node scripts/check_batch.ts",
     "import-batch": "node scripts/import_batch.ts",
-    "verify": "npm run check && npm run build && npm test && npm run test:e2e"
+    "verify": "npm run check && npm run build && npm test && npm run test:e2e",
+    "deploy:production": "node scripts/anatomy-production-deploy.mjs"
   },
   "dependencies": {
     "@astrojs/react": "^7.1.2",

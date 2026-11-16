@@ -81,7 +81,9 @@ const ALWAYS_HELD_FILES = new Set([
   // These legal/anatomy release gates decide whether draft material is shipped publicly.
   'scripts/check-legal-release.mjs',
   'scripts/anatomy-production-audit.mjs',
+  'scripts/anatomy-production-deploy.mjs', // Pre-upload production gate must never change without founder approval.
   'scripts/check-anatomy-build.mjs',
+  'scripts/check-anatomy-wrangler.mjs', // Wrangler custom-build upload audit must remain founder-held.
   'scripts/anatomy-postbuild-audit.mjs', // alternative production postbuild wrapper in PR #626
   'src/islands/anatomylab.ts', // Chooses draft versus approved data for build output.
   'src/islands/AnatomyLab.tsx', // Shows draft warnings, model attribution and export credits.
@@ -452,7 +454,11 @@ export function checkProblems(checks: readonly CheckRun[]): string[] {
   }
   for (const [name, run] of latest) {
     if ((REQUIRED_CHECKS as readonly string[]).includes(name)) continue;
-    if (run.status === 'completed' && !OK_CONCLUSIONS.has(run.conclusion ?? '')) {
+    // Do not merge while an observed non-required check is queued or running:
+    // an eventual failure must be known before staging receives the change.
+    if (run.status !== 'completed') {
+      problems.push(`"${name}" is still running`);
+    } else if (!OK_CONCLUSIONS.has(run.conclusion ?? '')) {
       problems.push(`"${name}" ended as ${run.conclusion ?? 'unknown'}`);
     }
   }

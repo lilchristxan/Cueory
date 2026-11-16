@@ -15,13 +15,17 @@ export interface PruneEnv {
 }
 
 export function keepsDrafts(env: PruneEnv): boolean {
-  if (env.WORKERS_CI !== '1') return env.CUEORY_ANATOMY_DRAFTS === '1';
+  // Mirror the page-data gate for both Workers CI environment spellings.
+  if (env.WORKERS_CI !== '1' && env.WORKERS_CI !== 'true') return env.CUEORY_ANATOMY_DRAFTS === '1';
   const rawBranch = env.WORKERS_CI_BRANCH?.trim();
   // Match the page-data gate: refs/heads/main must never keep draft GLBs.
   const branch = rawBranch?.startsWith('refs/heads/')
     ? rawBranch.slice('refs/heads/'.length)
     : rawBranch;
-  return Boolean(branch) && branch !== 'main';
+  // The connected Cloudflare production build currently follows GitLab
+  // legacy/main, while GitHub's production/release branch is main.
+  // Both must strip all draft geometry even if a preview opt-in is set.
+  return Boolean(branch) && branch !== 'main' && branch !== 'legacy/main';
 }
 
 interface SystemFile {
