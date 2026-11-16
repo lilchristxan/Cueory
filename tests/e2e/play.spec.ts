@@ -403,12 +403,17 @@ test.describe('daily games: crossword levels (Task 627)', () => {
         expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
         const cells = grid.locator('.crossword-cell');
         const first = await cells.first().boundingBox();
-        const last = await cells.last().boundingBox();
         expect(first).not.toBeNull();
-        expect(last).not.toBeNull();
-        if (size !== '15') expect(first!.width).toBeGreaterThanOrEqual(44);
+        expect(first!.width).toBeGreaterThanOrEqual(44);
         expect(first!.x).toBeGreaterThanOrEqual(0);
+        // The hard board scrolls within its own region. Its last square must
+        // still be reachable without scrolling the document sideways.
+        await cells.last().scrollIntoViewIfNeeded();
+        const last = await cells.last().boundingBox();
+        expect(last).not.toBeNull();
+        expect(last!.x).toBeGreaterThanOrEqual(0);
         expect(last!.x + last!.width).toBeLessThanOrEqual(width);
+        expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
       }
     }
   });
@@ -488,8 +493,8 @@ test.describe('daily games: crossword levels (Task 627)', () => {
     await page.getByTestId('crossword-levels').locator('label', { hasText: 'hard' }).click();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
     const hardCell = await board(page).locator('.crossword-cell').first().boundingBox();
-    expect(hardCell?.width).toBeGreaterThanOrEqual(24);
-    expect(hardCell?.width).toBeLessThanOrEqual(40);
+    expect(hardCell?.width).toBeGreaterThanOrEqual(44);
+    expect(hardCell?.height).toBeGreaterThanOrEqual(44);
     const controls = board(page).locator('.crossword-toolbar button, .crossword-no-print [role="group"] button');
     const boxes = await controls.evaluateAll((elements) => elements.map((element) => element.getBoundingClientRect()));
     for (const box of boxes) {
@@ -497,6 +502,79 @@ test.describe('daily games: crossword levels (Task 627)', () => {
       expect(box.right).toBeLessThanOrEqual(390);
       expect(box.height).toBeGreaterThanOrEqual(44);
     }
+  });
+
+  for (const { width, rootText } of [{ width: 320, rootText: 16 }, { width: 390, rootText: 32 }]) {
+    test(`hard board contains scrolling at ${width}px with ${rootText}px text and keeps every square reachable`, async ({ page }, testInfo) => {
+      await page.setViewportSize({ width, height: 844 });
+      await page.evaluate((size) => {
+        document.documentElement.style.setProperty('font-size', `${size}px`, 'important');
+      }, rootText);
+      await page.getByTestId('crossword-levels').locator('label', { hasText: 'hard' }).click();
+      const region = board(page).getByRole('region', { name: 'crossword board scroll area' });
+      const grid = region.getByRole('grid', { name: 'crossword grid' });
+      await expect(grid).toHaveAttribute('aria-colcount', '15');
+      await expect(region).toHaveCSS('overflow-x', 'auto');
+      expect(await region.evaluate((element) => element.scrollWidth > element.clientWidth)).toBe(true);
+      const noPageOverflow = async () => {
+        expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
+        expect(await page.evaluate(() => window.scrollX)).toBe(0);
+      };
+      await noPageOverflow();
+      const sizes = await grid.locator('button').evaluateAll((cells) => cells.map((cell) => {
+        const box = cell.getBoundingClientRect();
+        return { width: box.width, height: box.height };
+      }));
+      for (const size of sizes) {
+        expect(size.width).toBeGreaterThanOrEqual(44);
+        expect(size.height).toBeGreaterThanOrEqual(44);
+      }
+
+      // The region is its own Tab stop. Native arrow scrolling works there,
+      // while arrows on a square retain the game's roving-focus controls.
+      await region.focus();
+      await page.keyboard.press('Tab');
+      await page.keyboard.press('Shift+Tab');
+      await expect(region).toBeFocused();
+      await expect(region).toHaveCSS('outline-style', 'solid');
+      await page.keyboard.press('ArrowRight');
+      await expect.poll(() => region.evaluate((element) => element.scrollLeft)).toBeGreaterThan(0);
+      await noPageOverflow();
+      const first = grid.locator('button').first();
+      await first.focus();
+      for (let step = 0; step < 12; step++) await page.keyboard.press('ArrowRight');
+      const rightEdge = grid.getByRole('button', { name: /^row 1, column 14,/ });
+      await expect(rightEdge).toBeFocused();
+      await expect(rightEdge).toBeInViewport({ ratio: 1 });
+      expect(await region.evaluate((element) => element.scrollLeft)).toBeGreaterThan(0);
+      await noPageOverflow();
+
+      // Scroll to the final square, then exercise tap/mouse and letter input.
+      const last = grid.locator('button').last();
+      await last.scrollIntoViewIfNeeded();
+      if (testInfo.project.use.hasTouch) await last.tap();
+      else await last.click();
+      await expect(last).toBeFocused();
+      await expect(last).toBeInViewport({ ratio: 1 });
+      await page.keyboard.type('z');
+      await expect(last).toHaveAttribute('aria-label', /letter Z$/);
+      await grid.locator('button[tabindex="0"]').focus();
+      await page.keyboard.press('Tab');
+      await expect(board(page).getByRole('group', { name: 'letters' }).getByRole('button').first()).toBeFocused();
+      await noPageOverflow();
+    });
+  }
+
+  test('printing a hard board removes scroll containment', async ({ page }) => {
+    await page.getByTestId('crossword-levels').locator('label', { hasText: 'hard' }).click();
+    await page.evaluate(() => { window.print = () => undefined; });
+    await board(page).getByRole('button', { name: 'print this puzzle' }).click();
+    await page.emulateMedia({ media: 'print' });
+    const region = board(page).getByRole('region', { name: 'crossword board scroll area' });
+    await expect(region).toHaveCSS('overflow-x', 'visible');
+    await expect(region).toHaveCSS('transform', 'none');
+    await expect(board(page).locator('.crossword-print-clues')).toBeVisible();
+    await expect(board(page).locator('.crossword-entry').first()).toHaveCSS('visibility', 'hidden');
   });
 });
 
