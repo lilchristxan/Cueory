@@ -21,7 +21,7 @@ import { newsletter, promo, site } from '../config/site';
       lesson is sent to us.
     </p>
     <p>
-      If you pick Light or Dark at the bottom of a page, your browser remembers that choice as
+      If you pick Light or Dark at the bottom of a page, your browser remembers that choice as{' '}
       <code>cueory-theme</code> on this device. It never reaches us.
     </p>
 
@@ -45,7 +45,7 @@ import { newsletter, promo, site } from '../config/site';
       below).
     </p>
     <p>
-      Older per-deck stars can still be saved under <code>{'cueory-stars-<deck>'}</code> until they are moved into
+      Older per-deck stars can still be saved under <code>{'cueory-stars-<deck>'}</code> until they are moved into{' '}
       <code>cueory-progress</code>.
     </p>
     <p>
@@ -59,14 +59,14 @@ import { newsletter, promo, site } from '../config/site';
     </p>
     <p>
       On your first visit, a small panel about the launch list may slide down from the top of the page. Your browser
-      remembers on your device that it showed you the panel, using <code>cueory-promo-seen</code>, so it stays away for
+      remembers on your device that it showed you the panel, using <code>cueory-promo-seen</code>, so it stays away for{' '}
       {promo.rememberDays} days. That isn't a cookie, and it never reaches us.
     </p>
     <p>
       On <a href="/play">daily games</a> you can turn on stats. They're off unless you do. When they're on, your browser
       keeps, for each game you finish, the day, whether you solved it and how many tries it took. Anything older than 400
       days is deleted the next time you open daily games. It stays on your device and never reaches us, and there are no
-      streaks. "Forget", or turning stats off, deletes it. The storage key for these results is
+      streaks. "Forget", or turning stats off, deletes it. The storage key for these results is{' '}
       <code>cueory-game-stats</code>.
     </p>
 
@@ -114,7 +114,7 @@ import { newsletter, promo, site } from '../config/site';
 
     <h2>Lesson videos</h2>
     <p>
-      Some lessons include a video. The video doesn't load until you tap play. When you do, it loads from
+      Some lessons include a video. The video doesn't load until you tap play. When you do, it loads from{' '}
       <code>youtube-nocookie.com</code>, YouTube's reduced-tracking domain. YouTube may still set cookies or record
       that the video was played. Nothing plays automatically.
     </p>
@@ -151,7 +151,7 @@ import { newsletter, promo, site } from '../config/site';
     <p>
       If you choose Google sign-in, you are sent to Google to finish signing in. Google then gives Supabase, which runs
       our accounts, your name, a link to your profile photo, your Google account id, your email address and whether
-      Google has checked it. Supabase keeps them with your account and updates them each time you sign in with Google.
+      Google has checked it. Supabase keeps them with your account and updates them each time you sign in with Google.{' '}
       {site.name} never reads or shows your photo.
     </p>
     <p>
@@ -166,8 +166,8 @@ import { newsletter, promo, site } from '../config/site';
     <p>
       When you're signed in, the browser keeps your sign-in session under <code>cueory-auth</code>. It includes your
       account details, such as your email address. That is different from the study progress kept on your device.
-      While you sign in, the browser also keeps a one-time sign-in code under
-      <code>cueory-auth-code-verifier</code>, <code>{'cueory-auth-flow-<id>-code-verifier'}</code> and
+      While you sign in, the browser also keeps a one-time sign-in code under{' '}
+      <code>cueory-auth-code-verifier</code>, <code>{'cueory-auth-flow-<id>-code-verifier'}</code> and{' '}
       <code>cueory-auth-flows-code-verifier</code>. Signing out removes them.
     </p>
     <p>
