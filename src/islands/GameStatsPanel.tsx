@@ -16,11 +16,27 @@ import {
 } from './gameresults';
 import { currentStreak, dailyStats, forget, recordResult, summary, summaryInWords, wordPathSummary, wordPathSummaryInWords, type GameId, type GameStats } from './gamestats';
 import { GUESSES } from './pulse';
+import { parseSudokuSolves } from './sudokustats';
 
 const button = 'min-h-11 rounded-pill border border-control bg-page px-5 py-2.5 text-ink';
 
 /** What this browser keeps right now. Another open tab may have turned stats on or off, or added a game. */
 const latest = (): SavedStats => loadStats(browserStorage(), localDay(new Date()));
+/** Sudoku keeps its per-level solves in a second record (./sudokustats); the panel's controls cover both. */
+const sudokuKept = (): boolean => {
+  try { return parseSudokuSolves(browserStorage()?.getItem(SUDOKU_STATS_STORAGE_KEY) ?? null).length > 0; } catch { return false; }
+};
+/** Deletes sudoku's per-level record. False when the browser won't let us. */
+const forgetSudokuRecord = (): boolean => {
+  try {
+    const storage = browserStorage();
+    if (!storage) return false;
+    storage.removeItem(SUDOKU_STATS_STORAGE_KEY);
+    return true;
+  } catch {
+    return false;
+  }
+};
 const hasRecord = (): boolean => {
   try { return browserStorage()?.getItem(STATS_STORAGE_KEY) != null; } catch { return false; }
 };
@@ -151,15 +167,19 @@ export default function GameStatsPanel({ games: order }: Props) {
     if (!stats) return;
     forgetHeldRounds(game);
     focusNext.current = game;
-    keep(forget(stats, game), `${name} stats forgotten.`);
+    // Forgetting sudoku clears both its shared results and its per-level solve times (Codex on #831).
+    const sudokuGone = game !== 'triage' || forgetSudokuRecord();
+    if (!keep(forget(stats, game), `${name} stats forgotten.`)) return;
+    if (!sudokuGone) setSaid(`${name} results forgotten, but this browser didn't let us delete its solve times. clearing this site's data in your browser removes them.`);
   };
 
   const forgetAll = () => {
     if (!stillOn()) return;
     forgetHeldRounds();
     focusNext.current = 'switch';
-    try { browserStorage()?.removeItem(SUDOKU_STATS_STORAGE_KEY); } catch { /* the shared record below still resets */ }
-    keep([], 'all your stats are forgotten. new games are kept from now on.');
+    const sudokuGone = forgetSudokuRecord();
+    if (!keep([], 'all your stats are forgotten. new games are kept from now on.')) return;
+    if (!sudokuGone) setSaid("your results are forgotten, but this browser didn't let us delete sudoku's solve times. clearing this site's data in your browser removes them.");
   };
 
   const games = order.flatMap((id) => dailyGames.filter((game) => game.id === id && game.ready));
@@ -199,7 +219,7 @@ export default function GameStatsPanel({ games: order }: Props) {
                     {displayName}
                   </h3>
                   <p className="mt-1">{result.played === 0 ? 'not played yet.' : summaryInWords(result)}</p>
-                  {result.played > 0 && (
+                  {(result.played > 0 || (game.id === 'triage' && sudokuKept())) && (
                     <>
                       <p className="mt-1 text-sm text-ink-soft">{triesInWords(game.id, result.triesCounts)}</p>
                       {game.id === 'pulse' && <p className="mt-1 text-sm text-ink-soft">{pilloLine(saved.stats)}</p>}
@@ -221,7 +241,7 @@ export default function GameStatsPanel({ games: order }: Props) {
               );
             })}
           </ul>
-          {saved.stats.length > 0 && (
+          {(saved.stats.length > 0 || sudokuKept()) && (
             <button type="button" className={`${button} mt-6`} onClick={forgetAll}>
               forget all my stats
             </button>

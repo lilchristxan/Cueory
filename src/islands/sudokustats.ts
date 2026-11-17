@@ -131,8 +131,8 @@ export interface SavedSudokuStats {
 }
 
 /**
- * What this browser keeps, as of `today`. Stats are always kept; when this browser can't keep them a leftover sudoku
- * record is deleted (fail closed).
+ * What this browser keeps, as of `today`, writing back the cleanup of old solves. Stats are always kept; when this
+ * browser can't keep them a leftover sudoku record is deleted (fail closed).
  */
 export function loadSudokuStats(storage: KeyValueStorage | undefined, today: string): SavedSudokuStats {
   try {
@@ -140,7 +140,16 @@ export function loadSudokuStats(storage: KeyValueStorage | undefined, today: str
       if (storage?.getItem(SUDOKU_STATS_STORAGE_KEY) !== null) storage?.removeItem(SUDOKU_STATS_STORAGE_KEY);
       return { on: false, solves: [] };
     }
-    return { on: true, solves: parseSudokuSolves(storage?.getItem(SUDOKU_STATS_STORAGE_KEY) ?? null, today) };
+    const text = storage?.getItem(SUDOKU_STATS_STORAGE_KEY) ?? null;
+    const solves = parseSudokuSolves(text, today);
+    // Solves older than 400 days (or a record that can't be read) are deleted from storage, not only left out
+    // (Codex on #831). An empty result removes the record.
+    if (text !== null) {
+      const kept = solves.length > 0 ? serializeSudokuSolves(solves) : null;
+      if (kept === null) storage?.removeItem(SUDOKU_STATS_STORAGE_KEY);
+      else if (kept !== text) storage?.setItem(SUDOKU_STATS_STORAGE_KEY, kept);
+    }
+    return { on: true, solves };
   } catch {
     return { on: false, solves: [] };
   }

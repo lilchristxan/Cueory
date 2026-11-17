@@ -188,6 +188,22 @@ describe('per-level stats', () => {
     { level: 'hard', day: '2026-11-10', seconds: 900 },
   ];
 
+  it('deletes solves older than 400 days from storage when loaded, not only from the result (Codex on #831)', () => {
+    const old = { level: 'easy', day: '2025-01-01', seconds: 100 } as const;
+    const storage = memoryStorage({ [SUDOKU_STATS_STORAGE_KEY]: serializeSudokuSolves([old, ...solves]) });
+    expect(loadSudokuStats(storage, today).solves).toEqual(solves);
+    expect(parseSudokuSolves(storage.data.get(SUDOKU_STATS_STORAGE_KEY)!)).toEqual(solves);
+    // Only old solves: the record goes.
+    const onlyOld = memoryStorage({ [SUDOKU_STATS_STORAGE_KEY]: serializeSudokuSolves([old]) });
+    expect(loadSudokuStats(onlyOld, today).solves).toEqual([]);
+    expect(onlyOld.data.has(SUDOKU_STATS_STORAGE_KEY)).toBe(false);
+    // Nothing to clean: the record is left as it was.
+    const fresh = memoryStorage({ [SUDOKU_STATS_STORAGE_KEY]: serializeSudokuSolves(solves) });
+    const before = fresh.data.get(SUDOKU_STATS_STORAGE_KEY);
+    loadSudokuStats(fresh, today);
+    expect(fresh.data.get(SUDOKU_STATS_STORAGE_KEY)).toBe(before);
+  });
+
   it('counts solved, best and average time, and a streak that ends today or yesterday', () => {
     expect(sudokuLevelStats(solves, 'easy', today)).toEqual({ solved: 3, bestSeconds: 200, averageSeconds: 250, streak: 3 });
     expect(sudokuLevelStats(solves, 'easy', '2026-11-17').streak).toBe(3);
