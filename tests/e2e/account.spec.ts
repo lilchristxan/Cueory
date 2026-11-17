@@ -111,8 +111,14 @@ test.beforeAll(async () => {
       const query = table => {
         const q = {
           order: () => q, gt: () => q,
-          range: async () => params.has('export-fails') && table === 'attempts'
-            ? { data: null, error: { message: 'provider-private-detail' } } : { data: tables[table], error: null },
+          range: async () => {
+            // '&export-held': the attempts read waits until the test releases it, so the account can change meanwhile.
+            if (params.has('export-held') && table === 'attempts') {
+              await new Promise(resolve => { window.fixtureReleaseExport = resolve; });
+            }
+            return params.has('export-fails') && table === 'attempts'
+              ? { data: null, error: { message: 'provider-private-detail' } } : { data: tables[table], error: null };
+          },
         };
         return q;
       };
@@ -353,6 +359,49 @@ test.describe('/account signed in (fake client)', () => {
     await expect(page.locator('body')).not.toContainText('provider-private-detail');
     expect(files).toEqual([]);
     expect((await urls(page)).made).toBe(0);
+  });
+
+  test('switching A to B to A while the data is read offers no file and reloads for the current account (#757)', async ({ page }) => {
+    await fixture(page, '&export-held');
+    const files: Download[] = [];
+    page.on('download', download => files.push(download));
+    await page.getByRole('button', { name: 'download my data', exact: true }).click();
+    await expect.poll(() => page.evaluate(() => typeof (window as unknown as { fixtureReleaseExport?: unknown }).fixtureReleaseExport)).toBe('function');
+    await page.evaluate(() => {
+      const w = window as unknown as { fixtureSwitchUser: (userId: string) => void; fixtureOtherUserId: string; fixtureOriginalUserId: string };
+      w.fixtureSwitchUser(w.fixtureOtherUserId);
+      w.fixtureSwitchUser(w.fixtureOriginalUserId);
+    });
+    await page.evaluate(() => (window as unknown as { fixtureReleaseExport: () => void }).fixtureReleaseExport());
+    await expect(page.getByRole('alert')).toContainText('the account signed in on this device changed, so nothing was done.');
+    await expect(page.getByRole('button', { name: 'download my data', exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'download spreadsheet files' })).toHaveCount(0);
+    await page.waitForTimeout(500);
+    expect(files).toEqual([]);
+    expect((await urls(page)).made).toBe(0);
+    await axe(page);
+  });
+
+  test('switching to B while the spreadsheet files are on their way stops the rest (#757)', async ({ page }) => {
+    await fixture(page);
+    const json = page.waitForEvent('download');
+    await page.getByRole('button', { name: 'download my data', exact: true }).click();
+    await json;
+    const files: Download[] = [];
+    page.on('download', download => files.push(download));
+    await page.getByRole('button', { name: 'download spreadsheet files', exact: true }).click();
+    await expect.poll(() => files.length).toBeGreaterThan(0);
+    await page.evaluate(() => {
+      const w = window as unknown as { fixtureSwitchUser: (userId: string) => void; fixtureOtherUserId: string };
+      w.fixtureSwitchUser(w.fixtureOtherUserId);
+    });
+    await expect(page.getByRole('alert')).toContainText('the account signed in on this device changed, so nothing was done.');
+    const offered = files.length;
+    // 15 files 300 ms apart would take over four seconds; wait past that and check none came after the switch.
+    await page.waitForTimeout(5_000);
+    expect(files.length).toBe(offered);
+    expect(offered).toBeLessThan(15);
+    await expect(page.getByRole('button', { name: 'download spreadsheet files' })).toHaveCount(0);
   });
 
   test('delete stays disabled until "delete" is typed, then deletes and clears only this device', async ({ page }) => {
