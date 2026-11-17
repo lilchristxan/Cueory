@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { indexablePages } from '../../src/config/routes';
+import { accountLaunch, accountsOpen } from '../../src/config/site';
 
 // Verify the built visitor-facing HTML after npm run build, not only Astro source text.
 const built = readFileSync(new URL('../../dist/index.html', import.meta.url), 'utf8');
@@ -71,5 +72,15 @@ describe('home how-it-works (W01-3)', () => {
       expect(source).not.toMatch(/\bstyle\s*=/i);
       expect(source).not.toMatch(/#[\da-f]{3,8}\b/i);
     }
+  });
+  it("ties the hero's quiet link to the account launch switch (create your free account -> /signup once open)", () => {
+    // The e2e specs run against one build, so the accounts-open state is checked here without changing site config.
+    const source = readFileSync(new URL('../../src/pages/index.astro', import.meta.url), 'utf8');
+    expect(source).toContain('accountLaunch(accountsOpen).promoJoinLabel');
+    expect(source).toMatch(/href=\{accountHref\}[\s\S]*?data-testid="hero-join"/);
+    expect(accountLaunch(true)).toMatchObject({ accountHref: '/signup', promoJoinLabel: 'create your free account' });
+    const join = built.match(/<a\b(?=[^>]*data-testid="hero-join")[^>]*>([\s\S]*?)<\/a>/);
+    expect(join?.[0]).toContain('href="' + accountLaunch(accountsOpen).accountHref + '"');
+    expect(plain(join?.[1] ?? '')).toBe(accountLaunch(accountsOpen).promoJoinLabel);
   });
 });
