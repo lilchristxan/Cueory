@@ -10,6 +10,7 @@ import { PROMO_STORAGE_KEY } from '../scripts/promo';
 import { THEME_STORAGE_KEY } from '../scripts/theme';
 import type { KeyValueStorage } from '../scripts/storage';
 import { STATS_STORAGE_KEY } from './gameresults';
+import { GAME_SETTINGS_STORAGE_KEY } from './gamesettings';
 import { GUEST_IMPORT_MARKER_PREFIX } from './guestimportrun';
 import { LAST_WELCOME_STORAGE_KEY, VISIT_STORAGE_KEY } from './stickynote';
 import { RESUME_STORAGE_KEY } from '../scripts/resume';
@@ -121,6 +122,7 @@ export function afterDeletion(storage: KeyValueStorage | undefined): DeletionSto
     PROMO_STORAGE_KEY,
     THEME_STORAGE_KEY,
     STATS_STORAGE_KEY,
+    GAME_SETTINGS_STORAGE_KEY,
     RESUME_STORAGE_KEY,
     LAST_WELCOME_STORAGE_KEY,
     NOTE_SOUND_STORAGE_KEY,
@@ -138,49 +140,61 @@ export function afterDeletion(storage: KeyValueStorage | undefined): DeletionSto
   return Object.assign([...keys], { sessionKeys: [...SESSION_KEYS_AFTER_DELETION] });
 }
 
-// ── A recent sign-in before deleting (Task 302) ──────────────────────────────
+// ── A recent reauthentication before deleting (Task 725) ─────────────────────
 
-/**
- * delete_my_account refuses a token issued more than 10 minutes ago (iat), so a copied or shared-device token can't
- * delete the account (supabase/migrations/20261102160000_fresh_sign_in_and_name_rules.sql). The page checks first, so a
- * student with an older sign-in goes straight to sign-in instead of seeing a refusal, and then comes back here.
- */
+/** The server enforces ten minutes since a genuine authentication event in the signed AMR claim, not JWT iat. */
 export const DELETE_MAX_SIGN_IN_AGE_SECONDS = 600;
-/** Where sign-in sends the student back to: the account page, at the delete step. */
 export const DELETE_RETURN_PATH = '/account#delete';
 
-/** The sign-in page, set to return to the delete step. `/signin` keeps `next` through safeNext (signin.ts). */
 export function reauthHref(returnTo: string = DELETE_RETURN_PATH): string {
-  return `/signin?next=${encodeURIComponent(returnTo)}`;
+  return '/signin?next=' + encodeURIComponent(returnTo);
 }
 
-/**
- * The access token's `iat` (when it was issued, in seconds), read from its payload. For the page's own check only:
- * the database checks the signed token itself. Anything that isn't a well-formed token gives undefined.
- */
-export function tokenIssuedAt(accessToken: unknown): number | undefined {
+/** Client-side display hint only. The database verifies the Supabase-signed claims independently. */
+function tokenPayload(accessToken: unknown): Record<string, unknown> | undefined {
   if (typeof accessToken !== 'string' || accessToken.length > 16_384) return undefined;
   const parts = accessToken.split('.');
   if (parts.length !== 3 || !/^[A-Za-z0-9_-]+$/.test(parts[1]!)) return undefined;
   try {
     const base64 = parts[1]!.replace(/-/g, '+').replace(/_/g, '/');
     const payload: unknown = JSON.parse(atob(base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), '=')));
-    if (typeof payload !== 'object' || payload === null) return undefined;
-    const iat = (payload as { iat?: unknown }).iat;
-    return typeof iat === 'number' && Number.isFinite(iat) && iat > 0 ? iat : undefined;
+    return typeof payload === 'object' && payload !== null && !Array.isArray(payload)
+      ? payload as Record<string, unknown> : undefined;
   } catch {
     return undefined;
   }
 }
 
-/**
- * True when the token is recent enough to delete with. It keeps a margin (a minute by default) below the database's
- * 10 minutes, so a student who taps delete just before the limit isn't refused halfway through.
- */
+/** Diagnostic only. The renewable JWT iat must never authorize account deletion. */
+export function tokenIssuedAt(accessToken: unknown): number | undefined {
+  const iat = tokenPayload(accessToken)?.iat;
+  return typeof iat === 'number' && Number.isFinite(iat) && iat > 0 ? iat : undefined;
+}
+
+/** Timestamp of the newest genuine credential or aal2 second-factor event recorded by Supabase Auth. */
+export function tokenRecentAuthAt(accessToken: unknown): number | undefined {
+  const payload = tokenPayload(accessToken);
+  const amr = payload?.amr;
+  if (!Array.isArray(amr)) return undefined;
+  let recent: number | undefined;
+  for (const item of amr) {
+    if (typeof item !== 'object' || item === null) continue;
+    const { method, timestamp } = item as { method?: unknown; timestamp?: unknown };
+    const credential = method === 'password' || method === 'oauth' || method === 'otp' || method === 'magiclink';
+    const secondFactor = method === 'totp' && payload?.aal === 'aal2';
+    if (!credential && !secondFactor) continue;
+    if (typeof timestamp !== 'number' || !Number.isFinite(timestamp) || timestamp <= 0) continue;
+    recent = recent === undefined ? timestamp : Math.max(recent, timestamp);
+  }
+  return recent;
+}
+
+/** Non-authoritative UI check, with a one-minute buffer before the server's ten-minute expiry. */
 export function freshForDeletion(accessToken: unknown, nowMs: number, marginSeconds = 60): boolean {
-  const iat = tokenIssuedAt(accessToken);
-  if (iat === undefined || !Number.isFinite(nowMs)) return false;
-  return nowMs / 1000 - iat <= DELETE_MAX_SIGN_IN_AGE_SECONDS - marginSeconds;
+  const at = tokenRecentAuthAt(accessToken);
+  if (at === undefined || !Number.isFinite(nowMs)) return false;
+  const age = nowMs / 1000 - at;
+  return age >= -30 && age <= DELETE_MAX_SIGN_IN_AGE_SECONDS - marginSeconds;
 }
 
 export type DeleteOutcome =

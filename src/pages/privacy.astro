@@ -64,10 +64,16 @@ import { newsletter, promo, site } from '../config/site';
     </p>
     <p>
       On <a href="/play">daily games</a> you can turn on stats. They're off unless you do. When they're on, your browser
-      keeps, for each game you finish, the day, whether you solved it and how many tries it took. Anything older than 400
-      days is deleted the next time you open daily games. It stays on your device and never reaches us, and there are no
-      streaks. "Forget", or turning stats off, deletes it. The storage key for these results is
+      keeps, for each game you finish, the day, whether you solved it and how many tries it took; for word path, also how
+      many hints you used and whether you found the special answer first. Anything older than 400 days is deleted the
+      next time you open daily games. It stays on your device and never reaches us. The only streak is word path's,
+      worked out from those same days. "Forget", or turning stats off, deletes it. The storage key for these results is
       <code>cueory-game-stats</code>.
+    </p>
+    <p>
+      If you change the shared game settings (high contrast, reduced motion or game sounds), your browser remembers
+      those three choices on your device as <code>cueory-game-settings</code>. Nothing is saved until you change one,
+      and it never reaches us. Your theme pick there is the same one the footer saves.
     </p>
 
     <p>

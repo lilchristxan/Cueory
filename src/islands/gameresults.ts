@@ -1,6 +1,6 @@
 /**
  * Private daily-game stats on /play (D-76). Each game reports a finished round; the stats panel keeps the results
- * only when the student has turned stats on. The record itself (first result of each game and day, no streaks) is the
+ * only when the student has turned stats on. The record itself (first result of each game and day; only word path works out a streak from those days) is the
  * helper's logic in ./gamestats, and results older than 400 days are dropped by today's date.
  *
  * Stats are off until the student turns them on: turned on means the record exists in this browser's storage, and
@@ -232,6 +232,10 @@ export interface RoundResult {
   solved: boolean;
   /** Guesses for pillo, slips for the retired sort record, cues for the crossword and loose stitches for word path. */
   tries: number;
+  /** Word path boards only (#722): hints used. */
+  hints?: number;
+  /** Word path boards only (#722): whether the special answer was found first. */
+  specialFirst?: boolean;
   /** When present, the same completion also opens the shared finished-game dialog. */
   card?: GameResultCard;
 }

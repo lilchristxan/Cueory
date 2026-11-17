@@ -12,6 +12,7 @@ import {
 } from '../../src/islands/supabaseclient';
 import { GUEST_IMPORT_MARKER_PREFIX } from '../../src/islands/guestimportrun';
 import { STATS_STORAGE_KEY } from '../../src/islands/gameresults';
+import { GAME_SETTINGS_STORAGE_KEY } from '../../src/islands/gamesettings';
 import { afterDeletion } from '../../src/islands/deleteaccount';
 import { VISIT_STORAGE_KEY, LAST_WELCOME_STORAGE_KEY } from '../../src/islands/stickynote';
 import { NOTE_SOUND_STORAGE_KEY } from '../../src/scripts/notesound';
@@ -42,6 +43,7 @@ describe.skipIf(!existsSync(privacyPath))('privacy page browser storage disclosu
     PROMO_STORAGE_KEY,
     RESUME_STORAGE_KEY,
     STATS_STORAGE_KEY,
+    GAME_SETTINGS_STORAGE_KEY,
     legacyStarsKey('<deck>'),
   ])('includes the exported browser key %s in built markup', (key) => {
     expect(visibleCodeKeys(privacyHtml())).toContain(key);

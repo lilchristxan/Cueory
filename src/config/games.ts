@@ -41,7 +41,7 @@ export const dailyGames: readonly DailyGame[] = [
   {
     id: 'suture',
     name: 'word path',
-    line: 'find the hidden words in a grid of letters. each one runs up, down, left or right, and has its own cue.',
+    line: 'trace the theme words through a board of letters, in any direction, and find the thread that names the theme.',
     ready: true,
   },
 ];
