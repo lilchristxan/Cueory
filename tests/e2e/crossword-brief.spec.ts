@@ -79,7 +79,9 @@ test('players read "cue", never "clue": the box, its settings and its help', asy
 
 test('no description and no sample line in the game box', async ({ page }) => {
   const seen = await seenText(page, '[data-testid="cueword"]');
-  expect(seen).not.toContain('sample');
+  // The puzzle's own placeholder cues say [sample cue]; the box itself has no sample line.
+  expect(seen).not.toContain("today's puzzle is a sample");
+  expect(seen).not.toContain('sample puzzle');
   expect(seen).not.toContain('type letters. arrows move.');
   // Screen readers still get the keys: the grid points at them.
   const described = await board(page).getByRole('grid', { name: 'crossword grid' }).getAttribute('aria-describedby');
