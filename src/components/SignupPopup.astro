@@ -136,7 +136,21 @@ const logo = (width: number) => `/brand/v1/logo-full-dark-${width}.png`;
       dialog.close();
     };
 
+    // While it is open the page behind it doesn't scroll (a wheel or swipe over the dimmed page would otherwise move it
+    // out from under the visitor); the pop-up itself still scrolls on a short screen. On close the page is put back
+    // exactly where it was, and focus goes back where it was.
+    let savedScroll = { x: 0, y: 0 };
+    const lockPage = () => {
+      savedScroll = { x: window.scrollX, y: window.scrollY };
+      document.documentElement.toggleAttribute('data-signup-popup-open', true);
+    };
+    const unlockPage = () => {
+      document.documentElement.toggleAttribute('data-signup-popup-open', false);
+      window.scrollTo({ left: savedScroll.x, top: savedScroll.y, behavior: 'instant' });
+    };
+
     dialog.addEventListener('close', () => {
+      unlockPage();
       if (previousFocus?.isConnected) previousFocus.focus({ preventScroll: true });
     });
     // Escape: the browser's own cancel, routed through close() so the wait starts and focus returns.
@@ -172,6 +186,7 @@ const logo = (width: number) => `/brand/v1/logo-full-dark-${width}.png`;
       if (dialog.open || !mayShowPopup(storage, Date.now()) || !rememberPopup(storage, Date.now())) return;
       const active = document.activeElement;
       previousFocus = active instanceof HTMLElement && active !== document.body ? active : null;
+      lockPage();
       dialog.showModal();
       closeButton?.focus({ preventScroll: true });
     };
@@ -204,10 +219,8 @@ const logo = (width: number) => `/brand/v1/logo-full-dark-${width}.png`;
     document.addEventListener('visibilitychange', onVisibility);
     if (!document.hidden) startTimer();
 
-    // Leaving the page closes it at once, so the back/forward cache never brings it back open.
-    window.addEventListener('pagehide', () => {
-      if (dialog.open) dialog.close();
-    });
+    // Leaving counts as closing, so the 3-hour wait starts from when the visitor left.
+    window.addEventListener('pagehide', close);
   }
 </script>
 
@@ -234,7 +247,13 @@ const logo = (width: number) => `/brand/v1/logo-full-dark-${width}.png`;
       radial-gradient(ellipse at 100% 100%, var(--popup-green-deep), transparent 55%);
     box-shadow: var(--shadow-lift);
     overflow-wrap: break-word;
+    overscroll-behavior: contain;
     container-type: inline-size;
+  }
+
+  /* The page behind the open pop-up doesn't scroll; the pop-up scrolls inside itself without moving the page. */
+  html[data-signup-popup-open] {
+    overflow: hidden;
   }
 
   .signup-popup::backdrop {

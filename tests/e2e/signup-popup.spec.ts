@@ -12,21 +12,30 @@ const popup = (page: Page) => page.getByRole('dialog', { name: 'get updates and 
 
 test.skip(state === 'pending', 'the pop-up only exists once Kit has a form or a landing page');
 
-test.beforeEach(async ({ page }) => {
-  // The once-only promo panel would otherwise come first and make the pop-up wait.
-  await page.addInitScript(() => {
-    try { localStorage.setItem('cueory-promo-seen', String(Date.now())); }
-    catch { /* The page also works without storage. */ }
-  });
-});
+const START = Date.parse('2026-11-17T12:00:00Z');
 
-async function openAt(page: Page, path: string, seenAgo?: number) {
-  await page.clock.install({ time: new Date('2026-11-17T12:00:00Z') });
-  if (seenAgo !== undefined) {
-    await page.addInitScript(([key, value]) => localStorage.setItem(key, value), [
-      SIGNUP_POPUP_STORAGE_KEY, String(Date.parse('2026-11-17T12:00:00Z') - seenAgo),
-    ] as const);
-  }
+/**
+ * Starts fake time and opens a page. One init script seeds storage, once per tab, so a later navigation or reload
+ * sees what the page itself saved: the promo panel counts as already shown (unless `promoDue`), so it doesn't come
+ * first and make the pop-up wait, and `seenAgo` sets when the pop-up was last shown.
+ */
+async function openAt(page: Page, path: string, options: { seenAgo?: number; promoDue?: boolean } = {}) {
+  await page.clock.install({ time: new Date(START) });
+  await page.addInitScript(({ key, seen, promoDue }) => {
+    try {
+      if (sessionStorage.getItem('test-seeded')) return;
+      sessionStorage.setItem('test-seeded', '1');
+      if (promoDue) localStorage.removeItem('cueory-promo-seen');
+      else localStorage.setItem('cueory-promo-seen', String(Date.now()));
+      if (seen !== null) localStorage.setItem(key, String(seen));
+    } catch {
+      // The page also works without storage.
+    }
+  }, {
+    key: SIGNUP_POPUP_STORAGE_KEY,
+    seen: options.seenAgo === undefined ? null : START - options.seenAgo,
+    promoDue: options.promoDue ?? false,
+  });
   const response = await page.goto(path);
   expect(response?.status()).toBe(200);
 }
@@ -41,20 +50,37 @@ test('appears 10 seconds after the page opens, and remembers when', async ({ pag
   expect(Number(saved)).toBeGreaterThan(0);
 });
 
-test('stays away within 3 hours of the last showing, and comes back after', async ({ page }) => {
-  await openAt(page, '/privacy', 2 * HOUR);
+test('stays away within 3 hours of the last showing', async ({ page }) => {
+  await openAt(page, '/privacy', { seenAgo: 2 * HOUR });
   await page.clock.runFor(12_000);
   await expect(popup(page)).toBeHidden();
   await expect(page.getByTestId('signup-popup')).toHaveCount(1);
+});
 
-  await openAt(page, '/privacy', 3 * HOUR + 60_000);
+test('comes back once 3 hours have passed', async ({ page }) => {
+  await openAt(page, '/privacy', { seenAgo: 3 * HOUR + 60_000 });
   await page.clock.runFor(11_000);
   await expect(popup(page)).toBeVisible();
 });
 
-test('stays away on a page where the once-only promo panel is due', async ({ page }) => {
-  await page.addInitScript(() => localStorage.removeItem('cueory-promo-seen'));
+test('leaving the page while it is open counts as closing, so the wait starts again then', async ({ page }) => {
   await openAt(page, '/');
+  await page.clock.runFor(11_000);
+  await expect(popup(page)).toBeVisible();
+  // The visitor leaves it open for nearly 3 hours, then follows a link away.
+  await page.clock.fastForward('02:59:00');
+  const leftAt = await page.evaluate(() => Date.now());
+  await page.goto('/privacy');
+  const saved = Number(await page.evaluate((key) => localStorage.getItem(key), SIGNUP_POPUP_STORAGE_KEY));
+  expect(saved).toBeGreaterThanOrEqual(leftAt);
+  // Past the first showing's 3 hours, but not 3 hours since leaving: it stays away.
+  await page.clock.fastForward('00:02:00');
+  await page.clock.runFor(11_000);
+  await expect(popup(page)).toBeHidden();
+});
+
+test('stays away on a page where the once-only promo panel is due', async ({ page }) => {
+  await openAt(page, '/', { promoDue: true });
   await page.clock.runFor(15_000);
   await expect(page.getByTestId('promo')).toBeVisible();
   await expect(popup(page)).toBeHidden();
@@ -154,6 +180,42 @@ for (const scheme of ['light', 'dark'] as const) {
   });
 }
 
+test('the page behind stays put while it is open, and scroll and focus come back on close', async ({ page }) => {
+  await openAt(page, '/privacy');
+  // Scroll down to the page's first link and focus it, so the test can see focus come back to it, still on screen.
+  await page.evaluate(() => {
+    const link = document.querySelector<HTMLAnchorElement>('main a[href]');
+    link?.scrollIntoView({ block: 'center', behavior: 'instant' });
+    link?.setAttribute('data-test-focus', '');
+    link?.focus({ preventScroll: true });
+  });
+  const before = page.locator('[data-test-focus]');
+  await expect(before).toBeFocused();
+  const startY = await page.evaluate(() => window.scrollY);
+  expect(startY).toBeGreaterThan(0);
+
+  await page.clock.runFor(11_000);
+  await expect(popup(page)).toBeVisible();
+  // A wheel over the dimmed page, outside the pop-up, doesn't move the page underneath.
+  const viewport = page.viewportSize()!;
+  await page.mouse.move(4, viewport.height - 4);
+  await page.mouse.wheel(0, 700);
+  await page.clock.runFor(500);
+  expect(await page.evaluate(() => window.scrollY)).toBe(startY);
+  // Nor does a wheel over the pop-up itself.
+  const box = (await popup(page).boundingBox())!;
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.wheel(0, 700);
+  await page.clock.runFor(500);
+  expect(await page.evaluate(() => window.scrollY)).toBe(startY);
+
+  await page.keyboard.press('Escape');
+  await expect(popup(page)).toBeHidden();
+  expect(await page.evaluate(() => window.scrollY)).toBe(startY);
+  await expect(before).toBeFocused();
+  await expect(before).toBeInViewport();
+});
+
 test('the × closes it and starts the 3-hour wait', async ({ page }) => {
   await openAt(page, '/');
   await page.clock.runFor(11_000);
@@ -173,7 +235,6 @@ test('fits 320 px with 32 px text, with no sideways scroll', async ({ browser },
       baseURL: testInfo.project.use.baseURL, viewport: { width: 320, height: 720 }, colorScheme: scheme, reducedMotion: 'reduce',
     });
     try {
-      await context.addInitScript(() => localStorage.setItem('cueory-promo-seen', String(Date.now())));
       const page = await context.newPage();
       await openAt(page, '/');
       await page.evaluate(() => document.documentElement.style.setProperty('font-size', '32px', 'important'));
@@ -188,6 +249,14 @@ test('fits 320 px with 32 px text, with no sideways scroll', async ({ browser },
       expect(fit.page).toBeLessThanOrEqual(0);
       expect(fit.inside).toBeLessThanOrEqual(0);
       expect(fit.right).toBeLessThanOrEqual(320);
+      // On a short screen the pop-up scrolls inside itself, without moving the page behind it.
+      const pageY = await page.evaluate(() => window.scrollY);
+      const box = (await dialog.boundingBox())!;
+      await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+      await page.mouse.wheel(0, 400);
+      await page.clock.runFor(500);
+      await expect.poll(() => dialog.evaluate((el) => el.scrollTop)).toBeGreaterThan(0);
+      expect(await page.evaluate(() => window.scrollY)).toBe(pageY);
       // The last control can still be reached: the pop-up scrolls inside itself on a short screen.
       await dialog.getByText('we respect your privacy. unsubscribe anytime.').scrollIntoViewIfNeeded();
       await expect(dialog.getByText('we respect your privacy. unsubscribe anytime.')).toBeInViewport();
