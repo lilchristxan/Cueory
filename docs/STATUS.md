@@ -1,6 +1,6 @@
 # Status
 
-Last updated: 2026-11-05 (director docs batch; D-100 to D-136)
+Last updated: 2026-11-17 (verified merged-note sweep; older dated review lists below remain historical snapshots)
 
 ## Recent documentation
 - Added [docs/TESTING.md](TESTING.md), a plain-language map of the available type, build, unit, browser and batch checks.
@@ -535,6 +535,10 @@ removed in the same pull request (D-97). None of this is on the live site yet: C
 
 ## Done (status sweep, 2026-11-17)
 
+These are historical source-note summaries from their original merged PRs, not new runtime or production verification. Later changes can supersede their UI wording. Current game statistics include pillo, crossword and word path streaks, with sudoku statistics per level.
+
+Verified merged PRs: [#733](https://github.com/lilchristxan/Cueory/pull/733), [#748](https://github.com/lilchristxan/Cueory/pull/748), [#750](https://github.com/lilchristxan/Cueory/pull/750), [#753](https://github.com/lilchristxan/Cueory/pull/753), [#759](https://github.com/lilchristxan/Cueory/pull/759), [#761](https://github.com/lilchristxan/Cueory/pull/761), [#762](https://github.com/lilchristxan/Cueory/pull/762), [#763](https://github.com/lilchristxan/Cueory/pull/763), [#764](https://github.com/lilchristxan/Cueory/pull/764), [#765](https://github.com/lilchristxan/Cueory/pull/765), [#766](https://github.com/lilchristxan/Cueory/pull/766), [#767](https://github.com/lilchristxan/Cueory/pull/767), [#768](https://github.com/lilchristxan/Cueory/pull/768), [#769](https://github.com/lilchristxan/Cueory/pull/769).
+
 - Task 721 (#721), crossword parity: pen and pencil (pencil letters lighter, smaller and dashed-boxed), check and reveal by square, word or puzzle with a warning before the first use, Autocheck, Tab/Shift+Tab clues, Space and opposite-arrow direction switch, Backspace and Delete, cursor settings (skip filled squares, jump back to first blank, jump to next clue), timer show/hide and pause, clue text size, sound on solve, a clue-list view on every screen size, "something's not right yet" on a wrong full grid, a "solved without help" or "solved with help" badge, a crossword streak in the private stats, and the #735 daily-status progress event.
 - Fix, 320px boards with 32px root text: #765 renamed the sudoku "hints" switch to "auto candidates", and its label could not wrap (`white-space: nowrap`), so at 320px with 32px root text the button was about 300px wide and pushed /play sideways, failing the contained-scroll checks in sudoku-layout and word-path. The setting buttons now wrap only when they do not fit (max-inline-size 100%), so the page no longer scrolls sideways and both boards keep 48px squares that scroll inside their own region. No tests changed.
 - Task 720, sudoku parity (#720): easy/mid/hard daily puzzles checked by a uniqueness validator; normal and candidate modes (Space toggles, holding Shift switches for that moment) with an auto-candidates switch (turning it off removes the auto candidates and brings back the player's own; undo restores them); undo (button and Ctrl/Cmd+Z), clear cell (button and Backspace/Delete) and check puzzle; wrong answers get a slash and "wrong" in their label, candidates their own class; per-level stats (solved, best, average, streak) in `cueory-sudoku-stats`, kept only while daily-game stats are on and included in export and account deletion; solves now also count in `cueory-game-stats` as sudoku, and the first move sends `cueory:game-progress` for /play's daily status (#761). /privacy updated.
@@ -547,7 +551,7 @@ removed in the same pull request (D-97). None of this is on the live site yet: C
 - #734, shared game settings panel: one dialog (src/islands/GameSettings.tsx, logic in gamesettings.ts) with theme (the footer's own switch), high contrast, reduced motion and game sounds, plus a slot for each game's own settings; wired into /play only, games adopt it later; new browser key cueory-game-settings disclosed on /privacy and cleared on account deletion.
 - Issue #746, CSP in the HTTP header (#746): after the build, src/security/cspheader.ts copies every page's Astro `<meta>` policy (script and style hashes pooled) into the Content-Security-Policy line of dist/_headers, so the header enforces default-src, script-src and the rest with no 'unsafe-inline' or 'unsafe-eval', and the theme script that runs before the `<meta>` is covered by its hash. The build fails if pages disagree, a source is unsafe, frame-src is anything but youtube-nocookie, or the line passes Cloudflare's 2,000-character limit. Unit tests check the builder and the built header; a browser test serves a page with the real header and checks the theme script runs (and is blocked without its hash). Needs Christian's approval: security headers.
 - Task 752, astro security bump (#752): astro 7.4.4 to 7.4.12, fixing GHSA-mh32-jxcr-mh9f and GHSA-r3h5-4585-7x3w; npm audit clean. Needs Christian (dependency files).
-- In review: CLAUDE.md daily-puzzle rule names the forbidden game words (Wordle, Connections, Strands, NYT) again and links docs/GAMES-PARITY.md (#749).
+- Merged via #759: the daily-puzzle instruction documents the forbidden naming rules and links docs/GAMES-PARITY.md (#749).
 - Task 210 (#718): games parity rule and shared specification.
 
 ## In review
