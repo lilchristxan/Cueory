@@ -22,10 +22,21 @@ function privacyHtml(): string {
   return readFileSync(privacyPath, 'utf8');
 }
 
+const NAMED_ENTITIES: Record<string, string> = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ' };
+
+/** Decodes HTML entities in one pass, so a decoded "&" is never decoded again (no double unescaping). */
+function decodeEntities(text: string): string {
+  return text.replace(/&(?:#(\d+)|#x([\da-f]+)|([a-z]+));/gi, (entity, decimal?: string, hex?: string, name?: string) => {
+    if (decimal) return String.fromCodePoint(Number(decimal));
+    if (hex) return String.fromCodePoint(parseInt(hex, 16));
+    return NAMED_ENTITIES[name!.toLowerCase()] ?? entity;
+  });
+}
+
 /** The built page's plain text under each h2, keyed by heading. */
 function privacySections(html: string): Map<string, string> {
   const main = html.slice(html.indexOf('<article'), html.indexOf('</article>'));
-  const text = (part: string) => part.replace(/<[^>]+>/g, ' ').replaceAll('&amp;', '&').replaceAll('&#39;', "'").replace(/\s+/g, ' ').trim();
+  const text = (part: string) => decodeEntities(part.replace(/<[^>]+>/g, ' ')).replace(/\s+/g, ' ').trim();
   const sections = new Map<string, string>();
   const parts = main.split(/<h2[^>]*>/).slice(1);
   for (const part of parts) {
@@ -72,6 +83,15 @@ describe.skipIf(!existsSync(privacyPath))('privacy page browser storage disclosu
     expect(text).toContain('Cueory’s offline cache excludes daily games.');
     expect(text).toContain('its YouTube player loads only when you choose to play it');
     expect(text).toContain('Cueory does not track you across other websites');
+  });
+});
+
+describe('decodeEntities', () => {
+  it('decodes each entity once, never twice', () => {
+    expect(decodeEntities('&amp;lt;')).toBe('&lt;');
+    expect(decodeEntities('&amp;#39;')).toBe('&#39;');
+    expect(decodeEntities('Ko-fi&#39;s &lt;terms&gt; &amp; &#x2019; &quot;x&quot;')).toBe('Ko-fi\'s <terms> & \u2019 "x"');
+    expect(decodeEntities('&unknown; stays')).toBe('&unknown; stays');
   });
 });
 
