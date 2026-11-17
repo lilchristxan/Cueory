@@ -364,9 +364,12 @@
   }
 
   /* Glassy pill button: translucent brand glass, a crisp light rim, a small soft shadow (D-62). */
+  /* It never grows past its column: with large text on a narrow screen (320px, 32px text) its words wrap inside it. */
   .glass-button {
     display: inline-block;
+    max-inline-size: 100%;
     padding: calc(var(--spacing) * 3.5) calc(var(--spacing) * 8);
+    overflow-wrap: break-word;
     border-radius: var(--radius-pill);
     color: var(--color-on-button);
     text-decoration: none;
