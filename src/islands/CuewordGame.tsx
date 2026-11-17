@@ -26,7 +26,7 @@ const CHECKBOX_SETTINGS: ReadonlyArray<[Exclude<keyof CrosswordSettings, 'clueSi
   ['autocheck', "autocheck: mark each letter right or wrong as you type. this counts as help, so the solve won't extend your streak."],
   ['skipFilled', 'skip squares that already have a letter'],
   ['jumpBack', 'at the end of a word, jump back to its first blank square'],
-  ['jumpNext', 'when a word is full, jump to the next clue with a blank square'],
+  ['jumpNext', 'when a word is full, jump to the next cue with a blank square'],
   ['showTimer', 'show the timer'],
   ['playSound', 'play a sound when solved'],
 ];
@@ -48,7 +48,8 @@ function cellLabel(state: CuewordState, cell: number, r: number, c: number, word
 function Board({ puzzle, name }: Props) {
   const [state, setState] = useState(() => emptyState(puzzle));
   const [settings, setSettings] = useState<CrosswordSettings>(() => loadCrosswordSettings(browserStorage()));
-  const [pencil, setPencil] = useState(false);
+  // Pencil mode is gone (Christian's brief, 2026-11-17): every letter is a pen letter.
+  const pencil = false;
   const [paused, setPaused] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const [warned, setWarned] = useState(false);
@@ -235,7 +236,7 @@ function Board({ puzzle, name }: Props) {
                 ))}
               </fieldset>
               <fieldset>
-                <legend>clue text size</legend>
+                <legend>cue text size</legend>
                 {(['small', 'medium', 'large'] as const).map((size) => (
                   <label key={size} className="game-settings-option">
                     <span>{size}</span>
@@ -253,10 +254,6 @@ function Board({ puzzle, name }: Props) {
         />
       </div>
       <div className="crossword-toolbar crossword-no-print">
-        <div className="segmented crossword-mode" role="group" aria-label="entry mode">
-          <button type="button" className="segmented-option" aria-pressed={!pencil} disabled={solved} onClick={() => setPencil(false)}>{!pencil && <span className="segmented-check" aria-hidden="true">✓</span>}pen</button>
-          <button type="button" className="segmented-option" aria-pressed={pencil} disabled={solved} onClick={() => setPencil(true)}>{pencil && <span className="segmented-check" aria-hidden="true">✓</span>}pencil</button>
-        </div>
         {/* Check and reveal move to a new row together, never split across two rows (they only stack when even the pair
             is wider than the column, at the largest text on the narrowest screens). */}
         <div className="crossword-help-pair">
@@ -291,7 +288,6 @@ function Board({ puzzle, name }: Props) {
       )}
 
       <PrintLogo />
-      {puzzle.sample && <p className="text-center text-sm text-ink-soft">today's puzzle is a sample</p>}
       <div className="crossword-timer crossword-no-print mt-2">
         {settings.showTimer && <span className="tabular-nums" data-testid="crossword-time">time: {elapsedText(elapsed)}</span>}
         {!solved && (
@@ -300,8 +296,9 @@ function Board({ puzzle, name }: Props) {
           </button>
         )}
       </div>
-      <p id={help} className="crossword-no-print mt-2 text-center text-sm text-ink-soft">
-        type letters. arrows move. space switches direction. tab goes to the next clue, and past the last clue leaves the grid. escape leaves the grid too.
+      {/* The keys, for screen readers (the grid points here); everyone else has them in the "?" (Christian's brief). */}
+      <p id={help} className="sr-only">
+        type letters. arrows move. space switches direction. tab goes to the next cue, and past the last cue leaves the grid. escape leaves the grid too.
         {level === 'hard' && ' swipe the board sideways to see more squares. keyboard: focus the board scroll area to scroll, or use arrows on a square to move through the grid.'}
       </p>
 
@@ -397,15 +394,15 @@ function Board({ puzzle, name }: Props) {
       {!paused && (
         <div className="crossword-no-print mt-4 flex justify-center">
           <button type="button" className={quietButton} aria-expanded={showList} aria-controls={listId} onClick={() => setShowList((open) => !open)}>
-            {showList ? 'hide clue list' : 'show clue list'}
+            <span aria-hidden="true">{showList ? '▴ ' : '▾ '}</span>{showList ? 'hide cue list' : 'show cue list'}
           </button>
         </div>
       )}
       {showList && !paused && (
         <div id={listId} className="crossword-clue-list crossword-no-print" data-testid="crossword-clue-list">
           {(['across', 'down'] as const).map((direction: Direction) => (
-            <section key={direction} aria-label={direction + ' clues'}>
-              <h3 className="font-medium">{direction}</h3>
+            <section key={direction} aria-label={direction + ' cues'}>
+              <h3 className="font-medium">{direction} <span className="text-sm font-normal text-ink-soft">· {puzzle.clues[direction].length}</span></h3>
               <ol>
                 {puzzle.clues[direction].map((item) => {
                   const word = list.find((candidate) => candidate.direction === direction && candidate.number === item.number)!;
