@@ -3,7 +3,8 @@ import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from 
 import { browserStorage } from '../scripts/storage';
 import { localDay, reportRound } from './gameresults';
 import { printGame } from './gameprint';
-import { GameHelpButton, GameHelpCard, useGameHelp } from './GameHelp';
+import { GameHelpCard, useGameHelp } from './GameHelp';
+import GameHeader from './GameHeader';
 import ResultBrandMark from './ResultBrandMark';
 import { dayLabel } from './daily';
 import { playSolvedTone } from './solvetone';
@@ -25,7 +26,7 @@ const CHECKBOX_SETTINGS: ReadonlyArray<[Exclude<keyof CrosswordSettings, 'clueSi
   ['autocheck', "autocheck: mark each letter right or wrong as you type. this counts as help, so the solve won't extend your streak."],
   ['skipFilled', 'skip squares that already have a letter'],
   ['jumpBack', 'at the end of a word, jump back to its first blank square'],
-  ['jumpNext', 'when a word is full, jump to the next clue with a blank square'],
+  ['jumpNext', 'when a word is full, jump to the next cue with a blank square'],
   ['showTimer', 'show the timer'],
   ['playSound', 'play a sound when solved'],
 ];
@@ -34,9 +35,13 @@ function elapsedText(seconds: number): string {
   return Math.floor(seconds / 60) + ':' + String(seconds % 60).padStart(2, '0');
 }
 
-function cellLabel(state: CuewordState, cell: number, r: number, c: number, word: CuewordWord): string {
+/**
+ * A square's accessible name. A numbered square starts with its number, the text it shows, so the name contains the
+ * visible label (WCAG 2.5.3, axe label-content-name-mismatch).
+ */
+function cellLabel(state: CuewordState, cell: number, r: number, c: number, word: CuewordWord, number: number | null): string {
   const letter = state.entries[cell];
-  let label = 'row ' + (r + 1) + ', column ' + (c + 1) + ', ' + word.number + ' ' + word.direction + ', ' + (letter ? 'letter ' + letter : 'empty');
+  let label = (number !== null ? number + ', ' : '') + 'row ' + (r + 1) + ', column ' + (c + 1) + ', ' + word.number + ' ' + word.direction + ', ' + (letter ? 'letter ' + letter : 'empty');
   if (letter && state.pencil[cell]) label += ', pencil';
   if (state.cued.includes(cell)) label += ', revealed';
   else if (state.checks[cell] === 'right') label += ', checked right';
@@ -47,13 +52,14 @@ function cellLabel(state: CuewordState, cell: number, r: number, c: number, word
 function Board({ puzzle, name }: Props) {
   const [state, setState] = useState(() => emptyState(puzzle));
   const [settings, setSettings] = useState<CrosswordSettings>(() => loadCrosswordSettings(browserStorage()));
-  const [pencil, setPencil] = useState(false);
+  // Pencil mode is gone (Christian's brief, 2026-11-17): every letter is a pen letter.
+  const pencil = false;
   const [paused, setPaused] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const [warned, setWarned] = useState(false);
   const [asking, setAsking] = useState<Help | null>(null);
   const [showList, setShowList] = useState(false);
-  const [openMenu, setOpenMenu] = useState<'check' | 'reveal' | 'settings' | null>(null);
+  const [openMenu, setOpenMenu] = useState<'check' | 'reveal' | null>(null);
   const [said, setSaid] = useState('');
   const [today] = useState(() => new Date());
   const [counts, setCounts] = useState(true);
@@ -216,11 +222,42 @@ function Board({ puzzle, name }: Props) {
 
   return (
     <section className="crossword-panel" aria-label={name + ' puzzle'} data-testid="cueword" data-clue-size={settings.clueSize}>
+      {/* The corner row (Christian's brief): the gear at the top left opens the crossword's settings with the shared ones;
+          print and the "?" at the top right. */}
+      <div className="crossword-no-print">
+        <GameHeader
+          name={name}
+          help={howToPlay}
+          settings={
+            <div data-testid="crossword-settings">
+              <fieldset>
+                <legend>{name}</legend>
+                {CHECKBOX_SETTINGS.map(([setting, label]) => (
+                  <label key={setting} className="game-settings-option">
+                    <span>{label}</span>
+                    <input type="checkbox" checked={settings[setting]} onChange={(event) => changeSetting(setting, event.target.checked)} />
+                  </label>
+                ))}
+              </fieldset>
+              <fieldset>
+                <legend>cue text size</legend>
+                {(['small', 'medium', 'large'] as const).map((size) => (
+                  <label key={size} className="game-settings-option">
+                    <span>{size}</span>
+                    <input type="radio" name={help + '-clue-size'} value={size} checked={settings.clueSize === size} onChange={() => changeSetting('clueSize', size)} />
+                  </label>
+                ))}
+              </fieldset>
+            </div>
+          }
+          end={
+            <button type="button" className="corner-button corner-button-quiet" aria-label="print this puzzle" onClick={printPuzzle}>
+              <svg aria-hidden="true" viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M6 9V3h12v6"/><rect x="3" y="9" width="18" height="9" rx="2"/><path d="M7 14h10v7H7z"/></svg>
+            </button>
+          }
+        />
+      </div>
       <div className="crossword-toolbar crossword-no-print">
-        <div className="segmented crossword-mode" role="group" aria-label="entry mode">
-          <button type="button" className="segmented-option" aria-pressed={!pencil} disabled={solved} onClick={() => setPencil(false)}>{!pencil && <span className="segmented-check" aria-hidden="true">✓</span>}pen</button>
-          <button type="button" className="segmented-option" aria-pressed={pencil} disabled={solved} onClick={() => setPencil(true)}>{pencil && <span className="segmented-check" aria-hidden="true">✓</span>}pencil</button>
-        </div>
         {/* Check and reveal move to a new row together, never split across two rows (they only stack when even the pair
             is wider than the column, at the largest text on the narrowest screens). */}
         <div className="crossword-help-pair">
@@ -239,37 +276,6 @@ function Board({ puzzle, name }: Props) {
           </details>
         ))}
         </div>
-        <details ref={menuRef('settings')} className="crossword-help"
-          onToggle={(event) => { const open = event.currentTarget.open; setOpenMenu((current) => open ? 'settings' : current === 'settings' ? null : current); }}>
-          <summary className="corner-button corner-button-quiet" aria-label="crossword settings">
-            <svg aria-hidden="true" viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1"/></svg>
-          </summary>
-          {/* Rendered only while open, like the check and reveal menus, so a closed menu leaves no unreachable controls. */}
-          {openMenu === 'settings' && (
-            <div className="crossword-help-panel crossword-settings" data-testid="crossword-settings">
-              <h3 className="font-medium">settings</h3>
-              {CHECKBOX_SETTINGS.map(([setting, label]) => (
-                <label key={setting} className="crossword-setting">
-                  <input type="checkbox" checked={settings[setting]} onChange={(event) => changeSetting(setting, event.target.checked)} />
-                  <span>{label}</span>
-                </label>
-              ))}
-              <fieldset className="crossword-setting-group">
-                <legend>clue text size</legend>
-                {(['small', 'medium', 'large'] as const).map((size) => (
-                  <label key={size} className="crossword-setting">
-                    <input type="radio" name={help + '-clue-size'} value={size} checked={settings.clueSize === size} onChange={() => changeSetting('clueSize', size)} />
-                    <span>{size}</span>
-                  </label>
-                ))}
-              </fieldset>
-            </div>
-          )}
-        </details>
-        <button type="button" className="corner-button corner-button-quiet" aria-label="print this puzzle" onClick={printPuzzle}>
-          <svg aria-hidden="true" viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M6 9V3h12v6"/><rect x="3" y="9" width="18" height="9" rx="2"/><path d="M7 14h10v7H7z"/></svg>
-        </button>
-        <GameHelpButton help={howToPlay} name={name} className="corner-button corner-button-quiet" />
       </div>
 
       <GameHelpCard help={howToPlay} name={name} />
@@ -286,7 +292,6 @@ function Board({ puzzle, name }: Props) {
       )}
 
       <PrintLogo />
-      {puzzle.sample && <p className="text-center text-sm text-ink-soft">today's puzzle is a sample</p>}
       <div className="crossword-timer crossword-no-print mt-2">
         {settings.showTimer && <span className="tabular-nums" data-testid="crossword-time">time: {elapsedText(elapsed)}</span>}
         {!solved && (
@@ -295,8 +300,9 @@ function Board({ puzzle, name }: Props) {
           </button>
         )}
       </div>
-      <p id={help} className="crossword-no-print mt-2 text-center text-sm text-ink-soft">
-        type letters. arrows move. space switches direction. tab goes to the next clue, and past the last clue leaves the grid. escape leaves the grid too.
+      {/* The keys, for screen readers (the grid points here); everyone else has them in the "?" (Christian's brief). */}
+      <p id={help} className="sr-only">
+        type letters. arrows move. space switches direction. tab goes to the next cue, and past the last cue leaves the grid. escape leaves the grid too.
         {level === 'hard' && ' swipe the board sideways to see more squares. keyboard: focus the board scroll area to scroll, or use arrows on a square to move through the grid.'}
       </p>
 
@@ -347,7 +353,7 @@ function Board({ puzzle, name }: Props) {
                         type="button"
                         tabIndex={current ? 0 : -1}
                         disabled={solved}
-                        aria-label={cellLabel(state, cell, r, c, word)}
+                        aria-label={cellLabel(state, cell, r, c, word, number)}
                         aria-pressed={current}
                         data-cell={cell}
                         className={classes}
@@ -392,15 +398,15 @@ function Board({ puzzle, name }: Props) {
       {!paused && (
         <div className="crossword-no-print mt-4 flex justify-center">
           <button type="button" className={quietButton} aria-expanded={showList} aria-controls={listId} onClick={() => setShowList((open) => !open)}>
-            {showList ? 'hide clue list' : 'show clue list'}
+            <span aria-hidden="true">{showList ? '▴ ' : '▾ '}</span>{showList ? 'hide cue list' : 'show cue list'}
           </button>
         </div>
       )}
       {showList && !paused && (
         <div id={listId} className="crossword-clue-list crossword-no-print" data-testid="crossword-clue-list">
           {(['across', 'down'] as const).map((direction: Direction) => (
-            <section key={direction} aria-label={direction + ' clues'}>
-              <h3 className="font-medium">{direction}</h3>
+            <section key={direction} aria-label={direction + ' cues'}>
+              <h3 className="font-medium">{direction} <span className="text-sm font-normal text-ink-soft">· {puzzle.clues[direction].length}</span></h3>
               <ol>
                 {puzzle.clues[direction].map((item) => {
                   const word = list.find((candidate) => candidate.direction === direction && candidate.number === item.number)!;

@@ -43,7 +43,7 @@ for (const colorScheme of ['light', 'dark'] as const) {
     await expectStill(pillo);
     await page.goto('/play/crossword');
     const crossword = page.getByTestId('cueword');
-    const square = crossword.getByRole('button', { name: /^row 1, column 2,/ });
+    const square = crossword.getByRole('button', { name: /^(?:\d+, )?row 1, column 2,/ });
     await square.click();
     await page.keyboard.type('a');
     await expect(square).toContainText(/a/i);
