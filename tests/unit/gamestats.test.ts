@@ -167,7 +167,7 @@ describe('word path stats (#722)', () => {
       played: 0, completed: 0, solvePercent: 0, currentStreak: 0, longestStreak: 0, specialFirst: 0, withoutHints: 0,
     });
     expect(wordPathSummaryInWords(wordPathSummary(stats, '2026-11-08'))).toBe(
-      'completed 5, solve rate 83%. streak: 2 days, longest 3 days. the thread found first: 2. solved without hints: 3.',
+      'completed 5, solve rate 83%. streak: 2 days, longest 3 days. the thread found first: 2. solved without cues: 3.',
     );
   });
 });

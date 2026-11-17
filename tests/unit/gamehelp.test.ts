@@ -68,7 +68,8 @@ describe('game help text (#736)', () => {
 
   it('lists every pillo, sudoku and crossword setting the games offer', () => {
     const names = (topic: keyof typeof GAME_HELP) => GAME_HELP[topic].settings.map(({ name }) => name);
-    expect(names('pulse')).toEqual(['hard mode', 'high contrast', 'on-screen keyboard only']);
+    // High contrast is the shared setting (#805), so pillo's own list holds only what lasts for the visit.
+    expect(names('pulse')).toEqual(['hard mode', 'on-screen keyboard only']);
     // The sudoku labels come straight from the settings dialog, so a new setting there fails here until it is explained.
     const sudoku = readFileSync(new URL('../../src/islands/SudokuGame.tsx', import.meta.url), 'utf8');
     const labels = [...(/const labels: Record<keyof SudokuSettings, string> = \{([^}]+)\}/.exec(sudoku)?.[1] ?? '')
