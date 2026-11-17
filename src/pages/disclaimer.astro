@@ -3,66 +3,65 @@ import Layout from '../layouts/Layout.astro';
 import Prose from '../components/Prose.astro';
 import { site } from '../config/site';
 
-// Final text v3, approved 2026-11-17 after two review rounds. Use it word for word; change it only with Christian's
-// approval.
+// FINAL: legal text v5, adopted 13–0 on 2026-11-17 (file SHA-256 fc0e5514…f052). Word for word; change it only with
+// Christian's approval.
 const email = site.contactEmail;
+const mail = `mailto:${email}`;
 ---
 
 <Layout title="disclaimer" description="Cueory is a study aid, not medical advice." noindex>
   <Prose>
     <h1>disclaimer</h1>
-    <p class="text-sm text-ink-soft">Last updated: 17 November 2026</p>
+    <p class="text-sm text-ink-soft">Last updated 17 November 2026</p>
 
     <p>
-      Cueory is a study aid for nursing students. It is not medical advice and not a substitute for your school, your
-      instructors or your clinical training.
+      Cueory is for nursing students to practice and review what they’re learning. It does not provide medical, nursing or
+      clinical advice or replace instruction or supervised clinical training. Never use Cueory to make a decision about a
+      real patient, check a medication dose for care, or decide what to do about your own or someone else’s health.
     </p>
-
     <p>
-      <strong>Not medical advice.</strong> Nothing on Cueory is medical, nursing or clinical advice. Don't use it to
-      diagnose, treat or care for a real patient, or to make decisions about your own health or anyone else's. At
-      clinical and at work, follow your instructors, your preceptors and your facility's policies.
+      <strong>In an emergency, call 911 in the United States or your local emergency number.</strong> In a clinical
+      facility, alert staff immediately and follow the facility’s emergency procedures. Cueory is not monitored for
+      emergencies and cannot respond to one.
     </p>
 
+    <h2>Protect patient information</h2>
     <p>
-      <strong>Never share patient information.</strong> Don't type or send anything about a real patient anywhere on
-      Cueory. That includes names, dates, photos, room numbers and stories from clinical that could identify someone. If
-      you share something by mistake, email <a href={`mailto:${email}`}>{email}</a> and we'll delete it. Also tell your
-      instructor or clinical site if their rules require it.
+      Use invented examples only. Keep information about real patients off Cueory and out of emails to us, even if you
+      leave out their names. Photos, screenshots, dates, room numbers and details from a clinical placement can identify
+      someone.
     </p>
-
     <p>
-      <strong>In an emergency,</strong> call 911 or your local emergency number. Cueory can't help in an emergency.
+      If you send us patient information by mistake, promptly follow your school’s or facility’s reporting procedure.
+      Start a new email to <a href={mail}>{email}</a> with the approximate time and where you sent it so we can locate it
+      and address the disclosure. Do not forward the original, attach a screenshot or repeat any patient details.
     </p>
 
+    <h2>Follow your school’s and clinical site’s rules</h2>
     <p>
-      <strong>Follow your school's rules.</strong> Your school and clinical site decide when phones and study tools are
-      allowed. Don't use Cueory during an exam, a graded assignment or patient care unless they clearly allow it. Your
-      school's academic honesty rules always apply.
+      Use Cueory during an exam or graded assignment only if the rules for that activity expressly allow it. Keep
+      confidential questions and answers to yourself, including anything recalled from an exam. In clinical placements
+      and at work, follow facility policies and ask your instructor, preceptor or supervising clinician about patient
+      care.
     </p>
 
+    <h2>Check what you learn</h2>
     <p>
-      <strong>Check what you learn.</strong> Some content is sample or placeholder text, and content may not yet have
-      citations or review by a licensed nurse. Mistakes can happen. Your school's materials, textbooks and instructors
-      come first. If something here disagrees with them, follow them, and please tell us at
-      <a href={`mailto:${email}`}>{email}</a>.
+      Some study activities are samples, and some pages contain placeholder text. Material may lack citations or review
+      by a licensed nurse. Check what you learn against your assigned materials and current textbooks. If sources
+      disagree, ask your instructor before relying on the information. To flag a possible error, email the page title or
+      link and a description to <a href={mail}>{email}</a>. Leave out patient details and confidential exam material.
     </p>
-
     <p>
-      <strong>No guarantee of results.</strong> Using Cueory doesn't guarantee a grade, a passing score on a course exam
-      or the NCLEX, or any other outcome.
+      The daily puzzles currently use everyday words. Some repeat. Neither a puzzle result nor a practice score tells you
+      whether you’re ready to care for patients or pass an exam. Using Cueory does not guarantee a grade, a passing score
+      on the NCLEX or any other exam outcome.
     </p>
-
-    <p><strong>Puzzles are for fun.</strong> For now the daily puzzles are samples with everyday words, and some repeat.</p>
-
     <p>
-      <strong>Not affiliated.</strong> Cueory is independent. No school, nursing program, testing body or licensing board
-      runs or endorses it. Their names belong to them.
+      Cueory is independent. No school, nursing program, testing organization or licensing board runs or endorses it.
+      Names and marks belonging to those organizations remain theirs.
     </p>
 
-    <p>
-      See also our <a href="/terms">terms of use</a> and <a href="/privacy">privacy page</a>. Questions:
-      <a href={`mailto:${email}`}>{email}</a>.
-    </p>
+    <p><a href="/terms">Terms of Use</a> · <a href="/privacy">Privacy Notice</a></p>
   </Prose>
 </Layout>

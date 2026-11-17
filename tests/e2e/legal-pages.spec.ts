@@ -26,7 +26,7 @@ for (const legal of pages) {
     await page.goto(legal.path);
     const main = page.locator('main');
     await expect(main.getByRole('heading', { level: 1, name: legal.heading, exact: true })).toBeVisible();
-    await expect(main.getByText(/^Last updated: \d{1,2} [A-Z][a-z]+ \d{4}$/)).toBeVisible();
+    await expect(main.getByText(/^Last updated \d{1,2} [A-Z][a-z]+ \d{4}$/)).toBeVisible();
     await expect(main).not.toContainText(/Christian:|paste your|Placeholder:/);
     const mail = main.locator(`a[href="mailto:${site.contactEmail}"]`);
     expect(await mail.count()).toBeGreaterThan(0);

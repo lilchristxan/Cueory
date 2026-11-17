@@ -31,7 +31,7 @@ for (const viewport of viewports) {
       await expect(page.getByRole('heading', { level: 1, name: 'disclaimer' })).toBeVisible();
       // Christian's approved text, not the placeholder.
       await expect(page.locator('main')).not.toContainText(/Christian:|paste your|Placeholder:/);
-      await expect(page.locator('main').getByText(/^Last updated: /)).toBeVisible();
+      await expect(page.locator('main').getByText(/^Last updated \d/)).toBeVisible();
 
       const footer = page.getByRole('contentinfo');
       // The site's footer links are intentionally closed until the visitor opens them.
