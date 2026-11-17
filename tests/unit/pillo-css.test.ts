@@ -35,8 +35,14 @@ describe('Pillo stylesheet delivery', () => {
     expect(styles).toContain('pillo-pop');
   });
 
+  it('delivers them on pillo\'s own page too', () => {
+    const styles = deliveredStyles(readFileSync(join(dist, 'play/pillo.html'), 'utf8'));
+    for (const selector of ['.pillo-pack', '.pillo-key', '.pillo-legend']) expect(styles, selector).toContain(selector);
+  });
+
   it('does not deliver Pillo board or keyboard selectors to any other built route', () => {
-    const pages = htmlFiles(dist).filter(path => relative(dist, path) !== 'play.html');
+    // /play and pillo's own page (each game on its own page, 2026-11-17) are the only pages with pillo on them.
+    const pages = htmlFiles(dist).filter(path => !['play.html', 'play/pillo.html'].includes(relative(dist, path).replaceAll('\\', '/')));
     expect(pages.length).toBeGreaterThan(0);
     for (const path of pages) {
       const styles = deliveredStyles(readFileSync(path, 'utf8'));

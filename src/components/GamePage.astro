@@ -1,0 +1,37 @@
+---
+/**
+ * The inside of one daily game's own page (each page wraps it in Layout, so the site's page checks see it) (Christian's decision, 2026-11-17): /play/pillo, /play/sudoku, /play/crossword and
+ * /play/word-path. A link back to all games, the game's name centred at the top, the shared game settings, the game
+ * itself (the page passes it in as its only island), this game's private stats and the result dialog. The game's
+ * description and rules are in its own help (the "?" button), so the page stays plain.
+ *
+ * The wrappers keep the same shape as on /play, so each game's print rules (crossword.css, global.css for sudoku,
+ * wordpath.css) still print only the game.
+ */
+import GameSettings from '../islands/GameSettings';
+import GameStatsPanel from '../islands/GameStatsPanel';
+import GameResultsHost from '../islands/GameResultsHost';
+import type { DailyGame } from '../config/games';
+
+interface Props {
+  game: DailyGame;
+}
+const { game } = Astro.props;
+---
+<article class="veil mx-auto mt-6 max-w-prose p-6 sm:mt-10 sm:p-10" data-game-page={game.id}>
+    <p>
+      <a href="/play" class="inline-flex min-h-(--tap-min) items-center gap-2 font-medium" data-testid="all-games-link">
+        <span aria-hidden="true">←</span> all games
+      </a>
+    </p>
+    <slot name="title" />
+    <div class="mt-4 flex justify-center" data-testid="play-settings">
+      <GameSettings client:only="react" title="game settings" label="game settings" />
+    </div>
+    <noscript><p class="mt-4 text-center">game settings need JavaScript.</p></noscript>
+    <slot />
+    {/* Private stats (D-76) for this game only: off until the student turns them on, kept only in this browser. */}
+    <GameStatsPanel client:only="react" games={[game.id]} />
+</article>
+<GameResultsHost client:only="react" />
+<noscript><p>game results and sharing need JavaScript.</p></noscript>

@@ -75,7 +75,7 @@ and theme scripts. What a page adds on top of that floor:
 | Study screens (`learn`, `learn/*`) | 12 | 87.8 KiB | 97.4 KiB | `learn/study-skills/cards.html` |
 | Account (sign-in, sign-up, account, start, progress) | 8 | 92.2 KiB | 131.9 KiB | `account.html` |
 | Games page (`play`) | 1 | 137.9 KiB | 137.9 KiB | `play.html` |
-| Single game pages (`play/*`) | 6 | 87.8 KiB | 87.8 KiB | `play/word-path.html` |
+| Single game pages (`play/*`) | 6 | 89.3 KiB | 119.3 KiB | `play/sudoku.html` (each game on its own page, 2026-11-17) |
 | Internal previews and admin (`preview/*`, `admin/*`) | 13 | 87.8 KiB | 95.8 KiB | `preview/admin-flags.html` |
 
 The anatomy lab's preview page is left out of the internal row: on a build that shows drafts it carries the lab
@@ -85,6 +85,11 @@ itself and has its own limit in `tests/unit/build-output.test.ts`.
 shared results code (5.8 KiB) and the settings, stats and share islands sit on top of the floor.
 
 ### Budget per page type
+
+`/play/pillo`, `/play/sudoku`, `/play/crossword` and `/play/word-path` were share landings with no game until each
+game moved to its own page (2026-11-17, D-pending). The single game page budget was re-measured then from the real
+game pages (heaviest 119.3 KiB plus 10%); it was not a loosening of the same page. Splitting the shared React and flag
+code to shrink every page is on the after-launch list.
 
 The heaviest page of each type plus 10%, rounded up to whole KiB. `tests/unit/perf-budget.test.ts` fails the build
 check if any built page goes over its type's budget, so a new page has a limit from day one. Each existing page also
@@ -96,7 +101,7 @@ keeps its own per-route budget in `tests/unit/build-output.test.ts` (10% over it
 | Study screens | 108 KiB |
 | Account | 146 KiB |
 | Games page (`/play`) | 152 KiB |
-| Single game pages | 97 KiB |
+| Single game pages | 132 KiB |
 | Internal previews and admin | 106 KiB |
 
 HTML and CSS keep the limits in the first table (40 KiB and 70 KiB per page); today the largest are 19.0 KiB HTML

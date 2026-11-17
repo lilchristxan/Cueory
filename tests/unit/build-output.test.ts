@@ -69,10 +69,12 @@ const initialJsBudget = {
   'play.html': 168467,
   'play/hello-cards.html': 91427,
   'play/stat.html': 96284, // Task 640: measured from a local Node 24.22.2 build, not yet from CI
-  'play/crossword.html': 89662,
-  'play/pillo.html': 89662,
-  'play/sudoku.html': 89662,
-  'play/word-path.html': 89662,
+  // Each game on its own page (2026-11-17, D-pending): these routes stopped being share landings and now load their game.
+  // Measured from a local Node 24 build of lane8/game-pages; the old 89,662 baseline was a page with no game on it.
+  'play/crossword.html': 121556,
+  'play/pillo.html': 119797,
+  'play/sudoku.html': 122156,
+  'play/word-path.html': 120824,
   'preview/admin-flags.html': 92161,
   'preview/anatomy-text.html': 89104,
   'preview/anatomy-lab.html': 89027,
