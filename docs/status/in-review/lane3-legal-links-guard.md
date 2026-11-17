@@ -1,0 +1,1 @@
+status: Lane 3 legal links guard: the ☰ menu now hides unapproved legal pages with the same rule as the footer (#747); tests check keyboard reach and visible focus for footer and menu legal links, and that no unapproved legal page is linked from any built footer, menu or the sitemap.

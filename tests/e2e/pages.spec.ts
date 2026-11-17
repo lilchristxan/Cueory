@@ -1,6 +1,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
-import { socials } from '../../src/config/site';
+import { menuSmallLinks, socials } from '../../src/config/site';
+import { visibleFooterLinks } from '../../src/config/legalfooter';
 import { isDesktopOfEachEngine } from './projects';
 import { lessonRoutes } from '../lessonroutes';
 
@@ -1240,7 +1241,10 @@ test.describe('☰ side panel and account corner (D-46)', () => {
         await expect(nav.getByRole('link', { name })).toBeVisible();
       }
       await expect(panel.getByRole('link', { name: 'privacy' })).toBeVisible();
-      await expect(panel.getByRole('link', { name: 'terms' })).toBeVisible();
+      // #747: Terms shows in the menu only once its page is approved (same rule as the footer).
+      const terms = panel.getByRole('link', { name: 'terms' });
+      if (visibleFooterLinks(menuSmallLinks).some((link) => link.href === '/terms')) await expect(terms).toBeVisible();
+      else await expect(terms).toHaveCount(0);
 
       // Tab never leaves the panel while it is open.
       for (let i = 0; i < 9; i++) {

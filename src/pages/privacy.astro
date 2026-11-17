@@ -66,15 +66,15 @@ import { newsletter, promo, site } from '../config/site';
       On <a href="/play">daily games</a> you can turn on stats. They're off unless you do. When they're on, your browser
       keeps, for each game you finish, the day of the puzzle, whether you solved it, how many tries it took and, only
       when you finished it on a later day than the puzzle's own (for example after midnight), a note saying so. For the
-      crossword, a try is a check or a reveal, and it also keeps whether the solve extends your crossword streak (solved
-      without check or reveal, within 48 hours of the puzzle's date). For word path, it also keeps how many hints you used
+      crossword, a try is a check, a reveal or autocheck, and it also keeps whether the solve extends your crossword
+      streak (solved without check, reveal or autocheck, within 48 hours of the puzzle's date). For word path, it also keeps how many hints you used
       and whether you found the special answer first. Nothing else is kept. From these results the page works out, on
       your device, pillo's games played, win percentage, current and longest streak (days in a row you solved the puzzle
       on its own day) and how many guesses each solved game took, and word path's streak. Those numbers are not stored
       separately. Anything older than 400 days is deleted the next time you open daily games. It stays on your device and
       never reaches us. "Forget", or turning stats off, deletes it. The storage key for these results is
-      <code>cueory-game-stats</code>. pillo's settings (hard mode, high contrast and on-screen keyboard only) are not
-      saved: they last until you leave or reload the page.
+      <code>cueory-game-stats</code>. pillo's own settings (hard mode and on-screen keyboard only) are not saved: they
+      last until you leave or reload the page. Its high contrast switch is the shared game setting described below.
     </p>
     <p>
       The crossword remembers its settings on your device (autocheck, how the cursor moves, the timer, clue text size
@@ -94,6 +94,12 @@ import { newsletter, promo, site } from '../config/site';
       and it never reaches us. Your theme pick there is the same one the footer saves.
     </p>
 
+    <p>
+      After you finish daily puzzles on three different days, the daily games page may suggest adding Cueory to your
+      home screen. To decide when to show that suggestion, the browser keeps up to three dates on which you finished a
+      puzzle and whether you dismissed the suggestion, under <code>cueory-home-screen-tip</code>. That record remains
+      on this device and is not sent to us. Clearing this site's data removes it.
+    </p>
     <p>
       To let the lessons open without a connection, your browser may keep copies of the pages you visit (lessons
       and the home page; daily games are never kept) and of the site's own files, on your device. That is a normal browser feature, the
@@ -122,6 +128,11 @@ import { newsletter, promo, site } from '../config/site';
       <li>
         <code>cueory-break-timer</code>: when this feature is on, it will remember your break timer's current state
         in this browser tab, for up to two hours.
+      </li>
+      <li>
+        <code>cueory-finals-survey-dismissed</code>, and <code>cueory-preview-survey</code> on the unlinked preview
+        page: when the survey prompt is on, they will remember that you closed it, on this device. Nothing about an
+        answer is stored or sent.
       </li>
     </ul>
 
