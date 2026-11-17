@@ -2106,7 +2106,9 @@ html:has(dialog.mode-preview[open]) {
     }
   }
   .sudoku-number-row button { min-inline-size: var(--tap-min); min-block-size: var(--tap-min); border: var(--sudoku-line) solid var(--color-control); border-radius: var(--radius-md); background: var(--color-page); color: var(--color-ink); font-weight: 700; }
-  .sudoku-setting-button { display: inline-flex; min-block-size: var(--tap-min); align-items: center; gap: calc(var(--spacing) * 2); border: 0; background: transparent; color: var(--color-ink); cursor: pointer; white-space: nowrap; }
+  /* The labels stay on one line while they fit and wrap at large text sizes, so the longer "auto candidates" label
+     (issue 720) never pushes the page sideways at 320px with 32px root text. */
+  .sudoku-setting-button { display: inline-flex; max-inline-size: 100%; min-block-size: var(--tap-min); align-items: center; gap: calc(var(--spacing) * 2); border: 0; background: transparent; color: var(--color-ink); text-align: start; cursor: pointer; }
   .sudoku-solved { margin-block-start: calc(var(--spacing) * 6); padding: calc(var(--spacing) * 5); border: var(--sudoku-line) solid var(--color-line); border-radius: var(--radius-lg); text-align: center; }
   .sudoku-overlay { position: fixed; inset: 0; inline-size: 100%; block-size: 100%; max-inline-size: none; max-block-size: none; margin: 0; padding: calc(var(--spacing) * 5); border: 0; background: rgb(var(--shadow-tint) / var(--scrim-alpha)); color: var(--color-ink); backdrop-filter: blur(var(--blur-scrim)); }
   .sudoku-overlay[open] { display: flex; align-items: center; justify-content: center; }
