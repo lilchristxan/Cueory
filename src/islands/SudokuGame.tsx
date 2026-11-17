@@ -4,7 +4,7 @@ import { printGame } from './gameprint';
 import { GameHelpButton, GameHelpCard, useGameHelp } from './GameHelp';
 import { gameName } from '../config/games';
 import { localDay, showResultCard, sudokuResultCard } from './gameresults';
-import { GameSettingsDialog } from './GameSettings';
+import { GameSettingsDialog } from './GameSettings.tsx';
 import { GAME_SETTINGS_EVENT, GAME_SETTINGS_STORAGE_KEY, gameSoundAllowed, loadGameSettings, parseGameSettings, type SharedGameSettings } from './gamesettings';
 import { sudokuCellClasses } from './sudokuhighlight';
 import { DEFAULT_SUDOKU_SETTINGS, GAME_PROGRESS_EVENT, LEVEL_LABELS, sudokuProgressDetail, LEVEL_RULES, advanceSudokuSeconds, autoCandidateNotes, checkSudoku, conflictIndices, dailySudokuSeed, editSudokuBoard, effectiveSudokuMode, generateSudoku, getResult, loadSudokuSettings, newSudokuBoard, noteDigits, pushSudokuHistory, saveSudokuSettings, sudokuCellPresentation, sudokuKeyAction, sudokuWrongCells, undoSudoku, type SudokuBoard, type SudokuBoardAction, type SudokuLevel, type SudokuMode, type SudokuSettings } from './sudoku';

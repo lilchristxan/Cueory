@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { dailyGames, forbiddenGameWords } from '../../src/config/games';
 import {
   GAME_HELP, GAME_HELP_STORAGE_KEY, HELP_GAMES, SHARED_SETTINGS_NOTE, helpSeen, markHelpSeen, parseHelpSeen,
-} from '../../src/islands/gamehelp';
+} from '../../src/islands/gamehelpcontent';
 import type { KeyValueStorage } from '../../src/scripts/storage';
 
 class MemoryStorage implements KeyValueStorage {

@@ -4,7 +4,7 @@ import { renderToString } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import { accountsBuildEnv, accountsGateOpen, accountsPreviewAllowed } from '../../src/config/accountsgate';
 import { accountLaunch, accountsOpen } from '../../src/config/site';
-import SignIn, { type SignInAuth } from '../../src/islands/SignIn';
+import SignIn, { type SignInAuth } from '../../src/islands/SignIn.tsx';
 
 const fakeAuth = {} as SignInAuth;
 

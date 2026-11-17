@@ -31,7 +31,7 @@ import ResultBrandMark from './ResultBrandMark';
 import { GameHelpCard, useGameHelp } from './GameHelp';
 import GameHeader from './GameHeader';
 import { gameName } from '../config/games';
-import { useSharedGameSettings } from './GameSettings';
+import { useSharedGameSettings } from './GameSettings.tsx';
 import { browserStorage } from '../scripts/storage';
 
 interface Puzzle {
