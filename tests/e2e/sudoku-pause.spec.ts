@@ -100,10 +100,10 @@ test('paused keypad and keyboard cannot change entries, marks, errors, or the li
   await expect(game(page).getByTestId('sudoku-live')).toHaveText('puzzle paused. given numbers remain visible.');
   await expect(game(page).locator('[aria-live="polite"]')).toHaveCount(1);
   // A pause cannot silently reset the board or change the hint setting.
-  const hintsControl = game(page).getByRole('checkbox', { name: /hints/i });
+  const hintsControl = game(page).getByRole('checkbox', { name: /auto candidates/i });
   await expect(hintsControl).toBeDisabled();
   const hintsBefore = await hintsControl.getAttribute('aria-checked');
-  for (const difficulty of ['easy', 'medium', 'hard']) {
+  for (const difficulty of ['easy', 'mid', 'hard']) {
     await expect(game(page).getByRole('button', { name: difficulty, exact: true })).toBeDisabled();
   }
   await expect(game(page).getByRole('button', { name: 'easy', exact: true })).toHaveAttribute('aria-pressed', 'true');
@@ -122,7 +122,7 @@ test('paused keypad and keyboard cannot change entries, marks, errors, or the li
 
   await game(page).getByRole('button', { name: 'resume puzzle' }).click();
   await expect(hintsControl).toBeEnabled();
-  await expect(game(page).getByRole('button', { name: 'medium', exact: true })).toBeEnabled();
+  await expect(game(page).getByRole('button', { name: 'mid', exact: true })).toBeEnabled();
   await expect(game(page).getByRole('button', { name: 'easy', exact: true })).toHaveAttribute('aria-pressed', 'true');
   await expect(hintsControl).toHaveAttribute('aria-checked', hintsBefore!);
   await expect(cells(page).nth(empty)).toHaveAttribute('aria-selected', 'true');

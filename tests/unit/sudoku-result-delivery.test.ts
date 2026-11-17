@@ -20,11 +20,12 @@ vi.mock('../../src/islands/sudoku', async (importOriginal) => {
 });
 
 import SudokuGame from '../../src/islands/SudokuGame';
-import { discardPendingResultCard, GAME_RESULT_CARD_EVENT, takePendingResultCards, type GameResultCard } from '../../src/islands/gameresults';
+import { discardPendingResultCard, forgetHeldRounds, GAME_RESULT_CARD_EVENT, GAME_RESULT_EVENT, heldRounds, takePendingResultCards, type GameResultCard, type RoundResult } from '../../src/islands/gameresults';
 
 afterEach(() => {
   hooks.effects.length = 0;
   takePendingResultCards();
+  forgetHeldRounds();
   vi.unstubAllGlobals();
 });
 
@@ -73,6 +74,27 @@ describe('Sudoku completion before result-host hydration', () => {
       expect(received).toHaveLength(1);
       expect(received[0]).toMatchObject({ game: 'sudoku', level: 'easy', result: 'solved' });
       expect(takePendingResultCards()).toEqual([]);
+    } finally {
+      for (const cleanup of cleanups.reverse()) cleanup();
+    }
+  });
+
+  it('reports a solved daily sudoku to the shared stats record as game triage, with its errors as tries (#720)', () => {
+    const target = new EventTarget();
+    vi.stubGlobal('window', target);
+    forgetHeldRounds();
+    const rounds: RoundResult[] = [];
+    target.addEventListener(GAME_RESULT_EVENT, (event) => rounds.push((event as CustomEvent<RoundResult>).detail));
+    const cleanups: (() => void)[] = [];
+    try {
+      SudokuGame();
+      for (const effect of hooks.effects) {
+        const cleanup = effect();
+        if (cleanup) cleanups.push(cleanup);
+      }
+      expect(rounds).toHaveLength(1);
+      expect(rounds[0]).toEqual({ game: 'triage', day: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/), solved: true, tries: 0 });
+      expect(heldRounds()).toEqual(rounds);
     } finally {
       for (const cleanup of cleanups.reverse()) cleanup();
     }

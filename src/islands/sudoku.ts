@@ -104,10 +104,14 @@ export function advanceSudokuSeconds(seconds: number, paused: boolean, solved: b
 }
 
 export type SudokuEdit = { kind: 'enter'; value: number } | { kind: 'mark' };
-export type SudokuKeyAction = SudokuEdit | { kind: 'select'; index: number };
+export type SudokuKeyAction = SudokuEdit | { kind: 'select'; index: number } | { kind: 'clear' } | { kind: 'toggle-mode' };
 
-/** Arrow keys stop at the board edges, rather than wrapping to another row or column. */
-export function sudokuKeyAction(key: string, selected: number): SudokuKeyAction | undefined {
+/**
+ * Arrow keys stop at the board edges, rather than wrapping to another row or column. Space switches between normal
+ * and candidate mode; Backspace and Delete clear the square; x toggles the x mark. With Shift held a number key gives
+ * a symbol on most layouts, so the physical key (`code`, Digit1 or Numpad1) still names the number.
+ */
+export function sudokuKeyAction(key: string, selected: number, code = ''): SudokuKeyAction | undefined {
   if (!Number.isInteger(selected) || selected < 0 || selected >= 81) return;
   const row = Math.floor(selected / 9);
   const column = selected % 9;
@@ -116,7 +120,11 @@ export function sudokuKeyAction(key: string, selected: number): SudokuKeyAction 
   if (key === 'ArrowLeft') return { kind: 'select', index: column > 0 ? selected - 1 : selected };
   if (key === 'ArrowRight') return { kind: 'select', index: column < 8 ? selected + 1 : selected };
   if (/^[1-9]$/.test(key)) return { kind: 'enter', value: Number(key) };
-  if (key === 'x' || key === 'X' || key === 'Backspace' || key === 'Delete') return { kind: 'mark' };
+  const physical = /^(?:Digit|Numpad)([1-9])$/.exec(code);
+  if (physical) return { kind: 'enter', value: Number(physical[1]) };
+  if (key === ' ' || key === 'Spacebar') return { kind: 'toggle-mode' };
+  if (key === 'Backspace' || key === 'Delete') return { kind: 'clear' };
+  if (key === 'x' || key === 'X') return { kind: 'mark' };
 }
 
 /** Keyboard and on-screen pad use the same pure editing rules. Given squares cannot be changed. */
@@ -473,4 +481,161 @@ export function getResult(input: {
     time: `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`,
     errors: input.errors,
   };
+}
+
+/* ---------- Parity play tools (#720): levels, modes, candidates, undo, check, validator ---------- */
+
+/** What each level is called on screen. The stored id stays `medium` so seeds and saved results never change. */
+export const LEVEL_LABELS: Readonly<Record<SudokuLevel, string>> = { easy: 'easy', medium: 'mid', hard: 'hard' };
+
+/**
+ * The event /play's daily status listens for (PR #761): sent once, on the player's first move of the day, so the list
+ * can say sudoku is in progress. Only the game id and the day; nothing is stored.
+ */
+export const GAME_PROGRESS_EVENT = 'cueory:game-progress';
+export function sudokuProgressDetail(day: string): { game: 'triage'; day: string } {
+  return { game: 'triage', day };
+}
+
+/** Normal places a number; candidate toggles a small pencil note. */
+export type SudokuMode = 'normal' | 'candidate';
+
+/** Holding Shift flips the chosen mode for as long as it is held. */
+export function effectiveSudokuMode(mode: SudokuMode, shiftHeld: boolean): SudokuMode {
+  if (!shiftHeld) return mode;
+  return mode === 'normal' ? 'candidate' : 'normal';
+}
+
+/**
+ * One board's player state. `notes` holds each square's candidates as a bit mask (bit 0 is 1, bit 8 is 9) so a
+ * snapshot for undo is a plain copy.
+ */
+export interface SudokuBoard {
+  entries: number[];
+  notes: number[];
+  marks: Set<number>;
+}
+
+export function newSudokuBoard(puzzle: SudokuGrid): SudokuBoard {
+  return { entries: [...puzzle], notes: Array<number>(CELLS).fill(0), marks: new Set() };
+}
+
+const bit = (digit: number) => 1 << (digit - 1);
+
+/** The digits in a candidate mask, smallest first. */
+export function noteDigits(mask: number): number[] {
+  return DIGITS.filter((digit) => (mask & bit(digit)) !== 0);
+}
+
+/** Every empty square gets all the numbers that don't clash in its row, column and box. */
+export function autoCandidateNotes(entries: SudokuGrid): number[] {
+  return Array.from({ length: CELLS }, (_, index) =>
+    entries[index] ? 0 : candidates(entries, index).reduce((mask, digit) => mask | bit(digit), 0));
+}
+
+export type SudokuBoardAction =
+  | { kind: 'enter'; value: number }
+  | { kind: 'note'; value: number }
+  | { kind: 'clear' }
+  | { kind: 'mark' };
+
+/**
+ * The one editing rule for keyboard, number pad and buttons. Given squares never change. Returns undefined when the
+ * action changes nothing, so it is never pushed to the undo history.
+ * - enter: places the number, clearing that square's notes and mark; with auto candidates on it also removes the
+ *   number from the notes of every square in the same row, column and box.
+ * - note: toggles one candidate on an empty square.
+ * - clear: empties the square (number, notes and mark).
+ * - mark: toggles the x mark, which also empties the square.
+ */
+export function editSudokuBoard(
+  board: SudokuBoard, givens: SudokuGrid, index: number, action: SudokuBoardAction, autoCandidates = false,
+): SudokuBoard | undefined {
+  if (board.entries.length !== CELLS || board.notes.length !== CELLS || givens.length !== CELLS) return;
+  if (!Number.isInteger(index) || index < 0 || index >= CELLS || givens[index]) return;
+  const digit = 'value' in action ? action.value : 0;
+  if ('value' in action && (!Number.isInteger(digit) || digit < 1 || digit > 9)) return;
+  const entries = [...board.entries];
+  const notes = [...board.notes];
+  const marks = new Set(board.marks);
+  if (action.kind === 'enter') {
+    if (entries[index] === digit && !marks.has(index) && notes[index] === 0) return;
+    entries[index] = digit;
+    notes[index] = 0;
+    marks.delete(index);
+    if (autoCandidates) for (const peer of peers(index)) notes[peer] = notes[peer]! & ~bit(digit);
+  } else if (action.kind === 'note') {
+    if (entries[index]) return;
+    notes[index] = notes[index]! ^ bit(digit);
+    marks.delete(index);
+  } else if (action.kind === 'clear') {
+    if (!entries[index] && !notes[index] && !marks.has(index)) return;
+    entries[index] = 0;
+    notes[index] = 0;
+    marks.delete(index);
+  } else {
+    entries[index] = 0;
+    notes[index] = 0;
+    if (marks.has(index)) marks.delete(index);
+    else marks.add(index);
+  }
+  return { entries, notes, marks };
+}
+
+/** Undo keeps at most this many earlier boards. */
+export const SUDOKU_UNDO_LIMIT = 300;
+
+export function pushSudokuHistory(history: readonly SudokuBoard[], board: SudokuBoard): SudokuBoard[] {
+  const next = [...history, board];
+  return next.length > SUDOKU_UNDO_LIMIT ? next.slice(next.length - SUDOKU_UNDO_LIMIT) : next;
+}
+
+export function undoSudoku(history: readonly SudokuBoard[]): { board: SudokuBoard; history: SudokuBoard[] } | undefined {
+  if (history.length === 0) return;
+  return { board: history[history.length - 1]!, history: history.slice(0, -1) };
+}
+
+/**
+ * Squares shown as wrong: a filled, non-given square whose number isn't the answer, when guesses are checked as they
+ * are entered, or when "check puzzle" looked at that square and it is still wrong.
+ */
+export function sudokuWrongCells(
+  entries: SudokuGrid, givens: SudokuGrid, solution: SudokuGrid, checkGuesses: boolean, checked: ReadonlySet<number>,
+): Set<number> {
+  const wrong = new Set<number>();
+  for (let index = 0; index < CELLS; index++) {
+    const value = entries[index] ?? 0;
+    if (!value || givens[index] || value === solution[index]) continue;
+    if (checkGuesses || checked.has(index)) wrong.add(index);
+  }
+  return wrong;
+}
+
+/** What "check puzzle" finds: the filled squares that are wrong now, and how many squares are still empty. */
+export function checkSudoku(entries: SudokuGrid, givens: SudokuGrid, solution: SudokuGrid): { wrong: number[]; empty: number } {
+  const wrong: number[] = [];
+  let empty = 0;
+  for (let index = 0; index < CELLS; index++) {
+    const value = entries[index] ?? 0;
+    if (!value) empty++;
+    else if (!givens[index] && value !== solution[index]) wrong.push(index);
+  }
+  return { wrong, empty };
+}
+
+/**
+ * The puzzle validator: the givens must be a valid start, agree with the solution, the solution must be a complete
+ * valid grid, and the givens must have exactly one solution, which is that solution. Returns the problems found.
+ */
+export function validateSudokuPuzzle(puzzle: Pick<SudokuPuzzle, 'puzzle' | 'solution'>): string[] {
+  const problems: string[] = [];
+  const shape = (grid: SudokuGrid) => grid.length === CELLS && grid.every((value) => Number.isInteger(value) && value >= 0 && value <= 9);
+  if (!shape(puzzle.puzzle)) problems.push('givens must be 81 digits from 0 to 9.');
+  if (!shape(puzzle.solution) || !isCompleteAndValid(puzzle.solution)) problems.push('solution must be a complete, valid grid.');
+  if (problems.length) return problems;
+  if (puzzle.puzzle.some((value, index) => value !== 0 && value !== puzzle.solution[index])) problems.push('givens must match the solution.');
+  const count = countSolutions(puzzle.puzzle, 2);
+  if (count !== 1) problems.push(count === 0 ? 'givens have no solution.' : 'givens have more than one solution.');
+  else if (solveSudoku(puzzle.puzzle)?.some((value, index) => value !== puzzle.solution[index])) problems.push('the only solution must be the stored solution.');
+  return problems;
 }

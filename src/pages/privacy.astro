@@ -65,9 +65,15 @@ import { newsletter, promo, site } from '../config/site';
     <p>
       On <a href="/play">daily games</a> you can turn on stats. They're off unless you do. When they're on, your browser
       keeps, for each game you finish, the day, whether you solved it and how many tries it took. Anything older than 400
-      days is deleted the next time you open daily games. It stays on your device and never reaches us, and there are no
-      streaks. "Forget", or turning stats off, deletes it. The storage key for these results is
-      <code>cueory-game-stats</code>.
+      days is deleted the next time you open daily games. It stays on your device and never reaches us. "Forget", or
+      turning stats off, deletes it. The storage key for these results is <code>cueory-game-stats</code>.
+    </p>
+    <p>
+      While stats are on, sudoku also keeps the day, the level and your solve time for your first solve of each level
+      each day, so it can show how many you solved, your best and average times and your streak for each level. It stays
+      on your device, never reaches us and follows the same 400 days. "Forget sudoku stats", "forget all my stats" or
+      turning stats off deletes it. The storage key is <code>cueory-sudoku-stats</code>. Sudoku's own settings (such as
+      the highlights, the timer and the sound) are kept on your device with <code>cueory-sudoku-settings</code>.
     </p>
 
     <p>

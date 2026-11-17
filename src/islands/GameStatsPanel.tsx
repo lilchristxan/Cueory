@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { dailyGames, retiredGameNames } from '../config/games';
+import { dailyGames } from '../config/games';
 import { browserStorage } from '../scripts/storage';
 import {
   deleteStats,
@@ -10,6 +10,7 @@ import {
   localDay,
   saveStats,
   STATS_STORAGE_KEY,
+  SUDOKU_STATS_STORAGE_KEY,
   triesInWords,
   type SavedStats,
 } from './gameresults';
@@ -22,8 +23,8 @@ const latest = (): SavedStats => loadStats(browserStorage(), localDay(new Date()
 
 /**
  * Private stats for the daily games (D-76). Off until the student turns them on; then this browser keeps each finished
- * round (the day, solved or not, and the tries) and shows a short summary per game. Nothing is ever sent to us, there
- * are no streaks, and turning stats off or "forget" deletes them. Results older than 400 days are deleted when the page
+ * round (the day, solved or not, and the tries) and shows a short summary per game. Nothing is ever sent to us, and
+ * turning stats off or "forget" deletes them (sudoku's own per-level record, ./sudokustats, goes with "forget all"). Results older than 400 days are deleted when the page
  * opens. Rendered only in the browser (client:only).
  *
  * Every change starts from what storage holds at that moment, not from what this tab last showed, so turning stats off
@@ -159,6 +160,7 @@ export default function GameStatsPanel({ games: order }: Props) {
     if (!stillOn()) return;
     forgetHeldRounds();
     focusNext.current = 'switch';
+    try { browserStorage()?.removeItem(SUDOKU_STATS_STORAGE_KEY); } catch { /* the shared record below still resets */ }
     keep([], 'all your stats are forgotten. stats stay on.');
   };
 
@@ -170,7 +172,8 @@ export default function GameStatsPanel({ games: order }: Props) {
         your stats
       </h2>
       <p className="mt-2 text-ink-soft">
-        only if you want them. they stay in this browser, on this device, and never reach us. there are no streaks.
+        only if you want them. they stay in this browser, on this device, and never reach us. sudoku shows its own
+        times and streak for each level.
       </p>
       <button
         ref={toggleButton}
@@ -199,7 +202,7 @@ export default function GameStatsPanel({ games: order }: Props) {
           <ul className="mt-6 flex flex-col gap-5" aria-label="stats for each game">
             {games.map((game) => {
               const result = summary(saved.stats, game.id);
-              const displayName = game.id === 'triage' ? retiredGameNames.triage : game.name;
+              const displayName = game.name;
               return (
                 <li key={game.id}>
                   <h3

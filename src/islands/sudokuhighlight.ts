@@ -4,6 +4,8 @@
  * - is-related / is-box-related: the other squares in its row and column / its 3 × 3 box (a clear tint).
  * - is-identical: every square holding the selected square's number (strongest fill plus bold, so not color alone).
  * - is-conflict: a number that clashes in its row, column or box (a dashed ring, a sign that isn't color).
+ * - is-wrong: an entry that isn't the answer, when guesses are checked or "check puzzle" found it (a slash mark).
+ * - has-candidates: an empty square showing small candidate numbers (their size and 3 × 3 layout set them apart).
  * Pure, so tap, mouse and keyboard selection all go through the same rules and it can be unit tested.
  */
 import type { SudokuSettings } from './sudoku';
@@ -17,6 +19,10 @@ export interface SudokuHighlightState {
   conflicts: ReadonlySet<number>;
   paused: boolean;
   settings: SudokuHighlightSettings;
+  /** Squares to show as wrong (sudoku.ts sudokuWrongCells). */
+  wrong?: ReadonlySet<number>;
+  /** Empty squares that show candidate notes. */
+  noted?: ReadonlySet<number>;
 }
 
 export function sudokuCellClasses(index: number, state: SudokuHighlightState): string[] {
@@ -40,6 +46,8 @@ export function sudokuCellClasses(index: number, state: SudokuHighlightState): s
   if (box) classes.push('is-box-related');
   if (identical) classes.push('is-identical');
   if (!paused && settings.highlightConflicts && conflicts.has(index)) classes.push('is-conflict');
+  if (!paused && !given && state.wrong?.has(index)) classes.push('is-wrong');
+  if (!paused && !given && !value && state.noted?.has(index)) classes.push('has-candidates');
   if (column === 2 || column === 5) classes.push('sudoku-box-right');
   if (row === 2 || row === 5) classes.push('sudoku-box-bottom');
   return classes;
