@@ -213,7 +213,7 @@ export function wordPathSummary(stats: GameStats, today: string): WordPathSummar
 export function wordPathSummaryInWords(value: WordPathSummary): string {
   const days = (count: number) => `${count} ${count === 1 ? 'day' : 'days'}`;
   return `completed ${value.completed}, solve rate ${value.solvePercent}%. streak: ${days(value.currentStreak)}, longest ${days(value.longestStreak)}. ` +
-    `the thread found first: ${value.specialFirst}. solved without hints: ${value.withoutHints}.`;
+    `the thread found first: ${value.specialFirst}. solved without cues: ${value.withoutHints}.`;
 }
 
 export function forget(stats: GameStats, game?: string): GameStats {

@@ -87,17 +87,19 @@ function GameHelpDialog({ help, name }: { help: GameHelpState; name: string }) {
   if (!open) return null;
   return <dialog
     ref={overlay}
-    className="game-settings-overlay"
+    className="game-settings-overlay game-help-overlay"
     aria-labelledby={`${id}-title`}
     data-testid="game-help"
     onCancel={(event) => { event.preventDefault(); help.close(); }}
     onPointerDown={(event) => { if (event.target === event.currentTarget) help.close(); }}
   >
-    <div ref={panel} className="game-settings game-help">
-      <div className="game-settings-heading">
-        <h2 id={`${id}-title`}>how to play {name}</h2>
+    {/* The header row stays put and only the body scrolls, so the × never sits on top of any text (Christian's iPhone test). */}
+    <div ref={panel} className="game-help">
+      <div className="game-help-header">
+        <h2 id={`${id}-title`} className="game-help-title">how to play {name}</h2>
         <button type="button" className="game-settings-close" aria-label="close how to play" onClick={help.close}><span aria-hidden="true">×</span></button>
       </div>
+      <div className="game-help-body" data-testid="game-help-body">
       <PlaySteps content={content} />
       <h3 className="game-help-subheading">settings</h3>
       <p className="game-help-note">{content.settingsIntro}</p>
@@ -106,6 +108,7 @@ function GameHelpDialog({ help, name }: { help: GameHelpState; name: string }) {
       </dl>}
       <p className="game-help-note">{SHARED_SETTINGS_NOTE}</p>
       <button type="button" className="game-help-action" onClick={help.close}>got it</button>
+      </div>
     </div>
   </dialog>;
 }

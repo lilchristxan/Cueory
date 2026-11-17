@@ -111,11 +111,11 @@ export function PathBoard({ puzzle, name }: Props) {
         name,
         date: dayLabel(today),
         result: `${state.found.length} / ${total}`,
-        shareResult: `${state.found.length} of ${total} answers, ${state.hintsUsed} ${state.hintsUsed === 1 ? 'hint' : 'hints'}`,
+        shareResult: `${state.found.length} of ${total} answers, ${state.hintsUsed} ${state.hintsUsed === 1 ? 'cue' : 'cues'}`,
         summary: 'you found every answer on today\'s board.',
         stats: [
           { label: 'answers found', value: `${state.found.length}` },
-          { label: 'hints used', value: `${state.hintsUsed}` },
+          { label: 'cues used', value: `${state.hintsUsed}` },
           { label: 'the thread found first', value: specialFoundFirst(state, puzzle) ? 'yes' : 'no' },
         ],
         path: '/play/word-path',
@@ -189,13 +189,13 @@ export function PathBoard({ puzzle, name }: Props) {
     const before = current.current;
     const next = takeHint(before, puzzle);
     if (next === before) {
-      setSaid(`no hint yet. find ${wordsToNextHint(before)} more ${wordsToNextHint(before) === 1 ? 'word' : 'words'} that are not theme words.`);
+      setSaid(`no cue yet. find ${wordsToNextHint(before)} more ${wordsToNextHint(before) === 1 ? 'word' : 'words'} that are not theme words.`);
       return;
     }
     apply(next);
     setSaid(next.hint?.order
-      ? 'hint: the marked letters are now numbered in order.'
-      : `hint: the letters of one answer are marked. ${puzzle.words[next.hint!.answer]!.answer.length} letters.`);
+      ? 'cue: the marked letters are now numbered in order.'
+      : `cue: the letters of one answer are marked. ${puzzle.words[next.hint!.answer]!.answer.length} letters.`);
   };
 
   const key = (event: KeyboardEvent<HTMLButtonElement>, cell: Cell) => {
@@ -311,13 +311,13 @@ export function PathBoard({ puzzle, name }: Props) {
         <button type="button" className={button} disabled={done || state.picked.length === 0} onClick={send} data-testid="suture-submit">submit</button>
         <button type="button" className={button} disabled={done || state.picked.length === 0} onClick={clear} data-testid="suture-clear">clear</button>
         <button type="button" className={button} disabled={done} onClick={hint} data-testid="suture-hint" aria-describedby={`${title}-hint`}>
-          hint{left > 0 ? ` (${left})` : ''}
+          cue{left > 0 ? ` (${left})` : ''}
         </button>
       </div>
       <p id={`${title}-hint`} className="mt-2 text-center text-sm text-ink-soft" data-testid="suture-hint-progress" data-print-hidden>
         {left > 0
-          ? `${left} ${left === 1 ? 'hint' : 'hints'} ready.`
-          : `${towardHint} of ${WORDS_PER_HINT} words toward a hint. other words of ${MIN_WORD} letters or more count.`}
+          ? `${left} ${left === 1 ? 'cue' : 'cues'} ready.`
+          : `${towardHint} of ${WORDS_PER_HINT} words toward a cue. other words of ${MIN_WORD} letters or more count.`}
       </p>
       <ul className="mt-6 flex flex-wrap justify-center gap-x-4 gap-y-2 text-sm font-bold sm:text-lg" aria-label="answers found" data-testid="suture-found" data-print-hidden>
         {state.found.map((i) => {

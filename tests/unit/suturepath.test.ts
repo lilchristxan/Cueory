@@ -176,7 +176,7 @@ describe('submitting words', () => {
     let state = next.state;
     for (let r = 1; r < 8; r++) state = submit(pickAll(state, puzzle, row(r)), puzzle).state;
     expect(pathDone(state, puzzle)).toBe(true);
-    expect(pathShareLine(state, puzzle, 'sun 1 nov', 'Word Path')).toBe('cueory word path, sun 1 nov: found 9 of 9 answers, the thread 2nd, 0 hints.');
+    expect(pathShareLine(state, puzzle, 'sun 1 nov', 'Word Path')).toBe('cueory word path, sun 1 nov: found 9 of 9 answers, the thread 2nd, 0 cues.');
   });
   it('says short and unknown words apart, and only unknown words count as misses', () => {
     const puzzle = board();
@@ -210,7 +210,7 @@ describe('hints', () => {
     const puzzle = board();
     let next = submit(pickAll(startPath(), puzzle, row(0, 1, 4)), puzzle);
     expect(next.outcome).toEqual({ kind: 'extra', word: 'AAAA', earned: false });
-    expect(submitInWords(next.state, puzzle, next.outcome)).toBe('aaaa is a word, not a theme word. 2 more for a hint.');
+    expect(submitInWords(next.state, puzzle, next.outcome)).toBe('aaaa is a word, not a theme word. 2 more for a cue.');
     const again = submit(pickAll(next.state, puzzle, row(0, 1, 4)), puzzle);
     expect(again.outcome.kind).toBe('extra-again');
     expect(again.state.extras).toHaveLength(1);
@@ -236,7 +236,7 @@ describe('hints', () => {
     state = takeHint(state, puzzle);
     expect(state.hint).toEqual({ answer: 1, order: true });
     expect(cellView(state, puzzle, [0, 3])).toEqual({ look: 'hinted', order: 3 });
-    expect(pathCellLabel(state, puzzle, [0, 3])).toBe('row 1, column 4, A, hint, letter 3');
+    expect(pathCellLabel(state, puzzle, [0, 3])).toBe('row 1, column 4, A, cue, letter 3');
     // Solving the hinted answer clears the hint; the next hint goes to the next unsolved theme answer.
     state = submit(pickAll(state, puzzle, row(0)), puzzle).state;
     expect(state.hint).toBeNull();
