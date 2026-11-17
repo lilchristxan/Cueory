@@ -124,5 +124,6 @@ screens stay plain: nothing decorative, no texture behind lesson text, and no ma
   line and any `D-pending` decision. The director moves notes into `docs/STATUS.md` and `docs/DECISIONS.md` in batches,
   so parallel pull requests never clash on those two files.
 - Daily puzzles match the gameplay, settings, help tools, scoring, stats and controls of leading daily puzzle games.
-  Never copy their names, terms, look, colors, tile shapes, layout or colored-square share grids. `forbiddenGameWords`
-  stays; our own share is a plain one-line result, or symbols in our own style. Brand colors only.
+  Never use the names Wordle, Connections, Strands or NYT (`forbiddenGameWords`), and never copy their terms, look,
+  colors, tile shapes, layout or colored-square share grids ([docs/GAMES-PARITY.md](docs/GAMES-PARITY.md)). Our own
+  share is a plain one-line result, or symbols in our own style. Brand colors only.
