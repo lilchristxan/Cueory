@@ -43,3 +43,5 @@ Each link has a one-line summary and says whether Christian needs to read it. Gu
 - [GitLab migration](GITLAB-MIGRATION.md) — Read the proposed move from GitHub processes to GitLab. **Christian:** Read if reviewing migration decisions.
 
 Only approved, public information belongs in these files. Keep account secrets, private student details, question keys, reviewer results, and unreleased lessons out of this repository.
+
+Review note: [answer account binding](status/in-review/task-756-answers-stop-on-switch.md) — Stops stale players after a sign-in change.

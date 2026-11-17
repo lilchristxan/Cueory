@@ -42,6 +42,15 @@ test.beforeAll(async () => {
     stdin: { contents: `
       import React, { useEffect, useState } from 'react';
       import { createRoot } from 'react-dom/client';
+      import { getSupabase } from './src/islands/supabaseclient';
+      window.fixtureSwitch = async id => {
+        const client = await getSupabase();
+        const value = JSON.parse(localStorage.getItem('cueory-auth'));
+        value.user.id = id;
+        value.access_token = 'fixture-access-token-for-' + id;
+        localStorage.setItem('cueory-auth', JSON.stringify(value));
+        await client.auth._notifyAllSubscribers('SIGNED_IN', value);
+      };
       import PublishedQuestions from './src/islands/PublishedQuestions.tsx';
       import FlagMount from './src/islands/FlagMount.tsx';
       import { onFlagItem } from './src/islands/flagitem.ts';
@@ -193,6 +202,21 @@ test.describe('Task 172: real questions with a fake project', () => {
     const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa']).analyze();
     expect(results.violations.map(result => `${result.id}: ${result.help}`)).toEqual([]);
     expect(errors).toEqual([]);
+  });
+
+  for (const back of [false, true]) test(`account switch stops the player${back ? ' after A -> B -> A too' : ''}`, async ({ page }) => {
+    const seen = await mockProject(page);
+    await openFixture(page, { signedIn: true });
+    await page.getByLabel('sample circle').check();
+    await page.evaluate(async back => {
+      const fixture = window as unknown as { fixtureSwitch(id: string): Promise<void> };
+      await fixture.fixtureSwitch('00000000-0000-4000-8000-000000000099');
+      if (back) await fixture.fixtureSwitch('00000000-0000-4000-8000-00000000002a');
+    }, back);
+    await expect(page.getByRole('status').filter({ hasText: 'your signed-in account changed.' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'check', exact: true })).toHaveCount(0);
+    await expect(page.getByTestId('flag-probe')).toHaveText('none');
+    expect(seen.filter(request => request.path === '/rest/v1/rpc/check_answer')).toEqual([]);
   });
 
   test('a malformed check_answer reply shows a calm retry message, never feedback', async ({ page }) => {
