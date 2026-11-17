@@ -329,7 +329,9 @@ const PAGE_TYPE_JS_BUDGET = {
   study: 108 * 1024,
   account: 146 * 1024,
   'games page': 152 * 1024,
-  'game page': 97 * 1024,
+  // One game on its own page (2026-11-17, D-pending): /play/<game> used to be a share landing with no game, measured
+  // at 97 KiB. It now loads its game, so the type is re-measured: the heaviest (sudoku, 122,156 B) plus 10%.
+  'game page': 132 * 1024,
   internal: 106 * 1024,
 } as const;
 
@@ -362,10 +364,10 @@ describe('page types', () => {
     expect(pageType('admin/flags.html')).toBe('internal');
   });
 
-  it('gives a single game page the smallest budget and /play, with all four games, the largest', () => {
-    const budgets = Object.values(PAGE_TYPE_JS_BUDGET);
-    expect(PAGE_TYPE_JS_BUDGET['game page']).toBe(Math.min(...budgets));
-    expect(PAGE_TYPE_JS_BUDGET['games page']).toBe(Math.max(...budgets));
+  it('keeps one game on its own page well under what /play needed with all four games on it', () => {
+    // Before the split /play loaded all four games: 152 KiB. A page with one game must stay clearly lighter than that.
+    expect(PAGE_TYPE_JS_BUDGET['game page']).toBeLessThan(152 * 1024);
+    expect(PAGE_TYPE_JS_BUDGET['games page']).toBeLessThanOrEqual(152 * 1024);
   });
 
   it('reports a page over its type budget, and passes one exactly at it', () => {
