@@ -45,6 +45,12 @@ async function expectCloseStaysVisible(page: Page, card: Locator, close: Locator
       range.selectNodeContents(node);
       if ([...range.getClientRects()].some((rect) => rect.right > width)) past.push(`${node.parentElement?.className}: ${node.textContent?.trim().slice(0, 30)}`);
     }
+    // Boxes too, including ones within a pixel of the edge, which can round over it on a phone's pixel density.
+    for (const element of document.body.querySelectorAll('*')) {
+      if (scrolls(element.parentElement) || !element.getClientRects().length) continue;
+      const box = element.getBoundingClientRect();
+      if (box.right > width - 1 && box.right !== width) past.push(`box ${element.tagName.toLowerCase()}.${String(element.getAttribute('class')).slice(0, 40)}: right ${box.right.toFixed(2)}`);
+    }
     return { sideways: document.documentElement.scrollWidth - width, past };
   });
   expect(page_.sideways, JSON.stringify(page_.past)).toBeLessThanOrEqual(0);

@@ -2153,6 +2153,13 @@ html:has(dialog.mode-preview[open]) {
   @media (width < 40rem) {
     .sudoku-overlay, dialog.game-settings-overlay { padding: calc(var(--spacing) * 2); }
     .sudoku-settings, .game-settings-overlay .game-settings { padding: calc(var(--spacing) * 4); }
+    /*
+      The 6 × 8 word path board bleeds into the card's padding (-mx-6). With 32px text on a 320px screen its squares
+      need more room than that, and it used to spill past the card on the right only, ending under a pixel from the
+      screen edge (over it with some fonts). It now stays centred on the card, so it spills evenly and fits the screen.
+      With room to spare the offset is zero.
+    */
+    .wordpath[data-format="path"] .wordpath-board { position: relative; inset-inline-start: calc(50% + var(--spacing) * 6); translate: -50% 0; }
   }
   @media (orientation: portrait), (max-width: 50rem) {
     /* The number pad's layout lives with .sudoku-pad-wrap above (container queries on the panel's width). */
