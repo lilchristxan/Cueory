@@ -33,7 +33,7 @@ describe('crossword samples (D-70, Task 627)', () => {
         expect(hasShortEntries(puzzle.grid)).toBe(false);
         for (const word of words(puzzle)) expect(word.answer).toMatch(/^[A-Z]{3,15}$/);
         for (const clue of [...puzzle.clues.across, ...puzzle.clues.down]) {
-          expect(clue.text).toBe('[sample clue]');
+          expect(clue.text).toBe('[sample cue]');
         }
       } else {
         // Older easy samples stay for regression coverage; their everyday words and clues remain unchanged.

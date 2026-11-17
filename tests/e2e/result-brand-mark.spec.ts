@@ -54,7 +54,7 @@ test('crossword completion adds the mark to its finished card, not the clues', a
   for (const [row, letters] of sample.entries()) {
     for (const [column, letter] of [...letters].entries()) {
       if (letter === '.') continue;
-      await board.getByRole('button', { name: new RegExp('^row ' + (row + 1) + ', column ' + (column + 1) + ',') }).click();
+      await board.getByRole('button', { name: new RegExp('^(?:\\d+, )?row ' + (row + 1) + ', column ' + (column + 1) + ',') }).click();
       await page.keyboard.type(letter);
     }
   }
