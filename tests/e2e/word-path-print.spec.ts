@@ -25,7 +25,7 @@ test.beforeEach(async ({ page }) => {
     window.print = () => { (window as unknown as { printed: number }).printed += 1; };
   });
   await page.clock.setFixedTime(new Date('2026-11-06T15:00:00'));
-  await page.goto('/play');
+  await page.goto('/play/word-path');
   await expect(game(page)).toBeVisible();
 });
 
@@ -76,10 +76,11 @@ test.describe('word path: print for a patient (Task 641)', () => {
     await expect(page.getByTestId('suture-count')).toBeHidden();
     await expect(page.getByTestId('suture-live')).toBeHidden();
     await expect(game(page).getByText('tap a word\'s first letter')).toBeHidden();
-    // The rest of /play (the page title, the other games, the stats panel) is left out.
-    await expect(page.getByRole('heading', { level: 1, name: 'daily games' })).toBeHidden();
-    await expect(page.locator('#pulse-heading')).toBeHidden();
+    // The rest of the page (the back link, the page title, the settings and the stats panel) is left out.
+    await expect(page.getByRole('link', { name: 'all games' })).toBeHidden();
     await expect(page.locator('#word-path-heading')).toBeHidden();
+    await expect(page.getByTestId('play-settings')).toBeHidden();
+    await expect(page.getByTestId('game-stats')).toBeHidden();
 
     await expect(game(page).getByRole('grid')).toBeVisible();
     const words = page.getByTestId('suture-print-words');

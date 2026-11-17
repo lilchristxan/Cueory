@@ -21,7 +21,7 @@ for (const [size, width, height] of [['phone', 390, 844], ['desktop', 1440, 900]
   test(`sudoku modes, undo, clear and check by keyboard and tap: ${size}`, async ({ page }) => {
     await page.setViewportSize({ width, height });
     await page.emulateMedia({ reducedMotion: 'reduce' });
-    await page.goto('/play');
+    await page.goto('/play/sudoku');
     await expect(cells(page)).toHaveCount(81);
     const mode = game(page).getByTestId('sudoku-mode');
 
@@ -90,7 +90,7 @@ for (const [size, width, height] of [['phone', 390, 844], ['desktop', 1440, 900]
 }
 
 test('sudoku stats stay off until stats are on, then show each level', async ({ page }) => {
-  await page.goto('/play');
+  await page.goto('/play/sudoku');
   await expect(cells(page)).toHaveCount(81);
   await game(page).getByRole('button', { name: 'sudoku stats' }).click();
   await expect(game(page).getByTestId('sudoku-stats')).toContainText('stats are off');

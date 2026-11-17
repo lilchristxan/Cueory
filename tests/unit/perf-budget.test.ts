@@ -328,7 +328,8 @@ const PAGE_TYPE_JS_BUDGET = {
   marketing: 108 * 1024,
   study: 108 * 1024,
   account: 146 * 1024,
-  'games page': 152 * 1024,
+  // The /play hub (2026-11-17) loads no game: lowered from 152 KiB to its measured 102.1 KiB plus 10%.
+  'games page': 113 * 1024,
   // One game on its own page (2026-11-17, D-pending): /play/<game> used to be a share landing with no game, measured
   // at 97 KiB. It now loads its game, so the type is re-measured: the heaviest (sudoku, 122,156 B) plus 10%.
   'game page': 132 * 1024,

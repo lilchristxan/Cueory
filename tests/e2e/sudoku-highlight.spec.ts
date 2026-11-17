@@ -60,7 +60,7 @@ for (const scheme of ['light', 'dark'] as const) {
   test(`sudoku highlights are easy to tell apart and numbers stay readable (${scheme})`, async ({ page }, testInfo) => {
     expect([chosen, match, related, plain, quietGiven].every((index) => index >= 0)).toBe(true);
     await page.emulateMedia({ colorScheme: scheme, reducedMotion: 'reduce' });
-    await page.goto('/play');
+    await page.goto('/play/sudoku');
     await expect(cell(page, 80)).toBeVisible();
 
     // Tap on touch projects, mouse click elsewhere.

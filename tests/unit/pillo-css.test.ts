@@ -27,7 +27,7 @@ function deliveredStyles(html: string): string {
 describe('Pillo stylesheet delivery', () => {
   it('delivers the Pillo board, keyboard and reduced-motion rules on its game page', () => {
     expect(existsSync(dist), 'run npm run build before the build-output tests').toBe(true);
-    const styles = deliveredStyles(readFileSync(join(dist, 'play.html'), 'utf8'));
+    const styles = deliveredStyles(readFileSync(join(dist, 'play/pillo.html'), 'utf8'));
     for (const selector of ['.pillo-pack', '.pillo-key', '.pillo-legend']) {
       expect(styles, selector).toContain(selector);
     }
@@ -35,14 +35,9 @@ describe('Pillo stylesheet delivery', () => {
     expect(styles).toContain('pillo-pop');
   });
 
-  it('delivers them on pillo\'s own page too', () => {
-    const styles = deliveredStyles(readFileSync(join(dist, 'play/pillo.html'), 'utf8'));
-    for (const selector of ['.pillo-pack', '.pillo-key', '.pillo-legend']) expect(styles, selector).toContain(selector);
-  });
-
   it('does not deliver Pillo board or keyboard selectors to any other built route', () => {
-    // /play and pillo's own page (each game on its own page, 2026-11-17) are the only pages with pillo on them.
-    const pages = htmlFiles(dist).filter(path => !['play.html', 'play/pillo.html'].includes(relative(dist, path).replaceAll('\\', '/')));
+    // pillo's own page is the only page with pillo on it; the /play hub loads no game (2026-11-17).
+    const pages = htmlFiles(dist).filter(path => relative(dist, path).replaceAll('\\', '/') !== 'play/pillo.html');
     expect(pages.length).toBeGreaterThan(0);
     for (const path of pages) {
       const styles = deliveredStyles(readFileSync(path, 'utf8'));

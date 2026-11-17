@@ -35,7 +35,7 @@ test.beforeEach(async ({ page }, testInfo) => {
       value: { writeText: async (text: string) => { (window as unknown as { copied: string }).copied = text; } },
     });
   }, suppressPromo);
-  await page.goto('/play');
+  await page.goto('/play/pillo');
 });
 
 test('finished-game result announces the exact card and traps focus', async ({ page }) => {

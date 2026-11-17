@@ -23,7 +23,7 @@ for (const [size, width, height] of [['phone', 390, 844], ['tablet', 820, 1180],
     test(`sudoku pause at ${size} in ${scheme} theme`, async ({ page }) => {
       await page.setViewportSize({ width, height });
       await page.emulateMedia({ colorScheme: scheme });
-      await page.goto('/play');
+      await page.goto('/play/sudoku');
       await expect(cells(page)).toHaveCount(81);
       // The help text must describe the same privacy behavior as the paused board.
       const how = game(page).getByRole('button', { name: 'how to play' });
@@ -87,7 +87,7 @@ for (const [size, width, height] of [['phone', 390, 844], ['tablet', 820, 1180],
 test('paused keypad and keyboard cannot change entries, marks, errors, or the live message', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.emulateMedia({ colorScheme: 'dark', reducedMotion: 'reduce' });
-  await page.goto('/play');
+  await page.goto('/play/sudoku');
   await expect(cells(page)).toHaveCount(81);
 
   await cells(page).nth(empty).click();
