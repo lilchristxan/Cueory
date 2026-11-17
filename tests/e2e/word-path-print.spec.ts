@@ -110,7 +110,8 @@ test.describe('word path: print for a patient (Task 641)', () => {
     await expect(page.getByTestId('suture-words')).toBeHidden();
     await expect(page.getByTestId('suture-print-words')).toBeVisible();
     // Without the button's mark, the rest of the page prints as before.
-    await expect(page.getByRole('heading', { level: 1, name: 'daily games' })).toBeVisible();
+    // (each game on its own page, 2026-11-17: the page's title is the game's name)
+    await expect(page.getByRole('heading', { level: 1, name: 'word path' })).toBeVisible();
   });
 
   test('axe passes with the print button', async ({ page }) => {

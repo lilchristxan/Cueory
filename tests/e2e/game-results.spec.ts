@@ -99,6 +99,7 @@ test('the page behind an open result cannot be reached, and comes back on close'
 test('an open result locks page scrolling and restores the exact page position and styles', async ({ page }) => {
   // Sudoku's page is tall enough on a phone to scroll 300 px past the starting point; any game page has the dialog.
   await page.goto('/play/sudoku');
+  await expect(page.getByTestId('sudoku').getByRole('gridcell')).toHaveCount(81);
   const before = await page.evaluate(() => {
     const maxY = Math.max(0, document.documentElement.scrollHeight - innerHeight);
     const y = Math.min(120, Math.floor(maxY / 3));
