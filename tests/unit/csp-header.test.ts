@@ -109,6 +109,22 @@ describe('built dist/_headers (issue #746)', () => {
   const header = parsePolicy(line.replace(/^\s+Content-Security-Policy:\s*/, ''));
   const pages = htmlFiles(dist);
 
+  it('ships every other protective header unchanged, including HSTS and frame denial (Lane 10)', () => {
+    const source = readFileSync(fileURLToPath(new URL('../../public/_headers', import.meta.url)), 'utf8');
+    const siteRule = (text: string) => {
+      const lines = text.split('\n');
+      const start = lines.findIndex((l) => l.trim() === '/*');
+      const end = lines.findIndex((l, i) => i > start && /^\S/.test(l) && !l.startsWith('#'));
+      return lines.slice(start + 1, end < 0 ? undefined : end).map((l) => l.trim())
+        .filter((l) => l && !l.startsWith('#') && !l.startsWith('Content-Security-Policy:'));
+    };
+    const built = siteRule(headersText);
+    expect(built).toEqual(siteRule(source));
+    expect(built).toContain('Strict-Transport-Security: max-age=31536000; includeSubDomains');
+    expect(built).toContain('X-Frame-Options: DENY');
+    expect(built).toContain('X-Content-Type-Options: nosniff');
+  });
+
   it('enforces the full policy: default-src, script-src, no unsafe sources, YouTube cookie-free frames only', () => {
     expect(line.length).toBeLessThanOrEqual(HEADERS_LINE_LIMIT);
     expect(() => checkPolicy(header)).not.toThrow();
