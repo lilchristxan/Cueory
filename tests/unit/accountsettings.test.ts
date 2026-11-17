@@ -140,7 +140,7 @@ describe('download my data', () => {
     }
   });
 
-  it('leaves game stats out when they are off in this browser', async () => {
+  it('leaves game stats out when nothing is kept in this browser', async () => {
     const result = await gatherExport(reader(), { email: '', storage: new MemoryStorage(), today });
     expect(result.ok && 'gameStats' in result.data).toBe(false);
     expect(result.ok && result.data.profile?.email).toBeNull();

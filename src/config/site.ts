@@ -104,7 +104,10 @@ export const footerLinks = [
   { href: '/support', label: 'support cueory' },
 ] as const;
 
-/** Public launch wording only. This never enables authentication or changes access control. */
+/**
+ * Whether accounts are open to the public. Besides the launch wording, it gates /signin and /signup on the live site
+ * (src/config/accountsgate.ts): while it is false those pages show "accounts open soon" and never load Supabase.
+ */
 export const accountsOpen: boolean = false;
 
 /** Keep the account links and the already-planned promo label together for either launch state. */

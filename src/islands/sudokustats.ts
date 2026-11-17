@@ -131,8 +131,8 @@ export interface SavedSudokuStats {
 }
 
 /**
- * What this browser keeps, as of `today`. While stats are off a leftover sudoku record is deleted (fail closed), so it
- * can never outlive the switch.
+ * What this browser keeps, as of `today`, writing back the cleanup of old solves. Stats are always kept; when this
+ * browser can't keep them a leftover sudoku record is deleted (fail closed).
  */
 export function loadSudokuStats(storage: KeyValueStorage | undefined, today: string): SavedSudokuStats {
   try {
@@ -140,13 +140,22 @@ export function loadSudokuStats(storage: KeyValueStorage | undefined, today: str
       if (storage?.getItem(SUDOKU_STATS_STORAGE_KEY) !== null) storage?.removeItem(SUDOKU_STATS_STORAGE_KEY);
       return { on: false, solves: [] };
     }
-    return { on: true, solves: parseSudokuSolves(storage?.getItem(SUDOKU_STATS_STORAGE_KEY) ?? null, today) };
+    const text = storage?.getItem(SUDOKU_STATS_STORAGE_KEY) ?? null;
+    const solves = parseSudokuSolves(text, today);
+    // Solves older than 400 days (or a record that can't be read) are deleted from storage, not only left out
+    // (Codex on #831). An empty result removes the record.
+    if (text !== null) {
+      const kept = solves.length > 0 ? serializeSudokuSolves(solves) : null;
+      if (kept === null) storage?.removeItem(SUDOKU_STATS_STORAGE_KEY);
+      else if (kept !== text) storage?.setItem(SUDOKU_STATS_STORAGE_KEY, kept);
+    }
+    return { on: true, solves };
   } catch {
     return { on: false, solves: [] };
   }
 }
 
-/** Adds a solve when stats are on. Returns what is kept afterwards; nothing is written while stats are off. */
+/** Adds a solve. Returns what is kept afterwards; nothing is written when this browser can't keep stats. */
 export function keepSudokuSolve(storage: KeyValueStorage | undefined, today: string, solve: SudokuSolve): SavedSudokuStats {
   const saved = loadSudokuStats(storage, today);
   if (!saved.on) return saved;

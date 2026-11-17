@@ -215,7 +215,7 @@ describe('feedback countdown', () => {
 
 describe('account screen rendering', () => {
   it.each(['signin', 'signup'] as const)('waits for browser hydration before loading the %s client', mode => {
-    const html = renderToStaticMarkup(createElement(SignIn, { mode }));
+    const html = renderToStaticMarkup(createElement(SignIn, { mode, accountsOn: true }));
     expect(html).toContain('opening sign-in');
     expect(html).not.toContain('<form');
     expect(html).not.toContain('<input');
@@ -231,7 +231,7 @@ describe('account screen rendering', () => {
   });
   it.each(['signin', 'signup'] as const)('labels every %s credential field without calling auth on render', mode => {
     const auth = makeAuth();
-    const html = renderToStaticMarkup(createElement(SignIn, { auth, mode }));
+    const html = renderToStaticMarkup(createElement(SignIn, { auth, mode, accountsOn: true }));
     expect(html).toContain('type="email"');
     expect(html).toContain('autoComplete="email"');
     expect(html).toContain('type="password"');

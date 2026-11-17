@@ -63,8 +63,8 @@ import { newsletter, promo, site } from '../config/site';
       {promo.rememberDays} days. That isn't a cookie, and it never reaches us.
     </p>
     <p>
-      On <a href="/play">daily games</a> you can turn on stats. They're off unless you do. When they're on, your browser
-      keeps, for each game you finish, the day of the puzzle, whether you solved it, how many tries it took and, only
+      On <a href="/play">daily games</a> your browser keeps your stats, on your device only. For each game you finish it
+      keeps the day of the puzzle, whether you solved it, how many tries it took and, only
       when you finished it on a later day than the puzzle's own (for example after midnight), a note saying so. For the
       crossword, a try is a check, a reveal or autocheck, and it also keeps whether the solve extends your crossword
       streak (solved without check, reveal or autocheck, within 48 hours of the puzzle's date). For word path, it also keeps how many cues you used
@@ -72,7 +72,8 @@ import { newsletter, promo, site } from '../config/site';
       your device, pillo's games played, win percentage, current and longest streak (days in a row you solved the puzzle
       on its own day) and how many guesses each solved game took, and word path's streak. Those numbers are not stored
       separately. Anything older than 400 days is deleted the next time you open daily games. It stays on your device and
-      never reaches us. "Forget", or turning stats off, deletes it. The storage key for these results is
+      never reaches us. "Forget" or "forget all my stats" deletes it at any time, and so does clearing this site's data in
+      your browser. The storage key for these results is
       <code>cueory-game-stats</code>. pillo's own settings (hard mode and on-screen keyboard only) are not saved: they
       last until you leave or reload the page. Its high contrast switch is the shared game setting described below.
     </p>
@@ -82,10 +83,10 @@ import { newsletter, promo, site } from '../config/site';
       reaches us.
     </p>
     <p>
-      While stats are on, sudoku also keeps the day, the level and your solve time for your first solve of each level
+      Sudoku also keeps the day, the level and your solve time for your first solve of each level
       each day, so it can show how many you solved, your best and average times and your streak for each level. It stays
-      on your device, never reaches us and follows the same 400 days. "Forget sudoku stats", "forget all my stats" or
-      turning stats off deletes it. The storage key is <code>cueory-sudoku-stats</code>. Sudoku's own settings (such as
+      on your device, never reaches us and follows the same 400 days. "Forget sudoku stats" or "forget all my stats"
+      deletes it. The storage key is <code>cueory-sudoku-stats</code>. Sudoku's own settings (such as
       the highlights, the timer and the sound) are kept on your device with <code>cueory-sudoku-settings</code>.
     </p>
     <p>

@@ -467,8 +467,8 @@ export default function PulseGame({ puzzles }: Props) {
               </>
             ) : (
               <p className="mt-2 text-sm text-ink-soft">
-                stats are off. turn on “keep my stats” below to see games played, win %, streaks and the guesses each
-                game took. they stay in this browser.
+                this browser won't keep stats (private browsing or blocked site data), so games played, win %, streaks
+                and the guesses each game took can't be shown.
               </p>
             )}
           </section>

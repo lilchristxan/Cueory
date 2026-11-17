@@ -12,16 +12,18 @@ import { accountHref, accountsOpen } from '../config/site';
 interface Props {
   /** Study screens: the same button without the frosted circle. */
   quiet?: boolean;
+  /** The page's accounts gate is closed (/signin, /signup): keep the signed-out menu and never load Supabase. */
+  accountsOff?: boolean;
 }
 
-const { quiet = false } = Astro.props;
+const { quiet = false, accountsOff = false } = Astro.props;
 const items = [
   { label: 'create free account', href: accountHref },
   { label: 'sign in', href: accountsOpen ? '/signin' : accountHref },
 ];
 ---
 
-<div class="relative" data-account>
+<div class="relative" data-account data-accounts-off={accountsOff ? '' : undefined}>
   <button
     type="button"
     class:list={['corner-button invisible', quiet && 'corner-button-quiet']}
@@ -185,7 +187,10 @@ const items = [
       }
     };
 
-    if ('requestIdleCallback' in window) {
+    // A page whose accounts gate is closed keeps the signed-out menu and never loads Supabase.
+    if (corner.hasAttribute('data-accounts-off')) {
+      // Nothing to load.
+    } else if ('requestIdleCallback' in window) {
       window.requestIdleCallback(() => { void hydrate(); }, { timeout: 2500 });
     } else {
       setTimeout(() => { void hydrate(); }, 100);

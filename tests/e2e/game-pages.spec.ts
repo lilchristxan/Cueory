@@ -90,7 +90,8 @@ for (const game of games) {
 
 test('a finished pillo on its own page opens the result dialog and kept stats only for pillo', async ({ page }) => {
   await page.goto('/play/pillo');
-  await page.getByTestId('game-stats').getByRole('switch', { name: 'keep my stats' }).click();
+  // Stats are always kept (2026-11-17): there is no switch to turn on.
+  await expect(page.getByTestId('game-stats').getByRole('switch')).toHaveCount(0);
   const field = page.getByLabel('your guess', { exact: true });
   await field.fill('grace');
   await field.press('Enter');
