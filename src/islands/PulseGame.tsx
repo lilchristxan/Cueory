@@ -28,6 +28,8 @@ import { heldRounds, loadStats, localDay, reportProgress, reportRound } from './
 import { dailyStats, recordResult, type DailyStats, type GameStats } from './gamestats';
 import { loadWordList } from './pillowords';
 import ResultBrandMark from './ResultBrandMark';
+import { GameHelpButton, GameHelpCard, useGameHelp } from './GameHelp';
+import { gameName } from '../config/games';
 import { useSharedGameSettings } from './GameSettings';
 import { browserStorage } from '../scripts/storage';
 
@@ -118,6 +120,7 @@ export default function PulseGame({ puzzles }: Props) {
   const [state, setState] = useState<PulseState>(() => startPulse(puzzle?.word ?? ''));
   const [text, setText] = useState('');
   const [problem, setProblem] = useState('');
+  const howToPlay = useGameHelp('pulse');
   const [said, setSaid] = useState('');
   const [copied, setCopied] = useState('');
   // High contrast is the shared game setting (#734): one switch for every game, remembered with the others.
@@ -254,7 +257,9 @@ export default function PulseGame({ puzzles }: Props) {
             <span key={i} className={`pillo-strip-pocket${i >= GUESSES - left ? ' pillo-strip-pill' : ''}`} />
           ))}
         </span>
+        <GameHelpButton help={howToPlay} name={gameName('pulse')} className="corner-button corner-button-quiet" />
       </div>
+      <GameHelpCard help={howToPlay} name={gameName('pulse')} />
 
       <div className="pillo-pack mt-4">
         <ol className="pillo-board" aria-label="your guesses">

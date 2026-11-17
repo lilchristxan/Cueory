@@ -28,9 +28,12 @@ for (const [size, width, height] of [['phone', 390, 844], ['tablet', 820, 1180],
       // The help text must describe the same privacy behavior as the paused board.
       const how = game(page).getByRole('button', { name: 'how to play' });
       await how.click();
-      await expect(game(page).getByRole('region', { name: 'how to play sudoku' }))
+      // The "?" opens the rules in a dialog (#736); Escape closes it and gives focus back to the "?".
+      const rules = page.getByRole('dialog', { name: 'how to play sudoku' });
+      await expect(rules)
         .toContainText('pause hides your entries and x marks. the original numbers stay visible until you resume.');
-      await how.click();
+      await page.keyboard.press('Escape');
+      await expect(rules).toBeHidden();
       await cells(page).nth(empty).click();
       await page.keyboard.press('1');
       await cells(page).nth(marked).click();

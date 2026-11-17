@@ -14,6 +14,7 @@ import { THEME_STORAGE_KEY } from '../scripts/theme';
 import { CROSSWORD_SETTINGS_KEY } from '../islands/cuewordkeys';
 import { STATS_STORAGE_KEY, SUDOKU_STATS_STORAGE_KEY } from '../islands/gameresults';
 import { GAME_SETTINGS_STORAGE_KEY } from '../islands/gamesettings';
+import { GAME_HELP_STORAGE_KEY } from '../islands/gamehelpkeys';
 import { GUEST_IMPORT_MARKER_PREFIX } from '../islands/guestimportrun';
 import { HOME_TIP_STORAGE_KEY } from '../islands/home-screen-tip';
 import { LAST_WELCOME_STORAGE_KEY, VISIT_STORAGE_KEY } from '../islands/stickynote';
@@ -49,6 +50,7 @@ export const storageKeys: readonly StorageKey[] = Object.freeze([
   { name: CROSSWORD_SETTINGS_KEY, storage: 'local', holds: 'crossword settings', purpose: 'remember crossword settings', onDeletion: 'cleared' },
   { name: SUDOKU_SETTINGS_KEY, storage: 'local', holds: 'sudoku settings', purpose: 'remember sudoku settings', onDeletion: 'cleared' },
   { name: GAME_SETTINGS_STORAGE_KEY, storage: 'local', holds: 'high contrast, reduced motion and game sounds', purpose: 'remember the shared game settings', onDeletion: 'cleared' },
+  { name: GAME_HELP_STORAGE_KEY, storage: 'local', holds: "which daily games' rules you've seen (game names only)", purpose: "stop showing a game's first-visit rules once you've seen them", onDeletion: 'cleared' },
   { name: HOME_TIP_STORAGE_KEY, storage: 'local', holds: 'up to three days you finished a puzzle, and whether you dismissed the tip', purpose: 'decide when to suggest adding cueory to the home screen', onDeletion: 'cleared' },
   { name: LAST_WELCOME_STORAGE_KEY, storage: 'local', holds: 'the previous welcome note', purpose: 'show a different one next visit', onDeletion: 'cleared' },
   { name: NOTE_SOUND_STORAGE_KEY, storage: 'local', holds: 'whether glove-note sounds are on', purpose: 'remember the glove-note sound choice', onDeletion: 'cleared' },

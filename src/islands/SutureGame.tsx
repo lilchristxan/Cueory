@@ -3,6 +3,7 @@ import { useEffect, useId, useRef, useState, type KeyboardEvent, type PointerEve
 import { dayLabel } from './daily';
 import { localDay, reportRound } from './gameresults';
 import { printGame } from './gameprint';
+import { GameHelpButton, GameHelpCard, useGameHelp } from './GameHelp';
 import { site } from '../config/site';
 import { announceProgress } from './suturepath';
 import { cellLabel, clearPick, foundWord, isDone, moveCursor, outcomeInWords, parsePuzzle, pick, printableWords, selection, shareLine, startSuture, type Cell, type SuturePuzzle } from './suture';
@@ -50,6 +51,7 @@ function Board({ puzzle, name }: Props) {
   const board = useRef<HTMLDivElement>(null);
   const buttons = useRef(new Map<number, HTMLButtonElement>());
   const help = useId();
+  const howToPlay = useGameHelp('suture-search');
   const title = useId();
   const done = isDone(state);
   const width = puzzle.grid[0]!.length;
@@ -134,8 +136,9 @@ function Board({ puzzle, name }: Props) {
 
   return (
     <section aria-labelledby={puzzle.theme ? title : undefined} aria-label={puzzle.theme ? undefined : `${name} puzzle`} data-testid="suture" data-print-area="suture" className="wordpath">
-      {/* The round corner buttons (Task 641): print first, then the "?" (how to play) when the game has one. */}
+      {/* The round corner buttons (Task 641): the "?" (how to play, #736), then print, so print stays at the top right. */}
       <div className="wordpath-corner" data-print-hidden>
+        <GameHelpButton help={howToPlay} name={name} className="wordpath-round" />
         <button type="button" className="wordpath-round" aria-label="print" data-testid="suture-print" onClick={() => printGame('suture')}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
             <path d="M6 9V3h12v6" />
@@ -150,6 +153,7 @@ function Board({ puzzle, name }: Props) {
         tap a word's first letter, then its last letter. tap the first letter again to start over. on a keyboard, arrows
         move, enter or space picks, and escape clears.
       </p>
+      <GameHelpCard help={howToPlay} name={name} />
       <div
         className="wordpath-board-scroll -mx-6 mt-6 sm:mx-0"
         role="region"

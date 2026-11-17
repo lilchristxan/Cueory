@@ -50,3 +50,4 @@ Audit follow-up: [account-isolation leftovers](audits/lane1-remaining.md) — Re
 Review note: [isolation audit status](status/in-review/lane1-isolation-leftovers.md) — Source-only follow-up; no application change.
 
 Review note: [reset account binding](status/in-review/task-754-reset-bound-account.md) — Review status for the password reset account guard. **Christian:** Approval required.
+Review note: [answer account binding](status/in-review/task-756-answers-stop-on-switch.md) — Stops stale players after a sign-in change.

@@ -248,6 +248,7 @@
   --crossword-marker: 1ch;          /* room for the current-clue marker in the clue list */
   --crossword-print-cell: 2rem;      /* a printed square; colors on paper use --print-paper / --print-ink (Task 641) */
   --wordpath-cell-min: 1.5rem;       /* a letter square's floor: 24 px (WCAG 2.2) at default text, 48 px at 32 px root text, when the grid scrolls */
+  --wordpath-cell-max: 4.5rem;       /* a 6 × 8 board square's ceiling: 72 px, as large as a crossword square, so tablet and desktop boards are not oversized */
   --wordpath-columns: 11;            /* each puzzle overrides this with its validated grid width */
 }
 

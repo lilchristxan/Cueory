@@ -14,9 +14,9 @@ const { path } = Astro.props;
 ---
 <span
   data-testid="result-brand-mark"
-  class="mt-4 inline-flex select-none items-center gap-2 print:hidden"
+  class="mt-4 inline-flex max-w-full select-none items-center gap-2 print:hidden"
   aria-hidden="true"
 >
   <Wordmark variant="emblem" sizes="0.875rem" class="w-3.5 shrink-0" />
-  <span class="font-body text-sm leading-relaxed text-ink">cueory.app{path}</span>
+  <span class="min-w-0 font-body text-sm leading-relaxed text-ink wrap-anywhere">cueory.app{path}</span>
 </span>

@@ -21,6 +21,7 @@ import {
 import { PROMO_STORAGE_KEY } from '../../src/scripts/promo';
 import { THEME_STORAGE_KEY } from '../../src/scripts/theme';
 import { GAME_SETTINGS_STORAGE_KEY } from '../../src/islands/gamesettings';
+import { GAME_HELP_STORAGE_KEY } from '../../src/islands/gamehelpkeys';
 import { STATS_STORAGE_KEY } from '../../src/islands/gameresults';
 import { CROSSWORD_SETTINGS_KEY } from '../../src/islands/cueword';
 import type { KeyValueStorage } from '../../src/scripts/storage';
@@ -221,6 +222,10 @@ describe('afterDeletion', () => {
 
   it('includes the shared game settings key (#734)', () => {
     expect(afterDeletion(new MemoryStorage())).toContain(GAME_SETTINGS_STORAGE_KEY);
+  });
+
+  it('includes the game help seen key (#736)', () => {
+    expect(afterDeletion(new MemoryStorage())).toContain(GAME_HELP_STORAGE_KEY);
   });
 
   it('includes the study resume key (Task 104)', () => {
