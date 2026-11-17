@@ -3,11 +3,12 @@
  */
 import { createHash } from 'node:crypto';
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
-import { isAbsolute, join, relative } from 'node:path';
+import { join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { gzipSync } from 'node:zlib';
 import { describe, expect, it } from 'vitest';
 import { newsletter, site } from '../../src/config/site';
+import { initialJsFiles, initialJsGzipBytes, inlineScriptBodies } from './perf-scan';
 
 const dist = fileURLToPath(new URL('../../dist/', import.meta.url));
 
@@ -96,68 +97,6 @@ const initialJsBudget = {
   'terms.html': 148122,
 } satisfies Record<string, number>;
 
-function initialJsFiles(page: string): string[] {
-  const html = readFileSync(page, 'utf8');
-  const queue = [...html.matchAll(/(?:src|component-url|renderer-url)="([^"]+\.js(?:\?[^" ]*)?)"/g)].map((match) => match[1]!);
-  const files = new Set<string>();
-  const resolveAsset = (from: string, url: string) => {
-    if (isAbsolute(url) && url.startsWith(dist)) return url;
-    return url.startsWith('/') ? join(dist, url.slice(1)) : join(from, '..', url);
-  };
-
-  while (queue.length > 0) {
-    const url = queue.shift()!.split('?')[0]!;
-    const file = resolveAsset(page, url);
-    if (files.has(file) || !file.endsWith('.js') || !existsSync(file)) continue;
-    files.add(file);
-    const source = readFileSync(file, 'utf8');
-    for (const match of source.matchAll(/(?:import|export)\s*(?:[^"'();]*?\bfrom\s*)?["']([^"']+\.js)["']/g)) {
-      const imported = match[1]!.split('?')[0]!;
-      queue.push(imported.startsWith('/') ? imported : join(file, '..', imported));
-    }
-  }
-  return [...files];
-}
-
-/**
- * Read script bodies in our built HTML without an incomplete closing-tag regex.
- * End tags can use mixed case and whitespace or additional text before >.
- */
-function inlineScriptBodies(html: string): string[] {
-  // ASCII-only case folding preserves positions even around non-ASCII text.
-  const lower = html.replace(/[A-Z]/g, (letter) => letter.toLowerCase());
-  const isBoundary = (character: string | undefined) =>
-    character === undefined || character === '>' || character === '/' || /\s/u.test(character);
-  const bodies: string[] = [];
-  let at = 0;
-  for (;;) {
-    const open = lower.indexOf('<script', at);
-    if (open === -1) return bodies;
-    if (!isBoundary(lower[open + 7])) {
-      at = open + 7;
-      continue;
-    }
-    const startEnd = lower.indexOf('>', open + 7);
-    if (startEnd === -1) return bodies;
-    let close = lower.indexOf('</script', startEnd + 1);
-    while (close !== -1 && !isBoundary(lower[close + 8])) {
-      close = lower.indexOf('</script', close + 8);
-    }
-    if (close === -1) return bodies;
-    const closeEnd = lower.indexOf('>', close + 8);
-    if (closeEnd === -1) return bodies;
-    bodies.push(html.slice(startEnd + 1, close));
-    at = closeEnd + 1;
-  }
-}
-
-function initialJsGzipBytes(page: string): number {
-  const html = readFileSync(page, 'utf8');
-  const external = initialJsFiles(page).reduce((total, file) => total + gzipSync(readFileSync(file)).length, 0);
-  const inline = inlineScriptBodies(html).reduce((total, body) => total + gzipSync(body).length, 0);
-  return external + inline;
-}
-
 // A build that shows drafts (staging, previews and the browser tests: CUEORY_ANATOMY_DRAFTS=1) puts the anatomy lab
 // itself on its preview page; the live build shows "coming soon" there and loads no lab script, so the budget above
 // stays as it is for the live build. This is the lab page's own limit on a drafts build: 109,328 gzip bytes measured at
@@ -202,6 +141,7 @@ function markupOutsideScripts(html: string): string {
 
 describe.skipIf(!existsSync(dist))('built site', () => {
   const pages = htmlFiles(dist);
+  const latoPreloads = ['/fonts/lato-latin-400-normal.woff2', '/fonts/lato-latin-700-normal.woff2'];
 
   it('keeps each route within 10% of its initial JavaScript gzip budget', () => {
     const routes = pages.map((page) => relative(dist, page).replaceAll('\\', '/'));
@@ -244,8 +184,31 @@ describe.skipIf(!existsSync(dist))('built site', () => {
       expect(hrefs, page).toContain('/fonts/bodoni-moda-latin-opsz-normal.woff2');
       for (const href of hrefs) expect(existsSync(join(dist, href)), href).toBe(true);
     }
-    // Study screens stay quiet: no display font, nothing extra to download.
-    expect(preloads(readFileSync(join(dist, 'learn/study-skills.html'), 'utf8'))).toEqual([]);
+    // Study screens stay quiet: no display font. They preload only the two Lato files every page uses (lane 9).
+    expect(preloads(readFileSync(join(dist, 'learn/study-skills.html'), 'utf8'))).toEqual(latoPreloads);
+  });
+
+  it('every page preloads exactly the two Lato weights in use, and each file exists (lane 9, fonts)', () => {
+    for (const page of pages) {
+      const html = readFileSync(page, 'utf8');
+      const fonts = [...html.matchAll(/<link\b[^>]*rel="preload"[^>]*>/g)]
+        .map((m) => m[0])
+        .filter((link) => link.includes('as="font"'));
+      for (const link of fonts) {
+        expect(link, relative(dist, page)).toContain('type="font/woff2"');
+        expect(link, relative(dist, page)).toMatch(/\scrossorigin[\s>]/);
+      }
+      const hrefs = fonts.map((link) => /href="([^"]+)"/.exec(link)![1]!);
+      expect(hrefs.filter((href) => href.includes('/lato-')), relative(dist, page)).toEqual(latoPreloads);
+    }
+    for (const href of latoPreloads) expect(existsSync(join(dist, href)), href).toBe(true);
+    // Every @font-face that can swap keeps font-display: swap; only the preloaded serif may be optional.
+    const css = readdirSync(join(dist, '_astro')).filter((f) => f.endsWith('.css'))
+      .map((f) => readFileSync(join(dist, '_astro', f), 'utf8')).join('\n');
+    const faces = [...css.matchAll(/@font-face\s*\{([^}]*)\}/g)].map((m) => m[1]!);
+    const lato = faces.filter((face) => /font-family:\s*["']?Lato/.test(face));
+    expect(lato.length).toBeGreaterThanOrEqual(2);
+    for (const face of lato) expect(face).toMatch(/font-display:\s*swap/);
   });
 
   it('does not preload unused italic Bodoni on home, while retaining its font file (Task 187)', () => {
