@@ -206,6 +206,7 @@
     display: inline-flex;
     align-items: center;
     gap: calc(var(--spacing) * 1);
+    max-inline-size: 100%;                /* with enlarged text on a narrow phone the pockets narrow; the page never scrolls sideways */
     block-size: var(--pillo-strip-height);
     padding-inline: calc(var(--spacing) * 1.5);
     border-radius: var(--radius-md);

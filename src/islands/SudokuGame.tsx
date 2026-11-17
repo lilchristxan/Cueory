@@ -140,7 +140,9 @@ export default function SudokuGame() {
       else if (action.kind === 'mark') mark();
       else {
         setSelected(action.index);
-        cells.current.get(action.index)?.focus();
+        const cell = cells.current.get(action.index);
+        cell?.focus();
+        cell?.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'instant' });
       }
     };
     window.addEventListener('keydown', onKey);
@@ -173,7 +175,7 @@ export default function SudokuGame() {
         <div className="segmented" aria-label="difficulty">{LEVELS.map((choice) => <button key={choice} type="button" className="segmented-option" aria-pressed={level === choice} disabled={paused} onClick={() => { if (!paused) setLevel(choice); }}>{level === choice && <span className="segmented-check" aria-hidden="true">✓</span>}{choice}</button>)}</div>
         <span className="sudoku-errors">{settings.showErrors ? <>error: <strong>{errors}</strong></> : null}</span>
       </div>
-      <div className="sudoku-board-scroll">
+      <div className="sudoku-board-scroll" role="region" aria-label="sudoku grid scroll area" tabIndex={0}>
         <div className={`sudoku-board${paused ? ' is-paused' : ''}`} role="grid" aria-label="sudoku grid" aria-rowcount={9} aria-colcount={9}>
         {Array.from({ length: 9 }, (_, row) => <div key={row} className="sudoku-row" role="row">
           {entries.slice(row * 9, row * 9 + 9).map((_, column) => {

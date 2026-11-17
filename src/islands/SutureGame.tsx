@@ -10,12 +10,12 @@ import { cellLabel, clearPick, foundWord, isDone, moveCursor, outcomeInWords, pa
 interface Props { puzzle: SuturePuzzle; name: string }
 const printFoot = new URL(site.url).host;
 const button = 'min-h-11 min-w-11 rounded-md border border-control bg-page px-4 py-2 text-ink disabled:opacity-50';
-// Whole class names, so Tailwind sees each one (grids are 3 to 11 letters wide).
-const columns: Record<number, string> = {
-  3: 'grid-cols-3', 4: 'grid-cols-4', 5: 'grid-cols-5', 6: 'grid-cols-6', 7: 'grid-cols-7', 8: 'grid-cols-8',
-  9: 'grid-cols-9', 10: 'grid-cols-10', 11: 'grid-cols-11',
+// These static classes keep the grid width CSP-safe: style-src permits no inline styles.
+const columnClass: Record<number, string> = {
+  3: 'wordpath-cols-3', 4: 'wordpath-cols-4', 5: 'wordpath-cols-5',
+  6: 'wordpath-cols-6', 7: 'wordpath-cols-7', 8: 'wordpath-cols-8',
+  9: 'wordpath-cols-9', 10: 'wordpath-cols-10', 11: 'wordpath-cols-11',
 };
-
 /**
  * A gentle sideways shake for a wrong pick, through the Web Animations API, so no stylesheet is injected (the CSP allows
  * none) and the distance and timing come from the design tokens. Nothing moves when the device asks for reduced motion.
@@ -150,21 +150,23 @@ function Board({ puzzle, name }: Props) {
         tap a word's first letter, then its last letter. tap the first letter again to start over. on a keyboard, arrows
         move, enter or space picks, and escape clears.
       </p>
-      {/*
-        On phones the board spans the panel's padding (p-6 on /play), so 11 letters stay at least 24 px wide at 320 px.
-        The frame is --border-board (2.5 px, Christian's design) in the ink color.
-      */}
       <div
-        ref={board}
-        role="grid"
-        aria-label={`${name} letters`}
+        className="wordpath-board-scroll -mx-6 mt-6 sm:mx-0"
+        role="region"
+        aria-label={`${name} letters scroll area`}
         aria-describedby={help}
-        aria-rowcount={puzzle.grid.length}
-        aria-colcount={width}
-        className="wordpath-board -mx-6 mt-6 flex flex-col border-(length:--border-board) border-ink bg-page text-ink sm:mx-0 sm:p-3"
       >
-        {puzzle.grid.map((row, r) => (
-          <div key={r} role="row" aria-rowindex={r + 1} className={`grid ${columns[width]}`}>
+        <div
+          ref={board}
+          role="grid"
+          aria-label={`${name} letters`}
+          aria-describedby={help}
+          aria-rowcount={puzzle.grid.length}
+          aria-colcount={width}
+          className={`wordpath-board ${columnClass[width]} flex flex-col border-(length:--border-board) border-ink bg-page text-ink sm:p-3`}
+        >
+          {puzzle.grid.map((row, r) => (
+          <div key={r} role="row" aria-rowindex={r + 1} className="wordpath-row">
             {[...row].map((letter, c) => {
               const cell: Cell = [r, c];
               const index = r * width + c;
@@ -187,7 +189,7 @@ function Board({ puzzle, name }: Props) {
                     disabled={done}
                     aria-label={cellLabel(state, puzzle, cell)}
                     data-cell={`${r},${c}`}
-                    className={`flex aspect-square w-full items-center justify-center overflow-hidden rounded-full text-base font-bold sm:text-xl ${look}`}
+                    className={`flex aspect-square w-full items-center justify-center overflow-hidden rounded-full text-base leading-none font-bold sm:text-xl sm:leading-none ${look}`}
                     onFocus={() => { setFocused(index); setState((current) => moveCursor(current, puzzle, cell)); }}
                     onPointerEnter={(event) => hover(event, cell)}
                     onClick={() => choose(cell)}
@@ -199,7 +201,8 @@ function Board({ puzzle, name }: Props) {
               );
             })}
           </div>
-        ))}
+          ))}
+        </div>
       </div>
       <ul className="mt-6 columns-3 gap-x-4 text-sm font-bold sm:text-lg" aria-label="words to find" data-testid="suture-words" data-print-hidden>
         {puzzle.words.map((word, i) => {

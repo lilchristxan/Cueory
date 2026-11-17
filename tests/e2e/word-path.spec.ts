@@ -32,6 +32,29 @@ test.beforeEach(async ({ page }) => {
 });
 
 test.describe('word path: themed word search, the older format (Task 97)', () => {
+  test('at 320px with 32px root text, letters remain whole in a contained scroll area', async ({ page }) => {
+    await page.setViewportSize({ width: 320, height: 844 });
+    await page.evaluate(() => document.documentElement.style.setProperty('font-size', '32px', 'important'));
+
+    const region = game(page).getByRole('region', { name: 'word path letters scroll area' });
+    const grid = region.getByRole('grid', { name: 'word path letters' });
+    await expect(region).toHaveCSS('overflow-x', 'auto');
+    expect(await region.evaluate((element) => element.scrollWidth > element.clientWidth)).toBe(true);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
+
+    const cells = grid.getByRole('gridcell');
+    for (const cell of await cells.all()) {
+      const button = cell.getByRole('button');
+      const box = await button.boundingBox();
+      expect(box?.width).toBeGreaterThanOrEqual(44);
+      expect(box?.height).toBeGreaterThanOrEqual(44);
+      expect(await button.evaluate((element) => element.scrollWidth <= element.clientWidth && element.scrollHeight <= element.clientHeight)).toBe(true);
+    }
+    await cells.last().scrollIntoViewIfNeeded();
+    await expect(cells.last()).toBeInViewport({ ratio: 1 });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
+  });
+
   test('the theme is the title, with the word list, the count and the sample label', async ({ page }) => {
     await expect(game(page).getByRole('heading', { level: 3, name: 'study break' })).toBeVisible();
     await expect(game(page)).toContainText('find all 12 words. they run up, down, left or right.');

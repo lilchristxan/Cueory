@@ -38,6 +38,22 @@
     inline-size: calc(var(--spacing) * 5);
     block-size: calc(var(--spacing) * 5);
   }
+
+  /* Keep large-text letter grids inside a named scroll region. The grid's
+     squares stay large enough to tap and to show their enlarged letters. */
+  .wordpath-board-scroll { overflow-x: auto; }
+  /* The board fills its box; it grows past it (and scrolls) only when its squares would drop below the floor. */
+  .wordpath-board { min-inline-size: max-content; }
+  .wordpath-cols-3 { --wordpath-columns: 3; }
+  .wordpath-cols-4 { --wordpath-columns: 4; }
+  .wordpath-cols-5 { --wordpath-columns: 5; }
+  .wordpath-cols-6 { --wordpath-columns: 6; }
+  .wordpath-cols-7 { --wordpath-columns: 7; }
+  .wordpath-cols-8 { --wordpath-columns: 8; }
+  .wordpath-cols-9 { --wordpath-columns: 9; }
+  .wordpath-cols-10 { --wordpath-columns: 10; }
+  .wordpath-cols-11 { --wordpath-columns: 11; }
+  .wordpath-row { display: grid; grid-template-columns: repeat(var(--wordpath-columns), minmax(var(--wordpath-cell-min), 1fr)); }
 }
 
 @media print {
@@ -53,12 +69,18 @@
 
   .wordpath-board {
     inline-size: min(100%, var(--print-board)) !important;
+    min-inline-size: 0 !important;
     margin: var(--print-gap) auto 0 !important;
     padding: 0 !important;
     border-color: var(--print-ink) !important;
     background: var(--print-paper) !important;
     break-inside: avoid;
   }
+
+  .wordpath-board-scroll { overflow: visible; }
+
+  /* Paper must fit the whole board even when the browser's root text is enlarged. */
+  .wordpath-row { grid-template-columns: repeat(var(--wordpath-columns), minmax(0, 1fr)); }
 
   /* Every letter looks the same on paper: no found, picked or highlighted letters, no focus ring. */
   .wordpath-board button {

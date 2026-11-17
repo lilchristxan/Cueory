@@ -30,6 +30,9 @@ html:root[data-game-motion="reduce"] *::after {
     display: inline-flex;
     min-block-size: var(--tap-min);
     min-inline-size: var(--tap-min);
+    /* With enlarged root text on a narrow phone the label wraps inside the button instead of pushing the page sideways. */
+    max-inline-size: 100%;
+    text-align: center;
     align-items: center;
     justify-content: center;
     gap: calc(var(--spacing) * 2);
