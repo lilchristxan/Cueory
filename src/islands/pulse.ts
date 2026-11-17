@@ -40,6 +40,8 @@ export interface PulseState {
   answer: string;
   guesses: Guess[];
   status: 'playing' | 'solved' | 'out';
+  /** Hard Mode (Task 719): every letter already shown in place or in the word must be used again. */
+  hard?: boolean;
 }
 
 export function startPulse(answer: string): PulseState {
@@ -86,10 +88,64 @@ export function markGuess(guess: string, answer: string): Mark[] {
   return marks;
 }
 
+/** Hard Mode can be switched only before the first guess of the day. */
+export function canSetHardMode(state: PulseState): boolean {
+  return state.status === 'playing' && state.guesses.length === 0;
+}
+
+/** Turns Hard Mode on or off, or changes nothing once a guess has been played. */
+export function setHardMode(state: PulseState, on: boolean): PulseState {
+  if (!canSetHardMode(state) || Boolean(state.hard) === on) return state;
+  return { ...state, hard: on };
+}
+
+const ORDINAL = ['1st', '2nd', '3rd', '4th', '5th', '6th', '7th'];
+const TIMES = ['', '', ' twice', ' three times', ' four times', ' five times'];
+
+/**
+ * Why a guess breaks Hard Mode, or undefined when it follows it: a letter shown in place must stay in that place, and a
+ * letter shown in the word must be used again, as many times as one earlier guess showed it.
+ */
+export function hardModeProblem(guesses: readonly Guess[], word: string): string | undefined {
+  for (const guess of guesses) {
+    for (let i = 0; i < guess.word.length; i++) {
+      if (guess.marks[i] === 'here' && word[i] !== guess.word[i]) {
+        return `hard mode: the ${ORDINAL[i]} letter must be ${guess.word[i]}.`;
+      }
+    }
+  }
+  const needed = new Map<string, number>();
+  for (const guess of guesses) {
+    const shown = new Map<string, number>();
+    Array.from(guess.word).forEach((letter, i) => {
+      if (guess.marks[i] !== 'absent') shown.set(letter, (shown.get(letter) ?? 0) + 1);
+    });
+    for (const [letter, count] of shown) needed.set(letter, Math.max(needed.get(letter) ?? 0, count));
+  }
+  for (const [letter, count] of needed) {
+    const used = Array.from(word).filter((each) => each === letter).length;
+    if (used < count) return `hard mode: the guess must use ${letter}${TIMES[count] ?? ` ${count} times`}.`;
+  }
+  return undefined;
+}
+
+/**
+ * Why a guess can't be played, in plain words, or undefined when it can. A word that isn't in the list (when one is
+ * given) or that breaks Hard Mode never uses up a guess. The word of the day is always accepted.
+ */
+export function wordProblem(state: PulseState, guess: string, words?: ReadonlySet<string>): string | undefined {
+  const shape = guessProblem(guess, state.answer.length);
+  if (shape) return shape;
+  if (words && guess !== state.answer && !words.has(guess)) {
+    return `${guess} isn't in the word list. it didn't use a guess.`;
+  }
+  return state.hard ? hardModeProblem(state.guesses, guess) : undefined;
+}
+
 /** Plays a guess. A guess that can't be played, or one made after the game is over, changes nothing. */
-export function playGuess(state: PulseState, text: string): PulseState {
+export function playGuess(state: PulseState, text: string, words?: ReadonlySet<string>): PulseState {
   const word = cleanGuess(text);
-  if (state.status !== 'playing' || guessProblem(word, state.answer.length)) return state;
+  if (state.status !== 'playing' || wordProblem(state, word, words)) return state;
   const guesses = [...state.guesses, { word, marks: markGuess(word, state.answer) }];
   const next = { ...state, guesses };
   if (word === state.answer) return { ...next, status: 'solved' };
@@ -124,7 +180,7 @@ export function letterMarks(guesses: readonly Guess[]): Map<string, Mark> {
 export function shareText(state: PulseState, day: string): string {
   const used = GUESSES - guessesLeft(state);
   const result = state.status === 'solved' ? `solved in ${used} of ${GUESSES}` : 'not solved this time';
-  return `cueory ${gameName('pulse')}, ${day}: ${result}`;
+  return `cueory ${gameName('pulse')}, ${day}: ${result}${state.hard ? ', hard mode' : ''}`;
 }
 
 /** Days from 1 November 2026 to a calendar date, in the visitor's own time zone. */
@@ -138,4 +194,19 @@ export function dayNumber(date: Date): number {
 export function puzzleForDay<T>(puzzles: readonly T[], day: number): T | undefined {
   if (puzzles.length === 0) return undefined;
   return puzzles[((day % puzzles.length) + puzzles.length) % puzzles.length];
+}
+
+/** Milliseconds until the next local midnight, when the next puzzle opens. */
+export function untilNextPuzzle(now: Date): number {
+  const next = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+  return Math.max(0, next.getTime() - now.getTime());
+}
+
+/** A wait in plain words, rounded up to the minute: "5 h 12 min", "40 min". */
+export function waitInWords(ms: number): string {
+  const minutes = Math.max(1, Math.ceil(ms / 60_000));
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  if (hours === 0) return `${rest} min`;
+  return rest === 0 ? `${hours} h` : `${hours} h ${rest} min`;
 }

@@ -7,6 +7,11 @@ export interface GameResult {
   day: string;
   solved: boolean;
   tries: number;
+  /**
+   * Set only when the round was finished on another local day than its puzzle's own (for example after midnight). It
+   * still counts as played, but never extends a streak (Task 719).
+   */
+  offDay?: true;
   /** Word path boards only (#722): hints used. */
   hints?: number;
   /** Word path boards only (#722): whether the special answer (the thread) was found first. */
@@ -35,14 +40,16 @@ function readResult(value: unknown): GameResult | undefined {
   // A bad result is ignored, even if an object from an old caller has throwing getters.
   try {
     if (!value || typeof value !== 'object' || Array.isArray(value)) return;
-    const { game, day, solved, tries, hints, specialFirst } = value as Record<string, unknown>;
+    const { game, day, solved, tries, offDay, hints, specialFirst } = value as Record<string, unknown>;
     if (typeof game !== 'string' || !GAMES.includes(game) || dayNumber(day) === undefined ||
-      typeof solved !== 'boolean' || typeof tries !== 'number' || !Number.isSafeInteger(tries) || tries < 0) return;
+      typeof solved !== 'boolean' || typeof tries !== 'number' || !Number.isSafeInteger(tries) || tries < 0 ||
+      (offDay !== undefined && offDay !== true)) return;
     // The two word path details are optional, and only word path keeps them.
     if (hints !== undefined && (game !== 'suture' || typeof hints !== 'number' || !Number.isSafeInteger(hints) || hints < 0)) return;
     if (specialFirst !== undefined && (game !== 'suture' || typeof specialFirst !== 'boolean')) return;
     return {
       game: game as GameId, day: day as string, solved, tries,
+      ...(offDay === true ? { offDay: true as const } : {}),
       ...(hints !== undefined ? { hints } : {}),
       ...(specialFirst !== undefined ? { specialFirst } : {}),
     };
@@ -70,6 +77,55 @@ export function summary(stats: GameStats, game: string): GameSummary {
   const triesCounts: Record<number, number> = {};
   for (const result of results) triesCounts[result.tries] = (triesCounts[result.tries] ?? 0) + 1;
   return { played: results.length, solved: results.filter((entry) => entry.solved).length, triesCounts };
+}
+
+export interface DailyStats {
+  played: number;
+  /** Solved rounds as a whole percentage of rounds played; 0 when none were played. */
+  winPercent: number;
+  currentStreak: number;
+  longestStreak: number;
+  /** Solved rounds by guesses used: index 0 is one guess, up to `maxTries`. */
+  distribution: number[];
+}
+
+/**
+ * Played, win %, streaks and the guess distribution for one game (Task 719). A streak counts days in a row whose
+ * daily puzzle was solved on its own local day; a round finished on another day (offDay) never extends it. The current
+ * streak still stands today until today's puzzle is played, and a puzzle lost today ends it.
+ */
+export function dailyStats(stats: GameStats, game: string, today: string, maxTries: number): DailyStats {
+  const results = stats.filter((entry) => entry.game === game);
+  const solved = results.filter((entry) => entry.solved);
+  const distribution = Array.from({ length: maxTries }, () => 0);
+  for (const result of solved) if (result.tries >= 1 && result.tries <= maxTries) distribution[result.tries - 1] = (distribution[result.tries - 1] ?? 0) + 1;
+  const onDay = results.filter((entry) => !entry.offDay);
+  const won = new Set(onDay.filter((entry) => entry.solved).map((entry) => dayNumber(entry.day)!));
+  const lost = new Set(onDay.filter((entry) => !entry.solved).map((entry) => dayNumber(entry.day)!));
+
+  let longestStreak = 0;
+  for (const day of won) {
+    if (won.has(day - 1)) continue;
+    let run = 1;
+    while (won.has(day + run)) run++;
+    longestStreak = Math.max(longestStreak, run);
+  }
+  const now = dayNumber(today);
+  let currentStreak = 0;
+  if (now !== undefined && !lost.has(now)) {
+    let day = won.has(now) ? now : now - 1;
+    while (won.has(day)) {
+      currentStreak++;
+      day--;
+    }
+  }
+  return {
+    played: results.length,
+    winPercent: results.length === 0 ? 0 : Math.round((solved.length / results.length) * 100),
+    currentStreak,
+    longestStreak,
+    distribution,
+  };
 }
 
 export function summaryInWords(value: GameSummary): string {
