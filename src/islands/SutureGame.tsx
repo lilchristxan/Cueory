@@ -6,6 +6,7 @@ import { printGame } from './gameprint';
 import { GameHelpButton, GameHelpCard, useGameHelp } from './GameHelp';
 import { site } from '../config/site';
 import { announceProgress } from './suturepath';
+import PrintLogo from './PrintLogo';
 import { cellLabel, clearPick, foundWord, isDone, moveCursor, outcomeInWords, parsePuzzle, pick, printableWords, selection, shareLine, startSuture, type Cell, type SuturePuzzle } from './suture';
 
 interface Props { puzzle: SuturePuzzle; name: string }
@@ -147,6 +148,7 @@ function Board({ puzzle, name }: Props) {
           </svg>
         </button>
       </div>
+      <PrintLogo />
       {puzzle.theme && <h3 id={title} className="display text-center text-2xl text-ink sm:text-3xl" data-testid="suture-theme">{puzzle.theme}</h3>}
       <p className="mt-2 text-center text-ink-soft" data-print-hidden>find all {state.totalWords} words. they run up, down, left or right.</p>
       <p id={help} className="mt-2 text-center text-sm text-ink-soft" data-print-hidden>

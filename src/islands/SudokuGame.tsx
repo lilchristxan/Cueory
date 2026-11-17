@@ -9,6 +9,7 @@ import { sudokuCellClasses } from './sudokuhighlight';
 import { DEFAULT_SUDOKU_SETTINGS, GAME_PROGRESS_EVENT, LEVEL_LABELS, sudokuProgressDetail, LEVEL_RULES, advanceSudokuSeconds, autoCandidateNotes, checkSudoku, conflictIndices, dailySudokuSeed, editSudokuBoard, effectiveSudokuMode, generateSudoku, getResult, loadSudokuSettings, newSudokuBoard, noteDigits, pushSudokuHistory, saveSudokuSettings, sudokuCellPresentation, sudokuKeyAction, sudokuWrongCells, undoSudoku, type SudokuBoard, type SudokuBoardAction, type SudokuLevel, type SudokuMode, type SudokuSettings } from './sudoku';
 import { reportRound, SUDOKU_STATS_STORAGE_KEY, sudokuRoundResult } from './gameresults';
 import { keepSudokuSolve, loadSudokuStats, sudokuLevelStats, sudokuTime, type SavedSudokuStats } from './sudokustats';
+import PrintLogo from './PrintLogo';
 
 const LEVELS: SudokuLevel[] = ['easy', 'medium', 'hard'];
 const NUMBERS = [1, 2, 3, 4, 5, 6, 7, 8, 9];
@@ -292,6 +293,7 @@ export default function SudokuGame() {
 
   return <section className="sudoku-game" data-testid="sudoku">
     <div className="sudoku-panel">
+      <PrintLogo />
       <div className="segmented sudoku-levels" aria-label="difficulty">{LEVELS.map((choice) => <button key={choice} type="button" className="segmented-option" aria-pressed={level === choice} disabled={paused} onClick={() => { if (!paused) setLevel(choice); }}>{level === choice && <span className="segmented-check" aria-hidden="true">✓</span>}{LEVEL_LABELS[choice]}</button>)}</div>
       <div className="sudoku-status" data-testid="sudoku-status">
         <span className="sudoku-time">{settings.showTimer && <>time: <strong>{elapsed}</strong></>}</span>

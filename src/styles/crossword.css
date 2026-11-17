@@ -69,6 +69,7 @@
   /* Task 721: pen and pencil, check and reveal marks, settings, pause and the clue list. */
   .crossword-toolbar { flex-wrap: wrap; align-items: center; }
   .crossword-mode { margin-inline-end: auto; }
+  .crossword-help-pair { display: flex; flex-wrap: wrap; align-items: center; gap: var(--spacing); }
   .crossword-menu-button { display: inline-flex; align-items: center; list-style: none; cursor: pointer; }
   .crossword-menu-button::-webkit-details-marker { display: none; }
   .crossword-menu-panel { display: flex; flex-direction: column; gap: var(--crossword-panel-gap); }

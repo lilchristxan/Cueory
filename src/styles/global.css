@@ -2188,7 +2188,8 @@ html:has(dialog.mode-preview[open]) {
     main { max-inline-size: none !important; padding: 0 !important; }
     .sudoku-game { margin: 0; }
     .sudoku-board-scroll { overflow: visible; }
-    .sudoku-board { --sudoku-cell-size: var(--sudoku-cell-max); }
+    /* As large as the paper allows, up to --sudoku-cell-max, so the whole grid stays inside the page's width. */
+    .sudoku-board { --sudoku-cell-size: min(var(--sudoku-cell-max), calc((100cqi - var(--sudoku-board-frame)) / 9)); }
     .sudoku-cell { background: var(--color-page) !important; box-shadow: none !important; outline: 0 !important; color: var(--color-ink) !important; }
     .sudoku-cell[data-given="false"] > * { display: none !important; }
     .sudoku-cell[data-given="false"]::after, .sudoku-cell[data-given="false"]::before { display: none !important; }

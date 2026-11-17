@@ -290,12 +290,12 @@ test.describe('daily games on a narrow phone', () => {
         .filter((box) => box.left < 0 || box.right > window.innerWidth).length,
     );
     expect(outside).toBe(0);
-    // The three logical QWERTY rows can wrap onto extra visual lines on narrow phones.
+    // The letter keys (a to z, like the crossword's) and the ⌫ / enter row wrap onto extra lines on narrow phones.
     // Check actual touch-target size and non-overlap, not horizontal center order.
     const rows = await page.locator('.pillo-key-row').evaluateAll((rowEls) =>
       rowEls.map((row) => [...row.querySelectorAll('.pillo-key')].map((el) => el.getBoundingClientRect())),
     );
-    expect(rows.length).toBe(3);
+    expect(rows.length).toBe(2);
     const keys = rows.flat();
     for (const key of keys) {
       expect(key.width).toBeGreaterThanOrEqual(44);
