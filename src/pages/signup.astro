@@ -2,12 +2,18 @@
 import Layout from '../layouts/Layout.astro';
 import Wordmark from '../components/Wordmark.astro';
 import SignIn from '../islands/SignIn.tsx';
+import { accountLaunch, accountsOpen } from '../config/site';
+import { accountsBuildEnv, accountsGateOpen } from '../config/accountsgate';
+
+// Decided at build time: while accounts are closed this page never loads Supabase (src/config/accountsgate.ts).
+const accountsOn = accountsGateOpen(accountsOpen, accountsBuildEnv(process.env));
+const updatesHref = accountLaunch(false).accountHref;
 ---
 
 <Layout title="create an account" description="Create your free cueory account." variant="study" noindex promo={false}>
   <section class="mx-auto max-w-110 py-section font-body leading-relaxed" aria-labelledby="signup-heading">
     <div class="rounded-lg border border-line bg-page p-6 sm:p-8">
-      <SignIn mode="signup" client:load>
+      <SignIn accountsOn={accountsOn} updatesHref={updatesHref} mode="signup" client:load>
         <div class="mb-6 text-center">
           <div class="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-pill bg-surface">
             <Wordmark variant="emblem" class="w-10" sizes="2.5rem" />
