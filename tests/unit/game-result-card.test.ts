@@ -123,11 +123,10 @@ describe('shared result dialog design tokens', () => {
 
   it('uses small caps without text-transforming source content', () => {
     const host = readFileSync(new URL('../../src/islands/GameResultsHost.tsx', import.meta.url), 'utf8');
-    const landing = readFileSync(new URL('../../src/components/GameShareLanding.astro', import.meta.url), 'utf8');
+    // The share landing pages that also used result-meta became the games' own pages (2026-11-17) and were removed.
     const styles = readFileSync(new URL('../../src/styles/global.css', import.meta.url), 'utf8');
     expect(host).toContain('result-meta');
-    expect(landing).toContain('result-meta');
-    expect(host + landing).not.toContain('uppercase');
+    expect(host).not.toContain('uppercase');
     expect(styles).toContain('font-variant-caps: all-small-caps');
     expect(styles).not.toMatch(/\.result-meta[^}]*text-transform/s);
   });

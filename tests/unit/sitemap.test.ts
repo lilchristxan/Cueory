@@ -27,7 +27,7 @@ describe('sitemap', () => {
     for (const page of noindexPages) expect(listed).not.toContain(`https://cueory.app${page}`);
   });
 
-  it('lists each public game share landing page but not draft-only games', () => {
+  it('lists each public game page but not draft-only games', () => {
     const published = ['/play/pillo', '/play/crossword', '/play/sudoku', '/play/word-path'] as const;
     const xml = sitemapXml();
     for (const path of published) {
