@@ -58,10 +58,11 @@ function schema(): Map<string, Table> {
         owned: entries.some(entry => OWNER_REF.test(entry)),
       });
     }
-    for (const match of sql.matchAll(/alter\s+table\s+(?:only\s+)?public\.([a-z_]+)\s+((?:add\s+column[^;]*?)+);/gi)) {
+    // One alter table statement at a time (up to its semicolon); each comma-separated clause that adds a column counts.
+    for (const match of sql.matchAll(/alter\s+table\s+(?:only\s+)?public\.([a-z_]+)\s([^;]*);/gi)) {
       const table = tables.get(match[1]!);
       if (!table) continue;
-      for (const added of topLevel(match[2]!)) {
+      for (const added of topLevel(match[2]!.trim())) {
         const column = /^add\s+column\s+(?:if\s+not\s+exists\s+)?([a-z_]+)/i.exec(added);
         if (!column) continue;
         table.columns.push(column[1]!);
