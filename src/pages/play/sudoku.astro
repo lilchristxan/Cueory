@@ -13,6 +13,7 @@ const game = dailyGames.find((item) => item.id === 'triage')!;
   <section class="sudoku-section mt-6" aria-labelledby="sudoku-heading" data-testid="sudoku-section">
     <div class="sudoku-mount">
       <SudokuGame client:only="react" />
+      <noscript><p>{game.name} needs JavaScript.</p></noscript>
     </div>
   </section>
 </GamePage>

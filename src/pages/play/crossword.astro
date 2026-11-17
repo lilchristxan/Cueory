@@ -15,6 +15,7 @@ const samples = await crosswordSamples();
   <section class="mt-6" aria-labelledby="crossword-heading" data-game-print="crossword">
     <div class="crossword-print-host">
       <CuewordToday client:only="react" puzzles={samples} name={game.name} />
+      <noscript><p>{game.name} needs JavaScript.</p></noscript>
     </div>
   </section>
 </GamePage>

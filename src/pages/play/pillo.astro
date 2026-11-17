@@ -14,6 +14,7 @@ const samples = await pilloSamples();
   <h1 slot="title" id="pulse-heading" class="display mt-4 text-center text-title wrap-anywhere sm:text-title-lg"><PilloTitle name={game.name} /></h1>
   <section class="mt-6" aria-labelledby="pulse-heading">
     <PulseGame client:only="react" puzzles={samples} />
+    <noscript><p>{game.name} needs JavaScript.</p></noscript>
   </section>
 </GamePage>
 </Layout>

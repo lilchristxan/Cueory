@@ -28,9 +28,10 @@ const { game } = Astro.props;
     <div class="mt-4 flex justify-center" data-testid="play-settings">
       <GameSettings client:only="react" title="game settings" label="game settings" />
     </div>
-    <noscript><p class="mt-4 text-center">{game.name} needs JavaScript.</p></noscript>
+    <noscript><p class="mt-4 text-center">game settings need JavaScript.</p></noscript>
     <slot />
     {/* Private stats (D-76) for this game only: off until the student turns them on, kept only in this browser. */}
     <GameStatsPanel client:only="react" games={[game.id]} />
 </article>
 <GameResultsHost client:only="react" />
+<noscript><p>game results and sharing need JavaScript.</p></noscript>

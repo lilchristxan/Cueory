@@ -13,6 +13,7 @@ const samples = await wordPathSamples();
   <h1 slot="title" id="word-path-heading" class="display mt-4 text-center text-title wrap-anywhere sm:text-title-lg">{game.name}</h1>
   <section class="mt-6" aria-labelledby="word-path-heading">
     <SutureToday client:only="react" puzzles={samples} name={game.name} />
+    <noscript><p>{game.name} needs JavaScript.</p></noscript>
   </section>
 </GamePage>
 </Layout>
