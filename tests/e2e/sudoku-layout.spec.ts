@@ -20,17 +20,20 @@ for (const scheme of ['light', 'dark'] as const) {
     await expect(game(page).getByRole('gridcell')).toHaveCount(81);
     const width = page.viewportSize()!.width;
 
-    // The board keeps 44px squares and, where needed, scrolls within its own region.
+    // The whole board sits inside the panel and the screen, with squares of at least 24 px (WCAG 2.2), in a region
+    // that scrolls on its own only when enlarged text makes the squares wider than the panel.
     const panel = await rect(game(page).locator('.sudoku-panel'));
     const region = game(page).getByRole('region', { name: 'sudoku grid scroll area' });
     const board = await rect(game(page).locator('.sudoku-board'));
     expect(board.left).toBeGreaterThanOrEqual(panel.left - 0.5);
+    expect(board.right).toBeLessThanOrEqual(panel.right + 0.5);
+    expect(board.right).toBeLessThanOrEqual(width);
     await expect(region).toHaveCSS('overflow-x', 'auto');
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
     const boardCells = game(page).getByRole('gridcell');
     const firstCell = await rect(boardCells.first());
-    expect(firstCell.width).toBeGreaterThanOrEqual(44);
-    expect(firstCell.height).toBeGreaterThanOrEqual(44);
+    expect(firstCell.width).toBeGreaterThanOrEqual(24);
+    expect(firstCell.height).toBeGreaterThanOrEqual(24);
     await boardCells.last().scrollIntoViewIfNeeded();
     await expect(boardCells.last()).toBeInViewport({ ratio: 1 });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
@@ -98,8 +101,10 @@ for (const scheme of ['light', 'dark'] as const) {
 
 test('sudoku keeps usable cells in a contained scroll area at 320px with 32px root text', async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 844 });
-  await page.evaluate(() => document.documentElement.style.setProperty('font-size', '32px', 'important'));
   await page.goto('/play');
+  // After the page loads, so the larger root text applies to this page and not the blank one before it.
+  await page.evaluate(() => document.documentElement.style.setProperty('font-size', '32px', 'important'));
+  await expect(page.locator('html')).toHaveCSS('font-size', '32px');
   await expect(game(page).getByRole('gridcell')).toHaveCount(81);
 
   const region = game(page).getByRole('region', { name: 'sudoku grid scroll area' });

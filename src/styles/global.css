@@ -2052,8 +2052,10 @@ html:has(dialog.mode-preview[open]) {
   .sudoku-time { display: flex; align-items: center; gap: calc(var(--spacing) * 2); }
   .sudoku-errors { justify-self: end; }
   .sudoku-board-scroll { inline-size: 100%; overflow-x: auto; }
-  /* Keep 44px squares, including with enlarged root text; the board itself scrolls instead of shrinking its controls. */
-  .sudoku-board { --sudoku-cell-size: clamp(var(--sudoku-cell-min), min(calc((100vh - var(--sudoku-height-reserve)) / 9), calc((100vw - var(--sudoku-width-reserve)) / 9)), var(--sudoku-cell-max)); display: grid; inline-size: max-content; grid-template-rows: repeat(9, var(--sudoku-cell-size)); margin-inline: auto; border: var(--sudoku-box-line) solid var(--color-ink); background: var(--color-ink); }
+  /* Square size: the brief's clamp(44px, min((100vh − 460px) / 9, (100vw − 150px) / 9), 84px), but never wider than
+     the panel allows (100cqi minus the outer box lines), so the whole board fits a 390 px phone (D-pending). It never
+     drops below --sudoku-cell-floor, which grows with root text: with enlarged text the board scrolls in its own box. */
+  .sudoku-board { --sudoku-cell-size: max(var(--sudoku-cell-floor), min(calc((100cqi - var(--sudoku-board-frame)) / 9), clamp(var(--sudoku-cell-min), min(calc((100vh - var(--sudoku-height-reserve)) / 9), calc((100vw - var(--sudoku-width-reserve)) / 9)), var(--sudoku-cell-max)))); display: grid; inline-size: max-content; grid-template-rows: repeat(9, var(--sudoku-cell-size)); margin-inline: auto; border: var(--sudoku-box-line) solid var(--color-ink); background: var(--color-ink); }
   .sudoku-row { display: grid; grid-template-columns: repeat(9, var(--sudoku-cell-size)); }
   .sudoku-cell { position: relative; display: flex; inline-size: var(--sudoku-cell-size); block-size: var(--sudoku-cell-size); align-items: center; justify-content: center; border: 0; border-inline-end: var(--sudoku-line) solid var(--color-line); border-block-end: var(--sudoku-line) solid var(--color-line); background: var(--color-page); color: var(--color-ink); cursor: pointer; font-size: calc(var(--sudoku-cell-size) / 2); line-height: 1; }
   .sudoku-cell:last-child { border-inline-end: 0; }

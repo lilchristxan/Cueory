@@ -152,7 +152,6 @@ function Board({ puzzle, name }: Props) {
         role="region"
         aria-label={`${name} letters scroll area`}
         aria-describedby={help}
-        tabIndex={0}
       >
         <div
           ref={board}
@@ -179,7 +178,7 @@ function Board({ puzzle, name }: Props) {
                     ? 'bg-surface ring-2 ring-inset ring-ink-soft'
                     : 'bg-transparent';
               return (
-                <div key={c} role="gridcell" aria-colindex={c + 1} aria-selected={inPick}>
+                <div key={c} role="gridcell" aria-colindex={c + 1} aria-selected={inPick} className="sm:p-0.5">
                   <button
                     ref={(element) => { if (element) buttons.current.set(index, element); else buttons.current.delete(index); }}
                     type="button"
@@ -187,7 +186,7 @@ function Board({ puzzle, name }: Props) {
                     disabled={done}
                     aria-label={cellLabel(state, puzzle, cell)}
                     data-cell={`${r},${c}`}
-                    className={`flex aspect-square w-full items-center justify-center overflow-hidden rounded-full text-base font-bold sm:text-xl ${look}`}
+                    className={`flex aspect-square w-full items-center justify-center overflow-hidden rounded-full text-base leading-none font-bold sm:text-xl sm:leading-none ${look}`}
                     onFocus={() => { setFocused(index); setState((current) => moveCursor(current, puzzle, cell)); }}
                     onPointerEnter={(event) => hover(event, cell)}
                     onClick={() => choose(cell)}
