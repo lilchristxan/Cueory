@@ -136,7 +136,7 @@ describe('Sudoku generator performance and varied days (W08)', () => {
 });
 
 describe('W08-2 pause and resume', () => {
-  it('shows only givens while paused and restores entries, X marks and conflicts', () => {
+  it('hides every number while paused, givens too, and restores entries, X marks and conflicts', () => {
     const { puzzle } = generateSudoku('pause-restore', 'easy');
     const entryIndex = puzzle.indexOf(0);
     const markIndex = puzzle.findIndex((value, index) => value === 0 && index !== entryIndex);
@@ -153,8 +153,13 @@ describe('W08-2 pause and resume', () => {
     expect(entry).toEqual({ given: false, value: conflictDigit, marked: false, hidden: false });
     expect(mark).toEqual({ given: false, value: 0, marked: true, hidden: false });
     expect(sudokuCellPresentation(entries, puzzle, marks, givenIndex, true)).toEqual({
-      given: true, value: puzzle[givenIndex], marked: false, hidden: false,
+      given: true, value: 0, marked: false, hidden: true,
     });
+    for (let index = 0; index < 81; index++) {
+      const shown = sudokuCellPresentation(entries, puzzle, marks, index, true);
+      expect(shown.value).toBe(0);
+      expect(shown.hidden).toBe(true);
+    }
     for (const index of [entryIndex, markIndex]) {
       expect(sudokuCellPresentation(entries, puzzle, marks, index, true)).toEqual({
         given: false, value: 0, marked: false, hidden: true,
@@ -167,12 +172,13 @@ describe('W08-2 pause and resume', () => {
     expect(conflictIndices(entries)).toEqual(conflicts);
   });
 
-  it('takes visible givens from the puzzle, not from mutable entries', () => {
+  it('takes visible givens from the puzzle, not from mutable entries, once resumed', () => {
     const { puzzle } = generateSudoku('pause-givens', 'medium');
     const index = puzzle.findIndex((value) => value !== 0);
     const entries = [...puzzle];
     entries[index] = 0;
-    expect(sudokuCellPresentation(entries, puzzle, new Set(), index, true).value).toBe(puzzle[index]);
+    expect(sudokuCellPresentation(entries, puzzle, new Set(), index, true).value).toBe(0);
+    expect(sudokuCellPresentation(entries, puzzle, new Set(), index, false)).toMatchObject({ given: true });
   });
 
   it('stops the clock while paused or solved, resuming from its previous second', () => {
@@ -185,7 +191,7 @@ describe('W08-2 pause and resume', () => {
 
 
 describe('W08-2: paused displays across all difficulty levels', () => {
-  it.each(levels)('%s keeps all and only its original givens visible while paused', (level) => {
+  it.each(levels)('%s hides every number while paused, givens included', (level) => {
     const puzzle = generateSudoku('pause-every-square', level).puzzle;
     const entries = puzzle.map((value) => value || 9);
     const emptyIndices = puzzle.flatMap((value, index) => value === 0 ? [index] : []);
@@ -194,11 +200,10 @@ describe('W08-2: paused displays across all difficulty levels', () => {
     const preservedMarks = [...marks];
 
     const cells = puzzle.map((_, index) => sudokuCellPresentation(entries, puzzle, marks, index, true));
-    expect(cells.filter((cell) => cell.value > 0)).toHaveLength(LEVEL_RULES[level].givens);
+    expect(cells.filter((cell) => cell.value > 0)).toHaveLength(0);
+    expect(cells.filter((cell) => cell.given)).toHaveLength(LEVEL_RULES[level].givens);
     expect(cells.every((cell, index) =>
-      puzzle[index]
-        ? cell.given && cell.value === puzzle[index] && !cell.hidden && !cell.marked
-        : !cell.given && cell.value === 0 && cell.hidden && !cell.marked
+      cell.given === (puzzle[index] !== 0) && cell.value === 0 && cell.hidden && !cell.marked
     )).toBe(true);
     expect(entries).toEqual(preservedEntries);
     expect([...marks]).toEqual(preservedMarks);
