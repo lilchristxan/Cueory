@@ -64,11 +64,12 @@ const later = dailyGames.filter((game) => !game.ready);
     </p>
     {/* Home screen tip (L2): only after puzzles finished on 3 different days, decided on page load, never mid-game. */}
     <HomeScreenTip client:only="react" />
+    <noscript><p>to add cueory to your home screen, use your browser's menu. daily games need JavaScript.</p></noscript>
     {/* Shared game settings (issue #734): theme, high contrast, reduced motion and sound for every game below. */}
     <div class="mt-6" data-testid="play-settings">
       <GameSettings client:only="react" title="game settings" label="game settings" />
     </div>
-    <noscript><p>to add cueory to your home screen, use your browser's menu. daily games need JavaScript.</p></noscript>
+    <noscript><p>game settings need JavaScript.</p></noscript>
 
     <section class="mt-12" aria-labelledby="pulse-heading">
       <h2 id="pulse-heading" class="display text-2xl sm:text-3xl"><PilloTitle name={pulse.name} /></h2>
