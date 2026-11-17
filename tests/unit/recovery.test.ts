@@ -23,6 +23,7 @@ function fakeAuth({ emit = 'SIGNED_IN', eventUser = 'fake-user-1', redirectType 
       for (const listener of listeners) listener(emit, session(eventUser));
       return { data: { session: session(user), user: session(user).user, redirectType }, error: null };
     }),
+    getSession: vi.fn(async () => ({ data: { session: user ? session(user) : null }, error: null })),
     updateUser: vi.fn(),
   } satisfies RecoveryAuth;
   return { auth, unsubscribe };
@@ -31,7 +32,7 @@ function fakeAuth({ emit = 'SIGNED_IN', eventUser = 'fake-user-1', redirectType 
 describe('establishRecovery (reset form gating)', () => {
   it('opens the form when the exchange emits PASSWORD_RECOVERY for the same user', async () => {
     const { auth, unsubscribe } = fakeAuth({ emit: 'PASSWORD_RECOVERY' });
-    expect(await establishRecovery(async () => auth, at('?code=fake-code-1'))).toEqual({ kind: 'ready', auth });
+    expect(await establishRecovery(async () => auth, at('?code=fake-code-1'))).toEqual({ kind: 'ready', auth, userId: 'fake-user-1' });
     expect(auth.exchangeCodeForSession).toHaveBeenCalledExactlyOnceWith('fake-code-1');
     expect(unsubscribe).toHaveBeenCalledOnce();
     expect(auth.updateUser).not.toHaveBeenCalled();
