@@ -6,7 +6,7 @@ import { dailyGames } from '../../config/games';
 
 const game = dailyGames.find((item) => item.id === 'triage')!;
 ---
-<Layout title={game.name} description={game.line} socialImage="/share/games-scene.png" promo={false}>
+<Layout title={game.name} description={game.line} socialImage="/share/games-scene.png">
 <GamePage game={game}>
   <h1 slot="title" id="sudoku-heading" class="display mt-4 text-center text-title wrap-anywhere sm:text-title-lg">{game.name}</h1>
   {/* sudoku-section and sudoku-mount: sudoku's print rules (global.css) print only the mount. */}

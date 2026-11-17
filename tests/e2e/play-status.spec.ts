@@ -31,6 +31,8 @@ for (const size of [{ width: 390, height: 844 }, { width: 1440, height: 900 }]) 
         await expect(row(page, game)).toContainText('○');
         await expect(row(page, game)).toContainText('not started');
         const box = await row(page, game).getByRole('link').boundingBox();
+        // Each card opens the game's own page (2026-11-17).
+        await expect(row(page, game).getByRole('link')).toHaveAttribute('href', { pulse: '/play/pillo', triage: '/play/sudoku', cueword: '/play/crossword', suture: '/play/word-path' }[game]!);
         expect(box!.height).toBeGreaterThanOrEqual(44);
       }
       await expect(page.getByTestId('play-status-note')).toBeVisible();
@@ -58,7 +60,7 @@ for (const size of [{ width: 390, height: 844 }, { width: 1440, height: 900 }]) 
   });
 }
 
-test('finishing pillo on the page marks it done, and a started round shows in progress', async ({ page }) => {
+test('a started round shows in progress, and pillo finished on its own page shows done back on /play', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/play');
   await expect(row(page, 'pulse')).toHaveAttribute('data-status', 'not-started');
@@ -66,28 +68,48 @@ test('finishing pillo on the page marks it done, and a started round shows in pr
   await expect(row(page, 'suture')).toHaveAttribute('data-status', 'in-progress');
   await expect(row(page, 'suture')).toContainText('◐');
   await expect(row(page, 'suture')).toContainText('in progress');
+  // Each game is on its own page (2026-11-17): with stats kept, a finished game is still marked when you come back.
+  await page.getByTestId('game-stats').getByRole('switch', { name: 'keep my stats' }).click();
+  await row(page, 'pulse').getByRole('link').click();
+  await expect(page).toHaveURL(/\/play\/pillo$/);
   const field = page.getByLabel('your guess', { exact: true });
   await field.fill('grace');
   await field.press('Enter');
   await expect(page.getByTestId('pulse-result')).toContainText('solved.');
   await page.getByTestId('game-result-dialog').getByRole('button', { name: 'close results' }).click();
+  await page.getByRole('link', { name: 'all games' }).click();
   await expect(row(page, 'pulse')).toHaveAttribute('data-status', 'done');
 });
 
-test('each row jumps to its game by keyboard', async ({ page }) => {
+test('each card opens its game by keyboard', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/play');
   const link = row(page, 'triage').getByRole('link');
   await link.focus();
   await page.keyboard.press('Enter');
-  await expect(page).toHaveURL(/#sudoku-heading$/);
+  await expect(page).toHaveURL(/\/play\/sudoku$/);
+  await expect(page.getByTestId('sudoku')).toBeVisible();
+});
+
+test('old links to a game\'s section of /play go on to its own page', async ({ page }) => {
+  for (const [hash, path] of [['#pulse-heading', '/play/pillo'], ['#triage-heading', '/play/sudoku'], ['#sudoku-heading', '/play/sudoku'], ['#crossword-heading', '/play/crossword'], ['#word-path-heading', '/play/word-path']]) {
+    await page.goto('/play' + hash);
+    await expect(page).toHaveURL(new RegExp(path.replaceAll('/', '\\/') + '$'));
+  }
+  // Any other hash stays on the hub.
+  await page.goto('/play#stats-heading');
+  await expect(page.getByRole('heading', { level: 1, name: 'daily games' })).toBeVisible();
+  await expect(page).toHaveURL(/\/play#stats-heading$/);
 });
 
 test.describe('without JavaScript', () => {
   test.use({ javaScriptEnabled: false });
-  test('no status shows, so none can be wrong', async ({ page }) => {
+  test('no status shows, so none can be wrong, and each game is still a plain link', async ({ page }) => {
     await page.goto('/play');
     await expect(page.getByRole('heading', { level: 1, name: 'daily games' })).toBeVisible();
     await expect(list(page)).toHaveCount(0);
+    for (const name of ['pillo', 'sudoku', 'crossword', 'word path']) {
+      await expect(page.getByTestId('play-links').getByRole('link', { name, exact: true })).toBeVisible();
+    }
   });
 });

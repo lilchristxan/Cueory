@@ -27,7 +27,7 @@ test.beforeEach(async ({ page }) => {
     window.print = () => { (window as unknown as { printed: number }).printed += 1; };
   });
   await page.clock.setFixedTime(new Date('2026-11-01T15:00:00'));
-  await page.goto('/play');
+  await page.goto('/play/word-path');
   await expect(game(page)).toBeVisible();
 });
 

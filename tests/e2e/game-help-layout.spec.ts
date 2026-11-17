@@ -6,11 +6,12 @@ import { expect, test, type Page } from '@playwright/test';
  * portrait and landscape phones with enlarged root text.
  */
 
+// Each game is on its own page (2026-11-17).
 const games = [
-  { testId: 'pulse', name: 'pillo' },
-  { testId: 'sudoku', name: 'sudoku' },
-  { testId: 'cueword', name: 'crossword' },
-  { testId: 'suture', name: 'word path' },
+  { testId: 'pulse', name: 'pillo', path: '/play/pillo' },
+  { testId: 'sudoku', name: 'sudoku', path: '/play/sudoku' },
+  { testId: 'cueword', name: 'crossword', path: '/play/crossword' },
+  { testId: 'suture', name: 'word path', path: '/play/word-path' },
 ] as const;
 const screens = [[390, 844], [320, 568], [844, 390]] as const;
 const fonts = [20, 32] as const;
@@ -55,9 +56,9 @@ for (const [width, height] of screens) {
   for (const font of fonts) {
     test(`at ${width}×${height} with ${font}px text, every help dialog stacks its title over full-width rules and keeps text clear of ×`, async ({ page }) => {
       await page.setViewportSize({ width, height });
-      await page.goto('/play');
-      await page.evaluate((size) => document.documentElement.style.setProperty('font-size', `${size}px`, 'important'), font);
       for (const game of games) {
+        await page.goto(game.path);
+        await page.evaluate((size) => document.documentElement.style.setProperty('font-size', `${size}px`, 'important'), font);
         const button = page.getByTestId(game.testId).getByRole('button', { name: `how to play ${game.name}` });
         await button.click();
         const dialog = page.getByRole('dialog', { name: `how to play ${game.name}` });
@@ -107,7 +108,7 @@ for (const [width, height] of screens) {
 }
 
 test('pillo\'s marks are explained in its help, not below the board', async ({ page }) => {
-  await page.goto('/play');
+  await page.goto('/play/pillo');
   const pillo = page.getByTestId('pulse');
   await expect(pillo.getByRole('list', { name: 'your guesses' })).toBeAttached();
   await expect(pillo.getByTestId('pillo-legend')).toHaveCount(0);
@@ -119,7 +120,7 @@ test('pillo\'s marks are explained in its help, not below the board', async ({ p
 });
 
 test('pillo\'s help lists only hard mode and on-screen keyboard under its own settings', async ({ page }) => {
-  await page.goto('/play');
+  await page.goto('/play/pillo');
   await page.getByTestId('pulse').getByRole('button', { name: 'how to play pillo' }).click();
   const terms = page.getByRole('dialog', { name: 'how to play pillo' }).locator('.game-help-settings dt');
   await expect(terms).toHaveText(['hard mode', 'on-screen keyboard only']);

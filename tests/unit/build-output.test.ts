@@ -66,7 +66,9 @@ const initialJsBudget = {
   'learn/video-sample.html': 148178,
   'learn.html': 150346,
   'message.html': 89731,
-  'play.html': 168467,
+  // The hub (2026-11-17): no game loads here any more. Measured from a local Node 24 build of lane8/play-hub; it was
+  // 168,467 with all four games on the page.
+  'play.html': 104558,
   'play/hello-cards.html': 91427,
   'play/stat.html': 96284, // Task 640: measured from a local Node 24.22.2 build, not yet from CI
   // Each game on its own page (2026-11-17, D-pending): these routes stopped being share landings and now load their game.
