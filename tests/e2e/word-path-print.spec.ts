@@ -3,11 +3,11 @@ import { readFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
 
 /**
- * Printing word path for a patient (Task 641). The clock is set to 1 November 2026, so today's puzzle is the first
- * sample (content/games/suture/sample-01.json). window.print is replaced before the click, so no dialog opens.
+ * Printing word path for a patient (Task 641). The clock is set to 6 November 2026, so today's puzzle is the older
+ * word search sample (content/games/suture/sample-06.json); word-path-board.spec.ts prints a board. window.print is replaced before the click, so no dialog opens.
  */
 type Cell = [number, number];
-const sample = JSON.parse(readFileSync(new URL('../../content/games/suture/sample-01.json', import.meta.url), 'utf8')) as {
+const sample = JSON.parse(readFileSync(new URL('../../content/games/suture/sample-06.json', import.meta.url), 'utf8')) as {
   words: { answer: string; path: Cell[] }[];
 };
 
@@ -22,7 +22,7 @@ test.beforeEach(async ({ page }) => {
     (window as unknown as { printed: number }).printed = 0;
     window.print = () => { (window as unknown as { printed: number }).printed += 1; };
   });
-  await page.clock.setFixedTime(new Date('2026-11-01T15:00:00'));
+  await page.clock.setFixedTime(new Date('2026-11-06T15:00:00'));
   await page.goto('/play');
   await expect(game(page)).toBeVisible();
 });

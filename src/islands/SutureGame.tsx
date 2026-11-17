@@ -4,6 +4,7 @@ import { dayLabel } from './daily';
 import { localDay, reportRound } from './gameresults';
 import { printGame } from './gameprint';
 import { site } from '../config/site';
+import { announceProgress } from './suturepath';
 import { cellLabel, clearPick, foundWord, isDone, moveCursor, outcomeInWords, parsePuzzle, pick, printableWords, selection, shareLine, startSuture, type Cell, type SuturePuzzle } from './suture';
 
 interface Props { puzzle: SuturePuzzle; name: string }
@@ -19,7 +20,7 @@ const columnClass: Record<number, string> = {
  * A gentle sideways shake for a wrong pick, through the Web Animations API, so no stylesheet is injected (the CSP allows
  * none) and the distance and timing come from the design tokens. Nothing moves when the device asks for reduced motion.
  */
-function shake(element: HTMLElement | null) {
+export function shake(element: HTMLElement | null) {
   if (!element || typeof element.animate !== 'function') return;
   const motion = window.matchMedia?.('(prefers-reduced-motion: reduce)');
   if (motion?.matches) return;
@@ -91,6 +92,8 @@ function Board({ puzzle, name }: Props) {
     }
     setState(next.state);
     setSaid(outcomeInWords(next.state, puzzle, next.outcome));
+    // The day's first word tells /play's daily status list that word path is in progress (#761).
+    if (next.outcome.kind === 'found' && next.state.found.length === 1) announceProgress(localDay(today));
     if (next.outcome.kind === 'miss') shake(board.current);
   };
 

@@ -73,7 +73,7 @@ select ok(
 select ok(
   (select prosrc like '%auth.uid()%' and prosrc like '%max_age_seconds constant integer := 600%'
      from pg_proc where oid = 'public.delete_my_account(uuid)'::regprocedure),
-  'delete_my_account keeps auth.uid() and the fresh-sign-in check');
+  'delete_my_account keeps auth.uid() and the recent signed authentication-event check');
 select is((select count(*)::int from pg_proc p join pg_namespace n on n.oid = p.pronamespace
             where n.nspname = 'public' and p.proname = 'delete_my_account'), 1,
   'only the identity-bound delete_my_account exists; the zero-argument form is gone');
@@ -100,30 +100,32 @@ select lives_ok($$ select public.update_display_name('verified student') $$,
   'aal2 can change the display name through its existing rate-limited RPC');
 select results_eq($$ select display_name from public.profiles $$,
   $$ values ('verified student') $$, 'aal2 profile change was stored');
--- Check the later MFA migration also preserves the Task 302 recent-token gate.
+-- Check the latest migration preserves the recent server-signed authentication-event gate.
 select ok(
   (select prosrc like '%max_age_seconds constant integer := 600%'
      from pg_proc where oid = 'public.delete_my_account(uuid)'::regprocedure),
-  'the MFA delete RPC retains the ten-minute token check');
+  'the MFA delete RPC retains the ten-minute authentication-event check');
 select ok(
   (select prosrc like '%public.display_name_ok(clean_name)%'
      from pg_proc where oid = 'public.update_display_name(text)'::regprocedure),
   'the MFA name RPC retains the single server-side validation rule');
 select throws_ok($$ select public.delete_my_account('00000000-0000-4000-8000-000000000001'::uuid) $$,
   '28R01', 'please sign in again to delete your account',
-  'aal2 without a token issue time cannot delete an account');
+  'aal2 without a recent signed AMR event cannot delete an account');
 select set_config('request.jwt.claims', jsonb_build_object(
   'sub', '00000000-0000-4000-8000-000000000001', 'role', 'authenticated',
-  'aal', 'aal2', 'iat', extract(epoch from now())::bigint - 601)::text, true);
+  'aal', 'aal2', 'iat', extract(epoch from now())::bigint,
+  'amr', jsonb_build_array(jsonb_build_object('method', 'password', 'timestamp', extract(epoch from now())::bigint - 601)))::text, true);
 select throws_ok($$ select public.delete_my_account('00000000-0000-4000-8000-000000000001'::uuid) $$,
   '28R01', 'please sign in again to delete your account',
-  'aal2 with an eleven-minute-old token cannot delete an account');
+  'aal2 with a freshly refreshed token but stale authentication cannot delete');
 select set_config('request.jwt.claims', jsonb_build_object(
   'sub', '00000000-0000-4000-8000-000000000001', 'role', 'authenticated',
-  'aal', 'aal2', 'iat', 'invalid')::text, true);
+  'aal', 'aal2', 'iat', extract(epoch from now())::bigint,
+  'amr', jsonb_build_array(jsonb_build_object('method', 'password', 'timestamp', 'invalid')))::text, true);
 select throws_ok($$ select public.delete_my_account('00000000-0000-4000-8000-000000000001'::uuid) $$,
   '28R01', 'please sign in again to delete your account',
-  'aal2 with a nonnumeric token issue time cannot delete an account');
+  'aal2 with a malformed AMR timestamp cannot delete an account');
 select set_config('request.jwt.claims', jsonb_build_object(
   'sub', '00000000-0000-4000-8000-000000000001', 'role', 'authenticated',
   'aal', 'aal2', 'iat', extract(epoch from now())::bigint - 30)::text, true);
@@ -133,7 +135,8 @@ select throws_ok($$ select public.delete_my_account('00000000-0000-4000-8000-000
 -- A recently issued token plus verified MFA can still delete this test account.
 select set_config('request.jwt.claims', jsonb_build_object(
   'sub', '00000000-0000-4000-8000-000000000001', 'role', 'authenticated',
-  'aal', 'aal2', 'iat', extract(epoch from now())::bigint - 540)::text, true);
+  'aal', 'aal2', 'iat', extract(epoch from now())::bigint,
+  'amr', jsonb_build_array(jsonb_build_object('method', 'password', 'timestamp', extract(epoch from now())::bigint - 540)))::text, true);
 select lives_ok($$ select public.delete_my_account('00000000-0000-4000-8000-000000000001'::uuid) $$,
   'aal2 can still delete its own account');
 

@@ -246,6 +246,9 @@
 
 /* Pillo rules are a separate entry: always emit their shared theme variables. */
 @theme static {
+  /* ---------- Shared game settings (#734); static so the panel's own stylesheet can always use it ---------- */
+  --border-game-settings: 1px;      /* the shared game settings button's rim and the lines between its rows (#734) */
+
   /* ---------- pillo, the blister-pack word game on /play (Task 114) ----------
      Pill colors by mark (letters on them also carry ● ○ ·, so color is never the only signal). Evening values are in
      the two Evening copies below; tests/unit/pulse.test.ts checks every letter on its pill for AA contrast. */
