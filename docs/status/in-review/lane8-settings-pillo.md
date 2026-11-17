@@ -1,0 +1,1 @@
+status: Lane 8, pillo settings: its high contrast switch is now the shared game setting (#734), so it is remembered and turns on high contrast for every game; hard mode and on-screen keyboard only stay pillo-only for the visit. /privacy wording updated to match.

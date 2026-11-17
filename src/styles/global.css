@@ -364,9 +364,12 @@
   }
 
   /* Glassy pill button: translucent brand glass, a crisp light rim, a small soft shadow (D-62). */
+  /* It never grows past its column: with large text on a narrow screen (320px, 32px text) its words wrap inside it. */
   .glass-button {
     display: inline-block;
+    max-inline-size: 100%;
     padding: calc(var(--spacing) * 3.5) calc(var(--spacing) * 8);
+    overflow-wrap: break-word;
     border-radius: var(--radius-pill);
     color: var(--color-on-button);
     text-decoration: none;
@@ -1103,9 +1106,17 @@ html:has(dialog.menu-panel[open]) {
     gap: calc(var(--spacing) * 3);
   }
 
+  /* With large text on a narrow phone the dots wrap between the arrows, so the arrows never leave the screen or shrink. */
+  .modes-controls > .vial-arrow {
+    flex-shrink: 0;
+  }
+
   .modes-dots {
     display: flex;
+    min-inline-size: 0;
+    flex-wrap: wrap;
     align-items: center;
+    justify-content: center;
     gap: calc(var(--spacing) * 1.5);
   }
 
@@ -1617,6 +1628,24 @@ html:has(dialog.menu-panel[open]) {
     font-variant-caps: all-small-caps;
     letter-spacing: var(--tracking-label);
   }
+
+  /*
+    The finished-game card's close button (issue 743) floats in the top corner and sticks there while the card scrolls, so
+    large text on a narrow screen can neither push it off the edge nor scroll it out of sight. Focused controls stop
+    below it.
+  */
+  .result-dialog {
+    scroll-padding-block-start: calc(var(--tap-min) + var(--spacing) * 2);
+  }
+
+  .result-dialog-close {
+    position: sticky;
+    inset-block-start: 0;
+    z-index: 1;
+    float: inline-end;
+    margin-inline-start: calc(var(--spacing) * 3);
+    margin-block-end: calc(var(--spacing) * 2);
+  }
 }
 
 html:has(dialog.mode-preview[open]) {
@@ -2108,25 +2137,41 @@ html:has(dialog.mode-preview[open]) {
   .sudoku-number-row button { min-inline-size: var(--tap-min); min-block-size: var(--tap-min); border: var(--sudoku-line) solid var(--color-control); border-radius: var(--radius-md); background: var(--color-page); color: var(--color-ink); font-weight: 700; }
   /* The labels stay on one line while they fit and wrap at large text sizes, so the longer "auto candidates" label
      (issue 720) never pushes the page sideways at 320px with 32px root text. */
-  .sudoku-setting-button { display: inline-flex; max-inline-size: 100%; min-block-size: var(--tap-min); align-items: center; gap: calc(var(--spacing) * 2); border: 0; background: transparent; color: var(--color-ink); text-align: start; cursor: pointer; }
+  .sudoku-setting-button { display: inline-flex; max-inline-size: 100%; min-block-size: var(--tap-min); align-items: center; gap: calc(var(--spacing) * 2); border: 0; background: transparent; color: var(--color-ink); text-align: start; overflow-wrap: anywhere; cursor: pointer; }
   .sudoku-solved { margin-block-start: calc(var(--spacing) * 6); padding: calc(var(--spacing) * 5); border: var(--sudoku-line) solid var(--color-line); border-radius: var(--radius-lg); text-align: center; }
   .sudoku-overlay { position: fixed; inset: 0; inline-size: 100%; block-size: 100%; max-inline-size: none; max-block-size: none; margin: 0; padding: calc(var(--spacing) * 5); border: 0; background: rgb(var(--shadow-tint) / var(--scrim-alpha)); color: var(--color-ink); backdrop-filter: blur(var(--blur-scrim)); }
   .sudoku-overlay[open] { display: flex; align-items: center; justify-content: center; }
   .sudoku-overlay::backdrop { background: transparent; }
   /* The card always fits the screen and scrolls inside itself. */
   .sudoku-settings { inline-size: min(100%, var(--container-prose)); max-block-size: 100%; overflow: auto; overscroll-behavior: contain; padding: calc(var(--spacing) * 6); border-radius: var(--radius-xl); background: var(--color-page); box-shadow: var(--shadow-lift); }
-  .sudoku-settings-heading { display: flex; align-items: center; justify-content: space-between; }
-  .sudoku-settings h3 { font-size: var(--text-2xl); }
+  /* The close button floats in the top corner and sticks there while the card scrolls (issue 743); the title wraps beside it. */
+  .sudoku-settings { scroll-padding-block-start: calc(var(--tap-min) + var(--spacing) * 2); }
+  .sudoku-settings-heading { display: contents; }
+  .sudoku-settings-heading .sudoku-icon-button { position: sticky; inset-block-start: 0; z-index: 1; float: inline-end; margin-inline-start: calc(var(--spacing) * 3); }
+  .sudoku-settings h3 { display: flex; float: inline-start; min-block-size: var(--tap-min); max-inline-size: 100%; align-items: center; font-size: var(--text-2xl); overflow-wrap: break-word; }
+  .sudoku-settings fieldset:first-of-type { clear: both; }
   .sudoku-settings fieldset { margin-block-start: calc(var(--spacing) * 5); border: 0; padding: 0; }
   .sudoku-settings legend { padding-block-end: calc(var(--spacing) * 2); color: var(--color-ink-soft); font-size: var(--text-sm); }
   .sudoku-option { display: flex; min-block-size: var(--tap-min); align-items: center; justify-content: space-between; gap: calc(var(--spacing) * 4); border-block-start: var(--sudoku-line) solid var(--color-line); padding-block: calc(var(--spacing) * 2); cursor: pointer; }
-  .sudoku-option span { display: flex; flex-direction: column; }
+  .sudoku-option span { display: flex; min-inline-size: 0; flex-direction: column; overflow-wrap: anywhere; }
   .sudoku-check-option { justify-content: flex-start; }
   .sudoku-option input { flex: none; }
   .sudoku-settings fieldset + fieldset { margin-block-start: calc(var(--spacing) * 6); }
   .sudoku-option small { color: var(--color-ink-soft); }
   .sudoku-option input { inline-size: calc(var(--spacing) * 6); block-size: calc(var(--spacing) * 6); accent-color: var(--color-button); }
   .sudoku-print-footer { display: none; }
+  /* Narrow screens keep more room for the settings text (320px with 32px root text, issue 743). */
+  @media (width < 40rem) {
+    .sudoku-overlay, dialog.game-settings-overlay { padding: calc(var(--spacing) * 2); }
+    .sudoku-settings, .game-settings-overlay .game-settings { padding: calc(var(--spacing) * 4); }
+    /*
+      The 6 × 8 word path board bleeds into the card's padding (-mx-6). With 32px text on a 320px screen its squares
+      need more room than that, and it used to spill past the card on the right only, ending under a pixel from the
+      screen edge (over it with some fonts). It now stays centred on the card, so it spills evenly and fits the screen.
+      With room to spare the offset is zero.
+    */
+    .wordpath[data-format="path"] .wordpath-board { position: relative; inset-inline-start: calc(50% + var(--spacing) * 6); translate: -50% 0; }
+  }
   @media (orientation: portrait), (max-width: 50rem) {
     /* The number pad's layout lives with .sudoku-pad-wrap above (container queries on the panel's width). */
     .sudoku-toolbar { grid-template-columns: repeat(2, minmax(0, 1fr)); }

@@ -60,35 +60,59 @@ requested; removing them would need a build-script change (`package.json`, Chris
 
 ### JavaScript per page
 
-Every page starts from the same floor of **76.8 KiB**: React (63 KiB) for the footer's flag button, the offline
-helper `register-sw.js` (4.0 KiB), the flag button itself (3.6 KiB) and the small menu, account-corner and theme
-scripts. What a page adds on top of that floor:
+Corrected on staging `19d929e8` (lane 9, perf guard): the first version of this table came from a copy of the scanner
+that missed the small shared chunks each script imports (about 11 KiB on every page). The numbers below come from the
+scanner itself (`tests/unit/perf-scan.ts`), the same one each route's budget uses.
+
+Every page starts from the same floor of **87.8 KiB**: React (63.4 KiB plus 4.6 KiB of React helpers) for the footer's
+flag button, the offline helper `register-sw.js` (4.0 KiB), the flag button and its helpers (7.3 KiB, including
+the 1.5 KiB loader that fetches the Supabase client only when accounts are on) and the small menu, search, account-corner
+and theme scripts. What a page adds on top of that floor:
 
 | Page type | Pages | Lightest | Heaviest | Heaviest page |
 | --- | ---: | ---: | ---: | --- |
-| Marketing (home, about, legal, support, 404, …) | 13 | 76.8 KiB | 83.6 KiB | `index.html` |
-| Study screens (`learn`, `learn/*`) | 12 | 76.8 KiB | 81.4 KiB | `learn/study-skills/fill-in.html` |
-| Account (sign-in, sign-up, account, start, progress) | 8 | 77.5 KiB | 91.8 KiB | `signup.html` |
-| Games page (`play`) | 1 | 113.5 KiB | 113.5 KiB | `play.html` |
-| Single game pages (`play/*`) | 6 | 76.8 KiB | 76.8 KiB | `play/word-path.html` |
-| Internal previews and admin (`preview/*`, `admin/*`) | 13 | 76.8 KiB | 81.8 KiB | `preview/admin-flags.html` |
+| Marketing (home, about, legal, support, 404, …) | 13 | 87.8 KiB | 97.3 KiB | `index.html` |
+| Study screens (`learn`, `learn/*`) | 12 | 87.8 KiB | 97.4 KiB | `learn/study-skills/cards.html` |
+| Account (sign-in, sign-up, account, start, progress) | 8 | 92.2 KiB | 131.9 KiB | `account.html` |
+| Games page (`play`) | 1 | 137.9 KiB | 137.9 KiB | `play.html` |
+| Single game pages (`play/*`) | 6 | 87.8 KiB | 87.8 KiB | `play/word-path.html` |
+| Internal previews and admin (`preview/*`, `admin/*`) | 13 | 87.8 KiB | 95.8 KiB | `preview/admin-flags.html` |
 
-`/play` is the heaviest page: the four games' islands (word path 8.9, crossword 8.6, sudoku 5.9, pillo 3.9 KiB) and
-the shared settings, stats and results islands sit on top of the floor.
+The anatomy lab's preview page is left out of the internal row: on a build that shows drafts it carries the lab
+itself and has its own limit in `tests/unit/build-output.test.ts`.
+
+`/play` is the heaviest page: the four games' islands (word path 8.9, crossword 8.6, sudoku 5.9, pillo 3.9 KiB), the
+shared results code (5.8 KiB) and the settings, stats and share islands sit on top of the floor.
 
 ### Budget per page type
 
-The heaviest page of each type plus 10%, rounded up. A new page must stay under its type's budget; an existing page
-keeps its own, usually tighter, per-route budget in `tests/unit/build-output.test.ts`.
+The heaviest page of each type plus 10%, rounded up to whole KiB. `tests/unit/perf-budget.test.ts` fails the build
+check if any built page goes over its type's budget, so a new page has a limit from day one. Each existing page also
+keeps its own per-route budget in `tests/unit/build-output.test.ts` (10% over its first measurement).
 
 | Page type | Initial JavaScript budget (gzip) |
 | --- | ---: |
-| Marketing | 92 KiB |
-| Study screens | 90 KiB |
-| Account | 101 KiB |
-| Games page (`/play`) | 125 KiB |
-| Single game pages | 85 KiB |
-| Internal previews and admin | 91 KiB |
+| Marketing | 108 KiB |
+| Study screens | 108 KiB |
+| Account | 146 KiB |
+| Games page (`/play`) | 152 KiB |
+| Single game pages | 97 KiB |
+| Internal previews and admin | 106 KiB |
 
 HTML and CSS keep the limits in the first table (40 KiB and 70 KiB per page); today the largest are 19.0 KiB HTML
 and 25.6 KiB CSS, both on `play.html`.
+
+### Islands that load late (lane 9, 2026-11-17)
+
+Checked every island for `client:visible` / `client:idle`; none was changed, for these reasons:
+
+- Most islands are `client:only`. Astro can't delay those (an island takes exactly one `client:` directive), and
+  switching one to a delayable directive means rendering it on the server first, which changes what students without
+  JavaScript see.
+- The remaining `client:load` islands (sign-in, sign-up, password reset, account settings, break ideas) are the main
+  thing on their page and sit at the top of it, so delaying them would only delay the one thing the student came for.
+  The preview pages' islands are internal.
+- The one change that would matter is the footer's flag button: it is the only reason React (68 KiB of the 87.8 KiB
+  floor) loads on pages with no other island, such as about, privacy and the legal pages. Loading the flag form only
+  when the footer comes near the screen, keeping the email link as the fallback, needs a change to `SiteFooter.astro`
+  and the flag tests, so it is proposed for after launch rather than done here.

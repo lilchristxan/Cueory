@@ -1,0 +1,12 @@
+date,level,direction,row,column,answer,clue
+"# the day it plays, YYYY-MM-DD (leave blank to repeat the row above)","# easy (5 by 5), mid (7 by 7) or hard (15 by 15); blank repeats the row above","# across or down","# row of the first letter, counting from 1 at the top","# column of the first letter, counting from 1 at the left","# the answer, letters A to Z only","# the clue, up to 120 characters"
+2026-12-01,easy,across,1,1,SPA,a place to relax with a warm soak
+,,across,2,1,HER,not him
+,,across,3,1,EARTH,the planet we live on
+,,across,4,3,OWE,to need to pay back
+,,across,5,3,WON,came first in a race
+,,down,1,1,SHE,not he
+,,down,1,2,PEA,a small green ball that grows in a pod
+,,down,1,3,ARROW,a sign that points the way
+,,down,3,4,TWO,one plus one
+,,down,3,5,HEN,a farm bird that lays eggs

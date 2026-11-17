@@ -1,0 +1,1 @@
+status: Task 743, game dialog close buttons stay visible: the finished-game card, shared game settings and sudoku settings fit 320px with 32px text (no sideways scroll inside them), and their 44px close button floats in the top corner and stays on screen while the card scrolls.

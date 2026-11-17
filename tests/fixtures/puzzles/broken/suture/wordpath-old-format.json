@@ -1,0 +1,63 @@
+{
+  "status": "sample",
+  "sample": true,
+  "theme": "study break",
+  "grid": [
+    "CAT",
+    "DOG",
+    "SUN"
+  ],
+  "words": [
+    {
+      "answer": "CAT",
+      "path": [
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          2
+        ]
+      ]
+    },
+    {
+      "answer": "DOG",
+      "path": [
+        [
+          1,
+          0
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          1,
+          2
+        ]
+      ]
+    },
+    {
+      "answer": "SUN",
+      "path": [
+        [
+          2,
+          0
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          2,
+          2
+        ]
+      ]
+    }
+  ]
+}

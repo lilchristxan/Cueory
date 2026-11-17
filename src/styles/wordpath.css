@@ -53,6 +53,19 @@
   .wordpath-cols-9 { --wordpath-columns: 9; }
   .wordpath-cols-10 { --wordpath-columns: 10; }
   .wordpath-cols-11 { --wordpath-columns: 11; }
+  /*
+    The 6 × 8 letter board (SuturePathBoard) is as wide as the column, so on a short screen (a phone turned sideways,
+    844 × 390) it grew far taller than the screen and a path could not be dragged from top to bottom without scrolling.
+    Its width is capped so all 8 rows fit the screen's height (squares: width = height × 6 / 8), never below 44px
+    squares. --wordpath-board-edge is the board's own padding and border around the squares.
+  */
+  .wordpath[data-format="path"] .wordpath-board {
+    --wordpath-board-edge: calc(var(--spacing) * 6 + var(--border-board) * 2);
+    max-inline-size: max(
+      calc(var(--tap-min) * 6 + var(--wordpath-board-edge)),
+      calc((100svh - var(--spacing) * 8 - var(--wordpath-board-edge)) * 6 / 8 + var(--wordpath-board-edge))
+    );
+  }
   .wordpath-row { display: grid; grid-template-columns: repeat(var(--wordpath-columns), minmax(var(--wordpath-cell-min), 1fr)); }
 }
 
