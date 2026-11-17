@@ -1,9 +1,20 @@
 ---
 import Layout from '../../layouts/Layout.astro';
-import GameShareLanding from '../../components/GameShareLanding.astro';
+import GamePage from '../../components/GamePage.astro';
+import SudokuGame from '../../islands/SudokuGame';
 import { dailyGames } from '../../config/games';
-const game = dailyGames.find((game) => game.id === 'triage')!;
+
+const game = dailyGames.find((item) => item.id === 'triage')!;
 ---
-<Layout title={game.name} description={game.line} socialImage="/share/games-scene.png" promo={false}>
-  <GameShareLanding name={game.name} line={game.line} playHref="/play#sudoku-heading" />
+<Layout title={game.name} description={game.line} socialImage="/share/games-scene.png">
+<GamePage game={game}>
+  <h1 slot="title" id="sudoku-heading" class="display mt-4 text-center text-title wrap-anywhere sm:text-title-lg">{game.name}</h1>
+  {/* sudoku-section and sudoku-mount: sudoku's print rules (global.css) print only the mount. */}
+  <section class="sudoku-section mt-6" aria-labelledby="sudoku-heading" data-testid="sudoku-section">
+    <div class="sudoku-mount">
+      <SudokuGame client:only="react" />
+      <noscript><p>{game.name} needs JavaScript.</p></noscript>
+    </div>
+  </section>
+</GamePage>
 </Layout>

@@ -46,6 +46,14 @@ export const dailyGames: readonly DailyGame[] = [
   },
 ];
 
+/** Each daily game's own page (each game on its own page, 2026-11-17); /play is the hub that links to them. */
+export const gamePages: Readonly<Record<DailyGame['id'], string>> = Object.freeze({
+  pulse: '/play/pillo',
+  triage: '/play/sudoku',
+  cueword: '/play/crossword',
+  suture: '/play/word-path',
+});
+
 /** The name visitors see for a game. */
 export function gameName(id: DailyGame['id']): string {
   return dailyGames.find((game) => game.id === id)!.name;

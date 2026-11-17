@@ -16,7 +16,7 @@ test.beforeEach(async ({ page }) => {
 for (const scheme of ['light', 'dark'] as const) {
   test(`sudoku layout fits the screen (${scheme})`, async ({ page }) => {
     await page.emulateMedia({ colorScheme: scheme, reducedMotion: 'reduce' });
-    await page.goto('/play');
+    await page.goto('/play/sudoku');
     await expect(game(page).getByRole('gridcell')).toHaveCount(81);
     const width = page.viewportSize()!.width;
 
@@ -50,7 +50,7 @@ for (const scheme of ['light', 'dark'] as const) {
       expect(box.left).toBeGreaterThanOrEqual(rowBox.left - 0.5);
       expect(box.right).toBeLessThanOrEqual(Math.min(rowBox.right, width) + 0.5);
     }
-    for (const control of [game(page).getByRole('checkbox', { name: /auto candidates/ }), game(page).getByRole('button', { name: /settings/ })]) {
+    for (const control of [game(page).getByRole('checkbox', { name: /auto cues/ }), game(page).getByRole('button', { name: /settings/ })]) {
       await expect(control).toBeVisible();
       const box = await rect(control);
       expect(box.left).toBeGreaterThanOrEqual(0);
@@ -101,7 +101,7 @@ for (const scheme of ['light', 'dark'] as const) {
 
 test('sudoku keeps usable cells in a contained scroll area at 320px with 32px root text', async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 844 });
-  await page.goto('/play');
+  await page.goto('/play/sudoku');
   // After the page loads, so the larger root text applies to this page and not the blank one before it.
   await page.evaluate(() => document.documentElement.style.setProperty('font-size', '32px', 'important'));
   await expect(page.locator('html')).toHaveCSS('font-size', '32px');

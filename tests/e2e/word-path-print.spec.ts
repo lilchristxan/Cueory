@@ -25,7 +25,7 @@ test.beforeEach(async ({ page }) => {
     window.print = () => { (window as unknown as { printed: number }).printed += 1; };
   });
   await page.clock.setFixedTime(new Date('2026-11-06T15:00:00'));
-  await page.goto('/play');
+  await page.goto('/play/word-path');
   await expect(game(page)).toBeVisible();
 });
 
@@ -76,10 +76,11 @@ test.describe('word path: print for a patient (Task 641)', () => {
     await expect(page.getByTestId('suture-count')).toBeHidden();
     await expect(page.getByTestId('suture-live')).toBeHidden();
     await expect(game(page).getByText('tap a word\'s first letter')).toBeHidden();
-    // The rest of /play (the page title, the other games, the stats panel) is left out.
-    await expect(page.getByRole('heading', { level: 1, name: 'daily games' })).toBeHidden();
-    await expect(page.locator('#pulse-heading')).toBeHidden();
+    // The rest of the page (the back link, the page title, the settings and the stats panel) is left out.
+    await expect(page.getByRole('link', { name: 'all games' })).toBeHidden();
     await expect(page.locator('#word-path-heading')).toBeHidden();
+    await expect(page.getByTestId('play-settings')).toBeHidden();
+    await expect(page.getByTestId('game-stats')).toBeHidden();
 
     await expect(game(page).getByRole('grid')).toBeVisible();
     const words = page.getByTestId('suture-print-words');
@@ -109,7 +110,8 @@ test.describe('word path: print for a patient (Task 641)', () => {
     await expect(page.getByTestId('suture-words')).toBeHidden();
     await expect(page.getByTestId('suture-print-words')).toBeVisible();
     // Without the button's mark, the rest of the page prints as before.
-    await expect(page.getByRole('heading', { level: 1, name: 'daily games' })).toBeVisible();
+    // (each game on its own page, 2026-11-17: the page's title is the game's name)
+    await expect(page.getByRole('heading', { level: 1, name: 'word path' })).toBeVisible();
   });
 
   test('axe passes with the print button', async ({ page }) => {
@@ -117,4 +119,27 @@ test.describe('word path: print for a patient (Task 641)', () => {
     const results = await axe(page);
     expect(results.violations).toEqual([]);
   });
+});
+
+// Printing from the print button lays the page out at the paper's width, or on a phone at the screen's width. Either
+// way the printed board is centred on the page with all four of its borders inside it, for both board formats.
+test.describe('word path: the printed board is centred inside the page', () => {
+  for (const [format, day] of [['word search', '2026-11-06T15:00:00'], ['6 × 8 board', '2026-11-01T15:00:00']] as const) {
+    for (const width of [390, 816]) {
+      test(`${format} at a ${width} px layout`, async ({ page }) => {
+        await page.setViewportSize({ width, height: 1056 });
+        await page.clock.setFixedTime(new Date(day));
+        await page.reload();
+        await expect(game(page)).toBeVisible();
+        await printButton(page).click();
+        await page.emulateMedia({ media: 'print' });
+        const board = (await game(page).locator('.wordpath-board').boundingBox())!;
+        const pageWidth = await page.evaluate(() => document.documentElement.clientWidth);
+        expect(board.x).toBeGreaterThanOrEqual(0);
+        expect(board.x + board.width).toBeLessThanOrEqual(pageWidth);
+        expect(Math.abs(board.x + board.width / 2 - pageWidth / 2)).toBeLessThanOrEqual(3);
+        expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0);
+      });
+    }
+  }
 });

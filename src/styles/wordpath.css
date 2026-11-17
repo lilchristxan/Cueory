@@ -84,8 +84,14 @@
     color: var(--print-ink) !important;
   }
 
+  /* The screen-only offsets that centre a bleeding board on narrow phones are dropped, so the printed board is centred
+     on the page with all four borders inside it, whatever width the browser lays the page out at. */
   .wordpath-board {
+    position: static !important;
+    inset: auto !important;
+    translate: none !important;
     inline-size: min(100%, var(--print-board)) !important;
+    max-inline-size: 100% !important;
     min-inline-size: 0 !important;
     margin: var(--print-gap) auto 0 !important;
     padding: 0 !important;
@@ -94,7 +100,7 @@
     break-inside: avoid;
   }
 
-  .wordpath-board-scroll { overflow: visible; }
+  .wordpath-board-scroll { overflow: visible; margin-inline: 0 !important; }
 
   /* Paper must fit the whole board even when the browser's root text is enlarged. */
   .wordpath-row { grid-template-columns: repeat(var(--wordpath-columns), minmax(0, 1fr)); }
@@ -156,6 +162,43 @@
     -webkit-user-select: none;
   }
 
+  /* The whole board takes every touch, gaps and edges included, so a drag never scrolls the page mid-word. */
+  .wordpath[data-format="path"] .wordpath-board {
+    touch-action: none;
+  }
+
+  /* Each letter's circle sits inside its square, so a straight line can join it to the next letter of a word. */
+  .wordpath-dot {
+    position: absolute;
+    inset: var(--wordpath-letter-inset);
+  }
+
+  /* The joining lines sit under the letters and never take a touch. */
+  .wordpath-lines {
+    position: absolute;
+    inset: 0;
+    /* Always the board's size, even in the moment after a resize before the lines are measured again: the svg's own
+       width attribute would otherwise keep the old size and push the page sideways on a narrower screen. */
+    inline-size: 100%;
+    block-size: 100%;
+    overflow: visible;
+    pointer-events: none;
+  }
+
+  .wordpath-line {
+    stroke: var(--color-ink);
+    stroke-width: var(--wordpath-line);
+    stroke-linecap: round;
+  }
+
+  .wordpath-line-theme {
+    stroke: var(--color-ink-soft);
+  }
+
+  .wordpath-line-special {
+    stroke: var(--color-button);
+  }
+
   .wordpath-mark {
     position: absolute;
     inset-block-start: 12%;
@@ -179,7 +222,9 @@
 
 @media print {
   .wordpath-mark,
-  .wordpath-step {
+  .wordpath-step,
+  .wordpath-lines,
+  .wordpath-dot {
     display: none !important;
   }
 

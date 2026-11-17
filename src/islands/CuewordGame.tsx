@@ -8,6 +8,7 @@ import ResultBrandMark from './ResultBrandMark';
 import { dayLabel } from './daily';
 import { playSolvedTone } from './solvetone';
 import { useSharedGameSettings } from './GameSettings';
+import PrintLogo from './PrintLogo';
 import {
   announceFirstEntry, arrow, autocheckAll, backspace, check, clueLeavesGrid, countsForStreak, currentWord, deleteLetter, emptyState, enter, getResult,
   isFilledWrong, isLocked, isSolved, loadCrosswordSettings, moveClue, nextWord, numbering, parsePuzzle, previousWord,
@@ -220,10 +221,13 @@ function Board({ puzzle, name }: Props) {
           <button type="button" className="segmented-option" aria-pressed={!pencil} disabled={solved} onClick={() => setPencil(false)}>{!pencil && <span className="segmented-check" aria-hidden="true">✓</span>}pen</button>
           <button type="button" className="segmented-option" aria-pressed={pencil} disabled={solved} onClick={() => setPencil(true)}>{pencil && <span className="segmented-check" aria-hidden="true">✓</span>}pencil</button>
         </div>
+        {/* Check and reveal move to a new row together, never split across two rows (they only stack when even the pair
+            is wider than the column, at the largest text on the narrowest screens). */}
+        <div className="crossword-help-pair">
         {(['check', 'reveal'] as const).map((kind) => (
           <details key={kind} ref={menuRef(kind)} className="crossword-help" data-testid={'crossword-' + kind}
             onToggle={(event) => { const open = event.currentTarget.open; setOpenMenu((current) => open ? kind : current === kind ? null : current); }}>
-            <summary className={quietButton + ' crossword-menu-button'}>{kind}</summary>
+            <summary className={quietButton.replace('px-4', 'px-3') + ' crossword-menu-button'}>{kind}</summary>
             {/* Rendered only while open, so closed menus leave no hidden buttons behind. */}
             {openMenu === kind && (
               <div className="crossword-help-panel crossword-menu-panel" role="group" aria-label={kind}>
@@ -234,6 +238,7 @@ function Board({ puzzle, name }: Props) {
             )}
           </details>
         ))}
+        </div>
         <details ref={menuRef('settings')} className="crossword-help"
           onToggle={(event) => { const open = event.currentTarget.open; setOpenMenu((current) => open ? 'settings' : current === 'settings' ? null : current); }}>
           <summary className="corner-button corner-button-quiet" aria-label="crossword settings">
@@ -280,6 +285,7 @@ function Board({ puzzle, name }: Props) {
         </div>
       )}
 
+      <PrintLogo />
       {puzzle.sample && <p className="text-center text-sm text-ink-soft">today's puzzle is a sample</p>}
       <div className="crossword-timer crossword-no-print mt-2">
         {settings.showTimer && <span className="tabular-nums" data-testid="crossword-time">time: {elapsedText(elapsed)}</span>}

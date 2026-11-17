@@ -74,7 +74,8 @@ for (const colorScheme of ['light', 'dark'] as const) {
           value: { writeText: async (text: string) => { (window as unknown as { copied: string }).copied = text; } },
         });
       });
-      await page.goto('/play');
+      // A game page has the result dialog (each game on its own page, 2026-11-17).
+      await page.goto('/play/pillo');
       await page.evaluate(() => document.documentElement.style.setProperty('font-size', '32px', 'important'));
       await page.waitForLoadState('networkidle');
       await expect(page.locator('html')).toHaveCSS('font-size', '32px');

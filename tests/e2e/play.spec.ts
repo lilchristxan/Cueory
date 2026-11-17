@@ -36,23 +36,22 @@ const live = (page: Page) => page.getByTestId('pulse-live');
 test.describe('daily games: pillo (Task 114)', () => {
   test.beforeEach(async ({ page }) => {
     await page.clock.setFixedTime(new Date('2026-11-01T15:00:00'));
-    await page.goto('/play');
+    await page.goto('/play/pillo');
     await expect(page.getByTestId('pulse')).toBeVisible();
   });
 
   const status = (page: Page) => page.getByTestId('pulse').locator('.pillo-status');
   const strip = (page: Page) => page.getByTestId('pulse-strip').locator('.pillo-strip-pill');
 
-  test('the page names the four games, says the puzzle is a sample, and passes axe', async ({ page }) => {
-    await expect(page.getByRole('heading', { level: 1, name: 'daily games' })).toBeVisible();
-    await expect(page.getByRole('heading', { level: 2, name: 'pillo' })).toBeVisible();
-    await expect(page.getByTestId('sample-note')).toHaveText("today's word is a sample.");
+  test('pillo has its own page, with only pillo on it, and passes axe', async ({ page }) => {
+    // Each game on its own page (2026-11-17): the hub test below names all four games and says they are samples.
+    await expect(page.getByRole('heading', { level: 1, name: 'pillo' })).toBeVisible();
     await expect(status(page)).toHaveText('guess the 5-letter word · 6 of 6 guesses left');
     await expect(strip(page)).toHaveCount(6);
     // Six rows of five pockets, the first one ringed for the first letter.
     await expect(page.getByTestId('pulse').locator('.pillo-pack .pillo-pocket')).toHaveCount(30);
     await expect(page.getByTestId('pulse').locator('.pillo-next')).toHaveCount(1);
-    for (const name of ['crossword', 'sudoku', 'word path']) await expect(page.getByText(name, { exact: true }).first()).toBeVisible();
+    for (const other of ['sudoku', 'cueword', 'suture']) await expect(page.getByTestId(other)).toHaveCount(0);
     const results = await axe(page);
     expect(results.violations.map((v) => `${v.id}: ${v.help}`)).toEqual([]);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
@@ -162,7 +161,7 @@ test.describe('daily games: pillo settings and finish screen (Task 719)', () => 
 
   test.beforeEach(async ({ page }) => {
     await page.clock.setFixedTime(new Date('2026-11-01T15:00:00'));
-    await page.goto('/play');
+    await page.goto('/play/pillo');
     await expect(page.getByTestId('pulse')).toBeVisible();
   });
 
@@ -257,6 +256,24 @@ test.describe('daily games: pillo settings and finish screen (Task 719)', () => 
   });
 });
 
+test.describe('the /play hub (each game on its own page, 2026-11-17)', () => {
+  test('names the four games as cards, says the puzzles are samples once, loads no game, and passes axe', async ({ page }) => {
+    await page.clock.setFixedTime(new Date('2026-11-01T15:00:00'));
+    await page.goto('/play');
+    await expect(page.getByRole('heading', { level: 1, name: 'daily games' })).toBeVisible();
+    await expect(page.getByTestId('sample-note')).toHaveText('for now these are sample puzzles with everyday words.');
+    for (const [id, name, path] of [['pulse', 'pillo', '/play/pillo'], ['triage', 'sudoku', '/play/sudoku'], ['cueword', 'crossword', '/play/crossword'], ['suture', 'word path', '/play/word-path']]) {
+      const card = page.getByTestId(`play-status-${id}`).getByRole('link');
+      await expect(card).toContainText(name);
+      await expect(card).toHaveAttribute('href', path);
+    }
+    for (const game of ['pulse', 'sudoku', 'cueword', 'suture']) await expect(page.getByTestId(game)).toHaveCount(0);
+    const results = await axe(page);
+    expect(results.violations.map((v) => `${v.id}: ${v.help}`)).toEqual([]);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  });
+});
+
 test.describe('daily games on the home page (D-61)', () => {
   test('a calm section after "ways to study" leads to today\'s game', async ({ page }) => {
     await page.goto('/');
@@ -276,7 +293,7 @@ test.describe('daily games on a narrow phone', () => {
     await page.setViewportSize({ width: 320, height: 700 });
     // 3 November: the third sample, "blend".
     await page.clock.setFixedTime(new Date('2026-11-03T15:00:00'));
-    await page.goto('/play');
+    await page.goto('/play/pillo');
     // Two wrong guesses: the game goes on, so the letter keys stay on screen too.
     for (const word of ['plane', 'candy']) {
       await field(page).fill(word);
@@ -290,12 +307,12 @@ test.describe('daily games on a narrow phone', () => {
         .filter((box) => box.left < 0 || box.right > window.innerWidth).length,
     );
     expect(outside).toBe(0);
-    // The three logical QWERTY rows can wrap onto extra visual lines on narrow phones.
+    // The letter keys (a to z, like the crossword's) and the ⌫ / enter row wrap onto extra lines on narrow phones.
     // Check actual touch-target size and non-overlap, not horizontal center order.
     const rows = await page.locator('.pillo-key-row').evaluateAll((rowEls) =>
       rowEls.map((row) => [...row.querySelectorAll('.pillo-key')].map((el) => el.getBoundingClientRect())),
     );
-    expect(rows.length).toBe(3);
+    expect(rows.length).toBe(2);
     const keys = rows.flat();
     for (const key of keys) {
       expect(key.width).toBeGreaterThanOrEqual(44);
@@ -323,12 +340,12 @@ test.describe('daily games: sudoku (Task 625)', () => {
 
   test.beforeEach(async ({ page }) => {
     await page.clock.setFixedTime(new Date('2026-11-01T15:00:00'));
-    await page.goto('/play');
+    await page.goto('/play/sudoku');
     await expect(game(page)).toBeVisible();
   });
 
   test('shows one daily easy puzzle with the approved givens, controls and accessible page', async ({ page }) => {
-    await expect(page.getByRole('heading', { level: 2, name: 'sudoku' })).toHaveCount(1);
+    await expect(page.getByRole('heading', { level: 1, name: 'sudoku' })).toHaveCount(1);
     await expect(cells(page)).toHaveCount(81);
     await expect(grid(page).getByRole('row')).toHaveCount(9);
     for (const row of await grid(page).getByRole('row').all()) await expect(row.getByRole('gridcell')).toHaveCount(9);
@@ -367,20 +384,16 @@ test.describe('daily games: sudoku (Task 625)', () => {
     await expect(grid(page).locator('[data-given="true"]')).toHaveCount(26);
   });
 
-  test('pause keeps original givens visible, conceals private entries and preserves theme settings', async ({ page }) => {
+  test('pause hides every number, givens too, conceals private entries and preserves theme settings', async ({ page }) => {
     const pause = game(page).getByRole('button', { name: 'pause puzzle' });
     await pause.click();
     const before = await game(page).locator('.sudoku-time').innerText();
     await expect(grid(page).locator('[data-given="true"]')).toHaveCount(40);
-    for (const [index, given] of daily.puzzle.entries()) {
+    for (const index of daily.puzzle.keys()) {
       const cell = cells(page).nth(index);
-      if (given) {
-        await expect(cell).toHaveText(String(given));
-        await expect(cell).toHaveAttribute('aria-label', new RegExp(`, ${given}, given$`));
-      } else {
-        await expect(cell).toBeEmpty();
-        await expect(cell).toHaveAttribute('aria-label', /hidden until resumed/);
-      }
+      await expect(cell).toBeEmpty();
+      await expect(cell).toHaveAttribute('aria-label', /, hidden until resumed$/);
+      await expect(cell.locator('.sudoku-paused-mark')).toHaveCount(1);
     }
     await expect(game(page).locator('.is-entered, .is-conflict, .is-identical, .sudoku-mark, .sudoku-candidates')).toHaveCount(0);
     await expect(game(page).locator('.sudoku-cell.is-selected, [role="gridcell"][aria-selected="true"]')).toHaveCount(0);
@@ -398,15 +411,15 @@ test.describe('daily games: sudoku (Task 625)', () => {
     await expect(close).toBeFocused();
     // Theme rows drive the site's own switch (no second theme system); gameboard settings persist on their own.
     await expect(dialog.getByRole('radio')).toHaveCount(3);
-    await dialog.getByRole('checkbox', { name: 'start in auto candidate mode' }).check();
+    await dialog.getByRole('checkbox', { name: 'start in auto cue mode' }).check();
     await page.keyboard.press('Escape');
     await expect(trigger).toBeFocused();
 
     await page.reload();
     await game(page).getByRole('button', { name: /settings/i }).click();
-    await expect(game(page).getByRole('dialog', { name: 'settings' }).getByRole('checkbox', { name: 'start in auto candidate mode' })).toBeChecked();
+    await expect(game(page).getByRole('dialog', { name: 'settings' }).getByRole('checkbox', { name: 'start in auto cue mode' })).toBeChecked();
     await page.keyboard.press('Escape');
-    const hints = game(page).getByRole('checkbox', { name: /auto candidates/i });
+    const hints = game(page).getByRole('checkbox', { name: /auto cues/i });
     await expect(hints).toHaveAttribute('aria-checked', 'true');
     await hints.click();
     await expect(hints).toHaveAttribute('aria-checked', 'false');
@@ -484,12 +497,12 @@ test.describe('daily games: crossword levels (Task 627)', () => {
 
   test.beforeEach(async ({ page }) => {
     await page.clock.setFixedTime(new Date('2026-11-01T15:00:00'));
-    await page.goto('/play');
+    await page.goto('/play/crossword');
     await expect(board(page)).toBeVisible();
   });
 
   test('starts on the labeled 5 by 5 sample with a clue bar and no side clue list', async ({ page }) => {
-    await expect(page.getByRole('heading', { level: 2, name: 'crossword' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: 'crossword' })).toBeVisible();
     await expect(page.getByTestId('crossword-levels').getByLabel('easy, 5 by 5')).toBeChecked();
     await expect(board(page)).toContainText("today's puzzle is a sample");
     await expect(board(page).getByTestId('cueword-clue')).toContainText('1 across');
@@ -607,7 +620,7 @@ test.describe('daily games: crossword levels (Task 627)', () => {
 
   test('phone controls remain 44 px and hard mode never scrolls the page sideways', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
-    await page.goto('/play');
+    await page.goto('/play/crossword');
     await page.getByTestId('crossword-levels').locator('label', { hasText: 'hard' }).click();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
     const hardCell = await board(page).locator('.crossword-cell').first().boundingBox();
@@ -700,8 +713,8 @@ test.describe('daily games: word path (D-71)', () => {
   // Word path's board format (#722) is tested in full in word-path-board.spec.ts, the older word search in word-path.spec.ts.
   test("today's sample is labeled and themed, and axe passes", async ({ page }) => {
     await page.clock.setFixedTime(new Date('2026-11-01T15:00:00'));
-    await page.goto('/play');
-    await expect(page.getByRole('heading', { level: 2, name: 'word path' })).toBeVisible();
+    await page.goto('/play/word-path');
+    await expect(page.getByRole('heading', { level: 1, name: 'word path' })).toBeVisible();
     await expect(page.getByTestId('suture').getByRole('heading', { level: 3, name: 'a calm study break' })).toBeVisible();
     await expect(page.getByTestId('suture')).toContainText('sample puzzle');
     await expect(page.getByTestId('suture').getByRole('gridcell')).toHaveCount(48);
@@ -730,7 +743,7 @@ test.describe('daily games: private stats (D-76)', () => {
 
   test.beforeEach(async ({ page }) => {
     await page.clock.setFixedTime(new Date('2026-11-01T15:00:00'));
-    await page.goto('/play');
+    await page.goto('/play/pillo');
     await expect(toggle(page)).toBeVisible();
   });
 
@@ -789,7 +802,7 @@ test.describe('daily games: private stats (D-76)', () => {
     await toggle(page).click();
     const other = await context.newPage();
     await other.clock.setFixedTime(new Date('2026-11-01T15:00:00'));
-    await other.goto('/play');
+    await other.goto('/play/pillo');
     await expect(toggle(other)).toHaveAttribute('aria-checked', 'true');
 
     await toggle(page).click();
@@ -810,7 +823,7 @@ test.describe('daily games: private stats (D-76)', () => {
     await solvePulse(page);
     const other = await context.newPage();
     await other.clock.setFixedTime(new Date('2026-11-01T15:00:00'));
-    await other.goto('/play');
+    await other.goto('/play/pillo');
     await toggle(other).click();
     await expect(toggle(page)).toHaveAttribute('aria-checked', 'true');
     await toggle(other).click();
@@ -834,14 +847,14 @@ test.describe('daily games: private stats (D-76)', () => {
       await held;
       await route.continue();
     });
-    await page.goto('/play');
+    await page.goto('/play/pillo');
     await expect(page.getByTestId('pulse')).toBeVisible();
     await expect(toggle(page)).toHaveCount(0);
     await solvePulse(page);
 
     const other = await context.newPage();
     await other.clock.setFixedTime(new Date('2026-11-01T15:00:00'));
-    await other.goto('/play');
+    await other.goto('/play/pillo');
     await toggle(other).click();
     await expect(toggle(other)).toHaveAttribute('aria-checked', 'true');
     await toggle(other).click();
@@ -885,7 +898,8 @@ test.describe('daily games: private stats (D-76)', () => {
       (results) => localStorage.setItem('cueory-game-stats', JSON.stringify({ version: 1, results })),
       [{ game: 'pulse', day: '2025-09-27', solved: true, tries: 3 }, recent],
     );
-    await page.reload();
+    // The hub's stats list every game (each game's own page lists only that game).
+    await page.goto('/play');
     await expect(toggle(page)).toHaveAttribute('aria-checked', 'true');
     await expect(pulseStats(page)).toContainText('not played yet.');
     await expect(
@@ -903,7 +917,7 @@ test.describe('daily games: private stats (D-76)', () => {
       await held;
       await route.continue();
     });
-    await page.goto('/play');
+    await page.goto('/play/pillo');
     await expect(page.getByTestId('pulse')).toBeVisible();
     await expect(toggle(page)).toHaveCount(0);
     await solvePulse(page);
@@ -926,7 +940,7 @@ test.describe('daily games: private stats (D-76)', () => {
       await held;
       await route.continue();
     });
-    await page.goto('/play');
+    await page.goto('/play/pillo');
     await expect(page.getByTestId('pulse')).toBeVisible();
     await expect(toggle(page)).toHaveCount(0);
     await solvePulse(page);
@@ -934,7 +948,7 @@ test.describe('daily games: private stats (D-76)', () => {
     // Another tab: turn stats on, finish pillo there, then forget all stats (they stay on).
     const other = await context.newPage();
     await other.clock.setFixedTime(new Date('2026-11-01T15:00:00'));
-    await other.goto('/play');
+    await other.goto('/play/pillo');
     await toggle(other).click();
     await solvePulse(other);
     await expect(pulseStats(other)).toContainText('played 1 day, solved 1.');
@@ -967,19 +981,22 @@ test.describe('daily games: private stats (D-76)', () => {
 test.describe('daily games without JavaScript', () => {
   test.use({ javaScriptEnabled: false });
 
-  test('pillo and sudoku say they need JavaScript', async ({ page }) => {
+  test('the hub still links every game, and each game page says its game needs JavaScript', async ({ page }) => {
     await page.goto('/play');
     // Playwright's text matching skips <noscript>, so this uses CSS.
     await expect(page.locator('noscript p')).toHaveText([
       "to add cueory to your home screen, use your browser's menu. daily games need JavaScript.",
-      "today's status for each game needs JavaScript.",
       'game settings need JavaScript.',
-      'pillo needs JavaScript.',
-      'sudoku needs JavaScript.',
-      'crossword needs JavaScript.',
-      'word path needs JavaScript.',
-      'game results and sharing need JavaScript. you can still browse the game descriptions above.',
     ]);
     await expect(page.getByTestId('sample-note')).toBeVisible();
+    await expect(page.getByTestId('play-links').getByRole('link')).toHaveText(['pillo', 'sudoku', 'crossword', 'word path']);
+    for (const [path, name] of [['/play/pillo', 'pillo'], ['/play/sudoku', 'sudoku'], ['/play/crossword', 'crossword'], ['/play/word-path', 'word path']]) {
+      await page.goto(path);
+      await expect(page.locator('noscript p')).toHaveText([
+        'game settings need JavaScript.',
+        `${name} needs JavaScript.`,
+        'game results and sharing need JavaScript.',
+      ]);
+    }
   });
 });

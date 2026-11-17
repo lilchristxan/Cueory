@@ -21,7 +21,7 @@ for (const [size, width, height] of [['phone', 390, 844], ['tablet', 820, 1180],
     test('Sudoku keyboard and accessible controls: ' + size + ' / ' + scheme, async ({ page }) => {
       await page.setViewportSize({ width, height });
       await page.emulateMedia({ colorScheme: scheme, reducedMotion: 'reduce' });
-      await page.goto('/play');
+      await page.goto('/play/sudoku');
       await expect(game(page)).toBeVisible();
       await expect(cells(page)).toHaveCount(81);
 
@@ -83,7 +83,7 @@ for (const colorScheme of ['light', 'dark'] as const) {
     async ({ page }, testInfo) => {
       await page.setViewportSize({ width: 390, height: 844 });
       await page.emulateMedia({ colorScheme, reducedMotion: 'reduce' });
-      await page.goto('/play');
+      await page.goto('/play/sudoku');
       await expect(game(page)).toBeVisible();
       await cells(page).nth(empty).click();
 

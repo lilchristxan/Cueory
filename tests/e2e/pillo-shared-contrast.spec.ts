@@ -14,7 +14,7 @@ test.beforeEach(async ({ page }) => {
 });
 
 test('pillo high contrast and the shared high contrast are one switch, remembered on this device', async ({ page }) => {
-  await page.goto('/play');
+  await page.goto('/play/pillo');
   const pillo = page.getByTestId('pulse');
   await expect(pillo).toBeVisible();
   await pillo.getByText('pillo settings').click();

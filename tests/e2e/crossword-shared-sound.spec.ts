@@ -36,7 +36,7 @@ for (const shared of [true, false]) {
         constructor() { counted.tones += 1; throw new Error('no audio in tests'); }
       };
     }, shared);
-    await page.goto('/play');
+    await page.goto('/play/crossword');
     await expect(board(page)).toBeVisible();
     await solve(page);
     expect(await tones(page)).toBe(shared ? 1 : 0);

@@ -21,24 +21,24 @@ for (const [size, width, height] of [['phone', 390, 844], ['desktop', 1440, 900]
   test(`sudoku modes, undo, clear and check by keyboard and tap: ${size}`, async ({ page }) => {
     await page.setViewportSize({ width, height });
     await page.emulateMedia({ reducedMotion: 'reduce' });
-    await page.goto('/play');
+    await page.goto('/play/sudoku');
     await expect(cells(page)).toHaveCount(81);
     const mode = game(page).getByTestId('sudoku-mode');
 
-    // Space switches to candidate mode; numbers then add small candidates.
+    // Space switches to cue mode; numbers then add small cues.
     await cells(page).nth(open[0]!).click();
     await page.keyboard.press('Space');
-    await expect(mode.getByRole('button', { name: 'candidate' })).toHaveAttribute('aria-pressed', 'true');
+    await expect(mode.getByRole('button', { name: 'cue', exact: true })).toHaveAttribute('aria-pressed', 'true');
     await page.keyboard.press('3');
     await page.keyboard.press('5');
-    await expect(cells(page).nth(open[0]!)).toHaveAttribute('aria-label', /empty, candidates 3, 5/);
+    await expect(cells(page).nth(open[0]!)).toHaveAttribute('aria-label', /empty, cues 3, 5/);
     await expect(cells(page).nth(open[0]!)).toHaveClass(/has-candidates/);
 
     // Holding Shift flips back to normal for that moment only.
     await page.keyboard.down('Shift');
     await expect(mode.getByRole('button', { name: 'normal' })).toHaveAttribute('aria-pressed', 'true');
     await page.keyboard.up('Shift');
-    await expect(mode.getByRole('button', { name: 'candidate' })).toHaveAttribute('aria-pressed', 'true');
+    await expect(mode.getByRole('button', { name: 'cue', exact: true })).toHaveAttribute('aria-pressed', 'true');
 
     // Tap back to normal and enter a wrong number: it is marked wrong with a slash and the word "wrong".
     await mode.getByRole('button', { name: 'normal' }).click();
@@ -76,9 +76,9 @@ for (const [size, width, height] of [['phone', 390, 844], ['desktop', 1440, 900]
     await expect(cells(page).nth(open[2]!)).toHaveClass(/is-wrong/);
     await expect(live(page)).toContainText('1 square is wrong');
 
-    // Auto candidates fill every empty square.
-    await game(page).getByRole('checkbox', { name: /auto candidates/ }).click();
-    await expect(cells(page).nth(open[3]!)).toHaveAttribute('aria-label', /empty, candidates/);
+    // Auto cues fill every empty square.
+    await game(page).getByRole('checkbox', { name: /auto cues/ }).click();
+    await expect(cells(page).nth(open[3]!)).toHaveAttribute('aria-label', /empty, cues/);
 
     for (const box of await game(page).locator('.sudoku-tools button').evaluateAll((buttons) => buttons.map((b) => b.getBoundingClientRect().toJSON()))) {
       expect(box.width).toBeGreaterThanOrEqual(44);
@@ -90,7 +90,7 @@ for (const [size, width, height] of [['phone', 390, 844], ['desktop', 1440, 900]
 }
 
 test('sudoku stats stay off until stats are on, then show each level', async ({ page }) => {
-  await page.goto('/play');
+  await page.goto('/play/sudoku');
   await expect(cells(page)).toHaveCount(81);
   await game(page).getByRole('button', { name: 'sudoku stats' }).click();
   await expect(game(page).getByTestId('sudoku-stats')).toContainText('stats are off');

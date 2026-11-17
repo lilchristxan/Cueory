@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import sharp from 'sharp';
 import { describe, expect, it, vi } from 'vitest';
 import { dailyGames, gameName } from '../../src/config/games';
@@ -37,13 +37,12 @@ describe('share links go to the exact tool', () => {
     expect([...GAME_IDS].sort()).toEqual(dailyGames.map((game) => game.id).sort());
   });
 
-  it("points each game at its own section of /play, using heading ids the page really has", () => {
-    const play = read('src/pages/play.astro');
+  it('points each game at its own page, which the site really has (each game on its own page, 2026-11-17)', () => {
     for (const id of GAME_IDS) {
-      const [path, anchor] = TOOL_PATHS[id].split('#');
-      expect(path).toBe('/play');
-      expect(play).toContain(`id="${anchor}"`);
-      expect(buildShareUrl(id, SITE)).toBe(`${SITE}/play#${anchor}`);
+      const path = TOOL_PATHS[id];
+      expect(path).toMatch(/^\/play\/[a-z-]+$/);
+      expect(existsSync(new URL(`../../src/pages${path}.astro`, import.meta.url)), path).toBe(true);
+      expect(buildShareUrl(id, SITE)).toBe(`${SITE}${path}`);
     }
     expect(new Set(GAME_IDS.map((id) => TOOL_PATHS[id])).size).toBe(GAME_IDS.length);
   });
@@ -53,7 +52,7 @@ describe('share links go to the exact tool', () => {
   });
 
   it('strips a trailing slash and never adds tracking parameters', () => {
-    expect(buildShareUrl('pulse', `${SITE}/`)).toBe(`${SITE}/play#pulse-heading`);
+    expect(buildShareUrl('pulse', `${SITE}/`)).toBe(`${SITE}/play/pillo`);
     for (const tool of TOOLS) expect(new URL(buildShareUrl(tool, SITE)).search).toBe('');
   });
 });

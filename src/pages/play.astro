@@ -1,52 +1,20 @@
 ---
 /**
- * Daily games (D-61, D-63, D-66, D-70, D-71): one page for the four games, in the lowercase brand voice, all playable
- * now with sample puzzles (everyday words, labeled as samples). A "coming soon" list shows only while a game is still on
+ * Daily games (D-61, D-63, D-66, D-70, D-71): the hub for the four games, in the lowercase brand voice. Each game is
+ * played on its own page (2026-11-17); this page has a card per game with today's status, the shared settings and the
+ * stats, and one line saying the puzzles are labelled samples for now. A "coming soon" list shows only while a game is still on
  * its way. The names live in src/config/games.ts, so a rename is one line.
  */
 import { getCollection } from 'astro:content';
 import Layout from '../layouts/Layout.astro';
-import PulseGame from '../islands/PulseGame';
-import SudokuGame from '../islands/SudokuGame';
-import CuewordToday from '../islands/CuewordToday';
-import SutureToday from '../islands/SutureToday';
 import GameStatsPanel from '../islands/GameStatsPanel';
-import GameResultsHost from '../islands/GameResultsHost';
 import HomeScreenTip from '../islands/HomeScreenTip';
 import PlayStatus from '../islands/PlayStatus';
 import GameSettings from '../islands/GameSettings';
-import PilloTitle from '../components/PilloTitle.astro';
-import { parsePuzzle } from '../islands/cueword';
-import { parseWordPath } from '../islands/suturepath';
-import { dailyGames, helloCardsGame, helloCardsIndexWhenApproved, statGame } from '../config/games';
+import { dailyGames, gamePages, helloCardsGame, helloCardsIndexWhenApproved, statGame } from '../config/games';
 import { helloCardsPage } from '../islands/hello-cards';
 import { draftsAllowed } from '../islands/anatomylab';
 
-const samples = (await getCollection('pulse'))
-  .sort((a, b) => a.id.localeCompare(b.id))
-  .map(({ data }) => ({ word: data.word, cue: data.cue }));
-// Each crossword sample goes through the game's own rules here, so a broken one stops the build with a plain message.
-const crosswordSamples = (await getCollection('cueword'))
-  .sort((a, b) => a.id.localeCompare(b.id))
-  .map(({ id, data }) => {
-    try {
-      return parsePuzzle({ id, sample: true, level: data.level, grid: data.grid, clues: data.clues });
-    } catch (error) {
-      throw new Error(`content/games/cueword/${id}.json: ${(error as Error).message}`);
-    }
-  });
-const wordPathSamples = (await getCollection('suture'))
-  .sort((a, b) => a.id.localeCompare(b.id))
-  .map(({ id, data }) => {
-    try {
-      // A board-format file (#722) says "format": "path"; an older word search has a theme instead of a clue.
-      return parseWordPath(data.format === 'path'
-        ? { id, sample: true, format: data.format, clue: data.clue, grid: data.grid, words: data.words, extras: data.extras }
-        : { id, sample: true, theme: data.theme, grid: data.grid, words: data.words });
-    } catch (error) {
-      throw new Error(`content/games/suture/${id}.json: ${(error as Error).message}`);
-    }
-  });
 // The hello cards link only exists where the cards may show: drafts stay off the live site (see helloCardsShown).
 const helloEnv = { WORKERS_CI: process.env.WORKERS_CI, WORKERS_CI_BRANCH: process.env.WORKERS_CI_BRANCH, CUEORY_ANATOMY_DRAFTS: process.env.CUEORY_ANATOMY_DRAFTS };
 const helloEntries = await getCollection('hello-cards');
@@ -58,83 +26,35 @@ const sudokuGame = dailyGames.find((game) => game.id === 'triage')!;
 const crossword = dailyGames.find((game) => game.id === 'cueword')!;
 const wordPath = dailyGames.find((game) => game.id === 'suture')!;
 const later = dailyGames.filter((game) => !game.ready);
+// Each game's own page (2026-11-17): the hub links there; old /play#… links are sent on by src/scripts/playhash.ts.
+const hubGames = [pulse, sudokuGame, crossword, wordPath].map((game) => ({ id: game.id, name: game.name, line: game.line, href: gamePages[game.id] }));
 ---
 
 <Layout title="daily games" description="four short puzzles every day: a word to guess, sudoku, a small crossword and a word path. sample puzzles for now." socialImage="/share/games-scene.png">
   <article class="veil mx-auto mt-6 max-w-prose p-6 sm:mt-10 sm:p-10">
-    <h1 class="display text-title sm:text-title-lg">daily games</h1>
-    <p class="mt-3 text-ink-soft">
-      a new puzzle every day. for now these are sample puzzles with everyday words.
-    </p>
+    <h1 class="display text-center text-title sm:text-title-lg">daily games</h1>
+    <p class="mt-3 text-center text-ink-soft">a new puzzle every day. pick a game to play it.</p>
+    {/* One quiet line for every game (Christian's brief): the puzzles are labelled samples for now. */}
+    <p class="mt-1 text-center text-sm text-ink-soft" data-testid="sample-note">for now these are sample puzzles with everyday words.</p>
     {/* Home screen tip (L2): only after puzzles finished on 3 different days, decided on page load, never mid-game. */}
     <HomeScreenTip client:only="react" />
     <noscript><p>to add cueory to your home screen, use your browser's menu. daily games need JavaScript.</p></noscript>
-    {/* Today's status for each game (#735), from this device only. client:only: without JavaScript only the note shows. */}
-    <PlayStatus
-      client:only="react"
-      games={[
-        { id: pulse.id, name: pulse.name, anchor: 'pulse-heading' },
-        { id: sudokuGame.id, name: sudokuGame.name, anchor: 'sudoku-heading' },
-        { id: crossword.id, name: crossword.name, anchor: 'crossword-heading' },
-        { id: wordPath.id, name: wordPath.name, anchor: 'word-path-heading' },
-      ]}
-    />
-    <noscript><p>today's status for each game needs JavaScript.</p></noscript>
-    {/* Shared game settings (issue #734): theme, high contrast, reduced motion and sound for every game below. */}
-    <div class="mt-6" data-testid="play-settings">
+    {/* The four games as cards (#735 status included), each opening the game's own page. */}
+    <PlayStatus client:only="react" games={hubGames} />
+    <noscript>
+      <ul class="mt-8 flex flex-col gap-3" data-testid="play-links">
+        {hubGames.map((game) => <li><a href={game.href} class="font-medium">{game.name}</a><span class="text-ink-soft">: {game.line}</span></li>)}
+      </ul>
+    </noscript>
+    {/* Shared game settings (issue #734): theme, high contrast, reduced motion and sound for every game. */}
+    <div class="mt-8 flex justify-center" data-testid="play-settings">
       <GameSettings client:only="react" title="game settings" label="game settings" />
     </div>
     <noscript><p>game settings need JavaScript.</p></noscript>
 
-    <section class="mt-12" aria-labelledby="pulse-heading">
-      <h2 id="pulse-heading" class="display text-2xl sm:text-3xl"><PilloTitle name={pulse.name} /></h2>
-      <p class="mt-2 text-ink-soft">{pulse.line}</p>
-      <p class="mt-1 text-sm text-ink-soft" data-testid="sample-note">today's word is a sample.</p>
-      <div class="mt-6">
-        {/* client:only: nothing is pre-rendered, so without JavaScript only the note below shows. */}
-        <PulseGame client:only="react" puzzles={samples} />
-        <noscript>
-          <p>{pulse.name} needs JavaScript.</p>
-        </noscript>
-      </div>
-    </section>
-
-    <section id="triage-heading" class="sudoku-section mt-16" aria-labelledby="sudoku-heading" data-testid="sudoku-section">
-      <h2 id="sudoku-heading" class="display text-center text-title wrap-anywhere sm:text-title-lg">{sudokuGame.name}</h2>
-      <p class="mt-2 text-center text-ink-soft">{sudokuGame.line}</p>
-      <div class="sudoku-mount mt-6">
-        <SudokuGame client:only="react" />
-        <noscript>
-          <p>{sudokuGame.name} needs JavaScript.</p>
-        </noscript>
-      </div>
-    </section>
-
-    <section class="mt-16" aria-labelledby="crossword-heading" data-game-print="crossword">
-      <h2 id="crossword-heading" class="display text-center text-title wrap-anywhere">{crossword.name}</h2>
-      <p class="mt-2 text-ink-soft">{crossword.line}</p>
-      <div class="crossword-print-host mt-6">
-        <CuewordToday client:only="react" puzzles={crosswordSamples} name={crossword.name} />
-        <noscript>
-          <p>{crossword.name} needs JavaScript.</p>
-        </noscript>
-      </div>
-    </section>
-
-    <section class="mt-16" aria-labelledby="word-path-heading">
-      <h2 id="word-path-heading" class="text-2xl font-medium">{wordPath.name}</h2>
-      <p class="mt-2 text-ink-soft">{wordPath.line}</p>
-      <div class="mt-6">
-        <SutureToday client:only="react" puzzles={wordPathSamples} name={wordPath.name} />
-        <noscript>
-          <p>{wordPath.name} needs JavaScript.</p>
-        </noscript>
-      </div>
-    </section>
-
     {/* Private stats (D-76): off until the student turns them on, kept only in this browser. Without JavaScript there are
     no games to count, so nothing shows. */}
-    <GameStatsPanel client:only="react" games={[pulse, sudokuGame, crossword, wordPath].map((game) => game.id)} />
+    <GameStatsPanel client:only="react" games={hubGames.map((game) => game.id)} />
 
     {(showHello || showStat) && <section class="mt-16" aria-labelledby="more-games-heading">
       <h2 id="more-games-heading" class="text-2xl font-medium">more games</h2>
@@ -164,6 +84,9 @@ const later = dailyGames.filter((game) => !game.ready);
       )
     }
   </article>
-  <GameResultsHost client:only="react" />
-  <noscript><p>game results and sharing need JavaScript. you can still browse the game descriptions above.</p></noscript>
 </Layout>
+
+<script>
+  import { followOldGameHash } from '../scripts/playhash';
+  followOldGameHash(window.location);
+</script>

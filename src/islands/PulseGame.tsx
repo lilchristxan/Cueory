@@ -43,7 +43,7 @@ interface Props {
   puzzles: Puzzle[];
 }
 
-const KEY_ROWS = ['qwertyuiop', 'asdfghjkl', 'zxcvbnm'];
+const LETTERS = 'abcdefghijklmnopqrstuvwxyz';
 const primaryButton = 'rounded-pill bg-button px-5 py-2.5 text-on-button hover:bg-button-hover';
 const columns = Array.from({ length: WORD_LENGTH }, (_, i) => i);
 
@@ -350,44 +350,36 @@ export default function PulseGame({ puzzles }: Props) {
 
       {playing ? (
         <div className="pillo-keys mt-6" role="group" aria-label="letters">
-          {KEY_ROWS.map((row, r) => (
-            <div key={row} className="pillo-key-row">
-              {r === KEY_ROWS.length - 1 && (
+          {/* The same letter keys as the crossword: a to z in rows that wrap, then ⌫ and enter (Christian, 2026-11-17). */}
+          <div className="pillo-key-row">
+            {Array.from(LETTERS, (letter) => {
+              const mark = marks.get(letter);
+              return (
                 <button
+                  key={letter}
                   type="button"
-                  className="pillo-key pillo-key-wide"
-                  aria-label="delete"
-                  onClick={() => type(text.slice(0, -1))}
+                  className={`pillo-key${mark ? ` pillo-${mark}` : ''}`}
+                  aria-label={keyLabel(letter, mark)}
+                  onClick={() => type(text + letter)}
                 >
-                  ⌫
+                  <span aria-hidden="true">{letter}</span>
+                  {mark && (
+                    <span className="pillo-key-mark" aria-hidden="true">
+                      {MARK_SYMBOL[mark]}
+                    </span>
+                  )}
                 </button>
-              )}
-              {Array.from(row, (letter) => {
-                const mark = marks.get(letter);
-                return (
-                  <button
-                    key={letter}
-                    type="button"
-                    className={`pillo-key${mark ? ` pillo-${mark}` : ''}`}
-                    aria-label={keyLabel(letter, mark)}
-                    onClick={() => type(text + letter)}
-                  >
-                    <span aria-hidden="true">{letter.toUpperCase()}</span>
-                    {mark && (
-                      <span className="pillo-key-mark" aria-hidden="true">
-                        {MARK_SYMBOL[mark]}
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
-              {r === KEY_ROWS.length - 1 && (
-                <button type="button" className="pillo-key pillo-key-wide" onClick={() => void submit()}>
-                  enter
-                </button>
-              )}
-            </div>
-          ))}
+              );
+            })}
+          </div>
+          <div className="pillo-key-row">
+            <button type="button" className="pillo-key pillo-key-wide" aria-label="delete" onClick={() => type(text.slice(0, -1))}>
+              ⌫
+            </button>
+            <button type="button" className="pillo-key pillo-key-wide" onClick={() => void submit()}>
+              enter
+            </button>
+          </div>
         </div>
       ) : (
         <div ref={result} tabIndex={-1} className="pillo-result mt-6" data-testid="pulse-result">
