@@ -5,6 +5,7 @@ import {
 } from './accountsettings';
 import { AccountsUnavailable, authButton, authInput } from './SignIn.tsx';
 import { getSupabase } from './supabaseclient';
+import { reauthHref } from './deleteaccount';
 import { localDay } from '../scripts/progress';
 import { browserStorage, type KeyValueStorage } from '../scripts/storage';
 
@@ -296,6 +297,8 @@ function DeleteSection({ adapters, userId, email, busy, onStale, onDeleted }: {
           </div>
         </form>
         <p role="status" aria-atomic="true" className="mt-3 text-sm">{message}</p>
+        {message.includes("sign in again to delete your account") &&
+          <a href={reauthHref()} className="mt-2 inline-flex min-h-12 items-center underline">sign in again</a>}
       </div>
     </>}
   </section>;
