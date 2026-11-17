@@ -267,10 +267,11 @@ const cueword = defineCollection({
   loader: glob({ base: './content/games/cueword', pattern: '**/*.json' }),
   schema: z.object({
     status: z.literal('sample'),
+    level: z.enum(['easy', 'mid', 'hard']).optional(),
     grid: z
-      .array(z.string().regex(/^[A-Z.]{3,7}$/, 'a crossword row is 3 to 7 capital letters or dots'))
+      .array(z.string().regex(/^[A-Z.]{3,15}$/, 'a crossword row is 3 to 15 capital letters or dots'))
       .min(3)
-      .max(7),
+      .max(15),
     clues: z.object({ across: z.array(clue), down: z.array(clue) }),
   }),
 });
@@ -364,4 +365,43 @@ const videos = defineCollection({
   schema: videoSchema,
 });
 
-export const collections = { lessons, cards, pulse, triage, cueword, suture, organizer, 'fill-in': fillIn, 'label-it': labelIt, questions, visuals, videos };
+/**
+ * Hello cards (Task 201): conversation starters for the flip-the-card game, in content/games/hello-cards. Warm, open
+ * questions with no clinical facts; draft samples until Christian approves the wording.
+ */
+const helloCards = defineCollection({
+  loader: glob({ base: './content/games/hello-cards', pattern: '**/*.json' }),
+  schema: z
+    .object({
+      // `sample` is a draft awaiting Christian's wording review; only `approved` may reach the live site.
+      status: z.enum(['sample', 'approved']),
+      note: z.string().max(300).optional(),
+      starters: z
+        .array(
+          z.object({
+            id: z.string().regex(/^[a-z]+(-[a-z0-9]+)+$/, 'an id is lowercase letters, digits and dashes'),
+            category: z.enum(['patients', 'coworkers', 'classmates', 'yourself']),
+            depth: z.enum(['small', 'deep']),
+            text: z.string().trim().min(5).max(140),
+          }),
+        )
+        .min(3),
+    })
+    .superRefine(({ starters }, context) => {
+      if (new Set(starters.map((starter) => starter.id)).size !== starters.length) {
+        context.addIssue({ code: 'custom', path: ['starters'], message: 'a starter id is repeated' });
+      }
+      for (const category of ['patients', 'coworkers', 'classmates', 'yourself']) {
+        if (!starters.some((starter) => starter.category === category)) {
+          context.addIssue({ code: 'custom', path: ['starters'], message: `no starter for ${category}` });
+        }
+        for (const depth of ['small', 'deep']) {
+          if (!starters.some((starter) => starter.category === category && starter.depth === depth)) {
+            context.addIssue({ code: 'custom', path: ['starters'], message: `no ${depth} starter for ${category}` });
+          }
+        }
+      }
+    }),
+});
+
+export const collections = { lessons, cards, pulse, triage, cueword, suture, 'hello-cards': helloCards, organizer, 'fill-in': fillIn, 'label-it': labelIt, questions, visuals, videos };

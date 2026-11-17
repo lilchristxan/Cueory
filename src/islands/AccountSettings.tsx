@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import {
   accountMessage, adaptersFor, deleteGate, deleteMyAccount, deletionLines, offerFile, prepareDownloadFor,
-  sameIdentity, saveDisplayName, signOutHere, type AccountAdapters, type AccountClient, type DownloadFile,
+  otherAccountNow, sameIdentity, saveDisplayName, signOutHere, type AccountAdapters, type AccountClient, type DownloadFile,
 } from './accountsettings';
 import { AccountsUnavailable, authButton, authInput } from './SignIn.tsx';
 import { getSupabase } from './supabaseclient';
@@ -244,14 +244,26 @@ function DeleteSection({ adapters, userId, email, busy, onStale, onDeleted }: {
     setDeleting(true);
     busy.current = true;
     setMessage('');
-    const result = await deleteMyAccount({
-      typed, stillSame: () => sameIdentity(adapters, userId), deleteAccount: adapters.deleteAccount, signOut: adapters.signOut, local: browserStorage(), session: tabStorage(),
-    });
-    busy.current = false;
-    setDeleting(false);
+    // A -> B -> A is still a changed sign-in. Keep a permanent abort signal from the instant of confirmation.
+    const controller = new AbortController();
+    const stop = adapters.onIdentityChange?.(nextId => { if (nextId !== userId) controller.abort(); });
+    let result: Awaited<ReturnType<typeof deleteMyAccount>>;
+    try {
+      result = await deleteMyAccount({
+        userId, typed, signal: controller.signal, stillSame: () => sameIdentity(adapters, userId),
+        otherAccountNow: () => otherAccountNow(adapters, userId), deleteAccount: adapters.deleteAccount,
+        signOut: adapters.signOut, local: browserStorage(), session: tabStorage(),
+      });
+    } finally {
+      stop?.();
+      busy.current = false;
+      setDeleting(false);
+    }
     if (result.kind === 'deleted') onDeleted(result.message, result.next);
     else {
-      if (result.kind === 'identity-changed') return onStale(result.message);
+      // A network abort cannot prove whether deletion reached the server. Show that warning,
+      // then reload for the current account instead of leaving A's stale settings on screen for B.
+      if (result.kind === 'identity-changed' || controller.signal.aborted) return onStale(result.message);
       setMessage(result.message);
     }
   };

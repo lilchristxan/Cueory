@@ -1336,7 +1336,8 @@ html:has(dialog.menu-panel[open]) {
   .vial-img,
   .vial-shine,
   .vial-shadow,
-  .modes-dot {
+  .modes-dot,
+  .mode-preview a {
     transition: none;
   }
 }
@@ -1605,6 +1606,19 @@ html:has(dialog.menu-panel[open]) {
   While the preview is open the page behind stays put. Where scrollbars take up room, that room is kept so nothing
   shifts, and tinted like the darkened page.
 */
+@layer components {
+  .result-dialog-overlay {
+    background-color: rgb(var(--shadow-tint) / var(--scrim-alpha));
+    -webkit-backdrop-filter: blur(var(--blur-scrim));
+    backdrop-filter: blur(var(--blur-scrim));
+  }
+
+  .result-meta {
+    font-variant-caps: all-small-caps;
+    letter-spacing: var(--tracking-label);
+  }
+}
+
 html:has(dialog.mode-preview[open]) {
   overflow: hidden;
   scrollbar-gutter: stable;
@@ -1952,15 +1966,20 @@ html:has(dialog.mode-preview[open]) {
     color: var(--color-ink-soft);
     font-size: var(--text-sm);
     user-select: none;
-    transition:
-      background-color var(--duration-fast) var(--ease-soft),
-      color var(--duration-fast) var(--ease-soft);
+    /* Switch the foreground and fill together: interpolating either can lose
+       text contrast when a palette or selected option changes. */
+    transition: none;
   }
 
   .segmented-option:has(:checked) {
     background-color: var(--color-ink);
     color: var(--color-on-button);
   }
+
+  /* Button versions (aria-pressed, e.g. the sudoku level switch) also show a check mark and bold text, so the pick
+     never relies on color alone and survives forced colors. */
+  .segmented-option[aria-pressed] { border: 0; background-color: transparent; }
+  .segmented-option[aria-pressed="true"] { background-color: var(--color-ink); color: var(--color-on-button); font-weight: 700; }
 
   .segmented-option:focus-within {
     outline: var(--focus-width) solid var(--color-focus);
@@ -2016,5 +2035,129 @@ html:has(dialog.mode-preview[open]) {
   .segmented-option input[type="radio"] {
     position: static;
     opacity: 1;
+  }
+}
+
+
+/* Sudoku game page (Task 625): sizes and colors come from tokens.css. */
+@layer components {
+  .sudoku-game { position: relative; margin-block: calc(var(--spacing) * 8); }
+  .sudoku-title-row { display: flex; min-block-size: var(--tap-min); justify-content: flex-end; margin-block-end: calc(var(--spacing) * 3); }
+  .sudoku-corner-actions { display: flex; gap: calc(var(--spacing) * 2); }
+  .sudoku-icon-button, .sudoku-small-button { display: inline-flex; min-inline-size: var(--tap-min); min-block-size: var(--tap-min); align-items: center; justify-content: center; border: var(--sudoku-line) solid var(--color-control); border-radius: var(--radius-pill); background: var(--color-page); color: var(--color-ink); cursor: pointer; }
+  .sudoku-how { position: absolute; z-index: 5; inset-inline-end: 0; inset-block-start: 100%; inline-size: min(100%, var(--container-prose)); padding: calc(var(--spacing) * 5); border: var(--sudoku-line) solid var(--color-line); border-radius: var(--radius-lg); background: var(--color-page); box-shadow: var(--shadow-card); }
+  .sudoku-how ol { margin-block: calc(var(--spacing) * 2) 0; padding-inline-start: calc(var(--spacing) * 6); }
+  .sudoku-panel { container: sudoku-panel / inline-size; display: flex; flex-direction: column; align-items: center; gap: calc(var(--spacing) * 3); }
+  .sudoku-toolbar { display: grid; inline-size: 100%; grid-template-columns: 1fr auto 1fr; align-items: center; gap: calc(var(--spacing) * 2); }
+  .sudoku-time { display: flex; align-items: center; gap: calc(var(--spacing) * 2); }
+  .sudoku-errors { justify-self: end; }
+  .sudoku-board-scroll { inline-size: 100%; }
+  /* Square size: the brief's clamp(44px, min((100vh − 460px) / 9, (100vw − 150px) / 9), 84px), but never wider than
+     the panel allows (100cqi minus the outer box lines), so the whole board fits a 390 px phone (D-pending). */
+  .sudoku-board { --sudoku-cell-size: min(calc((100cqi - var(--sudoku-board-frame)) / 9), clamp(var(--sudoku-cell-min), min(calc((100vh - var(--sudoku-height-reserve)) / 9), calc((100vw - var(--sudoku-width-reserve)) / 9)), var(--sudoku-cell-max))); display: grid; inline-size: max-content; grid-template-rows: repeat(9, var(--sudoku-cell-size)); margin-inline: auto; border: var(--sudoku-box-line) solid var(--color-ink); background: var(--color-ink); }
+  .sudoku-row { display: grid; grid-template-columns: repeat(9, var(--sudoku-cell-size)); }
+  .sudoku-cell { position: relative; display: flex; inline-size: var(--sudoku-cell-size); block-size: var(--sudoku-cell-size); align-items: center; justify-content: center; border: 0; border-inline-end: var(--sudoku-line) solid var(--color-line); border-block-end: var(--sudoku-line) solid var(--color-line); background: var(--color-page); color: var(--color-ink); cursor: pointer; font-size: calc(var(--sudoku-cell-size) / 2); line-height: 1; }
+  .sudoku-cell:last-child { border-inline-end: 0; }
+  .sudoku-row:last-child .sudoku-cell { border-block-end: 0; }
+  .sudoku-cell.sudoku-box-right { border-inline-end: var(--sudoku-box-line) solid var(--color-ink); }
+  .sudoku-cell.sudoku-box-bottom { border-block-end: var(--sudoku-box-line) solid var(--color-ink); }
+  .sudoku-cell.is-given { background: var(--color-sudoku-given); font-weight: 700; }
+  .sudoku-cell.is-entered { color: var(--color-sudoku-entered); }
+  .sudoku-cell.is-entered::after { position: absolute; inset-inline: calc(var(--spacing) * 2); inset-block-end: calc(var(--spacing) * 1.5); block-size: var(--sudoku-entered-line); border-radius: var(--radius-pill); background: currentColor; content: ""; }
+  .sudoku-cell.is-related { background: var(--color-sudoku-related); }
+  .sudoku-cell.is-box-related { background: var(--color-sudoku-box-related); }
+  .sudoku-cell.is-identical { background: var(--color-sudoku-identical); color: var(--color-on-sudoku-identical); font-weight: 700; }
+  .sudoku-cell.is-conflict::before { position: absolute; inset: calc(var(--spacing) * 1); border: var(--sudoku-line) dashed var(--color-sudoku-conflict); border-radius: var(--radius-sm); content: ""; }
+  /* The selected square is the focal point: plain fill inside a strong outline, after every tint so it always wins. */
+  .sudoku-cell.is-selected { z-index: 1; background: var(--color-page); color: var(--color-ink); outline: var(--sudoku-selected-line) solid var(--color-sudoku-selected); outline-offset: calc(-1 * var(--sudoku-selected-line)); }
+  /* Keyboard focus on the selected square doubles its ring, so focus on the grid is visible apart from selection (Task 210). */
+  .sudoku-cell.is-selected:focus-visible { outline-width: calc(var(--sudoku-selected-line) + var(--focus-width)); outline-offset: calc(-1 * (var(--sudoku-selected-line) + var(--focus-width))); }
+  .sudoku-candidates { display: grid; inline-size: 100%; block-size: 100%; grid-template-columns: repeat(3, 1fr); font-size: var(--sudoku-candidate-size); line-height: 1; }
+  .sudoku-candidates i { display: flex; align-items: center; justify-content: center; font-style: normal; }
+  .sudoku-mark { color: var(--color-ink-soft); }
+  .sudoku-board.is-paused .sudoku-cell { background: var(--color-surface); color: var(--color-ink-soft); }
+  .sudoku-pad-wrap { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: calc(var(--spacing) * 3); inline-size: 100%; }
+  .sudoku-number-row { display: grid; flex: 1 0 100%; order: -1; grid-template-columns: repeat(auto-fit, minmax(var(--tap-min), 1fr)); gap: calc(var(--spacing) * 2); }
+  .sudoku-settings-trigger { margin-inline-start: auto; }
+  /* Two even rows of five on a phone (5 × 44 px + gaps = 15.75rem), one row of ten once ten fit (32rem). */
+  @container sudoku-panel (min-width: 16rem) {
+    .sudoku-number-row { grid-template-columns: repeat(5, minmax(var(--tap-min), 1fr)); }
+  }
+  @container sudoku-panel (min-width: 32rem) {
+    .sudoku-number-row { grid-template-columns: repeat(10, minmax(var(--tap-min), 1fr)); }
+  }
+  @media (orientation: landscape) {
+    @container sudoku-panel (min-width: 48rem) {
+      .sudoku-pad-wrap { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; }
+      .sudoku-number-row { order: 0; }
+    }
+  }
+  .sudoku-number-row button { min-inline-size: var(--tap-min); min-block-size: var(--tap-min); border: var(--sudoku-line) solid var(--color-control); border-radius: var(--radius-md); background: var(--color-page); color: var(--color-ink); font-weight: 700; }
+  .sudoku-setting-button { display: inline-flex; min-block-size: var(--tap-min); align-items: center; gap: calc(var(--spacing) * 2); border: 0; background: transparent; color: var(--color-ink); cursor: pointer; white-space: nowrap; }
+  .sudoku-solved { margin-block-start: calc(var(--spacing) * 6); padding: calc(var(--spacing) * 5); border: var(--sudoku-line) solid var(--color-line); border-radius: var(--radius-lg); text-align: center; }
+  .sudoku-overlay { position: fixed; inset: 0; inline-size: 100%; block-size: 100%; max-inline-size: none; max-block-size: none; margin: 0; padding: calc(var(--spacing) * 5); border: 0; background: rgb(var(--shadow-tint) / var(--scrim-alpha)); color: var(--color-ink); backdrop-filter: blur(var(--blur-scrim)); }
+  .sudoku-overlay[open] { display: flex; align-items: center; justify-content: center; }
+  .sudoku-overlay::backdrop { background: transparent; }
+  /* The card always fits the screen and scrolls inside itself. */
+  .sudoku-settings { inline-size: min(100%, var(--container-prose)); max-block-size: 100%; overflow: auto; overscroll-behavior: contain; padding: calc(var(--spacing) * 6); border-radius: var(--radius-xl); background: var(--color-page); box-shadow: var(--shadow-lift); }
+  .sudoku-settings-heading { display: flex; align-items: center; justify-content: space-between; }
+  .sudoku-settings h3 { font-size: var(--text-2xl); }
+  .sudoku-settings fieldset { margin-block-start: calc(var(--spacing) * 5); border: 0; padding: 0; }
+  .sudoku-settings legend { padding-block-end: calc(var(--spacing) * 2); color: var(--color-ink-soft); font-size: var(--text-sm); }
+  .sudoku-option { display: flex; min-block-size: var(--tap-min); align-items: center; justify-content: space-between; gap: calc(var(--spacing) * 4); border-block-start: var(--sudoku-line) solid var(--color-line); padding-block: calc(var(--spacing) * 2); cursor: pointer; }
+  .sudoku-option span { display: flex; flex-direction: column; }
+  .sudoku-check-option { justify-content: flex-start; }
+  .sudoku-option input { flex: none; }
+  .sudoku-settings fieldset + fieldset { margin-block-start: calc(var(--spacing) * 6); }
+  .sudoku-option small { color: var(--color-ink-soft); }
+  .sudoku-option input { inline-size: calc(var(--spacing) * 6); block-size: calc(var(--spacing) * 6); accent-color: var(--color-button); }
+  .sudoku-print-footer { display: none; }
+  @media (orientation: portrait), (max-width: 50rem) {
+    /* The number pad's layout lives with .sudoku-pad-wrap above (container queries on the panel's width). */
+    .sudoku-toolbar { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .sudoku-time { flex-wrap: wrap; }
+    .sudoku-toolbar .segmented { grid-column: 1 / -1; grid-row: 1; justify-self: center; }
+  }
+  @media print {
+    body > :not(main), .sudoku-title-row, .sudoku-toolbar, .sudoku-pad-wrap, .sudoku-solved, .sudoku-overlay, .sr-only { display: none !important; }
+    :root[data-print-game="sudoku"] main article > :not(.sudoku-section) { display: none !important; }
+    :root[data-print-game="sudoku"] .sudoku-section > :not(.sudoku-mount) { display: none !important; }
+    :root[data-print-game="sudoku"] main article { max-inline-size: none; padding: 0; background: transparent; box-shadow: none; }
+    :root[data-print-game="sudoku"] .sudoku-section, :root[data-print-game="sudoku"] .sudoku-mount { margin: 0 !important; }
+    main { max-inline-size: none !important; padding: 0 !important; }
+    .sudoku-game { margin: 0; }
+    .sudoku-board-scroll { overflow: visible; }
+    .sudoku-board { --sudoku-cell-size: var(--sudoku-cell-max); }
+    .sudoku-cell { background: var(--color-page) !important; box-shadow: none !important; outline: 0 !important; color: var(--color-ink) !important; }
+    .sudoku-cell[data-given="false"] > * { display: none !important; }
+    .sudoku-cell[data-given="false"]::after, .sudoku-cell[data-given="false"]::before { display: none !important; }
+    .sudoku-print-footer { display: block; margin-block-start: calc(var(--spacing) * 5); text-align: center; font-size: var(--text-sm); }
+  }
+}
+
+/*
+  Anatomy lab worksheet (src/islands/AnatomyLab.tsx). On screen the write-in lines are tall enough to write on once
+  printed. Printing marks the page data-print-game="anatomy-worksheet" (src/islands/gameprint.ts): then only the
+  worksheet is printed, black on white in Daytime and Evening alike, with its credit lines and without its buttons.
+*/
+@layer components {
+  .anatomy-worksheet-blank { min-block-size: var(--worksheet-blank); }
+
+  @media print {
+    :root[data-print-game="anatomy-worksheet"] main *:not(:has(.anatomy-worksheet)):not(.anatomy-worksheet):not(.anatomy-worksheet *) {
+      display: none !important;
+    }
+    :root[data-print-game="anatomy-worksheet"] main { padding-block: 0 !important; }
+    :root[data-print-game="anatomy-worksheet"] .anatomy-worksheet {
+      border: 0;
+      padding: 0;
+      background: var(--print-paper);
+      color: var(--print-ink);
+    }
+    :root[data-print-game="anatomy-worksheet"] .anatomy-worksheet * { color: var(--print-ink) !important; border-color: var(--print-ink) !important; }
+    :root[data-print-game="anatomy-worksheet"] .anatomy-worksheet > * + * { margin-block-start: var(--print-gap); }
+    :root[data-print-game="anatomy-worksheet"] .anatomy-worksheet img { inline-size: var(--print-figure); max-inline-size: 100%; break-inside: avoid; }
+    :root[data-print-game="anatomy-worksheet"] .anatomy-worksheet li { break-inside: avoid; }
+    :root[data-print-game="anatomy-worksheet"] .anatomy-worksheet-tools { display: none !important; }
   }
 }

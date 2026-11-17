@@ -59,24 +59,35 @@ const initialJsBudget = {
   'learn/study-skills/learn-mode.html': 153947,
   'learn/study-skills/matching.html': 154728,
   'learn/study-skills/organizer.html': 153555,
+  'learn/study-skills/print-cards.html': 89731, // #46: measured on merge 3c918c0f with Node 24.22.1 and this scanner
   'learn/study-skills/questions.html': 151681,
   'learn/study-skills.html': 147632,
   'learn/video-sample.html': 148178,
   'learn.html': 150346,
+  'message.html': 89731,
   'play.html': 168467,
+  'play/hello-cards.html': 91427,
+  'play/stat.html': 96284, // Task 640: measured from a local Node 24.22.2 build, not yet from CI
+  'play/crossword.html': 89662,
+  'play/pillo.html': 89662,
+  'play/sudoku.html': 89662,
+  'play/word-path.html': 89662,
   'preview/admin-flags.html': 92161,
   'preview/anatomy-text.html': 89104,
   'preview/anatomy-lab.html': 89027,
   'preview/body-viewer.html': 151504,
+  'preview/concept-map.html': 91589,
   'preview/email.html': 146752,
   'preview/prose.html': 146752,
   'preview/reminders.html': 148152,
+  'preview/rewards.html': 89731,
   'preview/share.html': 151522,
   'preview/states.html': 146752,
   'preview/survey.html': 90800,
   'privacy.html': 148122,
   'progress.html': 153183,
   'reset-password.html': 167326,
+  'resources.html': 89662,
   'signin.html': 166433,
   'signup.html': 166433,
   'start.html': 152098,
@@ -147,6 +158,19 @@ function initialJsGzipBytes(page: string): number {
   return external + inline;
 }
 
+// A build that shows drafts (staging, previews and the browser tests: CUEORY_ANATOMY_DRAFTS=1) puts the anatomy lab
+// itself on its preview page; the live build shows "coming soon" there and loads no lab script, so the budget above
+// stays as it is for the live build. This is the lab page's own limit on a drafts build: 109,328 gzip bytes measured at
+// merge request !102 (local Node 24 build) plus about 5%. Christian's decision 2026-11-11 (D-pending, Task 178).
+const draftsBuildJsLimit: Record<string, number> = {
+  'preview/anatomy-lab.html': 114795,
+};
+
+/** True when a built page carries the anatomy lab island, which only a build that shows drafts renders. */
+function showsDraftLab(page: string): boolean {
+  return existsSync(page) && /component-url="[^"]*AnatomyLab\./.test(readFileSync(page, 'utf8'));
+}
+
 describe('inline JavaScript collection', () => {
   it('handles mixed-case script closing tags and extended closing-tag whitespace', () => {
     expect(inlineScriptBodies('<SCRIPT type="module">const n = 1;</SCRIPT\t\n extra>')).toEqual(['const n = 1;']);
@@ -189,7 +213,8 @@ describe.skipIf(!existsSync(dist))('built site', () => {
     expect(routes.sort()).toEqual(Object.keys(initialJsBudget).sort());
     const overBudget = Object.entries(initialJsBudget).flatMap(([page, budget]) => {
       const actual = initialJsGzipBytes(join(dist, page));
-      const limit = Math.ceil(budget * 1.1);
+      const draftsLimit = draftsBuildJsLimit[page];
+      const limit = draftsLimit !== undefined && showsDraftLab(join(dist, page)) ? draftsLimit : Math.ceil(budget * 1.1);
       return actual > limit ? [`${page}: ${actual} gzip bytes exceeds limit ${limit} (baseline ${budget})`] : [];
     });
     // Only compute and report bundle contributions when the invariant fails. This
@@ -254,28 +279,45 @@ describe.skipIf(!existsSync(dist))('built site', () => {
     expect(csp!.replace(scriptSrc, '')).not.toContain('wasm-unsafe-eval');
   });
 
-  it('gives every indexable page complete, unique social metadata', () => {
-    const indexableTitles = new Map<string, string>();
+  it('gives every indexable page and about/support/404 complete, unique social metadata', () => {
+    const socialTitles = new Map<string, string>();
+    const informationPages = new Set(['about.html', 'support.html', '404.html']);
+    expect(pages.map((page) => relative(dist, page))).toEqual(expect.arrayContaining([...informationPages]));
     const meta = (html: string, property: string) =>
       new RegExp(`<meta property="${property}" content="([^"]*)"`).exec(html)?.[1];
+    const twitter = (html: string, name: string) =>
+      new RegExp(`<meta name="${name}" content="([^"]*)"`).exec(html)?.[1];
 
     for (const pagePath of pages) {
-      const page = pagePath.replace(`${dist}/`, '');
+      const page = relative(dist, pagePath);
       const html = readFileSync(pagePath, 'utf8');
-      if (html.includes('<meta name="robots" content="noindex')) continue;
+      // A page kept out of search still needs an image and identity when someone shares its link.
+      if (html.includes('<meta name="robots" content="noindex') && !informationPages.has(page)) continue;
 
       const title = /<title>([^<]+)<\/title>/.exec(html)?.[1];
       const description = /<meta name="description" content="([^"]*)"/.exec(html)?.[1];
       expect(title, `${page}: title`).toBeTruthy();
       expect(description, `${page}: description`).toBeTruthy();
-      expect(indexableTitles.has(title!), `${page}: duplicate title`).toBe(false);
-      indexableTitles.set(title!, page);
+      expect(socialTitles.has(title!), `${page}: duplicate title`).toBe(false);
+      socialTitles.set(title!, page);
 
       expect(html, `${page}: canonical`).toContain(`rel="canonical" href="https://cueory.app/`);
       expect(meta(html, 'og:title'), `${page}: og:title`).toBe(title);
       expect(meta(html, 'og:description'), `${page}: og:description`).toBe(description);
-      expect(meta(html, 'og:image'), `${page}: og:image`).toBe('https://cueory.app/share/study-ivory.png');
-      expect(existsSync(join(dist, 'share/study-ivory.png')), `${page}: og:image file`).toBe(true);
+      const gameImage = page === 'play.html' || /^play\/(pillo|crossword|word-path|sudoku)\.html$/.test(page);
+      const expectedOgImage = gameImage ? 'https://cueory.app/share/games-scene.png' : 'https://cueory.app/share/study-ivory.png';
+      expect(meta(html, 'og:image'), `${page}: og:image`).toBe(expectedOgImage);
+      expect(existsSync(join(dist, gameImage ? 'share/games-scene.png' : 'share/study-ivory.png')), `${page}: og:image file`).toBe(true);
+      expect(twitter(html, 'twitter:card'), `${page}: twitter:card`).toBe('summary_large_image');
+      expect(twitter(html, 'twitter:title'), `${page}: twitter:title`).toBe(title);
+      expect(twitter(html, 'twitter:description'), `${page}: twitter:description`).toBe(description);
+      expect(twitter(html, 'twitter:image'), `${page}: twitter:image`).toBe(meta(html, 'og:image'));
+      if (informationPages.has(page)) {
+        const image = readFileSync(join(dist, 'share/study-ivory.png'));
+        expect(image.equals(readFileSync(join(process.cwd(), 'public/share/study-ivory.png')))).toBe(true);
+        expect([...image.subarray(0, 8)]).toEqual([137, 80, 78, 71, 13, 10, 26, 10]);
+        expect([image.readUInt32BE(16), image.readUInt32BE(20)]).toEqual([1200, 630]);
+      }
     }
   });
 
