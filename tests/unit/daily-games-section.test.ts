@@ -5,6 +5,10 @@ import { dailyGames, statGame } from '../../src/config/games';
 // The verify script builds dist/ before unit tests, so these assertions check the actual visitor-facing HTML.
 const html = readFileSync(new URL('../../dist/index.html', import.meta.url), 'utf8');
 
+// The crossword is left out of today's games while it is closed on this build (site.ts crosswordOpen).
+const crosswordClosed = readFileSync(new URL('../../dist/play/crossword.html', import.meta.url), 'utf8').includes('data-testid="crossword-soon"');
+const shownGames = dailyGames.filter((game) => game.id !== 'cueword' || !crosswordClosed);
+
 function gamesSection(): string {
   const section = html.match(/<section\b(?=[^>]*\bid="daily-games")[^>]*>[\s\S]*?<\/section>/)?.[0];
   if (!section) throw new Error('the built home page is missing #daily-games');
@@ -20,12 +24,12 @@ function summaryText(): string {
 describe('home daily games summary', () => {
   it('names all ready games from the shared config and the separate stat preview', () => {
     const summary = summaryText();
-    const readyNames = dailyGames.filter((game) => game.ready).map((game) => game.name);
+    const readyNames = shownGames.filter((game) => game.ready).map((game) => game.name);
     const list = new Intl.ListFormat('en', { style: 'long', type: 'conjunction' }).format(readyNames);
 
     expect(summary).toContain(list);
     for (const name of readyNames) expect(summary).toContain(name);
-    for (const game of dailyGames.filter((game) => !game.ready)) expect(summary).not.toContain(game.name);
+    for (const game of dailyGames.filter((game) => !game.ready || !shownGames.includes(game))) expect(summary).not.toContain(game.name);
     expect(summary).toContain(`${statGame.name} is in preview`);
     expect(summary).not.toMatch(/\bsort\b/i);
     expect(summary).toBe(summary.toLowerCase());
