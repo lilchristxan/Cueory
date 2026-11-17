@@ -1,0 +1,1 @@
+status: Task 178 package 8 (#662): founder-held /anatomy route and site-menu entry appear only for explicitly approved BodyParts3D systems. Drafts and preview fixtures stay out of the public route in every build environment. No models or publication statuses changed.

@@ -7,6 +7,7 @@
  */
 import { menuLinks, menuSmallLinks } from '../config/site';
 import SocialLinks from './SocialLinks.astro';
+import { publicAnatomySystems } from '../islands/anatomypublic';
 import { currentHref, groupMenuLinks } from '../scripts/menu';
 
 interface Props {
@@ -15,10 +16,16 @@ interface Props {
 }
 
 const { quiet = false } = Astro.props;
-const grouped = groupMenuLinks(menuLinks, menuSmallLinks);
+// Public navigation reads the SAME source/build gate as /anatomy. Preview opt-in
+// never makes an unapproved model eligible for a public menu link.
+const anatomyFiles = import.meta.glob('../../content/visuals/anatomy-*.json', { eager: true, import: 'default' });
+const visibleMenuLinks = publicAnatomySystems(anatomyFiles).length > 0
+  ? [...menuLinks, { href: '/anatomy', label: 'anatomy lab' }]
+  : [...menuLinks];
+const grouped = groupMenuLinks(visibleMenuLinks, menuSmallLinks);
 const current = currentHref(
   Astro.url.pathname,
-  [...menuLinks, ...menuSmallLinks].map((link) => link.href),
+  [...visibleMenuLinks, ...menuSmallLinks].map((link) => link.href),
 );
 ---
 

@@ -1,0 +1,60 @@
+---
+/**
+ * Public, no-JavaScript/no-WebGL alternative for the approved Anatomy Lab.
+ * Only production-gated systems are ever passed here by /anatomy.
+ * All labels, groups and layers come from the source manifests, not from prose.
+ */
+import type { AnatomySystem } from '../islands/anatomylab';
+import {
+  BODYPARTS3D_CREDIT_LEAD,
+  BODYPARTS3D_LICENSE_NAME,
+  BODYPARTS3D_LICENSE_URL,
+  BODYPARTS3D_REFERENCE_NOTE,
+  BODYPARTS3D_REFERENCE_URL,
+  groupStructures,
+  nameSourceFor,
+  releaseNoteFor,
+} from '../islands/anatomylab';
+
+interface Props {
+  systems: readonly AnatomySystem[];
+}
+const { systems } = Astro.props;
+---
+
+<section aria-label="text-only anatomy structure names" class="space-y-6">
+  <h2 class="text-xl text-ink">structure names (text-only)</h2>
+  <p class="text-sm text-ink-soft">
+    use your browser's find-in-page to search every approved name. no JavaScript or 3D model is needed.
+  </p>
+  {systems.map((system) => (
+    <section aria-label={system.title} class="space-y-4 border-t border-line pt-4">
+      <h3 class="text-lg text-ink">{system.title}</h3>
+      <p class="text-sm text-ink-soft">{nameSourceFor(system)}</p>
+      {groupStructures(system.structures).map((group) => (
+        <div class="space-y-2">
+          {group.group && <h4 class="text-sm text-ink-soft">{group.group}</h4>}
+          <ul class="list-disc space-y-2 pl-5 text-ink">
+            {group.items.map((item) => (
+              <li class="break-words">
+                <span>{item.text}</span>
+                <p class="text-sm text-ink-soft">
+                  system: {system.title} · source group: {group.group ?? 'not listed'} · layer: {item.layer ?? 'not listed'}
+                </p>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))}
+      <p class="text-sm text-ink-soft">
+        {BODYPARTS3D_CREDIT_LEAD}{' '}
+        <a class="underline" href={BODYPARTS3D_LICENSE_URL} rel="license noopener">{BODYPARTS3D_LICENSE_NAME}</a>
+      </p>
+      <p class="text-sm text-ink-soft">{releaseNoteFor(system)}</p>
+      <p class="text-sm text-ink-soft">
+        {BODYPARTS3D_REFERENCE_NOTE}{' '}
+        <a class="underline" href={BODYPARTS3D_REFERENCE_URL} rel="noopener noreferrer">source details</a>
+      </p>
+    </section>
+  ))}
+</section>

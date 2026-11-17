@@ -1,0 +1,41 @@
+---
+/**
+ * Founder-held public address for the Anatomy Lab (Task 178 package 8).
+ * Drafts cannot appear here even on staging or in draft-enabled test builds:
+ * both this page and the site menu use the production manifest gate.
+ * /preview/anatomy-lab remains independent and unchanged.
+ */
+import Layout from '../layouts/Layout.astro';
+import AnatomyPublicText from '../components/AnatomyPublicText.astro';
+import AnatomyLab from '../islands/AnatomyLab.tsx';
+import { publicAnatomySystems } from '../islands/anatomypublic';
+
+const files = import.meta.glob('../../content/visuals/anatomy-*.json', { eager: true, import: 'default' });
+const systems = publicAnatomySystems(files);
+const ready = systems.length > 0;
+// Preserve the public route identity when the structure-reporting package is integrated.
+// A single props object stays type-compatible with the existing viewer and the
+// stricter reportPage contract in #684.
+const viewerProps = { systems, fixture: null, drafts: false, reportPage: '/anatomy' as const };
+---
+
+<Layout title="anatomy lab" description="Explore the anatomy lab." variant="study" noindex={!ready}>
+  <div class="mx-auto max-w-page space-y-8 pt-8 pb-section">
+    <h1 class="text-2xl text-ink">anatomy lab</h1>
+    {
+      ready ? (
+        <>
+          <AnatomyLab client:only="react" {...viewerProps} />
+          <noscript>
+            <div class="space-y-4 rounded-lg border border-line p-4 text-ink">
+              <p>the 3D anatomy lab needs JavaScript. You can study every approved structure in words below.</p>
+              <AnatomyPublicText systems={systems} />
+            </div>
+          </noscript>
+        </>
+      ) : (
+        <p class="rounded-lg border border-line p-4 text-ink">the anatomy lab is coming soon.</p>
+      )
+    }
+  </div>
+</Layout>
