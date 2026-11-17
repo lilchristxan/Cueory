@@ -21,6 +21,8 @@ import { NOTE_SOUND_STORAGE_KEY } from '../../src/scripts/notesound';
 import { THEME_STORAGE_KEY } from '../../src/scripts/theme';
 import { PROMO_STORAGE_KEY } from '../../src/scripts/promo';
 import { RESUME_STORAGE_KEY } from '../../src/scripts/resume';
+import { HOME_TIP_STORAGE_KEY } from '../../src/islands/home-screen-tip';
+import { SURVEY_STORAGE_KEYS } from '../../src/islands/surveykeys';
 
 const privacyPath = fileURLToPath(new URL('../../dist/privacy.html', import.meta.url));
 
@@ -49,6 +51,7 @@ describe.skipIf(!existsSync(privacyPath))('privacy page browser storage disclosu
     SUDOKU_STATS_STORAGE_KEY,
     SUDOKU_SETTINGS_KEY,
     GAME_SETTINGS_STORAGE_KEY,
+    HOME_TIP_STORAGE_KEY,
     legacyStarsKey('<deck>'),
   ])('includes the exported browser key %s in built markup', (key) => {
     expect(visibleCodeKeys(privacyHtml())).toContain(key);
@@ -56,7 +59,7 @@ describe.skipIf(!existsSync(privacyPath))('privacy page browser storage disclosu
 
   it.each([
     AUTH_STORAGE_KEY, PKCE_VERIFIER_STORAGE_KEY, PKCE_FLOW_LIST_STORAGE_KEY, pkceFlowStorageKey('<id>'),
-    `${GUEST_IMPORT_MARKER_PREFIX}<id>`, BREAK_STORAGE_KEY,
+    `${GUEST_IMPORT_MARKER_PREFIX}<id>`, BREAK_STORAGE_KEY, ...SURVEY_STORAGE_KEYS,
   ])(
     'discloses the planned storage key %s',
     (key) => {
@@ -102,6 +105,7 @@ describe.skipIf(!existsSync(privacyPath))('privacy page browser storage disclosu
       expect(covered.has(key), `no deletion or sign-out path for ${key}`).toBe(true);
     }
     expect(plan).not.toContain(AUTH_STORAGE_KEY);
+    for (const key of [HOME_TIP_STORAGE_KEY, ...SURVEY_STORAGE_KEYS]) expect(plan, key).toContain(key);
   });
 
   it('lists study resume as in use now, in the "It is only:" list, and words its answers truthfully', () => {

@@ -41,6 +41,17 @@ export function shareImagePath(tool: ShareToolId, style: ShareStyle): string {
   return `/share/${group}-${style}.png`;
 }
 
+/**
+ * Widths of the small WebP previews the share sheet shows (scripts/build-share-previews.mjs): enough for its card
+ * (--container-share-card, at most 280 CSS px) on 1x and 2x screens, and on 3x screens.
+ */
+export const SHARE_PREVIEW_WIDTHS = [560, 840] as const;
+
+/** A card's preview image at one of SHARE_PREVIEW_WIDTHS. The file that is shared stays the full PNG. */
+export function sharePreviewPath(tool: ShareToolId, style: ShareStyle, width: (typeof SHARE_PREVIEW_WIDTHS)[number]): string {
+  return shareImagePath(tool, style).replace(/^\/share\/(.+)\.png$/, `/share/previews/$1-${width}.webp`);
+}
+
 /** The file name a shared card image gets. */
 export function shareFileName(tool: ShareToolId, style: ShareStyle): string {
   return `cueory-${shareImagePath(tool, style).slice('/share/'.length)}`;
