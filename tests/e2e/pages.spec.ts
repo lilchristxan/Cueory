@@ -1,6 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
-import { menuSmallLinks, socials } from '../../src/config/site';
+import { accountLaunch, accountsOpen, menuSmallLinks, newsletter, showsHeroJoin, socials } from '../../src/config/site';
 import { visibleFooterLinks } from '../../src/config/legalfooter';
 import { isDesktopOfEachEngine } from './projects';
 import { lessonRoutes } from '../lessonroutes';
@@ -453,12 +453,16 @@ test.describe('marketing look (D-41)', () => {
     // One glassy button to the daily games and one quiet link to the launch list (lane 14 home polish).
     const button = page.locator('.scene-hero').getByRole('link', { name: "play today's games", exact: true });
     await expect(button).toHaveAttribute('href', '/play');
-    await expect(page.getByRole('link', { name: 'join the launch list', exact: true })).toHaveAttribute('href', '/#signup');
+    // The quiet join link shows only once it leads somewhere (showsHeroJoin): accounts open or the Kit form set.
+    const joinShown = showsHeroJoin(accountsOpen, newsletter.formAction);
+    if (joinShown) {
+      await expect(page.getByTestId('hero-join')).toHaveAttribute('href', accountLaunch(accountsOpen).accountHref);
+    }
     // No line under the button restates it (Christian, 2026-11-02).
     await expect(page.getByText('save your progress and pick up where you left off.')).toHaveCount(0);
     // A calmer hero (D-55): no course link, no motto line and no embossed logo behind the headline.
     const hero = page.locator('.scene-hero');
-    await expect(hero.getByRole('link')).toHaveCount(2);
+    await expect(hero.getByRole('link')).toHaveCount(joinShown ? 2 : 1);
     await expect(hero.locator('.glass-button')).toHaveCount(1);
     await expect(hero.getByText('by nursing students, for nursing students.')).toHaveCount(0);
     await expect(hero.locator('.logo')).toHaveCount(1);

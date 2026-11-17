@@ -42,7 +42,7 @@ test.describe('home page-specific behavior', () => {
       'get launch updates',
     ]);
 
-    await expect(page.getByTestId('signup-pending')).toHaveText('signups open soon.');
+    await expect(page.getByTestId('signup-pending')).toHaveText('sign ups open soon.');
     await expect(page.getByTestId('signup-form')).toHaveCount(0);
   });
 

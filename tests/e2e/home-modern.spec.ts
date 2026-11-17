@@ -1,11 +1,12 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
+import { accountLaunch, accountsOpen, newsletter, showsHeroJoin } from '../../src/config/site';
 
-// The hero's two ways in (lane 14 home polish): today's games and the launch list.
-const heroLinks = [
-  ['hero-play', '/play'],
-  ['hero-join', '/#signup'],
-] as const;
+// The hero's ways in (lane 14 home polish): today's games, and the quiet join link once it leads somewhere.
+const launch = accountLaunch(accountsOpen);
+const heroLinks: ReadonlyArray<readonly [string, string]> = showsHeroJoin(accountsOpen, newsletter.formAction)
+  ? [['hero-play', '/play'], ['hero-join', launch.accountHref]]
+  : [['hero-play', '/play']];
 
 test.beforeEach(async ({ page }) => {
   // The once-only marketing panel must not interrupt navigation and accessibility checks.
@@ -31,7 +32,8 @@ for (const size of [
       await expect(page.locator('main h1')).toHaveText('nursing school is hard enough.');
       await expect(page.locator('#hero-heading + p')).toHaveText('cueory makes studying simpler.');
       await expect(page.getByTestId('hero-play')).toHaveText("play today's games");
-      await expect(page.getByTestId('hero-join')).toHaveText('join the launch list');
+      if (heroLinks.length === 2) await expect(page.getByTestId('hero-join')).toHaveText(launch.promoJoinLabel);
+      else await expect(page.getByTestId('hero-join')).toHaveCount(0);
       // No line under the button restates it (Christian, 2026-11-02).
       await expect(page.getByText('save your progress and pick up where you left off.')).toHaveCount(0);
       await expect(page.getByRole('heading', { level: 2, name: 'how it works' })).toBeVisible();

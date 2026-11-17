@@ -80,6 +80,15 @@ export function accountLaunch(open: boolean) {
 export const accountHref = accountLaunch(accountsOpen).accountHref;
 
 /**
+ * Whether the home hero shows its quiet join link. It leads to a real next step only once accounts are open or the
+ * launch-updates box has a form (Kit's https address in `newsletter.formAction`); until then the box only says
+ * "sign ups open soon.", so the link would be a dead end.
+ */
+export function showsHeroJoin(open: boolean, formAction: string): boolean {
+  return open || formAction.startsWith('https://');
+}
+
+/**
  * The ☰ side panel (D-46). Lowercase on purpose (D-47). A link with a note shows it beside the label, for things
  * that aren't open yet. Search joins the top of the panel in its own pull request.
  */
