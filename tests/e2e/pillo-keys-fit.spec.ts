@@ -1,8 +1,9 @@
 import { expect, test, type Page } from '@playwright/test';
 
-// Phones in portrait, with normal and larger text: pillo's three keyboard rows (10, 9 and 9 keys, with ⌫ and enter)
-// never wrap onto a second line. Each key stays at least 30 px wide and 44 px tall, every key is on screen and the
-// page never scrolls sideways. The crossword's check and reveal buttons share one row wherever the pair fits.
+// pillo's on-screen keys are the crossword's letter keys (Christian, 2026-11-17): a to z in rows that wrap, then
+// ⌫ and enter in the same style. On phones in portrait, with normal and larger text, no row runs past the screen or
+// its group, every key is at least 44 × 44, no two keys overlap and the page never scrolls sideways. The crossword's
+// check and reveal buttons share one row wherever the pair fits.
 
 async function open(page: Page, width: number, rootText: string) {
   await page.setViewportSize({ width, height: 800 });
@@ -17,23 +18,31 @@ async function open(page: Page, width: number, rootText: string) {
 
 for (const width of [320, 390, 430]) {
   for (const rootText of ['16px', '20px', '32px']) {
-    test(`pillo keyboard rows stay on one line at ${width} px with ${rootText} root text`, async ({ page }) => {
+    test(`pillo keys fit at ${width} px with ${rootText} root text`, async ({ page }) => {
       await open(page, width, rootText);
-      const rows = await page.locator('.pillo-key-row').evaluateAll((rowElements) =>
-        rowElements.map((row) => [...row.querySelectorAll('.pillo-key')].map((key) => key.getBoundingClientRect().toJSON() as DOMRect)));
-      expect(rows.map((row) => row.length)).toEqual([10, 9, 9]);
-      for (const [index, row] of rows.entries()) {
-        const tops = new Set(row.map((key) => Math.round(key.top)));
-        expect(tops.size, `row ${index + 1} is one line`).toBe(1);
-        for (const key of row) {
-          expect(key.width).toBeGreaterThanOrEqual(30);
-          expect(key.height).toBeGreaterThanOrEqual(44);
-          expect(key.left).toBeGreaterThanOrEqual(0);
-          expect(key.right).toBeLessThanOrEqual(width);
+      const group = page.getByTestId('pulse').getByRole('group', { name: 'letters' });
+      const letters = await group.getByRole('button').evaluateAll((keys) => keys.map((key) => key.textContent?.trim()));
+      expect(letters.slice(0, 26).map((text) => text?.[0])).toEqual([...'abcdefghijklmnopqrstuvwxyz']);
+      expect(letters.slice(26)).toEqual(['⌫', 'enter']);
+
+      const area = (await group.boundingBox())!;
+      const keys = await group.getByRole('button').evaluateAll((list) => list.map((key) => key.getBoundingClientRect().toJSON() as DOMRect));
+      for (const key of keys) {
+        expect(key.width).toBeGreaterThanOrEqual(44);
+        expect(key.height).toBeGreaterThanOrEqual(44);
+        expect(key.left).toBeGreaterThanOrEqual(Math.max(0, area.x) - 0.5);
+        expect(key.right).toBeLessThanOrEqual(Math.min(width, area.x + area.width) + 0.5);
+      }
+      for (let i = 0; i < keys.length; i++) {
+        for (let j = i + 1; j < keys.length; j++) {
+          const a = keys[i]!;
+          const b = keys[j]!;
+          expect(a.right <= b.left || b.right <= a.left || a.bottom <= b.top || b.bottom <= a.top, `keys ${i} and ${j} overlap`).toBe(true);
         }
       }
-      // Each key's letter fits inside it.
-      expect(await page.locator('.pillo-key').evaluateAll((keys) => keys.filter((key) => key.scrollWidth > key.clientWidth + 1).length)).toBe(0);
+      // No row scrolls or spills sideways, and each key's letter fits inside it.
+      expect(await group.locator('.pillo-key-row').evaluateAll((rows) => rows.filter((row) => row.scrollWidth > row.clientWidth + 1).length)).toBe(0);
+      expect(await group.locator('.pillo-key').evaluateAll((list) => list.filter((key) => key.scrollWidth > key.clientWidth + 1).length)).toBe(0);
       expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0);
     });
   }
