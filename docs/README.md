@@ -56,3 +56,5 @@ Review note: [merged-note sweep](status/in-review/lane12-status-sweep-1.md) — 
 
 Runbook: [Thursday launch day](runbooks/launch-day.md) — Proposed Phoenix-time schedule and smoke checks for the games-only launch.
 Review note: [launch-day status](status/in-review/lane4-launch-day.md) — Planning only; every release gate still applies.
+
+Review note: [go-live corrections](status/in-review/lane12-go-live-followup.md) — Date, repository migration inventory and unmet legal release gates; documentation only.

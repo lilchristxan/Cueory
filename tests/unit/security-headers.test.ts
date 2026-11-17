@@ -128,7 +128,9 @@ function checkAstroPolicy(text: string): void {
 
   // Only the newsletter form origin can be computed, and it must come from URL.origin.
   expect(csp.get('form-action')).toEqual(["'self'" + '$' + '{formOrigin}']);
-  expect(text).toMatch(/const formOrigin = newsletter\.formAction \? \x60 \x24\{new URL\(newsletter\.formAction\)\.origin\}\x60 : '';/);
+  // ...and only from an address that passed the Kit-host check (kitFormAction in src/config/site.ts).
+  expect(text).toMatch(/const kitForm = kitFormAction\(newsletter\.formAction\);/);
+  expect(text).toMatch(/const formOrigin = kitForm \? \x60 \x24\{new URL\(kitForm\)\.origin\}\x60 : '';/);
 
   const resources = readLiteralArray(text, 'resources');
   rejectUnsafeSources(new Map([['script-src', resources]]));

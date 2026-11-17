@@ -80,7 +80,7 @@ describe('game help text (#736)', () => {
     const checkboxes = /const CHECKBOX_SETTINGS[^=]*= \[([\s\S]*?)\n\];/.exec(crossword)?.[1]?.match(/^\s*\['/gm) ?? [];
     expect(checkboxes.length).toBeGreaterThan(0);
     expect(names('cueword')).toHaveLength(checkboxes.length + 1);
-    expect(names('cueword').at(-1)).toBe('clue text size');
+    expect(names('cueword').at(-1)).toBe('cue text size');
   });
 
   it('keeps the sudoku pause sentence the pause test reads', () => {

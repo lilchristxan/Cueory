@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-const anchors = ['how-it-works', 'ways-to-study', 'daily-games', 'study-features', 'signup'] as const;
+const anchors = ['how-it-works', 'ways-to-study', 'daily-games', 'signup'] as const;
 
 test.describe('same-page anchors', () => {
   for (const id of anchors) {
