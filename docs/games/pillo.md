@@ -18,26 +18,25 @@ the player's own device. For now the words are labelled samples.
 3. The on-screen keys show the same marks, so you can see which letters are left.
 4. A letter you use twice is marked twice only if the word has it twice.
 5. A word that isn't in the word list doesn't use up a guess. The game says so in plain words.
-6. The strip of pill pockets next to "guess the 5-letter word" shows how many guesses are left: a used guess leaves an
-   empty pocket.
+6. The game box shows no guess counter; screen readers still hear how many guesses are left.
 
 ## Help
 
 This is the help added by pull request #801 (in review at the time of writing):
 
 - First visit: the rules show in a card above the board, with a **got it** button.
-- After that: the **?** button at the top of the game opens the rules and every setting in a dialog. Escape closes it.
+- After that: the **?** at the top right of the game opens the rules and every setting in a dialog. Escape closes it.
 
 ## Settings
 
-pillo settings are under the board. Hard mode and on-screen keyboard only last for this visit; the high contrast
-switch there is the shared, remembered one (the same as in game settings):
+The gear at the top left of the game opens pillo's settings, with the shared settings above them. Hard mode and
+on-screen keyboard only last for this visit:
 
 - **hard mode**: letters shown in place or in the word must be used in every later guess. It can be turned on or off
   only before the first guess of the day.
 - **on-screen keyboard only**: only the on-screen letter keys type, so a phone's own keyboard stays closed.
 
-Shared settings for every game (the **game settings** button at the top of /play): theme (light, evening or follow the
+Shared settings for every game (in the same dialog): theme (light, evening or follow the
 device), motion (follow the device or always reduce), high contrast and game sounds.
 
 ## Scoring and stats

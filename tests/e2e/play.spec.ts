@@ -40,14 +40,15 @@ test.describe('daily games: pillo (Task 114)', () => {
     await expect(page.getByTestId('pulse')).toBeVisible();
   });
 
-  const status = (page: Page) => page.getByTestId('pulse').locator('.pillo-status');
-  const strip = (page: Page) => page.getByTestId('pulse-strip').locator('.pillo-strip-pill');
+  // The guesses left are no longer drawn on the box (Christian's brief); screen readers still hear them.
+  const status = (page: Page) => page.getByTestId('pulse-status');
 
   test('pillo has its own page, with only pillo on it, and passes axe', async ({ page }) => {
     // Each game on its own page (2026-11-17): the hub test below names all four games and says they are samples.
     await expect(page.getByRole('heading', { level: 1, name: 'pillo' })).toBeVisible();
     await expect(status(page)).toHaveText('guess the 5-letter word · 6 of 6 guesses left');
-    await expect(strip(page)).toHaveCount(6);
+    await expect(status(page)).toHaveClass(/sr-only/);
+    await expect(page.getByTestId('pulse-strip')).toHaveCount(0);
     // Six rows of five pockets, the first one ringed for the first letter.
     await expect(page.getByTestId('pulse').locator('.pillo-pack .pillo-pocket')).toHaveCount(30);
     await expect(page.getByTestId('pulse').locator('.pillo-next')).toHaveCount(1);
@@ -73,7 +74,6 @@ test.describe('daily games: pillo (Task 114)', () => {
     await expect(page.getByRole('button', { name: 'n, not in the word' })).toBeVisible();
     await expect(status(page)).toHaveText('guess the 5-letter word · 5 of 6 guesses left');
     // A used guess leaves an empty pocket in the strip.
-    await expect(strip(page)).toHaveCount(5);
     // Focus stays in the field for the next guess.
     await expect(field(page)).toBeFocused();
   });
@@ -169,7 +169,7 @@ test.describe('daily games: pillo settings and finish screen (Task 719)', () => 
     await field(page).fill('zzzzz');
     await field(page).press('Enter');
     await expect(page.getByTestId('pulse-problem')).toHaveText("zzzzz isn't in the word list. it didn't use a guess.");
-    await expect(page.getByTestId('pulse').locator('.pillo-status')).toContainText('6 of 6 guesses left');
+    await expect(page.getByTestId('pulse-status')).toContainText('6 of 6 guesses left');
   });
 
   test("the first guess of the day, and only it, tells the page today's round has started", async ({ page }) => {
@@ -192,30 +192,38 @@ test.describe('daily games: pillo settings and finish screen (Task 719)', () => 
   });
 
   test('hard mode switches only before the first guess, and then holds shown letters', async ({ page }) => {
-    const settings = page.getByTestId('pulse-settings');
-    await settings.locator('summary').click();
+    // pillo's settings open from the gear at the top left (Christian's brief), in a dialog that holds the shared ones too.
+    const gear = page.getByTestId('pulse').getByRole('button', { name: 'pillo settings' });
+    const settings = page.getByRole('dialog', { name: 'pillo settings' });
     const hard = settings.getByRole('switch', { name: /hard mode/ });
+    await gear.click();
     await hard.click();
     await expect(hard).toHaveAttribute('aria-checked', 'true');
+    await page.keyboard.press('Escape');
     await field(page).fill('crane');
     await field(page).press('Enter');
+    await gear.click();
     await expect(hard).toHaveAttribute('aria-disabled', 'true');
     // Playwright waits forever for an aria-disabled control to become enabled, so force the click to prove it is ignored.
     await hard.click({ force: true });
     await expect(hard).toHaveAttribute('aria-checked', 'true');
+    await page.keyboard.press('Escape');
     await field(page).fill('plant');
     await field(page).press('Enter');
     await expect(page.getByTestId('pulse-problem')).toHaveText('hard mode: the 2nd letter must be r.');
-    await expect(page.getByTestId('pulse').locator('.pillo-status')).toContainText('5 of 6 guesses left');
+    await expect(page.getByTestId('pulse-status')).toContainText('5 of 6 guesses left');
   });
 
   test('on-screen keyboard only removes the typing field, and high contrast still passes axe', async ({ page }) => {
-    const settings = page.getByTestId('pulse-settings');
-    await settings.locator('summary').click();
+    await page.getByTestId('pulse').getByRole('button', { name: 'pillo settings' }).click();
+    const settings = page.getByRole('dialog', { name: 'pillo settings' });
     await settings.getByRole('switch', { name: /on-screen keyboard only/ }).click();
     await expect(field(page)).toHaveCount(0);
-    await settings.getByRole('switch', { name: /high contrast/ }).click();
+    // High contrast is the shared switch, in the same dialog.
+    await settings.getByRole('checkbox', { name: /high contrast/ }).check();
     await expect(page.getByTestId('pulse')).toHaveClass(/pillo-contrast/);
+    await page.keyboard.press('Escape');
+    await expect(settings).toHaveCount(0);
     const pulse = page.getByTestId('pulse');
     for (const letter of 'crane') await pulse.getByRole('button', { name: letter, exact: true }).click();
     await pulse.getByRole('button', { name: 'enter', exact: true }).click();
@@ -986,14 +994,14 @@ test.describe('daily games without JavaScript', () => {
     // Playwright's text matching skips <noscript>, so this uses CSS.
     await expect(page.locator('noscript p')).toHaveText([
       "to add cueory to your home screen, use your browser's menu. daily games need JavaScript.",
-      'game settings need JavaScript.',
     ]);
     await expect(page.getByTestId('sample-note')).toBeVisible();
     await expect(page.getByTestId('play-links').getByRole('link')).toHaveText(['pillo', 'sudoku', 'crossword', 'word path']);
     for (const [path, name] of [['/play/pillo', 'pillo'], ['/play/sudoku', 'sudoku'], ['/play/crossword', 'crossword'], ['/play/word-path', 'word path']]) {
       await page.goto(path);
+      // Only sudoku's page has the separate shared settings button; the others open them from the game's gear.
       await expect(page.locator('noscript p')).toHaveText([
-        'game settings need JavaScript.',
+        ...(name === 'sudoku' ? ['game settings need JavaScript.'] : []),
         `${name} needs JavaScript.`,
         'game results and sharing need JavaScript.',
       ]);

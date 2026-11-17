@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 
-// pillo's high contrast switch is the shared game setting (#734, lane8/settings-pillo): one switch for every game, kept
-// with the other shared settings, and the same in pillo's own settings and in game settings at the top of /play.
+// pillo's high contrast is the shared game setting (#734): one switch for every game, kept with the other shared
+// settings, in the dialog the gear at the top left of the game opens (Christian's brief).
 
 test.beforeEach(async ({ page }) => {
   await page.clock.setFixedTime(new Date('2026-11-01T15:00:00'));
@@ -13,35 +13,42 @@ test.beforeEach(async ({ page }) => {
   });
 });
 
-test('pillo high contrast and the shared high contrast are one switch, remembered on this device', async ({ page }) => {
+test('pillo high contrast is the shared switch in the gear\'s dialog, remembered on this device', async ({ page }) => {
   await page.goto('/play/pillo');
   const pillo = page.getByTestId('pulse');
   await expect(pillo).toBeVisible();
-  await pillo.getByText('pillo settings').click();
-  const pilloSwitch = pillo.getByRole('switch', { name: /high contrast/ });
-  await expect(pilloSwitch).toHaveAttribute('aria-checked', 'false');
+  // One dialog from the gear (Christian's brief): pillo's own settings and the shared ones, so one high contrast switch.
+  const gear = pillo.getByRole('button', { name: 'pillo settings' });
+  const dialog = page.getByRole('dialog', { name: 'pillo settings' });
+  await gear.click();
+  await expect(dialog.getByRole('checkbox', { name: /high contrast/ })).toHaveCount(1);
+  await expect(dialog.getByRole('switch', { name: /high contrast/ })).toHaveCount(0);
+  const contrast = dialog.getByRole('checkbox', { name: /high contrast/ });
+  await expect(contrast).not.toBeChecked();
 
-  await pilloSwitch.press('Enter');
-  await expect(pilloSwitch).toHaveAttribute('aria-checked', 'true');
+  await contrast.press('Space');
+  await expect(contrast).toBeChecked();
   await expect(pillo).toHaveClass(/pillo-contrast/);
   await expect(page.locator('html')).toHaveAttribute('data-game-contrast', 'high');
   expect(JSON.parse((await page.evaluate(() => localStorage.getItem('cueory-game-settings')))!)).toMatchObject({ highContrast: true });
 
-  // The shared panel shows the same choice, and turning it off there turns pillo's off too.
-  await page.getByTestId('game-settings-button').click();
-  const dialog = page.getByRole('dialog', { name: 'game settings' });
-  const shared = dialog.getByRole('checkbox', { name: /high contrast/ });
-  await expect(shared).toBeChecked();
-  await shared.uncheck();
+  // Turning it off there turns pillo's high contrast off too.
+  await contrast.uncheck();
   await page.keyboard.press('Escape');
-  await expect(pilloSwitch).toHaveAttribute('aria-checked', 'false');
+  await expect(dialog).toHaveCount(0);
+  await expect(gear).toBeFocused();
   await expect(pillo).not.toHaveClass(/pillo-contrast/);
   await expect(page.locator('html')).not.toHaveAttribute('data-game-contrast', /.*/);
 
-  // Turned on again, it is still on after a reload.
-  await pilloSwitch.click();
+  // Turned on again, it is still on after a reload, and other games' pages follow it.
+  await gear.click();
+  await contrast.check();
+  await page.keyboard.press('Escape');
   await page.reload();
   await expect(page.getByTestId('pulse')).toHaveClass(/pillo-contrast/);
-  await page.getByTestId('pulse').getByText('pillo settings').click();
-  await expect(page.getByTestId('pulse').getByRole('switch', { name: /high contrast/ })).toHaveAttribute('aria-checked', 'true');
+  await page.getByTestId('pulse').getByRole('button', { name: 'pillo settings' }).click();
+  await expect(dialog.getByRole('checkbox', { name: /high contrast/ })).toBeChecked();
+  await page.keyboard.press('Escape');
+  await page.goto('/play/crossword');
+  await expect(page.locator('html')).toHaveAttribute('data-game-contrast', 'high');
 });

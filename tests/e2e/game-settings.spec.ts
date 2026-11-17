@@ -1,7 +1,8 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
 
-// Issue #734: the shared game settings panel on /play (theme, high contrast, reduced motion, sound).
+// Issue #734: the shared game settings (theme, high contrast, reduced motion, sound), from a game's gear (Christian's
+// brief: word path's gear holds only the shared ones).
 
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
@@ -10,14 +11,14 @@ test.beforeEach(async ({ page }) => {
 });
 
 test('opens as a focus-trapped dialog that Escape closes, returning focus to its button', async ({ page }) => {
-  await page.goto('/play');
+  await page.goto('/play/word-path');
   const button = page.getByTestId('game-settings-button');
   await expect(button).toBeVisible();
   const box = await button.boundingBox();
   expect(box!.width).toBeGreaterThanOrEqual(44);
   expect(box!.height).toBeGreaterThanOrEqual(44);
   await button.click();
-  const dialog = page.getByRole('dialog', { name: 'game settings' });
+  const dialog = page.getByRole('dialog', { name: 'word path settings' });
   await expect(dialog).toBeVisible();
   const close = dialog.getByRole('button', { name: 'close settings' });
   await expect(close).toBeFocused();
@@ -41,11 +42,11 @@ test('opens as a focus-trapped dialog that Escape closes, returning focus to its
 });
 
 test('high contrast, reduced motion and sound are remembered and applied to the page', async ({ page }) => {
-  await page.goto('/play');
+  await page.goto('/play/word-path');
   const html = page.locator('html');
   await expect(html).not.toHaveAttribute('data-game-contrast', /.*/);
   await page.getByTestId('game-settings-button').click();
-  const dialog = page.getByRole('dialog', { name: 'game settings' });
+  const dialog = page.getByRole('dialog', { name: 'word path settings' });
   await dialog.getByRole('checkbox', { name: /high contrast/ }).check();
   await dialog.getByRole('group', { name: 'motion' }).getByRole('radio', { name: /always reduce/ }).check();
   await dialog.getByRole('checkbox', { name: /game sounds/ }).uncheck();
@@ -75,7 +76,7 @@ test('high contrast, reduced motion and sound are remembered and applied to the 
 
 test('reduced motion follows the device by default', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
-  await page.goto('/play');
+  await page.goto('/play/word-path');
   await expect(page.getByTestId('game-settings-button')).toBeVisible();
   await expect(page.locator('html')).toHaveAttribute('data-game-motion', 'reduce');
   await page.getByTestId('game-settings-button').click();
@@ -83,7 +84,7 @@ test('reduced motion follows the device by default', async ({ page }) => {
 });
 
 test('the theme rows drive the site theme switch', async ({ page }) => {
-  await page.goto('/play');
+  await page.goto('/play/word-path');
   await page.getByTestId('game-settings-button').click();
   const theme = page.getByRole('dialog').getByRole('group', { name: 'theme' });
   await theme.getByRole('radio', { name: /dark mode/ }).check();
@@ -96,7 +97,7 @@ test('the theme rows drive the site theme switch', async ({ page }) => {
 for (const viewport of [{ width: 390, height: 844 }, { width: 1440, height: 900 }]) {
   test(`fits the screen without sideways scrolling at ${viewport.width}px`, async ({ page }) => {
     await page.setViewportSize(viewport);
-    await page.goto('/play');
+    await page.goto('/play/word-path');
     await page.getByTestId('game-settings-button').click();
     const box = await page.locator('.game-settings').boundingBox();
     expect(box!.x).toBeGreaterThanOrEqual(0);

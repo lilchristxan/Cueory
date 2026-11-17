@@ -362,6 +362,19 @@
     color: var(--color-ink);
     text-align: start;
   }
+  /* In the gear's settings dialog (#823) a switch fills the row and its label wraps, so the card never scrolls sideways
+     at 320 px with enlarged text. */
+  .game-settings .pillo-switch {
+    inline-size: 100%;
+    padding-inline: calc(var(--spacing) * 3);
+    text-align: start;
+  }
+
+  .game-settings .pillo-switch > span:first-child {
+    min-inline-size: 0;
+    overflow-wrap: anywhere;
+  }
+
   .pillo-switch[aria-disabled="true"] {
     border-style: dashed;
     color: var(--color-ink-soft);

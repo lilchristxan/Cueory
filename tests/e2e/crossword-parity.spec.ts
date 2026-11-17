@@ -178,8 +178,9 @@ test.describe('crossword parity (Task 721)', () => {
   test('settings hide the timer, change the clue size, and are remembered in this browser', async ({ page }) => {
     await expect(board(page).getByTestId('crossword-time')).toBeVisible();
     await board(page).getByRole('group', { name: 'entry mode' }).waitFor();
-    await board(page).locator('summary[aria-label="crossword settings"]').click();
-    const settings = board(page).getByTestId('crossword-settings');
+    // The crossword's settings open from the gear at the top left (Christian's brief), with the shared ones.
+    await board(page).getByRole('button', { name: 'crossword settings' }).click();
+    const settings = page.getByRole('dialog', { name: 'crossword settings' }).getByTestId('crossword-settings');
     await settings.getByRole('checkbox', { name: 'show the timer' }).uncheck();
     await expect(board(page).getByTestId('crossword-time')).toHaveCount(0);
     await settings.getByRole('radio', { name: 'large' }).check();
@@ -195,11 +196,11 @@ test.describe('crossword parity (Task 721)', () => {
   });
 
   test('autocheck marks letters as they are typed', async ({ page }) => {
-    await board(page).locator('summary[aria-label="crossword settings"]').click();
-    await board(page).getByTestId('crossword-settings').getByRole('checkbox', { name: /^autocheck/ }).check();
-    // Close the menu first: on a phone its open panel lies over the top of the grid.
-    await board(page).locator('summary[aria-label="crossword settings"]').click();
-    await expect(board(page).getByTestId('crossword-settings')).toHaveCount(0);
+    await board(page).getByRole('button', { name: 'crossword settings' }).click();
+    await page.getByRole('dialog', { name: 'crossword settings' }).getByRole('checkbox', { name: /^autocheck/ }).check();
+    // Close the dialog first: it holds the page behind it inert.
+    await page.keyboard.press('Escape');
+    await expect(page.getByTestId('crossword-settings')).toHaveCount(0);
     await square(page, 2, 1).click();
     await page.keyboard.type('q');
     await expect(square(page, 2, 1)).toHaveAttribute('aria-label', /letter Q, marked wrong$/);
