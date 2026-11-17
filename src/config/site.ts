@@ -31,8 +31,9 @@ export const site = {
 
 /**
  * Launch-updates signup (Kit). The form posts straight to Kit; no Kit script
- * runs on our pages. Leave formAction empty until the Kit form exists: the
- * signup box then says "opening soon" instead of showing a form.
+ * runs on our pages. Until the Kit form exists (formAction empty), the signup
+ * box links out to Kit's landing page (landingUrl); with neither, it says
+ * "sign ups open soon." instead.
  */
 export const newsletter = {
   provider: 'Kit',
@@ -40,7 +41,26 @@ export const newsletter = {
   formAction: '',
   /** The email field's "name" from Kit's HTML embed code. */
   emailFieldName: 'email_address',
+  /** Christian's Kit landing page (a plain link out, no Kit script). Must be https on a kit.com host. */
+  landingUrl: 'https://cueory.kit.com/bfd9609b46',
 } as const;
+
+/** The landing page address if it is https on kit.com or one of its subdomains (no sign-in details), otherwise ''. */
+export function kitLandingUrl(value: string): string {
+  try {
+    const url = new URL(value);
+    const kitHost = url.hostname === 'kit.com' || url.hostname.endsWith('.kit.com');
+    return url.protocol === 'https:' && kitHost && !url.username && !url.password ? url.href : '';
+  } catch {
+    return '';
+  }
+}
+
+/** What the launch-updates box shows: Kit's form, a link to Kit's landing page, or "sign ups open soon.". */
+export function signupState(formAction: string, landingUrl: string): 'form' | 'landing' | 'pending' {
+  if (formAction.startsWith('https://')) return 'form';
+  return kitLandingUrl(landingUrl) ? 'landing' : 'pending';
+}
 
 /**
  * Cueory's social profiles (D-54; addresses confirmed by Christian on 1 Nov 2026, D-65). Each shows as its platform's
@@ -81,11 +101,11 @@ export const accountHref = accountLaunch(accountsOpen).accountHref;
 
 /**
  * Whether the home hero shows its quiet join link. It leads to a real next step only once accounts are open or the
- * launch-updates box has a form (Kit's https address in `newsletter.formAction`); until then the box only says
- * "sign ups open soon.", so the link would be a dead end.
+ * launch-updates box has Kit's form or its landing-page link; with neither, the box only says "sign ups open soon.",
+ * so the link would be a dead end.
  */
-export function showsHeroJoin(open: boolean, formAction: string): boolean {
-  return open || formAction.startsWith('https://');
+export function showsHeroJoin(open: boolean, formAction: string, landingUrl: string): boolean {
+  return open || signupState(formAction, landingUrl) !== 'pending';
 }
 
 /**

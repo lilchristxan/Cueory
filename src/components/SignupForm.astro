@@ -3,12 +3,16 @@
  * Launch-updates signup, the home page's last silk scene (D-53): a frosted card with a serif heading (no section
  * numbers, D-60). A plain HTML form that posts straight to Kit, so it works without JavaScript and loads no third-party
  * script. Kit validates the address, sends the confirmation (double opt-in) email and handles unsubscribes. Until Kit
- * is connected, the card says only that sign ups open soon; the line about the emails comes with the form, so small
+ * is connected, the card links to Kit's landing page (with no landing page either, it says only that sign ups open soon); the line about the emails comes with the form, so small
  * grey lines never stack (D-62). Lowercase brand voice (D-47).
  */
-import { newsletter } from '../config/site';
+import { kitLandingUrl, newsletter, signupState } from '../config/site';
 
-const ready = newsletter.formAction.startsWith('https://');
+const state = signupState(newsletter.formAction, newsletter.landingUrl);
+const ready = state === 'form';
+// Before the form exists, a plain link opens Kit's landing page: no Kit script, so no CSP change. Like the site's other
+// outside links (D-54) it opens in a new tab, and its name says so.
+const landingUrl = kitLandingUrl(newsletter.landingUrl);
 ---
 
 <section id="signup" class="scene scene-low scroll-mt-section py-section" aria-labelledby="signup-heading">
@@ -47,6 +51,22 @@ const ready = newsletter.formAction.startsWith('https://');
             <p id="signup-email-help" class="mt-4 text-sm text-ink-soft">
               a few emails about new lessons and the launch. unsubscribe any time. emails are sent by {newsletter.provider};
               see our <a href="/privacy">privacy page</a>.
+            </p>
+          </>
+        ) : state === 'landing' ? (
+          <>
+            <a
+              href={landingUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              class="glass-button mt-6"
+              aria-label="get launch updates (opens in a new tab)"
+              data-testid="signup-landing"
+            >
+              get launch updates
+            </a>
+            <p class="mt-4 text-sm text-ink-soft">
+              you sign up on {newsletter.provider}'s page; see our <a href="/privacy">privacy page</a>.
             </p>
           </>
         ) : (

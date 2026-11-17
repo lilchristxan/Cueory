@@ -4,7 +4,7 @@ import { accountLaunch, accountsOpen, newsletter, showsHeroJoin } from '../../sr
 
 // The hero's ways in (lane 14 home polish): today's games, and the quiet join link once it leads somewhere.
 const launch = accountLaunch(accountsOpen);
-const heroLinks: ReadonlyArray<readonly [string, string]> = showsHeroJoin(accountsOpen, newsletter.formAction)
+const heroLinks: ReadonlyArray<readonly [string, string]> = showsHeroJoin(accountsOpen, newsletter.formAction, newsletter.landingUrl)
   ? [['hero-play', '/play'], ['hero-join', launch.accountHref]]
   : [['hero-play', '/play']];
 

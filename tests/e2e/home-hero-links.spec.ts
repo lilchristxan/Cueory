@@ -3,7 +3,7 @@ import { accountLaunch, accountsOpen, newsletter, showsHeroJoin } from '../../sr
 import { isDesktopOfEachEngine } from './projects';
 
 // The quiet join link shows only once it leads somewhere (accounts open or the Kit form set): see showsHeroJoin.
-const joinShown = showsHeroJoin(accountsOpen, newsletter.formAction);
+const joinShown = showsHeroJoin(accountsOpen, newsletter.formAction, newsletter.landingUrl);
 const launch = accountLaunch(accountsOpen);
 
 // Lane 14 home polish: the hero points to today's games (/play) and quietly to the launch list, by keyboard and touch,

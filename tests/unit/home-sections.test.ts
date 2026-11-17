@@ -78,26 +78,32 @@ describe('home how-it-works (W01-3)', () => {
     const source = readFileSync(new URL('../../src/pages/index.astro', import.meta.url), 'utf8');
     expect(source).toContain('accountLaunch(accountsOpen).promoJoinLabel');
     expect(source).toMatch(/href=\{accountHref\}[\s\S]*?data-testid="hero-join"/);
-    expect(source).toContain('showsHeroJoin(accountsOpen, newsletter.formAction)');
+    expect(source).toContain('showsHeroJoin(accountsOpen, newsletter.formAction, newsletter.landingUrl)');
     expect(accountLaunch(true)).toMatchObject({ accountHref: '/signup', promoJoinLabel: 'create your free account' });
     const join = built.match(/<a\b(?=[^>]*data-testid="hero-join")[^>]*>([\s\S]*?)<\/a>/);
-    if (showsHeroJoin(accountsOpen, newsletter.formAction)) {
+    if (showsHeroJoin(accountsOpen, newsletter.formAction, newsletter.landingUrl)) {
       expect(join?.[0]).toContain('href="' + accountLaunch(accountsOpen).accountHref + '"');
       expect(plain(join?.[1] ?? '')).toBe(accountLaunch(accountsOpen).promoJoinLabel);
     } else {
-      // Accounts closed and no Kit form yet: the box below has no button, so the hero shows no link to it.
+      // Accounts closed, no Kit form and no landing page: the box below has no button, so the hero shows no link to it.
       expect(join).toBeNull();
     }
   });
 
   it('shows the hero join link only when it leads to a real next step', () => {
-    // Accounts closed, no form: the launch-updates box only says "sign ups open soon.", so no link.
-    expect(showsHeroJoin(false, '')).toBe(false);
-    expect(showsHeroJoin(false, 'http://example.com/form')).toBe(false);
-    // Accounts closed, Kit form set (made-up sample address): the link joins the launch list.
-    expect(showsHeroJoin(false, 'https://app.kit.com/forms/0000000/subscriptions')).toBe(true);
-    // Accounts open: the link creates the free account, with or without the form.
-    expect(showsHeroJoin(true, '')).toBe(true);
-    expect(showsHeroJoin(true, 'https://app.kit.com/forms/0000000/subscriptions')).toBe(true);
+    // Made-up sample addresses.
+    const form = 'https://app.kit.com/forms/0000000/subscriptions';
+    const landing = 'https://sample.kit.com/0000000000';
+    // Accounts closed, no form and no landing page: the box only says "sign ups open soon.", so no link.
+    expect(showsHeroJoin(false, '', '')).toBe(false);
+    expect(showsHeroJoin(false, 'http://example.com/form', '')).toBe(false);
+    expect(showsHeroJoin(false, '', 'https://example.com/not-kit')).toBe(false);
+    // Accounts closed, Kit form or landing page set: the link joins the launch list.
+    expect(showsHeroJoin(false, form, '')).toBe(true);
+    expect(showsHeroJoin(false, '', landing)).toBe(true);
+    expect(showsHeroJoin(false, form, landing)).toBe(true);
+    // Accounts open: the link creates the free account either way.
+    expect(showsHeroJoin(true, '', '')).toBe(true);
+    expect(showsHeroJoin(true, form, landing)).toBe(true);
   });
 });

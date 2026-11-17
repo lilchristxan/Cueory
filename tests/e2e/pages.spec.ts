@@ -380,7 +380,9 @@ test('home page has a launch-updates signup that works by keyboard', async ({ pa
   await expect(page.getByRole('heading', { name: 'Get launch updates' })).toBeVisible();
   const form = page.getByTestId('signup-form');
   if ((await form.count()) === 0) {
-    await expect(page.getByTestId('signup-pending')).toBeVisible();
+    // Before the Kit form exists: a link to Kit's landing page, or the pending line when there is none.
+    if (await page.getByTestId('signup-landing').count()) await expect(page.getByTestId('signup-landing')).toBeVisible();
+    else await expect(page.getByTestId('signup-pending')).toBeVisible();
     return;
   }
   const email = page.getByLabel('Email address');
@@ -454,7 +456,7 @@ test.describe('marketing look (D-41)', () => {
     const button = page.locator('.scene-hero').getByRole('link', { name: "play today's games", exact: true });
     await expect(button).toHaveAttribute('href', '/play');
     // The quiet join link shows only once it leads somewhere (showsHeroJoin): accounts open or the Kit form set.
-    const joinShown = showsHeroJoin(accountsOpen, newsletter.formAction);
+    const joinShown = showsHeroJoin(accountsOpen, newsletter.formAction, newsletter.landingUrl);
     if (joinShown) {
       await expect(page.getByTestId('hero-join')).toHaveAttribute('href', accountLaunch(accountsOpen).accountHref);
     }

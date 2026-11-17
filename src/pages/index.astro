@@ -11,7 +11,7 @@ import { accountHref, accountLaunch, accountsOpen, newsletter, showsHeroJoin, si
 // Until accounts open the quiet link joins the launch list; afterwards it creates the free account (src/config/site.ts).
 const joinLabel = accountLaunch(accountsOpen).promoJoinLabel;
 // No link while the launch-updates box has no form and accounts are closed: it would lead nowhere.
-const showJoin = showsHeroJoin(accountsOpen, newsletter.formAction);
+const showJoin = showsHeroJoin(accountsOpen, newsletter.formAction, newsletter.landingUrl);
 ---
 
 <Layout title={site.name} variant="home">
