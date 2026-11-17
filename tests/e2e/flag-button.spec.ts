@@ -77,6 +77,24 @@ for (const game of ['pillo', 'sudoku', 'crossword', 'word-path']) {
   });
 }
 
+test('a first-visit promo waits while a game report is open', async ({ page }) => {
+  // The suite suppresses the promo on the page fixture. A new page starts without that init script.
+  const fresh = await page.context().newPage();
+  await fresh.goto('/play/pillo');
+  const opener = fresh.locator('a[data-game-flag]');
+  const footer = fresh.locator('#footer-flag');
+  await expect(footer.getByRole('button', { name: 'flag or comment' })).toBeVisible();
+  await opener.focus();
+  await fresh.keyboard.press('Enter');
+  await expect(footer.getByRole('link', { name: 'hello@cueory.app' })).toBeVisible();
+  // Scrolling to the footer crosses the threshold that would otherwise open the promo.
+  await fresh.evaluate(() => window.dispatchEvent(new Event('scroll')));
+  await expect(fresh.getByTestId('promo')).toBeHidden();
+  await fresh.keyboard.press('Escape');
+  await expect(opener).toBeFocused();
+  await fresh.close();
+});
+
 test('flag button passes axe with form open', async ({ page }) => {
   await page.goto('/');
   await page.getByRole('button', { name: 'flag or comment', exact: true }).click();
