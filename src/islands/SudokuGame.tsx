@@ -5,7 +5,7 @@ import { GameHelpButton, GameHelpCard, useGameHelp } from './GameHelp';
 import { gameName } from '../config/games';
 import { localDay, showResultCard, sudokuResultCard } from './gameresults';
 import { GameSettingsDialog } from './GameSettings';
-import { gameSoundAllowed, loadGameSettings } from './gamesettings';
+import { GAME_SETTINGS_EVENT, GAME_SETTINGS_STORAGE_KEY, gameSoundAllowed, loadGameSettings, parseGameSettings, type SharedGameSettings } from './gamesettings';
 import { sudokuCellClasses } from './sudokuhighlight';
 import { DEFAULT_SUDOKU_SETTINGS, GAME_PROGRESS_EVENT, LEVEL_LABELS, sudokuProgressDetail, LEVEL_RULES, advanceSudokuSeconds, autoCandidateNotes, checkSudoku, conflictIndices, dailySudokuSeed, editSudokuBoard, effectiveSudokuMode, generateSudoku, getResult, loadSudokuSettings, newSudokuBoard, noteDigits, pushSudokuHistory, saveSudokuSettings, sudokuCellPresentation, sudokuKeyAction, sudokuWrongCells, undoSudoku, type SudokuBoard, type SudokuBoardAction, type SudokuLevel, type SudokuMode, type SudokuSettings } from './sudoku';
 import { reportRound, SUDOKU_STATS_STORAGE_KEY, sudokuRoundResult } from './gameresults';
@@ -97,13 +97,27 @@ export default function SudokuGame() {
     return () => window.clearInterval(timer);
   }, [paused, solved]);
 
+  // The latest shared settings (theme, motion, contrast, sound), followed live like useSharedGameSettings does: from the
+  // same-page event (so a change still counts when browser storage refuses to save it) and from other tabs. Kept in a
+  // ref, so following it never re-renders the board.
+  const shared = useRef<SharedGameSettings | null>(null);
+  useEffect(() => {
+    shared.current = loadGameSettings(browserStorage());
+    const onChange = (event: Event) => { shared.current = parseGameSettings(JSON.stringify((event as CustomEvent<unknown>).detail ?? null)); };
+    const onStorage = (event: StorageEvent) => {
+      if (event.key === null || event.key === GAME_SETTINGS_STORAGE_KEY) shared.current = loadGameSettings(browserStorage());
+    };
+    window.addEventListener(GAME_SETTINGS_EVENT, onChange);
+    window.addEventListener('storage', onStorage);
+    return () => { window.removeEventListener(GAME_SETTINGS_EVENT, onChange); window.removeEventListener('storage', onStorage); };
+  }, []);
+
   useEffect(() => {
     if (!solved || reported.current) return;
     reported.current = true;
     solvedResult.current?.focus();
-    // The shared "game sounds" switch silences every game, sudoku's solve sound too. It is read when the puzzle is
-    // solved, so a change made in the settings dialog a moment before still counts.
-    if (gameSoundAllowed(loadGameSettings(browserStorage()), settings.playSound)) playSolvedTone();
+    // The shared "game sounds" switch silences every game, sudoku's solve sound too: its latest value, as followed above.
+    if (gameSoundAllowed(shared.current ?? loadGameSettings(browserStorage()), settings.playSound)) playSolvedTone();
     const result = getResult({ day, level, seconds, errors, solved: true });
     // Queue the display result even if the separate host island has not hydrated yet.
     showResultCard(sudokuResultCard(result));
