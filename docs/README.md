@@ -51,3 +51,6 @@ Review note: [isolation audit status](status/in-review/lane1-isolation-leftovers
 
 Review note: [reset account binding](status/in-review/task-754-reset-bound-account.md) — Review status for the password reset account guard. **Christian:** Approval required.
 Review note: [answer account binding](status/in-review/task-756-answers-stop-on-switch.md) — Stops stale players after a sign-in change.
+
+Runbook: [restore the previous live version](runbooks/rollback.md) — Verified Cloudflare Workers dashboard steps and recovery checks.
+Review note: [rollback guide status](status/in-review/lane4-rollback-runbook.md) — Documentation only; no production action.
