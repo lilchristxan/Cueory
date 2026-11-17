@@ -14,6 +14,13 @@
     --pillo-hatch-color: color-mix(in srgb, var(--color-pillo-hatch) var(--pillo-hatch-mix), transparent);
     --pillo-gloss-color: color-mix(in srgb, var(--color-pillo-gloss) var(--pillo-gloss-mix), transparent);
     --pillo-perforation: color-mix(in srgb, var(--color-pillo-hatch) 22%, transparent);
+    /*
+      The clear end of each gradient is the same color at zero opacity, never the "transparent" keyword (clear black):
+      Safari's full-page screenshots and PDF export blend toward that black, which drew a solid black triangle over the
+      board where the gloss fades out.
+    */
+    --pillo-gloss-clear: rgb(from var(--color-pillo-gloss) r g b / 0);
+    --pillo-hatch-clear: rgb(from var(--color-pillo-hatch) r g b / 0);
   }
 
   .pillo-top {
@@ -41,9 +48,9 @@
   .pillo-strip {
     background-color: var(--pillo-foil-color);
     background-image:
-      linear-gradient(135deg, var(--pillo-gloss-color), transparent 45%),
-      repeating-linear-gradient(45deg, var(--pillo-hatch-color) 0 var(--pillo-hatch-width), transparent var(--pillo-hatch-width) var(--pillo-hatch-gap)),
-      repeating-linear-gradient(-45deg, var(--pillo-hatch-color) 0 var(--pillo-hatch-width), transparent var(--pillo-hatch-width) var(--pillo-hatch-gap));
+      linear-gradient(135deg, var(--pillo-gloss-color), var(--pillo-gloss-clear) 45%),
+      repeating-linear-gradient(45deg, var(--pillo-hatch-color) 0 var(--pillo-hatch-width), var(--pillo-hatch-clear) var(--pillo-hatch-width) var(--pillo-hatch-gap)),
+      repeating-linear-gradient(-45deg, var(--pillo-hatch-color) 0 var(--pillo-hatch-width), var(--pillo-hatch-clear) var(--pillo-hatch-width) var(--pillo-hatch-gap));
   }
 
   .pillo-pack {
@@ -111,7 +118,7 @@
     position: absolute;
     inset: 0;
     border-radius: inherit;
-    background-image: radial-gradient(ellipse 30% 22% at 26% 24%, var(--pillo-gloss-color), transparent);
+    background-image: radial-gradient(ellipse 30% 22% at 26% 24%, var(--pillo-gloss-color), var(--pillo-gloss-clear));
     pointer-events: none;
   }
 
@@ -291,21 +298,33 @@
     max-inline-size: var(--pillo-key-wide);
   }
 
-  /* A ten-letter QWERTY row cannot fit ten 44 px tap targets on a phone.
-     Keep every letter accessible: let the existing rows wrap, without zooming
-     out, hiding keys, or causing horizontal page scroll. */
+  /*
+    Phones (and large text): each QWERTY row stays on one line, like a phone's own keyboard. The keys run almost to
+    the screen edges, the gaps shrink first, then the keys share the row (at least 30 px wide at 320 px, still 48 px
+    tall), and with large text the letters shrink to fit their key. Nothing wraps and nothing scrolls sideways.
+  */
   @media (width < 40rem) {
+    .pillo-keys {
+      position: relative;
+      inset-inline-start: 50%;
+      container-type: inline-size;
+      inline-size: min(calc(100vw - var(--pillo-keys-edge) * 2), var(--pillo-board));
+      max-inline-size: none;
+      margin-inline: 0;
+      translate: -50% 0;
+    }
+
     .pillo-key-row {
-      flex-wrap: wrap;
+      flex-wrap: nowrap;
+      gap: var(--pillo-key-gap-fit);
     }
 
     .pillo-key {
-      flex: 0 0 var(--pillo-key-max);
-      min-inline-size: var(--tap-min);
+      font-size: min(var(--text-sm), var(--pillo-key-text-fit));
     }
 
     .pillo-key-wide {
-      flex-basis: var(--pillo-key-wide);
+      font-size: min(var(--text-sm), var(--pillo-key-wide-text-fit));
     }
   }
 
@@ -476,3 +495,16 @@
   }
 }
 
+/* On paper the foil keeps its plain grey and fine cross-hatch; the shine is a screen effect and is left out. */
+@media print {
+  .pillo-pack,
+  .pillo-strip {
+    background-image:
+      repeating-linear-gradient(45deg, var(--pillo-hatch-color) 0 var(--pillo-hatch-width), var(--pillo-hatch-clear) var(--pillo-hatch-width) var(--pillo-hatch-gap)),
+      repeating-linear-gradient(-45deg, var(--pillo-hatch-color) 0 var(--pillo-hatch-width), var(--pillo-hatch-clear) var(--pillo-hatch-width) var(--pillo-hatch-gap));
+  }
+
+  .pillo-pill::before {
+    display: none;
+  }
+}

@@ -204,6 +204,7 @@
   --print-board: 16cm;          /* the word path grid's width on paper: fits letter and A4 inside default margins */
   --print-letter: 16pt;         /* a letter in the printed grid, large enough to read at arm's length */
   --print-gap: 0.5cm;           /* space between the grid, the word list and the footer on paper */
+  --print-logo: 1.3cm;          /* the cueory logo at the top of a printed puzzle (about 49 px tall) */
   --print-figure: 13cm;         /* an anatomy worksheet's picture on paper: leaves room for the numbered list below */
   --worksheet-blank: 1.75rem;   /* the height of a write-in line on an anatomy worksheet */
 
@@ -294,6 +295,11 @@
   --pillo-key-max: 2.75rem;             /* a letter key's widest */
   --pillo-key-wide: 4.25rem;            /* ⌫ and enter, at their widest */
   --pillo-key-wide-share: 1.5;          /* ⌫ and enter take about one and a half letters' room in a narrow row */
+  --pillo-keys-edge: 2px;               /* phones: the letter keys run to 2 px from the screen edges, whatever the text size */
+  --pillo-key-fit: 31px;                /* phones: the narrowest a letter key gets (30 px plus rounding), so 10 keys share one row */
+  --pillo-key-gap-fit: clamp(1px, calc((100cqi - var(--pillo-key-fit) * 10) / 9), 0.25rem); /* phones: the gap shrinks before the keys do */
+  --pillo-key-text-fit: 6cqi;           /* phones with large text: letters shrink to fit a narrow key instead of wrapping the row */
+  --pillo-key-wide-text-fit: 4.5cqi;    /* phones with large text: "enter" fits its key */
   --pillo-strip-pill: 0.875rem;         /* a pill in the guesses-left strip */
   --pillo-strip-height: 1.75rem;
   --pillo-swatch: 2.75rem;              /* the sample pills in "how to play" */

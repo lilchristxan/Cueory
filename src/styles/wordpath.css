@@ -84,8 +84,14 @@
     color: var(--print-ink) !important;
   }
 
+  /* The screen-only offsets that centre a bleeding board on narrow phones are dropped, so the printed board is centred
+     on the page with all four borders inside it, whatever width the browser lays the page out at. */
   .wordpath-board {
+    position: static !important;
+    inset: auto !important;
+    translate: none !important;
     inline-size: min(100%, var(--print-board)) !important;
+    max-inline-size: 100% !important;
     min-inline-size: 0 !important;
     margin: var(--print-gap) auto 0 !important;
     padding: 0 !important;
@@ -94,7 +100,7 @@
     break-inside: avoid;
   }
 
-  .wordpath-board-scroll { overflow: visible; }
+  .wordpath-board-scroll { overflow: visible; margin-inline: 0 !important; }
 
   /* Paper must fit the whole board even when the browser's root text is enlarged. */
   .wordpath-row { grid-template-columns: repeat(var(--wordpath-columns), minmax(0, 1fr)); }

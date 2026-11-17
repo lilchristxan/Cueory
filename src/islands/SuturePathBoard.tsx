@@ -1,4 +1,5 @@
 import '../styles/wordpath.css';
+import PrintLogo from './PrintLogo';
 import { useEffect, useId, useRef, useState, type KeyboardEvent, type PointerEvent } from 'react';
 import { dayLabel } from './daily';
 import { localDay, reportRound } from './gameresults';
@@ -246,6 +247,7 @@ export function PathBoard({ puzzle, name }: Props) {
           </svg>
         </button>
       </div>
+      <PrintLogo />
       <p className="text-center text-sm text-ink-soft">today's theme</p>
       <h3 id={title} className="display text-center text-2xl text-ink sm:text-3xl" data-testid="suture-theme">{puzzle.clue}</h3>
       <p className="mt-2 text-center text-ink-soft" data-print-hidden>

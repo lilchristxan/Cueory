@@ -290,15 +290,16 @@ test.describe('daily games on a narrow phone', () => {
         .filter((box) => box.left < 0 || box.right > window.innerWidth).length,
     );
     expect(outside).toBe(0);
-    // The three logical QWERTY rows can wrap onto extra visual lines on narrow phones.
-    // Check actual touch-target size and non-overlap, not horizontal center order.
+    // The three QWERTY rows each stay on one line, like a phone keyboard: keys at least 30 px wide and 44 px tall
+    // (pillo-keys-fit.spec.ts checks more widths and text sizes), never overlapping.
     const rows = await page.locator('.pillo-key-row').evaluateAll((rowEls) =>
       rowEls.map((row) => [...row.querySelectorAll('.pillo-key')].map((el) => el.getBoundingClientRect())),
     );
     expect(rows.length).toBe(3);
+    for (const row of rows) expect(new Set(row.map((key) => Math.round(key.top))).size).toBe(1);
     const keys = rows.flat();
     for (const key of keys) {
-      expect(key.width).toBeGreaterThanOrEqual(44);
+      expect(key.width).toBeGreaterThanOrEqual(30);
       expect(key.height).toBeGreaterThanOrEqual(44);
     }
     for (let i = 0; i < keys.length; i++) {
