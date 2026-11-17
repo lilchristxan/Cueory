@@ -9,7 +9,7 @@ verified staging evidence before use.
 
 
 Every dashboard step Christian does before and on launch day, in order. One action per step. "You should see" says
-what to check. Settings and menu paths come from the official pages linked in brackets, read on 2 November 2026.
+what to check. Settings and menu paths come from the official pages linked in brackets, originally reviewed on 2 November 2026. That source-review date is separate from the repository migration inventory rechecked on 17 November 2026; the dashboard instructions have not been reverified as of that inventory check.
 Where those pages don't confirm a menu path, the step says **find** and describes what the setting does. If a
 screen doesn't match, stop and tell Claude what you see. Don't guess.
 
@@ -210,7 +210,7 @@ key that starts with `sb_publishable_`, never a secret key. [SB API keys]
    You should see the sign-in form. If it says "accounts open soon", find the `staging` preview's own build settings
    in the **Previews** section, or tell Claude.
 
-After PR #239 merges, a wrong value (only one of the two, a bad address, or a secret key) stops the build with a
+Merged PR #239 makes a wrong value (only one of the two, a bad address, or a secret key) stop the build with a
 reason, and the site keeps its previous version.
 
 ### 1.9 The email question (your decision)
@@ -235,7 +235,7 @@ cueory.app rather than cueory.app itself. [Resend domains] Those are email DNS r
 
 ---
 
-## 2. Launch day, Thursday, November 19, 2026
+## 2. Future account launch day
 
 For Thursday, use the [games-only launch checklist](LAUNCH-2026-11-19.md): accounts stay closed and production SQL stays untouched. The full-account steps below remain future reference and require separate approval.
 
@@ -260,7 +260,7 @@ For that future account launch, do these in order. After each step, check the li
    - `/signin` shows the sign-in form, not "accounts open soon";
    - **Sign in with Google** works with your business Gmail and returns you to cueory.app, showing your initials;
    - `/account` opens with your name, **download my data** gives a file, and **sign out** works;
-   - the flag button on a lesson page sends (after PR #237 merges);
+   - the flag button on a lesson page sends (implemented in merged PR #237);
    - `/privacy` describes the behavior actually released. **Unmet release gate:** `/terms` and `/disclaimer` are not ready until Christian supplies and approves the final text and it is implemented and verified; placeholder pages or hidden links do not satisfy this gate.
 7. **Check the lock is still on staging.** Open the staging preview address in a new private window.
    You should see the Cloudflare sign-in page.
@@ -317,7 +317,9 @@ These need your call. None costs money unless you choose a paid option.
 
 ---
 
-## Sources (read 2 November 2026)
+## Sources (original review: 2 November 2026)
+
+These dates refer to the original external-source review, not the repository inventory check of 17 November 2026. The inventory refresh did not reverify dashboard instructions or external-source content.
 
 [GitHub 2FA]: https://docs.github.com/en/authentication/securing-your-account-with-two-factor-authentication-2fa/configuring-two-factor-authentication
 [CF 2FA]: https://developers.cloudflare.com/changelog/post/2025-10-30-email-2FA/
