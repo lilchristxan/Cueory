@@ -341,6 +341,14 @@
     border-radius: var(--radius-lg);
   }
 
+  /* In pillo's help (the ? dialog and the first-visit card) the legend sits in the same column as the steps. It lives
+     here, not in gamehelp.css, so other games' pages never load pillo selectors. */
+  .game-help .pillo-legend,
+  .game-help-first .pillo-legend {
+    max-inline-size: none;
+    margin-block-start: calc(var(--spacing) * 4);
+  }
+
   .pillo-legend-row {
     display: flex;
     flex-wrap: wrap;
