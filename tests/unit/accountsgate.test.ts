@@ -64,6 +64,21 @@ describe('the sign-in island behind the gate', () => {
       const source = readFileSync(page, 'utf8');
       expect(source).toContain('accountsGateOpen(accountsOpen, accountsBuildEnv(process.env))');
       expect(source).toMatch(/<SignIn accountsOn=\{accountsOn\} updatesHref=\{updatesHref\}/);
+      // The layout's account corner and flag button stay signed out too (they would otherwise load the client).
+      expect(source).toMatch(/<Layout [^>]*accountsOff=\{!accountsOn\}>/);
     });
   }
+});
+
+describe('the layout passes the closed gate to the account corner and the flag button', () => {
+  it('threads accountsOff from Layout to AccountCorner and FlagMount', () => {
+    const layout = readFileSync('src/layouts/Layout.astro', 'utf8');
+    expect(layout.match(/<SiteHeader [^>]*accountsOff=\{accountsOff\}/g)).toHaveLength(2);
+    expect(layout).toMatch(/<SiteFooter [^>]*accountsOff=\{accountsOff\}/);
+    expect(readFileSync('src/components/SiteHeader.astro', 'utf8')).toMatch(/<AccountCorner [^>]*accountsOff=\{accountsOff\}/);
+    expect(readFileSync('src/components/SiteFooter.astro', 'utf8')).toContain('{...(accountsOff ? { accountsOff: true } : {})}');
+    const corner = readFileSync('src/components/AccountCorner.astro', 'utf8');
+    expect(corner).toContain("data-accounts-off={accountsOff ? '' : undefined}");
+    expect(corner).toContain("if (corner.hasAttribute('data-accounts-off'))");
+  });
 });

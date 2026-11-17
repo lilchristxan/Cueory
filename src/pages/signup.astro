@@ -10,7 +10,7 @@ const accountsOn = accountsGateOpen(accountsOpen, accountsBuildEnv(process.env))
 const updatesHref = accountLaunch(false).accountHref;
 ---
 
-<Layout title="create an account" description="Create your free cueory account." variant="study" noindex promo={false}>
+<Layout title="create an account" description="Create your free cueory account." variant="study" noindex promo={false} accountsOff={!accountsOn}>
   <section class="mx-auto max-w-110 py-section font-body leading-relaxed" aria-labelledby="signup-heading">
     <div class="rounded-lg border border-line bg-page p-6 sm:p-8">
       <SignIn accountsOn={accountsOn} updatesHref={updatesHref} mode="signup" client:load>

@@ -10,7 +10,7 @@ const accountsOn = accountsGateOpen(accountsOpen, accountsBuildEnv(process.env))
 const updatesHref = accountLaunch(false).accountHref;
 ---
 
-<Layout title="sign in" description="Sign in to your cueory account." variant="study" noindex promo={false}>
+<Layout title="sign in" description="Sign in to your cueory account." variant="study" noindex promo={false} accountsOff={!accountsOn}>
   <section class="mx-auto max-w-110 py-section font-body leading-relaxed" aria-labelledby="signin-heading">
     <div class="rounded-lg border border-line bg-page p-6 sm:p-8">
       <div class="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-pill bg-surface">
