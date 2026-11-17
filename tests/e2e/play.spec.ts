@@ -418,7 +418,8 @@ test.describe('daily games: sudoku (Task 625)', () => {
     await page.keyboard.press('Tab');
     await expect(close).toBeFocused();
     // Theme rows drive the site's own switch (no second theme system); gameboard settings persist on their own.
-    await expect(dialog.getByRole('radio')).toHaveCount(3);
+    // The dialog is the shared one (#823), so its theme group holds the three theme rows.
+    await expect(dialog.getByRole('group', { name: 'theme' }).getByRole('radio')).toHaveCount(3);
     await dialog.getByRole('checkbox', { name: 'start in auto cue mode' }).check();
     await page.keyboard.press('Escape');
     await expect(trigger).toBeFocused();
@@ -999,9 +1000,8 @@ test.describe('daily games without JavaScript', () => {
     await expect(page.getByTestId('play-links').getByRole('link')).toHaveText(['pillo', 'sudoku', 'crossword', 'word path']);
     for (const [path, name] of [['/play/pillo', 'pillo'], ['/play/sudoku', 'sudoku'], ['/play/crossword', 'crossword'], ['/play/word-path', 'word path']]) {
       await page.goto(path);
-      // Only sudoku's page has the separate shared settings button; the others open them from the game's gear.
+      // Every game opens the shared settings from its own gear (sudoku too, #823), so no page has a separate button.
       await expect(page.locator('noscript p')).toHaveText([
-        ...(name === 'sudoku' ? ['game settings need JavaScript.'] : []),
         `${name} needs JavaScript.`,
         'game results and sharing need JavaScript.',
       ]);

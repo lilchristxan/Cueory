@@ -2142,31 +2142,9 @@ html:has(dialog.mode-preview[open]) {
      (issue 720) never pushes the page sideways at 320px with 32px root text. */
   .sudoku-setting-button { display: inline-flex; max-inline-size: 100%; min-block-size: var(--tap-min); align-items: center; gap: calc(var(--spacing) * 2); border: 0; background: transparent; color: var(--color-ink); text-align: start; overflow-wrap: anywhere; cursor: pointer; }
   .sudoku-solved { margin-block-start: calc(var(--spacing) * 6); padding: calc(var(--spacing) * 5); border: var(--sudoku-line) solid var(--color-line); border-radius: var(--radius-lg); text-align: center; }
-  .sudoku-overlay { position: fixed; inset: 0; inline-size: 100%; block-size: 100%; max-inline-size: none; max-block-size: none; margin: 0; padding: calc(var(--spacing) * 5); border: 0; background: rgb(var(--shadow-tint) / var(--scrim-alpha)); color: var(--color-ink); backdrop-filter: blur(var(--blur-scrim)); }
-  .sudoku-overlay[open] { display: flex; align-items: center; justify-content: center; }
-  .sudoku-overlay::backdrop { background: transparent; }
-  /* The card always fits the screen and scrolls inside itself. */
-  .sudoku-settings { inline-size: min(100%, var(--container-prose)); max-block-size: 100%; overflow: auto; overscroll-behavior: contain; padding: calc(var(--spacing) * 6); border-radius: var(--radius-xl); background: var(--color-page); box-shadow: var(--shadow-lift); }
-  /* The close button floats in the top corner and sticks there while the card scrolls (issue 743); the title wraps beside it. */
-  .sudoku-settings { scroll-padding-block-start: calc(var(--tap-min) + var(--spacing) * 2); }
-  .sudoku-settings-heading { display: contents; }
-  .sudoku-settings-heading .sudoku-icon-button { position: sticky; inset-block-start: 0; z-index: 1; float: inline-end; margin-inline-start: calc(var(--spacing) * 3); }
-  .sudoku-settings h3 { display: flex; float: inline-start; min-block-size: var(--tap-min); max-inline-size: 100%; align-items: center; font-size: var(--text-2xl); overflow-wrap: break-word; }
-  .sudoku-settings fieldset:first-of-type { clear: both; }
-  .sudoku-settings fieldset { margin-block-start: calc(var(--spacing) * 5); border: 0; padding: 0; }
-  .sudoku-settings legend { padding-block-end: calc(var(--spacing) * 2); color: var(--color-ink-soft); font-size: var(--text-sm); }
-  .sudoku-option { display: flex; min-block-size: var(--tap-min); align-items: center; justify-content: space-between; gap: calc(var(--spacing) * 4); border-block-start: var(--sudoku-line) solid var(--color-line); padding-block: calc(var(--spacing) * 2); cursor: pointer; }
-  .sudoku-option span { display: flex; min-inline-size: 0; flex-direction: column; overflow-wrap: anywhere; }
-  .sudoku-check-option { justify-content: flex-start; }
-  .sudoku-option input { flex: none; }
-  .sudoku-settings fieldset + fieldset { margin-block-start: calc(var(--spacing) * 6); }
-  .sudoku-option small { color: var(--color-ink-soft); }
-  .sudoku-option input { inline-size: calc(var(--spacing) * 6); block-size: calc(var(--spacing) * 6); accent-color: var(--color-button); }
   .sudoku-print-footer { display: none; }
   /* Narrow screens keep more room for the settings text (320px with 32px root text, issue 743). */
   @media (width < 40rem) {
-    .sudoku-overlay, dialog.game-settings-overlay { padding: calc(var(--spacing) * 2); }
-    .sudoku-settings, .game-settings-overlay .game-settings { padding: calc(var(--spacing) * 4); }
     /*
       The 6 × 8 word path board bleeds into the card's padding (-mx-6). With 32px text on a 320px screen its squares
       need more room than that, and it used to spill past the card on the right only, ending under a pixel from the
@@ -2180,7 +2158,7 @@ html:has(dialog.mode-preview[open]) {
     .sudoku-status { row-gap: 0; }
   }
   @media print {
-    body > :not(main), .sudoku-levels, .sudoku-status, .sudoku-toolbar, .game-help-first, .sudoku-pad-wrap, .sudoku-solved, .sudoku-overlay, .sr-only { display: none !important; }
+    body > :not(main), .sudoku-levels, .sudoku-status, .sudoku-toolbar, .game-help-first, .sudoku-pad-wrap, .sudoku-solved, .sr-only { display: none !important; }
     :root[data-print-game="sudoku"] main article > :not(.sudoku-section) { display: none !important; }
     :root[data-print-game="sudoku"] .sudoku-section > :not(.sudoku-mount) { display: none !important; }
     :root[data-print-game="sudoku"] main article { max-inline-size: none; padding: 0; background: transparent; box-shadow: none; }

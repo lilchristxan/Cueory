@@ -1,24 +1,21 @@
 ---
 /**
  * The inside of one daily game's own page (each page wraps it in Layout, so the site's page checks see it) (Christian's decision, 2026-11-17): /play/pillo, /play/sudoku, /play/crossword and
- * /play/word-path. A link back to all games, the game's name centred at the top, the shared game settings, the game
+ * /play/word-path. A link back to all games, the game's name centred at the top, the game
  * itself (the page passes it in as its only island), this game's private stats and the result dialog. The game's
  * description and rules are in its own help (the "?" button), so the page stays plain.
  *
  * The wrappers keep the same shape as on /play, so each game's print rules (crossword.css, global.css for sudoku,
  * wordpath.css) still print only the game.
  */
-import GameSettings from '../islands/GameSettings';
 import GameStatsPanel from '../islands/GameStatsPanel';
 import GameResultsHost from '../islands/GameResultsHost';
 import type { DailyGame } from '../config/games';
 
 interface Props {
   game: DailyGame;
-  /** Show the shared settings button, for a game without the gear (sudoku). */
-  sharedSettings?: boolean;
 }
-const { game, sharedSettings = false } = Astro.props;
+const { game } = Astro.props;
 ---
 <article class="veil mx-auto mt-6 max-w-prose p-6 sm:mt-10 sm:p-10" data-game-page={game.id}>
     <p>
@@ -27,12 +24,6 @@ const { game, sharedSettings = false } = Astro.props;
       </a>
     </p>
     <slot name="title" />
-    {/* Pillo, crossword and word path open the shared settings from their own gear. Sudoku's settings (lane 6) don't
-    include them yet, so its page keeps this button. */}
-    {sharedSettings && <div class="mt-4 flex justify-center" data-testid="play-settings">
-      <GameSettings client:only="react" title="game settings" label="game settings" />
-    </div>}
-    {sharedSettings && <noscript><p class="mt-4 text-center">game settings need JavaScript.</p></noscript>}
     {/* The game's own headings start at level 3, so the page keeps a level 2 between them and the title. */}
     <h2 class="sr-only">today's puzzle</h2>
     <slot />
