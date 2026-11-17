@@ -432,7 +432,7 @@ test.describe('daily games: crossword levels (Task 627)', () => {
     }
   });
 
-  test('tap toggles direction, Escape leaves the grid and Alt+Arrow changes words', async ({ page }) => {
+  test('tap toggles direction, Tab past the last clue or Escape leaves the grid, and Alt+Arrow changes words', async ({ page }) => {
     const grid = board(page).getByRole('grid', { name: 'crossword grid' });
     const activeCell = grid.locator('button[tabindex="0"]');
     await activeCell.click();
@@ -443,7 +443,14 @@ test.describe('daily games: crossword levels (Task 627)', () => {
     await expect(board(page).getByTestId('cueword-clue')).not.toContainText('1 down');
     await expect(grid).toHaveAttribute('aria-keyshortcuts', 'Tab Shift+Tab Space Escape Alt+ArrowLeft Alt+ArrowRight');
 
-    // Tab moves between clues inside the grid (Task 721); Escape is the way out, to the erase button.
+    // Tab moves between clues inside the grid (Task 721). On the last clue (5 down) it leaves the grid, to the letters.
+    await expect(board(page).getByTestId('cueword-clue')).toContainText('2 down');
+    for (let step = 0; step < 3; step++) await page.keyboard.press('Alt+ArrowRight');
+    await expect(board(page).getByTestId('cueword-clue')).toContainText('5 down');
+    await page.keyboard.press('Tab');
+    await expect(board(page).getByRole('group', { name: 'letters' }).getByRole('button').first()).toBeFocused();
+
+    // Escape leaves too, to the erase button.
     await grid.locator('button[tabindex="0"]').focus();
     await page.keyboard.press('Escape');
     await expect(board(page).getByRole('button', { name: 'erase', exact: true })).toBeFocused();

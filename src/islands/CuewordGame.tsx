@@ -7,9 +7,9 @@ import ResultBrandMark from './ResultBrandMark';
 import { dayLabel } from './daily';
 import { playSolvedTone } from './solvetone';
 import {
-  announceFirstEntry, arrow, autocheckAll, backspace, check, countsForStreak, currentWord, deleteLetter, emptyState, enter, getResult,
+  announceFirstEntry, arrow, autocheckAll, backspace, check, clueLeavesGrid, countsForStreak, currentWord, deleteLetter, emptyState, enter, getResult,
   isFilledWrong, isLocked, isSolved, loadCrosswordSettings, moveClue, nextWord, numbering, parsePuzzle, previousWord,
-  reveal, saveCrosswordSettings, selectCell, selectOrToggleCell, toggleDirection, words,
+  reveal, saveCrosswordSettings, selectCell, selectOrToggleCell, words,
   type CrosswordSettings, type CuewordPuzzle, type CuewordState, type CuewordWord, type Direction, type HelpScope,
 } from './cueword';
 
@@ -50,7 +50,7 @@ function Board({ puzzle, name }: Props) {
   const [warned, setWarned] = useState(false);
   const [asking, setAsking] = useState<Help | null>(null);
   const [showList, setShowList] = useState(false);
-  const [openMenu, setOpenMenu] = useState<'check' | 'reveal' | null>(null);
+  const [openMenu, setOpenMenu] = useState<'check' | 'reveal' | 'settings' | null>(null);
   const [said, setSaid] = useState('');
   const [today] = useState(() => new Date());
   const [counts, setCounts] = useState(true);
@@ -187,8 +187,12 @@ function Board({ puzzle, name }: Props) {
     else if (/^[a-z]$/i.test(event.key)) next = enter(state, event.key, settings, pencil);
     else if (event.key === 'Backspace') next = backspace(state);
     else if (event.key === 'Delete') next = deleteLetter(state);
-    else if (event.key === 'Tab') next = moveClue(state, event.shiftKey ? -1 : 1);
-    else if (event.key === ' ') next = toggleDirection(state);
+    else if (event.key === 'Tab') {
+      // Tab on the last clue (Shift+Tab on the first) is left to the browser, so focus leaves the grid: no keyboard trap.
+      const delta = event.shiftKey ? -1 : 1;
+      if (clueLeavesGrid(state, delta)) return;
+      next = moveClue(state, delta);
+    }
     else if (event.key === 'ArrowLeft' || event.key === 'ArrowRight' || event.key === 'ArrowUp' || event.key === 'ArrowDown') next = arrow(state, event.key);
     else if (event.key === 'Escape') {
       event.preventDefault();
@@ -225,28 +229,32 @@ function Board({ puzzle, name }: Props) {
             )}
           </details>
         ))}
-        <details ref={menuRef('settings')} className="crossword-help">
+        <details ref={menuRef('settings')} className="crossword-help"
+          onToggle={(event) => { const open = event.currentTarget.open; setOpenMenu((current) => open ? 'settings' : current === 'settings' ? null : current); }}>
           <summary className="corner-button corner-button-quiet" aria-label="crossword settings">
             <svg aria-hidden="true" viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1"/></svg>
           </summary>
-          <div className="crossword-help-panel crossword-settings" data-testid="crossword-settings">
-            <h3 className="font-medium">settings</h3>
-            {CHECKBOX_SETTINGS.map(([setting, label]) => (
-              <label key={setting} className="crossword-setting">
-                <input type="checkbox" checked={settings[setting]} onChange={(event) => changeSetting(setting, event.target.checked)} />
-                <span>{label}</span>
-              </label>
-            ))}
-            <fieldset className="crossword-setting-group">
-              <legend>clue text size</legend>
-              {(['small', 'medium', 'large'] as const).map((size) => (
-                <label key={size} className="crossword-setting">
-                  <input type="radio" name={help + '-clue-size'} value={size} checked={settings.clueSize === size} onChange={() => changeSetting('clueSize', size)} />
-                  <span>{size}</span>
+          {/* Rendered only while open, like the check and reveal menus, so a closed menu leaves no unreachable controls. */}
+          {openMenu === 'settings' && (
+            <div className="crossword-help-panel crossword-settings" data-testid="crossword-settings">
+              <h3 className="font-medium">settings</h3>
+              {CHECKBOX_SETTINGS.map(([setting, label]) => (
+                <label key={setting} className="crossword-setting">
+                  <input type="checkbox" checked={settings[setting]} onChange={(event) => changeSetting(setting, event.target.checked)} />
+                  <span>{label}</span>
                 </label>
               ))}
-            </fieldset>
-          </div>
+              <fieldset className="crossword-setting-group">
+                <legend>clue text size</legend>
+                {(['small', 'medium', 'large'] as const).map((size) => (
+                  <label key={size} className="crossword-setting">
+                    <input type="radio" name={help + '-clue-size'} value={size} checked={settings.clueSize === size} onChange={() => changeSetting('clueSize', size)} />
+                    <span>{size}</span>
+                  </label>
+                ))}
+              </fieldset>
+            </div>
+          )}
         </details>
         <button type="button" className="corner-button corner-button-quiet" aria-label="print this puzzle" onClick={printPuzzle}>
           <svg aria-hidden="true" viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M6 9V3h12v6"/><rect x="3" y="9" width="18" height="9" rx="2"/><path d="M7 14h10v7H7z"/></svg>
@@ -257,7 +265,7 @@ function Board({ puzzle, name }: Props) {
             <h3 className="font-medium">how to play</h3>
             <p className="mt-2 text-sm text-ink-soft">{level} is {width} by {width}. tap a square and type, or use the letter buttons.</p>
             <p className="mt-2 text-sm text-ink-soft">tap the selected square again, or press space, to switch across and down. an arrow against the current direction switches direction first, then moves.</p>
-            <p className="mt-2 text-sm text-ink-soft">tab and shift+tab go to the next or previous clue. backspace deletes. escape leaves the grid.</p>
+            <p className="mt-2 text-sm text-ink-soft">tab and shift+tab go to the next or previous clue. tab on the last clue, shift+tab on the first, or escape leaves the grid. backspace deletes.</p>
             <p className="mt-2 text-sm text-ink-soft">pencil letters are lighter and boxed with a dashed line, for guesses you're unsure of.</p>
             <p className="mt-2 text-sm text-ink-soft">check and reveal work on a square, a word or the whole puzzle. a solve without them, within 48 hours of the puzzle's date, extends your streak.</p>
             <p className="mt-2 text-sm text-ink-soft">the printer button makes a blank grid with the complete clue list.</p>
@@ -286,7 +294,7 @@ function Board({ puzzle, name }: Props) {
         )}
       </div>
       <p id={help} className="crossword-no-print mt-2 text-center text-sm text-ink-soft">
-        type letters. arrows move. space switches direction. tab goes to the next clue. escape leaves the grid.
+        type letters. arrows move. space switches direction. tab goes to the next clue, and past the last clue leaves the grid. escape leaves the grid too.
         {level === 'hard' && ' swipe the board sideways to see more squares. keyboard: focus the board scroll area to scroll, or use arrows on a square to move through the grid.'}
       </p>
 

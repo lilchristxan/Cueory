@@ -46,6 +46,10 @@ async function closeResultDialog(page: Page) {
 
 test.describe('crossword parity (Task 721)', () => {
   test.beforeEach(async ({ page }) => {
+    // The once-only promo panel (D-59) opens after 5 seconds and takes focus and clicks; its own spec covers it (as in play.spec.ts).
+    await page.addInitScript(() => {
+      try { localStorage.setItem('cueory-promo-seen', String(Date.now())); } catch { /* storage blocked: no promo then */ }
+    });
     await page.clock.setFixedTime(new Date('2026-11-01T15:00:00'));
     await page.goto('/play');
     await expect(board(page)).toBeVisible();
@@ -128,7 +132,7 @@ test.describe('crossword parity (Task 721)', () => {
     await expect(board(page).getByTestId('cueword-not-right')).toHaveCount(0);
   });
 
-  test('keyboard: Space and opposite arrows switch direction, Tab and Shift+Tab change clue, Backspace deletes', async ({ page }) => {
+  test('keyboard: Space and opposite arrows switch direction, Tab and Shift+Tab change clue and leave the grid at either end, Backspace deletes', async ({ page }) => {
     const active = grid(page).locator('button[tabindex="0"]');
     await active.focus();
     await expect(clueBar(page)).toContainText('1 across');
@@ -150,6 +154,25 @@ test.describe('crossword parity (Task 721)', () => {
     await page.keyboard.press('Backspace');
     await page.keyboard.press('Backspace');
     await expect(square(page, 1, 2)).toHaveAttribute('aria-label', /empty$/);
+
+    // No keyboard trap: Tab walks the 10 clues in order, and Tab on the last one (5 down) leaves the grid forwards.
+    await expect(clueBar(page)).toContainText('1 across');
+    for (let step = 1; step < 10; step++) await page.keyboard.press('Tab');
+    await expect(clueBar(page)).toContainText('5 down');
+    await page.keyboard.press('Tab');
+    await expect(board(page).getByRole('group', { name: 'letters' }).getByRole('button').first()).toBeFocused();
+    // Shift+Tab comes back to the same square, walks back, and on the first clue (1 across) leaves the grid backwards.
+    await page.keyboard.press('Shift+Tab');
+    await expect(grid(page).locator('button[tabindex="0"]')).toBeFocused();
+    await expect(clueBar(page)).toContainText('5 down');
+    for (let step = 1; step < 10; step++) await page.keyboard.press('Shift+Tab');
+    await expect(clueBar(page)).toContainText('1 across');
+    await page.keyboard.press('Shift+Tab');
+    await expect(board(page).getByRole('button', { name: 'pause puzzle' })).toBeFocused();
+    // Escape leaves too, to the erase button.
+    await grid(page).locator('button[tabindex="0"]').focus();
+    await page.keyboard.press('Escape');
+    await expect(board(page).getByRole('button', { name: 'erase', exact: true })).toBeFocused();
   });
 
   test('settings hide the timer, change the clue size, and are remembered in this browser', async ({ page }) => {
@@ -174,6 +197,9 @@ test.describe('crossword parity (Task 721)', () => {
   test('autocheck marks letters as they are typed', async ({ page }) => {
     await board(page).locator('summary[aria-label="crossword settings"]').click();
     await board(page).getByTestId('crossword-settings').getByRole('checkbox', { name: /^autocheck/ }).check();
+    // Close the menu first: on a phone its open panel lies over the top of the grid.
+    await board(page).locator('summary[aria-label="crossword settings"]').click();
+    await expect(board(page).getByTestId('crossword-settings')).toHaveCount(0);
     await square(page, 2, 1).click();
     await page.keyboard.type('q');
     await expect(square(page, 2, 1)).toHaveAttribute('aria-label', /letter Q, marked wrong$/);
@@ -212,7 +238,8 @@ test.describe('crossword parity (Task 721)', () => {
     expect(await page.evaluate(() => (window as unknown as { heard: unknown[] }).heard)).toEqual([{ game: 'cueword', day: '2026-11-01' }]);
   });
 
-  for (const { width, rootText } of [{ width: 320, rootText: 32 }, { width: 390, rootText: 32 }]) {
+  // The same width and text-size pairs as play.spec.ts's hard-board test: 320 px at 16 px text, 390 px at 32 px text.
+  for (const { width, rootText } of [{ width: 320, rootText: 16 }, { width: 390, rootText: 32 }]) {
     test(`toolbar, menus, warning and clue list fit at ${width}px with ${rootText}px text, with no sideways page scroll`, async ({ page }) => {
       await page.setViewportSize({ width, height: 844 });
       await page.evaluate((size) => document.documentElement.style.setProperty('font-size', `${size}px`, 'important'), rootText);

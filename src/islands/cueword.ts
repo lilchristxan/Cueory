@@ -300,6 +300,16 @@ export function moveClue(state: CuewordState, delta: -1 | 1): CuewordState {
   return selectCell(state, firstBlank(state, next) ?? next.cells[0]!, next.direction);
 }
 
+/**
+ * Tab on the last clue, or Shift+Tab on the first, leaves the grid to the next or previous control instead of
+ * wrapping round, so the grid is never a keyboard trap (WCAG 2.1.2). Escape leaves too.
+ */
+export function clueLeavesGrid(state: CuewordState, delta: -1 | 1): boolean {
+  const list = wordList(state), word = currentWord(state);
+  const index = list.findIndex((candidate) => candidate.number === word.number && candidate.direction === word.direction);
+  return delta === 1 ? index === list.length - 1 : index === 0;
+}
+
 /** Where the cursor goes after a letter, by the cursor settings. */
 function advance(state: CuewordState, settings: CrosswordSettings): CuewordState {
   const word = currentWord(state);

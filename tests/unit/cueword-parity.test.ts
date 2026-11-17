@@ -1,7 +1,7 @@
 /** Task 721: crossword parity (docs/GAMES-PARITY.md, crossword section). */
 import { describe, expect, it } from 'vitest';
 import {
-  announceFirstEntry, arrow, autocheckAll, backspace, check, countsForStreak, GAME_PROGRESS_EVENT, currentWord, DEFAULT_CROSSWORD_SETTINGS, deleteLetter,
+  announceFirstEntry, arrow, autocheckAll, backspace, check, clueLeavesGrid, countsForStreak, GAME_PROGRESS_EVENT, currentWord, DEFAULT_CROSSWORD_SETTINGS, deleteLetter,
   emptyState, enter, isFilled, isFilledWrong, isLocked, isSolved, loadCrosswordSettings, moveClue,
   parseCrosswordSettings, reveal, saveCrosswordSettings, selectCell, CROSSWORD_SETTINGS_KEY,
   type CrosswordSettings, type CuewordPuzzle,
@@ -123,6 +123,15 @@ describe('crossword keyboard', () => {
     expect(currentWord(next)).toMatchObject({ number: 4, direction: 'across' });
     expect(next.cell).toBe(6);
     expect(currentWord(moveClue(state, -1))).toMatchObject({ number: 7, direction: 'down' });
+  });
+  it('Tab on the last clue and Shift+Tab on the first leave the grid instead of wrapping (no keyboard trap)', () => {
+    const first = emptyState(puzzle);
+    expect(clueLeavesGrid(first, -1)).toBe(true);
+    expect(clueLeavesGrid(first, 1)).toBe(false);
+    const last = moveClue(first, -1);
+    expect(currentWord(last)).toMatchObject({ number: 7, direction: 'down' });
+    expect(clueLeavesGrid(last, 1)).toBe(true);
+    expect(clueLeavesGrid(last, -1)).toBe(false);
   });
 });
 
