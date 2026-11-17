@@ -1,0 +1,1 @@
+status: Lane 3 missing keys: cueory-home-screen-tip (daily games home-screen tip) and the two survey-prompt keys are now listed on /privacy and cleared by delete-my-account, using #659's own wording and surveykeys.ts so the two merge cleanly.

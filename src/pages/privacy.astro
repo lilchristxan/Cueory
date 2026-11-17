@@ -95,6 +95,12 @@ import { newsletter, promo, site } from '../config/site';
     </p>
 
     <p>
+      After you finish daily puzzles on three different days, the daily games page may suggest adding Cueory to your
+      home screen. To decide when to show that suggestion, the browser keeps up to three dates on which you finished a
+      puzzle and whether you dismissed the suggestion, under <code>cueory-home-screen-tip</code>. That record remains
+      on this device and is not sent to us. Clearing this site's data removes it.
+    </p>
+    <p>
       To let the lessons open without a connection, your browser may keep copies of the pages you visit (lessons
       and the home page; daily games are never kept) and of the site's own files, on your device. That is a normal browser feature, the
       copies never leave your device, and nothing about your answers or progress is in them. Clearing this site's data
@@ -122,6 +128,11 @@ import { newsletter, promo, site } from '../config/site';
       <li>
         <code>cueory-break-timer</code>: when this feature is on, it will remember your break timer's current state
         in this browser tab, for up to two hours.
+      </li>
+      <li>
+        <code>cueory-finals-survey-dismissed</code>, and <code>cueory-preview-survey</code> on the unlinked preview
+        page: when the survey prompt is on, they will remember that you closed it, on this device. Nothing about an
+        answer is stored or sent.
       </li>
     </ul>
 
