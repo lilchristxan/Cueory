@@ -4,11 +4,12 @@ import { expect, test, type Page } from '@playwright/test';
 // Issue #736: every daily game shows its rules on the first visit, and from then on behind a "?" button that opens a
 // focus-trapped dialog Escape closes. The clock is 1 November 2026, so word path's puzzle is a board-format sample.
 
+// Each game is on its own page (2026-11-17).
 const games = [
-  { testId: 'pulse', name: 'pillo', id: 'pulse' },
-  { testId: 'sudoku', name: 'sudoku', id: 'triage' },
-  { testId: 'cueword', name: 'crossword', id: 'cueword' },
-  { testId: 'suture', name: 'word path', id: 'suture' },
+  { testId: 'pulse', name: 'pillo', id: 'pulse', path: '/play/pillo' },
+  { testId: 'sudoku', name: 'sudoku', id: 'triage', path: '/play/sudoku' },
+  { testId: 'cueword', name: 'crossword', id: 'cueword', path: '/play/crossword' },
+  { testId: 'suture', name: 'word path', id: 'suture', path: '/play/word-path' },
 ] as const;
 
 const seen = (page: Page) => page.evaluate(() => localStorage.getItem('cueory-game-help-seen'));
@@ -23,14 +24,15 @@ test.beforeEach(async ({ page }) => {
 });
 
 test('the first visit shows each game\'s rules above its board, and "got it" puts them away for good', async ({ page }) => {
-  await page.goto('/play');
   for (const game of games) {
+    await page.goto(game.path);
     const card = page.getByTestId(game.testId).getByTestId('game-help-first');
     await expect(card).toBeVisible();
     await expect(card.getByRole('heading', { name: `new to ${game.name}? here's how to play` })).toBeVisible();
+    expect((await axe(page, '[data-testid="game-help-first"]')).violations).toEqual([]);
   }
-  expect((await axe(page, '[data-testid="game-help-first"]')).violations).toEqual([]);
 
+  await page.goto('/play/sudoku');
   const sudoku = page.getByTestId('sudoku');
   const gotIt = sudoku.getByTestId('game-help-first').getByRole('button', { name: 'got it' });
   const box = await gotIt.boundingBox();
@@ -42,14 +44,15 @@ test('the first visit shows each game\'s rules above its board, and "got it" put
   expect(JSON.parse((await seen(page))!)).toEqual(['triage']);
 
   await page.reload();
-  await expect(page.getByTestId('pulse').getByTestId('game-help-first')).toBeVisible();
   await expect(page.getByTestId('sudoku').getByRole('grid')).toBeVisible();
   await expect(page.getByTestId('sudoku').getByTestId('game-help-first')).toHaveCount(0);
+  await page.goto('/play/pillo');
+  await expect(page.getByTestId('pulse').getByTestId('game-help-first')).toBeVisible();
 });
 
 for (const game of games) {
   test(`${game.name}: the "?" opens the rules in a focus-trapped dialog that Escape closes`, async ({ page }) => {
-    await page.goto('/play');
+    await page.goto(game.path);
     const area = page.getByTestId(game.testId);
     const button = area.getByRole('button', { name: `how to play ${game.name}` });
     await expect(button).toBeVisible();
@@ -100,7 +103,7 @@ test('the help dialog fits a phone without sideways scrolling, in light and even
   await page.setViewportSize({ width: 390, height: 844 });
   for (const scheme of ['light', 'dark'] as const) {
     await page.emulateMedia({ colorScheme: scheme });
-    await page.goto('/play');
+    await page.goto('/play/crossword');
     await page.getByTestId('cueword').getByRole('button', { name: 'how to play crossword' }).click();
     const panel = page.getByTestId('game-help').locator('.game-help');
     await expect(panel).toBeVisible();
@@ -114,7 +117,7 @@ test('the help dialog fits a phone without sideways scrolling, in light and even
 });
 
 test('typing in the sudoku help dialog never changes the board', async ({ page }) => {
-  await page.goto('/play');
+  await page.goto('/play/sudoku');
   const sudoku = page.getByTestId('sudoku');
   // Wait for today's puzzle, so "before" is the finished board and not one still being set up.
   await expect(sudoku.getByRole('gridcell')).toHaveCount(81);

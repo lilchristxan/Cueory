@@ -177,6 +177,10 @@
   .wordpath-lines {
     position: absolute;
     inset: 0;
+    /* Always the board's size, even in the moment after a resize before the lines are measured again: the svg's own
+       width attribute would otherwise keep the old size and push the page sideways on a narrower screen. */
+    inline-size: 100%;
+    block-size: 100%;
     overflow: visible;
     pointer-events: none;
   }

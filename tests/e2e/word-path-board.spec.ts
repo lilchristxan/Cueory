@@ -57,7 +57,7 @@ test.beforeEach(async ({ page }) => {
     window.addEventListener('cueory:game-progress', (event) => heard.push((event as CustomEvent).detail));
   });
   await page.clock.setFixedTime(new Date('2026-11-01T15:00:00'));
-  await page.goto('/play');
+  await page.goto('/play/word-path');
   await expect(game(page)).toBeVisible();
 });
 
