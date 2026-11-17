@@ -1,0 +1,1 @@
+status: Accessibility audit follow-up for #680: visible-focus and sticky-header scans exclude controls hidden by closed ancestor disclosures, retain summary controls, and exercise the Anatomy Text page with closed, partly open, and fully open disclosures.

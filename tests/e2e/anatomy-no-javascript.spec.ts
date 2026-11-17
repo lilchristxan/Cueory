@@ -32,3 +32,40 @@ test('anatomy structure names remain reachable and credited without JavaScript',
   );
   expect(modelRequests).toEqual([]);
 });
+
+for (const width of [320, 390, 820, 1440]) {
+  for (const colorScheme of ['light', 'dark'] as const) {
+    test(`text-only Find It is keyboard-usable at ${width}px in ${colorScheme} mode`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 900 });
+      await page.emulateMedia({ colorScheme });
+      const modelRequests: string[] = [];
+      page.on('request', (request) => {
+        if (request.url().includes('.glb')) modelRequests.push(request.url());
+      });
+      await page.goto('/preview/anatomy-text');
+
+      const system = page.locator('section[data-anatomy-system]').first();
+      const practice = system.locator('[data-anatomy-text-practice]');
+      await expect(practice).toBeVisible();
+      const openPractice = practice.locator(':scope > summary');
+      await openPractice.focus();
+      await page.keyboard.press('Enter');
+      await expect(practice).toHaveAttribute('open', '');
+
+      const check = practice.locator('ol > li details').first();
+      await expect(check.getByText(/^trail:/)).toBeHidden();
+      await check.locator('summary').focus();
+      await page.keyboard.press('Enter');
+      await expect(check).toHaveAttribute('open', '');
+      await expect(check.getByText(/^trail:/)).toBeVisible();
+
+      const link = check.getByRole('link', { name: 'go to catalog entry' });
+      const target = await link.getAttribute('href');
+      expect(target).toMatch(/^#structure-/);
+      await link.click();
+      await expect(page.locator(target!)).toBeVisible();
+      expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false);
+      expect(modelRequests).toEqual([]);
+    });
+  }
+}

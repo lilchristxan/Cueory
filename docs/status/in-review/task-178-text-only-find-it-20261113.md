@@ -1,0 +1,3 @@
+status: Task 178 Anatomy Lab text route: added five source-name Find It prompts per system, native keyboard disclosure of each source-based text trail, and direct catalog anchors, with no-JavaScript responsive regression tests. Drafts stay draft; no WebGL or third-party scripts.
+
+verification: Exact-head `0ed2d9f5d768efa8084c7ff18f88fe8f23422175` GitHub CI run 43570702372 and CodeQL run 43570702381 completed successfully, including typecheck/build/unit, Semgrep, Gitleaks, four Chromium browser shards and aggregate gate. This hosted evidence covers the source-name practice and no-JavaScript checks; it does not supply founder phone/WebKit acceptance or approve hierarchical trails or publication. All models remain draft; no merge or deployment authorized.
