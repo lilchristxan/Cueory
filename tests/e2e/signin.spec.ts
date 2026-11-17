@@ -145,7 +145,7 @@ test.beforeAll(async () => {
       const mode = params.get('mode');
       createRoot(document.getElementById('fixture')).render(mode === 'reset' ? <ResetPassword auth={supplied} />
         : mode === 'callback' ? <AuthCallback auth={supplied} />
-        : <SignIn auth={supplied} mode={mode === 'signup' ? 'signup' : 'signin'} />);
+        : <SignIn auth={supplied} accountsOn={!params.has('closed')} mode={mode === 'signup' ? 'signup' : 'signin'} />);
     `, resolveDir: process.cwd(), loader: 'tsx' },
     bundle: true, write: false, format: 'iife', platform: 'browser', jsx: 'automatic',
     resolveExtensions: ['.ts', '.tsx', '.js', '.jsx', '.json'],
@@ -185,6 +185,35 @@ const calls = (page: Page) => page.evaluate(() => (window as unknown as { authCa
 const clientLoads = (page: Page) => page.evaluate(() => (window as unknown as { clientLoads: number }).clientLoads);
 const fixtureLog = (page: Page) => page.evaluate(() => JSON.parse(sessionStorage.getItem('fixture-log') ?? '[]') as string[]);
 const recoveryLink = 'mode=reset&code=fake-code-1&recovery=event';
+
+test.describe('accounts gate (accountsOpen is false)', () => {
+  for (const mode of ['signin', 'signup'] as const) {
+    for (const client of ['shared', 'injected'] as const) {
+      test(`${mode} with the gate closed never loads or calls Supabase (${client} client)`, async ({ page }) => {
+        await fixture(page, `mode=${mode}&closed${client === 'injected' ? '&client=injected' : ''}`);
+        await expect(page.getByTestId('signin-unavailable')).toContainText('accounts open soon');
+        await expect(page.getByRole('link', { name: 'get launch updates', exact: true })).toHaveAttribute('href', '/#signup');
+        await expect(page.locator('form')).toHaveCount(0);
+        await page.waitForTimeout(300);
+        expect(await clientLoads(page)).toBe(0);
+        expect(await calls(page)).toEqual([]);
+      });
+    }
+    test(`${mode} with the gate open still shows the form`, async ({ page }) => {
+      await fixture(page, `mode=${mode}&client=injected`);
+      await expect(page.locator('form')).toHaveCount(1);
+      await expect(page.getByTestId('signin-unavailable')).toHaveCount(0);
+    });
+  }
+
+  for (const path of ['/signin', '/signup']) test(`${path} is built closed: the message is in the page itself`, async ({ request }) => {
+    const html = await (await request.get(path)).text();
+    expect(html).toContain('data-testid="signin-unavailable"');
+    expect(html).toContain('accounts open soon');
+    expect(html).not.toContain('opening sign-in');
+    expect(html).not.toMatch(/<form[\s>]/);
+  });
+});
 
 test.describe('shared client loading', () => {
   test('keeps controls closed until the configured client is ready', async ({ page }) => {
