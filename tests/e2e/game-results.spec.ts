@@ -35,8 +35,8 @@ test.beforeEach(async ({ page }, testInfo) => {
       value: { writeText: async (text: string) => { (window as unknown as { copied: string }).copied = text; } },
     });
   }, suppressPromo);
-  // A game page with the result dialog and enough height to scroll (each game on its own page, 2026-11-17).
-  await page.goto('/play/sudoku');
+  // pillo's own page (each game on its own page, 2026-11-17).
+  await page.goto('/play/pillo');
 });
 
 test('finished-game result announces the exact card and traps focus', async ({ page }) => {
@@ -97,6 +97,8 @@ test('the page behind an open result cannot be reached, and comes back on close'
 });
 
 test('an open result locks page scrolling and restores the exact page position and styles', async ({ page }) => {
+  // Sudoku's page is tall enough on a phone to scroll 300 px past the starting point; any game page has the dialog.
+  await page.goto('/play/sudoku');
   const before = await page.evaluate(() => {
     const maxY = Math.max(0, document.documentElement.scrollHeight - innerHeight);
     const y = Math.min(120, Math.floor(maxY / 3));
