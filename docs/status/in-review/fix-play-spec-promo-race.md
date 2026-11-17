@@ -1,0 +1,1 @@
+status: play.spec race fix: tests wait for the result dialog to hand focus back before their next key press, and the once-only panels are marked seen by the page's own fixed clock, so neither the deferred focus return nor the launch-updates pop-up's 3-hour wait can interrupt a test (CI on #836).
