@@ -520,6 +520,7 @@
   --sudoku-board-frame: calc(var(--sudoku-box-line) * 2 + 1px); /* outer box lines + 1px so rounding never overflows */
   --sudoku-candidate-size: 0.625rem;
   --sudoku-entered-line: 2px;
+  --sudoku-wrong-line: 2px;                          /* the slash across a wrong entry (issue 720) */
   --sudoku-selected-line: 3px;                       /* the selected square's outline */
   /* Highlights (Christian, 2026-11-12): the row, column and box tint is clearly darker than the given-number shading;
      squares with the selected number are the strongest fill plus bold; numbers keep 4.5:1 on every fill. */

@@ -50,7 +50,7 @@ for (const scheme of ['light', 'dark'] as const) {
       expect(box.left).toBeGreaterThanOrEqual(rowBox.left - 0.5);
       expect(box.right).toBeLessThanOrEqual(Math.min(rowBox.right, width) + 0.5);
     }
-    for (const control of [game(page).getByRole('checkbox', { name: /hints/ }), game(page).getByRole('button', { name: /settings/ })]) {
+    for (const control of [game(page).getByRole('checkbox', { name: /auto candidates/ }), game(page).getByRole('button', { name: /settings/ })]) {
       await expect(control).toBeVisible();
       const box = await rect(control);
       expect(box.left).toBeGreaterThanOrEqual(0);
@@ -59,8 +59,8 @@ for (const scheme of ['light', 'dark'] as const) {
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 
     // The chosen level shows a check mark and bold text, not only a darker fill.
-    await game(page).getByRole('button', { name: 'medium' }).click();
-    const medium = game(page).getByRole('button', { name: 'medium' });
+    await game(page).getByRole('button', { name: 'mid' }).click();
+    const medium = game(page).getByRole('button', { name: 'mid' });
     const easy = game(page).getByRole('button', { name: 'easy' });
     await expect(medium).toHaveAttribute('aria-pressed', 'true');
     await expect(medium.locator('.segmented-check')).toHaveText('✓');

@@ -2076,6 +2076,17 @@ html:has(dialog.mode-preview[open]) {
   .sudoku-candidates { display: grid; inline-size: 100%; block-size: 100%; grid-template-columns: repeat(3, 1fr); font-size: var(--sudoku-candidate-size); line-height: 1; }
   .sudoku-candidates i { display: flex; align-items: center; justify-content: center; font-style: normal; }
   .sudoku-mark { color: var(--color-ink-soft); }
+  /* Issue 720: a wrong entry gets a slash across it and "wrong" in its label, so it never depends on color. */
+  .sudoku-wrong-mark { position: absolute; inset: calc(var(--spacing) * 1.5); background: linear-gradient(to top right, transparent calc(50% - var(--sudoku-wrong-line)), currentColor calc(50% - var(--sudoku-wrong-line)), currentColor calc(50% + var(--sudoku-wrong-line)), transparent calc(50% + var(--sudoku-wrong-line))); pointer-events: none; }
+  .sudoku-cell.is-wrong { font-style: italic; }
+  .sudoku-cell.has-candidates { color: var(--color-ink-soft); }
+  .sudoku-tools { display: flex; flex: 1 0 100%; order: 1; flex-wrap: wrap; align-items: center; justify-content: center; gap: calc(var(--spacing) * 2); }
+  .sudoku-tool-button, .sudoku-text-button { min-inline-size: var(--tap-min); min-block-size: var(--tap-min); padding-inline: calc(var(--spacing) * 4); border: var(--sudoku-line) solid var(--color-control); border-radius: var(--radius-pill); background: var(--color-page); color: var(--color-ink); cursor: pointer; }
+  .sudoku-tool-button:disabled { color: var(--color-ink-soft); cursor: not-allowed; }
+  .sudoku-text-button { margin-block-start: calc(var(--spacing) * 3); }
+  .sudoku-stats table { inline-size: 100%; margin-block: calc(var(--spacing) * 3); border-collapse: collapse; }
+  .sudoku-stats th, .sudoku-stats td { padding: calc(var(--spacing) * 1.5) calc(var(--spacing) * 2); border-block-end: var(--sudoku-line) solid var(--color-line); text-align: start; }
+  .sudoku-stats thead th { color: var(--color-ink-soft); font-size: var(--text-sm); font-weight: 400; }
   .sudoku-board.is-paused .sudoku-cell { background: var(--color-surface); color: var(--color-ink-soft); }
   .sudoku-pad-wrap { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: calc(var(--spacing) * 3); inline-size: 100%; }
   .sudoku-number-row { display: grid; flex: 1 0 100%; order: -1; grid-template-columns: repeat(auto-fit, minmax(var(--tap-min), 1fr)); gap: calc(var(--spacing) * 2); }
@@ -2091,6 +2102,7 @@ html:has(dialog.mode-preview[open]) {
     @container sudoku-panel (min-width: 48rem) {
       .sudoku-pad-wrap { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; }
       .sudoku-number-row { order: 0; }
+      .sudoku-tools { grid-column: 1 / -1; }
     }
   }
   .sudoku-number-row button { min-inline-size: var(--tap-min); min-block-size: var(--tap-min); border: var(--sudoku-line) solid var(--color-control); border-radius: var(--radius-md); background: var(--color-page); color: var(--color-ink); font-weight: 700; }

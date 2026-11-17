@@ -12,6 +12,7 @@ import { checkDisplayName } from './displayname';
 import { exportCsvBlobs, exportJsonBlob, type ExportData } from './exportdata';
 import { fromSupabase, loadExport, type ExportReader, type SupabaseExportClient } from './exportload';
 import { loadStats } from './gameresults';
+import { loadSudokuStats } from './sudokustats';
 import { DELETE_IDENTITY, studentMessage } from './rpcerrors';
 import { AUTH_STORAGE_KEY, sessionCheckFrom, type SessionReader, type SessionState } from './supabaseclient';
 import { migrateLegacyStars } from '../scripts/progress';
@@ -221,6 +222,7 @@ export async function gatherExport(reader: ExportReader, { email, signInDetails,
   // The same reading /progress uses: older per-deck stars move into the record first, so the file has all of it.
   const progress = migrateLegacyStars(storage);
   const stats = loadStats(storage, today);
+  const sudoku = loadSudokuStats(storage, today);
   return {
     ok: true,
     data: {
@@ -229,6 +231,7 @@ export async function gatherExport(reader: ExportReader, { email, signInDetails,
       signInDetails: detailRows(signInDetails),
       progress,
       ...(stats.on ? { gameStats: stats.stats } : {}),
+      ...(sudoku.on ? { sudokuStats: sudoku.solves } : {}),
     },
   };
 }
