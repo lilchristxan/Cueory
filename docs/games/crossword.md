@@ -30,11 +30,12 @@ page never scrolls sideways.
 This is the help added by pull request #801 (in review at the time of writing):
 
 - First visit: the rules show in a card above the grid, with a **got it** button.
-- After that: the **?** button in the toolbar opens the rules and every setting in a dialog. Escape closes it.
+- After that: the **?** at the top right of the game opens the rules and every setting in a dialog. Escape closes it.
 
 ## Settings
 
-The gear button in the toolbar opens the crossword settings (kept on the device):
+The gear at the top left of the game opens the crossword settings (kept on the device), with the shared settings
+above them:
 
 - **autocheck**: marks each letter right or wrong while typing. It counts as help.
 - **skip squares that already have a letter**
@@ -44,7 +45,7 @@ The gear button in the toolbar opens the crossword settings (kept on the device)
 - **play a sound when solved**
 - **clue text size**: small, medium or large.
 
-Shared settings for every game are in **game settings** at the top of /play.
+The shared settings (theme, motion, high contrast, game sounds) are in the same dialog.
 
 ## Scoring and stats
 

@@ -46,7 +46,7 @@ The **settings** button under the numbers opens sudoku's settings (kept on the d
 - **highlight identical numbers**: every square with the same number as the picked one.
 - **play sound on solve**
 
-The same dialog also has the theme. Shared settings for every game are in **game settings** at the top of /play.
+The same dialog also has the theme. Shared settings for every game are in **game settings** above the game.
 
 ## Scoring and stats
 

@@ -40,7 +40,7 @@ export interface GameHelpContent {
 
 /** Said in every game's help: the shared panel (issue #734) sits at the top of /play. */
 export const SHARED_SETTINGS_NOTE =
-  'theme, high contrast, motion and game sounds are shared by every game. change them in game settings at the top of this page.';
+  'theme, high contrast, motion and game sounds are shared by every game. change them with the gear at the top left of a game (on sudoku, with game settings above the game).';
 
 const sizes = crosswordLevels.map(({ level, size }) => `${level} is ${size} by ${size}`).join(', ');
 
@@ -55,7 +55,7 @@ export const GAME_HELP: Readonly<Record<HelpTopic, GameHelpContent>> = Object.fr
       "a word that isn't in the word list doesn't use up a guess.",
       'when you finish you see your result, a one-line share and the time until the next word.',
     ],
-    settingsIntro: `${gameName('pulse')} settings are below the board. hard mode and on-screen keyboard only last for this visit.`,
+    settingsIntro: `${gameName('pulse')} settings are behind the gear at the top left. hard mode and on-screen keyboard only last for this visit.`,
     settings: [
       { name: 'hard mode', detail: 'letters shown in place or in the word must be used in every later guess. you can change it only before your first guess of the day.' },
       { name: 'on-screen keyboard only', detail: 'only the letter keys below type, so your device keyboard stays closed.' },
@@ -96,7 +96,7 @@ export const GAME_HELP: Readonly<Record<HelpTopic, GameHelpContent>> = Object.fr
       "if every square is filled and it isn't solved yet, the game says something's not right yet.",
       'pause hides your letters and stops the timer. show clue list lists every clue, and the printer button makes a blank grid with the complete clue list.',
     ],
-    settingsIntro: 'crossword settings are behind the gear button above the grid. they stay on this device.',
+    settingsIntro: 'crossword settings are behind the gear at the top left. they stay on this device.',
     settings: [
       { name: 'autocheck', detail: "marks each letter right or wrong as you type. it counts as help, so the solve won't extend your streak." },
       { name: 'skip filled squares', detail: 'typing passes over squares that already have a letter.' },
@@ -117,7 +117,7 @@ export const GAME_HELP: Readonly<Record<HelpTopic, GameHelpContent>> = Object.fr
       'on a keyboard, arrows move, enter or space adds a letter, enter on the last letter submits, backspace takes one back and escape clears.',
       `every ${WORDS_PER_HINT} other words of ${MIN_WORD} letters or more earn a cue. a cue marks the letters of one answer, and a second cue on it numbers them in order. there's no limit on guesses.`,
     ],
-    settingsIntro: `${gameName('suture')} has no settings of its own.`,
+    settingsIntro: `${gameName('suture')} has no settings of its own; its gear at the top left holds the shared ones.`,
     settings: [],
   },
   'suture-search': {
@@ -127,7 +127,7 @@ export const GAME_HELP: Readonly<Record<HelpTopic, GameHelpContent>> = Object.fr
       "tap a word's first letter, then its last letter. tap the first letter again to start over.",
       'on a keyboard, arrows move, enter or space picks, and escape clears.',
     ],
-    settingsIntro: `${gameName('suture')} has no settings of its own.`,
+    settingsIntro: `${gameName('suture')} has no settings of its own; its gear at the top left holds the shared ones.`,
     settings: [],
   },
 });

@@ -36,12 +36,12 @@ of one unsolved answer with a dashed outline. A second cue on that same answer n
 This is the help added by pull request #801 (in review at the time of writing):
 
 - First visit: the rules show in a card above the board, with a **got it** button.
-- After that: the **?** corner button opens the rules in a dialog. Escape closes it. The other corner button prints the
+- After that: the **?** at the top right opens the rules in a dialog. Escape closes it. The button beside it prints the
   puzzle.
 
 ## Settings
 
-Word path has no settings of its own. The shared settings for every game are in **game settings** at the top of /play.
+Word path has no settings of its own. The gear at the top left of the game holds the shared settings for every game.
 
 ## Scoring and stats
 

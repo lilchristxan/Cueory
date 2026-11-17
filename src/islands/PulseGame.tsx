@@ -28,7 +28,8 @@ import { heldRounds, loadStats, localDay, reportProgress, reportRound } from './
 import { dailyStats, recordResult, type DailyStats, type GameStats } from './gamestats';
 import { loadWordList } from './pillowords';
 import ResultBrandMark from './ResultBrandMark';
-import { GameHelpButton, GameHelpCard, useGameHelp } from './GameHelp';
+import { GameHelpCard, useGameHelp } from './GameHelp';
+import GameHeader from './GameHeader';
 import { gameName } from '../config/games';
 import { useSharedGameSettings } from './GameSettings';
 import { browserStorage } from '../scripts/storage';
@@ -142,10 +143,10 @@ export default function PulseGame({ puzzles }: Props) {
   const [said, setSaid] = useState('');
   const [copied, setCopied] = useState('');
   // High contrast is the shared game setting (#734): one switch for every game, remembered with the others.
-  const { settings: shared, update: updateShared } = useSharedGameSettings();
+  // Changed from the gear's dialog, in its shared part.
+  const { settings: shared } = useSharedGameSettings();
   const contrast = shared.highContrast;
   const [keysOnly, setKeysOnly] = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(false);
   const [finish, setFinish] = useState<FinishStats>({ on: false });
   const [wait, setWait] = useState('');
   const result = useRef<HTMLDivElement>(null);
@@ -265,18 +266,43 @@ export default function PulseGame({ puzzles }: Props) {
 
   return (
     <div className={`pillo${contrast ? ' pillo-contrast' : ''}`} data-testid="pulse">
-      <div className="pillo-top">
-        <p className="pillo-status">
-          guess the {WORD_LENGTH}-letter word · <strong>{leftWords}</strong>
-        </p>
-        {/* The same count as the words beside it, drawn as a blister strip: a used guess leaves an empty pocket. */}
-        <span className="pillo-strip" aria-hidden="true" data-testid="pulse-strip">
-          {Array.from({ length: GUESSES }, (_, i) => (
-            <span key={i} className={`pillo-strip-pocket${i >= GUESSES - left ? ' pillo-strip-pill' : ''}`} />
-          ))}
-        </span>
-        <GameHelpButton help={howToPlay} name={gameName('pulse')} className="corner-button corner-button-quiet" extra={<PilloLegend />} />
-      </div>
+      {/* The corner row (Christian's brief): the gear at the top left opens pillo's settings with the shared ones, the
+          "?" at the top right how to play. The guesses left are no longer shown on the box, but screen readers still
+          hear them here. */}
+      <GameHeader
+        name={gameName('pulse')}
+        help={howToPlay}
+        helpExtra={<PilloLegend />}
+        settings={
+          <fieldset>
+            <legend>{gameName('pulse')}</legend>
+            <ul className="flex flex-col gap-3">
+              <Setting
+                label="hard mode"
+                on={Boolean(state.hard)}
+                disabled={hardLocked}
+                onChange={() => setState((now) => setHardMode(now, !now.hard))}
+                note={
+                  hardLocked
+                    ? 'hard mode can change only before your first guess of the day.'
+                    : 'letters shown in place or in the word must be used in every later guess.'
+                }
+              />
+              <Setting
+                label="on-screen keyboard only"
+                on={keysOnly}
+                onChange={() => {
+                  setKeysOnly((on) => !on);
+                  setProblem('');
+                }}
+                note="only the letter keys below type, so your device keyboard stays closed."
+              />
+            </ul>
+            <p className="mt-3 text-sm text-ink-soft">hard mode and on-screen keyboard only last for this visit.</p>
+          </fieldset>
+        }
+      />
+      <p className="sr-only" data-testid="pulse-status">guess the {WORD_LENGTH}-letter word · {leftWords}</p>
       <GameHelpCard help={howToPlay} name={gameName('pulse')} extra={<PilloLegend />} />
 
       <div className="pillo-pack mt-4">
@@ -455,45 +481,6 @@ export default function PulseGame({ puzzles }: Props) {
         </div>
       )}
 
-      {/*
-        The switches render only while the disclosure is open. Chromium hides a closed <details> body with
-        content-visibility, which keeps its buttons laid out and "visible" but out of the Tab order.
-      */}
-      <details
-        className="pillo-settings mt-8"
-        data-testid="pulse-settings"
-        onToggle={(event) => setSettingsOpen(event.currentTarget.open)}
-      >
-        <summary className="pillo-settings-summary">pillo settings</summary>
-        {settingsOpen && (
-          <>
-            <ul className="mt-3 flex flex-col gap-3">
-              <Setting
-                label="hard mode"
-                on={Boolean(state.hard)}
-                disabled={hardLocked}
-                onChange={() => setState((now) => setHardMode(now, !now.hard))}
-                note={
-                  hardLocked
-                    ? 'hard mode can change only before your first guess of the day.'
-                    : 'letters shown in place or in the word must be used in every later guess.'
-                }
-              />
-              <Setting label="high contrast" on={contrast} onChange={() => updateShared({ highContrast: !contrast })} note="bolder edges and larger marks, in every game." />
-              <Setting
-                label="on-screen keyboard only"
-                on={keysOnly}
-                onChange={() => {
-                  setKeysOnly((on) => !on);
-                  setProblem('');
-                }}
-                note="only the letter keys below type, so your device keyboard stays closed."
-              />
-            </ul>
-            <p className="mt-3 text-sm text-ink-soft">hard mode and on-screen keyboard only last for this visit. high contrast is the same switch as in game settings, so it stays on for every game. light or evening is in the footer.</p>
-          </>
-        )}
-      </details>
 
 
       <p className="sr-only" aria-live="polite" aria-atomic="true" data-testid="pulse-live">
