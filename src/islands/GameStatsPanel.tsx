@@ -13,7 +13,8 @@ import {
   triesInWords,
   type SavedStats,
 } from './gameresults';
-import { currentStreak, forget, recordResult, summary, summaryInWords, wordPathSummary, wordPathSummaryInWords, type GameId, type GameStats } from './gamestats';
+import { currentStreak, dailyStats, forget, recordResult, summary, summaryInWords, wordPathSummary, wordPathSummaryInWords, type GameId, type GameStats } from './gamestats';
+import { GUESSES } from './pulse';
 
 const button = 'min-h-11 rounded-pill border border-control bg-page px-5 py-2.5 text-ink';
 
@@ -23,8 +24,9 @@ const latest = (): SavedStats => loadStats(browserStorage(), localDay(new Date()
 /**
  * Private stats for the daily games (D-76). Off until the student turns them on; then this browser keeps each finished
  * round (the day, solved or not, and the tries; for word path also the hints used and whether the special answer came
- * first) and shows a short summary per game. Nothing is ever sent to us. The crossword shows a streak (Task 721: days
- * solved without Check, Reveal or Autocheck) and word path shows one worked out from the days kept, and turning stats off or "forget" deletes them. Results older than 400 days are deleted when the page
+ * first) and shows a short summary per game, with pillo's win % and streaks (Task 719), the crossword's streak (Task 721:
+ * days solved without Check, Reveal or Autocheck) and word path's streak (worked out from the days kept). Nothing is ever
+ * sent to us, and turning stats off or "forget" deletes them. Results older than 400 days are deleted when the page
  * opens. Rendered only in the browser (client:only).
  *
  * Every change starts from what storage holds at that moment, not from what this tab last showed, so turning stats off
@@ -34,6 +36,13 @@ const latest = (): SavedStats => loadStats(browserStorage(), localDay(new Date()
 interface Props {
   /** The games in the order the page shows them. */
   games: readonly GameId[];
+}
+
+/** pillo's win % and streaks in words (Task 719). */
+function pilloLine(stats: GameStats): string {
+  const days = (n: number) => `${n} ${n === 1 ? 'day' : 'days'}`;
+  const value = dailyStats(stats, 'pulse', localDay(new Date()), GUESSES);
+  return `won ${value.winPercent}%. current streak ${days(value.currentStreak)}, longest ${days(value.longestStreak)}.`;
 }
 
 export default function GameStatsPanel({ games: order }: Props) {
@@ -171,7 +180,7 @@ export default function GameStatsPanel({ games: order }: Props) {
         your stats
       </h2>
       <p className="mt-2 text-ink-soft">
-        only if you want them. they stay in this browser, on this device, and never reach us. the crossword and word path also count streaks.
+        only if you want them. they stay in this browser, on this device, and never reach us. pillo, the crossword and word path also count your streaks.
       </p>
       <button
         ref={toggleButton}
@@ -217,6 +226,7 @@ export default function GameStatsPanel({ games: order }: Props) {
                   {result.played > 0 && (
                     <>
                       <p className="mt-1 text-sm text-ink-soft">{triesInWords(game.id, result.triesCounts)}</p>
+                      {game.id === 'pulse' && <p className="mt-1 text-sm text-ink-soft">{pilloLine(saved.stats)}</p>}
                       {game.id === 'cueword' && (() => {
                         const run = currentStreak(saved.stats, game.id, localDay(new Date()));
                         return <p className="mt-1 text-sm" data-testid="crossword-streak">streak: {run} {run === 1 ? 'day' : 'days'} solved without help.</p>;

@@ -1,7 +1,7 @@
 /**
  * Private daily-game stats on /play (D-76). Each game reports a finished round; the stats panel keeps the results
- * only when the student has turned stats on. The record itself (first result of each game and day; the crossword keeps a streak flag, Task 721, and word path works out a streak from its days, #722) is the
- * helper's logic in ./gamestats, and results older than 400 days are dropped by today's date.
+ * only when the student has turned stats on. The record itself (first result of each game and day; pillo's and word path's
+ * streaks are worked out from it, and the crossword keeps a streak flag; Task 719, #722, Task 721) is the helper's logic in ./gamestats, and results older than 400 days are dropped by today's date.
  *
  * Stats are off until the student turns them on: turned on means the record exists in this browser's storage, and
  * turning them off deletes it. Nothing here is ever sent anywhere.
@@ -232,6 +232,8 @@ export interface RoundResult {
   solved: boolean;
   /** Guesses for pillo, slips for the retired sort record, checks or reveals for the crossword and loose stitches for word path. */
   tries: number;
+  /** Set when the round ended on another local day than its puzzle's own: it then never extends a streak. */
+  offDay?: true;
   /** Crossword only: whether the solve extends the streak (no Check, Reveal or Autocheck, within 48 hours). */
   streak?: boolean;
   /** Word path boards only (#722): hints used. */
@@ -273,6 +275,21 @@ if (typeof window !== 'undefined') {
   window.addEventListener('pageshow', (event) => {
     if (event.persisted) forgetHeldRounds();
   });
+}
+
+/** The event a game sends on `window` once today's round has its first move (read by the /play daily status). */
+export const GAME_PROGRESS_EVENT = 'cueory:game-progress';
+
+export interface ProgressDetail {
+  game: GameId;
+  /** The puzzle's day in the visitor's own time zone, YYYY-MM-DD. */
+  day: string;
+}
+
+/** Tells the page that today's round has started. Nothing is stored or sent anywhere. */
+export function reportProgress(detail: ProgressDetail): void {
+  if (typeof window === 'undefined') return;
+  window.dispatchEvent(new CustomEvent<ProgressDetail>(GAME_PROGRESS_EVENT, { detail: { game: detail.game, day: detail.day } }));
 }
 
 /** Tells the page that a round has ended: the round waits to be kept, and an event tells the stats panel. */

@@ -1,27 +1,34 @@
 import '../styles/pillo.css';
-import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type FormEvent } from 'react';
 import {
+  canSetHardMode,
   cleanGuess,
   dayNumber,
   GUESSES,
   guessesLeft,
   guessInWords,
-  guessProblem,
   letterMarks,
   MARK_SYMBOL,
   MARK_WORDS,
   playablePuzzles,
   playGuess,
   puzzleForDay,
+  setHardMode,
   shareText,
   startPulse,
+  untilNextPuzzle,
+  waitInWords,
+  wordProblem,
   WORD_LENGTH,
   type Mark,
   type PulseState,
 } from './pulse';
 import { dayLabel } from './daily';
-import { localDay, reportRound } from './gameresults';
+import { heldRounds, loadStats, localDay, reportProgress, reportRound } from './gameresults';
+import { dailyStats, recordResult, type DailyStats, type GameStats } from './gamestats';
+import { loadWordList } from './pillowords';
 import ResultBrandMark from './ResultBrandMark';
+import { browserStorage } from '../scripts/storage';
 
 interface Puzzle {
   word: string;
@@ -36,6 +43,54 @@ interface Props {
 const KEY_ROWS = ['qwertyuiop', 'asdfghjkl', 'zxcvbnm'];
 const primaryButton = 'rounded-pill bg-button px-5 py-2.5 text-on-button hover:bg-button-hover';
 const columns = Array.from({ length: WORD_LENGTH }, (_, i) => i);
+
+/** What the finish screen shows from the private stats: nothing kept (stats off), or the numbers and today's row. */
+type FinishStats = { on: false } | { on: true; stats: DailyStats; todayRow: number | undefined };
+
+/** The private stats as they stand now, with this page's finished rounds that the stats panel hasn't kept yet. */
+function finishStats(day: string): FinishStats {
+  const saved = loadStats(browserStorage(), day);
+  if (!saved.on) return { on: false };
+  const all = heldRounds().reduce<GameStats>((kept, round) => recordResult(kept, round), saved.stats);
+  const today = all.find((result) => result.game === 'pulse' && result.day === day);
+  return { on: true, stats: dailyStats(all, 'pulse', day, GUESSES), todayRow: today?.solved ? today.tries : undefined };
+}
+
+/** One setting: a real button with switch semantics, its state in words as well as by its look. */
+function Setting({ label, on, onChange, disabled, note }: {
+  label: string;
+  on: boolean;
+  onChange: () => void;
+  disabled?: boolean;
+  note?: string;
+}) {
+  const id = `pillo-setting-${label.replace(/\W+/g, '-')}`;
+  return (
+    <li className="pillo-setting">
+      <button
+        type="button"
+        role="switch"
+        aria-checked={on}
+        aria-disabled={disabled || undefined}
+        aria-describedby={note ? `${id}-note` : undefined}
+        className="pillo-switch"
+        onClick={() => {
+          if (!disabled) onChange();
+        }}
+      >
+        <span>{label}</span>
+        <span aria-hidden="true" className="font-bold">
+          {on ? 'on' : 'off'}
+        </span>
+      </button>
+      {note && (
+        <p id={`${id}-note`} className="mt-1 text-sm text-ink-soft">
+          {note}
+        </p>
+      )}
+    </li>
+  );
+}
 
 /** One pocket of the blister pack, with its pill: a guessed letter and its mark, a typed letter, or nothing yet. */
 function Pocket({ letter, mark, typed, next }: { letter?: string; mark?: Mark; typed?: boolean; next?: boolean }) {
@@ -64,8 +119,31 @@ export default function PulseGame({ puzzles }: Props) {
   const [problem, setProblem] = useState('');
   const [said, setSaid] = useState('');
   const [copied, setCopied] = useState('');
+  const [contrast, setContrast] = useState(false);
+  const [keysOnly, setKeysOnly] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [finish, setFinish] = useState<FinishStats>({ on: false });
+  const [wait, setWait] = useState('');
   const result = useRef<HTMLDivElement>(null);
   const reported = useRef(false);
+  const words = useRef<ReadonlySet<string> | undefined>(undefined);
+  const busy = useRef(false);
+
+  // The word list loads in the background; a guess sent before it arrives waits for it.
+  useEffect(() => {
+    void loadWordList().then((list) => {
+      words.current = list;
+    });
+  }, []);
+
+  // The finish screen counts down to the next word (local midnight), once a minute.
+  useEffect(() => {
+    if (state.status === 'playing') return;
+    const tick = () => setWait(waitInWords(untilNextPuzzle(new Date())));
+    tick();
+    const timer = window.setInterval(tick, 60_000);
+    return () => window.clearInterval(timer);
+  }, [state.status]);
 
   // When the game ends, focus moves to the result so it is read out, and the share button is next. The round is also
   // reported once, for the stats panel, which keeps it only if the student has turned stats on (D-76).
@@ -76,21 +154,29 @@ export default function PulseGame({ puzzles }: Props) {
     reported.current = true;
     const tries = GUESSES - guessesLeft(state);
     const solved = state.status === 'solved';
+    const day = localDay(today);
+    // A round finished after midnight still counts as played, but never extends a streak.
+    const offDay = localDay(new Date()) !== day;
     reportRound({
       game: 'pulse',
-      day: localDay(today),
+      day,
       solved,
       tries,
+      ...(offDay ? { offDay: true as const } : {}),
       card: {
         game: 'pulse',
         name: 'pillo',
         date: dayLabel(today),
         result: solved ? `${tries} / ${GUESSES}` : 'not solved',
+        ...(state.hard ? { shareResult: `${solved ? `${tries} / ${GUESSES}` : 'not solved'} · hard mode` } : {}),
         summary: solved ? 'you found today\'s word.' : 'today\'s word is ready for another try tomorrow.',
         stats: [{ label: 'guesses', value: `${tries}` }],
+        nextMessage: `next word in ${waitInWords(untilNextPuzzle(new Date()))}.`,
         path: '/play/pillo',
       },
     });
+    // The stats panel keeps the round while the event above is handled, so storage already holds it when stats are on.
+    setFinish(finishStats(localDay(new Date())));
   }, [state.status]);
 
   if (!puzzle) return <p>no puzzle today.</p>;
@@ -101,18 +187,24 @@ export default function PulseGame({ puzzles }: Props) {
   // Rows below the guesses: the one being typed (while playing), then bare pockets.
   const emptyRows = GUESSES - state.guesses.length - (playing ? 1 : 0);
 
-  const submit = (event?: FormEvent) => {
+  const submit = async (event?: FormEvent) => {
     event?.preventDefault();
-    if (!playing) return;
+    if (!playing || busy.current) return;
+    busy.current = true;
     const word = cleanGuess(text);
-    const why = guessProblem(word, WORD_LENGTH);
+    const list = words.current ?? (await loadWordList());
+    busy.current = false;
+    // A word that isn't in the list, or that breaks Hard Mode, is explained and never uses up a guess.
+    const why = wordProblem(state, word, list);
     if (why) {
       setProblem(why);
       setSaid(why);
       return;
     }
-    const next = playGuess(state, word);
+    const next = playGuess(state, word, list);
     setState(next);
+    // The first guess of the day tells the /play daily status that today's round has started.
+    if (state.guesses.length === 0) reportProgress({ game: 'pulse', day: localDay(today) });
     setText('');
     setProblem('');
     const last = next.guesses.at(-1)!;
@@ -144,8 +236,11 @@ export default function PulseGame({ puzzles }: Props) {
   const keyLabel = (letter: string, mark: Mark | undefined) => (mark ? `${letter}, ${MARK_WORDS[mark]}` : letter);
   const rowClass = (row: number) => `pillo-row${row === GUESSES - 1 ? ' pillo-row-last' : ''}`;
 
+  const hardLocked = !canSetHardMode(state);
+  const typedWords = text ? `typed so far: ${Array.from(text).join(' ')}.` : 'nothing typed yet.';
+
   return (
-    <div className="pillo" data-testid="pulse">
+    <div className={`pillo${contrast ? ' pillo-contrast' : ''}`} data-testid="pulse">
       <div className="pillo-top">
         <p className="pillo-status">
           guess the {WORD_LENGTH}-letter word · <strong>{leftWords}</strong>
@@ -169,8 +264,18 @@ export default function PulseGame({ puzzles }: Props) {
           ))}
         </ol>
 
-        {playing && (
-          <form className={rowClass(state.guesses.length)} onSubmit={submit} noValidate>
+        {playing && keysOnly && (
+          // On-screen keyboard only: there is no field, so the device keyboard never opens and typed keys are ignored.
+          <div className={rowClass(state.guesses.length)} data-testid="pulse-typed-row">
+            {columns.map((i) => (
+              <Pocket key={i} letter={text[i]} typed={i < text.length} next={i === text.length} />
+            ))}
+            <p className="sr-only">{typedWords}</p>
+          </div>
+        )}
+
+        {playing && !keysOnly && (
+          <form className={rowClass(state.guesses.length)} onSubmit={(event) => void submit(event)} noValidate>
             {columns.map((i) => (
               <Pocket key={i} letter={text[i]} typed={i < text.length} next={i === text.length} />
             ))}
@@ -207,7 +312,9 @@ export default function PulseGame({ puzzles }: Props) {
       </div>
 
       <p id="pillo-hint" className="sr-only">
-        type a {WORD_LENGTH}-letter word and press enter, or tap the letters below.
+        {keysOnly
+          ? `tap the letters below to spell a ${WORD_LENGTH}-letter word, then tap enter.`
+          : `type a ${WORD_LENGTH}-letter word and press enter, or tap the letters below.`}
       </p>
       {problem && (
         <p id="pillo-problem" className="mt-3 text-sm text-ink" data-testid="pulse-problem">
@@ -249,7 +356,7 @@ export default function PulseGame({ puzzles }: Props) {
                 );
               })}
               {r === KEY_ROWS.length - 1 && (
-                <button type="button" className="pillo-key pillo-key-wide" onClick={() => submit()}>
+                <button type="button" className="pillo-key pillo-key-wide" onClick={() => void submit()}>
                   enter
                 </button>
               )}
@@ -266,10 +373,109 @@ export default function PulseGame({ puzzles }: Props) {
             copy my result
           </button>
           {copied && <p className="mt-2 text-sm text-ink-soft">{copied}</p>}
+
+          <section className="pillo-stats mt-6" aria-labelledby="pillo-stats-heading" data-testid="pulse-stats">
+            <h3 id="pillo-stats-heading" className="font-semibold">
+              your pillo stats
+            </h3>
+            {finish.on ? (
+              <>
+                <dl className="pillo-stat-list mt-3">
+                  {[
+                    ['played', `${finish.stats.played}`],
+                    ['win %', `${finish.stats.winPercent}`],
+                    ['current streak', `${finish.stats.currentStreak}`],
+                    ['longest streak', `${finish.stats.longestStreak}`],
+                  ].map(([label, value]) => (
+                    <div key={label} className="pillo-stat">
+                      <dt className="text-sm text-ink-soft">{label}</dt>
+                      <dd className="text-lg font-bold">{value}</dd>
+                    </div>
+                  ))}
+                </dl>
+                <h4 id="pillo-distribution" className="mt-4 text-sm font-semibold">
+                  guesses it took
+                </h4>
+                <ol className="pillo-distribution mt-2" aria-labelledby="pillo-distribution">
+                  {finish.stats.distribution.map((count, i) => {
+                    const most = Math.max(1, ...finish.stats.distribution);
+                    const mine = finish.todayRow === i + 1;
+                    return (
+                      <li
+                        key={i}
+                        className={`pillo-dist-row${mine ? ' pillo-dist-today' : ''}`}
+                        data-testid={mine ? 'pulse-today-row' : undefined}
+                      >
+                        <span className="pillo-dist-label">{i + 1}</span>
+                        <span
+                          className="pillo-dist-bar"
+                          style={{ '--pillo-share': count / most } as CSSProperties}
+                          aria-hidden="true"
+                        />
+                        <span className="pillo-dist-count">
+                          {count} {count === 1 ? 'day' : 'days'}
+                          {mine && <strong> · today</strong>}
+                        </span>
+                      </li>
+                    );
+                  })}
+                </ol>
+              </>
+            ) : (
+              <p className="mt-2 text-sm text-ink-soft">
+                stats are off. turn on “keep my stats” below to see games played, win %, streaks and the guesses each
+                game took. they stay in this browser.
+              </p>
+            )}
+          </section>
+
           <p className="mt-4 text-sm text-ink-soft">a new word comes tomorrow.</p>
+          <p className="mt-1 text-sm text-ink-soft" data-testid="pulse-next">
+            next word in {wait}.
+          </p>
           <ResultBrandMark path="/play" />
         </div>
       )}
+
+      {/*
+        The switches render only while the disclosure is open. Chromium hides a closed <details> body with
+        content-visibility, which keeps its buttons laid out and "visible" but out of the Tab order.
+      */}
+      <details
+        className="pillo-settings mt-8"
+        data-testid="pulse-settings"
+        onToggle={(event) => setSettingsOpen(event.currentTarget.open)}
+      >
+        <summary className="pillo-settings-summary">pillo settings</summary>
+        {settingsOpen && (
+          <>
+            <ul className="mt-3 flex flex-col gap-3">
+              <Setting
+                label="hard mode"
+                on={Boolean(state.hard)}
+                disabled={hardLocked}
+                onChange={() => setState((now) => setHardMode(now, !now.hard))}
+                note={
+                  hardLocked
+                    ? 'hard mode can change only before your first guess of the day.'
+                    : 'letters shown in place or in the word must be used in every later guess.'
+                }
+              />
+              <Setting label="high contrast" on={contrast} onChange={() => setContrast((on) => !on)} note="bolder edges and larger marks." />
+              <Setting
+                label="on-screen keyboard only"
+                on={keysOnly}
+                onChange={() => {
+                  setKeysOnly((on) => !on);
+                  setProblem('');
+                }}
+                note="only the letter keys below type, so your device keyboard stays closed."
+              />
+            </ul>
+            <p className="mt-3 text-sm text-ink-soft">settings last for this visit. light or evening is in the footer.</p>
+          </>
+        )}
+      </details>
 
       <section className="pillo-legend mt-8" aria-labelledby="pillo-how">
         <h3 id="pillo-how" className="text-lg font-semibold">
