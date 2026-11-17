@@ -62,7 +62,7 @@ test.beforeEach(async ({ page }) => {
 });
 
 test.describe('word path: board format (#722)', () => {
-  test('the clue is the title, on a 6 by 8 board, with submit, clear and hint buttons', async ({ page }) => {
+  test('the clue is the title, on a 6 by 8 board, with submit, clear and cue buttons', async ({ page }) => {
     await expect(game(page)).toHaveAttribute('data-format', 'path');
     await expect(game(page).getByRole('heading', { level: 3, name: sample.clue })).toBeVisible();
     await expect(game(page)).toContainText(`find all ${total} answers. one of them, the thread, names the theme`);
@@ -71,7 +71,7 @@ test.describe('word path: board format (#722)', () => {
     await expect(game(page).getByRole('gridcell')).toHaveCount(48);
     await expect(page.getByTestId('suture-count')).toHaveText(`0 of ${total} found`);
     for (const name of ['submit', 'clear']) await expect(game(page).getByRole('button', { name })).toBeDisabled();
-    await expect(game(page).getByRole('button', { name: 'hint' })).toBeEnabled();
+    await expect(game(page).getByRole('button', { name: 'cue' })).toBeEnabled();
   });
 
   test('tap letters then submit: a theme word gets its own state, a dot symbol and a spoken label', async ({ page }) => {
@@ -159,31 +159,31 @@ test.describe('word path: board format (#722)', () => {
     await expect(page.getByTestId('suture-count')).toHaveText(`0 of ${total} found`);
   });
 
-  test('every 3 other words earn a hint; a hint marks an answer, a second hint numbers its letters', async ({ page }) => {
-    const hintButton = game(page).getByRole('button', { name: /^hint/ });
+  test('every 3 other words earn a cue; a cue marks an answer, a second cue numbers its letters', async ({ page }) => {
+    const hintButton = game(page).getByRole('button', { name: /^cue/ });
     await hintButton.click();
-    await expect(live(page)).toHaveText('no hint yet. find 3 more words that are not theme words.');
+    await expect(live(page)).toHaveText('no cue yet. find 3 more words that are not theme words.');
     const extras = sample.extras.slice(0, 6);
     for (const [i, word] of extras.slice(0, 3).entries()) {
       await tapAndSubmit(page, trace(word));
       await expect(live(page)).toHaveText(i === 2
-        ? `${word.toLowerCase()} is a word, not a theme word. you earned a hint.`
-        : `${word.toLowerCase()} is a word, not a theme word. ${2 - i} more for a hint.`);
+        ? `${word.toLowerCase()} is a word, not a theme word. you earned a cue.`
+        : `${word.toLowerCase()} is a word, not a theme word. ${2 - i} more for a cue.`);
     }
-    await expect(page.getByTestId('suture-hint-progress')).toHaveText('1 hint ready.');
-    await expect(hintButton).toHaveText('hint (1)');
+    await expect(page.getByTestId('suture-hint-progress')).toHaveText('1 cue ready.');
+    await expect(hintButton).toHaveText('cue (1)');
     await hintButton.click();
     const hinted = game(page).locator('button[data-look="hinted"]');
     await expect(hinted).toHaveCount(themes[0]!.path.length);
-    await expect(cell(page, themes[0]!.path[0]!)).toHaveAccessibleName(/, hint$/);
+    await expect(cell(page, themes[0]!.path[0]!)).toHaveAccessibleName(/, cue$/);
     for (const word of extras.slice(3)) await tapAndSubmit(page, trace(word));
     await hintButton.click();
-    await expect(live(page)).toHaveText('hint: the marked letters are now numbered in order.');
-    await expect(cell(page, themes[0]!.path[0]!)).toHaveAccessibleName(/, hint, letter 1$/);
+    await expect(live(page)).toHaveText('cue: the marked letters are now numbered in order.');
+    await expect(cell(page, themes[0]!.path[0]!)).toHaveAccessibleName(/, cue, letter 1$/);
     await expect(cell(page, themes[0]!.path[1]!)).toContainText('2');
   });
 
-  test('finishing the board: result, plain share line, stats with hints and the thread first, one progress event', async ({ page }) => {
+  test('finishing the board: result, plain share line, stats with cues and the thread first, one progress event', async ({ page }) => {
     await page.getByTestId('game-stats').getByRole('switch', { name: 'keep my stats' }).click();
     await tapAndSubmit(page, thread.path);
     for (const word of themes) await tapAndSubmit(page, word.path);
@@ -192,11 +192,11 @@ test.describe('word path: board format (#722)', () => {
     await resultDialog.getByRole('button', { name: 'close results' }).click();
     const result = page.getByTestId('suture-result');
     await expect(result).toBeFocused();
-    await expect(result).toContainText(`cueory word path, sun 1 nov: found ${total} of ${total} answers, the thread 1st, 0 hints.`);
+    await expect(result).toContainText(`cueory word path, sun 1 nov: found ${total} of ${total} answers, the thread 1st, 0 cues.`);
     const kept = JSON.parse((await page.evaluate(() => localStorage.getItem('cueory-game-stats')))!);
     expect(kept.results).toContainEqual({ game: 'suture', day: '2026-11-01', solved: true, tries: 0, hints: 0, specialFirst: true });
     await expect(page.getByTestId('word-path-stats')).toHaveText(
-      'completed 1, solve rate 100%. streak: 1 day, longest 1 day. the thread found first: 1. solved without hints: 1.',
+      'completed 1, solve rate 100%. streak: 1 day, longest 1 day. the thread found first: 1. solved without cues: 1.',
     );
     expect(await page.evaluate(() => (window as unknown as { progress: unknown[] }).progress)).toEqual([{ game: 'suture', day: '2026-11-01' }]);
   });
