@@ -1,14 +1,121 @@
 ---
 import Layout from '../layouts/Layout.astro';
-import PlaceholderBlock from '../components/PlaceholderBlock.astro';
 import Prose from '../components/Prose.astro';
+import { site } from '../config/site';
+
+// Final text v3, approved 2026-11-17 after two review rounds. Use it word for word; change it only with Christian's
+// approval.
+const email = site.contactEmail;
 ---
 
 <Layout title="terms" description="The terms for using Cueory." noindex>
   <Prose>
     <h1>terms of use</h1>
-    <PlaceholderBlock label="Terms of use">
-      <p>Christian: paste your terms of use here. Have a qualified person review them before launch.</p>
-    </PlaceholderBlock>
+    <p class="text-sm text-ink-soft">Last updated: 17 November 2026</p>
+
+    <p>By using Cueory you agree to these terms. If you don't agree, please don't use the site.</p>
+
+    <p>
+      <strong>Who we are.</strong> Cueory is an independent study site for nursing students, owned and run by an
+      individual in Arizona, USA. In these terms, "Cueory", "we" and "us" mean that owner. You can reach us at
+      <a href={`mailto:${email}`}>{email}</a>.
+    </p>
+
+    <p>
+      <strong>Who can use Cueory.</strong> Cueory is for nursing students and is not aimed at children. You must be at
+      least 13. We don't knowingly collect information from anyone under 13; if we learn we have, we delete it. Parents
+      can email <a href={`mailto:${email}`}>{email}</a> to have a child's information deleted. If you're 13 to 17, a
+      parent or guardian must read and agree to these terms for you.
+    </p>
+
+    <p>
+      <strong>What Cueory is today.</strong> Cueory is still being built. Right now it has daily puzzles and some sample
+      or placeholder study pages. Real lessons and practice questions are added as they're ready. Cueory is a study aid
+      only, so please read our <a href="/disclaimer">disclaimer</a>.
+    </p>
+
+    <p>
+      <strong>Free to use.</strong> Cueory is free to use right now. If that ever changes, we'll say so here first. We
+      may change, pause or stop any part of Cueory at any time.
+    </p>
+
+    <p>
+      <strong>Changes to these terms.</strong> We may update these terms. We'll post the new version here with a new
+      date, and for important changes we'll show a notice on the site for at least 14 days. Important changes apply 14
+      days after we post the notice; other changes apply when posted. Changes never apply to disputes that started
+      earlier. If you don't agree with a change, please stop using Cueory.
+    </p>
+
+    <p>
+      <strong>Accounts.</strong> Accounts are optional and not open yet. When they open, keep your sign-in details to
+      yourself. You'll be able to delete your account at any time on the account page.
+    </p>
+
+    <p><strong>Using it fairly.</strong> Please don't:</p>
+    <ul>
+      <li>copy, sell or republish our lessons, questions, puzzles or design without our written permission;</li>
+      <li>share real exam or test questions from your school or any licensing exam;</li>
+      <li>try to break, overload or get around the site's security;</li>
+      <li>scrape the site or use bots to collect its content;</li>
+      <li>send us anything illegal or harmful, or anyone's private information, including patient information.</li>
+    </ul>
+    <p>We may block or limit anyone who breaks these terms.</p>
+
+    <p>
+      <strong>Our content.</strong> The lessons, questions, puzzles, the cueory name and logo, and the site's design
+      belong to Cueory or to those who license them to us. You may use them for your own personal, non-commercial study.
+      We keep all other rights.
+    </p>
+
+    <p>
+      <strong>Your feedback.</strong> If you send us a flag, comment or idea, by email or later through the "Flag or
+      comment" button, we may use it to improve Cueory. We won't owe you payment for it. Our
+      <a href="/privacy">privacy page</a> explains what we keep.
+    </p>
+
+    <p>
+      <strong>Copyright concerns.</strong> If you think something on Cueory copies your work, email
+      <a href={`mailto:${email}`}>{email}</a> with what the work is, where it appears on Cueory, your contact details,
+      and a statement that you own it or act for the owner. We'll look into it and remove it if needed.
+    </p>
+
+    <p>
+      <strong>Other services.</strong> Some parts of Cueory link to or use services we don't run: Kit for launch-update
+      emails, Ko-fi for optional tips, YouTube for videos, Google for sign-in once accounts open, and our social media
+      pages. Their own terms and privacy policies apply when you use them. Tips through Ko-fi are optional. A tip doesn't
+      buy you anything and doesn't change what you can use. Refunds follow Ko-fi's rules.
+    </p>
+
+    <p><strong>Your privacy.</strong> Our <a href="/privacy">privacy page</a> explains what we keep and why.</p>
+
+    <p>
+      <strong>No warranty.</strong> Cueory is provided "as is" and "as available". <strong>To the fullest extent the law
+      allows, we make no warranties of any kind, express or implied, including implied warranties of merchantability,
+      fitness for a particular purpose and non-infringement.</strong> We don't promise the site will be accurate,
+      complete, up to date, uninterrupted, secure or free of errors. You use Cueory, and rely on its content, at your own
+      risk.
+    </p>
+
+    <p>
+      <strong>Limit of liability.</strong> <strong>To the fullest extent the law allows, Cueory and anyone who helps run
+      it are not liable for indirect, incidental, special, consequential or punitive losses, or for lost data, grades,
+      exam results or income. For anything else, our total liability to you is limited to US $50.</strong> Some places
+      don't allow some of these limits, so parts of this may not apply to you. Nothing here limits liability that the law
+      says can't be limited.
+    </p>
+
+    <p>
+      <strong>The whole agreement.</strong> These terms, the <a href="/disclaimer">disclaimer</a> and the
+      <a href="/privacy">privacy page</a> are the whole agreement between you and Cueory. If a court finds part of them
+      can't be enforced, the rest still applies. If we don't enforce a term right away, we can still enforce it later.
+    </p>
+
+    <p>
+      <strong>Law.</strong> Arizona law (USA) applies to these terms, without regard to its conflict-of-law rules. Any
+      dispute will be handled in the state or federal courts located in Maricopa County, Arizona, unless the law where
+      you live gives you a right that can't be waived.
+    </p>
+
+    <p><strong>Contact.</strong> Questions about these terms: <a href={`mailto:${email}`}>{email}</a>.</p>
   </Prose>
 </Layout>

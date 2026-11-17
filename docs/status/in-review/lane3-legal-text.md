@@ -1,0 +1,1 @@
+status: Lane 3 legal text: /terms and /disclaimer now carry Christian's approved text (2026-11-17), dated "Last updated: 17 November 2026"; they no longer block the release gate, so their footer and menu links show again. /privacy still blocks until Christian confirms it.

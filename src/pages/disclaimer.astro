@@ -1,14 +1,68 @@
 ---
 import Layout from '../layouts/Layout.astro';
-import PlaceholderBlock from '../components/PlaceholderBlock.astro';
 import Prose from '../components/Prose.astro';
+import { site } from '../config/site';
+
+// Final text v3, approved 2026-11-17 after two review rounds. Use it word for word; change it only with Christian's
+// approval.
+const email = site.contactEmail;
 ---
 
 <Layout title="disclaimer" description="Cueory is a study aid, not medical advice." noindex>
   <Prose>
     <h1>disclaimer</h1>
-    <PlaceholderBlock label="Disclaimer text">
-      <p>Christian: paste your disclaimer here.</p>
-    </PlaceholderBlock>
+    <p class="text-sm text-ink-soft">Last updated: 17 November 2026</p>
+
+    <p>
+      Cueory is a study aid for nursing students. It is not medical advice and not a substitute for your school, your
+      instructors or your clinical training.
+    </p>
+
+    <p>
+      <strong>Not medical advice.</strong> Nothing on Cueory is medical, nursing or clinical advice. Don't use it to
+      diagnose, treat or care for a real patient, or to make decisions about your own health or anyone else's. At
+      clinical and at work, follow your instructors, your preceptors and your facility's policies.
+    </p>
+
+    <p>
+      <strong>Never share patient information.</strong> Don't type or send anything about a real patient anywhere on
+      Cueory. That includes names, dates, photos, room numbers and stories from clinical that could identify someone. If
+      you share something by mistake, email <a href={`mailto:${email}`}>{email}</a> and we'll delete it. Also tell your
+      instructor or clinical site if their rules require it.
+    </p>
+
+    <p>
+      <strong>In an emergency,</strong> call 911 or your local emergency number. Cueory can't help in an emergency.
+    </p>
+
+    <p>
+      <strong>Follow your school's rules.</strong> Your school and clinical site decide when phones and study tools are
+      allowed. Don't use Cueory during an exam, a graded assignment or patient care unless they clearly allow it. Your
+      school's academic honesty rules always apply.
+    </p>
+
+    <p>
+      <strong>Check what you learn.</strong> Some content is sample or placeholder text, and content may not yet have
+      citations or review by a licensed nurse. Mistakes can happen. Your school's materials, textbooks and instructors
+      come first. If something here disagrees with them, follow them, and please tell us at
+      <a href={`mailto:${email}`}>{email}</a>.
+    </p>
+
+    <p>
+      <strong>No guarantee of results.</strong> Using Cueory doesn't guarantee a grade, a passing score on a course exam
+      or the NCLEX, or any other outcome.
+    </p>
+
+    <p><strong>Puzzles are for fun.</strong> For now the daily puzzles are samples with everyday words, and some repeat.</p>
+
+    <p>
+      <strong>Not affiliated.</strong> Cueory is independent. No school, nursing program, testing body or licensing board
+      runs or endorses it. Their names belong to them.
+    </p>
+
+    <p>
+      See also our <a href="/terms">terms of use</a> and <a href="/privacy">privacy page</a>. Questions:
+      <a href={`mailto:${email}`}>{email}</a>.
+    </p>
   </Prose>
 </Layout>

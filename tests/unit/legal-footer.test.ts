@@ -61,9 +61,9 @@ describe('legalPageHasFinalCopy', () => {
     }
   });
 
-  it('reads the real pages: Terms and Disclaimer are still placeholders on this branch', () => {
-    expect(legalPageHasFinalCopy('terms')).toBe(false);
-    expect(legalPageHasFinalCopy('disclaimer')).toBe(false);
+  it("reads the real pages: Terms and Disclaimer hold Christian's approved text", () => {
+    expect(legalPageHasFinalCopy('terms')).toBe(true);
+    expect(legalPageHasFinalCopy('disclaimer')).toBe(true);
   });
 });
 
