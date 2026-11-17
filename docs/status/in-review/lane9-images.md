@@ -1,0 +1,1 @@
+status: Lane 9, images (lane9/images): the share sheet shows 560/840px WebP previews instead of the full 1200x630 PNGs (about 215 KB down to 19-30 KB per sheet), and every home-page vial declares its real width and height so lazy vials no longer shift the label.

@@ -12,6 +12,7 @@ import {
   SHARE_STYLES,
   shareFileName,
   shareImagePath,
+  sharePreviewPath,
   STYLE_LABELS,
   toolName,
   xIntentUrl,
@@ -294,7 +295,8 @@ function CardOption({ id, name, style, tool, checked, onChange }: CardOptionProp
         }`}
       >
         <img
-          src={shareImagePath(tool, style)}
+          src={sharePreviewPath(tool, style, 560)}
+          srcSet={`${sharePreviewPath(tool, style, 560)} 2x, ${sharePreviewPath(tool, style, 840)} 3x`}
           alt=""
           width={1200}
           height={630}
