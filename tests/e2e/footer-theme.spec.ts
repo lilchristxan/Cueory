@@ -91,7 +91,7 @@ test.describe('footer bar', () => {
     const footer = footerOf(page);
     const panel = footer.locator('#site-footer-panel');
     await expect(panel).toBeHidden();
-    await expect(footer.getByRole('link', { name: 'terms' })).toBeHidden();
+    await expect(footer.getByRole('link', { name: 'privacy' })).toBeHidden();
 
     await chevron(page).click();
     await expect(chevron(page)).toHaveAttribute('aria-expanded', 'true');
@@ -99,9 +99,11 @@ test.describe('footer bar', () => {
     await expect(panel).toBeVisible();
     // Above the bar.
     expect((await panel.boundingBox())!.y).toBeLessThan((await chevron(page).boundingBox())!.y);
-    for (const name of ['courses', 'coming soon', 'privacy', 'terms', 'disclaimer', 'support cueory', 'hello@cueory.app']) {
+    for (const name of ['courses', 'coming soon', 'privacy', 'support cueory', 'hello@cueory.app']) {
       await expect(footer.getByRole('link', { name, exact: true })).toBeVisible();
     }
+    // #747: Terms and Disclaimer stay out of the footer until they are approved.
+    for (const name of ['terms', 'disclaimer']) await expect(footer.getByRole('link', { name, exact: true })).toHaveCount(0);
     await expect(footer.getByText('by nursing students, for nursing students.', { exact: true })).toBeVisible();
     await expect(footer.getByText(/^© \d{4} cueory\. study help, not medical advice\.$/)).toBeVisible();
     await expect(footer.getByRole('group', { name: 'Theme' })).toBeVisible();
@@ -142,7 +144,7 @@ test.describe('footer without JavaScript', () => {
     await page.goto('/privacy');
     const footer = footerOf(page);
     await expect(footer.locator('#site-footer-panel')).toBeVisible();
-    await expect(footer.getByRole('link', { name: 'terms', exact: true })).toBeVisible();
+    await expect(footer.getByRole('link', { name: 'privacy', exact: true })).toBeVisible();
     const flag = footer.getByRole('link', { name: 'flag or comment', exact: true });
     await expect(flag).toBeVisible();
     await expect(flag).toHaveAttribute('href', `mailto:hello@cueory.app?subject=${encodeURIComponent('flag or comment: /privacy')}&body=${encodeURIComponent("please don't include patient names, dates of birth, medical record numbers, or other details that could identify a real person.\n\n")}`);
