@@ -7,7 +7,7 @@ import { join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { gzipSync } from 'node:zlib';
 import { describe, expect, it } from 'vitest';
-import { newsletter, site } from '../../src/config/site';
+import { kitFormAction, kitLandingUrl, newsletter, site } from '../../src/config/site';
 import { initialJsFiles, initialJsGzipBytes, inlineScriptBodies } from './perf-scan';
 
 const dist = fileURLToPath(new URL('../../dist/', import.meta.url));
@@ -410,15 +410,22 @@ describe.skipIf(!existsSync(dist))('built site', () => {
     const html = readFileSync(join(dist, 'index.html'), 'utf8');
     const csp = /<meta http-equiv="content-security-policy" content="([^"]+)"/.exec(html)![1];
     const formAction = /form-action ([^;]+)/.exec(csp)![1].trim();
-    if (newsletter.formAction) {
-      expect(html).toContain(`action="${newsletter.formAction}"`);
+    if (kitFormAction(newsletter.formAction)) {
+      expect(html).toContain(`action="${kitFormAction(newsletter.formAction)}"`);
       expect(html).toContain(`name="${newsletter.emailFieldName}"`);
-      expect(formAction).toBe(`'self' ${new URL(newsletter.formAction).origin}`);
+      expect(formAction).toBe(`'self' ${new URL(kitFormAction(newsletter.formAction)).origin}`);
     } else {
-      expect(html).toContain('signups open soon.');
+      // No form: a plain link to Kit's landing page (no Kit script, so form-action stays 'self'), or the pending line.
       expect(html).not.toContain('<form');
       expect(formAction).toBe("'self'");
+      if (kitLandingUrl(newsletter.landingUrl)) {
+        expect(html).toContain(`href="${kitLandingUrl(newsletter.landingUrl)}"`);
+        expect(html).not.toContain('sign ups open soon.');
+      } else {
+        expect(html).toContain('sign ups open soon.');
+      }
     }
+    expect(html).not.toMatch(/<script\b[^>]*\bsrc="https?:\/\/[^"]*kit\.com/i);
   });
 
   it('ships the security headers file', () => {

@@ -19,17 +19,17 @@ export default function CuewordToday({ puzzles, name }: Props) {
 
   return (
     <section aria-label={name + ' level'}>
-      <fieldset className="crossword-no-print mb-4 flex justify-center">
-        <legend className="sr-only">crossword level</legend>
-        <div className="segmented" data-testid="crossword-levels">
+      {/* The same level picker as sudoku's (Christian's brief): pressed buttons with a check mark, not only a fill. */}
+      <div className="crossword-no-print mb-4 flex justify-center">
+        <div className="segmented" role="group" aria-label="crossword level" data-testid="crossword-levels">
           {crosswordLevels.map(({ level: option, size }) => (
-            <label className="segmented-option" key={option} title={size + ' by ' + size}>
-              <input className="sr-only" type="radio" name="crossword-level" value={option} checked={level === option} onChange={() => setLevel(option)} />
-              {labels[option]}<span className="sr-only">, {size} by {size}</span>
-            </label>
+            <button key={option} type="button" className="segmented-option" aria-pressed={level === option} aria-label={`${labels[option]}, ${size} by ${size}`} onClick={() => setLevel(option)}>
+              {level === option && <span className="segmented-check" aria-hidden="true">✓</span>}
+              {labels[option]}
+            </button>
           ))}
         </div>
-      </fieldset>
+      </div>
       {puzzle ? <CuewordGame key={level + '-' + puzzle.id} puzzle={puzzle} name={name} /> : <p role="alert">no {level} sample puzzle today.</p>}
     </section>
   );

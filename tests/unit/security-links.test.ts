@@ -19,6 +19,7 @@ export const linkHosts = new Set([
   'cueory.app', // canonical and share links to our own site
   'www.instagram.com', 'www.tiktok.com', 'www.youtube.com', 'x.com', 'www.facebook.com', 'www.pinterest.com', // socials
   'ko-fi.com', // tip page
+  'cueory.kit.com', // Kit landing page for launch updates, a plain link until the Kit form exists
   'creativecommons.org', 'dbarchive.biosciencedbc.jp', // licence and source credits for the anatomy models
 ]);
 /** Hosts the page itself may load from (only the click-to-play lesson video frame). */
@@ -166,8 +167,9 @@ describe('external link checker (fixtures)', () => {
 });
 
 describe('site config only names allowed hosts', () => {
-  it('socials, tip page, site address and newsletter form', () => {
-    const urls = [site.url, site.tipPageUrl, ...socials.map((social) => social.href), newsletter.formAction].filter(Boolean);
+  it('socials, tip page, site address, newsletter form and landing page', () => {
+    const urls = [site.url, site.tipPageUrl, ...socials.map((social) => social.href), newsletter.formAction, newsletter.landingUrl]
+      .filter(Boolean);
     for (const url of urls) expect(linkHosts, url).toContain(new URL(url).hostname);
   });
 });
