@@ -4,7 +4,7 @@ import { defineConfig } from 'astro/config';
 import react from '@astrojs/react';
 import tailwindcss from '@tailwindcss/vite';
 import { createHash } from 'node:crypto';
-import { newsletter, site } from './src/config/site.ts';
+import { kitFormAction, newsletter, site } from './src/config/site.ts';
 import { themeHeadScript } from './src/scripts/theme.ts';
 import { connectSrc } from './src/islands/supabasecsp.ts';
 import { supabaseBuildCheck } from './src/islands/supabasebuildcheck.ts';
@@ -12,8 +12,10 @@ import { loadEnv } from 'vite';
 import { pruneDraftModelsIntegration } from './src/visuals/prunedrafts.ts';
 import { cspHeaderIntegration } from './src/security/cspheader.ts';
 
-// The signup form posts to Kit, so the CSP must allow that one address.
-const formOrigin = newsletter.formAction ? ` ${new URL(newsletter.formAction).origin}` : '';
+// The signup form posts to Kit, so the CSP must allow that one address. Only a valid Kit address (https on kit.com or a
+// subdomain, no sign-in details) counts, so a mistaken host can never widen form-action.
+const kitForm = kitFormAction(newsletter.formAction);
+const formOrigin = kitForm ? ` ${new URL(kitForm).origin}` : '';
 
 // Astro doesn't hash hand-written inline scripts, so allow the theme script by its exact hash.
 /** @type {`sha256-${string}`} */

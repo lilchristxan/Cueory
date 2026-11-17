@@ -6,7 +6,7 @@
  * is connected, the card links to Kit's landing page (with no landing page either, it says only that sign ups open soon); the line about the emails comes with the form, so small
  * grey lines never stack (D-62). Lowercase brand voice (D-47).
  */
-import { kitLandingUrl, newsletter, signupState } from '../config/site';
+import { kitFormAction, kitLandingUrl, newsletter, signupState } from '../config/site';
 
 const state = signupState(newsletter.formAction, newsletter.landingUrl);
 const ready = state === 'form';
@@ -23,7 +23,7 @@ const landingUrl = kitLandingUrl(newsletter.landingUrl);
         ready ? (
           <>
             <form
-              action={newsletter.formAction}
+              action={kitFormAction(newsletter.formAction)}
               method="post"
               class="mt-4 flex flex-col gap-3 text-left sm:flex-row sm:items-end"
               data-testid="signup-form"

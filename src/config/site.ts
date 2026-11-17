@@ -45,20 +45,39 @@ export const newsletter = {
   landingUrl: 'https://cueory.kit.com/bfd9609b46',
 } as const;
 
-/** The landing page address if it is https on kit.com or one of its subdomains (no sign-in details), otherwise ''. */
-export function kitLandingUrl(value: string): string {
+/**
+ * A Kit address, normalised by the URL parser (so the host is lowercase and an international name is punycode), if it
+ * is https on kit.com or one of its subdomains, on the default port, with no sign-in details; otherwise ''. A host with
+ * a trailing dot ("cueory.kit.com.") doesn't count. Used for both the landing page and the form address, so a mistaken
+ * host can never become a link or widen the CSP's form-action (astro.config.mjs).
+ */
+export function kitUrl(value: string): string {
   try {
     const url = new URL(value);
     const kitHost = url.hostname === 'kit.com' || url.hostname.endsWith('.kit.com');
-    return url.protocol === 'https:' && kitHost && !url.username && !url.password ? url.href : '';
+    const plain = !url.username && !url.password && url.port === '';
+    return url.protocol === 'https:' && kitHost && plain ? url.href : '';
   } catch {
     return '';
   }
 }
 
-/** What the launch-updates box shows: Kit's form, a link to Kit's landing page, or "sign ups open soon.". */
+/** The landing page address if it is a valid Kit address (kitUrl), otherwise ''. */
+export function kitLandingUrl(value: string): string {
+  return kitUrl(value);
+}
+
+/** The form's address if it is a valid Kit address (kitUrl; Kit's form posts go to app.kit.com), otherwise ''. */
+export function kitFormAction(value: string): string {
+  return kitUrl(value);
+}
+
+/**
+ * What the launch-updates box shows: Kit's form, a link to Kit's landing page, or "sign ups open soon.". An address
+ * that isn't a valid Kit address is ignored, so the box falls back to the next state.
+ */
 export function signupState(formAction: string, landingUrl: string): 'form' | 'landing' | 'pending' {
-  if (formAction.startsWith('https://')) return 'form';
+  if (kitFormAction(formAction)) return 'form';
   return kitLandingUrl(landingUrl) ? 'landing' : 'pending';
 }
 
