@@ -27,7 +27,20 @@ test.beforeEach(async ({ page }) => {
 */
 const axe = async (page: Page) => {
   await page.evaluate(() => window.scrollTo(0, 0));
-  await page.waitForFunction(() => (document.querySelector('header')?.getBoundingClientRect().top ?? 0) >= 0);
+  // On a timeout, say what held the header up (diagnosing a CI-only failure on #831); the wait itself is unchanged.
+  await page.waitForFunction(() => (document.querySelector('header')?.getBoundingClientRect().top ?? 0) >= 0, undefined, { timeout: 15_000 })
+    .catch(async (error: Error) => {
+      const why = await page.evaluate(() => JSON.stringify({
+        headerTop: document.querySelector('header')?.getBoundingClientRect().top,
+        headerClass: document.querySelector('header')?.className,
+        scrollY: window.scrollY,
+        bodyStyle: document.body.getAttribute('style'),
+        inert: [...document.querySelectorAll('[inert]')].map((element) => element.tagName + '.' + String(element.className).slice(0, 30)),
+        dialogs: [...document.querySelectorAll('dialog[open], [data-testid="game-result-dialog"], [data-promo]:not([hidden])')].map((element) => element.tagName + (element.getAttribute('data-testid') ?? '')),
+        active: document.activeElement?.tagName + ' ' + (document.activeElement?.getAttribute('aria-label') ?? ''),
+      }));
+      throw new Error(`${error.message} | page: ${why}`);
+    });
   return new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa']).analyze();
 };
 const field = (page: Page) => page.getByLabel('your guess', { exact: true });
@@ -766,6 +779,15 @@ test.describe('daily games: private stats (D-76), always kept (2026-11-17)', () 
     return () => release();
   };
 
+  /** What the page looks like at a failure, for CI (shown only in a failing assertion's message). */
+  const state = (page: Page) => page.evaluate(() => JSON.stringify({
+    active: (document.activeElement?.getAttribute('aria-label') ?? document.activeElement?.textContent ?? '').slice(0, 40) + ' <' + document.activeElement?.tagName + '>',
+    inert: [...document.querySelectorAll('[inert]')].map((element) => element.tagName + '.' + String(element.className).slice(0, 30)),
+    bodyStyle: document.body.getAttribute('style'),
+    dialogs: [...document.querySelectorAll('dialog[open], [role="dialog"], [data-testid="game-result-dialog"], [data-promo]:not([hidden])')].map((element) => element.tagName + (element.getAttribute('data-testid') ?? '')),
+    scrollY: window.scrollY,
+    headerTop: document.querySelector('header')?.getBoundingClientRect().top,
+  }));
   test.beforeEach(async ({ page }) => {
     await page.clock.setFixedTime(new Date('2026-11-01T15:00:00'));
     await page.goto('/play/pillo');
@@ -806,8 +828,9 @@ test.describe('daily games: private stats (D-76), always kept (2026-11-17)', () 
     await expect(pulseStats(page)).toContainText('played 1 day, solved 1.');
 
     await panel(page).getByRole('button', { name: 'forget pillo' }).focus();
+    const before = await state(page);
     await page.keyboard.press('Enter');
-    await expect(pulseStats(page)).toContainText('not played yet.');
+    await expect(pulseStats(page), `before Enter: ${before}`).toContainText('not played yet.');
     await expect(panel(page).getByRole('heading', { name: 'pillo', exact: true })).toBeFocused();
     expect(JSON.parse((await kept(page))!).results).toEqual([]);
 
