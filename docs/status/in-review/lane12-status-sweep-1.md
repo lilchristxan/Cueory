@@ -1,1 +1,1 @@
-status: Lane 12, verified 14 merged PRs against staging ancestry, folded their notes into STATUS.md and D-137 to D-144, preserved every unverified note; documentation only.
+status: Lane 12, verified 14 merged PRs against staging ancestry, folded their notes into STATUS.md and D-137 to D-144, preserved every unverified note; corrected the obsolete #634 conflict report after verifying main is 0 ahead and GitHub reports mergeable; documentation only.

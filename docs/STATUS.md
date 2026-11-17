@@ -558,7 +558,7 @@ Verified merged PRs: [#733](https://github.com/lilchristxan/Cueory/pull/733), [#
 - Open pull requests on 2026-11-05, midday:
   - #625, Task 178, built-asset production audit before deployment: `needs-christian` (it touches deployment); waits for Christian.
   - #633, this documentation batch: waits for a completed Codex review (Codex hit its usage limit).
-  - #634, release dry run from `staging` to `main`: **do not merge**, `needs-christian`. GitHub did not start the main CI on it because `main` has 28 commits `staging` lacks, one file conflicts (`src/layouts/Layout.astro`), so `staging` must first take in `main`. Only CodeQL ran.
+  - #634, release dry run from `staging` to `main`: **do not merge**, `needs-christian`. Rechecked 2026-11-17: `main` is 0 commits ahead of `staging`, and GitHub reports the PR mergeable; the earlier conflict report is obsolete. This remains a CI-only dry run, not release authorization. Check current CI results separately.
   - #635, two CodeQL high alerts in test files (test-only fix): checks green; waits for a completed Codex review.
 - Everything listed under "In review" on 2026-11-03 (#189, #157, #195, #191, #185, #188, #164, #180, #184, #174, #177, #178, #163, #172, #194, #156, #186 and the Release browser tests #55) has merged into `staging`; Christian merged the sensitive ones on 2026-11-04.
 - Open pull requests write their line in their own file under `docs/status/in-review/` (see its README); the director moves them here in batches.
