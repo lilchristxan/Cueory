@@ -6,6 +6,7 @@
  * hidden (its space is kept, so nothing moves) and the footer links still work.
  */
 import { menuLinks, menuSmallLinks } from '../config/site';
+import { visibleFooterLinks } from '../config/legalfooter';
 import SocialLinks from './SocialLinks.astro';
 import { currentHref, groupMenuLinks } from '../scripts/menu';
 
@@ -15,10 +16,12 @@ interface Props {
 }
 
 const { quiet = false } = Astro.props;
-const grouped = groupMenuLinks(menuLinks, menuSmallLinks);
+// #747: a legal page that isn't approved yet gets no menu link either (Privacy always shows).
+const smallLinks = visibleFooterLinks(menuSmallLinks);
+const grouped = groupMenuLinks(menuLinks, smallLinks);
 const current = currentHref(
   Astro.url.pathname,
-  [...menuLinks, ...menuSmallLinks].map((link) => link.href),
+  [...menuLinks, ...smallLinks].map((link) => link.href),
 );
 ---
 

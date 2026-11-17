@@ -133,6 +133,12 @@ describe.skipIf(!existsSync(privacyPath))('privacy page browser storage disclosu
     expect(html).toContain('When you create one, we store only:');
   });
 
+  it('says autocheck counts as help for the crossword, as countsForStreak and the autocheck setting do', () => {
+    const text = privacyHtml().replace(/\s+/g, ' ');
+    expect(text).toContain('a try is a check, a reveal or autocheck');
+    expect(text).toContain('solved without check, reveal or autocheck, within 48 hours');
+  });
+
   it('names flag reports, what Google sign-in shares and that the launch list is separate', () => {
     const html = privacyHtml();
     expect(html).toContain('Reports you send with the "Flag or comment" button');
@@ -225,7 +231,7 @@ const NOT_STORAGE: readonly { match: RegExp; why: string }[] = [
   { match: /^cueory-(resume-heading|resume-summary|guest-import-heading)$/, why: 'element ids for aria-labelledby' },
   { match: /^cueory-csp-header$/, why: 'name of the build plugin that writes the security header' },
   { match: /^cueory-export-1$/, why: 'format name written inside the data download' },
-  { match: /^cueory-data-\$\{/, why: 'file name of the account data download' },
+  { match: /^cueory-data-(\$\{|<date>-)/, why: 'file name of the account data download (and its README text)' },
   { match: /^cueory-progress-\$\{.*\.json$/, why: 'file name of the progress download' },
   { match: /^cueory-\$\{/, why: 'file names of share images and worksheets, built from the page' },
   { match: /^cueory-sudoku:\$\{/, why: "seed for the day's sudoku, never stored" },

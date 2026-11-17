@@ -74,21 +74,40 @@ html:root[data-game-motion="reduce"] *::after {
     max-block-size: 100%;
     overflow: auto;
     overscroll-behavior: contain;
+    scroll-padding-block-start: calc(var(--tap-min) + var(--spacing) * 2);
     padding: calc(var(--spacing) * 6);
     border-radius: var(--radius-xl);
     background: var(--color-page);
     box-shadow: var(--shadow-lift);
   }
 
+  /* The close button floats in the top corner and sticks there while the card scrolls (issue 743); the title wraps beside it. */
   .game-settings-heading {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: calc(var(--spacing) * 4);
+    display: contents;
   }
 
   .game-settings-heading h2 {
+    display: flex;
+    float: inline-start;
+    min-block-size: var(--tap-min);
+    max-inline-size: 100%;
+    align-items: center;
     font-size: var(--text-2xl);
+    overflow-wrap: break-word;
+  }
+
+  .game-settings-heading .game-settings-close {
+    position: sticky;
+    inset-block-start: 0;
+    z-index: 1;
+    float: inline-end;
+    margin-inline-start: calc(var(--spacing) * 3);
+    border-radius: var(--radius-pill);
+    background: var(--color-page);
+  }
+
+  .game-settings fieldset:first-of-type {
+    clear: both;
   }
 
   .game-settings-close {
@@ -129,7 +148,9 @@ html:root[data-game-motion="reduce"] *::after {
 
   .game-settings-option > span {
     display: flex;
+    min-inline-size: 0;
     flex-direction: column;
+    overflow-wrap: anywhere;
   }
 
   .game-settings-option small {

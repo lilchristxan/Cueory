@@ -32,6 +32,10 @@ my-puzzles/
 (`pulse`, `cueword` and `suture` are the games' inside names; visitors only ever see pillo, crossword and word path.)
 Sudoku has no folder: see below.
 
+Name each private file after the day it plays: `2026-11-20.json` for pillo and word path, `2026-11-20-easy.json` (or
+`-mid`, `-hard`) for crossword. The tools below read those dates. Real files say `"status": "draft"`; only made-up
+samples say `"status": "sample"`.
+
 ## pillo (folder `games/pulse/`)
 
 One file per puzzle, for example `games/pulse/sample-01.json`:
@@ -75,7 +79,12 @@ One file per puzzle:
 
 Sudoku needs no puzzle files. The site makes each day's three boards (easy, mid, hard) itself from built-in number
 templates (`src/islands/sudoku.ts`): everyone gets the same board on the same day, and each board has exactly one
-solution. There is nothing to load or check for sudoku.
+solution. There is nothing to load for sudoku. `content:calendar` (below) checks the site's own boards for the next 30
+days.
+
+If you ever want to try a hand-made board, `content:check` also checks a sudoku file in a `sudoku/` folder:
+`"level"` (easy, mid or hard) and a `"grid"` of 9 rows of 9 characters, 1 to 9 or `.` for an empty square. It says
+whether the board has exactly one solution. The site doesn't load these files.
 
 ## word path (folder `games/suture/`)
 
@@ -111,20 +120,66 @@ One file per board. Use the board format (`"format": "path"`):
 The older word search (no `format`, a `theme` instead of a `clue`, straight-line words) still loads, but new boards
 should use the board format.
 
-## Check a file
+## The puzzle tools
 
-In the cueory folder, run (on your Mac, first `export PATH=~/.local/node/bin:$PATH`):
+Three commands, run in the cueory folder (on your Mac, first `export PATH=~/.local/node/bin:$PATH`). Each works on any
+folder: your private store or the repository's `content/`. They print what to fix in plain words; each line ends with
+the rule's name, in case you want to ask Claude about it.
 
-```
-node scripts/check-content.mjs --content my-puzzles
-```
+| Command | What it does |
+| --- | --- |
+| `npm run content:check my-puzzles` | Checks every puzzle file in the folder (or one file) with the build's own rules and the games' checks. Lines starting `fix:` must be fixed; `check:` lines are worth a look. |
+| `npm run content:check -- --report my-puzzles` | The same, and saves `content-report.txt` in that folder, listing every file as ok or fix. |
+| `npm run content:calendar my-puzzles` | The next 30 days for every game: which puzzle plays each day, days with no puzzle or two, and answers used on two days. Sudoku shows "ok" when the site's board for that day has exactly one solution. |
+| `npm run content:csv my-sheet.csv` | Turns a spreadsheet saved as CSV into puzzle files next to it (see below). |
 
-It reads every file in the folder with the same rules the build uses and prints one line per problem, with the file
-and what to fix, or "no problems found". Exit code 0 means no problems. Today this check only accepts files marked
-`"status": "sample"`; a puzzle checker that also takes your real puzzles is on its way (lane 5 content check).
+What `content:check` checks, beyond the file format: pillo words are exactly five lowercase letters and never contain a
+name in `forbiddenGameWords`; crossword clues are at most 120 characters and no answer is in the grid twice; a word
+path theme clue is at most 60 characters, every letter belongs to exactly one answer, and exactly one special answer
+touches two opposite edges; a sudoku board has exactly one solution. A file inside the repository must be a labelled
+sample; one in your private store doesn't have to be. `npm test` runs `content:check -- --all` on the repository's
+`content/` folder, so a broken sample never reaches staging.
 
-The build runs the games' own checks too, so a broken sample in `content/games/` stops the staging build with a plain
-message instead of reaching a page.
+## Write puzzles in Google Sheets
+
+You can write puzzles in a spreadsheet instead of JSON: one row per word or clue. The templates are in
+`content/samples/templates/` (made-up everyday examples):
+
+| Template | One row per | Columns |
+| --- | --- | --- |
+| `pillo.csv` | day | `date`, `word`, `cue` |
+| `crossword.csv` | clue | `date`, `level`, `direction` (across or down), `row` and `column` of the first letter (counting from 1 at the top left), `answer`, `clue` |
+| `word-path.csv` | answer | `date`, `type` (`clue` once, `special` once, then `answer` and `extra`), `text`, `cells` (each letter's square as row-column from 1, separated by spaces, for example `1-6 2-6 3-5`) |
+
+The second row of each template explains its columns; any row whose first cell starts with `#` is a note and is
+skipped. A blank `date` (or crossword `level`) repeats the row above, so one sheet can hold a whole week.
+`content:csv` builds the grid from the answers, numbers the crossword clues itself, and saves files only when every
+puzzle passes `content:check`; otherwise it saves nothing and names the spreadsheet row to fix. It refuses to save real
+puzzles inside the repository.
+
+## Add a week of puzzles
+
+The whole job, for one game at a time. Pillo is shown; crossword and word path work the same way with their templates.
+
+1. In Google Sheets, open a new spreadsheet.
+2. Choose File > Import > Upload, pick `content/samples/templates/pillo.csv` from the cueory folder, choose "Replace
+   spreadsheet" and click Import data. You should see the column names in row 1, a note row starting with `#` in
+   row 2, and seven sample rows.
+3. Replace the sample rows with your seven days: a date (YYYY-MM-DD), the word and its cue on each row. Keep rows 1
+   and 2.
+4. Choose File > Download > Comma-separated values (.csv). You should see a file such as `pillo - Sheet1.csv` in your
+   Downloads folder.
+5. Move that file into your private store's `games/pulse/` folder (not into the cueory folder).
+6. Open Terminal.
+7. Type `cd ` (with a space), drag the cueory folder onto the Terminal window, and press Return.
+8. Paste `export PATH=~/.local/node/bin:$PATH` and press Return. You should see nothing printed; that's fine.
+9. Type `npm run content:csv ` (with a space), drag the CSV file from step 5 onto the window, and press Return. You
+   should see one `saved …2026-12-01.json` line per day and `7 pillo puzzles ready`. If you see `nothing saved`
+   instead, fix the rows it names in the sheet and go back to step 4.
+10. Type `npm run content:calendar ` (with a space), drag your private store's folder onto the window, and press
+    Return. You should see your seven words in the pillo column, one per date, and no `MISSING` on those dates.
+11. If the calendar lists "things to fix", fix them in the sheet and go back to step 4. "Things worth a look" (such as
+    a repeated answer) are your call.
 
 ## See a puzzle on staging
 
