@@ -239,9 +239,13 @@
     margin-inline: calc(var(--spacing) * -4);
   }
 
+  /* On a tablet or desktop the game column is wider than the pack: the pack, its status line and the keys are centred
+     in it, like the other daily boards. */
   @media (width >= 40rem) {
+    .pillo-top,
+    .pillo-pack,
     .pillo-keys {
-      margin-inline: 0;
+      margin-inline: auto;
     }
   }
 
