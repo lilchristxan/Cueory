@@ -10,6 +10,7 @@ import { PROMO_STORAGE_KEY } from '../scripts/promo';
 import { THEME_STORAGE_KEY } from '../scripts/theme';
 import type { KeyValueStorage } from '../scripts/storage';
 import { STATS_STORAGE_KEY, SUDOKU_STATS_STORAGE_KEY } from './gameresults';
+import { CROSSWORD_SETTINGS_KEY } from './cuewordkeys';
 import { SUDOKU_SETTINGS_KEY } from './sudoku';
 import { GAME_SETTINGS_STORAGE_KEY } from './gamesettings';
 import { GUEST_IMPORT_MARKER_PREFIX } from './guestimportrun';
@@ -128,6 +129,7 @@ export function afterDeletion(storage: KeyValueStorage | undefined): DeletionSto
     PROMO_STORAGE_KEY,
     THEME_STORAGE_KEY,
     STATS_STORAGE_KEY,
+    CROSSWORD_SETTINGS_KEY,
     SUDOKU_STATS_STORAGE_KEY,
     SUDOKU_SETTINGS_KEY,
     GAME_SETTINGS_STORAGE_KEY,

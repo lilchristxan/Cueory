@@ -14,7 +14,7 @@ import {
   triesInWords,
   type SavedStats,
 } from './gameresults';
-import { dailyStats, forget, recordResult, summary, summaryInWords, wordPathSummary, wordPathSummaryInWords, type GameId, type GameStats } from './gamestats';
+import { currentStreak, dailyStats, forget, recordResult, summary, summaryInWords, wordPathSummary, wordPathSummaryInWords, type GameId, type GameStats } from './gamestats';
 import { GUESSES } from './pulse';
 
 const button = 'min-h-11 rounded-pill border border-control bg-page px-5 py-2.5 text-ink';
@@ -25,9 +25,10 @@ const latest = (): SavedStats => loadStats(browserStorage(), localDay(new Date()
 /**
  * Private stats for the daily games (D-76). Off until the student turns them on; then this browser keeps each finished
  * round (the day, solved or not, and the tries; for word path also the hints used and whether the special answer came
- * first) and shows a short summary per game, with pillo's win % and streaks (Task 719) and word path's streak (worked out
- * from the days kept). Nothing is ever sent to us, and turning stats off or "forget" deletes them (sudoku's own per-level
- * record, ./sudokustats, goes with "forget all"). Results older than 400 days are deleted when the page
+ * first) and shows a short summary per game, with pillo's win % and streaks (Task 719), the crossword's streak (Task 721:
+ * days solved without Check, Reveal or Autocheck) and word path's streak (worked out from the days kept). Nothing is ever
+ * sent to us, and turning stats off or "forget" deletes them (sudoku's own per-level record, ./sudokustats, goes with
+ * "forget all"). Results older than 400 days are deleted when the page
  * opens. Rendered only in the browser (client:only).
  *
  * Every change starts from what storage holds at that moment, not from what this tab last showed, so turning stats off
@@ -182,8 +183,8 @@ export default function GameStatsPanel({ games: order }: Props) {
         your stats
       </h2>
       <p className="mt-2 text-ink-soft">
-        only if you want them. they stay in this browser, on this device, and never reach us. pillo and word path also count your
-        streaks, and sudoku shows its own times and streak for each level.
+        only if you want them. they stay in this browser, on this device, and never reach us. pillo, the crossword and word path
+        also count your streaks, and sudoku shows its own times and streak for each level.
       </p>
       <button
         ref={toggleButton}
@@ -230,6 +231,10 @@ export default function GameStatsPanel({ games: order }: Props) {
                     <>
                       <p className="mt-1 text-sm text-ink-soft">{triesInWords(game.id, result.triesCounts)}</p>
                       {game.id === 'pulse' && <p className="mt-1 text-sm text-ink-soft">{pilloLine(saved.stats)}</p>}
+                      {game.id === 'cueword' && (() => {
+                        const run = currentStreak(saved.stats, game.id, localDay(new Date()));
+                        return <p className="mt-1 text-sm" data-testid="crossword-streak">streak: {run} {run === 1 ? 'day' : 'days'} solved without help.</p>;
+                      })()}
                       {game.id === 'suture' && (
                         <p className="mt-1 text-sm text-ink-soft" data-testid="word-path-stats">
                           {wordPathSummaryInWords(wordPathSummary(saved.stats, localDay(new Date())))}

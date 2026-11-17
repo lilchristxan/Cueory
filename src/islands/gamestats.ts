@@ -12,6 +12,8 @@ export interface GameResult {
    * still counts as played, but never extends a streak (Task 719).
    */
   offDay?: true;
+  /** Crossword only (Task 721): whether this solve extends the streak (solved without help, within 48 hours). */
+  streak?: boolean;
   /** Word path boards only (#722): hints used. */
   hints?: number;
   /** Word path boards only (#722): whether the special answer (the thread) was found first. */
@@ -40,16 +42,18 @@ function readResult(value: unknown): GameResult | undefined {
   // A bad result is ignored, even if an object from an old caller has throwing getters.
   try {
     if (!value || typeof value !== 'object' || Array.isArray(value)) return;
-    const { game, day, solved, tries, offDay, hints, specialFirst } = value as Record<string, unknown>;
+    const { game, day, solved, tries, offDay, streak, hints, specialFirst } = value as Record<string, unknown>;
     if (typeof game !== 'string' || !GAMES.includes(game) || dayNumber(day) === undefined ||
       typeof solved !== 'boolean' || typeof tries !== 'number' || !Number.isSafeInteger(tries) || tries < 0 ||
       (offDay !== undefined && offDay !== true)) return;
+    if (streak !== undefined && typeof streak !== 'boolean') return;
     // The two word path details are optional, and only word path keeps them.
     if (hints !== undefined && (game !== 'suture' || typeof hints !== 'number' || !Number.isSafeInteger(hints) || hints < 0)) return;
     if (specialFirst !== undefined && (game !== 'suture' || typeof specialFirst !== 'boolean')) return;
     return {
       game: game as GameId, day: day as string, solved, tries,
       ...(offDay === true ? { offDay: true as const } : {}),
+      ...(streak === undefined ? {} : { streak }),
       ...(hints !== undefined ? { hints } : {}),
       ...(specialFirst !== undefined ? { specialFirst } : {}),
     };
@@ -214,4 +218,24 @@ export function wordPathSummaryInWords(value: WordPathSummary): string {
 
 export function forget(stats: GameStats, game?: string): GameStats {
   return game === undefined ? [] : stats.filter((result) => result.game !== game);
+}
+
+/** Whether a kept result extends the streak. Results kept before Task 721 had no help tools, so a clean solve counts. */
+function extendsStreak(result: GameResult): boolean {
+  return result.solved && (result.streak ?? result.tries === 0);
+}
+
+/**
+ * The current run of consecutive puzzle days that extend the streak, ending today (or yesterday, when today's puzzle
+ * isn't finished yet). A day solved with help, or not solved, ends the run. Used by the crossword (Task 721).
+ */
+export function currentStreak(stats: GameStats, game: string, today: string): number {
+  const end = dayNumber(today);
+  if (end === undefined) return 0;
+  const byDay = new Map<number, GameResult>();
+  for (const result of stats) if (result.game === game) byDay.set(dayNumber(result.day)!, result);
+  let day = byDay.has(end) ? end : end - 1;
+  let run = 0;
+  while (byDay.has(day) && extendsStreak(byDay.get(day)!)) { run++; day--; }
+  return run;
 }

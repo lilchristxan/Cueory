@@ -1,7 +1,7 @@
 /**
  * Private daily-game stats on /play (D-76). Each game reports a finished round; the stats panel keeps the results
  * only when the student has turned stats on. The record itself (first result of each game and day; pillo's and word path's
- * streaks are worked out from it, Task 719 and #722) is the helper's logic in ./gamestats, and results older than 400 days are dropped by today's date.
+ * streaks are worked out from it, and the crossword keeps a streak flag; Task 719, #722, Task 721) is the helper's logic in ./gamestats, and results older than 400 days are dropped by today's date.
  *
  * Stats are off until the student turns them on: turned on means the record exists in this browser's storage, and
  * turning them off deletes it. Nothing here is ever sent anywhere.
@@ -246,10 +246,12 @@ export interface RoundResult {
   /** The day of the puzzle that was played, in the visitor's own time zone, written YYYY-MM-DD. */
   day: string;
   solved: boolean;
-  /** Guesses for pillo, errors for sudoku, cues for the crossword and loose stitches for word path. */
+  /** Guesses for pillo, errors for sudoku, checks or reveals for the crossword and loose stitches for word path. */
   tries: number;
   /** Set when the round ended on another local day than its puzzle's own: it then never extends a streak. */
   offDay?: true;
+  /** Crossword only: whether the solve extends the streak (no Check, Reveal or Autocheck, within 48 hours). */
+  streak?: boolean;
   /** Word path boards only (#722): hints used. */
   hints?: number;
   /** Word path boards only (#722): whether the special answer was found first. */
@@ -376,7 +378,7 @@ export function deleteStats(storage: KeyValueStorage | undefined): boolean {
 const TRIES: Record<GameId, { one: string; many: string }> = {
   pulse: { one: 'guess', many: 'guesses' },
   triage: { one: 'error', many: 'errors' },
-  cueword: { one: 'cue', many: 'cues' },
+  cueword: { one: 'check or reveal', many: 'checks or reveals' },
   suture: { one: 'loose stitch', many: 'loose stitches' },
 };
 

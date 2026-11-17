@@ -239,6 +239,13 @@
   --crossword-number: clamp(0.45rem, 1.5vw, 0.75rem);
   --crossword-letter: clamp(0.75rem, 3vw, 1.5rem);
   --crossword-help: min(20rem, calc(100vw - var(--spacing-gutter) - var(--spacing-gutter)));
+  --crossword-pencil-inset: 12%;    /* the dashed box drawn inside a pencil square (Task 721) */
+  --crossword-pencil-weight: 300;   /* pencil letters are lighter as well as boxed, never told apart by color alone */
+  --crossword-pencil-scale: 0.8;    /* pencil letters are a little smaller than pen letters */
+  --crossword-mark-size: 30%;       /* the corner triangle on a revealed square */
+  --crossword-panel-gap: calc(var(--spacing) * 2);
+  --crossword-check-size: 1.25rem;  /* settings checkboxes and radio buttons */
+  --crossword-marker: 1ch;          /* room for the current-clue marker in the clue list */
   --crossword-print-cell: 2rem;      /* a printed square; colors on paper use --print-paper / --print-ink (Task 641) */
   --wordpath-cell-min: 1.5rem;       /* a letter square's floor: 24 px (WCAG 2.2) at default text, 48 px at 32 px root text, when the grid scrolls */
   --wordpath-columns: 11;            /* each puzzle overrides this with its validated grid width */
