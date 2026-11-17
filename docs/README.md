@@ -30,6 +30,9 @@ Each link has a one-line summary and says whether Christian needs to read it. Gu
 
 Game guides for videos: the [games folder](games/) has one plain page per daily game ([pillo](games/pillo.md), [sudoku](games/sudoku.md), [crossword](games/crossword.md), [word path](games/word-path.md)) with how to play, every setting and how scoring works. **Christian:** Read before recording a game video.
 
+- [19 November candidate release](RELEASE-2026-11-19.md) — Compare the pinned candidate with main and inspect all commit IDs. **Christian:** Read before selecting a release.
+
+
 ## For builders
 
 - [Architecture](ARCHITECTURE.md) — Find the site’s pages, data flow, and code locations. **Christian:** Usually not needed.
@@ -51,3 +54,6 @@ Review note: [isolation audit status](status/in-review/lane1-isolation-leftovers
 
 Review note: [reset account binding](status/in-review/task-754-reset-bound-account.md) — Review status for the password reset account guard. **Christian:** Approval required.
 Review note: [answer account binding](status/in-review/task-756-answers-stop-on-switch.md) — Stops stale players after a sign-in change.
+
+Inventory: [all candidate commit IDs](RELEASE-2026-11-19-COMMITS.tsv) — Complete pinned comparison supporting the release notes.
+Review note: [release inventory status](status/in-review/lane4-release-notes.md) — Source inventory only.
