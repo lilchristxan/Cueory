@@ -52,6 +52,18 @@ test('stays away within 3 hours of the last showing, and comes back after', asyn
   await expect(popup(page)).toBeVisible();
 });
 
+test('stays away on a page where the once-only promo panel is due', async ({ page }) => {
+  await page.addInitScript(() => localStorage.removeItem('cueory-promo-seen'));
+  await openAt(page, '/');
+  await page.clock.runFor(15_000);
+  await expect(page.getByTestId('promo')).toBeVisible();
+  await expect(popup(page)).toBeHidden();
+  // Closing the promo panel doesn't bring the pop-up on this page either.
+  await page.getByTestId('promo').getByRole('button', { name: 'close' }).click();
+  await page.clock.runFor(15_000);
+  await expect(popup(page)).toBeHidden();
+});
+
 for (const path of ['/learn/study-skills', '/play/sudoku']) {
   test(`never appears on ${path}`, async ({ page }) => {
     await openAt(page, path);

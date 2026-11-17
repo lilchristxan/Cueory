@@ -5,12 +5,14 @@ import { visibleFooterLinks } from '../../src/config/legalfooter';
 import { isDesktopOfEachEngine } from './projects';
 import { lessonRoutes } from '../lessonroutes';
 
-// The once-only promo panel (D-59) slides down after 5 seconds and takes keyboard focus, which would interrupt these
-// tests part-way, so every page here starts as if it had already been shown. tests/e2e/promo.spec.ts tests the panel.
+// The once-only promo panel (D-59) slides down after 5 seconds and takes keyboard focus, and the launch-updates pop-up
+// (lane 14) opens as a modal after 10, either of which would interrupt these tests part-way, so every page here starts
+// as if both had just been shown. tests/e2e/promo.spec.ts and tests/e2e/signup-popup.spec.ts test them.
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
     try {
       localStorage.setItem('cueory-promo-seen', String(Date.now()));
+      localStorage.setItem('cueory-signup-popup-seen', String(Date.now()));
     } catch {
       // Storage is blocked: the panel never shows then anyway.
     }
