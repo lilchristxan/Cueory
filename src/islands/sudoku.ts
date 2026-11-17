@@ -83,7 +83,10 @@ export function saveSudokuSettings(storage: Pick<SudokuSettingsStorage, 'setItem
   }
 }
 
-/** A paused board displays only the puzzle's published givens. Student data stays untouched in memory. */
+/**
+ * A paused board shows no numbers at all, givens included, so nothing can be worked on while the clock is stopped
+ * (Christian's sudoku brief). Student data stays untouched in memory and comes back on resume.
+ */
 export interface SudokuCellPresentation {
   given: boolean;
   value: number;
@@ -94,7 +97,7 @@ export function sudokuCellPresentation(
   entries: SudokuGrid, puzzle: SudokuGrid, marks: ReadonlySet<number>, index: number, paused: boolean,
 ): SudokuCellPresentation {
   const given = puzzle[index] !== 0;
-  if (paused) return { given, value: given ? puzzle[index]! : 0, marked: false, hidden: !given };
+  if (paused) return { given, value: 0, marked: false, hidden: true };
   return { given, value: entries[index] ?? 0, marked: !given && marks.has(index), hidden: false };
 }
 

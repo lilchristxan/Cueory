@@ -50,7 +50,7 @@ for (const scheme of ['light', 'dark'] as const) {
       expect(box.left).toBeGreaterThanOrEqual(rowBox.left - 0.5);
       expect(box.right).toBeLessThanOrEqual(Math.min(rowBox.right, width) + 0.5);
     }
-    for (const control of [game(page).getByRole('checkbox', { name: /auto candidates/ }), game(page).getByRole('button', { name: /settings/ })]) {
+    for (const control of [game(page).getByRole('checkbox', { name: /auto cues/ }), game(page).getByRole('button', { name: /settings/ })]) {
       await expect(control).toBeVisible();
       const box = await rect(control);
       expect(box.left).toBeGreaterThanOrEqual(0);
