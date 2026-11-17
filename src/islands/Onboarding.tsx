@@ -9,7 +9,7 @@ import {
   type ExamPlanSyncDb, type ScreenAnswers, type ServerPlan, type Touched,
 } from './examplansync';
 import {
-  ONBOARDING_FIELDS, nextOnboardingStep, previousOnboardingStep, skipOnboardingStep, type OnboardingStep,
+  ONBOARDING_FIELDS, focusAfterRender, nextOnboardingStep, previousOnboardingStep, skipOnboardingStep, type OnboardingStep,
 } from './onboardingsteps';
 
 const primaryButton = 'min-h-11 rounded-pill bg-button px-5 py-2.5 text-on-button hover:bg-button-hover';
@@ -159,8 +159,11 @@ export default function Onboarding() {
 
   const focusQuestion = (next: OnboardingStep) => {
     setStep(next);
-    requestAnimationFrame(() => {
-      (ONBOARDING_FIELDS[next] === 'course' ? courseLegendRef.current : dateHeadingRef.current)?.focus();
+    // Not if the student has already focused something else, or Enter would land on the heading (flaky e2e).
+    focusAfterRender(() => (ONBOARDING_FIELDS[next] === 'course' ? courseLegendRef.current : dateHeadingRef.current), {
+      active: () => document.activeElement,
+      body: () => document.body,
+      schedule: (run) => requestAnimationFrame(run),
     });
   };
 
