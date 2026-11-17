@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import QuestionsPlayer from './QuestionsPlayer';
 import { setFlagItem } from './flagitem';
-import { beginPublishedQuestionsRetry, describePublishedQuestions, openPublishedQuestions, type PublishedClient, type QuestionsView } from './publishedquestions';
+import { beginPublishedQuestionsRetry, describePublishedQuestions, openPublishedQuestions, type QuestionsView } from './publishedquestions';
+import { watchQuestionAccount, type QuestionAccount, type QuestionAccountClient } from './questionaccount';
 import { getSupabase, sessionStateFrom } from './supabaseclient';
 
 const link = 'inline-flex min-h-11 items-center rounded-sm underline underline-offset-4';
@@ -16,16 +17,28 @@ export default function PublishedQuestions() {
   const [view, setView] = useState<QuestionsView | undefined>(undefined);
   const [attempt, setAttempt] = useState(0);
   const [retrying, setRetrying] = useState(false);
+  const [accountChanged, setAccountChanged] = useState(false);
+  const account = useRef<QuestionAccount | null>(null);
   const settledRef = useRef<HTMLParagraphElement>(null);
 
   useEffect(() => {
     let cancelled = false;
+    let watched: QuestionAccount | null = null;
     void openPublishedQuestions(
       window.location,
-      () => getSupabase() as unknown as Promise<PublishedClient | null>,
+      async () => {
+        const client = await getSupabase() as unknown as QuestionAccountClient | null;
+        if (!client || cancelled) return null;
+        watched = await watchQuestionAccount(client, () => {
+          if (!cancelled) { setAccountChanged(true); setFlagItem(undefined); }
+        });
+        if (cancelled) { watched.dispose(); return null; }
+        account.current = watched;
+        return watched.client;
+      },
       sessionStateFrom,
     ).then(next => {
-      if (!cancelled) {
+      if (!cancelled && (!watched || watched.isCurrent())) {
         setView(next);
         setRetrying(false);
       }
@@ -35,13 +48,13 @@ export default function PublishedQuestions() {
         setRetrying(false);
       }
     });
-    return () => { cancelled = true; };
+    return () => { cancelled = true; watched?.dispose(); };
   }, [attempt]);
 
   const display = describePublishedQuestions(retrying ? beginPublishedQuestionsRetry(view) : view);
   const ready = view?.view === 'ready' ? view : undefined;
   // One remote object per load, so the player keeps its session while the student answers.
-  const remote = useMemo(() => ready && { signedIn: true, transport: ready.transport, versions: ready.versions }, [ready]);
+  const remote = useMemo(() => ready && { signedIn: true, transport: ready.transport, versions: ready.versions, isCurrent: account.current?.isCurrent }, [ready]);
   const versionOf = useMemo(() => new Map(ready?.versions.map(version => [version.item_id, version.id])), [ready]);
   const onCurrent = useCallback((itemId: string | undefined) => {
     const itemVersionId = itemId && versionOf.get(itemId);
@@ -56,6 +69,8 @@ export default function PublishedQuestions() {
       settledRef.current?.focus();
     }
   }, [attempt, retrying, view]);
+
+  if (accountChanged) return <p role="status">your signed-in account changed. <a className={link} href={window.location.pathname + window.location.search}>reload questions</a> to start again.</p>;
 
   if (display.status === 'loading' && !retrying) {
     return <p role="status" data-testid="questions-loading" className="text-sm text-ink-soft">{display.message}</p>;

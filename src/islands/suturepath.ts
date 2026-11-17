@@ -315,7 +315,7 @@ export function pathCellLabel(state: PathState, puzzle: SuturePathPuzzle, cell: 
     case 'special': return `${base}, the thread: ${puzzle.words[found!]!.answer.toLowerCase()}`;
     case 'theme': return `${base}, theme word: ${puzzle.words[found!]!.answer.toLowerCase()}`;
     case 'picked': return `${base}, picked, letter ${view.step} of the word`;
-    case 'hinted': return view.order ? `${base}, hint, letter ${view.order}` : `${base}, hint`;
+    case 'hinted': return view.order ? `${base}, cue, letter ${view.order}` : `${base}, cue`;
     default: return base;
   }
 }
@@ -334,9 +334,9 @@ export function submitInWords(state: PathState, puzzle: SuturePathPuzzle, outcom
     case 'again': return `you already found ${puzzle.words[outcome.answer]!.answer.toLowerCase()}.`;
     case 'elsewhere': return 'that word is an answer, but its letters run another way on this board.';
     case 'extra': {
-      if (outcome.earned) return `${outcome.word.toLowerCase()} is a word, not a theme word. you earned a hint.`;
+      if (outcome.earned) return `${outcome.word.toLowerCase()} is a word, not a theme word. you earned a cue.`;
       const left = wordsToNextHint(state);
-      return `${outcome.word.toLowerCase()} is a word, not a theme word. ${left} more for a hint.`;
+      return `${outcome.word.toLowerCase()} is a word, not a theme word. ${left} more for a cue.`;
     }
     case 'extra-again': return `you already found ${outcome.word.toLowerCase()}.`;
     default: return 'not a word on this board.';
@@ -348,7 +348,7 @@ export function pathShareLine(state: PathState, puzzle: SuturePathPuzzle, dateLa
   const clean = (text: string) => text.replace(/\s+/g, ' ').trim().toLowerCase();
   const place = state.found.indexOf(specialIndex(puzzle)) + 1;
   const ordinal = place === 1 ? '1st' : place === 2 ? '2nd' : place === 3 ? '3rd' : `${place}th`;
-  const hints = `${state.hintsUsed} ${state.hintsUsed === 1 ? 'hint' : 'hints'}`;
+  const hints = `${state.hintsUsed} ${state.hintsUsed === 1 ? 'cue' : 'cues'}`;
   return `${site.wordmarkName} ${clean(gameName)}, ${clean(dateLabel)}: found ${state.found.length} of ${puzzle.words.length} answers, the thread ${place > 0 ? ordinal : 'not yet'}, ${hints}.`;
 }
 

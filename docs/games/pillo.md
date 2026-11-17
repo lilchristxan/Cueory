@@ -30,11 +30,11 @@ This is the help added by pull request #801 (in review at the time of writing):
 
 ## Settings
 
-pillo settings are under the board (they last for this visit):
+pillo settings are under the board. Hard mode and on-screen keyboard only last for this visit; the high contrast
+switch there is the shared, remembered one (the same as in game settings):
 
 - **hard mode**: letters shown in place or in the word must be used in every later guess. It can be turned on or off
   only before the first guess of the day.
-- **high contrast**: bolder edges and larger marks.
 - **on-screen keyboard only**: only the on-screen letter keys type, so a phone's own keyboard stays closed.
 
 Shared settings for every game (the **game settings** button at the top of /play): theme (light, evening or follow the

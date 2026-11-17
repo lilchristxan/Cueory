@@ -4,6 +4,63 @@
   card. Every color, size and spacing value is a token.
 */
 @layer components {
+  /* The help dialog's own panel: a header row (title, then ×) that never scrolls, over a body that does. The title
+     always sits above the rules and the rules use the full width, at every screen size and text size. */
+  /* A narrower frame than the settings dialog, so a 320 px phone with enlarged text keeps a wide column for the rules. */
+  .game-settings-overlay.game-help-overlay {
+    padding: calc(var(--spacing) * 2);
+  }
+
+  .game-help {
+    display: flex;
+    flex-direction: column;
+    inline-size: min(100%, var(--container-prose));
+    max-block-size: 100%;
+    overflow: hidden;
+    border-radius: var(--radius-xl);
+    background: var(--color-page);
+    box-shadow: var(--shadow-lift);
+  }
+
+  .game-help-header {
+    display: flex;
+    flex: none;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: calc(var(--spacing) * 3);
+    padding: calc(var(--spacing) * 3) calc(var(--spacing) * 3) calc(var(--spacing) * 2);
+    border-block-end: var(--border-game-settings) solid var(--color-line);
+  }
+
+  .game-help-balance {
+    flex: none;
+    inline-size: var(--tap-min);
+  }
+
+  .game-help-title {
+    flex: 1 1 auto;
+    text-align: center;
+    min-inline-size: 0;
+    padding-block-start: calc(var(--spacing) * 1);
+    /* Smaller than the settings title, so with enlarged text on a short landscape phone the rules keep most of the height. */
+    font-size: var(--text-xl);
+    line-height: var(--text-xl--line-height);
+    overflow-wrap: anywhere;
+  }
+
+  .game-help-header .game-settings-close {
+    flex: none;
+  }
+
+  .game-help-body {
+    flex: 1 1 auto;
+    min-block-size: 0;
+    overflow: auto;
+    overscroll-behavior: contain;
+    padding: calc(var(--spacing) * 2) calc(var(--spacing) * 4) calc(var(--spacing) * 5);
+    overflow-wrap: anywhere;
+  }
+
   .game-help-first {
     margin-block: calc(var(--spacing) * 4);
     padding: calc(var(--spacing) * 5);
@@ -24,6 +81,25 @@
 
   .game-help-first .game-help-subheading {
     margin-block-start: 0;
+    text-align: center;
+  }
+
+  .game-help-line {
+    margin-block-start: calc(var(--spacing) * 2);
+    color: var(--color-ink-soft);
+    text-align: center;
+  }
+
+  /* Game-specific help, such as pillo's legend of marks, sits in the same column as the steps. */
+  .game-help .pillo-legend,
+  .game-help-first .pillo-legend {
+    max-inline-size: none;
+    margin-block-start: calc(var(--spacing) * 4);
+  }
+
+  .game-help-actions {
+    display: flex;
+    justify-content: center;
   }
 
   .game-help-steps {

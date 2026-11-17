@@ -59,6 +59,24 @@ function finishStats(day: string): FinishStats {
   return { on: true, stats: dailyStats(all, 'pulse', day, GUESSES), todayRow: today?.solved ? today.tries : undefined };
 }
 
+/** What each mark means, drawn as the pills on the board. Shown in pillo's help (the ? dialog and the first-visit card). */
+function PilloLegend() {
+  return (
+    <ul className="pillo-legend flex flex-col gap-3 text-sm" aria-label="what the marks mean" data-testid="pillo-legend">
+      {(['here', 'elsewhere', 'absent'] as const).map((mark) => (
+        <li key={mark} className="pillo-legend-row">
+          <span className={`pillo-pill pillo-${mark}`} aria-hidden="true">
+            <span className="pillo-mark">{MARK_SYMBOL[mark]}</span>
+          </span>
+          <span>
+            {MARK_SYMBOL[mark]} {mark === 'here' ? 'in its place' : mark === 'elsewhere' ? 'in the word, somewhere else' : 'not in the word'}
+          </span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 /** One setting: a real button with switch semantics, its state in words as well as by its look. */
 function Setting({ label, on, onChange, disabled, note }: {
   label: string;
@@ -257,9 +275,9 @@ export default function PulseGame({ puzzles }: Props) {
             <span key={i} className={`pillo-strip-pocket${i >= GUESSES - left ? ' pillo-strip-pill' : ''}`} />
           ))}
         </span>
-        <GameHelpButton help={howToPlay} name={gameName('pulse')} className="corner-button corner-button-quiet" />
+        <GameHelpButton help={howToPlay} name={gameName('pulse')} className="corner-button corner-button-quiet" extra={<PilloLegend />} />
       </div>
-      <GameHelpCard help={howToPlay} name={gameName('pulse')} />
+      <GameHelpCard help={howToPlay} name={gameName('pulse')} extra={<PilloLegend />} />
 
       <div className="pillo-pack mt-4">
         <ol className="pillo-board" aria-label="your guesses">
@@ -485,26 +503,6 @@ export default function PulseGame({ puzzles }: Props) {
         )}
       </details>
 
-      <section className="pillo-legend mt-8" aria-labelledby="pillo-how">
-        <h3 id="pillo-how" className="text-lg font-semibold">
-          how to play
-        </h3>
-        <ul className="mt-3 flex flex-col gap-3 text-sm">
-          {(['here', 'elsewhere', 'absent'] as const).map((mark) => (
-            <li key={mark} className="pillo-legend-row">
-              <span className={`pillo-pill pillo-${mark}`} aria-hidden="true">
-                <span className="pillo-mark">{MARK_SYMBOL[mark]}</span>
-              </span>
-              <span>
-                {MARK_SYMBOL[mark]} {mark === 'here' ? 'in its place' : mark === 'elsewhere' ? 'in the word, somewhere else' : 'not in the word'}
-              </span>
-            </li>
-          ))}
-        </ul>
-        <p className="mt-4 border-t border-line pt-3 text-sm text-ink-soft">
-          every word has {WORD_LENGTH} letters, and you have {GUESSES} guesses.
-        </p>
-      </section>
 
       <p className="sr-only" aria-live="polite" aria-atomic="true" data-testid="pulse-live">
         {said}

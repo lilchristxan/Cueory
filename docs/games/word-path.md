@@ -25,11 +25,11 @@ board is complete when every letter is used.
    Escape clears.
 4. There is no limit on guesses.
 
-## Hints
+## Cues
 
-Every 3 other words of 4 letters or more earn a hint. These are words each puzzle lists as extras: real words on the
-board that aren't answers. A hint marks the letters
-of one unsolved answer with a dashed outline. A second hint on that same answer numbers its letters in order.
+Every 3 other words of 4 letters or more earn a cue. These are words each puzzle lists as extras: real words on the
+board that aren't answers. A cue marks the letters
+of one unsolved answer with a dashed outline. A second cue on that same answer numbers its letters in order.
 
 ## Help
 
@@ -45,9 +45,9 @@ Word path has no settings of its own. The shared settings for every game are in 
 
 ## Scoring and stats
 
-- The share line reads like `cueory word path, <day>: found 7 of 7 answers, the thread 2nd, 1 hint.`
+- The share line reads like `cueory word path, <day>: found 7 of 7 answers, the thread 2nd, 1 cue.`
 - Stats (only when the player keeps stats, in that browser only): completed, solve rate, current and longest streak,
-  how often the thread was found first, and how many boards were solved without hints.
+  how often the thread was found first, and how many boards were solved without cues.
 
 ## The older format
 
