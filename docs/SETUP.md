@@ -239,7 +239,7 @@ file run out of order or twice fails or leaves a gap.
 | 15 | [fresh_sign_in_and_name_rules](https://raw.githubusercontent.com/lilchristxan/Cueory/staging/supabase/migrations/20261102160000_fresh_sign_in_and_name_rules.sql) | Checks recent sign-in for account deletion and applies one display-name rule |
 | 16 | [my_sessions](https://raw.githubusercontent.com/lilchristxan/Cueory/staging/supabase/migrations/20261102170000_my_sessions.sql) | Restricts students' session-history export to their own sessions, subject to MFA |
 | 17 | [enforce_opt_in_mfa](https://raw.githubusercontent.com/lilchristxan/Cueory/staging/supabase/migrations/20261104170500_enforce_opt_in_mfa.sql) | Enforces verified-factor MFA at the database boundary on personal data and protected functions |
-| 18 | [anatomy_study](https://raw.githubusercontent.com/lilchristxan/Cueory/staging/supabase/migrations/20261105120000_anatomy_study.sql) | Adds the anatomy lab review queue and saved views, read-only to students, written only through six checked, rate-limited functions |
+| 18 | [anatomy_study](https://raw.githubusercontent.com/lilchristxan/Cueory/staging/supabase/migrations/20261117030000_anatomy_study.sql) | Adds the anatomy lab review queue and saved views, read-only to students, written only through six checked, rate-limited functions |
 
 ### Open the right project
 1. Open https://github.com/lilchristxan/Cueory/tree/staging/supabase/migrations.

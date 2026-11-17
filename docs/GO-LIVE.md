@@ -20,7 +20,7 @@ Where this comes from: the Task 141 go-live audit, with actual migration filenam
 
 **Do not merge or serve #651's frontend on staging or production until the matching anatomy database schema exists there.** The new account-export paths intentionally fail closed if `public.anatomy_review_queue` or `public.anatomy_saved_views` is missing. Releasing the frontend first would prevent even pre-existing accounts from downloading their other data.
 
-1. Christian reviews the migration `supabase/migrations/20261105120000_anatomy_study.sql` and independently authorizes its application. Neither this PR nor this runbook applies a hosted migration.
+1. Christian reviews the migration `supabase/migrations/20261117030000_anatomy_study.sql` and independently authorizes its application. Neither this PR nor this runbook applies a hosted migration.
 2. An authorized operator replays and validates migrations in order locally, then (only after approval) applies the approved migration to the staging database.
 3. Confirm both tables, the two identity-bound read RPCs (`my_anatomy_review_queue(expected_user_id uuid)` and `my_anatomy_views(system_key text, expected_user_id uuid)`), and all four write RPCs exist and enforce RLS/MFA and initiating-user identity.
 4. Exercise an **existing** account's JSON and CSV exports in staging, including a two-factor-enabled account, before deploying or merging the #651 frontend.
@@ -120,7 +120,7 @@ Use exactly the steps of SETUP Part L, with three changes:
 | 15 | `20261102160000_fresh_sign_in_and_name_rules` | only after staging tests and specific founder auth/database approval |
 | 16 | `20261102170000_my_sessions` | only after staging session-isolation tests and specific founder privacy approval |
 | 17 | `20261104170500_enforce_opt_in_mfa` | only after staging MFA/policy tests and specific founder auth/database approval |
-| 18 | `20261105120000_anatomy_study` | only after staging tests and specific founder database approval |
+| 18 | `20261117030000_anatomy_study` | only after staging tests and specific founder database approval |
 
 1. Open https://github.com/lilchristxan/Cueory/tree/staging/supabase/migrations.
    You should see exactly the eighteen files above, including `20261102153000_admin_flag_rpcs.sql` from merged PR #338. Its position is determined by its timestamp, not by merge order. If the list differs, or an earlier-versioned file has not yet been applied on staging, stop for a reviewed database migration plan before any production SQL.

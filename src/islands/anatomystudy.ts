@@ -1,7 +1,7 @@
 /**
  * The anatomy lab's study tools, browser side (Task 178, part C): the review queue of structures a student missed in
  * the "Find it" quiz, and the views a student chooses to save. Everything is stored by the six functions in
- * `supabase/migrations/20261105120000_anatomy_study.sql`, which check every input, limit how much one person can
+ * `supabase/migrations/20261117030000_anatomy_study.sql`, which check every input, limit how much one person can
  * write, and refuse signed-out, unconfirmed and anonymous callers. Nothing is sent when accounts are off (the shared
  * client is `null`) or nobody is signed in: anonymous play records nothing.
  *
@@ -159,7 +159,7 @@ export function viewSnapshot(state: ViewState): { ok: true; args: SaveViewArgs }
 
 // ── Messages ──────────────────────────────────────────────────────────────────
 
-/** What the migration raises, verbatim (20261105120000_anatomy_study.sql). */
+/** What the migration raises, verbatim (20261117030000_anatomy_study.sql). */
 export const SIGNED_OUT_MESSAGES = [
   'sign in to record what you missed', 'sign in to change your review list', 'sign in to see your review list',
   'sign in to save a view', 'sign in to delete a view', 'sign in to see your saved views',

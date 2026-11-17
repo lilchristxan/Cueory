@@ -19,9 +19,9 @@ const sql = [
   '20261102135000_confirmed_accounts_only.sql',
   '20261102140000_update_display_name.sql',
   '20261102170000_my_sessions.sql',
-  '20261105120000_anatomy_study.sql',
   '20261112020000_restate_delete_my_account_mfa.sql',
   '20261114151643_delete_my_account_identity_and_mfa.sql',
+  '20261117030000_anatomy_study.sql',
 ].map(name => readFileSync(new URL(`../../supabase/migrations/${name}`, import.meta.url), 'utf8')).join('\n');
 
 type FunctionName =
@@ -181,9 +181,17 @@ describe('delete_my_account migration replay order', () => {
     const versions = names.map(name => name.slice(0, 14));
     expect(new Set(versions).size).toBe(versions.length);
     expect(names).toContain('20261112020000_restate_delete_my_account_mfa.sql');
-    expect(names.at(-1)).toBe('20261114151643_delete_my_account_identity_and_mfa.sql');
+    expect(names).toContain('20261114151643_delete_my_account_identity_and_mfa.sql');
     expect(names.indexOf('20261112020000_restate_delete_my_account_mfa.sql'))
       .toBeLessThan(names.indexOf('20261114151643_delete_my_account_identity_and_mfa.sql'));
+    // The identity-binding file is the last one that defines delete_my_account.
+    const lastDelete = names.filter(name =>
+      readFileSync(new URL(`../../supabase/migrations/${name}`, import.meta.url), 'utf8').includes('function public.delete_my_account'),
+    ).at(-1);
+    expect(lastDelete).toBe('20261114151643_delete_my_account_identity_and_mfa.sql');
+    // Issue #758: anatomy_study was never applied, so it replays after everything already on hosted staging.
+    expect(names.indexOf('20261117030000_anatomy_study.sql'))
+      .toBeGreaterThan(names.indexOf('20261114151643_delete_my_account_identity_and_mfa.sql'));
   });
 });
 
@@ -278,7 +286,7 @@ describe('my_sessions contract (Task 309)', () => {
 });
 
 describe('anatomy study contract (Task 178)', () => {
-  const anatomySql = readFileSync(new URL('../../supabase/migrations/20261105120000_anatomy_study.sql', import.meta.url), 'utf8');
+  const anatomySql = readFileSync(new URL('../../supabase/migrations/20261117030000_anatomy_study.sql', import.meta.url), 'utf8');
   const camera = { position: [0, 0, 3] as [number, number, number], target: [0, 0, 0] as [number, number, number] };
   const signatures = {
     record_anatomy_misses: 'text, text[], uuid', clear_anatomy_miss: 'text, text, uuid', my_anatomy_review_queue: 'uuid',
