@@ -312,6 +312,30 @@
   --pillo-cruet-rise: 0.28em;           /* how far below the top of the name's line the cruet's top sits */
 }
 
+/*
+  Launch-updates pop-up (lane 14, D-pending): the green look of Christian's Kit landing page, at his request. These
+  colors are OUTSIDE the brand guide v1.0 palette, so they are not --color-* tokens (those stay brand-only) and they are
+  used only by src/components/SignupPopup.astro. The same in Light and Evening. tests/unit/signup-popup.test.ts checks
+  their contrast.
+*/
+:root {
+  --popup-green: #26492a;        /* the pop-up's base, from the Kit landing page */
+  --popup-green-deep: #1b361f;   /* the darker folds of its plain texture */
+  --popup-green-light: #335d38;  /* the lighter folds of its plain texture */
+  --popup-cream: #f9f5ef;        /* Ivory: all text and the close icon on the green */
+  --popup-button: #d6e4a3;       /* the soft yellow-green "subscribe" button */
+  --popup-button-hover: #e4eebf; /* the button on hover */
+  --popup-button-ink: #26492a;   /* text on the button */
+  --popup-width: 30rem;          /* the pop-up is at most this wide */
+  --popup-scrim-mix: 60%;        /* how much deep green dims the page behind the pop-up */
+  /*
+    A photo goes here once Christian supplies one he has rights to, for example url("/popup/photo.webp"). It sits
+    under the green shade below, so the cream text keeps its contrast; raise --popup-photo-shade if it doesn't.
+  */
+  --popup-photo: none;
+  --popup-photo-shade: 0.72;
+}
+
 /* Strengths and images for the marketing background (D-41). Daytime values; the Evening ones are below. */
 :root {
   --shadow-tint: 62 44 35;      /* Espresso */
