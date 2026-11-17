@@ -1,6 +1,8 @@
-# Security headers for every page (Cloudflare Pages reads this file).
-# The rest of the Content-Security-Policy is a <meta> tag Astro writes on each
-# page (see astro.config.mjs). frame-ancestors only works as a header.
+# Security headers for every page (Cloudflare Workers static assets reads this file).
+# The Content-Security-Policy line below holds only the header-only directives
+# (frame-ancestors only works as a header). The build adds the rest of the policy,
+# including script-src with every page's hashes, to this line in dist/_headers
+# (src/security/cspheader.ts, issue #746). Astro's <meta> policy stays on each page.
 /*
   Content-Security-Policy: frame-ancestors 'none'; frame-src https://www.youtube-nocookie.com; object-src 'none'; base-uri 'self'; upgrade-insecure-requests
   Strict-Transport-Security: max-age=31536000; includeSubDomains
