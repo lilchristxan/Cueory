@@ -2,7 +2,6 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { dailyGames } from '../config/games';
 import { browserStorage } from '../scripts/storage';
 import {
-  deleteStats,
   forgetHeldRounds,
   GAME_RESULT_EVENT,
   heldRounds,
@@ -14,25 +13,44 @@ import {
   triesInWords,
   type SavedStats,
 } from './gameresults';
-import { currentStreak, dailyStats, forget, recordResult, summary, summaryInWords, wordPathSummary, wordPathSummaryInWords, type GameId, type GameStats } from './gamestats';
+import { currentStreak, dailyStats, forget, recordResult, serialize, summary, summaryInWords, wordPathSummary, wordPathSummaryInWords, type GameId, type GameStats } from './gamestats';
 import { GUESSES } from './pulse';
+import { loadSudokuStats, parseSudokuSolves } from './sudokustats';
 
 const button = 'min-h-11 rounded-pill border border-control bg-page px-5 py-2.5 text-ink';
 
 /** What this browser keeps right now. Another open tab may have turned stats on or off, or added a game. */
 const latest = (): SavedStats => loadStats(browserStorage(), localDay(new Date()));
+/** Sudoku keeps its per-level solves in a second record (./sudokustats); the panel's controls cover both. */
+const sudokuKept = (): boolean => {
+  try { return parseSudokuSolves(browserStorage()?.getItem(SUDOKU_STATS_STORAGE_KEY) ?? null).length > 0; } catch { return false; }
+};
+/** Deletes sudoku's per-level record. False when the browser won't let us. */
+const forgetSudokuRecord = (): boolean => {
+  try {
+    const storage = browserStorage();
+    if (!storage) return false;
+    storage.removeItem(SUDOKU_STATS_STORAGE_KEY);
+    return true;
+  } catch {
+    return false;
+  }
+};
+const hasRecord = (): boolean => {
+  try { return browserStorage()?.getItem(STATS_STORAGE_KEY) != null; } catch { return false; }
+};
 
 /**
- * Private stats for the daily games (D-76). Off until the student turns them on; then this browser keeps each finished
- * round (the day, solved or not, and the tries; for word path also the hints used and whether the special answer came
+ * Private stats for the daily games (D-76). Always kept in this browser (Christian's decision, 2026-11-17: no switch);
+ * it keeps each finished round (the day, solved or not, and the tries; for word path also the hints used and whether the special answer came
  * first) and shows a short summary per game, with pillo's win % and streaks (Task 719), the crossword's streak (Task 721:
  * days solved without Check, Reveal or Autocheck) and word path's streak (worked out from the days kept). Nothing is ever
- * sent to us, and turning stats off or "forget" deletes them (sudoku's own per-level record, ./sudokustats, goes with
+ * sent to us, and "forget" deletes them (sudoku's own per-level record, ./sudokustats, goes with
  * "forget all"). Results older than 400 days are deleted when the page
  * opens. Rendered only in the browser (client:only).
  *
- * Every change starts from what storage holds at that moment, not from what this tab last showed, so turning stats off
- * in one tab holds in every other open tab too. Rounds not kept yet wait in ./gameresults, which drops them whenever
+ * Every change starts from what storage holds at that moment, not from what this tab last showed, so a "forget" in one
+ * tab holds in every other open tab too. Rounds not kept yet wait in ./gameresults, which drops them whenever
  * another tab changes the stats.
  */
 interface Props {
@@ -54,7 +72,7 @@ export default function GameStatsPanel({ games: order }: Props) {
   /** What this tab shows, for the listeners, which are set up once. */
   const shown = useRef(saved);
   shown.current = saved;
-  const toggleButton = useRef<HTMLButtonElement>(null);
+  const toggleButton = useRef<HTMLHeadingElement>(null);
   const headings = useRef(new Map<GameId, HTMLHeadingElement>());
   /** Where focus goes after a "forget" button removes itself, so keyboard users keep their place. */
   const focusNext = useRef<GameId | 'switch' | undefined>(undefined);
@@ -81,17 +99,20 @@ export default function GameStatsPanel({ games: order }: Props) {
   useEffect(() => {
     // Results from before the last 400 days are deleted now, so nothing older stays in this browser.
     const now = latest();
-    if (now.on) saveStats(browserStorage(), now.stats);
+    // Only rewrite a record that exists, so a visitor who never finished a game has nothing saved.
+    if (now.on && hasRecord()) saveStats(browserStorage(), now.stats);
+    // Sudoku's per-level solve times follow the same 400 days: opening daily games or any game page deletes older
+    // ones from storage, not only when the sudoku stats view opens (Codex on #831).
+    loadSudokuStats(browserStorage(), localDay(new Date()));
     setSaved(now);
 
-    // Keeps the rounds waiting in ./gameresults when stats are on. While they're off, the rounds keep waiting, so
-    // turning stats on right after a game still counts it.
+    // Keeps the rounds waiting in ./gameresults. Stats are always kept; only a browser that won't store them keeps none.
     const keepWaiting = () => {
       const waiting = heldRounds();
       if (waiting.length === 0) return;
       const now = latest();
       if (!now.on) {
-        if (shown.current.on) setSaid("stats are off now, so this game wasn't kept.");
+        setSaid("this browser won't keep stats, so this game wasn't kept.");
         setSaved(now);
         return;
       }
@@ -132,31 +153,32 @@ export default function GameStatsPanel({ games: order }: Props) {
     };
   }, []);
 
-  const toggle = () => {
-    if (saved.on) {
-      if (!deleteStats(browserStorage())) {
-        setSaid("this browser didn't let us delete your stats. clearing this site's data in your browser removes them.");
-        return;
-      }
-      forgetHeldRounds();
-      setSaved({ on: false, stats: [] });
-      setSaid('stats are off, and what was kept is forgotten.');
-      return;
-    }
-    const now = latest();
-    const stats = heldRounds().reduce<GameStats>((all, result) => recordResult(all, result), now.stats);
-    if (keep(stats, 'stats are on. they stay in this browser.')) forgetHeldRounds();
-  };
-
   /** What storage holds now, or undefined (and the switch shows off) when stats were turned off meanwhile. */
   const stillOn = (): GameStats | undefined => {
     const now = latest();
     if (now.on) return now.stats;
     focusNext.current = 'switch';
     setSaved(now);
-    setSaid('stats are off now, so nothing is kept.');
+    setSaid("this browser won't keep stats, so nothing is kept.");
     return undefined;
   };
+
+  /**
+   * Writes the shared record after a "forget": an empty one is deleted (removeItem), not written, so a full storage
+   * can't keep the old history in place (Codex on #831). False when the browser refused.
+   */
+  const storeForgotten = (stats: GameStats): boolean => {
+    try {
+      const storage = browserStorage();
+      if (!storage) return false;
+      if (stats.length === 0) storage.removeItem(STATS_STORAGE_KEY);
+      else storage.setItem(STATS_STORAGE_KEY, serialize(stats));
+      return true;
+    } catch {
+      return false;
+    }
+  };
+  const SITE_DATA = "clearing this site's data in your browser removes them.";
 
   // A forgotten game's rounds that are still waiting to be kept are forgotten too.
   const forgetGame = (game: GameId, name: string) => {
@@ -164,49 +186,48 @@ export default function GameStatsPanel({ games: order }: Props) {
     if (!stats) return;
     forgetHeldRounds(game);
     focusNext.current = game;
-    keep(forget(stats, game), `${name} stats forgotten.`);
+    // Forgetting sudoku clears both its shared results and its per-level solve times (Codex on #831).
+    const timesGone = game !== 'triage' || forgetSudokuRecord();
+    const next = forget(stats, game);
+    const resultsGone = storeForgotten(next);
+    // Show what storage holds now, whatever happened.
+    setSaved(latest());
+    if (resultsGone && timesGone) setSaid(`${name} stats forgotten.`);
+    else if (resultsGone) setSaid(`${name} results forgotten, but this browser didn't let us delete its solve times. ${SITE_DATA}`);
+    else if (timesGone && game === 'triage') setSaid(`${name} solve times forgotten, but this browser didn't let us delete its results. ${SITE_DATA}`);
+    else setSaid(`this browser didn't let us delete your ${name} stats, so they are still kept. ${SITE_DATA}`);
   };
 
   const forgetAll = () => {
     if (!stillOn()) return;
     forgetHeldRounds();
     focusNext.current = 'switch';
-    try { browserStorage()?.removeItem(SUDOKU_STATS_STORAGE_KEY); } catch { /* the shared record below still resets */ }
-    keep([], 'all your stats are forgotten. stats stay on.');
+    const timesGone = forgetSudokuRecord();
+    const resultsGone = storeForgotten([]);
+    setSaved(latest());
+    if (resultsGone && timesGone) setSaid('all your stats are forgotten. new games are kept from now on.');
+    else if (resultsGone) setSaid(`your results are forgotten, but this browser didn't let us delete sudoku's solve times. ${SITE_DATA}`);
+    else if (timesGone) setSaid(`sudoku's solve times are forgotten, but this browser didn't let us delete your results. ${SITE_DATA}`);
+    else setSaid(`this browser didn't let us delete your stats, so they are still kept. ${SITE_DATA}`);
   };
 
   const games = order.flatMap((id) => dailyGames.filter((game) => game.id === id && game.ready));
 
   return (
     <section className="mt-16" aria-labelledby="stats-heading" data-testid="game-stats">
-      <h2 id="stats-heading" className="text-2xl font-medium">
+      {/* Focus lands here after "forget all" (there is no switch any more), so keyboard users keep their place. */}
+      <h2 ref={toggleButton} id="stats-heading" className="text-2xl font-medium" tabIndex={-1}>
         your stats
       </h2>
-      <p className="mt-2 text-ink-soft">
-        only if you want them. they stay in this browser, on this device, and never reach us. pillo, the crossword and word path
-        also count your streaks, and sudoku shows its own times and streak for each level.
+      <p className="mt-2 text-ink-soft" data-testid="stats-note">
+        kept in this browser, on this device, and never sent to us. pillo, the crossword and word path also count your
+        streaks, and sudoku shows its own times and streak for each level. forget them below at any time.
       </p>
-      <button
-        ref={toggleButton}
-        type="button"
-        role="switch"
-        aria-checked={saved.on}
-        aria-describedby="stats-switch-note"
-        className={`${button} mt-4 inline-flex max-w-full items-center gap-3 text-left`}
-        onClick={toggle}
-      >
-        <span>keep my stats</span>
-        <span aria-hidden="true" className="font-medium">
-          {saved.on ? 'on' : 'off'}
-        </span>
-      </button>
-      <p id="stats-switch-note" className="mt-2 text-sm text-ink-soft">
-        {blocked
-          ? "this browser won't keep them (private browsing or blocked site data)."
-          : saved.on
-            ? 'turning this off forgets them.'
-            : 'off: nothing is kept.'}
-      </p>
+      {blocked || !saved.on ? (
+        <p id="stats-switch-note" className="mt-2 text-sm text-ink-soft">this browser won't keep them (private browsing or blocked site data).</p>
+      ) : saved.stats.length === 0 && (
+        <p id="stats-switch-note" className="mt-2 text-sm text-ink-soft">nothing kept yet. finish a game and it shows here.</p>
+      )}
 
       {saved.on && (
         <>
@@ -227,7 +248,7 @@ export default function GameStatsPanel({ games: order }: Props) {
                     {displayName}
                   </h3>
                   <p className="mt-1">{result.played === 0 ? 'not played yet.' : summaryInWords(result)}</p>
-                  {result.played > 0 && (
+                  {(result.played > 0 || (game.id === 'triage' && sudokuKept())) && (
                     <>
                       <p className="mt-1 text-sm text-ink-soft">{triesInWords(game.id, result.triesCounts)}</p>
                       {game.id === 'pulse' && <p className="mt-1 text-sm text-ink-soft">{pilloLine(saved.stats)}</p>}
@@ -249,7 +270,7 @@ export default function GameStatsPanel({ games: order }: Props) {
               );
             })}
           </ul>
-          {saved.stats.length > 0 && (
+          {(saved.stats.length > 0 || sudokuKept()) && (
             <button type="button" className={`${button} mt-6`} onClick={forgetAll}>
               forget all my stats
             </button>

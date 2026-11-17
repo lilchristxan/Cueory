@@ -63,13 +63,10 @@ test('game dialogs fit a sideways phone without sideways scroll', async ({ page 
   };
 
   await open(page, '/play/sudoku');
-  await page.getByTestId('game-settings-button').click();
+  // Sudoku's gear opens the shared settings dialog with its own settings in it (#823).
+  await page.getByTestId('sudoku-section').getByRole('button', { name: 'sudoku settings' }).click();
   await check('.game-settings');
-  await page.getByRole('dialog', { name: 'game settings' }).getByRole('button', { name: 'close settings' }).click();
-
-  await page.getByTestId('sudoku-section').getByRole('button', { name: 'settings' }).click();
-  await check('.sudoku-settings');
-  await page.getByRole('dialog', { name: 'settings', exact: true }).getByRole('button', { name: 'close settings' }).click();
+  await page.getByRole('dialog', { name: 'sudoku settings' }).getByRole('button', { name: 'close settings' }).click();
 
   for (const [game, gameName] of [['pulse', 'pillo'], ['triage', 'sudoku'], ['cueword', 'crossword'], ['suture', 'word path']]) {
     await page.evaluate(({ game, gameName }) => {

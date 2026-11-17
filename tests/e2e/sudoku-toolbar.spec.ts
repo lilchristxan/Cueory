@@ -139,3 +139,34 @@ test('players see "cue", never "candidate"', async ({ page }) => {
   await expect(rules).toContainText('cue mode adds small cue numbers');
   expect(await rules.innerText()).not.toMatch(/candidate/i);
 });
+
+test('the gear opens one sudoku settings dialog with the shared settings and sudoku\'s own; no other settings button', async ({ page }) => {
+  await page.goto('/play/sudoku');
+  await expect(game(page).getByRole('gridcell')).toHaveCount(81);
+  await expect(page.getByTestId('play-settings')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: /settings/ })).toHaveCount(1);
+  const gear = toolbar(page).getByRole('button', { name: 'sudoku settings' });
+  await expect(gear).toHaveAttribute('data-testid', 'game-settings-button');
+  await gear.click();
+  const dialog = page.getByRole('dialog', { name: 'sudoku settings' });
+  await expect(dialog).toBeVisible();
+  for (const shared of ['theme', 'motion', 'every game', 'gameboard settings']) await expect(dialog.getByRole('group', { name: shared })).toBeVisible();
+  await expect(dialog.getByRole('checkbox', { name: 'start in auto cue mode' })).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(dialog).toHaveCount(0);
+  await expect(gear).toBeFocused();
+});
+
+test('with 32 px text at 320 px the sudoku settings dialog wraps inside its card, with no sideways scroll', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 700 });
+  await page.goto('/play/sudoku');
+  await page.evaluate(() => document.documentElement.style.setProperty('font-size', '32px', 'important'));
+  await toolbar(page).getByRole('button', { name: 'sudoku settings' }).click();
+  const card = page.getByRole('dialog', { name: 'sudoku settings' }).locator('.game-settings');
+  await expect(card).toBeVisible();
+  const [scrollWidth, clientWidth] = await card.evaluate((element) => [element.scrollWidth, element.clientWidth]);
+  expect(scrollWidth, 'sudoku: settings card scrolls sideways').toBeLessThanOrEqual(clientWidth);
+  const box = (await card.boundingBox())!;
+  expect(box.x).toBeGreaterThanOrEqual(0);
+  expect(box.x + box.width).toBeLessThanOrEqual(320);
+});

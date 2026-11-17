@@ -1,0 +1,1 @@
+status: GO-LIVE documentation follow-up: Thursday 19 November date, 20-file migration inventory in timestamp order, and terms/disclaimer explicitly unmet pending Christian-approved final text. Games/public pages only, accounts closed, production database untouched; no SQL execution or release authorization.

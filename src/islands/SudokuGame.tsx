@@ -4,7 +4,8 @@ import { printGame } from './gameprint';
 import { GameHelpButton, GameHelpCard, useGameHelp } from './GameHelp';
 import { gameName } from '../config/games';
 import { localDay, showResultCard, sudokuResultCard } from './gameresults';
-import { THEME_ROWS, chooseSiteTheme, currentSiteTheme } from './sitetheme';
+import { GameSettingsDialog } from './GameSettings';
+import { GAME_SETTINGS_EVENT, GAME_SETTINGS_STORAGE_KEY, gameSoundAllowed, loadGameSettings, parseGameSettings, type SharedGameSettings } from './gamesettings';
 import { sudokuCellClasses } from './sudokuhighlight';
 import { DEFAULT_SUDOKU_SETTINGS, GAME_PROGRESS_EVENT, LEVEL_LABELS, sudokuProgressDetail, LEVEL_RULES, advanceSudokuSeconds, autoCandidateNotes, checkSudoku, conflictIndices, dailySudokuSeed, editSudokuBoard, effectiveSudokuMode, generateSudoku, getResult, loadSudokuSettings, newSudokuBoard, noteDigits, pushSudokuHistory, saveSudokuSettings, sudokuCellPresentation, sudokuKeyAction, sudokuWrongCells, undoSudoku, type SudokuBoard, type SudokuBoardAction, type SudokuLevel, type SudokuMode, type SudokuSettings } from './sudoku';
 import { reportRound, SUDOKU_STATS_STORAGE_KEY, sudokuRoundResult } from './gameresults';
@@ -61,10 +62,7 @@ export default function SudokuGame() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const help = useGameHelp('triage');
   const howOpen = help.open;
-  const [theme, setTheme] = useState(() => currentSiteTheme(browserStorage()));
   const [said, setSaid] = useState('');
-  const dialog = useRef<HTMLDivElement>(null);
-  const overlay = useRef<HTMLDialogElement>(null);
   const settingsButton = useRef<HTMLButtonElement>(null);
   const solvedResult = useRef<HTMLDivElement>(null);
   const cells = useRef(new Map<number, HTMLButtonElement>());
@@ -99,11 +97,27 @@ export default function SudokuGame() {
     return () => window.clearInterval(timer);
   }, [paused, solved]);
 
+  // The latest shared settings (theme, motion, contrast, sound), followed live like useSharedGameSettings does: from the
+  // same-page event (so a change still counts when browser storage refuses to save it) and from other tabs. Kept in a
+  // ref, so following it never re-renders the board.
+  const shared = useRef<SharedGameSettings | null>(null);
+  useEffect(() => {
+    shared.current = loadGameSettings(browserStorage());
+    const onChange = (event: Event) => { shared.current = parseGameSettings(JSON.stringify((event as CustomEvent<unknown>).detail ?? null)); };
+    const onStorage = (event: StorageEvent) => {
+      if (event.key === null || event.key === GAME_SETTINGS_STORAGE_KEY) shared.current = loadGameSettings(browserStorage());
+    };
+    window.addEventListener(GAME_SETTINGS_EVENT, onChange);
+    window.addEventListener('storage', onStorage);
+    return () => { window.removeEventListener(GAME_SETTINGS_EVENT, onChange); window.removeEventListener('storage', onStorage); };
+  }, []);
+
   useEffect(() => {
     if (!solved || reported.current) return;
     reported.current = true;
     solvedResult.current?.focus();
-    if (settings.playSound) playSolvedTone();
+    // The shared "game sounds" switch silences every game, sudoku's solve sound too: its latest value, as followed above.
+    if (gameSoundAllowed(shared.current ?? loadGameSettings(browserStorage()), settings.playSound)) playSolvedTone();
     const result = getResult({ day, level, seconds, errors, solved: true });
     // Queue the display result even if the separate host island has not hydrated yet.
     showResultCard(sudokuResultCard(result));
@@ -119,26 +133,6 @@ export default function SudokuGame() {
 
   useEffect(() => { saveSudokuSettings(browserStorage(), settings); }, [settings]);
 
-  useEffect(() => {
-    if (!settingsOpen) return;
-    const previous = document.activeElement as HTMLElement | null;
-    // A modal <dialog> sits in the browser's top layer, so it is always placed against the screen, never against a
-    // page panel further up (that is what pushed the old overlay off the bottom of a desktop screen).
-    if (overlay.current && !overlay.current.open) overlay.current.showModal?.();
-    setTheme(currentSiteTheme(browserStorage()));
-    const controls = () => [...(dialog.current?.querySelectorAll<HTMLElement>('button:not([disabled]), input:not([disabled])') ?? [])];
-    controls()[0]?.focus();
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') { event.preventDefault(); setSettingsOpen(false); return; }
-      if (event.key !== 'Tab') return;
-      const list = controls(); if (!list.length) return;
-      const first = list[0]!; const last = list[list.length - 1]!;
-      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
-      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
-    };
-    document.addEventListener('keydown', onKey);
-    return () => { document.removeEventListener('keydown', onKey); (previous ?? settingsButton.current)?.focus(); };
-  }, [settingsOpen]);
 
   const togglePause = () => {
     setPaused((current) => !current);
@@ -301,7 +295,7 @@ export default function SudokuGame() {
       </div>
       {/* Five equal icon buttons spread across the board's width: settings, pause or play, print, stats, how to play. */}
       <div className="sudoku-toolbar" role="group" aria-label="sudoku tools" data-testid="sudoku-toolbar">
-        <button ref={settingsButton} type="button" className="sudoku-icon-button" aria-label="sudoku settings" aria-haspopup="dialog" onClick={() => setSettingsOpen(true)}><svg viewBox="0 0 24 24" className="size-6" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" strokeWidth="1.6" /><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" /></svg></button>
+        <button ref={settingsButton} type="button" className="sudoku-icon-button" aria-label="sudoku settings" aria-haspopup="dialog" data-testid="game-settings-button" onClick={() => setSettingsOpen(true)}><svg viewBox="0 0 24 24" className="size-6" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" strokeWidth="1.6" /><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" /></svg></button>
         <button type="button" className="sudoku-icon-button" aria-label={paused ? 'resume puzzle' : 'pause puzzle'} disabled={solved} onClick={togglePause}>{paused
           ? <svg viewBox="0 0 24 24" className="size-6" aria-hidden="true" focusable="false"><path d="M8.5 6.5v11l9-5.5z" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" /></svg>
           : <svg viewBox="0 0 24 24" className="size-6" aria-hidden="true" focusable="false"><path d="M9 6.5v11M15 6.5v11" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /></svg>}</button>
@@ -321,7 +315,7 @@ export default function SudokuGame() {
             </table>
             <p className="text-sm text-ink-soft">your first solve of each level each day counts. they stay in this browser and never reach us.</p>
             {kept.solves.length > 0 && <button type="button" className="sudoku-text-button" onClick={forgetSudokuStats}>forget sudoku stats</button>}
-          </> : <p>stats are off. turn on “keep my stats” under your stats on this page to keep your sudoku times and streaks.</p>}
+          </> : <p>this browser won't keep stats (private browsing or blocked site data), so your sudoku times and streaks can't be shown.</p>}
         </div>}
       </div>
       <GameHelpCard help={help} name={gameName('triage')} />
@@ -358,16 +352,16 @@ export default function SudokuGame() {
       </div>
     </div>
     {solved && <div ref={solvedResult} className="sudoku-solved" tabIndex={-1} role="status" data-testid="sudoku-result"><p className="text-lg font-medium">solved.</p><p>{elapsed} · {errors} {errors === 1 ? 'error' : 'errors'}</p><p className="text-sm text-ink-soft">a new sudoku comes out tomorrow.</p></div>}
-    {settingsOpen && <dialog ref={overlay} className="sudoku-overlay" aria-labelledby="sudoku-settings-title" onCancel={(event) => { event.preventDefault(); setSettingsOpen(false); }} onPointerDown={(event) => event.target === event.currentTarget && setSettingsOpen(false)}>
-      <div ref={dialog} className="sudoku-settings">
-        <div className="sudoku-settings-heading"><h3 id="sudoku-settings-title">settings</h3><button type="button" className="sudoku-icon-button" aria-label="close settings" onClick={() => setSettingsOpen(false)}>×</button></div>
-        <fieldset><legend>theme</legend>{THEME_ROWS.map((row) => <label key={row.value} className="sudoku-option sudoku-theme-option"><span>{row.label}<small>{row.detail}</small></span><input type="radio" name="sudoku-theme" value={row.value} checked={theme === row.value} onChange={() => { setTheme(row.value); chooseSiteTheme(document, browserStorage(), row.value); }} /></label>)}</fieldset>
-        <fieldset><legend>gameboard settings</legend>{(Object.keys(DEFAULT_SUDOKU_SETTINGS) as Array<keyof SudokuSettings>).map((key) => {
+    {/* The same settings dialog as the other games (#823): the shared settings first, then sudoku's own. */}
+    <GameSettingsDialog open={settingsOpen} onClose={() => setSettingsOpen(false)} title="sudoku settings" returnFocusTo={settingsButton}>
+      <fieldset>
+        <legend>gameboard settings</legend>
+        {(Object.keys(DEFAULT_SUDOKU_SETTINGS) as Array<keyof SudokuSettings>).map((key) => {
           const labels: Record<keyof SudokuSettings, string> = { checkGuesses: 'check guesses when entered', autoCandidates: 'start in auto cue mode', showErrors: 'show error counter', showTimer: 'show timer', highlightConflicts: 'highlight conflicts', highlightRowColumn: 'highlight row and column', highlightBox: 'highlight box', highlightIdentical: 'highlight identical numbers', playSound: 'play sound on solve' };
-          return <label key={key} className="sudoku-option sudoku-check-option"><input type="checkbox" checked={settings[key]} onChange={() => updateSetting(key)} /><span>{labels[key]}</span></label>;
-        })}</fieldset>
-      </div>
-    </dialog>}
+          return <label key={key} className="game-settings-option"><span>{labels[key]}</span><input type="checkbox" checked={settings[key]} onChange={() => updateSetting(key)} /></label>;
+        })}
+      </fieldset>
+    </GameSettingsDialog>
     <p className="sr-only" aria-live="polite" aria-atomic="true" data-testid="sudoku-live">{said}</p>
     <p className="sudoku-print-footer">cueory.app</p>
   </section>;

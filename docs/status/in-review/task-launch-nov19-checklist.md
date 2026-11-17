@@ -1,0 +1,1 @@
+status: Thursday 19 November games-and-public-pages launch checklist: keeps accounts closed, records the external Kit launch-updates link, separates legal and privacy checks, and distinguishes holding an unmerged candidate from rolling back a deployed release.

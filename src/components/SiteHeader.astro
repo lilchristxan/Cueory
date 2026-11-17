@@ -13,9 +13,11 @@ interface Props {
    * still fills the first screen and nothing moves.
    */
   overlay?: boolean;
+  /** The page's accounts gate is closed: the account corner stays signed out and never loads Supabase. */
+  accountsOff?: boolean;
 }
 
-const { quiet = false, overlay = false } = Astro.props;
+const { quiet = false, overlay = false, accountsOff = false } = Astro.props;
 ---
 
 <header
@@ -52,7 +54,7 @@ const { quiet = false, overlay = false } = Astro.props;
     )
   }
   <div class="flex flex-1 justify-end">
-    <AccountCorner quiet={quiet} />
+    <AccountCorner quiet={quiet} accountsOff={accountsOff} />
   </div>
 </header>
 
