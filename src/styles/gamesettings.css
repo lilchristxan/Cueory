@@ -1,0 +1,142 @@
+/*
+  Shared game settings (issue #734; src/islands/GameSettings.tsx). Two parts:
+
+  1. The attributes the panel puts on <html> (src/islands/gamesettings.ts, applyGameSettings). They are unlayered and
+     a little more specific than the palettes in tokens.css, so they win in Daytime and Evening alike. High contrast
+     only swaps roles to stronger colors of the same palette: soft text and lines become the main ink, so every color
+     is still an exact brand color. Games can add their own [data-game-contrast="high"] rules for their boards.
+  2. The settings dialog itself. Every color, size and spacing value is a token.
+*/
+html:root[data-game-contrast="high"] {
+  --color-ink-soft: var(--color-ink);
+  --color-line: var(--color-ink);
+  --color-control: var(--color-ink);
+  --color-focus: var(--color-ink);
+}
+
+html:root[data-game-motion="reduce"] *,
+html:root[data-game-motion="reduce"] *::before,
+html:root[data-game-motion="reduce"] *::after {
+  /* The same near-zero durations as the site's own prefers-reduced-motion rule (global.css), so animationend and
+     transitionend still fire for games that wait for them. */
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}
+
+@layer components {
+  .game-settings-trigger {
+    display: inline-flex;
+    min-block-size: var(--tap-min);
+    min-inline-size: var(--tap-min);
+    align-items: center;
+    justify-content: center;
+    gap: calc(var(--spacing) * 2);
+    border: var(--border-game-settings) solid var(--color-control);
+    border-radius: var(--radius-xl);
+    padding-inline: calc(var(--spacing) * 4);
+    background: transparent;
+    color: var(--color-ink);
+    cursor: pointer;
+  }
+
+  .game-settings-overlay {
+    position: fixed;
+    inset: 0;
+    inline-size: 100%;
+    block-size: 100%;
+    max-inline-size: none;
+    max-block-size: none;
+    margin: 0;
+    padding: calc(var(--spacing) * 5);
+    border: 0;
+    background: rgb(var(--shadow-tint) / var(--scrim-alpha));
+    color: var(--color-ink);
+    backdrop-filter: blur(var(--blur-scrim));
+  }
+
+  .game-settings-overlay[open] {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .game-settings-overlay::backdrop {
+    background: transparent;
+  }
+
+  .game-settings {
+    inline-size: min(100%, var(--container-prose));
+    max-block-size: 100%;
+    overflow: auto;
+    overscroll-behavior: contain;
+    padding: calc(var(--spacing) * 6);
+    border-radius: var(--radius-xl);
+    background: var(--color-page);
+    box-shadow: var(--shadow-lift);
+  }
+
+  .game-settings-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: calc(var(--spacing) * 4);
+  }
+
+  .game-settings-heading h2 {
+    font-size: var(--text-2xl);
+  }
+
+  .game-settings-close {
+    display: inline-flex;
+    min-block-size: var(--tap-min);
+    min-inline-size: var(--tap-min);
+    align-items: center;
+    justify-content: center;
+    border: 0;
+    background: transparent;
+    color: var(--color-ink);
+    font-size: var(--text-2xl);
+    cursor: pointer;
+  }
+
+  .game-settings fieldset {
+    margin-block-start: calc(var(--spacing) * 5);
+    border: 0;
+    padding: 0;
+  }
+
+  .game-settings legend {
+    padding-block-end: calc(var(--spacing) * 2);
+    color: var(--color-ink-soft);
+    font-size: var(--text-sm);
+  }
+
+  .game-settings-option {
+    display: flex;
+    min-block-size: var(--tap-min);
+    align-items: center;
+    justify-content: space-between;
+    gap: calc(var(--spacing) * 4);
+    border-block-start: var(--border-game-settings) solid var(--color-line);
+    padding-block: calc(var(--spacing) * 2);
+    cursor: pointer;
+  }
+
+  .game-settings-option > span {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .game-settings-option small {
+    color: var(--color-ink-soft);
+  }
+
+  .game-settings-option input {
+    flex: none;
+    inline-size: calc(var(--spacing) * 6);
+    block-size: calc(var(--spacing) * 6);
+    accent-color: var(--color-button);
+  }
+}

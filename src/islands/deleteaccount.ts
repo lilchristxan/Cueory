@@ -10,6 +10,7 @@ import { PROMO_STORAGE_KEY } from '../scripts/promo';
 import { THEME_STORAGE_KEY } from '../scripts/theme';
 import type { KeyValueStorage } from '../scripts/storage';
 import { STATS_STORAGE_KEY } from './gameresults';
+import { GAME_SETTINGS_STORAGE_KEY } from './gamesettings';
 import { GUEST_IMPORT_MARKER_PREFIX } from './guestimportrun';
 import { LAST_WELCOME_STORAGE_KEY, VISIT_STORAGE_KEY } from './stickynote';
 import { RESUME_STORAGE_KEY } from '../scripts/resume';
@@ -121,6 +122,7 @@ export function afterDeletion(storage: KeyValueStorage | undefined): DeletionSto
     PROMO_STORAGE_KEY,
     THEME_STORAGE_KEY,
     STATS_STORAGE_KEY,
+    GAME_SETTINGS_STORAGE_KEY,
     RESUME_STORAGE_KEY,
     LAST_WELCOME_STORAGE_KEY,
     NOTE_SOUND_STORAGE_KEY,
