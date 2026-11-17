@@ -71,7 +71,7 @@ export type AccountClient = {
   rpc(name: 'delete_my_account', args: { expected_user_id: string }): PromiseLike<{ error: unknown }> & {
     abortSignal?(signal: AbortSignal): PromiseLike<{ error: unknown }>;
   };
-  rpc(name: 'update_display_name', args: { new_name: string }): PromiseLike<Reply>;
+  rpc(name: 'update_display_name', args: { new_name: string; expected_user_id: string }): PromiseLike<Reply>;
 } & SupabaseExportClient & SessionReader;
 
 export interface AccountAdapters {
@@ -79,7 +79,8 @@ export interface AccountAdapters {
   /** The student's own display name, or null when there is none or it can't be read. */
   readName(userId: string): Promise<string | null>;
   /** Saves the signed-in student's own display name and resolves with it as saved, or rejects with the database error as `cause`. */
-  writeName(name: string): Promise<string>;
+  /** Saves the name for `expectedUserId`, the account on screen; the database refuses any other signed-in account. */
+  writeName(name: string, expectedUserId: string): Promise<string>;
   reader: ExportReader;
   /** The signed-in session's `user.user_metadata` (the sign-in provider's profile details), for the download. */
   signInDetails?(): Promise<unknown>;
@@ -132,8 +133,8 @@ export function adaptersFor(client: AccountClient): AccountAdapters {
       const name = (data as { display_name?: unknown }).display_name;
       return typeof name === 'string' ? name : null;
     },
-    async writeName(name) {
-      const { data, error } = await client.rpc('update_display_name', { new_name: name });
+    async writeName(name, expectedUserId) {
+      const { data, error } = await client.rpc('update_display_name', { new_name: name, expected_user_id: expectedUserId });
       if (error != null) throw new Error('display name not saved', { cause: error });
       if (typeof data !== 'string') throw new Error('display name not saved');
       return data;
@@ -182,7 +183,7 @@ function nameFailure(cause: unknown): string {
 }
 
 /** Checks the name with the database's own rules first, then saves it through update_display_name. */
-export async function saveDisplayName(write: AccountAdapters['writeName'], input: string): Promise<SaveResult> {
+export async function saveDisplayName(write: (name: string) => Promise<string>, input: string): Promise<SaveResult> {
   const checked = checkDisplayName(input);
   if (!checked.ok) return { kind: 'invalid', message: checked.message };
   try {

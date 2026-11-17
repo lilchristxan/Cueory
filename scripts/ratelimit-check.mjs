@@ -182,8 +182,10 @@ export async function run(argv = process.argv.slice(2), env = process.env, log =
   }
   const { createClient } = await import('@supabase/supabase-js');
   const client = createClient(guard.url, env.SUPABASE_PUBLISHABLE_KEY, { auth: { persistSession: false, autoRefreshToken: false } });
-  const { error: signInError } = await client.auth.signInWithPassword({ email: env.RATELIMIT_EMAIL, password: env.RATELIMIT_PASSWORD });
-  if (signInError) {
+  const { data: signedIn, error: signInError } = await client.auth.signInWithPassword({ email: env.RATELIMIT_EMAIL, password: env.RATELIMIT_PASSWORD });
+  // submit_flag and update_display_name are bound to the account the caller names (lane 2 migration).
+  const userId = signedIn?.user?.id;
+  if (signInError || !userId) {
     log('sign-in failed for the test account; check RATELIMIT_EMAIL and RATELIMIT_PASSWORD (not shown).');
     return 1;
   }
@@ -194,10 +196,10 @@ export async function run(argv = process.argv.slice(2), env = process.env, log =
     item_id: env.RATELIMIT_ITEM_ID, version_id: env.RATELIMIT_VERSION_ID, picked: [env.RATELIMIT_CHOICE],
   })));
   results.push(await hammer('submit_flag', n => client.rpc('submit_flag', {
-    page: '/learn/questions', item_id: null, item_version_id: null, reason: 'other', comment: `rate-limit check ${n}`,
+    page: '/learn/questions', item_id: null, item_version_id: null, reason: 'other', comment: `rate-limit check ${n}`, expected_user_id: userId,
   })));
   results.push(await hammer('record_study_events', n => client.rpc('record_study_events', { events: studyBatch(env, n, startMs) })));
-  results.push(await hammer('update_display_name', n => client.rpc('update_display_name', { new_name: `limit check ${n}` })));
+  results.push(await hammer('update_display_name', n => client.rpc('update_display_name', { new_name: `limit check ${n}`, expected_user_id: userId })));
   await client.auth.signOut();
   log(formatReport(results));
   return results.every(r => r.verdict === 'matches') ? 0 : 1;

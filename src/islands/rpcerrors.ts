@@ -21,6 +21,9 @@ export const DELETE_SIGNED_OUT = 'sign in to delete your account';
 export const DELETE_REAUTH = 'please sign in again to delete your account';
 /** Raised when the id the page passes is not the signed-in account (20261114151643_delete_my_account_identity_and_mfa.sql). */
 export const DELETE_IDENTITY = 'the account signed in on this device changed; nothing was deleted';
+/** 20261117050000_lane2_rpc_identity_profile.sql: the id the page named isn't the signed-in account. */
+export const NAME_IDENTITY = 'the account signed in on this device changed; nothing was saved';
+export const FLAG_IDENTITY = 'the account signed in on this device changed; nothing was sent';
 /** Raised when a verified second factor has not been used this sign-in. */
 /** PostgREST / Postgres codes for a missing function or signature (old page against new schema, or the reverse). */
 export const DELETE_UNAVAILABLE_CODES = ['PGRST202', '42883'];
@@ -70,6 +73,8 @@ export function studentMessage(fn: RpcFunction, error: unknown): string {
   if (fn === 'submit_flag') {
     // supabase/migrations/20261101120000_flags_and_submit_flag.sql (PR #110)
     if (msg === 'sign in to send a report') return 'please sign in to send a report.';
+    if (msg === DELETE_MFA) return 'enter your two-factor code to send a report.';
+    if (msg === FLAG_IDENTITY) return 'the account signed in on this device changed, so your report wasn’t sent. reload the page and try again.';
     if (msg === 'confirm your email to use this') return 'please confirm your email to send a report — look for the link in your inbox.';
     if (msg === 'the page must be an address on this site') {
       return 'something went wrong — please try again from the page you were on.';
@@ -101,6 +106,8 @@ export function studentMessage(fn: RpcFunction, error: unknown): string {
   if (fn === 'update_display_name') {
     // supabase/migrations/20261102140000_update_display_name.sql
     if (msg === 'sign in to change your display name') return 'please sign in again to change your display name.';
+    if (msg === DELETE_MFA) return 'enter your two-factor code to change your display name.';
+    if (msg === NAME_IDENTITY) return 'the account signed in on this device changed, so your name wasn’t saved. reload the page and try again.';
     if (msg === 'a display name is 1 to 50 characters of plain text') return 'a name can be 1 to 50 characters of plain text.';
     if (msg === 'that is a lot of name changes; please try again later') {
       return "you've changed your name a lot this hour. please try again later.";

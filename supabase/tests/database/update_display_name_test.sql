@@ -4,7 +4,7 @@
 -- inside this test.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(31);
+select plan(35);
 
 insert into auth.users (id, email) values
   ('00000000-0000-4000-8000-000000000001', 'one@example.com'),
@@ -13,16 +13,16 @@ insert into auth.users (id, email) values
 
 -- ---- Who may do what.
 select ok(
-  has_function_privilege('authenticated', 'public.update_display_name(text)', 'execute')
-    and not has_function_privilege('anon', 'public.update_display_name(text)', 'execute'),
+  has_function_privilege('authenticated', 'public.update_display_name(text, uuid)', 'execute')
+    and not has_function_privilege('anon', 'public.update_display_name(text, uuid)', 'execute'),
   'signed-in students can run update_display_name and signed-out visitors cannot'
 );
 select ok(
-  (select prosecdef from pg_proc where oid = 'public.update_display_name(text)'::regprocedure)
-    and (select proconfig @> array['search_path=""'] from pg_proc where oid = 'public.update_display_name(text)'::regprocedure),
+  (select prosecdef from pg_proc where oid = 'public.update_display_name(text, uuid)'::regprocedure)
+    and (select proconfig @> array['search_path=""'] from pg_proc where oid = 'public.update_display_name(text, uuid)'::regprocedure),
   'update_display_name is security definer with an empty search_path'
 );
-select function_returns('public', 'update_display_name', array['text'], 'text', 'it returns the name as saved');
+select function_returns('public', 'update_display_name', array['text', 'uuid'], 'text', 'it returns the name as saved');
 select ok(
   not has_table_privilege('authenticated', 'public.profiles', 'update')
     and not has_table_privilege('authenticated', 'public.profiles', 'insert')
@@ -46,7 +46,7 @@ set local role anon;
 set local "request.jwt.claims" to '{"role": "anon"}';
 set local "request.jwt.claim.sub" to '';
 select throws_ok(
-  $$ select public.update_display_name('sam') $$,
+  $$ select public.update_display_name('sam', (select auth.uid())) $$,
   '42501', null, 'signed-out visitors cannot run it at all'
 );
 
@@ -55,7 +55,7 @@ set local role authenticated;
 set local "request.jwt.claims" to '{"role": "authenticated"}';
 set local "request.jwt.claim.sub" to '';
 select throws_ok(
-  $$ select public.update_display_name('sam') $$,
+  $$ select public.update_display_name('sam', (select auth.uid())) $$,
   '28000', 'sign in to change your display name', 'a call without an account is refused'
 );
 
@@ -72,7 +72,7 @@ select throws_ok(
   '42501', null, 'a student cannot move their own name-change window'
 );
 
-select is(public.update_display_name('  Sam Smith  '), 'Sam Smith', 'a name is saved without its outer spaces');
+select is(public.update_display_name('  Sam Smith  ', (select auth.uid())), 'Sam Smith', 'a name is saved without its outer spaces');
 select results_eq(
   $$ select id, display_name, name_change_window_start = now(), name_changes_in_window from public.profiles order by id $$,
   $$ values ('00000000-0000-4000-8000-000000000001'::uuid, 'Sam Smith'::text, true, 1::smallint) $$,
@@ -89,21 +89,21 @@ select results_eq(
 );
 set local role authenticated;
 
-select throws_ok($$ select public.update_display_name(null) $$, '22023', 'a display name is 1 to 50 characters of plain text', 'no name is refused');
-select throws_ok($$ select public.update_display_name('   ') $$, '22023', 'a display name is 1 to 50 characters of plain text', 'an all-space name is refused');
+select throws_ok($$ select public.update_display_name(null, (select auth.uid())) $$, '22023', 'a display name is 1 to 50 characters of plain text', 'no name is refused');
+select throws_ok($$ select public.update_display_name('   ', (select auth.uid())) $$, '22023', 'a display name is 1 to 50 characters of plain text', 'an all-space name is refused');
 select throws_ok(
-  $$ select public.update_display_name(repeat('a', 51)) $$, '22023', 'a display name is 1 to 50 characters of plain text',
+  $$ select public.update_display_name(repeat('a', 51), (select auth.uid())) $$, '22023', 'a display name is 1 to 50 characters of plain text',
   'a name over 50 characters is refused'
 );
 select throws_ok(
-  $$ select public.update_display_name(E'sam\nsmith') $$, '22023', 'a display name is 1 to 50 characters of plain text',
+  $$ select public.update_display_name(E'sam\nsmith', (select auth.uid())) $$, '22023', 'a display name is 1 to 50 characters of plain text',
   'a name with a control character is refused'
 );
 select throws_ok(
-  $$ select public.update_display_name(E'sam\u0085smith') $$, '22023', 'a display name is 1 to 50 characters of plain text',
+  $$ select public.update_display_name(E'sam\u0085smith', (select auth.uid())) $$, '22023', 'a display name is 1 to 50 characters of plain text',
   'a name with a C1 control character is refused, like the browser check'
 );
-select is(public.update_display_name(repeat('é', 50)), repeat('é', 50), 'fifty characters are fine, counted as characters');
+select is(public.update_display_name(repeat('é', 50), (select auth.uid())), repeat('é', 50), 'fifty characters are fine, counted as characters');
 select is(
   (select name_changes_in_window from public.profiles where id = '00000000-0000-4000-8000-000000000001'),
   2::smallint,
@@ -112,11 +112,11 @@ select is(
 
 -- ---- The limit: 10 changes an hour per account.
 select lives_ok(
-  $$ select public.update_display_name('name ' || n) from generate_series(3, 10) as n $$,
+  $$ select public.update_display_name('name ' || n, (select auth.uid())) from generate_series(3, 10) as n $$,
   'up to 10 changes in an hour are allowed'
 );
 select throws_ok(
-  $$ select public.update_display_name('one too many') $$,
+  $$ select public.update_display_name('one too many', (select auth.uid())) $$,
   '54000', 'that is a lot of name changes; please try again later', 'the eleventh change in an hour is refused'
 );
 select results_eq(
@@ -128,7 +128,7 @@ select results_eq(
 -- Another account has its own limit.
 set local "request.jwt.claims" to '{"sub": "00000000-0000-4000-8000-000000000002", "role": "authenticated"}';
 set local "request.jwt.claim.sub" to '00000000-0000-4000-8000-000000000002';
-select is(public.update_display_name('two'), 'two', 'another account is not held back by the first one''s changes');
+select is(public.update_display_name('two', (select auth.uid())), 'two', 'another account is not held back by the first one''s changes');
 
 -- An hour after the window began, the next change starts a new window with a count of one.
 reset role;
@@ -137,7 +137,7 @@ update public.profiles set name_change_window_start = now() - interval '61 minut
 set local role authenticated;
 set local "request.jwt.claims" to '{"sub": "00000000-0000-4000-8000-000000000001", "role": "authenticated"}';
 set local "request.jwt.claim.sub" to '00000000-0000-4000-8000-000000000001';
-select is(public.update_display_name('later'), 'later', 'changes made more than an hour ago no longer count');
+select is(public.update_display_name('later', (select auth.uid())), 'later', 'changes made more than an hour ago no longer count');
 select results_eq(
   $$ select name_change_window_start = now(), name_changes_in_window from public.profiles
      where id = '00000000-0000-4000-8000-000000000001' $$,
@@ -151,7 +151,7 @@ update public.profiles set name_change_window_start = now() - interval '59 minut
   where id = '00000000-0000-4000-8000-000000000001';
 set local role authenticated;
 select throws_ok(
-  $$ select public.update_display_name('still too soon') $$,
+  $$ select public.update_display_name('still too soon', (select auth.uid())) $$,
   '54000', 'that is a lot of name changes; please try again later', 'a full window less than an hour old still refuses'
 );
 
@@ -169,8 +169,33 @@ set local role authenticated;
 set local "request.jwt.claims" to '{"sub": "00000000-0000-4000-8000-000000000003", "role": "authenticated"}';
 set local "request.jwt.claim.sub" to '00000000-0000-4000-8000-000000000003';
 select throws_ok(
-  $$ select public.update_display_name('three') $$,
+  $$ select public.update_display_name('three', (select auth.uid())) $$,
   'P0002', 'your profile was not found', 'an account without a profile row is refused'
+);
+
+-- ---- Bound to the account the page shows (lane 2): another account's id, or none, is refused and nothing changes.
+set local "request.jwt.claims" to '{"sub": "00000000-0000-4000-8000-000000000002", "role": "authenticated"}';
+set local "request.jwt.claim.sub" to '00000000-0000-4000-8000-000000000002';
+select throws_ok(
+  $$ select public.update_display_name('meant for account one', '00000000-0000-4000-8000-000000000001') $$,
+  '28000', 'the account signed in on this device changed; nothing was saved',
+  'a name meant for another account is refused'
+);
+select throws_ok(
+  $$ select public.update_display_name('no account named', null) $$,
+  '28000', 'the account signed in on this device changed; nothing was saved',
+  'a call that names no account is refused'
+);
+reset role;
+select results_eq(
+  $$ select id, display_name, name_changes_in_window from public.profiles order by id $$,
+  $$ values ('00000000-0000-4000-8000-000000000001'::uuid, 'later'::text, 10::smallint),
+            ('00000000-0000-4000-8000-000000000002'::uuid, 'two'::text, 1::smallint) $$,
+  'neither account changed, and the refused calls were not counted'
+);
+select is(
+  to_regprocedure('public.update_display_name(text)'), null,
+  'the old one-argument update_display_name is gone, so every change names its account'
 );
 
 select * from finish();

@@ -24,13 +24,19 @@ export interface FlagClient extends SessionReader {
 }
 export type LoadFlagClient = () => Promise<FlagClient | null>;
 
+/** Who is signed in on this browser: the account id, or null. Any error reads as signed out. */
+export async function flagSessionUser(load: LoadFlagClient): Promise<string | null> {
+  try {
+    const state = await sessionStateFrom(await load());
+    return state.signedIn ? state.userId : null;
+  } catch {
+    return null;
+  }
+}
+
 /** Whether this browser has a signed-in session. */
 export async function flagSignedIn(load: LoadFlagClient): Promise<boolean> {
-  try {
-    return (await sessionStateFrom(await load())).signedIn;
-  } catch {
-    return false;
-  }
+  return (await flagSessionUser(load)) !== null;
 }
 
 export interface FlagSessionWatch {
@@ -45,7 +51,12 @@ export interface FlagSessionWatch {
  * session again, and once the client has loaded, sign-ins and sign-outs (from any tab) are followed as they happen.
  * A check that was already running when a newer sign-in or sign-out arrived is dropped, so the newest state wins.
  */
-export function watchFlagSession(load: LoadFlagClient, report: (signedIn: boolean) => void): FlagSessionWatch {
+export function watchFlagSession(
+  load: LoadFlagClient,
+  report: (signedIn: boolean) => void,
+  /** Also told which account the form now shows as signed in (null: signed out), for binding a send to it. */
+  onUser: (userId: string | null) => void = () => {},
+): FlagSessionWatch {
   let stopped = false;
   let running = false;
   let latest = 0;
@@ -57,7 +68,10 @@ export function watchFlagSession(load: LoadFlagClient, report: (signedIn: boolea
       subscription = client.auth.onAuthStateChange((_event, session) => {
         if (stopped) return;
         latest += 1;
-        report(typeof session?.user?.id === 'string' && session.user.id !== '');
+        const id = session?.user?.id;
+        const userId = typeof id === 'string' && id !== '' ? id : null;
+        onUser(userId);
+        report(userId !== null);
       }).data.subscription;
     } catch {
       // Rechecking when the form opens still keeps it current.
@@ -76,10 +90,13 @@ export function watchFlagSession(load: LoadFlagClient, report: (signedIn: boolea
         } catch {
           client = null;
         }
-        const signedIn = await flagSignedIn(async () => client);
+        const userId = await flagSessionUser(async () => client);
         running = false;
         if (stopped) return;
-        if (mine === latest) report(signedIn);
+        if (mine === latest) {
+          onUser(userId);
+          report(userId !== null);
+        }
         listen(client);
       })();
     },
@@ -91,8 +108,11 @@ export function watchFlagSession(load: LoadFlagClient, report: (signedIn: boolea
   };
 }
 
-/** The FlagForm send callback, using the shared client. */
-export function makeFlagSend(load: LoadFlagClient): (report: FlagReport) => Promise<SendResult> {
+/**
+ * The FlagForm send callback, using the shared client. `shownUser` is the account the form shows as signed in
+ * (from watchFlagSession): the report is bound to it, so it is never saved under an account switched in meanwhile.
+ */
+export function makeFlagSend(load: LoadFlagClient, shownUser: () => string | null): (report: FlagReport) => Promise<SendResult> {
   return async (report) => {
     let client: FlagClient | null;
     try {
@@ -100,9 +120,10 @@ export function makeFlagSend(load: LoadFlagClient): (report: FlagReport) => Prom
     } catch {
       return 'failed';
     }
-    if (!client) return { message: studentMessage('submit_flag', { message: 'sign in to send a report' }) };
+    const userId = shownUser();
+    if (!client || !userId) return { message: studentMessage('submit_flag', { message: 'sign in to send a report' }) };
     // Called on the client itself: supabase-js's rpc needs its receiver.
-    return makeSend((name, args) => client.rpc(name, args))(report);
+    return makeSend((name, args) => client.rpc(name, args), userId)(report);
   };
 }
 

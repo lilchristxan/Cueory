@@ -3,7 +3,8 @@ import { checkReport, REASONS } from '../../src/islands/flag';
 import { flagArguments, type FlagContext } from '../../src/islands/flagsubmit';
 
 const VALID_PAGE = '/learn/anatomy';
-const ctx = (page: string): FlagContext => ({ page });
+const SHOWN = '44444444-4444-4444-8444-444444444444';
+const ctx = (page: string): FlagContext => ({ page, expectedUserId: SHOWN });
 
 function validReport() {
   return checkReport({
@@ -37,6 +38,12 @@ describe('valid flagArguments', () => {
     expect(result.args.item_version_id).toBeNull();
     expect(result.args.reason).toBe('typo');
     expect(result.args.comment).toBe('There is a typo here.');
+    expect(result.args.expected_user_id).toBe(SHOWN);
+  });
+
+  it('refuses a report with no account to bind it to (lane 2 migration)', () => {
+    expect(flagArguments(validReport(), { page: VALID_PAGE, expectedUserId: '' }).ok).toBe(false);
+    expect(flagArguments(validReport(), { page: VALID_PAGE } as FlagContext).ok).toBe(false);
   });
 
   it('passes item_id and item_version_id through', () => {
@@ -90,11 +97,11 @@ describe('valid flagArguments', () => {
     expect(result.args.comment.length).toBe(1000);
   });
 
-  it('args object contains exactly the five expected fields', () => {
+  it('args object contains exactly the six expected fields', () => {
     const result = flagArguments(validReport(), ctx(VALID_PAGE));
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    expect(Object.keys(result.args).sort()).toEqual(['comment', 'item_id', 'item_version_id', 'page', 'reason']);
+    expect(Object.keys(result.args).sort()).toEqual(['comment', 'expected_user_id', 'item_id', 'item_version_id', 'page', 'reason']);
   });
 });
 

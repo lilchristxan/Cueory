@@ -50,8 +50,8 @@ select ok(
   'signed-in students can still run check_answer and signed-out visitors cannot'
 );
 select ok(
-  has_function_privilege('authenticated', 'public.submit_flag(text, uuid, uuid, text, text)', 'execute')
-    and not has_function_privilege('anon', 'public.submit_flag(text, uuid, uuid, text, text)', 'execute'),
+  has_function_privilege('authenticated', 'public.submit_flag(text, uuid, uuid, text, text, uuid)', 'execute')
+    and not has_function_privilege('anon', 'public.submit_flag(text, uuid, uuid, text, text, uuid)', 'execute'),
   'signed-in students can still run submit_flag and signed-out visitors cannot'
 );
 select ok(
@@ -63,7 +63,7 @@ select ok(
   (select bool_and(p.prosecdef and p.proconfig @> array['search_path=""'])
      from pg_proc p
      where p.oid in ('public.check_answer(uuid, uuid, text[])'::regprocedure,
-                     'public.submit_flag(text, uuid, uuid, text, text)'::regprocedure,
+                     'public.submit_flag(text, uuid, uuid, text, text, uuid)'::regprocedure,
                      'public.record_study_events(jsonb)'::regprocedure)),
   'all three are still security definer with an empty search_path'
 );
@@ -83,7 +83,7 @@ select throws_ok(
   '28000', 'sign in to check an answer', 'with no user id, check_answer still asks to sign in'
 );
 select throws_ok(
-  $$ select public.submit_flag('/learn/sample', null, null, 'typo', null) $$,
+  $$ select public.submit_flag('/learn/sample', null, null, 'typo', null, (select auth.uid())) $$,
   '28000', 'sign in to send a report', 'with no user id, submit_flag still asks to sign in'
 );
 select throws_ok(
@@ -104,7 +104,7 @@ select throws_ok(
   '28000', 'confirm your email to use this', 'an unconfirmed student is refused before their input is checked'
 );
 select throws_ok(
-  $$ select public.submit_flag('/learn/sample', null, null, 'typo', null) $$,
+  $$ select public.submit_flag('/learn/sample', null, null, 'typo', null, (select auth.uid())) $$,
   '28000', 'confirm your email to use this', 'an unconfirmed student cannot send a report'
 );
 select throws_ok(
@@ -121,7 +121,7 @@ select throws_ok(
   '28000', 'confirm your email to use this', 'an account marked anonymous in auth.users cannot check an answer'
 );
 select throws_ok(
-  $$ select public.submit_flag('/learn/sample', null, null, 'typo', null) $$,
+  $$ select public.submit_flag('/learn/sample', null, null, 'typo', null, (select auth.uid())) $$,
   '28000', 'confirm your email to use this', 'an account marked anonymous in auth.users cannot send a report'
 );
 select throws_ok(
@@ -139,7 +139,7 @@ select throws_ok(
   '28000', 'confirm your email to use this', 'a JWT with is_anonymous cannot check an answer'
 );
 select throws_ok(
-  $$ select public.submit_flag('/learn/sample', null, null, 'typo', null) $$,
+  $$ select public.submit_flag('/learn/sample', null, null, 'typo', null, (select auth.uid())) $$,
   '28000', 'confirm your email to use this', 'a JWT with is_anonymous cannot send a report'
 );
 select throws_ok(
@@ -157,7 +157,7 @@ select throws_ok(
   '28000', 'confirm your email to use this', 'an anonymous sign-in cannot check an answer'
 );
 select throws_ok(
-  $$ select public.submit_flag('/learn/sample', null, null, 'typo', null) $$,
+  $$ select public.submit_flag('/learn/sample', null, null, 'typo', null, (select auth.uid())) $$,
   '28000', 'confirm your email to use this', 'an anonymous sign-in cannot send a report'
 );
 select throws_ok(
@@ -183,7 +183,7 @@ select results_eq(
   $$ values ('true') $$, 'a confirmed student can still check an answer'
 );
 select isnt(
-  public.submit_flag('/learn/sample', null, null, 'typo', null), null,
+  public.submit_flag('/learn/sample', null, null, 'typo', null, (select auth.uid())), null,
   'a confirmed student can still send a report'
 );
 select results_eq(

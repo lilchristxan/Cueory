@@ -100,6 +100,8 @@ test.describe('flag or comment with accounts on', () => {
     expect(rpcCalls).toHaveLength(1);
     expect(rpcCalls[0]!.postDataJSON()).toEqual({
       page: PAGE_PATH, item_id: ITEM_ID, item_version_id: VERSION_ID, reason: 'confusing', comment: 'the second choice reads oddly',
+      // Bound to the account the form shows as signed in (lane 2 migration).
+      expected_user_id: USER_ID,
     });
     const headers = rpcCalls[0]!.headers();
     expect(headers.apikey).toBe(KEY);

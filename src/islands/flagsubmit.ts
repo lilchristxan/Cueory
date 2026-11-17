@@ -6,6 +6,8 @@ import { REASONS, type CheckedReport } from './flag';
 
 export interface FlagContext {
   page: string;
+  /** The account the form is showing as signed in; submit_flag refuses any other (lane 2 migration). */
+  expectedUserId: string;
 }
 
 export interface FlagArgs {
@@ -14,6 +16,7 @@ export interface FlagArgs {
   item_version_id: string | null;
   reason: string;
   comment: string;
+  expected_user_id: string;
 }
 
 export type FlagArgumentsResult =
@@ -45,6 +48,10 @@ export function flagArguments(report: CheckedReport, context: FlagContext): Flag
     return { ok: false, message: 'the report has errors that need fixing before it can be sent' };
   }
 
+  if (typeof context.expectedUserId !== 'string' || context.expectedUserId === '') {
+    return { ok: false, message: 'a report needs the signed-in account it is sent from' };
+  }
+
   const page = normalizePage(context.page);
   if (page === null) {
     return { ok: false, message: 'the page address is not valid for this site' };
@@ -69,6 +76,7 @@ export function flagArguments(report: CheckedReport, context: FlagContext): Flag
       item_version_id: itemVersionId ?? null,
       reason,
       comment,
+      expected_user_id: context.expectedUserId,
     },
   };
 }

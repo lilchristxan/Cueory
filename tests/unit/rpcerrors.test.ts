@@ -161,10 +161,12 @@ describe('unknown and edge-case errors', () => {
       studentMessage('submit_flag', { message: 'the comment is up to 1,000 characters of plain text' }),
       studentMessage('submit_flag', { message: 'that question was not found' }),
       studentMessage('submit_flag', { message: 'that is a lot of reports; please try again later' }),
+      studentMessage('submit_flag', { message: 'the account signed in on this device changed; nothing was sent' }),
       studentMessage('update_display_name', { message: 'sign in to change your display name' }),
       studentMessage('update_display_name', { message: 'a display name is 1 to 50 characters of plain text' }),
       studentMessage('update_display_name', { message: 'that is a lot of name changes; please try again later' }),
       studentMessage('update_display_name', { message: 'your profile was not found' }),
+      studentMessage('update_display_name', { message: 'the account signed in on this device changed; nothing was saved' }),
       studentMessage('check_answer', { message: 'unknown' }),
     ];
     for (const msg of allMessages) {
