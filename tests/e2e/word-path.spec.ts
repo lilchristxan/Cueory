@@ -3,11 +3,12 @@ import { readFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
 
 /**
- * Word path as a themed word search (Task 97, D-71). The clock is set to 1 November 2026, so today's puzzle is the first
- * sample, "study break" (content/games/suture/sample-01.json). The tests read the word places from that file.
+ * Word path's older format, the themed word search (Task 97, D-71), which still loads beside the board format (#722,
+ * word-path-board.spec.ts). The clock is set to 6 November 2026, so today's puzzle is the sixth sample, "study break"
+ * (content/games/suture/sample-06.json), the one older-format sample. The tests read the word places from that file.
  */
 type Cell = [number, number];
-const sample = JSON.parse(readFileSync(new URL('../../content/games/suture/sample-01.json', import.meta.url), 'utf8')) as {
+const sample = JSON.parse(readFileSync(new URL('../../content/games/suture/sample-06.json', import.meta.url), 'utf8')) as {
   theme: string;
   grid: string[];
   words: { answer: string; path: Cell[] }[];
@@ -25,12 +26,12 @@ test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
     try { localStorage.setItem('cueory-promo-seen', String(Date.now())); } catch { /* storage blocked: no panel */ }
   });
-  await page.clock.setFixedTime(new Date('2026-11-01T15:00:00'));
+  await page.clock.setFixedTime(new Date('2026-11-06T15:00:00'));
   await page.goto('/play');
   await expect(game(page)).toBeVisible();
 });
 
-test.describe('word path: themed word search (Task 97)', () => {
+test.describe('word path: themed word search, the older format (Task 97)', () => {
   test('the theme is the title, with the word list, the count and the sample label', async ({ page }) => {
     await expect(game(page).getByRole('heading', { level: 3, name: 'study break' })).toBeVisible();
     await expect(game(page)).toContainText('find all 12 words. they run up, down, left or right.');
@@ -66,7 +67,7 @@ test.describe('word path: themed word search (Task 97)', () => {
     await resultDialog.getByRole('button', { name: 'close results' }).click();
     const result = page.getByTestId('suture-result');
     await expect(result).toBeFocused();
-    await expect(result).toContainText('cueory word path, sun 1 nov: found 12 of 12 words with 0 wrong picks.');
+    await expect(result).toContainText('cueory word path, fri 6 nov: found 12 of 12 words with 0 wrong picks.');
     await expect(page.getByTestId('suture-count')).toHaveText('12 of 12 found');
   });
 
@@ -147,7 +148,7 @@ test.describe('word path: themed word search (Task 97)', () => {
 
   test('at 320 px every sample fits, letters stay at least 24 px and other buttons 44 px', async ({ page }) => {
     await page.setViewportSize({ width: 320, height: 700 });
-    for (const day of ['2026-11-01', '2026-11-02', '2026-11-03', '2026-11-04', '2026-11-05']) {
+    for (const day of ['2026-11-01', '2026-11-02', '2026-11-03', '2026-11-04', '2026-11-05', '2026-11-06']) {
       await page.clock.setFixedTime(new Date(`${day}T15:00:00`));
       await page.goto('/play');
       await expect(game(page)).toBeVisible();
