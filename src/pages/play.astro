@@ -14,6 +14,7 @@ import GameStatsPanel from '../islands/GameStatsPanel';
 import GameResultsHost from '../islands/GameResultsHost';
 import HomeScreenTip from '../islands/HomeScreenTip';
 import PlayStatus from '../islands/PlayStatus';
+import GameSettings from '../islands/GameSettings';
 import PilloTitle from '../components/PilloTitle.astro';
 import { parsePuzzle } from '../islands/cueword';
 import { parsePuzzle as parseWordPath } from '../islands/suture';
@@ -76,6 +77,11 @@ const later = dailyGames.filter((game) => !game.ready);
       ]}
     />
     <noscript><p>today's status for each game needs JavaScript.</p></noscript>
+    {/* Shared game settings (issue #734): theme, high contrast, reduced motion and sound for every game below. */}
+    <div class="mt-6" data-testid="play-settings">
+      <GameSettings client:only="react" title="game settings" label="game settings" />
+    </div>
+    <noscript><p>game settings need JavaScript.</p></noscript>
 
     <section class="mt-12" aria-labelledby="pulse-heading">
       <h2 id="pulse-heading" class="display text-2xl sm:text-3xl"><PilloTitle name={pulse.name} /></h2>
