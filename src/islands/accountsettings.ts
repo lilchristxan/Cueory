@@ -254,13 +254,16 @@ export type DownloadResult =
   | { ok: false; message: string };
 
 /** The JSON file and the spreadsheet files, built from the pages without joining a long study history into one string. */
-export function downloadFiles(data: ExportData, today: string): DownloadResult {
+export function downloadFiles(data: ExportData, today: string, readmeText?: string): DownloadResult {
   try {
     const name = `cueory-data-${today}`;
+    // README.txt goes first with the spreadsheet files: one plain line for every file in the download.
+    const readme = readmeText === undefined ? []
+      : [{ fileName: `${name}-README.txt`, blob: new Blob([readmeText], { type: 'text/plain;charset=utf-8' }) }];
     return {
       ok: true,
       json: { fileName: `${name}.json`, blob: exportJsonBlob(data, today) },
-      csv: exportCsvBlobs(data).map(({ fileName, blob }) => ({ fileName: `${name}-${fileName}`, blob })),
+      csv: [...readme, ...exportCsvBlobs(data).map(({ fileName, blob }) => ({ fileName: `${name}-${fileName}`, blob }))],
     };
   } catch {
     return { ok: false, message: accountMessage('export-failed') };
@@ -270,7 +273,11 @@ export function downloadFiles(data: ExportData, today: string): DownloadResult {
 /** Loads, adds this browser's data and builds the files. Any failure offers no file at all. */
 export async function prepareDownload(reader: ExportReader, options: GatherOptions): Promise<DownloadResult> {
   const gathered = await gatherExport(reader, options);
-  return gathered.ok ? downloadFiles(gathered.data, options.today) : gathered;
+  if (!gathered.ok) return gathered;
+  // The README's text loads only when a download is made, so it adds nothing to the page's first load. It explains
+  // the files; if it can't load (offline), the data files still download without it.
+  const readme = await import('./exportreadme').then(m => m.exportReadmeText(options.today), () => undefined);
+  return downloadFiles(gathered.data, options.today, readme);
 }
 
 /** Like prepareDownload, but for the account the page was opened for: no file if the signed-in account differs before or after reading. */
