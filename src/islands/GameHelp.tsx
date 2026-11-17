@@ -1,6 +1,7 @@
 import '../styles/gamesettings.css';
 import '../styles/gamehelp.css';
-import { useEffect, useId, useRef, useState, type RefObject } from 'react';
+import { useEffect, useId, useRef, useState, type ReactNode, type RefObject } from 'react';
+import { dailyGames } from '../config/games';
 import { browserStorage } from '../scripts/storage';
 import { GAME_HELP, SHARED_SETTINGS_NOTE, helpSeen, markHelpSeen, type GameHelpContent, type HelpTopic } from './gamehelp';
 import { trappedFocusIndex } from './gamesettings';
@@ -49,11 +50,16 @@ export function useGameHelp(topic: HelpTopic): GameHelpState {
   };
 }
 
+/** The game's one-line description (src/config/games.ts), shown at the top of its help. */
+function gameLine(content: GameHelpContent): string | undefined {
+  return dailyGames.find((game) => game.id === content.game)?.line;
+}
+
 function PlaySteps({ content }: { content: GameHelpContent }) {
   return <ol className="game-help-steps">{content.play.map((step) => <li key={step}>{step}</li>)}</ol>;
 }
 
-function GameHelpDialog({ help, name }: { help: GameHelpState; name: string }) {
+function GameHelpDialog({ help, name, extra }: { help: GameHelpState; name: string; extra?: ReactNode }) {
   const overlay = useRef<HTMLDialogElement>(null);
   const panel = useRef<HTMLDivElement>(null);
   const id = useId();
@@ -95,11 +101,15 @@ function GameHelpDialog({ help, name }: { help: GameHelpState; name: string }) {
   >
     {/* The header row stays put and only the body scrolls, so the × never sits on top of any text (Christian's iPhone test). */}
     <div ref={panel} className="game-help">
+      {/* Title centred at the top (Christian's brief): an empty 44 px slot on the left balances the × on the right. */}
       <div className="game-help-header">
+        <span className="game-help-balance" aria-hidden="true" />
         <h2 id={`${id}-title`} className="game-help-title">how to play {name}</h2>
         <button type="button" className="game-settings-close" aria-label="close how to play" onClick={help.close}><span aria-hidden="true">×</span></button>
       </div>
       <div className="game-help-body" data-testid="game-help-body">
+      {gameLine(content) && <p className="game-help-line">{gameLine(content)}</p>}
+      {extra}
       <PlaySteps content={content} />
       <h3 className="game-help-subheading">settings</h3>
       <p className="game-help-note">{content.settingsIntro}</p>
@@ -107,30 +117,33 @@ function GameHelpDialog({ help, name }: { help: GameHelpState; name: string }) {
         {content.settings.map(({ name: setting, detail }) => <div key={setting}><dt>{setting}</dt><dd>{detail}</dd></div>)}
       </dl>}
       <p className="game-help-note">{SHARED_SETTINGS_NOTE}</p>
-      <button type="button" className="game-help-action" onClick={help.close}>got it</button>
+      <div className="game-help-actions"><button type="button" className="game-help-action" onClick={help.close}>got it</button></div>
       </div>
     </div>
   </dialog>;
 }
 
 /** The "?" corner button and its dialog. Each game passes its own corner-button class so it matches its other buttons. */
-export function GameHelpButton({ help, name, className }: { help: GameHelpState; name: string; className: string }) {
+/** `extra` is game-specific help shown above the steps, such as pillo's legend of marks. */
+export function GameHelpButton({ help, name, className, extra }: { help: GameHelpState; name: string; className: string; extra?: ReactNode }) {
   return <>
     <button ref={help.button} type="button" className={className} aria-label={`how to play ${name}`} aria-haspopup="dialog" data-testid="game-help-button" onClick={help.show}>
       <span aria-hidden="true">?</span>
     </button>
-    <GameHelpDialog help={help} name={name} />
+    <GameHelpDialog help={help} name={name} extra={extra} />
   </>;
 }
 
 /** The rules above the board on a game's first visit. "got it" (or the "?") puts them away for good on this device. */
-export function GameHelpCard({ help, name }: { help: GameHelpState; name: string }) {
+export function GameHelpCard({ help, name, extra }: { help: GameHelpState; name: string; extra?: ReactNode }) {
   const id = useId();
   if (!help.firstVisit) return null;
   return <section className="game-help-first" aria-labelledby={`${id}-title`} data-testid="game-help-first">
     <h3 id={`${id}-title`} className="game-help-subheading">new to {name}? here's how to play</h3>
+    {gameLine(help.content) && <p className="game-help-line">{gameLine(help.content)}</p>}
+    {extra}
     <PlaySteps content={help.content} />
     <p className="game-help-note">the ? button shows this again, with every setting.</p>
-    <button type="button" className="game-help-action" onClick={help.dismiss}>got it</button>
+    <div className="game-help-actions"><button type="button" className="game-help-action" onClick={help.dismiss}>got it</button></div>
   </section>;
 }

@@ -75,8 +75,13 @@ for (const [width, height] of screens) {
         expect(closeBox.height).toBeGreaterThanOrEqual(44);
         expect(closeBox.y).toBeGreaterThanOrEqual(0);
         expect(closeBox.y + closeBox.height).toBeLessThanOrEqual(height + 0.5);
-        // Title above the list, never beside it.
+        // Title above the list, never beside it, with its text centred in the dialog.
         expect(title.y + title.height).toBeLessThanOrEqual(list.y + 0.5);
+        await expect(dialog.getByRole('heading', { level: 2 })).toHaveCSS('text-align', 'center');
+        const titleMiddle = title.x + title.width / 2;
+        expect(Math.abs(titleMiddle - (panel.x + panel.width / 2))).toBeLessThanOrEqual(2);
+        // The game's one-line description is in its help.
+        await expect(dialog.locator('.game-help-line')).toHaveCount(1);
         // Each rule uses the dialog's width, not a narrow column.
         const items = await dialog.locator('.game-help-steps > li').evaluateAll((elements) => elements.map((element) => element.getBoundingClientRect().width));
         expect(items.length).toBeGreaterThan(0);
@@ -90,6 +95,9 @@ for (const [width, height] of screens) {
           const under = (await textBoxes(page)).filter((box) => overlaps(box, now));
           expect(under, `${game.name}: text under × (${where})`).toEqual([]);
         }
+        // "got it" sits centred at the bottom.
+        const gotIt = (await dialog.getByRole('button', { name: 'got it' }).boundingBox())!;
+        expect(Math.abs(gotIt.x + gotIt.width / 2 - (panel.x + panel.width / 2))).toBeLessThanOrEqual(2);
         expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
         await page.keyboard.press('Escape');
         await expect(dialog).toHaveCount(0);
@@ -97,6 +105,18 @@ for (const [width, height] of screens) {
     });
   }
 }
+
+test('pillo\'s marks are explained in its help, not below the board', async ({ page }) => {
+  await page.goto('/play');
+  const pillo = page.getByTestId('pulse');
+  await expect(pillo.getByRole('list', { name: 'your guesses' })).toBeAttached();
+  await expect(pillo.getByTestId('pillo-legend')).toHaveCount(0);
+  await pillo.getByRole('button', { name: 'how to play pillo' }).click();
+  const legend = page.getByRole('dialog', { name: 'how to play pillo' }).getByRole('list', { name: 'what the marks mean' });
+  // Each row is the drawn pill (its symbol inside it) and the symbol again in words beside it.
+  await expect(legend.getByRole('listitem')).toHaveText([/● in its place$/, /○ in the word, somewhere else$/, /· not in the word$/]);
+  await expect(legend.locator('.pillo-pill')).toHaveCount(3);
+});
 
 test('pillo\'s help lists only hard mode and on-screen keyboard under its own settings', async ({ page }) => {
   await page.goto('/play');

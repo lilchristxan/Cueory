@@ -28,12 +28,18 @@
     align-items: flex-start;
     justify-content: space-between;
     gap: calc(var(--spacing) * 3);
-    padding: calc(var(--spacing) * 3) calc(var(--spacing) * 3) calc(var(--spacing) * 2) calc(var(--spacing) * 4);
+    padding: calc(var(--spacing) * 3) calc(var(--spacing) * 3) calc(var(--spacing) * 2);
     border-block-end: var(--border-game-settings) solid var(--color-line);
+  }
+
+  .game-help-balance {
+    flex: none;
+    inline-size: var(--tap-min);
   }
 
   .game-help-title {
     flex: 1 1 auto;
+    text-align: center;
     min-inline-size: 0;
     padding-block-start: calc(var(--spacing) * 1);
     /* Smaller than the settings title, so with enlarged text on a short landscape phone the rules keep most of the height. */
@@ -75,6 +81,25 @@
 
   .game-help-first .game-help-subheading {
     margin-block-start: 0;
+    text-align: center;
+  }
+
+  .game-help-line {
+    margin-block-start: calc(var(--spacing) * 2);
+    color: var(--color-ink-soft);
+    text-align: center;
+  }
+
+  /* Game-specific help, such as pillo's legend of marks, sits in the same column as the steps. */
+  .game-help .pillo-legend,
+  .game-help-first .pillo-legend {
+    max-inline-size: none;
+    margin-block-start: calc(var(--spacing) * 4);
+  }
+
+  .game-help-actions {
+    display: flex;
+    justify-content: center;
   }
 
   .game-help-steps {
