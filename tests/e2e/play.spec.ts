@@ -853,6 +853,7 @@ test.describe('daily games without JavaScript', () => {
     // Playwright's text matching skips <noscript>, so this uses CSS.
     await expect(page.locator('noscript p')).toHaveText([
       "to add cueory to your home screen, use your browser's menu. daily games need JavaScript.",
+      "today's status for each game needs JavaScript.",
       'game settings need JavaScript.',
       'pillo needs JavaScript.',
       'sudoku needs JavaScript.',
