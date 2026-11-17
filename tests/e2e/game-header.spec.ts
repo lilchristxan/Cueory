@@ -85,3 +85,20 @@ test('with 32 px text at 320 px the corner row wraps instead of pushing any game
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth), game.name).toBe(true);
   }
 });
+
+test('with 32 px text at 320 px each game\'s settings dialog wraps inside its card, with no sideways scroll', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 700 });
+  for (const game of games) {
+    await page.goto(game.path);
+    await page.evaluate(() => document.documentElement.style.setProperty('font-size', '32px', 'important'));
+    await page.getByTestId(game.testId).getByRole('button', { name: `${game.name} settings` }).click();
+    const card = page.getByRole('dialog', { name: `${game.name} settings` }).locator('.game-settings');
+    await expect(card).toBeVisible();
+    const [scrollWidth, clientWidth] = await card.evaluate((element) => [element.scrollWidth, element.clientWidth]);
+    expect(scrollWidth, `${game.name}: settings card scrolls sideways`).toBeLessThanOrEqual(clientWidth);
+    const box = (await card.boundingBox())!;
+    expect(box.x).toBeGreaterThanOrEqual(0);
+    expect(box.x + box.width).toBeLessThanOrEqual(320);
+    await page.keyboard.press('Escape');
+  }
+});
