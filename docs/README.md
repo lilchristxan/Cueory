@@ -18,6 +18,7 @@ Each link has a one-line summary and says whether Christian needs to read it. Gu
 - [Content formats](CONTENT-FORMAT.md) — See the JSON fields and sample rules for lessons and study activities. **Christian:** Read when preparing content.
 - [Editing content](EDITING-CONTENT.md) — Choose the right content file, edit fields or columns, and understand the checks before review. **Christian:** Read before changing content.
 - [Content map](CONTENT-MAP.md) — Find where public samples, lessons, and study-game files belong. **Christian:** Read when preparing content.
+- [Content handoff](CONTENT-HANDOFF.md) — See the file format for each daily game, where real puzzles live, and how to check them. **Christian:** Read before loading puzzles.
 - [Content batches](BATCHES.md) — Learn how private question batches are checked, reviewed, and imported. **Christian:** Read before submitting a batch.
 - [Visuals kit](VISUALS.md) — See the plan for teaching pictures, sources, and approval checks. **Christian:** Read when approving visuals.
 - [Anatomy lab checks](ANATOMY-LAB-QA.md) — See the release checklist for anatomy models and interactions. **Christian:** Read before approving the anatomy lab.
