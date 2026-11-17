@@ -116,8 +116,12 @@ test('the help dialog fits a phone without sideways scrolling, in light and even
 test('typing in the sudoku help dialog never changes the board', async ({ page }) => {
   await page.goto('/play');
   const sudoku = page.getByTestId('sudoku');
+  // Wait for today's puzzle, so "before" is the finished board and not one still being set up.
+  await expect(sudoku.getByRole('gridcell')).toHaveCount(81);
+  await expect(sudoku.locator('[data-given="true"]').first()).toBeVisible();
   const before = await sudoku.getByRole('gridcell').evaluateAll((cells) => cells.map((cell) => cell.getAttribute('aria-label')));
   await sudoku.getByRole('button', { name: 'how to play sudoku' }).click();
+  await expect(page.getByRole('dialog', { name: 'how to play sudoku' })).toBeVisible();
   await page.keyboard.press('5');
   await page.keyboard.press('Control+z');
   await page.keyboard.press('Escape');
