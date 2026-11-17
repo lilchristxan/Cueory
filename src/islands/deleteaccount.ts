@@ -14,6 +14,7 @@ import { CROSSWORD_SETTINGS_KEY } from './cuewordkeys';
 import { SUDOKU_SETTINGS_KEY } from './sudoku';
 import { GAME_SETTINGS_STORAGE_KEY } from './gamesettings';
 import { HOME_TIP_STORAGE_KEY } from './home-screen-tip';
+import { GAME_HELP_STORAGE_KEY } from './gamehelpkeys';
 import { GUEST_IMPORT_MARKER_PREFIX } from './guestimportrun';
 import { LAST_WELCOME_STORAGE_KEY, VISIT_STORAGE_KEY } from './stickynote';
 import { SURVEY_STORAGE_KEYS } from './surveykeys';
@@ -136,6 +137,7 @@ export function afterDeletion(storage: KeyValueStorage | undefined): DeletionSto
     SUDOKU_SETTINGS_KEY,
     GAME_SETTINGS_STORAGE_KEY,
     HOME_TIP_STORAGE_KEY,
+    GAME_HELP_STORAGE_KEY,
     RESUME_STORAGE_KEY,
     LAST_WELCOME_STORAGE_KEY,
     NOTE_SOUND_STORAGE_KEY,

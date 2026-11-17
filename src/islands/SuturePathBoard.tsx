@@ -3,6 +3,7 @@ import { useEffect, useId, useRef, useState, type KeyboardEvent, type PointerEve
 import { dayLabel } from './daily';
 import { localDay, reportRound } from './gameresults';
 import { printGame } from './gameprint';
+import { GameHelpButton, GameHelpCard, useGameHelp } from './GameHelp';
 import { site } from '../config/site';
 import { shake } from './SutureGame';
 import type { Cell } from './suture';
@@ -82,6 +83,7 @@ export function PathBoard({ puzzle, name }: Props) {
   const drag = useRef<{ start: Cell; moved: boolean; id: number } | null>(null);
   const quietClickUntil = useRef(0);
   const help = useId();
+  const howToPlay = useGameHelp('suture');
   const title = useId();
   const done = pathDone(state, puzzle);
   const total = puzzle.words.length;
@@ -235,6 +237,7 @@ export function PathBoard({ puzzle, name }: Props) {
   return (
     <section aria-labelledby={title} data-testid="suture" data-format="path" data-print-area="suture" className="wordpath">
       <div className="wordpath-corner" data-print-hidden>
+        <GameHelpButton help={howToPlay} name={name} className="wordpath-round" />
         <button type="button" className="wordpath-round" aria-label="print" data-testid="suture-print" onClick={() => printGame('suture')}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
             <path d="M6 9V3h12v6" />
@@ -254,6 +257,7 @@ export function PathBoard({ puzzle, name }: Props) {
         again also submits). on a keyboard, arrows move, enter or space adds a letter, enter on the last letter submits,
         backspace takes one back and escape clears.
       </p>
+      <GameHelpCard help={howToPlay} name={name} />
       <div
         ref={board}
         role="grid"
