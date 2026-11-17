@@ -1,6 +1,6 @@
 /**
  * Private daily-game stats on /play (D-76). Each game reports a finished round; the stats panel keeps the results
- * only when the student has turned stats on. The record itself (first result of each game and day, no streaks) is the
+ * only when the student has turned stats on. The record itself (first result of each game and day; only the crossword keeps a streak, Task 721) is the
  * helper's logic in ./gamestats, and results older than 400 days are dropped by today's date.
  *
  * Stats are off until the student turns them on: turned on means the record exists in this browser's storage, and
@@ -230,8 +230,10 @@ export interface RoundResult {
   /** The day of the puzzle that was played, in the visitor's own time zone, written YYYY-MM-DD. */
   day: string;
   solved: boolean;
-  /** Guesses for pillo, slips for the retired sort record, cues for the crossword and loose stitches for word path. */
+  /** Guesses for pillo, slips for the retired sort record, checks or reveals for the crossword and loose stitches for word path. */
   tries: number;
+  /** Crossword only: whether the solve extends the streak (no Check, Reveal or Autocheck, within 48 hours). */
+  streak?: boolean;
   /** When present, the same completion also opens the shared finished-game dialog. */
   card?: GameResultCard;
 }
@@ -338,7 +340,7 @@ export function deleteStats(storage: KeyValueStorage | undefined): boolean {
 const TRIES: Record<GameId, { one: string; many: string }> = {
   pulse: { one: 'guess', many: 'guesses' },
   triage: { one: 'slip', many: 'slips' },
-  cueword: { one: 'cue', many: 'cues' },
+  cueword: { one: 'check or reveal', many: 'checks or reveals' },
   suture: { one: 'loose stitch', many: 'loose stitches' },
 };
 

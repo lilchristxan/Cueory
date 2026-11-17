@@ -387,8 +387,10 @@ test.describe('daily games: crossword levels (Task 627)', () => {
     await expect(board(page).getByTestId('cueword-clue')).toContainText('1 across');
     await expect(board(page).getByTestId('cueword-clue')).toContainText('[sample clue]');
     await expect(board(page).getByRole('grid', { name: 'crossword grid' })).toHaveAttribute('aria-rowcount', '5');
+    // The clue list is a view the player opens (Task 721); check and reveal sit in their own menus.
     await expect(board(page).getByRole('list')).toHaveCount(0);
-    await expect(board(page).getByRole('button', { name: /check|reveal/i })).toHaveCount(0);
+    await expect(board(page).getByTestId('crossword-check')).toBeVisible();
+    await expect(board(page).getByTestId('crossword-reveal')).toBeVisible();
     const results = await axe(page);
     expect(results.violations.map((violation) => violation.id + ': ' + violation.help)).toEqual([]);
   });
@@ -430,7 +432,7 @@ test.describe('daily games: crossword levels (Task 627)', () => {
     }
   });
 
-  test('tap toggles direction, Tab leaves the grid and Alt+Arrow changes words', async ({ page }) => {
+  test('tap toggles direction, Escape leaves the grid and Alt+Arrow changes words', async ({ page }) => {
     const grid = board(page).getByRole('grid', { name: 'crossword grid' });
     const activeCell = grid.locator('button[tabindex="0"]');
     await activeCell.click();
@@ -439,11 +441,12 @@ test.describe('daily games: crossword levels (Task 627)', () => {
     await activeCell.focus();
     await page.keyboard.press('Alt+ArrowRight');
     await expect(board(page).getByTestId('cueword-clue')).not.toContainText('1 down');
-    await expect(grid).toHaveAttribute('aria-keyshortcuts', 'Alt+ArrowLeft Alt+ArrowRight');
+    await expect(grid).toHaveAttribute('aria-keyshortcuts', 'Tab Shift+Tab Space Escape Alt+ArrowLeft Alt+ArrowRight');
 
+    // Tab moves between clues inside the grid (Task 721); Escape is the way out, to the erase button.
     await grid.locator('button[tabindex="0"]').focus();
-    await page.keyboard.press('Tab');
-    await expect(board(page).getByRole('group', { name: 'letters' }).getByRole('button').first()).toBeFocused();
+    await page.keyboard.press('Escape');
+    await expect(board(page).getByRole('button', { name: 'erase', exact: true })).toBeFocused();
   });
 
   test('solves the easy sample and exposes the plain solved result', async ({ page }) => {
@@ -559,8 +562,8 @@ test.describe('daily games: crossword levels (Task 627)', () => {
       await page.keyboard.type('z');
       await expect(last).toHaveAttribute('aria-label', /letter Z$/);
       await grid.locator('button[tabindex="0"]').focus();
-      await page.keyboard.press('Tab');
-      await expect(board(page).getByRole('group', { name: 'letters' }).getByRole('button').first()).toBeFocused();
+      await page.keyboard.press('Escape');
+      await expect(board(page).getByRole('button', { name: 'erase', exact: true })).toBeFocused();
       await noPageOverflow();
     });
   }

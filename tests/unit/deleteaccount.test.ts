@@ -21,6 +21,7 @@ import {
 import { PROMO_STORAGE_KEY } from '../../src/scripts/promo';
 import { THEME_STORAGE_KEY } from '../../src/scripts/theme';
 import { STATS_STORAGE_KEY } from '../../src/islands/gameresults';
+import { CROSSWORD_SETTINGS_KEY } from '../../src/islands/cueword';
 import type { KeyValueStorage } from '../../src/scripts/storage';
 
 class MemoryStorage implements KeyValueStorage {
@@ -211,6 +212,10 @@ describe('afterDeletion', () => {
 
   it('includes the game stats storage key', () => {
     expect(afterDeletion(new MemoryStorage())).toContain(STATS_STORAGE_KEY);
+  });
+
+  it('includes the crossword settings key (Task 721)', () => {
+    expect(afterDeletion(new MemoryStorage())).toContain(CROSSWORD_SETTINGS_KEY);
   });
 
   it('includes the study resume key (Task 104)', () => {
