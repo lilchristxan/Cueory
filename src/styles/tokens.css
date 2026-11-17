@@ -247,6 +247,7 @@
   --crossword-panel-gap: calc(var(--spacing) * 2);
   --crossword-check-size: 1.25rem;  /* settings checkboxes and radio buttons */
   --crossword-marker: 1ch;          /* room for the current-clue marker in the clue list */
+  --crossword-hatch: 3px;           /* the stripes on a blocked square, so it never looks like the selected one (2026-11-17) */
   --crossword-print-cell: 2rem;      /* a printed square; colors on paper use --print-paper / --print-ink (Task 641) */
   --wordpath-cell-min: 1.5rem;       /* a letter square's floor: 24 px (WCAG 2.2) at default text, 48 px at 32 px root text, when the grid scrolls */
   --wordpath-letter-inset: 10%;      /* a 6 × 8 board letter's circle sits this far inside its square, leaving room for the joining lines */

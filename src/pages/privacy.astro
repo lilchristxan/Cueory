@@ -177,7 +177,10 @@ import { newsletter, promo, site } from '../config/site';
       <li>
         Reports you send with the "Flag or comment" button: the page you were on, the question if there was one, the
         reason you picked and your comment, if you wrote one. We keep a report after we've dealt with it, until your
-        account is deleted. Your account data download will include them.
+        account is deleted. Your account data download will include them. If JavaScript is off in your browser, the
+        button opens an email to our contact address instead. Its subject is "flag or comment: " and the page's path
+        (such as /learn/study-skills), and its text starts with a reminder not to include patient information. You
+        choose what to send.
       </li>
     </ul>
     {/*

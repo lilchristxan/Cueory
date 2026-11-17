@@ -1,6 +1,6 @@
 /**
- * Crossword parity (Task 721, docs/GAMES-PARITY.md): pen and pencil, check and reveal with a first-use warning,
- * Autocheck, the keyboard model, cursor and display settings, pause, the clue list, the "something's not right yet"
+ * Crossword parity (Task 721, docs/GAMES-PARITY.md): check and reveal with a first-use warning (pen and pencil were
+ * removed, Christian's brief 2026-11-17), Autocheck, the keyboard model, cursor and display settings, pause, the cue list, the "something's not right yet"
  * message, the help badge and the streak. Uses the easy November sample, as play.spec.ts does.
  */
 import AxeBuilder from '@axe-core/playwright';
@@ -10,7 +10,7 @@ const SAMPLE = ['.ABC.', 'DEFGH', 'IJKLM', 'NOPQR', '.STU.'];
 const board = (page: Page) => page.getByTestId('cueword');
 const grid = (page: Page) => board(page).getByRole('grid', { name: 'crossword grid' });
 const square = (page: Page, row: number, column: number) =>
-  board(page).getByRole('button', { name: new RegExp('^row ' + row + ', column ' + column + ',') });
+  board(page).getByRole('button', { name: new RegExp('^(?:\\d+, )?row ' + row + ', column ' + column + ',') });
 const clueBar = (page: Page) => board(page).getByTestId('cueword-clue');
 const axe = async (page: Page) => {
   await page.evaluate(() => window.scrollTo(0, 0));
@@ -55,19 +55,13 @@ test.describe('crossword parity (Task 721)', () => {
     await expect(board(page)).toBeVisible();
   });
 
-  test('pencil letters are marked tentative by name and shape, not color alone', async ({ page }) => {
-    await board(page).getByRole('button', { name: 'pencil', exact: true }).click();
-    await expect(board(page).getByRole('button', { name: 'pencil', exact: true })).toHaveAttribute('aria-pressed', 'true');
-    await square(page, 2, 1).click();
-    await page.keyboard.type('d');
-    const pencilled = square(page, 2, 1);
-    await expect(pencilled).toHaveAttribute('aria-label', /letter D, pencil$/);
-    await expect(pencilled).toHaveClass(/crossword-cell-pencil/);
-    expect(await pencilled.evaluate((element) => getComputedStyle(element, '::after').borderTopStyle)).toBe('dashed');
-    await board(page).getByRole('button', { name: 'pen', exact: true }).click();
+  test('there is no pencil mode: every letter is a plain, final letter (Christian\'s brief)', async ({ page }) => {
+    await expect(board(page).getByRole('button', { name: 'pencil', exact: true })).toHaveCount(0);
+    await expect(board(page).getByRole('group', { name: 'entry mode' })).toHaveCount(0);
     await square(page, 2, 1).click();
     await page.keyboard.type('d');
     await expect(square(page, 2, 1)).toHaveAttribute('aria-label', /letter D$/);
+    await expect(square(page, 2, 1)).not.toHaveClass(/crossword-cell-pencil/);
   });
 
   test('warns before the first check, then checks a square, a word and the puzzle', async ({ page }) => {
@@ -141,9 +135,9 @@ test.describe('crossword parity (Task 721)', () => {
     await expect(clueBar(page)).toContainText('1 down');
     await page.keyboard.press('ArrowRight');
     await expect(clueBar(page)).toContainText('1 across');
-    await expect(active).toHaveAttribute('aria-label', /^row 1, column 2,/);
+    await expect(active).toHaveAttribute('aria-label', /^(?:\d+, )?row 1, column 2,/);
     await page.keyboard.press('ArrowRight');
-    await expect(grid(page).locator('button[tabindex="0"]')).toHaveAttribute('aria-label', /^row 1, column 3,/);
+    await expect(grid(page).locator('button[tabindex="0"]')).toHaveAttribute('aria-label', /^(?:\d+, )?row 1, column 3,/);
 
     await page.keyboard.press('Tab');
     await expect(clueBar(page)).toContainText('4 across');
@@ -178,7 +172,7 @@ test.describe('crossword parity (Task 721)', () => {
 
   test('settings hide the timer, change the clue size, and are remembered in this browser', async ({ page }) => {
     await expect(board(page).getByTestId('crossword-time')).toBeVisible();
-    await board(page).getByRole('group', { name: 'entry mode' }).waitFor();
+    await board(page).getByRole('grid', { name: 'crossword grid' }).waitFor();
     // The crossword's settings open from the gear at the top left (Christian's brief), with the shared ones.
     await board(page).getByRole('button', { name: 'crossword settings' }).click();
     const settings = page.getByRole('dialog', { name: 'crossword settings' }).getByTestId('crossword-settings');
@@ -218,12 +212,12 @@ test.describe('crossword parity (Task 721)', () => {
     await expect(square(page, 2, 1)).toHaveAttribute('aria-label', /letter D$/);
   });
 
-  test('the clue list view selects a clue by tap and marks the current clue with more than color', async ({ page }) => {
-    await board(page).getByRole('button', { name: 'show clue list' }).click();
+  test('the cue list view selects a cue by tap and marks the current cue with more than color', async ({ page }) => {
+    await board(page).getByRole('button', { name: 'show cue list' }).click();
     const list = board(page).getByTestId('crossword-clue-list');
-    await expect(list.getByRole('region', { name: 'across clues' })).toBeVisible();
+    await expect(list.getByRole('region', { name: 'across cues' })).toBeVisible();
     await expect(list.locator('[aria-current="true"]')).toContainText('▸');
-    await list.getByRole('region', { name: 'down clues' }).getByRole('button').first().click();
+    await list.getByRole('region', { name: 'down cues' }).getByRole('button').first().click();
     await expect(clueBar(page)).toContainText('down');
     await expect(grid(page).locator('button[tabindex="0"]')).toBeFocused();
     const results = await axe(page);
@@ -242,7 +236,7 @@ test.describe('crossword parity (Task 721)', () => {
 
   // The same width and text-size pairs as play.spec.ts's hard-board test: 320 px at 16 px text, 390 px at 32 px text.
   for (const { width, rootText } of [{ width: 320, rootText: 16 }, { width: 390, rootText: 32 }]) {
-    test(`toolbar, menus, warning and clue list fit at ${width}px with ${rootText}px text, with no sideways page scroll`, async ({ page }) => {
+    test(`toolbar, menus, warning and cue list fit at ${width}px with ${rootText}px text, with no sideways page scroll`, async ({ page }) => {
       await page.setViewportSize({ width, height: 844 });
       await page.evaluate((size) => document.documentElement.style.setProperty('font-size', `${size}px`, 'important'), rootText);
       await noSidewaysScroll(page);
@@ -261,11 +255,11 @@ test.describe('crossword parity (Task 721)', () => {
       await inView();
       await noSidewaysScroll(page);
       await board(page).getByRole('button', { name: 'cancel' }).click();
-      await board(page).getByRole('button', { name: 'show clue list' }).click();
+      await board(page).getByRole('button', { name: 'show cue list' }).click();
       await inView();
       await noSidewaysScroll(page);
-      await page.getByTestId('crossword-levels').locator('label', { hasText: 'hard' }).click();
-      await board(page).getByRole('button', { name: 'show clue list' }).click();
+      await page.getByTestId('crossword-levels').getByRole('button', { name: 'hard, 15 by 15' }).click();
+      await board(page).getByRole('button', { name: 'show cue list' }).click();
       await inView();
       await noSidewaysScroll(page);
     });
