@@ -16,7 +16,11 @@ interface Props { puzzle: SuturePathPuzzle; name: string }
 const printFoot = new URL(site.url).host;
 const button = 'min-h-11 min-w-11 rounded-md border border-control bg-page px-4 py-2 text-ink disabled:opacity-50';
 
-/** Each look has its own brand state, and found answers also carry a symbol, so color is never the only signal. */
+/**
+ * Each look has its own brand state, and found answers also carry a symbol, so color is never the only signal. Each
+ * letter's button fills its whole column, so it stays at least 44 px wide on a 320 px screen; the small gap between
+ * the round letters is the button's own padding, which its fill (bg-clip-content) leaves out.
+ */
 const looks: Record<CellLook, string> = {
   special: 'bg-button text-on-button',
   theme: 'bg-soft text-ink',
@@ -266,7 +270,7 @@ export function PathBoard({ puzzle, name }: Props) {
               const index = r * row.length + c;
               const view = cellView(state, puzzle, cell);
               return (
-                <div key={c} role="gridcell" aria-colindex={c + 1} aria-selected={view.look === 'picked'} className="p-0.5">
+                <div key={c} role="gridcell" aria-colindex={c + 1} aria-selected={view.look === 'picked'}>
                   <button
                     ref={(element) => { if (element) buttons.current.set(index, element); else buttons.current.delete(index); }}
                     type="button"
@@ -276,7 +280,7 @@ export function PathBoard({ puzzle, name }: Props) {
                     data-cell={`${r},${c}`}
                     data-look={view.look}
                     data-path
-                    className={`relative flex aspect-square w-full items-center justify-center overflow-hidden rounded-full text-base font-bold sm:text-xl ${looks[view.look]}`}
+                    className={`relative flex aspect-square w-full items-center justify-center overflow-hidden rounded-full bg-clip-content p-0.5 text-base font-bold sm:text-xl ${looks[view.look]}`}
                     onFocus={() => setFocused(index)}
                     onPointerDown={(event) => down(event, cell)}
                     onPointerMove={move}

@@ -102,6 +102,8 @@ test.describe('word path: board format (#722)', () => {
 
   test('dragging across the letters finds a word when the pointer lifts', async ({ page }) => {
     const word = themes[1]!;
+    // The mouse moves to points on the screen without scrolling, so bring the board into view first.
+    await game(page).getByRole('grid').scrollIntoViewIfNeeded();
     const centers = [];
     for (const at of word.path) {
       const box = (await cell(page, at).boundingBox())!;
@@ -203,6 +205,8 @@ test.describe('word path: board format (#722)', () => {
     test(`the board fits ${width} px with square letters, 44 px buttons and no sideways scrolling`, async ({ page }) => {
       await page.setViewportSize({ width, height: 800 });
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+      // The letters take every touch (no swipe scrolling on them), so the whole board must fit on the screen.
+      expect((await game(page).getByRole('grid').boundingBox())!.height).toBeLessThan(800);
       const boxes = await game(page).getByRole('button').evaluateAll((els) =>
         els.filter((el) => (el as HTMLElement).offsetParent !== null)
           .map((el) => ({ letter: el.hasAttribute('data-cell'), box: el.getBoundingClientRect().toJSON() as DOMRect })));
