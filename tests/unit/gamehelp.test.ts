@@ -84,6 +84,6 @@ describe('game help text (#736)', () => {
   });
 
   it('keeps the sudoku pause sentence the pause test reads', () => {
-    expect(GAME_HELP.triage.play).toContain('pause hides your entries and x marks. the original numbers stay visible until you resume.');
+    expect(GAME_HELP.triage.play).toContain('pause hides every number, the original ones too, until you press play. leaving the page pauses it for you.');
   });
 });
