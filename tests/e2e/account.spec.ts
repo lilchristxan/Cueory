@@ -172,8 +172,10 @@ test.beforeAll(async () => {
             held.abortSignal = nextSignal => { signal = nextSignal; return held; };
             return held;
           }
-          return Promise.resolve(params.has('delete-refused')
-            ? { data: null, error: { message: 'sign in to delete your account', code: '28000' } } : { data: null, error: null });
+          return Promise.resolve(params.has('auth-stale-refresh')
+            ? { data: null, error: { message: 'please sign in again to delete your account', code: '28R01' } }
+            : params.has('delete-refused')
+              ? { data: null, error: { message: 'sign in to delete your account', code: '28000' } } : { data: null, error: null });
         },
       };
       window.fixtureClient = client;
@@ -458,8 +460,23 @@ test.describe('/account signed in (fake client)', () => {
     await page.getByLabel('type delete to confirm').fill('delete');
     await deleteButton(page).click();
     await expect(page.getByText('please sign in again to delete your account.')).toBeVisible();
+    await expect(page.getByRole('link', { name: 'sign in again', exact: true })).toHaveAttribute('href', '/signin?next=%2Faccount%23delete');
     expect(await calls(page)).toEqual(['rpc:delete_my_account']);
     expect(await page.evaluate(() => localStorage.getItem('cueory-auth'))).toBe('1');
+  });
+
+  test('a refreshed token with stale credentials cannot delete, and keeps browser data', async ({ page }) => {
+    await fixture(page, '&auth-stale-refresh');
+    await page.evaluate(() => localStorage.setItem('cueory-auth', 'existing-session'));
+    await page.getByRole('button', { name: 'delete my account', exact: true }).click();
+    await page.getByLabel('type delete to confirm').fill('delete');
+    await deleteButton(page).click();
+    await expect(page.getByText('for your safety, please sign in again to delete your account.')).toBeVisible();
+    await expect(page.getByRole('link', { name: 'sign in again', exact: true }))
+      .toHaveAttribute('href', '/signin?next=%2Faccount%23delete');
+    expect(await calls(page)).toEqual(['rpc:delete_my_account']);
+    expect(await page.evaluate(() => localStorage.getItem('cueory-auth'))).toBe('existing-session');
+    await axe(page);
   });
 
   test('keep my account closes the panel and returns focus', async ({ page }) => {
