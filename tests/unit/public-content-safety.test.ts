@@ -59,6 +59,10 @@ const publicFiles: Record<string, PublicFile> = {
   'lessons/study-skills-01.json': { kind: 'placeholder', sha256: '9eff10936cdd78a2686350bc9e364c7eaab818d2d4da12c1c90afb3e1057bc03' },
   'organizer/study-skills-01.json': { kind: 'sample', sha256: 'fc9c698f5fa9461d52a5ad7cde7183aa00d50a9153197b83d86114916bf7823d' },
   'questions/study-skills-01.json': { kind: 'sample', sha256: 'cdb586ab4efc4fc1ef2b6e69f2c3e92b09e7f8aad797c3ae6361260d2f7618d0' },
+  // Lane 5 sheet templates: made-up everyday sample rows (the crossword and word path rows reuse public samples).
+  'samples/templates/crossword.csv': { kind: 'sample', sha256: '21800bb12de51474d1470bcdf0782f4462cc5e57028400ba38a4908f3a3f78a3' },
+  'samples/templates/pillo.csv': { kind: 'sample', sha256: '9dc222f7565cab3fe61db7e2641e246d2aed26d4d10b3b215c9058b9b436d832' },
+  'samples/templates/word-path.csv': { kind: 'sample', sha256: '96223e4c791d5267b85a4d24820d83bd39eb8393aa573299d484c40c6d5055d8' },
   'videos/study-skills-01.json': { kind: 'empty-video-placeholder', sha256: '81ea27e6b2ef303ee616d2f5a59ed78a71bc8b09c9b93599628bc659ee2a4893' },
   'visuals/anatomy-digestive.json': { kind: 'visual-source-metadata', sha256: 'aab9102a096f6660ba7c7b3bb8d7fe7ca66a7db226284614f18c6017b788856a' },
   'visuals/anatomy-heart.json': { kind: 'visual-source-metadata', sha256: 'e765f7d4265bb1e96d0a2d012beb0ca7bdc4e25f6fd2caa2576d7eb3f57205c8' },

@@ -15,8 +15,8 @@ import { STATS_STORAGE_KEY, SUDOKU_STATS_STORAGE_KEY } from '../../src/islands/g
 import { CROSSWORD_SETTINGS_KEY } from '../../src/islands/cuewordkeys';
 import { SUDOKU_SETTINGS_KEY } from '../../src/islands/sudoku';
 import { GAME_SETTINGS_STORAGE_KEY } from '../../src/islands/gamesettings';
-import { GAME_HELP_STORAGE_KEY } from '../../src/islands/gamehelpkeys';
-import { afterDeletion } from '../../src/islands/deleteaccount';
+import { afterDeletion, SESSION_KEYS_AFTER_DELETION } from '../../src/islands/deleteaccount';
+import { storageKeys } from '../../src/config/storage-keys';
 import { VISIT_STORAGE_KEY, LAST_WELCOME_STORAGE_KEY } from '../../src/islands/stickynote';
 import { NOTE_SOUND_STORAGE_KEY } from '../../src/scripts/notesound';
 import { THEME_STORAGE_KEY } from '../../src/scripts/theme';
@@ -53,7 +53,6 @@ describe.skipIf(!existsSync(privacyPath))('privacy page browser storage disclosu
     SUDOKU_SETTINGS_KEY,
     GAME_SETTINGS_STORAGE_KEY,
     HOME_TIP_STORAGE_KEY,
-    GAME_HELP_STORAGE_KEY,
     legacyStarsKey('<deck>'),
   ])('includes the exported browser key %s in built markup', (key) => {
     expect(visibleCodeKeys(privacyHtml())).toContain(key);
@@ -133,6 +132,12 @@ describe.skipIf(!existsSync(privacyPath))('privacy page browser storage disclosu
     expect(html).toContain('When you create one, we store only:');
   });
 
+  it('says autocheck counts as help for the crossword, as countsForStreak and the autocheck setting do', () => {
+    const text = privacyHtml().replace(/\s+/g, ' ');
+    expect(text).toContain('a try is a check, a reveal or autocheck');
+    expect(text).toContain('solved without check, reveal or autocheck, within 48 hours');
+  });
+
   it('names flag reports, what Google sign-in shares and that the launch list is separate', () => {
     const html = privacyHtml();
     expect(html).toContain('Reports you send with the "Flag or comment" button');
@@ -174,5 +179,43 @@ describe.skipIf(!existsSync(privacyPath))('privacy page browser storage disclosu
     expect(html).toContain('Unless you choose to bring it into your account, your study progress is kept by your browser');
     expect(html).toContain('your work on real questions is also saved to your account');
     expect(html).toContain('stars stay on this device');
+  });
+});
+
+describe('the one list of browser keys (src/config/storage-keys.ts)', () => {
+  it('names each key once, every one starting with cueory-', () => {
+    const names = storageKeys.map((key) => key.name);
+    expect(new Set(names).size).toBe(names.length);
+    for (const key of storageKeys) {
+      expect(key.name.startsWith('cueory-'), key.name).toBe(true);
+      if (key.prefix) expect(key.name.startsWith(key.prefix), key.name).toBe(true);
+      expect(key.holds.trim(), key.name).not.toBe('');
+      expect(key.purpose.trim(), key.name).not.toBe('');
+    }
+  });
+
+  it('delete-my-account clears every key the list marks as cleared, and leaves the session to sign-out', () => {
+    const examples = storageKeys.filter((key) => key.prefix).map((key) => key.prefix + 'example');
+    const plan = afterDeletion({
+      length: examples.length,
+      key: (index: number) => examples[index] ?? null,
+      getItem: () => null,
+      setItem: () => {},
+      removeItem: () => {},
+    });
+    for (const key of storageKeys) {
+      if (key.onDeletion !== 'cleared') {
+        expect(plan, key.name).not.toContain(key.name);
+        continue;
+      }
+      if (key.storage === 'session') expect(SESSION_KEYS_AFTER_DELETION, key.name).toContain(key.name);
+      else if (key.prefix) expect(plan, key.name).toContain(key.prefix + 'example');
+      else expect(plan, key.name).toContain(key.name);
+    }
+  });
+
+  it.skipIf(!existsSync(privacyPath))('every key in the list is named on the built /privacy page', () => {
+    const shown = visibleCodeKeys(privacyHtml());
+    for (const key of storageKeys) expect(shown, `/privacy does not name ${key.name}`).toContain(key.name);
   });
 });

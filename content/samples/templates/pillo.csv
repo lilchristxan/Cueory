@@ -1,0 +1,9 @@
+date,word,cue
+"# the day it plays, YYYY-MM-DD, one word a day","# the word to guess: exactly five letters a to z","# one line, up to 120 characters (the game doesn't show it yet)"
+2026-12-01,plant,a living thing that grows in soil
+2026-12-02,cloud,it floats in the sky and can bring rain
+2026-12-03,bread,a loaf you can slice for toast
+2026-12-04,river,water flowing toward the sea
+2026-12-05,chair,a seat with four legs and a back
+2026-12-06,smile,what your face does when you are happy
+2026-12-07,light,it lets you see in the dark

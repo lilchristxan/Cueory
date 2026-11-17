@@ -7,6 +7,7 @@ import { GameHelpButton, GameHelpCard, useGameHelp } from './GameHelp';
 import ResultBrandMark from './ResultBrandMark';
 import { dayLabel } from './daily';
 import { playSolvedTone } from './solvetone';
+import { useSharedGameSettings } from './GameSettings';
 import {
   announceFirstEntry, arrow, autocheckAll, backspace, check, clueLeavesGrid, countsForStreak, currentWord, deleteLetter, emptyState, enter, getResult,
   isFilledWrong, isLocked, isSolved, loadCrosswordSettings, moveClue, nextWord, numbering, parsePuzzle, previousWord,
@@ -64,6 +65,7 @@ function Board({ puzzle, name }: Props) {
   const menus = useRef(new Map<string, HTMLDetailsElement>());
   const help = useId();
   const howToPlay = useGameHelp('cueword');
+  const { soundAllowed } = useSharedGameSettings();
   const warning = useId();
   const listId = useId();
   const list = useMemo(() => words(puzzle), [puzzle]);
@@ -109,7 +111,8 @@ function Board({ puzzle, name }: Props) {
     reported.current = true;
     const streak = countsForStreak(today, Date.now(), state.assists);
     setCounts(streak);
-    if (settings.playSound) playSolvedTone();
+    // The shared "game sounds" switch (#734) silences every game, whatever the crossword's own sound setting says.
+    if (soundAllowed(settings.playSound)) playSolvedTone();
     reportRound({
       game: 'cueword', day: localDay(today), solved: true, tries: state.assists, streak,
       card: {
@@ -124,7 +127,7 @@ function Board({ puzzle, name }: Props) {
         path: '/play/crossword',
       },
     });
-  }, [solved, today, name, gameResult.level, gameResult.seconds, state.assists, helped, settings.playSound]);
+  }, [solved, today, name, gameResult.level, gameResult.seconds, state.assists, helped, settings.playSound, soundAllowed]);
 
   const update = (next: CuewordState, focus = true) => {
     focusGrid.current = focus;

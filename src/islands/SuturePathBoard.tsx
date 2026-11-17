@@ -265,7 +265,7 @@ export function PathBoard({ puzzle, name }: Props) {
         aria-describedby={help}
         aria-rowcount={puzzle.grid.length}
         aria-colcount={puzzle.grid[0]!.length}
-        className="wordpath-board -mx-6 mt-6 flex flex-col border-(length:--border-board) border-ink bg-page text-ink sm:mx-0 sm:p-3"
+        className="wordpath-board -mx-6 mt-6 flex flex-col border-(length:--border-board) border-ink bg-page text-ink sm:mx-auto sm:p-3"
       >
         {puzzle.grid.map((row, r) => (
           <div key={r} role="row" aria-rowindex={r + 1} className="grid grid-cols-6">

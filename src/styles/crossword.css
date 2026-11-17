@@ -25,6 +25,8 @@
     color: var(--color-ink);
     background: var(--color-page);
     box-shadow: var(--shadow-card);
+    /* Long words such as "shift+tab" wrap instead of pushing a 320px screen sideways at 32px text. */
+    overflow-wrap: anywhere;
   }
   .crossword-board-wrap { container-type: inline-size; max-inline-size: 100%; overflow: clip; }
   .crossword-board-wrap {

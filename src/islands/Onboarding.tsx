@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import {
-  COURSES, emptyProgress, examDateWords, isExamDate, localDay, readProgress, saveProgress, withOnboarding,
+  COURSES, emptyProgress, examDateWords, localDay, readProgress, saveProgress, withOnboarding,
   type Onboarding as Answers,
 } from '../scripts/progress';
 import { browserStorage } from '../scripts/storage';
@@ -8,6 +8,7 @@ import {
   connectExamPlans, isConnectFailure, type ConnectFailure, loadExamPlans, resolveAccountAnswers, saveSetupToAccount, SYNC_MESSAGES, withServerPlan,
   type ExamPlanSyncDb, type ScreenAnswers, type ServerPlan, type Touched,
 } from './examplansync';
+import { setupDateProblem } from './setupdate';
 import {
   ONBOARDING_FIELDS, focusAfterRender, nextOnboardingStep, previousOnboardingStep, skipOnboardingStep, type OnboardingStep,
 } from './onboardingsteps';
@@ -203,8 +204,15 @@ export default function Onboarding() {
   };
 
   const saveAnswers = () => {
-    if (examDate && !isExamDate(examDate)) {
-      setDateProblem('that date doesn’t look right. use the date picker, or leave it blank.');
+    // A past, too-distant or unfinished date is never saved: say what to do and keep the student on the field.
+    const problem = setupDateProblem({
+      value: examDate,
+      unfinished: dateRef.current?.validity.badInput ?? false,
+      typed: touched.current.examDate,
+      today: localDay(new Date()),
+    });
+    if (problem) {
+      setDateProblem(problem);
       dateRef.current?.focus();
       return;
     }

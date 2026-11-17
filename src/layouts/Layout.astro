@@ -77,6 +77,10 @@ const searchTitle = isHome ? 'home' : title;
     {noindex && <meta name="robots" content="noindex, nofollow" />}
     <!-- Applies a saved Light or Dark pick before the page paints (ThemePicker.astro, src/scripts/theme.ts). -->
     <script is:inline set:html={themeHeadScript} />
+    <!-- Every page sets its text in these two Lato files (the only weights in use), so fetch them alongside the
+         stylesheet instead of after it. They stay font-display: swap (global.css). -->
+    <link rel="preload" href="/fonts/lato-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/fonts/lato-latin-700-normal.woff2" as="font" type="font/woff2" crossorigin />
     {
       /* Marketing pages fetch their serif early so it is ready before the page is drawn (font-display: optional). */
       !isStudy && (
