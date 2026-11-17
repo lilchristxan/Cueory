@@ -8,7 +8,7 @@ import GameHeader from './GameHeader';
 import ResultBrandMark from './ResultBrandMark';
 import { dayLabel } from './daily';
 import { playSolvedTone } from './solvetone';
-import { useSharedGameSettings } from './GameSettings';
+import { useSharedGameSettings } from './GameSettings.tsx';
 import PrintLogo from './PrintLogo';
 import {
   announceFirstEntry, arrow, autocheckAll, backspace, check, clueLeavesGrid, countsForStreak, currentWord, deleteLetter, emptyState, enter, getResult,
