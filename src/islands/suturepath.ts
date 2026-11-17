@@ -55,6 +55,8 @@ export interface PathState {
   hint: PathHint | null;
   /** Submitted words that were not on the list. */
   misses: number;
+  /** The board was printed before it was finished: that counts as using a cue (Christian, 2026-11-17). */
+  printed?: boolean;
 }
 export type PathPick = 'ignored' | 'started' | 'added' | 'removed';
 export type PathSubmit =
@@ -204,6 +206,16 @@ export function startPath(): PathState {
 }
 
 export const pathDone = (state: PathState, puzzle: SuturePathPuzzle): boolean => state.found.length === puzzle.words.length;
+/** Cues used: the earned cues taken, plus one if the board was printed before it was finished. */
+export const cuesUsed = (state: PathState): number => state.hintsUsed + (state.printed ? 1 : 0);
+/**
+ * Printing an unfinished board counts as using a cue, once: the solve no longer counts as cue-free. It does not spend
+ * an earned cue. Printing a finished board changes nothing.
+ */
+export function printBoard(state: PathState, puzzle: SuturePathPuzzle): PathState {
+  if (state.printed || pathDone(state, puzzle)) return state;
+  return { ...state, printed: true };
+}
 export const hintsEarned = (state: PathState): number => Math.floor(state.extras.length / WORDS_PER_HINT);
 export const hintsLeft = (state: PathState): number => Math.max(0, hintsEarned(state) - state.hintsUsed);
 /** How many more extra words earn the next hint. */
@@ -348,7 +360,8 @@ export function pathShareLine(state: PathState, puzzle: SuturePathPuzzle, dateLa
   const clean = (text: string) => text.replace(/\s+/g, ' ').trim().toLowerCase();
   const place = state.found.indexOf(specialIndex(puzzle)) + 1;
   const ordinal = place === 1 ? '1st' : place === 2 ? '2nd' : place === 3 ? '3rd' : `${place}th`;
-  const hints = `${state.hintsUsed} ${state.hintsUsed === 1 ? 'cue' : 'cues'}`;
+  const used = cuesUsed(state);
+  const hints = `${used} ${used === 1 ? 'cue' : 'cues'}`;
   return `${site.wordmarkName} ${clean(gameName)}, ${clean(dateLabel)}: found ${state.found.length} of ${puzzle.words.length} answers, the thread ${place > 0 ? ordinal : 'not yet'}, ${hints}.`;
 }
 
