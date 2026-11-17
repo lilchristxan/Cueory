@@ -285,8 +285,17 @@ file run out of order or twice fails or leaves a gap.
 12. Tell Claude "staging database done".
 
 Supabase's docs prefer the command-line tool for migrations; the SQL Editor is used here because it needs no terminal.
-Running SQL there skips Supabase's migration history, so before anyone uses the command-line tool on this project,
-Claude marks only migrations confirmed to have **succeeded in the specific hosted project** as applied (`supabase migration repair <version> --status applied`). Seventeen files exist in Git, but the hosted database may have fewer applied versions. Never mark a failed, pending, or unrun migration as applied. Sources:
+**Stop before any `supabase db push`, `supabase migration repair`, or other CLI migration action until Christian has
+approved the plan.** SQL Editor runs create no migration-history entries, and the connected Supabase tool records its
+runs under its own timestamp versions rather than the file versions. On `cueory-staging` those rows were renamed on
+5 November 2026 (evening) to the 17 exact file versions, so history and files match one for one; the one caveat is
+that the `delete_my_account` rewrite in file 17 still has to be pasted into the SQL Editor by Christian (the tool
+refuses that statement), so row 17 is recorded ahead of that function until then. `cueory-prod` has no history rows
+and no schema. Before any CLI migration action, verify each project's SQL, schema and history version by version. The same hold covers running migration files by hand in the SQL Editor: on either project, a file is run there only
+when Christian says so for that file, and its exact file version is then recorded in the history table, so
+history never says less, or more, than what has run (the one exception today is the caveat above: staging's row 17
+is ahead of the `delete_my_account` rewrite until Christian pastes it).
+Never rerun already-applied SQL or mark a failed, pending, or unrun migration as applied. Sources:
 [Supabase: Database functions](https://supabase.com/docs/guides/database/functions) (SQL Editor, **New Query**,
 **Run**), [Supabase: Use Supabase with Next.js](https://supabase.com/docs/guides/getting-started/quickstarts/nextjs)
 (paste into the SQL Editor, then **Run**),
@@ -368,7 +377,8 @@ the exact wording: if what you see doesn't match, stop and tell Claude what it s
 26. In the project's left menu, click **Multi-Factor** (**check on screen**). Make sure the authenticator-app option
     (TOTP) is on. Supabase's docs say it's free and on by default. Leave the phone (text message) option **off**:
     Cueory doesn't use text messages.
-    Two-factor inside Cueory's own admin area needs code that isn't built yet; Claude will tell you when to set it up.
+    Two-factor inside Cueory itself is the `/account/two-factor` page (on `staging` since #337; the admin inbox at
+    `/admin/flags` requires it, #338); Claude will tell you when to enrol.
 
 Tell Claude "Part M done", or which step didn't match.
 

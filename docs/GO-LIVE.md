@@ -121,12 +121,20 @@ Use exactly the steps of SETUP Part L, with three changes:
 
 If a later pull request adds a file with an earlier date than one you've already run, tell Claude before running it.
 
-**Migration history note (for Claude, nothing for you to do):** the SQL Editor doesn't record runs in Supabase's
-migration history (`supabase_migrations.schema_migrations`), so the command-line tool would think nothing has run.
-Before anyone uses the command-line tool on `cueory-staging` or `cueory-prod`, every file run by hand there is
-marked as run, without running it again: `supabase migration repair <version> … --status applied --linked`, for
-example `supabase migration repair 20261101060000 20261101060100 --status applied --linked`. It only updates the
-history table; it doesn't apply or undo any SQL. [SB migrations] [SB repair]
+**Migration history (for Claude; founder sign-off required before any CLI migration action):** the hosted history
+table (`supabase_migrations.schema_migrations`) must list exactly the version numbers of the files in
+`supabase/migrations/`, or `supabase db push` would try to run files again and `migration repair` could misstate
+history. The SQL Editor records nothing there, and the connected Supabase tool records runs under its own timestamp
+versions, not the file versions. On `cueory-staging`, as of 5 November 2026 (evening), the 17 history rows were renamed
+to the 17 file versions (`20261101060000_locked_by_default` … `20261104170500_enforce_opt_in_mfa`), so they match the
+files one for one. One caveat remains until Christian pastes it in the SQL Editor: the `delete_my_account` rewrite in
+file 17 (the only statement in that file the tool refuses to run) was not yet applied, so row 17 is recorded ahead of
+that one function. `cueory-prod` has no history rows and no schema. Before any `db push` or `repair` on either project,
+compare the live history, the live schema and the files version by version, and get Christian's approval for the
+plan. A `migration repair` changes history, not the schema. The same hold covers running migration files by hand in the SQL Editor: on either project, a file is run there only
+when Christian says so for that file, and its exact file version is then recorded in the history table, so
+history never says less, or more, than what has run (the one exception today is the caveat above: staging's row 17
+is ahead of the `delete_my_account` rewrite until Christian pastes it). [SB migrations] [SB repair]
 
 ### 1.6 Sign-in settings on cueory-prod (25 minutes)
 
@@ -199,7 +207,7 @@ key that starts with `sb_publishable_`, never a secret key. [SB API keys]
    You should see the sign-in form. If it says "accounts open soon", find the `staging` preview's own build settings
    in the **Previews** section, or tell Claude.
 
-After PR #239 merges, a wrong value (only one of the two, a bad address, or a secret key) stops the build with a
+Since PR #239, a wrong value (only one of the two, a bad address, or a secret key) stops the build with a
 reason, and the site keeps its previous version.
 
 ### 1.9 The email question (your decision)
@@ -247,7 +255,7 @@ Do these in order. After each step, check the live site as it says.
    - `/signin` shows the sign-in form, not "accounts open soon";
    - **Sign in with Google** works with your business Gmail and returns you to cueory.app, showing your initials;
    - `/account` opens with your name, **download my data** gives a file, and **sign out** works;
-   - the flag button on a lesson page sends (after PR #237 merges);
+   - the flag button on a lesson page sends;
    - `/privacy`, `/terms` and `/disclaimer` show final text, with no "paste your … here" box.
 7. **Check the lock is still on staging.** Open the staging preview address in a new private window.
    You should see the Cloudflare sign-in page.
