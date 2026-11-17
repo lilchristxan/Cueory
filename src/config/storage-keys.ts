@@ -10,6 +10,7 @@ import { NOTE_SOUND_STORAGE_KEY } from '../scripts/notesound';
 import { legacyStarsKey, PROGRESS_STORAGE_KEY } from '../scripts/progress';
 import { PROMO_STORAGE_KEY } from '../scripts/promo';
 import { RESUME_STORAGE_KEY } from '../scripts/resume';
+import { SIGNUP_POPUP_STORAGE_KEY } from '../scripts/signuppopup';
 import { THEME_STORAGE_KEY } from '../scripts/theme';
 import { CROSSWORD_SETTINGS_KEY } from '../islands/cuewordkeys';
 import { STATS_STORAGE_KEY, SUDOKU_STATS_STORAGE_KEY } from '../islands/gameresults';
@@ -54,6 +55,7 @@ export const storageKeys: readonly StorageKey[] = Object.freeze([
   { name: legacyStarsKey('<deck>'), prefix: legacyStarsKey(''), storage: 'local', holds: 'older per-deck stars', purpose: 'keep stars saved before they moved into the progress record', onDeletion: 'cleared', disclosure: { section: STUDY, phrase: 'star a card' } },
   { name: RESUME_STORAGE_KEY, storage: 'local', holds: 'the activity, page and question you were on, with your answers so far', purpose: 'let you pick up where you stopped', onDeletion: 'cleared', disclosure: { section: STUDY, phrase: 'That saved place expires after 14 days.' } },
   { name: PROMO_STORAGE_KEY, storage: 'local', holds: 'when the launch-list panel was shown', purpose: 'keep the panel away for a while', onDeletion: 'cleared', disclosure: { section: SETTINGS, phrase: 'Your browser saves when the launch-list panel appeared' } },
+  { name: SIGNUP_POPUP_STORAGE_KEY, storage: 'local', holds: 'when the launch-updates pop-up was last shown or closed', purpose: 'show the pop-up at most once every 3 hours', onDeletion: 'cleared', disclosure: { section: SETTINGS, phrase: 'a separate signup pop-up may appear after 10 seconds of viewing' } },
   { name: THEME_STORAGE_KEY, storage: 'local', holds: 'Light or Dark, when you pick one', purpose: 'remember your theme pick', onDeletion: 'cleared', disclosure: { section: SETTINGS, phrase: 'whether you chose the light or dark theme' } },
   { name: STATS_STORAGE_KEY, storage: 'local', holds: 'daily game results, when stats are on', purpose: 'show game stats and streaks', onDeletion: 'cleared', disclosure: { section: GAMES, phrase: 'it automatically saves finished games on this device' } },
   { name: SUDOKU_STATS_STORAGE_KEY, storage: 'local', holds: 'sudoku solve days, levels and times, when stats are on', purpose: 'show sudoku stats per level', onDeletion: 'cleared', disclosure: { section: GAMES, phrase: 'the level, date and time taken for your first solve of each level each day' } },
@@ -88,3 +90,4 @@ export function localPrefixesToClear(keys: readonly StorageKey[] = storageKeys):
 export function sessionKeysToClear(keys: readonly StorageKey[] = storageKeys): string[] {
   return keys.filter((key) => key.storage === 'session' && key.onDeletion === 'cleared').map((key) => key.name);
 }
+

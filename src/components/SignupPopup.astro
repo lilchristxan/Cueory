@@ -1,0 +1,403 @@
+---
+/**
+ * The launch-updates pop-up (lane 14, Christian's request; D-pending). A native modal <dialog> in the green look of
+ * his Kit landing page (colors in tokens.css, outside brand v1.0 at his request).
+ *
+ * - It opens 10 seconds after a page opens (counted while the page is on screen), at most once every 3 hours: the time
+ *   it was shown or closed is kept in this browser's local storage (`cueory-signup-popup-seen`, on /privacy) and never
+ *   sent to us. A browser that can't remember never sees it.
+ * - Not on a page where the once-only promo panel (D-59) is due: one launch-list prompt per page.
+ * - Not for the rest of a page view once a "flag or comment" report has been opened on it (nothing saved).
+ * - Never on lesson or study screens (/learn, and the study layout) or a game's own page (/play/<game>), never in print, never without JavaScript, and it
+ *   waits while another dialog, the account menu or a game result is open, while the visitor is
+ *   typing, and while the tab is in the background.
+ * - Accessible modal: focus moves to its close button and stays inside (Tab wraps), Escape and × close it, focus goes
+ *   back where it was, and reduced motion gets no animation.
+ * - "subscribe" opens the Kit landing page in a new tab (D-54). Once Kit's form address is set, it is an email field
+ *   that posts straight to Kit instead. No Kit script runs on our pages, so the CSP doesn't change.
+ */
+import { kitLandingUrl, newsletter, signupState } from '../config/site';
+
+const state = signupState(newsletter.formAction, newsletter.landingUrl);
+const landingUrl = kitLandingUrl(newsletter.landingUrl);
+const logo = (width: number) => `/brand/v1/logo-full-dark-${width}.png`;
+---
+
+{
+  state !== 'pending' && (
+    <dialog
+      class="signup-popup"
+      aria-labelledby="signup-popup-heading"
+      aria-describedby="signup-popup-note"
+      data-signup-popup
+      data-testid="signup-popup"
+    >
+      <span class="signup-popup-photo" aria-hidden="true" />
+      <div class="signup-popup-body">
+        <button type="button" class="signup-popup-close" aria-label="close" data-signup-popup-close>
+          <svg viewBox="0 0 24 24" class="size-6" aria-hidden="true" focusable="false">
+            <path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+          </svg>
+        </button>
+        {/* The Ivory (Evening) logo artwork as it is: never recolored (brand guide §3.6). */}
+        <img
+          class="signup-popup-logo"
+          src={logo(480)}
+          srcset={`${logo(480)} 480w, ${logo(960)} 960w`}
+          sizes="10rem"
+          width="960"
+          height="303"
+          alt="cueory"
+          loading="lazy"
+        />
+        <h2 id="signup-popup-heading" class="display signup-popup-heading">
+          get updates and study tips for nursing school success!
+        </h2>
+        {
+          state === 'form' ? (
+            <form action={newsletter.formAction} method="post" class="signup-popup-form" data-signup-popup-form>
+              <label for="signup-popup-email" class="sr-only">
+                email address
+              </label>
+              <input
+                id="signup-popup-email"
+                name={newsletter.emailFieldName}
+                type="email"
+                required
+                maxlength="254"
+                autocomplete="email"
+                inputmode="email"
+                placeholder="email address"
+                class="signup-popup-input"
+              />
+              <button type="submit" class="signup-popup-button">
+                subscribe
+              </button>
+            </form>
+          ) : (
+            <a
+              href={landingUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              class="signup-popup-button"
+              data-signup-popup-subscribe
+            >
+              subscribe<span class="sr-only"> (opens in a new tab)</span>
+            </a>
+          )
+        }
+        <p id="signup-popup-note" class="signup-popup-note">
+          we respect your privacy. unsubscribe anytime.
+        </p>
+      </div>
+    </dialog>
+  )
+}
+
+<script>
+  import { promo } from '../config/site';
+  import { isTextEntry, mayShow as promoMayShow } from '../scripts/promo';
+  import { browserStorage } from '../scripts/storage';
+  import { OPEN_REPORT_SELECTOR, POPUP_DELAY_MS, mayShowPopup, popupAllowedOn, rememberPopup } from '../scripts/signuppopup';
+
+  const dialog = document.querySelector<HTMLDialogElement>('[data-signup-popup]');
+  const storage = browserStorage();
+  // The once-only promo panel (D-59) asks about the same launch list. On a page where it is due, the pop-up stays
+  // away, so a visitor never gets both on one page; it can come on a later page.
+  const promoDue = !!document.querySelector('[data-promo]') && promoMayShow(storage, Date.now(), promo.rememberDays);
+
+  if (
+    dialog &&
+    typeof dialog.showModal === 'function' &&
+    popupAllowedOn(location.pathname) &&
+    !promoDue &&
+    mayShowPopup(storage, Date.now())
+  ) {
+    const closeButton = dialog.querySelector<HTMLButtonElement>('[data-signup-popup-close]');
+    let previousFocus: HTMLElement | null = null;
+
+    /** Something else has the visitor's attention: the pop-up waits instead of interrupting it. */
+    const busy = () =>
+      document.hidden ||
+      document.querySelector('dialog[open]') !== null ||
+      document.querySelector('[data-promo][data-open]') !== null ||
+      document.querySelector('#account-menu:not([hidden])') !== null ||
+      document.querySelector('[data-result-dialog]') !== null ||
+      isTextEntry(document.activeElement as HTMLElement | null);
+
+    const focusables = () =>
+      [...dialog.querySelectorAll<HTMLElement>('a[href], button, input, [tabindex]:not([tabindex="-1"])')].filter(
+        (element) => !element.hasAttribute('disabled'),
+      );
+
+    /** Closing starts the 3-hour wait. Focus goes back where it was. */
+    const close = () => {
+      if (!dialog.open) return;
+      rememberPopup(storage, Date.now());
+      dialog.close();
+    };
+
+    // While it is open the page behind it doesn't scroll (a wheel or swipe over the dimmed page would otherwise move it
+    // out from under the visitor); the pop-up itself still scrolls on a short screen. On close the page is put back
+    // exactly where it was, and focus goes back where it was.
+    let savedScroll = { x: 0, y: 0 };
+    const lockPage = () => {
+      savedScroll = { x: window.scrollX, y: window.scrollY };
+      document.documentElement.toggleAttribute('data-signup-popup-open', true);
+    };
+    const unlockPage = () => {
+      document.documentElement.toggleAttribute('data-signup-popup-open', false);
+      window.scrollTo({ left: savedScroll.x, top: savedScroll.y, behavior: 'instant' });
+    };
+
+    dialog.addEventListener('close', () => {
+      unlockPage();
+      if (previousFocus?.isConnected) previousFocus.focus({ preventScroll: true });
+    });
+    // Escape: the browser's own cancel, routed through close() so the wait starts and focus returns.
+    dialog.addEventListener('cancel', (event) => {
+      event.preventDefault();
+      close();
+    });
+    closeButton?.addEventListener('click', close);
+    // A click on the dimmed page around the pop-up (the dialog box itself, outside its body) closes it too.
+    dialog.addEventListener('click', (event) => {
+      if (event.target === dialog) close();
+    });
+    // Tab and Shift+Tab stay inside the pop-up.
+    dialog.addEventListener('keydown', (event) => {
+      if (event.key !== 'Tab') return;
+      const items = focusables();
+      if (items.length === 0) return;
+      const index = items.indexOf(document.activeElement as HTMLElement);
+      const last = items.length - 1;
+      if (event.shiftKey && index <= 0) {
+        event.preventDefault();
+        items[last]!.focus();
+      } else if (!event.shiftKey && (index === last || index === -1)) {
+        event.preventDefault();
+        items[0]!.focus();
+      }
+    });
+    // "subscribe" opens Kit's page in a new tab; this page's pop-up closes behind it.
+    dialog.querySelector('[data-signup-popup-subscribe]')?.addEventListener('click', close);
+
+    const open = () => {
+      // Another tab may have shown it in the meantime, and a browser that can't remember it never sees it.
+      if (dialog.open || !mayShowPopup(storage, Date.now()) || !rememberPopup(storage, Date.now())) return;
+      const active = document.activeElement;
+      previousFocus = active instanceof HTMLElement && active !== document.body ? active : null;
+      lockPage();
+      dialog.showModal();
+      closeButton?.focus({ preventScroll: true });
+    };
+
+    /**
+     * Once a "flag or comment" report has been opened on this page (the footer flag, the per-game corner flag that
+     * opens the same footer form, or any report form), the pop-up is skipped for the rest of this page view: no retry
+     * after the report closes, so it never takes the focus the report just put back. Nothing is saved, so it may
+     * appear on a later page as usual.
+     */
+    let reportOpened = false;
+
+    let triggered = false;
+    const trigger = () => {
+      if (triggered) return;
+      triggered = true;
+      document.removeEventListener('visibilitychange', onVisibility);
+      const attempt = () => {
+        if (reportOpened) return;
+        if (busy()) window.setTimeout(attempt, 500);
+        else open();
+      };
+      attempt();
+    };
+
+    // The 10 seconds count only while the page is on screen, so it never opens in a background tab.
+    let remaining = POPUP_DELAY_MS;
+    let startedAt = 0;
+    let timer: number | undefined;
+    const startTimer = () => {
+      if (timer !== undefined || triggered) return;
+      startedAt = performance.now();
+      timer = window.setTimeout(trigger, remaining);
+    };
+    const pauseTimer = () => {
+      if (timer === undefined) return;
+      window.clearTimeout(timer);
+      timer = undefined;
+      remaining = Math.max(0, remaining - (performance.now() - startedAt));
+    };
+    const onVisibility = () => (document.hidden ? pauseTimer() : startTimer());
+    document.addEventListener('visibilitychange', onVisibility);
+    if (!document.hidden) startTimer();
+
+    const noteReport = () => {
+      if (reportOpened || dialog.open || document.querySelector(OPEN_REPORT_SELECTOR) === null) return;
+      reportOpened = true;
+      pauseTimer();
+      triggered = true;
+      document.removeEventListener('visibilitychange', onVisibility);
+      reportWatch.disconnect();
+    };
+    const reportWatch = new MutationObserver(noteReport);
+    reportWatch.observe(document.body, { subtree: true, attributes: true, attributeFilter: ['aria-expanded'] });
+    noteReport();
+
+    // Leaving counts as closing, so the 3-hour wait starts from when the visitor left.
+    window.addEventListener('pagehide', close);
+  }
+</script>
+
+<style is:global>
+  .signup-popup {
+    /* Inside the green pop-up, focus rings use its cream. */
+    --color-focus: var(--popup-cream);
+    position: fixed;
+    inset: 0;
+    margin: auto;
+    box-sizing: border-box;
+    inline-size: min(calc(100% - var(--spacing) * 6), var(--popup-width));
+    max-inline-size: 100%;
+    max-block-size: calc(100dvh - var(--spacing) * 6);
+    overflow: hidden auto;
+    padding: 0;
+    border: 0;
+    border-radius: var(--radius-xl);
+    color: var(--popup-cream);
+    background-color: var(--popup-green);
+    /* A plain green texture made from the tokens: two soft folds of light and shade. */
+    background-image:
+      radial-gradient(ellipse at 15% 0%, var(--popup-green-light), transparent 60%),
+      radial-gradient(ellipse at 100% 100%, var(--popup-green-deep), transparent 55%);
+    box-shadow: var(--shadow-lift);
+    overflow-wrap: break-word;
+    overscroll-behavior: contain;
+    container-type: inline-size;
+  }
+
+  /* The page behind the open pop-up doesn't scroll; the pop-up scrolls inside itself without moving the page. */
+  html[data-signup-popup-open] {
+    overflow: hidden;
+  }
+
+  .signup-popup::backdrop {
+    background-color: color-mix(in srgb, var(--popup-green-deep) var(--popup-scrim-mix), transparent);
+  }
+
+  /* The photo hook (tokens.css --popup-photo): none for now. A photo shows through the green at a low strength. */
+  .signup-popup-photo {
+    position: absolute;
+    inset: 0;
+    background-image: var(--popup-photo);
+    background-size: cover;
+    background-position: center;
+    opacity: calc(1 - var(--popup-photo-shade));
+    pointer-events: none;
+  }
+
+  .signup-popup-body {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: calc(var(--spacing) * 5);
+    padding: calc(var(--spacing) * 12) calc(var(--spacing) * 6) calc(var(--spacing) * 8);
+    text-align: center;
+  }
+
+  .signup-popup-close {
+    position: absolute;
+    inset-block-start: calc(var(--spacing) * 2);
+    inset-inline-end: calc(var(--spacing) * 2);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-inline-size: var(--tap-min);
+    min-block-size: var(--tap-min);
+    border-radius: var(--radius-pill);
+    color: var(--popup-cream);
+    background-color: transparent;
+    cursor: pointer;
+  }
+
+  .signup-popup-close:hover {
+    background-color: var(--popup-green-light);
+  }
+
+  .signup-popup-logo {
+    inline-size: min(100%, calc(var(--spacing) * 40));
+    block-size: auto;
+  }
+
+  /* Follows the pop-up's width, between the xl and title sizes, so a long word never runs past its edge, even with
+     large text on a 320 px screen. */
+  .signup-popup-heading {
+    font-size: clamp(var(--text-xl), 9cqi, var(--text-title));
+    line-height: var(--text-title--line-height);
+    overflow-wrap: anywhere;
+  }
+
+  .signup-popup-form {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: calc(var(--spacing) * 3);
+    inline-size: 100%;
+  }
+
+  .signup-popup-input {
+    flex: 1 1 calc(var(--spacing) * 48);
+    min-inline-size: 0;
+    min-block-size: var(--tap-min);
+    padding-inline: calc(var(--spacing) * 4);
+    border-radius: var(--radius-pill);
+    color: var(--popup-button-ink);
+    background-color: var(--popup-cream);
+  }
+
+  .signup-popup-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-block-size: var(--tap-min);
+    max-inline-size: 100%;
+    padding-inline: calc(var(--spacing) * 8);
+    border-radius: var(--radius-pill);
+    color: var(--popup-button-ink);
+    background-color: var(--popup-button);
+    font-weight: 700;
+    text-decoration: none;
+    cursor: pointer;
+  }
+
+  .signup-popup-button:hover {
+    color: var(--popup-button-ink);
+    background-color: var(--popup-button-hover);
+  }
+
+  .signup-popup-note {
+    font-size: var(--text-sm);
+    line-height: var(--text-sm--line-height);
+  }
+
+  /* A gentle fade and rise, only for visitors who haven't asked for reduced motion. */
+  @media (prefers-reduced-motion: no-preference) {
+    .signup-popup[open] {
+      animation: signup-popup-in var(--duration-base) ease-out;
+    }
+
+    @keyframes signup-popup-in {
+      from {
+        opacity: 0;
+        translate: 0 calc(var(--spacing) * 3);
+      }
+    }
+  }
+
+  @media print {
+    .signup-popup {
+      display: none !important;
+    }
+  }
+</style>
