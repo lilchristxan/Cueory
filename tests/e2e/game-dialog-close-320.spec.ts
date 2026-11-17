@@ -30,7 +30,24 @@ async function expectCloseStaysVisible(page: Page, card: Locator, close: Locator
   // The card scrolls only up and down.
   const sideways = await card.evaluate((element) => element.scrollWidth - element.clientWidth);
   expect(sideways).toBeLessThanOrEqual(1);
-  expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0);
+  // The page behind the dialog must not scroll sideways either. On failure, name what sticks out past the right edge.
+  const page_ = await page.evaluate(() => {
+    const width = document.documentElement.clientWidth;
+    const scrolls = (node: Element | null) => {
+      for (let at = node; at && at !== document.body; at = at.parentElement) if (getComputedStyle(at).overflowX !== 'visible') return true;
+      return false;
+    };
+    const past: string[] = [];
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      if (scrolls(node.parentElement)) continue;
+      const range = document.createRange();
+      range.selectNodeContents(node);
+      if ([...range.getClientRects()].some((rect) => rect.right > width)) past.push(`${node.parentElement?.className}: ${node.textContent?.trim().slice(0, 30)}`);
+    }
+    return { sideways: document.documentElement.scrollWidth - width, past };
+  });
+  expect(page_.sideways, JSON.stringify(page_.past)).toBeLessThanOrEqual(0);
   await expectOnScreen(page, close);
   // Scrolled to the end, the close button is still on screen and still the topmost thing where it sits.
   await card.evaluate((element) => { element.scrollTop = element.scrollHeight; });
