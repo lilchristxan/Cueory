@@ -1,0 +1,31 @@
+{
+  "status": "sample",
+  "sample": true,
+  "grid": [
+    "CAT",
+    "A.A",
+    "TAC"
+  ],
+  "clues": {
+    "across": [
+      {
+        "number": 1,
+        "text": "a pet that purrs"
+      },
+      {
+        "number": 3,
+        "text": "a pet that purrs, spelled backwards"
+      }
+    ],
+    "down": [
+      {
+        "number": 1,
+        "text": "a pet that purrs"
+      },
+      {
+        "number": 2,
+        "text": "a pet that purrs, spelled backwards"
+      }
+    ]
+  }
+}
