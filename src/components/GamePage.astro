@@ -17,10 +17,12 @@ interface Props {
   game: DailyGame;
   /** Show the shared settings button, for a game without the gear (sudoku). */
   sharedSettings?: boolean;
+  /** A wider column from tablet width up, so the crossword's 15 by 15 board fits without scrolling (2026-11-17). */
+  wide?: boolean;
 }
-const { game, sharedSettings = false } = Astro.props;
+const { game, sharedSettings = false, wide = false } = Astro.props;
 ---
-<article class="veil mx-auto mt-6 max-w-prose p-6 sm:mt-10 sm:p-10" data-game-page={game.id}>
+<article class:list={["veil mx-auto mt-6 max-w-prose p-6 sm:mt-10 sm:p-10", wide && "md:max-w-page"]} data-game-page={game.id}>
     <p>
       <a href="/play" class="inline-flex min-h-(--tap-min) items-center gap-2 font-medium" data-testid="all-games-link">
         <span aria-hidden="true">←</span> all games

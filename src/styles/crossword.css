@@ -46,7 +46,9 @@
   .crossword-board[data-level="hard"] { max-inline-size: none; }
   .crossword-row { display: flex; gap: var(--crossword-gap); }
   .crossword-cell, .crossword-gap { inline-size: var(--crossword-cell); block-size: var(--crossword-cell); flex: none; }
-  .crossword-gap { background: var(--color-ink); }
+  /* Blocked squares are striped, not a solid fill like the selected square, so the two differ by pattern as well as
+     color (Christian's brief). */
+  .crossword-gap { background: repeating-linear-gradient(-45deg, var(--color-ink) 0 var(--crossword-hatch), var(--color-surface) var(--crossword-hatch) calc(var(--crossword-hatch) * 2)); }
   .crossword-cell {
     position: relative;
     display: flex;
@@ -104,7 +106,10 @@
   .crossword-panel[data-clue-size="medium"] :is(.crossword-clue-bar, .crossword-clue-list) { font-size: var(--text-base); }
   .crossword-panel[data-clue-size="large"] :is(.crossword-clue-bar, .crossword-clue-list) { font-size: var(--text-lg); }
   .crossword-clue-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--crossword-help)), 1fr)); gap: calc(var(--spacing) * 4); margin-block-start: calc(var(--spacing) * 4); }
+  /* Tidied (Christian's brief): each direction is its own quiet panel, with a line between cues. */
+  .crossword-clue-list > section { padding: calc(var(--spacing) * 3); border: var(--crossword-line) solid var(--color-line); border-radius: var(--radius-lg); }
   .crossword-clue-list ol { margin-block-start: var(--crossword-panel-gap); }
+  .crossword-clue-list li + li { border-block-start: var(--crossword-line) solid var(--color-line); }
   .crossword-clue-item { display: flex; inline-size: 100%; min-block-size: var(--tap-min); align-items: baseline; gap: var(--crossword-panel-gap); padding: var(--crossword-panel-gap); border-radius: var(--radius-md); color: var(--color-ink); text-align: start; overflow-wrap: anywhere; }
   .crossword-clue-item[aria-current="true"] { background: var(--color-surface); font-weight: 700; }
   .crossword-clue-marker { flex: none; inline-size: var(--crossword-marker); }
