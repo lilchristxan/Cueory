@@ -12,6 +12,11 @@ import {
   ONBOARDING_FIELDS, focusAfterRender, nextOnboardingStep, previousOnboardingStep, skipOnboardingStep, type OnboardingStep,
 } from './onboardingsteps';
 
+/** The account signed in now isn't the one first connected on this visit. */
+const ACCOUNT_CHANGED = { accountChanged: true } as const;
+type AccountChanged = typeof ACCOUNT_CHANGED;
+const isAccountChanged = (value: unknown): value is AccountChanged => value === ACCOUNT_CHANGED;
+
 const primaryButton = 'min-h-11 rounded-pill bg-button px-5 py-2.5 text-on-button hover:bg-button-hover';
 const quietButton = 'min-h-11 rounded-pill px-3 py-2.5 text-ink-soft underline';
 const TOTAL_QUESTIONS = ONBOARDING_FIELDS.length;
@@ -30,6 +35,10 @@ const TOTAL_QUESTIONS = ONBOARDING_FIELDS.length;
  * device at once and shows the result; the account save waits for the plans and reconciles then: untouched answers
  * take the account's values (on the device and in the summary), and a date the student cleared or skipped removes
  * that course's plan. Waiting instead (with a time limit) would still need this reconcile for a load that outlasts it.
+ *
+ * One account per visit (#755): the first account connected here is the only one this screen ever writes to. Every
+ * write checks the client is still signed in as it (examplansync.ts), and a retry that finds another account signed
+ * in sends nothing, so answers set up while signed in as A never reach B. Back as A, a retry saves to A again.
  */
 export default function Onboarding() {
   const [storage] = useState(browserStorage);
@@ -52,7 +61,9 @@ export default function Onboarding() {
   const [accountSave, setAccountSave] = useState<'pending' | 'done' | 'retry'>('done');
   const retrySave = useRef<() => void>(() => {});
   /** Resolves once the account is known: its adapter and plans (null plans: they couldn't be read). Null: no account. */
-  const account = useRef<Promise<{ db: ExamPlanSyncDb; plans: ServerPlan[] | null } | ConnectFailure | null>>(Promise.resolve(null));
+  const account = useRef<Promise<{ db: ExamPlanSyncDb; plans: ServerPlan[] | null } | ConnectFailure | AccountChanged | null>>(Promise.resolve(null));
+  /** The first account connected on this visit: the only one this screen writes to. */
+  const firstAccount = useRef<string | null>(null);
   /** The account's plans once loaded, for keeping an untouched date in step with the course. */
   const plans = useRef<ServerPlan[] | null>(null);
   const finished = useRef(false);
@@ -81,6 +92,8 @@ export default function Onboarding() {
       const db = await connectExamPlans();
       if (!db) return null;
       if (isConnectFailure(db)) return db;
+      if (firstAccount.current === null) firstAccount.current = db.accountId;
+      else if (firstAccount.current !== db.accountId) return ACCOUNT_CHANGED;
       const loaded = await loadExamPlans(db);
       if (!loaded.ok) {
         if (!finished.current) setSyncNote(loaded.message);
@@ -109,6 +122,10 @@ export default function Onboarding() {
   const saveToAccount = async (deviceBefore: Answers, done: ScreenAnswers, acted: Touched, outcome: 'saved' | 'skipped') => {
     const known = await account.current;
     if (!known) return setAccountSave('done');
+    if (isAccountChanged(known)) {
+      if (outcome === 'saved') setSyncNote(SYNC_MESSAGES.accountChanged);
+      return setAccountSave('done');
+    }
     if (isConnectFailure(known)) {
       // The session couldn't be checked, so don't say it was saved: keep the device save and offer another try.
       if (outcome === 'skipped') return setAccountSave('done');
@@ -121,6 +138,12 @@ export default function Onboarding() {
         resultRef.current?.focus();
       };
       return setAccountSave('retry');
+    }
+    // Another tab may have switched accounts since the plans loaded: then they aren't this account's, so they neither
+    // fill in the device nor get sent anywhere. A failed check carries on, and the save itself checks again.
+    if ((await known.db.accountCheck().catch(() => 'unknown' as const)) === 'changed') {
+      if (outcome === 'saved') setSyncNote(SYNC_MESSAGES.accountChanged);
+      return setAccountSave('done');
     }
     let final: ScreenAnswers = done;
     if (known.plans) {
