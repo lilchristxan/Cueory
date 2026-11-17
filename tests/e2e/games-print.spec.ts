@@ -15,9 +15,13 @@ test.beforeEach(async ({ page }) => {
     window.print = () => {};
   });
   await page.clock.setFixedTime(new Date('2026-11-01T15:00:00'));
-  await page.goto('/play');
-  await page.waitForLoadState('networkidle');
 });
+
+/** Each game has its own page (#816). */
+async function open(page: Page, path: string) {
+  await page.goto(path);
+  await page.waitForLoadState('networkidle');
+}
 
 const foil = (page: Page) => page.evaluate(() =>
   [...document.querySelectorAll('.pillo-pack, .pillo-strip, .pillo-pill')].flatMap((element) => [
@@ -26,6 +30,7 @@ const foil = (page: Page) => page.evaluate(() =>
   ]));
 
 test('pillo foil and pill shine never fade to clear black, and print without the shine', async ({ page }) => {
+  await open(page, '/play/pillo');
   await page.getByLabel('your guess', { exact: true }).fill('ab');
   await expect(page.locator('.pillo-pill.pillo-typed').first()).toBeVisible();
   for (const layer of await foil(page)) expect(layer.image, layer.name).not.toContain('rgba(0, 0, 0, 0)');
@@ -40,8 +45,13 @@ test('pillo foil and pill shine never fade to clear black, and print without the
   }
 });
 
-for (const [game, area] of [['crossword', '[data-game-print="crossword"]'], ['sudoku', '.sudoku-section'], ['suture', '[data-print-area="suture"]']] as const) {
+for (const [game, area, path] of [
+  ['crossword', '[data-game-print="crossword"]', '/play/crossword'],
+  ['sudoku', '.sudoku-section', '/play/sudoku'],
+  ['suture', '[data-print-area="suture"]', '/play/word-path'],
+] as const) {
   test(`printed ${game} starts with the cueory logo, centred`, async ({ page }) => {
+    await open(page, path);
     await page.evaluate((name) => document.documentElement.setAttribute('data-print-game', name), game);
     const logo = page.locator(area).getByTestId('game-print-logo');
     await expect(logo).toBeHidden();

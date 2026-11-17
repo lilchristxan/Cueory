@@ -5,12 +5,13 @@ import { expect, test, type Page } from '@playwright/test';
 // its group, every key is at least 44 × 44, no two keys overlap and the page never scrolls sideways. The crossword's
 // check and reveal buttons share one row wherever the pair fits.
 
-async function open(page: Page, width: number, rootText: string) {
+async function open(page: Page, width: number, rootText: string, path: string) {
   await page.setViewportSize({ width, height: 800 });
   await page.addInitScript(() => {
     try { localStorage.setItem('cueory-promo-seen', String(Date.now())); } catch { /* optional storage */ }
   });
-  await page.goto('/play');
+  // Each game has its own page (#816).
+  await page.goto(path);
   await page.evaluate((size) => document.documentElement.style.setProperty('font-size', size, 'important'), rootText);
   await page.waitForLoadState('networkidle');
   await expect(page.locator('html')).toHaveCSS('font-size', rootText);
@@ -19,7 +20,7 @@ async function open(page: Page, width: number, rootText: string) {
 for (const width of [320, 390, 430]) {
   for (const rootText of ['16px', '20px', '32px']) {
     test(`pillo keys fit at ${width} px with ${rootText} root text`, async ({ page }) => {
-      await open(page, width, rootText);
+      await open(page, width, rootText, '/play/pillo');
       const group = page.getByTestId('pulse').getByRole('group', { name: 'letters' });
       const letters = await group.getByRole('button').evaluateAll((keys) => keys.map((key) => key.textContent?.trim()));
       expect(letters.slice(0, 26).map((text) => text?.[0])).toEqual([...'abcdefghijklmnopqrstuvwxyz']);
@@ -50,7 +51,7 @@ for (const width of [320, 390, 430]) {
 
 for (const [width, rootText] of [[320, '16px'], [320, '20px'], [390, '16px'], [390, '20px'], [430, '20px']] as const) {
   test(`crossword check and reveal share a row at ${width} px with ${rootText} root text`, async ({ page }) => {
-    await open(page, width, rootText);
+    await open(page, width, rootText, '/play/crossword');
     const game = page.getByTestId('cueword');
     const check = (await game.getByTestId('crossword-check').locator('summary').boundingBox())!;
     const reveal = (await game.getByTestId('crossword-reveal').locator('summary').boundingBox())!;
