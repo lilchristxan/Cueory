@@ -47,3 +47,4 @@ Game guides for videos: the [games folder](games/) has one plain page per daily 
 Only approved, public information belongs in these files. Keep account secrets, private student details, question keys, reviewer results, and unreleased lessons out of this repository.
 
 Review note: [reset account binding](status/in-review/task-754-reset-bound-account.md) — Review status for the password reset account guard. **Christian:** Approval required.
+Review note: [answer account binding](status/in-review/task-756-answers-stop-on-switch.md) — Stops stale players after a sign-in change.
