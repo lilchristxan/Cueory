@@ -10,6 +10,7 @@ import { connectSrc } from './src/islands/supabasecsp.ts';
 import { supabaseBuildCheck } from './src/islands/supabasebuildcheck.ts';
 import { loadEnv } from 'vite';
 import { pruneDraftModelsIntegration } from './src/visuals/prunedrafts.ts';
+import { cspHeaderIntegration } from './src/security/cspheader.ts';
 
 // The signup form posts to Kit, so the CSP must allow that one address.
 const formOrigin = newsletter.formAction ? ` ${new URL(newsletter.formAction).origin}` : '';
@@ -29,7 +30,8 @@ export default defineConfig({
   trailingSlash: 'never',
 
   // Bad account settings stop the build before a wrong value can be bundled into the public site (Task 161).
-  integrations: [supabaseBuildCheck(publicEnv), react(), pruneDraftModelsIntegration()],
+  // cspHeaderIntegration runs last: it copies the pages' finished CSP into dist/_headers (issue #746).
+  integrations: [supabaseBuildCheck(publicEnv), react(), pruneDraftModelsIntegration(), cspHeaderIntegration()],
 
   build: {
     // Keep CSS in files so the content security policy can stay strict.
@@ -40,6 +42,8 @@ export default defineConfig({
 
   // Astro adds a per-page Content-Security-Policy <meta> with hashes of its own
   // scripts and styles. Headers that can't go in a <meta> live in public/_headers.
+  // After the build, src/security/cspheader.ts adds these directives and every page's hashes to the HTTP header in
+  // dist/_headers, because a <meta> policy doesn't cover the theme script that comes before it (issue #746).
   security: {
     csp: {
       directives: [
