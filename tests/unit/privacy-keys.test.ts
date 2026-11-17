@@ -1,30 +1,20 @@
 /**
  * This test checks the built /privacy page. npm run verify builds before unit tests.
- * Keys from unfinished features are disclosed now, without saying those features are live.
+ * The Privacy Notice describes each browser key in plain words (it names only the signup pop-up's key), so every key in
+ * src/config/storage-keys.ts says which section describes it and a phrase that section must contain.
  */
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { legacyStarsKey, PROGRESS_STORAGE_KEY } from '../../src/scripts/progress';
-import { BREAK_STORAGE_KEY } from '../../src/scripts/breakstore';
-import {
-  AUTH_STORAGE_KEY, PKCE_FLOW_LIST_STORAGE_KEY, PKCE_VERIFIER_STORAGE_KEY, pkceFlowStorageKey,
-} from '../../src/islands/supabaseclient';
+import { BREAK_STORAGE_MAX_AGE_MS } from '../../src/scripts/breakstore';
 import { GUEST_IMPORT_MARKER_PREFIX } from '../../src/islands/guestimportrun';
-import { STATS_STORAGE_KEY, SUDOKU_STATS_STORAGE_KEY } from '../../src/islands/gameresults';
-import { CROSSWORD_SETTINGS_KEY } from '../../src/islands/cuewordkeys';
-import { SUDOKU_SETTINGS_KEY } from '../../src/islands/sudoku';
-import { GAME_SETTINGS_STORAGE_KEY } from '../../src/islands/gamesettings';
+import { KEEP_DAYS } from '../../src/islands/gameresults';
 import { afterDeletion, SESSION_KEYS_AFTER_DELETION } from '../../src/islands/deleteaccount';
 import { storageKeys } from '../../src/config/storage-keys';
-import { VISIT_STORAGE_KEY, LAST_WELCOME_STORAGE_KEY } from '../../src/islands/stickynote';
-import { NOTE_SOUND_STORAGE_KEY } from '../../src/scripts/notesound';
-import { THEME_STORAGE_KEY } from '../../src/scripts/theme';
-import { PROMO_STORAGE_KEY } from '../../src/scripts/promo';
-import { RESUME_STORAGE_KEY } from '../../src/scripts/resume';
-import { HOME_TIP_STORAGE_KEY } from '../../src/islands/home-screen-tip';
-import { SURVEY_STORAGE_KEYS } from '../../src/islands/surveykeys';
+import { RESUME_TTL_MS } from '../../src/scripts/resume';
+import { DAYS_NEEDED } from '../../src/islands/home-screen-tip';
+import { accountsOpen, promo } from '../../src/config/site';
 
 const privacyPath = fileURLToPath(new URL('../../dist/privacy.html', import.meta.url));
 
@@ -32,154 +22,56 @@ function privacyHtml(): string {
   return readFileSync(privacyPath, 'utf8');
 }
 
-/** Only look at visible <code> elements, not incidental text in bundled scripts. */
-function visibleCodeKeys(html: string): string[] {
-  return [...html.matchAll(/<code(?:\s[^>]*)?>([^<]*)<\/code>/g)].map((match) =>
-    match[1]!.replaceAll('&lt;', '<').replaceAll('&gt;', '>').replaceAll('&amp;', '&'),
-  );
+/** The built page's plain text under each h2, keyed by heading. */
+function privacySections(html: string): Map<string, string> {
+  const main = html.slice(html.indexOf('<article'), html.indexOf('</article>'));
+  const text = (part: string) => part.replace(/<[^>]+>/g, ' ').replaceAll('&amp;', '&').replaceAll('&#39;', "'").replace(/\s+/g, ' ').trim();
+  const sections = new Map<string, string>();
+  const parts = main.split(/<h2[^>]*>/).slice(1);
+  for (const part of parts) {
+    const [heading, ...rest] = part.split('</h2>');
+    sections.set(text(heading!), text(rest.join(' ')));
+  }
+  return sections;
 }
 
 describe.skipIf(!existsSync(privacyPath))('privacy page browser storage disclosures', () => {
-  it.each([
-    PROGRESS_STORAGE_KEY,
-    VISIT_STORAGE_KEY,
-    LAST_WELCOME_STORAGE_KEY,
-    NOTE_SOUND_STORAGE_KEY,
-    THEME_STORAGE_KEY,
-    PROMO_STORAGE_KEY,
-    RESUME_STORAGE_KEY,
-    STATS_STORAGE_KEY,
-    CROSSWORD_SETTINGS_KEY,
-    SUDOKU_STATS_STORAGE_KEY,
-    SUDOKU_SETTINGS_KEY,
-    GAME_SETTINGS_STORAGE_KEY,
-    HOME_TIP_STORAGE_KEY,
-    legacyStarsKey('<deck>'),
-  ])('includes the exported browser key %s in built markup', (key) => {
-    expect(visibleCodeKeys(privacyHtml())).toContain(key);
-  });
-
-  it.each([
-    AUTH_STORAGE_KEY, PKCE_VERIFIER_STORAGE_KEY, PKCE_FLOW_LIST_STORAGE_KEY, pkceFlowStorageKey('<id>'),
-    `${GUEST_IMPORT_MARKER_PREFIX}<id>`, BREAK_STORAGE_KEY, ...SURVEY_STORAGE_KEYS,
-  ])(
-    'discloses the planned storage key %s',
-    (key) => {
-      expect(visibleCodeKeys(privacyHtml())).toContain(key);
-    },
-  );
-
-  it.each([
-    VISIT_STORAGE_KEY,
-    LAST_WELCOME_STORAGE_KEY,
-    NOTE_SOUND_STORAGE_KEY,
-    BREAK_STORAGE_KEY,
-  ])('labels the unfinished feature %s as conditional, in its own list item', (key) => {
-    const listItems = privacyHtml().match(/<li(?:\s[^>]*)?>[\s\S]*?<\/li>/g) ?? [];
-    const item = listItems.find((part) => part.includes('<code>' + key + '</code>'));
-    expect(item, 'missing list item for ' + key).toBeDefined();
-    expect(item).toContain('when this feature is on');
-  });
-
-  it('discloses legacy stars and says account deletion also clears local settings', () => {
-    const html = privacyHtml();
-    expect(visibleCodeKeys(html)).toContain(legacyStarsKey('<deck>'));
-    expect(html).toContain('until they are moved into');
-    expect(html).toContain('Deleting it removes your account and all study data linked to it, and clears Cueory progress and');
-  });
-
-  it('covers every named Cueory browser key with local cleanup, session cleanup or Task 59 sign-out', () => {
-    const legacy = legacyStarsKey('<deck>');
-    const imported = `${GUEST_IMPORT_MARKER_PREFIX}<id>`;
-    const examples = [legacy, imported, pkceFlowStorageKey('<id>')];
-    const storage = {
-      length: examples.length,
-      key: (index: number) => examples[index] ?? null,
-      getItem: (_key: string) => null,
-      setItem: (_key: string, _value: string) => {},
-      removeItem: (_key: string) => {},
-    };
-    const plan = afterDeletion(storage);
-    const covered = new Set([...plan, ...plan.sessionKeys, AUTH_STORAGE_KEY]);
-    const disclosed = visibleCodeKeys(privacyHtml()).filter((key) => key.startsWith('cueory-'));
-    expect(new Set(disclosed).size).toBeGreaterThanOrEqual(15);
-    for (const key of disclosed) {
-      expect(covered.has(key), `no deletion or sign-out path for ${key}`).toBe(true);
+  it.each(storageKeys.map((key) => [key.name, key] as const))('describes %s in plain words in its section', (_name, key) => {
+    if (key.disclosure === 'accounts-closed') {
+      // Only sign-in keys, and only while public accounts are closed: reopening accounts needs a privacy update.
+      expect(accountsOpen, `${key.name}: accounts are open, so /privacy must describe this key`).toBe(false);
+      expect(key.name.startsWith('cueory-auth') || key.name.startsWith(GUEST_IMPORT_MARKER_PREFIX), key.name).toBe(true);
+      return;
     }
-    expect(plan).not.toContain(AUTH_STORAGE_KEY);
-    for (const key of [HOME_TIP_STORAGE_KEY, ...SURVEY_STORAGE_KEYS]) expect(plan, key).toContain(key);
+    const section = privacySections(privacyHtml()).get(key.disclosure.section);
+    expect(section, `/privacy has no "${key.disclosure.section}" section`).toBeDefined();
+    expect(section, `${key.name} is not described under "${key.disclosure.section}"`).toContain(key.disclosure.phrase);
   });
 
-  it('lists study resume as in use now, in the "It is only:" list, and words its answers truthfully', () => {
-    const html = privacyHtml();
-    const [inUse, building] = html.split('Features that are still being built');
-    expect(building, 'missing the still-being-built section').toBeDefined();
-    expect(inUse).toContain(`<code>${RESUME_STORAGE_KEY}</code>`);
-    expect(building).not.toContain(RESUME_STORAGE_KEY);
-    const only = inUse!.slice(inUse!.indexOf('It is only:'));
-    const list = only.slice(0, only.indexOf('</ul>'));
-    expect(list).toContain('where you stopped in a study activity');
-    expect(html).toContain('It never holds the answer key, but it can hold');
-    expect(html).toContain('answers you got right');
-    expect(html).not.toContain('never holds correct answers');
+  it('says public accounts are closed, which is only true while accountsOpen is false', () => {
+    expect(privacyHtml()).toContain('Public accounts are closed.');
+    expect(accountsOpen).toBe(false);
   });
 
-  it('stays true whether or not accounts are switched on in the build', () => {
-    const html = privacyHtml();
-    for (const stale of ['no accounts yet', 'Accounts are not open yet', 'When accounts arrive', 'Until accounts exist',
-      'When accounts open', 'Once accounts are on']) {
-      expect(html, stale).not.toContain(stale);
-    }
-    expect(html).toContain('When you create one, we store only:');
+  it('states the same time limits the code uses', () => {
+    const text = [...privacySections(privacyHtml()).values()].join(' ');
+    expect(RESUME_TTL_MS).toBe(14 * 24 * 60 * 60 * 1000);
+    expect(text).toContain('That saved place expires after 14 days.');
+    expect(KEEP_DAYS).toBe(400);
+    expect(text).toContain('deletes general results and sudoku solve times older than 400 days');
+    expect(promo.rememberDays).toBe(30);
+    expect(text).toContain('so it can stay out of the way for 30 days');
+    expect(DAYS_NEEDED).toBe(3);
+    expect(text).toContain('up to three dates on which you finished a puzzle');
+    expect(BREAK_STORAGE_MAX_AGE_MS).toBe(2 * 60 * 60 * 1000);
+    expect(text).toContain('in this tab for up to two hours');
   });
 
-  it('says autocheck counts as help for the crossword, as countsForStreak and the autocheck setting do', () => {
-    const text = privacyHtml().replace(/\s+/g, ' ');
-    expect(text).toContain('a try is a check, a reveal or autocheck');
-    expect(text).toContain('solved without check, reveal or autocheck, within 48 hours');
-  });
-
-  it('names flag reports, what Google sign-in shares and that the launch list is separate', () => {
-    const html = privacyHtml();
-    expect(html).toContain('Reports you send with the "Flag or comment" button');
-    expect(html).toContain('the reason you picked and your comment');
-    expect(html).toContain('until your');
-    expect(html).toContain('account is deleted');
-    expect(html).toContain('Supabase keeps them with');
-    expect(html).toContain('deleting an account doesn\'t take you off it');
-    expect(html).toContain('unsubscribe link');
-    expect(html).toContain('Signing out removes them.');
-  });
-
-  it('names each detail Google shares, the sign-in sessions and the service logs (Task 309, CLAUDE.md rule 2)', () => {
-    const text = privacyHtml().replace(/\s+/g, ' ');
-    for (const detail of ['your name', 'a link to your profile photo', 'your Google account id', 'your email address',
-      'whether Google has checked it']) {
-      expect(text).toContain(detail);
-    }
-    expect(text).toContain('never reads or shows your photo');
-    expect(text).toContain('Supabase keeps a sign-in session with your IP address and the kind of browser and device you used, until you sign out');
-    expect(text).toContain('which also include IP addresses, are kept for about a day');
-    expect(text).toContain('Your sign-in sessions, with the IP address and browser of each, until you sign out.');
-  });
-
-  it('describes live account export and deletion without hiding the Google sign-in disclosures', () => {
-    const html = privacyHtml();
-    const account = html.slice(html.indexOf('If you create an account'));
-    expect(account).toContain('<code>/account</code>');
-    expect(account).toContain('download your account data');
-    expect(account).toContain('delete your');
-    expect(html).toContain('Google sign-in');
-    expect(html).not.toContain('request deletion of your account');
-  });
-
-  it('preserves the newer staging explanation of local and signed-in progress', () => {
-    const html = privacyHtml();
-    expect(html).not.toContain('It never reaches us. It is only:');
-    expect(html).toContain('Without an account, nothing you do on a');
-    expect(html).toContain('Unless you choose to bring it into your account, your study progress is kept by your browser');
-    expect(html).toContain('your work on real questions is also saved to your account');
-    expect(html).toContain('stars stay on this device');
+  it('keeps the offline cache, the video player and the no-tracking statements', () => {
+    const text = [...privacySections(privacyHtml()).values()].join(' ');
+    expect(text).toContain('Cueory’s offline cache excludes daily games.');
+    expect(text).toContain('its YouTube player loads only when you choose to play it');
+    expect(text).toContain('Cueory does not track you across other websites');
   });
 });
 
@@ -213,11 +105,6 @@ describe('the one list of browser keys (src/config/storage-keys.ts)', () => {
       else if (key.prefix) expect(plan, key.name).toContain(key.prefix + 'example');
       else expect(plan, key.name).toContain(key.name);
     }
-  });
-
-  it.skipIf(!existsSync(privacyPath))('every key in the list is named on the built /privacy page', () => {
-    const shown = visibleCodeKeys(privacyHtml());
-    for (const key of storageKeys) expect(shown, `/privacy does not name ${key.name}`).toContain(key.name);
   });
 });
 

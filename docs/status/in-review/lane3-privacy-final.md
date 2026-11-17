@@ -1,0 +1,1 @@
+status: Lane 3 privacy final (draft PR): /privacy carries the adopted Privacy Notice p4 (depends on #831 and #832), still marked "Draft for review" and noindex, so the release audit keeps blocking until Christian confirms Cloudflare Web Analytics and the Codex re-vote finishes.
