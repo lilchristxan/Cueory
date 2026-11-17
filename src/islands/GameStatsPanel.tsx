@@ -2,7 +2,6 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { dailyGames } from '../config/games';
 import { browserStorage } from '../scripts/storage';
 import {
-  deleteStats,
   forgetHeldRounds,
   GAME_RESULT_EVENT,
   heldRounds,
@@ -14,9 +13,9 @@ import {
   triesInWords,
   type SavedStats,
 } from './gameresults';
-import { currentStreak, dailyStats, forget, recordResult, summary, summaryInWords, wordPathSummary, wordPathSummaryInWords, type GameId, type GameStats } from './gamestats';
+import { currentStreak, dailyStats, forget, recordResult, serialize, summary, summaryInWords, wordPathSummary, wordPathSummaryInWords, type GameId, type GameStats } from './gamestats';
 import { GUESSES } from './pulse';
-import { parseSudokuSolves } from './sudokustats';
+import { loadSudokuStats, parseSudokuSolves } from './sudokustats';
 
 const button = 'min-h-11 rounded-pill border border-control bg-page px-5 py-2.5 text-ink';
 
@@ -102,6 +101,9 @@ export default function GameStatsPanel({ games: order }: Props) {
     const now = latest();
     // Only rewrite a record that exists, so a visitor who never finished a game has nothing saved.
     if (now.on && hasRecord()) saveStats(browserStorage(), now.stats);
+    // Sudoku's per-level solve times follow the same 400 days: opening daily games or any game page deletes older
+    // ones from storage, not only when the sudoku stats view opens (Codex on #831).
+    loadSudokuStats(browserStorage(), localDay(new Date()));
     setSaved(now);
 
     // Keeps the rounds waiting in ./gameresults. Stats are always kept; only a browser that won't store them keeps none.
@@ -161,6 +163,23 @@ export default function GameStatsPanel({ games: order }: Props) {
     return undefined;
   };
 
+  /**
+   * Writes the shared record after a "forget": an empty one is deleted (removeItem), not written, so a full storage
+   * can't keep the old history in place (Codex on #831). False when the browser refused.
+   */
+  const storeForgotten = (stats: GameStats): boolean => {
+    try {
+      const storage = browserStorage();
+      if (!storage) return false;
+      if (stats.length === 0) storage.removeItem(STATS_STORAGE_KEY);
+      else storage.setItem(STATS_STORAGE_KEY, serialize(stats));
+      return true;
+    } catch {
+      return false;
+    }
+  };
+  const SITE_DATA = "clearing this site's data in your browser removes them.";
+
   // A forgotten game's rounds that are still waiting to be kept are forgotten too.
   const forgetGame = (game: GameId, name: string) => {
     const stats = stillOn();
@@ -168,18 +187,28 @@ export default function GameStatsPanel({ games: order }: Props) {
     forgetHeldRounds(game);
     focusNext.current = game;
     // Forgetting sudoku clears both its shared results and its per-level solve times (Codex on #831).
-    const sudokuGone = game !== 'triage' || forgetSudokuRecord();
-    if (!keep(forget(stats, game), `${name} stats forgotten.`)) return;
-    if (!sudokuGone) setSaid(`${name} results forgotten, but this browser didn't let us delete its solve times. clearing this site's data in your browser removes them.`);
+    const timesGone = game !== 'triage' || forgetSudokuRecord();
+    const next = forget(stats, game);
+    const resultsGone = storeForgotten(next);
+    // Show what storage holds now, whatever happened.
+    setSaved(latest());
+    if (resultsGone && timesGone) setSaid(`${name} stats forgotten.`);
+    else if (resultsGone) setSaid(`${name} results forgotten, but this browser didn't let us delete its solve times. ${SITE_DATA}`);
+    else if (timesGone && game === 'triage') setSaid(`${name} solve times forgotten, but this browser didn't let us delete its results. ${SITE_DATA}`);
+    else setSaid(`this browser didn't let us delete your ${name} stats, so they are still kept. ${SITE_DATA}`);
   };
 
   const forgetAll = () => {
     if (!stillOn()) return;
     forgetHeldRounds();
     focusNext.current = 'switch';
-    const sudokuGone = forgetSudokuRecord();
-    if (!keep([], 'all your stats are forgotten. new games are kept from now on.')) return;
-    if (!sudokuGone) setSaid("your results are forgotten, but this browser didn't let us delete sudoku's solve times. clearing this site's data in your browser removes them.");
+    const timesGone = forgetSudokuRecord();
+    const resultsGone = storeForgotten([]);
+    setSaved(latest());
+    if (resultsGone && timesGone) setSaid('all your stats are forgotten. new games are kept from now on.');
+    else if (resultsGone) setSaid(`your results are forgotten, but this browser didn't let us delete sudoku's solve times. ${SITE_DATA}`);
+    else if (timesGone) setSaid(`sudoku's solve times are forgotten, but this browser didn't let us delete your results. ${SITE_DATA}`);
+    else setSaid(`this browser didn't let us delete your stats, so they are still kept. ${SITE_DATA}`);
   };
 
   const games = order.flatMap((id) => dailyGames.filter((game) => game.id === id && game.ready));

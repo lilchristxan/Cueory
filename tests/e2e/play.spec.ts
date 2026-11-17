@@ -832,7 +832,8 @@ test.describe('daily games: private stats (D-76), always kept (2026-11-17)', () 
     await page.keyboard.press('Enter');
     await expect(pulseStats(page), `before Enter: ${before}`).toContainText('not played yet.');
     await expect(panel(page).getByRole('heading', { name: 'pillo', exact: true })).toBeFocused();
-    expect(JSON.parse((await kept(page))!).results).toEqual([]);
+    // Nothing left, so the record is deleted, not written empty (Codex on #831).
+    expect(await kept(page)).toBeNull();
 
     await page.reload();
     await solvePulse(page);
@@ -842,7 +843,8 @@ test.describe('daily games: private stats (D-76), always kept (2026-11-17)', () 
     await expect(pulseStats(page)).toContainText('not played yet.');
     await expect(panel(page).getByRole('heading', { name: 'your stats' })).toBeFocused();
     await expect(page.getByTestId('stats-live')).toHaveText('all your stats are forgotten. new games are kept from now on.');
-    expect(JSON.parse((await kept(page))!).results).toEqual([]);
+    // Nothing left, so the record is deleted, not written empty (Codex on #831).
+    expect(await kept(page)).toBeNull();
   });
 
   test('"forget all" in one tab holds in another tab that is already open', async ({ page, context }) => {
@@ -855,7 +857,8 @@ test.describe('daily games: private stats (D-76), always kept (2026-11-17)', () 
     await other.getByRole('button', { name: 'forget all my stats' }).click();
     // This tab shows it at once.
     await expect(pulseStats(page)).toContainText('not played yet.');
-    expect(JSON.parse((await kept(page))!).results).toEqual([]);
+    // Nothing left, so the record is deleted, not written empty (Codex on #831).
+    expect(await kept(page)).toBeNull();
     await other.close();
   });
 
@@ -879,7 +882,8 @@ test.describe('daily games: private stats (D-76), always kept (2026-11-17)', () 
     // The panel loads, and the forgotten round doesn't come back.
     release();
     await expect(pulseStats(page)).toContainText('not played yet.');
-    expect(JSON.parse((await kept(page))!).results).toEqual([]);
+    // Nothing left, so the record is deleted, not written empty (Codex on #831).
+    expect(await kept(page)).toBeNull();
   });
 
   test('a page back from the back/forward cache drops a round it was holding', async ({ page }) => {
