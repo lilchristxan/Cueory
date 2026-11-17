@@ -132,6 +132,12 @@ describe.skipIf(!existsSync(privacyPath))('privacy page browser storage disclosu
     expect(html).toContain('When you create one, we store only:');
   });
 
+  it('says autocheck counts as help for the crossword, as countsForStreak and the autocheck setting do', () => {
+    const text = privacyHtml().replace(/\s+/g, ' ');
+    expect(text).toContain('a try is a check, a reveal or autocheck');
+    expect(text).toContain('solved without check, reveal or autocheck, within 48 hours');
+  });
+
   it('names flag reports, what Google sign-in shares and that the launch list is separate', () => {
     const html = privacyHtml();
     expect(html).toContain('Reports you send with the "Flag or comment" button');
