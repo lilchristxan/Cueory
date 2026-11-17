@@ -8,7 +8,7 @@ import { wordPathSamples } from '../../config/gamesamples';
 const game = dailyGames.find((item) => item.id === 'suture')!;
 const samples = await wordPathSamples();
 ---
-<Layout title={game.name} description={game.line} socialImage="/share/games-scene.png" promo={false}>
+<Layout title={game.name} description={game.line} socialImage="/share/games-scene.png">
 <GamePage game={game}>
   <h1 slot="title" id="word-path-heading" class="display mt-4 text-center text-title wrap-anywhere sm:text-title-lg">{game.name}</h1>
   <section class="mt-6" aria-labelledby="word-path-heading">

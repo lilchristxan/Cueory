@@ -23,13 +23,14 @@ for (const [width, height] of [[320, 700], [390, 844], [820, 1180], [1440, 900]]
     test(`toolbar order and even spacing at ${width} px (${colorScheme === 'light' ? 'Light' : 'Evening'})`, async ({ page }) => {
       await page.setViewportSize({ width, height });
       await page.emulateMedia({ colorScheme });
-      await page.goto('/play');
+      await page.goto('/play/sudoku');
       await expect(game(page).getByRole('gridcell')).toHaveCount(81);
 
       // The levels, the time and error line, the tools and the board, in that order down the page.
       const section = page.getByTestId('sudoku-section');
       const tops = await Promise.all([
-        section.getByRole('heading', { name: 'sudoku', exact: true }),
+        // The page title (sudoku on its own page, 2026-11-17).
+        page.getByRole('heading', { level: 1, name: 'sudoku', exact: true }),
         game(page).getByRole('group', { name: 'difficulty' }).or(game(page).locator('.sudoku-levels')).first(),
         game(page).getByTestId('sudoku-status'),
         toolbar(page),
@@ -71,7 +72,7 @@ for (const [width, height] of [[320, 700], [390, 844], [820, 1180], [1440, 900]]
 }
 
 test('pause hides every number, givens included, with the same mark in every square; play brings them back', async ({ page }) => {
-  await page.goto('/play');
+  await page.goto('/play/sudoku');
   const cells = game(page).getByRole('gridcell');
   await expect(cells).toHaveCount(81);
   const before = await cells.allInnerTexts();
@@ -89,7 +90,7 @@ test('pause hides every number, givens included, with the same mark in every squ
 });
 
 test('leaving the page or the window pauses the game until the player presses play', async ({ page }) => {
-  await page.goto('/play');
+  await page.goto('/play/sudoku');
   await expect(game(page).getByRole('gridcell')).toHaveCount(81);
   const pause = toolbar(page).getByRole('button', { name: 'pause puzzle' });
   const resume = toolbar(page).getByRole('button', { name: 'resume puzzle' });
@@ -120,7 +121,7 @@ test('leaving the page or the window pauses the game until the player presses pl
 });
 
 test('players see "cue", never "candidate"', async ({ page }) => {
-  await page.goto('/play');
+  await page.goto('/play/sudoku');
   await expect(game(page).getByRole('gridcell')).toHaveCount(81);
   const mode = game(page).getByTestId('sudoku-mode');
   await expect(mode.getByRole('button')).toHaveText([/normal/, /cue/]);

@@ -35,7 +35,8 @@ test.beforeEach(async ({ page }, testInfo) => {
       value: { writeText: async (text: string) => { (window as unknown as { copied: string }).copied = text; } },
     });
   }, suppressPromo);
-  await page.goto('/play/pillo');
+  // A game page with the result dialog and enough height to scroll (each game on its own page, 2026-11-17).
+  await page.goto('/play/sudoku');
 });
 
 test('finished-game result announces the exact card and traps focus', async ({ page }) => {
