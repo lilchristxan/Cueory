@@ -72,11 +72,14 @@ export default function SudokuGame() {
   const noted = useMemo(() => new Set(notes.flatMap((mask, index) => (mask ? [index] : []))), [notes]);
   const activeMode = effectiveSudokuMode(mode, shiftHeld);
   const reported = useRef(false);
+  /** The player's own candidates from before auto candidates filled the board, restored when auto is turned off. */
+  const ownNotes = useRef<number[]>([]);
   /** The daily status hears about the first move once per page (it keys by game and day). */
   const started = useRef(false);
 
   useEffect(() => {
     const fresh = newSudokuBoard(puzzle.puzzle);
+    ownNotes.current = [...fresh.notes];
     setBoard(settings.autoCandidates ? withAutoNotes(fresh) : fresh); setHistory([]); setChecked(new Set());
     setSelected(firstOpen(puzzle.puzzle));
     setSeconds(0); setErrors(0); setPaused(false); setAuto(settings.autoCandidates);
@@ -189,12 +192,19 @@ export default function SudokuGame() {
     setSaid(chosen === 'candidate' ? 'candidate mode. numbers add or remove small candidates.' : 'normal mode. numbers fill the square.');
   };
   const toggleAuto = (on: boolean) => {
+    if (on === auto) return;
     setAuto(on);
-    if (on && !paused && !solved) {
+    if (!paused && !solved) {
       setHistory((past) => pushSudokuHistory(past, board));
-      setBoard(withAutoNotes(board));
+      if (on) {
+        ownNotes.current = [...notes];
+        setBoard(withAutoNotes(board));
+      } else {
+        // Turning auto off takes its candidates away and brings back the player's own, on squares still empty.
+        setBoard({ entries: [...entries], marks: new Set(marks), notes: ownNotes.current.map((mask, index) => (entries[index] || marks.has(index) ? 0 : mask)) });
+      }
     }
-    setSaid(on ? 'auto candidates on. every empty square shows its possible numbers.' : 'auto candidates off. your candidates stay until you change them.');
+    setSaid(on ? 'auto candidates on. every empty square shows its possible numbers.' : 'auto candidates off. your own candidates are back, and undo brings the auto ones back.');
   };
   const checkPuzzle = () => {
     if (paused || solved) return;
@@ -298,12 +308,14 @@ export default function SudokuGame() {
           const display = sudokuCellPresentation(entries, puzzle.puzzle, marks, index, paused);
           const { given, value } = display;
           const options = !paused && !value && !display.marked ? noteDigits(notes[index] ?? 0) : [];
+          // Each candidate digit ends in a space, so the visible text reads "6 8", not "68", and matches the label
+          // ("candidates 6, 8") for speech-input users (WCAG 2.5.3). The space never shows in the 3 by 3 layout.
           // Keep all styling in the pure highlighter; its pause guard must fail closed for private entries.
           const classes = sudokuCellClasses(index, { selected, entries, givens: puzzle.puzzle, conflicts, paused, settings, wrong, noted }).join(' ');
           const flags = paused || given ? '' : `${wrong.has(index) ? ', wrong' : ''}${settings.highlightConflicts && conflicts.has(index) ? ', conflict' : ''}`;
           const spoken = display.hidden ? 'hidden until resumed' : display.marked ? 'x mark' : value ? `${value}${flags}` : options.length ? `empty, candidates ${options.join(', ')}` : 'empty';
           return <button ref={(element) => { if (element) cells.current.set(index, element); else cells.current.delete(index); }} key={index} type="button" role="gridcell" tabIndex={paused ? -1 : selected === index ? 0 : -1} className={classes} aria-rowindex={row + 1} aria-colindex={column + 1} aria-selected={!paused && selected === index} aria-label={`row ${row + 1}, column ${column + 1}, ${spoken}${given ? ', given' : ''}`} data-given={given ? 'true' : 'false'} onClick={() => { if (!paused) setSelected(index); }}>
-            {display.marked ? <span className="sudoku-mark" aria-hidden="true">x</span> : value ? <span>{value}{!paused && wrong.has(index) && <span className="sudoku-wrong-mark" aria-hidden="true" />}</span> : options.length ? <span className="sudoku-candidates" aria-hidden="true">{NUMBERS.map((number) => <i key={number}>{options.includes(number) ? number : ''}</i>)}</span> : null}
+            {display.marked ? <span className="sudoku-mark" aria-hidden="true">x</span> : value ? <span>{value}{!paused && wrong.has(index) && <span className="sudoku-wrong-mark" aria-hidden="true" />}</span> : options.length ? <span className="sudoku-candidates" aria-hidden="true">{NUMBERS.map((number) => <i key={number}>{options.includes(number) ? `${number} ` : ''}</i>)}</span> : null}
           </button>;
           })}
         </div>)}

@@ -333,10 +333,12 @@ test.describe('/account signed in (fake client)', () => {
     page.on('download', download => files.push(download));
     await page.getByRole('button', { name: 'download spreadsheet files', exact: true }).click();
     await expect(page.getByText('your spreadsheet files are downloading.')).toBeVisible();
-    await expect.poll(() => files.length, { timeout: 15_000 }).toBe(14);
+    // 15 spreadsheet files since sudokuStats.csv joined the export (#720), plus the JSON file: 16 object URLs.
+    await expect.poll(() => files.length, { timeout: 15_000 }).toBe(15);
     expect(files.map(download => download.suggestedFilename())).toContain(`${file.suggestedFilename().slice(0, -5)}-studyEvents.csv`);
-    await expect.poll(async () => (await urls(page)).revoked, { timeout: 15_000 }).toBe(15);
-    expect((await urls(page)).made).toBe(15);
+    expect(files.map(download => download.suggestedFilename())).toContain(`${file.suggestedFilename().slice(0, -5)}-sudokuStats.csv`);
+    await expect.poll(async () => (await urls(page)).revoked, { timeout: 15_000 }).toBe(16);
+    expect((await urls(page)).made).toBe(16);
   });
 
   test('offers no file when a read fails, and never shows provider detail', async ({ page }) => {

@@ -300,7 +300,7 @@ test.describe('daily games: sudoku (Task 625)', () => {
     await game(page).getByRole('button', { name: /settings/i }).click();
     await expect(game(page).getByRole('dialog', { name: 'settings' }).getByRole('checkbox', { name: 'start in auto candidate mode' })).toBeChecked();
     await page.keyboard.press('Escape');
-    const hints = game(page).getByRole('checkbox', { name: /hints/i });
+    const hints = game(page).getByRole('checkbox', { name: /auto candidates/i });
     await expect(hints).toHaveAttribute('aria-checked', 'true');
     await hints.click();
     await expect(hints).toHaveAttribute('aria-checked', 'false');
@@ -350,9 +350,10 @@ test.describe('daily games: sudoku (Task 625)', () => {
       window.addEventListener('cueory:sudoku-solved', ((event: CustomEvent) => {
         document.documentElement.dataset.sudokuResult = JSON.stringify(event.detail);
       }) as EventListener, { once: true });
-      window.addEventListener('cueory:game-result', ((event: CustomEvent) => {
-        if (event.detail?.game === 'triage') document.documentElement.dataset.sudokuMisreported = 'true';
-      }) as EventListener);
+      // #720 (D-pending): a solved daily sudoku now counts in the shared stats record under its id triage.
+      const rounds: unknown[] = [];
+      (window as unknown as { sudokuRounds: unknown[] }).sudokuRounds = rounds;
+      window.addEventListener('cueory:game-result', ((event: CustomEvent) => { rounds.push(event.detail); }) as EventListener);
     });
     for (const index of open) {
       await cells(page).nth(index).click();
@@ -367,7 +368,8 @@ test.describe('daily games: sudoku (Task 625)', () => {
     await expect(result).toContainText('0 errors');
     const detail = JSON.parse((await page.locator('html').getAttribute('data-sudoku-result'))!);
     expect(detail).toMatchObject({ game: 'sudoku', day, level: 'easy', solved: true, errors: 0 });
-    await expect(page.locator('html')).not.toHaveAttribute('data-sudoku-misreported', 'true');
+    expect(await page.evaluate(() => (window as unknown as { sudokuRounds: unknown[] }).sudokuRounds))
+      .toEqual([{ game: 'triage', day, solved: true, tries: 0 }]);
   });
 });
 
@@ -771,7 +773,8 @@ test.describe('daily games: private stats (D-76)', () => {
     await expect(toggle(page)).toHaveAttribute('aria-checked', 'true');
     await expect(pulseStats(page)).toContainText('not played yet.');
     await expect(
-      panel(page).getByRole('listitem').filter({ has: page.getByRole('heading', { name: 'sort', exact: true }) }),
+      // #720 (D-pending): triage results show under sudoku, the game that now keeps them.
+      panel(page).getByRole('listitem').filter({ has: page.getByRole('heading', { name: 'sudoku', exact: true }) }),
     ).toContainText('played 1 day, solved 1.');
     // Deleted from this browser, not only hidden.
     expect(JSON.parse((await kept(page))!).results).toEqual([recent]);
