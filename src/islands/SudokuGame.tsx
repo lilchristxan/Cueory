@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { browserStorage } from '../scripts/storage';
 import { printGame } from './gameprint';
+import { GameHelpButton, GameHelpCard, useGameHelp } from './GameHelp';
+import { gameName } from '../config/games';
 import { localDay, showResultCard, sudokuResultCard } from './gameresults';
 import { THEME_ROWS, chooseSiteTheme, currentSiteTheme } from './sitetheme';
 import { sudokuCellClasses } from './sudokuhighlight';
@@ -56,7 +58,8 @@ export default function SudokuGame() {
   const [auto, setAuto] = useState(false);
   const [settings, setSettings] = useState<SudokuSettings>(() => loadSudokuSettings(browserStorage()));
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [howOpen, setHowOpen] = useState(false);
+  const help = useGameHelp('triage');
+  const howOpen = help.open;
   const [theme, setTheme] = useState(() => currentSiteTheme(browserStorage()));
   const [said, setSaid] = useState('');
   const dialog = useRef<HTMLDivElement>(null);
@@ -274,7 +277,7 @@ export default function SudokuGame() {
       <div className="sudoku-corner-actions">
         <button type="button" className="sudoku-icon-button print-control" aria-label="print this puzzle" onClick={printPuzzle}><svg viewBox="0 0 24 24" className="size-6" aria-hidden="true" focusable="false"><path d="M7 9V4h10v5M7 17H5.5A2.5 2.5 0 0 1 3 14.5v-3A2.5 2.5 0 0 1 5.5 9h13a2.5 2.5 0 0 1 2.5 2.5v3a2.5 2.5 0 0 1-2.5 2.5H17M7 14h10v6H7z" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" /></svg></button>
         <button type="button" className="sudoku-icon-button" aria-label="sudoku stats" aria-expanded={statsOpen} onClick={openStats}><svg viewBox="0 0 24 24" className="size-6" aria-hidden="true" focusable="false"><path d="M5 20V11M12 20V5M19 20v-6" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /></svg></button>
-        <button type="button" className="sudoku-icon-button" aria-label="how to play" aria-expanded={howOpen} onClick={() => setHowOpen((open) => !open)}>?</button>
+        <GameHelpButton help={help} name={gameName('triage')} className="sudoku-icon-button" />
       </div>
       {statsOpen && <div className="sudoku-how sudoku-stats" role="region" aria-label="sudoku stats" data-testid="sudoku-stats">
         <p className="font-medium">your sudoku stats</p>
@@ -291,11 +294,8 @@ export default function SudokuGame() {
           {kept.solves.length > 0 && <button type="button" className="sudoku-text-button" onClick={forgetSudokuStats}>forget sudoku stats</button>}
         </> : <p>stats are off. turn on “keep my stats” under your stats on this page to keep your sudoku times and streaks.</p>}
       </div>}
-      {howOpen && <div className="sudoku-how" role="region" aria-label="how to play sudoku">
-        <p className="font-medium">how to play</p>
-        <ol><li>fill each row, column and 3 by 3 box with 1 to 9, with no repeats.</li><li>pick a square, then type or tap a number. arrow keys move between squares.</li><li>normal mode fills the square; candidate mode adds small candidate numbers. space switches modes, and holding shift switches for that moment. auto candidates fills them in for you.</li><li>undo takes back your last move, clear empties the square (backspace does too), and check puzzle marks wrong squares with a slash. x adds your own mark.</li><li>pause hides your entries and x marks. the original numbers stay visible until you resume.</li></ol>
-      </div>}
     </div>
+    <GameHelpCard help={help} name={gameName('triage')} />
     <div className="sudoku-panel">
       <div className="sudoku-toolbar">
         <div className="sudoku-time">{settings.showTimer && <span>time: <strong>{elapsed}</strong></span>}{settings.showTimer && ' '}<button type="button" className="sudoku-small-button" aria-label={paused ? 'resume puzzle' : 'pause puzzle'} onClick={togglePause}><span aria-hidden="true">{paused ? '▶' : 'Ⅱ'}</span></button></div>

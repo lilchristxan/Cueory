@@ -3,6 +3,7 @@ import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from 
 import { browserStorage } from '../scripts/storage';
 import { localDay, reportRound } from './gameresults';
 import { printGame } from './gameprint';
+import { GameHelpButton, GameHelpCard, useGameHelp } from './GameHelp';
 import ResultBrandMark from './ResultBrandMark';
 import { dayLabel } from './daily';
 import { playSolvedTone } from './solvetone';
@@ -63,6 +64,7 @@ function Board({ puzzle, name }: Props) {
   const confirmButton = useRef<HTMLButtonElement>(null);
   const menus = useRef(new Map<string, HTMLDetailsElement>());
   const help = useId();
+  const howToPlay = useGameHelp('cueword');
   const { soundAllowed } = useSharedGameSettings();
   const warning = useId();
   const listId = useId();
@@ -262,19 +264,10 @@ function Board({ puzzle, name }: Props) {
         <button type="button" className="corner-button corner-button-quiet" aria-label="print this puzzle" onClick={printPuzzle}>
           <svg aria-hidden="true" viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M6 9V3h12v6"/><rect x="3" y="9" width="18" height="9" rx="2"/><path d="M7 14h10v7H7z"/></svg>
         </button>
-        <details className="crossword-help">
-          <summary className="corner-button corner-button-quiet" aria-label="how to play">?</summary>
-          <div className="crossword-help-panel">
-            <h3 className="font-medium">how to play</h3>
-            <p className="mt-2 text-sm text-ink-soft">{level} is {width} by {width}. tap a square and type, or use the letter buttons.</p>
-            <p className="mt-2 text-sm text-ink-soft">tap the selected square again, or press space, to switch across and down. an arrow against the current direction switches direction first, then moves.</p>
-            <p className="mt-2 text-sm text-ink-soft">tab and shift+tab go to the next or previous clue. tab on the last clue, shift+tab on the first, or escape leaves the grid. backspace deletes.</p>
-            <p className="mt-2 text-sm text-ink-soft">pencil letters are lighter and boxed with a dashed line, for guesses you're unsure of.</p>
-            <p className="mt-2 text-sm text-ink-soft">check and reveal work on a square, a word or the whole puzzle. a solve without them, within 48 hours of the puzzle's date, extends your streak.</p>
-            <p className="mt-2 text-sm text-ink-soft">the printer button makes a blank grid with the complete clue list.</p>
-          </div>
-        </details>
+        <GameHelpButton help={howToPlay} name={name} className="corner-button corner-button-quiet" />
       </div>
+
+      <GameHelpCard help={howToPlay} name={name} />
 
       {asking && (
         <div className="crossword-warning crossword-no-print" role="alertdialog" aria-labelledby={warning + '-title'} aria-describedby={warning} data-testid="crossword-warning">
