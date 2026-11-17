@@ -1,0 +1,76 @@
+---
+/**
+ * Accessibility statement (Task 200). It states a target (WCAG 2.2 AA, the level the browser tests check with axe,
+ * docs/ACCESSIBILITY.md) and the commitments CLAUDE.md rule 6 and D-48 already make, and it never claims a
+ * conformance certification: automated checks are not an audit. Not legal advice; attorney review pending.
+ */
+import Layout from '../layouts/Layout.astro';
+import LegalApproval from '../components/LegalApproval.astro';
+import { isLegalPageApproved } from '../config/legalapproval';
+import Prose from '../components/Prose.astro';
+import { site } from '../config/site';
+---
+
+<Layout title="accessibility" description="How Cueory works for everyone, what we test, and how to tell us when it doesn't." noindex={!isLegalPageApproved("accessibility")}>
+  <Prose>
+    <h1>accessibility</h1>
+    <LegalApproval page="accessibility" />
+
+    <h2>Our goal</h2>
+    <p>
+      We want every nursing student to be able to use {site.name}, whatever device or assistive technology they use.
+      Our target is the Web Content Accessibility Guidelines (WCAG) 2.2 at level AA. We are not there on every page yet,
+      and we don't claim a certified conformance level; this page says what we do and how to reach us when something
+      is in the way.
+    </p>
+
+    <h2>What we build in</h2>
+    <p>
+      These are design goals we work toward and check in tests, not a guarantee that every page already meets every
+      point. Please tell us about barriers that our tests missed.
+    </p>
+    <ul>
+      <li>We design dragging activities with alternatives for tapping and using a keyboard.</li>
+      <li>We work toward visible keyboard focus and a logical tab order.</li>
+      <li>We use words or symbols alongside colour to show right and wrong.</li>
+      <li>We test text contrast against WCAG AA targets in both the light and dark looks.</li>
+      <li>We test key animations and transitions with reduced-motion preferences enabled.</li>
+      <li>
+        We test text reflow when it is enlarged and aim to avoid page-wide horizontal scrolling. Large two-dimensional
+        games may need their own keyboard-accessible scrolling area.
+      </li>
+      <li>Buttons are real buttons with real names, and corner buttons are designed to be at least 44 by 44 pixels.</li>
+      <li>Our pages are built with a skip link, a main heading, headings in order and a page language.</li>
+      <li>Lessons and study tools keep working without JavaScript where they can, or say plainly when they can't.</li>
+      <li>Light and dark looks follow your device, and you can override them at the bottom of any page.</li>
+    </ul>
+
+    <h2>How we check</h2>
+    <p>
+      These are targets we test for, not a certified result. On every pull request that changes the site, automated
+      browser tests run the axe accessibility rules for WCAG 2.0 A and AA, 2.1 AA and 2.2 AA on a representative set of
+      pages at phone and desktop sizes, with further checks for reduced motion and enlarged text, and a high-contrast
+      check of the home page; before a release to the live site they also run at tablet size, in the dark look on the
+      pages covered by the dark-mode audit, and in Safari's and Firefox's engines.
+      Changes that touch only documentation skip them. Automated checks catch many problems but not all of them: manual
+      checks with a keyboard and with assistive technology are still needed, and the site has not yet had a full audit
+      by an independent accessibility specialist.
+    </p>
+
+    <h2>Known limits</h2>
+    <ul>
+      <li>Lesson videos play in YouTube's player, whose controls and captions are YouTube's.</li>
+      <li>The 3D anatomy lab has a text alternative for its structures, but a 3D scene itself can't be fully described in words.</li>
+      <li>Some lessons are samples or drafts and may still have gaps we haven't found.</li>
+      <li>Wide game grids can need a contained scrolling area at enlarged text sizes, and their layouts still need testing.</li>
+    </ul>
+
+    <h2>Tell us</h2>
+    <p>
+      If a page is hard to use, email <a href={`mailto:${site.contactEmail}`}>{site.contactEmail}</a> or use the "Flag
+      or comment" button at the bottom of the page. Tell us the page, what you were trying to do, and the device,
+      browser and assistive technology you were using. We use these details to investigate problems, but cannot promise
+      a particular reply time.
+    </p>
+  </Prose>
+</Layout>

@@ -1,0 +1,16 @@
+---
+/**
+ * A fact only Christian can supply inside a legal page (Task 200): the legal entity, its address, the governing law,
+ * the effective date, the copyright agent. It renders as visible text in double brackets so a reviewer cannot miss it,
+ * and `scripts/check-legal-release.mjs` refuses a production build while any page still contains one.
+ * Search the code for "CHRISTIAN-TEXT" to find every placeholder.
+ */
+interface Props {
+  /** What Christian must fill in, in plain words. */
+  what: string;
+}
+
+const { what } = Astro.props;
+---
+
+<strong class="key-term" data-placeholder="CHRISTIAN-TEXT">[[CHRISTIAN: {what}]]</strong>

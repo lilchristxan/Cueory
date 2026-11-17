@@ -62,6 +62,9 @@ export const footerLinks = [
   { href: '/privacy', label: 'privacy' },
   { href: '/terms', label: 'terms' },
   { href: '/disclaimer', label: 'disclaimer' },
+  { href: '/copyright', label: 'copyright' },
+  { href: '/accessibility', label: 'accessibility' },
+  { href: '/licenses', label: 'licences' },
   { href: '/support', label: 'support cueory' },
 ] as const;
 

@@ -27,16 +27,21 @@ describe('about page shell', () => {
     }
   });
 
-  it('leaves every text spot for Christian, including all lesson bullet points', () => {
+  it('replaces all eight text placeholders with meaningful, safely qualified copy', () => {
     const paragraphs = [...markup.matchAll(/<p\b([^>]*)>([\s\S]*?)<\/p>/g)];
     expect(paragraphs).toHaveLength(8);
     for (const paragraph of paragraphs) {
-      expect(paragraph[1]).toContain('data-placeholder="CHRISTIAN-TEXT"');
-      expect(paragraph[2]!.trim()).toBe('[Christian writes this]');
+      expect(paragraph[1]).not.toContain('data-placeholder');
+      expect(paragraph[2]!.trim()).not.toBe('[Christian writes this]');
+      expect(paragraph[2]!.trim().length).toBeGreaterThan(0);
     }
 
-    const lessonBullets = [...markup.matchAll(/<li>\s*<p\b[^>]*data-placeholder="CHRISTIAN-TEXT"[^>]*>\[Christian writes this\]<\/p>\s*<\/li>/g)];
+    const lessonBullets = [...markup.matchAll(/<li>\s*<p\b[^>]*>([\s\S]*?)<\/p>\s*<\/li>/g)];
     expect(lessonBullets).toHaveLength(3);
+    for (const bullet of lessonBullets) expect(bullet[1]!.trim().length).toBeGreaterThan(30);
+    expect(markup).toContain('Some content may not have citations or a licensed-nurse review');
+    expect(markup).toContain('Launch-update emails are not open yet');
+    expect(markup).toContain('Do not send anyone\'s private or patient information.');
   });
 
   it('uses the existing brand UI and does not index unfinished founder copy', () => {

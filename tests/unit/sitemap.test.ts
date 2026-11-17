@@ -2,6 +2,8 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import { indexablePages } from '../../src/config/routes';
+import { legalRoutes } from '../../src/config/legal';
+import { isRouteIndexable } from '../../src/config/legalapproval';
 import { GET, pageSourcePath, routeDeclaresNoindex, sitemapPages, sitemapXml, sourceDeclaresNoindex } from '../../src/pages/sitemap.xml';
 
 // Keep this response test independent of Astro's live content collection.
@@ -15,7 +17,6 @@ vi.mock('node:fs', async (importOriginal) => {
 const noindexPages = [
   '/auth/callback', '/reset-password', '/signin', '/signup', '/start', '/subscribed',
   '/progress', '/breaks', '/play/hello-cards', '/play/stat', '/account/two-factor',
-  '/privacy', '/terms', '/disclaimer',
 ];
 
 describe('sitemap', () => {
@@ -23,8 +24,13 @@ describe('sitemap', () => {
     const xml = sitemapXml();
     const listed = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((match) => match[1]);
 
-    expect(listed).toEqual(indexablePages.map((page) => `https://cueory.app${page}`));
+    expect(listed).toEqual(indexablePages.filter((page) => !routeDeclaresNoindex(page)).map((page) => `https://cueory.app${page}`));
     for (const page of noindexPages) expect(listed).not.toContain(`https://cueory.app${page}`);
+    // A legal page is included only after its exact text is approved.
+    for (const route of Object.keys(legalRoutes)) {
+      expect(indexablePages).toContain(route);
+      expect(listed.includes(`https://cueory.app${route}`)).toBe(isRouteIndexable(route));
+    }
   });
 
   it('lists each public game share landing page but not draft-only games', () => {
@@ -44,7 +50,7 @@ describe('sitemap', () => {
   it('rejects noindex routes even when someone mistakenly supplies them to the sitemap', () => {
     const xml = sitemapXml(['/', '/signin', '/privacy', '/preview/states']);
     expect([...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((match) => match[1]))
-      .toEqual(['https://cueory.app/']);
+      .toEqual(['https://cueory.app/', ...(isRouteIndexable('/privacy') ? ['https://cueory.app/privacy'] : [])]);
     expect(routeDeclaresNoindex('/signin')).toBe(true);
     expect(routeDeclaresNoindex('/preview/states')).toBe(true);
     expect(routeDeclaresNoindex('/')).toBe(false);
@@ -144,7 +150,7 @@ describe('sitemap', () => {
 
   it('excludes noindex pages from sitemapPages as well as sitemapXml', async () => {
     const pages = await sitemapPages();
-    expect(pages).toEqual(indexablePages);
+    expect(pages).toEqual(indexablePages.filter((page) => !routeDeclaresNoindex(page)));
     expect(pages.every((page) => !routeDeclaresNoindex(page))).toBe(true);
   });
 

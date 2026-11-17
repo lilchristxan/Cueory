@@ -65,10 +65,13 @@ describe('Cloudflare Workers Builds release gate', () => {
     expect(packageJson.scripts.prebuild).toBe('node scripts/check-legal-release.mjs');
   });
 
-  it('blocks main auto-deploys when legal sources contain known draft markers', () => {
-    const hasDraftCopy = ['terms', 'disclaimer', 'privacy'].some((page) =>
-      /<PlaceholderBlock\b|Draft for review|Last updated:\s*not yet published/i
-        .test(source(page)));
+  it('blocks main auto-deploys exactly when the structural check reports a problem', async () => {
+    // The helpers are pure (the script runs its gate only as a program), so the same judgement is made here.
+    const { structuralProblems } = await import('../../scripts/check-legal-release.mjs');
+    const { legal, legalApprovals } = await import('../../src/config/legal');
+    const { isLegalPageApproved } = await import('../../src/config/legalapproval');
+    const hasDraftCopy = structuralProblems(legal.minimumAge, (page: string) =>
+      isLegalPageApproved(page as Parameters<typeof isLegalPageApproved>[0], legalApprovals)).length > 0;
     const main = run({ WORKERS_CI: '1', WORKERS_CI_BRANCH: 'main' });
     const fullRefMain = run({ WORKERS_CI: '1', WORKERS_CI_BRANCH: 'refs/heads/main' });
     expect(fullRefMain.status).toBe(hasDraftCopy ? 1 : 0);
@@ -77,6 +80,23 @@ describe('Cloudflare Workers Builds release gate', () => {
     expect(run({ WORKERS_CI: '1', WORKERS_CI_BRANCH: 'staging' }).status).toBe(0);
     expect(run({ WORKERS_CI: '1', WORKERS_CI_BRANCH: 'refs/heads/staging' }).status).toBe(0);
     expect(run({ GITHUB_EVENT_NAME: 'pull_request', GITHUB_BASE_REF: 'staging' }).status).toBe(0);
+  });
+
+  it('runs the rendered-text pass after every build', () => {
+    const packageJson = JSON.parse(readFileSync(new URL('../../package.json', import.meta.url), 'utf8'));
+    expect(packageJson.scripts.postbuild).toBe('node scripts/check-legal-release.mjs --rendered');
+  });
+});
+
+describe('accessibility wording remains a tested goal, not a certification or service-level promise', () => {
+  it('does not claim universal reflow or a response time that has not been confirmed', () => {
+    const page = source('accessibility');
+    expect(page).toContain('These are design goals we work toward and check in tests');
+    expect(page).toContain('page-wide horizontal scrolling');
+    expect(page).toContain('keyboard-accessible scrolling area');
+    expect(page).toContain('cannot promise');
+    expect(page).not.toContain('no page scrolls sideways');
+    expect(page).not.toContain('within ten business days');
   });
 });
 
@@ -94,4 +114,10 @@ describe.skipIf(!shouldAuditLegalCopy(process.env))('legal pages ready for a mai
   it('contains a published, dated Privacy Policy instead of a draft', () => {
     expect(rendered('privacy.html')).not.toMatch(/Draft for review|Last updated:\s*not yet published/i);
   });
+
+  it.each(['terms', 'privacy', 'disclaimer', 'copyright', 'accessibility', 'licenses'])(
+    '%s has every [[CHRISTIAN: …]] fact filled in and shows Christian\'s approval date', (page) => {
+      expect(rendered(`${page}.html`)).not.toContain('[[CHRISTIAN');
+      expect(rendered(`${page}.html`)).toMatch(/Approved by Christian, founder, on \d{4}-\d{2}-\d{2}/);
+    });
 });

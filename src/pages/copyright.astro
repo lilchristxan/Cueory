@@ -1,0 +1,127 @@
+---
+/**
+ * Copyright and DMCA notice-and-takedown page (Task 200). The notice and counter-notice lists follow the elements
+ * named in 17 U.S.C. § 512(c)(3) and § 512(g)(3). The safe harbour also needs a designated agent registered with the
+ * U.S. Copyright Office: until Christian registers one, the agent's details are <LegalPlaceholder> marks and the
+ * production build is blocked. Not legal advice; attorney review pending.
+ */
+import Layout from '../layouts/Layout.astro';
+import LegalPlaceholder from '../components/LegalPlaceholder.astro';
+import LegalApproval from '../components/LegalApproval.astro';
+import { isLegalPageApproved } from '../config/legalapproval';
+import Prose from '../components/Prose.astro';
+import { site } from '../config/site';
+---
+
+<Layout title="copyright" description="Who owns what on Cueory, and how to report a copyright problem." noindex={!isLegalPageApproved("copyright")}>
+  <Prose>
+    <h1>copyright and takedown requests</h1>
+    <LegalApproval page="copyright" />
+
+    <h2>What belongs to whom</h2>
+    <p>
+      The lessons, questions, cards, puzzles, design, name and logo of {site.name} belong to{' '}
+      <LegalPlaceholder what="legal entity name, the same as on the terms page" /> or to the people who licensed them
+      to us. Our source code is public to view on GitHub, but it is not open source. GitHub's own terms of service give
+      other GitHub users the right to view, and to fork within GitHub, anything in a public repository; beyond that,
+      the code may not be copied, changed or used elsewhere without our written permission.{' '}
+      <LegalPlaceholder what="with a lawyer: confirm the GitHub terms wording (Terms of Service, section D, licence grant to other users), and decide whether anything in the public repository is too proprietary to stay there" /> Material from other creators, such as the open textbook we quote, the 3D anatomy models and
+      the fonts, keeps its own licence; we credit each one on the <a href="/licenses">licences page</a> and beside the
+      material itself.
+    </p>
+
+    <h2>Using our content</h2>
+    <p>
+      You may use {site.name} for your own personal, non-commercial study. Please don't copy, scrape, re-publish or
+      re-sell Cueory-owned material (our text, layout and branding), and don't hit our servers with automated access.
+      Material that carries a CC BY 4.0 credit, such as the adapted textbook text and the anatomy models listed on the{' '}
+      <a href="/licenses">licences page</a>, stays reusable under its own licence with attribution; we add no
+      restriction to it. If you want to use something of ours beyond personal study, email us and ask.{' '}
+      <LegalPlaceholder what="with a lawyer: confirm which adaptations Cueory owns outright and which remain CC BY 4.0 derivatives" />
+    
+    </p>
+
+    <h2>No public posting</h2>
+    <p>
+      {site.name} has no place where visitors publish content to each other. Students can send us private reports,
+      comments and emails, but those messages are not posted for other visitors. Account details, setup answers,
+      practice responses and study activity are different: they are private data handled under our{' '}
+      <a href="/privacy">privacy page</a>, not content posted to other students. Material shown publicly on the site
+      is published by Cueory, so a complaint about that material is handled by us.
+    </p>
+
+    <h2>Reporting a copyright problem</h2>
+    <p>
+      We respect other people's rights. If you believe material on {site.name} infringes a copyright you own or
+      represent, email <a href={`mailto:${site.contactEmail}`}>{site.contactEmail}</a> with "copyright" in the subject.
+      We will read it and review the material. We make no claim here that the safe harbour of 17 U.S.C. § 512 applies to
+      {site.name}. We have not verified whether a designated agent is registered with the U.S. Copyright Office. Before
+      this page is approved, Christian and legal counsel must confirm whether registration applies and which public
+      contact information, if any, is required.{' '}
+      <LegalPlaceholder what="Christian and counsel: confirm whether 17 U.S.C. § 512 applies, check the Copyright Office directory for any existing registration and its accuracy, determine whether a designated agent must be registered, and if applicable replace this paragraph with the verified agent's name, email, phone and mailing address. Do not assume registration status." />
+    </p>
+    <p>A complete notice helps us act, and under the law it includes:</p>
+    <ol>
+      <li>your physical or electronic signature, or that of a person authorised to act for the copyright owner;</li>
+      <li>which copyrighted work you say has been infringed (or a representative list, if there are several);</li>
+      <li>where the material is on {site.name}, with enough detail, such as the page address, for us to find it;</li>
+      <li>your name, mailing address, telephone number and email address;</li>
+      <li>a statement that you believe in good faith that the use is not authorised by the copyright owner, its agent or the law;</li>
+      <li>a statement, made under penalty of perjury, that the information in the notice is accurate and that you are the owner or authorised to act for the owner.</li>
+    </ol>
+    <p>
+      Knowingly misrepresenting that material is infringing can make you liable for damages. If you are not sure whether
+      a use is infringing, consider getting legal advice before you send a notice.
+    </p>
+
+    <h2>What we do with a notice</h2>
+    <p>
+      We review notices we receive and consider corrections or removal where a complaint about our own material is
+      well founded. If a private report or message is involved, we review it without publishing it. We do not yet
+      promise to contact its sender: any notification process must be verified first. We keep the notice with our
+      records.{' '}
+      <LegalPlaceholder what="Christian and counsel: confirm who reads and records copyright notices, when and how a sender would be notified if their private feedback is affected, and any response timetable before promising notification or timing" />
+    </p>
+
+    <h2>If your material was removed: counter-notice</h2>
+    <p>
+      If something you provided was removed and you believe it was removed by mistake or misidentification, you may
+      send a written counter-notice to the same email address. It must include:
+    </p>
+    <ol>
+      <li>your physical or electronic signature;</li>
+      <li>which material was removed, and where it appeared before it was removed;</li>
+      <li>a statement, made under penalty of perjury, that you believe in good faith the material was removed by mistake or misidentification;</li>
+      <li>
+        your name, address and telephone number, and a statement that you consent to the jurisdiction of the federal
+        district court for your address (or, if you are outside the United States, for any district in which we may be
+        found), and that you will accept service of process from the person who sent the original notice or their agent.
+      </li>
+    </ol>
+    <p>
+      Note that a counter-notice is forwarded in full, with your contact details, to the person who sent the original
+      notice; our <a href="/privacy">privacy page</a> says how notices are kept. When we receive a valid counter-notice
+      we send a copy to the person who sent the original notice. Unless they
+      tell us within ten business days that they have filed a court action to stop the infringement, we may restore the
+      material between ten and fourteen business days after we receive your counter-notice.
+    </p>
+
+    <h2>Repeat infringers</h2>
+    <p>
+      We may close the account of anyone who infringes copyright through the site, and we may remove any material at
+      our discretion, whether or not a notice has been sent.{' '}
+      <LegalPlaceholder what="with a lawyer: a formal repeat-infringer policy (strikes, records, termination) is one of the conditions of the § 512 safe harbour; adopt one here only if you pursue that safe harbour" />
+    </p>
+
+    <h2>Trademarks</h2>
+    <p>
+      "cueory" and the cueory logo are our marks. Exam, school and publisher names on the site belong to their owners
+      and are used only to describe what a lesson is about.
+    </p>
+
+    <h2>Questions</h2>
+    <p>
+      For anything other than a formal notice, email <a href={`mailto:${site.contactEmail}`}>{site.contactEmail}</a>.
+    </p>
+  </Prose>
+</Layout>

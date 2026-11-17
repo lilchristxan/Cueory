@@ -300,7 +300,7 @@ export function saveSort(storage: KeyValueStorage | undefined, deckId: string, c
 export function exportProgress(progress: Progress, today: string): string {
   return `${JSON.stringify(
     {
-      about: 'your cueory progress, saved in this browser only. nothing here was sent to cueory.',
+      about: 'your cueory progress, made from what this browser saved on this device. if you were signed in, your course and exam date may also be saved to your account; nothing else here was sent to cueory.',
       exportedOn: today,
       ...progress,
     },

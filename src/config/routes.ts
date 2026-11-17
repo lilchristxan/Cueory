@@ -20,4 +20,11 @@ export const indexablePages = [
   '/play/sudoku',
   '/play/word-path',
   '/support',
+  // Founder-approved legal pages become indexable only after their source digests match.
+  '/terms',
+  '/privacy',
+  '/disclaimer',
+  '/copyright',
+  '/accessibility',
+  '/licenses',
 ] as const;
