@@ -1,10 +1,10 @@
 /**
- * Private daily-game stats on /play (D-76). Each game reports a finished round; the stats panel keeps the results
- * only when the student has turned stats on. The record itself (first result of each game and day; pillo's and word path's
+ * Private daily-game stats (D-76). Each game reports a finished round and the stats panel keeps it. The record itself (first result of each game and day; pillo's and word path's
  * streaks are worked out from it, and the crossword keeps a streak flag; Task 719, #722, Task 721) is the helper's logic in ./gamestats, and results older than 400 days are dropped by today's date.
  *
- * Stats are off until the student turns them on: turned on means the record exists in this browser's storage, and
- * turning them off deletes it. Nothing here is ever sent anywhere.
+ * Stats are always kept in this browser (Christian's decision, 2026-11-17; there is no on/off switch any more), and
+ * "forget" deletes them. Only a browser that won't store anything (private browsing, blocked site data) keeps none.
+ * Nothing here is ever sent anywhere.
  */
 import type { KeyValueStorage } from '../scripts/storage';
 import { dayLabel } from './daily';
@@ -237,7 +237,7 @@ export const STATS_STORAGE_KEY = 'cueory-game-stats';
 
 /**
  * Sudoku's own per-level record (#720): the day, level and solve time of each level's first solve of a day. It is kept
- * only while stats are on, and turning stats off or "forget all" deletes it with the shared record (./sudokustats).
+ * like the other stats (always, in this browser), and "forget all" deletes it with the shared record (./sudokustats).
  */
 export const SUDOKU_STATS_STORAGE_KEY = 'cueory-sudoku-stats';
 
@@ -267,8 +267,8 @@ export function localDay(date: Date): string {
 }
 
 /**
- * Rounds finished on this page that aren't kept yet, in memory only. A round waits here while stats are off, in case
- * the student turns them on next, and while the stats panel's own code is still loading. Every island on the page
+ * Rounds finished on this page that aren't kept yet, in memory only. A round waits here while the stats panel's own
+ * code is still loading. Every island on the page
  * shares this module, so they share the list.
  */
 const held: RoundResult[] = [];
@@ -331,19 +331,21 @@ export function firstKeptDay(today: string): string {
 }
 
 export interface SavedStats {
-  /** Whether the student has turned stats on in this browser. */
+  /** Whether this browser can keep stats (false only when its storage is missing or blocked). */
   on: boolean;
   stats: GameStats;
 }
 
 /**
  * What this browser keeps, as of `today` in the visitor's own time zone: results from before the last 400 days are
- * left out. Missing or blocked storage means stats are off; a record that can't be read starts empty.
+ * left out. No record yet means nothing kept so far (stats are always on); missing or blocked storage means none can
+ * be kept; a record that can't be read starts empty.
  */
 export function loadStats(storage: KeyValueStorage | undefined, today: string): SavedStats {
   try {
-    const text = storage?.getItem(STATS_STORAGE_KEY) ?? null;
-    if (text === null) return { on: false, stats: [] };
+    if (!storage) return { on: false, stats: [] };
+    const text = storage.getItem(STATS_STORAGE_KEY);
+    if (text === null) return { on: true, stats: [] };
     const first = firstKeptDay(today);
     return { on: true, stats: parseStats(text).filter((result) => result.day >= first) };
   } catch {
@@ -351,7 +353,7 @@ export function loadStats(storage: KeyValueStorage | undefined, today: string): 
   }
 }
 
-/** Keeps the record (which also turns stats on). False when the browser won't store it. */
+/** Keeps the record. False when the browser won't store it. */
 export function saveStats(storage: KeyValueStorage | undefined, stats: GameStats): boolean {
   try {
     if (!storage) return false;
@@ -362,7 +364,7 @@ export function saveStats(storage: KeyValueStorage | undefined, stats: GameStats
   }
 }
 
-/** Turns stats off by deleting the record. False when the browser won't let us. */
+/** Forgets every kept result by deleting the record. False when the browser won't let us. */
 export function deleteStats(storage: KeyValueStorage | undefined): boolean {
   try {
     if (!storage) return false;
