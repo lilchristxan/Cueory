@@ -90,30 +90,78 @@ test('stays away on a page where the once-only promo panel is due', async ({ pag
   await expect(popup(page)).toBeHidden();
 });
 
+// Rule (coordinator's decision on #832): once a "flag or comment" report has been opened on a page, the pop-up is
+// skipped for the rest of that page view. No retry after the report closes, so focus stays where the report put it,
+// and nothing is saved, so the pop-up may appear on a later page.
+const footerFlag = (page: Page) => page.locator('[data-footer-flag]').getByRole('button', { name: 'flag or comment' });
+const savedTime = (page: Page) => page.evaluate((key) => localStorage.getItem(key), SIGNUP_POPUP_STORAGE_KEY);
+
 for (const scheme of ['light', 'dark'] as const) {
-  test(`waits while a "flag or comment" report is open, then appears once it closes (${scheme === 'light' ? 'Light' : 'Evening'})`, async ({ page }) => {
+  test(`after a footer report is opened, skips the page view and leaves focus on the opener (${scheme === 'light' ? 'Light' : 'Evening'})`, async ({ page }) => {
     await page.emulateMedia({ colorScheme: scheme, reducedMotion: 'reduce' });
     await openAt(page, '/');
-    const flag = page.locator('[data-footer-flag]').getByRole('button', { name: 'flag or comment' });
+    const flag = footerFlag(page);
     await flag.click();
     await expect(flag).toHaveAttribute('aria-expanded', 'true');
     const report = page.locator(`#${await flag.getAttribute('aria-controls')}`);
     await expect(report).toBeVisible();
 
-    // Well past 10 seconds: the report stays usable and the pop-up waits.
-    await page.clock.runFor(15_000);
+    // Past 10 seconds the report stays usable: the pop-up doesn't open over it.
+    await page.clock.runFor(12_000);
     await expect(popup(page)).toBeHidden();
-    await expect(report).toBeVisible();
     expect(await report.evaluate((el) => el.closest('[inert]') === null)).toBe(true);
 
-    // Closing the report lets the pop-up's usual retry open it.
-    await flag.click();
+    // The report closes and puts focus back on its opener; well past the old 500 ms retry, focus is still there.
+    await report.focus();
+    await page.keyboard.press('Escape');
     await expect(flag).toHaveAttribute('aria-expanded', 'false');
-    await page.clock.runFor(1_000);
+    await expect(flag).toBeFocused();
+    await page.clock.runFor(1_500);
+    await expect(flag).toBeFocused();
+    await expect(popup(page)).toBeHidden();
+    await page.clock.runFor(15_000);
+    await expect(popup(page)).toBeHidden();
+    // A skipped page view saves nothing...
+    expect(await savedTime(page)).toBeNull();
+
+    // ...so the pop-up may appear on a later page as usual.
+    await page.goto('/privacy');
+    await page.clock.runFor(11_000);
     await expect(popup(page)).toBeVisible();
-    await expect(popup(page).getByRole('button', { name: 'close' })).toBeFocused();
   });
 }
+
+test('after the per-game corner flag opens the footer report, the page view is skipped too', async ({ page }) => {
+  await openAt(page, '/');
+  // A stand-in for #833's game-corner flag, which opens the same footer report form: an a[data-game-flag] link.
+  await page.evaluate(() => {
+    const link = document.createElement('a');
+    link.href = '#footer-flag';
+    link.dataset.gameFlag = '';
+    link.textContent = 'flag or comment on this game';
+    link.addEventListener('click', (event) => {
+      event.preventDefault();
+      document.querySelector<HTMLButtonElement>('[data-footer-flag] button[aria-controls]')?.click();
+    });
+    document.querySelector('main')?.append(link);
+  });
+  const gameFlag = page.locator('a[data-game-flag]');
+  await gameFlag.click();
+  await expect(footerFlag(page)).toHaveAttribute('aria-expanded', 'true');
+  await page.clock.runFor(2_000);
+  const report = page.locator(`#${await footerFlag(page).getAttribute('aria-controls')}`);
+  await report.focus();
+  await page.keyboard.press('Escape');
+  await expect(footerFlag(page)).toHaveAttribute('aria-expanded', 'false');
+  // Focus is wherever the report put it (the footer button today; the game flag once #833 lands), never the pop-up.
+  const opener = await page.evaluate(() => document.activeElement?.matches('a[data-game-flag], [data-footer-flag] button') ?? false);
+  expect(opener).toBe(true);
+  await page.clock.runFor(1_500);
+  await page.clock.runFor(15_000);
+  await expect(popup(page)).toBeHidden();
+  expect(await page.evaluate(() => document.activeElement?.matches('a[data-game-flag], [data-footer-flag] button') ?? false)).toBe(true);
+  expect(await savedTime(page)).toBeNull();
+});
 
 for (const path of ['/learn/study-skills', '/play/sudoku']) {
   test(`never appears on ${path}`, async ({ page }) => {

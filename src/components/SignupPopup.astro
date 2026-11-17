@@ -7,8 +7,9 @@
  *   it was shown or closed is kept in this browser's local storage (`cueory-signup-popup-seen`, on /privacy) and never
  *   sent to us. A browser that can't remember never sees it.
  * - Not on a page where the once-only promo panel (D-59) is due: one launch-list prompt per page.
+ * - Not for the rest of a page view once a "flag or comment" report has been opened on it (nothing saved).
  * - Never on lesson or study screens (/learn, and the study layout) or a game's own page (/play/<game>), never in print, never without JavaScript, and it
- *   waits while another dialog, the account menu, a "flag or comment" report or a game result is open, while the visitor is
+ *   waits while another dialog, the account menu or a game result is open, while the visitor is
  *   typing, and while the tab is in the background.
  * - Accessible modal: focus moves to its close button and stays inside (Tab wraps), Escape and × close it, focus goes
  *   back where it was, and reduced motion gets no animation.
@@ -122,7 +123,6 @@ const logo = (width: number) => `/brand/v1/logo-full-dark-${width}.png`;
       document.querySelector('[data-promo][data-open]') !== null ||
       document.querySelector('#account-menu:not([hidden])') !== null ||
       document.querySelector('[data-result-dialog]') !== null ||
-      document.querySelector(OPEN_REPORT_SELECTOR) !== null ||
       isTextEntry(document.activeElement as HTMLElement | null);
 
     const focusables = () =>
@@ -192,12 +192,24 @@ const logo = (width: number) => `/brand/v1/logo-full-dark-${width}.png`;
       closeButton?.focus({ preventScroll: true });
     };
 
+    /**
+     * Once a "flag or comment" report has been opened on this page (the footer flag, the per-game corner flag that
+     * opens the same footer form, or any report form), the pop-up is skipped for the rest of this page view: no retry
+     * after the report closes, so it never takes the focus the report just put back. Nothing is saved, so it may
+     * appear on a later page as usual.
+     */
+    let reportOpened = false;
+
     let triggered = false;
     const trigger = () => {
       if (triggered) return;
       triggered = true;
       document.removeEventListener('visibilitychange', onVisibility);
-      const attempt = () => (busy() ? window.setTimeout(attempt, 500) : open());
+      const attempt = () => {
+        if (reportOpened) return;
+        if (busy()) window.setTimeout(attempt, 500);
+        else open();
+      };
       attempt();
     };
 
@@ -219,6 +231,18 @@ const logo = (width: number) => `/brand/v1/logo-full-dark-${width}.png`;
     const onVisibility = () => (document.hidden ? pauseTimer() : startTimer());
     document.addEventListener('visibilitychange', onVisibility);
     if (!document.hidden) startTimer();
+
+    const noteReport = () => {
+      if (reportOpened || dialog.open || document.querySelector(OPEN_REPORT_SELECTOR) === null) return;
+      reportOpened = true;
+      pauseTimer();
+      triggered = true;
+      document.removeEventListener('visibilitychange', onVisibility);
+      reportWatch.disconnect();
+    };
+    const reportWatch = new MutationObserver(noteReport);
+    reportWatch.observe(document.body, { subtree: true, attributes: true, attributeFilter: ['aria-expanded'] });
+    noteReport();
 
     // Leaving counts as closing, so the 3-hour wait starts from when the visitor left.
     window.addEventListener('pagehide', close);
