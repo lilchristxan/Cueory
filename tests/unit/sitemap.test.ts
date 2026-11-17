@@ -15,7 +15,7 @@ vi.mock('node:fs', async (importOriginal) => {
 const noindexPages = [
   '/auth/callback', '/reset-password', '/signin', '/signup', '/start', '/subscribed',
   '/progress', '/breaks', '/play/hello-cards', '/play/stat', '/account/two-factor',
-  '/privacy', '/terms', '/disclaimer',
+  '/privacy',
 ];
 
 describe('sitemap', () => {
@@ -25,6 +25,14 @@ describe('sitemap', () => {
 
     expect(listed).toEqual(indexablePages.map((page) => `https://cueory.app${page}`));
     for (const page of noindexPages) expect(listed).not.toContain(`https://cueory.app${page}`);
+  });
+
+  it('lists the approved Terms and Disclaimer as indexable pages', () => {
+    const xml = sitemapXml();
+    for (const path of ['/terms', '/disclaimer']) {
+      expect(routeDeclaresNoindex(path)).toBe(false);
+      expect(xml).toContain(`<loc>https://cueory.app${path}</loc>`);
+    }
   });
 
   it('lists each public game page but not draft-only games', () => {

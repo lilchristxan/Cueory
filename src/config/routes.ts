@@ -20,4 +20,7 @@ export const indexablePages = [
   '/play/sudoku',
   '/play/word-path',
   '/support',
+  // Final legal text (Christian, 2026-11-17). /privacy joins once its wording is approved.
+  '/terms',
+  '/disclaimer',
 ] as const;
