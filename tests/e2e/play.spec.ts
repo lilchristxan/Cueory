@@ -38,19 +38,34 @@ const axe = async (page: Page) => {
         scrollY: window.scrollY,
         bodyStyle: document.body.getAttribute('style'),
         inert: [...document.querySelectorAll('[inert]')].map((element) => element.tagName + '.' + String(element.className).slice(0, 30)),
-        dialogs: [...document.querySelectorAll('dialog[open], [data-testid="game-result-dialog"], [data-promo]:not([hidden])')].map((element) => element.tagName + (element.getAttribute('data-testid') ?? '')),
+        dialogs: [...document.querySelectorAll('dialog[open], [data-testid="game-result-dialog"], [data-promo][data-open]')].map((element) => element.tagName + (element.getAttribute('data-testid') ?? '')),
         active: document.activeElement?.tagName + ' ' + (document.activeElement?.getAttribute('aria-label') ?? ''),
       }));
       throw new Error(`${error.message} | page: ${why}`);
     });
   return new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa']).analyze();
 };
+/**
+ * Fixes the page's clock, then marks the once-only panels seen again by that clock. The marks above are written by the
+ * real clock (init scripts run before the clock is installed), while the panels compare them with the page's fixed
+ * date, so the launch-updates pop-up's 3-hour wait (and from December the promo's 30 days) would count as long over
+ * and open part-way through a test. Registered after the clock, this script sees the fixed date.
+ */
+async function fixClock(page: Page, date: Date) {
+  await page.clock.setFixedTime(date);
+  await page.addInitScript(() => {
+    try {
+      localStorage.setItem('cueory-promo-seen', String(Date.now()));
+      localStorage.setItem('cueory-signup-popup-seen', String(Date.now()));
+    } catch { /* storage blocked: the panels never show then anyway */ }
+  });
+}
 const field = (page: Page) => page.getByLabel('your guess', { exact: true });
 const live = (page: Page) => page.getByTestId('pulse-live');
 
 test.describe('daily games: pillo (Task 114)', () => {
   test.beforeEach(async ({ page }) => {
-    await page.clock.setFixedTime(new Date('2026-11-01T15:00:00'));
+    await fixClock(page, new Date('2026-11-01T15:00:00'));
     await page.goto('/play/pillo');
     await expect(page.getByTestId('pulse')).toBeVisible();
   });
@@ -172,10 +187,12 @@ test.describe('daily games: pillo settings and finish screen (Task 719)', () => 
     const resultDialog = page.getByTestId('game-result-dialog');
     await expect(resultDialog.getByRole('button', { name: 'close results' })).toBeFocused();
     await resultDialog.getByRole('button', { name: 'close results' }).click();
+    // The dialog hands focus back on the next frame; wait for it, so a test's next focus isn't taken back.
+    await expect(page.getByTestId('pulse-result')).toBeFocused();
   };
 
   test.beforeEach(async ({ page }) => {
-    await page.clock.setFixedTime(new Date('2026-11-01T15:00:00'));
+    await fixClock(page, new Date('2026-11-01T15:00:00'));
     await page.goto('/play/pillo');
     await expect(page.getByTestId('pulse')).toBeVisible();
   });
@@ -285,7 +302,7 @@ test.describe('daily games: pillo settings and finish screen (Task 719)', () => 
 
 test.describe('the /play hub (each game on its own page, 2026-11-17)', () => {
   test('names the four games as cards, says the puzzles are samples once, loads no game, and passes axe', async ({ page }) => {
-    await page.clock.setFixedTime(new Date('2026-11-01T15:00:00'));
+    await fixClock(page, new Date('2026-11-01T15:00:00'));
     await page.goto('/play');
     await expect(page.getByRole('heading', { level: 1, name: 'daily games' })).toBeVisible();
     await expect(page.getByTestId('sample-note')).toHaveText('for now these are sample puzzles with everyday words.');
@@ -319,7 +336,7 @@ test.describe('daily games on a narrow phone', () => {
   test('at 320 px nothing scrolls sideways, and every letter key and pill stays on screen', async ({ page }) => {
     await page.setViewportSize({ width: 320, height: 700 });
     // 3 November: the third sample, "blend".
-    await page.clock.setFixedTime(new Date('2026-11-03T15:00:00'));
+    await fixClock(page, new Date('2026-11-03T15:00:00'));
     await page.goto('/play/pillo');
     // Two wrong guesses: the game goes on, so the letter keys stay on screen too.
     for (const word of ['plane', 'candy']) {
@@ -366,7 +383,7 @@ test.describe('daily games: sudoku (Task 625)', () => {
   const cells = (page: Page) => grid(page).getByRole('gridcell');
 
   test.beforeEach(async ({ page }) => {
-    await page.clock.setFixedTime(new Date('2026-11-01T15:00:00'));
+    await fixClock(page, new Date('2026-11-01T15:00:00'));
     await page.goto('/play/sudoku');
     await expect(game(page)).toBeVisible();
   });
@@ -524,7 +541,7 @@ test.describe('daily games: crossword levels (Task 627)', () => {
   const board = (page: Page) => page.getByTestId('cueword');
 
   test.beforeEach(async ({ page }) => {
-    await page.clock.setFixedTime(new Date('2026-11-01T15:00:00'));
+    await fixClock(page, new Date('2026-11-01T15:00:00'));
     await page.goto('/play/crossword');
     await expect(board(page)).toBeVisible();
   });
@@ -744,7 +761,7 @@ test.describe('daily games: crossword levels (Task 627)', () => {
 test.describe('daily games: word path (D-71)', () => {
   // Word path's board format (#722) is tested in full in word-path-board.spec.ts, the older word search in word-path.spec.ts.
   test("today's sample is labeled and themed, and axe passes", async ({ page }) => {
-    await page.clock.setFixedTime(new Date('2026-11-01T15:00:00'));
+    await fixClock(page, new Date('2026-11-01T15:00:00'));
     await page.goto('/play/word-path');
     await expect(page.getByRole('heading', { level: 1, name: 'word path' })).toBeVisible();
     await expect(page.getByTestId('suture').getByRole('heading', { level: 3, name: 'a calm study break' })).toBeVisible();
@@ -771,6 +788,9 @@ test.describe('daily games: private stats (D-76), always kept (2026-11-17)', () 
     const resultDialog = page.getByTestId('game-result-dialog');
     await expect(resultDialog.getByRole('button', { name: 'close results' })).toBeFocused();
     await resultDialog.getByRole('button', { name: 'close results' }).click();
+    // The dialog hands focus back to the result on the next frame (requestAnimationFrame). Wait for it: focusing a
+    // control before then loses that focus to the late return, and a key press then goes nowhere (CI on #836).
+    await expect(page.getByTestId('pulse-result')).toBeFocused();
   };
   const holdPanel = async (page: Page) => {
     let release = () => {};
@@ -787,12 +807,13 @@ test.describe('daily games: private stats (D-76), always kept (2026-11-17)', () 
     active: (document.activeElement?.getAttribute('aria-label') ?? document.activeElement?.textContent ?? '').slice(0, 40) + ' <' + document.activeElement?.tagName + '>',
     inert: [...document.querySelectorAll('[inert]')].map((element) => element.tagName + '.' + String(element.className).slice(0, 30)),
     bodyStyle: document.body.getAttribute('style'),
-    dialogs: [...document.querySelectorAll('dialog[open], [role="dialog"], [data-testid="game-result-dialog"], [data-promo]:not([hidden])')].map((element) => element.tagName + (element.getAttribute('data-testid') ?? '')),
+    // Only panels that are really showing (the promo has role="dialog" even while hidden).
+    dialogs: [...document.querySelectorAll('dialog[open], [data-testid="game-result-dialog"], [data-promo][data-open]')].map((element) => element.tagName + (element.getAttribute('data-testid') ?? '')),
     scrollY: window.scrollY,
     headerTop: document.querySelector('header')?.getBoundingClientRect().top,
   }));
   test.beforeEach(async ({ page }) => {
-    await page.clock.setFixedTime(new Date('2026-11-01T15:00:00'));
+    await fixClock(page, new Date('2026-11-01T15:00:00'));
     await page.goto('/play/pillo');
     await expect(panel(page).getByRole('heading', { name: 'your stats' })).toBeVisible();
   });
@@ -853,7 +874,7 @@ test.describe('daily games: private stats (D-76), always kept (2026-11-17)', () 
   test('"forget all" in one tab holds in another tab that is already open', async ({ page, context }) => {
     await solvePulse(page);
     const other = await context.newPage();
-    await other.clock.setFixedTime(new Date('2026-11-01T15:00:00'));
+    await fixClock(other, new Date('2026-11-01T15:00:00'));
     await other.goto('/play/pillo');
     await expect(pulseStats(other)).toContainText('played 1 day, solved 1.');
 
@@ -874,7 +895,7 @@ test.describe('daily games: private stats (D-76), always kept (2026-11-17)', () 
 
     // Another tab: finish pillo there (kept at once), then forget all stats.
     const other = await context.newPage();
-    await other.clock.setFixedTime(new Date('2026-11-01T15:00:00'));
+    await fixClock(other, new Date('2026-11-01T15:00:00'));
     await other.goto('/play/pillo');
     await solvePulse(other);
     await expect(pulseStats(other)).toContainText('played 1 day, solved 1.');
