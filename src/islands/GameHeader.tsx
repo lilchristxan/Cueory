@@ -1,3 +1,4 @@
+import GameFlag from './GameFlag';
 import '../styles/gameheader.css';
 import { useRef, useState, type ReactNode } from 'react';
 import { GameSettingsDialog } from './GameSettings';
@@ -37,6 +38,7 @@ export default function GameHeader({ name, help, helpExtra, settings, end }: {
         </svg>
       </button>
       <div className="game-header-end">
+        <GameFlag name={name} />
         {end}
         <GameHelpButton help={help} name={name} className="corner-button corner-button-quiet" extra={helpExtra} />
       </div>

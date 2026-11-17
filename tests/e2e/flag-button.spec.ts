@@ -55,6 +55,28 @@ for (const { name, url } of pages) {
   });
 }
 
+for (const game of ['pillo', 'sudoku', 'crossword', 'word-path']) {
+  test(`the ${game} corner opens the shared footer report while signed out`, async ({ page }) => {
+    await page.goto(`/play/${game}`);
+    const link = page.locator('a[data-game-flag]');
+    const footer = page.locator('#footer-flag');
+    const trigger = footer.getByRole('button', { name: 'flag or comment', exact: true });
+    await expect(trigger).toBeVisible();
+    await expect(link).toHaveAccessibleName(`flag or comment on ${game.replace('-', ' ')}`);
+    const box = await link.boundingBox();
+    expect(box?.width).toBeGreaterThanOrEqual(44);
+    expect(box?.height).toBeGreaterThanOrEqual(44);
+    await link.focus();
+    await page.keyboard.press('Enter');
+    await expect(trigger).toHaveAttribute('aria-expanded', 'true');
+    await expect(page.getByTestId('flag-form')).toHaveCount(1);
+    await expect(footer.getByRole('link', { name: 'hello@cueory.app' })).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(link).toBeFocused();
+    await expect(trigger).toHaveAttribute('aria-expanded', 'false');
+  });
+}
+
 test('flag button passes axe with form open', async ({ page }) => {
   await page.goto('/');
   await page.getByRole('button', { name: 'flag or comment', exact: true }).click();
