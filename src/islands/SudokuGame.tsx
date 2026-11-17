@@ -4,7 +4,8 @@ import { printGame } from './gameprint';
 import { GameHelpButton, GameHelpCard, useGameHelp } from './GameHelp';
 import { gameName } from '../config/games';
 import { localDay, showResultCard, sudokuResultCard } from './gameresults';
-import { GameSettingsDialog, useSharedGameSettings } from './GameSettings';
+import { GameSettingsDialog } from './GameSettings';
+import { gameSoundAllowed, loadGameSettings } from './gamesettings';
 import { sudokuCellClasses } from './sudokuhighlight';
 import { DEFAULT_SUDOKU_SETTINGS, GAME_PROGRESS_EVENT, LEVEL_LABELS, sudokuProgressDetail, LEVEL_RULES, advanceSudokuSeconds, autoCandidateNotes, checkSudoku, conflictIndices, dailySudokuSeed, editSudokuBoard, effectiveSudokuMode, generateSudoku, getResult, loadSudokuSettings, newSudokuBoard, noteDigits, pushSudokuHistory, saveSudokuSettings, sudokuCellPresentation, sudokuKeyAction, sudokuWrongCells, undoSudoku, type SudokuBoard, type SudokuBoardAction, type SudokuLevel, type SudokuMode, type SudokuSettings } from './sudoku';
 import { reportRound, SUDOKU_STATS_STORAGE_KEY, sudokuRoundResult } from './gameresults';
@@ -59,8 +60,6 @@ export default function SudokuGame() {
   const [auto, setAuto] = useState(false);
   const [settings, setSettings] = useState<SudokuSettings>(() => loadSudokuSettings(browserStorage()));
   const [settingsOpen, setSettingsOpen] = useState(false);
-  // The shared "game sounds" switch silences every game, sudoku's solve sound too.
-  const { soundAllowed } = useSharedGameSettings();
   const help = useGameHelp('triage');
   const howOpen = help.open;
   const [said, setSaid] = useState('');
@@ -102,7 +101,9 @@ export default function SudokuGame() {
     if (!solved || reported.current) return;
     reported.current = true;
     solvedResult.current?.focus();
-    if (soundAllowed(settings.playSound)) playSolvedTone();
+    // The shared "game sounds" switch silences every game, sudoku's solve sound too. It is read when the puzzle is
+    // solved, so a change made in the settings dialog a moment before still counts.
+    if (gameSoundAllowed(loadGameSettings(browserStorage()), settings.playSound)) playSolvedTone();
     const result = getResult({ day, level, seconds, errors, solved: true });
     // Queue the display result even if the separate host island has not hydrated yet.
     showResultCard(sudokuResultCard(result));
@@ -114,7 +115,7 @@ export default function SudokuGame() {
     const now = keepSudokuSolve(browserStorage(), day, { level, day, seconds });
     setKept(now);
     setSaid(`solved in ${result.time} with ${errors} ${errors === 1 ? 'error' : 'errors'}.${now.on ? ' added to your sudoku stats.' : ''}`);
-  }, [solved, day, level, seconds, errors, settings.playSound, soundAllowed]);
+  }, [solved, day, level, seconds, errors, settings.playSound]);
 
   useEffect(() => { saveSudokuSettings(browserStorage(), settings); }, [settings]);
 
