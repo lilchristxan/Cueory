@@ -28,6 +28,8 @@ Each link has a one-line summary and says whether Christian needs to read it. Gu
 - [Study together plan](TOGETHER.md) — Review ideas for leaderboards, profiles, and shared studying. **Christian:** Read before deciding on social features.
 - [Operations](OPERATIONS.md) — Find recovery and rollback instructions if something stops working. **Christian:** Read when handling an incident.
 
+Game guides for videos: the [games folder](games/) has one plain page per daily game ([pillo](games/pillo.md), [sudoku](games/sudoku.md), [crossword](games/crossword.md), [word path](games/word-path.md)) with how to play, every setting and how scoring works. **Christian:** Read before recording a game video.
+
 ## For builders
 
 - [Architecture](ARCHITECTURE.md) — Find the site’s pages, data flow, and code locations. **Christian:** Usually not needed.
