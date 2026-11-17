@@ -3,23 +3,11 @@
  * The actual deletion is handled by the server; this module describes what will go and validates the
  * typed confirmation before the caller fires the request.
  */
-import { BREAK_STORAGE_KEY } from '../scripts/breakstore';
-import { NOTE_SOUND_STORAGE_KEY } from '../scripts/notesound';
-import { legacyStarsKey, PROGRESS_STORAGE_KEY, type Progress } from '../scripts/progress';
-import { PROMO_STORAGE_KEY } from '../scripts/promo';
-import { THEME_STORAGE_KEY } from '../scripts/theme';
+import { fixedLocalKeysToClear, localPrefixesToClear, sessionKeysToClear } from '../config/storage-keys';
+import type { Progress } from '../scripts/progress';
 import type { KeyValueStorage } from '../scripts/storage';
-import { STATS_STORAGE_KEY, SUDOKU_STATS_STORAGE_KEY } from './gameresults';
-import { CROSSWORD_SETTINGS_KEY } from './cuewordkeys';
-import { SUDOKU_SETTINGS_KEY } from './sudoku';
-import { GAME_SETTINGS_STORAGE_KEY } from './gamesettings';
-import { HOME_TIP_STORAGE_KEY } from './home-screen-tip';
-import { GUEST_IMPORT_MARKER_PREFIX } from './guestimportrun';
-import { LAST_WELCOME_STORAGE_KEY, VISIT_STORAGE_KEY } from './stickynote';
-import { SURVEY_STORAGE_KEYS } from './surveykeys';
-import { RESUME_STORAGE_KEY } from '../scripts/resume';
 import type { ExportData } from './exportdata';
-import { isPkceVerifierKey, PKCE_FLOW_LIST_STORAGE_KEY, PKCE_VERIFIER_STORAGE_KEY } from './supabaseclient';
+import { isPkceVerifierKey } from './supabaseclient';
 import { DELETE_REAUTH, DELETE_REAUTH_CODE, DELETE_SIGNED_OUT, studentMessage } from './rpcerrors';
 
 // Keep the download and confirmation contracts together, including the actual saved Progress record.
@@ -110,7 +98,7 @@ export function confirmState(typed: string): string | null {
 // ── Browser-storage keys to clear ────────────────────────────────────────────
 
 /** This tab's sessionStorage keys that deletion clears. Fixed names, so they can be cleared even when localStorage can't be listed. */
-export const SESSION_KEYS_AFTER_DELETION: readonly string[] = Object.freeze([VISIT_STORAGE_KEY, BREAK_STORAGE_KEY]);
+export const SESSION_KEYS_AFTER_DELETION: readonly string[] = Object.freeze(sessionKeysToClear());
 
 /** Iterable localStorage key names with separate keys for this tab's sessionStorage. */
 export type DeletionStorageKeys = string[] & { readonly sessionKeys: readonly string[] };
@@ -126,28 +114,13 @@ export function afterDeletion(storage: KeyValueStorage | undefined): DeletionSto
   if (!storage || typeof storage.length !== 'number' || !Number.isSafeInteger(storage.length) || storage.length < 0 || typeof storage.key !== 'function') {
     throw new Error('browser storage must support listing its keys before cleanup.');
   }
-  const keys = new Set([
-    PROGRESS_STORAGE_KEY,
-    PROMO_STORAGE_KEY,
-    THEME_STORAGE_KEY,
-    STATS_STORAGE_KEY,
-    CROSSWORD_SETTINGS_KEY,
-    SUDOKU_STATS_STORAGE_KEY,
-    SUDOKU_SETTINGS_KEY,
-    GAME_SETTINGS_STORAGE_KEY,
-    HOME_TIP_STORAGE_KEY,
-    RESUME_STORAGE_KEY,
-    LAST_WELCOME_STORAGE_KEY,
-    NOTE_SOUND_STORAGE_KEY,
-    PKCE_VERIFIER_STORAGE_KEY,
-    PKCE_FLOW_LIST_STORAGE_KEY,
-    ...SURVEY_STORAGE_KEYS,
-  ]);
-  const prefix = legacyStarsKey('');
+  // Every key comes from the one list in src/config/storage-keys.ts.
+  const keys = new Set(fixedLocalKeysToClear());
+  const prefixes = localPrefixesToClear();
   const length = storage.length;
   for (let index = 0; index < length; index++) {
     const key = storage.key(index);
-    if (key?.startsWith(prefix) || key?.startsWith(GUEST_IMPORT_MARKER_PREFIX) || (key && isPkceVerifierKey(key))) {
+    if (key && (prefixes.some((prefix) => key.startsWith(prefix)) || isPkceVerifierKey(key))) {
       keys.add(key);
     }
   }

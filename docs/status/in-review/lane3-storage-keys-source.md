@@ -1,0 +1,1 @@
+status: Lane 3 storage keys: src/config/storage-keys.ts lists every cueory- browser key (name, where it's kept, what it holds, why); delete-my-account now clears from it and a test checks /privacy names every key in it. /privacy wording is unchanged.
