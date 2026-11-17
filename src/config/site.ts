@@ -31,8 +31,9 @@ export const site = {
 
 /**
  * Launch-updates signup (Kit). The form posts straight to Kit; no Kit script
- * runs on our pages. Leave formAction empty until the Kit form exists: the
- * signup box then says "opening soon" instead of showing a form.
+ * runs on our pages. Until the Kit form exists (formAction empty), the signup
+ * box links out to Kit's landing page (landingUrl); with neither, it says
+ * "sign ups open soon." instead.
  */
 export const newsletter = {
   provider: 'Kit',
@@ -40,7 +41,45 @@ export const newsletter = {
   formAction: '',
   /** The email field's "name" from Kit's HTML embed code. */
   emailFieldName: 'email_address',
+  /** Christian's Kit landing page (a plain link out, no Kit script). Must be https on a kit.com host. */
+  landingUrl: 'https://cueory.kit.com/bfd9609b46',
 } as const;
+
+/**
+ * A Kit address, normalised by the URL parser (so the host is lowercase and an international name is punycode), if it
+ * is https on kit.com or one of its subdomains, on the default port, with no sign-in details; otherwise ''. A host with
+ * a trailing dot ("cueory.kit.com.") doesn't count. Used for both the landing page and the form address, so a mistaken
+ * host can never become a link or widen the CSP's form-action (astro.config.mjs).
+ */
+export function kitUrl(value: string): string {
+  try {
+    const url = new URL(value);
+    const kitHost = url.hostname === 'kit.com' || url.hostname.endsWith('.kit.com');
+    const plain = !url.username && !url.password && url.port === '';
+    return url.protocol === 'https:' && kitHost && plain ? url.href : '';
+  } catch {
+    return '';
+  }
+}
+
+/** The landing page address if it is a valid Kit address (kitUrl), otherwise ''. */
+export function kitLandingUrl(value: string): string {
+  return kitUrl(value);
+}
+
+/** The form's address if it is a valid Kit address (kitUrl; Kit's form posts go to app.kit.com), otherwise ''. */
+export function kitFormAction(value: string): string {
+  return kitUrl(value);
+}
+
+/**
+ * What the launch-updates box shows: Kit's form, a link to Kit's landing page, or "sign ups open soon.". An address
+ * that isn't a valid Kit address is ignored, so the box falls back to the next state.
+ */
+export function signupState(formAction: string, landingUrl: string): 'form' | 'landing' | 'pending' {
+  if (kitFormAction(formAction)) return 'form';
+  return kitLandingUrl(landingUrl) ? 'landing' : 'pending';
+}
 
 /**
  * Cueory's social profiles (D-54; addresses confirmed by Christian on 1 Nov 2026, D-65). Each shows as its platform's
@@ -78,6 +117,15 @@ export function accountLaunch(open: boolean) {
 }
 
 export const accountHref = accountLaunch(accountsOpen).accountHref;
+
+/**
+ * Whether the home hero shows its quiet join link. It leads to a real next step only once accounts are open or the
+ * launch-updates box has Kit's form or its landing-page link; with neither, the box only says "sign ups open soon.",
+ * so the link would be a dead end.
+ */
+export function showsHeroJoin(open: boolean, formAction: string, landingUrl: string): boolean {
+  return open || signupState(formAction, landingUrl) !== 'pending';
+}
 
 /**
  * The ☰ side panel (D-46). Lowercase on purpose (D-47). A link with a note shows it beside the label, for things
