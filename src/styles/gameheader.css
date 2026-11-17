@@ -3,8 +3,11 @@
   corner buttons) at the top right, the same on every game. Every size is a token.
 */
 @layer components {
+  /* With enlarged text the 44 px corner buttons grow with it, so on the narrowest phones the right-hand group may wrap
+     below the gear (still at the right) instead of pushing the page sideways. */
   .game-header {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
     gap: calc(var(--spacing) * 2);
@@ -12,6 +15,9 @@
 
   .game-header-end {
     display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    margin-inline-start: auto;
     align-items: center;
     gap: calc(var(--spacing) * 2);
   }

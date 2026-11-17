@@ -73,3 +73,15 @@ test('the /play hub has no settings button: each game\'s gear holds the shared s
   await expect(page.getByTestId('play-status')).toBeVisible();
   await expect(page.getByTestId('game-settings-button')).toHaveCount(0);
 });
+
+test('with 32 px text at 320 px the corner row wraps instead of pushing any game page sideways', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 700 });
+  for (const game of games) {
+    await page.goto(game.path);
+    await page.evaluate(() => document.documentElement.style.setProperty('font-size', '32px', 'important'));
+    await expect(page.getByTestId(game.testId)).toBeVisible();
+    const help = (await page.getByTestId(game.testId).getByRole('button', { name: `how to play ${game.name}` }).boundingBox())!;
+    expect(help.x + help.width, game.name).toBeLessThanOrEqual(320);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth), game.name).toBe(true);
+  }
+});
