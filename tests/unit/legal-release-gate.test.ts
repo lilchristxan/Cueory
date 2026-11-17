@@ -7,7 +7,9 @@ import { describe, expect, it } from 'vitest';
 import {
   APPROVED_PAGES, minimumAgeApproved, renderedProblems, structuralProblems,
 } from '../../scripts/check-legal-release.mjs';
-import { isApproved, isCalendarDate, legalDigest, manifestText, normalizeLegalSource, squeezed, visibleText } from '../../scripts/legal-digest.mjs';
+import {
+  isApproved, isCalendarDate, legalDigest, manifestText, normalizeLegalSource, squeezed, todayUtc, visibleText,
+} from '../../scripts/legal-digest.mjs';
 import { legal, legalApprovals, type LegalApproval, type LegalPage } from '../../src/config/legal';
 import { currentLegalDigest, isLegalPageApproved, legalManifest } from '../../src/config/legalapproval';
 
@@ -28,7 +30,7 @@ const none = Object.fromEntries(APPROVED_PAGES.map((page) => [page, { date: '', 
 const manifest = legalManifest();
 /** Every real page approved against its current text and imported values, with a synthetic date. */
 const allApproved = Object.fromEntries(APPROVED_PAGES.map((page) =>
-  [page, { date: '2026-12-01', digest: currentLegalDigest(page as LegalPage, manifest) }])) as Record<LegalPage, LegalApproval>;
+  [page, { date: '2026-11-01', digest: currentLegalDigest(page as LegalPage, manifest) }])) as Record<LegalPage, LegalApproval>;
 const approvedHtml = (body: string) => `<!doctype html><html><head><title>t</title><style>p { color: red }</style>
 <script>const mark = "[[CHRISTIAN: a script literal never counts]]";</script></head><body>
 <!-- [[CHRISTIAN: an inert HTML comment never counts --><main><p data-legal-approval="approved">Effective 2026-12-01. Approved by Christian, founder, on 2026-12-01.</p><p>${body}</p></main></body></html>`;
@@ -51,11 +53,36 @@ describe('legal digest (Task 200)', () => {
 
   it('approves only a real date with the matching digest', () => {
     const source = '<p>Version A.</p>';
-    expect(isApproved({ date: '2026-12-01', digest: legalDigest(source) }, source)).toBe(true);
+    expect(isApproved({ date: '2026-11-01', digest: legalDigest(source) }, source)).toBe(true);
     expect(isApproved({ date: '2026-13-45', digest: legalDigest(source) }, source)).toBe(false);
-    expect(isApproved({ date: '2026-12-01', digest: legalDigest(source) }, '<p>Version B.</p>')).toBe(false);
-    expect(isApproved({ date: '2026-12-01', digest: '' }, source)).toBe(false);
+    expect(isApproved({ date: '2026-11-01', digest: legalDigest(source) }, '<p>Version B.</p>')).toBe(false);
+    expect(isApproved({ date: '2026-11-01', digest: '' }, source)).toBe(false);
     expect(isApproved(undefined, source)).toBe(false);
+  });
+
+  it('refuses an approval dated in the future, with today as the last accepted day (#726)', () => {
+    const source = '<p>Version A.</p>';
+    const digest = legalDigest(source);
+    expect(isApproved({ date: '2026-11-16', digest }, source, {}, '2026-11-16')).toBe(true);
+    expect(isApproved({ date: '2026-11-15', digest }, source, {}, '2026-11-16')).toBe(true);
+    expect(isApproved({ date: '2026-11-17', digest }, source, {}, '2026-11-16')).toBe(false);
+    expect(isApproved({ date: '2027-01-01', digest }, source, {}, '2026-12-31')).toBe(false);
+    expect(isApproved({ date: '2026-12-01', digest }, source, {}, '2026-11-30')).toBe(false);
+    // A broken "today" never approves anything.
+    expect(isApproved({ date: '2026-11-16', digest }, source, {}, 'soon')).toBe(false);
+  });
+
+  it('uses the real clock by default: tomorrow is refused, today is accepted (#726 regression)', () => {
+    const source = '<p>Version A.</p>';
+    const digest = legalDigest(source);
+    const today = todayUtc();
+    const tomorrow = todayUtc(new Date(Date.parse(`${today}T00:00:00.000Z`) + 86_400_000));
+    expect(todayUtc(new Date('2026-11-16T23:59:59.999Z'))).toBe('2026-11-16');
+    expect(isApproved({ date: today, digest }, source)).toBe(true);
+    expect(isApproved({ date: tomorrow, digest }, source)).toBe(false);
+    const pages = Object.fromEntries(APPROVED_PAGES.map((page) =>
+      [page, { date: tomorrow, digest: currentLegalDigest(page as LegalPage, manifest) }])) as Record<LegalPage, LegalApproval>;
+    for (const page of APPROVED_PAGES) expect(isLegalPageApproved(page as LegalPage, pages, manifest)).toBe(false);
   });
 
   it('reads the visible text of a page: comments, scripts and styles skipped, entities decoded', () => {
@@ -131,7 +158,7 @@ describe('legal release gate (Task 200)', () => {
     const kitOrigin = { ...manifest, newsletterOpen: true, newsletterFormActionOrigin: 'https://app.kit.com' };
     const otherOrigin = { ...manifest, newsletterOpen: true, newsletterFormActionOrigin: 'https://other.example.test' };
     const kitApproved = Object.fromEntries(APPROVED_PAGES.map((page) =>
-      [page, { date: '2026-12-01', digest: currentLegalDigest(page as LegalPage, kitOrigin) }])) as Record<LegalPage, LegalApproval>;
+      [page, { date: '2026-11-01', digest: currentLegalDigest(page as LegalPage, kitOrigin) }])) as Record<LegalPage, LegalApproval>;
     // Approved against Kit origin passes.
     expect(isLegalPageApproved('privacy', kitApproved, kitOrigin)).toBe(true);
     // Same pages checked against a different origin fail.
@@ -142,7 +169,7 @@ describe('legal release gate (Task 200)', () => {
     expect(isLegalPageApproved('terms', { ...allApproved, terms: { ...allApproved.terms, date: '2026-13-45' } }, manifest)).toBe(false);
     expect(isLegalPageApproved('terms', { ...allApproved, terms: { ...allApproved.terms, digest: '' } }, manifest)).toBe(false);
     const edited = legalDigest(readFileSync(new URL('../../src/pages/terms.astro', import.meta.url), 'utf8') + ' One more sentence.', manifest);
-    expect(isLegalPageApproved('terms', { ...allApproved, terms: { date: '2026-12-01', digest: edited } }, manifest)).toBe(false);
+    expect(isLegalPageApproved('terms', { ...allApproved, terms: { date: '2026-11-01', digest: edited } }, manifest)).toBe(false);
     expect(isLegalPageApproved('terms', none, manifest)).toBe(false);
   });
 

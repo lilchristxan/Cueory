@@ -21,8 +21,8 @@ describe('Task 200: the sign-up agreement line', () => {
 
   it('shows a visible open mark until a page is approved, then the date', () => {
     expect(approvalLine('terms', false)).toMatch(/^\[\[CHRISTIAN: not yet approved/);
-    expect(approvalLine('terms', true, { ...legalApprovals, terms: { date: '2026-12-01', digest: 'x' } }))
-      .toBe('Effective 2026-12-01. Approved by Christian, founder, on 2026-12-01.');
+    expect(approvalLine('terms', true, { ...legalApprovals, terms: { date: '2026-11-01', digest: 'x' } }))
+      .toBe('Effective 2026-11-01. Approved by Christian, founder, on 2026-11-01.');
   });
 
   it('is approved only by a date and digest Christian gave, never by default', () => {
@@ -42,10 +42,11 @@ describe('Task 200: indexing follows approval', () => {
     const manifest = legalManifest();
     const digest = legalDigest(termsSource, manifest);
     expect(isRouteIndexable('/terms', none, manifest)).toBe(false);
-    expect(isRouteIndexable('/terms', { ...none, terms: { date: '2026-12-01', digest } }, manifest)).toBe(true);
-    expect(isRouteIndexable('/terms', { ...none, terms: { date: '2026-12-01', digest: legalDigest(termsSource + ' edited', manifest) } }, manifest)).toBe(false);
-    expect(isRouteIndexable('/terms', { ...none, terms: { date: '2026-12-01', digest } }, { ...manifest, minimumAge: '18' })).toBe(false);
+    expect(isRouteIndexable('/terms', { ...none, terms: { date: '2026-11-01', digest } }, manifest)).toBe(true);
+    expect(isRouteIndexable('/terms', { ...none, terms: { date: '2026-11-01', digest: legalDigest(termsSource + ' edited', manifest) } }, manifest)).toBe(false);
+    expect(isRouteIndexable('/terms', { ...none, terms: { date: '2026-11-01', digest } }, { ...manifest, minimumAge: '18' })).toBe(false);
     expect(isRouteIndexable('/terms', { ...none, terms: { date: '2026-13-45', digest } }, manifest)).toBe(false);
+    expect(isRouteIndexable('/terms', { ...none, terms: { date: '2999-01-01', digest } }, manifest)).toBe(false);
     expect(isRouteIndexable('/support', none, manifest)).toBe(true);
     expect(Object.keys(legalRoutes).sort()).toEqual(['/accessibility', '/copyright', '/disclaimer', '/licenses', '/privacy', '/terms']);
   });

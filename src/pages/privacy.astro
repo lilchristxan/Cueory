@@ -333,7 +333,7 @@ const format = (value: number) => value.toLocaleString('en-US');
       </li>
     </ul>
     <p>
-      The download is all or nothing, and it has limits: if your account holds more than {format(exportCaps.attempts)}
+      The download is all or nothing, and it has limits: if your account holds more than {format(exportCaps.attempts)}{' '}
       attempts, {format(exportCaps.reviewRows)} review schedules, {format(exportCaps.examPlans)} exam plans,{' '}
       {format(exportCaps.reports)} reports, {format(exportCaps.sessions)} sign-in sessions or{' '}
       {format(exportCaps.identities)} sign-in methods, the download fails with a plain message and no file. Study events

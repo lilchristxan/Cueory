@@ -47,7 +47,7 @@ export function currentLegalDigest(page: LegalPage, manifest: Record<string, unk
   return legalDigest(legalPageSource(page), manifest);
 }
 
-/** True only when the recorded date is a real day and the recorded digest is the current page's digest. */
+/** True only when the recorded date is a real day, not after today, and the recorded digest is the current page's digest. */
 export function isLegalPageApproved(
   page: LegalPage,
   approvals: Record<LegalPage, LegalApproval> = legalApprovals,

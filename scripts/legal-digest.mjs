@@ -47,10 +47,20 @@ export function isCalendarDate(value) {
   return Number.isFinite(time) && new Date(time).toISOString().slice(0, 10) === value;
 }
 
-/** Approved only when the date is real and the stored digest is the current page's digest. */
-export function isApproved(approval, source, manifest = {}) {
-  return !!approval && isCalendarDate(approval.date) && typeof approval.digest === 'string' &&
-    approval.digest.length === 64 && approval.digest === legalDigest(source, manifest);
+/** Today's calendar day in UTC as YYYY-MM-DD. UTC is never behind Arizona, so a same-day approval is never rejected. */
+export function todayUtc(now = new Date()) {
+  return now.toISOString().slice(0, 10);
+}
+
+/**
+ * Approved only when the date is a real day that is not after today and the stored digest is the current page's
+ * digest. A future date is refused: an approval can only record a day that has already come. `today` (YYYY-MM-DD)
+ * exists for tests; real callers use the clock.
+ */
+export function isApproved(approval, source, manifest = {}, today = todayUtc()) {
+  return !!approval && isCalendarDate(approval.date) && isCalendarDate(today) && approval.date <= today &&
+    typeof approval.digest === 'string' && approval.digest.length === 64 &&
+    approval.digest === legalDigest(source, manifest);
 }
 
 /** The founder's allowed choices for the minimum account age. The gate accepts nothing else; nobody else chooses. */
