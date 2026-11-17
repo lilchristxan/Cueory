@@ -13,15 +13,15 @@ const ready = newsletter.formAction.startsWith('https://');
 
 <section id="signup" class="scene scene-low scroll-mt-section py-section" aria-labelledby="signup-heading">
   <div class="mx-auto max-w-prose px-gutter" data-reveal-section>
-    <div class="veil p-6 sm:p-10">
-      <h2 id="signup-heading" class="display text-title wrap-break-word">get launch updates</h2>
+    <div class="veil p-6 text-center sm:p-10">
+      <h2 id="signup-heading" class="display text-title wrap-break-word sm:text-title-lg">get launch updates</h2>
       {
         ready ? (
           <>
             <form
               action={newsletter.formAction}
               method="post"
-              class="mt-4 flex flex-col gap-3 sm:flex-row sm:items-end"
+              class="mt-4 flex flex-col gap-3 text-left sm:flex-row sm:items-end"
               data-testid="signup-form"
             >
               <div class="flex flex-1 flex-col gap-1">

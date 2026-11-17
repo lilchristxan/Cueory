@@ -7,7 +7,7 @@ const built = readFileSync(new URL('../../dist/index.html', import.meta.url), 'u
 const main = built.match(/<main\b[^>]*>[\s\S]*?<\/main>/)?.[0];
 if (!main) throw new Error('missing main landmark on the built home page');
 
-function section(id: 'how-it-works' | 'study-features'): string {
+function section(id: 'how-it-works'): string {
   const expression = new RegExp('<section\\b(?=[^>]*\\bid="' + id + '")[^>]*>[\\s\\S]*?<\\/section>');
   const found = main!.match(expression)?.[0];
   if (!found) throw new Error('missing home section: ' + id);
@@ -24,19 +24,17 @@ function links(markup: string): string[] {
   return [...markup.matchAll(/<a\b[^>]*\bhref="([^"]+)"[^>]*>/g)].map((match) => match[1]!);
 }
 
-describe('home how-it-works and feature grid (W01-3)', () => {
+describe('home how-it-works (W01-3)', () => {
   it('has one h1, ordered h2 sections and h3 children', () => {
     const how = section('how-it-works');
-    const features = section('study-features');
     expect([...main!.matchAll(/<h1\b[^>]*>/g)]).toHaveLength(1);
     expect(main!.indexOf(how)).toBeGreaterThan(main!.indexOf('<h1'));
-    expect(main!.indexOf(features)).toBeGreaterThan(main!.indexOf(how));
     expect(titles(how, 2)).toEqual(['how it works']);
-    expect(titles(features, 2)).toEqual(['made for the way you study']);
     expect(titles(how, 3)).toHaveLength(3);
-    expect(titles(features, 3)).toHaveLength(2);
     expect(how.indexOf('<h3')).toBeGreaterThan(how.indexOf('<h2'));
-    expect(features.indexOf('<h3')).toBeGreaterThan(features.indexOf('<h2'));
+    // The feature tiles repeated the vials and the lesson link, so they left the home page (lane 14 home polish).
+    expect(main).not.toContain('id="study-features"');
+    expect(main).not.toContain('made for the way you study');
   });
 
   it('keeps three correctly ordered, labeled list steps', () => {
@@ -57,25 +55,10 @@ describe('home how-it-works and feature grid (W01-3)', () => {
     }
   });
 
-  it('keeps both feature cards, each with a distinct title and link', () => {
-    const features = section('study-features');
-    expect(features).toContain('aria-labelledby="features-heading"');
-    expect(features).toContain('id="features-heading"');
-    const cards = [...features.matchAll(/<a\b[^>]*>([\s\S]*?)<\/a>/g)].map((m) => m[1]!);
-    expect(cards).toHaveLength(2);
-    expect(cards.map((card) => titles(card, 3)[0])).toEqual([
-      'practice with cards', 'opened lessons can work offline',
-    ]);
-    expect(features).toContain('data-testid="feature-cards"');
-    expect(features).toContain('data-testid="feature-offline"');
-  });
-
   it('links only to existing indexable Cueory routes', () => {
     const fromHow = links(section('how-it-works'));
-    const fromFeatures = links(section('study-features'));
     expect(fromHow).toEqual(['/learn/study-skills']);
-    expect(fromFeatures).toEqual(['/learn/study-skills/cards', '/learn/study-skills']);
-    for (const href of [...fromHow, ...fromFeatures]) {
+    for (const href of fromHow) {
       expect(indexablePages).toContain(href);
       const file = new URL('../../dist' + href + '.html', import.meta.url);
       expect(existsSync(file)).toBe(true);
@@ -83,7 +66,7 @@ describe('home how-it-works and feature grid (W01-3)', () => {
   });
 
   it('keeps style values in tokens, not inline styles or raw colors', () => {
-    for (const file of ['HowItWorks.astro', 'FeatureGrid.astro']) {
+    for (const file of ['HowItWorks.astro']) {
       const source = readFileSync(new URL('../../src/components/' + file, import.meta.url), 'utf8');
       expect(source).not.toMatch(/\bstyle\s*=/i);
       expect(source).not.toMatch(/#[\da-f]{3,8}\b/i);

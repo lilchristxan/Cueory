@@ -1,13 +1,15 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import DailyGamesSection from '../components/DailyGamesSection.astro';
-import FeatureGrid from '../components/FeatureGrid.astro';
 import HowItWorks from '../components/HowItWorks.astro';
 import ModesCarousel from '../components/ModesCarousel.astro';
 import SignupForm from '../components/SignupForm.astro';
 import Wordmark from '../components/Wordmark.astro';
 import ContinueBar from '../islands/ContinueBar';
-import { accountHref, site } from '../config/site';
+import { accountHref, accountLaunch, accountsOpen, site } from '../config/site';
+
+// Until accounts open the quiet link joins the launch list; afterwards it creates the free account (src/config/site.ts).
+const joinLabel = accountLaunch(accountsOpen).promoJoinLabel;
 ---
 
 <Layout title={site.name} variant="home">
@@ -21,8 +23,9 @@ import { accountHref, site } from '../config/site';
   </div>
 
   <!--
-    Full-screen hero (D-41, D-46, D-55): the logo, a serif headline on one line, the accent line and one glassy button,
-    on draped silk, the first of the page's silk scenes (D-53). Lowercase brand voice (D-47).
+    Full-screen hero (D-41, D-46, D-55): the logo, a serif headline on one line, the accent line, one glassy button to
+    the daily games and one quiet link to the launch list (lane 14 home polish, D-pending), on draped silk, the first of
+    the page's silk scenes (D-53). Lowercase brand voice (D-47).
     Nothing sits behind the headline: the brand guide forbids embossing the logo (§3.6), and the motto lives in the
     footer.
   -->
@@ -35,21 +38,27 @@ import { accountHref, site } from '../config/site';
       <Wordmark loading="eager" class="w-(--logo-hero)" sizes="20rem" />
       <h1 id="hero-heading" class="display mt-section text-display-fit">nursing school is hard enough.</h1>
       <p class="mt-4 text-accent text-ink-soft sm:text-accent-lg">cueory makes studying simpler.</p>
-      <a href={accountHref} class="glass-button mt-10">create your free account</a>
+      <a href="/play" class="glass-button mt-10" data-testid="hero-play">play today's games</a>
+      <a
+        href={accountHref}
+        class="mt-4 inline-flex min-h-11 items-center px-3 text-ink-soft underline underline-offset-4 hover:text-ink"
+        data-testid="hero-join"
+      >
+        {joinLabel}
+      </a>
     </div>
   </section>
 
   <!--
     Below the hero the silk scenes alternate Ivory and Linen (D-53), and daily games stays right after "ways to study"
-    (D-61): how it works (Ivory), ways to study (Linen), daily games (Ivory), features (Linen), launch updates (Ivory).
+    (D-61): how it works (Ivory), ways to study (Linen), daily games (Ivory), launch updates. The old "made for the way
+    you study" tiles repeated the vials and the lesson link, so they left the home page (lane 14 home polish).
   -->
   <HowItWorks />
 
   <ModesCarousel />
 
   <DailyGamesSection />
-
-  <FeatureGrid />
 
   <SignupForm />
 </Layout>

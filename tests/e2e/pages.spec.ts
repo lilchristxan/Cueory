@@ -450,13 +450,16 @@ test.describe('marketing look (D-41)', () => {
     await expect(headline).toHaveText('nursing school is hard enough.');
     await expect(page.getByText('cueory makes studying simpler.')).toBeVisible();
     await expect(page.getByText('Short, clear lessons')).toHaveCount(0);
-    const button = page.getByRole('link', { name: 'create your free account', exact: true });
-    await expect(button).toHaveAttribute('href', '/#signup');
+    // One glassy button to the daily games and one quiet link to the launch list (lane 14 home polish).
+    const button = page.locator('.scene-hero').getByRole('link', { name: "play today's games", exact: true });
+    await expect(button).toHaveAttribute('href', '/play');
+    await expect(page.getByRole('link', { name: 'join the launch list', exact: true })).toHaveAttribute('href', '/#signup');
     // No line under the button restates it (Christian, 2026-11-02).
     await expect(page.getByText('save your progress and pick up where you left off.')).toHaveCount(0);
     // A calmer hero (D-55): no course link, no motto line and no embossed logo behind the headline.
     const hero = page.locator('.scene-hero');
-    await expect(hero.getByRole('link')).toHaveCount(1);
+    await expect(hero.getByRole('link')).toHaveCount(2);
+    await expect(hero.locator('.glass-button')).toHaveCount(1);
     await expect(hero.getByText('by nursing students, for nursing students.')).toHaveCount(0);
     await expect(hero.locator('.logo')).toHaveCount(1);
     for (const element of [headline, button]) {
@@ -574,7 +577,7 @@ test.describe('marketing look (D-41)', () => {
 
   test('the glassy button is see-through glass with a blur, and its text stays readable', async ({ page }) => {
     await page.goto('/');
-    const button = page.getByRole('link', { name: 'create your free account', exact: true });
+    const button = page.locator('.scene-hero').getByRole('link', { name: "play today's games", exact: true });
     const look = await button.evaluate((el) => {
       const style = getComputedStyle(el);
       return { background: style.backgroundColor, blur: style.backdropFilter || style.getPropertyValue('-webkit-backdrop-filter') };
@@ -621,9 +624,9 @@ test.describe('marketing look (D-41)', () => {
   }) => {
     await page.goto('/');
     const sections = page.locator('[data-reveal-section]');
-    // How it works, "ways to study", daily games (D-61), the features and the launch-updates panel (Task 83).
-    await expect(sections).toHaveCount(5);
-    const all = [0, 1, 2, 3, 4];
+    // How it works, "ways to study", daily games (D-61) and the launch-updates panel (Task 83, lane 14 home polish).
+    await expect(sections).toHaveCount(4);
+    const all = [0, 1, 2, 3];
     const ways = 1;
     const look = (index: number) =>
       sections.nth(index).evaluate((el) => [el.getAttribute('data-reveal'), getComputedStyle(el).opacity, getComputedStyle(el).translate]);
@@ -988,10 +991,10 @@ test.describe('silk scenes down the home page (D-53)', () => {
         };
       }),
     );
-    // Task 83: how it works and the features join the hero, "ways to study", daily games and launch updates, so
-    // Ivory and Linen still alternate below the hero.
+    // Task 83 and the lane 14 home polish: how it works, "ways to study", daily games and launch updates follow the
+    // hero, so Ivory and Linen still alternate below it.
     expect(scenes.map((scene) => scene.kind)).toEqual([
-      'scene-hero', 'scene-play', 'scene-tint', 'scene-play', 'scene-tint', 'scene-low',
+      'scene-hero', 'scene-play', 'scene-tint', 'scene-play', 'scene-low',
     ]);
     for (const scene of scenes) expect(scene).toMatchObject({ drawn: true, behind: '-20', fades: true });
 
@@ -1035,7 +1038,7 @@ test.describe('silk scenes down the home page (D-53)', () => {
       }
       return { bands: bands.length, hits };
     });
-    expect(covered.bands).toBe(6); // a fade above each of the five scenes after the hero, and one into the footer
+    expect(covered.bands).toBe(5); // a fade above each of the four scenes after the hero, and one into the footer
     expect(covered.hits).toEqual([]);
   });
 });

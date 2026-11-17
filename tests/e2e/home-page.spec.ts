@@ -21,26 +21,24 @@ test.describe('home page-specific behavior', () => {
     expect(response?.status()).toBe(200);
 
     const identifiedSections = page.locator('main > section[id]');
-    await expect(page.locator('main > section')).toHaveCount(6);
-    await expect(identifiedSections).toHaveCount(5);
+    await expect(page.locator('main > section')).toHaveCount(5);
+    await expect(identifiedSections).toHaveCount(4);
     const sectionIds = await identifiedSections.evaluateAll((sections) => sections.map((section) => section.id));
     expect(sectionIds).toEqual([
       'how-it-works',
       'ways-to-study',
       'daily-games',
-      'study-features',
       'signup',
     ]);
 
     await expect(page.getByRole('link', { name: "start with a lesson" })).toHaveAttribute('href', '/learn/study-skills');
     await expect(page.getByTestId('games-link')).toHaveAttribute('href', '/play');
-    await expect(page.getByRole('heading', { level: 2 })).toHaveCount(5);
+    await expect(page.getByRole('heading', { level: 2 })).toHaveCount(4);
     const sectionHeadings = await page.getByRole('heading', { level: 2 }).allTextContents();
     expect(sectionHeadings).toEqual([
       'how it works',
       'ways to study',
       'daily games',
-      'made for the way you study',
       'get launch updates',
     ]);
 
