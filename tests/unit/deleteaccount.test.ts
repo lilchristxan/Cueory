@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   deletionSummary, confirmState, afterDeletion, DELETE_MAX_SIGN_IN_AGE_SECONDS, DELETE_RETURN_PATH, deleteOutcome,
-  freshForDeletion, reauthHref, tokenIssuedAt,
+  freshForDeletion, reauthHref, tokenIssuedAt, tokenRecentAuthAt,
 } from '../../src/islands/deleteaccount';
 import { safeNext } from '../../src/islands/signin';
 import { GUEST_IMPORT_MARKER_PREFIX } from '../../src/islands/guestimportrun';
@@ -20,6 +20,7 @@ import {
 } from '../../src/scripts/progress';
 import { PROMO_STORAGE_KEY } from '../../src/scripts/promo';
 import { THEME_STORAGE_KEY } from '../../src/scripts/theme';
+import { GAME_SETTINGS_STORAGE_KEY } from '../../src/islands/gamesettings';
 import { STATS_STORAGE_KEY } from '../../src/islands/gameresults';
 import { CROSSWORD_SETTINGS_KEY } from '../../src/islands/cueword';
 import type { KeyValueStorage } from '../../src/scripts/storage';
@@ -216,6 +217,10 @@ describe('afterDeletion', () => {
 
   it('includes the crossword settings key (Task 721)', () => {
     expect(afterDeletion(new MemoryStorage())).toContain(CROSSWORD_SETTINGS_KEY);
+  });
+
+  it('includes the shared game settings key (#734)', () => {
+    expect(afterDeletion(new MemoryStorage())).toContain(GAME_SETTINGS_STORAGE_KEY);
   });
 
   it('includes the study resume key (Task 104)', () => {
@@ -514,24 +519,45 @@ describe('tokenIssuedAt', () => {
   });
 });
 
-describe('freshForDeletion', () => {
-  it('is the same 10 minutes as the database', () => {
+describe('tokenRecentAuthAt and freshForDeletion', () => {
+  const signed = (method: string, timestamp: unknown, extras: Record<string, unknown> = {}) =>
+    token({ iat: nowSeconds, amr: [{ method, timestamp }], ...extras });
+
+  it('uses the same ten-minute limit as the database', () => {
     expect(DELETE_MAX_SIGN_IN_AGE_SECONDS).toBe(600);
   });
 
-  it('accepts a token from just now', () => {
-    expect(freshForDeletion(token({ iat: nowSeconds }), NOW_MS)).toBe(true);
+  it('reads an actual password, OAuth, OTP or magic-link event, not a refreshed iat', () => {
+    expect(tokenRecentAuthAt(signed('password', nowSeconds - 40))).toBe(nowSeconds - 40);
+    expect(tokenRecentAuthAt(signed('oauth', nowSeconds - 20))).toBe(nowSeconds - 20);
+    expect(tokenRecentAuthAt(signed('otp', nowSeconds - 20))).toBe(nowSeconds - 20);
+    expect(tokenRecentAuthAt(signed('magiclink', nowSeconds - 20))).toBe(nowSeconds - 20);
+    expect(freshForDeletion(signed('password', nowSeconds), NOW_MS)).toBe(true);
+    expect(freshForDeletion(signed('password', nowSeconds - 540), NOW_MS)).toBe(true);
+    expect(freshForDeletion(signed('password', nowSeconds - 541), NOW_MS)).toBe(false);
+    expect(freshForDeletion(signed('password', nowSeconds - 3600), NOW_MS)).toBe(false);
+    expect(freshForDeletion(token({ iat: nowSeconds }), NOW_MS)).toBe(false);
   });
 
-  it('accepts a token up to 9 minutes old (a minute short of the limit)', () => {
-    expect(freshForDeletion(token({ iat: nowSeconds - 540 }), NOW_MS)).toBe(true);
-    expect(freshForDeletion(token({ iat: nowSeconds - 541 }), NOW_MS)).toBe(false);
+  it('allows a recent TOTP verification only at aal2', () => {
+    expect(freshForDeletion(signed('totp', nowSeconds, { aal: 'aal2' }), NOW_MS)).toBe(true);
+    expect(freshForDeletion(signed('totp', nowSeconds, { aal: 'aal1' }), NOW_MS)).toBe(false);
   });
 
-  it('refuses an older token, a token with no iat and no token', () => {
-    expect(freshForDeletion(token({ iat: nowSeconds - 3600 }), NOW_MS)).toBe(false);
-    expect(freshForDeletion(token({ sub: 'x' }), NOW_MS)).toBe(false);
+  it('rejects a token refresh, a malformed AMR claim, and a future credential event', () => {
+    expect(freshForDeletion(signed('token_refresh', nowSeconds), NOW_MS)).toBe(false);
+    expect(freshForDeletion(signed('password', 'fresh'), NOW_MS)).toBe(false);
+    expect(freshForDeletion(token({ iat: nowSeconds, amr: 'password' }), NOW_MS)).toBe(false);
+    expect(freshForDeletion(signed('password', nowSeconds + 40), NOW_MS)).toBe(false);
     expect(freshForDeletion(undefined, NOW_MS)).toBe(false);
+  });
+
+  it('uses the newest valid credential event, ignoring a newer token refresh', () => {
+    expect(freshForDeletion(token({ iat: nowSeconds, amr: [
+      { method: 'password', timestamp: nowSeconds - 2000 },
+      { method: 'token_refresh', timestamp: nowSeconds },
+      { method: 'oauth', timestamp: nowSeconds - 10 },
+    ] }), NOW_MS)).toBe(true);
   });
 });
 
