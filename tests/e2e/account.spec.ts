@@ -341,12 +341,15 @@ test.describe('/account signed in (fake client)', () => {
     page.on('download', download => files.push(download));
     await page.getByRole('button', { name: 'download spreadsheet files', exact: true }).click();
     await expect(page.getByText('your spreadsheet files are downloading.')).toBeVisible();
-    // 15 spreadsheet files since sudokuStats.csv joined the export (#720), plus the JSON file: 16 object URLs.
-    await expect.poll(() => files.length, { timeout: 15_000 }).toBe(15);
+    // 15 spreadsheet files since sudokuStats.csv joined the export (#720), README.txt first (lane 2), plus the JSON
+    // file: 17 object URLs.
+    await expect.poll(() => files.length, { timeout: 15_000 }).toBe(16);
+    expect(files[0]!.suggestedFilename()).toBe(`${file.suggestedFilename().slice(0, -5)}-README.txt`);
+    expect(readFileSync((await files[0]!.path())!, 'utf8')).toContain(`${file.suggestedFilename().slice(0, -5)}-studyEvents.csv`);
     expect(files.map(download => download.suggestedFilename())).toContain(`${file.suggestedFilename().slice(0, -5)}-studyEvents.csv`);
     expect(files.map(download => download.suggestedFilename())).toContain(`${file.suggestedFilename().slice(0, -5)}-sudokuStats.csv`);
-    await expect.poll(async () => (await urls(page)).revoked, { timeout: 15_000 }).toBe(16);
-    expect((await urls(page)).made).toBe(16);
+    await expect.poll(async () => (await urls(page)).revoked, { timeout: 15_000 }).toBe(17);
+    expect((await urls(page)).made).toBe(17);
   });
 
   test('offers no file when a read fails, and never shows provider detail', async ({ page }) => {
