@@ -20,12 +20,20 @@ for (const scheme of ['light', 'dark'] as const) {
     await expect(game(page).getByRole('gridcell')).toHaveCount(81);
     const width = page.viewportSize()!.width;
 
-    // The whole board sits inside the panel and the screen.
+    // The board keeps 44px squares and, where needed, scrolls within its own region.
     const panel = await rect(game(page).locator('.sudoku-panel'));
+    const region = game(page).getByRole('region', { name: 'sudoku grid scroll area' });
     const board = await rect(game(page).locator('.sudoku-board'));
     expect(board.left).toBeGreaterThanOrEqual(panel.left - 0.5);
-    expect(board.right).toBeLessThanOrEqual(panel.right + 0.5);
-    expect(board.right).toBeLessThanOrEqual(width);
+    await expect(region).toHaveCSS('overflow-x', 'auto');
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+    const boardCells = game(page).getByRole('gridcell');
+    const firstCell = await rect(boardCells.first());
+    expect(firstCell.width).toBeGreaterThanOrEqual(44);
+    expect(firstCell.height).toBeGreaterThanOrEqual(44);
+    await boardCells.last().scrollIntoViewIfNeeded();
+    await expect(boardCells.last()).toBeInViewport({ ratio: 1 });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 
     // All of 1–9 and x are on screen, 44 px or more, with nothing hidden in a sideways scroller.
     const row = game(page).locator('.sudoku-number-row');
@@ -87,3 +95,25 @@ for (const scheme of ['light', 'dark'] as const) {
     await expect(game(page).getByRole('button', { name: /settings/ })).toBeFocused();
   });
 }
+
+test('sudoku keeps usable cells in a contained scroll area at 320px with 32px root text', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 844 });
+  await page.evaluate(() => document.documentElement.style.setProperty('font-size', '32px', 'important'));
+  await page.goto('/play');
+  await expect(game(page).getByRole('gridcell')).toHaveCount(81);
+
+  const region = game(page).getByRole('region', { name: 'sudoku grid scroll area' });
+  const board = region.getByRole('grid', { name: 'sudoku grid' });
+  await expect(region).toHaveCSS('overflow-x', 'auto');
+  expect(await region.evaluate((element) => element.scrollWidth > element.clientWidth)).toBe(true);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
+
+  const first = board.getByRole('gridcell').first();
+  const firstBox = await rect(first);
+  expect(firstBox.width).toBeGreaterThanOrEqual(44);
+  expect(firstBox.height).toBeGreaterThanOrEqual(44);
+  const last = board.getByRole('gridcell').last();
+  await last.scrollIntoViewIfNeeded();
+  await expect(last).toBeInViewport({ ratio: 1 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
+});

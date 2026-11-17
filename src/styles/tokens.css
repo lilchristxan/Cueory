@@ -240,6 +240,8 @@
   --crossword-letter: clamp(0.75rem, 3vw, 1.5rem);
   --crossword-help: min(20rem, calc(100vw - var(--spacing-gutter) - var(--spacing-gutter)));
   --crossword-print-cell: 2rem;      /* a printed square; colors on paper use --print-paper / --print-ink (Task 641) */
+  --wordpath-cell: var(--tap-min);   /* large letter grids scroll inside their wrapper, keeping 44 px targets */
+  --wordpath-columns: 11;            /* each puzzle overrides this with its validated grid width */
 }
 
 /* Pillo rules are a separate entry: always emit their shared theme variables. */
@@ -502,7 +504,7 @@
 
 @theme static {
   /* ---------- Sudoku (Task 625) ---------- */
-  --sudoku-cell-min: 2.75rem;
+  --sudoku-cell-min: var(--tap-min);
   --sudoku-cell-max: 5.25rem;
   --sudoku-height-reserve: 28.75rem;
   --sudoku-width-reserve: 9.375rem;
