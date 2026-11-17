@@ -235,7 +235,7 @@
   /* ---------- Crossword levels (Task 627) ---------- */
   --crossword-cell-easy: clamp(2.75rem, 12vw, 4.5rem);
   --crossword-cell-mid: clamp(2.75rem, 7vw, 3.875rem);
-  --crossword-cell-hard: clamp(1.25rem, calc((100cqw - 0.875rem) / 15), 2.5rem);
+  --crossword-cell-hard: var(--tap-min); /* large boards scroll inside their wrapper, keeping 44 px targets */
   --crossword-gap: 0.0625rem;
   --crossword-line: 0.0625rem;
   --crossword-number: clamp(0.45rem, 1.5vw, 0.75rem);
