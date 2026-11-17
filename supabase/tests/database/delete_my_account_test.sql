@@ -4,7 +4,7 @@
 -- only inside this test.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(38);
+select plan(40);
 
 insert into auth.users (id, email) values
   ('00000000-0000-4000-8000-000000000001', 'one@example.com'),
@@ -52,6 +52,14 @@ insert into public.study_events (user_id, item_id, item_version_id, kind, ms_on_
          now() - make_interval(mins => n)
   from unnest(array['00000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000000002']::uuid[]) u,
        generate_series(1, 3) n;
+-- The anatomy lab's review queue and saved views (Task 178).
+insert into public.anatomy_review_queue (user_id, system_key, structure_id, missed_count)
+  select u, 'heart', 'FMA' || n, n
+  from unnest(array['00000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000000002']::uuid[]) u,
+       generate_series(1, 2) n;
+insert into public.anatomy_saved_views (user_id, system_key, name, camera, hidden, faded, selected)
+  select u, 'heart', 'sample view', '{"position": [0, 0, 3], "target": [0, 0, 0]}'::jsonb, array['FMA1'], '{}', 'FMA2'
+  from unnest(array['00000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000000002']::uuid[]) u;
 
 -- How many rows one person has in each table that references auth.users, found from the foreign keys themselves, so a
 -- table added later is counted without changing this function.
@@ -114,8 +122,8 @@ select results_eq(
 -- reviewer sees that delete-my-account covers it.
 select results_eq(
   $$ select array_agg(relation order by relation) from pg_temp.rows_for('00000000-0000-4000-8000-000000000001') $$,
-  $$ values (array['public.admins', 'public.attempts', 'public.exam_plans', 'public.flags', 'public.profiles', 'public.review_state',
-                   'public.study_events']) $$,
+  $$ values (array['public.admins', 'public.anatomy_review_queue', 'public.anatomy_saved_views', 'public.attempts', 'public.exam_plans',
+                   'public.flags', 'public.profiles', 'public.review_state', 'public.study_events']) $$,
   'the tables that reference auth.users are exactly the ones this test covers'
 );
 select is_empty(
@@ -241,12 +249,14 @@ select is_empty($$ select 1 from public.review_state where user_id = '00000000-0
 select is_empty($$ select 1 from public.exam_plans where user_id = '00000000-0000-4000-8000-000000000001' $$, 'their exam plans are gone');
 select is_empty($$ select 1 from public.flags where user_id = '00000000-0000-4000-8000-000000000001' $$, 'the reports they sent are gone');
 select is_empty($$ select 1 from public.study_events where user_id = '00000000-0000-4000-8000-000000000001' $$, 'their study events are gone');
+select is_empty($$ select 1 from public.anatomy_review_queue where user_id = '00000000-0000-4000-8000-000000000001' $$, 'their anatomy review queue is gone');
+select is_empty($$ select 1 from public.anatomy_saved_views where user_id = '00000000-0000-4000-8000-000000000001' $$, 'their saved anatomy views are gone');
 
 -- ---- Student two is untouched.
 select results_eq(
   $$ select relation, n::int from pg_temp.rows_for('00000000-0000-4000-8000-000000000002') order by relation $$,
-  $$ values ('public.admins', 1), ('public.attempts', 2), ('public.exam_plans', 2), ('public.flags', 1), ('public.profiles', 1),
-            ('public.review_state', 1), ('public.study_events', 3) $$,
+  $$ values ('public.admins', 1), ('public.anatomy_review_queue', 2), ('public.anatomy_saved_views', 1), ('public.attempts', 2),
+            ('public.exam_plans', 2), ('public.flags', 1), ('public.profiles', 1), ('public.review_state', 1), ('public.study_events', 3) $$,
   'another student keeps every row they had'
 );
 select results_eq(

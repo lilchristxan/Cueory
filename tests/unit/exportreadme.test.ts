@@ -50,6 +50,8 @@ describe('README.txt in download my data (lane 2)', () => {
       async *selectPages() { yield { data: [], error: null }; },
       rpc: async () => ({ data: [], error: null }),
       user: async () => ({ data: { user: { created_at: '2026-11-01T08:00:00.000Z' } }, error: null }),
+      // Task 178: the export checks the session's assurance before reading tables behind the opt-in MFA policies.
+      assurance: async () => ({ data: { currentLevel: 'aal1', nextLevel: 'aal1' }, error: null }),
     };
     const files = await prepareDownload(reader as never, { email: '', signInDetails: undefined, storage: undefined, today } as never);
     expect(files.ok).toBe(true);

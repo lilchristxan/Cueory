@@ -112,7 +112,8 @@ export function wholeBody(systems: readonly AnatomySystem[]): AnatomySystem | nu
       }
       if (seen.has(structure.id)) continue;
       seen.add(structure.id);
-      structures.push(structure);
+      // The whole body mixes PART-OF and IS-A systems: keep each structure's own relation beside its group and parents.
+      structures.push({ ...structure, tree: structure.tree ?? system.hierarchyTree ?? 'partof' });
     }
   }
   const out: AnatomySystem = {

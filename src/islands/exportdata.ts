@@ -4,6 +4,8 @@
  * Sections (JSON key and CSV file share the name): profile, onboarding, progress, reviewState, gameStats and
  * sudokuStats come from the account page or this browser; attempts, examPlans and reviewRows mirror the student's own rows in the database
  * tables `attempts`, `exam_plans` and `review_state` (supabase/migrations 20261101100000 and 20261101110000), and
+ * anatomyReviewQueue and anatomyViews hold the student's own Task 178 study data: the full review history including cleared
+ * misses, and saved cameras/visibility state; the reader omits database row and owner ids and relies on RLS + MFA.
  * reports holds the student's own "Flag or comment" reports as the database function `my_flags()` returns them (D-88):
  * never the admin fields (user, status, handled time), which are dropped by name like any other unknown field.
  * studyEvents mirrors the student's own rows in `study_events` (supabase/migrations/20261102100000, Task 140). A
@@ -20,7 +22,8 @@
  * sign-in sessions as `my_sessions()` returns them (supabase/migrations/20261102160000): when, browser and IP address,
  * without the session id, which is only the read cursor.
  * Row caps: attempts and reviewRows keep their first 50,000 rows, examPlans its first 10, reports and sessions their
- * first 10,000 and account.identities its first 20; the rest is reported in `dropped` as `<section>[<cap>+]`.
+ * first 10,000, anatomyReviewQueue its first 10,000, anatomyViews its first 50 and account.identities its first 20;
+ * the rest is reported in `dropped` as `<section>[<cap>+]`.
  * studyEvents has no cap: the whole history is exported.
  */
 import { dailyGames } from '../config/games';
@@ -37,6 +40,14 @@ export interface AccountIdentity {
 }
 export interface SessionRow {
   createdAt: string | null; updatedAt: string | null; notAfter: string | null; userAgent: string | null; ip: string | null;
+}
+export interface AnatomyReviewQueueExportRow {
+  systemKey: string; structureId: string; missedCount: number;
+  firstMissedAt: string; lastMissedAt: string; clearedAt: string | null;
+}
+export interface AnatomySavedViewExportRow {
+  systemKey: string; name: string; camera: JsonObject; hidden: readonly string[]; faded: readonly string[];
+  selected: string | null; createdAt: string; updatedAt: string;
 }
 
 export interface ExportData {
@@ -76,6 +87,10 @@ export interface ExportData {
    * loadExport supplies StudyEventPages; a short list can also be passed as rows.
    */
   studyEvents?: readonly StudyEventRow[] | StudyEventPages;
+  /** The signed-in student's full anatomy review history, including rows they cleared. */
+  anatomyReviewQueue?: readonly AnatomyReviewQueueExportRow[];
+  /** The signed-in student's saved anatomy views, with their camera and visibility state. */
+  anatomyViews?: readonly AnatomySavedViewExportRow[];
 }
 export interface StudyEventRow {
   itemId: string; itemVersionId: string; kind: string; msOnItem: number; mark: string | null; at: string; createdAt: string;
@@ -109,6 +124,7 @@ function utcDate(value: unknown): string | undefined {
   return iso.slice(0, -1) + micros + 'Z';
 }
 const date = (value: unknown) => utcDate(value) !== undefined;
+const nullableDate = (value: unknown) => value === null || date(value);
 const profileSchema: Schema = {
   displayName: nullableText, email: nullableText, createdAt: value => value === null || date(value),
   nameChangeWindowStart: value => value === null || date(value),
@@ -149,6 +165,44 @@ const reportSchema: Schema = {
 /** The database's own rules for a study event (study_events in 20261102100000_study_events.sql). */
 const studyEventKinds = ['answered', 'marked', 'skipped'];
 const studyEventMarks = ['know', 'learning'];
+const anatomySystemKey = (value: unknown) => typeof value === 'string' && /^[a-z0-9-]{1,40}$/.test(value);
+const anatomyStructureId = (value: unknown) =>
+  typeof value === 'string' && value.length <= 60 && /^(FMA\d+|FIX\d+|fixture-[a-z0-9-]+)$/.test(value);
+function anatomyIdList(value: unknown): boolean {
+  if (!Array.isArray(value) || value.length > 2000 || Object.keys(value).length !== value.length) return false;
+  const seen = new Set<string>();
+  for (let i = 0; i < value.length; i++) {
+    const item = own(value, String(i));
+    if (!anatomyStructureId(item) || seen.has(item as string)) return false;
+    seen.add(item as string);
+  }
+  return true;
+}
+function anatomyVector(value: unknown): boolean {
+  if (!Array.isArray(value) || value.length !== 3 || Object.keys(value).length !== 3) return false;
+  for (let i = 0; i < 3; i++) {
+    const item = own(value, String(i));
+    if (typeof item !== 'number' || !Number.isFinite(item)) return false;
+  }
+  return true;
+}
+function anatomyCamera(value: unknown): boolean {
+  if (!plain(value)) return false;
+  if (Object.keys(value).some(key => !['position', 'target', 'up'].includes(key))) return false;
+  return anatomyVector(own(value, 'position')) && anatomyVector(own(value, 'target')) &&
+    (!Object.hasOwn(value, 'up') || anatomyVector(own(value, 'up')));
+}
+const anatomyReviewQueueSchema: Schema = {
+  systemKey: anatomySystemKey, structureId: anatomyStructureId,
+  missedCount: value => typeof value === 'number' && Number.isSafeInteger(value) && value >= 1 && value <= 2_147_483_647,
+  firstMissedAt: date, lastMissedAt: date, clearedAt: nullableDate,
+};
+const anatomySavedViewSchema: Schema = {
+  systemKey: anatomySystemKey,
+  name: value => typeof value === 'string' && value.length >= 1 && value.length <= 60 && !/[\u0000-\u001f\u007f]/.test(value),
+  camera: anatomyCamera, hidden: anatomyIdList, faded: anatomyIdList,
+  selected: value => value === null || anatomyStructureId(value), createdAt: date, updatedAt: date,
+};
 const studyEventSchema: Schema = {
   itemId: uuid, itemVersionId: uuid,
   kind: value => typeof value === 'string' && studyEventKinds.includes(value),
@@ -196,7 +250,6 @@ export function jsonCopy(value: unknown, depth = 0): JsonValue | undefined {
   return Object.fromEntries(entries);
 }
 const jsonObject = (value: unknown) => plain(value) && jsonCopy(value) !== undefined;
-const nullableDate = (value: unknown) => value === null || date(value);
 /** A Supabase Auth provider name, such as google or email. */
 const providerName = (value: unknown) => typeof value === 'string' && /^[a-z0-9_-]{1,40}$/.test(value);
 function providerList(value: unknown): boolean {
@@ -218,10 +271,11 @@ const identitySchema: Schema = { provider: providerName, identityData: jsonObjec
 const sessionSchema: Schema = {
   createdAt: nullableDate, updatedAt: nullableDate, notAfter: nullableDate, userAgent: nullableText, ip: nullableText,
 };
-const sections = ['profile', 'signInDetails', 'account', 'onboarding', 'progress', 'reviewState', 'gameStats', 'sudokuStats', 'attempts', 'examPlans', 'reviewRows', 'reports', 'sessions', 'studyEvents'] as const;
+const sections = ['profile', 'signInDetails', 'account', 'onboarding', 'progress', 'reviewState', 'gameStats', 'sudokuStats', 'attempts', 'examPlans', 'reviewRows', 'reports', 'sessions', 'studyEvents', 'anatomyReviewQueue', 'anatomyViews'] as const;
 const rowCaps: Partial<Record<Section, number>> = {
   signInDetails: 100,
   attempts: 50_000, examPlans: 10, reviewRows: 50_000, reports: 10_000, sessions: 10_000,
+  anatomyReviewQueue: 10_000, anatomyViews: 50,
 };
 const IDENTITY_CAP = 20;
 type Section = typeof sections[number];
@@ -246,6 +300,8 @@ interface Sections {
   reports: Row[];
   sessions: Row[];
   studyEvents: StudyEventText;
+  anatomyReviewQueue: Row[];
+  anatomyViews: Row[];
 }
 /** Study events already written out: JSON array elements and CSV lines, as text or as one Blob per page. */
 interface StudyEventText { count: number; json: readonly (string | Blob)[]; csv: readonly (string | Blob)[] }
@@ -413,6 +469,20 @@ function prepare(data: unknown): { data: Sections; dropped: string[] } {
   const reviewRows = listSection('reviewRows', reviewRowSchema);
   for (const row of reviewRows) row.updatedAt = utcDate(row.updatedAt)!;
   const sessions = listSection('sessions', sessionSchema);
+  const anatomyReviewQueue = listSection('anatomyReviewQueue', anatomyReviewQueueSchema);
+  for (const row of anatomyReviewQueue) {
+    row.firstMissedAt = utcDate(row.firstMissedAt)!;
+    row.lastMissedAt = utcDate(row.lastMissedAt)!;
+    if (typeof row.clearedAt === 'string') row.clearedAt = utcDate(row.clearedAt)!;
+  }
+  const anatomyViews = listSection('anatomyViews', anatomySavedViewSchema);
+  for (const row of anatomyViews) {
+    row.createdAt = utcDate(row.createdAt)!;
+    row.updatedAt = utcDate(row.updatedAt)!;
+    row.camera = jsonCopy(row.camera) as JsonObject;
+    row.hidden = Array.from(row.hidden as readonly string[]);
+    row.faded = Array.from(row.faded as readonly string[]);
+  }
   for (const row of sessions) {
     for (const key of ['createdAt', 'updatedAt', 'notAfter']) if (typeof row[key] === 'string') row[key] = utcDate(row[key])!;
   }
@@ -458,6 +528,8 @@ function prepare(data: unknown): { data: Sections; dropped: string[] } {
       reports,
       sessions,
       studyEvents,
+      anatomyReviewQueue,
+      anatomyViews,
     },
     dropped: [...dropped].sort(),
   };
@@ -566,6 +638,8 @@ function csvParts(data: unknown): { fileName: string; parts: (string | Blob)[] }
     file('reports.csv', Object.keys(reportSchema), clean.data.reports),
     file('sessions.csv', Object.keys(sessionSchema), clean.data.sessions),
     { fileName: 'studyEvents.csv', parts: [csv(studyEventHeaders, []), ...clean.data.studyEvents.csv] },
+    file('anatomyReviewQueue.csv', Object.keys(anatomyReviewQueueSchema), clean.data.anatomyReviewQueue),
+    file('anatomyViews.csv', Object.keys(anatomySavedViewSchema), clean.data.anatomyViews),
     file('dropped.csv', ['dropped'], clean.dropped.map(dropped => ({ dropped }))),
   ];
 }

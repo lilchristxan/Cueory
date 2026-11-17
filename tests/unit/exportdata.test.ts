@@ -34,7 +34,7 @@ function sampleGuest() {
 
 describe('JSON export', () => {
   it('round-trips every allowed sample section with a caller-supplied date and format', () => {
-    expect(json(sample)).toEqual({ format: 'cueory-export-1', exportDate, ...sample, signInDetails: [], account: {}, attempts: [], examPlans: [], reviewRows: [], reports: [], sessions: [], studyEvents: [], dropped: [] });
+    expect(json(sample)).toEqual({ format: 'cueory-export-1', exportDate, ...sample, signInDetails: [], account: {}, attempts: [], examPlans: [], reviewRows: [], reports: [], sessions: [], studyEvents: [], anatomyReviewQueue: [], anatomyViews: [], dropped: [] });
     expect(exportJson(sample, exportDate)).toContain('\n  "profile": {\n    "displayName": "Sample Student",');
   });
 
@@ -180,7 +180,7 @@ describe('JSON export', () => {
       profile: { createdAt: '2026-10-01T12:00:00.000Z', email: 'sample@example.invalid', displayName: 'Sample Student' },
     };
     expect(exportJson(reordered, exportDate)).toBe(exportJson(sample, exportDate));
-    expect(Object.keys(json(sample))).toEqual(['format', 'exportDate', 'profile', 'signInDetails', 'account', 'onboarding', 'progress', 'reviewState', 'gameStats', 'sudokuStats', 'attempts', 'examPlans', 'reviewRows', 'reports', 'sessions', 'studyEvents', 'dropped']);
+    expect(Object.keys(json(sample))).toEqual(['format', 'exportDate', 'profile', 'signInDetails', 'account', 'onboarding', 'progress', 'reviewState', 'gameStats', 'sudokuStats', 'attempts', 'examPlans', 'reviewRows', 'reports', 'sessions', 'anatomyReviewQueue', 'anatomyViews', 'studyEvents', 'dropped']);
   });
 
   it('preserves attempt and history row order, false, zero, null and Unicode', () => {
@@ -198,7 +198,7 @@ describe('JSON export', () => {
 
   it('makes empty sections explicit without inventing profile values or records', () => {
     expect(json({})).toEqual({
-      format: 'cueory-export-1', exportDate, profile: {}, signInDetails: [], account: {}, onboarding: {}, progress: [], reviewState: [], gameStats: [], sudokuStats: [], attempts: [], examPlans: [], reviewRows: [], reports: [], sessions: [], studyEvents: [], dropped: [],
+      format: 'cueory-export-1', exportDate, profile: {}, signInDetails: [], account: {}, onboarding: {}, progress: [], reviewState: [], gameStats: [], sudokuStats: [], attempts: [], examPlans: [], reviewRows: [], reports: [], sessions: [], studyEvents: [], anatomyReviewQueue: [], anatomyViews: [], dropped: [],
     });
   });
 
@@ -307,7 +307,7 @@ describe('JSON export', () => {
 describe('CSV export', () => {
   it('returns section files in fixed order with RFC 4180 record endings', () => {
     const files = exportCsv(sample);
-    expect(files.map(entry => entry.fileName)).toEqual(['profile.csv', 'signInDetails.csv', 'account.csv', 'onboarding.csv', 'progress.csv', 'reviewState.csv', 'gameStats.csv', 'sudokuStats.csv', 'attempts.csv', 'examPlans.csv', 'reviewRows.csv', 'reports.csv', 'sessions.csv', 'studyEvents.csv', 'dropped.csv']);
+    expect(files.map(entry => entry.fileName)).toEqual(['profile.csv', 'signInDetails.csv', 'account.csv', 'onboarding.csv', 'progress.csv', 'reviewState.csv', 'gameStats.csv', 'sudokuStats.csv', 'attempts.csv', 'examPlans.csv', 'reviewRows.csv', 'reports.csv', 'sessions.csv', 'studyEvents.csv', 'anatomyReviewQueue.csv', 'anatomyViews.csv', 'dropped.csv']);
     expect(files.every(entry => entry.text.endsWith('\r\n'))).toBe(true);
     expect(parseRows(file(sample, 'progress'))).toEqual([
       ['id', 'result', 'date', 'deckId', 'progressVersion', 'course', 'examDate', 'done'],
@@ -350,9 +350,9 @@ describe('CSV export', () => {
 
   it('includes only headers for empty sections and the empty dropped report', () => {
     const files = exportCsv({});
-    expect(files).toHaveLength(15);
+    expect(files).toHaveLength(17);
     expect(files.every(entry => parseRows(entry.text).length === 1)).toBe(true);
-    expect(files[14]).toEqual({ fileName: 'dropped.csv', text: 'dropped\r\n' });
+    expect(files[16]).toEqual({ fileName: 'dropped.csv', text: 'dropped\r\n' });
   });
 
   it('returns fresh files and the same stable output for repeated exports', () => {
@@ -792,5 +792,103 @@ describe('the sign-in record and sessions (Task 309)', () => {
     const result = json({ account: { identities: Array(21).fill(account.identities[0]) } });
     expect(result.account.identities).toHaveLength(20);
     expect(result.dropped).toEqual(['account.identities[20+]']);
+  });
+});
+
+
+describe('anatomy lab account data (Task 178)', () => {
+  const review = {
+    systemKey: 'heart', structureId: 'FMA7204', missedCount: 3,
+    firstMissedAt: '2026-11-01T08:00:00+00:00', lastMissedAt: '2026-11-02T09:30:00+00:00',
+    clearedAt: null,
+  };
+  const clearedReview = {
+    ...review, systemKey: 'lungs', structureId: 'FMA7205', missedCount: 1,
+    clearedAt: '2026-11-03T10:00:00+00:00',
+  };
+  const view = {
+    systemKey: 'heart', name: 'front view',
+    camera: { position: [1, 2, 3], target: [0, 0, 0], up: [0, 1, 0] },
+    hidden: ['FMA1'], faded: ['FMA2'], selected: 'FMA3',
+    createdAt: '2026-11-01T08:00:00+00:00', updatedAt: '2026-11-02T09:30:00+00:00',
+  };
+
+  it('exports all review history including cleared entries and saved camera/visibility state in JSON and CSV', () => {
+    const input = { anatomyReviewQueue: [review, clearedReview], anatomyViews: [view] };
+    const result = json(input);
+    expect(result.anatomyReviewQueue).toEqual([
+      { ...review, firstMissedAt: '2026-11-01T08:00:00.000Z', lastMissedAt: '2026-11-02T09:30:00.000Z' },
+      { ...clearedReview, firstMissedAt: '2026-11-01T08:00:00.000Z', lastMissedAt: '2026-11-02T09:30:00.000Z',
+        clearedAt: '2026-11-03T10:00:00.000Z' },
+    ]);
+    expect(result.anatomyViews).toEqual([{
+      ...view, createdAt: '2026-11-01T08:00:00.000Z', updatedAt: '2026-11-02T09:30:00.000Z',
+    }]);
+    expect(result.dropped).toEqual([]);
+    expect(parseRows(file(input, 'anatomyReviewQueue'))).toEqual([
+      ['systemKey', 'structureId', 'missedCount', 'firstMissedAt', 'lastMissedAt', 'clearedAt'],
+      ['heart', 'FMA7204', '3', '2026-11-01T08:00:00.000Z', '2026-11-02T09:30:00.000Z', ''],
+      ['lungs', 'FMA7205', '1', '2026-11-01T08:00:00.000Z', '2026-11-02T09:30:00.000Z', '2026-11-03T10:00:00.000Z'],
+    ]);
+    expect(parseRows(file(input, 'anatomyViews'))).toEqual([
+      ['systemKey', 'name', 'camera', 'hidden', 'faded', 'selected', 'createdAt', 'updatedAt'],
+      ['heart', 'front view', JSON.stringify(view.camera), 'FMA1', 'FMA2', 'FMA3',
+        '2026-11-01T08:00:00.000Z', '2026-11-02T09:30:00.000Z'],
+    ]);
+  });
+
+  it('exports all 1,254 hidden IDs in a default whole-body view to JSON and CSV', () => {
+    const hidden = Array.from({ length: 1254 }, (_unused, i) => 'FMA' + (i + 1));
+    const wholeBody = { ...view, systemKey: 'whole-body', hidden };
+    const result = json({ anatomyViews: [wholeBody] });
+    expect(result.anatomyViews[0]?.hidden).toEqual(hidden);
+    expect(result.dropped).toEqual([]);
+    expect(file({ anatomyViews: [wholeBody] }, 'anatomyViews')).toContain('FMA1254');
+  });
+
+  it('drops internal ids and owner fields by name without exposing their values', () => {
+    const hidden = 'sample-private-owner-value';
+    const result = json({
+      anatomyReviewQueue: [{ ...review, id: hidden, userId: hidden, user_id: hidden }],
+      anatomyViews: [{ ...view, id: hidden, user_id: hidden }],
+    });
+    expect(result.anatomyReviewQueue).toEqual([{ ...review, firstMissedAt: '2026-11-01T08:00:00.000Z', lastMissedAt: '2026-11-02T09:30:00.000Z' }]);
+    expect(result.anatomyViews).toEqual([{ ...view, createdAt: '2026-11-01T08:00:00.000Z', updatedAt: '2026-11-02T09:30:00.000Z' }]);
+    expect(result.dropped).toEqual([
+      'anatomyReviewQueue[0].id', 'anatomyReviewQueue[0].userId', 'anatomyReviewQueue[0].user_id',
+      'anatomyViews[0].id', 'anatomyViews[0].user_id',
+    ]);
+    expect(JSON.stringify(result) + exportCsv({ anatomyViews: [{ ...view, user_id: hidden }] }).map(x => x.text).join('')).not.toContain(hidden);
+  });
+
+  it.each([
+    ['anatomyReviewQueue', { ...review, missedCount: 0 }],
+    ['anatomyReviewQueue', { ...review, lastMissedAt: 'not-a-date' }],
+    ['anatomyReviewQueue', { ...review, systemKey: '../outside' }],
+    ['anatomyReviewQueue', { ...review, structureId: 'private-id' }],
+    ['anatomyViews', { ...view, name: 'bad\nname' }],
+    ['anatomyViews', { ...view, camera: { position: [1, 2], target: [0, 0, 0] } }],
+    ['anatomyViews', { ...view, camera: { position: [1, 2, 3], target: [0, 0, 0], extra: true } }],
+    ['anatomyViews', { ...view, hidden: ['FMA1', 'FMA1'] }],
+    ['anatomyViews', { ...view, selected: 'private-id' }],
+  ])('refuses malformed %s row', (section, bad) => {
+    const result = json({ [section]: [bad] });
+    expect(result[section]).toEqual([]);
+    expect(result.dropped).toContain(section + '[0]');
+  });
+
+  it('caps exported anatomy rows and reports each omitted tail', () => {
+    const result = json({
+      anatomyReviewQueue: Array.from({ length: 10_001 }, () => review),
+      anatomyViews: Array.from({ length: 51 }, () => view),
+    });
+    expect(result.anatomyReviewQueue).toHaveLength(10_000);
+    expect(result.anatomyViews).toHaveLength(50);
+    expect(result.dropped).toEqual(['anatomyReviewQueue[10000+]', 'anatomyViews[50+]']);
+  });
+
+  it('keeps explicit empty anatomy CSV files in the account export bundle', () => {
+    expect(file({}, 'anatomyReviewQueue')).toBe('systemKey,structureId,missedCount,firstMissedAt,lastMissedAt,clearedAt\r\n');
+    expect(file({}, 'anatomyViews')).toBe('systemKey,name,camera,hidden,faded,selected,createdAt,updatedAt\r\n');
   });
 });

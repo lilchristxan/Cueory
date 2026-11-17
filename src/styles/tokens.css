@@ -59,6 +59,8 @@
   --color-board-given: color-mix(in srgb, #eadccf 50%, #f9f5ef); /* Linen + Ivory — sudoku given numbers, far lighter than the tint */
   --color-board-match: #6b5243;    /* Bronze   — sudoku squares holding the selected number */
   --color-on-board-match: #f9f5ef; /* Ivory    — numbers on those squares */
+  /* How opaque a faded structure is (Task 178 study tools): see-through enough to look past, solid enough to tap. */
+  --anatomy-faded-opacity: 0.35;
 
   /* ---------- Fonts ---------- */
   --font-body: "Lato", system-ui, -apple-system, "Segoe UI", sans-serif; /* headings, body, UI, buttons */
@@ -400,6 +402,7 @@
     --color-board-given: color-mix(in srgb, #3a2d24 50%, #1c1917); /* Walnut + Charcoal */
     --color-board-match: #cbb8a4;    /* Sand */
     --color-on-board-match: #1c1917; /* Charcoal */
+    --anatomy-faded-opacity: 0.35;
     --shadow-tint: 28 25 23;      /* Charcoal */
     --silk-fold-rgb: 58 45 36;    /* Walnut */
     --silk-fold-alpha: 0.7;
@@ -474,6 +477,7 @@
   --color-board-given: color-mix(in srgb, #3a2d24 50%, #1c1917); /* Walnut + Charcoal */
   --color-board-match: #cbb8a4;    /* Sand */
   --color-on-board-match: #1c1917; /* Charcoal */
+  --anatomy-faded-opacity: 0.35;
   --shadow-tint: 28 25 23;      /* Charcoal */
   --silk-fold-rgb: 58 45 36;    /* Walnut */
   --silk-fold-alpha: 0.7;

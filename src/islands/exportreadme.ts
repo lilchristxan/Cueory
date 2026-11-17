@@ -20,6 +20,8 @@ export const SPREADSHEET_FILES: Readonly<Record<string, string>> = {
   'reports.csv': 'the "flag or comment" reports you sent: the page, the question if there was one, the reason, your comment and when.',
   'sessions.csv': 'where you are signed in: when each sign-in started and was last used, the browser, and the ip address.',
   'studyEvents.csv': 'your study activity, one line per action on a question: what you did, how long you spent on it and when.',
+  'anatomyReviewQueue.csv': 'the anatomy lab structures you missed in "find it" and how often, including ones you cleared from your review list.',
+  'anatomyViews.csv': 'the anatomy lab views you saved: the name you gave each one, the camera angle, and which structures were hidden, faded or selected.',
   'dropped.csv': 'the names of any saved fields that couldn’t be read and were left out of this download. usually empty.',
 };
 

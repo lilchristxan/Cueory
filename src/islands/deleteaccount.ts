@@ -78,6 +78,11 @@ export function deletionSummary(data: ExportData): string[] {
   const events = data.studyEvents;
   const eventCount = events === undefined ? 0 : 'count' in events ? events.count : events.length;
   if (eventCount) lines.push(`${eventCount} study history entr${eventCount === 1 ? 'y' : 'ies'}`);
+  // Task 178: the anatomy lab's review list (including cleared misses) and saved views go with the account too.
+  const misses = data.anatomyReviewQueue?.length ?? 0;
+  if (misses) lines.push(`${misses} anatomy review entr${misses === 1 ? 'y' : 'ies'}`);
+  const views = data.anatomyViews?.length ?? 0;
+  if (views) lines.push(`${views} saved anatomy view${views === 1 ? '' : 's'}`);
 
   return lines;
 }

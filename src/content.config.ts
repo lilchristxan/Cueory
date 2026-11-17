@@ -342,6 +342,7 @@ const visuals = defineCollection({
       kind: z.enum(['diagram', 'model', 'overlay']),
       lessonIds: z.array(z.string().regex(/^U\d{2}-T\d{2}-L\d{2}$/, 'a lesson id looks like U01-T01-L01')).min(1),
       status: z.enum(['draft', 'approved']),
+      hierarchyTree: z.enum(['partof', 'isa']).optional(),
       labels: z.array(
         z.object({
           id: visualId.or(structureId),
@@ -349,6 +350,11 @@ const visuals = defineCollection({
           source: visualId.or(structureSourceId),
           group: z.string().min(1).max(120).optional(),
           layer: z.enum(['skin', 'muscle', 'nerves', 'vessels', 'organs', 'skeleton']).optional(),
+          // Task 178: the structure's full PART-OF ancestry from BodyParts3D, names only, root first, written by
+          // scripts/build-anatomy.mjs on a rebuild. Files without it still build; the lab then follows the group chain.
+          parents: z.array(z.string().min(1).max(120)).optional(),
+          // Task 178: alternative names from the source, searched like the official name. Never filled in by code.
+          also: z.array(z.string().min(1).max(120)).optional(),
         }),
       ),
       depictions: z.array(z.object({ id: visualId, what: z.string().min(1).max(300), source: visualId })),

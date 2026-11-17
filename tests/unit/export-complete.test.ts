@@ -84,6 +84,8 @@ async function exportReads() {
     async *selectPages(table, columns) { tables.set(table, columns.split(',')); yield empty; },
     rpc: (name) => { rpcs.add(name); return Promise.resolve(empty); },
     user: () => Promise.resolve({ data: { user: { created_at: '2026-11-01T08:00:00.000Z' } }, error: null }),
+    // Task 178: the export checks the session's assurance before reading tables behind the opt-in MFA policies.
+    assurance: () => Promise.resolve({ data: { currentLevel: 'aal1', nextLevel: 'aal1' }, error: null }),
   };
   await loadExport(reader);
   return { tables, rpcs };

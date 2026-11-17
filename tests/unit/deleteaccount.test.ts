@@ -490,6 +490,28 @@ describe('study history in the deletion summary (Task 140)', () => {
   });
 });
 
+describe('anatomy lab data in the deletion summary (Task 178)', () => {
+  const miss = Object.freeze({
+    systemKey: 'sample-system', structureId: 'sample-structure', missedCount: 2,
+    firstMissedAt: '2026-11-01T00:00:00Z', lastMissedAt: '2026-11-02T00:00:00Z', clearedAt: null,
+  });
+  const view = Object.freeze({
+    systemKey: 'sample-system', name: 'sample view', camera: {}, hidden: [], faded: [], selected: null,
+    createdAt: '2026-11-01T00:00:00Z', updatedAt: '2026-11-01T00:00:00Z',
+  });
+
+  it('counts review entries, cleared ones included, and saved views in plain words', () => {
+    expect(deletionSummary({ anatomyReviewQueue: [miss] })).toEqual(['1 anatomy review entry']);
+    expect(deletionSummary({ anatomyReviewQueue: [miss, { ...miss, clearedAt: '2026-11-03T00:00:00Z' }], anatomyViews: [view] }))
+      .toEqual(['2 anatomy review entries', '1 saved anatomy view']);
+    expect(deletionSummary({ anatomyViews: [view, view] })).toEqual(['2 saved anatomy views']);
+  });
+
+  it.each([{}, { anatomyReviewQueue: [], anatomyViews: [] }] satisfies ExportData[])('omits anatomy data when absent or empty: %j', data => {
+    expect(deletionSummary(data)).toEqual([]);
+  });
+});
+
 // ── A recent sign-in before deleting (Task 302) ──────────────────────────────
 
 /** A token shaped like Supabase's: base64url header.payload.signature. The signature is never checked here. */

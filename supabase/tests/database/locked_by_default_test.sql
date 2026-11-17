@@ -37,7 +37,8 @@ create temporary view anon_reach as
 -- What the website (anon or authenticated) can run in public, also as effective privileges. Only the functions on the
 -- allowed list: check_answer (D-86), submit_flag and my_flags (D-88), record_study_events (Task 140),
 -- delete_my_account (Task 60), update_display_name (Task 59), my_sessions (Task 309),
--- and the admin inbox functions (Task 65). Admin RPC authorization is tested separately.
+-- the admin inbox functions (Task 65), and the six anatomy lab study functions (Task 178). Admin RPC authorization is
+-- tested separately.
 create temporary view website_functions as
   select 'public.' || p.proname || '(' || pg_get_function_identity_arguments(p.oid) || ')' as function
   from pg_proc p join pg_namespace n on n.oid = p.pronamespace
@@ -45,7 +46,9 @@ create temporary view website_functions as
     and (has_function_privilege('anon', p.oid, 'execute')
          or has_function_privilege('authenticated', p.oid, 'execute'))
     and p.proname <> all (array['check_answer', 'submit_flag', 'my_flags', 'record_study_events', 'delete_my_account', 'update_display_name', 'my_sessions',
-                            'admin_list_flags', 'admin_mark_flag_handled', 'admin_reopen_flag']::name[]);
+                            'admin_list_flags', 'admin_mark_flag_handled', 'admin_reopen_flag',
+                            'record_anatomy_misses', 'clear_anatomy_miss', 'my_anatomy_review_queue',
+                            'save_anatomy_view', 'delete_anatomy_view', 'my_anatomy_views']::name[]);
 
 select is_empty(
   $$ select c.relname

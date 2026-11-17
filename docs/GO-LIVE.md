@@ -16,6 +16,20 @@ Where this comes from: the Task 141 go-live audit, with actual migration filenam
 
 ---
 
+## Anatomy Lab #651 rollout gate (LANE 4, November 14, 2026)
+
+**Do not merge or serve #651's frontend on staging or production until the matching anatomy database schema exists there.** The new account-export paths intentionally fail closed if `public.anatomy_review_queue` or `public.anatomy_saved_views` is missing. Releasing the frontend first would prevent even pre-existing accounts from downloading their other data.
+
+1. Christian reviews the migration `supabase/migrations/20261117030000_anatomy_study.sql` and independently authorizes its application. Neither this PR nor this runbook applies a hosted migration.
+2. An authorized operator replays and validates migrations in order locally, then (only after approval) applies the approved migration to the staging database.
+3. Confirm both tables, the two identity-bound read RPCs (`my_anatomy_review_queue(expected_user_id uuid)` and `my_anatomy_views(system_key text, expected_user_id uuid)`), and all four write RPCs exist and enforce RLS/MFA and initiating-user identity.
+4. Exercise an **existing** account's JSON and CSV exports in staging, including a two-factor-enabled account, before deploying or merging the #651 frontend.
+5. Complete the signed-in A→B and A→B→A two-tab acceptance. Keep `needs-christian` until Christian approves the change and final CI.
+
+No step here authorizes an unattended or production migration.
+
+---
+
 ## 1. Before launch day (things that wait on you)
 
 Do 1.1 to 1.4 this week. 1.4 (the domain) can take up to a day to become active, so start it early.
@@ -85,7 +99,7 @@ Rule 4: every file runs on `cueory-staging` first (SETUP Part L), and only then 
 Use exactly the steps of SETUP Part L, with three changes:
 - open **cueory-prod** instead of `cueory-staging`, and check the name at the top says `cueory-prod`;
 - run the files in the table below, in this order, once each;
-- the checklist must match the `staging` repository and the migrations **verified as successfully applied to `cueory-staging`**. There are now seventeen repository files after merged PRs #235, #332, #335, #337 and #338. GitHub merges do not execute hosted SQL. Before any production SQL, verify staging results, approval, and which versions are already present in each project.
+- the checklist must match the `staging` repository and the migrations **verified as successfully applied to `cueory-staging`**. There are now eighteen repository files after merged PRs #235, #332, #335, #337, #338 and Task 178's anatomy study migration. GitHub merges do not execute hosted SQL. Before any production SQL, verify staging results, approval, and which versions are already present in each project.
 
 | # | File | Run it |
 | --- | --- | --- |
@@ -106,9 +120,10 @@ Use exactly the steps of SETUP Part L, with three changes:
 | 15 | `20261102160000_fresh_sign_in_and_name_rules` | only after staging tests and specific founder auth/database approval |
 | 16 | `20261102170000_my_sessions` | only after staging session-isolation tests and specific founder privacy approval |
 | 17 | `20261104170500_enforce_opt_in_mfa` | only after staging MFA/policy tests and specific founder auth/database approval |
+| 18 | `20261117030000_anatomy_study` | only after staging tests and specific founder database approval |
 
 1. Open https://github.com/lilchristxan/Cueory/tree/staging/supabase/migrations.
-   You should see exactly the seventeen files above, including `20261102153000_admin_flag_rpcs.sql` from merged PR #338. Its position is determined by its timestamp, not by merge order. If the list differs, or an earlier-versioned file has not yet been applied on staging, stop for a reviewed database migration plan before any production SQL.
+   You should see exactly the eighteen files above, including `20261102153000_admin_flag_rpcs.sql` from merged PR #338. Its position is determined by its timestamp, not by merge order. If the list differs, or an earlier-versioned file has not yet been applied on staging, stop for a reviewed database migration plan before any production SQL.
 2. Open https://supabase.com/dashboard, click **cueory-prod**, and check the name at the top says `cueory-prod`.
 3. Go to the **SQL Editor** section. [SB functions]
 4. For each **approved, not-yet-applied** file, in verified timestamp order: open it on GitHub (SETUP Part L's links, or click the file above and then **Raw**), copy all of it, click **New Query**, paste, and click **Run**. [SB functions]
@@ -116,7 +131,7 @@ Use exactly the steps of SETUP Part L, with three changes:
 5. If a file shows an error or a box asks you to confirm something: stop, don't run it again, don't run the next
    one, and send Claude the error text and the file's number (SETUP Part L explains why).
 6. Run the check query from SETUP Part L, step 10.
-   If all seventeen migrations have passed and been approved for production, the SETUP Part L public-schema query should show 14 tables (all `RLS on`) and 19 public functions, including the restricted `admins` table and four admin-inbox functions. The MFA helper in the private schema is not included. Verify policy behavior, migration history, and the database regression suite as well as names and counts. If anything differs, stop before proceeding.
+   If all eighteen migrations have passed and been approved for production, the SETUP Part L public-schema query should show 16 tables (all `RLS on`) and 25 public functions, including the restricted `admins` table, four admin-inbox functions, the two anatomy study tables and their six functions. The MFA helper in the private schema is not included. Verify policy behavior, migration history, and the database regression suite as well as names and counts. If anything differs, stop before proceeding.
 7. Tell Claude "prod database done through file N".
 
 If a later pull request adds a file with an earlier date than one you've already run, tell Claude before running it.

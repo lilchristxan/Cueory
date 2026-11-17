@@ -51,11 +51,13 @@
  *   4. writes public/models/anatomy/<system>.glb, with the BodyParts3D credit as the file's copyright, and
  *      content/visuals/anatomy-<system>.json: one label per structure whose text is the parts list's English name
  *      exactly as written, cited to that line of parts_list_e.txt, and whose group (the lab's list heading) is a
- *      concept from the same hierarchy, chosen by scripts/anatomy-groups.mjs.
+ *      concept from the same hierarchy, chosen by scripts/anatomy-groups.mjs. Each label also carries `parents`
+ *      (Task 178): its whole PART-OF ancestry, names only, root first, always passing through its group.
  * It prints the triangles of every structure before and after. The same input gives the same files, byte for byte.
  */
-import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, realpathSync, statSync, writeFileSync } from 'node:fs';
 import { basename, extname, join } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { pack } from 'gltfpack';
 import { ancestorsOf, groupHeadings } from './anatomy-groups.mjs';
 import { checkCoordinates, readRelease4Tables, readZip, release4Files, resolveSystem4 } from './anatomy-release4.mjs';
@@ -180,13 +182,46 @@ function resolveSystem(system, data, claimed) {
   }
   return found.map(({ id, path }) => {
     if (!data.partsLines.has(id)) fail(`${system.id}: ${id} has a mesh but no line in the parts list to name it`);
+    const heading = headings.get(id);
     return {
       id,
       name: data.names.get(id),
-      group: data.names.get(headings.get(id)) ?? fail(`${system.id}: heading ${headings.get(id)} of ${id} has no name in the release's files`),
+      group: data.names.get(heading) ?? fail(`${system.id}: heading ${heading} of ${id} has no name in the release's files`),
       path: path.map((step) => data.names.get(step)),
+      parents: ancestryIds(id, path, heading, data.hierarchy.parents).map(
+        (step) => data.names.get(step) ?? fail(`${system.id}: ${step}, above ${id} in the hierarchy, has no name in the release's files`),
+      ),
     };
   });
+}
+
+/**
+ * The structure's whole PART-OF ancestry as concept ids, root first (Task 178: the label's `parents`). It is the
+ * build's path from the system's root concept down to (not including) the structure, with the concepts above that root
+ * climbed one parent at a time until a concept with no parent. Where a concept is part of several wholes, the one that
+ * leads to the structure's list heading is taken, so the heading is always on the chain; otherwise the first in file
+ * order. The same input gives the same chain, and a loop in the data ends the climb instead of hanging.
+ * @param {string} id
+ * @param {string[]} path root concept … structure, as walkSystem gives it
+ * @param {string | undefined} heading the list heading's concept id
+ * @param {Map<string, string[]>} parents concept id -> the concepts it is part of, in file order
+ * @returns {string[]}
+ */
+export function ancestryIds(id, path, heading, parents) {
+  const chain = path.filter((step) => step !== id);
+  const seen = new Set([id, ...chain]);
+  const leadsToHeading = (concept) => concept === heading || ancestorsOf(concept, parents).includes(heading);
+  let at = chain[0] ?? id;
+  while (true) {
+    const above = (parents.get(at) ?? []).filter((concept) => !seen.has(concept));
+    if (above.length === 0) break;
+    const wantHeading = heading !== undefined && !chain.includes(heading);
+    const next = (wantHeading ? above.find(leadsToHeading) : undefined) ?? above[0];
+    chain.unshift(next);
+    seen.add(next);
+    at = next;
+  }
+  return chain;
 }
 
 /** Every concept under a system's roots (breadth-first; ties in file order), skipping exclusions, with its path. */
@@ -497,8 +532,9 @@ function visualFor(system, structures, partsLines, release, { retrieved, tree })
     kind: 'model',
     lessonIds: system.lessonIds,
     status: 'draft',
+    hierarchyTree: tree,
     model: { file: `/models/anatomy/${system.id}.glb`, release: release.label, via: release.via },
-    labels: structures.map((s) => ({ id: s.id, text: s.name, group: s.group, layer: s.layer, source: `bp3d-${s.id}` })),
+    labels: structures.map((s) => ({ id: s.id, text: s.name, group: s.group, layer: s.layer, parents: s.parents, source: `bp3d-${s.id}` })),
     depictions: [
       {
         id: 'geometry',
@@ -635,4 +671,5 @@ async function main() {
   if (changed) writeFileSync(SYSTEMS_FILE, `${JSON.stringify(definitions, null, 2)}\n`);
 }
 
-await main();
+// Build only when run as a command; the unit tests import ancestryIds without building anything.
+if (process.argv[1] && import.meta.url === pathToFileURL(realpathSync(process.argv[1])).href) await main();

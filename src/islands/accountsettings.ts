@@ -286,14 +286,27 @@ export async function prepareDownload(reader: ExportReader, options: GatherOptio
  * checks, but the reads in between ran as B).
  */
 export async function prepareDownloadFor(
-  adapters: Pick<AccountAdapters, 'session' | 'reader'>, userId: string, options: GatherOptions, signal?: AbortSignal,
+  adapters: Pick<AccountAdapters, 'session' | 'reader' | 'onIdentityChange'>, userId: string, options: GatherOptions,
+  signal?: AbortSignal,
 ): Promise<DownloadResult | { ok: false; message: string; changed: true }> {
   const changed = { ok: false as const, message: accountMessage('identity-changed'), changed: true as const };
-  if (signal?.aborted || !(await sameIdentity(adapters, userId))) return changed;
-  const files = await prepareDownload(adapters.reader, options);
-  if (signal?.aborted) return changed;
-  if (files.ok && !(await sameIdentity(adapters, userId))) return changed;
-  return signal?.aborted ? changed : files;
+  // Callers without a watch still catch A->B->A: track every delivered auth event during the read, as well as `signal`.
+  let accountChanged = false;
+  let listening = true;
+  const stop = adapters.onIdentityChange?.(next => {
+    if (listening && next !== userId) accountChanged = true;
+  }) ?? (() => {});
+  const ended = () => accountChanged || signal?.aborted === true;
+  try {
+    if (ended() || !(await sameIdentity(adapters, userId)) || ended()) return changed;
+    const files = await prepareDownload(adapters.reader, options);
+    if (ended()) return changed;
+    if (files.ok && !(await sameIdentity(adapters, userId))) return changed;
+    return ended() ? changed : files;
+  } finally {
+    listening = false;
+    stop();
+  }
 }
 
 /**
