@@ -28,6 +28,7 @@ import { heldRounds, loadStats, localDay, reportProgress, reportRound } from './
 import { dailyStats, recordResult, type DailyStats, type GameStats } from './gamestats';
 import { loadWordList } from './pillowords';
 import ResultBrandMark from './ResultBrandMark';
+import { useSharedGameSettings } from './GameSettings';
 import { browserStorage } from '../scripts/storage';
 
 interface Puzzle {
@@ -119,7 +120,9 @@ export default function PulseGame({ puzzles }: Props) {
   const [problem, setProblem] = useState('');
   const [said, setSaid] = useState('');
   const [copied, setCopied] = useState('');
-  const [contrast, setContrast] = useState(false);
+  // High contrast is the shared game setting (#734): one switch for every game, remembered with the others.
+  const { settings: shared, update: updateShared } = useSharedGameSettings();
+  const contrast = shared.highContrast;
   const [keysOnly, setKeysOnly] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [finish, setFinish] = useState<FinishStats>({ on: false });
@@ -461,7 +464,7 @@ export default function PulseGame({ puzzles }: Props) {
                     : 'letters shown in place or in the word must be used in every later guess.'
                 }
               />
-              <Setting label="high contrast" on={contrast} onChange={() => setContrast((on) => !on)} note="bolder edges and larger marks." />
+              <Setting label="high contrast" on={contrast} onChange={() => updateShared({ highContrast: !contrast })} note="bolder edges and larger marks, in every game." />
               <Setting
                 label="on-screen keyboard only"
                 on={keysOnly}
@@ -472,7 +475,7 @@ export default function PulseGame({ puzzles }: Props) {
                 note="only the letter keys below type, so your device keyboard stays closed."
               />
             </ul>
-            <p className="mt-3 text-sm text-ink-soft">settings last for this visit. light or evening is in the footer.</p>
+            <p className="mt-3 text-sm text-ink-soft">hard mode and on-screen keyboard only last for this visit. high contrast is the same switch as in game settings, so it stays on for every game. light or evening is in the footer.</p>
           </>
         )}
       </details>
