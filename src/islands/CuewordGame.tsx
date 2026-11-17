@@ -44,9 +44,15 @@ function Board({ puzzle, name }: Props) {
 
   useEffect(() => {
     if (solved) result.current?.focus();
-    else if (focusGrid.current) cells.current.get(state.cell)?.focus();
+    else if (focusGrid.current) {
+      const cell = cells.current.get(state.cell);
+      cell?.focus();
+      // Native focus can leave a partly visible square clipped by the large
+      // board's scroll area. Reveal the whole target after keyboard/tap moves.
+      if (level === 'hard') cell?.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'instant' });
+    }
     focusGrid.current = false;
-  }, [state, solved]);
+  }, [state, solved, level]);
 
   const reported = useRef(false);
   useEffect(() => {
@@ -115,9 +121,17 @@ function Board({ puzzle, name }: Props) {
       <p className="mt-2 text-center text-sm text-ink-soft"><span className="tabular-nums">time: {elapsedText(elapsed)}</span></p>
       <p id={help} className="crossword-no-print mt-2 text-center text-sm text-ink-soft">
         type letters. arrows move. tap the selected square to switch direction. alt+left or alt+right changes word. tab leaves the grid.
+        {level === 'hard' && ' swipe the board sideways to see more squares. keyboard: focus the board scroll area to scroll, or use arrows on a square to move through the grid.'}
       </p>
 
-      <div className="crossword-board-wrap mt-4" data-level={level}>
+      <div
+        className="crossword-board-wrap mt-4"
+        data-level={level}
+        role={level === 'hard' ? 'region' : undefined}
+        aria-label={level === 'hard' ? name + ' board scroll area' : undefined}
+        aria-describedby={level === 'hard' ? help : undefined}
+        tabIndex={level === 'hard' ? 0 : undefined}
+      >
         <div
           role="grid"
           aria-label={name + ' grid'}
