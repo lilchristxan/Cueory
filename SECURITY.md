@@ -18,7 +18,9 @@ aim to reply within 7 days.
 4. **Strict headers.** Every page has a content security policy (hash-based, no `unsafe-inline`/`unsafe-eval`; the one
    allowance is `'wasm-unsafe-eval'`, which lets site search compile WebAssembly only (D-49); forms may post only to our
    own site and our newsletter provider), `frame-ancestors 'none'`, HSTS, `nosniff`, a strict
-   referrer policy and a locked-down permissions policy. See `public/_headers` and `astro.config.mjs`.
+   referrer policy and a locked-down permissions policy. See `public/_headers` and `astro.config.mjs`. The full policy
+   is sent as an HTTP header as well as Astro's `<meta>`: the build copies it, with every page's hashes, into
+   `dist/_headers` (`src/security/cspheader.ts`, issue #746).
 5. **Validate input everywhere**, on the server as well as in the browser.
 6. **Rate limits** on sign-in, sign-up and every form. The newsletter form relies on Kit's own abuse protection and
    double opt-in; our own forms (from Task 2) get server-side limits.
