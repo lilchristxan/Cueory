@@ -90,6 +90,31 @@ test('stays away on a page where the once-only promo panel is due', async ({ pag
   await expect(popup(page)).toBeHidden();
 });
 
+for (const scheme of ['light', 'dark'] as const) {
+  test(`waits while a "flag or comment" report is open, then appears once it closes (${scheme === 'light' ? 'Light' : 'Evening'})`, async ({ page }) => {
+    await page.emulateMedia({ colorScheme: scheme, reducedMotion: 'reduce' });
+    await openAt(page, '/');
+    const flag = page.locator('[data-footer-flag]').getByRole('button', { name: 'flag or comment' });
+    await flag.click();
+    await expect(flag).toHaveAttribute('aria-expanded', 'true');
+    const report = page.locator(`#${await flag.getAttribute('aria-controls')}`);
+    await expect(report).toBeVisible();
+
+    // Well past 10 seconds: the report stays usable and the pop-up waits.
+    await page.clock.runFor(15_000);
+    await expect(popup(page)).toBeHidden();
+    await expect(report).toBeVisible();
+    expect(await report.evaluate((el) => el.closest('[inert]') === null)).toBe(true);
+
+    // Closing the report lets the pop-up's usual retry open it.
+    await flag.click();
+    await expect(flag).toHaveAttribute('aria-expanded', 'false');
+    await page.clock.runFor(1_000);
+    await expect(popup(page)).toBeVisible();
+    await expect(popup(page).getByRole('button', { name: 'close' })).toBeFocused();
+  });
+}
+
 for (const path of ['/learn/study-skills', '/play/sudoku']) {
   test(`never appears on ${path}`, async ({ page }) => {
     await openAt(page, path);

@@ -8,7 +8,7 @@
  *   sent to us. A browser that can't remember never sees it.
  * - Not on a page where the once-only promo panel (D-59) is due: one launch-list prompt per page.
  * - Never on lesson or study screens (/learn, and the study layout) or a game's own page (/play/<game>), never in print, never without JavaScript, and it
- *   waits while another dialog, the account menu or a game result is open, while the visitor is
+ *   waits while another dialog, the account menu, a "flag or comment" report or a game result is open, while the visitor is
  *   typing, and while the tab is in the background.
  * - Accessible modal: focus moves to its close button and stays inside (Tab wraps), Escape and × close it, focus goes
  *   back where it was, and reduced motion gets no animation.
@@ -97,7 +97,7 @@ const logo = (width: number) => `/brand/v1/logo-full-dark-${width}.png`;
   import { promo } from '../config/site';
   import { isTextEntry, mayShow as promoMayShow } from '../scripts/promo';
   import { browserStorage } from '../scripts/storage';
-  import { POPUP_DELAY_MS, mayShowPopup, popupAllowedOn, rememberPopup } from '../scripts/signuppopup';
+  import { OPEN_REPORT_SELECTOR, POPUP_DELAY_MS, mayShowPopup, popupAllowedOn, rememberPopup } from '../scripts/signuppopup';
 
   const dialog = document.querySelector<HTMLDialogElement>('[data-signup-popup]');
   const storage = browserStorage();
@@ -122,6 +122,7 @@ const logo = (width: number) => `/brand/v1/logo-full-dark-${width}.png`;
       document.querySelector('[data-promo][data-open]') !== null ||
       document.querySelector('#account-menu:not([hidden])') !== null ||
       document.querySelector('[data-result-dialog]') !== null ||
+      document.querySelector(OPEN_REPORT_SELECTOR) !== null ||
       isTextEntry(document.activeElement as HTMLElement | null);
 
     const focusables = () =>

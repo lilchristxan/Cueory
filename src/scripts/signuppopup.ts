@@ -60,3 +60,10 @@ export function isGamePath(pathname: string): boolean {
 export function popupAllowedOn(pathname: string): boolean {
   return !isStudyPath(pathname) && !isGamePath(pathname);
 }
+
+/**
+ * An open "flag or comment" report: the footer's report panel (which the per-game corner flag also opens) or any
+ * other report form's panel. The pop-up waits while one is open, so it never makes a half-written report inert.
+ */
+export const OPEN_REPORT_SELECTOR =
+  '[data-footer-flag] button[aria-expanded="true"], [data-testid="flag-form"] > button[aria-expanded="true"]';

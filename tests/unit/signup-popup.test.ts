@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { storageKeys } from '../../src/config/storage-keys';
 import {
-  POPUP_DELAY_MS, POPUP_WAIT_MS, SIGNUP_POPUP_STORAGE_KEY, isGamePath, isStudyPath, mayShowPopup, popupAllowedOn,
+  OPEN_REPORT_SELECTOR, POPUP_DELAY_MS, POPUP_WAIT_MS, SIGNUP_POPUP_STORAGE_KEY, isGamePath, isStudyPath, mayShowPopup, popupAllowedOn,
   rememberPopup,
 } from '../../src/scripts/signuppopup';
 import type { KeyValueStorage } from '../../src/scripts/storage';
@@ -85,6 +85,16 @@ describe('where the pop-up may appear', () => {
     for (const path of ['/', '/play', '/play/', '/privacy', '/about', '/learning-tips', '/courses']) {
       expect(popupAllowedOn(path), path).toBe(true);
     }
+  });
+});
+
+describe('open reports make the pop-up wait', () => {
+  it('matches the footer report trigger (also opened by the per-game corner flag) and any report form trigger', () => {
+    const rules = OPEN_REPORT_SELECTOR.split(',').map((rule) => rule.trim());
+    expect(rules).toEqual([
+      '[data-footer-flag] button[aria-expanded="true"]',
+      '[data-testid="flag-form"] > button[aria-expanded="true"]',
+    ]);
   });
 });
 
