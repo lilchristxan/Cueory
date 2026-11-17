@@ -90,13 +90,6 @@
     text-align: center;
   }
 
-  /* Game-specific help, such as pillo's legend of marks, sits in the same column as the steps. */
-  .game-help .pillo-legend,
-  .game-help-first .pillo-legend {
-    max-inline-size: none;
-    margin-block-start: calc(var(--spacing) * 4);
-  }
-
   .game-help-actions {
     display: flex;
     justify-content: center;

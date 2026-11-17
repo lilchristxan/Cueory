@@ -162,6 +162,39 @@
     -webkit-user-select: none;
   }
 
+  /* The whole board takes every touch, gaps and edges included, so a drag never scrolls the page mid-word. */
+  .wordpath[data-format="path"] .wordpath-board {
+    touch-action: none;
+  }
+
+  /* Each letter's circle sits inside its square, so a straight line can join it to the next letter of a word. */
+  .wordpath-dot {
+    position: absolute;
+    inset: var(--wordpath-letter-inset);
+  }
+
+  /* The joining lines sit under the letters and never take a touch. */
+  .wordpath-lines {
+    position: absolute;
+    inset: 0;
+    overflow: visible;
+    pointer-events: none;
+  }
+
+  .wordpath-line {
+    stroke: var(--color-ink);
+    stroke-width: var(--wordpath-line);
+    stroke-linecap: round;
+  }
+
+  .wordpath-line-theme {
+    stroke: var(--color-ink-soft);
+  }
+
+  .wordpath-line-special {
+    stroke: var(--color-button);
+  }
+
   .wordpath-mark {
     position: absolute;
     inset-block-start: 12%;
@@ -185,7 +218,9 @@
 
 @media print {
   .wordpath-mark,
-  .wordpath-step {
+  .wordpath-step,
+  .wordpath-lines,
+  .wordpath-dot {
     display: none !important;
   }
 
