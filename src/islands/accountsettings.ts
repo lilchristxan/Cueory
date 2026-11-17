@@ -11,7 +11,7 @@ import { afterDeletion, confirmState, deletionSummary, SESSION_KEYS_AFTER_DELETI
 import { checkDisplayName } from './displayname';
 import { exportCsvBlobs, exportJsonBlob, type ExportData } from './exportdata';
 import { fromSupabase, loadExport, type ExportReader, type SupabaseExportClient } from './exportload';
-import { loadStats } from './gameresults';
+import { loadStats, STATS_STORAGE_KEY, SUDOKU_STATS_STORAGE_KEY } from './gameresults';
 import { loadSudokuStats } from './sudokustats';
 import { DELETE_IDENTITY, studentMessage } from './rpcerrors';
 import { AUTH_STORAGE_KEY, sessionCheckFrom, type SessionReader, type SessionState } from './supabaseclient';
@@ -223,6 +223,9 @@ export async function gatherExport(reader: ExportReader, { email, signInDetails,
   const progress = migrateLegacyStars(storage);
   const stats = loadStats(storage, today);
   const sudoku = loadSudokuStats(storage, today);
+  const stored = (key: string): boolean => {
+    try { return storage?.getItem(key) != null; } catch { return false; }
+  };
   return {
     ok: true,
     data: {
@@ -230,8 +233,9 @@ export async function gatherExport(reader: ExportReader, { email, signInDetails,
       profile: { ...loaded.data.profile, email: email || null },
       signInDetails: detailRows(signInDetails),
       progress,
-      ...(stats.on ? { gameStats: stats.stats } : {}),
-      ...(sudoku.on ? { sudokuStats: sudoku.solves } : {}),
+      // Stats are always kept (2026-11-17); the file lists them when this browser holds a record of them.
+      ...(stats.on && stored(STATS_STORAGE_KEY) ? { gameStats: stats.stats } : {}),
+      ...(sudoku.on && stored(SUDOKU_STATS_STORAGE_KEY) ? { sudokuStats: sudoku.solves } : {}),
     },
   };
 }

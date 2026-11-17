@@ -1,0 +1,1 @@
+status: Lane 3 legal text: /terms (Terms v6, minimum age 16) and /disclaimer (v5) carry the final legal text dated "Last updated 17 November 2026", no longer block the release gate, and are now indexed and in the sitemap. /privacy stays draft and noindex until its own approval.

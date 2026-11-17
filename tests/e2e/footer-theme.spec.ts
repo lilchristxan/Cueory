@@ -1,4 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
+import { visibleFooterLinks } from '../../src/config/legalfooter';
+import { footerLinks } from '../../src/config/site';
 import { expect, test, type Page } from '@playwright/test';
 import { isDesktopOfEachEngine } from './projects';
 
@@ -102,8 +104,13 @@ test.describe('footer bar', () => {
     for (const name of ['courses', 'coming soon', 'privacy', 'support cueory', 'hello@cueory.app']) {
       await expect(footer.getByRole('link', { name, exact: true })).toBeVisible();
     }
-    // #747: Terms and Disclaimer stay out of the footer until they are approved.
-    for (const name of ['terms', 'disclaimer']) await expect(footer.getByRole('link', { name, exact: true })).toHaveCount(0);
+    // #747: Terms and Disclaimer show only once their pages are approved (same rule as the footer).
+    const approved = new Set(visibleFooterLinks(footerLinks).map((link) => link.href));
+    for (const [name, href] of [['terms', '/terms'], ['disclaimer', '/disclaimer']] as const) {
+      const link = footer.getByRole('link', { name, exact: true });
+      if (approved.has(href)) await expect(link).toBeVisible();
+      else await expect(link).toHaveCount(0);
+    }
     await expect(footer.getByText('by nursing students, for nursing students.', { exact: true })).toBeVisible();
     await expect(footer.getByText(/^© \d{4} cueory\. study help, not medical advice\.$/)).toBeVisible();
     await expect(footer.getByRole('group', { name: 'Theme' })).toBeVisible();

@@ -107,7 +107,8 @@ test.describe('crossword parity (Task 721)', () => {
   });
 
   test('an unassisted solve gets the "solved without help" badge and starts the crossword streak', async ({ page }) => {
-    await page.getByTestId('game-stats').getByRole('switch', { name: 'keep my stats' }).click();
+    // Stats are always kept (2026-11-17): there is no switch to turn on.
+    await expect(page.getByTestId('game-stats').getByRole('switch')).toHaveCount(0);
     await fill(page);
     await closeResultDialog(page);
     await expect(board(page).getByTestId('crossword-badge')).toHaveText(/solved without help/);
