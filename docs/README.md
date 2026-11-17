@@ -57,3 +57,6 @@ Review note: [answer account binding](status/in-review/task-756-answers-stop-on-
 
 Inventory: [all candidate commit IDs](RELEASE-2026-11-19-COMMITS.tsv) — Complete pinned comparison supporting the release notes.
 Review note: [release inventory status](status/in-review/lane4-release-notes.md) — Source inventory only.
+
+Runbook: [Thursday launch day](runbooks/launch-day.md) — Proposed Phoenix-time schedule and smoke checks for the games-only launch.
+Review note: [launch-day status](status/in-review/lane4-launch-day.md) — Planning only; every release gate still applies.
