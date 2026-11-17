@@ -204,6 +204,7 @@
   --print-board: 16cm;          /* the word path grid's width on paper: fits letter and A4 inside default margins */
   --print-letter: 16pt;         /* a letter in the printed grid, large enough to read at arm's length */
   --print-gap: 0.5cm;           /* space between the grid, the word list and the footer on paper */
+  --print-logo: 1.3cm;          /* the cueory logo at the top of a printed puzzle (about 49 px tall) */
   --print-figure: 13cm;         /* an anatomy worksheet's picture on paper: leaves room for the numbered list below */
   --worksheet-blank: 1.75rem;   /* the height of a write-in line on an anatomy worksheet */
 
@@ -292,10 +293,7 @@
   --pillo-mark: 0.625rem;               /* the ● ○ · under a letter */
   --pillo-letter-lift: -0.3125rem;      /* a guessed letter moves up this much to make room for its mark */
   --pillo-mark-drop: -0.125rem;         /* the mark's line sits this far into the pill's bottom edge */
-  --pillo-key: 3rem;                    /* letter key height (48 px, above the 44 px minimum) */
-  --pillo-key-max: 2.75rem;             /* a letter key's widest */
-  --pillo-key-wide: 4.25rem;            /* ⌫ and enter, at their widest */
-  --pillo-key-wide-share: 1.5;          /* ⌫ and enter take about one and a half letters' room in a narrow row */
+  --pillo-keys-width: 24rem;             /* the letter keys wrap within this width, the same as the crossword's keys */
   --pillo-strip-pill: 0.875rem;         /* a pill in the guesses-left strip */
   --pillo-strip-height: 1.75rem;
   --pillo-swatch: 2.75rem;              /* the sample pills in "how to play" */
