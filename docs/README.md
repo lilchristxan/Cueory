@@ -12,6 +12,7 @@ Each link has a one-line summary and says whether Christian needs to read it. Gu
 - [Setup](SETUP.md) — Follow step-by-step instructions for accounts and site setup. **Christian:** Read when setting up a service.
 - [Go-live steps](GO-LIVE.md) — Check what to do before launch, on launch day, and if a release fails. **Christian:** Read before launch.
 - [Games launch checklist](LAUNCH.md) — Check every gate before the games-only launch, the launch-day clicks, and the first week. **Christian:** Read before the games launch.
+- [Games parity spec](GAMES-PARITY.md) — See the approved shared gameplay, accessibility, and sharing rules for daily games. **Christian:** Read when approving game work.
 - [Brand guide](BRAND.md) — See approved colors, fonts, the logo, and design rules. **Christian:** Read when approving designs.
 - [Content formats](CONTENT-FORMAT.md) — See the JSON fields and sample rules for lessons and study activities. **Christian:** Read when preparing content.
 - [Editing content](EDITING-CONTENT.md) — Choose the right content file, edit fields or columns, and understand the checks before review. **Christian:** Read before changing content.
