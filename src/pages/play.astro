@@ -15,7 +15,7 @@ import GameResultsHost from '../islands/GameResultsHost';
 import HomeScreenTip from '../islands/HomeScreenTip';
 import PilloTitle from '../components/PilloTitle.astro';
 import { parsePuzzle } from '../islands/cueword';
-import { parsePuzzle as parseWordPath } from '../islands/suture';
+import { parseWordPath } from '../islands/suturepath';
 import { dailyGames, helloCardsGame, helloCardsIndexWhenApproved, statGame } from '../config/games';
 import { helloCardsPage } from '../islands/hello-cards';
 import { draftsAllowed } from '../islands/anatomylab';
@@ -37,7 +37,10 @@ const wordPathSamples = (await getCollection('suture'))
   .sort((a, b) => a.id.localeCompare(b.id))
   .map(({ id, data }) => {
     try {
-      return parseWordPath({ id, sample: true, theme: data.theme, grid: data.grid, words: data.words });
+      // A board-format file (#722) says "format": "path"; an older word search has a theme instead of a clue.
+      return parseWordPath(data.format === 'path'
+        ? { id, sample: true, format: data.format, clue: data.clue, grid: data.grid, words: data.words, extras: data.extras }
+        : { id, sample: true, theme: data.theme, grid: data.grid, words: data.words });
     } catch (error) {
       throw new Error(`content/games/suture/${id}.json: ${(error as Error).message}`);
     }

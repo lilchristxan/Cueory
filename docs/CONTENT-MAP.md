@@ -20,7 +20,7 @@ This table includes every folder directly inside `content/` and every subfolder 
 | `content/games/hello-cards/` | Conversation starter cards. | `/play/hello-cards` when the page is enabled | Draft samples or content approved for public release. |
 | `content/games/pulse/` | Five-letter word game sample files. | Pillo on `/play` | Labeled samples only. No real daily puzzle answers. |
 | `content/games/stat/` | Clearly marked placeholder quiz items. | `/play/stat` on permitted preview builds | Labeled sample text only. Never real questions or answer keys. |
-| `content/games/suture/` | Word-search grids and word paths. | Word path on `/play` | Labeled samples only. No unreleased words or clues. |
+| `content/games/suture/` | Word path boards (6 by 8, the preferred format) and older word-search grids. | Word path on `/play` | Labeled samples only. No unreleased words or clues. |
 | `content/games/triage/` | Older sorting-game sample files. | Not the current Sudoku game. Kept for older tests. | Labeled samples only. |
 | `content/label-it/` | Sample images and labels for identifying pictured parts. | `/learn/study-skills/label-it` | Labeled samples with an image credit. Real images need documented rights. |
 | `content/lessons/` | The text and order of each lesson. | `/learn` and `/learn/[lesson]` | Labeled samples or placeholders, or approved public lessons. Never unreleased drafts. |
