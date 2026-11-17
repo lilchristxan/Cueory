@@ -65,13 +65,19 @@ import { newsletter, promo, site } from '../config/site';
     <p>
       On <a href="/play">daily games</a> you can turn on stats. They're off unless you do. When they're on, your browser
       keeps, for each game you finish, the day of the puzzle, whether you solved it, how many tries it took and, only
-      when you finished it on a later day than the puzzle's own (for example after midnight), a note saying so. Nothing
-      else is kept. From these results the page works out, on your device, pillo's games played, win percentage, current
-      and longest streak (days in a row you solved the puzzle on its own day) and how many guesses each solved game took.
+      when you finished it on a later day than the puzzle's own (for example after midnight), a note saying so; for word
+      path, also how many hints you used and whether you found the special answer first. Nothing else is kept. From these
+      results the page works out, on your device, pillo's games played, win percentage, current and longest streak (days
+      in a row you solved the puzzle on its own day) and how many guesses each solved game took, and word path's streak.
       Those numbers are not stored separately. Anything older than 400 days is deleted the next time you open daily
       games. It stays on your device and never reaches us. "Forget", or turning stats off, deletes it. The storage key for
       these results is <code>cueory-game-stats</code>. pillo's settings (hard mode, high contrast and on-screen keyboard
       only) are not saved: they last until you leave or reload the page.
+    </p>
+    <p>
+      If you change the shared game settings (high contrast, reduced motion or game sounds), your browser remembers
+      those three choices on your device as <code>cueory-game-settings</code>. Nothing is saved until you change one,
+      and it never reaches us. Your theme pick there is the same one the footer saves.
     </p>
 
     <p>

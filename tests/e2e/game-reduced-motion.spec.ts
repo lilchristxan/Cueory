@@ -63,6 +63,8 @@ for (const colorScheme of ['light', 'dark'] as const) {
         return original.apply(this, args);
       };
     });
+    // The older word search sample (sample-06), whose wrong pick takes two taps.
+    await page.clock.setFixedTime(new Date('2026-11-06T15:00:00'));
     await page.goto('/play');
     const game = page.getByTestId('suture');
     await game.locator('[data-cell="0,0"]').click();
@@ -86,6 +88,8 @@ for (const colorScheme of ['light', 'dark'] as const) {
         return animation;
       };
     });
+    // The older word search sample (sample-06), whose wrong pick takes two taps.
+    await page.clock.setFixedTime(new Date('2026-11-06T15:00:00'));
     await page.goto('/play');
     const game = page.getByTestId('suture');
     const board = game.locator('.wordpath-board');

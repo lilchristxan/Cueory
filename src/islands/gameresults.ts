@@ -1,7 +1,7 @@
 /**
  * Private daily-game stats on /play (D-76). Each game reports a finished round; the stats panel keeps the results
- * only when the student has turned stats on. The record itself (first result of each game and day; pillo's streaks are
- * worked out from it, Task 719) is the helper's logic in ./gamestats, and results older than 400 days are dropped by today's date.
+ * only when the student has turned stats on. The record itself (first result of each game and day; pillo's and word path's
+ * streaks are worked out from it, Task 719 and #722) is the helper's logic in ./gamestats, and results older than 400 days are dropped by today's date.
  *
  * Stats are off until the student turns them on: turned on means the record exists in this browser's storage, and
  * turning them off deletes it. Nothing here is ever sent anywhere.
@@ -234,6 +234,10 @@ export interface RoundResult {
   tries: number;
   /** Set when the round ended on another local day than its puzzle's own: it then never extends a streak. */
   offDay?: true;
+  /** Word path boards only (#722): hints used. */
+  hints?: number;
+  /** Word path boards only (#722): whether the special answer was found first. */
+  specialFirst?: boolean;
   /** When present, the same completion also opens the shared finished-game dialog. */
   card?: GameResultCard;
 }

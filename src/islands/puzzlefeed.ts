@@ -6,7 +6,7 @@
  * the real protection is the server or CDN never sending tomorrow's answer before its day (D-61).
  */
 import { parsePuzzle as parseCueword, type CuewordPuzzle } from './cueword';
-import { parsePuzzle as parseSuture, type SuturePuzzle } from './suture';
+import { parseWordPath as parseSuture, type WordPathPuzzle } from './suturepath';
 import type { TriagePuzzle } from './triage';
 
 const GAME_IDS = ['pulse', 'cueword', 'triage', 'suture'] as const;
@@ -22,7 +22,7 @@ export type AcceptResult =
   | { ok: true; game: 'pulse'; puzzle: PulsePuzzle }
   | { ok: true; game: 'cueword'; puzzle: CuewordPuzzle }
   | { ok: true; game: 'triage'; puzzle: TriagePuzzle }
-  | { ok: true; game: 'suture'; puzzle: SuturePuzzle }
+  | { ok: true; game: 'suture'; puzzle: WordPathPuzzle }
   | { ok: false; message: string };
 
 function isRecord(v: unknown): v is Record<string, unknown> {
