@@ -72,6 +72,9 @@ for (const scheme of ['light', 'dark'] as const) {
     await expect(cell(page, plain)).not.toHaveClass(/is-related|is-box-related|is-identical/);
     await expect(cell(page, quietGiven)).toHaveClass(/is-given/);
 
+    // The highlights fade in over a near-zero (reduced motion) transition; a color read in the same frame as the class
+    // change can still see the old color, so wait until no transition is running before reading them.
+    await page.waitForFunction(() => document.getAnimations().every((animation) => animation.playState !== 'running'));
     const [selected, tint, same, quiet, givenLook] = await Promise.all([chosen, related, match, plain, quietGiven].map((index) => look(page, index)));
 
     // 1. The selected square has a strong solid outline that stands out from the tint around it.
