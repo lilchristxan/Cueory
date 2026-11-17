@@ -1103,9 +1103,17 @@ html:has(dialog.menu-panel[open]) {
     gap: calc(var(--spacing) * 3);
   }
 
+  /* With large text on a narrow phone the dots wrap between the arrows, so the arrows never leave the screen or shrink. */
+  .modes-controls > .vial-arrow {
+    flex-shrink: 0;
+  }
+
   .modes-dots {
     display: flex;
+    min-inline-size: 0;
+    flex-wrap: wrap;
     align-items: center;
+    justify-content: center;
     gap: calc(var(--spacing) * 1.5);
   }
 
