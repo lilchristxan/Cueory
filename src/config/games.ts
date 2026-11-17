@@ -3,10 +3,10 @@
  * shown to visitors live only here, so a rename is one line. For now they are plain names (D-66): a trademark screen
  * found live US filings for cueword, triage and suture, so Christian chose plain names until he picks final ones.
  * Christian named the word game pillo (Task 114); its id stays pulse. The ids stay as they are: they are only used
- * inside the code and the content folders. Each game has an original look (CLAUDE.md): never the name, the colors,
- * the tile grid or the colored-square shares of another word game. Rules are original too, with one exception
- * Christian chose (Task 113): pillo uses the classic guess-the-word rules, a five-letter word and six guesses, on its
- * own blister-pack board with brand-color pills, a symbol on every letter and a one-line share.
+ * inside the code and the content folders. Daily games match the gameplay, settings, help tools, scoring, stats and
+ * controls of leading daily puzzle games. Never copy their names, terms, look, colors, tile shapes, layout or
+ * colored-square share grids. forbiddenGameWords stays; our own share is a plain one-line result, or symbols in our
+ * own style. Brand colors only.
  */
 export interface DailyGame {
   /** Inside the code only; never shown. */
@@ -55,7 +55,7 @@ export function gameName(id: DailyGame['id']): string {
 export const retiredGameNames = { triage: 'sort' } as const;
 
 /** Names and words the games must never use (CLAUDE.md). */
-export const forbiddenGameWords = ['wordle', 'connections', 'strands', 'nyt', 'new york times'] as const;
+export const forbiddenGameWords = ['wordle', 'connections', 'strands', 'spangram', 'nyt', 'new york times'] as const;
 
 /**
  * Hello cards (Task 201): a flip-the-card game of conversation starters for patients, co-workers and classmates. It is
