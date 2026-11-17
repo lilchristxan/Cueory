@@ -1,0 +1,24 @@
+/*
+  The corner row on every game box (src/islands/GameHeader.tsx): the gear at the top left, the "?" (and any other
+  corner buttons) at the top right, the same on every game. Every size is a token.
+*/
+@layer components {
+  .game-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: calc(var(--spacing) * 2);
+  }
+
+  .game-header-end {
+    display: flex;
+    align-items: center;
+    gap: calc(var(--spacing) * 2);
+  }
+
+  .game-header-gear svg {
+    inline-size: calc(var(--spacing) * 6);
+    block-size: calc(var(--spacing) * 6);
+  }
+
+}
