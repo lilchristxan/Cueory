@@ -9,7 +9,7 @@ test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
     try { localStorage.setItem('cueory-promo-seen', String(Date.now())); } catch { /* optional storage */ }
   });
-  await page.goto('/play');
+  await page.goto('/play/sudoku');
   await page.evaluate(() => document.documentElement.style.setProperty('font-size', '32px', 'important'));
   await page.waitForLoadState('networkidle');
   await expect(page.locator('html')).toHaveCSS('font-size', '32px');

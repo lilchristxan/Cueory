@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 
-// A phone turned sideways (844 × 390): every game board on /play and every game dialog fits without sideways scroll,
+// A phone turned sideways (844 × 390): every game board on its own page and every game dialog fits without sideways scroll,
 // and the word path letter board fits the screen's height so a path can be dragged without scrolling.
 
 test.use({ viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true });
@@ -9,23 +9,28 @@ test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
     try { localStorage.setItem('cueory-promo-seen', String(Date.now())); } catch { /* optional storage */ }
   });
-  await page.goto('/play');
-  await page.waitForLoadState('networkidle');
 });
+
+// Each game is on its own page (2026-11-17).
+async function open(page: Page, path: string) {
+  await page.goto(path);
+  await page.waitForLoadState('networkidle');
+}
 
 async function pageSideways(page: Page) {
   return page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
 }
 
 const boards = [
-  ['pillo', '[data-testid="pulse"]'],
-  ['sudoku', '.sudoku-board'],
-  ['crossword', '.crossword-board'],
-  ['word path', '.wordpath-board'],
+  ['pillo', '[data-testid="pulse"]', '/play/pillo'],
+  ['sudoku', '.sudoku-board', '/play/sudoku'],
+  ['crossword', '.crossword-board', '/play/crossword'],
+  ['word path', '.wordpath-board', '/play/word-path'],
 ] as const;
 
-for (const [name, selector] of boards) {
+for (const [name, selector, path] of boards) {
   test(`${name} board fits the width of a sideways phone`, async ({ page }) => {
+    await open(page, path);
     const board = page.locator(selector).first();
     await board.scrollIntoViewIfNeeded();
     const box = (await board.boundingBox())!;
@@ -36,6 +41,7 @@ for (const [name, selector] of boards) {
 }
 
 test('word path letters fit the screen height with squares of at least 44px', async ({ page }) => {
+  await open(page, '/play/word-path');
   const board = page.locator('.wordpath-board').first();
   const box = (await board.boundingBox())!;
   expect(box.height).toBeLessThanOrEqual(390);
@@ -56,6 +62,7 @@ test('game dialogs fit a sideways phone without sideways scroll', async ({ page 
     expect(await pageSideways(page)).toBeLessThanOrEqual(0);
   };
 
+  await open(page, '/play/sudoku');
   await page.getByTestId('game-settings-button').click();
   await check('.game-settings');
   await page.getByRole('dialog', { name: 'game settings' }).getByRole('button', { name: 'close settings' }).click();

@@ -60,7 +60,7 @@ for (const scheme of ['light', 'dark'] as const) {
   test(`sudoku highlights are easy to tell apart and numbers stay readable (${scheme})`, async ({ page }, testInfo) => {
     expect([chosen, match, related, plain, quietGiven].every((index) => index >= 0)).toBe(true);
     await page.emulateMedia({ colorScheme: scheme, reducedMotion: 'reduce' });
-    await page.goto('/play');
+    await page.goto('/play/sudoku');
     await expect(cell(page, 80)).toBeVisible();
 
     // Tap on touch projects, mouse click elsewhere.
@@ -72,6 +72,9 @@ for (const scheme of ['light', 'dark'] as const) {
     await expect(cell(page, plain)).not.toHaveClass(/is-related|is-box-related|is-identical/);
     await expect(cell(page, quietGiven)).toHaveClass(/is-given/);
 
+    // The highlights fade in over a near-zero (reduced motion) transition; a color read in the same frame as the class
+    // change can still see the old color, so wait until no transition is running before reading them.
+    await page.waitForFunction(() => document.getAnimations().every((animation) => animation.playState !== 'running'));
     const [selected, tint, same, quiet, givenLook] = await Promise.all([chosen, related, match, plain, quietGiven].map((index) => look(page, index)));
 
     // 1. The selected square has a strong solid outline that stands out from the tint around it.
