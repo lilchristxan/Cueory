@@ -89,15 +89,16 @@ test('finished-game result card keeps its close button on screen', async ({ page
 });
 
 test('shared game settings keep their close button on screen', async ({ page }) => {
+  // On sudoku's page the gear opens the shared settings with sudoku's own (#823).
   await page.getByTestId('game-settings-button').click();
-  const dialog = page.getByRole('dialog', { name: 'game settings' });
+  const dialog = page.getByRole('dialog', { name: 'sudoku settings' });
   await expectCloseStaysVisible(page, page.locator('.game-settings'), dialog.getByRole('button', { name: 'close settings' }));
   await expect(dialog).toBeHidden();
 });
 
 test('sudoku settings keep their close button on screen', async ({ page }) => {
   await page.getByTestId('sudoku-section').getByRole('button', { name: 'settings' }).click();
-  const dialog = page.getByRole('dialog', { name: 'settings', exact: true });
-  await expectCloseStaysVisible(page, page.locator('.sudoku-settings'), dialog.getByRole('button', { name: 'close settings' }));
+  const dialog = page.getByRole('dialog', { name: 'sudoku settings' });
+  await expectCloseStaysVisible(page, dialog.locator('.game-settings'), dialog.getByRole('button', { name: 'close settings' }));
   await expect(dialog).toBeHidden();
 });
