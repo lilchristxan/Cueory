@@ -166,6 +166,11 @@ test.describe('Task 94: full-site Evening palette audit', () => {
 
       findings.push(...await checkEveningColors(page));
 
+      // Run axe from the top of the page, with the sticky header back in place (as play.spec.ts's axe helper does):
+      // picking Dark scrolls to the footer, and with reduced motion the header stays shown there, so axe would count
+      // it as covering whatever page controls happen to sit under it at that scroll position (lane 8, #823).
+      await page.evaluate(() => window.scrollTo(0, 0));
+      await page.waitForFunction(() => (document.querySelector('header')?.getBoundingClientRect().top ?? 0) >= 0);
       // WCAG AA includes axe's color-contrast rule. Do not turn it off.
       const result = await new AxeBuilder({ page }).withTags(axeTags).analyze();
       for (const violation of result.violations) {
