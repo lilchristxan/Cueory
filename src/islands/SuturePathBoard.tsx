@@ -1,5 +1,5 @@
 import '../styles/wordpath.css';
-import { useEffect, useId, useRef, useState, type KeyboardEvent, type PointerEvent } from 'react';
+import { useEffect, useId, useLayoutEffect, useRef, useState, type KeyboardEvent, type PointerEvent } from 'react';
 import { dayLabel } from './daily';
 import { localDay, reportRound } from './gameresults';
 import { printGame } from './gameprint';
@@ -8,7 +8,8 @@ import { site } from '../config/site';
 import { shake } from './SutureGame';
 import type { Cell } from './suture';
 import {
-  announceProgress, backspace, cellView, firstWordFound, clearPicked, extend, hintsLeft, MIN_WORD, parsePathPuzzle, pathCellLabel, pathDone, pathShareLine,
+  announceProgress, backspace, cellView, cuesUsed, firstWordFound, clearPicked, extend, hintsLeft, MIN_WORD, parsePathPuzzle, pathCellLabel, pathDone, pathShareLine,
+  printBoard,
   pickedWord, specialFoundFirst, startPath, submit, submitInWords, takeHint, WORDS_PER_HINT, wordsToNextHint,
   type CellLook, type PathState, type SuturePathPuzzle,
 } from './suturepath';
@@ -19,16 +20,34 @@ const button = 'min-h-11 min-w-11 rounded-md border border-control bg-page px-4 
 
 /**
  * Each look has its own brand state, and found answers also carry a symbol, so color is never the only signal. Each
- * letter's button fills its whole column, so it stays at least 44 px wide on a 320 px screen; the small gap between
- * the round letters is the button's own padding, which its fill (bg-clip-content) leaves out.
+ * letter's button fills its whole column, so it stays at least 44 px wide on a 320 px screen. The round letter you see
+ * is a smaller circle inside it (.wordpath-dot), which leaves room between neighbours for the lines that join a word.
  */
-const looks: Record<CellLook, string> = {
-  special: 'bg-button text-on-button',
-  theme: 'bg-soft text-ink',
-  picked: 'bg-page text-ink ring-2 ring-inset ring-ink',
-  hinted: 'border-2 border-dashed border-ink-soft',
-  plain: 'bg-transparent',
+const looks: Record<CellLook, { dot: string; text: string }> = {
+  special: { dot: 'bg-button', text: 'text-on-button' },
+  theme: { dot: 'bg-soft', text: 'text-ink' },
+  picked: { dot: 'bg-page ring-2 ring-inset ring-ink', text: 'text-ink' },
+  hinted: { dot: 'border-2 border-dashed border-ink-soft', text: '' },
+  plain: { dot: '', text: '' },
 };
+
+/** Where each letter's circle sits inside the board (its padding box), measured from the page. */
+interface Circle { x: number; y: number; r: number }
+interface Layout { width: number; height: number; circles: Map<number, Circle> }
+type Kind = 'picked' | 'theme' | 'special';
+interface Line { key: string; kind: Kind; x1: number; y1: number; x2: number; y2: number }
+
+/** A straight line from the edge of one circle to the edge of the next, or none when they touch. */
+function joining(a: Circle, b: { x: number; y: number; r?: number }): Omit<Line, 'key' | 'kind'> | null {
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const distance = Math.hypot(dx, dy);
+  const end = b.r ?? 0;
+  if (distance <= a.r + end + 0.5) return null;
+  const ux = dx / distance;
+  const uy = dy / distance;
+  return { x1: a.x + ux * a.r, y1: a.y + uy * a.r, x2: b.x - ux * end, y2: b.y - uy * end };
+}
 
 /** The theme-word symbol: a small round dot. */
 function ThemeMark({ className = '' }: { className?: string }) {
@@ -81,6 +100,10 @@ export function PathBoard({ puzzle, name }: Props) {
   const board = useRef<HTMLDivElement>(null);
   const buttons = useRef(new Map<number, HTMLButtonElement>());
   const drag = useRef<{ start: Cell; moved: boolean; id: number } | null>(null);
+  const [layout, setLayout] = useState<Layout | null>(null);
+  /** While a finger or mouse drags, where it is inside the board, so the line can follow it. */
+  const [finger, setFinger] = useState<{ x: number; y: number } | null>(null);
+  const [printNote, setPrintNote] = useState('');
   const quietClickUntil = useRef(0);
   const help = useId();
   const howToPlay = useGameHelp('suture');
@@ -94,6 +117,37 @@ export function PathBoard({ puzzle, name }: Props) {
 
   useEffect(() => { if (done) result.current?.focus(); }, [done]);
 
+  // Measure every letter's circle, again whenever the board changes size (rotation, text size, a narrower window).
+  useLayoutEffect(() => {
+    const element = board.current;
+    if (!element) return;
+    const measure = () => {
+      const frame = element.getBoundingClientRect();
+      const left = frame.left + element.clientLeft;
+      const top = frame.top + element.clientTop;
+      const circles = new Map<number, Circle>();
+      for (const [index, letter] of buttons.current) {
+        const dot = letter.querySelector('.wordpath-dot')?.getBoundingClientRect();
+        if (!dot) continue;
+        circles.set(index, { x: dot.left + dot.width / 2 - left, y: dot.top + dot.height / 2 - top, r: dot.width / 2 });
+      }
+      setLayout({ width: element.clientWidth, height: element.clientHeight, circles });
+    };
+    measure();
+    if (typeof ResizeObserver === 'undefined') return;
+    const watch = new ResizeObserver(measure);
+    watch.observe(element);
+    return () => watch.disconnect();
+  }, []);
+
+  /** Where a pointer is inside the board's padding box. */
+  const inBoard = (x: number, y: number) => {
+    const element = board.current;
+    if (!element) return null;
+    const frame = element.getBoundingClientRect();
+    return { x: x - frame.left - element.clientLeft, y: y - frame.top - element.clientTop };
+  };
+
   // A finished board is reported once, for the stats panel, which keeps it only if the student turned stats on (D-76).
   const reported = useRef(false);
   useEffect(() => {
@@ -104,18 +158,18 @@ export function PathBoard({ puzzle, name }: Props) {
       day: localDay(today),
       solved: true,
       tries: state.misses,
-      hints: state.hintsUsed,
+      hints: cuesUsed(state),
       specialFirst: specialFoundFirst(state, puzzle),
       card: {
         game: 'suture',
         name,
         date: dayLabel(today),
         result: `${state.found.length} / ${total}`,
-        shareResult: `${state.found.length} of ${total} answers, ${state.hintsUsed} ${state.hintsUsed === 1 ? 'cue' : 'cues'}`,
+        shareResult: `${state.found.length} of ${total} answers, ${cuesUsed(state)} ${cuesUsed(state) === 1 ? 'cue' : 'cues'}`,
         summary: 'you found every answer on today\'s board.',
         stats: [
           { label: 'answers found', value: `${state.found.length}` },
-          { label: 'cues used', value: `${state.hintsUsed}` },
+          { label: 'cues used', value: `${cuesUsed(state)}` },
           { label: 'the thread found first', value: specialFoundFirst(state, puzzle) ? 'yes' : 'no' },
         ],
         path: '/play/word-path',
@@ -152,11 +206,13 @@ export function PathBoard({ puzzle, name }: Props) {
     if (done || (event.pointerType === 'mouse' && event.button !== 0)) return;
     drag.current = { start: cell, moved: false, id: event.pointerId };
     event.currentTarget.setPointerCapture?.(event.pointerId);
+    setFinger(inBoard(event.clientX, event.clientY));
   };
 
   const move = (event: PointerEvent<HTMLButtonElement>) => {
     const active = drag.current;
     if (!active || active.id !== event.pointerId) return;
+    setFinger(inBoard(event.clientX, event.clientY));
     const target = cellAt(board.current, event.clientX, event.clientY);
     if (!target) return;
     if (!active.moved) {
@@ -174,6 +230,7 @@ export function PathBoard({ puzzle, name }: Props) {
     const active = drag.current;
     if (!active || active.id !== event.pointerId) return;
     drag.current = null;
+    setFinger(null);
     if (!active.moved) return; // A tap: the click that follows picks the letter.
     quietClickUntil.current = performance.now() + 400;
     send();
@@ -231,6 +288,43 @@ export function PathBoard({ puzzle, name }: Props) {
     catch { setCopied(shared); }
   };
 
+  /** Printing an unfinished board counts as using a cue (once), and the player is told so in one line. */
+  const printPuzzle = () => {
+    const next = printBoard(current.current, puzzle);
+    if (next !== current.current) {
+      apply(next);
+      const note = 'printing before you finish counts as a cue, so today won\'t count as solved without cues.';
+      setPrintNote(note);
+      setSaid(note);
+    }
+    printGame('suture');
+  };
+
+  // The lines that join each found answer and the word being picked, from circle edge to circle edge.
+  const lines: Line[] = [];
+  if (layout) {
+    const width = puzzle.grid[0]!.length;
+    const at = (cell: Cell) => layout.circles.get(cell[0] * width + cell[1]);
+    const join = (path: readonly Cell[], kind: Kind, key: string) => {
+      for (let i = 1; i < path.length; i++) {
+        const a = at(path[i - 1]!);
+        const b = at(path[i]!);
+        const line = a && b ? joining(a, b) : null;
+        if (line) lines.push({ key: `${key}-${i}`, kind, ...line });
+      }
+    };
+    for (const index of state.found) {
+      const answer = puzzle.words[index]!;
+      join(answer.path, answer.special ? 'special' : 'theme', `found-${index}`);
+    }
+    join(state.picked, 'picked', 'picked');
+    // While dragging, a line runs on from the last letter to the finger.
+    const lastCell = state.picked.at(-1) ?? drag.current?.start;
+    const last = lastCell ? at(lastCell) : undefined;
+    const toFinger = finger && last ? joining(last, finger) : null;
+    if (toFinger) lines.push({ key: 'finger', kind: 'picked', ...toFinger });
+  }
+
   const left = hintsLeft(state);
   const towardHint = state.extras.length % WORDS_PER_HINT;
 
@@ -238,7 +332,7 @@ export function PathBoard({ puzzle, name }: Props) {
     <section aria-labelledby={title} data-testid="suture" data-format="path" data-print-area="suture" className="wordpath">
       <div className="wordpath-corner" data-print-hidden>
         <GameHelpButton help={howToPlay} name={name} className="wordpath-round" />
-        <button type="button" className="wordpath-round" aria-label="print" data-testid="suture-print" onClick={() => printGame('suture')}>
+        <button type="button" className="wordpath-round" aria-label="print" data-testid="suture-print" onClick={printPuzzle}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
             <path d="M6 9V3h12v6" />
             <rect x="3" y="9" width="18" height="9" rx="2" />
@@ -246,6 +340,7 @@ export function PathBoard({ puzzle, name }: Props) {
           </svg>
         </button>
       </div>
+      {printNote && <p className="mt-2 text-center text-sm text-ink-soft" data-testid="suture-print-note" data-print-hidden>{printNote}</p>}
       <p className="text-center text-sm text-ink-soft">today's theme</p>
       <h3 id={title} className="display text-center text-2xl text-ink sm:text-3xl" data-testid="suture-theme">{puzzle.clue}</h3>
       <p className="mt-2 text-center text-ink-soft" data-print-hidden>
@@ -265,8 +360,17 @@ export function PathBoard({ puzzle, name }: Props) {
         aria-describedby={help}
         aria-rowcount={puzzle.grid.length}
         aria-colcount={puzzle.grid[0]!.length}
-        className="wordpath-board -mx-6 mt-6 flex flex-col border-(length:--border-board) border-ink bg-page text-ink sm:mx-auto sm:p-3"
+        className="wordpath-board relative -mx-6 mt-6 flex flex-col border-(length:--border-board) border-ink bg-page text-ink sm:mx-auto sm:p-3"
       >
+        {layout && (
+          <svg className="wordpath-lines" aria-hidden="true" focusable="false" data-testid="suture-lines"
+            width={layout.width} height={layout.height} viewBox={`0 0 ${layout.width} ${layout.height}`}>
+            {lines.map((line) => (
+              <line key={line.key} className={`wordpath-line wordpath-line-${line.kind}`} data-kind={line.kind}
+                x1={line.x1} y1={line.y1} x2={line.x2} y2={line.y2} />
+            ))}
+          </svg>
+        )}
         {puzzle.grid.map((row, r) => (
           <div key={r} role="row" aria-rowindex={r + 1} className="grid grid-cols-6">
             {[...row].map((letter, c) => {
@@ -284,20 +388,22 @@ export function PathBoard({ puzzle, name }: Props) {
                     data-cell={`${r},${c}`}
                     data-look={view.look}
                     data-path
-                    className={`relative flex aspect-square w-full items-center justify-center overflow-hidden rounded-full bg-clip-content p-0.5 text-base font-bold sm:text-xl ${looks[view.look]}`}
+                    className={`wordpath-letter relative flex aspect-square w-full items-center justify-center rounded-full text-base font-bold sm:text-xl ${looks[view.look].text}`}
                     onFocus={() => setFocused(index)}
                     onPointerDown={(event) => down(event, cell)}
                     onPointerMove={move}
                     onPointerUp={up}
-                    onPointerCancel={() => { drag.current = null; }}
+                    onPointerCancel={() => { drag.current = null; setFinger(null); }}
                     onClick={() => tap(cell)}
                     onKeyDown={(event) => key(event, cell)}
                   >
-                    <span aria-hidden="true">{letter}</span>
+                    <span aria-hidden="true" className={`wordpath-dot rounded-full ${looks[view.look].dot}`} />
+                    <span aria-hidden="true" className="relative">{letter}</span>
                     {view.look === 'theme' && <ThemeMark className="wordpath-mark" />}
                     {view.look === 'special' && <ThreadMark className="wordpath-mark" />}
-                    {(view.order ?? view.step) !== undefined && (
-                      <span aria-hidden="true" className="wordpath-step text-xs font-normal">{view.order ?? view.step}</span>
+                    {/* Only a second cue numbers an answer's letters; picked letters show no numbers (the line shows the order). */}
+                    {view.order !== undefined && (
+                      <span aria-hidden="true" className="wordpath-step text-xs font-normal">{view.order}</span>
                     )}
                   </button>
                 </div>
