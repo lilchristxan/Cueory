@@ -247,6 +247,8 @@
   --crossword-check-size: 1.25rem;  /* settings checkboxes and radio buttons */
   --crossword-marker: 1ch;          /* room for the current-clue marker in the clue list */
   --crossword-print-cell: 2rem;      /* a printed square; colors on paper use --print-paper / --print-ink (Task 641) */
+  --wordpath-cell-min: 1.5rem;       /* a letter square's floor: 24 px (WCAG 2.2) at default text, 48 px at 32 px root text, when the grid scrolls */
+  --wordpath-columns: 11;            /* each puzzle overrides this with its validated grid width */
 }
 
 /* Pillo rules are a separate entry: always emit their shared theme variables. */
@@ -516,6 +518,7 @@
 @theme static {
   /* ---------- Sudoku (Task 625) ---------- */
   --sudoku-cell-min: 2.75rem;
+  --sudoku-cell-floor: 1.5rem;        /* a square's floor: 24 px (WCAG 2.2) at default text, 48 px at 32 px root text, when the board scrolls */
   --sudoku-cell-max: 5.25rem;
   --sudoku-height-reserve: 28.75rem;
   --sudoku-width-reserve: 9.375rem;
@@ -524,6 +527,7 @@
   --sudoku-board-frame: calc(var(--sudoku-box-line) * 2 + 1px); /* outer box lines + 1px so rounding never overflows */
   --sudoku-candidate-size: 0.625rem;
   --sudoku-entered-line: 2px;
+  --sudoku-wrong-line: 2px;                          /* the slash across a wrong entry (issue 720) */
   --sudoku-selected-line: 3px;                       /* the selected square's outline */
   /* Highlights (Christian, 2026-11-12): the row, column and box tint is clearly darker than the given-number shading;
      squares with the selected number are the strongest fill plus bold; numbers keep 4.5:1 on every fill. */

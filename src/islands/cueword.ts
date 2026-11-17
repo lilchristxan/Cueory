@@ -243,7 +243,8 @@ export interface CrosswordSettings {
   playSound: boolean;
 }
 
-export const CROSSWORD_SETTINGS_KEY = 'cueory-crossword-settings';
+import { CROSSWORD_SETTINGS_KEY } from './cuewordkeys';
+export { CROSSWORD_SETTINGS_KEY };
 export const DEFAULT_CROSSWORD_SETTINGS: Readonly<CrosswordSettings> = Object.freeze({
   autocheck: false,
   skipFilled: true,

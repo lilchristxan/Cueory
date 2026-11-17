@@ -9,8 +9,9 @@ import { legacyStarsKey, PROGRESS_STORAGE_KEY, type Progress } from '../scripts/
 import { PROMO_STORAGE_KEY } from '../scripts/promo';
 import { THEME_STORAGE_KEY } from '../scripts/theme';
 import type { KeyValueStorage } from '../scripts/storage';
-import { STATS_STORAGE_KEY } from './gameresults';
-import { CROSSWORD_SETTINGS_KEY } from './cueword';
+import { STATS_STORAGE_KEY, SUDOKU_STATS_STORAGE_KEY } from './gameresults';
+import { CROSSWORD_SETTINGS_KEY } from './cuewordkeys';
+import { SUDOKU_SETTINGS_KEY } from './sudoku';
 import { GAME_SETTINGS_STORAGE_KEY } from './gamesettings';
 import { GUEST_IMPORT_MARKER_PREFIX } from './guestimportrun';
 import { LAST_WELCOME_STORAGE_KEY, VISIT_STORAGE_KEY } from './stickynote';
@@ -73,6 +74,11 @@ export function deletionSummary(data: ExportData): string[] {
     lines.push(`${n} game result${n === 1 ? '' : 's'}`);
   }
 
+  if (Array.isArray(data.sudokuStats) && data.sudokuStats.length > 0) {
+    const n = data.sudokuStats.length;
+    lines.push(`${n} sudoku solve${n === 1 ? '' : 's'}`);
+  }
+
   if (data.attempts?.length) lines.push(`${data.attempts.length} question attempt${data.attempts.length === 1 ? '' : 's'}`);
   if (data.examPlans?.length) lines.push(`${data.examPlans.length} exam date${data.examPlans.length === 1 ? '' : 's'}`);
   if (data.reviewRows?.length) lines.push(`${data.reviewRows.length} account review schedule${data.reviewRows.length === 1 ? '' : 's'}`);
@@ -124,6 +130,8 @@ export function afterDeletion(storage: KeyValueStorage | undefined): DeletionSto
     THEME_STORAGE_KEY,
     STATS_STORAGE_KEY,
     CROSSWORD_SETTINGS_KEY,
+    SUDOKU_STATS_STORAGE_KEY,
+    SUDOKU_SETTINGS_KEY,
     GAME_SETTINGS_STORAGE_KEY,
     RESUME_STORAGE_KEY,
     LAST_WELCOME_STORAGE_KEY,
