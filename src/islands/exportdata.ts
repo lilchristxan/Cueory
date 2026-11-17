@@ -1,8 +1,8 @@
 /**
  * A download DTO, not a database reader. The caller supplies only their own data and the export date.
  *
- * Sections (JSON key and CSV file share the name): profile, onboarding, progress, reviewState and gameStats come from
- * the account page or this browser; attempts, examPlans and reviewRows mirror the student's own rows in the database
+ * Sections (JSON key and CSV file share the name): profile, onboarding, progress, reviewState, gameStats and
+ * sudokuStats come from the account page or this browser; attempts, examPlans and reviewRows mirror the student's own rows in the database
  * tables `attempts`, `exam_plans` and `review_state` (supabase/migrations 20261101100000 and 20261101110000), and
  * anatomyReviewQueue and anatomyViews hold the student's own Task 178 study data: the full review history including cleared
  * misses, and saved cameras/visibility state; the reader omits database row and owner ids and relies on RLS + MFA.
@@ -29,6 +29,7 @@
 import { dailyGames } from '../config/games';
 import { isCourse, isExamDate, PROGRESS_VERSION, type DeckProgress, type Progress } from '../scripts/progress';
 import type { GameStats } from './gamestats';
+import type { SudokuSolves } from './sudokustats';
 
 /** Plain JSON, as Supabase Auth returns `user_metadata` and `identity_data`. */
 export type JsonValue = string | number | boolean | null | readonly JsonValue[] | JsonObject;
@@ -67,6 +68,8 @@ export interface ExportData {
   reviewState?: readonly { id: string; nextDueDate: string; interval: number }[];
   /** Supplied from this browser's storage, never fetched from an account or a server. */
   gameStats?: GameStats;
+  /** Sudoku's per-level solve times (#720), also from this browser's storage only. */
+  sudokuStats?: SudokuSolves;
   /** The student's own `attempts` rows, as the account page read them. */
   attempts?: readonly { itemVersionId: string; picked: readonly string[]; correct: boolean; createdAt: string }[];
   /** The student's own `exam_plans` rows (at most 10). */
@@ -212,6 +215,9 @@ const reviewSchema: Schema = { id: value => text(value) && !!(value as string).t
 const gameSchema: Schema = {
   game: value => dailyGames.some(game => game.id === value), day, solved: bool, tries: whole,
 };
+const sudokuSchema: Schema = {
+  level: value => value === 'easy' || value === 'medium' || value === 'hard', day, seconds: whole,
+};
 /**
  * A fresh copy of plain JSON: own data properties only (getters never run), at most 6 levels deep, 200 entries in an
  * object or list and 10,000 characters in a text. Anything else gives undefined, so the caller refuses or drops it.
@@ -265,7 +271,7 @@ const identitySchema: Schema = { provider: providerName, identityData: jsonObjec
 const sessionSchema: Schema = {
   createdAt: nullableDate, updatedAt: nullableDate, notAfter: nullableDate, userAgent: nullableText, ip: nullableText,
 };
-const sections = ['profile', 'signInDetails', 'account', 'onboarding', 'progress', 'reviewState', 'gameStats', 'attempts', 'examPlans', 'reviewRows', 'reports', 'sessions', 'studyEvents', 'anatomyReviewQueue', 'anatomyViews'] as const;
+const sections = ['profile', 'signInDetails', 'account', 'onboarding', 'progress', 'reviewState', 'gameStats', 'sudokuStats', 'attempts', 'examPlans', 'reviewRows', 'reports', 'sessions', 'studyEvents', 'anatomyReviewQueue', 'anatomyViews'] as const;
 const rowCaps: Partial<Record<Section, number>> = {
   signInDetails: 100,
   attempts: 50_000, examPlans: 10, reviewRows: 50_000, reports: 10_000, sessions: 10_000,
@@ -287,6 +293,7 @@ interface Sections {
   progress: Row[] | GuestSnapshot;
   reviewState: Row[];
   gameStats: Row[];
+  sudokuStats: Row[];
   attempts: Row[];
   examPlans: Row[];
   reviewRows: Row[];
@@ -514,6 +521,7 @@ function prepare(data: unknown): { data: Sections; dropped: string[] } {
       progress,
       reviewState: listSection('reviewState', reviewSchema),
       gameStats: listSection('gameStats', gameSchema),
+      sudokuStats: listSection('sudokuStats', sudokuSchema),
       attempts,
       examPlans,
       reviewRows,
@@ -623,6 +631,7 @@ function csvParts(data: unknown): { fileName: string; parts: (string | Blob)[] }
     file('progress.csv', [...Object.keys(progressSchema), 'deckId', 'progressVersion', 'course', 'examDate', 'done'], progressRows),
     file('reviewState.csv', Object.keys(reviewSchema), clean.data.reviewState),
     file('gameStats.csv', Object.keys(gameSchema), clean.data.gameStats),
+    file('sudokuStats.csv', Object.keys(sudokuSchema), clean.data.sudokuStats),
     file('attempts.csv', Object.keys(attemptSchema), clean.data.attempts),
     file('examPlans.csv', Object.keys(examPlanSchema), clean.data.examPlans),
     file('reviewRows.csv', Object.keys(reviewRowSchema), clean.data.reviewRows),

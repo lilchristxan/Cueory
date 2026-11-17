@@ -141,7 +141,10 @@ All game collections below require `"status": "sample"`. Keep their words and cl
 - `content/games/pulse/*.json`: `status`, `word` of 5–7 lowercase letters, and `cue` of 1–120 characters.
 - `content/games/triage/*.json`: `status`, exactly three `groups` each with lowercase `name` (up to 32 characters) and three `terms` (up to 24 characters), and an `oddOne` term. All ten terms must differ.
 - `content/games/cueword/*.json`: `status`, optional `level` (`easy`, `mid`, or `hard`), `grid` (3–15 rows of 3–15 uppercase letters or dots), and `clues` with `across` and `down` lists. Every clue has positive whole-number `number` and `text` (1–120 characters). The game parser checks the grid matches.
-- `content/games/suture/*.json`: `status`, `theme` (1–60 characters), uppercase `grid` (3–11 rows of 3–11 letters), and `words` (3–20). Each word needs uppercase `answer` (3–11 letters) and a `path` of zero-based row/column pairs. Optional `cue` is 1–120 characters. The game checker validates paths.
+- `content/games/suture/*.json` (word path) loads two formats; the board format is preferred (#722):
+  - **Board** (`"format": "path"`): `status`, `clue` (the theme clue, 1–60 characters), uppercase `grid` of exactly 8 rows of 6 letters, and `words` (3–12 answers). Each answer needs uppercase `answer` (4 letters or more) and a `path` of zero-based `[row, column]` pairs, one per letter, each touching the one before (up, down, sideways or diagonally; paths may turn) and never using a cell twice. Every cell belongs to exactly one answer. Exactly one answer has `"special": true` (the thread): it names the theme and touches two opposite edges (top and bottom rows, or left and right columns). Optional `extras` lists other words of 4 letters or more that can be traced on the board; every 3 a player finds earn a hint.
+  - **Word search** (older, no `format`): `status`, `theme` (1–60 characters), uppercase `grid` (3–11 rows of 3–11 letters), and `words` (3–20). Each word needs uppercase `answer` (3–11 letters) and a straight-line `path`. Optional `cue` is 1–120 characters.
+  - The game's own checker (`parseWordPath` in `src/islands/suturepath.ts`) validates every path at build time.
 
 Example pulse file:
 
@@ -203,7 +206,7 @@ All JSON keys in the collection schemas are listed here. `[]` means an item in a
 | `pulse` | `status`, `word`, `cue` |
 | `triage` | `status`, `groups`, `groups[].name`, `groups[].terms`, `oddOne` |
 | `cueword` | `status`, `level?`, `grid`, `clues`, `clues.across`, `clues.across[].number`, `clues.across[].text`, `clues.down`, `clues.down[].number`, `clues.down[].text` |
-| `suture` | `status`, `theme`, `grid`, `words`, `words[].cue?`, `words[].answer`, `words[].path` |
+| `suture` | `status`, `format?`, `theme?`, `clue?`, `grid`, `words`, `words[].cue?`, `words[].answer`, `words[].path`, `words[].special?`, `extras?` |
 | `hello-cards` | `status`, `note?`, `starters`, `starters[].id`, `starters[].category`, `starters[].depth`, `starters[].text` |
 | `organizer` | `lesson`, `status`, `title`, `groups`, `groups[].id`, `groups[].name`, `items`, `items[].id`, `items[].text`, `items[].group` |
 | `fill-in` | `lesson`, `status`, `items`, `items[].id`, `items[].sentence`, `items[].distractors?` |

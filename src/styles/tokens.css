@@ -241,11 +241,24 @@
   --crossword-number: clamp(0.45rem, 1.5vw, 0.75rem);
   --crossword-letter: clamp(0.75rem, 3vw, 1.5rem);
   --crossword-help: min(20rem, calc(100vw - var(--spacing-gutter) - var(--spacing-gutter)));
+  --crossword-pencil-inset: 12%;    /* the dashed box drawn inside a pencil square (Task 721) */
+  --crossword-pencil-weight: 300;   /* pencil letters are lighter as well as boxed, never told apart by color alone */
+  --crossword-pencil-scale: 0.8;    /* pencil letters are a little smaller than pen letters */
+  --crossword-mark-size: 30%;       /* the corner triangle on a revealed square */
+  --crossword-panel-gap: calc(var(--spacing) * 2);
+  --crossword-check-size: 1.25rem;  /* settings checkboxes and radio buttons */
+  --crossword-marker: 1ch;          /* room for the current-clue marker in the clue list */
   --crossword-print-cell: 2rem;      /* a printed square; colors on paper use --print-paper / --print-ink (Task 641) */
+  --wordpath-cell-min: 1.5rem;       /* a letter square's floor: 24 px (WCAG 2.2) at default text, 48 px at 32 px root text, when the grid scrolls */
+  --wordpath-cell-max: 4.5rem;       /* a 6 × 8 board square's ceiling: 72 px, as large as a crossword square, so tablet and desktop boards are not oversized */
+  --wordpath-columns: 11;            /* each puzzle overrides this with its validated grid width */
 }
 
 /* Pillo rules are a separate entry: always emit their shared theme variables. */
 @theme static {
+  /* ---------- Shared game settings (#734); static so the panel's own stylesheet can always use it ---------- */
+  --border-game-settings: 1px;      /* the shared game settings button's rim and the lines between its rows (#734) */
+
   /* ---------- pillo, the blister-pack word game on /play (Task 114) ----------
      Pill colors by mark (letters on them also carry ● ○ ·, so color is never the only signal). Evening values are in
      the two Evening copies below; tests/unit/pulse.test.ts checks every letter on its pill for AA contrast. */
@@ -288,6 +301,9 @@
   --pillo-swatch: 2.75rem;              /* the sample pills in "how to play" */
   --pillo-ring: 2px;                    /* the next empty pocket's ring */
   --pillo-pop: 0.9;                     /* a typed pill grows from this size (never under reduced motion) */
+  --pillo-contrast-rim: 3px;            /* high contrast (Task 719): the solid rim of an "elsewhere" pill or key */
+  --pillo-mark-contrast: 0.875rem;      /* high contrast: the larger ● ○ · under a letter */
+  --pillo-bar-min: 1.75rem;             /* the shortest bar in the guess distribution, so its count fits */
   --shadow-pillo-pack: 0 1px 2px rgb(var(--shadow-tint) / 0.12), 0 14px 30px rgb(var(--shadow-tint) / 0.16);
   --shadow-pillo-pocket: inset 0 2px 4px rgb(var(--shadow-tint) / 0.2), inset 0 -1px 1px rgb(var(--shadow-tint) / 0.06);
   --shadow-pillo-pill: 0 2px 3px rgb(var(--shadow-tint) / 0.28), inset 0 -3px 4px rgb(var(--shadow-tint) / 0.14);
@@ -507,6 +523,7 @@
 @theme static {
   /* ---------- Sudoku (Task 625) ---------- */
   --sudoku-cell-min: 2.75rem;
+  --sudoku-cell-floor: 1.5rem;        /* a square's floor: 24 px (WCAG 2.2) at default text, 48 px at 32 px root text, when the board scrolls */
   --sudoku-cell-max: 5.25rem;
   --sudoku-height-reserve: 28.75rem;
   --sudoku-width-reserve: 9.375rem;
@@ -515,6 +532,7 @@
   --sudoku-board-frame: calc(var(--sudoku-box-line) * 2 + 1px); /* outer box lines + 1px so rounding never overflows */
   --sudoku-candidate-size: 0.625rem;
   --sudoku-entered-line: 2px;
+  --sudoku-wrong-line: 2px;                          /* the slash across a wrong entry (issue 720) */
   --sudoku-selected-line: 3px;                       /* the selected square's outline */
   /* Highlights (Christian, 2026-11-12): the row, column and box tint is clearly darker than the given-number shading;
      squares with the selected number are the strongest fill plus bold; numbers keep 4.5:1 on every fill. */

@@ -3,11 +3,11 @@ import { readFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
 
 /**
- * Printing word path for a patient (Task 641). The clock is set to 1 November 2026, so today's puzzle is the first
- * sample (content/games/suture/sample-01.json). window.print is replaced before the click, so no dialog opens.
+ * Printing word path for a patient (Task 641). The clock is set to 6 November 2026, so today's puzzle is the older
+ * word search sample (content/games/suture/sample-06.json); word-path-board.spec.ts prints a board. window.print is replaced before the click, so no dialog opens.
  */
 type Cell = [number, number];
-const sample = JSON.parse(readFileSync(new URL('../../content/games/suture/sample-01.json', import.meta.url), 'utf8')) as {
+const sample = JSON.parse(readFileSync(new URL('../../content/games/suture/sample-06.json', import.meta.url), 'utf8')) as {
   words: { answer: string; path: Cell[] }[];
 };
 
@@ -19,10 +19,12 @@ const cell = (page: Page, [row, col]: Cell) => game(page).locator(`button[data-c
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
     try { localStorage.setItem('cueory-promo-seen', String(Date.now())); } catch { /* storage blocked: no panel */ }
+    // A returning player: the first-visit rules card (#736) is already put away, so the letters follow the print button.
+    try { localStorage.setItem('cueory-game-help-seen', JSON.stringify(['suture'])); } catch { /* storage blocked */ }
     (window as unknown as { printed: number }).printed = 0;
     window.print = () => { (window as unknown as { printed: number }).printed += 1; };
   });
-  await page.clock.setFixedTime(new Date('2026-11-01T15:00:00'));
+  await page.clock.setFixedTime(new Date('2026-11-06T15:00:00'));
   await page.goto('/play');
   await expect(game(page)).toBeVisible();
 });
@@ -54,6 +56,8 @@ test.describe('word path: print for a patient (Task 641)', () => {
   });
 
   test('on paper: only the grid, the words to find and cueory.app, with nothing found shown', async ({ page }) => {
+    // Print must still fit its paper-width grid if a reader has enlarged root text.
+    await page.evaluate(() => document.documentElement.style.setProperty('font-size', '32px', 'important'));
     // Find one word first, so the printed copy has to hide it.
     const first = sample.words[0]!;
     await cell(page, first.path[0]!).click();
@@ -95,6 +99,8 @@ test.describe('word path: print for a patient (Task 641)', () => {
     // The grid fits the width of a letter or A4 page inside its margins (16 cm, about 605 px at 96 per inch).
     const board = (await game(page).getByRole('grid').boundingBox())!;
     expect(board.width).toBeLessThanOrEqual(606);
+    const finalCell = (await game(page).getByRole('row').first().getByRole('gridcell').last().boundingBox())!;
+    expect(finalCell.x + finalCell.width).toBeLessThanOrEqual(board.x + board.width + 0.5);
   });
 
   test('a plain print without the button still prints the game clean', async ({ page }) => {

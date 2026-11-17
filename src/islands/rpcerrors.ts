@@ -16,7 +16,7 @@
 
 export type RpcFunction = 'check_answer' | 'submit_flag' | 'delete_my_account' | 'update_display_name';
 
-/** delete_my_account's refusals (20261102160000_fresh_sign_in_and_name_rules.sql). */
+/** delete_my_account's refusals (Task 725's server-signed AMR timestamp check). */
 export const DELETE_SIGNED_OUT = 'sign in to delete your account';
 export const DELETE_REAUTH = 'please sign in again to delete your account';
 /** Raised when the id the page passes is not the signed-in account (20261114151643_delete_my_account_identity_and_mfa.sql). */
@@ -25,7 +25,7 @@ export const DELETE_IDENTITY = 'the account signed in on this device changed; no
 /** PostgREST / Postgres codes for a missing function or signature (old page against new schema, or the reverse). */
 export const DELETE_UNAVAILABLE_CODES = ['PGRST202', '42883'];
 export const DELETE_MFA = 'complete two-factor sign-in to continue';
-/** The SQLSTATE delete_my_account raises when the sign-in is older than 10 minutes. */
+/** The SQLSTATE delete_my_account raises if no server-signed credential/MFA AMR event occurred within ten minutes. */
 export const DELETE_REAUTH_CODE = '28R01';
 
 interface DbError {

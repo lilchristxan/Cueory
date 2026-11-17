@@ -18,7 +18,7 @@ type PublicFile = { kind: Kind; sha256: string };
 // do not regenerate fingerprints just to make a failure pass.
 // Curriculum outlines and sourced visual manifests are public metadata, not lessons.
 const publicFiles: Record<string, PublicFile> = {
-  'README.md': { kind: 'documentation', sha256: '4f65826da2b27c742f2ed14621942d2a49ea2a8e2fd12afb5810ae1011acee30' },
+  'README.md': { kind: 'documentation', sha256: 'faf6c82dc0a62df7a442aec9480383dade356f483b702594d1e1dbb862e0d0e8' },
   'batches/.gitkeep': { kind: 'empty-sentinel', sha256: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855' },
   'breaks/ideas.json': { kind: 'sample', sha256: '106106dbc858aeb88c24540a9693f4709aa3f8fa646d44899414f54c3d95175e' },
   'cards/study-skills-01.json': { kind: 'placeholder', sha256: 'b418d781233bba743de42ef9aea130ce19cea87fabad5108a20915051a9d373f' },
@@ -46,11 +46,12 @@ const publicFiles: Record<string, PublicFile> = {
   'games/pulse/sample-09.json': { kind: 'sample', sha256: 'b9dcf8d7ce165c64b54ac972a20c8b340e6f3d132416580e91d2c14ffb189d22' },
   'games/pulse/sample-10.json': { kind: 'sample', sha256: '461533e04c2843da7d6af15b0ee46408775feefb6b9b38ebd27ba98ee718c357' },
   'games/stat/sample.json': { kind: 'sample', sha256: '8e03334f92ce1e4827378f6f99c82b40f36e16a5db68259f84c378d442286c7c' },
-  'games/suture/sample-01.json': { kind: 'sample', sha256: 'd56189466a526e5bdbacb4baa14ac58b6ab434dc7d2d368fdf3a698f335eafb8' },
-  'games/suture/sample-02.json': { kind: 'sample', sha256: 'a77709a6849694babeabf71141d7c3ba3c5bdbea608fa94339eda3b1a630502b' },
-  'games/suture/sample-03.json': { kind: 'sample', sha256: '8dfc11ad5d7ab660c5affb04d8c0b3347c77c7ceeddd5980db21b703b42cd189' },
-  'games/suture/sample-04.json': { kind: 'sample', sha256: 'f3a1e4f67ff6bd03a480ecf29be55a6ea168d5b15d396da349d16fe4176e2da0' },
-  'games/suture/sample-05.json': { kind: 'sample', sha256: '265d89961358cfd9ae2442d8dd168dd6518a5871941d6455caa90d1be4c346c5' },
+  'games/suture/sample-01.json': { kind: 'sample', sha256: '6447d9809cf02771f315e54be7b9a26780ef11b990c5b85935a655e930305b64' },
+  'games/suture/sample-02.json': { kind: 'sample', sha256: '64705e73e9405084c1f44643e743dcb82aab3a279bacc7083624aca88ea35f6c' },
+  'games/suture/sample-03.json': { kind: 'sample', sha256: '9eda8a884553aa1c8618f9c009aaf974c192d2121eb792a1c73e64ecf4e61c6e' },
+  'games/suture/sample-04.json': { kind: 'sample', sha256: '7948dbe093c8b1f548721a18a147f218af04c764806b14dea270ea6ad8f4d8ec' },
+  'games/suture/sample-05.json': { kind: 'sample', sha256: 'b3c6ba7052da4d85f6cff881b78e86ee5ce777382996b7e59136dc28632d3dd2' },
+  'games/suture/sample-06.json': { kind: 'sample', sha256: 'd56189466a526e5bdbacb4baa14ac58b6ab434dc7d2d368fdf3a698f335eafb8' },
   'games/triage/sample-01.json': { kind: 'sample', sha256: '6ca5563813b09625f10696830eca0139f852b362a150baaf3013caf4788acd94' },
   'games/triage/sample-02.json': { kind: 'sample', sha256: '8267d2eb64dda945efb5da0e51670323326f1d4b756c6822adbe66496564e801' },
   'games/triage/sample-03.json': { kind: 'sample', sha256: 'db4518b97bd15f6806d7d409c925811cecda3ed3478485bb20113b1e95a6dcf2' },
@@ -62,6 +63,10 @@ const publicFiles: Record<string, PublicFile> = {
   'lessons/study-skills-01.json': { kind: 'placeholder', sha256: '9eff10936cdd78a2686350bc9e364c7eaab818d2d4da12c1c90afb3e1057bc03' },
   'organizer/study-skills-01.json': { kind: 'sample', sha256: 'fc9c698f5fa9461d52a5ad7cde7183aa00d50a9153197b83d86114916bf7823d' },
   'questions/study-skills-01.json': { kind: 'sample', sha256: 'cdb586ab4efc4fc1ef2b6e69f2c3e92b09e7f8aad797c3ae6361260d2f7618d0' },
+  // Lane 5 sheet templates: made-up everyday sample rows (the crossword and word path rows reuse public samples).
+  'samples/templates/crossword.csv': { kind: 'sample', sha256: '21800bb12de51474d1470bcdf0782f4462cc5e57028400ba38a4908f3a3f78a3' },
+  'samples/templates/pillo.csv': { kind: 'sample', sha256: '9dc222f7565cab3fe61db7e2641e246d2aed26d4d10b3b215c9058b9b436d832' },
+  'samples/templates/word-path.csv': { kind: 'sample', sha256: '96223e4c791d5267b85a4d24820d83bd39eb8393aa573299d484c40c6d5055d8' },
   'videos/study-skills-01.json': { kind: 'empty-video-placeholder', sha256: '81ea27e6b2ef303ee616d2f5a59ed78a71bc8b09c9b93599628bc659ee2a4893' },
   'visuals/anatomy-digestive.json': { kind: 'visual-source-metadata', sha256: 'af31ba3f17323e6b59a851dc6da45a7310500122b922b1a2fc79a0544957144a' },
   'visuals/anatomy-heart.json': { kind: 'visual-source-metadata', sha256: 'c29f46a6f993aeee992a7c09e5260d29cc48072593a3e57558c2a8acbb30a89c' },

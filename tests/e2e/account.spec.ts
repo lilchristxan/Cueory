@@ -113,8 +113,14 @@ test.beforeAll(async () => {
       const query = table => {
         const q = {
           order: () => q, gt: () => q,
-          range: async () => params.has('export-fails') && table === 'attempts'
-            ? { data: null, error: { message: 'provider-private-detail' } } : { data: tables[table], error: null },
+          range: async () => {
+            // '&export-held': the attempts read waits until the test releases it, so the account can change meanwhile.
+            if (params.has('export-held') && table === 'attempts') {
+              await new Promise(resolve => { window.fixtureReleaseExport = resolve; });
+            }
+            return params.has('export-fails') && table === 'attempts'
+              ? { data: null, error: { message: 'provider-private-detail' } } : { data: tables[table], error: null };
+          },
         };
         return q;
       };
@@ -181,8 +187,10 @@ test.beforeAll(async () => {
             held.abortSignal = nextSignal => { signal = nextSignal; return held; };
             return held;
           }
-          return Promise.resolve(params.has('delete-refused')
-            ? { data: null, error: { message: 'sign in to delete your account', code: '28000' } } : { data: null, error: null });
+          return Promise.resolve(params.has('auth-stale-refresh')
+            ? { data: null, error: { message: 'please sign in again to delete your account', code: '28R01' } }
+            : params.has('delete-refused')
+              ? { data: null, error: { message: 'sign in to delete your account', code: '28000' } } : { data: null, error: null });
         },
       };
       window.fixtureClient = client;
@@ -346,13 +354,18 @@ test.describe('/account signed in (fake client)', () => {
     page.on('download', download => files.push(download));
     await page.getByRole('button', { name: 'download spreadsheet files', exact: true }).click();
     await expect(page.getByText('your spreadsheet files are downloading.')).toBeVisible();
-    await expect.poll(() => files.length, { timeout: 15_000 }).toBe(16);
+    // 17 spreadsheet files (sudokuStats.csv joined in #720; anatomyReviewQueue.csv and anatomyViews.csv in Task 178),
+    // README.txt first (lane 2), plus the JSON file: 19 object URLs.
+    await expect.poll(() => files.length, { timeout: 15_000 }).toBe(18);
+    expect(files[0]!.suggestedFilename()).toBe(`${file.suggestedFilename().slice(0, -5)}-README.txt`);
+    expect(readFileSync((await files[0]!.path())!, 'utf8')).toContain(`${file.suggestedFilename().slice(0, -5)}-studyEvents.csv`);
     const names = files.map(download => download.suggestedFilename());
     expect(names).toContain(`${file.suggestedFilename().slice(0, -5)}-studyEvents.csv`);
+    expect(names).toContain(`${file.suggestedFilename().slice(0, -5)}-sudokuStats.csv`);
     expect(names).toContain(`${file.suggestedFilename().slice(0, -5)}-anatomyReviewQueue.csv`);
     expect(names).toContain(`${file.suggestedFilename().slice(0, -5)}-anatomyViews.csv`);
-    await expect.poll(async () => (await urls(page)).revoked, { timeout: 15_000 }).toBe(17);
-    expect((await urls(page)).made).toBe(17);
+    await expect.poll(async () => (await urls(page)).revoked, { timeout: 15_000 }).toBe(19);
+    expect((await urls(page)).made).toBe(19);
   });
 
   test('offers no file when a read fails, and never shows provider detail', async ({ page }) => {
@@ -365,6 +378,49 @@ test.describe('/account signed in (fake client)', () => {
     await expect(page.locator('body')).not.toContainText('provider-private-detail');
     expect(files).toEqual([]);
     expect((await urls(page)).made).toBe(0);
+  });
+
+  test('switching A to B to A while the data is read offers no file and reloads for the current account (#757)', async ({ page }) => {
+    await fixture(page, '&export-held');
+    const files: Download[] = [];
+    page.on('download', download => files.push(download));
+    await page.getByRole('button', { name: 'download my data', exact: true }).click();
+    await expect.poll(() => page.evaluate(() => typeof (window as unknown as { fixtureReleaseExport?: unknown }).fixtureReleaseExport)).toBe('function');
+    await page.evaluate(() => {
+      const w = window as unknown as { fixtureSwitchUser: (userId: string) => void; fixtureOtherUserId: string; fixtureOriginalUserId: string };
+      w.fixtureSwitchUser(w.fixtureOtherUserId);
+      w.fixtureSwitchUser(w.fixtureOriginalUserId);
+    });
+    await page.evaluate(() => (window as unknown as { fixtureReleaseExport: () => void }).fixtureReleaseExport());
+    await expect(page.getByRole('alert')).toContainText('the account signed in on this device changed, so nothing was done.');
+    await expect(page.getByRole('button', { name: 'download my data', exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'download spreadsheet files' })).toHaveCount(0);
+    await page.waitForTimeout(500);
+    expect(files).toEqual([]);
+    expect((await urls(page)).made).toBe(0);
+    await axe(page);
+  });
+
+  test('switching to B while the spreadsheet files are on their way stops the rest (#757)', async ({ page }) => {
+    await fixture(page);
+    const json = page.waitForEvent('download');
+    await page.getByRole('button', { name: 'download my data', exact: true }).click();
+    await json;
+    const files: Download[] = [];
+    page.on('download', download => files.push(download));
+    await page.getByRole('button', { name: 'download spreadsheet files', exact: true }).click();
+    await expect.poll(() => files.length).toBeGreaterThan(0);
+    await page.evaluate(() => {
+      const w = window as unknown as { fixtureSwitchUser: (userId: string) => void; fixtureOtherUserId: string };
+      w.fixtureSwitchUser(w.fixtureOtherUserId);
+    });
+    await expect(page.getByRole('alert')).toContainText('the account signed in on this device changed, so nothing was done.');
+    const offered = files.length;
+    // 15 files 300 ms apart would take over four seconds; wait past that and check none came after the switch.
+    await page.waitForTimeout(5_000);
+    expect(files.length).toBe(offered);
+    expect(offered).toBeLessThan(15);
+    await expect(page.getByRole('button', { name: 'download spreadsheet files' })).toHaveCount(0);
   });
 
   test('delete stays disabled until "delete" is typed, then deletes and clears only this device', async ({ page }) => {
@@ -472,8 +528,23 @@ test.describe('/account signed in (fake client)', () => {
     await page.getByLabel('type delete to confirm').fill('delete');
     await deleteButton(page).click();
     await expect(page.getByText('please sign in again to delete your account.')).toBeVisible();
+    await expect(page.getByRole('link', { name: 'sign in again', exact: true })).toHaveAttribute('href', '/signin?next=%2Faccount%23delete');
     expect(await calls(page)).toEqual(['rpc:delete_my_account']);
     expect(await page.evaluate(() => localStorage.getItem('cueory-auth'))).toBe('1');
+  });
+
+  test('a refreshed token with stale credentials cannot delete, and keeps browser data', async ({ page }) => {
+    await fixture(page, '&auth-stale-refresh');
+    await page.evaluate(() => localStorage.setItem('cueory-auth', 'existing-session'));
+    await page.getByRole('button', { name: 'delete my account', exact: true }).click();
+    await page.getByLabel('type delete to confirm').fill('delete');
+    await deleteButton(page).click();
+    await expect(page.getByText('for your safety, please sign in again to delete your account.')).toBeVisible();
+    await expect(page.getByRole('link', { name: 'sign in again', exact: true }))
+      .toHaveAttribute('href', '/signin?next=%2Faccount%23delete');
+    expect(await calls(page)).toEqual(['rpc:delete_my_account']);
+    expect(await page.evaluate(() => localStorage.getItem('cueory-auth'))).toBe('existing-session');
+    await axe(page);
   });
 
   test('keep my account closes the panel and returns focus', async ({ page }) => {

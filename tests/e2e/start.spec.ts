@@ -1,6 +1,15 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Locator, type Page } from '@playwright/test';
 
+/** A local calendar day `days` from now, YYYY-MM-DD, so the dates here never fall outside setup's window. */
+const daysFromNow = (days: number) => {
+  const d = new Date();
+  d.setDate(d.getDate() + days);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
+// 400 days ahead: a month up (or a December→January wrap) from here still lands inside today..two years.
+const EXAM = daysFromNow(400);
+
 const savedAnswers = (page: Page) => page.evaluate(() =>
   JSON.parse(localStorage.getItem('cueory-progress') ?? 'null')?.onboarding ?? null,
 );
@@ -35,7 +44,7 @@ test('keyboard-only back and forward preserve both unsaved answers, and skip onl
   const examHeading = page.getByRole('heading', { name: 'when is your exam?' });
   await expect(examHeading).toBeFocused();
   const date = page.getByLabel('when is your exam?');
-  await date.fill('2027-05-12');
+  await date.fill(EXAM);
 
   const back = page.getByRole('button', { name: 'back', exact: true });
   await tabTo(page, back);
@@ -50,7 +59,7 @@ test('keyboard-only back and forward preserve both unsaved answers, and skip onl
   await visibleKeyboardFocus(forward);
   await page.keyboard.press('Enter');
   await expect(examHeading).toBeFocused();
-  await expect(date).toHaveValue('2027-05-12');
+  await expect(date).toHaveValue(EXAM);
 
   const skip = page.getByRole('button', { name: 'skip', exact: true });
   await tabTo(page, skip);
@@ -118,17 +127,17 @@ test('two optional questions appear on separate screens, with no new stored fiel
   await expect(page.getByRole('radio', { name: 'both', exact: true })).toHaveCount(0);
   await expect(page.getByLabel('when is your exam?')).toHaveValue('');
   await expect(page.getByRole('button', { name: 'save my answers' })).toBeVisible();
-  await page.getByLabel('when is your exam?').fill('2027-05-12');
+  await page.getByLabel('when is your exam?').fill(EXAM);
   await page.getByRole('button', { name: 'save my answers' }).click();
 
   await expect(page.locator(':focus')).toContainText('saved on this device.');
-  expect(await savedAnswers(page)).toEqual({ course: 'both', examDate: '2027-05-12', done: true });
+  expect(await savedAnswers(page)).toEqual({ course: 'both', examDate: EXAM, done: true });
 
   await page.reload();
   await expect(page.getByTestId('setup-step')).toHaveText('question 1 of 2');
   await expect(page.getByRole('radio', { name: 'both', exact: true })).toBeChecked();
   await toExam(page);
-  await expect(page.getByLabel('when is your exam?')).toHaveValue('2027-05-12');
+  await expect(page.getByLabel('when is your exam?')).toHaveValue(EXAM);
 });
 
 test('back retains unsaved answers and skip clears only the current question', async ({ page }) => {
@@ -137,7 +146,7 @@ test('back retains unsaved answers and skip clears only the current question', a
   await page.getByRole('radio', { name: 'both', exact: true }).check();
   await toExam(page);
   const date = page.getByLabel('when is your exam?');
-  await date.fill('2027-05-12');
+  await date.fill(EXAM);
   await page.getByRole('button', { name: 'back', exact: true }).click();
   await expect(page.getByTestId('setup-step')).toHaveText('question 1 of 2');
   await expect(page.getByRole('radio', { name: 'both', exact: true })).toBeChecked();
@@ -146,9 +155,9 @@ test('back retains unsaved answers and skip clears only the current question', a
   // Skip the course, then return to the date that was already entered.
   await page.getByRole('button', { name: 'skip', exact: true }).click();
   await expect(page.getByTestId('setup-step')).toHaveText('question 2 of 2');
-  await expect(date).toHaveValue('2027-05-12');
+  await expect(date).toHaveValue(EXAM);
   await page.getByRole('button', { name: 'save my answers' }).click();
-  expect(await savedAnswers(page)).toEqual({ course: null, examDate: '2027-05-12', done: true });
+  expect(await savedAnswers(page)).toEqual({ course: null, examDate: EXAM, done: true });
 
   await page.reload();
   await page.getByRole('radio', { name: 'fundamentals', exact: true }).check();
@@ -168,7 +177,7 @@ test('skip for now ends setup immediately without saving unsaved edits', async (
   await page.goto('/start');
   await page.getByRole('radio', { name: 'med-surg i' }).check();
   await toExam(page);
-  await page.getByLabel('when is your exam?').fill('2027-05-12');
+  await page.getByLabel('when is your exam?').fill(EXAM);
   await page.getByRole('button', { name: 'skip for now' }).click();
   expect(await savedAnswers(page)).toEqual({ course: null, examDate: null, done: true });
 });
@@ -179,9 +188,9 @@ test.describe('hardware keyboard', () => {
   test.use({ isMobile: false, hasTouch: false });
 
   test('both questions can be changed and saved with keyboard and visible focus', async ({ page }) => {
-    await page.addInitScript(() => localStorage.setItem('cueory-progress', JSON.stringify({
-      version: 1, onboarding: { course: 'fundamentals', examDate: '2027-05-12', done: true }, decks: {},
-    })));
+    await page.addInitScript((examDate) => localStorage.setItem('cueory-progress', JSON.stringify({
+      version: 1, onboarding: { course: 'fundamentals', examDate, done: true }, decks: {},
+    })), EXAM);
     await page.goto('/start');
     const firstCourse = page.getByRole('radio', { name: 'fundamentals', exact: true });
     await tabTo(page, firstCourse);
@@ -200,7 +209,7 @@ test.describe('hardware keyboard', () => {
     await page.keyboard.press('ArrowUp');
     const changedDate = await date.inputValue();
     expect(changedDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
-    expect(changedDate).not.toBe('2027-05-12');
+    expect(changedDate).not.toBe(EXAM);
 
     const save = page.getByRole('button', { name: 'save my answers' });
     await tabTo(page, save);
@@ -216,7 +225,7 @@ test('clearing both answers is saved and survives a reload', async ({ page }) =>
   await page.getByRole('radio', { name: 'fundamentals', exact: true }).check();
   await toExam(page);
   const date = page.getByLabel('when is your exam?');
-  await date.fill('2027-05-12');
+  await date.fill(EXAM);
   await page.getByRole('button', { name: 'save my answers' }).click();
   await expect(page.getByText('saved on this device.', { exact: true })).toBeVisible();
   await page.reload();
@@ -255,4 +264,40 @@ test('each question and saved confirmation pass accessibility and fit a narrow s
   await page.getByRole('button', { name: 'save my answers' }).click();
   await expect(page.locator(':focus')).toContainText('saved on this device.');
   await check();
+});
+
+test.describe('exam date checks (lane 2)', () => {
+  for (const [name, date, message] of [
+    ['a date that has passed', daysFromNow(-1), 'that date has already passed. pick today or a later date, or leave it blank.'],
+    ['a date more than two years away', daysFromNow(731), 'that’s more than two years away. pick a date in the next two years, or leave it blank.'],
+  ] as const) {
+    test(`${name} is refused with a clear message, kept on the field, and never saved`, async ({ page }) => {
+      await page.goto('/start');
+      await page.getByRole('radio', { name: 'fundamentals', exact: true }).check();
+      await toExam(page);
+      const field = page.getByLabel('when is your exam?');
+      await field.fill(date);
+      await page.getByRole('button', { name: 'save my answers' }).click();
+      await expect(page.getByRole('alert')).toHaveText(message);
+      await expect(field).toBeFocused();
+      await expect(field).toHaveAttribute('aria-invalid', 'true');
+      expect(await savedAnswers(page)).toBeNull();
+      expect((await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa']).analyze()).violations).toEqual([]);
+
+      // Fixing it clears the message and saves.
+      await field.fill(daysFromNow(30));
+      await expect(page.getByRole('alert')).toHaveCount(0);
+      await page.getByRole('button', { name: 'save my answers' }).click();
+      await expect(page.locator(':focus')).toContainText('saved on this device.');
+      expect(await savedAnswers(page)).toEqual({ course: 'fundamentals', examDate: daysFromNow(30), done: true });
+    });
+  }
+
+  test('a blank date is still fine: the question is optional', async ({ page }) => {
+    await page.goto('/start');
+    await toExam(page);
+    await page.getByRole('button', { name: 'save my answers' }).click();
+    await expect(page.locator(':focus')).toContainText('saved on this device.');
+    expect(await savedAnswers(page)).toEqual({ course: null, examDate: null, done: true });
+  });
 });

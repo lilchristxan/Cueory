@@ -1,14 +1,14 @@
 /**
  * Private daily-game stats on /play (D-76). Each game reports a finished round; the stats panel keeps the results
- * only when the student has turned stats on. The record itself (first result of each game and day, no streaks) is the
- * helper's logic in ./gamestats, and results older than 400 days are dropped by today's date.
+ * only when the student has turned stats on. The record itself (first result of each game and day; pillo's and word path's
+ * streaks are worked out from it, and the crossword keeps a streak flag; Task 719, #722, Task 721) is the helper's logic in ./gamestats, and results older than 400 days are dropped by today's date.
  *
  * Stats are off until the student turns them on: turned on means the record exists in this browser's storage, and
  * turning them off deletes it. Nothing here is ever sent anywhere.
  */
 import type { KeyValueStorage } from '../scripts/storage';
 import { dayLabel } from './daily';
-import type { SudokuResult } from './sudoku';
+import { LEVEL_LABELS, type SudokuResult } from './sudoku';
 import type { StatRoundResult } from './stat';
 import { statGame } from '../config/games';
 import { parseStats, serialize, type GameId, type GameStats } from './gamestats';
@@ -66,22 +66,32 @@ export interface GameResultCard {
 /** Maps Worker 1's completion payload into the same display-only result card as every other game. */
 export function sudokuResultCard(detail: SudokuResult): GameResultCard {
   const errors = `${detail.errors} ${detail.errors === 1 ? 'error' : 'errors'}`;
+  // The level as players see it (easy, mid, hard); an unknown level falls back to its id.
+  const level = LEVEL_LABELS[detail.level] ?? detail.level;
   return {
     game: 'sudoku',
     name: 'sudoku',
     date: resultDayLabel(detail.day),
-    level: detail.level,
+    level,
     result: detail.solved ? 'solved' : 'not solved',
-    shareResult: `${detail.level} · ${detail.solved ? '' : 'not solved · '}${detail.time} · ${errors}`,
+    shareResult: `${level} · ${detail.solved ? '' : 'not solved · '}${detail.time} · ${errors}`,
     summary: detail.solved
-      ? `${detail.level} completed in ${detail.time} with ${errors}.`
-      : `${detail.level} ended after ${detail.time} with ${errors}.`,
+      ? `${level} completed in ${detail.time} with ${errors}.`
+      : `${level} ended after ${detail.time} with ${errors}.`,
     stats: [
       { label: 'time', value: detail.time },
       { label: 'errors', value: String(detail.errors) },
     ],
     path: '/play/sudoku',
   };
+}
+
+/**
+ * A solved daily sudoku as a round for the shared stats record (#720), under its game id `triage`. Tries are the errors
+ * counted while solving. The first round of the day counts, whichever level it was.
+ */
+export function sudokuRoundResult(detail: SudokuResult): RoundResult {
+  return { game: 'triage', day: detail.day, solved: detail.solved, tries: detail.errors };
 }
 
 /** Display-only Stat result. Questions, keys and private stats are never included. */
@@ -225,13 +235,27 @@ export function discardPendingResultCard(card: GameResultCard): void {
 /** Where the stats record is kept, when the student has turned stats on. */
 export const STATS_STORAGE_KEY = 'cueory-game-stats';
 
+/**
+ * Sudoku's own per-level record (#720): the day, level and solve time of each level's first solve of a day. It is kept
+ * only while stats are on, and turning stats off or "forget all" deletes it with the shared record (./sudokustats).
+ */
+export const SUDOKU_STATS_STORAGE_KEY = 'cueory-sudoku-stats';
+
 export interface RoundResult {
   game: GameId;
   /** The day of the puzzle that was played, in the visitor's own time zone, written YYYY-MM-DD. */
   day: string;
   solved: boolean;
-  /** Guesses for pillo, slips for the retired sort record, cues for the crossword and loose stitches for word path. */
+  /** Guesses for pillo, errors for sudoku, checks or reveals for the crossword and loose stitches for word path. */
   tries: number;
+  /** Set when the round ended on another local day than its puzzle's own: it then never extends a streak. */
+  offDay?: true;
+  /** Crossword only: whether the solve extends the streak (no Check, Reveal or Autocheck, within 48 hours). */
+  streak?: boolean;
+  /** Word path boards only (#722): hints used. */
+  hints?: number;
+  /** Word path boards only (#722): whether the special answer was found first. */
+  specialFirst?: boolean;
   /** When present, the same completion also opens the shared finished-game dialog. */
   card?: GameResultCard;
 }
@@ -267,6 +291,21 @@ if (typeof window !== 'undefined') {
   window.addEventListener('pageshow', (event) => {
     if (event.persisted) forgetHeldRounds();
   });
+}
+
+/** The event a game sends on `window` once today's round has its first move (read by the /play daily status). */
+export const GAME_PROGRESS_EVENT = 'cueory:game-progress';
+
+export interface ProgressDetail {
+  game: GameId;
+  /** The puzzle's day in the visitor's own time zone, YYYY-MM-DD. */
+  day: string;
+}
+
+/** Tells the page that today's round has started. Nothing is stored or sent anywhere. */
+export function reportProgress(detail: ProgressDetail): void {
+  if (typeof window === 'undefined') return;
+  window.dispatchEvent(new CustomEvent<ProgressDetail>(GAME_PROGRESS_EVENT, { detail: { game: detail.game, day: detail.day } }));
 }
 
 /** Tells the page that a round has ended: the round waits to be kept, and an event tells the stats panel. */
@@ -327,6 +366,7 @@ export function saveStats(storage: KeyValueStorage | undefined, stats: GameStats
 export function deleteStats(storage: KeyValueStorage | undefined): boolean {
   try {
     if (!storage) return false;
+    storage.removeItem(SUDOKU_STATS_STORAGE_KEY);
     storage.removeItem(STATS_STORAGE_KEY);
     return true;
   } catch {
@@ -337,8 +377,8 @@ export function deleteStats(storage: KeyValueStorage | undefined): boolean {
 /** What each game counts as a try, in the words its own rules use. */
 const TRIES: Record<GameId, { one: string; many: string }> = {
   pulse: { one: 'guess', many: 'guesses' },
-  triage: { one: 'slip', many: 'slips' },
-  cueword: { one: 'cue', many: 'cues' },
+  triage: { one: 'error', many: 'errors' },
+  cueword: { one: 'check or reveal', many: 'checks or reveals' },
   suture: { one: 'loose stitch', many: 'loose stitches' },
 };
 

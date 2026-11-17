@@ -1,0 +1,1 @@
+status: #735, /play shows today's status for each daily game (not started ○, in progress ◐, done ✓, in words), read only from this device: today's result in the private stats record or a finish heard on the page. No new storage. "in progress" waits for each game to send the new optional cueory:game-progress event on its first move (games don't keep a half-played round yet).

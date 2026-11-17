@@ -1,0 +1,58 @@
+{
+  "status": "sample",
+  "sample": true,
+  "level": "easy",
+  "grid": [
+    "SPA..",
+    "HER..",
+    "EARTH",
+    "..OWE",
+    "..WON"
+  ],
+  "clues": {
+    "across": [
+      {
+        "number": 1,
+        "text": "a clue that goes on and on a clue that goes on and on a clue that goes on and on a clue that goes on and on a clue that goes on and on "
+      },
+      {
+        "number": 4,
+        "text": "not him"
+      },
+      {
+        "number": 5,
+        "text": "the planet we live on"
+      },
+      {
+        "number": 8,
+        "text": "to need to pay back"
+      },
+      {
+        "number": 9,
+        "text": "came first in a race"
+      }
+    ],
+    "down": [
+      {
+        "number": 1,
+        "text": "not he"
+      },
+      {
+        "number": 2,
+        "text": "a small green ball that grows in a pod"
+      },
+      {
+        "number": 3,
+        "text": "a sign that points the way"
+      },
+      {
+        "number": 6,
+        "text": "one plus one"
+      },
+      {
+        "number": 7,
+        "text": "a farm bird that lays eggs"
+      }
+    ]
+  }
+}

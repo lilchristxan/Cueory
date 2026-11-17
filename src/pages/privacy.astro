@@ -64,12 +64,47 @@ import { newsletter, promo, site } from '../config/site';
     </p>
     <p>
       On <a href="/play">daily games</a> you can turn on stats. They're off unless you do. When they're on, your browser
-      keeps, for each game you finish, the day, whether you solved it and how many tries it took. Anything older than 400
-      days is deleted the next time you open daily games. It stays on your device and never reaches us, and there are no
-      streaks. "Forget", or turning stats off, deletes it. The storage key for these results is
-      <code>cueory-game-stats</code>.
+      keeps, for each game you finish, the day of the puzzle, whether you solved it, how many tries it took and, only
+      when you finished it on a later day than the puzzle's own (for example after midnight), a note saying so. For the
+      crossword, a try is a check, a reveal or autocheck, and it also keeps whether the solve extends your crossword
+      streak (solved without check, reveal or autocheck, within 48 hours of the puzzle's date). For word path, it also keeps how many cues you used
+      and whether you found the special answer first. Nothing else is kept. From these results the page works out, on
+      your device, pillo's games played, win percentage, current and longest streak (days in a row you solved the puzzle
+      on its own day) and how many guesses each solved game took, and word path's streak. Those numbers are not stored
+      separately. Anything older than 400 days is deleted the next time you open daily games. It stays on your device and
+      never reaches us. "Forget", or turning stats off, deletes it. The storage key for these results is
+      <code>cueory-game-stats</code>. pillo's own settings (hard mode and on-screen keyboard only) are not saved: they
+      last until you leave or reload the page. Its high contrast switch is the shared game setting described below.
+    </p>
+    <p>
+      The crossword remembers its settings on your device (autocheck, how the cursor moves, the timer, clue text size
+      and sound), using <code>cueory-crossword-settings</code>. It holds no letters, answers or results, and it never
+      reaches us.
+    </p>
+    <p>
+      While stats are on, sudoku also keeps the day, the level and your solve time for your first solve of each level
+      each day, so it can show how many you solved, your best and average times and your streak for each level. It stays
+      on your device, never reaches us and follows the same 400 days. "Forget sudoku stats", "forget all my stats" or
+      turning stats off deletes it. The storage key is <code>cueory-sudoku-stats</code>. Sudoku's own settings (such as
+      the highlights, the timer and the sound) are kept on your device with <code>cueory-sudoku-settings</code>.
+    </p>
+    <p>
+      If you change the shared game settings (high contrast, reduced motion or game sounds), your browser remembers
+      those three choices on your device as <code>cueory-game-settings</code>. Nothing is saved until you change one,
+      and it never reaches us. Your theme pick there is the same one the footer saves.
+    </p>
+    <p>
+      The first time you open each daily game, its rules show above the board. Once you press "got it" or the ? button,
+      your browser remembers which games you've seen (only the games' names) as <code>cueory-game-help-seen</code>, so
+      the rules don't show again. It stays on your device and never reaches us.
     </p>
 
+    <p>
+      After you finish daily puzzles on three different days, the daily games page may suggest adding Cueory to your
+      home screen. To decide when to show that suggestion, the browser keeps up to three dates on which you finished a
+      puzzle and whether you dismissed the suggestion, under <code>cueory-home-screen-tip</code>. That record remains
+      on this device and is not sent to us. Clearing this site's data removes it.
+    </p>
     <p>
       To let the lessons open without a connection, your browser may keep copies of the pages you visit (lessons
       and the home page; daily games are never kept) and of the site's own files, on your device. That is a normal browser feature, the
@@ -98,6 +133,11 @@ import { newsletter, promo, site } from '../config/site';
       <li>
         <code>cueory-break-timer</code>: when this feature is on, it will remember your break timer's current state
         in this browser tab, for up to two hours.
+      </li>
+      <li>
+        <code>cueory-finals-survey-dismissed</code>, and <code>cueory-preview-survey</code> on the unlinked preview
+        page: when the survey prompt is on, they will remember that you closed it, on this device. Nothing about an
+        answer is stored or sent.
       </li>
     </ul>
 

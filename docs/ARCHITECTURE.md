@@ -45,7 +45,7 @@ The public games page `src/pages/play.astro` hosts four games: pillo (word guess
 The pages `src/pages/play/stat.astro` and `src/pages/play/hello-cards.astro` are separate from those four. Stat's draft sample is available only where drafts are allowed; the live page shows a coming-soon state until ready. Hello cards also follows its own visibility rules.
 
 - Rendering: game interfaces such as `src/islands/PulseGame.tsx`, `src/islands/SudokuGame.tsx` and `src/islands/StatGame.tsx`.
-- Rules: plain files such as `src/islands/pulse.ts`, `src/islands/sudoku.ts`, `src/islands/cueword.ts`, `src/islands/suture.ts` and `src/islands/stat.ts`.
+- Rules: plain files such as `src/islands/pulse.ts`, `src/islands/sudoku.ts`, `src/islands/cueword.ts`, `src/islands/suture.ts` (word search), `src/islands/suturepath.ts` (word path board) and `src/islands/stat.ts`.
 - Validation: `src/islands/puzzlefeed.ts` checks a daily puzzle's expected shape and date before the game uses it.
 - Private device statistics: `src/islands/GameStatsPanel.tsx`, `src/islands/gamestats.ts` and `src/scripts/storage.ts`. Stored results must not be treated as verified clinical scores.
 

@@ -14,7 +14,7 @@ export default function ResultBrandMark({ path }: Props) {
     <span
       data-testid="result-brand-mark"
       aria-hidden="true"
-      className="mt-4 inline-flex select-none items-center gap-2 print:hidden"
+      className="mt-4 inline-flex max-w-full select-none items-center gap-2 print:hidden"
     >
       <span className="logo block w-3.5 shrink-0">
         <img
@@ -40,7 +40,7 @@ export default function ResultBrandMark({ path }: Props) {
           draggable={false}
         />
       </span>
-      <span className="font-body text-sm leading-relaxed text-ink">{'cueory.app' + path}</span>
+      <span className="min-w-0 font-body text-sm leading-relaxed text-ink wrap-anywhere">{'cueory.app' + path}</span>
     </span>
   );
 }

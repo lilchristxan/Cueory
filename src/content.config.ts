@@ -278,27 +278,47 @@ const cueword = defineCollection({
 
 /**
  * Word path (internal id suture, D-71): sample puzzles, one JSON file each in /content/games/suture. The shape is checked
- * here; /play also runs each one through the game's own parsePuzzle at build time.
- * Task 97: each sample is a themed word search. The theme (its title) is required here; the grid is up to 11 by 11; a
- * word's cue is optional, since the words themselves are the list the student sees.
+ * here; /play also runs each one through the game's own rules at build time (parseWordPath), which check every path.
+ *
+ * Two formats load (#722). The board format is preferred: `"format": "path"`, a theme `clue`, a 6 by 8 `grid` where
+ * every letter belongs to exactly one answer, one answer marked `"special": true` that touches two opposite edges, and
+ * optional `extras` (other words of 4 letters or more that earn hints). The older themed word search (Task 97) has no
+ * `format`, a `theme` title, a grid up to 11 by 11, and words in straight lines with an optional cue.
  */
 const suture = defineCollection({
   loader: glob({ base: './content/games/suture', pattern: '**/*.json' }),
-  schema: z.object({
-    status: z.literal('sample'),
-    theme: z.string().trim().min(1).max(60),
-    grid: z.array(z.string().regex(/^[A-Z]{3,11}$/, 'a word path row is 3 to 11 capital letters')).min(3).max(11),
-    words: z
-      .array(
-        z.object({
-          cue: z.string().min(1).max(120).optional(),
-          answer: z.string().regex(/^[A-Z]{3,11}$/),
-          path: z.array(z.tuple([z.number().int().min(0), z.number().int().min(0)])),
-        }),
-      )
-      .min(3)
-      .max(20),
-  }),
+  schema: z
+    .object({
+      status: z.literal('sample'),
+      format: z.literal('path').optional(),
+      theme: z.string().trim().min(1).max(60).optional(),
+      clue: z.string().trim().min(1).max(60).optional(),
+      grid: z.array(z.string().regex(/^[A-Z]{3,11}$/, 'a word path row is 3 to 11 capital letters')).min(3).max(11),
+      words: z
+        .array(
+          z.object({
+            cue: z.string().min(1).max(120).optional(),
+            answer: z.string().regex(/^[A-Z]{3,48}$/),
+            path: z.array(z.tuple([z.number().int().min(0), z.number().int().min(0)])),
+            special: z.boolean().optional(),
+          }),
+        )
+        .min(3)
+        .max(20),
+      extras: z.array(z.string().regex(/^[A-Z]{4,48}$/)).max(300).optional(),
+    })
+    .superRefine((data, context) => {
+      const issue = (message: string) => context.addIssue({ code: 'custom', message });
+      if (data.format === 'path') {
+        if (!data.clue) issue('a board puzzle ("format": "path") needs a clue.');
+        if (data.theme !== undefined) issue('a board puzzle uses clue, not theme.');
+      } else {
+        if (!data.theme) issue('a word search (no format) needs a theme.');
+        if (data.clue !== undefined || data.extras !== undefined || data.words.some((word) => word.special !== undefined)) {
+          issue('clue, extras and special belong to board puzzles: add "format": "path".');
+        }
+      }
+    }),
 });
 
 /**

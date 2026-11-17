@@ -2,7 +2,8 @@
  * This test checks the built /privacy page. npm run verify builds before unit tests.
  * Keys from unfinished features are disclosed now, without saying those features are live.
  */
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
+import { join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { legacyStarsKey, PROGRESS_STORAGE_KEY } from '../../src/scripts/progress';
@@ -11,13 +12,19 @@ import {
   AUTH_STORAGE_KEY, PKCE_FLOW_LIST_STORAGE_KEY, PKCE_VERIFIER_STORAGE_KEY, pkceFlowStorageKey,
 } from '../../src/islands/supabaseclient';
 import { GUEST_IMPORT_MARKER_PREFIX } from '../../src/islands/guestimportrun';
-import { STATS_STORAGE_KEY } from '../../src/islands/gameresults';
-import { afterDeletion } from '../../src/islands/deleteaccount';
+import { STATS_STORAGE_KEY, SUDOKU_STATS_STORAGE_KEY } from '../../src/islands/gameresults';
+import { CROSSWORD_SETTINGS_KEY } from '../../src/islands/cuewordkeys';
+import { SUDOKU_SETTINGS_KEY } from '../../src/islands/sudoku';
+import { GAME_SETTINGS_STORAGE_KEY } from '../../src/islands/gamesettings';
+import { afterDeletion, SESSION_KEYS_AFTER_DELETION } from '../../src/islands/deleteaccount';
+import { storageKeys } from '../../src/config/storage-keys';
 import { VISIT_STORAGE_KEY, LAST_WELCOME_STORAGE_KEY } from '../../src/islands/stickynote';
 import { NOTE_SOUND_STORAGE_KEY } from '../../src/scripts/notesound';
 import { THEME_STORAGE_KEY } from '../../src/scripts/theme';
 import { PROMO_STORAGE_KEY } from '../../src/scripts/promo';
 import { RESUME_STORAGE_KEY } from '../../src/scripts/resume';
+import { HOME_TIP_STORAGE_KEY } from '../../src/islands/home-screen-tip';
+import { SURVEY_STORAGE_KEYS } from '../../src/islands/surveykeys';
 
 const privacyPath = fileURLToPath(new URL('../../dist/privacy.html', import.meta.url));
 
@@ -42,6 +49,11 @@ describe.skipIf(!existsSync(privacyPath))('privacy page browser storage disclosu
     PROMO_STORAGE_KEY,
     RESUME_STORAGE_KEY,
     STATS_STORAGE_KEY,
+    CROSSWORD_SETTINGS_KEY,
+    SUDOKU_STATS_STORAGE_KEY,
+    SUDOKU_SETTINGS_KEY,
+    GAME_SETTINGS_STORAGE_KEY,
+    HOME_TIP_STORAGE_KEY,
     legacyStarsKey('<deck>'),
   ])('includes the exported browser key %s in built markup', (key) => {
     expect(visibleCodeKeys(privacyHtml())).toContain(key);
@@ -49,7 +61,7 @@ describe.skipIf(!existsSync(privacyPath))('privacy page browser storage disclosu
 
   it.each([
     AUTH_STORAGE_KEY, PKCE_VERIFIER_STORAGE_KEY, PKCE_FLOW_LIST_STORAGE_KEY, pkceFlowStorageKey('<id>'),
-    `${GUEST_IMPORT_MARKER_PREFIX}<id>`, BREAK_STORAGE_KEY,
+    `${GUEST_IMPORT_MARKER_PREFIX}<id>`, BREAK_STORAGE_KEY, ...SURVEY_STORAGE_KEYS,
   ])(
     'discloses the planned storage key %s',
     (key) => {
@@ -95,6 +107,7 @@ describe.skipIf(!existsSync(privacyPath))('privacy page browser storage disclosu
       expect(covered.has(key), `no deletion or sign-out path for ${key}`).toBe(true);
     }
     expect(plan).not.toContain(AUTH_STORAGE_KEY);
+    for (const key of [HOME_TIP_STORAGE_KEY, ...SURVEY_STORAGE_KEYS]) expect(plan, key).toContain(key);
   });
 
   it('lists study resume as in use now, in the "It is only:" list, and words its answers truthfully', () => {
@@ -118,6 +131,12 @@ describe.skipIf(!existsSync(privacyPath))('privacy page browser storage disclosu
       expect(html, stale).not.toContain(stale);
     }
     expect(html).toContain('When you create one, we store only:');
+  });
+
+  it('says autocheck counts as help for the crossword, as countsForStreak and the autocheck setting do', () => {
+    const text = privacyHtml().replace(/\s+/g, ' ');
+    expect(text).toContain('a try is a check, a reveal or autocheck');
+    expect(text).toContain('solved without check, reveal or autocheck, within 48 hours');
   });
 
   it('names flag reports, what Google sign-in shares and that the launch list is separate', () => {
@@ -161,5 +180,110 @@ describe.skipIf(!existsSync(privacyPath))('privacy page browser storage disclosu
     expect(html).toContain('Unless you choose to bring it into your account, your study progress is kept by your browser');
     expect(html).toContain('your work on real questions is also saved to your account');
     expect(html).toContain('stars stay on this device');
+  });
+});
+
+describe('the one list of browser keys (src/config/storage-keys.ts)', () => {
+  it('names each key once, every one starting with cueory-', () => {
+    const names = storageKeys.map((key) => key.name);
+    expect(new Set(names).size).toBe(names.length);
+    for (const key of storageKeys) {
+      expect(key.name.startsWith('cueory-'), key.name).toBe(true);
+      if (key.prefix) expect(key.name.startsWith(key.prefix), key.name).toBe(true);
+      expect(key.holds.trim(), key.name).not.toBe('');
+      expect(key.purpose.trim(), key.name).not.toBe('');
+    }
+  });
+
+  it('delete-my-account clears every key the list marks as cleared, and leaves the session to sign-out', () => {
+    const examples = storageKeys.filter((key) => key.prefix).map((key) => key.prefix + 'example');
+    const plan = afterDeletion({
+      length: examples.length,
+      key: (index: number) => examples[index] ?? null,
+      getItem: () => null,
+      setItem: () => {},
+      removeItem: () => {},
+    });
+    for (const key of storageKeys) {
+      if (key.onDeletion !== 'cleared') {
+        expect(plan, key.name).not.toContain(key.name);
+        continue;
+      }
+      if (key.storage === 'session') expect(SESSION_KEYS_AFTER_DELETION, key.name).toContain(key.name);
+      else if (key.prefix) expect(plan, key.name).toContain(key.prefix + 'example');
+      else expect(plan, key.name).toContain(key.name);
+    }
+  });
+
+  it.skipIf(!existsSync(privacyPath))('every key in the list is named on the built /privacy page', () => {
+    const shown = visibleCodeKeys(privacyHtml());
+    for (const key of storageKeys) expect(shown, `/privacy does not name ${key.name}`).toContain(key.name);
+  });
+});
+
+// ── Guard: every cueory- string in src/ is a listed key or a known non-storage name ──────────────────────────────
+
+/**
+ * Strings that start with cueory- but are not browser storage keys, each with the reason. Anything else that starts
+ * with cueory- must be in src/config/storage-keys.ts (and so on /privacy and cleared by delete-my-account).
+ */
+const NOT_STORAGE: readonly { match: RegExp; why: string }[] = [
+  { match: /^cueory-(resume-heading|resume-summary|guest-import-heading)$/, why: 'element ids for aria-labelledby' },
+  { match: /^cueory-csp-header$/, why: 'name of the build plugin that writes the security header' },
+  { match: /^cueory-export-1$/, why: 'format name written inside the data download' },
+  { match: /^cueory-data-(\$\{|<date>-)/, why: 'file name of the account data download (and its README text)' },
+  { match: /^cueory-progress-\$\{.*\.json$/, why: 'file name of the progress download' },
+  { match: /^cueory-\$\{/, why: 'file names of share images and worksheets, built from the page' },
+  { match: /^cueory-sudoku:\$\{/, why: "seed for the day's sudoku, never stored" },
+  { match: /^cueory-guest-import:\$\{/, why: 'Web Locks name so two tabs never import at once; locks are not storage' },
+  { match: /^cueory-offline-\*?$/, why: 'Cache Storage name for offline copies of public pages, described on /privacy and kept on purpose' },
+];
+
+/** Every quoted string literal in a source file that starts with cueory-. */
+function cueoryStrings(source: string): string[] {
+  return [...source.matchAll(/(['"`])(cueory-(?:(?!\1)[^\n])*)\1/g)].map((match) => match[2]!);
+}
+
+/** The cueory- strings that are neither a listed storage key (or key family) nor a known non-storage name. */
+function unlistedCueoryStrings(source: string): string[] {
+  const names = new Set(storageKeys.map((key) => key.name));
+  const prefixes = storageKeys.flatMap((key) => (key.prefix ? [key.prefix] : []));
+  return cueoryStrings(source).filter((text) =>
+    !names.has(text)
+    && !prefixes.some((prefix) => text === prefix || (text.startsWith(prefix) && !text.slice(prefix.length).includes('-')))
+    && !NOT_STORAGE.some(({ match }) => match.test(text)));
+}
+
+const srcRoot = fileURLToPath(new URL('../../src/', import.meta.url));
+function sourceFiles(dir: string): string[] {
+  return readdirSync(dir).flatMap((name) => {
+    const path = join(dir, name);
+    if (statSync(path).isDirectory()) return sourceFiles(path);
+    return /\.(ts|tsx|astro|mjs|js)$/.test(name) ? [path] : [];
+  });
+}
+
+describe('every cueory- string in src/ is accounted for', () => {
+  it('finds no storage key missing from src/config/storage-keys.ts', () => {
+    const missing = sourceFiles(srcRoot).flatMap((file) =>
+      unlistedCueoryStrings(readFileSync(file, 'utf8')).map((text) => `${relative(srcRoot, file)}: ${text}`));
+    expect(missing, 'add each to src/config/storage-keys.ts and /privacy, or to NOT_STORAGE with the reason').toEqual([]);
+  });
+
+  it('catches a new key that is not listed, in any quote style', () => {
+    expect(unlistedCueoryStrings("const KEY = 'cueory-new-thing';")).toEqual(['cueory-new-thing']);
+    expect(unlistedCueoryStrings('const KEY = "cueory-new-thing";')).toEqual(['cueory-new-thing']);
+    expect(unlistedCueoryStrings('const KEY = `cueory-new-${id}`;')).toEqual(['cueory-new-${id}']);
+    // A listed family's prefix doesn't cover a different key that merely starts the same way.
+    expect(unlistedCueoryStrings("'cueory-stars-x-y'")).toEqual(['cueory-stars-x-y']);
+  });
+
+  it('accepts listed keys, listed key families and the known non-storage names', () => {
+    expect(unlistedCueoryStrings("'cueory-progress' 'cueory-stars-' 'cueory-stars-deck1' 'cueory-guest-imported:<id>'")).toEqual([]);
+    expect(unlistedCueoryStrings("'cueory-csp-header' `cueory-data-${today}` 'cueory-offline-'")).toEqual([]);
+  });
+
+  it('gives a reason for every non-storage name', () => {
+    for (const entry of NOT_STORAGE) expect(entry.why.trim(), entry.match.source).not.toBe('');
   });
 });

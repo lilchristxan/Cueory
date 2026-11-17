@@ -30,6 +30,10 @@ export interface CuewordState {
   direction: Direction;
   cued: number[];
   checks: (CellMark | undefined)[];
+  /** Pencil entries (Task 721): tentative letters, drawn lighter and dashed. They still count toward the solve. */
+  pencil: boolean[];
+  /** How many times Check, Reveal or Autocheck helped with this puzzle. Any help keeps the solve out of the streak. */
+  assists: number;
 }
 export interface CrosswordResult {
   solved: boolean;
@@ -153,7 +157,7 @@ export function emptyState(puzzle: CuewordPuzzle): CuewordState {
   const parsed = parsePuzzle(puzzle);
   const first = words(parsed)[0]!;
   const count = parsed.grid.length * parsed.grid[0]!.length;
-  return { puzzle: parsed, entries: Array(count).fill(''), cell: first.cells[0]!, direction: first.direction, cued: [], checks: Array(count).fill(undefined) };
+  return { puzzle: parsed, entries: Array(count).fill(''), cell: first.cells[0]!, direction: first.direction, cued: [], checks: Array(count).fill(undefined), pencil: Array(count).fill(false), assists: 0 };
 }
 function step(state: CuewordState, direction: Direction, delta: -1 | 1): CuewordState {
   const width = state.puzzle.grid[0]!.length;
@@ -218,4 +222,224 @@ export function shareLine(result: { solved: boolean; seconds: number; cues: numb
   const day = dateLabel.replace(/\s+/g, ' ').trim().toLowerCase();
   const name = gameName.replace(/\s+/g, ' ').trim().toLowerCase();
   return site.wordmarkName + ' ' + name + ', ' + day + ': ' + (result.solved ? 'solved in ' + time : 'not solved this time') + ' with ' + result.cues + ' ' + (result.cues === 1 ? 'cue' : 'cues') + '.';
+}
+
+/* ── Task 721: crossword parity (docs/GAMES-PARITY.md, crossword section) ─────────────────────────────────────────── */
+
+export type HelpScope = 'square' | 'word' | 'puzzle';
+
+/** Cursor and display settings, kept in this browser under CROSSWORD_SETTINGS_KEY. */
+export interface CrosswordSettings {
+  /** Check each letter as it is typed. Counts as help, so a solve with it on doesn't count toward the streak. */
+  autocheck: boolean;
+  /** While typing, skip squares that already have a letter. */
+  skipFilled: boolean;
+  /** At the end of a word, jump back to its first blank square. */
+  jumpBack: boolean;
+  /** At the end of a finished word, jump to the next clue with a blank square. */
+  jumpNext: boolean;
+  showTimer: boolean;
+  clueSize: 'small' | 'medium' | 'large';
+  playSound: boolean;
+}
+
+import { CROSSWORD_SETTINGS_KEY } from './cuewordkeys';
+export { CROSSWORD_SETTINGS_KEY };
+export const DEFAULT_CROSSWORD_SETTINGS: Readonly<CrosswordSettings> = Object.freeze({
+  autocheck: false,
+  skipFilled: true,
+  jumpBack: false,
+  jumpNext: true,
+  showTimer: true,
+  clueSize: 'medium',
+  playSound: true,
+});
+const CLUE_SIZES: readonly CrosswordSettings['clueSize'][] = ['small', 'medium', 'large'];
+
+/** A saved record that is incomplete, old or malformed resets to the defaults instead of mixing values. */
+export function parseCrosswordSettings(saved: string | null): CrosswordSettings {
+  if (!saved) return { ...DEFAULT_CROSSWORD_SETTINGS };
+  try {
+    const value: unknown = JSON.parse(saved);
+    if (!record(value)) return { ...DEFAULT_CROSSWORD_SETTINGS };
+    const keys = Object.keys(DEFAULT_CROSSWORD_SETTINGS) as (keyof CrosswordSettings)[];
+    if (Object.keys(value).length !== keys.length) return { ...DEFAULT_CROSSWORD_SETTINGS };
+    for (const key of keys) {
+      const ok = key === 'clueSize' ? CLUE_SIZES.includes(value[key] as CrosswordSettings['clueSize']) : typeof value[key] === 'boolean';
+      if (!ok) return { ...DEFAULT_CROSSWORD_SETTINGS };
+    }
+    return Object.fromEntries(keys.map((key) => [key, value[key]])) as unknown as CrosswordSettings;
+  } catch {
+    return { ...DEFAULT_CROSSWORD_SETTINGS };
+  }
+}
+
+interface SettingsStorage { getItem(key: string): string | null; setItem(key: string, value: string): void }
+export function loadCrosswordSettings(storage: Pick<SettingsStorage, 'getItem'> | undefined): CrosswordSettings {
+  try { return parseCrosswordSettings(storage?.getItem(CROSSWORD_SETTINGS_KEY) ?? null); } catch { return { ...DEFAULT_CROSSWORD_SETTINGS }; }
+}
+export function saveCrosswordSettings(storage: Pick<SettingsStorage, 'setItem'> | undefined, settings: CrosswordSettings): void {
+  try { storage?.setItem(CROSSWORD_SETTINGS_KEY, JSON.stringify(settings)); } catch { /* Saving is optional; play goes on. */ }
+}
+
+const answerAt = (state: CuewordState, cell: number) => state.puzzle.grid.join('')[cell]!;
+/** Revealed squares and squares that a check confirmed can't be changed. */
+export function isLocked(state: CuewordState, cell: number): boolean { return state.cued.includes(cell) || state.checks[cell] === 'right'; }
+/** Every square has a letter. */
+export function isFilled(state: CuewordState): boolean { return [...state.puzzle.grid.join('')].every((answer, cell) => answer === '.' || state.entries[cell] !== ''); }
+/** Every square is filled but at least one letter is wrong: the game says "something's not right yet". */
+export function isFilledWrong(state: CuewordState): boolean { return isFilled(state) && !isSolved(state); }
+
+function wordList(state: CuewordState): CuewordWord[] { return words(state.puzzle); }
+function firstBlank(state: CuewordState, word: CuewordWord): number | undefined { return word.cells.find((cell) => state.entries[cell] === '' && !isLocked(state, cell)); }
+
+/** The next (or previous) clue in reading order, landing on its first blank square, or its first square when full. */
+export function moveClue(state: CuewordState, delta: -1 | 1): CuewordState {
+  const list = wordList(state), word = currentWord(state);
+  const index = list.findIndex((candidate) => candidate.number === word.number && candidate.direction === word.direction);
+  const next = list[(index + delta + list.length) % list.length]!;
+  return selectCell(state, firstBlank(state, next) ?? next.cells[0]!, next.direction);
+}
+
+/**
+ * Tab on the last clue, or Shift+Tab on the first, leaves the grid to the next or previous control instead of
+ * wrapping round, so the grid is never a keyboard trap (WCAG 2.1.2). Escape leaves too.
+ */
+export function clueLeavesGrid(state: CuewordState, delta: -1 | 1): boolean {
+  const list = wordList(state), word = currentWord(state);
+  const index = list.findIndex((candidate) => candidate.number === word.number && candidate.direction === word.direction);
+  return delta === 1 ? index === list.length - 1 : index === 0;
+}
+
+/** Where the cursor goes after a letter, by the cursor settings. */
+function advance(state: CuewordState, settings: CrosswordSettings): CuewordState {
+  const word = currentWord(state);
+  const at = word.cells.indexOf(state.cell);
+  const later = word.cells.slice(at + 1).filter((cell) => !isLocked(state, cell));
+  const target = settings.skipFilled ? later.find((cell) => state.entries[cell] === '') : later[0];
+  if (target !== undefined) return selectCell(state, target, state.direction);
+  if (settings.jumpBack) {
+    const blank = firstBlank(state, word);
+    if (blank !== undefined && blank !== state.cell) return selectCell(state, blank, state.direction);
+  }
+  if (settings.jumpNext && firstBlank(state, word) === undefined) {
+    const list = wordList(state);
+    const index = list.findIndex((candidate) => candidate.number === word.number && candidate.direction === word.direction);
+    for (let offset = 1; offset < list.length; offset++) {
+      const next = list[(index + offset) % list.length]!;
+      const blank = firstBlank(state, next);
+      if (blank !== undefined) return selectCell(state, blank, next.direction);
+    }
+  }
+  return state;
+}
+
+function marked(state: CuewordState, cell: number): CellMark { return !state.entries[cell] ? 'empty' : state.entries[cell] === answerAt(state, cell) ? 'right' : 'wrong'; }
+
+/** Types a letter in pen or pencil, then moves the cursor by the settings. Locked squares are skipped, never changed. */
+export function enter(state: CuewordState, letter: string, settings: CrosswordSettings, pencil = false): CuewordState {
+  if (!/^[a-z]$/i.test(letter) || isSolved(state)) return state;
+  let at = state;
+  if (isLocked(at, at.cell)) {
+    const word = currentWord(at);
+    const open = word.cells.slice(word.cells.indexOf(at.cell) + 1).find((cell) => !isLocked(at, cell));
+    if (open === undefined) return state;
+    at = selectCell(at, open, at.direction);
+  }
+  const entries = [...at.entries], checks = [...at.checks], marks = [...at.pencil];
+  entries[at.cell] = letter.toUpperCase();
+  marks[at.cell] = pencil;
+  checks[at.cell] = undefined;
+  let next: CuewordState = { ...at, entries, checks, pencil: marks };
+  if (settings.autocheck) {
+    checks[at.cell] = marked(next, at.cell);
+    // Autocheck counts as one use of help for the puzzle, not one per letter.
+    next = { ...next, checks, assists: Math.max(next.assists, 1) };
+  }
+  return advance(next, settings);
+}
+
+function clear(state: CuewordState, cell: number): CuewordState {
+  if (isLocked(state, cell) || state.entries[cell] === '') return state;
+  const entries = [...state.entries], checks = [...state.checks], marks = [...state.pencil];
+  entries[cell] = ''; checks[cell] = undefined; marks[cell] = false;
+  return { ...state, entries, checks, pencil: marks };
+}
+
+/** Backspace: clears a filled square in place; on an empty square, steps back one square and clears that one. */
+export function backspace(state: CuewordState): CuewordState {
+  if (isSolved(state)) return state;
+  if (state.entries[state.cell] !== '' && !isLocked(state, state.cell)) return clear(state, state.cell);
+  const word = currentWord(state);
+  const at = word.cells.indexOf(state.cell);
+  if (at <= 0) return state;
+  const back = selectCell(state, word.cells[at - 1]!, state.direction);
+  return clear(back, back.cell);
+}
+
+/** Delete: clears the current square and stays. */
+export function deleteLetter(state: CuewordState): CuewordState { return isSolved(state) ? state : clear(state, state.cell); }
+
+/** An arrow against the current direction switches direction first, when this square has a word that way. */
+export function arrow(state: CuewordState, key: 'ArrowLeft' | 'ArrowRight' | 'ArrowUp' | 'ArrowDown'): CuewordState {
+  const direction: Direction = key === 'ArrowLeft' || key === 'ArrowRight' ? 'across' : 'down';
+  if (direction !== state.direction) {
+    const turned = toggleDirection(state);
+    if (turned.direction === direction) return turned;
+  }
+  return move(state, key);
+}
+
+function scopeCells(state: CuewordState, scope: HelpScope): number[] {
+  if (scope === 'square') return [state.cell];
+  if (scope === 'word') return currentWord(state).cells;
+  return [...state.puzzle.grid.join('')].flatMap((answer, cell) => answer === '.' ? [] : [cell]);
+}
+
+/** Check: marks each letter in the square, word or puzzle right or wrong. Right letters lock. Counts as help. */
+export function check(state: CuewordState, scope: HelpScope): CuewordState {
+  if (isSolved(state)) return state;
+  const checks = [...state.checks];
+  for (const cell of scopeCells(state, scope)) if (state.entries[cell] && !state.cued.includes(cell)) checks[cell] = marked(state, cell);
+  return { ...state, checks, assists: state.assists + 1 };
+}
+
+/** Reveal: fills the square, word or puzzle with the answer. Revealed letters lock and are marked. Counts as help. */
+export function reveal(state: CuewordState, scope: HelpScope): CuewordState {
+  if (isSolved(state)) return state;
+  const entries = [...state.entries], checks = [...state.checks], marks = [...state.pencil], cued = [...state.cued];
+  for (const cell of scopeCells(state, scope)) {
+    if (entries[cell] === answerAt(state, cell) && checks[cell] === 'right') continue;
+    if (entries[cell] !== answerAt(state, cell) && !cued.includes(cell)) cued.push(cell);
+    entries[cell] = answerAt(state, cell); checks[cell] = 'right'; marks[cell] = false;
+  }
+  return { ...state, entries, checks, pencil: marks, cued, assists: state.assists + 1 };
+}
+
+/** Autocheck turned on mid-puzzle checks every letter already typed. */
+export function autocheckAll(state: CuewordState): CuewordState {
+  if (isSolved(state) || !state.entries.some(Boolean)) return state;
+  return check(state, 'puzzle');
+}
+
+const HOUR = 3_600_000;
+/** The local midnight that starts the puzzle's day. */
+export function puzzleDayStart(day: Date): number { return new Date(day.getFullYear(), day.getMonth(), day.getDate()).getTime(); }
+/** A solve counts toward the streak only without help and within 48 hours of the start of the puzzle's date. */
+export function countsForStreak(puzzleDay: Date, solvedAt: number, assists: number): boolean {
+  return assists === 0 && solvedAt >= puzzleDayStart(puzzleDay) && solvedAt - puzzleDayStart(puzzleDay) < 48 * HOUR;
+}
+
+/**
+ * The event /play's daily status list listens for (issue #735, src/islands/playstatus.ts): sent once a day, on the
+ * player's first entry, with `{ game: 'cueword', day }` (YYYY-MM-DD, local day). Nothing is stored.
+ */
+export const GAME_PROGRESS_EVENT = 'cueory:game-progress';
+const announcedDays = new Set<string>();
+/** Sends the progress event the first time it is called for `day` on this page; true when it sent it. */
+export function announceFirstEntry(target: Pick<EventTarget, 'dispatchEvent'> | undefined, day: string): boolean {
+  if (!target || announcedDays.has(day)) return false;
+  announcedDays.add(day);
+  target.dispatchEvent(new CustomEvent(GAME_PROGRESS_EVENT, { detail: { game: 'cueword', day } }));
+  return true;
 }

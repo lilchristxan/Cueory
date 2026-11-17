@@ -21,3 +21,25 @@ export function previousOnboardingStep(step: OnboardingStep): OnboardingStep | n
 export function skipOnboardingStep(step: OnboardingStep): { clear: OnboardingField; move: OnboardingMove } {
   return { clear: ONBOARDING_FIELDS[step], move: nextOnboardingStep(step) };
 }
+
+/**
+ * Moves focus to the new question after it renders, unless the student has already moved focus somewhere else in the
+ * meantime (a fast Tab or a click on "save my answers"). Focus that fell to the page body, or stayed on an element
+ * that is gone or unchanged, still moves, so the new question is announced as before.
+ */
+export function focusAfterRender(
+  target: () => { focus: () => void } | null | undefined,
+  page: { active: () => Element | null; body: () => Element | null; schedule: (run: () => void) => void },
+): void {
+  const before = page.active();
+  page.schedule(() => {
+    if (movedOn(before, page.active(), page.body())) return;
+    target()?.focus();
+  });
+}
+
+/** True when focus now sits on a different, still-present element than when the step changed. */
+export function movedOn(before: Element | null, now: Element | null, body: Element | null): boolean {
+  if (!now || now === body || now === before) return false;
+  return now.isConnected;
+}

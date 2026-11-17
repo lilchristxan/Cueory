@@ -1,0 +1,1 @@
+status: Lane 9, fonts (lane9/fonts): every page preloads the two Lato files it uses (400 and 700, font-display: swap kept); on a throttled phone connection they finish about 550 ms sooner and the font-swap layout shift on study screens goes from 0.036 to 0. No further subsetting: the files are already Latin subsets and Lato has a Reserved Font Name.

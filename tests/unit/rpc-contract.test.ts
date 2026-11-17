@@ -21,6 +21,7 @@ const sql = [
   '20261102170000_my_sessions.sql',
   '20261112020000_restate_delete_my_account_mfa.sql',
   '20261114151643_delete_my_account_identity_and_mfa.sql',
+  '20261116235000_delete_account_recent_amr_proof.sql',
   '20261117030000_anatomy_study.sql',
 ].map(name => readFileSync(new URL(`../../supabase/migrations/${name}`, import.meta.url), 'utf8')).join('\n');
 
@@ -175,35 +176,34 @@ describe('record_study_events contract (Task 140)', () => {
 });
 
 describe('delete_my_account migration replay order', () => {
-  it('has unique versions and replays identity binding after the staging MFA restatement', () => {
+  it('has unique versions and replays the recent-auth proof after the staging MFA restatement', () => {
     const names = readdirSync(new URL('../../supabase/migrations/', import.meta.url))
       .filter(name => /^\d{14}_.+\.sql$/.test(name)).sort();
     const versions = names.map(name => name.slice(0, 14));
     expect(new Set(versions).size).toBe(versions.length);
     expect(names).toContain('20261112020000_restate_delete_my_account_mfa.sql');
-    expect(names).toContain('20261114151643_delete_my_account_identity_and_mfa.sql');
     expect(names.indexOf('20261112020000_restate_delete_my_account_mfa.sql'))
-      .toBeLessThan(names.indexOf('20261114151643_delete_my_account_identity_and_mfa.sql'));
-    // The identity-binding file is the last one that defines delete_my_account.
+      .toBeLessThan(names.indexOf('20261116235000_delete_account_recent_amr_proof.sql'));
+    // The recent-auth proof is the last file that defines delete_my_account; later migrations must not replace it.
     const lastDelete = names.filter(name =>
       readFileSync(new URL(`../../supabase/migrations/${name}`, import.meta.url), 'utf8').includes('function public.delete_my_account'),
     ).at(-1);
-    expect(lastDelete).toBe('20261114151643_delete_my_account_identity_and_mfa.sql');
+    expect(lastDelete).toBe('20261116235000_delete_account_recent_amr_proof.sql');
     // Issue #758: anatomy_study was never applied, so it replays after everything already on hosted staging.
     expect(names.indexOf('20261117030000_anatomy_study.sql'))
-      .toBeGreaterThan(names.indexOf('20261114151643_delete_my_account_identity_and_mfa.sql'));
+      .toBeGreaterThan(names.indexOf('20261116235000_delete_account_recent_amr_proof.sql'));
   });
 });
 
 describe('delete_my_account contract (Tasks 60, 206)', () => {
   const deleteSql = readFileSync(
-    new URL('../../supabase/migrations/20261114151643_delete_my_account_identity_and_mfa.sql', import.meta.url), 'utf8',
+    new URL('../../supabase/migrations/20261116235000_delete_account_recent_amr_proof.sql', import.meta.url), 'utf8',
   );
 
   it('takes the shown account id and returns nothing, so the browser calls supabase.rpc(\'delete_my_account\', { expected_user_id })', () => {
     expect(declaration('delete_my_account').arguments).toEqual(['expected_user_id']);
-    expect(deleteSql).toMatch(/create\s+function\s+public\.delete_my_account\(expected_user_id uuid\)\s+returns void\s/i);
-    expect(deleteSql).toMatch(/drop function if exists public\.delete_my_account\(\);/i);
+    expect(deleteSql).toMatch(/create\s+or\s+replace\s+function\s+public\.delete_my_account\(expected_user_id uuid\)\s+returns void\s/i);
+    expect(deleteSql).not.toMatch(/drop function if exists public\.delete_my_account\(\);/i);
   });
 
   it('keeps the sign-in, identity, two-factor and fresh-token refusals the account page handles', () => {

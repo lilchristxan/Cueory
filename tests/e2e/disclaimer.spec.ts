@@ -39,11 +39,13 @@ for (const viewport of viewports) {
       await expect(toggle).toHaveAttribute('aria-expanded', 'true');
       for (const link of [
         { name: 'privacy', href: '/privacy' },
-        { name: 'terms', href: '/terms' },
-        { name: 'disclaimer', href: '/disclaimer' },
         { name: 'support cueory', href: '/support' },
       ]) {
         await expect(footer.getByRole('link', { name: link.name, exact: true })).toHaveAttribute('href', link.href);
+      }
+      // #747: Terms and Disclaimer are still placeholders, so the footer doesn't link to them yet.
+      for (const name of ['terms', 'disclaimer']) {
+        await expect(footer.getByRole('link', { name, exact: true })).toHaveCount(0);
       }
 
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);

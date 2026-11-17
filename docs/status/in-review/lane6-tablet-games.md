@@ -1,0 +1,1 @@
+status: Lane 6, tablet (820 × 1180 and 1180 × 820): all four /play boards centred in the game column (pillo pack, status line and keys were left-aligned), word path squares capped at 72px (were 95px) with a new --wordpath-cell-max token; new e2e (stacked on #795).

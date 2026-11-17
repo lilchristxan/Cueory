@@ -26,11 +26,23 @@ const answers = (course: Onboarding['course'], examDate: string | null): Onboard
  * update changes only exam_date, one plan per course (23505), at most ten (54000), the date window (23514).
  */
 class FakePlans implements ExamPlanSyncDb {
+  /** The account this adapter was made for, and who the page's client is signed in as now (#755). */
+  readonly accountId = 'account-a';
+  signedInAs: string | null = 'account-a';
+  /** The account check itself fails (a dropped connection). */
+  checkFails = false;
+  /** Runs after an update, to stand in for another tab switching accounts mid-save. */
+  afterUpdate?: () => void;
   rows: { course: string; exam_date: string }[] = [];
   calls: string[] = [];
   failOn?: (call: string) => DbError | undefined;
   /** Runs before an insert, to stand in for another tab adding the same course. */
   beforeInsert?: () => void;
+
+  async accountCheck() {
+    if (this.checkFails) return 'unknown' as const;
+    return this.signedInAs === this.accountId ? 'same' as const : 'changed' as const;
+  }
 
   private guard(examDate: string): DbError | undefined {
     const days = (Date.parse(examDate) - Date.parse(TODAY)) / 86_400_000;
@@ -49,6 +61,7 @@ class FakePlans implements ExamPlanSyncDb {
     if (error) return { data: null, error };
     const hit = this.rows.filter((r) => r.course === course);
     for (const row of hit) row.exam_date = examDate;
+    this.afterUpdate?.();
     return { data: hit.map((r) => ({ course: r.course })), error: null };
   }
 
@@ -380,6 +393,7 @@ describe('saveExamPlan', () => {
     expect(await saveExamPlan(db, answers('both', '2026-12-10'), answers('both', null), TODAY))
       .toEqual({ status: 'failed', message: SYNC_MESSAGES.removeFailed });
     const throwing: ExamPlanSyncDb = {
+      accountId: 'account-a', accountCheck: async () => 'same',
       list: () => Promise.reject(new Error('x')), update: () => Promise.reject(new Error('x')),
       insert: () => Promise.reject(new Error('x')), remove: () => Promise.reject(new Error('x')),
     };
@@ -400,26 +414,30 @@ describe('supabaseExamPlans', () => {
       from: (table) => {
         log.push(['from', table]);
         return {
-          select: (columns) => ({ limit: (n) => { log.push(['select', columns, n]); return done({ data: [], error: null }); } }),
-          update: (patch) => ({ eq: (column, value) => ({ select: (columns) => {
-            log.push(['update', patch, column, value, columns]);
-            return done({ data: [{ course: value }], error: null });
+          select: (columns) => ({ eq: (column, value) => ({ limit: (n) => {
+            log.push(['select', columns, column, value, n]);
+            return done({ data: [], error: null });
+          } }) }),
+          update: (patch) => ({ match: (filter) => ({ select: (columns) => {
+            log.push(['update', patch, filter, columns]);
+            return done({ data: [{ course: filter.course }], error: null });
           } }) }),
           insert: (row) => { log.push(['insert', row]); return done({ error: null }); },
-          delete: () => ({ eq: (column, value) => { log.push(['delete', column, value]); return done({ error: null }); } }),
+          delete: () => ({ match: (filter) => { log.push(['delete', filter]); return done({ error: null }); } }),
         };
       },
     };
-    const db = supabaseExamPlans(client);
+    const db = supabaseExamPlans(client, 'account-a', async () => 'same');
+    expect(db.accountId).toBe('account-a');
     await db.list();
     await db.update('both', '2026-12-10');
     await db.insert({ course: 'both', exam_date: '2026-12-10', user_id: 'someone-else' } as never);
     await db.remove('both');
     expect(log).toEqual([
-      ['from', 'exam_plans'], ['select', 'course,exam_date', 10],
-      ['from', 'exam_plans'], ['update', { exam_date: '2026-12-10' }, 'course', 'both', 'course'],
+      ['from', 'exam_plans'], ['select', 'course,exam_date', 'user_id', 'account-a', 10],
+      ['from', 'exam_plans'], ['update', { exam_date: '2026-12-10' }, { course: 'both', user_id: 'account-a' }, 'course'],
       ['from', 'exam_plans'], ['insert', { course: 'both', exam_date: '2026-12-10' }],
-      ['from', 'exam_plans'], ['delete', 'course', 'both'],
+      ['from', 'exam_plans'], ['delete', { course: 'both', user_id: 'account-a' }],
     ]);
   });
 });
@@ -427,7 +445,7 @@ describe('supabaseExamPlans', () => {
 describe('connectExamPlans', () => {
   const module = (client: unknown, signedIn: boolean) => async () => ({
     getSupabase: async () => client,
-    sessionCheckFrom: vi.fn(async () => ({ signedIn })),
+    sessionCheckFrom: vi.fn(async () => (signedIn ? { signedIn, userId: 'account-a' } : { signedIn })),
   });
   // The page's real session helper over a fake client, so a thrown or returned error goes the whole way through.
   const real = (getSession: () => Promise<unknown>) => async () => {
@@ -461,6 +479,39 @@ describe('connectExamPlans', () => {
     const db = await connectExamPlans(real(async () => ({ data: { session: { user: { id: 'u1' } } }, error: null })));
     expect(db).not.toBeNull();
     expect(isConnectFailure(db)).toBe(false);
+    expect((db as ExamPlanSyncDb).accountId).toBe('u1');
+  });
+
+  it('a signed-in session with no account id is a failed check, never an unbound adapter (#755)', async () => {
+    expect(await connectExamPlans(async () => ({
+      getSupabase: async () => ({ from: vi.fn() }), sessionCheckFrom: async () => ({ signedIn: true }),
+    }))).toEqual({ error: true });
+    expect(await connectExamPlans(async () => ({
+      getSupabase: async () => ({ from: vi.fn() }), sessionCheckFrom: async () => ({ signedIn: true, userId: '' }),
+    }))).toEqual({ error: true });
+  });
+
+  it("the adapter's account check reads the session fresh: same, changed (A→B, signed out), back to A, unknown (#755)", async () => {
+    let now: unknown = { signedIn: true, userId: 'account-a' };
+    const db = await connectExamPlans(async () => ({
+      getSupabase: async () => ({ from: vi.fn() }),
+      sessionCheckFrom: async () => {
+        if (now instanceof Error) throw now;
+        return now as never;
+      },
+    })) as ExamPlanSyncDb;
+    expect(db.accountId).toBe('account-a');
+    expect(await db.accountCheck()).toBe('same');
+    now = { signedIn: true, userId: 'account-b' };
+    expect(await db.accountCheck()).toBe('changed');
+    now = { signedIn: false };
+    expect(await db.accountCheck()).toBe('changed');
+    now = { signedIn: true, userId: 'account-a' };
+    expect(await db.accountCheck()).toBe('same');
+    now = { error: true };
+    expect(await db.accountCheck()).toBe('unknown');
+    now = new Error('offline');
+    expect(await db.accountCheck()).toBe('unknown');
   });
 
   it('gives the adapter when someone is signed in', async () => {
@@ -468,5 +519,99 @@ describe('connectExamPlans', () => {
     const db = await connectExamPlans(module({ from }, true));
     expect(db).not.toBeNull();
     expect(from).not.toHaveBeenCalled();
+  });
+});
+
+describe("account binding — A's setup never reaches B (#755)", () => {
+  const plansA = [{ course: 'med-surg-1' as const, examDate: '2026-12-01' }];
+
+  it('A→B before finishing: nothing is written, and the note says so with no retry message', async () => {
+    const db = new FakePlans();
+    db.rows = [{ course: 'med-surg-1', exam_date: '2026-12-01' }];
+    db.signedInAs = 'account-b';
+    const saved = await saveSetupToAccount(db, {
+      plans: plansA, deviceBefore: answers('med-surg-1', '2026-12-01'), after: answers('med-surg-1', '2026-12-20'),
+      clearedDate: false, today: TODAY,
+    });
+    expect(saved).toEqual({ status: 'failed', message: SYNC_MESSAGES.accountChanged });
+    expect(db.calls).toEqual([]);
+    expect(db.rows).toEqual([{ course: 'med-surg-1', exam_date: '2026-12-01' }]);
+  });
+
+  it('A→B before a clear: nothing is removed', async () => {
+    const db = new FakePlans();
+    db.rows = [{ course: 'med-surg-1', exam_date: '2026-12-01' }];
+    db.signedInAs = 'account-b';
+    const cleared = await saveSetupToAccount(db, {
+      plans: plansA, deviceBefore: answers('med-surg-1', '2026-12-01'), after: answers('med-surg-1', null),
+      clearedDate: true, today: TODAY,
+    });
+    expect(cleared).toEqual({ status: 'failed', message: SYNC_MESSAGES.accountChanged });
+    expect(db.calls).toEqual([]);
+    expect(db.rows).toHaveLength(1);
+  });
+
+  it('A→B between the update and the insert: the insert is never sent', async () => {
+    const db = new FakePlans();
+    db.afterUpdate = () => { db.signedInAs = 'account-b'; };
+    const saved = await saveExamPlan(db, answers(null, null), answers('fundamentals', '2026-12-10'), TODAY);
+    expect(saved).toEqual({ status: 'failed', message: SYNC_MESSAGES.accountChanged });
+    expect(db.calls).toEqual(['update fundamentals 2026-12-10']);
+    expect(db.rows).toEqual([]);
+  });
+
+  it('A→B before the retried update after a duplicate: the retry is never sent', async () => {
+    const db = new FakePlans();
+    db.beforeInsert = () => {
+      db.rows.push({ course: 'both', exam_date: '2026-12-30' });
+      db.signedInAs = 'account-b';
+    };
+    const saved = await saveExamPlan(db, answers(null, null), answers('both', '2026-12-10'), TODAY);
+    expect(saved).toEqual({ status: 'failed', message: SYNC_MESSAGES.accountChanged });
+    expect(db.calls).toEqual(['update both 2026-12-10', 'insert both 2026-12-10']);
+    expect(db.rows).toEqual([{ course: 'both', exam_date: '2026-12-30' }]);
+  });
+
+  it('A→B→A: back as A, the save goes to A as normal', async () => {
+    const db = new FakePlans();
+    db.rows = [{ course: 'med-surg-1', exam_date: '2026-12-01' }];
+    db.signedInAs = 'account-b';
+    const save = {
+      plans: plansA, deviceBefore: answers('med-surg-1', '2026-12-01'), after: answers('med-surg-1', '2026-12-20'),
+      clearedDate: false, today: TODAY,
+    };
+    expect((await saveSetupToAccount(db, save)).status).toBe('failed');
+    db.signedInAs = 'account-a';
+    expect(await saveSetupToAccount(db, save)).toEqual({ status: 'saved', message: SYNC_MESSAGES.saved });
+    expect(db.calls).toEqual(['update med-surg-1 2026-12-20']);
+    expect(db.rows).toEqual([{ course: 'med-surg-1', exam_date: '2026-12-20' }]);
+  });
+
+  it('signed out mid-save counts as a changed account', async () => {
+    const db = new FakePlans();
+    db.signedInAs = null;
+    expect(await saveExamPlan(db, answers(null, null), answers('both', '2026-12-10'), TODAY))
+      .toEqual({ status: 'failed', message: SYNC_MESSAGES.accountChanged });
+    expect(db.calls).toEqual([]);
+  });
+
+  it('a failed account check writes nothing and gives the ordinary, retryable failure', async () => {
+    const db = new FakePlans();
+    db.rows = [{ course: 'both', exam_date: '2026-12-01' }];
+    db.checkFails = true;
+    expect(await saveExamPlan(db, answers(null, null), answers('both', '2026-12-10'), TODAY))
+      .toEqual({ status: 'failed', message: SYNC_MESSAGES.failed });
+    expect(await saveExamPlan(db, answers('both', '2026-12-01'), answers('both', null), TODAY))
+      .toEqual({ status: 'failed', message: SYNC_MESSAGES.removeFailed });
+    const throws = Object.assign(new FakePlans(), { accountCheck: () => Promise.reject(new Error('x')) });
+    expect(await saveExamPlan(throws, answers(null, null), answers('both', '2026-12-10'), TODAY))
+      .toEqual({ status: 'failed', message: SYNC_MESSAGES.failed });
+    expect(db.calls).toEqual([]);
+    expect(throws.calls).toEqual([]);
+  });
+
+  it('the account-changed note is one plain lowercase sentence pair', () => {
+    expect(SYNC_MESSAGES.accountChanged).toBe(SYNC_MESSAGES.accountChanged.toLowerCase());
+    expect(SYNC_MESSAGES.accountChanged).toContain('this device only');
   });
 });

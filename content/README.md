@@ -77,9 +77,14 @@ its address, `/learn/study-skills`, and its label it and sample questions pages.
   Optional `level` is `easy`, `mid` or `hard`, requiring a matching 5 by 5, 7 by 7 or 15 by 15 square grid respectively.
   The build checks every file with the game's own rules (every word has exactly one clue). Everyday words only,
   labeled as samples on the page (D-70). See the [content format guide](../docs/CONTENT-FORMAT.md) for the full reference.
-- `games/suture/` — sample puzzles for word path, one JSON file each: a `grid` of capital letters (3 to 11 rows of equal length) and its `words`, each with an uppercase `answer` and the `path` of `[row, column]` cells it runs
-  through, up, down, left or right, never diagonally, with no cell shared. A word's `cue` is optional. The build checks every file with the game's
-  own rules. Everyday words only, labeled as samples on the page (D-71).
+- `games/suture/` — sample puzzles for word path, one JSON file each. The preferred board format (#722) says
+  `"format": "path"` and has a theme `clue`, a `grid` of exactly 8 rows of 6 capital letters, and its `words`: each an
+  uppercase `answer` of 4 letters or more and the `path` of `[row, column]` cells it runs through, each touching the
+  last (any direction, turns allowed, no cell twice). Every letter belongs to exactly one answer, and one answer has
+  `"special": true`: it names the theme and touches two opposite edges. Optional `extras` are other words on the board
+  that earn hints. The older word search (no `format`, a `theme` title, straight-line words, optional `cue`) still
+  loads. The build checks every file with the game's own rules. Everyday words only, labeled as samples on the page
+  (D-71).
 - `games/hello-cards/` — `status` (`sample` or `approved`), optional `note`, and `starters` containing `id`, `category`, `depth`, `text`. Each of four categories needs both `small` and `deep` starters.
 - `videos/` — required `lesson`, `title`, `status`, `videoId`, `captionsUrl`, `transcriptUrl`, plus optional self-hosted `thumbnail`. Both URL fields are required even when empty. Only published videos appear.
 - `batches/` — one folder per review batch (format and checker: [docs/BATCHES.md](../docs/BATCHES.md)). Git ignores

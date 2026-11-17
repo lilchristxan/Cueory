@@ -12,6 +12,8 @@ test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
     try {
       localStorage.setItem('cueory-promo-seen', String(Date.now()));
+      // A returning player: each game's first-visit rules card (#736) is already put away. game-help.spec.ts covers it.
+      localStorage.setItem('cueory-game-help-seen', JSON.stringify(['pulse', 'triage', 'cueword', 'suture']));
     } catch {
       // Storage is blocked: the panel never shows then anyway.
     }
@@ -151,6 +153,110 @@ test.describe('daily games: pillo (Task 114)', () => {
   });
 });
 
+test.describe('daily games: pillo settings and finish screen (Task 719)', () => {
+  const close = async (page: Page) => {
+    const resultDialog = page.getByTestId('game-result-dialog');
+    await expect(resultDialog.getByRole('button', { name: 'close results' })).toBeFocused();
+    await resultDialog.getByRole('button', { name: 'close results' }).click();
+  };
+
+  test.beforeEach(async ({ page }) => {
+    await page.clock.setFixedTime(new Date('2026-11-01T15:00:00'));
+    await page.goto('/play');
+    await expect(page.getByTestId('pulse')).toBeVisible();
+  });
+
+  test('a word that is not in the list keeps every guess and says so', async ({ page }) => {
+    await field(page).fill('zzzzz');
+    await field(page).press('Enter');
+    await expect(page.getByTestId('pulse-problem')).toHaveText("zzzzz isn't in the word list. it didn't use a guess.");
+    await expect(page.getByTestId('pulse').locator('.pillo-status')).toContainText('6 of 6 guesses left');
+  });
+
+  test("the first guess of the day, and only it, tells the page today's round has started", async ({ page }) => {
+    await page.evaluate(() => {
+      const heard: unknown[] = [];
+      (window as unknown as { heard: unknown[] }).heard = heard;
+      window.addEventListener('cueory:game-progress', (event) => heard.push((event as CustomEvent).detail));
+    });
+    const heard = () => page.evaluate(() => (window as unknown as { heard: unknown[] }).heard);
+    await field(page).fill('zzzzz');
+    await field(page).press('Enter');
+    await expect(page.getByTestId('pulse-problem')).toBeVisible();
+    expect(await heard()).toEqual([]);
+    for (const word of ['crane', 'plant']) {
+      await field(page).fill(word);
+      await field(page).press('Enter');
+    }
+    await expect(page.getByRole('list', { name: 'your guesses' }).getByRole('listitem')).toHaveCount(2);
+    expect(await heard()).toEqual([{ game: 'pulse', day: '2026-11-01' }]);
+  });
+
+  test('hard mode switches only before the first guess, and then holds shown letters', async ({ page }) => {
+    const settings = page.getByTestId('pulse-settings');
+    await settings.locator('summary').click();
+    const hard = settings.getByRole('switch', { name: /hard mode/ });
+    await hard.click();
+    await expect(hard).toHaveAttribute('aria-checked', 'true');
+    await field(page).fill('crane');
+    await field(page).press('Enter');
+    await expect(hard).toHaveAttribute('aria-disabled', 'true');
+    // Playwright waits forever for an aria-disabled control to become enabled, so force the click to prove it is ignored.
+    await hard.click({ force: true });
+    await expect(hard).toHaveAttribute('aria-checked', 'true');
+    await field(page).fill('plant');
+    await field(page).press('Enter');
+    await expect(page.getByTestId('pulse-problem')).toHaveText('hard mode: the 2nd letter must be r.');
+    await expect(page.getByTestId('pulse').locator('.pillo-status')).toContainText('5 of 6 guesses left');
+  });
+
+  test('on-screen keyboard only removes the typing field, and high contrast still passes axe', async ({ page }) => {
+    const settings = page.getByTestId('pulse-settings');
+    await settings.locator('summary').click();
+    await settings.getByRole('switch', { name: /on-screen keyboard only/ }).click();
+    await expect(field(page)).toHaveCount(0);
+    await settings.getByRole('switch', { name: /high contrast/ }).click();
+    await expect(page.getByTestId('pulse')).toHaveClass(/pillo-contrast/);
+    const pulse = page.getByTestId('pulse');
+    for (const letter of 'crane') await pulse.getByRole('button', { name: letter, exact: true }).click();
+    await pulse.getByRole('button', { name: 'enter', exact: true }).click();
+    await expect(page.getByRole('list', { name: 'your guesses' }).getByRole('listitem')).toHaveCount(1);
+    const results = await axe(page);
+    expect(results.violations.map((v) => `${v.id}: ${v.help}`)).toEqual([]);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  });
+
+  test('the finish screen shows the result, stats with today marked, the share line and the next word time', async ({ page }) => {
+    await page.getByTestId('game-stats').getByRole('switch', { name: 'keep my stats' }).click();
+    await field(page).fill('crane');
+    await field(page).press('Enter');
+    await field(page).fill('grace');
+    await field(page).press('Enter');
+    await close(page);
+    const result = page.getByTestId('pulse-result');
+    await expect(result).toContainText('solved.');
+    await expect(result).toContainText('cueory pillo, sun 1 nov: solved in 2 of 6');
+    const stats = page.getByTestId('pulse-stats');
+    for (const [label, value] of [['played', '1'], ['win %', '100'], ['current streak', '1'], ['longest streak', '1']]) {
+      await expect(stats.locator('.pillo-stat').filter({ hasText: label })).toContainText(value);
+    }
+    await expect(stats.getByRole('list', { name: 'guesses it took' }).getByRole('listitem')).toHaveCount(6);
+    await expect(page.getByTestId('pulse-today-row')).toContainText('2');
+    await expect(page.getByTestId('pulse-today-row')).toContainText('today');
+    await expect(page.getByTestId('pulse-next')).toHaveText('next word in 9 h.');
+    const results = await axe(page);
+    expect(results.violations.map((v) => `${v.id}: ${v.help}`)).toEqual([]);
+  });
+
+  test('with stats off, the finish screen says how to turn them on', async ({ page }) => {
+    await field(page).fill('grace');
+    await field(page).press('Enter');
+    await close(page);
+    await expect(page.getByTestId('pulse-stats')).toContainText('stats are off.');
+    await expect(page.getByTestId('pulse-today-row')).toHaveCount(0);
+  });
+});
+
 test.describe('daily games on the home page (D-61)', () => {
   test('a calm section after "ways to study" leads to today\'s game', async ({ page }) => {
     await page.goto('/');
@@ -255,7 +361,7 @@ test.describe('daily games: sudoku (Task 625)', () => {
     await game(page).getByRole('button', { name: String(daily.solution[second]), exact: true }).click();
     await expect(cells(page).nth(second)).toContainText(String(daily.solution[second]));
 
-    await game(page).getByRole('button', { name: 'medium' }).click();
+    await game(page).getByRole('button', { name: 'mid', exact: true }).click();
     await expect(grid(page).locator('[data-given="true"]')).toHaveCount(32);
     await game(page).getByRole('button', { name: 'hard' }).click();
     await expect(grid(page).locator('[data-given="true"]')).toHaveCount(26);
@@ -300,7 +406,7 @@ test.describe('daily games: sudoku (Task 625)', () => {
     await game(page).getByRole('button', { name: /settings/i }).click();
     await expect(game(page).getByRole('dialog', { name: 'settings' }).getByRole('checkbox', { name: 'start in auto candidate mode' })).toBeChecked();
     await page.keyboard.press('Escape');
-    const hints = game(page).getByRole('checkbox', { name: /hints/i });
+    const hints = game(page).getByRole('checkbox', { name: /auto candidates/i });
     await expect(hints).toHaveAttribute('aria-checked', 'true');
     await hints.click();
     await expect(hints).toHaveAttribute('aria-checked', 'false');
@@ -350,9 +456,10 @@ test.describe('daily games: sudoku (Task 625)', () => {
       window.addEventListener('cueory:sudoku-solved', ((event: CustomEvent) => {
         document.documentElement.dataset.sudokuResult = JSON.stringify(event.detail);
       }) as EventListener, { once: true });
-      window.addEventListener('cueory:game-result', ((event: CustomEvent) => {
-        if (event.detail?.game === 'triage') document.documentElement.dataset.sudokuMisreported = 'true';
-      }) as EventListener);
+      // #720 (D-pending): a solved daily sudoku now counts in the shared stats record under its id triage.
+      const rounds: unknown[] = [];
+      (window as unknown as { sudokuRounds: unknown[] }).sudokuRounds = rounds;
+      window.addEventListener('cueory:game-result', ((event: CustomEvent) => { rounds.push(event.detail); }) as EventListener);
     });
     for (const index of open) {
       await cells(page).nth(index).click();
@@ -367,7 +474,8 @@ test.describe('daily games: sudoku (Task 625)', () => {
     await expect(result).toContainText('0 errors');
     const detail = JSON.parse((await page.locator('html').getAttribute('data-sudoku-result'))!);
     expect(detail).toMatchObject({ game: 'sudoku', day, level: 'easy', solved: true, errors: 0 });
-    await expect(page.locator('html')).not.toHaveAttribute('data-sudoku-misreported', 'true');
+    expect(await page.evaluate(() => (window as unknown as { sudokuRounds: unknown[] }).sudokuRounds))
+      .toEqual([{ game: 'triage', day, solved: true, tries: 0 }]);
   });
 });
 
@@ -387,8 +495,10 @@ test.describe('daily games: crossword levels (Task 627)', () => {
     await expect(board(page).getByTestId('cueword-clue')).toContainText('1 across');
     await expect(board(page).getByTestId('cueword-clue')).toContainText('[sample clue]');
     await expect(board(page).getByRole('grid', { name: 'crossword grid' })).toHaveAttribute('aria-rowcount', '5');
+    // The clue list is a view the player opens (Task 721); check and reveal sit in their own menus.
     await expect(board(page).getByRole('list')).toHaveCount(0);
-    await expect(board(page).getByRole('button', { name: /check|reveal/i })).toHaveCount(0);
+    await expect(board(page).getByTestId('crossword-check')).toBeVisible();
+    await expect(board(page).getByTestId('crossword-reveal')).toBeVisible();
     const results = await axe(page);
     expect(results.violations.map((violation) => violation.id + ': ' + violation.help)).toEqual([]);
   });
@@ -430,7 +540,7 @@ test.describe('daily games: crossword levels (Task 627)', () => {
     }
   });
 
-  test('tap toggles direction, Tab leaves the grid and Alt+Arrow changes words', async ({ page }) => {
+  test('tap toggles direction, Tab past the last clue or Escape leaves the grid, and Alt+Arrow changes words', async ({ page }) => {
     const grid = board(page).getByRole('grid', { name: 'crossword grid' });
     const activeCell = grid.locator('button[tabindex="0"]');
     await activeCell.click();
@@ -439,11 +549,19 @@ test.describe('daily games: crossword levels (Task 627)', () => {
     await activeCell.focus();
     await page.keyboard.press('Alt+ArrowRight');
     await expect(board(page).getByTestId('cueword-clue')).not.toContainText('1 down');
-    await expect(grid).toHaveAttribute('aria-keyshortcuts', 'Alt+ArrowLeft Alt+ArrowRight');
+    await expect(grid).toHaveAttribute('aria-keyshortcuts', 'Tab Shift+Tab Space Escape Alt+ArrowLeft Alt+ArrowRight');
 
-    await grid.locator('button[tabindex="0"]').focus();
+    // Tab moves between clues inside the grid (Task 721). On the last clue (5 down) it leaves the grid, to the letters.
+    await expect(board(page).getByTestId('cueword-clue')).toContainText('2 down');
+    for (let step = 0; step < 3; step++) await page.keyboard.press('Alt+ArrowRight');
+    await expect(board(page).getByTestId('cueword-clue')).toContainText('5 down');
     await page.keyboard.press('Tab');
     await expect(board(page).getByRole('group', { name: 'letters' }).getByRole('button').first()).toBeFocused();
+
+    // Escape leaves too, to the erase button.
+    await grid.locator('button[tabindex="0"]').focus();
+    await page.keyboard.press('Escape');
+    await expect(board(page).getByRole('button', { name: 'erase', exact: true })).toBeFocused();
   });
 
   test('solves the easy sample and exposes the plain solved result', async ({ page }) => {
@@ -559,8 +677,8 @@ test.describe('daily games: crossword levels (Task 627)', () => {
       await page.keyboard.type('z');
       await expect(last).toHaveAttribute('aria-label', /letter Z$/);
       await grid.locator('button[tabindex="0"]').focus();
-      await page.keyboard.press('Tab');
-      await expect(board(page).getByRole('group', { name: 'letters' }).getByRole('button').first()).toBeFocused();
+      await page.keyboard.press('Escape');
+      await expect(board(page).getByRole('button', { name: 'erase', exact: true })).toBeFocused();
       await noPageOverflow();
     });
   }
@@ -579,14 +697,14 @@ test.describe('daily games: crossword levels (Task 627)', () => {
 });
 
 test.describe('daily games: word path (D-71)', () => {
-  // Word path became a themed word search in Task 97; its full browser tests are in word-path.spec.ts.
+  // Word path's board format (#722) is tested in full in word-path-board.spec.ts, the older word search in word-path.spec.ts.
   test("today's sample is labeled and themed, and axe passes", async ({ page }) => {
     await page.clock.setFixedTime(new Date('2026-11-01T15:00:00'));
     await page.goto('/play');
     await expect(page.getByRole('heading', { level: 2, name: 'word path' })).toBeVisible();
-    await expect(page.getByTestId('suture').getByRole('heading', { level: 3, name: 'study break' })).toBeVisible();
+    await expect(page.getByTestId('suture').getByRole('heading', { level: 3, name: 'a calm study break' })).toBeVisible();
     await expect(page.getByTestId('suture')).toContainText('sample puzzle');
-    await expect(page.getByRole('list', { name: 'words to find' }).getByRole('listitem')).toHaveCount(12);
+    await expect(page.getByTestId('suture').getByRole('gridcell')).toHaveCount(48);
     await expect(page.getByRole('heading', { name: 'coming soon' })).toHaveCount(0);
     const results = await axe(page);
     expect(results.violations.map((v) => `${v.id}: ${v.help}`)).toEqual([]);
@@ -771,7 +889,8 @@ test.describe('daily games: private stats (D-76)', () => {
     await expect(toggle(page)).toHaveAttribute('aria-checked', 'true');
     await expect(pulseStats(page)).toContainText('not played yet.');
     await expect(
-      panel(page).getByRole('listitem').filter({ has: page.getByRole('heading', { name: 'sort', exact: true }) }),
+      // #720 (D-pending): triage results show under sudoku, the game that now keeps them.
+      panel(page).getByRole('listitem').filter({ has: page.getByRole('heading', { name: 'sudoku', exact: true }) }),
     ).toContainText('played 1 day, solved 1.');
     // Deleted from this browser, not only hidden.
     expect(JSON.parse((await kept(page))!).results).toEqual([recent]);
@@ -853,6 +972,8 @@ test.describe('daily games without JavaScript', () => {
     // Playwright's text matching skips <noscript>, so this uses CSS.
     await expect(page.locator('noscript p')).toHaveText([
       "to add cueory to your home screen, use your browser's menu. daily games need JavaScript.",
+      "today's status for each game needs JavaScript.",
+      'game settings need JavaScript.',
       'pillo needs JavaScript.',
       'sudoku needs JavaScript.',
       'crossword needs JavaScript.',

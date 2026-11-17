@@ -3,18 +3,11 @@
  * The actual deletion is handled by the server; this module describes what will go and validates the
  * typed confirmation before the caller fires the request.
  */
-import { BREAK_STORAGE_KEY } from '../scripts/breakstore';
-import { NOTE_SOUND_STORAGE_KEY } from '../scripts/notesound';
-import { legacyStarsKey, PROGRESS_STORAGE_KEY, type Progress } from '../scripts/progress';
-import { PROMO_STORAGE_KEY } from '../scripts/promo';
-import { THEME_STORAGE_KEY } from '../scripts/theme';
+import { fixedLocalKeysToClear, localPrefixesToClear, sessionKeysToClear } from '../config/storage-keys';
+import type { Progress } from '../scripts/progress';
 import type { KeyValueStorage } from '../scripts/storage';
-import { STATS_STORAGE_KEY } from './gameresults';
-import { GUEST_IMPORT_MARKER_PREFIX } from './guestimportrun';
-import { LAST_WELCOME_STORAGE_KEY, VISIT_STORAGE_KEY } from './stickynote';
-import { RESUME_STORAGE_KEY } from '../scripts/resume';
 import type { ExportData } from './exportdata';
-import { isPkceVerifierKey, PKCE_FLOW_LIST_STORAGE_KEY, PKCE_VERIFIER_STORAGE_KEY } from './supabaseclient';
+import { isPkceVerifierKey } from './supabaseclient';
 import { DELETE_REAUTH, DELETE_REAUTH_CODE, DELETE_SIGNED_OUT, studentMessage } from './rpcerrors';
 
 // Keep the download and confirmation contracts together, including the actual saved Progress record.
@@ -71,6 +64,11 @@ export function deletionSummary(data: ExportData): string[] {
     lines.push(`${n} game result${n === 1 ? '' : 's'}`);
   }
 
+  if (Array.isArray(data.sudokuStats) && data.sudokuStats.length > 0) {
+    const n = data.sudokuStats.length;
+    lines.push(`${n} sudoku solve${n === 1 ? '' : 's'}`);
+  }
+
   if (data.attempts?.length) lines.push(`${data.attempts.length} question attempt${data.attempts.length === 1 ? '' : 's'}`);
   if (data.examPlans?.length) lines.push(`${data.examPlans.length} exam date${data.examPlans.length === 1 ? '' : 's'}`);
   if (data.reviewRows?.length) lines.push(`${data.reviewRows.length} account review schedule${data.reviewRows.length === 1 ? '' : 's'}`);
@@ -80,6 +78,11 @@ export function deletionSummary(data: ExportData): string[] {
   const events = data.studyEvents;
   const eventCount = events === undefined ? 0 : 'count' in events ? events.count : events.length;
   if (eventCount) lines.push(`${eventCount} study history entr${eventCount === 1 ? 'y' : 'ies'}`);
+  // Task 178: the anatomy lab's review list (including cleared misses) and saved views go with the account too.
+  const misses = data.anatomyReviewQueue?.length ?? 0;
+  if (misses) lines.push(`${misses} anatomy review entr${misses === 1 ? 'y' : 'ies'}`);
+  const views = data.anatomyViews?.length ?? 0;
+  if (views) lines.push(`${views} saved anatomy view${views === 1 ? '' : 's'}`);
 
   return lines;
 }
@@ -100,7 +103,7 @@ export function confirmState(typed: string): string | null {
 // ── Browser-storage keys to clear ────────────────────────────────────────────
 
 /** This tab's sessionStorage keys that deletion clears. Fixed names, so they can be cleared even when localStorage can't be listed. */
-export const SESSION_KEYS_AFTER_DELETION: readonly string[] = Object.freeze([VISIT_STORAGE_KEY, BREAK_STORAGE_KEY]);
+export const SESSION_KEYS_AFTER_DELETION: readonly string[] = Object.freeze(sessionKeysToClear());
 
 /** Iterable localStorage key names with separate keys for this tab's sessionStorage. */
 export type DeletionStorageKeys = string[] & { readonly sessionKeys: readonly string[] };
@@ -116,71 +119,74 @@ export function afterDeletion(storage: KeyValueStorage | undefined): DeletionSto
   if (!storage || typeof storage.length !== 'number' || !Number.isSafeInteger(storage.length) || storage.length < 0 || typeof storage.key !== 'function') {
     throw new Error('browser storage must support listing its keys before cleanup.');
   }
-  const keys = new Set([
-    PROGRESS_STORAGE_KEY,
-    PROMO_STORAGE_KEY,
-    THEME_STORAGE_KEY,
-    STATS_STORAGE_KEY,
-    RESUME_STORAGE_KEY,
-    LAST_WELCOME_STORAGE_KEY,
-    NOTE_SOUND_STORAGE_KEY,
-    PKCE_VERIFIER_STORAGE_KEY,
-    PKCE_FLOW_LIST_STORAGE_KEY,
-  ]);
-  const prefix = legacyStarsKey('');
+  // Every key comes from the one list in src/config/storage-keys.ts.
+  const keys = new Set(fixedLocalKeysToClear());
+  const prefixes = localPrefixesToClear();
   const length = storage.length;
   for (let index = 0; index < length; index++) {
     const key = storage.key(index);
-    if (key?.startsWith(prefix) || key?.startsWith(GUEST_IMPORT_MARKER_PREFIX) || (key && isPkceVerifierKey(key))) {
+    if (key && (prefixes.some((prefix) => key.startsWith(prefix)) || isPkceVerifierKey(key))) {
       keys.add(key);
     }
   }
   return Object.assign([...keys], { sessionKeys: [...SESSION_KEYS_AFTER_DELETION] });
 }
 
-// ── A recent sign-in before deleting (Task 302) ──────────────────────────────
+// ── A recent reauthentication before deleting (Task 725) ─────────────────────
 
-/**
- * delete_my_account refuses a token issued more than 10 minutes ago (iat), so a copied or shared-device token can't
- * delete the account (supabase/migrations/20261102160000_fresh_sign_in_and_name_rules.sql). The page checks first, so a
- * student with an older sign-in goes straight to sign-in instead of seeing a refusal, and then comes back here.
- */
+/** The server enforces ten minutes since a genuine authentication event in the signed AMR claim, not JWT iat. */
 export const DELETE_MAX_SIGN_IN_AGE_SECONDS = 600;
-/** Where sign-in sends the student back to: the account page, at the delete step. */
 export const DELETE_RETURN_PATH = '/account#delete';
 
-/** The sign-in page, set to return to the delete step. `/signin` keeps `next` through safeNext (signin.ts). */
 export function reauthHref(returnTo: string = DELETE_RETURN_PATH): string {
-  return `/signin?next=${encodeURIComponent(returnTo)}`;
+  return '/signin?next=' + encodeURIComponent(returnTo);
 }
 
-/**
- * The access token's `iat` (when it was issued, in seconds), read from its payload. For the page's own check only:
- * the database checks the signed token itself. Anything that isn't a well-formed token gives undefined.
- */
-export function tokenIssuedAt(accessToken: unknown): number | undefined {
+/** Client-side display hint only. The database verifies the Supabase-signed claims independently. */
+function tokenPayload(accessToken: unknown): Record<string, unknown> | undefined {
   if (typeof accessToken !== 'string' || accessToken.length > 16_384) return undefined;
   const parts = accessToken.split('.');
   if (parts.length !== 3 || !/^[A-Za-z0-9_-]+$/.test(parts[1]!)) return undefined;
   try {
     const base64 = parts[1]!.replace(/-/g, '+').replace(/_/g, '/');
     const payload: unknown = JSON.parse(atob(base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), '=')));
-    if (typeof payload !== 'object' || payload === null) return undefined;
-    const iat = (payload as { iat?: unknown }).iat;
-    return typeof iat === 'number' && Number.isFinite(iat) && iat > 0 ? iat : undefined;
+    return typeof payload === 'object' && payload !== null && !Array.isArray(payload)
+      ? payload as Record<string, unknown> : undefined;
   } catch {
     return undefined;
   }
 }
 
-/**
- * True when the token is recent enough to delete with. It keeps a margin (a minute by default) below the database's
- * 10 minutes, so a student who taps delete just before the limit isn't refused halfway through.
- */
+/** Diagnostic only. The renewable JWT iat must never authorize account deletion. */
+export function tokenIssuedAt(accessToken: unknown): number | undefined {
+  const iat = tokenPayload(accessToken)?.iat;
+  return typeof iat === 'number' && Number.isFinite(iat) && iat > 0 ? iat : undefined;
+}
+
+/** Timestamp of the newest genuine credential or aal2 second-factor event recorded by Supabase Auth. */
+export function tokenRecentAuthAt(accessToken: unknown): number | undefined {
+  const payload = tokenPayload(accessToken);
+  const amr = payload?.amr;
+  if (!Array.isArray(amr)) return undefined;
+  let recent: number | undefined;
+  for (const item of amr) {
+    if (typeof item !== 'object' || item === null) continue;
+    const { method, timestamp } = item as { method?: unknown; timestamp?: unknown };
+    const credential = method === 'password' || method === 'oauth' || method === 'otp' || method === 'magiclink';
+    const secondFactor = method === 'totp' && payload?.aal === 'aal2';
+    if (!credential && !secondFactor) continue;
+    if (typeof timestamp !== 'number' || !Number.isFinite(timestamp) || timestamp <= 0) continue;
+    recent = recent === undefined ? timestamp : Math.max(recent, timestamp);
+  }
+  return recent;
+}
+
+/** Non-authoritative UI check, with a one-minute buffer before the server's ten-minute expiry. */
 export function freshForDeletion(accessToken: unknown, nowMs: number, marginSeconds = 60): boolean {
-  const iat = tokenIssuedAt(accessToken);
-  if (iat === undefined || !Number.isFinite(nowMs)) return false;
-  return nowMs / 1000 - iat <= DELETE_MAX_SIGN_IN_AGE_SECONDS - marginSeconds;
+  const at = tokenRecentAuthAt(accessToken);
+  if (at === undefined || !Number.isFinite(nowMs)) return false;
+  const age = nowMs / 1000 - at;
+  return age >= -30 && age <= DELETE_MAX_SIGN_IN_AGE_SECONDS - marginSeconds;
 }
 
 export type DeleteOutcome =
