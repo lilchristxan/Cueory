@@ -131,8 +131,8 @@ export interface SavedSudokuStats {
 }
 
 /**
- * What this browser keeps, as of `today`. While stats are off a leftover sudoku record is deleted (fail closed), so it
- * can never outlive the switch.
+ * What this browser keeps, as of `today`. Stats are always kept; when this browser can't keep them a leftover sudoku
+ * record is deleted (fail closed).
  */
 export function loadSudokuStats(storage: KeyValueStorage | undefined, today: string): SavedSudokuStats {
   try {
@@ -146,7 +146,7 @@ export function loadSudokuStats(storage: KeyValueStorage | undefined, today: str
   }
 }
 
-/** Adds a solve when stats are on. Returns what is kept afterwards; nothing is written while stats are off. */
+/** Adds a solve. Returns what is kept afterwards; nothing is written when this browser can't keep stats. */
 export function keepSudokuSolve(storage: KeyValueStorage | undefined, today: string, solve: SudokuSolve): SavedSudokuStats {
   const saved = loadSudokuStats(storage, today);
   if (!saved.on) return saved;

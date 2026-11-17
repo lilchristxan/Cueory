@@ -1,0 +1,1 @@
+status: Lane 8, stats always kept (Christian's decision, 2026-11-17): the "keep my stats" switch is gone; every finished game is kept in this browser and "forget" / "forget all my stats" clear it. Only a browser that won't store anything keeps none, and the panel says so. /privacy and the data download match.

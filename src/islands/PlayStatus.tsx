@@ -99,7 +99,7 @@ export default function PlayStatus({ games }: Props) {
       </ul>
       {!saved.on && (
         <p className="mt-2 text-sm text-ink-soft" data-testid="play-status-note">
-          checked on this device only. turn on stats below to keep finished games marked after you leave.
+          checked on this device only. this browser won't keep stats, so finished games aren't marked after you leave.
         </p>
       )}
     </section>

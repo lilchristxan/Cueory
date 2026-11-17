@@ -35,7 +35,8 @@ for (const size of [{ width: 390, height: 844 }, { width: 1440, height: 900 }]) 
         await expect(row(page, game).getByRole('link')).toHaveAttribute('href', { pulse: '/play/pillo', triage: '/play/sudoku', cueword: '/play/crossword', suture: '/play/word-path' }[game]!);
         expect(box!.height).toBeGreaterThanOrEqual(44);
       }
-      await expect(page.getByTestId('play-status-note')).toBeVisible();
+      // Stats are always kept (2026-11-17), so the "turn on stats" note is gone; it shows only where storage is blocked.
+      await expect(page.getByTestId('play-status-note')).toHaveCount(0);
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
     });
 
@@ -69,7 +70,8 @@ test('a started round shows in progress, and pillo finished on its own page show
   await expect(row(page, 'suture')).toContainText('◐');
   await expect(row(page, 'suture')).toContainText('in progress');
   // Each game is on its own page (2026-11-17): with stats kept, a finished game is still marked when you come back.
-  await page.getByTestId('game-stats').getByRole('switch', { name: 'keep my stats' }).click();
+  // Stats are always kept (2026-11-17): there is no switch to turn on.
+  await expect(page.getByTestId('game-stats').getByRole('switch')).toHaveCount(0);
   await row(page, 'pulse').getByRole('link').click();
   await expect(page).toHaveURL(/\/play\/pillo$/);
   const field = page.getByLabel('your guess', { exact: true });

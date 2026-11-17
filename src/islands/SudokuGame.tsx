@@ -321,7 +321,7 @@ export default function SudokuGame() {
             </table>
             <p className="text-sm text-ink-soft">your first solve of each level each day counts. they stay in this browser and never reach us.</p>
             {kept.solves.length > 0 && <button type="button" className="sudoku-text-button" onClick={forgetSudokuStats}>forget sudoku stats</button>}
-          </> : <p>stats are off. turn on “keep my stats” under your stats on this page to keep your sudoku times and streaks.</p>}
+          </> : <p>this browser won't keep stats (private browsing or blocked site data), so your sudoku times and streaks can't be shown.</p>}
         </div>}
       </div>
       <GameHelpCard help={help} name={gameName('triage')} />

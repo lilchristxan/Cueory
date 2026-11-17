@@ -208,12 +208,12 @@ describe('per-level stats', () => {
     expect(parseSudokuSolves(serializeSudokuSolves(solves), '2027-12-31')).toEqual([]);
   });
 
-  it('is kept only while stats are on, and turning stats off deletes it', () => {
-    const off = memoryStorage({ [SUDOKU_STATS_STORAGE_KEY]: serializeSudokuSolves(solves) });
-    expect(loadSudokuStats(off, today)).toEqual({ on: false, solves: [] });
-    expect(off.data.has(SUDOKU_STATS_STORAGE_KEY)).toBe(false);
-    expect(keepSudokuSolve(off, today, { level: 'easy', day: today, seconds: 99 }).on).toBe(false);
-    expect(off.data.has(SUDOKU_STATS_STORAGE_KEY)).toBe(false);
+  it('is always kept (2026-11-17: no switch), never written without storage, and "forget" deletes it', () => {
+    // Kept even before the shared record exists.
+    const fresh = memoryStorage({ [SUDOKU_STATS_STORAGE_KEY]: serializeSudokuSolves(solves) });
+    expect(loadSudokuStats(fresh, today).on).toBe(true);
+    expect(loadSudokuStats(fresh, today).solves.length).toBeGreaterThan(0);
+    expect(keepSudokuSolve(undefined, today, { level: 'easy', day: today, seconds: 99 }).on).toBe(false);
 
     const on = memoryStorage({ [STATS_STORAGE_KEY]: JSON.stringify({ version: 1, results: [] }) });
     expect(keepSudokuSolve(on, today, { level: 'hard', day: today, seconds: 600 }).solves).toHaveLength(1);

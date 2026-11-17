@@ -89,15 +89,15 @@ for (const [size, width, height] of [['phone', 390, 844], ['desktop', 1440, 900]
   });
 }
 
-test('sudoku stats stay off until stats are on, then show each level', async ({ page }) => {
+test('sudoku stats are always kept (no switch), show each level, and "forget all" clears them', async ({ page }) => {
   await page.goto('/play/sudoku');
   await expect(cells(page)).toHaveCount(81);
+  // Stats are always kept (2026-11-17): no switch, and the stats view shows the table straight away.
+  await expect(page.getByRole('switch', { name: /keep my stats/ })).toHaveCount(0);
   await game(page).getByRole('button', { name: 'sudoku stats' }).click();
-  await expect(game(page).getByTestId('sudoku-stats')).toContainText('stats are off');
+  await expect(game(page).getByTestId('sudoku-stats').getByRole('table')).toBeVisible();
   await game(page).getByRole('button', { name: 'sudoku stats' }).click();
 
-  await page.getByRole('switch', { name: /keep my stats/ }).click();
-  await expect(page.getByRole('switch', { name: /keep my stats/ })).toHaveAttribute('aria-checked', 'true');
   // The first move of the day tells /play's daily status that sudoku is in progress.
   await page.evaluate(() => {
     const seen: unknown[] = [];
@@ -125,7 +125,7 @@ test('sudoku stats stay off until stats are on, then show each level', async ({ 
   await expect(easy).toContainText('1');
   await expect(easy).toContainText('1 day');
 
-  // Turning stats off deletes the sudoku record too.
-  await page.getByRole('switch', { name: /keep my stats/ }).click();
+  // "forget all my stats" deletes the sudoku record too.
+  await page.getByRole('button', { name: 'forget all my stats' }).click();
   expect(await page.evaluate(() => localStorage.getItem('cueory-sudoku-stats'))).toBeNull();
 });
