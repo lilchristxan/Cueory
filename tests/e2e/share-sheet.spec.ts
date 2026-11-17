@@ -170,7 +170,7 @@ test('share… sends the selected card image with the text and the link to the e
   await expect.poll(() => recorded(page)).toHaveLength(2);
   const [first, second] = await recorded(page);
   for (const share of [first!, second!]) {
-    expect(share.url).toBe(`${SITE}/play#pulse-heading`);
+    expect(share.url).toBe(`${SITE}/play/pillo`);
     expect(share.text).toContain(gameName('pulse'));
     expect(share.files).toHaveLength(1);
     expect(share.files[0]!.type).toBe('image/png');
@@ -201,7 +201,7 @@ test('without file sharing, share… sends the text and link only, and Instagram
   await expect.poll(() => recorded(page)).toHaveLength(1);
   const [share] = await recorded(page);
   expect(share!.files).toEqual([]);
-  expect(share!.url).toBe(`${SITE}/play#pulse-heading`);
+  expect(share!.url).toBe(`${SITE}/play/pillo`);
   expect(share!.text).toContain(gameName('pulse'));
 });
 
@@ -232,7 +232,7 @@ test('without the Web Share API, copy link still works', async ({ page }) => {
   await expect(sheet.getByRole('button', { name: 'share…' })).toHaveCount(0);
   await sheet.getByRole('button', { name: 'copy link' }).click();
   await expect(sheet.getByRole('status')).toHaveText('link copied.');
-  expect(await page.evaluate(() => window.__copied)).toEqual([`${SITE}/play#pulse-heading`]);
+  expect(await page.evaluate(() => window.__copied)).toEqual([`${SITE}/play/pillo`]);
 });
 
 test('post on X is a plain link with the text and the tool link, and no tracking', async ({ page }) => {
@@ -241,7 +241,7 @@ test('post on X is a plain link with the text and the tool link, and no tracking
   const url = new URL(href!);
   expect(url.origin + url.pathname).toBe('https://x.com/intent/post');
   expect([...url.searchParams.keys()].sort()).toEqual(['text', 'url']);
-  expect(url.searchParams.get('url')).toBe(`${SITE}/play#pulse-heading`);
+  expect(url.searchParams.get('url')).toBe(`${SITE}/play/pillo`);
   expect(url.searchParams.get('text')).toContain(gameName('pulse'));
 });
 
