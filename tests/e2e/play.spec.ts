@@ -12,6 +12,8 @@ test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
     try {
       localStorage.setItem('cueory-promo-seen', String(Date.now()));
+      // The launch-updates pop-up (a modal after 10 seconds) is put away too; signup-popup.spec.ts covers it.
+      localStorage.setItem('cueory-signup-popup-seen', String(Date.now()));
       // A returning player: each game's first-visit rules card (#736) is already put away. game-help.spec.ts covers it.
       localStorage.setItem('cueory-game-help-seen', JSON.stringify(['pulse', 'triage', 'cueword', 'suture']));
     } catch {
