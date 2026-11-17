@@ -158,7 +158,7 @@ describe('built dist/_headers (issue #746)', () => {
     const scriptSrc = header.get('script-src')!;
     for (const file of pages) {
       const html = readFileSync(file, 'utf8');
-      for (const match of html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)) {
+      for (const match of html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script\b[^>]*>/gi)) {
         const [, attrs, body] = match;
         if (/\bsrc\s*=/i.test(attrs!) || /type\s*=\s*["']?application\/(ld\+)?json/i.test(attrs!)) continue;
         if (!body) continue;
