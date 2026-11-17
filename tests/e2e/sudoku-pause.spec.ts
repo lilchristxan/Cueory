@@ -28,9 +28,12 @@ for (const [size, width, height] of [['phone', 390, 844], ['tablet', 820, 1180],
       // The help text must describe the same privacy behavior as the paused board.
       const how = game(page).getByRole('button', { name: 'how to play' });
       await how.click();
-      await expect(game(page).getByRole('region', { name: 'how to play sudoku' }))
-        .toContainText('pause hides your entries and x marks. the original numbers stay visible until you resume.');
-      await how.click();
+      // The "?" opens the rules in a dialog (#736); Escape closes it and gives focus back to the "?".
+      const rules = page.getByRole('dialog', { name: 'how to play sudoku' });
+      await expect(rules)
+        .toContainText('pause hides every number, the original ones too, until you press play. leaving the page pauses it for you.');
+      await page.keyboard.press('Escape');
+      await expect(rules).toBeHidden();
       await cells(page).nth(empty).click();
       await page.keyboard.press('1');
       await cells(page).nth(marked).click();
@@ -45,10 +48,12 @@ for (const [size, width, height] of [['phone', 390, 844], ['tablet', 820, 1180],
       await pause.focus();
       await expect(pause).toBeFocused();
       await page.keyboard.press('Enter');
-      await expect(game(page).getByTestId('sudoku-live')).toHaveText('puzzle paused. given numbers remain visible.');
-      await expect(cells(page).nth(given)).toHaveText(String(puzzle[given]));
-      await expect(cells(page).nth(given)).toHaveAttribute('aria-label', /given$/);
+      await expect(game(page).getByTestId('sudoku-live')).toHaveText('puzzle paused. every number is hidden until you press play.');
+      // Every square is hidden while paused, the given numbers too, and shows the same quiet mark.
+      await expect(cells(page).nth(given)).toBeEmpty();
+      await expect(cells(page).nth(given)).toHaveAttribute('aria-label', /hidden until resumed$/);
       await expect(game(page).locator('[data-given="true"]')).toHaveCount(40);
+      await expect(game(page).locator('.sudoku-paused-mark')).toHaveCount(81);
       for (const index of [empty, marked]) {
         await expect(cells(page).nth(index)).toBeEmpty();
         await expect(cells(page).nth(index)).toHaveAttribute('aria-label', /hidden until resumed/);
@@ -64,6 +69,8 @@ for (const [size, width, height] of [['phone', 390, 844], ['tablet', 820, 1180],
       await expect(game(page).getByTestId('sudoku-live')).toHaveText('puzzle resumed.');
       await expect(cells(page).nth(empty)).toHaveText('1');
       await expect(cells(page).nth(marked)).toHaveText('x');
+      await expect(cells(page).nth(given)).toHaveText(String(puzzle[given]));
+      await expect(game(page).locator('.sudoku-paused-mark')).toHaveCount(0);
       await expect(cells(page).nth(empty)).toHaveAttribute('aria-label', savedEntry!);
       await expect(cells(page).nth(marked)).toHaveAttribute('aria-label', savedMark!);
       await page.clock.runFor(2000);
@@ -97,10 +104,10 @@ test('paused keypad and keyboard cannot change entries, marks, errors, or the li
   for (const button of await game(page).locator('.sudoku-number-row button').all()) {
     await expect(button).toBeDisabled();
   }
-  await expect(game(page).getByTestId('sudoku-live')).toHaveText('puzzle paused. given numbers remain visible.');
+  await expect(game(page).getByTestId('sudoku-live')).toHaveText('puzzle paused. every number is hidden until you press play.');
   await expect(game(page).locator('[aria-live="polite"]')).toHaveCount(1);
   // A pause cannot silently reset the board or change the hint setting.
-  const hintsControl = game(page).getByRole('checkbox', { name: /auto candidates/i });
+  const hintsControl = game(page).getByRole('checkbox', { name: /auto cues/i });
   await expect(hintsControl).toBeDisabled();
   const hintsBefore = await hintsControl.getAttribute('aria-checked');
   for (const difficulty of ['easy', 'mid', 'hard']) {
@@ -118,7 +125,7 @@ test('paused keypad and keyboard cannot change entries, marks, errors, or the li
   await expect(cells(page).nth(empty)).toBeEmpty();
   await expect(cells(page).nth(marked)).toBeEmpty();
   await expect(game(page).locator('.sudoku-errors')).toHaveText(errorsBefore);
-  await expect(game(page).getByTestId('sudoku-live')).toHaveText('puzzle paused. given numbers remain visible.');
+  await expect(game(page).getByTestId('sudoku-live')).toHaveText('puzzle paused. every number is hidden until you press play.');
 
   await game(page).getByRole('button', { name: 'resume puzzle' }).click();
   await expect(hintsControl).toBeEnabled();

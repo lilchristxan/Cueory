@@ -28,6 +28,9 @@ import { heldRounds, loadStats, localDay, reportProgress, reportRound } from './
 import { dailyStats, recordResult, type DailyStats, type GameStats } from './gamestats';
 import { loadWordList } from './pillowords';
 import ResultBrandMark from './ResultBrandMark';
+import { GameHelpButton, GameHelpCard, useGameHelp } from './GameHelp';
+import { gameName } from '../config/games';
+import { useSharedGameSettings } from './GameSettings';
 import { browserStorage } from '../scripts/storage';
 
 interface Puzzle {
@@ -40,7 +43,7 @@ interface Props {
   puzzles: Puzzle[];
 }
 
-const KEY_ROWS = ['qwertyuiop', 'asdfghjkl', 'zxcvbnm'];
+const LETTERS = 'abcdefghijklmnopqrstuvwxyz';
 const primaryButton = 'rounded-pill bg-button px-5 py-2.5 text-on-button hover:bg-button-hover';
 const columns = Array.from({ length: WORD_LENGTH }, (_, i) => i);
 
@@ -54,6 +57,24 @@ function finishStats(day: string): FinishStats {
   const all = heldRounds().reduce<GameStats>((kept, round) => recordResult(kept, round), saved.stats);
   const today = all.find((result) => result.game === 'pulse' && result.day === day);
   return { on: true, stats: dailyStats(all, 'pulse', day, GUESSES), todayRow: today?.solved ? today.tries : undefined };
+}
+
+/** What each mark means, drawn as the pills on the board. Shown in pillo's help (the ? dialog and the first-visit card). */
+function PilloLegend() {
+  return (
+    <ul className="pillo-legend flex flex-col gap-3 text-sm" aria-label="what the marks mean" data-testid="pillo-legend">
+      {(['here', 'elsewhere', 'absent'] as const).map((mark) => (
+        <li key={mark} className="pillo-legend-row">
+          <span className={`pillo-pill pillo-${mark}`} aria-hidden="true">
+            <span className="pillo-mark">{MARK_SYMBOL[mark]}</span>
+          </span>
+          <span>
+            {MARK_SYMBOL[mark]} {mark === 'here' ? 'in its place' : mark === 'elsewhere' ? 'in the word, somewhere else' : 'not in the word'}
+          </span>
+        </li>
+      ))}
+    </ul>
+  );
 }
 
 /** One setting: a real button with switch semantics, its state in words as well as by its look. */
@@ -117,9 +138,12 @@ export default function PulseGame({ puzzles }: Props) {
   const [state, setState] = useState<PulseState>(() => startPulse(puzzle?.word ?? ''));
   const [text, setText] = useState('');
   const [problem, setProblem] = useState('');
+  const howToPlay = useGameHelp('pulse');
   const [said, setSaid] = useState('');
   const [copied, setCopied] = useState('');
-  const [contrast, setContrast] = useState(false);
+  // High contrast is the shared game setting (#734): one switch for every game, remembered with the others.
+  const { settings: shared, update: updateShared } = useSharedGameSettings();
+  const contrast = shared.highContrast;
   const [keysOnly, setKeysOnly] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [finish, setFinish] = useState<FinishStats>({ on: false });
@@ -251,7 +275,9 @@ export default function PulseGame({ puzzles }: Props) {
             <span key={i} className={`pillo-strip-pocket${i >= GUESSES - left ? ' pillo-strip-pill' : ''}`} />
           ))}
         </span>
+        <GameHelpButton help={howToPlay} name={gameName('pulse')} className="corner-button corner-button-quiet" extra={<PilloLegend />} />
       </div>
+      <GameHelpCard help={howToPlay} name={gameName('pulse')} extra={<PilloLegend />} />
 
       <div className="pillo-pack mt-4">
         <ol className="pillo-board" aria-label="your guesses">
@@ -324,44 +350,36 @@ export default function PulseGame({ puzzles }: Props) {
 
       {playing ? (
         <div className="pillo-keys mt-6" role="group" aria-label="letters">
-          {KEY_ROWS.map((row, r) => (
-            <div key={row} className="pillo-key-row">
-              {r === KEY_ROWS.length - 1 && (
+          {/* The same letter keys as the crossword: a to z in rows that wrap, then ⌫ and enter (Christian, 2026-11-17). */}
+          <div className="pillo-key-row">
+            {Array.from(LETTERS, (letter) => {
+              const mark = marks.get(letter);
+              return (
                 <button
+                  key={letter}
                   type="button"
-                  className="pillo-key pillo-key-wide"
-                  aria-label="delete"
-                  onClick={() => type(text.slice(0, -1))}
+                  className={`pillo-key${mark ? ` pillo-${mark}` : ''}`}
+                  aria-label={keyLabel(letter, mark)}
+                  onClick={() => type(text + letter)}
                 >
-                  ⌫
+                  <span aria-hidden="true">{letter}</span>
+                  {mark && (
+                    <span className="pillo-key-mark" aria-hidden="true">
+                      {MARK_SYMBOL[mark]}
+                    </span>
+                  )}
                 </button>
-              )}
-              {Array.from(row, (letter) => {
-                const mark = marks.get(letter);
-                return (
-                  <button
-                    key={letter}
-                    type="button"
-                    className={`pillo-key${mark ? ` pillo-${mark}` : ''}`}
-                    aria-label={keyLabel(letter, mark)}
-                    onClick={() => type(text + letter)}
-                  >
-                    <span aria-hidden="true">{letter.toUpperCase()}</span>
-                    {mark && (
-                      <span className="pillo-key-mark" aria-hidden="true">
-                        {MARK_SYMBOL[mark]}
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
-              {r === KEY_ROWS.length - 1 && (
-                <button type="button" className="pillo-key pillo-key-wide" onClick={() => void submit()}>
-                  enter
-                </button>
-              )}
-            </div>
-          ))}
+              );
+            })}
+          </div>
+          <div className="pillo-key-row">
+            <button type="button" className="pillo-key pillo-key-wide" aria-label="delete" onClick={() => type(text.slice(0, -1))}>
+              ⌫
+            </button>
+            <button type="button" className="pillo-key pillo-key-wide" onClick={() => void submit()}>
+              enter
+            </button>
+          </div>
         </div>
       ) : (
         <div ref={result} tabIndex={-1} className="pillo-result mt-6" data-testid="pulse-result">
@@ -461,7 +479,7 @@ export default function PulseGame({ puzzles }: Props) {
                     : 'letters shown in place or in the word must be used in every later guess.'
                 }
               />
-              <Setting label="high contrast" on={contrast} onChange={() => setContrast((on) => !on)} note="bolder edges and larger marks." />
+              <Setting label="high contrast" on={contrast} onChange={() => updateShared({ highContrast: !contrast })} note="bolder edges and larger marks, in every game." />
               <Setting
                 label="on-screen keyboard only"
                 on={keysOnly}
@@ -472,31 +490,11 @@ export default function PulseGame({ puzzles }: Props) {
                 note="only the letter keys below type, so your device keyboard stays closed."
               />
             </ul>
-            <p className="mt-3 text-sm text-ink-soft">settings last for this visit. light or evening is in the footer.</p>
+            <p className="mt-3 text-sm text-ink-soft">hard mode and on-screen keyboard only last for this visit. high contrast is the same switch as in game settings, so it stays on for every game. light or evening is in the footer.</p>
           </>
         )}
       </details>
 
-      <section className="pillo-legend mt-8" aria-labelledby="pillo-how">
-        <h3 id="pillo-how" className="text-lg font-semibold">
-          how to play
-        </h3>
-        <ul className="mt-3 flex flex-col gap-3 text-sm">
-          {(['here', 'elsewhere', 'absent'] as const).map((mark) => (
-            <li key={mark} className="pillo-legend-row">
-              <span className={`pillo-pill pillo-${mark}`} aria-hidden="true">
-                <span className="pillo-mark">{MARK_SYMBOL[mark]}</span>
-              </span>
-              <span>
-                {MARK_SYMBOL[mark]} {mark === 'here' ? 'in its place' : mark === 'elsewhere' ? 'in the word, somewhere else' : 'not in the word'}
-              </span>
-            </li>
-          ))}
-        </ul>
-        <p className="mt-4 border-t border-line pt-3 text-sm text-ink-soft">
-          every word has {WORD_LENGTH} letters, and you have {GUESSES} guesses.
-        </p>
-      </section>
 
       <p className="sr-only" aria-live="polite" aria-atomic="true" data-testid="pulse-live">
         {said}

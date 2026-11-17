@@ -3,9 +3,12 @@ import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from 
 import { browserStorage } from '../scripts/storage';
 import { localDay, reportRound } from './gameresults';
 import { printGame } from './gameprint';
+import { GameHelpButton, GameHelpCard, useGameHelp } from './GameHelp';
 import ResultBrandMark from './ResultBrandMark';
 import { dayLabel } from './daily';
 import { playSolvedTone } from './solvetone';
+import { useSharedGameSettings } from './GameSettings';
+import PrintLogo from './PrintLogo';
 import {
   announceFirstEntry, arrow, autocheckAll, backspace, check, clueLeavesGrid, countsForStreak, currentWord, deleteLetter, emptyState, enter, getResult,
   isFilledWrong, isLocked, isSolved, loadCrosswordSettings, moveClue, nextWord, numbering, parsePuzzle, previousWord,
@@ -62,6 +65,8 @@ function Board({ puzzle, name }: Props) {
   const confirmButton = useRef<HTMLButtonElement>(null);
   const menus = useRef(new Map<string, HTMLDetailsElement>());
   const help = useId();
+  const howToPlay = useGameHelp('cueword');
+  const { soundAllowed } = useSharedGameSettings();
   const warning = useId();
   const listId = useId();
   const list = useMemo(() => words(puzzle), [puzzle]);
@@ -107,7 +112,8 @@ function Board({ puzzle, name }: Props) {
     reported.current = true;
     const streak = countsForStreak(today, Date.now(), state.assists);
     setCounts(streak);
-    if (settings.playSound) playSolvedTone();
+    // The shared "game sounds" switch (#734) silences every game, whatever the crossword's own sound setting says.
+    if (soundAllowed(settings.playSound)) playSolvedTone();
     reportRound({
       game: 'cueword', day: localDay(today), solved: true, tries: state.assists, streak,
       card: {
@@ -122,7 +128,7 @@ function Board({ puzzle, name }: Props) {
         path: '/play/crossword',
       },
     });
-  }, [solved, today, name, gameResult.level, gameResult.seconds, state.assists, helped, settings.playSound]);
+  }, [solved, today, name, gameResult.level, gameResult.seconds, state.assists, helped, settings.playSound, soundAllowed]);
 
   const update = (next: CuewordState, focus = true) => {
     focusGrid.current = focus;
@@ -215,10 +221,13 @@ function Board({ puzzle, name }: Props) {
           <button type="button" className="segmented-option" aria-pressed={!pencil} disabled={solved} onClick={() => setPencil(false)}>{!pencil && <span className="segmented-check" aria-hidden="true">✓</span>}pen</button>
           <button type="button" className="segmented-option" aria-pressed={pencil} disabled={solved} onClick={() => setPencil(true)}>{pencil && <span className="segmented-check" aria-hidden="true">✓</span>}pencil</button>
         </div>
+        {/* Check and reveal move to a new row together, never split across two rows (they only stack when even the pair
+            is wider than the column, at the largest text on the narrowest screens). */}
+        <div className="crossword-help-pair">
         {(['check', 'reveal'] as const).map((kind) => (
           <details key={kind} ref={menuRef(kind)} className="crossword-help" data-testid={'crossword-' + kind}
             onToggle={(event) => { const open = event.currentTarget.open; setOpenMenu((current) => open ? kind : current === kind ? null : current); }}>
-            <summary className={quietButton + ' crossword-menu-button'}>{kind}</summary>
+            <summary className={quietButton.replace('px-4', 'px-3') + ' crossword-menu-button'}>{kind}</summary>
             {/* Rendered only while open, so closed menus leave no hidden buttons behind. */}
             {openMenu === kind && (
               <div className="crossword-help-panel crossword-menu-panel" role="group" aria-label={kind}>
@@ -229,6 +238,7 @@ function Board({ puzzle, name }: Props) {
             )}
           </details>
         ))}
+        </div>
         <details ref={menuRef('settings')} className="crossword-help"
           onToggle={(event) => { const open = event.currentTarget.open; setOpenMenu((current) => open ? 'settings' : current === 'settings' ? null : current); }}>
           <summary className="corner-button corner-button-quiet" aria-label="crossword settings">
@@ -259,19 +269,10 @@ function Board({ puzzle, name }: Props) {
         <button type="button" className="corner-button corner-button-quiet" aria-label="print this puzzle" onClick={printPuzzle}>
           <svg aria-hidden="true" viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M6 9V3h12v6"/><rect x="3" y="9" width="18" height="9" rx="2"/><path d="M7 14h10v7H7z"/></svg>
         </button>
-        <details className="crossword-help">
-          <summary className="corner-button corner-button-quiet" aria-label="how to play">?</summary>
-          <div className="crossword-help-panel">
-            <h3 className="font-medium">how to play</h3>
-            <p className="mt-2 text-sm text-ink-soft">{level} is {width} by {width}. tap a square and type, or use the letter buttons.</p>
-            <p className="mt-2 text-sm text-ink-soft">tap the selected square again, or press space, to switch across and down. an arrow against the current direction switches direction first, then moves.</p>
-            <p className="mt-2 text-sm text-ink-soft">tab and shift+tab go to the next or previous clue. tab on the last clue, shift+tab on the first, or escape leaves the grid. backspace deletes.</p>
-            <p className="mt-2 text-sm text-ink-soft">pencil letters are lighter and boxed with a dashed line, for guesses you're unsure of.</p>
-            <p className="mt-2 text-sm text-ink-soft">check and reveal work on a square, a word or the whole puzzle. a solve without them, within 48 hours of the puzzle's date, extends your streak.</p>
-            <p className="mt-2 text-sm text-ink-soft">the printer button makes a blank grid with the complete clue list.</p>
-          </div>
-        </details>
+        <GameHelpButton help={howToPlay} name={name} className="corner-button corner-button-quiet" />
       </div>
+
+      <GameHelpCard help={howToPlay} name={name} />
 
       {asking && (
         <div className="crossword-warning crossword-no-print" role="alertdialog" aria-labelledby={warning + '-title'} aria-describedby={warning} data-testid="crossword-warning">
@@ -284,6 +285,7 @@ function Board({ puzzle, name }: Props) {
         </div>
       )}
 
+      <PrintLogo />
       {puzzle.sample && <p className="text-center text-sm text-ink-soft">today's puzzle is a sample</p>}
       <div className="crossword-timer crossword-no-print mt-2">
         {settings.showTimer && <span className="tabular-nums" data-testid="crossword-time">time: {elapsedText(elapsed)}</span>}

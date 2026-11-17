@@ -1,0 +1,46 @@
+import { expect, test } from '@playwright/test';
+
+// A tablet held upright (820 × 1180) and sideways (1180 × 820): all four daily boards on /play are centred in the
+// game column, no square grows past 72px (a crossword square) or drops under 44px, and nothing scrolls sideways.
+
+const boards = [
+  { name: 'pillo', board: '.pillo-pack', square: null },
+  { name: 'pillo keys', board: '.pillo-keys', square: null },
+  { name: 'sudoku', board: '.sudoku-board', square: '.sudoku-cell' },
+  { name: 'crossword', board: '.crossword-board', square: '.crossword-cell' },
+  { name: 'word path', board: '.wordpath-board', square: '.wordpath-board button[data-path]' },
+] as const;
+
+for (const [width, height] of [[820, 1180], [1180, 820]] as const) {
+  test.describe(`tablet ${width} × ${height}`, () => {
+    test.use({ viewport: { width, height }, hasTouch: true, isMobile: true });
+
+    test('every board is centred, squares are 44 to 72px, no sideways scroll', async ({ page }) => {
+      await page.addInitScript(() => {
+        try { localStorage.setItem('cueory-promo-seen', String(Date.now())); } catch { /* optional storage */ }
+      });
+      await page.goto('/play');
+      await page.waitForLoadState('networkidle');
+      expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0);
+
+      // The middle of the column the games sit in (the main content box, inside its side padding).
+      const middle = await page.locator('main').evaluate((main) => {
+        const box = main.getBoundingClientRect();
+        const style = getComputedStyle(main);
+        return (box.left + parseFloat(style.paddingLeft) + box.right - parseFloat(style.paddingRight)) / 2;
+      });
+
+      for (const { name, board, square } of boards) {
+        const box = (await page.locator(board).first().boundingBox())!;
+        expect(Math.abs(box.x + box.width / 2 - middle), `${name} is centred`).toBeLessThanOrEqual(2);
+        expect(box.x, name).toBeGreaterThanOrEqual(0);
+        expect(box.x + box.width, name).toBeLessThanOrEqual(width);
+        if (!square) continue;
+        const cell = (await page.locator(square).first().boundingBox())!;
+        expect(cell.width, `${name} square`).toBeLessThanOrEqual(72.5);
+        expect(cell.width, `${name} square`).toBeGreaterThanOrEqual(44);
+        expect(cell.height, `${name} square`).toBeGreaterThanOrEqual(44);
+      }
+    });
+  });
+}

@@ -1,9 +1,9 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { spawnSync } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
-import { mkdtempSync, mkdirSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { dirname, join } from 'node:path';
+import { dirname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { gzipSync } from 'node:zlib';
 import {
@@ -16,6 +16,7 @@ import {
   resolveLocalAsset,
   scanPerformanceBudget,
 } from '../../scripts/perf-budget.mjs';
+import { dist, initialJsGzipBytes } from './perf-scan';
 
 const roots: string[] = [];
 afterEach(() => {
@@ -313,5 +314,108 @@ describe('built-site performance budgets', () => {
     f.file('index.html', '<html></html>');
     symlinkSync(join(f.root, 'index.html'), join(f.root, 'other.html'));
     expect(() => scanPerformanceBudget(f.root)).toThrow('Symbolic link');
+  });
+});
+
+/**
+ * The budget per page type from docs/PERFORMANCE.md (lane 9): the heaviest page of each type on staging 19d929e8
+ * (2026-11-17) plus 10%, rounded up to whole KiB,
+ * in gzip bytes of initial JavaScript, counted by the same scanner as each route's own budget in build-output.test.ts.
+ * The per-route budgets there allow 10% over an older baseline; these caps stop any page drifting far above what its
+ * kind of page needs today, and give a new page a limit before it has a baseline of its own.
+ */
+const PAGE_TYPE_JS_BUDGET = {
+  marketing: 108 * 1024,
+  study: 108 * 1024,
+  account: 146 * 1024,
+  'games page': 152 * 1024,
+  // One game on its own page (2026-11-17, D-pending): /play/<game> used to be a share landing with no game, measured
+  // at 97 KiB. It now loads its game, so the type is re-measured: the heaviest (sudoku, 122,156 B) plus 10%.
+  'game page': 132 * 1024,
+  internal: 106 * 1024,
+} as const;
+
+type PageType = keyof typeof PAGE_TYPE_JS_BUDGET;
+
+/** Which budget a built page (path relative to dist/) falls under. */
+function pageType(page: string): PageType {
+  if (page === 'play.html') return 'games page';
+  if (page.startsWith('play/')) return 'game page';
+  if (page === 'learn.html' || page.startsWith('learn/')) return 'study';
+  if (page.startsWith('preview/') || page.startsWith('admin/')) return 'internal';
+  if (/^(?:signin|signup|reset-password|account|start|progress)\.html$/.test(page) || /^(?:account|auth)\//.test(page)) {
+    return 'account';
+  }
+  return 'marketing';
+}
+
+describe('page types', () => {
+  it('sorts pages into the types in docs/PERFORMANCE.md', () => {
+    expect(pageType('index.html')).toBe('marketing');
+    expect(pageType('privacy.html')).toBe('marketing');
+    expect(pageType('learn.html')).toBe('study');
+    expect(pageType('learn/study-skills/cards.html')).toBe('study');
+    expect(pageType('signup.html')).toBe('account');
+    expect(pageType('account/two-factor.html')).toBe('account');
+    expect(pageType('auth/callback.html')).toBe('account');
+    expect(pageType('play.html')).toBe('games page');
+    expect(pageType('play/pillo.html')).toBe('game page');
+    expect(pageType('preview/share.html')).toBe('internal');
+    expect(pageType('admin/flags.html')).toBe('internal');
+  });
+
+  it('keeps one game on its own page well under what /play needed with all four games on it', () => {
+    // Before the split /play loaded all four games: 152 KiB. A page with one game must stay clearly lighter than that.
+    expect(PAGE_TYPE_JS_BUDGET['game page']).toBeLessThan(152 * 1024);
+    expect(PAGE_TYPE_JS_BUDGET['games page']).toBeLessThanOrEqual(152 * 1024);
+  });
+
+  it('reports a page over its type budget, and passes one exactly at it', () => {
+    const f = fixture();
+    const js = randomBytes(4000).toString('base64');
+    f.file('play/pillo.html', '<script type="module" src="/_astro/big.js"></script>');
+    f.file('_astro/big.js', js);
+    const page = join(f.root, 'play/pillo.html');
+    const actual = initialJsGzipBytes(page, join(f.root, '/'));
+    // The script file, plus the scanner's count for the (empty) script element itself.
+    expect(actual).toBeGreaterThanOrEqual(gzipSync(js).length);
+    expect(typeBudgetBreaches([page], f.root, { 'game page': actual })).toEqual([]);
+    expect(typeBudgetBreaches([page], f.root, { 'game page': actual - 1 })).toEqual([
+      `play/pillo.html (game page): ${actual} gzip bytes is over ${actual - 1}`,
+    ]);
+  });
+});
+
+/** Pages over their type's JavaScript budget, as readable lines. */
+function typeBudgetBreaches(
+  pages: string[],
+  root: string,
+  budgets: Partial<Record<PageType, number>> = PAGE_TYPE_JS_BUDGET,
+): string[] {
+  return pages.flatMap((page) => {
+    const route = relative(root, page).replaceAll('\\', '/');
+    const type = pageType(route);
+    const budget = budgets[type];
+    if (budget === undefined) return [];
+    const actual = initialJsGzipBytes(page, join(root, '/'));
+    return actual > budget ? [`${route} (${type}): ${actual} gzip bytes is over ${budget}`] : [];
+  });
+}
+
+function builtPages(dir: string): string[] {
+  return readdirSync(dir).flatMap((name) => {
+    const p = join(dir, name);
+    if (statSync(p).isDirectory()) return builtPages(p);
+    return p.endsWith('.html') ? [p] : [];
+  });
+}
+
+describe.skipIf(!existsSync(dist))('built site: JavaScript per page type', () => {
+  it('every page stays within its page type budget (docs/PERFORMANCE.md)', () => {
+    // A build that shows drafts puts the anatomy lab itself on its preview page; build-output.test.ts gives that page
+    // its own drafts limit (D-pending, Task 178), so it is left to that check here.
+    const pages = builtPages(dist).filter((page) => !/component-url="[^"]*AnatomyLab\./.test(readFileSync(page, 'utf8')));
+    expect(pages.length).toBeGreaterThan(40);
+    expect(typeBudgetBreaches(pages, dist)).toEqual([]);
   });
 });

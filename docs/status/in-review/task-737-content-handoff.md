@@ -1,0 +1,1 @@
+status: Task 737, content handoff guide (#737): docs/CONTENT-HANDOFF.md gives each daily game's file format (from src/content.config.ts), says real puzzles stay in Christian's private store and never in the repository, how to check a folder, and how to see a sample on staging; sudoku needs no files.

@@ -12,6 +12,8 @@ test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
     try {
       localStorage.setItem('cueory-promo-seen', String(Date.now()));
+      // A returning player: each game's first-visit rules card (#736) is already put away. game-help.spec.ts covers it.
+      localStorage.setItem('cueory-game-help-seen', JSON.stringify(['pulse', 'triage', 'cueword', 'suture']));
     } catch {
       // Storage is blocked: the panel never shows then anyway.
     }
@@ -288,12 +290,12 @@ test.describe('daily games on a narrow phone', () => {
         .filter((box) => box.left < 0 || box.right > window.innerWidth).length,
     );
     expect(outside).toBe(0);
-    // The three logical QWERTY rows can wrap onto extra visual lines on narrow phones.
+    // The letter keys (a to z, like the crossword's) and the ⌫ / enter row wrap onto extra lines on narrow phones.
     // Check actual touch-target size and non-overlap, not horizontal center order.
     const rows = await page.locator('.pillo-key-row').evaluateAll((rowEls) =>
       rowEls.map((row) => [...row.querySelectorAll('.pillo-key')].map((el) => el.getBoundingClientRect())),
     );
-    expect(rows.length).toBe(3);
+    expect(rows.length).toBe(2);
     const keys = rows.flat();
     for (const key of keys) {
       expect(key.width).toBeGreaterThanOrEqual(44);
@@ -365,20 +367,16 @@ test.describe('daily games: sudoku (Task 625)', () => {
     await expect(grid(page).locator('[data-given="true"]')).toHaveCount(26);
   });
 
-  test('pause keeps original givens visible, conceals private entries and preserves theme settings', async ({ page }) => {
+  test('pause hides every number, givens too, conceals private entries and preserves theme settings', async ({ page }) => {
     const pause = game(page).getByRole('button', { name: 'pause puzzle' });
     await pause.click();
     const before = await game(page).locator('.sudoku-time').innerText();
     await expect(grid(page).locator('[data-given="true"]')).toHaveCount(40);
-    for (const [index, given] of daily.puzzle.entries()) {
+    for (const index of daily.puzzle.keys()) {
       const cell = cells(page).nth(index);
-      if (given) {
-        await expect(cell).toHaveText(String(given));
-        await expect(cell).toHaveAttribute('aria-label', new RegExp(`, ${given}, given$`));
-      } else {
-        await expect(cell).toBeEmpty();
-        await expect(cell).toHaveAttribute('aria-label', /hidden until resumed/);
-      }
+      await expect(cell).toBeEmpty();
+      await expect(cell).toHaveAttribute('aria-label', /, hidden until resumed$/);
+      await expect(cell.locator('.sudoku-paused-mark')).toHaveCount(1);
     }
     await expect(game(page).locator('.is-entered, .is-conflict, .is-identical, .sudoku-mark, .sudoku-candidates')).toHaveCount(0);
     await expect(game(page).locator('.sudoku-cell.is-selected, [role="gridcell"][aria-selected="true"]')).toHaveCount(0);
@@ -396,15 +394,15 @@ test.describe('daily games: sudoku (Task 625)', () => {
     await expect(close).toBeFocused();
     // Theme rows drive the site's own switch (no second theme system); gameboard settings persist on their own.
     await expect(dialog.getByRole('radio')).toHaveCount(3);
-    await dialog.getByRole('checkbox', { name: 'start in auto candidate mode' }).check();
+    await dialog.getByRole('checkbox', { name: 'start in auto cue mode' }).check();
     await page.keyboard.press('Escape');
     await expect(trigger).toBeFocused();
 
     await page.reload();
     await game(page).getByRole('button', { name: /settings/i }).click();
-    await expect(game(page).getByRole('dialog', { name: 'settings' }).getByRole('checkbox', { name: 'start in auto candidate mode' })).toBeChecked();
+    await expect(game(page).getByRole('dialog', { name: 'settings' }).getByRole('checkbox', { name: 'start in auto cue mode' })).toBeChecked();
     await page.keyboard.press('Escape');
-    const hints = game(page).getByRole('checkbox', { name: /auto candidates/i });
+    const hints = game(page).getByRole('checkbox', { name: /auto cues/i });
     await expect(hints).toHaveAttribute('aria-checked', 'true');
     await hints.click();
     await expect(hints).toHaveAttribute('aria-checked', 'false');

@@ -1,0 +1,1 @@
+status: Lane 6, footer and site menu at 320px with 32px text, Light and Evening: footer links and the contact email are now 44px tap targets (were 18px at normal text, 36px at 32px) and wrap inside the screen; the theme switch and menu already fit. New e2e.

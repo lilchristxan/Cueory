@@ -53,6 +53,23 @@
   .wordpath-cols-9 { --wordpath-columns: 9; }
   .wordpath-cols-10 { --wordpath-columns: 10; }
   .wordpath-cols-11 { --wordpath-columns: 11; }
+  /*
+    The 6 × 8 letter board (SuturePathBoard) is as wide as the column, so on a short screen (a phone turned sideways,
+    844 × 390) it grew far taller than the screen and a path could not be dragged from top to bottom without scrolling.
+    Its width is capped so all 8 rows fit the screen's height (squares: width = height × 6 / 8), never below 44px
+    squares. On a tablet or desktop the column is wide, so squares also stop at --wordpath-cell-max (72px) instead of
+    growing to almost 100px. --wordpath-board-edge is the board's own padding and border around the squares.
+  */
+  .wordpath[data-format="path"] .wordpath-board {
+    --wordpath-board-edge: calc(var(--spacing) * 6 + var(--border-board) * 2);
+    max-inline-size: min(
+      calc(var(--wordpath-cell-max) * 6 + var(--wordpath-board-edge)),
+      max(
+        calc(var(--tap-min) * 6 + var(--wordpath-board-edge)),
+        calc((100svh - var(--spacing) * 8 - var(--wordpath-board-edge)) * 6 / 8 + var(--wordpath-board-edge))
+      )
+    );
+  }
   .wordpath-row { display: grid; grid-template-columns: repeat(var(--wordpath-columns), minmax(var(--wordpath-cell-min), 1fr)); }
 }
 
@@ -67,8 +84,14 @@
     color: var(--print-ink) !important;
   }
 
+  /* The screen-only offsets that centre a bleeding board on narrow phones are dropped, so the printed board is centred
+     on the page with all four borders inside it, whatever width the browser lays the page out at. */
   .wordpath-board {
+    position: static !important;
+    inset: auto !important;
+    translate: none !important;
     inline-size: min(100%, var(--print-board)) !important;
+    max-inline-size: 100% !important;
     min-inline-size: 0 !important;
     margin: var(--print-gap) auto 0 !important;
     padding: 0 !important;
@@ -77,7 +100,7 @@
     break-inside: avoid;
   }
 
-  .wordpath-board-scroll { overflow: visible; }
+  .wordpath-board-scroll { overflow: visible; margin-inline: 0 !important; }
 
   /* Paper must fit the whole board even when the browser's root text is enlarged. */
   .wordpath-row { grid-template-columns: repeat(var(--wordpath-columns), minmax(0, 1fr)); }
@@ -139,6 +162,39 @@
     -webkit-user-select: none;
   }
 
+  /* The whole board takes every touch, gaps and edges included, so a drag never scrolls the page mid-word. */
+  .wordpath[data-format="path"] .wordpath-board {
+    touch-action: none;
+  }
+
+  /* Each letter's circle sits inside its square, so a straight line can join it to the next letter of a word. */
+  .wordpath-dot {
+    position: absolute;
+    inset: var(--wordpath-letter-inset);
+  }
+
+  /* The joining lines sit under the letters and never take a touch. */
+  .wordpath-lines {
+    position: absolute;
+    inset: 0;
+    overflow: visible;
+    pointer-events: none;
+  }
+
+  .wordpath-line {
+    stroke: var(--color-ink);
+    stroke-width: var(--wordpath-line);
+    stroke-linecap: round;
+  }
+
+  .wordpath-line-theme {
+    stroke: var(--color-ink-soft);
+  }
+
+  .wordpath-line-special {
+    stroke: var(--color-button);
+  }
+
   .wordpath-mark {
     position: absolute;
     inset-block-start: 12%;
@@ -162,7 +218,9 @@
 
 @media print {
   .wordpath-mark,
-  .wordpath-step {
+  .wordpath-step,
+  .wordpath-lines,
+  .wordpath-dot {
     display: none !important;
   }
 

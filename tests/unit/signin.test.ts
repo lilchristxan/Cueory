@@ -150,29 +150,55 @@ describe('auth request contracts', () => {
 
 describe('password recovery', () => {
   it('never calls updateUser without the authenticated handoff', async () => {
-    const auth = { updateUser: vi.fn() };
-    expect(await changePassword(auth, false, valid.password)).toEqual({ ok: false, message: signInMessage('recovery-required') });
+    const auth = { getSession: vi.fn().mockResolvedValue({ data: { session: { user: { id: 'fake-user-1' } } }, error: null }), updateUser: vi.fn() };
+    expect(await changePassword(auth, null, valid.password, () => true)).toEqual({ ok: false, message: signInMessage('recovery-required') });
     expect(auth.updateUser).not.toHaveBeenCalled();
-    expect((await changePassword(null, true, valid.password)).ok).toBe(false);
+    expect((await changePassword(null, 'fake-user-1', valid.password, () => true)).ok).toBe(false);
+  });
+  it.each(['fake-user-2', null])('refuses a changed or missing session (%s)', async userId => {
+    const auth = {
+      getSession: vi.fn(async () => ({ data: { session: userId ? { user: { id: userId } } : null }, error: null })),
+      updateUser: vi.fn(),
+    };
+    expect(await changePassword(auth, 'fake-user-1', valid.password, () => true))
+      .toEqual({ ok: false, message: signInMessage('recovery-changed') });
+    expect(auth.updateUser).not.toHaveBeenCalled();
+  });
+  it('refuses A -> B -> A while the session check is pending', async () => {
+    let current = true;
+    const auth = {
+      getSession: vi.fn(async () => {
+        current = false;
+        return { data: { session: { user: { id: 'fake-user-1' } } }, error: null };
+      }),
+      updateUser: vi.fn(),
+    };
+    expect((await changePassword(auth, 'fake-user-1', valid.password, () => current)).ok).toBe(false);
+    expect(auth.updateUser).not.toHaveBeenCalled();
+  });
+  it('fails closed when the session cannot be read', async () => {
+    const auth = { getSession: vi.fn().mockResolvedValue({ data: { session: null }, error: new Error('private') }), updateUser: vi.fn() };
+    expect((await changePassword(auth, 'fake-user-1', valid.password, () => true)).ok).toBe(false);
+    expect(auth.updateUser).not.toHaveBeenCalled();
   });
   it('rejects invalid passwords before calling the service', async () => {
-    const auth = { updateUser: vi.fn() };
-    expect((await changePassword(auth, true, 'x')).ok).toBe(false);
+    const auth = { getSession: vi.fn().mockResolvedValue({ data: { session: { user: { id: 'fake-user-1' } } }, error: null }), updateUser: vi.fn() };
+    expect((await changePassword(auth, 'fake-user-1', 'x', () => true)).ok).toBe(false);
     expect(auth.updateUser).not.toHaveBeenCalled();
   });
   it('updates the authenticated user without changing or retaining the password', async () => {
-    const auth = { updateUser: vi.fn().mockResolvedValue({ error: null }) };
+    const auth = { getSession: vi.fn().mockResolvedValue({ data: { session: { user: { id: 'fake-user-1' } } }, error: null }), updateUser: vi.fn().mockResolvedValue({ error: null }) };
     const password = ' ' + valid.password + ' ';
-    const result = await changePassword(auth, true, password);
+    const result = await changePassword(auth, 'fake-user-1', password, () => true);
     expect(auth.updateUser).toHaveBeenCalledExactlyOnceWith({ password });
     expect(result).toEqual({ ok: true, message: signInMessage('reset-done') });
     expect(JSON.stringify(result)).not.toContain(password);
   });
   it.each(['returned', 'thrown'])('handles %s failures without exposing service details', async kind => {
-    const auth = { updateUser: vi.fn() };
+    const auth = { getSession: vi.fn().mockResolvedValue({ data: { session: { user: { id: 'fake-user-1' } } }, error: null }), updateUser: vi.fn() };
     if (kind === 'thrown') auth.updateUser.mockRejectedValue(new Error('provider detail'));
     else auth.updateUser.mockResolvedValue({ error: { message: 'provider detail' } });
-    expect(await changePassword(auth, true, valid.password)).toEqual({ ok: false, message: signInMessage('reset-failed') });
+    expect(await changePassword(auth, 'fake-user-1', valid.password, () => true)).toEqual({ ok: false, message: signInMessage('reset-failed') });
   });
 });
 
@@ -219,7 +245,7 @@ describe('account screen rendering', () => {
     for (const method of Object.values(auth)) expect(method).not.toHaveBeenCalled();
   });
   it('renders no password field on recovery before the code is checked', () => {
-    const auth = { updateUser: vi.fn(), exchangeCodeForSession: vi.fn(), onAuthStateChange: vi.fn() };
+    const auth = { getSession: vi.fn().mockResolvedValue({ data: { session: { user: { id: 'fake-user-1' } } }, error: null }), updateUser: vi.fn(), exchangeCodeForSession: vi.fn(), onAuthStateChange: vi.fn() };
     const html = renderToStaticMarkup(createElement(ResetPassword, { auth }));
     expect(html).toContain('checking your reset link');
     expect(html).not.toContain('<input');

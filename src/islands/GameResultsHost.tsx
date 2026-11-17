@@ -164,7 +164,7 @@ export default function GameResultsHost() {
 
   return (
     <div
-      className="result-dialog-overlay fixed inset-0 z-50 flex items-center justify-center p-4"
+      className="result-dialog-overlay fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4"
       onMouseDown={(event) => { if (event.target === event.currentTarget) close(); }}
       data-testid="game-result-overlay"
     >
@@ -174,24 +174,24 @@ export default function GameResultsHost() {
         aria-modal="true"
         aria-labelledby="game-result-title"
         aria-describedby="game-result-summary"
-        className="max-h-full w-full max-w-lg overflow-y-auto rounded-xl border border-line bg-page p-6 text-ink shadow-card sm:p-8"
+        className="result-dialog max-h-full w-full max-w-lg overflow-y-auto rounded-xl border border-line bg-page p-4 text-ink shadow-card sm:p-8"
         data-testid="game-result-dialog"
         data-result-dialog
       >
-        <div className="flex items-start justify-between gap-4">
-          <p className="result-meta text-sm font-bold text-ink-soft">
-            {card.name}{card.level ? ` · ${card.level}` : ''} · {card.date}
-          </p>
-          <button
-            ref={closeButton}
-            type="button"
-            aria-label="close results"
-            onClick={close}
-            className="flex size-(--tap-min) shrink-0 items-center justify-center rounded-full border border-control bg-page text-ink"
-          >
-            <span aria-hidden="true">×</span>
-          </button>
-        </div>
+        {/* The close button floats at the top corner and stays there while the card scrolls (issue 743), so it is never
+            pushed off a narrow screen by large text or scrolled out of sight. The game and date wrap beside it. */}
+        <button
+          ref={closeButton}
+          type="button"
+          aria-label="close results"
+          onClick={close}
+          className="result-dialog-close flex size-(--tap-min) items-center justify-center rounded-full border border-control bg-page text-ink"
+        >
+          <span aria-hidden="true">×</span>
+        </button>
+        <p className="result-meta text-sm font-bold text-ink-soft wrap-break-word">
+          {card.name}{card.level ? ` · ${card.level}` : ''} · {card.date}
+        </p>
 
         <h2 id="game-result-title" className="display mt-3 text-title sm:text-title-lg" aria-live="polite">
           {card.result}

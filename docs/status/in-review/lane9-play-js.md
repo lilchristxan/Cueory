@@ -1,0 +1,1 @@
+status: Lane 9, /play JS (lane9/play-js): /register-sw.js, loaded on every page, is now minified at build with Vite's own minifier: 4,071 to 1,334 gzip bytes, so /play and every other page carry about 2.7 KB less JavaScript.

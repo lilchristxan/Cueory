@@ -144,3 +144,13 @@
     page-break-inside: avoid;
   }
 }
+
+/* The cueory logo at the top middle of a printed puzzle (src/islands/PrintLogo.tsx). */
+@media print {
+  .game-print-logo {
+    inline-size: auto !important;
+    block-size: var(--print-logo) !important;
+    max-inline-size: 100%;
+    margin: 0 auto var(--print-gap) !important;
+  }
+}

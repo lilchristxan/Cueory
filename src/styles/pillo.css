@@ -14,6 +14,13 @@
     --pillo-hatch-color: color-mix(in srgb, var(--color-pillo-hatch) var(--pillo-hatch-mix), transparent);
     --pillo-gloss-color: color-mix(in srgb, var(--color-pillo-gloss) var(--pillo-gloss-mix), transparent);
     --pillo-perforation: color-mix(in srgb, var(--color-pillo-hatch) 22%, transparent);
+    /*
+      The clear end of each gradient is the same color at zero opacity, never the "transparent" keyword (clear black):
+      Safari's full-page screenshots and PDF export blend toward that black, which drew a solid black triangle over the
+      board where the gloss fades out.
+    */
+    --pillo-gloss-clear: rgb(from var(--color-pillo-gloss) r g b / 0);
+    --pillo-hatch-clear: rgb(from var(--color-pillo-hatch) r g b / 0);
   }
 
   .pillo-top {
@@ -41,9 +48,9 @@
   .pillo-strip {
     background-color: var(--pillo-foil-color);
     background-image:
-      linear-gradient(135deg, var(--pillo-gloss-color), transparent 45%),
-      repeating-linear-gradient(45deg, var(--pillo-hatch-color) 0 var(--pillo-hatch-width), transparent var(--pillo-hatch-width) var(--pillo-hatch-gap)),
-      repeating-linear-gradient(-45deg, var(--pillo-hatch-color) 0 var(--pillo-hatch-width), transparent var(--pillo-hatch-width) var(--pillo-hatch-gap));
+      linear-gradient(135deg, var(--pillo-gloss-color), var(--pillo-gloss-clear) 45%),
+      repeating-linear-gradient(45deg, var(--pillo-hatch-color) 0 var(--pillo-hatch-width), var(--pillo-hatch-clear) var(--pillo-hatch-width) var(--pillo-hatch-gap)),
+      repeating-linear-gradient(-45deg, var(--pillo-hatch-color) 0 var(--pillo-hatch-width), var(--pillo-hatch-clear) var(--pillo-hatch-width) var(--pillo-hatch-gap));
   }
 
   .pillo-pack {
@@ -111,7 +118,7 @@
     position: absolute;
     inset: 0;
     border-radius: inherit;
-    background-image: radial-gradient(ellipse 30% 22% at 26% 24%, var(--pillo-gloss-color), transparent);
+    background-image: radial-gradient(ellipse 30% 22% at 26% 24%, var(--pillo-gloss-color), var(--pillo-gloss-clear));
     pointer-events: none;
   }
 
@@ -226,83 +233,50 @@
   }
 
   /*
-    The letter keys: capsules in three rows. Each shows the best mark its letter has had, as a color and its symbol.
-    On wide screens they share each row's width up to --pillo-key-max. On phones, keys
-    wrap into additional lines instead of shrinking below the 44 px touch target. Each key
-    remains at least 48 px tall and every letter stays visible without sideways page scrolling.
+    The letter keys look and lie out like the crossword's (Christian, 2026-11-17): plain squared keys a to z in rows
+    that wrap, each at least 44 × 44, with ⌫ and enter in the same style on their own row. Each key still shows the best
+    mark its letter has had, as a color and its symbol. Nothing is squeezed: at any width or text size the rows wrap.
   */
   .pillo-keys {
     display: flex;
     flex-direction: column;
-    gap: calc(var(--spacing) * 2);
-    max-inline-size: var(--pillo-board);
-    margin-inline: calc(var(--spacing) * -4);
+    align-items: center;
+    gap: calc(var(--spacing) * 3);
+    max-inline-size: var(--pillo-keys-width);
+    margin-inline: auto;
   }
 
+  /* On a tablet or desktop the game column is wider than the pack: the pack, its status line and the keys are centred
+     in it, like the other daily boards. */
   @media (width >= 40rem) {
+    .pillo-top,
+    .pillo-pack,
     .pillo-keys {
-      margin-inline: 0;
+      margin-inline: auto;
     }
   }
 
   .pillo-key-row {
     display: flex;
+    flex-wrap: wrap;
     justify-content: center;
-    gap: calc(var(--spacing) * 1);
+    gap: var(--spacing);
   }
 
   .pillo-key {
     position: relative;
     display: inline-flex;
-    flex: 1 1 0;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    min-inline-size: 0;
-    max-inline-size: var(--pillo-key-max);
-    min-block-size: var(--pillo-key);
-    border: var(--border-pillo-key) solid transparent;
-    border-radius: var(--radius-pill);
-    font-size: var(--text-sm);
-    font-weight: 700;
+    min-inline-size: var(--tap-min);
+    min-block-size: var(--tap-min);
+    padding-inline: calc(var(--spacing) * 3);
+    border: var(--border-pillo-key) solid var(--color-control);
+    border-radius: var(--radius-md);
     line-height: var(--text-sm--line-height);
-    color: var(--color-on-pillo-key);
-    background-color: color-mix(in srgb, var(--color-pillo-key) var(--pillo-key-mix), var(--pillo-foil-color));
-    box-shadow: var(--shadow-pillo-pill);
-    transition: transform var(--duration-fast) var(--ease-soft);
-  }
-
-  .pillo-key:active {
-    transform: translateY(var(--pillo-press-offset));
-  }
-
-  .pillo-key:focus-visible {
-    border-radius: var(--radius-pill);
-  }
-
-  /* ⌫ and enter grow like the letters but about one and a half times as wide, up to --pillo-key-wide, so on a 320 px
-     phone the bottom row's letters keep the same spacing as the other rows (WCAG 2.5.8). */
-  .pillo-key-wide {
-    flex: var(--pillo-key-wide-share) 1 0;
-    max-inline-size: var(--pillo-key-wide);
-  }
-
-  /* A ten-letter QWERTY row cannot fit ten 44 px tap targets on a phone.
-     Keep every letter accessible: let the existing rows wrap, without zooming
-     out, hiding keys, or causing horizontal page scroll. */
-  @media (width < 40rem) {
-    .pillo-key-row {
-      flex-wrap: wrap;
-    }
-
-    .pillo-key {
-      flex: 0 0 var(--pillo-key-max);
-      min-inline-size: var(--tap-min);
-    }
-
-    .pillo-key-wide {
-      flex-basis: var(--pillo-key-wide);
-    }
+    color: var(--color-ink);
+    background-color: var(--color-page);
   }
 
   .pillo-key.pillo-here {
@@ -335,6 +309,14 @@
     padding: calc(var(--spacing) * 5);
     border: var(--border-pillo-legend) solid var(--color-line);
     border-radius: var(--radius-lg);
+  }
+
+  /* In pillo's help (the ? dialog and the first-visit card) the legend sits in the same column as the steps. It lives
+     here, not in gamehelp.css, so other games' pages never load pillo selectors. */
+  .game-help .pillo-legend,
+  .game-help-first .pillo-legend {
+    max-inline-size: none;
+    margin-block-start: calc(var(--spacing) * 4);
   }
 
   .pillo-legend-row {
@@ -460,15 +442,23 @@
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .pillo-pill.pillo-typed,
-    .pillo-key {
+    .pillo-pill.pillo-typed {
       animation: none;
       transition: none;
-    }
-
-    .pillo-key:active {
-      transform: none;
     }
   }
 }
 
+/* On paper the foil keeps its plain grey and fine cross-hatch; the shine is a screen effect and is left out. */
+@media print {
+  .pillo-pack,
+  .pillo-strip {
+    background-image:
+      repeating-linear-gradient(45deg, var(--pillo-hatch-color) 0 var(--pillo-hatch-width), var(--pillo-hatch-clear) var(--pillo-hatch-width) var(--pillo-hatch-gap)),
+      repeating-linear-gradient(-45deg, var(--pillo-hatch-color) 0 var(--pillo-hatch-width), var(--pillo-hatch-clear) var(--pillo-hatch-width) var(--pillo-hatch-gap));
+  }
+
+  .pillo-pill::before {
+    display: none;
+  }
+}

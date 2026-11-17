@@ -16,7 +16,7 @@ const OTHER = '00000000-0000-4000-8000-0000000000bb';
 type Reply = { data?: unknown; error?: unknown };
 type Call =
   | { op: 'select'; columns: string; gt?: string; order?: unknown; limit?: number }
-  | { op: 'update'; values: Record<string, unknown>; eq: [string, string]; returning: string }
+  | { op: 'update'; values: Record<string, unknown>; match: { item_id: string; user_id: string }; returning: string }
   | { op: 'insert'; values: Record<string, unknown> };
 
 /** A fake of the few client calls reviewsync uses. Each reply comes from a script, in call order per kind. */
@@ -24,6 +24,12 @@ function fakeClient(script: { select?: Reply[]; update?: (Reply | Error)[]; inse
   const calls: Call[] = [];
   /** Who the browser's session says is signed in; tests change it to sign out or switch accounts. */
   const auth = { userId: OWNER as string | null, reads: 0 };
+  /** Sign-in listeners, as supabase-js keeps them; `emit` plays a sign-in change from another tab. */
+  const listeners = new Set<(event: string, session: { user?: { id?: unknown } | null } | null) => void>();
+  const emit = (userId: string | null) => {
+    auth.userId = userId;
+    for (const listener of [...listeners]) listener(userId ? 'SIGNED_IN' : 'SIGNED_OUT', userId ? { user: { id: userId } } : null);
+  };
   const next = <T>(list: T[] | undefined, fallback: T): T => (list && list.length ? list.shift()! : fallback);
   const settle = (reply: Reply | Error) => (reply instanceof Error ? Promise.reject(reply) : Promise.resolve(reply));
   const client: ReviewStateClient = {
@@ -31,6 +37,10 @@ function fakeClient(script: { select?: Reply[]; update?: (Reply | Error)[]; inse
       async getSession() {
         auth.reads += 1;
         return { data: { session: auth.userId ? { user: { id: auth.userId, email: '' } } : null }, error: null };
+      },
+      onAuthStateChange(callback) {
+        listeners.add(callback);
+        return { data: { subscription: { unsubscribe: () => { listeners.delete(callback); } } } };
       },
     },
     from(table) {
@@ -48,11 +58,11 @@ function fakeClient(script: { select?: Reply[]; update?: (Reply | Error)[]; inse
         },
         update(values) {
           return {
-            eq(column, value) {
+            match(filter) {
               return {
                 select(returning) {
-                  calls.push({ op: 'update', values: { ...values }, eq: [column, value], returning });
-                  return settle(next(script.update, { data: [{ item_id: value }], error: null }));
+                  calls.push({ op: 'update', values: { ...values }, match: { ...filter }, returning });
+                  return settle(next(script.update, { data: [{ item_id: filter.item_id }], error: null }));
                 },
               };
             },
@@ -65,7 +75,7 @@ function fakeClient(script: { select?: Reply[]; update?: (Reply | Error)[]; inse
       };
     },
   };
-  return { client, calls, auth };
+  return { client, calls, auth, emit, listeners };
 }
 
 const row = (item_id: string, level: 0 | 1 | 2 | 3 = 1, last_reviewed = '2026-11-01', next_review = '2026-11-04'): ReviewStateRow =>
@@ -172,7 +182,7 @@ describe('createReviewSync writes', () => {
     const { client, calls } = fakeClient();
     const sync = createReviewSync(client, OWNER);
     expect(await sync.record(A, [{ day: today, result: 'knew' }], today)).toEqual({ ok: true });
-    expect(calls).toEqual([{ op: 'update', values: { level: 1, last_reviewed: today, next_review: '2026-11-05' }, eq: ['item_id', A], returning: 'item_id' }]);
+    expect(calls).toEqual([{ op: 'update', values: { level: 1, last_reviewed: today, next_review: '2026-11-05' }, match: { item_id: A, user_id: OWNER }, returning: 'item_id' }]);
     expect(Object.keys((calls[0] as Extract<Call, { op: 'update' }>).values).sort()).toEqual(['last_reviewed', 'level', 'next_review']);
   });
 
@@ -201,7 +211,7 @@ describe('createReviewSync writes', () => {
     const first = sync.record(A, [{ day: today, result: 'knew' }], today);
     const second = sync.record(B, [{ day: today, result: 'missed' }], today);
     expect(await Promise.all([first, second])).toEqual([{ ok: true }, { ok: true }]);
-    expect(calls.map((call) => (call as Extract<Call, { op: 'update' }>).eq[1])).toEqual([A, B]);
+    expect(calls.map((call) => (call as Extract<Call, { op: 'update' }>).match.item_id)).toEqual([A, B]);
   });
 
   it('works with the session it is wired into', async () => {
@@ -252,7 +262,7 @@ describe('createReviewSync failures', () => {
     expect(await sync.record(A, [{ day: today, result: 'knew' }], today)).toEqual({ ok: false, message: MESSAGES.unavailable, failed: [A] });
     // B comes after the refused A in the waiting list and is still saved.
     expect(await sync.record(B, [{ day: today, result: 'missed' }], today)).toEqual({ ok: false, message: MESSAGES.unavailable, failed: [A] });
-    const writes = calls.map((call) => `${call.op} ${call.op === 'update' ? call.eq[1] : (call as Extract<Call, { op: 'insert' }>).values.item_id}`);
+    const writes = calls.map((call) => `${call.op} ${call.op === 'update' ? call.match.item_id : (call as Extract<Call, { op: 'insert' }>).values.item_id}`);
     expect(writes).toEqual([`update ${A}`, `insert ${A}`, `update ${A}`, `insert ${A}`, `update ${B}`]);
     // A is kept for a retry; B, saved, is not sent again.
     expect(await sync.retry()).toEqual({ ok: false, message: MESSAGES.unavailable, failed: [A] });
@@ -272,7 +282,7 @@ describe('createReviewSync failures', () => {
     expect(await sync.record(B, [{ day: today, result: 'knew' }], today)).toEqual({ ok: false, message: MESSAGES.connection, failed: [A, B] });
     // Back online: the next step sends every waiting row, oldest first, then the new one.
     expect(await sync.record(C, [{ day: today, result: 'knew' }], today)).toEqual({ ok: true });
-    expect(calls.filter((call) => call.op === 'update').map((call) => (call as Extract<Call, { op: 'update' }>).eq[1]))
+    expect(calls.filter((call) => call.op === 'update').map((call) => (call as Extract<Call, { op: 'update' }>).match.item_id))
       .toEqual([A, A, B, A, B, C]);
   });
 
@@ -368,10 +378,10 @@ describe('a sync belongs to one account (Task 302)', () => {
         ...chain,
         update(values) {
           return {
-            eq(column, value) {
+            match(filter) {
               return {
                 select(returning) {
-                  calls.push({ op: 'update', values: { ...values }, eq: [column, value], returning });
+                  calls.push({ op: 'update', values: { ...values }, match: { ...filter }, returning });
                   if (!switched) { switched = true; auth.userId = OTHER; }
                   return Promise.resolve(noRow);
                 },
@@ -415,5 +425,125 @@ describe('a sync belongs to one account (Task 302)', () => {
     auth.userId = OTHER;
     expect(await started.sync.record(A, [{ day: today, result: 'knew' }], today)).toEqual({ ok: false, message: MESSAGES.signedOut });
     expect(calls.filter((call) => call.op !== 'select')).toEqual([]);
+  });
+});
+
+describe('a sync stays bound to its owner through A→B→A (audit #741 P2)', () => {
+  const knew = [{ day: today, result: 'knew' as const }];
+
+  it('every update names the owner as well as the question', async () => {
+    const { client, calls } = fakeClient();
+    await createReviewSync(client, OWNER).record(A, knew, today);
+    expect(calls[0]).toMatchObject({ op: 'update', match: { item_id: A, user_id: OWNER } });
+  });
+
+  it('A→B→A between two saves: the session check says A again, but nothing more is sent', async () => {
+    const { client, calls, emit } = fakeClient({ update: [new TypeError('Failed to fetch')] });
+    const sync = createReviewSync(client, OWNER);
+    expect((await sync.record(A, knew, today)).ok).toBe(false);
+    emit(OTHER);
+    emit(OWNER);
+    expect(await sync.retry()).toEqual({ ok: false, message: MESSAGES.signedOut });
+    expect(await sync.record(B, knew, today)).toEqual({ ok: false, message: MESSAGES.signedOut });
+    expect(calls).toHaveLength(1);
+  });
+
+  it('A→B→A between the update and the insert: the insert is never sent', async () => {
+    const { client, calls, emit } = fakeClient({ update: [{ data: [], error: null }] });
+    const original = client.from.bind(client);
+    let once = false;
+    client.from = (table) => {
+      const chain = original(table);
+      return {
+        ...chain,
+        update(values) {
+          const inner = chain.update(values);
+          return {
+            match(filter) {
+              const sent = inner.match(filter).select('item_id');
+              if (!once) { once = true; emit(OTHER); emit(OWNER); }
+              return { select: () => sent };
+            },
+          };
+        },
+      };
+    };
+    expect(await createReviewSync(client, OWNER).record(A, knew, today)).toEqual({ ok: false, message: MESSAGES.signedOut });
+    expect(calls.map((call) => call.op)).toEqual(['update']);
+  });
+
+  it('a sign-in event for the same account (a token refresh) changes nothing', async () => {
+    const { client, calls, emit } = fakeClient();
+    const sync = createReviewSync(client, OWNER);
+    emit(OWNER);
+    expect(await sync.record(A, knew, today)).toEqual({ ok: true });
+    expect(calls).toHaveLength(1);
+  });
+
+  it('A→B→A while the rows load fails the load, even though every session check says A', async () => {
+    const page = Array.from({ length: PAGE_SIZE }, (_, i) => row(`550e8400-e29b-41d4-a716-${String(i).padStart(12, '0')}`));
+    const { client, calls, emit } = fakeClient({ select: [{ data: page, error: null }, { data: [row(A)], error: null }] });
+    const original = client.from.bind(client);
+    let pages = 0;
+    client.from = (table) => {
+      pages += 1;
+      // Between the first and second page another tab signs in as B and back as A.
+      if (pages === 2) { emit(OTHER); emit(OWNER); }
+      return original(table);
+    };
+    expect(await startReviewSync(client, { signedIn: true, userId: OWNER, email: '' }))
+      .toEqual({ mode: 'device', message: MESSAGES.signedOut });
+    expect(calls.filter((call) => call.op !== 'select')).toEqual([]);
+  });
+
+  it('loadReviewState with an owner check stops before reading a page once the owner is gone', async () => {
+    const { client, calls } = fakeClient({ select: [{ data: [row(A)], error: null }] });
+    expect(await loadReviewState(client, async () => false)).toEqual({ ok: false, message: MESSAGES.load });
+    expect(calls).toEqual([]);
+  });
+
+  it('the load checks the owner once more after the last page', async () => {
+    const { client } = fakeClient({ select: [{ data: [row(A)], error: null }] });
+    let checks = 0;
+    // True for the two pages, false at the end: the rows read can't be trusted as the owner's.
+    expect(await loadReviewState(client, async () => ++checks < 3)).toEqual({ ok: false, message: MESSAGES.load });
+    expect(checks).toBe(3);
+  });
+
+  it('the watch from the load carries into the sync: a change after loading drops later saves', async () => {
+    const { client, calls, emit } = fakeClient();
+    const started = await startReviewSync(client, { signedIn: true, userId: OWNER, email: '' });
+    expect(started.mode).toBe('account');
+    if (started.mode !== 'account') return;
+    emit(OTHER);
+    emit(OWNER);
+    expect(await started.sync.record(A, knew, today)).toEqual({ ok: false, message: MESSAGES.signedOut });
+    expect(calls.filter((call) => call.op !== 'select')).toEqual([]);
+  });
+
+  it('close() stops listening and sends nothing more', async () => {
+    const { client, calls, listeners } = fakeClient();
+    const sync = createReviewSync(client, OWNER);
+    expect(listeners.size).toBe(1);
+    sync.close?.();
+    expect(listeners.size).toBe(0);
+    expect(await sync.record(A, knew, today)).toEqual({ ok: false, message: MESSAGES.signedOut });
+    expect(calls).toEqual([]);
+  });
+
+  it('a failed load stops listening', async () => {
+    const { client, listeners } = fakeClient({ select: [{ data: null, error: { code: '500' } }] });
+    await startReviewSync(client, { signedIn: true, userId: OWNER, email: '' });
+    expect(listeners.size).toBe(0);
+  });
+
+  it('works with a client that has no sign-in listener: the session check still guards', async () => {
+    const { client, calls, auth } = fakeClient({ update: [new TypeError('Failed to fetch')] });
+    delete (client.auth as { onAuthStateChange?: unknown }).onAuthStateChange;
+    const sync = createReviewSync(client, OWNER);
+    expect((await sync.record(A, knew, today)).ok).toBe(false);
+    auth.userId = OTHER;
+    expect(await sync.retry()).toEqual({ ok: false, message: MESSAGES.signedOut });
+    expect(calls).toHaveLength(1);
   });
 });
