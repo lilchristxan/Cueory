@@ -88,12 +88,17 @@ describe('plain platform share pages', () => {
 
 describe('shared result dialog placement and touch targets', () => {
   it('mounts result hosts outside filtered veil articles', () => {
-    const play = readFileSync(new URL('../../src/pages/play.astro', import.meta.url), 'utf8');
+    // The daily games' own pages share GamePage.astro, which each page wraps in Layout (2026-11-17).
+    const game = readFileSync(new URL('../../src/components/GamePage.astro', import.meta.url), 'utf8');
     const hello = readFileSync(new URL('../../src/pages/play/hello-cards.astro', import.meta.url), 'utf8');
-    for (const source of [play, hello]) {
-      expect(source.lastIndexOf('<GameResultsHost')).toBeGreaterThan(source.lastIndexOf('</article>'));
-      expect(source.lastIndexOf('<GameResultsHost')).toBeLessThan(source.lastIndexOf('</Layout>'));
+    expect(game.lastIndexOf('<GameResultsHost')).toBeGreaterThan(game.lastIndexOf('</article>'));
+    for (const page of ['pillo', 'sudoku', 'crossword', 'word-path']) {
+      const source = readFileSync(new URL(`../../src/pages/play/${page}.astro`, import.meta.url), 'utf8');
+      expect(source.indexOf('<GamePage'), page).toBeGreaterThan(source.indexOf('<Layout'));
+      expect(source.lastIndexOf('</GamePage>'), page).toBeLessThan(source.lastIndexOf('</Layout>'));
     }
+    expect(hello.lastIndexOf('<GameResultsHost')).toBeGreaterThan(hello.lastIndexOf('</article>'));
+    expect(hello.lastIndexOf('<GameResultsHost')).toBeLessThan(hello.lastIndexOf('</Layout>'));
     expect(hello).toContain('{shown && <GameResultsHost client:only="react" />}');
   });
 
@@ -118,11 +123,10 @@ describe('shared result dialog design tokens', () => {
 
   it('uses small caps without text-transforming source content', () => {
     const host = readFileSync(new URL('../../src/islands/GameResultsHost.tsx', import.meta.url), 'utf8');
-    const landing = readFileSync(new URL('../../src/components/GameShareLanding.astro', import.meta.url), 'utf8');
+    // The share landing pages that also used result-meta became the games' own pages (2026-11-17) and were removed.
     const styles = readFileSync(new URL('../../src/styles/global.css', import.meta.url), 'utf8');
     expect(host).toContain('result-meta');
-    expect(landing).toContain('result-meta');
-    expect(host + landing).not.toContain('uppercase');
+    expect(host).not.toContain('uppercase');
     expect(styles).toContain('font-variant-caps: all-small-caps');
     expect(styles).not.toMatch(/\.result-meta[^}]*text-transform/s);
   });

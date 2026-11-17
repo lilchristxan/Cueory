@@ -15,15 +15,20 @@ test.beforeEach(async ({ page }) => {
 const mark = (page: Page) => page.getByTestId('result-brand-mark');
 
 test('no game result mark appears while a student is answering', async ({ page }) => {
-  await page.goto('/play');
+  // Each game is on its own page (2026-11-17).
+  await page.goto('/play/pillo');
   await expect(page.getByTestId('pulse')).toBeVisible();
   await expect(mark(page)).toHaveCount(0);
+  await page.goto('/play/crossword');
   await expect(page.getByRole('grid', { name: 'crossword grid' })).toBeVisible();
+  await expect(mark(page)).toHaveCount(0);
+  await page.goto('/play/sudoku');
   await expect(page.getByTestId('sudoku')).toBeVisible();
+  await expect(mark(page)).toHaveCount(0);
 });
 
 test('pillo completion adds the unobtrusive original-art mark inside the result only', async ({ page }) => {
-  await page.goto('/play');
+  await page.goto('/play/pillo');
   await page.getByTestId('pulse').getByLabel('your guess', { exact: true }).fill('grace');
   await page.getByTestId('pulse').getByRole('button', { name: 'enter', exact: true }).click();
   const resultDialog = page.getByTestId('game-result-dialog');
@@ -41,7 +46,7 @@ test('pillo completion adds the unobtrusive original-art mark inside the result 
 
 
 test('crossword completion adds the mark to its finished card, not the clues', async ({ page }) => {
-  await page.goto('/play');
+  await page.goto('/play/crossword');
   // The crossword has no clue buttons any more: each square is a button named by its row and column (Task 627).
   // Same easy November sample as play.spec.ts.
   const board = page.getByTestId('cueword');

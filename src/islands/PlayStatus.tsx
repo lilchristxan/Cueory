@@ -9,8 +9,10 @@ const SUDOKU_SOLVED_EVENT = 'cueory:sudoku-solved';
 interface Row {
   id: GameId;
   name: string;
-  /** The id of the game's heading on this page, so each row jumps to its game. */
-  anchor: string;
+  /** The game's one-line description. */
+  line: string;
+  /** The game's own page (each game on its own page, 2026-11-17). */
+  href: string;
 }
 
 interface Props {
@@ -21,8 +23,9 @@ interface Props {
 const readStats = (): SavedStats => loadStats(browserStorage(), localDay(new Date()));
 
 /**
- * Today's status for each daily game (issue #735), from this device only; the logic is in ./playstatus. Rendered only
- * in the browser (client:only), so without JavaScript nothing shows, and nothing can be wrong.
+ * The /play hub's game cards: each game's name, its one-line description and today's status (issue #735), from this
+ * device only; the logic is in ./playstatus. Each card opens the game's own page. Rendered only in the browser
+ * (client:only); without JavaScript the hub shows plain links instead, with no status, so none can be wrong.
  */
 export default function PlayStatus({ games }: Props) {
   const ids = games.map((game) => game.id);
@@ -73,18 +76,19 @@ export default function PlayStatus({ games }: Props) {
   return (
     <section className="mt-8" aria-labelledby="today-status-heading" data-testid="play-status">
       <h2 id="today-status-heading" className="text-lg font-medium">today</h2>
-      <ul className="mt-2 flex flex-col">
+      <ul className="mt-4 grid gap-4 sm:grid-cols-2">
         {games.map((game) => {
           const status = statusFor(game.id, today, saved.stats, heard);
           const text = STATUS_TEXT[status];
           return (
             <li key={game.id} data-testid={`play-status-${game.id}`} data-status={status}>
               <a
-                href={`#${game.anchor}`}
-                className="flex min-h-11 flex-wrap items-center justify-between gap-x-4 border-b border-line py-2 text-ink no-underline"
+                href={game.href}
+                className="flex h-full min-h-11 flex-col gap-2 rounded-lg border border-line bg-page p-4 text-ink no-underline hover:bg-surface"
               >
-                <span className="font-medium">{game.name}</span>
-                <span className="inline-flex items-center gap-2 text-ink-soft">
+                <span className="text-lg font-medium">{game.name}</span>
+                <span className="text-sm text-ink-soft">{game.line}</span>
+                <span className="mt-auto inline-flex items-center gap-2 text-sm text-ink-soft">
                   <span aria-hidden="true">{text.symbol}</span>
                   <span>{text.label}</span>
                 </span>

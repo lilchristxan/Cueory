@@ -52,9 +52,13 @@ test('the registration is an external file, never an inline script', async ({ pa
   expect(await file.text()).toContain('/sw.js');
 });
 
-test('the play page is never kept, because today\'s puzzles are inside it', async ({ page }) => {
+test('the play pages are never kept, because today\'s puzzles are inside them', async ({ page }) => {
   await visitLesson(page);
   await page.goto('/play');
+  await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+  await page.reload();
+  // Each game on its own page (2026-11-17): a game page is not kept either.
+  await page.goto('/play/pillo');
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
   await page.reload();
   await page.waitForTimeout(500);

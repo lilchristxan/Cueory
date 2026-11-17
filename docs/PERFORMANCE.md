@@ -74,15 +74,15 @@ and theme scripts. What a page adds on top of that floor:
 | Marketing (home, about, legal, support, 404, …) | 13 | 87.8 KiB | 97.3 KiB | `index.html` |
 | Study screens (`learn`, `learn/*`) | 12 | 87.8 KiB | 97.4 KiB | `learn/study-skills/cards.html` |
 | Account (sign-in, sign-up, account, start, progress) | 8 | 92.2 KiB | 131.9 KiB | `account.html` |
-| Games page (`play`) | 1 | 137.9 KiB | 137.9 KiB | `play.html` |
+| Games hub (`play`) | 1 | 102.1 KiB | 102.1 KiB | `play.html` (no game loads here since 2026-11-17) |
 | Single game pages (`play/*`) | 6 | 89.3 KiB | 119.3 KiB | `play/sudoku.html` (each game on its own page, 2026-11-17) |
 | Internal previews and admin (`preview/*`, `admin/*`) | 13 | 87.8 KiB | 95.8 KiB | `preview/admin-flags.html` |
 
 The anatomy lab's preview page is left out of the internal row: on a build that shows drafts it carries the lab
 itself and has its own limit in `tests/unit/build-output.test.ts`.
 
-`/play` is the heaviest page: the four games' islands (word path 8.9, crossword 8.6, sudoku 5.9, pillo 3.9 KiB), the
-shared results code (5.8 KiB) and the settings, stats and share islands sit on top of the floor.
+Since 2026-11-17 each game is on its own page, so a page loads one game's island on top of the floor (plus the
+settings, stats and results islands); the `/play` hub loads none, and its budget was lowered to match.
 
 ### Budget per page type
 
@@ -100,7 +100,7 @@ keeps its own per-route budget in `tests/unit/build-output.test.ts` (10% over it
 | Marketing | 108 KiB |
 | Study screens | 108 KiB |
 | Account | 146 KiB |
-| Games page (`/play`) | 152 KiB |
+| Games hub (`/play`) | 113 KiB |
 | Single game pages | 132 KiB |
 | Internal previews and admin | 106 KiB |
 

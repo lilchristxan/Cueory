@@ -27,7 +27,7 @@ test.beforeEach(async ({ page }) => {
     try { localStorage.setItem('cueory-promo-seen', String(Date.now())); } catch { /* storage blocked: no panel */ }
   });
   await page.clock.setFixedTime(new Date('2026-11-06T15:00:00'));
-  await page.goto('/play');
+  await page.goto('/play/word-path');
   await expect(game(page)).toBeVisible();
 });
 
@@ -146,13 +146,13 @@ test.describe('word path: themed word search, the older format (Task 97)', () =>
       };
     });
     const shakes = () => page.evaluate(() => (window as unknown as { shakes?: number }).shakes ?? 0);
-    await page.goto('/play');
+    await page.goto('/play/word-path');
     await cell(page, [0, 0]).click();
     await cell(page, [0, 2]).click();
     await expect(live(page)).toHaveText('not a word in this puzzle.');
     expect(await shakes()).toBe(1);
     await page.emulateMedia({ reducedMotion: 'reduce' });
-    await page.goto('/play');
+    await page.goto('/play/word-path');
     await cell(page, [0, 0]).click();
     await cell(page, [0, 2]).click();
     await expect(live(page)).toHaveText('not a word in this puzzle.');
@@ -173,7 +173,7 @@ test.describe('word path: themed word search, the older format (Task 97)', () =>
     await page.setViewportSize({ width: 320, height: 700 });
     for (const day of ['2026-11-01', '2026-11-02', '2026-11-03', '2026-11-04', '2026-11-05', '2026-11-06']) {
       await page.clock.setFixedTime(new Date(`${day}T15:00:00`));
-      await page.goto('/play');
+      await page.goto('/play/word-path');
       await expect(game(page)).toBeVisible();
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
       const boxes = await game(page).getByRole('button').evaluateAll((els) =>

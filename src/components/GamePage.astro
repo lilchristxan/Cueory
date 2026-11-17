@@ -29,6 +29,8 @@ const { game } = Astro.props;
       <GameSettings client:only="react" title="game settings" label="game settings" />
     </div>
     <noscript><p class="mt-4 text-center">game settings need JavaScript.</p></noscript>
+    {/* The game's own headings start at level 3, so the page keeps a level 2 between them and the title. */}
+    <h2 class="sr-only">today's puzzle</h2>
     <slot />
     {/* Private stats (D-76) for this game only: off until the student turns them on, kept only in this browser. */}
     <GameStatsPanel client:only="react" games={[game.id]} />
