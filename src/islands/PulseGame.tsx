@@ -121,6 +121,7 @@ export default function PulseGame({ puzzles }: Props) {
   const [copied, setCopied] = useState('');
   const [contrast, setContrast] = useState(false);
   const [keysOnly, setKeysOnly] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [finish, setFinish] = useState<FinishStats>({ on: false });
   const [wait, setWait] = useState('');
   const result = useRef<HTMLDivElement>(null);
@@ -436,32 +437,44 @@ export default function PulseGame({ puzzles }: Props) {
         </div>
       )}
 
-      <details className="pillo-settings mt-8" data-testid="pulse-settings">
+      {/*
+        The switches render only while the disclosure is open. Chromium hides a closed <details> body with
+        content-visibility, which keeps its buttons laid out and "visible" but out of the Tab order.
+      */}
+      <details
+        className="pillo-settings mt-8"
+        data-testid="pulse-settings"
+        onToggle={(event) => setSettingsOpen(event.currentTarget.open)}
+      >
         <summary className="pillo-settings-summary">pillo settings</summary>
-        <ul className="mt-3 flex flex-col gap-3">
-          <Setting
-            label="hard mode"
-            on={Boolean(state.hard)}
-            disabled={hardLocked}
-            onChange={() => setState((now) => setHardMode(now, !now.hard))}
-            note={
-              hardLocked
-                ? 'hard mode can change only before your first guess of the day.'
-                : 'letters shown in place or in the word must be used in every later guess.'
-            }
-          />
-          <Setting label="high contrast" on={contrast} onChange={() => setContrast((on) => !on)} note="bolder edges and larger marks." />
-          <Setting
-            label="on-screen keyboard only"
-            on={keysOnly}
-            onChange={() => {
-              setKeysOnly((on) => !on);
-              setProblem('');
-            }}
-            note="only the letter keys below type, so your device keyboard stays closed."
-          />
-        </ul>
-        <p className="mt-3 text-sm text-ink-soft">settings last for this visit. light or evening is in the footer.</p>
+        {settingsOpen && (
+          <>
+            <ul className="mt-3 flex flex-col gap-3">
+              <Setting
+                label="hard mode"
+                on={Boolean(state.hard)}
+                disabled={hardLocked}
+                onChange={() => setState((now) => setHardMode(now, !now.hard))}
+                note={
+                  hardLocked
+                    ? 'hard mode can change only before your first guess of the day.'
+                    : 'letters shown in place or in the word must be used in every later guess.'
+                }
+              />
+              <Setting label="high contrast" on={contrast} onChange={() => setContrast((on) => !on)} note="bolder edges and larger marks." />
+              <Setting
+                label="on-screen keyboard only"
+                on={keysOnly}
+                onChange={() => {
+                  setKeysOnly((on) => !on);
+                  setProblem('');
+                }}
+                note="only the letter keys below type, so your device keyboard stays closed."
+              />
+            </ul>
+            <p className="mt-3 text-sm text-ink-soft">settings last for this visit. light or evening is in the footer.</p>
+          </>
+        )}
       </details>
 
       <section className="pillo-legend mt-8" aria-labelledby="pillo-how">
