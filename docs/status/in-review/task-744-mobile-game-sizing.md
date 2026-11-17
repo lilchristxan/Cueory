@@ -1,0 +1,1 @@
+status: Task 744, mobile Word Path and Sudoku sizing (#744): keeps 44 px game controls usable at 320 px with enlarged text, contains boards in their own scroll regions, and preserves printable Word Path grids.

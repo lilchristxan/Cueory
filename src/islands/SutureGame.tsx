@@ -1,5 +1,5 @@
 import '../styles/wordpath.css';
-import { useEffect, useId, useRef, useState, type CSSProperties, type KeyboardEvent, type PointerEvent } from 'react';
+import { useEffect, useId, useRef, useState, type KeyboardEvent, type PointerEvent } from 'react';
 import { dayLabel } from './daily';
 import { localDay, reportRound } from './gameresults';
 import { printGame } from './gameprint';
@@ -9,6 +9,12 @@ import { cellLabel, clearPick, foundWord, isDone, moveCursor, outcomeInWords, pa
 interface Props { puzzle: SuturePuzzle; name: string }
 const printFoot = new URL(site.url).host;
 const button = 'min-h-11 min-w-11 rounded-md border border-control bg-page px-4 py-2 text-ink disabled:opacity-50';
+// These static classes keep the grid width CSP-safe: style-src permits no inline styles.
+const columnClass: Record<number, string> = {
+  3: 'wordpath-cols-3', 4: 'wordpath-cols-4', 5: 'wordpath-cols-5',
+  6: 'wordpath-cols-6', 7: 'wordpath-cols-7', 8: 'wordpath-cols-8',
+  9: 'wordpath-cols-9', 10: 'wordpath-cols-10', 11: 'wordpath-cols-11',
+};
 /**
  * A gentle sideways shake for a wrong pick, through the Web Animations API, so no stylesheet is injected (the CSP allows
  * none) and the distance and timing come from the design tokens. Nothing moves when the device asks for reduced motion.
@@ -155,8 +161,7 @@ function Board({ puzzle, name }: Props) {
           aria-describedby={help}
           aria-rowcount={puzzle.grid.length}
           aria-colcount={width}
-          style={{ '--wordpath-columns': width } as CSSProperties}
-          className="wordpath-board flex flex-col border-(length:--border-board) border-ink bg-page text-ink sm:p-3"
+          className={`wordpath-board ${columnClass[width]} flex flex-col border-(length:--border-board) border-ink bg-page text-ink sm:p-3`}
         >
           {puzzle.grid.map((row, r) => (
           <div key={r} role="row" aria-rowindex={r + 1} className="wordpath-row">

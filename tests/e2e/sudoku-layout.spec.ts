@@ -116,4 +116,12 @@ test('sudoku keeps usable cells in a contained scroll area at 320px with 32px ro
   await last.scrollIntoViewIfNeeded();
   await expect(last).toBeInViewport({ ratio: 1 });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
+
+  // Keyboard travel keeps the roving focused cell visible within the same region.
+  const firstCell = board.getByRole('gridcell').first();
+  await firstCell.focus();
+  for (let i = 0; i < 8; i++) await page.keyboard.press('ArrowRight');
+  await expect(board.getByRole('gridcell').nth(8)).toBeFocused();
+  await expect(board.getByRole('gridcell').nth(8)).toBeInViewport({ ratio: 1 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
 });

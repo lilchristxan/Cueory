@@ -49,6 +49,9 @@ test.describe('word path: themed word search (Task 97)', () => {
       expect(box?.height).toBeGreaterThanOrEqual(44);
       expect(await button.evaluate((element) => element.scrollWidth <= element.clientWidth && element.scrollHeight <= element.clientHeight)).toBe(true);
     }
+    await cells.last().scrollIntoViewIfNeeded();
+    await expect(cells.last()).toBeInViewport({ ratio: 1 });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
   });
 
   test('the theme is the title, with the word list, the count and the sample label', async ({ page }) => {

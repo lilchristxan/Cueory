@@ -54,6 +54,8 @@ test.describe('word path: print for a patient (Task 641)', () => {
   });
 
   test('on paper: only the grid, the words to find and cueory.app, with nothing found shown', async ({ page }) => {
+    // Print must still fit its paper-width grid if a reader has enlarged root text.
+    await page.evaluate(() => document.documentElement.style.setProperty('font-size', '32px', 'important'));
     // Find one word first, so the printed copy has to hide it.
     const first = sample.words[0]!;
     await cell(page, first.path[0]!).click();
@@ -95,6 +97,8 @@ test.describe('word path: print for a patient (Task 641)', () => {
     // The grid fits the width of a letter or A4 page inside its margins (16 cm, about 605 px at 96 per inch).
     const board = (await game(page).getByRole('grid').boundingBox())!;
     expect(board.width).toBeLessThanOrEqual(606);
+    const finalCell = (await game(page).getByRole('row').first().getByRole('gridcell').last().boundingBox())!;
+    expect(finalCell.x + finalCell.width).toBeLessThanOrEqual(board.x + board.width + 0.5);
   });
 
   test('a plain print without the button still prints the game clean', async ({ page }) => {
