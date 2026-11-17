@@ -11,12 +11,14 @@ import type { FlagArgs } from '../../src/islands/flagsubmit';
 const id = '11111111-1111-4111-8111-111111111111';
 const itemId = '22222222-2222-4222-8222-222222222222';
 const versionId = '33333333-3333-4333-8333-333333333333';
+/** The account the form shows as signed in. */
+const shown = '44444444-4444-4444-8444-444444444444';
 const good: FlagReport = { page: '/learn/study-skills', reason: 'typo', comment: 'a spelling issue' };
 
 /** A fake RPC in these tests never needs a network connection. */
 function stub(result: { data: unknown; error: unknown } = { data: id, error: null }) {
   const rpc = vi.fn(async (_name: 'submit_flag', _args: FlagArgs) => result);
-  return { rpc, send: makeSend(rpc) };
+  return { rpc, send: makeSend(rpc, shown) };
 }
 
 describe('makeSend for submit_flag', () => {
@@ -26,7 +28,7 @@ describe('makeSend for submit_flag', () => {
     expect(rpc).toHaveBeenCalledTimes(1);
     expect(rpc).toHaveBeenCalledWith('submit_flag', {
       page: '/learn/study-skills', item_id: null, item_version_id: null,
-      reason: 'typo', comment: 'a spelling issue',
+      reason: 'typo', comment: 'a spelling issue', expected_user_id: shown,
     });
   });
 
@@ -37,7 +39,7 @@ describe('makeSend for submit_flag', () => {
     expect(rpc).toHaveBeenCalledTimes(1);
     expect(rpc).toHaveBeenCalledWith('submit_flag', {
       page: good.page, item_id: itemId, item_version_id: versionId,
-      reason: good.reason, comment: good.comment,
+      reason: good.reason, comment: good.comment, expected_user_id: shown,
     });
     expect(report).toEqual({ ...good, itemId, itemVersionId: versionId });
   });
@@ -76,7 +78,7 @@ describe('makeSend for submit_flag', () => {
 
   it('does not expose network exceptions', async () => {
     const rpc: FlagRpc = async () => { throw new Error('a private connection error'); };
-    expect(await makeSend(rpc)(good)).toBe('failed');
+    expect(await makeSend(rpc, shown)(good)).toBe('failed');
   });
 });
 

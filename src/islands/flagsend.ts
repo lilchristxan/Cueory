@@ -31,13 +31,15 @@ function validItemContext(args: FlagArgs): boolean {
 /**
  * The FlagForm send callback. No sending occurs until a caller injects an RPC,
  * and an invalid or incomplete response is never reported as a successful send.
+ * `expectedUserId` is the account the form shows as signed in: submit_flag refuses the report if another account's
+ * token is attached by the time it is sent (lane 2 migration).
  */
-export function makeSend(rpc: FlagRpc): (report: FlagReport) => Promise<SendResult> {
+export function makeSend(rpc: FlagRpc, expectedUserId: string): (report: FlagReport) => Promise<SendResult> {
   return async (report) => {
     try {
       const checked = checkReport(report);
       if (!checked.ok) return 'failed';
-      const parsed = flagArguments(checked, { page: checked.report.page });
+      const parsed = flagArguments(checked, { page: checked.report.page, expectedUserId });
       if (!parsed.ok || !validItemContext(parsed.args)) return 'failed';
 
       const reply = await rpc('submit_flag', parsed.args);

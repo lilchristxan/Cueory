@@ -388,11 +388,15 @@ describe('adaptersFor', () => {
 
   it('saves the name only through update_display_name, never a direct table update (Codex on #230)', async () => {
     const { client, calls } = fakeClient({ saved: 'Sample' });
-    expect(await adaptersFor(client).writeName('Sample')).toBe('Sample');
-    expect(calls).toEqual([['rpc', 'update_display_name', { new_name: 'Sample' }]]);
-    await expect(adaptersFor(fakeClient({ saved: null }).client).writeName('Sample')).rejects.toThrow();
+    expect(await adaptersFor(client).writeName('Sample', 'user-1')).toBe('Sample');
+    // Bound to the account on screen (lane 2 migration): the database refuses any other signed-in account.
+    expect(calls).toEqual([['rpc', 'update_display_name', { new_name: 'Sample', expected_user_id: 'user-1' }]]);
+    await expect(adaptersFor(fakeClient({ saved: null }).client).writeName('Sample', 'user-1')).rejects.toThrow();
     const refusal = { code: '54000', message: 'that is a lot of name changes; please try again later' };
-    await expect(adaptersFor(fakeClient({ error: refusal }).client).writeName('Sample')).rejects.toMatchObject({ cause: refusal });
+    await expect(adaptersFor(fakeClient({ error: refusal }).client).writeName('Sample', 'user-1')).rejects.toMatchObject({ cause: refusal });
+    const switched = { code: '28000', message: 'the account signed in on this device changed; nothing was saved' };
+    const outcome = await saveDisplayName(name => adaptersFor(fakeClient({ error: switched }).client).writeName(name, 'user-1'), 'Sample');
+    expect(outcome).toMatchObject({ kind: 'failed', message: 'the account signed in on this device changed, so your name wasn’t saved. reload the page and try again.' });
   });
 
   it('refuses browser cleanup when the current session cannot be verified', async () => {

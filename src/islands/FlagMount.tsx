@@ -25,11 +25,13 @@ export default function FlagMount({ page, itemId, itemVersionId, variant }: Prop
   const [published, setPublished] = useState<FlagItem | undefined>(currentFlagItem);
   useEffect(() => { setPublished(currentFlagItem()); return onFlagItem(setPublished); }, []);
   const watch = useRef<FlagSessionWatch | null>(null);
-  const send = useMemo(() => makeFlagSend(loadShared), []);
+  // The account the form shows as signed in; a report is bound to it (lane 2 migration).
+  const shownUser = useRef<string | null>(null);
+  const send = useMemo(() => makeFlagSend(loadShared, () => shownUser.current), []);
   const check = useCallback(() => watch.current?.check(), []);
 
   useEffect(() => {
-    const current = watchFlagSession(loadShared, setSignedIn);
+    const current = watchFlagSession(loadShared, setSignedIn, (userId) => { shownUser.current = userId; });
     watch.current = current;
     let cancelIdle: () => void;
     if ('requestIdleCallback' in window) {

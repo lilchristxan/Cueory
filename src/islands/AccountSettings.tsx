@@ -108,7 +108,7 @@ function AccountView({ supplied, onNotice }: { supplied: AccountAdapters | null 
   if (phase.kind !== 'ready') return null;
 
   return <div className="space-y-10">
-    <NameSection adapters={phase.adapters} initial={phase.name} />
+    <NameSection adapters={phase.adapters} userId={phase.userId} initial={phase.name} />
     <DataSection adapters={phase.adapters} userId={phase.userId} email={phase.email} onStale={reload} />
     <DeleteSection adapters={phase.adapters} userId={phase.userId} email={phase.email} busy={deleting} onStale={reload}
       onDeleted={(message, next) => setPhase({ kind: 'deleted', message, next })} />
@@ -116,7 +116,7 @@ function AccountView({ supplied, onNotice }: { supplied: AccountAdapters | null 
   </div>;
 }
 
-function NameSection({ adapters, initial }: { adapters: AccountAdapters; initial: string }) {
+function NameSection({ adapters, userId, initial }: { adapters: AccountAdapters; userId: string; initial: string }) {
   const id = useId();
   const [name, setName] = useState(initial);
   const [saving, setSaving] = useState(false);
@@ -127,7 +127,8 @@ function NameSection({ adapters, initial }: { adapters: AccountAdapters; initial
     if (saving) return;
     setSaving(true);
     setOutcome(null);
-    const result = await saveDisplayName(adapters.writeName, name);
+    // Bound to the account on screen: if another tab switched accounts, the database saves nothing.
+    const result = await saveDisplayName(next => adapters.writeName(next, userId), name);
     setSaving(false);
     setOutcome({ invalid: result.kind === 'invalid', message: result.message });
     if (result.kind === 'saved') setName(result.name);

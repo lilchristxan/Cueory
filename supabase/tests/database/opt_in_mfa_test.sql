@@ -52,7 +52,7 @@ select is_empty($$ select id from public.my_flags() $$, 'verified student cannot
 select throws_ok($$ select public.delete_my_account('00000000-0000-4000-8000-000000000001'::uuid) $$,
   '28000', 'complete two-factor sign-in to continue',
   'aal1 cannot permanently delete a verified-factor account');
-select throws_ok($$ select public.update_display_name('try change') $$,
+select throws_ok($$ select public.update_display_name('try change', (select auth.uid())) $$,
   '28000', 'complete two-factor sign-in to continue',
   'aal1 cannot mutate the verified-factor profile via an elevated RPC');
 select throws_ok($$ select public.check_answer(null, null, array['a']) $$,
@@ -61,7 +61,7 @@ select throws_ok($$ select public.check_answer(null, null, array['a']) $$,
 select throws_ok($$ select public.record_study_events('[]'::jsonb) $$,
   '28000', 'complete two-factor sign-in to continue',
   'aal1 cannot write history through a SECURITY DEFINER function');
-select throws_ok($$ select public.submit_flag('/learn/sample', null, null, 'typo', null) $$,
+select throws_ok($$ select public.submit_flag('/learn/sample', null, null, 'typo', null, (select auth.uid())) $$,
   '28000', 'complete two-factor sign-in to continue',
   'aal1 cannot submit a report via an elevated RPC');
 
@@ -90,13 +90,13 @@ select results_eq($$ select id from public.profiles $$,
 select results_eq($$ select count(*)::int from public.my_flags() $$,
   $$ values (1) $$, 'aal2 can export its own report');
 -- The later MFA override must retain Task 302's strict direct-RPC name rule.
-select throws_ok($$ select public.update_display_name('sam' || chr(x'200b'::int) || 'smith') $$,
+select throws_ok($$ select public.update_display_name('sam' || chr(x'200b'::int) || 'smith', (select auth.uid())) $$,
   '22023', 'a display name is 1 to 50 characters of plain text',
   'aal2 cannot save zero-width characters through the name RPC');
-select throws_ok($$ select public.update_display_name('sam' || chr(x'202e'::int) || 'smith') $$,
+select throws_ok($$ select public.update_display_name('sam' || chr(x'202e'::int) || 'smith', (select auth.uid())) $$,
   '22023', 'a display name is 1 to 50 characters of plain text',
   'aal2 cannot save a bidirectional override through the name RPC');
-select lives_ok($$ select public.update_display_name('verified student') $$,
+select lives_ok($$ select public.update_display_name('verified student', (select auth.uid())) $$,
   'aal2 can change the display name through its existing rate-limited RPC');
 select results_eq($$ select display_name from public.profiles $$,
   $$ values ('verified student') $$, 'aal2 profile change was stored');
@@ -107,7 +107,7 @@ select ok(
   'the MFA delete RPC retains the ten-minute authentication-event check');
 select ok(
   (select prosrc like '%public.display_name_ok(clean_name)%'
-     from pg_proc where oid = 'public.update_display_name(text)'::regprocedure),
+     from pg_proc where oid = 'public.update_display_name(text, uuid)'::regprocedure),
   'the MFA name RPC retains the single server-side validation rule');
 select throws_ok($$ select public.delete_my_account('00000000-0000-4000-8000-000000000001'::uuid) $$,
   '28R01', 'please sign in again to delete your account',
@@ -148,7 +148,7 @@ select results_eq($$ select id from public.profiles $$,
   'an account with only an unverified factor still works at aal1');
 select results_eq($$ select count(*)::int from public.my_flags() $$,
   $$ values (1) $$, 'unverified account can export its own report');
-select lives_ok($$ select public.update_display_name('pending student') $$,
+select lives_ok($$ select public.update_display_name('pending student', (select auth.uid())) $$,
   'unverified account can still change its display name');
 select results_eq($$ select display_name from public.profiles $$,
   $$ values ('pending student') $$, 'unverified-account update was stored');
@@ -170,7 +170,7 @@ set local "request.jwt.claims" to '{"sub":"00000000-0000-4000-8000-000000000002"
 set local "request.jwt.claim.sub" to '00000000-0000-4000-8000-000000000002';
 select throws_ok($$ select public.check_answer(null, null, null) $$,
   '28000', 'confirm your email to use this', 'an unconfirmed user cannot invoke check_answer even with aal2');
-select throws_ok($$ select public.submit_flag('/learn/sample', null, null, 'typo', null) $$,
+select throws_ok($$ select public.submit_flag('/learn/sample', null, null, 'typo', null, (select auth.uid())) $$,
   '28000', 'confirm your email to use this', 'an unconfirmed user cannot invoke submit_flag even with aal2');
 select throws_ok($$ select public.record_study_events('[]'::jsonb) $$,
   '28000', 'confirm your email to use this', 'an unconfirmed user cannot invoke record_study_events even with aal2');
@@ -182,7 +182,7 @@ set local "request.jwt.claims" to '{"sub":"00000000-0000-4000-8000-000000000002"
 set local "request.jwt.claim.sub" to '00000000-0000-4000-8000-000000000002';
 select throws_ok($$ select public.check_answer(null, null, null) $$,
   '28000', 'confirm your email to use this', 'a user marked anonymous in auth.users cannot invoke check_answer even with aal2');
-select throws_ok($$ select public.submit_flag('/learn/sample', null, null, 'typo', null) $$,
+select throws_ok($$ select public.submit_flag('/learn/sample', null, null, 'typo', null, (select auth.uid())) $$,
   '28000', 'confirm your email to use this', 'a user marked anonymous in auth.users cannot invoke submit_flag even with aal2');
 select throws_ok($$ select public.record_study_events('[]'::jsonb) $$,
   '28000', 'confirm your email to use this', 'a user marked anonymous in auth.users cannot invoke record_study_events even with aal2');
@@ -194,7 +194,7 @@ set local "request.jwt.claims" to '{"sub":"00000000-0000-4000-8000-000000000002"
 set local "request.jwt.claim.sub" to '00000000-0000-4000-8000-000000000002';
 select throws_ok($$ select public.check_answer(null, null, null) $$,
   '28000', 'confirm your email to use this', 'a caller with the anonymous JWT claim cannot invoke check_answer even with aal2');
-select throws_ok($$ select public.submit_flag('/learn/sample', null, null, 'typo', null) $$,
+select throws_ok($$ select public.submit_flag('/learn/sample', null, null, 'typo', null, (select auth.uid())) $$,
   '28000', 'confirm your email to use this', 'a caller with the anonymous JWT claim cannot invoke submit_flag even with aal2');
 select throws_ok($$ select public.record_study_events('[]'::jsonb) $$,
   '28000', 'confirm your email to use this', 'a caller with the anonymous JWT claim cannot invoke record_study_events even with aal2');

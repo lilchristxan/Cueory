@@ -19,6 +19,8 @@ const sql = [
   '20261112020000_restate_delete_my_account_mfa.sql',
   '20261114151643_delete_my_account_identity_and_mfa.sql',
   '20261116235000_delete_account_recent_amr_proof.sql',
+  // Lane 2 binds update_display_name and submit_flag to the account the page shows.
+  '20261117050000_lane2_rpc_identity_profile.sql',
 ].map(name => readFileSync(new URL(`../../supabase/migrations/${name}`, import.meta.url), 'utf8')).join('\n');
 
 type FunctionName =
@@ -44,7 +46,7 @@ function declaration(name: FunctionName) {
 describe('SQL arguments and browser request helpers', () => {
   it('submit_flag names and argument order match the validated flagArguments result', () => {
     const checked = checkReport({ page: '/learn/sample', reason: 'typo', comment: 'sample report' });
-    const result = flagArguments(checked, { page: '/learn/sample' });
+    const result = flagArguments(checked, { page: '/learn/sample', expectedUserId: '00000000-0000-4000-8000-000000000001' });
     expect(result.ok).toBe(true);
     if (!result.ok) throw new Error(result.message);
     expect(Object.keys(result.args)).toEqual(declaration('submit_flag').arguments);
@@ -176,7 +178,11 @@ describe('delete_my_account migration replay order', () => {
     const versions = names.map(name => name.slice(0, 14));
     expect(new Set(versions).size).toBe(versions.length);
     expect(names).toContain('20261112020000_restate_delete_my_account_mfa.sql');
-    expect(names.at(-1)).toBe('20261116235000_delete_account_recent_amr_proof.sql');
+    // The recent-auth proof is the last migration that defines delete_my_account (later migrations define others).
+    const definesDelete = names.filter(name => /function\s+public\.delete_my_account\s*\(/i.test(
+      readFileSync(new URL(`../../supabase/migrations/${name}`, import.meta.url), 'utf8'),
+    ));
+    expect(definesDelete.at(-1)).toBe('20261116235000_delete_account_recent_amr_proof.sql');
     expect(names.indexOf('20261112020000_restate_delete_my_account_mfa.sql'))
       .toBeLessThan(names.indexOf('20261116235000_delete_account_recent_amr_proof.sql'));
   });
@@ -217,13 +223,29 @@ describe('update_display_name contract (Task 59, Codex on #230)', () => {
     new URL('../../supabase/migrations/20261102140000_update_display_name.sql', import.meta.url), 'utf8',
   );
 
-  it('takes one text argument named new_name, which the account page sends, and returns the saved name', async () => {
-    expect(declaration('update_display_name').arguments).toEqual(['new_name']);
+  it('takes new_name and expected_user_id, which the account page sends, and returns the saved name', async () => {
+    expect(declaration('update_display_name').arguments).toEqual(['new_name', 'expected_user_id']);
     expect(nameSql).toMatch(/create function public\.update_display_name\(new_name text\)\s+returns text\s/i);
     const rpc = vi.fn(async () => ({ data: 'Sample', error: null }));
     const client = { rpc } as unknown as AccountClient;
-    expect(await adaptersFor(client).writeName('Sample')).toBe('Sample');
-    expect(rpc).toHaveBeenCalledWith('update_display_name', { new_name: 'Sample' });
+    expect(await adaptersFor(client).writeName('Sample', 'user-1')).toBe('Sample');
+    expect(rpc).toHaveBeenCalledWith('update_display_name', { new_name: 'Sample', expected_user_id: 'user-1' });
+  });
+
+  it('lane 2: both profile RPCs refuse any account but the one named, and the old signatures are gone', () => {
+    const lane2 = readFileSync(
+      new URL('../../supabase/migrations/20261117050000_lane2_rpc_identity_profile.sql', import.meta.url), 'utf8',
+    );
+    expect(lane2).toContain('drop function if exists public.update_display_name(text);');
+    expect(lane2).toContain('drop function if exists public.submit_flag(text, uuid, uuid, text, text);');
+    expect(lane2).toMatch(/if update_display_name\.expected_user_id is distinct from uid then/);
+    expect(lane2).toMatch(/if submit_flag\.expected_user_id is distinct from uid then/);
+    for (const signature of ['update_display_name(text, uuid)', 'submit_flag(text, uuid, uuid, text, text, uuid)']) {
+      expect(lane2).toContain(`revoke execute on function public.${signature} from public, anon, authenticated;`);
+      expect(lane2).toContain(`grant execute on function public.${signature} to authenticated;`);
+    }
+    expect(lane2).not.toMatch(/grant\s+execute[^;]*to\s+(anon|public)\b/i);
+    expect(lane2.match(/security definer\s+set search_path = ''/g)).toHaveLength(2);
   });
 
   it('is signed-in only, security definer with an empty search_path, rate limited, and the only way in', () => {

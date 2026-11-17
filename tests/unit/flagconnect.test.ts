@@ -6,6 +6,8 @@ import type { FlagArgs } from '../../src/islands/flagsubmit';
 const reportId = '11111111-1111-4111-8111-111111111111';
 const itemId = '22222222-2222-4222-8222-222222222222';
 const versionId = '33333333-3333-4333-8333-333333333333';
+/** The account the form shows as signed in. */
+const shown = '44444444-4444-4444-8444-444444444444';
 const good: FlagReport = { page: '/learn/study-skills/questions', reason: 'confusing', comment: 'the second choice reads oddly' };
 
 /** A fake shared client. It never touches the network. */
@@ -86,6 +88,19 @@ describe('watchFlagSession (Codex on #237)', () => {
     watch.stop();
   });
 
+  it('also reports which account the form shows, from checks and announcements', async () => {
+    const fake = switchableClient();
+    const users: (string | null)[] = [];
+    const watch = watchFlagSession(async () => fake.client, () => {}, (userId) => users.push(userId));
+    watch.check();
+    await settle();
+    fake.announce('user-1');
+    fake.announce('user-2');
+    fake.announce(null);
+    expect(users).toEqual([null, 'user-1', 'user-2', null]);
+    watch.stop();
+  });
+
   it('follows announced sign-ins and sign-outs once the client has loaded, and stops listening when stopped', async () => {
     const fake = switchableClient();
     const seen: boolean[] = [];
@@ -156,32 +171,32 @@ describe('watchFlagSession (Codex on #237)', () => {
 describe('makeFlagSend', () => {
   it('sends the exact submit_flag arguments on the shared client and reports sent', async () => {
     const { client, calls, load } = fakeClient();
-    const send = makeFlagSend(load);
+    const send = makeFlagSend(load, () => shown);
     expect(await send({ ...good, itemId, itemVersionId: versionId })).toBe('sent');
     expect(calls).toEqual([{
       name: 'submit_flag',
-      args: { page: good.page, item_id: itemId, item_version_id: versionId, reason: 'confusing', comment: good.comment },
+      args: { page: good.page, item_id: itemId, item_version_id: versionId, reason: 'confusing', comment: good.comment, expected_user_id: shown },
       receiver: client,
     }]);
   });
 
   it('sends a page-only report with null item context', async () => {
     const { calls, load } = fakeClient();
-    expect(await makeFlagSend(load)(good)).toBe('sent');
-    expect(calls[0]!.args).toEqual({ page: good.page, item_id: null, item_version_id: null, reason: 'confusing', comment: good.comment });
+    expect(await makeFlagSend(load, () => shown)(good)).toBe('sent');
+    expect(calls[0]!.args).toEqual({ page: good.page, item_id: null, item_version_id: null, reason: 'confusing', comment: good.comment, expected_user_id: shown });
   });
 
   it('asks a signed-out student to sign in when accounts are off, without calling anything', async () => {
-    expect(await makeFlagSend(async () => null)(good)).toEqual({ message: 'please sign in to send a report.' });
+    expect(await makeFlagSend(async () => null, () => shown)(good)).toEqual({ message: 'please sign in to send a report.' });
   });
 
   it('fails quietly when the client cannot load', async () => {
-    expect(await makeFlagSend(async () => { throw new Error('a private connection error'); })(good)).toBe('failed');
+    expect(await makeFlagSend(async () => { throw new Error('a private connection error'); }, () => shown)(good)).toBe('failed');
   });
 
   it('turns the rate limit into too-many', async () => {
     const { load } = fakeClient({ reply: { data: null, error: { code: '54000', message: 'that is a lot of reports; please try again later' } } });
-    expect(await makeFlagSend(load)(good)).toBe('too-many');
+    expect(await makeFlagSend(load, () => shown)(good)).toBe('too-many');
   });
 
   it.each([
@@ -193,7 +208,7 @@ describe('makeFlagSend', () => {
     ['that question was not found', 'that question could not be found — it may have been removed.'],
   ])('maps "%s" to its plain sentence', async (raw, sentence) => {
     const { load } = fakeClient({ reply: { data: null, error: { message: raw } } });
-    expect(await makeFlagSend(load)(good)).toEqual({ message: sentence });
+    expect(await makeFlagSend(load, () => shown)(good)).toEqual({ message: sentence });
   });
 
   it.each([
@@ -202,12 +217,30 @@ describe('makeFlagSend', () => {
     { data: 'not-a-report-id', error: null },
   ])('never claims an unsuccessful report was sent, or echoes raw text', async reply => {
     const { load } = fakeClient({ reply });
-    expect(await makeFlagSend(load)(good)).toBe('failed');
+    expect(await makeFlagSend(load, () => shown)(good)).toBe('failed');
+  });
+
+  it('binds the report to the account the form shows, and sends nothing when it shows none (lane 2 migration)', async () => {
+    const { calls, load } = fakeClient();
+    let user: string | null = 'account-a';
+    const send = makeFlagSend(load, () => user);
+    expect(await send(good)).toBe('sent');
+    expect(calls[0]!.args.expected_user_id).toBe('account-a');
+    user = null;
+    expect(await send(good)).toEqual({ message: 'please sign in to send a report.' });
+    expect(calls).toHaveLength(1);
+  });
+
+  it('a report refused because the account changed says so in one sentence', async () => {
+    const { load } = fakeClient({ reply: { data: null, error: { code: '28000', message: 'the account signed in on this device changed; nothing was sent' } } });
+    expect(await makeFlagSend(load, () => shown)(good)).toEqual({
+      message: 'the account signed in on this device changed, so your report wasn’t sent. reload the page and try again.',
+    });
   });
 
   it('does not call submit_flag for a sample slug', async () => {
     const { calls, load } = fakeClient();
-    expect(await makeFlagSend(load)({ ...good, itemId: 'sample_1', itemVersionId: versionId })).toBe('failed');
+    expect(await makeFlagSend(load, () => shown)({ ...good, itemId: 'sample_1', itemVersionId: versionId })).toBe('failed');
     expect(calls).toEqual([]);
   });
 });

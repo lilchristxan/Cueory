@@ -102,6 +102,8 @@ test.beforeAll(async () => {
       window.fixtureOriginalUserId = firstUser;
       window.fixtureOtherUserId = secondUser;
       window.fixtureServerDeletes = 0;
+      // Another tab's sign-in that this page hasn't heard about yet: the token changes, no event arrives.
+      window.fixtureSilentSwitch = next => { activeUser = next; };
       window.fixtureSwitchUser = next => {
         activeUser = next;
         for (const listener of subscribers) {
@@ -148,6 +150,10 @@ test.beforeAll(async () => {
           if (fn === 'my_flags' || fn === 'my_sessions') return query(fn);
           if (fn === 'update_display_name') {
             calls.push('rpc:update_display_name:' + args.new_name);
+            // As the database does (lane 2 migration): the id the page names must be the signed-in account.
+            if (args.expected_user_id !== activeUser) {
+              return Promise.resolve({ data: null, error: { code: '28000', message: 'the account signed in on this device changed; nothing was saved' } });
+            }
             if (params.has('name-limited')) {
               return Promise.resolve({ data: null, error: { message: 'that is a lot of name changes; please try again later', code: '54000' } });
             }
@@ -297,6 +303,21 @@ test.describe('/account signed in (fake client)', () => {
     await expect(page.getByRole('status').first()).toHaveText('your display name is saved.');
     await expect(field).toHaveValue('New Name');
     expect(await calls(page)).toEqual(['rpc:update_display_name:New Name']);
+  });
+
+  test('a name typed for A is never saved to B when the token switched without notice (lane 2)', async ({ page }) => {
+    await fixture(page);
+    const field = page.getByRole('textbox', { name: 'display name' });
+    await expect(field).toHaveValue('Sample Student');
+    await page.evaluate(() => {
+      const w = window as unknown as { fixtureSilentSwitch: (userId: string) => void; fixtureOtherUserId: string };
+      w.fixtureSilentSwitch(w.fixtureOtherUserId);
+    });
+    await field.fill('Meant For A');
+    await page.getByRole('button', { name: 'save', exact: true }).click();
+    await expect(page.getByRole('status').first())
+      .toHaveText('the account signed in on this device changed, so your name wasn’t saved. reload the page and try again.');
+    expect(await calls(page)).toEqual(['rpc:update_display_name:Meant For A']);
   });
 
   test('says so in one sentence when the server limit refuses a name change (Codex on #230)', async ({ page }) => {
