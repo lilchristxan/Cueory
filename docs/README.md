@@ -52,5 +52,7 @@ Review note: [isolation audit status](status/in-review/lane1-isolation-leftovers
 Review note: [reset account binding](status/in-review/task-754-reset-bound-account.md) — Review status for the password reset account guard. **Christian:** Approval required.
 Review note: [answer account binding](status/in-review/task-756-answers-stop-on-switch.md) — Stops stale players after a sign-in change.
 
+Review note: [merged-note sweep](status/in-review/lane12-status-sweep-1.md) — Fourteen verified merged PRs folded into the central status and decisions.
+
 Runbook: [Thursday launch day](runbooks/launch-day.md) — Proposed Phoenix-time schedule and smoke checks for the games-only launch.
 Review note: [launch-day status](status/in-review/lane4-launch-day.md) — Planning only; every release gate still applies.

@@ -1,1 +1,0 @@
-status: Task 210 (#718): games parity rule and shared specification. D-pending: Match gameplay, settings, scoring and controls of leading daily puzzle games; never their names, look, colors or colored-square shares (Christian, 2026-11-14).

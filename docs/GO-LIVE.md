@@ -1,4 +1,12 @@
-# Go-live runbook (launch: Friday, November 13)
+# Go-live runbook (Thursday, November 19, 2026 — games and public pages only, accounts closed)
+
+Thursday's launch is **games and public pages only; accounts remain closed**.
+Use the [Thursday launch checklist](LAUNCH-2026-11-19.md) for its release gates.
+The production database remains untouched. The full-account setup, database
+migration and account-opening procedures below are **future reference, not
+steps for this games-only launch**; they need separate Christian approval and
+verified staging evidence before use.
+
 
 Every dashboard step Christian does before and on launch day, in order. One action per step. "You should see" says
 what to check. Settings and menu paths come from the official pages linked in brackets, read on 2 November 2026.
