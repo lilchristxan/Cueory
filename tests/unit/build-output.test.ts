@@ -202,6 +202,7 @@ function markupOutsideScripts(html: string): string {
 
 describe.skipIf(!existsSync(dist))('built site', () => {
   const pages = htmlFiles(dist);
+  const latoPreloads = ['/fonts/lato-latin-400-normal.woff2', '/fonts/lato-latin-700-normal.woff2'];
 
   it('keeps each route within 10% of its initial JavaScript gzip budget', () => {
     const routes = pages.map((page) => relative(dist, page).replaceAll('\\', '/'));
@@ -244,8 +245,31 @@ describe.skipIf(!existsSync(dist))('built site', () => {
       expect(hrefs, page).toContain('/fonts/bodoni-moda-latin-opsz-normal.woff2');
       for (const href of hrefs) expect(existsSync(join(dist, href)), href).toBe(true);
     }
-    // Study screens stay quiet: no display font, nothing extra to download.
-    expect(preloads(readFileSync(join(dist, 'learn/study-skills.html'), 'utf8'))).toEqual([]);
+    // Study screens stay quiet: no display font. They preload only the two Lato files every page uses (lane 9).
+    expect(preloads(readFileSync(join(dist, 'learn/study-skills.html'), 'utf8'))).toEqual(latoPreloads);
+  });
+
+  it('every page preloads exactly the two Lato weights in use, and each file exists (lane 9, fonts)', () => {
+    for (const page of pages) {
+      const html = readFileSync(page, 'utf8');
+      const fonts = [...html.matchAll(/<link\b[^>]*rel="preload"[^>]*>/g)]
+        .map((m) => m[0])
+        .filter((link) => link.includes('as="font"'));
+      for (const link of fonts) {
+        expect(link, relative(dist, page)).toContain('type="font/woff2"');
+        expect(link, relative(dist, page)).toMatch(/\scrossorigin[\s>]/);
+      }
+      const hrefs = fonts.map((link) => /href="([^"]+)"/.exec(link)![1]!);
+      expect(hrefs.filter((href) => href.includes('/lato-')), relative(dist, page)).toEqual(latoPreloads);
+    }
+    for (const href of latoPreloads) expect(existsSync(join(dist, href)), href).toBe(true);
+    // Every @font-face that can swap keeps font-display: swap; only the preloaded serif may be optional.
+    const css = readdirSync(join(dist, '_astro')).filter((f) => f.endsWith('.css'))
+      .map((f) => readFileSync(join(dist, '_astro', f), 'utf8')).join('\n');
+    const faces = [...css.matchAll(/@font-face\s*\{([^}]*)\}/g)].map((m) => m[1]!);
+    const lato = faces.filter((face) => /font-family:\s*["']?Lato/.test(face));
+    expect(lato.length).toBeGreaterThanOrEqual(2);
+    for (const face of lato) expect(face).toMatch(/font-display:\s*swap/);
   });
 
   it('does not preload unused italic Bodoni on home, while retaining its font file (Task 187)', () => {
