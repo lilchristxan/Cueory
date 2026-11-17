@@ -1,3 +1,4 @@
+import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 
 /**
@@ -7,6 +8,15 @@ import { expect, test, type Page } from '@playwright/test';
  * inside its own box). Easy November sample.
  */
 const board = (page: Page) => page.getByTestId('cueword');
+/** The text players can see in an element: every text node except screen-reader-only text. */
+const seenText = (page: Page, selector: string) => page.locator(selector).first().evaluate((root) => {
+  const parts: string[] = [];
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+    if (!node.parentElement?.closest('.sr-only')) parts.push(node.textContent ?? '');
+  }
+  return parts.join(' ').toLowerCase();
+});
 const levels = (page: Page) => page.getByTestId('crossword-levels');
 
 test.beforeEach(async ({ page }) => {
@@ -53,23 +63,24 @@ test('a blocked square is striped, the selected square is solid: they differ by 
 test('players read "cue", never "clue": the box, its settings and its help', async ({ page }) => {
   await board(page).getByRole('button', { name: 'show cue list' }).click();
   await expect(board(page).getByTestId('crossword-clue-list')).toBeVisible();
-  expect((await board(page).innerText()).toLowerCase()).not.toContain('clue');
+  expect(await seenText(page, '[data-testid="cueword"]')).not.toContain('clue');
   await board(page).getByRole('button', { name: 'crossword settings' }).click();
   const settings = page.getByRole('dialog', { name: 'crossword settings' });
   await expect(settings.getByRole('group', { name: 'cue text size' })).toBeVisible();
-  expect((await settings.innerText()).toLowerCase()).not.toContain('clue');
+  expect(await seenText(page, '[data-testid="game-settings"]')).not.toContain('clue');
   await page.keyboard.press('Escape');
   await board(page).getByRole('button', { name: 'how to play crossword' }).click();
   const help = page.getByRole('dialog', { name: 'how to play crossword' });
   await expect(help).toBeVisible();
-  const text = (await help.innerText()).toLowerCase();
+  const text = await seenText(page, '[data-testid="game-help"]');
   expect(text).not.toContain('clue');
   expect(text).not.toContain('pencil');
 });
 
 test('no description and no sample line in the game box', async ({ page }) => {
-  await expect(board(page)).not.toContainText('sample');
-  await expect(board(page)).not.toContainText('type letters. arrows move.');
+  const seen = await seenText(page, '[data-testid="cueword"]');
+  expect(seen).not.toContain('sample');
+  expect(seen).not.toContain('type letters. arrows move.');
   // Screen readers still get the keys: the grid points at them.
   const described = await board(page).getByRole('grid', { name: 'crossword grid' }).getAttribute('aria-describedby');
   expect(described).toBeTruthy();
@@ -89,3 +100,16 @@ for (const [width, scrolls] of [[390, true], [820, false], [1440, false]] as con
     expect(cell.width).toBeGreaterThanOrEqual(44);
   });
 }
+
+test('a numbered square\'s name starts with the number it shows (axe label-content-name-mismatch)', async ({ page }) => {
+  for (const level of ['easy, 5 by 5', 'mid, 7 by 7', 'hard, 15 by 15']) {
+    await levels(page).getByRole('button', { name: level }).click();
+    const numbered = board(page).locator('.crossword-cell:has(.crossword-number)');
+    expect(await numbered.count()).toBeGreaterThan(0);
+    for (const [shown, name] of await numbered.evaluateAll((cells) => cells.map((cell) => [cell.querySelector('.crossword-number')!.textContent, cell.getAttribute('aria-label')]))) {
+      expect(name, level).toMatch(new RegExp('^' + shown + ', row '));
+    }
+    const results = await new AxeBuilder({ page }).include('[data-testid="cueword"]').withRules(['label-content-name-mismatch']).analyze();
+    expect(results.violations.map((violation) => violation.id), level).toEqual([]);
+  }
+});

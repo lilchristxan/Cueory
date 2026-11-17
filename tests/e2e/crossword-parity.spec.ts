@@ -10,7 +10,7 @@ const SAMPLE = ['.ABC.', 'DEFGH', 'IJKLM', 'NOPQR', '.STU.'];
 const board = (page: Page) => page.getByTestId('cueword');
 const grid = (page: Page) => board(page).getByRole('grid', { name: 'crossword grid' });
 const square = (page: Page, row: number, column: number) =>
-  board(page).getByRole('button', { name: new RegExp('^row ' + row + ', column ' + column + ',') });
+  board(page).getByRole('button', { name: new RegExp('^(?:\\d+, )?row ' + row + ', column ' + column + ',') });
 const clueBar = (page: Page) => board(page).getByTestId('cueword-clue');
 const axe = async (page: Page) => {
   await page.evaluate(() => window.scrollTo(0, 0));
@@ -134,9 +134,9 @@ test.describe('crossword parity (Task 721)', () => {
     await expect(clueBar(page)).toContainText('1 down');
     await page.keyboard.press('ArrowRight');
     await expect(clueBar(page)).toContainText('1 across');
-    await expect(active).toHaveAttribute('aria-label', /^row 1, column 2,/);
+    await expect(active).toHaveAttribute('aria-label', /^(?:\d+, )?row 1, column 2,/);
     await page.keyboard.press('ArrowRight');
-    await expect(grid(page).locator('button[tabindex="0"]')).toHaveAttribute('aria-label', /^row 1, column 3,/);
+    await expect(grid(page).locator('button[tabindex="0"]')).toHaveAttribute('aria-label', /^(?:\d+, )?row 1, column 3,/);
 
     await page.keyboard.press('Tab');
     await expect(clueBar(page)).toContainText('4 across');

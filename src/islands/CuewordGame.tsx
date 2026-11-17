@@ -35,9 +35,13 @@ function elapsedText(seconds: number): string {
   return Math.floor(seconds / 60) + ':' + String(seconds % 60).padStart(2, '0');
 }
 
-function cellLabel(state: CuewordState, cell: number, r: number, c: number, word: CuewordWord): string {
+/**
+ * A square's accessible name. A numbered square starts with its number, the text it shows, so the name contains the
+ * visible label (WCAG 2.5.3, axe label-content-name-mismatch).
+ */
+function cellLabel(state: CuewordState, cell: number, r: number, c: number, word: CuewordWord, number: number | null): string {
   const letter = state.entries[cell];
-  let label = 'row ' + (r + 1) + ', column ' + (c + 1) + ', ' + word.number + ' ' + word.direction + ', ' + (letter ? 'letter ' + letter : 'empty');
+  let label = (number !== null ? number + ', ' : '') + 'row ' + (r + 1) + ', column ' + (c + 1) + ', ' + word.number + ' ' + word.direction + ', ' + (letter ? 'letter ' + letter : 'empty');
   if (letter && state.pencil[cell]) label += ', pencil';
   if (state.cued.includes(cell)) label += ', revealed';
   else if (state.checks[cell] === 'right') label += ', checked right';
@@ -349,7 +353,7 @@ function Board({ puzzle, name }: Props) {
                         type="button"
                         tabIndex={current ? 0 : -1}
                         disabled={solved}
-                        aria-label={cellLabel(state, cell, r, c, word)}
+                        aria-label={cellLabel(state, cell, r, c, word, number)}
                         aria-pressed={current}
                         data-cell={cell}
                         className={classes}

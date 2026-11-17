@@ -594,7 +594,7 @@ test.describe('daily games: crossword levels (Task 627)', () => {
     for (const [row, letters] of sample.entries()) {
       for (const [column, letter] of [...letters].entries()) {
         if (letter === '.') continue;
-        const cell = board(page).getByRole('button', { name: new RegExp('^row ' + (row + 1) + ', column ' + (column + 1) + ',') });
+        const cell = board(page).getByRole('button', { name: new RegExp('^(?:\\d+, )?row ' + (row + 1) + ', column ' + (column + 1) + ',') });
         await cell.click();
         await page.keyboard.type(letter);
       }
@@ -609,7 +609,7 @@ test.describe('daily games: crossword levels (Task 627)', () => {
   });
 
   test('print isolates a blank grid, every clue and the cueory.app footer', async ({ page }) => {
-    await board(page).getByRole('button', { name: 'row 1, column 2, 1 across, empty' }).click();
+    await board(page).getByRole('button', { name: '1, row 1, column 2, 1 across, empty' }).click();
     await page.keyboard.type('a');
     await page.evaluate(() => { window.print = () => undefined; });
     await board(page).getByRole('button', { name: 'print this puzzle' }).click();
@@ -686,7 +686,7 @@ test.describe('daily games: crossword levels (Task 627)', () => {
       const first = grid.locator('button').first();
       await first.focus();
       for (let step = 0; step < 12; step++) await page.keyboard.press('ArrowRight');
-      const rightEdge = grid.getByRole('button', { name: /^row 1, column 14,/ });
+      const rightEdge = grid.getByRole('button', { name: /^(?:\d+, )?row 1, column 14,/ });
       await expect(rightEdge).toBeFocused();
       await expect(rightEdge).toBeInViewport({ ratio: 1 });
       expect(await region.evaluate((element) => element.scrollLeft)).toBeGreaterThan(0);

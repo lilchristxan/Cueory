@@ -6,7 +6,7 @@ import { expect, test, type Page } from '@playwright/test';
 const SAMPLE = ['.ABC.', 'DEFGH', 'IJKLM', 'NOPQR', '.STU.'];
 const board = (page: Page) => page.getByTestId('cueword');
 const square = (page: Page, row: number, column: number) =>
-  board(page).getByRole('button', { name: new RegExp('^row ' + row + ', column ' + column + ',') });
+  board(page).getByRole('button', { name: new RegExp('^(?:\\d+, )?row ' + row + ', column ' + column + ',') });
 
 async function solve(page: Page) {
   for (const [row, letters] of SAMPLE.entries()) {

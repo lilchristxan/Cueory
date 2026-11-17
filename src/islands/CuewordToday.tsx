@@ -23,9 +23,9 @@ export default function CuewordToday({ puzzles, name }: Props) {
       <div className="crossword-no-print mb-4 flex justify-center">
         <div className="segmented" role="group" aria-label="crossword level" data-testid="crossword-levels">
           {crosswordLevels.map(({ level: option, size }) => (
-            <button key={option} type="button" className="segmented-option" aria-pressed={level === option} onClick={() => setLevel(option)}>
+            <button key={option} type="button" className="segmented-option" aria-pressed={level === option} aria-label={`${labels[option]}, ${size} by ${size}`} onClick={() => setLevel(option)}>
               {level === option && <span className="segmented-check" aria-hidden="true">✓</span>}
-              {labels[option]}<span className="sr-only">, {size} by {size}</span>
+              {labels[option]}
             </button>
           ))}
         </div>
