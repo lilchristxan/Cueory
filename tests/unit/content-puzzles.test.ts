@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { forbiddenGameWords } from '../../src/config/games';
 import { buildFromSheet, parseCells, parseCsv, readSheet } from '../../scripts/content/csv';
 import {
-  buildCalendar, calendarLines, fileDay, forbiddenWordIn, gameFor, parseDay, puzzleFindings, reportText,
+  buildCalendar, calendarLines, fileDay, forbiddenWordIn, gameFor, isBoardSizeMessage, parseDay, puzzleFindings, reportText,
   sudokuDigits, sudokuSolutionFinding, type Finding, type PuzzleFile,
 } from '../../scripts/content/puzzles';
 
@@ -103,6 +103,15 @@ describe('the puzzle rules', () => {
     expect(rules(puzzleFindings('word path', { ...board, words: words.slice(1) }, 'x'))).toEqual(expect.arrayContaining(['wordpath-every-letter-once', 'wordpath-special']));
     const twoSpecial = words.map((word) => ({ ...word, special: true }));
     expect(puzzleFindings('word path', { ...board, words: twoSpecial }, 'x').find((finding) => finding.rule === 'wordpath-special')?.message).toMatch(/exactly one .* it has 7/);
+  });
+
+  it('matches only the whole board-size message from the game', () => {
+    expect(isBoardSizeMessage('the board must have 8 rows.')).toBe(true);
+    expect(isBoardSizeMessage('each row must have 6 letters.')).toBe(true);
+    expect(isBoardSizeMessage('the board must have 8 rows. and more')).toBe(false);
+    expect(isBoardSizeMessage('extra: each row must have 6 letters.')).toBe(false);
+    expect(isBoardSizeMessage('each extra word must have at least 4 capital letters.')).toBe(false);
+    expect(isBoardSizeMessage('rows')).toBe(false);
   });
 
   it('checks that a sudoku board has exactly one solution', () => {

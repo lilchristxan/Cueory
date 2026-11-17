@@ -14,7 +14,7 @@
  * Exit code: 0 saved, 1 something to fix (nothing saved), 2 the command was typed wrong.
  */
 import './hooks.mjs';
-import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { basename, dirname, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { parseArgs } from 'node:util';
@@ -33,7 +33,11 @@ if (args.positionals.length !== 1) {
   process.exit(2);
 }
 const sheetFile = resolve(args.positionals[0]);
-if (!existsSync(sheetFile) || !statSync(sheetFile).isFile()) {
+// Read the sheet in one step (no separate existence check that could go stale).
+let sheetText;
+try {
+  sheetText = readFileSync(sheetFile, 'utf8');
+} catch {
   console.error(`there is no file at ${args.positionals[0]}. In Google Sheets use File > Download > Comma-separated values (.csv).`);
   process.exit(2);
 }
@@ -51,7 +55,7 @@ const { collections } = await load('src/content.config.ts');
 const { describeIssue } = await load('scripts/check-content/report.ts');
 const COLLECTION = { pillo: 'pulse', crossword: 'cueword', 'word path': 'suture' };
 
-const built = csv.buildFromSheet(csv.readSheet(readFileSync(sheetFile, 'utf8')), { sample, baseName: basename(sheetFile).replace(/\.csv$/i, '') });
+const built = csv.buildFromSheet(csv.readSheet(sheetText), { sample, baseName: basename(sheetFile).replace(/\.csv$/i, '') });
 const problems = built.problems.map((problem) => `${shown(sheetFile)}: ${problem}`);
 for (const puzzle of built.puzzles) {
   const schema = collections[COLLECTION[built.game]].schema;
@@ -71,8 +75,16 @@ if (problems.length || !built.puzzles.length) {
 mkdirSync(outDir, { recursive: true });
 for (const puzzle of built.puzzles) {
   const file = join(outDir, puzzle.name);
-  const existed = existsSync(file);
-  writeFileSync(file, `${JSON.stringify(puzzle.data, null, 2)}\n`);
+  const text = `${JSON.stringify(puzzle.data, null, 2)}\n`;
+  // Create the file in one step ("wx" fails if it is already there), so no separate existence check can go stale.
+  let existed = false;
+  try {
+    writeFileSync(file, text, { flag: 'wx' });
+  } catch (error) {
+    if (error?.code !== 'EEXIST') throw error;
+    existed = true;
+    writeFileSync(file, text);
+  }
   console.log(`${existed ? 'updated' : 'saved'} ${shown(file)}`);
 }
 console.log(`${built.puzzles.length} ${built.game} ${built.puzzles.length === 1 ? 'puzzle' : 'puzzles'} ready${sample ? ' (labelled samples)' : ' (private: keep them out of the repository)'}. next: npm run content:calendar ${shown(outDir)}`);

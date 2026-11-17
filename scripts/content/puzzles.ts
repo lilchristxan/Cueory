@@ -71,6 +71,10 @@ const note = (rule: string, message: string): Finding => ({ severity: 'note', ru
 /** The games' own messages end with a full stop and start in lowercase; ours read the same way. */
 const plain = (message: string) => message.replace(/\.$/, '');
 
+/** The game's own board-size messages (parsePathPuzzle), matched whole so a longer message never counts. */
+export const isBoardSizeMessage = (message: string): boolean =>
+  /^(?:the board must have \d+ rows|each row must have \d+ letters)\.$/.test(message);
+
 /** Clue limits from src/content.config.ts: a crossword clue up to 120 characters, a word path theme clue up to 60. */
 export const CROSSWORD_CLUE_MAX = 120;
 export const WORD_PATH_CLUE_MAX = MAX_CLUE;
@@ -270,7 +274,7 @@ export function puzzleFindings(game: Game, data: unknown, id: string, schemaMess
       return (/every letter|share a letter/.test(finding.message) && fired.has('wordpath-every-letter-once'))
         || (/exactly one special/.test(finding.message) && fired.has('wordpath-special'))
         || (/opposite edges/.test(finding.message) && fired.has('wordpath-special-edges'))
-        || (/rows|letters\.$/.test(finding.message) && fired.has('wordpath-board-size'))
+        || (isBoardSizeMessage(finding.message) && fired.has('wordpath-board-size'))
         || (/clue/.test(finding.message) && fired.has('wordpath-clue-length'));
     }
     return false;
