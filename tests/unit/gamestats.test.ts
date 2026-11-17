@@ -3,6 +3,7 @@ import {
   forget, parseStats, recordResult, serialize, summary, summaryInWords,
   type GameId, type GameResult, type GameStats,
 } from '../../src/islands/gamestats';
+import { wordPathSummary, wordPathSummaryInWords } from '../../src/islands/gamestats';
 
 const result = (game: GameId = 'pulse', day = '2026-11-01', solved = true, tries = 3): GameResult => ({ game, day, solved, tries });
 const saved = (results: unknown[], version: unknown = 1) => JSON.stringify({ version, results });
@@ -130,5 +131,43 @@ describe('versioned data and forgetting', () => {
     expect(forget(stats, 'unknown')).toEqual(stats);
     expect(forget(stats)).toEqual([]);
     expect(stats).toHaveLength(2);
+  });
+});
+
+describe('word path stats (#722)', () => {
+  const round = (day: string, extra: Record<string, unknown> = {}) => ({ game: 'suture', day, solved: true, tries: 0, ...extra });
+  const build = (...results: unknown[]) => results.reduce<GameStats>((stats, result) => recordResult(stats, result), []);
+
+  it('keeps hints used and the special answer found first for word path only, and they survive a save', () => {
+    const stats = build(round('2026-11-10', { hints: 2, specialFirst: true }));
+    expect(stats[0]).toEqual({ game: 'suture', day: '2026-11-10', solved: true, tries: 0, hints: 2, specialFirst: true });
+    expect(parseStats(serialize(stats))).toEqual(stats);
+    expect(recordResult([], { game: 'pulse', day: '2026-11-10', solved: true, tries: 3, hints: 1 })).toEqual([]);
+    expect(recordResult([], round('2026-11-10', { hints: -1 }))).toEqual([]);
+    expect(recordResult([], round('2026-11-10', { specialFirst: 'yes' }))).toEqual([]);
+    // Older results without the two details still read.
+    expect(parseStats(serialize(build(round('2026-11-09'))))).toHaveLength(1);
+  });
+
+  it('counts completed, solve %, streaks, the special answer first and solves without hints', () => {
+    const stats = build(
+      round('2026-11-01', { hints: 0, specialFirst: true }),
+      round('2026-11-02', { hints: 1 }),
+      round('2026-11-03', { hints: 0 }),
+      { game: 'suture', day: '2026-11-05', solved: false, tries: 0 },
+      round('2026-11-07', { hints: 0, specialFirst: true }),
+      round('2026-11-08'),
+    );
+    expect(wordPathSummary(stats, '2026-11-09')).toEqual({
+      played: 6, completed: 5, solvePercent: 83, currentStreak: 2, longestStreak: 3, specialFirst: 2, withoutHints: 3,
+    });
+    // A day missed breaks the current streak, and nothing played reads as zero.
+    expect(wordPathSummary(stats, '2026-11-10').currentStreak).toBe(0);
+    expect(wordPathSummary([], '2026-11-10')).toEqual({
+      played: 0, completed: 0, solvePercent: 0, currentStreak: 0, longestStreak: 0, specialFirst: 0, withoutHints: 0,
+    });
+    expect(wordPathSummaryInWords(wordPathSummary(stats, '2026-11-08'))).toBe(
+      'completed 5, solve rate 83%. streak: 2 days, longest 3 days. the thread found first: 2. solved without hints: 3.',
+    );
   });
 });

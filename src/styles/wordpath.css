@@ -104,3 +104,47 @@
     backdrop-filter: none !important;
   }
 }
+
+/*
+  The board format (#722): found answers carry a symbol as well as their brand state (a dot for a theme word, a
+  diamond for the thread), and a picked or hinted-in-order letter shows its place as a small number. Dragging across
+  the letters must not scroll the page, so the board's letters take every touch themselves.
+*/
+@layer components {
+  .wordpath-board button[data-path] {
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  .wordpath-mark {
+    position: absolute;
+    inset-block-start: 12%;
+    inset-inline-end: 12%;
+    inline-size: calc(var(--spacing) * 2);
+    block-size: calc(var(--spacing) * 2);
+  }
+
+  .wordpath-list-mark {
+    inline-size: calc(var(--spacing) * 2.5);
+    block-size: calc(var(--spacing) * 2.5);
+  }
+
+  .wordpath-step {
+    position: absolute;
+    inset-block-end: 8%;
+    inset-inline-end: 18%;
+    line-height: 1;
+  }
+}
+
+@media print {
+  .wordpath-mark,
+  .wordpath-step {
+    display: none !important;
+  }
+
+  .wordpath-board button[data-path] {
+    border: 0 !important;
+  }
+}
