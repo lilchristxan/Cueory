@@ -199,7 +199,8 @@ test.describe('daily games: pillo settings and finish screen (Task 719)', () => 
     await field(page).fill('crane');
     await field(page).press('Enter');
     await expect(hard).toHaveAttribute('aria-disabled', 'true');
-    await hard.click();
+    // Playwright waits forever for an aria-disabled control to become enabled, so force the click to prove it is ignored.
+    await hard.click({ force: true });
     await expect(hard).toHaveAttribute('aria-checked', 'true');
     await field(page).fill('plant');
     await field(page).press('Enter');
