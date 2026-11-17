@@ -589,14 +589,14 @@ test.describe('daily games: crossword levels (Task 627)', () => {
 });
 
 test.describe('daily games: word path (D-71)', () => {
-  // Word path became a themed word search in Task 97; its full browser tests are in word-path.spec.ts.
+  // Word path's board format (#722) is tested in full in word-path-board.spec.ts, the older word search in word-path.spec.ts.
   test("today's sample is labeled and themed, and axe passes", async ({ page }) => {
     await page.clock.setFixedTime(new Date('2026-11-01T15:00:00'));
     await page.goto('/play');
     await expect(page.getByRole('heading', { level: 2, name: 'word path' })).toBeVisible();
-    await expect(page.getByTestId('suture').getByRole('heading', { level: 3, name: 'study break' })).toBeVisible();
+    await expect(page.getByTestId('suture').getByRole('heading', { level: 3, name: 'a calm study break' })).toBeVisible();
     await expect(page.getByTestId('suture')).toContainText('sample puzzle');
-    await expect(page.getByRole('list', { name: 'words to find' }).getByRole('listitem')).toHaveCount(12);
+    await expect(page.getByTestId('suture').getByRole('gridcell')).toHaveCount(48);
     await expect(page.getByRole('heading', { name: 'coming soon' })).toHaveCount(0);
     const results = await axe(page);
     expect(results.violations.map((v) => `${v.id}: ${v.help}`)).toEqual([]);
@@ -863,6 +863,7 @@ test.describe('daily games without JavaScript', () => {
     // Playwright's text matching skips <noscript>, so this uses CSS.
     await expect(page.locator('noscript p')).toHaveText([
       "to add cueory to your home screen, use your browser's menu. daily games need JavaScript.",
+      "today's status for each game needs JavaScript.",
       'game settings need JavaScript.',
       'pillo needs JavaScript.',
       'sudoku needs JavaScript.',

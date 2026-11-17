@@ -13,10 +13,11 @@ import SutureToday from '../islands/SutureToday';
 import GameStatsPanel from '../islands/GameStatsPanel';
 import GameResultsHost from '../islands/GameResultsHost';
 import HomeScreenTip from '../islands/HomeScreenTip';
+import PlayStatus from '../islands/PlayStatus';
 import GameSettings from '../islands/GameSettings';
 import PilloTitle from '../components/PilloTitle.astro';
 import { parsePuzzle } from '../islands/cueword';
-import { parsePuzzle as parseWordPath } from '../islands/suture';
+import { parseWordPath } from '../islands/suturepath';
 import { dailyGames, helloCardsGame, helloCardsIndexWhenApproved, statGame } from '../config/games';
 import { helloCardsPage } from '../islands/hello-cards';
 import { draftsAllowed } from '../islands/anatomylab';
@@ -38,7 +39,10 @@ const wordPathSamples = (await getCollection('suture'))
   .sort((a, b) => a.id.localeCompare(b.id))
   .map(({ id, data }) => {
     try {
-      return parseWordPath({ id, sample: true, theme: data.theme, grid: data.grid, words: data.words });
+      // A board-format file (#722) says "format": "path"; an older word search has a theme instead of a clue.
+      return parseWordPath(data.format === 'path'
+        ? { id, sample: true, format: data.format, clue: data.clue, grid: data.grid, words: data.words, extras: data.extras }
+        : { id, sample: true, theme: data.theme, grid: data.grid, words: data.words });
     } catch (error) {
       throw new Error(`content/games/suture/${id}.json: ${(error as Error).message}`);
     }
@@ -65,6 +69,17 @@ const later = dailyGames.filter((game) => !game.ready);
     {/* Home screen tip (L2): only after puzzles finished on 3 different days, decided on page load, never mid-game. */}
     <HomeScreenTip client:only="react" />
     <noscript><p>to add cueory to your home screen, use your browser's menu. daily games need JavaScript.</p></noscript>
+    {/* Today's status for each game (#735), from this device only. client:only: without JavaScript only the note shows. */}
+    <PlayStatus
+      client:only="react"
+      games={[
+        { id: pulse.id, name: pulse.name, anchor: 'pulse-heading' },
+        { id: sudokuGame.id, name: sudokuGame.name, anchor: 'sudoku-heading' },
+        { id: crossword.id, name: crossword.name, anchor: 'crossword-heading' },
+        { id: wordPath.id, name: wordPath.name, anchor: 'word-path-heading' },
+      ]}
+    />
+    <noscript><p>today's status for each game needs JavaScript.</p></noscript>
     {/* Shared game settings (issue #734): theme, high contrast, reduced motion and sound for every game below. */}
     <div class="mt-6" data-testid="play-settings">
       <GameSettings client:only="react" title="game settings" label="game settings" />

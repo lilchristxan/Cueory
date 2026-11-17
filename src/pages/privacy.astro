@@ -66,9 +66,10 @@ import { newsletter, promo, site } from '../config/site';
       On <a href="/play">daily games</a> you can turn on stats. They're off unless you do. When they're on, your browser
       keeps, for each game you finish, the day, whether you solved it and how many tries it took. For the crossword, a
       try is a check or a reveal, and it also keeps whether the solve extends your crossword streak (solved without
-      check or reveal, within 48 hours of the puzzle's date); that is the only streak. Anything older than 400
-      days is deleted the next time you open daily games. It stays on your device and never reaches us. "Forget", or
-      turning stats off, deletes it. The storage key for these results is
+      check or reveal, within 48 hours of the puzzle's date). For word path, it also keeps how many hints you used and
+      whether you found the special answer first, and word path's streak is worked out from those same days. Anything
+      older than 400 days is deleted the next time you open daily games. It stays on your device and never reaches us.
+      "Forget", or turning stats off, deletes it. The storage key for these results is
       <code>cueory-game-stats</code>.
     </p>
     <p>
