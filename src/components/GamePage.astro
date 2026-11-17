@@ -15,8 +15,10 @@ import type { DailyGame } from '../config/games';
 
 interface Props {
   game: DailyGame;
+  /** Show the shared settings button, for a game without the gear (sudoku). */
+  sharedSettings?: boolean;
 }
-const { game } = Astro.props;
+const { game, sharedSettings = false } = Astro.props;
 ---
 <article class="veil mx-auto mt-6 max-w-prose p-6 sm:mt-10 sm:p-10" data-game-page={game.id}>
     <p>
@@ -25,10 +27,12 @@ const { game } = Astro.props;
       </a>
     </p>
     <slot name="title" />
-    <div class="mt-4 flex justify-center" data-testid="play-settings">
+    {/* Pillo, crossword and word path open the shared settings from their own gear. Sudoku's settings (lane 6) don't
+    include them yet, so its page keeps this button. */}
+    {sharedSettings && <div class="mt-4 flex justify-center" data-testid="play-settings">
       <GameSettings client:only="react" title="game settings" label="game settings" />
-    </div>
-    <noscript><p class="mt-4 text-center">game settings need JavaScript.</p></noscript>
+    </div>}
+    {sharedSettings && <noscript><p class="mt-4 text-center">game settings need JavaScript.</p></noscript>}
     {/* The game's own headings start at level 3, so the page keeps a level 2 between them and the title. */}
     <h2 class="sr-only">today's puzzle</h2>
     <slot />

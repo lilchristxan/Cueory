@@ -64,7 +64,8 @@ for (const game of games) {
     const dialog = page.getByRole('dialog', { name: `how to play ${game.name}` });
     await expect(dialog).toBeVisible();
     await expect(dialog.getByRole('heading', { name: 'settings' })).toBeVisible();
-    await expect(dialog).toContainText('change them in game settings at the top of this page.');
+    // Where the shared settings are now (each game's gear, Christian's brief).
+    await expect(dialog).toContainText('change them with the gear at the top left of a game');
     // Using the "?" counts as seeing the rules, so the first-visit card goes away.
     await expect(area.getByTestId('game-help-first')).toHaveCount(0);
     expect(JSON.parse((await seen(page))!)).toEqual([game.id]);

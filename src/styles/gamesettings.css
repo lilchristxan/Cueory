@@ -93,7 +93,10 @@ html:root[data-game-motion="reduce"] *::after {
     max-inline-size: 100%;
     align-items: center;
     font-size: var(--text-2xl);
-    overflow-wrap: break-word;
+    /* "anywhere", not "break-word": a long game name ("crossword settings") at 32 px text must be able to wrap inside
+       the card instead of setting its minimum width (Codex on #823). */
+    min-inline-size: 0;
+    overflow-wrap: anywhere;
   }
 
   .game-settings-heading .game-settings-close {
@@ -124,9 +127,17 @@ html:root[data-game-motion="reduce"] *::after {
   }
 
   .game-settings fieldset {
+    /* A fieldset is at least as wide as its widest word by default (min-content); 0 lets a game's own settings wrap
+       inside the card at 320 px with enlarged text instead of making it scroll sideways (Codex on #823). */
+    min-inline-size: 0;
     margin-block-start: calc(var(--spacing) * 5);
     border: 0;
     padding: 0;
+  }
+
+  .game-settings-option > span {
+    min-inline-size: 0;
+    overflow-wrap: anywhere;
   }
 
   .game-settings legend {

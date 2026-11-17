@@ -4,7 +4,8 @@ import { useEffect, useId, useLayoutEffect, useRef, useState, type KeyboardEvent
 import { dayLabel } from './daily';
 import { localDay, reportRound } from './gameresults';
 import { printGame } from './gameprint';
-import { GameHelpButton, GameHelpCard, useGameHelp } from './GameHelp';
+import { GameHelpCard, useGameHelp } from './GameHelp';
+import GameHeader from './GameHeader';
 import { site } from '../config/site';
 import { shake } from './SutureGame';
 import type { Cell } from './suture';
@@ -331,16 +332,21 @@ export function PathBoard({ puzzle, name }: Props) {
 
   return (
     <section aria-labelledby={title} data-testid="suture" data-format="path" data-print-area="suture" className="wordpath">
-      <div className="wordpath-corner" data-print-hidden>
-        <GameHelpButton help={howToPlay} name={name} className="wordpath-round" />
-        <button type="button" className="wordpath-round" aria-label="print" data-testid="suture-print" onClick={printPuzzle}>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
-            <path d="M6 9V3h12v6" />
-            <rect x="3" y="9" width="18" height="9" rx="2" />
-            <path d="M7 14h10v7H7z" />
-          </svg>
-        </button>
-      </div>
+      {/* The corner row (Christian's brief): the gear at the top left (word path has no settings of its own, so it holds
+          the shared ones); print and the "?" at the top right. */}
+      <GameHeader
+        name={name}
+        help={howToPlay}
+        end={
+          <button type="button" className="wordpath-round" aria-label="print" data-testid="suture-print" onClick={printPuzzle}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
+              <path d="M6 9V3h12v6" />
+              <rect x="3" y="9" width="18" height="9" rx="2" />
+              <path d="M7 14h10v7H7z" />
+            </svg>
+          </button>
+        }
+      />
       {printNote && <p className="mt-2 text-center text-sm text-ink-soft" data-testid="suture-print-note" data-print-hidden>{printNote}</p>}
       <PrintLogo />
       <p className="text-center text-sm text-ink-soft">today's theme</p>

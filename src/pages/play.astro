@@ -10,7 +10,6 @@ import Layout from '../layouts/Layout.astro';
 import GameStatsPanel from '../islands/GameStatsPanel';
 import HomeScreenTip from '../islands/HomeScreenTip';
 import PlayStatus from '../islands/PlayStatus';
-import GameSettings from '../islands/GameSettings';
 import { dailyGames, gamePages, helloCardsGame, helloCardsIndexWhenApproved, statGame } from '../config/games';
 import { helloCardsPage } from '../islands/hello-cards';
 import { draftsAllowed } from '../islands/anatomylab';
@@ -46,11 +45,7 @@ const hubGames = [pulse, sudokuGame, crossword, wordPath].map((game) => ({ id: g
         {hubGames.map((game) => <li><a href={game.href} class="font-medium">{game.name}</a><span class="text-ink-soft">: {game.line}</span></li>)}
       </ul>
     </noscript>
-    {/* Shared game settings (issue #734): theme, high contrast, reduced motion and sound for every game. */}
-    <div class="mt-8 flex justify-center" data-testid="play-settings">
-      <GameSettings client:only="react" title="game settings" label="game settings" />
-    </div>
-    <noscript><p>game settings need JavaScript.</p></noscript>
+    {/* Shared game settings (#734) open from each game's gear (Christian's brief), so the hub has no settings button. */}
 
     {/* Private stats (D-76): off until the student turns them on, kept only in this browser. Without JavaScript there are
     no games to count, so nothing shows. */}
