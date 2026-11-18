@@ -165,7 +165,7 @@ export default function GameResultsHost() {
         aria-modal="true"
         aria-labelledby="game-result-title"
         aria-describedby="game-result-summary"
-        className="result-dialog max-h-full w-full max-w-2xl overflow-y-auto rounded-[var(--cueory-result-card-radius)] border border-[color:var(--cueory-result-card-border)] bg-[color:var(--cueory-result-card-bg)] p-[var(--cueory-result-card-padding)] text-ink shadow-[var(--cueory-result-card-shadow)]"
+        className="result-dialog max-h-full w-full max-w-[var(--container-prose)] overflow-y-auto rounded-[var(--cueory-result-card-radius)] border border-[color:var(--cueory-result-card-border)] bg-[color:var(--cueory-result-card-bg)] p-[var(--cueory-result-card-padding)] text-ink shadow-[var(--cueory-result-card-shadow)]"
         data-testid="game-result-dialog"
         data-result-dialog
       >
@@ -180,7 +180,7 @@ export default function GameResultsHost() {
         >
           <span aria-hidden="true">×</span>
         </button>
-        <p className="result-meta text-[length:var(--cueory-label-size)] font-[var(--cueory-label-weight)] tracking-[var(--cueory-label-tracking)] uppercase text-ink-soft wrap-break-word">
+        <p className="result-meta text-center text-[length:var(--cueory-label-size)] font-[var(--cueory-label-weight)] tracking-[var(--cueory-label-tracking)] uppercase text-ink-soft wrap-break-word">
           {card.name}{card.level ? ` · ${card.level}` : ''} · {card.date}
         </p>
 
