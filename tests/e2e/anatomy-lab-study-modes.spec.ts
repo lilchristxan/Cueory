@@ -1,5 +1,5 @@
 import AxeBuilder from '@axe-core/playwright';
-import { withoutWebkitSelectReports } from './csp-allow';
+import { recordCspEvents, withoutWebkitSelectReports } from './csp-allow';
 import { expect, test, type Page } from '@playwright/test';
 import { isDesktopOfEachEngine } from './projects';
 
@@ -17,6 +17,8 @@ const FIXTURE_CREDIT = 'test shapes made in code for automated tests: not anatom
 
 function watchErrors(page: Page): string[] {
   const errors: string[] = [];
+  // The structured violations decide the WebKit select exception (csp-allow.ts); console text alone never does.
+  void recordCspEvents(page);
   page.on('console', (msg) => {
     if (msg.type() === 'error' && /content security policy|refused to/i.test(msg.text())) errors.push(msg.text());
   });

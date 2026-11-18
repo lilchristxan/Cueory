@@ -79,7 +79,7 @@ async function violations(page: Page, consoleErrors: string[]): Promise<string[]
   const events = await page.evaluate(() =>
     (window as Window & { __cueoryCspViolations?: string[] }).__cueoryCspViolations ?? []);
   // Only WebKit's native <select> report is set aside, narrowly (csp-allow.ts, #862).
-  return withoutWebkitSelectReports(page, [...events, ...consoleErrors]);
+  return withoutWebkitSelectReports(page, consoleErrors, events);
 }
 
 test.describe('Task 191: every built route obeys CSP', () => {

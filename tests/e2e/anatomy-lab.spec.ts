@@ -1,5 +1,5 @@
 import AxeBuilder from '@axe-core/playwright';
-import { withoutWebkitSelectReports } from './csp-allow';
+import { recordCspEvents, withoutWebkitSelectReports } from './csp-allow';
 import { readFile } from 'node:fs/promises';
 import { expect, test, type Page } from '@playwright/test';
 import { isDesktopOfEachEngine } from './projects';
@@ -16,6 +16,8 @@ const NAMES = ['fixture cube A', 'fixture cube B', 'fixture block C', 'fixture p
 
 function watchCsp(page: Page): string[] {
   const errors: string[] = [];
+  // The structured violations decide the WebKit select exception (csp-allow.ts); console text alone never does.
+  void recordCspEvents(page);
   page.on('console', (msg) => {
     if (msg.type() === 'error' && /content security policy|refused to/i.test(msg.text())) errors.push(msg.text());
   });
@@ -339,6 +341,17 @@ test.describe('anatomy lab', () => {
     expect(glb).toEqual(['/preview/anatomy-fixture/fixture.glb']);
     // WebKit's native <select> report is set aside, narrowly (csp-allow.ts, #862).
     expect(await withoutWebkitSelectReports(page, csp)).toEqual([]);
+  });
+
+  test('the WebKit select exception never hides a console-only CSP line on the real lab page (#862)', async ({ page }) => {
+    const csp = watchCsp(page);
+    await openLab(page);
+    // WebKit's own wording, raised with no securitypolicyviolation event behind it: nothing qualifies it, so it stays.
+    const line = "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy.";
+    await page.evaluate((text) => console.error(text), line);
+    await expect.poll(() => csp.length).toBeGreaterThan(0);
+    expect(await withoutWebkitSelectReports(page, csp)).toEqual(csp);
+    expect(csp.some((message) => message.includes('Refused to apply a stylesheet'))).toBe(true);
   });
 
   test('keyboard path: search, select from the list, name card, hide, show only, show all', async ({ page }) => {

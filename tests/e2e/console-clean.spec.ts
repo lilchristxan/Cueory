@@ -58,14 +58,11 @@ function collectErrors(page: Page, origin: string): ConsoleFinding[] {
 async function allFindings(page: Page, recorded: ConsoleFinding[]): Promise<ConsoleFinding[]> {
   const violations = await page.evaluate(() =>
     (window as Window & { __cueoryConsoleCsp?: string[] }).__cueoryConsoleCsp ?? []);
-  const all: ConsoleFinding[] = [
-    ...recorded,
-    ...violations.map((message) => ({ kind: 'csp' as const, url: page.url(), message })),
-  ];
-  // Only WebKit's native <select> report is set aside, narrowly (csp-allow.ts, #862).
+  const events: ConsoleFinding[] = violations.map((message) => ({ kind: 'csp' as const, url: page.url(), message }));
+  // Only WebKit's native <select> report is set aside, narrowly and from the structured events (csp-allow.ts, #862).
   const browserName = page.context().browser()?.browserType().name() ?? '';
   const selectCount = browserName === 'webkit' ? await page.locator('select').count() : 0;
-  return dropWebkitSelectReports(all, (finding) => (finding.kind === 'csp' || finding.kind === 'console' ? finding.message : ''), { browserName, selectCount });
+  return dropWebkitSelectReports(events, recorded, (finding) => (finding.kind === 'csp' || finding.kind === 'console' ? finding.message : ''), { browserName, selectCount });
 }
 
 function descriptions(route: string, findings: ConsoleFinding[], origin: string): string[] {

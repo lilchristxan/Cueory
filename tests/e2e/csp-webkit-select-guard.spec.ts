@@ -33,6 +33,13 @@ for (const [name, body] of [
     await page.waitForTimeout(200);
     const events = await page.evaluate(() => (window as unknown as { __guardViolations: string[] }).__guardViolations.slice());
     expect(events.length, 'the control must be reported by the engine').toBeGreaterThan(0);
-    expect((await withoutWebkitSelectReports(page, events)).length).toBeGreaterThan(0);
+    expect((await withoutWebkitSelectReports(page, [], events)).length).toBeGreaterThan(0);
   });
 }
+
+test('a console-only stylesheet line is never set aside, with or without a select', async ({ page, baseURL }) => {
+  await page.goto(`${baseURL}/support`);
+  const line = "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy.";
+  // No structured event was recorded for it, so the exception has nothing to qualify.
+  expect(await withoutWebkitSelectReports(page, [line], [])).toEqual([line]);
+});
