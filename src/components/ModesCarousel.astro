@@ -22,7 +22,7 @@
  * follows. With a mouse, the vial in front lifts a little and its glass brightens under the pointer or keyboard focus.
  */
 import { studyModes, type StudyFeatureIcon } from '../config/modes';
-import { accountHref } from '../config/site';
+import { accountHref, accountLaunch, accountsOpen } from '../config/site';
 import InfoTip from './InfoTip.astro';
 import ModeVial from './ModeVial.astro';
 
@@ -189,7 +189,7 @@ const icons: Record<StudyFeatureIcon, string> = {
             <span data-mode-preview-try-label>start</span><span aria-hidden="true"> →</span>
           </a>
           <p class="mode-soon" data-mode-preview-soon>coming soon</p>
-          <a href={accountHref} class="text-sm text-ink-soft hover:text-ink">create your free account</a>
+          <a href={accountHref} class="text-sm text-ink-soft hover:text-ink">{accountLaunch(accountsOpen).promoJoinLabel}</a>
         </div>
         <div class="mt-7 flex gap-3">
           <button type="button" class="corner-button" aria-label="previous study mode" data-mode-preview-prev>
