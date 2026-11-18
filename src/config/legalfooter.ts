@@ -29,6 +29,7 @@ export const alwaysShownLegalRoutes: readonly string[] = ['/privacy'];
 export const legalPlaceholderMarkers: Record<string, RegExp> = {
   terms: /<PlaceholderBlock\b|Christian:\s*paste your terms of use here/i,
   disclaimer: /<PlaceholderBlock\b|Christian:\s*paste your disclaimer here/i,
+  privacy: /Draft for review|Last updated:\s*not yet published/i,
 };
 
 export function legalPageSource(page: string): string {

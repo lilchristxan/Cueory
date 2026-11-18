@@ -154,8 +154,10 @@ test('after the per-game corner flag opens the footer report, the page view is s
   await page.keyboard.press('Escape');
   await expect(footerFlag(page)).toHaveAttribute('aria-expanded', 'false');
   // Focus is wherever the report put it (the footer button today; the game flag once #833 lands), never the pop-up.
-  const opener = await page.evaluate(() => document.activeElement?.matches('a[data-game-flag], [data-footer-flag] button') ?? false);
-  expect(opener).toBe(true);
+  // (Focus can come back a frame after the report closes, so it is polled, not read once.)
+  await expect
+    .poll(() => page.evaluate(() => document.activeElement?.matches('a[data-game-flag], [data-footer-flag] button') ?? false))
+    .toBe(true);
   await page.clock.runFor(1_500);
   await page.clock.runFor(15_000);
   await expect(popup(page)).toBeHidden();

@@ -1,0 +1,1 @@
+status: Lane 23 overflow sweep 1, long words in headings, coming-soon cards and the learn-mode progress row wrap at 320 px with 32px text; the large-text spec now also runs at 320 px in Light and Evening.

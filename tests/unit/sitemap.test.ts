@@ -2,6 +2,7 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import { indexablePages } from '../../src/config/routes';
+import { crosswordOpen } from '../../src/config/site';
 import { GET, pageSourcePath, routeDeclaresNoindex, sitemapPages, sitemapXml, sourceDeclaresNoindex } from '../../src/pages/sitemap.xml';
 
 // Keep this response test independent of Astro's live content collection.
@@ -15,7 +16,6 @@ vi.mock('node:fs', async (importOriginal) => {
 const noindexPages = [
   '/auth/callback', '/reset-password', '/signin', '/signup', '/start', '/subscribed',
   '/progress', '/breaks', '/play/hello-cards', '/play/stat', '/account/two-factor',
-  '/privacy',
 ];
 
 describe('sitemap', () => {
@@ -27,22 +27,26 @@ describe('sitemap', () => {
     for (const page of noindexPages) expect(listed).not.toContain(`https://cueory.app${page}`);
   });
 
-  it('lists the approved Terms and Disclaimer as indexable pages', () => {
+  it('lists the approved legal pages as indexable pages', () => {
     const xml = sitemapXml();
-    for (const path of ['/terms', '/disclaimer']) {
+    for (const path of ['/terms', '/disclaimer', '/privacy']) {
       expect(routeDeclaresNoindex(path)).toBe(false);
       expect(xml).toContain(`<loc>https://cueory.app${path}</loc>`);
     }
   });
 
   it('lists each public game page but not draft-only games', () => {
-    const published = ['/play/pillo', '/play/crossword', '/play/sudoku', '/play/word-path'] as const;
+    const published = ['/play/pillo', '/play/sudoku', '/play/word-path'] as const;
     const xml = sitemapXml();
     for (const path of published) {
       expect(indexablePages).toContain(path);
       expect(routeDeclaresNoindex(path)).toBe(false);
       expect(xml).toContain(`<loc>https://cueory.app${path}</loc>`);
     }
+    // The crossword page follows the crosswordOpen switch (site.ts): a "coming soon" noindex note while closed.
+    const crossword = '/play/crossword';
+    expect(indexablePages.includes(crossword)).toBe(crosswordOpen);
+    expect(xml.includes(`<loc>https://cueory.app${crossword}</loc>`)).toBe(crosswordOpen);
     for (const path of ['/play/stat', '/play/hello-cards']) {
       expect(indexablePages).not.toContain(path);
       expect(xml).not.toContain(`<loc>https://cueory.app${path}</loc>`);
@@ -50,11 +54,12 @@ describe('sitemap', () => {
   });
 
   it('rejects noindex routes even when someone mistakenly supplies them to the sitemap', () => {
-    const xml = sitemapXml(['/', '/signin', '/privacy', '/preview/states']);
+    const xml = sitemapXml(['/', '/signin', '/progress', '/preview/states']);
     expect([...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((match) => match[1]))
       .toEqual(['https://cueory.app/']);
     expect(routeDeclaresNoindex('/signin')).toBe(true);
     expect(routeDeclaresNoindex('/preview/states')).toBe(true);
+    expect(routeDeclaresNoindex('/privacy')).toBe(false);
     expect(routeDeclaresNoindex('/')).toBe(false);
   });
 
@@ -170,5 +175,18 @@ describe('sitemap', () => {
 
   it('escapes XML values in the generated loc', () => {
     expect(sitemapXml(['/?term=a&b'])).toContain('term=a&amp;b');
+  });
+});
+
+describe('crossword page while it is closed', () => {
+  it.skipIf(crosswordOpen)('is noindex in the built page', () => {
+    const html = readFileSync(resolve('dist/play/crossword.html'), 'utf8');
+    expect(html).toContain('data-testid="crossword-soon"');
+    expect(html).toMatch(/<meta name="robots" content="noindex/);
+  });
+
+  it('is listed in the built sitemap exactly when the switch is open', () => {
+    const xml = readFileSync(resolve('dist/sitemap.xml'), 'utf8');
+    expect(xml.includes('https://cueory.app/play/crossword</loc>')).toBe(crosswordOpen);
   });
 });

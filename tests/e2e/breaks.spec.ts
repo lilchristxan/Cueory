@@ -25,7 +25,7 @@ test('sample page stays out of search and lists all ideas on plain cards', async
   await expect(list(page).getByRole('listitem')).toHaveText(expectedIdeas);
   await expect(page.locator('body')).not.toHaveClass(/silk/);
   await expect(page.locator('main img')).toHaveCount(0);
-  await expect(page.getByText('sharing your own idea is coming with free accounts. for now, you can browse these samples.')).toBeVisible();
+  await expect(page.getByText('sharing your own idea is not open yet. for now, you can browse these samples.')).toBeVisible();
   await expect(page.getByRole('link', { name: 'back to study skills' })).toHaveAttribute('href', '/learn/study-skills');
 });
 

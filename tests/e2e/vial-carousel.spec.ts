@@ -163,7 +163,7 @@ test('Enter on the vial in front grows that same bottle into the preview, in two
     'read-along text in the lesson',
   ]);
   await expect(preview.getByText('coming soon')).toBeVisible();
-  await expect(preview.getByRole('link', { name: 'create your free account', exact: true })).toBeVisible();
+  await expect(preview.getByRole('link', { name: 'join the launch list', exact: true })).toBeVisible();
   const axe = await new AxeBuilder({ page }).include('#mode-preview').withTags(axeTags).analyze();
   expect(axe.violations.map((v) => `${v.id}: ${v.help}`)).toEqual([]);
 
@@ -193,7 +193,14 @@ test('with a mouse, the front vial lifts to 104% with brighter glass; its neighb
 }, testInfo) => {
   test.skip(!isDesktopOfEachEngine(testInfo), 'hover needs a mouse');
   await showRing(page);
-  await page.waitForTimeout(800);
+  // The ring has settled once no finite animation or transition is still running (an endless shimmer doesn't count).
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () => document.getAnimations().filter((a) => a.effect?.getComputedTiming().iterations !== Infinity && a.playState === 'running').length,
+      ),
+    )
+    .toBe(0);
   const look = (id: string) =>
     page.locator(`#mode-${id}`).evaluate((card) => ({
       scale: getComputedStyle(card).scale,
