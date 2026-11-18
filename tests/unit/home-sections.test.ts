@@ -1,8 +1,5 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { draftsAllowed } from '../../src/islands/anatomylab';
-import { draftBuildEnv } from '../../src/lessons/draftgate';
-import { indexablePages } from '../../src/config/routes';
 import { accountLaunch, accountsOpen, newsletter, showsHeroJoin } from '../../src/config/site';
 
 // Verify the built visitor-facing HTML after npm run build, not only Astro source text.
@@ -10,7 +7,7 @@ const built = readFileSync(new URL('../../dist/index.html', import.meta.url), 'u
 const main = built.match(/<main\b[^>]*>[\s\S]*?<\/main>/)?.[0];
 if (!main) throw new Error('missing main landmark on the built home page');
 
-function section(id: 'how-it-works'): string {
+function section(id: 'ways-to-study' | 'daily-games' | 'signup'): string {
   const expression = new RegExp('<section\\b(?=[^>]*\\bid="' + id + '")[^>]*>[\\s\\S]*?<\\/section>');
   const found = main!.match(expression)?.[0];
   if (!found) throw new Error('missing home section: ' + id);
@@ -27,53 +24,30 @@ function links(markup: string): string[] {
   return [...markup.matchAll(/<a\b[^>]*\bhref="([^"]+)"[^>]*>/g)].map((match) => match[1]!);
 }
 
-describe('home how-it-works (W01-3)', () => {
-  it('has one h1, ordered h2 sections and h3 children', () => {
-    const how = section('how-it-works');
+describe('home lower sections', () => {
+  it('has one h1 and only the approved lower-section order', () => {
     expect([...main!.matchAll(/<h1\b[^>]*>/g)]).toHaveLength(1);
-    expect(main!.indexOf(how)).toBeGreaterThan(main!.indexOf('<h1'));
-    expect(titles(how, 2)).toEqual(['how it works']);
-    expect(titles(how, 3)).toHaveLength(3);
-    expect(how.indexOf('<h3')).toBeGreaterThan(how.indexOf('<h2'));
-    // The feature tiles repeated the vials and the lesson link, so they left the home page (lane 14 home polish).
-    expect(main).not.toContain('id="study-features"');
-    expect(main).not.toContain('made for the way you study');
+    const ids = [...main!.matchAll(/<section\b[^>]*\bid="([^"]+)"/g)].map((match) => match[1]);
+    expect(ids).toEqual(['ways-to-study', 'daily-games', 'signup']);
+    expect(titles(section('ways-to-study'), 2).filter(Boolean)).toEqual(['ways to study']);
+    expect(titles(section('daily-games'), 2)).toEqual(['a few minutes, every day.']);
+    expect(titles(section('signup'), 2)).toEqual(['coming soon']);
+    expect(main).not.toContain('how-it-works');
   });
 
-  it('keeps three correctly ordered, labeled list steps', () => {
-    const how = section('how-it-works');
-    expect(how).toContain('aria-labelledby="how-it-works-heading"');
-    expect(how).toContain('id="how-it-works-heading"');
-    const list = how.match(/<ol\b[^>]*>([\s\S]*?)<\/ol>/)?.[1];
-    expect(list).toBeDefined();
-    const steps = [...(list ?? '').matchAll(/<li\b[^>]*>([\s\S]*?)<\/li>/g)].map((m) => m[1]!);
-    expect(steps).toHaveLength(3);
-    expect(steps.map((step) => titles(step, 3)[0])).toEqual([
-      'pick a lesson', 'study it your way', "come back to what you're still learning",
-    ]);
-    for (const [index, step] of steps.entries()) {
-      expect(step).toContain('aria-hidden="true"');
-      expect(plain(step)).toContain('0' + (index + 1));
-      expect(titles(step, 3)).toHaveLength(1);
-    }
+  it('keeps the games action, closed-game gates and Kit signup contract', () => {
+    const games = section('daily-games');
+    const signup = section('signup');
+    expect(links(games)).toEqual(['/play']);
+    expect(plain(games)).toContain('crossword coming soon');
+    expect(plain(games)).toMatch(/hello cards flip a card, start a conversation\. coming soon/);
+    expect(plain(games)).toContain('sudoku fill every row, column and box with the numbers one through nine.');
+    expect(signup).toContain('id="signup"');
+    expect(plain(signup)).toContain('Mental Health I and Med Math are next. Get one email when they open.');
   });
 
-  it('links only to existing indexable Cueory routes', () => {
-    const how = section('how-it-works');
-    const fromHow = links(how);
-    // The one lesson link is the sample lesson's: it only renders where the draft gate shows it (never on the live build).
-    // Closed mode comes from the build configuration: the live build has no lesson link, a drafts build has the one.
-    expect(fromHow).toEqual(draftsAllowed(draftBuildEnv(process.env)) ? ['/learn/study-skills'] : []);
-    expect(readFileSync(new URL('../../src/components/HowItWorks.astro', import.meta.url), 'utf8')).toMatch(/sampleLessonShown\(\) && \(/);
-    expect(indexablePages).not.toContain('/learn/study-skills');
-    for (const href of fromHow) {
-      const file = new URL('../../dist' + href + '.html', import.meta.url);
-      expect(existsSync(file)).toBe(true);
-    }
-  });
-
-  it('keeps style values in tokens, not inline styles or raw colors', () => {
-    for (const file of ['HowItWorks.astro']) {
+  it('keeps surviving lower-section style values in tokens, not inline styles or raw colors', () => {
+    for (const file of ['DailyGamesSection.astro', 'SignupForm.astro']) {
       const source = readFileSync(new URL('../../src/components/' + file, import.meta.url), 'utf8');
       expect(source).not.toMatch(/\bstyle\s*=/i);
       expect(source).not.toMatch(/#[\da-f]{3,8}\b/i);
