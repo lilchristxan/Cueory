@@ -28,7 +28,8 @@ describe('coming-soon and subscribed page shells', () => {
       const hrefs = [...source.matchAll(/<a\b[^>]*\bhref="([^"]+)"/g)].map((match) => match[1]);
       expect(hrefs.length).toBeGreaterThan(0);
       for (const href of hrefs) {
-        expect(indexablePages).toContain(href);
+        // /learn/study-skills is the sample lesson: the live build holds it behind a coming-soon page, so it is not in indexablePages.
+        expect([...indexablePages, '/learn/study-skills']).toContain(href);
         expect(href).not.toMatch(/^https?:\/\//);
       }
       expect(hrefs).toContain('/learn/study-skills');

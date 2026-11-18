@@ -2,6 +2,8 @@
 /** A lesson's organizer set (Task 300: built for every lesson whose set may show; src/lessons/catalog.ts). */
 import { getEntry } from 'astro:content';
 import Layout from '../../../layouts/Layout.astro';
+import LessonComingSoon from '../../../components/LessonComingSoon.astro';
+import { lessonIsHeldBack } from '../../../lessons/holdback';
 import ContentLabel from '../../../components/ContentLabel.astro';
 import InfoTip from '../../../components/InfoTip.astro';
 import OrganizerBoard from '../../../islands/OrganizerBoard';
@@ -14,6 +16,7 @@ export async function getStaticPaths() {
 }
 
 const { lesson } = Astro.props as { lesson: CatalogLesson };
+const hold = await lessonIsHeldBack(lesson.id);
 const entry = lesson.organizer && await getEntry('organizer', lesson.organizer.id);
 if (!entry) throw new Error(`The organizer file for lesson ${lesson.id} is missing.`);
 // The same checks the board runs, so a broken file stops the build instead of reaching a student.
@@ -21,6 +24,7 @@ const set = parseSet({ id: entry.id, title: entry.data.title, groups: entry.data
 const page = `${lesson.href}/organizer`;
 ---
 
+{hold ? <LessonComingSoon /> : (
 <Layout title={`organizer: ${lesson.short}`} description={`sort ideas into groups for ${lesson.about}.`} variant="study">
   <div class="mx-auto max-w-prose pt-8">
     <p class="text-sm text-ink-soft">{lesson.context}</p>
@@ -56,3 +60,4 @@ const page = `${lesson.href}/organizer`;
     </div>
   </div>
 </Layout>
+)}

@@ -2,6 +2,8 @@
 /** A static, no-JavaScript card sheet for each visible lesson with a visible deck (W09-2, #46). */
 import { getCollection, getEntry } from 'astro:content';
 import Layout from '../../../layouts/Layout.astro';
+import LessonComingSoon from '../../../components/LessonComingSoon.astro';
+import { lessonIsHeldBack } from '../../../lessons/holdback';
 import { pathsFor, statusNotice, type CatalogLesson } from '../../../lessons/catalog';
 import { lessonCatalog } from '../../../lessons/load';
 import { creditsFor } from '../../../visuals/credits';
@@ -12,6 +14,7 @@ export async function getStaticPaths() {
 }
 
 const { lesson } = Astro.props as { lesson: CatalogLesson };
+const hold = await lessonIsHeldBack(lesson.id);
 const deck = lesson.cards && await getEntry('cards', lesson.cards.id);
 if (!deck) throw new Error(`The card file for lesson ${lesson.id} is missing.`);
 const { title, status, cards } = deck.data;
@@ -24,6 +27,7 @@ const shownVisuals = visualsForLesson(
 const credits = creditsFor(shownVisuals);
 ---
 
+{hold ? <LessonComingSoon /> : (
 <Layout title={`print cards · ${title}`} description={`printable cards for ${lesson.about}.`} variant="study" noindex promo={false}>
   <article data-print-cards class="mx-auto max-w-page pb-section pt-8 sm:pt-12">
     <header>
@@ -66,3 +70,4 @@ const credits = creditsFor(shownVisuals);
     )}
   </article>
 </Layout>
+)}

@@ -1,10 +1,14 @@
 ---
 import Layout from '../../../layouts/Layout.astro';
+import LessonComingSoon from '../../../components/LessonComingSoon.astro';
+import { lessonIsHeldBack } from '../../../lessons/holdback';
 import ContentLabel from '../../../components/ContentLabel.astro';
 import InfoTip from '../../../components/InfoTip.astro';
 import { LabelItFromUrl } from '../../../islands/LabelItBoard';
+const hold = await lessonIsHeldBack('study-skills-01');
 ---
 
+{hold ? <LessonComingSoon /> : (
 <Layout title="label it: lesson 1" description="uncover a diagram's labels for lesson 1 of how to study for nursing school." variant="study">
   <div class="mx-auto max-w-prose pt-8">
     <p class="text-sm text-ink-soft">how to study for nursing school · lesson 1</p>
@@ -36,3 +40,4 @@ import { LabelItFromUrl } from '../../../islands/LabelItBoard';
     </div>
   </div>
 </Layout>
+)}

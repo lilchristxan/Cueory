@@ -346,8 +346,10 @@ describe.skipIf(!existsSync(dist))('built site', () => {
       expect(markup, label.text).not.toMatch(new RegExp(`\\b${label.text}\\b`, 'i'));
     }
     const props = [...html.matchAll(/<astro-island[^>]*\sprops="([^"]*)"/g)].map((m) => m[1]);
+    // The live (drafts-closed) build holds the sample lesson back behind a coming-soon page: only the flag island is left.
+    const heldBack = html.includes('data-testid="lesson-soon"');
     expect(props).toEqual([
-      '{&quot;src&quot;:[0,&quot;/learn/study-skills/label-it/study-skills-01.json&quot;]}',
+      ...(heldBack ? [] : ['{&quot;src&quot;:[0,&quot;/learn/study-skills/label-it/study-skills-01.json&quot;]}']),
       '{&quot;page&quot;:[0,&quot;/learn/study-skills/label-it.html&quot;],&quot;itemId&quot;:[0],&quot;itemVersionId&quot;:[0],&quot;variant&quot;:[0,&quot;icon&quot;]}',
     ]);
     const served = JSON.parse(readFileSync(join(dist, 'learn/study-skills/label-it/study-skills-01.json'), 'utf8'));
@@ -365,8 +367,10 @@ describe.skipIf(!existsSync(dist))('built site', () => {
     }
     expect(markup).not.toMatch(/&quot;key&quot;|"key"/);
     const props = [...html.matchAll(/<astro-island[^>]*\sprops="([^"]*)"/g)].map((m) => m[1]);
+    // The live (drafts-closed) build holds the sample lesson back behind a coming-soon page: only the flag island is left.
+    const heldBack = html.includes('data-testid="lesson-soon"');
     expect(props).toEqual([
-      '{&quot;src&quot;:[0,&quot;/learn/study-skills/questions/study-skills-01.json&quot;]}',
+      ...(heldBack ? [] : ['{&quot;src&quot;:[0,&quot;/learn/study-skills/questions/study-skills-01.json&quot;]}']),
       '{&quot;page&quot;:[0,&quot;/learn/study-skills/questions.html&quot;],&quot;itemId&quot;:[0],&quot;itemVersionId&quot;:[0],&quot;variant&quot;:[0,&quot;icon&quot;]}',
     ]);
     const served = JSON.parse(readFileSync(join(dist, 'learn/study-skills/questions/study-skills-01.json'), 'utf8'));
