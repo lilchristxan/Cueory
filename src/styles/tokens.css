@@ -40,11 +40,13 @@
      Semantic aliases for the rendering builders. Keep these aliases pointed at
      existing brand/silk/cell roles so the redesign does not create a second
      palette or rename established tokens. */
-  /* Use the role pair with AA-safe normal text at both gradient endpoints in
-     daytime (Ivory ink) and evening (Charcoal ink) themes. */
-  --cueory-copper-start: var(--color-button-hover);
-  --cueory-copper-end: var(--color-button);
-  --cueory-copper-ink: var(--color-on-button);
+  /* The rendering's copper button (#B87348 edge, #D9976A body, #F6D3AE and #FFF0DE shine) is not a brand colour. The
+     closest palette colours are used instead, each with AA-safe text: Taupe edge, Linen body, Ivory shine, Espresso ink
+     in daytime. Gradient: start at the edges, end through the body, shine at the sweep. Evening overrides these below. */
+  --cueory-copper-start: #d3b7a1; /* Taupe    — gradient edges */
+  --cueory-copper-end: #eadccf;   /* Linen    — gradient body */
+  --cueory-copper-shine: #f9f5ef; /* Ivory    — the light sweep */
+  --cueory-copper-ink: #3e2c23;   /* Espresso — text on the gradient */
   --cueory-glass-bg: rgb(var(--glass-rgb) / var(--glass-alpha));
   --cueory-glass-border: rgb(var(--glass-rim-rgb) / var(--glass-rim-alpha));
   --cueory-glass-shadow: var(--shadow-soft);
@@ -438,6 +440,10 @@
     --color-button-hover: #f9f5ef; /* Ivory */
     --color-on-button: #1c1917; /* Charcoal */
     --color-focus: #cbb8a4;     /* Sand */
+    --cueory-copper-start: #d3b7a1; /* Taupe   — copper gradient edges */
+    --cueory-copper-end: #cbb8a4;   /* Sand    — copper gradient body */
+    --cueory-copper-shine: #eadccf; /* Linen   — the light sweep */
+    --cueory-copper-ink: #1c1917;   /* Charcoal — text on the gradient */
 
     --color-silk-base: #1c1917;   /* Charcoal */
     --color-silk-sheen: #3a2d24;  /* Walnut */
@@ -512,6 +518,10 @@
   --color-button-hover: #f9f5ef; /* Ivory */
   --color-on-button: #1c1917; /* Charcoal */
   --color-focus: #cbb8a4;     /* Sand */
+  --cueory-copper-start: #d3b7a1; /* Taupe   — copper gradient edges */
+  --cueory-copper-end: #cbb8a4;   /* Sand    — copper gradient body */
+  --cueory-copper-shine: #eadccf; /* Linen   — the light sweep */
+  --cueory-copper-ink: #1c1917;   /* Charcoal — text on the gradient */
 
   --color-silk-base: #1c1917;   /* Charcoal */
   --color-silk-sheen: #3a2d24;  /* Walnut */
