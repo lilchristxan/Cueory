@@ -3,11 +3,11 @@ import '../styles/gamehelp.css';
 import { useEffect, useId, useRef, useState, type ReactNode, type RefObject } from 'react';
 import { dailyGames } from '../config/games';
 import { browserStorage } from '../scripts/storage';
-import { GAME_HELP, SHARED_SETTINGS_NOTE, helpSeen, markHelpSeen, type GameHelpContent, type HelpTopic } from './gamehelp';
+import { GAME_HELP, SHARED_SETTINGS_NOTE, helpSeen, markHelpSeen, type GameHelpContent, type HelpTopic } from './gamehelpcontent';
 import { trappedFocusIndex } from './gamesettings';
 
 /**
- * How to play, for every daily game (issue #736; text and "seen" logic in gamehelp.ts).
+ * How to play, for every daily game (issue #736; text and "seen" logic in gamehelpcontent.ts).
  *
  *   const help = useGameHelp('triage');
  *   <GameHelpButton help={help} name="sudoku" className="sudoku-icon-button" />  // the "?" and its dialog
