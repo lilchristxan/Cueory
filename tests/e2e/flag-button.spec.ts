@@ -92,6 +92,10 @@ test('a first-visit promo waits while a game report is open', async ({ page }) =
   await expect(fresh.getByTestId('promo')).toBeHidden();
   await fresh.keyboard.press('Escape');
   await expect(opener).toBeFocused();
+  // The promo retries every 500 ms while something else has attention: it must not fire after the report closes.
+  await fresh.waitForTimeout(650);
+  await expect(fresh.getByTestId('promo')).toBeHidden();
+  await expect(opener).toBeFocused();
   await fresh.close();
 });
 
