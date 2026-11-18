@@ -263,7 +263,7 @@
 
   .building-strip-icon {
     display: inline-block;
-    margin-inline-end: 0.45rem;
+    margin-inline-end: 0.5em;
     color: var(--color-highlight);
     font-size: 0.8em;
   }
