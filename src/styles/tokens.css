@@ -40,11 +40,18 @@
      Semantic aliases for the rendering builders. Keep these aliases pointed at
      existing brand/silk/cell roles so the redesign does not create a second
      palette or rename established tokens. */
-  /* Use the role pair with AA-safe normal text at both gradient endpoints in
-     daytime (Ivory ink) and evening (Charcoal ink) themes. */
-  --cueory-copper-start: var(--color-button-hover);
-  --cueory-copper-end: var(--color-button);
-  --cueory-copper-ink: var(--color-on-button);
+  /* Copper accent (added 18 Nov 2026 by Christian's decision, to match the redesign renderings; docs/BRAND.md). Only
+     for copper buttons, pills and accents. The same four colours serve Daytime and Evening. */
+  --color-copper-deep: #b87348;   /* Copper Deep  — gradient edges */
+  --color-copper: #d9976a;        /* Copper       — gradient body */
+  --color-copper-glow: #f6d3ae;   /* Copper Glow  — soft highlight */
+  --color-copper-shine: #fff0de;  /* Copper Shine — the light sweep */
+  --cueory-copper-start: var(--color-copper-deep);
+  --cueory-copper-end: var(--color-copper);
+  --cueory-copper-glow: var(--color-copper-glow);
+  --cueory-copper-shine: var(--color-copper-shine);
+  /* Ivory and Espresso text fail 4.5:1 on the copper stops; Charcoal passes on all four (4.65 or more). */
+  --cueory-copper-ink: #1c1917;   /* Charcoal — text on the gradient, in both themes */
   --cueory-glass-bg: rgb(var(--glass-rgb) / var(--glass-alpha));
   --cueory-glass-border: rgb(var(--glass-rim-rgb) / var(--glass-rim-alpha));
   --cueory-glass-shadow: var(--shadow-soft);
@@ -438,6 +445,10 @@
     --color-button-hover: #f9f5ef; /* Ivory */
     --color-on-button: #1c1917; /* Charcoal */
     --color-focus: #cbb8a4;     /* Sand */
+    --color-copper-deep: #b87348;   /* Copper Deep  — same copper in Evening */
+    --color-copper: #d9976a;        /* Copper */
+    --color-copper-glow: #f6d3ae;   /* Copper Glow */
+    --color-copper-shine: #fff0de;  /* Copper Shine */
 
     --color-silk-base: #1c1917;   /* Charcoal */
     --color-silk-sheen: #3a2d24;  /* Walnut */
@@ -512,6 +523,10 @@
   --color-button-hover: #f9f5ef; /* Ivory */
   --color-on-button: #1c1917; /* Charcoal */
   --color-focus: #cbb8a4;     /* Sand */
+  --color-copper-deep: #b87348;   /* Copper Deep  — same copper in Evening */
+  --color-copper: #d9976a;        /* Copper */
+  --color-copper-glow: #f6d3ae;   /* Copper Glow */
+  --color-copper-shine: #fff0de;  /* Copper Shine */
 
   --color-silk-base: #1c1917;   /* Charcoal */
   --color-silk-sheen: #3a2d24;  /* Walnut */
