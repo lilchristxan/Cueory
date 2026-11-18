@@ -2,7 +2,7 @@ import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
 
 const headings = [
-  'about cueory',
+  'we know nursing school is hard.',
   'our mission',
   'how we make our lessons',
   "what's coming",
@@ -18,16 +18,17 @@ test.describe('about page', () => {
     await expect(page.locator('main section')).toHaveCount(4);
 
     const paragraphs = page.locator('main p');
-    await expect(paragraphs).toHaveCount(8);
-    for (const paragraph of await paragraphs.all()) {
-      await expect(paragraph).toHaveAttribute('data-placeholder', 'CHRISTIAN-TEXT');
-      await expect(paragraph).toHaveText('[Christian writes this]');
-    }
+    await expect(paragraphs).toHaveCount(5);
+    await expect(page.locator('main p[data-placeholder="CHRISTIAN-TEXT"]')).toHaveCount(1);
+    await expect(page.locator('main p[data-placeholder="CHRISTIAN-TEXT"]')).toHaveText('[Christian writes this]');
+    await expect(page.locator('main p').filter({ hasText: 'To make studying for nursing school simpler' })).toHaveCount(1);
+    await expect(page.locator('main p').filter({ hasText: 'Mental Health I and Med Math are next' })).toHaveCount(1);
 
-    await expect(page.locator('main section').nth(1).locator('li')).toHaveCount(3);
+    await expect(page.locator('main section').nth(1).locator('li')).toHaveCount(1);
     await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', 'noindex, nofollow');
-    await expect(page.getByRole('link', { name: 'get launch updates' })).toHaveAttribute('href', '/#signup');
-    await expect(page.getByRole('link', { name: 'support our mission' })).toHaveAttribute('href', '/support');
+    await expect(page.getByRole('link', { name: 'join the mailing list' })).toHaveAttribute('href', '/#signup');
+    await expect(page.getByRole('link', { name: 'support on Ko-fi ↗' })).toHaveAttribute('href', 'https://ko-fi.com/cueory');
+    await expect(page.getByRole('link', { name: 'support on Ko-fi ↗' })).toHaveAttribute('target', '_blank');
   });
 
   for (const viewport of [
@@ -41,7 +42,7 @@ test.describe('about page', () => {
         await page.emulateMedia({ colorScheme });
         await page.goto('/about');
 
-        await expect(page.getByRole('heading', { level: 1, name: 'about cueory' })).toBeVisible();
+        await expect(page.getByRole('heading', { level: 1, name: 'we know nursing school is hard.' })).toBeVisible();
         await expect(page.locator('main .veil')).toHaveCount(4);
 
         const headingFont = await page.locator('main h1').evaluate((element) => getComputedStyle(element).fontFamily);
