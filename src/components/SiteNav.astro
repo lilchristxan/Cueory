@@ -23,7 +23,7 @@ const current = currentHref(
       {
         navLinks.map((link) => (
           <li>
-            <a href={link.href} class="nav-pill-link" aria-current={link.href === current ? 'page' : undefined}>
+            <a href={link.href} class="inline-flex min-h-(--tap-min) items-center rounded-pill px-4 text-ink no-underline hover:bg-surface nav-pill" aria-current={link.href === current ? 'page' : undefined}>
               {link.label}
             </a>
           </li>
@@ -33,13 +33,13 @@ const current = currentHref(
         about.length > 0 && (
           <li class="relative">
             <details class="about-menu" data-about-menu>
-              <summary class="nav-pill-link cursor-pointer list-none">
+              <summary class="inline-flex min-h-(--tap-min) items-center rounded-pill px-4 text-ink no-underline hover:bg-surface nav-pill cursor-pointer list-none">
                 about <span aria-hidden="true">▾</span>
               </summary>
-              <ul class="about-list veil">
+              <ul class="veil absolute left-1/2 top-full z-30 mt-2 flex min-w-48 -translate-x-1/2 flex-col p-2">
                 {about.map((link) => (
                   <li>
-                    <a href={link.href} class="nav-pill-link w-full" aria-current={link.href === current ? 'page' : undefined}>
+                    <a href={link.href} class="inline-flex min-h-(--tap-min) items-center rounded-pill px-4 text-ink no-underline hover:bg-surface nav-pill w-full" aria-current={link.href === current ? 'page' : undefined}>
                       {link.label}
                     </a>
                   </li>
@@ -60,36 +60,14 @@ const current = currentHref(
 </div>
 
 <style>
-  .nav-pill-link {
-    display: inline-flex;
-    align-items: center;
-    min-block-size: var(--tap-min);
-    padding-inline: 1rem;
-    border-radius: var(--radius-pill);
-    color: var(--color-ink);
-    text-decoration: none;
-  }
-
-  .nav-pill-link:hover,
-  .nav-pill-link[aria-current='page'] {
-    background-color: var(--color-surface);
-  }
-
+  /* Safari draws its own disclosure triangle on <summary> unless told not to; the ▾ in the markup is the marker. */
   .about-menu summary::-webkit-details-marker {
     display: none;
   }
 
-  .about-list {
-    position: absolute;
-    inset-block-start: 100%;
-    inset-inline-start: 50%;
-    translate: -50% 0;
-    z-index: 30;
-    min-inline-size: 12rem;
-    margin-block-start: 0.5rem;
-    padding: 0.5rem;
-    display: flex;
-    flex-direction: column;
+  /* The page you are on, marked the same way as the hover (the colour is not the only signal: aria-current is set). */
+  .nav-pill[aria-current='page'] {
+    background-color: var(--color-surface);
   }
 </style>
 

@@ -29,15 +29,25 @@ test.describe('wide screen', () => {
     await expect(page.getByRole('button', { name: 'search the site' })).toBeVisible();
   });
 
-  test('every control is at least 44 px and nothing scrolls sideways', async ({ page }) => {
+  test('every control is at least 44 by 44 px and nothing scrolls sideways', async ({ page }) => {
     await page.goto('/');
     for (const control of [
       ...(await page.getByRole('navigation', { name: 'main', exact: true }).getByRole('link').all()),
+      page.locator('[data-about-menu] summary'),
       page.getByRole('button', { name: 'search the site' }),
     ]) {
       const box = (await control.boundingBox())!;
       expect(box.height).toBeGreaterThanOrEqual(43.5);
+      expect(box.width).toBeGreaterThanOrEqual(43.5);
     }
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  });
+
+  test('at the breakpoint with enlarged text the bar never scrolls the page sideways', async ({ page }) => {
+    await page.setViewportSize({ width: 1024, height: 800 });
+    await page.goto('/support');
+    await page.evaluate(() => { document.documentElement.style.fontSize = '32px'; });
+    expect(await page.evaluate(() => getComputedStyle(document.documentElement).fontSize)).toBe('32px');
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   });
 
@@ -72,12 +82,15 @@ test.describe('wide screen', () => {
   });
 });
 
-test.describe('phone', () => {
-  test.use({ viewport: { width: 390, height: 844 } });
+for (const [label, width, height] of [['phone', 390, 844], ['smallest phone', 320, 640], ['tablet', 820, 1180]] as const) {
+  test.describe(label, () => {
+    test.use({ viewport: { width, height } });
 
-  test('keeps the ☰ panel and shows no pill', async ({ page }) => {
-    await page.goto('/support');
-    await expect(page.getByRole('navigation', { name: 'main', exact: true })).toBeHidden();
-    await expect(page.getByRole('button', { name: 'open site menu' })).toBeVisible();
+    test('keeps the ☰ panel, shows no pill, and does not scroll sideways', async ({ page }) => {
+      await page.goto('/support');
+      await expect(page.getByRole('navigation', { name: 'main', exact: true })).toBeHidden();
+      await expect(page.getByRole('button', { name: 'open site menu' })).toBeVisible();
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+    });
   });
-});
+}
