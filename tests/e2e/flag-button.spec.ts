@@ -95,6 +95,21 @@ test('a first-visit promo waits while a game report is open', async ({ page }) =
   await fresh.close();
 });
 
+test('the open report panel fits a 320px screen at 32px text', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 700 });
+  await page.addInitScript(() => { document.documentElement.style.fontSize = '32px'; });
+  await page.goto('/play/pillo');
+  await page.locator('a[data-game-flag]').click();
+  const panel = page.locator('#footer-flag [role], #footer-flag div[tabindex="-1"]').first();
+  await expect(panel).toBeVisible();
+  const m = await panel.evaluate(el => ({ c: el.clientWidth, s: el.scrollWidth, r: el.getBoundingClientRect().right, b: el.getBoundingClientRect().bottom, w: document.documentElement.scrollWidth, v: window.innerWidth, h: window.innerHeight }));
+  expect(m.c).toBeGreaterThan(200);
+  expect(m.s).toBeLessThanOrEqual(m.c);
+  expect(m.r).toBeLessThanOrEqual(m.v);
+  expect(m.b).toBeLessThanOrEqual(m.h);
+  expect(m.w).toBeLessThanOrEqual(m.v);
+});
+
 test('flag button passes axe with form open', async ({ page }) => {
   await page.goto('/');
   await page.getByRole('button', { name: 'flag or comment', exact: true }).click();
