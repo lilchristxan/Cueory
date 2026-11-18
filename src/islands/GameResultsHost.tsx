@@ -174,7 +174,7 @@ export default function GameResultsHost() {
         aria-modal="true"
         aria-labelledby="game-result-title"
         aria-describedby="game-result-summary"
-        className="result-dialog max-h-full w-full max-w-lg overflow-y-auto rounded-xl border border-line bg-page p-4 text-ink shadow-card sm:p-8"
+        className="result-dialog max-h-full w-full max-w-lg overflow-y-auto rounded-[var(--cueory-result-card-radius)] border border-[color:var(--cueory-result-card-border)] bg-[color:var(--cueory-result-card-bg)] p-[var(--cueory-result-card-padding)] text-ink shadow-[var(--cueory-result-card-shadow)]"
         data-testid="game-result-dialog"
         data-result-dialog
       >
@@ -189,7 +189,7 @@ export default function GameResultsHost() {
         >
           <span aria-hidden="true">×</span>
         </button>
-        <p className="result-meta text-sm font-bold text-ink-soft wrap-break-word">
+        <p className="result-meta text-[length:var(--cueory-label-size)] font-[var(--cueory-label-weight)] tracking-[var(--cueory-label-tracking)] uppercase text-ink-soft wrap-break-word">
           {card.name}{card.level ? ` · ${card.level}` : ''} · {card.date}
         </p>
 
@@ -200,8 +200,8 @@ export default function GameResultsHost() {
 
         <dl className="mt-5 flex flex-wrap gap-2">
           {card.stats.slice(0, 3).map((stat) => (
-            <div key={stat.label} className="rounded-pill border border-line px-4 py-2">
-              <dt className="text-sm text-ink-soft">{stat.label}</dt>
+            <div key={stat.label} className="rounded-pill border border-[color:var(--cueory-glass-border)] bg-[color:var(--cueory-glass-bg)] px-4 py-2 shadow-[var(--cueory-glass-shadow)]">
+              <dt className="text-[length:var(--cueory-label-size)] font-[var(--cueory-label-weight)] tracking-[var(--cueory-label-tracking)] uppercase text-ink-soft">{stat.label}</dt>
               <dd className="font-bold">{stat.value}</dd>
             </div>
           ))}
@@ -212,7 +212,7 @@ export default function GameResultsHost() {
         </p>
 
         <div className="mt-5 flex flex-wrap gap-2">
-          <button type="button" aria-disabled={preparing || undefined} aria-busy={preparing || undefined} className="min-h-(--tap-min) rounded-pill bg-button px-5 py-2.5 text-on-button aria-disabled:opacity-50" onClick={() => void share(card, line)}>{prepared?.card === card ? 'share image' : preparing ? 'preparing image' : 'share'}</button>
+          <button type="button" aria-disabled={preparing || undefined} aria-busy={preparing || undefined} className="min-h-(--tap-min) rounded-pill bg-linear-to-r from-[var(--cueory-copper-start)] to-[var(--cueory-copper-end)] px-5 py-2.5 text-[color:var(--cueory-copper-ink)] aria-disabled:opacity-50" onClick={() => void share(card, line)}>{prepared?.card === card ? 'share image' : preparing ? 'preparing image' : 'share'}</button>
           <button type="button" className="min-h-(--tap-min) rounded-pill border border-control px-5 py-2.5" onClick={() => void copy(line)}>copy</button>
 
           <nav aria-label="share result on a website" className="flex flex-wrap gap-2">
