@@ -39,3 +39,12 @@ export const SAMPLE_LESSON_HREF = '/learn/study-skills';
 export function lessonEntryHref(source: Record<string, string | undefined> = process.env): string {
   return sampleLessonShown(source) ? SAMPLE_LESSON_HREF : '/learn';
 }
+
+/**
+ * Does this build show the setup questions at /start? Accounts are closed at launch (Christian, 18 Nov), so the live
+ * build holds /start behind a coming-soon page and links to it nowhere. Staging, previews and test builds keep the real
+ * questions. Same fail-closed gate as the sample lesson.
+ */
+export function onboardingShown(source: Record<string, string | undefined> = process.env): boolean {
+  return draftsAllowed(draftBuildEnv(source));
+}
