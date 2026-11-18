@@ -2,6 +2,8 @@
 /** Matching for a lesson's cards (Task 300: built for every lesson whose deck may show; src/lessons/catalog.ts). */
 import { getEntry } from 'astro:content';
 import Layout from '../../../layouts/Layout.astro';
+import LessonComingSoon from '../../../components/LessonComingSoon.astro';
+import { lessonIsHeldBack } from '../../../lessons/holdback';
 import ContentLabel from '../../../components/ContentLabel.astro';
 import MatchingBoard from '../../../islands/MatchingBoard';
 import { pathsFor, statusNotice, type CatalogLesson } from '../../../lessons/catalog';
@@ -12,6 +14,7 @@ export async function getStaticPaths() {
 }
 
 const { lesson } = Astro.props as { lesson: CatalogLesson };
+const hold = await lessonIsHeldBack(lesson.id);
 const deck = lesson.cards && await getEntry('cards', lesson.cards.id);
 if (!deck) throw new Error(`The card file for lesson ${lesson.id} is missing.`);
 const { title, cards, status } = deck.data;
@@ -20,6 +23,7 @@ const pairs = cards.map(({ front, back }) => ({ front, back }));
 const page = `${lesson.href}/matching`;
 ---
 
+{hold ? <LessonComingSoon /> : (
 <Layout title={`matching: ${title}`} description={`matching for ${lesson.about}.`} variant="study">
   <div class="mx-auto max-w-prose pt-8">
     <p class="text-sm text-ink-soft">{lesson.context}</p>
@@ -42,3 +46,4 @@ const page = `${lesson.href}/matching`;
     </div>
   </div>
 </Layout>
+)}

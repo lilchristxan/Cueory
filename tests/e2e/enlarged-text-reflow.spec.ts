@@ -1,11 +1,13 @@
 import { expect, test } from '@playwright/test';
 
 /**
- * /resources and /preview/concept-map have two builds: drafts open (staging, previews, tests) and drafts closed (the live
+ * /resources, /preview/concept-map and the study-skills sample lesson pages have two builds: drafts open (staging, previews, tests) and drafts closed (the live
  * build shows a plain coming-soon page). Whichever build the tests run on, the page must reflow at 320px with a 32px root
  * font, with the page-width check unchanged.
  */
-for (const path of ['/resources', '/preview/concept-map']) {
+const lessonRoutes = ['', '/cards', '/fill-in', '/learn-mode', '/matching', '/organizer', '/print-cards', '/label-it', '/questions'].map((tail) => `/learn/study-skills${tail}`);
+
+for (const path of ['/resources', '/preview/concept-map', ...lessonRoutes]) {
   test(`${path} does not scroll sideways at 320px with a 32px root font`, async ({ page }) => {
     await page.addInitScript(() => {
       try {

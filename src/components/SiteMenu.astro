@@ -9,6 +9,7 @@ import { menuLinks, menuSmallLinks } from '../config/site';
 import { visibleFooterLinks } from '../config/legalfooter';
 import SocialLinks from './SocialLinks.astro';
 import { currentHref, groupMenuLinks } from '../scripts/menu';
+import { SAMPLE_LESSON_HREF, sampleLessonShown } from '../lessons/draftgate';
 
 interface Props {
   /** Study screens: the same button, without the frosted circle. */
@@ -18,10 +19,13 @@ interface Props {
 const { quiet = false } = Astro.props;
 // #747: a legal page that isn't approved yet gets no menu link either (Privacy always shows).
 const smallLinks = visibleFooterLinks(menuSmallLinks);
-const grouped = groupMenuLinks(menuLinks, smallLinks);
+// The live build holds the sample lesson back, so the panel doesn't link to it there.
+const sampleShown = sampleLessonShown();
+const links = menuLinks.filter((link) => sampleShown || link.href !== SAMPLE_LESSON_HREF);
+const grouped = groupMenuLinks(links, smallLinks);
 const current = currentHref(
   Astro.url.pathname,
-  [...menuLinks, ...smallLinks].map((link) => link.href),
+  [...links, ...smallLinks].map((link) => link.href),
 );
 ---
 

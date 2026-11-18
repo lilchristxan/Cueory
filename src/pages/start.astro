@@ -1,6 +1,8 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import Onboarding from '../islands/Onboarding';
+import { lessonEntryHref } from '../lessons/draftgate';
+const entryHref = lessonEntryHref();
 ---
 
 <Layout title="get started" promo={false} noindex description="Two optional setup questions, one at a time. Answers stay on your device.">
@@ -15,7 +17,7 @@ import Onboarding from '../islands/Onboarding';
       {/* client:only: the answers are read from and saved to this browser, so there is nothing to pre-render. */}
       <Onboarding client:only="react" />
       <noscript>
-        <p>these questions need javascript turned on. you can still <a href="/learn/study-skills">start studying</a> without them.</p>
+        <p>these questions need javascript turned on. you can still <a href={entryHref}>start studying</a> without them.</p>
       </noscript>
     </div>
   </div>

@@ -1,5 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
+import { draftsAllowed } from '../../src/islands/anatomylab';
+import { draftBuildEnv } from '../../src/lessons/draftgate';
 import { indexablePages } from '../../src/config/routes';
 import { accountLaunch, accountsOpen, newsletter, showsHeroJoin } from '../../src/config/site';
 
@@ -57,10 +59,14 @@ describe('home how-it-works (W01-3)', () => {
   });
 
   it('links only to existing indexable Cueory routes', () => {
-    const fromHow = links(section('how-it-works'));
-    expect(fromHow).toEqual(['/learn/study-skills']);
+    const how = section('how-it-works');
+    const fromHow = links(how);
+    // The one lesson link is the sample lesson's: it only renders where the draft gate shows it (never on the live build).
+    // Closed mode comes from the build configuration: the live build has no lesson link, a drafts build has the one.
+    expect(fromHow).toEqual(draftsAllowed(draftBuildEnv(process.env)) ? ['/learn/study-skills'] : []);
+    expect(readFileSync(new URL('../../src/components/HowItWorks.astro', import.meta.url), 'utf8')).toMatch(/sampleLessonShown\(\) && \(/);
+    expect(indexablePages).not.toContain('/learn/study-skills');
     for (const href of fromHow) {
-      expect(indexablePages).toContain(href);
       const file = new URL('../../dist' + href + '.html', import.meta.url);
       expect(existsSync(file)).toBe(true);
     }

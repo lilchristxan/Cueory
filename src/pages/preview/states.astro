@@ -4,6 +4,8 @@ import EmptyState from '../../components/EmptyState.astro';
 import Skeleton from '../../islands/Skeleton';
 import { ErrorBoundaryDemo } from '../../islands/ErrorBoundary';
 import Layout from '../../layouts/Layout.astro';
+import { lessonEntryHref } from '../../lessons/draftgate';
+const entryHref = lessonEntryHref();
 ---
 
 <Layout
@@ -50,7 +52,7 @@ import Layout from '../../layouts/Layout.astro';
           description="try another search or browse the available lessons."
           icon="search"
           actionLabel="browse lessons"
-          actionHref="/learn/study-skills"
+          actionHref={entryHref}
           headingLevel={3}
         />
         <EmptyState
@@ -64,7 +66,7 @@ import Layout from '../../layouts/Layout.astro';
           description="open a lesson to find cards worth keeping."
           icon="book"
           actionLabel="open a lesson"
-          actionHref="/learn/study-skills"
+          actionHref={entryHref}
           headingLevel={3}
         />
         <EmptyState

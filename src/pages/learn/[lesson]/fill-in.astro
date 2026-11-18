@@ -2,6 +2,8 @@
 /** A lesson's fill-in set (Task 300: built for every lesson whose set may show; src/lessons/catalog.ts). */
 import { getEntry } from 'astro:content';
 import Layout from '../../../layouts/Layout.astro';
+import LessonComingSoon from '../../../components/LessonComingSoon.astro';
+import { lessonIsHeldBack } from '../../../lessons/holdback';
 import ContentLabel from '../../../components/ContentLabel.astro';
 import InfoTip from '../../../components/InfoTip.astro';
 import FillInBoard from '../../../islands/FillInBoard';
@@ -14,6 +16,7 @@ export async function getStaticPaths() {
 }
 
 const { lesson } = Astro.props as { lesson: CatalogLesson };
+const hold = await lessonIsHeldBack(lesson.id);
 const entry = lesson.fillIn && await getEntry('fill-in', lesson.fillIn.id);
 if (!entry) throw new Error(`The fill-in file for lesson ${lesson.id} is missing.`);
 // The same checks the board runs, so a broken file stops the build instead of reaching a student.
@@ -21,6 +24,7 @@ const items = parseItems(entry.data.items);
 const page = `${lesson.href}/fill-in`;
 ---
 
+{hold ? <LessonComingSoon /> : (
 <Layout title={`fill-in: ${lesson.short}`} description={`recall the missing word for ${lesson.about}.`} variant="study">
   <div class="mx-auto max-w-prose pt-8">
     <p class="text-sm text-ink-soft">{lesson.context}</p>
@@ -52,3 +56,4 @@ const page = `${lesson.href}/fill-in`;
     </div>
   </div>
 </Layout>
+)}

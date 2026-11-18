@@ -3,6 +3,8 @@
  * Three plain steps. No readiness prediction or unbuilt scheduling promise. Each title says it all, so no line repeats
  * it underneath (Christian, 2026-11-02).
  */
+import { sampleLessonShown } from '../lessons/draftgate';
+
 const steps = [
   { number: '01', title: 'pick a lesson' },
   { number: '02', title: 'study it your way' },
@@ -25,10 +27,14 @@ const steps = [
         ))
       }
     </ol>
-    <div class="mt-8 text-center">
-      <a href="/learn/study-skills" class="glass-button">
-        start with a lesson
-      </a>
-    </div>
+    {
+      sampleLessonShown() && (
+        <div class="mt-8 text-center">
+          <a href="/learn/study-skills" class="glass-button">
+            start with a lesson
+          </a>
+        </div>
+      )
+    }
   </div>
 </section>

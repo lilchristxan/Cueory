@@ -1,8 +1,10 @@
 import { readFileSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
-import { indexablePages } from '../../src/config/routes';
+import { indexablePages, sampleLessonPages } from '../../src/config/routes';
 import { crosswordOpen } from '../../src/config/site';
+import { draftsAllowed } from '../../src/islands/anatomylab';
+import { draftBuildEnv } from '../../src/lessons/draftgate';
 import { GET, pageSourcePath, routeDeclaresNoindex, sitemapPages, sitemapXml, sourceDeclaresNoindex } from '../../src/pages/sitemap.xml';
 
 // Keep this response test independent of Astro's live content collection.
@@ -157,7 +159,8 @@ describe('sitemap', () => {
 
   it('excludes noindex pages from sitemapPages as well as sitemapXml', async () => {
     const pages = await sitemapPages();
-    expect(pages).toEqual(indexablePages);
+    // The two hand-built sample-lesson pages join the sitemap only on builds that show the sample lesson.
+    expect(pages).toEqual([...indexablePages, ...(draftsAllowed(draftBuildEnv(process.env)) ? sampleLessonPages : [])]);
     expect(pages.every((page) => !routeDeclaresNoindex(page))).toBe(true);
   });
 
@@ -188,5 +191,20 @@ describe('crossword page while it is closed', () => {
   it('is listed in the built sitemap exactly when the switch is open', () => {
     const xml = readFileSync(resolve('dist/sitemap.xml'), 'utf8');
     expect(xml.includes('https://cueory.app/play/crossword</loc>')).toBe(crosswordOpen);
+  });
+});
+
+describe('study-skills sample lesson in the built sitemap', () => {
+  // Same gate as the lesson pages (draftsAllowed, src/lessons/draftgate.ts): absent when closed, present when open.
+  const open = draftsAllowed(draftBuildEnv(process.env));
+  const routes = ['/learn/study-skills', '/learn/study-skills/cards', '/learn/study-skills/label-it', '/learn/study-skills/questions'];
+
+  it('lists the sample lesson pages exactly when the build shows drafts', () => {
+    const xml = readFileSync(resolve('dist/sitemap.xml'), 'utf8');
+    for (const route of routes) expect(xml.includes(`https://cueory.app${route}</loc>`), route).toBe(open);
+  });
+
+  it('keeps the sample lesson out of indexablePages, which the live build shares', () => {
+    for (const route of routes) expect(indexablePages).not.toContain(route);
   });
 });

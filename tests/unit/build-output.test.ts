@@ -8,6 +8,8 @@ import { fileURLToPath } from 'node:url';
 import { gzipSync } from 'node:zlib';
 import { describe, expect, it } from 'vitest';
 import { kitFormAction, kitLandingUrl, newsletter, site } from '../../src/config/site';
+import { draftsAllowed } from '../../src/islands/anatomylab';
+import { draftBuildEnv } from '../../src/lessons/draftgate';
 import { initialJsFiles, initialJsGzipBytes, inlineScriptBodies } from './perf-scan';
 
 const dist = fileURLToPath(new URL('../../dist/', import.meta.url));
@@ -346,8 +348,10 @@ describe.skipIf(!existsSync(dist))('built site', () => {
       expect(markup, label.text).not.toMatch(new RegExp(`\\b${label.text}\\b`, 'i'));
     }
     const props = [...html.matchAll(/<astro-island[^>]*\sprops="([^"]*)"/g)].map((m) => m[1]);
+    // The live (drafts-closed) build holds the sample lesson back behind a coming-soon page: only the flag island is left.
+    const heldBack = html.includes('data-testid="lesson-soon"');
     expect(props).toEqual([
-      '{&quot;src&quot;:[0,&quot;/learn/study-skills/label-it/study-skills-01.json&quot;]}',
+      ...(heldBack ? [] : ['{&quot;src&quot;:[0,&quot;/learn/study-skills/label-it/study-skills-01.json&quot;]}']),
       '{&quot;page&quot;:[0,&quot;/learn/study-skills/label-it.html&quot;],&quot;itemId&quot;:[0],&quot;itemVersionId&quot;:[0],&quot;variant&quot;:[0,&quot;icon&quot;]}',
     ]);
     const served = JSON.parse(readFileSync(join(dist, 'learn/study-skills/label-it/study-skills-01.json'), 'utf8'));
@@ -365,8 +369,10 @@ describe.skipIf(!existsSync(dist))('built site', () => {
     }
     expect(markup).not.toMatch(/&quot;key&quot;|"key"/);
     const props = [...html.matchAll(/<astro-island[^>]*\sprops="([^"]*)"/g)].map((m) => m[1]);
+    // The live (drafts-closed) build holds the sample lesson back behind a coming-soon page: only the flag island is left.
+    const heldBack = html.includes('data-testid="lesson-soon"');
     expect(props).toEqual([
-      '{&quot;src&quot;:[0,&quot;/learn/study-skills/questions/study-skills-01.json&quot;]}',
+      ...(heldBack ? [] : ['{&quot;src&quot;:[0,&quot;/learn/study-skills/questions/study-skills-01.json&quot;]}']),
       '{&quot;page&quot;:[0,&quot;/learn/study-skills/questions.html&quot;],&quot;itemId&quot;:[0],&quot;itemVersionId&quot;:[0],&quot;variant&quot;:[0,&quot;icon&quot;]}',
     ]);
     const served = JSON.parse(readFileSync(join(dist, 'learn/study-skills/questions/study-skills-01.json'), 'utf8'));
@@ -392,10 +398,12 @@ describe.skipIf(!existsSync(dist))('built site', () => {
       expect(match, `card ${id}`).not.toBeNull();
       return { name: match![1]!.trim(), href: match![2] };
     };
+    // The live (drafts-closed) build holds the sample lesson back, so its vials say coming soon instead of linking to it.
+    const sampleHref = (mode: string) => (draftsAllowed(draftBuildEnv(process.env)) ? `/learn/study-skills/${mode}` : undefined);
     expect(card('video')).toEqual({ name: 'video', href: undefined });
-    expect(card('learn')).toEqual({ name: 'learn', href: '/learn/study-skills/learn-mode' });
-    expect(card('fill-in')).toEqual({ name: 'fill-in', href: '/learn/study-skills/fill-in' });
-    expect(card('questions')).toEqual({ name: 'questions', href: '/learn/study-skills/questions' });
+    expect(card('learn')).toEqual({ name: 'learn', href: sampleHref('learn-mode') });
+    expect(card('fill-in')).toEqual({ name: 'fill-in', href: sampleHref('fill-in') });
+    expect(card('questions')).toEqual({ name: 'questions', href: sampleHref('questions') });
     expect(card('review')).toEqual({ name: 'review', href: undefined });
     expect(card('level-test')).toEqual({ name: 'level test', href: undefined });
     expect(html).not.toContain('id="mode-lesson"');
