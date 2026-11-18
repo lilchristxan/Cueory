@@ -127,6 +127,14 @@
     border-radius: var(--radius-sm);
   }
 
+  /* Date and time inputs keep keyboard focus on an inner field (month, day, hour...). In WebKit and Firefox the input
+     itself does not match :focus-visible then, so the rule above draws nothing; :focus-within does match. */
+  input:is([type="date"], [type="time"], [type="datetime-local"], [type="month"], [type="week"]):focus-within {
+    outline: var(--focus-width) solid var(--color-focus);
+    outline-offset: var(--focus-offset);
+    border-radius: var(--radius-sm);
+  }
+
   @media (prefers-reduced-motion: reduce) {
     *,
     *::before,

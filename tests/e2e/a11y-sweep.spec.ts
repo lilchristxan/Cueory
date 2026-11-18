@@ -114,7 +114,7 @@ async function tabAudit(page: Page): Promise<string[]> {
         index,
         name: el.tagName.toLowerCase() + (el.id ? '#' + el.id : ''),
         inputType: el instanceof HTMLInputElement ? el.type : null,
-        visibleFocus: el.matches(':focus-visible') && ((outlineIsVisible && outlineChanged) || shadowChanged),
+        visibleFocus: (el.matches(':focus-visible') || (el instanceof HTMLInputElement && ['date', 'time', 'datetime-local', 'month', 'week'].includes(el.type) && el.matches(':focus-within'))) && ((outlineIsVisible && outlineChanged) || shadowChanged),
         inViewport: rect.width > 0 && rect.height > 0 &&
           rect.top < innerHeight && rect.bottom > 0 &&
           rect.left < innerWidth && rect.right > 0,
@@ -230,12 +230,6 @@ test.describe('Task 74: full-site accessibility sweep', () => {
 
       // One failure per page, with *every* finding in the assertion output.
       // Do not mark failures as fixed or alter pages in this auditing task.
-      // If a genuine date-field focus defect remains AFTER the outline
-      // detector fix, preserve it as an explicit follow-up for the director.
-      if (route === '/start' && problems.length &&
-          problems.every((problem) => problem === 'input#exam-date: keyboard focus has no visible outline')) {
-        test.fixme(true, '/start: native date-input focus indicator not visible on every internal Tab stop');
-      }
       expect(problems, `${testInfo.project.name} ${route}: accessibility findings`).toEqual([]);
     });
   }
@@ -245,7 +239,8 @@ test.describe('Task 74: full-site accessibility sweep', () => {
 test.describe('keyboard traversal regression cases', () => {
   test('repeated native date-control stops do not skip buttons after the date', async ({ page }) => {
     await page.setContent(
-      '<style>:focus-visible { outline: 2px solid black; }</style>' +
+      // The same two rules as global.css: a native date input keeps focus on an inner field, so only :focus-within matches it in WebKit.
+      '<style>:focus-visible, input[type="date"]:focus-within { outline: 2px solid black; }</style>' +
       '<label for="exam-date">exam date</label><input id="exam-date" type="date">' +
       '<button id="save">save</button><button id="skip">skip</button>',
     );
