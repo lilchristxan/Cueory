@@ -53,7 +53,8 @@ test('finished-game result announces the exact card and traps focus', async ({ p
   await expect(dialog.getByTestId('result-share-line')).toHaveText('pillo · nov 11, 2026 · 4 / 6 · cueory.app');
   await expect(dialog.locator('dt')).toHaveCount(3);
   await page.keyboard.press('Shift+Tab');
-  await expect(dialog.getByRole('link', { name: /whatsapp/ })).toBeFocused();
+  await expect(dialog.getByRole('button', { name: 'copy', exact: true })).toBeFocused();
+  await expect(dialog.getByRole('link')).toHaveCount(0);
   const axe = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa']).analyze();
   expect(axe.violations.map((violation) => violation.id + ': ' + violation.help)).toEqual([]);
   await page.keyboard.press('Escape');
@@ -64,15 +65,14 @@ test('finished-game result announces the exact card and traps focus', async ({ p
 test('result footer stays truthful for repeating samples and respects explicit game copy', async ({ page }) => {
   const dialog = await openResult(page);
   const nextMessage = dialog.getByTestId('game-result-next-message');
-  await expect(nextMessage).toHaveText('thanks for playing.');
-  await expect(nextMessage).not.toContainText('tomorrow');
+  await expect(nextMessage).toContainText('on a phone, share also opens instagram');
 
   await page.evaluate((detail) => {
     window.dispatchEvent(new CustomEvent('cueory:game-result-card', {
       detail: { ...detail, game: 'hello-cards', name: 'hello cards', result: "today's card" },
     }));
   }, card);
-  await expect(nextMessage).toHaveText('thanks for playing.');
+  await expect(nextMessage).toContainText('on a phone, share also opens instagram');
 
   await page.evaluate((detail) => {
     window.dispatchEvent(new CustomEvent('cueory:game-result-card', {
@@ -262,27 +262,14 @@ test('first-visit promo waits while the result dialog owns focus', async ({ page
   await expect(page.getByTestId('promo')).toBeVisible();
 });
 
-test('copy fallback and every platform link stay plain and tracker-free', async ({ page }) => {
+test('copy fallback stays plain and social destinations remain held', async ({ page }) => {
   const dialog = await openResult(page);
   const line = 'pillo · nov 11, 2026 · 4 / 6 · cueory.app';
   await dialog.getByRole('button', { name: 'copy', exact: true }).click();
   await expect(dialog.getByRole('status')).toHaveText('result copied.');
   expect(await page.evaluate(() => (window as unknown as { copied: string }).copied)).toBe(line);
 
-  const expected = {
-    facebook: ['facebook.com', 'u'],
-    x: ['x.com', 'url'],
-    threads: ['threads.com', 'url'],
-    reddit: ['reddit.com', 'url'],
-    whatsapp: ['wa.me', 'text'],
-  } as const;
-  for (const [name, [host, parameter]] of Object.entries(expected)) {
-    const href = await dialog.getByRole('link', { name: new RegExp('^' + name) }).getAttribute('href');
-    const url = new URL(href!);
-    expect(url.hostname).toContain(host);
-    expect(url.searchParams.get(parameter)).toBeTruthy();
-    expect([...url.searchParams.keys()].some((key) => key.startsWith('utm_'))).toBe(false);
-  }
+  await expect(dialog.getByRole('link')).toHaveCount(0);
 });
 
 test('native image sharing waits for a fresh click after image preparation', async ({ page }) => {
