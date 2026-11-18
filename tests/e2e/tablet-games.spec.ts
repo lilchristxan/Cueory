@@ -20,7 +20,7 @@ for (const [width, height] of [[820, 1180], [1180, 820]] as const) {
       // older word search, whose letters have no data-path (landscape-games.spec.ts has the same fix).
       await page.clock.setFixedTime(new Date('2026-11-01T15:00:00'));
       await page.addInitScript(() => {
-        try { localStorage.setItem('cueory-promo-seen', String(Date.now())); } catch { /* optional storage */ }
+        try { localStorage.setItem('cueory-promo-seen', String(Date.now())); localStorage.setItem('cueory-signup-popup-seen', String(Date.now())); } catch { /* optional storage */ }
       });
       for (const { name, path, board, square } of boards) {
         await page.goto(path);

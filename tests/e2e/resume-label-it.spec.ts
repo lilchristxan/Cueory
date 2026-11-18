@@ -8,7 +8,7 @@ const saved = (page: Page) => page.evaluate(key => JSON.parse(localStorage.getIt
 
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
-    try { localStorage.setItem('cueory-promo-seen', String(Date.now())); } catch { /* storage can be blocked */ }
+    try { localStorage.setItem('cueory-promo-seen', String(Date.now())); localStorage.setItem('cueory-signup-popup-seen', String(Date.now())); } catch { /* storage can be blocked */ }
   });
 });
 

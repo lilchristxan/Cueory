@@ -10,7 +10,7 @@ test.use({ viewport: { width: 816, height: 1056 } });
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
     try {
-      localStorage.setItem('cueory-promo-seen', String(Date.now()));
+      localStorage.setItem('cueory-promo-seen', String(Date.now())); localStorage.setItem('cueory-signup-popup-seen', String(Date.now()));
       localStorage.setItem('cueory-game-help-seen', JSON.stringify(['pulse', 'cueword', 'triage', 'suture']));
     } catch { /* optional storage */ }
     window.print = () => {};

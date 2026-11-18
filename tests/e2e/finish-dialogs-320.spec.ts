@@ -68,7 +68,7 @@ for (const colorScheme of ['light', 'dark'] as const) {
 
     test.beforeEach(async ({ page }) => {
       await page.addInitScript(() => {
-        try { localStorage.setItem('cueory-promo-seen', String(Date.now())); } catch { /* optional storage */ }
+        try { localStorage.setItem('cueory-promo-seen', String(Date.now())); localStorage.setItem('cueory-signup-popup-seen', String(Date.now())); } catch { /* optional storage */ }
         Object.defineProperty(navigator, 'clipboard', {
           configurable: true,
           value: { writeText: async (text: string) => { (window as unknown as { copied: string }).copied = text; } },

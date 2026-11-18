@@ -7,7 +7,7 @@ test.beforeEach(async ({ page }) => {
   await markPanelsSeen(page);
   await page.addInitScript(() => {
     try {
-      localStorage.setItem('cueory-promo-seen', String(Date.now()));
+      localStorage.setItem('cueory-promo-seen', String(Date.now())); localStorage.setItem('cueory-signup-popup-seen', String(Date.now()));
     } catch {
       // When storage is blocked the panel never appears.
     }

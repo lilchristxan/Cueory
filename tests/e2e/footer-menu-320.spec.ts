@@ -24,7 +24,7 @@ for (const colorScheme of ['light', 'dark'] as const) {
     test.beforeEach(async ({ page }) => {
       // The once-only promo panel (D-59) would sit over the footer, so it counts as already shown.
       await page.addInitScript(() => {
-        try { localStorage.setItem('cueory-promo-seen', String(Date.now())); } catch { /* optional storage */ }
+        try { localStorage.setItem('cueory-promo-seen', String(Date.now())); localStorage.setItem('cueory-signup-popup-seen', String(Date.now())); } catch { /* optional storage */ }
       });
       await page.goto('/about');
       await page.evaluate(() => document.documentElement.style.setProperty('font-size', '32px', 'important'));

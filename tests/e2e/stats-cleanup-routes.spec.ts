@@ -15,7 +15,7 @@ for (const path of ['/play', '/play/pillo', '/play/sudoku']) {
     await markPanelsSeen(page);
     await page.addInitScript(({ old, recent }) => {
       try {
-        localStorage.setItem('cueory-promo-seen', String(Date.now()));
+        localStorage.setItem('cueory-promo-seen', String(Date.now())); localStorage.setItem('cueory-signup-popup-seen', String(Date.now()));
         // Seeded once, so the page's own cleanup is what the test sees after load.
         if (!sessionStorage.getItem('seeded')) {
           sessionStorage.setItem('seeded', '1');
@@ -34,7 +34,7 @@ for (const path of ['/play', '/play/pillo', '/play/sudoku']) {
     await markPanelsSeen(page);
     await page.addInitScript((old) => {
       try {
-        localStorage.setItem('cueory-promo-seen', String(Date.now()));
+        localStorage.setItem('cueory-promo-seen', String(Date.now())); localStorage.setItem('cueory-signup-popup-seen', String(Date.now()));
         if (!sessionStorage.getItem('seeded')) {
           sessionStorage.setItem('seeded', '1');
           localStorage.setItem('cueory-sudoku-stats', JSON.stringify({ version: 1, solves: [old] }));

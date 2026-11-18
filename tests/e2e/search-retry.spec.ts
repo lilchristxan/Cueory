@@ -3,7 +3,7 @@ import { expect, test } from '@playwright/test';
 for (const surface of ['menu', '404'] as const) {
   test(`${surface} search retries a failed module download without reloading the page`, async ({ page }) => {
     await page.addInitScript(() => {
-      try { localStorage.setItem('cueory-promo-seen', String(Date.now())); } catch { /* storage may be disabled */ }
+      try { localStorage.setItem('cueory-promo-seen', String(Date.now())); localStorage.setItem('cueory-signup-popup-seen', String(Date.now())); } catch { /* storage may be disabled */ }
     });
     let unavailable = true;
     let requests = 0;

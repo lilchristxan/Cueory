@@ -8,7 +8,7 @@ const ORGANIZER = '/learn/study-skills/organizer';
 // The marketing note has its own tests and must not interrupt keyboard flows here.
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
-    try { localStorage.setItem('cueory-promo-seen', String(Date.now())); } catch { /* storage may be disabled */ }
+    try { localStorage.setItem('cueory-promo-seen', String(Date.now())); localStorage.setItem('cueory-signup-popup-seen', String(Date.now())); } catch { /* storage may be disabled */ }
   });
 });
 

@@ -76,7 +76,7 @@ test.describe('Task 222: reduced motion route sweep', () => {
       test.skip(testInfo.project.name === 'phone-evening', 'Daytime route sweep runs once; widget tests cover Evening.');
       await page.emulateMedia({ reducedMotion: 'reduce' });
       await page.addInitScript(() => {
-        try { localStorage.setItem('cueory-promo-seen', String(Date.now())); } catch { /* storage unavailable */ }
+        try { localStorage.setItem('cueory-promo-seen', String(Date.now())); localStorage.setItem('cueory-signup-popup-seen', String(Date.now())); } catch { /* storage unavailable */ }
       });
       await page.goto(route);
       await waitForIslands(page, route);

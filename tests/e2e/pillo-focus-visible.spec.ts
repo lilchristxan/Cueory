@@ -11,7 +11,7 @@ for (const [width, height] of [[390, 844], [1440, 900]] as const) {
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await page.addInitScript(() => {
       try {
-        localStorage.setItem('cueory-promo-seen', String(Date.now()));
+        localStorage.setItem('cueory-promo-seen', String(Date.now())); localStorage.setItem('cueory-signup-popup-seen', String(Date.now()));
         localStorage.setItem('cueory-game-help-seen', JSON.stringify(['pulse']));
       } catch { /* optional storage */ }
     });

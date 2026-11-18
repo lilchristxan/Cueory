@@ -25,7 +25,7 @@ const listed = (page: Page, word: string) => page.getByRole('list', { name: 'wor
 test.beforeEach(async ({ page }) => {
   // The once-only promo panel (D-59) would take focus part-way through, so it counts as already shown (as in play.spec.ts).
   await page.addInitScript(() => {
-    try { localStorage.setItem('cueory-promo-seen', String(Date.now())); } catch { /* storage blocked: no panel */ }
+    try { localStorage.setItem('cueory-promo-seen', String(Date.now())); localStorage.setItem('cueory-signup-popup-seen', String(Date.now())); } catch { /* storage blocked: no panel */ }
   });
   await page.clock.setFixedTime(new Date('2026-11-06T15:00:00'));
   await markPanelsSeen(page);

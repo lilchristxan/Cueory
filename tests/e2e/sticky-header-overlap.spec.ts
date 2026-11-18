@@ -55,7 +55,7 @@ async function assertNotCovered(element: Locator, route: string, label: string):
 test.describe('Task 270: sticky header overlap', () => {
   test.beforeEach(async ({ page }) => {
     await page.addInitScript(() => {
-      try { localStorage.setItem('cueory-promo-seen', String(Date.now())); } catch { /* storage unavailable */ }
+      try { localStorage.setItem('cueory-promo-seen', String(Date.now())); localStorage.setItem('cueory-signup-popup-seen', String(Date.now())); } catch { /* storage unavailable */ }
     });
   });
 

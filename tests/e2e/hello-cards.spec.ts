@@ -14,7 +14,7 @@ const textsFor = (level: string) => data.starters.filter((s) => s.depth === leve
 test.beforeEach(async ({ page }) => {
   // The once-only promo panel would take keyboard focus mid-test (as in play.spec.ts).
   await page.addInitScript(() => {
-    try { localStorage.setItem('cueory-promo-seen', String(Date.now())); } catch { /* storage blocked */ }
+    try { localStorage.setItem('cueory-promo-seen', String(Date.now())); localStorage.setItem('cueory-signup-popup-seen', String(Date.now())); } catch { /* storage blocked */ }
   });
   await page.goto('/play/hello-cards');
   await expect(card(page)).toBeEnabled();

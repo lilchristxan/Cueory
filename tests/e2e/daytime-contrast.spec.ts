@@ -34,7 +34,7 @@ test.describe('Task 233: Daytime contrast sweep', () => {
       await page.addInitScript(() => {
         try {
           localStorage.setItem('cueory-theme', 'light');
-          localStorage.setItem('cueory-promo-seen', String(Date.now()));
+          localStorage.setItem('cueory-promo-seen', String(Date.now())); localStorage.setItem('cueory-signup-popup-seen', String(Date.now()));
         } catch {
           // Storage may be blocked, but the test should still report the page state.
         }

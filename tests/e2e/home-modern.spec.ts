@@ -11,7 +11,7 @@ const heroLinks: ReadonlyArray<readonly [string, string]> = showsHeroJoin(accoun
 test.beforeEach(async ({ page }) => {
   // The once-only marketing panel must not interrupt navigation and accessibility checks.
   await page.addInitScript(() => {
-    try { localStorage.setItem('cueory-promo-seen', String(Date.now())); }
+    try { localStorage.setItem('cueory-promo-seen', String(Date.now())); localStorage.setItem('cueory-signup-popup-seen', String(Date.now())); }
     catch { /* Storage may be blocked; the page still works. */ }
   });
 });

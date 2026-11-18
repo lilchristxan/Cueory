@@ -57,7 +57,7 @@ test.describe('supporting our mission (/support)', () => {
       await page.emulateMedia({ colorScheme, reducedMotion: 'reduce' });
       await page.addInitScript(() => {
         // The timed promo has its own tests. Do not let it intercept the support-page link.
-        try { localStorage.setItem('cueory-promo-seen', String(Date.now())); } catch { /* storage denied */ }
+        try { localStorage.setItem('cueory-promo-seen', String(Date.now())); localStorage.setItem('cueory-signup-popup-seen', String(Date.now())); } catch { /* storage denied */ }
       });
       await page.goto('/support');
 

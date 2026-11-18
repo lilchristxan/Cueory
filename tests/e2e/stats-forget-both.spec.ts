@@ -17,7 +17,7 @@ async function open(page: Page, records: { shared?: unknown[]; sudoku?: unknown[
   await markPanelsSeen(page);
   await page.addInitScript(({ records, refuseSudokuDelete, refuseSharedWrite }) => {
     try {
-      localStorage.setItem('cueory-promo-seen', String(Date.now()));
+      localStorage.setItem('cueory-promo-seen', String(Date.now())); localStorage.setItem('cueory-signup-popup-seen', String(Date.now()));
       if (records.shared) localStorage.setItem('cueory-game-stats', JSON.stringify({ version: 1, results: records.shared }));
       if (records.sudoku) localStorage.setItem('cueory-sudoku-stats', JSON.stringify({ version: 1, solves: records.sudoku }));
     } catch { /* optional storage */ }

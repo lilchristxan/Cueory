@@ -10,7 +10,7 @@ const sizes = [
 test.beforeEach(async ({ page }) => {
   // The once-per-visit welcome panel has its own tests; avoid interrupting study controls here.
   await page.addInitScript(() => {
-    try { localStorage.setItem('cueory-promo-seen', String(Date.now())); } catch { /* blocked storage */ }
+    try { localStorage.setItem('cueory-promo-seen', String(Date.now())); localStorage.setItem('cueory-signup-popup-seen', String(Date.now())); } catch { /* blocked storage */ }
   });
 });
 

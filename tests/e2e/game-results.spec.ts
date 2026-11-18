@@ -29,7 +29,10 @@ test.beforeEach(async ({ page }, testInfo) => {
   const suppressPromo = !testInfo.title.startsWith('first-visit promo');
   if (!suppressPromo) await page.clock.install();
   await page.addInitScript((suppressPromo) => {
-    if (suppressPromo) localStorage.setItem('cueory-promo-seen', String(Date.now()));
+    if (suppressPromo) {
+      localStorage.setItem('cueory-promo-seen', String(Date.now()));
+      localStorage.setItem('cueory-signup-popup-seen', String(Date.now()));
+    }
     Object.defineProperty(navigator, 'clipboard', {
       configurable: true,
       value: { writeText: async (text: string) => { (window as unknown as { copied: string }).copied = text; } },

@@ -19,7 +19,7 @@ const cell = (page: Page, [row, col]: Cell) => game(page).locator(`button[data-c
 
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
-    try { localStorage.setItem('cueory-promo-seen', String(Date.now())); } catch { /* storage blocked: no panel */ }
+    try { localStorage.setItem('cueory-promo-seen', String(Date.now())); localStorage.setItem('cueory-signup-popup-seen', String(Date.now())); } catch { /* storage blocked: no panel */ }
     // A returning player: the first-visit rules card (#736) is already put away, so the letters follow the print button.
     try { localStorage.setItem('cueory-game-help-seen', JSON.stringify(['suture'])); } catch { /* storage blocked */ }
     (window as unknown as { printed: number }).printed = 0;

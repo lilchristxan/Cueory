@@ -11,7 +11,7 @@ test.beforeEach(async ({ page }) => {
   // The once-only promo panel (D-59) would take focus part-way: start as if it had been shown.
   await page.addInitScript(() => {
     try {
-      localStorage.setItem('cueory-promo-seen', String(Date.now()));
+      localStorage.setItem('cueory-promo-seen', String(Date.now())); localStorage.setItem('cueory-signup-popup-seen', String(Date.now()));
     } catch {
       // Storage is blocked: the panel never shows then anyway.
     }

@@ -12,7 +12,7 @@ const cells = (page: Page) => grid(page).getByRole('gridcell');
 
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
-    try { localStorage.setItem('cueory-promo-seen', String(Date.now())); } catch { /* optional */ }
+    try { localStorage.setItem('cueory-promo-seen', String(Date.now())); localStorage.setItem('cueory-signup-popup-seen', String(Date.now())); } catch { /* optional */ }
   });
   await page.clock.setFixedTime(new Date('2026-11-01T15:00:00'));
   await markPanelsSeen(page);

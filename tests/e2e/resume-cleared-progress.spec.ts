@@ -5,7 +5,7 @@ const KEY = 'cueory-resume';
 // Apply to every tab, including the progress page and the fresh study session.
 test.beforeEach(async ({ context }) => {
   await context.addInitScript(() => {
-    localStorage.setItem('cueory-promo-seen', String(Date.now()));
+    localStorage.setItem('cueory-promo-seen', String(Date.now())); localStorage.setItem('cueory-signup-popup-seen', String(Date.now()));
   });
 });
 

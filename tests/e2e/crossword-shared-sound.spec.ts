@@ -28,7 +28,7 @@ for (const shared of [true, false]) {
     await markPanelsSeen(page);
     await page.addInitScript((sound) => {
       try {
-        localStorage.setItem('cueory-promo-seen', String(Date.now()));
+        localStorage.setItem('cueory-promo-seen', String(Date.now())); localStorage.setItem('cueory-signup-popup-seen', String(Date.now()));
         localStorage.setItem('cueory-game-help-seen', JSON.stringify(['pulse', 'triage', 'cueword', 'suture']));
         if (!sound) localStorage.setItem('cueory-game-settings', JSON.stringify({ highContrast: false, motion: 'device', sound: false }));
       } catch { /* optional storage */ }

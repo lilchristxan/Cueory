@@ -76,7 +76,7 @@ test.describe('Task 94: full-site Evening palette audit', () => {
         try {
           // The promo tests own its timing and focus. Don't let a delayed
           // promo cover the page while this color-contrast audit runs.
-          localStorage.setItem('cueory-promo-seen', String(Date.now()));
+          localStorage.setItem('cueory-promo-seen', String(Date.now())); localStorage.setItem('cueory-signup-popup-seen', String(Date.now()));
           // First verify the DEVICE-dark palette before explicitly choosing
           // the footer's "dark" option.
           localStorage.removeItem('cueory-theme');
