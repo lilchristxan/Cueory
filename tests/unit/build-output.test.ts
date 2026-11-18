@@ -154,8 +154,11 @@ describe.skipIf(!existsSync(dist))('built site', () => {
       missingBudgets.map((page) => `${page}: ${initialJsGzipBytes(join(dist, page))} gzip bytes`),
       'Every built route must have a measured JavaScript budget',
     ).toEqual([]);
-    expect(routes.sort()).toEqual(Object.keys(initialJsBudget).sort());
-    const overBudget = Object.entries(initialJsBudget).flatMap(([page, budget]) => {
+    // The live build removes /preview/* (scripts/prune-preview.mjs), so its budgets only apply where those pages exist.
+    const previewPruned = !existsSync(join(dist, 'preview'));
+    const budgeted = Object.entries(initialJsBudget).filter(([page]) => !(previewPruned && page.startsWith('preview/')));
+    expect(routes.sort()).toEqual(budgeted.map(([page]) => page).sort());
+    const overBudget = budgeted.flatMap(([page, budget]) => {
       const actual = initialJsGzipBytes(join(dist, page));
       const draftsLimit = draftsBuildJsLimit[page];
       const limit = draftsLimit !== undefined && showsDraftLab(join(dist, page)) ? draftsLimit : Math.ceil(budget * 1.1);
@@ -303,7 +306,10 @@ describe.skipIf(!existsSync(dist))('built site', () => {
     });
 
     expect(entry.languages?.en?.page_count).toBe(searchablePages.length);
-    expect(searchablePages).not.toEqual(expect.arrayContaining(pages.filter((page) => page.includes('/preview/'))));
+    const previewPages = pages.filter((page) => page.includes('/preview/'));
+    // arrayContaining([]) matches everything, so a pruned (live) build with no preview pages is checked directly.
+    if (previewPages.length === 0) expect(searchablePages.some((page) => page.includes('/preview/'))).toBe(false);
+    else expect(searchablePages).not.toEqual(expect.arrayContaining(previewPages));
     expect(searchablePages.every((page) => !readFileSync(page, 'utf8').includes('content="noindex'))).toBe(true);
   });
 
