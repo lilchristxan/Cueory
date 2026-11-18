@@ -1,5 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Locator, type Page } from '@playwright/test';
+import { markPanelsSeen } from './clock';
 
 // Visual-check regressions (#86): every project size (390 / 820 / 1440) in Light and Evening shows the whole board and
 // all ten number buttons, marks the chosen level with more than color, and keeps settings on screen.
@@ -11,6 +12,7 @@ test.beforeEach(async ({ page }) => {
     try { localStorage.setItem('cueory-promo-seen', String(Date.now())); } catch { /* optional */ }
   });
   await page.clock.setFixedTime(new Date('2026-11-01T15:00:00'));
+  await markPanelsSeen(page);
 });
 
 for (const scheme of ['light', 'dark'] as const) {

@@ -1,4 +1,5 @@
 import { expect, test, type Locator } from '@playwright/test';
+import { markPanelsSeen } from './clock';
 
 async function expectStill(root: Locator) {
   const moving = await root.evaluate((element) => {
@@ -27,6 +28,7 @@ async function expectStill(root: Locator) {
 
 test.beforeEach(async ({ page }) => {
   await page.clock.setFixedTime(new Date('2026-11-01T15:00:00'));
+  await markPanelsSeen(page);
   await page.addInitScript(() => {
     try { localStorage.setItem('cueory-promo-seen', String(Date.now())); } catch { /* optional storage */ }
   });
@@ -68,6 +70,7 @@ for (const colorScheme of ['light', 'dark'] as const) {
     });
     // The older word search sample (sample-06), whose wrong pick takes two taps.
     await page.clock.setFixedTime(new Date('2026-11-06T15:00:00'));
+    await markPanelsSeen(page);
     await page.goto('/play/word-path');
     const game = page.getByTestId('suture');
     await game.locator('[data-cell="0,0"]').click();
@@ -93,6 +96,7 @@ for (const colorScheme of ['light', 'dark'] as const) {
     });
     // The older word search sample (sample-06), whose wrong pick takes two taps.
     await page.clock.setFixedTime(new Date('2026-11-06T15:00:00'));
+    await markPanelsSeen(page);
     await page.goto('/play/word-path');
     const game = page.getByTestId('suture');
     const board = game.locator('.wordpath-board');
@@ -129,6 +133,7 @@ for (const colorScheme of ['light', 'dark'] as const) {
   test(`stat keeps readable time without a moving transition in ${colorScheme}`, async ({ page }) => {
     await page.emulateMedia({ reducedMotion: 'reduce', colorScheme });
     await page.clock.install({ time: new Date('2026-11-01T15:00:00') });
+    await markPanelsSeen(page);
     await page.goto('/play/stat');
     await page.getByTestId('stat-start').click();
     await expect(page.getByTestId('stat-progress')).toHaveText('question 1 of 15');

@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { markPanelsSeen } from './clock';
 
 // Printing the daily games. pillo's foil keeps no gradient that fades to clear black (Safari's full-page screenshot
 // and PDF export drew that as a solid black triangle), and on paper the shine is left out. Each printed puzzle
@@ -15,6 +16,7 @@ test.beforeEach(async ({ page }) => {
     window.print = () => {};
   });
   await page.clock.setFixedTime(new Date('2026-11-01T15:00:00'));
+  await markPanelsSeen(page);
 });
 
 /** Each game has its own page (#816). */

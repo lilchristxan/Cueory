@@ -1,6 +1,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 import { dailySudokuSeed, generateSudoku } from '../../src/islands/sudoku';
+import { fixClock } from './clock';
 
 /**
  * Daily games (D-61): pillo (Task 114; its id is still pulse) on /play. The page's clock is set to 1 November 2026, the
@@ -45,21 +46,6 @@ const axe = async (page: Page) => {
     });
   return new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa']).analyze();
 };
-/**
- * Fixes the page's clock, then marks the once-only panels seen again by that clock. The marks above are written by the
- * real clock (init scripts run before the clock is installed), while the panels compare them with the page's fixed
- * date, so the launch-updates pop-up's 3-hour wait (and from December the promo's 30 days) would count as long over
- * and open part-way through a test. Registered after the clock, this script sees the fixed date.
- */
-async function fixClock(page: Page, date: Date) {
-  await page.clock.setFixedTime(date);
-  await page.addInitScript(() => {
-    try {
-      localStorage.setItem('cueory-promo-seen', String(Date.now()));
-      localStorage.setItem('cueory-signup-popup-seen', String(Date.now()));
-    } catch { /* storage blocked: the panels never show then anyway */ }
-  });
-}
 const field = (page: Page) => page.getByLabel('your guess', { exact: true });
 const live = (page: Page) => page.getByTestId('pulse-live');
 

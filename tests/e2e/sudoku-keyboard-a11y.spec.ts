@@ -1,6 +1,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 import { dailySudokuSeed, generateSudoku } from '../../src/islands/sudoku';
+import { markPanelsSeen } from './clock';
 
 const daily = generateSudoku(dailySudokuSeed('2026-11-01', 'easy'), 'easy');
 const empty = daily.puzzle.findIndex((digit) => digit === 0);
@@ -14,6 +15,7 @@ test.beforeEach(async ({ page }) => {
     try { localStorage.setItem('cueory-promo-seen', String(Date.now())); } catch { /* optional */ }
   });
   await page.clock.setFixedTime(new Date('2026-11-01T15:00:00'));
+  await markPanelsSeen(page);
 });
 
 for (const [size, width, height] of [['phone', 390, 844], ['tablet', 820, 1180], ['desktop', 1440, 900]] as const) {

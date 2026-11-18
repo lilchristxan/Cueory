@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { markPanelsSeen } from './clock';
 
 /**
  * "forget sudoku" and "forget all my stats" clear both stores sudoku keeps (Codex on #831): the shared results
@@ -13,6 +14,7 @@ const stored = (page: Page, key: string) => page.evaluate((name) => localStorage
 
 async function open(page: Page, records: { shared?: unknown[]; sudoku?: unknown[] }, refuseSudokuDelete = false, refuseSharedWrite = false) {
   await page.clock.setFixedTime(new Date(`${today}T15:00:00`));
+  await markPanelsSeen(page);
   await page.addInitScript(({ records, refuseSudokuDelete, refuseSharedWrite }) => {
     try {
       localStorage.setItem('cueory-promo-seen', String(Date.now()));

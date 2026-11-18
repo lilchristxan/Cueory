@@ -1,8 +1,10 @@
 import { expect, test, type Page } from '@playwright/test';
+import { markPanelsSeen } from './clock';
 
 test.beforeEach(async ({ page }) => {
   // Same reviewed November sample puzzle as play.spec.ts, so tests do not depend on today's word.
   await page.clock.setFixedTime(new Date('2026-11-01T15:00:00'));
+  await markPanelsSeen(page);
   await page.addInitScript(() => {
     try {
       localStorage.setItem('cueory-promo-seen', String(Date.now()));

@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { dailySudokuSeed, generateSudoku } from '../../src/islands/sudoku';
+import { markPanelsSeen } from './clock';
 
 // Christian, 2026-11-12: "Make sure all related boxes are highlighted well." In Light and Evening, at every project size
 // (390 / 820 / 1440), the selected square, its row / column / box tint, the givens and the matching numbers must be
@@ -54,6 +55,7 @@ test.beforeEach(async ({ page }) => {
     try { localStorage.setItem('cueory-promo-seen', String(Date.now())); } catch { /* optional */ }
   });
   await page.clock.setFixedTime(new Date('2026-11-01T15:00:00'));
+  await markPanelsSeen(page);
 });
 
 for (const scheme of ['light', 'dark'] as const) {

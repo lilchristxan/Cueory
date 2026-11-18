@@ -1,10 +1,12 @@
 import { expect, test } from '@playwright/test';
+import { markPanelsSeen } from './clock';
 
 // pillo's high contrast is the shared game setting (#734): one switch for every game, kept with the other shared
 // settings, in the dialog the gear at the top left of the game opens (Christian's brief).
 
 test.beforeEach(async ({ page }) => {
   await page.clock.setFixedTime(new Date('2026-11-01T15:00:00'));
+  await markPanelsSeen(page);
   await page.addInitScript(() => {
     try {
       localStorage.setItem('cueory-promo-seen', String(Date.now()));

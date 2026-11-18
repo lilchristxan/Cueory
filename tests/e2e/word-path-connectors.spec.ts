@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
+import { markPanelsSeen } from './clock';
 
 /**
  * Word path's 6 × 8 board (sample-01, 1 November 2026): straight lines join the letters of the word being picked and
@@ -27,6 +28,7 @@ test.beforeEach(async ({ page }) => {
     window.print = () => { (window as unknown as { printed: number }).printed += 1; };
   });
   await page.clock.setFixedTime(new Date('2026-11-01T15:00:00'));
+  await markPanelsSeen(page);
   await page.goto('/play/word-path');
   await expect(game(page)).toBeVisible();
 });

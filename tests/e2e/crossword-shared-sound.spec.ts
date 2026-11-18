@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { markPanelsSeen } from './clock';
 
 // The shared "game sounds" switch (#734) silences the crossword's solve sound too (lane8/settings-crossword). The
 // browser's AudioContext is replaced with a counter, so the test hears nothing and counts each tone. Easy November sample.
@@ -24,6 +25,7 @@ const tones = (page: Page) => page.evaluate(() => (window as unknown as { tones:
 for (const shared of [true, false]) {
   test(`with game sounds ${shared ? 'on' : 'off'}, a solve ${shared ? 'plays a' : 'plays no'} tone`, async ({ page }) => {
     await page.clock.setFixedTime(new Date('2026-11-01T15:00:00'));
+    await markPanelsSeen(page);
     await page.addInitScript((sound) => {
       try {
         localStorage.setItem('cueory-promo-seen', String(Date.now()));

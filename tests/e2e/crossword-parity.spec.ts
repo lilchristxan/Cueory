@@ -5,6 +5,7 @@
  */
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
+import { markPanelsSeen } from './clock';
 
 const SAMPLE = ['.ABC.', 'DEFGH', 'IJKLM', 'NOPQR', '.STU.'];
 const board = (page: Page) => page.getByTestId('cueword');
@@ -51,6 +52,7 @@ test.describe('crossword parity (Task 721)', () => {
       try { localStorage.setItem('cueory-promo-seen', String(Date.now())); } catch { /* storage blocked: no promo then */ }
     });
     await page.clock.setFixedTime(new Date('2026-11-01T15:00:00'));
+    await markPanelsSeen(page);
     await page.goto('/play/crossword');
     await expect(board(page)).toBeVisible();
   });
