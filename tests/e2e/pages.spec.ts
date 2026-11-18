@@ -550,7 +550,10 @@ test.describe('marketing look (D-41)', () => {
     for (const colorScheme of ['light', 'dark'] as const) {
       await page.emulateMedia({ colorScheme });
       for (const [route, status] of [['/', 200], ['/about', 200], ['/support', 200], ['/social-preview-page-does-not-exist', 404]] as const) {
-        const response = await page.goto(route);
+        // The second pass visits the same pages again. WebKit then revalidates them and reports the conditional
+        // answer's 304 as the navigation's status (webkit-desktop: "Expected: 200, Received: 304"), though the page is
+        // the same. A different query makes each visit a fresh fetch, so the 200 or 404 is the page's own answer.
+        const response = await page.goto(route + (colorScheme === 'dark' ? '?scheme=dark' : ''));
         expect(response?.status()).toBe(status);
         const title = await page.title();
         const description = await page.locator('head meta[name="description"]').getAttribute('content');
