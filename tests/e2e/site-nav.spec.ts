@@ -29,16 +29,18 @@ test.describe('wide screen', () => {
     await expect(page.getByRole('button', { name: 'search the site' })).toBeVisible();
   });
 
-  test('every control is at least 44 by 44 px and nothing scrolls sideways', async ({ page }) => {
+  test('every control is at least 44 by 44 px, dropdown links included, and nothing scrolls sideways', async ({ page }) => {
     await page.goto('/');
+    await page.locator('[data-about-menu] summary').click();
+    await expect(page.locator('[data-about-menu]')).toHaveAttribute('open', '');
     for (const control of [
       ...(await page.getByRole('navigation', { name: 'main', exact: true }).getByRole('link').all()),
       page.locator('[data-about-menu] summary'),
       page.getByRole('button', { name: 'search the site' }),
     ]) {
       const box = (await control.boundingBox())!;
-      expect(box.height).toBeGreaterThanOrEqual(43.5);
-      expect(box.width).toBeGreaterThanOrEqual(43.5);
+      expect(box.height).toBeGreaterThanOrEqual(44);
+      expect(box.width).toBeGreaterThanOrEqual(44);
     }
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   });
