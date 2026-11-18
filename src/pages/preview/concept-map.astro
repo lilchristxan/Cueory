@@ -3,9 +3,17 @@
 import Layout from '../../layouts/Layout.astro';
 import ConceptMap from '../../islands/ConceptMap';
 import type { ConceptItem } from '../../islands/concept-map.ts';
+import { draftsAllowed } from '../../islands/anatomylab';
+
+// Sample text only builds where drafts may show; the live build gets a plain "coming soon" page.
+const shown = draftsAllowed({
+  WORKERS_CI: process.env.WORKERS_CI,
+  WORKERS_CI_BRANCH: process.env.WORKERS_CI_BRANCH,
+  CUEORY_ANATOMY_DRAFTS: process.env.CUEORY_ANATOMY_DRAFTS,
+});
 
 // Labeled interface samples only. These do not represent student progress.
-const sampleItems = [
+const sampleItems = (shown ? [
   { concept: '[sample concept A]', status: 'got it', description: '[sample description A]' },
   { concept: '[sample concept B]', status: 'got it', description: '[sample description B]' },
   { concept: '[sample concept C]', status: 'getting there', description: '[sample description C]' },
@@ -14,7 +22,7 @@ const sampleItems = [
   { concept: '[sample concept F]', status: 'learning', description: '[sample description F]' },
   { concept: '[sample concept G]', status: 'not started', description: '[sample description G]' },
   { concept: '[sample concept H]', status: 'not started', description: '[sample description H]' },
-] satisfies ConceptItem[];
+] : []) satisfies ConceptItem[];
 ---
 
 <Layout
@@ -31,7 +39,7 @@ const sampleItems = [
       <p class="mt-3 text-ink-soft">sample interface only. the concepts below are not lessons or saved student progress.</p>
     </header>
 
-    <ConceptMap items={sampleItems} client:visible />
+    {shown ? <ConceptMap items={sampleItems} client:visible /> : <p data-testid="concept-map-soon">the concept map is coming soon.</p>}
     <noscript><p>turn on javascript to use the sample concept filters. nothing is saved or sent.</p></noscript>
   </div>
 </Layout>
