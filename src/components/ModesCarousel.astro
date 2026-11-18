@@ -58,7 +58,7 @@ const icons: Record<StudyFeatureIcon, string> = {
 
 <section
   id="ways-to-study"
-  class="modes scene scene-tint py-section scroll-mt-section"
+  class="modes modes-p6 scene scene-tint py-section scroll-mt-section"
   role="region"
   aria-labelledby="modes-heading"
   aria-roledescription="carousel"
@@ -791,3 +791,18 @@ const icons: Record<StudyFeatureIcon, string> = {
     root.querySelector('[data-modes-controls]')?.classList.remove('invisible');
   }
 </script>
+
+<style>
+  /* P6 surface contract: keep the carousel on the shared glass/label tokens owned by Phase 0. */
+  .modes-p6 .modes-kicker {
+    font-size: var(--cueory-label-size);
+    font-weight: var(--cueory-label-weight);
+    letter-spacing: var(--cueory-label-tracking);
+  }
+
+  .modes-p6 .mode-preview-panel {
+    background: var(--cueory-glass-bg);
+    border-color: var(--cueory-glass-border);
+    box-shadow: var(--cueory-glass-shadow);
+  }
+</style>

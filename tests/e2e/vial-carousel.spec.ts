@@ -26,6 +26,7 @@ const axeTags = ['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa'];
 async function showRing(page: Page) {
   await page.goto('/');
   await section(page).scrollIntoViewIfNeeded();
+  await expect(section(page)).toHaveClass(/modes-p6/);
   await expect(section(page)).toHaveAttribute('data-ring', '');
   await expect(section(page).locator('[data-modes-controls]')).not.toHaveClass(/invisible/);
   // The section's first fade-in (D-62) has finished, so nothing is still rising while it is measured.
