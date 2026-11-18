@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 
-// pillo's on-screen keys are the crossword's letter keys (Christian, 2026-11-17): a to z in rows that wrap, then
-// ⌫ and enter in the same style. On phones in portrait, with normal and larger text, no row runs past the screen or
+// pillo's on-screen keys follow the approved QWERTY order, with action keys in the third logical row. On phones in
+// portrait, with normal and larger text, no row runs past the screen or
 // its group, every key is at least 44 × 44, no two keys overlap and the page never scrolls sideways. The crossword's
 // check and reveal buttons share one row wherever the pair fits.
 
@@ -23,8 +23,7 @@ for (const width of [320, 390, 430]) {
       await open(page, width, rootText, '/play/pillo');
       const group = page.getByTestId('pulse').getByRole('group', { name: 'letters' });
       const letters = await group.getByRole('button').evaluateAll((keys) => keys.map((key) => key.textContent?.trim()));
-      expect(letters.slice(0, 26).map((text) => text?.[0])).toEqual([...'abcdefghijklmnopqrstuvwxyz']);
-      expect(letters.slice(26)).toEqual(['⌫', 'enter']);
+      expect(letters.map((text) => text?.[0])).toEqual([...'qwertyuiopasdfghjkl⌫zxcvbnmenter']);
 
       const area = (await group.boundingBox())!;
       const keys = await group.getByRole('button').evaluateAll((list) => list.map((key) => key.getBoundingClientRect().toJSON() as DOMRect));

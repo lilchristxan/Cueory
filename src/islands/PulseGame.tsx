@@ -46,7 +46,7 @@ interface Props {
 
 // The on-screen keyboard follows the approved Pillo rendering's QWERTY rows.
 const LETTERS = 'qwertyuiopasdfghjklzxcvbnm';
-const KEYBOARD_ROWS = ['qwertyuiop', 'asdfghjkl', 'zxcvbnm'] as const;
+const KEYBOARD_ROWS = ['qwertyuiop', 'asdfghjkl'] as const;
 const primaryButton = 'rounded-pill bg-button px-5 py-2.5 text-on-button hover:bg-button-hover';
 const columns = Array.from({ length: WORD_LENGTH }, (_, i) => i);
 
@@ -404,6 +404,13 @@ export default function PulseGame({ puzzles }: Props) {
             <button type="button" className="pillo-key pillo-key-wide" aria-label="delete" onClick={() => type(text.slice(0, -1))}>
               ⌫
             </button>
+            {Array.from('zxcvbnm', (letter) => {
+              const mark = marks.get(letter);
+              return <button key={letter} type="button" className={`pillo-key${mark ? ` pillo-${mark}` : ''}`} aria-label={keyLabel(letter, mark)} onClick={() => type(text + letter)}>
+                <span aria-hidden="true">{letter}</span>
+                {mark && <span className="pillo-key-mark" aria-hidden="true">{MARK_SYMBOL[mark]}</span>}
+              </button>;
+            })}
             <button type="button" className="pillo-key pillo-key-wide" onClick={() => void submit()}>
               enter
             </button>
