@@ -15,23 +15,23 @@ const games = [
 
 <section id="daily-games" class="scene scene-play scroll-mt-section py-section" aria-labelledby="games-heading">
   <div class="mx-auto max-w-page px-gutter text-center" data-reveal-section>
-    <p class="text-[length:var(--cueory-label-size)] font-[var(--cueory-label-weight)] tracking-[var(--cueory-label-tracking)] text-ink-soft">daily games</p>
+    <p class="section-label text-ink-soft">daily games</p>
     <h2 id="games-heading" class="display mt-4 text-title sm:text-title-lg">a few minutes, every day.</h2>
     <p class="mx-auto mt-4 max-w-prose text-ink-soft" data-testid="daily-games-summary">a new set of nursing games each day. play one, or all three.</p>
     <p class="mt-2 text-sm text-ink-soft" data-testid="daily-games-day" data-daily-games-date aria-live="polite" aria-atomic="true">the date changes at midnight on your device. some sample puzzles repeat.</p>
 
-    <div class="mt-10 rounded-[var(--cueory-result-card-radius)] border border-[var(--cueory-glass-border)] bg-ink p-5 text-left text-page shadow-[var(--cueory-glass-shadow)] sm:p-8" data-testid="games-stage">
-      <div class="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(16rem,0.9fr)] lg:items-center">
+    <div class="games-stage mt-10 border bg-ink p-5 text-left text-page sm:p-8" data-testid="games-stage">
+      <div class="games-stage-layout grid gap-8 lg:items-center">
         <div>
-          <p class="text-[length:var(--cueory-label-size)] font-[var(--cueory-label-weight)] tracking-[var(--cueory-label-tracking)]">01 / 05 · daily game</p>
+          <p class="section-label">01 / 05 · daily game</p>
           <h3 class="display mt-5 text-title sm:text-title-lg">pillo</h3>
           <p class="mt-3 max-w-prose text-base">guess the five-letter word in six tries.</p>
-          <a href="/play" class="mt-7 inline-flex min-h-11 items-center rounded-pill border border-[var(--cueory-copper-shine)] bg-[linear-gradient(135deg,var(--cueory-copper-start),var(--cueory-copper-end))] px-6 font-bold text-[var(--cueory-copper-ink)] shadow-[var(--cueory-glass-shadow)] hover:brightness-110" data-testid="games-link">
+          <a href="/play" class="games-stage-action mt-7 inline-flex min-h-11 items-center rounded-pill border px-6 font-bold hover:brightness-110" data-testid="games-link">
             play today's <span class="ml-2" aria-hidden="true">→</span>
           </a>
         </div>
-        <div class="rounded-[var(--cueory-result-card-radius)] bg-[var(--cueory-result-card-bg)] p-8 text-center text-ink" aria-hidden="true">
-          <span class="mx-auto flex size-16 items-center justify-center rounded-[var(--cueory-result-card-radius)] border border-[var(--cueory-glass-border)] text-2xl">p</span>
+        <div class="games-preview p-8 text-center text-ink" aria-hidden="true">
+          <span class="games-preview-mark mx-auto flex size-16 items-center justify-center border text-2xl">p</span>
           <div class="mt-6 flex justify-center gap-3">
             <span class="size-4 rounded-full bg-ink"></span><span class="size-4 rounded-full bg-ink"></span><span class="size-4 rounded-full bg-ink"></span><span class="size-4 rounded-full bg-ink"></span><span class="size-4 rounded-full bg-ink"></span>
           </div>
@@ -41,11 +41,11 @@ const games = [
       <ol class="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-5" aria-label="daily games">
         {
           games.map((game, index) => (
-            <li class:list={['min-w-0 rounded-[var(--cueory-result-card-radius)] border border-[var(--cueory-glass-border)] p-4', { 'bg-[var(--cueory-copper-start)] text-[var(--cueory-copper-ink)]': index === 0 }]} data-game-card={game.name}>
-              <p class="text-[length:var(--cueory-label-size)] font-[var(--cueory-label-weight)] tracking-[var(--cueory-label-tracking)]">{String(index + 1).padStart(2, '0')}</p>
+            <li class:list={['games-card min-w-0 border p-4', { 'games-card-active': index === 0 }]} data-game-card={game.name}>
+              <p class="section-label">{String(index + 1).padStart(2, '0')}</p>
               <p class="mt-2 font-bold">{game.name}</p>
               <p class="mt-2 text-sm">{game.line}</p>
-              {!game.available && <span class="mt-3 inline-flex rounded-pill border border-[var(--cueory-glass-border)] px-3 py-1 text-xs font-bold">coming soon</span>}
+              {!game.available && <span class="games-card-chip mt-3 inline-flex rounded-pill border px-3 py-1 text-xs font-bold">coming soon</span>}
             </li>
           ))
         }
@@ -53,6 +53,54 @@ const games = [
     </div>
   </div>
 </section>
+
+<style>
+  .section-label {
+    font-size: var(--cueory-label-size);
+    font-weight: var(--cueory-label-weight);
+    letter-spacing: var(--cueory-label-tracking);
+  }
+
+  .games-stage {
+    border-color: var(--cueory-glass-border);
+    border-radius: var(--cueory-result-card-radius);
+    box-shadow: var(--cueory-glass-shadow);
+  }
+
+  .games-stage-action {
+    border-color: var(--cueory-copper-shine);
+    background: linear-gradient(135deg, var(--cueory-copper-start), var(--cueory-copper-end));
+    box-shadow: var(--cueory-glass-shadow);
+    color: var(--cueory-copper-ink);
+  }
+
+  .games-preview,
+  .games-preview-mark,
+  .games-card {
+    border-radius: var(--cueory-result-card-radius);
+  }
+
+  .games-preview {
+    background: var(--cueory-result-card-bg);
+  }
+
+  .games-preview-mark,
+  .games-card,
+  .games-card-chip {
+    border-color: var(--cueory-glass-border);
+  }
+
+  .games-card-active {
+    background: var(--cueory-copper-start);
+    color: var(--cueory-copper-ink);
+  }
+
+  @media (min-width: 64em) {
+    .games-stage-layout {
+      grid-template-columns: minmax(0, 1fr) minmax(calc(var(--spacing) * 64), 0.9fr);
+    }
+  }
+</style>
 
 <!-- Astro bundles the external TypeScript module; no inline script runs under the CSP. -->
 <script src="../islands/dailyline.ts"></script>

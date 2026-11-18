@@ -17,10 +17,10 @@ const landingUrl = kitLandingUrl(newsletter.landingUrl);
 
 <section id="signup" class="scene scene-low scroll-mt-section py-section" aria-labelledby="signup-heading">
   <div class="mx-auto max-w-page px-gutter" data-reveal-section>
-    <div class="veil rounded-[var(--cueory-result-card-radius)] border border-[var(--cueory-glass-border)] p-6 sm:p-10">
-      <div class="grid gap-6 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] lg:items-center">
+    <div class="signup-card veil border p-6 sm:p-10">
+      <div class="signup-layout grid gap-6 lg:items-center">
         <div>
-          <p class="text-[length:var(--cueory-label-size)] font-[var(--cueory-label-weight)] tracking-[var(--cueory-label-tracking)] text-ink-soft">launch updates</p>
+          <p class="signup-label text-ink-soft">launch updates</p>
           <h2 id="signup-heading" class="display mt-3 text-title wrap-break-word sm:text-title-lg">coming soon</h2>
           <p class="mt-4 max-w-prose text-ink-soft">Mental Health I and Med Math are next. Get one email when they open.</p>
         </div>
@@ -49,7 +49,7 @@ const landingUrl = kitLandingUrl(newsletter.landingUrl);
                   class="rounded-pill border border-control bg-page px-4 py-3 text-ink"
                 />
               </div>
-              <button type="submit" class="min-h-11 rounded-pill bg-[var(--cueory-copper-end)] px-6 py-3 font-bold text-[var(--cueory-copper-ink)] hover:bg-[var(--cueory-copper-start)]">
+              <button type="submit" class="signup-action min-h-11 rounded-pill px-6 py-3 font-bold">
                 join the list
               </button>
             </form>
@@ -58,7 +58,7 @@ const landingUrl = kitLandingUrl(newsletter.landingUrl);
               href={landingUrl}
               target="_blank"
               rel="noopener noreferrer"
-              class="inline-flex min-h-11 items-center justify-center rounded-pill bg-[var(--cueory-copper-end)] px-6 py-3 font-bold text-[var(--cueory-copper-ink)] hover:bg-[var(--cueory-copper-start)]"
+              class="signup-action inline-flex min-h-11 items-center justify-center rounded-pill px-6 py-3 font-bold"
               aria-label="get launch updates (opens in a new tab)"
               data-testid="signup-landing"
             >
@@ -86,3 +86,31 @@ const landingUrl = kitLandingUrl(newsletter.landingUrl);
     </div>
   </div>
 </section>
+
+<style>
+  .signup-card {
+    border-color: var(--cueory-glass-border);
+    border-radius: var(--cueory-result-card-radius);
+  }
+
+  .signup-label {
+    font-size: var(--cueory-label-size);
+    font-weight: var(--cueory-label-weight);
+    letter-spacing: var(--cueory-label-tracking);
+  }
+
+  .signup-action {
+    background: var(--cueory-copper-end);
+    color: var(--cueory-copper-ink);
+  }
+
+  .signup-action:hover {
+    background: var(--cueory-copper-start);
+  }
+
+  @media (min-width: 64em) {
+    .signup-layout {
+      grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+    }
+  }
+</style>
