@@ -156,6 +156,7 @@
   --gap-mode-card: 1rem;        /* space between "ways to study" cards */
   --drop-mode-card: 1rem;       /* how much lower a neighbouring card sits, per card away from the middle */
   --zoom-mode-card: 1.04;       /* a "ways to study" card under the mouse or keyboard focus grows this much (D-51) */
+  --container-mode-tile: 7.5rem; /* narrowest a lesson-hub mode tile gets: two fit a phone, one fits when text is enlarged */
   --container-mode-preview: 28rem; /* the study-mode preview panel (D-51) */
   --container-flag-panel: min(calc(100vw - 2rem), 28rem); /* the flag form, opened from the footer's flag icon */
   --nudge-mode-preview: 1rem;   /* how far the preview slides in when previous or next changes the mode (D-51) */
