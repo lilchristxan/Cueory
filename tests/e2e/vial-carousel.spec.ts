@@ -193,7 +193,14 @@ test('with a mouse, the front vial lifts to 104% with brighter glass; its neighb
 }, testInfo) => {
   test.skip(!isDesktopOfEachEngine(testInfo), 'hover needs a mouse');
   await showRing(page);
-  await page.waitForTimeout(800);
+  // The ring has settled once no finite animation or transition is still running (an endless shimmer doesn't count).
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () => document.getAnimations().filter((a) => a.effect?.getComputedTiming().iterations !== Infinity && a.playState === 'running').length,
+      ),
+    )
+    .toBe(0);
   const look = (id: string) =>
     page.locator(`#mode-${id}`).evaluate((card) => ({
       scale: getComputedStyle(card).scale,
