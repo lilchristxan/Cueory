@@ -258,7 +258,6 @@
 
   .building-strip {
     background: color-mix(in srgb, var(--color-surface) 82%, var(--color-silk-tint));
-    letter-spacing: var(--tracking-label);
   }
 
   .building-strip-icon {
