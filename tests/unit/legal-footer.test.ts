@@ -61,9 +61,10 @@ describe('legalPageHasFinalCopy', () => {
     }
   });
 
-  it("reads the real pages: Terms and Disclaimer hold Christian's approved text", () => {
+  it("reads the real pages: Terms, Disclaimer and Privacy hold Christian's approved text", () => {
     expect(legalPageHasFinalCopy('terms')).toBe(true);
     expect(legalPageHasFinalCopy('disclaimer')).toBe(true);
+    expect(legalPageHasFinalCopy('privacy')).toBe(true);
   });
 });
 

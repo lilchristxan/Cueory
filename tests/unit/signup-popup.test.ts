@@ -104,7 +104,7 @@ describe('pop-up storage key and privacy', () => {
     expect(entry).toMatchObject({ storage: 'local', onDeletion: 'cleared' });
     const privacy = readFileSync(new URL('../../src/pages/privacy.astro', import.meta.url), 'utf8');
     expect(privacy).toContain(`<code>${SIGNUP_POPUP_STORAGE_KEY}</code>`);
-    expect(privacy.replace(/\s+/g, ' ')).toContain('appears at most once every 3 hours');
+    expect(privacy.replace(/\s+/g, ' ')).toContain('keep the pop-up away for three hours');
   });
 });
 

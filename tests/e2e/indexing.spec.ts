@@ -24,7 +24,6 @@ const previewPages = existsSync(previewDir)
 
 const noindexPages = [
   ...previewPages,
-  '/privacy', // draft policy, until the owner approves final wording
   '/auth/callback',
   '/reset-password',
   '/signin',
@@ -101,22 +100,22 @@ test.describe('Task 127: indexing', () => {
     }
   });
 
-  test('final legal pages are searchable while the draft privacy page stays out', async ({ page }) => {
-    for (const path of ['/terms', '/disclaimer']) {
+  test('final legal pages are searchable, in site search, and carry final dated text', async ({ page }) => {
+    for (const [path, date] of [
+      ['/terms', /^Last updated \d{1,2} [A-Z][a-z]+ \d{4}$/],
+      ['/disclaimer', /^Last updated \d{1,2} [A-Z][a-z]+ \d{4}$/],
+      ['/privacy', /^Effective \d{1,2} [A-Z][a-z]+ \d{4}$/],
+    ] as const) {
       const response = await page.goto(path);
       expect(response?.status()).toBe(200);
       await expect(robots(page)).toHaveCount(0);
       await expect(page.locator('main[data-pagefind-body]')).toHaveCount(1);
+      await expect(page.locator('p.text-sm.text-ink-soft')).toHaveText(date);
+      await expect(page.locator('main')).not.toContainText(/Draft for review|Last updated:\s*not yet published/i);
     }
   });
 
-  test('draft legal pages stay out of external and site search while public support remains searchable', async ({ page }) => {
-    for (const path of ['/privacy']) {
-      const response = await page.goto(path);
-      expect(response?.status()).toBe(200);
-      await expect(robots(page)).toHaveAttribute('content', /\bnoindex\b/);
-      await expect(page.locator('main[data-pagefind-body]')).toHaveCount(0);
-    }
+  test('public support remains searchable while non-public sign-in stays out of site search', async ({ page }) => {
     await page.goto('/support');
     await expect(robots(page)).toHaveCount(0);
     await expect(page.locator('main[data-pagefind-body]')).toHaveCount(1);
