@@ -97,8 +97,9 @@ test('links to the other legal pages and to each outside privacy policy it names
   await expect(page).toHaveURL(/\/terms$/);
 });
 
-test('stays a draft, out of search, until it is final', async ({ page }) => {
+test('is final and searchable', async ({ page }) => {
   await page.goto('/privacy');
-  await expect(page.getByRole('main').getByText('Draft for review.', { exact: true })).toBeVisible();
-  await expect(page.locator('head meta[name="robots"]')).toHaveAttribute('content', /\bnoindex\b/);
+  await expect(page.getByRole('main').getByText('Draft for review.', { exact: true })).toHaveCount(0);
+  await expect(page.getByRole('main').getByText('Effective 19 November 2026', { exact: true })).toBeVisible();
+  await expect(page.locator('head meta[name="robots"]')).toHaveCount(0);
 });

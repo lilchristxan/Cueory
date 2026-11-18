@@ -3,17 +3,15 @@ import Layout from '../layouts/Layout.astro';
 import Prose from '../components/Prose.astro';
 import { site } from '../config/site';
 
-// DRAFT: Privacy Notice p4, adopted 2026-11-17 (file SHA-256 02b71d70…574f). Word for word; change it only with
-// Christian's approval. It describes behaviour from #831 and #832, which must merge first. The "Draft for review" line
-// keeps the release audit blocking until Christian confirms Cloudflare Web Analytics and the Codex re-vote finishes.
+// FINAL: Privacy Notice p4, adopted by the Claude panel and the Codex vote on 2026-11-17 (file SHA-256 02b71d70…574f,
+// full text on PR #835). Word for word; change it only with Christian's approval.
 const email = site.contactEmail;
 const mail = `mailto:${email}`;
 ---
 
-<Layout title="privacy" description="What Cueory stores, what it doesn't, and how to delete or export your data." noindex>
+<Layout title="privacy" description="What Cueory stores, what it doesn't, and how to delete or export your data.">
   <Prose>
     <h1>privacy, in plain language</h1>
-    <p class="text-sm text-ink-soft">Draft for review.</p>
     <p class="text-sm text-ink-soft">Effective 19 November 2026</p>
 
     <p>
