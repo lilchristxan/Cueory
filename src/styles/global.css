@@ -2000,6 +2000,14 @@ html:has(dialog.mode-preview[open]) {
     transition: none;
   }
 
+  /* The label's color is inherited by its text and icon. Reduced motion sets a 0.01ms transition on every element (see
+     the base layer), which keeps the old color for a frame in Firefox and WebKit, so a just-picked option was read as
+     low contrast. No property may transition inside the control. */
+  .segmented-option,
+  .segmented-option * {
+    transition: none;
+  }
+
   .segmented-option:has(:checked) {
     background-color: var(--color-ink);
     color: var(--color-on-button);
