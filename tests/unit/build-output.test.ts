@@ -9,6 +9,7 @@ import { gzipSync } from 'node:zlib';
 import { describe, expect, it } from 'vitest';
 import { kitFormAction, kitLandingUrl, newsletter, site } from '../../src/config/site';
 import { initialJsFiles, initialJsGzipBytes, inlineScriptBodies } from './perf-scan';
+import { isProductionBuild } from '../../scripts/prune-preview.mjs';
 
 const dist = fileURLToPath(new URL('../../dist/', import.meta.url));
 
@@ -154,8 +155,10 @@ describe.skipIf(!existsSync(dist))('built site', () => {
       missingBudgets.map((page) => `${page}: ${initialJsGzipBytes(join(dist, page))} gzip bytes`),
       'Every built route must have a measured JavaScript budget',
     ).toEqual([]);
-    // The live build removes /preview/* (scripts/prune-preview.mjs), so its budgets only apply where those pages exist.
-    const previewPruned = !existsSync(join(dist, 'preview'));
+    // The live build removes /preview/* (scripts/prune-preview.mjs). Which build this is comes from the environment,
+    // never from the output, so a staging build that wrongly lost its previews fails here instead of passing.
+    const previewPruned = isProductionBuild(process.env);
+    expect(existsSync(join(dist, 'preview')), 'dist/preview exists exactly when this is not the production build').toBe(!previewPruned);
     const budgeted = Object.entries(initialJsBudget).filter(([page]) => !(previewPruned && page.startsWith('preview/')));
     expect(routes.sort()).toEqual(budgeted.map(([page]) => page).sort());
     const overBudget = budgeted.flatMap(([page, budget]) => {
@@ -306,10 +309,8 @@ describe.skipIf(!existsSync(dist))('built site', () => {
     });
 
     expect(entry.languages?.en?.page_count).toBe(searchablePages.length);
-    const previewPages = pages.filter((page) => page.includes('/preview/'));
-    // arrayContaining([]) matches everything, so a pruned (live) build with no preview pages is checked directly.
-    if (previewPages.length === 0) expect(searchablePages.some((page) => page.includes('/preview/'))).toBe(false);
-    else expect(searchablePages).not.toEqual(expect.arrayContaining(previewPages));
+    // No preview page may be indexed in any build, and a pruned build has none to index.
+    expect(searchablePages.filter((page) => page.includes('/preview/'))).toEqual([]);
     expect(searchablePages.every((page) => !readFileSync(page, 'utf8').includes('content="noindex'))).toBe(true);
   });
 
