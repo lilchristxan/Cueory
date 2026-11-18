@@ -1,0 +1,1 @@
+status: test reliability: the result-dialog scroll-lock test asks the page to scroll with scrollBy on mobile WebKit, which has no mouse wheel, and keeps the wheel everywhere else. Tests only; the test still checks the same behaviour.
