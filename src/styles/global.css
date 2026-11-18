@@ -266,8 +266,6 @@
     color: var(--color-highlight);
   }
 
-  .building-strip-icon::before { content: "✦"; }
-
   /* Frosted panel: brand surface color, partly see-through, blurred, with a 1 px hairline and one soft shadow. */
   .veil {
     background-color: rgb(var(--veil-rgb) / var(--veil-alpha));
