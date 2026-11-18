@@ -248,8 +248,24 @@
   /* The same cloth without folds, for whole pages behind text. */
   .silk-quiet {
     background-color: var(--color-silk-base);
-    background-image: var(--silk-grain), linear-gradient(180deg, var(--color-silk-base), var(--color-silk-shade));
-    background-size: 220px 220px, auto;
+    background-image:
+      var(--silk-grain),
+      radial-gradient(ellipse 55% 42% at 8% 12%, rgb(var(--silk-fold-rgb) / 0.16), transparent 72%),
+      radial-gradient(ellipse 48% 38% at 92% 22%, rgb(var(--silk-fold-rgb) / 0.12), transparent 70%),
+      linear-gradient(180deg, var(--color-silk-base), var(--color-silk-shade));
+    background-size: 220px 220px, auto, auto, auto;
+  }
+
+  .building-strip {
+    background: color-mix(in srgb, var(--color-surface) 82%, var(--color-silk-tint));
+    letter-spacing: 0.01em;
+  }
+
+  .building-strip-icon {
+    display: inline-block;
+    margin-inline-end: 0.45rem;
+    color: var(--color-highlight);
+    font-size: 0.8em;
   }
 
   /* Frosted panel: brand surface color, partly see-through, blurred, with a 1 px hairline and one soft shadow. */
