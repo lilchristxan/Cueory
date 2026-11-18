@@ -1,0 +1,1 @@
+STATUS: in review. One-line copy fix to the /play description (follow-up to #836): it listed four puzzles including the crossword, but the crossword is closed, so it now says three. No behavior change.
