@@ -79,7 +79,7 @@ SudokuDone/Sort markup body past the CSS and the top 40 lines of WordPath were s
 | Support page itself: no board for the tip/mission page; keep content, apply chrome. | S |
 | About: board claims "researched, cites sources, nurse reviewer" style copy (verify against board text before use) vs staging about.astro (86 lines, tested by about.spec). Claims must be true (rule 5) and legal text is locked. | M |
 
-## Settled defaults (Christian, 18 Nov 2026, 08:29; the rules win over the renderings)
+## Settled defaults (1-11: Christian, 18 Nov 2026, 08:29; the rules win over the renderings)
 
 1. Pillo uses brand colors plus symbols, never green and yellow tiles.
 2. Sign-in and free-account calls to action show as coming soon while accounts are closed.
@@ -92,7 +92,7 @@ SudokuDone/Sort markup body past the CSS and the top 40 lines of WordPath were s
 9. The persistent search button stays (it opens the existing site search).
 10. Keep the current hero line: "nursing school is hard enough. cueory makes studying nursing simpler."
 11. Game screens get a quiet background; motion off under reduced motion.
-12. Phones and tablets keep the existing ☰ panel (the renderings draw no phone bar); about-us and contact links join the menu when their pages exist (P7/P13).
+12. Proposed P2 first-slice behaviour (the lead's default, told to Christian 18 Nov 08:45; final with his approval of #875): phones and tablets keep the existing ☰ panel (the renderings draw no phone bar); about-us and contact links join the menu when their pages exist (P7/P13).
 
 ## Build plan (small PRs, in order; each replaces, never loosens, the named tests)
 
@@ -101,7 +101,7 @@ Phase 0, in parallel (Christian, 08:28): Worker 1 = P1, Architect = P2, Worker 2
 2. P2 Header and nav: persistent pill, about dropdown, phone collapse, sign-in hidden until accounts open. L, needs-christian (auth link, header). Replaces header-tuck, sticky-header-overlap, navigation-links, theme-navigation, account-corner-keyboard, tap-targets, footer-theme, large-text-reflow, a11y-sweep and dark-mode runs.
 3. P3 Building strip + page background. M. dark-mode, forced-colors, reduced-motion, home-modern, daytime-contrast.
 
-Phase 1, parallel (up to 7 builders after P3)
+Phase 1, parallel (up to 7 builders): prepare now on branches from staging; open PRs only after all of Phase 0 (P1, P2 and P3) has merged
 4. P4 Result card and share set (C5). L. share-sheet, result-brand-mark, play.spec, word-path.spec.
 5. P5 Home hero. M. home-page, home-modern, promo, indexing.
 6. P6 Home vial carousel. L. vial-carousel, home-modern.
