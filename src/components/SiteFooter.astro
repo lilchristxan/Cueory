@@ -26,9 +26,11 @@ interface Props {
   hideFlag?: boolean;
   /** The real item a question page shows (database uuids), passed down from the layout. Sample pages pass none. */
   flagItem?: { itemId: string; itemVersionId: string };
+  /** The page's accounts gate is closed (/signin, /signup): the flag form stays signed out and never loads Supabase. */
+  accountsOff?: boolean;
 }
 
-const { hideFlag = false, flagItem } = Astro.props;
+const { hideFlag = false, flagItem, accountsOff = false } = Astro.props;
 // Fails the build for a sample slug or half a pair: submit_flag only takes real ids.
 const item = flagItemContext(flagItem);
 // #747: a legal page that isn't approved yet gets no footer link (Privacy always shows).
@@ -49,6 +51,7 @@ const barButton =
             itemId={item.itemId}
             itemVersionId={item.itemVersionId}
             variant="icon"
+            {...(accountsOff ? { accountsOff: true } : {})}
           >
             <div slot="fallback" class="flex items-center gap-2">
             <a

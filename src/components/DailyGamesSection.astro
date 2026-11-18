@@ -5,9 +5,11 @@
  * scene, between the tint of "ways to study" and the launch-updates panel.
  */
 import { dailyGames, statGame } from '../config/games';
+import { crosswordShown, pageBuildEnv } from '../config/crossword';
 
 // The ready puzzle names come from /play; stat remains a separate preview game.
-const dailyNames = dailyGames.filter((game) => game.ready).map((game) => game.name);
+const showCrossword = crosswordShown(pageBuildEnv());
+const dailyNames = dailyGames.filter((game) => game.ready && (showCrossword || game.id !== 'cueword')).map((game) => game.name);
 const dailyList = new Intl.ListFormat('en', { style: 'long', type: 'conjunction' }).format(dailyNames);
 ---
 

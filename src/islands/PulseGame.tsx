@@ -31,7 +31,7 @@ import ResultBrandMark from './ResultBrandMark';
 import { GameHelpCard, useGameHelp } from './GameHelp';
 import GameHeader from './GameHeader';
 import { gameName } from '../config/games';
-import { useSharedGameSettings } from './GameSettings';
+import { useSharedGameSettings } from './GameSettings.tsx';
 import { browserStorage } from '../scripts/storage';
 
 interface Puzzle {
@@ -467,8 +467,8 @@ export default function PulseGame({ puzzles }: Props) {
               </>
             ) : (
               <p className="mt-2 text-sm text-ink-soft">
-                stats are off. turn on “keep my stats” below to see games played, win %, streaks and the guesses each
-                game took. they stay in this browser.
+                this browser won't keep stats (private browsing or blocked site data), so games played, win %, streaks
+                and the guesses each game took can't be shown.
               </p>
             )}
           </section>

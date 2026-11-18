@@ -1,7 +1,7 @@
 import GameFlag from './GameFlag';
 import '../styles/gameheader.css';
 import { useRef, useState, type ReactNode } from 'react';
-import { GameSettingsDialog } from './GameSettings';
+import { GameSettingsDialog } from './GameSettings.tsx';
 import { GameHelpButton, type GameHelpState } from './GameHelp';
 
 /**

@@ -19,6 +19,7 @@ export const linkHosts = new Set([
   'cueory.app', // canonical and share links to our own site
   'www.instagram.com', 'www.tiktok.com', 'www.youtube.com', 'x.com', 'www.facebook.com', 'www.pinterest.com', // socials
   'ko-fi.com', // tip page
+  'more.ko-fi.com', // Ko-fi's terms, linked from the approved Terms of Use (v5)
   'cueory.kit.com', // Kit landing page for launch updates, a plain link until the Kit form exists
   'creativecommons.org', 'dbarchive.biosciencedbc.jp', // licence and source credits for the anatomy models
 ]);

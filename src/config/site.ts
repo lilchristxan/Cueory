@@ -104,8 +104,19 @@ export const footerLinks = [
   { href: '/support', label: 'support cueory' },
 ] as const;
 
-/** Public launch wording only. This never enables authentication or changes access control. */
+/**
+ * Whether accounts are open to the public. Besides the launch wording, it gates /signin and /signup on the live site
+ * (src/config/accountsgate.ts): while it is false those pages show "accounts open soon" and never load Supabase.
+ */
 export const accountsOpen: boolean = false;
+
+/**
+ * Whether the crossword is open to the public. It stays false until Christian's real puzzles are scheduled (he keeps
+ * them out of the public repo). While false, /play/crossword shows a short "coming soon" note and /play and the home
+ * page leave the crossword out of today's games. Builds that may show drafts (staging, previews, local and test builds,
+ * the same fail-closed gate as stat) still show the sample crossword so it can be tested; the live build never does.
+ */
+export const crosswordOpen: boolean = false;
 
 /** Keep the account links and the already-planned promo label together for either launch state. */
 export function accountLaunch(open: boolean) {

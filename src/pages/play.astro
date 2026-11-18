@@ -9,10 +9,11 @@ import { getCollection } from 'astro:content';
 import Layout from '../layouts/Layout.astro';
 import GameStatsPanel from '../islands/GameStatsPanel';
 import HomeScreenTip from '../islands/HomeScreenTip';
-import PlayStatus from '../islands/PlayStatus';
+import PlayStatus from '../islands/PlayStatus.tsx';
 import { dailyGames, gamePages, helloCardsGame, helloCardsIndexWhenApproved, statGame } from '../config/games';
 import { helloCardsPage } from '../islands/hello-cards';
 import { draftsAllowed } from '../islands/anatomylab';
+import { crosswordShown } from '../config/crossword';
 
 // The hello cards link only exists where the cards may show: drafts stay off the live site (see helloCardsShown).
 const helloEnv = { WORKERS_CI: process.env.WORKERS_CI, WORKERS_CI_BRANCH: process.env.WORKERS_CI_BRANCH, CUEORY_ANATOMY_DRAFTS: process.env.CUEORY_ANATOMY_DRAFTS };
@@ -24,9 +25,11 @@ const pulse = dailyGames.find((game) => game.id === 'pulse')!;
 const sudokuGame = dailyGames.find((game) => game.id === 'triage')!;
 const crossword = dailyGames.find((game) => game.id === 'cueword')!;
 const wordPath = dailyGames.find((game) => game.id === 'suture')!;
-const later = dailyGames.filter((game) => !game.ready);
+// The crossword stays out of the cards (and the stats list) while it is closed (site.ts crosswordOpen).
+const showCrossword = crosswordShown(helloEnv);
+const later = [...dailyGames.filter((game) => !game.ready), ...(showCrossword ? [] : [crossword])];
 // Each game's own page (2026-11-17): the hub links there; old /play#… links are sent on by src/scripts/playhash.ts.
-const hubGames = [pulse, sudokuGame, crossword, wordPath].map((game) => ({ id: game.id, name: game.name, line: game.line, href: gamePages[game.id] }));
+const hubGames = [pulse, sudokuGame, ...(showCrossword ? [crossword] : []), wordPath].map((game) => ({ id: game.id, name: game.name, line: game.line, href: gamePages[game.id] }));
 ---
 
 <Layout title="daily games" description="four short puzzles every day: a word to guess, sudoku, a small crossword and a word path. sample puzzles for now." socialImage="/share/games-scene.png">

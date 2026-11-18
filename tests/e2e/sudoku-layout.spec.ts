@@ -74,7 +74,7 @@ for (const scheme of ['light', 'dark'] as const) {
     await game(page).getByRole('button', { name: /settings/ }).click();
     const dialog = game(page).getByRole('dialog', { name: 'settings' });
     await expect(dialog).toBeVisible();
-    const card = dialog.locator('.sudoku-settings');
+    const card = dialog.locator('.game-settings');
     const cardBox = await rect(card);
     const height = page.viewportSize()!.height;
     expect(cardBox.top).toBeGreaterThanOrEqual(0);
@@ -82,15 +82,15 @@ for (const scheme of ['light', 'dark'] as const) {
     expect(cardBox.right).toBeLessThanOrEqual(width);
     expect(await card.evaluate((element) => getComputedStyle(element).overflowY)).toBe('auto');
 
-    await dialog.getByRole('radio', { name: /^dark mode/ }).check();
+    await dialog.getByRole('group', { name: 'theme' }).getByRole('radio', { name: /^dark mode/ }).check();
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
     await expect(page.locator('[data-theme-picker] input[value="dark"]')).toBeChecked();
     expect(await page.evaluate(() => localStorage.getItem('cueory-theme'))).toBe('dark');
-    await dialog.getByRole('radio', { name: /^follow device/ }).check();
+    await dialog.getByRole('group', { name: 'theme' }).getByRole('radio', { name: /^follow device/ }).check();
     await expect(page.locator('html')).not.toHaveAttribute('data-theme', /.+/);
     await expect(page.locator('[data-theme-picker] input[value="device"]')).toBeChecked();
 
-    const results = await new AxeBuilder({ page }).include('.sudoku-overlay').withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa']).analyze();
+    const results = await new AxeBuilder({ page }).include('[data-testid="game-settings"]').withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa']).analyze();
     expect(results.violations.map((violation) => violation.id + ': ' + violation.help)).toEqual([]);
 
     await page.keyboard.press('Escape');

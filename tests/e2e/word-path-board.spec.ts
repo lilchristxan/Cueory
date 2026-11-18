@@ -184,7 +184,8 @@ test.describe('word path: board format (#722)', () => {
   });
 
   test('finishing the board: result, plain share line, stats with cues and the thread first, one progress event', async ({ page }) => {
-    await page.getByTestId('game-stats').getByRole('switch', { name: 'keep my stats' }).click();
+    // Stats are always kept (2026-11-17): there is no switch to turn on.
+    await expect(page.getByTestId('game-stats').getByRole('switch')).toHaveCount(0);
     await tapAndSubmit(page, thread.path);
     for (const word of themes) await tapAndSubmit(page, word.path);
     await expect(live(page)).toHaveText(new RegExp(`${total} of ${total}\\. board complete\\.$`));
