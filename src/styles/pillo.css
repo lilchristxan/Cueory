@@ -23,6 +23,16 @@
     --pillo-hatch-clear: rgb(from var(--color-pillo-hatch) r g b / 0);
   }
 
+  .pillo-pack {
+    background-image:
+      url("/design/pillo-blister-board.webp"),
+      linear-gradient(135deg, var(--pillo-gloss-color), var(--pillo-gloss-clear) 45%),
+      repeating-linear-gradient(45deg, var(--pillo-hatch-color) 0 var(--pillo-hatch-width), var(--pillo-hatch-clear) var(--pillo-hatch-width) var(--pillo-hatch-gap)),
+      repeating-linear-gradient(-45deg, var(--pillo-hatch-color) 0 var(--pillo-hatch-width), var(--pillo-hatch-clear) var(--pillo-hatch-width) var(--pillo-hatch-gap));
+    background-size: 100% 100%, auto, auto, auto;
+    background-repeat: no-repeat, repeat, repeat, repeat;
+  }
+
   .pillo-top {
     display: flex;
     flex-wrap: wrap;
