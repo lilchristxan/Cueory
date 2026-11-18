@@ -180,7 +180,7 @@ export default function GameResultsHost() {
         >
           <span aria-hidden="true">×</span>
         </button>
-        <p className="result-meta text-[length:var(--cueory-label-size)] font-normal text-ink-soft wrap-break-word">
+        <p className="result-meta text-[length:var(--cueory-label-size)] font-[var(--cueory-label-weight)] tracking-[var(--cueory-label-tracking)] uppercase text-ink-soft wrap-break-word">
           {card.name}{card.level ? ` · ${card.level}` : ''} · {card.date}
         </p>
 
@@ -198,7 +198,7 @@ export default function GameResultsHost() {
           ))}
         </dl>
 
-        <p className="mt-5 rounded-md border border-dashed border-control p-3 text-sm break-words" data-testid="result-share-line">
+        <p className="mt-5 rounded-md border border-dashed border-control p-3 text-center text-sm break-words" data-testid="result-share-line">
           {line}
         </p>
 
