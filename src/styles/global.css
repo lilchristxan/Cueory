@@ -250,19 +250,20 @@
     background-color: var(--color-silk-base);
     background-image:
       var(--silk-grain),
-      radial-gradient(ellipse 55% 42% at 8% 12%, rgb(var(--silk-fold-rgb) / var(--silk-fold-alpha)), transparent 72%),
-      radial-gradient(ellipse 48% 38% at 92% 22%, rgb(var(--silk-fold-rgb) / calc(var(--silk-fold-alpha) * 0.75)), transparent 70%),
-      linear-gradient(180deg, var(--color-silk-base), var(--color-silk-shade));
-    background-size: 220px 220px, auto, auto, auto;
+      radial-gradient(ellipse 60% 45% at 6% 8%, color-mix(in srgb, var(--color-silk-sheen) 85%, transparent), transparent 70%),
+      radial-gradient(ellipse 55% 50% at 94% 18%, rgb(var(--silk-fold-rgb) / calc(var(--silk-fold-alpha) * 2)), transparent 70%),
+      radial-gradient(ellipse 70% 40% at 20% 78%, rgb(var(--silk-fold-rgb) / var(--silk-fold-alpha)), transparent 72%),
+      linear-gradient(180deg, var(--color-silk-tint), var(--color-silk-base) 55%, var(--color-silk-shade));
+    background-size: 220px 220px, auto, auto, auto, auto;
   }
 
+  /* Transparent with a fade, as in HomeV2-1.png: the page's silk shows through and the strip melts into it. */
   .building-strip {
-    background: color-mix(in srgb, var(--color-surface) 82%, var(--color-silk-tint));
+    background-image: linear-gradient(180deg, color-mix(in srgb, var(--color-surface) 60%, transparent), transparent);
   }
 
   .building-strip-icon {
     display: inline-block;
-    color: var(--color-highlight);
   }
 
   /* Frosted panel: brand surface color, partly see-through, blurred, with a 1 px hairline and one soft shadow. */
