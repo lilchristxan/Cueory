@@ -16,6 +16,9 @@ for (const [width, height] of [[820, 1180], [1180, 820]] as const) {
     test.use({ viewport: { width, height }, hasTouch: true, isMobile: true });
 
     test('every board is centred, squares are 44 to 72px, no sideways scroll', async ({ page }) => {
+      // A fixed board day: without it, the runner's own date picks the sample, and on some days word path shows its
+      // older word search, whose letters have no data-path (landscape-games.spec.ts has the same fix).
+      await page.clock.setFixedTime(new Date('2026-11-01T15:00:00'));
       await page.addInitScript(() => {
         try { localStorage.setItem('cueory-promo-seen', String(Date.now())); } catch { /* optional storage */ }
       });
