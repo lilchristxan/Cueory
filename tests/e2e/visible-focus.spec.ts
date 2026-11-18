@@ -48,13 +48,17 @@ test.describe('Task 210: visible keyboard focus', () => {
 
       const controls = await page.evaluate((query) => {
         const elements = [...document.querySelectorAll<HTMLElement>(query)];
-        const isReachable = (el: HTMLElement) =>
-          el.tabIndex >= 0 &&
+        const isReachable = (el: HTMLElement) => {
+          // Links inside a closed <details> are in the page but no browser tabs to them: only its summary is a stop.
+          const closedDetails = el.closest('details:not([open])');
+          if (closedDetails && !(el.matches('summary') && el.parentElement === closedDetails)) return false;
+          return el.tabIndex >= 0 &&
           !el.matches(':disabled') &&
           !el.closest('[hidden], [inert]') &&
           el.getClientRects().length > 0 &&
           getComputedStyle(el).display !== 'none' &&
           getComputedStyle(el).visibility === 'visible';
+        };
 
         return elements.flatMap((el, index) => {
           if (!isReachable(el)) return [];
