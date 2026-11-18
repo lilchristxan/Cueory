@@ -41,14 +41,14 @@ and decorative letters in demo animations (board letters, "term" chips) are plac
 
 | Section | Rendering text | Ship | Reason / source |
 |---|---|---|---|
-| hero eyebrow | by nursing students, for nursing students | hold: leave out until Christian OKs | a claim about who makes the site; Christian is a former nursing student but "nursing students" (plural) is not true today. Needs Christian |
+| hero eyebrow | by nursing students, for nursing students | by nursing students, for nursing students | KEEP: Christian's own motto (stated 30 Oct). default (lead, 18 Nov), Christian may change |
 | hero h1 | nursing school made simpler. | nursing school is hard enough. | default 10, current hero line (index.astro) |
 | hero accent | (none drawn; the curve is a graphic) | cueory makes studying nursing simpler. | default 10; `index.astro` accent line is "cueory makes studying simpler." today: the default's longer wording wins, update both |
 | hero button | start studying for free → | play today's games | accounts closed (default 2). Current hero button (`index.astro`) |
 | hero quiet link | (none) | join the launch list | `accountLaunch` promoJoinLabel while accounts are closed |
 | value row 1 | structured learning / from basics to med-surg | structured learning / from basics to med-surg | same, true today (courses.ts) |
 | value row 2 | multiple ways to study / learn the way that works for you | same | same, true (11 study modes) |
-| value row 3 | adhd friendly / less overwhelm, more focus | hold | a claim about a health condition with no support behind it; needs Christian |
+| value row 3 | adhd friendly / less overwhelm, more focus | hold (not shipped) | default (lead, 18 Nov), Christian may change |
 | support card | support on Ko-fi | support on ko-fi | lowercase voice, brand name kept lowercase |
 | support card body | support our mission to expand our resources, help nursing students struggling in class, and keep building ways we can help students and nurses. | your support helps us maintain the domain, keep the website available, and build more lessons. | "help students struggling in class" promises something not built; use the approved support-page line (support.astro, D-94) |
 | explore label | EXPLORE | explore | lowercase |
@@ -77,17 +77,17 @@ and decorative letters in demo animations (board letters, "term" chips) are plac
 | games button | play today's → | play today's games | existing button text |
 | games demo | "small talk" / "[a question]" | none | demo is decorative; no question text ships in a demo |
 | mailing h2 | coming soon | coming soon | same |
-| mailing body | Mental Health I and Med Math are next. Get one email when they open. | mental health and med math are next. get launch updates by email. | lowercase; course names match `courses.ts` ("Mental Health", "Med Math" are its titles, lowercase in running text); "one email" is a promise about Kit behaviour we cannot verify. Needs Christian for the "next" order |
+| mailing body | Mental Health I and Med Math are next. Get one email when they open. | mental health and med math are next. get launch updates by email. | lowercase; "one email" is a promise about Kit we cannot verify. KEEP the order: Christian's stated plan. default (lead, 18 Nov), Christian may change |
 | mailing field | label email, placeholder your email, button join the list | button only: get launch updates (opens in a new tab) | default 4: no on-page email field; SignupForm uses the Kit hosted page |
 | courses modal title | choose a course | choose a course | same |
 | courses modal line | Faded courses are on the way, so you can see what we're building. | faded courses are on the way, so you can see what we're building. | lowercase |
-| course cards | Med-Surg I, Fundamentals, Mental Health I, Med Math, Med-Surg II, Maternity + Peds | the titles and status in `courses.ts` | live data wins. Title case is the data's own; the board's blurbs ("Common disorders and core drug classes", "Conversions to infusion programming") are descriptions of content and need Christian's OK before shipping |
+| course cards | Med-Surg I, Fundamentals, Mental Health I, Med Math, Med-Surg II, Maternity + Peds | titles shown lowercase: med-surg i (open now), med-surg ii (coming soon), mental health (coming soon), med math (coming soon) | identities and statuses come from `src/config/courses.ts` (available / coming-soon); only the display case changes (lowercase voice). Board extras with no data row (fundamentals, mental health i, maternity + peds) do not ship. Board blurbs need Christian's OK |
 | course badges | OPEN NOW / COMING SOON | open now / coming soon | lowercase |
 | course link | start → | start | arrow is an icon |
 | games modal | today's games / A new set every day. Each one takes a couple of minutes. | today's games / a new puzzle every day. each one takes a few minutes. | lowercase; same claim as the home line. "a couple" shortened is fine; both are time claims, keep soft |
 | support modal h2 | support our mission. | supporting our mission | page title in `support.astro` |
 | support modal body | Cueory is free because students already pay enough. Every donation goes back into the platform: | cueory is free for every nursing student. your support helps us maintain the domain, keep the website available, and build more lessons. | approved support wording (D-94). "every donation goes back into the platform" is a promise of use of funds, not in approved copy |
-| support modal 3 cards | expand our resources / help students who are struggling / build what's next, with blurbs | drop the cards; show the approved three-line mission block from `support.astro` | blurbs promise specifics (tools for classes where students fall behind) |
+| support modal 3 cards | expand our resources / help students who are struggling / build what's next, with blurbs | drop (not shipped) | default (lead, 18 Nov), Christian may change |
 | support modal button | support us on Ko-fi ↗ | support our mission (opens in a new tab) | existing button (support.astro) |
 | support modal note | Opens Ko-fi in a new tab. Ko-fi handles the payment; we never see your card. | opens in a new tab. | "we never see your card" is true of a payment page but a promise about a third party; keep only the new-tab note unless Christian approves. Needs Christian |
 | support modal card | work with us / Schools, educators, nurses and brands that fit our students: partner or advertise with us. / get in touch | drop | advertising and partnerships are not launched; no process behind it. Needs Christian |
@@ -127,7 +127,7 @@ and decorative letters in demo animations (board letters, "term" chips) are plac
 | result stat | today's word / [word] | today's word / [word] | same, shown only after play, never from the page source |
 | result stat | guesses / 4 of 6 | guesses / [n] of 6 | same |
 | share line | pillo · [date] · 4/6 · cueory.app | cueory pillo, [day]: solved in [n] of 6 | use the existing one-line share (`shareText`, `pulse.ts`); the board's line differs. Either is plain text; keep ours so tests and the one-line share rule stay as is. Needs Christian only if he wants the board's line |
-| share buttons | share, copy, facebook, x, threads, reddit, whatsapp | same | lowercase already. Each is an external link: adds third-party share targets; Christian approves (CSP and privacy page) |
+| share buttons | share, copy, facebook, x, threads, reddit, whatsapp | share, copy | HOLD the five social links; ship the device share and copy only. default (lead, 18 Nov), Christian may change |
 | share note | on a phone, share also opens instagram, tiktok and messages. a new pillo comes out tomorrow. | same | lowercase already; "instagram, tiktok" depends on the phone's share sheet, keep as written only if tested |
 | close | aria "close and see the board" | same | same |
 | dialog | aria "today's result" | same | same |
@@ -157,7 +157,7 @@ and decorative letters in demo animations (board letters, "term" chips) are plac
 | setting | dark mode / ignore your device setting and always use dark mode. | same | the theme switch exists (footer); wording already lowercase |
 | setting | light mode / ignore your device setting and always use light mode. | same | same |
 | section label | GAMEBOARD SETTINGS | gameboard settings | lowercase |
-| settings rows | check guesses when entered; start in auto candidate mode; show error counter; show timer; highlight conflicts; highlight row and column; highlight box; highlight identical numbers; play sound on solve | same | already lowercase. Builders: only ship a setting that works. Sound on solve needs an audio asset (self-hosted) and Christian's OK, otherwise omit that row |
+| settings rows | check guesses when entered; start in auto candidate mode; show error counter; show timer; highlight conflicts; highlight row and column; highlight box; highlight identical numbers; play sound on solve | same | already lowercase. Builders: only ship a setting that works. HOLD the sound row (not shipped). default (lead, 18 Nov), Christian may change |
 | close | aria "close settings" | same | same |
 | result label | SUDOKU · MEDIUM · [DATE] | sudoku · medium · [date] | lowercase |
 | result big | solved | solved | same |
@@ -172,14 +172,14 @@ and decorative letters in demo animations (board letters, "term" chips) are plac
 |---|---|---|---|
 | title | word path | word path | same |
 | tagline | LETTER PATH GAME | letter path game | lowercase |
-| help 1 | Tap letters that touch to build a path, across, down or diagonal. | tap letters that touch to build a path, across, down or diagonal. | lowercase |
-| help 2 | Submit when the path spells a word on the list. | submit when the path spells a word on the list. | lowercase |
-| help 3 | Found words are ticked off. | found words are ticked off. | lowercase |
-| help 4 | Tap the last letter again to undo a step. | tap the last letter again to undo a step. | lowercase |
-| help 5 | Tap the printer button above the board to print a clean copy. | tap the printer button above the board to print a clean copy. | lowercase |
-| theme card | CUE OF THE DAY / [theme of today's words] | cue of the day / [the day's theme from the puzzle file] | lowercase; theme text comes from `/content` data, never typed in the page |
-| print list | WORDS TO FIND / NURSE, [word two] (5 letters) ... | words to find / [from the puzzle file] | "NURSE" and all words are samples; builders must not hardcode. Print footer "cueory.app" stays |
-| result | (no Done card text beyond the shared structure) | label "word path · [date]", sub "you found every word.", stats "words found / [n] of [total]", share "word path · [date] · [n] of [total]", note "a new word path comes out tomorrow." | WordPathDone has the same result card shape as the other two; the exact strings are our drafting using the shared pattern. Marked draft: confirm with the shipped word-path share line (`suture.ts`) before use |
+| help 1 | Tap letters that touch to build a path, across, down or diagonal. | find every word in the list. words run up, down, left or right. | verbatim from `gamehelpcontent.ts` ('suture-search'). The board's diagonal path is wrong for the shipped game: words run straight, never diagonally (suture.ts). Builders must draw straight paths |
+| help 2 | Submit when the path spells a word on the list. | tap a word's first letter, then its last letter. tap the first letter again to start over. | verbatim from `gamehelpcontent.ts`. There is no submit step: the pick is checked as soon as the last letter is tapped |
+| help 3 | Found words are ticked off. | on a keyboard, arrows move, enter or space picks, and escape clears. | verbatim from `gamehelpcontent.ts`. Found-word ticking is behaviour, not help text; the page already shows the word list (aria "words to find") |
+| help 4 | Tap the last letter again to undo a step. | (drop) | no undo step exists; tapping the first letter again clears the pick (covered by help 2) |
+| help 5 | Tap the printer button above the board to print a clean copy. | tap the printer button above the board to print a clean copy. | lowercase. Keep only if the print button ships on the page; it is not in the verbatim help text |
+| theme card | CUE OF THE DAY / [theme of today's words] | [the day's theme from the puzzle file] | `SutureGame.tsx` shows the theme alone as a heading (data-testid suture-theme); the "cue of the day" label is new, lowercase if Christian wants it. Theme text comes from `/content`, never typed in the page |
+| print list | WORDS TO FIND / NURSE, [word two] (5 letters) ... | words to find / [from the puzzle file] | existing `words to find` label (SutureGame.tsx); "NURSE" and all words are samples, never hardcoded. The "(5 letters)" hints are not in the shipped list: omit |
+| result | (no Done card text beyond the shared structure) | share line from `shareLine` in `suture.ts`: "cueory word path, [date]: found [n] of [total] words with [m] wrong picks." The rest of the result card reuses the shared pattern (label "word path · [date]", note "a new word path comes out tomorrow.") | the shipped share line wins. Result strings other than the share line are still drafting, confirm in P4 |
 
 ## /support (Message board + support.astro)
 
@@ -203,17 +203,17 @@ Default 6: only true claims. The page today holds `[Christian writes this]` plac
 | Section | Rendering text | Ship | Reason / source |
 |---|---|---|---|
 | breadcrumb | / about us | / about us | same |
-| eyebrow | by nursing students, for nursing students | [Christian writes this] | see home eyebrow |
-| h1 | we know nursing school is hard. | we know nursing school is hard. | true, tone claim only; the shipped h1 is "about cueory" (about.astro), so Christian picks. Needs Christian |
+| eyebrow | by nursing students, for nursing students | by nursing students, for nursing students | KEEP: Christian's motto. default (lead, 18 Nov), Christian may change |
+| h1 | we know nursing school is hard. | we know nursing school is hard. | use this About heading. default (lead, 18 Nov), Christian may change |
 | story | [Christian's story: why Cueory exists, in his own words.] | [Christian writes this] | only Christian writes it |
 | our mission h2 | our mission | our mission | same |
 | mission text | To make studying for nursing school simpler, and to give nursing students the materials they need to succeed and become great nurses at an affordable price. | to make studying for nursing school simpler. / to give nursing students the materials they need to succeed and become great nurses at an affordable price. | approved mission lines in `support.astro` (D-94), lowercase |
 | lessons h2 | how we make our lessons | how we make our lessons | same (about.astro) |
-| bullet 1 | Every lesson is researched and cites its sources. | hold: [Christian writes this] | rule 5. `site.ts` contentNotice says "content may not have citations or licensed-nurse review". Not true for every lesson |
-| bullet 2 | Higher-risk topics wait for a nurse reviewer before they go live. | hold: [Christian writes this] | default 6: no "reviewed by" claim until a reviewer exists |
+| bullet 1 | Every lesson is researched and cites its sources. | hold (not shipped) | rule 5. `site.ts` contentNotice says "content may not have citations or licensed-nurse review". Not true for every lesson (default (lead, 18 Nov), Christian may change) |
+| bullet 2 | Higher-risk topics wait for a nurse reviewer before they go live. | hold (not shipped) | default 6: no "reviewed by" claim until a reviewer exists (default (lead, 18 Nov), Christian may change) |
 | bullet 3 | Spot a mistake? The flag button is on every page, and we fix it. | spot a mistake? the flag button is on every page. | the flag exists on game pages and lessons ("flag or comment"); "we fix it" is a promise, so cut. Verify the button is on every public page before shipping "every page" (otherwise "on every lesson and game") |
 | coming h2 | what's coming | what's coming | same |
-| coming text | Mental Health I and Med Math are next, then Med-Surg II. | [Christian writes this] | roadmap order is Christian's. Needs Christian |
+| coming text | Mental Health I and Med Math are next, then Med-Surg II. | mental health and med math are next, then med-surg ii. | KEEP the order (Christian's stated plan); lowercase. default (lead, 18 Nov), Christian may change |
 | coming link | join the mailing list | get launch updates | SignupForm wording, link to /#signup |
 | support aria | Support our mission | support our mission | lowercase |
 | support h2 | help keep cueory free. | help keep cueory free. | same (about.astro) |
@@ -222,10 +222,10 @@ Default 6: only true claims. The page today holds `[Christian writes this]` plac
 
 ## Needs Christian (carried to the PR)
 
-1. Hero eyebrow "by nursing students, for nursing students" (home, about): not true as written today.
-2. "adhd friendly" value row: held; no support for the claim.
-3. Mailing/coming-soon order ("mental health and med math are next") and the About "what's coming" line.
-4. About bullets 1-2 (research, sources, nurse reviewer) held; bullet 3 trimmed.
-5. Share targets (facebook, x, threads, reddit, whatsapp) and "sound on solve" add third-party links and an audio asset.
-6. Support modal: drop the "work with us" card, the "every donation goes back" line and the "we never see your card" note unless he approves them.
+Defaults below are "default (lead, 18 Nov), Christian may change":
+1. KEEP the motto "by nursing students, for nursing students" (home, about).
+2. HOLD "adhd friendly" and the About research, sources and reviewer bullets.
+3. KEEP "mental health and med math are next"; About h1 is "we know nursing school is hard."
+4. HOLD the social share buttons (facebook, x, threads, reddit, whatsapp) and the solve sound.
+5. DROP the three support-modal cards, plus the "work with us" card, the "every donation goes back" line and the "we never see your card" note.
 7. Course blurbs on the board describe content (not clinical facts) but are his words to approve.
