@@ -79,23 +79,24 @@ SudokuDone/Sort markup body past the CSS and the top 40 lines of WordPath were s
 | Support page itself: no board for the tip/mission page; keep content, apply chrome. | S |
 | About: board claims "researched, cites sources, nurse reviewer" style copy (verify against board text before use) vs staging about.astro (86 lines, tested by about.spec). Claims must be true (rule 5) and legal text is locked. | M |
 
-## Conflicts for Christian
+## Settled defaults (Christian, 18 Nov 2026, 08:29; the rules win over the renderings)
 
-1. Green and yellow pillo tiles and keys against BRAND.md ("no red or green") and the no-lookalike rule.
-2. Sign in and free-account calls to action while accounts are closed (accountsOpen false).
-3. Crossword and hello-cards cards in the games carousel while closed or draft.
-4. On-page email field against the Kit hosted-page rule (privacy, spam, security).
-5. Message form against email-only feedback (backend, rate limits, privacy page).
-6. About claims (researched, cites sources, reviewer) against rule 5.
-7. Capitalised "Ko-fi", course names and "HOW TO PLAY" caps against lowercase voice (D-47); caps labels like "CUE OF THE DAY" follow the brand's letter-spaced label style only if D-47 allows.
-8. "sort" versus sudoku and "word path" naming; sample vial names are placeholders.
-9. Search button: staging search lives inside the menu; a persistent search is a new element.
-10. Hero headline wording differs from the current approved line.
-11. Backgrounds and motion on game screens against "study screens stay plain" and reduced-motion rules.
+1. Pillo uses brand colors plus symbols, never green and yellow tiles.
+2. Sign-in and free-account calls to action show as coming soon while accounts are closed.
+3. Crossword and hello cards show as coming soon in the games carousel.
+4. Keep the current launch-updates signup method; no new on-page email field.
+5. Support stays email-only; no message form yet.
+6. About makes only claims that are true today; no "reviewed by" until a reviewer exists.
+7. Lowercase voice everywhere, labels included.
+8. The "sort" board is sudoku; vials use the real study-mode names (the board names are samples).
+9. The persistent search button stays (it opens the existing site search).
+10. Keep the current hero line: "nursing school is hard enough. cueory makes studying nursing simpler."
+11. Game screens get a quiet background; motion off under reduced motion.
+12. Phones and tablets keep the existing ☰ panel (the renderings draw no phone bar); about-us and contact links join the menu when their pages exist (P7/P13).
 
 ## Build plan (small PRs, in order; each replaces, never loosens, the named tests)
 
-Phase 0, serial, one builder (everything depends on it)
+Phase 0, in parallel (Christian, 08:28): Worker 1 = P1, Architect = P2, Worker 2 = P3. P1 merges first; P2 and P3 follow.
 1. P1 Tokens: copper button, glass nav, caps label, result card, mesh, cell sizes. S. tokens/design-values unit tests extended.
 2. P2 Header and nav: persistent pill, about dropdown, phone collapse, sign-in hidden until accounts open. L, needs-christian (auth link, header). Replaces header-tuck, sticky-header-overlap, navigation-links, theme-navigation, account-corner-keyboard, tap-targets, footer-theme, large-text-reflow, a11y-sweep and dark-mode runs.
 3. P3 Building strip + page background. M. dark-mode, forced-colors, reduced-motion, home-modern, daytime-contrast.
@@ -104,13 +105,13 @@ Phase 1, parallel (up to 7 builders after P3)
 4. P4 Result card and share set (C5). L. share-sheet, result-brand-mark, play.spec, word-path.spec.
 5. P5 Home hero. M. home-page, home-modern, promo, indexing.
 6. P6 Home vial carousel. L. vial-carousel, home-modern.
-7. P7 Home games stage + how it works + mailing section. M. home-page, promo, no-javascript-routes. Hold the email field per conflict 4.
+7. P7 Home games stage + how it works + mailing section. M. home-page, promo, no-javascript-routes. Keep the current signup (default 4).
 8. P8 /play hub. L. play.spec, no-javascript-routes, indexing (crossword stays gated).
-9. P9 Pillo board and keyboard. L. play.spec, flag-button, a11y-sweep. Waits on Christian's colors decision.
+9. P9 Pillo board and keyboard. L. play.spec, flag-button, a11y-sweep. Brand colors plus symbols (default 1).
 10. P10 Sudoku grid, pad, settings, pause. L (maybe split into 2 PRs). play.spec, tap-targets.
 11. P11 Word path grid, print, theme card. M. word-path.spec, print specs.
 12. P12 /support restyle. S-M. support.spec.
-13. P13 /about restyle. M. about.spec (needs Christian to confirm claims).
+13. P13 /about restyle. M. about.spec (true claims only, default 6).
 
 Phase 2, serial
 14. P14 Cross-engine pass (WebKit, Firefox), 320 px and 32 px sweep, 44 px targets, Evening palette check of every new component. M-L.
@@ -120,10 +121,8 @@ Phase 2, serial
 Chrome C1-C5: about 16-20 h. Home 9-12 h. /play 4-6 h. Pillo 8-10 h. Sudoku 8-10 h. Word path 4-6 h. Support and about 4-8 h.
 Grand total about 55-70 builder-hours, plus review loops (assume 1.5x) and 6-8 h final cross-engine/accessibility pass.
 
-## Honest launch estimate (7 Codex workers plus the Architect)
+## Launch date
 
-Parallelism helps only after Phase 0: P1-P3 are serial (about 1-1.5 days including Codex review and staging). Phase 1 then
-runs in parallel (about 1.5-2 days). Phase 2 plus Christian's reviews of the needs-christian PRs adds about 1 day.
-Earliest: Mon 23 Nov. More likely: Wed 25 Nov. Risks that move it: the colors decision, the three Christian approvals
-(header, email field, about claims), and Firefox/WebKit fixes that cannot run locally. Anything that must land by
-17:00 Phoenix today is only the Phase 0 plan, not the pages.
+Christian set the launch for Mon 23 Nov 2026 (08:28), with every launch page matching the renderings. Daily targets:
+Wed Phase 0 merged; Thu home and /play; Fri games and results; Sat support/about and the cross-engine and accessibility
+pass; Sun release run and Christian's walkthrough; Mon launch.
