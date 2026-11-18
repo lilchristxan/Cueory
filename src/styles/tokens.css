@@ -46,8 +46,14 @@
   --cueory-glass-bg: rgb(var(--glass-rgb) / var(--glass-alpha));
   --cueory-glass-border: rgb(var(--glass-rim-rgb) / var(--glass-rim-alpha));
   --cueory-glass-shadow: var(--shadow-soft);
-  --cueory-label-size: var(--text-sm);
-  --cueory-label-tracking: var(--tracking-label);
+  --cueory-result-card-bg: var(--veil-rgb);
+  --cueory-result-card-border: var(--color-line);
+  --cueory-result-card-shadow: var(--shadow-lift);
+  --cueory-result-card-radius: var(--radius-xl);
+  --cueory-result-card-padding: var(--spacing-stack);
+  /* C5 caps label: 12px with the rendering's .22em tracking. */
+  --cueory-label-size: 0.75rem;
+  --cueory-label-tracking: 0.22em;
   --cueory-label-weight: 700;
   --cueory-mesh-base: var(--color-silk-base);
   --cueory-mesh-sheen: var(--color-silk-sheen);
