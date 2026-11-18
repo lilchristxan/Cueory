@@ -35,7 +35,7 @@ export default function FlagForm(props: Props) {
 
 /** A signed-out student can still report a problem by email while accounts are being set up. The email names this page. */
 export function SignedOutReportHelp({ page = '/' }: { page?: string }) {
-  return <div className="[overflow-wrap:anywhere]">
+  return <div className="wrap-anywhere">
     <p className="text-ink">
     email us at{' '}
     <a href={flagMailto(site.contactEmail, page)} className="underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2">
@@ -128,7 +128,7 @@ function ReportForm({ page, itemId, itemVersionId, signedIn, send, onOpen, varia
     </button>
     {open && <div ref={panel} id={panelId} tabIndex={-1}
       className={icon
-        ? 'absolute bottom-full left-0 z-10 mb-2 max-h-[min(24rem,calc(100dvh-8rem))] w-flag-panel overflow-y-auto [overflow-wrap:anywhere] rounded-md border border-line bg-page p-4 shadow-lift'
+        ? 'absolute bottom-full left-0 z-10 mb-2 max-h-(--height-flag-panel) w-flag-panel overflow-y-auto wrap-anywhere rounded-md border border-line bg-page p-4 shadow-lift'
         : 'mt-3 rounded-md border border-line bg-page p-4'}
       onKeyDown={event => { if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); close(); } }}>
       {signedIn === null ? <p className="text-ink">checking your account…</p> : !signedIn ? <SignedOutReportHelp page={page} /> : <form noValidate onSubmit={event => { event.preventDefault(); void submit(); }}>
