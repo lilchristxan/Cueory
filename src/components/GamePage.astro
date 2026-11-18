@@ -22,13 +22,13 @@ interface Props {
 const { game, wide = false } = Astro.props;
 ---
 <article class:list={["veil mx-auto mt-6 max-w-prose p-6 sm:mt-10 sm:p-10", wide && "md:max-w-page"]} data-game-page={game.id}>
-    <div class="flex items-center justify-between gap-2">
+    <div class="flex flex-wrap items-center justify-between gap-x-2">
       <a href="/play" class="inline-flex min-h-(--tap-min) items-center gap-2 font-medium" data-testid="all-games-link">
         <span aria-hidden="true">←</span> all games
       </a>
       {/* Rendered on the server so it works without JavaScript: it is an email link to this page's report address.
           Once the footer's report panel loads, a click here opens that panel instead (FlagForm). */}
-      <a href={flagMailto(site.contactEmail, Astro.url.pathname)} data-game-flag class="corner-button corner-button-quiet shrink-0"
+      <a href={flagMailto(site.contactEmail, Astro.url.pathname)} data-game-flag class="corner-button corner-button-quiet ml-auto shrink-0"
         aria-label={`flag or comment on ${game.name}`}>
         <svg viewBox="0 0 24 24" class="size-6" aria-hidden="true" focusable="false">
           <path d="M5 21V4M5 4h12l-3 4.5 3 4.5H5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
