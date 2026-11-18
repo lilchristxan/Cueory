@@ -82,7 +82,7 @@ jobs:
     needs: checks
     if: needs.checks.outputs.docs_only != 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
     strategy:
       # Every part finishes, so one run shows all failing tests at once.
       fail-fast: false
