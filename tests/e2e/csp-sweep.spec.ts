@@ -1,6 +1,7 @@
 import { expect, test, type Page, type Request } from '@playwright/test';
 import { readdirSync } from 'node:fs';
 import { join, relative, resolve, sep } from 'node:path';
+import { withoutWebkitSelectReports } from './csp-allow';
 
 const dist = resolve('dist');
 const missingPage = '/csp-sweep-page-does-not-exist';
@@ -77,7 +78,8 @@ function trackRequests(page: Page, longLived: string[] = []) {
 async function violations(page: Page, consoleErrors: string[]): Promise<string[]> {
   const events = await page.evaluate(() =>
     (window as Window & { __cueoryCspViolations?: string[] }).__cueoryCspViolations ?? []);
-  return [...events, ...consoleErrors];
+  // Only WebKit's native <select> report is set aside, narrowly (csp-allow.ts, #862).
+  return withoutWebkitSelectReports(page, [...events, ...consoleErrors]);
 }
 
 test.describe('Task 191: every built route obeys CSP', () => {

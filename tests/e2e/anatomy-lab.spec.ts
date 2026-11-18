@@ -1,4 +1,5 @@
 import AxeBuilder from '@axe-core/playwright';
+import { withoutWebkitSelectReports } from './csp-allow';
 import { readFile } from 'node:fs/promises';
 import { expect, test, type Page } from '@playwright/test';
 import { isDesktopOfEachEngine } from './projects';
@@ -336,7 +337,8 @@ test.describe('anatomy lab', () => {
     await expect(page.locator('canvas')).toBeFocused();
     for (const name of NAMES) await expect(list(page).getByRole('button', { name, exact: true })).toBeVisible();
     expect(glb).toEqual(['/preview/anatomy-fixture/fixture.glb']);
-    expect(csp).toEqual([]);
+    // WebKit's native <select> report is set aside, narrowly (csp-allow.ts, #862).
+    expect(await withoutWebkitSelectReports(page, csp)).toEqual([]);
   });
 
   test('keyboard path: search, select from the list, name card, hide, show only, show all', async ({ page }) => {

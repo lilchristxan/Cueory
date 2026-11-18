@@ -1,4 +1,5 @@
 import AxeBuilder from '@axe-core/playwright';
+import { withoutWebkitSelectReports } from './csp-allow';
 import { expect, test, type Page } from '@playwright/test';
 import { isDesktopOfEachEngine } from './projects';
 
@@ -216,7 +217,8 @@ test.describe('anatomy lab: name it', () => {
 
     await noSidewaysScroll(page);
     expect((await new AxeBuilder({ page }).withTags(axeTags).analyze()).violations).toEqual([]);
-    expect(errors).toEqual([]);
+    // WebKit's native <select> report is set aside, narrowly (csp-allow.ts, #862).
+    expect(await withoutWebkitSelectReports(page, errors)).toEqual([]);
   });
 
   test('type a name by keyboard: a wrong answer is echoed, the official name in any capitals is right', async ({ page }) => {
@@ -366,7 +368,8 @@ test.describe('anatomy lab: worksheet', () => {
 
     await sheet(page).getByRole('button', { name: 'close worksheet' }).click();
     await expect(sheet(page)).toHaveCount(0);
-    expect(errors).toEqual([]);
+    // WebKit's native <select> report is set aside, narrowly (csp-allow.ts, #862).
+    expect(await withoutWebkitSelectReports(page, errors)).toEqual([]);
   });
 
   test('numbers only what is showing, and says why when nothing is', async ({ page }) => {
