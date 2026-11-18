@@ -16,13 +16,18 @@ const astroText = rawAstroText.replace(CONNECT_CALL, JSON.stringify(BASE_CONNECT
 function readHeaders(text: string): Map<string, string> {
   const rows = text.split(/\r?\n/).map((row) => row.trim()).filter((row) => row && !row.startsWith('#'));
   if (rows[0] !== '/*') throw new Error('Missing site-wide Cloudflare /* rule');
-  // Allow one additional, exact static-asset cache rule. All other path rules remain forbidden.
-  // In particular, the global security headers below must still be present unchanged.
-  const sitemapIndex = rows.indexOf('/sitemap.xml');
-  if (sitemapIndex < 0) throw new Error('Missing sitemap-only cache rule');
-  if (sitemapIndex !== rows.length - 2 ||
-      rows[sitemapIndex + 1] !== 'Cache-Control: public, max-age=3600, s-maxage=86400') {
-    throw new Error('Unexpected sitemap cache rule or additional path');
+  // Allow exactly two additional static-asset cache rules, each with its one exact Cache-Control line: the sitemap and
+  // the self-hosted fonts (/fonts/*, a week, never "immutable" because the file names are not hashed). All other path
+  // rules remain forbidden. In particular, the global security headers below must still be present unchanged.
+  const sitemapIndex = rows.findIndex((row, index) => index > 0 && row.startsWith('/'));
+  if (sitemapIndex < 0) throw new Error('Missing static-asset cache rules');
+  const pathRules = rows.slice(sitemapIndex);
+  const expectedPathRules = [
+    '/sitemap.xml', 'Cache-Control: public, max-age=3600, s-maxage=86400',
+    '/fonts/*', 'Cache-Control: public, max-age=604800',
+  ];
+  if (pathRules.length !== expectedPathRules.length || pathRules.some((row, index) => row !== expectedPathRules[index])) {
+    throw new Error('Unexpected static-asset cache rule or additional path');
   }
   const headers = new Map<string, string>();
   for (const row of rows.slice(1, sitemapIndex)) {
@@ -150,6 +155,8 @@ describe('security headers (Task 75)', () => {
   it('rejects a broader sitemap cache path, changed lifetime, or extra path rules', () => {
     expect(() => checkHeaderPolicy(headersText.replace('/sitemap.xml', '/*'))).toThrow();
     expect(() => checkHeaderPolicy(headersText.replace('s-maxage=86400', 's-maxage=31536000'))).toThrow();
+    expect(() => checkHeaderPolicy(headersText.replace('max-age=604800', 'max-age=31536000, immutable'))).toThrow();
+    expect(() => checkHeaderPolicy(headersText.replace('/fonts/*', '/*'))).toThrow();
     expect(() => checkHeaderPolicy(`${headersText}\n/another-path\n  Cache-Control: public, max-age=86400\n`)).toThrow();
   });
 
