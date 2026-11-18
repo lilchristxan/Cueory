@@ -220,7 +220,7 @@ export default function GameStatsPanel({ games: order }: Props) {
         your stats
       </h2>
       <p className="mt-2 text-ink-soft" data-testid="stats-note">
-        kept in this browser, on this device, and never sent to us. pillo, the crossword and word path also count your
+        kept in this browser, on this device, and never sent to us. {order.includes('cueword') ? 'pillo, the crossword and word path' : 'pillo and word path'} also count your
         streaks, and sudoku shows its own times and streak for each level. forget them below at any time.
       </p>
       {blocked || !saved.on ? (
