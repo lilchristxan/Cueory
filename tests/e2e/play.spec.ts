@@ -305,12 +305,16 @@ test.describe('the /play hub (each game on its own page, 2026-11-17)', () => {
 });
 
 test.describe('daily games on the home page (D-61)', () => {
-  test('a calm section after "ways to study" leads to today\'s game', async ({ page }) => {
+  test('the approved games stage after "ways to study" leads to /play', async ({ page }) => {
     await page.goto('/');
     const headings = await page.getByRole('heading', { level: 2 }).allTextContents();
-    expect(headings.indexOf('daily games')).toBe(headings.indexOf('ways to study') + 1);
+    expect(headings.indexOf('a few minutes, every day.')).toBe(headings.indexOf('ways to study') + 1);
+    const stage = page.getByTestId('games-stage');
+    await expect(stage.locator('[data-game-card]')).toHaveCount(5);
+    await expect(stage.locator('[data-game-card="crossword"]')).toContainText('coming soon');
+    await expect(stage.locator('[data-game-card="hello cards"]')).toContainText('coming soon');
     const link = page.getByTestId('games-link');
-    await expect(link).toHaveText("play today's games");
+    await expect(link).toHaveText("play today's →");
     await expect(link).toHaveAttribute('href', '/play');
     await link.click();
     await expect(page).toHaveURL(/\/play$/);
