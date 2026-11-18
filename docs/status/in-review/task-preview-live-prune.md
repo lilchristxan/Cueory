@@ -1,0 +1,1 @@
+status: the live (main) build removes the /preview/* pages before search indexing; staging, branch previews and local builds keep them. A fail-closed script (scripts/prune-preview.mjs) runs between the Astro build and Pagefind.
