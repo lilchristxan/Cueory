@@ -27,33 +27,30 @@ function contrast(foreground: string, background: string) {
   return (Math.max(foregroundL, backgroundL) + 0.05) / (Math.min(foregroundL, backgroundL) + 0.05);
 }
 
-function copperBlocks() {
-  // Daytime sits in @theme; Evening is set twice (device setting and the footer's Dark choice).
-  const daytime = css.slice(0, css.indexOf('@media (prefers-color-scheme: dark)'));
-  const evening = [...css.matchAll(/--cueory-copper-start:\s*(#[0-9a-f]{6});[^\n]*\n\s*--cueory-copper-end:\s*(#[0-9a-f]{6});[^\n]*\n\s*--cueory-copper-shine:\s*(#[0-9a-f]{6});[^\n]*\n\s*--cueory-copper-ink:\s*(#[0-9a-f]{6});/g)]
-    .map((m) => ({ start: m[1], end: m[2], shine: m[3], ink: m[4] }));
-  return { daytime: evening[0], evening: evening.slice(1), source: daytime };
-}
+const copper = { deep: '#b87348', body: '#d9976a', glow: '#f6d3ae', shine: '#fff0de', ink: '#1c1917' };
 
-it('maps the copper gradient to exact brand colours, not to the button roles', () => {
-  const { daytime, evening } = copperBlocks();
-  expect(daytime).toEqual({ start: '#d3b7a1', end: '#eadccf', shine: '#f9f5ef', ink: '#3e2c23' });
-  expect(evening).toHaveLength(2);
-  for (const block of evening) expect(block).toEqual({ start: '#d3b7a1', end: '#cbb8a4', shine: '#eadccf', ink: '#1c1917' });
-  expect(css).not.toMatch(/--cueory-copper-(start|end|shine|ink):\s*var\(/);
+it('defines the copper palette group and maps the gradient to it in every theme', () => {
+  expect(css).toMatch(/--color-copper-deep:\s*#b87348;/);
+  expect(css).toMatch(/--color-copper:\s*#d9976a;/);
+  expect(css).toMatch(/--color-copper-glow:\s*#f6d3ae;/);
+  expect(css).toMatch(/--color-copper-shine:\s*#fff0de;/);
+  expect(css).toMatch(/--cueory-copper-start:\s*var\(--color-copper-deep\);/);
+  expect(css).toMatch(/--cueory-copper-end:\s*var\(--color-copper\);/);
+  expect(css).toMatch(/--cueory-copper-glow:\s*var\(--color-copper-glow\);/);
+  expect(css).toMatch(/--cueory-copper-shine:\s*var\(--color-copper-shine\);/);
+  expect(css).toMatch(/--cueory-copper-ink:\s*#1c1917;/);
+  // One definition serves Daytime and Evening: no theme block overrides the copper aliases.
+  expect(css.match(/--cueory-copper-start:/g)).toHaveLength(1);
 });
 
-it('uses only palette colours for the copper gradient', () => {
-  const palette = new Set(['#f9f5ef', '#eadccf', '#d3b7a1', '#8b6f5b', '#6b5243', '#3e2c23', '#3a2d24', '#cbb8a4', '#1c1917']);
-  const { daytime, evening } = copperBlocks();
-  for (const block of [daytime, ...evening]) for (const hex of Object.values(block)) expect(palette.has(hex)).toBe(true);
+it('lists the copper group in docs/BRAND.md with the same values', () => {
+  const brand = readFileSync(new URL('../../docs/BRAND.md', import.meta.url), 'utf8');
+  for (const hex of [copper.deep, copper.body, copper.glow, copper.shine]) expect(brand).toContain('`' + hex.toUpperCase() + '`');
+  expect(brand).toMatch(/added 18 Nov 2026 by Christian's decision/i);
 });
 
-it('keeps normal copper-gradient text at or above 4.5:1 at every gradient colour in both themes', () => {
-  const { daytime, evening } = copperBlocks();
-  for (const palette of [daytime, ...evening]) {
-    for (const background of [palette.start, palette.end, palette.shine]) {
-      expect(contrast(palette.ink, background)).toBeGreaterThanOrEqual(4.5);
-    }
+it('keeps normal text on every copper stop at or above 4.5:1', () => {
+  for (const stop of [copper.deep, copper.body, copper.glow, copper.shine]) {
+    expect(contrast(copper.ink, stop)).toBeGreaterThanOrEqual(4.5);
   }
 });
