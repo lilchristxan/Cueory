@@ -219,12 +219,6 @@ test.describe('Task 74: full-site accessibility sweep', () => {
 
       // One failure per page, with *every* finding in the assertion output.
       // Do not mark failures as fixed or alter pages in this auditing task.
-      // If a genuine date-field focus defect remains AFTER the outline
-      // detector fix, preserve it as an explicit follow-up for the director.
-      if (route === '/start' && problems.length &&
-          problems.every((problem) => problem === 'input#exam-date: keyboard focus has no visible outline')) {
-        test.fixme(true, '/start: native date-input focus indicator not visible on every internal Tab stop');
-      }
       expect(problems, `${testInfo.project.name} ${route}: accessibility findings`).toEqual([]);
     });
   }
