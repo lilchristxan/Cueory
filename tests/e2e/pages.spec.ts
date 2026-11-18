@@ -1099,7 +1099,7 @@ test.describe('study-mode preview (D-51)', () => {
     // Its feature rows wait behind the ⓘ beside the name (Christian, 2026-11-02).
     await expect(preview.getByRole('button', { name: 'more about cards' })).toHaveAttribute('aria-expanded', 'false');
     await expect(preview.getByRole('link', { name: 'start cards' })).toHaveAttribute('href', '/learn/study-skills/cards');
-    await expect(preview.getByRole('link', { name: 'create your free account', exact: true })).toHaveAttribute(
+    await expect(preview.getByRole('link', { name: 'join the launch list', exact: true })).toHaveAttribute(
       'href',
       '/#signup',
     );

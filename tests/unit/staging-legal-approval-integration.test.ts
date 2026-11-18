@@ -7,8 +7,8 @@ import { indexablePages } from '../../src/config/routes.ts';
 // Integration guard for the two founder-held changes combined on staging:
 // #601 keeps draft legal pages out of search, and #607 prevents those
 // indexability decisions from bypassing founder approval in either mode.
-// A legal page joins search only once it holds Christian's final text (Terms and Disclaimer, 2026-11-17); /privacy has
-// no final-text rule yet, so it stays out until its own approval changes this test on purpose.
+// A legal page joins search only once it holds Christian's final text. Privacy p4 joins Terms and Disclaimer once the
+// explicit finalization decision records its source and removes the release-gate draft marker.
 const legalPages = [
   { route: '/privacy', page: 'privacy', file: 'src/pages/privacy.astro' },
   { route: '/terms', page: 'terms', file: 'src/pages/terms.astro' },
@@ -29,9 +29,9 @@ describe('staging integration: legal indexing and founder-held paths', () => {
     expect(isHeldPath(file, 'launched')).toBe(true);
   });
 
-  it('keeps /privacy out of search until its wording is approved', () => {
-    expect(legalPageHasFinalCopy('privacy')).toBe(false);
-    expect(indexablePages).not.toContain('/privacy');
+  it('lists /privacy once its approved p4 source has final text', () => {
+    expect(legalPageHasFinalCopy('privacy')).toBe(true);
+    expect(indexablePages).toContain('/privacy');
   });
 
   it('keeps all robots-noindex pages excluded from the Pagefind body index', () => {
