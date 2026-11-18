@@ -13,7 +13,7 @@ describe('about page shell', () => {
     }));
 
     expect(headings).toEqual([
-      { level: 1, text: 'about cueory' },
+      { level: 1, text: 'we know nursing school is<br class="hidden sm:inline" /> hard.' },
       { level: 2, text: 'our mission' },
       { level: 2, text: 'how we make our lessons' },
       { level: 2, text: "what's coming" },
@@ -27,16 +27,15 @@ describe('about page shell', () => {
     }
   });
 
-  it('leaves every text spot for Christian, including all lesson bullet points', () => {
+  it('keeps the founder-owned story placeholder while shipping approved About copy', () => {
     const paragraphs = [...markup.matchAll(/<p\b([^>]*)>([\s\S]*?)<\/p>/g)];
-    expect(paragraphs).toHaveLength(8);
-    for (const paragraph of paragraphs) {
-      expect(paragraph[1]).toContain('data-placeholder="CHRISTIAN-TEXT"');
-      expect(paragraph[2]!.trim()).toBe('[Christian writes this]');
-    }
+    expect(paragraphs).toHaveLength(6);
+    const founderStory = paragraphs.find((paragraph) => paragraph[1]!.includes('data-placeholder="CHRISTIAN-TEXT"'));
+    expect(founderStory?.[2]!.trim()).toBe("[Christian's story: why Cueory exists, in his own words.]");
 
-    const lessonBullets = [...markup.matchAll(/<li>\s*<p\b[^>]*data-placeholder="CHRISTIAN-TEXT"[^>]*>\[Christian writes this\]<\/p>\s*<\/li>/g)];
-    expect(lessonBullets).toHaveLength(3);
+    expect(markup).toContain('To make studying for nursing school simpler, and to give nursing students the materials they need to succeed and become great nurses at an affordable price.');
+    expect(markup).toContain('Spot a mistake? The flag button is on every page, and we fix it.');
+    expect(markup).toContain('Mental Health I and Med Math are next, then Med-Surg II.');
   });
 
   it('uses the existing brand UI and does not index unfinished founder copy', () => {
@@ -45,7 +44,9 @@ describe('about page shell', () => {
     expect(markup.match(/class="[^"]*\bveil\b/g)).toHaveLength(4);
     expect(markup).toContain('class="display');
     expect(markup).toContain('href="/#signup"');
-    expect(markup).toContain('href="/support"');
-    expect(markup).not.toMatch(/<script\b|<style\b|\sstyle=/i);
+    expect(markup).toContain('href={site.tipPageUrl}');
+    expect(markup).toContain('var(--cueory-copper-start)');
+    expect(markup).toContain('var(--cueory-copper-ink)');
+    expect(markup).not.toMatch(/<script\b|<style\b/i);
   });
 });
