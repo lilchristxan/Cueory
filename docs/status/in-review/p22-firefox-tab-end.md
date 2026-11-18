@@ -1,0 +1,1 @@
+status: test reliability: the Tab-traversal audit and the account keyboard walk no longer assume Chromium's end-of-page behaviour, so they pass in Firefox, which keeps focus on the last control. Tests only; no check is reduced.

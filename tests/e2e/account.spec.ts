@@ -11,6 +11,17 @@ async function keyboardWalk(page: Page) {
   const count = await controls.count();
   expect(count).toBeGreaterThan(0);
   const reached = new Set<number>();
+  // Start Tab at the top of the page. The second walk begins right after a click on "delete my account", and Tab goes on
+  // from the clicked control. Chromium wraps round to the controls above it after the last stop; Firefox keeps focus
+  // on the last control, so those controls above were never reached. Focus and drop a marker at the very start of the
+  // page (the browser then starts sequential focus navigation from there).
+  await page.evaluate(() => {
+    const marker = document.createElement('span');
+    marker.tabIndex = -1;
+    document.body.prepend(marker);
+    marker.focus();
+    marker.remove();
+  });
   for (let press = 0; press < count + 30 && reached.size < count; press++) {
     await page.keyboard.press('Tab');
     for (let index = 0; index < count; index++) {
