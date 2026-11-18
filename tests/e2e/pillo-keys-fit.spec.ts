@@ -23,7 +23,8 @@ for (const width of [320, 390, 430]) {
       await open(page, width, rootText, '/play/pillo');
       const group = page.getByTestId('pulse').getByRole('group', { name: 'letters' });
       const letters = await group.getByRole('button').evaluateAll((keys) => keys.map((key) => key.textContent?.trim()));
-      expect(letters.map((text) => text?.[0])).toEqual([...'qwertyuiopasdfghjkl⌫zxcvbnmenter']);
+      const normalized = letters.map((text) => text?.replace(/[●○·]/g, '').trim());
+      expect(normalized).toEqual([..."qwertyuiopasdfghjkl⌫zxcvbnm", 'enter']);
 
       const area = (await group.boundingBox())!;
       const keys = await group.getByRole('button').evaluateAll((list) => list.map((key) => key.getBoundingClientRect().toJSON() as DOMRect));

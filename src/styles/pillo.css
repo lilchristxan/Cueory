@@ -54,7 +54,6 @@
   }
 
   /* The foil itself: a fine cross-hatch and a soft sheen over the grey, rounded like a real blister card. */
-  .pillo-pack,
   .pillo-strip {
     background-color: var(--pillo-foil-color);
     background-image:
