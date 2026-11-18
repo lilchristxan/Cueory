@@ -24,7 +24,6 @@ const previewPages = existsSync(previewDir)
 
 const noindexPages = [
   ...previewPages,
-  '/privacy', // draft policy, until the owner approves final wording
   '/auth/callback',
   '/reset-password',
   '/signin',
@@ -111,7 +110,7 @@ test.describe('Task 127: indexing', () => {
       expect(response?.status()).toBe(200);
       await expect(robots(page)).toHaveCount(0);
       await expect(page.locator('main[data-pagefind-body]')).toHaveCount(1);
-      await expect(page.locator('main')).toContainText(date);
+      await expect(page.locator('p.text-sm.text-ink-soft')).toHaveText(date);
       await expect(page.locator('main')).not.toContainText(/Draft for review|Last updated:\s*not yet published/i);
     }
   });
