@@ -44,7 +44,9 @@ interface Props {
   puzzles: Puzzle[];
 }
 
-const LETTERS = 'abcdefghijklmnopqrstuvwxyz';
+// The on-screen keyboard follows the approved Pillo rendering's QWERTY rows.
+const LETTERS = 'qwertyuiopasdfghjklzxcvbnm';
+const KEYBOARD_ROWS = ['qwertyuiop', 'asdfghjkl', 'zxcvbnm'] as const;
 const primaryButton = 'rounded-pill bg-button px-5 py-2.5 text-on-button hover:bg-button-hover';
 const columns = Array.from({ length: WORD_LENGTH }, (_, i) => i);
 
@@ -377,8 +379,8 @@ export default function PulseGame({ puzzles }: Props) {
       {playing ? (
         <div className="pillo-keys mt-6" role="group" aria-label="letters">
           {/* The same letter keys as the crossword: a to z in rows that wrap, then ⌫ and enter (Christian, 2026-11-17). */}
-          <div className="pillo-key-row">
-            {Array.from(LETTERS, (letter) => {
+          {KEYBOARD_ROWS.map((row) => <div className="pillo-key-row" key={row}>
+            {Array.from(row, (letter) => {
               const mark = marks.get(letter);
               return (
                 <button
@@ -397,7 +399,7 @@ export default function PulseGame({ puzzles }: Props) {
                 </button>
               );
             })}
-          </div>
+          </div>)}
           <div className="pillo-key-row">
             <button type="button" className="pillo-key pillo-key-wide" aria-label="delete" onClick={() => type(text.slice(0, -1))}>
               ⌫
