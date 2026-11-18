@@ -76,18 +76,18 @@ export default function PlayStatus({ games }: Props) {
   return (
     <section className="mt-8" aria-labelledby="today-status-heading" data-testid="play-status">
       <h2 id="today-status-heading" className="text-lg font-medium">today</h2>
-      <ul className="mt-4 grid gap-4 sm:grid-cols-2">
+      <ul className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
         {games.map((game) => {
           const status = statusFor(game.id, today, saved.stats, heard);
           const text = STATUS_TEXT[status];
           return (
-            <li key={game.id} data-testid={`play-status-${game.id}`} data-status={status}>
+            <li key={game.id} className="min-w-0" data-testid={`play-status-${game.id}`} data-status={status}>
               <a
                 href={game.href}
                 className="flex h-full min-h-11 flex-col gap-2 rounded-lg border border-line bg-page p-4 text-ink no-underline hover:bg-surface"
               >
-                <span className="text-lg font-medium">{game.name}</span>
-                <span className="text-sm text-ink-soft">{game.line}</span>
+                <span className="wrap-anywhere text-lg font-medium">{game.name}</span>
+                <span className="wrap-anywhere text-sm text-ink-soft">{game.line}</span>
                 <span className="mt-auto inline-flex items-center gap-2 text-sm text-ink-soft">
                   <span aria-hidden="true">{text.symbol}</span>
                   <span>{text.label}</span>
