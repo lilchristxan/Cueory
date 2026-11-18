@@ -1,0 +1,1 @@
+status: two test-only fixes from the #634 engine run: the privacy popup scroll test asks mobile WebKit to scroll with scrollBy (it has no mouse wheel), and the lesson-video height bound allows one 1/60 px layout step (Firefox measured 199.999969 for a 200 px minimum).

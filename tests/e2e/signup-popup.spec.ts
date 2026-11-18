@@ -255,7 +255,17 @@ for (const scheme of ['light', 'dark'] as const) {
   });
 }
 
-test('the page behind stays put while it is open, and scroll and focus come back on close', async ({ page }) => {
+/**
+ * Asks the page to scroll by `dy`: a mouse wheel where the browser has one; mobile WebKit has none ("Mouse wheel is not
+ * supported in mobile WebKit"), so there the page itself is asked with scrollBy (the same fallback as tryScroll in
+ * game-results.spec.ts). Either way it is only a request: a locked page must ignore it.
+ */
+async function requestScroll(page: Page, browserName: string, isMobile: boolean | undefined, dy: number) {
+  if (browserName === 'webkit' && isMobile) await page.evaluate((y) => window.scrollBy(0, y), dy);
+  else await page.mouse.wheel(0, dy);
+}
+
+test('the page behind stays put while it is open, and scroll and focus come back on close', async ({ page, browserName, isMobile }) => {
   await openAt(page, '/privacy');
   // Scroll down to the page's first link and focus it, so the test can see focus come back to it, still on screen.
   await page.evaluate(() => {
@@ -274,13 +284,13 @@ test('the page behind stays put while it is open, and scroll and focus come back
   // A wheel over the dimmed page, outside the pop-up, doesn't move the page underneath.
   const viewport = page.viewportSize()!;
   await page.mouse.move(4, viewport.height - 4);
-  await page.mouse.wheel(0, 700);
+  await requestScroll(page, browserName, isMobile, 700);
   await page.clock.runFor(500);
   expect(await page.evaluate(() => window.scrollY)).toBe(startY);
   // Nor does a wheel over the pop-up itself.
   const box = (await popup(page).boundingBox())!;
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
-  await page.mouse.wheel(0, 700);
+  await requestScroll(page, browserName, isMobile, 700);
   await page.clock.runFor(500);
   expect(await page.evaluate(() => window.scrollY)).toBe(startY);
 

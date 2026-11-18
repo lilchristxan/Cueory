@@ -108,14 +108,18 @@ test('privacy note and transcript links are visible before the tap', async ({ pa
   await expect(page.getByRole('link', { name: 'Transcript' })).toBeVisible();
 });
 
+// Browsers lay out in 1/60 px steps and Firefox reported 199.999969 for a 12.5rem (200 px) minimum, so the bound allows
+// one layout step of rounding and nothing more: a cover that is really shorter than 200 px still fails.
+const MIN_HEIGHT = 200 - 1 / 60;
+
 test('cover and player are at least 200 px tall, even at 320 px wide', async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 640 });
   await page.goto(LESSON_URL);
   const cover = page.getByRole('button', { name: /play video/i });
-  expect((await cover.boundingBox())?.height).toBeGreaterThanOrEqual(200);
+  expect((await cover.boundingBox())?.height).toBeGreaterThanOrEqual(MIN_HEIGHT);
   await cover.click();
   const iframe = page.locator('iframe[src*="youtube-nocookie.com"]');
   await expect(iframe).toBeVisible();
   const box = await iframe.boundingBox();
-  expect(box?.height).toBeGreaterThanOrEqual(200);
+  expect(box?.height).toBeGreaterThanOrEqual(MIN_HEIGHT);
 });
