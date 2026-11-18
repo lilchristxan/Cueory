@@ -7,7 +7,12 @@ import { site } from '../../src/config/site';
 
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
-    try { localStorage.setItem('cueory-promo-seen', String(Date.now())); } catch { /* optional storage */ }
+    try {
+      // The launch-list panel and the delayed signup modal are separately persisted prompts.
+      // These legal-page assertions cover page content and reflow, not either prompt.
+      localStorage.setItem('cueory-promo-seen', String(Date.now()));
+      localStorage.setItem('cueory-signup-popup-seen', String(Date.now()));
+    } catch { /* optional storage */ }
   });
 });
 
