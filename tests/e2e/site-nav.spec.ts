@@ -65,6 +65,33 @@ test.describe('wide screen', () => {
     await expect(summary).toBeFocused();
   });
 
+  test('with the dropdown open, Tab visits about, then privacy, terms and disclaimer, each with a visible focus ring', async ({ page }) => {
+    await page.goto('/support');
+    const menu = page.locator('[data-about-menu]');
+    await page.locator('[data-about-menu] summary').focus();
+    await page.keyboard.press('Enter');
+    await expect(menu).toHaveAttribute('open', '');
+    for (const name of ['privacy', 'terms', 'disclaimer']) {
+      await page.keyboard.press('Tab');
+      const link = menu.getByRole('link', { name, exact: true });
+      await expect(link).toBeFocused();
+      const ring = await link.evaluate((el) => {
+        const style = getComputedStyle(el);
+        return el.matches(':focus-visible') && style.outlineStyle !== 'none' && Number.parseFloat(style.outlineWidth) > 0;
+      });
+      expect(ring, name).toBe(true);
+    }
+  });
+
+  test('closed, only the about summary is a Tab stop in the dropdown', async ({ page }) => {
+    await page.goto('/support');
+    const reachable = await page.locator('[data-about-menu] a').evaluateAll((links) => links.map((link) => link.closest('details:not([open])') !== null));
+    expect(reachable.every(Boolean)).toBe(true);
+    await page.locator('[data-about-menu] summary').focus();
+    await page.keyboard.press('Tab');
+    await expect(page.locator('[data-about-menu] a:focus')).toHaveCount(0);
+  });
+
   test('search opens the panel with the search field focused, Escape returns to the search button', async ({ page }) => {
     await page.goto('/support');
     const search = page.getByRole('button', { name: 'search the site' });
