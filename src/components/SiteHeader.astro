@@ -29,6 +29,8 @@ const bar = !quiet;
   data-scroll-header={overlay ? undefined : ''}
   class:list={[
     'z-20 flex w-full items-center gap-(--header-corner-gap) px-(--header-inline-gutter) py-4',
+    // With enlarged text the pill can be wider than the screen: let the bar wrap onto a second row, never scroll sideways.
+    bar && 'lg:flex-wrap',
     overlay ? 'absolute inset-x-0 top-0' : 'sticky top-0 site-header-sticky',
   ]}
 >
@@ -60,7 +62,7 @@ const bar = !quiet;
   }
   {
     bar && (
-      <div class="hidden lg:flex lg:flex-1 lg:justify-center">
+      <div class="hidden min-w-0 lg:flex lg:flex-1 lg:justify-center">
         <SiteNav />
       </div>
     )
