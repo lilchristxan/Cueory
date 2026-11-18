@@ -1,0 +1,94 @@
+---
+/**
+ * The persistent top bar on wide screens (redesign P2): study, games, support and an "about" dropdown in one frosted
+ * pill, plus a round search button. Below the large breakpoint it is hidden and the ☰ side panel is the menu, so a
+ * phone never gets a second, cramped bar. The dropdown is a native <details>, so it opens with Enter or Space and
+ * works without JavaScript; the small script below only adds Escape and click-away.
+ *
+ * Search opens the same panel as ☰ with the search field focused (SiteMenu.astro), so there is one search.
+ */
+import { navLinks, visibleAboutLinks } from '../config/sitenav';
+import { currentHref } from '../scripts/menu';
+
+const about = visibleAboutLinks();
+const current = currentHref(
+  Astro.url.pathname,
+  [...navLinks, ...about].map((link) => link.href),
+);
+---
+
+<div class="site-nav hidden min-w-0 flex-wrap items-center justify-center gap-3 lg:flex" data-site-nav>
+  <nav aria-label="main" class="veil flex min-w-0 flex-wrap items-center justify-center gap-1 rounded-pill px-3 py-1">
+    <ul class="flex flex-wrap items-center justify-center gap-1">
+      {
+        navLinks.map((link) => (
+          <li>
+            <a href={link.href} class="inline-flex min-h-(--tap-min) items-center rounded-pill px-4 text-ink no-underline hover:bg-surface nav-pill" aria-current={link.href === current ? 'page' : undefined}>
+              {link.label}
+            </a>
+          </li>
+        ))
+      }
+      {
+        about.length > 0 && (
+          <li class="relative">
+            <details class="about-menu" data-about-menu>
+              <summary class="inline-flex min-h-(--tap-min) items-center rounded-pill px-4 text-ink no-underline hover:bg-surface nav-pill cursor-pointer list-none">
+                about <span aria-hidden="true">▾</span>
+              </summary>
+              <ul class="veil absolute left-1/2 top-full z-30 mt-2 flex min-w-48 -translate-x-1/2 flex-col p-2">
+                {about.map((link) => (
+                  <li>
+                    <a href={link.href} class="inline-flex min-h-(--tap-min) items-center rounded-pill px-4 text-ink no-underline hover:bg-surface nav-pill w-full" aria-current={link.href === current ? 'page' : undefined}>
+                      {link.label}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </details>
+          </li>
+        )
+      }
+    </ul>
+  </nav>
+  <button type="button" class="corner-button invisible" aria-label="search the site" data-menu-open data-menu-search>
+    <svg viewBox="0 0 24 24" class="size-6" aria-hidden="true" focusable="false">
+      <circle cx="10.5" cy="10.5" r="6" fill="none" stroke="currentColor" stroke-width="1.6"></circle>
+      <path d="M15 15l5 5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path>
+    </svg>
+  </button>
+</div>
+
+<style>
+  /* Safari draws its own disclosure triangle on <summary> unless told not to; the ▾ in the markup is the marker. */
+  .about-menu summary::-webkit-details-marker {
+    display: none;
+  }
+
+  /* The page you are on, marked the same way as the hover (the colour is not the only signal: aria-current is set). */
+  .nav-pill[aria-current='page'] {
+    background-color: var(--color-surface);
+  }
+</style>
+
+<script>
+  const menu = document.querySelector<HTMLDetailsElement>('[data-about-menu]');
+  if (menu) {
+    const summary = menu.querySelector<HTMLElement>('summary');
+    // Escape closes the dropdown and puts focus back on "about".
+    menu.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && menu.open) {
+        event.preventDefault();
+        menu.open = false;
+        summary?.focus();
+      }
+    });
+    // A click anywhere else, or focus leaving the dropdown, closes it.
+    document.addEventListener('click', (event) => {
+      if (menu.open && event.target instanceof Node && !menu.contains(event.target)) menu.open = false;
+    });
+    menu.addEventListener('focusout', (event) => {
+      if (menu.open && event.relatedTarget instanceof Node && !menu.contains(event.relatedTarget)) menu.open = false;
+    });
+  }
+</script>
