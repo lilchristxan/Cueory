@@ -6,6 +6,10 @@ import { expect, test, type Page } from '@playwright/test';
 test.use({ viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true });
 
 test.beforeEach(async ({ page }) => {
+  // Each game picks today's sample from the visitor's own date, so a test without a fixed day plays whichever sample
+  // the runner's date lands on: on some days word path's older word search (a taller grid) instead of the 6 by 8 board.
+  // 1 November 2026 is a board day. The promo is marked seen after the clock, so by the same date the page uses.
+  await page.clock.setFixedTime(new Date('2026-11-01T15:00:00'));
   await page.addInitScript(() => {
     try { localStorage.setItem('cueory-promo-seen', String(Date.now())); } catch { /* optional storage */ }
   });
@@ -42,6 +46,8 @@ for (const [name, selector, path] of boards) {
 
 test('word path letters fit the screen height with squares of at least 44px', async ({ page }) => {
   await open(page, '/play/word-path');
+  // The board you drag paths on (#722), not the older tap-first-and-last word search.
+  await expect(page.getByTestId('suture')).toHaveAttribute('data-format', 'path');
   const board = page.locator('.wordpath-board').first();
   const box = (await board.boundingBox())!;
   expect(box.height).toBeLessThanOrEqual(390);
