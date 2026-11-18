@@ -44,7 +44,7 @@ and decorative letters in demo animations (board letters, "term" chips) are plac
 | hero eyebrow | by nursing students, for nursing students | by nursing students, for nursing students | KEEP: Christian's own motto (stated 30 Oct). default (lead, 18 Nov), Christian may change |
 | hero h1 | nursing school made simpler. | nursing school made simpler. | as drawn (Christian, 11:30). Replaces the earlier "is hard enough" default |
 | hero accent | (none drawn; the curve is a graphic) | (the curve is a graphic; no text) | as drawn. The earlier accent line is dropped |
-| hero button | start studying for free → | start studying for free → | as drawn (lead, 18 Nov): links to /learn, which works with no account (`lessonEntryHref()` in `draftgate.ts` picks the sample lesson where it shows, /learn everywhere else). Not coming soon and not disabled: studying needs no account, so it is true today (lead decision, 18 Nov) |
+| hero button | start studying for free → | start studying for free → (disabled, tagged "coming soon", not a link) | rule [T]: the live build's /learn has 0 "open now" lessons, so a live link would lead nowhere. Same treatment as the sign-in pill. Switch condition: once at least one real lesson is open in the live build, it becomes a live link to /learn (`lessonEntryHref()` in `draftgate.ts`). Text as drawn (lead, 18 Nov, reversing the earlier call) |
 | hero quiet link | (none) | (none) | as drawn; the old quiet "join the launch list" link goes away with the new hero. The launch-updates form is lower on the page |
 | value row 1 | structured learning / from basics to med-surg | structured learning / from basics to med-surg | same, true today (courses.ts) |
 | value row 2 | multiple ways to study / learn the way that works for you | same | same, true (11 study modes) |
@@ -224,7 +224,7 @@ Default 6: only true claims. The page today holds `[Christian writes this]` plac
 
 Christian, 11:30: everything else ships as drawn. Not shipped as drawn, by rule:
 1. [T] "adhd friendly" row; About bullets 1 and 2 (research, sources, nurse reviewer); "all five" games (three are live); "Sort ten terms" copy (the game is sudoku); crossword blurb ("from this week's lessons").
-2. [A] sign in pill (disabled, "sign in, coming soon"). The hero "start studying for free →" ships as drawn and links to /learn: studying needs no account, so it is true today (lead decision, 18 Nov).
+2. [A] sign in pill (disabled, "sign in, coming soon"). [T] hero "start studying for free →": disabled with "coming soon" until at least one real lesson is open in the live build, then a live link to /learn.
 3. [C] crossword and hello cards shown as coming soon.
 4. [N] pillo tiles and keys use brand colors plus symbols, never green and yellow.
 5. [F] social share buttons and "play sound on solve": not brought back. (The three support-modal cards are back, as drawn, per Christian 11:30.)
