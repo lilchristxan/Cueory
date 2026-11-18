@@ -346,12 +346,16 @@ test.describe('anatomy lab', () => {
   test('the WebKit select exception never hides a console-only CSP line on the real lab page (#862)', async ({ page }) => {
     const csp = await watchCsp(page);
     await openLab(page);
+    // Whatever the lab's own native select legitimately reports (in WebKit one event and its console mirror) is gone.
+    const baseline = await withoutWebkitSelectReports(page, csp);
+    const before = csp.length;
     // WebKit's own wording, raised with no securitypolicyviolation event behind it: nothing qualifies it, so it stays.
     const line = "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy.";
     await page.evaluate((text) => console.error(text), line);
-    await expect.poll(() => csp.length).toBeGreaterThan(0);
-    expect(await withoutWebkitSelectReports(page, csp)).toEqual(csp);
-    expect(csp.some((message) => message.includes('Refused to apply a stylesheet'))).toBe(true);
+    await expect.poll(() => csp.length).toBeGreaterThan(before);
+    const after = await withoutWebkitSelectReports(page, csp);
+    expect(after).toHaveLength(baseline.length + 1);
+    expect(after.some((message) => message.includes('Refused to apply a stylesheet'))).toBe(true);
   });
 
   test('keyboard path: search, select from the list, name card, hide, show only, show all', async ({ page }) => {
