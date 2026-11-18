@@ -193,14 +193,14 @@ export default function GameResultsHost() {
           {card.name}{card.level ? ` · ${card.level}` : ''} · {card.date}
         </p>
 
-        <h2 id="game-result-title" className="display mt-3 text-title sm:text-title-lg" aria-live="polite">
+        <h2 id="game-result-title" className="display mt-3 text-center text-title sm:text-title-lg" aria-live="polite">
           {card.result}
         </h2>
-        <p id="game-result-summary" className="mt-2 text-ink-soft">{card.summary}</p>
+        <p id="game-result-summary" className="mt-2 text-center text-ink-soft">{card.summary}</p>
 
-        <dl className="mt-5 flex flex-wrap gap-2">
+        <dl className="mt-5 flex flex-wrap justify-center gap-2">
           {card.stats.slice(0, 3).map((stat) => (
-            <div key={stat.label} className="rounded-pill border border-[color:var(--cueory-glass-border)] bg-[color:var(--cueory-glass-bg)] px-4 py-2 shadow-[var(--cueory-glass-shadow)]">
+            <div key={stat.label} className="min-w-24 rounded-pill border border-[color:var(--cueory-glass-border)] bg-[color:var(--cueory-result-card-bg)] px-4 py-2 text-center shadow-[var(--cueory-glass-shadow)]">
               <dt className="text-[length:var(--cueory-label-size)] font-[var(--cueory-label-weight)] tracking-[var(--cueory-label-tracking)] uppercase text-ink-soft">{stat.label}</dt>
               <dd className="font-bold">{stat.value}</dd>
             </div>
@@ -211,7 +211,7 @@ export default function GameResultsHost() {
           {line}
         </p>
 
-        <div className="mt-5 flex flex-wrap gap-2">
+        <div className="mt-5 flex flex-wrap items-start justify-center gap-2">
           <button type="button" aria-disabled={preparing || undefined} aria-busy={preparing || undefined} className="min-h-(--tap-min) rounded-pill bg-linear-to-r from-[var(--cueory-copper-start)] to-[var(--cueory-copper-end)] px-5 py-2.5 text-[color:var(--cueory-copper-ink)] aria-disabled:opacity-50" onClick={() => void share(card, line)}>{prepared?.card === card ? 'share image' : preparing ? 'preparing image' : 'share'}</button>
           <button type="button" className="min-h-(--tap-min) rounded-pill border border-control px-5 py-2.5" onClick={() => void copy(line)}>copy</button>
 
