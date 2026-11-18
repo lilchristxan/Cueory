@@ -2201,3 +2201,11 @@ html:has(dialog.mode-preview[open]) {
     :root[data-print-game="anatomy-worksheet"] .anatomy-worksheet-tools { display: none !important; }
   }
 }
+
+/* The lesson hub's mode tiles (lane 23): as many columns as fit, so they stack when text is enlarged. sm and up use the
+   utility column counts on the page. */
+@layer components {
+  .mode-grid-fit {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--container-mode-tile)), 1fr));
+  }
+}
