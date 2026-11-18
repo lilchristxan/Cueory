@@ -68,7 +68,8 @@ const icons: Record<StudyFeatureIcon, string> = {
   <div data-reveal-section>
   <div class="mx-auto max-w-page px-gutter text-center">
     <h2 id="modes-heading" class="modes-kicker">ways to study</h2>
-    <p class="display mt-2 text-title sm:text-title-lg">one lesson, eleven ways in</p>
+        <p class="display mt-2 text-title sm:text-title-lg">one lesson, ten ways in</p>
+        <p class="mt-2 text-body text-ink-soft">pick the method that fits your brain today.</p>
   </div>
 
   <div class="vial-stage mt-8">
@@ -804,5 +805,15 @@ const icons: Record<StudyFeatureIcon, string> = {
     background: var(--cueory-glass-bg);
     border-color: var(--cueory-glass-border);
     box-shadow: var(--cueory-glass-shadow);
+  }
+
+  /* HomeV2 keeps the real-mode carousel as a readable straight row on its glossy platform. */
+  .modes-p6[data-ring] .mode-card {
+    transform: translateX(calc(-50% + var(--ring-shift, 0) * var(--vial-width))) scale(var(--ring-scale, 1));
+  }
+
+  .modes-p6 .vial-arrow {
+    color: var(--cueory-copper-ink);
+    background: linear-gradient(135deg, var(--cueory-copper-start), var(--cueory-copper-end));
   }
 </style>

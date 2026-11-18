@@ -27,6 +27,8 @@ async function showRing(page: Page) {
   await page.goto('/');
   await section(page).scrollIntoViewIfNeeded();
   await expect(section(page)).toHaveClass(/modes-p6/);
+  await expect(section(page).getByText('one lesson, ten ways in', { exact: true })).toBeVisible();
+  await expect(section(page).getByText('pick the method that fits your brain today.', { exact: true })).toBeVisible();
   await expect(section(page)).toHaveAttribute('data-ring', '');
   await expect(section(page).locator('[data-modes-controls]')).not.toHaveClass(/invisible/);
   // The section's first fade-in (D-62) has finished, so nothing is still rising while it is measured.
