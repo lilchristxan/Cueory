@@ -114,7 +114,7 @@ async function tabAudit(page: Page): Promise<string[]> {
         index,
         name: el.tagName.toLowerCase() + (el.id ? '#' + el.id : ''),
         inputType: el instanceof HTMLInputElement ? el.type : null,
-        visibleFocus: el.matches(':focus-visible') && ((outlineIsVisible && outlineChanged) || shadowChanged),
+        visibleFocus: (el.matches(':focus-visible') || (el instanceof HTMLInputElement && ['date', 'time', 'datetime-local', 'month', 'week'].includes(el.type) && el.matches(':focus-within'))) && ((outlineIsVisible && outlineChanged) || shadowChanged),
         inViewport: rect.width > 0 && rect.height > 0 &&
           rect.top < innerHeight && rect.bottom > 0 &&
           rect.left < innerWidth && rect.right > 0,
@@ -234,7 +234,8 @@ test.describe('Task 74: full-site accessibility sweep', () => {
 test.describe('keyboard traversal regression cases', () => {
   test('repeated native date-control stops do not skip buttons after the date', async ({ page }) => {
     await page.setContent(
-      '<style>:focus-visible { outline: 2px solid black; }</style>' +
+      // The same two rules as global.css: a native date input keeps focus on an inner field, so only :focus-within matches it in WebKit.
+      '<style>:focus-visible, input[type="date"]:focus-within { outline: 2px solid black; }</style>' +
       '<label for="exam-date">exam date</label><input id="exam-date" type="date">' +
       '<button id="save">save</button><button id="skip">skip</button>',
     );
