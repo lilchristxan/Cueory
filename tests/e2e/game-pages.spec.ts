@@ -1,5 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
+import { markPanelsSeen } from './clock';
 
 /**
  * Each daily game on its own page (Christian's decision, 2026-11-17): /play/pillo, /play/sudoku, /play/crossword and
@@ -24,6 +25,7 @@ const axe = async (page: Page) => {
 
 test.beforeEach(async ({ page }) => {
   await page.clock.setFixedTime(new Date('2026-11-01T15:00:00'));
+  await markPanelsSeen(page);
   await page.addInitScript(() => {
     try { localStorage.setItem('cueory-promo-seen', String(Date.now())); } catch { /* optional storage */ }
   });

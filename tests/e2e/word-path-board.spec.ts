@@ -1,6 +1,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import { readFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
+import { markPanelsSeen } from './clock';
 
 /**
  * Word path's board format (#722, docs/GAMES-PARITY.md). The clock is set to 1 November 2026, so today's puzzle is the
@@ -57,6 +58,7 @@ test.beforeEach(async ({ page }) => {
     window.addEventListener('cueory:game-progress', (event) => heard.push((event as CustomEvent).detail));
   });
   await page.clock.setFixedTime(new Date('2026-11-01T15:00:00'));
+  await markPanelsSeen(page);
   await page.goto('/play/word-path');
   await expect(game(page)).toBeVisible();
 });

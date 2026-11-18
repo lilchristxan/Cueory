@@ -1,5 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
+import { markPanelsSeen } from './clock';
 
 /**
  * The corner row on pillo, crossword and word path (Christian's brief, 2026-11-17): a drawn gear at the top left opens
@@ -14,6 +15,7 @@ const games = [
 
 test.beforeEach(async ({ page }) => {
   await page.clock.setFixedTime(new Date('2026-11-01T15:00:00'));
+  await markPanelsSeen(page);
   await page.addInitScript(() => {
     try {
       localStorage.setItem('cueory-promo-seen', String(Date.now()));

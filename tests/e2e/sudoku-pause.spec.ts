@@ -1,6 +1,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 import { dailySudokuSeed, generateSudoku } from '../../src/islands/sudoku';
+import { markPanelsSeen } from './clock';
 
 // Fix the browser timezone, not just the runner's clock, so the daily seed always matches Nov 1.
 test.use({ timezoneId: 'America/Phoenix' });
@@ -14,6 +15,7 @@ const cells = (page: Page) => game(page).getByRole('gridcell');
 
 test.beforeEach(async ({ page }) => {
   await page.clock.install({ time: new Date('2026-11-01T15:00:00-07:00') });
+  await markPanelsSeen(page);
   await page.addInitScript(() => {
     try { localStorage.setItem('cueory-promo-seen', String(Date.now())); } catch { /* optional */ }
   });

@@ -1,6 +1,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
 import { isDesktopOfEachEngine } from './projects';
+import { markPanelsSeen } from './clock';
 
 // Run the complete six-state matrix once per browser engine, not once for each project's default viewport.
 const widths = [390, 820, 1440] as const;
@@ -95,6 +96,7 @@ test('the visitor day changes at local midnight, even without a page reload', as
     // Start well before midnight, then freeze the clock before making assertions.
     // This prevents a slow page load from advancing to the next day first.
     await page.clock.install({ time: new Date('2026-11-11T23:59:00-05:00') });
+    await markPanelsSeen(page);
     await page.clock.pauseAt(new Date('2026-11-11T23:59:58-05:00'));
     const response = await page.goto('/');
     expect(response?.status()).toBe(200);
@@ -133,6 +135,7 @@ test('a restored home page refreshes after midnight without waiting for a suspen
   try {
     const page = await context.newPage();
     await page.clock.install({ time: new Date('2026-11-11T23:59:00-05:00') });
+    await markPanelsSeen(page);
     await page.clock.pauseAt(new Date('2026-11-11T23:59:58-05:00'));
     const response = await page.goto('/');
     expect(response?.status()).toBe(200);
@@ -141,6 +144,7 @@ test('a restored home page refreshes after midnight without waiting for a suspen
 
     // Jump the device date without firing scheduled timers or a visibility event.
     await page.clock.setFixedTime(new Date('2026-11-12T00:02:00-05:00'));
+    await markPanelsSeen(page);
     await expect(day).toContainText("today's set: wed 11 nov.");
     await page.evaluate(() => window.dispatchEvent(new PageTransitionEvent('pageshow', { persisted: false })));
     await expect(day).toContainText("today's set: wed 11 nov.");
@@ -151,6 +155,7 @@ test('a restored home page refreshes after midnight without waiting for a suspen
 
     // A window can regain focus after the device clock changes without a visibility event.
     await page.clock.setFixedTime(new Date('2026-11-13T00:02:00-05:00'));
+    await markPanelsSeen(page);
     await expect(day).toContainText("today's set: thu 12 nov.");
     await page.evaluate(() => window.dispatchEvent(new Event('focus')));
     await expect(day).toContainText("today's set: fri 13 nov.");

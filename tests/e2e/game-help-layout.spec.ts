@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { markPanelsSeen } from './clock';
 
 /**
  * The "?" help dialog's layout (#736 follow-up, from Christian's iPhone test): the title always sits above the rules,
@@ -18,6 +19,7 @@ const fonts = [20, 32] as const;
 
 test.beforeEach(async ({ page }) => {
   await page.clock.setFixedTime(new Date('2026-11-01T15:00:00'));
+  await markPanelsSeen(page);
   await page.addInitScript(() => {
     try {
       localStorage.setItem('cueory-promo-seen', String(Date.now()));

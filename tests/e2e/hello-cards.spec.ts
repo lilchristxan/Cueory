@@ -1,5 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
+import { markPanelsSeen } from './clock';
 import data from '../../content/games/hello-cards/starters.json' with { type: 'json' };
 
 const card = (page: Page) => page.getByTestId('hello-card');
@@ -142,6 +143,7 @@ test('with reduced motion the switch thumb does not slide', async ({ page }) => 
 
 test('the prompt of the day shows today\'s date, is the same on reload and changes the next day', async ({ page }) => {
   await page.clock.setFixedTime(new Date('2026-11-07T10:00:00'));
+  await markPanelsSeen(page);
   await page.reload();
   const daily = page.getByTestId('hello-daily-text');
   await expect(page.getByTestId('hello-daily')).toContainText('sat 7 nov');
@@ -150,6 +152,7 @@ test('the prompt of the day shows today\'s date, is the same on reload and chang
   await page.reload();
   await expect(daily).toHaveText(first);
   await page.clock.setFixedTime(new Date('2026-11-08T10:00:00'));
+  await markPanelsSeen(page);
   await page.reload();
   await expect(daily).not.toHaveText(first);
   await expect(page.getByTestId('hello-daily')).toContainText('sun 8 nov');
@@ -175,6 +178,7 @@ test('sharing today\'s card uses the production hello result adapter', async ({ 
 
 test('a tab left open across local midnight moves on to the new day\'s prompt', async ({ page }) => {
   await page.clock.install({ time: new Date('2026-11-07T23:59:30') });
+  await markPanelsSeen(page);
   await page.goto('/play/hello-cards');
   await expect(card(page)).toBeEnabled();
   const daily = page.getByTestId('hello-daily-text');

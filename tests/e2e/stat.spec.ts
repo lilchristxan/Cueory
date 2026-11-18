@@ -1,6 +1,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 import { TIMEOUT_KEEPS_PICK } from '../../src/islands/stat';
+import { markPanelsSeen } from './clock';
 import sample from '../../content/games/stat/sample.json' with { type: 'json' };
 
 // stat (Task 640). The page's clock is Playwright's fake clock, so 20 seconds pass in an instant and nothing is flaky.
@@ -17,6 +18,7 @@ test.beforeEach(async ({ page }) => {
     try { localStorage.setItem('cueory-promo-seen', String(Date.now())); } catch { /* storage blocked */ }
   });
   await page.clock.install({ time: new Date('2026-11-11T09:00:00') });
+  await markPanelsSeen(page);
   await page.goto('/play/stat');
   await expect(page.getByTestId('stat-start')).toBeVisible();
   // From here on the page's time moves only when a test moves it, so a slow machine can't eat into the 20 seconds.

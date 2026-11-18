@@ -1,6 +1,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import { readFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
+import { markPanelsSeen } from './clock';
 
 /**
  * Word path's older format, the themed word search (Task 97, D-71), which still loads beside the board format (#722,
@@ -27,6 +28,7 @@ test.beforeEach(async ({ page }) => {
     try { localStorage.setItem('cueory-promo-seen', String(Date.now())); } catch { /* storage blocked: no panel */ }
   });
   await page.clock.setFixedTime(new Date('2026-11-06T15:00:00'));
+  await markPanelsSeen(page);
   await page.goto('/play/word-path');
   await expect(game(page)).toBeVisible();
 });
@@ -173,6 +175,7 @@ test.describe('word path: themed word search, the older format (Task 97)', () =>
     await page.setViewportSize({ width: 320, height: 700 });
     for (const day of ['2026-11-01', '2026-11-02', '2026-11-03', '2026-11-04', '2026-11-05', '2026-11-06']) {
       await page.clock.setFixedTime(new Date(`${day}T15:00:00`));
+      await markPanelsSeen(page);
       await page.goto('/play/word-path');
       await expect(game(page)).toBeVisible();
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);

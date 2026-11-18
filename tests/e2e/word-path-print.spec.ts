@@ -1,6 +1,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import { readFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
+import { markPanelsSeen } from './clock';
 
 /**
  * Printing word path for a patient (Task 641). The clock is set to 6 November 2026, so today's puzzle is the older
@@ -25,6 +26,7 @@ test.beforeEach(async ({ page }) => {
     window.print = () => { (window as unknown as { printed: number }).printed += 1; };
   });
   await page.clock.setFixedTime(new Date('2026-11-06T15:00:00'));
+  await markPanelsSeen(page);
   await page.goto('/play/word-path');
   await expect(game(page)).toBeVisible();
 });
@@ -137,6 +139,7 @@ test.describe('word path: the printed board is centred inside the page', () => {
       test(`${format} at a ${width} px layout`, async ({ page }) => {
         await page.setViewportSize({ width, height: 1056 });
         await page.clock.setFixedTime(new Date(day));
+        await markPanelsSeen(page);
         await page.reload();
         await expect(game(page)).toBeVisible();
         await printButton(page).click();

@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { markPanelsSeen } from './clock';
 
 /**
  * Today's status for each daily game on /play (#735), from this device only. The clock is set to 1 November 2026, when
@@ -13,6 +14,7 @@ test.beforeEach(async ({ page }) => {
     }
   });
   await page.clock.setFixedTime(new Date('2026-11-01T15:00:00'));
+  await markPanelsSeen(page);
 });
 
 const list = (page: Page) => page.getByTestId('play-status');

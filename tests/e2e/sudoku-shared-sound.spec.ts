@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { dailySudokuSeed, generateSudoku } from '../../src/islands/sudoku';
+import { markPanelsSeen } from './clock';
 
 // The shared "game sounds" switch (#734) silences sudoku's solve sound too, even with sudoku's own "play sound on
 // solve" on. The browser's AudioContext is replaced with a counter, so the test hears nothing and counts each tone.
@@ -12,6 +13,7 @@ test.use({ timezoneId: 'America/Phoenix' });
 for (const shared of [true, false]) {
   test(`with game sounds ${shared ? 'on' : 'off'}, a sudoku solve ${shared ? 'plays a' : 'plays no'} tone`, async ({ page }) => {
     await page.clock.setFixedTime(new Date('2026-11-01T15:00:00-07:00'));
+    await markPanelsSeen(page);
     await page.addInitScript((sound) => {
       try {
         localStorage.setItem('cueory-promo-seen', String(Date.now()));
@@ -43,6 +45,7 @@ for (const shared of [true, false]) {
 
 test('game sounds turned off in the sudoku dialog keep the solve silent even when browser storage refuses to save', async ({ page }) => {
   await page.clock.setFixedTime(new Date('2026-11-01T15:00:00-07:00'));
+  await markPanelsSeen(page);
   await page.addInitScript(() => {
     try {
       localStorage.setItem('cueory-promo-seen', String(Date.now()));

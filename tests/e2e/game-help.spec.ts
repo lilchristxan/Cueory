@@ -1,5 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
+import { markPanelsSeen } from './clock';
 
 // Issue #736: every daily game shows its rules on the first visit, and from then on behind a "?" button that opens a
 // focus-trapped dialog Escape closes. The clock is 1 November 2026, so word path's puzzle is a board-format sample.
@@ -18,6 +19,7 @@ const axe = (page: Page, selector: string) =>
 
 test.beforeEach(async ({ page }) => {
   await page.clock.setFixedTime(new Date('2026-11-01T15:00:00'));
+  await markPanelsSeen(page);
   await page.addInitScript(() => {
     try { localStorage.setItem('cueory-promo-seen', String(Date.now())); } catch { /* optional storage */ }
   });
