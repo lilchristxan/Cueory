@@ -54,7 +54,7 @@ test.describe('640 CSS px reflow', () => {
   test.beforeEach(async ({ page }, info) => {
     test.skip(info.project.name !== 'desktop', 'fixed-width desktop reflow sweep');
     await page.addInitScript(() => {
-      try { localStorage.setItem('cueory-promo-seen', String(Date.now())); } catch { /* blocked storage */ }
+      try { localStorage.setItem('cueory-promo-seen', String(Date.now())); localStorage.setItem('cueory-signup-popup-seen', String(Date.now())); } catch { /* blocked storage */ }
     });
   });
 

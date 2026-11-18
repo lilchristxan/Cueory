@@ -5,7 +5,7 @@ test.beforeEach(async ({ page }) => {
   // Prevent the one-time welcome panel from taking focus during a carousel test.
   await page.addInitScript(() => {
     try {
-      localStorage.setItem('cueory-promo-seen', String(Date.now()));
+      localStorage.setItem('cueory-promo-seen', String(Date.now())); localStorage.setItem('cueory-signup-popup-seen', String(Date.now()));
     } catch {
       // Storage may be unavailable. The carousel must still use the plain links.
     }

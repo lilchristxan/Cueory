@@ -13,7 +13,7 @@ test.beforeEach(async ({ page }) => {
   // The delayed marketing promo must not interrupt a scroll, focus or navigation test.
   await page.addInitScript(() => {
     try {
-      localStorage.setItem('cueory-promo-seen', String(Date.now()));
+      localStorage.setItem('cueory-promo-seen', String(Date.now())); localStorage.setItem('cueory-signup-popup-seen', String(Date.now()));
     } catch {
       // Storage is optional; these tests do not depend on it.
     }

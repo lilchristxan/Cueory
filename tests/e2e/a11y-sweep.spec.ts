@@ -176,7 +176,7 @@ test.describe('Task 74: full-site accessibility sweep', () => {
       await page.addInitScript(() => {
         // The separate promo tests cover its focus behavior. Suppress it here
         // so a timed popup cannot interrupt a long keyboard traversal.
-        try { localStorage.setItem('cueory-promo-seen', String(Date.now())); } catch { /* storage unavailable */ }
+        try { localStorage.setItem('cueory-promo-seen', String(Date.now())); localStorage.setItem('cueory-signup-popup-seen', String(Date.now())); } catch { /* storage unavailable */ }
       });
 
       const problems: string[] = [];

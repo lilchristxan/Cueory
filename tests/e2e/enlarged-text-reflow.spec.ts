@@ -9,7 +9,7 @@ for (const path of ['/resources', '/preview/concept-map']) {
   test(`${path} does not scroll sideways at 320px with a 32px root font`, async ({ page }) => {
     await page.addInitScript(() => {
       try {
-        localStorage.setItem('cueory-promo-seen', String(Date.now()));
+        localStorage.setItem('cueory-promo-seen', String(Date.now())); localStorage.setItem('cueory-signup-popup-seen', String(Date.now()));
       } catch {
         // The page must also work when storage is unavailable.
       }

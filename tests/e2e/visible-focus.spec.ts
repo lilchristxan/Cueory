@@ -39,7 +39,7 @@ test.describe('Task 210: visible keyboard focus', () => {
   for (const route of routes) {
     test(`${route} gives each Tab stop a visible focus indicator`, async ({ page }) => {
       await page.addInitScript(() => {
-        try { localStorage.setItem('cueory-promo-seen', String(Date.now())); } catch { /* storage unavailable */ }
+        try { localStorage.setItem('cueory-promo-seen', String(Date.now())); localStorage.setItem('cueory-signup-popup-seen', String(Date.now())); } catch { /* storage unavailable */ }
       });
 
       const response = await page.goto(route);

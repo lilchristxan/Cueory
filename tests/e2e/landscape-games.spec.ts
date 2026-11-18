@@ -11,7 +11,7 @@ test.beforeEach(async ({ page }) => {
   // 1 November 2026 is a board day. The promo is marked seen after the clock, so by the same date the page uses.
   await page.clock.setFixedTime(new Date('2026-11-01T15:00:00'));
   await page.addInitScript(() => {
-    try { localStorage.setItem('cueory-promo-seen', String(Date.now())); } catch { /* optional storage */ }
+    try { localStorage.setItem('cueory-promo-seen', String(Date.now())); localStorage.setItem('cueory-signup-popup-seen', String(Date.now())); } catch { /* optional storage */ }
   });
 });
 

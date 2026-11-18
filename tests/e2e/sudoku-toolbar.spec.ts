@@ -12,7 +12,7 @@ const order = ['sudoku settings', 'pause puzzle', 'print this puzzle', 'sudoku s
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
     try {
-      localStorage.setItem('cueory-promo-seen', String(Date.now()));
+      localStorage.setItem('cueory-promo-seen', String(Date.now())); localStorage.setItem('cueory-signup-popup-seen', String(Date.now()));
       localStorage.setItem('cueory-game-help-seen', JSON.stringify(['triage']));
     } catch { /* optional storage */ }
   });

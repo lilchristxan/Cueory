@@ -20,7 +20,7 @@ const lines = (page: Page, kind: string) => game(page).locator(`[data-testid="su
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
     try {
-      localStorage.setItem('cueory-promo-seen', String(Date.now()));
+      localStorage.setItem('cueory-promo-seen', String(Date.now())); localStorage.setItem('cueory-signup-popup-seen', String(Date.now()));
       localStorage.setItem('cueory-game-help-seen', JSON.stringify(['suture']));
     } catch { /* optional storage */ }
     (window as unknown as { printed: number }).printed = 0;

@@ -7,7 +7,7 @@ import { readFileSync } from 'node:fs';
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
     try {
-      localStorage.setItem('cueory-promo-seen', String(Date.now()));
+      localStorage.setItem('cueory-promo-seen', String(Date.now())); localStorage.setItem('cueory-signup-popup-seen', String(Date.now()));
     } catch {
       // Storage is blocked: the panel never shows then anyway.
     }
@@ -162,7 +162,7 @@ test('card piles and stars show on the progress page; download and forget work',
   await expect(page.getByText('done. your progress is no longer saved on this device.')).toBeFocused();
   expect(await saved(page)).toBeNull();
   await expect(page.getByText('nothing saved yet.', { exact: false })).toBeVisible();
-  // The theme pick and promo date aren't progress, so they stay.
+  // The theme pick and the promo and pop-up dates aren't progress, so they stay.
   expect(await page.evaluate(() => localStorage.getItem('cueory-promo-seen'))).not.toBeNull();
 });
 
@@ -189,7 +189,7 @@ test('stars kept only under old keys show on the progress page, and forget remov
 
   await page.getByRole('button', { name: 'forget my progress on this device' }).click();
   await page.getByRole('button', { name: 'yes, forget it' }).click();
-  const left = await page.evaluate(() => Object.keys(localStorage).filter((key) => key.startsWith('cueory-') && key !== 'cueory-promo-seen'));
+  const left = await page.evaluate(() => Object.keys(localStorage).filter((key) => key.startsWith('cueory-') && key !== 'cueory-promo-seen' && key !== 'cueory-signup-popup-seen'));
   expect(left).toEqual([]);
 });
 

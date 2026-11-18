@@ -8,7 +8,7 @@ import { expect, test, type Page } from '@playwright/test';
 async function open(page: Page, width: number, rootText: string, path: string) {
   await page.setViewportSize({ width, height: 800 });
   await page.addInitScript(() => {
-    try { localStorage.setItem('cueory-promo-seen', String(Date.now())); } catch { /* optional storage */ }
+    try { localStorage.setItem('cueory-promo-seen', String(Date.now())); localStorage.setItem('cueory-signup-popup-seen', String(Date.now())); } catch { /* optional storage */ }
   });
   // Each game has its own page (#816).
   await page.goto(path);

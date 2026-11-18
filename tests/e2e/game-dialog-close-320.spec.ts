@@ -7,7 +7,7 @@ test.use({ viewport: { width: 320, height: 700 } });
 
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
-    try { localStorage.setItem('cueory-promo-seen', String(Date.now())); } catch { /* optional storage */ }
+    try { localStorage.setItem('cueory-promo-seen', String(Date.now())); localStorage.setItem('cueory-signup-popup-seen', String(Date.now())); } catch { /* optional storage */ }
   });
   await page.goto('/play/sudoku');
   await page.evaluate(() => document.documentElement.style.setProperty('font-size', '32px', 'important'));

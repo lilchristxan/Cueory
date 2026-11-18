@@ -27,7 +27,7 @@ for (const size of sizes) {
       });
       try {
         await context.addInitScript(() => {
-          try { localStorage.setItem('cueory-promo-seen', String(Date.now())); }
+          try { localStorage.setItem('cueory-promo-seen', String(Date.now())); localStorage.setItem('cueory-signup-popup-seen', String(Date.now())); }
           catch { /* The home page also works without storage. */ }
         });
         const page = await context.newPage();

@@ -6,7 +6,7 @@ for (const theme of ['light', 'dark'] as const) {
   test(`continue progress uses brand colors and readable text in ${theme}`, async ({ page, browserName }) => {
     await page.addInitScript((theme) => {
       localStorage.setItem('cueory-theme', theme);
-      localStorage.setItem('cueory-promo-seen', String(Date.now()));
+      localStorage.setItem('cueory-promo-seen', String(Date.now())); localStorage.setItem('cueory-signup-popup-seen', String(Date.now()));
       localStorage.setItem('cueory-resume', JSON.stringify({
         version: 1, savedAt: Date.now(), tool: 'cards',
         page: '/learn/study-skills/cards', itemIndex: 1, totalItems: 4,
@@ -81,7 +81,7 @@ for (const width of [390, 820, 1440]) {
       try {
         await context.addInitScript(() => {
           try {
-            localStorage.setItem('cueory-promo-seen', String(Date.now()));
+            localStorage.setItem('cueory-promo-seen', String(Date.now())); localStorage.setItem('cueory-signup-popup-seen', String(Date.now()));
             localStorage.setItem('cueory-resume', JSON.stringify({
               version: 1, savedAt: Date.now(), tool: 'cards',
               page: '/learn/study-skills/cards', itemIndex: 1, totalItems: 4,

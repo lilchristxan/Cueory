@@ -14,7 +14,7 @@ for (const shared of [true, false]) {
     await page.clock.setFixedTime(new Date('2026-11-01T15:00:00-07:00'));
     await page.addInitScript((sound) => {
       try {
-        localStorage.setItem('cueory-promo-seen', String(Date.now()));
+        localStorage.setItem('cueory-promo-seen', String(Date.now())); localStorage.setItem('cueory-signup-popup-seen', String(Date.now()));
         localStorage.setItem('cueory-game-help-seen', JSON.stringify(['pulse', 'triage', 'cueword', 'suture']));
         if (!sound) localStorage.setItem('cueory-game-settings', JSON.stringify({ highContrast: false, motion: 'device', sound: false }));
       } catch { /* optional storage */ }
@@ -45,7 +45,7 @@ test('game sounds turned off in the sudoku dialog keep the solve silent even whe
   await page.clock.setFixedTime(new Date('2026-11-01T15:00:00-07:00'));
   await page.addInitScript(() => {
     try {
-      localStorage.setItem('cueory-promo-seen', String(Date.now()));
+      localStorage.setItem('cueory-promo-seen', String(Date.now())); localStorage.setItem('cueory-signup-popup-seen', String(Date.now()));
       localStorage.setItem('cueory-game-help-seen', JSON.stringify(['pulse', 'triage', 'cueword', 'suture']));
     } catch { /* optional storage */ }
     // Saving the shared settings fails, as it does when the browser's storage is full.

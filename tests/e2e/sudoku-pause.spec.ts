@@ -15,7 +15,7 @@ const cells = (page: Page) => game(page).getByRole('gridcell');
 test.beforeEach(async ({ page }) => {
   await page.clock.install({ time: new Date('2026-11-01T15:00:00-07:00') });
   await page.addInitScript(() => {
-    try { localStorage.setItem('cueory-promo-seen', String(Date.now())); } catch { /* optional */ }
+    try { localStorage.setItem('cueory-promo-seen', String(Date.now())); localStorage.setItem('cueory-signup-popup-seen', String(Date.now())); } catch { /* optional */ }
   });
 });
 for (const [size, width, height] of [['phone', 390, 844], ['tablet', 820, 1180], ['desktop', 1440, 900]] as const) {

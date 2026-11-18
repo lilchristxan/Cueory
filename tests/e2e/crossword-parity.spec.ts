@@ -48,7 +48,7 @@ test.describe('crossword parity (Task 721)', () => {
   test.beforeEach(async ({ page }) => {
     // The once-only promo panel (D-59) opens after 5 seconds and takes focus and clicks; its own spec covers it (as in play.spec.ts).
     await page.addInitScript(() => {
-      try { localStorage.setItem('cueory-promo-seen', String(Date.now())); } catch { /* storage blocked: no promo then */ }
+      try { localStorage.setItem('cueory-promo-seen', String(Date.now())); localStorage.setItem('cueory-signup-popup-seen', String(Date.now())); } catch { /* storage blocked: no promo then */ }
     });
     await page.clock.setFixedTime(new Date('2026-11-01T15:00:00'));
     await page.goto('/play/crossword');

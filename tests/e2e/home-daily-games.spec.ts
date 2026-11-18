@@ -23,7 +23,7 @@ for (const width of widths) {
       try {
         // The once-only promo would otherwise cover the section while keyboard focus and taps are tested.
         await context.addInitScript(() => {
-          try { localStorage.setItem('cueory-promo-seen', String(Date.now())); }
+          try { localStorage.setItem('cueory-promo-seen', String(Date.now())); localStorage.setItem('cueory-signup-popup-seen', String(Date.now())); }
           catch { /* The home page also works without storage. */ }
         });
         const page = await context.newPage();

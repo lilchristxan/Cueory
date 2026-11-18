@@ -5,7 +5,7 @@ test.use({ reducedMotion: 'no-preference' });
 test('prints every home section before scrolling and preserves the screen reveal', async ({ page }) => {
   // Keep the optional marketing panel from covering the page under test.
   await page.addInitScript(() => {
-    try { localStorage.setItem('cueory-promo-seen', String(Date.now())); }
+    try { localStorage.setItem('cueory-promo-seen', String(Date.now())); localStorage.setItem('cueory-signup-popup-seen', String(Date.now())); }
     catch { /* Blocked storage does not prevent the page from rendering. */ }
   });
 

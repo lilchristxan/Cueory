@@ -6,7 +6,7 @@ const path = '/learn/study-skills/fill-in';
 // The delayed welcome popup is tested elsewhere; it must not interrupt study controls here.
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
-    try { localStorage.setItem('cueory-promo-seen', String(Date.now())); } catch { /* blocked storage */ }
+    try { localStorage.setItem('cueory-promo-seen', String(Date.now())); localStorage.setItem('cueory-signup-popup-seen', String(Date.now())); } catch { /* blocked storage */ }
   });
 });
 

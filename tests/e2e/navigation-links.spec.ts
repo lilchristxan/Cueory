@@ -10,7 +10,7 @@ for (const surface of ['footer', 'menu'] as const) {
   for (const href of [...new Set(links.map(link => link.href))].filter(href => href.startsWith('/'))) {
     test(`${surface} opens ${href}`, async ({ page }) => {
       await page.addInitScript(() => {
-        try { localStorage.setItem('cueory-promo-seen', String(Date.now())); } catch { /* blocked storage */ }
+        try { localStorage.setItem('cueory-promo-seen', String(Date.now())); localStorage.setItem('cueory-signup-popup-seen', String(Date.now())); } catch { /* blocked storage */ }
       });
       await page.goto('/privacy');
       if (surface === 'footer') {
