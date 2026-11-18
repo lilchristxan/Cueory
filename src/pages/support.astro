@@ -15,11 +15,17 @@ const missionLines = [
 >
   <section class="mx-auto max-w-prose break-words py-section" aria-labelledby="support-heading">
     <header class="mb-10 text-center">
-      <p class="text-sm text-ink-soft">free study help for nursing students</p>
+      <p
+        class="text-sm text-ink-soft"
+        style="font-size: var(--cueory-label-size); letter-spacing: var(--cueory-label-tracking); font-weight: var(--cueory-label-weight);"
+      >free study help for nursing students</p>
       <h1 id="support-heading" class="display mt-4 text-title sm:text-title-lg">supporting our mission</h1>
     </header>
 
-    <div class="veil p-6 sm:p-10">
+    <div
+      class="veil p-6 sm:p-10"
+      style="background: var(--cueory-result-card-bg); border-color: var(--cueory-result-card-border); border-radius: var(--cueory-result-card-radius); box-shadow: var(--cueory-result-card-shadow); padding: var(--cueory-result-card-padding);"
+    >
       <ul data-mission aria-label="our mission" class="m-0 flex list-none flex-col gap-8 p-0">
         {
           missionLines.map((line) => (
@@ -43,6 +49,7 @@ const missionLines = [
               rel="noopener noreferrer"
               target="_blank"
               class="glass-button mt-8 inline-flex min-h-11 items-center justify-center text-center"
+              style="background: linear-gradient(135deg, var(--cueory-copper-start), var(--cueory-copper-end)); color: var(--cueory-copper-ink);"
             >
               support our mission (opens in a new tab)
             </a>
