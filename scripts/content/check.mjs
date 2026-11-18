@@ -14,7 +14,7 @@
  * Exit code: 0 nothing to fix, 1 something to fix, 2 the command was typed wrong.
  */
 import './hooks.mjs';
-import { writeFileSync } from 'node:fs';
+import { realpathSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { parseArgs } from 'node:util';
@@ -148,14 +148,24 @@ console.log(lines.join('\n'));
 if (args.values.report) {
   const first = resolve(targets[0]);
   const folder = files.length && !isInside(first, repoRoot) ? (files.length === 1 && files[0].file === first ? dirname(first) : first) : repoRoot;
+  // macOS can report a physical /private/var cwd for a lexical /var target. When the command was run in the
+  // report's external folder, keep that lexical folder as the display base; from elsewhere, retain the usual cwd view.
+  let reportBase;
+  if (!isInside(first, repoRoot)) {
+    try {
+      if (realpathSync(process.cwd()) === realpathSync(folder)) reportBase = folder;
+    } catch {
+      // The report is still useful; fall back to the usual cwd-relative display if a path cannot be resolved.
+    }
+  }
   const reportFile = join(folder, 'content-report.txt');
   writeFileSync(reportFile, puzzles.reportText({
     when: new Date(),
     where,
-    files: results.map((result) => ({ file: shown(result.file), game: result.game, findings: result.findings })),
+    files: results.map((result) => ({ file: shown(result.file, reportBase), game: result.game, findings: result.findings })),
     skipped,
     otherChecked,
   }));
-  console.log(`\nreport saved to ${shown(reportFile)}`);
+  console.log(`\nreport saved to ${shown(reportFile, reportBase)}`);
 }
 process.exit(toFix.length ? 1 : 0);
