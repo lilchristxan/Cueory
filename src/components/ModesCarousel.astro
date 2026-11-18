@@ -25,6 +25,11 @@ import { studyModes, type StudyFeatureIcon } from '../config/modes';
 import { accountHref, accountLaunch, accountsOpen } from '../config/site';
 import InfoTip from './InfoTip.astro';
 import ModeVial from './ModeVial.astro';
+import { sampleLessonShown } from '../lessons/draftgate';
+
+// The live build holds the sample lesson back: no mode links to it there (the vials say "coming soon" instead).
+const sampleShown = sampleLessonShown();
+const linkOf = (mode: (typeof studyModes)[number]) => (sampleShown ? mode.link : undefined);
 
 const count = studyModes.length;
 const first = studyModes[0]!;
@@ -91,7 +96,7 @@ const icons: Record<StudyFeatureIcon, string> = {
             aria-label={`${index + 1} of ${count}`}
             data-mode-card
             data-name={mode.name}
-            data-href={mode.link?.href}
+            data-href={linkOf(mode)?.href}
           >
             <button
               type="button"
@@ -104,11 +109,11 @@ const icons: Record<StudyFeatureIcon, string> = {
               data-mode-open
             />
             <ModeVial mode={mode} summaryId={`mode-${mode.id}-summary`} />
-            {mode.link ? (
+            {linkOf(mode) ? (
               // The ring hides these links (its preview has "start …"). The hide sits in the utilities layer as a
               // variant, because global.css's components-layer rule loses to the utility `inline-flex` here.
-              <a href={mode.link.href} class="mode-card-link inline-flex min-h-11 items-center justify-center px-3 [[data-ring]_&]:hidden">
-                {mode.link.label}
+              <a href={linkOf(mode)!.href} class="mode-card-link inline-flex min-h-11 items-center justify-center px-3 [[data-ring]_&]:hidden">
+                {linkOf(mode)!.label}
               </a>
             ) : (
               <p class="mode-card-link text-sm text-ink-soft">coming soon</p>

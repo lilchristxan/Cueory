@@ -7,6 +7,8 @@ import data from '../../content/breaks/ideas.json';
 // The sample marker belongs to the content envelope. Keep parseIdeas' exact schema unchanged.
 if (data.sample !== true) throw new Error('break ideas must remain labeled samples until content approval.');
 const ideas = parseIdeas({ ideas: data.ideas });
+import { lessonEntryHref } from '../lessons/draftgate';
+const entryHref = lessonEntryHref();
 ---
 
 <Layout title="break ideas" description="Everyday sample ideas for a pause between study sessions."
@@ -20,8 +22,8 @@ const ideas = parseIdeas({ ideas: data.ideas });
     <BreakIdeasList ideas={ideas} client:load />
     <noscript><p>all the ideas are listed here. turn on javascript to shuffle them or choose one at random.</p></noscript>
     <p class="text-ink-soft">sharing your own idea is not open yet. for now, you can browse these samples.</p>
-    <a href="/learn/study-skills" class="inline-flex min-h-11 items-center rounded-pill border border-control px-5 py-2.5 text-ink">
-      back to study skills
+    <a href={entryHref} class="inline-flex min-h-11 items-center rounded-pill border border-control px-5 py-2.5 text-ink">
+      {entryHref === '/learn' ? 'back to learn' : 'back to study skills'}
     </a>
   </div>
 </Layout>

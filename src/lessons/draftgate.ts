@@ -23,3 +23,19 @@ export function draftBuildEnv(source: Record<string, string | undefined>): Build
     CUEORY_ANATOMY_DRAFTS: source.CUEORY_ANATOMY_DRAFTS,
   };
 }
+
+/**
+ * Does this build show the study-skills sample lesson (and so link to it)? Menu, home and library entry points use this
+ * one answer, so the live build advertises nothing it holds back. Reads the same variables as the lesson pages.
+ */
+export function sampleLessonShown(source: Record<string, string | undefined> = process.env): boolean {
+  return draftsAllowed(draftBuildEnv(source));
+}
+
+/** The one menu address that opens the sample lesson. */
+export const SAMPLE_LESSON_HREF = '/learn/study-skills';
+
+/** Where "start studying" style links go: the sample lesson where it shows, the lesson library everywhere else. */
+export function lessonEntryHref(source: Record<string, string | undefined> = process.env): string {
+  return sampleLessonShown(source) ? SAMPLE_LESSON_HREF : '/learn';
+}

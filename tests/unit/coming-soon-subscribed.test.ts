@@ -26,13 +26,15 @@ describe('coming-soon and subscribed page shells', () => {
 
     it(`${name} next-step links point to real public routes`, () => {
       const hrefs = [...source.matchAll(/<a\b[^>]*\bhref="([^"]+)"/g)].map((match) => match[1]);
-      expect(hrefs.length).toBeGreaterThan(0);
+      // The lesson link is dynamic (below), so a page may have no literal links.
+      expect(hrefs.length + (source.includes('href={entryHref}') ? 1 : 0)).toBeGreaterThan(0);
       for (const href of hrefs) {
-        // /learn/study-skills is the sample lesson: the live build holds it behind a coming-soon page, so it is not in indexablePages.
-        expect([...indexablePages, '/learn/study-skills']).toContain(href);
+        expect(indexablePages).toContain(href);
         expect(href).not.toMatch(/^https?:\/\//);
       }
-      expect(hrefs).toContain('/learn/study-skills');
+      // The lesson link is driven by the draft gate (lessonEntryHref): the sample lesson where it shows, /learn otherwise.
+      expect(source).toContain('href={entryHref}');
+      expect(source).toContain('lessonEntryHref()');
     });
   }
 

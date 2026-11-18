@@ -8,6 +8,8 @@ import { fileURLToPath } from 'node:url';
 import { gzipSync } from 'node:zlib';
 import { describe, expect, it } from 'vitest';
 import { kitFormAction, kitLandingUrl, newsletter, site } from '../../src/config/site';
+import { draftsAllowed } from '../../src/islands/anatomylab';
+import { draftBuildEnv } from '../../src/lessons/draftgate';
 import { initialJsFiles, initialJsGzipBytes, inlineScriptBodies } from './perf-scan';
 
 const dist = fileURLToPath(new URL('../../dist/', import.meta.url));
@@ -396,10 +398,12 @@ describe.skipIf(!existsSync(dist))('built site', () => {
       expect(match, `card ${id}`).not.toBeNull();
       return { name: match![1]!.trim(), href: match![2] };
     };
+    // The live (drafts-closed) build holds the sample lesson back, so its vials say coming soon instead of linking to it.
+    const sampleHref = (mode: string) => (draftsAllowed(draftBuildEnv(process.env)) ? `/learn/study-skills/${mode}` : undefined);
     expect(card('video')).toEqual({ name: 'video', href: undefined });
-    expect(card('learn')).toEqual({ name: 'learn', href: '/learn/study-skills/learn-mode' });
-    expect(card('fill-in')).toEqual({ name: 'fill-in', href: '/learn/study-skills/fill-in' });
-    expect(card('questions')).toEqual({ name: 'questions', href: '/learn/study-skills/questions' });
+    expect(card('learn')).toEqual({ name: 'learn', href: sampleHref('learn-mode') });
+    expect(card('fill-in')).toEqual({ name: 'fill-in', href: sampleHref('fill-in') });
+    expect(card('questions')).toEqual({ name: 'questions', href: sampleHref('questions') });
     expect(card('review')).toEqual({ name: 'review', href: undefined });
     expect(card('level-test')).toEqual({ name: 'level test', href: undefined });
     expect(html).not.toContain('id="mode-lesson"');

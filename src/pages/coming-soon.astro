@@ -3,6 +3,8 @@ import Layout from '../layouts/Layout.astro';
 import { courses, roadmap } from '../config/courses';
 
 const plannedCourses = courses.filter((c) => c.status === 'coming-soon');
+import { lessonEntryHref } from '../lessons/draftgate';
+const entryHref = lessonEntryHref();
 ---
 
 <Layout
@@ -52,7 +54,7 @@ const plannedCourses = courses.filter((c) => c.status === 'coming-soon');
 
     <div class="mt-10 text-center">
       <a
-        href="/learn/study-skills"
+        href={entryHref}
         class="glass-button inline-flex min-h-11 items-center justify-center"
       >
         explore available lessons
