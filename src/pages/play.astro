@@ -32,7 +32,7 @@ const later = [...dailyGames.filter((game) => !game.ready), ...(showCrossword ? 
 const hubGames = [pulse, sudokuGame, ...(showCrossword ? [crossword] : []), wordPath].map((game) => ({ id: game.id, name: game.name, line: game.line, href: gamePages[game.id] }));
 ---
 
-<Layout title="daily games" description="four short puzzles every day: a word to guess, sudoku, a small crossword and a word path. sample puzzles for now." socialImage="/share/games-scene.png">
+<Layout title="daily games" description="short puzzles every day: a word to guess, sudoku and a word path. sample puzzles for now." socialImage="/share/games-scene.png">
   <article class="veil mx-auto mt-6 max-w-prose p-6 sm:mt-10 sm:p-10">
     <h1 class="display text-center text-title sm:text-title-lg">daily games</h1>
     <p class="mt-3 text-center text-ink-soft">a new puzzle every day. pick a game to play it.</p>
