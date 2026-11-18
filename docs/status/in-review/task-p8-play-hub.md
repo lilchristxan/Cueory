@@ -1,0 +1,1 @@
+status: redesign P8, games hub stage layout (#889). Restyles /play to Games.png and Games-390.png: blister-pack pillo card with sample pills and how-to key, side stack of crossword, sudoku and word path cards with live status, breadcrumb with live date, and preserved sample note, home-screen tip, stats panel and gated cards.

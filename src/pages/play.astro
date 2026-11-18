@@ -1,9 +1,9 @@
 ---
 /**
- * Daily games (D-61, D-63, D-66, D-70, D-71): the hub for the four games, in the lowercase brand voice. Each game is
- * played on its own page (2026-11-17); this page has a card per game with today's status, the shared settings and the
- * stats, and one line saying the puzzles are labelled samples for now. A "coming soon" list shows only while a game is still on
- * its way. The names live in src/config/games.ts, so a rename is one line.
+ * Daily games (D-61, D-63, D-66, D-70, D-71): the hub for the daily games in the lowercase brand voice.
+ * Redesign P8 matching Games.png and Games-390.png: blister-pack game cards in stage layout.
+ * Each game is played on its own page; this page has a card per game with today's status,
+ * the shared settings and stats, and one quiet line saying the puzzles are labelled samples for now.
  */
 import { getCollection } from 'astro:content';
 import Layout from '../layouts/Layout.astro';
@@ -14,62 +14,125 @@ import { dailyGames, gamePages, helloCardsGame, helloCardsIndexWhenApproved, sta
 import { helloCardsPage } from '../islands/hello-cards';
 import { draftsAllowed } from '../islands/anatomylab';
 import { crosswordShown } from '../config/crossword';
+import { dayLabel } from '../islands/daily';
 
 // The hello cards link only exists where the cards may show: drafts stay off the live site (see helloCardsShown).
-const helloEnv = { WORKERS_CI: process.env.WORKERS_CI, WORKERS_CI_BRANCH: process.env.WORKERS_CI_BRANCH, CUEORY_ANATOMY_DRAFTS: process.env.CUEORY_ANATOMY_DRAFTS };
+const helloEnv = {
+  WORKERS_CI: process.env.WORKERS_CI,
+  WORKERS_CI_BRANCH: process.env.WORKERS_CI_BRANCH,
+  CUEORY_ANATOMY_DRAFTS: process.env.CUEORY_ANATOMY_DRAFTS,
+};
 const helloEntries = await getCollection('hello-cards');
 const showHello = helloCardsPage(helloEntries.map(({ data }) => data), helloEnv, helloCardsIndexWhenApproved).linked;
+
 // stat (Task 640) runs on labeled samples, so its link shows only where its page does (src/pages/play/stat.astro).
 const showStat = draftsAllowed(helloEnv);
+
 const pulse = dailyGames.find((game) => game.id === 'pulse')!;
 const sudokuGame = dailyGames.find((game) => game.id === 'triage')!;
 const crossword = dailyGames.find((game) => game.id === 'cueword')!;
 const wordPath = dailyGames.find((game) => game.id === 'suture')!;
+
 // The crossword stays out of the cards (and the stats list) while it is closed (site.ts crosswordOpen).
 const showCrossword = crosswordShown(helloEnv);
-const later = [...dailyGames.filter((game) => !game.ready), ...(showCrossword ? [] : [crossword])];
-// Each game's own page (2026-11-17): the hub links there; old /play#… links are sent on by src/scripts/playhash.ts.
-const hubGames = [pulse, sudokuGame, ...(showCrossword ? [crossword] : []), wordPath].map((game) => ({ id: game.id, name: game.name, line: game.line, href: gamePages[game.id] }));
+const later = dailyGames.filter((game) => !game.ready && game.id !== 'cueword');
+
+// Each game on the board matching Games.png / Games-390.png and copy-deck.md
+const hubGames = [pulse, sudokuGame, crossword, wordPath].map((game) => ({
+  id: game.id,
+  name: game.name,
+  line:
+    game.id === 'pulse'
+      ? 'Guess the five-letter word in six tries.'
+      : game.id === 'cueword'
+        ? "A mini crossword from this week's lessons."
+        : game.id === 'triage'
+          ? 'Fill every row, column and box with the numbers one through nine.'
+          : 'Trace hidden words through the letters.',
+  href: gamePages[game.id],
+}));
+
+const today = new Date();
+const formattedDate = dayLabel(today);
+const todayIso = today.toISOString().split('T')[0];
 ---
 
-<Layout title="daily games" description={`${showCrossword ? 'four short puzzles' : 'three short puzzles'} every day: a word to guess, sudoku, ${showCrossword ? 'a small crossword and ' : 'and '}a word path. sample puzzles for now.`} socialImage="/share/games-scene.png">
-  <article class="veil mx-auto mt-6 max-w-prose p-6 sm:mt-10 sm:p-10">
-    <h1 class="display text-center text-title sm:text-title-lg">daily games</h1>
-    <p class="mt-3 text-center text-ink-soft">a new puzzle every day. pick a game to play it.</p>
-    {/* One quiet line for every game (Christian's brief): the puzzles are labelled samples for now. */}
-    <p class="mt-1 text-center text-sm text-ink-soft" data-testid="sample-note">for now these are sample puzzles with everyday words.</p>
+<Layout
+  title="daily games"
+  description={`${showCrossword ? 'four short puzzles' : 'three short puzzles'} every day: a word to guess, sudoku, ${showCrossword ? 'a small crossword and ' : 'and '}a word path. sample puzzles for now.`}
+  socialImage="/share/games-scene.png"
+>
+  <div class="mx-auto w-full max-w-page py-6 sm:py-10">
+    <!-- Breadcrumb: / daily games · [date] -->
+    <nav aria-label="Breadcrumb" class="mb-6">
+      <h1
+        aria-label="daily games"
+        class="text-sm font-medium tracking-label text-ink-soft inline-flex items-center gap-1.5"
+      >
+        <span aria-hidden="true">/</span>
+        <span>daily games</span>
+        <span aria-hidden="true">·</span>
+        <time datetime={todayIso}>{formattedDate}</time>
+      </h1>
+    </nav>
+
     {/* Home screen tip (L2): only after puzzles finished on 3 different days, decided on page load, never mid-game. */}
     <HomeScreenTip client:only="react" />
     <noscript><p>to add cueory to your home screen, use your browser's menu. daily games need JavaScript.</p></noscript>
-    {/* The four games as cards (#735 status included), each opening the game's own page. */}
-    <PlayStatus client:only="react" games={hubGames} />
+
+    {/* The four games as cards in stage layout matching Games.png and Games-390.png */}
+    <PlayStatus client:only="react" games={hubGames} isComingSoonCrossword={!showCrossword} />
     <noscript>
       <ul class="mt-8 flex flex-col gap-3" data-testid="play-links">
-        {hubGames.map((game) => <li><a href={game.href} class="font-medium">{game.name}</a><span class="text-ink-soft">: {game.line}</span></li>)}
+        {
+          hubGames.map((game) => (
+            <li>
+              <a href={game.href} class="font-medium">
+                {game.name}
+              </a>
+              <span class="text-ink-soft">: {game.line}</span>
+            </li>
+          ))
+        }
       </ul>
     </noscript>
-    {/* Shared game settings (#734) open from each game's gear (Christian's brief), so the hub has no settings button. */}
 
-    {/* Private stats (D-76): off until the student turns them on, kept only in this browser. Without JavaScript there are
-    no games to count, so nothing shows. */}
+    {/* One quiet line for every game (Christian's brief): the puzzles are labelled samples for now. */}
+    <p class="mt-8 text-center text-sm text-ink-soft" data-testid="sample-note">
+      for now these are sample puzzles with everyday words.
+    </p>
+
+    {/* Private stats (D-76): off until the student turns them on, kept only in this browser. */}
     <GameStatsPanel client:only="react" games={hubGames.map((game) => game.id)} />
 
-    {(showHello || showStat) && <section class="mt-16" aria-labelledby="more-games-heading">
-      <h2 id="more-games-heading" class="text-2xl font-medium">more games</h2>
-      {showHello && <p class="mt-2">
-        <a href={helloCardsGame.href} class="font-medium" data-testid="hello-cards-link">{helloCardsGame.name}</a>
-        <span class="text-ink-soft">: {helloCardsGame.line}</span>
-      </p>}
-      {showStat && <p class="mt-2">
-        <a href={statGame.href} class="font-medium" data-testid="stat-link">{statGame.name}</a>
-        <span class="text-ink-soft">: {statGame.line}</span>
-      </p>}
-    </section>}
+    {
+      (showHello || showStat) && (
+        <section class="mt-16" aria-labelledby="more-games-heading">
+          <h2 id="more-games-heading" class="text-2xl font-medium">
+            more games
+          </h2>
+          {showHello && <p class="mt-2">
+            <a href={helloCardsGame.href} class="font-medium" data-testid="hello-cards-link">
+              {helloCardsGame.name}
+            </a>
+            <span class="text-ink-soft">: {helloCardsGame.line}</span>
+          </p>}
+          {showStat && <p class="mt-2">
+            <a href={statGame.href} class="font-medium" data-testid="stat-link">
+              {statGame.name}
+            </a>
+            <span class="text-ink-soft">: {statGame.line}</span>
+          </p>}
+        </section>
+      )
+    }
 
     {
       later.length > 0 && (
         <section class="mt-16" aria-labelledby="later-heading">
-          <h2 id="later-heading" class="text-2xl font-medium">coming soon</h2>
+          <h2 id="later-heading" class="text-2xl font-medium">
+            coming soon
+          </h2>
           <ul class="mt-4 flex flex-col gap-3">
             {later.map((game) => (
               <li>
@@ -81,7 +144,7 @@ const hubGames = [pulse, sudokuGame, ...(showCrossword ? [crossword] : []), word
         </section>
       )
     }
-  </article>
+  </div>
 </Layout>
 
 <script>

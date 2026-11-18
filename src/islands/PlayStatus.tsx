@@ -18,16 +18,17 @@ interface Row {
 interface Props {
   /** The games in the order the page shows them. */
   games: readonly Row[];
+  isComingSoonCrossword?: boolean;
 }
 
 const readStats = (): SavedStats => loadStats(browserStorage(), localDay(new Date()));
 
 /**
- * The /play hub's game cards: each game's name, its one-line description and today's status (issue #735), from this
- * device only; the logic is in ./playstatus. Each card opens the game's own page. Rendered only in the browser
- * (client:only); without JavaScript the hub shows plain links instead, with no status, so none can be wrong.
+ * The /play hub's game cards (redesign P8, matching Games.png / Games-390.png):
+ * Stage layout with pillo blister pack card on the left, and crossword, sudoku, word path on the right.
+ * Each card shows its name, one-line description, and today's status from this device only.
  */
-export default function PlayStatus({ games }: Props) {
+export default function PlayStatus({ games, isComingSoonCrossword = false }: Props) {
   const ids = games.map((game) => game.id);
   const [today, setToday] = useState(() => localDay(new Date()));
   const [saved, setSaved] = useState(readStats);
@@ -70,35 +71,239 @@ export default function PlayStatus({ games }: Props) {
       window.removeEventListener('storage', storage);
       document.removeEventListener('visibilitychange', visible);
     };
-    // The games never change on this page.
   }, []);
 
+  const pilloGame = games.find((g) => g.id === 'pulse') || {
+    id: 'pulse',
+    name: 'pillo',
+    line: 'Guess the five-letter word in six tries.',
+    href: '/play/pillo',
+  };
+  const crosswordGame = games.find((g) => g.id === 'cueword') || {
+    id: 'cueword',
+    name: 'crossword',
+    line: "A mini crossword from this week's lessons.",
+    href: '/play/crossword',
+  };
+  const sudokuGame = games.find((g) => g.id === 'triage') || {
+    id: 'triage',
+    name: 'sudoku',
+    line: 'Fill every row, column and box with the numbers one through nine.',
+    href: '/play/sudoku',
+  };
+  const wordPathGame = games.find((g) => g.id === 'suture') || {
+    id: 'suture',
+    name: 'word path',
+    line: 'Trace hidden words through the letters.',
+    href: '/play/word-path',
+  };
+
+  const pilloStatus = statusFor('pulse', today, saved.stats, heard);
+  const pilloText = STATUS_TEXT[pilloStatus];
+
+  const crosswordStatus = statusFor('cueword', today, saved.stats, heard);
+  const crosswordText = STATUS_TEXT[crosswordStatus];
+
+  const sudokuStatus = statusFor('triage', today, saved.stats, heard);
+  const sudokuText = STATUS_TEXT[sudokuStatus];
+
+  const wordPathStatus = statusFor('suture', today, saved.stats, heard);
+  const wordPathText = STATUS_TEXT[wordPathStatus];
+
   return (
-    <section className="mt-8" aria-labelledby="today-status-heading" data-testid="play-status">
-      <h2 id="today-status-heading" className="text-lg font-medium">today</h2>
-      <ul className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
-        {games.map((game) => {
-          const status = statusFor(game.id, today, saved.stats, heard);
-          const text = STATUS_TEXT[status];
-          return (
-            <li key={game.id} className="min-w-0" data-testid={`play-status-${game.id}`} data-status={status}>
-              <a
-                href={game.href}
-                className="flex h-full min-h-11 flex-col gap-2 rounded-lg border border-line bg-page p-4 text-ink no-underline hover:bg-surface"
+    <section className="mt-4" aria-labelledby="today-status-heading" data-testid="play-status">
+      <h2 id="today-status-heading" className="sr-only">today</h2>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+        {/* Left Column: Pillo (spans 2 columns on desktop) */}
+        <div
+          data-testid="play-status-pulse"
+          data-status={pilloStatus}
+          className="h-full min-w-0 lg:col-span-2"
+        >
+          <a
+            href={pilloGame.href}
+            className="veil flex flex-col justify-between h-full p-6 sm:p-8 text-ink no-underline group hover:border-line transition-colors min-h-11"
+          >
+            <div>
+              <span className="display block text-3xl sm:text-4xl text-ink font-medium">{pilloGame.name}</span>
+              <p className="mt-2 text-sm text-ink-soft">{pilloGame.line}</p>
+            </div>
+
+            <div className="mt-6 flex flex-col md:flex-row gap-6 lg:gap-8 items-start">
+              {/* Blister pack illustration */}
+              <div
+                className="w-full max-w-sm bg-surface p-3 sm:p-5 rounded-xl select-none shrink-0"
+                aria-hidden="true"
               >
-                <span className="wrap-anywhere text-lg font-medium">{game.name}</span>
-                <span className="wrap-anywhere text-sm text-ink-soft">{game.line}</span>
-                <span className="mt-auto inline-flex items-center gap-2 text-sm text-ink-soft">
-                  <span aria-hidden="true">{text.symbol}</span>
-                  <span>{text.label}</span>
+                <div className="grid grid-cols-5 gap-2 sm:gap-2.5">
+                  {/* Row 1: A×, B•, C×, D✓, E× */}
+                  <div className="aspect-square rounded-full bg-page flex flex-col items-center justify-center">
+                    <span className="text-xs sm:text-base font-bold text-ink leading-none">A</span>
+                    <span className="text-xs text-ink leading-none mt-0.5">×</span>
+                  </div>
+                  <div className="aspect-square rounded-full bg-soft flex flex-col items-center justify-center">
+                    <span className="text-xs sm:text-base font-bold text-ink leading-none">B</span>
+                    <span className="text-xs text-ink leading-none mt-0.5">•</span>
+                  </div>
+                  <div className="aspect-square rounded-full bg-page flex flex-col items-center justify-center">
+                    <span className="text-xs sm:text-base font-bold text-ink leading-none">C</span>
+                    <span className="text-xs text-ink leading-none mt-0.5">×</span>
+                  </div>
+                  <div className="aspect-square rounded-full bg-ink flex flex-col items-center justify-center">
+                    <span className="text-xs sm:text-base font-bold text-on-button leading-none">D</span>
+                    <span className="text-xs text-on-button leading-none mt-0.5">✓</span>
+                  </div>
+                  <div className="aspect-square rounded-full bg-page flex flex-col items-center justify-center">
+                    <span className="text-xs sm:text-base font-bold text-ink leading-none">E</span>
+                    <span className="text-xs text-ink leading-none mt-0.5">×</span>
+                  </div>
+
+                  {/* Row 2: F×, G•, H✓, I×, J✓ */}
+                  <div className="aspect-square rounded-full bg-page flex flex-col items-center justify-center">
+                    <span className="text-xs sm:text-base font-bold text-ink leading-none">F</span>
+                    <span className="text-xs text-ink leading-none mt-0.5">×</span>
+                  </div>
+                  <div className="aspect-square rounded-full bg-soft flex flex-col items-center justify-center">
+                    <span className="text-xs sm:text-base font-bold text-ink leading-none">G</span>
+                    <span className="text-xs text-ink leading-none mt-0.5">•</span>
+                  </div>
+                  <div className="aspect-square rounded-full bg-ink flex flex-col items-center justify-center">
+                    <span className="text-xs sm:text-base font-bold text-on-button leading-none">H</span>
+                    <span className="text-xs text-on-button leading-none mt-0.5">✓</span>
+                  </div>
+                  <div className="aspect-square rounded-full bg-page flex flex-col items-center justify-center">
+                    <span className="text-xs sm:text-base font-bold text-ink leading-none">I</span>
+                    <span className="text-xs text-ink leading-none mt-0.5">×</span>
+                  </div>
+                  <div className="aspect-square rounded-full bg-ink flex flex-col items-center justify-center">
+                    <span className="text-xs sm:text-base font-bold text-on-button leading-none">J</span>
+                    <span className="text-xs text-on-button leading-none mt-0.5">✓</span>
+                  </div>
+
+                  {/* Rows 3-6: 20 empty pockets */}
+                  {Array.from({ length: 20 }).map((_, i) => (
+                    <div
+                      key={i}
+                      className="aspect-square rounded-full bg-page border border-dashed border-line"
+                    />
+                  ))}
+                </div>
+              </div>
+
+              {/* Key */}
+              <div className="flex-1 min-w-0">
+                <h3 className="text-sm font-bold text-ink">how to read the pack</h3>
+                <ul className="mt-3 space-y-2 text-sm">
+                  <li className="flex items-center gap-1.5">
+                    <span className="font-bold text-ink">✓ filled</span>
+                    <span className="text-ink-soft">right letter, right spot</span>
+                  </li>
+                  <li className="flex items-center gap-1.5">
+                    <span className="font-bold text-ink">• half</span>
+                    <span className="text-ink-soft">in the word, wrong spot</span>
+                  </li>
+                  <li className="flex items-center gap-1.5">
+                    <span className="font-bold text-ink">× empty</span>
+                    <span className="text-ink-soft">not in the word</span>
+                  </li>
+                </ul>
+
+                {/* Status */}
+                <div className="mt-6 pt-4 border-t border-line">
+                  <span className="inline-flex items-center gap-2 text-sm font-semibold text-ink">
+                    <span aria-hidden="true">{pilloText.symbol}</span>
+                    <span>{pilloText.label}</span>
+                  </span>
+                </div>
+              </div>
+            </div>
+          </a>
+        </div>
+
+        {/* Right Column: crossword, sudoku, word path */}
+        <div className="flex flex-col gap-4">
+          {/* crossword */}
+          <div
+            data-testid="play-status-cueword"
+            data-status={crosswordStatus}
+            className="min-w-0"
+          >
+            <a
+              href={crosswordGame.href}
+              className="veil flex flex-col justify-between p-6 sm:p-8 min-h-36 text-ink no-underline group hover:border-line transition-colors"
+            >
+              <div>
+                <span className="display block text-2xl text-ink font-medium">{crosswordGame.name}</span>
+                <p className="mt-2 text-sm text-ink-soft">{crosswordGame.line}</p>
+              </div>
+              <div className="mt-4 pt-2">
+                {isComingSoonCrossword ? (
+                  <span className="text-sm font-semibold text-ink">
+                    <span className="sr-only">
+                      {crosswordText.symbol} {crosswordText.label}
+                    </span>
+                    <span>coming soon</span>
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-2 text-sm font-semibold text-ink">
+                    <span aria-hidden="true">{crosswordText.symbol}</span>
+                    <span>{crosswordText.label}</span>
+                  </span>
+                )}
+              </div>
+            </a>
+          </div>
+
+          {/* sudoku */}
+          <div
+            data-testid="play-status-triage"
+            data-status={sudokuStatus}
+            className="min-w-0"
+          >
+            <a
+              href={sudokuGame.href}
+              className="veil flex flex-col justify-between p-6 sm:p-8 min-h-36 text-ink no-underline group hover:border-line transition-colors"
+            >
+              <div>
+                <span className="display block text-2xl text-ink font-medium">{sudokuGame.name}</span>
+                <p className="mt-2 text-sm text-ink-soft">{sudokuGame.line}</p>
+              </div>
+              <div className="mt-4 pt-2">
+                <span className="inline-flex items-center gap-2 text-sm font-semibold text-ink">
+                  <span aria-hidden="true">{sudokuText.symbol}</span>
+                  <span>{sudokuText.label}</span>
                 </span>
-              </a>
-            </li>
-          );
-        })}
-      </ul>
+              </div>
+            </a>
+          </div>
+
+          {/* word path */}
+          <div
+            data-testid="play-status-suture"
+            data-status={wordPathStatus}
+            className="min-w-0"
+          >
+            <a
+              href={wordPathGame.href}
+              className="veil flex flex-col justify-between p-6 sm:p-8 min-h-36 text-ink no-underline group hover:border-line transition-colors"
+            >
+              <div>
+                <span className="display block text-2xl text-ink font-medium">{wordPathGame.name}</span>
+                <p className="mt-2 text-sm text-ink-soft">{wordPathGame.line}</p>
+              </div>
+              <div className="mt-4 pt-2">
+                <span className="inline-flex items-center gap-2 text-sm font-semibold text-ink">
+                  <span aria-hidden="true">{wordPathText.symbol}</span>
+                  <span>{wordPathText.label}</span>
+                </span>
+              </div>
+            </a>
+          </div>
+        </div>
+      </div>
+
       {!saved.on && (
-        <p className="mt-2 text-sm text-ink-soft" data-testid="play-status-note">
+        <p className="mt-4 text-sm text-ink-soft" data-testid="play-status-note">
           checked on this device only. this browser won't keep stats, so finished games aren't marked after you leave.
         </p>
       )}
