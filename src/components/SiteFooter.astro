@@ -44,7 +44,7 @@ const barButton =
   <div class="mx-auto grid h-14 w-full max-w-page grid-cols-3 items-center px-gutter">
     {
       !hideFlag && (
-        <div class="col-start-1 justify-self-start" data-footer-flag>
+        <div class="col-start-1 justify-self-start" id="footer-flag" data-footer-flag>
           <FlagMount
             client:only="react"
             page={Astro.url.pathname}
