@@ -1,4 +1,3 @@
-import GameFlag from './GameFlag';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { browserStorage } from '../scripts/storage';
 import { printGame } from './gameprint';
@@ -293,7 +292,6 @@ export default function SudokuGame() {
       <div className="sudoku-status" data-testid="sudoku-status">
         <span className="sudoku-time">{settings.showTimer && <>time: <strong>{elapsed}</strong></>}</span>
         <span className="sudoku-errors">{settings.showErrors ? <>error: <strong>{errors}</strong></> : null}</span>
-        <GameFlag name={gameName('triage')} />
       </div>
       {/* Five equal icon buttons spread across the board's width: settings, pause or play, print, stats, how to play. */}
       <div className="sudoku-toolbar" role="group" aria-label="sudoku tools" data-testid="sudoku-toolbar">

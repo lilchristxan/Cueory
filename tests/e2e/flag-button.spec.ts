@@ -39,7 +39,7 @@ for (const { name, url } of pages) {
     // Signed out: the panel opens above the footer bar and offers the email fallback (Task 63).
     await expect(btn).toHaveAttribute('aria-expanded', 'true');
     const panel = page.getByTestId('flag-form');
-    await expect(panel).toContainText('a free account is needed to send a report');
+    await expect(panel).toContainText('email us at');
     await expect(panel.getByRole('link', { name: 'hello@cueory.app' })).toBeVisible();
 
     // Escape closes it and returns focus to the flag.

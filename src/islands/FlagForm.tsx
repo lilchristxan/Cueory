@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { site } from '../config/site';
+import { flagMailto } from '../scripts/footer';
 import type { SendResult } from './flagsend';
 import { charactersLeft, checkReport, PATIENT_INFO_WARNING, REASONS, reasonInWords, type FlagProblem, type FlagReport, type Reason } from './flag';
 
@@ -32,14 +33,14 @@ export default function FlagForm(props: Props) {
 }
 
 
-/** A signed-out student can still report a problem by email while accounts are being set up. */
-export function SignedOutReportHelp() {
-  return <div>
+/** A signed-out student can still report a problem by email while accounts are being set up. The email names this page. */
+export function SignedOutReportHelp({ page = '/' }: { page?: string }) {
+  return <div className="[overflow-wrap:anywhere]">
     <p className="text-ink">
-    a free account is needed to send a report. you can email us at{' '}
-    <a href={`mailto:${site.contactEmail}`} className="underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2">
+    email us at{' '}
+    <a href={flagMailto(site.contactEmail, page)} className="underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2">
       {site.contactEmail}
-    </a> instead.
+    </a> and we'll read it.
     </p>
     <p className="mt-2 text-sm text-ink" data-testid="flag-patient-warning">{PATIENT_INFO_WARNING}</p>
   </div>;
@@ -127,10 +128,10 @@ function ReportForm({ page, itemId, itemVersionId, signedIn, send, onOpen, varia
     </button>
     {open && <div ref={panel} id={panelId} tabIndex={-1}
       className={icon
-        ? 'absolute bottom-full left-0 z-10 mb-2 max-h-96 w-flag-panel overflow-y-auto rounded-md border border-line bg-page p-4 shadow-lift'
+        ? 'absolute bottom-full left-0 z-10 mb-2 max-h-[calc(100dvh-8rem)] w-flag-panel max-w-full overflow-y-auto [overflow-wrap:anywhere] rounded-md border border-line bg-page p-4 shadow-lift'
         : 'mt-3 rounded-md border border-line bg-page p-4'}
       onKeyDown={event => { if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); close(); } }}>
-      {signedIn === null ? <p className="text-ink">checking your account…</p> : !signedIn ? <SignedOutReportHelp /> : <form noValidate onSubmit={event => { event.preventDefault(); void submit(); }}>
+      {signedIn === null ? <p className="text-ink">checking your account…</p> : !signedIn ? <SignedOutReportHelp page={page} /> : <form noValidate onSubmit={event => { event.preventDefault(); void submit(); }}>
         <fieldset disabled={pending} aria-describedby={error('reason') ? errorId('reason') : undefined}>
           <legend className="font-medium">what's wrong?</legend>
           <div className="mt-2 grid gap-2">
