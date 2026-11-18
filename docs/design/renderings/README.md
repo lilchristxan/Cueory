@@ -2,7 +2,15 @@
 
 Christian's approved redesign boards, rendered from his exported design page (the claude.ai "Design" canvas) in
 Chromium at 1440 px wide, with the brand fonts (Lato, Bodoni Moda), the cueory logo artwork, the pillo blister-pack art
-and the draped-silk background all showing. Build to match these.
+and the draped-silk background all showing. Build to match these, subject to the rules below.
+
+**The rules win over the pictures.** Christian's settled defaults in
+[redesign-plan.md, "Settled defaults"](../redesign-plan.md#settled-defaults-1-11-christian-18-nov-2026-0829-the-rules-win-over-the-renderings)
+and the shipped text in [copy-deck.md](../copy-deck.md) override these images wherever they differ. In particular:
+pillo uses brand colours plus symbols, never the green and yellow tiles drawn in `Pillo.png`, and never the subtitle
+"a nursing wordle" or any Wordle, Connections, Strands or NYT name or look (AGENTS.md, CLAUDE.md); sign-in, the
+"start studying" button, crossword, hello cards and the anatomy lab show as coming soon while closed; claims must be
+true today. Treat a difference between a picture and those rules as the rules being right.
 
 **Names and numbers are samples.** The boards' own sticky note says: "Draft renderings for Christian's review. Colors
 and logo from brand spec v1.0 (ivory #F9F5EF, espresso #3E2C23, charcoal #1C1917, linen/sand/taupe neutrals). Headings
