@@ -272,16 +272,16 @@
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) .building-strip-icon {
       box-sizing: content-box;
-      padding: 2px;
-      border-radius: 9999px;
+      padding: var(--notice-icon-disc);
+      border-radius: var(--radius-pill);
       background-color: var(--color-ink);
     }
   }
 
   :root[data-theme="dark"] .building-strip-icon {
     box-sizing: content-box;
-    padding: 2px;
-    border-radius: 9999px;
+    padding: var(--notice-icon-disc);
+    border-radius: var(--radius-pill);
     background-color: var(--color-ink);
   }
 
