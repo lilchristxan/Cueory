@@ -34,9 +34,9 @@ const { mode, linkLabel, href } = Astro.props;
   {href ? (
     <a
       href={href}
-      class="mt-auto inline-flex min-h-11 max-w-full items-center rounded-md border border-control px-3 py-2 text-sm font-medium text-ink no-underline hover:bg-page focus-visible:bg-page"
+      class="mt-auto inline-flex min-h-11 items-center rounded-md border border-control px-3 py-2 text-sm font-medium text-ink no-underline hover:bg-page focus-visible:bg-page"
     >
-      <span class="min-w-0 wrap-anywhere">{linkLabel}</span>
+      <span class="min-w-0">{linkLabel}</span>
       <span class="ml-2 shrink-0" aria-hidden="true">→</span>
     </a>
   ) : (
