@@ -84,7 +84,7 @@ test.describe('footer bar', () => {
       await expect(footerOf(page).getByRole('button', { name: 'flag or comment', exact: true })).toBeVisible();
       await flags.click();
       await expect(flags).toHaveAttribute('aria-expanded', 'true');
-      await expect(page.getByTestId('flag-form')).toContainText('a free account is needed to send a report');
+      await expect(page.getByTestId('flag-form')).toContainText('to report a problem or send feedback, email us at');
     }
   });
 

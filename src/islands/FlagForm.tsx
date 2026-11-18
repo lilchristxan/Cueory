@@ -32,14 +32,14 @@ export default function FlagForm(props: Props) {
 }
 
 
-/** A signed-out student can still report a problem by email while accounts are being set up. */
+/** Accounts are closed at launch, so reports and feedback go by email. */
 export function SignedOutReportHelp() {
   return <div>
     <p className="text-ink">
-    a free account is needed to send a report. you can email us at{' '}
+    to report a problem or send feedback, email us at{' '}
     <a href={`mailto:${site.contactEmail}`} className="underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2">
       {site.contactEmail}
-    </a> instead.
+    </a>.
     </p>
     <p className="mt-2 text-sm text-ink" data-testid="flag-patient-warning">{PATIENT_INFO_WARNING}</p>
   </div>;

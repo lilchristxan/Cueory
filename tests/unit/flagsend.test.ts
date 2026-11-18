@@ -83,7 +83,7 @@ describe('makeSend for submit_flag', () => {
 describe('signed-out report help', () => {
   it('shows the configured email address as a mailto link without a send button', () => {
     const html = renderToStaticMarkup(createElement(SignedOutReportHelp));
-    expect(html).toContain('a free account is needed');
+    expect(html).toContain('to report a problem or send feedback, email us at');
     expect(html).toContain('href="mailto:' + site.contactEmail + '"');
     expect(html).toContain(site.contactEmail);
     expect(html).toContain(PATIENT_INFO_WARNING.split("'")[1]); // the text after the apostrophe, which React escapes
