@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { kitLandingUrl, newsletter, signupState } from '../../src/config/site';
+import { kitFormAction, kitLandingUrl, newsletter, signupState } from '../../src/config/site';
 import { sizeOf } from './projects';
 
 const homeSizes = new Set(['phone', 'desktop']);
@@ -70,6 +70,21 @@ test.describe('home page-specific behavior', () => {
       await page.keyboard.press('Tab');
       await expect(landing).toBeFocused();
       expect(await landing.evaluate((el) => el.matches(':focus-visible') && getComputedStyle(el).outlineStyle !== 'none')).toBe(true);
+    }
+    if (state === 'form') {
+      // The configured Kit path remains a plain HTML form. Do not submit it: that would create a real subscription.
+      const form = page.getByTestId('signup-form');
+      const email = form.getByLabel('email address');
+      const submit = form.getByRole('button', { name: 'join the list' });
+      await expect(form).toHaveAttribute('action', kitFormAction(newsletter.formAction));
+      await expect(email).toHaveAttribute('name', newsletter.emailFieldName);
+      await expect(email).toHaveAttribute('type', 'email');
+      await expect(email).toHaveAttribute('placeholder', 'your email');
+      await expect(submit).toBeVisible();
+      await email.scrollIntoViewIfNeeded();
+      await email.focus();
+      await page.keyboard.press('Tab');
+      await expect(submit).toBeFocused();
     }
   });
 

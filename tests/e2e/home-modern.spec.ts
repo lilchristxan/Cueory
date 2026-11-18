@@ -1,6 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
-import { accountLaunch, accountsOpen, newsletter, showsHeroJoin } from '../../src/config/site';
+import { accountLaunch, accountsOpen, newsletter, showsHeroJoin, signupState } from '../../src/config/site';
 
 // The hero's ways in (lane 14 home polish): today's games, and the quiet join link once it leads somewhere.
 const launch = accountLaunch(accountsOpen);
@@ -87,6 +87,19 @@ test.describe('home without JavaScript', () => {
     await expect(page.getByRole('heading', { level: 2, name: 'a few minutes, every day.' })).toBeVisible();
     await expect(page.getByTestId('games-stage')).toBeVisible();
     await expect(page.getByRole('heading', { level: 2, name: 'coming soon' })).toBeVisible();
+    if (signupState(newsletter.formAction, newsletter.landingUrl) === 'form') {
+      // This is intentionally not submitted: the browser must retain a useful, native form without a Kit script.
+      const form = page.getByTestId('signup-form');
+      const email = form.getByLabel('email address');
+      const submit = form.getByRole('button', { name: 'join the list' });
+      await expect(form).toBeVisible();
+      await expect(email).toHaveAttribute('type', 'email');
+      await expect(email).toHaveAttribute('placeholder', 'your email');
+      await expect(submit).toBeVisible();
+      await email.focus();
+      await page.keyboard.press('Tab');
+      await expect(submit).toBeFocused();
+    }
   });
 });
 
