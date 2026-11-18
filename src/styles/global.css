@@ -250,15 +250,15 @@
     background-color: var(--color-silk-base);
     background-image:
       var(--silk-grain),
-      radial-gradient(ellipse 55% 42% at 8% 12%, rgb(var(--silk-fold-rgb) / 0.16), transparent 72%),
-      radial-gradient(ellipse 48% 38% at 92% 22%, rgb(var(--silk-fold-rgb) / 0.12), transparent 70%),
+      radial-gradient(ellipse 55% 42% at 8% 12%, rgb(var(--silk-fold-rgb) / var(--silk-fold-alpha)), transparent 72%),
+      radial-gradient(ellipse 48% 38% at 92% 22%, rgb(var(--silk-fold-rgb) / calc(var(--silk-fold-alpha) * 0.75)), transparent 70%),
       linear-gradient(180deg, var(--color-silk-base), var(--color-silk-shade));
     background-size: 220px 220px, auto, auto, auto;
   }
 
   .building-strip {
     background: color-mix(in srgb, var(--color-surface) 82%, var(--color-silk-tint));
-    letter-spacing: 0.01em;
+    letter-spacing: var(--tracking-label);
   }
 
   .building-strip-icon {
