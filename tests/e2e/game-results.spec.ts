@@ -99,7 +99,18 @@ test('the page behind an open result cannot be reached, and comes back on close'
   await expect(behind).toBeFocused();
 });
 
-test('an open result locks page scrolling and restores the exact page position and styles', async ({ page }) => {
+/**
+ * Tries to scroll the page by `dy`. A mouse wheel where the browser has one; mobile WebKit (the iPhone project) has
+ * none ("Mouse wheel is not supported in mobile WebKit"), so there the scroll is asked of the page itself with
+ * scrollBy. Either way it is only a request: a locked page (body fixed, overflow hidden) must ignore it, an unlocked
+ * one must move.
+ */
+async function tryScroll(page: Page, browserName: string, isMobile: boolean | undefined, dy: number) {
+  if (browserName === 'webkit' && isMobile) await page.evaluate((y) => window.scrollBy(0, y), dy);
+  else await page.mouse.wheel(0, dy);
+}
+
+test('an open result locks page scrolling and restores the exact page position and styles', async ({ page, browserName, isMobile }) => {
   // Sudoku's page is tall enough on a phone to scroll 300 px past the starting point; any game page has the dialog.
   await page.goto('/play/sudoku');
   await expect(page.getByTestId('sudoku').getByRole('gridcell')).toHaveCount(81);
@@ -159,7 +170,7 @@ test('an open result locks page scrolling and restores the exact page position a
   });
 
   const lockedY = await page.evaluate(() => scrollY);
-  await page.mouse.wheel(0, 400);
+  await tryScroll(page, browserName, isMobile, 400);
   await page.evaluate(() => new Promise<void>((resolve) => {
     requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
   }));
@@ -184,7 +195,7 @@ test('an open result locks page scrolling and restores the exact page position a
     },
   }))).toEqual({ root: before.root, body: before.body });
 
-  await page.mouse.wheel(0, 300);
+  await tryScroll(page, browserName, isMobile, 300);
   await expect.poll(() => page.evaluate(() => scrollY)).toBeGreaterThan(before.y);
 });
 
