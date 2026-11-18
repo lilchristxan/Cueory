@@ -146,6 +146,17 @@ async function tabAudit(page: Page): Promise<string[]> {
     lastIndex = focused.index;
     lastVisibleFocus = hasIndicator;
 
+    // At the last stop Chromium moves focus into the browser's own interface (activeElement is null above) or wraps
+    // round, but Firefox, which has no such interface under Playwright, leaves focus on the last control however often
+    // Tab is pressed. Once every eligible control has been visited, a few more presses on the same control are the end
+    // of the page, not a stuck focus. (Date inputs repeat for their segments, at most 2 extra; 4 leaves room.)
+    // Before every control has been reached, a repeated stop is still reported as stuck.
+    if (sameElementTabs >= 4 && eligible.every((control) => seen.has(control.index) || control.index === focused.index)) {
+      seen.add(focused.index);
+      finished = true;
+      break;
+    }
+
     if (sameElementTabs > 8) {
       problems.push(focused.name + ': keyboard focus did not advance after repeated Tab presses');
       break;
