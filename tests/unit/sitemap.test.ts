@@ -49,7 +49,7 @@ describe('sitemap', () => {
   });
 
   it('rejects noindex routes even when someone mistakenly supplies them to the sitemap', () => {
-    const xml = sitemapXml(['/', '/signin', '/preview/states']);
+    const xml = sitemapXml(['/', '/signin', '/progress', '/preview/states']);
     expect([...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((match) => match[1]))
       .toEqual(['https://cueory.app/']);
     expect(routeDeclaresNoindex('/signin')).toBe(true);

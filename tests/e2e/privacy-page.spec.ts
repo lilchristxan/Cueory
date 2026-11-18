@@ -102,4 +102,5 @@ test('is final, indexable and available to site search', async ({ page }) => {
   await expect(page.getByRole('main')).not.toContainText('Draft for review.');
   await expect(page.locator('head meta[name="robots"]')).toHaveCount(0);
   await expect(page.locator('main[data-pagefind-body]')).toHaveCount(1);
+  await expect(page.getByRole('main').getByText('Effective 19 November 2026', { exact: true })).toBeVisible();
 });
