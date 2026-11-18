@@ -210,6 +210,7 @@
   --radius-lg: 1rem;
   --radius-xl: 1rem;            /* frosted panels and cards on marketing pages (16 px, D-62) */
   --radius-pill: 999px;
+  --notice-icon-disc: 0.125rem; /* light disc margin around the building-strip icon in Evening */
 
   /* ---------- Depth (marketing pages) ---------- */
   --shadow-soft: 0 12px 32px rgb(var(--shadow-tint) / 0.08); /* one soft shadow for frosted panels (D-62) */
