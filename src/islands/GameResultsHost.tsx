@@ -180,7 +180,7 @@ export default function GameResultsHost() {
         >
           <span aria-hidden="true">×</span>
         </button>
-        <p className="result-meta text-[length:var(--cueory-label-size)] font-[var(--cueory-label-weight)] tracking-[var(--cueory-label-tracking)] uppercase text-ink-soft wrap-break-word">
+        <p className="result-meta text-[length:var(--cueory-label-size)] font-normal text-ink-soft wrap-break-word">
           {card.name}{card.level ? ` · ${card.level}` : ''} · {card.date}
         </p>
 
@@ -209,7 +209,7 @@ export default function GameResultsHost() {
         </div>
 
         <p role="status" className="mt-3 min-h-6 text-sm text-ink-soft break-all">{status}</p>
-        <p className="mt-4 text-center text-sm text-ink-soft" data-testid="game-result-next-message">{card.nextMessage ?? 'on a phone, share opens your device options. a new game comes out tomorrow.'}</p>
+        <p className="mt-4 text-center text-sm text-ink-soft" data-testid="game-result-next-message">{card.nextMessage ?? 'on a phone, share opens your device options.'}</p>
       </div>
     </div>
   );
