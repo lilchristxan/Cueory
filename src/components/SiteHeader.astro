@@ -1,6 +1,7 @@
 ---
 import AccountCorner from './AccountCorner.astro';
 import SiteMenu from './SiteMenu.astro';
+import SiteNav from './SiteNav.astro';
 import Wordmark from './Wordmark.astro';
 import { site } from '../config/site';
 
@@ -18,6 +19,10 @@ interface Props {
 }
 
 const { quiet = false, overlay = false, accountsOff = false } = Astro.props;
+// Redesign P2: from the large breakpoint up, pages that aren't study screens show the persistent pill between the
+// logo and the account corner (SiteNav.astro). Study screens keep the quiet corners only, and below that breakpoint
+// the ☰ panel stays the menu, so nothing changes on phones and tablets.
+const bar = !quiet;
 ---
 
 <header
@@ -28,12 +33,12 @@ const { quiet = false, overlay = false, accountsOff = false } = Astro.props;
   ]}
 >
   <!-- ☰ in the top-left corner, the account in the top-right (D-46). -->
-  <div class="flex flex-1 justify-start">
+  <div class:list={['flex flex-1 justify-start', bar && 'lg:flex-none']}>
     <SiteMenu quiet={quiet} />
   </div>
   {
     overlay ? (
-      <span />
+      <span class:list={[bar && 'lg:hidden']} />
     ) : (
       <a href="/" class="p-(--logo-clear) text-ink" aria-label={`${site.name} home`}>
         {/*
@@ -53,7 +58,14 @@ const { quiet = false, overlay = false, accountsOff = false } = Astro.props;
       </a>
     )
   }
-  <div class="flex flex-1 justify-end">
+  {
+    bar && (
+      <div class="hidden lg:flex lg:flex-1 lg:justify-center">
+        <SiteNav />
+      </div>
+    )
+  }
+  <div class:list={['flex flex-1 justify-end', bar && 'lg:flex-none']}>
     <AccountCorner quiet={quiet} accountsOff={accountsOff} />
   </div>
 </header>

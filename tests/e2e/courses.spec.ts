@@ -40,7 +40,7 @@ test.describe('courses page', () => {
 
   test('is linked from the navigation menu', async ({ page }) => {
     await page.goto('/');
-    const menuButton = page.locator('button[data-menu-open]');
+    const menuButton = page.locator('button[data-menu-open]:not([data-menu-search])');
     await expect(menuButton).toBeVisible();
     await expect(menuButton).toHaveAccessibleName(/menu/);
     await menuButton.click();

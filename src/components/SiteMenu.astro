@@ -249,26 +249,34 @@ const current = currentHref(
   }
 
   const dialog = document.querySelector<HTMLDialogElement>('#site-menu');
-  const openButton = document.querySelector<HTMLButtonElement>('[data-menu-open]');
+  // ☰ and, on wide screens, the round search button in the top bar: both open this panel.
+  const openButtons = [...document.querySelectorAll<HTMLButtonElement>('[data-menu-open]')];
+  const openButton = openButtons[0];
   const closeButton = dialog?.querySelector<HTMLButtonElement>('[data-menu-close]');
 
   if (dialog && openButton && closeButton && typeof dialog.showModal === 'function') {
     let returnFocus = true;
+    let opener: HTMLButtonElement = openButton;
 
-    openButton.addEventListener('click', () => {
-      returnFocus = true;
-      dialog.showModal();
-      // Focus starts on the close button. Left to itself, the browser focuses the first focusable thing in the panel,
-      // and once the links are taller than the window the panel's own scrolling box counts as one: Chromium would
-      // focus that box, which comes before the close button, instead of a control.
-      closeButton.focus();
-      openButton.setAttribute('aria-expanded', 'true');
-    });
+    for (const button of openButtons) {
+      button.addEventListener('click', () => {
+        returnFocus = true;
+        opener = button;
+        dialog.showModal();
+        // Focus starts on the close button. Left to itself, the browser focuses the first focusable thing in the panel,
+        // and once the links are taller than the window the panel's own scrolling box counts as one: Chromium would
+        // focus that box, which comes before the close button, instead of a control.
+        // The top bar's search button goes straight to the search field instead.
+        if (button.hasAttribute('data-menu-search')) dialog.querySelector<HTMLInputElement>('[data-search-input]')?.focus();
+        else closeButton.focus();
+        button.setAttribute('aria-expanded', 'true');
+      });
+    }
 
     dialog.addEventListener('close', () => {
-      openButton.setAttribute('aria-expanded', 'false');
+      for (const button of openButtons) button.setAttribute('aria-expanded', 'false');
       // After a link to a spot on this page, focus follows the link instead of jumping back to the top.
-      if (returnFocus) openButton.focus({ preventScroll: true });
+      if (returnFocus) opener.focus({ preventScroll: true });
     });
 
     dialog.addEventListener('keydown', (event) => {
@@ -311,6 +319,6 @@ const current = currentHref(
     const search = dialog.querySelector<HTMLElement>('[data-site-search]');
     if (search) setUpSearch(search);
 
-    openButton.classList.remove('invisible');
+    for (const button of openButtons) button.classList.remove('invisible');
   }
 </script>
