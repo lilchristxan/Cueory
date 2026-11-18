@@ -263,10 +263,10 @@
 
   .building-strip-icon {
     display: inline-block;
-    margin-inline-end: 0.5em;
     color: var(--color-highlight);
-    font-size: 0.8em;
   }
+
+  .building-strip-icon::before { content: "✦"; }
 
   /* Frosted panel: brand surface color, partly see-through, blurred, with a 1 px hairline and one soft shadow. */
   .veil {
