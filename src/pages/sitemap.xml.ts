@@ -2,7 +2,7 @@ import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { relative, resolve } from 'node:path';
 import type { APIRoute } from 'astro';
 import { site } from '../config/site';
-import { indexablePages } from '../config/routes';
+import { indexablePages, sampleLessonPages } from '../config/routes';
 import { buildCatalog, contentEntryId, generatedRoutes, type CompanionFile, type LessonFile } from '../lessons/catalog';
 import { parseLessonMap } from '../islands/lessonmap';
 
@@ -186,10 +186,11 @@ export async function sitemapPages(): Promise<string[]> {
   // Loaded here, not at the top, so unit tests can import sitemapXml without Astro's content layer.
   const { lessonCatalog } = await import('../lessons/load');
   const { lessonIsHeldBack } = await import('../lessons/holdback');
+  const { sampleLessonShown } = await import('../lessons/draftgate');
   const catalog = await lessonCatalog();
   // Sample and placeholder lessons are held back on the live build (a coming-soon page), so they stay out of the sitemap.
   const held = new Set((await Promise.all(catalog.lessons.map(async (lesson) => (await lessonIsHeldBack(lesson.id)) ? lesson.href : null))).filter((href): href is string => href !== null));
-  return [...new Set([...indexablePages, ...generatedRoutes(catalog)])]
+  return [...new Set([...indexablePages, ...(sampleLessonShown() ? sampleLessonPages : []), ...generatedRoutes(catalog)])]
     .filter((page) => ![...held].some((href) => page === href || page.startsWith(`${href}/`)))
     .filter((page) => !routeDeclaresNoindex(page));
 }

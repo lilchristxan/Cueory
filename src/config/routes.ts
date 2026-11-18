@@ -20,3 +20,9 @@ export const indexablePages = [
   '/disclaimer',
   '/privacy',
 ] as const;
+
+/**
+ * The study-skills sample lesson's two hand-built pages (the rest are generated from /content). They are listed in the
+ * sitemap only on builds that show the sample lesson; the live build holds them behind a coming-soon page.
+ */
+export const sampleLessonPages = ['/learn/study-skills/label-it', '/learn/study-skills/questions'] as const;
