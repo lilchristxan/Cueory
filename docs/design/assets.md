@@ -9,11 +9,10 @@ declare the width and height on every `<img>` (see `tests/unit/perf-images.test.
 | `public/design/hero-anatomy-figure.webp` | 124,228 B | 673 x 692 | HomeV2: hero, right side (CSS `.herobg`, `background-size: auto 100%`) | Home hero background figure, lazy-loading not needed (above the fold). Quality-95 WebP of the original 725 KB PNG (mean pixel difference 1.6 of 255). |
 | `public/design/pillo-blister-board.webp` | 357,332 B | 1230 x 1180 | Pillo and PilloDone: the game board | Board image under the tiles; tiles are positioned over it by percent (see the board's tile `left`/`top`). Already WebP; re-encoding made it larger or visibly worse, so it is the original. |
 | `public/design/logo-pillo.webp` | 4,306 B | 550 x 208 | Pillo and PilloDone: wordmark above the board | The "pillo" title image (wordmark and TM only). Lossless WebP, keeps transparency. The original export also had a subtitle line under the wordmark that named a competitor game; it sat in its own band (rows 222 to 242, clear of the wordmark's rows 0 to 207) and was cropped off. Wordmark pixels are unchanged (checked pixel for pixel). Do not add a subtitle under it. |
-| `public/design/icon-daily-games.webp` | 9,794 B | 181 x 176 | HomeV2: Explore bar, "daily games" tile (40 px tall) | Games tile icon. Original file (already WebP). |
 | `public/design/icon-building-notice.webp` | 3,160 B | 145 x 132 | HomeV2, Pillo, Sudoku, WordPath and Done boards: top "we're still building" notice (20 px tall) | Notice bar mark. Lossless WebP of the original PNG, keeps transparency. |
 | `public/design/silk-background.svg` | 1,709 B | viewBox 1440 x 760 | HomeV2, Pillo, Sudoku, WordPath and Done boards: draped-silk page background (`.silk`, `background-size: 100% 100%`, several copies flipped and skewed down the page) | Background layer behind marketing pages and the game screens. Original file. |
 
-Total: 500,529 bytes.
+Total: 490,735 bytes.
 
 ## Logos: use the existing brand files, no new copies
 
@@ -32,9 +31,13 @@ The Games board crops the wordmark out of a 2048 x 2048 logo sheet with CSS. Do 
 - Silk SVG: no text.
 - Pillo blister board: empty wells, no lettering, no colored tiles. The colored tiles in the boards are drawn by the page code.
 - Notice icon: no lettering.
-- Daily-games icon: a small pill-pack mark with one yellow and one green capsule among outlined ones. No lettering. Decision pending whether to keep it, since it looks like a result grid.
+- Daily-games icon: removed from this PR. Its green and yellow capsules read as a result grid, which the no-lookalike rule forbids.
 
 ## Not included
+
+The HomeV2 "daily games" tile icon: the tile uses an existing brand icon (or a line icon in brand tokens, like the other tiles) until Christian supplies a version in brand colours.
+
+
 
 The HomeV2 vial carousel and pedestal images and any other game-board art were not in the export. The vials already in
 `public/vials/` are separate.
