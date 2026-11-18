@@ -1,3 +1,5 @@
+import { crosswordOpen } from './site';
+
 /**
  * Pages that may be listed in the public sitemap. Noindex and preview pages stay out. Lesson pages generated from
  * /content are added to the sitemap at build time (src/pages/sitemap.xml.ts, Task 300); study-skills is listed here too.
@@ -15,7 +17,8 @@ export const indexablePages = [
   '/learn/study-skills/organizer',
   '/learn/study-skills/questions',
   '/play',
-  '/play/crossword',
+  // The crossword page is a "coming soon" note (and noindex) while crosswordOpen (site.ts) is false.
+  ...(crosswordOpen ? ['/play/crossword' as const] : []),
   '/play/pillo',
   '/play/sudoku',
   '/play/word-path',
