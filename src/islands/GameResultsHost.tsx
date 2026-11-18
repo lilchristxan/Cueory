@@ -10,6 +10,10 @@ import {
 } from './gameresults';
 import { canShareFiles, createStoryFile, shareFileOrCopy } from './share';
 
+function absoluteUrl(path: string): string {
+  return new URL(path, window.location.origin).href;
+}
+
 /** One shared, accessible dialog for every finished game. */
 export default function GameResultsHost() {
   const [card, setCard] = useState<GameResultCard | null>(null);
@@ -205,7 +209,7 @@ export default function GameResultsHost() {
         </div>
 
         <p role="status" className="mt-3 min-h-6 text-sm text-ink-soft break-all">{status}</p>
-        <p className="mt-4 text-center text-sm text-ink-soft" data-testid="game-result-next-message">{card.nextMessage ?? 'on a phone, share also opens instagram, tiktok and messages. a new game comes out tomorrow.'}</p>
+        <p className="mt-4 text-center text-sm text-ink-soft" data-testid="game-result-next-message">{card.nextMessage ?? 'on a phone, share opens your device options. a new game comes out tomorrow.'}</p>
       </div>
     </div>
   );
