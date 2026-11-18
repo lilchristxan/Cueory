@@ -30,9 +30,12 @@ describe('evening palette copies', () => {
 
 // Exact brand-guide v1.0 colors (§4.1 and §4.2; D-55). Tokens may only use these. The older #3f2e24, #1b1715 and
 // #efe6da are retired (§4.3).
+// The copper group (Copper Deep, Copper, Copper Glow, Copper Shine) was added 18 Nov 2026 by Christian's decision
+// (docs/BRAND.md) and serves both themes.
+const copperGroup = ['#b87348', '#d9976a', '#f6d3ae', '#fff0de'];
 const brand = {
-  daytime: ['#f9f5ef', '#eadccf', '#d3b7a1', '#8b6f5b', '#3e2c23', '#6b5243'],
-  evening: ['#1c1917', '#3a2d24', '#6b5243', '#cbb8a4', '#f9f5ef'],
+  daytime: ['#f9f5ef', '#eadccf', '#d3b7a1', '#8b6f5b', '#3e2c23', '#6b5243', ...copperGroup],
+  evening: ['#1c1917', '#3a2d24', '#6b5243', '#cbb8a4', '#f9f5ef', ...copperGroup],
 };
 
 // Palette-independent type, spacing and layout tokens live in the shared @theme block. Color tokens are

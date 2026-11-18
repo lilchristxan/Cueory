@@ -4,8 +4,6 @@ import { expect, it } from 'vitest';
 const css = readFileSync(new URL('../../src/styles/tokens.css', import.meta.url), 'utf8');
 
 it('publishes the isolated P1 rendering interface without duplicating brand primitives', () => {
-  expect(css).toMatch(/--cueory-copper-start:\s*var\(--color-button-hover\);/);
-  expect(css).toMatch(/--cueory-copper-end:\s*var\(--color-button\);/);
   expect(css).toMatch(/--cueory-glass-bg:\s*rgb\(var\(--glass-rgb\) \/ var\(--glass-alpha\)\);/);
   expect(css).toMatch(/--cueory-mesh-base:\s*var\(--color-silk-base\);/);
   expect(css).toMatch(/--cueory-cell-min:\s*var\(--wordpath-cell-min\);/);
@@ -29,11 +27,30 @@ function contrast(foreground: string, background: string) {
   return (Math.max(foregroundL, backgroundL) + 0.05) / (Math.min(foregroundL, backgroundL) + 0.05);
 }
 
-it('keeps normal copper-gradient text at or above 4.5:1 at every theme endpoint', () => {
-  const daytime = { ink: '#f9f5ef', start: '#6b5243', end: '#3e2c23' };
-  const evening = { ink: '#1c1917', start: '#f9f5ef', end: '#cbb8a4' };
-  for (const palette of [daytime, evening]) {
-    expect(contrast(palette.ink, palette.start)).toBeGreaterThanOrEqual(4.5);
-    expect(contrast(palette.ink, palette.end)).toBeGreaterThanOrEqual(4.5);
+const copper = { deep: '#b87348', body: '#d9976a', glow: '#f6d3ae', shine: '#fff0de', ink: '#1c1917' };
+
+it('defines the copper palette group and maps the gradient to it in every theme', () => {
+  expect(css).toMatch(/--color-copper-deep:\s*#b87348;/);
+  expect(css).toMatch(/--color-copper:\s*#d9976a;/);
+  expect(css).toMatch(/--color-copper-glow:\s*#f6d3ae;/);
+  expect(css).toMatch(/--color-copper-shine:\s*#fff0de;/);
+  expect(css).toMatch(/--cueory-copper-start:\s*var\(--color-copper-deep\);/);
+  expect(css).toMatch(/--cueory-copper-end:\s*var\(--color-copper\);/);
+  expect(css).toMatch(/--cueory-copper-glow:\s*var\(--color-copper-glow\);/);
+  expect(css).toMatch(/--cueory-copper-shine:\s*var\(--color-copper-shine\);/);
+  expect(css).toMatch(/--cueory-copper-ink:\s*#1c1917;/);
+  // One definition serves Daytime and Evening: no theme block overrides the copper aliases.
+  expect(css.match(/--cueory-copper-start:/g)).toHaveLength(1);
+});
+
+it('lists the copper group in docs/BRAND.md with the same values', () => {
+  const brand = readFileSync(new URL('../../docs/BRAND.md', import.meta.url), 'utf8');
+  for (const hex of [copper.deep, copper.body, copper.glow, copper.shine]) expect(brand).toContain('`' + hex.toUpperCase() + '`');
+  expect(brand).toMatch(/added 18 Nov 2026 by Christian's decision/i);
+});
+
+it('keeps normal text on every copper stop at or above 4.5:1', () => {
+  for (const stop of [copper.deep, copper.body, copper.glow, copper.shine]) {
+    expect(contrast(copper.ink, stop)).toBeGreaterThanOrEqual(4.5);
   }
 });
