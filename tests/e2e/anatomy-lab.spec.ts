@@ -14,10 +14,10 @@ const axeTags = ['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa'];
 const URL = '/preview/anatomy-lab?fixture';
 const NAMES = ['fixture cube A', 'fixture cube B', 'fixture block C', 'fixture point D', 'fixture slab E'];
 
-function watchCsp(page: Page): string[] {
+async function watchCsp(page: Page): Promise<string[]> {
   const errors: string[] = [];
   // The structured violations decide the WebKit select exception (csp-allow.ts); console text alone never does.
-  void recordCspEvents(page);
+  await recordCspEvents(page);
   page.on('console', (msg) => {
     if (msg.type() === 'error' && /content security policy|refused to/i.test(msg.text())) errors.push(msg.text());
   });
@@ -327,7 +327,7 @@ test.describe('anatomy lab', () => {
   });
 
   test('opens the fixture with its draft note, credit and release, and no CSP errors', async ({ page }) => {
-    const csp = watchCsp(page);
+    const csp = await watchCsp(page);
     const glb: string[] = [];
     page.on('request', (req) => {
       if (req.url().endsWith('.glb')) glb.push(new globalThis.URL(req.url()).pathname);
@@ -344,7 +344,7 @@ test.describe('anatomy lab', () => {
   });
 
   test('the WebKit select exception never hides a console-only CSP line on the real lab page (#862)', async ({ page }) => {
-    const csp = watchCsp(page);
+    const csp = await watchCsp(page);
     await openLab(page);
     // WebKit's own wording, raised with no securitypolicyviolation event behind it: nothing qualifies it, so it stays.
     const line = "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy.";

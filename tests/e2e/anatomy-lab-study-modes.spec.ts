@@ -15,10 +15,10 @@ const URL = '/preview/anatomy-lab?fixture';
 const NAMES = ['fixture cube A', 'fixture cube B', 'fixture block C', 'fixture point D', 'fixture slab E'];
 const FIXTURE_CREDIT = 'test shapes made in code for automated tests: not anatomy, not from BodyParts3D';
 
-function watchErrors(page: Page): string[] {
+async function watchErrors(page: Page): Promise<string[]> {
   const errors: string[] = [];
   // The structured violations decide the WebKit select exception (csp-allow.ts); console text alone never does.
-  void recordCspEvents(page);
+  await recordCspEvents(page);
   page.on('console', (msg) => {
     if (msg.type() === 'error' && /content security policy|refused to/i.test(msg.text())) errors.push(msg.text());
   });
@@ -166,7 +166,7 @@ test.describe('anatomy lab: preset views and keys', () => {
 
 test.describe('anatomy lab: name it', () => {
   test('pick a name: wrong and right are said in words and marked with a symbol, and there is no score', async ({ page }) => {
-    const errors = watchErrors(page);
+    const errors = await watchErrors(page);
     await openLab(page);
     await recall(page).getByRole('button', { name: 'start name it' }).click();
     await expect(recall(page).getByText('which structure is highlighted?', { exact: false })).toBeVisible();
@@ -314,7 +314,7 @@ test.describe('anatomy lab: name it', () => {
 
 test.describe('anatomy lab: worksheet', () => {
   test('makes a numbered picture with blanks, answers on request, the credit, and prints only the worksheet', async ({ page }) => {
-    const errors = watchErrors(page);
+    const errors = await watchErrors(page);
     await openLab(page);
     await page.getByRole('button', { name: 'make a worksheet' }).click();
     await expect(sheet(page)).toBeVisible({ timeout: 20_000 });
