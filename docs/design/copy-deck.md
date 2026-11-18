@@ -86,11 +86,11 @@ and decorative letters in demo animations (board letters, "term" chips) are plac
 | course link | start → | start → | as drawn (Christian, 11:30) |
 | games modal | today's games / A new set every day. Each one takes a couple of minutes. | today's games / A new set every day. Each one takes a couple of minutes. | as drawn (Christian, 11:30) |
 | support modal h2 | support our mission. | support our mission. | as drawn (Christian, 11:30) |
-| support modal body | Cueory is free because students already pay enough. Every donation goes back into the platform: | Cueory is free because students already pay enough. | first sentence as drawn; the second sentence ("Every donation goes back into the platform:") led into the three cards, which stay out [F], so it is cut |
-| support modal 3 cards | expand our resources / help students who are struggling / build what's next, with blurbs | drop (not shipped) | rule [F]: Christian did not bring the three cards back. default (lead, 18 Nov), Christian may change |
+| support modal body | Cueory is free because students already pay enough. Every donation goes back into the platform: | Cueory is free because students already pay enough. [Every donation goes back into the platform:] | first sentence as drawn. The bracketed sentence is pending Christian's confirmation (a promise about how money is used); until he confirms, ship the first sentence only |
+| support modal 3 cards | expand our resources / help students who are struggling / build what's next, with blurbs | as drawn: expand our resources (more courses, lessons and practice, so nursing school gets simpler.) / help students who are struggling (tools for the classes where students fall behind most.) / build what's next (new ways to help students and nurses.) | restored: Christian, 11:30, asked about advertisers, sponsors and premium accounts later; the three cards ship as drawn |
 | support modal button | support us on Ko-fi ↗ | support us on Ko-fi ↗ | as drawn (Christian, 11:30) |
-| support modal note | Opens Ko-fi in a new tab. Ko-fi handles the payment; we never see your card. | Opens Ko-fi in a new tab. Ko-fi handles the payment; we never see your card. | as drawn (Christian, 11:30) |
-| support modal card | work with us / Schools, educators, nurses and brands that fit our students: partner or advertise with us. / get in touch | work with us / Schools, educators, nurses and brands that fit our students: partner or advertise with us. / get in touch | as drawn (it is not one of the three cards); "get in touch" goes to /message (email-only) [B] |
+| support modal note | Opens Ko-fi in a new tab. Ko-fi handles the payment; we never see your card. | Opens Ko-fi in a new tab. Ko-fi handles the payment; we never see your card. | as drawn: Ko-fi and Stripe process the payments (lead, 18 Nov) |
+| support modal card | work with us / Schools, educators, nurses and brands that fit our students: partner or advertise with us. / get in touch | as drawn | "get in touch" is a mailto link to `site.contactEmail` (hello@cueory.app, `src/config/site.ts`), not the /message page |
 
 ## /play (Games hub board)
 
@@ -172,10 +172,10 @@ and decorative letters in demo animations (board letters, "term" chips) are plac
 |---|---|---|---|
 | title | word path | word path | same |
 | tagline | LETTER PATH GAME | LETTER PATH GAME | as drawn (Christian, 11:30) |
-| help 1 | Tap letters that touch to build a path, across, down or diagonal. | Find every word in the list. Words run up, down, left or right. | rule [T]: words run straight, never diagonally; text is `gamehelpcontent.ts` ('suture-search') with a capital letter at the start of each sentence as drawn. Builders draw straight paths |
-| help 2 | Submit when the path spells a word on the list. | Tap a word's first letter, then its last letter. Tap the first letter again to start over. | rule [T]: no submit step; same source as above |
-| help 3 | Found words are ticked off. | On a keyboard, arrows move, enter or space picks, and escape clears. | rule [T]: same source as above; found words are ticked on the list |
-| help 4 | Tap the last letter again to undo a step. | (drop) | rule [T]: there is no undo step; the first-letter tap already clears (help 2) |
+| help 1 | Tap letters that touch to build a path, across, down or diagonal. | puzzle format "path" (sample-01 to sample-05, `SuturePathBoard`; turning and diagonal paths, select every letter, submit): help topic `suture`, six lines verbatim from `src/islands/gamehelpcontent.ts` on staging: "find every answer on the board. each letter belongs to exactly one answer." / "answers run through touching letters, up, down, sideways or diagonally, and can turn. a path never uses the same letter twice." / "one answer, the thread, names the theme and runs from one side of the board to the other. found theme words get a dot, and the thread gets a diamond." / "drag across the letters, or tap them one by one and press submit. tapping the last letter again also submits, and clear starts over." / "on a keyboard, arrows move, enter or space adds a letter, enter on the last letter submits, backspace takes one back and escape clears." / the cue line (every N other words of M letters or more earn a cue ...), whose numbers come from `WORDS_PER_HINT` and `MIN_WORD`: copy the line from the file, never retype the numbers | rule [T]: the help must match the game. Capital letter at the start of each line as drawn. The board's diagonal path is correct for this format |
+| help 2 | Submit when the path spells a word on the list. | puzzle format "search" (sample-06 only, first/last-letter): help topic `suture-search`, three lines verbatim from `src/islands/gamehelpcontent.ts` on staging: "find every word in the list. words run up, down, left or right." / "tap a word's first letter, then its last letter. tap the first letter again to start over." / "on a keyboard, arrows move, enter or space picks, and escape clears." | rule [T]: no submit step in this format |
+| help 3 | Found words are ticked off. | builders: show the help variant that matches the day's puzzle format, the way `SutureGame.tsx` picks the topic; never mix the two | found words are ticked off on the word list (behaviour, not help text) |
+| help 4 | Tap the last letter again to undo a step. | (drop) | rule [T]: neither format has an undo line; "backspace takes one back" (path) and "tap the first letter again to start over" (search) already cover it |
 | help 5 | Tap the printer button above the board to print a clean copy. | Tap the printer button above the board to print a clean copy. | as drawn (Christian, 11:30); shown only if the print button ships |
 | theme card | CUE OF THE DAY / [theme of today's words] | CUE OF THE DAY / [the day's theme from the puzzle file] | label as drawn; theme text comes from `/content` [S] |
 | print list | WORDS TO FIND / NURSE, [word two] (5 letters) ... | WORDS TO FIND / [words from the puzzle file] ([n] letters) | as drawn; words are never hardcoded; the sample "NURSE" row is a placeholder [S] |
@@ -223,11 +223,11 @@ Default 6: only true claims. The page today holds `[Christian writes this]` plac
 ## Held or changed because a rule blocks the drawing
 
 Christian, 11:30: everything else ships as drawn. Not shipped as drawn, by rule:
-1. [T] "adhd friendly" row; About bullets 1 and 2 (research, sources, nurse reviewer); "all five" games (three are live); "Sort ten terms" copy (the game is sudoku); word path help lines (shipped game has no submit or undo, words run straight); crossword blurb ("from this week's lessons").
+1. [T] "adhd friendly" row; About bullets 1 and 2 (research, sources, nurse reviewer); "all five" games (three are live); "Sort ten terms" copy (the game is sudoku); crossword blurb ("from this week's lessons").
 2. [A] sign in pill (disabled, "coming soon") and "start studying for free" (button goes to /play).
 3. [C] crossword and hello cards shown as coming soon.
 4. [N] pillo tiles and keys use brand colors plus symbols, never green and yellow.
-5. [F] social share buttons, "play sound on solve", the three support-modal cards: not brought back.
+5. [F] social share buttons and "play sound on solve": not brought back. (The three support-modal cards are back, as drawn, per Christian 11:30.)
 6. [B] message form: email-only page until a backend exists.
 7. [S] sample vial names, sample words, "NURSE", "[a question]", dates and times: replaced with real or generated data.
 
@@ -235,6 +235,6 @@ Christian, 11:30: everything else ships as drawn. Not shipped as drawn, by rule:
 
 1. The hero button wording while accounts are closed ("play today's games" vs "start studying" to /learn).
 2. The mailing section's on-page email field: needs `newsletter.formAction` to be set; otherwise the button shows.
-3. "Get one email when they open" (a Kit promise) and the support modal's "we never see your card".
+3. "Get one email when they open" (a Kit promise) and "Every donation goes back into the platform" (pending Christian's confirmation).
 4. Course blurbs for real courses, and whether Fundamentals should appear (it is not in `courses.ts`).
 5. Share lines for pillo and sudoku follow the boards and replace the current lines; tests that pin the old lines are replaced, not loosened.
