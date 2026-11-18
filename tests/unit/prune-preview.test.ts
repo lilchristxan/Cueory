@@ -2,7 +2,6 @@ import { mkdtempSync, mkdirSync, writeFileSync, existsSync, rmSync } from 'node:
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-// @ts-expect-error plain .mjs build script
 import { isProductionBuild, prunePreview } from '../../scripts/prune-preview.mjs';
 
 const made: string[] = [];
