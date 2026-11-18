@@ -874,7 +874,8 @@ test.describe('daily games: private stats (D-76), always kept (2026-11-17)', () 
 
   test('a round waiting for the stats panel to load is dropped when another tab forgets stats', async ({ page, context }) => {
     const release = await holdPanel(page);
-    await page.goto('/play/pillo');
+    // The held stats-panel script must not hold up the page's load event (WebKit waits for it); the page's own checks below wait.
+    await page.goto('/play/pillo', { waitUntil: 'domcontentloaded' });
     await expect(page.getByTestId('pulse')).toBeVisible();
     await expect(panel(page)).toHaveCount(0);
     await solvePulse(page);
@@ -898,7 +899,8 @@ test.describe('daily games: private stats (D-76), always kept (2026-11-17)', () 
 
   test('a page back from the back/forward cache drops a round it was holding', async ({ page }) => {
     const release = await holdPanel(page);
-    await page.goto('/play/pillo');
+    // The held stats-panel script must not hold up the page's load event (WebKit waits for it); the page's own checks below wait.
+    await page.goto('/play/pillo', { waitUntil: 'domcontentloaded' });
     await expect(page.getByTestId('pulse')).toBeVisible();
     await solvePulse(page);
     // As if another tab forgot the stats while this page was away: a cached page hears no one's storage changes.
@@ -956,7 +958,8 @@ test.describe('daily games: private stats (D-76), always kept (2026-11-17)', () 
 
   test('a round finished before the stats panel has loaded still counts', async ({ page }) => {
     const release = await holdPanel(page);
-    await page.goto('/play/pillo');
+    // The held stats-panel script must not hold up the page's load event (WebKit waits for it); the page's own checks below wait.
+    await page.goto('/play/pillo', { waitUntil: 'domcontentloaded' });
     await expect(page.getByTestId('pulse')).toBeVisible();
     await expect(panel(page)).toHaveCount(0);
     await solvePulse(page);

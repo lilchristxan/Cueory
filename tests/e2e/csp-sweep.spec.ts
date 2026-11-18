@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page, type Request } from '@playwright/test';
 import { readdirSync } from 'node:fs';
 import { join, relative, resolve, sep } from 'node:path';
 
@@ -40,6 +40,40 @@ async function watchCsp(page: Page): Promise<string[]> {
   return consoleErrors;
 }
 
+/**
+ * Waits for the page to be done fetching, without 'networkidle' (WebKit on a loaded runner never reached it on a few
+ * routes: a 90 s timeout though the page was finished). Every request the page makes is counted from 'request' until
+ * 'requestfinished' or 'requestfailed'; settled() waits until none is pending and none has started for a settle
+ * period, so a slow fetch whose answer later causes a policy violation is still waited for. Long-lived connections
+ * would never finish: list one by exact URL in `longLived`, and nothing else is excluded. A hard cap, far below the
+ * test's own timeout, fails with the URLs still pending rather than hanging or passing too early.
+ */
+function trackRequests(page: Page, longLived: string[] = []) {
+  const pending = new Set<Request>();
+  let lastActivity = Date.now();
+  page.on('request', request => {
+    if (longLived.includes(request.url())) return;
+    pending.add(request);
+    lastActivity = Date.now();
+  });
+  const done = (request: Request) => { pending.delete(request); lastActivity = Date.now(); };
+  page.on('requestfinished', done);
+  page.on('requestfailed', done);
+  return {
+    async settled({ quietMs = 500, capMs = 20_000 } = {}) {
+      await page.waitForLoadState('load');
+      await page.evaluate(() => document.fonts.ready.then(() => undefined));
+      const started = Date.now();
+      while (pending.size > 0 || Date.now() - lastActivity < quietMs) {
+        if (Date.now() - started > capMs) {
+          throw new Error(`requests still pending after ${capMs} ms: ${[...pending].map(request => request.url()).join(', ') || 'none (still starting new ones)'}`);
+        }
+        await page.waitForTimeout(100);
+      }
+    },
+  };
+}
+
 async function violations(page: Page, consoleErrors: string[]): Promise<string[]> {
   const events = await page.evaluate(() =>
     (window as Window & { __cueoryCspViolations?: string[] }).__cueoryCspViolations ?? []);
@@ -50,13 +84,14 @@ test.describe('Task 191: every built route obeys CSP', () => {
   for (const route of [...new Set(builtPages())].sort()) {
     test(`${route}: no policy violations during page load and hydration`, async ({ page }) => {
       const consoleErrors = await watchCsp(page);
+      const pending = trackRequests(page);
       const response = await page.goto(route);
       expect(response?.status(), `${route}: HTTP response`).toBe(route === missingPage ? 404 : 200);
       const policy = response?.headers()['content-security-policy'] ??
         await page.locator('meta[http-equiv="content-security-policy" i]').getAttribute('content');
       expect(policy, `${route}: an enforced CSP must be present`).toBeTruthy();
       await page.waitForFunction(() => document.querySelectorAll('astro-island[ssr]').length === 0);
-      await page.waitForLoadState('networkidle');
+      await pending.settled();
       expect(await violations(page, consoleErrors), `${route}: CSP findings`).toEqual([]);
     });
   }
@@ -74,4 +109,23 @@ test('CSP detector catches a deliberately blocked inline style', async ({ page }
   await expect.poll(() => page.evaluate(() =>
     (window as Window & { __cueoryCspViolations?: string[] }).__cueoryCspViolations
       ?.some(message => message.startsWith('style-src-elem: inline')) ?? false)).toBe(true);
+});
+
+test('the sweep waits for a slow fetch whose answer causes a policy violation', async ({ page }) => {
+  const consoleErrors = await watchCsp(page);
+  const pending = trackRequests(page);
+  await page.route('**/__csp-slow-fixture', route => route.fulfill({
+    contentType: 'text/html',
+    body: '<!doctype html><meta http-equiv="Content-Security-Policy" content="default-src \'self\'; script-src \'unsafe-inline\'; img-src \'self\'">' +
+      '<title>slow CSP fixture</title><h1>fixture</h1>' +
+      '<script>fetch("/__csp-slow-data").then(r => r.text()).then(() => { new Image().src = "https://blocked.example/pixel.png"; });</script>',
+  }));
+  // The answer comes well after the 300 ms the old resource-count poll allowed, and only then does the page break its policy.
+  await page.route('**/__csp-slow-data', async route => {
+    await new Promise(resolve => setTimeout(resolve, 1_500));
+    await route.fulfill({ contentType: 'text/plain', body: 'late' });
+  });
+  await page.goto('/__csp-slow-fixture');
+  await pending.settled();
+  expect((await violations(page, consoleErrors)).some(finding => finding.startsWith('img-src'))).toBe(true);
 });
