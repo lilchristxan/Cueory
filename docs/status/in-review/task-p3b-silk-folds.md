@@ -1,5 +1,2 @@
-# task-p3b/silk-folds
-
-STATUS: in review. P3b follow-up to #878: the page silk (`.silk-quiet`, every non-study page) gets two diagonal peach folds and stronger glows, matching the renderings' peach-tan cloth (HomeV2 about #f3d8c1, About #f1dcc9). Static, so reduced motion is unaffected; Evening stays quiet (Walnut). Only `global.css` and `tokens.css` change.
-
-D-pending: the peach is Copper Glow (`#f6d3ae`) at partial strength over Ivory, via new tokens `--silk-peach-rgb` and `--silk-peach-alpha`. BRAND.md limits copper to buttons, pills and accents, so using it for page silk needs the lead's or Christian's OK.
+status: P3b follow-up to #878. The page silk (`.silk-quiet`, every non-study page) gets two static diagonal peach folds and stronger glows to match the renderings' peach cloth (HomeV2 about #f3d8c1, About #f1dcc9). Evening stays quiet (Walnut) and reduced motion is unaffected. Only `global.css` and `tokens.css` change.
+decision: Copper Glow (`#f6d3ae`) at partial strength over Ivory is the Light silk on marketing pages only, through the tokens `--silk-peach-rgb` and `--silk-peach-alpha`. Reason: the lead's ruling on #893 (16:45, 18 Nov 2026); BRAND.md otherwise limits copper to buttons, pills and accents.
