@@ -36,6 +36,26 @@
   --color-on-button: #f9f5ef;   /* text on main buttons (Ivory) */
   --color-focus: #6b5243;       /* keyboard focus outline (Bronze) */
 
+  /* ---------- Redesign interface (Phase 0 P1) ----------
+     Semantic aliases for the rendering builders. Keep these aliases pointed at
+     existing brand/silk/cell roles so the redesign does not create a second
+     palette or rename established tokens. */
+  --cueory-copper-start: var(--color-highlight);
+  --cueory-copper-end: var(--color-button);
+  --cueory-copper-ink: var(--color-on-button);
+  --cueory-glass-bg: rgb(var(--glass-rgb) / var(--glass-alpha));
+  --cueory-glass-border: rgb(var(--glass-rim-rgb) / var(--glass-rim-alpha));
+  --cueory-glass-shadow: var(--shadow-soft);
+  --cueory-label-size: var(--text-sm);
+  --cueory-label-tracking: var(--tracking-label);
+  --cueory-label-weight: 700;
+  --cueory-mesh-base: var(--color-silk-base);
+  --cueory-mesh-sheen: var(--color-silk-sheen);
+  --cueory-mesh-shade: var(--color-silk-shade);
+  --cueory-mesh-tint: var(--color-silk-tint);
+  --cueory-cell-min: var(--wordpath-cell-min);
+  --cueory-cell-max: var(--wordpath-cell-max);
+
   /* ---------- Marketing pages only (D-41): draped-silk background and frosted panels (no embossed logo: D-55) ---------- */
   --color-silk-base: #f9f5ef;   /* Ivory    — silk background */
   --color-silk-sheen: #f9f5ef;  /* Ivory    — light catching a fold */
