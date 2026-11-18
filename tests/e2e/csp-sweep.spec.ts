@@ -56,7 +56,18 @@ test.describe('Task 191: every built route obeys CSP', () => {
         await page.locator('meta[http-equiv="content-security-policy" i]').getAttribute('content');
       expect(policy, `${route}: an enforced CSP must be present`).toBeTruthy();
       await page.waitForFunction(() => document.querySelectorAll('astro-island[ssr]').length === 0);
-      await page.waitForLoadState('networkidle');
+      // Not 'networkidle': WebKit on a loaded runner never reached it on a few routes (90 s timeout), though the page was
+      // long finished. What the check needs is every resource that was started to have finished: load complete, fonts
+      // ready, and the resource list unchanged across a short settle.
+      await page.waitForLoadState('load');
+      await page.evaluate(() => document.fonts.ready.then(() => undefined));
+      let seen = -1;
+      await expect.poll(async () => {
+        const count = await page.evaluate(() => performance.getEntriesByType('resource').length);
+        const settled = count === seen;
+        seen = count;
+        return settled;
+      }, { intervals: [300] }).toBe(true);
       expect(await violations(page, consoleErrors), `${route}: CSP findings`).toEqual([]);
     });
   }

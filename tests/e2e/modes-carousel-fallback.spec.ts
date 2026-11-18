@@ -56,16 +56,17 @@ for (const viewport of viewports) {
       await page.keyboard.press('Tab');
       await expect(link).toBeFocused();
       expect(await link.evaluate((element) => getComputedStyle(element).outlineStyle)).toBe('solid');
-      await page.keyboard.press('Enter');
-      await expect(page).toHaveURL(/\/learn\/study-skills\/cards\/?$/);
+      // Navigation on a slow engine can take longer than an assertion's 5 s; wait for the navigation itself.
+      await Promise.all([page.waitForURL(/\/learn\/study-skills\/cards\/?$/), page.keyboard.press('Enter')]);
 
       // Re-enter the fallback carousel and confirm pointer/touch navigation too.
       await page.goto('/');
       const again = page.locator('#ways-to-study').getByRole('link', { name: 'try the cards' });
       await expect(again).toBeVisible();
-      if (testInfo.project.use.hasTouch) await again.tap();
-      else await again.click();
-      await expect(page).toHaveURL(/\/learn\/study-skills\/cards\/?$/);
+      await Promise.all([
+        page.waitForURL(/\/learn\/study-skills\/cards\/?$/),
+        testInfo.project.use.hasTouch ? again.tap() : again.click(),
+      ]);
     });
   }
 }
