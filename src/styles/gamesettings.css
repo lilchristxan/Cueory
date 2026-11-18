@@ -25,6 +25,25 @@ html:root[data-game-motion="reduce"] *::after {
   scroll-behavior: auto !important;
 }
 
+/*
+  Inside the settings dialog no property may transition under reduced motion. The blanket rule above (and the one in
+  global.css) gives every element a 0.01ms transition, which in WebKit and Firefox keeps the old color for a frame after
+  the theme rows switch the palette, so axe read a label or row at a half-switched color and reported low contrast
+  (the sudoku layout spec in WebKit). "transition: none" sets the property to none, so nothing is interpolated at all.
+  Same fix as the segmented control (#858). Without reduced motion the dialog keeps its normal transitions.
+*/
+@media (prefers-reduced-motion: reduce) {
+  .game-settings,
+  .game-settings * {
+    transition: none;
+  }
+}
+
+html:root[data-game-motion="reduce"] .game-settings,
+html:root[data-game-motion="reduce"] .game-settings * {
+  transition: none;
+}
+
 @layer components {
   .game-settings-trigger {
     display: inline-flex;
