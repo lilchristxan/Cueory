@@ -1,0 +1,1 @@
+status: test reliability: the guest-import fixture now enforces the database's unique keys, so the no-Web-Locks two-tab case asserts what the real system guarantees (one exam plan, same-value update) while the Web Locks path keeps its strict single-insert check. Tests only.
