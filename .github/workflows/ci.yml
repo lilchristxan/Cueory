@@ -82,7 +82,8 @@ jobs:
     needs: checks
     if: needs.checks.outputs.docs_only != 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # Release pull requests (into main) run every project, about twice the tests of a staging pull request.
+    timeout-minutes: 30
     strategy:
       # Every part finishes, so one run shows all failing tests at once.
       fail-fast: false
@@ -166,7 +167,8 @@ jobs:
     name: Browser tests in ${{ matrix.project }}
     if: github.event_name == 'pull_request' && github.base_ref == 'main' && github.event.pull_request.draft == false
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # A full suite in one engine runs about 2,000 tests on two workers.
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
