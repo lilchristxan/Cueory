@@ -10,9 +10,8 @@ declare the width and height on every `<img>` (see `tests/unit/perf-images.test.
 | `public/design/pillo-blister-board.webp` | 357,332 B | 1230 x 1180 | Pillo and PilloDone: the game board | Board image under the tiles; tiles are positioned over it by percent (see the board's tile `left`/`top`). Already WebP; re-encoding made it larger or visibly worse, so it is the original. |
 | `public/design/logo-pillo.webp` | 4,306 B | 550 x 208 | Pillo and PilloDone: wordmark above the board | The "pillo" title image (wordmark and TM only). Lossless WebP, keeps transparency. The original export also had a subtitle line under the wordmark that named a competitor game; it sat in its own band (rows 222 to 242, clear of the wordmark's rows 0 to 207) and was cropped off. Wordmark pixels are unchanged (checked pixel for pixel). Do not add a subtitle under it. |
 | `public/design/icon-building-notice.webp` | 3,160 B | 145 x 132 | HomeV2, Pillo, Sudoku, WordPath and Done boards: top "we're still building" notice (20 px tall) | Notice bar mark. Lossless WebP of the original PNG, keeps transparency. |
-| `public/design/silk-background.svg` | 1,709 B | viewBox 1440 x 760 | HomeV2, Pillo, Sudoku, WordPath and Done boards: draped-silk page background (`.silk`, `background-size: 100% 100%`, several copies flipped and skewed down the page) | Background layer behind marketing pages and the game screens. Original file. |
 
-Total: 490,735 bytes.
+Total: 489,026 bytes.
 
 ## Logos: use the existing brand files, no new copies
 
@@ -28,12 +27,14 @@ The Games board crops the wordmark out of a 2048 x 2048 logo sheet with CSS. Do 
 ## Checked for lettering and result tiles (18 Nov 2026)
 
 - Hero figure: no lettering.
-- Silk SVG: no text.
+- Silk SVG: removed from this PR (see Not included).
 - Pillo blister board: empty wells, no lettering, no colored tiles. The colored tiles in the boards are drawn by the page code.
 - Notice icon: no lettering.
 - Daily-games icon: removed from this PR. Its green and yellow capsules read as a result grid, which the no-lookalike rule forbids.
 
 ## Not included
+
+The draped-silk background SVG from the boards: it hard-coded colours outside the approved palettes, and staging already has a brand-compliant silk (D-41, D-53) built from tokens (`--color-silk-base`, `--color-silk-sheen`, `--color-silk-shade`, `--color-silk-tint` in `src/styles/tokens.css`, scenes in `src/styles/global.css`). Builders use the existing silk tokens and match them against the renderings; no SVG is added.
 
 The HomeV2 "daily games" tile icon: the tile uses an existing brand icon (or a line icon in brand tokens, like the other tiles) until Christian supplies a version in brand colours.
 
