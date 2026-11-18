@@ -39,9 +39,16 @@ test.describe('home page-specific behavior', () => {
     expect(sectionHeadings).toEqual([
       'how it works',
       'ways to study',
-      'daily games',
-      'get launch updates',
+      'a few minutes, every day.',
+      'coming soon',
     ]);
+
+    await expect(page.getByText('a new set of nursing games each day. play one, or all three.')).toBeVisible();
+    const games = page.getByTestId('games-stage');
+    await expect(games.locator('[data-game-card]')).toHaveCount(5);
+    await expect(games.locator('[data-game-card="crossword"]')).toContainText('coming soon');
+    await expect(games.locator('[data-game-card="hello cards"]')).toContainText('coming soon');
+    await expect(games.locator('[data-game-card="sudoku"]')).toContainText('fill every row, column and box with the numbers one through nine.');
 
     // The launch-updates box follows src/config/site.ts: Kit's form, a link to Kit's landing page, or the pending line.
     const state = signupState(newsletter.formAction, newsletter.landingUrl);
