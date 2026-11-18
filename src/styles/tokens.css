@@ -40,13 +40,15 @@
      Semantic aliases for the rendering builders. Keep these aliases pointed at
      existing brand/silk/cell roles so the redesign does not create a second
      palette or rename established tokens. */
-  --cueory-copper-start: var(--color-highlight);
+  /* Use the role pair with AA-safe normal text at both gradient endpoints in
+     daytime (Ivory ink) and evening (Charcoal ink) themes. */
+  --cueory-copper-start: var(--color-button-hover);
   --cueory-copper-end: var(--color-button);
   --cueory-copper-ink: var(--color-on-button);
   --cueory-glass-bg: rgb(var(--glass-rgb) / var(--glass-alpha));
   --cueory-glass-border: rgb(var(--glass-rim-rgb) / var(--glass-rim-alpha));
   --cueory-glass-shadow: var(--shadow-soft);
-  --cueory-result-card-bg: var(--veil-rgb);
+  --cueory-result-card-bg: rgb(var(--veil-rgb) / var(--veil-alpha));
   --cueory-result-card-border: var(--color-line);
   --cueory-result-card-shadow: var(--shadow-lift);
   --cueory-result-card-radius: var(--radius-xl);
