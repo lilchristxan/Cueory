@@ -44,7 +44,7 @@ and decorative letters in demo animations (board letters, "term" chips) are plac
 | hero eyebrow | by nursing students, for nursing students | by nursing students, for nursing students | KEEP: Christian's own motto (stated 30 Oct). default (lead, 18 Nov), Christian may change |
 | hero h1 | nursing school made simpler. | nursing school made simpler. | as drawn (Christian, 11:30). Replaces the earlier "is hard enough" default |
 | hero accent | (none drawn; the curve is a graphic) | (the curve is a graphic; no text) | as drawn. The earlier accent line is dropped |
-| hero button | start studying for free → | play today's games → | rule [A]: "start studying for free" leads to account sign-up, which is closed. Same button shape, goes to /play. Christian may prefer "start studying" to /learn |
+| hero button | start studying for free → | start studying for free → | as drawn (lead, 18 Nov): links to /learn, which works with no account (`lessonEntryHref()` in `draftgate.ts` picks the sample lesson where it shows, /learn everywhere else). Not coming soon and not disabled: studying needs no account, so it is true today (lead decision, 18 Nov) |
 | hero quiet link | (none) | (none) | as drawn; the old quiet "join the launch list" link goes away with the new hero. The launch-updates form is lower on the page |
 | value row 1 | structured learning / from basics to med-surg | structured learning / from basics to med-surg | same, true today (courses.ts) |
 | value row 2 | multiple ways to study / learn the way that works for you | same | same, true (11 study modes) |
@@ -86,7 +86,7 @@ and decorative letters in demo animations (board letters, "term" chips) are plac
 | course link | start → | start → | as drawn (Christian, 11:30) |
 | games modal | today's games / A new set every day. Each one takes a couple of minutes. | today's games / A new set every day. Each one takes a couple of minutes. | as drawn (Christian, 11:30) |
 | support modal h2 | support our mission. | support our mission. | as drawn (Christian, 11:30) |
-| support modal body | Cueory is free because students already pay enough. Every donation goes back into the platform: | Cueory is free because students already pay enough. [Every donation goes back into the platform:] | first sentence as drawn. The bracketed sentence is pending Christian's confirmation (a promise about how money is used); until he confirms, ship the first sentence only |
+| support modal body | Cueory is free because students already pay enough. Every donation goes back into the platform: | Cueory is free because students already pay enough. Every donation supports our mission to make nursing school simpler. | Christian, 11:32, reworded the donation line; his wording tightened to match the mission text in `site.ts`. Replaces "Every donation goes back into the platform" and is no longer pending |
 | support modal 3 cards | expand our resources / help students who are struggling / build what's next, with blurbs | as drawn: expand our resources (more courses, lessons and practice, so nursing school gets simpler.) / help students who are struggling (tools for the classes where students fall behind most.) / build what's next (new ways to help students and nurses.) | restored: Christian, 11:30, asked about advertisers, sponsors and premium accounts later; the three cards ship as drawn |
 | support modal button | support us on Ko-fi ↗ | support us on Ko-fi ↗ | as drawn (Christian, 11:30) |
 | support modal note | Opens Ko-fi in a new tab. Ko-fi handles the payment; we never see your card. | Opens Ko-fi in a new tab. Ko-fi handles the payment; we never see your card. | as drawn: Ko-fi and Stripe process the payments (lead, 18 Nov) |
@@ -224,7 +224,7 @@ Default 6: only true claims. The page today holds `[Christian writes this]` plac
 
 Christian, 11:30: everything else ships as drawn. Not shipped as drawn, by rule:
 1. [T] "adhd friendly" row; About bullets 1 and 2 (research, sources, nurse reviewer); "all five" games (three are live); "Sort ten terms" copy (the game is sudoku); crossword blurb ("from this week's lessons").
-2. [A] sign in pill (disabled, "coming soon") and "start studying for free" (button goes to /play).
+2. [A] sign in pill (disabled, "sign in, coming soon"). The hero "start studying for free →" ships as drawn and links to /learn: studying needs no account, so it is true today (lead decision, 18 Nov).
 3. [C] crossword and hello cards shown as coming soon.
 4. [N] pillo tiles and keys use brand colors plus symbols, never green and yellow.
 5. [F] social share buttons and "play sound on solve": not brought back. (The three support-modal cards are back, as drawn, per Christian 11:30.)
@@ -233,8 +233,7 @@ Christian, 11:30: everything else ships as drawn. Not shipped as drawn, by rule:
 
 ## Needs Christian or the lead (open)
 
-1. The hero button wording while accounts are closed ("play today's games" vs "start studying" to /learn).
-2. The mailing section's on-page email field: needs `newsletter.formAction` to be set; otherwise the button shows.
-3. "Get one email when they open" (a Kit promise) and "Every donation goes back into the platform" (pending Christian's confirmation).
-4. Course blurbs for real courses, and whether Fundamentals should appear (it is not in `courses.ts`).
-5. Share lines for pillo and sudoku follow the boards and replace the current lines; tests that pin the old lines are replaced, not loosened.
+1. The mailing section's on-page email field: needs `newsletter.formAction` to be set; otherwise the button shows.
+2. "Get one email when they open" (a Kit promise).
+3. Course blurbs for real courses, and whether Fundamentals should appear (it is not in `courses.ts`).
+4. Share lines for pillo and sudoku follow the boards and replace the current lines; tests that pin the old lines are replaced, not loosened.
