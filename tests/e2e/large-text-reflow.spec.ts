@@ -37,7 +37,6 @@ const routes = builtPages();
 const LEGAL = ['/terms', '/disclaimer', '/privacy'];
 const routes320 = [...new Set([...indexablePages, '/play', '/play/pillo', '/play/sudoku', '/play/word-path', '/play/crossword'])]
   .filter((route) => !LEGAL.includes(route))
-  .filter((route) => route !== '/learn/study-skills') // its tile grid is fixed in its own pull request, which removes this line
   .filter((route) => routes.includes(route));
 
 const sweeps = [
