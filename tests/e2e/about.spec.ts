@@ -13,6 +13,7 @@ test.describe('about page', () => {
   test('shows the design sections with founder-owned copy, without publishing unfinished text', async ({ page }) => {
     await page.goto('/about');
 
+    await expect(page.getByText('/ about us', { exact: true })).toBeVisible();
     await expect(page.locator('main h1')).toHaveCount(1);
     await expect(page.locator('main h1, main h2')).toHaveText([...headings]);
     await expect(page.locator('main section')).toHaveCount(4);
@@ -20,7 +21,7 @@ test.describe('about page', () => {
     const paragraphs = page.locator('main p');
     await expect(paragraphs).toHaveCount(5);
     await expect(page.locator('main p[data-placeholder="CHRISTIAN-TEXT"]')).toHaveCount(1);
-    await expect(page.locator('main p[data-placeholder="CHRISTIAN-TEXT"]')).toHaveText('[Christian writes this]');
+    await expect(page.locator('main p[data-placeholder="CHRISTIAN-TEXT"]')).toHaveText("[Christian's story: why Cueory exists, in his own words.]");
     await expect(page.locator('main p').filter({ hasText: 'To make studying for nursing school simpler' })).toHaveCount(1);
     await expect(page.locator('main p').filter({ hasText: 'Mental Health I and Med Math are next' })).toHaveCount(1);
 
