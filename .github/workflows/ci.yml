@@ -82,7 +82,8 @@ jobs:
     needs: checks
     if: needs.checks.outputs.docs_only != 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # Release pull requests (into main) run every project, about twice the tests of a staging pull request.
+    timeout-minutes: 30
     strategy:
       # Every part finishes, so one run shows all failing tests at once.
       fail-fast: false
@@ -166,7 +167,8 @@ jobs:
     name: Browser tests in ${{ matrix.project }}
     if: github.event_name == 'pull_request' && github.base_ref == 'main' && github.event.pull_request.draft == false
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # A full suite in one engine runs about 2,000 tests on two workers.
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
@@ -192,9 +194,18 @@ jobs:
       - run: npx playwright install --with-deps "$BROWSER"
         env:
           BROWSER: ${{ matrix.browser }}
-      - run: npm run test:e2e -- --project="$PROJECT"
+      # Headless Firefox cannot create a WebGL context (Mozilla bug 1375585), so the 3D anatomy viewer cannot start.
+      # Firefox therefore runs headed under a virtual display (Xvfb); WebKit stays headless.
+      - run: |
+          if [ "$BROWSER" = "firefox" ]; then
+            xvfb-run -a npm run test:e2e -- --project="$PROJECT"
+          else
+            npm run test:e2e -- --project="$PROJECT"
+          fi
         env:
           ALL_ENGINES: '1'
+          BROWSER: ${{ matrix.browser }}
+          HEADED_FIREFOX: ${{ matrix.browser == 'firefox' && '1' || '' }}
           PROJECT: ${{ matrix.project }}
 
       - name: Keep the test report if browser tests fail

@@ -35,7 +35,12 @@ export default defineConfig({
       ? [
           { name: 'webkit-phone', timeout: engineTimeout, use: { ...devices['iPhone 14'], viewport: { width: 390, height: 844 } } },
           { name: 'webkit-desktop', timeout: engineTimeout, use: { ...devices['Desktop Safari'], viewport: { width: 1440, height: 900 } } },
-          { name: 'firefox-desktop', timeout: engineTimeout, use: { ...devices['Desktop Firefox'], viewport: { width: 1440, height: 900 } } },
+          {
+            name: 'firefox-desktop',
+            timeout: engineTimeout,
+            // CI runs Firefox headed under Xvfb (HEADED_FIREFOX=1) because headless Firefox has no WebGL.
+            use: { ...devices['Desktop Firefox'], viewport: { width: 1440, height: 900 }, headless: process.env.HEADED_FIREFOX !== '1' },
+          },
         ]
       : []),
   ],
