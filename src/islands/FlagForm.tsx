@@ -128,7 +128,7 @@ function ReportForm({ page, itemId, itemVersionId, signedIn, send, onOpen, varia
     </button>
     {open && <div ref={panel} id={panelId} tabIndex={-1}
       className={icon
-        ? 'absolute bottom-full left-0 z-10 mb-2 max-h-[calc(100dvh-8rem)] w-flag-panel overflow-y-auto [overflow-wrap:anywhere] rounded-md border border-line bg-page p-4 shadow-lift'
+        ? 'absolute bottom-full left-0 z-10 mb-2 max-h-[min(24rem,calc(100dvh-8rem))] w-flag-panel overflow-y-auto [overflow-wrap:anywhere] rounded-md border border-line bg-page p-4 shadow-lift'
         : 'mt-3 rounded-md border border-line bg-page p-4'}
       onKeyDown={event => { if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); close(); } }}>
       {signedIn === null ? <p className="text-ink">checking your account…</p> : !signedIn ? <SignedOutReportHelp page={page} /> : <form noValidate onSubmit={event => { event.preventDefault(); void submit(); }}>

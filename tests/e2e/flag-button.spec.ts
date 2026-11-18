@@ -97,8 +97,9 @@ test('a first-visit promo waits while a game report is open', async ({ page }) =
 
 test('the open report panel fits a 320px screen at 32px text', async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 700 });
-  await page.addInitScript(() => { document.documentElement.style.fontSize = '32px'; });
   await page.goto('/play/pillo');
+  await page.evaluate(() => { document.documentElement.style.fontSize = '32px'; });
+  expect(await page.evaluate(() => getComputedStyle(document.documentElement).fontSize)).toBe('32px');
   await page.locator('a[data-game-flag]').click();
   const panel = page.locator('#footer-flag [role], #footer-flag div[tabindex="-1"]').first();
   await expect(panel).toBeVisible();
