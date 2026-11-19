@@ -361,7 +361,7 @@ export function PathBoard({ puzzle, name }: Props) {
         aria-describedby={help}
         aria-rowcount={puzzle.grid.length}
         aria-colcount={puzzle.grid[0]!.length}
-        className="wordpath-board relative mx-auto mt-4 flex flex-col border-(length:--border-board) border-transparent text-ink sm:p-3"
+        className="wordpath-board relative mt-4 flex flex-col sm:mx-auto border-(length:--border-board) border-transparent text-ink sm:p-3"
       >
         {layout && (
           <svg className="wordpath-lines" aria-hidden="true" focusable="false" data-testid="suture-lines"
