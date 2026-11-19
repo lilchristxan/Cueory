@@ -97,6 +97,7 @@ const logo = (width: number) => `/brand/v1/logo-full-dark-${width}.png`;
 <script>
   import { promo } from '../config/site';
   import { isTextEntry, mayShow as promoMayShow } from '../scripts/promo';
+  import { lockPageScroll } from '../scripts/scrolllock';
   import { browserStorage } from '../scripts/storage';
   import { OPEN_REPORT_SELECTOR, POPUP_DELAY_MS, mayShowPopup, popupAllowedOn, rememberPopup } from '../scripts/signuppopup';
 
@@ -135,19 +136,23 @@ const logo = (width: number) => `/brand/v1/logo-full-dark-${width}.png`;
       if (!dialog.open) return;
       rememberPopup(storage, Date.now());
       dialog.close();
+      // The page goes back in the same task, not when the 'close' event comes, so it never paints at the top first.
+      unlockPage();
     };
 
     // While it is open the page behind it doesn't scroll (a wheel or swipe over the dimmed page would otherwise move it
     // out from under the visitor); the pop-up itself still scrolls on a short screen. On close the page is put back
-    // exactly where it was, and focus goes back where it was.
-    let savedScroll = { x: 0, y: 0 };
+    // exactly where it was, and focus goes back where it was. The lock is the one the game results use: it also fixes
+    // the body in place, because `overflow: hidden` alone doesn't stop a swipe in older iOS Safari.
+    let restoreScroll: (() => void) | undefined;
     const lockPage = () => {
-      savedScroll = { x: window.scrollX, y: window.scrollY };
       document.documentElement.toggleAttribute('data-signup-popup-open', true);
+      restoreScroll ??= lockPageScroll(document.documentElement, document.body, window);
     };
     const unlockPage = () => {
       document.documentElement.toggleAttribute('data-signup-popup-open', false);
-      window.scrollTo({ left: savedScroll.x, top: savedScroll.y, behavior: 'instant' });
+      restoreScroll?.();
+      restoreScroll = undefined;
     };
 
     dialog.addEventListener('close', () => {

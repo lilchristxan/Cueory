@@ -1,7 +1,10 @@
 {
+  "id": "/",
   "name": "cueory",
   "short_name": "cueory",
+  "lang": "en",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "theme_color": "#F9F5EF",
   "background_color": "#F9F5EF",

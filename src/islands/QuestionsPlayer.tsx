@@ -152,8 +152,10 @@ function Session({ questions, check, events, onCurrent }: SessionProps) {
                 const words = mark ? MARKS[mark] : undefined;
                 return (
                   <div key={choice.id}>
-                    <label className="flex min-h-11 cursor-pointer items-start gap-3 rounded-md border border-control px-4 py-3">
-                      <input className="mt-1 shrink-0" type={question.type === 'single' ? 'radio' : 'checkbox'} name={`${id}-answer`}
+                    {/* The native radio or checkbox is 24 px (WebKit's own is smaller, under the WCAG 2.2 target size), and the
+                        whole label is a 44 px tap area. */}
+                    <label className="flex min-h-(--tap-min) min-w-(--tap-min) cursor-pointer items-start gap-3 rounded-md border border-control px-4 py-3">
+                      <input className="size-6 shrink-0" type={question.type === 'single' ? 'radio' : 'checkbox'} name={`${id}-answer`}
                         value={choice.id} checked={state.picked.includes(choice.id)}
                         onChange={() => { setState((previous) => pick(previous, choice.id)); setError(''); }} />
                       <span className="min-w-0 break-words">{choice.text}</span>
