@@ -7,6 +7,48 @@ import { markPanelsSeen } from './clock';
 const game = (page: Page) => page.getByTestId('sudoku');
 const rect = (locator: Locator) => locator.evaluate((element) => element.getBoundingClientRect().toJSON() as DOMRect);
 
+function channelValues(color: string): number[] {
+  const match = /rgba?\((\d+(?:\.\d+)?),?\s*(\d+(?:\.\d+)?),?\s*(\d+(?:\.\d+)?)/.exec(color);
+  if (!match) throw new Error(`unreadable color ${color}`);
+  return match.slice(1, 4).map(Number);
+}
+
+function contrast(first: string, second: string): number {
+  const luminance = (color: string) => {
+    const channels = channelValues(color).map((value) => {
+      const channel = value / 255;
+      return channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
+    });
+    return 0.2126 * channels[0]! + 0.7152 * channels[1]! + 0.0722 * channels[2]!;
+  };
+  const [low, high] = [luminance(first), luminance(second)].sort((a, b) => a - b);
+  return (high! + 0.05) / (low! + 0.05);
+}
+
+const painted = (locator: Locator) => locator.evaluate((element) => {
+  const style = getComputedStyle(element);
+  return { color: style.color, background: style.backgroundColor };
+});
+
+/** Composite the page's actual flat background layers for text such as the status line, which has no fill of its own. */
+const effectivePaint = (locator: Locator) => locator.evaluate((element) => {
+  const parse = (value: string) => {
+    const match = /rgba?\((\d+(?:\.\d+)?),?\s*(\d+(?:\.\d+)?),?\s*(\d+(?:\.\d+)?)(?:,?\s*([\d.]+))?/.exec(value);
+    if (!match) return null;
+    return [Number(match[1]), Number(match[2]), Number(match[3]), match[4] === undefined ? 1 : Number(match[4])] as const;
+  };
+  let background: [number, number, number] = [255, 255, 255];
+  const layers: number[][] = [];
+  for (let node: Element | null = element; node; node = node.parentElement) {
+    const layer = parse(getComputedStyle(node).backgroundColor);
+    if (layer && layer[3] > 0) layers.push([...layer]);
+  }
+  for (const [red, green, blue, alpha] of [...layers].reverse()) {
+    background = [red * alpha + background[0] * (1 - alpha), green * alpha + background[1] * (1 - alpha), blue * alpha + background[2] * (1 - alpha)];
+  }
+  return { color: getComputedStyle(element).color, background: `rgb(${background.join(', ')})` };
+});
+
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
     try { localStorage.setItem('cueory-promo-seen', String(Date.now())); localStorage.setItem('cueory-signup-popup-seen', String(Date.now())); } catch { /* optional */ }
@@ -61,8 +103,8 @@ for (const scheme of ['light', 'dark'] as const) {
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 
     // The chosen level shows a check mark and bold text, not only a darker fill.
-    await game(page).getByRole('button', { name: 'mid' }).click();
-    const medium = game(page).getByRole('button', { name: 'mid' });
+    await game(page).getByRole('button', { name: 'medium' }).click();
+    const medium = game(page).getByRole('button', { name: 'medium' });
     const easy = game(page).getByRole('button', { name: 'easy' });
     await expect(medium).toHaveAttribute('aria-pressed', 'true');
     await expect(medium.locator('.segmented-check')).toHaveText('✓');
@@ -71,6 +113,35 @@ for (const scheme of ['light', 'dark'] as const) {
     await expect(easy).toHaveAttribute('aria-pressed', 'false');
     await expect(easy.locator('.segmented-check')).toHaveCount(0);
     expect(await easy.evaluate((element) => getComputedStyle(element).fontWeight)).not.toBe('700');
+
+    if (scheme === 'light') {
+      for (const label of ['easy', 'medium', 'hard']) {
+        const level = game(page).getByRole('button', { name: label, exact: true });
+        const look = await painted(level);
+        expect(contrast(look.color, look.background), `${label} Light difficulty text`).toBeGreaterThanOrEqual(4.5);
+      }
+    }
+
+    // The route gives all interactive controls an opaque surface. Measure the actual rendered foreground/background
+    // pair in both themes, including the status text whose background is inherited from the panel.
+    const toolbar = game(page).getByTestId('sudoku-toolbar').getByRole('button');
+    for (const button of await toolbar.all()) {
+      const look = await painted(button);
+      expect(contrast(look.color, look.background), `${scheme} toolbar ${await button.getAttribute('aria-label')}`).toBeGreaterThanOrEqual(3);
+    }
+    await toolbar.first().hover();
+    let look = await painted(toolbar.first());
+    expect(contrast(look.color, look.background), `${scheme} toolbar hover`).toBeGreaterThanOrEqual(3);
+    await toolbar.first().focus();
+    look = await painted(toolbar.first());
+    expect(contrast(look.color, look.background), `${scheme} toolbar focus`).toBeGreaterThanOrEqual(3);
+
+    for (const button of await game(page).locator('.sudoku-number-row button, .sudoku-tool-button:not([disabled]), .sudoku-setting-button').all()) {
+      const control = await painted(button);
+      expect(contrast(control.color, control.background), `${scheme} ${await button.innerText()} control text`).toBeGreaterThanOrEqual(4.5);
+    }
+    const status = await effectivePaint(game(page).getByTestId('sudoku-status'));
+    expect(contrast(status.color, status.background), `${scheme} status text`).toBeGreaterThanOrEqual(4.5);
 
     // Settings fits the screen, scrolls inside itself, and its theme rows drive the footer's theme switch.
     await game(page).getByRole('button', { name: /settings/ }).click();
@@ -131,4 +202,17 @@ test('sudoku keeps usable cells in a contained scroll area at 320px with 32px ro
   await expect(board.getByRole('gridcell').nth(8)).toBeFocused();
   await expect(board.getByRole('gridcell').nth(8)).toBeInViewport({ ratio: 1 });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
+});
+
+// The level is called "medium" everywhere (Sudoku.png, copy deck): the button, the screen-reader announcement and the
+// stats row header all use the same LEVEL_LABELS, so nobody hears "mid" while the button says "medium".
+test('the medium level is announced and listed as "medium"', async ({ page }) => {
+  await page.goto('/play/sudoku');
+  const medium = game(page).getByRole('button', { name: 'medium', exact: true });
+  await medium.click();
+  await expect(medium).toHaveAttribute('aria-pressed', 'true');
+  await expect(game(page).getByTestId('sudoku-live')).toHaveText(/^medium puzzle ready\./);
+  await game(page).getByRole('button', { name: 'sudoku stats' }).click();
+  await expect(page.getByRole('rowheader', { name: 'medium', exact: true })).toBeVisible();
+  await expect(page.getByRole('rowheader', { name: 'mid', exact: true })).toHaveCount(0);
 });

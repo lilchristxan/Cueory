@@ -379,7 +379,8 @@ test('keyboard focus is visible', async ({ page }) => {
 
 test('home page has a launch-updates signup that works by keyboard', async ({ page }) => {
   await page.goto('/');
-  await expect(page.getByRole('heading', { name: 'Get launch updates' })).toBeVisible();
+  const signup = page.locator('#signup');
+  await expect(signup.getByRole('heading', { name: 'coming soon', exact: true })).toBeVisible();
   const form = page.getByTestId('signup-form');
   if ((await form.count()) === 0) {
     // Before the Kit form exists: a link to Kit's landing page, or the pending line when there is none.
@@ -392,7 +393,7 @@ test('home page has a launch-updates signup that works by keyboard', async ({ pa
   await expect(email).toHaveAttribute('required', '');
   await email.focus();
   await page.keyboard.press('Tab');
-  await expect(form.getByRole('button', { name: 'Sign up' })).toBeFocused();
+  await expect(form.getByRole('button', { name: 'join the list', exact: true })).toBeFocused();
 });
 
 test.describe('theme switch', () => {
@@ -644,10 +645,13 @@ test.describe('marketing look (D-41)', () => {
   }) => {
     await page.goto('/');
     const sections = page.locator('[data-reveal-section]');
-    // How it works, "ways to study", daily games (D-61) and the launch-updates panel (Task 83, lane 14 home polish).
-    await expect(sections).toHaveCount(4);
-    const all = [0, 1, 2, 3];
-    const ways = 1;
+    // The approved home keeps the carousel, daily games, then the launch-updates panel; how-it-works has been removed.
+    await expect(sections).toHaveCount(3);
+    expect(await sections.evaluateAll((items) => items.map((item) => item.closest('section')?.id))).toEqual([
+      'ways-to-study', 'daily-games', 'signup',
+    ]);
+    const all = [0, 1, 2];
+    const ways = 0;
     const look = (index: number) =>
       sections.nth(index).evaluate((el) => [el.getAttribute('data-reveal'), getComputedStyle(el).opacity, getComputedStyle(el).translate]);
     // All of them start below the first screen, so they wait, lowered and clear.
@@ -1016,10 +1020,9 @@ test.describe('silk scenes down the home page (D-53)', () => {
         };
       }),
     );
-    // Task 83 and the lane 14 home polish: how it works, "ways to study", daily games and launch updates follow the
-    // hero, so Ivory and Linen still alternate below it.
+    // The approved home has the hero, carousel, daily games and launch updates in that order.
     expect(scenes.map((scene) => scene.kind)).toEqual([
-      'scene-hero', 'scene-play', 'scene-tint', 'scene-play', 'scene-low',
+      'scene-hero', 'scene-tint', 'scene-play', 'scene-low',
     ]);
     for (const scene of scenes) expect(scene).toMatchObject({ drawn: true, behind: '-20', fades: true });
 
@@ -1042,13 +1045,14 @@ test.describe('silk scenes down the home page (D-53)', () => {
         probe.remove();
         return size;
       };
-      const bands: Array<[number, number]> = [];
+      const bands: Array<{ scene: string; edge: 'top' | 'bottom'; from: number; to: number }> = [];
       for (const section of document.querySelectorAll('.scene')) {
         const box = section.getBoundingClientRect();
         const top = length(section, '--scene-fade-top');
         const bottom = length(section, '--scene-fade-bottom');
-        if (top > 0) bands.push([box.top - top, box.top]);
-        if (bottom > 0) bands.push([box.bottom - bottom, box.bottom]);
+        const scene = [...section.classList].find((name) => name.startsWith('scene-'))!;
+        if (top > 0) bands.push({ scene, edge: 'top', from: box.top - top, to: box.top });
+        if (bottom > 0) bands.push({ scene, edge: 'bottom', from: box.bottom - bottom, to: box.bottom });
       }
       const hits: string[] = [];
       const walker = document.createTreeWalker(document.querySelector('main')!, NodeFilter.SHOW_TEXT);
@@ -1058,12 +1062,14 @@ test.describe('silk scenes down the home page (D-53)', () => {
         range.selectNodeContents(node);
         for (const rect of range.getClientRects()) {
           if (rect.width === 0 || rect.height === 0) continue;
-          if (bands.some(([from, to]) => rect.bottom > from && rect.top < to)) hits.push(node.textContent.trim());
+          if (bands.some(({ from, to }) => rect.bottom > from && rect.top < to)) hits.push(node.textContent.trim());
         }
       }
-      return { bands: bands.length, hits };
+      return { bands, hits };
     });
-    expect(covered.bands).toBe(5); // a fade above each of the four scenes after the hero, and one into the footer
+    expect(covered.bands.map(({ scene, edge }) => [scene, edge])).toEqual([
+      ['scene-tint', 'top'], ['scene-play', 'top'], ['scene-low', 'top'], ['scene-low', 'bottom'],
+    ]); // Three top fades between the four scenes, then the launch-updates scene fades into the footer.
     expect(covered.hits).toEqual([]);
   });
 });

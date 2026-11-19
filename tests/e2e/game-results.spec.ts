@@ -51,9 +51,80 @@ test('finished-game result announces the exact card and traps focus', async ({ p
   await expect(dialog).toContainText('pillo · easy · nov 11, 2026');
   await expect(dialog.getByRole('heading', { level: 2 })).toHaveText('4 / 6');
   await expect(dialog.getByTestId('result-share-line')).toHaveText('pillo · nov 11, 2026 · 4 / 6 · cueory.app');
+  const metadataGeometry = async () => dialog.locator('.result-meta').evaluate((element) => {
+    const range = document.createRange();
+    range.selectNodeContents(element);
+    const card = element.closest('[data-testid="game-result-dialog"]')!.getBoundingClientRect();
+    const raw = [...range.getClientRects()]
+      .filter((rect) => rect.width > 0 && rect.height > 0)
+      .map((rect) => ({ left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom }));
+    const lines: { left: number; right: number; top: number; bottom: number }[] = [];
+    for (const rect of raw.sort((a, b) => a.top - b.top || a.left - b.left)) {
+      const line = lines.find((candidate) => Math.abs(candidate.top - rect.top) <= 0.5 && Math.abs(candidate.bottom - rect.bottom) <= 0.5);
+      if (line) { line.left = Math.min(line.left, rect.left); line.right = Math.max(line.right, rect.right); }
+      else lines.push({ ...rect });
+    }
+    return {
+      raw,
+      lines,
+      deltas: lines.map((rect) => Math.abs((rect.left + rect.right) / 2 - (card.left + card.right) / 2)),
+      top: Math.min(...lines.map((rect) => rect.top)) - card.top,
+    };
+  });
+  const centered = await metadataGeometry();
+  expect(centered.deltas.length).toBeGreaterThan(0);
+  expect(Math.max(...centered.deltas), JSON.stringify(centered)).toBeLessThanOrEqual(1);
+  expect(centered.top).toBeLessThan(80);
+  const control = await page.evaluate(() => {
+    const find = (rules: CSSRuleList): { previous: string } | null => {
+      for (const rule of [...rules]) {
+        if (rule instanceof CSSStyleRule && rule.selectorText.includes('.result-dialog') && rule.selectorText.includes('before')) {
+          const previous = rule.style.display;
+          rule.style.setProperty('display', 'none', 'important');
+          return { previous };
+        }
+        if ('cssRules' in rule) {
+          const found = find((rule as CSSGroupingRule).cssRules);
+          if (found) return found;
+        }
+      }
+      return null;
+    };
+    for (const sheet of [...document.styleSheets]) {
+      let rules: CSSRuleList;
+      try { rules = sheet.cssRules; } catch { continue; }
+      const found = find(rules);
+      if (found) return found;
+    }
+    throw new Error('result-dialog balancing rule not found');
+  });
+  try {
+    const unbalanced = await metadataGeometry();
+    expect(Math.max(...unbalanced.deltas), JSON.stringify(unbalanced)).toBeGreaterThan(1);
+  } finally {
+    await page.evaluate(({ previous }) => {
+      const restore = (rules: CSSRuleList): boolean => {
+        for (const rule of [...rules]) {
+          if (rule instanceof CSSStyleRule && rule.selectorText.includes('.result-dialog') && rule.selectorText.includes('before')) {
+            if (previous) rule.style.setProperty('display', previous);
+            else rule.style.removeProperty('display');
+            return true;
+          }
+          if ('cssRules' in rule && restore((rule as CSSGroupingRule).cssRules)) return true;
+        }
+        return false;
+      };
+      for (const sheet of [...document.styleSheets]) {
+        let rules: CSSRuleList;
+        try { rules = sheet.cssRules; } catch { continue; }
+        if (restore(rules)) return;
+      }
+    }, control);
+  }
   await expect(dialog.locator('dt')).toHaveCount(3);
   await page.keyboard.press('Shift+Tab');
-  await expect(dialog.getByRole('link', { name: /whatsapp/ })).toBeFocused();
+  await expect(dialog.getByRole('button', { name: 'copy', exact: true })).toBeFocused();
+  await expect(dialog.getByRole('link')).toHaveCount(0);
   const axe = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa']).analyze();
   expect(axe.violations.map((violation) => violation.id + ': ' + violation.help)).toEqual([]);
   await page.keyboard.press('Escape');
@@ -61,18 +132,35 @@ test('finished-game result announces the exact card and traps focus', async ({ p
   await expect(returnTo).toBeFocused();
 });
 
+test('result card matches the P4 capture notes: plain close, solid share pill, solid Ivory in Daytime', async ({ page }) => {
+  await page.emulateMedia({ colorScheme: 'light' });
+  const dialog = await openResult(page);
+  // Daytime card is opaque Ivory (--color-page), not a see-through veil.
+  await expect(dialog).toHaveCSS('background-color', 'rgb(249, 245, 239)');
+  await expect(dialog.getByTestId('result-share-line')).toHaveCSS('border-top-style', 'solid');
+  const close = dialog.getByRole('button', { name: 'close results' });
+  await expect(close).toHaveCSS('border-top-width', '0px');
+  const box = await close.boundingBox();
+  expect(box!.width).toBeGreaterThanOrEqual(44);
+  expect(box!.height).toBeGreaterThanOrEqual(44);
+  // Keyboard focus back onto the close control still draws the visible focus ring.
+  await page.keyboard.press('Tab');
+  await page.keyboard.press('Shift+Tab');
+  await expect(close).toBeFocused();
+  await expect(close).toHaveCSS('outline-style', 'solid');
+});
+
 test('result footer stays truthful for repeating samples and respects explicit game copy', async ({ page }) => {
   const dialog = await openResult(page);
   const nextMessage = dialog.getByTestId('game-result-next-message');
-  await expect(nextMessage).toHaveText('thanks for playing.');
-  await expect(nextMessage).not.toContainText('tomorrow');
+  await expect(nextMessage).toHaveText('on a phone, share opens your device options.');
 
   await page.evaluate((detail) => {
     window.dispatchEvent(new CustomEvent('cueory:game-result-card', {
       detail: { ...detail, game: 'hello-cards', name: 'hello cards', result: "today's card" },
     }));
   }, card);
-  await expect(nextMessage).toHaveText('thanks for playing.');
+  await expect(nextMessage).toHaveText('on a phone, share opens your device options.');
 
   await page.evaluate((detail) => {
     window.dispatchEvent(new CustomEvent('cueory:game-result-card', {
@@ -262,27 +350,14 @@ test('first-visit promo waits while the result dialog owns focus', async ({ page
   await expect(page.getByTestId('promo')).toBeVisible();
 });
 
-test('copy fallback and every platform link stay plain and tracker-free', async ({ page }) => {
+test('copy fallback stays plain and social destinations remain held', async ({ page }) => {
   const dialog = await openResult(page);
   const line = 'pillo · nov 11, 2026 · 4 / 6 · cueory.app';
   await dialog.getByRole('button', { name: 'copy', exact: true }).click();
   await expect(dialog.getByRole('status')).toHaveText('result copied.');
   expect(await page.evaluate(() => (window as unknown as { copied: string }).copied)).toBe(line);
 
-  const expected = {
-    facebook: ['facebook.com', 'u'],
-    x: ['x.com', 'url'],
-    threads: ['threads.com', 'url'],
-    reddit: ['reddit.com', 'url'],
-    whatsapp: ['wa.me', 'text'],
-  } as const;
-  for (const [name, [host, parameter]] of Object.entries(expected)) {
-    const href = await dialog.getByRole('link', { name: new RegExp('^' + name) }).getAttribute('href');
-    const url = new URL(href!);
-    expect(url.hostname).toContain(host);
-    expect(url.searchParams.get(parameter)).toBeTruthy();
-    expect([...url.searchParams.keys()].some((key) => key.startsWith('utm_'))).toBe(false);
-  }
+  await expect(dialog.getByRole('link')).toHaveCount(0);
 });
 
 test('native image sharing waits for a fresh click after image preparation', async ({ page }) => {
