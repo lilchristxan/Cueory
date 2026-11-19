@@ -16,17 +16,29 @@ for (const path of ['/', '/play/pillo', '/play/sudoku', '/learn/study-skills/car
   test(`${path}: nothing moves under reduced motion`, async ({ page }) => {
     await page.goto(path);
     const moving = await page.evaluate(() => {
-      const ms = (v: string) => Math.max(...v.split(',').map((t) => (t.trim().endsWith('ms') ? parseFloat(t) : parseFloat(t) * 1000)));
+      const timesInMs = (value: string) => value.split(',').map((time) => {
+        const amount = Number.parseFloat(time);
+        return time.trim().endsWith('ms') ? amount : amount * 1000;
+      });
       const found: string[] = [];
       for (const el of document.querySelectorAll('*')) {
         for (const pseudo of [null, '::before', '::after']) {
           const s = getComputedStyle(el, pseudo);
           const name = `${el.tagName.toLowerCase()}${el.id ? `#${el.id}` : ''}${el.classList.length ? `.${[...el.classList].join('.')}` : ''}${pseudo ?? ''}`;
-          if (s.transitionProperty !== 'none' && ms(s.transitionDuration) > 0.01) found.push(`${name}: transition ${s.transitionProperty} ${s.transitionDuration}`);
+          if (timesInMs(s.transitionDelay).some((delay) => delay !== 0)) {
+            found.push(`${name}: transition delay ${s.transitionDelay}`);
+          }
+          if (timesInMs(s.animationDelay).some((delay) => delay !== 0)) {
+            found.push(`${name}: animation delay ${s.animationDelay}`);
+          }
+          if (s.transitionProperty !== 'none' && timesInMs(s.transitionDuration).some((duration) => duration > 0.01)) {
+            found.push(`${name}: transition ${s.transitionProperty} ${s.transitionDuration}`);
+          }
           if (s.animationName !== 'none') {
-            if (ms(s.animationDuration) > 0.01) found.push(`${name}: animation ${s.animationName} ${s.animationDuration}`);
+            if (timesInMs(s.animationDuration).some((duration) => duration > 0.01)) {
+              found.push(`${name}: animation ${s.animationName} ${s.animationDuration}`);
+            }
             if (s.animationIterationCount !== '1') found.push(`${name}: animation loops (${s.animationIterationCount})`);
-            if (ms(s.animationDelay) > 0) found.push(`${name}: animation waits ${s.animationDelay}`);
           }
         }
       }
