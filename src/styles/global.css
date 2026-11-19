@@ -1541,6 +1541,22 @@ html:has(dialog.menu-panel[open]) {
 }
 
 /*
+  Study-mode preview dialog under reduced motion: no transition and no animation is created inside it. The blanket rule
+  above gives every element a 0.01ms duration, which Chromium finishes before the next frame but Firefox still lists in
+  getAnimations() (18 of them, release run 44422471256). Setting the property to none creates nothing at all, so the
+  dialog opens and closes at once.
+*/
+@media (prefers-reduced-motion: reduce) {
+  .mode-preview,
+  .mode-preview *,
+  .mode-preview *::before,
+  .mode-preview *::after {
+    transition: none;
+    animation-name: none;
+  }
+}
+
+/*
   The study-mode preview (D-51, Task 109): a native modal <dialog> that fills the window. Behind the panel, the page is
   darkened and softly frosted (the scrim). The panel's cream surface is its own layer, so the script can open it around
   the bottle; it is opaque, in the frosted cards' own color (Ivory, Evening: Walnut), so its text has the plain
