@@ -25,6 +25,8 @@ const patterns: { kind: string; pattern: RegExp }[] = [
   { kind: 'Google OAuth client secret', pattern: /\bGOCSPX-[A-Za-z0-9_-]{20,}/ },
   { kind: 'Resend API key', pattern: /\bre_[A-Za-z0-9]{8,}_[A-Za-z0-9]{16,}/ },
   { kind: 'Postgres URL with a password', pattern: /\bpostgres(?:ql)?:\/\/[^\s:/@'"`]+:[^\s@'"`<>{}$]{6,}@/ },
+  // The backup flow encrypts to an age public key (docs/BACKUPS.md); its private half must never be committed.
+  { kind: 'age private key', pattern: /\bAGE-SECRET-KEY-1[0-9A-Z]{50,}/ },
 ];
 
 /**
@@ -69,6 +71,7 @@ describe('secret finder (fixtures)', () => {
     ['Google OAuth client secret', join2('GOCSPX-', 'x'.repeat(24))],
     ['Resend API key', join2('re_', 'x'.repeat(8), '_', 'y'.repeat(20))],
     ['Postgres URL with a password', join2('postgresql://', 'postgres:', 'z'.repeat(12), '@db.example.co:5432/postgres')],
+    ['age private key', join2('AGE-', 'SECRET-', 'KEY-1', 'Q'.repeat(58))],
   ])('finds a %s and does not echo it', (kind, value) => {
     const findings = findSecrets(`first line\nconst value = '${value}';`);
     expect(findings).toEqual([`line 2: ${kind}`]);
@@ -81,6 +84,7 @@ describe('secret finder (fixtures)', () => {
       "SUPABASE_SECRET_KEY=<from the Supabase dashboard>",
       'postgresql://postgres:${PGPASSWORD}@localhost:54322/postgres',
       'postgresql://postgres@localhost:54322/postgres',
+      'the private key starts with `AGE-SECRET-KEY-1`.',
       "PUBLIC_SUPABASE_PUBLISHABLE_KEY: 'sb_secret_abcdefghijklmnopqrstuvwxyz'",
     ].join('\n'))).toEqual([]);
   });
