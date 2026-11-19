@@ -79,7 +79,7 @@ function Session({ questions, check, events, onCurrent }: SessionProps) {
   const [focusStep, setFocusStep] = useState(0);
   const request = useRef(0);
   const inFlight = useRef(false);
-  const stem = useRef<HTMLLegendElement>(null);
+  const stem = useRef<HTMLSpanElement>(null);
   const end = useRef<HTMLDivElement>(null);
   const id = useId();
   const question = currentQuestion(state);
@@ -144,7 +144,9 @@ function Session({ questions, check, events, onCurrent }: SessionProps) {
         <>
           <p className="text-sm text-ink-soft">question {state.index + 1} of {state.questions.length}</p>
           <fieldset className="mt-4 min-w-0" disabled={waiting || !!answer} aria-describedby={question.type === 'sata' ? `${id}-instruction` : undefined}>
-            <legend ref={stem} tabIndex={-1} className="w-full text-lg font-medium">{question.stem}</legend>
+            <legend className="w-full text-lg font-medium">
+              <span ref={stem} tabIndex={-1}>{question.stem}</span>
+            </legend>
             {question.type === 'sata' && <p id={`${id}-instruction`} className="mt-2 text-sm text-ink-soft">select all that apply</p>}
             <div className="mt-4 flex flex-col gap-3">
               {question.choices.map((choice) => {
