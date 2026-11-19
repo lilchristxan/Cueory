@@ -22,7 +22,7 @@ for (const path of ['/', '/learn/study-skills', '/play', '/signin']) {
   test(`${path}: both preloaded Lato weights are used and downloaded once`, async ({ page, browserName }, testInfo) => {
     await page.goto(path);
     await page.evaluate(() => document.fonts.ready);
-    const result = await page.evaluate(() => ({
+    const result = await page.evaluate((withFetchStart) => ({
       loaded: [...document.fonts]
         .filter((face) => face.family.replaceAll('"', '') === 'Lato' && face.style === 'normal' && face.status === 'loaded')
         .map((face) => face.weight)
@@ -40,9 +40,12 @@ for (const path of ['/', '/learn/study-skills', '/play', '/signin']) {
             encodedBodySize: timing.encodedBodySize,
             startTime: timing.startTime,
             responseEnd: timing.responseEnd,
+            // WebKit only, and only for the log line and attachment below (never asserted): the open review question
+            // on the allowance is whether a reused entry's startTime is copied from the preload's fetchStart.
+            ...(withFetchStart ? { fetchStart: timing.fetchStart } : {}),
           };
         }),
-    }));
+    }), browserName === 'webkit');
     console.log(`${testInfo.project.name} ${path} lato entries: ${JSON.stringify(result.entries)}`);
     await testInfo.attach('lato-resource-entries', { body: JSON.stringify(result.entries, null, 2), contentType: 'application/json' });
     expect(result.loaded).toEqual(['400', '700']);
