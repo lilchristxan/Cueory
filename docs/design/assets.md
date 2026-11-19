@@ -10,6 +10,7 @@ declare the width and height on every `<img>` (see `tests/unit/perf-images.test.
 | `public/design/pillo-blister-board.webp` | 357,332 B | 1230 x 1180 | Pillo and PilloDone: the game board | Board image under the tiles; tiles are positioned over it by percent (see the board's tile `left`/`top`). Already WebP; re-encoding made it larger or visibly worse, so it is the original. |
 | `public/design/logo-pillo.webp` | 4,306 B | 550 x 208 | Pillo and PilloDone: wordmark above the board | The "pillo" title image (wordmark and TM only). Lossless WebP, keeps transparency. The original export also had a subtitle line under the wordmark that named a competitor game; it sat in its own band (rows 222 to 242, clear of the wordmark's rows 0 to 207) and was cropped off. Wordmark pixels are unchanged (checked pixel for pixel). Do not add a subtitle under it. |
 | `public/design/icon-building-notice.webp` | 3,160 B | 145 x 132 | HomeV2, Pillo, Sudoku, WordPath and Done boards: top "we're still building" notice (20 px tall) | Notice bar mark. Lossless WebP of the original PNG, keeps transparency. |
+| `public/design/silk-fold-mask.svg` | 1698 B | vector 1440 x 760 | HomeV2, Pillo, Sudoku, WordPath, About and Done boards: the draped-silk swoosh | Fold shape only, as a CSS `mask-image` over a token-coloured layer (`--silk-peach-*`, `--color-silk-*`). All its colours are black: only the opacity (alpha) is used, so no colour comes from the file. Same paths, gradient opacities and blur as the boards' silk. Repeat or flip it down the page with CSS, as the boards do. |
 
 Total: 489,026 bytes.
 
@@ -34,7 +35,7 @@ The Games board crops the wordmark out of a 2048 x 2048 logo sheet with CSS. Do 
 
 ## Not included
 
-The draped-silk background SVG from the boards: it hard-coded colours outside the approved palettes, and staging already has a brand-compliant silk (D-41, D-53) built from tokens (`--color-silk-base`, `--color-silk-sheen`, `--color-silk-shade`, `--color-silk-tint` in `src/styles/tokens.css`, scenes in `src/styles/global.css`). Builders use the existing silk tokens and match them against the renderings; no SVG is added.
+The draped-silk background SVG from the boards: it hard-coded colours outside the approved palettes, and staging already has a brand-compliant silk (D-41, D-53) built from tokens (`--color-silk-base`, `--color-silk-sheen`, `--color-silk-shade`, `--color-silk-tint` in `src/styles/tokens.css`, scenes in `src/styles/global.css`). Builders use the existing silk tokens and match them against the renderings. The fold geometry is available only as the colourless mask `public/design/silk-fold-mask.svg` (above).
 
 The HomeV2 "daily games" tile icon: the tile uses an existing brand icon (or a line icon in brand tokens, like the other tiles) until Christian supplies a version in brand colours.
 

@@ -247,16 +247,38 @@
 
   /* The same cloth without folds, for whole pages behind text. */
   .silk-quiet {
-    --silk-glow-alpha: min(calc(var(--silk-fold-alpha) * 2.8), 0.5);
     background-color: var(--color-silk-base);
     background-image:
       var(--silk-grain),
-      radial-gradient(ellipse 65% 50% at 4% 6%, rgb(var(--silk-fold-rgb) / var(--silk-glow-alpha)), transparent 72%),
-      radial-gradient(ellipse 60% 55% at 96% 20%, rgb(var(--silk-fold-rgb) / calc(var(--silk-glow-alpha) * 0.8)), transparent 70%),
-      radial-gradient(ellipse 75% 45% at 22% 80%, rgb(var(--silk-fold-rgb) / calc(var(--silk-glow-alpha) * 0.7)), transparent 72%),
-      radial-gradient(ellipse 50% 40% at 55% 38%, color-mix(in srgb, var(--color-silk-sheen) 70%, transparent), transparent 70%),
+      /* Diagonal folds: a soft ridge of peach with a lighter sheen beside it, as in the renderings. */
+      linear-gradient(115deg, transparent 12%, rgb(var(--silk-peach-rgb) / calc(var(--silk-peach-alpha) * 0.7)) 26%, color-mix(in srgb, var(--color-silk-sheen) 55%, transparent) 34%, transparent 46%),
+      linear-gradient(245deg, transparent 50%, rgb(var(--silk-peach-rgb) / calc(var(--silk-peach-alpha) * 0.8)) 64%, color-mix(in srgb, var(--color-silk-sheen) 45%, transparent) 72%, transparent 86%),
+      radial-gradient(ellipse 65% 50% at 4% 6%, rgb(var(--silk-peach-rgb) / var(--silk-peach-alpha)), transparent 72%),
+      radial-gradient(ellipse 60% 55% at 96% 20%, rgb(var(--silk-peach-rgb) / calc(var(--silk-peach-alpha) * 0.8)), transparent 70%),
+      radial-gradient(ellipse 75% 45% at 22% 80%, rgb(var(--silk-peach-rgb) / calc(var(--silk-peach-alpha) * 0.7)), transparent 72%),
       linear-gradient(180deg, var(--color-silk-tint), var(--color-silk-base) 55%, var(--color-silk-shade));
-    background-size: 220px 220px, auto, auto, auto, auto, auto;
+    background-size: 220px 220px, auto, auto, auto, auto, auto, auto;
+  }
+
+  /* The boards' fold shape (a colourless mask) over a token-coloured layer, tiled down the page behind the content. */
+  .silk-quiet {
+    position: relative;
+    isolation: isolate;
+  }
+
+  .silk-quiet::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background-color: rgb(var(--silk-peach-rgb) / calc(var(--silk-peach-alpha) * 0.6));
+    -webkit-mask-image: url("/design/silk-fold-mask.svg");
+    mask-image: url("/design/silk-fold-mask.svg");
+    -webkit-mask-size: 100% var(--silk-fold-height);
+    mask-size: 100% var(--silk-fold-height);
+    -webkit-mask-repeat: repeat-y;
+    mask-repeat: repeat-y;
   }
 
   /* Transparent with a fade, as in HomeV2-1.png: the page's silk shows through and the strip melts into it. */
