@@ -39,11 +39,60 @@ export function statusFor(game: GameId, today: string, stats: GameStats, heard: 
 }
 
 /** The words and symbol each status shows. The symbol is decoration; the words carry the meaning (never color). */
-export const STATUS_TEXT: Readonly<Record<DayStatus, { label: string; symbol: string }>> = Object.freeze({
+export interface StatusDisplay {
+  label: string;
+  symbol: string;
+}
+
+export const STATUS_TEXT: Readonly<Record<DayStatus, StatusDisplay>> = Object.freeze({
   'not-started': { label: 'not started', symbol: '○' },
   'in-progress': { label: 'in progress', symbol: '◐' },
   done: { label: 'done', symbol: '✓' },
 });
+
+export interface StatusDetails {
+  wordsFound?: number;
+  totalWords?: number;
+}
+
+/**
+ * Returns the status label and symbol for a given game and status.
+ * Side-card status pills show the real states matching Games.png:
+ * - "not started" (symbol: ○)
+ * - "in progress" (symbol: ◐)
+ * - "done · <n> of <total> words" (symbol: ✓) for word path (suture) when the saved result gives both counts,
+ *   otherwise "done"
+ * Colour is never the only signal.
+ */
+/** Both counts present, whole, not negative, and no more words found than the round has. */
+function validWordCount(found: number | undefined, total: number | undefined): boolean {
+  return (
+    Number.isSafeInteger(found) &&
+    Number.isSafeInteger(total) &&
+    (found as number) >= 0 &&
+    (total as number) > 0 &&
+    (found as number) <= (total as number)
+  );
+}
+
+export function statusDisplayFor(
+  game: GameId,
+  status: DayStatus,
+  details?: StatusDetails
+): StatusDisplay {
+  if (status === 'not-started') {
+    return { label: 'not started', symbol: '○' };
+  }
+  if (status === 'in-progress') {
+    return { label: 'in progress', symbol: '◐' };
+  }
+  // status === 'done'
+  // The word count shows only when the saved result backs it; otherwise plain "done", never an assumed count.
+  if (game === 'suture' && details && validWordCount(details.wordsFound, details.totalWords)) {
+    return { label: `done · ${details.wordsFound} of ${details.totalWords} words`, symbol: '✓' };
+  }
+  return { label: 'done', symbol: '✓' };
+}
 
 /**
  * Reads a game event's detail into a heard key, or nothing when it isn't one of `games` on a real day. Sudoku's own

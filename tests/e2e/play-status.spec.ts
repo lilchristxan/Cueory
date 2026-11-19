@@ -60,6 +60,22 @@ for (const size of [{ width: 390, height: 844 }, { width: 1440, height: 900 }]) 
       await expect(row(page, 'suture')).toHaveAttribute('data-status', 'not-started');
       await expect(page.getByTestId('play-status-note')).toHaveCount(0);
     });
+
+    test('a suture result kept in the stats record, with no word counts saved, shows plain done (never an assumed count)', async ({ page }) => {
+      await page.addInitScript(() => {
+        localStorage.setItem('cueory-game-stats', JSON.stringify({
+          version: 1,
+          results: [
+            { game: 'suture', day: '2026-11-01', solved: true, tries: 0 },
+          ],
+        }));
+      });
+      await page.goto('/play');
+      await expect(row(page, 'suture')).toHaveAttribute('data-status', 'done');
+      await expect(row(page, 'suture')).toContainText('✓');
+      await expect(row(page, 'suture')).toContainText('done');
+      await expect(row(page, 'suture')).not.toContainText('of 6 words');
+    });
   });
 }
 
