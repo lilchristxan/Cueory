@@ -62,8 +62,8 @@ async function loopback(upstream: string) {
 }
 
 /** One visit, no reload: the page saves itself and the files it loaded before the worker could (the first visit). */
-async function visitLesson(page: Page) {
-  await page.goto('/learn/study-skills');
+async function visitLesson(page: Page, origin = '') {
+  await page.goto(`${origin}/learn/study-skills`);
   await expect.poll(() => kept(page), { timeout: 15_000 }).toContain('/learn/study-skills');
 }
 
@@ -122,21 +122,11 @@ test('it keeps only pages and built files from this site, never a query string o
   expect(await page.evaluate(() => caches.keys())).toEqual([expect.stringMatching(/^cueory-offline-[A-Za-z0-9-]+$/)]);
 });
 
-test('a page that was never visited fails when its worker cannot reach the same-origin transport', async ({ browser, baseURL }) => {
+test('a page that was never visited fails when its worker cannot reach the same-origin transport', async ({ page, baseURL }) => {
   if (!baseURL) throw new Error('the local preview base URL is required');
   const proxy = await loopback(baseURL);
-  let context: Awaited<ReturnType<typeof browser.newContext>> | undefined;
   try {
-    context = await browser.newContext({ baseURL: proxy.origin, serviceWorkers: 'allow' });
-    const page = await context.newPage();
-    await page.addInitScript(() => {
-      try {
-        localStorage.setItem('cueory-promo-seen', String(Date.now())); localStorage.setItem('cueory-signup-popup-seen', String(Date.now()));
-      } catch {
-        // Storage is blocked: the panel never shows then anyway.
-      }
-    });
-    await visitLesson(page);
+    await visitLesson(page, proxy.origin);
     expect(await page.evaluate(() => window.isSecureContext)).toBe(true);
     await expect.poll(() => page.evaluate(() => navigator.serviceWorker.controller?.scriptURL ?? null)).not.toBeNull();
     expect(await kept(page)).not.toContain('/learn/study-skills/matching');
@@ -149,7 +139,6 @@ test('a page that was never visited fails when its worker cannot reach the same-
     const failed = await page.evaluate(() => fetch('/learn/study-skills/matching').then(() => false, () => true));
     expect(failed).toBe(true);
   } finally {
-    await context?.close();
     await proxy.stop();
   }
 });
