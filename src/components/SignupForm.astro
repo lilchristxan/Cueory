@@ -29,10 +29,10 @@ const landingUrl = kitLandingUrl(newsletter.landingUrl);
             <form
               action={kitFormAction(newsletter.formAction)}
               method="post"
-              class="flex flex-col gap-3 text-left sm:flex-row sm:items-end"
+              class="min-w-0 flex flex-col gap-3 text-left sm:flex-row sm:items-end"
               data-testid="signup-form"
             >
-              <div class="flex flex-1 flex-col gap-1">
+              <div class="min-w-0 flex flex-1 flex-col gap-1">
                 <label for="signup-email" class="text-sm text-ink-soft">
                   email address
                 </label>
@@ -46,7 +46,7 @@ const landingUrl = kitLandingUrl(newsletter.landingUrl);
                   inputmode="email"
                   aria-describedby="signup-email-help"
                   placeholder="your email"
-                  class="rounded-pill border border-control bg-page px-4 py-3 text-ink"
+                  class="min-w-0 w-full max-w-full rounded-pill border border-control bg-page px-4 py-3 text-ink"
                 />
               </div>
               <button type="submit" class="signup-action min-h-11 rounded-pill px-6 py-3 font-bold">
@@ -97,6 +97,10 @@ const landingUrl = kitLandingUrl(newsletter.landingUrl);
     font-size: var(--cueory-label-size);
     font-weight: var(--cueory-label-weight);
     letter-spacing: var(--cueory-label-tracking);
+  }
+
+  .signup-layout {
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .signup-action {
