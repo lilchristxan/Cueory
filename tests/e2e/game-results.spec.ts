@@ -132,6 +132,24 @@ test('finished-game result announces the exact card and traps focus', async ({ p
   await expect(returnTo).toBeFocused();
 });
 
+test('result card matches the P4 capture notes: plain close, solid share pill, solid Ivory in Daytime', async ({ page }) => {
+  await page.emulateMedia({ colorScheme: 'light' });
+  const dialog = await openResult(page);
+  // Daytime card is opaque Ivory (--color-page), not a see-through veil.
+  await expect(dialog).toHaveCSS('background-color', 'rgb(249, 245, 239)');
+  await expect(dialog.getByTestId('result-share-line')).toHaveCSS('border-top-style', 'solid');
+  const close = dialog.getByRole('button', { name: 'close results' });
+  await expect(close).toHaveCSS('border-top-width', '0px');
+  const box = await close.boundingBox();
+  expect(box!.width).toBeGreaterThanOrEqual(44);
+  expect(box!.height).toBeGreaterThanOrEqual(44);
+  // Keyboard focus back onto the close control still draws the visible focus ring.
+  await page.keyboard.press('Tab');
+  await page.keyboard.press('Shift+Tab');
+  await expect(close).toBeFocused();
+  await expect(close).toHaveCSS('outline-style', 'solid');
+});
+
 test('result footer stays truthful for repeating samples and respects explicit game copy', async ({ page }) => {
   const dialog = await openResult(page);
   const nextMessage = dialog.getByTestId('game-result-next-message');

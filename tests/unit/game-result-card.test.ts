@@ -122,15 +122,15 @@ describe('shared result dialog design tokens', () => {
     expect(source).not.toContain('rounded-2xl');
   });
 
-  it('uses small caps without text-transforming source content', () => {
+  it('shows the label in capitals by style only, without changing the source text', () => {
     const host = readFileSync(new URL('../../src/islands/GameResultsHost.tsx', import.meta.url), 'utf8');
     // The share landing pages that also used result-meta became the games' own pages (2026-11-17) and were removed.
     const styles = readFileSync(new URL('../../src/styles/global.css', import.meta.url), 'utf8');
     expect(host).toContain('result-meta');
     expect(host).toContain('uppercase');
     expect(host).not.toMatch(/PILLO|SUDOKU|WORD PATH|CROSSWORD/);
-    expect(styles).toContain('font-variant-caps: all-small-caps');
-    expect(styles).not.toMatch(/\.result-meta[^}]*text-transform/s);
+    // The uppercase class is the one caps treatment: a small-caps rule on top of it would be dead weight.
+    expect(styles).not.toMatch(/\.result-meta\s*\{/);
   });
 });
 

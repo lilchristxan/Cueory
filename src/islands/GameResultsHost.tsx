@@ -176,7 +176,7 @@ export default function GameResultsHost() {
           type="button"
           aria-label="close results"
           onClick={close}
-          className="result-dialog-close flex size-(--tap-min) items-center justify-center text-ink"
+          className="result-dialog-close flex size-(--tap-min) items-center justify-center rounded-pill text-xl leading-none text-ink"
         >
           <span aria-hidden="true">×</span>
         </button>
@@ -198,7 +198,7 @@ export default function GameResultsHost() {
           ))}
         </dl>
 
-        <p className="mt-5 rounded-md border border-dashed border-control p-3 text-center text-sm break-words" data-testid="result-share-line">
+        <p className="mt-5 rounded-pill border border-control px-4 py-3 text-center text-sm break-words" data-testid="result-share-line">
           {line}
         </p>
 

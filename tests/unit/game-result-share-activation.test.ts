@@ -56,7 +56,7 @@ function button(node: unknown, name: string): ReactElement<{ children?: unknown;
     if (childElement.props['aria-hidden']) return '';
     return text(childElement.props.children);
   };
-  if (element.type === 'button' && ((element.props['aria-label'] ?? '') === name || text(element.props.children).includes(name))) return element;
+  if (element.type === 'button' && ((element.props['aria-label'] ?? '') === name || text(element.props.children).trim() === name)) return element;
   return button(element.props.children, name);
 }
 function click(name: string) {

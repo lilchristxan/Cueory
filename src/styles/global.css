@@ -1879,11 +1879,6 @@ html:has(dialog.menu-panel[open]) {
     backdrop-filter: blur(var(--blur-scrim));
   }
 
-  .result-meta {
-    font-variant-caps: all-small-caps;
-    letter-spacing: var(--tracking-label);
-  }
-
   /*
     The finished-game card's close button (issue 743) floats in the top corner and sticks there while the card scrolls, so
     large text on a narrow screen can neither push it off the edge nor scroll it out of sight. Focused controls stop

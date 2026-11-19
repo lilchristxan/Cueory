@@ -7,7 +7,9 @@ it('publishes the isolated P1 rendering interface without duplicating brand prim
   expect(css).toMatch(/--cueory-glass-bg:\s*rgb\(var\(--glass-rgb\) \/ var\(--glass-alpha\)\);/);
   expect(css).toMatch(/--cueory-mesh-base:\s*var\(--color-silk-base\);/);
   expect(css).toMatch(/--cueory-cell-min:\s*var\(--wordpath-cell-min\);/);
-  expect(css).toMatch(/--cueory-result-card-bg:\s*rgb\(var\(--veil-rgb\) \/ var\(--veil-alpha\)\);/);
+  // Daytime: solid Ivory, not frosted (PilloDone); both Evening copies keep the Walnut veil.
+  expect(css).toMatch(/--cueory-result-card-bg:\s*var\(--color-page\);/);
+  expect(css.match(/--cueory-result-card-bg:\s*rgb\(var\(--veil-rgb\) \/ var\(--veil-alpha\)\);/g)).toHaveLength(2);
   expect(css).toMatch(/--cueory-result-card-shadow:\s*var\(--shadow-lift\);/);
   expect(css).toMatch(/--cueory-label-size:\s*0\.75rem;/);
   expect(css).toMatch(/--cueory-label-tracking:\s*0\.22em;/);
