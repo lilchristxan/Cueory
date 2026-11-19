@@ -21,7 +21,7 @@ describe('finished-game share line', () => {
   it('shares Sudoku level, elapsed time and error count from the canonical result', () => {
     const result = sudokuResultCard(sudokuResult({ day: '2026-11-11', level: 'medium', solved: true, seconds: 252, errors: 0 }));
     expect(result.result).toBe('solved');
-    expect(buildResultShareLine(result)).toBe('sudoku · wed 11 nov · mid · 04:12 · 0 errors · cueory.app');
+    expect(buildResultShareLine(result)).toBe('sudoku · wed 11 nov · medium · 04:12 · 0 errors · cueory.app');
   });
 });
 
@@ -42,10 +42,10 @@ describe('Sudoku result adapter', () => {
       game: 'sudoku',
       name: 'sudoku',
       date: 'wed 11 nov',
-      level: 'mid',
+      level: 'medium',
       result: 'solved',
-      shareResult: 'mid · 02:34 · 1 error',
-      summary: 'mid completed in 02:34 with 1 error.',
+      shareResult: 'medium · 02:34 · 1 error',
+      summary: 'medium completed in 02:34 with 1 error.',
       stats: [
         { label: 'time', value: '02:34' },
         { label: 'errors', value: '1' },

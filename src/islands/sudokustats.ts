@@ -1,5 +1,5 @@
 /**
- * Sudoku's private per-level stats (#720): solved, best time, average time and streak for easy, mid and hard.
+ * Sudoku's private per-level stats (#720): solved, best time, average time and streak for easy, medium and hard.
  *
  * The record holds only the day, the level and the solve time of each level's first solve of a day. It follows the
  * shared daily-game stats switch (D-76): it is kept only while stats are on, it is deleted when stats are turned off or

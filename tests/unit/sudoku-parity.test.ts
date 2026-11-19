@@ -43,8 +43,8 @@ function memoryStorage(initial: Record<string, string> = {}) {
 }
 
 describe('levels and the puzzle validator', () => {
-  it('calls the levels easy, mid and hard, with one stable puzzle per level per day', () => {
-    expect(levels.map((level) => LEVEL_LABELS[level])).toEqual(['easy', 'mid', 'hard']);
+  it('calls the levels easy, medium and hard (as drawn in Sudoku.png and the copy deck), with one stable puzzle per level per day', () => {
+    expect(levels.map((level) => LEVEL_LABELS[level])).toEqual(['easy', 'medium', 'hard']);
     const boards = levels.map((level) => generateSudoku(dailySudokuSeed(today, level), level).puzzle.join(''));
     expect(new Set(boards).size).toBe(3);
     expect(generateSudoku(dailySudokuSeed(today, 'hard'), 'hard').puzzle.join('')).toBe(boards[2]);
