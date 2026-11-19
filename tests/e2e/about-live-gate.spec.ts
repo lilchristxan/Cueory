@@ -24,15 +24,21 @@ test.describe('staging and local builds', () => {
  */
 function liveBuild(): string {
   const dir = mkdtempSync(join(tmpdir(), 'cueory-about-live-'));
-  const site = join(dir, 'site');
-  const env: NodeJS.ProcessEnv = { ...process.env, WORKERS_CI: '1', WORKERS_CI_BRANCH: 'main' };
-  delete env.CUEORY_ANATOMY_DRAFTS;
-  execFileSync('npx', ['astro', 'build', '--outDir', site], { env, stdio: 'ignore' });
-  prunePreview(env, site);
-  // The build does make the page; it is the prune step that takes it out.
-  const removed = pruneHeldPages(env, site);
-  if (!removed.includes('about.html')) throw new Error(`the live build should have pruned about.html, pruned: ${removed.join(', ')}`);
-  return dir;
+  try {
+    const site = join(dir, 'site');
+    const env: NodeJS.ProcessEnv = { ...process.env, WORKERS_CI: '1', WORKERS_CI_BRANCH: 'main' };
+    delete env.CUEORY_ANATOMY_DRAFTS;
+    execFileSync('npx', ['astro', 'build', '--outDir', site], { env, stdio: 'ignore' });
+    prunePreview(env, site);
+    // The build does make the page; it is the prune step that takes it out.
+    const removed = pruneHeldPages(env, site);
+    if (!removed.includes('about.html')) throw new Error(`the live build should have pruned about.html, pruned: ${removed.join(', ')}`);
+    return dir;
+  } catch (error) {
+    // The caller never gets the path if setup fails, so the half-made build is removed here.
+    rmSync(dir, { recursive: true, force: true });
+    throw error;
+  }
 }
 
 function builtPages(folder: string): string[] {
