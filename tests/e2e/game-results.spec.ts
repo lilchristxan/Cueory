@@ -51,16 +51,76 @@ test('finished-game result announces the exact card and traps focus', async ({ p
   await expect(dialog).toContainText('pillo · easy · nov 11, 2026');
   await expect(dialog.getByRole('heading', { level: 2 })).toHaveText('4 / 6');
   await expect(dialog.getByTestId('result-share-line')).toHaveText('pillo · nov 11, 2026 · 4 / 6 · cueory.app');
-  const metadataGeometry = await dialog.locator('.result-meta').evaluate((element) => {
-    const text = element.getBoundingClientRect();
+  const metadataGeometry = async () => dialog.locator('.result-meta').evaluate((element) => {
+    const range = document.createRange();
+    range.selectNodeContents(element);
     const card = element.closest('[data-testid="game-result-dialog"]')!.getBoundingClientRect();
+    const raw = [...range.getClientRects()]
+      .filter((rect) => rect.width > 0 && rect.height > 0)
+      .map((rect) => ({ left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom }));
+    const lines: { left: number; right: number; top: number; bottom: number }[] = [];
+    for (const rect of raw.sort((a, b) => a.top - b.top || a.left - b.left)) {
+      const line = lines.find((candidate) => Math.abs(candidate.top - rect.top) <= 0.5 && Math.abs(candidate.bottom - rect.bottom) <= 0.5);
+      if (line) { line.left = Math.min(line.left, rect.left); line.right = Math.max(line.right, rect.right); }
+      else lines.push({ ...rect });
+    }
     return {
-      delta: Math.abs((text.left + text.right) / 2 - (card.left + card.right) / 2),
-      top: text.top - card.top,
+      raw,
+      lines,
+      deltas: lines.map((rect) => Math.abs((rect.left + rect.right) / 2 - (card.left + card.right) / 2)),
+      top: Math.min(...lines.map((rect) => rect.top)) - card.top,
     };
   });
-  expect(metadataGeometry.delta).toBeLessThanOrEqual(1);
-  expect(metadataGeometry.top).toBeLessThan(80);
+  const centered = await metadataGeometry();
+  expect(centered.deltas.length).toBeGreaterThan(0);
+  expect(Math.max(...centered.deltas), JSON.stringify(centered)).toBeLessThanOrEqual(1);
+  expect(centered.top).toBeLessThan(80);
+  const control = await page.evaluate(() => {
+    const find = (rules: CSSRuleList): { previous: string } | null => {
+      for (const rule of [...rules]) {
+        if (rule instanceof CSSStyleRule && rule.selectorText.includes('.result-dialog') && rule.selectorText.includes('before')) {
+          const previous = rule.style.display;
+          rule.style.setProperty('display', 'none', 'important');
+          return { previous };
+        }
+        if ('cssRules' in rule) {
+          const found = find((rule as CSSGroupingRule).cssRules);
+          if (found) return found;
+        }
+      }
+      return null;
+    };
+    for (const sheet of [...document.styleSheets]) {
+      let rules: CSSRuleList;
+      try { rules = sheet.cssRules; } catch { continue; }
+      const found = find(rules);
+      if (found) return found;
+    }
+    throw new Error('result-dialog balancing rule not found');
+  });
+  try {
+    const unbalanced = await metadataGeometry();
+    expect(Math.max(...unbalanced.deltas), JSON.stringify(unbalanced)).toBeGreaterThan(1);
+  } finally {
+    await page.evaluate(({ previous }) => {
+      const restore = (rules: CSSRuleList): boolean => {
+        for (const rule of [...rules]) {
+          if (rule instanceof CSSStyleRule && rule.selectorText.includes('.result-dialog') && rule.selectorText.includes('before')) {
+            if (previous) rule.style.setProperty('display', previous);
+            else rule.style.removeProperty('display');
+            return true;
+          }
+          if ('cssRules' in rule && restore((rule as CSSGroupingRule).cssRules)) return true;
+        }
+        return false;
+      };
+      for (const sheet of [...document.styleSheets]) {
+        let rules: CSSRuleList;
+        try { rules = sheet.cssRules; } catch { continue; }
+        if (restore(rules)) return;
+      }
+    }, control);
+  }
   await expect(dialog.locator('dt')).toHaveCount(3);
   await page.keyboard.press('Shift+Tab');
   await expect(dialog.getByRole('button', { name: 'copy', exact: true })).toBeFocused();
