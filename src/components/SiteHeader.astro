@@ -48,13 +48,16 @@ const bar = !quiet;
           compact emblem (guide §6.1: small, unobtrusive branding during study). Other pages get the full logo at
           240px (guide §3.5) where it fits beside the two corner buttons, and the emblem on phones, where 240px plus
           the corners, gaps and gutters would be wider than the screen.
+          The full logo loads lazily (performance, 2026-11-19): phones hide it, and a hidden lazy picture is never
+          downloaded, so a phone no longer fetches both 960px full-logo files (about 70 KB) it never shows. From 640px
+          the shown copy loads as soon as the page is laid out. The phone emblem stays eager.
         */}
         {quiet ? (
           <Wordmark loading="eager" variant="emblem" class="w-(--logo-emblem)" sizes="2.25rem" />
         ) : (
           <>
             <Wordmark loading="eager" variant="emblem" class="w-(--logo-emblem) sm:hidden" sizes="2.25rem" />
-            <Wordmark loading="eager" class="hidden w-(--logo-width) sm:block" sizes="15rem" />
+            <Wordmark class="hidden w-(--logo-width) sm:block" sizes="15rem" />
           </>
         )}
       </a>

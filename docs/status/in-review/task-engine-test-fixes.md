@@ -1,0 +1,1 @@
+status: engine-run fixes: the privacy popup scroll test asks mobile WebKit to scroll with scrollBy (it has no mouse wheel), and the lesson video cover and player minimum height is 12.75rem (204 px) so the unchanged at-least-200 px assertion holds with margin; Firefox measured 199.999969 for the old exact 200 px minimum.
