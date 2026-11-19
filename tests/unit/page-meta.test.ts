@@ -18,9 +18,11 @@ function htmlFiles(dir: string): string[] {
   });
 }
 
+const ENTITIES: Readonly<Record<string, string>> = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", '#39': "'" };
+
+/** Decodes the named entities Astro writes in one pass, so "&amp;lt;" becomes "&lt;" and is never decoded twice. */
 function decode(s: string): string {
-  // &amp; goes last, so "&amp;lt;" stays "&lt;" instead of being decoded twice (CodeQL js/double-escaping).
-  return s.replace(/&#39;|&apos;/g, "'").replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&').trim();
+  return s.replace(/&(amp|lt|gt|quot|apos|#39);/g, (match, name: string) => ENTITIES[name] ?? match).trim();
 }
 
 function attr(tag: string, name: string): string | undefined {
