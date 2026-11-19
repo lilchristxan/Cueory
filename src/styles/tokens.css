@@ -60,6 +60,7 @@
   --cueory-result-card-shadow: var(--shadow-lift);
   --cueory-result-card-radius: var(--radius-xl);
   --cueory-result-card-padding: var(--spacing-stack);
+  --cueory-result-card-max-width: 38.75rem;
   /* C5 caps label: 12px with the rendering's .22em tracking. */
   --cueory-label-size: 0.75rem;
   --cueory-label-tracking: 0.22em;

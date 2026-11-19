@@ -165,7 +165,7 @@ export default function GameResultsHost() {
         aria-modal="true"
         aria-labelledby="game-result-title"
         aria-describedby="game-result-summary"
-        className="result-dialog max-h-full w-full max-w-[var(--container-prose)] overflow-y-auto rounded-[var(--cueory-result-card-radius)] border border-[color:var(--cueory-result-card-border)] bg-[color:var(--cueory-result-card-bg)] p-[var(--cueory-result-card-padding)] text-ink shadow-[var(--cueory-result-card-shadow)]"
+        className="result-dialog max-h-full w-full max-w-[var(--cueory-result-card-max-width)] overflow-y-auto rounded-[var(--cueory-result-card-radius)] border border-[color:var(--cueory-result-card-border)] bg-[color:var(--cueory-result-card-bg)] p-[var(--cueory-result-card-padding)] text-ink shadow-[var(--cueory-result-card-shadow)]"
         data-testid="game-result-dialog"
         data-result-dialog
       >
@@ -191,7 +191,7 @@ export default function GameResultsHost() {
 
         <dl className="mt-5 flex flex-wrap justify-center gap-2">
           {card.stats.slice(0, 3).map((stat) => (
-            <div key={stat.label} className="min-w-24 rounded-pill border border-[color:var(--cueory-glass-border)] bg-[color:var(--cueory-result-card-bg)] px-4 py-2 text-center shadow-[var(--cueory-glass-shadow)]">
+            <div key={stat.label} className="min-w-24 rounded-[var(--radius-md)] border border-[color:var(--cueory-glass-border)] bg-surface px-4 py-2 text-center shadow-[var(--cueory-glass-shadow)]">
               <dt className="text-[length:var(--cueory-label-size)] font-normal text-ink-soft">{stat.label}</dt>
               <dd className="font-bold">{stat.value}</dd>
             </div>
