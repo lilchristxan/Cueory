@@ -362,7 +362,7 @@ function containsAnimation(node: ts.Node): boolean {
 
 /** Guards the current direct .animate() calls in the three carousel preview entry points. */
 function unguardedPreviewHandlers(component: string) {
-  const script = /<script>([\s\S]*?)<\/script>/.exec(component)?.[1] ?? '';
+  const script = /<script\b[^>]*>([\s\S]*?)<\/script\s*>/i.exec(component)?.[1] ?? '';
   const source = ts.createSourceFile('ModesCarousel.ts', script, ts.ScriptTarget.Latest, true);
   const previewBlocks: ts.Block[] = [];
   function visit(node: ts.Node): void {
