@@ -4,14 +4,9 @@ import DailyGamesSection from '../components/DailyGamesSection.astro';
 import HowItWorks from '../components/HowItWorks.astro';
 import ModesCarousel from '../components/ModesCarousel.astro';
 import SignupForm from '../components/SignupForm.astro';
-import Wordmark from '../components/Wordmark.astro';
+import HomeHero from '../components/HomeHero.astro';
 import ContinueBar from '../islands/ContinueBar';
-import { accountHref, accountLaunch, accountsOpen, newsletter, showsHeroJoin, site } from '../config/site';
-
-// Until accounts open the quiet link joins the launch list; afterwards it creates the free account (src/config/site.ts).
-const joinLabel = accountLaunch(accountsOpen).promoJoinLabel;
-// No link while the launch-updates box has no form and accounts are closed: it would lead nowhere.
-const showJoin = showsHeroJoin(accountsOpen, newsletter.formAction, newsletter.landingUrl);
+import { site } from '../config/site';
 ---
 
 <Layout title={site.name} variant="home">
@@ -24,36 +19,7 @@ const showJoin = showsHeroJoin(accountsOpen, newsletter.formAction, newsletter.l
     <ContinueBar client:only="react" />
   </div>
 
-  <!--
-    Full-screen hero (D-41, D-46, D-55): the logo, a serif headline on one line, the accent line, one glassy button to
-    the daily games and, once it leads somewhere, one quiet link to the launch list (lane 14 home polish, D-pending), on draped silk, the first of
-    the page's silk scenes (D-53). Lowercase brand voice (D-47).
-    Nothing sits behind the headline: the brand guide forbids embossing the logo (§3.6), and the motto lives in the
-    footer.
-  -->
-  <section
-    class="scene scene-hero flex min-h-svh items-center justify-center overflow-hidden px-gutter py-section text-center"
-    aria-labelledby="hero-heading"
-  >
-    <!-- A size container: the headline's size follows this box's width, so it stays on one line on every screen. -->
-    <div class="@container flex w-full flex-col items-center">
-      <Wordmark loading="eager" class="w-(--logo-hero)" sizes="20rem" />
-      <h1 id="hero-heading" class="display mt-section text-display-fit">nursing school is hard enough.</h1>
-      <p class="mt-4 text-accent text-ink-soft sm:text-accent-lg">cueory makes studying simpler.</p>
-      <a href="/play" class="glass-button mt-10" data-testid="hero-play">play today's games</a>
-      {
-        showJoin && (
-          <a
-            href={accountHref}
-            class="mt-4 inline-flex min-h-11 items-center px-3 text-ink-soft underline underline-offset-4 hover:text-ink"
-            data-testid="hero-join"
-          >
-            {joinLabel}
-          </a>
-        )
-      }
-    </div>
-  </section>
+  <HomeHero />
 
   <!--
     Below the hero the silk scenes alternate Ivory and Linen (D-53), and daily games stays right after "ways to study"

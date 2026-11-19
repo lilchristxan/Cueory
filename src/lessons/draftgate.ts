@@ -41,6 +41,14 @@ export function lessonEntryHref(source: Record<string, string | undefined> = pro
 }
 
 /**
+ * Where the home hero's "start studying for free" button goes, or null while the build has no open lesson (the live
+ * build holds the sample lesson back), when the hero shows it closed and tagged "coming soon" instead of a link.
+ */
+export function heroStartHref(source: Record<string, string | undefined> = process.env): string | null {
+  return sampleLessonShown(source) ? lessonEntryHref(source) : null;
+}
+
+/**
  * Does this build show the setup questions at /start? Accounts are closed at launch (Christian, 18 Nov), so the live
  * build holds /start behind a coming-soon page and links to it nowhere. Staging, previews and test builds keep the real
  * questions. Same fail-closed gate as the sample lesson.

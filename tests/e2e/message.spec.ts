@@ -13,7 +13,7 @@ for (const colorScheme of ['light', 'dark'] as const) {
     await expect(page.getByRole('heading', { level: 2, name: 'coming soon' })).toBeVisible();
     await expect(page.getByRole('heading', { level: 2, name: 'flag or comment on a page' })).toBeVisible();
     await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', 'noindex, nofollow');
-    await expect(page.locator('[data-placeholder="CHRISTIAN-TEXT"]')).toHaveText('[Christian writes this]');
+    await expect(page.getByText('Something broken, confusing or missing? An idea that would help? We read every message.')).toBeVisible();
 
     // The common footer has its own flag/report control. This page must not add a form of its own.
     await expect(page.locator('main form, main input, main select, main textarea, main button')).toHaveCount(0);
@@ -21,6 +21,7 @@ for (const colorScheme of ['light', 'dark'] as const) {
     await expect(emailLink).toHaveCount(1);
     await expect(emailLink).toHaveAttribute('href', `mailto:${site.contactEmail}`);
     await expect(emailLink).toBeVisible();
+    await expect(emailLink).toHaveClass(/copper-button/);
     const bounds = await emailLink.boundingBox();
     expect(bounds).not.toBeNull();
     expect(bounds!.width).toBeGreaterThanOrEqual(44);
