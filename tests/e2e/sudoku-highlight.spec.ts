@@ -18,6 +18,7 @@ const chosen = daily.puzzle.findIndex((value, index) => value !== 0 &&
 const value = daily.puzzle[chosen]!;
 const match = daily.puzzle.findIndex((other, j) => j !== chosen && other === value && !sees(chosen, j));
 const related = daily.puzzle.findIndex((other, j) => j !== chosen && rowOf(j) === rowOf(chosen) && !given(j));
+const overlap = daily.puzzle.findIndex((other, j) => j !== chosen && j !== related && rowOf(j) === rowOf(chosen) && !given(j));
 const plain = daily.puzzle.findIndex((other, j) => !sees(chosen, j) && !given(j));
 const quietGiven = daily.puzzle.findIndex((other, j) => !sees(chosen, j) && given(j) && other !== value);
 
@@ -28,7 +29,7 @@ const cell = (page: Page, index: number) => game(page).getByRole('grid', { name:
 async function look(page: Page, index: number) {
   return cell(page, index).evaluate((element) => {
     const style = getComputedStyle(element);
-    return { background: style.backgroundColor, color: style.color, weight: style.fontWeight, outline: style.outlineColor, outlineWidth: style.outlineWidth, outlineStyle: style.outlineStyle };
+    return { background: style.backgroundColor, color: style.color, border: style.borderRightColor, weight: style.fontWeight, outline: style.outlineColor, outlineWidth: style.outlineWidth, outlineStyle: style.outlineStyle };
   });
 }
 function channels(color: string): number[] {
@@ -60,7 +61,7 @@ test.beforeEach(async ({ page }) => {
 
 for (const scheme of ['light', 'dark'] as const) {
   test(`sudoku highlights are easy to tell apart and numbers stay readable (${scheme})`, async ({ page }, testInfo) => {
-    expect([chosen, match, related, plain, quietGiven].every((index) => index >= 0)).toBe(true);
+    expect([chosen, match, related, overlap, plain, quietGiven].every((index) => index >= 0)).toBe(true);
     await page.emulateMedia({ colorScheme: scheme, reducedMotion: 'reduce' });
     await page.goto('/play/sudoku');
     await expect(cell(page, 80)).toBeVisible();
@@ -74,10 +75,21 @@ for (const scheme of ['light', 'dark'] as const) {
     await expect(cell(page, plain)).not.toHaveClass(/is-related|is-box-related|is-identical/);
     await expect(cell(page, quietGiven)).toHaveClass(/is-given/);
 
+    // An entered duplicate in the selected row is related, identical and conflicting. The route tint cannot replace
+    // the identical-number fill/ink, while the conflict ring remains a non-colour cue.
+    if (testInfo.project.use.hasTouch) await cell(page, overlap).tap();
+    else await cell(page, overlap).click();
+    await page.keyboard.press(String(value));
+    await expect(cell(page, overlap)).toHaveClass(/is-conflict/);
+    if (testInfo.project.use.hasTouch) await cell(page, chosen).tap();
+    else await cell(page, chosen).click();
+    await expect(cell(page, overlap)).toHaveClass(/is-related/);
+    await expect(cell(page, overlap)).toHaveClass(/is-identical/);
+
     // The highlights fade in over a near-zero (reduced motion) transition; a color read in the same frame as the class
     // change can still see the old color, so wait until no transition is running before reading them.
     await page.waitForFunction(() => document.getAnimations().every((animation) => animation.playState !== 'running'));
-    const [selected, tint, same, quiet, givenLook] = await Promise.all([chosen, related, match, plain, quietGiven].map((index) => look(page, index)));
+    const [selected, tint, same, overlapping, quiet, givenLook] = await Promise.all([chosen, related, match, overlap, plain, quietGiven].map((index) => look(page, index)));
 
     // 1. The selected square has a strong solid outline that stands out from the tint around it.
     expect(selected.outlineStyle).toBe('solid');
@@ -95,9 +107,15 @@ for (const scheme of ['light', 'dark'] as const) {
     expect(same.weight).toBe('700');
     expect(contrast(same.background, tint.background)).toBeGreaterThanOrEqual(2.4);
     expect(contrast(same.background, quiet.background)).toBeGreaterThan(contrast(tint.background, quiet.background));
+    expect(overlapping.background).toBe(same.background);
+    expect(overlapping.color).toBe(same.color);
+    expect(overlapping.weight).toBe('700');
 
-    // Numbers stay readable on every fill.
-    for (const square of [selected, tint, same, quiet, givenLook]) {
+    // Grid lines and given/entered digits stay readable on the actual board in both themes.
+    expect(contrast(quiet.border, quiet.background), `${scheme} grid line`).toBeGreaterThanOrEqual(4.5);
+    expect(contrast(givenLook.color, givenLook.background), `${scheme} given digit`).toBeGreaterThanOrEqual(4.5);
+    expect(contrast(overlapping.color, overlapping.background), `${scheme} entered digit`).toBeGreaterThanOrEqual(4.5);
+    for (const square of [selected, tint, same, overlapping, quiet, givenLook]) {
       expect(contrast(square.color, square.background)).toBeGreaterThanOrEqual(4.5);
     }
 

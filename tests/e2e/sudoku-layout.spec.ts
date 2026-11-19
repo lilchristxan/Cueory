@@ -30,6 +30,25 @@ const painted = (locator: Locator) => locator.evaluate((element) => {
   return { color: style.color, background: style.backgroundColor };
 });
 
+/** Composite the page's actual flat background layers for text such as the status line, which has no fill of its own. */
+const effectivePaint = (locator: Locator) => locator.evaluate((element) => {
+  const parse = (value: string) => {
+    const match = /rgba?\((\d+(?:\.\d+)?),?\s*(\d+(?:\.\d+)?),?\s*(\d+(?:\.\d+)?)(?:,?\s*([\d.]+))?/.exec(value);
+    if (!match) return null;
+    return [Number(match[1]), Number(match[2]), Number(match[3]), match[4] === undefined ? 1 : Number(match[4])] as const;
+  };
+  let background: [number, number, number] = [255, 255, 255];
+  const layers: number[][] = [];
+  for (let node: Element | null = element; node; node = node.parentElement) {
+    const layer = parse(getComputedStyle(node).backgroundColor);
+    if (layer && layer[3] > 0) layers.push([...layer]);
+  }
+  for (const [red, green, blue, alpha] of [...layers].reverse()) {
+    background = [red * alpha + background[0] * (1 - alpha), green * alpha + background[1] * (1 - alpha), blue * alpha + background[2] * (1 - alpha)];
+  }
+  return { color: getComputedStyle(element).color, background: `rgb(${background.join(', ')})` };
+});
+
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
     try { localStorage.setItem('cueory-promo-seen', String(Date.now())); localStorage.setItem('cueory-signup-popup-seen', String(Date.now())); } catch { /* optional */ }
@@ -101,19 +120,28 @@ for (const scheme of ['light', 'dark'] as const) {
         const look = await painted(level);
         expect(contrast(look.color, look.background), `${label} Light difficulty text`).toBeGreaterThanOrEqual(4.5);
       }
-
-      const toolbar = game(page).getByTestId('sudoku-toolbar').getByRole('button');
-      for (const button of await toolbar.all()) {
-        const look = await painted(button);
-        expect(contrast(look.color, look.background), `Light toolbar ${await button.getAttribute('aria-label')}`).toBeGreaterThanOrEqual(3);
-      }
-      await toolbar.first().hover();
-      let look = await painted(toolbar.first());
-      expect(contrast(look.color, look.background), 'Light toolbar hover').toBeGreaterThanOrEqual(3);
-      await toolbar.first().focus();
-      look = await painted(toolbar.first());
-      expect(contrast(look.color, look.background), 'Light toolbar focus').toBeGreaterThanOrEqual(3);
     }
+
+    // The route gives all interactive controls an opaque surface. Measure the actual rendered foreground/background
+    // pair in both themes, including the status text whose background is inherited from the panel.
+    const toolbar = game(page).getByTestId('sudoku-toolbar').getByRole('button');
+    for (const button of await toolbar.all()) {
+      const look = await painted(button);
+      expect(contrast(look.color, look.background), `${scheme} toolbar ${await button.getAttribute('aria-label')}`).toBeGreaterThanOrEqual(3);
+    }
+    await toolbar.first().hover();
+    let look = await painted(toolbar.first());
+    expect(contrast(look.color, look.background), `${scheme} toolbar hover`).toBeGreaterThanOrEqual(3);
+    await toolbar.first().focus();
+    look = await painted(toolbar.first());
+    expect(contrast(look.color, look.background), `${scheme} toolbar focus`).toBeGreaterThanOrEqual(3);
+
+    for (const button of await game(page).locator('.sudoku-number-row button, .sudoku-tool-button:not([disabled]), .sudoku-setting-button').all()) {
+      const control = await painted(button);
+      expect(contrast(control.color, control.background), `${scheme} ${await button.innerText()} control text`).toBeGreaterThanOrEqual(4.5);
+    }
+    const status = await effectivePaint(game(page).getByTestId('sudoku-status'));
+    expect(contrast(status.color, status.background), `${scheme} status text`).toBeGreaterThanOrEqual(4.5);
 
     // Settings fits the screen, scrolls inside itself, and its theme rows drive the footer's theme switch.
     await game(page).getByRole('button', { name: /settings/ }).click();

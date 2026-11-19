@@ -1,5 +1,5 @@
 import AxeBuilder from '@axe-core/playwright';
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Locator, type Page } from '@playwright/test';
 import { dailySudokuSeed, generateSudoku } from '../../src/islands/sudoku';
 import { fixClock } from './clock';
 
@@ -48,6 +48,30 @@ const axe = async (page: Page) => {
 };
 const field = (page: Page) => page.getByLabel('your guess', { exact: true });
 const live = (page: Page) => page.getByTestId('pulse-live');
+
+/** Contrast against the composed flat background beneath a rendered result-copy node. */
+const renderedContrast = (locator: Locator) => locator.evaluate((element) => {
+  const rgba = (value: string) => {
+    const match = /rgba?\((\d+(?:\.\d+)?),?\s*(\d+(?:\.\d+)?),?\s*(\d+(?:\.\d+)?)(?:,?\s*([\d.]+))?/.exec(value);
+    if (!match) throw new Error(`unreadable color ${value}`);
+    return [Number(match[1]), Number(match[2]), Number(match[3]), match[4] === undefined ? 1 : Number(match[4])] as const;
+  };
+  let background: [number, number, number] = [255, 255, 255];
+  const layers: number[][] = [];
+  for (let node: Element | null = element; node; node = node.parentElement) {
+    const layer = rgba(getComputedStyle(node).backgroundColor);
+    if (layer[3] > 0) layers.push([...layer]);
+  }
+  for (const [red, green, blue, alpha] of [...layers].reverse()) {
+    background = [red * alpha + background[0] * (1 - alpha), green * alpha + background[1] * (1 - alpha), blue * alpha + background[2] * (1 - alpha)];
+  }
+  const luminance = ([red, green, blue]: readonly number[]) => [red, green, blue].map((value) => {
+    const channel = value / 255;
+    return channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
+  }).reduce((total, channel, index) => total + channel * [0.2126, 0.7152, 0.0722][index]!, 0);
+  const [low, high] = [luminance(rgba(getComputedStyle(element).color)), luminance(background)].sort((a, b) => a - b);
+  return (high! + 0.05) / (low! + 0.05);
+});
 
 test.describe('daily games: pillo (Task 114)', () => {
   test.beforeEach(async ({ page }) => {
@@ -516,6 +540,9 @@ test.describe('daily games: sudoku (Task 625)', () => {
     await expect(result).toBeFocused();
     await expect(result).toContainText('solved.');
     await expect(result).toContainText('0 errors');
+    for (const copy of await result.locator('p').all()) {
+      expect(await renderedContrast(copy), `solved result copy: ${await copy.innerText()}`).toBeGreaterThanOrEqual(4.5);
+    }
     const detail = JSON.parse((await page.locator('html').getAttribute('data-sudoku-result'))!);
     expect(detail).toMatchObject({ game: 'sudoku', day, level: 'easy', solved: true, errors: 0 });
     expect(await page.evaluate(() => (window as unknown as { sudokuRounds: unknown[] }).sudokuRounds))
