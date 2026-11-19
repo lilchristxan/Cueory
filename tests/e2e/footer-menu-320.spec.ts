@@ -39,6 +39,10 @@ for (const colorScheme of ['light', 'dark'] as const) {
       await expect(panel).toBeVisible();
       expect(await sideways(page)).toBeLessThanOrEqual(0);
 
+      // The link row is drawn above the bar and is always visible; its links keep 44 px targets too.
+      for (const link of await footer.getByRole('navigation', { name: 'footer' }).getByRole('link').all()) {
+        await expectTarget(page, link, (await link.textContent())?.trim() || 'footer link');
+      }
       for (const link of await panel.getByRole('link').all()) {
         if (!(await link.isVisible())) continue;
         await expectTarget(page, link, (await link.textContent())?.trim() || (await link.getAttribute('aria-label')) || 'link');
