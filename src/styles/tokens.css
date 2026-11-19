@@ -157,6 +157,11 @@
   /* Phones draw the headline on four large lines (nursing / school / made / simpler.), sized by the same column width. */
   --text-display-hero-phone: clamp(1rem, 100cqi / 4.6, 5.5rem);
   --text-display-hero-phone--line-height: 1.05;
+  /* Phones draw the About headline on four large lines (we know / nursing / school is / hard.), sized by the header's
+     width (container query). Its longest line, "we know", is about 3.9 times its font size in Bodoni Moda; 5 leaves
+     room for the fallback serifs and enlarged text. */
+  --text-display-about-phone: clamp(1rem, 100cqi / 5, 5.5rem);
+  --text-display-about-phone--line-height: 1.05;
   --text-title-explore: 2rem;   /* the explore row's heading */
   --text-title-explore--line-height: 1.2;
   --text-title: 2.375rem;       /* marketing page title (38px) */
@@ -186,6 +191,8 @@
   --spacing-gutter: 1.25rem;    /* page side padding on phones */
   --spacing-section: 4.5rem;    /* space between page sections */
   --spacing-stack: 1.25rem;     /* space between paragraphs and blocks */
+  --new-tab-cue-gap: 0.25em;    /* space before the ↗ that marks a link opening in a new tab */
+  --new-tab-cue-size: 0.85em;   /* size of that ↗, relative to the link text */
   /* Header reflows with enlarged text without shrinking the corner controls (Task 280). */
   --header-inline-gutter: min(var(--spacing-gutter), 5vw);
   --header-corner-gap: min(calc(var(--spacing) * 4), 2.5vw);

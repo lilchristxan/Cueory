@@ -27,9 +27,10 @@ describe('message page shell', () => {
     expect(pageSource.match(/mailto:/g)).toHaveLength(1);
   });
 
-  it('is not added to the menu, footer links or public sitemap', () => {
-    const hrefs: string[] = [...menuLinks, ...footerLinks].map((link) => link.href);
-    expect(hrefs).not.toContain('/message');
+  it('is linked once from the footer as drawn, but not the menu or public sitemap', () => {
+    // Footer as drawn (#918, approved by Christian 2026-11-19) adds "contact" -> /message.
+    expect(menuLinks.map((link) => link.href)).not.toContain('/message');
+    expect(footerLinks.filter((link) => link.href === '/message')).toEqual([{ href: '/message', label: 'contact' }]);
     expect(indexablePages).not.toContain('/message');
   });
 
