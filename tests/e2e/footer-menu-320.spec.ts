@@ -59,6 +59,9 @@ for (const colorScheme of ['light', 'dark'] as const) {
       await page.getByRole('button', { name: 'open site menu' }).click();
       const menu = page.getByRole('dialog', { name: 'site menu' });
       await expect(menu).toBeVisible();
+      // The panel slides in from the left over 280 ms (global.css .menu-panel). Measure where it comes to rest: until the
+      // slide ends, the close button can still sit at its starting place, off screen to the left.
+      await expect(menu).toHaveCSS('transform', 'none');
       await expectTarget(page, menu.getByRole('button', { name: 'close site menu' }), 'close site menu');
       for (const link of await menu.getByRole('navigation', { name: 'site' }).getByRole('link').all()) {
         await expectTarget(page, link, (await link.textContent())?.trim() || 'menu link');
