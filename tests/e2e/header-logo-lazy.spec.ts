@@ -19,8 +19,8 @@ for (const path of ['/support', '/play/word-path']) {
         .filter((img) => img.getClientRects().length === 0)
         .map((img) => {
           const htmlImg = img as HTMLImageElement;
-          const src = img.getAttribute('src') ?? '';
-          const started = resources.some((r) => r.name === htmlImg.src || (src.length > 0 && r.name.includes(src)));
+          const currentSrc = htmlImg.currentSrc;
+          const started = currentSrc !== "" && resources.some((r) => r.name === currentSrc);
           return {
             src: img.getAttribute('src'),
             loading: htmlImg.loading,
@@ -33,3 +33,31 @@ for (const path of ['/support', '/play/word-path']) {
     for (const img of hiddenFull) expect(img, String(img.src)).toEqual({ src: img.src, loading: 'lazy', started: false });
   });
 }
+
+test('/support: responsive candidates: started detection catches a non-fallback candidate from srcset', async ({ page }) => {
+  await page.goto('/support', { waitUntil: 'load' });
+  const home = page.getByRole('link', { name: 'cueory home' });
+  await expect(home).toBeVisible();
+
+  const evaluated = await home.locator('.logo img[src*="logo-full"]').evaluateAll((imgs) => {
+    const hidden = imgs.find((img) => img.getClientRects().length === 0) as HTMLImageElement;
+    if (!hidden) return null;
+
+    const srcset = hidden.getAttribute('srcset') ?? '';
+    const candidates = srcset.split(',').map((p) => p.trim().split(/\s+/)[0]);
+    const nonFallback = candidates.find((u) => u && !u.includes('960')) ?? '';
+    const nonFallbackHref = new URL(nonFallback, window.location.href).href;
+
+    const simulatedResources = [{ name: nonFallbackHref }];
+    const simulatedCurrent = nonFallbackHref;
+    const isStarted = simulatedCurrent !== '' && simulatedResources.some((r) => r.name === simulatedCurrent);
+
+    return {
+      nonFallback,
+      isStarted,
+    };
+  });
+
+  expect(evaluated?.nonFallback).toBeTruthy();
+  expect(evaluated?.isStarted).toBe(true);
+});

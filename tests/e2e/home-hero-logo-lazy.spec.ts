@@ -17,8 +17,8 @@ test('/: the hero logo row downloads only the logo it shows', async ({ page }) =
       .filter((img) => img.getClientRects().length === 0)
       .map((img) => {
         const htmlImg = img as HTMLImageElement;
-        const src = img.getAttribute('src') ?? '';
-        const started = resources.some((r) => r.name === htmlImg.src || (src.length > 0 && r.name.includes(src)));
+        const currentSrc = htmlImg.currentSrc;
+        const started = currentSrc !== "" && resources.some((r) => r.name === currentSrc);
         return {
           src: img.getAttribute('src'),
           loading: htmlImg.loading,
