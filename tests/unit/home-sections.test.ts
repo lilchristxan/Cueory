@@ -122,6 +122,13 @@ describe('home how-it-works (W01-3)', () => {
     expect(hero).toMatch(/<img\b(?=[^>]*hero-anatomy-figure\.webp)(?=[^>]*loading="eager")(?=[^>]*alt="")[^>]*>/);
   });
 
+  it('draws the hairline rule between the hero value points from the tablet width up, as in HomeV2-1', () => {
+    const source = readFileSync(new URL('../../src/components/HomeHero.astro', import.meta.url), 'utf8');
+    const ruled = source.match(/<li class="([^"]*)" data-hero-point-rule>/);
+    expect(ruled, 'second value point carries the rule').not.toBeNull();
+    expect(ruled![1].split(' ')).toEqual(expect.arrayContaining(['sm:border-s', 'sm:border-control', 'sm:ps-5']));
+  });
+
   it('the hero start button follows the draft gate: closed live, a link to the open lesson elsewhere', () => {
     // The live build (a Workers Build of main) holds the sample lesson back, so there is no link to show.
     expect(heroStartHref({ WORKERS_CI: '1', WORKERS_CI_BRANCH: 'main' })).toBeNull();
