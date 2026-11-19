@@ -61,6 +61,8 @@ for (const path of ['/', '/learn/study-skills', '/play', '/signin']) {
       for (const reuse of others) {
         const preload = preloads[0]!;
         expect(reuse.initiator, file).toBe('css');
+        // The preload must report real bytes, so "same size" can't pass on two zeros.
+        expect(preload.encodedBodySize, `${file} preload size`).toBeGreaterThan(0);
         expect(reuse.encodedBodySize, file).toBe(preload.encodedBodySize);
         // The same network transfer: its response ended with the preload's, before the reuse even started.
         expect(Math.abs(reuse.responseEnd - preload.responseEnd), `${file} response time`).toBeLessThanOrEqual(1);
