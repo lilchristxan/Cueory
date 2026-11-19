@@ -6,27 +6,40 @@ import { expect, test } from '@playwright/test';
  * other palette's copy everywhere) is never downloaded, while the copy that shows still loads.
  */
 test('/: the hero logo row downloads only the logo it shows', async ({ page }) => {
+  const requestedUrls = new Set<string>();
+  page.on('request', (req) => requestedUrls.add(req.url()));
+
   await page.goto('/', { waitUntil: 'load' });
   const row = page.locator('.scene-hero .logo').first().locator('xpath=..');
   const shown = row.locator('.logo img').filter({ visible: true });
   await expect(shown).toHaveCount(1);
   await expect.poll(() => shown.evaluate((img) => (img as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
+
   const hiddenFull = await row.locator('.logo img[src*="logo-full"]').evaluateAll((imgs) => {
-    const resources = performance.getEntriesByType('resource');
+    const resourceUrls = new Set(performance.getEntriesByType('resource').map((r) => r.name));
     return imgs
       .filter((img) => img.getClientRects().length === 0)
       .map((img) => {
         const htmlImg = img as HTMLImageElement;
         const currentSrc = htmlImg.currentSrc;
-        const started = currentSrc !== "" && resources.some((r) => r.name === currentSrc);
+        const resourceLoaded = currentSrc !== '' && resourceUrls.has(currentSrc);
         return {
           src: img.getAttribute('src'),
+          currentSrc,
           loading: htmlImg.loading,
-          started,
+          resourceLoaded,
         };
       });
   });
+
   // Phones hide both full-logo copies; wider screens hide the other palette's copy.
   expect(hiddenFull.length).toBeGreaterThan(0);
-  for (const img of hiddenFull) expect(img, String(img.src)).toEqual({ src: img.src, loading: 'lazy', started: false });
+  for (const img of hiddenFull) {
+    const started = img.resourceLoaded || (img.currentSrc !== '' && requestedUrls.has(img.currentSrc));
+    expect({ src: img.src, loading: img.loading, started }, String(img.src)).toEqual({
+      src: img.src,
+      loading: 'lazy',
+      started: false,
+    });
+  }
 });
