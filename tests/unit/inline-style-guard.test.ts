@@ -10,7 +10,9 @@ const files = readdirSync(src, { recursive: true, encoding: 'utf8' })
 
 const strip = (text: string) => text.replace(/\/\*[\s\S]*?\*\//g, (c) => c.replace(/[^\n]/g, ' ')).replace(/(^|[ \t])\/\/[^\n]*/gm, (c) => c.replace(/[^\n]/g, ' '));
 
-// path -> [expected count of `style={`, reason]
+const countJsxStyles = (source: string) => (strip(source).match(/\bstyle\s*=\s*\{/g) ?? []).length;
+
+// path -> [expected count of JSX style props, reason]
 const jsxStyleAllowlist: Record<string, [number, string]> = {
   'islands/PulseGame.tsx': [1, 'sets only the --pillo-share custom property, which the stylesheet turns into a bar length'],
   'islands/LabelItBoard.tsx': [1, 'label boxes are positioned from submitted image percentages at runtime'],
@@ -29,10 +31,16 @@ describe('inline style guard', () => {
     expect(hits).toEqual([]);
   });
 
+  it('counts inline JSX style props even with spaces or line breaks around the equals sign', () => {
+    expect(countJsxStyles('<div style={{ display: "none" }} />')).toBe(1);
+    expect(countJsxStyles('<div style = {{ display: "none" }} />')).toBe(1);
+    expect(countJsxStyles('<div style\n=\n{{ display: "none" }} />')).toBe(1);
+  });
+
   it('limits JSX style={...} objects to the documented runtime-geometry list', () => {
     const found: Record<string, number> = {};
     for (const file of files) {
-      const count = (strip(readFileSync(new URL(file, src), 'utf8')).match(/\bstyle=\{/g) ?? []).length;
+      const count = countJsxStyles(readFileSync(new URL(file, src), 'utf8'));
       if (count) found[file] = count;
     }
     expect(found).toEqual(Object.fromEntries(Object.entries(jsxStyleAllowlist).map(([file, [count]]) => [file, count])));
