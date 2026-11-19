@@ -85,18 +85,6 @@ const exceptions: Exception[] = [
       /(?:backdrop-filter: blur\([12]px\)|@supports .*blur\(1px\)|transform: translate(?:X|Y)?\([^)]*px)/.test(text),
     reason: 'responsive, safe-area, hairline, texture-tile, blur and animation geometry are CSS primitives',
   },
-  {
-    kind: 'size',
-    path: 'pages/play/sudoku.astro',
-    matches: text => /^(?:max-inline-size: 62rem|padding: clamp\(1rem, 3vw, 2.5rem\)|border: 1px solid var\(--cueory-glass-border\)|border-radius: 2rem|padding-block: 0.25rem|border-radius: 1rem|box-shadow: (?:0 0.25rem 0.8rem rgb\(0 0 0 \/ 8%\)|0 0.75rem 1.75rem rgb\(0 0 0 \/ 12%\)|inset 0 0 0 0.2rem var\(--cueory-copper-ink\)))$/.test(text.trim()),
-    reason: 'Sudoku board and frosted panel geometry is route-owned layout measured from the approved design',
-  },
-  {
-    kind: 'color',
-    path: 'pages/play/sudoku.astro',
-    matches: text => /^box-shadow: (?:0 0.25rem 0.8rem rgb\(0 0 0 \/ 8%\)|0 0.75rem 1.75rem rgb\(0 0 0 \/ 12%\))$/.test(text.trim()),
-    reason: 'Sudoku route shadows provide approved frosted-panel depth and are not palette values',
-  },
 ];
 
 function exceptionFor(finding: Finding): Exception | undefined {
