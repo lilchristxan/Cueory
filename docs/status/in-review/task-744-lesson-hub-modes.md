@@ -1,0 +1,1 @@
+status: W05-2 (#38), lesson hub modes: all seven canonical tiles remain visible, but only lesson-specific showable modes link. Unavailable tiles say coming soon. For Claude review and browser testing.

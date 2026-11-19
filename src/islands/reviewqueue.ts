@@ -14,8 +14,12 @@ export interface ReviewStateRow {
 const DAY_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 function isValidDay(day: unknown): day is string {
-  if (typeof day !== 'string' || !DAY_RE.test(day)) return false;
+  // The shared review scheduler also rejects unsupported year zero.
+  if (typeof day !== 'string' || !DAY_RE.test(day) || day.startsWith('0000-')) return false;
   const d = new Date(`${day}T00:00:00.000Z`);
+  // An invalid month can match DAY_RE but produces Invalid Date. Let callers
+  // report the field-specific validation error instead of a RangeError.
+  if (!Number.isFinite(d.getTime())) return false;
   return d.toISOString().slice(0, 10) === day;
 }
 

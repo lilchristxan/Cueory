@@ -1,0 +1,1 @@
+status: Lane 3 privacy accuracy: /privacy now says crossword autocheck counts as a try and keeps a solve out of the streak, as the code does; every other sentence checked against the code, open questions listed for Christian in the PR.

@@ -1,0 +1,1 @@
+status: Lane 6, finished-game cards for all four daily games at 320px with 32px text, Light and Evening: new e2e checks the card, share, copy and the website share links fit, and the close button stays on screen (stacked on #780).

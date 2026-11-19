@@ -300,8 +300,7 @@ export default function BodyViewer({ creditText }: Props) {
           aria-label="Interactive 3D body viewer (placeholder model)"
           role="img"
           aria-describedby="body-viewer-desc"
-          className="w-full rounded-lg bg-page focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-button"
-          style={{ aspectRatio: '4/3', touchAction: 'none', minHeight: '200px' }}
+          className="aspect-4/3 min-h-50 w-full touch-none rounded-lg bg-page focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-button"
         />
         {state === 'loading' && (
           <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-soft">

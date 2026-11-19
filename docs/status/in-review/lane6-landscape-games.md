@@ -1,0 +1,1 @@
+status: Lane 6, landscape phone (844 × 390): every /play game board and game dialog fits without sideways scroll (new e2e), and the 6 × 8 word path board is capped so all 8 rows fit the screen height (squares stay at least 44px), centred in its column.

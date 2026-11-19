@@ -1,100 +1,33 @@
 {
   "status": "sample",
+  "format": "path",
+  "clue": "things you cook with",
   "grid": [
-    "MONTH",
-    "WLIGY",
-    "EEKUE",
-    "DBCFA",
-    "AYPVR"
+    "KHITST",
+    "RSWOAE",
+    "IECHER",
+    "KTXIPN",
+    "EKENML",
+    "TLOATA",
+    "ETPREO",
+    "NVOLWB"
   ],
   "words": [
-    {
-      "cue": "about four weeks",
-      "answer": "MONTH",
-      "path": [
-        [
-          0,
-          0
-        ],
-        [
-          0,
-          1
-        ],
-        [
-          0,
-          2
-        ],
-        [
-          0,
-          3
-        ],
-        [
-          0,
-          4
-        ]
-      ]
-    },
-    {
-      "cue": "seven days",
-      "answer": "WEEK",
-      "path": [
-        [
-          1,
-          0
-        ],
-        [
-          2,
-          0
-        ],
-        [
-          2,
-          1
-        ],
-        [
-          2,
-          2
-        ]
-      ]
-    },
-    {
-      "cue": "twelve months",
-      "answer": "YEAR",
-      "path": [
-        [
-          1,
-          4
-        ],
-        [
-          2,
-          4
-        ],
-        [
-          3,
-          4
-        ],
-        [
-          4,
-          4
-        ]
-      ]
-    },
-    {
-      "cue": "from morning to night",
-      "answer": "DAY",
-      "path": [
-        [
-          3,
-          0
-        ],
-        [
-          4,
-          0
-        ],
-        [
-          4,
-          1
-        ]
-      ]
-    }
+    { "answer": "KITCHEN", "path": [[3,0],[2,0],[3,1],[2,2],[2,3],[2,4],[3,5]], "special": true },
+    { "answer": "TOASTER", "path": [[0,3],[1,3],[1,4],[0,4],[0,5],[1,5],[2,5]] },
+    { "answer": "KETTLE", "path": [[4,1],[4,0],[5,0],[6,1],[5,1],[4,2]] },
+    { "answer": "PLATE", "path": [[3,4],[4,5],[5,5],[5,4],[6,4]] },
+    { "answer": "WHISK", "path": [[1,2],[0,1],[0,2],[1,1],[0,0]] },
+    { "answer": "APRON", "path": [[5,3],[6,2],[6,3],[5,2],[4,3]] },
+    { "answer": "MIXER", "path": [[4,4],[3,3],[3,2],[2,1],[1,0]] },
+    { "answer": "OVEN", "path": [[7,2],[7,1],[6,0],[7,0]] },
+    { "answer": "BOWL", "path": [[7,5],[6,5],[7,4],[7,3]] }
+  ],
+  "extras": [
+    "AREA", "BEAN", "BEAR", "BEAT", "BOAT", "CHAT", "CHIN", "COAT", "COST", "EARL", "EARN", "EASE",
+    "EAST", "HARE", "HARP", "HEAT", "HERE", "HINT", "HOSE", "HOST", "KELP", "LAMP", "LATE", "LEAN",
+    "LEAP", "LOVE", "MALT", "MANE", "MARE", "MINT", "NEAR", "NEAT", "NICE", "NOTE", "OATS", "PART",
+    "PINE", "POLE", "PORT", "RATE", "REAL", "REST", "RISE", "ROAM", "ROLE", "SEAT", "SITE", "STAR",
+    "TEAM", "TENT", "TEST", "TONE", "WEAR", "WISE", "WISH", "MAPLE", "TOAST", "TOWER", "WHEAT"
   ]
 }

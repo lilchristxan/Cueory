@@ -46,9 +46,12 @@ describe('private game stats on /play (D-76)', () => {
     expect(localDay(new Date(2027, 11, 31, 12))).toBe('2027-12-31');
   });
 
-  it('is off until the record exists, and turning off deletes it', () => {
+  it('is always on where storage works (2026-11-17: no switch), and "forget" deletes the record', () => {
     const storage = memoryStorage();
-    expect(loadStats(storage, TODAY)).toEqual({ on: false, stats: [] });
+    expect(loadStats(storage, TODAY)).toEqual({ on: true, stats: [] });
+    // Only a browser without storage keeps nothing.
+    expect(loadStats(undefined, TODAY)).toEqual({ on: false, stats: [] });
+    expect(loadStats({ getItem() { throw new Error('blocked'); }, setItem() {}, removeItem() {} }, TODAY)).toEqual({ on: false, stats: [] });
     expect(saveStats(storage, [])).toBe(true);
     expect(loadStats(storage, TODAY)).toEqual({ on: true, stats: [] });
 
@@ -59,7 +62,7 @@ describe('private game stats on /play (D-76)', () => {
 
     expect(deleteStats(storage)).toBe(true);
     expect(storage.data.has(STATS_STORAGE_KEY)).toBe(false);
-    expect(loadStats(storage, TODAY)).toEqual({ on: false, stats: [] });
+    expect(loadStats(storage, TODAY)).toEqual({ on: true, stats: [] });
   });
 
   it('keeps stats on with an empty record when the saved one can’t be read', () => {
@@ -78,9 +81,9 @@ describe('private game stats on /play (D-76)', () => {
   });
 
   it('says each game’s tries in its own words, fewest first', () => {
-    expect(triesInWords('pulse', { 3: 2, 1: 1 })).toBe('1 beat on 1 day, 3 beats on 2 days.');
-    expect(triesInWords('triage', { 0: 3 })).toBe('0 slips on 3 days.');
-    expect(triesInWords('cueword', { 1: 1 })).toBe('1 cue on 1 day.');
+    expect(triesInWords('pulse', { 3: 2, 1: 1 })).toBe('1 guess on 1 day, 3 guesses on 2 days.');
+    expect(triesInWords('triage', { 0: 3, 1: 1 })).toBe('0 errors on 3 days, 1 error on 1 day.');
+    expect(triesInWords('cueword', { 1: 1 })).toBe('1 check or reveal on 1 day.');
     expect(triesInWords('suture', { 2: 1, 1: 4 })).toBe('1 loose stitch on 4 days, 2 loose stitches on 1 day.');
     expect(triesInWords('pulse', {})).toBe('');
   });

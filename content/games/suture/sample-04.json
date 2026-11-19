@@ -1,100 +1,33 @@
 {
   "status": "sample",
+  "format": "path",
+  "clue": "a trip to the shore",
   "grid": [
-    "GREEN",
-    "BOSTP",
-    "LUEAI",
-    "RWMYN",
-    "EDHCK"
+    "SIPHAT",
+    "CENSEL",
+    "NUAWIE",
+    "ISBCOD",
+    "CLKUCT",
+    "LEEBSR",
+    "HATEAE",
+    "SWVPIR"
   ],
   "words": [
-    {
-      "cue": "the color of grass",
-      "answer": "GREEN",
-      "path": [
-        [
-          0,
-          0
-        ],
-        [
-          0,
-          1
-        ],
-        [
-          0,
-          2
-        ],
-        [
-          0,
-          3
-        ],
-        [
-          0,
-          4
-        ]
-      ]
-    },
-    {
-      "cue": "the color of a clear sky",
-      "answer": "BLUE",
-      "path": [
-        [
-          1,
-          0
-        ],
-        [
-          2,
-          0
-        ],
-        [
-          2,
-          1
-        ],
-        [
-          2,
-          2
-        ]
-      ]
-    },
-    {
-      "cue": "a light red, like a flamingo",
-      "answer": "PINK",
-      "path": [
-        [
-          1,
-          4
-        ],
-        [
-          2,
-          4
-        ],
-        [
-          3,
-          4
-        ],
-        [
-          4,
-          4
-        ]
-      ]
-    },
-    {
-      "cue": "the color of a ripe tomato",
-      "answer": "RED",
-      "path": [
-        [
-          3,
-          0
-        ],
-        [
-          4,
-          0
-        ],
-        [
-          4,
-          1
-        ]
-      ]
-    }
+    { "answer": "SEASIDE", "path": [[0,0],[1,1],[2,2],[1,3],[2,4],[3,5],[2,5]], "special": true },
+    { "answer": "SUNHAT", "path": [[3,1],[2,1],[1,2],[0,3],[0,4],[0,5]] },
+    { "answer": "BUCKET", "path": [[3,2],[4,3],[3,3],[4,2],[5,2],[6,2]] },
+    { "answer": "PICNIC", "path": [[0,2],[0,1],[1,0],[2,0],[3,0],[4,0]] },
+    { "answer": "WAVES", "path": [[7,1],[6,1],[7,2],[6,3],[5,4]] },
+    { "answer": "SHELL", "path": [[7,0],[6,0],[5,1],[5,0],[4,1]] },
+    { "answer": "TOWEL", "path": [[4,5],[3,4],[2,3],[1,4],[1,5]] },
+    { "answer": "CRAB", "path": [[4,4],[5,5],[6,4],[5,3]] },
+    { "answer": "PIER", "path": [[7,3],[7,4],[6,5],[7,5]] }
+  ],
+  "extras": [
+    "ABLE", "ARTS", "BARE", "BASE", "BEAR", "BEAT", "BELL", "BEST", "CASE", "CODE", "CUBE", "DIET",
+    "DISH", "DOCK", "EASE", "EAST", "HALL", "HEAT", "ISLE", "LATE", "LINE", "NICE", "PAIR", "PART",
+    "PAST", "PEEL", "PINE", "REST", "SALT", "SEAL", "SEAT", "SEED", "SEEK", "SIDE", "SILK", "SWAN",
+    "TALE", "TELL", "TEST", "TOWN", "VEST", "WALL", "WAVE", "WIDE", "WISE", "WISH", "SAUCE", "SLEEP",
+    "SLICE", "SPICE", "WHEAT", "WHEEL", "BASKET", "SUNSET"
   ]
 }

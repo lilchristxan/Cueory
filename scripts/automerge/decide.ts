@@ -13,6 +13,10 @@
  * - GitHub says it merges cleanly.
  * It never targets `main`: the merge call itself refuses any base other than `staging` (see staging_automerge.ts).
  *
+ * One nudge, never a merge (Task 39): when Codex itself failed to review the head commit ("Something went wrong",
+ * status "failed" in its summary), the bot asks it to try again by commenting `@codex review`, at most
+ * CODEX_RETRY_LIMIT times per head commit, and keeps waiting. A review that finished with findings is never retried.
+ *
  * The mode comes from automation.json at the repository root (parseAutomation below). Before launch only the paths
  * that must always be Christian's are held; once the site is live, the longer sensitive list is held too.
  */
@@ -20,6 +24,8 @@
 export const BASE_BRANCH = 'staging';
 export const NEEDS_CHRISTIAN_LABEL = 'needs-christian';
 export const CODEX_LOGIN = 'chatgpt-codex-connector[bot]';
+/** How many times the bot asks Codex to retry a failed review of one head commit before leaving it to a person. */
+export const CODEX_RETRY_LIMIT = 3;
 
 /** Checks that must have run and passed on the head commit (names as GitHub shows them). */
 export const REQUIRED_CHECKS = [
@@ -56,7 +62,12 @@ export type Mode = 'prelaunch' | 'launched';
  * - `supabase/` (sign-in and database policies) and `wrangler.jsonc` (deployment), which CLAUDE.md rule 3 reserves
  *   for Christian.
  */
-const ALWAYS_HELD_PREFIXES = ['.github/', 'scripts/automerge/', 'content/', 'supabase/'];
+const ALWAYS_HELD_PREFIXES = [
+  '.github/', 'scripts/automerge/', 'content/', 'supabase/',
+  'public/models/anatomy/', // Founder reviews every 3D model binary before it reaches staging.
+  'src/pages/preview/anatomy-fixture/', // Test fixture endpoint must never become an unattended production route.
+  'src/pages/auth/', 'src/pages/account/', 'src/pages/admin/', 'src/pages/preview/admin-',
+];
 const ALWAYS_HELD_FILES = new Set([
   'automation.json',
   'scripts/staging_automerge.ts',
@@ -64,14 +75,85 @@ const ALWAYS_HELD_FILES = new Set([
   'AGENTS.md',
   'SECURITY.md',
   'wrangler.jsonc',
+  // Header/CSP changes affect browser security, including before public launch.
+  'public/_headers',
+  'astro.config.mjs',
+  // These legal/anatomy release gates decide whether draft material is shipped publicly.
+  'scripts/check-legal-release.mjs',
+  'scripts/anatomy-production-audit.mjs',
+  'scripts/check-anatomy-build.mjs',
+  'scripts/anatomy-postbuild-audit.mjs', // alternative production postbuild wrapper in PR #626
+  'src/islands/anatomylab.ts', // Chooses draft versus approved data for build output.
+  'src/islands/AnatomyLab.tsx', // Shows draft warnings, model attribution and export credits.
+  'src/islands/anatomyscene.ts', // Renders mandatory source credits in exported anatomy PNGs.
+  'src/pages/preview/anatomy-lab.astro', // Serializes the model selection into the page.
+  'src/pages/preview/anatomy-text.astro', // Serializes source names without JavaScript under the same draft gate.
+  'scripts/build-anatomy.mjs', // Source-driven geometry and label generation.
+  'scripts/anatomy-review-report.mjs',
+  'scripts/anatomy-source-url.mjs', // Model generator's official source/rights URL mapping. // Provides the founder's prepublication labels and rights inventory.
+  'scripts/anatomy-systems.json', // Model source selection and layer definitions.
+  'scripts/anatomy-release4.mjs', // Parses official BodyParts3D structure identities and hierarchy.
+  'scripts/anatomy-groups.mjs', // Derives source-backed structure grouping labels.
+  'src/visuals/prunedrafts.ts',
+  'src/visuals/sources.ts',
+  'src/content.config.ts', // Astro content schema enforces anatomy source, model validation and approval status.
+  // Founder approval is required for changes to secret-scan exceptions/config.
+  '.gitleaksignore',
+  '.gitleaks.toml',
+  // Legal/SEO release controls remain founder-held while their copy is in draft.
+  'src/pages/privacy.astro',
+  'src/pages/terms.astro',
+  'src/pages/disclaimer.astro',
+  'src/config/routes.ts',
+  // Account session/menu and newsletter form code are security-sensitive even before launch.
+  'src/config/site.ts',
+  'src/components/AccountCorner.astro',
+  'src/components/SignupForm.astro',
+  'src/scripts/accountcorner.ts',
+  'src/scripts/studyeventqueue.ts', // may pass signed-in study events to an RPC sender
+  'src/islands/questions.ts', // ensures public question state rejects pre-attempt answer keys
+  'src/islands/flag.ts', // validates authenticated student report payloads
+  'src/pages/learn/questions.astro', // publishes the signed-in question practice entry point
+  'src/scripts/progress.ts', // holds local onboarding answers later imported into an account
 ]);
+
+/**
+ * Account, authentication and privileged-admin code requires founder review in BOTH modes.
+ * These directories hold route entrypoints, while the flat islands folder uses narrow
+ * feature stems to include future helper modules without blocking ordinary study islands.
+ */
+const SENSITIVE_AUTH_PAGES = new Set([
+  'src/pages/account.astro',
+  'src/pages/signin.astro',
+  'src/pages/signup.astro',
+  'src/pages/reset-password.astro',
+  'src/pages/start.astro',
+  'src/pages/progress.astro', // shows signed-in exam data and student export controls
+]);
+  // RPC bridges and signed-in progress sync are security boundaries too.
+const SENSITIVE_AUTH_ISLAND_STEMS = [
+  'account', 'admin', 'auth', 'checkanswer', 'deleteaccount', 'displayname',
+  'examplan', 'exportdata', 'exportload', 'flagconnect', 'flagform', 'flaginbox',
+  'flagmount', 'flagsend', 'flagsubmit', 'flagitem',
+  'guestimport', 'mfa', 'oauth',
+  'onboarding', 'password', 'pkce', 'progresspanel', 'publishedquestions',
+  'questionsplayer', 'questionsremote', 'recovery', 'resetpassword',
+  'rpcerrors', 'reviewsession', 'reviewsync', 'session', 'signin', 'signup', 'studyrecorder', 'supabase', 'twofactor',
+];
+
+function isSensitiveAuthSource(path: string): boolean {
+  if (SENSITIVE_AUTH_PAGES.has(path)) return true;
+  if (!path.startsWith('src/islands/')) return false;
+  const filename = path.slice('src/islands/'.length).toLowerCase();
+  return SENSITIVE_AUTH_ISLAND_STEMS.some((stem) => filename.startsWith(stem));
+}
 
 /**
  * Also held once the site is live: the rest of the brief's sensitive list, plus the Node version every build uses and
  * the newsletter form settings (AGENTS.md sensitive areas).
  */
 const LAUNCHED_HELD_PREFIXES = ['brand-source/', 'public/brand/'];
-const LAUNCHED_HELD_FILES = new Set(['public/_headers', 'astro.config.mjs', '.node-version', 'src/config/site.ts']);
+const LAUNCHED_HELD_FILES = new Set(['.node-version']);
 /** A dependency list anywhere in the tree counts, not just the root one. */
 const LAUNCHED_HELD_BASENAMES = new Set(['package.json', 'package-lock.json']);
 
@@ -124,6 +206,8 @@ export interface Decision {
   action: Action;
   /** Plain-English reasons, shown in the workflow log. */
   reasons: string[];
+  /** Set only with action "wait": ask Codex to review the head commit again (see codexRetry). */
+  codexRetry?: CodexRetry;
 }
 
 /**
@@ -145,7 +229,7 @@ export function parseAutomation(text: string | undefined): { mode: Mode; note?: 
 }
 
 export function isHeldPath(path: string, mode: Mode): boolean {
-  if (ALWAYS_HELD_FILES.has(path) || ALWAYS_HELD_PREFIXES.some((prefix) => path.startsWith(prefix))) return true;
+  if (ALWAYS_HELD_FILES.has(path) || ALWAYS_HELD_PREFIXES.some((prefix) => path.startsWith(prefix)) || isSensitiveAuthSource(path)) return true;
   if (mode === 'prelaunch') return false;
   if (LAUNCHED_HELD_FILES.has(path) || LAUNCHED_HELD_PREFIXES.some((prefix) => path.startsWith(prefix))) return true;
   return LAUNCHED_HELD_BASENAMES.has(path.slice(path.lastIndexOf('/') + 1));
@@ -378,14 +462,19 @@ export function checkProblems(checks: readonly CheckRun[]): string[] {
 const STATE_MARKER = /<!--\s*codex-review-state:v1\s*(\{[\s\S]*?\})\s*-->/;
 
 /**
- * Codex's own review state, from the newest summary comment Codex posted. Comments by anyone else are ignored, so a
- * person can't fake a clean review by pasting the marker. Returns null when there is no readable summary.
+ * The newest summary comment Codex itself posted (the one carrying its review state). Comments by anyone else are
+ * ignored, so a person can't fake a clean review by pasting the marker. Null when there is none.
  */
-export function codexState(comments: readonly IssueComment[]): CodexState | null {
+export function codexSummary(comments: readonly IssueComment[]): IssueComment | null {
   const fromCodex = comments
     .filter((c) => c.user?.login === CODEX_LOGIN && c.user.type === 'Bot' && c.body && STATE_MARKER.test(c.body))
     .sort((a, b) => a.updated_at.localeCompare(b.updated_at) || a.id - b.id);
-  const newest = fromCodex.at(-1);
+  return fromCodex.at(-1) ?? null;
+}
+
+/** Codex's own review state, from its newest summary comment. Returns null when there is no readable summary. */
+export function codexState(comments: readonly IssueComment[]): CodexState | null {
+  const newest = codexSummary(comments);
   if (!newest?.body) return null;
   try {
     const parsed: unknown = JSON.parse(STATE_MARKER.exec(newest.body)![1]!);
@@ -395,11 +484,55 @@ export function codexState(comments: readonly IssueComment[]): CodexState | null
   }
 }
 
+/** True only when Codex reports that its review of this exact head commit failed for its own reasons. */
+export function codexFailed(state: CodexState | null, headSha: string): boolean {
+  const review = state?.code_review;
+  return !!review && review.commit_sha === headSha && review.status === 'failed';
+}
+
+/** The comment the bot posts to ask Codex to try again; the hidden marker makes retries for one head countable. */
+export function codexRetryComment(headSha: string): string {
+  return `@codex review\n\n<!-- automerge-codex-retry: ${headSha} -->`;
+}
+
+const RETRY_MARKER = /<!--\s*automerge-codex-retry:\s*([0-9a-f]+)\s*-->/g;
+
+/**
+ * Earlier retry comments for this head commit. Every comment carrying the marker counts, whoever posted it, so a
+ * pasted marker can only use up retries, never add any (fails closed).
+ */
+export function codexRetries(comments: readonly IssueComment[], headSha: string): IssueComment[] {
+  return comments.filter((c) => c.body && [...c.body.matchAll(RETRY_MARKER)].some((m) => m[1] === headSha));
+}
+
+export interface CodexRetry {
+  headSha: string;
+  /** 1-based: the retry the bot is about to ask for. */
+  attempt: number;
+  limit: number;
+}
+
+/**
+ * Whether to ask Codex to review the head commit again (Task 39): only when Codex's newest summary says its review
+ * of this exact head failed, fewer than CODEX_RETRY_LIMIT retries were asked for this head, and Codex has posted or
+ * updated its summary since the last one (so one failure gets one nudge, not one per sweep). Never for a review that
+ * finished with findings, is still running, or is for an older commit.
+ */
+export function codexRetry(comments: readonly IssueComment[], headSha: string): CodexRetry | null {
+  const summary = codexSummary(comments);
+  if (!summary || !codexFailed(codexState(comments), headSha)) return null;
+  const earlier = codexRetries(comments, headSha);
+  if (earlier.length >= CODEX_RETRY_LIMIT) return null;
+  if (earlier.some((c) => c.updated_at.localeCompare(summary.updated_at) >= 0)) return null;
+  return { headSha, attempt: earlier.length + 1, limit: CODEX_RETRY_LIMIT };
+}
+
 /** Problems with Codex's review of this head commit, or an empty list when it is a clean, finished review. */
 export function codexProblems(state: CodexState | null, headSha: string): string[] {
   const review = state?.code_review;
   if (!review) return ["Codex hasn't posted a review summary yet"];
   if (review.commit_sha !== headSha) return ["Codex hasn't reviewed the latest commit yet"];
+  if (review.status === 'failed') return ["Codex couldn't finish its review"];
   if (review.status !== 'completed') return ['Codex is still reviewing'];
   const problems: string[] = [];
   if (review.has_any_findings !== false) problems.push('Codex found something to look at');
@@ -445,7 +578,12 @@ export function decide({ repo, mode, pr, files, dependencies, checks, comments }
   if (!pr.base.sha) problems.push('cannot verify the staging base commit');
   if (pr.mergeable === null) problems.push('GitHub is still checking whether it merges cleanly');
   else if (!pr.mergeable) problems.push("it doesn't merge cleanly into staging");
-  if (problems.length > 0) return { action: 'wait', reasons: problems };
+  if (problems.length > 0) {
+    // Codex failing for its own reasons is the one problem the bot may nudge; everything else just waits.
+    const retry = codexRetry(comments, pr.head.sha);
+    if (retry) return { action: 'wait', reasons: [...problems, `codex retry ${retry.attempt}/${retry.limit}`], codexRetry: retry };
+    return { action: 'wait', reasons: problems };
+  }
 
   return { action: 'merge', reasons: [`checks passed, Codex is clean, nothing held (${mode} rules)`] };
 }

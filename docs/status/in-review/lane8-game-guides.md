@@ -1,0 +1,1 @@
+status: Lane 8, game guides for videos: docs/games/ has one plain page per daily game (pillo, sudoku, crossword, word path) with how to play, every setting and scoring, written from the code on staging.

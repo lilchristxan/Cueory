@@ -46,7 +46,7 @@ export default function SentenceStepper({ sentences }: Props) {
       </ol>
 
       <p className="mt-stack text-sm text-ink-soft">
-        Sentence {state.shown} of {state.total}
+        sentence {state.shown} of {state.total}
       </p>
 
       <div className="mt-stack flex flex-wrap gap-3">
@@ -54,30 +54,30 @@ export default function SentenceStepper({ sentences }: Props) {
           type="button"
           onClick={() => setState(back)}
           disabled={state.shown <= 1}
-          className="rounded-pill border border-line px-5 py-2.5 text-ink disabled:opacity-50"
+          className="min-h-(--tap-min) rounded-pill border border-line px-5 py-2.5 text-ink disabled:opacity-50"
         >
-          Back
+          back
         </button>
         <button
           type="button"
           onClick={() => setState(next)}
           disabled={done}
-          className="rounded-pill bg-button px-5 py-2.5 text-on-button hover:bg-button-hover disabled:opacity-50"
+          className="min-h-(--tap-min) rounded-pill bg-button px-5 py-2.5 text-on-button hover:bg-button-hover disabled:opacity-50"
         >
-          Next sentence
+          next sentence
         </button>
         {!done && (
           <button
             type="button"
             onClick={() => setState(showAll)}
-            className="rounded-pill px-3 py-2.5 text-ink-soft underline"
+            className="min-h-(--tap-min) rounded-pill px-3 py-2.5 text-ink-soft underline"
           >
-            Show all
+            show all
           </button>
         )}
       </div>
 
-      {done && <p className="mt-stack text-ink-soft">That's the whole lesson for now. More is coming soon.</p>}
+      {done && <p className="mt-stack text-ink-soft">that's the whole lesson for now. more is coming soon.</p>}
     </div>
   );
 }
