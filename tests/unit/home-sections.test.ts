@@ -126,7 +126,7 @@ describe('home how-it-works (W01-3)', () => {
     const source = readFileSync(new URL('../../src/components/HomeHero.astro', import.meta.url), 'utf8');
     const ruled = source.match(/<li class="([^"]*)" data-hero-point-rule>/);
     expect(ruled, 'second value point carries the rule').not.toBeNull();
-    expect(ruled![1].split(' ')).toEqual(expect.arrayContaining(['sm:border-s', 'sm:border-control', 'sm:ps-5']));
+    expect(ruled![1].split(' ')).toEqual(expect.arrayContaining(['sm:border-s', 'sm:border-line', 'sm:ps-5']));
   });
 
   it('the hero start button follows the draft gate: closed live, a link to the open lesson elsewhere', () => {
