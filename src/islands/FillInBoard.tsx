@@ -351,7 +351,7 @@ function Session({ items: suppliedItems, page = FILL_IN_PAGE }: Props) {
                   {options.map((option, optIdx) => (
                     <label
                       key={`${option}-${optIdx}`}
-                      className="flex min-h-11 cursor-pointer items-center gap-3 rounded-md border border-control bg-surface px-4 py-2.5 text-ink"
+                      className="flex min-h-11 cursor-pointer items-center gap-3 rounded-md border border-control bg-surface px-4 py-2.5 text-ink has-checked:border-ink has-checked:inset-ring-1 has-checked:inset-ring-ink has-disabled:cursor-default"
                     >
                       <input
                         type="radio"
@@ -366,7 +366,9 @@ function Session({ items: suppliedItems, page = FILL_IN_PAGE }: Props) {
                             check();
                           }
                         }}
-                        className="size-6 shrink-0 accent-ink"
+                        // Drawn from tokens rather than the browser's radio, so the chosen dot stays full ink once the
+                        // choices are disabled after "check" (a disabled native radio turns grey, worst in Evening).
+                        className="size-6 shrink-0 cursor-pointer appearance-none rounded-full border-2 border-control bg-surface checked:border-ink checked:bg-ink checked:inset-ring-4 checked:inset-ring-surface disabled:cursor-default forced-colors:appearance-auto"
                       />
                       <span>{option}</span>
                     </label>
