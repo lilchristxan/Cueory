@@ -14,18 +14,45 @@ function astroPages(folder: string): string[] {
 // Pages whose single Layout holds mutually exclusive branches (coming-soon vs shown), each with its own h1.
 const EXCLUSIVE_BRANCH_H1 = new Set(['preview/prose.astro', 'resources.astro']);
 
-const strip = (source: string) => source.replace(/<!--[\s\S]*?-->/g, ' ');
+// Drop HTML comments and whole {/* ... */} template comments, so commented-out markup never counts.
+const strip = (source: string) => source.replace(/<!--[\s\S]*?-->/g, ' ').replace(/\{\s*\/\*(?:(?!\*\/)[\s\S])*\*\/\s*\}/g, ' ');
 
-/** Local components and islands a page imports; they may supply the page's h1. */
-function importedH1Count(file: string, source: string): number {
-  let count = 0;
-  for (const match of source.matchAll(/^import\s+(?:[\w{}\s,]+)\s+from\s+['"](\.[^'"]+)['"]/gm)) {
-    const target = resolve(dirname(file), match[1]);
-    if (/layouts\/Layout\.astro$/.test(target)) continue;
-    if (!/\.(astro|tsx)$/.test(target) || !existsSync(target)) continue;
-    count += (strip(readFileSync(target, 'utf8')).match(/<h1\b/g) ?? []).length;
+const h1Count = (markup: string) => (markup.match(/<h1\b/g) ?? []).length;
+
+/** Default-imported local components and islands of a page, mapped to the number of h1 tags in their own source. */
+function componentHeadings(file: string, source: string): Map<string, number> {
+  const headings = new Map<string, number>();
+  for (const match of source.matchAll(/^import\s+([A-Z]\w*)\s*(?:,\s*\{[^}]*\}\s*)?from\s+['"](\.[^'"]+)['"]/gm)) {
+    const base = resolve(dirname(file), match[2]);
+    if (/layouts\/Layout\.astro$/.test(base)) continue;
+    const target = [base, `${base}.tsx`, `${base}.astro`].find((path) => /\.(astro|tsx)$/.test(path) && existsSync(path));
+    if (target) headings.set(match[1], h1Count(strip(readFileSync(target, 'utf8'))));
   }
-  return count;
+  return headings;
+}
+
+/** True when the markup renders `<Name ...>` itself, not a longer tag that starts with the same letters. */
+const renders = (markup: string, name: string) => new RegExp(`<${name}(?=[\\s/>])`).test(markup);
+
+/**
+ * Heading problems in one page's source. Each Layout it renders needs exactly one h1 of its own, or a component
+ * rendered inside that same Layout whose source holds the h1. An import alone never counts.
+ */
+function headingProblems(name: string, source: string, components: ReadonlyMap<string, number>): string[] {
+  const markup = strip(source.replace(/^---[\s\S]*?\n---/, ' '));
+  const blocks = markup.split(/<Layout\b/).slice(1).map((part) => part.split(/<\/Layout\s*>/)[0]);
+  if (blocks.length === 0) return ['page must render the shared Layout'];
+  const problems: string[] = [];
+  blocks.forEach((block, index) => {
+    const own = h1Count(block);
+    if (own > 1 && !EXCLUSIVE_BRANCH_H1.has(name)) problems.push(`Layout ${index + 1} has ${own} h1 elements`);
+    if (own > 1 && EXCLUSIVE_BRANCH_H1.has(name) && !/\{\s*!?shown\b/.test(block)) {
+      problems.push(`Layout ${index + 1} has several h1 elements outside its shown branches`);
+    }
+    const fromComponent = [...components].some(([component, count]) => count > 0 && renders(block, component));
+    if (own === 0 && !fromComponent) problems.push(`Layout ${index + 1} has no h1 of its own or from a component it renders`);
+  });
+  return problems;
 }
 
 describe('page source: one h1 per rendered page, main landmark owned by Layout', () => {
@@ -43,19 +70,51 @@ describe('page source: one h1 per rendered page, main landmark owned by Layout',
     expect(offenders).toEqual([]);
   });
 
+  it('reads the headings of a real imported island', () => {
+    const file = join(PAGES_ROOT, 'admin/flags.astro');
+    expect(componentHeadings(file, readFileSync(file, 'utf8')).get('AdminFlags')).toBeGreaterThan(0);
+  });
+
   for (const file of pages) {
     const name = relative(PAGES_ROOT, file);
     it(`${name} gives every Layout it renders an h1, and never two in one Layout`, () => {
-      const source = strip(readFileSync(file, 'utf8'));
-      const blocks = source.split(/<Layout\b/).slice(1).map((part) => part.split(/<\/Layout\s*>/)[0]);
-      expect(blocks.length, 'page must render the shared Layout').toBeGreaterThan(0);
-      const viaImports = importedH1Count(file, source);
-      for (const block of blocks) {
-        const own = (block.match(/<h1\b/g) ?? []).length;
-        if (!EXCLUSIVE_BRANCH_H1.has(name)) expect(own, 'two h1 elements inside one Layout').toBeLessThanOrEqual(1);
-        else expect(block, 'multiple h1 only in conditional branches').toMatch(/\{\s*!?shown\b|\{\s*\n?\s*!shown/);
-        if (own === 0) expect(viaImports, 'Layout has no h1 of its own or from an imported component').toBeGreaterThan(0);
-      }
+      const source = readFileSync(file, 'utf8');
+      expect(headingProblems(name, source, componentHeadings(file, source))).toEqual([]);
     });
   }
+});
+
+describe('page source headings: synthetic pages', () => {
+  const island = new Map([['AdminFlags', 3]]);
+  const page = (body: string) =>
+    `---\nimport Layout from '../layouts/Layout.astro';\nimport AdminFlags from '../islands/AdminFlags.tsx';\n---\n${body}\n`;
+  const missing = (n: number) => `Layout ${n} has no h1 of its own or from a component it renders`;
+
+  it('credits a component heading where the component renders', () => {
+    expect(headingProblems('x.astro', page('<Layout title="x"><AdminFlags client:only="react" /></Layout>'), island)).toEqual([]);
+  });
+
+  it('rejects a component that is imported but never rendered', () => {
+    expect(headingProblems('x.astro', page('<Layout title="x"><p>reports</p></Layout>'), island)).toEqual([missing(1)]);
+  });
+
+  it('rejects commented-out and similarly named components', () => {
+    for (const body of ['<!-- <AdminFlags /> -->', '{/* <AdminFlags /> */}', '<AdminFlagsLegacy />']) {
+      expect(headingProblems('x.astro', page(`<Layout title="x">${body}</Layout>`), island), body).toEqual([missing(1)]);
+    }
+  });
+
+  it('checks each Layout branch on its own', () => {
+    const body = '{ok ? (<Layout title="x"><AdminFlags /></Layout>) : (<Layout title="y"><p>soon</p></Layout>)}';
+    expect(headingProblems('x.astro', page(body), island)).toEqual([missing(2)]);
+  });
+
+  it('rejects two h1 in one Layout, a component without a heading, and a page without Layout', () => {
+    expect(headingProblems('x.astro', page('<Layout title="x"><h1>a</h1><h1>b</h1></Layout>'), island))
+      .toEqual(['Layout 1 has 2 h1 elements']);
+    expect(headingProblems('x.astro', page('<Layout title="x"><Quiet /></Layout>'), new Map([['Quiet', 0]])))
+      .toEqual([missing(1)]);
+    expect(headingProblems('x.astro', '<html><body><h1>a</h1></body></html>', island))
+      .toEqual(['page must render the shared Layout']);
+  });
 });
