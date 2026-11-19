@@ -23,6 +23,28 @@ const twScale = /(?:^|[\s"'`])(?:min-w|w|basis)-(?:(\d+(?:\.\d+)?)|\[(\d+(?:\.\d
 // Raw CSS declarations of a fixed width (not max-, not inside a media query).
 const cssWidth = /(?<![-\w(])(?:min-width|min-inline-size|width|inline-size|flex-basis)\s*:\s*(\d+(?:\.\d+)?)(px|rem)\b/g;
 
+function inMinWidthMedia(text: string, index: number): boolean {
+  const stack: string[] = [];
+  let start = 0;
+  for (let i = 0; i < index; i++) {
+    const ch = text[i];
+    if (ch === '{') {
+      stack.push(text.slice(start, i));
+      start = i + 1;
+    } else if (ch === '}') {
+      stack.pop();
+      start = i + 1;
+    } else if (ch === ';') start = i + 1;
+  }
+  return stack.some((header) => /@media[^{]*min-width/.test(header));
+}
+
+function oversizedCssWidths(text: string): string[] {
+  return [...text.matchAll(cssWidth)]
+    .filter((m) => toPx(Number(m[1]), m[2]!) > LIMIT_PX && !inMinWidthMedia(text, m.index!))
+    .map((m) => m[0]);
+}
+
 describe('320px fixed-width source guard', () => {
   it('has no unprefixed Tailwind width wider than a 320px phone', () => {
     const bad: string[] = [];
@@ -40,15 +62,20 @@ describe('320px fixed-width source guard', () => {
   it('has no raw CSS fixed width wider than a 320px phone outside a min-width media query', () => {
     const bad: string[] = [];
     for (const file of files.filter((f) => /\.(css|astro)$/.test(f))) {
-      const text = readFileSync(file, 'utf8');
-      for (const m of text.matchAll(cssWidth)) {
-        const before = text.slice(0, m.index);
-        const lastMedia = before.lastIndexOf('@media');
-        const inMinMedia = lastMedia >= 0 && /^@media[^{]*min-width/.test(before.slice(lastMedia)) && !/\n\}/.test(before.slice(lastMedia));
-        if (toPx(Number(m[1]), m[2]!) > LIMIT_PX && !inMinMedia) bad.push(`${file.replace(root, 'src')}: ${m[0]}`);
-      }
+      for (const hit of oversizedCssWidths(readFileSync(file, 'utf8'))) bad.push(`${file.replace(root, 'src')}: ${hit}`);
     }
     expect(bad).toEqual([]);
+  });
+
+  it('tracks real brace nesting, so a declaration after an indented media block is still flagged', () => {
+    const css = [
+      '  @media (min-width: 40rem) {',
+      '    .a { width: 400px; }',
+      '  }',
+      '  .phone { min-width: 400px; }',
+    ].join('\n');
+    expect(oversizedCssWidths(css)).toEqual(['min-width: 400px']);
+    expect(oversizedCssWidths('@media (min-width: 40rem) {\n  .a {\n    width: 30rem;\n  }\n}')).toEqual([]);
   });
 
   it('only uses whitespace-nowrap inside an overflow-x scroller or a size-fitted label', () => {
