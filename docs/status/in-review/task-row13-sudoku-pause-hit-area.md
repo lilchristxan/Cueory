@@ -1,1 +1,1 @@
-status: Row 13 Firefox pause/resume control keeps a Sudoku-scoped 48 px hit area above the 44 px minimum, avoiding Firefox's documented 43.99997 px boundary while preserving board and timer behavior.
+status: Row 13 expands the Sudoku Pause/Resume pointer target to 48 px at default text while preserving the five equal 44 px toolbar buttons and existing focus and pause behavior.
