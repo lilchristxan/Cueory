@@ -83,6 +83,22 @@ const game = dailyGames.find((item) => item.id === 'triage')!;
     box-shadow: inset 0 0 0 var(--spacing) var(--cueory-copper-ink);
   }
 
+  @media (prefers-color-scheme: dark) {
+    :global(:root:not([data-theme="light"]) .sudoku-cell.is-selected) {
+      background: var(--color-surface);
+      color: var(--color-ink);
+      outline-color: var(--color-ink);
+      box-shadow: inset 0 0 0 var(--spacing) var(--color-ink);
+    }
+  }
+
+  :global(:root[data-theme="dark"] .sudoku-cell.is-selected) {
+    background: var(--color-surface);
+    color: var(--color-ink);
+    outline-color: var(--color-ink);
+    box-shadow: inset 0 0 0 var(--spacing) var(--color-ink);
+  }
+
   :global(.sudoku-cell.is-related) {
     background: var(--color-sudoku-related);
   }
