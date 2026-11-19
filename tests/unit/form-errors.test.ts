@@ -49,6 +49,40 @@ describe('inline email errors (x2 lane 9)', () => {
     expect(attrs.get('aria-describedby')).toBe('signup-popup-email-error');
   });
 
+  it('lets a fixed address through: the native verdict flips, the message clears, and the send is not blocked', () => {
+    const listeners: Record<string, (event: { preventDefault: () => void }) => void> = {};
+    const inputListeners: Record<string, () => void> = {};
+    const attrs = new Map<string, string>([['aria-describedby', 'signup-popup-hint']]);
+    const form = { noValidate: false, addEventListener: (type: string, fn: never) => (listeners[type] = fn) };
+    const input = {
+      value: 'name@example..com',
+      validity: { typeMismatch: true },
+      getAttribute: (name: string) => attrs.get(name) ?? null,
+      setAttribute: (name: string, value: string) => attrs.set(name, value),
+      removeAttribute: (name: string) => attrs.delete(name),
+      hasAttribute: (name: string) => attrs.has(name),
+      focus: () => undefined,
+      addEventListener: (type: string, fn: never) => (inputListeners[type] = fn),
+    };
+    const message = { id: 'signup-popup-email-error', textContent: '', hidden: true };
+    attachEmailErrors(form as never, input as never, message as never);
+    let prevented = 0;
+    listeners.submit!({ preventDefault: () => prevented++ });
+    expect(prevented).toBe(1);
+    // An existing description stays and the message is added after it.
+    expect(attrs.get('aria-describedby')).toBe('signup-popup-hint signup-popup-email-error');
+    // The visitor removes the doubled dot: the browser's verdict flips and the message goes with it.
+    input.value = 'name@example.com';
+    input.validity.typeMismatch = false;
+    inputListeners.input!();
+    expect(message.hidden).toBe(true);
+    expect(message.textContent).toBe('');
+    expect(attrs.has('aria-invalid')).toBe(false);
+    expect(attrs.get('aria-describedby')).toBe('signup-popup-hint');
+    listeners.submit!({ preventDefault: () => prevented++ });
+    expect(prevented).toBe(1);
+  });
+
   it('the pop-up marks the message as an alert, hidden until needed, and wires the script', () => {
     const source = readFileSync('src/components/SignupPopup.astro', 'utf8');
     expect(source).toMatch(/id="signup-popup-email-error"[^>]*role="alert"[^>]*hidden/);
