@@ -10,9 +10,10 @@ import { site } from '../config/site';
 >
   <div class="mx-auto flex w-full max-w-page flex-col gap-8 py-section">
     <p class="mx-auto w-full max-w-page text-sm font-medium tracking-label text-ink-soft">/ about us</p>
-    <header class="mx-auto w-full max-w-page space-y-5">
+    <!-- A size container: on phones the headline's size follows this column's width, so it draws four large lines. -->
+    <header class="@container mx-auto w-full max-w-page space-y-5">
       <p class="text-sm font-bold tracking-label text-ink-soft">by nursing students, for nursing students</p>
-      <h1 class="display max-w-4xl wrap-anywhere text-display text-ink sm:text-display-lg">we know nursing school is<br class="hidden sm:inline" /> hard.</h1>
+      <h1 class="display max-w-4xl wrap-anywhere text-display-about-phone text-ink sm:text-display-lg"><span class="max-sm:block">we know</span> <span class="max-sm:block">nursing</span> <span class="max-sm:block">school is</span><br class="hidden sm:inline" /> <span class="max-sm:block">hard.</span></h1>
       <p class="text-lg text-ink" data-placeholder="CHRISTIAN-TEXT">
         [Christian's story: why Cueory exists, in his own words.]
       </p>
@@ -37,7 +38,7 @@ import { site } from '../config/site';
         <h2 id="coming-heading" class="display text-2xl text-ink sm:text-title">what's coming</h2>
         <p class="mt-3 text-ink">Mental Health I and Med Math are next, then Med-Surg II.</p>
       </div>
-      <a href="/#signup" class="inline-flex min-h-11 shrink-0 items-center justify-center rounded-pill border border-control bg-transparent px-5 py-2.5 text-center text-ink hover:bg-surface">
+      <a href="/#signup" class="inline-flex min-h-11 self-start sm:self-center shrink-0 items-center justify-center rounded-pill border border-control bg-transparent px-5 py-2.5 text-center text-ink hover:bg-surface">
         join the mailing list
       </a>
     </section>
@@ -60,7 +61,7 @@ import { site } from '../config/site';
           </h2>
           <p class="mt-3 text-ink">Support our mission to expand our resources, help nursing students struggling in class, and keep building ways we can help students and nurses.</p>
         </div>
-        <a href={site.tipPageUrl} target="_blank" rel="noopener noreferrer" class="copper-button inline-flex min-h-11 shrink-0 items-center justify-center text-center">
+        <a href={site.tipPageUrl} target="_blank" rel="noopener noreferrer" class="copper-button inline-flex min-h-11 self-start sm:self-center shrink-0 items-center justify-center text-center">
           support on Ko-fi ↗
         </a>
       </div>

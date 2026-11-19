@@ -32,6 +32,37 @@ test.describe('about page', () => {
     await expect(page.getByRole('link', { name: 'support on Ko-fi ↗' })).toHaveAttribute('target', '_blank');
   });
 
+  for (const width of [320, 390]) {
+    test(`${width}px phone: the headline draws four large lines, each fitting the column`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 844 });
+      await page.goto('/about');
+
+      const heading = page.locator('main h1');
+      const lines = await heading.evaluate((element) => {
+        const lineHeight = Number.parseFloat(getComputedStyle(element).lineHeight);
+        const column = element.getBoundingClientRect();
+        // Each line's own text box (a block span is always as wide as the column, its words may not be).
+        const spans = [...element.querySelectorAll('span')].map((span) => {
+          const range = document.createRange();
+          range.selectNodeContents(span);
+          const box = range.getBoundingClientRect();
+          return { top: Math.round(box.top), right: box.right, rows: range.getClientRects().length };
+        });
+        return {
+          count: Math.round(column.height / lineHeight),
+          tops: new Set(spans.map((span) => span.top)).size,
+          fits: spans.every((span) => span.rows === 1 && span.right <= column.right + 1),
+          fontSize: Number.parseFloat(getComputedStyle(element).fontSize),
+        };
+      });
+      expect(lines.count).toBe(4);
+      expect(lines.tops).toBe(4);
+      expect(lines.fits).toBe(true);
+      expect(lines.fontSize).toBeGreaterThan(44);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+    });
+  }
+
   for (const viewport of [
     { name: 'phone', width: 390, height: 844 },
     { name: 'tablet', width: 820, height: 1180 },
