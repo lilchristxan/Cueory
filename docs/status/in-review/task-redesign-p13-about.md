@@ -1,0 +1,1 @@
+status: P13 About rendering (#885): approved copy, responsive reflow, and canonical copper CTA integration are ready for review; local Astro and browser verification were unavailable in the worktree and are covered by hosted CI and lead capture.
