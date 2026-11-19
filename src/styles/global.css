@@ -396,6 +396,25 @@
     background-color: rgb(var(--glass-hover-rgb) / var(--glass-hover-alpha));
   }
 
+  /* Filled copper action used by the redesign renderings. Keep the ink opaque for contrast on every stop. */
+  .copper-button {
+    display: inline-block;
+    max-inline-size: 100%;
+    padding: calc(var(--spacing) * 3.5) calc(var(--spacing) * 8);
+    overflow-wrap: break-word;
+    border-radius: var(--radius-pill);
+    color: var(--cueory-copper-ink);
+    text-decoration: none;
+    background: linear-gradient(110deg, var(--cueory-copper-start), var(--cueory-copper-end) 72%, var(--cueory-copper-shine));
+    box-shadow: var(--shadow-button);
+    transition: filter 150ms ease;
+  }
+
+  .copper-button:hover {
+    color: var(--cueory-copper-ink);
+    filter: brightness(1.04);
+  }
+
   /* Social profile links (D-54): the platform's one-color mark in the text color, on a 44 px target. */
   .social-link {
     display: inline-flex;

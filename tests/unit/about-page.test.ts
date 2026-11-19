@@ -45,8 +45,7 @@ describe('about page shell', () => {
     expect(markup).toContain('class="display');
     expect(markup).toContain('href="/#signup"');
     expect(markup).toContain('href={site.tipPageUrl}');
-    expect(markup).toContain('var(--cueory-copper-start)');
-    expect(markup).toContain('var(--cueory-copper-ink)');
-    expect(markup).not.toMatch(/<script\b|<style\b/i);
+    expect(markup).toContain('class="copper-button');
+    expect(markup).not.toMatch(/<script\b|<style\b|\sstyle=/i);
   });
 });
