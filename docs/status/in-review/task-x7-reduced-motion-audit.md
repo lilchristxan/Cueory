@@ -1,0 +1,1 @@
+status: Adds a unit audit test that every script-driven animation, smooth scroll and stylesheet keyframe in src has a reduced-motion guard, and that the global reduced-motion fallbacks stay in place. No source gap found; test only.
