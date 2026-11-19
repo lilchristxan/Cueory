@@ -1,5 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
+import { site } from '../../src/config/site';
 
 // The hero's ways in (redesign P5): the explore row's tiles, each to a page that exists today. The "start studying" call
 // to action is closed (not a link) and the old quiet join link is gone.
@@ -35,11 +36,12 @@ for (const size of [
       await expect(page.getByText('by nursing students, for nursing students').first()).toBeVisible();
       const start = page.getByTestId('hero-start');
       await expect(start).toHaveText(/start studying for free/);
-      await expect(start).toHaveAttribute('aria-disabled', 'true');
-      await expect(page.locator('.scene-hero a[href="/learn"]').filter({ hasText: 'start studying' })).toHaveCount(0);
+      // The browser-test build may show drafts, so the button is a link to the open sample lesson (the live build's
+      // closed button is checked in tests/unit/home-sections.test.ts).
+      await expect(start).toHaveAttribute('href', '/learn/study-skills');
       await expect(page.getByTestId('hero-join')).toHaveCount(0);
       await expect(page.locator('.scene-hero').getByText('adhd friendly')).toHaveCount(0);
-      await expect(page.getByTestId('hero-support')).toHaveAttribute('href', /ko-fi\.com/);
+      await expect(page.getByTestId('hero-support')).toHaveAttribute('href', site.tipPageUrl);
       // No line under the button restates it (Christian, 2026-11-02).
       await expect(page.getByText('save your progress and pick up where you left off.')).toHaveCount(0);
       await expect(page.getByRole('heading', { level: 2, name: 'how it works' })).toBeVisible();

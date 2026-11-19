@@ -444,7 +444,7 @@ test.describe('theme switch', () => {
 });
 
 test.describe('marketing look (D-41)', () => {
-  test('the home hero: logo, motto, a two-line serif headline with a copper accent, a closed call to action (P5)', async ({
+  test('the home hero: logo, motto, a two-line serif headline with a copper accent, the start link (P5)', async ({
     page,
   }) => {
     await page.goto('/');
@@ -455,13 +455,12 @@ test.describe('marketing look (D-41)', () => {
     await expect(page.getByText('Short, clear lessons')).toHaveCount(0);
     const hero = page.locator('.scene-hero');
     await expect(hero.getByText('by nursing students, for nursing students')).toBeVisible();
-    // The call to action is closed while the live build has no open lesson: a button that is disabled for assistive
-    // technology, with "coming soon" written next to it, never a link (copy deck, hero button).
+    // The call to action follows the draft gate: this build may show drafts, so it is a copper link to the open sample
+    // lesson. (The live build's closed, "coming soon" button is checked in tests/unit/home-sections.test.ts.)
     const button = hero.getByTestId('hero-start');
-    await expect(button).toHaveAttribute('aria-disabled', 'true');
+    await expect(button).toHaveAttribute('href', '/learn/study-skills');
     await expect(button).toHaveText(/start studying for free/);
-    await expect(hero.getByText('coming soon', { exact: true })).toBeVisible();
-    await expect(hero.getByRole('link', { name: /start studying/ })).toHaveCount(0);
+    await expect(button).toHaveClass(/copper-button/);
     // The old quiet join link and play button went away with the old hero; the explore row and the Ko-fi card remain.
     await expect(page.getByTestId('hero-join')).toHaveCount(0);
     await expect(hero.getByTestId('hero-play')).toHaveCount(0);

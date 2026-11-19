@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { isDesktopOfEachEngine } from './projects';
 
-// Redesign P5: the hero's closed call to action, the Ko-fi card and the explore row work by keyboard and touch, in Light
+// Redesign P5: the hero's start link, the Ko-fi card and the explore row work by keyboard and touch, in Light
 // and Evening, without sideways scroll, including a 320 px screen with 32 px text.
 const sizes = [
   { width: 320, height: 720, rootText: '32px' },
@@ -36,11 +36,9 @@ for (const size of sizes) {
         const hero = page.locator('.scene-hero');
         const start = hero.getByTestId('hero-start');
         await expect(start).toBeVisible();
-        await expect(start).toHaveAttribute('aria-disabled', 'true');
-        // Closed means closed: pressing it goes nowhere, and "coming soon" is written out, not only coloured.
-        await expect(hero.getByText('coming soon', { exact: true })).toBeVisible();
-        await start.click({ force: true }); // Playwright treats aria-disabled as not enabled
-        await expect(page).toHaveURL(/\/$/);
+        // The browser-test build may show drafts, so the button is a link to the open sample lesson. The live build's
+        // closed button is checked in tests/unit/home-sections.test.ts.
+        await expect(start).toHaveAttribute('href', '/learn/study-skills');
 
         const targets = ['hero-support', 'explore-lessons', 'explore-materials', 'explore-games', 'explore-suggestions'];
         for (const id of targets) {
@@ -53,10 +51,15 @@ for (const size of sizes) {
         const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
         expect(overflow).toBeLessThanOrEqual(0);
 
-        // Keyboard: the closed button can still be reached and read out; Tab then walks on to the Ko-fi card and the
+        // Keyboard: the start link takes focus with a visible ring; Tab then walks on to the Ko-fi card and the
         // explore tiles, each with a visible focus ring, and Enter on "daily games" opens the games hub.
         await start.focus();
         await expect(start).toBeFocused();
+        const startRing = await start.evaluate((el) => {
+          const style = getComputedStyle(el);
+          return el.matches(':focus-visible') && style.outlineStyle !== 'none' && Number.parseFloat(style.outlineWidth) > 0;
+        });
+        expect(startRing).toBe(true);
         for (const id of ['hero-support', 'explore-lessons', 'explore-materials', 'explore-games']) {
           await page.keyboard.press('Tab');
           const link = hero.getByTestId(id);

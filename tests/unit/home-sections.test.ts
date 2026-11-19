@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { draftsAllowed } from '../../src/islands/anatomylab';
-import { draftBuildEnv } from '../../src/lessons/draftgate';
+import { draftBuildEnv, heroStartHref, lessonEntryHref } from '../../src/lessons/draftgate';
 import { indexablePages } from '../../src/config/routes';
 import { accountLaunch, accountsOpen, newsletter, showsHeroJoin } from '../../src/config/site';
 
@@ -85,11 +85,22 @@ describe('home how-it-works (W01-3)', () => {
     const heading = hero.match(/<h1\b[^>]*>([\s\S]*?)<\/h1>/)?.[1] ?? '';
     expect(plain(heading)).toBe('nursing school made simpler.');
     expect(plain(hero)).toContain('by nursing students, for nursing students');
-    // The "start studying" call to action is closed while the live build has no open lesson: a disabled button, never a link.
-    const start = hero.match(/<button\b(?=[^>]*data-testid="hero-start")[^>]*>([\s\S]*?)<\/button>/);
-    expect(start?.[0]).toContain('aria-disabled="true"');
-    expect(plain(start?.[1] ?? '')).toBe('start studying for free →');
-    expect(hero).toContain('coming soon');
+    // The "start studying" call to action follows the draft gate (heroStartHref): a copper link to the open lesson where
+    // drafts may show, and in the live build a disabled button tagged "coming soon", never a link that leads nowhere.
+    const open = draftsAllowed(draftBuildEnv(process.env));
+    const startTag = hero.match(/<(a|button)\b(?=[^>]*data-testid="hero-start")[^>]*>([\s\S]*?)<\/\1>/);
+    expect(plain(startTag?.[2] ?? '')).toBe('start studying for free →');
+    if (open) {
+      expect(startTag?.[1]).toBe('a');
+      expect(startTag?.[0]).toContain('href="' + lessonEntryHref(process.env) + '"');
+      expect(startTag?.[0]).toContain('copper-button');
+      expect(startTag?.[0]).not.toContain('aria-disabled');
+    } else {
+      expect(startTag?.[1]).toBe('button');
+      expect(startTag?.[0]).toContain('aria-disabled="true"');
+      expect(startTag?.[0]).not.toContain('href=');
+      expect(hero).toContain('coming soon');
+    }
     // The old quiet launch-list link went away with the old hero (copy deck, "hero quiet link"); the form is lower down.
     expect(hero).not.toContain('data-testid="hero-join"');
     expect(accountLaunch(true)).toMatchObject({ accountHref: '/signup', promoJoinLabel: 'create your free account' });
@@ -109,6 +120,22 @@ describe('home how-it-works (W01-3)', () => {
     expect(support).toContain('opens in a new tab');
     // The figure loads at once and is decorative.
     expect(hero).toMatch(/<img\b(?=[^>]*hero-anatomy-figure\.webp)(?=[^>]*loading="eager")(?=[^>]*alt="")[^>]*>/);
+  });
+
+  it('the hero start button follows the draft gate: closed live, a link to the open lesson elsewhere', () => {
+    // The live build (a Workers Build of main) holds the sample lesson back, so there is no link to show.
+    expect(heroStartHref({ WORKERS_CI: '1', WORKERS_CI_BRANCH: 'main' })).toBeNull();
+    expect(heroStartHref({ WORKERS_CI: '1', WORKERS_CI_BRANCH: 'refs/heads/main' })).toBeNull();
+    expect(heroStartHref({ WORKERS_CI: '1' })).toBeNull();
+    expect(heroStartHref({})).toBeNull();
+    // Staging, previews and the browser-test build show the sample lesson, and the button links to it.
+    expect(heroStartHref({ WORKERS_CI: '1', WORKERS_CI_BRANCH: 'staging' })).toBe('/learn/study-skills');
+    expect(heroStartHref({ WORKERS_CI: '1', WORKERS_CI_BRANCH: 'task-p5/home-hero' })).toBe('/learn/study-skills');
+    expect(heroStartHref({ CUEORY_ANATOMY_DRAFTS: '1' })).toBe('/learn/study-skills');
+    // The hero asks the guard; it never decides on its own.
+    const source = readFileSync(new URL('../../src/components/HomeHero.astro', import.meta.url), 'utf8');
+    expect(source).toContain('heroStartHref()');
+    expect(source).toMatch(/startHref \? \(/);
   });
 
   it('shows the hero join link only when it leads to a real next step', () => {

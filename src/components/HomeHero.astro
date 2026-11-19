@@ -1,6 +1,7 @@
 ---
 import Wordmark from './Wordmark.astro';
 import { site } from '../config/site';
+import { heroStartHref } from '../lessons/draftgate';
 
 /**
  * The home hero (redesign P5, renderings HomeV2-1.png and HomeV2-390.png; copy: docs/design/copy-deck.md, "/ (HomeV2)",
@@ -8,8 +9,10 @@ import { site } from '../config/site';
  * free" call to action, the value points, the Ko-fi support card, the anatomy figure and the "explore" row.
  *
  * Settled rules that win over the picture:
- * - The call to action is closed ("coming soon", not a link) while the live build's /learn has no open lessons; it
- *   becomes a link to /learn once a real lesson is open (copy-deck, hero button).
+ * - The call to action follows the draft gate (heroStartHref in src/lessons/draftgate.ts, the same answer the menu and
+ *   the library use): where a lesson is open (staging, previews, local and test builds) it is a copper link to it; in the
+ *   live build, which holds the sample lesson back, it is a disabled button tagged "coming soon", never a link that leads
+ *   nowhere (copy-deck, hero button). Once a real lesson is open live, the guard's answer changes and so does this button.
  * - The third value point ("adhd friendly") is held: there is no support for the claim yet.
  * - The accent words and the motto are upright (brand guide: accent lines are never italic or script).
  * - "resources" is left out of the explore row until /resources is live (its live build is a plain coming-soon page).
@@ -21,6 +24,8 @@ const exploreTiles = [
   { label: 'daily games', href: '/play', testid: 'explore-games', icon: 'games' },
   { label: 'give us suggestions', href: '/message', testid: 'explore-suggestions', icon: 'chat' },
 ] as const;
+
+const startHref = heroStartHref();
 ---
 
 <section
@@ -51,19 +56,32 @@ const exploreTiles = [
         <path d="M2 14 C 80 2, 190 2, 298 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" vector-effect="non-scaling-stroke" />
       </svg>
 
-      <!-- Closed until a real lesson is open in the live build; see the note at the top. -->
-      <p class="mt-10 flex flex-wrap items-center gap-3">
-        <button
-          type="button"
-          class="copper-button hero-cta inline-flex min-h-11 items-center text-start font-bold"
-          aria-disabled="true"
-          aria-describedby="hero-start-soon"
-          data-testid="hero-start"
-        >
-          start studying for free <span aria-hidden="true">→</span>
-        </button>
-        <span id="hero-start-soon" class="hero-soon">coming soon</span>
-      </p>
+      {
+        startHref ? (
+          <p class="mt-10">
+            <a
+              href={startHref}
+              class="copper-button hero-cta inline-flex min-h-11 items-center text-start font-bold"
+              data-testid="hero-start"
+            >
+              start studying for free <span aria-hidden="true">→</span>
+            </a>
+          </p>
+        ) : (
+          <p class="mt-10 flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              class="copper-button hero-cta inline-flex min-h-11 items-center text-start font-bold"
+              aria-disabled="true"
+              aria-describedby="hero-start-soon"
+              data-testid="hero-start"
+            >
+              start studying for free <span aria-hidden="true">→</span>
+            </button>
+            <span id="hero-start-soon" class="hero-soon">coming soon</span>
+          </p>
+        )
+      }
 
       <ul class="mt-10 grid gap-5 sm:grid-cols-2" aria-label="what you get">
         <li class="flex items-start gap-3 text-ink">
