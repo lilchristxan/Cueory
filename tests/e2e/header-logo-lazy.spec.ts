@@ -13,13 +13,21 @@ for (const path of ['/support', '/play/word-path']) {
     const shown = home.locator('.logo img').filter({ visible: true });
     await expect(shown).toHaveCount(1);
     await expect.poll(() => shown.evaluate((img) => (img as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
-    const hiddenFull = await home.locator('.logo img[src*="logo-full"]').evaluateAll((imgs) =>
-      imgs.filter((img) => img.getClientRects().length === 0).map((img) => ({
-        src: img.getAttribute('src'),
-        loading: (img as HTMLImageElement).loading,
-        started: (img as HTMLImageElement).currentSrc !== '',
-      })),
-    );
+    const hiddenFull = await home.locator('.logo img[src*="logo-full"]').evaluateAll((imgs) => {
+      const resources = performance.getEntriesByType('resource');
+      return imgs
+        .filter((img) => img.getClientRects().length === 0)
+        .map((img) => {
+          const htmlImg = img as HTMLImageElement;
+          const src = img.getAttribute('src') ?? '';
+          const started = resources.some((r) => r.name === htmlImg.src || (src.length > 0 && r.name.includes(src)));
+          return {
+            src: img.getAttribute('src'),
+            loading: htmlImg.loading,
+            started,
+          };
+        });
+    });
     // Phones hide both full-logo copies; wider screens hide the other palette's copy.
     expect(hiddenFull.length).toBeGreaterThan(0);
     for (const img of hiddenFull) expect(img, String(img.src)).toEqual({ src: img.src, loading: 'lazy', started: false });
