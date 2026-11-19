@@ -3,6 +3,7 @@ import { dirname, join, relative, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 const PAGES_ROOT = resolve('src/pages');
+const ADMIN_FLAGS_PATH = resolve('src/islands/AdminFlags.tsx');
 
 function astroPages(folder: string): string[] {
   return readdirSync(folder, { withFileTypes: true }).flatMap((entry) => {
@@ -19,14 +20,32 @@ const strip = (source: string) => source.replace(/<!--[\s\S]*?-->/g, ' ').replac
 
 const h1Count = (markup: string) => (markup.match(/<h1\b/g) ?? []).length;
 
-/** Default-imported local components and islands of a page, mapped to the number of h1 tags in their own source. */
+function componentHeadingCount(file: string, source: string): number {
+  const markup = strip(source);
+  const count = h1Count(markup);
+  if (file !== ADMIN_FLAGS_PATH) return count;
+
+  // AdminFlags returns separate refusal, failure and reports views. The transient loading view has no h1.
+  // Keep the exception tied to this file and one heading in each of those three distinct return branches.
+  const headedBranches = [
+    /if \(screen\.kind === 'refused'\) return <>([\s\S]*?)<\/>;/,
+    /if \(!admitted\) \{\s*return screen\.kind === 'failed' \? \(([\s\S]*?)\) : \(/,
+    /const groups = [^\n]+\n\s*return \(([\s\S]*)/,
+  ];
+  if (count !== headedBranches.length || !headedBranches.every((branch) => h1Count(branch.exec(markup)?.[1] ?? '') === 1)) {
+    throw new Error('AdminFlags heading branches changed: check the refusal, failure, loading and reports views');
+  }
+  return 1;
+}
+
+/** Default-imported local components and islands of a page, mapped to their heading counts. */
 function componentHeadings(file: string, source: string): Map<string, number> {
   const headings = new Map<string, number>();
   for (const match of source.matchAll(/^import\s+([A-Z]\w*)\s*(?:,\s*\{[^}]*\}\s*)?from\s+['"](\.[^'"]+)['"]/gm)) {
     const base = resolve(dirname(file), match[2]);
     if (/layouts\/Layout\.astro$/.test(base)) continue;
     const target = [base, `${base}.tsx`, `${base}.astro`].find((path) => /\.(astro|tsx)$/.test(path) && existsSync(path));
-    if (target) headings.set(match[1], h1Count(strip(readFileSync(target, 'utf8'))));
+    if (target) headings.set(match[1], componentHeadingCount(target, readFileSync(target, 'utf8')));
   }
   return headings;
 }
@@ -35,9 +54,8 @@ function componentHeadings(file: string, source: string): Map<string, number> {
 const renderCount = (markup: string, name: string) => (markup.match(new RegExp(`<${name}(?=[\\s/>])`, 'g')) ?? []).length;
 
 /**
- * Heading problems in one page's source. Each Layout it renders needs exactly one h1: its own, or one rendered
- * component whose source holds an h1. A component counts once per time it renders, however many mutually exclusive
- * states with an h1 it has inside. An import alone never counts.
+ * Heading problems in one page's source. Each Layout it renders needs exactly one h1 across its own markup
+ * and the components it renders. An import alone never counts.
  */
 function headingProblems(name: string, source: string, components: ReadonlyMap<string, number>): string[] {
   const markup = strip(source.replace(/^---[\s\S]*?\n---/, ' '));
@@ -45,7 +63,7 @@ function headingProblems(name: string, source: string, components: ReadonlyMap<s
   if (blocks.length === 0) return ['page must render the shared Layout'];
   const problems: string[] = [];
   const headings = (markup: string) => h1Count(markup) + [...components]
-    .reduce((sum, [component, count]) => sum + (count > 0 ? renderCount(markup, component) : 0), 0);
+    .reduce((sum, [component, count]) => sum + count * renderCount(markup, component), 0);
   blocks.forEach((block, index) => {
     const split = EXCLUSIVE_BRANCH_H1.has(name) ? shownBranches(block) : { outside: block, branches: [] };
     if (!split) {
@@ -131,9 +149,9 @@ describe('page source: one h1 per rendered page, main landmark owned by Layout',
     expect(offenders).toEqual([]);
   });
 
-  it('reads the headings of a real imported island', () => {
-    const file = join(PAGES_ROOT, 'admin/flags.astro');
-    expect(componentHeadings(file, readFileSync(file, 'utf8')).get('AdminFlags')).toBeGreaterThan(0);
+  it.each(['admin/flags.astro', 'preview/admin-flags.astro'])('counts one heading from the audited AdminFlags views in %s', (page) => {
+    const file = join(PAGES_ROOT, page);
+    expect(componentHeadings(file, readFileSync(file, 'utf8')).get('AdminFlags')).toBe(1);
   });
 
   for (const file of pages) {
@@ -146,7 +164,7 @@ describe('page source: one h1 per rendered page, main landmark owned by Layout',
 });
 
 describe('page source headings: synthetic pages', () => {
-  const island = new Map([['AdminFlags', 3]]);
+  const island = new Map([['AdminFlags', 1]]);
   const page = (body: string) =>
     `---\nimport Layout from '../layouts/Layout.astro';\nimport AdminFlags from '../islands/AdminFlags.tsx';\n---\n${body}\n`;
   const missing = (n: number) => `Layout ${n} has no h1 of its own or from a component it renders`;
@@ -175,6 +193,13 @@ describe('page source headings: synthetic pages', () => {
       .toEqual(['Layout 1 has 2 h1 elements']);
     expect(headingProblems('x.astro', page('<Layout title="x"><AdminFlags /><AdminFlags /></Layout>'), island))
       .toEqual(['Layout 1 has 2 h1 elements']);
+  });
+
+  it('rejects two headings inside a single component rendered by the Layout', () => {
+    const count = componentHeadingCount(resolve('src/components/DoubleHeading.astro'), '<h1>one</h1><h1>two</h1>');
+    const components = new Map([['DoubleHeading', count]]);
+    const source = page('<Layout title="x"><DoubleHeading /></Layout>');
+    expect(headingProblems('x.astro', source, components)).toEqual(['Layout 1 has 2 h1 elements']);
   });
 
   it('pinned pages: one h1 per shown state, counting content outside the branches', () => {
