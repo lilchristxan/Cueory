@@ -18,9 +18,16 @@ const START = Date.parse('2026-11-17T12:00:00Z');
  * Starts fake time and opens a page. One init script seeds storage, once per tab, so a later navigation or reload
  * sees what the page itself saved: the promo panel counts as already shown (unless `promoDue`), so it doesn't come
  * first and make the pop-up wait, and `seenAgo` sets when the pop-up was last shown.
+ *
+ * `paused` stops the clock before the page loads, for checks just before the 10 seconds are up. An installed clock that
+ * is not paused keeps real time flowing, so on a busy machine the time the page takes to load (and the test takes to
+ * reach its next step) counts toward the 10 seconds, and "still hidden after 9 seconds" fails. Paused, the page's timer
+ * moves only when the test runs the clock (the same fix as promo.spec.ts, #895).
  */
-async function openAt(page: Page, path: string, options: { seenAgo?: number; promoDue?: boolean } = {}) {
+async function openAt(page: Page, path: string, options: { seenAgo?: number; promoDue?: boolean; paused?: boolean } = {}) {
   await page.clock.install({ time: new Date(START) });
+  // Before any page has loaded there are no timers yet, so stopping the clock here skips nothing.
+  if (options.paused) await page.clock.pauseAt(new Date(START + 1_000));
   await page.addInitScript(({ key, seen, promoDue }) => {
     try {
       if (sessionStorage.getItem('test-seeded')) return;
@@ -41,13 +48,22 @@ async function openAt(page: Page, path: string, options: { seenAgo?: number; pro
 }
 
 test('appears 10 seconds after the page opens, and remembers when', async ({ page }) => {
-  await openAt(page, '/');
+  await openAt(page, '/', { paused: true });
   await page.clock.runFor(9_000);
   await expect(popup(page)).toBeHidden();
   await page.clock.runFor(1_500);
   await expect(popup(page)).toBeVisible();
   const saved = await page.evaluate((key) => localStorage.getItem(key), SIGNUP_POPUP_STORAGE_KEY);
   expect(Number(saved)).toBeGreaterThan(0);
+});
+
+test('a slow host cannot use up the 10 seconds: real time passing changes nothing, only the page clock does', async ({ page }) => {
+  await openAt(page, '/', { paused: true });
+  await page.waitForTimeout(1_500); // real time: with 9 seconds of page time below, more than the whole delay
+  await page.clock.runFor(9_000);
+  await expect(popup(page)).toBeHidden();
+  await page.clock.runFor(1_500);
+  await expect(popup(page)).toBeVisible();
 });
 
 test('stays away within 3 hours of the last showing', async ({ page }) => {
