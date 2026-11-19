@@ -29,6 +29,15 @@ test.describe('wide screen', () => {
     await expect(page.getByRole('button', { name: 'search the site' })).toBeVisible();
   });
 
+  test('the current page is marked by more than colour: only its link is underlined', async ({ page }) => {
+    await page.goto('/support');
+    const nav = page.getByRole('navigation', { name: 'main', exact: true });
+    const line = (name: string) =>
+      nav.getByRole('link', { name, exact: true }).evaluate((el) => getComputedStyle(el).textDecorationLine);
+    expect(await line('support')).toBe('underline');
+    expect(await line('games')).toBe('none');
+  });
+
   test('every control is at least 44 by 44 px, dropdown links included, and nothing scrolls sideways', async ({ page }) => {
     await page.goto('/');
     await page.locator('[data-about-menu] summary').click();

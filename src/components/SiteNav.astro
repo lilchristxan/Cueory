@@ -65,9 +65,11 @@ const current = currentHref(
     display: none;
   }
 
-  /* The page you are on, marked the same way as the hover (the colour is not the only signal: aria-current is set). */
+  /* The page you are on: the hover colour plus an underline, so colour is never the only visible signal
+     (aria-current tells screen readers). */
   .nav-pill[aria-current='page'] {
     background-color: var(--color-surface);
+    text-decoration-line: underline;
   }
 </style>
 
