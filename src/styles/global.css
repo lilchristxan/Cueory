@@ -2169,7 +2169,9 @@ html:has(dialog.mode-preview[open]) {
   .sudoku-time:empty, .sudoku-errors:empty { display: none; }
   .sudoku-errors { margin-inline-start: auto; }
   .sudoku-toolbar { position: relative; display: flex; inline-size: min(100%, var(--sudoku-board-width)); flex-wrap: wrap; align-items: center; justify-content: space-between; gap: calc(var(--spacing) * 2) 0; }
-  .sudoku-toolbar > .sudoku-icon-button { flex: none; inline-size: var(--tap-min); block-size: var(--tap-min); }
+  /* The five toolbar buttons are exactly one tap target square: a floor as well as a size, border-box, and nothing
+     that could scale them at rest (Firefox measured the pause button at 43.99997 px, release run 44422471256). */
+  .sudoku-toolbar > .sudoku-icon-button { box-sizing: border-box; flex: none; inline-size: var(--tap-min); block-size: var(--tap-min); min-inline-size: var(--tap-min); min-block-size: var(--tap-min); transform: none; scale: none; translate: none; }
   .sudoku-board.is-paused .sudoku-paused-mark { display: block; inline-size: calc(var(--sudoku-cell-size) / 4); block-size: var(--sudoku-entered-line); border-radius: var(--radius-pill); background: currentColor; }
   .sudoku-board-scroll { inline-size: 100%; overflow-x: auto; }
   /* Square size: the brief's clamp(44px, min((100vh − 460px) / 9, (100vw − 150px) / 9), 84px), but never wider than
