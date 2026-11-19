@@ -22,15 +22,19 @@ describe('W09 lesson print styles', () => {
   });
 
   it('prints black on white without raw palette values or unapproved sizes', () => {
-    expect(lessonCss).toContain('color: black !important;');
-    expect(lessonCss).toContain('background-color: white !important;');
+    // Black on white through the shared print tokens (lane 9, #903), which stay black and white.
+    expect(lessonCss).toContain('color: var(--print-ink) !important;');
+    expect(lessonCss).toContain('background-color: var(--print-paper) !important;');
+    const tokens = readFileSync(join(process.cwd(), 'src/styles/tokens.css'), 'utf8');
+    expect(tokens).toMatch(/--print-ink:\s*black;/);
+    expect(tokens).toMatch(/--print-paper:\s*white;/);
     expect(lessonCss).toContain('background-image: none !important;');
     expect(lessonCss).not.toMatch(/#[\da-f]{3,8}\b|\b(?:rgb|rgba|hsl|hsla|oklch)\s*\(|\b\d+(?:\.\d+)?(?:px|rem|em)\b/i);
 
     const colors = [...lessonCss.matchAll(/(?:background-color|color)\s*:\s*([^;]+);/g)].map((match) => match[1]!.trim());
     expect(colors).toHaveLength(2);
     for (const value of colors) {
-      expect(value).toMatch(/^(?:black|white|var\(--[\w-]+\))\s*!important$/);
+      expect(value).toMatch(/^var\(--print-(?:ink|paper)\)\s*!important$/);
     }
   });
 
