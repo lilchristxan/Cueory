@@ -125,6 +125,25 @@ for (const [size, width, height] of [['phone', 390, 844], ['tablet', 820, 1180],
       // Enter on the chosen answer checks it, like Enter in the typed field.
       await page.keyboard.press('Enter');
       await expect(board.getByText('the word was honey.')).toBeVisible();
+      // After "check" the choices are disabled, but the chosen one stays plain to see in both palettes: its dot is
+      // full ink (not the browser's grey disabled radio) and its row has an ink edge; the others keep the surface.
+      await expect(radios.nth(wrongIndex)).toBeDisabled();
+      await expect(radios.nth(wrongIndex)).toBeChecked();
+      const look = await radios.evaluateAll((nodes) => nodes.map((node) => {
+        const input = getComputedStyle(node);
+        const row = getComputedStyle(node.parentElement!);
+        return { dot: input.backgroundColor, edge: input.borderTopColor, row: row.borderTopColor, ring: row.boxShadow, ink: row.color };
+      }));
+      const chosen = look[wrongIndex]!;
+      expect(chosen.dot).toBe(chosen.ink);
+      expect(chosen.edge).toBe(chosen.ink);
+      expect(chosen.row).toBe(chosen.ink);
+      expect(chosen.ring).not.toBe('none');
+      for (const [position, other] of look.entries()) {
+        if (position === wrongIndex) continue;
+        expect(other.dot).not.toBe(other.ink);
+        expect(other.ring).toBe('none');
+      }
       const next = board.getByRole('button', { name: 'next' });
       const box = await next.boundingBox();
       expect(box?.height).toBeGreaterThanOrEqual(44);
