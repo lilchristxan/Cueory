@@ -1,0 +1,1 @@
+status: x3, form validation: an empty answer on a learn-mode typed or fill-in card now shows an inline "problem:" message tied to the field (aria-invalid, aria-describedby, live region) instead of a silently disabled Check button.
