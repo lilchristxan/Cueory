@@ -44,17 +44,76 @@ function headingProblems(name: string, source: string, components: ReadonlyMap<s
   const blocks = markup.split(/<Layout\b/).slice(1).map((part) => part.split(/<\/Layout\s*>/)[0]);
   if (blocks.length === 0) return ['page must render the shared Layout'];
   const problems: string[] = [];
+  const headings = (markup: string) => h1Count(markup) + [...components]
+    .reduce((sum, [component, count]) => sum + (count > 0 ? renderCount(markup, component) : 0), 0);
   blocks.forEach((block, index) => {
-    const fromComponents = [...components]
-      .reduce((sum, [component, count]) => sum + (count > 0 ? renderCount(block, component) : 0), 0);
-    const total = h1Count(block) + fromComponents;
-    if (total > 1 && !EXCLUSIVE_BRANCH_H1.has(name)) problems.push(`Layout ${index + 1} has ${total} h1 elements`);
-    if (total > 1 && EXCLUSIVE_BRANCH_H1.has(name) && !/\{\s*!?shown\b/.test(block)) {
-      problems.push(`Layout ${index + 1} has several h1 elements outside its shown branches`);
+    const split = EXCLUSIVE_BRANCH_H1.has(name) ? shownBranches(block) : { outside: block, branches: [] };
+    if (!split) {
+      problems.push(`Layout ${index + 1}: could not read its shown branches`);
+      return;
     }
+    if (split.branches.length > 0) {
+      // Each state renders the content outside the branches plus only the branches for that state.
+      for (const state of [true, false]) {
+        const total = headings(split.outside) + split.branches
+          .filter((branch) => branch.when === state).reduce((sum, branch) => sum + headings(branch.markup), 0);
+        if (total !== 1) problems.push(`Layout ${index + 1} has ${total} h1 elements when shown is ${state}`);
+      }
+      return;
+    }
+    const total = headings(block);
+    if (total > 1) problems.push(`Layout ${index + 1} has ${total} h1 elements`);
     if (total === 0) problems.push(`Layout ${index + 1} has no h1 of its own or from a component it renders`);
   });
   return problems;
+}
+
+/** Index just past the `{...}` or `(...)` group that opens at `start`, or undefined when it never closes. */
+function groupEnd(text: string, start: number): number | undefined {
+  const closers: string[] = [];
+  for (let i = start; i < text.length; i += 1) {
+    const ch = text[i];
+    if (ch === '{') closers.push('}');
+    else if (ch === '(') closers.push(')');
+    else if (ch === '}' || ch === ')') {
+      if (closers.pop() !== ch) return undefined;
+      if (closers.length === 0) return i + 1;
+    }
+  }
+  return undefined;
+}
+
+interface Branch { when: boolean; markup: string }
+
+/**
+ * Split a Layout block into its `{shown && (...)}`, `{!shown && (...)}` and `{shown ? (...) : (...)}` branches and the
+ * content outside them. Undefined when a branch cannot be read, so the guard fails closed.
+ */
+function shownBranches(block: string): { outside: string; branches: Branch[] } | undefined {
+  const branches: Branch[] = [];
+  let outside = '';
+  let cursor = 0;
+  const start = /\{\s*(!?)shown\s*(&&|\?)/g;
+  for (let match = start.exec(block); match; match = start.exec(block)) {
+    const end = groupEnd(block, match.index);
+    if (end === undefined) return undefined;
+    const when = match[1] !== '!';
+    const body = block.slice(match.index + match[0].length, end - 1);
+    if (match[2] === '&&') branches.push({ when, markup: body });
+    else {
+      const open = body.indexOf('(');
+      const thenEnd = open === -1 ? undefined : groupEnd(body, open);
+      const rest = thenEnd === undefined ? undefined : /^\s*:\s*\(/.exec(body.slice(thenEnd));
+      const elseOpen = thenEnd === undefined || !rest ? undefined : thenEnd + rest[0].length - 1;
+      const elseEnd = elseOpen === undefined ? undefined : groupEnd(body, elseOpen);
+      if (thenEnd === undefined || elseOpen === undefined || elseEnd === undefined || body.slice(elseEnd).trim()) return undefined;
+      branches.push({ when, markup: body.slice(open, thenEnd) }, { when: !when, markup: body.slice(elseOpen, elseEnd) });
+    }
+    outside += block.slice(cursor, match.index);
+    cursor = end;
+    start.lastIndex = end;
+  }
+  return { outside: outside + block.slice(cursor), branches };
 }
 
 describe('page source: one h1 per rendered page, main landmark owned by Layout', () => {
@@ -116,6 +175,24 @@ describe('page source headings: synthetic pages', () => {
       .toEqual(['Layout 1 has 2 h1 elements']);
     expect(headingProblems('x.astro', page('<Layout title="x"><AdminFlags /><AdminFlags /></Layout>'), island))
       .toEqual(['Layout 1 has 2 h1 elements']);
+  });
+
+  it('pinned pages: one h1 per shown state, counting content outside the branches', () => {
+    const ternary = '{!shown ? (<article><h1>soon</h1></article>) : (<div><h1>ready</h1></div>)}';
+    const both = '{!shown && (<p><h1>soon</h1></p>)}{shown && (<div><h1>ready</h1></div>)}';
+    expect(headingProblems('resources.astro', page(`<Layout title="x">${ternary}</Layout>`), island)).toEqual([]);
+    expect(headingProblems('preview/prose.astro', page(`<Layout title="x">${both}</Layout>`), island)).toEqual([]);
+    expect(headingProblems('resources.astro', page('<Layout title="x">{shown ? (<AdminFlags />) : (<h1>soon</h1>)}</Layout>'), island))
+      .toEqual([]);
+    const extra = ['Layout 1 has 2 h1 elements when shown is true', 'Layout 1 has 2 h1 elements when shown is false'];
+    expect(headingProblems('resources.astro', page(`<Layout title="x">${ternary}<h1>extra</h1></Layout>`), island)).toEqual(extra);
+    expect(headingProblems('preview/prose.astro', page(`<Layout title="x"><h1>extra</h1>${both}</Layout>`), island)).toEqual(extra);
+    expect(headingProblems('preview/prose.astro', page('<Layout title="x">{!shown && (<p>soon</p>)}{shown && (<h1>ready</h1>)}</Layout>'), island))
+      .toEqual(['Layout 1 has 0 h1 elements when shown is false']);
+    expect(headingProblems('resources.astro', page('<Layout title="x"><h1>a</h1><h1>b</h1></Layout>'), island))
+      .toEqual(['Layout 1 has 2 h1 elements']);
+    expect(headingProblems('resources.astro', page('<Layout title="x">{shown ? (<h1>a</h1>)}</Layout>'), island))
+      .toEqual(['Layout 1: could not read its shown branches']);
   });
 
   it('rejects two h1 in one Layout, a component without a heading, and a page without Layout', () => {
