@@ -127,8 +127,8 @@ const game = dailyGames.find((item) => item.id === 'triage')!;
 
   :global(.sudoku-cell) { border-color: var(--color-ink); }
 
-  /* The selected square (Sudoku.png): a thin Copper Deep outline on Copper Shine, with no extra inset ring. The outline
-   * is a shape cue as well as a colour, and aria-selected names it for screen readers. */
+  /* The selected square (Sudoku.png): a thin deep-copper outline on Copper Shine, with no extra inset ring. The outline
+   * is a shape cue as well as a colour (3:1 or more against every square it touches), and aria-selected names it. */
   :global(.sudoku-cell.is-selected) {
     background: var(--color-sudoku-selected-fill);
     color: var(--color-ink);

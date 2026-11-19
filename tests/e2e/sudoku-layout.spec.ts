@@ -203,3 +203,16 @@ test('sudoku keeps usable cells in a contained scroll area at 320px with 32px ro
   await expect(board.getByRole('gridcell').nth(8)).toBeInViewport({ ratio: 1 });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
 });
+
+// The level is called "medium" everywhere (Sudoku.png, copy deck): the button, the screen-reader announcement and the
+// stats row header all use the same LEVEL_LABELS, so nobody hears "mid" while the button says "medium".
+test('the medium level is announced and listed as "medium"', async ({ page }) => {
+  await page.goto('/play/sudoku');
+  const medium = game(page).getByRole('button', { name: 'medium', exact: true });
+  await medium.click();
+  await expect(medium).toHaveAttribute('aria-pressed', 'true');
+  await expect(game(page).getByTestId('sudoku-live')).toHaveText(/^medium puzzle ready\./);
+  await game(page).getByRole('button', { name: 'sudoku stats' }).click();
+  await expect(page.getByRole('rowheader', { name: 'medium', exact: true })).toBeVisible();
+  await expect(page.getByRole('rowheader', { name: 'mid', exact: true })).toHaveCount(0);
+});

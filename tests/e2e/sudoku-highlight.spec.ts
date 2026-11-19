@@ -91,21 +91,28 @@ for (const scheme of ['light', 'dark'] as const) {
     await page.waitForFunction(() => document.getAnimations().every((animation) => animation.playState !== 'running'));
     const [selected, tint, same, overlapping, quiet, givenLook] = await Promise.all([chosen, related, match, overlap, plain, quietGiven].map((index) => look(page, index)));
 
-    // 1. The selected square (Sudoku.png, P10): a solid 3 px Copper Deep outline around a Copper Shine fill, no extra
-    //    inset ring. The outline is a shape cue, not colour alone, and meets 3:1 (WCAG non-text) against the fill it
-    //    frames; the fill also stands apart from the tint around it. (Replaces the earlier "strong dark ring, 4.5:1
-    //    against the tint" check: the design changed on purpose to the rendering's thin copper outline.)
+    // 1. The selected square (Sudoku.png, P10): a solid 3 px deep-copper outline around a Copper Shine fill, no extra
+    //    inset ring. The outline is a shape cue, not colour alone, and reaches 3:1 (WCAG non-text contrast) against
+    //    every square it touches: the row / column / box tint, given and plain squares, and its own fill.
+    //    Changed on purpose (P10): the old check wanted 4.5:1 for a thick dark ring; the rendering draws a thin copper
+    //    outline, so the floor is the WCAG 3:1 for a state indicator, now measured against the tint, givens and plain
+    //    squares as well as the fill.
     expect(selected.outlineStyle).toBe('solid');
     expect(parseFloat(selected.outlineWidth)).toBeGreaterThanOrEqual(3);
-    expect(contrast(selected.outline, selected.background), `${scheme} selected outline`).toBeGreaterThanOrEqual(3);
-    expect(contrast(selected.background, tint.background), `${scheme} selected fill vs tint`).toBeGreaterThanOrEqual(1.2);
     expect(selected.shadow).toBe('none');
+    for (const [name, square] of [['tint', tint], ['given', givenLook], ['plain', quiet], ['own fill', selected]] as const) {
+      expect(contrast(selected.outline, square.background), `${scheme} selected outline vs ${name}`).toBeGreaterThanOrEqual(3);
+    }
 
-    // 2. The row / column / box tint is pale, as drawn, but still stands apart from plain squares and is darker than
-    //    the given-number shading. (Replaces the earlier 2.5:1 / 3:1 tint floors, which forced the heavy Taupe tint.)
-    expect(contrast(tint.background, quiet.background), `${scheme} tint vs plain`).toBeGreaterThanOrEqual(1.2);
+    // 2. The row / column / box tint is pale, as drawn, but stands apart from plain squares and is darker than the
+    //    given-number shading. Changed on purpose (P10): the floors were 2.5:1 (Light) / 3:1 (Evening) against plain
+    //    squares and 2.3:1 / 2.8:1 against givens, which forced the heavy Taupe tint the rendering replaces; the
+    //    rendering's own tint is about 1.4:1 against its plain squares. The tint is a helper, never the only cue: the
+    //    selected square has the 3:1 outline above, givens are bold, and matching numbers are bold on the strongest fill.
+    expect(contrast(tint.background, quiet.background), `${scheme} tint vs plain`).toBeGreaterThanOrEqual(1.3);
     expect(luminance(tint.background)).toBeLessThan(luminance(givenLook.background));
-    expect(contrast(tint.background, givenLook.background), `${scheme} tint vs given`).toBeGreaterThanOrEqual(1.1);
+    expect(contrast(tint.background, givenLook.background), `${scheme} tint vs given`).toBeGreaterThanOrEqual(1.2);
+    expect(givenLook.weight, `${scheme} givens are bold`).toBe('700');
 
     // The board is never inverted: in Light and Evening alike the squares are light and the numbers and lines dark.
     expect(luminance(quiet.background), `${scheme} light squares`).toBeGreaterThan(luminance(givenLook.color));

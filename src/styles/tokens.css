@@ -91,8 +91,8 @@
   --color-model-alt: #d3b7a1;      /* Taupe    — every other structure */
   --color-model-selected: #3e2c23; /* Espresso — the selected structure */
   /* Sudoku board (P10, Sudoku.png): light squares, dark lines and numbers in both palettes, so Evening reads like
-     Daytime; a pale row, column and box tint; the selected square is Copper Shine inside a Copper Deep outline. */
-  --color-board-tint: color-mix(in srgb, #eadccf 50%, #f6d3ae); /* Linen + Copper Glow — row, column and box of the selected square, pale as drawn */
+     Daytime; a pale row, column and box tint; the selected square is Copper Shine inside a deep copper outline. */
+  --color-board-tint: color-mix(in srgb, #f6d3ae 80%, #d3b7a1); /* Copper Glow + Taupe — row, column and box of the selected square, pale as drawn */
   --color-board-given: color-mix(in srgb, #eadccf 50%, #f9f5ef); /* Linen + Ivory — sudoku given numbers, lighter than the tint */
   --color-board-match: #6b5243;    /* Bronze   — sudoku squares holding the selected number */
   --color-on-board-match: #f9f5ef; /* Ivory    — numbers on those squares */
@@ -101,7 +101,7 @@
   --color-board-ink-soft: #6b5243; /* Bronze   — pencil marks on the board */
   --color-board-paused: #eadccf;   /* Linen    — squares while the game is paused */
   --color-board-selected: #fff0de; /* Copper Shine — the selected square */
-  --color-board-selected-line: #b87348; /* Copper Deep — the selected square's outline (3.36:1 on Copper Shine) */
+  --color-board-selected-line: color-mix(in srgb, #b87348 75%, #3e2c23); /* Copper Deep + Espresso — the selected square's outline, at least 3:1 against every square it touches */
 
   /* ---------- Fonts ---------- */
   --font-body: "Lato", system-ui, -apple-system, "Segoe UI", sans-serif; /* headings, body, UI, buttons */
@@ -511,7 +511,7 @@
     --color-model-alt: #6b5243;      /* Bronze */
     --color-model-selected: #f9f5ef; /* Ivory */
     --color-board-tint: color-mix(in srgb, #cbb8a4 70%, #6b5243); /* Sand + Bronze */
-    --color-board-given: color-mix(in srgb, #cbb8a4 85%, #6b5243); /* Sand + Bronze, lighter than the tint */
+    --color-board-given: color-mix(in srgb, #cbb8a4 90%, #6b5243); /* Sand + Bronze, lighter than the tint */
     --color-board-match: #6b5243;    /* Bronze */
     --color-on-board-match: #f9f5ef; /* Ivory */
     --color-board-cell: #cbb8a4;     /* Sand: light squares on the dark page, like Daytime */
@@ -519,7 +519,7 @@
     --color-board-ink-soft: #3a2d24; /* Walnut */
     --color-board-paused: #cbb8a4;   /* Sand */
     --color-board-selected: #fff0de; /* Copper Shine */
-    --color-board-selected-line: #b87348; /* Copper Deep */
+    --color-board-selected-line: color-mix(in srgb, #b87348 40%, #1c1917); /* Copper Deep + Charcoal: at least 3:1 against the tint */
     --shadow-tint: 28 25 23;      /* Charcoal */
     --silk-fold-rgb: 58 45 36;    /* Walnut */
     --silk-fold-alpha: 0.7;
@@ -600,7 +600,7 @@
   --color-model-alt: #6b5243;      /* Bronze */
   --color-model-selected: #f9f5ef; /* Ivory */
   --color-board-tint: color-mix(in srgb, #cbb8a4 70%, #6b5243); /* Sand + Bronze */
-  --color-board-given: color-mix(in srgb, #cbb8a4 85%, #6b5243); /* Sand + Bronze, lighter than the tint */
+  --color-board-given: color-mix(in srgb, #cbb8a4 90%, #6b5243); /* Sand + Bronze, lighter than the tint */
   --color-board-match: #6b5243;    /* Bronze */
   --color-on-board-match: #f9f5ef; /* Ivory */
   --color-board-cell: #cbb8a4;     /* Sand: light squares on the dark page, like Daytime */
@@ -608,7 +608,7 @@
   --color-board-ink-soft: #3a2d24; /* Walnut */
   --color-board-paused: #cbb8a4;   /* Sand */
   --color-board-selected: #fff0de; /* Copper Shine */
-  --color-board-selected-line: #b87348; /* Copper Deep */
+  --color-board-selected-line: color-mix(in srgb, #b87348 40%, #1c1917); /* Copper Deep + Charcoal: at least 3:1 against the tint */
   --shadow-tint: 28 25 23;      /* Charcoal */
   --silk-fold-rgb: 58 45 36;    /* Walnut */
   --silk-fold-alpha: 0.7;
