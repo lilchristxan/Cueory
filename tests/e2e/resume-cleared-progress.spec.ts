@@ -27,7 +27,8 @@ const modes = [
     async expectEmpty(page: Page) {
       const board = page.getByTestId('fill-in');
       await expect(board.getByText('round 1 · item 1 of 4')).toBeVisible();
-      await expect(board.getByRole('combobox', { name: 'the missing word' })).toHaveValue('');
+      await expect(board.getByRole('radiogroup', { name: 'the missing word' }).getByRole('radio')).toHaveCount(4);
+      await expect(board.getByRole('radiogroup', { name: 'the missing word' }).getByRole('radio', { checked: true })).toHaveCount(0);
       await expect(board.getByRole('region', { name: 'your submitted answers' })).toHaveCount(0);
     },
   },
