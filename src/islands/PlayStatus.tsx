@@ -118,95 +118,102 @@ export default function PlayStatus({ games, isComingSoonCrossword = false }: Pro
         <div
           data-testid="play-status-pulse"
           data-status={pilloStatus}
-          className="h-full min-w-0 lg:col-span-2"
+          className="min-w-0 lg:col-span-2"
         >
           <a
             href={pilloGame.href}
-            className="veil flex flex-col justify-between h-full p-6 sm:p-8 text-ink no-underline group hover:border-line transition-colors min-h-11"
+            className="veil block p-6 sm:p-8 text-ink no-underline group hover:border-line transition-colors min-h-11"
           >
-            <div>
-              <span className="display block text-3xl sm:text-4xl text-ink font-medium">{pilloGame.name}</span>
-              <p className="mt-2 text-sm text-ink-soft">{pilloGame.line}</p>
-            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
+              {/* Left Column: Title, Tagline, Blister Pack */}
+              <div className="flex flex-col min-w-0">
+                <span className="display block text-3xl sm:text-4xl text-ink font-medium break-words">
+                  {pilloGame.name}
+                </span>
+                <p className="mt-2 text-sm text-ink-soft">{pilloGame.line}</p>
 
-            <div className="mt-6 flex flex-col md:flex-row gap-6 lg:gap-8 items-start">
-              {/* Blister pack illustration */}
-              <div
-                className="w-full max-w-sm bg-surface p-3 sm:p-5 rounded-xl select-none shrink-0"
-                aria-hidden="true"
-              >
-                <div className="grid grid-cols-5 gap-2 sm:gap-2.5">
-                  {/* Row 1: A×, B•, C×, D✓, E× */}
-                  <div className="aspect-square rounded-full bg-page flex flex-col items-center justify-center">
-                    <span className="text-xs sm:text-base font-bold text-ink leading-none">A</span>
-                    <span className="text-xs text-ink leading-none mt-0.5">×</span>
-                  </div>
-                  <div className="aspect-square rounded-full bg-soft flex flex-col items-center justify-center">
-                    <span className="text-xs sm:text-base font-bold text-ink leading-none">B</span>
-                    <span className="text-xs text-ink leading-none mt-0.5">•</span>
-                  </div>
-                  <div className="aspect-square rounded-full bg-page flex flex-col items-center justify-center">
-                    <span className="text-xs sm:text-base font-bold text-ink leading-none">C</span>
-                    <span className="text-xs text-ink leading-none mt-0.5">×</span>
-                  </div>
-                  <div className="aspect-square rounded-full bg-ink flex flex-col items-center justify-center">
-                    <span className="text-xs sm:text-base font-bold text-on-button leading-none">D</span>
-                    <span className="text-xs text-on-button leading-none mt-0.5">✓</span>
-                  </div>
-                  <div className="aspect-square rounded-full bg-page flex flex-col items-center justify-center">
-                    <span className="text-xs sm:text-base font-bold text-ink leading-none">E</span>
-                    <span className="text-xs text-ink leading-none mt-0.5">×</span>
-                  </div>
+                {/* Blister pack illustration - sits directly under tagline */}
+                <div
+                  className="mt-6 w-full max-w-xs bg-surface p-3 sm:p-4 rounded-xl select-none"
+                  aria-hidden="true"
+                >
+                  <div className="grid grid-cols-5 gap-2 sm:gap-2.5">
+                    {/* Row 1: A×, B•, C×, D✓, E× */}
+                    <div className="aspect-square rounded-full bg-page flex flex-col items-center justify-center">
+                      <span className="text-xs sm:text-base font-bold text-ink leading-none">A</span>
+                      <span className="text-xs text-ink leading-none mt-0.5">×</span>
+                    </div>
+                    <div className="aspect-square rounded-full bg-soft flex flex-col items-center justify-center">
+                      <span className="text-xs sm:text-base font-bold text-ink leading-none">B</span>
+                      <span className="text-xs text-ink leading-none mt-0.5">•</span>
+                    </div>
+                    <div className="aspect-square rounded-full bg-page flex flex-col items-center justify-center">
+                      <span className="text-xs sm:text-base font-bold text-ink leading-none">C</span>
+                      <span className="text-xs text-ink leading-none mt-0.5">×</span>
+                    </div>
+                    <div className="aspect-square rounded-full bg-ink flex flex-col items-center justify-center">
+                      <span className="text-xs sm:text-base font-bold text-on-button leading-none">D</span>
+                      <span className="text-xs text-on-button leading-none mt-0.5">✓</span>
+                    </div>
+                    <div className="aspect-square rounded-full bg-page flex flex-col items-center justify-center">
+                      <span className="text-xs sm:text-base font-bold text-ink leading-none">E</span>
+                      <span className="text-xs text-ink leading-none mt-0.5">×</span>
+                    </div>
 
-                  {/* Row 2: F×, G•, H✓, I×, J✓ */}
-                  <div className="aspect-square rounded-full bg-page flex flex-col items-center justify-center">
-                    <span className="text-xs sm:text-base font-bold text-ink leading-none">F</span>
-                    <span className="text-xs text-ink leading-none mt-0.5">×</span>
-                  </div>
-                  <div className="aspect-square rounded-full bg-soft flex flex-col items-center justify-center">
-                    <span className="text-xs sm:text-base font-bold text-ink leading-none">G</span>
-                    <span className="text-xs text-ink leading-none mt-0.5">•</span>
-                  </div>
-                  <div className="aspect-square rounded-full bg-ink flex flex-col items-center justify-center">
-                    <span className="text-xs sm:text-base font-bold text-on-button leading-none">H</span>
-                    <span className="text-xs text-on-button leading-none mt-0.5">✓</span>
-                  </div>
-                  <div className="aspect-square rounded-full bg-page flex flex-col items-center justify-center">
-                    <span className="text-xs sm:text-base font-bold text-ink leading-none">I</span>
-                    <span className="text-xs text-ink leading-none mt-0.5">×</span>
-                  </div>
-                  <div className="aspect-square rounded-full bg-ink flex flex-col items-center justify-center">
-                    <span className="text-xs sm:text-base font-bold text-on-button leading-none">J</span>
-                    <span className="text-xs text-on-button leading-none mt-0.5">✓</span>
-                  </div>
+                    {/* Row 2: F×, G•, H✓, I×, J✓ */}
+                    <div className="aspect-square rounded-full bg-page flex flex-col items-center justify-center">
+                      <span className="text-xs sm:text-base font-bold text-ink leading-none">F</span>
+                      <span className="text-xs text-ink leading-none mt-0.5">×</span>
+                    </div>
+                    <div className="aspect-square rounded-full bg-soft flex flex-col items-center justify-center">
+                      <span className="text-xs sm:text-base font-bold text-ink leading-none">G</span>
+                      <span className="text-xs text-ink leading-none mt-0.5">•</span>
+                    </div>
+                    <div className="aspect-square rounded-full bg-ink flex flex-col items-center justify-center">
+                      <span className="text-xs sm:text-base font-bold text-on-button leading-none">H</span>
+                      <span className="text-xs text-on-button leading-none mt-0.5">✓</span>
+                    </div>
+                    <div className="aspect-square rounded-full bg-page flex flex-col items-center justify-center">
+                      <span className="text-xs sm:text-base font-bold text-ink leading-none">I</span>
+                      <span className="text-xs text-ink leading-none mt-0.5">×</span>
+                    </div>
+                    <div className="aspect-square rounded-full bg-ink flex flex-col items-center justify-center">
+                      <span className="text-xs sm:text-base font-bold text-on-button leading-none">J</span>
+                      <span className="text-xs text-on-button leading-none mt-0.5">✓</span>
+                    </div>
 
-                  {/* Rows 3-6: 20 empty pockets */}
-                  {Array.from({ length: 20 }).map((_, i) => (
-                    <div
-                      key={i}
-                      className="aspect-square rounded-full bg-page border border-dashed border-line"
-                    />
-                  ))}
+                    {/* Rows 3-6: 20 empty pockets */}
+                    {Array.from({ length: 20 }).map((_, i) => (
+                      <div
+                        key={i}
+                        className="aspect-square rounded-full bg-page border border-dashed border-line"
+                      />
+                    ))}
+                  </div>
                 </div>
               </div>
 
-              {/* Key */}
-              <div className="flex-1 min-w-0">
+              {/* Right Column: Legend, Share Note, Status */}
+              <div className="flex flex-col min-w-0 pt-1">
                 <h3 className="text-sm font-bold text-ink">how to read the pack</h3>
                 <ul className="mt-3 space-y-2 text-sm">
-                  <li className="flex items-center gap-1.5">
-                    <span className="font-bold text-ink">✓ filled</span>
+                  <li>
+                    <span className="font-bold text-ink">✓ filled </span>
                     <span className="text-ink-soft">right letter, right spot</span>
                   </li>
-                  <li className="flex items-center gap-1.5">
-                    <span className="font-bold text-ink">• half</span>
+                  <li>
+                    <span className="font-bold text-ink">• half </span>
                     <span className="text-ink-soft">in the word, wrong spot</span>
                   </li>
-                  <li className="flex items-center gap-1.5">
-                    <span className="font-bold text-ink">× empty</span>
+                  <li>
+                    <span className="font-bold text-ink">× empty </span>
                     <span className="text-ink-soft">not in the word</span>
                   </li>
                 </ul>
+
+                <p className="mt-6 text-sm text-ink-soft break-words">
+                  Share line: &quot;pillo [date] · 4/6&quot; in plain words. No colored squares.
+                </p>
 
                 {/* Status */}
                 <div className="mt-6 pt-4 border-t border-line">
@@ -228,30 +235,42 @@ export default function PlayStatus({ games, isComingSoonCrossword = false }: Pro
             data-status={crosswordStatus}
             className="min-w-0"
           >
-            <a
-              href={crosswordGame.href}
-              className="veil flex flex-col justify-between p-6 sm:p-8 min-h-36 text-ink no-underline group hover:border-line transition-colors"
-            >
-              <div>
-                <span className="display block text-2xl text-ink font-medium">{crosswordGame.name}</span>
-                <p className="mt-2 text-sm text-ink-soft">{crosswordGame.line}</p>
-              </div>
-              <div className="mt-4 pt-2">
-                {isComingSoonCrossword ? (
+            {isComingSoonCrossword ? (
+              <div className="veil flex flex-col justify-between p-6 sm:p-8 min-h-36 text-ink">
+                <div>
+                  <span className="display block text-2xl text-ink font-medium break-words">
+                    {crosswordGame.name}
+                  </span>
+                  <p className="mt-2 text-sm text-ink-soft">{crosswordGame.line}</p>
+                </div>
+                <div className="mt-4 pt-2">
                   <span className="text-sm font-semibold text-ink">
                     <span className="sr-only">
                       {crosswordText.symbol} {crosswordText.label}
                     </span>
                     <span>coming soon</span>
                   </span>
-                ) : (
+                </div>
+              </div>
+            ) : (
+              <a
+                href={crosswordGame.href}
+                className="veil flex flex-col justify-between p-6 sm:p-8 min-h-36 text-ink no-underline group hover:border-line transition-colors"
+              >
+                <div>
+                  <span className="display block text-2xl text-ink font-medium break-words">
+                    {crosswordGame.name}
+                  </span>
+                  <p className="mt-2 text-sm text-ink-soft">{crosswordGame.line}</p>
+                </div>
+                <div className="mt-4 pt-2">
                   <span className="inline-flex items-center gap-2 text-sm font-semibold text-ink">
                     <span aria-hidden="true">{crosswordText.symbol}</span>
                     <span>{crosswordText.label}</span>
                   </span>
-                )}
-              </div>
-            </a>
+                </div>
+              </a>
+            )}
           </div>
 
           {/* sudoku */}
@@ -265,7 +284,7 @@ export default function PlayStatus({ games, isComingSoonCrossword = false }: Pro
               className="veil flex flex-col justify-between p-6 sm:p-8 min-h-36 text-ink no-underline group hover:border-line transition-colors"
             >
               <div>
-                <span className="display block text-2xl text-ink font-medium">{sudokuGame.name}</span>
+                <span className="display block text-2xl text-ink font-medium break-words">{sudokuGame.name}</span>
                 <p className="mt-2 text-sm text-ink-soft">{sudokuGame.line}</p>
               </div>
               <div className="mt-4 pt-2">
@@ -288,7 +307,7 @@ export default function PlayStatus({ games, isComingSoonCrossword = false }: Pro
               className="veil flex flex-col justify-between p-6 sm:p-8 min-h-36 text-ink no-underline group hover:border-line transition-colors"
             >
               <div>
-                <span className="display block text-2xl text-ink font-medium">{wordPathGame.name}</span>
+                <span className="display block text-2xl text-ink font-medium break-words">{wordPathGame.name}</span>
                 <p className="mt-2 text-sm text-ink-soft">{wordPathGame.line}</p>
               </div>
               <div className="mt-4 pt-2">

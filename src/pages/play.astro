@@ -87,10 +87,19 @@ const todayIso = today.toISOString().split('T')[0];
         {
           hubGames.map((game) => (
             <li>
-              <a href={game.href} class="font-medium">
-                {game.name}
-              </a>
-              <span class="text-ink-soft">: {game.line}</span>
+              {game.id === 'cueword' && !showCrossword ? (
+                <>
+                  <span class="font-medium">{game.name}</span>
+                  <span class="text-ink-soft">: {game.line} (coming soon)</span>
+                </>
+              ) : (
+                <>
+                  <a href={game.href} class="font-medium">
+                    {game.name}
+                  </a>
+                  <span class="text-ink-soft">: {game.line}</span>
+                </>
+              )}
             </li>
           ))
         }
