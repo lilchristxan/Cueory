@@ -29,6 +29,17 @@ for (const { route, names } of cases) {
   });
 }
 
+// Firefox measured links that were exactly 44 px as 43.99994 px (engine run 44460645965), so their floor is one layout
+// step higher: 48 px, the same as the sign-in page's standalone links.
+test('/learn/study-skills/cards: the standalone links have a 48 px floor, one step above the tap minimum', async ({ page }) => {
+  await page.goto('/learn/study-skills/cards');
+  for (const name of ['learn these cards in learn mode', 'back to the lesson']) {
+    const link = page.getByRole('main').getByRole('link', { name, exact: true });
+    expect(await link.evaluate((element) => getComputedStyle(element).minHeight), name).toBe('48px');
+    expect((await link.boundingBox())!.height, name).toBeGreaterThanOrEqual(48);
+  }
+});
+
 test('/preview/survey: the yes and no choices are at least 44 px tall', async ({ page }) => {
   await page.goto('/preview/survey');
   for (const name of ['yes', 'no']) {
