@@ -202,8 +202,8 @@ const labelIt = defineCollection({
       image: z.object({
         src: z.string().regex(/^\/[\w\-./]+\.(svg|png|webp|jpg)$/, 'the image is a file on this site, starting with /'),
         alt: z.string().min(1, 'this cannot be empty').max(300, 'too long: keep it to 300 characters or fewer'),
-        width: z.number().positive(),
-        height: z.number().positive(),
+        width: z.number('width is a number').positive('width must be above zero'),
+        height: z.number('height is a number').positive('height must be above zero'),
         credit: z.string().min(1, 'this cannot be empty').max(300, 'too long: keep it to 300 characters or fewer'),
       }),
       labels: z.array(z.object({ id: z.string(), text: z.string(), x: z.number(), y: z.number(), w: z.number(), h: z.number() })),
@@ -285,6 +285,12 @@ const cueword = defineCollection({
  * optional `extras` (other words of 4 letters or more that earn hints). The older themed word search (Task 97) has no
  * `format`, a `theme` title, a grid up to 11 by 11, and words in straight lines with an optional cue.
  */
+/** A word path step's row or column: squares count from 0 at the top left. */
+const pathCoordinate = z
+  .number('a path row or column is a number')
+  .int('a path row or column is a whole number, such as 0 or 3')
+  .min(0, 'a path row or column starts at 0, so it cannot be negative');
+
 const suture = defineCollection({
   loader: glob({ base: './content/games/suture', pattern: '**/*.json' }),
   schema: z
@@ -299,7 +305,7 @@ const suture = defineCollection({
           z.object({
             cue: z.string().min(1, 'this cannot be empty').max(120, 'too long: keep it to 120 characters or fewer').optional(),
             answer: z.string().regex(/^[A-Z]{3,48}$/, 'an answer is 3 to 48 capital letters A to Z, with no spaces'),
-            path: z.array(z.tuple([z.number().int().min(0), z.number().int().min(0)])),
+            path: z.array(z.tuple([pathCoordinate, pathCoordinate], 'each path step is [row, column]')),
             special: z.boolean().optional(),
           }),
         )

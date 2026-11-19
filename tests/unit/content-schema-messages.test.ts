@@ -15,9 +15,9 @@ describe('content schema messages', () => {
     ['a regex check', /\.regex\(\/(?:[^/\\]|\\.)+\/\)/],
     ['an enum', /z\.enum\(\[[^\]]*\]\)/],
     ['a literal', /z\.literal\('[^']*'\)/],
+    ['a number check', /\.(int|positive|nonnegative)\(\)/],
   ])('has no %s without a message', (_name, bare) => {
-    // z.number().int().min(0) tuple coordinates are checked by their own refine messages.
-    const bad = lines.filter((l) => bare.test(l.text) && !/z\.number\(\)/.test(l.text)).map((l) => `line ${l.n}: ${l.text.trim()}`);
+    const bad = lines.filter((l) => bare.test(l.text)).map((l) => `line ${l.n}: ${l.text.trim()}`);
     expect(bad).toEqual([]);
   });
 });
