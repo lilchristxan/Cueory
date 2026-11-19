@@ -207,6 +207,8 @@ function Board({ set }: Props) {
               alt={set.image.alt}
               width={set.image.width}
               height={set.image.height}
+              loading="lazy"
+              decoding="async"
               className="block h-auto w-full rounded-md"
             />
             <ul aria-label="labels on the image">

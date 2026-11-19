@@ -1,0 +1,1 @@
+status: x2 image audit: label board picture now lazy-loads (loading=lazy, decoding=async); new source-level test checks every <img> in src has alt, width and height. Other islands (ShareSheet, ResultBrandMark, SignIn, TwoFactor, AnatomyLab) lack loading=lazy but are in open PRs or auth, so left for follow-up.
