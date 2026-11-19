@@ -340,7 +340,12 @@ test.describe('W20: clear question loading, empty, and retry states', () => {
     const seen = await mockProject(page, { empty: true, failConceptReads: 1 });
     await openFixture(page, { signedIn: true });
     await expect(page.getByRole('alert')).toHaveText("couldn't load questions. please try again.");
-    await page.getByRole('button', { name: 'try again' }).click();
+    // Keyboard recovery keeps Firefox in keyboard modality while the app moves focus
+    // to the empty guidance, so Tab reaches its library link with a visible ring.
+    const retry = page.getByRole('button', { name: 'try again' });
+    await retry.focus();
+    await expect(retry).toBeFocused();
+    await page.keyboard.press('Enter');
     const empty = page.getByTestId('questions-not-found');
     await expect(empty).toContainText('there are no published questions for this topic yet.');
     await expect(empty).toBeFocused();
@@ -349,8 +354,6 @@ test.describe('W20: clear question loading, empty, and retry states', () => {
     const backRect = await back.boundingBox();
     expect(backRect?.width ?? 0).toBeGreaterThanOrEqual(44);
     expect(backRect?.height ?? 0).toBeGreaterThanOrEqual(44);
-    await back.focus();
-    await page.keyboard.press('Shift+Tab');
     await page.keyboard.press('Tab');
     await expect(back).toBeFocused();
     await expect(back).toHaveCSS('outline-style', 'solid');
