@@ -19,7 +19,7 @@ test.describe('about page', () => {
     await expect(page.locator('main section')).toHaveCount(4);
 
     const paragraphs = page.locator('main p');
-    await expect(paragraphs).toHaveCount(5);
+    await expect(paragraphs).toHaveCount(6);
     await expect(page.locator('main p[data-placeholder="CHRISTIAN-TEXT"]')).toHaveCount(1);
     await expect(page.locator('main p[data-placeholder="CHRISTIAN-TEXT"]')).toHaveText("[Christian's story: why Cueory exists, in his own words.]");
     await expect(page.locator('main p').filter({ hasText: 'To make studying for nursing school simpler' })).toHaveCount(1);
