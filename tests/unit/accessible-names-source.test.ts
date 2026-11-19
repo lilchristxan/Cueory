@@ -19,17 +19,6 @@ const TAG = (names: string) =>
 const line = (source: string, index: number) => source.slice(0, index).split('\n').length;
 const NAMED = /(?:^|\s)(?:aria-label|aria-labelledby|title)=|\{\.\.\./;
 
-// Repeats the removal until nothing changes, so stripped markup cannot leave a new tag behind.
-function removeUntilStable(text: string, pattern: RegExp): string {
-  let previous: string;
-  let current = text;
-  do {
-    previous = current;
-    current = current.replace(pattern, '');
-  } while (current !== previous);
-  return current;
-}
-
 // The value of one attribute as source text, so ids compare as the same expression whether written id="x",
 // id={`${id}-x`} or id={"x"}.
 function attributeValue(attributes: string, attribute: string): string | undefined {
@@ -56,6 +45,55 @@ function unnamedControls(file: string, source: string): string[] {
   return bad;
 }
 
+const VOID_ELEMENTS = new Set(['area', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'source', 'track', 'wbr']);
+const ANY_TAG = /<(\/?)([A-Za-z][\w.:-]*)?((?:[^>"'{]|"[^"]*"|'[^']*'|\{(?:[^{}]|\{[^{}]*\})*\})*?)(\/?)>/y;
+// Statically hidden: aria-hidden="true", aria-hidden={true}, a bare aria-hidden, or the hidden attribute.
+// A dynamic aria-hidden={expression} cannot be judged from source, so its text still counts.
+const HIDDEN = /(?:^|\s)(?:aria-hidden(?:=(?:"true"|'true'|\{true\}|\{"true"\}))?|hidden(?:=(?:""|"hidden"|\{true\}))?)(?=[\s/]|$)/;
+
+/** The text of some markup that a screen reader would read: skips svg and any element hidden from assistive tech. */
+function visibleText(markup: string): string {
+  let text = '';
+  const stack: Array<{ name: string; hidden: boolean }> = [];
+  let index = 0;
+  while (index < markup.length) {
+    const open = markup.indexOf('<', index);
+    const end = open === -1 ? markup.length : open;
+    if (!stack.some((entry) => entry.hidden)) text += markup.slice(index, end);
+    if (open === -1) break;
+    ANY_TAG.lastIndex = open;
+    const tag = ANY_TAG.exec(markup);
+    const name = tag?.[2]?.toLowerCase();
+    if (!tag || (!name && tag[3] !== '')) {
+      // A bare "<" in text, not a tag.
+      if (!stack.some((entry) => entry.hidden)) text += '<';
+      index = open + 1;
+      continue;
+    }
+    index = open + tag[0].length;
+    if (tag[1] === '/') {
+      const at = stack.map((entry) => entry.name).lastIndexOf(name ?? '');
+      if (at !== -1) stack.length = at;
+    } else if (tag[4] !== '/' && !(name && VOID_ELEMENTS.has(name))) {
+      stack.push({ name: name ?? '', hidden: name === 'svg' || HIDDEN.test(tag[3]) });
+    }
+  }
+  return text;
+}
+
+/** Buttons and links with no name: no label attribute and no visible text or expression. */
+function unnamedButtonsAndLinks(file: string, source: string): string[] {
+  const bad: string[] = [];
+  for (const m of source.matchAll(TAG('button|a')) as Iterable<RegExpExecArray>) {
+    if (m[3] === '/' || NAMED.test(m[2])) continue;
+    const start = m.index + m[0].length;
+    const end = source.indexOf(`</${m[1]}>`, start);
+    const text = end === -1 ? '' : visibleText(source.slice(start, end));
+    if (!/[A-Za-z0-9]/.test(text) && !/\{[^}]+\}/.test(text)) bad.push(`${file}:${line(source, m.index)} <${m[1]}>`);
+  }
+  return bad;
+}
+
 function scan(test: (file: string, source: string, m: RegExpExecArray) => boolean) {
   const bad: string[] = [];
   for (const { name, source } of files) {
@@ -72,15 +110,27 @@ describe('accessible names in component and island source', () => {
   });
 
   it('gives every button and link a name: label attributes or visible text', () => {
-    expect(
-      scan((_n, source, m) => {
-        if (!['button', 'a'].includes(m[1]) || m[3] === '/' || NAMED.test(m[2])) return true;
-        const end = source.indexOf(`</${m[1]}>`, m.index + m[0].length);
-        const inner = removeUntilStable(source.slice(m.index + m[0].length, end), /<svg[\s\S]*?<\/svg>/g);
-        const text = removeUntilStable(inner, /<[^>]+>/g);
-        return /[A-Za-z0-9]/.test(text) || /\{[^}]+\}/.test(text);
-      }),
-    ).toEqual([]);
+    expect(files.flatMap(({ name, source }) => unnamedButtonsAndLinks(name, source))).toEqual([]);
+  });
+
+  it('does not count text inside hidden descendants as a name (negative fixtures)', () => {
+    const bad = (markup: string) => unnamedButtonsAndLinks('x.tsx', markup);
+    expect(bad('<button type="button"><span aria-hidden="true">{number}</span></button>')).toHaveLength(1);
+    expect(bad('<button><span aria-hidden={true}>x</span></button>')).toHaveLength(1);
+    expect(bad('<button><span hidden>close</span><svg aria-hidden="true"></svg></button>')).toHaveLength(1);
+    expect(bad('<button><span aria-hidden><b>nested</b></span></button>')).toHaveLength(1);
+    expect(bad('<a href="/x"><svg viewBox="0 0 1 1"><title>go</title></svg></a>')).toHaveLength(1);
+    expect(bad('<button type="button"></button>')).toHaveLength(1);
+  });
+
+  it('counts visible text next to hidden icons (positive fixtures)', () => {
+    const bad = (markup: string) => unnamedButtonsAndLinks('x.tsx', markup);
+    expect(bad('<button><svg aria-hidden="true"></svg><span>open</span></button>')).toEqual([]);
+    expect(bad('<button><span aria-hidden="true">{n}</span><span>open set</span></button>')).toEqual([]);
+    expect(bad('<button aria-label="close"><span aria-hidden="true">x</span></button>')).toEqual([]);
+    expect(bad('<button><span aria-hidden="true"><b>nested</b></span>text</button>')).toEqual([]);
+    expect(bad('<button>{label}</button>')).toEqual([]);
+    expect(bad('<a href="/x"><img src="/a.svg" alt="" />home</a>')).toEqual([]);
   });
 
   it('gives every image alt text', () => {
