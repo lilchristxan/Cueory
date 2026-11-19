@@ -1,12 +1,14 @@
 ---
 import '../styles/global.css';
 import '../styles/print.css';
+import '../styles/reduced-motion.css';
 import BuildingNotice from '../components/BuildingNotice.astro';
 import PromoPanel from '../components/PromoPanel.astro';
 import SignupPopup from '../components/SignupPopup.astro';
 import SiteFooter from '../components/SiteFooter.astro';
 import SiteHeader from '../components/SiteHeader.astro';
 import { offline, promo as promoSettings, site } from '../config/site';
+import { socialImageMeta } from '../config/socialimages';
 import { popupAllowedOn } from '../scripts/signuppopup';
 import { themeHeadScript } from '../scripts/theme';
 
@@ -50,6 +52,11 @@ const fullTitle = title === site.name || title === site.wordmarkName ? site.word
 const canonicalPath = (Astro.url.pathname.replace(/\/index\.html$/, '') || '/').replace(/\.html$/, '');
 const canonical = new URL(canonicalPath, site.url).href;
 const socialImage = new URL(socialImagePath, site.url).href;
+// The share card's size, type and words for link previews. Only our own cards in public/share/ are allowed, so an
+// unknown image fails the build instead of shipping a preview without a size or a text alternative.
+const socialImageUrl = new URL(socialImagePath, site.url);
+const socialImageInfo = socialImageUrl.origin === new URL(site.url).origin ? socialImageMeta(socialImageUrl.pathname) : undefined;
+if (!socialImageInfo) throw new Error(`Layout: ${socialImagePath} is not a share card listed in src/config/socialimages.ts`);
 const isStudy = variant === 'study';
 const isHome = variant === 'home';
 const showPromo = promoSettings.show && promo && !isStudy;
@@ -68,14 +75,21 @@ const searchTitle = isHome ? 'home' : title;
     <meta name="description" content={description} />
     <link rel="canonical" href={canonical} />
     <meta property="og:type" content="website" />
+    <meta property="og:site_name" content={site.wordmarkName} />
+    <meta property="og:locale" content="en_US" />
     <meta property="og:title" content={fullTitle} />
     <meta property="og:description" content={description} />
     <meta property="og:url" content={canonical} />
     <meta property="og:image" content={socialImage} />
+    <meta property="og:image:type" content={socialImageInfo.type} />
+    <meta property="og:image:width" content={String(socialImageInfo.width)} />
+    <meta property="og:image:height" content={String(socialImageInfo.height)} />
+    <meta property="og:image:alt" content={socialImageInfo.alt} />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content={fullTitle} />
     <meta name="twitter:description" content={description} />
     <meta name="twitter:image" content={socialImage} />
+    <meta name="twitter:image:alt" content={socialImageInfo.alt} />
     <!-- Brand v1.0 icons (D-55): the emblem on Ivory, built by scripts/build-brand-v1.mjs. -->
     <link rel="icon" type="image/png" sizes="32x32" href="/brand/v1/icon-32.png" />
     <link rel="icon" type="image/png" sizes="192x192" href="/brand/v1/icon-192.png" />

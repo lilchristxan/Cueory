@@ -9,8 +9,8 @@
   body:has(main [data-testid="study-reader"]),
   body:has(main [data-testid="study-reader"]) main,
   body:has(main [data-testid="study-reader"]) main * {
-    color: black !important;
-    background-color: white !important;
+    color: var(--print-ink) !important;
+    background-color: var(--print-paper) !important;
     background-image: none !important;
     box-shadow: none !important;
     text-shadow: none !important;
