@@ -19,6 +19,17 @@ const TAG = (names: string) =>
 const line = (source: string, index: number) => source.slice(0, index).split('\n').length;
 const NAMED = /aria-label=|aria-labelledby=|\btitle=|\{\.\.\./;
 
+// Repeats the removal until nothing changes, so stripped markup cannot leave a new tag behind.
+function removeUntilStable(text: string, pattern: RegExp): string {
+  let previous: string;
+  let current = text;
+  do {
+    previous = current;
+    current = current.replace(pattern, '');
+  } while (current !== previous);
+  return current;
+}
+
 function scan(test: (file: string, source: string, m: RegExpExecArray) => boolean) {
   const bad: string[] = [];
   for (const { name, source } of files) {
@@ -39,8 +50,9 @@ describe('accessible names in component and island source', () => {
       scan((_n, source, m) => {
         if (!['button', 'a'].includes(m[1]) || m[3] === '/' || NAMED.test(m[2])) return true;
         const end = source.indexOf(`</${m[1]}>`, m.index + m[0].length);
-        const inner = source.slice(m.index + m[0].length, end).replace(/<svg[\s\S]*?<\/svg>/g, '');
-        return /[A-Za-z0-9]/.test(inner.replace(/<[^>]+>/g, '')) || /\{[^}]+\}/.test(inner.replace(/<[^>]+>/g, ''));
+        const inner = removeUntilStable(source.slice(m.index + m[0].length, end), /<svg[\s\S]*?<\/svg>/g);
+        const text = removeUntilStable(inner, /<[^>]+>/g);
+        return /[A-Za-z0-9]/.test(text) || /\{[^}]+\}/.test(text);
       }),
     ).toEqual([]);
   });
