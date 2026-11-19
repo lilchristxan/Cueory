@@ -387,12 +387,12 @@ test('home page has a launch-updates signup that works by keyboard', async ({ pa
     else await expect(page.getByTestId('signup-pending')).toBeVisible();
     return;
   }
-  const email = page.getByLabel('Email address');
+  const email = form.getByLabel('Email address');
   await expect(email).toHaveAttribute('type', 'email');
   await expect(email).toHaveAttribute('required', '');
   await email.focus();
   await page.keyboard.press('Tab');
-  await expect(page.getByRole('button', { name: 'Sign up' })).toBeFocused();
+  await expect(form.getByRole('button', { name: 'Sign up' })).toBeFocused();
 });
 
 test.describe('theme switch', () => {
