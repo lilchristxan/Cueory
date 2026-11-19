@@ -747,6 +747,7 @@ test.describe('"ways to study" merry-go-round (D-50, D-60)', () => {
       page.locator(`#mode-${id}`).evaluate((card) => {
         const box = card.getBoundingClientRect();
         return {
+          x: box.x,
           width: box.width,
           bottom: box.bottom,
           bright: (card as HTMLElement).style.getPropertyValue('--ring-bright'),
@@ -761,9 +762,11 @@ test.describe('"ways to study" merry-go-round (D-50, D-60)', () => {
     expect(near.width / front.width).toBeLessThan(0.9);
     expect(far.width / front.width).toBeGreaterThan(0.6);
     expect(far.width / front.width).toBeLessThan(0.78);
-    // The arc: each step out stands higher.
-    expect(near.bottom).toBeLessThan(front.bottom);
-    expect(far.bottom).toBeLessThan(near.bottom);
+    // HomeV2 keeps the vials on one glossy baseline instead of the old fanned arc.
+    expect(Math.abs(near.bottom - front.bottom)).toBeLessThan(1);
+    expect(Math.abs(far.bottom - front.bottom)).toBeLessThan(1);
+    expect(near.x).toBeGreaterThan(front.x);
+    expect(far.x).toBeGreaterThan(near.x);
     // Quieter: the glass (only the bottle image, never the words) is dimmer per step out.
     expect([front.bright, near.bright, left.bright, far.bright]).toEqual(['1', '0.95', '0.95', '0.9']);
     expect(near.glass).not.toBe(front.glass);
