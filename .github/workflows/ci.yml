@@ -6,7 +6,7 @@
 # - a pull request that only changes Markdown files (outside content/ and src/) skips the build and tests;
 # - pull requests into staging run the browser tests at phone and desktop size, and Release pull requests into main
 #   run every device;
-# - the browser tests run in four parts side by side, so each job stays well inside its time limit (Task 308).
+# - the browser tests run in six parts side by side, so each job stays well inside its time limit (Task 308).
 name: CI
 
 on:
@@ -24,7 +24,7 @@ concurrency:
 
 jobs:
   # The work is split so no job comes near its time limit as browser tests grow (Task 308): `checks` type-checks,
-  # builds and runs the unit tests; `browser` runs the Chromium browser tests in four parts side by side, each on its
+  # builds and runs the unit tests; `browser` runs the Chromium browser tests in six parts side by side, each on its
   # own runner; `verify` passes only when all of them passed. `verify` keeps the check name "Type check, build and
   # test" that the staging auto-merge requires (scripts/automerge/decide.ts), so that name still means everything.
   checks:
@@ -78,6 +78,10 @@ jobs:
   browser:
     # Playwright's --shard splits the test list into equal parts by test count; every part builds the same commit,
     # so all parts see the same list and together run every test exactly once. Add a number to `shard` for more parts.
+    # Six parts (was four): over 48 green runs on 5 Nov 2026 the test step itself took a median 5.7 minutes of each
+    # part's 6.5, with everything else (checkout, Node, npm ci, build, Chromium) about 50 seconds, so the part count is
+    # the one lever left for the critical path. Six keeps a run at nine jobs, so two pull requests still fit inside the
+    # 20 concurrent jobs a free account gets; going to eight would queue sooner with many contributors pushing at once.
     name: Browser tests, part ${{ matrix.shard }}
     needs: checks
     if: needs.checks.outputs.docs_only != 'true'
@@ -88,7 +92,7 @@ jobs:
       # Every part finishes, so one run shows all failing tests at once.
       fail-fast: false
       matrix:
-        shard: [1, 2, 3, 4]
+        shard: [1, 2, 3, 4, 5, 6]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
