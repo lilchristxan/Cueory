@@ -17,6 +17,10 @@ describe('Task 92 app icons and install files', () => {
     expect(manifest.name).toBe('cueory');
     expect(manifest.short_name).toBe('cueory');
     expect(manifest.start_url).toBe('/');
+    // The installed app is the whole site, in English (SEO lane): fixed id and scope, lang matching <html lang>.
+    expect(manifest.id).toBe('/');
+    expect(manifest.scope).toBe('/');
+    expect(manifest.lang).toBe('en');
     expect(manifest.display).toBe('standalone');
     expect(manifest.theme_color).toBe(brand.colors.ivory);
     expect(manifest.background_color).toBe(brand.colors.ivory);

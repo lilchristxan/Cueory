@@ -44,9 +44,13 @@ await sharp({ create: { width: 512, height: 512, channels: 3, background } })
   .toFile(resolve(output, 'icons/icon-maskable-512.png'));
 
 writeFileSync(resolve(output, 'manifest.webmanifest'), `${JSON.stringify({
+  // id and scope name the installed app and the pages it covers (the whole site); lang matches <html lang="en">.
+  id: '/',
   name: 'cueory',
   short_name: 'cueory',
+  lang: 'en',
   start_url: '/',
+  scope: '/',
   display: 'standalone',
   theme_color: background,
   background_color: background,

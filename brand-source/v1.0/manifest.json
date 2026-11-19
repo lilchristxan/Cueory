@@ -252,5 +252,12 @@
       "height": 512,
       "sha256": "968fd448a09cb81f97a94cc735141284afe94a4044c5c8e1ace80942df3d79db"
     }
+  },
+  "favicon": {
+    "file": "public/favicon.ico",
+    "from": "icon-32.png (unchanged PNG inside an ICO file)",
+    "width": 32,
+    "height": 32,
+    "sha256": "9b0e72aed3aee63869ea795f21f4353a74f48b32da2cbac6667ad5ca153cc395"
   }
 }
