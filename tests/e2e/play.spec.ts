@@ -683,6 +683,25 @@ test.describe('daily games: crossword levels (Task 627)', () => {
       await expect(region).toHaveCSS('overflow-x', 'auto');
       expect(await region.evaluate((element) => element.scrollWidth > element.clientWidth)).toBe(true);
       const noPageOverflow = async () => {
+        // Diagnostics only (no assertion depends on it): record the widths and the widest element outside the board, so a
+        // failing engine report shows which box pushes the page sideways. It attaches to the test report on every engine.
+        const widths = await page.evaluate(() => {
+          const root = document.documentElement;
+          const describe = (element: Element) => `${element.tagName.toLowerCase()}.${String(element.className).trim().split(/\s+/).join('.')}`;
+          let widest: Element | null = null;
+          let widestRight = 0;
+          for (const element of Array.from(document.body.querySelectorAll('*'))) {
+            const right = element.getBoundingClientRect().right;
+            if (right > widestRight && !element.closest('.crossword-board') && getComputedStyle(element).display !== 'none') {
+              widestRight = right;
+              widest = element;
+            }
+          }
+          const chain: string[] = [];
+          for (let node: Element | null = widest; node && node !== root; node = node.parentElement) chain.push(describe(node));
+          return { scrollWidth: root.scrollWidth, clientWidth: root.clientWidth, innerWidth: window.innerWidth, widestRight, widestChain: chain };
+        });
+        await testInfo.attach('page-width-diagnostics', { body: JSON.stringify(widths, null, 2), contentType: 'application/json' });
         expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
         expect(await page.evaluate(() => window.scrollX)).toBe(0);
       };
