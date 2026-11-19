@@ -451,6 +451,30 @@
     background-color: rgb(var(--glass-hover-rgb) / var(--glass-hover-alpha));
   }
 
+  /* The one shared copper button (redesign, #889 palette): the renderings' copper sweep, Charcoal ink at full opacity
+     (4.65:1 or better on every stop), a 44 px minimum target. Pages add only layout utilities, never their own copper. */
+  .copper-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: calc(var(--spacing) * 2);
+    min-block-size: var(--tap-min);
+    max-inline-size: 100%;
+    padding: calc(var(--spacing) * 3.5) calc(var(--spacing) * 8);
+    overflow-wrap: break-word;
+    border: 1px solid transparent; /* shows as a real border in forced-colors mode, where the gradient is dropped */
+    border-radius: var(--radius-pill);
+    color: var(--cueory-copper-ink);
+    text-decoration: none;
+    background-image: linear-gradient(110deg, var(--cueory-copper-start), var(--cueory-copper-end) 72%, var(--cueory-copper-shine));
+    box-shadow: var(--shadow-button);
+  }
+
+  .copper-button:hover,
+  .copper-button:visited {
+    color: var(--cueory-copper-ink);
+  }
+
   /* Social profile links (D-54): the platform's one-color mark in the text color, on a 44 px target. */
   .social-link {
     display: inline-flex;
