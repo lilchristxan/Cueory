@@ -35,7 +35,8 @@ function buttonTags(source: string): string[] {
 // A class list that sets vertical padding but no explicit tap-target size.
 function paddingOnly(classes: string): boolean {
   if (!/(^|\s)py-[\d.]+(\s|$)/.test(classes)) return false;
-  return !/min-h-11|min-h-12|min-h-14|min-h-\(--tap-min\)|(^|\s)h-1[1-9]|size-\(--tap-min\)/.test(classes);
+  // A responsive-only size does not guarantee a tap target at phone widths.
+  return !/(?:^|\s)(?:min-h-(?:11|12|14|\(--tap-min\))|h-1[1-9]|size-\(--tap-min\))(?=\s|$)/.test(classes);
 }
 
 // Known gaps owned by other open work, pinned to the exact class list so nothing else in the file is excused.
@@ -77,6 +78,14 @@ describe('padding-sized buttons carry an explicit tap-target size', () => {
     expect(unexpectedOffenders(new Map([['components/SignupForm.astro', [pinned, other]]])))
       .toEqual([`components/SignupForm.astro: ${other}`]);
     expect(unexpectedOffenders(new Map([['components/Other.astro', [pinned]]]))).toEqual([`components/Other.astro: ${pinned}`]);
+  });
+
+  it('requires a complete phone-applicable size class even when a larger breakpoint sets one', () => {
+    expect(paddingOnly('py-1 sm:min-h-11')).toBe(true);
+    expect(paddingOnly('py-1 h-11/12')).toBe(true);
+    expect(paddingOnly('py-1 min-h-(--tap-min) sm:min-h-14')).toBe(false);
+    expect(paddingOnly('py-1 h-12')).toBe(false);
+    expect(paddingOnly('py-1 size-(--tap-min)')).toBe(false);
   });
 
   it('passes once a known gap is fixed, so merge order does not matter', () => {
