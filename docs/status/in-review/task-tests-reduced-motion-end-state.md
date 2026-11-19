@@ -1,0 +1,1 @@
+status: Tests, reduced-motion sweep: before checking for motion, each page now waits for concrete end states (page loaded, fonts ready, on-screen pictures loaded) and the same 500 ms quiet-network check as before, and a timeout names the requests still open (webkit-phone timed out once on / with no clue which).

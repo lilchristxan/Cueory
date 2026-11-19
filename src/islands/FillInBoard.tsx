@@ -161,7 +161,7 @@ function Session({ items: suppliedItems, page = FILL_IN_PAGE }: Props) {
   const moves = useRef(0);
   const latestDraft = useRef<ResumeDraft | null>(null);
   const input = useRef<HTMLInputElement>(null);
-  const select = useRef<HTMLSelectElement>(null);
+  const choices = useRef<HTMLDivElement>(null);
   const nextButton = useRef<HTMLButtonElement>(null);
   const end = useRef<HTMLDivElement>(null);
   const id = useId();
@@ -197,7 +197,11 @@ function Session({ items: suppliedItems, page = FILL_IN_PAGE }: Props) {
     else if (answered) nextButton.current?.focus();
     else if (focusInput > 0) {
       if (inputMode === 'type') input.current?.focus();
-      else select.current?.focus();
+      else {
+        // The chosen answer, or the first one when none is chosen yet (arrow keys move within the group).
+        const group = choices.current;
+        (group?.querySelector<HTMLInputElement>('input:checked') ?? group?.querySelector<HTMLInputElement>('input'))?.focus();
+      }
     }
   }, [answered, focusInput, inputMode, state.done]);
 
@@ -312,12 +316,16 @@ function Session({ items: suppliedItems, page = FILL_IN_PAGE }: Props) {
 
             <div className="mt-6">
               <div className="flex items-center justify-between">
-                <label htmlFor={`${id}-answer`} className="block text-sm font-medium">the missing word</label>
+                {inputMode === 'dropdown' ? (
+                  <span id={`${id}-label`} className="block text-sm font-medium">the missing word</span>
+                ) : (
+                  <label htmlFor={`${id}-answer`} className="block text-sm font-medium">the missing word</label>
+                )}
                 <button
                   type="button"
                   className="min-h-11 px-2 text-xs leading-relaxed text-ink-soft underline hover:text-ink"
                   onClick={() => {
-                    // A select can only submit one of its visible options. Do not retain
+                    // The choices can only submit one of their visible options. Do not retain
                     // an unseen free-text answer when changing back to dropdown mode.
                     if (inputMode === 'type' && typed !== '' && !options.includes(typed)) {
                       setTyped('');
@@ -331,22 +339,41 @@ function Session({ items: suppliedItems, page = FILL_IN_PAGE }: Props) {
               </div>
 
               {inputMode === 'dropdown' ? (
-                <select
-                  ref={select}
-                  id={`${id}-answer`}
-                  value={typed}
-                  disabled={answered}
+                // Radio buttons, not a native <select>: WebKit reports a style-src-attr CSP violation for every <select>
+                // (probe #862, tests/e2e/csp-element-probe.spec.ts), and the site's CSP stays strict.
+                <div
+                  ref={choices}
+                  role="radiogroup"
+                  aria-labelledby={`${id}-label`}
                   aria-describedby={message ? `${id}-sentence ${id}-message` : `${id}-sentence`}
-                  onChange={(event) => setTyped(event.currentTarget.value)}
-                  className="mt-2 min-h-11 w-full rounded-md border border-control bg-surface px-4 py-2.5 text-ink"
+                  className="mt-2 grid gap-2"
                 >
-                  <option value="">choose an answer...</option>
                   {options.map((option, optIdx) => (
-                    <option key={`${option}-${optIdx}`} value={option}>
-                      {option}
-                    </option>
+                    <label
+                      key={`${option}-${optIdx}`}
+                      className="flex min-h-11 cursor-pointer items-center gap-3 rounded-md border border-control bg-surface px-4 py-2.5 text-ink has-checked:border-ink has-checked:inset-ring-1 has-checked:inset-ring-ink has-disabled:cursor-default"
+                    >
+                      <input
+                        type="radio"
+                        name={`${id}-answer`}
+                        value={option}
+                        checked={typed === option}
+                        disabled={answered}
+                        onChange={() => setTyped(option)}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter') {
+                            event.preventDefault();
+                            check();
+                          }
+                        }}
+                        // Drawn from tokens rather than the browser's radio, so the chosen dot stays full ink once the
+                        // choices are disabled after "check" (a disabled native radio turns grey, worst in Evening).
+                        className="size-6 shrink-0 cursor-pointer appearance-none rounded-full border-2 border-control bg-surface checked:border-ink checked:bg-ink checked:inset-ring-4 checked:inset-ring-surface disabled:cursor-default forced-colors:appearance-auto"
+                      />
+                      <span>{option}</span>
+                    </label>
                   ))}
-                </select>
+                </div>
               ) : (
                 <input
                   ref={input}
