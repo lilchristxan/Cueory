@@ -1,6 +1,16 @@
 import { expect, test } from '@playwright/test';
 
 /**
+ * Checks whether an image has started downloading, either recorded in resource timing or currently in flight.
+ */
+function isDownloadStarted(
+  img: { currentSrc: string; resourceLoaded: boolean },
+  requestedUrls: ReadonlySet<string>,
+): boolean {
+  return img.resourceLoaded || (img.currentSrc !== '' && requestedUrls.has(img.currentSrc));
+}
+
+/**
  * Performance (2026-11-19): the header carries the phone emblem and the full logo, each in a Daytime and an Evening
  * copy, and CSS shows one. The full logo is lazy, so a copy the page hides (the full logo on phones, the other
  * palette's copy everywhere) is never downloaded, while the copy that shows still loads.
@@ -37,7 +47,7 @@ for (const path of ['/support', '/play/word-path']) {
     // Phones hide both full-logo copies; wider screens hide the other palette's copy.
     expect(hiddenFull.length).toBeGreaterThan(0);
     for (const img of hiddenFull) {
-      const started = img.resourceLoaded || (img.currentSrc !== '' && requestedUrls.has(img.currentSrc));
+      const started = isDownloadStarted(img, requestedUrls);
       expect({ src: img.src, loading: img.loading, started }, String(img.src)).toEqual({
         src: img.src,
         loading: 'lazy',
@@ -55,34 +65,42 @@ test('/support: responsive candidates: started detection catches a non-fallback 
   const home = page.getByRole('link', { name: 'cueory home' });
   await expect(home).toBeVisible();
 
-  const evaluated = await home.locator('.logo img[src*="logo-full"]').evaluateAll((imgs) => {
+  const nonFallbackUrl = await home.locator('.logo img[src*="logo-full"]').evaluateAll((imgs) => {
     const hidden = imgs.find((img) => img.getClientRects().length === 0) as HTMLImageElement;
-    if (!hidden) return null;
-
+    if (!hidden) return '';
     const rawSrcset = hidden.getAttribute('srcset') ?? '';
     const candidates = rawSrcset
       .split(',')
       .map((p) => p.trim().split(/\s+/)[0])
       .filter(Boolean)
       .map((url) => new URL(url, document.baseURI).href);
-    const nonFallback = candidates.find((u) => !u.includes('960')) ?? '';
+    return candidates.find((u) => !u.includes('960')) ?? '';
+  });
 
+  expect(nonFallbackUrl).toBeTruthy();
+
+  // Trigger a real request for the non-fallback responsive candidate
+  await page.evaluate((url) => {
+    const testImg = document.createElement('img');
+    testImg.id = 'test-non-fallback-img';
+    testImg.src = url;
+    document.body.appendChild(testImg);
+  }, nonFallbackUrl);
+
+  await expect.poll(() => requestedUrls.has(nonFallbackUrl)).toBe(true);
+
+  // Exercise the real detection path on the downloaded candidate
+  const detectionResult = await page.locator('#test-non-fallback-img').evaluate((img) => {
+    const htmlImg = img as HTMLImageElement;
+    const resourceUrls = new Set(performance.getEntriesByType('resource').map((r) => r.name));
+    const currentSrc = htmlImg.currentSrc;
+    const resourceLoaded = currentSrc !== '' && resourceUrls.has(currentSrc);
     return {
-      nonFallback,
-      currentSrc: hidden.currentSrc,
+      currentSrc,
+      resourceLoaded,
     };
   });
 
-  expect(evaluated?.nonFallback).toBeTruthy();
-  const nonFallback = evaluated!.nonFallback;
-
-  // Verify that if a non-fallback candidate is selected and requested, it is detected as started
-  const simulatedRequests = new Set([nonFallback]);
-  const isStartedFromRequests = nonFallback !== '' && simulatedRequests.has(nonFallback);
-  expect(isStartedFromRequests).toBe(true);
-
-  // Verify that if a non-fallback candidate is selected and completed in resource timing, it is detected as started
-  const simulatedResourceUrls = new Set([nonFallback]);
-  const isStartedFromResources = nonFallback !== '' && simulatedResourceUrls.has(nonFallback);
-  expect(isStartedFromResources).toBe(true);
+  const started = isDownloadStarted(detectionResult, requestedUrls);
+  expect(started).toBe(true);
 });
