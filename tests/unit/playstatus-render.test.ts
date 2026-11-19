@@ -1,7 +1,8 @@
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
-import PlayStatus from '../../src/islands/PlayStatus';
+// The .tsx extension is explicit: on a case-insensitive disk a bare 'PlayStatus' would resolve to playstatus.ts first.
+import PlayStatus from '../../src/islands/PlayStatus.tsx';
 import { MARK_SYMBOL } from '../../src/islands/pulse';
 import { dailyGames, gamePages } from '../../src/config/games';
 
