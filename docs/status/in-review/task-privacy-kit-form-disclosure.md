@@ -1,0 +1,1 @@
+status: needs Christian (privacy page). Corrects the launch email list paragraph on /privacy: since #892 the email box on the home page and in the pop-up sends the address straight to Kit (app.kit.com), so the old "the link opens Cueory's signup page on Kit" was no longer complete. Only that paragraph changes.
