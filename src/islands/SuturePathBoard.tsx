@@ -28,9 +28,10 @@ const button = 'min-h-11 min-w-11 rounded-md border border-control bg-page px-4 
 const looks: Record<CellLook, { dot: string; text: string }> = {
   special: { dot: 'bg-button', text: 'text-on-button' },
   theme: { dot: 'bg-soft', text: 'text-ink' },
-  picked: { dot: 'bg-page ring-2 ring-inset ring-ink', text: 'text-ink' },
-  hinted: { dot: 'border-2 border-dashed border-ink-soft', text: '' },
-  plain: { dot: '', text: '' },
+  // Copper ring and glow, as drawn (WordPath.png); the letter takes the copper ink so it reads in both palettes.
+  picked: { dot: 'wordpath-pick', text: 'wordpath-pick-text' },
+  hinted: { dot: 'wordpath-plain border-2 border-dashed border-ink-soft', text: '' },
+  plain: { dot: 'wordpath-plain', text: '' },
 };
 
 /** Where each letter's circle sits inside the board (its padding box), measured from the page. */
@@ -349,18 +350,10 @@ export function PathBoard({ puzzle, name }: Props) {
       />
       {printNote && <p className="mt-2 text-center text-sm text-ink-soft" data-testid="suture-print-note" data-print-hidden>{printNote}</p>}
       <PrintLogo />
-      <p className="text-center text-sm text-ink-soft">today's theme</p>
-      <h3 id={title} className="display text-center text-2xl text-ink sm:text-3xl" data-testid="suture-theme">{puzzle.clue}</h3>
-      <p className="mt-2 text-center text-ink-soft" data-print-hidden>
-        find all {total} answers. one of them, the thread, names the theme and runs from one side of the board to the
-        other. every letter is used once.
-      </p>
-      <p id={help} className="mt-2 text-center text-sm text-ink-soft" data-print-hidden>
-        drag across touching letters in any direction, or tap them one by one and press submit (tapping the last letter
-        again also submits). on a keyboard, arrows move, enter or space adds a letter, enter on the last letter submits,
-        backspace takes one back and escape clears.
-      </p>
       <GameHelpCard help={howToPlay} name={name} />
+      <div className="wordpath-panel -mx-6 mt-6 sm:mx-0 sm:px-(--spacing-stack)">
+      <p className="wordpath-label px-4 text-center text-ink-soft sm:px-0">cue of the day</p>
+      <h3 id={title} className="display px-4 sm:px-0 text-center text-2xl text-ink sm:text-3xl" data-testid="suture-theme">{puzzle.clue}</h3>
       <div
         ref={board}
         role="grid"
@@ -368,7 +361,7 @@ export function PathBoard({ puzzle, name }: Props) {
         aria-describedby={help}
         aria-rowcount={puzzle.grid.length}
         aria-colcount={puzzle.grid[0]!.length}
-        className="wordpath-board relative -mx-6 mt-6 flex flex-col border-(length:--border-board) border-ink bg-page text-ink sm:mx-auto sm:p-3"
+        className="wordpath-board relative mt-4 flex flex-col sm:mx-auto border-(length:--border-board) border-transparent text-ink sm:p-3"
       >
         {layout && (
           <svg className="wordpath-lines" aria-hidden="true" focusable="false" data-testid="suture-lines"
@@ -420,6 +413,7 @@ export function PathBoard({ puzzle, name }: Props) {
           </div>
         ))}
       </div>
+      </div>
       <p className="mt-4 min-h-11 text-center text-xl font-bold text-ink" aria-hidden="true" data-testid="suture-picked" data-print-hidden>{word}</p>
       <div className="mt-2 flex flex-wrap justify-center gap-2" data-print-hidden>
         <button type="button" className={button} disabled={done || state.picked.length === 0} onClick={send} data-testid="suture-submit">submit</button>
@@ -432,6 +426,15 @@ export function PathBoard({ puzzle, name }: Props) {
         {left > 0
           ? `${left} ${left === 1 ? 'cue' : 'cues'} ready.`
           : `${towardHint} of ${WORDS_PER_HINT} words toward a cue. other words of ${MIN_WORD} letters or more count.`}
+      </p>
+      <p className="mt-2 text-center text-ink-soft" data-print-hidden>
+        find all {total} answers. one of them, the thread, names the theme and runs from one side of the board to the
+        other. every letter is used once.
+      </p>
+      <p id={help} className="mt-2 text-center text-sm text-ink-soft" data-print-hidden>
+        drag across touching letters in any direction, or tap them one by one and press submit (tapping the last letter
+        again also submits). on a keyboard, arrows move, enter or space adds a letter, enter on the last letter submits,
+        backspace takes one back and escape clears.
       </p>
       <ul className="mt-6 flex flex-wrap justify-center gap-x-4 gap-y-2 text-sm font-bold sm:text-lg" aria-label="answers found" data-testid="suture-found" data-print-hidden>
         {state.found.map((i) => {
