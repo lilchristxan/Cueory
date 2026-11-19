@@ -305,10 +305,15 @@ test('native image sharing waits for a fresh click after image preparation', asy
   });
   try {
     await dialog.getByRole('button', { name: 'share', exact: true }).click();
-    await expect.poll(() => requests).toBe(1);
+    // createStoryFile() gives the whole preparation STORY_ASSET_TIMEOUT_MS (4 s of wall time) before the copy fallback
+    // runs, and the held logo request spends that budget. So the hold covers this one check only: on a busy CI runner,
+    // three held checks used up the budget, the fallback copied the line and 'share image' never appeared.
     await expect(dialog.getByRole('button', { name: 'preparing image', exact: true })).toHaveAttribute('aria-disabled', 'true');
-    expect(await page.evaluate(() => (window as unknown as { nativeShares: unknown[] }).nativeShares)).toEqual([]);
     release();
+    await expect.poll(() => requests).toBe(1);
+    // The concrete end state: the image is ready (a 'result copied.' status here would mean the budget ran out), and the
+    // ready button waits for a fresh click. Nothing was shared during preparation or on its completion.
+    await expect(dialog.getByRole('status')).toHaveText('image ready. tap share image to open your share options.', { timeout: 10_000 });
     const shareImage = dialog.getByRole('button', { name: 'share image', exact: true });
     await expect(shareImage).toBeEnabled();
     expect(await page.evaluate(() => (window as unknown as { nativeShares: unknown[] }).nativeShares)).toEqual([]);

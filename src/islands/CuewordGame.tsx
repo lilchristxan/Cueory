@@ -281,7 +281,8 @@ function Board({ puzzle, name }: Props) {
       <GameHelpCard help={howToPlay} name={name} />
 
       {asking && (
-        <div className="crossword-warning crossword-no-print" role="alertdialog" aria-labelledby={warning + '-title'} aria-describedby={warning} data-testid="crossword-warning">
+        <div className="crossword-warning crossword-no-print" role="alertdialog" aria-labelledby={warning + '-title'} aria-describedby={warning} data-testid="crossword-warning"
+          onKeyDown={(event) => { if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); cancelHelp(); } }}>
           <p id={warning + '-title'} className="font-medium">use {asking.kind} {asking.scope}?</p>
           <p id={warning} className="mt-1 text-sm">check and reveal still count as solved, but today's crossword won't extend your streak.</p>
           <div className="mt-3 flex flex-wrap gap-2">

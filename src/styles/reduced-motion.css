@@ -10,6 +10,9 @@
 
   Durations stay at 0.01ms (tests and scripts read them); only the property list is emptied. No transition means no
   transitionend either; the promo panel already hides at once under reduced motion.
+
+  Delays go to zero too (lane 8): a 0.01ms animation that waits a second first still leaves an element hidden, then
+  pops it in, which is motion of its own.
 */
 @layer base {
   @media (prefers-reduced-motion: reduce) {
@@ -17,6 +20,8 @@
     *::before,
     *::after {
       transition-property: none !important;
+      transition-delay: 0s !important;
+      animation-delay: 0s !important;
     }
   }
 }
