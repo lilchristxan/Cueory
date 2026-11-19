@@ -115,7 +115,7 @@ const savedTime = (page: Page) => page.evaluate((key) => localStorage.getItem(ke
 for (const scheme of ['light', 'dark'] as const) {
   test(`after a footer report is opened, skips the page view and leaves focus on the opener (${scheme === 'light' ? 'Light' : 'Evening'})`, async ({ page }) => {
     await page.emulateMedia({ colorScheme: scheme, reducedMotion: 'reduce' });
-    await openAt(page, '/');
+    await openAt(page, '/', { paused: true });
     const flag = footerFlag(page);
     await flag.click();
     await expect(flag).toHaveAttribute('aria-expanded', 'true');
