@@ -710,8 +710,36 @@ test.describe('daily games: crossword levels (Task 627)', () => {
       await expect(region).toHaveCSS('overflow-x', 'auto');
       expect(await region.evaluate((element) => element.scrollWidth > element.clientWidth)).toBe(true);
       const noPageOverflow = async () => {
-        expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
-        expect(await page.evaluate(() => window.scrollX)).toBe(0);
+        // One snapshot of the numbers the two checks below use. Only when one of them is about to fail, walk the page
+        // for the widest element outside the board and attach it with the snapshot, so the evidence is the failing state
+        // (diagnostics only: the assertions are unchanged, and passing checkpoints add no extra layout reads).
+        const snapshot = await page.evaluate(() => ({
+          scrollWidth: document.documentElement.scrollWidth,
+          clientWidth: document.documentElement.clientWidth,
+          innerWidth: window.innerWidth,
+          scrollX: window.scrollX,
+        }));
+        if (snapshot.scrollWidth > snapshot.clientWidth || snapshot.scrollX !== 0) {
+          const widest = await page.evaluate(() => {
+            const root = document.documentElement;
+            const describe = (element: Element) => `${element.tagName.toLowerCase()}.${String(element.className).trim().split(/\s+/).join('.')}`;
+            let widestElement: Element | null = null;
+            let widestRight = 0;
+            for (const element of Array.from(document.body.querySelectorAll('*'))) {
+              const right = element.getBoundingClientRect().right;
+              if (right > widestRight && !element.closest('.crossword-board') && getComputedStyle(element).display !== 'none') {
+                widestRight = right;
+                widestElement = element;
+              }
+            }
+            const chain: string[] = [];
+            for (let node: Element | null = widestElement; node && node !== root; node = node.parentElement) chain.push(describe(node));
+            return { widestRight, widestChain: chain };
+          });
+          await testInfo.attach('page-width-diagnostics', { body: JSON.stringify({ ...snapshot, ...widest }, null, 2), contentType: 'application/json' });
+        }
+        expect(snapshot.scrollWidth <= snapshot.clientWidth).toBe(true);
+        expect(snapshot.scrollX).toBe(0);
       };
       await noPageOverflow();
       const sizes = await grid.locator('button').evaluateAll((cells) => cells.map((cell) => {

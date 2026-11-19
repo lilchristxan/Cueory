@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { draftsAllowed } from '../../src/islands/anatomylab';
-import { draftBuildEnv } from '../../src/lessons/draftgate';
+import { draftBuildEnv, heroStartHref, lessonEntryHref } from '../../src/lessons/draftgate';
 import { indexablePages } from '../../src/config/routes';
 import { accountLaunch, accountsOpen, newsletter, showsHeroJoin } from '../../src/config/site';
 
@@ -79,21 +79,63 @@ describe('home how-it-works (W01-3)', () => {
       expect(source).not.toMatch(/#[\da-f]{3,8}\b/i);
     }
   });
-  it("ties the hero's quiet link to the account launch switch (create your free account -> /signup once open)", () => {
-    // The e2e specs run against one build, so the accounts-open state is checked here without changing site config.
-    const source = readFileSync(new URL('../../src/pages/index.astro', import.meta.url), 'utf8');
-    expect(source).toContain('accountLaunch(accountsOpen).promoJoinLabel');
-    expect(source).toMatch(/href=\{accountHref\}[\s\S]*?data-testid="hero-join"/);
-    expect(source).toContain('showsHeroJoin(accountsOpen, newsletter.formAction, newsletter.landingUrl)');
-    expect(accountLaunch(true)).toMatchObject({ accountHref: '/signup', promoJoinLabel: 'create your free account' });
-    const join = built.match(/<a\b(?=[^>]*data-testid="hero-join")[^>]*>([\s\S]*?)<\/a>/);
-    if (showsHeroJoin(accountsOpen, newsletter.formAction, newsletter.landingUrl)) {
-      expect(join?.[0]).toContain('href="' + accountLaunch(accountsOpen).accountHref + '"');
-      expect(plain(join?.[1] ?? '')).toBe(accountLaunch(accountsOpen).promoJoinLabel);
+  it('builds the redesigned hero: a closed call to action, no quiet join link, and true explore links (P5)', () => {
+    const hero = built.match(/<section\b[^>]*\bscene-hero\b[^>]*>[\s\S]*?<\/section>/)?.[0];
+    if (!hero) throw new Error('missing home hero');
+    const heading = hero.match(/<h1\b[^>]*>([\s\S]*?)<\/h1>/)?.[1] ?? '';
+    expect(plain(heading)).toBe('nursing school made simpler.');
+    expect(plain(hero)).toContain('by nursing students, for nursing students');
+    // The "start studying" call to action follows the draft gate (heroStartHref): a copper link to the open lesson where
+    // drafts may show, and in the live build a disabled button tagged "coming soon", never a link that leads nowhere.
+    const open = draftsAllowed(draftBuildEnv(process.env));
+    const startTag = hero.match(/<(a|button)\b(?=[^>]*data-testid="hero-start")[^>]*>([\s\S]*?)<\/\1>/);
+    expect(plain(startTag?.[2] ?? '')).toBe('start studying for free →');
+    if (open) {
+      expect(startTag?.[1]).toBe('a');
+      expect(startTag?.[0]).toContain('href="' + lessonEntryHref(process.env) + '"');
+      expect(startTag?.[0]).toContain('copper-button');
+      expect(startTag?.[0]).not.toContain('aria-disabled');
     } else {
-      // Accounts closed, no Kit form and no landing page: the box below has no button, so the hero shows no link to it.
-      expect(join).toBeNull();
+      expect(startTag?.[1]).toBe('button');
+      expect(startTag?.[0]).toContain('aria-disabled="true"');
+      expect(startTag?.[0]).not.toContain('href=');
+      expect(hero).toContain('coming soon');
     }
+    // The old quiet launch-list link went away with the old hero (copy deck, "hero quiet link"); the form is lower down.
+    expect(hero).not.toContain('data-testid="hero-join"');
+    expect(accountLaunch(true)).toMatchObject({ accountHref: '/signup', promoJoinLabel: 'create your free account' });
+    // The third value point stays held: there is no support for "adhd friendly" yet.
+    expect(plain(hero)).not.toMatch(/adhd/i);
+    expect(plain(hero)).toContain('structured learning');
+    expect(plain(hero)).toContain('multiple ways to study');
+    // Explore tiles: only places that exist today; "resources" waits until that page is live.
+    const explore = hero.match(/<nav\b[^>]*aria-labelledby="explore-heading"[\s\S]*?<\/nav>/)?.[0] ?? '';
+    expect(links(explore)).toEqual(['/learn', '#ways-to-study', '/play', '/message']);
+    expect(plain(explore)).not.toMatch(/resources/i);
+    for (const href of ['/learn', '/play', '/message']) expect(existsSync(new URL('../../dist' + href + '.html', import.meta.url)) || existsSync(new URL('../../dist' + href + '/index.html', import.meta.url))).toBe(true);
+    // Ko-fi card: the supporting-our-mission page, opened in a new tab and said so to screen readers.
+    const support = hero.match(/<a\b(?=[^>]*data-testid="hero-support")[^>]*>[\s\S]*?<\/a>/)?.[0] ?? '';
+    expect(support).toContain('target="_blank"');
+    expect(support).toContain('rel="noopener noreferrer"');
+    expect(support).toContain('opens in a new tab');
+    // The figure loads at once and is decorative.
+    expect(hero).toMatch(/<img\b(?=[^>]*hero-anatomy-figure\.webp)(?=[^>]*loading="eager")(?=[^>]*alt="")[^>]*>/);
+  });
+
+  it('the hero start button follows the draft gate: closed live, a link to the open lesson elsewhere', () => {
+    // The live build (a Workers Build of main) holds the sample lesson back, so there is no link to show.
+    expect(heroStartHref({ WORKERS_CI: '1', WORKERS_CI_BRANCH: 'main' })).toBeNull();
+    expect(heroStartHref({ WORKERS_CI: '1', WORKERS_CI_BRANCH: 'refs/heads/main' })).toBeNull();
+    expect(heroStartHref({ WORKERS_CI: '1' })).toBeNull();
+    expect(heroStartHref({})).toBeNull();
+    // Staging, previews and the browser-test build show the sample lesson, and the button links to it.
+    expect(heroStartHref({ WORKERS_CI: '1', WORKERS_CI_BRANCH: 'staging' })).toBe('/learn/study-skills');
+    expect(heroStartHref({ WORKERS_CI: '1', WORKERS_CI_BRANCH: 'task-p5/home-hero' })).toBe('/learn/study-skills');
+    expect(heroStartHref({ CUEORY_ANATOMY_DRAFTS: '1' })).toBe('/learn/study-skills');
+    // The hero asks the guard; it never decides on its own.
+    const source = readFileSync(new URL('../../src/components/HomeHero.astro', import.meta.url), 'utf8');
+    expect(source).toContain('heroStartHref()');
+    expect(source).toMatch(/startHref \? \(/);
   });
 
   it('shows the hero join link only when it leads to a real next step', () => {

@@ -181,14 +181,31 @@ export default function Onboarding() {
     await send();
   };
 
-  const focusQuestion = (next: OnboardingStep) => {
-    setStep(next);
+  /** The question that should take focus once it has rendered; set by focusQuestion, consumed by the effect below. */
+  const pendingFocus = useRef<OnboardingStep | null>(null);
+  const focusPending = (next: OnboardingStep) => {
     // Not if the student has already focused something else, or Enter would land on the heading (flaky e2e).
     focusAfterRender(() => (ONBOARDING_FIELDS[next] === 'course' ? courseLegendRef.current : dateHeadingRef.current), {
       active: () => document.activeElement,
       body: () => document.body,
       schedule: (run) => requestAnimationFrame(run),
     });
+  };
+  // Focus is placed after React has committed the new question, so the target exists however the browser schedules
+  // the frame (Firefox ran the frame before the commit, and the legend or heading was not there yet).
+  useEffect(() => {
+    const next = pendingFocus.current;
+    if (next === null) return;
+    pendingFocus.current = null;
+    focusPending(next);
+  }, [step]);
+  const focusQuestion = (next: OnboardingStep) => {
+    if (next === step) {
+      focusPending(next);
+      return;
+    }
+    pendingFocus.current = next;
+    setStep(next);
   };
 
   const finish = (done: ScreenAnswers, outcome: 'saved' | 'skipped', acted: Touched = touched.current) => {

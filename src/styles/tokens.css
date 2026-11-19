@@ -40,11 +40,18 @@
      Semantic aliases for the rendering builders. Keep these aliases pointed at
      existing brand/silk/cell roles so the redesign does not create a second
      palette or rename established tokens. */
-  /* Use the role pair with AA-safe normal text at both gradient endpoints in
-     daytime (Ivory ink) and evening (Charcoal ink) themes. */
-  --cueory-copper-start: var(--color-button-hover);
-  --cueory-copper-end: var(--color-button);
-  --cueory-copper-ink: var(--color-on-button);
+  /* Copper accent (added 18 Nov 2026 by Christian's decision, to match the redesign renderings; docs/BRAND.md). Only
+     for copper buttons, pills and accents. The same four colours serve Daytime and Evening. */
+  --color-copper-deep: #b87348;   /* Copper Deep  — gradient edges */
+  --color-copper: #d9976a;        /* Copper       — gradient body */
+  --color-copper-glow: #f6d3ae;   /* Copper Glow  — soft highlight */
+  --color-copper-shine: #fff0de;  /* Copper Shine — the light sweep */
+  --cueory-copper-start: var(--color-copper-deep);
+  --cueory-copper-end: var(--color-copper);
+  --cueory-copper-glow: var(--color-copper-glow);
+  --cueory-copper-shine: var(--color-copper-shine);
+  /* Ivory and Espresso text fail 4.5:1 on the copper stops; Charcoal passes on all four (4.65 or more). */
+  --cueory-copper-ink: #1c1917;   /* Charcoal — text on the gradient, in both themes */
   --cueory-glass-bg: rgb(var(--glass-rgb) / var(--glass-alpha));
   --cueory-glass-border: rgb(var(--glass-rim-rgb) / var(--glass-rim-alpha));
   --cueory-glass-shadow: var(--shadow-soft);
@@ -143,6 +150,12 @@
   */
   --text-display-fit: clamp(1rem, 100cqi / 14, 4.5rem);
   --text-display-fit--line-height: 1.12;
+  /* The home hero headline sits on two lines ("nursing school" / "made simpler."): its size follows the hero text
+     column's width (container query), so the longer line always fits, even with enlarged text. */
+  --text-display-hero: clamp(1rem, 100cqi / 7.6, 5.5rem);
+  --text-display-hero--line-height: 1.05;
+  --text-title-explore: 2rem;   /* the explore row's heading */
+  --text-title-explore--line-height: 1.2;
   --text-title: 2.375rem;       /* marketing page title (38px) */
   --text-title--line-height: 1.12;
   --text-title-lg: 3rem;        /* marketing page title on wider screens (48px) */
@@ -162,6 +175,7 @@
   /* ---------- Letter spacing ---------- */
   --tracking-label: 0.02em;     /* small label above the home headline */
   --tracking-display: -0.025em; /* serif display headings (brand spec) */
+  --tracking-caps: 0.18em;      /* small all-capital labels such as EXPLORE */
   --tracking-menu: 0.04em;      /* ☰ side panel links: medium Inter, slightly wide */
 
   /* ---------- Spacing ---------- */
@@ -176,8 +190,23 @@
   /* ---------- Widths ---------- */
   --container-prose: 40rem;     /* comfortable reading width */
   --container-page: 64rem;      /* widest content width */
+  --container-game-showcase: 61.25rem; /* a game page that opts in (word path): the rendering's 900 px panel (WordPath.png, 270 to 1170 at 1440) plus the article's 40 px side padding */
   --container-headline: 18ch;   /* home headline wraps at about 18 letters */
   --container-hero: 46rem;      /* the centered hero column */
+  --container-hero-copy: 40rem; /* the home hero's text column beside the figure */
+  --container-hero-card: 34rem; /* the Ko-fi support card under the hero's value points */
+  --hero-figure-width: min(46vw, 42rem); /* the anatomy figure from large screens up */
+  --hero-figure-phone: min(100%, 26rem); /* and under the text on phones */
+  --hero-figure-fade: 26%;      /* how much of the figure's top and left edge fades into the silk */
+  --hero-figure-fade-bottom: 14%; /* the bottom edge, where it meets the explore row */
+  --hero-figure-evening-dim: 0.5; /* Evening: the figure's pale backdrop is dimmed so it doesn't glow */
+  --hero-min-height: 60rem;     /* the hero is about this tall on large screens, so the explore row starts below the fold */
+  --container-explore: 80rem;  /* the explore row under the hero */
+  --hero-top-clear: 1rem;       /* space above the hero's logo row (the corner buttons sit in the page's top 4.5 rem) */
+  --hero-logo-inset: calc(var(--header-inline-gutter) + var(--tap-min) + var(--header-corner-gap) - var(--spacing-gutter));
+  --hero-eyebrow-gap: 2.5rem;   /* between the logo row and the motto */
+  --icon-size: 1.75rem;         /* a small line icon beside a label */
+  --icon-size-lg: 2rem;         /* a line icon above a tile label */
   --sudoku-board-max: 62rem;    /* measured board cap from docs/design/renderings/Sudoku.png */
   --container-menu: min(85vw, 22.5rem); /* the ☰ side panel: most of a phone, 360px on bigger screens */
   --container-account-menu: 15rem; /* the small account menu */
@@ -204,6 +233,7 @@
   --radius-lg: 1rem;
   --radius-xl: 1rem;            /* frosted panels and cards on marketing pages (16 px, D-62) */
   --radius-pill: 999px;
+  --notice-icon-disc: 0.125rem; /* light disc margin around the building-strip icon in Evening */
 
   /* ---------- Depth (marketing pages) ---------- */
   --shadow-soft: 0 12px 32px rgb(var(--shadow-tint) / 0.08); /* one soft shadow for frosted panels (D-62) */
@@ -282,6 +312,8 @@
   --crossword-print-cell: 2rem;      /* a printed square; colors on paper use --print-paper / --print-ink (Task 641) */
   --wordpath-cell-min: 1.5rem;       /* a letter square's floor: 24 px (WCAG 2.2) at default text, 48 px at 32 px root text, when the grid scrolls */
   --wordpath-letter-inset: 10%;      /* a 6 × 8 board letter's circle sits this far inside its square, leaving room for the joining lines */
+  --border-wordpath-panel: 1px;      /* the hairline rim of the word path panel (the rendering shows a 1 px light edge) */
+  --wordpath-ring: 2px;              /* the copper ring round a picked letter (WordPath.png shows about 2 px at 1440) */
   --wordpath-line: 3px;              /* the line that joins the letters of a word, from circle edge to circle edge */
   --wordpath-cell-max: 4.5rem;       /* a 6 × 8 board square's ceiling: 72 px, as large as a crossword square, so tablet and desktop boards are not oversized */
   --wordpath-columns: 11;            /* each puzzle overrides this with its validated grid width */
@@ -374,6 +406,14 @@
   /* Fold shadows: Taupe at 16%, faint so Bronze text keeps AA contrast. Plain rgb() so every browser draws them right. */
   --silk-fold-rgb: 211 183 161; /* Taupe */
   --silk-fold-alpha: 0.16;
+  /* Page silk peach (follow-up to P3): the redesign's warm cloth is Copper Glow at partial strength over Ivory. */
+  --silk-peach-rgb: 246 211 174; /* Copper Glow */
+  --silk-peach-alpha: 0.55;
+  /* The renderings' warm wash under every fold (Light only; Evening sets the alpha to 0): Copper Glow over Ivory. */
+  --silk-wash-rgb: 246 211 174; /* Copper Glow */
+  --silk-wash-alpha: 0.75;
+  --silk-fold-layer: 1.4; /* how strongly the fold mask shows the peach layer: the creases and glints (P3c) */
+  --silk-fold-height: 47.5rem; /* one tile of the boards' fold mask (public/design/silk-fold-mask.svg, 1440 x 760) */
   /* Frosted panels: Ivory, three-quarters opaque. A plain rgb() so every browser gets the right panel color. */
   --veil-rgb: 249 245 239;      /* Ivory */
   --veil-alpha: 0.74;
@@ -439,6 +479,10 @@
     --color-button-hover: #f9f5ef; /* Ivory */
     --color-on-button: #1c1917; /* Charcoal */
     --color-focus: #cbb8a4;     /* Sand */
+    --color-copper-deep: #b87348;   /* Copper Deep  — same copper in Evening */
+    --color-copper: #d9976a;        /* Copper */
+    --color-copper-glow: #f6d3ae;   /* Copper Glow */
+    --color-copper-shine: #fff0de;  /* Copper Shine */
 
     --color-silk-base: #1c1917;   /* Charcoal */
     --color-silk-sheen: #3a2d24;  /* Walnut */
@@ -459,6 +503,11 @@
     --shadow-tint: 28 25 23;      /* Charcoal */
     --silk-fold-rgb: 58 45 36;    /* Walnut */
     --silk-fold-alpha: 0.7;
+    --silk-peach-rgb: 58 45 36;    /* Walnut: Evening stays quiet */
+    --silk-peach-alpha: 0.7;
+    --silk-fold-layer: 0.6; /* Evening keeps the creases as quiet as before */
+    --silk-wash-rgb: 58 45 36;    /* Walnut */
+    --silk-wash-alpha: 0;         /* no wash in Evening */
     --veil-rgb: 58 45 36;         /* Walnut */
     --veil-alpha: 0.78;
     --silk-grain: url("/textures/grain-evening.svg");
@@ -513,6 +562,10 @@
   --color-button-hover: #f9f5ef; /* Ivory */
   --color-on-button: #1c1917; /* Charcoal */
   --color-focus: #cbb8a4;     /* Sand */
+  --color-copper-deep: #b87348;   /* Copper Deep  — same copper in Evening */
+  --color-copper: #d9976a;        /* Copper */
+  --color-copper-glow: #f6d3ae;   /* Copper Glow */
+  --color-copper-shine: #fff0de;  /* Copper Shine */
 
   --color-silk-base: #1c1917;   /* Charcoal */
   --color-silk-sheen: #3a2d24;  /* Walnut */
@@ -533,6 +586,11 @@
   --shadow-tint: 28 25 23;      /* Charcoal */
   --silk-fold-rgb: 58 45 36;    /* Walnut */
   --silk-fold-alpha: 0.7;
+  --silk-peach-rgb: 58 45 36;    /* Walnut: Evening stays quiet */
+  --silk-peach-alpha: 0.7;
+  --silk-fold-layer: 0.6; /* Evening keeps the creases as quiet as before */
+  --silk-wash-rgb: 58 45 36;    /* Walnut */
+  --silk-wash-alpha: 0;         /* no wash in Evening */
   --veil-rgb: 58 45 36;         /* Walnut */
   --veil-alpha: 0.78;
   --silk-grain: url("/textures/grain-evening.svg");
