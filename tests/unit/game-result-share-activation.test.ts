@@ -49,7 +49,14 @@ function button(node: unknown, name: string): ReactElement<{ children?: unknown;
   }
   if (!node || typeof node !== 'object' || !('props' in node)) return;
   const element = node as ReactElement<{ children?: unknown; onClick: () => void; 'aria-label'?: string }>;
-  if (element.type === 'button' && (element.props['aria-label'] ?? element.props.children) === name) return element;
+  const text = (child: unknown): string => {
+    if (Array.isArray(child)) return child.map(text).join('');
+    if (!child || typeof child !== 'object' || !('props' in child)) return typeof child === 'string' ? child : '';
+    const childElement = child as ReactElement<{ children?: unknown; 'aria-hidden'?: boolean }>;
+    if (childElement.props['aria-hidden']) return '';
+    return text(childElement.props.children);
+  };
+  if (element.type === 'button' && ((element.props['aria-label'] ?? '') === name || text(element.props.children).includes(name))) return element;
   return button(element.props.children, name);
 }
 function click(name: string) {
