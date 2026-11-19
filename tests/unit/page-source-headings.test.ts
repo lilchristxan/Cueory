@@ -31,12 +31,13 @@ function componentHeadings(file: string, source: string): Map<string, number> {
   return headings;
 }
 
-/** True when the markup renders `<Name ...>` itself, not a longer tag that starts with the same letters. */
-const renders = (markup: string, name: string) => new RegExp(`<${name}(?=[\\s/>])`).test(markup);
+/** How many times the markup renders `<Name ...>` itself, not a longer tag that starts with the same letters. */
+const renderCount = (markup: string, name: string) => (markup.match(new RegExp(`<${name}(?=[\\s/>])`, 'g')) ?? []).length;
 
 /**
- * Heading problems in one page's source. Each Layout it renders needs exactly one h1 of its own, or a component
- * rendered inside that same Layout whose source holds the h1. An import alone never counts.
+ * Heading problems in one page's source. Each Layout it renders needs exactly one h1: its own, or one rendered
+ * component whose source holds an h1. A component counts once per time it renders, however many mutually exclusive
+ * states with an h1 it has inside. An import alone never counts.
  */
 function headingProblems(name: string, source: string, components: ReadonlyMap<string, number>): string[] {
   const markup = strip(source.replace(/^---[\s\S]*?\n---/, ' '));
@@ -44,13 +45,14 @@ function headingProblems(name: string, source: string, components: ReadonlyMap<s
   if (blocks.length === 0) return ['page must render the shared Layout'];
   const problems: string[] = [];
   blocks.forEach((block, index) => {
-    const own = h1Count(block);
-    if (own > 1 && !EXCLUSIVE_BRANCH_H1.has(name)) problems.push(`Layout ${index + 1} has ${own} h1 elements`);
-    if (own > 1 && EXCLUSIVE_BRANCH_H1.has(name) && !/\{\s*!?shown\b/.test(block)) {
+    const fromComponents = [...components]
+      .reduce((sum, [component, count]) => sum + (count > 0 ? renderCount(block, component) : 0), 0);
+    const total = h1Count(block) + fromComponents;
+    if (total > 1 && !EXCLUSIVE_BRANCH_H1.has(name)) problems.push(`Layout ${index + 1} has ${total} h1 elements`);
+    if (total > 1 && EXCLUSIVE_BRANCH_H1.has(name) && !/\{\s*!?shown\b/.test(block)) {
       problems.push(`Layout ${index + 1} has several h1 elements outside its shown branches`);
     }
-    const fromComponent = [...components].some(([component, count]) => count > 0 && renders(block, component));
-    if (own === 0 && !fromComponent) problems.push(`Layout ${index + 1} has no h1 of its own or from a component it renders`);
+    if (total === 0) problems.push(`Layout ${index + 1} has no h1 of its own or from a component it renders`);
   });
   return problems;
 }
@@ -107,6 +109,13 @@ describe('page source headings: synthetic pages', () => {
   it('checks each Layout branch on its own', () => {
     const body = '{ok ? (<Layout title="x"><AdminFlags /></Layout>) : (<Layout title="y"><p>soon</p></Layout>)}';
     expect(headingProblems('x.astro', page(body), island)).toEqual([missing(2)]);
+  });
+
+  it('rejects a direct h1 beside a heading component, or that component twice, in one Layout', () => {
+    expect(headingProblems('x.astro', page('<Layout title="x"><h1>reports</h1><AdminFlags client:only="react" /></Layout>'), island))
+      .toEqual(['Layout 1 has 2 h1 elements']);
+    expect(headingProblems('x.astro', page('<Layout title="x"><AdminFlags /><AdminFlags /></Layout>'), island))
+      .toEqual(['Layout 1 has 2 h1 elements']);
   });
 
   it('rejects two h1 in one Layout, a component without a heading, and a page without Layout', () => {
