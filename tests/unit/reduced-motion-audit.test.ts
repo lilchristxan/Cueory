@@ -174,12 +174,34 @@ function unguardedStyleLines(source: string): number[] {
   return found;
 }
 
+const GLOBAL_FALLBACKS = [
+  'animation-duration: 0.01ms !important',
+  'animation-iteration-count: 1 !important',
+  'transition-duration: 0.01ms !important',
+  'scroll-behavior: auto !important',
+];
+
+/** Returns the global reduced-motion declarations missing from the universal reduce rule in global.css. */
+function missingGlobalFallbacks(css: string) {
+  const rule = /@media \(prefers-reduced-motion: reduce\)\s*\{\s*\*,\s*\*::before,\s*\*::after \{([^}]*)\}/.exec(css)?.[1];
+  if (rule === undefined) return ['the universal reduce rule'];
+  return GLOBAL_FALLBACKS.filter((declaration) => !rule.includes(declaration));
+}
+
 describe('reduced motion audit', () => {
   it('keeps the global fallbacks', () => {
     const global = files.find((f) => f.name === 'styles/global.css')!.text;
-    expect(global).toMatch(/@media \(prefers-reduced-motion: reduce\)\s*\{\s*\*,\s*\*::before,\s*\*::after \{[^}]*scroll-behavior: auto !important/);
+    expect(missingGlobalFallbacks(global)).toEqual([]);
     const none = files.find((f) => f.name === 'styles/reduced-motion.css')!.text;
     expect(none).toContain('transition-property: none !important');
+  });
+
+  it('notices when a global animation fallback is deleted from the real global.css', () => {
+    const global = files.find((f) => f.name === 'styles/global.css')!.text;
+    for (const declaration of GLOBAL_FALLBACKS) {
+      expect(global).toContain(declaration);
+      expect(missingGlobalFallbacks(global.replace(declaration, ''))).toEqual([declaration]);
+    }
   });
 
   it('guards every Web Animations call where it runs', () => {
