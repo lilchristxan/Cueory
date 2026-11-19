@@ -81,6 +81,78 @@ function visibleText(markup: string): string {
   return text;
 }
 
+/** Marks which characters of an expression sit at nesting depth 0, outside any string. */
+function topLevelMask(text: string): boolean[] {
+  const mask: boolean[] = [];
+  let depth = 0;
+  let quote = '';
+  for (let at = 0; at < text.length; at += 1) {
+    const ch = text[at];
+    mask.push(false);
+    if (quote) {
+      if (ch === '\\') {
+        mask.push(false);
+        at += 1;
+      } else if (ch === quote) quote = '';
+    } else if (ch === '"' || ch === '`' || (ch === "'" && !/[A-Za-z0-9]/.test(text[at - 1] ?? ' '))) {
+      quote = ch; // an apostrophe inside a word (don't) is text, not a quote
+    } else if ('([{'.includes(ch)) {
+      depth += 1;
+    } else if (')]}'.includes(ch)) {
+      depth -= 1;
+    } else mask[at] = depth === 0;
+  }
+  return mask;
+}
+
+const isTernaryMark = (text: string, mask: boolean[], at: number) =>
+  mask[at] && text[at] === '?' && text[at - 1] !== '?' && text[at + 1] !== '?' && !(text[at + 1] === '.' && !/\d/.test(text[at + 2] ?? ''));
+
+/**
+ * Whether a JSX expression (the text between { and }, hidden elements already removed) still shows readable content.
+ * A ternary needs both branches readable; `a && b`, `a || b` and `a ?? b` count only through b; a plain value
+ * expression such as label or t('x') counts; null, undefined, booleans, empty strings and bare symbols do not.
+ */
+function readableExpression(expression: string): boolean {
+  const text = expression.trim();
+  const mask = topLevelMask(text);
+  for (let at = 0; at < text.length; at += 1) {
+    if (!isTernaryMark(text, mask, at)) continue;
+    let nested = 0;
+    for (let end = at + 1; end < text.length; end += 1) {
+      if (isTernaryMark(text, mask, end)) nested += 1;
+      else if (mask[end] && text[end] === ':') {
+        if (nested > 0) nested -= 1;
+        else return readableExpression(text.slice(at + 1, end)) && readableExpression(text.slice(end + 1));
+      }
+    }
+    return true; // not a ternary this walk can follow
+  }
+  let after = -1;
+  for (let at = 0; at < text.length - 1; at += 1) {
+    if (mask[at] && ['&&', '||', '??'].includes(text.slice(at, at + 2))) after = at + 2;
+  }
+  if (after !== -1) return readableExpression(text.slice(after));
+  return /[A-Za-z0-9]/.test(text) && !/^(?:null|undefined|true|false)$/.test(text);
+}
+
+/** Whether the visible text of a button or link names it: plain text, or a top-level expression that reads. */
+function namesControl(text: string): boolean {
+  let depth = 0;
+  let start = 0;
+  let plain = '';
+  for (let at = 0; at < text.length; at += 1) {
+    if (text[at] === '{') {
+      if (depth === 0) start = at + 1;
+      depth += 1;
+    } else if (text[at] === '}' && depth > 0) {
+      depth -= 1;
+      if (depth === 0 && readableExpression(text.slice(start, at))) return true;
+    } else if (depth === 0) plain += text[at];
+  }
+  return /[A-Za-z0-9]/.test(plain);
+}
+
 /** Buttons and links with no name: no label attribute and no visible text or expression. */
 function unnamedButtonsAndLinks(file: string, source: string): string[] {
   const bad: string[] = [];
@@ -89,7 +161,7 @@ function unnamedButtonsAndLinks(file: string, source: string): string[] {
     const start = m.index + m[0].length;
     const end = source.indexOf(`</${m[1]}>`, start);
     const text = end === -1 ? '' : visibleText(source.slice(start, end));
-    if (!/[A-Za-z0-9]/.test(text) && !/\{[^}]+\}/.test(text)) bad.push(`${file}:${line(source, m.index)} <${m[1]}>`);
+    if (!namesControl(text)) bad.push(`${file}:${line(source, m.index)} <${m[1]}>`);
   }
   return bad;
 }
@@ -121,6 +193,14 @@ describe('accessible names in component and island source', () => {
     expect(bad('<button><span aria-hidden><b>nested</b></span></button>')).toHaveLength(1);
     expect(bad('<a href="/x"><svg viewBox="0 0 1 1"><title>go</title></svg></a>')).toHaveLength(1);
     expect(bad('<button type="button"></button>')).toHaveLength(1);
+    // The pause button pattern with its aria-label removed: only the {cond ? : } skeleton is left.
+    expect(
+      bad('<button type="button" className="icon" disabled={solved} onClick={toggle}>{paused\n  ? <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6v11" /></svg>\n  : <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6v11" /></svg>}</button>'),
+    ).toHaveLength(1);
+    expect(bad('<button>{open && <svg aria-hidden="true" />}</button>')).toHaveLength(1);
+    expect(bad('<button>{open ? <svg aria-hidden="true" /> : \'open\'}</button>')).toHaveLength(1);
+    expect(bad('<button>{open ? <span>close</span> : null}</button>')).toHaveLength(1);
+    expect(bad('<button>{open ? \'\' : \'\'}</button>')).toHaveLength(1);
   });
 
   it('counts visible text next to hidden icons (positive fixtures)', () => {
@@ -130,6 +210,12 @@ describe('accessible names in component and island source', () => {
     expect(bad('<button aria-label="close"><span aria-hidden="true">x</span></button>')).toEqual([]);
     expect(bad('<button><span aria-hidden="true"><b>nested</b></span>text</button>')).toEqual([]);
     expect(bad('<button>{label}</button>')).toEqual([]);
+    expect(bad("<button>{t('x')}</button>")).toEqual([]);
+    expect(bad("<button>{open ? 'close' : 'open'}</button>")).toEqual([]);
+    expect(bad('<button>{open ? <span>close</span> : <span>open</span>}</button>')).toEqual([]);
+    expect(bad('<button>{ready && <span>go</span>}</button>')).toEqual([]);
+    expect(bad('<button>{a ? b : c ? \'x\' : \'y\'}</button>')).toEqual([]);
+    expect(bad('<button>{shown && <span aria-hidden="true">✓</span>}{names[key]}</button>')).toEqual([]);
     expect(bad('<a href="/x"><img src="/a.svg" alt="" />home</a>')).toEqual([]);
   });
 
