@@ -27,4 +27,9 @@ describe('colour is never the only signal in game islands', () => {
   it('a found cell in the Suture letter grid is underlined, not only filled', () => {
     expect(source('SutureGame')).toMatch(/'bg-soft underline[^']*'/);
   });
+
+  it('the found-cell underline is screen-only, so a printed puzzle never gives away found answers', () => {
+    const found = source('SutureGame').match(/'(bg-soft underline[^']*)'/)?.[1] ?? '';
+    expect(found.split(/\s+/)).toContain('print:no-underline');
+  });
 });

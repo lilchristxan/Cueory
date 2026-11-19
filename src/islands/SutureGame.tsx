@@ -182,7 +182,7 @@ function Board({ puzzle, name }: Props) {
               const isFirst = state.anchor?.[0] === r && state.anchor?.[1] === c;
               const inPick = picked.some(([pr, pc]) => pr === r && pc === c);
               const look = word !== undefined
-                ? 'bg-soft underline decoration-2 underline-offset-2'
+                ? 'bg-soft underline decoration-2 underline-offset-2 print:no-underline'
                 : isFirst
                   ? 'bg-button text-on-button'
                   : inPick
