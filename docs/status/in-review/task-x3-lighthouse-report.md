@@ -1,0 +1,1 @@
+status: Task x3, Lighthouse mobile report (docs/launch/lighthouse-x3.md): 4 of the 20 launch pages measured, with accessibility and best practices at 100 on all four and speed 25 to 48 on a local server; the other 16 timed out on a busy laptop and need a rerun against the preview or live site.
