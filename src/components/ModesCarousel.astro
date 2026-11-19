@@ -1,13 +1,15 @@
 ---
 /**
  * "ways to study" on the home page (D-50, D-60), drawn as Christian's vials (Task 109, the prototype he approved on
- * 2026-11-01: docs/screenshots/approved-2026-11-01/vial-carousel-*). A small "ways to study" heading and the serif
- * line, then the eleven vials standing in a shallow arc on a soft pedestal, with the arrows and the dots under it. No
- * caption repeats the vial's name (Christian, 2026-11-02: no description that only restates its label).
+ * 2026-11-01: docs/screenshots/approved-2026-11-01/vial-carousel-*), restyled to HomeV2 (P6): the copy deck's serif
+ * heading "one lesson, multiple ways to study" and its line, then the vials standing side by side in a straight row on
+ * a glossy platform, with copper-rimmed arrows and the dots. No two vials overlap, and a vial that would not fit whole
+ * is hidden rather than cut off (rowPlace in src/scripts/carousel.ts). No caption repeats the vial's name (Christian,
+ * 2026-11-02: no description that only restates its label).
  *
  * Without JavaScript it still works: the vials are a row that scrolls sideways and snaps each vial to the middle, each
  * with its link (or "coming soon") under it. The script turns the row into the ring: the vial in front is the largest
- * and brightest, and the others step back on both sides, smaller, further back, a little higher and dimmer. Next
+ * and brightest, and the others stand beside it on both sides, each a little smaller and dimmer than the last. Next
  * after the last vial is the first again, and previous before the first is the last. The arrows, the arrow keys, a
  * swipe or a tap on a side vial turn it; a tap or Enter on the vial in front opens its preview. A gentle auto-advance
  * stops for good once the visitor uses it, pauses while a mouse rests on the vials or keyboard focus is inside, and
@@ -67,9 +69,9 @@ const icons: Record<StudyFeatureIcon, string> = {
   <!-- The heading, the vials and their buttons fade in together the first time they come into view (D-62). -->
   <div data-reveal-section>
   <div class="mx-auto max-w-page px-gutter text-center">
-    <h2 id="modes-heading" class="modes-kicker">ways to study</h2>
-        <p class="display mt-2 text-title sm:text-title-lg">one lesson, multiple ways to study</p>
-        <p class="mt-2 text-body text-ink-soft">pick the method that fits your brain today.</p>
+    <!-- HomeV2 and the copy deck: the serif heading in two lines, no eyebrow above it, and the one line under it. -->
+    <h2 id="modes-heading" class="display text-title sm:text-title-lg"><span class="block">one lesson,</span> <span class="block">multiple ways to study</span></h2>
+    <p class="mt-3 text-body text-ink-soft">pick the method that fits your brain today.</p>
   </div>
 
   <div class="vial-stage mt-8">
@@ -232,6 +234,8 @@ const icons: Record<StudyFeatureIcon, string> = {
     keyTarget,
     ringOffset,
     ringPlace,
+    rowPlace,
+    ROW_GAP,
     slideAnnouncement,
     swipeTurn,
     wrap,
@@ -301,22 +305,42 @@ const icons: Record<StudyFeatureIcon, string> = {
      * Puts every vial in its place on the arc around the one in front. The styles draw each place from the numbers set
      * here (global.css); a vial going round the back, or the first placing, switches at once instead of gliding.
      */
+    const prevArrow = root.querySelector<HTMLElement>('[data-modes-prev]');
+    /**
+     * How many vial widths the row has from its middle to the nearest thing it must not cross: the stage's edge, or
+     * the arrow beside the vials on wider screens, less one gap. A vial that would pass it is hidden, never cut off.
+     */
+    const rowRoom = () => {
+      const width = cards[active]!.offsetWidth;
+      if (!width) return Number.POSITIVE_INFINITY;
+      const stage = track.getBoundingClientRect();
+      const middle = stage.left + stage.width / 2;
+      let reach = stage.width / 2;
+      if (prevArrow && getComputedStyle(prevArrow).position === 'absolute') {
+        reach = Math.min(reach, middle - prevArrow.getBoundingClientRect().right);
+      }
+      return (reach - ROW_GAP * width) / width;
+    };
+
     const place = () => {
+      const room = rowRoom();
       cards.forEach((card, index) => {
         const offset = ringOffset(index, active, cards.length);
         const spot = ringPlace(offset);
+        // HomeV2's straight row (P6): the ring's sizes and light, but side by side with a gap, and only what fits.
+        const row = rowPlace(offset, room);
         const before = offsets[index]!;
         offsets[index] = offset;
         card.toggleAttribute('data-jump', Number.isNaN(before) || !glides(before, offset));
         card.dataset.offset = String(offset);
-        card.style.setProperty('--ring-shift', String(spot.shift));
+        card.style.setProperty('--ring-shift', String(row.shift));
         card.style.setProperty('--ring-rise', String(spot.rise));
         card.style.setProperty('--ring-depth', String(spot.depth));
         card.style.setProperty('--ring-scale', String(spot.scale));
         card.style.setProperty('--ring-bright', String(spot.bright));
         card.style.setProperty('--ring-saturate', String(spot.saturate));
         card.style.setProperty('--ring-layer', String(spot.layer));
-        card.toggleAttribute('data-far', !spot.shown);
+        card.toggleAttribute('data-far', !row.shown);
         card.toggleAttribute('data-active', offset === 0);
         // Only the vial in front is in the Tab order. A side vial is one tap, or one arrow key, away.
         const button = openButtons[index];
@@ -331,6 +355,16 @@ const icons: Record<StudyFeatureIcon, string> = {
       });
       dots.forEach((dot, index) => dot.toggleAttribute('data-on', index === active));
     };
+
+    // A new window width (or text size) changes how many vials fit, so the row is laid out again.
+    let laidOutAt = track.clientWidth;
+    const relayout = () => {
+      if (track.clientWidth === laidOutAt) return;
+      laidOutAt = track.clientWidth;
+      place();
+    };
+    if (typeof ResizeObserver === 'function') new ResizeObserver(relayout).observe(track);
+    else window.addEventListener('resize', relayout);
 
     /**
      * Only the card where the merry-go-round comes to rest is announced: a run of quick presses or swipes reads out
@@ -794,26 +828,45 @@ const icons: Record<StudyFeatureIcon, string> = {
 </script>
 
 <style>
-  /* P6 surface contract: keep the carousel on the shared glass/label tokens owned by Phase 0. */
-  .modes-p6 .modes-kicker {
-    font-size: var(--cueory-label-size);
-    font-weight: var(--cueory-label-weight);
-    letter-spacing: var(--cueory-label-tracking);
-  }
-
+  /* P6 surface contract: keep the carousel on the shared glass tokens owned by Phase 0. */
   .modes-p6 .mode-preview-panel {
     background: var(--cueory-glass-bg);
     border-color: var(--cueory-glass-border);
     box-shadow: var(--cueory-glass-shadow);
   }
 
-  /* HomeV2 keeps the real-mode carousel as a readable straight row on its glossy platform. */
+  /*
+    HomeV2's straight row: every vial on one baseline, side by side with a gap (rowPlace in src/scripts/carousel.ts
+    sets --ring-shift so no two bottles overlap, and hides any that would not fit whole).
+  */
   .modes-p6[data-ring] .mode-card {
     transform: translateX(calc(-50% + var(--ring-shift, 0) * var(--vial-width))) scale(var(--ring-scale, 1));
   }
 
+  /*
+    HomeV2's glossy platform: a raised white disc with a rim. The top is the pedestal itself (a bright sheen over the
+    ivory), the rim is its lower edge drawn as a band of soft shade under it.
+  */
+  .modes-p6 .vial-pedestal {
+    background-image:
+      radial-gradient(60% 55% at 50% 30%, rgb(var(--glass-rim-rgb) / 0.95), transparent 70%),
+      linear-gradient(180deg, var(--color-silk-sheen), color-mix(in srgb, var(--color-silk-sheen) 70%, var(--color-silk-tint)));
+    box-shadow:
+      0 calc(var(--spacing) * 3) 0 color-mix(in srgb, var(--color-silk-tint) 70%, var(--color-silk-shade)),
+      0 calc(var(--spacing) * 9) calc(var(--spacing) * 12) rgb(var(--shadow-tint) / 0.2),
+      inset 0 calc(var(--spacing) * 0.5) 0 rgb(var(--glass-rim-rgb) / 0.9),
+      inset 0 calc(var(--spacing) * -2) calc(var(--spacing) * 3) rgb(var(--shadow-tint) / 0.08);
+  }
+
+  /* HomeV2's arrows: pale copper-glow discs with a copper rim and a dark chevron (Charcoal on the glow in both themes). */
   .modes-p6 .vial-arrow {
     color: var(--cueory-copper-ink);
-    background: linear-gradient(135deg, var(--cueory-copper-start), var(--cueory-copper-end));
+    background: var(--cueory-copper-glow);
+    border: 1px solid var(--cueory-copper-start);
+    box-shadow: 0 calc(var(--spacing) * 1) calc(var(--spacing) * 3) rgb(var(--shadow-tint) / 0.16);
+  }
+
+  .modes-p6 .vial-arrow:hover {
+    background: var(--cueory-copper-shine);
   }
 </style>

@@ -104,6 +104,52 @@ test('phones put the arrows under the pedestal, either side of the dots; wider s
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 });
 
+test('every vial on show has its whole label in view, and no two vials overlap, in Light and Evening (P6)', async ({
+  page,
+}) => {
+  for (const colorScheme of ['light', 'dark'] as const) {
+    await page.emulateMedia({ colorScheme });
+    await showRing(page);
+    // Check the row where it starts and after one turn each way, once each glide has finished.
+    for (const turn of [undefined, 'next', 'previous'] as const) {
+      if (turn) await section(page).getByRole('button', { name: `${turn} study mode` }).click();
+      await expect
+        .poll(() =>
+          section(page)
+            .locator('[data-mode-card]')
+            .evaluateAll((cards) => cards.some((card) => card.getAnimations().some((a) => a.playState === 'running'))),
+        )
+        .toBe(false);
+      const shown = await section(page).evaluate((root) => {
+        const stage = root.querySelector('[data-modes-track]')!.getBoundingClientRect();
+        return [...root.querySelectorAll<HTMLElement>('[data-mode-card]')]
+          .filter((card) => getComputedStyle(card).visibility === 'visible')
+          .map((card) => {
+            const box = (el: Element) => {
+              const r = el.getBoundingClientRect();
+              return { left: r.left, right: r.right, top: r.top, bottom: r.bottom };
+            };
+            return { name: card.dataset.name, vial: box(card.querySelector('[data-vial]')!), label: box(card.querySelector('.vial-label')!) };
+          })
+          .sort((a, b) => a.vial.left - b.vial.left)
+          .map((item) => ({ ...item, stage: { left: stage.left, right: stage.right }, view: window.innerWidth }));
+      });
+      // The front vial and at least one neighbour on each side.
+      expect(shown.length, `${colorScheme} ${turn ?? 'start'}`).toBeGreaterThanOrEqual(3);
+      for (const [i, item] of shown.entries()) {
+        // The whole label is inside the window and inside the stage (which clips what passes its edges).
+        expect(item.label.left, `${item.name} label left`).toBeGreaterThanOrEqual(Math.max(0, item.stage.left) - 0.5);
+        expect(item.label.right, `${item.name} label right`).toBeLessThanOrEqual(Math.min(item.view, item.stage.right) + 0.5);
+        expect(item.label.right - item.label.left).toBeGreaterThan(0);
+        // No bottle overlaps the next one, so nothing covers any part of a label.
+        const next = shown[i + 1];
+        if (next) expect(next.vial.left, `${item.name} and ${next.name} overlap`).toBeGreaterThanOrEqual(item.vial.right);
+      }
+    }
+  }
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+});
+
 test('Enter on the vial in front grows that same bottle into the preview, in two stages; Escape puts it back', async ({
   page,
 }) => {
