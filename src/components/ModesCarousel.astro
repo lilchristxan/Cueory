@@ -574,6 +574,7 @@ const icons: Record<StudyFeatureIcon, string> = {
     const bottle = dialog?.querySelector<HTMLElement>('[data-mode-preview-vial]');
     const surface = dialog?.querySelector<HTMLElement>('[data-mode-preview-surface]');
     if (dialog && panel && scrim && bottle && surface && typeof dialog.showModal === 'function') {
+      const closeButton = dialog.querySelector<HTMLButtonElement>('[data-mode-preview-close]');
       const fades = [...dialog.querySelectorAll<HTMLElement>('[data-mode-preview-fade]')];
       const title = dialog.querySelector<HTMLElement>('[data-mode-preview-title]');
       const info = dialog.querySelector<HTMLElement>('[data-infotip]');
@@ -648,6 +649,7 @@ const icons: Record<StudyFeatureIcon, string> = {
         returnFocus = true;
         quiet = true;
         dialog.showModal();
+        closeButton?.focus();
         lend(index);
         if (state.reducedMotion) return;
         const to = bottle.getBoundingClientRect();
@@ -745,7 +747,7 @@ const icons: Record<StudyFeatureIcon, string> = {
       };
 
       preview = open;
-      dialog.querySelector('[data-mode-preview-close]')?.addEventListener('click', () => void close());
+      closeButton?.addEventListener('click', () => void close());
       dialog.querySelector('[data-mode-preview-prev]')?.addEventListener('click', () => step(-1));
       dialog.querySelector('[data-mode-preview-next]')?.addEventListener('click', () => step(1));
 
