@@ -1,0 +1,2 @@
+status: P7 redesigns the home games stage and launch-updates presentation, removes the unreferenced home how-it-works section, and preserves closed-game gates and the existing Kit signup path.
+The stage's names, readiness and counts ("01 / 05", "play one, or all three") now come from games.ts through src/config/homegames.ts (copy deck ship column), and the stage widens to the explore width so the five cards match HomeV2-3.

@@ -15,20 +15,24 @@ const ready = state === 'form';
 const landingUrl = kitLandingUrl(newsletter.landingUrl);
 ---
 
-<section id="signup" class="scene scene-low scroll-mt-section py-section" aria-labelledby="signup-heading">
-  <div class="mx-auto max-w-prose px-gutter" data-reveal-section>
-    <div class="veil p-6 text-center sm:p-10">
-      <h2 id="signup-heading" class="display text-title wrap-break-word sm:text-title-lg">get launch updates</h2>
+<section id="signup" class="scene scene-low scroll-mt-section py-section" aria-labelledby="signup-eyebrow signup-heading">
+  <div class="mx-auto max-w-page px-gutter" data-reveal-section>
+    <div class="signup-card veil border p-6 sm:p-10">
+      <div class="signup-layout grid gap-6 lg:items-center">
+        <div>
+          <p id="signup-eyebrow" class="signup-label text-ink-soft">launch updates</p>
+          <h2 id="signup-heading" class="display mt-3 text-title wrap-break-word sm:text-title-lg">coming soon</h2>
+          <p class="mt-4 max-w-prose text-ink-soft">Mental Health I and Med Math are next. Get one email when they open.</p>
+        </div>
       {
         ready ? (
-          <>
             <form
               action={kitFormAction(newsletter.formAction)}
               method="post"
-              class="mt-4 flex flex-col gap-3 text-left sm:flex-row sm:items-end"
+              class="min-w-0 flex flex-col gap-3 text-left sm:flex-row sm:items-end"
               data-testid="signup-form"
             >
-              <div class="flex flex-1 flex-col gap-1">
+              <div class="min-w-0 flex flex-1 flex-col gap-1">
                 <label for="signup-email" class="text-sm text-ink-soft">
                   email address
                 </label>
@@ -41,40 +45,76 @@ const landingUrl = kitLandingUrl(newsletter.landingUrl);
                   autocomplete="email"
                   inputmode="email"
                   aria-describedby="signup-email-help"
-                  class="rounded-md border border-control bg-page px-4 py-3 text-ink"
+                  placeholder="your email"
+                  class="min-w-0 w-full max-w-full rounded-pill border border-control bg-page px-4 py-3 text-ink"
                 />
               </div>
-              <button type="submit" class="rounded-pill bg-button px-6 py-3 text-on-button hover:bg-button-hover">
-                sign up
+              <button type="submit" class="signup-action min-h-11 rounded-pill px-6 py-3 font-bold">
+                join the list
               </button>
             </form>
-            <p id="signup-email-help" class="mt-4 text-sm text-ink-soft">
-              a few emails about new lessons and the launch. unsubscribe any time. emails are sent by {newsletter.provider};
-              see our <a href="/privacy">privacy page</a>.
-            </p>
-          </>
         ) : state === 'landing' ? (
-          <>
             <a
               href={landingUrl}
               target="_blank"
               rel="noopener noreferrer"
-              class="glass-button mt-6"
+              class="signup-action inline-flex min-h-11 items-center justify-center rounded-pill px-6 py-3 font-bold"
               aria-label="get launch updates (opens in a new tab)"
               data-testid="signup-landing"
             >
               get launch updates
             </a>
-            <p class="mt-4 text-sm text-ink-soft">
-              you sign up on {newsletter.provider}'s page; see our <a href="/privacy">privacy page</a>.
-            </p>
-          </>
         ) : (
-          <p class="mt-3 text-ink-soft" data-testid="signup-pending">
+          <p class="text-ink-soft" data-testid="signup-pending">
             sign ups open soon.
           </p>
         )
       }
+      </div>
+      {
+        ready ? (
+          <p id="signup-email-help" class="mt-4 text-sm text-ink-soft">
+            a few emails about new lessons and the launch. unsubscribe any time. emails are sent by {newsletter.provider};
+            see our <a href="/privacy">privacy page</a>.
+          </p>
+        ) : state === 'landing' ? (
+          <p class="mt-4 text-sm text-ink-soft">
+            you sign up on {newsletter.provider}'s page; see our <a href="/privacy">privacy page</a>.
+          </p>
+        ) : null
+      }
     </div>
   </div>
 </section>
+
+<style>
+  .signup-card {
+    border-color: var(--cueory-glass-border);
+    border-radius: var(--cueory-result-card-radius);
+  }
+
+  .signup-label {
+    font-size: var(--cueory-label-size);
+    font-weight: var(--cueory-label-weight);
+    letter-spacing: var(--cueory-label-tracking);
+  }
+
+  .signup-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .signup-action {
+    background: var(--cueory-copper-end);
+    color: var(--cueory-copper-ink);
+  }
+
+  .signup-action:hover {
+    background: var(--cueory-copper-start);
+  }
+
+  @media (min-width: 64em) {
+    .signup-layout {
+      grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+    }
+  }
+</style>

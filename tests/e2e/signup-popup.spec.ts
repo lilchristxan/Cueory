@@ -213,7 +213,7 @@ for (const scheme of ['light', 'dark'] as const) {
     await page.emulateMedia({ colorScheme: scheme, reducedMotion: 'reduce' });
     await openAt(page, '/');
     // Focus starts on a page link, so the test can see it come back.
-    const before = page.getByRole('link', { name: "play today's games", exact: true }).first();
+    const before = page.getByTestId('games-link');
     await before.focus();
     await page.clock.runFor(11_000);
     const dialog = popup(page);

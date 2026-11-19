@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { kitLandingUrl, newsletter, signupState } from '../../src/config/site';
+import { kitFormAction, kitLandingUrl, newsletter, signupState } from '../../src/config/site';
 import { sizeOf } from './projects';
 
 const homeSizes = new Set(['phone', 'desktop']);
@@ -22,27 +22,29 @@ test.describe('home page-specific behavior', () => {
     expect(response?.status()).toBe(200);
 
     const identifiedSections = page.locator('main > section[id]');
-    await expect(page.locator('main > section')).toHaveCount(5);
-    await expect(identifiedSections).toHaveCount(4);
+    await expect(page.locator('main > section')).toHaveCount(4);
+    await expect(identifiedSections).toHaveCount(3);
     const sectionIds = await identifiedSections.evaluateAll((sections) => sections.map((section) => section.id));
     expect(sectionIds).toEqual([
-      'how-it-works',
       'ways-to-study',
       'daily-games',
       'signup',
     ]);
 
-    await expect(page.getByRole('link', { name: "start with a lesson" })).toHaveAttribute('href', '/learn/study-skills');
     await expect(page.getByTestId('games-link')).toHaveAttribute('href', '/play');
-    await expect(page.getByRole('heading', { level: 2 })).toHaveCount(5);
-    const sectionHeadings = await page.getByRole('heading', { level: 2 }).allTextContents();
-    expect(sectionHeadings).toEqual([
-      'start with what you need.', // the hero's explore row (P5)
-      'how it works',
-      'one lesson, multiple ways to study', // the vial carousel (P6, copy deck)
-      'daily games',
-      'get launch updates',
+    await expect(page.getByRole('heading', { level: 2 })).toHaveText([
+      'start with what you need.',
+      'one lesson, multiple ways to study',
+      'a few minutes, every day.',
+      'coming soon',
     ]);
+
+    await expect(page.getByText('a new set of nursing games each day. play one, or all three.')).toBeVisible();
+    const games = page.getByTestId('games-stage');
+    await expect(games.locator('[data-game-card]')).toHaveCount(5);
+    await expect(games.locator('[data-game-card="crossword"]')).toContainText('coming soon');
+    await expect(games.locator('[data-game-card="hello cards"]')).toContainText('coming soon');
+    await expect(games.locator('[data-game-card="sudoku"]')).toContainText('fill every row, column and box with the numbers one through nine.');
 
     // The launch-updates box follows src/config/site.ts: Kit's form, a link to Kit's landing page, or the pending line.
     const state = signupState(newsletter.formAction, newsletter.landingUrl);
@@ -67,6 +69,60 @@ test.describe('home page-specific behavior', () => {
       await page.keyboard.press('Tab');
       await expect(landing).toBeFocused();
       expect(await landing.evaluate((el) => el.matches(':focus-visible') && getComputedStyle(el).outlineStyle !== 'none')).toBe(true);
+    }
+    if (state === 'form') {
+      // The configured Kit path remains a plain HTML form. Do not submit it: that would create a real subscription.
+      const form = page.getByTestId('signup-form');
+      const email = form.getByLabel('email address');
+      const submit = form.getByRole('button', { name: 'join the list' });
+      await expect(form).toHaveAttribute('action', kitFormAction(newsletter.formAction));
+      await expect(email).toHaveAttribute('name', newsletter.emailFieldName);
+      await expect(email).toHaveAttribute('type', 'email');
+      await expect(email).toHaveAttribute('placeholder', 'your email');
+      await expect(submit).toBeVisible();
+      await email.scrollIntoViewIfNeeded();
+      await email.focus();
+      await page.keyboard.press('Tab');
+      await expect(submit).toBeFocused();
+    }
+  });
+
+  test('keeps the daily-games action keyboard focus visible on its inverted stage in Light and Evening', async ({ page }, testInfo) => {
+    test.skip(!homeSizes.has(sizeOf(testInfo)), 'Task 400 runs at phone and desktop sizes only.');
+
+    for (const colorScheme of ['light', 'dark'] as const) {
+      await page.emulateMedia({ colorScheme });
+      await page.goto('/');
+      const action = page.getByTestId('games-link');
+      await action.focus();
+      await page.keyboard.press('Shift+Tab');
+      await page.keyboard.press('Tab');
+      await expect(action).toBeFocused();
+
+      const focus = await action.evaluate((element) => {
+        const stage = element.closest<HTMLElement>('[data-testid="games-stage"]')!;
+        const rgb = (color: string) => color.match(/\d+/g)!.slice(0, 3).map(Number).map((channel) => channel / 255);
+        const luminance = (color: string) => {
+          const [red, green, blue] = rgb(color).map((channel) =>
+            channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4,
+          );
+          return 0.2126 * red + 0.7152 * green + 0.0722 * blue;
+        };
+        const style = getComputedStyle(element);
+        const outline = luminance(style.outlineColor);
+        const stagePaint = luminance(getComputedStyle(stage).backgroundColor);
+        return {
+          visible: element.matches(':focus-visible') && style.outlineStyle !== 'none',
+          width: style.outlineWidth,
+          offset: style.outlineOffset,
+          contrast: (Math.max(outline, stagePaint) + 0.05) / (Math.min(outline, stagePaint) + 0.05),
+        };
+      });
+
+      expect(focus.visible).toBe(true);
+      expect(focus.width).toBe('3px');
+      expect(focus.offset).toBe('3px');
+      expect(focus.contrast).toBeGreaterThanOrEqual(3);
     }
   });
 
