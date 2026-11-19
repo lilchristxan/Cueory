@@ -121,6 +121,16 @@ test('arrow keys move the selection and bring the card into view', async ({ page
   await expect.poll(() => group.evaluate((row) => row.scrollLeft)).toBeGreaterThan(0);
 });
 
+test('the scrolling row is not a Tab stop of its own, so Tab goes from the radios straight to the buttons', async ({ page }) => {
+  // Firefox makes a scrolling box a Tab stop unless it opts out (advisor finding, #903 lane 7).
+  await page.goto(ROUTE);
+  const group = page.getByRole('radiogroup', { name: gameSheetName });
+  await expect(group).toHaveAttribute('tabindex', '-1');
+  await group.getByRole('radio', { name: 'scene' }).focus();
+  await page.keyboard.press('Tab');
+  await expect(page.getByRole('button', { name: 'previous style' }).first()).toBeFocused();
+});
+
 test('the focused card draws its own visible focus ring', async ({ page }) => {
   await page.goto(ROUTE);
   const group = page.getByRole('radiogroup', { name: gameSheetName });

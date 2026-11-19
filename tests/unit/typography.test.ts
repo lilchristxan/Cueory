@@ -8,7 +8,7 @@ const tokens = read('src/styles/tokens.css');
 const global = read('src/styles/global.css');
 
 /** Text styles set in the serif display font (marketing headlines), kept tight on purpose. */
-const DISPLAY = new Set(['hero', 'display', 'display-lg', 'display-fit', 'display-hero', 'title-explore', 'title', 'title-lg']);
+const DISPLAY = new Set(['hero', 'display', 'display-lg', 'display-fit', 'display-hero', 'display-hero-phone', 'display-about-phone', 'title-explore', 'title', 'title-lg']);
 
 describe('typography', () => {
   it('uses Lato for body and interface text', () => {
