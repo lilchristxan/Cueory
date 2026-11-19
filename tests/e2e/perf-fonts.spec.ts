@@ -6,6 +6,11 @@ import { expect, test } from '@playwright/test';
  */
 const lato = ['lato-latin-400-normal.woff2', 'lato-latin-700-normal.woff2'];
 
+// The offline first-visit save (src/scripts/offline.ts) asks again, through the service worker, for every file the
+// page loaded (initiator "fetch", answered from cache) once the worker takes control. That deliberate request is not
+// the font load measured here and lands at a random moment, so this spec runs without service workers.
+test.use({ serviceWorkers: 'block' });
+
 for (const path of ['/', '/learn/study-skills', '/play', '/signin']) {
   test(`${path}: both preloaded Lato weights are used and downloaded once`, async ({ page }, testInfo) => {
     await page.goto(path);

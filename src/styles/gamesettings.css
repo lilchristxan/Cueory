@@ -17,11 +17,13 @@ html:root[data-game-contrast="high"] {
 html:root[data-game-motion="reduce"] *,
 html:root[data-game-motion="reduce"] *::before,
 html:root[data-game-motion="reduce"] *::after {
-  /* The same near-zero durations as the site's own prefers-reduced-motion rule (global.css), so animationend and
-     transitionend still fire for games that wait for them. */
+  /* The same rules as the site's own prefers-reduced-motion ones (global.css and reduced-motion.css): near-zero
+     animations, so animationend still fires, and no transitions at all. A blanket 0.01ms transition turned every color
+     change into a one-frame transition, and WebKit and Firefox read the old color (engine run 44460645965, E2). */
   animation-duration: 0.01ms !important;
   animation-iteration-count: 1 !important;
   transition-duration: 0.01ms !important;
+  transition-property: none !important;
   scroll-behavior: auto !important;
 }
 

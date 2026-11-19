@@ -155,6 +155,9 @@
      column's width (container query), so the longer line always fits, even with enlarged text. */
   --text-display-hero: clamp(1rem, 100cqi / 7.6, 5.5rem);
   --text-display-hero--line-height: 1.05;
+  /* Phones draw the headline on four large lines (nursing / school / made / simpler.), sized by the same column width. */
+  --text-display-hero-phone: clamp(1rem, 100cqi / 4.6, 5.5rem);
+  --text-display-hero-phone--line-height: 1.05;
   --text-title-explore: 2rem;   /* the explore row's heading */
   --text-title-explore--line-height: 1.2;
   --text-title: 2.375rem;       /* marketing page title (38px) */
@@ -206,6 +209,9 @@
   --hero-top-clear: 1rem;       /* space above the hero's logo row (the corner buttons sit in the page's top 4.5 rem) */
   --hero-logo-inset: calc(var(--header-inline-gutter) + var(--tap-min) + var(--header-corner-gap) - var(--spacing-gutter));
   --hero-eyebrow-gap: 2.5rem;   /* between the logo row and the motto */
+  --radius-card-lg: 1.75rem;    /* the hero's support card corners */
+  --icon-size-mug: 2.5rem;      /* the Ko-fi cup mark, width */
+  --icon-size-mug-height: 1.875rem; /* and height */
   --icon-size: 1.75rem;         /* a small line icon beside a label */
   --icon-size-lg: 2rem;         /* a line icon above a tile label */
   --container-menu: min(85vw, 22.5rem); /* the ☰ side panel: most of a phone, 360px on bigger screens */
