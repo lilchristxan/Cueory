@@ -65,14 +65,14 @@ test('finished-game result announces the exact card and traps focus', async ({ p
 test('result footer stays truthful for repeating samples and respects explicit game copy', async ({ page }) => {
   const dialog = await openResult(page);
   const nextMessage = dialog.getByTestId('game-result-next-message');
-  await expect(nextMessage).toHaveText('on a phone, share also opens instagram, tiktok and messages. a new pillo comes out tomorrow.');
+  await expect(nextMessage).toHaveText('on a phone, share opens your device options.');
 
   await page.evaluate((detail) => {
     window.dispatchEvent(new CustomEvent('cueory:game-result-card', {
       detail: { ...detail, game: 'hello-cards', name: 'hello cards', result: "today's card" },
     }));
   }, card);
-  await expect(nextMessage).toHaveText('on a phone, share also opens instagram, tiktok and messages. a new pillo comes out tomorrow.');
+  await expect(nextMessage).toHaveText('on a phone, share opens your device options.');
 
   await page.evaluate((detail) => {
     window.dispatchEvent(new CustomEvent('cueory:game-result-card', {
