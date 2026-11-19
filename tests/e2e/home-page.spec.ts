@@ -32,8 +32,8 @@ test.describe('home page-specific behavior', () => {
     ]);
 
     await expect(page.getByTestId('games-link')).toHaveAttribute('href', '/play');
-    await expect(page.getByRole('heading', { level: 2 })).toHaveCount(3);
-    const sectionHeadings = await page.getByRole('heading', { level: 2 }).allTextContents();
+    // P5 owns the hero's headings. These are the three P7 lower section headings in their published order.
+    const sectionHeadings = await page.locator('#ways-to-study h2, #daily-games h2, #signup h2').allTextContents();
     expect(sectionHeadings).toEqual([
       'ways to study',
       'a few minutes, every day.',

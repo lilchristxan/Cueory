@@ -33,9 +33,10 @@ describe('message page shell', () => {
     expect(indexablePages).not.toContain('/message');
   });
 
-  it('explains the page-level flag and leaves founder copy for review', () => {
+  it('explains the page-level flag and uses the approved intro copy', () => {
     expect(pageSource).toContain('flag or comment on a page');
     expect(pageSource).toContain('PATIENT_INFO_WARNING');
-    expect(pageSource).toContain('[Christian writes this]');
+    expect(pageSource).toContain('Something broken, confusing or missing? An idea that would help? We read every message.');
+    expect(pageSource).not.toContain('[Christian writes this]');
   });
 });
