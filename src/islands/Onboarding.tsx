@@ -12,6 +12,7 @@ import { setupDateProblem } from './setupdate';
 import {
   ONBOARDING_FIELDS, focusAfterRender, nextOnboardingStep, previousOnboardingStep, skipOnboardingStep, type OnboardingStep,
 } from './onboardingsteps';
+import { moveRadioWithArrows } from './radioarrows';
 
 /** The account signed in now isn't the one first connected on this visit. */
 const ACCOUNT_CHANGED = { accountChanged: true } as const;
@@ -182,29 +183,31 @@ export default function Onboarding() {
   };
 
   /** The question that should take focus once it has rendered; set by focusQuestion, consumed by the effect below. */
-  const pendingFocus = useRef<OnboardingStep | null>(null);
-  const focusPending = (next: OnboardingStep) => {
+  const pendingFocus = useRef<{ step: OnboardingStep; before: Element | null } | null>(null);
+  const focusPending = (next: OnboardingStep, before: Element | null) => {
     // Not if the student has already focused something else, or Enter would land on the heading (flaky e2e).
     focusAfterRender(() => (ONBOARDING_FIELDS[next] === 'course' ? courseLegendRef.current : dateHeadingRef.current), {
       active: () => document.activeElement,
       body: () => document.body,
       schedule: (run) => requestAnimationFrame(run),
-    });
+    }, before);
   };
   // Focus is placed after React has committed the new question, so the target exists however the browser schedules
   // the frame (Firefox ran the frame before the commit, and the legend or heading was not there yet).
   useEffect(() => {
-    const next = pendingFocus.current;
-    if (next === null) return;
+    const pending = pendingFocus.current;
+    if (pending === null) return;
     pendingFocus.current = null;
-    focusPending(next);
+    focusPending(pending.step, pending.before);
   }, [step]);
   const focusQuestion = (next: OnboardingStep) => {
+    // Remember the focus now, before the render can remove the pressed button (Firefox start.spec 78).
+    const before = document.activeElement;
     if (next === step) {
-      focusPending(next);
+      focusPending(next, before);
       return;
     }
-    pendingFocus.current = next;
+    pendingFocus.current = { step: next, before };
     setStep(next);
   };
 
@@ -314,8 +317,9 @@ export default function Onboarding() {
         <fieldset
           className="min-w-0 space-y-4"
           onKeyDown={(event) => {
-            // Enter advances from a selected radio. Arrow keys continue to
-            // change the selection using the browser's normal radio behavior.
+            // Arrow keys move the choice with a visible focus ring in every engine (radioarrows.ts).
+            if (moveRadioWithArrows(event)) return;
+            // Enter advances from a selected radio.
             if (event.key === 'Enter' && event.target instanceof HTMLInputElement && event.target.type === 'radio') {
               event.preventDefault();
               const move = nextOnboardingStep(step);

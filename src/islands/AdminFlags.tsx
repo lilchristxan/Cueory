@@ -235,7 +235,7 @@ export default function AdminFlags({ sampleRows }: Props) {
         <legend className="font-medium">show</legend>
         <div className="mt-2 flex flex-wrap gap-3">
           {STATUSES.map((value) => (
-            <label key={value} className="flex min-h-11 cursor-pointer items-center gap-3 rounded-md border border-control px-3 py-2">
+            <label key={value} className="flex min-h-(--tap-min) min-w-(--tap-min) cursor-pointer items-center gap-3 rounded-md border border-control px-3 py-2">
               <input
                 type="radio"
                 name="admin-flags-status"
@@ -245,7 +245,7 @@ export default function AdminFlags({ sampleRows }: Props) {
                   setAnnouncement('');
                   setStatus(value);
                 }}
-                className="size-5 shrink-0 accent-ink"
+                className="size-6 shrink-0 accent-ink"
               />
               {value === 'open' ? 'not handled' : 'handled'}
             </label>
