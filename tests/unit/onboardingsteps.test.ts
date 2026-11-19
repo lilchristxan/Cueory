@@ -81,6 +81,31 @@ describe('onboarding focus after a step change', () => {
     expect(page.heading.focused).toBe(0);
   });
 
+  it('treats the html element like the body: focus left on the page itself still moves (engine run 44460645965)', () => {
+    const html = element();
+    const body = { isConnected: true, parentElement: html } as unknown as Element;
+    expect(movedOn(element(), html, body)).toBe(false);
+    expect(movedOn(element(), element(), body)).toBe(true);
+  });
+
+  it('compares with the control the student pressed, not with what had focus after the render', () => {
+    const pressed = element();
+    const html = element();
+    const body = { isConnected: true, parentElement: html } as unknown as Element;
+    const run = (activeAtRender: Element) => {
+      let pending: (() => void) | null = null;
+      const heading = { focused: 0, focus() { this.focused += 1; } };
+      // By the time the effect runs, Back is gone and the browser has put focus somewhere on the page.
+      focusAfterRender(() => heading, { active: () => activeAtRender, body: () => body, schedule: (go) => { pending = go; } }, pressed);
+      pending!();
+      return heading.focused;
+    };
+    expect(run(html)).toBe(1);
+    expect(run(body)).toBe(1);
+    expect(run(pressed)).toBe(1);
+    expect(run(element())).toBe(0);
+  });
+
   it('ignores a focused element that is no longer on the page', () => {
     expect(movedOn(element(), element(false), element())).toBe(false);
     expect(movedOn(element(), null, element())).toBe(false);
