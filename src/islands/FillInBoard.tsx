@@ -164,6 +164,8 @@ function Session({ items: suppliedItems, page = FILL_IN_PAGE }: Props) {
   const choices = useRef<HTMLDivElement>(null);
   const nextButton = useRef<HTMLButtonElement>(null);
   const end = useRef<HTMLDivElement>(null);
+  // Read by the focus effect without re-running it: switching between choosing and typing must not move focus by itself.
+  const inputModeRef = useRef(inputMode);
   const id = useId();
   const index = currentIndex(state);
   const item = index === undefined ? undefined : items[index];
@@ -192,18 +194,19 @@ function Session({ items: suppliedItems, page = FILL_IN_PAGE }: Props) {
   // Do not overwrite a different mode's save merely by visiting this page.
   useEffect(() => attachResumeLifecycle(browserStorage(), () => latestDraft.current), []);
 
+  inputModeRef.current = inputMode;
   useEffect(() => {
     if (state.done) end.current?.focus();
     else if (answered) nextButton.current?.focus();
     else if (focusInput > 0) {
-      if (inputMode === 'type') input.current?.focus();
+      if (inputModeRef.current === 'type') input.current?.focus();
       else {
         // The chosen answer, or the first one when none is chosen yet (arrow keys move within the group).
         const group = choices.current;
         (group?.querySelector<HTMLInputElement>('input:checked') ?? group?.querySelector<HTMLInputElement>('input'))?.focus();
       }
     }
-  }, [answered, focusInput, inputMode, state.done]);
+  }, [answered, focusInput, state.done]);
 
   const persist = (next: FillInState) => {
     const draft = fillInDraft(items, next, attempts.current, moves.current, page);
@@ -331,7 +334,8 @@ function Session({ items: suppliedItems, page = FILL_IN_PAGE }: Props) {
                       setTyped('');
                     }
                     setInputMode(inputMode === 'dropdown' ? 'type' : 'dropdown');
-                    setFocusInput((req) => req + 1);
+                    // Once the item is answered the only next step is "next"; do not pull focus off this button.
+                    if (!answered) setFocusInput((req) => req + 1);
                   }}
                 >
                   {inputMode === 'dropdown' ? 'type instead' : 'choose from options'}
