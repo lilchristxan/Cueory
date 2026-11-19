@@ -219,7 +219,7 @@ export default function PlayStatus({ games, isComingSoonCrossword = false }: Pro
         )}
 
         {/* Right: crossword, sudoku, word path */}
-        <div className="flex flex-col gap-4">
+        <div className="min-w-0 flex flex-col gap-4">
           {side.map(({ row, status, text }) => {
             // A closed crossword is a plain card: no link, no focus stop, and only the visible "coming soon".
             const closed = row.id === 'cueword' && isComingSoonCrossword;
@@ -229,7 +229,7 @@ export default function PlayStatus({ games, isComingSoonCrossword = false }: Pro
                   className={`veil relative flex flex-col justify-between p-6 min-h-36 text-ink${closed ? '' : ' hover:border-line transition-colors'}`}
                 >
                   <div>
-                    <h3 className="display text-2xl text-ink font-medium break-words">
+                    <h3 className="display text-2xl text-ink font-medium wrap-anywhere">
                       {closed ? row.name : (
                         <a href={row.href} className={CARD_LINK}>
                           {row.name}
