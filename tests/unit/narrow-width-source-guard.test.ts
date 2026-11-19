@@ -4,7 +4,8 @@ import { describe, expect, it } from 'vitest';
 
 // 320px reflow guard: a fixed (non-max) width wider than a 320px phone minus page padding
 // forces sideways scroll. Source scan; the Playwright 320 specs cover rendered pages.
-const LIMIT_PX = 288; // 320px minus 2 x 1rem page padding
+const PHONE_WIDTH_PX = 320;
+const LIMIT_PX = PHONE_WIDTH_PX - 2 * 16; // 1rem page padding on each side
 const root = join(process.cwd(), 'src');
 
 function walk(dir: string): string[] {
@@ -23,7 +24,7 @@ const twScale = /(?:^|[\s"'`])(?:min-w|w|basis)-(?:(\d+(?:\.\d+)?)|\[(\d+(?:\.\d
 // Raw CSS declarations of a fixed width (not max-, not inside a media query).
 const cssWidth = /(?<![-\w(])(?:min-width|min-inline-size|width|inline-size|flex-basis)\s*:\s*(\d+(?:\.\d+)?)(px|rem)\b/g;
 
-function inMinWidthMedia(text: string, index: number): boolean {
+function inWideMinWidthMedia(text: string, index: number): boolean {
   const stack: string[] = [];
   let start = 0;
   for (let i = 0; i < index; i++) {
@@ -36,12 +37,16 @@ function inMinWidthMedia(text: string, index: number): boolean {
       start = i + 1;
     } else if (ch === ';') start = i + 1;
   }
-  return stack.some((header) => /@media[^{]*min-width/.test(header));
+  // Only exempt a simple query whose minimum is strictly wider than the phone viewport.
+  return stack.some((header) => {
+    const minimum = /@media\s*\(\s*min-width\s*:\s*(\d+(?:\.\d+)?)(px|rem)\s*\)\s*$/i.exec(header);
+    return minimum !== null && toPx(Number(minimum[1]), minimum[2]!.toLowerCase()) > PHONE_WIDTH_PX;
+  });
 }
 
 function oversizedCssWidths(text: string): string[] {
   return [...text.matchAll(cssWidth)]
-    .filter((m) => toPx(Number(m[1]), m[2]!) > LIMIT_PX && !inMinWidthMedia(text, m.index!))
+    .filter((m) => toPx(Number(m[1]), m[2]!) > LIMIT_PX && !inWideMinWidthMedia(text, m.index!))
     .map((m) => m[0]);
 }
 
@@ -59,7 +64,7 @@ describe('320px fixed-width source guard', () => {
     expect(bad).toEqual([]);
   });
 
-  it('has no raw CSS fixed width wider than a 320px phone outside a min-width media query', () => {
+  it('has no raw CSS fixed width wider than a 320px phone outside a min-width media query above the phone viewport', () => {
     const bad: string[] = [];
     for (const file of files.filter((f) => /\.(css|astro)$/.test(f))) {
       for (const hit of oversizedCssWidths(readFileSync(file, 'utf8'))) bad.push(`${file.replace(root, 'src')}: ${hit}`);
@@ -77,6 +82,13 @@ describe('320px fixed-width source guard', () => {
     expect(oversizedCssWidths(css)).toEqual(['min-width: 400px']);
     expect(oversizedCssWidths('@media (min-width: 40rem) {\n  .a {\n    width: 30rem;\n  }\n}')).toEqual([]);
   });
+
+  it.each(['(min-width: 20rem)', '(min-width: 320px)', '(min-width: 40rem), (orientation: portrait)'])(
+    'still flags a fixed width inside a media query that can apply at 320px: %s',
+    (query) => {
+      expect(oversizedCssWidths(`@media ${query} { .wide { width: 400px; } }`)).toEqual(['width: 400px']);
+    },
+  );
 
   it('only uses whitespace-nowrap inside an overflow-x scroller or a size-fitted label', () => {
     const allowed = new Map([
