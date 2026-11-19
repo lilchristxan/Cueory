@@ -1,5 +1,6 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { markPanelsSeen } from './clock';
+import { sizeOf } from './projects';
 
 /*
   Every dialog and pop-up closes with Escape and gives focus back to the control that opened it (WCAG 2.1.1, 2.4.3).
@@ -42,7 +43,7 @@ test('the account menu', async ({ page }) => {
 });
 
 test('the "about" dropdown in the desktop navigation', async ({ page }, info) => {
-  test.skip(info.project.name !== 'desktop', 'the navigation bar shows from the desktop width up');
+  test.skip(sizeOf(info) !== 'desktop', 'the navigation bar shows from the desktop width up');
   await page.goto('/');
   const menu = page.locator('[data-about-menu]');
   const trigger = menu.locator('summary');
@@ -54,16 +55,25 @@ test('the "about" dropdown in the desktop navigation', async ({ page }, info) =>
 });
 
 test('the study-mode preview on the home page', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
   await page.goto('/');
-  const trigger = page.getByRole('button', { name: /^preview / }).first();
-  await trigger.scrollIntoViewIfNeeded();
-  await openByKeyboard(page, trigger);
+  const carousel = page.locator('#ways-to-study');
+  await expect(carousel).toHaveAttribute('data-ring', '');
+  const track = carousel.locator('[data-modes-track]');
+  await track.focus();
+  await expect(track).toBeFocused();
+
+  // Take over from autoplay and choose a non-first card to catch focus returning to the wrong opener.
+  await page.keyboard.press('Home');
+  await page.keyboard.press('ArrowRight');
+  const activeCard = carousel.locator('#mode-cards');
+  await expect(activeCard).toHaveAttribute('data-active', '');
+  const opener = activeCard.getByRole('button', { name: 'preview cards', exact: true });
+  await openByKeyboard(page, opener);
+
   const dialog = page.locator('#mode-preview');
-  await expect(dialog).toBeVisible();
-  const opener = page.locator('[aria-haspopup="dialog"]').first();
-  await page.keyboard.press('Escape');
-  await expect(dialog).toBeHidden();
-  await expect(opener).toBeFocused();
+  await expect(dialog).toHaveAccessibleName('cards');
+  await escapeBack(page, opener, dialog);
 });
 
 test('an info tip', async ({ page }) => {
