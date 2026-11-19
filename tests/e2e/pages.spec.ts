@@ -444,37 +444,33 @@ test.describe('theme switch', () => {
 });
 
 test.describe('marketing look (D-41)', () => {
-  test('the home hero fills the first screen: logo, a one-line serif headline, the accent line, one button', async ({
+  test('the home hero: logo, motto, a serif headline (two lines wide, four large lines on phones) with a copper accent, the start link (P5)', async ({
     page,
   }) => {
     await page.goto('/');
     await page.evaluate(() => document.fonts.ready);
     const height = page.viewportSize()!.height;
     const headline = page.getByRole('heading', { level: 1 });
-    await expect(headline).toHaveText('nursing school is hard enough.');
-    await expect(page.getByText('cueory makes studying simpler.')).toBeVisible();
+    await expect(headline).toHaveText('nursing school made simpler.');
     await expect(page.getByText('Short, clear lessons')).toHaveCount(0);
-    // One glassy button to the daily games and one quiet link to the launch list (lane 14 home polish).
-    const button = page.locator('.scene-hero').getByRole('link', { name: "play today's games", exact: true });
-    await expect(button).toHaveAttribute('href', '/play');
-    // The quiet join link shows only once it leads somewhere (showsHeroJoin): accounts open or the Kit form set.
-    const joinShown = showsHeroJoin(accountsOpen, newsletter.formAction, newsletter.landingUrl);
-    if (joinShown) {
-      await expect(page.getByTestId('hero-join')).toHaveAttribute('href', accountLaunch(accountsOpen).accountHref);
-    }
-    // No line under the button restates it (Christian, 2026-11-02).
-    await expect(page.getByText('save your progress and pick up where you left off.')).toHaveCount(0);
-    // A calmer hero (D-55): no course link, no motto line and no embossed logo behind the headline.
     const hero = page.locator('.scene-hero');
-    await expect(hero.getByRole('link')).toHaveCount(joinShown ? 2 : 1);
-    await expect(hero.locator('.glass-button')).toHaveCount(1);
-    await expect(hero.getByText('by nursing students, for nursing students.')).toHaveCount(0);
-    await expect(hero.locator('.logo')).toHaveCount(1);
+    await expect(hero.getByText('by nursing students, for nursing students')).toBeVisible();
+    // The call to action follows the draft gate: this build may show drafts, so it is a copper link to the open sample
+    // lesson. (The live build's closed, "coming soon" button is checked in tests/unit/home-sections.test.ts.)
+    const button = hero.getByTestId('hero-start');
+    await expect(button).toHaveAttribute('href', '/learn/study-skills');
+    await expect(button).toHaveText(/start studying for free/);
+    await expect(button).toHaveClass(/copper-button/);
+    // The old quiet join link and play button went away with the old hero; the explore row and the Ko-fi card remain.
+    await expect(page.getByTestId('hero-join')).toHaveCount(0);
+    await expect(hero.getByTestId('hero-play')).toHaveCount(0);
+    await expect(hero.locator('.glass-button')).toHaveCount(0);
+    await expect(hero.locator('.logo')).toHaveCount(2); // the emblem and the full logo; one shows per screen width
     for (const element of [headline, button]) {
       const box = (await element.boundingBox())!;
       expect(box.y + box.height).toBeLessThanOrEqual(height);
     }
-    // One straight line at every width (D-46): one line tall, nothing cut off, inside the screen.
+    // Two lines from the sm breakpoint up, four large lines below it (as HomeV2-390 draws), nothing cut off, inside the screen.
     const fit = await headline.evaluate((el) => {
       const style = getComputedStyle(el);
       const box = el.getBoundingClientRect();
@@ -484,10 +480,14 @@ test.describe('marketing look (D-41)', () => {
         inside: box.left >= 0 && box.right <= window.innerWidth,
       };
     });
-    expect(fit.lines).toBeLessThan(1.5);
+    const phone = page.viewportSize()!.width < 640;
+    expect(Math.round(fit.lines)).toBe(phone ? 4 : 2);
     expect(fit.clipped).toBe(false);
     expect(fit.inside).toBe(true);
     expect(await headline.evaluate((el) => getComputedStyle(el).fontFamily)).toMatch(/^"?Bodoni Moda/);
+    // "simpler." is copper (Copper Deep in Daytime), not just heavier: its colour differs from the headline's.
+    const colours = await headline.evaluate((el) => ({ own: getComputedStyle(el).color, accent: getComputedStyle(el.querySelector('.hero-accent')!).color }));
+    expect(colours.accent).not.toBe(colours.own);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   });
 
@@ -504,18 +504,24 @@ test.describe('marketing look (D-41)', () => {
     const hero = page.locator('.scene-hero');
     await openFooterLinks(page);
     await page.getByRole('radio', { name: 'Light' }).check();
+    // The home hero draws its own logo beside the menu button (P5): the full logo from 640 px wide, the emblem on phones.
+    const heroWide = page.viewportSize()!.width >= 640;
+    const heroFile = (palette: 'light' | 'dark') =>
+      new RegExp(`\\/brand\\/v1\\/${heroWide ? 'logo-full' : 'emblem'}-${palette}-\\d+\\.png$`);
     let images = await shown(hero);
     expect(images).toHaveLength(1);
-    expect(images[0]!.src).toMatch(/\/brand\/v1\/logo-full-light-\d+\.png$/);
+    expect(images[0]!.src).toMatch(heroFile('light'));
     expect(images[0]!.alt).toBe('');
     expect(await hero.locator('.logo img').first().evaluate((img) => (img as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
-    const width = (await hero.locator('.logo').boundingBox())!.width;
-    expect(width).toBeGreaterThanOrEqual(239);
+    if (heroWide) {
+      const width = (await hero.locator('.logo:visible').boundingBox())!.width;
+      expect(width).toBeGreaterThanOrEqual(239);
+    }
 
     await page.getByRole('radio', { name: 'Dark' }).check();
     images = await shown(hero);
     expect(images).toHaveLength(1);
-    expect(images[0]!.src).toMatch(/\/brand\/v1\/logo-full-dark-\d+\.png$/);
+    expect(images[0]!.src).toMatch(heroFile('dark'));
 
     await expect(page.locator('footer').getByText('by nursing students, for nursing students.')).toBeVisible();
     await expect(page.locator('link[rel="icon"][sizes="32x32"]')).toHaveAttribute('href', '/brand/v1/icon-32.png');
@@ -586,15 +592,18 @@ test.describe('marketing look (D-41)', () => {
     }
   });
 
-  test('the glassy button is see-through glass with a blur, and its text stays readable', async ({ page }) => {
+  test('the copper call to action is an opaque copper gradient with Charcoal ink, and its text stays readable', async ({ page }) => {
     await page.goto('/');
-    const button = page.locator('.scene-hero').getByRole('link', { name: "play today's games", exact: true });
+    const button = page.locator('.scene-hero').getByTestId('hero-start');
     const look = await button.evaluate((el) => {
       const style = getComputedStyle(el);
-      return { background: style.backgroundColor, blur: style.backdropFilter || style.getPropertyValue('-webkit-backdrop-filter') };
+      return { image: style.backgroundImage, ink: style.color, opacity: style.opacity };
     });
-    expect(look.background).toMatch(/^rgba\(\d+, \d+, \d+, 0\.\d+\)$/);
-    expect(look.blur).toContain('blur(');
+    // One shared class (.copper-button): the copper gradient, the Charcoal ink and no opacity at all.
+    expect(look.image).toContain('linear-gradient(');
+    expect(look.image).toContain('rgb(184, 115, 72)');
+    expect(look.ink).toBe('rgb(28, 25, 23)');
+    expect(look.opacity).toBe('1');
     const results = await new AxeBuilder({ page }).include('#hero-heading ~ *').withRules(['color-contrast']).analyze();
     expect(results.violations.map((v) => `${v.id}: ${v.help}`)).toEqual([]);
   });
@@ -1349,7 +1358,8 @@ test.describe('☰ side panel and account corner (D-46)', () => {
     await account.click();
     await expect(menu).toBeVisible();
     await expect(account).toHaveAttribute('aria-label', 'close account menu');
-    await page.getByRole('heading', { level: 1 }).click();
+    // The headline's top-left corner: on a phone the open account menu now covers the rest of the (higher) headline.
+    await page.getByRole('heading', { level: 1 }).click({ position: { x: 5, y: 5 } });
     await expect(menu).toBeHidden();
     await expect(account).toHaveAttribute('aria-label', 'open account menu');
   });

@@ -1,0 +1,1 @@
+status: P12 /message redesign (#884), merged to staging as 174dc0eb4cb453a3f51f14e0a98e3792ba7214e0: preserves email-only mailto contact, no form/backend controls, noindex, the page-level flag and patient-information warning; the staged exact-head CI and CodeQL passed, with 390/1440 visual capture requested separately.

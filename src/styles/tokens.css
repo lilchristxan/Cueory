@@ -150,6 +150,15 @@
   */
   --text-display-fit: clamp(1rem, 100cqi / 14, 4.5rem);
   --text-display-fit--line-height: 1.12;
+  /* The home hero headline sits on two lines ("nursing school" / "made simpler."): its size follows the hero text
+     column's width (container query), so the longer line always fits, even with enlarged text. */
+  --text-display-hero: clamp(1rem, 100cqi / 7.6, 5.5rem);
+  --text-display-hero--line-height: 1.05;
+  /* Phones draw the headline on four large lines (nursing / school / made / simpler.), sized by the same column width. */
+  --text-display-hero-phone: clamp(1rem, 100cqi / 4.6, 5.5rem);
+  --text-display-hero-phone--line-height: 1.05;
+  --text-title-explore: 2rem;   /* the explore row's heading */
+  --text-title-explore--line-height: 1.2;
   --text-title: 2.375rem;       /* marketing page title (38px) */
   --text-title--line-height: 1.12;
   --text-title-lg: 3rem;        /* marketing page title on wider screens (48px) */
@@ -169,6 +178,7 @@
   /* ---------- Letter spacing ---------- */
   --tracking-label: 0.02em;     /* small label above the home headline */
   --tracking-display: -0.025em; /* serif display headings (brand spec) */
+  --tracking-caps: 0.18em;      /* small all-capital labels such as EXPLORE */
   --tracking-menu: 0.04em;      /* ☰ side panel links: medium Inter, slightly wide */
 
   /* ---------- Spacing ---------- */
@@ -186,6 +196,23 @@
   --container-game-showcase: 61.25rem; /* a game page that opts in (word path): the rendering's 900 px panel (WordPath.png, 270 to 1170 at 1440) plus the article's 40 px side padding */
   --container-headline: 18ch;   /* home headline wraps at about 18 letters */
   --container-hero: 46rem;      /* the centered hero column */
+  --container-hero-copy: 40rem; /* the home hero's text column beside the figure */
+  --container-hero-card: 34rem; /* the Ko-fi support card under the hero's value points */
+  --hero-figure-width: min(46vw, 42rem); /* the anatomy figure from large screens up */
+  --hero-figure-phone: min(100%, 26rem); /* and under the text on phones */
+  --hero-figure-fade: 26%;      /* how much of the figure's top and left edge fades into the silk */
+  --hero-figure-fade-bottom: 14%; /* the bottom edge, where it meets the explore row */
+  --hero-figure-evening-dim: 0.5; /* Evening: the figure's pale backdrop is dimmed so it doesn't glow */
+  --hero-min-height: 60rem;     /* the hero is about this tall on large screens, so the explore row starts below the fold */
+  --container-explore: 80rem;  /* the explore row under the hero */
+  --hero-top-clear: 1rem;       /* space above the hero's logo row (the corner buttons sit in the page's top 4.5 rem) */
+  --hero-logo-inset: calc(var(--header-inline-gutter) + var(--tap-min) + var(--header-corner-gap) - var(--spacing-gutter));
+  --hero-eyebrow-gap: 2.5rem;   /* between the logo row and the motto */
+  --radius-card-lg: 1.75rem;    /* the hero's support card corners */
+  --icon-size-mug: 2.5rem;      /* the Ko-fi cup mark, width */
+  --icon-size-mug-height: 1.875rem; /* and height */
+  --icon-size: 1.75rem;         /* a small line icon beside a label */
+  --icon-size-lg: 2rem;         /* a line icon above a tile label */
   --container-menu: min(85vw, 22.5rem); /* the ☰ side panel: most of a phone, 360px on bigger screens */
   --container-account-menu: 15rem; /* the small account menu */
   --container-mode-card: min(68vw, 20rem); /* a "ways to study" card: most of a phone, 320px on bigger screens */
@@ -387,6 +414,10 @@
   /* Page silk peach (follow-up to P3): the redesign's warm cloth is Copper Glow at partial strength over Ivory. */
   --silk-peach-rgb: 246 211 174; /* Copper Glow */
   --silk-peach-alpha: 0.55;
+  /* The renderings' warm wash under every fold (Light only; Evening sets the alpha to 0): Copper Glow over Ivory. */
+  --silk-wash-rgb: 246 211 174; /* Copper Glow */
+  --silk-wash-alpha: 0.75;
+  --silk-fold-layer: 1.4; /* how strongly the fold mask shows the peach layer: the creases and glints (P3c) */
   --silk-fold-height: 47.5rem; /* one tile of the boards' fold mask (public/design/silk-fold-mask.svg, 1440 x 760) */
   /* Frosted panels: Ivory, three-quarters opaque. A plain rgb() so every browser gets the right panel color. */
   --veil-rgb: 249 245 239;      /* Ivory */
@@ -479,6 +510,9 @@
     --silk-fold-alpha: 0.7;
     --silk-peach-rgb: 58 45 36;    /* Walnut: Evening stays quiet */
     --silk-peach-alpha: 0.7;
+    --silk-fold-layer: 0.6; /* Evening keeps the creases as quiet as before */
+    --silk-wash-rgb: 58 45 36;    /* Walnut */
+    --silk-wash-alpha: 0;         /* no wash in Evening */
     --veil-rgb: 58 45 36;         /* Walnut */
     --veil-alpha: 0.78;
     --silk-grain: url("/textures/grain-evening.svg");
@@ -559,6 +593,9 @@
   --silk-fold-alpha: 0.7;
   --silk-peach-rgb: 58 45 36;    /* Walnut: Evening stays quiet */
   --silk-peach-alpha: 0.7;
+  --silk-fold-layer: 0.6; /* Evening keeps the creases as quiet as before */
+  --silk-wash-rgb: 58 45 36;    /* Walnut */
+  --silk-wash-alpha: 0;         /* no wash in Evening */
   --veil-rgb: 58 45 36;         /* Walnut */
   --veil-alpha: 0.78;
   --silk-grain: url("/textures/grain-evening.svg");

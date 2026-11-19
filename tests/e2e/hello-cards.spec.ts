@@ -42,6 +42,19 @@ test('the card flips by click and by keyboard and shows a starter', async ({ pag
   expect(await card(page).evaluate((el) => el.matches(':focus-visible') && parseFloat(getComputedStyle(el).outlineWidth) > 0)).toBe(true);
 });
 
+// Engine run 44460645965 (E8): a mouse click alone never forces the ring; a keyboard press after it shows it.
+test('a click turns the card without a focus ring; Enter after it shows the ring', async ({ page }) => {
+  await card(page).click();
+  await expect(card(page)).toHaveAttribute('aria-pressed', 'true');
+  expect(await card(page).evaluate((el) => el.matches(':focus-visible'))).toBe(false);
+  // Safari's buttons don't take focus from a click, so put it there the way the flip test does.
+  await card(page).focus();
+  await page.keyboard.press('Enter');
+  await expect(card(page)).toHaveAttribute('aria-pressed', 'false');
+  await expect(card(page)).toBeFocused();
+  expect(await card(page).evaluate((el) => el.matches(':focus-visible') && parseFloat(getComputedStyle(el).outlineWidth) > 0)).toBe(true);
+});
+
 test('there is no audience picker; next card stays in the chosen depth, never repeats and mixes categories', async ({ page }) => {
   await expect(page.getByRole('group', { name: 'who is it for' })).toHaveCount(0);
   for (const name of ['patients', 'co-workers', 'classmates', 'get to know yourself']) {

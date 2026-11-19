@@ -30,16 +30,21 @@ export function skipOnboardingStep(step: OnboardingStep): { clear: OnboardingFie
 export function focusAfterRender(
   target: () => { focus: () => void } | null | undefined,
   page: { active: () => Element | null; body: () => Element | null; schedule: (run: () => void) => void },
+  // What had focus when the student acted (the button they pressed). Read after the render instead, it can already be
+  // whatever the browser chose once that button was removed (Back on question 2 removes it).
+  before: Element | null = page.active(),
 ): void {
-  const before = page.active();
   page.schedule(() => {
     if (movedOn(before, page.active(), page.body())) return;
     target()?.focus();
   });
 }
 
-/** True when focus now sits on a different, still-present element than when the step changed. */
+/**
+ * True when focus now sits on a different, still-present element than when the step changed. The page itself (body or
+ * the html element, where a browser may leave focus after the focused button is removed) does not count.
+ */
 export function movedOn(before: Element | null, now: Element | null, body: Element | null): boolean {
-  if (!now || now === body || now === before) return false;
+  if (!now || now === body || now === before || (body !== null && now === body.parentElement)) return false;
   return now.isConnected;
 }

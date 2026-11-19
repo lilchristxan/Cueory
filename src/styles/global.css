@@ -199,8 +199,9 @@
         rgb(var(--silk-fold-rgb) / calc(var(--silk-fold-alpha) / 2)) 63%,
         transparent 82%
       ),
+      linear-gradient(rgb(var(--silk-wash-rgb) / var(--silk-wash-alpha)) 0 0),
       linear-gradient(180deg, var(--scene-base), var(--color-silk-shade));
-    background-size: 220px 220px, auto, auto, auto, auto;
+    background-size: 220px 220px, auto, auto, auto, auto, auto;
     -webkit-mask-image: linear-gradient(
       180deg,
       transparent,
@@ -221,6 +222,156 @@
   .scene-hero {
     --scene-fade-top: 0px;
   }
+
+  /*
+    Home hero figure (redesign P5): Christian's anatomy picture has its own pale backdrop, so its top and left edges
+    fade into the silk (a mask, never over text). Evening dims it so the pale backdrop doesn't glow on the dark page.
+  */
+  .hero-figure {
+    -webkit-mask-image:
+      linear-gradient(to right, transparent, currentColor var(--hero-figure-fade)),
+      linear-gradient(to bottom, transparent, currentColor var(--hero-figure-fade)),
+      linear-gradient(to top, transparent, currentColor var(--hero-figure-fade-bottom));
+    -webkit-mask-composite: source-in;
+    mask-image:
+      linear-gradient(to right, transparent, currentColor var(--hero-figure-fade)),
+      linear-gradient(to bottom, transparent, currentColor var(--hero-figure-fade)),
+      linear-gradient(to top, transparent, currentColor var(--hero-figure-fade-bottom));
+    mask-composite: intersect;
+    pointer-events: none;
+    user-select: none;
+  }
+
+  :root[data-theme="dark"] .hero-figure {
+    filter: brightness(var(--hero-figure-evening-dim));
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .hero-figure {
+      filter: brightness(var(--hero-figure-evening-dim));
+    }
+  }
+
+  .hero-eyebrow {
+    font-size: var(--text-sm);
+    line-height: var(--text-sm--line-height);
+  }
+
+  .hero-caps {
+    letter-spacing: var(--tracking-caps);
+  }
+
+  /* "simpler." in copper (a solid copper: Copper Deep on Ivory is 3.6:1, above the 3:1 large text needs; lighter in Evening). */
+  .hero-accent {
+    color: var(--color-copper-deep);
+  }
+
+  :root[data-theme="dark"] .hero-accent {
+    color: var(--color-copper);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .hero-accent {
+      color: var(--color-copper);
+    }
+  }
+
+  /* The curve under the headline: decorative, copper, as wide as the headline's text column. */
+  .hero-curve {
+    display: block;
+    inline-size: 60%;
+    block-size: var(--spacing-stack);
+    margin-block-start: var(--spacing);
+    margin-inline-start: auto;
+    color: var(--color-copper-deep);
+  }
+
+  /* The "coming soon" tag inside the closed call to action: words, so it never relies on colour alone. */
+  .hero-soon {
+    border: 1px solid var(--cueory-copper-ink);
+    border-radius: var(--radius-pill);
+    padding-inline: calc(var(--spacing) * 2);
+    font-size: var(--text-sm);
+    font-weight: 400;
+  }
+
+  .hero-icon,
+  .hero-icon-lg {
+    flex: none;
+    inline-size: var(--icon-size);
+    block-size: var(--icon-size);
+  }
+
+  .hero-icon-lg {
+    inline-size: var(--icon-size-lg);
+    block-size: var(--icon-size-lg);
+  }
+
+  .hero-icon-copper {
+    color: var(--color-copper-deep);
+  }
+
+  /* The support card as drawn: a rounded card tinted with copper glow, a hairline copper rim and a soft shadow. */
+  .hero-support {
+    border: 1px solid color-mix(in srgb, var(--color-copper-glow) 70%, transparent);
+    border-radius: var(--radius-card-lg);
+    background-image: linear-gradient(
+      110deg,
+      color-mix(in srgb, var(--color-copper-glow) 55%, transparent),
+      color-mix(in srgb, var(--color-copper) 38%, transparent)
+    );
+    box-shadow: var(--shadow-soft);
+  }
+
+  :root[data-theme="dark"] .hero-support {
+    background-image: linear-gradient(
+      110deg,
+      color-mix(in srgb, var(--color-copper-deep) 26%, transparent),
+      color-mix(in srgb, var(--color-copper) 16%, transparent)
+    );
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .hero-support {
+      background-image: linear-gradient(
+        110deg,
+        color-mix(in srgb, var(--color-copper-deep) 26%, transparent),
+        color-mix(in srgb, var(--color-copper) 16%, transparent)
+      );
+    }
+  }
+
+  .hero-icon-mug {
+    flex: none;
+    inline-size: var(--icon-size-mug);
+    block-size: var(--icon-size-mug-height);
+  }
+
+  .hero-icon-mug-heart {
+    fill: var(--color-copper-shine);
+  }
+
+  .hero-support-body {
+    min-inline-size: 0;
+    flex: 1;
+  }
+
+  .explore-tile {
+    min-block-size: calc(var(--tap-min) * 2.25);
+    border: 1px solid var(--cueory-glass-border);
+    border-radius: var(--radius-lg);
+    background-color: rgb(var(--veil-rgb) / var(--veil-alpha));
+  }
+
+  .explore-tile:hover {
+    border-color: var(--color-control);
+  }
+
+  /* The coming-soon call to action: copper like the others, but it never acts. It still takes focus so it can be read out. */
+  .copper-button[aria-disabled="true"] {
+    cursor: default;
+  }
+
 
   /* "ways to study": Linen (Evening: Walnut), the folds falling the other way, light from the upper right. */
   .scene-tint {
@@ -256,8 +407,9 @@
       radial-gradient(ellipse 65% 50% at 4% 6%, rgb(var(--silk-peach-rgb) / var(--silk-peach-alpha)), transparent 72%),
       radial-gradient(ellipse 60% 55% at 96% 20%, rgb(var(--silk-peach-rgb) / calc(var(--silk-peach-alpha) * 0.8)), transparent 70%),
       radial-gradient(ellipse 75% 45% at 22% 80%, rgb(var(--silk-peach-rgb) / calc(var(--silk-peach-alpha) * 0.7)), transparent 72%),
+      linear-gradient(rgb(var(--silk-wash-rgb) / var(--silk-wash-alpha)) 0 0),
       linear-gradient(180deg, var(--color-silk-tint), var(--color-silk-base) 55%, var(--color-silk-shade));
-    background-size: 220px 220px, auto, auto, auto, auto, auto, auto;
+    background-size: 220px 220px, auto, auto, auto, auto, auto, auto, auto;
   }
 
   /* The boards' fold shape (a colourless mask) over a token-coloured layer, tiled down the page behind the content. */
@@ -272,7 +424,7 @@
     inset: 0;
     z-index: -1;
     pointer-events: none;
-    background-color: rgb(var(--silk-peach-rgb) / calc(var(--silk-peach-alpha) * 0.6));
+    background-color: rgb(var(--silk-peach-rgb) / calc(var(--silk-peach-alpha) * var(--silk-fold-layer)));
     -webkit-mask-image: url("/design/silk-fold-mask.svg");
     mask-image: url("/design/silk-fold-mask.svg");
     -webkit-mask-size: 100% var(--silk-fold-height);
