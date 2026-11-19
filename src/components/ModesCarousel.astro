@@ -357,10 +357,13 @@ const icons: Record<StudyFeatureIcon, string> = {
     };
 
     // A new window width (or text size) changes how many vials fit, so the row is laid out again.
-    let laidOutAt = track.clientWidth;
+    // Both the stage's width and the vial's own width count: larger text widens the vials without changing the window.
+    const rowSize = () => `${track.clientWidth} ${cards[active]!.offsetWidth}`;
+    let laidOutAt = rowSize();
     const relayout = () => {
-      if (track.clientWidth === laidOutAt) return;
-      laidOutAt = track.clientWidth;
+      const size = rowSize();
+      if (size === laidOutAt) return;
+      laidOutAt = size;
       place();
     };
     if (typeof ResizeObserver === 'function') new ResizeObserver(relayout).observe(track);
@@ -828,13 +831,6 @@ const icons: Record<StudyFeatureIcon, string> = {
 </script>
 
 <style>
-  /* P6 surface contract: keep the carousel on the shared glass tokens owned by Phase 0. */
-  .modes-p6 .mode-preview-panel {
-    background: var(--cueory-glass-bg);
-    border-color: var(--cueory-glass-border);
-    box-shadow: var(--cueory-glass-shadow);
-  }
-
   /*
     HomeV2's straight row: every vial on one baseline, side by side with a gap (rowPlace in src/scripts/carousel.ts
     sets --ring-shift so no two bottles overlap, and hides any that would not fit whole).
