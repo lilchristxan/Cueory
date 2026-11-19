@@ -408,6 +408,10 @@
   /* Page silk peach (follow-up to P3): the redesign's warm cloth is Copper Glow at partial strength over Ivory. */
   --silk-peach-rgb: 246 211 174; /* Copper Glow */
   --silk-peach-alpha: 0.55;
+  /* The renderings' warm wash under every fold (Light only; Evening sets the alpha to 0): Copper Glow over Ivory. */
+  --silk-wash-rgb: 246 211 174; /* Copper Glow */
+  --silk-wash-alpha: 0.75;
+  --silk-fold-layer: 1.4; /* how strongly the fold mask shows the peach layer: the creases and glints (P3c) */
   --silk-fold-height: 47.5rem; /* one tile of the boards' fold mask (public/design/silk-fold-mask.svg, 1440 x 760) */
   /* Frosted panels: Ivory, three-quarters opaque. A plain rgb() so every browser gets the right panel color. */
   --veil-rgb: 249 245 239;      /* Ivory */
@@ -500,6 +504,9 @@
     --silk-fold-alpha: 0.7;
     --silk-peach-rgb: 58 45 36;    /* Walnut: Evening stays quiet */
     --silk-peach-alpha: 0.7;
+    --silk-fold-layer: 0.6; /* Evening keeps the creases as quiet as before */
+    --silk-wash-rgb: 58 45 36;    /* Walnut */
+    --silk-wash-alpha: 0;         /* no wash in Evening */
     --veil-rgb: 58 45 36;         /* Walnut */
     --veil-alpha: 0.78;
     --silk-grain: url("/textures/grain-evening.svg");
@@ -580,6 +587,9 @@
   --silk-fold-alpha: 0.7;
   --silk-peach-rgb: 58 45 36;    /* Walnut: Evening stays quiet */
   --silk-peach-alpha: 0.7;
+  --silk-fold-layer: 0.6; /* Evening keeps the creases as quiet as before */
+  --silk-wash-rgb: 58 45 36;    /* Walnut */
+  --silk-wash-alpha: 0;         /* no wash in Evening */
   --veil-rgb: 58 45 36;         /* Walnut */
   --veil-alpha: 0.78;
   --silk-grain: url("/textures/grain-evening.svg");
