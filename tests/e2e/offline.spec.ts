@@ -1,3 +1,5 @@
+import { createServer, request as forward } from 'node:http';
+import type { Socket } from 'node:net';
 import { expect, test, type Page } from '@playwright/test';
 
 // The offline service worker (ROADMAP Task 5). Every other test runs with service workers blocked (playwright.config.ts),
@@ -23,6 +25,41 @@ const kept = (page: Page) =>
     }
     return urls;
   });
+
+/** A same-origin, per-test proxy that can be closed to make the worker's actual network fetch fail. */
+async function loopback(upstream: string) {
+  const preview = new URL(upstream);
+  const sockets = new Set<Socket>();
+  const server = createServer((request, response) => {
+    const target = new URL(request.url ?? '/', preview);
+    if (target.origin !== preview.origin) return response.writeHead(400).end();
+    const outgoing = forward(target, { method: request.method, headers: { ...request.headers, host: target.host } }, (incoming) => {
+      response.writeHead(incoming.statusCode ?? 502, incoming.headers);
+      incoming.pipe(response);
+    });
+    outgoing.on('error', () => response.destroy());
+    request.pipe(outgoing);
+  });
+  server.on('connection', (socket) => {
+    sockets.add(socket);
+    socket.once('close', () => sockets.delete(socket));
+  });
+  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+  const address = server.address();
+  if (!address || typeof address === 'string') throw new Error('loopback proxy did not choose a TCP port');
+
+  let stopped = false;
+  return {
+    origin: `http://127.0.0.1:${address.port}`,
+    async stop() {
+      if (stopped) return;
+      stopped = true;
+      const closed = new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+      for (const socket of sockets) socket.destroy();
+      await closed;
+    },
+  };
+}
 
 /** One visit, no reload: the page saves itself and the files it loaded before the worker could (the first visit). */
 async function visitLesson(page: Page) {
@@ -85,12 +122,36 @@ test('it keeps only pages and built files from this site, never a query string o
   expect(await page.evaluate(() => caches.keys())).toEqual([expect.stringMatching(/^cueory-offline-[A-Za-z0-9-]+$/)]);
 });
 
-test('a page that was never visited fails the way it would without a worker', async ({ page, context }) => {
-  await visitLesson(page);
-  await context.setOffline(true);
-  const failed = await page.evaluate(() => fetch('/learn/study-skills/matching').then(() => false, () => true));
-  expect(failed).toBe(true);
-  await context.setOffline(false);
+test('a page that was never visited fails when its worker cannot reach the same-origin transport', async ({ browser, baseURL }) => {
+  if (!baseURL) throw new Error('the local preview base URL is required');
+  const proxy = await loopback(baseURL);
+  let context: Awaited<ReturnType<typeof browser.newContext>> | undefined;
+  try {
+    context = await browser.newContext({ baseURL: proxy.origin, serviceWorkers: 'allow' });
+    const page = await context.newPage();
+    await page.addInitScript(() => {
+      try {
+        localStorage.setItem('cueory-promo-seen', String(Date.now())); localStorage.setItem('cueory-signup-popup-seen', String(Date.now()));
+      } catch {
+        // Storage is blocked: the panel never shows then anyway.
+      }
+    });
+    await visitLesson(page);
+    expect(await page.evaluate(() => window.isSecureContext)).toBe(true);
+    await expect.poll(() => page.evaluate(() => navigator.serviceWorker.controller?.scriptURL ?? null)).not.toBeNull();
+    expect(await kept(page)).not.toContain('/learn/study-skills/matching');
+
+    await proxy.stop();
+    await page.reload();
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+    await expect(page.locator('main')).toContainText('study');
+
+    const failed = await page.evaluate(() => fetch('/learn/study-skills/matching').then(() => false, () => true));
+    expect(failed).toBe(true);
+  } finally {
+    await context?.close();
+    await proxy.stop();
+  }
 });
 
 test('the privacy page says pages may be kept on the device', async ({ page }) => {
