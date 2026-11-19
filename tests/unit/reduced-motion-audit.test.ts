@@ -1,5 +1,6 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
+import ts from 'typescript';
 import { describe, expect, it } from 'vitest';
 
 /**
@@ -347,5 +348,78 @@ describe('reduced motion audit detectors', () => {
       const override = /@media \(prefers-reduced-motion: reduce\) \{\s*\.pillo-pill\.pillo-typed \{\s*animation: none;\s*transition: none;\s*\}\s*\}/;
       expect(unguardedStyleLines(without('styles/pillo.css', override))).not.toEqual([]);
     });
+  });
+});
+
+const previewHandlers = ['open', 'close', 'step'] as const;
+
+function containsAnimation(node: ts.Node): boolean {
+  if (ts.isCallExpression(node) && ts.isPropertyAccessExpression(node.expression) && node.expression.name.text === 'animate') {
+    return true;
+  }
+  return ts.forEachChild(node, child => containsAnimation(child) || undefined) ?? false;
+}
+
+/** Guards the current direct .animate() calls in the three carousel preview entry points. */
+function unguardedPreviewHandlers(component: string) {
+  const script = /<script>([\s\S]*?)<\/script>/.exec(component)?.[1] ?? '';
+  const source = ts.createSourceFile('ModesCarousel.ts', script, ts.ScriptTarget.Latest, true);
+  const previewBlocks: ts.Block[] = [];
+  function visit(node: ts.Node): void {
+    if (ts.isBlock(node) && node.statements.some(
+      (statement) => ts.isExpressionStatement(statement) && statement.expression.getText(source) === 'preview = open',
+    )) {
+      previewBlocks.push(node);
+    }
+    ts.forEachChild(node, visit);
+  }
+  visit(source);
+  if (previewBlocks.length !== 1) return [...previewHandlers];
+
+  const declarations = previewBlocks[0]!.statements.filter(ts.isVariableStatement)
+    .flatMap((statement) => statement.declarationList.declarations);
+  return previewHandlers.filter((name) => {
+    const handlers = declarations.filter((declaration) => ts.isIdentifier(declaration.name) && declaration.name.text === name);
+    const handler = handlers[0]?.initializer;
+    if (handlers.length !== 1 || !handler || !ts.isArrowFunction(handler) || !ts.isBlock(handler.body)) return true;
+    const statements = handler.body.statements;
+    const animations = statements.filter(containsAnimation);
+    if (animations.length === 0) return true;
+
+    if (name === 'step') {
+      return animations.some((statement) => (
+        !ts.isIfStatement(statement)
+        || statement.expression.getText(source) !== '!state.reducedMotion'
+        || !containsAnimation(statement.thenStatement)
+        || (statement.elseStatement && containsAnimation(statement.elseStatement))
+      ));
+    }
+
+    // The reduced-motion return in open/close must execute before the first animation on any path.
+    const beforeAnimation = statements.slice(0, statements.indexOf(animations[0]!));
+    return !beforeAnimation.some((statement) => {
+      if (!ts.isIfStatement(statement) || statement.expression.getText(source) !== 'state.reducedMotion') return false;
+      const last = ts.isBlock(statement.thenStatement) ? statement.thenStatement.statements.at(-1) : statement.thenStatement;
+      return last !== undefined && ts.isReturnStatement(last);
+    });
+  });
+}
+
+describe('ModesCarousel preview reduced-motion branches', () => {
+  const component = files.find((file) => file.name === 'components/ModesCarousel.astro')!.text;
+
+  it('protects the actual open, close and step animations', () => {
+    expect(unguardedPreviewHandlers(component)).toEqual([]);
+  });
+
+  it.each([
+    ['open', 'if (state.reducedMotion) return;', '// if (state.reducedMotion) return;'],
+    ['close', 'if (state.reducedMotion) {', 'if (false) { // state.reducedMotion'],
+    ['step', 'if (!state.reducedMotion) {', 'if (true) { // !state.reducedMotion'],
+  ])('rejects an unguarded %s animation even with reduced-motion text nearby', (name, guard, replacement) => {
+    expect(component.split(guard)).toHaveLength(2);
+    const modified = component.replace(guard, replacement);
+    expect(modified).toMatch(new RegExp(REDUCED_WORDS));
+    expect(unguardedPreviewHandlers(modified)).toEqual([name]);
   });
 });
