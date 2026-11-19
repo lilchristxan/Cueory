@@ -27,7 +27,7 @@ async function showRing(page: Page) {
   await page.goto('/');
   await section(page).scrollIntoViewIfNeeded();
   await expect(section(page)).toHaveClass(/modes-p6/);
-  await expect(section(page).getByText(`one lesson, ${studyModes.length} ways in`, { exact: true })).toBeVisible();
+  await expect(section(page).getByText('one lesson, multiple ways to study', { exact: true })).toBeVisible();
   await expect(section(page).getByText('pick the method that fits your brain today.', { exact: true })).toBeVisible();
   await expect(section(page)).toHaveAttribute('data-ring', '');
   await expect(section(page).locator('[data-modes-controls]')).not.toHaveClass(/invisible/);
