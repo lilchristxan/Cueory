@@ -2124,8 +2124,10 @@ html:has(dialog.mode-preview[open]) {
       transform: none;
     }
 
+    /* The faces swap in one step: the base-layer reset (reduced-motion.css) removes every transition under reduced
+       motion anyway, so a cross-fade here never ran (lane 8). */
     .flip-face {
-      transition: opacity var(--duration-base) var(--ease-soft);
+      transition: none;
     }
 
     .flip.is-flipped .flip-face {
@@ -2139,7 +2141,7 @@ html:has(dialog.mode-preview[open]) {
       -webkit-backface-visibility: visible;
       opacity: 0;
       pointer-events: none;
-      transition: opacity var(--duration-base) var(--ease-soft);
+      transition: none;
     }
 
     .flip.is-flipped .flip-back {
