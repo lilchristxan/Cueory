@@ -186,12 +186,14 @@ export async function sitemapPages(): Promise<string[]> {
   // Loaded here, not at the top, so unit tests can import sitemapXml without Astro's content layer.
   const { lessonCatalog } = await import('../lessons/load');
   const { lessonIsHeldBack } = await import('../lessons/holdback');
-  const { sampleLessonShown } = await import('../lessons/draftgate');
+  const { sampleLessonShown, aboutShown, ABOUT_HREF } = await import('../lessons/draftgate');
   const catalog = await lessonCatalog();
   // Sample and placeholder lessons are held back on the live build (a coming-soon page), so they stay out of the sitemap.
   const held = new Set((await Promise.all(catalog.lessons.map(async (lesson) => (await lessonIsHeldBack(lesson.id)) ? lesson.href : null))).filter((href): href is string => href !== null));
   return [...new Set([...indexablePages, ...(sampleLessonShown() ? sampleLessonPages : []), ...generatedRoutes(catalog)])]
     .filter((page) => ![...held].some((href) => page === href || page.startsWith(`${href}/`)))
+    // The live build leaves /about out until Christian's story is written (aboutShown), so it never lists it either.
+    .filter((page) => aboutShown() || page !== ABOUT_HREF)
     .filter((page) => !routeDeclaresNoindex(page));
 }
 
