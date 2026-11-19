@@ -3,3 +3,5 @@ status: Task redesign P9 (Pillo) redesign: approved artwork, QWERTY keyboard and
 D-pending, needs Christian: keys are narrower than 44 px on phones to keep three rows as drawn; this replaces the 2026-11-18 lead decision if he agrees. Either choice is one line: `--pillo-key-min` in src/styles/tokens.css is 1.5rem (24 px keys, three rows); setting it to `var(--tap-min)` gives 44 px wide keys in wrapped rows.
 
 Needs Christian: the pillo wordmark (/design/logo-pillo.webp) has no Evening (light) version anywhere in brand-source/ or public/, and the logo rule forbids recolouring it, so it is nearly invisible on the Evening page until he supplies a light copy.
+
+2026-11-19, Codex review: the pack's padding and each row's height now follow the artwork's own measurements (tokens `--pillo-art-*`), so every pill sits in its drawn well instead of the sixth row landing on the blank strip.

@@ -4,8 +4,10 @@
   (● in place, ○ elsewhere in the word, · not in the word), and each guess is also said in words for screen readers,
   so color is never the only signal. In place is Espresso (Evening: Walnut), elsewhere is Taupe (Evening: Sand), and not
   in the word is Ivory with a faded Bronze letter (Evening: frosted Ivory). The row being typed shows plain Ivory pills
-  and rings the next empty pocket. Every color, size and shadow is a token (tokens.css, "pillo"); the foil is drawn
-  with gradients, so there is no image file and nothing the content security policy has to allow.
+  and rings the next empty pocket. Every color, size and shadow is a token (tokens.css, "pillo"). The pack is the
+  approved blister-board artwork (public/design/pillo-blister-board.webp, PR #887): its outer margins, its six rows
+  of five wells and the rim of each well are tokens too (--pillo-art-*), so the live tiles sit in the drawn wells at
+  every width. The foil gradients remain under the artwork while it loads, in high contrast and on paper.
 */
 @layer components {
   /* Pillo-1/Pillo-2 place the board directly on the page; keep other GamePage wrappers unchanged. */
@@ -33,6 +35,7 @@
     --pillo-hatch-clear: rgb(from var(--color-pillo-hatch) r g b / 0);
   }
 
+  /* The artwork is stretched over the pack, whose padding and row heights follow the artwork's own proportions. */
   .pillo-pack {
     background-image:
       url("/design/pillo-blister-board.webp"),
@@ -74,16 +77,21 @@
 
   .pillo-pack {
     max-inline-size: var(--pillo-board);
-    padding: calc(var(--spacing) * 2);
+    /* The artwork's margins around its grid of wells, as shares of the pack's width (PR #887 review, 2026-11-19). */
+    padding: var(--pillo-art-inset-top) var(--pillo-art-inset-right) var(--pillo-art-inset-bottom) var(--pillo-art-inset-left);
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow-pillo-pack);
   }
 
-  /* One row of five pockets. Dashed perforations run between rows and between pockets. */
+  /*
+    One row of five pockets. Dashed perforations run between rows and between pockets. A row is as tall as the
+    artwork's row of wells is for its width, so the sixth row sits in the sixth row of wells, not on the blank strip.
+  */
   .pillo-row {
     position: relative;
     display: grid;
     grid-template-columns: repeat(5, minmax(0, 1fr));
+    aspect-ratio: var(--pillo-art-row-ratio);
     border-block-end: var(--border-pillo-perforation) dashed var(--pillo-perforation);
   }
 
@@ -91,22 +99,17 @@
     border-block-end: none;
   }
 
+  /* A pocket fills its cell; its pill fills the well drawn there, inside the well's rim (shares of the cell's width). */
   .pillo-pocket {
     display: grid;
     place-items: stretch;
-    block-size: var(--pillo-pocket);
-    padding: var(--pillo-pill-inset);
+    min-inline-size: 0;
+    padding: var(--pillo-art-well-top) var(--pillo-art-well-right) var(--pillo-art-well-bottom) var(--pillo-art-well-left);
     border-inline-end: var(--border-pillo-perforation) dashed var(--pillo-perforation);
   }
 
   .pillo-pocket:last-of-type {
     border-inline-end: none;
-  }
-
-  @media (width >= 40rem) {
-    .pillo-pocket {
-      block-size: var(--pillo-pocket-lg);
-    }
   }
 
   /* The pill, or the empty pocket where a pill will sit. */
