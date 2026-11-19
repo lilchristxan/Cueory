@@ -34,9 +34,10 @@ test.describe('home page-specific behavior', () => {
 
     await expect(page.getByRole('link', { name: "start with a lesson" })).toHaveAttribute('href', '/learn/study-skills');
     await expect(page.getByTestId('games-link')).toHaveAttribute('href', '/play');
-    await expect(page.getByRole('heading', { level: 2 })).toHaveCount(4);
+    await expect(page.getByRole('heading', { level: 2 })).toHaveCount(5);
     const sectionHeadings = await page.getByRole('heading', { level: 2 }).allTextContents();
     expect(sectionHeadings).toEqual([
+      'start with what you need.', // the hero's explore row (P5)
       'how it works',
       'ways to study',
       'daily games',
