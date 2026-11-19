@@ -70,6 +70,7 @@ const logo = (width: number) => `/brand/v1/logo-full-dark-${width}.png`;
                 placeholder="email address"
                 class="signup-popup-input"
               />
+              <p id="signup-popup-email-error" class="signup-popup-error" role="alert" hidden data-signup-popup-error />
               <button type="submit" class="signup-popup-button">
                 subscribe
               </button>
@@ -97,6 +98,7 @@ const logo = (width: number) => `/brand/v1/logo-full-dark-${width}.png`;
 <script>
   import { promo } from '../config/site';
   import { isTextEntry, mayShow as promoMayShow } from '../scripts/promo';
+  import { attachEmailErrors } from '../scripts/formerrors';
   import { lockPageScroll } from '../scripts/scrolllock';
   import { browserStorage } from '../scripts/storage';
   import { OPEN_REPORT_SELECTOR, POPUP_DELAY_MS, mayShowPopup, popupAllowedOn, rememberPopup } from '../scripts/signuppopup';
@@ -115,6 +117,10 @@ const logo = (width: number) => `/brand/v1/logo-full-dark-${width}.png`;
     mayShowPopup(storage, Date.now())
   ) {
     const closeButton = dialog.querySelector<HTMLButtonElement>('[data-signup-popup-close]');
+    const emailForm = dialog.querySelector<HTMLFormElement>('[data-signup-popup-form]');
+    const emailInput = emailForm?.querySelector<HTMLInputElement>('input[type="email"]');
+    const emailError = dialog.querySelector<HTMLElement>('[data-signup-popup-error]');
+    if (emailForm && emailInput && emailError) attachEmailErrors(emailForm, emailInput, emailError);
     let previousFocus: HTMLElement | null = null;
 
     /** Something else has the visitor's attention: the pop-up waits instead of interrupting it. */
@@ -356,9 +362,31 @@ const logo = (width: number) => `/brand/v1/logo-full-dark-${width}.png`;
     min-inline-size: 0;
     min-block-size: var(--tap-min);
     padding-inline: calc(var(--spacing) * 4);
+    border: var(--focus-width) solid transparent;
     border-radius: var(--radius-pill);
     color: var(--popup-button-ink);
     background-color: var(--popup-cream);
+  }
+
+  /* The written error under the email box: cream on the green like the rest, with its own border so it is not colour alone. */
+  .signup-popup-error {
+    flex: 1 0 100%;
+    padding: calc(var(--spacing) * 2) calc(var(--spacing) * 3);
+    border: var(--focus-width) solid var(--popup-cream);
+    border-radius: var(--radius-md);
+    font-size: var(--text-sm);
+    line-height: var(--text-sm--line-height);
+    font-weight: 700;
+  }
+
+  .signup-popup-error[hidden] {
+    display: none;
+  }
+
+  .signup-popup-input[aria-invalid='true'] {
+    /* Mark the error with a border so the shared keyboard-focus outline stays separate. */
+    border-style: dashed;
+    border-color: var(--popup-button-ink);
   }
 
   .signup-popup-button {

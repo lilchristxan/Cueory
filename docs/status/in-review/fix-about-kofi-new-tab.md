@@ -1,0 +1,1 @@
+status: Fix staging unit tests: the About page Ko-fi link (from #885) now follows the site-wide new-tab rule from #967 — screen readers hear "(opens in a new tab)" and the visible ↗ comes from the shared CSS cue instead of typed text. Looks the same.
