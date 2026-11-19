@@ -60,9 +60,21 @@ export interface StatusDetails {
  * Side-card status pills show the real states matching Games.png:
  * - "not started" (symbol: ○)
  * - "in progress" (symbol: ◐)
- * - "done · <n> of <n> words" (symbol: ✓) for word path (suture), or that game's done wording
+ * - "done · <n> of <total> words" (symbol: ✓) for word path (suture) when the saved result gives both counts,
+ *   otherwise "done"
  * Colour is never the only signal.
  */
+/** Both counts present, whole, not negative, and no more words found than the round has. */
+function validWordCount(found: number | undefined, total: number | undefined): boolean {
+  return (
+    Number.isSafeInteger(found) &&
+    Number.isSafeInteger(total) &&
+    (found as number) >= 0 &&
+    (total as number) > 0 &&
+    (found as number) <= (total as number)
+  );
+}
+
 export function statusDisplayFor(
   game: GameId,
   status: DayStatus,
@@ -75,10 +87,9 @@ export function statusDisplayFor(
     return { label: 'in progress', symbol: '◐' };
   }
   // status === 'done'
-  if (game === 'suture') {
-    const total = details?.totalWords ?? 6;
-    const found = details?.wordsFound ?? total;
-    return { label: `done · ${found} of ${total} words`, symbol: '✓' };
+  // The word count shows only when the saved result backs it; otherwise plain "done", never an assumed count.
+  if (game === 'suture' && details && validWordCount(details.wordsFound, details.totalWords)) {
+    return { label: `done · ${details.wordsFound} of ${details.totalWords} words`, symbol: '✓' };
   }
   return { label: 'done', symbol: '✓' };
 }

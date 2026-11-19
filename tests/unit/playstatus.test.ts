@@ -67,14 +67,16 @@ describe('today\'s status for each daily game (#735)', () => {
       expect(inProgress.symbol).toBe('◐');
     }
 
-    // Done state for suture shows word count matching Games.png
-    const sutureDone = statusDisplayFor('suture', 'done');
-    expect(sutureDone.label).toBe('done · 6 of 6 words');
-    expect(sutureDone.symbol).toBe('✓');
-
-    const sutureCustomDone = statusDisplayFor('suture', 'done', { wordsFound: 7, totalWords: 7 });
-    expect(sutureCustomDone.label).toBe('done · 7 of 7 words');
-    expect(sutureCustomDone.symbol).toBe('✓');
+    // Word path shows a count only when the saved result backs it, never an assumed 6 of 6.
+    expect(statusDisplayFor('suture', 'done')).toEqual({ label: 'done', symbol: '✓' });
+    expect(statusDisplayFor('suture', 'done', {})).toEqual({ label: 'done', symbol: '✓' });
+    expect(statusDisplayFor('suture', 'done', { wordsFound: 4 })).toEqual({ label: 'done', symbol: '✓' });
+    expect(statusDisplayFor('suture', 'done', { totalWords: 6 })).toEqual({ label: 'done', symbol: '✓' });
+    expect(statusDisplayFor('suture', 'done', { wordsFound: 7, totalWords: 5 })).toEqual({ label: 'done', symbol: '✓' });
+    expect(statusDisplayFor('suture', 'done', { wordsFound: Number.NaN, totalWords: 6 })).toEqual({ label: 'done', symbol: '✓' });
+    expect(statusDisplayFor('suture', 'done', { wordsFound: 0, totalWords: 0 })).toEqual({ label: 'done', symbol: '✓' });
+    expect(statusDisplayFor('suture', 'done', { wordsFound: 4, totalWords: 7 })).toEqual({ label: 'done · 4 of 7 words', symbol: '✓' });
+    expect(statusDisplayFor('suture', 'done', { wordsFound: 5, totalWords: 5 })).toEqual({ label: 'done · 5 of 5 words', symbol: '✓' });
 
     // Done state for other games
     for (const game of ['pulse', 'triage', 'cueword'] as const) {

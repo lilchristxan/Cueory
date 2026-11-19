@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { browserStorage } from '../scripts/storage';
 import { GAME_RESULT_EVENT, heldRounds, loadStats, localDay, STATS_STORAGE_KEY, type SavedStats } from './gameresults';
+import { MARK_SYMBOL, type Mark } from './pulse';
 import { GAME_PROGRESS_EVENT, heardKey, readHeard, statusDisplayFor, statusFor, type GameId, type HeardToday, type StatusDetails } from './playstatus';
 
 /** Sudoku reports its finish with its own event, whose detail has the day but no game id. */
@@ -20,6 +21,30 @@ interface Props {
   games: readonly Row[];
   isComingSoonCrossword?: boolean;
 }
+
+/**
+ * The sample pack on the pillo card: the game's own marks (MARK_SYMBOL) and tile colours, so the hub and the game read
+ * the same way. Brand colours only, and every tile carries its mark, so colour is never the only signal. "In place" is
+ * Espresso by day as in the game, and the ink colour in the evening, because the game's Walnut only reads over its
+ * lighter foil; "not in the word" keeps the plain pocket colour for the same reason.
+ */
+const PILL_CLASS: Readonly<Record<Mark, string>> = {
+  here: 'bg-ink text-on-button',
+  elsewhere: 'bg-pillo-elsewhere text-on-pillo-elsewhere',
+  absent: 'bg-page text-ink-soft',
+};
+
+const SAMPLE_PACK: ReadonlyArray<readonly [string, Mark]> = [
+  ['A', 'absent'], ['B', 'elsewhere'], ['C', 'absent'], ['D', 'here'], ['E', 'absent'],
+  ['F', 'absent'], ['G', 'elsewhere'], ['H', 'here'], ['I', 'absent'], ['J', 'here'],
+];
+
+/** "how to read the pack", in the copy deck's words, with the game's marks. */
+const LEGEND: ReadonlyArray<readonly [Mark, string, string]> = [
+  ['here', 'filled', 'right letter, right spot'],
+  ['elsewhere', 'half', 'in the word, wrong spot'],
+  ['absent', 'empty', 'not in the word'],
+];
 
 const readStats = (): SavedStats => loadStats(browserStorage(), localDay(new Date()));
 
@@ -169,51 +194,16 @@ export default function PlayStatus({ games, isComingSoonCrossword = false }: Pro
                   aria-hidden="true"
                 >
                   <div className="grid grid-cols-5 gap-2 sm:gap-2.5">
-                    {/* Row 1: A×, B•, C×, D✓, E× */}
-                    <div className="aspect-square rounded-full bg-page flex flex-col items-center justify-center">
-                      <span className="text-xs sm:text-base font-bold text-ink leading-none">A</span>
-                      <span className="text-xs text-ink leading-none mt-0.5">×</span>
-                    </div>
-                    <div className="aspect-square rounded-full bg-soft flex flex-col items-center justify-center">
-                      <span className="text-xs sm:text-base font-bold text-ink leading-none">B</span>
-                      <span className="text-xs text-ink leading-none mt-0.5">•</span>
-                    </div>
-                    <div className="aspect-square rounded-full bg-page flex flex-col items-center justify-center">
-                      <span className="text-xs sm:text-base font-bold text-ink leading-none">C</span>
-                      <span className="text-xs text-ink leading-none mt-0.5">×</span>
-                    </div>
-                    <div className="aspect-square rounded-full bg-ink flex flex-col items-center justify-center">
-                      <span className="text-xs sm:text-base font-bold text-on-button leading-none">D</span>
-                      <span className="text-xs text-on-button leading-none mt-0.5">✓</span>
-                    </div>
-                    <div className="aspect-square rounded-full bg-page flex flex-col items-center justify-center">
-                      <span className="text-xs sm:text-base font-bold text-ink leading-none">E</span>
-                      <span className="text-xs text-ink leading-none mt-0.5">×</span>
-                    </div>
-
-                    {/* Row 2: F×, G•, H✓, I×, J✓ */}
-                    <div className="aspect-square rounded-full bg-page flex flex-col items-center justify-center">
-                      <span className="text-xs sm:text-base font-bold text-ink leading-none">F</span>
-                      <span className="text-xs text-ink leading-none mt-0.5">×</span>
-                    </div>
-                    <div className="aspect-square rounded-full bg-soft flex flex-col items-center justify-center">
-                      <span className="text-xs sm:text-base font-bold text-ink leading-none">G</span>
-                      <span className="text-xs text-ink leading-none mt-0.5">•</span>
-                    </div>
-                    <div className="aspect-square rounded-full bg-ink flex flex-col items-center justify-center">
-                      <span className="text-xs sm:text-base font-bold text-on-button leading-none">H</span>
-                      <span className="text-xs text-on-button leading-none mt-0.5">✓</span>
-                    </div>
-                    <div className="aspect-square rounded-full bg-page flex flex-col items-center justify-center">
-                      <span className="text-xs sm:text-base font-bold text-ink leading-none">I</span>
-                      <span className="text-xs text-ink leading-none mt-0.5">×</span>
-                    </div>
-                    <div className="aspect-square rounded-full bg-ink flex flex-col items-center justify-center">
-                      <span className="text-xs sm:text-base font-bold text-on-button leading-none">J</span>
-                      <span className="text-xs text-on-button leading-none mt-0.5">✓</span>
-                    </div>
-
-                    {/* Rows 3-6: 20 empty pockets */}
+                    {/* Two sample guesses in the pillo game's own tile colours and marks, then 20 empty pockets. */}
+                    {SAMPLE_PACK.map(([letter, mark]) => (
+                      <div
+                        key={letter}
+                        className={`aspect-square rounded-full flex flex-col items-center justify-center ${PILL_CLASS[mark]}`}
+                      >
+                        <span className="text-xs sm:text-base font-bold leading-none">{letter}</span>
+                        <span className="text-xs leading-none mt-0.5">{MARK_SYMBOL[mark]}</span>
+                      </div>
+                    ))}
                     {Array.from({ length: 20 }).map((_, i) => (
                       <div
                         key={i}
@@ -228,19 +218,18 @@ export default function PlayStatus({ games, isComingSoonCrossword = false }: Pro
               <div className="flex flex-col min-w-0 pt-1">
                 <h3 className="text-sm font-bold text-ink">how to read the pack</h3>
                 <ul className="mt-3 space-y-2 text-sm">
-                  <li>
-                    <span className="font-bold text-ink">✓ filled </span>
-                    <span className="text-ink-soft">right letter, right spot</span>
-                  </li>
-                  <li>
-                    <span className="font-bold text-ink">• half </span>
-                    <span className="text-ink-soft">in the word, wrong spot</span>
-                  </li>
-                  <li>
-                    <span className="font-bold text-ink">× empty </span>
-                    <span className="text-ink-soft">not in the word</span>
-                  </li>
+                  {LEGEND.map(([mark, word, meaning]) => (
+                    <li key={mark}>
+                      <span className="font-bold text-ink">
+                        {MARK_SYMBOL[mark]} {word}{' '}
+                      </span>
+                      <span className="text-ink-soft">{meaning}</span>
+                    </li>
+                  ))}
                 </ul>
+                <p className="mt-3 text-sm text-ink-soft" data-testid="pillo-share-note">
+                  the share line is plain words. no colored squares.
+                </p>
 
                 {/* Status */}
                 <div className="mt-6 pt-4 border-t border-line">
@@ -271,12 +260,7 @@ export default function PlayStatus({ games, isComingSoonCrossword = false }: Pro
                   <p className="mt-2 text-sm text-ink-soft">{crosswordGame.line}</p>
                 </div>
                 <div className="mt-4 pt-2">
-                  <span className="text-sm font-semibold text-ink">
-                    <span className="sr-only">
-                      {crosswordText.symbol} {crosswordText.label}
-                    </span>
-                    <span>coming soon</span>
-                  </span>
+                  <span className="text-sm font-semibold text-ink">coming soon</span>
                 </div>
               </div>
             ) : (

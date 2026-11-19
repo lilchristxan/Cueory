@@ -15,6 +15,8 @@ import { helloCardsPage } from '../islands/hello-cards';
 import { draftsAllowed } from '../islands/anatomylab';
 import { crosswordShown } from '../config/crossword';
 import { dayLabel } from '../islands/daily';
+// Keeps room for the browser-only cards and stats until they render, so nothing below them jumps (performance).
+import '../styles/playhub.css';
 
 // The hello cards link only exists where the cards may show: drafts stay off the live site (see helloCardsShown).
 const helloEnv = {
@@ -81,7 +83,9 @@ const todayIso = today.toISOString().split('T')[0];
     <noscript><p>to add cueory to your home screen, use your browser's menu. daily games need JavaScript.</p></noscript>
 
     {/* The four games as cards in stage layout matching Games.png and Games-390.png */}
-    <PlayStatus client:only="react" games={hubGames} isComingSoonCrossword={!showCrossword} />
+    <div class="play-hub-island play-hub-cards">
+      <PlayStatus client:only="react" games={hubGames} isComingSoonCrossword={!showCrossword} />
+    </div>
     <noscript>
       <ul class="mt-8 flex flex-col gap-3" data-testid="play-links">
         {
@@ -112,7 +116,9 @@ const todayIso = today.toISOString().split('T')[0];
     </p>
 
     {/* Private stats (D-76): off until the student turns them on, kept only in this browser. */}
-    <GameStatsPanel client:only="react" games={hubGames.map((game) => game.id)} />
+    <div class="play-hub-island play-hub-stats">
+      <GameStatsPanel client:only="react" games={hubGames.map((game) => game.id)} />
+    </div>
 
     {
       (showHello || showStat) && (

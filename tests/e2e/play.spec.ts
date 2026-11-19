@@ -292,8 +292,9 @@ test.describe('the /play hub (each game on its own page, 2026-11-17)', () => {
     await page.goto('/play');
     await expect(page.getByRole('heading', { level: 1, name: 'daily games' })).toBeVisible();
     await expect(page.getByTestId('sample-note')).toHaveText('for now these are sample puzzles with everyday words.');
+    // The pack key says the share line is plain words (lead, after the 8c35ebf capture); the builder's note framing stays out.
+    await expect(page.getByTestId('pillo-share-note')).toHaveText('the share line is plain words. no colored squares.');
     await expect(page.locator('main')).not.toContainText('Share line:');
-    await expect(page.locator('main')).not.toContainText('No colored squares');
     for (const [id, name, path] of [['pulse', 'pillo', '/play/pillo'], ['triage', 'sudoku', '/play/sudoku'], ['cueword', 'crossword', '/play/crossword'], ['suture', 'word path', '/play/word-path']]) {
       const card = page.getByTestId(`play-status-${id}`).getByRole('link');
       await expect(card).toContainText(name);
