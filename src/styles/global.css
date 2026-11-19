@@ -199,8 +199,9 @@
         rgb(var(--silk-fold-rgb) / calc(var(--silk-fold-alpha) / 2)) 63%,
         transparent 82%
       ),
+      linear-gradient(rgb(var(--silk-wash-rgb) / var(--silk-wash-alpha)) 0 0),
       linear-gradient(180deg, var(--scene-base), var(--color-silk-shade));
-    background-size: 220px 220px, auto, auto, auto, auto;
+    background-size: 220px 220px, auto, auto, auto, auto, auto;
     -webkit-mask-image: linear-gradient(
       180deg,
       transparent,
@@ -221,6 +222,120 @@
   .scene-hero {
     --scene-fade-top: 0px;
   }
+
+  /*
+    Home hero figure (redesign P5): Christian's anatomy picture has its own pale backdrop, so its top and left edges
+    fade into the silk (a mask, never over text). Evening dims it so the pale backdrop doesn't glow on the dark page.
+  */
+  .hero-figure {
+    -webkit-mask-image:
+      linear-gradient(to right, transparent, currentColor var(--hero-figure-fade)),
+      linear-gradient(to bottom, transparent, currentColor var(--hero-figure-fade)),
+      linear-gradient(to top, transparent, currentColor var(--hero-figure-fade-bottom));
+    -webkit-mask-composite: source-in;
+    mask-image:
+      linear-gradient(to right, transparent, currentColor var(--hero-figure-fade)),
+      linear-gradient(to bottom, transparent, currentColor var(--hero-figure-fade)),
+      linear-gradient(to top, transparent, currentColor var(--hero-figure-fade-bottom));
+    mask-composite: intersect;
+    pointer-events: none;
+    user-select: none;
+  }
+
+  :root[data-theme="dark"] .hero-figure {
+    filter: brightness(var(--hero-figure-evening-dim));
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .hero-figure {
+      filter: brightness(var(--hero-figure-evening-dim));
+    }
+  }
+
+  .hero-eyebrow {
+    font-size: var(--text-sm);
+    line-height: var(--text-sm--line-height);
+  }
+
+  .hero-caps {
+    letter-spacing: var(--tracking-caps);
+  }
+
+  /* "simpler." in copper (a solid copper: Copper Deep on Ivory is 3.6:1, above the 3:1 large text needs; lighter in Evening). */
+  .hero-accent {
+    color: var(--color-copper-deep);
+  }
+
+  :root[data-theme="dark"] .hero-accent {
+    color: var(--color-copper);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .hero-accent {
+      color: var(--color-copper);
+    }
+  }
+
+  /* The curve under the headline: decorative, copper, as wide as the headline's text column. */
+  .hero-curve {
+    display: block;
+    inline-size: 60%;
+    block-size: var(--spacing-stack);
+    margin-block-start: var(--spacing);
+    margin-inline-start: auto;
+    color: var(--color-copper-deep);
+  }
+
+  /* The "coming soon" tag inside the closed call to action: words, so it never relies on colour alone. */
+  .hero-soon {
+    border: 1px solid var(--cueory-copper-ink);
+    border-radius: var(--radius-pill);
+    padding-inline: calc(var(--spacing) * 2);
+    font-size: var(--text-sm);
+    font-weight: 400;
+  }
+
+  .hero-icon,
+  .hero-icon-lg {
+    flex: none;
+    inline-size: var(--icon-size);
+    block-size: var(--icon-size);
+  }
+
+  .hero-icon-lg {
+    inline-size: var(--icon-size-lg);
+    block-size: var(--icon-size-lg);
+  }
+
+  .hero-icon-copper {
+    color: var(--color-copper-deep);
+  }
+
+  .hero-support {
+    border-radius: var(--radius-xl);
+  }
+
+  .hero-support-body {
+    min-inline-size: 0;
+    flex: 1;
+  }
+
+  .explore-tile {
+    min-block-size: calc(var(--tap-min) * 2.25);
+    border: 1px solid var(--cueory-glass-border);
+    border-radius: var(--radius-lg);
+    background-color: rgb(var(--veil-rgb) / var(--veil-alpha));
+  }
+
+  .explore-tile:hover {
+    border-color: var(--color-control);
+  }
+
+  /* The coming-soon call to action: copper like the others, but it never acts. It still takes focus so it can be read out. */
+  .copper-button[aria-disabled="true"] {
+    cursor: default;
+  }
+
 
   /* "ways to study": Linen (Evening: Walnut), the folds falling the other way, light from the upper right. */
   .scene-tint {
@@ -256,8 +371,9 @@
       radial-gradient(ellipse 65% 50% at 4% 6%, rgb(var(--silk-peach-rgb) / var(--silk-peach-alpha)), transparent 72%),
       radial-gradient(ellipse 60% 55% at 96% 20%, rgb(var(--silk-peach-rgb) / calc(var(--silk-peach-alpha) * 0.8)), transparent 70%),
       radial-gradient(ellipse 75% 45% at 22% 80%, rgb(var(--silk-peach-rgb) / calc(var(--silk-peach-alpha) * 0.7)), transparent 72%),
+      linear-gradient(rgb(var(--silk-wash-rgb) / var(--silk-wash-alpha)) 0 0),
       linear-gradient(180deg, var(--color-silk-tint), var(--color-silk-base) 55%, var(--color-silk-shade));
-    background-size: 220px 220px, auto, auto, auto, auto, auto, auto;
+    background-size: 220px 220px, auto, auto, auto, auto, auto, auto, auto;
   }
 
   /* The boards' fold shape (a colourless mask) over a token-coloured layer, tiled down the page behind the content. */
@@ -272,7 +388,7 @@
     inset: 0;
     z-index: -1;
     pointer-events: none;
-    background-color: rgb(var(--silk-peach-rgb) / calc(var(--silk-peach-alpha) * 0.6));
+    background-color: rgb(var(--silk-peach-rgb) / calc(var(--silk-peach-alpha) * var(--silk-fold-layer)));
     -webkit-mask-image: url("/design/silk-fold-mask.svg");
     mask-image: url("/design/silk-fold-mask.svg");
     -webkit-mask-size: 100% var(--silk-fold-height);
@@ -449,6 +565,30 @@
   .glass-button:hover {
     color: var(--color-on-button);
     background-color: rgb(var(--glass-hover-rgb) / var(--glass-hover-alpha));
+  }
+
+  /* The one shared copper button (redesign, #889 palette): the renderings' copper sweep, Charcoal ink at full opacity
+     (4.65:1 or better on every stop), a 44 px minimum target. Pages add only layout utilities, never their own copper. */
+  .copper-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: calc(var(--spacing) * 2);
+    min-block-size: var(--tap-min);
+    max-inline-size: 100%;
+    padding: calc(var(--spacing) * 3.5) calc(var(--spacing) * 8);
+    overflow-wrap: break-word;
+    border: 1px solid transparent; /* shows as a real border in forced-colors mode, where the gradient is dropped */
+    border-radius: var(--radius-pill);
+    color: var(--cueory-copper-ink);
+    text-decoration: none;
+    background-image: linear-gradient(110deg, var(--cueory-copper-start), var(--cueory-copper-end) 72%, var(--cueory-copper-shine));
+    box-shadow: var(--shadow-button);
+  }
+
+  .copper-button:hover,
+  .copper-button:visited {
+    color: var(--cueory-copper-ink);
   }
 
   /* Social profile links (D-54): the platform's one-color mark in the text color, on a 44 px target. */
@@ -2235,12 +2375,12 @@ html:has(dialog.mode-preview[open]) {
   /* Narrow screens keep more room for the settings text (320px with 32px root text, issue 743). */
   @media (width < 40rem) {
     /*
-      The 6 × 8 word path board bleeds into the card's padding (-mx-6). With 32px text on a 320px screen its squares
+      The 6 × 8 word path board sits in a panel that bleeds into the card's padding (-mx-6). With 32px text on a 320px screen its squares
       need more room than that, and it used to spill past the card on the right only, ending under a pixel from the
       screen edge (over it with some fonts). It now stays centred on the card, so it spills evenly and fits the screen.
       With room to spare the offset is zero.
     */
-    .wordpath[data-format="path"] .wordpath-board { position: relative; inset-inline-start: calc(50% + var(--spacing) * 6); translate: -50% 0; }
+    .wordpath[data-format="path"] .wordpath-board { position: relative; inset-inline-start: 50%; translate: -50% 0; }
   }
   @media (orientation: portrait), (max-width: 50rem) {
     /* The number pad's layout lives with .sudoku-pad-wrap above (container queries on the panel's width). */

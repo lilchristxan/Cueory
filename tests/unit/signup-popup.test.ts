@@ -139,3 +139,13 @@ describe('pop-up colors (outside brand v1.0, at Christian\'s request)', () => {
     expect(css).toMatch(/--popup-photo:\s*none;/);
   });
 });
+
+describe('the page behind the open pop-up', () => {
+  it('is held by the same lock as the game results, which also fixes the body in place', () => {
+    const source = readFileSync(new URL('../../src/components/SignupPopup.astro', import.meta.url), 'utf8');
+    expect(source).toContain("import { lockPageScroll } from '../scripts/scrolllock';");
+    expect(source).toMatch(/lockPageScroll\(document\.documentElement, document\.body, window\)/);
+    const results = readFileSync(new URL('../../src/islands/gameresults.ts', import.meta.url), 'utf8');
+    expect(results).toContain("export { lockPageScroll } from '../scripts/scrolllock';");
+  });
+});

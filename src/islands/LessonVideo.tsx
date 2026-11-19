@@ -34,7 +34,7 @@ export default function LessonVideo({ videoId, title, thumbnail, captionsUrl, tr
   return (
     <div className="space-y-3">
       {playing ? (
-        <div className="relative aspect-video min-h-50 w-full overflow-hidden rounded-lg bg-player">
+        <div className="relative aspect-video min-h-51 w-full overflow-hidden rounded-lg bg-player">
           <iframe
             ref={frameRef}
             className="absolute inset-0 size-full"
@@ -48,7 +48,7 @@ export default function LessonVideo({ videoId, title, thumbnail, captionsUrl, tr
         <button
           type="button"
           onClick={play}
-          className="group relative aspect-video min-h-50 w-full overflow-hidden rounded-lg bg-ink-soft/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-button"
+          className="group relative aspect-video min-h-51 w-full overflow-hidden rounded-lg bg-ink-soft/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-button"
           aria-label={`Play video: ${title}`}
         >
           {thumbnail ? (

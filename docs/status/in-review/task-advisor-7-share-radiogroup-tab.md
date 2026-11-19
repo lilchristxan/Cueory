@@ -1,0 +1,1 @@
+status: advisor finding #903 (lane 7 #1): the share sheet's scrolling style row opts out of the Tab order (tabIndex -1), so Firefox stops adding it as an extra focus stop on /preview/share; radios keep native Tab and arrow keys. Firefox confirmation is in the next release run (#634).
