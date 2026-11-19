@@ -96,12 +96,14 @@ export const socials = [
 ] as const;
 
 export const footerLinks = [
+  { href: '/about', label: 'about us' },
   { href: '/courses', label: 'courses' },
   { href: '/coming-soon', label: 'coming soon' },
   { href: '/privacy', label: 'privacy' },
   { href: '/terms', label: 'terms' },
   { href: '/disclaimer', label: 'disclaimer' },
   { href: '/support', label: 'support cueory' },
+  { href: '/message', label: 'contact' },
 ] as const;
 
 /**
