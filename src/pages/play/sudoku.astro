@@ -55,6 +55,7 @@ const game = dailyGames.find((item) => item.id === 'triage')!;
 
   :global(.sudoku-toolbar) {
     padding-block: var(--spacing);
+    inline-size: min(calc(100% + var(--sudoku-box-line)), var(--sudoku-board-width));
   }
 
   :global(.sudoku-icon-button) {
@@ -76,8 +77,9 @@ const game = dailyGames.find((item) => item.id === 'triage')!;
   }
 
   :global(.sudoku-cell.is-selected) {
-    background: linear-gradient(135deg, var(--cueory-copper-start), var(--cueory-copper-end));
+    background: var(--cueory-copper-start);
     color: var(--cueory-copper-ink);
+    outline-color: var(--cueory-copper-ink);
     box-shadow: inset 0 0 0 var(--spacing) var(--cueory-copper-ink);
   }
 
