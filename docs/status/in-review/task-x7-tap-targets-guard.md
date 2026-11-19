@@ -1,0 +1,1 @@
+status: In review. Adds a static guard that every padding-sized Tailwind button carries an explicit 44px tap-target size, and hardens the three lesson sentence-stepper buttons that only reached 44px by accident. Known gap left for other open PRs: the "create your free account" link in the study-mode preview (ModesCarousel, #888) is a 20px-high text-sm link.

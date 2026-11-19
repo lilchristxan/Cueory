@@ -1,0 +1,1 @@
+status: Adds tests/unit/self-hosted-sources.test.ts, a source-level guard that src and public load no script, style, font, image, frame or worker from another origin (only the youtube-nocookie frame is allowed), and that every island calling fetch has a catch path, an alert state and a loading state. Tests only, no product change; found no gap in current staging.
