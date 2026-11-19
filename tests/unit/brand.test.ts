@@ -173,17 +173,14 @@ describe('brand v1.0', () => {
       expect(await alpha('dark')).toBe(await alpha('light'));
     });
 
-    it('shows next to pillo\'s name as decoration, with the name as the text', () => {
-      const component = file('src/components/PilloTitle.astro').toString();
-      expect(component).toContain('{name}');
-      expect(component).toContain('aria-hidden="true"');
-      expect(component.match(/alt=""/g)).toHaveLength(2);
-      expect(component).toContain('class="logo-day"');
-      expect(component).toContain('class="logo-evening"');
-      expect(component).not.toMatch(/style=|\w-\[/);
-      // pillo's own page (each game on its own page, 2026-11-17) carries the mark in its title.
+    it('uses the approved Pillo wordmark as the accessible page title', () => {
       const page = file('src/pages/play/pillo.astro').toString();
-      expect(page).toMatch(/<h1 slot="title" id="pulse-heading" class="display [^"]*"><PilloTitle name=\{game\.name\} \/><\/h1>/);
+      expect(page).toMatch(/<h1 slot="title" id="pulse-heading"[^>]*>[\s\S]*<img[\s\S]*alt="\{game\.name\}"[\s\S]*<\/h1>/);
+      expect(page).toContain('src="/design/logo-pillo.webp"');
+      expect(page).toContain('width="550"');
+      expect(page).toContain('height="208"');
+      expect(page).toContain('loading="lazy"');
+      expect(page).not.toMatch(/filter:|mix-blend|style=.*(?:color|background)/);
     });
   });
 });

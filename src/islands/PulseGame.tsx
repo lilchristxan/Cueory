@@ -28,7 +28,7 @@ import { heldRounds, loadStats, localDay, reportProgress, reportRound } from './
 import { dailyStats, recordResult, type DailyStats, type GameStats } from './gamestats';
 import { loadWordList } from './pillowords';
 import ResultBrandMark from './ResultBrandMark';
-import { GameHelpCard, useGameHelp } from './GameHelp';
+import { useGameHelp } from './GameHelp';
 import GameHeader from './GameHeader';
 import { gameName } from '../config/games';
 import { useSharedGameSettings } from './GameSettings.tsx';
@@ -305,8 +305,6 @@ export default function PulseGame({ puzzles }: Props) {
         }
       />
       <p className="sr-only" data-testid="pulse-status">guess the {WORD_LENGTH}-letter word · {leftWords}</p>
-      <GameHelpCard help={howToPlay} name={gameName('pulse')} extra={<PilloLegend />} />
-
       <div className="pillo-pack mt-4">
         <ol className="pillo-board" aria-label="your guesses">
           {state.guesses.map((guess, row) => (
