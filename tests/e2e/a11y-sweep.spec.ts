@@ -32,7 +32,20 @@ async function waitForIslands(page: Page, route: string): Promise<void> {
   });
 }
 
-async function tabAudit(page: Page): Promise<string[]> {
+/**
+ * On macOS WebKit, ordinary Tab follows the host's text-controls-only setting.
+ * Option+Tab is Safari's full keyboard-navigation chord. Keep ordinary Tab for
+ * every other engine and host so this remains the same user-path audit there.
+ */
+function isMacOSWebKit(browserName: string): boolean {
+  return process.platform === 'darwin' && browserName === 'webkit';
+}
+
+function keyboardNavigationKey(browserName: string): 'Tab' | 'Alt+Tab' {
+  return isMacOSWebKit(browserName) ? 'Alt+Tab' : 'Tab';
+}
+
+async function tabAudit(page: Page, key = 'Tab', waitForNativeFocusScroll = false): Promise<string[]> {
   const problems: string[] = [];
   const selector = 'a[href], button, input, select, textarea, [tabindex], details > summary:first-of-type';
 
@@ -88,42 +101,68 @@ async function tabAudit(page: Page): Promise<string[]> {
   let sameElementTabs = 0;
   let finished = false;
 
+  const readFocused = () => page.evaluate(({ query, baselines }) => {
+    const el = document.activeElement;
+    if (!(el instanceof HTMLElement) || el === document.body || el === document.documentElement) return null;
+
+    const candidates = [...document.querySelectorAll<HTMLElement>(query)];
+    const index = candidates.indexOf(el);
+    const previous = baselines.find((control) => control.index === index);
+    const style = getComputedStyle(el);
+    const rect = el.getBoundingClientRect();
+
+    // rgb(0, 0, 0) is opaque black, NOT alpha zero. Only rgba has
+    // a comma-separated alpha component in this browser.
+    const color = style.outlineColor;
+    const transparent = color === 'transparent' ||
+      (color.startsWith('rgba(') && Number.parseFloat(color.slice(color.lastIndexOf(',') + 1)) === 0);
+    const outlineIsVisible = style.outlineStyle !== 'none' &&
+      Number.parseFloat(style.outlineWidth) > 0 && !transparent;
+    const outlineChanged = !previous ||
+      style.outlineStyle !== previous.outlineStyle ||
+      style.outlineWidth !== previous.outlineWidth ||
+      style.outlineColor !== previous.outlineColor ||
+      style.outlineOffset !== previous.outlineOffset;
+    const shadowChanged = style.boxShadow !== 'none' && style.boxShadow !== previous?.boxShadow;
+
+    return {
+      index,
+      name: el.tagName.toLowerCase() + (el.id ? '#' + el.id : ''),
+      inputType: el instanceof HTMLInputElement ? el.type : null,
+      visibleFocus: (el.matches(':focus-visible') || (el instanceof HTMLInputElement && ['date', 'time', 'datetime-local', 'month', 'week'].includes(el.type) && el.matches(':focus-within'))) && ((outlineIsVisible && outlineChanged) || shadowChanged),
+      inViewport: rect.width > 0 && rect.height > 0 &&
+        rect.top < innerHeight && rect.bottom > 0 &&
+        rect.left < innerWidth && rect.right > 0,
+    };
+  }, { query: selector, baselines: eligible });
+
   for (let step = 0; step < maxTabs; step++) {
-    await page.keyboard.press('Tab');
-    const focused = await page.evaluate(({ query, baselines }) => {
-      const el = document.activeElement;
-      if (!(el instanceof HTMLElement) || el === document.body || el === document.documentElement) return null;
+    await page.keyboard.press(key);
+    let focused = await readFocused();
 
-      const candidates = [...document.querySelectorAll<HTMLElement>(query)];
-      const index = candidates.indexOf(el);
-      const previous = baselines.find((control) => control.index === index);
-      const style = getComputedStyle(el);
-      const rect = el.getBoundingClientRect();
-
-      // rgb(0, 0, 0) is opaque black, NOT alpha zero. Only rgba has
-      // a comma-separated alpha component in this browser.
-      const color = style.outlineColor;
-      const transparent = color === 'transparent' ||
-        (color.startsWith('rgba(') && Number.parseFloat(color.slice(color.lastIndexOf(',') + 1)) === 0);
-      const outlineIsVisible = style.outlineStyle !== 'none' &&
-        Number.parseFloat(style.outlineWidth) > 0 && !transparent;
-      const outlineChanged = !previous ||
-        style.outlineStyle !== previous.outlineStyle ||
-        style.outlineWidth !== previous.outlineWidth ||
-        style.outlineColor !== previous.outlineColor ||
-        style.outlineOffset !== previous.outlineOffset;
-      const shadowChanged = style.boxShadow !== 'none' && style.boxShadow !== previous?.boxShadow;
-
-      return {
-        index,
-        name: el.tagName.toLowerCase() + (el.id ? '#' + el.id : ''),
-        inputType: el instanceof HTMLInputElement ? el.type : null,
-        visibleFocus: (el.matches(':focus-visible') || (el instanceof HTMLInputElement && ['date', 'time', 'datetime-local', 'month', 'week'].includes(el.type) && el.matches(':focus-within'))) && ((outlineIsVisible && outlineChanged) || shadowChanged),
-        inViewport: rect.width > 0 && rect.height > 0 &&
+    // macOS WebKit can report the newly focused control before its native
+    // focus scroll is painted. Wait only for that same control to enter the
+    // viewport; no scripted scroll is performed, and focus loss still fails.
+    if (waitForNativeFocusScroll && focused && !focused.inViewport) {
+      const expectedIndex = focused.index;
+      await page.waitForFunction(({ query, expectedIndex }) => {
+        const el = document.activeElement;
+        if (!(el instanceof HTMLElement)) return true;
+        const candidates = [...document.querySelectorAll<HTMLElement>(query)];
+        if (candidates.indexOf(el) !== expectedIndex) return true;
+        const rect = el.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0 &&
           rect.top < innerHeight && rect.bottom > 0 &&
-          rect.left < innerWidth && rect.right > 0,
-      };
-    }, { query: selector, baselines: eligible });
+          rect.left < innerWidth && rect.right > 0;
+      }, { query: selector, expectedIndex }, { timeout: 250 }).catch((error: unknown) => {
+        if (!String(error).includes('Timeout')) throw error;
+      });
+      const settled = await readFocused();
+      if (!settled || settled.index !== expectedIndex) {
+        problems.push(focused.name + ': native focus scroll did not retain its target');
+      }
+      focused = settled;
+    }
 
     // Chrome may move focus into the browser chrome at the end, or wrap it to
     // the first stop. Neither counts as success until all eligible controls
@@ -184,7 +223,7 @@ async function tabAudit(page: Page): Promise<string[]> {
 
 test.describe('Task 74: full-site accessibility sweep', () => {
   for (const route of pages) {
-    test(`${route}: axe, heading, skip link and keyboard focus`, async ({ page }, testInfo) => {
+    test(`${route}: axe, heading, skip link and keyboard focus`, async ({ page, browserName }, testInfo) => {
       // Task 94 audits the Evening palette. This test checks precisely the
       // requested three viewports, not a duplicate fourth phone project.
       test.skip(isEveningProject(testInfo), 'Evening palette is Task 94');
@@ -195,6 +234,8 @@ test.describe('Task 74: full-site accessibility sweep', () => {
       });
 
       const problems: string[] = [];
+      const macOSWebKit = isMacOSWebKit(browserName);
+      const tabKey = keyboardNavigationKey(browserName);
       const response = await page.goto(route);
       await waitForIslands(page, route);
       const expectedStatus = route === missingPage ? 404 : 200;
@@ -209,7 +250,7 @@ test.describe('Task 74: full-site accessibility sweep', () => {
       if (await skip.count() !== 1 || await main.count() !== 1) {
         problems.push('Missing or duplicated skip link / main#main target');
       } else {
-        await page.keyboard.press('Tab');
+        await page.keyboard.press(tabKey);
         if (!(await skip.evaluate((el) => el === document.activeElement))) {
           problems.push('Skip link is not first in the keyboard tab order');
         } else {
@@ -224,7 +265,7 @@ test.describe('Task 74: full-site accessibility sweep', () => {
       // at the first interactive element rather than halfway down the page.
       await page.goto(route);
       await waitForIslands(page, route);
-      problems.push(...await tabAudit(page));
+      problems.push(...await tabAudit(page, tabKey, macOSWebKit));
 
       const results = await new AxeBuilder({ page }).withTags(axeTags).analyze();
       for (const violation of results.violations) {
