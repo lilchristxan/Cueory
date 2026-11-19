@@ -58,8 +58,8 @@ and hello cards.
   of the BodyParts3D source and credit.
 - **Study-skills sample lesson, learn pages, questions, courses, resources, breaks, progress.** Behind "coming soon" or noindex.
   Lesson flashcard sheets, concept maps, rewards, reminders and survey are preview-only.
-- **Legal pages.** Terms v6 and the Disclaimer are written, but they are checked against the rendered pages before
-  release, and the privacy notice is a draft until Christian approves it. Do not announce them from this list.
+- **Legal pages.** Terms v6, the Disclaimer and the adopted privacy notice still need a rendered-page check
+  before release. Do not announce them from this list.
 - **Offline use** (saving lessons for offline): present in the code, not promised for launch.
 
 ## Behind the scenes
