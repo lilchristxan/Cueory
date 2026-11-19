@@ -183,6 +183,10 @@ describe('brand v1.0', () => {
       expect(page).toContain('loading="eager"');
       expect(page).not.toContain('loading="lazy"');
       expect(page).not.toMatch(/filter:|mix-blend|style=.*(?:color|background)/);
+      expect(page).toContain('data-image-priority="title"');
+      // pillo's own stylesheet never filters or blends the page (so never the wordmark), in any form.
+      const css = file('src/styles/pillo.css').toString();
+      expect(css).not.toMatch(/(?:^|[^-\w])filter\s*:|-webkit-filter|mix-blend-mode|background-blend-mode/m);
     });
   });
 });

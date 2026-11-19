@@ -363,6 +363,7 @@
   --pillo-letter-lift: -0.3125rem;      /* a guessed letter moves up this much to make room for its mark */
   --pillo-mark-drop: -0.125rem;         /* the mark's line sits this far into the pill's bottom edge */
   --pillo-keys-width: 24rem;             /* the letter keys wrap within this width, the same as the crossword's keys */
+  --pillo-key-min: 1.5rem;              /* narrowest letter key (24 px, WCAG 2.2 minimum); var(--tap-min) = 44 px keys in wrapped rows (D-pending) */
   --pillo-key-gap: 0.1875rem;           /* the space between two letter keys in a row (3 px) */
   --pillo-keys-bleed: 1.25rem;          /* on phones the keys reach this far into the game panel's 1.5rem padding */
   --pillo-key-pad: 0.125rem;            /* the least space beside a key's letter, so ten keys fit across a 320 px phone */

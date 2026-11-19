@@ -337,15 +337,17 @@ test.describe('daily games on a narrow phone', () => {
         .filter((box) => box.left < 0 || box.right > window.innerWidth).length,
     );
     expect(outside).toBe(0);
-    // The approved QWERTY rows and action keys may center-wrap on narrow phones. Check actual touch-target size and
-    // non-overlap, not a fixed row count.
+    // The QWERTY keys stay in the three rows drawn, even at 320 px (PR #887 review, 2026-11-19, D-pending for
+    // Christian): every key is at least 44 px tall and at least 24 px wide (WCAG 2.2's minimum target), narrower than
+    // 44 px so ten keys fit across. The key tops form exactly three rows.
     const rows = await page.locator('.pillo-key-row').evaluateAll((rowEls) =>
-      rowEls.map((row) => [...row.querySelectorAll('.pillo-key')].map((el) => el.getBoundingClientRect())),
+      rowEls.map((row) => [...row.querySelectorAll('.pillo-key')].map((el) => el.getBoundingClientRect().toJSON() as DOMRect)),
     );
-    expect(rows.length).toBeGreaterThanOrEqual(3);
+    expect(rows).toHaveLength(3);
     const keys = rows.flat();
+    expect(new Set(keys.map((key) => Math.round(key.top))).size).toBe(3);
     for (const key of keys) {
-      expect(key.width).toBeGreaterThanOrEqual(44);
+      expect(key.width).toBeGreaterThanOrEqual(24);
       expect(key.height).toBeGreaterThanOrEqual(44);
     }
     for (let i = 0; i < keys.length; i++) {

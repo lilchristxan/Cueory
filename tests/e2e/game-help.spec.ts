@@ -72,6 +72,13 @@ for (const game of games) {
     await expect(dialog.getByRole('heading', { name: 'settings' })).toBeVisible();
     // Where the shared settings are now (each game's gear, Christian's brief).
     await expect(dialog).toContainText('change them with the gear at the top left of a game');
+    if (game.id === 'pulse') {
+      // pillo's help shows the legend: each mark as a pill, with its symbol and its meaning in words.
+      const legend = dialog.getByRole('list', { name: 'what the marks mean' });
+      await expect(legend).toBeVisible();
+      await expect(legend.getByRole('listitem')).toHaveCount(3);
+      for (const meaning of ['in its place', 'in the word, somewhere else', 'not in the word']) await expect(legend).toContainText(meaning);
+    }
     // Using the "?" counts as seeing the rules, so the first-visit card goes away.
     await expect(area.getByTestId('game-help-first')).toHaveCount(0);
     expect(JSON.parse((await seen(page))!)).toEqual([game.id]);

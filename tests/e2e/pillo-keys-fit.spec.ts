@@ -2,10 +2,12 @@ import { expect, test, type Page } from '@playwright/test';
 
 // pillo's on-screen keys follow the approved QWERTY order, with action keys in the third logical row. On phones in
 // portrait, with normal and larger text, no row runs past the screen or its group, every key is at least 44 px tall
-// and 24 px wide, no two keys overlap and the page never scrolls sideways. With normal text the keys form exactly three
-// rows, as a phone keyboard does (PR #887 review, 2026-11-19: the keys narrow instead of wrapping into six short rows,
-// so the 44 px rule now holds for height and the width follows WCAG's 24 px minimum target). The crossword's check and
-// reveal buttons share one row wherever the pair fits.
+// and 24 px wide (WCAG 2.2's minimum target), no two keys overlap and the page never scrolls sideways. With 16 px text
+// the key tops form exactly three rows at 320, 390 and 430 px, as drawn (PR #887 review, 2026-11-19; D-pending for
+// Christian, since the keys are narrower than 44 px). With larger text a key never squeezes its letter, so a logical row
+// may wrap onto more lines: at 20 px text every row wraps at 320 px, the first and third rows wrap at 390 px, and all
+// three stay whole at 430 px; at 32 px text every row wraps. The three logical rows always stay separate and in order.
+// The crossword's check and reveal buttons share one row wherever the pair fits.
 
 async function open(page: Page, width: number, rootText: string, path: string) {
   await page.setViewportSize({ width, height: 800 });
@@ -47,8 +49,16 @@ for (const width of [320, 390, 430]) {
       expect(await group.locator('.pillo-key-row').evaluateAll((rows) => rows.filter((row) => row.scrollWidth > row.clientWidth + 1).length)).toBe(0);
       expect(await group.locator('.pillo-key').evaluateAll((list) => list.filter((key) => key.scrollWidth > key.clientWidth + 1).length)).toBe(0);
       expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0);
-      // With normal text the key tops form exactly three rows; larger text may wrap a row rather than squeeze a letter.
+      // With 16 px text the key tops form exactly three rows. Larger text may wrap a logical row, never merge two.
       if (rootText === '16px') expect(new Set(keys.map((key) => Math.round(key.top))).size).toBe(3);
+      const logical = await group.locator('.pillo-key-row').evaluateAll((rows) =>
+        rows.map((row) => [...row.querySelectorAll('.pillo-key')].map((key) => key.getBoundingClientRect().toJSON() as DOMRect)),
+      );
+      expect(logical).toHaveLength(3);
+      for (let i = 1; i < logical.length; i++) {
+        const above = Math.max(...logical[i - 1]!.map((key) => key.bottom));
+        expect(Math.min(...logical[i]!.map((key) => key.top)), `row ${i + 1} starts below row ${i}`).toBeGreaterThanOrEqual(above - 0.5);
+      }
     });
   }
 }
