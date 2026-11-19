@@ -1,9 +1,11 @@
 import { expect, test, type Page } from '@playwright/test';
 
 // pillo's on-screen keys follow the approved QWERTY order, with action keys in the third logical row. On phones in
-// portrait, with normal and larger text, no row runs past the screen or
-// its group, every key is at least 44 × 44, no two keys overlap and the page never scrolls sideways. The crossword's
-// check and reveal buttons share one row wherever the pair fits.
+// portrait, with normal and larger text, no row runs past the screen or its group, every key is at least 44 px tall
+// and 24 px wide, no two keys overlap and the page never scrolls sideways. With normal text the keys form exactly three
+// rows, as a phone keyboard does (PR #887 review, 2026-11-19: the keys narrow instead of wrapping into six short rows,
+// so the 44 px rule now holds for height and the width follows WCAG's 24 px minimum target). The crossword's check and
+// reveal buttons share one row wherever the pair fits.
 
 async function open(page: Page, width: number, rootText: string, path: string) {
   await page.setViewportSize({ width, height: 800 });
@@ -29,7 +31,7 @@ for (const width of [320, 390, 430]) {
       const area = (await group.boundingBox())!;
       const keys = await group.getByRole('button').evaluateAll((list) => list.map((key) => key.getBoundingClientRect().toJSON() as DOMRect));
       for (const key of keys) {
-        expect(key.width).toBeGreaterThanOrEqual(44);
+        expect(key.width).toBeGreaterThanOrEqual(24);
         expect(key.height).toBeGreaterThanOrEqual(44);
         expect(key.left).toBeGreaterThanOrEqual(Math.max(0, area.x) - 0.5);
         expect(key.right).toBeLessThanOrEqual(Math.min(width, area.x + area.width) + 0.5);
@@ -45,6 +47,8 @@ for (const width of [320, 390, 430]) {
       expect(await group.locator('.pillo-key-row').evaluateAll((rows) => rows.filter((row) => row.scrollWidth > row.clientWidth + 1).length)).toBe(0);
       expect(await group.locator('.pillo-key').evaluateAll((list) => list.filter((key) => key.scrollWidth > key.clientWidth + 1).length)).toBe(0);
       expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0);
+      // With normal text the key tops form exactly three rows; larger text may wrap a row rather than squeeze a letter.
+      if (rootText === '16px') expect(new Set(keys.map((key) => Math.round(key.top))).size).toBe(3);
     });
   }
 }

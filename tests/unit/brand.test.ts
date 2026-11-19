@@ -179,7 +179,9 @@ describe('brand v1.0', () => {
       expect(page).toContain('src="/design/logo-pillo.webp"');
       expect(page).toContain('width="550"');
       expect(page).toContain('height="208"');
-      expect(page).toContain('loading="lazy"');
+      // It is the top-of-page heading, so it loads eagerly (PR #887 review, 2026-11-19).
+      expect(page).toContain('loading="eager"');
+      expect(page).not.toContain('loading="lazy"');
       expect(page).not.toMatch(/filter:|mix-blend|style=.*(?:color|background)/);
     });
   });

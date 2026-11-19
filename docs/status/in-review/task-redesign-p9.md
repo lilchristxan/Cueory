@@ -1,1 +1,1 @@
-status: Task redesign P9 (Pillo) redesign: approved artwork, QWERTY keyboard and help-flow updates are integrated at exact head 818b18e5; hosted Chromium browser matrix is green.
+status: Task redesign P9 (Pillo) redesign: approved artwork, QWERTY keyboard and help-flow updates; the keyboard now keeps three rows on phones (keys 44 px tall, narrower when needed) and the wordmark loads eagerly. Needs Christian: the pillo wordmark has no Evening (light) version, so it is hard to see on the Evening page until he supplies one.

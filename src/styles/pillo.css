@@ -252,9 +252,11 @@
   }
 
   /*
-    The letter keys look and lie out like the crossword's (Christian, 2026-11-17): plain squared keys a to z in rows
-    that wrap, each at least 44 × 44, with ⌫ and enter in the same style on their own row. Each key still shows the best
-    mark its letter has had, as a color and its symbol. Nothing is squeezed: at any width or text size the rows wrap.
+    The letter keys lie out as a phone keyboard (PR #887 review, 2026-11-19): three QWERTY rows, with ⌫ and enter at
+    the ends of the third. Every key is at least 44 px tall; on a narrow phone the keys narrow, sharing the row's width
+    (ten across the first row, the same width below), so the three rows stay three rows at 320 px. Each key still shows
+    the best mark its letter has had, as a color and its symbol. A key never squeezes its letter: only when the text is
+    enlarged past what ten keys can hold does a row wrap.
   */
   .pillo-keys {
     display: flex;
@@ -263,6 +265,15 @@
     gap: calc(var(--spacing) * 3);
     max-inline-size: var(--pillo-keys-width);
     margin-inline: auto;
+  }
+
+  /* On a phone the keys use most of the game panel's side padding too, so ten keys across stay wide enough to tap. */
+  @media (width < 40rem) {
+    .pillo-keys {
+      /* Centred at the keys' usual width where there is room; otherwise widened into the padding, never past it. */
+      max-inline-size: none;
+      margin-inline: max(calc(-1 * var(--pillo-keys-bleed)), calc((100% - var(--pillo-keys-width)) / 2));
+    }
   }
 
   /* On a tablet or desktop the game column is wider than the pack: the pack, its status line and the keys are centred
@@ -283,7 +294,8 @@
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
-    gap: var(--spacing);
+    gap: var(--pillo-key-gap);
+    inline-size: 100%;
   }
 
   .pillo-key {
@@ -292,14 +304,23 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    min-inline-size: var(--tap-min);
+    /* At most one tenth of the row after its nine gaps, and never narrower than the letter it shows. */
+    flex: 1 1 0;
+    max-inline-size: calc((100% - 9 * var(--pillo-key-gap)) / 10);
+    min-inline-size: calc(1em + 2 * (var(--pillo-key-pad) + var(--border-pillo-key)));
     min-block-size: var(--tap-min);
-    padding-inline: calc(var(--spacing) * 3);
+    padding-inline: var(--pillo-key-pad);
     border: var(--border-pillo-key) solid var(--color-control);
     border-radius: var(--radius-md);
     line-height: var(--text-sm--line-height);
     color: var(--color-ink);
     background-color: var(--color-page);
+  }
+
+  /* ⌫ and enter share what the third row's seven letters leave. */
+  .pillo-key.pillo-key-wide {
+    min-inline-size: auto;
+    max-inline-size: none;
   }
 
   .pillo-key.pillo-here {
