@@ -32,6 +32,8 @@ const game = dailyGames.find((item) => item.id === 'triage')!;
 
   :global(.sudoku-panel) {
     max-inline-size: var(--sudoku-board-max);
+    inline-size: 100%;
+    box-sizing: border-box;
     margin-inline: auto;
     padding: var(--spacing-stack);
     border: var(--border-game-settings) solid var(--cueory-glass-border);
@@ -68,7 +70,6 @@ const game = dailyGames.find((item) => item.id === 'triage')!;
   }
 
   :global(.sudoku-board) {
-    overflow: hidden;
     border-color: var(--color-ink);
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow-lift);
@@ -80,9 +81,12 @@ const game = dailyGames.find((item) => item.id === 'triage')!;
     box-shadow: inset 0 0 0 var(--spacing) var(--cueory-copper-ink);
   }
 
-  :global(.sudoku-cell.is-related),
+  :global(.sudoku-cell.is-related) {
+    background: var(--color-sudoku-related);
+  }
+
   :global(.sudoku-cell.is-box-related) {
-    background: color-mix(in srgb, var(--cueory-copper-start) 14%, var(--color-page));
+    background: var(--color-sudoku-box-related);
   }
 
   :global(.sudoku-number-row button),
