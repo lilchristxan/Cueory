@@ -11,6 +11,38 @@
   page, and the word path part of it still prints clean (print.css hides [data-print-hidden], shows [data-print-only]).
 */
 @layer components {
+  /* The frosted panel around the board (WordPath.png): the shared glass tokens, rounded like the other panels. */
+  .wordpath-panel {
+    padding-block: var(--spacing-stack);
+    background-color: var(--cueory-result-card-bg);
+    border: var(--border-wordpath-panel) solid var(--cueory-result-card-border);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--cueory-glass-shadow);
+    -webkit-backdrop-filter: blur(var(--blur-veil));
+    backdrop-filter: blur(var(--blur-veil));
+  }
+
+  /* "cue of the day" and "letter path game": the caps label from the renderings (12 px, .22em tracking). */
+  .wordpath-label {
+    font-size: var(--cueory-label-size);
+    letter-spacing: var(--cueory-label-tracking);
+    font-weight: var(--cueory-label-weight);
+    text-transform: uppercase;
+  }
+
+  /* A picked letter: copper glow with a copper-deep ring, as drawn. Charcoal copper ink reads on it in both palettes. */
+  .wordpath-pick {
+    background-color: var(--color-copper-glow);
+    box-shadow: inset 0 0 0 var(--wordpath-ring) var(--color-copper-deep);
+    color: var(--cueory-copper-ink);
+  }
+  /* An unpicked letter: a page-colour circle with a hairline rim so it reads against the frosted panel in both palettes. */
+  .wordpath-plain {
+    background-color: var(--color-page);
+    box-shadow: inset 0 0 0 var(--border-wordpath-panel) var(--color-line);
+  }
+  .wordpath-pick-text { color: var(--cueory-copper-ink); }
+
   .wordpath-corner {
     display: flex;
     justify-content: flex-end;
@@ -74,6 +106,17 @@
 }
 
 @media print {
+  /* The panel is only for the screen: on paper the board sits on plain white with no bleed or frame. */
+  .wordpath-panel {
+    margin-inline: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    background: none !important;
+    box-shadow: none !important;
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
+
   /* The game's own part, in any print. */
   .wordpath {
     color: var(--print-ink) !important;
@@ -186,7 +229,7 @@
   }
 
   .wordpath-line {
-    stroke: var(--color-ink);
+    stroke: var(--color-copper-deep);
     stroke-width: var(--wordpath-line);
     stroke-linecap: round;
   }

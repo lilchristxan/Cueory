@@ -1557,6 +1557,22 @@ html:has(dialog.menu-panel[open]) {
 }
 
 /*
+  Study-mode preview dialog under reduced motion: no transition and no animation is created inside it. The blanket rule
+  above gives every element a 0.01ms duration, which Chromium finishes before the next frame but Firefox still lists in
+  getAnimations() (18 of them, release run 44422471256). Setting the property to none creates nothing at all, so the
+  dialog opens and closes at once.
+*/
+@media (prefers-reduced-motion: reduce) {
+  .mode-preview,
+  .mode-preview *,
+  .mode-preview *::before,
+  .mode-preview *::after {
+    transition: none;
+    animation-name: none;
+  }
+}
+
+/*
   The study-mode preview (D-51, Task 109): a native modal <dialog> that fills the window. Behind the panel, the page is
   darkened and softly frosted (the scrim). The panel's cream surface is its own layer, so the script can open it around
   the bottle; it is opaque, in the frosted cards' own color (Ivory, Evening: Walnut), so its text has the plain
@@ -2169,7 +2185,9 @@ html:has(dialog.mode-preview[open]) {
   .sudoku-time:empty, .sudoku-errors:empty { display: none; }
   .sudoku-errors { margin-inline-start: auto; }
   .sudoku-toolbar { position: relative; display: flex; inline-size: min(100%, var(--sudoku-board-width)); flex-wrap: wrap; align-items: center; justify-content: space-between; gap: calc(var(--spacing) * 2) 0; }
-  .sudoku-toolbar > .sudoku-icon-button { flex: none; inline-size: var(--tap-min); block-size: var(--tap-min); }
+  /* The five toolbar buttons are exactly one tap target square: a floor as well as a size, border-box, and nothing
+     that could scale them at rest (Firefox measured the pause button at 43.99997 px, release run 44422471256). */
+  .sudoku-toolbar > .sudoku-icon-button { box-sizing: border-box; flex: none; inline-size: var(--tap-min); block-size: var(--tap-min); min-inline-size: var(--tap-min); min-block-size: var(--tap-min); transform: none; scale: none; translate: none; }
   .sudoku-board.is-paused .sudoku-paused-mark { display: block; inline-size: calc(var(--sudoku-cell-size) / 4); block-size: var(--sudoku-entered-line); border-radius: var(--radius-pill); background: currentColor; }
   .sudoku-board-scroll { inline-size: 100%; overflow-x: auto; }
   /* Square size: the brief's clamp(44px, min((100vh − 460px) / 9, (100vw − 150px) / 9), 84px), but never wider than
@@ -2233,12 +2251,12 @@ html:has(dialog.mode-preview[open]) {
   /* Narrow screens keep more room for the settings text (320px with 32px root text, issue 743). */
   @media (width < 40rem) {
     /*
-      The 6 × 8 word path board bleeds into the card's padding (-mx-6). With 32px text on a 320px screen its squares
+      The 6 × 8 word path board sits in a panel that bleeds into the card's padding (-mx-6). With 32px text on a 320px screen its squares
       need more room than that, and it used to spill past the card on the right only, ending under a pixel from the
       screen edge (over it with some fonts). It now stays centred on the card, so it spills evenly and fits the screen.
       With room to spare the offset is zero.
     */
-    .wordpath[data-format="path"] .wordpath-board { position: relative; inset-inline-start: calc(50% + var(--spacing) * 6); translate: -50% 0; }
+    .wordpath[data-format="path"] .wordpath-board { position: relative; inset-inline-start: 50%; translate: -50% 0; }
   }
   @media (orientation: portrait), (max-width: 50rem) {
     /* The number pad's layout lives with .sudoku-pad-wrap above (container queries on the panel's width). */
