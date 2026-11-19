@@ -112,7 +112,7 @@ test('paused keypad and keyboard cannot change entries, marks, errors, or the li
   const hintsControl = game(page).getByRole('checkbox', { name: /auto cues/i });
   await expect(hintsControl).toBeDisabled();
   const hintsBefore = await hintsControl.getAttribute('aria-checked');
-  for (const difficulty of ['easy', 'mid', 'hard']) {
+  for (const difficulty of ['easy', 'medium', 'hard']) {
     await expect(game(page).getByRole('button', { name: difficulty, exact: true })).toBeDisabled();
   }
   await expect(game(page).getByRole('button', { name: 'easy', exact: true })).toHaveAttribute('aria-pressed', 'true');
@@ -131,7 +131,7 @@ test('paused keypad and keyboard cannot change entries, marks, errors, or the li
 
   await game(page).getByRole('button', { name: 'resume puzzle' }).click();
   await expect(hintsControl).toBeEnabled();
-  await expect(game(page).getByRole('button', { name: 'mid', exact: true })).toBeEnabled();
+  await expect(game(page).getByRole('button', { name: 'medium', exact: true })).toBeEnabled();
   await expect(game(page).getByRole('button', { name: 'easy', exact: true })).toHaveAttribute('aria-pressed', 'true');
   await expect(hintsControl).toHaveAttribute('aria-checked', hintsBefore!);
   await expect(cells(page).nth(empty)).toHaveAttribute('aria-selected', 'true');

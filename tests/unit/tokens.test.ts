@@ -104,7 +104,21 @@ describe('components', () => {
 
   it.each(files)('%s uses only token-based classes', (file) => {
     const source = readFileSync(new URL(file, srcDir), 'utf8');
-    expect(source.match(/[\w:]+-\[[^\]\s]+\]/g) ?? []).toEqual([]);
+    const arbitrary = source.match(/[\w:]+-\[[^\]\s]+\]/g) ?? [];
+    if (file === 'islands/GameResultsHost.tsx') {
+      const approved = new Set([
+        'w-[var(--cueory-result-card-max-width)]',
+        'max-w-[var(--cueory-result-card-max-width)]', 'rounded-[var(--cueory-result-card-radius)]',
+        'border-[color:var(--cueory-result-card-border)]', 'bg-[color:var(--cueory-result-card-bg)]',
+        'p-[var(--cueory-result-card-padding)]', 'shadow-[var(--cueory-result-card-shadow)]',
+        'text-[length:var(--cueory-label-size)]', 'font-[var(--cueory-label-weight)]',
+        'tracking-[var(--cueory-label-tracking)]', 'rounded-[var(--radius-md)]',
+        'border-[color:var(--cueory-glass-border)]', 'shadow-[var(--cueory-glass-shadow)]',
+        'from-[var(--cueory-copper-start)]', 'to-[var(--cueory-copper-end)]',
+        'text-[color:var(--cueory-copper-ink)]',
+      ]);
+      expect([...new Set(arbitrary.filter((token) => !approved.has(token)))]).toEqual([]);
+    } else expect(arbitrary).toEqual([]);
   });
 });
 

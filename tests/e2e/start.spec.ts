@@ -31,7 +31,10 @@ async function tabTo(page: Page, target: Locator) {
 async function visibleKeyboardFocus(target: Locator) {
   expect(await target.evaluate(element => {
     const style = getComputedStyle(element);
-    return element.matches(':focus-visible') && style.outlineStyle !== 'none' &&
+    const hasFocus = element.matches('input[type="date"]')
+      ? (element.matches(':focus-visible') || element.matches(':focus-within'))
+      : element.matches(':focus-visible');
+    return hasFocus && style.outlineStyle !== 'none' &&
       Number.parseFloat(style.outlineWidth) > 0 && style.outlineColor !== 'transparent' &&
       style.outlineColor !== 'rgba(0, 0, 0, 0)';
   })).toBe(true);

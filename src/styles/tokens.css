@@ -55,11 +55,13 @@
   --cueory-glass-bg: rgb(var(--glass-rgb) / var(--glass-alpha));
   --cueory-glass-border: rgb(var(--glass-rim-rgb) / var(--glass-rim-alpha));
   --cueory-glass-shadow: var(--shadow-soft);
-  --cueory-result-card-bg: rgb(var(--veil-rgb) / var(--veil-alpha));
+  /* The finished-game card is solid Ivory in Daytime, not frosted (matches PilloDone); Evening keeps the Walnut veil. */
+  --cueory-result-card-bg: var(--color-page);
   --cueory-result-card-border: var(--color-line);
   --cueory-result-card-shadow: var(--shadow-lift);
   --cueory-result-card-radius: var(--radius-xl);
   --cueory-result-card-padding: var(--spacing-stack);
+  --cueory-result-card-max-width: 38.75rem;
   /* C5 caps label: 12px with the rendering's .22em tracking. */
   --cueory-label-size: 0.75rem;
   --cueory-label-tracking: 0.22em;
@@ -90,10 +92,18 @@
   --color-model: #8b6f5b;          /* Mocha    — a structure */
   --color-model-alt: #d3b7a1;      /* Taupe    — every other structure */
   --color-model-selected: #3e2c23; /* Espresso — the selected structure */
-  --color-board-tint: color-mix(in srgb, #d3b7a1 50%, #8b6f5b); /* Taupe + Mocha — sudoku row, column and box of the selected square */
-  --color-board-given: color-mix(in srgb, #eadccf 50%, #f9f5ef); /* Linen + Ivory — sudoku given numbers, far lighter than the tint */
+  /* Sudoku board (P10, Sudoku.png): light squares, dark lines and numbers in both palettes, so Evening reads like
+     Daytime; a pale row, column and box tint; the selected square is Copper Shine inside a deep copper outline. */
+  --color-board-tint: color-mix(in srgb, #f6d3ae 80%, #d3b7a1); /* Copper Glow + Taupe — row, column and box of the selected square, pale as drawn */
+  --color-board-given: color-mix(in srgb, #eadccf 50%, #f9f5ef); /* Linen + Ivory — sudoku given numbers, lighter than the tint */
   --color-board-match: #6b5243;    /* Bronze   — sudoku squares holding the selected number */
   --color-on-board-match: #f9f5ef; /* Ivory    — numbers on those squares */
+  --color-board-cell: #f9f5ef;     /* Ivory    — an empty square */
+  --color-board-ink: #3e2c23;      /* Espresso — numbers and grid lines on the board */
+  --color-board-ink-soft: #6b5243; /* Bronze   — pencil marks on the board */
+  --color-board-paused: #eadccf;   /* Linen    — squares while the game is paused */
+  --color-board-selected: #fff0de; /* Copper Shine — the selected square */
+  --color-board-selected-line: color-mix(in srgb, #b87348 75%, #3e2c23); /* Copper Deep + Espresso — the selected square's outline, at least 3:1 against every square it touches */
 
   /* ---------- Fonts ---------- */
   --font-body: "Lato", system-ui, -apple-system, "Segoe UI", sans-serif; /* headings, body, UI, buttons */
@@ -220,6 +230,7 @@
   --icon-size-mug-height: 1.875rem; /* and height */
   --icon-size: 1.75rem;         /* a small line icon beside a label */
   --icon-size-lg: 2rem;         /* a line icon above a tile label */
+  --sudoku-board-max: 62rem;    /* measured board cap from docs/design/renderings/Sudoku.png */
   --container-menu: min(85vw, 22.5rem); /* the ☰ side panel: most of a phone, 360px on bigger screens */
   --container-account-menu: 15rem; /* the small account menu */
   --container-mode-card: min(68vw, 20rem); /* a "ways to study" card: most of a phone, 320px on bigger screens */
@@ -509,10 +520,16 @@
     --color-model: #cbb8a4;          /* Sand */
     --color-model-alt: #6b5243;      /* Bronze */
     --color-model-selected: #f9f5ef; /* Ivory */
-    --color-board-tint: color-mix(in srgb, #6b5243 30%, #8b6f5b); /* Bronze + Mocha */
-    --color-board-given: color-mix(in srgb, #3a2d24 50%, #1c1917); /* Walnut + Charcoal */
-    --color-board-match: #cbb8a4;    /* Sand */
-    --color-on-board-match: #1c1917; /* Charcoal */
+    --color-board-tint: color-mix(in srgb, #cbb8a4 70%, #6b5243); /* Sand + Bronze */
+    --color-board-given: color-mix(in srgb, #cbb8a4 90%, #6b5243); /* Sand + Bronze, lighter than the tint */
+    --color-board-match: #6b5243;    /* Bronze */
+    --color-on-board-match: #f9f5ef; /* Ivory */
+    --color-board-cell: #cbb8a4;     /* Sand: light squares on the dark page, like Daytime */
+    --color-board-ink: #1c1917;      /* Charcoal */
+    --color-board-ink-soft: #3a2d24; /* Walnut */
+    --color-board-paused: #cbb8a4;   /* Sand */
+    --color-board-selected: #fff0de; /* Copper Shine */
+    --color-board-selected-line: color-mix(in srgb, #b87348 40%, #1c1917); /* Copper Deep + Charcoal: at least 3:1 against the tint */
     --shadow-tint: 28 25 23;      /* Charcoal */
     --silk-fold-rgb: 58 45 36;    /* Walnut */
     --silk-fold-alpha: 0.7;
@@ -523,6 +540,7 @@
     --silk-wash-alpha: 0;         /* no wash in Evening */
     --veil-rgb: 58 45 36;         /* Walnut */
     --veil-alpha: 0.78;
+    --cueory-result-card-bg: rgb(var(--veil-rgb) / var(--veil-alpha));
     --silk-grain: url("/textures/grain-evening.svg");
     --glass-rgb: 203 184 164;     /* Sand */
     --glass-alpha: 0.82;
@@ -592,10 +610,16 @@
   --color-model: #cbb8a4;          /* Sand */
   --color-model-alt: #6b5243;      /* Bronze */
   --color-model-selected: #f9f5ef; /* Ivory */
-  --color-board-tint: color-mix(in srgb, #6b5243 30%, #8b6f5b); /* Bronze + Mocha */
-  --color-board-given: color-mix(in srgb, #3a2d24 50%, #1c1917); /* Walnut + Charcoal */
-  --color-board-match: #cbb8a4;    /* Sand */
-  --color-on-board-match: #1c1917; /* Charcoal */
+  --color-board-tint: color-mix(in srgb, #cbb8a4 70%, #6b5243); /* Sand + Bronze */
+  --color-board-given: color-mix(in srgb, #cbb8a4 90%, #6b5243); /* Sand + Bronze, lighter than the tint */
+  --color-board-match: #6b5243;    /* Bronze */
+  --color-on-board-match: #f9f5ef; /* Ivory */
+  --color-board-cell: #cbb8a4;     /* Sand: light squares on the dark page, like Daytime */
+  --color-board-ink: #1c1917;      /* Charcoal */
+  --color-board-ink-soft: #3a2d24; /* Walnut */
+  --color-board-paused: #cbb8a4;   /* Sand */
+  --color-board-selected: #fff0de; /* Copper Shine */
+  --color-board-selected-line: color-mix(in srgb, #b87348 40%, #1c1917); /* Copper Deep + Charcoal: at least 3:1 against the tint */
   --shadow-tint: 28 25 23;      /* Charcoal */
   --silk-fold-rgb: 58 45 36;    /* Walnut */
   --silk-fold-alpha: 0.7;
@@ -606,6 +630,7 @@
   --silk-wash-alpha: 0;         /* no wash in Evening */
   --veil-rgb: 58 45 36;         /* Walnut */
   --veil-alpha: 0.78;
+  --cueory-result-card-bg: rgb(var(--veil-rgb) / var(--veil-alpha));
   --silk-grain: url("/textures/grain-evening.svg");
   --glass-rgb: 203 184 164;     /* Sand */
   --glass-alpha: 0.82;
@@ -657,14 +682,27 @@
   --sudoku-entered-line: 2px;
   --sudoku-wrong-line: 2px;                          /* the slash across a wrong entry (issue 720) */
   --sudoku-selected-line: 3px;                       /* the selected square's outline */
-  /* Highlights (Christian, 2026-11-12): the row, column and box tint is clearly darker than the given-number shading;
+  /* Highlights (Christian, 2026-11-12; pale as drawn in Sudoku.png, P10): the tint is darker than the given-number shading;
      squares with the selected number are the strongest fill plus bold; numbers keep 4.5:1 on every fill. */
   --color-sudoku-given: var(--color-board-given);
   --color-sudoku-related: var(--color-board-tint);
   --color-sudoku-box-related: var(--color-board-tint);
   --color-sudoku-identical: var(--color-board-match);
   --color-on-sudoku-identical: var(--color-on-board-match);
-  --color-sudoku-selected: var(--color-ink);
-  --color-sudoku-entered: var(--color-ink);
+  --color-sudoku-selected: var(--color-board-selected-line);
+  --color-sudoku-selected-fill: var(--color-board-selected);
+  --color-sudoku-entered: var(--color-board-ink);
+  --color-sudoku-cell: var(--color-board-cell);
+  --color-sudoku-ink: var(--color-board-ink);
+  --color-sudoku-ink-soft: var(--color-board-ink-soft);
+  --color-sudoku-paused: var(--color-board-paused);
   --color-sudoku-conflict: currentColor;
+}
+
+@theme static {
+  /* ---------- /play hub (redesign P8): room kept for the browser-only cards until they render ---------- */
+  /* Measured rendered heights plus each island's own top margin (mt-4 cards, mt-16 stats), 2026-11-19. */
+  --play-hub-cards-reserve: min(100svh, 74.5rem); /* the cards in one column, under 1024 px wide (at least 1194 px); a screen is enough on phones */
+  --play-hub-cards-reserve-lg: 44.75rem; /* the pillo card beside the other three, from 1024 px (716 px) */
+  --play-hub-stats-reserve: 34rem;      /* the stats panel at every width (at least 550 px) */
 }

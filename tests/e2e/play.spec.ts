@@ -1,5 +1,5 @@
 import AxeBuilder from '@axe-core/playwright';
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Locator, type Page } from '@playwright/test';
 import { dailySudokuSeed, generateSudoku } from '../../src/islands/sudoku';
 import { fixClock } from './clock';
 
@@ -48,6 +48,30 @@ const axe = async (page: Page) => {
 };
 const field = (page: Page) => page.getByLabel('your guess', { exact: true });
 const live = (page: Page) => page.getByTestId('pulse-live');
+
+/** Contrast against the composed flat background beneath a rendered result-copy node. */
+const renderedContrast = (locator: Locator) => locator.evaluate((element) => {
+  const rgba = (value: string) => {
+    const match = /rgba?\((\d+(?:\.\d+)?),?\s*(\d+(?:\.\d+)?),?\s*(\d+(?:\.\d+)?)(?:,?\s*([\d.]+))?/.exec(value);
+    if (!match) throw new Error(`unreadable color ${value}`);
+    return [Number(match[1]), Number(match[2]), Number(match[3]), match[4] === undefined ? 1 : Number(match[4])] as const;
+  };
+  let background: [number, number, number] = [255, 255, 255];
+  const layers: number[][] = [];
+  for (let node: Element | null = element; node; node = node.parentElement) {
+    const layer = rgba(getComputedStyle(node).backgroundColor);
+    if (layer[3] > 0) layers.push([...layer]);
+  }
+  for (const [red, green, blue, alpha] of [...layers].reverse()) {
+    background = [red * alpha + background[0] * (1 - alpha), green * alpha + background[1] * (1 - alpha), blue * alpha + background[2] * (1 - alpha)];
+  }
+  const luminance = ([red, green, blue]: readonly number[]) => [red, green, blue].map((value) => {
+    const channel = value / 255;
+    return channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
+  }).reduce((total, channel, index) => total + channel * [0.2126, 0.7152, 0.0722][index]!, 0);
+  const [low, high] = [luminance(rgba(getComputedStyle(element).color)), luminance(background)].sort((a, b) => a - b);
+  return (high! + 0.05) / (low! + 0.05);
+});
 
 test.describe('daily games: pillo (Task 114)', () => {
   test.beforeEach(async ({ page }) => {
@@ -292,6 +316,11 @@ test.describe('the /play hub (each game on its own page, 2026-11-17)', () => {
     await page.goto('/play');
     await expect(page.getByRole('heading', { level: 1, name: 'daily games' })).toBeVisible();
     await expect(page.getByTestId('sample-note')).toHaveText('for now these are sample puzzles with everyday words.');
+    // The pack key says the share line is plain words (lead, after the 8c35ebf capture); the builder's note framing stays out.
+    await expect(page.getByTestId('pillo-share-note')).toHaveText('the share line is plain words. no colored squares.');
+    // The date comes from the visitor's clock, not the build day (the page is built ahead of time).
+    await expect(page.getByTestId('play-date')).toHaveText('sun 1 nov');
+    await expect(page.getByTestId('play-date')).toHaveAttribute('datetime', '2026-11-01');
     for (const [id, name, path] of [['pulse', 'pillo', '/play/pillo'], ['triage', 'sudoku', '/play/sudoku'], ['cueword', 'crossword', '/play/crossword'], ['suture', 'word path', '/play/word-path']]) {
       const card = page.getByTestId(`play-status-${id}`).getByRole('link');
       await expect(card).toContainText(name);
@@ -305,12 +334,16 @@ test.describe('the /play hub (each game on its own page, 2026-11-17)', () => {
 });
 
 test.describe('daily games on the home page (D-61)', () => {
-  test('a calm section after "ways to study" leads to today\'s game', async ({ page }) => {
+  test('the approved games stage after "ways to study" leads to /play', async ({ page }) => {
     await page.goto('/');
     const headings = await page.getByRole('heading', { level: 2 }).allTextContents();
-    expect(headings.indexOf('daily games')).toBe(headings.indexOf('one lesson, multiple ways to study') + 1);
+    expect(headings.indexOf('a few minutes, every day.')).toBe(headings.indexOf('one lesson, multiple ways to study') + 1);
+    const stage = page.getByTestId('games-stage');
+    await expect(stage.locator('[data-game-card]')).toHaveCount(5);
+    await expect(stage.locator('[data-game-card="crossword"]')).toContainText('coming soon');
+    await expect(stage.locator('[data-game-card="hello cards"]')).toContainText('coming soon');
     const link = page.getByTestId('games-link');
-    await expect(link).toHaveText("play today's games");
+    await expect(link).toHaveText("play today's →");
     await expect(link).toHaveAttribute('href', '/play');
     await link.click();
     await expect(page).toHaveURL(/\/play$/);
@@ -408,7 +441,7 @@ test.describe('daily games: sudoku (Task 625)', () => {
     await game(page).getByRole('button', { name: String(daily.solution[second]), exact: true }).click();
     await expect(cells(page).nth(second)).toContainText(String(daily.solution[second]));
 
-    await game(page).getByRole('button', { name: 'mid', exact: true }).click();
+    await game(page).getByRole('button', { name: 'medium', exact: true }).click();
     await expect(grid(page).locator('[data-given="true"]')).toHaveCount(32);
     await game(page).getByRole('button', { name: 'hard' }).click();
     await expect(grid(page).locator('[data-given="true"]')).toHaveCount(26);
@@ -516,6 +549,9 @@ test.describe('daily games: sudoku (Task 625)', () => {
     await expect(result).toBeFocused();
     await expect(result).toContainText('solved.');
     await expect(result).toContainText('0 errors');
+    for (const copy of await result.locator('p').all()) {
+      expect(await renderedContrast(copy), `solved result copy: ${await copy.innerText()}`).toBeGreaterThanOrEqual(4.5);
+    }
     const detail = JSON.parse((await page.locator('html').getAttribute('data-sudoku-result'))!);
     expect(detail).toMatchObject({ game: 'sudoku', day, level: 'easy', solved: true, errors: 0 });
     expect(await page.evaluate(() => (window as unknown as { sudokuRounds: unknown[] }).sudokuRounds))
