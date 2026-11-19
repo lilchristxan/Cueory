@@ -12,6 +12,11 @@ const strip = (text: string) => text.replace(/\/\*[\s\S]*?\*\//g, (c) => c.repla
 
 const countJsxStyles = (source: string) => (strip(source).match(/\bstyle\s*=\s*\{/g) ?? []).length;
 
+function quotedStyleLines(source: string): number[] {
+  const markup = strip(source);
+  return Array.from(markup.matchAll(/\bstyle\s*=\s*["']/g), ({ index }) => markup.slice(0, index).split('\n').length);
+}
+
 // path -> [expected count of JSX style props, reason]
 const jsxStyleAllowlist: Record<string, [number, string]> = {
   'islands/PulseGame.tsx': [1, 'sets only the --pillo-share custom property, which the stylesheet turns into a bar length'],
@@ -24,11 +29,16 @@ describe('inline style guard', () => {
   it('has no style="" or style=\'\' attribute in templates or markup strings', () => {
     const hits: string[] = [];
     for (const file of files) {
-      strip(readFileSync(new URL(file, src), 'utf8')).split('\n').forEach((line, i) => {
-        if (/\bstyle\s*=\s*["']/.test(line)) hits.push(`${file}:${i + 1}`);
-      });
+      const source = readFileSync(new URL(file, src), 'utf8');
+      for (const line of quotedStyleLines(source)) hits.push(`${file}:${line}`);
     }
     expect(hits).toEqual([]);
+  });
+
+  it('locates a quoted inline style even when its equals sign or value starts on another line', () => {
+    expect(quotedStyleLines('<div style="display: none" />')).toEqual([1]);
+    expect(quotedStyleLines('<div\n style\n=\n"display: none" />')).toEqual([2]);
+    expect(quotedStyleLines("<div\n class='sticky'\n style=\n'display: none' />")).toEqual([3]);
   });
 
   it('counts inline JSX style props even with spaces or line breaks around the equals sign', () => {
