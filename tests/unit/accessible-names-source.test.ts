@@ -159,12 +159,16 @@ const isTernaryMark = (text: string, mask: boolean[], at: number) =>
 
 /**
  * Whether a JSX expression (the text between { and }, hidden elements already removed) still shows readable content.
- * A ternary needs both branches readable; `a && b`, `a || b` and `a ?? b` count only through b; a plain value
- * expression such as label or t('x') counts; null, undefined, booleans, empty strings and bare symbols do not.
+ * A ternary needs both branches readable. An `&&` expression alone may leave a control unnamed. An `||` or
+ * `??` expression is checked through its fallback. A plain value such as label or t('x') counts, while null,
+ * undefined, booleans, empty strings and bare symbols do not.
  */
 function readableExpression(expression: string): boolean {
   const text = expression.trim();
   const mask = topLevelMask(text);
+  if (text.startsWith('(') && text.endsWith(')') && !mask.some(Boolean)) {
+    return readableExpression(text.slice(1, -1));
+  }
   for (let at = 0; at < text.length; at += 1) {
     if (!isTernaryMark(text, mask, at)) continue;
     let nested = 0;
@@ -177,12 +181,16 @@ function readableExpression(expression: string): boolean {
     }
     return true; // not a ternary this walk can follow
   }
-  let after = -1;
+  let fallback = -1;
+  let conditional = false;
   for (let at = 0; at < text.length - 1; at += 1) {
-    if (mask[at] && ['&&', '||', '??'].includes(text.slice(at, at + 2))) after = at + 2;
+    if (!mask[at]) continue;
+    const operator = text.slice(at, at + 2);
+    if (operator === '&&') conditional = true;
+    if (operator === '||' || operator === '??') fallback = at + 2;
   }
-  if (after !== -1) return readableExpression(text.slice(after));
-  return /[A-Za-z0-9]/.test(text) && !/^(?:null|undefined|true|false)$/.test(text);
+  if (fallback !== -1) return readableExpression(text.slice(fallback));
+  return !conditional && /[A-Za-z0-9]/.test(text) && !/^(?:null|undefined|true|false)$/.test(text);
 }
 
 /** Whether the visible text of a button or link names it: plain text, or a top-level expression that reads. */
@@ -266,10 +274,18 @@ describe('accessible names in component and island source', () => {
     expect(bad("<button>{t('x')}</button>")).toEqual([]);
     expect(bad("<button>{open ? 'close' : 'open'}</button>")).toEqual([]);
     expect(bad('<button>{open ? <span>close</span> : <span>open</span>}</button>')).toEqual([]);
-    expect(bad('<button>{ready && <span>go</span>}</button>')).toEqual([]);
     expect(bad('<button>{a ? b : c ? \'x\' : \'y\'}</button>')).toEqual([]);
     expect(bad('<button>{shown && <span aria-hidden="true">✓</span>}{names[key]}</button>')).toEqual([]);
     expect(bad('<a href="/x"><img src="/a.svg" alt="" />home</a>')).toEqual([]);
+  });
+
+  it('requires a name whenever the control is present', () => {
+    const bad = (markup: string) => unnamedButtonsAndLinks('x.tsx', markup);
+    expect(bad('<button>{ready && <span>go</span>}</button>')).toHaveLength(1);
+    expect(bad('<button>{(ready && <span>go</span>)}</button>')).toHaveLength(1);
+    expect(bad('{ready && <button><span>go</span></button>}')).toEqual([]);
+    expect(bad('{ready && <button></button>}')).toHaveLength(1);
+    expect(bad('<button>{(ready && <span>go</span>) || "wait"}</button>')).toEqual([]);
   });
 
   it('gives every image alt text', () => {
