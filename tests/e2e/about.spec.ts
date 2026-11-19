@@ -28,8 +28,8 @@ test.describe('about page', () => {
     await expect(page.locator('main section').nth(1).locator('li')).toHaveCount(1);
     await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', 'noindex, nofollow');
     await expect(page.getByRole('link', { name: 'join the mailing list' })).toHaveAttribute('href', '/#signup');
-    await expect(page.getByRole('link', { name: 'support on Ko-fi ↗' })).toHaveAttribute('href', 'https://ko-fi.com/cueory');
-    await expect(page.getByRole('link', { name: 'support on Ko-fi ↗' })).toHaveAttribute('target', '_blank');
+    await expect(page.getByRole('link', { name: 'support on Ko-fi (opens in a new tab)' })).toHaveAttribute('href', 'https://ko-fi.com/cueory');
+    await expect(page.getByRole('link', { name: 'support on Ko-fi (opens in a new tab)' })).toHaveAttribute('target', '_blank');
   });
 
   for (const width of [320, 390]) {
