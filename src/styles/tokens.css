@@ -157,6 +157,11 @@
   /* Phones draw the headline on four large lines (nursing / school / made / simpler.), sized by the same column width. */
   --text-display-hero-phone: clamp(1rem, 100cqi / 4.6, 5.5rem);
   --text-display-hero-phone--line-height: 1.05;
+  /* Phones draw the About headline on four large lines (we know / nursing / school is / hard.), sized by the header's
+     width (container query). Its longest line, "we know", is about 3.9 times its font size in Bodoni Moda; 5 leaves
+     room for the fallback serifs and enlarged text. */
+  --text-display-about-phone: clamp(1rem, 100cqi / 5, 5.5rem);
+  --text-display-about-phone--line-height: 1.05;
   --text-title-explore: 2rem;   /* the explore row's heading */
   --text-title-explore--line-height: 1.2;
   --text-title: 2.375rem;       /* marketing page title (38px) */
