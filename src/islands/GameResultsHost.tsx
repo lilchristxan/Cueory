@@ -203,7 +203,7 @@ export default function GameResultsHost() {
         </p>
 
         <div className="mt-5 flex flex-wrap items-start justify-center gap-2">
-          <button type="button" aria-disabled={preparing || undefined} aria-busy={preparing || undefined} className="min-h-(--tap-min) rounded-pill bg-linear-to-r from-[var(--cueory-copper-start)] to-[var(--cueory-copper-end)] px-5 py-2.5 text-[color:var(--cueory-copper-ink)]" onClick={() => void share(card, line)}><span aria-hidden="true">↗</span> {prepared?.card === card ? 'share image' : preparing ? 'preparing image' : 'share'}</button>
+          <button type="button" aria-disabled={preparing || undefined} aria-busy={preparing || undefined} className="min-h-(--tap-min) rounded-pill bg-linear-to-r from-[var(--cueory-copper-start)] to-[var(--cueory-copper-end)] px-5 py-2.5 text-[color:var(--cueory-copper-ink)] aria-busy:cursor-progress" onClick={() => void share(card, line)}><span aria-hidden="true">↗</span> {prepared?.card === card ? 'share image' : preparing ? 'preparing image' : 'share'}</button>
           <button type="button" className="min-h-(--tap-min) rounded-pill border border-control px-5 py-2.5" onClick={() => void copy(line)}>copy</button>
 
         </div>

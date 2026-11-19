@@ -122,6 +122,15 @@ describe('shared result dialog design tokens', () => {
     expect(source).not.toContain('rounded-2xl');
   });
 
+  it('keeps the copper share button fully opaque while an image is prepared, with a busy cursor', () => {
+    const source = readFileSync(new URL('../../src/islands/GameResultsHost.tsx', import.meta.url), 'utf8');
+    expect(source).not.toMatch(/opacity-\d/);
+    expect(source).toContain('aria-busy:cursor-progress');
+    expect(source).toContain('aria-disabled={preparing || undefined}');
+    expect(source).toContain('aria-busy={preparing || undefined}');
+    expect(source).toContain('if (preparing) return;');
+  });
+
   it('shows the label in capitals by style only, without changing the source text', () => {
     const host = readFileSync(new URL('../../src/islands/GameResultsHost.tsx', import.meta.url), 'utf8');
     // The share landing pages that also used result-meta became the games' own pages (2026-11-17) and were removed.
