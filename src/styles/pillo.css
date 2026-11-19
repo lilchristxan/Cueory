@@ -273,6 +273,10 @@
     .pillo-keys {
       margin-inline: auto;
     }
+
+    .pillo-keys {
+      max-inline-size: var(--pillo-board);
+    }
   }
 
   .pillo-key-row {

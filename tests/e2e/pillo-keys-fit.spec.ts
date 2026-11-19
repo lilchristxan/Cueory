@@ -49,6 +49,18 @@ for (const width of [320, 390, 430]) {
   }
 }
 
+test('pillo keyboard keeps each logical row on one physical line at desktop width', async ({ page }) => {
+  await open(page, 1440, '16px', '/play/pillo');
+  const rows = await page.getByTestId('pulse').getByRole('group', { name: 'letters' }).locator('.pillo-key-row').evaluateAll((els) =>
+    els.map((row) => [...row.querySelectorAll('.pillo-key')].map((key) => key.getBoundingClientRect())),
+  );
+  expect(rows).toHaveLength(3);
+  for (const row of rows) {
+    expect(new Set(row.map((key) => key.top)).size).toBe(1);
+    expect(row.every((key) => key.width >= 44 && key.height >= 44)).toBe(true);
+  }
+});
+
 for (const [width, rootText] of [[320, '16px'], [320, '20px'], [390, '16px'], [390, '20px'], [430, '20px']] as const) {
   test(`crossword check and reveal share a row at ${width} px with ${rootText} root text`, async ({ page }) => {
     await open(page, width, rootText, '/play/crossword');
