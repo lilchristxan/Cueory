@@ -170,3 +170,45 @@ test('with 32 px text at 320 px the sudoku settings dialog wraps inside its card
   expect(box.x).toBeGreaterThanOrEqual(0);
   expect(box.x + box.width).toBeLessThanOrEqual(320);
 });
+
+for (const [width, height] of [[320, 700], [390, 844]] as const) {
+  test(`pause and resume respond beyond the visible toolbar button at ${width} px`, async ({ page, hasTouch }) => {
+    await page.setViewportSize({ width, height });
+    await page.goto('/play/sudoku');
+    const pause = toolbar(page).getByRole('button', { name: 'pause puzzle' });
+    await pause.scrollIntoViewIfNeeded();
+    const { top, bottom, left, right, settings, print } = await pause.evaluate((button) => {
+      const box = button.getBoundingClientRect();
+      const centerX = box.left + box.width / 2;
+      const centerY = box.top + box.height / 2;
+      const reach = 1.5;
+      const target = (x: number, y: number) => ({
+        x, y, label: document.elementFromPoint(x, y)?.closest('button')?.getAttribute('aria-label'),
+      });
+      return {
+        top: target(centerX, box.top - reach),
+        bottom: target(centerX, box.bottom + reach),
+        left: target(box.left - reach, centerY),
+        right: target(box.right + reach, centerY),
+        settings: target(button.previousElementSibling!.getBoundingClientRect().right - 1, centerY),
+        print: target(button.nextElementSibling!.getBoundingClientRect().left + 1, centerY),
+      };
+    });
+    expect(top.label).toBe('pause puzzle');
+    expect(bottom.label).toBe('pause puzzle');
+    expect(settings.label).toBe('sudoku settings');
+    expect(print.label).toBe('print this puzzle');
+    // At 320 px the gaps are narrower than the overlay. At 390 px there is room for the full width.
+    if (width === 390) {
+      expect(left.label).toBe('pause puzzle');
+      expect(right.label).toBe('pause puzzle');
+    }
+
+    const point = width === 390 ? right : top;
+    const press = () => hasTouch ? page.touchscreen.tap(point.x, point.y) : page.mouse.click(point.x, point.y);
+    await press();
+    await expect(toolbar(page).getByRole('button', { name: 'resume puzzle' })).toBeVisible();
+    await press();
+    await expect(pause).toBeVisible();
+  });
+}
