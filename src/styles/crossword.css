@@ -31,10 +31,11 @@
   .crossword-board-wrap { container-type: inline-size; max-inline-size: 100%; overflow: clip; }
   .crossword-board-wrap {
     position: relative;
-    inset-inline-start: 50%;
     inline-size: calc(100vw - var(--spacing) * 4);
     max-inline-size: none;
-    transform: translateX(-50%);
+    /* Center the full-bleed scroller without a transformed scroll ancestor.
+       Firefox otherwise adds its moved scrollable overflow to the document. */
+    margin-inline: calc(50% - 50vw + var(--spacing) * 2);
     overflow: visible;
   }
   .crossword-board { --crossword-cell: min(var(--crossword-cell-easy), calc((100cqw - 4 * var(--crossword-gap)) / 5)); display: flex; inline-size: max-content; max-inline-size: 100%; margin-inline: auto; flex-direction: column; gap: var(--crossword-gap); }
@@ -130,7 +131,7 @@
   .crossword-cell::before, .crossword-cell::after, .crossword-mark { display: none; }
   .crossword-cell { background-image: none; }
   .crossword-panel { color: var(--print-ink); background: var(--print-paper); }
-  .crossword-board-wrap { position: static; inline-size: auto; max-inline-size: none; transform: none; container-type: normal; }
+  .crossword-board-wrap { position: static; inline-size: auto; max-inline-size: none; margin-inline: 0; container-type: normal; }
   .crossword-board-wrap[data-level="hard"] { overflow: visible; }
   .crossword-board { --crossword-cell: var(--crossword-print-cell) !important; gap: 0; overflow: visible; }
   .crossword-row { gap: 0; }
