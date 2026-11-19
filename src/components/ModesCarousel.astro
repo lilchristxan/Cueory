@@ -322,8 +322,12 @@ const icons: Record<StudyFeatureIcon, string> = {
       return (reach - ROW_GAP * width) / width;
     };
 
+    /** How much room the row had when it was last laid out (rowRoom), so a resize that changes nothing is skipped. */
+    let laidOutIn = Number.NaN;
+
     const place = () => {
       const room = rowRoom();
+      laidOutIn = room;
       cards.forEach((card, index) => {
         const offset = ringOffset(index, active, cards.length);
         const spot = ringPlace(offset);
@@ -356,18 +360,21 @@ const icons: Record<StudyFeatureIcon, string> = {
       dots.forEach((dot, index) => dot.toggleAttribute('data-on', index === active));
     };
 
-    // A new window width (or text size) changes how many vials fit, so the row is laid out again.
-    // Both the stage's width and the vial's own width count: larger text widens the vials without changing the window.
-    const rowSize = () => `${track.clientWidth} ${cards[active]!.offsetWidth}`;
-    let laidOutAt = rowSize();
+    /*
+      A new window width or text size changes how much room the row has, so it is laid out again. The room comes from
+      everything the vials must fit between: the stage's width, the arrows' place and the vials' own width (larger text
+      widens the vials and the arrows without changing the window). So the stage and the vials are both watched, and
+      the row is laid out again whenever the room they leave has changed, not only when the stage is a new width.
+    */
     const relayout = () => {
-      const size = rowSize();
-      if (size === laidOutAt) return;
-      laidOutAt = size;
+      if (rowRoom() === laidOutIn) return;
       place();
     };
-    if (typeof ResizeObserver === 'function') new ResizeObserver(relayout).observe(track);
-    else window.addEventListener('resize', relayout);
+    if (typeof ResizeObserver === 'function') {
+      const watcher = new ResizeObserver(relayout);
+      watcher.observe(track);
+      for (const card of cards) watcher.observe(card);
+    } else window.addEventListener('resize', relayout);
 
     /**
      * Only the card where the merry-go-round comes to rest is announced: a run of quick presses or swipes reads out
