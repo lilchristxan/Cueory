@@ -186,7 +186,13 @@ describe('brand v1.0', () => {
       expect(page).toContain('data-image-priority="title"');
       // pillo's own stylesheet never filters or blends the page (so never the wordmark), in any form.
       const css = file('src/styles/pillo.css').toString();
-      expect(css).not.toMatch(/(?:^|[^-\w])filter\s*:|-webkit-filter|mix-blend-mode|background-blend-mode/m);
+      const filtersOrBlends = /(?:^|[^-\w])filter\s*:|-webkit-filter|mix-blend-mode|background-blend-mode/m;
+      // The check itself works: it catches an ordinary filter or blend declaration and lets backdrop-filter through.
+      for (const bad of ['.pillo { filter: invert(1); }', '.pillo{filter:brightness(2)}', 'filter : none', '.pillo { mix-blend-mode: difference; }']) {
+        expect(bad).toMatch(filtersOrBlends);
+      }
+      expect('.veil { backdrop-filter: blur(4px); }').not.toMatch(filtersOrBlends);
+      expect(css).not.toMatch(filtersOrBlends);
     });
   });
 });
