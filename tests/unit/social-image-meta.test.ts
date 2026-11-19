@@ -38,13 +38,35 @@ function head(html: string): string {
   return html.replace(/<!--[\s\S]*?-->/g, ' ').match(/<head\b[^>]*>([\s\S]*?)<\/head\s*>/i)?.[1] ?? '';
 }
 
-/** Every content value of the meta tags with this property or name, in order. */
+/** Decode HTML character references in one pass, so "&amp;quot;" stays "&quot;" instead of decoding twice. */
+function decodeEntities(value: string): string {
+  const named: Readonly<Record<string, string>> = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: '\u00a0' };
+  return value.replace(/&(#x[0-9a-f]+|#\d+|[a-z]+);/gi, (match, entity: string) => {
+    if (entity.startsWith('#')) {
+      const code = entity[1]?.toLowerCase() === 'x' ? Number.parseInt(entity.slice(2), 16) : Number.parseInt(entity.slice(1), 10);
+      return Number.isFinite(code) && code > 0 && code <= 0x10ffff ? String.fromCodePoint(code) : match;
+    }
+    return named[entity.toLowerCase()] ?? match;
+  });
+}
+
+/** A tag's attributes by lowercase name (double-quoted, single-quoted or bare values), each decoded once. */
+function attributes(tag: string): Map<string, string> {
+  const found = new Map<string, string>();
+  const body = tag.replace(/^<[a-z]+/i, '').replace(/\/?>$/, '');
+  for (const match of body.matchAll(/([^\s"'>\/=]+)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+)))?/g)) {
+    const name = match[1].toLowerCase();
+    if (!found.has(name)) found.set(name, decodeEntities(match[2] ?? match[3] ?? match[4] ?? ''));
+  }
+  return found;
+}
+
+/** Every content value of the meta tags whose property or name is exactly this key, in order. */
 function metaValues(html: string, key: string): string[] {
   return [...head(html).matchAll(/<meta\b[^>]*>/gi)]
-    .map((match) => match[0])
-    .filter((tag) => new RegExp(`\\s(?:property|name)="${key.replace(/[.:]/g, '\\$&')}"`).test(tag))
-    .map((tag) => /\scontent="([^"]*)"/.exec(tag)?.[1] ?? '')
-    .map((value) => value.replaceAll('&amp;', '&').replaceAll('&#39;', "'").replaceAll('&quot;', '"'));
+    .map((match) => attributes(match[0]))
+    .filter((attrs) => attrs.get('property') === key || attrs.get('name') === key)
+    .map((attrs) => attrs.get('content') ?? '');
 }
 
 function one(html: string, key: string): string | undefined {
@@ -57,6 +79,20 @@ function pngSize(file: string): [number, number] {
   expect([...bytes.subarray(0, 8)], `${file}: PNG signature`).toEqual([137, 80, 78, 71, 13, 10, 26, 10]);
   return [bytes.readUInt32BE(16), bytes.readUInt32BE(20)];
 }
+
+describe('the meta-tag reader used below', () => {
+  it('matches keys exactly, reads any quoting, and decodes each value once', () => {
+    const html = '<head><meta property="og:image:alt" content="a &amp;quot;b&amp;quot; &#39;c&#39;">'
+      + "<meta content='x' name=twitter:image:alt><meta property=\"og:imageXalt\" content=\"no\">"
+      + '<meta property="og:image" content="https://cueory.app/share/study-ivory.png?a=1&amp;b=2" /></head>';
+    expect(metaValues(html, 'og:image:alt')).toEqual(['a &quot;b&quot; \'c\'']);
+    expect(metaValues(html, 'twitter:image:alt')).toEqual(['x']);
+    expect(metaValues(html, 'og:image')).toEqual(['https://cueory.app/share/study-ivory.png?a=1&b=2']);
+    expect(metaValues(html, 'og:image.alt')).toEqual([]);
+    expect(metaValues(html, 'og:image\\:alt')).toEqual([]);
+    expect(metaValues('<!-- <head><meta name="x" content="hidden"></head> --><head></head>', 'x')).toEqual([]);
+  });
+});
 
 describe('share card facts (src/config/socialimages.ts)', () => {
   it('knows every share card in public/share/, with its real size', () => {
