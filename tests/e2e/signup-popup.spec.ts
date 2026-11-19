@@ -23,8 +23,10 @@ async function openAt(page: Page, path: string, options: { seenAgo?: number; pro
   // Installed AND paused before the page loads: an unpaused fake clock keeps real time flowing, so on a busy machine the
   // page's load time counted toward the 10 seconds and "hidden after 9 seconds" failed. The page's time now moves only
   // when a test runs the clock.
-  await page.clock.install({ time: new Date(START) });
-  await page.clock.pauseAt(new Date(START + 1_000));
+  // The clock starts a second early and is paused AT `START`, so the page's time is exactly the START the seeded
+  // storage below is measured against.
+  await page.clock.install({ time: new Date(START - 1_000) });
+  await page.clock.pauseAt(new Date(START));
   await page.addInitScript(({ key, seen, promoDue }) => {
     try {
       if (sessionStorage.getItem('test-seeded')) return;
