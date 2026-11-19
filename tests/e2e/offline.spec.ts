@@ -29,11 +29,25 @@ const kept = (page: Page) =>
 /** A same-origin, per-test proxy that can be closed to make the worker's actual network fetch fail. */
 async function loopback(upstream: string) {
   const preview = new URL(upstream);
+  const { hostname, port, host } = preview;
+  if (preview.protocol !== 'http:' || (hostname !== 'localhost' && hostname !== '127.0.0.1')) {
+    throw new Error('the offline fixture requires an HTTP loopback preview');
+  }
+
   const sockets = new Set<Socket>();
   const server = createServer((request, response) => {
-    const target = new URL(request.url ?? '/', preview);
-    if (target.origin !== preview.origin) return response.writeHead(400).end();
-    const outgoing = forward(target, { method: request.method, headers: { ...request.headers, host: target.host } }, (incoming) => {
+    const path = request.url;
+    if (!path?.startsWith('/') || path.startsWith('//') || path.includes('\\')) {
+      return response.writeHead(400).end();
+    }
+    // Only forward the origin-form path. The preview configuration owns the authority.
+    const outgoing = forward({
+      hostname,
+      port,
+      path,
+      method: request.method,
+      headers: { ...request.headers, host },
+    }, (incoming) => {
       response.writeHead(incoming.statusCode ?? 502, incoming.headers);
       incoming.pipe(response);
     });
