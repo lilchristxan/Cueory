@@ -258,7 +258,8 @@ for (const scheme of ['light', 'dark'] as const) {
 /**
  * Asks the page to scroll by `dy`: a mouse wheel where the browser has one; mobile WebKit has none ("Mouse wheel is not
  * supported in mobile WebKit"), so there the page itself is asked with scrollBy (the same fallback as tryScroll in
- * game-results.spec.ts). Either way it is only a request: a locked page must ignore it.
+ * game-results.spec.ts). Either way it is only a request: a locked page must ignore it. `overflow: hidden` alone would
+ * still let scrollBy through, so this also checks that the body is fixed in place like the game results lock.
  */
 async function requestScroll(page: Page, browserName: string, isMobile: boolean | undefined, dy: number) {
   if (browserName === 'webkit' && isMobile) await page.evaluate((y) => window.scrollBy(0, y), dy);
@@ -278,25 +279,31 @@ test('the page behind stays put while it is open, and scroll and focus come back
   await expect(before).toBeFocused();
   const startY = await page.evaluate(() => window.scrollY);
   expect(startY).toBeGreaterThan(0);
+  // Where the page sits on screen: the lock fixes the body in place, so while it is open the page's own scroll position
+  // reads 0 and what the visitor sees is the link's place on screen, which must not move.
+  const linkTop = () => before.evaluate((link) => link.getBoundingClientRect().top);
+  const startTop = await linkTop();
 
   await page.clock.runFor(11_000);
   await expect(popup(page)).toBeVisible();
+  expect(await linkTop()).toBe(startTop);
   // A wheel over the dimmed page, outside the pop-up, doesn't move the page underneath.
   const viewport = page.viewportSize()!;
   await page.mouse.move(4, viewport.height - 4);
   await requestScroll(page, browserName, isMobile, 700);
   await page.clock.runFor(500);
-  expect(await page.evaluate(() => window.scrollY)).toBe(startY);
+  expect(await linkTop()).toBe(startTop);
   // Nor does a wheel over the pop-up itself.
   const box = (await popup(page).boundingBox())!;
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
   await requestScroll(page, browserName, isMobile, 700);
   await page.clock.runFor(500);
-  expect(await page.evaluate(() => window.scrollY)).toBe(startY);
+  expect(await linkTop()).toBe(startTop);
 
   await page.keyboard.press('Escape');
   await expect(popup(page)).toBeHidden();
   expect(await page.evaluate(() => window.scrollY)).toBe(startY);
+  expect(await linkTop()).toBe(startTop);
   await expect(before).toBeFocused();
   await expect(before).toBeInViewport();
 });
@@ -334,14 +341,16 @@ test('fits 320 px with 32 px text, with no sideways scroll', async ({ browser },
       expect(fit.page).toBeLessThanOrEqual(0);
       expect(fit.inside).toBeLessThanOrEqual(0);
       expect(fit.right).toBeLessThanOrEqual(320);
-      // On a short screen the pop-up scrolls inside itself, without moving the page behind it.
-      const pageY = await page.evaluate(() => window.scrollY);
+      // On a short screen the pop-up scrolls inside itself, without moving the page behind it (measured on screen: the
+      // lock fixes the body in place, so the page's own scroll position stays 0 while it is open).
+      const pageTop = () => page.evaluate(() => document.body.getBoundingClientRect().top);
+      const pageY = await pageTop();
       const box = (await dialog.boundingBox())!;
       await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
       await page.mouse.wheel(0, 400);
       await page.clock.runFor(500);
       await expect.poll(() => dialog.evaluate((el) => el.scrollTop)).toBeGreaterThan(0);
-      expect(await page.evaluate(() => window.scrollY)).toBe(pageY);
+      expect(await pageTop()).toBe(pageY);
       // The last control can still be reached: the pop-up scrolls inside itself on a short screen.
       await dialog.getByText('we respect your privacy. unsubscribe anytime.').scrollIntoViewIfNeeded();
       await expect(dialog.getByText('we respect your privacy. unsubscribe anytime.')).toBeInViewport();
