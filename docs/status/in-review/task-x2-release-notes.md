@@ -1,1 +1,1 @@
-status: Task x2, plain-language draft of what's new for the launch (docs/launch/release-notes-draft-x2.md), docs only, not approved for release.
+status: Task x2, plain-language draft of what's new for the launch (docs/launch/release-notes-draft-x2.md), docs only, not approved for release. Follow-up for the Codex review: every feature is now marked live or preview only (crossword, hello cards, stat, lessons and study tools, Anatomy Lab are preview only in the live build).
