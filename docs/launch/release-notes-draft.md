@@ -12,12 +12,11 @@ and hello cards.
 ## Launching (in the games-and-public-pages release)
 
 ### Games
-- Four daily games, each on its own page under `/play`: pillo, sudoku, crossword and word path.
+- Three daily games, each on its own page under `/play`: pillo, sudoku and word path. The crossword is not open yet (see "NOT launched" below).
 - `/play` shows today's status for each game, so you can see what you have and have not finished.
 - Finished-game result cards and a share card, so you can show a result without giving anything away.
 - One shared settings dialog for all the games, including a sounds switch and a high-contrast option.
 - Sudoku: one tool row above the board, a full pause, and auto-pause when you switch away.
-- Crossword: check and reveal sit together, the keyboard stays out of the way on phones, and tab-key navigation works.
 - Word path: lines now join the letters of each word.
 - Games print cleanly with the Cueory logo.
 - Your game statistics stay on your own device.
@@ -43,12 +42,17 @@ and hello cards.
 ### Privacy and safety
 - The site stores very little in your browser, and what it does store is listed and clearable.
 - Strict security headers on every page.
-- Crossword autocheck counts as a try, so it cannot be used to keep a streak.
 
 ## NOT launched (draft, held or behind a flag)
 
 - **Accounts.** Sign in, sign up, onboarding, export and delete are in the code but accounts stay closed.
-  `/signin` and `/signup` say accounts open soon; "get launch updates" opens the Kit signup.
+  `/signin` and `/signup` say accounts open soon; their "get launch updates" link goes to the email box on the home
+  page (`/#signup`), which sends the address straight to Kit. No separate Kit signup page opens.
+- **Crossword.** Closed on the live build: `crosswordOpen` is `false` in `src/config/site.ts`, so `/play` leaves it out
+  of today's games and lists it under "coming soon" (`src/pages/play.astro`). Staging, preview and test builds still
+  show the sample crossword. The crossword items from the first draft of these notes reach visitors only when it
+  opens: check and reveal sit together, the keyboard stays out of the way on phones, tab-key navigation works, and
+  autocheck counts as a try, so it cannot be used to keep a streak.
 - **Hello cards** (conversation-starter flip cards at `/play/hello-cards`): shows "coming soon" until content is approved.
 - **Anatomy Lab and 3D body viewer.** Preview pages only (unlinked, noindex). Models are held for founder review
   of the BodyParts3D source and credit.
