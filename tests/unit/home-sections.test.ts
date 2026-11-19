@@ -31,7 +31,7 @@ describe('home lower sections', () => {
     expect([...main!.matchAll(/<h1\b[^>]*>/g)]).toHaveLength(1);
     const ids = [...main!.matchAll(/<section\b[^>]*\bid="([^"]+)"/g)].map((match) => match[1]);
     expect(ids.filter((id) => ['ways-to-study', 'daily-games', 'signup'].includes(id))).toEqual(['ways-to-study', 'daily-games', 'signup']);
-    expect(titles(section('ways-to-study'), 2).filter(Boolean)).toEqual(['ways to study']);
+    expect(titles(section('ways-to-study'), 2).filter(Boolean)).toEqual(['one lesson, multiple ways to study']);
     expect(titles(section('daily-games'), 2)).toEqual(['a few minutes, every day.']);
     expect(titles(section('signup'), 2)).toEqual(['coming soon']);
     expect(main).not.toContain('id="how-it-works"');
