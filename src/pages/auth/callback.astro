@@ -4,7 +4,7 @@ import AuthCallback from '../../islands/AuthCallback.tsx';
 ---
 
 <!-- No tokens or codes are placed in the HTML. The PKCE exchange happens only on the student's device. -->
-<Layout title="finish signing in" variant="study" noindex promo={false}>
+<Layout title="finish signing in" description="Finishing your Cueory sign-in. This page redirects you automatically." variant="study" noindex promo={false}>
   <div class="mx-auto max-w-prose pt-8">
     <h1 class="text-2xl">signing you in…</h1>
     <AuthCallback client:only="react" />
