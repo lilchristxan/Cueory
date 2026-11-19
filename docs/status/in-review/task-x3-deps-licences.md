@@ -1,0 +1,1 @@
+status: Task x3, dependency licence check: nothing GPL or AGPL ships to visitors; LGPL (sharp-libvips) and MPL-2.0 (lightningcss, axe-core) are build or test only; every direct runtime dependency is MIT or OFL-1.1, none deprecated; findings and three follow-ups (unused @fontsource-variable/inter, simple-icons placement, BodyParts3D CC BY 4.0 credit) in docs/launch/deps-x3.md.
