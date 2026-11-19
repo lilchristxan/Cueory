@@ -40,12 +40,16 @@ async function tabAudit(page: Page): Promise<string[]> {
   // count as a keyboard focus indicator if it looks identical when focused.
   const eligible = await page.evaluate((query) => {
     const controls = [...document.querySelectorAll<HTMLElement>(query)];
-    const isReachable = (el: HTMLElement) =>
-      el.tabIndex >= 0 &&
+    const isReachable = (el: HTMLElement) => {
+      // Links inside a closed <details> are in the page but no browser tabs to them: only its summary is a stop.
+      const closedDetails = el.closest('details:not([open])');
+      if (closedDetails && !(el.matches('summary') && el.parentElement === closedDetails)) return false;
+      return el.tabIndex >= 0 &&
       !el.matches(':disabled') &&
       !el.closest('[inert]') &&
       el.getClientRects().length > 0 &&
       getComputedStyle(el).visibility === 'visible';
+    };
 
     return controls.flatMap((el, index) => {
       if (!isReachable(el)) return [];

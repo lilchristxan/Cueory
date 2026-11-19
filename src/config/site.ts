@@ -38,7 +38,7 @@ export const site = {
 export const newsletter = {
   provider: 'Kit',
   /** The form's "action" address from Kit's HTML embed code. Public, not a secret. */
-  formAction: '',
+  formAction: 'https://app.kit.com/forms/10204219/subscriptions',
   /** The email field's "name" from Kit's HTML embed code. */
   emailFieldName: 'email_address',
   /** Christian's Kit landing page (a plain link out, no Kit script). Must be https on a kit.com host. */

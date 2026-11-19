@@ -223,6 +223,20 @@ test.describe('word path: board format (#722)', () => {
     });
   }
 
+  // The board is centred in its panel on a short landscape phone (568 × 320) and when enlarged text makes it wider than
+  // the panel (320 px wide with a 32 px root font): the gap on each side matches within a pixel.
+  for (const [label, width, height, root] of [['a short landscape phone', 568, 320, null], ['enlarged text at 320 px', 320, 700, 32]] as const) {
+    test(`the board is centred in its panel on ${label}`, async ({ page }) => {
+      await page.setViewportSize({ width, height });
+      if (root) await page.evaluate((px) => document.documentElement.style.setProperty('font-size', `${px}px`, 'important'), root);
+      const panel = (await page.locator('.wordpath-panel').boundingBox())!;
+      const board = (await game(page).locator('.wordpath-board').boundingBox())!;
+      const left = board.x - panel.x;
+      const right = panel.x + panel.width - (board.x + board.width);
+      expect(Math.abs(left - right)).toBeLessThanOrEqual(1);
+    });
+  }
+
   for (const [label, width, height] of [['phone', 390, 844], ['tablet', 820, 1180], ['desktop', 1440, 900]] as const) {
     test(`axe passes at ${label} size, with a picked word, a theme word and the thread found`, async ({ page }) => {
       await page.setViewportSize({ width, height });
