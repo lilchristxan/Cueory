@@ -40,8 +40,16 @@ const barButton =
   'inline-flex size-12 items-center justify-center rounded-pill text-ink hover:bg-surface';
 ---
 
-<footer class="mt-section flex flex-col-reverse border-t border-line" data-site-footer>
-  <div class="mx-auto grid h-14 w-full max-w-page grid-cols-3 items-center px-gutter">
+<footer class="mt-section flex flex-col-reverse" data-site-footer>
+  <!-- The bar and the link row share one positioned box. In the footer the report panel (FlagForm, opened from the
+       flag) is placed against this box instead of against the flag, so it opens above the link row and never covers
+       part of a link: the two long classes un-position the form's own wrapper here and keep the panel in line with
+       the flag (the page gutter). The bar still comes first in the page; flex-col-reverse draws the link row above it. -->
+  <div
+    class="relative mx-auto flex w-full max-w-page flex-col-reverse [&_[data-testid=flag-form]]:static [&_[data-testid=flag-form]>.absolute]:left-gutter"
+    data-footer-base
+  >
+  <div class="grid h-14 w-full grid-cols-3 items-center px-gutter">
     {
       !hideFlag && (
         <div class="col-start-1 justify-self-start" id="footer-flag" data-footer-flag>
@@ -105,29 +113,33 @@ const barButton =
     </button>
   </div>
 
-  <div id="site-footer-panel" class="border-b border-line" data-footer-panel>
+  <!-- The footer's links as drawn (HomeV2-3): one centered row of small underlined links, always visible. It sits after the bar
+       in the page and, with flex-col-reverse, is drawn between the extras panel and the bar. -->
+  <nav aria-label="footer" class="w-full px-gutter">
+    <ul class="flex flex-wrap justify-center gap-x-5 text-sm">
+      {
+        links.map((link) => (
+          <li>
+            <a
+              href={link.href}
+              class="inline-flex min-h-(--tap-min) items-center text-ink underline underline-offset-4 wrap-anywhere hover:text-ink-soft"
+              aria-current={link.href === publicPath(Astro.url.pathname) ? 'page' : undefined}
+            >
+              {link.label}
+            </a>
+          </li>
+        ))
+      }
+    </ul>
+  </nav>
+  </div>
+
+  <div id="site-footer-panel" data-footer-panel>
     <div
-      class="mx-auto flex w-full max-w-page flex-col gap-6 px-gutter py-8 text-sm text-ink-soft sm:flex-row sm:items-start sm:justify-between"
+      class="mx-auto flex w-full max-w-page flex-col items-center gap-6 px-gutter py-8 text-center text-sm text-ink-soft"
     >
-      <div class="flex flex-col gap-2">
+      <div class="flex flex-col items-center gap-2">
         <p class="font-bold text-ink">{site.tagline}</p>
-        <nav aria-label="footer">
-          <ul class="flex flex-wrap gap-x-5">
-            {
-              links.map((link) => (
-                <li>
-                  <a
-                    href={link.href}
-                    class="inline-flex min-h-(--tap-min) items-center text-ink-soft wrap-anywhere hover:text-ink"
-                    aria-current={link.href === publicPath(Astro.url.pathname) ? 'page' : undefined}
-                  >
-                    {link.label}
-                  </a>
-                </li>
-              ))
-            }
-          </ul>
-        </nav>
         <SocialLinks />
         {
           site.contactEmail && (

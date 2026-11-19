@@ -380,12 +380,14 @@ export default function Onboarding() {
             className="block min-h-14 w-full rounded-xl border border-control bg-page px-4 text-ink"
           />
           {dateProblem && <p id="exam-date-problem" className="text-sm" role="alert">{dateProblem}</p>}
-          {examDate && (
+          {(examDate || dateProblem) && (
             <button
               type="button"
               onClick={() => {
                 changeExamDate('');
                 setDateProblem('');
+                // A half-typed date reads as '' to React, so the field's own text must be emptied too.
+                if (dateRef.current) dateRef.current.value = '';
                 // This button disappears after clearing; restore focus to the date field.
                 dateRef.current?.focus();
               }}

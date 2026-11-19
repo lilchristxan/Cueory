@@ -135,6 +135,36 @@ export function ringPlace(offset: number): RingPlace {
   };
 }
 
+/** The gap between two vials in HomeV2's straight row (P6), in vial widths: they stand apart, never overlapping. */
+export const ROW_GAP = 0.08;
+
+/** Where a vial stands in HomeV2's straight row (P6). */
+export interface RowPlace {
+  /** How far sideways its middle is from the middle of the row, in vial widths. */
+  shift: number;
+  /** Whether it shows: only vials whose whole bottle fits inside the room, so no label is ever cut off. */
+  shown: boolean;
+}
+
+/**
+ * HomeV2's straight row (P6): each vial keeps ringPlace's size, brightness and layer, but stands beside its neighbour
+ * with a gap of ROW_GAP vial widths, so the bottles never overlap and every label stays whole. `room` is how many vial
+ * widths there are from the middle of the row to the nearest thing it must not cross (the window's edge, or an arrow
+ * beside the vials). A vial whose outer edge would pass it is hidden instead of cut off.
+ */
+export function rowPlace(offset: number, room: number): RowPlace {
+  const distance = Math.abs(offset);
+  const scaleAt = (step: number) => ringPlace(step).scale;
+  let middle = 0;
+  for (let step = 1; step <= distance; step += 1) middle += (scaleAt(step - 1) + scaleAt(step)) / 2 + ROW_GAP;
+  const edge = middle + scaleAt(distance) / 2;
+  return {
+    shift: round(Math.sign(offset) * middle),
+    // The front vial always shows: it is the one the visitor is on.
+    shown: distance === 0 || (distance <= FARTHEST_SHOWN && edge <= room + 1e-9),
+  };
+}
+
 /**
  * Whether a vial glides to its new place or simply appears there. A turn of one or two vials glides; a vial going
  * round the back of the ring, or a jump of several vials (Home, End), switches at once instead of sweeping across the

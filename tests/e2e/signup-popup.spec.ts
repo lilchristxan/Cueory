@@ -262,6 +262,29 @@ for (const scheme of ['light', 'dark'] as const) {
       .analyze();
     expect(axe.violations.map((v) => `${v.id}: ${v.help}`)).toEqual([]);
 
+    if (state === 'form') {
+      // Keep this browser test from sending a request to Kit even if client-side validation regresses.
+      await page.route(newsletter.formAction, (route) => route.abort());
+      const email = dialog.getByLabel('email address', { exact: true });
+      await subscribe.focus();
+      await page.keyboard.press('Enter');
+      await expect(email).toHaveAttribute('aria-invalid', 'true');
+      await expect(email).toBeFocused();
+      await expect(email).toHaveCSS('border-top-style', 'dashed');
+      await expect(email).toHaveCSS('outline-style', 'solid');
+
+      await page.keyboard.press('Tab');
+      await expect(subscribe).toBeFocused();
+      await expect(email).toHaveCSS('border-top-style', 'dashed');
+      await expect(email).toHaveCSS('outline-style', 'none');
+
+      await page.keyboard.press('Shift+Tab');
+      await expect(email).toBeFocused();
+      await expect(email).toHaveCSS('border-top-style', 'dashed');
+      await expect(email).toHaveCSS('outline-style', 'solid');
+      expect(await email.evaluate((el) => parseFloat(getComputedStyle(el).outlineWidth))).toBeGreaterThan(0);
+    }
+
     // Escape closes it, focus goes back, and the 3-hour wait starts again from now.
     await page.evaluate((key) => localStorage.removeItem(key), SIGNUP_POPUP_STORAGE_KEY);
     await page.keyboard.press('Escape');

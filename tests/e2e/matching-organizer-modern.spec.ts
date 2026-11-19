@@ -178,3 +178,32 @@ for (const mode of ['matching', 'organizer'] as const) {
     await expect.poll(() => page.evaluate(() => (window as Window & { __cueoryFeedback?: Animation[] }).__cueoryFeedback?.map((animation) => animation.playState))).toEqual(mode === 'matching' ? ['idle', 'idle'] : ['idle']);
   });
 }
+
+test('organizer keeps keyboard focus on the board after a check that turns the check button off', async ({ page }) => {
+  await page.goto('/learn/study-skills/organizer');
+  const board = page.getByTestId('organizer');
+  const item = (text: string) => board.getByRole('button', { name: new RegExp(`^${text}(?:\\s|$)`) });
+  const checkButton = board.getByRole('button', { name: 'check' });
+
+  // A wrong placement goes back to the tray and focus lands on it, not on the page body.
+  await item('apple').focus();
+  await page.keyboard.press('2');
+  await item('pear').focus();
+  await page.keyboard.press('1');
+  await expect(checkButton).toBeEnabled();
+  await checkButton.focus();
+  await page.keyboard.press('Enter');
+  await expect(board.getByTestId('organizer-live')).toHaveText('1 right, 1 back in the tray to try again.');
+  await expect(checkButton).toBeDisabled();
+  await expect(item('apple')).toBeFocused();
+  await expect(item('apple')).toContainText('back in the tray to try again');
+
+  // All placed items right but others still waiting: focus goes to the first item left in the tray.
+  await item('apple').focus();
+  await page.keyboard.press('1');
+  await checkButton.focus();
+  await page.keyboard.press('Enter');
+  await expect(board.getByTestId('organizer-live')).toHaveText('1 right, 0 back in the tray to try again.');
+  await expect(board.getByRole('list', { name: 'tray' }).getByRole('button').first()).toBeFocused();
+  expect(await page.evaluate(() => document.activeElement === document.body)).toBe(false);
+});

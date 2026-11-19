@@ -154,6 +154,24 @@
 */
 @layer components {
   /*
+    A link that opens in a new tab shows a small ↗ after it, so sighted visitors know before they click, not only
+    screen reader users (who hear "(opens in a new tab)" from each link's own text). The ↗ itself is silent: the
+    "/ ''" alternative text keeps it from being read out. Links that already show their own cue carry
+    data-new-tab-cue and get no second one.
+  */
+  a[target="_blank"]:not([data-new-tab-cue])::after {
+    content: "\2197";
+    content: "\2197" / "";
+    display: inline-block;
+    margin-inline-start: var(--new-tab-cue-gap);
+    font-size: var(--new-tab-cue-size);
+    line-height: 1;
+    text-decoration: none;
+  }
+}
+
+@layer components {
+  /*
     Draped silk scenes (D-41, D-53): diagonal folds of light and shade, a soft sheen and a faint grain. The home page
     is a series of them, one per section: the same cloth with the folds at another angle, the light from another side
     and the tint moving between Ivory and Linen (Evening: Charcoal and Walnut). Each scene is its own layer behind its
@@ -1879,11 +1897,6 @@ html:has(dialog.menu-panel[open]) {
     backdrop-filter: blur(var(--blur-scrim));
   }
 
-  .result-meta {
-    font-variant-caps: all-small-caps;
-    letter-spacing: var(--tracking-label);
-  }
-
   /*
     The finished-game card's close button (issue 743) floats in the top corner and sticks there while the card scrolls, so
     large text on a narrow screen can neither push it off the edge nor scroll it out of sight. Focused controls stop
@@ -1891,6 +1904,14 @@ html:has(dialog.menu-panel[open]) {
   */
   .result-dialog {
     scroll-padding-block-start: calc(var(--tap-min) + var(--spacing) * 2);
+  }
+
+  .result-dialog::before {
+    content: '';
+    display: block;
+    float: inline-start;
+    inline-size: calc(var(--tap-min) + var(--spacing) * 3);
+    block-size: calc(var(--tap-min) + var(--spacing) * 2);
   }
 
   .result-dialog-close {
@@ -2106,8 +2127,10 @@ html:has(dialog.mode-preview[open]) {
       transform: none;
     }
 
+    /* The faces swap in one step: the base-layer reset (reduced-motion.css) removes every transition under reduced
+       motion anyway, so a cross-fade here never ran (lane 8). */
     .flip-face {
-      transition: opacity var(--duration-base) var(--ease-soft);
+      transition: none;
     }
 
     .flip.is-flipped .flip-face {
@@ -2121,7 +2144,7 @@ html:has(dialog.mode-preview[open]) {
       -webkit-backface-visibility: visible;
       opacity: 0;
       pointer-events: none;
-      transition: opacity var(--duration-base) var(--ease-soft);
+      transition: none;
     }
 
     .flip.is-flipped .flip-back {

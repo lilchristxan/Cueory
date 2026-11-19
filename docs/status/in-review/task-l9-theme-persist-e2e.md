@@ -1,0 +1,1 @@
+status: Lane 9, e2e that a Light or Dark pick persists across page types, reloads and back/forward, and is already applied when <body> is created and at the first painted frame (device set to the opposite palette); the site already behaves.

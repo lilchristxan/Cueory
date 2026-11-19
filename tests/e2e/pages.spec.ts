@@ -2,7 +2,7 @@ import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 import { accountLaunch, accountsOpen, menuSmallLinks, newsletter, showsHeroJoin, socials } from '../../src/config/site';
 import { visibleFooterLinks } from '../../src/config/legalfooter';
-import { isDesktopOfEachEngine } from './projects';
+import { isDesktopOfEachEngine, sizeOf } from './projects';
 import { lessonRoutes } from '../lessonroutes';
 
 // The once-only promo panel (D-59) slides down after 5 seconds and takes keyboard focus, and the launch-updates pop-up
@@ -698,11 +698,11 @@ test.describe('"ways to study" merry-go-round (D-50, D-60)', () => {
     await expect(section(page)).toHaveAttribute('role', 'region');
     await expect(section(page)).toHaveAttribute('aria-roledescription', 'carousel');
     await expect(page.getByRole('heading', { name: 'ways to study' })).toBeVisible();
-    // The first vial in front, with the last one as its left neighbour: four on each side stand on the arc (Task 109;
-    // on phones the outer ones run past the window's edges), and the one straight behind is hidden.
-    await expect
-      .poll(() => onScreen(page))
-      .toEqual(['review', 'label it', 'adaptive quiz', 'level test', 'video', 'cards', 'learn', 'fill-in', 'matching']);
+    // The first vial in front, with the last one as its left neighbour. HomeV2's straight row (P6) shows as many on each
+    // side as fit whole (four at 1440, fewer on narrower screens, never cut off), and the one straight behind is hidden.
+    const ring = ['review', 'label it', 'adaptive quiz', 'level test', 'video', 'cards', 'learn', 'fill-in', 'matching'];
+    const perSide = { phone: 1, tablet: 2, desktop: 4 }[sizeOf(test.info())];
+    await expect.poll(() => onScreen(page)).toEqual(ring.slice(4 - perSide, 5 + perSide));
     await expect(section(page).getByRole('group', { name: '1 of 11', exact: true })).toHaveAttribute('data-active', '');
 
     // Previous from the first card goes round to the last, and next from the last comes back to the first.
@@ -747,7 +747,7 @@ test.describe('"ways to study" merry-go-round (D-50, D-60)', () => {
     expect(axe.violations.map((v) => `${v.id}: ${v.help}`)).toEqual([]);
   });
 
-  test("neighbours step back, smaller, higher, further back and dimmer, but no vial's words are ever faded", async ({
+  test("neighbours stand beside the front vial, smaller and dimmer, never overlapping, and no vial's words are ever faded", async ({
     page,
   }) => {
     await page.goto('/');
@@ -760,6 +760,7 @@ test.describe('"ways to study" merry-go-round (D-50, D-60)', () => {
       page.locator(`#mode-${id}`).evaluate((card) => {
         const box = card.getBoundingClientRect();
         return {
+          x: box.x,
           width: box.width,
           bottom: box.bottom,
           bright: (card as HTMLElement).style.getPropertyValue('--ring-bright'),
@@ -774,9 +775,13 @@ test.describe('"ways to study" merry-go-round (D-50, D-60)', () => {
     expect(near.width / front.width).toBeLessThan(0.9);
     expect(far.width / front.width).toBeGreaterThan(0.6);
     expect(far.width / front.width).toBeLessThan(0.78);
-    // The arc: each step out stands higher.
-    expect(near.bottom).toBeLessThan(front.bottom);
-    expect(far.bottom).toBeLessThan(near.bottom);
+    // HomeV2 keeps the vials on one glossy baseline instead of the old fanned arc.
+    expect(Math.abs(near.bottom - front.bottom)).toBeLessThan(1);
+    expect(Math.abs(far.bottom - front.bottom)).toBeLessThan(1);
+    // Side by side, never overlapping (P6): each vial starts after the one before it ends.
+    expect(near.x).toBeGreaterThanOrEqual(front.x + front.width);
+    expect(far.x).toBeGreaterThanOrEqual(near.x + near.width);
+    expect(left.x + left.width).toBeLessThanOrEqual(front.x);
     // Quieter: the glass (only the bottle image, never the words) is dimmer per step out.
     expect([front.bright, near.bright, left.bright, far.bright]).toEqual(['1', '0.95', '0.95', '0.9']);
     expect(near.glass).not.toBe(front.glass);

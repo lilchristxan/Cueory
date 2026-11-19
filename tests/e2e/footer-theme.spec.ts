@@ -93,7 +93,9 @@ test.describe('footer bar', () => {
     const footer = footerOf(page);
     const panel = footer.locator('#site-footer-panel');
     await expect(panel).toBeHidden();
-    await expect(footer.getByRole('link', { name: 'privacy' })).toBeHidden();
+    // The link row is drawn above the bar and stays visible while the extras panel is closed.
+    await expect(footer.getByRole('link', { name: 'privacy', exact: true })).toBeVisible();
+    await expect(footer.getByRole('link', { name: 'hello@cueory.app', exact: true })).toBeHidden();
 
     await chevron(page).click();
     await expect(chevron(page)).toHaveAttribute('aria-expanded', 'true');
@@ -101,7 +103,7 @@ test.describe('footer bar', () => {
     await expect(panel).toBeVisible();
     // Above the bar.
     expect((await panel.boundingBox())!.y).toBeLessThan((await chevron(page).boundingBox())!.y);
-    for (const name of ['courses', 'coming soon', 'privacy', 'support cueory', 'hello@cueory.app']) {
+    for (const name of ['about us', 'courses', 'coming soon', 'privacy', 'support cueory', 'contact', 'hello@cueory.app']) {
       await expect(footer.getByRole('link', { name, exact: true })).toBeVisible();
     }
     // #747: Terms and Disclaimer show only once their pages are approved (same rule as the footer).
@@ -123,6 +125,8 @@ test.describe('footer bar', () => {
     await chevron(page).focus();
     await page.keyboard.press('Enter');
     await expect(panel).toBeVisible();
+    await page.keyboard.press('Tab');
+    await expect(footer.getByRole('link', { name: 'about us', exact: true })).toBeFocused();
     await page.keyboard.press('Tab');
     await expect(footer.getByRole('link', { name: 'courses', exact: true })).toBeFocused();
     await page.keyboard.press('Tab');
