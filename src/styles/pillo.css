@@ -8,6 +8,16 @@
   with gradients, so there is no image file and nothing the content security policy has to allow.
 */
 @layer components {
+  /* Pillo-1/Pillo-2 place the board directly on the page; keep other GamePage wrappers unchanged. */
+  body:has([data-testid="pulse"]) article[data-game-page="pulse"] {
+    max-inline-size: var(--pillo-board);
+    margin-block-start: var(--spacing-section);
+    padding: 0;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
   .pillo {
     /* The foil's grey: Ivory greyed with Bronze by day, Charcoal lit with Sand in the evening. */
     --pillo-foil-color: color-mix(in srgb, var(--color-pillo-foil-tint) var(--pillo-foil-mix), var(--color-pillo-foil));
