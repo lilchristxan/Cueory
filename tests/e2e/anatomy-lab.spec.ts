@@ -442,7 +442,8 @@ test.describe('anatomy lab', () => {
     // previously raycast (often to nothing) and silently cleared selection.
     const canvas = page.locator('canvas');
     for (const button of ['right', 'middle'] as const) {
-      await canvas.click({ button, position: { x: 3, y: 3 } });
+      // 24px is blank in the fixture but inside rounded-lg's 16px hit region; (3,3) is outside that corner in Firefox.
+      await canvas.click({ button, position: { x: 24, y: 24 } });
       await expect(cube, `${button} click must not change the selected mesh`)
         .toHaveAttribute('aria-pressed', 'true');
       await expect(nameCard).toBeVisible();
