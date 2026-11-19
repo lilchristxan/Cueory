@@ -45,6 +45,9 @@ describe('home lower sections', () => {
     expect(plain(games)).toMatch(/hello cards flip a card, start a conversation\. coming soon/);
     expect(plain(games)).toContain('sudoku fill every row, column and box with the numbers one through nine.');
     expect(signup).toContain('id="signup"');
+    // The signup landmark is named by its "launch updates" eyebrow and its heading together.
+    expect(signup).toMatch(/<section\b[^>]*\baria-labelledby="signup-eyebrow signup-heading"/);
+    expect(plain(signup.match(/<p\b[^>]*\bid="signup-eyebrow"[^>]*>[\s\S]*?<\/p>/)?.[0] ?? '')).toBe('launch updates');
     expect(plain(signup)).toContain('Mental Health I and Med Math are next. Get one email when they open.');
   });
 

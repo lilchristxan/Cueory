@@ -97,6 +97,9 @@ test.describe('home without JavaScript', () => {
     await expect(page.getByRole('heading', { level: 2, name: 'a few minutes, every day.' })).toBeVisible();
     await expect(page.getByTestId('games-stage')).toBeVisible();
     await expect(page.getByRole('heading', { level: 2, name: 'coming soon' })).toBeVisible();
+    // The landmark names the signup, not only its "coming soon" heading.
+    await expect(page.locator('#signup')).toHaveAccessibleName('launch updates coming soon');
+    await expect(page.getByRole('region', { name: 'launch updates coming soon', exact: true })).toBeVisible();
     if (signupState(newsletter.formAction, newsletter.landingUrl) === 'form') {
       // This is intentionally not submitted: the browser must retain a useful, native form without a Kit script.
       const form = page.getByTestId('signup-form');
