@@ -22,7 +22,8 @@ export const linkHosts = new Set([
   'more.ko-fi.com', // Ko-fi's terms, linked from the approved Terms of Use (v5)
   'kit.com', 'policies.google.com', 'www.cloudflare.com', // privacy policies linked from the Privacy Notice (p3)
   // (more.ko-fi.com also serves Ko-fi's privacy policy, linked from the Privacy Notice)
-  'cueory.kit.com', // Kit landing page for launch updates, a plain link until the Kit form exists
+  'cueory.kit.com', // Kit landing page for launch updates (plain link)
+  'app.kit.com', // Kit form address the launch-updates email box posts to (plain HTML form, no Kit script)
   'creativecommons.org', 'dbarchive.biosciencedbc.jp', // licence and source credits for the anatomy models
 ]);
 /** Hosts the page itself may load from (only the click-to-play lesson video frame). */
