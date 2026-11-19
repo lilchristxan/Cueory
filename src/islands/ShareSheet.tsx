@@ -303,6 +303,7 @@ function CardOption({ id, name, style, tool, checked, onChange }: CardOptionProp
           width={1200}
           height={630}
           className="block size-full object-cover"
+          loading="lazy"
           decoding="async"
           draggable={false}
         />
