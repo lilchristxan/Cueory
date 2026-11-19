@@ -293,6 +293,29 @@ test.describe('exam date checks (lane 2)', () => {
     });
   }
 
+  test('a half-typed date offers "clear the date", which empties the field so setup can be saved', async ({ page }) => {
+    await page.goto('/start');
+    await toExam(page);
+    const field = page.getByLabel('when is your exam?');
+    await field.focus();
+    // Only the month typed: the browser holds an unfinished date, which reads as blank.
+    await page.keyboard.type('01');
+    await page.getByRole('button', { name: 'save my answers' }).click();
+    await expect(page.getByRole('alert')).toContainText('that date isn’t finished');
+    expect(await savedAnswers(page)).toBeNull();
+
+    const clear = page.getByRole('button', { name: 'clear the date' });
+    await expect(clear).toBeVisible();
+    await clear.click();
+    await expect(page.getByRole('alert')).toHaveCount(0);
+    await expect(field).toBeFocused();
+    expect(await field.evaluate((el: HTMLInputElement) => el.validity.badInput)).toBe(false);
+
+    await page.getByRole('button', { name: 'save my answers' }).click();
+    await expect(page.locator(':focus')).toContainText('saved on this device.');
+    expect(await savedAnswers(page)).toEqual({ course: null, examDate: null, done: true });
+  });
+
   test('a blank date is still fine: the question is optional', async ({ page }) => {
     await page.goto('/start');
     await toExam(page);
