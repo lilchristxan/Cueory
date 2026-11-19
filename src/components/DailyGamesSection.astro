@@ -62,6 +62,8 @@ const games = [
   }
 
   .games-stage {
+    /* The stage inverts ink/page in either theme, so page is the visible keyboard ring on its ink surface. */
+    --color-focus: var(--color-page);
     border-color: var(--cueory-glass-border);
     border-radius: var(--cueory-result-card-radius);
     box-shadow: var(--cueory-glass-shadow);

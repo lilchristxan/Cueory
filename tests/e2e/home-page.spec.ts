@@ -88,6 +88,45 @@ test.describe('home page-specific behavior', () => {
     }
   });
 
+  test('keeps the daily-games action keyboard focus visible on its inverted stage in Light and Evening', async ({ page }, testInfo) => {
+    test.skip(!homeSizes.has(sizeOf(testInfo)), 'Task 400 runs at phone and desktop sizes only.');
+
+    for (const colorScheme of ['light', 'dark'] as const) {
+      await page.emulateMedia({ colorScheme });
+      await page.goto('/');
+      const action = page.getByTestId('games-link');
+      await action.focus();
+      await page.keyboard.press('Shift+Tab');
+      await page.keyboard.press('Tab');
+      await expect(action).toBeFocused();
+
+      const focus = await action.evaluate((element) => {
+        const stage = element.closest<HTMLElement>('[data-testid="games-stage"]')!;
+        const rgb = (color: string) => color.match(/\d+/g)!.slice(0, 3).map(Number).map((channel) => channel / 255);
+        const luminance = (color: string) => {
+          const [red, green, blue] = rgb(color).map((channel) =>
+            channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4,
+          );
+          return 0.2126 * red + 0.7152 * green + 0.0722 * blue;
+        };
+        const style = getComputedStyle(element);
+        const outline = luminance(style.outlineColor);
+        const stagePaint = luminance(getComputedStyle(stage).backgroundColor);
+        return {
+          visible: element.matches(':focus-visible') && style.outlineStyle !== 'none',
+          width: style.outlineWidth,
+          offset: style.outlineOffset,
+          contrast: (Math.max(outline, stagePaint) + 0.05) / (Math.min(outline, stagePaint) + 0.05),
+        };
+      });
+
+      expect(focus.visible).toBe(true);
+      expect(focus.width).toBe('3px');
+      expect(focus.offset).toBe('3px');
+      expect(focus.contrast).toBeGreaterThanOrEqual(3);
+    }
+  });
+
   test('opens and closes a study-mode preview with keyboard-safe focus', async ({ page }, testInfo) => {
     test.skip(!homeSizes.has(sizeOf(testInfo)), 'Task 400 runs at phone and desktop sizes only.');
     await page.emulateMedia({ reducedMotion: 'reduce' });
