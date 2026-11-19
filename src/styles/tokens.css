@@ -154,6 +154,9 @@
      column's width (container query), so the longer line always fits, even with enlarged text. */
   --text-display-hero: clamp(1rem, 100cqi / 7.6, 5.5rem);
   --text-display-hero--line-height: 1.05;
+  /* Phones draw the headline on four large lines (nursing / school / made / simpler.), sized by the same column width. */
+  --text-display-hero-phone: clamp(1rem, 100cqi / 4.6, 5.5rem);
+  --text-display-hero-phone--line-height: 1.05;
   --text-title-explore: 2rem;   /* the explore row's heading */
   --text-title-explore--line-height: 1.2;
   --text-title: 2.375rem;       /* marketing page title (38px) */
