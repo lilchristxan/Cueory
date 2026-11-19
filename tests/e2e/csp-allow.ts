@@ -5,10 +5,10 @@ import type { Page } from '@playwright/test';
  *
  * Probe result (#862, tests/e2e/csp-element-probe.spec.ts): in WebKit a native <select> raises a `style-src-attr`
  * report with the blocked target "inline", whether the select is parsed from HTML or created by script, with no page
- * code involved. The site's CSP is correct and stays as it is. Only /resources (disabled filter selects), the fill-in
- * dropdown (FillInBoard) and the anatomy lab's body-systems select (AnatomyTextRecall) contain one. The selects are
- * being replaced with custom controls after launch (docs/status/in-review/p21-replace-native-selects.md); delete this
- * file when they are.
+ * code involved. The site's CSP is correct and stays as it is. Only /resources (disabled filter selects) and the
+ * anatomy lab's body-systems select (AnatomyTextRecall) contain one; the fill-in choices became radio buttons (E5). The
+ * selects are being replaced with custom controls after launch (docs/status/in-review/p21-replace-native-selects.md);
+ * delete this file when they are.
  *
  * Narrow on purpose, and decided ONLY from structured `securitypolicyviolation` events (the `events` argument, text
  * "effectiveDirective: blockedURI at file:line"). A console line alone never qualifies anything. The events set aside

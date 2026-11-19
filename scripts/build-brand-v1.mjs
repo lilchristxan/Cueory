@@ -9,8 +9,8 @@
  *   3. writes the ink in exactly one brand color with that coverage as its transparency, so the logo sits on the silk
  *      or any background without a box around it, and the cruet's empty top half stays empty (guide §4.1);
  *   4. crops to the visible artwork (guide §3.5: scale from the visible bounding box) and saves a few widths.
- * It also writes browser and app icons (the emblem on Ivory) and brand-source/v1.0/manifest.json, which records
- * where every file came from with checksums (guide §2.3). tests/unit/brand.test.ts checks all of it.
+ * It also writes browser and app icons (the emblem on Ivory), public/favicon.ico (the 32px icon inside an ICO file) and
+ * brand-source/v1.0/manifest.json, which records where every file came from with checksums (guide §2.3). tests/unit/brand.test.ts checks all of it.
  *
  * Run from the repository root (sharp comes with Astro):
  *   node scripts/build-brand-v1.mjs           writes public/brand/v1/ and the manifest
@@ -22,6 +22,8 @@ import sharp from 'sharp';
 
 const SOURCE_DIR = 'brand-source/v1.0';
 const OUT_DIR = 'public/brand/v1';
+/** /favicon.ico, for browsers and tools that ask for it directly instead of reading the page's icon links. */
+const FAVICON = 'public/favicon.ico';
 const EXPORTED = '2026-11-01';
 
 /** The three logo colors (guide §4.1). Partly blended edge pixels are normal anti-aliasing, not new colors. */
@@ -273,6 +275,26 @@ async function overlap(a, b) {
 }
 
 /** The coverage map a family's drawing comes from (both palettes use it when the family names one). */
+/**
+ * An ICO file holding one PNG image unchanged (the ICO format allows a PNG as the image data): a 6-byte header, one
+ * 16-byte directory entry, then the PNG bytes as they are. Nothing is redrawn, resized or recolored.
+ */
+function icoFromPng(png, size) {
+  const header = Buffer.alloc(22);
+  header.writeUInt16LE(0, 0); // reserved
+  header.writeUInt16LE(1, 2); // type 1: icon
+  header.writeUInt16LE(1, 4); // one image
+  header.writeUInt8(size, 6); // width
+  header.writeUInt8(size, 7); // height
+  header.writeUInt8(0, 8); // no palette
+  header.writeUInt8(0, 9); // reserved
+  header.writeUInt16LE(1, 10); // color planes
+  header.writeUInt16LE(32, 12); // bits per pixel
+  header.writeUInt32LE(png.length, 14); // image size
+  header.writeUInt32LE(22, 18); // image offset
+  return Buffer.concat([header, png]);
+}
+
 const drawnFrom = (family, light, dark) => ((family.drawing ?? 'light') === 'light' ? light : dark);
 
 const checkOnly = process.argv.includes('--check');
@@ -370,6 +392,10 @@ if (!checkOnly) {
     writeFileSync(`${OUT_DIR}/${name}`, png);
     manifest.icons[name] = { from: 'emblem (Daytime)', background: COLORS.ivory.hex, width: size, height: size, sha256: sha256(png) };
   }
+  // The 32px icon above, byte for byte, inside an ICO file at the site root.
+  const favicon = icoFromPng(readFileSync(`${OUT_DIR}/icon-32.png`), 32);
+  writeFileSync(FAVICON, favicon);
+  manifest.favicon = { file: FAVICON, from: 'icon-32.png (unchanged PNG inside an ICO file)', width: 32, height: 32, sha256: sha256(favicon) };
   writeFileSync(`${SOURCE_DIR}/manifest.json`, `${JSON.stringify(manifest, null, 2)}\n`);
   console.log(`wrote ${OUT_DIR}/ and ${SOURCE_DIR}/manifest.json`);
 }

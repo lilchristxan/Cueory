@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type MouseEvent } from 'react';
 import { dayLabel } from './daily';
+import { showFocusRing } from './focusring';
 import { helloResultCard, showResultCard } from './gameresults';
 import {
   HELLO_CATEGORY_LABELS,
@@ -86,11 +87,13 @@ export default function HelloCards({ starters }: { starters: readonly HelloStart
     setNotice(`${HELLO_DEPTH_LABELS[next]} chosen. a new card is face down.`);
   };
 
-  const flip = () => {
+  const flip = (event: MouseEvent<HTMLButtonElement>) => {
     if (!current) return;
     const next = !flipped;
     setFlipped(next);
     setNotice(next ? `card turned over. ${current && isReflective(current.category) ? 'ask yourself' : 'try asking'}: ${current.text}` : 'card turned face down.');
+    // Enter or Space after a click: Firefox keeps the card without its focus ring (focusring.ts).
+    if (event.detail === 0) showFocusRing(event.currentTarget);
   };
 
   const another = () => {
