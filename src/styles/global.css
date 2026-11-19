@@ -272,7 +272,7 @@
     inset: 0;
     z-index: -1;
     pointer-events: none;
-    background-color: rgb(var(--silk-peach-rgb) / calc(var(--silk-peach-alpha) * 0.6));
+    background-color: rgb(var(--silk-peach-rgb) / calc(var(--silk-peach-alpha) * var(--silk-fold-layer)));
     -webkit-mask-image: url("/design/silk-fold-mask.svg");
     mask-image: url("/design/silk-fold-mask.svg");
     -webkit-mask-size: 100% var(--silk-fold-height);
