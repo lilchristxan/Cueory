@@ -87,6 +87,7 @@ held back the same way, so the live build shows "coming soon" in their place and
 
 ## Open questions for Christian
 
-1. Is the crossword opening on Thursday? If not, the launch message should say three games, not four.
+1. The crossword is closed (`crosswordOpen = false` in `src/config/site.ts`), so this draft counts three games and
+   lists the crossword as preview only. Only if Christian opens it before Thursday should the launch message say four games.
 2. The Anatomy Lab and the study tools are preview only in the live build. Keep them out of the launch message?
 3. Approve or change the privacy wording about the email box.
