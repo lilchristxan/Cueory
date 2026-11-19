@@ -285,12 +285,6 @@
     color: var(--color-copper-deep);
   }
 
-  .hero-cta {
-    padding-block: calc(var(--spacing) * 3);
-    padding-inline: calc(var(--spacing) * 6);
-    font-size: var(--text-lg);
-  }
-
   /* The "coming soon" tag inside the closed call to action: words, so it never relies on colour alone. */
   .hero-soon {
     border: 1px solid var(--cueory-copper-ink);
@@ -341,9 +335,6 @@
     cursor: default;
   }
 
-  .copper-button[aria-disabled="true"]:hover {
-    filter: none;
-  }
 
   /* "ways to study": Linen (Evening: Walnut), the folds falling the other way, light from the upper right. */
   .scene-tint {
@@ -574,23 +565,28 @@
     background-color: rgb(var(--glass-hover-rgb) / var(--glass-hover-alpha));
   }
 
-  /* Filled copper action used by the redesign renderings. Keep the ink opaque for contrast on every stop. */
+  /* The one shared copper button (redesign, #889 palette): the renderings' copper sweep, Charcoal ink at full opacity
+     (4.65:1 or better on every stop), a 44 px minimum target. Pages add only layout utilities, never their own copper. */
   .copper-button {
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: calc(var(--spacing) * 2);
+    min-block-size: var(--tap-min);
     max-inline-size: 100%;
     padding: calc(var(--spacing) * 3.5) calc(var(--spacing) * 8);
     overflow-wrap: break-word;
+    border: 1px solid transparent; /* shows as a real border in forced-colors mode, where the gradient is dropped */
     border-radius: var(--radius-pill);
     color: var(--cueory-copper-ink);
     text-decoration: none;
-    background: linear-gradient(110deg, var(--cueory-copper-start), var(--cueory-copper-end) 72%, var(--cueory-copper-shine));
+    background-image: linear-gradient(110deg, var(--cueory-copper-start), var(--cueory-copper-end) 72%, var(--cueory-copper-shine));
     box-shadow: var(--shadow-button);
-    transition: filter 150ms ease;
   }
 
-  .copper-button:hover {
+  .copper-button:hover,
+  .copper-button:visited {
     color: var(--cueory-copper-ink);
-    filter: brightness(1.04);
   }
 
   /* Social profile links (D-54): the platform's one-color mark in the text color, on a 44 px target. */
@@ -2377,12 +2373,12 @@ html:has(dialog.mode-preview[open]) {
   /* Narrow screens keep more room for the settings text (320px with 32px root text, issue 743). */
   @media (width < 40rem) {
     /*
-      The 6 × 8 word path board bleeds into the card's padding (-mx-6). With 32px text on a 320px screen its squares
+      The 6 × 8 word path board sits in a panel that bleeds into the card's padding (-mx-6). With 32px text on a 320px screen its squares
       need more room than that, and it used to spill past the card on the right only, ending under a pixel from the
       screen edge (over it with some fonts). It now stays centred on the card, so it spills evenly and fits the screen.
       With room to spare the offset is zero.
     */
-    .wordpath[data-format="path"] .wordpath-board { position: relative; inset-inline-start: calc(50% + var(--spacing) * 6); translate: -50% 0; }
+    .wordpath[data-format="path"] .wordpath-board { position: relative; inset-inline-start: 50%; translate: -50% 0; }
   }
   @media (orientation: portrait), (max-width: 50rem) {
     /* The number pad's layout lives with .sudoku-pad-wrap above (container queries on the panel's width). */
