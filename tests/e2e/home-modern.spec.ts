@@ -44,9 +44,7 @@ for (const size of [
       await expect(page.getByTestId('hero-support')).toHaveAttribute('href', site.tipPageUrl);
       // No line under the button restates it (Christian, 2026-11-02).
       await expect(page.getByText('save your progress and pick up where you left off.')).toHaveCount(0);
-      await expect(page.getByRole('heading', { level: 2, name: 'how it works' })).toBeVisible();
-      await expect(page.locator('#how-it-works li')).toHaveCount(3);
-      await expect(page.getByRole('heading', { level: 3, name: "come back to what you're still learning" })).toBeVisible();
+      await expect(page.locator('#how-it-works')).toHaveCount(0);
       await expect(page.getByRole('heading', { level: 2, name: 'ways to study' })).toBeVisible();
       await expect(page.getByRole('heading', { level: 2, name: 'a few minutes, every day.' })).toBeVisible();
       await expect(page.getByRole('heading', { level: 2, name: 'coming soon' })).toBeVisible();
@@ -91,8 +89,7 @@ test.describe('home without JavaScript', () => {
   test('shows the approved lower sections and their links without a reveal script', async ({ page }) => {
     const response = await page.goto('/');
     expect(response?.status()).toBe(200);
-    await expect(page.getByRole('heading', { level: 2, name: 'how it works' })).toBeVisible();
-    await expect(page.locator('#how-it-works li')).toHaveCount(3);
+    await expect(page.locator('#how-it-works')).toHaveCount(0);
     for (const [testId, href] of heroLinks) {
       await expect(page.getByTestId(testId)).toHaveAttribute('href', href);
       await expect(page.getByTestId(testId)).toBeVisible();
@@ -119,7 +116,7 @@ test.describe('home without JavaScript', () => {
 test('reduced motion never hides the new sections', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.goto('/');
-  for (const section of ['#how-it-works', '#daily-games']) {
+  for (const section of ['#daily-games']) {
     const target = page.locator(section + ' [data-reveal-section]');
     await expect(target).toBeVisible();
     await expect(target).not.toHaveAttribute('data-reveal', 'waiting');

@@ -2,7 +2,6 @@ import { existsSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { draftsAllowed } from '../../src/islands/anatomylab';
 import { draftBuildEnv, heroStartHref, lessonEntryHref } from '../../src/lessons/draftgate';
-import { indexablePages } from '../../src/config/routes';
 import { accountLaunch, accountsOpen, showsHeroJoin } from '../../src/config/site';
 
 // Verify the built visitor-facing HTML after npm run build, not only Astro source text.
@@ -10,7 +9,7 @@ const built = readFileSync(new URL('../../dist/index.html', import.meta.url), 'u
 const main = built.match(/<main\b[^>]*>[\s\S]*?<\/main>/)?.[0];
 if (!main) throw new Error('missing main landmark on the built home page');
 
-function section(id: 'how-it-works' | 'ways-to-study' | 'daily-games' | 'signup'): string {
+function section(id: 'ways-to-study' | 'daily-games' | 'signup'): string {
   const expression = new RegExp('<section\\b(?=[^>]*\\bid="' + id + '")[^>]*>[\\s\\S]*?<\\/section>');
   const found = main!.match(expression)?.[0];
   if (!found) throw new Error('missing home section: ' + id);
@@ -35,16 +34,7 @@ describe('home lower sections', () => {
     expect(titles(section('ways-to-study'), 2).filter(Boolean)).toEqual(['ways to study']);
     expect(titles(section('daily-games'), 2)).toEqual(['a few minutes, every day.']);
     expect(titles(section('signup'), 2)).toEqual(['coming soon']);
-  });
-
-  it('keeps P5 how-it-works steps and their draft-gated route contract', () => {
-    const how = section('how-it-works');
-    expect(titles(how, 2)).toEqual(['how it works']);
-    const steps = [...(how.match(/<ol\b[^>]*>([\s\S]*?)<\/ol>/)?.[1] ?? '').matchAll(/<li\b[^>]*>([\s\S]*?)<\/li>/g)].map((match) => match[1]!);
-    expect(steps.map((step) => titles(step, 3)[0])).toEqual(['pick a lesson', 'study it your way', "come back to what you're still learning"]);
-    expect(links(how)).toEqual(draftsAllowed(draftBuildEnv(process.env)) ? ['/learn/study-skills'] : []);
-    expect(readFileSync(new URL('../../src/components/HowItWorks.astro', import.meta.url), 'utf8')).toMatch(/sampleLessonShown\(\) && \(/);
-    expect(indexablePages).not.toContain('/learn/study-skills');
+    expect(main).not.toContain('id="how-it-works"');
   });
 
   it('keeps the games action, closed-game gates and Kit signup contract', () => {
