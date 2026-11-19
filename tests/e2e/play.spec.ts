@@ -408,7 +408,7 @@ test.describe('daily games: sudoku (Task 625)', () => {
     await game(page).getByRole('button', { name: String(daily.solution[second]), exact: true }).click();
     await expect(cells(page).nth(second)).toContainText(String(daily.solution[second]));
 
-    await game(page).getByRole('button', { name: 'mid', exact: true }).click();
+    await game(page).getByRole('button', { name: 'medium', exact: true }).click();
     await expect(grid(page).locator('[data-given="true"]')).toHaveCount(32);
     await game(page).getByRole('button', { name: 'hard' }).click();
     await expect(grid(page).locator('[data-given="true"]')).toHaveCount(26);

@@ -13,6 +13,7 @@ import { keepSudokuSolve, loadSudokuStats, sudokuLevelStats, sudokuTime, type Sa
 import PrintLogo from './PrintLogo';
 
 const LEVELS: SudokuLevel[] = ['easy', 'medium', 'hard'];
+const VISIBLE_LEVEL_LABELS: Readonly<Record<SudokuLevel, string>> = { easy: 'easy', medium: 'medium', hard: 'hard' };
 const NUMBERS = [1, 2, 3, 4, 5, 6, 7, 8, 9];
 
 const where = (index: number) => `row ${Math.floor(index / 9) + 1}, column ${index % 9 + 1}`;
@@ -288,7 +289,7 @@ export default function SudokuGame() {
   return <section className="sudoku-game" data-testid="sudoku">
     <div className="sudoku-panel">
       <PrintLogo />
-      <div className="segmented sudoku-levels" aria-label="difficulty">{LEVELS.map((choice) => <button key={choice} type="button" className="segmented-option" aria-pressed={level === choice} disabled={paused} onClick={() => { if (!paused) setLevel(choice); }}>{level === choice && <span className="segmented-check" aria-hidden="true">✓</span>}{LEVEL_LABELS[choice]}</button>)}</div>
+      <div className="segmented sudoku-levels" aria-label="difficulty">{LEVELS.map((choice) => <button key={choice} type="button" className="segmented-option" aria-pressed={level === choice} disabled={paused} onClick={() => { if (!paused) setLevel(choice); }}>{level === choice && <span className="segmented-check" aria-hidden="true">✓</span>}{VISIBLE_LEVEL_LABELS[choice]}</button>)}</div>
       <div className="sudoku-status" data-testid="sudoku-status">
         <span className="sudoku-time">{settings.showTimer && <>time: <strong>{elapsed}</strong></>}</span>
         <span className="sudoku-errors">{settings.showErrors ? <>error: <strong>{errors}</strong></> : null}</span>

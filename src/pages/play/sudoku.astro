@@ -36,21 +36,26 @@ const game = dailyGames.find((item) => item.id === 'triage')!;
     box-sizing: border-box;
     margin-inline: auto;
     padding: var(--spacing);
-    border: var(--border-game-settings) solid var(--cueory-glass-border);
+    border: var(--border-game-settings) solid var(--cueory-result-card-border);
     border-radius: var(--radius-xl);
-    background: var(--cueory-glass-bg);
-    box-shadow: var(--cueory-glass-shadow);
+    background: var(--cueory-result-card-bg);
+    box-shadow: var(--cueory-result-card-shadow);
   }
 
   :global(.sudoku-levels) {
-    border-color: var(--cueory-glass-border);
-    background: color-mix(in srgb, var(--cueory-glass-bg) 82%, transparent);
+    border-color: var(--cueory-result-card-border);
+    background: var(--color-page);
   }
 
   :global(.sudoku-levels .segmented-option[aria-pressed="true"]) {
     border-radius: var(--radius-pill);
-    background: linear-gradient(110deg, var(--cueory-copper-start), var(--cueory-copper-end));
+    background: var(--cueory-copper-start);
     color: var(--cueory-copper-ink);
+  }
+
+  :global(.sudoku-levels .segmented-option[aria-pressed="false"]) {
+    background: var(--color-page);
+    color: var(--color-ink);
   }
 
   :global(.sudoku-toolbar) {
@@ -59,8 +64,8 @@ const game = dailyGames.find((item) => item.id === 'triage')!;
   }
 
   :global(.sudoku-icon-button) {
-    border-color: var(--cueory-glass-border);
-    background: var(--cueory-glass-bg);
+    border-color: var(--cueory-result-card-border);
+    background: var(--color-page);
     box-shadow: var(--shadow-button);
   }
 
@@ -77,11 +82,13 @@ const game = dailyGames.find((item) => item.id === 'triage')!;
   }
 
   :global(.sudoku-cell.is-selected) {
-    background: var(--cueory-copper-start);
-    color: var(--cueory-copper-ink);
-    outline-color: var(--cueory-copper-ink);
-    box-shadow: inset 0 0 0 var(--spacing) var(--cueory-copper-ink);
+    background: var(--color-page);
+    color: var(--color-ink);
+    outline-color: var(--color-sudoku-selected);
+    box-shadow: inset 0 0 0 var(--spacing) var(--color-ink);
   }
+
+  :global(.sudoku-cell.is-selected .sudoku-mark) { color: inherit; }
 
   @media (prefers-color-scheme: dark) {
     :global(:root:not([data-theme="light"]) .sudoku-cell.is-selected) {
@@ -90,6 +97,25 @@ const game = dailyGames.find((item) => item.id === 'triage')!;
       outline-color: var(--color-ink);
       box-shadow: inset 0 0 0 var(--spacing) var(--color-ink);
     }
+  }
+
+  :global(:root[data-theme="dark"] .sudoku-panel) {
+    border-color: var(--cueory-glass-border);
+    background: var(--cueory-glass-bg);
+    box-shadow: var(--cueory-glass-shadow);
+  }
+
+  :global(:root[data-theme="dark"] .sudoku-levels) {
+    border-color: var(--cueory-glass-border);
+    background: color-mix(in srgb, var(--cueory-glass-bg) 82%, transparent);
+  }
+
+  :global(:root[data-theme="dark"] .sudoku-icon-button),
+  :global(:root[data-theme="dark"] .sudoku-number-row button),
+  :global(:root[data-theme="dark"] .sudoku-tool-button),
+  :global(:root[data-theme="dark"] .sudoku-setting-button) {
+    border-color: var(--cueory-glass-border);
+    background: var(--cueory-glass-bg);
   }
 
   :global(:root[data-theme="dark"] .sudoku-cell.is-selected) {
@@ -110,8 +136,29 @@ const game = dailyGames.find((item) => item.id === 'triage')!;
   :global(.sudoku-number-row button),
   :global(.sudoku-tool-button),
   :global(.sudoku-setting-button) {
-    border-color: var(--cueory-glass-border);
-    background: var(--cueory-glass-bg);
+    border-color: var(--cueory-result-card-border);
+    background: var(--color-page);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :global(:root:not([data-theme="light"]) .sudoku-panel) {
+      border-color: var(--cueory-glass-border);
+      background: var(--cueory-glass-bg);
+      box-shadow: var(--cueory-glass-shadow);
+    }
+
+    :global(:root:not([data-theme="light"]) .sudoku-levels) {
+      border-color: var(--cueory-glass-border);
+      background: color-mix(in srgb, var(--cueory-glass-bg) 82%, transparent);
+    }
+
+    :global(:root:not([data-theme="light"]) .sudoku-icon-button),
+    :global(:root:not([data-theme="light"]) .sudoku-number-row button),
+    :global(:root:not([data-theme="light"]) .sudoku-tool-button),
+    :global(:root:not([data-theme="light"]) .sudoku-setting-button) {
+      border-color: var(--cueory-glass-border);
+      background: var(--cueory-glass-bg);
+    }
   }
 
   :global(.sudoku-number-row button:hover),
