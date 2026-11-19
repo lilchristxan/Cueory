@@ -25,12 +25,21 @@ const where = (page: Page) => page.evaluate(() => {
 for (const mode of modes) {
   test(`${mode}: pressing every control by keyboard never drops focus onto the page body`, async ({ page }) => {
     await page.goto(`/learn/study-skills/${mode}`);
-    const main = page.locator('main');
-    await expect(main.locator('button, input, [tabindex="0"]').first()).toBeVisible();
+    // The study board is a client-only island. Wait until every island has mounted (Astro then drops `ssr`), so the walk
+    // presses the board's controls instead of finishing before they exist.
+    await page.waitForFunction(() => document.querySelectorAll('astro-island[ssr]').length === 0);
     // Start from the top of the page and Tab into the study area.
     await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
     let pressed = 0;
+    let pressedOnBoard = 0;
     for (let step = 0; step < 80 && pressed < 30; step++) {
+      // An empty text field with focus (reached by Tab, or because a press moved focus there) gets a word typed, so the
+      // next Tab reaches the check button the word turns on.
+      const emptyField = await page.evaluate(() => {
+        const a = document.activeElement;
+        return a instanceof HTMLInputElement && a.type === 'text' && a.value === '' && !a.readOnly && !!a.closest('main');
+      });
+      if (emptyField) await page.keyboard.type('word');
       await page.keyboard.press('Tab');
       const place = await where(page);
       if (place !== 'study') {
@@ -40,16 +49,17 @@ for (const mode of modes) {
       }
       const control = await page.evaluate(() => {
         const a = document.activeElement as HTMLInputElement;
-        return { tag: a.tagName, type: a.type ?? '' };
+        return { tag: a.tagName, type: a.type ?? '', onBoard: !!a.closest('astro-island') };
       });
       if (control.tag === 'A') continue; // links leave the page; they are not a study control
-      // Radios and boxes toggle with Space, buttons and the card with Enter; a text field only gets a word typed.
-      if (control.tag === 'INPUT' && control.type === 'text') { await page.keyboard.type('word'); continue; }
+      if (control.tag === 'INPUT' && control.type === 'text') continue; // typed into at the start of the next step
+      // Radios and boxes toggle with Space; buttons and the card turn with Enter.
       await page.keyboard.press(control.tag === 'INPUT' ? 'Space' : 'Enter');
       pressed++;
+      if (control.onBoard) pressedOnBoard++;
       // Let any focus hand-off (an effect after the render) settle, then focus must be on a real element.
       await expect.poll(() => where(page), { message: `focus fell to the body after pressing a control in ${mode}` }).not.toBe('body');
     }
-    expect(pressed).toBeGreaterThan(0);
+    expect(pressedOnBoard, `no control on the ${mode} board was pressed`).toBeGreaterThan(0);
   });
 }
