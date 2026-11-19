@@ -11,18 +11,26 @@ test.beforeEach(async ({ page }) => {
   });
 });
 
-test('fill-in dropdowns provide 4 options by default and allow toggling to type instead', async ({ page }) => {
+// The choices are radio buttons, not a native <select>: WebKit reports a CSP violation for every <select> (#862).
+test('fill-in choices provide 4 options by default and allow toggling to type instead', async ({ page }) => {
   await page.goto('/learn/study-skills/fill-in');
   const board = page.getByTestId('fill-in');
 
-  // Dropdown should be default
-  const dropdown = board.getByRole('combobox', { name: 'the missing word' });
+  // Choosing is the default
+  const dropdown = board.getByRole('radiogroup', { name: 'the missing word' });
   await expect(dropdown).toBeVisible();
+  await expect(board.locator('select')).toHaveCount(0);
 
-  // Check 4 options + 1 placeholder = 5 options
-  const options = dropdown.locator('option');
-  await expect(options).toHaveCount(5);
-  await expect(options.nth(0)).toHaveText('choose an answer...');
+  // 4 options, none chosen yet
+  const options = dropdown.getByRole('radio');
+  await expect(options).toHaveCount(4);
+  await expect(dropdown.getByRole('radio', { checked: true })).toHaveCount(0);
+  await expect(board.getByRole('button', { name: 'check' })).toBeDisabled();
+  for (const option of await options.all()) {
+    // 24 px radios (axe target-size) inside a 44 px row that is itself the tap target.
+    expect((await option.boundingBox())?.height).toBeGreaterThanOrEqual(24);
+    expect((await option.locator('xpath=..').boundingBox())?.height).toBeGreaterThanOrEqual(44);
+  }
 
   // Toggle to type instead
   const toggle = board.getByRole('button', { name: 'type instead' });
@@ -35,15 +43,16 @@ test('fill-in dropdowns provide 4 options by default and allow toggling to type 
   await expect(board.getByRole('button', { name: 'choose from options' })).toBeVisible();
 
   // An answer typed outside the available options must not be submitted
-  // invisibly when the student switches back to the dropdown.
+  // invisibly when the student switches back to the choices.
   await input.fill('not a dropdown option');
   await board.getByRole('button', { name: 'choose from options' }).click();
   await expect(dropdown).toBeVisible();
-  await expect(dropdown).toHaveValue('');
+  await expect(dropdown.getByRole('radio', { checked: true })).toHaveCount(0);
   await expect(board.getByRole('button', { name: 'check' })).toBeDisabled();
 
-  // Select the correct answer from dropdown
-  await dropdown.selectOption({ label: 'honey' });
+  // Choose the correct answer by tapping its row (the label)
+  await dropdown.getByText('honey', { exact: true }).click();
+  await expect(dropdown.getByRole('radio', { name: 'honey' })).toBeChecked();
   await board.getByRole('button', { name: 'check' }).click();
 
   // Spoken feedback and next button appear
@@ -74,13 +83,14 @@ test('a resumed free-text typo cannot be checked as a hidden dropdown answer', a
 
   await page.reload();
   await page.getByRole('button', { name: 'continue question 1' }).click();
-  const dropdown = board.getByRole('combobox', { name: 'the missing word' });
+  const dropdown = board.getByRole('radiogroup', { name: 'the missing word' });
   await expect(dropdown).toBeVisible();
 
   // The restored typo is not any visible option. It must not be submitted.
   const check = board.getByRole('button', { name: 'check' });
   await expect(check).toBeDisabled();
-  await dropdown.selectOption({ label: 'honey' });
+  await expect(dropdown.getByRole('radio', { checked: true })).toHaveCount(0);
+  await dropdown.getByRole('radio', { name: 'honey' }).check();
   await expect(check).toBeEnabled();
   await check.click();
   await expect(board.getByText('right.', { exact: true })).toBeVisible();
@@ -97,19 +107,23 @@ for (const [size, width, height] of [['phone', 390, 844], ['tablet', 820, 1180],
       await page.emulateMedia({ colorScheme: scheme, reducedMotion: 'reduce' });
       await page.goto('/learn/study-skills/fill-in');
       const board = page.getByTestId('fill-in');
-      const dropdown = board.getByRole('combobox', { name: 'the missing word' });
+      const dropdown = board.getByRole('radiogroup', { name: 'the missing word' });
       await expect(dropdown).toBeVisible();
-      const choices = await dropdown.locator('option').allTextContents();
-      const wrongIndex = choices.findIndex((value, index) => index > 0 && value !== 'honey');
-      expect(wrongIndex).toBeGreaterThan(0);
-      await dropdown.focus();
-      await expect(dropdown).toBeFocused();
-      await dropdown.press('Home');
-      // Native select popup arrows are handled by the OS on macOS; typeahead
-      // exercises real keyboard selection in both headless macOS and Linux.
-      await dropdown.pressSequentially(choices[wrongIndex]!);
-      await expect(dropdown).toHaveValue(choices[wrongIndex]!);
-      await board.getByRole('button', { name: 'check' }).press('Enter');
+      const radios = dropdown.getByRole('radio');
+      const choices = await radios.evaluateAll((nodes) => nodes.map((node) => (node as HTMLInputElement).value));
+      expect(choices).toHaveLength(4);
+      // Keyboard only: Tab from the mode switch reaches the first choice; Space picks it, or, when it is the right
+      // answer, ArrowDown moves to and picks the next one.
+      await board.getByRole('button', { name: 'type instead' }).focus();
+      await page.keyboard.press('Tab');
+      await expect(radios.first()).toBeFocused();
+      const wrongIndex = choices[0] === 'honey' ? 1 : 0;
+      await page.keyboard.press(wrongIndex === 0 ? 'Space' : 'ArrowDown');
+      await expect(radios.nth(wrongIndex)).toBeFocused();
+      await expect(radios.nth(wrongIndex)).toBeChecked();
+      await expect(dropdown.getByRole('radio', { checked: true })).toHaveCount(1);
+      // Enter on the chosen answer checks it, like Enter in the typed field.
+      await page.keyboard.press('Enter');
       await expect(board.getByText('the word was honey.')).toBeVisible();
       const next = board.getByRole('button', { name: 'next' });
       const box = await next.boundingBox();
