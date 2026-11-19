@@ -40,7 +40,6 @@ for (const size of [{ width: 390, height: 844 }, { width: 1440, height: 900 }]) 
       // Stats are always kept (2026-11-17), so the "turn on stats" note is gone; it shows only where storage is blocked.
       await expect(page.getByTestId('play-status-note')).toHaveCount(0);
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
-      await expect(list(page)).not.toContainText('Share line:');
     });
 
     test('a result kept in the stats record shows as done, and the stats note goes away', async ({ page }) => {

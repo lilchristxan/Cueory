@@ -664,7 +664,7 @@
 @theme static {
   /* ---------- /play hub (redesign P8): room kept for the browser-only cards until they render ---------- */
   /* Measured rendered heights plus each island's own top margin (mt-4 cards, mt-16 stats), 2026-11-19. */
-  --play-hub-cards-reserve: 73rem;      /* the cards in one column, under 1024 px wide (at least 1168 px) */
-  --play-hub-cards-reserve-lg: 40.5rem; /* the pillo card beside the other three, from 1024 px (649 px) */
+  --play-hub-cards-reserve: min(100svh, 74.5rem); /* the cards in one column, under 1024 px wide (at least 1194 px); a screen is enough on phones */
+  --play-hub-cards-reserve-lg: 44.75rem; /* the pillo card beside the other three, from 1024 px (716 px) */
   --play-hub-stats-reserve: 34rem;      /* the stats panel at every width (at least 550 px) */
 }

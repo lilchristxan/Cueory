@@ -3,13 +3,12 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import PlayStatus from '../../src/islands/PlayStatus';
 import { MARK_SYMBOL } from '../../src/islands/pulse';
+import { dailyGames, gamePages } from '../../src/config/games';
 
-const games = [
-  { id: 'pulse', name: 'pillo', line: 'Guess the five-letter word in six tries.', href: '/play/pillo' },
-  { id: 'triage', name: 'sudoku', line: 'Fill every row, column and box with the numbers one through nine.', href: '/play/sudoku' },
-  { id: 'cueword', name: 'crossword', line: "A mini crossword from this week's lessons.", href: '/play/crossword' },
-  { id: 'suture', name: 'word path', line: 'Trace hidden words through the letters.', href: '/play/word-path' },
-] as const;
+const games = (['pulse', 'triage', 'cueword', 'suture'] as const).map((id) => {
+  const game = dailyGames.find((entry) => entry.id === id)!;
+  return { id, name: game.name, line: game.line, href: gamePages[id] };
+});
 
 const render = (isComingSoonCrossword: boolean) =>
   renderToStaticMarkup(createElement(PlayStatus, { games, isComingSoonCrossword }));
@@ -32,5 +31,16 @@ describe('the /play hub cards (redesign P8)', () => {
     for (const mark of Object.values(MARK_SYMBOL)) expect(html).toContain(mark);
     expect(html).not.toMatch(/green|yellow|amber/);
     expect(html).toContain('bg-pillo-elsewhere');
+    // The key's marks are decoration for screen readers; the words carry the meaning.
+    for (const mark of Object.values(MARK_SYMBOL)) expect(html).toContain(`<span aria-hidden="true">${mark} </span>`);
+  });
+
+  it('makes only each game\'s name the link, so the key and status are not read as part of it', () => {
+    const html = render(false);
+    for (const game of games) {
+      expect(html).toMatch(new RegExp(`<h3[^>]*><a href="${game.href}"[^>]*>${game.name}</a></h3>`));
+      expect(html).toContain(game.line.replace(/'/g, '&#x27;'));
+    }
+    expect(html).not.toMatch(/<a\b[^>]*>(?:(?!<\/a>)[\s\S])*how to read the pack/);
   });
 });

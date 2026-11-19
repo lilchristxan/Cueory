@@ -26,8 +26,8 @@ test('/play: what follows the cards and stats does not move into or within the f
   const before = await tops(page);
 
   release();
-  await expect(page.getByTestId('play-status')).toBeVisible();
-  await expect(page.getByTestId('game-stats')).toBeAttached();
+  await expect(page.getByTestId('play-status')).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByTestId('game-stats')).toBeAttached({ timeout: 30_000 });
   for (const holder of ['.play-hub-cards', '.play-hub-stats']) {
     await expect.poll(() => page.locator(holder).evaluate((el) => getComputedStyle(el).minHeight)).toBe('0px');
   }

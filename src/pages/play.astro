@@ -14,7 +14,6 @@ import { dailyGames, gamePages, helloCardsGame, helloCardsIndexWhenApproved, sta
 import { helloCardsPage } from '../islands/hello-cards';
 import { draftsAllowed } from '../islands/anatomylab';
 import { crosswordShown } from '../config/crossword';
-import { dayLabel } from '../islands/daily';
 // Keeps room for the browser-only cards and stats until they render, so nothing below them jumps (performance).
 import '../styles/playhub.css';
 
@@ -39,24 +38,15 @@ const wordPath = dailyGames.find((game) => game.id === 'suture')!;
 const showCrossword = crosswordShown(helloEnv);
 const later = dailyGames.filter((game) => !game.ready && game.id !== 'cueword');
 
-// Each game on the board matching Games.png / Games-390.png and copy-deck.md
+// Each game on the board (Games.png / Games-390.png), with its name and line from src/config/games.ts, the one source.
 const hubGames = [pulse, sudokuGame, crossword, wordPath].map((game) => ({
   id: game.id,
   name: game.name,
-  line:
-    game.id === 'pulse'
-      ? 'Guess the five-letter word in six tries.'
-      : game.id === 'cueword'
-        ? "A mini crossword from this week's lessons."
-        : game.id === 'triage'
-          ? 'Fill every row, column and box with the numbers one through nine.'
-          : 'Trace hidden words through the letters.',
+  line: game.line,
   href: gamePages[game.id],
 }));
-
-const today = new Date();
-const formattedDate = dayLabel(today);
-const todayIso = today.toISOString().split('T')[0];
+// The stats list leaves the crossword out while it is closed, like the cards' "coming soon" (site.ts crosswordOpen).
+const statsGames = hubGames.filter((game) => showCrossword || game.id !== 'cueword').map((game) => game.id);
 ---
 
 <Layout
@@ -65,25 +55,21 @@ const todayIso = today.toISOString().split('T')[0];
   socialImage="/share/games-scene.png"
 >
   <div class="w-full py-4 sm:py-6">
-    <!-- Breadcrumb: / daily games · [date] -->
-    <nav aria-label="Breadcrumb" class="mb-4">
-      <h1
-        aria-label="daily games"
-        class="text-sm font-medium tracking-label text-ink-soft inline-flex items-center gap-1.5"
-      >
-        <span aria-hidden="true">/</span>
-        <span>daily games</span>
-        <span aria-hidden="true">·</span>
-        <time datetime={todayIso}>{formattedDate}</time>
-      </h1>
-    </nav>
+    {/* "/ daily games · [date]": the heading, then today's date from the visitor's clock (src/scripts/playdate.ts). */}
+    <div class="mb-4 flex flex-wrap items-center gap-1.5 text-sm font-medium tracking-label text-ink-soft">
+      <span aria-hidden="true">/</span>
+      <h1 class="text-sm font-medium tracking-label text-ink-soft">daily games</h1>
+      <span data-play-date hidden><span aria-hidden="true">·</span> <time data-testid="play-date"></time></span>
+    </div>
 
     {/* Home screen tip (L2): only after puzzles finished on 3 different days, decided on page load, never mid-game. */}
     <HomeScreenTip client:only="react" />
     <noscript><p>to add cueory to your home screen, use your browser's menu. daily games need JavaScript.</p></noscript>
 
     {/* The four games as cards in stage layout matching Games.png and Games-390.png */}
-    <div class="play-hub-island play-hub-cards">
+    <div
+      class="play-hub-island play-hub-cards [--play-hub-reserve:var(--play-hub-cards-reserve)] lg:[--play-hub-reserve:var(--play-hub-cards-reserve-lg)]"
+    >
       <PlayStatus client:only="react" games={hubGames} isComingSoonCrossword={!showCrossword} />
     </div>
     <noscript>
@@ -117,7 +103,7 @@ const todayIso = today.toISOString().split('T')[0];
 
     {/* Private stats (D-76): off until the student turns them on, kept only in this browser. */}
     <div class="play-hub-island play-hub-stats">
-      <GameStatsPanel client:only="react" games={hubGames.map((game) => game.id)} />
+      <GameStatsPanel client:only="react" games={statsGames} />
     </div>
 
     {
@@ -164,5 +150,11 @@ const todayIso = today.toISOString().split('T')[0];
 
 <script>
   import { followOldGameHash } from '../scripts/playhash';
+  import { showPlayDate } from '../scripts/playdate';
   followOldGameHash(window.location);
+  showPlayDate(document);
+  // A tab left open past midnight shows the new day when the visitor comes back, as the game cards do.
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') showPlayDate(document);
+  });
 </script>

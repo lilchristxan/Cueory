@@ -46,6 +46,19 @@ const LEGEND: ReadonlyArray<readonly [Mark, string, string]> = [
   ['absent', 'empty', 'not in the word'],
 ];
 
+/** A card's name link: at least 44 px tall, and its ::after covers the whole card, so the card is one tap target. */
+const CARD_LINK = 'inline-flex min-h-11 items-center text-ink no-underline after:absolute after:inset-0';
+
+/** A card's status: the symbol is decoration, the words carry the meaning (never colour alone). */
+function StatusLine({ text }: { text: { symbol: string; label: string } }) {
+  return (
+    <span className="inline-flex items-center gap-2 text-sm font-semibold text-ink">
+      <span aria-hidden="true">{text.symbol}</span>
+      <span>{text.label}</span>
+    </span>
+  );
+}
+
 const readStats = (): SavedStats => loadStats(browserStorage(), localDay(new Date()));
 
 /**
@@ -129,206 +142,109 @@ export default function PlayStatus({ games, isComingSoonCrossword = false }: Pro
     };
   }, []);
 
-  const pilloGame = games.find((g) => g.id === 'pulse') || {
-    id: 'pulse',
-    name: 'pillo',
-    line: 'Guess the five-letter word in six tries.',
-    href: '/play/pillo',
-  };
-  const crosswordGame = games.find((g) => g.id === 'cueword') || {
-    id: 'cueword',
-    name: 'crossword',
-    line: "A mini crossword from this week's lessons.",
-    href: '/play/crossword',
-  };
-  const sudokuGame = games.find((g) => g.id === 'triage') || {
-    id: 'triage',
-    name: 'sudoku',
-    line: 'Fill every row, column and box with the numbers one through nine.',
-    href: '/play/sudoku',
-  };
-  const wordPathGame = games.find((g) => g.id === 'suture') || {
-    id: 'suture',
-    name: 'word path',
-    line: 'Trace hidden words through the letters.',
-    href: '/play/word-path',
-  };
-
+  const game = (id: GameId) => games.find((row) => row.id === id);
+  const pilloGame = game('pulse');
   const pilloStatus = statusFor('pulse', today, saved.stats, heard);
   const pilloText = statusDisplayFor('pulse', pilloStatus);
-
-  const crosswordStatus = statusFor('cueword', today, saved.stats, heard);
-  const crosswordText = statusDisplayFor('cueword', crosswordStatus);
-
-  const sudokuStatus = statusFor('triage', today, saved.stats, heard);
-  const sudokuText = statusDisplayFor('triage', sudokuStatus);
-
-  const wordPathStatus = statusFor('suture', today, saved.stats, heard);
-  const wordPathText = statusDisplayFor('suture', wordPathStatus, details[heardKey('suture', today)]);
+  const side = (['cueword', 'triage', 'suture'] as const).flatMap((id) => {
+    const row = game(id);
+    if (!row) return [];
+    const status = statusFor(id, today, saved.stats, heard);
+    return [{ row, status, text: statusDisplayFor(id, status, id === 'suture' ? details[heardKey('suture', today)] : undefined) }];
+  });
 
   return (
     <section className="mt-4" aria-labelledby="today-status-heading" data-testid="play-status">
       <h2 id="today-status-heading" className="sr-only">today</h2>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-        {/* Left Column: Pillo (spans 2 columns on desktop) */}
-        <div
-          data-testid="play-status-pulse"
-          data-status={pilloStatus}
-          className="min-w-0 lg:col-span-2"
-        >
-          <a
-            href={pilloGame.href}
-            className="veil block p-6 sm:p-8 text-ink no-underline group hover:border-line transition-colors min-h-11"
-          >
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
-              {/* Left Column: Title, Tagline, Blister Pack */}
-              <div className="flex flex-col min-w-0">
-                <span className="display block text-3xl sm:text-4xl text-ink font-medium break-words">
-                  {pilloGame.name}
-                </span>
-                <p className="mt-2 text-sm text-ink-soft">{pilloGame.line}</p>
+        {/* Left: the pillo card (two columns wide on desktop). Only the name is the link; it covers the card. */}
+        {pilloGame && (
+          <div data-testid="play-status-pulse" data-status={pilloStatus} className="min-w-0 lg:col-span-2">
+            <div className="veil relative p-6 sm:p-8 text-ink hover:border-line transition-colors">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
+                {/* Title, line, blister pack */}
+                <div className="flex flex-col min-w-0">
+                  <h3 className="display text-3xl sm:text-4xl text-ink font-medium break-words">
+                    <a href={pilloGame.href} className={CARD_LINK}>
+                      {pilloGame.name}
+                    </a>
+                  </h3>
+                  <p className="mt-2 text-sm text-ink-soft">{pilloGame.line}</p>
 
-                {/* Blister pack illustration - sits directly under tagline */}
-                <div
-                  className="mt-6 w-full max-w-xs bg-surface p-3 sm:p-4 rounded-xl select-none"
-                  aria-hidden="true"
-                >
-                  <div className="grid grid-cols-5 gap-2 sm:gap-2.5">
-                    {/* Two sample guesses in the pillo game's own tile colours and marks, then 20 empty pockets. */}
-                    {SAMPLE_PACK.map(([letter, mark]) => (
-                      <div
-                        key={letter}
-                        className={`aspect-square rounded-full flex flex-col items-center justify-center ${PILL_CLASS[mark]}`}
-                      >
-                        <span className="text-xs sm:text-base font-bold leading-none">{letter}</span>
-                        <span className="text-xs leading-none mt-0.5">{MARK_SYMBOL[mark]}</span>
-                      </div>
+                  {/* Blister pack illustration - sits directly under the line */}
+                  <div className="mt-6 w-full max-w-xs bg-surface p-3 sm:p-4 rounded-xl select-none" aria-hidden="true">
+                    <div className="grid grid-cols-5 gap-2 sm:gap-2.5">
+                      {/* Two sample guesses in the pillo game's own tile colours and marks, then 20 empty pockets. */}
+                      {SAMPLE_PACK.map(([letter, mark]) => (
+                        <div
+                          key={letter}
+                          className={`aspect-square rounded-full flex flex-col items-center justify-center ${PILL_CLASS[mark]}`}
+                        >
+                          <span className="text-xs sm:text-base font-bold leading-none">{letter}</span>
+                          <span className="text-xs leading-none mt-0.5">{MARK_SYMBOL[mark]}</span>
+                        </div>
+                      ))}
+                      {Array.from({ length: 20 }).map((_, i) => (
+                        <div key={i} className="aspect-square rounded-full bg-page border border-dashed border-line" />
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Key, share note, status */}
+                <div className="flex flex-col min-w-0 pt-1">
+                  <h4 className="text-sm font-bold text-ink">how to read the pack</h4>
+                  <ul className="mt-3 space-y-2 text-sm">
+                    {LEGEND.map(([mark, word, meaning]) => (
+                      <li key={mark}>
+                        <span className="font-bold text-ink">
+                          <span aria-hidden="true">{MARK_SYMBOL[mark]} </span>
+                          {word}{' '}
+                        </span>
+                        <span className="text-ink-soft">{meaning}</span>
+                      </li>
                     ))}
-                    {Array.from({ length: 20 }).map((_, i) => (
-                      <div
-                        key={i}
-                        className="aspect-square rounded-full bg-page border border-dashed border-line"
-                      />
-                    ))}
+                  </ul>
+                  <p className="mt-3 text-sm text-ink-soft" data-testid="pillo-share-note">
+                    the share line is plain words. no colored squares.
+                  </p>
+
+                  <div className="mt-6 pt-4 border-t border-line">
+                    <StatusLine text={pilloText} />
                   </div>
                 </div>
               </div>
-
-              {/* Right Column: Legend, Share Note, Status */}
-              <div className="flex flex-col min-w-0 pt-1">
-                <h3 className="text-sm font-bold text-ink">how to read the pack</h3>
-                <ul className="mt-3 space-y-2 text-sm">
-                  {LEGEND.map(([mark, word, meaning]) => (
-                    <li key={mark}>
-                      <span className="font-bold text-ink">
-                        {MARK_SYMBOL[mark]} {word}{' '}
-                      </span>
-                      <span className="text-ink-soft">{meaning}</span>
-                    </li>
-                  ))}
-                </ul>
-                <p className="mt-3 text-sm text-ink-soft" data-testid="pillo-share-note">
-                  the share line is plain words. no colored squares.
-                </p>
-
-                {/* Status */}
-                <div className="mt-6 pt-4 border-t border-line">
-                  <span className="inline-flex items-center gap-2 text-sm font-semibold text-ink">
-                    <span aria-hidden="true">{pilloText.symbol}</span>
-                    <span>{pilloText.label}</span>
-                  </span>
-                </div>
-              </div>
             </div>
-          </a>
-        </div>
+          </div>
+        )}
 
-        {/* Right Column: crossword, sudoku, word path */}
+        {/* Right: crossword, sudoku, word path */}
         <div className="flex flex-col gap-4">
-          {/* crossword */}
-          <div
-            data-testid="play-status-cueword"
-            data-status={crosswordStatus}
-            className="min-w-0"
-          >
-            {isComingSoonCrossword ? (
-              <div className="veil flex flex-col justify-between p-6 min-h-36 text-ink">
-                <div>
-                  <span className="display block text-2xl text-ink font-medium break-words">
-                    {crosswordGame.name}
-                  </span>
-                  <p className="mt-2 text-sm text-ink-soft">{crosswordGame.line}</p>
+          {side.map(({ row, status, text }) => {
+            // A closed crossword is a plain card: no link, no focus stop, and only the visible "coming soon".
+            const closed = row.id === 'cueword' && isComingSoonCrossword;
+            return (
+              <div key={row.id} data-testid={`play-status-${row.id}`} data-status={status} className="min-w-0">
+                <div
+                  className={`veil relative flex flex-col justify-between p-6 min-h-36 text-ink${closed ? '' : ' hover:border-line transition-colors'}`}
+                >
+                  <div>
+                    <h3 className="display text-2xl text-ink font-medium break-words">
+                      {closed ? row.name : (
+                        <a href={row.href} className={CARD_LINK}>
+                          {row.name}
+                        </a>
+                      )}
+                    </h3>
+                    <p className="mt-2 text-sm text-ink-soft">{row.line}</p>
+                  </div>
+                  <div className="mt-4 pt-2">
+                    {closed ? <span className="text-sm font-semibold text-ink">coming soon</span> : <StatusLine text={text} />}
+                  </div>
                 </div>
-                <div className="mt-4 pt-2">
-                  <span className="text-sm font-semibold text-ink">coming soon</span>
-                </div>
               </div>
-            ) : (
-              <a
-                href={crosswordGame.href}
-                className="veil flex flex-col justify-between p-6 min-h-36 text-ink no-underline group hover:border-line transition-colors"
-              >
-                <div>
-                  <span className="display block text-2xl text-ink font-medium break-words">
-                    {crosswordGame.name}
-                  </span>
-                  <p className="mt-2 text-sm text-ink-soft">{crosswordGame.line}</p>
-                </div>
-                <div className="mt-4 pt-2">
-                  <span className="inline-flex items-center gap-2 text-sm font-semibold text-ink">
-                    <span aria-hidden="true">{crosswordText.symbol}</span>
-                    <span>{crosswordText.label}</span>
-                  </span>
-                </div>
-              </a>
-            )}
-          </div>
-
-          {/* sudoku */}
-          <div
-            data-testid="play-status-triage"
-            data-status={sudokuStatus}
-            className="min-w-0"
-          >
-            <a
-              href={sudokuGame.href}
-              className="veil flex flex-col justify-between p-6 min-h-36 text-ink no-underline group hover:border-line transition-colors"
-            >
-              <div>
-                <span className="display block text-2xl text-ink font-medium break-words">{sudokuGame.name}</span>
-                <p className="mt-2 text-sm text-ink-soft">{sudokuGame.line}</p>
-              </div>
-              <div className="mt-4 pt-2">
-                <span className="inline-flex items-center gap-2 text-sm font-semibold text-ink">
-                  <span aria-hidden="true">{sudokuText.symbol}</span>
-                  <span>{sudokuText.label}</span>
-                </span>
-              </div>
-            </a>
-          </div>
-
-          {/* word path */}
-          <div
-            data-testid="play-status-suture"
-            data-status={wordPathStatus}
-            className="min-w-0"
-          >
-            <a
-              href={wordPathGame.href}
-              className="veil flex flex-col justify-between p-6 min-h-36 text-ink no-underline group hover:border-line transition-colors"
-            >
-              <div>
-                <span className="display block text-2xl text-ink font-medium break-words">{wordPathGame.name}</span>
-                <p className="mt-2 text-sm text-ink-soft">{wordPathGame.line}</p>
-              </div>
-              <div className="mt-4 pt-2">
-                <span className="inline-flex items-center gap-2 text-sm font-semibold text-ink">
-                  <span aria-hidden="true">{wordPathText.symbol}</span>
-                  <span>{wordPathText.label}</span>
-                </span>
-              </div>
-            </a>
-          </div>
+            );
+          })}
         </div>
       </div>
 
