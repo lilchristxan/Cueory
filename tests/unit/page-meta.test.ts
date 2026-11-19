@@ -19,7 +19,8 @@ function htmlFiles(dir: string): string[] {
 }
 
 function decode(s: string): string {
-  return s.replace(/&amp;/g, '&').replace(/&#39;|&apos;/g, "'").replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>').trim();
+  // &amp; goes last, so "&amp;lt;" stays "&lt;" instead of being decoded twice (CodeQL js/double-escaping).
+  return s.replace(/&#39;|&apos;/g, "'").replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&').trim();
 }
 
 function attr(tag: string, name: string): string | undefined {
