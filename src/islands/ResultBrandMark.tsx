@@ -25,6 +25,7 @@ export default function ResultBrandMark({ path }: Props) {
           width={384}
           height={428}
           alt=""
+          loading="lazy"
           decoding="async"
           draggable={false}
         />
@@ -36,6 +37,7 @@ export default function ResultBrandMark({ path }: Props) {
           width={384}
           height={428}
           alt=""
+          loading="lazy"
           decoding="async"
           draggable={false}
         />
