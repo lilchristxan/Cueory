@@ -303,25 +303,30 @@ test.describe('exam date checks (lane 2)', () => {
 });
 
 test('reload or browser back and forward mid-setup restart at question 1 with only saved answers', async ({ page }) => {
+  // Visit the home page first so the browser back button has somewhere to go from /start.
+  await page.goto('/');
   await page.goto('/start');
   await page.getByRole('radio', { name: 'both', exact: true }).check();
   await toExam(page);
   await page.getByLabel('when is your exam?').fill(EXAM);
 
-  // Reload on question 2: nothing was saved, so the unsaved answers are gone and setup starts over, empty.
-  await page.reload();
+  // Browser back on question 2 leaves the page (the questions are not history entries), and forward returns to a
+  // clean question 1, not to the unfinished question 2: nothing was saved, so the unsaved answers are gone.
+  await page.goBack();
+  await expect(page).not.toHaveURL(/\/start/);
+  await page.goForward();
   await expect(page.getByTestId('setup-step')).toHaveText('question 1 of 2');
   await expect(page.getByRole('radio', { name: 'both', exact: true })).not.toBeChecked();
   expect(await savedAnswers(page)).toBeNull();
 
-  // Browser back leaves the page (the questions are not history entries); forward returns to a clean question 1.
-  await page.goto('/');
-  await page.goBack();
-  await expect(page.getByTestId('setup-step')).toHaveText('question 1 of 2');
-  await page.goForward();
-  await page.goBack();
+  // Reload on question 2 with fresh unsaved answers: they are gone too, and setup starts over, empty.
+  await page.getByRole('radio', { name: 'both', exact: true }).check();
+  await toExam(page);
+  await page.getByLabel('when is your exam?').fill(EXAM);
+  await page.reload();
   await expect(page.getByTestId('setup-step')).toHaveText('question 1 of 2');
   await expect(page.getByRole('radio', { name: 'both', exact: true })).not.toBeChecked();
+  expect(await savedAnswers(page)).toBeNull();
 
   // Once saved, a reload mid-setup starts at question 1 showing the saved answers, and an empty confirm keeps them.
   await page.getByRole('radio', { name: 'fundamentals', exact: true }).check();
