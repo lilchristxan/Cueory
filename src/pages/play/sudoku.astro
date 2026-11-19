@@ -33,9 +33,9 @@ const game = dailyGames.find((item) => item.id === 'triage')!;
   :global(.sudoku-panel) {
     max-inline-size: 62rem;
     margin-inline: auto;
-    padding: clamp(1rem, 3vw, 2.5rem);
-    border: 1px solid var(--cueory-glass-border);
-    border-radius: 2rem;
+    padding: var(--spacing-stack);
+    border: var(--border-game-settings) solid var(--cueory-glass-border);
+    border-radius: var(--radius-xl);
     background: var(--cueory-glass-bg);
     box-shadow: var(--cueory-glass-shadow);
   }
@@ -52,13 +52,13 @@ const game = dailyGames.find((item) => item.id === 'triage')!;
   }
 
   :global(.sudoku-toolbar) {
-    padding-block: 0.25rem;
+    padding-block: var(--spacing);
   }
 
   :global(.sudoku-icon-button) {
     border-color: var(--cueory-glass-border);
     background: var(--cueory-glass-bg);
-    box-shadow: 0 0.25rem 0.8rem rgb(0 0 0 / 8%);
+    box-shadow: var(--shadow-button);
   }
 
   :global(.sudoku-icon-button:hover),
@@ -70,14 +70,14 @@ const game = dailyGames.find((item) => item.id === 'triage')!;
   :global(.sudoku-board) {
     overflow: hidden;
     border-color: var(--color-ink);
-    border-radius: 1rem;
-    box-shadow: 0 0.75rem 1.75rem rgb(0 0 0 / 12%);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lift);
   }
 
   :global(.sudoku-cell.is-selected) {
     background: linear-gradient(135deg, var(--cueory-copper-start), var(--cueory-copper-end));
     color: var(--cueory-copper-ink);
-    box-shadow: inset 0 0 0 0.2rem var(--cueory-copper-ink);
+    box-shadow: inset 0 0 0 var(--spacing) var(--cueory-copper-ink);
   }
 
   :global(.sudoku-cell.is-related),
