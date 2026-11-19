@@ -9,14 +9,29 @@ export function waitsForReveal(top: number, viewportHeight: number): boolean {
   return top >= viewportHeight;
 }
 
+/**
+ * When keyboard focus lands in a waiting section, reveal it instantly without motion and stop observing it.
+ */
+export function revealInstantly(section: HTMLElement, observer?: Pick<IntersectionObserver, 'unobserve'>): void {
+  if (section.dataset.reveal === 'waiting') {
+    section.dataset.reveal = 'instant';
+    observer?.unobserve(section);
+  }
+}
+
 export function revealSections(): void {
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches || !('IntersectionObserver' in window)) return;
   const observer = new IntersectionObserver(
     (entries) => {
       for (const entry of entries) {
         if (!entry.isIntersecting) continue;
-        (entry.target as HTMLElement).dataset.reveal = 'shown';
-        observer.unobserve(entry.target);
+        const target = entry.target as HTMLElement;
+        if (target.dataset.reveal === 'instant') {
+          observer.unobserve(target);
+          continue;
+        }
+        target.dataset.reveal = 'shown';
+        observer.unobserve(target);
       }
     },
     { rootMargin: '0px 0px -8% 0px' },
@@ -24,6 +39,13 @@ export function revealSections(): void {
   for (const section of document.querySelectorAll<HTMLElement>('[data-reveal-section]')) {
     if (!waitsForReveal(section.getBoundingClientRect().top, window.innerHeight)) continue;
     section.dataset.reveal = 'waiting';
+    const onFocusIn = () => {
+      if (section.dataset.reveal === 'waiting') {
+        revealInstantly(section, observer);
+        section.removeEventListener('focusin', onFocusIn);
+      }
+    };
+    section.addEventListener('focusin', onFocusIn);
     observer.observe(section);
   }
 }
