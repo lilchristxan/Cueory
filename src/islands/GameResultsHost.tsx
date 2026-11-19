@@ -8,15 +8,7 @@ import {
   takePendingResultCards,
   type GameResultCard,
 } from './gameresults';
-import { canShareFiles, createStoryFile, platformShareUrl, shareFileOrCopy, type SharePlatform } from './share';
-
-const platforms: readonly { id: SharePlatform; label: string }[] = [
-  { id: 'facebook', label: 'facebook' },
-  { id: 'x', label: 'x' },
-  { id: 'threads', label: 'threads' },
-  { id: 'reddit', label: 'reddit' },
-  { id: 'whatsapp', label: 'whatsapp' },
-];
+import { canShareFiles, createStoryFile, shareFileOrCopy } from './share';
 
 function absoluteUrl(path: string): string {
   return new URL(path, window.location.origin).href;
@@ -160,7 +152,6 @@ export default function GameResultsHost() {
 
   if (!card) return null;
   const line = buildResultShareLine(card);
-  const url = absoluteUrl(card.path);
 
   return (
     <div
@@ -174,7 +165,7 @@ export default function GameResultsHost() {
         aria-modal="true"
         aria-labelledby="game-result-title"
         aria-describedby="game-result-summary"
-        className="result-dialog max-h-full w-full max-w-lg overflow-y-auto rounded-xl border border-line bg-page p-4 text-ink shadow-card sm:p-8"
+        className="result-dialog max-h-full w-full max-w-[var(--cueory-result-card-max-width)] overflow-y-auto rounded-[var(--cueory-result-card-radius)] border border-[color:var(--cueory-result-card-border)] bg-[color:var(--cueory-result-card-bg)] p-[var(--cueory-result-card-padding)] text-ink shadow-[var(--cueory-result-card-shadow)]"
         data-testid="game-result-dialog"
         data-result-dialog
       >
@@ -185,47 +176,40 @@ export default function GameResultsHost() {
           type="button"
           aria-label="close results"
           onClick={close}
-          className="result-dialog-close flex size-(--tap-min) items-center justify-center rounded-full border border-control bg-page text-ink"
+          className="result-dialog-close flex size-(--tap-min) items-center justify-center rounded-pill text-xl leading-none text-ink"
         >
           <span aria-hidden="true">×</span>
         </button>
-        <p className="result-meta text-sm font-bold text-ink-soft wrap-break-word">
+        <p className="result-meta text-center text-[length:var(--cueory-label-size)] font-[var(--cueory-label-weight)] tracking-[var(--cueory-label-tracking)] uppercase text-ink-soft wrap-break-word">
           {card.name}{card.level ? ` · ${card.level}` : ''} · {card.date}
         </p>
 
-        <h2 id="game-result-title" className="display mt-3 text-title sm:text-title-lg" aria-live="polite">
+        <h2 id="game-result-title" className="display mt-3 text-center text-title sm:text-title-lg" aria-live="polite">
           {card.result}
         </h2>
-        <p id="game-result-summary" className="mt-2 text-ink-soft">{card.summary}</p>
+        <p id="game-result-summary" className="mt-2 text-center text-ink-soft">{card.summary}</p>
 
-        <dl className="mt-5 flex flex-wrap gap-2">
+        <dl className="mt-5 flex flex-wrap justify-center gap-2">
           {card.stats.slice(0, 3).map((stat) => (
-            <div key={stat.label} className="rounded-pill border border-line px-4 py-2">
-              <dt className="text-sm text-ink-soft">{stat.label}</dt>
+            <div key={stat.label} className="min-w-24 rounded-[var(--radius-md)] border border-[color:var(--cueory-glass-border)] bg-surface px-4 py-2 text-center shadow-[var(--cueory-glass-shadow)]">
+              <dt className="text-[length:var(--cueory-label-size)] font-normal text-ink-soft">{stat.label}</dt>
               <dd className="font-bold">{stat.value}</dd>
             </div>
           ))}
         </dl>
 
-        <p className="mt-5 rounded-md border border-dashed border-control p-3 text-sm break-words" data-testid="result-share-line">
+        <p className="mt-5 rounded-pill border border-control px-4 py-3 text-center text-sm break-words" data-testid="result-share-line">
           {line}
         </p>
 
-        <div className="mt-5 flex flex-wrap gap-2">
-          <button type="button" aria-disabled={preparing || undefined} aria-busy={preparing || undefined} className="min-h-(--tap-min) rounded-pill bg-button px-5 py-2.5 text-on-button aria-disabled:opacity-50" onClick={() => void share(card, line)}>{prepared?.card === card ? 'share image' : preparing ? 'preparing image' : 'share'}</button>
+        <div className="mt-5 flex flex-wrap items-start justify-center gap-2">
+          <button type="button" aria-disabled={preparing || undefined} aria-busy={preparing || undefined} className="min-h-(--tap-min) rounded-pill bg-linear-to-r from-[var(--cueory-copper-start)] to-[var(--cueory-copper-end)] px-5 py-2.5 text-[color:var(--cueory-copper-ink)] aria-busy:cursor-progress" onClick={() => void share(card, line)}><span aria-hidden="true">↗</span> {prepared?.card === card ? 'share image' : preparing ? 'preparing image' : 'share'}</button>
           <button type="button" className="min-h-(--tap-min) rounded-pill border border-control px-5 py-2.5" onClick={() => void copy(line)}>copy</button>
 
-          <nav aria-label="share result on a website" className="flex flex-wrap gap-2">
-            {platforms.map((platform) => (
-              <a key={platform.id} href={platformShareUrl(platform.id, line, url)} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-(--tap-min) min-w-(--tap-min) items-center justify-center rounded-pill border border-control bg-page px-4 py-2">
-                {platform.label}<span className="sr-only"> (opens in a new tab)</span>
-              </a>
-            ))}
-          </nav>
         </div>
 
         <p role="status" className="mt-3 min-h-6 text-sm text-ink-soft break-all">{status}</p>
-        <p className="mt-4 text-sm text-ink-soft" data-testid="game-result-next-message">{card.nextMessage ?? 'thanks for playing.'}</p>
+        <p className="mt-4 text-center text-sm text-ink-soft" data-testid="game-result-next-message">{card.nextMessage ?? 'on a phone, share opens your device options.'}</p>
       </div>
     </div>
   );

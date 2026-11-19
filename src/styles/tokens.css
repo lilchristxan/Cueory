@@ -55,11 +55,13 @@
   --cueory-glass-bg: rgb(var(--glass-rgb) / var(--glass-alpha));
   --cueory-glass-border: rgb(var(--glass-rim-rgb) / var(--glass-rim-alpha));
   --cueory-glass-shadow: var(--shadow-soft);
-  --cueory-result-card-bg: rgb(var(--veil-rgb) / var(--veil-alpha));
+  /* The finished-game card is solid Ivory in Daytime, not frosted (matches PilloDone); Evening keeps the Walnut veil. */
+  --cueory-result-card-bg: var(--color-page);
   --cueory-result-card-border: var(--color-line);
   --cueory-result-card-shadow: var(--shadow-lift);
   --cueory-result-card-radius: var(--radius-xl);
   --cueory-result-card-padding: var(--spacing-stack);
+  --cueory-result-card-max-width: 38.75rem;
   /* C5 caps label: 12px with the rendering's .22em tracking. */
   --cueory-label-size: 0.75rem;
   --cueory-label-tracking: 0.22em;
@@ -523,6 +525,7 @@
     --silk-wash-alpha: 0;         /* no wash in Evening */
     --veil-rgb: 58 45 36;         /* Walnut */
     --veil-alpha: 0.78;
+    --cueory-result-card-bg: rgb(var(--veil-rgb) / var(--veil-alpha));
     --silk-grain: url("/textures/grain-evening.svg");
     --glass-rgb: 203 184 164;     /* Sand */
     --glass-alpha: 0.82;
@@ -606,6 +609,7 @@
   --silk-wash-alpha: 0;         /* no wash in Evening */
   --veil-rgb: 58 45 36;         /* Walnut */
   --veil-alpha: 0.78;
+  --cueory-result-card-bg: rgb(var(--veil-rgb) / var(--veil-alpha));
   --silk-grain: url("/textures/grain-evening.svg");
   --glass-rgb: 203 184 164;     /* Sand */
   --glass-alpha: 0.82;

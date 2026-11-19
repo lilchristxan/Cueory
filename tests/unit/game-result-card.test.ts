@@ -102,12 +102,12 @@ describe('shared result dialog placement and touch targets', () => {
     expect(hello).toContain('{shown && <GameResultsHost client:only="react" />}');
   });
 
-  it('gives every platform link a tokenized square minimum target', () => {
+  it('keeps held socials out and gives share/copy the approved tap target', () => {
     const source = readFileSync(new URL('../../src/islands/GameResultsHost.tsx', import.meta.url), 'utf8');
-    const platformLink = source.slice(source.indexOf('platforms.map'), source.indexOf('</nav>'));
-    expect(platformLink).toContain('min-h-(--tap-min)');
-    expect(platformLink).toContain('min-w-(--tap-min)');
-    expect(platformLink).toContain('justify-center');
+    expect(source).not.toContain('share result on a website');
+    const actions = source.slice(source.indexOf('className="mt-5 flex'), source.indexOf('data-testid="game-result-next-message"'));
+    expect(actions.match(/min-h-\(--tap-min\)/g)?.length).toBeGreaterThanOrEqual(2);
+    expect(actions).toContain('rounded-pill');
   });
 });
 
@@ -115,20 +115,31 @@ describe('shared result dialog design tokens', () => {
   it('uses the repository overlay and radius tokens', () => {
     const source = readFileSync(new URL('../../src/islands/GameResultsHost.tsx', import.meta.url), 'utf8');
     expect(source).toContain('result-dialog-overlay');
-    expect(source).toContain('rounded-xl');
+    expect(source).toContain('rounded-[var(--cueory-result-card-radius)]');
+    expect(source).toContain('max-w-[var(--cueory-result-card-max-width)]');
     expect(source).not.toContain('backdrop-blur-sm');
     expect(source).not.toContain('bg-ink/40');
     expect(source).not.toContain('rounded-2xl');
   });
 
-  it('uses small caps without text-transforming source content', () => {
+  it('keeps the copper share button fully opaque while an image is prepared, with a busy cursor', () => {
+    const source = readFileSync(new URL('../../src/islands/GameResultsHost.tsx', import.meta.url), 'utf8');
+    expect(source).not.toMatch(/opacity-\d/);
+    expect(source).toContain('aria-busy:cursor-progress');
+    expect(source).toContain('aria-disabled={preparing || undefined}');
+    expect(source).toContain('aria-busy={preparing || undefined}');
+    expect(source).toContain('if (preparing) return;');
+  });
+
+  it('shows the label in capitals by style only, without changing the source text', () => {
     const host = readFileSync(new URL('../../src/islands/GameResultsHost.tsx', import.meta.url), 'utf8');
     // The share landing pages that also used result-meta became the games' own pages (2026-11-17) and were removed.
     const styles = readFileSync(new URL('../../src/styles/global.css', import.meta.url), 'utf8');
     expect(host).toContain('result-meta');
-    expect(host).not.toContain('uppercase');
-    expect(styles).toContain('font-variant-caps: all-small-caps');
-    expect(styles).not.toMatch(/\.result-meta[^}]*text-transform/s);
+    expect(host).toContain('uppercase');
+    expect(host).not.toMatch(/PILLO|SUDOKU|WORD PATH|CROSSWORD/);
+    // The uppercase class is the one caps treatment: a small-caps rule on top of it would be dead weight.
+    expect(styles).not.toMatch(/\.result-meta\s*\{/);
   });
 });
 
