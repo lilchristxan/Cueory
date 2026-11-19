@@ -79,19 +79,22 @@ test.describe('touch only (no hover)', () => {
   }
 
   test('the home carousel hover zoom is inactive under touch, and its pause button is a real tap target', async ({ page }) => {
+    // The carousel hides its pause control when reduced motion stops automatic movement.
+    await page.emulateMedia({ reducedMotion: 'no-preference' });
     await page.goto('/');
     const card = page.locator('#ways-to-study [data-mode-card][data-offset="0"]');
     await card.scrollIntoViewIfNeeded();
     await expect(card).toBeVisible();
     expect(await card.evaluate((element) => getComputedStyle(element).scale)).toBe('none');
 
-    const pause = page.locator('#ways-to-study').getByRole('button', { name: /^(pause|play) the (slideshow|animation)$/ }).first();
-    if (await pause.isVisible()) {
-      const box = await pause.boundingBox();
-      expect(box!.width).toBeGreaterThanOrEqual(44);
-      expect(box!.height).toBeGreaterThanOrEqual(44);
-      await pause.tap();
-      await expect(pause).toHaveAccessibleName(/^play the /);
-    }
+    const pause = page.locator('#ways-to-study [data-modes-pause]');
+    await expect(pause).toBeVisible();
+    await expect(pause).toBeEnabled();
+    await expect(pause).toHaveAccessibleName(/^pause the (slideshow|animation)$/);
+    const box = await pause.boundingBox();
+    expect(box!.width).toBeGreaterThanOrEqual(44);
+    expect(box!.height).toBeGreaterThanOrEqual(44);
+    await pause.tap();
+    await expect(pause).toHaveAccessibleName(/^play the (slideshow|animation)$/);
   });
 });
