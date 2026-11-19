@@ -5,11 +5,15 @@ import { expect, test } from '@playwright/test';
  * preload whose crossorigin doesn't match the font request is fetched twice).
  *
  * WebKit (engine run 44460645965): when @font-face reuses a finished preload from the memory cache, WebKit adds a
- * second Resource Timing entry (initiator "css") and gives it the preload's own network numbers
- * (CachedResourceLoader::requestResource, the `Use` case, calls ResourceTiming::fromMemoryCache with the resource's
- * taken network metrics). So in WebKit one more entry is allowed only when it is that reuse: from the stylesheet, with
- * the preload's size and the preload's own response end, which is before the reuse began. A real second download ends
- * after its own start, so it still fails. Chromium and Firefox add no entry for a consumed preload: one entry.
+ * second Resource Timing entry (initiator "css") carrying the preload's network metrics
+ * (CachedResourceLoader::requestResource, the `Use` case, calls ResourceTiming::fromMemoryCache). That run logged both
+ * entries per weight with the same transferSize and encodedBodySize, and the reuse's startTime 40 to 240 ms after the
+ * preload's: the moment the cache was read. Which timestamps the reuse entry gets can differ by build, though: when the
+ * copied metrics carry fetchStart, PerformanceResourceTiming derives startTime from it and responseEnd from the same
+ * metrics, so the entry repeats the preload's timeline. So in WebKit one more entry is allowed only when it is that
+ * reuse: from the stylesheet, with the preload's sizes, and with no transfer of its own in either shape. A real second
+ * download has its own later start followed by its own response end, so it still fails. Chromium and Firefox add no
+ * entry for a consumed preload: one entry.
  */
 const lato = ['lato-latin-400-normal.woff2', 'lato-latin-700-normal.woff2'];
 
@@ -40,8 +44,8 @@ for (const path of ['/', '/learn/study-skills', '/play', '/signin']) {
             encodedBodySize: timing.encodedBodySize,
             startTime: timing.startTime,
             responseEnd: timing.responseEnd,
-            // WebKit only, and only for the log line and attachment below (never asserted): the open review question
-            // on the allowance is whether a reused entry's startTime is copied from the preload's fetchStart.
+            // WebKit only, and only for the log line and attachment below (never asserted): shows which timeline a
+            // reuse entry got, its own cache-read moment or the preload's copied fetchStart.
             ...(withFetchStart ? { fetchStart: timing.fetchStart } : {}),
           };
         }),
@@ -67,9 +71,20 @@ for (const path of ['/', '/learn/study-skills', '/play', '/signin']) {
         // The preload must report real bytes, so "same size" can't pass on two zeros.
         expect(preload.encodedBodySize, `${file} preload size`).toBeGreaterThan(0);
         expect(reuse.encodedBodySize, file).toBe(preload.encodedBodySize);
-        // The same network transfer: its response ended with the preload's, before the reuse even started.
-        expect(Math.abs(reuse.responseEnd - preload.responseEnd), `${file} response time`).toBeLessThanOrEqual(1);
-        expect(reuse.responseEnd, `${file} reuse began after the transfer ended`).toBeLessThanOrEqual(reuse.startTime);
+        expect(reuse.transferSize, file).toBe(preload.transferSize);
+        // No transfer of its own. The reuse entry's timestamps depend on the WebKit build (see the file comment), so
+        // both shapes count, and a real second download fits neither: its own later start is followed by its own
+        // response end.
+        // - It repeats the preload's timeline: startTime from the copied fetchStart, responseEnd from the same metrics.
+        // - It marks the moment the cache was read: its responseEnd is not after its startTime (the preload's earlier
+        //   response end, or the same instant marked twice; 1 ms of slack for the timer resolution).
+        const repeatsPreloadTimeline =
+          Math.abs(reuse.startTime - preload.startTime) <= 1 && Math.abs(reuse.responseEnd - preload.responseEnd) <= 1;
+        const noTransferOfItsOwn = reuse.responseEnd <= reuse.startTime + 1;
+        expect(
+          repeatsPreloadTimeline || noTransferOfItsOwn,
+          `${file} reuse entry carries a transfer of its own: ${JSON.stringify({ preload, reuse })}`,
+        ).toBe(true);
       }
     }
   });
