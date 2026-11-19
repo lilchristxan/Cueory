@@ -175,7 +175,7 @@ describe('brand v1.0', () => {
 
     it('uses the approved Pillo wordmark as the accessible page title', () => {
       const page = file('src/pages/play/pillo.astro').toString();
-      expect(page).toMatch(/<h1 slot="title" id="pulse-heading"[^>]*>[\s\S]*<img[\s\S]*alt="\{game\.name\}"[\s\S]*<\/h1>/);
+      expect(page).toMatch(/<h1\s+slot="title"\s+id="pulse-heading"[^>]*>[\s\S]*<img[\s\S]*\balt=\{game\.name\}[\s\S]*<\/h1>/);
       expect(page).toContain('src="/design/logo-pillo.webp"');
       expect(page).toContain('width="550"');
       expect(page).toContain('height="208"');
