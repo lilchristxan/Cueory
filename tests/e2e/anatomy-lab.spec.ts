@@ -1,4 +1,5 @@
 import AxeBuilder from '@axe-core/playwright';
+import { recordCspEvents, withoutWebkitSelectReports } from './csp-allow';
 import { readFile } from 'node:fs/promises';
 import { expect, test, type Page } from '@playwright/test';
 import { isDesktopOfEachEngine } from './projects';
@@ -13,8 +14,10 @@ const axeTags = ['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa'];
 const URL = '/preview/anatomy-lab?fixture';
 const NAMES = ['fixture cube A', 'fixture cube B', 'fixture block C', 'fixture point D', 'fixture slab E'];
 
-function watchCsp(page: Page): string[] {
+async function watchCsp(page: Page): Promise<string[]> {
   const errors: string[] = [];
+  // The structured violations decide the WebKit select exception (csp-allow.ts); console text alone never does.
+  await recordCspEvents(page);
   page.on('console', (msg) => {
     if (msg.type() === 'error' && /content security policy|refused to/i.test(msg.text())) errors.push(msg.text());
   });
@@ -324,7 +327,7 @@ test.describe('anatomy lab', () => {
   });
 
   test('opens the fixture with its draft note, credit and release, and no CSP errors', async ({ page }) => {
-    const csp = watchCsp(page);
+    const csp = await watchCsp(page);
     const glb: string[] = [];
     page.on('request', (req) => {
       if (req.url().endsWith('.glb')) glb.push(new globalThis.URL(req.url()).pathname);
@@ -336,7 +339,23 @@ test.describe('anatomy lab', () => {
     await expect(page.locator('canvas')).toBeFocused();
     for (const name of NAMES) await expect(list(page).getByRole('button', { name, exact: true })).toBeVisible();
     expect(glb).toEqual(['/preview/anatomy-fixture/fixture.glb']);
-    expect(csp).toEqual([]);
+    // WebKit's native <select> report is set aside, narrowly (csp-allow.ts, #862).
+    expect(await withoutWebkitSelectReports(page, csp)).toEqual([]);
+  });
+
+  test('the WebKit select exception never hides a console-only CSP line on the real lab page (#862)', async ({ page }) => {
+    const csp = await watchCsp(page);
+    await openLab(page);
+    // Whatever the lab's own native select legitimately reports (in WebKit one event and its console mirror) is gone.
+    const baseline = await withoutWebkitSelectReports(page, csp);
+    const before = csp.length;
+    // WebKit's own wording, raised with no securitypolicyviolation event behind it: nothing qualifies it, so it stays.
+    const line = "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy.";
+    await page.evaluate((text) => console.error(text), line);
+    await expect.poll(() => csp.length).toBeGreaterThan(before);
+    const after = await withoutWebkitSelectReports(page, csp);
+    expect(after).toHaveLength(baseline.length + 1);
+    expect(after.some((message) => message.includes('Refused to apply a stylesheet'))).toBe(true);
   });
 
   test('keyboard path: search, select from the list, name card, hide, show only, show all', async ({ page }) => {

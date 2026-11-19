@@ -27,6 +27,8 @@ interface Deck {
 
 interface Props {
   decks: Deck[];
+  /** Where the setup questions are; null while the live build holds them back (accounts closed). */
+  setupHref?: string | null;
 }
 
 const primaryButton = 'min-h-11 rounded-pill bg-button px-5 py-2.5 text-on-button hover:bg-button-hover';
@@ -39,7 +41,7 @@ const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one :
  * Nothing here is sent anywhere. Rendered only in the browser (client:only).
  * Signed in (Task 145), the account's exam date is read on load and wins over the device's; it is only read here.
  */
-export default function ProgressPanel({ decks }: Props) {
+export default function ProgressPanel({ decks, setupHref = '/start' }: Props) {
   const [storage] = useState(browserStorage);
   // Stars saved before D-69 move into the record first, so this page shows (and forgets) all of it.
   const [progress, setProgress] = useState(() => migrateLegacyStars(storage));
@@ -145,9 +147,11 @@ export default function ProgressPanel({ decks }: Props) {
         )}
         {countdown && <p className="mt-3 text-ink-soft">{countdown}</p>}
         {syncNote && <p className="mt-3 text-ink-soft" role="status" data-testid="exam-sync">{syncNote}</p>}
-        <p className="mt-3">
-          <a href="/start">{course || examDate ? 'change your answers' : 'answer two quick questions'}</a>
-        </p>
+        {setupHref && (
+          <p className="mt-3">
+            <a href={setupHref}>{course || examDate ? 'change your answers' : 'answer two quick questions'}</a>
+          </p>
+        )}
       </section>
 
       <section aria-labelledby="decks-heading" className="mt-section">

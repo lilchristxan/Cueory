@@ -36,6 +36,41 @@
   --color-on-button: #f9f5ef;   /* text on main buttons (Ivory) */
   --color-focus: #6b5243;       /* keyboard focus outline (Bronze) */
 
+  /* ---------- Redesign interface (Phase 0 P1) ----------
+     Semantic aliases for the rendering builders. Keep these aliases pointed at
+     existing brand/silk/cell roles so the redesign does not create a second
+     palette or rename established tokens. */
+  /* Copper accent (added 18 Nov 2026 by Christian's decision, to match the redesign renderings; docs/BRAND.md). Only
+     for copper buttons, pills and accents. The same four colours serve Daytime and Evening. */
+  --color-copper-deep: #b87348;   /* Copper Deep  — gradient edges */
+  --color-copper: #d9976a;        /* Copper       — gradient body */
+  --color-copper-glow: #f6d3ae;   /* Copper Glow  — soft highlight */
+  --color-copper-shine: #fff0de;  /* Copper Shine — the light sweep */
+  --cueory-copper-start: var(--color-copper-deep);
+  --cueory-copper-end: var(--color-copper);
+  --cueory-copper-glow: var(--color-copper-glow);
+  --cueory-copper-shine: var(--color-copper-shine);
+  /* Ivory and Espresso text fail 4.5:1 on the copper stops; Charcoal passes on all four (4.65 or more). */
+  --cueory-copper-ink: #1c1917;   /* Charcoal — text on the gradient, in both themes */
+  --cueory-glass-bg: rgb(var(--glass-rgb) / var(--glass-alpha));
+  --cueory-glass-border: rgb(var(--glass-rim-rgb) / var(--glass-rim-alpha));
+  --cueory-glass-shadow: var(--shadow-soft);
+  --cueory-result-card-bg: rgb(var(--veil-rgb) / var(--veil-alpha));
+  --cueory-result-card-border: var(--color-line);
+  --cueory-result-card-shadow: var(--shadow-lift);
+  --cueory-result-card-radius: var(--radius-xl);
+  --cueory-result-card-padding: var(--spacing-stack);
+  /* C5 caps label: 12px with the rendering's .22em tracking. */
+  --cueory-label-size: 0.75rem;
+  --cueory-label-tracking: 0.22em;
+  --cueory-label-weight: 700;
+  --cueory-mesh-base: var(--color-silk-base);
+  --cueory-mesh-sheen: var(--color-silk-sheen);
+  --cueory-mesh-shade: var(--color-silk-shade);
+  --cueory-mesh-tint: var(--color-silk-tint);
+  --cueory-cell-min: var(--wordpath-cell-min);
+  --cueory-cell-max: var(--wordpath-cell-max);
+
   /* ---------- Marketing pages only (D-41): draped-silk background and frosted panels (no embossed logo: D-55) ---------- */
   --color-silk-base: #f9f5ef;   /* Ivory    — silk background */
   --color-silk-sheen: #f9f5ef;  /* Ivory    — light catching a fold */
@@ -148,6 +183,7 @@
   /* ---------- Widths ---------- */
   --container-prose: 40rem;     /* comfortable reading width */
   --container-page: 64rem;      /* widest content width */
+  --container-game-showcase: 61.25rem; /* a game page that opts in (word path): the rendering's 900 px panel (WordPath.png, 270 to 1170 at 1440) plus the article's 40 px side padding */
   --container-headline: 18ch;   /* home headline wraps at about 18 letters */
   --container-hero: 46rem;      /* the centered hero column */
   --container-menu: min(85vw, 22.5rem); /* the ☰ side panel: most of a phone, 360px on bigger screens */
@@ -175,6 +211,7 @@
   --radius-lg: 1rem;
   --radius-xl: 1rem;            /* frosted panels and cards on marketing pages (16 px, D-62) */
   --radius-pill: 999px;
+  --notice-icon-disc: 0.125rem; /* light disc margin around the building-strip icon in Evening */
 
   /* ---------- Depth (marketing pages) ---------- */
   --shadow-soft: 0 12px 32px rgb(var(--shadow-tint) / 0.08); /* one soft shadow for frosted panels (D-62) */
@@ -253,6 +290,8 @@
   --crossword-print-cell: 2rem;      /* a printed square; colors on paper use --print-paper / --print-ink (Task 641) */
   --wordpath-cell-min: 1.5rem;       /* a letter square's floor: 24 px (WCAG 2.2) at default text, 48 px at 32 px root text, when the grid scrolls */
   --wordpath-letter-inset: 10%;      /* a 6 × 8 board letter's circle sits this far inside its square, leaving room for the joining lines */
+  --border-wordpath-panel: 1px;      /* the hairline rim of the word path panel (the rendering shows a 1 px light edge) */
+  --wordpath-ring: 2px;              /* the copper ring round a picked letter (WordPath.png shows about 2 px at 1440) */
   --wordpath-line: 3px;              /* the line that joins the letters of a word, from circle edge to circle edge */
   --wordpath-cell-max: 4.5rem;       /* a 6 × 8 board square's ceiling: 72 px, as large as a crossword square, so tablet and desktop boards are not oversized */
   --wordpath-columns: 11;            /* each puzzle overrides this with its validated grid width */
@@ -345,6 +384,10 @@
   /* Fold shadows: Taupe at 16%, faint so Bronze text keeps AA contrast. Plain rgb() so every browser draws them right. */
   --silk-fold-rgb: 211 183 161; /* Taupe */
   --silk-fold-alpha: 0.16;
+  /* Page silk peach (follow-up to P3): the redesign's warm cloth is Copper Glow at partial strength over Ivory. */
+  --silk-peach-rgb: 246 211 174; /* Copper Glow */
+  --silk-peach-alpha: 0.55;
+  --silk-fold-height: 47.5rem; /* one tile of the boards' fold mask (public/design/silk-fold-mask.svg, 1440 x 760) */
   /* Frosted panels: Ivory, three-quarters opaque. A plain rgb() so every browser gets the right panel color. */
   --veil-rgb: 249 245 239;      /* Ivory */
   --veil-alpha: 0.74;
@@ -410,6 +453,10 @@
     --color-button-hover: #f9f5ef; /* Ivory */
     --color-on-button: #1c1917; /* Charcoal */
     --color-focus: #cbb8a4;     /* Sand */
+    --color-copper-deep: #b87348;   /* Copper Deep  — same copper in Evening */
+    --color-copper: #d9976a;        /* Copper */
+    --color-copper-glow: #f6d3ae;   /* Copper Glow */
+    --color-copper-shine: #fff0de;  /* Copper Shine */
 
     --color-silk-base: #1c1917;   /* Charcoal */
     --color-silk-sheen: #3a2d24;  /* Walnut */
@@ -430,6 +477,8 @@
     --shadow-tint: 28 25 23;      /* Charcoal */
     --silk-fold-rgb: 58 45 36;    /* Walnut */
     --silk-fold-alpha: 0.7;
+    --silk-peach-rgb: 58 45 36;    /* Walnut: Evening stays quiet */
+    --silk-peach-alpha: 0.7;
     --veil-rgb: 58 45 36;         /* Walnut */
     --veil-alpha: 0.78;
     --silk-grain: url("/textures/grain-evening.svg");
@@ -484,6 +533,10 @@
   --color-button-hover: #f9f5ef; /* Ivory */
   --color-on-button: #1c1917; /* Charcoal */
   --color-focus: #cbb8a4;     /* Sand */
+  --color-copper-deep: #b87348;   /* Copper Deep  — same copper in Evening */
+  --color-copper: #d9976a;        /* Copper */
+  --color-copper-glow: #f6d3ae;   /* Copper Glow */
+  --color-copper-shine: #fff0de;  /* Copper Shine */
 
   --color-silk-base: #1c1917;   /* Charcoal */
   --color-silk-sheen: #3a2d24;  /* Walnut */
@@ -504,6 +557,8 @@
   --shadow-tint: 28 25 23;      /* Charcoal */
   --silk-fold-rgb: 58 45 36;    /* Walnut */
   --silk-fold-alpha: 0.7;
+  --silk-peach-rgb: 58 45 36;    /* Walnut: Evening stays quiet */
+  --silk-peach-alpha: 0.7;
   --veil-rgb: 58 45 36;         /* Walnut */
   --veil-alpha: 0.78;
   --silk-grain: url("/textures/grain-evening.svg");

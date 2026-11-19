@@ -154,15 +154,12 @@ function Board({ puzzle, name }: Props) {
         }
       />
       <PrintLogo />
-      {puzzle.theme && <h3 id={title} className="display text-center text-2xl text-ink sm:text-3xl" data-testid="suture-theme">{puzzle.theme}</h3>}
-      <p className="mt-2 text-center text-ink-soft" data-print-hidden>find all {state.totalWords} words. they run up, down, left or right.</p>
-      <p id={help} className="mt-2 text-center text-sm text-ink-soft" data-print-hidden>
-        tap a word's first letter, then its last letter. tap the first letter again to start over. on a keyboard, arrows
-        move, enter or space picks, and escape clears.
-      </p>
       <GameHelpCard help={howToPlay} name={name} />
+      <div className="wordpath-panel -mx-6 mt-6 sm:mx-0 sm:px-(--spacing-stack)">
+      {puzzle.theme && <p className="wordpath-label px-4 text-center text-ink-soft sm:px-0">cue of the day</p>}
+      {puzzle.theme && <h3 id={title} className="display px-4 sm:px-0 text-center text-2xl text-ink sm:text-3xl" data-testid="suture-theme">{puzzle.theme}</h3>}
       <div
-        className="wordpath-board-scroll -mx-6 mt-6 sm:mx-0"
+        className="wordpath-board-scroll mt-4"
         role="region"
         aria-label={`${name} letters scroll area`}
         aria-describedby={help}
@@ -174,7 +171,7 @@ function Board({ puzzle, name }: Props) {
           aria-describedby={help}
           aria-rowcount={puzzle.grid.length}
           aria-colcount={width}
-          className={`wordpath-board ${columnClass[width]} flex flex-col border-(length:--border-board) border-ink bg-page text-ink sm:p-3`}
+          className={`wordpath-board ${columnClass[width]} flex flex-col border-(length:--border-board) border-transparent text-ink sm:p-3`}
         >
           {puzzle.grid.map((row, r) => (
           <div key={r} role="row" aria-rowindex={r + 1} className="wordpath-row">
@@ -189,8 +186,8 @@ function Board({ puzzle, name }: Props) {
                 : isFirst
                   ? 'bg-button text-on-button'
                   : inPick
-                    ? 'bg-surface ring-2 ring-inset ring-ink-soft'
-                    : 'bg-transparent';
+                    ? 'wordpath-pick'
+                    : 'wordpath-plain';
               return (
                 <div key={c} role="gridcell" aria-colindex={c + 1} aria-selected={inPick} className="sm:p-0.5">
                   <button
@@ -215,6 +212,7 @@ function Board({ puzzle, name }: Props) {
           ))}
         </div>
       </div>
+      </div>
       <ul className="mt-6 columns-3 gap-x-4 text-sm font-bold sm:text-lg" aria-label="words to find" data-testid="suture-words" data-print-hidden>
         {puzzle.words.map((word, i) => {
           const isFound = state.found.includes(i);
@@ -227,6 +225,11 @@ function Board({ puzzle, name }: Props) {
           );
         })}
       </ul>
+      <p className="mt-2 text-center text-ink-soft" data-print-hidden>find all {state.totalWords} words. they run up, down, left or right.</p>
+      <p id={help} className="mt-2 text-center text-sm text-ink-soft" data-print-hidden>
+        tap a word's first letter, then its last letter. tap the first letter again to start over. on a keyboard, arrows
+        move, enter or space picks, and escape clears.
+      </p>
       {/* On paper only: every word to find, never crossed out, and where the puzzle came from. */}
       <div className="wordpath-print-words" data-print-only data-testid="suture-print-words">
         <p className="text-center font-bold">words to find</p>
