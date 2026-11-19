@@ -183,6 +183,7 @@
   /* ---------- Widths ---------- */
   --container-prose: 40rem;     /* comfortable reading width */
   --container-page: 64rem;      /* widest content width */
+  --container-game-showcase: 61.25rem; /* a game page that opts in (word path): the rendering's 900 px panel (WordPath.png, 270 to 1170 at 1440) plus the article's 40 px side padding */
   --container-headline: 18ch;   /* home headline wraps at about 18 letters */
   --container-hero: 46rem;      /* the centered hero column */
   --container-menu: min(85vw, 22.5rem); /* the ☰ side panel: most of a phone, 360px on bigger screens */
@@ -210,6 +211,7 @@
   --radius-lg: 1rem;
   --radius-xl: 1rem;            /* frosted panels and cards on marketing pages (16 px, D-62) */
   --radius-pill: 999px;
+  --notice-icon-disc: 0.125rem; /* light disc margin around the building-strip icon in Evening */
 
   /* ---------- Depth (marketing pages) ---------- */
   --shadow-soft: 0 12px 32px rgb(var(--shadow-tint) / 0.08); /* one soft shadow for frosted panels (D-62) */
@@ -288,6 +290,8 @@
   --crossword-print-cell: 2rem;      /* a printed square; colors on paper use --print-paper / --print-ink (Task 641) */
   --wordpath-cell-min: 1.5rem;       /* a letter square's floor: 24 px (WCAG 2.2) at default text, 48 px at 32 px root text, when the grid scrolls */
   --wordpath-letter-inset: 10%;      /* a 6 × 8 board letter's circle sits this far inside its square, leaving room for the joining lines */
+  --border-wordpath-panel: 1px;      /* the hairline rim of the word path panel (the rendering shows a 1 px light edge) */
+  --wordpath-ring: 2px;              /* the copper ring round a picked letter (WordPath.png shows about 2 px at 1440) */
   --wordpath-line: 3px;              /* the line that joins the letters of a word, from circle edge to circle edge */
   --wordpath-cell-max: 4.5rem;       /* a 6 × 8 board square's ceiling: 72 px, as large as a crossword square, so tablet and desktop boards are not oversized */
   --wordpath-columns: 11;            /* each puzzle overrides this with its validated grid width */
@@ -380,6 +384,10 @@
   /* Fold shadows: Taupe at 16%, faint so Bronze text keeps AA contrast. Plain rgb() so every browser draws them right. */
   --silk-fold-rgb: 211 183 161; /* Taupe */
   --silk-fold-alpha: 0.16;
+  /* Page silk peach (follow-up to P3): the redesign's warm cloth is Copper Glow at partial strength over Ivory. */
+  --silk-peach-rgb: 246 211 174; /* Copper Glow */
+  --silk-peach-alpha: 0.55;
+  --silk-fold-height: 47.5rem; /* one tile of the boards' fold mask (public/design/silk-fold-mask.svg, 1440 x 760) */
   /* Frosted panels: Ivory, three-quarters opaque. A plain rgb() so every browser gets the right panel color. */
   --veil-rgb: 249 245 239;      /* Ivory */
   --veil-alpha: 0.74;
@@ -469,6 +477,8 @@
     --shadow-tint: 28 25 23;      /* Charcoal */
     --silk-fold-rgb: 58 45 36;    /* Walnut */
     --silk-fold-alpha: 0.7;
+    --silk-peach-rgb: 58 45 36;    /* Walnut: Evening stays quiet */
+    --silk-peach-alpha: 0.7;
     --veil-rgb: 58 45 36;         /* Walnut */
     --veil-alpha: 0.78;
     --silk-grain: url("/textures/grain-evening.svg");
@@ -547,6 +557,8 @@
   --shadow-tint: 28 25 23;      /* Charcoal */
   --silk-fold-rgb: 58 45 36;    /* Walnut */
   --silk-fold-alpha: 0.7;
+  --silk-peach-rgb: 58 45 36;    /* Walnut: Evening stays quiet */
+  --silk-peach-alpha: 0.7;
   --veil-rgb: 58 45 36;         /* Walnut */
   --veil-alpha: 0.78;
   --silk-grain: url("/textures/grain-evening.svg");

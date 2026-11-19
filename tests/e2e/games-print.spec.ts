@@ -57,11 +57,13 @@ for (const [game, area, path] of [
     await page.evaluate((name) => document.documentElement.setAttribute('data-print-game', name), game);
     const logo = page.locator(area).getByTestId('game-print-logo');
     await expect(logo).toBeHidden();
+    const logoResponse = page.waitForResponse((response) => /\/brand\/v1\/logo-full-light-960\.png\?print$/.test(response.url()));
     await page.emulateMedia({ media: 'print' });
     await expect(logo).toBeVisible();
-    await expect(logo).toHaveAttribute('alt', 'cueory');
-    await expect(logo).toHaveAttribute('src', /\/brand\/v1\/logo-full-light-/);
-    expect(await logo.evaluate((image: HTMLImageElement) => image.complete && image.naturalWidth > 0)).toBe(true);
+    // The logo is a print-only background (no screen request in any engine), named "cueory" for assistive technology.
+    await expect(logo).toHaveAttribute('aria-label', 'cueory');
+    await expect(logo).toHaveCSS('background-image', /\/brand\/v1\/logo-full-light-960\.png\?print/);
+    expect((await logoResponse).status()).toBe(200);
     const box = (await logo.boundingBox())!;
     const width = await page.evaluate(() => document.documentElement.clientWidth);
     expect(Math.abs(box.x + box.width / 2 - width / 2)).toBeLessThanOrEqual(3);
