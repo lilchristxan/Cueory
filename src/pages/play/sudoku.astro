@@ -31,7 +31,7 @@ const game = dailyGames.find((item) => item.id === 'triage')!;
   }
 
   :global(.sudoku-panel) {
-    max-inline-size: 62rem;
+    max-inline-size: var(--sudoku-board-max);
     margin-inline: auto;
     padding: var(--spacing-stack);
     border: var(--border-game-settings) solid var(--cueory-glass-border);
