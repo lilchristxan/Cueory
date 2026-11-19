@@ -14,9 +14,28 @@ const axe = (page: Page) => new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2a
 /** Lets the page's clock run, as if the visitor had waited that long. */
 const wait = (page: Page, ms: number) => page.clock.runFor(ms);
 
+/**
+ * Lets the page's clock run until the panel's 5-second timer is `ms` old. The installed clock keeps real time flowing,
+ * so on a busy machine the page's load time already counts toward those 5 seconds; measuring from the moment the page
+ * armed the timer (recorded by the init script in beforeEach) keeps "hidden at 4.5 seconds" true however long loading took.
+ */
+const waitUntilTimerAge = async (page: Page, ms: number) => {
+  const age = await page.evaluate(() => performance.now() - ((window as unknown as { __promoArmedAt?: number }).__promoArmedAt ?? 0));
+  await page.clock.runFor(Math.max(0, ms - age));
+};
+
 test.describe('once-only promo panel (D-59)', () => {
   test.beforeEach(async ({ page }) => {
     await page.clock.install();
+    // Added after the clock, so it wraps the page's fake setTimeout: it notes when the 5-second promo timer is armed.
+    await page.addInitScript(() => {
+      const armed = window.setTimeout.bind(window);
+      window.setTimeout = ((handler: TimerHandler, delay?: number, ...args: unknown[]) => {
+        const marks = window as unknown as { __promoArmedAt?: number };
+        if (delay === 5_000 && marks.__promoArmedAt === undefined) marks.__promoArmedAt = performance.now();
+        return armed(handler, delay, ...args);
+      }) as typeof window.setTimeout;
+    });
   });
 
   test('slides down after 5 seconds, takes focus without scrolling, moves nothing and passes axe', async ({ page }) => {
@@ -25,7 +44,7 @@ test.describe('once-only promo panel (D-59)', () => {
     const headline = page.locator('h1');
     const before = await headline.boundingBox();
 
-    await wait(page, 4_500);
+    await waitUntilTimerAge(page, 4_500);
     await expect(promoPanel(page)).toBeHidden();
     await wait(page, 1_000);
 
