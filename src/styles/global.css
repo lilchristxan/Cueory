@@ -222,6 +222,129 @@
     --scene-fade-top: 0px;
   }
 
+  /*
+    Home hero figure (redesign P5): Christian's anatomy picture has its own pale backdrop, so its top and left edges
+    fade into the silk (a mask, never over text). Evening dims it so the pale backdrop doesn't glow on the dark page.
+  */
+  .hero-figure {
+    -webkit-mask-image:
+      linear-gradient(to right, transparent, currentColor var(--hero-figure-fade)),
+      linear-gradient(to bottom, transparent, currentColor var(--hero-figure-fade)),
+      linear-gradient(to top, transparent, currentColor var(--hero-figure-fade-bottom));
+    -webkit-mask-composite: source-in;
+    mask-image:
+      linear-gradient(to right, transparent, currentColor var(--hero-figure-fade)),
+      linear-gradient(to bottom, transparent, currentColor var(--hero-figure-fade)),
+      linear-gradient(to top, transparent, currentColor var(--hero-figure-fade-bottom));
+    mask-composite: intersect;
+    pointer-events: none;
+    user-select: none;
+  }
+
+  :root[data-theme="dark"] .hero-figure {
+    filter: brightness(var(--hero-figure-evening-dim));
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .hero-figure {
+      filter: brightness(var(--hero-figure-evening-dim));
+    }
+  }
+
+  .hero-eyebrow {
+    font-size: var(--text-sm);
+    line-height: var(--text-sm--line-height);
+  }
+
+  .hero-caps {
+    letter-spacing: var(--tracking-caps);
+  }
+
+  /* "simpler." in copper (a solid copper: Copper Deep on Ivory is 3.6:1, above the 3:1 large text needs; lighter in Evening). */
+  .hero-accent {
+    color: var(--color-copper-deep);
+  }
+
+  :root[data-theme="dark"] .hero-accent {
+    color: var(--color-copper);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .hero-accent {
+      color: var(--color-copper);
+    }
+  }
+
+  /* The curve under the headline: decorative, copper, as wide as the headline's text column. */
+  .hero-curve {
+    display: block;
+    inline-size: 60%;
+    block-size: var(--spacing-stack);
+    margin-block-start: var(--spacing);
+    margin-inline-start: auto;
+    color: var(--color-copper-deep);
+  }
+
+  .hero-cta {
+    padding-block: calc(var(--spacing) * 3);
+    padding-inline: calc(var(--spacing) * 6);
+    font-size: var(--text-lg);
+  }
+
+  /* The "coming soon" tag inside the closed call to action: words, so it never relies on colour alone. */
+  .hero-soon {
+    border: 1px solid var(--cueory-copper-ink);
+    border-radius: var(--radius-pill);
+    padding-inline: calc(var(--spacing) * 2);
+    font-size: var(--text-sm);
+    font-weight: 400;
+  }
+
+  .hero-icon,
+  .hero-icon-lg {
+    flex: none;
+    inline-size: var(--icon-size);
+    block-size: var(--icon-size);
+  }
+
+  .hero-icon-lg {
+    inline-size: var(--icon-size-lg);
+    block-size: var(--icon-size-lg);
+  }
+
+  .hero-icon-copper {
+    color: var(--color-copper-deep);
+  }
+
+  .hero-support {
+    border-radius: var(--radius-xl);
+  }
+
+  .hero-support-body {
+    min-inline-size: 0;
+    flex: 1;
+  }
+
+  .explore-tile {
+    min-block-size: calc(var(--tap-min) * 2.25);
+    border: 1px solid var(--cueory-glass-border);
+    border-radius: var(--radius-lg);
+    background-color: rgb(var(--veil-rgb) / var(--veil-alpha));
+  }
+
+  .explore-tile:hover {
+    border-color: var(--color-control);
+  }
+
+  /* The coming-soon call to action: copper like the others, but it never acts. It still takes focus so it can be read out. */
+  .copper-button[aria-disabled="true"] {
+    cursor: default;
+  }
+
+  .copper-button[aria-disabled="true"]:hover {
+    filter: none;
+  }
+
   /* "ways to study": Linen (Evening: Walnut), the folds falling the other way, light from the upper right. */
   .scene-tint {
     --scene-base: var(--color-silk-tint);
@@ -449,6 +572,25 @@
   .glass-button:hover {
     color: var(--color-on-button);
     background-color: rgb(var(--glass-hover-rgb) / var(--glass-hover-alpha));
+  }
+
+  /* Filled copper action used by the redesign renderings. Keep the ink opaque for contrast on every stop. */
+  .copper-button {
+    display: inline-block;
+    max-inline-size: 100%;
+    padding: calc(var(--spacing) * 3.5) calc(var(--spacing) * 8);
+    overflow-wrap: break-word;
+    border-radius: var(--radius-pill);
+    color: var(--cueory-copper-ink);
+    text-decoration: none;
+    background: linear-gradient(110deg, var(--cueory-copper-start), var(--cueory-copper-end) 72%, var(--cueory-copper-shine));
+    box-shadow: var(--shadow-button);
+    transition: filter 150ms ease;
+  }
+
+  .copper-button:hover {
+    color: var(--cueory-copper-ink);
+    filter: brightness(1.04);
   }
 
   /* Social profile links (D-54): the platform's one-color mark in the text color, on a 44 px target. */

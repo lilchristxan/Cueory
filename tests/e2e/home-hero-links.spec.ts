@@ -1,13 +1,8 @@
 import { expect, test } from '@playwright/test';
-import { accountLaunch, accountsOpen, newsletter, showsHeroJoin } from '../../src/config/site';
 import { isDesktopOfEachEngine } from './projects';
 
-// The quiet join link shows only once it leads somewhere (accounts open or the Kit form set): see showsHeroJoin.
-const joinShown = showsHeroJoin(accountsOpen, newsletter.formAction, newsletter.landingUrl);
-const launch = accountLaunch(accountsOpen);
-
-// Lane 14 home polish: the hero points to today's games (/play) and quietly to the launch list, by keyboard and touch,
-// in Light and Evening, without sideways scroll, including a 320 px screen with 32 px text.
+// Redesign P5: the hero's closed call to action, the Ko-fi card and the explore row work by keyboard and touch, in Light
+// and Evening, without sideways scroll, including a 320 px screen with 32 px text.
 const sizes = [
   { width: 320, height: 720, rootText: '32px' },
   { width: 390, height: 844, rootText: '' },
@@ -16,7 +11,7 @@ const sizes = [
 
 for (const size of sizes) {
   for (const scheme of ['light', 'dark'] as const) {
-    test(`home hero links: ${size.width}px${size.rootText ? ' with ' + size.rootText + ' text' : ''} in ${scheme}`, async ({ browser }, testInfo) => {
+    test(`home hero: ${size.width}px${size.rootText ? ' with ' + size.rootText + ' text' : ''} in ${scheme}`, async ({ browser }, testInfo) => {
       test.skip(!isDesktopOfEachEngine(testInfo), 'the size and scheme checks run once per browser engine');
       const context = await browser.newContext({
         baseURL: testInfo.project.use.baseURL,
@@ -39,65 +34,46 @@ for (const size of sizes) {
         }
 
         const hero = page.locator('.scene-hero');
-        const play = hero.getByTestId('hero-play');
-        const join = hero.getByTestId('hero-join');
-        await expect(play).toHaveText("play today's games");
-        await expect(play).toHaveAttribute('href', '/play');
-        if (!joinShown) {
-          // No dead end: with no form and accounts closed, the hero has only its play button.
-          await expect(join).toHaveCount(0);
-          await expect(hero.getByRole('link')).toHaveCount(1);
-        } else {
-          await expect(join).toHaveText(launch.promoJoinLabel);
-          await expect(join).toHaveAttribute('href', launch.accountHref);
-        }
+        const start = hero.getByTestId('hero-start');
+        await expect(start).toBeVisible();
+        await expect(start).toHaveAttribute('aria-disabled', 'true');
+        // Closed means closed: pressing it goes nowhere, and "coming soon" is written out, not only coloured.
+        await expect(hero.getByText('coming soon', { exact: true })).toBeVisible();
+        await start.click({ force: true }); // Playwright treats aria-disabled as not enabled
+        await expect(page).toHaveURL(/\/$/);
 
-        for (const link of joinShown ? [play, join] : [play]) {
-          const box = (await link.boundingBox())!;
-          expect(box.width).toBeGreaterThanOrEqual(44);
-          expect(box.height).toBeGreaterThanOrEqual(44);
+        const targets = ['hero-support', 'explore-lessons', 'explore-materials', 'explore-games', 'explore-suggestions'];
+        for (const id of targets) {
+          const box = (await hero.getByTestId(id).boundingBox())!;
+          expect(box.width, id).toBeGreaterThanOrEqual(44);
+          expect(box.height, id).toBeGreaterThanOrEqual(44);
         }
+        const startBox = (await start.boundingBox())!;
+        expect(startBox.height).toBeGreaterThanOrEqual(44);
         const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
         expect(overflow).toBeLessThanOrEqual(0);
 
-        // Keyboard: the play button takes real keyboard focus with a visible ring, and Enter opens the games hub.
-        await play.focus();
-        await page.keyboard.press('Shift+Tab');
-        await page.keyboard.press('Tab');
-        await expect(play).toBeFocused();
-        const playRing = await play.evaluate((el) => {
-          const style = getComputedStyle(el);
-          return el.matches(':focus-visible') && style.outlineStyle !== 'none' && Number.parseFloat(style.outlineWidth) > 0;
-        });
-        expect(playRing).toBe(true);
-        await page.keyboard.press('Enter');
-        await expect(page).toHaveURL(/\/play\/?$/);
-
-        if (joinShown) {
-          await page.goto('/');
-          // The quiet link is underlined, so it never relies on color alone to read as a link.
-          expect(await join.evaluate((el) => getComputedStyle(el).textDecorationLine)).toContain('underline');
-          await play.focus();
+        // Keyboard: the closed button can still be reached and read out; Tab then walks on to the Ko-fi card and the
+        // explore tiles, each with a visible focus ring, and Enter on "daily games" opens the games hub.
+        await start.focus();
+        await expect(start).toBeFocused();
+        for (const id of ['hero-support', 'explore-lessons', 'explore-materials', 'explore-games']) {
           await page.keyboard.press('Tab');
-          await expect(join).toBeFocused();
-          const ring = await join.evaluate((el) => {
+          const link = hero.getByTestId(id);
+          await expect(link, id).toBeFocused();
+          const ring = await link.evaluate((el) => {
             const style = getComputedStyle(el);
             return el.matches(':focus-visible') && style.outlineStyle !== 'none' && Number.parseFloat(style.outlineWidth) > 0;
           });
-          expect(ring).toBe(true);
-          await page.keyboard.press('Enter');
-          if (launch.accountHref === '/#signup') {
-            await expect(page).toHaveURL(/\/#signup$/);
-            await expect(page.locator('#signup')).toBeInViewport();
-          } else {
-            await expect(page).toHaveURL(new RegExp(launch.accountHref + '$'));
-          }
+          expect(ring, id).toBe(true);
         }
-
-        // Touch: a tap on the play button opens the games hub.
-        await page.goto('/');
-        await page.getByTestId('hero-play').tap();
+        await page.keyboard.press('Enter');
         await expect(page).toHaveURL(/\/play\/?$/);
+
+        // Touch: a tap on an explore tile opens its page.
+        await page.goto('/');
+        await page.getByTestId('explore-suggestions').tap();
+        await expect(page).toHaveURL(/\/message\/?$/);
       } finally {
         await context.close();
       }

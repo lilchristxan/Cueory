@@ -113,7 +113,7 @@ test.describe('once-only promo panel (D-59)', () => {
 
   test('Escape closes it, and focus goes back where it was', async ({ page }) => {
     await page.goto('/');
-    const hero = page.getByTestId('hero-play');
+    const hero = page.getByTestId('explore-games');
     await hero.focus();
     await wait(page, 5_500);
     const panel = promoPanel(page);
@@ -151,7 +151,7 @@ test.describe('once-only promo panel (D-59)', () => {
     // Nothing leaves the test machine: the supporting-our-mission page's address is answered with an error.
     await page.context().route(/^https?:\/\/(?:[^/]*\.)?ko-fi\.com(?:[/:?#]|$)/, (route) => route.abort());
     await page.goto('/');
-    const hero = page.getByTestId('hero-play');
+    const hero = page.getByTestId('explore-games');
     await hero.focus();
     await wait(page, 5_500);
     const popup = page.waitForEvent('popup');
