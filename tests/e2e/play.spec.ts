@@ -308,7 +308,7 @@ test.describe('daily games on the home page (D-61)', () => {
   test('a calm section after "ways to study" leads to today\'s game', async ({ page }) => {
     await page.goto('/');
     const headings = await page.getByRole('heading', { level: 2 }).allTextContents();
-    expect(headings.indexOf('daily games')).toBe(headings.indexOf('ways to study') + 1);
+    expect(headings.indexOf('daily games')).toBe(headings.indexOf('one lesson, multiple ways to study') + 1);
     const link = page.getByTestId('games-link');
     await expect(link).toHaveText("play today's games");
     await expect(link).toHaveAttribute('href', '/play');

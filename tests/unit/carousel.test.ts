@@ -18,6 +18,8 @@ import {
   RING_MS,
   ringOffset,
   ringPlace,
+  ROW_GAP,
+  rowPlace,
   slideAnnouncement,
   SWIPE_CLOSE_PX,
   SWIPE_TURN_PX,
@@ -341,5 +343,33 @@ describe('the vials (Task 109)', () => {
     for (const text of words) {
       expect(text).not.toMatch(/\bdose\b|\bdosage\b|mg\/ml|\bmg\b|\bml\b|wellness shot|prescription|\brx\b/i);
     }
+  });
+});
+
+describe("HomeV2's straight row of vials (P6)", () => {
+  it('stands every vial beside its neighbour with a gap, so no two bottles ever overlap', () => {
+    for (const side of [-1, 1]) {
+      for (const d of [1, 2, 3, 4]) {
+        const inner = rowPlace(side * (d - 1), 99);
+        const outer = rowPlace(side * d, 99);
+        const halves = (ringPlace(d - 1).scale + ringPlace(d).scale) / 2;
+        // Middle to middle is the two half-widths plus the gap: their edges never meet.
+        expect(Math.abs(outer.shift - inner.shift)).toBeCloseTo(halves + ROW_GAP, 2);
+        expect(Math.abs(outer.shift)).toBeGreaterThan(Math.abs(inner.shift));
+      }
+    }
+    expect(rowPlace(0, 99)).toEqual({ shift: 0, shown: true });
+    expect(rowPlace(-1, 99).shift).toBe(-rowPlace(1, 99).shift);
+  });
+
+  it('hides a vial that would cross the room instead of cutting its label off', () => {
+    // 390 px phone: 120 px vials and 187 px from the middle to the margin, so the front vial and one each side.
+    const phone = 187 / 120;
+    expect([-2, -1, 0, 1, 2].map((o) => rowPlace(o, phone).shown)).toEqual([false, true, true, true, false]);
+    // 1440 px: 160 px vials, the arrows 92 px in from each edge, so four each side.
+    const desktop = (720 - 92) / 160;
+    expect([1, 2, 3, 4, 5].map((o) => rowPlace(o, desktop).shown)).toEqual([true, true, true, true, false]);
+    // The front vial always shows, even in a room narrower than itself.
+    expect(rowPlace(0, 0.1).shown).toBe(true);
   });
 });

@@ -39,7 +39,7 @@ test.describe('home page-specific behavior', () => {
     expect(sectionHeadings).toEqual([
       'start with what you need.', // the hero's explore row (P5)
       'how it works',
-      'ways to study',
+      'one lesson, multiple ways to study', // the vial carousel (P6, copy deck)
       'daily games',
       'get launch updates',
     ]);
