@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page, type Request } from '@playwright/test';
 import { readdirSync } from 'node:fs';
 import { join, relative, resolve, sep } from 'node:path';
 
@@ -23,15 +23,47 @@ function builtPages(folder = dist): string[] {
 
 const pages = [...new Set(builtPages())].sort();
 
-async function waitForIslands(page: Page, route: string): Promise<void> {
+/** Requests the page has started and not yet finished or failed (with their start time), and the last network event. */
+type OpenRequests = { open: Map<Request, number>; lastActivity: number };
+
+function trackOpenRequests(page: Page): OpenRequests {
+  const tracker: OpenRequests = { open: new Map(), lastActivity: Date.now() };
+  const settle = (request: Request) => { tracker.open.delete(request); tracker.lastActivity = Date.now(); };
+  page.on('request', (request) => { tracker.open.set(request, Date.now()); tracker.lastActivity = Date.now(); });
+  page.on('requestfinished', settle);
+  page.on('requestfailed', settle);
+  return tracker;
+}
+
+async function waitForIslands(page: Page, route: string, network: OpenRequests): Promise<void> {
   await page.waitForFunction(() => document.querySelectorAll('astro-island[ssr]').length === 0, undefined, {
     timeout: 10_000,
   }).catch(() => {
     throw new Error(`${route}: islands did not finish loading within 10 s`);
   });
-  await page.waitForLoadState('networkidle', { timeout: 10_000 }).catch(() => {
-    throw new Error(`${route}: network requests did not settle within 10 s`);
+  // Concrete end state: the page has loaded, its fonts are ready and every picture on screen has loaded.
+  await page.waitForFunction(() => {
+    if (document.readyState !== 'complete' || document.fonts.status !== 'loaded') return false;
+    const onScreen = (img: HTMLImageElement) => {
+      const rect = img.getBoundingClientRect();
+      return rect.width > 0 && rect.height > 0 && rect.bottom > 0 && rect.top < innerHeight;
+    };
+    return [...document.images].filter(onScreen).every((img) => img.complete);
+  }, undefined, { timeout: 10_000 }).catch(() => {
+    throw new Error(`${route}: the page, its fonts or its on-screen pictures did not finish loading within 10 s`);
   });
+  // The same quiet-network check as Playwright's networkidle (no request open for 500 ms, within 10 s), but counted
+  // here so a timeout names the requests still open (one webkit-phone run timed out on / with no clue which). Any
+  // request starting or ending restarts the 500 ms, even one that comes and goes between two polls.
+  const deadline = Date.now() + 10_000;
+  const quietFor = () => (network.open.size > 0 ? 0 : Date.now() - network.lastActivity);
+  while (quietFor() < 500) {
+    if (Date.now() > deadline) {
+      const names = [...network.open].map(([request, at]) => `${request.url()} (open ${Date.now() - at} ms)`).join(', ');
+      throw new Error(`${route}: network requests did not settle within 10 s: ${names}`);
+    }
+    await page.waitForTimeout(50);
+  }
 }
 
 type MotionFinding = { name: string; animation: string; animationDuration: string; transitionDuration: string };
@@ -78,8 +110,9 @@ test.describe('Task 222: reduced motion route sweep', () => {
       await page.addInitScript(() => {
         try { localStorage.setItem('cueory-promo-seen', String(Date.now())); localStorage.setItem('cueory-signup-popup-seen', String(Date.now())); } catch { /* storage unavailable */ }
       });
+      const network = trackOpenRequests(page);
       await page.goto(route);
-      await waitForIslands(page, route);
+      await waitForIslands(page, route, network);
       await expect.poll(() => motionFindings(page), { timeout: 2_000 }).toEqual([]);
     });
   }

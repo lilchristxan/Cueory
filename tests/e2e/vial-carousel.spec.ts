@@ -215,7 +215,7 @@ test('with a mouse, the front vial lifts to 104% with brighter glass; its neighb
   await page.locator('#mode-video [data-mode-open]').hover();
   await expect.poll(async () => (await look('video')).scale).toBe('1.04');
   await expect.poll(async () => (await look('video')).shine).toBe('1');
-  expect((await look('video')).translate).toBe('0px -6px');
+  await expect.poll(async () => (await look('video')).translate).toBe('0px -6px');
   expect(await look('cards')).toEqual(sideBefore);
   // Back smoothly on leave.
   await page.mouse.move(0, 0);

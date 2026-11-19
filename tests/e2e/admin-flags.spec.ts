@@ -47,6 +47,21 @@ test.describe('/admin/flags, refused', () => {
 });
 
 test.describe('/admin/flags table (sample rows on the preview page)', () => {
+  test('the show filter radios and their labels are at least 44 px tap targets, and axe target-size passes', async ({ page }) => {
+    await page.goto('/preview/admin-flags');
+    const group = page.getByRole('group', { name: 'show' });
+    for (const radio of await group.getByRole('radio').all()) {
+      const input = (await radio.boundingBox())!;
+      expect(input.width).toBeGreaterThanOrEqual(24);
+      expect(input.height).toBeGreaterThanOrEqual(24);
+      const label = (await radio.locator('xpath=..').boundingBox())!;
+      expect(label.width).toBeGreaterThanOrEqual(44);
+      expect(label.height).toBeGreaterThanOrEqual(44);
+    }
+    const results = await new AxeBuilder({ page }).withRules(['target-size']).analyze();
+    expect(results.violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`)).toEqual([]);
+  });
+
   test('groups by question, filters open and handled, and passes axe', async ({ page }) => {
     await page.goto('/preview/admin-flags');
     const table = page.getByTestId('admin-flags-table');

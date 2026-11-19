@@ -13,15 +13,19 @@ import GameResultsHost from '../islands/GameResultsHost';
 import type { DailyGame } from '../config/games';
 import { site } from '../config/site';
 import { flagMailto } from '../scripts/footer';
+// Keeps one screen of room for the game until it renders, so nothing below it jumps (performance, 2026-11-19).
+import '../styles/gamepage.css';
 
 interface Props {
   game: DailyGame;
   /** A wider column from tablet width up, so the crossword's 15 by 15 board fits without scrolling (2026-11-17). */
   wide?: boolean;
+  /** Opt-in: the width of the redesign's game panel (word path), wider than the default column from tablet width up. */
+  showcase?: boolean;
 }
-const { game, wide = false } = Astro.props;
+const { game, wide = false, showcase = false } = Astro.props;
 ---
-<article class:list={["veil mx-auto mt-6 max-w-prose p-6 sm:mt-10 sm:p-10", wide && "md:max-w-page"]} data-game-page={game.id}>
+<article class:list={["veil mx-auto mt-6 max-w-prose p-6 sm:mt-10 sm:p-10", wide && "md:max-w-page", showcase && "md:max-w-game-showcase"]} data-game-page={game.id}>
     <div class="flex flex-wrap items-center justify-between gap-x-2">
       <a href="/play" class="inline-flex min-h-(--tap-min) items-center gap-2 font-medium" data-testid="all-games-link">
         <span aria-hidden="true">←</span> all games
