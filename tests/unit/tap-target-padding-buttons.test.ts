@@ -32,27 +32,55 @@ function buttonTags(source: string): string[] {
   return tags;
 }
 
-// Known gaps owned by other open work. Remove an entry when its fix lands; the test fails if an entry goes stale.
-const KNOWN_GAPS = new Set(['components/SignupForm.astro']);
+// A class list that sets vertical padding but no explicit tap-target size.
+function paddingOnly(classes: string): boolean {
+  if (!/(^|\s)py-[\d.]+(\s|$)/.test(classes)) return false;
+  return !/min-h-11|min-h-12|min-h-14|min-h-\(--tap-min\)|(^|\s)h-1[1-9]|size-\(--tap-min\)/.test(classes);
+}
+
+// Known gaps owned by other open work, pinned to the exact class list so nothing else in the file is excused.
+// The sign-up button is fixed by the open Home redesign pull request (#890), which this pull request must not touch.
+// An entry is NOT required to still be a gap: this test has to pass both before and after that fix lands, in either
+// merge order. Delete the entry once the fix is in `staging`.
+const KNOWN_GAPS = new Map<string, string[]>([
+  ['components/SignupForm.astro', ['rounded-pill bg-button px-6 py-3 text-on-button hover:bg-button-hover']],
+]);
+
+function unexpectedOffenders(offenders: Map<string, string[]>): string[] {
+  return [...offenders].flatMap(([file, lists]) =>
+    lists.filter((classes) => !(KNOWN_GAPS.get(file) ?? []).includes(classes)).map((classes) => `${file}: ${classes}`));
+}
 
 describe('padding-sized buttons carry an explicit tap-target size', () => {
   const offenders = new Map<string, string[]>();
   for (const file of walk(root).filter((f) => /\.(tsx|astro)$/.test(f))) {
     for (const tag of buttonTags(readFileSync(file, 'utf8'))) {
       const classes = tag.match(/class(?:Name)?="([^"]*)"/)?.[1] ?? '';
-      if (!/(^|\s)py-[\d.]+(\s|$)/.test(classes)) continue;
-      if (/min-h-11|min-h-12|min-h-14|min-h-\(--tap-min\)|(^|\s)h-1[1-9]|size-\(--tap-min\)/.test(classes)) continue;
+      if (!paddingOnly(classes)) continue;
       const key = relative(root, file);
       offenders.set(key, [...(offenders.get(key) ?? []), classes]);
     }
   }
 
   it('has no new padding-only buttons', () => {
-    const unexpected = [...offenders].filter(([file]) => !KNOWN_GAPS.has(file));
-    expect(unexpected).toEqual([]);
+    expect(unexpectedOffenders(offenders)).toEqual([]);
   });
 
-  it('keeps the known-gap list honest', () => {
-    for (const file of KNOWN_GAPS) expect(offenders.has(file), `${file} is fixed: drop it from KNOWN_GAPS`).toBe(true);
+  it('pins every known gap to a class list the rule would flag', () => {
+    for (const lists of KNOWN_GAPS.values()) for (const classes of lists) expect(paddingOnly(classes), classes).toBe(true);
+  });
+
+  it('excuses only the pinned class list, not the whole file', () => {
+    const pinned = 'rounded-pill bg-button px-6 py-3 text-on-button hover:bg-button-hover';
+    const other = 'rounded-pill px-3 py-2 text-ink';
+    expect(unexpectedOffenders(new Map([['components/SignupForm.astro', [pinned]]]))).toEqual([]);
+    expect(unexpectedOffenders(new Map([['components/SignupForm.astro', [pinned, other]]])))
+      .toEqual([`components/SignupForm.astro: ${other}`]);
+    expect(unexpectedOffenders(new Map([['components/Other.astro', [pinned]]]))).toEqual([`components/Other.astro: ${pinned}`]);
+  });
+
+  it('passes once a known gap is fixed, so merge order does not matter', () => {
+    expect(paddingOnly('signup-action min-h-11 rounded-pill px-6 py-3 font-bold')).toBe(false);
+    expect(unexpectedOffenders(new Map())).toEqual([]);
   });
 });
