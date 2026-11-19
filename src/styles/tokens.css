@@ -205,6 +205,9 @@
   --hero-top-clear: 1rem;       /* space above the hero's logo row (the corner buttons sit in the page's top 4.5 rem) */
   --hero-logo-inset: calc(var(--header-inline-gutter) + var(--tap-min) + var(--header-corner-gap) - var(--spacing-gutter));
   --hero-eyebrow-gap: 2.5rem;   /* between the logo row and the motto */
+  --radius-card-lg: 1.75rem;    /* the hero's support card corners */
+  --icon-size-mug: 2.5rem;      /* the Ko-fi cup mark, width */
+  --icon-size-mug-height: 1.875rem; /* and height */
   --icon-size: 1.75rem;         /* a small line icon beside a label */
   --icon-size-lg: 2rem;         /* a line icon above a tile label */
   --container-menu: min(85vw, 22.5rem); /* the ☰ side panel: most of a phone, 360px on bigger screens */
