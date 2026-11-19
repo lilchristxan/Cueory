@@ -17,13 +17,25 @@ const files = folders.flatMap((dir) =>
 const TAG = (names: string) =>
   new RegExp(`<(${names})\\b((?:[^>"'{]|"[^"]*"|'[^']*'|\\{(?:[^{}]|\\{[^{}]*\\})*\\})*?)(/?)>`, 'g');
 const line = (source: string, index: number) => source.slice(0, index).split('\n').length;
-const NAMED = /(?:^|\s)(?:aria-label|aria-labelledby|title)=|\{\.\.\./;
 
 // The value of one attribute as source text, so ids compare as the same expression whether written id="x",
 // id={`${id}-x`} or id={"x"}.
 function attributeValue(attributes: string, attribute: string): string | undefined {
   const found = new RegExp(`(?:^|\\s)${attribute}=(?:"([^"]*)"|'([^']*)'|\\{((?:[^{}]|\\{[^{}]*\\})*)\\})`).exec(attributes);
   return found ? (found[1] ?? found[2] ?? found[3]).trim().replace(/^[`"']|[`"']$/g, '') : undefined;
+}
+
+/**
+ * Whether the attributes name the element. A statically empty value (aria-label="", aria-label={''}, title=" ") is
+ * not a name; a spread or a value this walk cannot read counts, since it cannot be judged from source.
+ */
+function hasNamingAttribute(attributes: string, names = ['aria-label', 'aria-labelledby', 'title']): boolean {
+  if (/\{\.\.\./.test(attributes)) return true;
+  return names.some((name) => {
+    if (!new RegExp(`(?:^|\\s)${name}=`).test(attributes)) return false;
+    const value = attributeValue(attributes, name);
+    return value === undefined || value.trim() !== '';
+  });
 }
 
 /** Form controls with no accessible name. An id alone is not a name: a <label for> with the same id must exist. */
@@ -35,7 +47,7 @@ function unnamedControls(file: string, source: string): string[] {
   }
   const bad: string[] = [];
   for (const m of source.matchAll(TAG('input|select|textarea')) as Iterable<RegExpExecArray>) {
-    if (/type="(hidden|submit|button)"/.test(m[2]) || NAMED.test(m[2])) continue;
+    if (/type="(hidden|submit|button)"/.test(m[2]) || hasNamingAttribute(m[2])) continue;
     const before = source.slice(Math.max(0, m.index - 1500), m.index);
     if (before.lastIndexOf('<label') > before.lastIndexOf('</label>')) continue; // wrapped in a <label>
     const id = attributeValue(m[2], 'id');
@@ -51,22 +63,30 @@ const ANY_TAG = /<(\/?)([A-Za-z][\w.:-]*)?((?:[^>"'{]|"[^"]*"|'[^']*'|\{(?:[^{}]
 // A dynamic aria-hidden={expression} cannot be judged from source, so its text still counts.
 const HIDDEN = /(?:^|\s)(?:aria-hidden(?:=(?:"true"|'true'|\{true\}|\{"true"\}))?|hidden(?:=(?:""|"hidden"|\{true\}))?)(?=[\s/]|$)/;
 
-/** The text of some markup that a screen reader would read: skips svg and any element hidden from assistive tech. */
-function visibleText(markup: string): string {
-  let text = '';
+/**
+ * Walks markup in order with the stack of open elements. Reports each run of text and each opening tag, with whether
+ * a real ancestor hides it from assistive tech (aria-hidden, hidden, or an enclosing svg).
+ */
+function walkMarkup(
+  markup: string,
+  onText: (text: string, hidden: boolean) => void,
+  onOpen: (name: string, attributes: string, hidden: boolean, index: number) => void,
+  base = 0,
+  outerHidden = false,
+): void {
   const stack: Array<{ name: string; hidden: boolean }> = [];
+  const inHidden = () => outerHidden || stack.some((entry) => entry.hidden);
   let index = 0;
   while (index < markup.length) {
     const open = markup.indexOf('<', index);
-    const end = open === -1 ? markup.length : open;
-    if (!stack.some((entry) => entry.hidden)) text += markup.slice(index, end);
+    onText(markup.slice(index, open === -1 ? markup.length : open), inHidden());
     if (open === -1) break;
     ANY_TAG.lastIndex = open;
     const tag = ANY_TAG.exec(markup);
     const name = tag?.[2]?.toLowerCase();
     if (!tag || (!name && tag[3] !== '')) {
       // A bare "<" in text, not a tag.
-      if (!stack.some((entry) => entry.hidden)) text += '<';
+      onText('<', inHidden());
       index = open + 1;
       continue;
     }
@@ -74,11 +94,40 @@ function visibleText(markup: string): string {
     if (tag[1] === '/') {
       const at = stack.map((entry) => entry.name).lastIndexOf(name ?? '');
       if (at !== -1) stack.length = at;
-    } else if (tag[4] !== '/' && !(name && VOID_ELEMENTS.has(name))) {
-      stack.push({ name: name ?? '', hidden: name === 'svg' || HIDDEN.test(tag[3]) });
+      continue;
     }
+    const hides = name === 'svg' || HIDDEN.test(tag[3]);
+    onOpen(name ?? '', tag[3], inHidden(), base + open);
+    // JSX handed over as a prop (end={<button>...</button>}) sits inside the attributes: walk it too, as a child.
+    if (/<[A-Za-z]/.test(tag[3])) {
+      walkMarkup(tag[3], () => {}, onOpen, base + open + 1 + (tag[2]?.length ?? 0), inHidden() || hides);
+    }
+    if (tag[4] !== '/' && !(name && VOID_ELEMENTS.has(name))) stack.push({ name: name ?? '', hidden: hides });
   }
+}
+
+/** The text of some markup that a screen reader would read: skips svg and any element hidden from assistive tech. */
+function visibleText(markup: string): string {
+  let text = '';
+  walkMarkup(markup, (run, hidden) => { if (!hidden) text += run; }, () => {});
   return text;
+}
+
+// The svg's own aria-hidden: static true, bare, or an expression; never an explicit false.
+const SVG_OWN_HIDDEN = /(?:^|\s)aria-hidden=\{(?!false\}|"false"\}|'false'\})/;
+
+/** Svgs that are neither hidden (own attribute or a real ancestor) nor named with role="img" and a label. */
+function unnamedSvgs(file: string, source: string): { seen: number; bad: string[] } {
+  const bad: string[] = [];
+  let seen = 0;
+  walkMarkup(source, () => {}, (name, attributes, hidden, index) => {
+    if (name !== 'svg') return;
+    seen += 1;
+    if (hidden || /\{\.\.\./.test(attributes) || HIDDEN.test(attributes) || SVG_OWN_HIDDEN.test(attributes)) return;
+    const named = /(?:^|\s)role="img"/.test(attributes) && hasNamingAttribute(attributes, ['aria-label', 'aria-labelledby']);
+    if (!named) bad.push(`${file}:${line(source, index)} <svg>`);
+  });
+  return { seen, bad };
 }
 
 /** Marks which characters of an expression sit at nesting depth 0, outside any string. */
@@ -157,7 +206,7 @@ function namesControl(text: string): boolean {
 function unnamedButtonsAndLinks(file: string, source: string): string[] {
   const bad: string[] = [];
   for (const m of source.matchAll(TAG('button|a')) as Iterable<RegExpExecArray>) {
-    if (NAMED.test(m[2])) continue;
+    if (hasNamingAttribute(m[2])) continue;
     const start = m.index + m[0].length;
     // A self-closing control has no children, so only its own attributes can name it.
     const end = m[3] === '/' ? -1 : source.indexOf(`</${m[1]}>`, start);
@@ -248,14 +297,41 @@ describe('accessible names in component and island source', () => {
     expect(unnamedControls('x.tsx', '<input type="hidden" name="n" />')).toEqual([]);
   });
 
-  it('hides decorative svgs or names them with role="img"', () => {
-    expect(
-      scan((_n, source, m) => {
-        if (m[1] !== 'svg' || /aria-hidden=|\{\.\.\./.test(m[2])) return true;
-        if (/role="img"/.test(m[2])) return /aria-label=|aria-labelledby=/.test(m[2]);
-        return /aria-hidden="true"/.test(source.slice(Math.max(0, m.index - 1500), m.index));
-      }),
-    ).toEqual([]);
+  it('hides decorative svgs (own attribute or a real ancestor) or names them with role="img"', () => {
+    expect(files.flatMap(({ name, source }) => unnamedSvgs(name, source).bad)).toEqual([]);
+  });
+
+  it('sees every svg in the walk, so none is skipped', () => {
+    for (const { name, source } of files) {
+      expect([name, unnamedSvgs(name, source).seen]).toEqual([name, [...source.matchAll(TAG('svg'))].length]);
+    }
+  });
+
+  it('needs a hidden ancestor, not hidden markup nearby (svg fixtures)', () => {
+    const bad = (markup: string) => unnamedSvgs('x.tsx', markup).bad;
+    // A hidden sibling that is already closed does not hide the next svg.
+    expect(bad('<button aria-label="a"><svg aria-hidden="true"></svg></button><button aria-label="b"><svg viewBox="0 0 1 1"></svg></button>')).toHaveLength(1);
+    expect(bad('<span aria-hidden="true">x</span><svg viewBox="0 0 1 1"></svg>')).toHaveLength(1);
+    expect(bad('<svg role="img" viewBox="0 0 1 1"></svg>')).toHaveLength(1);
+    expect(bad('<svg role="img" aria-label="" viewBox="0 0 1 1"></svg>')).toHaveLength(1);
+    expect(bad('<svg aria-hidden="false" viewBox="0 0 1 1"></svg>')).toHaveLength(1);
+    expect(bad('<Header end={<button aria-label="print" onClick={() => go()}><svg viewBox="0 0 1 1"></svg></button>} />')).toHaveLength(1);
+    expect(bad('<span aria-hidden="true"><svg viewBox="0 0 1 1"></svg></span>')).toEqual([]);
+    expect(bad('<span aria-hidden="true">{on && (<svg viewBox="0 0 1 1"><path d="M1" /></svg>)}</span>')).toEqual([]);
+    expect(bad('<svg aria-hidden="true" viewBox="0 0 1 1"></svg>')).toEqual([]);
+    expect(bad('<svg role="img" aria-label={description} viewBox="0 0 1 1"></svg>')).toEqual([]);
+  });
+
+  it('does not accept a statically empty naming attribute (negative fixtures)', () => {
+    const svg = '<svg aria-hidden="true"></svg>';
+    expect(unnamedButtonsAndLinks('x.tsx', `<button aria-label="">${svg}</button>`)).toHaveLength(1);
+    expect(unnamedButtonsAndLinks('x.tsx', `<button aria-label={''}>${svg}</button>`)).toHaveLength(1);
+    expect(unnamedButtonsAndLinks('x.tsx', `<button title="">${svg}</button>`)).toHaveLength(1);
+    expect(unnamedButtonsAndLinks('x.tsx', `<a href="/x" aria-labelledby="">${svg}</a>`)).toHaveLength(1);
+    expect(unnamedButtonsAndLinks('x.tsx', '<button aria-label=" " />')).toHaveLength(1);
+    expect(unnamedControls('x.tsx', '<input aria-label="" />')).toHaveLength(1);
+    expect(unnamedButtonsAndLinks('x.tsx', `<button aria-label="sudoku settings">${svg}</button>`)).toEqual([]);
+    expect(unnamedButtonsAndLinks('x.tsx', `<button aria-label={open ? 'close' : 'open'}>${svg}</button>`)).toEqual([]);
   });
 
   it('keeps live regions coherent: status and alert roles are never switched off', () => {
