@@ -51,6 +51,16 @@ test('finished-game result announces the exact card and traps focus', async ({ p
   await expect(dialog).toContainText('pillo · easy · nov 11, 2026');
   await expect(dialog.getByRole('heading', { level: 2 })).toHaveText('4 / 6');
   await expect(dialog.getByTestId('result-share-line')).toHaveText('pillo · nov 11, 2026 · 4 / 6 · cueory.app');
+  const metadataGeometry = await dialog.locator('.result-meta').evaluate((element) => {
+    const text = element.getBoundingClientRect();
+    const card = element.closest('[data-testid="game-result-dialog"]')!.getBoundingClientRect();
+    return {
+      delta: Math.abs((text.left + text.right) / 2 - (card.left + card.right) / 2),
+      top: text.top - card.top,
+    };
+  });
+  expect(metadataGeometry.delta).toBeLessThanOrEqual(1);
+  expect(metadataGeometry.top).toBeLessThan(80);
   await expect(dialog.locator('dt')).toHaveCount(3);
   await page.keyboard.press('Shift+Tab');
   await expect(dialog.getByRole('button', { name: 'copy', exact: true })).toBeFocused();

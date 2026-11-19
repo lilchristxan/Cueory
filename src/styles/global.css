@@ -1646,6 +1646,14 @@ html:has(dialog.menu-panel[open]) {
     scroll-padding-block-start: calc(var(--tap-min) + var(--spacing) * 2);
   }
 
+  .result-dialog::before {
+    content: '';
+    display: block;
+    float: inline-start;
+    inline-size: calc(var(--tap-min) + var(--spacing) * 3);
+    block-size: calc(var(--tap-min) + var(--spacing) * 2);
+  }
+
   .result-dialog-close {
     position: sticky;
     inset-block-start: 0;
