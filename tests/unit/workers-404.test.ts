@@ -5,16 +5,49 @@
  */
 import { spawn, type ChildProcess } from 'node:child_process';
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 const dist = fileURLToPath(new URL('../../dist', import.meta.url));
+const wrangler = join(dirname(createRequire(import.meta.url).resolve('wrangler/package.json')), 'bin', 'wrangler.js');
+
+function workerPort(child: ChildProcess): Promise<number> {
+  return new Promise((resolve, reject) => {
+    let stderr = '';
+    child.stderr?.on('data', (chunk: Buffer) => {
+      stderr = (stderr + chunk.toString()).slice(-4_000);
+    });
+    const quit = (reason: string) => {
+      clearTimeout(timeout);
+      reject(new Error(`${reason}${stderr ? `\n${stderr.trim()}` : ''}`));
+    };
+    const timeout = setTimeout(() => quit('wrangler dev did not report readiness'), 90_000);
+    child.once('error', (error) => quit(`could not start wrangler dev: ${error.message}`));
+    child.once('exit', (code, signal) => quit(`wrangler dev exited before readiness (${signal ?? code})`));
+    child.on('message', (message) => {
+      if (typeof message !== 'string') return;
+      let ready: { event?: string; ip?: string; port?: number };
+      try {
+        ready = JSON.parse(message) ?? {};
+      } catch {
+        return;
+      }
+      const { event, ip, port } = ready;
+      if (event !== 'DEV_SERVER_READY' || ip !== '127.0.0.1' || typeof port !== 'number'
+        || !Number.isInteger(port) || port < 1 || port > 65_535) return;
+      clearTimeout(timeout);
+      resolve(port);
+    });
+  });
+}
 
 describe('Workers build 404', () => {
-  const port = Number(process.env.CUEORY_WRANGLER_PORT ?? 4323);
-  const base = `http://127.0.0.1:${port}`;
+  // Ask the OS for a free port unless the caller explicitly selects one.
+  const port = Number(process.env.CUEORY_WRANGLER_PORT ?? 0);
+  let base: string;
   // Config and miniflare state both live in a temp folder, so nothing is written to .wrangler/ in the repository.
   const dir = mkdtempSync(join(tmpdir(), 'cueory-wrangler-'));
   let child: ChildProcess | undefined;
@@ -34,29 +67,31 @@ describe('Workers build 404', () => {
         assets: { directory: dist, not_found_handling: notFound, html_handling: html },
       }),
     );
-    const args = ['wrangler', 'dev', '-c', config, '--port', String(port), '--ip', '127.0.0.1', '--persist-to', join(dir, 'state')];
-    // Own process group, so afterAll can stop npx, wrangler and workerd together.
-    child = spawn('npx', args, {
-      stdio: 'ignore',
+    const args = [wrangler, 'dev', '-c', config, '--port', String(port), '--ip', '127.0.0.1', '--persist-to', join(dir, 'state')];
+    // Wrangler forwards the launched server's readiness over IPC. A response from another preview is not enough.
+    child = spawn(process.execPath, args, {
+      stdio: ['ignore', 'ignore', 'pipe', 'ipc'],
       detached: process.platform !== 'win32',
       env: { ...process.env, WRANGLER_SEND_METRICS: 'false', CI: '1' },
     });
-    // Ready means the home page itself is served (HTTP 200), not just that something answers on the port.
-    for (let i = 0; i < 90; i++) {
+    base = `http://127.0.0.1:${await workerPort(child)}`;
+    // The proxy can report a port before the home page is ready to serve assets.
+    const signal = AbortSignal.timeout(20_000);
+    while (!signal.aborted && child.exitCode === null && child.signalCode === null) {
       try {
-        const res = await fetch(`${base}/`);
-        await res.arrayBuffer();
-        if (res.ok) return;
+        const home = await fetch(`${base}/`, { signal });
+        await home.arrayBuffer();
+        if (home.ok && child.exitCode === null && child.signalCode === null) return;
       } catch {
-        // not listening yet
+        // Still loading; the probe's shared timeout bounds both requests and the retry loop.
       }
-      await new Promise((r) => setTimeout(r, 1000));
+      await new Promise((resolve) => setTimeout(resolve, 250));
     }
-    throw new Error('wrangler dev did not start');
+    throw new Error('wrangler dev did not serve the home page after reporting readiness');
   }, 120_000);
 
   afterAll(async () => {
-    if (child?.pid && child.exitCode === null) {
+    if (child?.pid && child.exitCode === null && child.signalCode === null) {
       const exited = new Promise((r) => child!.once('exit', r));
       try {
         if (process.platform === 'win32') child.kill();
@@ -70,12 +105,12 @@ describe('Workers build 404', () => {
   }, 20_000);
 
   it('answers an unknown address with HTTP 404 and the 404 page', async () => {
-    const res = await fetch(`${base}/this-page-does-not-exist`);
+    const res = await fetch(`${base}/this-page-does-not-exist`, { signal: AbortSignal.timeout(5_000) });
     expect(res.status).toBe(404);
     expect(await res.text()).toContain('page not found');
   });
 
   it('keeps real pages at HTTP 200', async () => {
-    expect((await fetch(`${base}/`)).status).toBe(200);
+    expect((await fetch(`${base}/`, { signal: AbortSignal.timeout(5_000) })).status).toBe(200);
   });
 });
