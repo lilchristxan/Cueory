@@ -39,11 +39,49 @@ export function statusFor(game: GameId, today: string, stats: GameStats, heard: 
 }
 
 /** The words and symbol each status shows. The symbol is decoration; the words carry the meaning (never color). */
-export const STATUS_TEXT: Readonly<Record<DayStatus, { label: string; symbol: string }>> = Object.freeze({
+export interface StatusDisplay {
+  label: string;
+  symbol: string;
+}
+
+export const STATUS_TEXT: Readonly<Record<DayStatus, StatusDisplay>> = Object.freeze({
   'not-started': { label: 'not started', symbol: '○' },
   'in-progress': { label: 'in progress', symbol: '◐' },
   done: { label: 'done', symbol: '✓' },
 });
+
+export interface StatusDetails {
+  wordsFound?: number;
+  totalWords?: number;
+}
+
+/**
+ * Returns the status label and symbol for a given game and status.
+ * Side-card status pills show the real states matching Games.png:
+ * - "not started" (symbol: ○)
+ * - "in progress" (symbol: ◐)
+ * - "done · <n> of <n> words" (symbol: ✓) for word path (suture), or that game's done wording
+ * Colour is never the only signal.
+ */
+export function statusDisplayFor(
+  game: GameId,
+  status: DayStatus,
+  details?: StatusDetails
+): StatusDisplay {
+  if (status === 'not-started') {
+    return { label: 'not started', symbol: '○' };
+  }
+  if (status === 'in-progress') {
+    return { label: 'in progress', symbol: '◐' };
+  }
+  // status === 'done'
+  if (game === 'suture') {
+    const total = details?.totalWords ?? 6;
+    const found = details?.wordsFound ?? total;
+    return { label: `done · ${found} of ${total} words`, symbol: '✓' };
+  }
+  return { label: 'done', symbol: '✓' };
+}
 
 /**
  * Reads a game event's detail into a heard key, or nothing when it isn't one of `games` on a real day. Sudoku's own

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { browserStorage } from '../scripts/storage';
 import { GAME_RESULT_EVENT, heldRounds, loadStats, localDay, STATS_STORAGE_KEY, type SavedStats } from './gameresults';
-import { GAME_PROGRESS_EVENT, readHeard, STATUS_TEXT, statusFor, type GameId, type HeardToday } from './playstatus';
+import { GAME_PROGRESS_EVENT, heardKey, readHeard, statusDisplayFor, statusFor, type GameId, type HeardToday, type StatusDetails } from './playstatus';
 
 /** Sudoku reports its finish with its own event, whose detail has the day but no game id. */
 const SUDOKU_SOLVED_EVENT = 'cueory:sudoku-solved';
@@ -42,12 +42,43 @@ export default function PlayStatus({ games, isComingSoonCrossword = false }: Pro
     return { started: new Set(), finished };
   });
 
+  const [details, setDetails] = useState<Record<string, StatusDetails>>(() => {
+    const map: Record<string, StatusDetails> = {};
+    for (const round of heldRounds()) {
+      if (round.game && round.day && round.card?.result) {
+        const match = /^(\d+)\s*\/\s*(\d+)$/.exec(round.card.result);
+        if (match) {
+          map[heardKey(round.game, round.day)] = { wordsFound: Number(match[1]), totalWords: Number(match[2]) };
+        }
+      }
+    }
+    return map;
+  });
+
   useEffect(() => {
     const add = (kind: keyof HeardToday, key: string | undefined) => {
       if (!key) return;
       setHeard((now) => (now[kind].has(key) ? now : { ...now, [kind]: new Set([...now[kind], key]) }));
     };
-    const finished = (event: Event) => add('finished', readHeard((event as CustomEvent).detail, ids));
+    const finished = (event: Event) => {
+      const detail = (event as CustomEvent).detail;
+      add('finished', readHeard(detail, ids));
+      if (detail && typeof detail === 'object') {
+        const { game, day, card } = detail as Record<string, unknown>;
+        if (typeof game === 'string' && typeof day === 'string' && card && typeof card === 'object') {
+          const resultStr = (card as Record<string, unknown>).result;
+          if (typeof resultStr === 'string') {
+            const match = /^(\d+)\s*\/\s*(\d+)$/.exec(resultStr);
+            if (match) {
+              setDetails((prev) => ({
+                ...prev,
+                [heardKey(game as GameId, day)]: { wordsFound: Number(match[1]), totalWords: Number(match[2]) },
+              }));
+            }
+          }
+        }
+      }
+    };
     const sudoku = (event: Event) => add('finished', readHeard((event as CustomEvent).detail, ids, 'triage'));
     const started = (event: Event) => add('started', readHeard((event as CustomEvent).detail, ids));
     const storage = (event: StorageEvent) => {
@@ -99,16 +130,16 @@ export default function PlayStatus({ games, isComingSoonCrossword = false }: Pro
   };
 
   const pilloStatus = statusFor('pulse', today, saved.stats, heard);
-  const pilloText = STATUS_TEXT[pilloStatus];
+  const pilloText = statusDisplayFor('pulse', pilloStatus);
 
   const crosswordStatus = statusFor('cueword', today, saved.stats, heard);
-  const crosswordText = STATUS_TEXT[crosswordStatus];
+  const crosswordText = statusDisplayFor('cueword', crosswordStatus);
 
   const sudokuStatus = statusFor('triage', today, saved.stats, heard);
-  const sudokuText = STATUS_TEXT[sudokuStatus];
+  const sudokuText = statusDisplayFor('triage', sudokuStatus);
 
   const wordPathStatus = statusFor('suture', today, saved.stats, heard);
-  const wordPathText = STATUS_TEXT[wordPathStatus];
+  const wordPathText = statusDisplayFor('suture', wordPathStatus, details[heardKey('suture', today)]);
 
   return (
     <section className="mt-4" aria-labelledby="today-status-heading" data-testid="play-status">
@@ -211,10 +242,6 @@ export default function PlayStatus({ games, isComingSoonCrossword = false }: Pro
                   </li>
                 </ul>
 
-                <p className="mt-6 text-sm text-ink-soft break-words">
-                  Share line: &quot;pillo [date] · 4/6&quot; in plain words. No colored squares.
-                </p>
-
                 {/* Status */}
                 <div className="mt-6 pt-4 border-t border-line">
                   <span className="inline-flex items-center gap-2 text-sm font-semibold text-ink">
@@ -236,7 +263,7 @@ export default function PlayStatus({ games, isComingSoonCrossword = false }: Pro
             className="min-w-0"
           >
             {isComingSoonCrossword ? (
-              <div className="veil flex flex-col justify-between p-6 sm:p-8 min-h-36 text-ink">
+              <div className="veil flex flex-col justify-between p-6 min-h-36 text-ink">
                 <div>
                   <span className="display block text-2xl text-ink font-medium break-words">
                     {crosswordGame.name}
@@ -255,7 +282,7 @@ export default function PlayStatus({ games, isComingSoonCrossword = false }: Pro
             ) : (
               <a
                 href={crosswordGame.href}
-                className="veil flex flex-col justify-between p-6 sm:p-8 min-h-36 text-ink no-underline group hover:border-line transition-colors"
+                className="veil flex flex-col justify-between p-6 min-h-36 text-ink no-underline group hover:border-line transition-colors"
               >
                 <div>
                   <span className="display block text-2xl text-ink font-medium break-words">
@@ -281,7 +308,7 @@ export default function PlayStatus({ games, isComingSoonCrossword = false }: Pro
           >
             <a
               href={sudokuGame.href}
-              className="veil flex flex-col justify-between p-6 sm:p-8 min-h-36 text-ink no-underline group hover:border-line transition-colors"
+              className="veil flex flex-col justify-between p-6 min-h-36 text-ink no-underline group hover:border-line transition-colors"
             >
               <div>
                 <span className="display block text-2xl text-ink font-medium break-words">{sudokuGame.name}</span>
@@ -304,7 +331,7 @@ export default function PlayStatus({ games, isComingSoonCrossword = false }: Pro
           >
             <a
               href={wordPathGame.href}
-              className="veil flex flex-col justify-between p-6 sm:p-8 min-h-36 text-ink no-underline group hover:border-line transition-colors"
+              className="veil flex flex-col justify-between p-6 min-h-36 text-ink no-underline group hover:border-line transition-colors"
             >
               <div>
                 <span className="display block text-2xl text-ink font-medium break-words">{wordPathGame.name}</span>

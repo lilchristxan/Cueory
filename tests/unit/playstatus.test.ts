@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { localDay } from '../../src/islands/gameresults';
-import { heardKey, readHeard, STATUS_TEXT, statusFor, type GameId, type HeardToday } from '../../src/islands/playstatus';
+import { heardKey, readHeard, STATUS_TEXT, statusDisplayFor, statusFor, type GameId, type HeardToday } from '../../src/islands/playstatus';
 import type { GameStats } from '../../src/islands/gamestats';
 
 const TODAY = '2026-11-01';
@@ -54,6 +54,34 @@ describe('today\'s status for each daily game (#735)', () => {
     expect(labels).toEqual(['not started', 'in progress', 'done']);
     expect(new Set(symbols).size).toBe(3);
     for (const symbol of symbols) expect(symbol.trim()).not.toBe('');
+  });
+
+  it('statusDisplayFor returns real states as drawn in Games.png with both words and symbols', () => {
+    for (const game of GAMES) {
+      const notStarted = statusDisplayFor(game, 'not-started');
+      expect(notStarted.label).toBe('not started');
+      expect(notStarted.symbol).toBe('○');
+
+      const inProgress = statusDisplayFor(game, 'in-progress');
+      expect(inProgress.label).toBe('in progress');
+      expect(inProgress.symbol).toBe('◐');
+    }
+
+    // Done state for suture shows word count matching Games.png
+    const sutureDone = statusDisplayFor('suture', 'done');
+    expect(sutureDone.label).toBe('done · 6 of 6 words');
+    expect(sutureDone.symbol).toBe('✓');
+
+    const sutureCustomDone = statusDisplayFor('suture', 'done', { wordsFound: 7, totalWords: 7 });
+    expect(sutureCustomDone.label).toBe('done · 7 of 7 words');
+    expect(sutureCustomDone.symbol).toBe('✓');
+
+    // Done state for other games
+    for (const game of ['pulse', 'triage', 'cueword'] as const) {
+      const done = statusDisplayFor(game, 'done');
+      expect(done.label).toBe('done');
+      expect(done.symbol).toBe('✓');
+    }
   });
 });
 

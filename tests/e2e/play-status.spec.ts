@@ -40,6 +40,8 @@ for (const size of [{ width: 390, height: 844 }, { width: 1440, height: 900 }]) 
       // Stats are always kept (2026-11-17), so the "turn on stats" note is gone; it shows only where storage is blocked.
       await expect(page.getByTestId('play-status-note')).toHaveCount(0);
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+      await expect(list(page)).not.toContainText('Share line:');
+      await expect(list(page)).not.toContainText('No colored squares');
     });
 
     test('a result kept in the stats record shows as done, and the stats note goes away', async ({ page }) => {
@@ -59,6 +61,21 @@ for (const size of [{ width: 390, height: 844 }, { width: 1440, height: 900 }]) 
       // Yesterday's result doesn't count for today.
       await expect(row(page, 'suture')).toHaveAttribute('data-status', 'not-started');
       await expect(page.getByTestId('play-status-note')).toHaveCount(0);
+    });
+
+    test('a suture result kept in the stats record shows as done with word count matching Games.png', async ({ page }) => {
+      await page.addInitScript(() => {
+        localStorage.setItem('cueory-game-stats', JSON.stringify({
+          version: 1,
+          results: [
+            { game: 'suture', day: '2026-11-01', solved: true, tries: 0 },
+          ],
+        }));
+      });
+      await page.goto('/play');
+      await expect(row(page, 'suture')).toHaveAttribute('data-status', 'done');
+      await expect(row(page, 'suture')).toContainText('✓');
+      await expect(row(page, 'suture')).toContainText('done · 6 of 6 words');
     });
   });
 }
