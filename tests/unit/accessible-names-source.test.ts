@@ -17,7 +17,7 @@ const files = folders.flatMap((dir) =>
 const TAG = (names: string) =>
   new RegExp(`<(${names})\\b((?:[^>"'{]|"[^"]*"|'[^']*'|\\{(?:[^{}]|\\{[^{}]*\\})*\\})*?)(/?)>`, 'g');
 const line = (source: string, index: number) => source.slice(0, index).split('\n').length;
-const NAMED = /aria-label=|aria-labelledby=|\btitle=|\{\.\.\./;
+const NAMED = /(?:^|\s)(?:aria-label|aria-labelledby|title)=|\{\.\.\./;
 
 // Repeats the removal until nothing changes, so stripped markup cannot leave a new tag behind.
 function removeUntilStable(text: string, pattern: RegExp): string {
@@ -28,6 +28,32 @@ function removeUntilStable(text: string, pattern: RegExp): string {
     current = current.replace(pattern, '');
   } while (current !== previous);
   return current;
+}
+
+// The value of one attribute as source text, so ids compare as the same expression whether written id="x",
+// id={`${id}-x`} or id={"x"}.
+function attributeValue(attributes: string, attribute: string): string | undefined {
+  const found = new RegExp(`(?:^|\\s)${attribute}=(?:"([^"]*)"|'([^']*)'|\\{((?:[^{}]|\\{[^{}]*\\})*)\\})`).exec(attributes);
+  return found ? (found[1] ?? found[2] ?? found[3]).trim().replace(/^[`"']|[`"']$/g, '') : undefined;
+}
+
+/** Form controls with no accessible name. An id alone is not a name: a <label for> with the same id must exist. */
+function unnamedControls(file: string, source: string): string[] {
+  const labelled = new Set<string>();
+  for (const label of source.matchAll(TAG('label')) as Iterable<RegExpExecArray>) {
+    const target = attributeValue(label[2], 'htmlFor') ?? attributeValue(label[2], 'for');
+    if (target) labelled.add(target);
+  }
+  const bad: string[] = [];
+  for (const m of source.matchAll(TAG('input|select|textarea')) as Iterable<RegExpExecArray>) {
+    if (/type="(hidden|submit|button)"/.test(m[2]) || NAMED.test(m[2])) continue;
+    const before = source.slice(Math.max(0, m.index - 1500), m.index);
+    if (before.lastIndexOf('<label') > before.lastIndexOf('</label>')) continue; // wrapped in a <label>
+    const id = attributeValue(m[2], 'id');
+    if (id && labelled.has(id)) continue;
+    bad.push(`${file}:${line(source, m.index)} <${m[1]}>`);
+  }
+  return bad;
 }
 
 function scan(test: (file: string, source: string, m: RegExpExecArray) => boolean) {
@@ -61,16 +87,25 @@ describe('accessible names in component and island source', () => {
     expect(scan((_n, _s, m) => m[1] !== 'img' || /\balt=|\{\.\.\./.test(m[2]))).toEqual([]);
   });
 
-  it('labels every form control: id, aria name, or a wrapping label', () => {
-    expect(
-      scan((_n, source, m) => {
-        if (!['input', 'select', 'textarea'].includes(m[1])) return true;
-        if (/type="(hidden|submit|button)"/.test(m[2]) || NAMED.test(m[2]) || /\bid=/.test(m[2])) return true;
-        const before = source.slice(Math.max(0, m.index - 1500), m.index);
-        // Wrapped in a <label>, or a radiogroup/fieldset that names its options (FillInBoard dropdown mode).
-        return before.lastIndexOf('<label') > before.lastIndexOf('</label>') || /role="radiogroup"/.test(before);
-      }),
-    ).toEqual([]);
+  it('labels every form control: aria name, wrapping label, or a label for its id', () => {
+    expect(files.flatMap(({ name, source }) => unnamedControls(name, source))).toEqual([]);
+  });
+
+  it('rejects a control that has an id but no matching label (negative fixtures)', () => {
+    expect(unnamedControls('x.tsx', '<input id="a" name="a" />')).toHaveLength(1);
+    expect(unnamedControls('x.tsx', '<label htmlFor="b">b</label><input id="a" />')).toHaveLength(1);
+    expect(unnamedControls('x.tsx', '<input id={`${id}-confirm`} name="confirm" />')).toHaveLength(1);
+    expect(unnamedControls('x.tsx', '<label htmlFor={`${id}-other`}>x</label><input id={`${id}-confirm`} />')).toHaveLength(1);
+    expect(unnamedControls('x.astro', '<input data-title="t" data-aria-label="t" type="text" />')).toHaveLength(1);
+  });
+
+  it('accepts named controls (positive fixtures)', () => {
+    expect(unnamedControls('x.tsx', '<label htmlFor="a">a</label><input id="a" />')).toEqual([]);
+    expect(unnamedControls('x.astro', '<label for="a">a</label><input id="a" />')).toEqual([]);
+    expect(unnamedControls('x.tsx', '<label htmlFor={`${id}-confirm`}>c</label><input id={`${id}-confirm`} />')).toEqual([]);
+    expect(unnamedControls('x.tsx', '<label>name <input name="n" /></label>')).toEqual([]);
+    expect(unnamedControls('x.tsx', '<input aria-label="search" />')).toEqual([]);
+    expect(unnamedControls('x.tsx', '<input type="hidden" name="n" />')).toEqual([]);
   });
 
   it('hides decorative svgs or names them with role="img"', () => {
