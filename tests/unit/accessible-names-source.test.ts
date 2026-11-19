@@ -18,12 +18,20 @@ const TAG = (names: string) =>
   new RegExp(`<(${names})\\b((?:[^>"'{]|"[^"]*"|'[^']*'|\\{(?:[^{}]|\\{[^{}]*\\})*\\})*?)(/?)>`, 'g');
 const line = (source: string, index: number) => source.slice(0, index).split('\n').length;
 
+function attributeParts(attributes: string, attribute: string): RegExpExecArray | null {
+  return new RegExp(`(?:^|\\s)${attribute}=(?:"([^"]*)"|'([^']*)'|\\{((?:[^{}]|\\{[^{}]*\\})*)\\})`).exec(attributes);
+}
+
 // The value of one attribute as source text, so ids compare as the same expression whether written id="x",
 // id={`${id}-x`} or id={"x"}.
 function attributeValue(attributes: string, attribute: string): string | undefined {
-  const found = new RegExp(`(?:^|\\s)${attribute}=(?:"([^"]*)"|'([^']*)'|\\{((?:[^{}]|\\{[^{}]*\\})*)\\})`).exec(attributes);
+  const found = attributeParts(attributes, attribute);
   return found ? (found[1] ?? found[2] ?? found[3]).trim().replace(/^[`"']|[`"']$/g, '') : undefined;
 }
+
+const isNonTextValue = /^(?:null|undefined|true|false)$/;
+const readableAttributeValue = (text: string) => !isNonTextValue.test(text) && text.replace(/^[`"']|[`"']$/g, '').trim() !== '';
+const readableChildValue = (text: string) => !isNonTextValue.test(text) && /[A-Za-z0-9]/.test(text);
 
 /**
  * Whether the attributes name the element. A statically empty value (aria-label="", aria-label={''}, title=" ") is
@@ -33,8 +41,12 @@ function hasNamingAttribute(attributes: string, names = ['aria-label', 'aria-lab
   if (/\{\.\.\./.test(attributes)) return true;
   return names.some((name) => {
     if (!new RegExp(`(?:^|\\s)${name}=`).test(attributes)) return false;
-    const value = attributeValue(attributes, name);
-    return value === undefined || value.trim() !== '';
+    const parts = attributeParts(attributes, name);
+    if (!parts) return true;
+    const [, doubleQuoted, singleQuoted, expression] = parts;
+    return expression === undefined
+      ? (doubleQuoted ?? singleQuoted ?? '').trim() !== ''
+      : readableExpression(expression, readableAttributeValue);
   });
 }
 
@@ -157,18 +169,7 @@ function topLevelMask(text: string): boolean[] {
 const isTernaryMark = (text: string, mask: boolean[], at: number) =>
   mask[at] && text[at] === '?' && text[at - 1] !== '?' && text[at + 1] !== '?' && !(text[at + 1] === '.' && !/\d/.test(text[at + 2] ?? ''));
 
-/**
- * Whether a JSX expression (the text between { and }, hidden elements already removed) still shows readable content.
- * A ternary needs both branches readable. An `&&` expression alone may leave a control unnamed. An `||` or
- * `??` expression is checked through its fallback. A plain value such as label or t('x') counts, while null,
- * undefined, booleans, empty strings and bare symbols do not.
- */
-function readableExpression(expression: string): boolean {
-  const text = expression.trim();
-  const mask = topLevelMask(text);
-  if (text.startsWith('(') && text.endsWith(')') && !mask.some(Boolean)) {
-    return readableExpression(text.slice(1, -1));
-  }
+function ternaryBranches(text: string, mask = topLevelMask(text)) {
   for (let at = 0; at < text.length; at += 1) {
     if (!isTernaryMark(text, mask, at)) continue;
     let nested = 0;
@@ -176,10 +177,31 @@ function readableExpression(expression: string): boolean {
       if (isTernaryMark(text, mask, end)) nested += 1;
       else if (mask[end] && text[end] === ':') {
         if (nested > 0) nested -= 1;
-        else return readableExpression(text.slice(at + 1, end)) && readableExpression(text.slice(end + 1));
+        else return {
+          condition: text.slice(0, at).trim(),
+          whenTrue: text.slice(at + 1, end),
+          whenFalse: text.slice(end + 1),
+        };
       }
     }
-    return true; // not a ternary this walk can follow
+    return null; // not a ternary this walk can follow
+  }
+}
+
+/**
+ * Whether a JSX expression provides a name. A ternary needs both branches readable. An `&&` expression alone
+ * may leave a control unnamed. An `||` or `??` expression is checked through its fallback.
+ */
+function readableExpression(expression: string, readableValue = readableChildValue): boolean {
+  const text = expression.trim();
+  const mask = topLevelMask(text);
+  if (text.startsWith('(') && text.endsWith(')') && !mask.some(Boolean)) {
+    return readableExpression(text.slice(1, -1), readableValue);
+  }
+  const ternary = ternaryBranches(text, mask);
+  if (ternary === null) return true;
+  if (ternary) {
+    return readableExpression(ternary.whenTrue, readableValue) && readableExpression(ternary.whenFalse, readableValue);
   }
   let fallback = -1;
   let conditional = false;
@@ -189,8 +211,8 @@ function readableExpression(expression: string): boolean {
     if (operator === '&&') conditional = true;
     if (operator === '||' || operator === '??') fallback = at + 2;
   }
-  if (fallback !== -1) return readableExpression(text.slice(fallback));
-  return !conditional && /[A-Za-z0-9]/.test(text) && !/^(?:null|undefined|true|false)$/.test(text);
+  if (fallback !== -1) return readableExpression(text.slice(fallback), readableValue);
+  return !conditional && readableValue(text);
 }
 
 /** Whether the visible text of a button or link names it: plain text, or a top-level expression that reads. */
@@ -210,6 +232,21 @@ function namesControl(text: string): boolean {
   return /[A-Za-z0-9]/.test(plain);
 }
 
+/** A simple mode switch may supply an aria-label in one state and visible text in the other. */
+function hasComplementaryLabel(attributes: string, visible: string): boolean {
+  const label = attributeParts(attributes, 'aria-label')?.[3];
+  const child = /^\{((?:[^{}]|\{[^{}]*\})*)\}$/.exec(visible.trim())?.[1];
+  if (label === undefined || child === undefined) return false;
+
+  const named = ternaryBranches(label);
+  const shown = ternaryBranches(child);
+  if (!named || !shown || named.condition !== shown.condition || !/^[A-Za-z_$][\w$]*$/.test(named.condition)) return false;
+  return (
+    (readableExpression(named.whenTrue, readableAttributeValue) || readableExpression(shown.whenTrue)) &&
+    (readableExpression(named.whenFalse, readableAttributeValue) || readableExpression(shown.whenFalse))
+  );
+}
+
 /** Buttons and links with no name: no label attribute and no visible text or expression. */
 function unnamedButtonsAndLinks(file: string, source: string): string[] {
   const bad: string[] = [];
@@ -219,7 +256,7 @@ function unnamedButtonsAndLinks(file: string, source: string): string[] {
     // A self-closing control has no children, so only its own attributes can name it.
     const end = m[3] === '/' ? -1 : source.indexOf(`</${m[1]}>`, start);
     const text = end === -1 ? '' : visibleText(source.slice(start, end));
-    if (!namesControl(text)) bad.push(`${file}:${line(source, m.index)} <${m[1]}>`);
+    if (!namesControl(text) && !hasComplementaryLabel(m[2], text)) bad.push(`${file}:${line(source, m.index)} <${m[1]}>`);
   }
   return bad;
 }
@@ -348,6 +385,18 @@ describe('accessible names in component and island source', () => {
     expect(unnamedControls('x.tsx', '<input aria-label="" />')).toHaveLength(1);
     expect(unnamedButtonsAndLinks('x.tsx', `<button aria-label="sudoku settings">${svg}</button>`)).toEqual([]);
     expect(unnamedButtonsAndLinks('x.tsx', `<button aria-label={open ? 'close' : 'open'}>${svg}</button>`)).toEqual([]);
+  });
+
+  it('requires conditional naming attributes to name the control in each state', () => {
+    const bad = (markup: string) => unnamedButtonsAndLinks('x.tsx', markup);
+    const icon = '<svg aria-hidden="true"></svg>';
+    expect(bad(`<button aria-label={paused ? '' : 'pause puzzle'}>${icon}</button>`)).toHaveLength(1);
+    expect(bad(`<button aria-label={ready && 'go'}>${icon}</button>`)).toHaveLength(1);
+    expect(bad(`<button aria-label={paused ? 'resume puzzle' : 'pause puzzle'}>${icon}</button>`)).toEqual([]);
+    expect(bad(`<button aria-label={label || 'open'}>${icon}</button>`)).toEqual([]);
+    expect(bad(`<button aria-label={ready ? 'go' : '進む'}>${icon}</button>`)).toEqual([]);
+    expect(bad(`<button aria-label={iconOnly ? 'report' : undefined}>{iconOnly ? ${icon} : 'report'}</button>`)).toEqual([]);
+    expect(bad(`<button aria-label={iconOnly ? 'report' : undefined}>{anotherMode ? ${icon} : 'report'}</button>`)).toHaveLength(1);
   });
 
   it('keeps live regions coherent: status and alert roles are never switched off', () => {
