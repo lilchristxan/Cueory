@@ -1,5 +1,30 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 import { sizeOf } from './projects';
+
+async function expectNativeTouchInput(page: Page) {
+  await page.evaluate(() => {
+    const probe = document.createElement('button');
+    probe.type = 'button';
+    probe.dataset.touchInputProbe = 'true';
+    probe.textContent = 'touch input probe';
+    probe.addEventListener('pointerdown', (event) => {
+      probe.dataset.touchPointerType = event.pointerType;
+    });
+    probe.addEventListener('touchstart', () => {
+      probe.dataset.touchStart = 'true';
+    });
+    document.body.prepend(probe);
+  });
+
+  const probe = page.locator('[data-touch-input-probe]');
+  try {
+    await probe.tap();
+    await expect(probe).toHaveAttribute('data-touch-pointer-type', 'touch');
+    await expect(probe).toHaveAttribute('data-touch-start', 'true');
+  } finally {
+    await probe.evaluate((element) => element.remove()).catch(() => undefined);
+  }
+}
 
 /**
  * Touch-only check at 390 px: a phone has no hover. Nothing may depend on resting a pointer, so on the phone
@@ -25,17 +50,22 @@ test.describe('touch only (no hover)', () => {
   });
 
   for (const path of pages) {
-    test(`${path}: no hover, no title tooltips, and no hover-only reveal`, async ({ page }) => {
+    test(`${path}: no hover, no title tooltips, and no hover-only reveal`, async ({ page, browserName }) => {
       await page.goto(path);
       await page.evaluate(() => document.fonts.ready);
 
       const media = await page.evaluate(() => ({
         hover: matchMedia('(hover: hover)').matches,
         fine: matchMedia('(pointer: fine)').matches,
-        touch: navigator.maxTouchPoints > 0,
+        maxTouchPoints: navigator.maxTouchPoints,
         width: innerWidth,
       }));
-      expect(media).toMatchObject({ hover: false, fine: false, touch: true, width: 390 });
+      expect(media).toMatchObject({ hover: false, fine: false, width: 390 });
+      if (process.platform === 'darwin' && browserName === 'webkit') {
+        await expectNativeTouchInput(page);
+      } else {
+        expect(media.maxTouchPoints).toBeGreaterThan(0);
+      }
 
       // A title="" tooltip never shows on a phone. The video frame's title is for screen readers.
       const titled = await page.evaluate(() =>
