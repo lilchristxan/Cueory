@@ -1,0 +1,2 @@
+status: tests only. signup-popup.spec.ts installed its fake clock without pausing it, so real page-load time counted toward the pop-up's 10 seconds, leaving about 1 s of margin for "hidden after 9 seconds" (seen failing on #907 shard 4, desktop). `openAt` now installs the clock and pauses it before the page loads, so the page's time moves only when a test runs the clock; the clock resumes only before the axe scan, which needs page timers. Every assertion and every timing value is unchanged. No app code changes.
+decision: none.

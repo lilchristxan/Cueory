@@ -20,7 +20,11 @@ const START = Date.parse('2026-11-17T12:00:00Z');
  * first and make the pop-up wait, and `seenAgo` sets when the pop-up was last shown.
  */
 async function openAt(page: Page, path: string, options: { seenAgo?: number; promoDue?: boolean } = {}) {
+  // Installed AND paused before the page loads: an unpaused fake clock keeps real time flowing, so on a busy machine the
+  // page's load time counted toward the 10 seconds and "hidden after 9 seconds" failed. The page's time now moves only
+  // when a test runs the clock.
   await page.clock.install({ time: new Date(START) });
+  await page.clock.pauseAt(new Date(START + 1_000));
   await page.addInitScript(({ key, seen, promoDue }) => {
     try {
       if (sessionStorage.getItem('test-seeded')) return;
@@ -240,6 +244,8 @@ for (const scheme of ['light', 'dark'] as const) {
     });
     expect(ring).toBe(true);
 
+    // axe schedules work on the page's timers, which never fire while the clock is paused; the timing checks are done.
+    await page.clock.resume();
     const axe = await new AxeBuilder({ page })
       .include('[data-signup-popup]')
       .withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa'])
