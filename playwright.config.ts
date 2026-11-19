@@ -1,6 +1,13 @@
 import { defineConfig, devices } from '@playwright/test';
 
-const port = 4322;
+export function playwrightPort(env: NodeJS.ProcessEnv = process.env): number {
+  const value = env.PLAYWRIGHT_PORT;
+  if (!value) return 4322;
+  const parsed = Number.parseInt(value, 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 4322;
+}
+
+const port = playwrightPort();
 
 // Safari's engine (WebKit) and Firefox run only when CI sets ALL_ENGINES=1, which it does on pull requests into `main`
 // (D-48). Without it these projects don't exist, so ordinary pull requests and `npm run test:e2e` stay Chromium only.

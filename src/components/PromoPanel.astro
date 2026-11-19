@@ -42,7 +42,7 @@ import { accountHref, promo, site } from '../config/site';
     <a href={accountHref} class="promo-button">{promo.joinLabel}</a>
     {
       site.tipPageUrl && (
-        <a href={site.tipPageUrl} target="_blank" rel="noopener noreferrer" class="promo-link">
+        <a href={site.tipPageUrl} target="_blank" rel="noopener noreferrer" class="promo-link" data-new-tab-cue>
           {promo.supportLabel}
           <span class="sr-only"> (opens in a new tab)</span>
           <svg viewBox="0 0 24 24" class="size-4 shrink-0" aria-hidden="true" focusable="false">

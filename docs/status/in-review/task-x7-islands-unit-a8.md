@@ -1,0 +1,1 @@
+status: Adds unit tests for the Anatomy Lab scene's token readers (readColors, readExportTokens): trimming, fallbacks, a named error for a missing picture-size token, and a guard that every token it reads exists in tokens.css. Tests only; no app behavior changes. Awaiting review.
