@@ -12,6 +12,7 @@ import { setupDateProblem } from './setupdate';
 import {
   ONBOARDING_FIELDS, focusAfterRender, nextOnboardingStep, previousOnboardingStep, skipOnboardingStep, type OnboardingStep,
 } from './onboardingsteps';
+import { moveRadioWithArrows } from './radioarrows';
 
 /** The account signed in now isn't the one first connected on this visit. */
 const ACCOUNT_CHANGED = { accountChanged: true } as const;
@@ -314,8 +315,9 @@ export default function Onboarding() {
         <fieldset
           className="min-w-0 space-y-4"
           onKeyDown={(event) => {
-            // Enter advances from a selected radio. Arrow keys continue to
-            // change the selection using the browser's normal radio behavior.
+            // Arrow keys move the choice with a visible focus ring in every engine (radioarrows.ts).
+            if (moveRadioWithArrows(event)) return;
+            // Enter advances from a selected radio.
             if (event.key === 'Enter' && event.target instanceof HTMLInputElement && event.target.type === 'radio') {
               event.preventDefault();
               const move = nextOnboardingStep(step);
