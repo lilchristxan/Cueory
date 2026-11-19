@@ -1,0 +1,22 @@
+/*
+  Reduced motion: nothing transitions (engine run 44460645965, group E2).
+
+  global.css shortens every duration to 0.01ms under reduced motion. Because transition-property defaults to "all",
+  that also turns every property change on every element into a one-frame transition, colors included. WebKit and
+  Firefox can hold the old value for a while: after a theme switch, and on the root element when the browser styled it
+  before the stylesheet arrived, text was read with its old color (black or Espresso on Charcoal). Earlier fixes
+  removed the transition from single components (segmented options, game settings, the study-mode preview). This
+  removes it everywhere at once, so a color always switches in one step.
+
+  Durations stay at 0.01ms (tests and scripts read them); only the property list is emptied. No transition means no
+  transitionend either; the promo panel already hides at once under reduced motion.
+*/
+@layer base {
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      transition-property: none !important;
+    }
+  }
+}
