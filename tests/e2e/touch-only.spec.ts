@@ -1,9 +1,11 @@
 import { expect, test } from '@playwright/test';
+import { sizeOf } from './projects';
 
 /**
  * Touch-only check at 390 px: a phone has no hover. Nothing may depend on resting a pointer, so on the phone
  * projects (touch emulation) the pages must report no hover, carry no title="" tooltips, and show their
- * hover-polish rules as inactive.
+ * hover-polish rules as inactive. The phone projects are picked by what they are (phone-size window, touch screen),
+ * never by name, so Safari's `webkit-phone` on Release pull requests is checked like `phone` and `phone-evening`.
  */
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
@@ -19,7 +21,7 @@ const pages = ['/', '/play', '/learn', '/support', '/resources', '/progress', '/
 
 test.describe('touch only (no hover)', () => {
   test.beforeEach(({}, testInfo) => {
-    test.skip(!testInfo.project.name.startsWith('phone'), 'the touch-only check runs on the phone projects');
+    test.skip(sizeOf(testInfo) !== 'phone' || !testInfo.project.use.hasTouch, 'the touch-only check runs on the phone projects');
   });
 
   for (const path of pages) {
