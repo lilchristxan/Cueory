@@ -183,6 +183,7 @@
   /* ---------- Widths ---------- */
   --container-prose: 40rem;     /* comfortable reading width */
   --container-page: 64rem;      /* widest content width */
+  --container-game-showcase: 61.25rem; /* a game page that opts in (word path): the rendering's 900 px panel (WordPath.png, 270 to 1170 at 1440) plus the article's 40 px side padding */
   --container-headline: 18ch;   /* home headline wraps at about 18 letters */
   --container-hero: 46rem;      /* the centered hero column */
   --container-menu: min(85vw, 22.5rem); /* the ☰ side panel: most of a phone, 360px on bigger screens */
