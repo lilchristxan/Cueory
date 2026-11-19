@@ -46,7 +46,7 @@ async function waitForIslands(page: Page, route: string, network: OpenRequests):
     if (document.readyState !== 'complete' || document.fonts.status !== 'loaded') return false;
     const onScreen = (img: HTMLImageElement) => {
       const rect = img.getBoundingClientRect();
-      return rect.width > 0 && rect.height > 0 && rect.bottom > 0 && rect.top < innerHeight;
+      return rect.width > 0 && rect.height > 0 && rect.right > 0 && rect.left < innerWidth && rect.bottom > 0 && rect.top < innerHeight;
     };
     return [...document.images].filter(onScreen).every((img) => img.complete);
   }, undefined, { timeout: 10_000 }).catch(() => {
