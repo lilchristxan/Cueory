@@ -29,7 +29,7 @@ const cell = (page: Page, index: number) => game(page).getByRole('grid', { name:
 async function look(page: Page, index: number) {
   return cell(page, index).evaluate((element) => {
     const style = getComputedStyle(element);
-    return { background: style.backgroundColor, color: style.color, border: style.borderRightColor, weight: style.fontWeight, outline: style.outlineColor, outlineWidth: style.outlineWidth, outlineStyle: style.outlineStyle };
+    return { background: style.backgroundColor, color: style.color, border: style.borderRightColor, weight: style.fontWeight, outline: style.outlineColor, outlineWidth: style.outlineWidth, outlineStyle: style.outlineStyle, shadow: style.boxShadow };
   });
 }
 function channels(color: string): number[] {
@@ -91,17 +91,25 @@ for (const scheme of ['light', 'dark'] as const) {
     await page.waitForFunction(() => document.getAnimations().every((animation) => animation.playState !== 'running'));
     const [selected, tint, same, overlapping, quiet, givenLook] = await Promise.all([chosen, related, match, overlap, plain, quietGiven].map((index) => look(page, index)));
 
-    // 1. The selected square has a strong solid outline that stands out from the tint around it.
+    // 1. The selected square (Sudoku.png, P10): a solid 3 px Copper Deep outline around a Copper Shine fill, no extra
+    //    inset ring. The outline is a shape cue, not colour alone, and meets 3:1 (WCAG non-text) against the fill it
+    //    frames; the fill also stands apart from the tint around it. (Replaces the earlier "strong dark ring, 4.5:1
+    //    against the tint" check: the design changed on purpose to the rendering's thin copper outline.)
     expect(selected.outlineStyle).toBe('solid');
     expect(parseFloat(selected.outlineWidth)).toBeGreaterThanOrEqual(3);
-    expect(contrast(selected.outline, tint.background)).toBeGreaterThanOrEqual(4.5);
-    expect(contrast(selected.outline, selected.background)).toBeGreaterThanOrEqual(4.5);
+    expect(contrast(selected.outline, selected.background), `${scheme} selected outline`).toBeGreaterThanOrEqual(3);
+    expect(contrast(selected.background, tint.background), `${scheme} selected fill vs tint`).toBeGreaterThanOrEqual(1.2);
+    expect(selected.shadow).toBe('none');
 
-    // 2. The row / column / box tint stands apart from plain squares and from the given-number shading.
-    //    (3:1 against plain squares is reached in Evening; in Light it can't coexist with 4.5:1 dark numbers on the
-    //    tint, so the tint is the darkest fill that keeps them readable: about 2.6:1.)
-    expect(contrast(tint.background, quiet.background)).toBeGreaterThanOrEqual(scheme === 'dark' ? 3 : 2.5);
-    expect(contrast(tint.background, givenLook.background)).toBeGreaterThanOrEqual(scheme === 'dark' ? 2.8 : 2.3);
+    // 2. The row / column / box tint is pale, as drawn, but still stands apart from plain squares and is darker than
+    //    the given-number shading. (Replaces the earlier 2.5:1 / 3:1 tint floors, which forced the heavy Taupe tint.)
+    expect(contrast(tint.background, quiet.background), `${scheme} tint vs plain`).toBeGreaterThanOrEqual(1.2);
+    expect(luminance(tint.background)).toBeLessThan(luminance(givenLook.background));
+    expect(contrast(tint.background, givenLook.background), `${scheme} tint vs given`).toBeGreaterThanOrEqual(1.1);
+
+    // The board is never inverted: in Light and Evening alike the squares are light and the numbers and lines dark.
+    expect(luminance(quiet.background), `${scheme} light squares`).toBeGreaterThan(luminance(givenLook.color));
+    expect(luminance(quiet.background), `${scheme} dark lines`).toBeGreaterThan(luminance(quiet.border));
 
     // 3. Matching numbers get the strongest fill plus bold, so the match isn't shown by color alone.
     expect(same.weight).toBe('700');

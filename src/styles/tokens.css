@@ -90,10 +90,18 @@
   --color-model: #8b6f5b;          /* Mocha    — a structure */
   --color-model-alt: #d3b7a1;      /* Taupe    — every other structure */
   --color-model-selected: #3e2c23; /* Espresso — the selected structure */
-  --color-board-tint: color-mix(in srgb, #d3b7a1 50%, #8b6f5b); /* Taupe + Mocha — sudoku row, column and box of the selected square */
-  --color-board-given: color-mix(in srgb, #eadccf 50%, #f9f5ef); /* Linen + Ivory — sudoku given numbers, far lighter than the tint */
+  /* Sudoku board (P10, Sudoku.png): light squares, dark lines and numbers in both palettes, so Evening reads like
+     Daytime; a pale row, column and box tint; the selected square is Copper Shine inside a Copper Deep outline. */
+  --color-board-tint: color-mix(in srgb, #eadccf 50%, #f6d3ae); /* Linen + Copper Glow — row, column and box of the selected square, pale as drawn */
+  --color-board-given: color-mix(in srgb, #eadccf 50%, #f9f5ef); /* Linen + Ivory — sudoku given numbers, lighter than the tint */
   --color-board-match: #6b5243;    /* Bronze   — sudoku squares holding the selected number */
   --color-on-board-match: #f9f5ef; /* Ivory    — numbers on those squares */
+  --color-board-cell: #f9f5ef;     /* Ivory    — an empty square */
+  --color-board-ink: #3e2c23;      /* Espresso — numbers and grid lines on the board */
+  --color-board-ink-soft: #6b5243; /* Bronze   — pencil marks on the board */
+  --color-board-paused: #eadccf;   /* Linen    — squares while the game is paused */
+  --color-board-selected: #fff0de; /* Copper Shine — the selected square */
+  --color-board-selected-line: #b87348; /* Copper Deep — the selected square's outline (3.36:1 on Copper Shine) */
 
   /* ---------- Fonts ---------- */
   --font-body: "Lato", system-ui, -apple-system, "Segoe UI", sans-serif; /* headings, body, UI, buttons */
@@ -502,10 +510,16 @@
     --color-model: #cbb8a4;          /* Sand */
     --color-model-alt: #6b5243;      /* Bronze */
     --color-model-selected: #f9f5ef; /* Ivory */
-    --color-board-tint: color-mix(in srgb, #6b5243 30%, #8b6f5b); /* Bronze + Mocha */
-    --color-board-given: color-mix(in srgb, #3a2d24 50%, #1c1917); /* Walnut + Charcoal */
-    --color-board-match: #cbb8a4;    /* Sand */
-    --color-on-board-match: #1c1917; /* Charcoal */
+    --color-board-tint: color-mix(in srgb, #cbb8a4 70%, #6b5243); /* Sand + Bronze */
+    --color-board-given: color-mix(in srgb, #cbb8a4 85%, #6b5243); /* Sand + Bronze, lighter than the tint */
+    --color-board-match: #6b5243;    /* Bronze */
+    --color-on-board-match: #f9f5ef; /* Ivory */
+    --color-board-cell: #cbb8a4;     /* Sand: light squares on the dark page, like Daytime */
+    --color-board-ink: #1c1917;      /* Charcoal */
+    --color-board-ink-soft: #3a2d24; /* Walnut */
+    --color-board-paused: #cbb8a4;   /* Sand */
+    --color-board-selected: #fff0de; /* Copper Shine */
+    --color-board-selected-line: #b87348; /* Copper Deep */
     --shadow-tint: 28 25 23;      /* Charcoal */
     --silk-fold-rgb: 58 45 36;    /* Walnut */
     --silk-fold-alpha: 0.7;
@@ -585,10 +599,16 @@
   --color-model: #cbb8a4;          /* Sand */
   --color-model-alt: #6b5243;      /* Bronze */
   --color-model-selected: #f9f5ef; /* Ivory */
-  --color-board-tint: color-mix(in srgb, #6b5243 30%, #8b6f5b); /* Bronze + Mocha */
-  --color-board-given: color-mix(in srgb, #3a2d24 50%, #1c1917); /* Walnut + Charcoal */
-  --color-board-match: #cbb8a4;    /* Sand */
-  --color-on-board-match: #1c1917; /* Charcoal */
+  --color-board-tint: color-mix(in srgb, #cbb8a4 70%, #6b5243); /* Sand + Bronze */
+  --color-board-given: color-mix(in srgb, #cbb8a4 85%, #6b5243); /* Sand + Bronze, lighter than the tint */
+  --color-board-match: #6b5243;    /* Bronze */
+  --color-on-board-match: #f9f5ef; /* Ivory */
+  --color-board-cell: #cbb8a4;     /* Sand: light squares on the dark page, like Daytime */
+  --color-board-ink: #1c1917;      /* Charcoal */
+  --color-board-ink-soft: #3a2d24; /* Walnut */
+  --color-board-paused: #cbb8a4;   /* Sand */
+  --color-board-selected: #fff0de; /* Copper Shine */
+  --color-board-selected-line: #b87348; /* Copper Deep */
   --shadow-tint: 28 25 23;      /* Charcoal */
   --silk-fold-rgb: 58 45 36;    /* Walnut */
   --silk-fold-alpha: 0.7;
@@ -650,14 +670,19 @@
   --sudoku-entered-line: 2px;
   --sudoku-wrong-line: 2px;                          /* the slash across a wrong entry (issue 720) */
   --sudoku-selected-line: 3px;                       /* the selected square's outline */
-  /* Highlights (Christian, 2026-11-12): the row, column and box tint is clearly darker than the given-number shading;
+  /* Highlights (Christian, 2026-11-12; pale as drawn in Sudoku.png, P10): the tint is darker than the given-number shading;
      squares with the selected number are the strongest fill plus bold; numbers keep 4.5:1 on every fill. */
   --color-sudoku-given: var(--color-board-given);
   --color-sudoku-related: var(--color-board-tint);
   --color-sudoku-box-related: var(--color-board-tint);
   --color-sudoku-identical: var(--color-board-match);
   --color-on-sudoku-identical: var(--color-on-board-match);
-  --color-sudoku-selected: var(--color-ink);
-  --color-sudoku-entered: var(--color-ink);
+  --color-sudoku-selected: var(--color-board-selected-line);
+  --color-sudoku-selected-fill: var(--color-board-selected);
+  --color-sudoku-entered: var(--color-board-ink);
+  --color-sudoku-cell: var(--color-board-cell);
+  --color-sudoku-ink: var(--color-board-ink);
+  --color-sudoku-ink-soft: var(--color-board-ink-soft);
+  --color-sudoku-paused: var(--color-board-paused);
   --color-sudoku-conflict: currentColor;
 }
