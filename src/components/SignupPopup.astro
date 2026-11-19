@@ -371,7 +371,7 @@ const logo = (width: number) => `/brand/v1/logo-full-dark-${width}.png`;
   .signup-popup-error {
     flex: 1 0 100%;
     padding: calc(var(--spacing) * 2) calc(var(--spacing) * 3);
-    border: 2px solid var(--popup-cream);
+    border: var(--focus-width) solid var(--popup-cream);
     border-radius: var(--radius-md);
     font-size: var(--text-sm);
     line-height: var(--text-sm--line-height);
@@ -383,8 +383,8 @@ const logo = (width: number) => `/brand/v1/logo-full-dark-${width}.png`;
   }
 
   .signup-popup-input[aria-invalid='true'] {
-    outline: 3px solid var(--popup-cream);
-    outline-offset: 2px;
+    outline: var(--focus-width) dashed var(--popup-cream);
+    outline-offset: var(--focus-offset);
   }
 
   .signup-popup-button {

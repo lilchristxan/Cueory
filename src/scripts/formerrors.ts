@@ -9,11 +9,17 @@
 /** Same loose shape the browser's own email check uses: something, "@", something, no spaces. */
 const EMAIL_SHAPE = /^[^\s@]+@[^\s@]+$/;
 
-/** The message for an email box value, or null when it looks fine. Kit still confirms the address by email. */
-export function emailProblem(value: string): string | null {
+/**
+ * The message for an email box value, or null when it looks fine. `nativeMismatch` is the browser's own verdict
+ * (`input.validity.typeMismatch`, still filled in with noValidate), so addresses it rejects, such as a comma or a
+ * doubled dot in the domain, are still blocked with the written message. Kit still confirms the address by email.
+ */
+export function emailProblem(value: string, nativeMismatch = false): string | null {
   const text = value.trim();
   if (text === '') return 'problem: enter your email address.';
-  if (!EMAIL_SHAPE.test(text)) return 'problem: that email address needs an @ and a name on both sides, like name@example.com.';
+  if (nativeMismatch || !EMAIL_SHAPE.test(text)) {
+    return 'problem: that email address needs an @ and a name on both sides, like name@example.com.';
+  }
   return null;
 }
 
@@ -34,7 +40,7 @@ export function attachEmailErrors(form: HTMLFormElement, input: HTMLInputElement
   };
   form.noValidate = true;
   form.addEventListener('submit', (event) => {
-    const problem = emailProblem(input.value);
+    const problem = emailProblem(input.value, input.validity.typeMismatch);
     show(problem);
     if (problem !== null) {
       event.preventDefault();
@@ -42,6 +48,6 @@ export function attachEmailErrors(form: HTMLFormElement, input: HTMLInputElement
     }
   });
   input.addEventListener('input', () => {
-    if (input.hasAttribute('aria-invalid')) show(emailProblem(input.value));
+    if (input.hasAttribute('aria-invalid')) show(emailProblem(input.value, input.validity.typeMismatch));
   });
 }
