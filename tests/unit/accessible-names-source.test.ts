@@ -157,9 +157,10 @@ function namesControl(text: string): boolean {
 function unnamedButtonsAndLinks(file: string, source: string): string[] {
   const bad: string[] = [];
   for (const m of source.matchAll(TAG('button|a')) as Iterable<RegExpExecArray>) {
-    if (m[3] === '/' || NAMED.test(m[2])) continue;
+    if (NAMED.test(m[2])) continue;
     const start = m.index + m[0].length;
-    const end = source.indexOf(`</${m[1]}>`, start);
+    // A self-closing control has no children, so only its own attributes can name it.
+    const end = m[3] === '/' ? -1 : source.indexOf(`</${m[1]}>`, start);
     const text = end === -1 ? '' : visibleText(source.slice(start, end));
     if (!namesControl(text)) bad.push(`${file}:${line(source, m.index)} <${m[1]}>`);
   }
@@ -193,6 +194,8 @@ describe('accessible names in component and island source', () => {
     expect(bad('<button><span aria-hidden><b>nested</b></span></button>')).toHaveLength(1);
     expect(bad('<a href="/x"><svg viewBox="0 0 1 1"><title>go</title></svg></a>')).toHaveLength(1);
     expect(bad('<button type="button"></button>')).toHaveLength(1);
+    expect(bad('<button type="button" class="preview" hidden />')).toHaveLength(1);
+    expect(bad('<a href="/x" />')).toHaveLength(1);
     // The pause button pattern with its aria-label removed: only the {cond ? : } skeleton is left.
     expect(
       bad('<button type="button" className="icon" disabled={solved} onClick={toggle}>{paused\n  ? <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6v11" /></svg>\n  : <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6v11" /></svg>}</button>'),
@@ -210,6 +213,7 @@ describe('accessible names in component and island source', () => {
     expect(bad('<button aria-label="close"><span aria-hidden="true">x</span></button>')).toEqual([]);
     expect(bad('<button><span aria-hidden="true"><b>nested</b></span>text</button>')).toEqual([]);
     expect(bad('<button>{label}</button>')).toEqual([]);
+    expect(bad('<button type="button" aria-label={`preview ${mode.name}`} hidden />')).toEqual([]);
     expect(bad("<button>{t('x')}</button>")).toEqual([]);
     expect(bad("<button>{open ? 'close' : 'open'}</button>")).toEqual([]);
     expect(bad('<button>{open ? <span>close</span> : <span>open</span>}</button>')).toEqual([]);
