@@ -115,26 +115,47 @@ async function settled(page: Page) {
     .toBe(false);
 }
 
-/** Every vial on show, left to right: where its bottle and its label are, with the stage's edges and the window's width. */
-function shownBoxes(page: Page) {
-  return section(page).evaluate((root) => {
-    const stage = root.querySelector('[data-modes-track]')!.getBoundingClientRect();
-    return [...root.querySelectorAll<HTMLElement>('[data-mode-card]')]
-      .filter((card) => getComputedStyle(card).visibility === 'visible')
-      .map((card) => {
-        const box = (el: Element) => {
-          const r = el.getBoundingClientRect();
-          return { left: r.left, right: r.right, top: r.top, bottom: r.bottom };
-        };
-        return { name: card.dataset.name, vial: box(card.querySelector('[data-vial]')!), label: box(card.querySelector('.vial-label')!) };
-      })
-      .sort((a, b) => a.vial.left - b.vial.left)
-      .map((item) => ({ ...item, stage: { left: stage.left, right: stage.right }, view: window.innerWidth }));
-  });
+/** Read selection, presentation and geometry together. During resize, require two matching idle frames. */
+function measureRow(page: Page, waitForPair = false) {
+  return section(page).evaluate(async (root, waitForPair) => {
+    const track = root.querySelector('[data-modes-track]')!;
+    const cards = [...track.querySelectorAll<HTMLElement>('[data-mode-card]')];
+    const box = (el: Element) => {
+      const { left, right, top, bottom } = el.getBoundingClientRect();
+      return { left, right, top, bottom };
+    };
+    const read = () => {
+      const stage = box(track);
+      const view = window.innerWidth;
+      const shown = cards.filter(card => getComputedStyle(card).visibility === 'visible').map(card => ({
+        name: card.dataset.name!, vial: box(card.querySelector('[data-vial]')!),
+        label: box(card.querySelector('.vial-label')!), stage, view,
+      })).sort((a, b) => a.vial.left - b.vial.left);
+      return {
+        active: cards.find(card => card.hasAttribute('data-active'))?.dataset.name,
+        intended: cards.filter(card => !card.hasAttribute('data-far')).map(card => card.dataset.name!),
+        shown,
+      };
+    };
+    if (!waitForPair) return read();
+    const measured = track.querySelectorAll('[data-mode-card], [data-mode-card] [data-vial], [data-mode-card] .vial-label');
+    const elements = [...measured];
+    let previous: string | undefined;
+    const deadline = performance.now() + 5000;
+    while (performance.now() < deadline) {
+      await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
+      const row = read();
+      const moving = elements.some(el => el.getAnimations().some(a => a.pending || a.playState === 'running'));
+      const current = JSON.stringify(row);
+      if (!moving && previous === current) return row;
+      previous = moving ? undefined : current;
+    }
+    throw new Error('Vial selection, visible labels and bottle bounds did not settle across two animation frames');
+  }, waitForPair);
 }
 
 /** Every label whole, inside the window and the stage (which clips what passes its edges), and no bottle over the next. */
-function expectWhole(shown: Awaited<ReturnType<typeof shownBoxes>>) {
+function expectWhole(shown: Awaited<ReturnType<typeof measureRow>>['shown']) {
   for (const [i, item] of shown.entries()) {
     expect(item.label.left, `${item.name} label left`).toBeGreaterThanOrEqual(Math.max(0, item.stage.left) - 0.5);
     expect(item.label.right, `${item.name} label right`).toBeLessThanOrEqual(Math.min(item.view, item.stage.right) + 0.5);
@@ -162,7 +183,7 @@ test('every vial on show has its whole label in view, and no two vials overlap, 
     for (const turn of [undefined, 'next', 'previous'] as const) {
       if (turn) await section(page).getByRole('button', { name: `${turn} study mode` }).click();
       await settled(page);
-      const shown = await shownBoxes(page);
+      const { shown } = await measureRow(page);
       // The front vial and at least one neighbour on each side.
       expect(shown.length, `${colorScheme} ${turn ?? 'start'}`).toBeGreaterThanOrEqual(3);
       expectWhole(shown);
@@ -175,21 +196,29 @@ test('larger text lays the row out again without a turn: a neighbour that no lon
   page,
 }) => {
   await showRing(page);
-  const front = await section(page).locator('[data-mode-card][data-active]').getAttribute('data-name');
-  const before = await onShow(page);
-  expect(before.length).toBeGreaterThanOrEqual(3);
-  // Text twice as large (the browser's own setting) with the window as it was: the vials and the arrows grow in step,
-  // so fewer vials fit beside the front one, which always shows.
-  await page.evaluate(() => document.documentElement.style.setProperty('font-size', '32px', 'important'));
-  await expect.poll(() => onShow(page)).not.toEqual(before);
-  const after = await onShow(page);
-  expect(after.length).toBeLessThan(before.length);
-  expect(after).toContain(front);
-  await settled(page);
-  expectWhole(await shownBoxes(page));
-  // Back to the usual size, the row shows what it showed before.
-  await page.evaluate(() => document.documentElement.style.removeProperty('font-size'));
-  await expect.poll(() => onShow(page)).toEqual(before);
+  const carousel = section(page);
+  await carousel.getByRole('button', { name: 'pause the slideshow' }).click();
+  await expect(carousel).toHaveAttribute('data-paused', '');
+  await carousel.locator('[data-modes-track]').press('Home');
+  for (const front of ['video', 'cards']) {
+    if (front === 'cards') await carousel.getByRole('button', { name: 'next study mode' }).click();
+    const checkRow = async () => {
+      const row = await measureRow(page, true);
+      expect(row.active).toBe(front);
+      expect(row.intended).toContain(front);
+      expect(row.shown.map(card => card.name)).toEqual(expect.arrayContaining(row.intended));
+      expectWhole(row.shown);
+      return row.intended;
+    };
+    const before = await checkRow();
+    expect(before.length).toBeGreaterThanOrEqual(3);
+    await page.evaluate(() => document.documentElement.style.setProperty('font-size', '32px', 'important'));
+    await expect.poll(() => onShow(page)).not.toEqual(before);
+    expect((await checkRow()).length).toBeLessThan(before.length);
+    await page.evaluate(() => document.documentElement.style.removeProperty('font-size'));
+    await expect.poll(() => onShow(page)).toEqual(before);
+    expect(await checkRow()).toEqual(before);
+  }
 });
 
 test('Enter on the vial in front grows that same bottle into the preview, in two stages; Escape puts it back', async ({
