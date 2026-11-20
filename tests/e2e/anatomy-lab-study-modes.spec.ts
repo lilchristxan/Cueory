@@ -209,6 +209,7 @@ test.describe('anatomy lab: name it', () => {
       }
       wrongSeen++;
       await expect(recall(page).locator('[data-feedback="wrong"]')).toContainText(`✗ not this one: you picked ${name}.`);
+      await expect(recall(page).locator('[data-feedback="wrong"]')).toContainText('try again, or choose show me.');
       await expect(choices.filter({ hasText: name })).toContainText('(not this one)');
     }
     expect(wrongSeen).toBeLessThan(4);
@@ -233,6 +234,7 @@ test.describe('anatomy lab: name it', () => {
     await input.fill('not a fixture name');
     await input.press('Enter');
     await expect(recall(page).locator('[data-feedback="wrong"]')).toContainText('✗ not this one: you typed not a fixture name.');
+    await expect(recall(page).locator('[data-feedback="wrong"]')).toContainText('try again, or choose show me.');
 
     // Learn the answer from "show me" on this question, then type the next one from what is left.
     await recall(page).getByRole('button', { name: 'show me' }).click();
