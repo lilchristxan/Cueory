@@ -3,6 +3,7 @@ import {
   migrateStatAndSutureStatsToTachyyyAndPiccline,
   migrateLegacyGameStats,
   wordPathSummary,
+  forget,
   type GameResult,
 } from '../../src/islands/gamestats';
 import { loadStats, STATS_STORAGE_KEY } from '../../src/islands/gameresults';
@@ -102,5 +103,25 @@ describe('tachyyy and piccline stats migration', () => {
     expect(tachyyyShareText(14, '20 nov 2026', 15)).toBe(
       'tachyyy · 20 nov 2026 · 14/15 · cueory.app',
     );
+  });
+
+  it('forget clears both canonical and legacy aliases of a game', () => {
+    const stats: GameResult[] = [
+      { game: 'suture', day: '2026-11-18', solved: true, tries: 0 },
+      { game: 'piccline', day: '2026-11-18', solved: true, tries: 0 },
+      { game: 'stat', day: '2026-11-18', solved: true, tries: 2 },
+      { game: 'tachyyy', day: '2026-11-18', solved: true, tries: 2 },
+      { game: 'vialo', day: '2026-11-18', solved: true, tries: 4 },
+      { game: 'pulse', day: '2026-11-18', solved: true, tries: 4 },
+    ];
+    const forgottenSuture = forget(stats, 'suture');
+    expect(forgottenSuture.some((r) => r.game === 'suture' || r.game === 'piccline')).toBe(false);
+    expect(forgottenSuture.some((r) => r.game === 'tachyyy')).toBe(true);
+
+    const forgottenStat = forget(stats, 'stat');
+    expect(forgottenStat.some((r) => r.game === 'stat' || r.game === 'tachyyy')).toBe(false);
+
+    const forgottenPulse = forget(stats, 'pulse');
+    expect(forgottenPulse.some((r) => r.game === 'pulse' || r.game === 'pillo' || r.game === 'vialo')).toBe(false);
   });
 });

@@ -147,12 +147,12 @@ export function serialize(stats: GameStats): string {
   return JSON.stringify({ version: VERSION, results: trim(results) });
 }
 
-/** If cueory-game-stats holds pillo data under an old key, copy it to vialo so nobody loses a streak. */
+/** If cueory-game-stats holds pillo or pulse data under an old key, copy it to vialo so nobody loses a streak. */
 export function migratePilloStatsToVialo(stats: GameStats): GameStats {
   const vialoDays = new Set(stats.filter((r) => r.game === 'vialo').map((r) => r.day));
   const migrated: GameResult[] = [...stats];
   for (const r of stats) {
-    if ((r.game as string) === 'pillo' && !vialoDays.has(r.day)) {
+    if (((r.game as string) === 'pillo' || (r.game as string) === 'pulse') && !vialoDays.has(r.day)) {
       migrated.push({
         ...r,
         game: 'vialo' as GameId,
@@ -272,7 +272,18 @@ export function wordPathSummaryInWords(value: WordPathSummary): string {
 }
 
 export function forget(stats: GameStats, game?: string): GameStats {
-  return game === undefined ? [] : stats.filter((result) => result.game !== game);
+  if (game === undefined) return [];
+  const aliases: Record<string, string[]> = {
+    suture: ['suture', 'piccline'],
+    piccline: ['suture', 'piccline'],
+    pulse: ['pulse', 'pillo', 'vialo'],
+    pillo: ['pulse', 'pillo', 'vialo'],
+    vialo: ['pulse', 'pillo', 'vialo'],
+    stat: ['stat', 'tachyyy'],
+    tachyyy: ['stat', 'tachyyy'],
+  };
+  const toForget = new Set(aliases[game] ?? [game]);
+  return stats.filter((result) => !toForget.has(result.game as string));
 }
 
 /** Whether a kept result extends the streak. Results kept before Task 721 had no help tools, so a clean solve counts. */

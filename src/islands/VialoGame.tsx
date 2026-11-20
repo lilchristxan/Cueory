@@ -14,7 +14,6 @@ import {
   playGuess,
   puzzleForDay,
   setHardMode,
-  startPulse,
   untilNextPuzzle,
   waitInWords,
   wordProblem,
@@ -23,7 +22,7 @@ import {
   type PulseState,
 } from './pulse';
 import { gameName } from '../config/games';
-import { vialoShareText } from './vialo';
+import { loadVialoHardMode, rememberVialoHardMode, startVialo, vialoShareText } from './vialo';
 import { dayLabel } from './daily';
 import { heldRounds, loadStats, localDay, reportProgress, reportRound } from './gameresults';
 import { dailyStats, recordResult, type DailyStats, type GameStats } from './gamestats';
@@ -124,11 +123,15 @@ function Pocket({ letter, mark, typed, next }: { letter?: string; mark?: Mark; t
 
 export default function VialoGame({ puzzles }: Props) {
   const today = useMemo(() => new Date(), []);
+  const day = localDay(today);
   const puzzle = useMemo(() => puzzleForDay(playablePuzzles(puzzles), dayNumber(today)), [puzzles, today]);
-  const [state, setState] = useState<PulseState>(() => startPulse(puzzle?.word ?? ''));
+  const [state, setState] = useState<PulseState>(() => {
+    const savedHardMode = loadVialoHardMode(browserStorage(), day);
+    return startVialo(puzzle?.word ?? '', savedHardMode, savedHardMode !== undefined);
+  });
   const [text, setText] = useState('');
   const [problem, setProblem] = useState('');
-  const howToPlay = useGameHelp('pulse');
+  const howToPlay = useGameHelp('vialo');
   const [said, setSaid] = useState('');
   const [copied, setCopied] = useState('');
   const { settings: shared } = useSharedGameSettings();
@@ -207,7 +210,10 @@ export default function VialoGame({ puzzles }: Props) {
     }
     const next = playGuess(state, word, list);
     setState(next);
-    if (state.guesses.length === 0) reportProgress({ game: 'vialo', day: localDay(today) });
+    if (state.guesses.length === 0) {
+      rememberVialoHardMode(browserStorage(), day, Boolean(next.hard));
+      reportProgress({ game: 'vialo', day });
+    }
     setText('');
     setProblem('');
     const last = next.guesses.at(-1)!;
@@ -273,12 +279,12 @@ export default function VialoGame({ puzzles }: Props) {
                 note="only the letter keys below type, so your device keyboard stays closed."
               />
             </ul>
-            <p className="mt-3 text-sm text-ink-soft">hard mode and on-screen keyboard only last for this visit.</p>
+            <p className="mt-3 text-sm text-ink-soft">after your first accepted guess, hard mode stays set for that day. on-screen keyboard only lasts for this visit.</p>
           </fieldset>
         }
       />
       <p className="sr-only" data-testid="vialo-status">guess the {WORD_LENGTH}-letter word · {leftWords}</p>
-      <GameHelpCard help={howToPlay} name={gameName('pulse')} extra={<VialoLegend />} />
+      <GameHelpCard help={howToPlay} name={gameName('vialo')} extra={<VialoLegend />} />
 
       <div className="vialo-pack mt-4">
         <ol className="vialo-board" aria-label="your guesses">

@@ -29,7 +29,7 @@ const { questions, sampleKey } = shown ? parsed : { questions: [], sampleKey: {}
 
 <Layout
   title={tachyyyGame.name}
-  description="fifteen fast clinical questions in 30 seconds. how sharp are you on shift today?"
+  description="fifteen fast clinical questions, 20 seconds each. how sharp are you on shift today?"
   noindex={true}
   promo={false}
 >
@@ -38,11 +38,11 @@ const { questions, sampleKey } = shown ? parsed : { questions: [], sampleKey: {}
     <h1 class="display mt-2 text-title sm:text-title-lg">
       <TachyyyTitle name={tachyyyGame.name} />
     </h1>
-    <p class="mt-3 text-ink-soft">30 seconds · 20-second clinical questions. how sharp are you on shift today?</p>
+    <p class="mt-3 text-ink-soft">fast clinical questions · 20 seconds each. how sharp are you on shift today?</p>
     {
       shown ? (
         <div class="mt-8">
-          <StatGame client:only="react" questions={questions} sampleKey={sampleKey} />
+          <StatGame client:only="react" questions={questions} sampleKey={sampleKey} game="tachyyy" />
           <noscript>
             <p>{tachyyyGame.name} needs JavaScript for its clock. you can still <a href="/play">go back to the daily games</a>.</p>
           </noscript>

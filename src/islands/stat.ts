@@ -19,6 +19,7 @@
 import { dayLabel } from './daily';
 import { localDay } from './gameresults';
 import { remoteChecker, type RemoteQuestions } from './questionsremote';
+import { tachyyyShareLine } from './tachyyy';
 
 /** Questions in a round. */
 export const STAT_QUESTIONS = 15;
@@ -255,7 +256,7 @@ export function reviewWords(row: StatReviewRow): {
  * is true for every finished round (each one ends with a score).
  */
 export interface StatRoundResult {
-  game: 'stat';
+  game: 'stat' | 'tachyyy';
   /** YYYY-MM-DD in the visitor's own time zone (localDay). */
   day: string;
   solved: boolean;
@@ -275,18 +276,19 @@ export function getResult(
   answers: readonly StatAnswer[],
   date: Date,
   practice: boolean,
+  game: 'stat' | 'tachyyy' = 'stat',
 ): StatRoundResult | null {
   if (!rows || rows.length !== STAT_QUESTIONS) return null;
   const score = scoreOf(rows);
   return {
-    game: 'stat',
+    game,
     day: localDay(date),
     solved: true,
     tries: STAT_QUESTIONS - score,
     score,
     total: STAT_QUESTIONS,
     averageSeconds: averageSeconds(answers),
-    share: statShareLine(date, score),
+    share: game === 'tachyyy' ? tachyyyShareLine(date, score) : statShareLine(date, score),
     practice,
   };
 }

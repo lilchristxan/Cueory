@@ -142,10 +142,11 @@ export default function PlayStatus({ games, isComingSoonCrossword = false }: Pro
     };
   }, []);
 
-  const game = (id: GameId) => games.find((row) => row.id === id);
-  const pilloGame = game('pulse');
-  const pilloStatus = statusFor('pulse', today, saved.stats, heard);
-  const pilloText = statusDisplayFor('pulse', pilloStatus);
+  const game = (id: GameId | string) => games.find((row) => row.id === id);
+  const pilloGame = game('vialo') || game('pulse');
+  const wordGameId = (pilloGame?.id ?? 'vialo') as GameId;
+  const pilloStatus = statusFor(wordGameId, today, saved.stats, heard);
+  const pilloText = statusDisplayFor(wordGameId, pilloStatus);
   const side = (['cueword', 'triage', 'suture'] as const).flatMap((id) => {
     const row = game(id);
     if (!row) return [];
