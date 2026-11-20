@@ -41,7 +41,17 @@ function prepare(logo: HTMLElement) {
 }
 
 export function prepareDesktopWordmarks() {
-  const prepareAll = () => document.querySelectorAll<HTMLElement>('[data-wordmark-preload]').forEach(prepare);
-  prepareAll();
-  window.addEventListener('resize', prepareAll);
+  const logos = document.querySelectorAll<HTMLElement>('[data-wordmark-preload]');
+  const picker = document.querySelector('[data-theme-picker]');
+  if (!logos.length || !picker) return;
+  const prepareAll = () => logos.forEach(prepare);
+  const onThemeIntent = () => {
+    prepareAll();
+    window.addEventListener('resize', prepareAll);
+  };
+  // Keep the unused palette lazy on arrival. Pointer and keyboard users give
+  // advance notice at the picker. The site menu also sends it a change event.
+  for (const type of ['pointerenter', 'pointerdown', 'focusin', 'change']) {
+    picker.addEventListener(type, onThemeIntent, { capture: true, once: true });
+  }
 }

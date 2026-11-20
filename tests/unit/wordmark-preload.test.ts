@@ -18,9 +18,13 @@ it('reselects both palette files after the desktop pixel density changes', () =>
     dataset: {},
   };
   vi.stubGlobal('window', viewport);
-  vi.stubGlobal('document', { querySelectorAll: () => [logo] });
+  const picker = new EventTarget();
+  vi.stubGlobal('document', { querySelectorAll: () => [logo], querySelector: () => picker });
 
   prepareDesktopWordmarks();
+  viewport.dispatchEvent(new Event('resize'));
+  for (const image of images) expect(image.decode).toHaveBeenCalledTimes(0);
+  picker.dispatchEvent(new Event('focusin'));
   expect(images.map(image => image.src)).toEqual(['/light-480.png', '/dark-480.png']);
   viewport.devicePixelRatio = 3;
   viewport.dispatchEvent(new Event('resize'));
