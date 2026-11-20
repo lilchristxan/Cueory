@@ -22,8 +22,6 @@ import {
 import { gameName } from '../config/games';
 import {
   canSetVialoHardMode,
-  loadVialoHardMode,
-  rememberVialoHardMode,
   setVialoHardMode,
   startVialo,
   vialoShareText,
@@ -130,10 +128,7 @@ export default function VialoGame({ puzzles }: Props) {
   const today = useMemo(() => new Date(), []);
   const day = localDay(today);
   const puzzle = useMemo(() => puzzleForDay(playablePuzzles(puzzles), dayNumber(today)), [puzzles, today]);
-  const [state, setState] = useState<PulseState>(() => {
-    const savedHardMode = loadVialoHardMode(browserStorage(), day);
-    return startVialo(puzzle?.word ?? '', savedHardMode, savedHardMode !== undefined);
-  });
+  const [state, setState] = useState<PulseState>(() => startVialo(puzzle?.word ?? ''));
   const [text, setText] = useState('');
   const [problem, setProblem] = useState('');
   const howToPlay = useGameHelp('vialo');
@@ -216,7 +211,6 @@ export default function VialoGame({ puzzles }: Props) {
     const next = playGuess(state, word, list);
     setState(next);
     if (state.guesses.length === 0) {
-      rememberVialoHardMode(browserStorage(), day, Boolean(next.hard));
       reportProgress({ game: 'vialo', day });
     }
     setText('');
