@@ -4,6 +4,7 @@ import { existsSync } from 'node:fs';
 import { studyModes } from '../../src/config/modes';
 import {
   AUTO_ADVANCE_MS,
+  autoplayHold,
   canAutoAdvance,
   canEnhanceCarousel,
   carouselState,
@@ -257,6 +258,19 @@ describe('"ways to study" merry-go-round (D-50, D-60)', () => {
     expect(canAutoAdvance({ ...idle, focusInside: true })).toBe(false);
     expect(canAutoAdvance({ ...idle, onScreen: false })).toBe(false);
     expect(canAutoAdvance({ ...idle, previewOpen: true })).toBe(false);
+  });
+
+  it('names the active autoplay hold without changing the motion policy', () => {
+    expect(autoplayHold(idle)).toBeUndefined();
+    expect(autoplayHold({ ...idle, reducedMotion: true })).toBe('reduced-motion');
+    expect(autoplayHold({ ...idle, paused: true })).toBe('paused');
+    expect(autoplayHold({ ...idle, tookOver: true })).toBe('takeover');
+    expect(autoplayHold({ ...idle, hovering: true })).toBe('hover');
+    expect(autoplayHold({ ...idle, focusInside: true })).toBe('focus');
+    expect(autoplayHold({ ...idle, onScreen: false })).toBe('offscreen');
+    expect(autoplayHold({ ...idle, previewOpen: true })).toBe('preview');
+    // The first hold mirrors canAutoAdvance's existing short-circuit order.
+    expect(autoplayHold({ ...idle, paused: true, hovering: true })).toBe('paused');
   });
 
   it('reports one carousel state: settled only with no glide and no preview, the preview phase while it is open', () => {
