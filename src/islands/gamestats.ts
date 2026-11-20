@@ -147,17 +147,21 @@ export function serialize(stats: GameStats): string {
   return JSON.stringify({ version: VERSION, results: trim(results) });
 }
 
-/** If cueory-game-stats holds pillo or pulse data under an old key, copy it to vialo so nobody loses a streak. */
+/** If cueory-game-stats holds pillo or pulse data under an old key, canonicalize it to vialo so nobody loses a streak. */
 export function migratePilloStatsToVialo(stats: GameStats): GameStats {
   const vialoDays = new Set(stats.filter((r) => r.game === 'vialo').map((r) => r.day));
-  const migrated: GameResult[] = [...stats];
+  const migrated: GameResult[] = [];
   for (const r of stats) {
-    if (((r.game as string) === 'pillo' || (r.game as string) === 'pulse') && !vialoDays.has(r.day)) {
-      migrated.push({
-        ...r,
-        game: 'vialo' as GameId,
-      });
-      vialoDays.add(r.day);
+    if ((r.game as string) === 'pillo' || (r.game as string) === 'pulse') {
+      if (!vialoDays.has(r.day)) {
+        migrated.push({
+          ...r,
+          game: 'vialo' as GameId,
+        });
+        vialoDays.add(r.day);
+      }
+    } else {
+      migrated.push(r);
     }
   }
   return trim(migrated);
@@ -170,21 +174,26 @@ export function migratePilloStatsToVialo(stats: GameStats): GameStats {
 export function migrateStatAndSutureStatsToTachyyyAndPiccline(stats: GameStats): GameStats {
   const picclineDays = new Set(stats.filter((r) => r.game === 'piccline').map((r) => r.day));
   const tachyyyDays = new Set(stats.filter((r) => r.game === 'tachyyy').map((r) => r.day));
-  const migrated: GameResult[] = [...stats];
+  const migrated: GameResult[] = [];
   for (const r of stats) {
-    if ((r.game as string) === 'suture' && !picclineDays.has(r.day)) {
-      migrated.push({
-        ...r,
-        game: 'piccline' as GameId,
-      });
-      picclineDays.add(r.day);
-    }
-    if ((r.game as string) === 'stat' && !tachyyyDays.has(r.day)) {
-      migrated.push({
-        ...r,
-        game: 'tachyyy' as GameId,
-      });
-      tachyyyDays.add(r.day);
+    if ((r.game as string) === 'suture') {
+      if (!picclineDays.has(r.day)) {
+        migrated.push({
+          ...r,
+          game: 'piccline' as GameId,
+        });
+        picclineDays.add(r.day);
+      }
+    } else if ((r.game as string) === 'stat') {
+      if (!tachyyyDays.has(r.day)) {
+        migrated.push({
+          ...r,
+          game: 'tachyyy' as GameId,
+        });
+        tachyyyDays.add(r.day);
+      }
+    } else {
+      migrated.push(r);
     }
   }
   return trim(migrated);

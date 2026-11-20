@@ -1,7 +1,6 @@
 import '../styles/vialo.css';
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type FormEvent } from 'react';
 import {
-  canSetHardMode,
   cleanGuess,
   dayNumber,
   GUESSES,
@@ -13,7 +12,6 @@ import {
   playablePuzzles,
   playGuess,
   puzzleForDay,
-  setHardMode,
   untilNextPuzzle,
   waitInWords,
   wordProblem,
@@ -22,7 +20,14 @@ import {
   type PulseState,
 } from './pulse';
 import { gameName } from '../config/games';
-import { loadVialoHardMode, rememberVialoHardMode, startVialo, vialoShareText } from './vialo';
+import {
+  canSetVialoHardMode,
+  loadVialoHardMode,
+  rememberVialoHardMode,
+  setVialoHardMode,
+  startVialo,
+  vialoShareText,
+} from './vialo';
 import { dayLabel } from './daily';
 import { heldRounds, loadStats, localDay, reportProgress, reportRound } from './gameresults';
 import { dailyStats, recordResult, type DailyStats, type GameStats } from './gamestats';
@@ -245,7 +250,7 @@ export default function VialoGame({ puzzles }: Props) {
   const keyLabel = (letter: string, mark: Mark | undefined) => (mark ? `${letter}, ${MARK_WORDS[mark]}` : letter);
   const rowClass = (row: number) => `vialo-row${row === GUESSES - 1 ? ' vialo-row-last' : ''}`;
 
-  const hardLocked = !canSetHardMode(state);
+  const hardLocked = !canSetVialoHardMode(state);
   const typedWords = text ? `typed so far: ${Array.from(text).join(' ')}.` : 'nothing typed yet.';
 
   return (
@@ -262,7 +267,7 @@ export default function VialoGame({ puzzles }: Props) {
                 label="hard mode"
                 on={Boolean(state.hard)}
                 disabled={hardLocked}
-                onChange={() => setState((now) => setHardMode(now, !now.hard))}
+                onChange={() => setState((now) => setVialoHardMode(now, !now.hard))}
                 note={
                   hardLocked
                     ? 'hard mode can change only before your first guess of the day.'

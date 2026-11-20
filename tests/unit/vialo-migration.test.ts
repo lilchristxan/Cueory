@@ -2,10 +2,16 @@ import { describe, expect, it } from 'vitest';
 import {
   migratePilloStatsToVialo,
   dailyStats,
+  forget,
   type GameResult,
 } from '../../src/islands/gamestats';
 import { loadStats, STATS_STORAGE_KEY } from '../../src/islands/gameresults';
-import { vialoShareText } from '../../src/islands/vialo';
+import {
+  canSetVialoHardMode,
+  setVialoHardMode,
+  startVialo,
+  vialoShareText,
+} from '../../src/islands/vialo';
 import { startPulse } from '../../src/islands/pulse';
 
 function memoryStorage(initial: Record<string, string> = {}) {
@@ -95,5 +101,28 @@ describe('vialo stats migration and share format', () => {
       })),
     };
     expect(vialoShareText(lostState, 'fri 20 nov')).toBe('vialo · fri 20 nov · x/6 · cueory.app');
+  });
+
+  it('forget removes vialo and all legacy aliases so stats are not recreated on next load', () => {
+    const historical: GameResult[] = [
+      { game: 'pulse' as any, day: '2026-11-18', solved: true, tries: 4 },
+      { game: 'vialo', day: '2026-11-19', solved: true, tries: 3 },
+    ];
+    const forgotten = forget(historical, 'vialo');
+    expect(forgotten.some((r) => r.game === 'vialo' || r.game === 'pulse' || r.game === 'pillo')).toBe(false);
+  });
+
+  it('honors the restored hard mode lock when hasPlayed is true', () => {
+    const freshState = startVialo('crane', false, false);
+    expect(canSetVialoHardMode(freshState)).toBe(true);
+    const updated = setVialoHardMode(freshState, true);
+    expect(updated.hard).toBe(true);
+
+    const reloadedLockedState = startVialo('crane', true, true);
+    expect(reloadedLockedState.hard).toBe(true);
+    expect(canSetVialoHardMode(reloadedLockedState)).toBe(false);
+    // Setting hard mode when locked is a no-op
+    const triedSwitch = setVialoHardMode(reloadedLockedState, false);
+    expect(triedSwitch.hard).toBe(true);
   });
 });

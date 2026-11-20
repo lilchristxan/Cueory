@@ -1,5 +1,5 @@
 import { gameName } from '../config/games';
-import { GUESSES, guessesLeft, startPulse, type PulseState } from './pulse';
+import { canSetHardMode, GUESSES, guessesLeft, setHardMode, startPulse, type PulseState } from './pulse';
 import type { KeyValueStorage } from '../scripts/storage';
 
 /**
@@ -12,12 +12,29 @@ export function vialoShareText(state: PulseState, day: string): string {
   return `${gameName('vialo')} · ${day} · ${score} · cueory.app`;
 }
 
-export function startVialo(answer: string, hard?: boolean, hasPlayed = false): PulseState {
+export interface VialoState extends PulseState {
+  /** An accepted guess was made for this day's puzzle before this page loaded. */
+  hasPlayed?: boolean;
+}
+
+export function startVialo(answer: string, hard?: boolean, hasPlayed = false): VialoState {
   return {
     ...startPulse(answer),
     ...(hard === undefined ? {} : { hard }),
     ...(hasPlayed ? { hasPlayed: true } : {}),
   };
+}
+
+/** Whether hard mode can be switched: locked if a guess was made today or previously in this visit. */
+export function canSetVialoHardMode(state: PulseState): boolean {
+  if ((state as VialoState).hasPlayed) return false;
+  return canSetHardMode(state);
+}
+
+/** Sets hard mode unless locked by today's accepted guess. */
+export function setVialoHardMode(state: PulseState, hard: boolean): PulseState {
+  if ((state as VialoState).hasPlayed) return state;
+  return setHardMode(state, hard);
 }
 
 export const VIALO_HARD_MODE_STORAGE_KEY = 'cueory-vialo-hard-mode';
