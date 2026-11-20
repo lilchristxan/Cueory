@@ -152,8 +152,11 @@ export default function GuestImportOffer({ idMap = NO_CARD_MATCHES }: { idMap?: 
       generation.current += 1;
       account.current = null;
       setView({ kind: 'hidden' });
-    } else if (outcome.kind === 'done') setView({ kind: 'done', contents: outcome.contents });
-    else if (outcome.kind === 'handled') setView({ kind: 'hidden' });
+    } else if (outcome.kind === 'done' || outcome.kind === 'handled') {
+      // A completed import found through the RLS check is still a success from this keyboard user's action.
+      // Keep the normal confirmation/focus target instead of unmounting the focused button with no replacement.
+      setView({ kind: 'done', contents });
+    }
     else setView({ kind: 'offer', contents, message: outcome.message });
   };
 

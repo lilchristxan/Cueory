@@ -225,7 +225,8 @@ test.describe('guest import offer after sign-in', () => {
     })), { userId: USER, examDate });
 
     await page.getByRole('button', { name: 'bring it in' }).click();
-    await expect(offer(page)).toHaveCount(0);
+    await expect(page.getByRole('status')).toHaveText('your exam date is in your account now.');
+    await expect(page.getByRole('status')).toBeFocused();
     expect(await marker(page)).toBe('1');
     const calls = await dbCalls(page);
     expect(calls.filter(call => call[0] === 'insert' || call[0] === 'update')).toEqual([]);
