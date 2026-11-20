@@ -21,6 +21,7 @@
     */
     --pillo-gloss-clear: rgb(from var(--color-pillo-gloss) r g b / 0);
     --pillo-hatch-clear: rgb(from var(--color-pillo-hatch) r g b / 0);
+    --vialo-pop: 0.9;
   }
 
   .vialo-top {
