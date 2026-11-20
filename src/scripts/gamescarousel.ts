@@ -62,9 +62,6 @@ export function initGamesCarousel(): void {
 
   let activeIndex = 0;
   const count = cards.length;
-  const CARD_WIDTH = 280;
-  const GAP = 28;
-  const STEP = CARD_WIDTH + GAP;
 
   const motionQuery = typeof window.matchMedia === 'function'
     ? window.matchMedia('(prefers-reduced-motion: reduce)')
@@ -78,6 +75,18 @@ export function initGamesCarousel(): void {
     root.dataset.carouselState = isReducedMotion() ? 'settled' : state;
   };
 
+  const getStep = (): number => {
+    if (cards.length >= 2) {
+      const rect0 = cards[0].getBoundingClientRect();
+      const rect1 = cards[1].getBoundingClientRect();
+      const dist = rect1.left - rect0.left;
+      if (dist > 0) return dist;
+    }
+    const cardWidth = cards[0]?.offsetWidth || 280;
+    const computedGap = parseFloat(getComputedStyle(track).columnGap || getComputedStyle(track).gap) || 28;
+    return cardWidth + computedGap;
+  };
+
   const updatePosition = (newIndex: number) => {
     activeIndex = ((newIndex % count) + count) % count;
 
@@ -85,11 +94,12 @@ export function initGamesCarousel(): void {
       card.classList.toggle('on', idx === activeIndex);
     });
 
+    const step = getStep();
     const carWidth = car.clientWidth || 320;
-    const totalScroll = count * STEP - GAP;
+    const totalScroll = track.scrollWidth || count * step;
     const maxScroll = Math.max(0, totalScroll - carWidth);
 
-    let offset = activeIndex * STEP;
+    let offset = activeIndex * step;
     if (offset > maxScroll) offset = maxScroll;
 
     setState('turning');
@@ -195,6 +205,10 @@ export function initGamesCarousel(): void {
       hydrateGameStatuses(root);
     }
   });
+
+  window.addEventListener('resize', () => {
+    updatePosition(activeIndex);
+  }, { passive: true });
 
   setState('settled');
 }

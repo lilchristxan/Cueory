@@ -353,4 +353,38 @@ test.describe('home games carousel (Home v2 Lane 5)', () => {
       await context.close();
     }
   });
+
+  test('large default font size (32px): step and extent scale dynamically and reach all cards', async ({ page }, testInfo) => {
+    test.skip(!isDesktopOfEachEngine(testInfo), 'runs once per browser engine');
+
+    await page.goto('/');
+    await markPanelsSeen(page);
+
+    // Set 32px root font size (simulates 200% text zoom)
+    await page.evaluate(() => document.documentElement.style.setProperty('font-size', '32px', 'important'));
+    await expect(page.locator('html')).toHaveCSS('font-size', '32px');
+
+    const section = page.locator('#daily-games');
+    await section.scrollIntoViewIfNeeded();
+
+    const firstCard = section.locator('[data-game-card]').first();
+    const nextBtn = section.locator('[data-games-next]');
+    const track = section.locator('[data-games-track]');
+
+    // Card width scales with font size (17.5rem * 32px = 560px)
+    const cardBox = await firstCard.boundingBox();
+    expect(cardBox?.width).toBeCloseTo(560, 0);
+
+    // Initial card is on
+    await expect(firstCard).toHaveClass(/on/);
+
+    // Click next button
+    await nextBtn.click();
+    const secondCard = section.locator('[data-game-card]').nth(1);
+    await expect(secondCard).toHaveClass(/on/);
+
+    // Track offset has moved by the dynamic step (~616px: 560px card + 56px gap)
+    const transform = await track.evaluate((el) => el.style.transform);
+    expect(transform).toMatch(/translateX\(-616px\)/);
+  });
 });
