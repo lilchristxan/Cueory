@@ -1,0 +1,1 @@
+status: Firefox dark home wordmark: prepares the actual desktop Light and Evening full-logo files before the site palette changes, while preserving phone emblem selection and no additional full-wordmark transfer beyond the 390px baseline.
