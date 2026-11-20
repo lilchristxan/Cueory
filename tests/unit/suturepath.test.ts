@@ -237,6 +237,10 @@ describe('hints', () => {
     expect(state.hint).toEqual({ answer: 1, order: true });
     expect(cellView(state, puzzle, [0, 3])).toEqual({ look: 'hinted', order: 3 });
     expect(pathCellLabel(state, puzzle, [0, 3])).toBe('row 1, column 4, A, cue, letter 3');
+    state = extend(state, puzzle, [0, 3]).state;
+    expect(cellView(state, puzzle, [0, 3])).toEqual({ look: 'picked', step: 1, order: 3 });
+    expect(cellView(state, puzzle, [0, 1])).toEqual({ look: 'hinted', order: 1 });
+    expect(pathCellLabel(state, puzzle, [0, 3])).toBe('row 1, column 4, A, picked, letter 1 of the word, cue, letter 3');
     // Solving the hinted answer clears the hint; the next hint goes to the next unsolved theme answer.
     state = submit(pickAll(state, puzzle, row(0)), puzzle).state;
     expect(state.hint).toBeNull();

@@ -183,6 +183,12 @@ test.describe('word path: board format (#722)', () => {
     await expect(live(page)).toHaveText('cue: the marked letters are now numbered in order.');
     await expect(cell(page, themes[0]!.path[0]!)).toHaveAccessibleName(/, cue, letter 1$/);
     await expect(cell(page, themes[0]!.path[1]!)).toContainText('2');
+    const selected = themes[0]!.path[2]!;
+    await cell(page, selected).click();
+    await expect(cell(page, selected)).toHaveAttribute('data-look', 'picked');
+    await expect(cell(page, selected)).toHaveAccessibleName(/picked, letter 1 of the word, cue, letter 3$/);
+    await expect(cell(page, selected).locator('.wordpath-step')).toHaveText('3');
+    await expect(cell(page, themes[0]!.path[0]!).locator('.wordpath-step')).toHaveText('1');
   });
 
   test('finishing the board: result, plain share line, stats with cues and the thread first, one progress event', async ({ page }) => {
