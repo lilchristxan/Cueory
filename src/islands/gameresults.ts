@@ -296,7 +296,7 @@ export function loadStats(storage: KeyValueStorage | undefined, today: string): 
     const first = firstKeptDay(today);
     const parsed = parseStats(text);
     const migrated = migratePilloStatsToVialo(parsed);
-    if (migrated.length > parsed.length) {
+    if (serialize(migrated) !== serialize(parsed)) {
       saveStats(storage, migrated);
     }
     return { on: true, stats: migrated.filter((result) => result.day >= first) };
