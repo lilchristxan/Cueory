@@ -108,7 +108,8 @@ export interface AcceptOptions {
 
 export type AcceptOutcome =
   | { kind: 'done'; contents: OfferContents }
-  | { kind: 'handled' }
+  /** An existing marker or nothing left to import stopped this request without database writes. */
+  | { kind: 'handled'; reason: 'imported' | 'declined' | 'nothing' }
   | { kind: 'account-changed' }
   | { kind: 'error'; message: string };
 
@@ -170,7 +171,8 @@ async function acceptLocked({
   const key = markerKey(userId);
   try {
     // Checked again inside the lock: another tab may have finished while this one waited.
-    if (storage.getItem(key) !== null) return { kind: 'handled' };
+    const existing = storage.getItem(key);
+    if (existing !== null) return { kind: 'handled', reason: existing === DECLINED_MARKER ? 'declined' : 'imported' };
   } catch {
     return { kind: 'error', message: RETRY };
   }
@@ -179,7 +181,7 @@ async function acceptLocked({
 
   const progress = readProgress(storage);
   const wanted = contentsOf(progress, idMap, today);
-  if (!wanted.cards && !wanted.examPlan) return { kind: 'handled' };
+  if (!wanted.cards && !wanted.examPlan) return { kind: 'handled', reason: 'nothing' };
 
   if (completionDb) {
     const completion = await completionOf(completionDb, progress, idMap, today, wanted);
@@ -193,7 +195,7 @@ async function acceptLocked({
       } catch {
         return { kind: 'error', message: RETRY };
       }
-      return { kind: 'handled' };
+      return { kind: 'handled', reason: 'imported' };
     }
   }
 

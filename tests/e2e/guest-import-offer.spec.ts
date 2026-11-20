@@ -50,6 +50,14 @@ test.beforeAll(async () => {
           version: 1, onboarding: { course: 'fundamentals', examDate, done: true }, decks: {},
         }));
       }
+      // A tab can begin an action before a marker event from another tab is delivered. This fixture option holds that
+      // notification so the second tab exercises its inside-lock marker read instead of hiding before the click.
+      if (params.has('hold-marker-events')) {
+        const addEventListener = window.addEventListener.bind(window);
+        window.addEventListener = (type, listener, options) => {
+          if (type !== 'storage') addEventListener(type, listener, options);
+        };
+      }
       createRoot(document.getElementById('fixture')).render(<GuestImportOffer />);
     `, resolveDir: process.cwd(), loader: 'tsx' },
     bundle: true, write: false, format: 'iife', platform: 'browser', jsx: 'automatic',
@@ -295,6 +303,23 @@ test.describe('guest import offer after sign-in', () => {
     await open(third, 'x=1');
     await third.waitForTimeout(300);
     await expect(third.getByRole('button', { name: 'bring it in' })).toHaveCount(0);
+  });
+
+  test('two tabs: a decline that arrives before accept dismisses with visible focus and no success claim', async ({ page, context }) => {
+    await open(page, 'seed=1');
+    const second = await context.newPage();
+    await open(second, 'x=1&hold-marker-events=1');
+    await expect(offer(page)).toBeVisible();
+    await expect(offer(second)).toBeVisible();
+
+    await page.getByRole('button', { name: 'not now' }).click();
+    expect(await marker(page)).toBe('declined');
+    // The held event keeps the second tab's stale offer visible, as when it receives the other tab's marker late.
+    await second.getByRole('button', { name: 'bring it in' }).click();
+    await expect(offer(second)).toHaveCount(0);
+    await expect(second.locator('h1')).toBeFocused();
+    await expect(second.getByRole('status')).toHaveCount(0);
+    expect((await dbCalls(second)).filter(call => call[0] === 'insert' || call[0] === 'update')).toEqual([]);
   });
 
   test('another tab saying "not now" removes this tab\'s offer', async ({ page, context }) => {

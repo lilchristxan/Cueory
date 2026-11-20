@@ -157,7 +157,7 @@ describe('acceptOffer', () => {
     expect(dbs.upsert).toHaveBeenCalledTimes(1);
     expect(dbs.upsert).toHaveBeenCalledWith('exam_plans', { course: 'fundamentals', exam_date: '2026-12-10' }, 'user_id,course');
     expect(storage.getItem(markerKey(USER))).toBe(IMPORTED_MARKER);
-    expect(await run()).toEqual({ kind: 'handled' });
+    expect(await run()).toEqual({ kind: 'handled', reason: 'imported' });
     expect(dbs.upsert).toHaveBeenCalledTimes(1);
   });
 
@@ -198,7 +198,7 @@ describe('acceptOffer', () => {
       return task();
     };
     const { dbs, run } = accept(storage, { lock });
-    expect(await run()).toEqual({ kind: 'handled' });
+    expect(await run()).toEqual({ kind: 'handled', reason: 'imported' });
     expect(names).toEqual([`cueory-guest-import:${USER}`]);
     expect(dbs.upsert).not.toHaveBeenCalled();
   });
@@ -218,13 +218,27 @@ describe('acceptOffer', () => {
     expect(dbs.upsert).toHaveBeenCalledTimes(1);
   });
 
+  it('stops an accept behind another tab\'s decline without a success or database write', async () => {
+    const storage = memoryStorage();
+    withExamDate(storage);
+    const lock: LockRunner = async (_name, task) => {
+      storage.setItem(markerKey(USER), DECLINED_MARKER);
+      return task();
+    };
+    const { dbs, run } = accept(storage, { lock });
+    expect(await run()).toEqual({ kind: 'handled', reason: 'declined' });
+    expect(dbs.upsert).not.toHaveBeenCalled();
+    expect(dbs.insert).not.toHaveBeenCalled();
+    expect(storage.getItem(markerKey(USER))).toBe(DECLINED_MARKER);
+  });
+
   it('marks an already complete import after RLS reads, without another database write', async () => {
     const storage = memoryStorage();
     saveProgress(storage, withPile(withOnboarding(emptyProgress(), { course: 'fundamentals', examDate: '2026-12-10' }), 'deck-a', 'card-a', 'know'));
     const complete = completion([{ course: 'fundamentals', exam_date: '2026-12-10' }], [{ item_id: CARD_A }]);
     const { dbs, run } = accept(storage, { idMap: MATCHES, completionDb: complete });
 
-    expect(await run()).toEqual({ kind: 'handled' });
+    expect(await run()).toEqual({ kind: 'handled', reason: 'imported' });
     expect(storage.getItem(markerKey(USER))).toBe(IMPORTED_MARKER);
     expect(dbs.upsert).not.toHaveBeenCalled();
     expect(dbs.insert).not.toHaveBeenCalled();
