@@ -1,0 +1,1 @@
+status: #634 Firefox rapid-Next regression: the carousel's existing final-announcement contract now uses four real Next-button clicks under a controlled page clock, proving superseded timers stay quiet and the final matching card is announced exactly once.

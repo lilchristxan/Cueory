@@ -3,6 +3,7 @@ import { writeFile } from 'node:fs/promises';
 import { expect, test, type Page } from '@playwright/test';
 import { accountLaunch, accountsOpen, menuSmallLinks, newsletter, showsHeroJoin, socials } from '../../src/config/site';
 import { visibleFooterLinks } from '../../src/config/legalfooter';
+import { REST_MS } from '../../src/scripts/carousel';
 import { isDesktopOfEachEngine, sizeOf } from './projects';
 import { lessonRoutes } from '../lessonroutes';
 
@@ -870,14 +871,40 @@ test.describe('"ways to study" merry-go-round (D-50, D-60)', () => {
     });
   const heard = (page: Page) => page.evaluate(() => (window as unknown as { heard: string[] }).heard);
 
-  test('a run of quick presses announces only the card where it comes to rest', async ({ page }) => {
+  test('quick real Next presses replace each pending announcement and announce the final card once', async ({ page }) => {
+    // Keep the page clock still between interactions. The controlled gaps make this a real rapid-input contract rather
+    // than relying on how long Playwright takes to deliver four separate click actions in a loaded browser.
+    const clockStart = new Date('2026-11-20T00:00:00');
+    await page.clock.install({ time: clockStart });
+    // An installed Playwright clock otherwise continues with host time; pause before the page creates its timers.
+    await page.clock.pauseAt(new Date(clockStart.getTime() + 1_000));
     await page.goto('/');
     await section(page).scrollIntoViewIfNeeded();
     await listen(page);
     const next = section(page).getByRole('button', { name: 'next study mode' });
-    for (let i = 0; i < 4; i++) await next.click({ force: true });
+
+    // These are actual button clicks, 250 ms apart: every gap is nonzero and below REST_MS. The first timer would be
+    // due 10 ms after the fourth click if a later click failed to clear it, well before the final timer's deadline.
+    const gap = 250;
+    for (let i = 0; i < 4; i++) {
+      await next.click();
+      if (i < 3) await page.clock.runFor(gap);
+    }
+    await expect.poll(() => middleCard(page)).toBe('matching');
+
+    const staleDeadlineAfterLastClick = REST_MS - gap * 3;
+    expect(staleDeadlineAfterLastClick).toBeGreaterThan(0);
+    await page.clock.runFor(staleDeadlineAfterLastClick);
+    await expect(section(page).locator('[data-modes-live]')).toHaveText('');
+    expect(await heard(page)).toEqual([]);
+
+    await page.clock.runFor(REST_MS - staleDeadlineAfterLastClick - 1);
+    await expect(section(page).locator('[data-modes-live]')).toHaveText('');
+    expect(await heard(page)).toEqual([]);
+
+    await page.clock.runFor(1);
     await expect(section(page).locator('[data-modes-live]')).toHaveText('matching, 5 of 11');
-    await page.waitForTimeout(600);
+    await page.clock.runFor(600);
     expect(await heard(page)).toEqual(['matching, 5 of 11']);
   });
 
