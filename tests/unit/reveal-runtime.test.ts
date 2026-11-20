@@ -39,4 +39,42 @@ describe('reveal section runtime guards', () => {
 
     expect(() => revealSections()).not.toThrow();
   });
+
+  it('wires up focusin on waiting sections to reveal instantly and unobserve', () => {
+    const unobserved: unknown[] = [];
+    class AvailableObserver {
+      observe() {}
+      unobserve(el: unknown) {
+        unobserved.push(el);
+      }
+    }
+    const listeners: Record<string, () => void> = {};
+    const section = {
+      dataset: { reveal: '' },
+      getBoundingClientRect: () => ({ top: 1000 }),
+      addEventListener: (type: string, fn: () => void) => {
+        listeners[type] = fn;
+      },
+      removeEventListener: (type: string) => {
+        delete listeners[type];
+      },
+    };
+    vi.stubGlobal('IntersectionObserver', AvailableObserver);
+    vi.stubGlobal('window', {
+      innerHeight: 800,
+      matchMedia: () => ({ matches: false }),
+      IntersectionObserver: AvailableObserver,
+    });
+    vi.stubGlobal('document', {
+      querySelectorAll: () => [section],
+    });
+
+    revealSections();
+    expect(section.dataset.reveal).toBe('waiting');
+    expect(listeners.focusin).toBeDefined();
+
+    listeners.focusin();
+    expect(section.dataset.reveal).toBe('instant');
+    expect(unobserved).toContain(section);
+  });
 });

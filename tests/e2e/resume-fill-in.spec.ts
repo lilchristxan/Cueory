@@ -6,7 +6,7 @@ const path = '/learn/study-skills/fill-in';
 // The delayed welcome popup is tested elsewhere; it must not interrupt study controls here.
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
-    try { localStorage.setItem('cueory-promo-seen', String(Date.now())); } catch { /* blocked storage */ }
+    try { localStorage.setItem('cueory-promo-seen', String(Date.now())); localStorage.setItem('cueory-signup-popup-seen', String(Date.now())); } catch { /* blocked storage */ }
   });
 });
 
@@ -57,7 +57,7 @@ for (const width of [390, 1440]) {
     await expect(board.getByText('round 1 · item 3 of 4')).toBeVisible();
     await expect(board.getByRole('region', { name: 'your submitted answers' })).toContainText('item 1: honey');
     await expect(board.getByRole('region', { name: 'your submitted answers' })).toContainText('item 2: days');
-    await expect(board.getByRole('combobox', { name: 'the missing word' })).toBeFocused();
+    await expect(board.getByRole('radiogroup', { name: 'the missing word' }).getByRole('radio').first()).toBeFocused();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   });
 }
@@ -70,7 +70,8 @@ test('start over discards the snapshot and restores an empty first item', async 
   await page.getByRole('button', { name: 'start over' }).click();
   await expect(board.getByText('round 1 · item 1 of 4')).toBeVisible();
   await expect(board.getByRole('region', { name: 'your submitted answers' })).toHaveCount(0);
-  await expect(board.getByRole('combobox', { name: 'the missing word' })).toHaveValue('');
+  await expect(board.getByRole('radiogroup', { name: 'the missing word' }).getByRole('radio')).toHaveCount(4);
+  await expect(board.getByRole('radiogroup', { name: 'the missing word' }).getByRole('radio', { checked: true })).toHaveCount(0);
   expect(await page.evaluate(() => localStorage.getItem('cueory-resume'))).toBeNull();
 });
 

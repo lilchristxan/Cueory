@@ -123,7 +123,7 @@ screens stay plain: nothing decorative, no texture behind lesson text, and no ma
 - Add a status note in the same pull request: a new file `docs/status/in-review/<branch-with-dashes>.md` with the STATUS
   line and any `D-pending` decision. The director moves notes into `docs/STATUS.md` and `docs/DECISIONS.md` in batches,
   so parallel pull requests never clash on those two files.
-- Daily puzzles (Task 7) use original names and visual design. Never the names Wordle, Connections or NYT, and never
-  a copy of their look, colors or colored-square shares. Rules are original too, with one exception Christian chose
-  (Task 113): pillo uses the classic guess-the-word rules (a five-letter word, six guesses), with its own blister-pack
-  look, brand colors, symbols on every letter and a plain one-line share.
+- Daily puzzles match the gameplay, settings, help tools, scoring, stats and controls of leading daily puzzle games.
+  Never use the names Wordle, Connections, Strands or NYT (`forbiddenGameWords`), and never copy their terms, look,
+  colors, tile shapes, layout or colored-square share grids ([docs/GAMES-PARITY.md](docs/GAMES-PARITY.md)). Our own
+  share is a plain one-line result, or symbols in our own style. Brand colors only.

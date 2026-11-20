@@ -79,6 +79,30 @@ Colors are applied in `src/styles/tokens.css`. The logo is shown by `src/compone
 | Secondary text / UI | Sand | `#CBB8A4` |
 | Primary text / logo | Ivory | `#F9F5EF` |
 
+## Copper accent (both themes)
+Added 18 Nov 2026 by Christian's decision, to match the redesign renderings. Use only for copper buttons, pills and
+accents; never for body text or backgrounds of reading areas. Not part of brand guide v1.0, which is unchanged.
+
+| Role | Name | HEX |
+| --- | --- | --- |
+| Gradient edges | Copper Deep | `#B87348` |
+| Gradient body | Copper | `#D9976A` |
+| Soft highlight | Copper Glow | `#F6D3AE` |
+| Light sweep | Copper Shine | `#FFF0DE` |
+
+Text on copper is Charcoal `#1C1917`: 4.65:1 on Copper Deep, 7.15:1 on Copper, 12.36:1 on Copper Glow, 15.63:1 on Copper
+Shine. Ivory and Espresso fail 4.5:1 on the deeper stops, so they are not used on copper.
+
+## Game accents
+Added 20 Nov 2026 by Christian's decision for the daily games rebrand. Teal is for piccline only. Dim is for the unlit board cells on vialo's dark icon.
+
+| Role | Name | Daytime HEX | Evening HEX | Notes |
+| --- | --- | --- | --- | --- |
+| Piccline accent | Teal / Teal Light | `#2F7A78` | `#4FB3AE` | piccline only; cursive wordmark and board loop |
+| Vialo unlit cell | Dim | `#5A463A` | `#5A463A` | unlit cells on vialo dark icon tile |
+
+Fonts: Sacramento (SIL Open Font License) is used for the piccline wordmark outlines only (notice in `public/fonts/sacramento-OFL.txt`).
+
 **Retired (guide §4.3):** Espresso `#3F2E24`, Charcoal `#1B1715` and Evening Ivory `#EFE6DA` from the earlier board. A
 test fails if they come back.
 

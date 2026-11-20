@@ -1,7 +1,15 @@
-# Go-live runbook (launch: Friday, November 13)
+# Go-live runbook (Thursday, November 19, 2026 — games and public pages only, accounts closed)
 
-Every dashboard step Christian does before and on launch day, in order. One action per step. "You should see" says
-what to check. Settings and menu paths come from the official pages linked in brackets, read on 2 November 2026.
+Thursday's launch is **games and public pages only; accounts remain closed**.
+Use the [Thursday launch checklist](LAUNCH-2026-11-19.md) for its release gates.
+The production database remains untouched. The full-account setup, database
+migration and account-opening procedures below are **future reference, not
+steps for this games-only launch**; they need separate Christian approval and
+verified staging evidence before use.
+
+
+Every dashboard step below is for the future account launch and database go-live, not Thursday's games-and-public-pages launch. One action per step. "You should see" says
+what to check. Settings and menu paths come from the official pages linked in brackets, originally reviewed on 2 November 2026. That source-review date is separate from the repository migration inventory rechecked on 17 November 2026; the dashboard instructions have not been reverified as of that inventory check.
 Where those pages don't confirm a menu path, the step says **find** and describes what the setting does. If a
 screen doesn't match, stop and tell Claude what you see. Don't guess.
 
@@ -12,7 +20,7 @@ Golden rules (the same as [SETUP.md](SETUP.md)):
 - Don't add, change or delete any email DNS record (MX, SPF, DKIM, DMARC, or TXT records for email) until you've
   said yes to the email question in 1.9.
 
-Where this comes from: the Task 141 go-live audit, with actual migration filenames rechecked on `staging` on 4 November. Never run SQL from an unmerged PR. Production changes require Claude's staging-first verification.
+Where this comes from: the Task 141 go-live audit, with actual migration filenames rechecked on `staging` on 17 November 2026. Never run SQL from an unmerged PR. Production changes require Claude's staging-first verification.
 
 ---
 
@@ -85,7 +93,7 @@ Rule 4: every file runs on `cueory-staging` first (SETUP Part L), and only then 
 Use exactly the steps of SETUP Part L, with three changes:
 - open **cueory-prod** instead of `cueory-staging`, and check the name at the top says `cueory-prod`;
 - run the files in the table below, in this order, once each;
-- the checklist must match the `staging` repository and the migrations **verified as successfully applied to `cueory-staging`**. There are now seventeen repository files after merged PRs #235, #332, #335, #337 and #338. GitHub merges do not execute hosted SQL. Before any production SQL, verify staging results, approval, and which versions are already present in each project.
+- the checklist must match the `staging` repository and the migrations **verified as successfully applied to `cueory-staging`**. There are 20 repository migration files as of 17 November 2026; all 20 are listed below in timestamp order. GitHub merges do not execute hosted SQL. Before any production SQL, verify staging results, approval, and which versions are already present in each project.
 
 | # | File | Run it |
 | --- | --- | --- |
@@ -106,9 +114,12 @@ Use exactly the steps of SETUP Part L, with three changes:
 | 15 | `20261102160000_fresh_sign_in_and_name_rules` | only after staging tests and specific founder auth/database approval |
 | 16 | `20261102170000_my_sessions` | only after staging session-isolation tests and specific founder privacy approval |
 | 17 | `20261104170500_enforce_opt_in_mfa` | only after staging MFA/policy tests and specific founder auth/database approval |
+| 18 | `20261112020000_restate_delete_my_account_mfa` | only after staging drift-repair/MFA tests and specific founder auth/database approval |
+| 19 | `20261114151643_delete_my_account_identity_and_mfa` | only after staging account-identity/MFA tests and specific founder auth/database approval |
+| 20 | `20261116235000_delete_account_recent_amr_proof` | only after staging recent-sign-in proof tests and specific founder auth/database approval |
 
 1. Open https://github.com/lilchristxan/Cueory/tree/staging/supabase/migrations.
-   You should see exactly the seventeen files above, including `20261102153000_admin_flag_rpcs.sql` from merged PR #338. Its position is determined by its timestamp, not by merge order. If the list differs, or an earlier-versioned file has not yet been applied on staging, stop for a reviewed database migration plan before any production SQL.
+   You should see the 20 files above. Their order is determined by timestamps, not merge order. This is a repository inventory, not evidence that any migration has run on a hosted database. If the list differs, or an earlier-versioned file has not yet been applied on staging, stop for a reviewed database migration plan before any production SQL.
 2. Open https://supabase.com/dashboard, click **cueory-prod**, and check the name at the top says `cueory-prod`.
 3. Go to the **SQL Editor** section. [SB functions]
 4. For each **approved, not-yet-applied** file, in verified timestamp order: open it on GitHub (SETUP Part L's links, or click the file above and then **Raw**), copy all of it, click **New Query**, paste, and click **Run**. [SB functions]
@@ -116,7 +127,7 @@ Use exactly the steps of SETUP Part L, with three changes:
 5. If a file shows an error or a box asks you to confirm something: stop, don't run it again, don't run the next
    one, and send Claude the error text and the file's number (SETUP Part L explains why).
 6. Run the check query from SETUP Part L, step 10.
-   If all seventeen migrations have passed and been approved for production, the SETUP Part L public-schema query should show 14 tables (all `RLS on`) and 19 public functions, including the restricted `admins` table and four admin-inbox functions. The MFA helper in the private schema is not included. Verify policy behavior, migration history, and the database regression suite as well as names and counts. If anything differs, stop before proceeding.
+   Only after all 20 migrations have passed on staging and received production approval, compare the SETUP Part L public-schema query with the reviewed migration definitions and verified staging schema. Every public table must have `RLS on`; verify function signatures and bodies, policies, migration history, and the database regression suite as well as names and counts. The private-schema MFA helper is not included in the public-schema query. The former 17-migration counts are not proof of a complete or correct schema. If anything differs, stop before proceeding.
 7. Tell Claude "prod database done through file N".
 
 If a later pull request adds a file with an earlier date than one you've already run, tell Claude before running it.
@@ -199,7 +210,7 @@ key that starts with `sb_publishable_`, never a secret key. [SB API keys]
    You should see the sign-in form. If it says "accounts open soon", find the `staging` preview's own build settings
    in the **Previews** section, or tell Claude.
 
-After PR #239 merges, a wrong value (only one of the two, a bad address, or a secret key) stops the build with a
+Merged PR #239 makes a wrong value (only one of the two, a bad address, or a secret key) stop the build with a
 reason, and the site keeps its previous version.
 
 ### 1.9 The email question (your decision)
@@ -224,9 +235,11 @@ cueory.app rather than cueory.app itself. [Resend domains] Those are email DNS r
 
 ---
 
-## 2. Launch day, Friday, November 13
+## 2. Future account launch day
 
-Do these in order. After each step, check the live site as it says.
+For Thursday, use the [games-only launch checklist](LAUNCH-2026-11-19.md): accounts stay closed and production SQL stays untouched. The full-account steps below remain future reference and require separate approval.
+
+For that future account launch, do these in order. After each step, check the live site as it says.
 
 1. **Check staging one last time.** Open the staging preview in a private window, sign in through Cloudflare, then
    sign in to Cueory with Google (and email, if you chose A).
@@ -247,8 +260,8 @@ Do these in order. After each step, check the live site as it says.
    - `/signin` shows the sign-in form, not "accounts open soon";
    - **Sign in with Google** works with your business Gmail and returns you to cueory.app, showing your initials;
    - `/account` opens with your name, **download my data** gives a file, and **sign out** works;
-   - the flag button on a lesson page sends (after PR #237 merges);
-   - `/privacy`, `/terms` and `/disclaimer` show final text, with no "paste your … here" box.
+   - the flag button on a lesson page sends (implemented in merged PR #237);
+   - `/privacy` describes the behavior actually released. **Unmet release gate:** `/terms` and `/disclaimer` are not ready until Christian supplies and approves the final text and it is implemented and verified; placeholder pages or hidden links do not satisfy this gate.
 7. **Check the lock is still on staging.** Open the staging preview address in a new private window.
    You should see the Cloudflare sign-in page.
 8. **Check the data landed in cueory-prod.** In Supabase **cueory-prod**, open the **SQL Editor**, click **New
@@ -304,7 +317,9 @@ These need your call. None costs money unless you choose a paid option.
 
 ---
 
-## Sources (read 2 November 2026)
+## Sources (original review: 2 November 2026)
+
+These dates refer to the original external-source review, not the repository inventory check of 17 November 2026. The inventory refresh did not reverify dashboard instructions or external-source content.
 
 [GitHub 2FA]: https://docs.github.com/en/authentication/securing-your-account-with-two-factor-authentication-2fa/configuring-two-factor-authentication
 [CF 2FA]: https://developers.cloudflare.com/changelog/post/2025-10-30-email-2FA/

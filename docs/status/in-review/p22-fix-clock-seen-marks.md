@@ -1,0 +1,1 @@
+status: test reliability: every spec that fixes the page clock now marks the promo (30 days) and pop-up (3 hours) seen by that clock, through a shared helper (tests/e2e/clock.ts), so they don't reopen mid-test from 1 December 2026. Tests only.

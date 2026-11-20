@@ -39,7 +39,7 @@ test.describe('Task 210: visible keyboard focus', () => {
   for (const route of routes) {
     test(`${route} gives each Tab stop a visible focus indicator`, async ({ page }) => {
       await page.addInitScript(() => {
-        try { localStorage.setItem('cueory-promo-seen', String(Date.now())); } catch { /* storage unavailable */ }
+        try { localStorage.setItem('cueory-promo-seen', String(Date.now())); localStorage.setItem('cueory-signup-popup-seen', String(Date.now())); } catch { /* storage unavailable */ }
       });
 
       const response = await page.goto(route);
@@ -48,13 +48,17 @@ test.describe('Task 210: visible keyboard focus', () => {
 
       const controls = await page.evaluate((query) => {
         const elements = [...document.querySelectorAll<HTMLElement>(query)];
-        const isReachable = (el: HTMLElement) =>
-          el.tabIndex >= 0 &&
+        const isReachable = (el: HTMLElement) => {
+          // Links inside a closed <details> are in the page but no browser tabs to them: only its summary is a stop.
+          const closedDetails = el.closest('details:not([open])');
+          if (closedDetails && !(el.matches('summary') && el.parentElement === closedDetails)) return false;
+          return el.tabIndex >= 0 &&
           !el.matches(':disabled') &&
           !el.closest('[hidden], [inert]') &&
           el.getClientRects().length > 0 &&
           getComputedStyle(el).display !== 'none' &&
           getComputedStyle(el).visibility === 'visible';
+        };
 
         return elements.flatMap((el, index) => {
           if (!isReachable(el)) return [];
@@ -128,16 +132,15 @@ test.describe('Task 210: visible keyboard focus', () => {
         await page.keyboard.press('Tab');
         const focused = await inspectFocus();
 
-        // On /play, the crossword widget captures Tab to navigate word cells and only releases on Escape.
-        // CuewordGame.tsx moves focus directly to the check button on Escape, jumping over the preceding
-        // 26 letters, erase and cue buttons. We inspect the check button destination, then traverse backward
-        // with Shift+Tab through the skipped controls before pressing Escape again from the grid to return to
-        // the check button, allowing normal forward Tab traversal to proceed from there.
-        // If focus later re-enters the grid, Escape again but do not repeat the already-audited backward walk.
+        // On /play, the crossword grid uses one roving Tab stop. Escape moves focus directly
+        // to erase, after the 26 on-screen letter buttons. Inspect that destination, then walk
+        // backward through the skipped buttons once before returning to erase so normal forward
+        // Tab traversal can resume. If focus later re-enters the grid, Escape without repeating
+        // the already-audited backward walk.
         if (route === '/play' && focused?.isCrosswordCell) {
           await page.keyboard.press('Escape');
-          const checkFocus = await inspectFocus();
-          if (checkFocus && !crosswordBacktracked) {
+          const eraseFocus = await inspectFocus();
+          if (eraseFocus && !crosswordBacktracked) {
             crosswordBacktracked = true;
             let backwardSteps = 0;
             while (backwardSteps < 35) {
@@ -146,7 +149,7 @@ test.describe('Task 210: visible keyboard focus', () => {
               const backFocus = await inspectFocus();
               if (!backFocus || backFocus.isCrosswordCell) {
                 // Stepped back into the crossword grid or out of the skipped controls; press Escape
-                // to return focus directly to the check button so normal forward Tab can resume.
+                // to return focus directly to the erase button so normal forward Tab can resume.
                 if (backFocus?.isCrosswordCell) {
                   await page.keyboard.press('Escape');
                 } else {

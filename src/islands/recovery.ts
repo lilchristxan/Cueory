@@ -16,7 +16,7 @@ export interface RecoveryAuth extends CodeExchangeAuth, ResetPasswordAuth {
   };
 }
 
-export type RecoveryResult = { kind: 'ready'; auth: RecoveryAuth } | { kind: 'required' } | { kind: 'unavailable' };
+export type RecoveryResult = { kind: 'ready'; auth: RecoveryAuth; userId: string } | { kind: 'required' } | { kind: 'unavailable' };
 
 export async function establishRecovery(load: AuthLoader<RecoveryAuth>, href: string): Promise<RecoveryResult> {
   const callback = readCallback(href);
@@ -34,7 +34,7 @@ export async function establishRecovery(load: AuthLoader<RecoveryAuth>, href: st
     const userId = exchangedUserId(data);
     if (error || !userId) return { kind: 'required' };
     const typed = (data as { redirectType?: unknown }).redirectType === 'recovery';
-    return typed || recoveryUser === userId ? { kind: 'ready', auth } : { kind: 'required' };
+    return typed || recoveryUser === userId ? { kind: 'ready', auth, userId } : { kind: 'required' };
   } catch {
     return { kind: 'required' };
   } finally {

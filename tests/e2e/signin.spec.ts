@@ -108,7 +108,13 @@ test.beforeAll(async () => {
         await new Promise(resolve => setTimeout(resolve, 150));
         return { error: params.has('fail') ? { status: 400, message: 'provider-private-detail' } : null };
       };
+      let sessionUser = { id: 'fake-user-1' };
+      window.switchAccount = id => {
+        sessionUser = id ? { id } : null;
+        for (const listener of listeners) listener(id ? 'SIGNED_IN' : 'SIGNED_OUT', sessionUser ? { user: sessionUser } : null);
+      };
       const auth = {
+        getSession: async () => ({ data: { session: sessionUser ? { user: sessionUser } : null }, error: null }),
         signUp: () => call('signup'),
         signInWithOAuth: () => call('google'),
         signInWithPassword() {
@@ -139,12 +145,17 @@ test.beforeAll(async () => {
       const mode = params.get('mode');
       createRoot(document.getElementById('fixture')).render(mode === 'reset' ? <ResetPassword auth={supplied} />
         : mode === 'callback' ? <AuthCallback auth={supplied} />
-        : <SignIn auth={supplied} mode={mode === 'signup' ? 'signup' : 'signin'} />);
+        : <SignIn auth={supplied} accountsOn={!params.has('closed')} mode={mode === 'signup' ? 'signup' : 'signin'} />);
     `, resolveDir: process.cwd(), loader: 'tsx' },
     bundle: true, write: false, format: 'iife', platform: 'browser', jsx: 'automatic',
     resolveExtensions: ['.ts', '.tsx', '.js', '.jsx', '.json'],
     define: { 'process.env.NODE_ENV': '"production"' },
     plugins: [{ name: 'fixture-client', setup(builder) {
+      builder.onResolve({ filter: /\/recoveryclient$/ }, () => ({ path: 'recovery', namespace: 'recovery-fixture' }));
+      builder.onLoad({ filter: /.*/, namespace: 'recovery-fixture' }, () => ({ contents: `
+        import { getSupabase } from './supabaseclient';
+        export async function getRecoveryAuth() { return (await getSupabase())?.auth ?? null; }
+      `, loader: 'js', resolveDir: process.cwd() + '/src/islands' }));
       builder.onResolve({ filter: /\/supabaseclient(?:\.ts)?$/ }, () => ({ path: 'client', namespace: 'fixture' }));
       builder.onLoad({ filter: /.*/, namespace: 'fixture' }, () => ({ contents: `
         export async function getSupabase() {
@@ -174,6 +185,35 @@ const calls = (page: Page) => page.evaluate(() => (window as unknown as { authCa
 const clientLoads = (page: Page) => page.evaluate(() => (window as unknown as { clientLoads: number }).clientLoads);
 const fixtureLog = (page: Page) => page.evaluate(() => JSON.parse(sessionStorage.getItem('fixture-log') ?? '[]') as string[]);
 const recoveryLink = 'mode=reset&code=fake-code-1&recovery=event';
+
+test.describe('accounts gate (accountsOpen is false)', () => {
+  for (const mode of ['signin', 'signup'] as const) {
+    for (const client of ['shared', 'injected'] as const) {
+      test(`${mode} with the gate closed never loads or calls Supabase (${client} client)`, async ({ page }) => {
+        await fixture(page, `mode=${mode}&closed${client === 'injected' ? '&client=injected' : ''}`);
+        await expect(page.getByTestId('signin-unavailable')).toContainText('accounts open soon');
+        await expect(page.getByRole('link', { name: 'get launch updates', exact: true })).toHaveAttribute('href', '/#signup');
+        await expect(page.locator('form')).toHaveCount(0);
+        await page.waitForTimeout(300);
+        expect(await clientLoads(page)).toBe(0);
+        expect(await calls(page)).toEqual([]);
+      });
+    }
+    test(`${mode} with the gate open still shows the form`, async ({ page }) => {
+      await fixture(page, `mode=${mode}&client=injected`);
+      await expect(page.locator('form')).toHaveCount(1);
+      await expect(page.getByTestId('signin-unavailable')).toHaveCount(0);
+    });
+  }
+
+  for (const path of ['/signin', '/signup']) test(`${path} is built closed: the message is in the page itself`, async ({ request }) => {
+    const html = await (await request.get(path)).text();
+    expect(html).toContain('data-testid="signin-unavailable"');
+    expect(html).toContain('accounts open soon');
+    expect(html).not.toContain('opening sign-in');
+    expect(html).not.toMatch(/<form[\s>]/);
+  });
+});
 
 test.describe('shared client loading', () => {
   test('keeps controls closed until the configured client is ready', async ({ page }) => {
@@ -291,6 +331,21 @@ test.describe('enabled account components with fake shared auth', () => {
     expect((await fixtureLog(page))[0]).toBe('exchange:fake-code-1 at ' + `?mode=reset&code=fake-code-1&recovery=${recovery}`);
     expect(page.url()).not.toContain('code=');
     expect(await clientLoads(page)).toBe(1);
+  });
+
+  for (const switchedBack of [false, true]) test(`account switch blocks recovery${switchedBack ? ' even after switching back' : ''}`, async ({ page }) => {
+    await fixture(page, recoveryLink);
+    await page.getByLabel('password', { exact: true }).fill(fakePassword);
+    await page.evaluate(back => {
+      const fixture = window as unknown as { switchAccount(id: string | null): void };
+      fixture.switchAccount('fake-user-2');
+      if (back) fixture.switchAccount('fake-user-1');
+    }, switchedBack);
+    await expect(page.getByRole('status')).toHaveText('your signed-in account changed. nothing was saved. request a new reset link.');
+    await expect(page.getByLabel('password', { exact: true })).toHaveValue('');
+    await expect(page.getByRole('button', { name: 'save new password' })).toHaveAttribute('aria-disabled', 'true');
+    await page.getByRole('button', { name: 'save new password' }).click({ force: true });
+    expect(await calls(page)).toEqual(['exchange']);
   });
 
   test('verified recovery saves once and clears the field', async ({ page }) => {

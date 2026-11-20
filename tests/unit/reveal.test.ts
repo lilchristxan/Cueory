@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { waitsForReveal } from '../../src/scripts/reveal';
+import { revealInstantly, waitsForReveal } from '../../src/scripts/reveal';
 
 describe('home page sections fade in once (D-62)', () => {
   it('only a section that starts below the window waits to fade in; one already on screen never hides', () => {
@@ -7,5 +7,35 @@ describe('home page sections fade in once (D-62)', () => {
     expect(waitsForReveal(1400, 900)).toBe(true);
     expect(waitsForReveal(899, 900)).toBe(false);
     expect(waitsForReveal(-200, 900)).toBe(false);
+  });
+
+  it('reveals a waiting section instantly on focus and unobserves it', () => {
+    const section = {
+      dataset: { reveal: 'waiting' },
+    } as unknown as HTMLElement;
+    let unobserved: Element | null = null;
+    const observer = {
+      unobserve: (el: Element) => {
+        unobserved = el;
+      },
+    } as unknown as IntersectionObserver;
+    revealInstantly(section, observer);
+    expect(section.dataset.reveal).toBe('instant');
+    expect(unobserved).toBe(section);
+  });
+
+  it('leaves a non-waiting section alone', () => {
+    const section = {
+      dataset: { reveal: 'shown' },
+    } as unknown as HTMLElement;
+    let called = false;
+    const observer = {
+      unobserve: () => {
+        called = true;
+      },
+    } as unknown as IntersectionObserver;
+    revealInstantly(section, observer);
+    expect(section.dataset.reveal).toBe('shown');
+    expect(called).toBe(false);
   });
 });

@@ -1,4 +1,5 @@
 import { useId, useRef, useState } from 'react';
+import { moveRadioWithArrows } from './radioarrows';
 
 interface Props {
   /** The review owner supplies its completed result, never a URL flag or a timer. */
@@ -33,7 +34,8 @@ function ReminderChoices() {
     </p>
     <div id={`${id}-choices`} hidden={!open} className="mt-6 rounded-lg border border-line bg-surface p-6"
       onKeyDown={event => { if (event.key === 'Escape') { event.stopPropagation(); close(); } }}>
-      <fieldset>
+      {/* Arrow keys move the choice with a visible focus ring in every engine (radioarrows.ts). */}
+      <fieldset onKeyDown={(event) => { moveRadioWithArrows(event); }}>
         <legend className="text-lg font-bold">how would you like a review reminder?</legend>
         <p className="mt-2 text-ink-soft">choose an option to preview it. reminders are coming later.</p>
         <div className="mt-4 space-y-3">

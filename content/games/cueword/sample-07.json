@@ -1,0 +1,57 @@
+{
+  "status": "sample",
+  "level": "easy",
+  "grid": [
+    ".ABC.",
+    "DEFGH",
+    "IJKLM",
+    "NOPQR",
+    ".STU."
+  ],
+  "clues": {
+    "across": [
+      {
+        "number": 1,
+        "text": "[sample cue]"
+      },
+      {
+        "number": 4,
+        "text": "[sample cue]"
+      },
+      {
+        "number": 6,
+        "text": "[sample cue]"
+      },
+      {
+        "number": 7,
+        "text": "[sample cue]"
+      },
+      {
+        "number": 8,
+        "text": "[sample cue]"
+      }
+    ],
+    "down": [
+      {
+        "number": 1,
+        "text": "[sample cue]"
+      },
+      {
+        "number": 2,
+        "text": "[sample cue]"
+      },
+      {
+        "number": 3,
+        "text": "[sample cue]"
+      },
+      {
+        "number": 4,
+        "text": "[sample cue]"
+      },
+      {
+        "number": 5,
+        "text": "[sample cue]"
+      }
+    ]
+  }
+}

@@ -1,0 +1,1 @@
+status: Adds a unit source guard for 320px reflow: no bare fixed width above 288px in Tailwind or CSS, and whitespace-nowrap or flex-nowrap only in the known, safe places. Test only, no source change. Awaiting review.

@@ -1,0 +1,1 @@
+status: test reliability: the vial hover test waits for the ring's animations to finish instead of a fixed 800 ms, and the pop-up spec polls for focus returning after the report closes instead of reading it once. Tests only.

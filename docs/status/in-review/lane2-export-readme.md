@@ -1,0 +1,1 @@
+status: lane 2, download my data now includes a README.txt (first with the spreadsheet files) that explains the data file and every spreadsheet file in one plain line each; a unit test keeps it in step with the files the export makes.

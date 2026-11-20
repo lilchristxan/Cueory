@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { countsInWords, filterItems, parseItems, STATUS_ORDER, type ConceptItem } from '../../src/islands/conceptmap.ts';
+import { countsInWords, filterItems, parseItems, STATUS_ORDER, type ConceptItem } from '../../src/islands/concept-map.ts';
 
 const items: ConceptItem[] = [
   { concept: 'Colors', status: 'got it', description: 'everyday color names' },

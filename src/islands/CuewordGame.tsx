@@ -1,208 +1,467 @@
+import '../styles/crossword.css';
 import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from 'react';
-import { dayLabel } from './daily';
+import { browserStorage } from '../scripts/storage';
 import { localDay, reportRound } from './gameresults';
+import { printGame } from './gameprint';
+import { GameHelpCard, useGameHelp } from './GameHelp';
+import GameHeader from './GameHeader';
 import ResultBrandMark from './ResultBrandMark';
+import { dayLabel } from './daily';
+import { playSolvedTone } from './solvetone';
+import { useSharedGameSettings } from './GameSettings.tsx';
+import PrintLogo from './PrintLogo';
 import {
-  checkAll, checkWord, currentWord, emptyState, erase, isSolved, move, nextWord, numbering,
-  parsePuzzle, previousWord, revealCue, selectCell, shareLine, toggleDirection, type, words,
-  type CuewordPuzzle, type CuewordState, type Direction,
+  announceFirstEntry, arrow, autocheckAll, backspace, check, clueLeavesGrid, countsForStreak, currentWord, deleteLetter, emptyState, enter, getResult,
+  isFilledWrong, isLocked, isSolved, loadCrosswordSettings, moveClue, nextWord, numbering, parsePuzzle, previousWord,
+  reveal, saveCrosswordSettings, selectCell, selectOrToggleCell, words,
+  type CrosswordSettings, type CuewordPuzzle, type CuewordState, type CuewordWord, type Direction, type HelpScope,
 } from './cueword';
 
 interface Props { puzzle: CuewordPuzzle; name: string }
-const button = 'min-h-11 min-w-11 rounded-md border border-control bg-page px-4 py-2 text-ink disabled:opacity-50';
-const letterButton = 'flex size-11 shrink-0 items-center justify-center rounded-md border border-control bg-page text-ink';
+const letterButton = 'flex min-h-(--tap-min) min-w-(--tap-min) items-center justify-center rounded-md border border-control bg-page px-3 text-ink';
+const quietButton = 'min-h-(--tap-min) min-w-(--tap-min) rounded-md border border-control bg-page px-4 py-2 text-ink';
+const SCOPES: readonly HelpScope[] = ['square', 'word', 'puzzle'];
+type Help = { kind: 'check' | 'reveal'; scope: HelpScope };
+const CHECKBOX_SETTINGS: ReadonlyArray<[Exclude<keyof CrosswordSettings, 'clueSize'>, string]> = [
+  ['autocheck', "autocheck: mark each letter right or wrong as you type. this counts as help, so the solve won't extend your streak."],
+  ['skipFilled', 'skip squares that already have a letter'],
+  ['jumpBack', 'at the end of a word, jump back to its first blank square'],
+  ['jumpNext', 'when a word is full, jump to the next cue with a blank square'],
+  ['showTimer', 'show the timer'],
+  ['playSound', 'play a sound when solved'],
+];
 
 function elapsedText(seconds: number): string {
-  return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
+  return Math.floor(seconds / 60) + ':' + String(seconds % 60).padStart(2, '0');
+}
+
+/**
+ * A square's accessible name. A numbered square starts with its number, the text it shows, so the name contains the
+ * visible label (WCAG 2.5.3, axe label-content-name-mismatch).
+ */
+function cellLabel(state: CuewordState, cell: number, r: number, c: number, word: CuewordWord, number: number | null): string {
+  const letter = state.entries[cell];
+  let label = (number !== null ? number + ', ' : '') + 'row ' + (r + 1) + ', column ' + (c + 1) + ', ' + word.number + ' ' + word.direction + ', ' + (letter ? 'letter ' + letter : 'empty');
+  if (letter && state.pencil[cell]) label += ', pencil';
+  if (state.cued.includes(cell)) label += ', revealed';
+  else if (state.checks[cell] === 'right') label += ', checked right';
+  else if (state.checks[cell] === 'wrong') label += ', marked wrong';
+  return label;
 }
 
 function Board({ puzzle, name }: Props) {
   const [state, setState] = useState(() => emptyState(puzzle));
-  const [said, setSaid] = useState('');
+  const [settings, setSettings] = useState<CrosswordSettings>(() => loadCrosswordSettings(browserStorage()));
+  // Pencil mode is gone (Christian's brief, 2026-11-17): every letter is a pen letter.
+  const pencil = false;
+  const [paused, setPaused] = useState(false);
   const [elapsed, setElapsed] = useState(0);
-  const [copied, setCopied] = useState('');
+  const [warned, setWarned] = useState(false);
+  const [asking, setAsking] = useState<Help | null>(null);
+  const [showList, setShowList] = useState(false);
+  const [openMenu, setOpenMenu] = useState<'check' | 'reveal' | null>(null);
+  const [said, setSaid] = useState('');
   const [today] = useState(() => new Date());
-  const started = useRef(Date.now());
+  const [counts, setCounts] = useState(true);
   const cells = useRef(new Map<number, HTMLButtonElement>());
   const focusGrid = useRef(false);
   const result = useRef<HTMLDivElement>(null);
-  const checkButton = useRef<HTMLButtonElement>(null);
+  const eraseButton = useRef<HTMLButtonElement>(null);
+  const resumeButton = useRef<HTMLButtonElement>(null);
+  const confirmButton = useRef<HTMLButtonElement>(null);
+  const menus = useRef(new Map<string, HTMLDetailsElement>());
   const help = useId();
+  const howToPlay = useGameHelp('cueword');
+  const { soundAllowed } = useSharedGameSettings();
+  const warning = useId();
+  const listId = useId();
   const list = useMemo(() => words(puzzle), [puzzle]);
   const numbers = useMemo(() => numbering(puzzle), [puzzle]);
   const width = puzzle.grid[0]!.length;
+  const level = puzzle.level ?? 'easy';
   const active = currentWord(state);
   const clue = puzzle.clues[active.direction].find((item) => item.number === active.number)!;
   const solved = isSolved(state);
-  const shared = shareLine({ solved, seconds: elapsed, cues: state.cued.length }, dayLabel(today), name);
+  const wrongFill = isFilledWrong(state);
+  const gameResult = getResult(state, elapsed);
+  const helped = state.assists > 0;
 
   useEffect(() => {
-    if (solved) return;
-    const timer = window.setInterval(() => setElapsed(Math.floor((Date.now() - started.current) / 1000)), 1000);
+    if (solved || paused) return;
+    const timer = window.setInterval(() => setElapsed((value) => value + 1), 1000);
     return () => window.clearInterval(timer);
-  }, [solved]);
+  }, [solved, paused]);
+
+  useEffect(() => { saveCrosswordSettings(browserStorage(), settings); }, [settings]);
 
   useEffect(() => {
     if (solved) result.current?.focus();
-    else if (focusGrid.current) cells.current.get(state.cell)?.focus();
+    else if (focusGrid.current && !paused) {
+      const cell = cells.current.get(state.cell);
+      cell?.focus();
+      // Native focus can leave a partly visible square clipped by the large
+      // board's scroll area. Reveal the whole target after keyboard/tap moves.
+      if (level === 'hard') cell?.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'instant' });
+    }
     focusGrid.current = false;
-  }, [state, solved]);
+  }, [state, solved, level, paused]);
 
-  // A solved grid is reported once, for the stats panel, which keeps it only if the student turned stats on (D-76).
+  useEffect(() => { if (paused) resumeButton.current?.focus(); }, [paused]);
+  const anyEntry = state.entries.some(Boolean);
+  // Tells /play's daily status that today's crossword has started (#735). Once a day, on the first entry.
+  useEffect(() => { if (anyEntry) announceFirstEntry(window, localDay(today)); }, [anyEntry, today]);
+  useEffect(() => { if (asking) confirmButton.current?.focus(); }, [asking]);
+
   const reported = useRef(false);
   useEffect(() => {
     if (!solved || reported.current) return;
     reported.current = true;
-    reportRound({ game: 'cueword', day: localDay(today), solved: true, tries: state.cued.length });
-  }, [solved]);
+    const streak = countsForStreak(today, Date.now(), state.assists);
+    setCounts(streak);
+    // The shared "game sounds" switch (#734) silences every game, whatever the crossword's own sound setting says.
+    if (soundAllowed(settings.playSound)) playSolvedTone();
+    reportRound({
+      game: 'cueword', day: localDay(today), solved: true, tries: state.assists, streak,
+      card: {
+        game: 'cueword', name, date: dayLabel(today), level: gameResult.level,
+        shareResult: `${gameResult.level} · solved in ${elapsedText(gameResult.seconds)}${helped ? ' with help' : ''}`,
+        result: 'solved', summary: helped ? "you completed today's crossword with help." : "you completed today's crossword.",
+        stats: [
+          { label: 'level', value: gameResult.level },
+          { label: 'time', value: elapsedText(gameResult.seconds) },
+          { label: 'help', value: helped ? 'used' : 'none' },
+        ],
+        path: '/play/crossword',
+      },
+    });
+  }, [solved, today, name, gameResult.level, gameResult.seconds, state.assists, helped, settings.playSound, soundAllowed]);
 
   const update = (next: CuewordState, focus = true) => {
-    if (!solved && isSolved(next)) setElapsed(Math.floor((Date.now() - started.current) / 1000));
     focusGrid.current = focus;
     setState(next);
   };
 
+  const closeMenus = () => { for (const menu of menus.current.values()) menu.open = false; setOpenMenu(null); };
+  const menuRef = (key: string) => (element: HTMLDetailsElement | null) => { if (element) menus.current.set(key, element); else menus.current.delete(key); };
+
+  const applyHelp = ({ kind, scope }: Help) => {
+    const next = kind === 'check' ? check(state, scope) : reveal(state, scope);
+    const wrong = kind === 'check' ? next.checks.filter((mark) => mark === 'wrong').length : 0;
+    setSaid(kind === 'check'
+      ? (wrong ? `${wrong} ${wrong === 1 ? 'letter is' : 'letters are'} marked wrong.` : 'no wrong letters found.')
+      : `${scope} revealed.`);
+    update(next);
+  };
+
+  const askHelp = (requested: Help) => {
+    closeMenus();
+    if (solved || paused) return;
+    if (!warned) { setAsking(requested); return; }
+    applyHelp(requested);
+  };
+
+  const confirmHelp = () => {
+    if (!asking) return;
+    setWarned(true);
+    const requested = asking;
+    setAsking(null);
+    applyHelp(requested);
+  };
+
+  const cancelHelp = () => { setAsking(null); focusGrid.current = true; setState({ ...state }); };
+
+  const changeSetting = <K extends keyof CrosswordSettings>(key: K, value: CrosswordSettings[K]) => {
+    setSettings((current) => ({ ...current, [key]: value }));
+    if (key === 'autocheck' && value === true && !solved) {
+      setWarned(true);
+      update(autocheckAll(state), false);
+    }
+  };
+
+  const togglePause = () => {
+    if (solved) return;
+    setSaid(paused ? 'puzzle resumed.' : 'puzzle paused. your letters are hidden until you resume.');
+    if (paused) focusGrid.current = true;
+    setPaused(!paused);
+  };
+
+  const typeLetter = (letter: string) => update(enter(state, letter, settings, pencil));
+
+  // The shared print helper (Task 641): marks the page for the crossword's print rules and clears the mark after printing.
+  const printPuzzle = () => printGame('crossword');
+
   const key = (event: KeyboardEvent<HTMLDivElement>) => {
-    if (solved || event.ctrlKey || event.metaKey) return;
+    if (solved || paused || event.ctrlKey || event.metaKey) return;
     let next: CuewordState;
     if (event.altKey && event.key === 'ArrowLeft') next = previousWord(state);
     else if (event.altKey && event.key === 'ArrowRight') next = nextWord(state);
     else if (event.altKey) return;
-    else if (/^[a-z]$/i.test(event.key)) next = type(state, event.key);
-    else if (event.key === 'Backspace' || event.key === 'Delete') next = erase(state);
-    else if (event.key === 'ArrowLeft' || event.key === 'ArrowRight' || event.key === 'ArrowUp' || event.key === 'ArrowDown') next = move(state, event.key);
-    else if (event.key === ' ') next = toggleDirection(state);
+    else if (/^[a-z]$/i.test(event.key)) next = enter(state, event.key, settings, pencil);
+    else if (event.key === 'Backspace') next = backspace(state);
+    else if (event.key === 'Delete') next = deleteLetter(state);
+    else if (event.key === 'Tab') {
+      // Tab on the last clue (Shift+Tab on the first) is left to the browser, so focus leaves the grid: no keyboard trap.
+      const delta = event.shiftKey ? -1 : 1;
+      if (clueLeavesGrid(state, delta)) return;
+      next = moveClue(state, delta);
+    }
+    else if (event.key === 'ArrowLeft' || event.key === 'ArrowRight' || event.key === 'ArrowUp' || event.key === 'ArrowDown') next = arrow(state, event.key);
     else if (event.key === 'Escape') {
       event.preventDefault();
-      checkButton.current?.focus();
+      eraseButton.current?.focus();
       return;
     } else return;
     event.preventDefault();
     update(next);
   };
 
-  const check = (all = false) => {
-    const next = all ? checkAll(state) : checkWord(state);
-    const checked = all ? list.flatMap((word) => word.cells) : active.cells;
-    const unique = [...new Set(checked)];
-    const wrong = unique.filter((cell) => next.checks[cell] === 'wrong').length;
-    const empty = unique.filter((cell) => next.checks[cell] === 'empty').length;
-    const where = all ? 'the puzzle' : `${active.number} ${active.direction}`;
-    setSaid(`${wrong} ${wrong === 1 ? 'letter is' : 'letters are'} wrong in ${where}. ${empty} ${empty === 1 ? 'cell is' : 'cells are'} empty.`);
-    update(next, false);
-  };
-
-  const cue = () => {
-    const next = revealCue(state, state.cell);
-    if (next === state) return;
-    update(next);
-    setSaid(`letter ${next.entries[state.cell]?.toLowerCase()} revealed. ${next.cued.length} of 3 cues used. this letter stays in place.`);
-  };
-
-  const share = async () => {
-    try {
-      await navigator.clipboard.writeText(shared);
-      setCopied(`copied: ${shared}`);
-    } catch {
-      setCopied(shared);
-    }
+  const chooseClue = (word: CuewordWord) => {
+    const blank = word.cells.find((cell) => !state.entries[cell] && !isLocked(state, cell));
+    update(selectCell(state, blank ?? word.cells[0]!, word.direction));
   };
 
   return (
-    <section aria-label={`${name} puzzle`} data-testid="cueword">
-      {puzzle.sample && <p className="text-sm text-ink-soft">today's puzzle is a sample</p>}
-      <p className="mt-2 text-sm text-ink-soft"><span className="tabular-nums">{elapsedText(elapsed)}</span> · {state.cued.length} of 3 cues used</p>
-      <p className="mt-4 font-medium" aria-live="polite" aria-atomic="true" data-testid="cueword-clue">
-        {active.number} {active.direction}: {clue.text}
-      </p>
-      <p id={help} className="mt-2 text-sm text-ink-soft">
-        type letters. arrows move, space switches direction, alt+left or alt+right changes word, and tab leaves the grid.
-        the outlined and underlined cells are the current word.
-      </p>
-
-      <div className="mt-4 max-w-full overflow-x-auto">
-        <div role="grid" aria-label={`${name} grid`} aria-describedby={help} aria-keyshortcuts="Alt+ArrowLeft Alt+ArrowRight" aria-rowcount={puzzle.grid.length} aria-colcount={width} className="mx-auto flex w-max flex-col gap-1 p-1" onKeyDown={key}>
-          {puzzle.grid.map((row, r) => (
-            <div role="row" aria-rowindex={r + 1} key={r} className="flex gap-1">
-              {[...row].map((answer, c) => {
-                const cell = r * width + c;
-                if (answer === '.') return <div role="gridcell" aria-colindex={c + 1} aria-label="gap" key={cell} className="size-11" />;
-                const word = list.find((item) => item.direction === state.direction && item.cells.includes(cell)) ?? list.find((item) => item.cells.includes(cell))!;
-                const selected = active.cells.includes(cell);
-                const cued = state.cued.includes(cell);
-                const mark = state.checks[cell];
-                const number = numbers[r]![c];
-                const label = `row ${r + 1}, column ${c + 1}, ${word.number} ${word.direction}, ${state.entries[cell] ? `letter ${state.entries[cell]}` : 'empty'}${cued ? ', cued' : mark ? `, ${mark}` : ''}`;
-                return (
-                  <div role="gridcell" aria-colindex={c + 1} aria-selected={selected} key={cell}>
-                    <button
-                      ref={(element) => { if (element) cells.current.set(cell, element); else cells.current.delete(cell); }}
-                      type="button"
-                      tabIndex={cell === state.cell ? 0 : -1}
-                      disabled={solved}
-                      aria-label={label}
-                      aria-pressed={cell === state.cell}
-                      data-cell={cell}
-                      data-cued={cued || undefined}
-                      className={`relative flex size-11 items-center justify-center rounded-sm border text-lg text-ink ${selected ? 'border-b-4 border-ink outline outline-2 outline-ink underline decoration-2 underline-offset-4' : 'border-control'} ${cell === state.cell ? 'bg-surface' : 'bg-page'}`}
-                      onClick={() => update(selectCell(state, cell))}
-                    >
-                      {number !== null && <span className="absolute left-0 top-0 px-1 text-xs" aria-hidden="true">{number}</span>}
-                      <span aria-hidden="true">{state.entries[cell] || '\u00a0'}</span>
-                      {(cued || mark) && <span className="absolute right-0 bottom-0 px-1 text-xs" aria-hidden="true">{cued ? 'cue' : mark === 'wrong' ? '×' : mark === 'right' ? '✓' : '?'}</span>}
-                    </button>
-                  </div>
-                );
-              })}
+    <section className="crossword-panel" aria-label={name + ' puzzle'} data-testid="cueword" data-clue-size={settings.clueSize}>
+      {/* The corner row (Christian's brief): the gear at the top left opens the crossword's settings with the shared ones;
+          print and the "?" at the top right. */}
+      <div className="crossword-no-print">
+        <GameHeader
+          name={name}
+          help={howToPlay}
+          settings={
+            <div data-testid="crossword-settings">
+              <fieldset>
+                <legend>{name}</legend>
+                {CHECKBOX_SETTINGS.map(([setting, label]) => (
+                  <label key={setting} className="game-settings-option">
+                    <span>{label}</span>
+                    <input type="checkbox" checked={settings[setting]} onChange={(event) => changeSetting(setting, event.target.checked)} />
+                  </label>
+                ))}
+              </fieldset>
+              <fieldset>
+                <legend>cue text size</legend>
+                {(['small', 'medium', 'large'] as const).map((size) => (
+                  <label key={size} className="game-settings-option">
+                    <span>{size}</span>
+                    <input type="radio" name={help + '-clue-size'} value={size} checked={settings.clueSize === size} onChange={() => changeSetting('clueSize', size)} />
+                  </label>
+                ))}
+              </fieldset>
             </div>
-          ))}
+          }
+          end={
+            <button type="button" className="corner-button corner-button-quiet" aria-label="print this puzzle" onClick={printPuzzle}>
+              <svg aria-hidden="true" viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M6 9V3h12v6"/><rect x="3" y="9" width="18" height="9" rx="2"/><path d="M7 14h10v7H7z"/></svg>
+            </button>
+          }
+        />
+      </div>
+      <div className="crossword-toolbar crossword-no-print">
+        {/* Check and reveal move to a new row together, never split across two rows (they only stack when even the pair
+            is wider than the column, at the largest text on the narrowest screens). */}
+        <div className="crossword-help-pair">
+        {(['check', 'reveal'] as const).map((kind) => (
+          <details key={kind} ref={menuRef(kind)} className="crossword-help" data-testid={'crossword-' + kind}
+            onToggle={(event) => { const open = event.currentTarget.open; setOpenMenu((current) => open ? kind : current === kind ? null : current); }}>
+            <summary className={quietButton.replace('px-4', 'px-3') + ' crossword-menu-button'}>{kind}</summary>
+            {/* Rendered only while open, so closed menus leave no hidden buttons behind. */}
+            {openMenu === kind && (
+              <div className="crossword-help-panel crossword-menu-panel" role="group" aria-label={kind}>
+                {SCOPES.map((scope) => (
+                  <button key={scope} type="button" className={quietButton} disabled={solved || paused} onClick={() => askHelp({ kind, scope })}>{kind} {scope}</button>
+                ))}
+              </div>
+            )}
+          </details>
+        ))}
         </div>
       </div>
 
-      {!solved && (
-        <>
-          <div className="mx-auto mt-6 flex max-w-sm flex-wrap justify-center gap-1" role="group" aria-label="letters">
-            {[...'abcdefghijklmnopqrstuvwxyz'].map((letter) => <button type="button" key={letter} className={letterButton} onClick={() => update(type(state, letter))}>{letter}</button>)}
+      <GameHelpCard help={howToPlay} name={name} />
+
+      {asking && (
+        <div className="crossword-warning crossword-no-print" role="alertdialog" aria-labelledby={warning + '-title'} aria-describedby={warning} data-testid="crossword-warning"
+          onKeyDown={(event) => { if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); cancelHelp(); } }}>
+          <p id={warning + '-title'} className="font-medium">use {asking.kind} {asking.scope}?</p>
+          <p id={warning} className="mt-1 text-sm">check and reveal still count as solved, but today's crossword won't extend your streak.</p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button ref={confirmButton} type="button" className={quietButton} onClick={confirmHelp}>yes, {asking.kind}</button>
+            <button type="button" className={quietButton} onClick={cancelHelp}>cancel</button>
           </div>
-          <div className="mt-3 flex flex-wrap justify-center gap-2" role="group" aria-label="puzzle controls">
-            <button type="button" className={button} onClick={() => update(erase(state))}>erase</button>
-            <button type="button" className={button} onClick={cue} disabled={state.cued.length >= 3 || state.cued.includes(state.cell)}>cue</button>
-            <button ref={checkButton} type="button" className={button} onClick={() => check()}>check</button>
-            <button type="button" className={button} onClick={() => check(true)}>check all</button>
-          </div>
-          <p className="mt-2 text-sm text-ink-soft">× wrong · ✓ right · ? empty · a cued letter stays in place</p>
-        </>
+        </div>
       )}
 
-      <div className="mt-6 grid gap-6 sm:grid-cols-2">
-        {(['across', 'down'] as const).map((direction: Direction) => (
-          <div key={direction}>
-            <h2 className="text-lg font-medium">{direction}</h2>
-            <ul className="mt-2 flex flex-col gap-1" aria-label={`${direction} clues`}>
-              {puzzle.clues[direction].map((item) => {
-                const word = list.find((candidate) => candidate.direction === direction && candidate.number === item.number)!;
-                return <li key={item.number}><button type="button" className={`${button} w-full text-left ${active.direction === direction && active.number === item.number ? 'font-medium underline decoration-2 underline-offset-4' : ''}`} disabled={solved} onClick={() => update(selectCell(state, word.cells[0]!, direction))}>{item.number}. {item.text}</button></li>;
-              })}
-            </ul>
+      <PrintLogo />
+      <div className="crossword-timer crossword-no-print mt-2">
+        {settings.showTimer && <span className="tabular-nums" data-testid="crossword-time">time: {elapsedText(elapsed)}</span>}
+        {!solved && (
+          <button type="button" className="corner-button corner-button-quiet" aria-label={paused ? 'resume puzzle' : 'pause puzzle'} onClick={togglePause}>
+            <span aria-hidden="true">{paused ? '▶' : 'Ⅱ'}</span>
+          </button>
+        )}
+      </div>
+      {/* The keys, for screen readers (the grid points here); everyone else has them in the "?" (Christian's brief). */}
+      <p id={help} className="sr-only">
+        type letters. arrows move. space switches direction. tab goes to the next cue, and past the last cue leaves the grid. escape leaves the grid too.
+        {level === 'hard' && ' swipe the board sideways to see more squares. keyboard: focus the board scroll area to scroll, or use arrows on a square to move through the grid.'}
+      </p>
+
+      {paused ? (
+        <div className="crossword-paused mt-4" data-testid="crossword-paused">
+          <p className="font-medium">puzzle paused</p>
+          <p className="mt-1 text-sm text-ink-soft">your letters are hidden until you resume. the timer is stopped.</p>
+          <button ref={resumeButton} type="button" className={quietButton + ' mt-3'} onClick={togglePause}>resume</button>
+        </div>
+      ) : (
+        <div
+          className="crossword-board-wrap mt-4"
+          data-level={level}
+          role={level === 'hard' ? 'region' : undefined}
+          aria-label={level === 'hard' ? name + ' board scroll area' : undefined}
+          aria-describedby={level === 'hard' ? help : undefined}
+          tabIndex={level === 'hard' ? 0 : undefined}
+        >
+          <div
+            role="grid"
+            aria-label={name + ' grid'}
+            aria-describedby={help}
+            aria-keyshortcuts="Tab Shift+Tab Space Escape Alt+ArrowLeft Alt+ArrowRight"
+            aria-rowcount={puzzle.grid.length}
+            aria-colcount={width}
+            className="crossword-board"
+            data-level={level}
+            onKeyDown={key}
+          >
+            {puzzle.grid.map((row, r) => (
+              <div role="row" aria-rowindex={r + 1} key={r} className="crossword-row">
+                {[...row].map((answer, c) => {
+                  const cell = r * width + c;
+                  if (answer === '.') return <div role="gridcell" aria-colindex={c + 1} aria-label="black square" key={cell} className="crossword-gap" />;
+                  const word = list.find((item) => item.direction === state.direction && item.cells.includes(cell)) ?? list.find((item) => item.cells.includes(cell))!;
+                  const selected = active.cells.includes(cell);
+                  const current = cell === state.cell;
+                  const number = numbers[r]![c];
+                  const revealed = state.cued.includes(cell);
+                  const mark = revealed ? undefined : state.checks[cell];
+                  const classes = 'crossword-cell' + (selected ? ' crossword-cell-word' : '') + (current ? ' crossword-cell-current' : '') +
+                    (state.entries[cell] && state.pencil[cell] ? ' crossword-cell-pencil' : '') + (revealed ? ' crossword-cell-revealed' : '') +
+                    (mark === 'wrong' ? ' crossword-cell-wrong' : '') + (mark === 'right' ? ' crossword-cell-right' : '');
+                  return (
+                    <div role="gridcell" aria-colindex={c + 1} aria-selected={selected} key={cell}>
+                      <button
+                        ref={(element) => { if (element) cells.current.set(cell, element); else cells.current.delete(cell); }}
+                        type="button"
+                        tabIndex={current ? 0 : -1}
+                        disabled={solved}
+                        aria-label={cellLabel(state, cell, r, c, word, number)}
+                        aria-pressed={current}
+                        data-cell={cell}
+                        className={classes}
+                        onClick={() => update(selectOrToggleCell(state, cell))}
+                      >
+                        {number !== null && <span className="crossword-number" aria-hidden="true">{number}</span>}
+                        <span className="crossword-entry" aria-hidden="true">{state.entries[cell] || ' '}</span>
+                        {mark === 'right' && <span className="crossword-mark" aria-hidden="true">✓</span>}
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            ))}
           </div>
+        </div>
+      )}
+
+      {!paused && (
+        <p className="crossword-clue-bar" aria-live="polite" aria-atomic="true" data-testid="cueword-clue">
+          <strong>{active.number} {active.direction}</strong><span>{clue.text}</span>
+        </p>
+      )}
+
+      {wrongFill && (
+        <p className="crossword-not-right crossword-no-print" role="status" data-testid="cueword-not-right">
+          <span aria-hidden="true">△ </span>something's not right yet. every square is filled, but at least one letter is wrong.
+        </p>
+      )}
+
+      {!solved && !paused && (
+        <div className="crossword-no-print">
+          <div className="mx-auto mt-6 flex max-w-sm flex-wrap justify-center gap-1" role="group" aria-label="letters">
+            {[...'abcdefghijklmnopqrstuvwxyz'].map((letter) => <button type="button" key={letter} className={letterButton} onClick={() => typeLetter(letter)}>{letter}</button>)}
+          </div>
+          <div className="mt-3 flex justify-center">
+            <button ref={eraseButton} type="button" className={quietButton} onClick={() => update(backspace(state))}>erase</button>
+          </div>
+        </div>
+      )}
+
+      {!paused && (
+        <div className="crossword-no-print mt-4 flex justify-center">
+          <button type="button" className={quietButton} aria-expanded={showList} aria-controls={listId} onClick={() => setShowList((open) => !open)}>
+            <span aria-hidden="true">{showList ? '▴ ' : '▾ '}</span>{showList ? 'hide cue list' : 'show cue list'}
+          </button>
+        </div>
+      )}
+      {showList && !paused && (
+        <div id={listId} className="crossword-clue-list crossword-no-print" data-testid="crossword-clue-list">
+          {(['across', 'down'] as const).map((direction: Direction) => (
+            <section key={direction} aria-label={direction + ' cues'}>
+              <h3 className="font-medium">{direction} <span className="text-sm font-normal text-ink-soft">· {puzzle.clues[direction].length}</span></h3>
+              <ol>
+                {puzzle.clues[direction].map((item) => {
+                  const word = list.find((candidate) => candidate.direction === direction && candidate.number === item.number)!;
+                  const isActive = active.direction === direction && active.number === item.number;
+                  return (
+                    <li key={item.number}>
+                      <button type="button" className="crossword-clue-item" aria-current={isActive ? 'true' : undefined} onClick={() => chooseClue(word)}>
+                        <span aria-hidden="true" className="crossword-clue-marker">{isActive ? '▸' : ''}</span>
+                        <strong>{item.number}</strong> <span>{item.text}</span>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ol>
+            </section>
+          ))}
+        </div>
+      )}
+
+      <div className="crossword-print-clues">
+        {(['across', 'down'] as const).map((direction: Direction) => (
+          <section key={direction}>
+            <h2>{direction}</h2>
+            <ol>
+              {puzzle.clues[direction].map((item) => <li key={item.number}><strong>{item.number}.</strong> {item.text}</li>)}
+            </ol>
+          </section>
         ))}
       </div>
 
+      <footer className="crossword-print-footer">cueory.app</footer>
+
+      <p className="sr-only" aria-live="polite" aria-atomic="true" data-testid="crossword-live">{said}</p>
+
       {solved && (
-        <div ref={result} tabIndex={-1} className="mt-6 rounded-md border border-control p-4" data-testid="cueword-result">
+        <div ref={result} tabIndex={-1} className="crossword-result mt-6 rounded-md border border-control p-4" data-testid="cueword-result" role="status">
           <p className="text-lg font-medium">solved.</p>
-          <p className="mt-2">{shared}</p>
-          <button type="button" className={`${button} mt-3`} onClick={share}>copy my result</button>
-          {copied && <p className="mt-2 text-sm text-ink-soft" aria-live="polite">{copied}</p>}
+          <p className="mt-2">{gameResult.level} · {elapsedText(gameResult.seconds)}</p>
+          <p className="crossword-badge mt-2" data-testid="crossword-badge" data-badge={helped ? 'helped' : 'clean'}>
+            <span aria-hidden="true">{helped ? '◇' : '◆'} </span>
+            {helped ? 'solved with help' : 'solved without help'}
+          </p>
+          <p className="mt-1 text-sm text-ink-soft" data-testid="crossword-streak-note">
+            {counts ? 'this solve extends your streak when stats are on.'
+              : helped ? "check or reveal was used, so this solve doesn't extend your streak."
+                : "solved more than 48 hours after the puzzle's date, so it doesn't extend your streak."}
+          </p>
           <ResultBrandMark path="/play" />
         </div>
       )}
-      <p className="mt-3 text-sm text-ink-soft" aria-live="polite" aria-atomic="true" data-testid="cueword-live">{said}</p>
     </section>
   );
 }
 
-/** The page supplies reviewed puzzle data; this island contains no puzzle content or persistent storage. */
 export default function CuewordGame({ puzzle, name }: Props) {
   try {
     const parsed = parsePuzzle(puzzle);

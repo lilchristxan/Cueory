@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { existsSync, readdirSync } from 'node:fs';
 import { join, relative, resolve, sep } from 'node:path';
+import { indexablePages } from '../../src/config/routes';
 
 const dist = resolve('dist');
 
@@ -31,8 +32,29 @@ async function settleIslands(page: Page, route: string): Promise<void> {
 
 const routes = builtPages();
 
-test.describe('Task 280: large-text reflow', () => {
-  for (const route of routes) {
+// Lane 23: the same check at the narrowest supported width (320 px) in Light and Evening, for every public page the
+// sitemap lists plus /play and each game page. The legal pages are checked by their own specs.
+const LEGAL = ['/terms', '/disclaimer', '/privacy'];
+const routes320 = [...new Set([...indexablePages, '/play', '/play/pillo', '/play/sudoku', '/play/word-path', '/play/crossword'])]
+  .filter((route) => !LEGAL.includes(route))
+  .filter((route) => routes.includes(route));
+
+const sweeps = [
+  { title: 'Task 280: large-text reflow', list: routes, use: {} },
+  ...(['light', 'dark'] as const).map((colorScheme) => ({
+    title: `Lane 23: large-text reflow at 320 px (${colorScheme === 'light' ? 'Light' : 'Evening'})`,
+    list: routes320,
+    use: { viewport: { width: 320, height: 700 }, colorScheme },
+  })),
+];
+
+for (const sweep of sweeps) {
+  test.describe(sweep.title, () => {
+    test.use(sweep.use);
+    test.beforeEach(async ({}, info) => {
+      test.skip(Object.keys(sweep.use).length > 0 && info.project.name !== 'desktop', 'fixed-width sweep runs once, in the desktop project');
+    });
+  for (const route of sweep.list) {
     test(`${route} has no sideways scroll or clipped visible controls at 32px root text`, async ({ page }) => {
       await page.goto(route);
       await page.evaluate(() => {
@@ -143,4 +165,5 @@ test.describe('Task 280: large-text reflow', () => {
       expect(findings.clipped, `${route}: clipped visible controls`).toEqual([]);
     });
   }
-});
+  });
+}

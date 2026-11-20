@@ -1,0 +1,16 @@
+/*
+  Room for a game that has not rendered yet (src/components/GamePage.astro; performance, 2026-11-19). Each game is a
+  browser-only island, so until its script runs the article child that holds it is empty, and the stats panel and footer
+  sit right under the title; when the game appears (several seconds on a slow phone) they jump down a whole screen
+  (layout shift about 0.5 on phones). While that island is still empty, and only when scripts can run, keep one screen
+  of room for it: what follows starts below the fold, so nothing visible moves. Every game is taller than one screen at
+  every size, and the rule stops matching as soon as the game renders. No wrapper element is added, because the print
+  rules select the article's direct children.
+*/
+@layer components {
+  @media (scripting: enabled) {
+    [data-game-page] > :has(astro-island:empty) {
+      min-block-size: 100svh;
+    }
+  }
+}

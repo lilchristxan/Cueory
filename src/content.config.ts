@@ -19,19 +19,19 @@ import { lessonSentenceProblems } from './content/lesson-validation';
 const lessons = defineCollection({
   loader: glob({ base: './content/lessons', pattern: '**/*.json' }),
   schema: z.object({
-    course: z.string().min(1),
-    order: z.number().int().positive(),
-    title: z.string().min(1).max(120),
-    summary: z.string().max(300),
-    status: z.enum(['placeholder', 'sample', 'draft', 'in_review', 'published']),
+    course: z.string().min(1, 'course cannot be empty'),
+    order: z.number().int('order must be a whole number').positive('order must be above zero'),
+    title: z.string().min(1, 'this cannot be empty').max(120, 'too long: keep it to 120 characters or fewer'),
+    summary: z.string().max(300, 'too long: keep the summary to 300 characters or fewer'),
+    status: z.enum(['placeholder', 'sample', 'draft', 'in_review', 'published'], 'must be one of: placeholder, sample, draft, in_review, published'),
     sentences: z
       .array(
         z.object({
-          id: z.string().regex(/^[a-z0-9-]+$/),
-          text: z.string().min(1).max(400),
+          id: z.string().regex(/^[a-z0-9-]+$/, 'use lowercase letters, digits and dashes only, with no spaces or capitals'),
+          text: z.string().min(1, 'this cannot be empty').max(400, 'too long: keep it to 400 characters or fewer'),
         }),
       )
-      .min(1)
+      .min(1, 'needs at least 1 entry')
       .superRefine((sentences, context) => {
         for (const message of lessonSentenceProblems(sentences)) {
           context.addIssue({ code: 'custom', message });
@@ -48,24 +48,24 @@ const lessons = defineCollection({
 const cards = defineCollection({
   loader: glob({ base: './content/cards', pattern: '**/*.json' }),
   schema: z.object({
-    lesson: z.string().regex(/^[a-z0-9-]+$/),
-    title: z.string().min(1).max(120),
-    status: z.enum(['placeholder', 'sample', 'draft', 'in_review', 'published']),
+    lesson: z.string().regex(/^[a-z0-9-]+$/, 'use lowercase letters, digits and dashes only, with no spaces or capitals'),
+    title: z.string().min(1, 'this cannot be empty').max(120, 'too long: keep it to 120 characters or fewer'),
+    status: z.enum(['placeholder', 'sample', 'draft', 'in_review', 'published'], 'must be one of: placeholder, sample, draft, in_review, published'),
     cards: z
       .array(
         z
           .object({
-            id: z.string().regex(/^[a-z0-9-]+$/),
-            front: z.string().min(1).max(300),
-            back: z.string().min(1).max(600),
-            blank: z.string().trim().min(1).max(120).optional(),
+            id: z.string().regex(/^[a-z0-9-]+$/, 'use lowercase letters, digits and dashes only, with no spaces or capitals'),
+            front: z.string().min(1, 'this cannot be empty').max(300, 'too long: keep it to 300 characters or fewer'),
+            back: z.string().min(1, 'this cannot be empty').max(600, 'too long: keep it to 600 characters or fewer'),
+            blank: z.string().trim().min(1, 'this cannot be empty').max(120, 'too long: keep it to 120 characters or fewer').optional(),
           })
           .refine((card) => card.blank === undefined || card.back.includes(card.blank), {
             message: "blank must be words that appear in the card's back, exactly as written",
             path: ['blank'],
           }),
       )
-      .min(1)
+      .min(1, 'needs at least 1 entry')
       .superRefine((cards, context) => {
         for (const index of repeatedCardIndexes(cards.map((card) => card.id))) {
           context.addIssue({
@@ -86,9 +86,9 @@ const cards = defineCollection({
 const pulse = defineCollection({
   loader: glob({ base: './content/games/pulse', pattern: '**/*.json' }),
   schema: z.object({
-    status: z.literal('sample'),
+    status: z.literal('sample', 'must be exactly "sample"'),
     word: z.string().regex(/^[a-z]{5,7}$/, 'a pulse word is five to seven lowercase letters'),
-    cue: z.string().min(1).max(120),
+    cue: z.string().min(1, 'this cannot be empty').max(120, 'too long: keep it to 120 characters or fewer'),
   }),
 });
 
@@ -101,7 +101,7 @@ const triage = defineCollection({
   loader: glob({ base: './content/games/triage', pattern: '**/*.json' }),
   schema: z
     .object({
-      status: z.literal('sample'),
+      status: z.literal('sample', 'must be exactly "sample"'),
       groups: z
         .array(
           z.object({
@@ -128,14 +128,14 @@ const organizer = defineCollection({
   loader: glob({ base: './content/organizer', pattern: '*.json' }),
   schema: z
     .object({
-      lesson: z.string().regex(/^[a-z0-9-]+$/),
-      status: z.literal('sample'),
-      title: z.string().min(1).max(200),
+      lesson: z.string().regex(/^[a-z0-9-]+$/, 'use lowercase letters, digits and dashes only, with no spaces or capitals'),
+      status: z.literal('sample', 'must be exactly "sample"'),
+      title: z.string().min(1, 'this cannot be empty').max(200, 'too long: keep it to 200 characters or fewer'),
       groups: z
-        .array(z.object({ id: organizerId.refine((id) => id !== 'tray', 'tray is reserved for unsorted items'), name: z.string().min(1).max(200) }))
-        .min(2)
-        .max(4),
-      items: z.array(z.object({ id: organizerId, text: z.string().min(1).max(1000), group: organizerId })).min(4).max(12),
+        .array(z.object({ id: organizerId.refine((id) => id !== 'tray', 'tray is reserved for unsorted items'), name: z.string().min(1, 'this cannot be empty').max(200, 'too long: keep it to 200 characters or fewer') }))
+        .min(2, 'needs at least 2 entries')
+        .max(4, 'has too many entries: the most allowed is 4'),
+      items: z.array(z.object({ id: organizerId, text: z.string().min(1, 'this cannot be empty').max(1000, 'too long: keep it to 1000 characters or fewer'), group: organizerId })).min(4, 'needs at least 4 entries').max(12, 'has too many entries: the most allowed is 12'),
     })
     .superRefine(({ groups, items }, context) => {
       const groupIds = new Set(groups.map((group) => group.id));
@@ -160,18 +160,18 @@ const fillIn = defineCollection({
   loader: glob({ base: './content/fill-in', pattern: '*.json' }),
   schema: z
     .object({
-      lesson: z.string().regex(/^[a-z0-9-]+$/),
-      status: z.literal('sample'),
+      lesson: z.string().regex(/^[a-z0-9-]+$/, 'use lowercase letters, digits and dashes only, with no spaces or capitals'),
+      status: z.literal('sample', 'must be exactly "sample"'),
       items: z
         .array(
           z.object({
             id: z.string().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/, 'an id is lowercase letters, digits and dashes'),
-            sentence: z.string().min(1).max(400),
-            distractors: z.array(z.string().min(1).max(200)).optional(),
+            sentence: z.string().min(1, 'this cannot be empty').max(400, 'too long: keep it to 400 characters or fewer'),
+            distractors: z.array(z.string().min(1, 'this cannot be empty').max(200, 'too long: keep it to 200 characters or fewer')).optional(),
           }),
         )
-        .min(1)
-        .max(30),
+        .min(1, 'needs at least 1 entry')
+        .max(30, 'has too many entries: the most allowed is 30'),
     })
     .superRefine(({ items }, context) => {
       if (new Set(items.map((item) => item.id)).size !== items.length) {
@@ -197,14 +197,14 @@ const labelIt = defineCollection({
   loader: glob({ base: './content/label-it', pattern: '*.json' }),
   schema: z
     .object({
-      lesson: z.string().regex(/^[a-z0-9-]+$/),
-      status: z.literal('sample'),
+      lesson: z.string().regex(/^[a-z0-9-]+$/, 'use lowercase letters, digits and dashes only, with no spaces or capitals'),
+      status: z.literal('sample', 'must be exactly "sample"'),
       image: z.object({
         src: z.string().regex(/^\/[\w\-./]+\.(svg|png|webp|jpg)$/, 'the image is a file on this site, starting with /'),
-        alt: z.string().min(1).max(300),
-        width: z.number().positive(),
-        height: z.number().positive(),
-        credit: z.string().min(1).max(300),
+        alt: z.string().min(1, 'this cannot be empty').max(300, 'too long: keep it to 300 characters or fewer'),
+        width: z.number('width is a number').positive('width must be above zero'),
+        height: z.number('height is a number').positive('height must be above zero'),
+        credit: z.string().min(1, 'this cannot be empty').max(300, 'too long: keep it to 300 characters or fewer'),
       }),
       labels: z.array(z.object({ id: z.string(), text: z.string(), x: z.number(), y: z.number(), w: z.number(), h: z.number() })),
     })
@@ -223,27 +223,27 @@ const labelIt = defineCollection({
  * their keys stay in the database and are checked by check_answer (Task 2). Checked with the player's own
  * sampleChecker, which refuses anything that isn't marked "sample".
  */
-const choiceId = z.enum(['a', 'b', 'c', 'd', 'e']);
+const choiceId = z.enum(['a', 'b', 'c', 'd', 'e'], 'must be one of: a, b, c, d, e');
 const questions = defineCollection({
   loader: glob({ base: './content/questions', pattern: '*.json' }),
   schema: z
     .object({
-      lesson: z.string().regex(/^[a-z0-9-]+$/),
-      status: z.literal('sample'),
+      lesson: z.string().regex(/^[a-z0-9-]+$/, 'use lowercase letters, digits and dashes only, with no spaces or capitals'),
+      status: z.literal('sample', 'must be exactly "sample"'),
       items: z
         .array(
           z.object({
             id: z.string().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/, 'an id is lowercase letters, digits and dashes'),
-            status: z.literal('sample'),
-            type: z.enum(['single', 'sata']),
-            stem: z.string().min(1).max(400),
-            choices: z.array(z.object({ id: choiceId, text: z.string().min(1).max(300) })).min(2).max(5),
-            key: z.array(choiceId).min(1),
-            rationales: z.partialRecord(choiceId, z.string().min(1).max(400)),
+            status: z.literal('sample', 'must be exactly "sample"'),
+            type: z.enum(['single', 'sata'], 'must be one of: single, sata'),
+            stem: z.string().min(1, 'this cannot be empty').max(400, 'too long: keep it to 400 characters or fewer'),
+            choices: z.array(z.object({ id: choiceId, text: z.string().min(1, 'this cannot be empty').max(300, 'too long: keep it to 300 characters or fewer') })).min(2, 'a question needs at least 2 choices').max(5, 'a question has at most 5 choices (a to e)'),
+            key: z.array(choiceId).min(1, 'a question needs at least one correct choice in its key'),
+            rationales: z.partialRecord(choiceId, z.string().min(1, 'this cannot be empty').max(400, 'too long: keep it to 400 characters or fewer')),
           }),
         )
-        .min(1)
-        .max(30),
+        .min(1, 'needs at least 1 entry')
+        .max(30, 'has too many entries: the most allowed is 30'),
     })
     .superRefine(({ items }, context) => {
       try {
@@ -262,42 +262,69 @@ const questions = defineCollection({
  * shape is checked here; /play also runs each one through the game's own parsePuzzle at build time, so a clue that
  * doesn't match a word stops the build with a plain message.
  */
-const clue = z.object({ number: z.number().int().positive(), text: z.string().min(1).max(120) });
+const clue = z.object({ number: z.number().int('a clue number is a whole number').positive('a clue number is above zero'), text: z.string().min(1, 'this cannot be empty').max(120, 'too long: keep it to 120 characters or fewer') });
 const cueword = defineCollection({
   loader: glob({ base: './content/games/cueword', pattern: '**/*.json' }),
   schema: z.object({
-    status: z.literal('sample'),
+    status: z.literal('sample', 'must be exactly "sample"'),
+    level: z.enum(['easy', 'mid', 'hard'], 'must be one of: easy, mid, hard').optional(),
     grid: z
-      .array(z.string().regex(/^[A-Z.]{3,7}$/, 'a crossword row is 3 to 7 capital letters or dots'))
-      .min(3)
-      .max(7),
+      .array(z.string().regex(/^[A-Z.]{3,15}$/, 'a crossword row is 3 to 15 capital letters or dots'))
+      .min(3, 'needs at least 3 entries')
+      .max(15, 'has too many entries: the most allowed is 15'),
     clues: z.object({ across: z.array(clue), down: z.array(clue) }),
   }),
 });
 
 /**
  * Word path (internal id suture, D-71): sample puzzles, one JSON file each in /content/games/suture. The shape is checked
- * here; /play also runs each one through the game's own parsePuzzle at build time.
- * Task 97: each sample is a themed word search. The theme (its title) is required here; the grid is up to 11 by 11; a
- * word's cue is optional, since the words themselves are the list the student sees.
+ * here; /play also runs each one through the game's own rules at build time (parseWordPath), which check every path.
+ *
+ * Two formats load (#722). The board format is preferred: `"format": "path"`, a theme `clue`, a 6 by 8 `grid` where
+ * every letter belongs to exactly one answer, one answer marked `"special": true` that touches two opposite edges, and
+ * optional `extras` (other words of 4 letters or more that earn hints). The older themed word search (Task 97) has no
+ * `format`, a `theme` title, a grid up to 11 by 11, and words in straight lines with an optional cue.
  */
+/** A word path step's row or column: squares count from 0 at the top left. */
+const pathCoordinate = z
+  .number('a path row or column is a number')
+  .int('a path row or column is a whole number, such as 0 or 3')
+  .min(0, 'a path row or column starts at 0, so it cannot be negative');
+
 const suture = defineCollection({
   loader: glob({ base: './content/games/suture', pattern: '**/*.json' }),
-  schema: z.object({
-    status: z.literal('sample'),
-    theme: z.string().trim().min(1).max(60),
-    grid: z.array(z.string().regex(/^[A-Z]{3,11}$/, 'a word path row is 3 to 11 capital letters')).min(3).max(11),
-    words: z
-      .array(
-        z.object({
-          cue: z.string().min(1).max(120).optional(),
-          answer: z.string().regex(/^[A-Z]{3,11}$/),
-          path: z.array(z.tuple([z.number().int().min(0), z.number().int().min(0)])),
-        }),
-      )
-      .min(3)
-      .max(20),
-  }),
+  schema: z
+    .object({
+      status: z.literal('sample', 'must be exactly "sample"'),
+      format: z.literal('path', 'must be exactly "path"').optional(),
+      theme: z.string().trim().min(1, 'this cannot be empty').max(60, 'too long: keep it to 60 characters or fewer').optional(),
+      clue: z.string().trim().min(1, 'this cannot be empty').max(60, 'too long: keep it to 60 characters or fewer').optional(),
+      grid: z.array(z.string().regex(/^[A-Z]{3,11}$/, 'a word path row is 3 to 11 capital letters')).min(3, 'a word path grid needs at least 3 rows').max(11, 'a word path grid has at most 11 rows'),
+      words: z
+        .array(
+          z.object({
+            cue: z.string().min(1, 'this cannot be empty').max(120, 'too long: keep it to 120 characters or fewer').optional(),
+            answer: z.string().regex(/^[A-Z]{3,48}$/, 'an answer is 3 to 48 capital letters A to Z, with no spaces'),
+            path: z.array(z.tuple([pathCoordinate, pathCoordinate], 'each path step is [row, column]')),
+            special: z.boolean().optional(),
+          }),
+        )
+        .min(3, 'needs at least 3 entries')
+        .max(20, 'has too many entries: the most allowed is 20'),
+      extras: z.array(z.string().regex(/^[A-Z]{4,48}$/, 'an extra word is 4 to 48 capital letters A to Z, with no spaces')).max(300, 'too many extra words: the most allowed is 300').optional(),
+    })
+    .superRefine((data, context) => {
+      const issue = (message: string) => context.addIssue({ code: 'custom', message });
+      if (data.format === 'path') {
+        if (!data.clue) issue('a board puzzle ("format": "path") needs a clue.');
+        if (data.theme !== undefined) issue('a board puzzle uses clue, not theme.');
+      } else {
+        if (!data.theme) issue('a word search (no format) needs a theme.');
+        if (data.clue !== undefined || data.extras !== undefined || data.words.some((word) => word.special !== undefined)) {
+          issue('clue, extras and special belong to board puzzles: add "format": "path".');
+        }
+      }
+    }),
 });
 
 /**
@@ -317,36 +344,36 @@ const visuals = defineCollection({
   schema: z
     .object({
       id: visualId,
-      title: z.string().min(1).max(120),
-      kind: z.enum(['diagram', 'model', 'overlay']),
-      lessonIds: z.array(z.string().regex(/^U\d{2}-T\d{2}-L\d{2}$/, 'a lesson id looks like U01-T01-L01')).min(1),
-      status: z.enum(['draft', 'approved']),
+      title: z.string().min(1, 'this cannot be empty').max(120, 'too long: keep it to 120 characters or fewer'),
+      kind: z.enum(['diagram', 'model', 'overlay'], 'must be one of: diagram, model, overlay'),
+      lessonIds: z.array(z.string().regex(/^U\d{2}-T\d{2}-L\d{2}$/, 'a lesson id looks like U01-T01-L01')).min(1, 'list at least one lesson id'),
+      status: z.enum(['draft', 'approved'], 'must be one of: draft, approved'),
       labels: z.array(
         z.object({
           id: visualId.or(structureId),
-          text: z.string().min(1).max(120),
+          text: z.string().min(1, 'this cannot be empty').max(120, 'too long: keep it to 120 characters or fewer'),
           source: visualId.or(structureSourceId),
-          group: z.string().min(1).max(120).optional(),
-          layer: z.enum(['skin', 'muscle', 'nerves', 'vessels', 'organs', 'skeleton']).optional(),
+          group: z.string().min(1, 'this cannot be empty').max(120, 'too long: keep it to 120 characters or fewer').optional(),
+          layer: z.enum(['skin', 'muscle', 'nerves', 'vessels', 'organs', 'skeleton'], 'must be one of: skin, muscle, nerves, vessels, organs, skeleton').optional(),
         }),
       ),
-      depictions: z.array(z.object({ id: visualId, what: z.string().min(1).max(300), source: visualId })),
+      depictions: z.array(z.object({ id: visualId, what: z.string().min(1, 'this cannot be empty').max(300, 'too long: keep it to 300 characters or fewer'), source: visualId })),
       sources: z
         .array(
           z.object({
             id: visualId.or(structureSourceId),
-            quote: z.string().min(1).max(1000),
-            book: z.string().min(1),
-            section: z.string().min(1).max(200),
+            quote: z.string().min(1, 'this cannot be empty').max(1000, 'too long: keep it to 1000 characters or fewer'),
+            book: z.string().min(1, 'book cannot be empty'),
+            section: z.string().min(1, 'this cannot be empty').max(200, 'too long: keep it to 200 characters or fewer'),
             url: z.string().regex(/^https:\/\/\S+$/, 'a page address starts with https://'),
-            license: z.string().min(1),
+            license: z.string().min(1, 'license cannot be empty'),
             retrieved: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'retrieved is the day the words were copied, YYYY-MM-DD'),
           }),
         )
-        .min(1),
+        .min(1, 'needs at least 1 entry'),
       // A 3D model's file under public/ (kind "model" only), the atlas release and how the files reached us.
       model: z
-        .object({ file: z.string().min(1).max(200), release: z.string().min(1).max(120), via: z.string().min(1).max(200).optional() })
+        .object({ file: z.string().min(1, 'this cannot be empty').max(200, 'too long: keep it to 200 characters or fewer'), release: z.string().min(1, 'this cannot be empty').max(120, 'too long: keep it to 120 characters or fewer'), via: z.string().min(1, 'this cannot be empty').max(200, 'too long: keep it to 200 characters or fewer').optional() })
         .optional(),
     })
     .superRefine((visual, context) => {
@@ -364,4 +391,43 @@ const videos = defineCollection({
   schema: videoSchema,
 });
 
-export const collections = { lessons, cards, pulse, triage, cueword, suture, organizer, 'fill-in': fillIn, 'label-it': labelIt, questions, visuals, videos };
+/**
+ * Hello cards (Task 201): conversation starters for the flip-the-card game, in content/games/hello-cards. Warm, open
+ * questions with no clinical facts; draft samples until Christian approves the wording.
+ */
+const helloCards = defineCollection({
+  loader: glob({ base: './content/games/hello-cards', pattern: '**/*.json' }),
+  schema: z
+    .object({
+      // `sample` is a draft awaiting Christian's wording review; only `approved` may reach the live site.
+      status: z.enum(['sample', 'approved'], 'must be one of: sample, approved'),
+      note: z.string().max(300, 'too long: keep the note to 300 characters or fewer').optional(),
+      starters: z
+        .array(
+          z.object({
+            id: z.string().regex(/^[a-z]+(-[a-z0-9]+)+$/, 'an id is lowercase letters, digits and dashes'),
+            category: z.enum(['patients', 'coworkers', 'classmates', 'yourself'], 'must be one of: patients, coworkers, classmates, yourself'),
+            depth: z.enum(['small', 'deep'], 'must be one of: small, deep'),
+            text: z.string().trim().min(5, 'too short: write at least 5 characters').max(140, 'too long: keep it to 140 characters or fewer'),
+          }),
+        )
+        .min(3, 'needs at least 3 entries'),
+    })
+    .superRefine(({ starters }, context) => {
+      if (new Set(starters.map((starter) => starter.id)).size !== starters.length) {
+        context.addIssue({ code: 'custom', path: ['starters'], message: 'a starter id is repeated' });
+      }
+      for (const category of ['patients', 'coworkers', 'classmates', 'yourself']) {
+        if (!starters.some((starter) => starter.category === category)) {
+          context.addIssue({ code: 'custom', path: ['starters'], message: `no starter for ${category}` });
+        }
+        for (const depth of ['small', 'deep']) {
+          if (!starters.some((starter) => starter.category === category && starter.depth === depth)) {
+            context.addIssue({ code: 'custom', path: ['starters'], message: `no ${depth} starter for ${category}` });
+          }
+        }
+      }
+    }),
+});
+
+export const collections = { lessons, cards, pulse, triage, cueword, suture, 'hello-cards': helloCards, organizer, 'fill-in': fillIn, 'label-it': labelIt, questions, visuals, videos };

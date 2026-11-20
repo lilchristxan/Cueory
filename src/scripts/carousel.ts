@@ -8,6 +8,39 @@
  * the arrows, the arrow keys, swipes, a tap on a side vial to bring it to the front, and a gentle auto-advance.
  */
 
+/**
+ * The native snap-scrolling links are the accessible baseline. Turn them into a ring only when every
+ * browser feature used by the modal preview is present. This pure check also guards older browsers
+ * without the Web Animations API, matchMedia or IntersectionObserver.
+ */
+export interface CarouselCapabilities {
+  nativeDialog: boolean;
+  dialog: { showModal?: unknown; close?: unknown } | null | undefined;
+  animationTargets: readonly ({ animate?: unknown; getAnimations?: unknown } | null | undefined)[];
+  matchMedia: unknown;
+  motionQuery: { matches?: unknown; addEventListener?: unknown } | null | undefined;
+  intersectionObserver: unknown;
+  replaceChildren: unknown;
+}
+
+export function canEnhanceCarousel(capabilities: CarouselCapabilities): boolean {
+  return (
+    capabilities.nativeDialog &&
+    typeof capabilities.dialog?.showModal === 'function' &&
+    typeof capabilities.dialog?.close === 'function' &&
+    typeof capabilities.matchMedia === 'function' &&
+    typeof capabilities.motionQuery?.matches === 'boolean' &&
+    typeof capabilities.motionQuery?.addEventListener === 'function' &&
+    typeof capabilities.intersectionObserver === 'function' &&
+    typeof capabilities.replaceChildren === 'function' &&
+    // Panel, scrim, bottle, surface, and both word-fade containers all animate.
+    capabilities.animationTargets.length >= 6 &&
+    capabilities.animationTargets.every(
+      (element) => typeof element?.animate === 'function' && typeof element?.getAnimations === 'function',
+    )
+  );
+}
+
 /** Time each vial stays in front before the next one comes in, when nobody is using the carousel. */
 export const AUTO_ADVANCE_MS = 6000;
 
@@ -102,6 +135,36 @@ export function ringPlace(offset: number): RingPlace {
   };
 }
 
+/** The gap between two vials in HomeV2's straight row (P6), in vial widths: they stand apart, never overlapping. */
+export const ROW_GAP = 0.08;
+
+/** Where a vial stands in HomeV2's straight row (P6). */
+export interface RowPlace {
+  /** How far sideways its middle is from the middle of the row, in vial widths. */
+  shift: number;
+  /** Whether it shows: only vials whose whole bottle fits inside the room, so no label is ever cut off. */
+  shown: boolean;
+}
+
+/**
+ * HomeV2's straight row (P6): each vial keeps ringPlace's size, brightness and layer, but stands beside its neighbour
+ * with a gap of ROW_GAP vial widths, so the bottles never overlap and every label stays whole. `room` is how many vial
+ * widths there are from the middle of the row to the nearest thing it must not cross (the window's edge, or an arrow
+ * beside the vials). A vial whose outer edge would pass it is hidden instead of cut off.
+ */
+export function rowPlace(offset: number, room: number): RowPlace {
+  const distance = Math.abs(offset);
+  const scaleAt = (step: number) => ringPlace(step).scale;
+  let middle = 0;
+  for (let step = 1; step <= distance; step += 1) middle += (scaleAt(step - 1) + scaleAt(step)) / 2 + ROW_GAP;
+  const edge = middle + scaleAt(distance) / 2;
+  return {
+    shift: round(Math.sign(offset) * middle),
+    // The front vial always shows: it is the one the visitor is on.
+    shown: distance === 0 || (distance <= FARTHEST_SHOWN && edge <= room + 1e-9),
+  };
+}
+
 /**
  * Whether a vial glides to its new place or simply appears there. A turn of one or two vials glides; a vial going
  * round the back of the ring, or a jump of several vials (Home, End), switches at once instead of sweeping across the
@@ -150,11 +213,15 @@ export interface MotionState {
   focusInside: boolean;
   /** Most of the carousel is on screen and the tab is visible. */
   onScreen: boolean;
+  /** The preview is open (or still opening or closing). */
+  previewOpen: boolean;
 }
 
 /**
  * Auto-advance runs only while nobody is using the carousel: never with reduced motion, after the pause button,
- * once the visitor has taken over, while it is hovered or focused, or while it is off screen.
+ * once the visitor has taken over, while it is hovered or focused, while it is off screen, or while the preview is
+ * open. The page script restarts the full AUTO_ADVANCE_MS countdown each time this turns true and stops it the moment
+ * it turns false, so the vial in front always gets its whole time.
  */
 export function canAutoAdvance(state: MotionState): boolean {
   return (
@@ -163,9 +230,32 @@ export function canAutoAdvance(state: MotionState): boolean {
     !state.tookOver &&
     !state.hovering &&
     !state.focusInside &&
-    state.onScreen
+    state.onScreen &&
+    !state.previewOpen
   );
 }
+
+/** Where the preview is: closed, growing out of its vial, open and still, stepping to another mode, or shrinking back. */
+export type PreviewPhase = 'closed' | 'opening' | 'open' | 'stepping' | 'closing';
+
+/**
+ * What the carousel is doing, written to `data-carousel-state` on the section: `settled` when nothing is in flight
+ * (no glide, no preview), `turning` while the vials glide, or the preview's own phase while it is open. Tests and
+ * anything else that needs a still carousel wait for this instead of a fixed time.
+ */
+export type CarouselState = 'settled' | 'turning' | Exclude<PreviewPhase, 'closed'>;
+
+export function carouselState(preview: PreviewPhase, turning: boolean): CarouselState {
+  if (preview !== 'closed') return preview;
+  return turning ? 'turning' : 'settled';
+}
+
+/**
+ * How much longer than planned a glide, grow, shrink or nudge may take before the script finishes it itself. A browser
+ * too busy to draw can leave an animation's `finished` waiting for seconds (seen in WebKit and Firefox on release runs);
+ * the carousel still reaches its resting state on time.
+ */
+export const SETTLE_GRACE_MS = 150;
 
 /** A box on screen, as getBoundingClientRect gives it. */
 export interface Box {

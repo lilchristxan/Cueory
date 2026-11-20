@@ -3,7 +3,8 @@ import { attachResumeLifecycle, clearResume, readResume, saveResume, type Resume
 import { browserStorage } from '../scripts/storage';
 import ResumePrompt from './ResumePrompt';
 import {
-  answerCurrent, blankOptions, boundTyped, currentIndex, isCheckKey, nextItem, normalizeAnswer, parseItems, sentenceParts, showHint,
+  answerCurrent, blankOptions, boundTyped, currentIndex, encodeFillInAttempt, isCheckKey, nextItem,
+  normalizeAnswer, parseItems, parseSavedFillInAttempt, sentenceParts, showHint,
   MAX_TYPED, startFillIn, summary, type FillInItem, type FillInState,
 } from './fillin';
 
@@ -39,7 +40,7 @@ function appendAttempt(history: readonly string[], entry: string, previousWasClo
   return [...kept, entry];
 }
 
-/** Only typed submissions and whether the student used a hint are saved. */
+/** Save only submitted text, a small input-kind marker, and whether a hint was used. */
 function fillInDraft(items: readonly FillInItem[], state: FillInState, attempts: Attempts, moves: number, page: string): ResumeDraft | null {
   if (!items.length) return null;
   const index = currentIndex(state) ?? items.length - 1;
@@ -49,6 +50,7 @@ function fillInDraft(items: readonly FillInItem[], state: FillInState, attempts:
     totalItems: items.length,
     answers: {
       ...Object.fromEntries(Object.entries(attempts).map(([key, entries]) => [key, [...entries]])),
+      format: 'v2',
       // A hint taken before any answer on the open item: kept so a reload can't drop the repeat round it costs.
       ...(openHint(state) ? { [HINT_KEY]: itemKey(index) } : {}),
     },
@@ -57,7 +59,7 @@ function fillInDraft(items: readonly FillInItem[], state: FillInState, attempts:
 }
 
 /**
- * Replay only the student's typed submissions through the existing rules. Never
+ * Replay only the student's submissions through the exact rules used when saved. Never
  * trust a saved verdict, sentence, answer key, item ID or arbitrary engine state.
  * Multiple attempts on the same item also support close spelling and later rounds.
  */
@@ -72,9 +74,13 @@ function restoreFillIn(items: readonly FillInItem[], snapshot: ResumeSnapshot, p
   if (!Number.isSafeInteger(moves) || moves > 2000) return null;
 
   const attempts: Attempts = {};
+  const format = snapshot.answers.format;
+  if (format !== undefined && format !== 'v2') return null;
+  const oldSnapshot = format === undefined;
   let count = 0;
   let pendingHint: string | undefined;
   for (const [key, submitted] of Object.entries(snapshot.answers)) {
+    if (key === 'format') continue;
     if (key === HINT_KEY) {
       if (typeof submitted !== 'string' || !/^item-(0|[1-9]\d*)$/.test(submitted)) return null;
       pendingHint = submitted;
@@ -84,9 +90,9 @@ function restoreFillIn(items: readonly FillInItem[], snapshot: ResumeSnapshot, p
     if (!match || Number(match[1]) >= items.length || !Array.isArray(submitted)) return null;
     const entries: string[] = [];
     for (const raw of submitted) {
-      if (typeof raw !== 'string' || !/^[nh]:/.test(raw) ||
-          normalizeAnswer(raw.slice(2)) === '' || boundTyped(raw.slice(2)) !== raw.slice(2)) return null;
-      entries.push(raw);
+      const parsed = parseSavedFillInAttempt(raw, oldSnapshot);
+      if (!parsed) return null;
+      entries.push(parsed.stored);
       if (++count > 1000) return null;
     }
     if (!entries.length) return null;
@@ -105,12 +111,13 @@ function restoreFillIn(items: readonly FillInItem[], snapshot: ResumeSnapshot, p
     const entries = attempts[key] ?? [];
     let offset = used.get(key) ?? 0;
     while (offset < entries.length && state.result !== 'right' && state.result !== 'wrong') {
-      const attempt = entries[offset++]!;
-      if (attempt.startsWith('h:')) state = showHint(state);
-      const checked = answerCurrent(state, items, attempt.slice(2));
+      const attempt = parseSavedFillInAttempt(entries[offset++]!);
+      if (!attempt) return null;
+      if (attempt.hinted) state = showHint(state);
+      const checked = answerCurrent(state, items, attempt.text, attempt.kind);
       if (checked === state) return null;
       state = checked;
-      typed = attempt.slice(2);
+      typed = attempt.text;
     }
     used.set(key, offset);
     if (advancesLeft === 0) break;
@@ -148,15 +155,20 @@ function Session({ items: suppliedItems, page = FILL_IN_PAGE }: Props) {
     const saved = readResume(browserStorage());
     return saved?.tool === 'fill-in' && saved.page === page;
   });
+  // An empty answer is explained, not silently refused: the message is text (not colour), tied to the field with
+  // aria-describedby and aria-invalid, and announced through the always-present live region below.
+  const [problem, setProblem] = useState('');
   const attempts = useRef<Attempts>({});
   // The item whose last saved entry is a close try that is still open (a hint in between doesn't close it).
   const openClose = useRef<string | null>(null);
   const moves = useRef(0);
   const latestDraft = useRef<ResumeDraft | null>(null);
   const input = useRef<HTMLInputElement>(null);
-  const select = useRef<HTMLSelectElement>(null);
+  const choices = useRef<HTMLDivElement>(null);
   const nextButton = useRef<HTMLButtonElement>(null);
   const end = useRef<HTMLDivElement>(null);
+  // Read by the focus effect without re-running it: switching between choosing and typing must not move focus by itself.
+  const inputModeRef = useRef(inputMode);
   const id = useId();
   const index = currentIndex(state);
   const item = index === undefined ? undefined : items[index];
@@ -179,20 +191,25 @@ function Session({ items: suppliedItems, page = FILL_IN_PAGE }: Props) {
     : [];
 
   // A resumed free-text attempt may not be one of the dropdown's options.
-  // Never enable checking an answer the student cannot see selected.
-  const canSubmit = normalizeAnswer(typed) !== '' && (inputMode === 'type' || options.includes(typed));
+  // In dropdown mode, check is disabled until an option is picked. In typed mode, check stays on.
+  const canSubmit = inputMode === 'type' || options.includes(typed);
 
   // Do not overwrite a different mode's save merely by visiting this page.
   useEffect(() => attachResumeLifecycle(browserStorage(), () => latestDraft.current), []);
 
+  inputModeRef.current = inputMode;
   useEffect(() => {
     if (state.done) end.current?.focus();
     else if (answered) nextButton.current?.focus();
     else if (focusInput > 0) {
-      if (inputMode === 'type') input.current?.focus();
-      else select.current?.focus();
+      if (inputModeRef.current === 'type') input.current?.focus();
+      else {
+        // The chosen answer, or the first one when none is chosen yet (arrow keys move within the group).
+        const group = choices.current;
+        (group?.querySelector<HTMLInputElement>('input:checked') ?? group?.querySelector<HTMLInputElement>('input'))?.focus();
+      }
     }
-  }, [answered, focusInput, inputMode, state.done]);
+  }, [answered, focusInput, state.done]);
 
   const persist = (next: FillInState) => {
     const draft = fillInDraft(items, next, attempts.current, moves.current, page);
@@ -208,15 +225,22 @@ function Session({ items: suppliedItems, page = FILL_IN_PAGE }: Props) {
   };
 
   const check = () => {
+    if (inputMode === 'type' && normalizeAnswer(typed) === '') {
+      setProblem('type an answer first, or look at the card again.');
+      input.current?.focus();
+      return;
+    }
+    setProblem('');
     // Check exactly the text that will be saved, so a resumed replay reaches the same verdict.
     const submitted = boundTyped(typed);
     if (index === undefined || !parts || !canSubmit || answered) return;
-    const next = answerCurrent(state, items, submitted);
+    const kind = inputMode === 'dropdown' ? 'choice' : 'typed';
+    const next = answerCurrent(state, items, submitted, kind);
     if (next === state) return;
     const key = itemKey(index);
     attempts.current = {
       ...attempts.current,
-      [key]: appendAttempt(attempts.current[key] ?? [], `${state.hinted ? 'h' : 'n'}:${submitted}`, openClose.current === key),
+      [key]: appendAttempt(attempts.current[key] ?? [], encodeFillInAttempt(submitted, state.hinted, kind), openClose.current === key),
     };
     openClose.current = next.result === 'close' ? key : null;
     if (submitted !== typed) setTyped(submitted);
@@ -226,6 +250,7 @@ function Session({ items: suppliedItems, page = FILL_IN_PAGE }: Props) {
   };
 
   const hint = () => {
+    setProblem('');
     const next = showHint(state);
     setState(next);
     if (next !== state) persist(next);
@@ -239,6 +264,7 @@ function Session({ items: suppliedItems, page = FILL_IN_PAGE }: Props) {
     setState(next);
     persist(next);
     setTyped('');
+    setProblem('');
     setFocusInput((request) => request + 1);
   };
 
@@ -250,6 +276,7 @@ function Session({ items: suppliedItems, page = FILL_IN_PAGE }: Props) {
     clearResume(browserStorage());
     setState(startFillIn(items));
     setTyped('');
+    setProblem('');
     setResumePending(false);
     setFocusInput((request) => request + 1);
   };
@@ -267,6 +294,7 @@ function Session({ items: suppliedItems, page = FILL_IN_PAGE }: Props) {
     latestDraft.current = fillInDraft(items, saved.state, saved.attempts, saved.moves, page);
     setState(saved.state);
     setTyped(saved.typed);
+    setProblem('');
     setResumePending(false);
     setFocusInput((request) => request + 1);
   };
@@ -304,18 +332,24 @@ function Session({ items: suppliedItems, page = FILL_IN_PAGE }: Props) {
 
             <div className="mt-6">
               <div className="flex items-center justify-between">
-                <label htmlFor={`${id}-answer`} className="block text-sm font-medium">the missing word</label>
+                {inputMode === 'dropdown' ? (
+                  <span id={`${id}-label`} className="block text-sm font-medium">the missing word</span>
+                ) : (
+                  <label htmlFor={`${id}-answer`} className="block text-sm font-medium">the missing word</label>
+                )}
                 <button
                   type="button"
                   className="min-h-11 px-2 text-xs leading-relaxed text-ink-soft underline hover:text-ink"
                   onClick={() => {
-                    // A select can only submit one of its visible options. Do not retain
+                    // The choices can only submit one of their visible options. Do not retain
                     // an unseen free-text answer when changing back to dropdown mode.
                     if (inputMode === 'type' && typed !== '' && !options.includes(typed)) {
                       setTyped('');
                     }
+                    setProblem('');
                     setInputMode(inputMode === 'dropdown' ? 'type' : 'dropdown');
-                    setFocusInput((req) => req + 1);
+                    // Once the item is answered the only next step is "next"; do not pull focus off this button.
+                    if (!answered) setFocusInput((req) => req + 1);
                   }}
                 >
                   {inputMode === 'dropdown' ? 'type instead' : 'choose from options'}
@@ -323,32 +357,58 @@ function Session({ items: suppliedItems, page = FILL_IN_PAGE }: Props) {
               </div>
 
               {inputMode === 'dropdown' ? (
-                <select
-                  ref={select}
-                  id={`${id}-answer`}
-                  value={typed}
-                  disabled={answered}
+                // Radio buttons, not a native <select>: WebKit reports a style-src-attr CSP violation for every <select>
+                // (probe #862, tests/e2e/csp-element-probe.spec.ts), and the site's CSP stays strict.
+                <div
+                  ref={choices}
+                  role="radiogroup"
+                  aria-labelledby={`${id}-label`}
                   aria-describedby={message ? `${id}-sentence ${id}-message` : `${id}-sentence`}
-                  onChange={(event) => setTyped(event.currentTarget.value)}
-                  className="mt-2 min-h-11 w-full rounded-md border border-control bg-surface px-4 py-2.5 text-ink"
+                  className="mt-2 grid gap-2"
                 >
-                  <option value="">choose an answer...</option>
                   {options.map((option, optIdx) => (
-                    <option key={`${option}-${optIdx}`} value={option}>
-                      {option}
-                    </option>
+                    <label
+                      key={`${option}-${optIdx}`}
+                      className="flex min-h-11 cursor-pointer items-center gap-3 rounded-md border border-control bg-surface px-4 py-2.5 text-ink has-checked:border-ink has-checked:inset-ring-1 has-checked:inset-ring-ink has-disabled:cursor-default"
+                    >
+                      <input
+                        type="radio"
+                        name={`${id}-answer`}
+                        value={option}
+                        checked={typed === option}
+                        disabled={answered}
+                        onChange={() => {
+                          setTyped(option);
+                          setProblem('');
+                        }}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter') {
+                            event.preventDefault();
+                            check();
+                          }
+                        }}
+                        // Drawn from tokens rather than the browser's radio, so the chosen dot stays full ink once the
+                        // choices are disabled after "check" (a disabled native radio turns grey, worst in Evening).
+                        className="size-6 shrink-0 cursor-pointer appearance-none rounded-full border-2 border-control bg-surface checked:border-ink checked:bg-ink checked:inset-ring-4 checked:inset-ring-surface disabled:cursor-default forced-colors:appearance-auto"
+                      />
+                      <span>{option}</span>
+                    </label>
                   ))}
-                </select>
+                </div>
               ) : (
                 <input
                   ref={input}
                   id={`${id}-answer`}
                   value={typed}
                   readOnly={answered}
+                  aria-invalid={problem ? true : undefined}
                   // The sentence describes the field, so moving to the next item reads the new sentence too (Codex on #56).
-                  aria-describedby={message ? `${id}-sentence ${id}-message` : `${id}-sentence`}
+                  aria-describedby={problem ? `${id}-problem` : message ? `${id}-sentence ${id}-message` : `${id}-sentence`}
                   maxLength={MAX_TYPED}
-                  onChange={(event) => setTyped(boundTyped(event.currentTarget.value))}
+                  onChange={(event) => {
+                    setTyped(boundTyped(event.currentTarget.value));
+                    setProblem('');
+                  }}
                   onKeyDown={(event) => {
                     // Not while an input method is still composing the word (Codex on #56).
                     if (isCheckKey({ key: event.key, isComposing: event.nativeEvent.isComposing, keyCode: event.keyCode })) {
@@ -361,6 +421,10 @@ function Session({ items: suppliedItems, page = FILL_IN_PAGE }: Props) {
                 />
               )}
             </div>
+
+            <p id={`${id}-problem`} role="alert" className="mt-2 text-sm text-ink" data-testid="answer-problem">
+              {problem && <><span className="font-medium">problem:</span> {problem}</>}
+            </p>
 
             <p id={`${id}-message`} className="mt-4 min-h-6" aria-live="polite" aria-atomic="true">{message}</p>
 

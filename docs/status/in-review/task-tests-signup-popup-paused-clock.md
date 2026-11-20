@@ -1,0 +1,1 @@
+status: tests: signup-popup.spec's "appears 10 seconds after the page opens" check pauses its fake clock before the page loads, so real load time on a busy CI runner can no longer count toward the 10 seconds (flaky toBeHidden on unrelated PRs; same fix as promo.spec in #895), plus a check that real time alone never opens the pop-up.

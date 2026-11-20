@@ -42,7 +42,7 @@ import { accountHref, promo, site } from '../config/site';
     <a href={accountHref} class="promo-button">{promo.joinLabel}</a>
     {
       site.tipPageUrl && (
-        <a href={site.tipPageUrl} target="_blank" rel="noopener noreferrer" class="promo-link">
+        <a href={site.tipPageUrl} target="_blank" rel="noopener noreferrer" class="promo-link" data-new-tab-cue>
           {promo.supportLabel}
           <span class="sr-only"> (opens in a new tab)</span>
           <svg viewBox="0 0 24 24" class="size-4 shrink-0" aria-hidden="true" focusable="false">
@@ -99,6 +99,8 @@ import { accountHref, promo, site } from '../config/site';
       document.querySelector('dialog[open]') !== null ||
       closingDialogs.size > 0 ||
       document.querySelector('#account-menu:not([hidden])') !== null ||
+      document.querySelector('[data-result-dialog]') !== null ||
+      document.querySelector('[data-footer-flag] button[aria-expanded="true"]') !== null ||
       isTextEntry(document.activeElement as HTMLElement | null);
 
     /** Closes the panel. Focus goes back where it was, unless a link took the visitor somewhere else. */
@@ -145,12 +147,24 @@ import { accountHref, promo, site } from '../config/site';
       document.addEventListener('keydown', onKeydown);
     };
 
+    // Set by a click on a report opener (the footer's flag or a game's corner flag), before any retry can run.
+    let reportOpened = false;
+    document.addEventListener('click', (event) => {
+      if (event.target instanceof Element && event.target.closest('a[data-game-flag], [data-footer-flag] button')) reportOpened = true;
+    }, true);
+
     /** Opens the panel as soon as nothing else has the visitor's attention. */
     const trigger = () => {
       if (triggered) return;
       triggered = true;
       stopWatching();
-      const attempt = () => (busy() ? window.setTimeout(attempt, 500) : open());
+      // A visitor who has just opened the report panel was asking for something else: once they close it the
+      // promo stays away rather than pulling focus from where Escape put it back.
+      const attempt = () => {
+        if (reportOpened) return;
+        if (busy()) window.setTimeout(attempt, 500);
+        else open();
+      };
       attempt();
     };
 

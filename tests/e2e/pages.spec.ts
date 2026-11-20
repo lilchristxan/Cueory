@@ -1,15 +1,20 @@
 import AxeBuilder from '@axe-core/playwright';
+import { writeFile } from 'node:fs/promises';
 import { expect, test, type Page } from '@playwright/test';
-import { socials } from '../../src/config/site';
-import { isDesktopOfEachEngine } from './projects';
+import { accountLaunch, accountsOpen, menuSmallLinks, newsletter, showsHeroJoin, socials } from '../../src/config/site';
+import { visibleFooterLinks } from '../../src/config/legalfooter';
+import { REST_MS } from '../../src/scripts/carousel';
+import { isDesktopOfEachEngine, sizeOf } from './projects';
 import { lessonRoutes } from '../lessonroutes';
 
-// The once-only promo panel (D-59) slides down after 5 seconds and takes keyboard focus, which would interrupt these
-// tests part-way, so every page here starts as if it had already been shown. tests/e2e/promo.spec.ts tests the panel.
+// The once-only promo panel (D-59) slides down after 5 seconds and takes keyboard focus, and the launch-updates pop-up
+// (lane 14) opens as a modal after 10, either of which would interrupt these tests part-way, so every page here starts
+// as if both had just been shown. tests/e2e/promo.spec.ts and tests/e2e/signup-popup.spec.ts test them.
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
     try {
       localStorage.setItem('cueory-promo-seen', String(Date.now()));
+      localStorage.setItem('cueory-signup-popup-seen', String(Date.now()));
     } catch {
       // Storage is blocked: the panel never shows then anyway.
     }
@@ -27,6 +32,54 @@ async function openFooterLinks(page: Page) {
 /** The name of the card in the middle of the "ways to study" merry-go-round (D-60). */
 const middleCard = (page: Page) =>
   page.locator('#ways-to-study [data-mode-card][data-offset="0"]').getAttribute('data-name');
+
+/** Test-only D-51 close observation; it captures IDs and event state, never DOM content or user text. */
+async function installPreviewCloseDiagnostic(page: Page) {
+  await page.addInitScript(() => {
+    type Entry = { phase: string; t: number; open: boolean | null; detail?: Record<string, boolean | string | null> };
+    type ProbeWindow = Window & { __cueoryD51Diagnostic?: Entry[] };
+    const state = window as ProbeWindow;
+    const entries: Entry[] = [];
+    state.__cueoryD51Diagnostic = entries;
+    const identity = (node: EventTarget | null) => {
+      const element = node instanceof Element ? node : null;
+      return { tag: element?.tagName ?? null, id: element?.id ?? null };
+    };
+    const note = (phase: string, detail?: Entry['detail']) => {
+      entries.push({ phase, t: performance.now(), open: document.querySelector<HTMLDialogElement>('[data-mode-preview]')?.open ?? null, detail });
+    };
+    const showModal = HTMLDialogElement.prototype.showModal;
+    HTMLDialogElement.prototype.showModal = function (...args) {
+      note('showModal:enter', identity(this));
+      try { const result = showModal.apply(this, args); note('showModal:return', identity(this)); return result; }
+      catch (error) { note('showModal:throw', { ...identity(this), name: error instanceof Error ? error.name : 'non-error' }); throw error; }
+    };
+    const close = HTMLDialogElement.prototype.close;
+    HTMLDialogElement.prototype.close = function (...args) {
+      note('dialog.close:enter', identity(this));
+      try { const result = close.apply(this, args); note('dialog.close:return', identity(this)); return result; }
+      catch (error) { note('dialog.close:throw', { ...identity(this), name: error instanceof Error ? error.name : 'non-error' }); throw error; }
+    };
+    const focus = HTMLElement.prototype.focus;
+    HTMLElement.prototype.focus = function (...args) { note('focus', identity(this)); return focus.apply(this, args); };
+    const animate = Element.prototype.animate;
+    Element.prototype.animate = function (...args) {
+      const animation = animate.apply(this, args);
+      const element = identity(this);
+      note('animation:created', element);
+      void animation.finished.then(() => note('animation:fulfilled', element), () => note('animation:rejected', element));
+      return animation;
+    };
+    document.addEventListener('DOMContentLoaded', () => {
+      const dialog = document.querySelector<HTMLDialogElement>('[data-mode-preview]');
+      if (!dialog) return note('dialog:missing');
+      for (const type of ['keydown', 'cancel', 'close']) {
+        dialog.addEventListener(type, (event) => note(`dialog:${type}`, { key: event instanceof KeyboardEvent ? event.key : null, defaultPrevented: event.defaultPrevented, ...identity(event.target) }), true);
+      }
+      note('dialog:observed', identity(dialog));
+    });
+  });
+}
 
 /** Measure cards only after their turn transitions finish, including on a loaded runner. */
 const waitForCardTurn = async (page: Page) => {
@@ -376,18 +429,21 @@ test('keyboard focus is visible', async ({ page }) => {
 
 test('home page has a launch-updates signup that works by keyboard', async ({ page }) => {
   await page.goto('/');
-  await expect(page.getByRole('heading', { name: 'Get launch updates' })).toBeVisible();
+  const signup = page.locator('#signup');
+  await expect(signup.getByRole('heading', { name: 'coming soon', exact: true })).toBeVisible();
   const form = page.getByTestId('signup-form');
   if ((await form.count()) === 0) {
-    await expect(page.getByTestId('signup-pending')).toBeVisible();
+    // Before the Kit form exists: a link to Kit's landing page, or the pending line when there is none.
+    if (await page.getByTestId('signup-landing').count()) await expect(page.getByTestId('signup-landing')).toBeVisible();
+    else await expect(page.getByTestId('signup-pending')).toBeVisible();
     return;
   }
-  const email = page.getByLabel('Email address');
+  const email = form.getByLabel('Email address');
   await expect(email).toHaveAttribute('type', 'email');
   await expect(email).toHaveAttribute('required', '');
   await email.focus();
   await page.keyboard.press('Tab');
-  await expect(page.getByRole('button', { name: 'Sign up' })).toBeFocused();
+  await expect(form.getByRole('button', { name: 'join the list', exact: true })).toBeFocused();
 });
 
 test.describe('theme switch', () => {
@@ -439,30 +495,33 @@ test.describe('theme switch', () => {
 });
 
 test.describe('marketing look (D-41)', () => {
-  test('the home hero fills the first screen: logo, a one-line serif headline, the accent line, one button', async ({
+  test('the home hero: logo, motto, a serif headline (two lines wide, four large lines on phones) with a copper accent, the start link (P5)', async ({
     page,
   }) => {
     await page.goto('/');
     await page.evaluate(() => document.fonts.ready);
     const height = page.viewportSize()!.height;
     const headline = page.getByRole('heading', { level: 1 });
-    await expect(headline).toHaveText('nursing school is hard enough.');
-    await expect(page.getByText('cueory makes studying simpler.')).toBeVisible();
+    await expect(headline).toHaveText('nursing school made simpler.');
     await expect(page.getByText('Short, clear lessons')).toHaveCount(0);
-    const button = page.getByRole('link', { name: 'create your free account', exact: true });
-    await expect(button).toHaveAttribute('href', '/#signup');
-    // No line under the button restates it (Christian, 2026-11-02).
-    await expect(page.getByText('save your progress and pick up where you left off.')).toHaveCount(0);
-    // A calmer hero (D-55): no course link, no motto line and no embossed logo behind the headline.
     const hero = page.locator('.scene-hero');
-    await expect(hero.getByRole('link')).toHaveCount(1);
-    await expect(hero.getByText('by nursing students, for nursing students.')).toHaveCount(0);
-    await expect(hero.locator('.logo')).toHaveCount(1);
+    await expect(hero.getByText('by nursing students, for nursing students')).toBeVisible();
+    // The call to action follows the draft gate: this build may show drafts, so it is a copper link to the open sample
+    // lesson. (The live build's closed, "coming soon" button is checked in tests/unit/home-sections.test.ts.)
+    const button = hero.getByTestId('hero-start');
+    await expect(button).toHaveAttribute('href', '/learn/study-skills');
+    await expect(button).toHaveText(/start studying for free/);
+    await expect(button).toHaveClass(/copper-button/);
+    // The old quiet join link and play button went away with the old hero; the explore row and the Ko-fi card remain.
+    await expect(page.getByTestId('hero-join')).toHaveCount(0);
+    await expect(hero.getByTestId('hero-play')).toHaveCount(0);
+    await expect(hero.locator('.glass-button')).toHaveCount(0);
+    await expect(hero.locator('.logo')).toHaveCount(2); // the emblem and the full logo; one shows per screen width
     for (const element of [headline, button]) {
       const box = (await element.boundingBox())!;
       expect(box.y + box.height).toBeLessThanOrEqual(height);
     }
-    // One straight line at every width (D-46): one line tall, nothing cut off, inside the screen.
+    // Two lines from the sm breakpoint up, four large lines below it (as HomeV2-390 draws), nothing cut off, inside the screen.
     const fit = await headline.evaluate((el) => {
       const style = getComputedStyle(el);
       const box = el.getBoundingClientRect();
@@ -472,10 +531,14 @@ test.describe('marketing look (D-41)', () => {
         inside: box.left >= 0 && box.right <= window.innerWidth,
       };
     });
-    expect(fit.lines).toBeLessThan(1.5);
+    const phone = page.viewportSize()!.width < 640;
+    expect(Math.round(fit.lines)).toBe(phone ? 4 : 2);
     expect(fit.clipped).toBe(false);
     expect(fit.inside).toBe(true);
     expect(await headline.evaluate((el) => getComputedStyle(el).fontFamily)).toMatch(/^"?Bodoni Moda/);
+    // "simpler." is copper (Copper Deep in Daytime), not just heavier: its colour differs from the headline's.
+    const colours = await headline.evaluate((el) => ({ own: getComputedStyle(el).color, accent: getComputedStyle(el.querySelector('.hero-accent')!).color }));
+    expect(colours.accent).not.toBe(colours.own);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   });
 
@@ -492,18 +555,24 @@ test.describe('marketing look (D-41)', () => {
     const hero = page.locator('.scene-hero');
     await openFooterLinks(page);
     await page.getByRole('radio', { name: 'Light' }).check();
+    // The home hero draws its own logo beside the menu button (P5): the full logo from 640 px wide, the emblem on phones.
+    const heroWide = page.viewportSize()!.width >= 640;
+    const heroFile = (palette: 'light' | 'dark') =>
+      new RegExp(`\\/brand\\/v1\\/${heroWide ? 'logo-full' : 'emblem'}-${palette}-\\d+\\.png$`);
     let images = await shown(hero);
     expect(images).toHaveLength(1);
-    expect(images[0]!.src).toMatch(/\/brand\/v1\/logo-full-light-\d+\.png$/);
+    expect(images[0]!.src).toMatch(heroFile('light'));
     expect(images[0]!.alt).toBe('');
     expect(await hero.locator('.logo img').first().evaluate((img) => (img as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
-    const width = (await hero.locator('.logo').boundingBox())!.width;
-    expect(width).toBeGreaterThanOrEqual(239);
+    if (heroWide) {
+      const width = (await hero.locator('.logo:visible').boundingBox())!.width;
+      expect(width).toBeGreaterThanOrEqual(239);
+    }
 
     await page.getByRole('radio', { name: 'Dark' }).check();
     images = await shown(hero);
     expect(images).toHaveLength(1);
-    expect(images[0]!.src).toMatch(/\/brand\/v1\/logo-full-dark-\d+\.png$/);
+    expect(images[0]!.src).toMatch(heroFile('dark'));
 
     await expect(page.locator('footer').getByText('by nursing students, for nursing students.')).toBeVisible();
     await expect(page.locator('link[rel="icon"][sizes="32x32"]')).toHaveAttribute('href', '/brand/v1/icon-32.png');
@@ -535,47 +604,57 @@ test.describe('marketing look (D-41)', () => {
     }
   });
   test('Open Graph and Twitter previews use the same page identity', async ({ page }) => {
-    for (const route of ['/', '/support']) {
-      await page.goto(route);
-      const title = await page.title();
-      const description = await page.locator('head meta[name="description"]').getAttribute('content');
-      const canonical = await page.locator('head link[rel="canonical"]').getAttribute('href');
-      const image = 'https://cueory.app/share/study-ivory.png';
-      expect(description).toBeTruthy();
-      expect(canonical).toBeTruthy();
-      for (const [property, content] of [
-        ['og:type', 'website'],
-        ['og:title', title],
-        ['og:description', description],
-        ['og:url', canonical],
-        ['og:image', image],
-      ]) {
-        const tag = page.locator(`head meta[property="${property}"]`);
-        await expect(tag).toHaveCount(1);
-        await expect(tag).toHaveAttribute('content', content!);
-      }
-      for (const [name, content] of [
-        ['twitter:card', 'summary_large_image'],
-        ['twitter:title', title],
-        ['twitter:description', description],
-        ['twitter:image', image],
-      ]) {
-        const tag = page.locator(`head meta[name="${name}"]`);
-        await expect(tag).toHaveCount(1);
-        await expect(tag).toHaveAttribute('content', content!);
+    for (const colorScheme of ['light', 'dark'] as const) {
+      await page.emulateMedia({ colorScheme });
+      for (const [route, status] of [['/', 200], ['/about', 200], ['/support', 200], ['/social-preview-page-does-not-exist', 404]] as const) {
+        // The second pass visits the same pages again. WebKit then revalidates them and reports the conditional
+        // answer's 304 as the navigation's status (webkit-desktop: "Expected: 200, Received: 304"), though the page is
+        // the same. A different query makes each visit a fresh fetch, so the 200 or 404 is the page's own answer.
+        const response = await page.goto(route + (colorScheme === 'dark' ? '?scheme=dark' : ''));
+        expect(response?.status()).toBe(status);
+        const title = await page.title();
+        const description = await page.locator('head meta[name="description"]').getAttribute('content');
+        const canonical = await page.locator('head link[rel="canonical"]').getAttribute('href');
+        const image = 'https://cueory.app/share/study-ivory.png';
+        expect(description).toBeTruthy();
+        expect(canonical).toBeTruthy();
+        for (const [property, content] of [
+          ['og:type', 'website'],
+          ['og:title', title],
+          ['og:description', description],
+          ['og:url', canonical],
+          ['og:image', image],
+        ]) {
+          const tag = page.locator(`head meta[property="${property}"]`);
+          await expect(tag).toHaveCount(1);
+          await expect(tag).toHaveAttribute('content', content!);
+        }
+        for (const [name, content] of [
+          ['twitter:card', 'summary_large_image'],
+          ['twitter:title', title],
+          ['twitter:description', description],
+          ['twitter:image', image],
+        ]) {
+          const tag = page.locator(`head meta[name="${name}"]`);
+          await expect(tag).toHaveCount(1);
+          await expect(tag).toHaveAttribute('content', content!);
+        }
       }
     }
   });
 
-  test('the glassy button is see-through glass with a blur, and its text stays readable', async ({ page }) => {
+  test('the copper call to action is an opaque copper gradient with Charcoal ink, and its text stays readable', async ({ page }) => {
     await page.goto('/');
-    const button = page.getByRole('link', { name: 'create your free account', exact: true });
+    const button = page.locator('.scene-hero').getByTestId('hero-start');
     const look = await button.evaluate((el) => {
       const style = getComputedStyle(el);
-      return { background: style.backgroundColor, blur: style.backdropFilter || style.getPropertyValue('-webkit-backdrop-filter') };
+      return { image: style.backgroundImage, ink: style.color, opacity: style.opacity };
     });
-    expect(look.background).toMatch(/^rgba\(\d+, \d+, \d+, 0\.\d+\)$/);
-    expect(look.blur).toContain('blur(');
+    // One shared class (.copper-button): the copper gradient, the Charcoal ink and no opacity at all.
+    expect(look.image).toContain('linear-gradient(');
+    expect(look.image).toContain('rgb(184, 115, 72)');
+    expect(look.ink).toBe('rgb(28, 25, 23)');
+    expect(look.opacity).toBe('1');
     const results = await new AxeBuilder({ page }).include('#hero-heading ~ *').withRules(['color-contrast']).analyze();
     expect(results.violations.map((v) => `${v.id}: ${v.help}`)).toEqual([]);
   });
@@ -616,10 +695,13 @@ test.describe('marketing look (D-41)', () => {
   }) => {
     await page.goto('/');
     const sections = page.locator('[data-reveal-section]');
-    // How it works, "ways to study", daily games (D-61), the features and the launch-updates panel (Task 83).
-    await expect(sections).toHaveCount(5);
-    const all = [0, 1, 2, 3, 4];
-    const ways = 1;
+    // The approved home keeps the carousel, daily games, then the launch-updates panel; how-it-works has been removed.
+    await expect(sections).toHaveCount(3);
+    expect(await sections.evaluateAll((items) => items.map((item) => item.closest('section')?.id))).toEqual([
+      'ways-to-study', 'daily-games', 'signup',
+    ]);
+    const all = [0, 1, 2];
+    const ways = 0;
     const look = (index: number) =>
       sections.nth(index).evaluate((el) => [el.getAttribute('data-reveal'), getComputedStyle(el).opacity, getComputedStyle(el).translate]);
     // All of them start below the first screen, so they wait, lowered and clear.
@@ -666,11 +748,11 @@ test.describe('"ways to study" merry-go-round (D-50, D-60)', () => {
     await expect(section(page)).toHaveAttribute('role', 'region');
     await expect(section(page)).toHaveAttribute('aria-roledescription', 'carousel');
     await expect(page.getByRole('heading', { name: 'ways to study' })).toBeVisible();
-    // The first vial in front, with the last one as its left neighbour: four on each side stand on the arc (Task 109;
-    // on phones the outer ones run past the window's edges), and the one straight behind is hidden.
-    await expect
-      .poll(() => onScreen(page))
-      .toEqual(['review', 'label it', 'adaptive quiz', 'level test', 'video', 'cards', 'learn', 'fill-in', 'matching']);
+    // The first vial in front, with the last one as its left neighbour. HomeV2's straight row (P6) shows as many on each
+    // side as fit whole (four at 1440, fewer on narrower screens, never cut off), and the one straight behind is hidden.
+    const ring = ['review', 'label it', 'adaptive quiz', 'level test', 'video', 'cards', 'learn', 'fill-in', 'matching'];
+    const perSide = { phone: 1, tablet: 2, desktop: 4 }[sizeOf(test.info())];
+    await expect.poll(() => onScreen(page)).toEqual(ring.slice(4 - perSide, 5 + perSide));
     await expect(section(page).getByRole('group', { name: '1 of 11', exact: true })).toHaveAttribute('data-active', '');
 
     // Previous from the first card goes round to the last, and next from the last comes back to the first.
@@ -715,19 +797,24 @@ test.describe('"ways to study" merry-go-round (D-50, D-60)', () => {
     expect(axe.violations.map((v) => `${v.id}: ${v.help}`)).toEqual([]);
   });
 
-  test("neighbours step back, smaller, higher, further back and dimmer, but no vial's words are ever faded", async ({
+  test("neighbours stand beside the front vial, smaller and dimmer, never overlapping, and no vial's words are ever faded", async ({
     page,
   }) => {
     await page.goto('/');
     await section(page).scrollIntoViewIfNeeded();
     await section(page).getByRole('button', { name: 'next study mode' }).click();
     await expect.poll(() => middleCard(page)).toBe('cards');
-    // Let the 700 ms glide finish (Task 109).
+    // Let the 700 ms glide finish (Task 109), and the section's own first fade-in rise (D-62), which moves every vial
+    // 10 px between the separate measurements below on a slow machine.
     await waitForCardTurn(page);
+    await expect
+      .poll(() => section(page).locator('[data-reveal-section]').evaluate((el) => getComputedStyle(el).translate))
+      .toMatch(/^(none|0px)$/);
     const look = (id: string) =>
       page.locator(`#mode-${id}`).evaluate((card) => {
         const box = card.getBoundingClientRect();
         return {
+          x: box.x,
           width: box.width,
           bottom: box.bottom,
           bright: (card as HTMLElement).style.getPropertyValue('--ring-bright'),
@@ -742,9 +829,13 @@ test.describe('"ways to study" merry-go-round (D-50, D-60)', () => {
     expect(near.width / front.width).toBeLessThan(0.9);
     expect(far.width / front.width).toBeGreaterThan(0.6);
     expect(far.width / front.width).toBeLessThan(0.78);
-    // The arc: each step out stands higher.
-    expect(near.bottom).toBeLessThan(front.bottom);
-    expect(far.bottom).toBeLessThan(near.bottom);
+    // HomeV2 keeps the vials on one glossy baseline instead of the old fanned arc.
+    expect(Math.abs(near.bottom - front.bottom)).toBeLessThan(1);
+    expect(Math.abs(far.bottom - front.bottom)).toBeLessThan(1);
+    // Side by side, never overlapping (P6): each vial starts after the one before it ends.
+    expect(near.x).toBeGreaterThanOrEqual(front.x + front.width);
+    expect(far.x).toBeGreaterThanOrEqual(near.x + near.width);
+    expect(left.x + left.width).toBeLessThanOrEqual(front.x);
     // Quieter: the glass (only the bottle image, never the words) is dimmer per step out.
     expect([front.bright, near.bright, left.bright, far.bright]).toEqual(['1', '0.95', '0.95', '0.9']);
     expect(near.glass).not.toBe(front.glass);
@@ -784,14 +875,40 @@ test.describe('"ways to study" merry-go-round (D-50, D-60)', () => {
     });
   const heard = (page: Page) => page.evaluate(() => (window as unknown as { heard: string[] }).heard);
 
-  test('a run of quick presses announces only the card where it comes to rest', async ({ page }) => {
+  test('quick real Next presses replace each pending announcement and announce the final card once', async ({ page }) => {
+    // Keep the page clock still between interactions. The controlled gaps make this a real rapid-input contract rather
+    // than relying on how long Playwright takes to deliver four separate click actions in a loaded browser.
+    const clockStart = new Date('2026-11-20T00:00:00');
+    await page.clock.install({ time: clockStart });
+    // An installed Playwright clock otherwise continues with host time; pause before the page creates its timers.
+    await page.clock.pauseAt(new Date(clockStart.getTime() + 1_000));
     await page.goto('/');
     await section(page).scrollIntoViewIfNeeded();
     await listen(page);
     const next = section(page).getByRole('button', { name: 'next study mode' });
-    for (let i = 0; i < 4; i++) await next.click({ force: true });
+
+    // These are actual button clicks, 250 ms apart: every gap is nonzero and below REST_MS. The first timer would be
+    // due 10 ms after the fourth click if a later click failed to clear it, well before the final timer's deadline.
+    const gap = 250;
+    for (let i = 0; i < 4; i++) {
+      await next.click();
+      if (i < 3) await page.clock.runFor(gap);
+    }
+    await expect.poll(() => middleCard(page)).toBe('matching');
+
+    const staleDeadlineAfterLastClick = REST_MS - gap * 3;
+    expect(staleDeadlineAfterLastClick).toBeGreaterThan(0);
+    await page.clock.runFor(staleDeadlineAfterLastClick);
+    await expect(section(page).locator('[data-modes-live]')).toHaveText('');
+    expect(await heard(page)).toEqual([]);
+
+    await page.clock.runFor(REST_MS - staleDeadlineAfterLastClick - 1);
+    await expect(section(page).locator('[data-modes-live]')).toHaveText('');
+    expect(await heard(page)).toEqual([]);
+
+    await page.clock.runFor(1);
     await expect(section(page).locator('[data-modes-live]')).toHaveText('matching, 5 of 11');
-    await page.waitForTimeout(600);
+    await page.clock.runFor(600);
     expect(await heard(page)).toEqual(['matching, 5 of 11']);
   });
 
@@ -983,10 +1100,9 @@ test.describe('silk scenes down the home page (D-53)', () => {
         };
       }),
     );
-    // Task 83: how it works and the features join the hero, "ways to study", daily games and launch updates, so
-    // Ivory and Linen still alternate below the hero.
+    // The approved home has the hero, carousel, daily games and launch updates in that order.
     expect(scenes.map((scene) => scene.kind)).toEqual([
-      'scene-hero', 'scene-play', 'scene-tint', 'scene-play', 'scene-tint', 'scene-low',
+      'scene-hero', 'scene-tint', 'scene-play', 'scene-low',
     ]);
     for (const scene of scenes) expect(scene).toMatchObject({ drawn: true, behind: '-20', fades: true });
 
@@ -1009,13 +1125,14 @@ test.describe('silk scenes down the home page (D-53)', () => {
         probe.remove();
         return size;
       };
-      const bands: Array<[number, number]> = [];
+      const bands: Array<{ scene: string; edge: 'top' | 'bottom'; from: number; to: number }> = [];
       for (const section of document.querySelectorAll('.scene')) {
         const box = section.getBoundingClientRect();
         const top = length(section, '--scene-fade-top');
         const bottom = length(section, '--scene-fade-bottom');
-        if (top > 0) bands.push([box.top - top, box.top]);
-        if (bottom > 0) bands.push([box.bottom - bottom, box.bottom]);
+        const scene = [...section.classList].find((name) => name.startsWith('scene-'))!;
+        if (top > 0) bands.push({ scene, edge: 'top', from: box.top - top, to: box.top });
+        if (bottom > 0) bands.push({ scene, edge: 'bottom', from: box.bottom - bottom, to: box.bottom });
       }
       const hits: string[] = [];
       const walker = document.createTreeWalker(document.querySelector('main')!, NodeFilter.SHOW_TEXT);
@@ -1025,12 +1142,14 @@ test.describe('silk scenes down the home page (D-53)', () => {
         range.selectNodeContents(node);
         for (const rect of range.getClientRects()) {
           if (rect.width === 0 || rect.height === 0) continue;
-          if (bands.some(([from, to]) => rect.bottom > from && rect.top < to)) hits.push(node.textContent.trim());
+          if (bands.some(({ from, to }) => rect.bottom > from && rect.top < to)) hits.push(node.textContent.trim());
         }
       }
-      return { bands: bands.length, hits };
+      return { bands, hits };
     });
-    expect(covered.bands).toBe(6); // a fade above each of the five scenes after the hero, and one into the footer
+    expect(covered.bands.map(({ scene, edge }) => [scene, edge])).toEqual([
+      ['scene-tint', 'top'], ['scene-play', 'top'], ['scene-low', 'top'], ['scene-low', 'bottom'],
+    ]); // Three top fades between the four scenes, then the launch-updates scene fades into the footer.
     expect(covered.hits).toEqual([]);
   });
 });
@@ -1054,8 +1173,12 @@ test.describe('study-mode preview (D-51)', () => {
 
   test('the card in the middle grows into its preview, which passes axe; Escape shrinks it back and focus returns', async ({
     page,
-  }) => {
-    await page.goto('/');
+  }, testInfo) => {
+    const pageErrors: string[] = [];
+    page.on('pageerror', (error) => pageErrors.push(error.name));
+    await installPreviewCloseDiagnostic(page);
+    try {
+      await page.goto('/');
     await bringToMiddle(page, 'cards');
     // Let the turn finish, so the card has come to rest before it is measured.
     await waitForCardTurn(page);
@@ -1083,7 +1206,7 @@ test.describe('study-mode preview (D-51)', () => {
     // Its feature rows wait behind the ⓘ beside the name (Christian, 2026-11-02).
     await expect(preview.getByRole('button', { name: 'more about cards' })).toHaveAttribute('aria-expanded', 'false');
     await expect(preview.getByRole('link', { name: 'start cards' })).toHaveAttribute('href', '/learn/study-skills/cards');
-    await expect(preview.getByRole('link', { name: 'create your free account', exact: true })).toHaveAttribute(
+    await expect(preview.getByRole('link', { name: 'join the launch list', exact: true })).toHaveAttribute(
       'href',
       '/#signup',
     );
@@ -1103,7 +1226,13 @@ test.describe('study-mode preview (D-51)', () => {
 
     await page.keyboard.press('Escape');
     await expect(dialog(page)).toBeHidden();
-    await expect(page.getByRole('button', { name: 'preview cards' })).toBeFocused();
+      await expect(page.getByRole('button', { name: 'preview cards' })).toBeFocused();
+    } finally {
+      const entries = await page.evaluate(() => (window as Window & { __cueoryD51Diagnostic?: unknown[] }).__cueoryD51Diagnostic ?? []).catch(() => []);
+      const payload = JSON.stringify({ entries, pageErrors }, null, 2);
+      await testInfo.attach('carousel-d51-close-path', { body: payload, contentType: 'application/json' });
+      if (process.env.CUEORY_CAROUSEL_DIAG_PATH) await writeFile(`${process.env.CUEORY_CAROUSEL_DIAG_PATH}.d51.json`, payload);
+    }
   });
 
   test('previous and next move through the modes with the row behind; the X and the darkened page close it', async ({
@@ -1236,7 +1365,10 @@ test.describe('☰ side panel and account corner (D-46)', () => {
         await expect(nav.getByRole('link', { name })).toBeVisible();
       }
       await expect(panel.getByRole('link', { name: 'privacy' })).toBeVisible();
-      await expect(panel.getByRole('link', { name: 'terms' })).toBeVisible();
+      // #747: Terms shows in the menu only once its page is approved (same rule as the footer).
+      const terms = panel.getByRole('link', { name: 'terms' });
+      if (visibleFooterLinks(menuSmallLinks).some((link) => link.href === '/terms')) await expect(terms).toBeVisible();
+      else await expect(terms).toHaveCount(0);
 
       // Tab never leaves the panel while it is open.
       for (let i = 0; i < 9; i++) {
@@ -1327,7 +1459,8 @@ test.describe('☰ side panel and account corner (D-46)', () => {
     await account.click();
     await expect(menu).toBeVisible();
     await expect(account).toHaveAttribute('aria-label', 'close account menu');
-    await page.getByRole('heading', { level: 1 }).click();
+    // The headline's top-left corner: on a phone the open account menu now covers the rest of the (higher) headline.
+    await page.getByRole('heading', { level: 1 }).click({ position: { x: 5, y: 5 } });
     await expect(menu).toBeHidden();
     await expect(account).toHaveAttribute('aria-label', 'open account menu');
   });

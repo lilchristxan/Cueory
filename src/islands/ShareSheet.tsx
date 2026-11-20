@@ -12,6 +12,7 @@ import {
   SHARE_STYLES,
   shareFileName,
   shareImagePath,
+  sharePreviewPath,
   STYLE_LABELS,
   toolName,
   xIntentUrl,
@@ -139,9 +140,11 @@ export default function ShareSheet({ tool, siteUrl }: Props) {
         pick a card for {name}
       </p>
 
-      {/* card style picker: one native radio group, so arrow keys move the selection */}
+      {/* card style picker: one native radio group, so arrow keys move the selection. tabIndex -1 keeps Firefox from
+          adding the scrolling row itself as an extra Tab stop; Tab still reaches the checked radio. */}
       <div
         ref={rowRef}
+        tabIndex={-1}
         role="radiogroup"
         aria-labelledby={labelId}
         className="relative flex w-full snap-x snap-mandatory gap-4 overflow-x-auto px-4 py-2"
@@ -294,11 +297,13 @@ function CardOption({ id, name, style, tool, checked, onChange }: CardOptionProp
         }`}
       >
         <img
-          src={shareImagePath(tool, style)}
+          src={sharePreviewPath(tool, style, 560)}
+          srcSet={`${sharePreviewPath(tool, style, 560)} 2x, ${sharePreviewPath(tool, style, 840)} 3x`}
           alt=""
           width={1200}
           height={630}
           className="block size-full object-cover"
+          loading="lazy"
           decoding="async"
           draggable={false}
         />

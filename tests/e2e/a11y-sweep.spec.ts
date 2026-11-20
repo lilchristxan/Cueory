@@ -32,7 +32,20 @@ async function waitForIslands(page: Page, route: string): Promise<void> {
   });
 }
 
-async function tabAudit(page: Page): Promise<string[]> {
+/**
+ * On macOS WebKit, ordinary Tab follows the host's text-controls-only setting.
+ * Option+Tab is Safari's full keyboard-navigation chord. Keep ordinary Tab for
+ * every other engine and host so this remains the same user-path audit there.
+ */
+function isMacOSWebKit(browserName: string): boolean {
+  return process.platform === 'darwin' && browserName === 'webkit';
+}
+
+function keyboardNavigationKey(browserName: string): 'Tab' | 'Alt+Tab' {
+  return isMacOSWebKit(browserName) ? 'Alt+Tab' : 'Tab';
+}
+
+async function tabAudit(page: Page, key = 'Tab', waitForNativeFocusScroll = false): Promise<string[]> {
   const problems: string[] = [];
   const selector = 'a[href], button, input, select, textarea, [tabindex], details > summary:first-of-type';
 
@@ -40,12 +53,16 @@ async function tabAudit(page: Page): Promise<string[]> {
   // count as a keyboard focus indicator if it looks identical when focused.
   const eligible = await page.evaluate((query) => {
     const controls = [...document.querySelectorAll<HTMLElement>(query)];
-    const isReachable = (el: HTMLElement) =>
-      el.tabIndex >= 0 &&
+    const isReachable = (el: HTMLElement) => {
+      // Links inside a closed <details> are in the page but no browser tabs to them: only its summary is a stop.
+      const closedDetails = el.closest('details:not([open])');
+      if (closedDetails && !(el.matches('summary') && el.parentElement === closedDetails)) return false;
+      return el.tabIndex >= 0 &&
       !el.matches(':disabled') &&
       !el.closest('[inert]') &&
       el.getClientRects().length > 0 &&
       getComputedStyle(el).visibility === 'visible';
+    };
 
     return controls.flatMap((el, index) => {
       if (!isReachable(el)) return [];
@@ -84,42 +101,68 @@ async function tabAudit(page: Page): Promise<string[]> {
   let sameElementTabs = 0;
   let finished = false;
 
+  const readFocused = () => page.evaluate(({ query, baselines }) => {
+    const el = document.activeElement;
+    if (!(el instanceof HTMLElement) || el === document.body || el === document.documentElement) return null;
+
+    const candidates = [...document.querySelectorAll<HTMLElement>(query)];
+    const index = candidates.indexOf(el);
+    const previous = baselines.find((control) => control.index === index);
+    const style = getComputedStyle(el);
+    const rect = el.getBoundingClientRect();
+
+    // rgb(0, 0, 0) is opaque black, NOT alpha zero. Only rgba has
+    // a comma-separated alpha component in this browser.
+    const color = style.outlineColor;
+    const transparent = color === 'transparent' ||
+      (color.startsWith('rgba(') && Number.parseFloat(color.slice(color.lastIndexOf(',') + 1)) === 0);
+    const outlineIsVisible = style.outlineStyle !== 'none' &&
+      Number.parseFloat(style.outlineWidth) > 0 && !transparent;
+    const outlineChanged = !previous ||
+      style.outlineStyle !== previous.outlineStyle ||
+      style.outlineWidth !== previous.outlineWidth ||
+      style.outlineColor !== previous.outlineColor ||
+      style.outlineOffset !== previous.outlineOffset;
+    const shadowChanged = style.boxShadow !== 'none' && style.boxShadow !== previous?.boxShadow;
+
+    return {
+      index,
+      name: el.tagName.toLowerCase() + (el.id ? '#' + el.id : ''),
+      inputType: el instanceof HTMLInputElement ? el.type : null,
+      visibleFocus: (el.matches(':focus-visible') || (el instanceof HTMLInputElement && ['date', 'time', 'datetime-local', 'month', 'week'].includes(el.type) && el.matches(':focus-within'))) && ((outlineIsVisible && outlineChanged) || shadowChanged),
+      inViewport: rect.width > 0 && rect.height > 0 &&
+        rect.top < innerHeight && rect.bottom > 0 &&
+        rect.left < innerWidth && rect.right > 0,
+    };
+  }, { query: selector, baselines: eligible });
+
   for (let step = 0; step < maxTabs; step++) {
-    await page.keyboard.press('Tab');
-    const focused = await page.evaluate(({ query, baselines }) => {
-      const el = document.activeElement;
-      if (!(el instanceof HTMLElement) || el === document.body || el === document.documentElement) return null;
+    await page.keyboard.press(key);
+    let focused = await readFocused();
 
-      const candidates = [...document.querySelectorAll<HTMLElement>(query)];
-      const index = candidates.indexOf(el);
-      const previous = baselines.find((control) => control.index === index);
-      const style = getComputedStyle(el);
-      const rect = el.getBoundingClientRect();
-
-      // rgb(0, 0, 0) is opaque black, NOT alpha zero. Only rgba has
-      // a comma-separated alpha component in this browser.
-      const color = style.outlineColor;
-      const transparent = color === 'transparent' ||
-        (color.startsWith('rgba(') && Number.parseFloat(color.slice(color.lastIndexOf(',') + 1)) === 0);
-      const outlineIsVisible = style.outlineStyle !== 'none' &&
-        Number.parseFloat(style.outlineWidth) > 0 && !transparent;
-      const outlineChanged = !previous ||
-        style.outlineStyle !== previous.outlineStyle ||
-        style.outlineWidth !== previous.outlineWidth ||
-        style.outlineColor !== previous.outlineColor ||
-        style.outlineOffset !== previous.outlineOffset;
-      const shadowChanged = style.boxShadow !== 'none' && style.boxShadow !== previous?.boxShadow;
-
-      return {
-        index,
-        name: el.tagName.toLowerCase() + (el.id ? '#' + el.id : ''),
-        inputType: el instanceof HTMLInputElement ? el.type : null,
-        visibleFocus: el.matches(':focus-visible') && ((outlineIsVisible && outlineChanged) || shadowChanged),
-        inViewport: rect.width > 0 && rect.height > 0 &&
+    // macOS WebKit can report the newly focused control before its native
+    // focus scroll is painted. Wait only for that same control to enter the
+    // viewport; no scripted scroll is performed, and focus loss still fails.
+    if (waitForNativeFocusScroll && focused && !focused.inViewport) {
+      const expectedIndex = focused.index;
+      await page.waitForFunction(({ query, expectedIndex }) => {
+        const el = document.activeElement;
+        if (!(el instanceof HTMLElement)) return true;
+        const candidates = [...document.querySelectorAll<HTMLElement>(query)];
+        if (candidates.indexOf(el) !== expectedIndex) return true;
+        const rect = el.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0 &&
           rect.top < innerHeight && rect.bottom > 0 &&
-          rect.left < innerWidth && rect.right > 0,
-      };
-    }, { query: selector, baselines: eligible });
+          rect.left < innerWidth && rect.right > 0;
+      }, { query: selector, expectedIndex }, { timeout: 250 }).catch((error: unknown) => {
+        if (!String(error).includes('Timeout')) throw error;
+      });
+      const settled = await readFocused();
+      if (!settled || settled.index !== expectedIndex) {
+        problems.push(focused.name + ': native focus scroll did not retain its target');
+      }
+      focused = settled;
+    }
 
     // Chrome may move focus into the browser chrome at the end, or wrap it to
     // the first stop. Neither counts as success until all eligible controls
@@ -146,6 +189,17 @@ async function tabAudit(page: Page): Promise<string[]> {
     lastIndex = focused.index;
     lastVisibleFocus = hasIndicator;
 
+    // At the last stop Chromium moves focus into the browser's own interface (activeElement is null above) or wraps
+    // round, but Firefox, which has no such interface under Playwright, leaves focus on the last control however often
+    // Tab is pressed. Once every eligible control has been visited, a few more presses on the same control are the end
+    // of the page, not a stuck focus. (Date inputs repeat for their segments, at most 2 extra; 4 leaves room.)
+    // Before every control has been reached, a repeated stop is still reported as stuck.
+    if (sameElementTabs >= 4 && eligible.every((control) => seen.has(control.index) || control.index === focused.index)) {
+      seen.add(focused.index);
+      finished = true;
+      break;
+    }
+
     if (sameElementTabs > 8) {
       problems.push(focused.name + ': keyboard focus did not advance after repeated Tab presses');
       break;
@@ -169,17 +223,19 @@ async function tabAudit(page: Page): Promise<string[]> {
 
 test.describe('Task 74: full-site accessibility sweep', () => {
   for (const route of pages) {
-    test(`${route}: axe, heading, skip link and keyboard focus`, async ({ page }, testInfo) => {
+    test(`${route}: axe, heading, skip link and keyboard focus`, async ({ page, browserName }, testInfo) => {
       // Task 94 audits the Evening palette. This test checks precisely the
       // requested three viewports, not a duplicate fourth phone project.
       test.skip(isEveningProject(testInfo), 'Evening palette is Task 94');
       await page.addInitScript(() => {
         // The separate promo tests cover its focus behavior. Suppress it here
         // so a timed popup cannot interrupt a long keyboard traversal.
-        try { localStorage.setItem('cueory-promo-seen', String(Date.now())); } catch { /* storage unavailable */ }
+        try { localStorage.setItem('cueory-promo-seen', String(Date.now())); localStorage.setItem('cueory-signup-popup-seen', String(Date.now())); } catch { /* storage unavailable */ }
       });
 
       const problems: string[] = [];
+      const macOSWebKit = isMacOSWebKit(browserName);
+      const tabKey = keyboardNavigationKey(browserName);
       const response = await page.goto(route);
       await waitForIslands(page, route);
       const expectedStatus = route === missingPage ? 404 : 200;
@@ -194,7 +250,7 @@ test.describe('Task 74: full-site accessibility sweep', () => {
       if (await skip.count() !== 1 || await main.count() !== 1) {
         problems.push('Missing or duplicated skip link / main#main target');
       } else {
-        await page.keyboard.press('Tab');
+        await page.keyboard.press(tabKey);
         if (!(await skip.evaluate((el) => el === document.activeElement))) {
           problems.push('Skip link is not first in the keyboard tab order');
         } else {
@@ -209,7 +265,7 @@ test.describe('Task 74: full-site accessibility sweep', () => {
       // at the first interactive element rather than halfway down the page.
       await page.goto(route);
       await waitForIslands(page, route);
-      problems.push(...await tabAudit(page));
+      problems.push(...await tabAudit(page, tabKey, macOSWebKit));
 
       const results = await new AxeBuilder({ page }).withTags(axeTags).analyze();
       for (const violation of results.violations) {
@@ -219,12 +275,6 @@ test.describe('Task 74: full-site accessibility sweep', () => {
 
       // One failure per page, with *every* finding in the assertion output.
       // Do not mark failures as fixed or alter pages in this auditing task.
-      // If a genuine date-field focus defect remains AFTER the outline
-      // detector fix, preserve it as an explicit follow-up for the director.
-      if (route === '/start' && problems.length &&
-          problems.every((problem) => problem === 'input#exam-date: keyboard focus has no visible outline')) {
-        test.fixme(true, '/start: native date-input focus indicator not visible on every internal Tab stop');
-      }
       expect(problems, `${testInfo.project.name} ${route}: accessibility findings`).toEqual([]);
     });
   }
@@ -234,7 +284,8 @@ test.describe('Task 74: full-site accessibility sweep', () => {
 test.describe('keyboard traversal regression cases', () => {
   test('repeated native date-control stops do not skip buttons after the date', async ({ page }) => {
     await page.setContent(
-      '<style>:focus-visible { outline: 2px solid black; }</style>' +
+      // The same two rules as global.css: a native date input keeps focus on an inner field, so only :focus-within matches it in WebKit.
+      '<style>:focus-visible, input[type="date"]:focus-within { outline: 2px solid black; }</style>' +
       '<label for="exam-date">exam date</label><input id="exam-date" type="date">' +
       '<button id="save">save</button><button id="skip">skip</button>',
     );
