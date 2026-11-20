@@ -1,5 +1,6 @@
 import { expect, test, type Request } from '@playwright/test';
-import { readFile, readFileSync, stat } from 'node:fs';
+import { readFileSync } from 'node:fs';
+import { readFile, stat } from 'node:fs/promises';
 import { createServer, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { extname, normalize, resolve, sep } from 'node:path';
@@ -72,11 +73,12 @@ test.beforeAll(async () => {
       const pathname = new URL(request.url ?? '/', 'http://127.0.0.1').pathname;
       const file = fileFor(pathname);
       await stat(file);
+      const body = await readFile(file);
       response.writeHead(200, {
         'content-type': contentType(file),
         ...(pathname.startsWith('/fonts/') ? { 'cache-control': fontCacheControl } : {}),
       });
-      response.end(await readFile(file));
+      response.end(body);
     } catch {
       response.writeHead(404, { 'content-type': 'text/plain; charset=utf-8' });
       response.end('not found');
@@ -124,7 +126,8 @@ for (const path of ['/', '/learn/study-skills', '/play', '/signin']) {
       })());
     });
 
-    await page.goto(new URL(path, fontOrigin).toString());
+    const navigation = await page.goto(new URL(path, fontOrigin).toString());
+    expect(navigation?.ok(), `${path}: loopback fixture navigation`).toBe(true);
     await page.evaluate(() => document.fonts.ready);
     await Promise.all(completed);
     const loaded = await page.evaluate(() => [...document.fonts]
