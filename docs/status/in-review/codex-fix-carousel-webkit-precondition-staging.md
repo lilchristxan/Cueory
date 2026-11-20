@@ -1,0 +1,1 @@
+status: WebKit carousel modal test repair (#995): selects the Video card through the supported keyboard control before verifying its one-click preview path, with lifecycle diagnostics retained for the independent D-51 close path.

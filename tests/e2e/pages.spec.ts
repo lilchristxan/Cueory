@@ -1,7 +1,9 @@
 import AxeBuilder from '@axe-core/playwright';
+import { writeFile } from 'node:fs/promises';
 import { expect, test, type Page } from '@playwright/test';
 import { accountLaunch, accountsOpen, menuSmallLinks, newsletter, showsHeroJoin, socials } from '../../src/config/site';
 import { visibleFooterLinks } from '../../src/config/legalfooter';
+import { REST_MS } from '../../src/scripts/carousel';
 import { isDesktopOfEachEngine, sizeOf } from './projects';
 import { lessonRoutes } from '../lessonroutes';
 
@@ -30,6 +32,54 @@ async function openFooterLinks(page: Page) {
 /** The name of the card in the middle of the "ways to study" merry-go-round (D-60). */
 const middleCard = (page: Page) =>
   page.locator('#ways-to-study [data-mode-card][data-offset="0"]').getAttribute('data-name');
+
+/** Test-only D-51 close observation; it captures IDs and event state, never DOM content or user text. */
+async function installPreviewCloseDiagnostic(page: Page) {
+  await page.addInitScript(() => {
+    type Entry = { phase: string; t: number; open: boolean | null; detail?: Record<string, boolean | string | null> };
+    type ProbeWindow = Window & { __cueoryD51Diagnostic?: Entry[] };
+    const state = window as ProbeWindow;
+    const entries: Entry[] = [];
+    state.__cueoryD51Diagnostic = entries;
+    const identity = (node: EventTarget | null) => {
+      const element = node instanceof Element ? node : null;
+      return { tag: element?.tagName ?? null, id: element?.id ?? null };
+    };
+    const note = (phase: string, detail?: Entry['detail']) => {
+      entries.push({ phase, t: performance.now(), open: document.querySelector<HTMLDialogElement>('[data-mode-preview]')?.open ?? null, detail });
+    };
+    const showModal = HTMLDialogElement.prototype.showModal;
+    HTMLDialogElement.prototype.showModal = function (...args) {
+      note('showModal:enter', identity(this));
+      try { const result = showModal.apply(this, args); note('showModal:return', identity(this)); return result; }
+      catch (error) { note('showModal:throw', { ...identity(this), name: error instanceof Error ? error.name : 'non-error' }); throw error; }
+    };
+    const close = HTMLDialogElement.prototype.close;
+    HTMLDialogElement.prototype.close = function (...args) {
+      note('dialog.close:enter', identity(this));
+      try { const result = close.apply(this, args); note('dialog.close:return', identity(this)); return result; }
+      catch (error) { note('dialog.close:throw', { ...identity(this), name: error instanceof Error ? error.name : 'non-error' }); throw error; }
+    };
+    const focus = HTMLElement.prototype.focus;
+    HTMLElement.prototype.focus = function (...args) { note('focus', identity(this)); return focus.apply(this, args); };
+    const animate = Element.prototype.animate;
+    Element.prototype.animate = function (...args) {
+      const animation = animate.apply(this, args);
+      const element = identity(this);
+      note('animation:created', element);
+      void animation.finished.then(() => note('animation:fulfilled', element), () => note('animation:rejected', element));
+      return animation;
+    };
+    document.addEventListener('DOMContentLoaded', () => {
+      const dialog = document.querySelector<HTMLDialogElement>('[data-mode-preview]');
+      if (!dialog) return note('dialog:missing');
+      for (const type of ['keydown', 'cancel', 'close']) {
+        dialog.addEventListener(type, (event) => note(`dialog:${type}`, { key: event instanceof KeyboardEvent ? event.key : null, defaultPrevented: event.defaultPrevented, ...identity(event.target) }), true);
+      }
+      note('dialog:observed', identity(dialog));
+    });
+  });
+}
 
 /** Measure cards only after their turn transitions finish, including on a loaded runner. */
 const waitForCardTurn = async (page: Page) => {
@@ -821,14 +871,40 @@ test.describe('"ways to study" merry-go-round (D-50, D-60)', () => {
     });
   const heard = (page: Page) => page.evaluate(() => (window as unknown as { heard: string[] }).heard);
 
-  test('a run of quick presses announces only the card where it comes to rest', async ({ page }) => {
+  test('quick real Next presses replace each pending announcement and announce the final card once', async ({ page }) => {
+    // Keep the page clock still between interactions. The controlled gaps make this a real rapid-input contract rather
+    // than relying on how long Playwright takes to deliver four separate click actions in a loaded browser.
+    const clockStart = new Date('2026-11-20T00:00:00');
+    await page.clock.install({ time: clockStart });
+    // An installed Playwright clock otherwise continues with host time; pause before the page creates its timers.
+    await page.clock.pauseAt(new Date(clockStart.getTime() + 1_000));
     await page.goto('/');
     await section(page).scrollIntoViewIfNeeded();
     await listen(page);
     const next = section(page).getByRole('button', { name: 'next study mode' });
-    for (let i = 0; i < 4; i++) await next.click({ force: true });
+
+    // These are actual button clicks, 250 ms apart: every gap is nonzero and below REST_MS. The first timer would be
+    // due 10 ms after the fourth click if a later click failed to clear it, well before the final timer's deadline.
+    const gap = 250;
+    for (let i = 0; i < 4; i++) {
+      await next.click();
+      if (i < 3) await page.clock.runFor(gap);
+    }
+    await expect.poll(() => middleCard(page)).toBe('matching');
+
+    const staleDeadlineAfterLastClick = REST_MS - gap * 3;
+    expect(staleDeadlineAfterLastClick).toBeGreaterThan(0);
+    await page.clock.runFor(staleDeadlineAfterLastClick);
+    await expect(section(page).locator('[data-modes-live]')).toHaveText('');
+    expect(await heard(page)).toEqual([]);
+
+    await page.clock.runFor(REST_MS - staleDeadlineAfterLastClick - 1);
+    await expect(section(page).locator('[data-modes-live]')).toHaveText('');
+    expect(await heard(page)).toEqual([]);
+
+    await page.clock.runFor(1);
     await expect(section(page).locator('[data-modes-live]')).toHaveText('matching, 5 of 11');
-    await page.waitForTimeout(600);
+    await page.clock.runFor(600);
     expect(await heard(page)).toEqual(['matching, 5 of 11']);
   });
 
@@ -1093,8 +1169,12 @@ test.describe('study-mode preview (D-51)', () => {
 
   test('the card in the middle grows into its preview, which passes axe; Escape shrinks it back and focus returns', async ({
     page,
-  }) => {
-    await page.goto('/');
+  }, testInfo) => {
+    const pageErrors: string[] = [];
+    page.on('pageerror', (error) => pageErrors.push(error.name));
+    await installPreviewCloseDiagnostic(page);
+    try {
+      await page.goto('/');
     await bringToMiddle(page, 'cards');
     // Let the turn finish, so the card has come to rest before it is measured.
     await waitForCardTurn(page);
@@ -1142,7 +1222,13 @@ test.describe('study-mode preview (D-51)', () => {
 
     await page.keyboard.press('Escape');
     await expect(dialog(page)).toBeHidden();
-    await expect(page.getByRole('button', { name: 'preview cards' })).toBeFocused();
+      await expect(page.getByRole('button', { name: 'preview cards' })).toBeFocused();
+    } finally {
+      const entries = await page.evaluate(() => (window as Window & { __cueoryD51Diagnostic?: unknown[] }).__cueoryD51Diagnostic ?? []).catch(() => []);
+      const payload = JSON.stringify({ entries, pageErrors }, null, 2);
+      await testInfo.attach('carousel-d51-close-path', { body: payload, contentType: 'application/json' });
+      if (process.env.CUEORY_CAROUSEL_DIAG_PATH) await writeFile(`${process.env.CUEORY_CAROUSEL_DIAG_PATH}.d51.json`, payload);
+    }
   });
 
   test('previous and next move through the modes with the row behind; the X and the darkened page close it', async ({

@@ -44,7 +44,11 @@ const startHref = heroStartHref();
     */}
     <div class="flex items-center ps-(--hero-logo-inset)">
       <Wordmark loading="eager" variant="emblem" class="w-(--logo-emblem) sm:hidden" sizes="2.25rem" />
-      <Wordmark class="hidden w-(--logo-width) sm:block" sizes="15rem" />
+      <Wordmark
+        class="hidden w-(--logo-width) sm:block"
+        sizes="15rem"
+        preloadBothOnDesktop
+      />
     </div>
 
     <!-- A size container: the headline's size follows the text column's width, so its longer line always fits. -->
