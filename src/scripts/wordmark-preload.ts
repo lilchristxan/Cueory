@@ -4,9 +4,9 @@
  * merely because its `loading` property changes. On desktop, give the actual
  * switch targets a concrete responsive file so both can finish before a palette
  * change. This module is bundled as a same-origin script; the strict CSP stays
- * unchanged. Phones never enter this branch.
+ * unchanged. The responsive CSS is the source of truth: a hidden phone logo
+ * never enters this branch.
  */
-const desktop = window.matchMedia('(min-width: 40rem)');
 
 function sourceFor(image: HTMLImageElement, targetWidth: number) {
   const candidates = (image.getAttribute('srcset') ?? '')
@@ -21,7 +21,7 @@ function sourceFor(image: HTMLImageElement, targetWidth: number) {
 }
 
 function prepare(logo: HTMLElement) {
-  if (!desktop.matches) return;
+  if (!logo.getClientRects().length) return;
   const targetWidth = Math.ceil(logo.getBoundingClientRect().width * window.devicePixelRatio);
   for (const image of logo.querySelectorAll<HTMLImageElement>('img')) {
     const source = sourceFor(image, targetWidth);
@@ -38,5 +38,5 @@ function prepare(logo: HTMLElement) {
 export function prepareDesktopWordmarks() {
   const prepareAll = () => document.querySelectorAll<HTMLElement>('[data-wordmark-preload]').forEach(prepare);
   prepareAll();
-  desktop.addEventListener('change', prepareAll);
+  window.addEventListener('resize', prepareAll);
 }
