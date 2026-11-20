@@ -4,6 +4,8 @@ import {
   migrateLegacyGameStats,
   wordPathSummary,
   forget,
+  recordResult,
+  summary,
   type GameResult,
 } from '../../src/islands/gamestats';
 import { loadStats, STATS_STORAGE_KEY } from '../../src/islands/gameresults';
@@ -123,5 +125,24 @@ describe('tachyyy and piccline stats migration', () => {
 
     const forgottenPulse = forget(stats, 'pulse');
     expect(forgottenPulse.some((r) => r.game === 'pulse' || r.game === 'pillo' || r.game === 'vialo')).toBe(false);
+  });
+
+  it('summary and recordResult normalize suture and piccline aliases', () => {
+    const historical: GameResult[] = [
+      { game: 'suture', day: '2026-11-18', solved: true, tries: 0 },
+      { game: 'piccline', day: '2026-11-19', solved: true, tries: 0 },
+    ];
+    // Both aliases report 2 played
+    expect(summary(historical, 'suture').played).toBe(2);
+    expect(summary(historical, 'piccline').played).toBe(2);
+
+    // Recording piccline when suture already exists for that day is a no-op
+    const noDuplicate = recordResult(historical, {
+      game: 'piccline',
+      day: '2026-11-18',
+      solved: true,
+      tries: 0,
+    });
+    expect(noDuplicate).toHaveLength(2);
   });
 });

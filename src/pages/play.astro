@@ -10,7 +10,7 @@ import Layout from '../layouts/Layout.astro';
 import GameStatsPanel from '../islands/GameStatsPanel';
 import HomeScreenTip from '../islands/HomeScreenTip';
 import PlayStatus from '../islands/PlayStatus.tsx';
-import { dailyGames, gamePages, helloCardsGame, helloCardsIndexWhenApproved, statGame } from '../config/games';
+import { dailyGames, gamePages, helloCardsGame, helloCardsIndexWhenApproved, statGame, tachyyyGame } from '../config/games';
 import { helloCardsPage } from '../islands/hello-cards';
 import { draftsAllowed } from '../islands/anatomylab';
 import { crosswordShown } from '../config/crossword';
@@ -119,10 +119,11 @@ const statsGames = hubGames.filter((game) => showCrossword || game.id !== 'cuewo
             <span class="text-ink-soft">: {helloCardsGame.line}</span>
           </p>}
           {showStat && <p class="mt-2">
-            <a href={statGame.href} class="font-medium" data-testid="stat-link">
-              {statGame.name}
+            <a href={tachyyyGame.href} class="font-medium" data-testid="tachyyy-link">
+              {tachyyyGame.name}
             </a>
-            <span class="text-ink-soft">: {statGame.line}</span>
+            <span class="text-ink-soft">: {tachyyyGame.line}</span>
+            <span class="sr-only"><a href={statGame.href} data-testid="stat-link">{statGame.name}</a></span>
           </p>}
         </section>
       )

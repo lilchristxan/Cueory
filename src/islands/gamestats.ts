@@ -69,15 +69,29 @@ function trim(results: GameStats): GameResult[] {
   return results.filter((result) => dayNumber(result.day)! >= latest.get(result.game)! - WINDOW_DAYS + 1);
 }
 
+export function sameGame(a: string, b: string): boolean {
+  if (a === b) return true;
+  if ((a === 'suture' || a === 'piccline') && (b === 'suture' || b === 'piccline')) return true;
+  if ((a === 'pulse' || a === 'pillo' || a === 'vialo') && (b === 'pulse' || b === 'pillo' || b === 'vialo')) return true;
+  if ((a === 'stat' || a === 'tachyyy') && (b === 'stat' || b === 'tachyyy')) return true;
+  return false;
+}
+
 /** First result for a game/day wins. Replay never rewrites it or another game's history. */
 export function recordResult(stats: GameStats, result: unknown): GameStats {
   const valid = readResult(result);
-  if (!valid || stats.some((entry) => entry.game === valid.game && entry.day === valid.day)) return stats;
+  if (!valid || stats.some((entry) => sameGame(entry.game, valid.game) && entry.day === valid.day)) return stats;
   return trim([...stats, valid]);
 }
 
 export function summary(stats: GameStats, game: string): GameSummary {
-  const results = stats.filter((entry) => entry.game === game);
+  const seenDays = new Set<string>();
+  const results = stats.filter((entry) => {
+    if (!sameGame(entry.game, game)) return false;
+    if (seenDays.has(entry.day)) return false;
+    seenDays.add(entry.day);
+    return true;
+  });
   const triesCounts: Record<number, number> = {};
   for (const result of results) triesCounts[result.tries] = (triesCounts[result.tries] ?? 0) + 1;
   return { played: results.length, solved: results.filter((entry) => entry.solved).length, triesCounts };
@@ -99,7 +113,13 @@ export interface DailyStats {
  * streak still stands today until today's puzzle is played, and a puzzle lost today ends it.
  */
 export function dailyStats(stats: GameStats, game: string, today: string, maxTries: number): DailyStats {
-  const results = stats.filter((entry) => entry.game === game);
+  const seenDays = new Set<string>();
+  const results = stats.filter((entry) => {
+    if (!sameGame(entry.game, game)) return false;
+    if (seenDays.has(entry.day)) return false;
+    seenDays.add(entry.day);
+    return true;
+  });
   const solved = results.filter((entry) => entry.solved);
   const distribution = Array.from({ length: maxTries }, () => 0);
   for (const result of solved) if (result.tries >= 1 && result.tries <= maxTries) distribution[result.tries - 1] = (distribution[result.tries - 1] ?? 0) + 1;
@@ -174,26 +194,37 @@ export function migratePilloStatsToVialo(stats: GameStats): GameStats {
 export function migrateStatAndSutureStatsToTachyyyAndPiccline(stats: GameStats): GameStats {
   const picclineDays = new Set(stats.filter((r) => r.game === 'piccline').map((r) => r.day));
   const tachyyyDays = new Set(stats.filter((r) => r.game === 'tachyyy').map((r) => r.day));
-  const migrated: GameResult[] = [];
+  const sutureDays = new Set(stats.filter((r) => r.game === 'suture').map((r) => r.day));
+  const statDays = new Set(stats.filter((r) => r.game === 'stat').map((r) => r.day));
+  const migrated: GameResult[] = [...stats];
   for (const r of stats) {
-    if ((r.game as string) === 'suture') {
-      if (!picclineDays.has(r.day)) {
-        migrated.push({
-          ...r,
-          game: 'piccline' as GameId,
-        });
-        picclineDays.add(r.day);
-      }
-    } else if ((r.game as string) === 'stat') {
-      if (!tachyyyDays.has(r.day)) {
-        migrated.push({
-          ...r,
-          game: 'tachyyy' as GameId,
-        });
-        tachyyyDays.add(r.day);
-      }
-    } else {
-      migrated.push(r);
+    if ((r.game as string) === 'suture' && !picclineDays.has(r.day)) {
+      migrated.push({
+        ...r,
+        game: 'piccline' as GameId,
+      });
+      picclineDays.add(r.day);
+    }
+    if ((r.game as string) === 'piccline' && !sutureDays.has(r.day)) {
+      migrated.push({
+        ...r,
+        game: 'suture' as GameId,
+      });
+      sutureDays.add(r.day);
+    }
+    if ((r.game as string) === 'stat' && !tachyyyDays.has(r.day)) {
+      migrated.push({
+        ...r,
+        game: 'tachyyy' as GameId,
+      });
+      tachyyyDays.add(r.day);
+    }
+    if ((r.game as string) === 'tachyyy' && !statDays.has(r.day)) {
+      migrated.push({
+        ...r,
+        game: 'stat' as GameId,
+      });
+      statDays.add(r.day);
     }
   }
   return trim(migrated);
