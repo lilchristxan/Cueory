@@ -1,10 +1,19 @@
 import { expect, test, type Request } from '@playwright/test';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 
 /**
  * Lane 5, fonts: the two preloaded Lato files are the ones the page really uses, and each is requested once (a
  * preload whose crossorigin doesn't match the font request is requested twice).
  */
 const lato = ['lato-latin-400-normal.woff2', 'lato-latin-700-normal.woff2'];
+const fontCacheControl = (() => {
+  const lines = readFileSync(resolve('dist/_headers'), 'utf8').split('\n');
+  const start = lines.findIndex((line) => line.trim() === '/fonts/*');
+  const line = lines.slice(start + 1).find((entry) => /^\s+Cache-Control:/.test(entry));
+  if (start < 0 || !line) throw new Error('built dist/_headers has no /fonts/* Cache-Control rule');
+  return line.replace(/^\s+Cache-Control:\s*/, '').trim();
+})();
 
 const requestHeaderNames = ['origin', 'sec-fetch-dest', 'sec-fetch-mode', 'sec-fetch-site', 'purpose'] as const;
 const responseHeaderNames = ['access-control-allow-origin', 'cache-control', 'content-type', 'vary'] as const;
@@ -29,6 +38,15 @@ function safeHeaders(headers: Record<string, string>, names: readonly string[]) 
 // page loaded (initiator "fetch", answered from cache) once the worker takes control. That deliberate request is not
 // the font load measured here and lands at a random moment, so this spec runs without service workers.
 test.use({ serviceWorkers: 'block' });
+
+// Astro preview does not serve dist/_headers. Apply the generated policy to the Lato responses so this browser
+// fixture exercises the same production cache directive while the separate loopback-origin count remains evidence.
+test.beforeEach(async ({ page }) => {
+  await page.route('**/fonts/lato-*.woff2', async (route) => {
+    const response = await route.fetch();
+    await route.fulfill({ response, headers: { ...response.headers(), 'cache-control': fontCacheControl } });
+  });
+});
 
 for (const path of ['/', '/learn/study-skills', '/play', '/signin']) {
   test(`${path}: both preloaded Lato weights are used and requested once`, async ({ page }, testInfo) => {
@@ -103,6 +121,10 @@ for (const path of ['/', '/learn/study-skills', '/play', '/signin']) {
     });
 
     expect(loaded).toEqual(['400', '700']);
-    for (const file of lato) expect(requests.get(file), file).toBe(1);
+    for (const file of lato) {
+      expect(requests.get(file), file).toBe(1);
+      expect([...diagnostics.values()].filter((entry) => entry.name === file).map((entry) => entry.responseHeaders['cache-control']), file)
+        .toEqual([fontCacheControl]);
+    }
   });
 }
