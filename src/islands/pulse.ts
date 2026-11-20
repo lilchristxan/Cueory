@@ -6,6 +6,7 @@
  * marked in words and by a symbol, never by color alone: in its place, in the word somewhere else, or not in it.
  */
 import { gameName } from '../config/games';
+import type { KeyValueStorage } from '../scripts/storage';
 
 /** Guesses a day. */
 export const GUESSES = 6;
@@ -42,10 +43,49 @@ export interface PulseState {
   status: 'playing' | 'solved' | 'out';
   /** Hard Mode (Task 719): every letter already shown in place or in the word must be used again. */
   hard?: boolean;
+  /** An accepted guess was made for this day's puzzle before this page loaded. */
+  hasPlayed?: boolean;
 }
 
-export function startPulse(answer: string): PulseState {
-  return { answer: answer.toLowerCase(), guesses: [], status: 'playing' };
+export function startPulse(answer: string, hard?: boolean, hasPlayed = false): PulseState {
+  return {
+    answer: answer.toLowerCase(),
+    guesses: [],
+    status: 'playing',
+    ...(hard === undefined ? {} : { hard }),
+    ...(hasPlayed ? { hasPlayed: true } : {}),
+  };
+}
+
+/** The only Pillo round detail kept locally: its day and the Hard Mode choice, never a guess or result. */
+export const PILLO_HARD_MODE_STORAGE_KEY = 'cueory-pillo-hard-mode';
+
+interface SavedPilloHardMode {
+  day: string;
+  hard: boolean;
+}
+
+/** Reads this local day's locked mode. Missing, old-day and malformed records do not lock a new round. */
+export function loadPilloHardMode(storage: KeyValueStorage | undefined, day: string): boolean | undefined {
+  try {
+    const value = storage?.getItem(PILLO_HARD_MODE_STORAGE_KEY);
+    if (!value) return undefined;
+    const saved: unknown = JSON.parse(value);
+    if (!saved || typeof saved !== 'object' || Array.isArray(saved)) return undefined;
+    const record = saved as Partial<SavedPilloHardMode>;
+    return record.day === day && typeof record.hard === 'boolean' ? record.hard : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/** Locks today's selected mode after an accepted first guess. This intentionally keeps no guess content. */
+export function rememberPilloHardMode(storage: KeyValueStorage | undefined, day: string, hard: boolean): void {
+  try {
+    storage?.setItem(PILLO_HARD_MODE_STORAGE_KEY, JSON.stringify({ day, hard }));
+  } catch {
+    // Blocked browser storage leaves this visit's state intact, but cannot retain it after a reload.
+  }
 }
 
 /** Guesses still available. */
@@ -90,7 +130,7 @@ export function markGuess(guess: string, answer: string): Mark[] {
 
 /** Hard Mode can be switched only before the first guess of the day. */
 export function canSetHardMode(state: PulseState): boolean {
-  return state.status === 'playing' && state.guesses.length === 0;
+  return state.status === 'playing' && !state.hasPlayed && state.guesses.length === 0;
 }
 
 /** Turns Hard Mode on or off, or changes nothing once a guess has been played. */
@@ -147,7 +187,7 @@ export function playGuess(state: PulseState, text: string, words?: ReadonlySet<s
   const word = cleanGuess(text);
   if (state.status !== 'playing' || wordProblem(state, word, words)) return state;
   const guesses = [...state.guesses, { word, marks: markGuess(word, state.answer) }];
-  const next = { ...state, guesses };
+  const next = { ...state, guesses, hasPlayed: true };
   if (word === state.answer) return { ...next, status: 'solved' };
   return guessesLeft(next) <= 0 ? { ...next, status: 'out' } : next;
 }

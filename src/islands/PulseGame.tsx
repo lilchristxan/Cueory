@@ -10,9 +10,11 @@ import {
   letterMarks,
   MARK_SYMBOL,
   MARK_WORDS,
+  loadPilloHardMode,
   playablePuzzles,
   playGuess,
   puzzleForDay,
+  rememberPilloHardMode,
   setHardMode,
   shareText,
   startPulse,
@@ -136,7 +138,11 @@ function Pocket({ letter, mark, typed, next }: { letter?: string; mark?: Mark; t
 export default function PulseGame({ puzzles }: Props) {
   const today = useMemo(() => new Date(), []);
   const puzzle = useMemo(() => puzzleForDay(playablePuzzles(puzzles), dayNumber(today)), [puzzles, today]);
-  const [state, setState] = useState<PulseState>(() => startPulse(puzzle?.word ?? ''));
+  const day = localDay(today);
+  const [state, setState] = useState<PulseState>(() => {
+    const savedHardMode = loadPilloHardMode(browserStorage(), day);
+    return startPulse(puzzle?.word ?? '', savedHardMode, savedHardMode !== undefined);
+  });
   const [text, setText] = useState('');
   const [problem, setProblem] = useState('');
   const howToPlay = useGameHelp('pulse');
@@ -229,7 +235,10 @@ export default function PulseGame({ puzzles }: Props) {
     const next = playGuess(state, word, list);
     setState(next);
     // The first guess of the day tells the /play daily status that today's round has started.
-    if (state.guesses.length === 0) reportProgress({ game: 'pulse', day: localDay(today) });
+    if (state.guesses.length === 0) {
+      rememberPilloHardMode(browserStorage(), day, Boolean(next.hard));
+      reportProgress({ game: 'pulse', day });
+    }
     setText('');
     setProblem('');
     const last = next.guesses.at(-1)!;
@@ -298,7 +307,7 @@ export default function PulseGame({ puzzles }: Props) {
                 note="only the letter keys below type, so your device keyboard stays closed."
               />
             </ul>
-            <p className="mt-3 text-sm text-ink-soft">hard mode and on-screen keyboard only last for this visit.</p>
+            <p className="mt-3 text-sm text-ink-soft">after your first accepted guess, hard mode stays set for that day. on-screen keyboard only lasts for this visit.</p>
           </fieldset>
         }
       />

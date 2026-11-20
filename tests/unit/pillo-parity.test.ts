@@ -8,8 +8,11 @@ import {
   canSetHardMode,
   GUESSES,
   hardModeProblem,
+  loadPilloHardMode,
   markGuess,
+  PILLO_HARD_MODE_STORAGE_KEY,
   playGuess,
+  rememberPilloHardMode,
   setHardMode,
   shareText,
   startPulse,
@@ -20,6 +23,15 @@ import {
 import { dailyStats, parseStats, recordResult, serialize, type GameResult, type GameStats } from '../../src/islands/gamestats';
 
 const words = new Set(['crane', 'grace', 'grape', 'plant', 'trace', 'brace', 'eerie', 'geese', 'cacao']);
+
+function memoryStorage() {
+  const values = new Map<string, string>();
+  return {
+    getItem: (key: string) => values.get(key) ?? null,
+    setItem: (key: string, value: string) => values.set(key, value),
+    removeItem: (key: string) => values.delete(key),
+  };
+}
 
 describe('pillo hard mode', () => {
   it('can be switched only before the first guess', () => {
@@ -33,6 +45,33 @@ describe('pillo hard mode', () => {
     expect(canSetHardMode(played)).toBe(false);
     expect(setHardMode(played, false)).toBe(played);
     expect(setHardMode(playGuess(start, 'crane', words), true).hard).toBeUndefined();
+  });
+
+  it('locks the chosen mode after an accepted first guess through a same-day reload', () => {
+    const storage = memoryStorage();
+    const start = startPulse('grace');
+    const rejected = playGuess(start, 'zzzzz', words);
+    expect(rejected).toBe(start);
+    expect(loadPilloHardMode(storage, '2026-11-01')).toBeUndefined();
+
+    const hard = setHardMode(start, true);
+    const played = playGuess(hard, 'crane', words);
+    rememberPilloHardMode(storage, '2026-11-01', Boolean(played.hard));
+    expect(JSON.parse(storage.getItem(PILLO_HARD_MODE_STORAGE_KEY)!)).toEqual({ day: '2026-11-01', hard: true });
+
+    const savedHardMode = loadPilloHardMode(storage, '2026-11-01');
+    const reloaded = startPulse('grace', savedHardMode, savedHardMode !== undefined);
+    expect(reloaded.hard).toBe(true);
+    expect(canSetHardMode(reloaded)).toBe(false);
+    expect(loadPilloHardMode(storage, '2026-11-02')).toBeUndefined();
+    expect(canSetHardMode(startPulse('grace'))).toBe(true);
+
+    const defaultMode = memoryStorage();
+    rememberPilloHardMode(defaultMode, '2026-11-01', false);
+    const savedDefaultMode = loadPilloHardMode(defaultMode, '2026-11-01');
+    const defaultReloaded = startPulse('grace', savedDefaultMode, savedDefaultMode !== undefined);
+    expect(defaultReloaded.hard).toBe(false);
+    expect(canSetHardMode(defaultReloaded)).toBe(false);
   });
 
   it('keeps letters shown in place where they are, and uses letters shown elsewhere', () => {
@@ -197,6 +236,10 @@ describe('pillo first guess of the day', () => {
 
   it('sends it from the game on the first guess only', () => {
     const source = readFileSync(new URL('../../src/islands/PulseGame.tsx', import.meta.url), 'utf8');
-    expect(source).toContain("if (state.guesses.length === 0) reportProgress({ game: 'pulse', day: localDay(today) });");
+    expect(source).toContain("if (state.guesses.length === 0) {");
+    expect(source).toContain(
+      "rememberPilloHardMode(browserStorage(), day, Boolean(next.hard));",
+    );
+    expect(source).toContain("reportProgress({ game: 'pulse', day });");
   });
 });
