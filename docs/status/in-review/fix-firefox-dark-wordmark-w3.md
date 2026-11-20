@@ -1,0 +1,1 @@
+status: Firefox dark home wordmark: the hidden full logo stays lazy on arrival. Interacting with the theme picker prepares the desktop palette artwork, retaining responsive image choices and the phone emblem.
