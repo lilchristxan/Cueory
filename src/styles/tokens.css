@@ -52,6 +52,9 @@
   --cueory-copper-shine: var(--color-copper-shine);
   /* Ivory and Espresso text fail 4.5:1 on the copper stops; Charcoal passes on all four (4.65 or more). */
   --cueory-copper-ink: #1c1917;   /* Charcoal — text on the gradient, in both themes */
+  /* Game accents (Christian, 20 Nov 2026; docs/BRAND.md). Teal is for piccline only; dim is for vialo's unlit board cells on dark. */
+  --color-game-teal: #2f7a78;     /* Teal         — piccline accent in Daytime */
+  --color-game-dim: #5a463a;      /* Dim          — vialo unlit cells on dark */
   --cueory-glass-bg: rgb(var(--glass-rgb) / var(--glass-alpha));
   --cueory-glass-border: rgb(var(--glass-rim-rgb) / var(--glass-rim-alpha));
   --cueory-glass-shadow: var(--shadow-soft);
@@ -507,6 +510,10 @@
     --color-copper: #d9976a;        /* Copper */
     --color-copper-glow: #f6d3ae;   /* Copper Glow */
     --color-copper-shine: #fff0de;  /* Copper Shine */
+  --color-game-teal: #4fb3ae;     /* Teal Light   — piccline accent in Evening */
+  --color-game-dim: #5a463a;      /* Dim          — vialo unlit cells on dark */
+    --color-game-teal: #4fb3ae;     /* Teal Light   — piccline accent in Evening */
+    --color-game-dim: #5a463a;      /* Dim          — vialo unlit cells on dark */
 
     --color-silk-base: #1c1917;   /* Charcoal */
     --color-silk-sheen: #3a2d24;  /* Walnut */
@@ -597,6 +604,8 @@
   --color-copper: #d9976a;        /* Copper */
   --color-copper-glow: #f6d3ae;   /* Copper Glow */
   --color-copper-shine: #fff0de;  /* Copper Shine */
+  --color-game-teal: #4fb3ae;     /* Teal Light   — piccline accent in Evening */
+  --color-game-dim: #5a463a;      /* Dim          — vialo unlit cells on dark */
 
   --color-silk-base: #1c1917;   /* Charcoal */
   --color-silk-sheen: #3a2d24;  /* Walnut */

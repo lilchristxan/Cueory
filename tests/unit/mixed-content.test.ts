@@ -25,7 +25,7 @@ function unapproved(text: string, path: string): string[] {
     if (namespaces.has(url)) return false;
     // Preserve upstream font licenses verbatim. This is a license reference,
     // never an executable script, style, image or document resource.
-    if (/^fonts\/(?:lato|bodoni-moda|kalam)-OFL\.txt$/.test(path) && url === 'http://scripts.sil.org/OFL') return false;
+    if (/^fonts\/(?:lato|bodoni-moda|kalam|sacramento)-OFL\.txt$/.test(path) && url === 'http://scripts.sil.org/OFL') return false;
     // The bundled Supabase auth SDK contains its upstream local-development
     // default. Production uses the validated, supplied project URL, not this
     // default (src/islands/supabaseclient.ts and supabaseenv.ts).
