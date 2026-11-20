@@ -1,6 +1,6 @@
 import { expect, test, type Request } from '@playwright/test';
 import { readFileSync } from 'node:fs';
-import { readFile, stat } from 'node:fs/promises';
+import { readFile } from 'node:fs/promises';
 import { createServer, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { extname, normalize, resolve, sep } from 'node:path';
@@ -72,7 +72,6 @@ test.beforeAll(async () => {
     try {
       const pathname = new URL(request.url ?? '/', 'http://127.0.0.1').pathname;
       const file = fileFor(pathname);
-      await stat(file);
       const body = await readFile(file);
       response.writeHead(200, {
         'content-type': contentType(file),
