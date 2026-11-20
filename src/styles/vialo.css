@@ -405,11 +405,11 @@
     font-size: var(--text-sm);
     line-height: var(--text-sm--line-height);
   }
-  /* --pillo-share (0 to 1) is this row's count against the most common row; the island sets it on each bar. */
+  /* --vialo-share (0 to 1) is this row's count against the most common row; the island sets it on each bar. */
   .vialo-dist-bar {
-    --pillo-share: 0;
+    --vialo-share: 0;
     display: block;
-    inline-size: calc(var(--pillo-bar-min) + (100% - var(--pillo-bar-min)) * var(--pillo-share));
+    inline-size: calc(var(--pillo-bar-min) + (100% - var(--pillo-bar-min)) * var(--vialo-share));
     block-size: var(--pillo-strip-pill);
     border: var(--border-pillo-key) solid var(--color-line);
     border-radius: var(--radius-pill);
