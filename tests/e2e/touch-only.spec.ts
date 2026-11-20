@@ -1,5 +1,65 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page, type TestInfo } from '@playwright/test';
 import { sizeOf } from './projects';
+
+type TouchInputObservation = {
+  maxTouchPoints: number;
+  pointerdown: { isTrusted: boolean; pointerType: string } | null;
+  touchstart: { changedTouchesLength: number; isTrusted: boolean; targetTouchesLength: number; touchesLength: number } | null;
+};
+
+async function recordLinuxWebkitTouchInput(page: Page, testInfo: TestInfo) {
+  await page.evaluate(() => {
+    const probe = document.createElement('button');
+    probe.type = 'button';
+    probe.dataset.linuxWebkitTouchProbe = 'true';
+    probe.textContent = 'touch input probe';
+    const observation: TouchInputObservation = {
+      maxTouchPoints: navigator.maxTouchPoints,
+      pointerdown: null,
+      touchstart: null,
+    };
+    const save = () => {
+      probe.dataset.touchObservation = JSON.stringify(observation);
+    };
+    probe.addEventListener('pointerdown', (event) => {
+      observation.pointerdown = { isTrusted: event.isTrusted, pointerType: event.pointerType };
+      save();
+    });
+    probe.addEventListener('touchstart', (event) => {
+      observation.touchstart = {
+        changedTouchesLength: event.changedTouches.length,
+        isTrusted: event.isTrusted,
+        targetTouchesLength: event.targetTouches.length,
+        touchesLength: event.touches.length,
+      };
+      save();
+    });
+    save();
+    document.body.prepend(probe);
+  });
+
+  const probe = page.locator('[data-linux-webkit-touch-probe]');
+  let tapError: unknown;
+  try {
+    await probe.tap();
+  } catch (error) {
+    tapError = error;
+  } finally {
+    const observation = await probe
+      .evaluate((element) => JSON.parse((element as HTMLElement).dataset.touchObservation ?? '{}'))
+      .catch(() => ({ probe: 'unavailable' }));
+    await testInfo.attach('linux-webkit-trusted-touch', {
+      body: JSON.stringify({
+        platform: process.platform,
+        tap: tapError === undefined ? 'completed' : 'failed',
+        ...observation,
+      }, null, 2),
+      contentType: 'application/json',
+    });
+    await probe.evaluate((element) => element.remove()).catch(() => undefined);
+  }
+  if (tapError !== undefined) throw tapError;
+}
 
 async function expectNativeTouchInput(page: Page) {
   await page.evaluate(() => {
@@ -50,7 +110,7 @@ test.describe('touch only (no hover)', () => {
   });
 
   for (const path of pages) {
-    test(`${path}: no hover, no title tooltips, and no hover-only reveal`, async ({ page, browserName }) => {
+    test(`${path}: no hover, no title tooltips, and no hover-only reveal`, async ({ page, browserName }, testInfo) => {
       await page.goto(path);
       await page.evaluate(() => document.fonts.ready);
 
@@ -61,6 +121,9 @@ test.describe('touch only (no hover)', () => {
         width: innerWidth,
       }));
       expect(media).toMatchObject({ hover: false, fine: false, width: 390 });
+      if (process.platform === 'linux' && browserName === 'webkit') {
+        await recordLinuxWebkitTouchInput(page, testInfo);
+      }
       if (process.platform === 'darwin' && browserName === 'webkit') {
         await expectNativeTouchInput(page);
       } else {
