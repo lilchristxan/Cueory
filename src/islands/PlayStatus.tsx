@@ -86,7 +86,7 @@ export default function PlayStatus({ games, isComingSoonCrossword = false }: Pro
       if (round.game && round.day && round.card?.result) {
         const match = /^(\d+)\s*\/\s*(\d+)$/.exec(round.card.result);
         if (match) {
-          map[heardKey(round.game, round.day)] = { wordsFound: Number(match[1]), totalWords: Number(match[2]) };
+          map[heardKey(round.game as GameId, round.day)] = { wordsFound: Number(match[1]), totalWords: Number(match[2]) };
         }
       }
     }
