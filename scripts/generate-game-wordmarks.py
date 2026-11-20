@@ -8,7 +8,7 @@ from fontTools.pens.transformPen import TransformPen
 from fontTools.pens.svgPathPen import SVGPathPen
 from fontTools.pens.boundsPen import BoundsPen
 
-REPO_ROOT = "/Users/christian/.gemini/antigravity/scratch/Cueory"
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT_DIR = os.path.join(REPO_ROOT, "public/brand/games")
 os.makedirs(OUT_DIR, exist_ok=True)
 
@@ -28,7 +28,7 @@ def decompress_to_ttf(path):
 # --- A. VIALO ---
 # Bodoni Moda Medium (500), optical size 96
 # Letter-spacing about -0.022em.
-# Top 58% espresso #3e2c23, bottom 42% copper #b87348 (Evening: #efe6da over #d9976a).
+# Top 58% espresso #3e2c23, bottom 42% copper #b87348 (Evening: #f9f5ef over #d9976a).
 bodoni_norm_data = decompress_to_ttf(os.path.join(REPO_ROOT, "public/fonts/bodoni-moda-latin-opsz-normal.woff2"))
 tt_bodoni = TTFont(io.BytesIO(bodoni_norm_data))
 inst_bodoni = instantiateVariableFont(tt_bodoni, {"wght": 500, "opsz": 96})
@@ -93,7 +93,7 @@ vialo_light_svg = f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {widt
 vialo_dark_svg = f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {width} {height}" role="img" aria-label="vialo">
   <defs>
     <linearGradient id="vialo-split-dark" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="58%" stop-color="#efe6da" />
+      <stop offset="58%" stop-color="#f9f5ef" />
       <stop offset="58%" stop-color="#d9976a" />
     </linearGradient>
   </defs>
@@ -111,7 +111,7 @@ print("Saved vialo wordmarks. Dimensions:", width, height)
 # "tach" in Bodoni Moda 500 roman, three italic "y"s overlapping.
 # y2 and y3 shifted left 0.3365em, overall letter-spacing -0.0125em.
 # Light: y1 rgba(62,44,35,0.22), y2 rgba(62,44,35,0.5), y3 #b87348.
-# Evening: y1 rgba(239,230,218,0.22), y2 rgba(239,230,218,0.5), y3 #d9976a, tach #efe6da.
+# Evening: y1 rgba(249,245,239,0.22), y2 rgba(249,245,239,0.5), y3 #d9976a, tach #f9f5ef.
 bodoni_ital_data = decompress_to_ttf(os.path.join(REPO_ROOT, "public/fonts/bodoni-moda-latin-opsz-italic.woff2"))
 tt_ital = TTFont(io.BytesIO(bodoni_ital_data))
 inst_ital = instantiateVariableFont(tt_ital, {"wght": 500, "opsz": 96})
@@ -193,9 +193,9 @@ tachyyy_light_svg = f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {t_
 </svg>'''
 
 tachyyy_dark_svg = f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {t_width} {t_height}" role="img" aria-label="tachyyy">
-  <path d="{tach_d}" fill="#efe6da" />
-  <path d="{y1_d}" fill="rgba(239,230,218,0.22)" />
-  <path d="{y2_d}" fill="rgba(239,230,218,0.5)" />
+  <path d="{tach_d}" fill="#f9f5ef" />
+  <path d="{y1_d}" fill="rgba(249,245,239,0.22)" />
+  <path d="{y2_d}" fill="rgba(249,245,239,0.5)" />
   <path d="{y3_d}" fill="#d9976a" />
 </svg>'''
 
@@ -208,10 +208,17 @@ print("Saved tachyyy wordmarks. Dimensions:", t_width, t_height)
 
 # --- C. PICCLINE ---
 # Sacramento (SIL OFL), teal #2f7a78 (light), Evening #4fb3ae (dark).
-with open("/tmp/Sacramento-Regular.ttf", "rb") as f:
+sacramento_path = os.path.join(REPO_ROOT, "scripts/fonts/Sacramento-Regular.ttf")
+if not os.path.exists(sacramento_path):
+    import urllib.request
+    os.makedirs(os.path.dirname(sacramento_path), exist_ok=True)
+    url = "https://raw.githubusercontent.com/google/fonts/main/ofl/sacramento/Sacramento-Regular.ttf"
+    urllib.request.urlretrieve(url, sacramento_path)
+
+with open(sacramento_path, "rb") as f:
     sacramento_data = f.read()
 
-tt_sacramento = TTFont("/tmp/Sacramento-Regular.ttf")
+tt_sacramento = TTFont(sacramento_path)
 gset_sacramento = tt_sacramento.getGlyphSet()
 
 face_sacramento = hb.Face(sacramento_data)
@@ -265,7 +272,7 @@ print("Saved piccline wordmarks. Dimensions:", p_width, p_height)
 # 2. GENERATE GAME ICONS
 # ==========================================
 # All tiles: rounded square, corner radius 23% of the width (rx=23 in 100x100 viewBox).
-# Dark espresso tile: 1px ring rgba(239,230,218,0.16).
+# Dark espresso tile: 1px ring rgba(249,245,239,0.16).
 
 # --- VIALO ICON ---
 # 5x3 grid, rect x="{9+17c}" y="{22+22r}" width="14" height="12" rx="6"
@@ -290,7 +297,7 @@ vialo_icon_light = f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 
 </svg>'''
 
 vialo_icon_dark = f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-label="vialo">
-  <rect width="100" height="100" rx="23" fill="#3e2c23" stroke="rgba(239,230,218,0.16)" stroke-width="1" />
+  <rect width="100" height="100" rx="23" fill="#3e2c23" stroke="rgba(249,245,239,0.16)" stroke-width="1" />
 {build_vialo_cells("#d9976a", "#5a463a")}
 </svg>'''
 
@@ -312,9 +319,9 @@ tachyyy_icon_light = f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10
 </svg>'''
 
 tachyyy_icon_dark = f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-label="tachyyy">
-  <rect width="100" height="100" rx="23" fill="#3e2c23" stroke="rgba(239,230,218,0.16)" stroke-width="1" />
-  <path d="{heart_d}" transform="translate(6 19) scale(0.62)" fill="#efe6da" fill-opacity="0.22" />
-  <path d="{heart_d}" transform="translate(19 19) scale(0.62)" fill="#efe6da" fill-opacity="0.5" />
+  <rect width="100" height="100" rx="23" fill="#3e2c23" stroke="rgba(249,245,239,0.16)" stroke-width="1" />
+  <path d="{heart_d}" transform="translate(6 19) scale(0.62)" fill="#f9f5ef" fill-opacity="0.22" />
+  <path d="{heart_d}" transform="translate(19 19) scale(0.62)" fill="#f9f5ef" fill-opacity="0.5" />
   <path d="{heart_d}" transform="translate(32 19) scale(0.62)" fill="#d9976a" />
 </svg>'''
 

@@ -1,7 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 4326 1620" role="img" aria-label="vialo">
   <defs>
     <linearGradient id="vialo-split-dark" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="58%" stop-color="#efe6da" />
+      <stop offset="58%" stop-color="#f9f5ef" />
       <stop offset="58%" stop-color="#d9976a" />
     </linearGradient>
   </defs>
