@@ -124,7 +124,7 @@ test.describe('touch only (no hover)', () => {
       if (process.platform === 'linux' && browserName === 'webkit') {
         await recordLinuxWebkitTouchInput(page, testInfo);
       }
-      if (process.platform === 'darwin' && browserName === 'webkit') {
+      if (browserName === 'webkit') {
         await expectNativeTouchInput(page);
       } else {
         expect(media.maxTouchPoints).toBeGreaterThan(0);
