@@ -41,6 +41,10 @@ function isMacOSWebKit(browserName: string): boolean {
   return process.platform === 'darwin' && browserName === 'webkit';
 }
 
+function waitsForWebKitFocusScroll(browserName: string): boolean {
+  return browserName === 'webkit';
+}
+
 function keyboardNavigationKey(browserName: string): 'Tab' | 'Alt+Tab' {
   return isMacOSWebKit(browserName) ? 'Alt+Tab' : 'Tab';
 }
@@ -140,8 +144,8 @@ async function tabAudit(page: Page, key = 'Tab', waitForNativeFocusScroll = fals
     await page.keyboard.press(key);
     let focused = await readFocused();
 
-    // macOS WebKit can report the newly focused control before its native
-    // focus scroll is painted. Wait only for that same control to enter the
+    // WebKit can report the newly focused control before its native focus
+    // scroll is painted. Wait only for that same control to enter the
     // viewport; no scripted scroll is performed, and focus loss still fails.
     if (waitForNativeFocusScroll && focused && !focused.inViewport) {
       const expectedIndex = focused.index;
@@ -234,7 +238,7 @@ test.describe('Task 74: full-site accessibility sweep', () => {
       });
 
       const problems: string[] = [];
-      const macOSWebKit = isMacOSWebKit(browserName);
+      const webkitFocusScroll = waitsForWebKitFocusScroll(browserName);
       const tabKey = keyboardNavigationKey(browserName);
       const response = await page.goto(route);
       await waitForIslands(page, route);
@@ -265,7 +269,7 @@ test.describe('Task 74: full-site accessibility sweep', () => {
       // at the first interactive element rather than halfway down the page.
       await page.goto(route);
       await waitForIslands(page, route);
-      problems.push(...await tabAudit(page, tabKey, macOSWebKit));
+      problems.push(...await tabAudit(page, tabKey, webkitFocusScroll));
 
       const results = await new AxeBuilder({ page }).withTags(axeTags).analyze();
       for (const violation of results.violations) {

@@ -19,6 +19,19 @@ export function revealInstantly(section: HTMLElement, observer?: Pick<Intersecti
   }
 }
 
+/**
+ * Once a waiting section has been made visible, let the browser finish the
+ * focus scroll against its final (untranslated) layout. WebKit can otherwise
+ * keep the newly focused control a few pixels below the viewport edge.
+ */
+export function keepFocusedTargetInView(target: HTMLElement): void {
+  window.requestAnimationFrame(() => {
+    if (document.activeElement === target) {
+      target.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    }
+  });
+}
+
 export function revealSections(): void {
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches || !('IntersectionObserver' in window)) return;
   const observer = new IntersectionObserver(
@@ -39,10 +52,14 @@ export function revealSections(): void {
   for (const section of document.querySelectorAll<HTMLElement>('[data-reveal-section]')) {
     if (!waitsForReveal(section.getBoundingClientRect().top, window.innerHeight)) continue;
     section.dataset.reveal = 'waiting';
-    const onFocusIn = () => {
+    const onFocusIn = (event?: FocusEvent) => {
       if (section.dataset.reveal === 'waiting') {
         revealInstantly(section, observer);
         section.removeEventListener('focusin', onFocusIn);
+        const target = event?.target;
+        if (target && typeof HTMLElement !== 'undefined' && target instanceof HTMLElement) {
+          keepFocusedTargetInView(target);
+        }
       }
     };
     section.addEventListener('focusin', onFocusIn);
