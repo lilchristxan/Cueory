@@ -402,7 +402,7 @@ export function PathBoard({ puzzle, name }: Props) {
                     <span aria-hidden="true" className="relative">{letter}</span>
                     {view.look === 'theme' && <ThemeMark className="wordpath-mark" />}
                     {view.look === 'special' && <ThreadMark className="wordpath-mark" />}
-                    {/* Only a second cue numbers an answer's letters; picked letters show no numbers (the line shows the order). */}
+                    {/* A second cue's order remains visible when one of its letters is also picked. */}
                     {view.order !== undefined && (
                       <span aria-hidden="true" className="wordpath-step text-xs font-normal">{view.order}</span>
                     )}

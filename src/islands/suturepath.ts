@@ -308,8 +308,11 @@ export interface CellView {
 export function cellView(state: PathState, puzzle: SuturePathPuzzle, cell: Cell): CellView {
   const found = foundAnswer(state, puzzle, cell);
   if (found !== undefined) return { look: puzzle.words[found]!.special ? 'special' : 'theme' };
+  const hintedPlace = state.hint?.order
+    ? puzzle.words[state.hint.answer]!.path.findIndex((part) => same(part, cell))
+    : -1;
   const step = state.picked.findIndex((part) => same(part, cell));
-  if (step >= 0) return { look: 'picked', step: step + 1 };
+  if (step >= 0) return { look: 'picked', step: step + 1, ...(hintedPlace >= 0 ? { order: hintedPlace + 1 } : {}) };
   if (state.hint) {
     const place = puzzle.words[state.hint.answer]!.path.findIndex((part) => same(part, cell));
     if (place >= 0) return state.hint.order ? { look: 'hinted', order: place + 1 } : { look: 'hinted' };
@@ -326,7 +329,7 @@ export function pathCellLabel(state: PathState, puzzle: SuturePathPuzzle, cell: 
   switch (view.look) {
     case 'special': return `${base}, the thread: ${puzzle.words[found!]!.answer.toLowerCase()}`;
     case 'theme': return `${base}, theme word: ${puzzle.words[found!]!.answer.toLowerCase()}`;
-    case 'picked': return `${base}, picked, letter ${view.step} of the word`;
+    case 'picked': return `${base}, picked, letter ${view.step} of the word${view.order ? `, cue, letter ${view.order}` : ''}`;
     case 'hinted': return view.order ? `${base}, cue, letter ${view.order}` : `${base}, cue`;
     default: return base;
   }
