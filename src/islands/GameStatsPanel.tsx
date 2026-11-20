@@ -251,7 +251,7 @@ export default function GameStatsPanel({ games: order }: Props) {
                   {(result.played > 0 || (game.id === 'triage' && sudokuKept())) && (
                     <>
                       <p className="mt-1 text-sm text-ink-soft">{triesInWords(game.id, result.triesCounts)}</p>
-                      {game.id === 'pulse' && <p className="mt-1 text-sm text-ink-soft">{vialoLine(saved.stats)}</p>}
+                      {(game.id === 'pulse' || game.id === 'vialo') && <p className="mt-1 text-sm text-ink-soft">{vialoLine(saved.stats)}</p>}
                       {game.id === 'cueword' && (() => {
                         const run = currentStreak(saved.stats, game.id, localDay(new Date()));
                         return <p className="mt-1 text-sm" data-testid="crossword-streak">streak: {run} {run === 1 ? 'day' : 'days'} solved without help.</p>;

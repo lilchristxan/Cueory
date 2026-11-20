@@ -164,7 +164,10 @@ export function parseHelpSeen(raw: string | null | undefined): Set<HelpGame> {
 
 export function helpSeen(storage: KeyValueStorage | undefined, game: HelpGame): boolean {
   try {
-    return parseHelpSeen(storage?.getItem(GAME_HELP_STORAGE_KEY)).has(game);
+    const seen = parseHelpSeen(storage?.getItem(GAME_HELP_STORAGE_KEY));
+    if (seen.has(game)) return true;
+    if (game === 'vialo' && seen.has('pulse')) return true;
+    return false;
   } catch {
     return false;
   }
@@ -176,6 +179,7 @@ export function markHelpSeen(storage: KeyValueStorage | undefined, game: HelpGam
     const seen = parseHelpSeen(storage?.getItem(GAME_HELP_STORAGE_KEY));
     if (seen.has(game)) return;
     seen.add(game);
+    if (game === 'vialo') seen.add('pulse');
     storage?.setItem(GAME_HELP_STORAGE_KEY, JSON.stringify(VALID_HELP_GAMES.filter((id) => seen.has(id as HelpGame))));
   } catch {
     // Not remembered.

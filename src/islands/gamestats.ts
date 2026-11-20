@@ -147,12 +147,12 @@ export function serialize(stats: GameStats): string {
   return JSON.stringify({ version: VERSION, results: trim(results) });
 }
 
-/** If cueory-game-stats holds pillo data under an old key, copy it to vialo so nobody loses a streak. */
+/** If cueory-game-stats holds pillo or pulse data under an old key, copy it to vialo so nobody loses a streak. */
 export function migratePilloStatsToVialo(stats: GameStats): GameStats {
   const vialoDays = new Set(stats.filter((r) => r.game === 'vialo').map((r) => r.day));
   const migrated: GameResult[] = [...stats];
   for (const r of stats) {
-    if ((r.game as string) === 'pillo' && !vialoDays.has(r.day)) {
+    if (((r.game as string) === 'pillo' || (r.game as string) === 'pulse') && !vialoDays.has(r.day)) {
       migrated.push({
         ...r,
         game: 'vialo' as GameId,
