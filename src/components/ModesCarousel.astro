@@ -227,6 +227,7 @@ const icons: Record<StudyFeatureIcon, string> = {
     RING_MS,
     SETTLE_GRACE_MS,
     STEP_MS,
+    autoplayHold,
     canAutoAdvance,
     canEnhanceCarousel,
     carouselState,
@@ -484,15 +485,19 @@ const icons: Record<StudyFeatureIcon, string> = {
       Auto-advance: one countdown, started afresh (the full AUTO_ADVANCE_MS) each time nothing stops it and cleared the
       moment something does, so the vial in front always gets its whole time: after the carousel comes into view, after
       the pointer leaves it or focus moves out, after play. Every change to `state` calls syncAutoplay synchronously,
-      and root[data-autoplay] says whether the countdown is running. Never a free-running interval, whose next tick
-      could land a moment after the carousel came into view or the pointer left it.
+      could land a moment after the carousel came into view or the pointer left it. data-autoplay-hold gives the active
+      hold reason whenever it is off. Never a free-running interval, whose next tick could land a moment after the
+      carousel came into view or the pointer left it.
     */
     const controls = root.querySelector<HTMLElement>('[data-modes-controls]');
     const finePointer = window.matchMedia('(hover: hover) and (pointer: fine)');
     let countdown = 0;
     function syncAutoplay() {
-      const allowed = canAutoAdvance(state);
+      const hold = autoplayHold(state);
+      const allowed = hold === undefined;
       root!.dataset.autoplay = allowed ? 'on' : 'off';
+      if (hold) root!.dataset.autoplayHold = hold;
+      else delete root!.dataset.autoplayHold;
       if (!allowed) {
         window.clearTimeout(countdown);
         countdown = 0;

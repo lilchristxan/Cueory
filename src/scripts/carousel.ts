@@ -218,21 +218,30 @@ export interface MotionState {
 }
 
 /**
+ * The first active condition that holds the carousel still. Kept separate from canAutoAdvance so the rendered
+ * carousel can expose the same reason that its timer uses without changing its existing motion policy.
+ */
+export type AutoplayHold = 'reduced-motion' | 'paused' | 'takeover' | 'hover' | 'focus' | 'offscreen' | 'preview';
+
+export function autoplayHold(state: MotionState): AutoplayHold | undefined {
+  if (state.reducedMotion) return 'reduced-motion';
+  if (state.paused) return 'paused';
+  if (state.tookOver) return 'takeover';
+  if (state.hovering) return 'hover';
+  if (state.focusInside) return 'focus';
+  if (!state.onScreen) return 'offscreen';
+  if (state.previewOpen) return 'preview';
+  return undefined;
+}
+
+/**
  * Auto-advance runs only while nobody is using the carousel: never with reduced motion, after the pause button,
  * once the visitor has taken over, while it is hovered or focused, while it is off screen, or while the preview is
  * open. The page script restarts the full AUTO_ADVANCE_MS countdown each time this turns true and stops it the moment
  * it turns false, so the vial in front always gets its whole time.
  */
 export function canAutoAdvance(state: MotionState): boolean {
-  return (
-    !state.reducedMotion &&
-    !state.paused &&
-    !state.tookOver &&
-    !state.hovering &&
-    !state.focusInside &&
-    state.onScreen &&
-    !state.previewOpen
-  );
+  return autoplayHold(state) === undefined;
 }
 
 /** Where the preview is: closed, growing out of its vial, open and still, stepping to another mode, or shrinking back. */

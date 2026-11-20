@@ -375,12 +375,14 @@ test('auto-advance gives the vial in front its full six seconds from when the ri
   const carousel = section(page);
   await expect(carousel).toHaveAttribute('data-ring', '');
   await expect(carousel).toHaveAttribute('data-autoplay', 'off');
+  await expect(carousel).toHaveAttribute('data-autoplay-hold', 'offscreen');
   // Below the window for a while: nothing counts down, so no advance is owed when the ring comes into view.
   await page.clock.runFor(20_000);
   await expect(carousel.locator('#mode-video')).toHaveAttribute('data-active', '');
   await page.mouse.move(0, 0);
   await carousel.scrollIntoViewIfNeeded();
   await expect(carousel).toHaveAttribute('data-autoplay', 'on');
+  await expect(carousel).not.toHaveAttribute('data-autoplay-hold');
   await page.clock.runFor(5_900);
   await expect(carousel.locator('#mode-video')).toHaveAttribute('data-active', '');
   await page.clock.runFor(200);
@@ -391,11 +393,13 @@ test('auto-advance gives the vial in front its full six seconds from when the ri
   await page.clock.runFor(3_000);
   await carousel.locator('[data-modes-track]').hover();
   await expect(carousel).toHaveAttribute('data-autoplay', 'off');
+  await expect(carousel).toHaveAttribute('data-autoplay-hold', 'hover');
   await page.clock.runFor(20_000);
   await expect(carousel.locator('#mode-cards')).toHaveAttribute('data-active', '');
   // Moving off starts a fresh six seconds, not whatever was left before the pause.
   await page.mouse.move(0, 0);
   await expect(carousel).toHaveAttribute('data-autoplay', 'on');
+  await expect(carousel).not.toHaveAttribute('data-autoplay-hold');
   await page.clock.runFor(5_900);
   await expect(carousel.locator('#mode-cards')).toHaveAttribute('data-active', '');
   await page.clock.runFor(200);
@@ -405,6 +409,8 @@ test('auto-advance gives the vial in front its full six seconds from when the ri
   await carousel.locator('#mode-learn [data-mode-open]').click();
   await expect(carousel).toHaveAttribute('data-carousel-state', /^(opening|open)$/);
   await expect(carousel).toHaveAttribute('data-autoplay', 'off');
+  // Opening a preview is also a visitor action, so the established takeover hold wins this diagnostic's priority.
+  await expect(carousel).toHaveAttribute('data-autoplay-hold', 'takeover');
   await page.clock.runFor(SETTLE_WAIT);
   await expect(carousel).toHaveAttribute('data-carousel-state', 'open');
   await page.keyboard.press('Escape');
@@ -416,6 +422,7 @@ test('auto-advance gives the vial in front its full six seconds from when the ri
   await page.clock.runFor(20_000);
   await expect(carousel.locator('#mode-learn')).toHaveAttribute('data-active', '');
   await expect(carousel).toHaveAttribute('data-autoplay', 'off');
+  await expect(carousel).toHaveAttribute('data-autoplay-hold', 'takeover');
 });
 
 test('touch screens never get the hover lift; reduced motion never lifts either', async ({ page }, testInfo) => {
