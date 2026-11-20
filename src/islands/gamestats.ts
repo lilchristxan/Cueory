@@ -1,7 +1,7 @@
 /** Optional private game history. No storage, clock, network or visible game names. */
 import type { DailyGame } from '../config/games';
 
-export type GameId = DailyGame['id'];
+export type GameId = DailyGame['id'] | 'vialo' | 'pillo';
 export interface GameResult {
   game: GameId;
   day: string;
@@ -27,7 +27,7 @@ export interface GameSummary {
   triesCounts: Record<number, number>;
 }
 
-const GAMES: readonly string[] = ['pulse', 'cueword', 'triage', 'suture'];
+const GAMES: readonly string[] = ['vialo', 'pulse', 'pillo', 'cueword', 'triage', 'suture'];
 const DAY = 86_400_000;
 const WINDOW_DAYS = 400;
 const VERSION = 1;
@@ -145,6 +145,22 @@ export function serialize(stats: GameStats): string {
     results.push(valid);
   }
   return JSON.stringify({ version: VERSION, results: trim(results) });
+}
+
+/** If cueory-game-stats holds pillo data under an old key, copy it to vialo so nobody loses a streak. */
+export function migratePilloStatsToVialo(stats: GameStats): GameStats {
+  const vialoDays = new Set(stats.filter((r) => r.game === 'vialo').map((r) => r.day));
+  const migrated: GameResult[] = [...stats];
+  for (const r of stats) {
+    if ((r.game as string) === 'pillo' && !vialoDays.has(r.day)) {
+      migrated.push({
+        ...r,
+        game: 'vialo' as GameId,
+      });
+      vialoDays.add(r.day);
+    }
+  }
+  return trim(migrated);
 }
 
 /** Bad or old data starts empty. One invalid entry invalidates the whole saved record. */

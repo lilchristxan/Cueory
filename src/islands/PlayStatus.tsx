@@ -164,11 +164,14 @@ export default function PlayStatus({ games, isComingSoonCrossword = false }: Pro
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
                 {/* Title, line, blister pack */}
                 <div className="flex flex-col min-w-0">
-                  <h3 className="display text-3xl sm:text-4xl text-ink font-medium break-words">
-                    <a href={pilloGame.href} className={CARD_LINK}>
-                      {pilloGame.name}
-                    </a>
-                  </h3>
+                  <div className="flex flex-wrap items-baseline gap-x-3">
+                    <h3 className="display text-3xl sm:text-4xl text-ink font-medium break-words">
+                      <a href={pilloGame.href} className={CARD_LINK}>
+                        {pilloGame.name}
+                      </a>
+                    </h3>
+                    <span className="text-sm font-medium text-ink-soft">daily word</span>
+                  </div>
                   <p className="mt-2 text-sm text-ink-soft">{pilloGame.line}</p>
 
                   {/* Blister pack illustration - sits directly under the line */}

@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { dailyGames } from '../config/games';
+import { dailyGames, gameName } from '../config/games';
 import { browserStorage } from '../scripts/storage';
 import {
   forgetHeldRounds,
@@ -58,10 +58,10 @@ interface Props {
   games: readonly GameId[];
 }
 
-/** pillo's win % and streaks in words (Task 719). */
-function pilloLine(stats: GameStats): string {
+/** vialo's win % and streaks in words. */
+function vialoLine(stats: GameStats): string {
   const days = (n: number) => `${n} ${n === 1 ? 'day' : 'days'}`;
-  const value = dailyStats(stats, 'pulse', localDay(new Date()), GUESSES);
+  const value = dailyStats(stats, 'vialo', localDay(new Date()), GUESSES);
   return `won ${value.winPercent}%. current streak ${days(value.currentStreak)}, longest ${days(value.longestStreak)}.`;
 }
 
@@ -220,7 +220,7 @@ export default function GameStatsPanel({ games: order }: Props) {
         your stats
       </h2>
       <p className="mt-2 text-ink-soft" data-testid="stats-note">
-        kept in this browser, on this device, and never sent to us. {order.includes('cueword') ? 'pillo, the crossword and word path' : 'pillo and word path'} also count your
+        kept in this browser, on this device, and never sent to us. {order.includes('cueword') ? `${gameName('pulse')}, the crossword and word path` : `${gameName('pulse')} and word path`} also count your
         streaks, and sudoku shows its own times and streak for each level. forget them below at any time.
       </p>
       {blocked || !saved.on ? (
@@ -251,7 +251,7 @@ export default function GameStatsPanel({ games: order }: Props) {
                   {(result.played > 0 || (game.id === 'triage' && sudokuKept())) && (
                     <>
                       <p className="mt-1 text-sm text-ink-soft">{triesInWords(game.id, result.triesCounts)}</p>
-                      {game.id === 'pulse' && <p className="mt-1 text-sm text-ink-soft">{pilloLine(saved.stats)}</p>}
+                      {game.id === 'pulse' && <p className="mt-1 text-sm text-ink-soft">{vialoLine(saved.stats)}</p>}
                       {game.id === 'cueword' && (() => {
                         const run = currentStreak(saved.stats, game.id, localDay(new Date()));
                         return <p className="mt-1 text-sm" data-testid="crossword-streak">streak: {run} {run === 1 ? 'day' : 'days'} solved without help.</p>;
