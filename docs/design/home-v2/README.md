@@ -60,3 +60,11 @@ scroll at 320, 390, 820, 1440 and 1920, Light and Evening.
 
 Each lane: match the design at 1440, make it work at the other widths, add or update e2e tests (never loosen),
 `npm run verify`, open ready, `@codex review`, work findings to a clean receipt.
+
+## Lessons from the first header attempt
+
+- Showing the nav bar on phones makes the sticky header much taller (about 154 px, and about 482 px with 32 px
+  text), which pushes panels off a 320 px screen. Let a header taller than half the screen stop sticking.
+- The "about" dropdown can run off the left edge on phones at 32 px text; keep it inside the viewport.
+- Limit any `pointer-events: auto` on the header corners to the home page, or the tucked-away header's buttons stay
+  clickable off screen and the accessibility check fails.
