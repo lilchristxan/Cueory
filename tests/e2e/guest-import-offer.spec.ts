@@ -64,8 +64,8 @@ test.beforeAll(async () => {
           calls.push(call);
           localStorage.setItem('fixture-db-calls', JSON.stringify(calls));
         };
-        const answer = (extra = {}) => new Promise(resolve => setTimeout(() => resolve({
-          error: params.has('fail') ? { code: '08006', message: 'provider-private-detail' } : null,
+        const answer = (extra = {}, canFail = true) => new Promise(resolve => setTimeout(() => resolve({
+          error: canFail && params.has('fail') ? { code: '08006', message: 'provider-private-detail' } : null,
           ...extra,
         }), 200));
         // The tables behave like the database's: rows are kept in localStorage (so two tabs share them) and the
@@ -98,6 +98,12 @@ test.beforeAll(async () => {
           localStorage.setItem('fixture-db-rows', JSON.stringify(rows));
           return matched.map(row => ({ user_id: row.user_id }));
         };
+        const selectedRows = (table, columns, filter) => readRows()[table]
+          // The SELECT policy is the same RLS boundary as the real tables: this client can see only its own rows.
+          .filter(row => row.user_id === signedInAs() && Object.entries(filter).every(([column, value]) => {
+            return Array.isArray(value) ? value.includes(row[column]) : row[column] === value;
+          }))
+          .map(row => Object.fromEntries(columns.split(',').map(column => [column, row[column]])));
         // The signed-in account can be switched through localStorage ('none' = signed out). Like supabase-js's
         // cross-tab broadcast, a switch made in another tab is announced to onAuthStateChange listeners here;
         // a switch made in this tab is not, which stands in for a missed announcement.
@@ -125,6 +131,16 @@ test.beforeAll(async () => {
               record(['update', table, patch, filter]);
               return answer({ data: params.has('fail') ? null : updateRows(table, patch, filter) });
             } }) }),
+            select: (columns) => ({
+              eq: (column, value) => {
+                record(['select', table, columns, column, value]);
+                return answer({ data: selectedRows(table, columns, { [column]: value }) }, false);
+              },
+              in: (column, values) => {
+                record(['select', table, columns, column, values]);
+                return answer({ data: selectedRows(table, columns, { [column]: values }) }, false);
+              },
+            }),
           }),
         };
         export async function getSupabase() { return params.get('client') === 'off' ? null : client; }
@@ -187,16 +203,32 @@ test.describe('guest import offer after sign-in', () => {
     await page.getByRole('button', { name: 'bring it in' }).dblclick();
     await expect(page.getByRole('status')).toHaveText('your exam date is in your account now.');
     await expect(page.getByRole('status')).toBeFocused();
-    const calls = await dbCalls(page);
-    expect(calls).toHaveLength(1);
-    expect(calls[0]!.slice(0, 2)).toEqual(['insert', 'exam_plans']);
-    expect(Object.keys(calls[0]![2] as object).sort()).toEqual(['course', 'exam_date']);
+    const writes = (await dbCalls(page)).filter(call => call[0] === 'insert' || call[0] === 'update');
+    expect(writes).toHaveLength(1);
+    expect(writes[0]!.slice(0, 2)).toEqual(['insert', 'exam_plans']);
+    expect(Object.keys(writes[0]![2] as object).sort()).toEqual(['course', 'exam_date']);
     expect(await marker(page)).toBe('1');
 
     await open(page, 'x=1');
     await page.waitForTimeout(300);
     await expect(page.getByRole('button', { name: 'bring it in' })).toHaveCount(0);
-    expect(await dbCalls(page)).toHaveLength(1);
+    expect((await dbCalls(page)).filter(call => call[0] === 'insert' || call[0] === 'update')).toHaveLength(1);
+  });
+
+  test('marks a completed RLS-visible import without another database write when the local marker is stale', async ({ page }) => {
+    await open(page, 'seed=1');
+    await expect(offer(page)).toBeVisible();
+    await page.evaluate((userId) => localStorage.setItem('fixture-db-rows', JSON.stringify({
+      exam_plans: [{ user_id: userId, course: 'fundamentals', exam_date: '2026-12-10' }],
+      review_state: [],
+    })), USER);
+
+    await page.getByRole('button', { name: 'bring it in' }).click();
+    await expect(offer(page)).toHaveCount(0);
+    expect(await marker(page)).toBe('1');
+    const calls = await dbCalls(page);
+    expect(calls.filter(call => call[0] === 'insert' || call[0] === 'update')).toEqual([]);
+    expect(calls).toContainEqual(['select', 'exam_plans', 'course,exam_date', 'course', 'fundamentals']);
   });
 
   test('"not now" hides the offer for good and saves nothing', async ({ page }) => {

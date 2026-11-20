@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import type { IdMap } from './guestimport';
 import {
-  acceptOffer, cardsDbFrom, contentsWords, declineOffer, isMarkerEvent, offerDecision, plansDbFrom, sessionUserId,
-  type ImportClient, type LockRunner, type OfferContents,
+  acceptOffer, cardsDbFrom, completionDbFrom, contentsWords, declineOffer, isMarkerEvent, offerDecision, plansDbFrom, sessionUserId,
+  type ImportClient, type ImportCompletionClient, type LockRunner, type OfferContents,
 } from './guestimportoffer';
 import { getSessionState, getSupabase } from './supabaseclient';
 import { localDay } from '../scripts/progress';
@@ -142,6 +142,7 @@ export default function GuestImportOffer({ idMap = NO_CARD_MATCHES }: { idMap?: 
       today: localDay(new Date()),
       cardsDb: cardsDbFrom(current.client),
       plansDb: plansDbFrom(current.client, current.userId),
+      completionDb: completionDbFrom(current.client as unknown as ImportCompletionClient),
       lock: browserLock(),
       currentUserId: signedInNow,
     });

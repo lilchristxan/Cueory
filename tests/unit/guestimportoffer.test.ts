@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   acceptOffer, cardsDbFrom, contentsWords, declineOffer, DECLINED_MARKER, IMPORTED_MARKER, isMarkerEvent, markerKey,
-  offerDecision, plansDbFrom, sessionUserId, type AcceptOptions, type ImportClient, type LockRunner,
+  offerDecision, plansDbFrom, sessionUserId, type AcceptOptions, type ImportClient, type ImportCompletionDb, type LockRunner,
 } from '../../src/islands/guestimportoffer';
 import { runGuestImport, type GuestImportDb } from '../../src/islands/guestimportrun';
 import type { ExamPlanDb } from '../../src/islands/examplanimport';
@@ -40,6 +40,17 @@ function databases(plan: { error: { code?: string } | null } = { error: null }, 
   const upsert = vi.fn(async () => plan);
   const insert = vi.fn(async () => cards);
   return { plansDb: { upsert } as ExamPlanDb, cardsDb: { insert } as GuestImportDb, upsert, insert };
+}
+
+function completion(
+  plans: { course: string; exam_date: string }[] | null = [],
+  cards: { item_id: string }[] | null = [],
+  error: { code?: string } | null = null,
+): ImportCompletionDb {
+  return {
+    readPlans: vi.fn(async () => ({ data: plans, error })),
+    readCards: vi.fn(async () => ({ data: cards, error })),
+  };
 }
 
 const stillUser = async () => USER;
@@ -205,6 +216,37 @@ describe('acceptOffer', () => {
     const results = await Promise.all([run(), run()]);
     expect(results.map((r) => r.kind).sort()).toEqual(['done', 'handled']);
     expect(dbs.upsert).toHaveBeenCalledTimes(1);
+  });
+
+  it('marks an already complete import after RLS reads, without another database write', async () => {
+    const storage = memoryStorage();
+    saveProgress(storage, withPile(withOnboarding(emptyProgress(), { course: 'fundamentals', examDate: '2026-12-10' }), 'deck-a', 'card-a', 'know'));
+    const complete = completion([{ course: 'fundamentals', exam_date: '2026-12-10' }], [{ item_id: CARD_A }]);
+    const { dbs, run } = accept(storage, { idMap: MATCHES, completionDb: complete });
+
+    expect(await run()).toEqual({ kind: 'handled' });
+    expect(storage.getItem(markerKey(USER))).toBe(IMPORTED_MARKER);
+    expect(dbs.upsert).not.toHaveBeenCalled();
+    expect(dbs.insert).not.toHaveBeenCalled();
+    expect(complete.readPlans).toHaveBeenCalledWith('fundamentals');
+    expect(complete.readCards).toHaveBeenCalledWith([CARD_A]);
+  });
+
+  it('does not mark a partial import, and a completion-read failure leaves it retryable', async () => {
+    const storage = memoryStorage();
+    saveProgress(storage, withPile(withOnboarding(emptyProgress(), { course: 'fundamentals', examDate: '2026-12-10' }), 'deck-a', 'card-a', 'know'));
+    const partial = completion([{ course: 'fundamentals', exam_date: '2026-12-10' }]);
+    const first = accept(storage, { idMap: MATCHES, completionDb: partial });
+    expect((await first.run()).kind).toBe('done');
+    expect(first.dbs.upsert).toHaveBeenCalledTimes(1);
+    expect(first.dbs.insert).toHaveBeenCalledTimes(1);
+
+    const retry = memoryStorage();
+    withExamDate(retry);
+    const failed = accept(retry, { completionDb: completion([], [], { code: '08006' }) });
+    expect(await failed.run()).toEqual({ kind: 'error', message: "that didn't work. please try again." });
+    expect(failed.dbs.upsert).not.toHaveBeenCalled();
+    expect(retry.getItem(markerKey(USER))).toBeNull();
   });
 
   it('writes nothing and marks nothing when another tab switched to a different account', async () => {
