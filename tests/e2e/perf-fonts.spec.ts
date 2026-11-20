@@ -1,12 +1,15 @@
 import { expect, test, type Request } from '@playwright/test';
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { readFile, readFileSync, stat } from 'node:fs';
+import { createServer, type Server } from 'node:http';
+import type { AddressInfo } from 'node:net';
+import { extname, normalize, resolve, sep } from 'node:path';
 
 /**
  * Lane 5, fonts: the two preloaded Lato files are the ones the page really uses, and each is requested once (a
  * preload whose crossorigin doesn't match the font request is requested twice).
  */
 const lato = ['lato-latin-400-normal.woff2', 'lato-latin-700-normal.woff2'];
+const dist = resolve('dist');
 const fontCacheControl = (() => {
   const lines = readFileSync(resolve('dist/_headers'), 'utf8').split('\n');
   const start = lines.findIndex((line) => line.trim() === '/fonts/*');
@@ -14,6 +17,25 @@ const fontCacheControl = (() => {
   if (start < 0 || !line) throw new Error('built dist/_headers has no /fonts/* Cache-Control rule');
   return line.replace(/^\s+Cache-Control:\s*/, '').trim();
 })();
+
+function fileFor(pathname: string): string {
+  const decoded = decodeURIComponent(pathname);
+  const relative = decoded === '/' ? 'index.html' : decoded.slice(1);
+  const output = resolve(dist, normalize(relative.endsWith('/') ? `${relative}index.html` : extname(relative) ? relative : `${relative}.html`));
+  if (output !== dist && !output.startsWith(`${dist}${sep}`)) throw new Error(`blocked static path: ${pathname}`);
+  return output;
+}
+
+function contentType(file: string): string {
+  return ({
+    '.css': 'text/css; charset=utf-8',
+    '.html': 'text/html; charset=utf-8',
+    '.js': 'text/javascript; charset=utf-8',
+    '.json': 'application/json; charset=utf-8',
+    '.svg': 'image/svg+xml',
+    '.woff2': 'font/woff2',
+  })[extname(file)] ?? 'application/octet-stream';
+}
 
 const requestHeaderNames = ['origin', 'sec-fetch-dest', 'sec-fetch-mode', 'sec-fetch-site', 'purpose'] as const;
 const responseHeaderNames = ['access-control-allow-origin', 'cache-control', 'content-type', 'vary'] as const;
@@ -39,14 +61,32 @@ function safeHeaders(headers: Record<string, string>, names: readonly string[]) 
 // the font load measured here and lands at a random moment, so this spec runs without service workers.
 test.use({ serviceWorkers: 'block' });
 
-// Astro preview does not serve dist/_headers. Apply the generated policy to the Lato responses so this browser
-// fixture exercises the same production cache directive while the separate loopback-origin count remains evidence.
-test.beforeEach(async ({ page }) => {
-  await page.route('**/fonts/lato-*.woff2', async (route) => {
-    const response = await route.fetch();
-    await route.fulfill({ response, headers: { ...response.headers(), 'cache-control': fontCacheControl } });
+// Astro preview does not serve dist/_headers. This tiny loopback origin serves the generated site and applies its
+// /fonts/* rule to real font responses, so browser caching remains enabled (unlike page.route()).
+let fontServer: Server;
+let fontOrigin = '';
+
+test.beforeAll(async () => {
+  fontServer = createServer(async (request, response) => {
+    try {
+      const pathname = new URL(request.url ?? '/', 'http://127.0.0.1').pathname;
+      const file = fileFor(pathname);
+      await stat(file);
+      response.writeHead(200, {
+        'content-type': contentType(file),
+        ...(pathname.startsWith('/fonts/') ? { 'cache-control': fontCacheControl } : {}),
+      });
+      response.end(await readFile(file));
+    } catch {
+      response.writeHead(404, { 'content-type': 'text/plain; charset=utf-8' });
+      response.end('not found');
+    }
   });
+  await new Promise<void>((done) => fontServer.listen(0, '127.0.0.1', done));
+  fontOrigin = `http://127.0.0.1:${(fontServer.address() as AddressInfo).port}`;
 });
+
+test.afterAll(() => new Promise<void>((done) => fontServer.close(() => done())));
 
 for (const path of ['/', '/learn/study-skills', '/play', '/signin']) {
   test(`${path}: both preloaded Lato weights are used and requested once`, async ({ page }, testInfo) => {
@@ -84,7 +124,7 @@ for (const path of ['/', '/learn/study-skills', '/play', '/signin']) {
       })());
     });
 
-    await page.goto(path);
+    await page.goto(new URL(path, fontOrigin).toString());
     await page.evaluate(() => document.fonts.ready);
     await Promise.all(completed);
     const loaded = await page.evaluate(() => [...document.fonts]
