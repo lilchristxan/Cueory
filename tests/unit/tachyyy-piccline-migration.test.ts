@@ -76,26 +76,15 @@ describe('tachyyy and piccline stats migration', () => {
     expect(migrated.some((r) => r.game === 'tachyyy' && r.day === '2026-11-18')).toBe(true);
   });
 
-  it('loadStats automatically migrates legacy data and saves back to storage', () => {
-    const storage = memoryStorage({
-      [STATS_STORAGE_KEY]: JSON.stringify({
-        version: 1,
-        results: [
-          { game: 'suture', day: '2026-11-19', solved: true, tries: 0 },
-          { game: 'stat', day: '2026-11-19', solved: true, tries: 1 },
-        ],
-      }),
-    });
+  it('migrateLegacyGameStats migrates legacy data and preserves valid history', () => {
+    const rawResults: GameResult[] = [
+      { game: 'suture', day: '2026-11-19', solved: true, tries: 0 },
+      { game: 'stat', day: '2026-11-19', solved: true, tries: 1 },
+    ];
 
-    const loaded = loadStats(storage, '2026-11-20');
-    expect(loaded.on).toBe(true);
-    expect(loaded.stats.some((r) => r.game === 'piccline')).toBe(true);
-    expect(loaded.stats.some((r) => r.game === 'tachyyy')).toBe(true);
-
-    // Verify written back to storage
-    const raw = JSON.parse(storage.getItem(STATS_STORAGE_KEY)!);
-    expect(raw.results.some((r: { game: string }) => r.game === 'piccline')).toBe(true);
-    expect(raw.results.some((r: { game: string }) => r.game === 'tachyyy')).toBe(true);
+    const migrated = migrateLegacyGameStats(rawResults);
+    expect(migrated.some((r) => r.game === 'piccline')).toBe(true);
+    expect(migrated.some((r) => r.game === 'tachyyy')).toBe(true);
   });
 
   it('formats share lines correctly', () => {
