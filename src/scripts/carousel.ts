@@ -213,11 +213,15 @@ export interface MotionState {
   focusInside: boolean;
   /** Most of the carousel is on screen and the tab is visible. */
   onScreen: boolean;
+  /** The preview is open (or still opening or closing). */
+  previewOpen: boolean;
 }
 
 /**
  * Auto-advance runs only while nobody is using the carousel: never with reduced motion, after the pause button,
- * once the visitor has taken over, while it is hovered or focused, or while it is off screen.
+ * once the visitor has taken over, while it is hovered or focused, while it is off screen, or while the preview is
+ * open. The page script restarts the full AUTO_ADVANCE_MS countdown each time this turns true and stops it the moment
+ * it turns false, so the vial in front always gets its whole time.
  */
 export function canAutoAdvance(state: MotionState): boolean {
   return (
@@ -226,9 +230,32 @@ export function canAutoAdvance(state: MotionState): boolean {
     !state.tookOver &&
     !state.hovering &&
     !state.focusInside &&
-    state.onScreen
+    state.onScreen &&
+    !state.previewOpen
   );
 }
+
+/** Where the preview is: closed, growing out of its vial, open and still, stepping to another mode, or shrinking back. */
+export type PreviewPhase = 'closed' | 'opening' | 'open' | 'stepping' | 'closing';
+
+/**
+ * What the carousel is doing, written to `data-carousel-state` on the section: `settled` when nothing is in flight
+ * (no glide, no preview), `turning` while the vials glide, or the preview's own phase while it is open. Tests and
+ * anything else that needs a still carousel wait for this instead of a fixed time.
+ */
+export type CarouselState = 'settled' | 'turning' | Exclude<PreviewPhase, 'closed'>;
+
+export function carouselState(preview: PreviewPhase, turning: boolean): CarouselState {
+  if (preview !== 'closed') return preview;
+  return turning ? 'turning' : 'settled';
+}
+
+/**
+ * How much longer than planned a glide, grow, shrink or nudge may take before the script finishes it itself. A browser
+ * too busy to draw can leave an animation's `finished` waiting for seconds (seen in WebKit and Firefox on release runs);
+ * the carousel still reaches its resting state on time.
+ */
+export const SETTLE_GRACE_MS = 150;
 
 /** A box on screen, as getBoundingClientRect gives it. */
 export interface Box {

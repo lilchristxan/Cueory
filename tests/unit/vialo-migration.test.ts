@@ -5,12 +5,15 @@ import {
   forget,
   type GameResult,
 } from '../../src/islands/gamestats';
-import { loadStats, STATS_STORAGE_KEY } from '../../src/islands/gameresults';
 import {
   canSetVialoHardMode,
+  loadVialoHardMode,
+  rememberVialoHardMode,
   setVialoHardMode,
   startVialo,
   vialoShareText,
+  PILLO_HARD_MODE_STORAGE_KEY,
+  VIALO_HARD_MODE_STORAGE_KEY,
 } from '../../src/islands/vialo';
 import { startPulse } from '../../src/islands/pulse';
 
@@ -113,5 +116,21 @@ describe('vialo stats migration and share format', () => {
     // Setting hard mode when locked is a no-op
     const triedSwitch = setVialoHardMode(reloadedLockedState, false);
     expect(triedSwitch.hard).toBe(true);
+  });
+
+  it('remembers hard mode on the same day and migrates legacy pillo hard mode', () => {
+    const storage = memoryStorage();
+    expect(loadVialoHardMode(storage, '2026-11-20')).toBeUndefined();
+
+    // Migrates legacy pillo setting
+    storage.setItem(PILLO_HARD_MODE_STORAGE_KEY, JSON.stringify({ day: '2026-11-20', hard: true }));
+    expect(loadVialoHardMode(storage, '2026-11-20')).toBe(true);
+    // Different day does not restore lock
+    expect(loadVialoHardMode(storage, '2026-11-21')).toBeUndefined();
+
+    // Canonical vialo takes precedence
+    rememberVialoHardMode(storage, '2026-11-20', false);
+    expect(JSON.parse(storage.getItem(VIALO_HARD_MODE_STORAGE_KEY)!)).toEqual({ day: '2026-11-20', hard: false });
+    expect(loadVialoHardMode(storage, '2026-11-20')).toBe(false);
   });
 });

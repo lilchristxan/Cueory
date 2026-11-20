@@ -79,6 +79,7 @@ const initialJsBudget = {
   'play/crossword.html': 121556,
   'play/pillo.html': 119797,
   'play/sudoku.html': 122156,
+  'play/vialo.html': 124013,
   'play/word-path.html': 120824,
   'preview/admin-flags.html': 92161,
   'preview/anatomy-text.html': 89104,
