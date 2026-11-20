@@ -218,10 +218,11 @@ test.describe('guest import offer after sign-in', () => {
   test('marks a completed RLS-visible import without another database write when the local marker is stale', async ({ page }) => {
     await open(page, 'seed=1');
     await expect(offer(page)).toBeVisible();
-    await page.evaluate((userId) => localStorage.setItem('fixture-db-rows', JSON.stringify({
-      exam_plans: [{ user_id: userId, course: 'fundamentals', exam_date: '2026-12-10' }],
+    const examDate = await page.evaluate(() => JSON.parse(localStorage.getItem('cueory-progress')!).onboarding.examDate as string);
+    await page.evaluate(({ userId, examDate }) => localStorage.setItem('fixture-db-rows', JSON.stringify({
+      exam_plans: [{ user_id: userId, course: 'fundamentals', exam_date: examDate }],
       review_state: [],
-    })), USER);
+    })), { userId: USER, examDate });
 
     await page.getByRole('button', { name: 'bring it in' }).click();
     await expect(offer(page)).toHaveCount(0);
