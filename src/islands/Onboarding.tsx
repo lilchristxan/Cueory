@@ -47,6 +47,8 @@ export default function Onboarding() {
   const [saved] = useState(() => readProgress(storage).onboarding);
   const [course, setCourse] = useState<string>(saved.course ?? '');
   const [examDate, setExamDate] = useState(saved.examDate ?? '');
+  // WebKit retains a partial native date value after assigning ''. Incrementing this remounts the control on clear.
+  const [dateControlVersion, setDateControlVersion] = useState(0);
   const [step, setStep] = useState<OnboardingStep>(0);
   const [dateProblem, setDateProblem] = useState('');
   const [result, setResult] = useState<'saved' | 'skipped' | 'not-kept' | null>(null);
@@ -87,6 +89,13 @@ export default function Onboarding() {
   const changeExamDate = (value: string) => {
     touched.current.examDate = true;
     show({ ...answers.current, examDate: value, dateFromAccount: false });
+  };
+  const clearExamDate = () => {
+    changeExamDate('');
+    setDateProblem('');
+    setDateControlVersion((version) => version + 1);
+    // The date control is replaced to clear WebKit's internal partial value. Focus the replacement after it commits.
+    requestAnimationFrame(() => dateRef.current?.focus());
   };
 
   const connectAccount = () =>
@@ -366,6 +375,7 @@ export default function Onboarding() {
             optional. later, reviews will be paced to this date.
           </p>
           <input
+            key={dateControlVersion}
             ref={dateRef}
             id="exam-date"
             type="date"
@@ -388,14 +398,7 @@ export default function Onboarding() {
           {(examDate || dateProblem) && (
             <button
               type="button"
-              onClick={() => {
-                changeExamDate('');
-                setDateProblem('');
-                // A half-typed date reads as '' to React, so the field's own text must be emptied too.
-                if (dateRef.current) dateRef.current.value = '';
-                // This button disappears after clearing; restore focus to the date field.
-                dateRef.current?.focus();
-              }}
+              onClick={clearExamDate}
               className={quietButton}
             >
               clear the date
