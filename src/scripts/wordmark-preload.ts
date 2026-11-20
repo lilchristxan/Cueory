@@ -8,8 +8,12 @@
  * never enters this branch.
  */
 
+const originalSrcsets = new WeakMap<HTMLImageElement, string>();
+
 function sourceFor(image: HTMLImageElement, targetWidth: number) {
-  const candidates = (image.getAttribute('srcset') ?? '')
+  const srcset = originalSrcsets.get(image) ?? image.srcset;
+  originalSrcsets.set(image, srcset);
+  const candidates = srcset
     .split(',')
     .map((part) => {
       const [url, descriptor] = part.trim().split(/\s+/, 2);
@@ -25,6 +29,7 @@ function prepare(logo: HTMLElement) {
   const targetWidth = Math.ceil(logo.getBoundingClientRect().width * window.devicePixelRatio);
   for (const image of logo.querySelectorAll<HTMLImageElement>('img')) {
     const source = sourceFor(image, targetWidth);
+    if (!image.srcset && image.getAttribute('src') === source) continue;
     // A concrete source makes Firefox select hidden Evening art now, not only
     // after CSS makes it visible. Keep this scoped to the desktop-only hero.
     image.srcset = '';
