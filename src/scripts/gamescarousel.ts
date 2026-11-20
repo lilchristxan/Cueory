@@ -4,6 +4,50 @@
  * and maintains data-carousel-state="settled|turning".
  */
 
+function matchesGame(cardGameId: string, resultGame: string | undefined): boolean {
+  if (!resultGame) return false;
+  if (cardGameId === 'vialo') return resultGame === 'vialo' || resultGame === 'pulse' || resultGame === 'pillo';
+  if (cardGameId === 'tachyyy') return resultGame === 'tachyyy' || resultGame === 'stat';
+  if (cardGameId === 'piccline') return resultGame === 'piccline' || resultGame === 'suture';
+  if (cardGameId === 'crossword') return resultGame === 'cueword' || resultGame === 'crossword';
+  if (cardGameId === 'sudoku') return resultGame === 'triage' || resultGame === 'sudoku';
+  return resultGame === cardGameId;
+}
+
+export function hydrateGameStatuses(root: HTMLElement): void {
+  try {
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const now = new Date();
+    const today = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+    const raw = localStorage.getItem('cueory-game-stats');
+    if (!raw) return;
+
+    let results: Array<{ game?: string; day?: string; solved?: boolean }> = [];
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) {
+      results = parsed;
+    } else if (parsed && typeof parsed === 'object' && Array.isArray((parsed as { results?: unknown }).results)) {
+      results = (parsed as { results: Array<{ game?: string; day?: string; solved?: boolean }> }).results;
+    }
+
+    if (results.length === 0) return;
+
+    const statusEls = root.querySelectorAll<HTMLElement>('[data-game-status]');
+    statusEls.forEach((el) => {
+      const gameId = el.getAttribute('data-game-status');
+      if (!gameId || gameId === 'hello-cards') return;
+      const done = results.some(
+        (r) => matchesGame(gameId, r?.game) && r?.day === today
+      );
+      if (done) {
+        el.innerHTML = '<span class="gstatus-sym" aria-hidden="true">✓</span> done today';
+      }
+    });
+  } catch {
+    // Ignore storage errors
+  }
+}
+
 export function initGamesCarousel(): void {
   const root = document.querySelector<HTMLElement>('[data-games-carousel]');
   if (!root) return;
@@ -138,33 +182,19 @@ export function initGamesCarousel(): void {
     }
   }, { passive: true });
 
-  // Hydrate today's status from localStorage if available
-  try {
-    const pad = (n: number) => String(n).padStart(2, '0');
-    const now = new Date();
-    const today = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
-    const raw = localStorage.getItem('cueory-game-stats');
-    if (raw) {
-      const stats = JSON.parse(raw);
-      if (Array.isArray(stats)) {
-        const statusEls = root.querySelectorAll<HTMLElement>('[data-game-status]');
-        statusEls.forEach((el) => {
-          const gameId = el.getAttribute('data-game-status');
-          if (!gameId) return;
-          const done = stats.some(
-            (r: { game?: string; day?: string }) =>
-              (r.game === gameId || (gameId === 'vialo' && r.game === 'pulse') || (gameId === 'piccline' && r.game === 'suture') || (gameId === 'tachyyy' && r.game === 'stat')) &&
-              r.day === today
-          );
-          if (done) {
-            el.innerHTML = '<span class="gstatus-sym" aria-hidden="true">✓</span> done today';
-          }
-        });
-      }
+  hydrateGameStatuses(root);
+
+  window.addEventListener('cueory:game-result', () => {
+    hydrateGameStatuses(root);
+  });
+  window.addEventListener('cueory:sudoku-solved', () => {
+    hydrateGameStatuses(root);
+  });
+  window.addEventListener('storage', (e) => {
+    if (e.key === 'cueory-game-stats') {
+      hydrateGameStatuses(root);
     }
-  } catch {
-    // Ignore storage errors
-  }
+  });
 
   setState('settled');
 }

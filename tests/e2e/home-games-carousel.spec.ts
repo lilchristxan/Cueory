@@ -278,4 +278,79 @@ test.describe('home games carousel (Home v2 Lane 5)', () => {
       await context.close();
     }
   });
+
+  test("hydrates today's status badges from cueory-game-stats storage envelope", async ({ page }, testInfo) => {
+    test.skip(!isDesktopOfEachEngine(testInfo), 'runs once per browser engine');
+
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const now = new Date();
+    const today = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+
+    // Seed localStorage with { version: 1, results: [...] } using persistent IDs
+    await page.addInitScript((todayStr) => {
+      try {
+        localStorage.setItem(
+          'cueory-game-stats',
+          JSON.stringify({
+            version: 1,
+            results: [
+              { game: 'pulse', day: todayStr, solved: true, tries: 3 },
+              { game: 'stat', day: todayStr, solved: true, tries: 2 },
+              { game: 'suture', day: todayStr, solved: true, tries: 4 },
+              { game: 'cueword', day: todayStr, solved: true, tries: 0 },
+              { game: 'triage', day: todayStr, solved: true, tries: 1 },
+            ],
+          })
+        );
+      } catch {
+        // Ignore
+      }
+    }, today);
+
+    await page.goto('/');
+    await markPanelsSeen(page);
+    const section = page.locator('#daily-games');
+    await section.scrollIntoViewIfNeeded();
+
+    await expect(section.locator('[data-game-status="vialo"]')).toContainText('done today');
+    await expect(section.locator('[data-game-status="tachyyy"]')).toContainText('done today');
+    await expect(section.locator('[data-game-status="piccline"]')).toContainText('done today');
+    await expect(section.locator('[data-game-status="crossword"]')).toContainText('done today');
+    await expect(section.locator('[data-game-status="sudoku"]')).toContainText('done today');
+    await expect(section.locator('[data-game-status="hello-cards"]')).toContainText('not started');
+  });
+
+  test('evening mode: white playing cards maintain dark ink contrast on text and status badges', async ({ browser }, testInfo) => {
+    test.skip(!isDesktopOfEachEngine(testInfo), 'runs once per browser engine');
+
+    const context = await browser.newContext({
+      baseURL: testInfo.project.use.baseURL,
+      colorScheme: 'dark',
+      reducedMotion: 'reduce',
+    });
+    try {
+      const page = await context.newPage();
+      await page.goto('/');
+      await markPanelsSeen(page);
+
+      const section = page.locator('#daily-games');
+      await section.scrollIntoViewIfNeeded();
+
+      const firstCard = section.locator('[data-game-card]').first();
+      const statusBadge = firstCard.locator('.gstatus');
+      const desc = firstCard.locator('.gdesc');
+
+      // Card, status badge and description must use fixed dark ink, not ivory (--color-ink on dark is #f9f5ef)
+      const statusColor = await statusBadge.evaluate((el) => getComputedStyle(el).color);
+      const descColor = await desc.evaluate((el) => getComputedStyle(el).color);
+      const cardColor = await firstCard.evaluate((el) => getComputedStyle(el).color);
+
+      // #3e2c23 is rgb(62, 44, 35); #6b5243 is rgb(107, 82, 67)
+      expect(statusColor).toBe('rgb(62, 44, 35)');
+      expect(cardColor).toBe('rgb(62, 44, 35)');
+      expect(descColor).toBe('rgb(107, 82, 67)');
+    } finally {
+      await context.close();
+    }
+  });
 });

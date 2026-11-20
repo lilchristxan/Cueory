@@ -363,7 +363,7 @@ import { gameName, helloCardsGame, tachyyyGame } from '../config/games';
     align-items: center;
     justify-content: center;
     text-decoration: none;
-    color: var(--color-ink);
+    color: var(--game-card-ink);
     background: var(--game-card-bg);
     border: var(--game-card-border);
     box-shadow: var(--game-card-shadow);
@@ -408,7 +408,7 @@ import { gameName, helloCardsGame, tachyyyGame } from '../config/games';
   }
 
   .gpip-crossword {
-    background: var(--color-surface);
+    background: var(--game-pip-bg);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -422,18 +422,18 @@ import { gameName, helloCardsGame, tachyyyGame } from '../config/games';
 
   .pip-xcell-dark {
     height: var(--game-pip-xgrid-size);
-    background: var(--color-ink);
+    background: var(--game-pip-ink);
   }
 
   .pip-xcell-light {
     height: var(--game-pip-xgrid-size);
-    border: var(--border-hairline) solid var(--color-line);
+    border: var(--border-hairline) solid var(--game-pip-line);
     box-sizing: border-box;
   }
 
   .gpip-sudoku {
-    background: var(--color-surface);
-    color: var(--color-ink);
+    background: var(--game-pip-bg);
+    color: var(--game-pip-ink);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -443,8 +443,8 @@ import { gameName, helloCardsGame, tachyyyGame } from '../config/games';
   }
 
   .gpip-hello {
-    background: var(--color-surface);
-    color: var(--color-ink);
+    background: var(--game-pip-bg);
+    color: var(--game-pip-ink);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -490,7 +490,7 @@ import { gameName, helloCardsGame, tachyyyGame } from '../config/games';
     font-weight: 500;
     font-size: var(--game-serif-name-size);
     line-height: 1;
-    color: var(--color-ink);
+    color: var(--game-card-name-ink);
   }
 
   .gdesc {
@@ -498,7 +498,7 @@ import { gameName, helloCardsGame, tachyyyGame } from '../config/games';
     font-family: var(--font-body);
     font-size: var(--game-desc-size);
     line-height: 1.5;
-    color: var(--color-ink-soft);
+    color: var(--game-card-ink-soft);
     transition: opacity 0.25s ease;
   }
 
@@ -511,8 +511,8 @@ import { gameName, helloCardsGame, tachyyyGame } from '../config/games';
     font-size: var(--game-status-size);
     padding: var(--game-status-padding);
     border-radius: var(--radius-pill);
-    border: var(--border-hairline) solid var(--color-line);
-    color: var(--color-ink);
+    border: var(--border-hairline) solid var(--game-status-border);
+    color: var(--game-status-ink);
     background: var(--game-status-bg);
     transition: opacity 0.25s ease;
   }
@@ -573,7 +573,7 @@ import { gameName, helloCardsGame, tachyyyGame } from '../config/games';
     width: var(--game-demo-vialo-cell-size);
     height: var(--game-demo-vialo-cell-size);
     border-radius: var(--radius-pill);
-    border: var(--game-demo-vialo-cell-border) solid var(--color-line);
+    border: var(--game-demo-vialo-cell-border) solid var(--game-demo-border);
     background: var(--game-demo-vialo-cell-bg);
     display: flex;
     align-items: center;
@@ -591,22 +591,22 @@ import { gameName, helloCardsGame, tachyyyGame } from '../config/games';
   }
 
   @keyframes gfill {
-    0%, 8% { background: var(--game-demo-vialo-cell-bg); border-color: var(--color-line); color: transparent; }
-    18%, 86% { background: var(--color-ink); border-color: var(--color-ink); color: var(--color-page); }
-    100% { background: var(--game-demo-vialo-cell-bg); border-color: var(--color-line); color: transparent; }
+    0%, 8% { background: var(--game-demo-vialo-cell-bg); border-color: var(--game-demo-border); color: transparent; }
+    18%, 86% { background: var(--game-card-ink); border-color: var(--game-card-ink); color: var(--game-card-on-dark); }
+    100% { background: var(--game-demo-vialo-cell-bg); border-color: var(--game-demo-border); color: transparent; }
   }
 
   @keyframes gfillc {
-    0%, 8% { background: var(--game-demo-vialo-cell-bg); border-color: var(--color-line); color: transparent; }
-    18%, 86% { background: var(--color-copper-glow); border-color: var(--color-copper-deep); color: var(--color-ink); }
-    100% { background: var(--game-demo-vialo-cell-bg); border-color: var(--color-line); color: transparent; }
+    0%, 8% { background: var(--game-demo-vialo-cell-bg); border-color: var(--game-demo-border); color: transparent; }
+    18%, 86% { background: var(--color-copper-glow); border-color: var(--color-copper-deep); color: var(--game-card-ink); }
+    100% { background: var(--game-demo-vialo-cell-bg); border-color: var(--game-demo-border); color: transparent; }
   }
 
   /* Tachyyy Demo */
   .tq {
     width: var(--game-demo-tachyyy-width);
     border-radius: var(--game-demo-tachyyy-radius);
-    border: var(--border-hairline) solid var(--color-surface);
+    border: var(--border-hairline) solid var(--game-demo-border);
     background: var(--game-demo-tachyyy-bg);
     padding: var(--game-demo-tachyyy-padding);
     box-sizing: border-box;
@@ -614,7 +614,7 @@ import { gameName, helloCardsGame, tachyyyGame } from '../config/games';
     font-weight: 400;
     font-size: var(--game-demo-tachyyy-font-size);
     line-height: 1.4;
-    color: var(--color-ink);
+    color: var(--game-card-ink);
     display: flex;
     flex-direction: column;
     gap: var(--game-demo-tachyyy-gap);
@@ -623,7 +623,7 @@ import { gameName, helloCardsGame, tachyyyGame } from '../config/games';
   .tbar {
     height: var(--game-demo-tachyyy-bar-height);
     border-radius: var(--radius-pill);
-    background: var(--color-surface);
+    background: var(--game-pip-bg);
     overflow: hidden;
   }
 
@@ -644,7 +644,7 @@ import { gameName, helloCardsGame, tachyyyGame } from '../config/games';
   }
 
   .tch {
-    border: var(--border-hairline) solid var(--color-line);
+    border: var(--border-hairline) solid var(--game-demo-border);
     border-radius: var(--radius-pill);
     padding: var(--game-demo-tachyyy-choice-padding);
     text-align: left;
@@ -655,9 +655,9 @@ import { gameName, helloCardsGame, tachyyyGame } from '../config/games';
   }
 
   @keyframes tok {
-    0%, 45% { background: var(--game-demo-tachyyy-bg); border-color: var(--color-line); color: var(--color-ink); }
-    55%, 90% { background: var(--color-ink); color: var(--color-page); border-color: var(--color-ink); }
-    100% { background: var(--game-demo-tachyyy-bg); color: var(--color-ink); }
+    0%, 45% { background: var(--game-demo-tachyyy-bg); border-color: var(--game-demo-border); color: var(--game-card-ink); }
+    55%, 90% { background: var(--game-card-ink); color: var(--game-card-on-dark); border-color: var(--game-card-ink); }
+    100% { background: var(--game-demo-tachyyy-bg); color: var(--game-card-ink); }
   }
 
   /* Piccline Demo */
@@ -669,7 +669,7 @@ import { gameName, helloCardsGame, tachyyyGame } from '../config/games';
     font-family: var(--font-body);
     font-weight: 700;
     font-size: var(--game-demo-piccline-font-size);
-    color: var(--color-ink);
+    color: var(--game-card-ink);
     text-align: center;
     line-height: var(--game-demo-piccline-line-height);
   }
@@ -711,7 +711,7 @@ import { gameName, helloCardsGame, tachyyyGame } from '../config/games';
     width: var(--game-demo-crossword-cell-size);
     height: var(--game-demo-crossword-cell-size);
     box-sizing: border-box;
-    border: var(--border-hairline) solid var(--color-line);
+    border: var(--border-hairline) solid var(--game-demo-border);
     background: var(--game-demo-crossword-bg);
     display: flex;
     align-items: center;
@@ -719,12 +719,12 @@ import { gameName, helloCardsGame, tachyyyGame } from '../config/games';
     font-family: var(--font-body);
     font-weight: 700;
     font-size: var(--game-demo-crossword-font-size);
-    color: var(--color-ink);
+    color: var(--game-card-ink);
   }
 
   .xg span.b {
-    background: var(--color-ink);
-    border-color: var(--color-ink);
+    background: var(--game-card-ink);
+    border-color: var(--game-card-ink);
   }
 
   .xg em,
@@ -745,21 +745,21 @@ import { gameName, helloCardsGame, tachyyyGame } from '../config/games';
     display: grid;
     grid-template-columns: repeat(3, var(--game-demo-sudoku-cell-size));
     gap: 0;
-    border: var(--game-demo-sudoku-border) solid var(--color-ink);
+    border: var(--game-demo-sudoku-border) solid var(--game-card-ink);
   }
 
   .sg span {
     width: var(--game-demo-sudoku-cell-size);
     height: var(--game-demo-sudoku-cell-size);
     box-sizing: border-box;
-    border: var(--border-hairline) solid var(--color-line);
+    border: var(--border-hairline) solid var(--game-demo-border);
     display: flex;
     align-items: center;
     justify-content: center;
     font-family: var(--font-body);
     font-weight: 400;
     font-size: var(--game-demo-sudoku-font-size);
-    color: var(--color-ink);
+    color: var(--game-card-ink);
     background: var(--game-demo-sudoku-bg);
   }
 
@@ -806,13 +806,13 @@ import { gameName, helloCardsGame, tachyyyGame } from '../config/games';
   }
 
   .hface.front {
-    background: var(--color-ink);
-    color: var(--color-page);
+    background: var(--game-card-ink);
+    color: var(--game-card-on-dark);
   }
 
   .hface.back {
-    background: var(--color-surface);
-    color: var(--color-ink);
+    background: var(--game-pip-bg);
+    color: var(--game-card-ink);
     transform: rotateY(180deg);
   }
 
