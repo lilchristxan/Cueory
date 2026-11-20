@@ -16,6 +16,16 @@ Bodoni Moda for marketing headings, the cueory logo is the PNG artwork untouched
 for everything, visible focus, reduced motion (every animation stops), colour never the only signal, no sideways
 scroll at 320, 390, 820, 1440 and 1920, Light and Evening.
 
+## Where the design breaks a brand rule (build the brand rule)
+
+The export is exact for layout, sizes, colours and copy, but where it differs from `docs/BRAND.md` and the brand
+guide, the brand rule wins unless Christian approves the difference:
+
+- The hero eyebrow ("by nursing students, for nursing students") is italic Bodoni Moda in the design. Build it in
+  plain upright Lato: accent lines are never italic or script (D-41).
+- Italic serif in the design ("simpler.", "start with what you need.") is built upright. The copper shine on
+  "simpler." stays.
+
 ## What the page has, top to bottom
 
 1. **Notice bar**: cruet mark plus "we're still building. more coming soon." (existing building notice).
