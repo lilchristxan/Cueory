@@ -1,7 +1,7 @@
 /** Optional private game history. No storage, clock, network or visible game names. */
 import type { DailyGame } from '../config/games';
 
-export type GameId = DailyGame['id'] | 'vialo' | 'pillo';
+export type GameId = DailyGame['id'] | 'vialo' | 'pillo' | 'tachyyy' | 'stat' | 'piccline';
 export interface GameResult {
   game: GameId;
   day: string;
@@ -27,7 +27,7 @@ export interface GameSummary {
   triesCounts: Record<number, number>;
 }
 
-const GAMES: readonly string[] = ['vialo', 'pulse', 'pillo', 'cueword', 'triage', 'suture'];
+const GAMES: readonly string[] = ['vialo', 'pulse', 'pillo', 'cueword', 'triage', 'suture', 'piccline', 'tachyyy', 'stat'];
 const DAY = 86_400_000;
 const WINDOW_DAYS = 400;
 const VERSION = 1;
@@ -47,9 +47,9 @@ function readResult(value: unknown): GameResult | undefined {
       typeof solved !== 'boolean' || typeof tries !== 'number' || !Number.isSafeInteger(tries) || tries < 0 ||
       (offDay !== undefined && offDay !== true)) return;
     if (streak !== undefined && typeof streak !== 'boolean') return;
-    // The two word path details are optional, and only word path keeps them.
-    if (hints !== undefined && (game !== 'suture' || typeof hints !== 'number' || !Number.isSafeInteger(hints) || hints < 0)) return;
-    if (specialFirst !== undefined && (game !== 'suture' || typeof specialFirst !== 'boolean')) return;
+    // The two word path details are optional, and only word path (suture / piccline) keeps them.
+    if (hints !== undefined && (game !== 'suture' && game !== 'piccline' || typeof hints !== 'number' || !Number.isSafeInteger(hints) || hints < 0)) return;
+    if (specialFirst !== undefined && (game !== 'suture' && game !== 'piccline' || typeof specialFirst !== 'boolean')) return;
     return {
       game: game as GameId, day: day as string, solved, tries,
       ...(offDay === true ? { offDay: true as const } : {}),
@@ -163,6 +163,37 @@ export function migratePilloStatsToVialo(stats: GameStats): GameStats {
   return trim(migrated);
 }
 
+/**
+ * If cueory-game-stats holds legacy game data (suture, stat), copy to the rebranded names
+ * (piccline, tachyyy) so nobody loses a streak or history.
+ */
+export function migrateStatAndSutureStatsToTachyyyAndPiccline(stats: GameStats): GameStats {
+  const picclineDays = new Set(stats.filter((r) => r.game === 'piccline').map((r) => r.day));
+  const tachyyyDays = new Set(stats.filter((r) => r.game === 'tachyyy').map((r) => r.day));
+  const migrated: GameResult[] = [...stats];
+  for (const r of stats) {
+    if ((r.game as string) === 'suture' && !picclineDays.has(r.day)) {
+      migrated.push({
+        ...r,
+        game: 'piccline' as GameId,
+      });
+      picclineDays.add(r.day);
+    }
+    if ((r.game as string) === 'stat' && !tachyyyDays.has(r.day)) {
+      migrated.push({
+        ...r,
+        game: 'tachyyy' as GameId,
+      });
+      tachyyyDays.add(r.day);
+    }
+  }
+  return trim(migrated);
+}
+
+export function migrateLegacyGameStats(stats: GameStats): GameStats {
+  return migrateStatAndSutureStatsToTachyyyAndPiccline(migratePilloStatsToVialo(stats));
+}
+
 /** Bad or old data starts empty. One invalid entry invalidates the whole saved record. */
 export function parseStats(text: unknown): GameStats {
   try {
@@ -203,7 +234,15 @@ export interface WordPathSummary {
  * visitor's own YYYY-MM-DD day.
  */
 export function wordPathSummary(stats: GameStats, today: string): WordPathSummary {
-  const results = stats.filter((entry) => entry.game === 'suture');
+  const byDay = new Map<string, GameResult>();
+  for (const entry of stats) {
+    if ((entry.game as string) === 'piccline') {
+      byDay.set(entry.day, entry);
+    } else if (entry.game === 'suture' && !byDay.has(entry.day)) {
+      byDay.set(entry.day, entry);
+    }
+  }
+  const results = [...byDay.values()];
   const solved = results.filter((entry) => entry.solved);
   const days = [...new Set(solved.map((entry) => dayNumber(entry.day)!))].sort((a, b) => a - b);
   let longest = 0;

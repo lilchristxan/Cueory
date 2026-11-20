@@ -1,0 +1,28 @@
+---
+/**
+ * piccline: daily word path game.
+ * Rebrands word path / suture.
+ */
+import Layout from '../../layouts/Layout.astro';
+import GamePage from '../../components/GamePage.astro';
+import PicclineTitle from '../../components/PicclineTitle.astro';
+import SutureToday from '../../islands/SutureToday';
+import { dailyGames } from '../../config/games';
+import { wordPathSamples } from '../../config/gamesamples';
+
+const game = dailyGames.find((item) => item.id === 'piccline')!;
+const samples = await wordPathSamples();
+---
+
+<Layout title="piccline" description={game.line} socialImage="/share/games-scene.png" noindex={true}>
+  <GamePage game={game} showcase>
+    <h1 slot="title" id="piccline-heading" class="display mt-4 flex flex-col items-center">
+      <PicclineTitle name="piccline" />
+      <span class="wordpath-label mt-2 text-center text-ink-soft">word path</span>
+    </h1>
+    <section class="mt-6" aria-labelledby="piccline-heading">
+      <SutureToday client:only="react" puzzles={samples} name="piccline" />
+      <noscript><p>piccline needs JavaScript.</p></noscript>
+    </section>
+  </GamePage>
+</Layout>

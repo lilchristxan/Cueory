@@ -16,7 +16,6 @@
  * Time is read from a deadline, not counted by a timer, so a tab that was in the background still loses its time: on
  * return every question whose clock ran out moves on with no answer, and the student can never get extra seconds.
  */
-import { statGame } from '../config/games';
 import { dayLabel } from './daily';
 import { localDay } from './gameresults';
 import { remoteChecker, type RemoteQuestions } from './questionsremote';
@@ -222,7 +221,7 @@ export function verdict(score: number): string {
 
 /** The plain one-line share: no colored squares, nothing personal. */
 export function statShareLine(date: Date, score: number): string {
-  return `${statGame.name} · ${dayLabel(date)} · ${score}/${STAT_QUESTIONS} · cueory.app`;
+  return `stat · ${dayLabel(date)} · ${score}/${STAT_QUESTIONS} · cueory.app`;
 }
 
 /** Every review label is plain language, with a symbol as a second signal (never color alone). */

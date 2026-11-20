@@ -11,7 +11,7 @@ import { dayLabel } from './daily';
 import { LEVEL_LABELS, type SudokuResult } from './sudoku';
 import type { StatRoundResult } from './stat';
 import { statGame } from '../config/games';
-import { migratePilloStatsToVialo, parseStats, serialize, type GameId, type GameStats } from './gamestats';
+import { migrateLegacyGameStats, parseStats, serialize, type GameId, type GameStats } from './gamestats';
 
 /** The event a game sends on `window` when a round ends. */
 export const GAME_RESULT_EVENT = 'cueory:game-result';
@@ -295,7 +295,7 @@ export function loadStats(storage: KeyValueStorage | undefined, today: string): 
     if (text === null) return { on: true, stats: [] };
     const first = firstKeptDay(today);
     const parsed = parseStats(text);
-    const migrated = migratePilloStatsToVialo(parsed);
+    const migrated = migrateLegacyGameStats(parsed);
     if (migrated.length > parsed.length) {
       saveStats(storage, migrated);
     }

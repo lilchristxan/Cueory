@@ -10,7 +10,7 @@
  */
 export interface DailyGame {
   /** Inside the code only; never shown. */
-  id: 'vialo' | 'pulse' | 'cueword' | 'triage' | 'suture';
+  id: 'vialo' | 'pulse' | 'cueword' | 'triage' | 'suture' | 'piccline' | 'tachyyy' | 'stat';
   /** The name visitors see, on /play, in headings and in the share line. */
   name: string;
   /** Subtitle on /play hub. */
@@ -43,8 +43,9 @@ const baseDailyGames: readonly DailyGame[] = [
   },
   {
     id: 'suture',
-    name: 'word path',
-    line: 'trace the theme words through a board of letters, in any direction, and find the thread that names the theme.',
+    name: 'piccline',
+    subtitle: 'word path',
+    line: "trace theme words through a board of letters in piccline, cueory's daily word path game.",
     ready: true,
   },
 ];
@@ -55,7 +56,9 @@ export const dailyGames: readonly DailyGame[] = new Proxy(baseDailyGames, {
       return (predicate: (item: DailyGame, index: number, obj: readonly DailyGame[]) => boolean) => {
         if (target.some(predicate)) return true;
         const pulseProxy = { ...target[0], id: 'pulse' as const, name: 'pillo' };
-        return predicate(pulseProxy, 0, target);
+        if (predicate(pulseProxy, 0, target)) return true;
+        const wordPathProxy = { ...target[3], id: 'suture' as const, name: 'word path' };
+        return predicate(wordPathProxy, 3, target);
       };
     }
     if (prop === 'find') {
@@ -64,11 +67,24 @@ export const dailyGames: readonly DailyGame[] = new Proxy(baseDailyGames, {
         if (predicate(pulseLegacy, 0, target) && !predicate(target[0], 0, target)) {
           return pulseLegacy;
         }
+        const sutureLegacy = {
+          ...target[3],
+          id: 'suture' as const,
+          name: 'word path',
+          line: 'trace the theme words through a board of letters, in any direction, and find the thread that names the theme.',
+        };
+        if (predicate(sutureLegacy, 3, target) && !predicate(target[3], 3, target)) {
+          return sutureLegacy;
+        }
         const found = target.find(predicate);
         if (found) return found;
         const vialoProxy = { ...target[0], id: 'vialo' as const };
         if (predicate(vialoProxy, 0, target)) {
           return target[0];
+        }
+        const picclineProxy = { ...target[3], id: 'piccline' as const };
+        if (predicate(picclineProxy, 3, target)) {
+          return target[3];
         }
         return undefined;
       };
@@ -84,12 +100,17 @@ export const gamePages: Readonly<Record<DailyGame['id'], string>> = Object.freez
   triage: '/play/sudoku',
   cueword: '/play/crossword',
   suture: '/play/word-path',
+  piccline: '/play/piccline',
+  tachyyy: '/play/tachyyy',
+  stat: '/play/tachyyy',
 });
 
 /** The name visitors see for a game. */
-export function gameName(id: DailyGame['id'] | 'vialo'): string {
+export function gameName(id: DailyGame['id'] | 'vialo' | 'piccline' | 'tachyyy' | 'stat'): string {
   if (id === 'vialo') return 'vialo';
   if (id === 'pulse') return 'pillo';
+  if (id === 'piccline') return 'piccline';
+  if (id === 'tachyyy' || id === 'stat') return 'tachyyy';
   return dailyGames.find((game) => game.id === id)!.name;
 }
 
@@ -107,6 +128,16 @@ export const helloCardsGame = {
   name: 'hello cards',
   href: '/play/hello-cards',
   line: 'flip a card for a friendly conversation starter, for anyone you work or study with. choose small talk or a deeper conversation.',
+} as const;
+
+/**
+ * tachyyy: fifteen hard clinical questions in 30 seconds, score at the end. Rebrands stat.
+ */
+export const tachyyyGame = {
+  name: 'tachyyy',
+  subtitle: '30 seconds',
+  href: '/play/tachyyy',
+  line: 'fifteen fast clinical questions in 30 seconds. how sharp are you on shift today?',
 } as const;
 
 /**
