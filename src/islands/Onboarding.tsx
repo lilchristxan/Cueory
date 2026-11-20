@@ -186,7 +186,12 @@ export default function Onboarding() {
   const pendingFocus = useRef<{ step: OnboardingStep; before: Element | null } | null>(null);
   const focusPending = (next: OnboardingStep, before: Element | null) => {
     // Not if the student has already focused something else, or Enter would land on the heading (flaky e2e).
-    focusAfterRender(() => (ONBOARDING_FIELDS[next] === 'course' ? courseLegendRef.current : dateHeadingRef.current), {
+    focusAfterRender(() => {
+      const target = ONBOARDING_FIELDS[next] === 'course' ? courseLegendRef.current : dateHeadingRef.current;
+      // Firefox needs this new legend's layout to be committed before it accepts focus after Back replaces the button.
+      if (ONBOARDING_FIELDS[next] === 'course') target?.getBoundingClientRect();
+      return target;
+    }, {
       active: () => document.activeElement,
       body: () => document.body,
       schedule: (run) => requestAnimationFrame(run),
