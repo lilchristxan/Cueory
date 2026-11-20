@@ -1,134 +1,868 @@
 ---
 /**
- * Daily games on the home page (D-61, D-63): one calm silk scene after "ways to study", with the heading, one line and
- * a way into today's games. Like the other sections below the first screen, it fades in once (D-62). It has its own
- * scene, between the tint of "ways to study" and the launch-updates panel.
+ * Daily games on Home v2 (Lane 5, D-61): "nurse's station games".
+ * Six white playing-card style cards (280x392) in a carousel:
+ * vialo, tachyyy, piccline, crossword, sudoku, hello cards.
+ *
+ * Each card has:
+ * - Square game icon top-left (.gpip.tl) and upside down bottom-right (.gpip.br)
+ * - Wordmark or serif title (.gname)
+ * - One-line description (.gdesc)
+ * - Today's status (.gstatus)
+ * - Looping interactive demo on hover/focus (.gdemo), paused under reduced motion
+ *
+ * Prev/next navigation buttons (52px >= 44px tap target), arrow keys, swipe on touch, wrapping.
+ * Brand tokens only, no arbitrary tailwind classes, no inline styles or raw hex.
  */
-import { homeGameCards, homeGamesSummary, stageCounter } from '../config/homegames';
-import { crosswordOpen } from '../config/site';
-
-// Names, readiness and counts come from the real game list (games.ts) and the crossword's launch switch, with the copy
-// deck's order and lines. Preview builds keep the sample crossword on /play for its tests, but the home stage shows
-// what the live site will show, so staging matches the deck.
-const games = homeGameCards(crosswordOpen);
-const featured = games[0]!;
+import { gameName, helloCardsGame, tachyyyGame } from '../config/games';
 ---
 
-<section id="daily-games" class="scene scene-play scroll-mt-section py-section" aria-labelledby="games-heading">
-  <div class="mx-auto max-w-(--container-explore) px-gutter text-center" data-reveal-section>
-    <p class="section-label text-ink-soft">daily games</p>
-    <h2 id="games-heading" class="display mt-4 text-title sm:text-title-lg">a few minutes, every day.</h2>
-    <p class="mx-auto mt-4 max-w-prose text-ink-soft" data-testid="daily-games-summary">{homeGamesSummary(games)}</p>
-    <p class="mt-2 text-sm text-ink-soft" data-testid="daily-games-day" data-daily-games-date aria-live="polite" aria-atomic="true">the date changes at midnight on your device. some sample puzzles repeat.</p>
-
-    <div class="games-stage mt-10 border bg-ink p-5 text-left text-page sm:p-8" data-testid="games-stage">
-      <div class="games-stage-layout grid gap-8 lg:items-center">
-        <div class="min-w-0">
-          <p class="section-label">{stageCounter(1, games.length)} · daily game</p>
-          <h3 class="display mt-5 text-title sm:text-title-lg">{featured.name}</h3>
-          <p class="mt-3 max-w-prose text-base">{featured.line}</p>
-          <a href="/play" class="games-stage-action mt-7 inline-flex min-h-11 items-center rounded-pill border px-6 font-bold hover:brightness-110" data-testid="games-link">
-            play today's <span class="ml-2" aria-hidden="true">→</span>
-          </a>
-        </div>
-        <div class="games-preview text-center text-ink" aria-hidden="true">
-          <span class="games-preview-mark mx-auto flex items-center justify-center border text-2xl font-serif">v</span>
-          <div class="games-preview-dots mt-6 justify-center">
-            <span class="size-4 rounded-full bg-ink"></span><span class="size-4 rounded-full bg-ink"></span><span class="size-4 rounded-full bg-ink"></span><span class="size-4 rounded-full bg-ink"></span><span class="size-4 rounded-full bg-ink"></span>
-          </div>
-        </div>
+<section id="daily-games" class="games-section" aria-labelledby="games-heading">
+  <div class="games-container" role="region" aria-roledescription="carousel" aria-label="daily games" data-games-carousel data-carousel-state="settled">
+    <div class="games-header">
+      <div class="games-nav-slot games-nav-prev">
+        <button type="button" class="glass gs-nav" data-games-prev aria-label="previous game" aria-controls="games-track">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="M15 5l-7 7 7 7"></path>
+          </svg>
+        </button>
       </div>
-
-      <ol class="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-5" aria-label="daily games">
-        {
-          games.map((game, index) => (
-            <li class:list={['games-card min-w-0 border p-4', { 'games-card-active': index === 0 }]} data-game-card={game.name}>
-              <p class="section-label">{String(index + 1).padStart(2, '0')}</p>
-              <p class="mt-2 font-bold">{game.name}</p>
-              <p class="mt-2 text-sm">{game.line}</p>
-              {!game.available && <span class="games-card-chip mt-3 inline-flex rounded-pill border px-3 py-1 text-xs font-bold">coming soon</span>}
-            </li>
-          ))
-        }
-      </ol>
+      <h2 id="games-heading" class="serif games-heading">nurse's station games</h2>
+      <div class="games-nav-slot games-nav-next">
+        <button type="button" class="glass gs-nav" data-games-next aria-label="next game" aria-controls="games-track">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="M9 5l7 7-7 7"></path>
+          </svg>
+        </button>
+      </div>
+      <p class="games-subtitle" data-testid="daily-games-summary">inspired by your favorite daily games for you and your patients</p>
     </div>
+
+    <div class="gcar" data-games-car>
+      <div id="games-track" class="gtrack" data-games-track>
+        <!-- Card 1: Vialo -->
+        <a href="/play/vialo" class="gcard on" data-game-card="vialo" aria-label={`${gameName('vialo')}: guess the five-letter word in six tries`}>
+          <img class="gpip tl" src="/brand/games/vialo-dark.svg" alt="" aria-hidden="true" width="52" height="52" loading="lazy" decoding="async" />
+          <span class="gface">
+            <span class="gname">
+              <img src="/brand/games/vialo-wordmark-light.svg" alt={gameName('vialo')} width="168" height="60" loading="lazy" decoding="async" />
+            </span>
+            <span class="gdesc">guess the five-letter word in six tries.</span>
+            <span class="gstatus" data-game-status="vialo">
+              <span class="gstatus-sym" aria-hidden="true">○</span> not started
+            </span>
+            <span class="gdemo" aria-hidden="true">
+              <span class="vialo-grid">
+                <span class="vialo-row">
+                  <span class="gc d-0">C</span>
+                  <span class="gc cu d-30">A</span>
+                  <span class="gc d-60">R</span>
+                  <span class="gc d-90">E</span>
+                  <span class="gc cu d-120">S</span>
+                </span>
+                <span class="vialo-row">
+                  <span class="gc d-180">N</span>
+                  <span class="gc d-210">U</span>
+                  <span class="gc d-240">R</span>
+                  <span class="gc d-270">S</span>
+                  <span class="gc d-300">E</span>
+                </span>
+              </span>
+            </span>
+          </span>
+          <img class="gpip br" src="/brand/games/vialo-dark.svg" alt="" aria-hidden="true" width="52" height="52" loading="lazy" decoding="async" />
+        </a>
+
+        <!-- Card 2: Tachyyy -->
+        <a href="/play/tachyyy" class="gcard" data-game-card="tachyyy" aria-label={`${tachyyyGame.name}: quick questions against the clock`}>
+          <img class="gpip tl" src="/brand/games/tachyyy-dark.svg" alt="" aria-hidden="true" width="52" height="52" loading="lazy" decoding="async" />
+          <span class="gface">
+            <span class="gname">
+              <img src="/brand/games/tachyyy-wordmark-light.svg" alt={tachyyyGame.name} width="168" height="60" loading="lazy" decoding="async" />
+            </span>
+            <span class="gdesc">quick questions against the clock.</span>
+            <span class="gstatus" data-game-status="tachyyy">
+              <span class="gstatus-sym" aria-hidden="true">◐</span> in progress
+            </span>
+            <span class="gdemo" aria-hidden="true">
+              <span class="tq">
+                <span class="tbar"><i></i></span>
+                <span class="tq-prompt">A pt presents to ED...</span>
+                <span class="tch">answer a</span>
+                <span class="tch ok">answer b</span>
+                <span class="tch">answer c</span>
+              </span>
+            </span>
+          </span>
+          <img class="gpip br" src="/brand/games/tachyyy-dark.svg" alt="" aria-hidden="true" width="52" height="52" loading="lazy" decoding="async" />
+        </a>
+
+        <!-- Card 3: Piccline -->
+        <a href="/play/piccline" class="gcard" data-game-card="piccline" aria-label={`${gameName('piccline')}: trace hidden words through the letters`}>
+          <img class="gpip tl" src="/brand/games/piccline-dark.svg" alt="" aria-hidden="true" width="52" height="52" loading="lazy" decoding="async" />
+          <span class="gface">
+            <span class="gname">
+              <img src="/brand/games/piccline-wordmark-light.svg" alt={gameName('piccline')} width="168" height="60" loading="lazy" decoding="async" />
+            </span>
+            <span class="gdesc">trace hidden words through the letters.</span>
+            <span class="gstatus" data-game-status="piccline">
+              <span class="gstatus-sym" aria-hidden="true">○</span> not started
+            </span>
+            <span class="gdemo" aria-hidden="true">
+              <span class="pgrid">
+                <svg viewBox="0 0 132 98" preserveAspectRatio="none" aria-hidden="true">
+                  <polyline points="15,15 49,15 49,49 83,49 83,83"></polyline>
+                </svg>
+                <span>N</span><span>U</span><span>·</span><span>·</span>
+                <span>·</span><span>R</span><span>S</span><span>·</span>
+                <span>·</span><span>·</span><span>E</span><span>·</span>
+              </span>
+            </span>
+          </span>
+          <img class="gpip br" src="/brand/games/piccline-dark.svg" alt="" aria-hidden="true" width="52" height="52" loading="lazy" decoding="async" />
+        </a>
+
+        <!-- Card 4: Crossword -->
+        <a href="/play/crossword" class="gcard" data-game-card="crossword" aria-label={`${gameName('cueword')}: a mini crossword from this week's lessons`}>
+          <span class="gpip tl gpip-crossword" aria-hidden="true">
+            <span class="pip-xgrid">
+              <span class="pip-xcell-dark"></span>
+              <span class="pip-xcell-light"></span>
+              <span class="pip-xcell-light"></span>
+              <span class="pip-xcell-light"></span>
+              <span class="pip-xcell-dark"></span>
+              <span class="pip-xcell-light"></span>
+              <span class="pip-xcell-light"></span>
+              <span class="pip-xcell-light"></span>
+              <span class="pip-xcell-dark"></span>
+            </span>
+          </span>
+          <span class="gface">
+            <span class="gname">
+              <span class="serif">{gameName('cueword')}</span>
+            </span>
+            <span class="gdesc">a mini crossword from this week's lessons.</span>
+            <span class="gstatus" data-game-status="crossword">
+              <span class="gstatus-sym" aria-hidden="true">○</span> not started
+            </span>
+            <span class="gdemo" aria-hidden="true">
+              <span class="xg">
+                <span><em class="d-0">C</em></span>
+                <span><em class="d-18">A</em></span>
+                <span><em class="d-36">R</em></span>
+                <span><em class="d-54">E</em></span>
+                <span><em class="d-72">A</em></span>
+                <span class="b"></span>
+                <span class="b"></span>
+                <span><em class="d-126">A</em></span>
+                <span><em class="d-144">R</em></span>
+                <span class="b"></span>
+                <span class="b"></span>
+                <span><em class="d-198">T</em></span>
+                <span><em class="d-216">E</em></span>
+                <span><em class="d-234">A</em></span>
+                <span><em class="d-252">T</em></span>
+                <span><em class="d-270">S</em></span>
+              </span>
+            </span>
+          </span>
+          <span class="gpip br gpip-crossword" aria-hidden="true">
+            <span class="pip-xgrid">
+              <span class="pip-xcell-dark"></span>
+              <span class="pip-xcell-light"></span>
+              <span class="pip-xcell-light"></span>
+              <span class="pip-xcell-light"></span>
+              <span class="pip-xcell-dark"></span>
+              <span class="pip-xcell-light"></span>
+              <span class="pip-xcell-light"></span>
+              <span class="pip-xcell-light"></span>
+              <span class="pip-xcell-dark"></span>
+            </span>
+          </span>
+        </a>
+
+        <!-- Card 5: Sudoku -->
+        <a href="/play/sudoku" class="gcard" data-game-card="sudoku" aria-label={`${gameName('triage')}: a calm numbers break`}>
+          <span class="gpip tl gpip-sudoku" aria-hidden="true">9</span>
+          <span class="gface">
+            <span class="gname">
+              <span class="serif">{gameName('triage')}</span>
+            </span>
+            <span class="gdesc">a calm numbers break.</span>
+            <span class="gstatus" data-game-status="sudoku">
+              <span class="gstatus-sym" aria-hidden="true">○</span> not started
+            </span>
+            <span class="gdemo" aria-hidden="true">
+              <span class="sg">
+                <span>4</span>
+                <span><em class="d-25">3</em></span>
+                <span>9</span>
+                <span><em class="d-75">8</em></span>
+                <span>7</span>
+                <span><em class="d-125">1</em></span>
+                <span>2</span>
+                <span><em class="d-175">6</em></span>
+                <span>5</span>
+              </span>
+            </span>
+          </span>
+          <span class="gpip br gpip-sudoku" aria-hidden="true">9</span>
+        </a>
+
+        <!-- Card 6: Hello cards -->
+        <a href="/play/hello-cards" class="gcard" data-game-card="hello cards" aria-label={`${helloCardsGame.name}: flip a card, start a conversation`}>
+          <span class="gpip tl gpip-hello" aria-hidden="true">hi</span>
+          <span class="gface">
+            <span class="gname">
+              <span class="serif">{helloCardsGame.name}</span>
+            </span>
+            <span class="gdesc">flip a card,<br />start a conversation.</span>
+            <span class="gstatus" data-game-status="hello-cards">
+              <span class="gstatus-sym" aria-hidden="true">○</span> not started
+            </span>
+            <span class="gdemo gdemo-perspective" aria-hidden="true">
+              <span class="hflip">
+                <span class="hface front">hello card<br />tap to flip</span>
+                <span class="hface back">[a conversation starter]</span>
+              </span>
+            </span>
+          </span>
+          <span class="gpip br gpip-hello" aria-hidden="true">hi</span>
+        </a>
+      </div>
+    </div>
+
+    <p class="games-date-note" data-testid="daily-games-day" data-daily-games-date aria-live="polite" aria-atomic="true">
+      the date changes at midnight on your device. some sample puzzles repeat.
+    </p>
   </div>
 </section>
 
 <style>
-  .section-label {
-    font-size: var(--cueory-label-size);
-    font-weight: var(--cueory-label-weight);
-    letter-spacing: var(--cueory-label-tracking);
-  }
-
-  .games-stage {
-    /* The stage inverts ink/page in either theme, so page is the visible keyboard ring on its ink surface. */
-    --color-focus: var(--color-page);
-    border-color: var(--cueory-glass-border);
-    border-radius: var(--cueory-result-card-radius);
-    box-shadow: var(--cueory-glass-shadow);
-  }
-
-  .games-stage-action {
-    border-color: var(--cueory-copper-shine);
-    background: linear-gradient(135deg, var(--cueory-copper-start), var(--cueory-copper-end));
-    box-shadow: var(--cueory-glass-shadow);
-    color: var(--cueory-copper-ink);
-    flex-wrap: wrap;
-    max-inline-size: 100%;
-  }
-
-  .games-preview,
-  .games-preview-mark,
-  .games-card {
-    border-radius: var(--cueory-result-card-radius);
-  }
-
-  .games-preview {
-    background: var(--cueory-result-card-bg);
+  .games-section {
+    max-width: var(--game-section-max-width);
+    margin: 0 auto;
+    padding: var(--game-section-padding);
     box-sizing: border-box;
-    max-inline-size: 100%;
-    min-inline-size: 0;
-    padding: calc(var(--spacing) * 4);
   }
 
-  .games-preview-mark {
-    aspect-ratio: 1;
-    block-size: auto;
-    inline-size: min(100%, calc(var(--spacing) * 16));
-    max-inline-size: 100%;
-    min-inline-size: 0;
-  }
-
-  .games-preview-dots {
-    display: flex;
-    flex-wrap: wrap;
-    gap: calc(var(--spacing) * 3);
-    max-inline-size: 100%;
-  }
-
-  .games-preview-mark,
-  .games-card,
-  .games-card-chip {
-    border-color: var(--cueory-glass-border);
-  }
-
-  .games-card-active {
-    background: var(--cueory-copper-start);
-    color: var(--cueory-copper-ink);
-  }
-
-  @media (min-width: 64em) {
-    .games-stage-layout {
-      grid-template-columns: minmax(0, 1fr) minmax(calc(var(--spacing) * 64), 0.9fr);
+  @media (max-width: 40em) {
+    .games-section {
+      padding: var(--game-section-padding-phone);
     }
+  }
 
-    .games-preview {
-      padding: calc(var(--spacing) * 8);
+  .games-container {
+    display: flex;
+    flex-direction: column;
+    gap: var(--game-container-gap);
+    width: 100%;
+  }
+
+  .games-header {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: var(--game-header-gap);
+  }
+
+  .games-nav-slot {
+    display: flex;
+    align-items: center;
+  }
+
+  .games-nav-prev {
+    justify-self: start;
+  }
+
+  .games-nav-next {
+    justify-self: end;
+  }
+
+  .gs-nav {
+    width: var(--game-nav-size);
+    height: var(--game-nav-size);
+    min-width: var(--game-nav-size);
+    min-height: var(--game-nav-size);
+    border-radius: var(--radius-pill);
+    border: var(--border-hairline) solid var(--game-nav-border);
+    background: var(--game-nav-bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    padding: 0;
+    color: var(--color-ink);
+    transition: background 0.2s ease, transform 0.2s ease;
+  }
+
+  .gs-nav:hover {
+    background: var(--game-nav-bg-hover);
+  }
+
+  .gs-nav:focus-visible {
+    outline: var(--game-nav-outline-width) solid var(--color-copper-deep);
+    outline-offset: var(--game-nav-outline-offset);
+  }
+
+  .games-heading {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: clamp(var(--game-heading-size-min), 6vw, var(--game-heading-size-max));
+    line-height: 1.1;
+    text-align: center;
+    color: var(--color-ink);
+    font-weight: 700;
+  }
+
+  .games-subtitle {
+    margin: 0 0 var(--game-subtitle-margin-bottom);
+    text-align: center;
+    font-family: var(--font-body);
+    font-size: var(--game-subtitle-size);
+    line-height: 1.5;
+    color: var(--color-ink-soft);
+    grid-column: 1 / -1;
+  }
+
+  .games-date-note {
+    margin: var(--game-date-note-margin-top) 0 0;
+    text-align: center;
+    font-family: var(--font-body);
+    font-size: var(--text-sm);
+    line-height: var(--text-sm--line-height);
+    color: var(--color-ink-soft);
+  }
+
+  /* Carousel structure */
+  .gcar {
+    overflow: hidden;
+    padding: var(--game-car-padding);
+    touch-action: pan-y;
+    max-width: 100%;
+  }
+
+  .gtrack {
+    display: flex;
+    gap: var(--game-track-gap);
+    transition: transform 0.55s cubic-bezier(0.2, 0.7, 0.2, 1);
+    will-change: transform;
+  }
+
+  /* Playing Card Style (280x392) */
+  .gcard {
+    flex: 0 0 auto;
+    position: relative;
+    width: var(--game-card-width);
+    height: var(--game-card-height);
+    box-sizing: border-box;
+    border-radius: var(--game-card-radius);
+    padding: var(--game-card-padding);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    color: var(--color-ink);
+    background: var(--game-card-bg);
+    border: var(--game-card-border);
+    box-shadow: var(--game-card-shadow);
+    transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+  }
+
+  .gcard:hover,
+  .gcard:focus-visible {
+    transform: translateY(var(--game-card-lift));
+    border-color: var(--color-copper-glow);
+    box-shadow: var(--game-card-shadow-hover);
+  }
+
+  .gcard:focus-visible {
+    outline: var(--game-card-outline-width) solid var(--color-copper-deep);
+    outline-offset: var(--game-card-outline-offset);
+  }
+
+  .gcard.on {
+    border-color: var(--color-copper-glow);
+    box-shadow: var(--game-card-shadow-on);
+  }
+
+  /* Pips */
+  .gpip {
+    position: absolute;
+    width: var(--game-pip-size);
+    height: var(--game-pip-size);
+    border-radius: var(--game-pip-radius);
+    box-shadow: var(--game-pip-shadow);
+  }
+
+  .gpip.tl {
+    top: var(--game-pip-inset);
+    left: var(--game-pip-inset);
+  }
+
+  .gpip.br {
+    bottom: var(--game-pip-inset);
+    right: var(--game-pip-inset);
+    transform: rotate(180deg);
+  }
+
+  .gpip-crossword {
+    background: var(--color-surface);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .pip-xgrid {
+    display: grid;
+    grid-template-columns: repeat(3, var(--game-pip-xgrid-size));
+    gap: var(--game-pip-xgrid-gap);
+  }
+
+  .pip-xcell-dark {
+    height: var(--game-pip-xgrid-size);
+    background: var(--color-ink);
+  }
+
+  .pip-xcell-light {
+    height: var(--game-pip-xgrid-size);
+    border: var(--border-hairline) solid var(--color-line);
+    box-sizing: border-box;
+  }
+
+  .gpip-sudoku {
+    background: var(--color-surface);
+    color: var(--color-ink);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-display);
+    font-size: var(--game-pip-sudoku-size);
+    line-height: 1;
+  }
+
+  .gpip-hello {
+    background: var(--color-surface);
+    color: var(--color-ink);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-display);
+    font-style: italic;
+    font-size: var(--game-pip-hello-size);
+    line-height: 1;
+  }
+
+  /* Card Face */
+  .gface {
+    position: relative;
+    width: var(--game-face-width);
+    height: var(--game-face-height);
+    box-sizing: border-box;
+    background: none;
+    border: 0;
+    display: grid;
+    grid-template-rows: var(--game-face-header-height) auto 1fr;
+    justify-items: center;
+    padding: var(--game-face-padding);
+    text-align: center;
+  }
+
+  .gname {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: var(--game-face-header-height);
+  }
+
+  .gname img {
+    display: block;
+    max-width: var(--game-wordmark-max-width);
+    max-height: var(--game-wordmark-max-height);
+    width: auto;
+    height: auto;
+  }
+
+  .gname span {
+    font-family: var(--font-display);
+    font-weight: 500;
+    font-size: var(--game-serif-name-size);
+    line-height: 1;
+    color: var(--color-ink);
+  }
+
+  .gdesc {
+    margin: var(--game-desc-margin-top) 0 0;
+    font-family: var(--font-body);
+    font-size: var(--game-desc-size);
+    line-height: 1.5;
+    color: var(--color-ink-soft);
+    transition: opacity 0.25s ease;
+  }
+
+  .gstatus {
+    align-self: end;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--game-status-gap);
+    font-family: var(--font-body);
+    font-size: var(--game-status-size);
+    padding: var(--game-status-padding);
+    border-radius: var(--radius-pill);
+    border: var(--border-hairline) solid var(--color-line);
+    color: var(--color-ink);
+    background: var(--game-status-bg);
+    transition: opacity 0.25s ease;
+  }
+
+  .gstatus-sym {
+    font-family: var(--font-body);
+    font-weight: 700;
+  }
+
+  /* Demos */
+  .gdemo {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: var(--game-demo-top);
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.25s ease;
+    pointer-events: none;
+  }
+
+  .gcard:hover .gdesc,
+  .gcard:hover .gstatus,
+  .gcard:focus-visible .gdesc,
+  .gcard:focus-visible .gstatus {
+    opacity: 0;
+  }
+
+  .gcard:hover .gdemo,
+  .gcard:focus-visible .gdemo {
+    opacity: 1;
+  }
+
+  .gdemo * {
+    animation-play-state: paused !important;
+  }
+
+  .gcard:hover .gdemo *,
+  .gcard:focus-visible .gdemo * {
+    animation-play-state: running !important;
+  }
+
+  /* Vialo Demo */
+  .vialo-grid {
+    display: grid;
+    gap: var(--game-demo-vialo-grid-gap);
+  }
+
+  .vialo-row {
+    display: flex;
+    gap: var(--game-demo-vialo-row-gap);
+  }
+
+  .gc {
+    width: var(--game-demo-vialo-cell-size);
+    height: var(--game-demo-vialo-cell-size);
+    border-radius: var(--radius-pill);
+    border: var(--game-demo-vialo-cell-border) solid var(--color-line);
+    background: var(--game-demo-vialo-cell-bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-body);
+    font-weight: 700;
+    font-size: var(--game-demo-vialo-font-size);
+    color: transparent;
+    box-sizing: border-box;
+    animation: gfill 4.8s ease-in-out infinite;
+  }
+
+  .gc.cu {
+    animation-name: gfillc;
+  }
+
+  @keyframes gfill {
+    0%, 8% { background: var(--game-demo-vialo-cell-bg); border-color: var(--color-line); color: transparent; }
+    18%, 86% { background: var(--color-ink); border-color: var(--color-ink); color: var(--color-page); }
+    100% { background: var(--game-demo-vialo-cell-bg); border-color: var(--color-line); color: transparent; }
+  }
+
+  @keyframes gfillc {
+    0%, 8% { background: var(--game-demo-vialo-cell-bg); border-color: var(--color-line); color: transparent; }
+    18%, 86% { background: var(--color-copper-glow); border-color: var(--color-copper-deep); color: var(--color-ink); }
+    100% { background: var(--game-demo-vialo-cell-bg); border-color: var(--color-line); color: transparent; }
+  }
+
+  /* Tachyyy Demo */
+  .tq {
+    width: var(--game-demo-tachyyy-width);
+    border-radius: var(--game-demo-tachyyy-radius);
+    border: var(--border-hairline) solid var(--color-surface);
+    background: var(--game-demo-tachyyy-bg);
+    padding: var(--game-demo-tachyyy-padding);
+    box-sizing: border-box;
+    font-family: var(--font-body);
+    font-weight: 400;
+    font-size: var(--game-demo-tachyyy-font-size);
+    line-height: 1.4;
+    color: var(--color-ink);
+    display: flex;
+    flex-direction: column;
+    gap: var(--game-demo-tachyyy-gap);
+  }
+
+  .tbar {
+    height: var(--game-demo-tachyyy-bar-height);
+    border-radius: var(--radius-pill);
+    background: var(--color-surface);
+    overflow: hidden;
+  }
+
+  .tbar i {
+    display: block;
+    height: 100%;
+    background: var(--color-copper-deep);
+    animation: tbar 4s linear infinite;
+  }
+
+  @keyframes tbar {
+    0% { width: 100%; }
+    100% { width: 0; }
+  }
+
+  .tq-prompt {
+    font-weight: 700;
+  }
+
+  .tch {
+    border: var(--border-hairline) solid var(--color-line);
+    border-radius: var(--radius-pill);
+    padding: var(--game-demo-tachyyy-choice-padding);
+    text-align: left;
+  }
+
+  .tch.ok {
+    animation: tok 4s ease-in-out infinite;
+  }
+
+  @keyframes tok {
+    0%, 45% { background: var(--game-demo-tachyyy-bg); border-color: var(--color-line); color: var(--color-ink); }
+    55%, 90% { background: var(--color-ink); color: var(--color-page); border-color: var(--color-ink); }
+    100% { background: var(--game-demo-tachyyy-bg); color: var(--color-ink); }
+  }
+
+  /* Piccline Demo */
+  .pgrid {
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(4, var(--game-demo-piccline-cell-size));
+    gap: var(--game-demo-piccline-gap);
+    font-family: var(--font-body);
+    font-weight: 700;
+    font-size: var(--game-demo-piccline-font-size);
+    color: var(--color-ink);
+    text-align: center;
+    line-height: var(--game-demo-piccline-line-height);
+  }
+
+  .pgrid svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+  }
+
+  .pgrid polyline {
+    fill: none;
+    stroke: var(--color-copper-deep);
+    stroke-width: var(--game-demo-piccline-stroke);
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    opacity: 0.45;
+    stroke-dasharray: 260;
+    stroke-dashoffset: 260;
+    animation: ptrace 4.4s ease-in-out infinite;
+  }
+
+  @keyframes ptrace {
+    0%, 10% { stroke-dashoffset: 260; }
+    60%, 88% { stroke-dashoffset: 0; }
+    100% { stroke-dashoffset: 260; }
+  }
+
+  /* Crossword Demo */
+  .xg {
+    display: grid;
+    grid-template-columns: repeat(4, var(--game-demo-crossword-cell-size));
+    gap: var(--game-demo-crossword-gap);
+  }
+
+  .xg span {
+    width: var(--game-demo-crossword-cell-size);
+    height: var(--game-demo-crossword-cell-size);
+    box-sizing: border-box;
+    border: var(--border-hairline) solid var(--color-line);
+    background: var(--game-demo-crossword-bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-body);
+    font-weight: 700;
+    font-size: var(--game-demo-crossword-font-size);
+    color: var(--color-ink);
+  }
+
+  .xg span.b {
+    background: var(--color-ink);
+    border-color: var(--color-ink);
+  }
+
+  .xg em,
+  .sg em {
+    font-style: normal;
+    opacity: 0;
+    animation: gpop 4.8s ease-in-out infinite;
+  }
+
+  @keyframes gpop {
+    0%, 10% { opacity: 0; transform: scale(0.4); }
+    22%, 86% { opacity: 1; transform: scale(1); }
+    100% { opacity: 0; }
+  }
+
+  /* Sudoku Demo */
+  .sg {
+    display: grid;
+    grid-template-columns: repeat(3, var(--game-demo-sudoku-cell-size));
+    gap: 0;
+    border: var(--game-demo-sudoku-border) solid var(--color-ink);
+  }
+
+  .sg span {
+    width: var(--game-demo-sudoku-cell-size);
+    height: var(--game-demo-sudoku-cell-size);
+    box-sizing: border-box;
+    border: var(--border-hairline) solid var(--color-line);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-body);
+    font-weight: 400;
+    font-size: var(--game-demo-sudoku-font-size);
+    color: var(--color-ink);
+    background: var(--game-demo-sudoku-bg);
+  }
+
+  .sg em {
+    color: var(--color-copper-deep);
+    font-weight: 700;
+  }
+
+  /* Hello cards Demo */
+  .gdemo-perspective {
+    perspective: var(--game-demo-hello-perspective);
+  }
+
+  .hflip {
+    width: var(--game-demo-hello-width);
+    height: var(--game-demo-hello-height);
+    position: relative;
+    transform-style: preserve-3d;
+    animation: hflip 4.8s ease-in-out infinite;
+  }
+
+  @keyframes hflip {
+    0%, 25% { transform: rotateY(0deg); }
+    40%, 80% { transform: rotateY(180deg); }
+    95%, 100% { transform: rotateY(0deg); }
+  }
+
+  .hface {
+    position: absolute;
+    inset: 0;
+    border-radius: var(--game-demo-hello-radius);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: var(--game-demo-hello-padding);
+    box-sizing: border-box;
+    font-family: var(--font-body);
+    font-weight: 400;
+    font-size: var(--game-demo-hello-font-size);
+    line-height: 1.4;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+  }
+
+  .hface.front {
+    background: var(--color-ink);
+    color: var(--color-page);
+  }
+
+  .hface.back {
+    background: var(--color-surface);
+    color: var(--color-ink);
+    transform: rotateY(180deg);
+  }
+
+  /* Animation delay helper classes (No inline styles!) */
+  .d-0 { animation-delay: 0s; }
+  .d-18 { animation-delay: 0.18s; }
+  .d-25 { animation-delay: 0.25s; }
+  .d-30 { animation-delay: 0.3s; }
+  .d-36 { animation-delay: 0.36s; }
+  .d-54 { animation-delay: 0.54s; }
+  .d-60 { animation-delay: 0.6s; }
+  .d-72 { animation-delay: 0.72s; }
+  .d-75 { animation-delay: 0.75s; }
+  .d-90 { animation-delay: 0.9s; }
+  .d-120 { animation-delay: 1.2s; }
+  .d-125 { animation-delay: 1.25s; }
+  .d-126 { animation-delay: 1.26s; }
+  .d-144 { animation-delay: 1.44s; }
+  .d-175 { animation-delay: 1.75s; }
+  .d-180 { animation-delay: 1.8s; }
+  .d-198 { animation-delay: 1.98s; }
+  .d-210 { animation-delay: 2.1s; }
+  .d-216 { animation-delay: 2.16s; }
+  .d-234 { animation-delay: 2.34s; }
+  .d-240 { animation-delay: 2.4s; }
+  .d-252 { animation-delay: 2.52s; }
+  .d-270 { animation-delay: 2.7s; }
+  .d-300 { animation-delay: 3s; }
+
+  /* Reduced Motion */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    .gcard,
+    .gtrack,
+    .gdemo,
+    .gdesc,
+    .gstatus,
+    .gc,
+    .gc.cu,
+    .tbar i,
+    .tch.ok,
+    .pgrid polyline,
+    .xg em,
+    .sg em,
+    .hflip {
+      animation: none !important;
+      transition: none !important;
     }
   }
 </style>
 
-<!-- Astro bundles the external TypeScript module; no inline script runs under the CSP. -->
+<script src="../scripts/gamescarousel.ts"></script>
 <script src="../islands/dailyline.ts"></script>

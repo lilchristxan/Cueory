@@ -17,16 +17,24 @@ function summaryText(): string {
 }
 
 describe('home daily games stage', () => {
-  it('uses the approved Home copy and keeps closed cards visible but gated', () => {
+  it('uses the approved Home v2 copy and cards', () => {
     const summary = summaryText();
     const section = gamesSection();
 
-    expect(summary).toBe('a new set of nursing games each day. play one, or all three.');
-    expect([...section.matchAll(/data-game-card=/g)]).toHaveLength(5);
-    expect(section).toMatch(/data-game-card="crossword"[\s\S]*?crossword[\s\S]*?coming soon/);
-    expect(section).toMatch(/data-game-card="hello cards"[\s\S]*?hello cards[\s\S]*?coming soon/);
-    expect(section).toContain('sudoku');
-    expect(section).toContain('fill every row, column and box with the numbers one through nine.');
+    expect(summary).toBe('inspired by your favorite daily games for you and your patients');
+    expect([...section.matchAll(/data-game-card=/g)]).toHaveLength(6);
+    expect(section).toContain('data-game-card="vialo"');
+    expect(section).toContain('data-game-card="tachyyy"');
+    expect(section).toContain('data-game-card="piccline"');
+    expect(section).toContain('data-game-card="crossword"');
+    expect(section).toContain('data-game-card="sudoku"');
+    expect(section).toContain('data-game-card="hello cards"');
+    expect(section).toContain('guess the five-letter word in six tries.');
+    expect(section).toContain('quick questions against the clock.');
+    expect(section).toContain('trace hidden words through the letters.');
+    expect(section).toContain("a mini crossword from this week's lessons.");
+    expect(section).toContain('a calm numbers break.');
+    expect(section).toMatch(/flip a card,[\s\S]*?start a conversation\./);
     expect(summary).not.toMatch(/\bsort\b/i);
     expect(summary).toBe(summary.toLowerCase());
   });
@@ -41,10 +49,16 @@ describe('home daily games stage', () => {
     expect(section).toContain('the date changes at midnight on your device. some sample puzzles repeat.');
   });
 
-  it('keeps the single call to action on /play, without direct game-card links', () => {
+  it('links each card to its game route', () => {
     const section = gamesSection();
     const links = [...section.matchAll(/<a\b[^>]*\bhref="([^"]+)"[^>]*>/g)].map((match) => match[1]);
-    expect(links).toEqual(['/play']);
-    expect(section).toContain('data-testid="games-link"');
+    expect(links).toEqual([
+      '/play/vialo',
+      '/play/tachyyy',
+      '/play/piccline',
+      '/play/crossword',
+      '/play/sudoku',
+      '/play/hello-cards',
+    ]);
   });
 });
