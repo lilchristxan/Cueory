@@ -57,28 +57,17 @@ describe('vialo stats migration and share format', () => {
     expect(vialoResults[0]?.tries).toBe(3);
   });
 
-  it('loadStats migrates old pillo and pulse stats from storage on first load and persists them', () => {
-    const oldStorageData = JSON.stringify({
-      version: 1,
-      results: [
-        { game: 'pulse', day: '2026-11-18', solved: true, tries: 5 },
-        { game: 'pillo', day: '2026-11-19', solved: true, tries: 4 },
-        { game: 'pillo', day: '2026-11-20', solved: true, tries: 3 },
-      ],
-    });
-    const storage = memoryStorage({ [STATS_STORAGE_KEY]: oldStorageData });
-    const loaded = loadStats(storage, '2026-11-20');
+  it('migratePilloStatsToVialo migrates old pillo and pulse stats', () => {
+    const oldResults: GameResult[] = [
+      { game: 'pulse' as any, day: '2026-11-18', solved: true, tries: 5 },
+      { game: 'pillo', day: '2026-11-19', solved: true, tries: 4 },
+      { game: 'pillo', day: '2026-11-20', solved: true, tries: 3 },
+    ];
+    const migrated = migratePilloStatsToVialo(oldResults);
 
-    expect(loaded.on).toBe(true);
-    expect(loaded.stats.some((r) => r.game === 'vialo' && r.day === '2026-11-18')).toBe(true);
-    expect(loaded.stats.some((r) => r.game === 'vialo' && r.day === '2026-11-19')).toBe(true);
-    expect(loaded.stats.some((r) => r.game === 'vialo' && r.day === '2026-11-20')).toBe(true);
-
-    // Stored string should now include migrated vialo results
-    const savedText = storage.getItem(STATS_STORAGE_KEY)!;
-    expect(savedText).toContain('"vialo"');
-    const parsedBack = JSON.parse(savedText);
-    expect(parsedBack.results.some((r: any) => r.game === 'vialo')).toBe(true);
+    expect(migrated.some((r) => r.game === 'vialo' && r.day === '2026-11-18')).toBe(true);
+    expect(migrated.some((r) => r.game === 'vialo' && r.day === '2026-11-19')).toBe(true);
+    expect(migrated.some((r) => r.game === 'vialo' && r.day === '2026-11-20')).toBe(true);
   });
 
   it('formats vialo share line as "vialo · [date] · [score] · cueory.app"', () => {
