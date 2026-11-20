@@ -10,6 +10,7 @@ import {
   getResult,
   isCompleteAndValid,
   solveSudoku,
+  solvingTechnique,
   sudokuCellPresentation,
   type SudokuLevel,
 } from '../../src/islands/sudoku';
@@ -45,6 +46,15 @@ describe('daily Sudoku generator (Task 625)', () => {
     expect(LEVEL_RULES.easy.technique).toContain('singles');
     expect(LEVEL_RULES.medium.technique).toContain('candidate');
     expect(LEVEL_RULES.hard.technique).toContain('search');
+  });
+
+  it.each([
+    ['easy', 'naked singles'],
+    ['medium', 'hidden singles'],
+    ['hard', 'search'],
+  ] as const)('classifies a %s board with its direct solving helper', (level, technique) => {
+    const puzzle = generateSudoku(`technique-helper:${level}`, level).puzzle;
+    expect(solvingTechnique(puzzle)).toBe(technique);
   });
 
   it('builds one stable seed for a local day and level', () => {
