@@ -6,6 +6,7 @@ import {
   AUTO_ADVANCE_MS,
   canAutoAdvance,
   canEnhanceCarousel,
+  carouselState,
   clipAround,
   flipFrom,
   glides,
@@ -17,6 +18,7 @@ import {
   RING_EASING,
   RING_MS,
   ringOffset,
+  SETTLE_GRACE_MS,
   ringPlace,
   ROW_GAP,
   rowPlace,
@@ -38,6 +40,7 @@ const idle: MotionState = {
   hovering: false,
   focusInside: false,
   onScreen: true,
+  previewOpen: false,
 };
 
 const mockCapability = () => undefined;
@@ -253,6 +256,19 @@ describe('"ways to study" merry-go-round (D-50, D-60)', () => {
     expect(canAutoAdvance({ ...idle, hovering: true })).toBe(false);
     expect(canAutoAdvance({ ...idle, focusInside: true })).toBe(false);
     expect(canAutoAdvance({ ...idle, onScreen: false })).toBe(false);
+    expect(canAutoAdvance({ ...idle, previewOpen: true })).toBe(false);
+  });
+
+  it('reports one carousel state: settled only with no glide and no preview, the preview phase while it is open', () => {
+    expect(carouselState('closed', false)).toBe('settled');
+    expect(carouselState('closed', true)).toBe('turning');
+    for (const phase of ['opening', 'open', 'stepping', 'closing'] as const) {
+      expect(carouselState(phase, false)).toBe(phase);
+      expect(carouselState(phase, true)).toBe(phase);
+    }
+    // A late glide or grow is finished by the script soon after it should have ended, never seconds later.
+    expect(SETTLE_GRACE_MS).toBeGreaterThan(0);
+    expect(SETTLE_GRACE_MS).toBeLessThan(PREVIEW_MS);
   });
 });
 

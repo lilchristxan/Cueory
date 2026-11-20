@@ -804,8 +804,12 @@ test.describe('"ways to study" merry-go-round (D-50, D-60)', () => {
     await section(page).scrollIntoViewIfNeeded();
     await section(page).getByRole('button', { name: 'next study mode' }).click();
     await expect.poll(() => middleCard(page)).toBe('cards');
-    // Let the 700 ms glide finish (Task 109).
+    // Let the 700 ms glide finish (Task 109), and the section's own first fade-in rise (D-62), which moves every vial
+    // 10 px between the separate measurements below on a slow machine.
     await waitForCardTurn(page);
+    await expect
+      .poll(() => section(page).locator('[data-reveal-section]').evaluate((el) => getComputedStyle(el).translate))
+      .toMatch(/^(none|0px)$/);
     const look = (id: string) =>
       page.locator(`#mode-${id}`).evaluate((card) => {
         const box = card.getBoundingClientRect();

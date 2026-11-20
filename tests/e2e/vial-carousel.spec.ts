@@ -1,6 +1,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 import { studyModes } from '../../src/config/modes';
+import { markPanelsSeen } from './clock';
 import { isDesktopOfEachEngine, sizeOf } from './projects';
 
 /*
@@ -21,6 +22,8 @@ test.beforeEach(async ({ page }) => {
 });
 
 const section = (page: Page) => page.locator('#ways-to-study');
+/** Longer than any grow, shrink or glide may take before the carousel finishes it itself (SETTLE_GRACE_MS). */
+const SETTLE_WAIT = 1_000;
 const axeTags = ['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa'];
 
 async function showRing(page: Page) {
@@ -53,8 +56,12 @@ test('every vial is a blank bottle with its label in live text: name and time, w
     // The logo is Christian's artwork, not typed.
     await expect(card.locator('img.vial-logo')).toHaveAttribute('src', '/brand/v1/logo-full-light-480.png');
   }
-  // Screen readers hear the method and its two lines: "cards, best for recall, about 5 minutes".
+  // Screen readers hear the method and its two lines: "cards, best for recall, about 5 minutes". The checks above can
+  // outlast the six-second auto-advance on a slow machine, so first bring the first vial to the front by keyboard
+  // (which also takes over from the auto-advance), then one step to cards.
   const cards = section(page).locator('#mode-cards [data-mode-open]');
+  await section(page).locator('[data-modes-track]').press('Home');
+  await expect(section(page).locator('#mode-video')).toHaveAttribute('data-active', '');
   await section(page).getByRole('button', { name: 'next study mode' }).click();
   await expect(cards).toHaveAccessibleName('preview cards');
   await expect(cards).toHaveAccessibleDescription('best for recall, about 5 minutes');
@@ -232,11 +239,26 @@ test('Enter on the vial in front grows that same bottle into the preview, in two
     'solid',
     '3px',
   ]);
+  // The focus lift (220 ms) has finished, so the vial is measured where the grow will start from.
+  await settled(page);
   const vial = (await section(page).locator('#mode-video [data-vial]').boundingBox())!;
+  // The grow lasts 320 ms, less than one round trip to a busy browser can take (770 ms seen), so the page keeps each
+  // animation as it is made, and the checks below read those same animations whenever they get there.
+  await page.evaluate(() => {
+    const made: Array<{ target: Element; animation: Animation }> = [];
+    (window as Window & { __madeAnimations?: typeof made }).__madeAnimations = made;
+    const original = Element.prototype.animate;
+    Element.prototype.animate = function (...args: Parameters<Element['animate']>) {
+      const animation = original.apply(this, args);
+      made.push({ target: this, animation });
+      return animation;
+    };
+  });
   await page.keyboard.press('Enter');
   const grow = await page.evaluate(() => {
+    const made = (window as Window & { __madeAnimations?: Array<{ target: Element; animation: Animation }> }).__madeAnimations ?? [];
     const bottle = document.querySelector<HTMLElement>('[data-mode-preview-vial]')!;
-    const [move] = bottle.getAnimations();
+    const move = made.find((entry) => entry.target === bottle)?.animation;
     if (!move) return undefined;
     move.pause();
     move.currentTime = 0;
@@ -244,7 +266,8 @@ test('Enter on the vial in front grows that same bottle into the preview, in two
     move.currentTime = 160;
     const settled = getComputedStyle(bottle).transform;
     move.play();
-    const words = document.querySelector<HTMLElement>('.mode-preview-details')!.getAnimations()[0]!;
+    const details = document.querySelector<HTMLElement>('.mode-preview-details')!;
+    const words = made.find((entry) => entry.target === details)!.animation;
     const frames = words.effect!.getComputedTiming();
     return {
       box: [box.left, box.top, box.width, box.height],
@@ -337,6 +360,62 @@ test('with a mouse, the front vial lifts to 104% with brighter glass; its neighb
   // Back smoothly on leave.
   await page.mouse.move(0, 0);
   await expect.poll(async () => (await look('video')).scale).toBe('none');
+});
+
+test('auto-advance gives the vial in front its full six seconds from when the ring comes into view or the pointer leaves', async ({
+  page,
+}, testInfo) => {
+  test.skip(!isDesktopOfEachEngine(testInfo), 'rests a mouse on the vials: once per engine, at desktop size');
+  // The page's own timers run on Playwright's clock and move only when the test moves them, so a busy test machine
+  // cannot shift a countdown.
+  await page.clock.install({ time: new Date('2026-11-20T07:00:00') });
+  await markPanelsSeen(page);
+  await page.goto('/');
+  await page.clock.pauseAt(new Date('2026-11-20T07:05:00'));
+  const carousel = section(page);
+  await expect(carousel).toHaveAttribute('data-ring', '');
+  await expect(carousel).toHaveAttribute('data-autoplay', 'off');
+  // Below the window for a while: nothing counts down, so no advance is owed when the ring comes into view.
+  await page.clock.runFor(20_000);
+  await expect(carousel.locator('#mode-video')).toHaveAttribute('data-active', '');
+  await page.mouse.move(0, 0);
+  await carousel.scrollIntoViewIfNeeded();
+  await expect(carousel).toHaveAttribute('data-autoplay', 'on');
+  await page.clock.runFor(5_900);
+  await expect(carousel.locator('#mode-video')).toHaveAttribute('data-active', '');
+  await page.clock.runFor(200);
+  await expect(carousel.locator('#mode-cards')).toHaveAttribute('data-active', '');
+  await expect(carousel).toHaveAttribute('data-carousel-state', 'settled');
+
+  // A mouse resting on the vials stops the countdown at once, however long it stays.
+  await page.clock.runFor(3_000);
+  await carousel.locator('[data-modes-track]').hover();
+  await expect(carousel).toHaveAttribute('data-autoplay', 'off');
+  await page.clock.runFor(20_000);
+  await expect(carousel.locator('#mode-cards')).toHaveAttribute('data-active', '');
+  // Moving off starts a fresh six seconds, not whatever was left before the pause.
+  await page.mouse.move(0, 0);
+  await expect(carousel).toHaveAttribute('data-autoplay', 'on');
+  await page.clock.runFor(5_900);
+  await expect(carousel.locator('#mode-cards')).toHaveAttribute('data-active', '');
+  await page.clock.runFor(200);
+  await expect(carousel.locator('#mode-learn')).toHaveAttribute('data-active', '');
+
+  // The open preview holds it too, and so does taking over.
+  await carousel.locator('#mode-learn [data-mode-open]').click();
+  await expect(carousel).toHaveAttribute('data-carousel-state', /^(opening|open)$/);
+  await expect(carousel).toHaveAttribute('data-autoplay', 'off');
+  await page.clock.runFor(SETTLE_WAIT);
+  await expect(carousel).toHaveAttribute('data-carousel-state', 'open');
+  await page.keyboard.press('Escape');
+  await page.clock.runFor(SETTLE_WAIT);
+  await expect(page.locator('#mode-preview')).toBeHidden();
+  await expect(carousel).toHaveAttribute('data-carousel-state', 'settled');
+  await expect(carousel.locator('#mode-learn [data-mode-open]')).toBeFocused();
+  await page.mouse.move(0, 0);
+  await page.clock.runFor(20_000);
+  await expect(carousel.locator('#mode-learn')).toHaveAttribute('data-active', '');
+  await expect(carousel).toHaveAttribute('data-autoplay', 'off');
 });
 
 test('touch screens never get the hover lift; reduced motion never lifts either', async ({ page }, testInfo) => {
