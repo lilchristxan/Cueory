@@ -75,16 +75,17 @@ for (const path of ['/', '/learn/study-skills', '/play', '/signin']) {
       .sort());
 
     const browserEvidence = await page.evaluate((files) => {
-      const preloads = Object.fromEntries([...document.querySelectorAll('link[rel="preload"][as="font"]')]
-        .map((link) => {
-          const file = new URL(link.href).pathname.split('/').at(-1);
-          return [file!, {
+      const preloads: Record<string, { as: string | null; type: string | null; crossorigin: string | null }> = {};
+      for (const link of document.querySelectorAll<HTMLLinkElement>('link[rel="preload"][as="font"]')) {
+        const file = new URL(link.href).pathname.split('/').at(-1);
+        if (file && files.includes(file)) {
+          preloads[file] = {
             as: link.getAttribute('as'),
             type: link.getAttribute('type'),
             crossorigin: link.getAttribute('crossorigin'),
-          }];
-        })
-        .filter(([file]) => files.includes(file)));
+          };
+        }
+      }
       const initiators = performance.getEntriesByType('resource')
         .filter((entry) => files.includes(entry.name.split('/').pop()!))
         .map((entry) => ({ name: entry.name, initiator: (entry as PerformanceResourceTiming).initiatorType }));
