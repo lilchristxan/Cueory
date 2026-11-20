@@ -224,9 +224,13 @@ const icons: Record<StudyFeatureIcon, string> = {
     PREVIEW_MS,
     PREVIEW_SPLIT,
     REST_MS,
+    RING_MS,
+    SETTLE_GRACE_MS,
     STEP_MS,
     canAutoAdvance,
     canEnhanceCarousel,
+    carouselState,
+    type PreviewPhase,
     clipAround,
     flipFrom,
     glides,
@@ -289,7 +293,50 @@ const icons: Record<StudyFeatureIcon, string> = {
       hovering: false,
       focusInside: false,
       onScreen: false,
+      previewOpen: false,
     };
+
+    /*
+      One deterministic state (root[data-carousel-state], carouselState in src/scripts/carousel.ts): "settled" only
+      once no glide and no preview animation is in flight, so nothing has to guess with a fixed wait.
+    */
+    let turning = false;
+    let previewPhase: PreviewPhase = 'closed';
+    const showState = () => {
+      root.dataset.carouselState = carouselState(previewPhase, turning);
+    };
+
+    /** The finite animations and transitions still running (or about to start) on these elements and inside them. */
+    const busy = (elements: readonly Element[]) =>
+      elements
+        .flatMap((element) => element.getAnimations({ subtree: true }))
+        .filter((animation) => animation.effect?.getComputedTiming().iterations !== Infinity)
+        .filter((animation) => animation.pending || animation.playState === 'running' || animation.playState === 'paused');
+
+    /**
+     * Resolves once every one of these animations has finished or been cancelled. Any still unfinished `limit` ms from
+     * now is finished at once (SETTLE_GRACE_MS), so the carousel reaches its resting state on time even in a browser
+     * too busy to draw.
+     */
+    const settle = (animations: readonly Animation[], limit: number) =>
+      new Promise<void>((resolve) => {
+        const cap = window.setTimeout(() => {
+          for (const animation of animations) {
+            if (animation.playState === 'finished' || animation.playState === 'idle') continue;
+            try {
+              animation.finish();
+            } catch {
+              animation.cancel();
+            }
+          }
+          resolve();
+        }, limit);
+        void Promise.allSettled(animations.map((animation) => animation.finished)).then(() => {
+          window.clearTimeout(cap);
+          resolve();
+        });
+      });
+
     /** The vial in front. */
     let active = 0;
     /** The card last written to the live region (none yet). */
@@ -325,6 +372,29 @@ const icons: Record<StudyFeatureIcon, string> = {
     /** How much room the row had when it was last laid out (rowRoom), so a resize that changes nothing is skipped. */
     let laidOutIn = Number.NaN;
 
+    /**
+     * After every placing the ring counts as turning until the vials' and dots' transitions have all finished, then as
+     * settled. A newer placing takes over.
+     */
+    let placing = 0;
+    const settleRing = () => {
+      const round = ++placing;
+      turning = true;
+      showState();
+      const check = () => {
+        if (round !== placing) return;
+        const gliding = busy([...cards, ...dots]);
+        if (gliding.length === 0) {
+          turning = false;
+          showState();
+          return;
+        }
+        void settle(gliding, RING_MS + SETTLE_GRACE_MS).then(check);
+      };
+      // getAnimations() brings the styles up to date first, so the transitions this placing starts are already there.
+      queueMicrotask(check);
+    };
+
     const place = () => {
       const room = rowRoom();
       laidOutIn = room;
@@ -358,6 +428,7 @@ const icons: Record<StudyFeatureIcon, string> = {
         for (const link of card.querySelectorAll('a')) link.tabIndex = -1;
       });
       dots.forEach((dot, index) => dot.toggleAttribute('data-on', index === active));
+      settleRing();
     };
 
     /*
@@ -406,7 +477,37 @@ const icons: Record<StudyFeatureIcon, string> = {
     const takeOver = () => {
       state.tookOver = true;
       live?.setAttribute('aria-live', 'polite');
+      syncAutoplay();
     };
+
+    /*
+      Auto-advance: one countdown, started afresh (the full AUTO_ADVANCE_MS) each time nothing stops it and cleared the
+      moment something does, so the vial in front always gets its whole time: after the carousel comes into view, after
+      the pointer leaves it or focus moves out, after play. Every change to `state` calls syncAutoplay synchronously,
+      and root[data-autoplay] says whether the countdown is running. Never a free-running interval, whose next tick
+      could land a moment after the carousel came into view or the pointer left it.
+    */
+    const controls = root.querySelector<HTMLElement>('[data-modes-controls]');
+    const finePointer = window.matchMedia('(hover: hover) and (pointer: fine)');
+    let countdown = 0;
+    function syncAutoplay() {
+      const allowed = canAutoAdvance(state);
+      root!.dataset.autoplay = allowed ? 'on' : 'off';
+      if (!allowed) {
+        window.clearTimeout(countdown);
+        countdown = 0;
+      } else if (!countdown) {
+        countdown = window.setTimeout(autoAdvance, AUTO_ADVANCE_MS);
+      }
+    }
+    function autoAdvance() {
+      countdown = 0;
+      // The pointer's real place is checked too, in case a browser left out an enter event: a mouse resting on the
+      // vials or their buttons always holds the vial in front.
+      const resting = finePointer.matches && [track, controls].some((area) => area?.matches(':hover'));
+      if (canAutoAdvance(state) && !resting) goTo(active + 1);
+      syncAutoplay();
+    }
 
     root.querySelector('[data-modes-prev]')?.addEventListener('click', () => {
       takeOver();
@@ -426,10 +527,16 @@ const icons: Record<StudyFeatureIcon, string> = {
     });
 
     // A tap on a side vial brings it to the front; a tap (or Enter) on the vial in front opens its preview.
+    // The flag is used up by the one click it is there to stop, and a new touch clears it, so a later real tap (even
+    // while the ring is still gliding) is never mistaken for the end of an earlier swipe.
     let swiped = false;
+    let swipeExpiry = 0;
     openButtons.forEach((button, index) => {
       button?.addEventListener('click', () => {
-        if (swiped) return;
+        if (swiped) {
+          swiped = false;
+          return;
+        }
         if (index === active) {
           preview?.(index);
           return;
@@ -458,7 +565,8 @@ const icons: Record<StudyFeatureIcon, string> = {
       if (!turn) return;
       // The tap that some browsers report at the end of a swipe is not a tap on a card.
       swiped = true;
-      window.setTimeout(() => {
+      window.clearTimeout(swipeExpiry);
+      swipeExpiry = window.setTimeout(() => {
         swiped = false;
       }, REST_MS);
       takeOver();
@@ -503,21 +611,25 @@ const icons: Record<StudyFeatureIcon, string> = {
     // A mouse resting on the cards or their buttons pauses the auto-advance. The words around them don't: the section
     // is taller than many windows, so pausing for the whole of it would stop the auto-advance for good on a computer.
     const hovered = new Set<HTMLElement>();
-    for (const area of [track, root.querySelector<HTMLElement>('[data-modes-controls]')]) {
+    for (const area of [track, controls]) {
       area?.addEventListener('pointerenter', (event) => {
         if (event.pointerType === 'mouse') hovered.add(area);
         state.hovering = hovered.size > 0;
+        syncAutoplay();
       });
       area?.addEventListener('pointerleave', () => {
         hovered.delete(area);
         state.hovering = hovered.size > 0;
+        syncAutoplay();
       });
     }
     root.addEventListener('focusin', () => {
       state.focusInside = true;
+      syncAutoplay();
     });
     root.addEventListener('focusout', (event) => {
       if (!root.contains(event.relatedTarget as Node | null)) state.focusInside = false;
+      syncAutoplay();
     });
 
     /** The pause button stops the auto-advance, the only thing here that moves by itself. */
@@ -533,6 +645,7 @@ const icons: Record<StudyFeatureIcon, string> = {
       // Playing again lets the auto-advance run again, even after the visitor took over.
       if (!state.paused) state.tookOver = false;
       showPaused();
+      syncAutoplay();
     });
 
     const applyMotion = () => {
@@ -541,12 +654,14 @@ const icons: Record<StudyFeatureIcon, string> = {
       // With reduced motion nothing moves by itself, so there is nothing to pause: the button keeps its space only.
       pauseButton?.classList.toggle('invisible', state.reducedMotion);
       place();
+      syncAutoplay();
     };
     reducedMotion.addEventListener('change', applyMotion);
 
     let intersecting = false;
     const showing = () => {
       state.onScreen = intersecting && !document.hidden;
+      syncAutoplay();
     };
     new IntersectionObserver(
       ([entry]) => {
@@ -556,10 +671,6 @@ const icons: Record<StudyFeatureIcon, string> = {
       { threshold: 0.5 },
     ).observe(track);
     document.addEventListener('visibilitychange', showing);
-
-    window.setInterval(() => {
-      if (canAutoAdvance(state)) goTo(active + 1);
-    }, AUTO_ADVANCE_MS);
 
     /*
       The preview (D-51, Task 109). The vial in front opens one shared <dialog>. Opening measures the vial, shows the
@@ -584,8 +695,22 @@ const icons: Record<StudyFeatureIcon, string> = {
       const features = [...dialog.querySelectorAll<HTMLElement>('[data-mode-preview-features]')];
       const previewLive = dialog.querySelector<HTMLElement>('[data-mode-preview-live]');
       let shown = 0;
-      let closing = false;
       let returnFocus = true;
+      /** Each open, step and close starts a new round; a phase change from an older round is ignored. */
+      let previewRound = 0;
+      const setPreview = (phase: PreviewPhase) => {
+        previewPhase = phase;
+        state.previewOpen = phase !== 'closed';
+        syncAutoplay();
+        showState();
+      };
+      /** Once this round's animations are done (or finished on time by settle), the preview is open and still. */
+      const restWhenDone = (animations: readonly Animation[], limit: number) => {
+        const round = previewRound;
+        void settle(animations, limit).then(() => {
+          if (round === previewRound && dialog.open) setPreview('open');
+        });
+      };
       // How far a step nudges the panel sideways: the --nudge-mode-preview token, read once.
       const nudge = getComputedStyle(panel).getPropertyValue('--nudge-mode-preview').trim() || '0px';
       const radius = getComputedStyle(surface).borderTopLeftRadius || '0px';
@@ -649,8 +774,11 @@ const icons: Record<StudyFeatureIcon, string> = {
         returnFocus = true;
         quiet = true;
         dialog.showModal();
+        // Focus goes inside at once, so Escape and Tab start from inside the dialog (#888).
         closeButton?.focus();
         lend(index);
+        previewRound += 1;
+        setPreview(state.reducedMotion ? 'open' : 'opening');
         if (state.reducedMotion) return;
         const to = bottle.getBoundingClientRect();
         const box = panel.getBoundingClientRect();
@@ -658,33 +786,37 @@ const icons: Record<StudyFeatureIcon, string> = {
         const full = clipAround(box, box, radius);
         const split = PREVIEW_SPLIT;
         const timing = { duration: PREVIEW_MS, easing: PREVIEW_EASING };
-        // 1. The same bottle grows from its place toward the middle while the page darkens...
-        bottle.animate(
-          [{ transform: flipFrom(from, to) }, { transform: 'none', offset: split }, { transform: 'none' }],
-          timing,
-        );
-        scrim.animate([{ opacity: 0 }, { opacity: 1, offset: split }, { opacity: 1 }], { ...timing, easing: 'ease' });
-        // 2. ...then the cream panel opens around it, and its words fade in.
-        surface.animate(
-          [
-            { opacity: 0, clipPath: around },
-            { opacity: 0, clipPath: around, offset: split - 0.05 },
-            { opacity: 1, clipPath: around, offset: split + 0.05 },
-            { opacity: 1, clipPath: full },
-          ],
-          timing,
-        );
-        for (const words of fades) words.animate([{ opacity: 0 }, { opacity: 0, offset: split }, { opacity: 1 }], timing);
+        const grow = [
+          // 1. The same bottle grows from its place toward the middle while the page darkens...
+          bottle.animate(
+            [{ transform: flipFrom(from, to) }, { transform: 'none', offset: split }, { transform: 'none' }],
+            timing,
+          ),
+          scrim.animate([{ opacity: 0 }, { opacity: 1, offset: split }, { opacity: 1 }], { ...timing, easing: 'ease' }),
+          // 2. ...then the cream panel opens around it, and its words fade in.
+          surface.animate(
+            [
+              { opacity: 0, clipPath: around },
+              { opacity: 0, clipPath: around, offset: split - 0.05 },
+              { opacity: 1, clipPath: around, offset: split + 0.05 },
+              { opacity: 1, clipPath: full },
+            ],
+            timing,
+          ),
+          ...fades.map((words) => words.animate([{ opacity: 0 }, { opacity: 0, offset: split }, { opacity: 1 }], timing)),
+        ];
+        restWhenDone(grow, PREVIEW_MS + SETTLE_GRACE_MS);
       };
 
       /** Closes the panel around the bottle, shrinks the bottle back into the vial in front, then closes the dialog. */
       const close = async () => {
-        if (!dialog.open || closing) return;
+        if (!dialog.open || previewPhase === 'closing') return;
         if (state.reducedMotion) {
           dialog.close();
           return;
         }
-        closing = true;
+        const round = ++previewRound;
+        setPreview('closing');
         const into = vialOf(shown).getBoundingClientRect();
         // Closing in the middle of the grow or a nudge closes from where everything is now.
         const was = stopAll();
@@ -694,39 +826,41 @@ const icons: Record<StudyFeatureIcon, string> = {
         const home = flipFrom(into, to);
         const timing = { duration: PREVIEW_MS, easing: PREVIEW_EASING, fill: 'forwards' as const };
         const split = PREVIEW_SPLIT;
-        let shrink: Animation;
+        let shrink: Animation[];
         if (was.running) {
           // Part-way open: everything goes straight back from where it is.
-          shrink = bottle.animate([{ transform: was.bottle }, { transform: home }], timing);
-          surface.animate([{ opacity: was.surface, clipPath: was.clip === 'none' ? around : was.clip }, { opacity: 0, clipPath: around }], timing);
-          for (const words of fades) words.animate([{ opacity: was.words }, { opacity: 0 }], timing);
-          scrim.animate([{ opacity: was.shade }, { opacity: 0 }], { ...timing, easing: 'ease' });
+          shrink = [
+            bottle.animate([{ transform: was.bottle }, { transform: home }], timing),
+            surface.animate([{ opacity: was.surface, clipPath: was.clip === 'none' ? around : was.clip }, { opacity: 0, clipPath: around }], timing),
+            ...fades.map((words) => words.animate([{ opacity: was.words }, { opacity: 0 }], timing)),
+            scrim.animate([{ opacity: was.shade }, { opacity: 0 }], { ...timing, easing: 'ease' }),
+          ];
         } else {
           // Fully open: the words fade and the panel closes around the bottle, then the bottle goes home.
-          for (const words of fades) words.animate([{ opacity: 1 }, { opacity: 0, offset: split }, { opacity: 0 }], timing);
-          surface.animate(
-            [
-              { opacity: 1, clipPath: clipAround(box, box, radius) },
-              { opacity: 1, clipPath: around, offset: split - 0.05 },
-              { opacity: 0, clipPath: around, offset: split + 0.05 },
-              { opacity: 0, clipPath: around },
-            ],
-            timing,
-          );
-          shrink = bottle.animate([{ transform: 'none' }, { transform: 'none', offset: split }, { transform: home }], timing);
-          scrim.animate([{ opacity: 1 }, { opacity: 1, offset: split }, { opacity: 0 }], { ...timing, easing: 'ease' });
+          shrink = [
+            bottle.animate([{ transform: 'none' }, { transform: 'none', offset: split }, { transform: home }], timing),
+            ...fades.map((words) => words.animate([{ opacity: 1 }, { opacity: 0, offset: split }, { opacity: 0 }], timing)),
+            surface.animate(
+              [
+                { opacity: 1, clipPath: clipAround(box, box, radius) },
+                { opacity: 1, clipPath: around, offset: split - 0.05 },
+                { opacity: 0, clipPath: around, offset: split + 0.05 },
+                { opacity: 0, clipPath: around },
+              ],
+              timing,
+            ),
+            scrim.animate([{ opacity: 1 }, { opacity: 1, offset: split }, { opacity: 0 }], { ...timing, easing: 'ease' }),
+          ];
         }
-        try {
-          await shrink.finished;
-        } catch {
-          // Cancelled because the dialog was closed some other way: nothing left to do.
-        }
-        if (dialog.open) dialog.close();
+        // The dialog closes once the shrink is done, or on time even if a busy browser never reports it done. If it
+        // was closed some other way meanwhile (a link inside), there is nothing left to do.
+        await settle(shrink, PREVIEW_MS + SETTLE_GRACE_MS);
+        if (round === previewRound && dialog.open) dialog.close();
       };
 
       /** Previous and next inside the preview: the next mode in the ring's order, and the ring behind follows. */
       const step = (delta: number) => {
-        if (closing) return;
+        if (previewPhase === 'closing') return;
         const next = wrap(shown + delta, cards.length);
         // "start …" disappears for a mode that isn't open yet; if it had focus, focus moves to the arrow going that way.
         const tryHadFocus = !!tryLink && document.activeElement === tryLink;
@@ -739,10 +873,13 @@ const icons: Record<StudyFeatureIcon, string> = {
         goTo(next);
         if (previewLive) previewLive.textContent = slideAnnouncement(cards[next]!.dataset.name ?? '', next, cards.length);
         if (!state.reducedMotion) {
-          panel.animate([{ transform: `translateX(calc(${delta} * ${nudge}))` }, { transform: 'none' }], {
+          previewRound += 1;
+          setPreview('stepping');
+          const nudged = panel.animate([{ transform: `translateX(calc(${delta} * ${nudge}))` }, { transform: 'none' }], {
             duration: STEP_MS,
             easing: PREVIEW_EASING,
           });
+          restWhenDone([nudged], STEP_MS + SETTLE_GRACE_MS);
         }
       };
 
@@ -820,8 +957,17 @@ const icons: Record<StudyFeatureIcon, string> = {
         });
       }
 
+      // Escape while focus is somewhere outside the open dialog (a browser that left it on the page) still closes it the
+      // same way. Inside, the dialog's own keydown handles it, after an open ⓘ has had its turn.
+      document.addEventListener('keydown', (event) => {
+        if (!dialog.open || !isCloseKey(event.key) || dialog.contains(event.target as Node | null)) return;
+        event.preventDefault();
+        void close();
+      });
+
       dialog.addEventListener('close', () => {
-        closing = false;
+        previewRound += 1;
+        setPreview('closed');
         quiet = false;
         announced = active;
         for (const animation of animations()) animation.cancel();
