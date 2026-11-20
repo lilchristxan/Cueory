@@ -33,9 +33,12 @@ describe('evening palette copies', () => {
 // The copper group (Copper Deep, Copper, Copper Glow, Copper Shine) was added 18 Nov 2026 by Christian's decision
 // (docs/BRAND.md) and serves both themes.
 const copperGroup = ['#b87348', '#d9976a', '#f6d3ae', '#fff0de'];
+// Game accents added 20 Nov 2026 by Christian's decision (docs/BRAND.md): Teal for piccline, Dim for vialo dark icon.
+const gameDaytime = ['#2f7a78', '#5a463a'];
+const gameEvening = ['#4fb3ae', '#5a463a'];
 const brand = {
-  daytime: ['#f9f5ef', '#eadccf', '#d3b7a1', '#8b6f5b', '#3e2c23', '#6b5243', ...copperGroup],
-  evening: ['#1c1917', '#3a2d24', '#6b5243', '#cbb8a4', '#f9f5ef', ...copperGroup],
+  daytime: ['#f9f5ef', '#eadccf', '#d3b7a1', '#8b6f5b', '#3e2c23', '#6b5243', ...copperGroup, ...gameDaytime],
+  evening: ['#1c1917', '#3a2d24', '#6b5243', '#cbb8a4', '#f9f5ef', ...copperGroup, ...gameEvening],
 };
 
 // Palette-independent type, spacing and layout tokens live in the shared @theme block. Color tokens are
