@@ -98,7 +98,6 @@
 .game-frame-logo {
   height: var(--game-frame-logo-height);
   width: var(--game-frame-logo-width);
-  display: block;
 }
 
 .game-frame-game-badge {

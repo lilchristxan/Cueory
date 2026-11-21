@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { browserStorage } from '../scripts/storage';
 import { GAME_STATS_CHANGED_EVENT, loadStats, localDay } from './gameresults';
-import { currentStreak, dailyStats, wordPathSummary, type GameId, type GameStats } from './gamestats';
+import { currentStreak, dailyStats, longestStreak, wordPathSummary, type GameId, type GameStats } from './gamestats';
 import { GUESSES } from './pulse';
 
 interface Props {
@@ -51,10 +51,11 @@ function computeStats(game: string, stats: GameStats, today: string): StatValues
 
   const ds = dailyStats(stats, id, today, GUESSES);
   const streak = id === 'cueword' ? currentStreak(stats, id, today) : ds.currentStreak;
+  const bestStreak = id === 'cueword' ? longestStreak(stats, id) : ds.longestStreak;
   return {
     winPercent: ds.winPercent,
     currentStreak: streak,
-    bestStreak: ds.longestStreak,
+    bestStreak,
     played: ds.played,
     firstLabel: '% solved',
   };

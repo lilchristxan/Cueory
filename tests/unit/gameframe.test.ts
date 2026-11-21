@@ -56,6 +56,12 @@ describe('GameFrame (Scope 1)', () => {
     expect(tokens).toContain('--game-frame-dateline-lh: 1.3125rem;');
   });
 
+  it('keeps theme utilities in control of the sidebar logo visibility', () => {
+    const styles = readFileSync(resolve(root, 'src/styles/gameframe.css'), 'utf-8');
+    expect(styles).toMatch(/\.game-frame-logo\s*\{[^}]*width: var\(--game-frame-logo-width\);/s);
+    expect(styles).not.toMatch(/\.game-frame-logo\s*\{[^}]*display:/s);
+  });
+
   it('refreshes sidebar stats only after the shared history has changed', () => {
     const statsCode = readFileSync(resolve(root, 'src/islands/GameFrameStats.tsx'), 'utf-8');
     const resultCode = readFileSync(resolve(root, 'src/islands/gameresults.ts'), 'utf-8');
@@ -64,5 +70,10 @@ describe('GameFrame (Scope 1)', () => {
     expect(statsCode).not.toContain('GAME_RESULT_EVENT');
     expect(resultCode).toContain("'cueory:game-stats-changed'");
     expect(panelCode).toContain('reportStatsChanged()');
+  });
+
+  it('uses the crossword assisted-solve eligibility for the sidebar best streak', () => {
+    const statsCode = readFileSync(resolve(root, 'src/islands/GameFrameStats.tsx'), 'utf-8');
+    expect(statsCode).toContain("id === 'cueword' ? longestStreak(stats, id) : ds.longestStreak");
   });
 });

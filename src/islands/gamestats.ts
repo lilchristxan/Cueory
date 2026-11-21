@@ -226,6 +226,25 @@ function extendsStreak(result: GameResult): boolean {
 }
 
 /**
+ * The longest run of consecutive puzzle days that extend a streak. This shares the crossword's assisted-solve
+ * eligibility with currentStreak(), so a checked or revealed puzzle breaks historical runs too.
+ */
+export function longestStreak(stats: GameStats, game: string): number {
+  const won = new Set<number>();
+  for (const result of stats) {
+    if (result.game === game && extendsStreak(result)) won.add(dayNumber(result.day)!);
+  }
+  let longest = 0;
+  for (const day of won) {
+    if (won.has(day - 1)) continue;
+    let run = 1;
+    while (won.has(day + run)) run++;
+    longest = Math.max(longest, run);
+  }
+  return longest;
+}
+
+/**
  * The current run of consecutive puzzle days that extend the streak, ending today (or yesterday, when today's puzzle
  * isn't finished yet). A day solved with help, or not solved, ends the run. Used by the crossword (Task 721).
  */
