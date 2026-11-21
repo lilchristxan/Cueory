@@ -413,4 +413,11 @@ describe('camera animation cancellation and posture synchronization', () => {
     expect(openBlock).toContain("setPosture('standing')");
     expect(openBlock).toContain("postureRef.current = 'standing'");
   });
+
+  it('accommodates camera distance in OrbitControls constraints when applying external camera state', () => {
+    const source = readFileSync(new URL('../../src/islands/anatomyscene.ts', import.meta.url), 'utf8');
+    const applyBlock = source.slice(source.indexOf('function applyCameraState('), source.indexOf('function viewFrom('));
+    expect(applyBlock).toContain('if (distance < controls.minDistance) controls.minDistance = distance;');
+    expect(applyBlock).toContain('if (distance > controls.maxDistance) controls.maxDistance = distance;');
+  });
 });

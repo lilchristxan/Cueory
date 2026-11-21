@@ -623,6 +623,15 @@ export function createLabScene({ canvas, reducedMotion, colors: initialColors, p
     camera.position.set(state.position[0], state.position[1], state.position[2]);
     controls.target.set(state.target[0], state.target[1], state.target[2]);
     camera.lookAt(controls.target);
+    const distance = camera.position.distanceTo(controls.target);
+    if (Number.isFinite(distance) && distance > 0) {
+      if (distance < controls.minDistance) controls.minDistance = distance;
+      if (distance > controls.maxDistance) controls.maxDistance = distance;
+      if (distance * 2 > camera.far) {
+        camera.far = distance * 20;
+        camera.updateProjectionMatrix();
+      }
+    }
     controls.update();
     requestRender();
   }
