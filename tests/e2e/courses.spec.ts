@@ -1,6 +1,14 @@
 import AxeBuilder from '@axe-core/playwright';
-import { expect, test } from '@playwright/test';
+import { expect, test, type Locator, type Page } from '@playwright/test';
 import { courses } from '../../src/config/courses';
+
+async function tabTo(page: Page, target: Locator) {
+  for (let step = 0; step < 40; step++) {
+    if (await target.evaluate((element) => document.activeElement === element)) return;
+    await page.keyboard.press('Tab');
+  }
+  throw new Error('Keyboard focus did not reach open course');
+}
 
 test.describe('courses page', () => {
   test('lists available and coming-soon courses', async ({ page }) => {
@@ -36,6 +44,28 @@ test.describe('courses page', () => {
       await expect(card.getByText('no lessons yet · coming soon')).toBeVisible();
       await expect(card.getByRole('link')).toHaveCount(0);
     }
+  });
+
+  test('open course receives natural keyboard focus and Enter opens the course library', async ({ page }) => {
+    await page.goto('/courses');
+    const medSurgConfig = courses.find((course) => course.href === '/learn');
+    const openCourse = page.locator('[data-course-id="' + medSurgConfig!.id + '"]')
+      .getByRole('link', { name: 'open course' });
+
+    await tabTo(page, openCourse);
+    await expect(openCourse).toBeFocused();
+    const focus = await openCourse.evaluate((element) => {
+      const style = getComputedStyle(element);
+      return { kind: style.outlineStyle, width: Number.parseFloat(style.outlineWidth) };
+    });
+    expect(focus.kind).not.toBe('none');
+    expect(focus.width).toBeGreaterThanOrEqual(1);
+
+    await Promise.all([
+      page.waitForURL(/\/learn\/?$/),
+      page.keyboard.press('Enter'),
+    ]);
+    await expect(page.getByRole('heading', { level: 1, name: 'med-surg i' })).toBeVisible();
   });
 
   test('is linked from the navigation menu', async ({ page }) => {
