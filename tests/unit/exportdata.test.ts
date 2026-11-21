@@ -33,6 +33,18 @@ function sampleGuest() {
 }
 
 describe('JSON export', () => {
+  it('round-trips a validated study resume snapshot in JSON and CSV', () => {
+    const resume = {
+      version: 1, tool: 'fill-in', page: '/learn/sample', module: 'module-1', step: 'step-2', itemIndex: 1,
+      itemId: 'item-2', totalItems: 3, answers: { 'item-2': 'student answer' }, timer: null, phase: 'working', savedAt: 1_795_200_000_000,
+    };
+    expect(json({ resume }).resume).toEqual(resume);
+    expect(parseRows(file({ resume }, 'resume'))).toEqual([
+      ['version', 'tool', 'page', 'module', 'step', 'itemIndex', 'itemId', 'totalItems', 'answers', 'timer', 'phase', 'savedAt'],
+      ['1', 'fill-in', '/learn/sample', 'module-1', 'step-2', '1', 'item-2', '3', '{"item-2":"student answer"}', '', 'working', '1795200000000'],
+    ]);
+  });
+
   it('round-trips every allowed sample section with a caller-supplied date and format', () => {
     expect(json(sample)).toEqual({ format: 'cueory-export-1', exportDate, ...sample, signInDetails: [], account: {}, attempts: [], examPlans: [], reviewRows: [], reports: [], sessions: [], studyEvents: [], dropped: [] });
     expect(exportJson(sample, exportDate)).toContain('\n  "profile": {\n    "displayName": "Sample Student",');
@@ -170,24 +182,6 @@ describe('JSON export', () => {
     expect(json({ gameStats }).gameStats).toEqual([{ ...sample.gameStats[0], game: 'vialo' }]);
   });
 
-  it('round-trips the optional game-history details in JSON and keeps old rows valid', () => {
-    const current = {
-      gameStats: [
-        { game: 'cueword', day: '2026-10-31', solved: true, tries: 3, streak: true },
-        { game: 'suture', day: '2026-10-30', solved: true, tries: 1, hints: 2, specialFirst: true },
-        { game: 'vialo', day: '2026-10-29', solved: false, tries: 7, offDay: true },
-      ],
-    };
-    expect(json(current).gameStats).toEqual(current.gameStats);
-    expect(json({ gameStats: [{ game: 'vialo', day: '2026-10-31', solved: true, tries: 1 }] }).dropped).toEqual([]);
-    expect(parseRows(file(current, 'gameStats'))).toEqual([
-      ['game', 'day', 'solved', 'tries', 'offDay', 'streak', 'hints', 'specialFirst'],
-      ['cueword', '2026-10-31', 'true', '3', '', 'true', '', ''],
-      ['suture', '2026-10-30', 'true', '1', '', '', '2', 'true'],
-      ['vialo', '2026-10-29', 'false', '7', 'true', '', '', ''],
-    ]);
-  });
-
   it('uses fixed field order regardless of the input property order', () => {
     const reordered = {
       sudokuStats: [{ seconds: 412, day: '2026-10-31', level: 'medium' }],
@@ -297,6 +291,44 @@ describe('JSON export', () => {
     expect(json({ gameStats: games }).gameStats).toEqual(games);
   });
 
+  it('exports new game-result fields (streak, hints, specialFirst, offDay) in JSON and CSV, keeping them optional', () => {
+    const currentRecords: ExportData['gameStats'] = [
+      { game: 'vialo', day: '2026-11-01', solved: true, tries: 3, offDay: true },
+      { game: 'cueword', day: '2026-11-02', solved: true, tries: 0, streak: true },
+      { game: 'suture', day: '2026-11-03', solved: true, tries: 4, hints: 2, specialFirst: true },
+      { game: 'triage', day: '2026-11-04', solved: false, tries: 5 },
+    ];
+    const result = json({ gameStats: currentRecords });
+    expect(result.gameStats).toEqual(currentRecords);
+    expect(result.dropped).toEqual([]);
+
+    const csvRows = parseRows(file({ gameStats: currentRecords }, 'gameStats'));
+    expect(csvRows).toEqual([
+      ['game', 'day', 'solved', 'tries', 'streak', 'hints', 'specialFirst', 'offDay'],
+      ['vialo', '2026-11-01', 'true', '3', '', '', '', 'true'],
+      ['cueword', '2026-11-02', 'true', '0', 'true', '', '', ''],
+      ['suture', '2026-11-03', 'true', '4', '', '2', 'true', ''],
+      ['triage', '2026-11-04', 'false', '5', '', '', '', ''],
+    ]);
+  });
+
+  it('drops rows with invalid new game-result fields and records them in dropped', () => {
+    const invalidRecords = [
+      { game: 'pulse', day: '2026-11-01', solved: true, tries: 3, streak: 'yes' },
+      { game: 'suture', day: '2026-11-02', solved: true, tries: 1, hints: -1 },
+      { game: 'suture', day: '2026-11-03', solved: true, tries: 1, specialFirst: 'true' },
+      { game: 'vialo', day: '2026-11-04', solved: true, tries: 2, offDay: false },
+    ];
+    const result = json({ gameStats: invalidRecords });
+    expect(result.gameStats).toEqual([]);
+    expect(result.dropped).toEqual([
+      'gameStats[0]', 'gameStats[0].streak',
+      'gameStats[1]', 'gameStats[1].hints',
+      'gameStats[2]', 'gameStats[2].specialFirst',
+      'gameStats[3]', 'gameStats[3].offDay',
+    ]);
+  });
+
   it('does not mutate input or share arrays with the parsed download', () => {
     const input = structuredClone(sample);
     Object.freeze(input.profile);
@@ -332,7 +364,7 @@ describe('CSV export', () => {
       ['sample-item', 'true', '2026-10-31', '', '', '', '', ''],
     ]);
     expect(parseRows(file(sample, 'gameStats'))).toEqual([
-      ['game', 'day', 'solved', 'tries', 'offDay', 'streak', 'hints', 'specialFirst'],
+      ['game', 'day', 'solved', 'tries', 'streak', 'hints', 'specialFirst', 'offDay'],
       ['pulse', '2026-10-31', 'false', '7', '', '', '', ''],
     ]);
   });
