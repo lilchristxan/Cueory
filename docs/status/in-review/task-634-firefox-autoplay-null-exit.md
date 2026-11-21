@@ -1,0 +1,2 @@
+status: #634 Firefox autoplay follow-up rejects a trusted null-relatedTarget mouseout when its coordinates disagree with the last physical mouse position, preserving genuine document exits and all existing carousel behavior.
+decision: The stale-exit guard is narrow and evidence-backed by the post-hover attachment; the paired unit contract covers stale mismatch, matching genuine exit, and no prior position. Remove or revise only with new hosted evidence.

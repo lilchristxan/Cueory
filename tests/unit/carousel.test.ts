@@ -10,6 +10,7 @@ import {
   carouselState,
   clipAround,
   enterMatchesMouseMove,
+  exitMatchesMouseMove,
   flipFrom,
   glides,
   isSwipeDown,
@@ -265,6 +266,12 @@ describe('"ways to study" merry-go-round (D-50, D-60)', () => {
     expect(enterMatchesMouseMove({ x: 0, y: 0 }, { x: 636, y: 423 })).toBe(false);
     expect(enterMatchesMouseMove({ x: 636, y: 423 }, { x: 636, y: 423 })).toBe(true);
     expect(enterMatchesMouseMove(undefined, { x: 636, y: 423 })).toBe(true);
+  });
+
+  it('clears only a matching document exit, while rejecting a stale old-coordinate exit', () => {
+    expect(exitMatchesMouseMove({ x: 720, y: 508 }, { x: 636, y: 423 })).toBe(false);
+    expect(exitMatchesMouseMove({ x: 720, y: 508 }, { x: 720, y: 508 })).toBe(true);
+    expect(exitMatchesMouseMove(undefined, { x: 636, y: 423 })).toBe(true);
   });
 
   it('names the active autoplay hold without changing the motion policy', () => {
