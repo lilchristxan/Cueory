@@ -38,6 +38,11 @@ type CaseReceipt = {
   setupError?: string;
 };
 
+let wroteStepSummaryHeader = false;
+
+const markdownCell = (value: unknown): string => String(value ?? 'null')
+  .replaceAll('|', '\\|').replaceAll('\r', ' ').replaceAll('\n', ' ');
+
 function logCaseReceipt(entry: CaseReceipt) {
   const measurement = entry.measurement;
   // Keep this compact receipt in runner stdout too: retained failure reports may omit test attachments.
@@ -56,11 +61,16 @@ function logCaseReceipt(entry: CaseReceipt) {
   const stepSummary = process.env.GITHUB_STEP_SUMMARY;
   if (!stepSummary) return;
   try {
-    appendFileSync(stepSummary, `\n#### Frame pacing: ${entry.name}\n\n\`\`\`json\n${JSON.stringify(summary)}\n\`\`\`\n`);
+    if (!wroteStepSummaryHeader) {
+      appendFileSync(stepSummary, '\n| Viewport | Case | Treatment | Preview | Count | Median ms | P95 ms | Max ms | Missed | Error |\n| --- | --- | --- | --- | ---: | ---: | ---: | ---: | --- | --- |\n');
+      wroteStepSummaryHeader = true;
+    }
+    const viewport = `${summary.viewport.width}×${summary.viewport.height}`;
+    appendFileSync(stepSummary, `| ${markdownCell(viewport)} | ${markdownCell(summary.case)} | ${markdownCell(entry.treatment)} | ${markdownCell(entry.preview)} | ${markdownCell(summary.count)} | ${markdownCell(summary.median)} | ${markdownCell(summary.p95)} | ${markdownCell(summary.max)} | ${markdownCell(summary.missed)} | ${markdownCell(summary.error)} |\n`);
     // The browser-free GitHub-reporter probe verified this direct stdout notice survives reporter capture.
-    const notice = `case=${entry.name}; count=${summary.count}; median=${summary.median}; p95=${summary.p95}; max=${summary.max}; missed=${summary.missed}; error=${summary.error}`
+    const notice = `viewport=${viewport}; case=${entry.name}; count=${summary.count}; median=${summary.median}; p95=${summary.p95}; max=${summary.max}; missed=${summary.missed}; error=${summary.error}`
       .replaceAll('%', '%25').replaceAll('\r', '%0D').replaceAll('\n', '%0A');
-    writeSync(1, `::notice title=Frame pacing receipt::${notice}\n`);
+    writeSync(1, `::notice title=Frame pacing receipt ${viewport}::${notice}\n`);
   } catch {
     // Receipt reporting is best effort; attachment and test behavior remain unchanged if a runner disallows it.
   }
@@ -251,8 +261,8 @@ async function freshPage(browser: Browser, testInfo: TestInfo): Promise<{ page: 
   return { page: await context.newPage(), close: () => context.close() };
 }
 
-test('temporary WebKit frame-pacing receipt for Home treatments', async ({ browser }, testInfo) => {
-  test.skip(testInfo.project.use.browserName !== 'webkit', 'temporary WebKit-only diagnostic; Chromium and Windows coverage stay unchanged');
+test('temporary WebKit frame-pacing receipt for Home treatments', async ({ browser, browserName }, testInfo) => {
+  test.skip(browserName !== 'webkit', 'temporary WebKit-only diagnostic; Chromium and Windows coverage stay unchanged');
 
   const viewport = testInfo.project.use.viewport ?? { width: 1440, height: 900 };
   const cases: readonly { name: CaseName; treatment: Treatment; preview: boolean }[] = [
