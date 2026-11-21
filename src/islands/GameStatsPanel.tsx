@@ -4,6 +4,7 @@ import { browserStorage } from '../scripts/storage';
 import {
   forgetHeldRounds,
   GAME_RESULT_EVENT,
+  reportStatsChanged,
   heldRounds,
   loadStats,
   localDay,
@@ -93,6 +94,7 @@ export default function GameStatsPanel({ games: order }: Props) {
     setBlocked(false);
     setSaved({ on: true, stats });
     setSaid(message);
+    reportStatsChanged();
     return true;
   };
 
@@ -173,6 +175,7 @@ export default function GameStatsPanel({ games: order }: Props) {
       if (!storage) return false;
       if (stats.length === 0) storage.removeItem(STATS_STORAGE_KEY);
       else storage.setItem(STATS_STORAGE_KEY, serialize(stats));
+      reportStatsChanged();
       return true;
     } catch {
       return false;

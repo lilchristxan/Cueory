@@ -18,7 +18,6 @@ const {
   game,
   tagline: propTagline,
   dateLine: propDateLine,
-  puzzleNumber,
   howSteps: propHowSteps,
   wide = false,
   showcase = false,
@@ -153,7 +152,9 @@ const currentConfig: GameConfig = configs[key] ?? configs.pulse!;
 
 const activeTagline = propTagline ?? currentConfig.defaultTagline;
 const activeSteps = propHowSteps ?? currentConfig.defaultSteps;
-const activeDateLine = propDateLine ?? formatGameDateLine(new Date(), puzzleNumber);
+// The static fallback makes the page useful before hydration. The browser replaces it with the visitor's own day
+// below; a build date must never identify a later visitor's daily puzzle.
+const activeDateLine = propDateLine ?? formatGameDateLine(new Date());
 ---
 
 <div class="game-frame">
@@ -262,7 +263,7 @@ const activeDateLine = propDateLine ?? formatGameDateLine(new Date(), puzzleNumb
     <!-- Center area -->
     <div class="game-frame-main">
       <!-- Date line centered above the board -->
-      <p class="game-frame-dateline"><i>{activeDateLine}</i></p>
+      <p class="game-frame-dateline" data-game-frame-dateline={propDateLine === undefined ? '' : undefined}><i>{activeDateLine}</i></p>
 
       <!-- Slot for piccline cue line ("TODAY'S CUE · ...") -->
       <div class="game-frame-cue-slot">
@@ -299,3 +300,13 @@ const activeDateLine = propDateLine ?? formatGameDateLine(new Date(), puzzleNumb
     <slot name="footer" />
   </div>
 </div>
+
+{propDateLine === undefined && (
+  <script>
+    import { formatGameDateLine } from '../scripts/gamedateline';
+
+    for (const line of document.querySelectorAll<HTMLElement>('[data-game-frame-dateline]')) {
+      line.textContent = formatGameDateLine(new Date());
+    }
+  </script>
+)}

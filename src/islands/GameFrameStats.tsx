@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { browserStorage } from '../scripts/storage';
-import { GAME_RESULT_EVENT, loadStats, localDay } from './gameresults';
+import { GAME_STATS_CHANGED_EVENT, loadStats, localDay } from './gameresults';
 import { currentStreak, dailyStats, wordPathSummary, type GameId, type GameStats } from './gamestats';
 import { GUESSES } from './pulse';
 
@@ -74,10 +74,10 @@ export default function GameFrameStats({ game }: Props) {
       setStats(computeStats(game, saved.stats, today));
     };
 
-    window.addEventListener(GAME_RESULT_EVENT, refresh);
+    window.addEventListener(GAME_STATS_CHANGED_EVENT, refresh);
     window.addEventListener('storage', refresh);
     return () => {
-      window.removeEventListener(GAME_RESULT_EVENT, refresh);
+      window.removeEventListener(GAME_STATS_CHANGED_EVENT, refresh);
       window.removeEventListener('storage', refresh);
     };
   }, [game]);

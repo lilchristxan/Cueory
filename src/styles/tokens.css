@@ -110,6 +110,7 @@
   --game-frame-grid-line: 1px;
   --game-frame-grid-pos: -0.5px -0.5px;
   --game-frame-logo-height: 1.25rem;     /* 20px */
+  --game-frame-logo-width: 6rem;         /* 96px */
   --game-frame-emblem-radius: 1.125rem;  /* 18px */
   --game-frame-emblem-gap: 0.125rem;     /* 2px */
   --game-frame-emblem-9-size: 2.4375rem; /* 39px */
@@ -120,7 +121,7 @@
   --game-frame-stat-value-size: 1.75rem; /* 28px */
   --game-frame-stat-label-size: 0.8125rem; /* 13px */
   --game-frame-dateline-size: 0.875rem;  /* 14px */
-  --game-frame-dateline-lh: 1.0625rem;   /* 17px */
+  --game-frame-dateline-lh: 1.3125rem;   /* 21px, 1.5 at 14px */
   --game-frame-gear-size: 1.5rem;        /* 24px */
   --game-frame-how-font-size: 1.25rem;   /* 20px */
   --game-frame-popover-radius: 1.25rem;  /* 20px */

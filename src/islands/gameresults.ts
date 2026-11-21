@@ -16,6 +16,9 @@ import { parseStats, serialize, type GameId, type GameStats } from './gamestats'
 /** The event a game sends on `window` when a round ends. */
 export const GAME_RESULT_EVENT = 'cueory:game-result';
 
+/** Fired only after the browser's shared game-history record has been saved or deleted. */
+export const GAME_STATS_CHANGED_EVENT = 'cueory:game-stats-changed';
+
 /** The separate event that opens the shared finished-game dialog. */
 export const GAME_RESULT_CARD_EVENT = 'cueory:game-result-card';
 
@@ -261,6 +264,11 @@ export function reportRound(result: RoundResult): void {
   if (typeof window === 'undefined') return;
   window.dispatchEvent(new CustomEvent<RoundResult>(GAME_RESULT_EVENT, { detail: result }));
   if (result.card) showResultCard(result.card);
+}
+
+/** Lets same-page consumers refresh after the stats panel has durably changed browser storage. */
+export function reportStatsChanged(): void {
+  if (typeof window !== 'undefined') window.dispatchEvent(new Event(GAME_STATS_CHANGED_EVENT));
 }
 
 /** The rounds waiting to be kept, oldest first. Reading them leaves them waiting; forget them once they're kept. */

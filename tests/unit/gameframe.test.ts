@@ -19,6 +19,8 @@ describe('GameFrame (Scope 1)', () => {
     // Date line and controls
     expect(content).toContain('game-frame-dateline');
     expect(content).toContain('GameFrameControls');
+    expect(content).toContain('data-game-frame-dateline');
+    expect(content).toContain('formatGameDateLine(new Date())');
   });
 
   it('formats lowercase italic date line according to the design spec', () => {
@@ -50,5 +52,17 @@ describe('GameFrame (Scope 1)', () => {
     expect(tokens).toContain('--game-dark-green: #0e5a3d;');
     expect(tokens).toContain('--game-frame-sidebar-width');
     expect(tokens).toContain('--game-frame-btn-size');
+    expect(tokens).toContain('--game-frame-logo-width: 6rem;');
+    expect(tokens).toContain('--game-frame-dateline-lh: 1.3125rem;');
+  });
+
+  it('refreshes sidebar stats only after the shared history has changed', () => {
+    const statsCode = readFileSync(resolve(root, 'src/islands/GameFrameStats.tsx'), 'utf-8');
+    const resultCode = readFileSync(resolve(root, 'src/islands/gameresults.ts'), 'utf-8');
+    const panelCode = readFileSync(resolve(root, 'src/islands/GameStatsPanel.tsx'), 'utf-8');
+    expect(statsCode).toContain('GAME_STATS_CHANGED_EVENT');
+    expect(statsCode).not.toContain('GAME_RESULT_EVENT');
+    expect(resultCode).toContain("'cueory:game-stats-changed'");
+    expect(panelCode).toContain('reportStatsChanged()');
   });
 });
