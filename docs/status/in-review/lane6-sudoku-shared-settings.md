@@ -1,1 +1,0 @@
-status: Lane 6, sudoku settings: the sudoku gear opens the same shared "sudoku settings" dialog as the other games (theme, motion, contrast, sound, then gameboard settings), the separate shared-settings button is gone from /play/sudoku, and the five-icon toolbar is unchanged. New e2e checks the dialog wraps at 320px with 32px text.

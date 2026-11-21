@@ -1,4 +1,0 @@
-status: Games v2 design reference pack added: six static pages and a build README in `docs/design/games-v2/`, plus screenshots and assets in `public/design/games-v2/`. Christian approved the designs on the canvas on 2026-11-20. Docs and assets only; no app code changes.
-decision: D-pending (Games v2) Oxblood `#6E2019` and dark green `#0E5A3D` become game tokens with Evening versions. Reason: Christian chose them on the canvas (2026-11-20), and both are outside the brand palette.
-decision: D-pending (Games v2) Vialo tile letters use Bodoni Moda, not Times New Roman. Reason: Times New Roman can't be self-hosted; Christian decides on staging.
-decision: D-pending (Games v2) Vialo pill states also differ by finish (solid shine, inner ring band, flat matte), so colour isn't the only signal. Reason: CLAUDE.md rule 6; Christian removed the symbols on the canvas.

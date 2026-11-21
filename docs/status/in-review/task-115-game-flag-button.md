@@ -1,1 +1,0 @@
-status: Task 115, per-game flag button: each daily game has a corner link to its existing footer report panel. Signed-out students can email feedback. Closing the panel returns keyboard focus to the control that opened it.

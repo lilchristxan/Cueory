@@ -1,1 +1,0 @@
-status: #634 WebKit CI: the study-mode preview's round buttons and the home ring's arrows no longer ask for a frosted blur that cannot show (opaque surface / opaque copper glow), which cost WebKit an offscreen blur per button on every frame. No visible change.

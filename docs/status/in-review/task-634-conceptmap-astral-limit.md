@@ -1,1 +1,0 @@
-status: Task 634 concept-map validation: a neutral fixture-only unit protects the 201 Unicode code-point concept-name limit alongside the existing 200-code-point acceptance; no curriculum, content or application behavior changes.

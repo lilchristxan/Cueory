@@ -1,1 +1,0 @@
-status: Canonical Vialo virtual-key coverage: the /play/vialo on-screen keys keep 44 px targets and can type, delete, and submit the sample guess without relying on the retired Pillo selector surface.

@@ -1,1 +1,0 @@
-status: lane 2, export completeness guard: tests/unit/export-complete.test.ts finds every user-owned table and column in supabase/migrations and fails if download-my-data doesn't read it; no gap today (admins is left out on purpose, flags goes through my_flags) (needs Christian).

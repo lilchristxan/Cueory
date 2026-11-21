@@ -1,1 +1,0 @@
-status: Task 634 Follow device storage-denial regression: covers a blocked removeItem call when saveChoice clears the saved theme. Tests only; no first-paint behavior, assertion, negative-control, browser, retry, or product change. Focused tests/unit/theme.test.ts passed 8/8 at 5bfa08414270a0a28bca2694aa8f4b1ff4581414; no browser or heavy verification was run.

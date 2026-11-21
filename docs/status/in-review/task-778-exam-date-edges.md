@@ -1,1 +1,0 @@
-status: W11 spare S18 (#79), exam-date edge cases: added regression coverage for calendar-day wording, invalid inputs, leap-day limits, daylight-saving weekends and far-future dates. Ready for Claude review.

@@ -1,1 +1,0 @@
-status: #634 temporary deterministic Matching empty-deck boundary coverage: verifies an empty deck is already over, has no next round, remains one round, and keeps next-round plus either-side picks inert; remove only if the Matching round contract is retired.

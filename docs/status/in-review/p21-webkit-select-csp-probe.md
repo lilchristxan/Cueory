@@ -1,1 +1,0 @@
-status: Launch smoke test (L21): a CSP element probe (tests/e2e/csp-element-probe.spec.ts) that reports which element kinds raise a style-src-attr violation in the running engine, to pin down the WebKit-only finding on pages with a native select. Reports only; no assertion on the result.

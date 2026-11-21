@@ -1,1 +1,0 @@
-status: #634 temporary deterministic Hello Cards boundary coverage: placeholder-only test verifies prompt-of-the-day negative-day modulo immediately before the fixed epoch and the local-midnight transition into it; remove only if the underlying daily-selection contract is retired.

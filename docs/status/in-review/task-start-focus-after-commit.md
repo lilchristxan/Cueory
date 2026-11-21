@@ -1,1 +1,0 @@
-status: /start onboarding now moves focus to the new question after React has committed it (a pending-focus ref consumed by an effect on the step), instead of a frame scheduled before the commit, which Firefox ran too early so the legend or heading did not exist yet. Hypothesis from the Firefox release run (start.spec.ts:40 and :78); to be confirmed by the same specs in Firefox.

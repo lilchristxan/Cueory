@@ -1,2 +1,0 @@
-status: #634 Firefox autoplay fixture parks the mouse on the visible carousel heading, outside cards and controls, rather than at an absolute coordinate. The retained Firefox trace recorded stale carousel pointer entries after the absolute park, which repeatedly reset the six-second autoplay countdown. Existing assertions, waits, timeouts, project scope, retries, and skips are unchanged.
-decision: The temporary pointer diagnostic is removed with this fixture fix. Exact-head hosted Firefox proof is pending; no product carousel behavior changes.
