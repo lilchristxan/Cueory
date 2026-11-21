@@ -33,8 +33,12 @@ export default function SudokuFrameStats() {
       });
     };
     refresh();
+    const onPageShow = (event: PageTransitionEvent) => {
+      if (event.persisted) refresh();
+    };
     window.addEventListener(GAME_STATS_CHANGED_EVENT, refresh);
     window.addEventListener('storage', refresh);
+    window.addEventListener('pageshow', onPageShow);
     const onLevel = (event: Event) => {
       const next = (event as CustomEvent<unknown>).detail;
       if (typeof next === 'string' && LEVELS.includes(next as SudokuLevel)) setLevel(next as SudokuLevel);
@@ -43,6 +47,7 @@ export default function SudokuFrameStats() {
     return () => {
       window.removeEventListener(GAME_STATS_CHANGED_EVENT, refresh);
       window.removeEventListener('storage', refresh);
+      window.removeEventListener('pageshow', onPageShow);
       window.removeEventListener('cueory:game-frame-sudoku-level-change', onLevel);
     };
   }, [level]);

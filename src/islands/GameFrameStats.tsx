@@ -73,12 +73,17 @@ export default function GameFrameStats({ game }: Props) {
       const saved = loadStats(browserStorage(), today);
       setStats(computeStats(game, saved.stats, today));
     };
+    const onPageShow = (event: PageTransitionEvent) => {
+      if (event.persisted) refresh();
+    };
 
     window.addEventListener(GAME_STATS_CHANGED_EVENT, refresh);
     window.addEventListener('storage', refresh);
+    window.addEventListener('pageshow', onPageShow);
     return () => {
       window.removeEventListener(GAME_STATS_CHANGED_EVENT, refresh);
       window.removeEventListener('storage', refresh);
+      window.removeEventListener('pageshow', onPageShow);
     };
   }, [game]);
 

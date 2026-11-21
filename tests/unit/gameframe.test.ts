@@ -67,12 +67,17 @@ describe('GameFrame (Scope 1)', () => {
 
   it('refreshes sidebar stats only after the shared history has changed', () => {
     const statsCode = readFileSync(resolve(root, 'src/islands/GameFrameStats.tsx'), 'utf-8');
+    const sudokuCode = readFileSync(resolve(root, 'src/islands/SudokuFrameStats.tsx'), 'utf-8');
     const resultCode = readFileSync(resolve(root, 'src/islands/gameresults.ts'), 'utf-8');
     const panelCode = readFileSync(resolve(root, 'src/islands/GameStatsPanel.tsx'), 'utf-8');
     expect(statsCode).toContain('GAME_STATS_CHANGED_EVENT');
     expect(statsCode).not.toContain('GAME_RESULT_EVENT');
     expect(resultCode).toContain("'cueory:game-stats-changed'");
     expect(panelCode).toContain('reportStatsChanged()');
+    expect(statsCode).toContain("addEventListener('pageshow', onPageShow)");
+    expect(statsCode).toContain('if (event.persisted) refresh()');
+    expect(sudokuCode).toContain("addEventListener('pageshow', onPageShow)");
+    expect(sudokuCode).toContain('if (event.persisted) refresh()');
   });
 
   it('keeps Sudoku’s existing 400-day solve cleanup in the framed stats lifecycle only', () => {
