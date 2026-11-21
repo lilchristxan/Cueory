@@ -12,6 +12,8 @@ import GameFrame from './GameFrame.astro';
 import GameStatsPanel, { GameStatsPersistence } from '../islands/GameStatsPanel';
 import GameResultsHost from '../islands/GameResultsHost';
 import type { DailyGame } from '../config/games';
+import { site } from '../config/site';
+import { flagMailto } from '../scripts/footer';
 // Keeps one screen of room for the game until it renders, so nothing below it jumps (performance, 2026-11-19).
 import '../styles/gamepage.css';
 
@@ -34,6 +36,17 @@ const { game, wide = false, showcase = false, framed = false } = Astro.props;
     <h2 class="sr-only">today's puzzle</h2>
     <slot />
     <slot name="deck" slot="deck" />
+    <a
+      slot="footer"
+      href={flagMailto(site.contactEmail, Astro.url.pathname)}
+      data-game-flag
+      class="corner-button corner-button-quiet ml-auto shrink-0"
+      aria-label={`flag or comment on ${game.name}`}
+    >
+      <svg viewBox="0 0 24 24" class="size-6" aria-hidden="true" focusable="false">
+        <path d="M5 21V4M5 4h12l-3 4.5 3 4.5H5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
+      </svg>
+    </a>
     <slot name="footer" slot="footer" />
   </GameFrame>
   {!framed && <div class="game-page-stats-container max-w-prose mx-auto px-6 pb-12" data-print-hidden>
