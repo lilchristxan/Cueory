@@ -12,6 +12,25 @@ interface Props {
 
 export const GAME_FRAME_SETTINGS_EVENT = 'cueory:game-frame-settings';
 export const GAME_FRAME_HELP_EVENT = 'cueory:game-frame-help';
+export const GAME_FRAME_HELP_READY_EVENT = 'cueory:game-frame-help-ready';
+
+/**
+ * Framed game islands hydrate independently from the visible Frame controls. Keep the visible
+ * help button available to either island first, then announce it to an island that hydrates later.
+ */
+const frameHelpButtons = new Map<string, HTMLButtonElement>();
+
+export function frameHelpButton(gameName: string): HTMLButtonElement | undefined {
+  return frameHelpButtons.get(gameName);
+}
+
+export function registerFrameHelpButton(gameName: string, button: HTMLButtonElement) {
+  frameHelpButtons.set(gameName, button);
+  window.dispatchEvent(new CustomEvent(GAME_FRAME_HELP_READY_EVENT, { detail: { gameName, trigger: button } }));
+  return () => {
+    if (frameHelpButtons.get(gameName) === button) frameHelpButtons.delete(gameName);
+  };
+}
 
 /** The shared Frame owns the visible controls; the framed island retains its established dialog content and state. */
 export default function GameFrameControls({ gameName, steps, hasPillLegend = false, bridge = false, children }: Props) {
@@ -22,6 +41,11 @@ export default function GameFrameControls({ gameName, steps, hasPillLegend = fal
   const [pinned, setPinned] = useState(false);
   const [hovered, setHovered] = useState(false);
   const helpOpen = pinned || hovered;
+
+  useEffect(() => {
+    if (!bridge || !helpBtnRef.current) return;
+    return registerFrameHelpButton(gameName, helpBtnRef.current);
+  }, [bridge, gameName]);
 
   useEffect(() => {
     if (bridge || !helpOpen) return;

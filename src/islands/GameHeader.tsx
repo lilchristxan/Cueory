@@ -2,7 +2,7 @@ import '../styles/gameheader.css';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { GameSettingsDialog } from './GameSettings.tsx';
 import { GameHelpButton, type GameHelpState } from './GameHelp';
-import { GAME_FRAME_HELP_EVENT, GAME_FRAME_SETTINGS_EVENT } from './GameFrameControls';
+import { frameHelpButton, GAME_FRAME_HELP_EVENT, GAME_FRAME_HELP_READY_EVENT, GAME_FRAME_SETTINGS_EVENT } from './GameFrameControls';
 
 /**
  * The same corner row on every game box (Christian's brief, 2026-11-17): a drawn gear at the top left opens the game's
@@ -32,18 +32,26 @@ export default function GameHeader({ name, help, helpExtra, settings, end, frame
       return gameName === name && trigger instanceof HTMLButtonElement ? trigger : undefined;
     };
     const openSettings = (event: Event) => { if (detailFor(event)) setOpen(true); };
+    const setHelpReturnTarget = (trigger = frameHelpButton(name)) => {
+      if (trigger) help.button.current = trigger;
+    };
     const openHelp = (event: Event) => {
       const trigger = detailFor(event);
       if (!trigger) return;
       // GameHelp restores focus through this existing ref after its dialog closes.
-      help.button.current = trigger;
+      setHelpReturnTarget(trigger);
       help.show();
     };
+    const setHelpWhenReady = (event: Event) => { setHelpReturnTarget(detailFor(event)); };
+    // The Frame control may have hydrated before this island, or may announce itself afterwards.
+    setHelpReturnTarget();
     window.addEventListener(GAME_FRAME_SETTINGS_EVENT, openSettings);
     window.addEventListener(GAME_FRAME_HELP_EVENT, openHelp);
+    window.addEventListener(GAME_FRAME_HELP_READY_EVENT, setHelpWhenReady);
     return () => {
       window.removeEventListener(GAME_FRAME_SETTINGS_EVENT, openSettings);
       window.removeEventListener(GAME_FRAME_HELP_EVENT, openHelp);
+      window.removeEventListener(GAME_FRAME_HELP_READY_EVENT, setHelpWhenReady);
     };
   }, [framed, help, name]);
   return (

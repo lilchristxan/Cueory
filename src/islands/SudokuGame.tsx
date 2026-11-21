@@ -5,7 +5,7 @@ import { GameHelpButton, GameHelpCard, useGameHelp } from './GameHelp';
 import { gameName } from '../config/games';
 import { deleteStats, forgetHeldRounds, localDay, reportStatsChanged, showResultCard, sudokuResultCard } from './gameresults';
 import { GameSettingsDialog } from './GameSettings.tsx';
-import { GAME_FRAME_HELP_EVENT, GAME_FRAME_SETTINGS_EVENT } from './GameFrameControls';
+import { frameHelpButton, GAME_FRAME_HELP_EVENT, GAME_FRAME_HELP_READY_EVENT, GAME_FRAME_SETTINGS_EVENT } from './GameFrameControls';
 import { GAME_SETTINGS_EVENT, GAME_SETTINGS_STORAGE_KEY, gameSoundAllowed, loadGameSettings, parseGameSettings, type SharedGameSettings } from './gamesettings';
 import { sudokuCellClasses } from './sudokuhighlight';
 import { DEFAULT_SUDOKU_SETTINGS, GAME_PROGRESS_EVENT, LEVEL_LABELS, sudokuProgressDetail, LEVEL_RULES, advanceSudokuSeconds, autoCandidateNotes, checkSudoku, conflictIndices, dailySudokuSeed, editSudokuBoard, effectiveSudokuMode, generateSudoku, getResult, loadSudokuSettings, newSudokuBoard, noteDigits, pushSudokuHistory, saveSudokuSettings, sudokuCellPresentation, sudokuKeyAction, sudokuWrongCells, undoSudoku, type SudokuBoard, type SudokuBoardAction, type SudokuLevel, type SudokuMode, type SudokuSettings } from './sudoku';
@@ -93,22 +93,30 @@ export default function SudokuGame({ framed = false }: { framed?: boolean } = {}
       return gameName === 'sudoku' && trigger instanceof HTMLButtonElement ? trigger : undefined;
     };
     const openSettings = (event: Event) => { if (detailFor(event)) setSettingsOpen(true); };
+    const setHelpReturnTarget = (trigger = frameHelpButton('sudoku')) => {
+      if (trigger) help.button.current = trigger;
+    };
     const openHelp = (event: Event) => {
       const trigger = detailFor(event);
       if (!trigger) return;
-      help.button.current = trigger;
+      setHelpReturnTarget(trigger);
       help.show();
     };
+    const setHelpWhenReady = (event: Event) => { setHelpReturnTarget(detailFor(event)); };
     const chooseLevel = (event: Event) => {
       const level = (event as CustomEvent<unknown>).detail;
       if (typeof level === 'string' && LEVELS.includes(level as SudokuLevel) && !pausedNow.current) setLevel(level as SudokuLevel);
     };
+    // The Frame control may have hydrated before this island, or may announce itself afterwards.
+    setHelpReturnTarget();
     window.addEventListener(GAME_FRAME_SETTINGS_EVENT, openSettings);
     window.addEventListener(GAME_FRAME_HELP_EVENT, openHelp);
+    window.addEventListener(GAME_FRAME_HELP_READY_EVENT, setHelpWhenReady);
     window.addEventListener('cueory:game-frame-sudoku-level', chooseLevel);
     return () => {
       window.removeEventListener(GAME_FRAME_SETTINGS_EVENT, openSettings);
       window.removeEventListener(GAME_FRAME_HELP_EVENT, openHelp);
+      window.removeEventListener(GAME_FRAME_HELP_READY_EVENT, setHelpWhenReady);
       window.removeEventListener('cueory:game-frame-sudoku-level', chooseLevel);
     };
   }, [framed, help]);

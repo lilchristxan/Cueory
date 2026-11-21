@@ -36,6 +36,7 @@ describe('GameFrame (Scope 1)', () => {
     expect(controlsCode).toContain('game-frame-controls-middle');
     expect(controlsCode).toContain("'cueory:game-frame-settings'");
     expect(controlsCode).toContain("'cueory:game-frame-help'");
+    expect(controlsCode).toContain("'cueory:game-frame-help-ready'");
     expect(controlsCode).toContain('bridge = false');
     expect(controlsCode).toContain('game-frame-popover');
   });
