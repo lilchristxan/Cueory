@@ -304,18 +304,22 @@ const activeDateLine = propDateLine ?? formatGameDateLine(new Date());
       </div>
 
       <!-- Row above the board: Settings gear (top-left), middle slot for game-specific controls, ? popover (top-right) -->
-      {framed && (
+      {framed ? (
         <GameFrameControls client:load gameName={currentConfig.name} steps={activeSteps} hasPillLegend={currentConfig.hasPillLegend} bridge={bridge}>
           <slot name="controls" />
         </GameFrameControls>
+      ) : (
+        <div class="game-frame-controls-row game-frame-controls-row-unframed">
+          <slot name="controls" />
+        </div>
       )}
 
-      <!-- Slot for page title -->
-      <slot name="title" />
-
-      <!-- The board slot -->
-      <div class:list={['game-frame-board', wide && 'is-wide', showcase && 'is-showcase']}>
-        <slot />
+      <!-- Play area: centres the board vertically in the space between controls and footer -->
+      <div class="game-frame-play-area">
+        <div class:list={['game-frame-board', wide && 'is-wide', showcase && 'is-showcase']}>
+          <slot name="title" />
+          <slot />
+        </div>
       </div>
 
       <!-- Card deck slot (placeholder for Item 2) -->

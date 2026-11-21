@@ -20,7 +20,7 @@ test.describe('GameFrame shared layout (Scope 1)', () => {
       await expect(backLink).toBeVisible();
       await expect(backLink).toHaveAttribute('href', '/play');
 
-      const logo = page.locator('.game-frame-logo').first();
+      const logo = page.locator('.game-frame-logo:visible');
       await expect(logo).toBeVisible();
 
       // Stats
