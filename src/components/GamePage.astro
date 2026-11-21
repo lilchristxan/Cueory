@@ -29,6 +29,16 @@ interface Props {
 const { game, wide = false, showcase = false, framed = false } = Astro.props;
 ---
 <article class:list={["game-page-frame", wide && "md:max-w-page", showcase && "md:max-w-game-showcase"]} data-game-page={game.id}>
+  <a
+    href={flagMailto(site.contactEmail, Astro.url.pathname)}
+    data-game-flag
+    class="corner-button corner-button-quiet ml-auto shrink-0"
+    aria-label={`flag or comment on ${game.name}`}
+  >
+    <svg viewBox="0 0 24 24" class="size-6" aria-hidden="true" focusable="false">
+      <path d="M5 21V4M5 4h12l-3 4.5 3 4.5H5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
+    </svg>
+  </a>
   <GameFrame game={game.id} wide={wide} showcase={showcase} framed={framed} bridge={framed}>
     <slot name="cue" slot="cue" />
     <slot name="controls" slot="controls" />
@@ -36,17 +46,6 @@ const { game, wide = false, showcase = false, framed = false } = Astro.props;
     <h2 class="sr-only">today's puzzle</h2>
     <slot />
     <slot name="deck" slot="deck" />
-    <a
-      slot="footer"
-      href={flagMailto(site.contactEmail, Astro.url.pathname)}
-      data-game-flag
-      class="corner-button corner-button-quiet ml-auto shrink-0"
-      aria-label={`flag or comment on ${game.name}`}
-    >
-      <svg viewBox="0 0 24 24" class="size-6" aria-hidden="true" focusable="false">
-        <path d="M5 21V4M5 4h12l-3 4.5 3 4.5H5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
-      </svg>
-    </a>
     <slot name="footer" slot="footer" />
   </GameFrame>
   {!framed && <div class="game-page-stats-container max-w-prose mx-auto px-6 pb-12" data-print-hidden>
