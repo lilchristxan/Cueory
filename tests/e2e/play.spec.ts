@@ -321,12 +321,12 @@ test.describe('the /play hub (each game on its own page, 2026-11-17)', () => {
     // The date comes from the visitor's clock, not the build day (the page is built ahead of time).
     await expect(page.getByTestId('play-date')).toHaveText('sun 1 nov');
     await expect(page.getByTestId('play-date')).toHaveAttribute('datetime', '2026-11-01');
-    for (const [id, name, path] of [['pulse', 'pillo', '/play/pillo'], ['triage', 'sudoku', '/play/sudoku'], ['cueword', 'crossword', '/play/crossword'], ['suture', 'word path', '/play/word-path']]) {
+    for (const [id, name, path] of [['vialo', 'vialo', '/play/vialo'], ['triage', 'sudoku', '/play/sudoku'], ['cueword', 'crossword', '/play/crossword'], ['suture', 'word path', '/play/word-path']]) {
       const card = page.getByTestId(`play-status-${id}`).getByRole('link');
       await expect(card).toContainText(name);
       await expect(card).toHaveAttribute('href', path);
     }
-    for (const game of ['pulse', 'sudoku', 'cueword', 'suture']) await expect(page.getByTestId(game)).toHaveCount(0);
+    for (const game of ['vialo', 'sudoku', 'cueword', 'suture']) await expect(page.getByTestId(game)).toHaveCount(0);
     const results = await axe(page);
     expect(results.violations.map((v) => `${v.id}: ${v.help}`)).toEqual([]);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
@@ -828,19 +828,19 @@ test.describe('daily games: private stats (D-76), always kept (2026-11-17)', () 
   // Christian's decision: no "keep my stats" switch. Stats are always kept in this browser, and "forget" clears them.
   const panel = (page: Page) => page.getByTestId('game-stats');
   const kept = (page: Page) => page.evaluate(() => localStorage.getItem('cueory-game-stats'));
-  const pulseStats = (page: Page) =>
-    panel(page).getByRole('listitem').filter({ has: page.getByRole('heading', { name: 'pillo', exact: true }) });
+  const vialoStats = (page: Page) =>
+    panel(page).getByRole('listitem').filter({ has: page.getByRole('heading', { name: 'vialo', exact: true }) });
   // Today's word on 1 November is "grace", so one guess solves it.
-  const solvePulse = async (page: Page) => {
+  const solveVialo = async (page: Page) => {
     await field(page).fill('grace');
     await field(page).press('Enter');
-    await expect(page.getByTestId('pulse-result')).toContainText('solved.');
+    await expect(page.getByTestId('vialo-result')).toContainText('solved.');
     const resultDialog = page.getByTestId('game-result-dialog');
     await expect(resultDialog.getByRole('button', { name: 'close results' })).toBeFocused();
     await resultDialog.getByRole('button', { name: 'close results' }).click();
     // The dialog hands focus back to the result on the next frame (requestAnimationFrame). Wait for it: focusing a
     // control before then loses that focus to the late return, and a key press then goes nowhere (CI on #836).
-    await expect(page.getByTestId('pulse-result')).toBeFocused();
+    await expect(page.getByTestId('vialo-result')).toBeFocused();
   };
   const holdPanel = async (page: Page) => {
     let release = () => {};
@@ -864,7 +864,7 @@ test.describe('daily games: private stats (D-76), always kept (2026-11-17)', () 
   }));
   test.beforeEach(async ({ page }) => {
     await fixClock(page, new Date('2026-11-01T15:00:00'));
-    await page.goto('/play/pillo');
+    await page.goto('/play/vialo');
     await expect(panel(page).getByRole('heading', { name: 'your stats' })).toBeVisible();
   });
 
@@ -878,43 +878,43 @@ test.describe('daily games: private stats (D-76), always kept (2026-11-17)', () 
   });
 
   test('a finished game is kept at once, stays after a reload, and passes axe', async ({ page }) => {
-    await solvePulse(page);
-    await expect(pulseStats(page)).toContainText('played 1 day, solved 1.');
-    await expect(pulseStats(page)).toContainText('1 guess on 1 day.');
+    await solveVialo(page);
+    await expect(vialoStats(page)).toContainText('played 1 day, solved 1.');
+    await expect(vialoStats(page)).toContainText('1 guess on 1 day.');
     expect(JSON.parse((await kept(page))!)).toEqual({
       version: 1,
-      results: [{ game: 'pulse', day: '2026-11-01', solved: true, tries: 1 }],
+      results: [{ game: 'vialo', day: '2026-11-01', solved: true, tries: 1 }],
     });
     expect((await axe(page)).violations).toEqual([]);
 
     await page.reload();
-    await expect(pulseStats(page)).toContainText('played 1 day, solved 1.');
+    await expect(vialoStats(page)).toContainText('played 1 day, solved 1.');
     // Playing the same day again changes nothing: the first result of the day counts.
-    await solvePulse(page);
-    await expect(page.getByTestId('stats-live')).toHaveText("pillo: today's first game is already in your stats.");
-    await expect(pulseStats(page)).toContainText('played 1 day, solved 1.');
+    await solveVialo(page);
+    await expect(page.getByTestId('stats-live')).toHaveText("vialo: today's first game is already in your stats.");
+    await expect(vialoStats(page)).toContainText('played 1 day, solved 1.');
     expect(JSON.parse((await kept(page))!).results).toHaveLength(1);
   });
 
   test('"forget" and "forget all" delete what was kept, and keyboard focus stays in the panel', async ({ page }) => {
     // Was "forget and turning stats off" (play.spec:790): the switch is gone, so "forget all" takes its place.
-    await solvePulse(page);
-    await expect(pulseStats(page)).toContainText('played 1 day, solved 1.');
+    await solveVialo(page);
+    await expect(vialoStats(page)).toContainText('played 1 day, solved 1.');
 
-    await panel(page).getByRole('button', { name: 'forget pillo' }).focus();
+    await panel(page).getByRole('button', { name: 'forget vialo' }).focus();
     const before = await state(page);
     await page.keyboard.press('Enter');
-    await expect(pulseStats(page), `before Enter: ${before}`).toContainText('not played yet.');
-    await expect(panel(page).getByRole('heading', { name: 'pillo', exact: true })).toBeFocused();
+    await expect(vialoStats(page), `before Enter: ${before}`).toContainText('not played yet.');
+    await expect(panel(page).getByRole('heading', { name: 'vialo', exact: true })).toBeFocused();
     // Nothing left, so the record is deleted, not written empty (Codex on #831).
     expect(await kept(page)).toBeNull();
 
     await page.reload();
-    await solvePulse(page);
-    await expect(pulseStats(page)).toContainText('played 1 day, solved 1.');
+    await solveVialo(page);
+    await expect(vialoStats(page)).toContainText('played 1 day, solved 1.');
     await panel(page).getByRole('button', { name: 'forget all my stats' }).focus();
     await page.keyboard.press('Enter');
-    await expect(pulseStats(page)).toContainText('not played yet.');
+    await expect(vialoStats(page)).toContainText('not played yet.');
     await expect(panel(page).getByRole('heading', { name: 'your stats' })).toBeFocused();
     await expect(page.getByTestId('stats-live')).toHaveText('all your stats are forgotten. new games are kept from now on.');
     // Nothing left, so the record is deleted, not written empty (Codex on #831).
@@ -922,15 +922,15 @@ test.describe('daily games: private stats (D-76), always kept (2026-11-17)', () 
   });
 
   test('"forget all" in one tab holds in another tab that is already open', async ({ page, context }) => {
-    await solvePulse(page);
+    await solveVialo(page);
     const other = await context.newPage();
     await fixClock(other, new Date('2026-11-01T15:00:00'));
-    await other.goto('/play/pillo');
-    await expect(pulseStats(other)).toContainText('played 1 day, solved 1.');
+    await other.goto('/play/vialo');
+    await expect(vialoStats(other)).toContainText('played 1 day, solved 1.');
 
     await other.getByRole('button', { name: 'forget all my stats' }).click();
     // This tab shows it at once.
-    await expect(pulseStats(page)).toContainText('not played yet.');
+    await expect(vialoStats(page)).toContainText('not played yet.');
     // Nothing left, so the record is deleted, not written empty (Codex on #831).
     expect(await kept(page)).toBeNull();
     await other.close();
@@ -939,24 +939,24 @@ test.describe('daily games: private stats (D-76), always kept (2026-11-17)', () 
   test('a round waiting for the stats panel to load is dropped when another tab forgets stats', async ({ page, context }) => {
     const release = await holdPanel(page);
     // The held stats-panel script must not hold up the page's load event (WebKit waits for it); the page's own checks below wait.
-    await page.goto('/play/pillo', { waitUntil: 'domcontentloaded' });
-    await expect(page.getByTestId('pulse')).toBeVisible();
+    await page.goto('/play/vialo', { waitUntil: 'domcontentloaded' });
+    await expect(page.getByTestId('vialo')).toBeVisible();
     await expect(panel(page)).toHaveCount(0);
-    await solvePulse(page);
+    await solveVialo(page);
 
     // Another tab: finish pillo there (kept at once), then forget all stats.
     const other = await context.newPage();
     await fixClock(other, new Date('2026-11-01T15:00:00'));
-    await other.goto('/play/pillo');
-    await solvePulse(other);
-    await expect(pulseStats(other)).toContainText('played 1 day, solved 1.');
+    await other.goto('/play/vialo');
+    await solveVialo(other);
+    await expect(vialoStats(other)).toContainText('played 1 day, solved 1.');
     await other.getByRole('button', { name: 'forget all my stats' }).click();
-    await expect(pulseStats(other)).toContainText('not played yet.');
+    await expect(vialoStats(other)).toContainText('not played yet.');
     await other.close();
 
     // The panel loads, and the forgotten round doesn't come back.
     release();
-    await expect(pulseStats(page)).toContainText('not played yet.');
+    await expect(vialoStats(page)).toContainText('not played yet.');
     // Nothing left, so the record is deleted, not written empty (Codex on #831).
     expect(await kept(page)).toBeNull();
   });
@@ -964,16 +964,16 @@ test.describe('daily games: private stats (D-76), always kept (2026-11-17)', () 
   test('a page back from the back/forward cache drops a round it was holding', async ({ page }) => {
     const release = await holdPanel(page);
     // The held stats-panel script must not hold up the page's load event (WebKit waits for it); the page's own checks below wait.
-    await page.goto('/play/pillo', { waitUntil: 'domcontentloaded' });
-    await expect(page.getByTestId('pulse')).toBeVisible();
-    await solvePulse(page);
+    await page.goto('/play/vialo', { waitUntil: 'domcontentloaded' });
+    await expect(page.getByTestId('vialo')).toBeVisible();
+    await solveVialo(page);
     // As if another tab forgot the stats while this page was away: a cached page hears no one's storage changes.
     await page.evaluate(() => {
       localStorage.setItem('cueory-game-stats', JSON.stringify({ version: 1, results: [] }));
       window.dispatchEvent(new PageTransitionEvent('pageshow', { persisted: true }));
     });
     release();
-    await expect(pulseStats(page)).toContainText('not played yet.');
+    await expect(vialoStats(page)).toContainText('not played yet.');
     expect(JSON.parse((await kept(page))!).results).toEqual([]);
   });
 
@@ -982,10 +982,10 @@ test.describe('daily games: private stats (D-76), always kept (2026-11-17)', () 
     // own storage changes). The new game is kept on its own: the forgotten day doesn't come back.
     await page.evaluate(() => localStorage.setItem('cueory-game-stats', JSON.stringify({ version: 1, results: [{ game: 'pulse', day: '2026-10-31', solved: true, tries: 2 }] })));
     await page.reload();
-    await expect(pulseStats(page)).toContainText('played 1 day, solved 1.');
+    await expect(vialoStats(page)).toContainText('played 1 day, solved 1.');
     await page.evaluate(() => localStorage.removeItem('cueory-game-stats'));
-    await solvePulse(page);
-    expect(JSON.parse((await kept(page))!).results).toEqual([{ game: 'pulse', day: '2026-11-01', solved: true, tries: 1 }]);
+    await solveVialo(page);
+    expect(JSON.parse((await kept(page))!).results).toEqual([{ game: 'vialo', day: '2026-11-01', solved: true, tries: 1 }]);
   });
 
   test('a browser that won\'t store anything keeps nothing and says so', async ({ page }) => {
@@ -998,9 +998,9 @@ test.describe('daily games: private stats (D-76), always kept (2026-11-17)', () 
     });
     await page.reload();
     await expect(panel(page)).toContainText("this browser won't keep them (private browsing or blocked site data).");
-    await solvePulse(page);
+    await solveVialo(page);
     await expect(page.getByTestId('stats-live')).toHaveText("this browser won't keep stats, so this game wasn't kept.");
-    await expect(page.getByTestId('pulse-stats')).toContainText("this browser won't keep stats");
+    await expect(page.getByTestId('vialo-stats')).toContainText("this browser won't keep stats");
   });
 
   test('anything older than 400 days is deleted when daily games open', async ({ page }) => {
@@ -1011,7 +1011,7 @@ test.describe('daily games: private stats (D-76), always kept (2026-11-17)', () 
     );
     // The hub's stats list every game (each game's own page lists only that game).
     await page.goto('/play');
-    await expect(pulseStats(page)).toContainText('not played yet.');
+    await expect(vialoStats(page)).toContainText('not played yet.');
     await expect(
       // #720 (D-pending): triage results show under sudoku, the game that now keeps them.
       panel(page).getByRole('listitem').filter({ has: page.getByRole('heading', { name: 'sudoku', exact: true }) }),
@@ -1023,22 +1023,22 @@ test.describe('daily games: private stats (D-76), always kept (2026-11-17)', () 
   test('a round finished before the stats panel has loaded still counts', async ({ page }) => {
     const release = await holdPanel(page);
     // The held stats-panel script must not hold up the page's load event (WebKit waits for it); the page's own checks below wait.
-    await page.goto('/play/pillo', { waitUntil: 'domcontentloaded' });
-    await expect(page.getByTestId('pulse')).toBeVisible();
+    await page.goto('/play/vialo', { waitUntil: 'domcontentloaded' });
+    await expect(page.getByTestId('vialo')).toBeVisible();
     await expect(panel(page)).toHaveCount(0);
-    await solvePulse(page);
+    await solveVialo(page);
 
     release();
-    await expect(pulseStats(page)).toContainText('played 1 day, solved 1.');
+    await expect(vialoStats(page)).toContainText('played 1 day, solved 1.');
     expect(JSON.parse((await kept(page))!).results).toEqual([
-      { game: 'pulse', day: '2026-11-01', solved: true, tries: 1 },
+      { game: 'vialo', day: '2026-11-01', solved: true, tries: 1 },
     ]);
   });
 
   test('at 320 px the panel fits, and its buttons are at least 44 px tall', async ({ page }) => {
     await page.setViewportSize({ width: 320, height: 720 });
-    await solvePulse(page);
-    await expect(pulseStats(page)).toContainText('played 1 day, solved 1.');
+    await solveVialo(page);
+    await expect(vialoStats(page)).toContainText('played 1 day, solved 1.');
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(320);
     const buttons = await panel(page).getByRole('button').all();
     expect(buttons.length).toBeGreaterThan(0);
@@ -1061,8 +1061,8 @@ test.describe('daily games without JavaScript', () => {
       "to add cueory to your home screen, use your browser's menu. daily games need JavaScript.",
     ]);
     await expect(page.getByTestId('sample-note')).toBeVisible();
-    await expect(page.getByTestId('play-links').getByRole('link')).toHaveText(['pillo', 'sudoku', 'crossword', 'word path']);
-    for (const [path, name] of [['/play/pillo', 'pillo'], ['/play/sudoku', 'sudoku'], ['/play/crossword', 'crossword'], ['/play/word-path', 'word path']]) {
+    await expect(page.getByTestId('play-links').getByRole('link')).toHaveText(['vialo', 'sudoku', 'crossword', 'word path']);
+    for (const [path, name] of [['/play/vialo', 'vialo'], ['/play/sudoku', 'sudoku'], ['/play/crossword', 'crossword'], ['/play/word-path', 'word path']]) {
       await page.goto(path);
       // Every game opens the shared settings from its own gear (sudoku too, #823), so no page has a separate button.
       await expect(page.locator('noscript p')).toHaveText([

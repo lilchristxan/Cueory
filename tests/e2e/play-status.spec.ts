@@ -3,7 +3,7 @@ import { markPanelsSeen } from './clock';
 
 /**
  * Today's status for each daily game on /play (#735), from this device only. The clock is set to 1 November 2026, when
- * pillo's sample word is "grace" (content/games/pulse/sample-01.json).
+ * vialo's sample word is "grace" (content/games/pulse/sample-01.json).
  */
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
@@ -27,14 +27,14 @@ for (const size of [{ width: 390, height: 844 }, { width: 1440, height: 900 }]) 
     test('every game shows "not started" in words and a symbol, with 44 px targets and no sideways scroll', async ({ page }) => {
       await page.goto('/play');
       await expect(list(page).getByRole('heading', { name: 'today' })).toBeVisible();
-      for (const [game, name] of [['pulse', 'pillo'], ['triage', 'sudoku'], ['cueword', 'crossword'], ['suture', 'word path']]) {
+      for (const [game, name] of [['vialo', 'vialo'], ['triage', 'sudoku'], ['cueword', 'crossword'], ['suture', 'word path']]) {
         await expect(row(page, game)).toHaveAttribute('data-status', 'not-started');
         await expect(row(page, game)).toContainText(name);
         await expect(row(page, game)).toContainText('○');
         await expect(row(page, game)).toContainText('not started');
         const box = await row(page, game).getByRole('link').boundingBox();
         // Each card opens the game's own page (2026-11-17).
-        await expect(row(page, game).getByRole('link')).toHaveAttribute('href', { pulse: '/play/pillo', triage: '/play/sudoku', cueword: '/play/crossword', suture: '/play/word-path' }[game]!);
+        await expect(row(page, game).getByRole('link')).toHaveAttribute('href', { vialo: '/play/vialo', triage: '/play/sudoku', cueword: '/play/crossword', suture: '/play/word-path' }[game]!);
         expect(box!.height).toBeGreaterThanOrEqual(44);
       }
       // Stats are always kept (2026-11-17), so the "turn on stats" note is gone; it shows only where storage is blocked.
@@ -79,10 +79,10 @@ for (const size of [{ width: 390, height: 844 }, { width: 1440, height: 900 }]) 
   });
 }
 
-test('a started round shows in progress, and pillo finished on its own page shows done back on /play', async ({ page }) => {
+test('a started round shows in progress, and vialo finished on its own page shows done back on /play', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/play');
-  await expect(row(page, 'pulse')).toHaveAttribute('data-status', 'not-started');
+  await expect(row(page, 'vialo')).toHaveAttribute('data-status', 'not-started');
   await page.evaluate(() => window.dispatchEvent(new CustomEvent('cueory:game-progress', { detail: { game: 'suture', day: '2026-11-01' } })));
   await expect(row(page, 'suture')).toHaveAttribute('data-status', 'in-progress');
   await expect(row(page, 'suture')).toContainText('◐');
@@ -90,15 +90,15 @@ test('a started round shows in progress, and pillo finished on its own page show
   // Each game is on its own page (2026-11-17): with stats kept, a finished game is still marked when you come back.
   // Stats are always kept (2026-11-17): there is no switch to turn on.
   await expect(page.getByTestId('game-stats').getByRole('switch')).toHaveCount(0);
-  await row(page, 'pulse').getByRole('link').click();
-  await expect(page).toHaveURL(/\/play\/pillo$/);
+  await row(page, 'vialo').getByRole('link').click();
+  await expect(page).toHaveURL(/\/play\/vialo$/);
   const field = page.getByLabel('your guess', { exact: true });
   await field.fill('grace');
   await field.press('Enter');
-  await expect(page.getByTestId('pulse-result')).toContainText('solved.');
+  await expect(page.getByTestId('vialo-result')).toContainText('solved.');
   await page.getByTestId('game-result-dialog').getByRole('button', { name: 'close results' }).click();
   await page.getByRole('link', { name: 'all games' }).click();
-  await expect(row(page, 'pulse')).toHaveAttribute('data-status', 'done');
+  await expect(row(page, 'vialo')).toHaveAttribute('data-status', 'done');
 });
 
 test('each card opens its game by keyboard', async ({ page }) => {
@@ -112,7 +112,7 @@ test('each card opens its game by keyboard', async ({ page }) => {
 });
 
 test('old links to a game\'s section of /play go on to its own page', async ({ page }) => {
-  for (const [hash, path] of [['#pulse-heading', '/play/pillo'], ['#triage-heading', '/play/sudoku'], ['#sudoku-heading', '/play/sudoku'], ['#crossword-heading', '/play/crossword'], ['#word-path-heading', '/play/word-path']]) {
+  for (const [hash, path] of [['#vialo-heading', '/play/vialo'], ['#pulse-heading', '/play/vialo'], ['#triage-heading', '/play/sudoku'], ['#sudoku-heading', '/play/sudoku'], ['#crossword-heading', '/play/crossword'], ['#word-path-heading', '/play/word-path']]) {
     await page.goto('/play' + hash);
     await expect(page).toHaveURL(new RegExp(path.replaceAll('/', '\\/') + '$'));
   }
@@ -128,7 +128,7 @@ test.describe('without JavaScript', () => {
     await page.goto('/play');
     await expect(page.getByRole('heading', { level: 1, name: 'daily games' })).toBeVisible();
     await expect(list(page)).toHaveCount(0);
-    for (const name of ['pillo', 'sudoku', 'crossword', 'word path']) {
+    for (const name of ['vialo', 'sudoku', 'crossword', 'word path']) {
       await expect(page.getByTestId('play-links').getByRole('link', { name, exact: true })).toBeVisible();
     }
   });
