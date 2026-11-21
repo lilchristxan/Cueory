@@ -1,0 +1,1 @@
+status: #634 temporary WebKit Home frame-pacing diagnostic: records bounded fresh-context baseline, backdrop-filter-off, animation-off, combined, and preview-open samples; remove after the retained release evidence is reviewed.
