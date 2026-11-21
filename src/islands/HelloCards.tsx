@@ -28,6 +28,7 @@ export default function HelloCards({ starters }: { starters: readonly HelloStart
   const [seen, setSeen] = useState<string[]>([]);
   const [flipped, setFlipped] = useState(false);
   const [flipsToday, setFlipsToday] = useState(0);
+  const [revealedToday, setRevealedToday] = useState<ReadonlySet<string>>(() => new Set());
   const [completionDismissed, setCompletionDismissed] = useState(false);
   const [favorites, setFavorites] = useState<ReadonlySet<string>>(() => new Set());
   const [notice, setNotice] = useState('');
@@ -82,6 +83,7 @@ export default function HelloCards({ starters }: { starters: readonly HelloStart
     if (nextDay === dayRef.current) return;
     dayRef.current = nextDay;
     setFlipsToday(0);
+    setRevealedToday(new Set());
     setCompletionDismissed(false);
     setNotice('a new day, with five new cards to flip.');
   }, [today]);
@@ -105,9 +107,9 @@ export default function HelloCards({ starters }: { starters: readonly HelloStart
     if (!current) return;
     const next = !flipped;
     setFlipped(next);
-    if (next) {
+    if (next && !revealedToday.has(current.id)) {
+      setRevealedToday((previous) => new Set(previous).add(current.id));
       setFlipsToday((previous) => Math.min(5, previous + 1));
-      setCompletionDismissed(false);
     }
     setNotice(next ? `card turned over. ${current && isReflective(current.category) ? 'ask yourself' : 'try asking'}: ${current.text}` : 'card turned face down.');
     // Enter or Space after a click: Firefox keeps the card without its focus ring (focusring.ts).
@@ -227,7 +229,7 @@ export default function HelloCards({ starters }: { starters: readonly HelloStart
 
         {flipsToday === 5 && !completionDismissed && (
           <section className="mx-auto mt-4 max-w-md rounded-xl border-2 border-control bg-surface p-6 text-center shadow-card" aria-labelledby="hello-complete-heading" data-testid="hello-complete">
-            <h2 id="hello-complete-heading" className="font-display text-3xl">congrats!</h2>
+            <h2 id="hello-complete-heading" className="text-3xl font-bold">congrats!</h2>
             <p className="mt-2">You made the world friendlier today.</p>
             <p className="mt-3 text-sm font-bold uppercase tracking-wide text-ink-soft">5 of 5 cards flipped</p>
             <button type="button" className="press mt-5 min-h-(--tap-min) rounded-pill bg-button px-5 py-2.5 text-on-button hover:bg-button-hover" onClick={keepGoing}>
@@ -257,9 +259,9 @@ export default function HelloCards({ starters }: { starters: readonly HelloStart
           disabled={!ready || !current}
           aria-pressed={Boolean(current && favorites.has(current.id))}
           onClick={toggleFavorite}
-          className="press min-h-(--tap-min) rounded-pill border border-control px-5 py-2.5 disabled:opacity-60"
+          className={`press min-h-(--tap-min) rounded-pill border border-control px-5 py-2.5 disabled:opacity-60 ${current && favorites.has(current.id) ? 'bg-button text-on-button' : ''}`}
         >
-          Favorite
+          {current && favorites.has(current.id) ? 'Favorite saved' : 'Favorite'}
         </button>
         <button
           type="button"
