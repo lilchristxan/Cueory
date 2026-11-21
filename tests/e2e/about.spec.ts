@@ -1,5 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Locator, type Page } from '@playwright/test';
+import { markPanelsSeen } from './clock';
 
 const headings = [
   'we know nursing school is hard.',
@@ -51,6 +52,8 @@ test.describe('about page', () => {
 
   test('page calls to action receive natural keyboard focus and activate safely', async ({ page, context }) => {
     const signup = page.getByRole('link', { name: 'join the mailing list' });
+    // This test owns the page CTAs, not either once-only launch panel that can take focus after navigation.
+    await markPanelsSeen(page);
     await page.goto('/about');
     await tabTo(page, signup, 'join the mailing list');
     await expect(signup).toBeFocused();
