@@ -71,7 +71,7 @@ test.describe('word path: board format (#722)', () => {
     await expect(game(page)).toContainText('sample puzzle');
     await expect(game(page).getByRole('row')).toHaveCount(8);
     await expect(game(page).getByRole('gridcell')).toHaveCount(48);
-    await expect(page.getByTestId('suture-count')).toHaveText(`0 of ${total} found`);
+    await expect(page.getByTestId('suture-count')).toContainText(`0 of ${total} words found`);
     for (const name of ['submit', 'clear']) await expect(game(page).getByRole('button', { name })).toBeDisabled();
     await expect(game(page).getByRole('button', { name: 'cue' })).toBeEnabled();
   });
@@ -89,7 +89,8 @@ test.describe('word path: board format (#722)', () => {
     const found = page.getByRole('list', { name: 'answers found' }).getByRole('listitem');
     await expect(found).toHaveCount(1);
     await expect(found.first()).toContainText('(theme word)');
-    await expect(page.getByTestId('suture-count')).toHaveText(`1 of ${total} found`);
+    await expect(page.getByTestId('suture-count')).toContainText(`1 of ${total} words found`);
+    await expect(found.first()).toHaveClass(/wordpath-found-pill/);
   });
 
   test('tapping the last letter again submits; the thread gets a second state and a diamond symbol', async ({ page }) => {
@@ -158,7 +159,7 @@ test.describe('word path: board format (#722)', () => {
     expect([...sample.extras, ...sample.words.map((item) => item.answer)]).not.toContain(letters);
     await tapAndSubmit(page, part);
     await expect(live(page)).toHaveText('not a word on this board.');
-    await expect(page.getByTestId('suture-count')).toHaveText(`0 of ${total} found`);
+    await expect(page.getByTestId('suture-count')).toContainText(`0 of ${total} words found`);
   });
 
   test('every 3 other words earn a cue; a cue marks an answer, a second cue numbers its letters', async ({ page }) => {

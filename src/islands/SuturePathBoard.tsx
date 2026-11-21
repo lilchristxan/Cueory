@@ -26,9 +26,11 @@ const button = 'min-h-11 min-w-11 rounded-md border border-control bg-page px-4 
  * is a smaller circle inside it (.wordpath-dot), which leaves room between neighbours for the lines that join a word.
  */
 const looks: Record<CellLook, { dot: string; text: string }> = {
-  special: { dot: 'bg-button', text: 'text-on-button' },
-  theme: { dot: 'bg-soft', text: 'text-ink' },
-  // Copper ring and glow, as drawn (WordPath.png); the letter takes the copper ink so it reads in both palettes.
+  // Found paths use the same tan fill as their joining line. The dot and diamond marks still distinguish theme words
+  // from the thread without relying on colour.
+  special: { dot: 'wordpath-found', text: 'text-ink' },
+  theme: { dot: 'wordpath-found', text: 'text-ink' },
+  // Teal is the active trace colour in the Piccline reference. Its ring is also visible when colour is unavailable.
   picked: { dot: 'wordpath-pick', text: 'wordpath-pick-text' },
   hinted: { dot: 'wordpath-plain border-2 border-dashed border-ink-soft', text: '' },
   plain: { dot: 'wordpath-plain', text: '' },
@@ -413,6 +415,21 @@ export function PathBoard({ puzzle, name }: Props) {
           </div>
         ))}
       </div>
+      <ul className="wordpath-found mt-4 flex flex-wrap justify-center gap-2" aria-label="answers found" data-testid="suture-found" data-print-hidden>
+        {state.found.map((i) => {
+          const answer = puzzle.words[i]!;
+          return (
+            <li key={i} className="wordpath-found-pill inline-flex items-center gap-1">
+              {answer.special ? <ThreadMark className="wordpath-list-mark" /> : <ThemeMark className="wordpath-list-mark" />}
+              <span>{answer.answer.toLowerCase()}</span>
+              <span className="sr-only">{answer.special ? ' (the thread)' : ' (theme word)'}</span>
+            </li>
+          );
+        })}
+      </ul>
+      <p className="wordpath-found-count mt-3 text-center text-sm text-ink-soft" data-testid="suture-count" data-print-hidden>
+        {state.found.length} of {total} {total === 1 ? 'word' : 'words'} found · teal line: the word you are tracing
+      </p>
       </div>
       <p className="mt-4 min-h-11 text-center text-xl font-bold text-ink" aria-hidden="true" data-testid="suture-picked" data-print-hidden>{word}</p>
       <div className="mt-2 flex flex-wrap justify-center gap-2" data-print-hidden>
@@ -436,21 +453,8 @@ export function PathBoard({ puzzle, name }: Props) {
         again also submits). on a keyboard, arrows move, enter or space adds a letter, enter on the last letter submits,
         backspace takes one back and escape clears.
       </p>
-      <ul className="mt-6 flex flex-wrap justify-center gap-x-4 gap-y-2 text-sm font-bold sm:text-lg" aria-label="answers found" data-testid="suture-found" data-print-hidden>
-        {state.found.map((i) => {
-          const answer = puzzle.words[i]!;
-          return (
-            <li key={i} className="inline-flex items-center gap-1">
-              {answer.special ? <ThreadMark className="wordpath-list-mark" /> : <ThemeMark className="wordpath-list-mark" />}
-              <span>{answer.answer.toLowerCase()}</span>
-              <span className="sr-only">{answer.special ? ' (the thread)' : ' (theme word)'}</span>
-            </li>
-          );
-        })}
-      </ul>
       <p className="wordpath-print-foot text-sm" data-print-only data-testid="suture-print-foot">{printFoot}</p>
       <div className="mt-4 flex flex-wrap justify-between gap-2 text-sm text-ink-soft" data-print-hidden>
-        <p data-testid="suture-count">{state.found.length} of {total} found</p>
         {puzzle.sample && <p>sample puzzle</p>}
       </div>
       {done && (
