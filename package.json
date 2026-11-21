@@ -8,7 +8,7 @@
   "scripts": {
     "dev": "astro dev",
     "prebuild": "node scripts/check-legal-release.mjs",
-    "build": "astro build && node scripts/prune-preview.mjs && pagefind --site dist",
+    "build": "astro build && node scripts/prune-preview.mjs && node scripts/prod-prune-guard.mjs && pagefind --site dist",
     "preview": "astro preview",
     "astro": "astro",
     "check": "astro check",

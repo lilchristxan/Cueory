@@ -1,7 +1,7 @@
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it } from 'vitest';
 import { isProductionBuild } from '../../scripts/prune-preview.mjs';
@@ -292,5 +292,26 @@ describe('post-build check: prod-prune-guard against fixture folders', () => {
         env: { ...process.env, WORKERS_CI: '1', WORKERS_CI_BRANCH: 'main' },
       });
     }).toThrow();
+  });
+
+  it('wires prod-prune-guard.mjs right after prune-preview.mjs in the build script', () => {
+    const pkgPath = resolve(fileURLToPath(new URL('../../package.json', import.meta.url)));
+    const pkg = JSON.parse(readFileSync(pkgPath, 'utf8'));
+    const buildScript = pkg.scripts?.build;
+
+    expect(buildScript).toBeDefined();
+
+    const steps = buildScript.split('&&').map((s: string) => s.trim());
+    const pruneIndex = steps.findIndex((s: string) => s.includes('scripts/prune-preview.mjs'));
+    const guardIndex = steps.findIndex((s: string) => s.includes('scripts/prod-prune-guard.mjs'));
+    const pagefindIndex = steps.findIndex((s: string) => s.includes('pagefind'));
+
+    expect(pruneIndex).toBeGreaterThan(-1);
+    expect(guardIndex).toBe(pruneIndex + 1);
+    expect(pagefindIndex).toBeGreaterThan(guardIndex);
+
+    // Exact invocation checks
+    expect(steps[guardIndex]).toBe('node scripts/prod-prune-guard.mjs');
+    expect(steps[pruneIndex]).toBe('node scripts/prune-preview.mjs');
   });
 });
