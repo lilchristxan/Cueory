@@ -30,18 +30,19 @@
     text-transform: uppercase;
   }
 
-  /* A picked letter: copper glow with a copper-deep ring, as drawn. Charcoal copper ink reads on it in both palettes. */
+  /* A Piccline active trace uses the existing teal game token. The inner ring remains a visible non-colour boundary. */
   .wordpath-pick {
-    background-color: var(--color-copper-glow);
-    box-shadow: inset 0 0 0 var(--wordpath-ring) var(--color-copper-deep);
-    color: var(--cueory-copper-ink);
+    background-color: var(--color-game-teal);
+    box-shadow: inset 0 0 0 var(--wordpath-ring) var(--color-page);
+    color: var(--color-page);
   }
+  .wordpath-found { background-color: var(--color-soft); }
   /* An unpicked letter: a page-colour circle with a hairline rim so it reads against the frosted panel in both palettes. */
   .wordpath-plain {
     background-color: var(--color-page);
     box-shadow: inset 0 0 0 var(--border-wordpath-panel) var(--color-line);
   }
-  .wordpath-pick-text { color: var(--cueory-copper-ink); }
+  .wordpath-pick-text { color: var(--color-page); }
 
   .wordpath-corner {
     display: flex;
@@ -70,6 +71,21 @@
     inline-size: calc(var(--spacing) * 5);
     block-size: calc(var(--spacing) * 5);
   }
+
+  /* Found answers sit directly under Piccline's 6 × 8 board as tangible tan pills, ahead of the controls. */
+  .wordpath-found:not(.wordpath-dot) {
+    background: transparent;
+  }
+  .wordpath-found-pill {
+    min-block-size: var(--tap-min);
+    padding-inline: calc(var(--spacing) * 3);
+    border-radius: var(--radius-pill);
+    background-color: var(--color-soft);
+    color: var(--color-ink);
+    font-size: var(--text-sm);
+    font-weight: 700;
+  }
+  .wordpath-found-count { min-block-size: var(--tap-min); }
 
   /* Keep large-text letter grids inside a named scroll region. The grid's
      squares stay large enough to tap and to show their enlarged letters. */
@@ -229,17 +245,17 @@
   }
 
   .wordpath-line {
-    stroke: var(--color-copper-deep);
+    stroke: var(--color-game-teal);
     stroke-width: var(--wordpath-line);
     stroke-linecap: round;
   }
 
   .wordpath-line-theme {
-    stroke: var(--color-ink-soft);
+    stroke: var(--color-soft);
   }
 
   .wordpath-line-special {
-    stroke: var(--color-button);
+    stroke: var(--color-soft);
   }
 
   .wordpath-mark {
