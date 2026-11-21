@@ -39,7 +39,10 @@ const { game, wide = false, showcase = false, framed = false } = Astro.props;
   {!framed && <div class="game-page-stats-container max-w-prose mx-auto px-6 pb-12" data-print-hidden>
     <GameStatsPanel client:only="react" games={[game.id]} />
   </div>}
-  {framed && <GameStatsPersistence client:only="react" />}
+  {framed && <>
+    <GameStatsPersistence client:only="react" />
+    <noscript><p>finish a game with JavaScript to keep its result in this browser.</p></noscript>
+  </>}
 </article>
 <GameResultsHost client:only="react" />
 <noscript><p>game results and sharing need JavaScript.</p></noscript>

@@ -98,7 +98,8 @@ describe('GameFrame (Scope 1)', () => {
     expect(frame).toContain('<GameFrameStats client:load game={currentConfig.id} />');
     expect(page).toContain('framed = false');
     expect(page).toContain('{!framed && <div class="game-page-stats-container');
-    expect(page).toContain('{framed && <GameStatsPersistence client:only="react" />}');
+    expect(page).toContain('<GameStatsPersistence client:only="react" />');
+    expect(page).toContain('finish a game with JavaScript to keep its result in this browser.');
     expect(header).toContain('GAME_FRAME_SETTINGS_EVENT');
     expect(header).toContain('GAME_FRAME_HELP_EVENT');
     expect(header).toContain('<GameHelpDialog help={help} name={name} extra={helpExtra} />');
