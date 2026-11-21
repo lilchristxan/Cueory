@@ -7,10 +7,10 @@ const rootOf = (style: Partial<ScrollRoot['style']> = {}): ScrollRoot => ({
 const bodyOf = (style: Partial<ScrollBody['style']> = {}): ScrollBody => ({
   style: { position: '', top: '', left: '', right: '', width: '', overflow: '', overscrollBehavior: '', ...style },
 });
-const viewAt = (scrollX: number, scrollY: number): ScrollView & { scrollTo: ReturnType<typeof vi.fn> } => ({
+const viewAt = (scrollX: number, scrollY: number): ScrollView & { scrollTo: ReturnType<typeof vi.fn<(x: number, y: number) => void>> } => ({
   scrollX,
   scrollY,
-  scrollTo: vi.fn(),
+  scrollTo: vi.fn<(x: number, y: number) => void>(),
 });
 
 describe('lockPageScroll', () => {
@@ -54,7 +54,7 @@ describe('lockPageScroll', () => {
   });
 
   it('restores the offset read at lock time even if the view moved while locked', () => {
-    const view = { scrollX: 0, scrollY: 100, scrollTo: vi.fn() };
+    const view = { scrollX: 0, scrollY: 100, scrollTo: vi.fn<(x: number, y: number) => void>() };
     const unlock = lockPageScroll(rootOf(), bodyOf(), view);
     view.scrollY = 0;
     unlock();
