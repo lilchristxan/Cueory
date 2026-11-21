@@ -2,8 +2,8 @@
 
 Christian approved these designs on the design canvas on 2026-11-20. Build them on the live routes.
 
-- `pages/<game>.html` is a static reference at 1440 × 1090. It has no scripts; open it to measure.
-- `shots/<game>.jpg` is the same page as a picture.
+- `pages/<game>.html` (here in `docs/design/games-v2/`) is a static reference at 1440 × 1090. It has no scripts; open it to measure. Its image paths are site paths (`/brand/...`, `/design/...`) under `public/`.
+- `public/design/games-v2/shots/<game>.jpg` is the same page as a picture, and `public/design/games-v2/assets/` holds the new logo files.
 - Every word on these pages is a placeholder. Real puzzles, answers and prompts come from Christian's reviewed batches in the database, never from this folder.
 
 | Game (brand name) | Route | Current island | Reference |
