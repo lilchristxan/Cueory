@@ -231,6 +231,7 @@ const icons: Record<StudyFeatureIcon, string> = {
     canAutoAdvance,
     canEnhanceCarousel,
     carouselState,
+    enterMatchesMouseMove,
     type PreviewPhase,
     clipAround,
     flipFrom,
@@ -490,7 +491,6 @@ const icons: Record<StudyFeatureIcon, string> = {
       carousel came into view or the pointer left it.
     */
     const controls = root.querySelector<HTMLElement>('[data-modes-controls]');
-    const finePointer = window.matchMedia('(hover: hover) and (pointer: fine)');
     let countdown = 0;
     function syncAutoplay() {
       const hold = autoplayHold(state);
@@ -507,10 +507,10 @@ const icons: Record<StudyFeatureIcon, string> = {
     }
     function autoAdvance() {
       countdown = 0;
-      // The pointer's real place is checked too, in case a browser left out an enter event: a mouse resting on the
-      // vials or their buttons always holds the vial in front.
-      const resting = finePointer.matches && [track, controls].some((area) => area?.matches(':hover'));
-      if (canAutoAdvance(state) && !resting) goTo(active + 1);
+      // syncAutoplay and this callback intentionally share canAutoAdvance's one event-derived state. A separate
+      // CSS :hover veto can be stale even after the pointer has moved away, leaving the countdown visibly "on" but
+      // unable to advance.
+      if (canAutoAdvance(state)) goTo(active + 1);
       syncAutoplay();
     }
 
@@ -636,9 +636,14 @@ const icons: Record<StudyFeatureIcon, string> = {
         if (event.pointerType !== 'mouse') return;
         // A stationary pointer can gain an area when layout moves underneath it. A stale enter reports a different
         // coordinate than the last physical move, so it cannot pause the carousel by itself.
-        if (lastMouseMove?.x === event.clientX && lastMouseMove.y === event.clientY) setHovering(true);
+        if (enterMatchesMouseMove(lastMouseMove, { x: event.clientX, y: event.clientY })) setHovering(true);
       });
     }
+    // There is no final in-window pointermove when the mouse exits into browser chrome. Clear only that genuine
+    // document exit; ordinary track/control handoffs have a related target and continue through pointermove instead.
+    window.addEventListener('mouseout', (event) => {
+      if (event.isTrusted && event.relatedTarget === null) setHovering(false);
+    }, { passive: true });
     root.addEventListener('focusin', () => {
       state.focusInside = true;
       syncAutoplay();

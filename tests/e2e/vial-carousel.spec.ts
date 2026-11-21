@@ -442,18 +442,15 @@ test('auto-advance gives the vial in front its full six seconds from when the ri
   await expect(carousel).toHaveAttribute('data-autoplay-hold', 'hover');
   await page.clock.runFor(20_000);
   await expect(carousel.locator('#mode-cards')).toHaveAttribute('data-active', '');
-  // Moving off starts a fresh six seconds, not whatever was left before the pause.
-  await page.mouse.move(0, 0);
-  await expect(carousel).toHaveAttribute('data-autoplay', 'on');
-  await expect(carousel).not.toHaveAttribute('data-autoplay-hold');
-
-  // The controls are a pause area too; a real pointer move over one holds the same fresh countdown.
+  // A real handoff from a vial to a control keeps the hover hold; it is not an out-of-document exit.
   await carousel.getByRole('button', { name: 'next study mode' }).hover();
   await expect(carousel).toHaveAttribute('data-autoplay', 'off');
   await expect(carousel).toHaveAttribute('data-autoplay-hold', 'hover');
   await page.clock.runFor(20_000);
   await expect(carousel.locator('#mode-cards')).toHaveAttribute('data-active', '');
-  await page.mouse.move(0, 0);
+
+  // Exiting into browser chrome has no following in-window pointermove; it still starts a fresh six seconds.
+  await page.mouse.move(-1, -1);
   await expect(carousel).toHaveAttribute('data-autoplay', 'on');
   await expect(carousel).not.toHaveAttribute('data-autoplay-hold');
 
@@ -480,6 +477,32 @@ test('auto-advance gives the vial in front its full six seconds from when the ri
   await expect(carousel.locator('#mode-learn')).toHaveAttribute('data-active', '');
   await expect(carousel).toHaveAttribute('data-autoplay', 'off');
   await expect(carousel).toHaveAttribute('data-autoplay-hold', 'takeover');
+});
+
+test('auto-advance uses the event-derived hover gate, not an independent CSS hover veto', async ({ page }, testInfo) => {
+  test.skip(!isDesktopOfEachEngine(testInfo), 'checks the fine-pointer autoplay gate once per engine, at desktop size');
+  // This isolates the old bypass: product state is unhovered after the real park, but CSS :hover reports stale true.
+  // The production gate must advance from its event-derived state rather than querying that stale CSS result again.
+  await page.addInitScript(() => {
+    const matches = Element.prototype.matches;
+    Object.defineProperty(Element.prototype, 'matches', {
+      configurable: true,
+      value: function (this: Element, selector: string) {
+        if (selector === ':hover' && this.id === 'modes-track') return true;
+        return matches.call(this, selector);
+      },
+    });
+  });
+  await page.clock.install({ time: new Date('2026-11-20T07:00:00') });
+  await markPanelsSeen(page);
+  await page.goto('/');
+  await page.clock.pauseAt(new Date('2026-11-20T07:05:00'));
+  const carousel = section(page);
+  await page.mouse.move(0, 0);
+  await carousel.scrollIntoViewIfNeeded();
+  await expect(carousel).toHaveAttribute('data-autoplay', 'on');
+  await page.clock.runFor(6_100);
+  await expect(carousel.locator('#mode-cards')).toHaveAttribute('data-active', '');
 });
 
 test('touch screens never get the hover lift; reduced motion never lifts either', async ({ page }, testInfo) => {
