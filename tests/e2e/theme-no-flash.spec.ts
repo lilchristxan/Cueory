@@ -8,53 +8,48 @@ import { markPanelsSeen } from './clock';
 
   An init script runs before the page's own scripts and records:
   - "body created": the theme attribute the moment <body> exists (the earliest anything can paint);
-  - "frame 1", "frame 2" ...: the theme and the page color (the <html> background, which carries the palette) at every
-    animation frame from the very first one until the page has been styled for three frames, so the first styled frame
-    is never skipped. Before the stylesheet applies the color is transparent: nothing of either palette is drawn then,
-    so those frames are checked for the theme only.
-  Every record's theme must match the settled page, every styled frame's color must too, and there must be a frame-1
-  sample and a styled sample. The device is set to the opposite palette, so a theme applied late would show. A negative control removes the head theme script and applies
-  the theme after load instead, and the same check must catch it.
+  - "first rendered frame": the theme and the page color (the <html> background, which carries the palette) on the
+    next animation frame requested after <body> is created.
+  Every record must match the settled page, and both observations must exist. Requesting the frame from the body
+  observer keeps the probe in the navigated document: WebKit can discard a callback requested before that document has
+  a body. The device is set to the opposite palette, so a theme applied late would show. A negative control removes
+  the head theme script and applies the theme after load instead, and the same check must catch it.
 */
 
 const routes = ['/', '/learn/study-skills', '/play/pillo', '/privacy', '/no-such-page'];
-// Sample every frame until the page is styled, up to about a second, so the first styled frame is never skipped.
-const FRAMES = 60;
+type SamplePhase = 'body created' | 'first rendered frame' | 'settled';
 
-const UNSTYLED = 'rgba(0, 0, 0, 0)';
-
-interface Sample { at: string; theme: string | undefined; color?: string }
+interface Sample { phase: SamplePhase; theme: string | undefined; color: string }
 
 async function recordFirstFrames(page: Page) {
-  await page.addInitScript((frames) => {
+  await page.addInitScript(() => {
     const w = window as unknown as { __themeSamples: Sample[] };
     w.__themeSamples = [];
     const theme = () => document.documentElement.dataset.theme;
+    const record = (phase: SamplePhase) => {
+      w.__themeSamples.push({
+        phase,
+        theme: theme(),
+        color: phase === 'first rendered frame' ? getComputedStyle(document.documentElement).backgroundColor : '',
+      });
+    };
     new MutationObserver((_changes, observer) => {
       if (document.body) {
-        w.__themeSamples.push({ at: 'body created', theme: theme() });
+        record('body created');
         observer.disconnect();
+        // Schedule inside the navigated document after its body exists. A callback requested before this point can be
+        // discarded by WebKit during navigation, leaving the no-flash assertion without a rendered-frame sample.
+        requestAnimationFrame(() => record('first rendered frame'));
       }
     }).observe(document, { childList: true, subtree: true });
-    let n = 0;
-    let styled = 0;
-    const frame = () => {
-      n += 1;
-      const color = getComputedStyle(document.documentElement).backgroundColor;
-      w.__themeSamples.push({ at: `frame ${n}`, theme: theme(), color });
-      // Keep a few styled frames after the first, then stop.
-      if (color !== 'rgba(0, 0, 0, 0)') styled += 1;
-      if (n < frames && styled < 3) requestAnimationFrame(frame);
-    };
-    requestAnimationFrame(frame);
-  }, FRAMES);
+  });
 }
 
 async function settled(page: Page): Promise<Sample> {
-  // Long enough for any transition on the page color to end, and for every recorded frame to have run.
+  // Long enough for any transition on the page color to end and for the body-created frame callback to run.
   await page.waitForTimeout(600);
   return page.evaluate(() => ({
-    at: 'settled',
+    phase: 'settled',
     theme: document.documentElement.dataset.theme,
     color: getComputedStyle(document.documentElement).backgroundColor,
   }));
@@ -66,15 +61,15 @@ const samples = (page: Page) => page.evaluate(() => (window as unknown as { __th
 function problems(early: Sample[], end: Sample, choice: string): string[] {
   const found: string[] = [];
   if (end.theme !== choice) found.push(`settled theme is ${end.theme}, expected ${choice}`);
-  if (!early.some((s) => s.at === 'body created')) found.push('no sample when <body> was created');
-  if (!early.some((s) => s.at === 'frame 1')) found.push('no sample at frame 1');
-  const styled = early.filter((s) => s.color !== undefined && s.color !== UNSTYLED);
-  if (styled.length === 0) found.push('no styled frame was sampled');
+  const bodyCreated = early.find((s) => s.phase === 'body created');
+  if (!bodyCreated) found.push('no sample when <body> was created');
+  const firstFrame = early.find((s) => s.phase === 'first rendered frame');
+  if (!firstFrame) found.push('no sample at the first rendered frame');
   for (const s of early) {
-    if (s.theme !== end.theme) found.push(`${s.at}: theme ${s.theme}, settled ${end.theme}`);
+    if (s.theme !== end.theme) found.push(`${s.phase}: theme ${s.theme}, settled ${end.theme}`);
   }
-  for (const s of styled) {
-    if (s.color !== end.color) found.push(`${s.at}: page color ${s.color}, settled ${end.color}`);
+  if (firstFrame && firstFrame.color !== end.color) {
+    found.push(`first rendered frame: page color ${firstFrame.color}, settled ${end.color}`);
   }
   return found;
 }
@@ -138,7 +133,7 @@ test('negative control: a theme applied after load is caught', async ({ page }) 
   const end = await settled(page);
   expect(end.theme).toBe('dark');
   const found = problems(await samples(page), end, 'dark');
-  expect(found.some((p) => /^frame \d+: (page color|theme)/.test(p)), found.join('\n')).toBe(true);
+  expect(found.some((p) => /^(body created|first rendered frame): (page color|theme)/.test(p)), found.join('\n')).toBe(true);
 });
 
 test('the theme is applied by a blocking script before any stylesheet or body', async ({ request }) => {
