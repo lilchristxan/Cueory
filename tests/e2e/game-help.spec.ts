@@ -25,13 +25,17 @@ test.beforeEach(async ({ page }) => {
   });
 });
 
-test('the first visit shows each game\'s rules above its board, and "got it" puts them away for good', async ({ page }) => {
+test('first-visit rules and the Pillo closed default preserve the help contract', async ({ page }) => {
   for (const game of games) {
     await page.goto(game.path);
     const card = page.getByTestId(game.testId).getByTestId('game-help-first');
-    await expect(card).toBeVisible();
-    await expect(card.getByRole('heading', { name: `new to ${game.name}? here's how to play` })).toBeVisible();
-    expect((await axe(page, '[data-testid="game-help-first"]')).violations).toEqual([]);
+    if (game.id === 'pulse') {
+      await expect(card).toHaveCount(0);
+    } else {
+      await expect(card).toBeVisible();
+      await expect(card.getByRole('heading', { name: `new to ${game.name}? here's how to play` })).toBeVisible();
+      expect((await axe(page, '[data-testid="game-help-first"]')).violations).toEqual([]);
+    }
   }
 
   await page.goto('/play/sudoku');
@@ -49,7 +53,7 @@ test('the first visit shows each game\'s rules above its board, and "got it" put
   await expect(page.getByTestId('sudoku').getByRole('grid')).toBeVisible();
   await expect(page.getByTestId('sudoku').getByTestId('game-help-first')).toHaveCount(0);
   await page.goto('/play/pillo');
-  await expect(page.getByTestId('pulse').getByTestId('game-help-first')).toBeVisible();
+  await expect(page.getByTestId('pulse').getByTestId('game-help-first')).toHaveCount(0);
 });
 
 for (const game of games) {
@@ -68,6 +72,13 @@ for (const game of games) {
     await expect(dialog.getByRole('heading', { name: 'settings' })).toBeVisible();
     // Where the shared settings are now (each game's gear, Christian's brief).
     await expect(dialog).toContainText('change them with the gear at the top left of a game');
+    if (game.id === 'pulse') {
+      // pillo's help shows the legend: each mark as a pill, with its symbol and its meaning in words.
+      const legend = dialog.getByRole('list', { name: 'what the marks mean' });
+      await expect(legend).toBeVisible();
+      await expect(legend.getByRole('listitem')).toHaveCount(3);
+      for (const meaning of ['in its place', 'in the word, somewhere else', 'not in the word']) await expect(legend).toContainText(meaning);
+    }
     // Using the "?" counts as seeing the rules, so the first-visit card goes away.
     await expect(area.getByTestId('game-help-first')).toHaveCount(0);
     expect(JSON.parse((await seen(page))!)).toEqual([game.id]);

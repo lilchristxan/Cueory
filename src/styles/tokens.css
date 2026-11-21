@@ -376,15 +376,27 @@
   --color-pillo-hatch: #3e2c23;         /* Espresso — the foil's fine cross-hatch */
   --color-pillo-gloss: #f9f5ef;         /* Ivory    — the shine on a pill */
   --pillo-board: 32rem;                 /* the widest the blister pack grows (512 px) */
-  --pillo-pocket: 3rem;                 /* a pocket's height on phones (48 px), so the pills stay capsules */
-  --pillo-pocket-lg: 4rem;              /* a pocket's height from 640 px wide (64 px) */
-  --pillo-pill-inset: 0.3125rem;        /* space between a pocket's edge and its pill */
+  /* The approved blister-board artwork (public/design/pillo-blister-board.webp, 1230 × 1180 px, PR #887): where its
+     wells lie, measured from its dashed perforations, so the live tiles sit in the drawn wells at every width. */
+  --pillo-art-inset-top: 4.64%;         /* the artwork's top edge to its first row of cells, as a share of its width */
+  --pillo-art-inset-right: 4.58%;       /* its right edge to the fifth column */
+  --pillo-art-inset-bottom: 8.08%;      /* its bottom edge to the sixth row (the blank foil strip under it) */
+  --pillo-art-inset-left: 4.5%;         /* its left edge to the first column */
+  --pillo-art-row-ratio: 1118.4 / 170.6; /* one row of five cells: width to height */
+  --pillo-art-well-top: 6.7%;           /* a cell's top edge to its well's rim, as a share of the cell's width */
+  --pillo-art-well-right: 7%;           /* a cell's right edge to the rim */
+  --pillo-art-well-bottom: 10.7%;       /* a cell's bottom edge to the rim (the well sits a little above centre) */
+  --pillo-art-well-left: 7%;            /* a cell's left edge to the rim */
   --pillo-letter: 1.25rem;              /* the capital letter on a pill (phones) */
   --pillo-letter-lg: 1.875rem;
   --pillo-mark: 0.625rem;               /* the ● ○ · under a letter */
   --pillo-letter-lift: -0.3125rem;      /* a guessed letter moves up this much to make room for its mark */
   --pillo-mark-drop: -0.125rem;         /* the mark's line sits this far into the pill's bottom edge */
   --pillo-keys-width: 24rem;             /* the letter keys wrap within this width, the same as the crossword's keys */
+  --pillo-key-min: 1.5rem;              /* narrowest letter key (24 px, WCAG 2.2 minimum); var(--tap-min) = 44 px keys in wrapped rows (D-pending) */
+  --pillo-key-gap: 0.1875rem;           /* the space between two letter keys in a row (3 px) */
+  --pillo-keys-bleed: 1.25rem;          /* on phones the keys reach this far into the game panel's 1.5rem padding */
+  --pillo-key-pad: 0.125rem;            /* the least space beside a key's letter, so ten keys fit across a 320 px phone */
   --pillo-strip-pill: 0.875rem;         /* a pill in the guesses-left strip */
   --pillo-strip-height: 1.75rem;
   --pillo-swatch: 2.75rem;              /* the sample pills in "how to play" */
