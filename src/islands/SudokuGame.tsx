@@ -5,6 +5,7 @@ import { GameHelpButton, GameHelpCard, useGameHelp } from './GameHelp';
 import { gameName } from '../config/games';
 import { localDay, showResultCard, sudokuResultCard } from './gameresults';
 import { GameSettingsDialog } from './GameSettings.tsx';
+import { GAME_FRAME_HELP_EVENT, GAME_FRAME_SETTINGS_EVENT } from './GameFrameControls';
 import { GAME_SETTINGS_EVENT, GAME_SETTINGS_STORAGE_KEY, gameSoundAllowed, loadGameSettings, parseGameSettings, type SharedGameSettings } from './gamesettings';
 import { sudokuCellClasses } from './sudokuhighlight';
 import { DEFAULT_SUDOKU_SETTINGS, GAME_PROGRESS_EVENT, LEVEL_LABELS, sudokuProgressDetail, LEVEL_RULES, advanceSudokuSeconds, autoCandidateNotes, checkSudoku, conflictIndices, dailySudokuSeed, editSudokuBoard, effectiveSudokuMode, generateSudoku, getResult, loadSudokuSettings, newSudokuBoard, noteDigits, pushSudokuHistory, saveSudokuSettings, sudokuCellPresentation, sudokuKeyAction, sudokuWrongCells, undoSudoku, type SudokuBoard, type SudokuBoardAction, type SudokuLevel, type SudokuMode, type SudokuSettings } from './sudoku';
@@ -41,7 +42,7 @@ function playSolvedTone(): void {
   } catch { /* Sound is optional. */ }
 }
 
-export default function SudokuGame() {
+export default function SudokuGame({ framed = false }: { framed?: boolean } = {}) {
   const today = useMemo(() => new Date(), []);
   const day = useMemo(() => localDay(today), [today]);
   const [level, setLevel] = useState<SudokuLevel>('easy');
@@ -81,6 +82,29 @@ export default function SudokuGame() {
   const ownNotes = useRef<number[]>([]);
   /** The daily status hears about the first move once per page (it keys by game and day). */
   const started = useRef(false);
+
+  useEffect(() => {
+    if (!framed) return;
+    const detailFor = (event: Event) => {
+      const detail = (event as CustomEvent<unknown>).detail;
+      if (!detail || typeof detail !== 'object') return;
+      const { gameName, trigger } = detail as { gameName?: unknown; trigger?: unknown };
+      return gameName === 'sudoku' && trigger instanceof HTMLButtonElement ? trigger : undefined;
+    };
+    const openSettings = (event: Event) => { if (detailFor(event)) setSettingsOpen(true); };
+    const openHelp = (event: Event) => {
+      const trigger = detailFor(event);
+      if (!trigger) return;
+      help.button.current = trigger;
+      help.show();
+    };
+    window.addEventListener(GAME_FRAME_SETTINGS_EVENT, openSettings);
+    window.addEventListener(GAME_FRAME_HELP_EVENT, openHelp);
+    return () => {
+      window.removeEventListener(GAME_FRAME_SETTINGS_EVENT, openSettings);
+      window.removeEventListener(GAME_FRAME_HELP_EVENT, openHelp);
+    };
+  }, [framed, help]);
 
   useEffect(() => {
     const fresh = newSudokuBoard(puzzle.puzzle);
@@ -295,14 +319,14 @@ export default function SudokuGame() {
       </div>
       {/* Five equal icon buttons spread across the board's width: settings, pause or play, print, stats, how to play. */}
       <div className="sudoku-toolbar" role="group" aria-label="sudoku tools" data-testid="sudoku-toolbar">
-        <button ref={settingsButton} type="button" className="sudoku-icon-button" aria-label="sudoku settings" aria-haspopup="dialog" data-testid="game-settings-button" onClick={() => setSettingsOpen(true)}><svg viewBox="0 0 24 24" className="size-6" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" strokeWidth="1.6" /><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" /></svg></button>
+        {!framed && <button ref={settingsButton} type="button" className="sudoku-icon-button" aria-label="sudoku settings" aria-haspopup="dialog" data-testid="game-settings-button" onClick={() => setSettingsOpen(true)}><svg viewBox="0 0 24 24" className="size-6" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" strokeWidth="1.6" /><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" /></svg></button>}
         <button type="button" className="sudoku-icon-button sudoku-pause-button" aria-label={paused ? 'resume puzzle' : 'pause puzzle'} disabled={solved} onClick={togglePause}>{paused
           ? <svg viewBox="0 0 24 24" className="size-6" aria-hidden="true" focusable="false"><path d="M8.5 6.5v11l9-5.5z" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" /></svg>
           : <svg viewBox="0 0 24 24" className="size-6" aria-hidden="true" focusable="false"><path d="M9 6.5v11M15 6.5v11" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /></svg>}</button>
         <button type="button" className="sudoku-icon-button print-control" aria-label="print this puzzle" onClick={printPuzzle}><svg viewBox="0 0 24 24" className="size-6" aria-hidden="true" focusable="false"><path d="M7 9V4h10v5M7 17H5.5A2.5 2.5 0 0 1 3 14.5v-3A2.5 2.5 0 0 1 5.5 9h13a2.5 2.5 0 0 1 2.5 2.5v3a2.5 2.5 0 0 1-2.5 2.5H17M7 14h10v6H7z" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" /></svg></button>
-        <button type="button" className="sudoku-icon-button" aria-label="sudoku stats" aria-expanded={statsOpen} onClick={openStats}><svg viewBox="0 0 24 24" className="size-6" aria-hidden="true" focusable="false"><path d="M5 20V11M12 20V5M19 20v-6" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /></svg></button>
-        <GameHelpButton help={help} name={gameName('triage')} className="sudoku-icon-button" />
-        {statsOpen && <div className="sudoku-how sudoku-stats" role="region" aria-label="sudoku stats" data-testid="sudoku-stats">
+        {!framed && <button type="button" className="sudoku-icon-button" aria-label="sudoku stats" aria-expanded={statsOpen} onClick={openStats}><svg viewBox="0 0 24 24" className="size-6" aria-hidden="true" focusable="false"><path d="M5 20V11M12 20V5M19 20v-6" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /></svg></button>}
+        {!framed && <GameHelpButton help={help} name={gameName('triage')} className="sudoku-icon-button" />}
+        {!framed && statsOpen && <div className="sudoku-how sudoku-stats" role="region" aria-label="sudoku stats" data-testid="sudoku-stats">
           <p className="font-medium">your sudoku stats</p>
           {kept.on ? <>
             <table>
@@ -353,7 +377,8 @@ export default function SudokuGame() {
     </div>
     {solved && <div ref={solvedResult} className="sudoku-solved" tabIndex={-1} role="status" data-testid="sudoku-result"><p className="text-lg font-medium">solved.</p><p>{elapsed} · {errors} {errors === 1 ? 'error' : 'errors'}</p><p className="text-sm text-ink-soft">a new sudoku comes out tomorrow.</p></div>}
     {/* The same settings dialog as the other games (#823): the shared settings first, then sudoku's own. */}
-    <GameSettingsDialog open={settingsOpen} onClose={() => setSettingsOpen(false)} title="sudoku settings" returnFocusTo={settingsButton}>
+    {framed && <GameHelpButton help={help} name={gameName('triage')} className="hidden" />}
+    <GameSettingsDialog open={settingsOpen} onClose={() => setSettingsOpen(false)} title="sudoku settings" returnFocusTo={framed ? undefined : settingsButton}>
       <fieldset>
         <legend>gameboard settings</legend>
         {(Object.keys(DEFAULT_SUDOKU_SETTINGS) as Array<keyof SudokuSettings>).map((key) => {

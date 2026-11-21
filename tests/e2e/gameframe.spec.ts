@@ -1,17 +1,17 @@
 import { expect, test } from '@playwright/test';
 
 const games = [
-  { path: '/play/pillo', name: 'pillo', brandName: 'vialo', hasLegend: true },
-  { path: '/play/stat', name: 'stat', brandName: 'tachyyy', hasLegend: false },
-  { path: '/play/word-path', name: 'word path', brandName: 'piccline', hasLegend: false },
-  { path: '/play/crossword', name: 'crossword', brandName: 'crossword', hasLegend: false },
-  { path: '/play/sudoku', name: 'sudoku', brandName: 'sudoku', hasLegend: false },
-  { path: '/play/hello-cards', name: 'hello cards', brandName: 'hello cards', hasLegend: false },
+  { path: '/play/pillo', name: 'pillo', framed: false, bridge: false },
+  { path: '/play/stat', name: 'stat', framed: true, bridge: false },
+  { path: '/play/word-path', name: 'word path', framed: false, bridge: false },
+  { path: '/play/crossword', name: 'crossword', framed: true, bridge: true },
+  { path: '/play/sudoku', name: 'sudoku', framed: true, bridge: true },
+  { path: '/play/hello-cards', name: 'hello cards', framed: true, bridge: false },
 ] as const;
 
 test.describe('GameFrame shared layout (Scope 1)', () => {
   for (const game of games) {
-    test(`${game.name}: provides left panel, date line, controls row, and 44px tap targets`, async ({ page }) => {
+    test(`${game.name}: keeps the explicit Frame control ownership`, async ({ page }) => {
       await page.goto(game.path);
       await page.waitForLoadState('domcontentloaded');
 
@@ -25,42 +25,52 @@ test.describe('GameFrame shared layout (Scope 1)', () => {
 
       // Stats
       const stats = page.locator('.game-frame-stats');
-      await expect(stats).toBeVisible();
-      await expect(stats).toContainText(game.name === 'hello cards' ? 'questions asked' : '% solved');
-      await expect(stats).toContainText('played');
+      if (game.framed) {
+        await expect(stats).toBeVisible();
+        await expect(stats).toContainText(game.name === 'hello cards' ? 'questions asked' : '% solved');
+        await expect(stats).toContainText('played');
+      } else {
+        await expect(stats).toHaveCount(0);
+      }
 
       // Date line
       const dateLine = page.locator('.game-frame-dateline');
       await expect(dateLine).toBeVisible();
 
-      // Controls row
+      // Only opted-in routes use the Frame controls; held routes retain their legacy island controls.
       const gear = page.getByTestId('game-frame-gear');
+      const helpBtn = page.getByTestId('game-frame-help-button');
+      if (!game.framed) {
+        await expect(gear).toHaveCount(0);
+        await expect(helpBtn).toHaveCount(0);
+        return;
+      }
       await expect(gear).toBeVisible();
       const gearBox = await gear.boundingBox();
       expect(gearBox?.width).toBeGreaterThanOrEqual(44);
       expect(gearBox?.height).toBeGreaterThanOrEqual(44);
 
-      const helpBtn = page.getByTestId('game-frame-help-button');
       await expect(helpBtn).toBeVisible();
       const helpBox = await helpBtn.boundingBox();
       expect(helpBox?.width).toBeGreaterThanOrEqual(44);
       expect(helpBox?.height).toBeGreaterThanOrEqual(44);
 
-      // Popover interaction
-      await helpBtn.click();
-      const popover = page.locator('.game-frame-popover');
-      await expect(popover).toBeVisible();
-      await expect(popover).toContainText('HOW TO PLAY');
-
-      if (game.hasLegend) {
-        await expect(page.locator('.game-frame-legend')).toBeVisible();
+      if (game.bridge) {
+        // The one visible shared opener delegates to the island's established dialog and returns focus to this button.
+        await expect(page.getByRole('button', { name: `${game.name} settings` })).toHaveCount(1);
+        await expect(page.getByRole('button', { name: `how to play ${game.name}` })).toHaveCount(1);
+        await expect(page.getByTestId('game-settings-button')).toHaveCount(0);
+        await expect(page.getByTestId('game-help-button')).toHaveCount(0);
+        if (game.name === 'sudoku') await expect(page.getByRole('button', { name: 'sudoku stats' })).toHaveCount(0);
+        await helpBtn.click();
+        const dialog = page.getByRole('dialog', { name: `how to play ${game.name}` });
+        await expect(dialog).toBeVisible();
+        await page.keyboard.press('Escape');
+        await expect(helpBtn).toBeFocused();
+      } else {
+        await helpBtn.click();
+        await expect(page.locator('.game-frame-popover')).toBeVisible();
       }
-
-      // Close popover
-      await page.keyboard.press('Escape');
-      await page.mouse.move(0, 0);
-      await page.locator('body').click({ position: { x: 0, y: 0 } });
-      await expect(popover).toBeHidden();
     });
   }
 

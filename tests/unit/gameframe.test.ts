@@ -29,13 +29,15 @@ describe('GameFrame (Scope 1)', () => {
     expect(formatted).toBe('friday, november 20th · #312');
   });
 
-  it('GameFrameControls provides gear, help popover, and middle slot', () => {
+  it('GameFrameControls owns visible controls and dispatches to the framed island dialogs', () => {
     const controlsCode = readFileSync(resolve(root, 'src/islands/GameFrameControls.tsx'), 'utf-8');
     expect(controlsCode).toContain('data-testid="game-frame-gear"');
     expect(controlsCode).toContain('data-testid="game-frame-help-button"');
     expect(controlsCode).toContain('game-frame-controls-middle');
+    expect(controlsCode).toContain("'cueory:game-frame-settings'");
+    expect(controlsCode).toContain("'cueory:game-frame-help'");
+    expect(controlsCode).toContain('bridge = false');
     expect(controlsCode).toContain('game-frame-popover');
-    expect(controlsCode).toContain('game-frame-legend');
   });
 
   it('GameFrameStats renders % solved, current streak, best streak, and played', () => {
@@ -75,5 +77,17 @@ describe('GameFrame (Scope 1)', () => {
   it('uses the crossword assisted-solve eligibility for the sidebar best streak', () => {
     const statsCode = readFileSync(resolve(root, 'src/islands/GameFrameStats.tsx'), 'utf-8');
     expect(statsCode).toContain("id === 'cueword' ? longestStreak(stats, id) : ds.longestStreak");
+  });
+
+  it('makes framing an explicit route opt-in and retains legacy controls elsewhere', () => {
+    const frame = readFileSync(resolve(root, 'src/components/GameFrame.astro'), 'utf-8');
+    const page = readFileSync(resolve(root, 'src/components/GamePage.astro'), 'utf-8');
+    const header = readFileSync(resolve(root, 'src/islands/GameHeader.tsx'), 'utf-8');
+    expect(frame).toContain('framed = true');
+    expect(frame).toContain('{framed && <GameFrameStats');
+    expect(page).toContain('framed = false');
+    expect(page).toContain('{!framed && <div class="game-page-stats-container');
+    expect(header).toContain('GAME_FRAME_SETTINGS_EVENT');
+    expect(header).toContain('GAME_FRAME_HELP_EVENT');
   });
 });

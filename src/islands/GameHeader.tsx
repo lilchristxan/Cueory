@@ -1,14 +1,15 @@
 import '../styles/gameheader.css';
-import { useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { GameSettingsDialog } from './GameSettings.tsx';
 import { GameHelpButton, type GameHelpState } from './GameHelp';
+import { GAME_FRAME_HELP_EVENT, GAME_FRAME_SETTINGS_EVENT } from './GameFrameControls';
 
 /**
  * The same corner row on every game box (Christian's brief, 2026-11-17): a drawn gear at the top left opens the game's
  * settings, with the shared settings (theme, contrast, motion, sound) in the same dialog, and the "?" at the top right
  * opens how to play. `end` holds any other corner buttons (such as print), placed just before the "?".
  */
-export default function GameHeader({ name, help, helpExtra, settings, end }: {
+export default function GameHeader({ name, help, helpExtra, settings, end, framed = false }: {
   /** The game's name, for the button labels and the settings title. */
   name: string;
   help: GameHelpState;
@@ -17,11 +18,37 @@ export default function GameHeader({ name, help, helpExtra, settings, end }: {
   /** The game's own settings, shown below the shared ones. */
   settings?: ReactNode;
   end?: ReactNode;
+  /** A GameFrame route moves this header's existing dialogs onto the shared Frame controls. */
+  framed?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const gear = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (!framed) return;
+    const detailFor = (event: Event) => {
+      const detail = (event as CustomEvent<unknown>).detail;
+      if (!detail || typeof detail !== 'object') return;
+      const { gameName, trigger } = detail as { gameName?: unknown; trigger?: unknown };
+      return gameName === name && trigger instanceof HTMLButtonElement ? trigger : undefined;
+    };
+    const openSettings = (event: Event) => { if (detailFor(event)) setOpen(true); };
+    const openHelp = (event: Event) => {
+      const trigger = detailFor(event);
+      if (!trigger) return;
+      // GameHelp restores focus through this existing ref after its dialog closes.
+      help.button.current = trigger;
+      help.show();
+    };
+    window.addEventListener(GAME_FRAME_SETTINGS_EVENT, openSettings);
+    window.addEventListener(GAME_FRAME_HELP_EVENT, openHelp);
+    return () => {
+      window.removeEventListener(GAME_FRAME_SETTINGS_EVENT, openSettings);
+      window.removeEventListener(GAME_FRAME_HELP_EVENT, openHelp);
+    };
+  }, [framed, help, name]);
   return (
-    <div className="game-header" data-print-hidden>
+    <>
+    {!framed && <div className="game-header" data-print-hidden>
       <button
         ref={gear}
         type="button"
@@ -40,9 +67,12 @@ export default function GameHeader({ name, help, helpExtra, settings, end }: {
         {end}
         <GameHelpButton help={help} name={name} className="corner-button corner-button-quiet" extra={helpExtra} />
       </div>
-      <GameSettingsDialog open={open} onClose={() => setOpen(false)} title={`${name} settings`} returnFocusTo={gear}>
-        {settings}
-      </GameSettingsDialog>
-    </div>
+    </div>}
+    {/* In framed mode this stays out of the accessibility tree but keeps the established help dialog and seen-state. */}
+    {framed && <GameHelpButton help={help} name={name} className="hidden" extra={helpExtra} />}
+    <GameSettingsDialog open={open} onClose={() => setOpen(false)} title={`${name} settings`} returnFocusTo={framed ? undefined : gear}>
+      {settings}
+    </GameSettingsDialog>
+    </>
   );
 }

@@ -5,50 +5,53 @@ interface Props {
   gameName: string;
   steps: readonly string[];
   hasPillLegend?: boolean;
+  /** Framed daily-game islands listen for the events and retain their existing dialogs. */
+  bridge?: boolean;
   children?: ReactNode;
 }
 
-export default function GameFrameControls({ gameName, steps, hasPillLegend = false, children }: Props) {
-  const [settingsOpen, setSettingsOpen] = useState(false);
-  const [pinned, setPinned] = useState(false);
-  const [hovered, setHovered] = useState(false);
+export const GAME_FRAME_SETTINGS_EVENT = 'cueory:game-frame-settings';
+export const GAME_FRAME_HELP_EVENT = 'cueory:game-frame-help';
+
+/** The shared Frame owns the visible controls; the framed island retains its established dialog content and state. */
+export default function GameFrameControls({ gameName, steps, hasPillLegend = false, bridge = false, children }: Props) {
   const gearRef = useRef<HTMLButtonElement>(null);
   const helpRef = useRef<HTMLDivElement>(null);
   const helpBtnRef = useRef<HTMLButtonElement>(null);
-
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [pinned, setPinned] = useState(false);
+  const [hovered, setHovered] = useState(false);
   const helpOpen = pinned || hovered;
 
-  // Close popover on Escape or click outside
   useEffect(() => {
-    if (!helpOpen) return;
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        setPinned(false);
-        setHovered(false);
-        helpBtnRef.current?.focus();
-      }
-    };
-    const handleClickOutside = (e: PointerEvent) => {
-      if (helpRef.current && !helpRef.current.contains(e.target as Node)) {
-        setPinned(false);
-        setHovered(false);
-      }
-    };
-    document.addEventListener('keydown', handleKeyDown);
-    document.addEventListener('pointerdown', handleClickOutside);
-    return () => {
-      document.removeEventListener('keydown', handleKeyDown);
-      document.removeEventListener('pointerdown', handleClickOutside);
-    };
-  }, [helpOpen]);
-
-  const toggleHelp = () => {
-    if (pinned) {
+    if (bridge || !helpOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
       setPinned(false);
       setHovered(false);
-    } else {
-      setPinned(true);
+      helpBtnRef.current?.focus();
+    };
+    const onOutside = (event: PointerEvent) => {
+      if (helpRef.current && !helpRef.current.contains(event.target as Node)) {
+        setPinned(false);
+        setHovered(false);
+      }
+    };
+    document.addEventListener('keydown', onKeyDown);
+    document.addEventListener('pointerdown', onOutside);
+    return () => {
+      document.removeEventListener('keydown', onKeyDown);
+      document.removeEventListener('pointerdown', onOutside);
+    };
+  }, [bridge, helpOpen]);
+
+  const open = (type: typeof GAME_FRAME_SETTINGS_EVENT | typeof GAME_FRAME_HELP_EVENT, trigger: HTMLButtonElement | null) => {
+    if (bridge) {
+      if (trigger) window.dispatchEvent(new CustomEvent(type, { detail: { gameName, trigger } }));
+      return;
     }
+    if (type === GAME_FRAME_SETTINGS_EVENT) setSettingsOpen(true);
+    else setPinned((current) => !current);
   };
 
   return (
@@ -61,7 +64,7 @@ export default function GameFrameControls({ gameName, steps, hasPillLegend = fal
         aria-label={`${gameName} settings`}
         aria-haspopup="dialog"
         data-testid="game-frame-gear"
-        onClick={() => setSettingsOpen(true)}
+        onClick={() => open(GAME_FRAME_SETTINGS_EVENT, gearRef.current)}
       >
         <span aria-hidden="true" className="game-frame-gear-icon">⚙</span>
       </button>
@@ -72,72 +75,52 @@ export default function GameFrameControls({ gameName, steps, hasPillLegend = fal
       </div>
 
       {/* The ? sits at top-right of the board */}
-      <div
-        ref={helpRef}
-        className="game-frame-how-wrap"
-        data-open={helpOpen ? 'true' : 'false'}
-        onPointerEnter={(e) => {
-          if (e.pointerType === 'mouse') setHovered(true);
-        }}
-        onPointerLeave={(e) => {
-          if (e.pointerType === 'mouse') setHovered(false);
-        }}
-      >
+      {bridge ? (
         <button
           ref={helpBtnRef}
           type="button"
           className="game-frame-btn game-frame-how"
           aria-label={`how to play ${gameName}`}
           aria-haspopup="dialog"
-          aria-expanded={helpOpen}
           data-testid="game-frame-help-button"
-          onClick={toggleHelp}
+          onClick={() => open(GAME_FRAME_HELP_EVENT, helpBtnRef.current)}
         >
           <span aria-hidden="true" className="game-frame-how-q">?</span>
         </button>
-
-        {/* Popover showing the game's steps */}
+      ) : (
         <div
-          className="game-frame-popover"
-          role="region"
-          aria-label={`how to play ${gameName} guide`}
+          ref={helpRef}
+          className="game-frame-how-wrap"
+          data-open={helpOpen ? 'true' : 'false'}
+          onPointerEnter={(event) => { if (event.pointerType === 'mouse') setHovered(true); }}
+          onPointerLeave={(event) => { if (event.pointerType === 'mouse') setHovered(false); }}
         >
-          <div className="game-frame-popover-title">HOW TO PLAY</div>
-          <ol className="game-frame-popover-steps">
-            {steps.map((step, idx) => (
-              <li key={idx} className="game-frame-popover-step">
-                <b className="game-frame-step-num" aria-hidden="true">{idx + 1}</b>
-                <span className="game-frame-step-text">{step}</span>
-              </li>
-            ))}
-          </ol>
-
-          {/* Vialo pill states legend */}
-          {hasPillLegend && (
-            <div className="game-frame-legend">
-              <div className="game-frame-legend-item">
-                <span className="game-frame-pill-cap game-frame-pill-green" aria-hidden="true">a</span>
-                <span>right letter, right spot</span>
-              </div>
-              <div className="game-frame-legend-item">
-                <span className="game-frame-pill-cap game-frame-pill-oxblood" aria-hidden="true">a</span>
-                <span>right letter, wrong spot</span>
-              </div>
-              <div className="game-frame-legend-item">
-                <span className="game-frame-pill-cap game-frame-pill-ivory" aria-hidden="true">a</span>
-                <span>not in the word</span>
-              </div>
-            </div>
-          )}
+          <button
+            ref={helpBtnRef}
+            type="button"
+            className="game-frame-btn game-frame-how"
+            aria-label={`how to play ${gameName}`}
+            aria-haspopup="dialog"
+            aria-expanded={helpOpen}
+            data-testid="game-frame-help-button"
+            onClick={() => open(GAME_FRAME_HELP_EVENT, helpBtnRef.current)}
+          >
+            <span aria-hidden="true" className="game-frame-how-q">?</span>
+          </button>
+          <div className="game-frame-popover" role="region" aria-label={`how to play ${gameName} guide`}>
+            <div className="game-frame-popover-title">HOW TO PLAY</div>
+            <ol className="game-frame-popover-steps">
+              {steps.map((step, index) => <li key={index} className="game-frame-popover-step"><b className="game-frame-step-num" aria-hidden="true">{index + 1}</b><span className="game-frame-step-text">{step}</span></li>)}
+            </ol>
+            {hasPillLegend && <div className="game-frame-legend">
+              <div className="game-frame-legend-item"><span className="game-frame-pill-cap game-frame-pill-green" aria-hidden="true">a</span><span>right letter, right spot</span></div>
+              <div className="game-frame-legend-item"><span className="game-frame-pill-cap game-frame-pill-oxblood" aria-hidden="true">a</span><span>right letter, wrong spot</span></div>
+              <div className="game-frame-legend-item"><span className="game-frame-pill-cap game-frame-pill-ivory" aria-hidden="true">a</span><span>not in the word</span></div>
+            </div>}
+          </div>
         </div>
-      </div>
-
-      <GameSettingsDialog
-        open={settingsOpen}
-        onClose={() => setSettingsOpen(false)}
-        title={`${gameName} settings`}
-        returnFocusTo={gearRef}
-      />
+      )}
+      {!bridge && <GameSettingsDialog open={settingsOpen} onClose={() => setSettingsOpen(false)} title={`${gameName} settings`} returnFocusTo={gearRef} />}
     </div>
   );
 }

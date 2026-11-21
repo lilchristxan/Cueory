@@ -8,10 +8,14 @@ interface Props {
   game: string;
   tagline?: string;
   dateLine?: string;
-  puzzleNumber?: number | string;
   howSteps?: readonly string[];
+  puzzleNumber?: number | string;
   wide?: boolean;
   showcase?: boolean;
+  /** Opted-in game pages move visible page controls and stats to this Frame. */
+  framed?: boolean;
+  /** True only where a framed island receives the Frame's named control events. */
+  bridge?: boolean;
 }
 
 const {
@@ -21,6 +25,8 @@ const {
   howSteps: propHowSteps,
   wide = false,
   showcase = false,
+  framed = true,
+  bridge = false,
 } = Astro.props;
 
 type GameConfig = {
@@ -257,7 +263,7 @@ const activeDateLine = propDateLine ?? formatGameDateLine(new Date());
       <div class="game-frame-divider" aria-hidden="true"></div>
 
       <!-- Stats: % solved, current streak, best streak, played -->
-      <GameFrameStats client:load game={currentConfig.id} />
+      {framed && <GameFrameStats client:load game={currentConfig.id} />}
     </aside>
 
     <!-- Center area -->
@@ -271,14 +277,11 @@ const activeDateLine = propDateLine ?? formatGameDateLine(new Date());
       </div>
 
       <!-- Row above the board: Settings gear (top-left), middle slot for game-specific controls, ? popover (top-right) -->
-      <GameFrameControls
-        client:load
-        gameName={currentConfig.name}
-        steps={activeSteps}
-        hasPillLegend={currentConfig.hasPillLegend}
-      >
-        <slot name="controls" />
-      </GameFrameControls>
+      {framed && (
+        <GameFrameControls client:load gameName={currentConfig.name} steps={activeSteps} hasPillLegend={currentConfig.hasPillLegend} bridge={bridge}>
+          <slot name="controls" />
+        </GameFrameControls>
+      )}
 
       <!-- Slot for page title -->
       <slot name="title" />
