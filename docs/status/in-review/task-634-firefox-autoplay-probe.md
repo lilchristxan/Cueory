@@ -1,0 +1,2 @@
+status: #634 Firefox autoplay diagnostic probe: on a Firefox failure, the existing desktop autoplay assertion attaches a bounded, test-only trace of trusted track/control pointer boundaries, post-dispatch CSS hover and geometry, pointer capture, and autoplay-hold mutations. Product carousel behavior is unchanged.
+decision: The probe is temporary and must be removed in the same pull request as the eventual Firefox autoplay fix. It preserves the existing assertion, timing, and project scope; it adds neither retries nor skips.
