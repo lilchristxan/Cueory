@@ -1,0 +1,1 @@
+status: Task 178, Anatomy Lab core and study tools (#651 rebuild without database change): interactive anatomical diagrams, hierarchy browsing, recall mode, nearby region inspection, compare views, speech synthesis, and local browser storage fallback for saved views and misses while database migration is held for Christian. Reachable only via /preview/anatomy-lab.

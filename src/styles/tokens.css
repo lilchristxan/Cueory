@@ -101,6 +101,8 @@
   --color-board-given: color-mix(in srgb, #eadccf 50%, #f9f5ef); /* Linen + Ivory — sudoku given numbers, lighter than the tint */
   --color-board-match: #6b5243;    /* Bronze   — sudoku squares holding the selected number */
   --color-on-board-match: #f9f5ef; /* Ivory    — numbers on those squares */
+  /* How opaque a faded structure is (Task 178 study tools): see-through enough to look past, solid enough to tap. */
+  --anatomy-faded-opacity: 0.35;
   --color-board-cell: #f9f5ef;     /* Ivory    — an empty square */
   --color-board-ink: #3e2c23;      /* Espresso — numbers and grid lines on the board */
   --color-board-ink-soft: #6b5243; /* Bronze   — pencil marks on the board */
@@ -531,6 +533,7 @@
     --color-board-given: color-mix(in srgb, #cbb8a4 90%, #6b5243); /* Sand + Bronze, lighter than the tint */
     --color-board-match: #6b5243;    /* Bronze */
     --color-on-board-match: #f9f5ef; /* Ivory */
+    --anatomy-faded-opacity: 0.35;
     --color-board-cell: #cbb8a4;     /* Sand: light squares on the dark page, like Daytime */
     --color-board-ink: #1c1917;      /* Charcoal */
     --color-board-ink-soft: #3a2d24; /* Walnut */
@@ -623,6 +626,7 @@
   --color-board-given: color-mix(in srgb, #cbb8a4 90%, #6b5243); /* Sand + Bronze, lighter than the tint */
   --color-board-match: #6b5243;    /* Bronze */
   --color-on-board-match: #f9f5ef; /* Ivory */
+  --anatomy-faded-opacity: 0.35;
   --color-board-cell: #cbb8a4;     /* Sand: light squares on the dark page, like Daytime */
   --color-board-ink: #1c1917;      /* Charcoal */
   --color-board-ink-soft: #3a2d24; /* Walnut */
