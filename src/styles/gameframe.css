@@ -218,6 +218,14 @@
   width: 100%;
 }
 
+.game-frame-stats-status {
+  margin: 0;
+  color: var(--color-ink-soft);
+  font-size: var(--game-frame-stat-label-size);
+  line-height: 1.4;
+  text-align: center;
+}
+
 .game-frame-stat {
   display: flex;
   flex-direction: column;

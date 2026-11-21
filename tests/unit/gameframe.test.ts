@@ -77,6 +77,16 @@ describe('GameFrame (Scope 1)', () => {
     expect(statsCode).toContain('if (event.persisted) refresh()');
   });
 
+  it('surfaces framed persistence status without mounting a second stats panel', () => {
+    const statsCode = readFileSync(resolve(root, 'src/islands/GameFrameStats.tsx'), 'utf-8');
+    const resultCode = readFileSync(resolve(root, 'src/islands/gameresults.ts'), 'utf-8');
+    const panelCode = readFileSync(resolve(root, 'src/islands/GameStatsPanel.tsx'), 'utf-8');
+    expect(resultCode).toContain("'cueory:game-stats-status'");
+    expect(panelCode).toContain('reportStatsStatus');
+    expect(statsCode).toContain('game-frame-stats-status');
+    expect(statsCode).toContain("role=\"status\"");
+  });
+
   it('keeps Sudoku-owned stats out of the shared framed stats lifecycle', () => {
     const frame = readFileSync(resolve(root, 'src/components/GameFrame.astro'), 'utf-8');
     const statsCode = readFileSync(resolve(root, 'src/islands/GameFrameStats.tsx'), 'utf-8');

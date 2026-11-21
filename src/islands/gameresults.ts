@@ -19,6 +19,19 @@ export const GAME_RESULT_EVENT = 'cueory:game-result';
 /** Fired only after the browser's shared game-history record has been saved or deleted. */
 export const GAME_STATS_CHANGED_EVENT = 'cueory:game-stats-changed';
 
+/** Fired when framed persistence has a user-facing save status to announce. */
+export const GAME_STATS_STATUS_EVENT = 'cueory:game-stats-status';
+
+export interface GameStatsStatusDetail {
+  message: string;
+}
+
+declare global {
+  interface WindowEventMap {
+    'cueory:game-stats-status': CustomEvent<GameStatsStatusDetail>;
+  }
+}
+
 /** The separate event that opens the shared finished-game dialog. */
 export const GAME_RESULT_CARD_EVENT = 'cueory:game-result-card';
 
@@ -223,6 +236,19 @@ export function localDay(date: Date): string {
  */
 const held: RoundResult[] = [];
 const pendingCards: GameResultCard[] = [];
+let latestStatsStatus = '';
+
+/** Announces a persistence result to the visible framed stats island, including when it hydrates later. */
+export function reportStatsStatus(message: string): void {
+  latestStatsStatus = message;
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent<GameStatsStatusDetail>(GAME_STATS_STATUS_EVENT, { detail: { message } }));
+  }
+}
+
+export function currentStatsStatus(): string {
+  return latestStatsStatus;
+}
 
 /** Drops the waiting rounds of one game, or of every game, so none of them can be kept later. */
 export function forgetHeldRounds(game?: GameId): void {
