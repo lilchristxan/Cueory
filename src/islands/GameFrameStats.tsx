@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { browserStorage } from '../scripts/storage';
 import { GAME_STATS_CHANGED_EVENT, loadStats, localDay } from './gameresults';
 import { currentStreak, dailyStats, longestStreak, wordPathSummary, type GameId, type GameStats } from './gamestats';
@@ -15,9 +15,6 @@ interface StatValues {
   played: number;
   firstLabel: string;
 }
-
-// Sudoku's picker and per-level view are not initial JavaScript for the other framed games.
-const SudokuFrameStats = lazy(() => import('./SudokuFrameStats'));
 
 function resolveGameId(game: string): GameId | string {
   if (game === 'pillo' || game === 'vialo' || game === 'pulse') return 'pulse';
@@ -70,8 +67,6 @@ export default function GameFrameStats({ game }: Props) {
     const saved = loadStats(browserStorage(), today);
     return computeStats(game, saved.stats, today);
   });
-  const isSudoku = resolveGameId(game) === 'triage';
-
   useEffect(() => {
     const refresh = () => {
       const today = localDay(new Date());
@@ -87,8 +82,7 @@ export default function GameFrameStats({ game }: Props) {
     };
   }, [game]);
 
-  return (
-    <div className="game-frame-stats" data-testid="game-frame-stats" aria-label="your stats">
+  return <>
       <div className="game-frame-stat">
         <span className="game-frame-stat-value">{stats.winPercent}</span>
         <span className="game-frame-stat-label">{stats.firstLabel}</span>
@@ -105,7 +99,5 @@ export default function GameFrameStats({ game }: Props) {
         <span className="game-frame-stat-value">{stats.played}</span>
         <span className="game-frame-stat-label">played</span>
       </div>
-      {isSudoku && <Suspense fallback={null}><SudokuFrameStats /></Suspense>}
-    </div>
-  );
+    </>;
 }

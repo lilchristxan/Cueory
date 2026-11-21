@@ -75,9 +75,12 @@ describe('GameFrame (Scope 1)', () => {
   });
 
   it('keeps Sudoku’s existing 400-day solve cleanup in the framed stats lifecycle only', () => {
+    const frame = readFileSync(resolve(root, 'src/components/GameFrame.astro'), 'utf-8');
     const statsCode = readFileSync(resolve(root, 'src/islands/GameFrameStats.tsx'), 'utf-8');
     const sudokuCode = readFileSync(resolve(root, 'src/islands/SudokuFrameStats.tsx'), 'utf-8');
-    expect(statsCode).toContain("lazy(() => import('./SudokuFrameStats'))");
+    expect(frame).toContain("currentConfig.id === 'triage' && <SudokuFrameStats client:only=\"react\" />");
+    expect(statsCode).not.toContain('lazy(');
+    expect(statsCode).not.toContain('Suspense');
     expect(sudokuCode).toContain('loadSudokuStats(browserStorage(), today)');
   });
 
@@ -91,7 +94,7 @@ describe('GameFrame (Scope 1)', () => {
     const page = readFileSync(resolve(root, 'src/components/GamePage.astro'), 'utf-8');
     const header = readFileSync(resolve(root, 'src/islands/GameHeader.tsx'), 'utf-8');
     expect(frame).toContain('framed = true');
-    expect(frame).toContain('{framed && <GameFrameStats');
+    expect(frame).toContain('<GameFrameStats client:load game={currentConfig.id} />');
     expect(page).toContain('framed = false');
     expect(page).toContain('{!framed && <div class="game-page-stats-container');
     expect(header).toContain('GAME_FRAME_SETTINGS_EVENT');
