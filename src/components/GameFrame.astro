@@ -266,7 +266,10 @@ const activeDateLine = propDateLine ?? formatGameDateLine(new Date());
       <!-- Stats: generic Frame numbers on every opted-in route; Sudoku owns its separately hydrated level view. -->
       {framed && <div class="game-frame-stats" data-testid="game-frame-stats" aria-label="your stats">
         <GameFrameStats client:load game={currentConfig.id} />
-        {currentConfig.id === 'triage' && <SudokuFrameStats client:only="react" />}
+        {currentConfig.id === 'triage' && <>
+          <SudokuFrameStats client:only="react" />
+          <noscript><p>Sudoku level statistics appear when JavaScript is available.</p></noscript>
+        </>}
       </div>}
     </aside>
 
