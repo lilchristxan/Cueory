@@ -59,11 +59,11 @@ async function applyTreatment(page: Page, treatment: Treatment): Promise<Record<
     state.setAttribute(marker, selected);
 
     const css = selected === 'filter-off'
-      ? `html[${marker}="filter-off"] .veil { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }`
+      ? `html[${marker}="filter-off"] *, html[${marker}="filter-off"] *::before, html[${marker}="filter-off"] *::after { filter: none !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }`
       : selected === 'animation-off'
-        ? `html[${marker}="animation-off"] .modes *, html[${marker}="animation-off"] .modes *::before, html[${marker}="animation-off"] .modes *::after { animation: none !important; transition: none !important; }`
+        ? `html[${marker}="animation-off"] *, html[${marker}="animation-off"] *::before, html[${marker}="animation-off"] *::after { animation: none !important; }`
         : selected === 'combined'
-          ? `html[${marker}="combined"] .veil { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; } html[${marker}="combined"] .modes *, html[${marker}="combined"] .modes *::before, html[${marker}="combined"] .modes *::after { animation: none !important; transition: none !important; }`
+          ? `html[${marker}="combined"] *, html[${marker}="combined"] *::before, html[${marker}="combined"] *::after { filter: none !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important; animation: none !important; }`
           : '';
 
     if (css) {
@@ -74,29 +74,52 @@ async function applyTreatment(page: Page, treatment: Treatment): Promise<Record<
       } catch (error) {
         return {
           applied: false,
+          filter: null,
           backdropFilter: null,
+          webkitBackdropFilter: null,
           animationName: null,
+          pseudoAnimationName: null,
           veilFound: false,
+          vialImageFound: false,
           illustrationFound: false,
+          cardFound: false,
+          transitionsUntouched: null,
           error: error instanceof Error ? error.name : 'stylesheet-unavailable',
         };
       }
     }
 
     const veil = document.querySelector<HTMLElement>('.veil');
+    const vialImage = document.querySelector<HTMLElement>('.vial-img');
     const illustration = document.querySelector<HTMLElement>('.modes .ill-anim');
-    const veilStyle = veil ? getComputedStyle(veil) : null;
-    const illustrationStyle = illustration ? getComputedStyle(illustration) : null;
+    const card = document.querySelector<HTMLElement>('.mode-card');
+    const styleOf = (element: HTMLElement | null, pseudo?: string) => element ? getComputedStyle(element, pseudo) : null;
+    const veilStyle = styleOf(veil);
+    const vialStyle = styleOf(vialImage);
+    const illustrationStyle = styleOf(illustration);
+    const cardBeforeStyle = styleOf(card, '::before');
     const filterExpected = selected === 'filter-off' || selected === 'combined';
     const animationExpected = selected === 'animation-off' || selected === 'combined';
-    const filterValue = veilStyle?.getPropertyValue('backdrop-filter') || veilStyle?.getPropertyValue('-webkit-backdrop-filter') || null;
+    const filterValue = vialStyle?.filter || null;
+    const backdropValue = veilStyle?.getPropertyValue('backdrop-filter') || null;
+    const webkitBackdropValue = veilStyle?.getPropertyValue('-webkit-backdrop-filter') || null;
     const animationValue = illustrationStyle?.animationName ?? null;
+    const pseudoAnimationValue = cardBeforeStyle?.animationName ?? null;
+    const filterApplied = vialImage !== null && filterValue === 'none';
+    const backdropApplied = veil !== null && (backdropValue === 'none' || webkitBackdropValue === 'none');
+    const animationApplied = illustration !== null && animationValue === 'none' && card !== null && pseudoAnimationValue === 'none';
     return {
-      applied: (!filterExpected || (veil !== null && filterValue === 'none')) && (!animationExpected || (illustration !== null && animationValue === 'none')),
-      backdropFilter: filterValue,
+      applied: (!filterExpected || (filterApplied && backdropApplied)) && (!animationExpected || animationApplied),
+      filter: filterValue,
+      backdropFilter: backdropValue,
+      webkitBackdropFilter: webkitBackdropValue,
       animationName: animationValue,
+      pseudoAnimationName: pseudoAnimationValue,
       veilFound: veil !== null,
+      vialImageFound: vialImage !== null,
       illustrationFound: illustration !== null,
+      cardFound: card !== null,
+      transitionsUntouched: illustrationStyle?.transitionProperty ?? null,
       error: null,
     };
   }, treatment);
