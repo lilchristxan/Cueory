@@ -324,7 +324,53 @@ test('wider screens show the preview in two columns, phones stacked with the via
   await section(page).locator('#mode-video [data-mode-open]').click();
   const preview = page.getByRole('dialog', { name: 'video' });
   await expect(preview).toBeVisible();
-  await expect.poll(() => page.evaluate(() => document.querySelector('[data-mode-preview]')!.getAnimations({ subtree: true }).length)).toBe(0);
+  try {
+    await expect.poll(() => page.evaluate(() => document.querySelector('[data-mode-preview]')!.getAnimations({ subtree: true }).length)).toBe(0);
+  } catch (error) {
+    // Failure-only evidence for WebKit: retain the existing idle assertion while identifying every animation that
+    // prevented the layout measurement from starting. This does not change preview behavior or timing.
+    const animations = await page.evaluate(() => {
+      const preview = document.querySelector<HTMLElement>('[data-mode-preview]')!;
+      const describeTarget = (target: Element | null) => {
+        if (!target) return null;
+        const element = target as HTMLElement;
+        const rect = element.getBoundingClientRect();
+        return {
+          tag: element.tagName.toLowerCase(),
+          id: element.id || null,
+          classes: [...element.classList],
+          previewPart: element.getAttribute('data-mode-preview') ?? null,
+          bounds: { x: rect.x, y: rect.y, width: rect.width, height: rect.height },
+        };
+      };
+      return preview.getAnimations({ subtree: true }).map((animation, index) => {
+        const effect = animation.effect;
+        const timing = effect?.getComputedTiming();
+        const localTime = typeof timing?.localTime === 'number' ? timing.localTime : null;
+        const delay = typeof timing?.delay === 'number' ? timing.delay : null;
+        const endTime = typeof timing?.endTime === 'number' ? timing.endTime : null;
+        const phase = localTime === null || delay === null || endTime === null ? null :
+          localTime < delay ? 'before' : localTime >= endTime ? 'after' : 'active';
+        return {
+          index,
+          playState: animation.playState,
+          pending: animation.pending,
+          currentTime: animation.currentTime,
+          phase,
+          progress: timing?.progress ?? null,
+          duration: timing?.activeDuration ?? null,
+          delay,
+          endTime,
+          target: describeTarget(effect instanceof KeyframeEffect ? effect.target : null),
+        };
+      });
+    });
+    await testInfo.attach('preview-layout-animations', {
+      body: JSON.stringify({ viewport: page.viewportSize(), animations }, null, 2),
+      contentType: 'application/json',
+    });
+    throw error;
+  }
   const bottle = (await preview.locator('[data-mode-preview-vial]').boundingBox())!;
   const words = (await preview.locator('.mode-preview-details').boundingBox())!;
   if (sizeOf(testInfo) === 'phone') expect(words.y).toBeGreaterThanOrEqual(bottle.y + bottle.height);
