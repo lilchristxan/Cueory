@@ -6,6 +6,7 @@ import {
   AUTO_ADVANCE_MS,
   autoplayHold,
   canAutoAdvance,
+  illustrationsMayLoop,
   canEnhanceCarousel,
   carouselState,
   clipAround,
@@ -408,5 +409,21 @@ describe("HomeV2's straight row of vials (P6)", () => {
     expect([1, 2, 3, 4, 5].map((o) => rowPlace(o, desktop).shown)).toEqual([true, true, true, true, false]);
     // The front vial always shows, even in a room narrower than itself.
     expect(rowPlace(0, 0.1).shown).toBe(true);
+  });
+});
+
+describe('illustration loops (#634)', () => {
+  const on = { reducedMotion: false, paused: false, onScreen: true, previewOpen: false };
+  it('run only while on screen, playing, motion allowed and no preview open', () => {
+    expect(illustrationsMayLoop(on)).toBe(true);
+    expect(illustrationsMayLoop({ ...on, reducedMotion: true })).toBe(false);
+    expect(illustrationsMayLoop({ ...on, paused: true })).toBe(false);
+    expect(illustrationsMayLoop({ ...on, onScreen: false })).toBe(false);
+    expect(illustrationsMayLoop({ ...on, previewOpen: true })).toBe(false);
+  });
+  it('are gated by data-looping in the stylesheet, and the preview scrim has no blur', () => {
+    const css = readFileSync('src/styles/global.css', 'utf8');
+    expect(css).toMatch(/\.modes\[data-motion\]:not\(\[data-paused\]\)\[data-looping\] \.mode-card\[data-active\]/);
+    expect(css).not.toMatch(/\.mode-preview-scrim \{[^}]*backdrop-filter/);
   });
 });

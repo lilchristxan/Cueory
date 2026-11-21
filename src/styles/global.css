@@ -1540,11 +1540,12 @@ html:has(dialog.menu-panel[open]) {
 }
 
 /*
-  The illustration loops play only on the card in the middle and in the open preview, only once the script has checked
-  the visitor's motion setting (data-motion), and stop with either pause button (data-paused). Without them every illustration is still and
+  The illustration loops play only on the card in the middle, only while the carousel is on screen with no preview open
+  and the visitor's motion setting allows it (data-looping, set by the script from illustrationsMayLoop), and stop with
+  either pause button. The preview's scrim is a plain translucent color: a blur over the live page cost WebKit its frames (#634). Without them every illustration is still and
   complete. Each loop is 6 s, the same as the auto-advance.
 */
-.modes[data-motion]:not([data-paused]) :is(.mode-card[data-active], .mode-preview) {
+.modes[data-motion]:not([data-paused])[data-looping] .mode-card[data-active] {
   & .ill-video-press { animation: ill-video-press 6s ease-in-out infinite both; }
   & .ill-video-progress { animation: ill-video-progress 6s ease-in-out infinite both; }
 
@@ -1788,8 +1789,6 @@ html:has(dialog.menu-panel[open]) {
     position: fixed;
     inset: 0;
     background-color: rgb(var(--shadow-tint) / var(--scrim-alpha));
-    -webkit-backdrop-filter: blur(var(--blur-scrim));
-    backdrop-filter: blur(var(--blur-scrim));
   }
 
   .mode-preview-panel {
