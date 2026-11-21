@@ -112,6 +112,8 @@ import {
   revealedQuizTarget,
   reviewQuizPool,
   savedCamera,
+  cameraToModelFrame,
+  cameraToWorldFrame,
   savingViewBusy,
   savingViewSettled,
   savingViewStarted,
@@ -1511,6 +1513,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
   /** A "find it" round over the review queue only: every queued structure is shown first, then asked about. */
   const startReviewQuiz = () => {
     if (reviewPool.length === 0 || !ready) return;
+    stopRecall();
     changeVisibility((v) => ({ hidden: expandNearby(v.hidden, reviewPool), faded: v.faded }));
     setSelected(null);
     setQuiz(startQuiz(reviewPool, Math.random));
@@ -1525,7 +1528,8 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
     if (!activeUserId || identity.userId !== activeUserId) return;
     const name = viewName.trim();
     setSavingViews((current) => savingViewStarted(current, key));
-    void study.saveView({ systemKey: key, name, camera: scene.cameraState(), hidden, faded, selected }, identity.userId)
+    const modelCamera = cameraToModelFrame(scene.cameraState(), posture);
+    void study.saveView({ systemKey: key, name, camera: modelCamera, hidden, faded, selected }, identity.userId)
       .then((outcome) => {
         if (!identityGuard.isCurrent(identity) || activeSystemKeyRef.current !== key) return;
         if (!outcome.ok) {
@@ -1585,7 +1589,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
     }
     changeVisibility(() => restored);
     setSelected(selectedId);
-    scene.applyCameraState(camera);
+    scene.applyCameraState(cameraToWorldFrame(camera, posture));
     if (!loader || missingFiles.length === 0) {
       setAnnounce(`opened the view "${view.name}".`);
       return;

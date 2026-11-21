@@ -272,20 +272,11 @@ export function isMissingDatabaseRpc(error: unknown): boolean {
 const memoryStore = new Map<string, string>();
 
 function storageGet(key: string): string | null {
-  try {
-    return typeof localStorage !== 'undefined' ? localStorage.getItem(key) : memoryStore.get(key) ?? null;
-  } catch {
-    return memoryStore.get(key) ?? null;
-  }
+  return memoryStore.get(key) ?? null;
 }
 
 function storageSet(key: string, value: string): void {
-  try {
-    if (typeof localStorage !== 'undefined') localStorage.setItem(key, value);
-    else memoryStore.set(key, value);
-  } catch {
-    memoryStore.set(key, value);
-  }
+  memoryStore.set(key, value);
 }
 
 function generateLocalId(): string {
@@ -468,29 +459,9 @@ export function createAnatomyStudy(getClient: () => Promise<AnatomyStudyClient |
       const reply = await client.rpc('delete_anatomy_view', { id, expected_user_id: expectedUserId });
       if (reply.error != null && isMissingDatabaseRpc(reply.error)) {
         let deleted = false;
-        try {
-          if (typeof localStorage !== 'undefined') {
-            const prefix = `cueory:anatomy:views:${expectedUserId}:`;
-            for (let i = 0; i < localStorage.length; i++) {
-              const k = localStorage.key(i);
-              if (k?.startsWith(prefix)) {
-                const raw = localStorage.getItem(k);
-                if (raw) {
-                  const list: SavedViewRow[] = JSON.parse(raw);
-                  const filtered = list.filter((v) => v.id !== id);
-                  if (filtered.length !== list.length) {
-                    localStorage.setItem(k, JSON.stringify(filtered));
-                    deleted = true;
-                  }
-                }
-              }
-            }
-          }
-        } catch {
-          // ignore
-        }
+        const prefix = `cueory:anatomy:views:${expectedUserId}:`;
         for (const [k, raw] of memoryStore.entries()) {
-          if (k.startsWith(`cueory:anatomy:views:${expectedUserId}:`)) {
+          if (k.startsWith(prefix)) {
             const list: SavedViewRow[] = JSON.parse(raw);
             const filtered = list.filter((v) => v.id !== id);
             if (filtered.length !== list.length) {

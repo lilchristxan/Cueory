@@ -2,6 +2,8 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import {
   CAMERA_MOVE_MS,
+  cameraToModelFrame,
+  cameraToWorldFrame,
   COMPARE_SYNC_MS,
   compareSyncDelay,
   compareSyncDue,
@@ -327,5 +329,25 @@ describe('the faded-opacity token', () => {
     const source = readFileSync(new URL('../../src/islands/anatomyscene.ts', import.meta.url), 'utf8');
     expect(source).toContain("get('--anatomy-faded-opacity')");
     expect(source).not.toMatch(/opacity\s*=\s*0\.\d+\s*;/); // no raw opacity values in the scene
+  });
+});
+
+describe('camera posture normalization', () => {
+  it('preserves camera coordinates in standing posture (rotation 0)', () => {
+    const cam = { position: [1, 2, 3] as [number, number, number], target: [0, 0, 0] as [number, number, number], up: [0, 1, 0] as [number, number, number] };
+    expect(cameraToModelFrame(cam, 'standing')).toEqual(cam);
+    expect(cameraToWorldFrame(cam, 'standing')).toEqual(cam);
+  });
+
+  it('transforms camera to model frame and back round-trip in lying posture', () => {
+    const worldCam = { position: [0, 5, 0] as [number, number, number], target: [0, 0, 0] as [number, number, number], up: [0, 0, -1] as [number, number, number] };
+    const modelCam = cameraToModelFrame(worldCam, 'lying');
+    expect(modelCam.position[0]).toBeCloseTo(0);
+    expect(modelCam.position[1]).toBeCloseTo(0);
+    expect(modelCam.position[2]).toBeCloseTo(5);
+    const restored = cameraToWorldFrame(modelCam, 'lying');
+    expect(restored.position[0]).toBeCloseTo(worldCam.position[0]);
+    expect(restored.position[1]).toBeCloseTo(worldCam.position[1]);
+    expect(restored.position[2]).toBeCloseTo(worldCam.position[2]);
   });
 });

@@ -1342,6 +1342,42 @@ export function savedCamera(camera: { position: readonly number[]; target: reado
   return { position: [...camera.position], target: [...camera.target], up };
 }
 
+/** Normalizes a camera state from world space to the posture-independent model frame. */
+export function cameraToModelFrame<T extends { position: readonly number[]; target: readonly number[]; up?: readonly number[] }>(
+  camera: T,
+  posture: Posture,
+): T {
+  const angle = postureAngleX(posture);
+  if (angle === 0) return camera;
+  const pos = rotateX({ x: camera.position[0], y: camera.position[1], z: camera.position[2] }, -angle);
+  const tgt = rotateX({ x: camera.target[0], y: camera.target[1], z: camera.target[2] }, -angle);
+  const up = camera.up ? rotateX({ x: camera.up[0], y: camera.up[1], z: camera.up[2] }, -angle) : undefined;
+  return {
+    ...camera,
+    position: [pos.x, pos.y, pos.z],
+    target: [tgt.x, tgt.y, tgt.z],
+    ...(up ? { up: [up.x, up.y, up.z] } : {}),
+  };
+}
+
+/** Denormalizes a model-frame camera state into world space for the given posture. */
+export function cameraToWorldFrame<T extends { position: [number, number, number]; target: [number, number, number]; up: [number, number, number] }>(
+  camera: T,
+  posture: Posture,
+): T {
+  const angle = postureAngleX(posture);
+  if (angle === 0) return camera;
+  const pos = rotateX({ x: camera.position[0], y: camera.position[1], z: camera.position[2] }, angle);
+  const tgt = rotateX({ x: camera.target[0], y: camera.target[1], z: camera.target[2] }, angle);
+  const up = rotateX({ x: camera.up[0], y: camera.up[1], z: camera.up[2] }, angle);
+  return {
+    ...camera,
+    position: [pos.x, pos.y, pos.z],
+    target: [tgt.x, tgt.y, tgt.z],
+    up: [up.x, up.y, up.z],
+  };
+}
+
 /** Restores source-valid IDs, even on lazy layers that have not downloaded. Hidden wins over faded. */
 export function savedVisibility(view: { hidden: readonly string[]; faded: readonly string[] }, found: ReadonlySet<string>): Visibility {
   const hidden = new Set(view.hidden.filter((id) => found.has(id)));
