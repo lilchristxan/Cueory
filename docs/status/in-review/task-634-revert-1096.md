@@ -1,0 +1,1 @@
+status: Task 634, revert of #1096 (preview animation release): the next release run 44922941921 regressed WebKit (webkit-phone / networkidle in a11y-sweep:299 and body-line-height:23, theme-no-flash:96 now failing in light as well as dark); root cause still being investigated.

@@ -226,7 +226,6 @@ const icons: Record<StudyFeatureIcon, string> = {
     REST_MS,
     RING_MS,
     SETTLE_GRACE_MS,
-    releaseAnimations,
     STEP_MS,
     autoplayHold,
     canAutoAdvance,
@@ -753,8 +752,6 @@ const icons: Record<StudyFeatureIcon, string> = {
       const restWhenDone = (animations: readonly Animation[], limit: number) => {
         const round = previewRound;
         void settle(animations, limit).then(() => {
-          // The grow and the nudge fill nothing, so releasing them changes nothing on screen.
-          releaseAnimations(animations);
           if (round === previewRound && dialog.open) setPreview('open');
         });
       };
