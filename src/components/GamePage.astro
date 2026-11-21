@@ -8,11 +8,10 @@
  * The wrappers keep the same shape as on /play, so each game's print rules (crossword.css, global.css for sudoku,
  * wordpath.css) still print only the game.
  */
+import GameFrame from './GameFrame.astro';
 import GameStatsPanel from '../islands/GameStatsPanel';
 import GameResultsHost from '../islands/GameResultsHost';
 import type { DailyGame } from '../config/games';
-import { site } from '../config/site';
-import { flagMailto } from '../scripts/footer';
 // Keeps one screen of room for the game until it renders, so nothing below it jumps (performance, 2026-11-19).
 import '../styles/gamepage.css';
 
@@ -25,26 +24,19 @@ interface Props {
 }
 const { game, wide = false, showcase = false } = Astro.props;
 ---
-<article class:list={["veil mx-auto mt-6 max-w-prose p-6 sm:mt-10 sm:p-10", wide && "md:max-w-page", showcase && "md:max-w-game-showcase"]} data-game-page={game.id}>
-    <div class="flex flex-wrap items-center justify-between gap-x-2">
-      <a href="/play" class="inline-flex min-h-(--tap-min) items-center gap-2 font-medium" data-testid="all-games-link">
-        <span aria-hidden="true">←</span> all games
-      </a>
-      {/* Rendered on the server so it works without JavaScript: it is an email link to this page's report address.
-          Once the footer's report panel loads, a click here opens that panel instead (FlagForm). */}
-      <a href={flagMailto(site.contactEmail, Astro.url.pathname)} data-game-flag class="corner-button corner-button-quiet ml-auto shrink-0"
-        aria-label={`flag or comment on ${game.name}`}>
-        <svg viewBox="0 0 24 24" class="size-6" aria-hidden="true" focusable="false">
-          <path d="M5 21V4M5 4h12l-3 4.5 3 4.5H5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
-        </svg>
-      </a>
-    </div>
-    <slot name="title" />
-    {/* The game's own headings start at level 3, so the page keeps a level 2 between them and the title. */}
+<article class:list={["game-page-frame", wide && "md:max-w-page", showcase && "md:max-w-game-showcase"]} data-game-page={game.id}>
+  <GameFrame game={game.id} wide={wide} showcase={showcase}>
+    <slot name="cue" slot="cue" />
+    <slot name="controls" slot="controls" />
+    <slot name="title" slot="title" />
     <h2 class="sr-only">today's puzzle</h2>
     <slot />
-    {/* Private stats (D-76) for this game only: off until the student turns them on, kept only in this browser. */}
+    <slot name="deck" slot="deck" />
+    <slot name="footer" slot="footer" />
+  </GameFrame>
+  <div class="game-page-stats-container max-w-prose mx-auto px-6 pb-12" data-print-hidden>
     <GameStatsPanel client:only="react" games={[game.id]} />
+  </div>
 </article>
 <GameResultsHost client:only="react" />
 <noscript><p>game results and sharing need JavaScript.</p></noscript>
