@@ -67,7 +67,6 @@ describe('GameFrame (Scope 1)', () => {
 
   it('refreshes sidebar stats only after the shared history has changed', () => {
     const statsCode = readFileSync(resolve(root, 'src/islands/GameFrameStats.tsx'), 'utf-8');
-    const sudokuCode = readFileSync(resolve(root, 'src/islands/SudokuFrameStats.tsx'), 'utf-8');
     const resultCode = readFileSync(resolve(root, 'src/islands/gameresults.ts'), 'utf-8');
     const panelCode = readFileSync(resolve(root, 'src/islands/GameStatsPanel.tsx'), 'utf-8');
     expect(statsCode).toContain('GAME_STATS_CHANGED_EVENT');
@@ -76,20 +75,16 @@ describe('GameFrame (Scope 1)', () => {
     expect(panelCode).toContain('reportStatsChanged()');
     expect(statsCode).toContain("addEventListener('pageshow', onPageShow)");
     expect(statsCode).toContain('if (event.persisted) refresh()');
-    expect(sudokuCode).toContain("addEventListener('pageshow', onPageShow)");
-    expect(sudokuCode).toContain('if (event.persisted) refresh()');
   });
 
-  it('keeps Sudoku’s existing 400-day solve cleanup in the framed stats lifecycle only', () => {
+  it('keeps Sudoku-owned stats out of the shared framed stats lifecycle', () => {
     const frame = readFileSync(resolve(root, 'src/components/GameFrame.astro'), 'utf-8');
     const statsCode = readFileSync(resolve(root, 'src/islands/GameFrameStats.tsx'), 'utf-8');
-    const sudokuCode = readFileSync(resolve(root, 'src/islands/SudokuFrameStats.tsx'), 'utf-8');
-    expect(frame).toContain("currentConfig.id === 'triage' && <>");
-    expect(frame).toContain('<SudokuFrameStats client:only="react" />');
-    expect(frame).toContain('Sudoku level statistics appear when JavaScript is available.');
+    expect(frame).not.toContain("currentConfig.id === 'triage' && <>");
+    expect(frame).not.toContain('SudokuFrameStats');
+    expect(frame).not.toContain('Sudoku level statistics appear when JavaScript is available.');
     expect(statsCode).not.toContain('lazy(');
     expect(statsCode).not.toContain('Suspense');
-    expect(sudokuCode).toContain('loadSudokuStats(browserStorage(), today)');
   });
 
   it('uses the crossword assisted-solve eligibility for the sidebar best streak', () => {
@@ -116,7 +111,8 @@ describe('GameFrame (Scope 1)', () => {
     expect(header).toContain('GAME_FRAME_HELP_EVENT');
     expect(header).toContain('<GameHelpDialog help={help} name={name} extra={helpExtra} />');
     const sudoku = readFileSync(resolve(root, 'src/islands/SudokuGame.tsx'), 'utf-8');
-    expect(sudoku).toContain('<GameHelpDialog help={help} name={gameName(\'triage\')} />');
+    expect(sudoku).toContain('<GameHelpButton help={help} name={gameName(\'triage\')} className="sudoku-icon-button" />');
+    expect(sudoku).toContain('<GameHelpCard help={help} name={gameName(\'triage\')} />');
     expect(header).toContain('{framed && end &&');
   });
 });
