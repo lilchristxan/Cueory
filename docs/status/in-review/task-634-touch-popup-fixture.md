@@ -1,0 +1,1 @@
+status: #634 touch-only phone checks now mark the existing delayed signup popup as seen alongside the promo panel before navigation, so unrelated tap and hover assertions cannot be covered by the popup. Popup behavior remains covered in its dedicated promo and signup-popup specs; assertions and timing are unchanged.

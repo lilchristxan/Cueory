@@ -1,0 +1,1 @@
+status: Task 634, unit tests for the daily game status on /play (`src/islands/playstatus.ts`): vialo/pulse name alias, precedence, word-count validation, event reading. Test-only; no product code change.
