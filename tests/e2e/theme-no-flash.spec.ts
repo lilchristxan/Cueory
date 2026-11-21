@@ -8,16 +8,19 @@ import { markPanelsSeen } from './clock';
 
   An init script runs before the page's own scripts and records:
   - "body created": the theme attribute the moment <body> exists (the earliest anything can paint);
-  - "first rendered frame": the theme and the page color (the <html> background, which carries the palette) on the
+  - "rAF requested" and "next task": diagnostic scheduling markers requested after <body> is created;
+  - "first rendered frame": the theme and the page color (the <html> background, which carries the palette) in the
     next animation frame requested after <body> is created.
   Every record must match the settled page, and both observations must exist. Requesting the frame from the body
   observer keeps the probe in the navigated document: WebKit can discard a callback requested before that document has
-  a body. The device is set to the opposite palette, so a theme applied late would show. A negative control removes
-  the head theme script and applies the theme after load instead, and the same check must catch it.
+  a body. The next-task marker is reporting-only: it distinguishes a missing rAF callback from no subsequent task
+  progress, but never supplies a first-frame sample. The device is set to the opposite palette, so a theme applied
+  late would show. A negative control removes the head theme script and applies the theme after load instead, and the
+  same check must catch it.
 */
 
 const routes = ['/', '/learn/study-skills', '/play/pillo', '/privacy', '/no-such-page'];
-type SamplePhase = 'body created' | 'first rendered frame' | 'settled';
+type SamplePhase = 'body created' | 'rAF requested' | 'next task' | 'first rendered frame' | 'settled';
 
 interface Sample { phase: SamplePhase; theme: string | undefined; color: string }
 
@@ -39,7 +42,10 @@ async function recordFirstFrames(page: Page) {
         observer.disconnect();
         // Schedule inside the navigated document after its body exists. A callback requested before this point can be
         // discarded by WebKit during navigation, leaving the no-flash assertion without a rendered-frame sample.
+        // These two scheduling records are diagnostic only: only the rAF callback may provide a first-frame color.
+        record('rAF requested');
         requestAnimationFrame(() => record('first rendered frame'));
+        setTimeout(() => record('next task'), 0);
       }
     }).observe(document, { childList: true, subtree: true });
   });
