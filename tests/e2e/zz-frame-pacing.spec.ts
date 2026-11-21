@@ -42,6 +42,8 @@ let wroteStepSummaryHeader = false;
 
 const markdownCell = (value: unknown): string => String(value ?? 'null')
   .replaceAll('|', '\\|').replaceAll('\r', ' ').replaceAll('\n', ' ');
+const stepSummaryColumns = ['Viewport', 'Case', 'Treatment', 'Preview', 'Count', 'Median ms', 'P95 ms', 'Max ms', 'Missed', 'Error'] as const;
+const stepSummaryDividers = ['---', '---', '---', '---', '---:', '---:', '---:', '---:', '---', '---'] as const;
 
 function logCaseReceipt(entry: CaseReceipt) {
   const measurement = entry.measurement;
@@ -62,13 +64,13 @@ function logCaseReceipt(entry: CaseReceipt) {
   if (!stepSummary) return;
   try {
     if (!wroteStepSummaryHeader) {
-      appendFileSync(stepSummary, '\n| Viewport | Case | Treatment | Preview | Count | Median ms | P95 ms | Max ms | Missed | Error |\n| --- | --- | --- | --- | ---: | ---: | ---: | ---: | --- | --- |\n');
+      appendFileSync(stepSummary, `\n| ${stepSummaryColumns.join(' | ')} |\n| ${stepSummaryDividers.join(' | ')} |\n`);
       wroteStepSummaryHeader = true;
     }
     const viewport = `${summary.viewport.width}×${summary.viewport.height}`;
     appendFileSync(stepSummary, `| ${markdownCell(viewport)} | ${markdownCell(summary.case)} | ${markdownCell(entry.treatment)} | ${markdownCell(entry.preview)} | ${markdownCell(summary.count)} | ${markdownCell(summary.median)} | ${markdownCell(summary.p95)} | ${markdownCell(summary.max)} | ${markdownCell(summary.missed)} | ${markdownCell(summary.error)} |\n`);
     // The browser-free GitHub-reporter probe verified this direct stdout notice survives reporter capture.
-    const notice = `viewport=${viewport}; case=${entry.name}; count=${summary.count}; median=${summary.median}; p95=${summary.p95}; max=${summary.max}; missed=${summary.missed}; error=${summary.error}`
+    const notice = JSON.stringify(summary)
       .replaceAll('%', '%25').replaceAll('\r', '%0D').replaceAll('\n', '%0A');
     writeSync(1, `::notice title=Frame pacing receipt ${viewport}::${notice}\n`);
   } catch {
