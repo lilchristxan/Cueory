@@ -111,7 +111,7 @@ export type SudokuKeyAction = SudokuEdit | { kind: 'select'; index: number } | {
 
 /**
  * Arrow keys stop at the board edges, rather than wrapping to another row or column. Space switches between normal
- * and candidate mode; Backspace and Delete clear the square; x toggles the x mark. With Shift held a number key gives
+ * and candidate (Pencil) mode; Backspace and Delete clear the square; x toggles the x mark. With Shift held a number key gives
  * a symbol on most layouts, so the physical key (`code`, Digit1 or Numpad1) still names the number.
  */
 export function sudokuKeyAction(key: string, selected: number, code = ''): SudokuKeyAction | undefined {

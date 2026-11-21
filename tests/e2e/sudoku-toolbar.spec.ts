@@ -2,7 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 
 // Christian's sudoku brief: top to bottom the title, the levels, the time and error line, five equal icon buttons
 // spread across the board's width (settings, pause or play, print, stats, how to play), then the board. Pause hides
-// every number, leaving the page pauses the game until the player presses play, and players see "cue", never
+// every number, leaving the page pauses the game until the player presses play, and players see "Pencil", never
 // "candidate".
 
 const game = (page: Page) => page.getByTestId('sudoku');
@@ -120,23 +120,23 @@ test('leaving the page or the window pauses the game until the player presses pl
   await expect(game(page).locator('.sudoku-paused-mark')).toHaveCount(81);
 });
 
-test('players see "cue", never "candidate"', async ({ page }) => {
+test('players see "Pencil", never "candidate"', async ({ page }) => {
   await page.goto('/play/sudoku');
   await expect(game(page).getByRole('gridcell')).toHaveCount(81);
   const mode = game(page).getByTestId('sudoku-mode');
-  await expect(mode.getByRole('button')).toHaveText([/normal/, /cue/]);
-  await expect(game(page).getByRole('checkbox', { name: 'auto cues' })).toBeVisible();
+  await expect(mode.getByRole('button')).toHaveText('Pencil');
+  await expect(game(page).getByRole('button', { name: 'hint' })).toBeVisible();
   expect(await game(page).innerText()).not.toMatch(/candidate/i);
 
   await toolbar(page).getByRole('button', { name: 'sudoku settings' }).click();
   const settings = game(page).getByRole('dialog', { name: 'settings' });
-  await expect(settings.getByRole('checkbox', { name: 'start in auto cue mode' })).toBeVisible();
+  await expect(settings.getByRole('checkbox', { name: 'start in auto pencil mode' })).toBeVisible();
   expect(await settings.innerText()).not.toMatch(/candidate/i);
   await page.keyboard.press('Escape');
 
   await toolbar(page).getByRole('button', { name: 'how to play sudoku' }).click();
   const rules = page.getByRole('dialog', { name: 'how to play sudoku' });
-  await expect(rules).toContainText('cue mode adds small cue numbers');
+  await expect(rules).toContainText('Pencil mode adds small pencil marks');
   expect(await rules.innerText()).not.toMatch(/candidate/i);
 });
 
@@ -151,7 +151,7 @@ test('the gear opens one sudoku settings dialog with the shared settings and sud
   const dialog = page.getByRole('dialog', { name: 'sudoku settings' });
   await expect(dialog).toBeVisible();
   for (const shared of ['theme', 'motion', 'every game', 'gameboard settings']) await expect(dialog.getByRole('group', { name: shared })).toBeVisible();
-  await expect(dialog.getByRole('checkbox', { name: 'start in auto cue mode' })).toBeVisible();
+  await expect(dialog.getByRole('checkbox', { name: 'start in auto pencil mode' })).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(dialog).toHaveCount(0);
   await expect(gear).toBeFocused();

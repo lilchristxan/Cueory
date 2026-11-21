@@ -109,14 +109,14 @@ test('paused keypad and keyboard cannot change entries, marks, errors, or the li
   await expect(game(page).getByTestId('sudoku-live')).toHaveText('puzzle paused. every number is hidden until you press play.');
   await expect(game(page).locator('[aria-live="polite"]')).toHaveCount(1);
   // A pause cannot silently reset the board or change the hint setting.
-  const hintsControl = game(page).getByRole('checkbox', { name: /auto cues/i });
+  const hintsControl = game(page).getByRole('button', { name: 'hint' });
   await expect(hintsControl).toBeDisabled();
-  const hintsBefore = await hintsControl.getAttribute('aria-checked');
+  const hintsBefore = await hintsControl.getAttribute('aria-pressed');
   for (const difficulty of ['easy', 'medium', 'hard']) {
     await expect(game(page).getByRole('button', { name: difficulty, exact: true })).toBeDisabled();
   }
   await expect(game(page).getByRole('button', { name: 'easy', exact: true })).toHaveAttribute('aria-pressed', 'true');
-  await expect(hintsControl).toHaveAttribute('aria-checked', hintsBefore!);
+  await expect(hintsControl).toHaveAttribute('aria-pressed', hintsBefore!);
   // Pausing conceals the current selection, and tapping another cell cannot replace it.
   await expect(game(page).locator('.sudoku-cell.is-selected')).toHaveCount(0);
   await expect(game(page).locator('[role="gridcell"][aria-selected="true"]')).toHaveCount(0);
@@ -133,7 +133,7 @@ test('paused keypad and keyboard cannot change entries, marks, errors, or the li
   await expect(hintsControl).toBeEnabled();
   await expect(game(page).getByRole('button', { name: 'medium', exact: true })).toBeEnabled();
   await expect(game(page).getByRole('button', { name: 'easy', exact: true })).toHaveAttribute('aria-pressed', 'true');
-  await expect(hintsControl).toHaveAttribute('aria-checked', hintsBefore!);
+  await expect(hintsControl).toHaveAttribute('aria-pressed', hintsBefore!);
   await expect(cells(page).nth(empty)).toHaveAttribute('aria-selected', 'true');
   await expect(cells(page).nth(marked)).toHaveAttribute('aria-selected', 'false');
   await expect(cells(page).nth(empty)).toHaveText('1');
