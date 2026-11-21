@@ -1,0 +1,777 @@
+/*
+  Games v2 Shared Frame Styles (docs/design/games-v2/README.md)
+  Tokens only. Every target at least 44px. Works across 390, 820, and 1440 widths.
+*/
+
+:root:has(.game-frame) main#main {
+  display: flex;
+  flex-direction: column;
+}
+
+:root:has(.game-frame) [data-site-footer],
+:root:has(.game-frame) footer {
+  margin-block-start: 0;
+}
+
+.game-page-frame {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  width: 100%;
+  min-height: 0;
+}
+
+.game-frame {
+  width: 100%;
+  flex: 1;
+  background-color: var(--color-page);
+  background-image:
+    linear-gradient(to right, color-mix(in srgb, var(--color-copper-deep) 35%, transparent) var(--game-frame-grid-line), transparent var(--game-frame-grid-line)),
+    linear-gradient(to bottom, color-mix(in srgb, var(--color-copper-deep) 35%, transparent) var(--game-frame-grid-line), transparent var(--game-frame-grid-line)),
+    linear-gradient(to right, color-mix(in srgb, var(--color-copper-deep) 16%, transparent) var(--game-frame-grid-line), transparent var(--game-frame-grid-line)),
+    linear-gradient(to bottom, color-mix(in srgb, var(--color-copper-deep) 16%, transparent) var(--game-frame-grid-line), transparent var(--game-frame-grid-line)),
+    linear-gradient(to right, color-mix(in srgb, var(--color-copper-deep) 6%, transparent) var(--game-frame-grid-line), transparent var(--game-frame-grid-line)),
+    linear-gradient(to bottom, color-mix(in srgb, var(--color-copper-deep) 6%, transparent) var(--game-frame-grid-line), transparent var(--game-frame-grid-line));
+  background-size: var(--game-frame-grid-major), var(--game-frame-grid-major), var(--game-frame-grid-mid), var(--game-frame-grid-mid), var(--game-frame-grid-minor), var(--game-frame-grid-minor);
+  background-position: var(--game-frame-grid-pos);
+  font-family: var(--font-body);
+  color: var(--color-ink);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow-x: hidden;
+  box-sizing: border-box;
+}
+
+.game-frame-layout {
+  display: flex;
+  flex: 1;
+  width: 100%;
+  min-height: 0;
+  position: relative;
+}
+
+/* ---------------- Left Panel (240px wide) ---------------- */
+.game-frame-sidebar {
+  width: var(--game-frame-sidebar-width);
+  flex-shrink: 0;
+  background-color: var(--game-frame-sidebar-bg);
+  border-right: var(--game-frame-line) solid var(--game-frame-border);
+  padding: calc(var(--spacing) * 8) calc(var(--spacing) * 6);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--spacing) * 5);
+  position: relative;
+  z-index: 10;
+}
+
+.game-frame-sidebar-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.game-frame-back {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--game-frame-btn-size);
+  min-width: var(--game-frame-btn-size);
+  padding: calc(var(--spacing) * 2) calc(var(--spacing) * 3);
+  font-size: var(--text-sm);
+  color: var(--color-ink-soft);
+  text-decoration: none;
+  border-radius: var(--radius-md);
+  box-sizing: border-box;
+  transition: color 0.15s ease;
+}
+
+.game-frame-back:hover,
+.game-frame-back:focus-visible {
+  color: var(--color-ink);
+}
+
+.game-frame-back:focus-visible {
+  outline: var(--focus-width) solid var(--color-focus);
+  outline-offset: var(--focus-offset);
+}
+
+.game-frame-logo-wrap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--game-frame-btn-size);
+  min-width: var(--game-frame-btn-size);
+  border-radius: var(--radius-md);
+  box-sizing: border-box;
+}
+
+.game-frame-logo-wrap:focus-visible {
+  outline: var(--focus-width) solid var(--color-focus);
+  outline-offset: var(--focus-offset);
+}
+
+.game-frame-logo {
+  height: var(--game-frame-logo-height);
+  width: var(--game-frame-logo-width);
+}
+
+.game-frame-game-badge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: calc(var(--spacing) * 4);
+  margin-top: calc(var(--spacing) * 2);
+  text-align: center;
+}
+
+.game-frame-icon-wrap {
+  width: var(--game-frame-icon-size);
+  height: var(--game-frame-icon-size);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.game-frame-icon-img {
+  width: var(--game-frame-icon-size);
+  height: var(--game-frame-icon-size);
+  display: block;
+}
+
+.game-frame-emblem {
+  width: var(--game-frame-icon-size);
+  height: var(--game-frame-icon-size);
+  border-radius: var(--game-frame-emblem-radius);
+  background: var(--color-surface);
+  border: var(--game-frame-line) solid var(--color-line);
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--color-ink);
+}
+
+.game-frame-emblem-9 {
+  font-family: var(--font-display);
+  font-size: var(--game-frame-emblem-9-size);
+  line-height: 1;
+  color: var(--color-ink);
+}
+
+.game-frame-emblem-hi {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: var(--game-frame-emblem-hi-size);
+  line-height: 1;
+  color: var(--color-ink);
+}
+
+.game-frame-emblem-grid {
+  display: grid;
+  grid-template-columns: repeat(3, var(--game-frame-emblem-cell));
+  gap: var(--game-frame-emblem-gap);
+}
+
+.game-frame-emblem-cell {
+  height: var(--game-frame-emblem-cell);
+  border: var(--game-frame-line) solid var(--color-line);
+  box-sizing: border-box;
+}
+
+.game-frame-emblem-cell.is-filled {
+  background: var(--color-ink);
+  border-color: var(--color-ink);
+}
+
+.game-frame-wordmark-wrap {
+  min-height: var(--game-frame-wordmark-height);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.game-frame-wordmark-img {
+  height: var(--game-frame-wordmark-height);
+  width: auto;
+  max-width: 100%;
+  display: block;
+}
+
+.game-frame-serif-title {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: var(--game-frame-title-size);
+  line-height: 1;
+  color: var(--color-ink);
+  text-align: center;
+}
+
+.game-frame-tagline {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: var(--game-frame-tagline-size);
+  line-height: 1.35;
+  color: var(--color-ink);
+  text-align: center;
+}
+
+.game-frame-divider {
+  height: var(--game-frame-line);
+  background-color: var(--game-frame-border);
+  width: 100%;
+}
+
+/* ---------------- Stats in Left Panel ---------------- */
+.game-frame-stats {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--spacing) * 5);
+  text-align: center;
+  width: 100%;
+}
+
+.game-frame-stat {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--spacing) * 0.5);
+  align-items: center;
+}
+
+.game-frame-stat-value {
+  font-family: var(--font-body);
+  font-weight: 900;
+  font-size: var(--game-frame-stat-value-size);
+  line-height: 1.1;
+  color: var(--color-ink);
+}
+
+.game-frame-stat-label {
+  font-size: var(--game-frame-stat-label-size);
+  color: var(--color-ink-soft);
+  text-transform: lowercase;
+}
+
+.game-frame-sudoku-stats {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--spacing) * 2);
+  inline-size: 100%;
+}
+
+.game-frame-sudoku-stats select {
+  min-block-size: var(--tap-min);
+  border: var(--game-frame-line) solid var(--game-frame-border);
+  border-radius: var(--radius-pill);
+  background: var(--color-page);
+  color: var(--color-ink);
+  padding-inline: calc(var(--spacing) * 3);
+}
+
+/* ---------------- Center Main Area ---------------- */
+.game-frame-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: calc(var(--spacing) * 8) calc(var(--spacing) * 6) 0;
+  box-sizing: border-box;
+  position: relative;
+}
+
+.game-frame-dateline {
+  margin: 0 0 calc(var(--spacing) * 6);
+  font-size: var(--game-frame-dateline-size);
+  line-height: var(--game-frame-dateline-lh);
+  color: var(--color-ink-soft);
+  font-style: italic;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.game-frame-cue-slot {
+  width: 100%;
+  max-width: var(--game-frame-max-board);
+  margin-bottom: calc(var(--spacing) * 3);
+  text-align: center;
+}
+
+/* ---------------- Controls Row above Board ---------------- */
+.game-frame-controls-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  max-width: var(--game-frame-max-board);
+  gap: calc(var(--spacing) * 4);
+  margin-bottom: 0;
+  position: relative;
+  z-index: 15;
+}
+
+.game-frame-controls-row-unframed {
+  min-height: var(--game-frame-btn-size);
+}
+
+.game-frame-btn {
+  width: var(--game-frame-btn-size);
+  height: var(--game-frame-btn-size);
+  min-width: var(--game-frame-btn-size);
+  min-height: var(--game-frame-btn-size);
+  border-radius: var(--radius-pill);
+  border: var(--game-frame-btn-border);
+  background: var(--game-frame-btn-bg);
+  box-shadow: var(--game-frame-btn-shadow);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-ink);
+  cursor: pointer;
+  padding: 0;
+  box-sizing: border-box;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.game-frame-btn:hover {
+  transform: translateY(calc(var(--game-frame-line) * -1));
+}
+
+.game-frame-btn:focus-visible {
+  outline: var(--focus-width) solid var(--color-copper-deep);
+  outline-offset: var(--focus-offset);
+}
+
+.game-frame-gear-icon {
+  font-size: var(--game-frame-gear-size);
+  line-height: 1;
+}
+
+.game-frame-controls-middle {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+}
+
+/* ? Button & Popover */
+.game-frame-how {
+  width: var(--game-frame-btn-size);
+  height: var(--game-frame-btn-size);
+  min-width: var(--game-frame-btn-size);
+  min-height: var(--game-frame-btn-size);
+  border-radius: var(--radius-pill);
+  border: var(--game-frame-btn-border);
+  background: var(--game-frame-btn-bg);
+  box-shadow: var(--game-frame-btn-shadow);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-ink);
+  cursor: pointer;
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: var(--game-frame-how-font-size);
+  position: relative;
+  z-index: 25;
+  box-sizing: border-box;
+}
+
+.game-frame-how:hover {
+  transform: translateY(calc(var(--game-frame-line) * -1));
+}
+
+.game-frame-how:focus-visible {
+  outline: var(--focus-width) solid var(--color-copper-deep);
+  outline-offset: var(--focus-offset);
+}
+
+.game-frame-how-q {
+  line-height: 1;
+}
+
+.game-frame-popover {
+  display: none;
+  position: absolute;
+  right: 0;
+  top: calc(var(--game-frame-btn-size) + calc(var(--spacing) * 2.5));
+  width: var(--game-frame-popover-width);
+  max-width: min(calc(100vw - calc(var(--spacing) * 8)), var(--game-frame-popover-width));
+  padding: var(--game-frame-popover-padding);
+  border-radius: var(--game-frame-popover-radius);
+  background: var(--game-frame-popover-bg);
+  border: var(--game-frame-popover-border);
+  box-shadow: var(--game-frame-popover-shadow);
+  font-family: var(--font-body);
+  font-weight: 400;
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  color: var(--color-ink);
+  text-align: left;
+  z-index: 50;
+  box-sizing: border-box;
+}
+
+.game-frame-how-wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.game-frame-how-wrap[data-open="true"] .game-frame-popover {
+  display: block;
+}
+
+.game-frame-popover-title {
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: var(--game-frame-popover-title-size);
+  letter-spacing: var(--game-frame-popover-title-tracking);
+  color: var(--color-ink-soft);
+  margin-bottom: calc(var(--spacing) * 3);
+}
+
+.game-frame-popover-steps {
+  margin: 0 0 calc(var(--spacing) * 3.5);
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--spacing) * 2.5);
+}
+
+.game-frame-popover-step {
+  display: flex;
+  gap: calc(var(--spacing) * 3.5);
+  align-items: flex-start;
+}
+
+.game-frame-step-num {
+  width: var(--game-frame-step-num-size);
+  height: var(--game-frame-step-num-size);
+  border-radius: var(--radius-pill);
+  border: var(--game-frame-step-num-border);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--game-frame-stat-label-size);
+  font-weight: 700;
+  color: var(--color-ink);
+  flex-shrink: 0;
+}
+
+.game-frame-step-text {
+  line-height: 1.5;
+  font-size: var(--text-sm);
+}
+
+.game-frame-legend {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--spacing) * 2.5);
+  margin-top: calc(var(--spacing) * 3.5);
+  padding-top: calc(var(--spacing) * 3);
+  border-top: var(--game-frame-line) solid var(--color-line);
+}
+
+.game-frame-legend-item {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--spacing) * 3.5);
+  font-size: var(--text-sm);
+}
+
+.game-frame-pill-cap {
+  width: var(--game-frame-pill-width);
+  height: var(--game-frame-pill-height);
+  border-radius: var(--radius-pill);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: var(--game-frame-pill-font-size);
+  color: var(--game-frame-pill-text-color);
+  text-shadow: var(--game-frame-pill-text-shadow);
+  box-shadow: var(--game-frame-pill-shadow);
+  flex-shrink: 0;
+}
+
+.game-frame-pill-green {
+  background: radial-gradient(120% 140% at 30% 20%, var(--game-dark-green-light) 0%, var(--game-dark-green) 55%, var(--game-dark-green-deep) 100%);
+}
+
+.game-frame-pill-oxblood {
+  background: radial-gradient(120% 140% at 30% 20%, var(--game-oxblood-light) 0%, var(--game-oxblood) 55%, var(--game-oxblood-deep) 100%);
+}
+
+.game-frame-pill-ivory {
+  background: var(--game-frame-pill-ivory-bg);
+  color: var(--color-ink-soft);
+  text-shadow: none;
+}
+
+.game-frame-cue-slot:empty,
+.game-frame-deck-slot:empty,
+.game-frame-footer-slot:empty {
+  display: none;
+}
+
+.game-frame-play-area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: safe center;
+  align-content: safe center;
+  width: 100%;
+  flex: 1;
+  min-height: 0;
+  position: relative;
+}
+
+/* ---------------- Board Mount Area ---------------- */
+.game-frame-board {
+  width: 100%;
+  max-width: var(--game-frame-max-board);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  z-index: 5;
+  margin-block: auto;
+}
+
+.game-frame-board > * {
+  width: 100%;
+}
+
+.game-frame-board > *:first-child {
+  margin-block-start: 0;
+}
+
+.game-frame-board > *:last-child {
+  margin-block-end: 0;
+}
+
+.game-frame-board.is-wide {
+  max-width: var(--game-frame-max-board-wide);
+}
+
+.game-frame-board.is-showcase {
+  max-width: var(--game-frame-max-board-showcase);
+}
+
+/* ---------------- Deck and Footer Slots ---------------- */
+.game-frame-deck-slot {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 10;
+}
+
+.game-frame-footer-slot {
+  width: 100%;
+  margin-top: auto;
+  z-index: 10;
+}
+
+/* ---------------- Responsive: Tablet and Mobile ---------------- */
+@media (width < 64rem) {
+  .game-frame-layout {
+    flex-direction: column;
+  }
+
+  .game-frame-sidebar {
+    width: 100%;
+    height: auto;
+    border-right: none;
+    border-bottom: var(--game-frame-line) solid var(--game-frame-border);
+    padding: calc(var(--spacing) * 4) calc(var(--spacing) * 5);
+    gap: calc(var(--spacing) * 3.5);
+  }
+
+  .game-frame-sidebar-compact-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+  }
+
+  .game-frame-game-badge {
+    flex-direction: row;
+    gap: calc(var(--spacing) * 3);
+    margin-top: 0;
+  }
+
+  .game-frame-icon-wrap {
+    width: var(--game-frame-sidebar-compact-emblem-size);
+    height: var(--game-frame-sidebar-compact-emblem-size);
+  }
+
+  .game-frame-icon-img,
+  .game-frame-emblem {
+    width: var(--game-frame-sidebar-compact-emblem-size);
+    height: var(--game-frame-sidebar-compact-emblem-size);
+    border-radius: var(--game-frame-sidebar-compact-emblem-radius);
+  }
+
+  .game-frame-emblem-9 {
+    font-size: var(--game-frame-gear-size);
+  }
+
+  .game-frame-emblem-hi {
+    font-size: var(--game-frame-how-font-size);
+  }
+
+  .game-frame-emblem-grid {
+    grid-template-columns: repeat(3, var(--game-frame-sidebar-compact-emblem-cell));
+    gap: var(--game-frame-line);
+  }
+
+  .game-frame-emblem-cell {
+    height: var(--game-frame-sidebar-compact-emblem-cell);
+  }
+
+  .game-frame-wordmark-wrap {
+    min-height: auto;
+  }
+
+  .game-frame-wordmark-img {
+    height: var(--game-frame-sidebar-compact-wordmark-height);
+  }
+
+  .game-frame-serif-title {
+    font-size: var(--game-frame-stat-value-size);
+  }
+
+  .game-frame-tagline {
+    font-size: var(--game-frame-pill-font-size);
+  }
+
+  .game-frame-stats {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: space-around;
+    gap: calc(var(--spacing) * 3);
+    padding-top: calc(var(--spacing) * 2.5);
+    border-top: var(--game-frame-line) solid color-mix(in srgb, var(--game-frame-border) 40%, transparent);
+  }
+
+  .game-frame-stat {
+    gap: 0;
+  }
+
+  .game-frame-stat-value {
+    font-size: var(--game-frame-how-font-size);
+  }
+
+  .game-frame-stat-label {
+    font-size: var(--game-frame-stat-label-compact);
+  }
+
+  .game-frame-main {
+    padding: calc(var(--spacing) * 5) calc(var(--spacing) * 4) 0;
+  }
+
+  .game-frame-deck-slot {
+    position: static;
+    transform: none;
+    width: 100%;
+    margin-top: calc(var(--spacing) * 6);
+    display: flex;
+    justify-content: center;
+  }
+}
+
+@media (width < 30rem) {
+  .game-frame-sidebar {
+    padding: calc(var(--spacing) * 2.5) calc(var(--spacing) * 3);
+    gap: calc(var(--spacing) * 2);
+  }
+
+  .game-frame-main {
+    padding: calc(var(--spacing) * 2.5) calc(var(--spacing) * 3) 0;
+  }
+
+  .game-frame-dateline {
+    margin: 0 0 calc(var(--spacing) * 3);
+  }
+
+  .game-frame-controls-row {
+    margin-bottom: 0;
+  }
+
+  .game-frame-serif-title {
+    font-size: var(--game-frame-gear-size);
+  }
+
+  .game-frame-tagline {
+    font-size: calc(var(--spacing) * 4);
+  }
+
+  .game-frame-stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: calc(var(--spacing) * 1.5);
+  }
+
+  .game-frame-stat-value {
+    font-size: var(--game-frame-pill-font-size);
+  }
+
+  .game-frame-stat-label {
+    font-size: var(--game-frame-stat-label-phone);
+  }
+}
+
+/* ---------------- Reduced Motion ---------------- */
+@media (prefers-reduced-motion: reduce) {
+  .game-frame-btn,
+  .game-frame-how,
+  .game-frame-back {
+    transition: none !important;
+    transform: none !important;
+  }
+}
+
+/* ---------------- Print Media ---------------- */
+@media print {
+  .game-frame-sidebar,
+  .game-frame-dateline,
+  .game-frame-controls-row,
+  .game-frame-deck-slot,
+  .game-frame-cue {
+    display: none !important;
+  }
+
+  .game-frame {
+    display: block !important;
+    background: transparent !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+
+  .game-frame-main {
+    display: block !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    max-width: none !important;
+  }
+
+  .game-frame-board {
+    display: block !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    max-width: none !important;
+  }
+}

@@ -120,7 +120,7 @@
 @media print {
   html[data-print-game="crossword"] body > :not(main),
   html[data-print-game="crossword"] main > :not(article),
-  html[data-print-game="crossword"] main > article > :not([data-game-print="crossword"]),
+  html[data-print-game="crossword"] main > article > :not([data-game-print="crossword"]):not(:has([data-game-print="crossword"])),
   html[data-print-game="crossword"] [data-game-print="crossword"] > :not(.crossword-print-host) { display: none !important; }
   html[data-print-game="crossword"] main,
   html[data-print-game="crossword"] main > article,

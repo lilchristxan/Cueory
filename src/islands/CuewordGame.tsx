@@ -17,7 +17,7 @@ import {
   type CrosswordSettings, type CuewordPuzzle, type CuewordState, type CuewordWord, type Direction, type HelpScope,
 } from './cueword';
 
-interface Props { puzzle: CuewordPuzzle; name: string }
+interface Props { puzzle: CuewordPuzzle; name: string; framed?: boolean }
 const letterButton = 'flex min-h-(--tap-min) min-w-(--tap-min) items-center justify-center rounded-md border border-control bg-page px-3 text-ink';
 const quietButton = 'min-h-(--tap-min) min-w-(--tap-min) rounded-md border border-control bg-page px-4 py-2 text-ink';
 const SCOPES: readonly HelpScope[] = ['square', 'word', 'puzzle'];
@@ -49,7 +49,7 @@ function cellLabel(state: CuewordState, cell: number, r: number, c: number, word
   return label;
 }
 
-function Board({ puzzle, name }: Props) {
+function Board({ puzzle, name, framed = false }: Props) {
   const [state, setState] = useState(() => emptyState(puzzle));
   const [settings, setSettings] = useState<CrosswordSettings>(() => loadCrosswordSettings(browserStorage()));
   // Pencil mode is gone (Christian's brief, 2026-11-17): every letter is a pen letter.
@@ -228,6 +228,7 @@ function Board({ puzzle, name }: Props) {
         <GameHeader
           name={name}
           help={howToPlay}
+          framed={framed}
           settings={
             <div data-testid="crossword-settings">
               <fieldset>
@@ -462,10 +463,10 @@ function Board({ puzzle, name }: Props) {
   );
 }
 
-export default function CuewordGame({ puzzle, name }: Props) {
+export default function CuewordGame({ puzzle, name, framed = false }: Props) {
   try {
     const parsed = parsePuzzle(puzzle);
-    return <Board key={JSON.stringify(parsed)} puzzle={parsed} name={name} />;
+    return <Board key={JSON.stringify(parsed)} puzzle={parsed} name={name} framed={framed} />;
   } catch {
     return <p role="alert">this puzzle could not be loaded. please try again later.</p>;
   }
