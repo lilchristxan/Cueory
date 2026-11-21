@@ -239,6 +239,22 @@
   text-transform: lowercase;
 }
 
+.game-frame-sudoku-stats {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--spacing) * 2);
+  inline-size: 100%;
+}
+
+.game-frame-sudoku-stats select {
+  min-block-size: var(--tap-min);
+  border: var(--game-frame-line) solid var(--game-frame-border);
+  border-radius: var(--radius-pill);
+  background: var(--color-page);
+  color: var(--color-ink);
+  padding-inline: calc(var(--spacing) * 3);
+}
+
 /* ---------------- Center Main Area ---------------- */
 .game-frame-main {
   flex: 1;

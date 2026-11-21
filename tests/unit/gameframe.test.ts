@@ -76,7 +76,7 @@ describe('GameFrame (Scope 1)', () => {
 
   it('keeps Sudoku’s existing 400-day solve cleanup in the framed stats lifecycle only', () => {
     const statsCode = readFileSync(resolve(root, 'src/islands/GameFrameStats.tsx'), 'utf-8');
-    expect(statsCode).toContain("if (resolveGameId(game) === 'triage')");
+    expect(statsCode).toContain("const isSudoku = resolveGameId(game) === 'triage'");
     expect(statsCode).toContain("import('./sudokustats')");
     expect(statsCode).toContain('loadSudokuStats(browserStorage(), today)');
   });

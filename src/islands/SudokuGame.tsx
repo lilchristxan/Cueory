@@ -3,7 +3,7 @@ import { browserStorage } from '../scripts/storage';
 import { printGame } from './gameprint';
 import { GameHelpButton, GameHelpCard, useGameHelp } from './GameHelp';
 import { gameName } from '../config/games';
-import { localDay, showResultCard, sudokuResultCard } from './gameresults';
+import { deleteStats, forgetHeldRounds, localDay, reportStatsChanged, showResultCard, sudokuResultCard } from './gameresults';
 import { GameSettingsDialog } from './GameSettings.tsx';
 import { GAME_FRAME_HELP_EVENT, GAME_FRAME_SETTINGS_EVENT } from './GameFrameControls';
 import { GAME_SETTINGS_EVENT, GAME_SETTINGS_STORAGE_KEY, gameSoundAllowed, loadGameSettings, parseGameSettings, type SharedGameSettings } from './gamesettings';
@@ -61,6 +61,7 @@ export default function SudokuGame({ framed = false }: { framed?: boolean } = {}
   const [auto, setAuto] = useState(false);
   const [settings, setSettings] = useState<SudokuSettings>(() => loadSudokuSettings(browserStorage()));
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [confirmingForgetAll, setConfirmingForgetAll] = useState(false);
   const help = useGameHelp('triage');
   const howOpen = help.open;
   const [said, setSaid] = useState('');
@@ -98,13 +99,23 @@ export default function SudokuGame({ framed = false }: { framed?: boolean } = {}
       help.button.current = trigger;
       help.show();
     };
+    const chooseLevel = (event: Event) => {
+      const level = (event as CustomEvent<unknown>).detail;
+      if (typeof level === 'string' && LEVELS.includes(level as SudokuLevel) && !pausedNow.current) setLevel(level as SudokuLevel);
+    };
     window.addEventListener(GAME_FRAME_SETTINGS_EVENT, openSettings);
     window.addEventListener(GAME_FRAME_HELP_EVENT, openHelp);
+    window.addEventListener('cueory:game-frame-sudoku-level', chooseLevel);
     return () => {
       window.removeEventListener(GAME_FRAME_SETTINGS_EVENT, openSettings);
       window.removeEventListener(GAME_FRAME_HELP_EVENT, openHelp);
+      window.removeEventListener('cueory:game-frame-sudoku-level', chooseLevel);
     };
   }, [framed, help]);
+
+  useEffect(() => {
+    if (framed) window.dispatchEvent(new CustomEvent('cueory:game-frame-sudoku-level-change', { detail: level }));
+  }, [framed, level]);
 
   useEffect(() => {
     const fresh = newSudokuBoard(puzzle.puzzle);
@@ -263,6 +274,14 @@ export default function SudokuGame({ framed = false }: { framed?: boolean } = {}
     setKept(loadSudokuStats(browserStorage(), day));
     setSaid('sudoku stats forgotten.');
   };
+  const forgetAllStats = () => {
+    const forgotten = deleteStats(browserStorage());
+    forgetHeldRounds();
+    reportStatsChanged();
+    setKept(loadSudokuStats(browserStorage(), day));
+    setConfirmingForgetAll(false);
+    setSaid(forgotten ? 'all your stats are forgotten. new games are kept from now on.' : "this browser didn't let us delete your stats, so they are still kept.");
+  };
 
   // Holding Shift flips the mode for that moment; letting go (or leaving the page) flips it back.
   useEffect(() => {
@@ -312,7 +331,7 @@ export default function SudokuGame({ framed = false }: { framed?: boolean } = {}
   return <section className="sudoku-game" data-testid="sudoku">
     <div className="sudoku-panel">
       <PrintLogo />
-      <div className="segmented sudoku-levels" aria-label="difficulty">{LEVELS.map((choice) => <button key={choice} type="button" className="segmented-option" aria-pressed={level === choice} disabled={paused} onClick={() => { if (!paused) setLevel(choice); }}>{level === choice && <span className="segmented-check" aria-hidden="true">✓</span>}{LEVEL_LABELS[choice]}</button>)}</div>
+      {!framed && <div className="segmented sudoku-levels" aria-label="difficulty">{LEVELS.map((choice) => <button key={choice} type="button" className="segmented-option" aria-pressed={level === choice} disabled={paused} onClick={() => { if (!paused) setLevel(choice); }}>{level === choice && <span className="segmented-check" aria-hidden="true">✓</span>}{LEVEL_LABELS[choice]}</button>)}</div>}
       <div className="sudoku-status" data-testid="sudoku-status">
         <span className="sudoku-time">{settings.showTimer && <>time: <strong>{elapsed}</strong></>}</span>
         <span className="sudoku-errors">{settings.showErrors ? <>error: <strong>{errors}</strong></> : null}</span>
@@ -386,6 +405,14 @@ export default function SudokuGame({ framed = false }: { framed?: boolean } = {}
           return <label key={key} className="game-settings-option"><span>{labels[key]}</span><input type="checkbox" checked={settings[key]} onChange={() => updateSetting(key)} /></label>;
         })}
       </fieldset>
+      {framed && <fieldset>
+        <legend>your data</legend>
+        {!confirmingForgetAll ? <button type="button" className="game-settings-data-button" onClick={() => setConfirmingForgetAll(true)}>forget all my stats</button> : <div role="group" aria-labelledby="forget-stats-question" className="game-settings-confirm">
+          <p id="forget-stats-question">forget all game stats on this device? this can’t be undone.</p>
+          <button type="button" className="game-settings-data-button" onClick={forgetAllStats}>yes, forget all my stats</button>
+          <button type="button" className="game-settings-data-button" onClick={() => setConfirmingForgetAll(false)}>keep my stats</button>
+        </div>}
+      </fieldset>}
     </GameSettingsDialog>
     <p className="sr-only" aria-live="polite" aria-atomic="true" data-testid="sudoku-live">{said}</p>
     <p className="sudoku-print-footer">cueory.app</p>
