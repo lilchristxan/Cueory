@@ -1,0 +1,1 @@
+status: Task 634, unit tests for the sort game logic (`src/islands/triage.ts`): unknown terms, frozen finished rounds, slip clamping, place helpers, share text for each status. Test-only; no product code change.

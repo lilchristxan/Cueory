@@ -1,14 +1,14 @@
-# Go-live runbook (Thursday, November 19, 2026 — games and public pages only, accounts closed)
+# Go-live runbook (Monday, November 23, 2026 — games and public pages only, accounts closed)
 
-Thursday's launch is **games and public pages only; accounts remain closed**.
-Use the [Thursday launch checklist](LAUNCH-2026-11-19.md) for its release gates.
+Monday's launch is **games and public pages only; accounts remain closed**.
+Use the [Monday launch checklist](LAUNCH-2026-11-23.md) for its release gates.
 The production database remains untouched. The full-account setup, database
 migration and account-opening procedures below are **future reference, not
 steps for this games-only launch**; they need separate Christian approval and
 verified staging evidence before use.
 
 
-Every dashboard step below is for the future account launch and database go-live, not Thursday's games-and-public-pages launch. One action per step. "You should see" says
+Every dashboard step below is for the future account launch and database go-live, not Monday's games-and-public-pages launch. One action per step. "You should see" says
 what to check. Settings and menu paths come from the official pages linked in brackets, originally reviewed on 2 November 2026. That source-review date is separate from the repository migration inventory rechecked on 17 November 2026; the dashboard instructions have not been reverified as of that inventory check.
 Where those pages don't confirm a menu path, the step says **find** and describes what the setting does. If a
 screen doesn't match, stop and tell Claude what you see. Don't guess.
@@ -237,7 +237,7 @@ cueory.app rather than cueory.app itself. [Resend domains] Those are email DNS r
 
 ## 2. Future account launch day
 
-For Thursday, use the [games-only launch checklist](LAUNCH-2026-11-19.md): accounts stay closed and production SQL stays untouched. The full-account steps below remain future reference and require separate approval.
+For Monday, use the [games-only launch checklist](LAUNCH-2026-11-23.md): accounts stay closed and production SQL stays untouched. The full-account steps below remain future reference and require separate approval.
 
 For that future account launch, do these in order. After each step, check the live site as it says.
 

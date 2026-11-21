@@ -225,6 +225,15 @@ export function enterMatchesMouseMove(
   return lastMove === undefined || (lastMove.x === enter.x && lastMove.y === enter.y);
 }
 
+/** A mismatched exit is stale only when its old coordinate still hits a pause area. */
+export function shouldClearDocumentExit(
+  lastMove: { x: number; y: number } | undefined,
+  exit: { x: number; y: number },
+  hitPauseArea: boolean,
+): boolean {
+  return lastMove === undefined || (lastMove.x === exit.x && lastMove.y === exit.y) || !hitPauseArea;
+}
+
 /**
  * The first active condition that holds the carousel still. Kept separate from canAutoAdvance so the rendered
  * carousel can expose the same reason that its timer uses without changing its existing motion policy.
@@ -252,6 +261,15 @@ export function canAutoAdvance(state: MotionState): boolean {
   return autoplayHold(state) === undefined;
 }
 
+/**
+ * The 6 s illustration loops on the card in front run only while the carousel is on screen, not paused, not under
+ * reduced motion, and while no preview is open (the page behind a modal is not looked at, and its loops cost frames,
+ * #634). The page script writes this to `data-looping` on the section.
+ */
+export function illustrationsMayLoop(state: Pick<MotionState, 'reducedMotion' | 'paused' | 'onScreen' | 'previewOpen'>): boolean {
+  return !state.reducedMotion && !state.paused && state.onScreen && !state.previewOpen;
+}
+
 /** Where the preview is: closed, growing out of its vial, open and still, stepping to another mode, or shrinking back. */
 export type PreviewPhase = 'closed' | 'opening' | 'open' | 'stepping' | 'closing';
 
@@ -273,6 +291,17 @@ export function carouselState(preview: PreviewPhase, turning: boolean): Carousel
  * the carousel still reaches its resting state on time.
  */
 export const SETTLE_GRACE_MS = 150;
+
+/**
+ * Takes away the animations of a preview round that has come to rest (the grow and the step nudge). None of them fills
+ * forwards, so a finished one changes nothing on screen; cancelling it only stops the browser listing it. WebKit keeps
+ * listing a finished animation in getAnimations() until its next rendering update, and a still page has none, so the
+ * open preview looked busy for seconds (five animations at the 5 s mark, #634). Never use this for an animation that
+ * fills forwards (the shrink).
+ */
+export function releaseAnimations(animations: readonly Pick<Animation, 'cancel'>[]): void {
+  for (const animation of animations) animation.cancel();
+}
 
 /** A box on screen, as getBoundingClientRect gives it. */
 export interface Box {

@@ -1,0 +1,1 @@
+status: Task 634, unit tests for sudoku's private stats (`src/islands/sudokustats.ts`): record validation limits, 400-day window, streaks, saved-text parsing and storage failure paths. Test-only; no product code change.

@@ -27,6 +27,7 @@ describe('live build prunes /preview/*', () => {
   it('keeps them for staging, named branches, local builds and the drafts flag', () => {
     expect(isProductionBuild({ WORKERS_CI: '1', WORKERS_CI_BRANCH: 'staging' })).toBe(false);
     expect(isProductionBuild({ WORKERS_CI: '1', WORKERS_CI_BRANCH: 'task-1/x' })).toBe(false);
+    expect(isProductionBuild({ WORKERS_CI: '1', WORKERS_CI_BRANCH: 'production' })).toBe(false);
     expect(isProductionBuild({})).toBe(false);
     expect(isProductionBuild({ CUEORY_ANATOMY_DRAFTS: '1' })).toBe(false);
     expect(isProductionBuild({ WORKERS_CI: '1', WORKERS_CI_BRANCH: 'main', CUEORY_ANATOMY_DRAFTS: '1' })).toBe(true);

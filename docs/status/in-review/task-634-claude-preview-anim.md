@@ -1,0 +1,1 @@
+status: Task 634, study-mode preview settle: once the open preview's five grow animations (bottle, scrim, panel surface, two fading groups) and the step nudge are done they are cancelled, so WebKit stops listing the finished ones in getAnimations() (vial-carousel.spec.ts:573); none fills forwards, so the look is identical.
