@@ -288,8 +288,13 @@ const helloCardsAvailable = helloCardsPage(
 
   .games-header {
     display: grid;
-    grid-template-columns: auto 1fr auto;
+    grid-template-columns: 1fr 1fr;
+    grid-template-areas:
+      "heading heading"
+      "subtitle subtitle"
+      "prev next";
     align-items: center;
+    justify-items: center;
     gap: var(--game-header-gap);
   }
 
@@ -299,11 +304,13 @@ const helloCardsAvailable = helloCardsPage(
   }
 
   .games-nav-prev {
-    justify-self: start;
+    grid-area: prev;
+    justify-self: end;
   }
 
   .games-nav-next {
-    justify-self: end;
+    grid-area: next;
+    justify-self: start;
   }
 
   .gs-nav {
@@ -333,6 +340,7 @@ const helloCardsAvailable = helloCardsPage(
   }
 
   .games-heading {
+    grid-area: heading;
     margin: 0;
     font-family: var(--font-display);
     font-size: clamp(var(--game-heading-size-min), 6vw, var(--game-heading-size-max));
@@ -340,16 +348,36 @@ const helloCardsAvailable = helloCardsPage(
     text-align: center;
     color: var(--color-ink);
     font-weight: 700;
+    min-width: 0;
+    overflow-wrap: break-word;
   }
 
   .games-subtitle {
+    grid-area: subtitle;
     margin: 0 0 var(--game-subtitle-margin-bottom);
     text-align: center;
     font-family: var(--font-body);
     font-size: var(--game-subtitle-size);
     line-height: 1.5;
     color: var(--color-ink-soft);
-    grid-column: 1 / -1;
+    min-width: 0;
+  }
+
+  @media (min-width: 48em) {
+    .games-header {
+      grid-template-columns: minmax(auto, var(--game-nav-size)) minmax(0, 1fr) minmax(auto, var(--game-nav-size));
+      grid-template-areas:
+        "prev heading next"
+        "subtitle subtitle subtitle";
+    }
+
+    .games-nav-prev {
+      justify-self: start;
+    }
+
+    .games-nav-next {
+      justify-self: end;
+    }
   }
 
   .games-date-note {

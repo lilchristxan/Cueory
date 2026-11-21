@@ -388,6 +388,76 @@ test.describe('home games carousel (Home v2 Lane 5)', () => {
     expect(transform).toMatch(/translateX\(-616px\)/);
   });
 
+  test('phone (390px) with 32px root font size: header reflows without horizontal overflow', async ({ browser }, testInfo) => {
+    test.skip(!isDesktopOfEachEngine(testInfo), 'runs once per browser engine');
+
+    const context = await browser.newContext({
+      baseURL: testInfo.project.use.baseURL,
+      viewport: { width: 390, height: 844 },
+      reducedMotion: 'reduce',
+      hasTouch: true,
+      isMobile: true,
+    });
+    try {
+      await context.addInitScript(() => {
+        try {
+          localStorage.setItem('cueory-promo-seen', String(Date.now()));
+          localStorage.setItem('cueory-signup-popup-seen', String(Date.now()));
+        } catch {}
+      });
+      const page = await context.newPage();
+      await page.goto('/');
+      await markPanelsSeen(page);
+
+      // Set 32px root font size (simulates 200% text zoom on mobile)
+      await page.evaluate(() => document.documentElement.style.setProperty('font-size', '32px', 'important'));
+      await expect(page.locator('html')).toHaveCSS('font-size', '32px');
+
+      const section = page.locator('#daily-games');
+      await section.scrollIntoViewIfNeeded();
+
+      const heading = section.locator('#games-heading');
+      const prevBtn = section.locator('[data-games-prev]');
+      const nextBtn = section.locator('[data-games-next]');
+
+      await expect(heading).toBeVisible();
+      await expect(prevBtn).toBeVisible();
+      await expect(nextBtn).toBeVisible();
+
+      // Controls and heading are on separate rows: buttons are below heading
+      const headingBox = await heading.boundingBox();
+      const prevBox = await prevBtn.boundingBox();
+      const nextBox = await nextBtn.boundingBox();
+
+      expect(prevBox?.y ?? 0).toBeGreaterThanOrEqual((headingBox?.y ?? 0) + (headingBox?.height ?? 0));
+      expect(nextBox?.y ?? 0).toBeGreaterThanOrEqual((headingBox?.y ?? 0) + (headingBox?.height ?? 0));
+
+      // Buttons are clickable and >= 44px
+      expect(prevBox?.width ?? 0).toBeGreaterThanOrEqual(44);
+      expect(prevBox?.height ?? 0).toBeGreaterThanOrEqual(44);
+      expect(nextBox?.width ?? 0).toBeGreaterThanOrEqual(44);
+      expect(nextBox?.height ?? 0).toBeGreaterThanOrEqual(44);
+
+      // Verify buttons sit inside the 390px viewport
+      expect(prevBox?.x ?? 0).toBeGreaterThanOrEqual(0);
+      expect((nextBox?.x ?? 0) + (nextBox?.width ?? 0)).toBeLessThanOrEqual(390);
+
+      // Check header horizontal overflow
+      const headerOverflow = await page.evaluate(() => {
+        const header = document.querySelector('.games-header');
+        return header ? header.scrollWidth - header.clientWidth : 0;
+      });
+      expect(headerOverflow).toBeLessThanOrEqual(0);
+
+      // Prev and next buttons can be clicked
+      await nextBtn.click();
+      const secondCard = section.locator('[data-game-card]').nth(1);
+      await expect(secondCard).toHaveClass(/on/);
+    } finally {
+      await context.close();
+    }
+  });
+
   test('daily game status badges reconcile at midnight and restore default when day changes', async ({ browser }, testInfo) => {
     test.skip(!isDesktopOfEachEngine(testInfo), 'a clock test runs once per browser engine');
 
