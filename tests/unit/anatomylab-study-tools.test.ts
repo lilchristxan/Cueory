@@ -350,4 +350,23 @@ describe('camera posture normalization', () => {
     expect(restored.position[1]).toBeCloseTo(worldCam.position[1]);
     expect(restored.position[2]).toBeCloseTo(worldCam.position[2]);
   });
+
+  it('transforms preset directions into current posture', () => {
+    const center = { x: 0, y: 0, z: 0 };
+    // Standing: front faces +Z, top faces +Y
+    const standingFront = cameraForPreset('front', center, 10, 'standing');
+    expect(standingFront.x).toBe(0);
+    expect(standingFront.y).toBe(0);
+    expect(standingFront.z).toBeCloseTo(10);
+
+    // Lying: front faces +Y (above model), top faces -Z (above head)
+    const lyingFront = cameraForPreset('front', center, 10, 'lying');
+    expect(lyingFront.x).toBe(0);
+    expect(lyingFront.y).toBeCloseTo(10);
+    expect(lyingFront.z).toBeCloseTo(0);
+
+    const lyingTop = cameraForPreset('top', center, 10, 'lying');
+    expect(lyingTop.x).toBe(0);
+    expect(lyingTop.z).toBeCloseTo(-10);
+  });
 });

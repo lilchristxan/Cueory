@@ -1587,6 +1587,8 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
       setBulkPrompt({ kind: 'saved-view', systemKey: system.key, files: missingFiles.length, view, identity });
       return;
     }
+    stopRecall();
+    setQuiz(null);
     changeVisibility(() => restored);
     setSelected(selectedId);
     scene.applyCameraState(cameraToWorldFrame(camera, posture));

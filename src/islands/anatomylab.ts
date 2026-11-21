@@ -1175,9 +1175,10 @@ export function cameraPosition(center: Vec3, direction: Vec3, distance: number):
   return { x: center.x + direction.x * d, y: center.y + direction.y * d, z: center.z + direction.z * d };
 }
 
-/** The camera's position for a preset view of a model centered at `center`, `distance` away. */
-export function cameraForPreset(preset: ViewPreset, center: Vec3, distance: number): Vec3 {
-  return cameraPosition(center, presetDirection(preset), distance);
+/** The camera's position for a preset view of a model centered at `center`, `distance` away, transformed into `posture`. */
+export function cameraForPreset(preset: ViewPreset, center: Vec3, distance: number, posture: Posture = 'standing'): Vec3 {
+  const dir = rotateX(presetDirection(preset), postureAngleX(posture));
+  return cameraPosition(center, dir, distance);
 }
 
 /**

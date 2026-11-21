@@ -34,6 +34,7 @@ import {
   pictureTitleLayout,
   postureAngleX,
   preparePictureFonts,
+  rotateX,
   wrapText,
   type ExportSize,
   type Posture,
@@ -572,7 +573,7 @@ export function createLabScene({ canvas, reducedMotion, colors: initialColors, o
     if (!box) return;
     const center = box.getCenter(new THREE.Vector3());
     const distance = fitDistance(box.getSize(new THREE.Vector3()), camera.fov, camera.aspect);
-    moveCamera(cameraForPreset(preset, center, distance), center);
+    moveCamera(cameraForPreset(preset, center, distance, posture), center);
   }
 
   function focusOn(id: string): boolean {
@@ -614,7 +615,8 @@ export function createLabScene({ canvas, reducedMotion, colors: initialColors, o
   }
 
   function viewFrom(direction: readonly [number, number, number]) {
-    const dir = new THREE.Vector3(direction[0], direction[1], direction[2]);
+    const rotated = rotateX({ x: direction[0], y: direction[1], z: direction[2] }, postureAngleX(posture));
+    const dir = new THREE.Vector3(rotated.x, rotated.y, rotated.z);
     if (dir.lengthSq() < 1e-12) return;
     const distance = home.position.distanceTo(home.target);
     controls.target.copy(home.target);
