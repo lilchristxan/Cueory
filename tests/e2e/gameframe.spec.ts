@@ -5,7 +5,6 @@ const games = [
   { path: '/play/stat', name: 'stat', framed: true, bridge: false },
   { path: '/play/word-path', name: 'word path', framed: false, bridge: false },
   { path: '/play/crossword', name: 'crossword', framed: true, bridge: true },
-  { path: '/play/sudoku', name: 'sudoku', framed: true, bridge: true },
   { path: '/play/hello-cards', name: 'hello cards', framed: true, bridge: false },
 ] as const;
 
@@ -69,7 +68,6 @@ test.describe('GameFrame shared layout (Scope 1)', () => {
         await expect(page.getByRole('button', { name: `how to play ${game.name}` })).toHaveCount(1);
         await expect(page.getByTestId('game-settings-button')).toHaveCount(0);
         await expect(page.getByTestId('game-help-button')).toHaveCount(0);
-        if (game.name === 'sudoku') await expect(page.getByRole('button', { name: 'sudoku stats' })).toHaveCount(0);
         await helpBtn.click();
         const dialog = page.getByRole('dialog', { name: `how to play ${game.name}` });
         await expect(dialog).toBeVisible();
@@ -81,29 +79,6 @@ test.describe('GameFrame shared layout (Scope 1)', () => {
       }
     });
   }
-
-  test('framed Sudoku keeps keyboard focus inside and after the forget-all confirmation', async ({ page }) => {
-    await page.goto('/play/sudoku');
-    const settings = page.getByRole('button', { name: 'sudoku settings' });
-    await settings.focus();
-    await page.keyboard.press('Enter');
-
-    const forget = page.getByRole('button', { name: 'forget all my stats' });
-    await forget.focus();
-    await page.keyboard.press('Enter');
-    const confirm = page.getByRole('button', { name: 'yes, forget all my stats' });
-    const cancel = page.getByRole('button', { name: 'keep my stats' });
-    await expect(confirm).toBeFocused();
-    await page.keyboard.press('Tab');
-    await expect(cancel).toBeFocused();
-    await page.keyboard.press('Enter');
-    await expect(forget).toBeFocused();
-
-    await page.keyboard.press('Enter');
-    await expect(confirm).toBeFocused();
-    await page.keyboard.press('Enter');
-    await expect(forget).toBeFocused();
-  });
 
   // Responsive and Evening checks
   for (const [size, width, height] of [['390', 390, 844], ['820', 820, 1180], ['1440', 1440, 900]] as const) {

@@ -21,7 +21,7 @@ for (const path of ['/support', '/play/word-path']) {
     page.on('request', (req) => requestedUrls.add(req.url()));
 
     await page.goto(path, { waitUntil: 'load' });
-    const home = page.getByRole('link', { name: 'cueory home' });
+    const home = page.locator('header').getByRole('link', { name: 'cueory home' });
     await expect(home).toBeVisible();
     const shown = home.locator('.logo img').filter({ visible: true });
     await expect(shown).toHaveCount(1);
@@ -62,7 +62,7 @@ test('/support: responsive candidates: started detection catches a non-fallback 
   page.on('request', (req) => requestedUrls.add(req.url()));
 
   await page.goto('/support', { waitUntil: 'load' });
-  const home = page.getByRole('link', { name: 'cueory home' });
+  const home = page.locator('header').getByRole('link', { name: 'cueory home' });
   await expect(home).toBeVisible();
 
   const nonFallbackUrl = await home.locator('.logo img[src*="logo-full"]').evaluateAll((imgs) => {
