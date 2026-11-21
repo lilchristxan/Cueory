@@ -1,7 +1,7 @@
 import '../styles/gameheader.css';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { GameSettingsDialog } from './GameSettings.tsx';
-import { GameHelpButton, type GameHelpState } from './GameHelp';
+import { GameHelpButton, GameHelpDialog, type GameHelpState } from './GameHelp';
 import { frameHelpButton, GAME_FRAME_HELP_EVENT, GAME_FRAME_HELP_READY_EVENT, GAME_FRAME_SETTINGS_EVENT } from './GameFrameControls';
 
 /**
@@ -78,8 +78,8 @@ export default function GameHeader({ name, help, helpExtra, settings, end, frame
     </div>}
     {/* Board-level controls (for example print) remain available when Frame owns only the page-level gear and help. */}
     {framed && end && <div className="game-header" data-print-hidden><div className="game-header-end">{end}</div></div>}
-    {/* In framed mode this stays out of the accessibility tree but keeps the established help dialog and seen-state. */}
-    {framed && <GameHelpButton help={help} name={name} className="hidden" extra={helpExtra} />}
+    {/* The Frame is the sole visible opener; this reuses the established dialog and seen state without a hidden trigger. */}
+    {framed && <GameHelpDialog help={help} name={name} extra={helpExtra} />}
     <GameSettingsDialog open={open} onClose={() => setOpen(false)} title={`${name} settings`} returnFocusTo={framed ? undefined : gear}>
       {settings}
     </GameSettingsDialog>

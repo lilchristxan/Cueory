@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { browserStorage } from '../scripts/storage';
 import { printGame } from './gameprint';
-import { GameHelpButton, GameHelpCard, useGameHelp } from './GameHelp';
+import { GameHelpButton, GameHelpCard, GameHelpDialog, useGameHelp } from './GameHelp';
 import { gameName } from '../config/games';
 import { deleteStats, forgetHeldRounds, localDay, reportStatsChanged, showResultCard, sudokuResultCard } from './gameresults';
 import { GameSettingsDialog } from './GameSettings.tsx';
@@ -404,7 +404,7 @@ export default function SudokuGame({ framed = false }: { framed?: boolean } = {}
     </div>
     {solved && <div ref={solvedResult} className="sudoku-solved" tabIndex={-1} role="status" data-testid="sudoku-result"><p className="text-lg font-medium">solved.</p><p>{elapsed} · {errors} {errors === 1 ? 'error' : 'errors'}</p><p className="text-sm text-ink-soft">a new sudoku comes out tomorrow.</p></div>}
     {/* The same settings dialog as the other games (#823): the shared settings first, then sudoku's own. */}
-    {framed && <GameHelpButton help={help} name={gameName('triage')} className="hidden" />}
+    {framed && <GameHelpDialog help={help} name={gameName('triage')} />}
     <GameSettingsDialog open={settingsOpen} onClose={() => setSettingsOpen(false)} title="sudoku settings" returnFocusTo={framed ? undefined : settingsButton}>
       <fieldset>
         <legend>gameboard settings</legend>

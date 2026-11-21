@@ -101,6 +101,9 @@ describe('GameFrame (Scope 1)', () => {
     expect(page).toContain('{framed && <GameStatsPersistence client:only="react" />}');
     expect(header).toContain('GAME_FRAME_SETTINGS_EVENT');
     expect(header).toContain('GAME_FRAME_HELP_EVENT');
+    expect(header).toContain('<GameHelpDialog help={help} name={name} extra={helpExtra} />');
+    const sudoku = readFileSync(resolve(root, 'src/islands/SudokuGame.tsx'), 'utf-8');
+    expect(sudoku).toContain('<GameHelpDialog help={help} name={gameName(\'triage\')} />');
     expect(header).toContain('{framed && end &&');
   });
 });
