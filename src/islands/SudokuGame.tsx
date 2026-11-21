@@ -342,9 +342,9 @@ export default function SudokuGame() {
       </div>
       <div className="sudoku-pad-wrap">
         <div className="sudoku-tools">
-          <div role="group" aria-label="entry mode" data-testid="sudoku-mode"><button type="button" className="sudoku-tool-button sudoku-pencil-button" aria-pressed={activeMode === 'candidate'} disabled={paused || solved} onClick={() => switchMode()}>Pencil</button></div>
+          <div role="group" aria-label="entry mode" data-testid="sudoku-mode"><button type="button" className="sudoku-tool-button sudoku-pencil-button" aria-pressed={activeMode === 'candidate'} disabled={paused || solved} onClick={() => switchMode()}>{activeMode === 'candidate' && <span className="segmented-check sudoku-toggle-mark" aria-hidden="true">✓</span>}Pencil</button></div>
           <button type="button" className="sudoku-tool-button" onClick={undo} disabled={paused || solved || history.length === 0}>undo</button>
-          <button type="button" className="sudoku-tool-button sudoku-hint-button" aria-pressed={auto} onClick={() => toggleAuto(!auto)} disabled={paused || solved}>hint</button>
+          <button type="button" className="sudoku-tool-button sudoku-hint-button" aria-pressed={auto} onClick={() => toggleAuto(!auto)} disabled={paused || solved}>{auto && <span className="segmented-check sudoku-toggle-mark" aria-hidden="true">✓</span>}hint</button>
           <button type="button" className="sudoku-tool-button" onClick={clearCell} disabled={paused || solved}>clear cell</button>
           <button type="button" className="sudoku-tool-button" onClick={checkPuzzle} disabled={paused || solved}>check puzzle</button>
         </div>

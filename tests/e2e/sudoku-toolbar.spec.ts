@@ -124,8 +124,18 @@ test('players see "Pencil", never "candidate"', async ({ page }) => {
   await page.goto('/play/sudoku');
   await expect(game(page).getByRole('gridcell')).toHaveCount(81);
   const mode = game(page).getByTestId('sudoku-mode');
-  await expect(mode.getByRole('button')).toHaveText('Pencil');
-  await expect(game(page).getByRole('button', { name: 'hint' })).toBeVisible();
+  const pencil = mode.getByRole('button', { name: 'Pencil' });
+  const hint = game(page).getByRole('button', { name: 'hint' });
+  await expect(pencil).toHaveText('Pencil');
+  await expect(hint).toBeVisible();
+  await expect(pencil).toHaveAttribute('aria-pressed', 'false');
+  await expect(hint).toHaveAttribute('aria-pressed', 'false');
+  await pencil.click();
+  await expect(pencil).toHaveAttribute('aria-pressed', 'true');
+  await expect(pencil.locator('.sudoku-toggle-mark')).toHaveText('✓');
+  await hint.click();
+  await expect(hint).toHaveAttribute('aria-pressed', 'true');
+  await expect(hint.locator('.sudoku-toggle-mark')).toHaveText('✓');
   expect(await game(page).innerText()).not.toMatch(/candidate/i);
 
   await toolbar(page).getByRole('button', { name: 'sudoku settings' }).click();
