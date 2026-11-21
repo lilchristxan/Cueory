@@ -1,9 +1,8 @@
-import { useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { browserStorage } from '../scripts/storage';
 import { GAME_STATS_CHANGED_EVENT, loadStats, localDay } from './gameresults';
 import { currentStreak, dailyStats, longestStreak, wordPathSummary, type GameId, type GameStats } from './gamestats';
 import { GUESSES } from './pulse';
-import type { SudokuLevel } from './sudoku';
 
 interface Props {
   game: string;
@@ -17,17 +16,8 @@ interface StatValues {
   firstLabel: string;
 }
 
-interface SudokuValues {
-  on: boolean;
-  solved: number;
-  best: string;
-  average: string;
-  streak: number;
-}
-
-const SUDOKU_LEVELS: readonly SudokuLevel[] = ['easy', 'medium', 'hard'];
-// Keep the shared Frame client independent of the Sudoku board module so other framed games do not download it.
-const SUDOKU_LEVEL_LABELS: Record<SudokuLevel, string> = { easy: 'Easy', medium: 'Medium', hard: 'Hard' };
+// Sudoku's picker and per-level view are not initial JavaScript for the other framed games.
+const SudokuFrameStats = lazy(() => import('./SudokuFrameStats'));
 
 function resolveGameId(game: string): GameId | string {
   if (game === 'pillo' || game === 'vialo' || game === 'pulse') return 'pulse';
@@ -80,8 +70,6 @@ export default function GameFrameStats({ game }: Props) {
     const saved = loadStats(browserStorage(), today);
     return computeStats(game, saved.stats, today);
   });
-  const [sudokuLevel, setSudokuLevel] = useState<SudokuLevel>('easy');
-  const [sudoku, setSudoku] = useState<SudokuValues | undefined>();
   const isSudoku = resolveGameId(game) === 'triage';
 
   useEffect(() => {
@@ -98,46 +86,6 @@ export default function GameFrameStats({ game }: Props) {
       window.removeEventListener('storage', refresh);
     };
   }, [game]);
-
-  useEffect(() => {
-    if (!isSudoku) { setSudoku(undefined); return; }
-    let live = true;
-    const refresh = () => {
-      const today = localDay(new Date());
-      // This dedicated import preserves the existing cleanup lifecycle without adding Sudoku code to other Frame routes.
-      void import('./sudokustats').then(({ loadSudokuStats, sudokuLevelStats, sudokuTime }) => {
-        if (!live) return;
-        const saved = loadSudokuStats(browserStorage(), today);
-        const values = sudokuLevelStats(saved.solves, sudokuLevel, today);
-        setSudoku({
-          on: saved.on,
-          solved: values.solved,
-          best: values.bestSeconds === null ? '–' : sudokuTime(values.bestSeconds),
-          average: values.averageSeconds === null ? '–' : sudokuTime(values.averageSeconds),
-          streak: values.streak,
-        });
-      });
-    };
-    refresh();
-    window.addEventListener(GAME_STATS_CHANGED_EVENT, refresh);
-    window.addEventListener('storage', refresh);
-    const onLevel = (event: Event) => {
-      const level = (event as CustomEvent<unknown>).detail;
-      if (typeof level === 'string' && SUDOKU_LEVELS.includes(level as SudokuLevel)) setSudokuLevel(level as SudokuLevel);
-    };
-    window.addEventListener('cueory:game-frame-sudoku-level-change', onLevel);
-    return () => {
-      live = false;
-      window.removeEventListener(GAME_STATS_CHANGED_EVENT, refresh);
-      window.removeEventListener('storage', refresh);
-      window.removeEventListener('cueory:game-frame-sudoku-level-change', onLevel);
-    };
-  }, [isSudoku, sudokuLevel]);
-
-  const chooseSudokuLevel = (level: SudokuLevel) => {
-    setSudokuLevel(level);
-    window.dispatchEvent(new CustomEvent('cueory:game-frame-sudoku-level', { detail: level }));
-  };
 
   return (
     <div className="game-frame-stats" data-testid="game-frame-stats" aria-label="your stats">
@@ -157,18 +105,7 @@ export default function GameFrameStats({ game }: Props) {
         <span className="game-frame-stat-value">{stats.played}</span>
         <span className="game-frame-stat-label">played</span>
       </div>
-      {isSudoku && <section className="game-frame-sudoku-stats" aria-label="sudoku level stats" data-testid="game-frame-sudoku-stats">
-        <label htmlFor="game-frame-sudoku-level">difficulty</label>
-        <select id="game-frame-sudoku-level" value={sudokuLevel} onChange={(event) => chooseSudokuLevel(event.target.value as SudokuLevel)}>
-          {SUDOKU_LEVELS.map((level) => <option key={level} value={level}>{SUDOKU_LEVEL_LABELS[level]}</option>)}
-        </select>
-        <div aria-live="polite" aria-atomic="true" data-testid="game-frame-sudoku-numbers">
-          {!sudoku ? <span>loading sudoku stats.</span> : !sudoku.on ? <span>this browser won't keep sudoku stats.</span> : <>
-            <span className="game-frame-stat-value">{sudoku.solved}</span>
-            <span className="game-frame-stat-label">{SUDOKU_LEVEL_LABELS[sudokuLevel]} solved · best {sudoku.best} · average {sudoku.average} · {sudoku.streak} day streak</span>
-          </>}
-        </div>
-      </section>}
+      {isSudoku && <Suspense fallback={null}><SudokuFrameStats /></Suspense>}
     </div>
   );
 }
