@@ -1,0 +1,1 @@
+status: Task 634, unit tests for the sudoku highlight classes (`src/islands/sudokuhighlight.ts`): class order, related and box tints, settings off, out-of-range selection, given and wrong rules, box lines, pause. Test-only; no product code change.
