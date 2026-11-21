@@ -33,9 +33,6 @@ async function openFooterLinks(page: Page) {
 const middleCard = (page: Page) =>
   page.locator('#ways-to-study [data-mode-card][data-offset="0"]').getAttribute('data-name');
 
-/** Park on the carousel's visible words, outside its cards and controls, so each engine receives a durable hover target. */
-const parkMouseOutsideCards = (page: Page) => page.locator('#modes-heading').hover();
-
 /** Test-only D-51 close observation; it captures IDs and event state, never DOM content or user text. */
 async function installPreviewCloseDiagnostic(page: Page) {
   await page.addInitScript(() => {
@@ -1069,19 +1066,19 @@ test.describe('"ways to study" merry-go-round (D-50, D-60)', () => {
     await page.goto('/');
     await section(page).scrollIntoViewIfNeeded();
     // The mouse over the section's words, not its cards: that doesn't pause it.
-    await parkMouseOutsideCards(page);
+    await page.mouse.move(0, 0);
     await expect.poll(() => middleCard(page), { timeout: 9000 }).toBe('cards');
 
     // Resting on the cards pauses it; moving off lets it go on.
     await page.getByRole('group', { name: 'study mode cards' }).hover();
     await page.waitForTimeout(7000);
     expect(await middleCard(page)).toBe('cards');
-    await parkMouseOutsideCards(page);
+    await page.mouse.move(0, 0);
     await expect.poll(() => middleCard(page), { timeout: 9000 }).toBe('learn');
 
     await section(page).getByRole('button', { name: 'next study mode' }).click();
     await expect.poll(() => middleCard(page)).toBe('fill-in');
-    await parkMouseOutsideCards(page);
+    await page.mouse.move(0, 0);
     await page.waitForTimeout(7000);
     expect(await middleCard(page)).toBe('fill-in');
   });
