@@ -136,7 +136,7 @@ test('players see "Pencil", never "candidate"', async ({ page }) => {
 
   await toolbar(page).getByRole('button', { name: 'how to play sudoku' }).click();
   const rules = page.getByRole('dialog', { name: 'how to play sudoku' });
-  await expect(rules).toContainText('Pencil mode adds small pencil marks');
+  await expect(rules).toContainText('pencil mode adds small pencil marks');
   expect(await rules.innerText()).not.toMatch(/candidate/i);
 });
 
