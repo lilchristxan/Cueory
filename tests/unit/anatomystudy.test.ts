@@ -513,5 +513,18 @@ describe('local storage fallback when database migration is held', () => {
     if (viewsAfterDelete.ok) {
       expect(viewsAfterDelete.value).toHaveLength(0);
     }
+
+    // 7. Limit check allows replacing existing view at 50 views, but rejects a 51st new view
+    for (let i = 0; i < 50; i++) {
+      const res = await study.saveView({ systemKey: 'heart', name: `view ${i}`, camera, hidden: [] }, 'student-fallback');
+      expect(res.ok).toBe(true);
+    }
+    // Re-saving existing view name replaces it
+    const replaceOutcome = await study.saveView({ systemKey: 'heart', name: 'view 0', camera, hidden: ['FMA1'] }, 'student-fallback');
+    expect(replaceOutcome.ok).toBe(true);
+
+    // Saving a 51st view name is refused
+    const overflowOutcome = await study.saveView({ systemKey: 'heart', name: 'view 50', camera, hidden: [] }, 'student-fallback');
+    expect(overflowOutcome).toEqual({ ok: false, message: 'you can keep up to 50 saved views; delete one first.' });
   });
 });

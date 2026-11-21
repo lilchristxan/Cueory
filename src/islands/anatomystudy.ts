@@ -430,11 +430,11 @@ export function createAnatomyStudy(getClient: () => Promise<AnatomyStudyClient |
         const storageKey = `cueory:anatomy:views:${expectedUserId}:${snapshot.args.system_key}`;
         const raw = storageGet(storageKey);
         const existing: SavedViewRow[] = raw ? JSON.parse(raw) : [];
-        if (existing.length >= SAVED_VIEW_LIMIT) {
+        const existingIndex = existing.findIndex((v) => v.name === snapshot.args.name);
+        if (existingIndex < 0 && existing.length >= SAVED_VIEW_LIMIT) {
           return { ok: false, message: 'you can keep up to 50 saved views; delete one first.' };
         }
         const now = new Date().toISOString();
-        const existingIndex = existing.findIndex((v) => v.name === snapshot.args.name);
         const viewRow: SavedViewRow = {
           id: existingIndex >= 0 ? existing[existingIndex]!.id : generateLocalId(),
           system_key: snapshot.args.system_key,
