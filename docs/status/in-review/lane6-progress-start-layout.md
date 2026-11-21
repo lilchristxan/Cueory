@@ -1,1 +1,0 @@
-status: Lane 6, /progress and /start at 320px with 32px text: the "cueory.app/progress" credit under the progress page (and the same credit on game result cards) wraps instead of pushing the page 32px sideways; /start already fit. New e2e walks both setup questions and the progress page at that size.

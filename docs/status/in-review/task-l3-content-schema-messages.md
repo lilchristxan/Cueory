@@ -1,1 +1,0 @@
-status: Lane 3, every size, pattern, choice and exact-value check in src/content.config.ts now says in plain words what is wrong; no content edited. Sensitive path (founder-reviewed publication control): needs Christian.

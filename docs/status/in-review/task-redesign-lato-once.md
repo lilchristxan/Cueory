@@ -1,1 +1,0 @@
-status: week-long Cache-Control for /fonts/* in public/_headers, so Safari need not revalidate a preloaded font on every page (the likely second Lato request in WebKit), plus diagnostics in perf-fonts that log each Lato entry's status and transfer size. May not turn perf-fonts green. Needs Christian: public/_headers.

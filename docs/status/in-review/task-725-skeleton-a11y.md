@@ -1,1 +1,0 @@
-status: Spare S5 (#25), loading skeleton accessibility: verified status announcements, hiding after loading, and existing reduced-motion token styling in unit tests; ready for Claude review pending real project test execution.

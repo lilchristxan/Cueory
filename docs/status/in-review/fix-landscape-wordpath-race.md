@@ -1,1 +1,0 @@
-status: landscape-games and tablet-games fix: both specs now fix the day to 1 November 2026, a word path board day; without it the runner's own date picked the sample, and on 18 November (and every 6th day) word path showed its older word search, which is taller and has no path buttons.

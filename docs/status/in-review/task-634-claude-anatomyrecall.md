@@ -1,1 +1,0 @@
-status: Task 634, edge tests for src/islands/anatomyrecall.ts: answers after show-me, retries, round end, trimmed echoes, same-name twins, missing names, two-name catalogs, using placeholder sample labels.

@@ -1,1 +1,0 @@
-status: tests: footer-menu-320.spec's site-menu check waits for the ☰ panel's 280 ms slide-in to end before measuring, so a slow first frame can no longer read the close button at its off-screen starting place (flaky "close site menu" x = -137 on unrelated PRs).

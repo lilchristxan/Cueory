@@ -1,1 +1,0 @@
-status: test reliability: every spec that marks the once-only promo as seen now also marks the launch-updates pop-up, so it cannot open (10 s after load) on the slower Firefox and WebKit runners. Tests only.

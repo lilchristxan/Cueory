@@ -1,1 +1,0 @@
-status: Lane 8, reduced motion now also zeroes animation and transition delays, the card flip's dead cross-fade is gone, and a unit test plus a computed-style e2e check that nothing in src/styles moves under prefers-reduced-motion.

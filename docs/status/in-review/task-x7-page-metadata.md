@@ -1,1 +1,0 @@
-status: x7 page metadata audit: new source-level guard test (tests/unit/page-source-headings.test.ts) that every page gives each Layout exactly one h1 (two only in pinned exclusive branches) and never renders its own main landmark. Test only, no page changes.
