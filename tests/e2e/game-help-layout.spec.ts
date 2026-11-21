@@ -61,7 +61,7 @@ for (const [width, height] of screens) {
       for (const game of games) {
         await page.goto(game.path);
         await page.evaluate((size) => document.documentElement.style.setProperty('font-size', `${size}px`, 'important'), font);
-        const button = game.name === 'pillo'
+        const button = game.name === 'pillo' || game.name === 'word path'
           ? page.getByTestId(game.testId).getByRole('button', { name: `how to play ${game.name}` })
           : page.getByTestId('game-frame-help-button');
         await button.click();
