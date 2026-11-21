@@ -1,5 +1,5 @@
 import AxeBuilder from '@axe-core/playwright';
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Locator, type Page } from '@playwright/test';
 
 const sizes = [
   { width: 320, height: 720 },
@@ -20,6 +20,13 @@ async function checkAccessible(page: Page) {
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 }
 
+async function expect44pxTarget(control: Locator) {
+  const box = await control.boundingBox();
+  expect(box).not.toBeNull();
+  expect(box!.width).toBeGreaterThanOrEqual(44);
+  expect(box!.height).toBeGreaterThanOrEqual(44);
+}
+
 test('matching has accessible cards, progress and a complete keyboard flow at three sizes', async ({ page }) => {
   for (const size of sizes) {
     await page.setViewportSize(size);
@@ -30,6 +37,8 @@ test('matching has accessible cards, progress and a complete keyboard flow at th
     await expect(progress).toHaveAttribute('aria-valuemin', '0');
     await expect(progress).toHaveAttribute('aria-valuemax', '3');
     await expect(progress).toHaveAttribute('aria-valuenow', '0');
+    await expect44pxTarget(terms.getByRole('button').first());
+    await expect44pxTarget(meanings.getByRole('button').first());
 
     for (let n = 1; n <= 3; n++) {
       const term = terms.getByRole('button', { name: new RegExp(`^Placeholder card ${n}, front\\.`) });
@@ -52,6 +61,7 @@ test('matching has accessible cards, progress and a complete keyboard flow at th
     await expect(page.getByText('All 3 matched.')).toBeVisible();
     await checkAccessible(page);
     const playAgain = page.getByRole('button', { name: 'Play again' });
+    await expect44pxTarget(playAgain);
     await playAgain.focus();
     await page.keyboard.press('Enter');
     await expect(progress).toHaveAttribute('aria-valuenow', '0');

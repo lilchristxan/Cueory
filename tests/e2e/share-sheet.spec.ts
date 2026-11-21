@@ -3,13 +3,13 @@ import { expect, test, type Page } from '@playwright/test';
 import { gameName } from '../../src/config/games';
 
 /**
- * Task 103: the share sheet on its noindex preview page. Two sheets: a game (pulse's visible name) and study skills.
+ * Task 103: the share sheet on its noindex preview page. Two sheets: a game (vialo's visible name) and study skills.
  * navigator.share, canShare and the clipboard are replaced with recorders, so these tests never open a real sheet.
  */
 
 const ROUTE = '/preview/share';
 const SITE = 'https://cueory.app';
-const gameSheetName = `pick a card for ${gameName('pulse')}`;
+const gameSheetName = `pick a card for ${gameName('vialo')}`;
 
 interface Recorded {
   title?: string;
@@ -180,8 +180,8 @@ test('share… sends the selected card image with the text and the link to the e
   await expect.poll(() => recorded(page)).toHaveLength(2);
   const [first, second] = await recorded(page);
   for (const share of [first!, second!]) {
-    expect(share.url).toBe(`${SITE}/play/pillo`);
-    expect(share.text).toContain(gameName('pulse'));
+    expect(share.url).toBe(`${SITE}/play/vialo`);
+    expect(share.text).toContain(gameName('vialo'));
     expect(share.files).toHaveLength(1);
     expect(share.files[0]!.type).toBe('image/png');
     expect(share.files[0]!.size).toBeGreaterThan(1000);
@@ -211,8 +211,8 @@ test('without file sharing, share… sends the text and link only, and Instagram
   await expect.poll(() => recorded(page)).toHaveLength(1);
   const [share] = await recorded(page);
   expect(share!.files).toEqual([]);
-  expect(share!.url).toBe(`${SITE}/play/pillo`);
-  expect(share!.text).toContain(gameName('pulse'));
+  expect(share!.url).toBe(`${SITE}/play/vialo`);
+  expect(share!.text).toContain(gameName('vialo'));
 });
 
 test('closing the share sheet is quiet and never throws', async ({ page }) => {
@@ -242,7 +242,7 @@ test('without the Web Share API, copy link still works', async ({ page }) => {
   await expect(sheet.getByRole('button', { name: 'share…' })).toHaveCount(0);
   await sheet.getByRole('button', { name: 'copy link' }).click();
   await expect(sheet.getByRole('status')).toHaveText('link copied.');
-  expect(await page.evaluate(() => window.__copied)).toEqual([`${SITE}/play/pillo`]);
+  expect(await page.evaluate(() => window.__copied)).toEqual([`${SITE}/play/vialo`]);
 });
 
 test('post on X is a plain link with the text and the tool link, and no tracking', async ({ page }) => {
@@ -251,8 +251,8 @@ test('post on X is a plain link with the text and the tool link, and no tracking
   const url = new URL(href!);
   expect(url.origin + url.pathname).toBe('https://x.com/intent/post');
   expect([...url.searchParams.keys()].sort()).toEqual(['text', 'url']);
-  expect(url.searchParams.get('url')).toBe(`${SITE}/play/pillo`);
-  expect(url.searchParams.get('text')).toContain(gameName('pulse'));
+  expect(url.searchParams.get('url')).toBe(`${SITE}/play/vialo`);
+  expect(url.searchParams.get('text')).toContain(gameName('vialo'));
 });
 
 test('choosing a card scrolls instantly under reduced motion', async ({ page }) => {

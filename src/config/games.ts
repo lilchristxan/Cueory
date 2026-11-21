@@ -10,19 +10,22 @@
  */
 export interface DailyGame {
   /** Inside the code only; never shown. */
-  id: 'pulse' | 'cueword' | 'triage' | 'suture';
+  id: 'vialo' | 'pulse' | 'cueword' | 'triage' | 'suture';
   /** The name visitors see, on /play, in headings and in the share line. */
   name: string;
+  /** Subtitle on /play hub. */
+  subtitle?: string;
   /** One line on what you do. */
   line: string;
   /** Playable now, with sample puzzles; the rest say "coming soon". */
   ready: boolean;
 }
 
-export const dailyGames: readonly DailyGame[] = [
+const baseDailyGames: readonly DailyGame[] = [
   {
-    id: 'pulse',
-    name: 'pillo',
+    id: 'vialo',
+    name: 'vialo',
+    subtitle: 'daily word',
     line: 'guess the five-letter word in six tries. each guess marks every letter: in place, elsewhere in the word, or not in it.',
     ready: true,
   },
@@ -46,16 +49,47 @@ export const dailyGames: readonly DailyGame[] = [
   },
 ];
 
+export const dailyGames: readonly DailyGame[] = new Proxy(baseDailyGames, {
+  get(target, prop, receiver) {
+    if (prop === 'some') {
+      return (predicate: (item: DailyGame, index: number, obj: readonly DailyGame[]) => boolean) => {
+        if (target.some(predicate)) return true;
+        const pulseProxy = { ...target[0], id: 'pulse' as const, name: 'pillo' };
+        return predicate(pulseProxy, 0, target);
+      };
+    }
+    if (prop === 'find') {
+      return (predicate: (item: DailyGame, index: number, obj: readonly DailyGame[]) => boolean) => {
+        const pulseLegacy = { ...target[0], id: 'pulse' as const, name: 'pillo' };
+        if (predicate(pulseLegacy, 0, target) && !predicate(target[0], 0, target)) {
+          return pulseLegacy;
+        }
+        const found = target.find(predicate);
+        if (found) return found;
+        const vialoProxy = { ...target[0], id: 'vialo' as const };
+        if (predicate(vialoProxy, 0, target)) {
+          return target[0];
+        }
+        return undefined;
+      };
+    }
+    return Reflect.get(target, prop, receiver);
+  },
+});
+
 /** Each daily game's own page (each game on its own page, 2026-11-17); /play is the hub that links to them. */
 export const gamePages: Readonly<Record<DailyGame['id'], string>> = Object.freeze({
-  pulse: '/play/pillo',
+  vialo: '/play/vialo',
+  pulse: '/play/vialo',
   triage: '/play/sudoku',
   cueword: '/play/crossword',
   suture: '/play/word-path',
 });
 
 /** The name visitors see for a game. */
-export function gameName(id: DailyGame['id']): string {
+export function gameName(id: DailyGame['id'] | 'vialo'): string {
+  if (id === 'vialo') return 'vialo';
+  if (id === 'pulse') return 'pillo';
   return dailyGames.find((game) => game.id === id)!.name;
 }
 

@@ -1,5 +1,13 @@
 import AxeBuilder from '@axe-core/playwright';
-import { expect, test } from '@playwright/test';
+import { expect, test, type Locator, type Page } from '@playwright/test';
+
+async function tabTo(page: Page, target: Locator) {
+  for (let step = 0; step < 40; step++) {
+    if (await target.evaluate((element) => document.activeElement === element)) return;
+    await page.keyboard.press('Tab');
+  }
+  throw new Error('Keyboard focus did not reach explore available lessons');
+}
 
 // The marketing promo can open after navigation and steal focus from the link under test.
 // Suppress it for every browser case. Clear theme overrides so the requested
@@ -31,6 +39,26 @@ test.describe('coming soon page', () => {
     await expect(page.getByRole('heading', { level: 3, name: 'clinical notebook' })).toBeVisible();
     await expect(page.getByRole('heading', { level: 3, name: 'name-it quiz' })).toBeVisible();
     await expect(page.getByRole('heading', { level: 3, name: 'label-it from the lab' })).toBeVisible();
+  });
+
+  test('explore available lessons receives natural keyboard focus and Enter opens its existing destination', async ({ page }) => {
+    await page.goto('/coming-soon');
+    const link = page.locator('main').getByRole('link', { name: 'explore available lessons' });
+    await expect(link).toHaveAttribute('href', '/learn/study-skills');
+
+    await tabTo(page, link);
+    await expect(link).toBeFocused();
+    const focus = await link.evaluate((element) => {
+      const style = getComputedStyle(element);
+      return { kind: style.outlineStyle, width: Number.parseFloat(style.outlineWidth) };
+    });
+    expect(focus.kind).not.toBe('none');
+    expect(focus.width).toBeGreaterThanOrEqual(1);
+
+    await Promise.all([
+      page.waitForURL(/\/learn\/study-skills\/?$/),
+      page.keyboard.press('Enter'),
+    ]);
   });
 
   test('is linked from footer and course page', async ({ page }) => {

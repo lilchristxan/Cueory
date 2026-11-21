@@ -1,0 +1,1 @@
+status: Task 634, unit tests for the solved-puzzle tone (`src/islands/solvetone.ts`): fixed pitch and fade, signal routing, context closed once after the tone ends, and silent failure when Web Audio is missing or blocked. Test-only; no product code change.
