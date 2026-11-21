@@ -56,3 +56,17 @@ export function heroStartHref(source: Record<string, string | undefined> = proce
 export function onboardingShown(source: Record<string, string | undefined> = process.env): boolean {
   return draftsAllowed(draftBuildEnv(source));
 }
+
+/** The about page's address. */
+export const ABOUT_HREF = '/about';
+
+/**
+ * Does this build show the about page? Christian's story is not written yet, so the live build (a Workers Build of main,
+ * or one that names no branch) leaves /about out: scripts/prune-preview.mjs deletes dist/about.html before Pagefind
+ * runs, so the address gets the site's normal 404 page and search never sees it. Staging, previews, plain local builds
+ * and the dev server keep it, so the page can still be written and checked there. Same rule as isProductionBuild in that
+ * script (a unit test keeps the two in agreement). Turn the page on for the live site by deleting this gate.
+ */
+export function aboutShown(source: Record<string, string | undefined> = process.env): boolean {
+  return source.WORKERS_CI !== '1' || draftsAllowed(draftBuildEnv(source));
+}
