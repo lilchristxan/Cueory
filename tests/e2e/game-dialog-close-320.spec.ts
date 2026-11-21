@@ -90,7 +90,8 @@ test('finished-game result card keeps its close button on screen', async ({ page
 
 test('shared game settings keep their close button on screen', async ({ page }) => {
   // On sudoku's page the gear opens the shared settings with sudoku's own (#823).
-  await page.getByTestId('game-settings-button').click();
+  // Framed Sudoku exposes the shared opener from GameFrame, while the dialog remains Sudoku-owned.
+  await page.getByTestId('game-frame-gear').click();
   const dialog = page.getByRole('dialog', { name: 'sudoku settings' });
   await expectCloseStaysVisible(page, page.locator('.game-settings'), dialog.getByRole('button', { name: 'close settings' }));
   await expect(dialog).toBeHidden();

@@ -34,8 +34,9 @@ for (const game of games) {
         const box = page.getByTestId(game.testId);
         await expect(box).toBeVisible();
         const area = (await box.boundingBox())!;
-        const gear = box.getByRole('button', { name: `${game.name} settings` });
-        const help = box.getByRole('button', { name: `how to play ${game.name}` });
+        // Framed routes move the shared controls out of the game island; keep the same strict accessible names.
+        const gear = page.getByTestId('game-frame-gear');
+        const help = page.getByTestId('game-frame-help-button');
         const g = (await gear.boundingBox())!;
         const h = (await help.boundingBox())!;
         for (const corner of [g, h]) {

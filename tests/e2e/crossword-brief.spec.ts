@@ -66,7 +66,8 @@ test('players read "cue", never "clue": the box, its settings and its help', asy
   await board(page).getByRole('button', { name: 'show cue list' }).click();
   await expect(board(page).getByTestId('crossword-clue-list')).toBeVisible();
   expect(await seenText(page, '[data-testid="cueword"]')).not.toContain('clue');
-  await board(page).getByRole('button', { name: 'crossword settings' }).click();
+  // The framed page owns the shared settings opener outside the crossword island.
+  await page.getByTestId('game-frame-gear').click();
   const settings = page.getByRole('dialog', { name: 'crossword settings' });
   await expect(settings.getByRole('group', { name: 'cue text size' })).toBeVisible();
   expect(await seenText(page, '[data-testid="game-settings"]')).not.toContain('clue');
