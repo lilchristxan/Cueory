@@ -68,6 +68,8 @@ export default function GameHeader({ name, help, helpExtra, settings, end, frame
         <GameHelpButton help={help} name={name} className="corner-button corner-button-quiet" extra={helpExtra} />
       </div>
     </div>}
+    {/* Board-level controls (for example print) remain available when Frame owns only the page-level gear and help. */}
+    {framed && end && <div className="game-header" data-print-hidden><div className="game-header-end">{end}</div></div>}
     {/* In framed mode this stays out of the accessibility tree but keeps the established help dialog and seen-state. */}
     {framed && <GameHelpButton help={help} name={name} className="hidden" extra={helpExtra} />}
     <GameSettingsDialog open={open} onClose={() => setOpen(false)} title={`${name} settings`} returnFocusTo={framed ? undefined : gear}>

@@ -89,5 +89,6 @@ describe('GameFrame (Scope 1)', () => {
     expect(page).toContain('{!framed && <div class="game-page-stats-container');
     expect(header).toContain('GAME_FRAME_SETTINGS_EVENT');
     expect(header).toContain('GAME_FRAME_HELP_EVENT');
+    expect(header).toContain('{framed && end &&');
   });
 });
