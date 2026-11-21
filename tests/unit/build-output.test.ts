@@ -74,6 +74,7 @@ const initialJsBudget = {
   'play.html': 104558,
   'play/hello-cards.html': 91427,
   'play/stat.html': 96284, // Task 640: measured from a local Node 24.22.2 build, not yet from CI
+  'play/tachyyy.html': 96284, // Canonical Tachyyy keeps Stat's same game bundle baseline.
   // Each game on its own page (2026-11-17, D-pending): these routes stopped being share landings and now load their game.
   // Measured from a local Node 24 build of lane8/game-pages; the old 89,662 baseline was a page with no game on it.
   'play/crossword.html': 121556,
@@ -81,6 +82,7 @@ const initialJsBudget = {
   'play/sudoku.html': 122156,
   'play/vialo.html': 124013,
   'play/word-path.html': 120824,
+  'play/piccline.html': 120824, // Canonical Piccline keeps Word Path's same game bundle baseline.
   'preview/admin-flags.html': 92161,
   'preview/anatomy-text.html': 89104,
   'preview/anatomy-lab.html': 89027,
@@ -150,6 +152,11 @@ function markupOutsideScripts(html: string): string {
 describe.skipIf(!existsSync(dist))('built site', () => {
   const pages = htmlFiles(dist);
   const latoPreloads = ['/fonts/lato-latin-400-normal.woff2', '/fonts/lato-latin-700-normal.woff2'];
+
+  it('keeps canonical game aliases on their retained legacy route budgets', () => {
+    expect(initialJsBudget['play/tachyyy.html']).toBe(initialJsBudget['play/stat.html']);
+    expect(initialJsBudget['play/piccline.html']).toBe(initialJsBudget['play/word-path.html']);
+  });
 
   it('keeps each route within 10% of its initial JavaScript gzip budget', () => {
     const routes = pages.map((page) => relative(dist, page).replaceAll('\\', '/'));

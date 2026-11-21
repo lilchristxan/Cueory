@@ -10,7 +10,7 @@ describe('home daily-games cards (copy deck, home rows "games line" to "game 5")
       { name: 'vialo', line: 'guess the five-letter word in six tries.', available: true },
       { name: 'crossword', line: 'coming soon.', available: false },
       { name: 'sudoku', line: 'fill every row, column and box with the numbers one through nine.', available: true },
-      { name: 'word path', line: 'trace hidden words through the letters.', available: true },
+      { name: 'piccline', line: 'trace hidden words through the letters.', available: true },
       { name: 'hello cards', line: 'flip a card, start a conversation.', available: false },
     ]);
     expect(homeGamesSummary(cards)).toBe('a new set of nursing games each day. play one, or all three.');
