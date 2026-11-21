@@ -195,4 +195,23 @@ html:root[data-game-motion="reduce"] .game-settings * {
     block-size: calc(var(--spacing) * 6);
     accent-color: var(--color-button);
   }
+
+  .game-settings-data-button {
+    min-block-size: var(--tap-min);
+    border: var(--border-game-settings) solid var(--color-control);
+    border-radius: var(--radius-pill);
+    background: var(--color-page);
+    color: var(--color-ink);
+    padding: calc(var(--spacing) * 2) calc(var(--spacing) * 3);
+  }
+
+  .game-settings-confirm {
+    display: flex;
+    flex-wrap: wrap;
+    gap: calc(var(--spacing) * 3);
+    border-block-start: var(--border-game-settings) solid var(--color-line);
+    padding-block: calc(var(--spacing) * 3);
+  }
+
+  .game-settings-confirm p { flex-basis: 100%; }
 }

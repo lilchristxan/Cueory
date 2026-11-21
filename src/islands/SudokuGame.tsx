@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { browserStorage } from '../scripts/storage';
 import { printGame } from './gameprint';
-import { GameHelpButton, GameHelpCard, useGameHelp } from './GameHelp';
+import { GameHelpButton, GameHelpCard, GameHelpDialog, useGameHelp } from './GameHelp';
 import { gameName } from '../config/games';
-import { localDay, showResultCard, sudokuResultCard } from './gameresults';
+import { deleteStats, forgetHeldRounds, localDay, reportStatsChanged, showResultCard, sudokuResultCard } from './gameresults';
 import { GameSettingsDialog } from './GameSettings.tsx';
+import { frameHelpButton, GAME_FRAME_HELP_EVENT, GAME_FRAME_HELP_READY_EVENT, GAME_FRAME_SETTINGS_EVENT } from './GameFrameControls';
 import { GAME_SETTINGS_EVENT, GAME_SETTINGS_STORAGE_KEY, gameSoundAllowed, loadGameSettings, parseGameSettings, type SharedGameSettings } from './gamesettings';
 import { sudokuCellClasses } from './sudokuhighlight';
 import { DEFAULT_SUDOKU_SETTINGS, GAME_PROGRESS_EVENT, LEVEL_LABELS, sudokuProgressDetail, LEVEL_RULES, advanceSudokuSeconds, autoCandidateNotes, checkSudoku, conflictIndices, dailySudokuSeed, editSudokuBoard, effectiveSudokuMode, generateSudoku, getResult, loadSudokuSettings, newSudokuBoard, noteDigits, pushSudokuHistory, saveSudokuSettings, sudokuCellPresentation, sudokuKeyAction, sudokuWrongCells, undoSudoku, type SudokuBoard, type SudokuBoardAction, type SudokuLevel, type SudokuMode, type SudokuSettings } from './sudoku';
@@ -41,7 +42,7 @@ function playSolvedTone(): void {
   } catch { /* Sound is optional. */ }
 }
 
-export default function SudokuGame() {
+export default function SudokuGame({ framed = false }: { framed?: boolean } = {}) {
   const today = useMemo(() => new Date(), []);
   const day = useMemo(() => localDay(today), [today]);
   const [level, setLevel] = useState<SudokuLevel>('easy');
@@ -60,10 +61,14 @@ export default function SudokuGame() {
   const [auto, setAuto] = useState(false);
   const [settings, setSettings] = useState<SudokuSettings>(() => loadSudokuSettings(browserStorage()));
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [confirmingForgetAll, setConfirmingForgetAll] = useState(false);
   const help = useGameHelp('triage');
   const howOpen = help.open;
   const [said, setSaid] = useState('');
   const settingsButton = useRef<HTMLButtonElement>(null);
+  const forgetAllStatsButton = useRef<HTMLButtonElement>(null);
+  const confirmForgetAllButton = useRef<HTMLButtonElement>(null);
+  const restoreForgetAllFocus = useRef(false);
   const solvedResult = useRef<HTMLDivElement>(null);
   const cells = useRef(new Map<number, HTMLButtonElement>());
   const { entries, marks, notes } = board;
@@ -81,6 +86,51 @@ export default function SudokuGame() {
   const ownNotes = useRef<number[]>([]);
   /** The daily status hears about the first move once per page (it keys by game and day). */
   const started = useRef(false);
+
+  useEffect(() => {
+    if (!framed) return;
+    const detailFor = (event: Event) => {
+      const detail = (event as CustomEvent<unknown>).detail;
+      if (!detail || typeof detail !== 'object') return;
+      const { gameName, trigger } = detail as { gameName?: unknown; trigger?: unknown };
+      return gameName === 'sudoku' && trigger instanceof HTMLButtonElement ? trigger : undefined;
+    };
+    const openSettings = (event: Event) => { if (detailFor(event)) setSettingsOpen(true); };
+    const setHelpReturnTarget = (trigger = frameHelpButton('sudoku')) => {
+      if (trigger) help.button.current = trigger;
+    };
+    const openHelp = (event: Event) => {
+      const trigger = detailFor(event);
+      if (!trigger) return;
+      setHelpReturnTarget(trigger);
+      help.show();
+    };
+    const setHelpWhenReady = (event: Event) => { setHelpReturnTarget(detailFor(event)); };
+    const chooseLevel = (event: Event) => {
+      const level = (event as CustomEvent<unknown>).detail;
+      if (typeof level === 'string' && LEVELS.includes(level as SudokuLevel) && !pausedNow.current) setLevel(level as SudokuLevel);
+    };
+    // The Frame control may have hydrated before this island, or may announce itself afterwards.
+    setHelpReturnTarget();
+    window.addEventListener(GAME_FRAME_SETTINGS_EVENT, openSettings);
+    window.addEventListener(GAME_FRAME_HELP_EVENT, openHelp);
+    window.addEventListener(GAME_FRAME_HELP_READY_EVENT, setHelpWhenReady);
+    window.addEventListener('cueory:game-frame-sudoku-level', chooseLevel);
+    return () => {
+      window.removeEventListener(GAME_FRAME_SETTINGS_EVENT, openSettings);
+      window.removeEventListener(GAME_FRAME_HELP_EVENT, openHelp);
+      window.removeEventListener(GAME_FRAME_HELP_READY_EVENT, setHelpWhenReady);
+      window.removeEventListener('cueory:game-frame-sudoku-level', chooseLevel);
+    };
+  }, [framed, help]);
+
+  useEffect(() => {
+    if (framed) window.dispatchEvent(new CustomEvent('cueory:game-frame-sudoku-level-change', { detail: level }));
+  }, [framed, level]);
+
+  useEffect(() => {
+    if (framed) window.dispatchEvent(new CustomEvent('cueory:sudoku-paused', { detail: paused }));
+  }, [framed, paused]);
 
   useEffect(() => {
     const fresh = newSudokuBoard(puzzle.puzzle);
@@ -127,6 +177,7 @@ export default function SudokuGame() {
     reportRound(sudokuRoundResult(result));
     // Per-level stats are kept only while the shared stats switch is on (./sudokustats).
     const now = keepSudokuSolve(browserStorage(), day, { level, day, seconds });
+    reportStatsChanged();
     setKept(now);
     setSaid(`solved in ${result.time} with ${errors} ${errors === 1 ? 'error' : 'errors'}.${now.on ? ' added to your sudoku stats.' : ''}`);
   }, [solved, day, level, seconds, errors, settings.playSound]);
@@ -239,6 +290,29 @@ export default function SudokuGame() {
     setKept(loadSudokuStats(browserStorage(), day));
     setSaid('sudoku stats forgotten.');
   };
+  const forgetAllStats = () => {
+    const forgotten = deleteStats(browserStorage());
+    forgetHeldRounds();
+    reportStatsChanged();
+    setKept(loadSudokuStats(browserStorage(), day));
+    restoreForgetAllFocus.current = true;
+    setConfirmingForgetAll(false);
+    setSaid(forgotten ? 'all your stats are forgotten. new games are kept from now on.' : "this browser didn't let us delete your stats, so they are still kept.");
+  };
+
+  useEffect(() => {
+    if (confirmingForgetAll) confirmForgetAllButton.current?.focus();
+    else if (restoreForgetAllFocus.current) {
+      forgetAllStatsButton.current?.focus();
+      restoreForgetAllFocus.current = false;
+    }
+  }, [confirmingForgetAll]);
+
+  const openForgetAllConfirmation = () => setConfirmingForgetAll(true);
+  const cancelForgetAllConfirmation = () => {
+    restoreForgetAllFocus.current = true;
+    setConfirmingForgetAll(false);
+  };
 
   // Holding Shift flips the mode for that moment; letting go (or leaving the page) flips it back.
   useEffect(() => {
@@ -285,24 +359,24 @@ export default function SudokuGame() {
   const printPuzzle = () => printGame('sudoku');
   const elapsed = `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`;
 
-  return <section className="sudoku-game" data-testid="sudoku">
+  return <section className="sudoku-game" data-testid="sudoku" data-paused={paused ? 'true' : 'false'}>
     <div className="sudoku-panel">
       <PrintLogo />
-      <div className="segmented sudoku-levels" aria-label="difficulty">{LEVELS.map((choice) => <button key={choice} type="button" className="segmented-option" aria-pressed={level === choice} disabled={paused} onClick={() => { if (!paused) setLevel(choice); }}>{level === choice && <span className="segmented-check" aria-hidden="true">✓</span>}{LEVEL_LABELS[choice]}</button>)}</div>
+      {!framed && <div className="segmented sudoku-levels" aria-label="difficulty">{LEVELS.map((choice) => <button key={choice} type="button" className="segmented-option" aria-pressed={level === choice} disabled={paused} onClick={() => { if (!paused) setLevel(choice); }}>{level === choice && <span className="segmented-check" aria-hidden="true">✓</span>}{LEVEL_LABELS[choice]}</button>)}</div>}
       <div className="sudoku-status" data-testid="sudoku-status">
         <span className="sudoku-time">{settings.showTimer && <>time: <strong>{elapsed}</strong></>}</span>
         <span className="sudoku-errors">{settings.showErrors ? <>error: <strong>{errors}</strong></> : null}</span>
       </div>
       {/* Five equal icon buttons spread across the board's width: settings, pause or play, print, stats, how to play. */}
       <div className="sudoku-toolbar" role="group" aria-label="sudoku tools" data-testid="sudoku-toolbar">
-        <button ref={settingsButton} type="button" className="sudoku-icon-button" aria-label="sudoku settings" aria-haspopup="dialog" data-testid="game-settings-button" onClick={() => setSettingsOpen(true)}><svg viewBox="0 0 24 24" className="size-6" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" strokeWidth="1.6" /><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" /></svg></button>
+        {!framed && <button ref={settingsButton} type="button" className="sudoku-icon-button" aria-label="sudoku settings" aria-haspopup="dialog" data-testid="game-settings-button" onClick={() => setSettingsOpen(true)}><svg viewBox="0 0 24 24" className="size-6" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" strokeWidth="1.6" /><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" /></svg></button>}
         <button type="button" className="sudoku-icon-button sudoku-pause-button" aria-label={paused ? 'resume puzzle' : 'pause puzzle'} disabled={solved} onClick={togglePause}>{paused
           ? <svg viewBox="0 0 24 24" className="size-6" aria-hidden="true" focusable="false"><path d="M8.5 6.5v11l9-5.5z" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" /></svg>
           : <svg viewBox="0 0 24 24" className="size-6" aria-hidden="true" focusable="false"><path d="M9 6.5v11M15 6.5v11" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /></svg>}</button>
         <button type="button" className="sudoku-icon-button print-control" aria-label="print this puzzle" onClick={printPuzzle}><svg viewBox="0 0 24 24" className="size-6" aria-hidden="true" focusable="false"><path d="M7 9V4h10v5M7 17H5.5A2.5 2.5 0 0 1 3 14.5v-3A2.5 2.5 0 0 1 5.5 9h13a2.5 2.5 0 0 1 2.5 2.5v3a2.5 2.5 0 0 1-2.5 2.5H17M7 14h10v6H7z" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" /></svg></button>
-        <button type="button" className="sudoku-icon-button" aria-label="sudoku stats" aria-expanded={statsOpen} onClick={openStats}><svg viewBox="0 0 24 24" className="size-6" aria-hidden="true" focusable="false"><path d="M5 20V11M12 20V5M19 20v-6" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /></svg></button>
-        <GameHelpButton help={help} name={gameName('triage')} className="sudoku-icon-button" />
-        {statsOpen && <div className="sudoku-how sudoku-stats" role="region" aria-label="sudoku stats" data-testid="sudoku-stats">
+        {!framed && <button type="button" className="sudoku-icon-button" aria-label="sudoku stats" aria-expanded={statsOpen} onClick={openStats}><svg viewBox="0 0 24 24" className="size-6" aria-hidden="true" focusable="false"><path d="M5 20V11M12 20V5M19 20v-6" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /></svg></button>}
+        {!framed && <GameHelpButton help={help} name={gameName('triage')} className="sudoku-icon-button" />}
+        {!framed && statsOpen && <div className="sudoku-how sudoku-stats" role="region" aria-label="sudoku stats" data-testid="sudoku-stats">
           <p className="font-medium">your sudoku stats</p>
           {kept.on ? <>
             <table>
@@ -353,7 +427,8 @@ export default function SudokuGame() {
     </div>
     {solved && <div ref={solvedResult} className="sudoku-solved" tabIndex={-1} role="status" data-testid="sudoku-result"><p className="text-lg font-medium">solved.</p><p>{elapsed} · {errors} {errors === 1 ? 'error' : 'errors'}</p><p className="text-sm text-ink-soft">a new sudoku comes out tomorrow.</p></div>}
     {/* The same settings dialog as the other games (#823): the shared settings first, then sudoku's own. */}
-    <GameSettingsDialog open={settingsOpen} onClose={() => setSettingsOpen(false)} title="sudoku settings" returnFocusTo={settingsButton}>
+    {framed && <GameHelpDialog help={help} name={gameName('triage')} />}
+    <GameSettingsDialog open={settingsOpen} onClose={() => setSettingsOpen(false)} title="sudoku settings" returnFocusTo={framed ? undefined : settingsButton}>
       <fieldset>
         <legend>gameboard settings</legend>
         {(Object.keys(DEFAULT_SUDOKU_SETTINGS) as Array<keyof SudokuSettings>).map((key) => {
@@ -361,6 +436,14 @@ export default function SudokuGame() {
           return <label key={key} className="game-settings-option"><span>{labels[key]}</span><input type="checkbox" checked={settings[key]} onChange={() => updateSetting(key)} /></label>;
         })}
       </fieldset>
+      {framed && <fieldset>
+        <legend>your data</legend>
+        {!confirmingForgetAll ? <button ref={forgetAllStatsButton} type="button" className="game-settings-data-button" onClick={openForgetAllConfirmation}>forget all my stats</button> : <div role="group" aria-labelledby="forget-stats-question" className="game-settings-confirm">
+          <p id="forget-stats-question">forget all game stats on this device? this can’t be undone.</p>
+          <button ref={confirmForgetAllButton} type="button" className="game-settings-data-button" onClick={forgetAllStats}>yes, forget all my stats</button>
+          <button type="button" className="game-settings-data-button" onClick={cancelForgetAllConfirmation}>keep my stats</button>
+        </div>}
+      </fieldset>}
     </GameSettingsDialog>
     <p className="sr-only" aria-live="polite" aria-atomic="true" data-testid="sudoku-live">{said}</p>
     <p className="sudoku-print-footer">cueory.app</p>

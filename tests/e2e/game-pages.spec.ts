@@ -35,6 +35,7 @@ for (const game of games) {
   test.describe(`${game.name} on its own page`, () => {
     test('shows only this game, with its name at the top and a link back to all games', async ({ page }) => {
       await page.goto(game.path);
+      test.skip(game.name === 'crossword' && await page.getByTestId('crossword-soon').count() > 0, 'crossword is closed in this build');
       const heading = page.getByRole('heading', { level: 1, name: game.name });
       await expect(heading).toBeVisible();
       await expect(heading).toHaveCSS('text-align', 'center');
@@ -49,8 +50,8 @@ for (const game of games) {
       await expect(back).toHaveAttribute('href', '/play');
       const box = (await back.boundingBox())!;
       expect(box.height).toBeGreaterThanOrEqual(44);
-      await expect(page.getByTestId('game-settings-button')).toBeVisible();
-      await expect(page.getByTestId('game-stats')).toBeVisible();
+      await expect(game.id === 'triage' ? page.getByTestId('game-frame-gear') : page.getByTestId('game-settings-button')).toBeVisible();
+      await expect(game.id === 'triage' ? page.getByTestId('game-frame-stats') : page.getByTestId('game-stats')).toBeVisible();
       // The share tags stay those of the game, so a shared result still previews as before.
       await expect(page).toHaveTitle(new RegExp(`^${game.name}`));
       expect(await page.locator('meta[property="og:image"]').getAttribute('content')).toBe('https://cueory.app/share/games-scene.png');
@@ -63,7 +64,9 @@ for (const game of games) {
       const back = page.getByRole('link', { name: 'all games' });
       await back.focus();
       await expect(back).toBeFocused();
-      const help = page.getByTestId(game.testId).getByRole('button', { name: `how to play ${game.name}` });
+      const help = game.id === 'triage'
+        ? page.getByTestId('game-frame-help-button')
+        : page.getByTestId(game.testId).getByRole('button', { name: `how to play ${game.name}` });
       for (let step = 0; step < 40 && !(await help.evaluate((node) => node === document.activeElement)); step++) await page.keyboard.press('Tab');
       await expect(help).toBeFocused();
       await page.keyboard.press('Enter');

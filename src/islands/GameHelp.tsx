@@ -59,7 +59,7 @@ function PlaySteps({ content }: { content: GameHelpContent }) {
   return <ol className="game-help-steps">{content.play.map((step) => <li key={step}>{step}</li>)}</ol>;
 }
 
-function GameHelpDialog({ help, name, extra }: { help: GameHelpState; name: string; extra?: ReactNode }) {
+export function GameHelpDialog({ help, name, extra }: { help: GameHelpState; name: string; extra?: ReactNode }) {
   const overlay = useRef<HTMLDialogElement>(null);
   const panel = useRef<HTMLDivElement>(null);
   const id = useId();

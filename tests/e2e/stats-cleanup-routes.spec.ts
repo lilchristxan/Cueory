@@ -10,6 +10,9 @@ const old = { level: 'easy', day: '2025-09-27', seconds: 100 };
 const recent = { level: 'hard', day: '2026-10-30', seconds: 600 };
 
 for (const path of ['/play', '/play/pillo', '/play/sudoku']) {
+  const statsHeading = (page: import('@playwright/test').Page) => path === '/play/sudoku'
+    ? page.getByTestId('game-frame-sudoku-stats')
+    : page.getByTestId('game-stats').getByRole('heading', { name: 'your stats' });
   test(`opening ${path} deletes sudoku solve times older than 400 days`, async ({ page }) => {
     await page.clock.setFixedTime(new Date(`${today}T15:00:00`));
     await markPanelsSeen(page);
@@ -24,7 +27,7 @@ for (const path of ['/play', '/play/pillo', '/play/sudoku']) {
       } catch { /* optional storage */ }
     }, { old, recent });
     await page.goto(path);
-    await expect(page.getByTestId('game-stats').getByRole('heading', { name: 'your stats' })).toBeVisible();
+    await expect(statsHeading(page)).toBeVisible();
     await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('cueory-sudoku-stats') ?? 'null')?.solves))
       .toEqual([recent]);
   });
@@ -42,7 +45,7 @@ for (const path of ['/play', '/play/pillo', '/play/sudoku']) {
       } catch { /* optional storage */ }
     }, old);
     await page.goto(path);
-    await expect(page.getByTestId('game-stats').getByRole('heading', { name: 'your stats' })).toBeVisible();
+    await expect(statsHeading(page)).toBeVisible();
     await expect.poll(() => page.evaluate(() => localStorage.getItem('cueory-sudoku-stats'))).toBeNull();
   });
 }

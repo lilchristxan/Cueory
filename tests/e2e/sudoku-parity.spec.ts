@@ -68,7 +68,7 @@ for (const [size, width, height] of [['phone', 390, 844], ['desktop', 1440, 900]
     await expect(cells(page).nth(open[0]!)).toHaveAttribute('aria-label', /, empty$/);
 
     // Check puzzle with live checking off: a wrong entry is marked only after the check.
-    await game(page).getByRole('button', { name: 'settings' }).click();
+    await page.getByTestId('game-frame-gear').click();
     await page.getByRole('checkbox', { name: 'check guesses when entered' }).uncheck();
     await page.getByRole('button', { name: 'close settings' }).click();
     await cells(page).nth(open[2]!).click();

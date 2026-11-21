@@ -7,12 +7,12 @@ import { dailyGames } from '../../config/games';
 const game = dailyGames.find((item) => item.id === 'triage')!;
 ---
 <Layout title={game.name} description={game.line} socialImage="/share/games-scene.png">
-<GamePage game={game}>
+<GamePage game={game} framed>
   <h1 slot="title" id="sudoku-heading" class="display mt-4 text-center text-title wrap-anywhere sm:text-title-lg">{game.name}</h1>
   {/* sudoku-section and sudoku-mount: sudoku's print rules (global.css) print only the mount. */}
   <section class="sudoku-section mt-6" aria-labelledby="sudoku-heading" data-testid="sudoku-section">
     <div class="sudoku-mount">
-      <SudokuGame client:only="react" />
+      <SudokuGame client:only="react" framed />
       <noscript><p>{game.name} needs JavaScript.</p></noscript>
     </div>
   </section>
