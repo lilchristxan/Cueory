@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { countsInWords, filterItems, parseItems, STATUS_ORDER, type ConceptFilter, type ConceptItem, type ConceptStatus } from './conceptmap.ts';
+import { countsInWords, filterItems, parseItems, STATUS_ORDER, type ConceptFilter, type ConceptItem, type ConceptStatus } from './concept-map.ts';
 
 interface Props { items: ConceptItem[] }
 

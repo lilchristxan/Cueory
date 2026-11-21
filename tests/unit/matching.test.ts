@@ -90,6 +90,17 @@ describe('a Matching round', () => {
     expect(roundCount(s)).toBe(1);
   });
 
+  it('treats an empty deck as an already-finished single round with inert picks', () => {
+    const empty = startMatching([], seeded(1));
+
+    expect(isRoundOver(empty)).toBe(true);
+    expect(hasNextRound(empty)).toBe(false);
+    expect(roundCount(empty)).toBe(1);
+    expect(nextRound(empty, seeded(2))).toBe(empty);
+    expect(pick(empty, 'term', 0)).toBe(empty);
+    expect(pick(empty, 'meaning', 0)).toBe(empty);
+  });
+
   it('puts cards that read the same on either side into different rounds, so every round can be finished', () => {
     // (A, X), (A, Y), (B, Y): any two of them share a term or a meaning.
     const twins: MatchCard[] = [

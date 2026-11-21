@@ -191,16 +191,28 @@ describe('invalid deck shapes (graceful fallback)', () => {
 // ── today validation ──────────────────────────────────────────────────────────
 
 describe('today validation', () => {
-  it('throws on garbage today', () => {
-    expect(() => importRows(emptyProgress(), new Map(), 'garbage')).toThrow();
+  it('throws the import-specific error on garbage today', () => {
+    expect(() => importRows(emptyProgress(), new Map(), 'garbage'))
+      .toThrow('importRows: invalid today "garbage"');
   });
 
-  it('throws on a rolled-over date like 2026-02-31', () => {
-    expect(() => importRows(emptyProgress(), new Map(), '2026-02-31')).toThrow();
-  });
+  it.each(['2026-00-01', '2026-13-01', '2026-99-01', '0000-01-01'])(
+    'rejects an invalid month or year (%s) without leaking RangeError', (day) => {
+      expect(() => importRows(emptyProgress(), new Map(), day))
+        .toThrow(new Error(`importRows: invalid today "${day}"`));
+    },
+  );
 
-  it('accepts a valid date without throwing', () => {
+  it.each(['2026-02-29', '2026-02-31'])(
+    'rejects an impossible calendar day (%s)', (day) => {
+      expect(() => importRows(emptyProgress(), new Map(), day))
+        .toThrow(new Error(`importRows: invalid today "${day}"`));
+    },
+  );
+
+  it('accepts a leap day and ordinary valid dates', () => {
     expect(() => importRows(emptyProgress(), new Map(), TODAY)).not.toThrow();
+    expect(() => importRows(emptyProgress(), new Map(), '2024-02-29')).not.toThrow();
   });
 });
 

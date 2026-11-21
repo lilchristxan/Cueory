@@ -1,0 +1,1 @@
+status: Task 634, unit tests for the inline email error rules (`src/scripts/formerrors.ts`): empty and loose-shape values, browser verdict, aria wiring with and without a hint, live recheck. Test-only; no product code change.

@@ -8,6 +8,15 @@ const [eveningDeviceCss, eveningPickedCss] = eveningCss.split(':root[data-theme=
 const daytime = readColorTokens(daytimeCss);
 const evening = { ...daytime, ...readColorTokens(eveningDeviceCss) };
 
+describe('picture export tokens (Task 178)', () => {
+  it('defines every --export-* size the exporter reads', () => {
+    const source = readFileSync(new URL('../../src/islands/anatomyscene.ts', import.meta.url), 'utf8');
+    const names = [...source.matchAll(/'(--export-[a-z-]+)'/g)].map((m) => m[1]!);
+    expect(names.length).toBeGreaterThan(10);
+    for (const name of names) expect(css).toMatch(new RegExp(`${name}:\\s*[0-9.]+;`));
+  });
+});
+
 describe('evening palette copies', () => {
   it('has one copy for Follow device and one for a Dark pick', () => {
     expect(eveningDeviceCss).toContain(':root:not([data-theme="light"])');
@@ -21,10 +30,26 @@ describe('evening palette copies', () => {
 
 // Exact brand-guide v1.0 colors (§4.1 and §4.2; D-55). Tokens may only use these. The older #3f2e24, #1b1715 and
 // #efe6da are retired (§4.3).
+// The copper group (Copper Deep, Copper, Copper Glow, Copper Shine) was added 18 Nov 2026 by Christian's decision
+// (docs/BRAND.md) and serves both themes.
+const copperGroup = ['#b87348', '#d9976a', '#f6d3ae', '#fff0de'];
+// Game accents added 20 Nov 2026 by Christian's decision (docs/BRAND.md): Teal for piccline, Dim for vialo dark icon.
+const gameDaytime = ['#2f7a78', '#5a463a'];
+const gameEvening = ['#4fb3ae', '#5a463a'];
 const brand = {
-  daytime: ['#f9f5ef', '#eadccf', '#d3b7a1', '#8b6f5b', '#3e2c23', '#6b5243'],
-  evening: ['#1c1917', '#3a2d24', '#6b5243', '#cbb8a4', '#f9f5ef'],
+  daytime: ['#f9f5ef', '#eadccf', '#d3b7a1', '#8b6f5b', '#3e2c23', '#6b5243', ...copperGroup, ...gameDaytime],
+  evening: ['#1c1917', '#3a2d24', '#6b5243', '#cbb8a4', '#f9f5ef', ...copperGroup, ...gameEvening],
 };
+
+// Palette-independent type, spacing and layout tokens live in the shared @theme block. Color tokens are
+// palette-dependent and must be declared in both the Daytime block and the Evening override.
+describe('palette token parity', () => {
+  it('gives every Daytime color token an Evening value', () => {
+    const daytimeColors = Object.keys(daytime);
+    const eveningColors = Object.keys(readColorTokens(eveningDeviceCss));
+    expect(eveningColors).toEqual(expect.arrayContaining(daytimeColors));
+  });
+});
 
 describe('retired colors (brand guide v1.0 §4.3)', () => {
   it('appear nowhere in the tokens', () => {
@@ -36,6 +61,7 @@ describe('retired colors (brand guide v1.0 §4.3)', () => {
 const pairs: Array<[string, string, number]> = [
   ['ink', 'page', 4.5],
   ['ink', 'surface', 4.5],
+  ['ink', 'line', 4.5], // Coming-soon course status badges, in Daytime and Evening.
   ['ink', 'soft', 4.5],
   ['ink-soft', 'page', 4.5],
   ['ink-soft', 'surface', 4.5],
@@ -81,7 +107,21 @@ describe('components', () => {
 
   it.each(files)('%s uses only token-based classes', (file) => {
     const source = readFileSync(new URL(file, srcDir), 'utf8');
-    expect(source.match(/[\w:]+-\[[^\]\s]+\]/g) ?? []).toEqual([]);
+    const arbitrary = source.match(/[\w:]+-\[[^\]\s]+\]/g) ?? [];
+    if (file === 'islands/GameResultsHost.tsx') {
+      const approved = new Set([
+        'w-[var(--cueory-result-card-max-width)]',
+        'max-w-[var(--cueory-result-card-max-width)]', 'rounded-[var(--cueory-result-card-radius)]',
+        'border-[color:var(--cueory-result-card-border)]', 'bg-[color:var(--cueory-result-card-bg)]',
+        'p-[var(--cueory-result-card-padding)]', 'shadow-[var(--cueory-result-card-shadow)]',
+        'text-[length:var(--cueory-label-size)]', 'font-[var(--cueory-label-weight)]',
+        'tracking-[var(--cueory-label-tracking)]', 'rounded-[var(--radius-md)]',
+        'border-[color:var(--cueory-glass-border)]', 'shadow-[var(--cueory-glass-shadow)]',
+        'from-[var(--cueory-copper-start)]', 'to-[var(--cueory-copper-end)]',
+        'text-[color:var(--cueory-copper-ink)]',
+      ]);
+      expect([...new Set(arbitrary.filter((token) => !approved.has(token)))]).toEqual([]);
+    } else expect(arbitrary).toEqual([]);
   });
 });
 
@@ -296,7 +336,7 @@ describe('glass button and side panel (D-46)', () => {
     // Codex review of #24: a light hover layer dropped the Taupe "coming soon" note below AA.
     const styles = readFileSync(new URL('../../src/styles/global.css', import.meta.url), 'utf8');
     for (const selector of ['.account-link:hover', '.menu-link:hover', '.menu-small-link:hover']) {
-      const rule = new RegExp(`${selector.replace(/[.:]/g, '\\$&')}\\s*\\{([^}]*)\\}`).exec(styles);
+      const rule = new RegExp(`${selector.replace(/[\\.:]/g, '\\$&')}\\s*\\{([^}]*)\\}`).exec(styles);
       expect(rule, `${selector} rule`).not.toBeNull();
       expect(rule![1]).not.toMatch(/background/);
     }

@@ -18,10 +18,15 @@ aim to reply within 7 days.
 4. **Strict headers.** Every page has a content security policy (hash-based, no `unsafe-inline`/`unsafe-eval`; the one
    allowance is `'wasm-unsafe-eval'`, which lets site search compile WebAssembly only (D-49); forms may post only to our
    own site and our newsletter provider), `frame-ancestors 'none'`, HSTS, `nosniff`, a strict
-   referrer policy and a locked-down permissions policy. See `public/_headers` and `astro.config.mjs`.
+   referrer policy and a locked-down permissions policy. See `public/_headers` and `astro.config.mjs`. The full policy
+   is sent as an HTTP header as well as Astro's `<meta>`: the build copies it, with every page's hashes, into
+   `dist/_headers` (`src/security/cspheader.ts`, issue #746).
 5. **Validate input everywhere**, on the server as well as in the browser.
-6. **Rate limits** on sign-in, sign-up and every form. The newsletter form relies on Kit's own abuse protection and
-   double opt-in; our own forms (from Task 2) get server-side limits.
+6. **Rate limits** on sign-in, sign-up and every form. Sign-in and sign-up use Supabase Auth's default rate limits,
+   kept on purpose (D-111). Our own database functions limit each person inside the database: answer checks
+   (`check_answer`), reports (`submit_flag`), study events (`record_study_events`) and display-name changes
+   (`update_display_name`). The newsletter form relies on Kit's own abuse protection and double opt-in. The admin
+   functions have no limit yet (see [the admin console plan](docs/ADMIN-CONSOLE.md)).
 7. **Automated checks stay on:** Dependabot alerts and updates, code scanning, secret scanning, and CI on every pull
    request. The repository is public (D-75), so GitHub's CodeQL and secret scanning with push protection run for
    free, and Semgrep Community Edition and gitleaks keep running in CI as a second layer.
@@ -30,15 +35,25 @@ aim to reply within 7 days.
    - **Outside pull requests never merge themselves:** the staging auto-merge skips pull requests from forks, and
      only Christian merges into `main`.
 8. **Two-factor authentication** is required on the admin account and on every account that controls the business
-   (GitHub, Cloudflare, Kit, Google, and from Task 2 Supabase and Resend).
+   (GitHub, Cloudflare, Kit, Google, and from Task 2 Supabase and Resend). For the site's admin account the database
+   enforces it: `is_admin()` needs an `aal2` session and a currently verified authenticator factor, so admin
+   functions refuse a session without two-factor.
 9. **Business accounts use Christian's business Gmail**, never an address on `cueory.app`, so a domain or email
    problem can't lock him out. Email DNS records (MX, SPF, DKIM, DMARC) are never changed without asking him.
 10. **Locked staging.** The staging site (and every preview) is behind Cloudflare Access, limited to Christian's email.
-    From Task 2, `/admin` is locked the same way, and every admin action is checked again in the database.
+    Every admin action is checked in the database (`is_admin()` inside each admin function). Cloudflare Access in
+    front of `/admin` on the live site is decided (docs/ADMIN-CONSOLE.md, decision 3, 2026-11-05) but not set up yet;
+    it must be in place before any admin page is public.
 11. **Review.** Codex reviews every pull request. Christian approves anything touching auth, database policies,
     payments, workflows, deployment or secrets. Nobody merges their own pull request into `main`.
 
-## Backups
+## Backups — setup pending
 
-From Task 2, the production database is dumped nightly by a GitHub Actions job and encrypted before it is stored.
-The restore steps will live in `docs/OPERATIONS.md`.
+A nightly encrypted production database backup is **planned, not yet verified as operational**.
+The proposed workflow is in `.github/workflows/prod-backup.yml` on `staging` but is not present on the
+default `main` branch. GitHub's scheduled workflows run from the default branch, so the draft
+does not currently provide a scheduled production backup.
+
+Before relying on backups or storing student records, verify that the founder-approved workflow
+is installed on `main`, an encrypted off-site upload has completed, and a controlled restore
+has succeeded. See [the backup proposal](docs/BACKUPS.md) and [operations](docs/OPERATIONS.md).

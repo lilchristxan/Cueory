@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   COURSES,
-  deckProgress,
   emptyProgress,
   examDateWords,
   exportProgress,
@@ -9,8 +8,15 @@ import {
   isEmptyProgress,
   localDay,
   migrateLegacyStars,
+  readProgress,
+  saveProgress,
+  withOnboarding,
 } from '../scripts/progress';
 import { browserStorage } from '../scripts/storage';
+import { readResume } from '../scripts/resume';
+import { connectExamPlans, isConnectFailure, loadExamPlan, loadTickets } from './examplansync';
+import ProgressRing from './ProgressRing';
+import { examCountdown, progressView } from './progressview';
 
 interface Deck {
   id: string;
@@ -21,6 +27,8 @@ interface Deck {
 
 interface Props {
   decks: Deck[];
+  /** Where the setup questions are; null while the live build holds them back (accounts closed). */
+  setupHref?: string | null;
 }
 
 const primaryButton = 'min-h-11 rounded-pill bg-button px-5 py-2.5 text-on-button hover:bg-button-hover';
@@ -31,8 +39,9 @@ const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one :
 /**
  * What this browser keeps for the student (D-69), with "download my progress" and "forget my progress on this device".
  * Nothing here is sent anywhere. Rendered only in the browser (client:only).
+ * Signed in (Task 145), the account's exam date is read on load and wins over the device's; it is only read here.
  */
-export default function ProgressPanel({ decks }: Props) {
+export default function ProgressPanel({ decks, setupHref = '/start' }: Props) {
   const [storage] = useState(browserStorage);
   // Stars saved before D-69 move into the record first, so this page shows (and forgets) all of it.
   const [progress, setProgress] = useState(() => migrateLegacyStars(storage));
@@ -41,6 +50,31 @@ export default function ProgressPanel({ decks }: Props) {
   const forgetRef = useRef<HTMLButtonElement>(null);
   const confirmRef = useRef<HTMLButtonElement>(null);
   const saidRef = useRef<HTMLParagraphElement>(null);
+  const [signedIn, setSignedIn] = useState(false);
+  const [syncNote, setSyncNote] = useState('');
+  // "forget my progress" cancels a load still on its way, so the account's answers aren't written back afterwards.
+  const [loads] = useState(loadTickets);
+
+  useEffect(() => {
+    const current = loads.start();
+    let live = true;
+    void (async () => {
+      const db = await connectExamPlans();
+      if (!db || isConnectFailure(db) || !live) return;
+      setSignedIn(true);
+      if (!current()) return;
+      const loaded = await loadExamPlan(db, () => readProgress(storage).onboarding);
+      if (!live || !current()) return;
+      if (!loaded.ok) setSyncNote(loaded.message);
+      else if (loaded.onboarding && saveProgress(storage, withOnboarding(readProgress(storage), loaded.onboarding))) {
+        setProgress(migrateLegacyStars(storage));
+      }
+    })();
+    return () => {
+      live = false;
+      loads.cancel();
+    };
+  }, [storage, loads]);
 
   // Studying in another tab changes what's saved. Read it again when another tab saves, and when this page comes back
   // into view, so the page, the download and "forget" always match what's actually kept.
@@ -58,18 +92,8 @@ export default function ProgressPanel({ decks }: Props) {
   }, [storage]);
 
   const { course, examDate, done } = progress.onboarding;
-  // Decks no longer on the site still show, so the page lists everything that's kept.
-  const retired = Object.keys(progress.decks)
-    .filter((id) => !decks.some((deck) => deck.id === id))
-    .map((id) => ({ id, title: `a deck no longer on the site (${id})`, cardIds: null }));
-  const deckLines = [...decks, ...retired].flatMap((deck) => {
-    const known = deck.cardIds ? new Set(deck.cardIds) : null;
-    const saved = deckProgress(progress, deck.id);
-    const count = (ids: string[]) => ids.filter((id) => !known || known.has(id)).length;
-    const [know, learning, starred] = [count(saved.know), count(saved.learning), count(saved.starred)];
-    if (!know && !learning && !starred) return [];
-    return [{ id: deck.id, title: deck.title, text: `${know} know it · ${learning} still learning · ${plural(starred, 'star', 'stars')}` }];
-  });
+  const view = progressView(progress, decks);
+  const countdown = examCountdown(examDate, localDay(new Date()));
 
   const download = () => {
     // Read what's saved right now, not what this page showed when it opened.
@@ -88,6 +112,7 @@ export default function ProgressPanel({ decks }: Props) {
   };
 
   const forget = () => {
+    loads.cancel();
     const ok = forgetProgress(storage, decks.map((deck) => deck.id));
     setConfirming(false);
     if (ok) setProgress(emptyProgress());
@@ -104,11 +129,13 @@ export default function ProgressPanel({ decks }: Props) {
     );
   }
 
-  const empty = isEmptyProgress(progress);
+  // Download has nothing to export without saved progress, but forget also clears a saved study place (Codex on #221).
+  const noProgress = isEmptyProgress(progress);
+  const empty = noProgress && readResume(storage) === null;
 
   return (
     <div>
-      <section aria-labelledby="answers-heading">
+      <section aria-labelledby="answers-heading" className="rounded-xl border border-line bg-surface p-5">
         <h2 id="answers-heading" className="text-xl">your setup answers</h2>
         {course || examDate ? (
           <ul className="mt-3 space-y-1">
@@ -118,34 +145,75 @@ export default function ProgressPanel({ decks }: Props) {
         ) : (
           <p className="mt-3 text-ink-soft">{done ? 'you skipped these.' : 'you haven’t answered them yet.'}</p>
         )}
-        <p className="mt-3">
-          <a href="/start">{course || examDate ? 'change your answers' : 'answer two quick questions'}</a>
-        </p>
+        {countdown && <p className="mt-3 text-ink-soft">{countdown}</p>}
+        {syncNote && <p className="mt-3 text-ink-soft" role="status" data-testid="exam-sync">{syncNote}</p>}
+        {setupHref && (
+          <p className="mt-3">
+            <a href={setupHref}>{course || examDate ? 'change your answers' : 'answer two quick questions'}</a>
+          </p>
+        )}
       </section>
 
       <section aria-labelledby="decks-heading" className="mt-section">
         <h2 id="decks-heading" className="text-xl">card decks</h2>
-        {deckLines.length ? (
-          <ul className="mt-3 space-y-2">
-            {deckLines.map((line) => (
-              <li key={line.id}>
-                <span className="block">{line.title}</span>
-                <span className="block text-sm text-ink-soft">{line.text}</span>
-              </li>
-            ))}
-          </ul>
-        ) : (
+        {!view.hasSavedDecks && (
           <p className="mt-3 text-ink-soft">nothing saved yet. piles and stars from card decks show up here.</p>
         )}
+        {view.overall.total > 0 && (
+          <div className="mt-4 rounded-xl border border-line bg-surface p-5">
+            <h3 className="text-lg">across current decks</h3>
+            <div className="mt-3 flex flex-wrap items-center gap-4">
+              <ProgressRing
+                label="overall card progress"
+                know={view.overall.know}
+                learning={view.overall.learning}
+                notStarted={view.overall.notStarted}
+              />
+              <p className="text-sm text-ink-soft">
+                {view.overall.know} know it · {view.overall.learning} still learning · {view.overall.notStarted} not started
+              </p>
+            </div>
+          </div>
+        )}
+        <ul className="mt-4 grid gap-4 sm:grid-cols-2">
+          {view.decks.map((line) => (
+            <li key={line.id} className="min-w-0 rounded-xl border border-line p-5">
+              <h3 className="text-lg">{line.title}</h3>
+              <div className="mt-3 flex flex-wrap items-center gap-4">
+                {line.notStarted !== null && (
+                  <ProgressRing
+                    label={line.title}
+                    know={line.know}
+                    learning={line.learning}
+                    notStarted={line.notStarted}
+                  />
+                )}
+                <div>
+                  <span className="block text-sm text-ink-soft">
+                    {line.know} know it · {line.learning} still learning · {plural(line.starred, 'star', 'stars')}
+                  </span>
+                  <span className="mt-1 block text-sm text-ink-soft">
+                    {line.notStarted === null ? 'not started: unknown for this retired deck' : <>{line.notStarted} not started</>}
+                  </span>
+                </div>
+              </div>
+              {!line.retired && (
+                <a href="/learn" className="mt-3 inline-flex min-h-11 items-center underline">study now</a>
+              )}
+            </li>
+          ))}
+        </ul>
       </section>
 
       <section aria-labelledby="yours-heading" className="mt-section">
         <h2 id="yours-heading" className="text-xl">it’s yours</h2>
         <p className="mt-3 text-ink-soft">
-          all of this is saved in this browser only. cueory never receives it.
+          {signedIn
+            ? 'all of this is saved in this browser. an exam date you set is also saved to your account.'
+            : 'all of this is saved in this browser only. cueory never receives it.'}
         </p>
         <div className="mt-stack flex flex-wrap gap-3">
-          <button type="button" onClick={download} disabled={empty} className={`${primaryButton} disabled:opacity-50`}>
+          <button type="button" onClick={download} disabled={noProgress} className={`${primaryButton} disabled:opacity-50`}>
             download my progress
           </button>
           {!confirming && (
@@ -167,7 +235,7 @@ export default function ProgressPanel({ decks }: Props) {
         {confirming && (
           <div role="group" aria-labelledby="forget-question" className="mt-stack rounded-md border border-line bg-surface p-4">
             <p id="forget-question">
-              forget your setup answers, piles and stars on this device? this can’t be undone. your light or dark pick stays.
+              forget your setup answers, piles, stars and where you stopped studying on this device? this can’t be undone. your light or dark pick stays.
             </p>
             <div className="mt-3 flex flex-wrap gap-3">
               <button ref={confirmRef} type="button" onClick={forget} className={primaryButton}>

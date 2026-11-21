@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
-  answerCurrent, checkAnswer, currentIndex, editDistance, isCheckKey, nextItem, normalizeAnswer, parseItems,
-  sentenceParts, showHint, startFillIn, summary, type FillInItem,
+  answerCurrent, blankOptions, boundTyped, checkAnswer, currentIndex, editDistance, encodeFillInAttempt,
+  isCheckKey, nextItem, normalizeAnswer, parseItems, parseSavedFillInAttempt,
+  MAX_TYPED, sentenceParts, showHint, startFillIn, summary, type FillInItem,
 } from '../../src/islands/fillin';
+import { MAX_ANSWER_TEXT, parseResume } from '../../src/scripts/resume';
 
 const items: FillInItem[] = [
   { id: 'bees', sentence: 'Bees make [[honey]] from flowers.' },
@@ -119,5 +121,134 @@ describe('fill-in rounds', () => {
     expect(state.done).toBe(true);
     expect(currentIndex(state)).toBeUndefined();
     expect(summary(state)).toBe('all 0 recalled in 0 rounds.');
+  });
+});
+
+describe('fill-in submission bounds (Codex on #219)', () => {
+  it('keeps a saved attempt with its prefix inside the resume answer limit', () => {
+    expect(MAX_TYPED + 2).toBe(MAX_ANSWER_TEXT);
+    const long = boundTyped('a'.repeat(600));
+    expect([...long]).toHaveLength(MAX_TYPED);
+    const now = 1_800_000_000_000;
+    const raw = JSON.stringify({
+      version: 1, tool: 'fill-in', page: '/learn/study-skills/fill-in', step: 'advance-0', itemIndex: 0,
+      itemId: 'item-0', totalItems: 1, answers: { 'item-0': [`h:${long}`] }, timer: null, phase: 'working', savedAt: now,
+    });
+    expect(parseResume(raw, now)).not.toBeNull();
+  });
+
+  it('counts characters, not code units, and drops control characters the resume format rejects', () => {
+    expect([...boundTyped('\u{1F600}'.repeat(600))]).toHaveLength(MAX_TYPED);
+    expect(boundTyped('ho\u0001ney\u007f')).toBe('honey');
+    expect(boundTyped('honey')).toBe('honey');
+  });
+
+  it('rejects a saved attempt beyond the persisted character cap, including astral characters', () => {
+    const atLimit = '\u{1F600}'.repeat(MAX_TYPED);
+    expect(parseSavedFillInAttempt(`n:${atLimit}`)).toMatchObject({ text: atLimit, kind: 'typed' });
+    expect(parseSavedFillInAttempt(`n:${atLimit}\u{1F600}`)).toBeNull();
+  });
+});
+
+describe('blank options construction', () => {
+  it('prefers deck distractors when present and returns 4 options containing the answer', () => {
+    const opts = blankOptions('honey', ['nectar', 'syrup', 'sugar']);
+    expect(opts).toHaveLength(4);
+    expect(opts).toContain('honey');
+    expect(opts).toContain('nectar');
+    expect(opts).toContain('syrup');
+    expect(opts).toContain('sugar');
+  });
+
+  it('draws from other answers when distractors are absent or insufficient', () => {
+    const otherAnswers = ['blue', 'nest', 'tree'];
+    const opts = blankOptions('honey', undefined, otherAnswers);
+    expect(opts).toHaveLength(4);
+    expect(opts).toContain('honey');
+    expect(opts).toContain('blue');
+    expect(opts).toContain('nest');
+    expect(opts).toContain('tree');
+  });
+
+  it('combines item distractors and other answers up to 4 options without duplicates', () => {
+    const itemDistractors = ['nectar'];
+    const otherAnswers = ['honey', 'nectar', 'blue', 'nest'];
+    const opts = blankOptions('honey', itemDistractors, otherAnswers);
+    expect(opts).toHaveLength(4);
+    expect(opts).toContain('honey');
+    expect(opts).toContain('nectar');
+    expect(opts).toContain('blue');
+    expect(opts).toContain('nest');
+    expect(new Set(opts).size).toBe(4);
+  });
+
+  it('uses generic fallbacks when fewer than 3 distractors and other answers exist', () => {
+    const opts = blankOptions('honey', [], []);
+    expect(opts).toHaveLength(4);
+    expect(opts).toContain('honey');
+    expect(new Set(opts).size).toBe(4);
+  });
+});
+
+
+describe('S6 exact dropdown grading and notation', () => {
+  it('grades dropdown spelling near misses wrong while typed near misses stay close', () => {
+    expect(checkAnswer('money', 'honey', 'choice')).toBe('wrong');
+    expect(checkAnswer('money', 'honey', 'typed')).toBe('close');
+    expect(answerCurrent(startFillIn(items), items, 'money', 'choice')).toMatchObject({
+      result: 'wrong', learning: [0],
+    });
+    expect(answerCurrent(startFillIn(items), items, 'money', 'typed')).toMatchObject({
+      result: 'close', learning: [],
+    });
+  });
+
+  it('preserves percentage signs and similar notation', () => {
+    expect(normalizeAnswer('50%')).not.toBe(normalizeAnswer('50'));
+    for (const kind of ['typed', 'choice'] as const) {
+      expect(checkAnswer('50', '50%', kind)).toBe('wrong');
+      expect(checkAnswer('50%', '50', kind)).toBe('wrong');
+      expect(checkAnswer('honey%', 'honey', kind)).toBe('wrong');
+    }
+    expect(checkAnswer('Honey!?', 'honey', 'typed')).toBe('right');
+  });
+
+  it('keeps a percent-marked answer and an unmarked option distinct', () => {
+    const opts = blankOptions('50%', ['50', '50°', '50%']);
+    expect(opts).toHaveLength(4);
+    expect(opts).toContain('50%');
+    expect(opts).toContain('50');
+    expect(opts).toContain('50°');
+  });
+
+  it('records input kind and hints without saving any key', () => {
+    expect(encodeFillInAttempt('money', false, 'choice')).toBe('c:money');
+    expect(encodeFillInAttempt('honey', true, 'choice')).toBe('d:honey');
+    expect(encodeFillInAttempt('hoeny', false, 'typed')).toBe('n:hoeny');
+    expect(parseSavedFillInAttempt('d:honey')).toEqual({
+      text: 'honey', kind: 'choice', hinted: true, stored: 'd:honey',
+    });
+    expect(parseSavedFillInAttempt('m:honey')).toEqual({
+      text: 'honey', kind: 'legacy', hinted: true, stored: 'm:honey',
+    });
+    for (const invalid of ['', 'x:honey', 'n:', 'c:\u0001', 'c:honey\u0001']) {
+      expect(parseSavedFillInAttempt(invalid)).toBeNull();
+    }
+  });
+
+  it('replays saved legacy attempts with their original verdict even after upgrading', () => {
+    const legacy = parseSavedFillInAttempt('n:50', true);
+    expect(legacy).toEqual({ text: '50', kind: 'legacy', hinted: false, stored: 'l:50' });
+    expect(checkAnswer(legacy!.text, '50%', legacy!.kind)).toBe('right');
+    const upgraded = parseSavedFillInAttempt(legacy!.stored);
+    expect(upgraded).toEqual(legacy);
+    expect(checkAnswer(upgraded!.text, '50%', upgraded!.kind)).toBe('right');
+    const now = 1_800_000_000_000;
+    const base = {
+      version: 1, tool: 'fill-in', page: '/learn/study-skills/fill-in', step: 'advance-0',
+      itemIndex: 0, itemId: 'item-0', totalItems: 1, timer: null, phase: 'working', savedAt: now,
+    };
+    expect(parseResume(JSON.stringify({ ...base, answers: { 'item-0': ['n:50'] } }), now)).not.toBeNull();
+    expect(parseResume(JSON.stringify({ ...base, answers: { format: 'v2', 'item-0': ['l:50'] } }), now)).not.toBeNull();
   });
 });

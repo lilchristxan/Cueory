@@ -1,23 +1,55 @@
-import { useEffect, useId, useRef, useState } from 'react';
-import { charactersLeft, checkReport, REASONS, reasonInWords, type FlagProblem, type FlagReport, type Reason } from './flag';
+import { useCallback, useEffect, useId, useRef, useState } from 'react';
+import { site } from '../config/site';
+import { flagMailto } from '../scripts/footer';
+import type { SendResult } from './flagsend';
+import { charactersLeft, checkReport, PATIENT_INFO_WARNING, REASONS, reasonInWords, type FlagProblem, type FlagReport, type Reason } from './flag';
 
 interface Props {
   page: string;
   itemId?: string;
   itemVersionId?: string;
-  signedIn: boolean;
-  send: (report: FlagReport) => Promise<'sent' | 'too-many' | 'failed'>;
+  /** null while the browser's session is still being checked. */
+  signedIn: boolean | null;
+  send: (report: FlagReport) => Promise<SendResult>;
+  /** Called when the student opens the form, so a session check that hasn't started yet starts now. */
+  onOpen?: () => void;
+  /** 'icon': the footer's flag icon opens the form in a panel above the bar (Task 115). */
+  variant?: 'text' | 'icon';
 }
 const control = 'min-h-11 min-w-11 rounded-md border border-control px-4 py-2 text-ink disabled:opacity-50';
 
-/** A changed page, item or account starts a fresh form before it can render another report's draft. */
+/**
+ * A changed page, item or account starts a fresh form before it can render another report's draft. The first session
+ * check finishing (null to signed in or out) is not a change of account, so a panel opened while it ran stays open.
+ * Neither is signing in after being signed out: the signed-out panel has no draft, so an open panel simply shows the form.
+ */
 export default function FlagForm(props: Props) {
-  return <ReportForm key={JSON.stringify([props.page, props.itemId, props.itemVersionId, props.signedIn])} {...props} />;
+  const account = useRef<{ known: boolean | null; changes: number }>({ known: null, changes: 0 });
+  if (props.signedIn !== null) {
+    if (account.current.known === true && !props.signedIn) account.current.changes += 1;
+    account.current.known = props.signedIn;
+  }
+  return <ReportForm key={JSON.stringify([props.page, props.itemId, props.itemVersionId, account.current.changes])} {...props} />;
 }
 
-function ReportForm({ page, itemId, itemVersionId, signedIn, send }: Props) {
+
+/** A signed-out student can still report a problem by email while accounts are being set up. The email names this page. */
+export function SignedOutReportHelp({ page = '/' }: { page?: string }) {
+  return <div className="wrap-anywhere">
+    <p className="text-ink">
+    email us at{' '}
+    <a href={flagMailto(site.contactEmail, page)} className="underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2">
+      {site.contactEmail}
+    </a> and we'll read it.
+    </p>
+    <p className="mt-2 text-sm text-ink" data-testid="flag-patient-warning">{PATIENT_INFO_WARNING}</p>
+  </div>;
+}
+
+function ReportForm({ page, itemId, itemVersionId, signedIn, send, onOpen, variant = 'text' }: Props) {
+  const icon = variant === 'icon';
   const id = useId();
-  const panelId = `${id}-panel`, commentId = `${id}-comment`, countId = `${id}-count`;
+  const panelId = `${id}-panel`, commentId = `${id}-comment`, countId = `${id}-count`, warningId = `${id}-patient-warning`;
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState<Reason | undefined>();
   const [comment, setComment] = useState('');
@@ -37,7 +69,31 @@ function ReportForm({ page, itemId, itemVersionId, signedIn, send }: Props) {
     if (field) (field === 'reason' ? firstReason.current : field === 'comment' ? commentBox.current : context.current)?.focus();
   }, [problems]);
 
-  const close = () => { isOpen.current = false; setOpen(false); trigger.current?.focus(); };
+  const opener = useRef<HTMLElement | null>(null);
+  const show = useCallback((source: HTMLElement) => {
+    opener.current = source;
+    if (isOpen.current) {
+      panel.current?.focus();
+      return;
+    }
+    setAnnouncement(''); setProblems([]); isOpen.current = true; setOpen(true); onOpen?.();
+  }, [onOpen]);
+  useEffect(() => {
+    if (!icon) return;
+    const openFromGame = (event: MouseEvent) => {
+      if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+      const link = event.target instanceof Element ? event.target.closest<HTMLAnchorElement>('a[data-game-flag]') : null;
+      if (!link) return;
+      event.preventDefault();
+      show(link);
+    };
+    document.addEventListener('click', openFromGame);
+    return () => document.removeEventListener('click', openFromGame);
+  }, [icon, show]);
+  const close = () => {
+    isOpen.current = false; setOpen(false);
+    (opener.current?.isConnected ? opener.current : trigger.current)?.focus();
+  };
   const error = (field: FlagProblem['field']) => problems.find(problem => problem.field === field);
   const errorId = (field: FlagProblem['field']) => `${id}-${field}-error`;
   const problemText = (field: FlagProblem['field']) => error(field) && <p id={errorId(field)} className="mt-2 text-sm text-ink">{error(field)!.message}</p>;
@@ -47,7 +103,7 @@ function ReportForm({ page, itemId, itemVersionId, signedIn, send }: Props) {
     const checked = checkReport({ page, itemId, itemVersionId, reason, comment });
     if (!checked.ok) { setProblems(checked.problems); return; }
     setProblems([]); setAnnouncement(''); busy.current = true; setPending(true);
-    let result: 'sent' | 'too-many' | 'failed';
+    let result: SendResult;
     try { result = await send(checked.report); } catch { result = 'failed'; }
     if (!mounted.current) return;
     busy.current = false; setPending(false);
@@ -55,17 +111,27 @@ function ReportForm({ page, itemId, itemVersionId, signedIn, send }: Props) {
       setReason(undefined); setComment(''); setProblems([]);
       setAnnouncement('thank you. your report is in.');
       if (isOpen.current) close();
-    } else setAnnouncement(result === 'too-many' ? "you've sent a few reports this hour. please try again later." : "it didn't send. please try again.");
+    } else if (typeof result === 'object') setAnnouncement(result.message);
+    else setAnnouncement(result === 'too-many' ? "you've sent a few reports this hour. please try again later." : "it didn't send. please try again.");
   };
 
-  return <div className="max-w-full text-ink" data-testid="flag-form">
-    <button ref={trigger} type="button" className={control} aria-expanded={open} aria-controls={panelId}
-      onClick={() => { if (open) close(); else { setAnnouncement(''); setProblems([]); isOpen.current = true; setOpen(true); } }}>
-      flag or comment
+  return <div className={icon ? 'relative text-ink' : 'max-w-full text-ink'} data-testid="flag-form">
+    <button ref={trigger} type="button" aria-expanded={open} aria-controls={panelId}
+      className={icon ? 'inline-flex size-12 items-center justify-center rounded-pill text-ink hover:bg-surface' : control}
+      aria-label={icon ? 'flag or comment' : undefined}
+      onClick={event => open ? close() : show(event.currentTarget)}>
+      {icon
+        ? <svg viewBox="0 0 24 24" className="size-6" aria-hidden="true" focusable="false">
+            <path d="M5 21V4M5 4h12l-3 4.5 3 4.5H5" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        : 'flag or comment'}
     </button>
-    {open && <div ref={panel} id={panelId} tabIndex={-1} className="mt-3 rounded-md border border-line bg-page p-4"
+    {open && <div ref={panel} id={panelId} tabIndex={-1}
+      className={icon
+        ? 'absolute bottom-full left-0 z-10 mb-2 max-h-(--height-flag-panel) w-flag-panel overflow-y-auto wrap-anywhere rounded-md border border-line bg-page p-4 shadow-lift'
+        : 'mt-3 rounded-md border border-line bg-page p-4'}
       onKeyDown={event => { if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); close(); } }}>
-      {!signedIn ? <p>sign in to send a report. accounts are coming soon.</p> : <form noValidate onSubmit={event => { event.preventDefault(); void submit(); }}>
+      {signedIn === null ? <p className="text-ink">checking your account…</p> : !signedIn ? <SignedOutReportHelp page={page} /> : <form noValidate onSubmit={event => { event.preventDefault(); void submit(); }}>
         <fieldset disabled={pending} aria-describedby={error('reason') ? errorId('reason') : undefined}>
           <legend className="font-medium">what's wrong?</legend>
           <div className="mt-2 grid gap-2">
@@ -78,8 +144,9 @@ function ReportForm({ page, itemId, itemVersionId, signedIn, send }: Props) {
           {problemText('reason')}
         </fieldset>
         <label htmlFor={commentId} className="mt-4 block">anything to add? ({reason === 'other' ? 'required' : 'optional'})</label>
+        <p id={warningId} className="mt-1 text-sm text-ink" data-testid="flag-patient-warning">{PATIENT_INFO_WARNING}</p>
         <textarea ref={commentBox} id={commentId} value={comment} onChange={event => setComment(event.target.value)} required={reason === 'other'} readOnly={pending}
-          aria-invalid={error('comment') ? true : undefined} aria-describedby={[countId, error('comment') ? errorId('comment') : ''].filter(Boolean).join(' ')}
+          aria-invalid={error('comment') ? true : undefined} aria-describedby={[warningId, countId, error('comment') ? errorId('comment') : ''].filter(Boolean).join(' ')}
           rows={4} className="mt-2 block min-h-11 w-full max-w-full rounded-md border border-control bg-page p-3 text-ink" />
         <p id={countId} className="mt-2 text-sm text-ink-soft">{charactersLeft(comment).toLocaleString('en-US')} characters left</p>
         {problemText('comment')}
@@ -88,10 +155,13 @@ function ReportForm({ page, itemId, itemVersionId, signedIn, send }: Props) {
           this report includes this page's address ({page}){itemId !== undefined ? `, item ${itemId}` : ''}{itemVersionId !== undefined ? `, version ${itemVersionId}` : ''}.
         </p>
         {problemText('page')}{problemText('itemId')}{problemText('itemVersionId')}
+        {/* The footer's live line is screen-reader only while its panel is open, so a refusal is also shown here. */}
+        {icon && announcement && <p aria-hidden="true" className="mt-4 text-sm text-ink" data-testid="flag-visible-result">{announcement}</p>}
         <button type="submit" aria-disabled={pending} className={`${control} mt-4 bg-button text-on-button aria-disabled:opacity-50`}>{pending ? 'sending…' : 'send'}</button>
       </form>}
       <button type="button" className={`${control} mt-3`} onClick={close}>close</button>
     </div>}
-    <p aria-live="polite" aria-atomic="true" className="mt-2 text-sm" data-testid="flag-result">{announcement}</p>
+    <p aria-live="polite" aria-atomic="true" data-testid="flag-result"
+      className={!icon ? 'mt-2 text-sm' : announcement && !open ? 'absolute bottom-full left-0 mb-2 w-flag-panel rounded-md border border-line bg-page px-3 py-2 text-sm' : 'sr-only'}>{announcement}</p>
   </div>;
 }

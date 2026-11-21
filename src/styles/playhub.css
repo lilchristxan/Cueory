@@ -1,0 +1,25 @@
+/*
+  Room for the /play hub's browser-only islands until they render (src/pages/play.astro; performance, 2026-11-19).
+  The game cards (PlayStatus) and the stats panel (GameStatsPanel) are client:only, so until their scripts run the
+  sample note, the stats and the footer sit right under the breadcrumb and then jump down (layout shift 0.29 on a
+  throttled phone). While an island has drawn nothing yet, and only when scripts can run, its holder keeps the room the
+  island will take: the measured height plus the island's own top margin (flow-root keeps that margin inside the
+  holder). The cards' room changes at the lg breakpoint, so play.astro sets --play-hub-reserve from the two tokens with
+  lg: classes. The rules stop matching as soon as the island renders. The same approach as the game pages
+  (gamepage.css, #921), which keep their own rule.
+*/
+@layer components {
+  .play-hub-island {
+    display: flow-root;
+  }
+
+  @media (scripting: enabled) {
+    .play-hub-cards:not(:has(> astro-island > *)) {
+      min-block-size: var(--play-hub-reserve);
+    }
+
+    .play-hub-stats:not(:has(> astro-island > *)) {
+      min-block-size: var(--play-hub-stats-reserve);
+    }
+  }
+}

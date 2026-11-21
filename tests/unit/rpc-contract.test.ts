@@ -1,23 +1,34 @@
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { describe, expect, it, vi } from 'vitest';
 import { checkAnswer, type AnswerTransport } from '../../src/islands/checkanswer';
 import { exportCsv, exportJson, type ExportData } from '../../src/islands/exportdata';
 import { checkReport } from '../../src/islands/flag';
 import { flagArguments } from '../../src/islands/flagsubmit';
+import { adaptersFor, type AccountClient } from '../../src/islands/accountsettings';
 import { studentMessage } from '../../src/islands/rpcerrors';
 
 const sql = [
   '20261101100000_attempts_and_check_answer.sql',
   '20261101120000_flags_and_submit_flag.sql',
+  '20261102100000_study_events.sql',
+  '20261102110000_delete_my_account.sql',
+  // Task 169 redefines three RPCs. Read the last declaration for the effective contract.
+  '20261102135000_confirmed_accounts_only.sql',
+  '20261102140000_update_display_name.sql',
+  '20261102170000_my_sessions.sql',
+  '20261112020000_restate_delete_my_account_mfa.sql',
+  '20261114151643_delete_my_account_identity_and_mfa.sql',
+  '20261116235000_delete_account_recent_amr_proof.sql',
 ].map(name => readFileSync(new URL(`../../supabase/migrations/${name}`, import.meta.url), 'utf8')).join('\n');
 
-type FunctionName = 'submit_flag' | 'check_answer' | 'my_flags';
+type FunctionName =
+  | 'submit_flag' | 'check_answer' | 'my_flags' | 'record_study_events' | 'delete_my_account' | 'update_display_name' | 'my_sessions';
 
 /** Read the actual declarations and dollar-quoted bodies, rather than copying their contracts into a fixture. */
 function declaration(name: FunctionName) {
-  const match = new RegExp(
-    `create\\s+function\\s+public\\.${name}\\s*\\(([^)]*)\\)\\s*returns([\\s\\S]*?)as\\s*\\$\\$([\\s\\S]*?)\\$\\$;`, 'i',
-  ).exec(sql);
+  const match = [...sql.matchAll(new RegExp(
+    `create\\s+(?:or\\s+replace\\s+)?function\\s+public\\.${name}\\s*\\(([^)]*)\\)\\s*returns([\\s\\S]*?)as\\s*\\$\\$([\\s\\S]*?)\\$\\$;`, 'gi',
+  ))].at(-1);
   if (!match) throw new Error(`The SQL declaration for ${name} was not found; update the contract reader.`);
   const names = (text: string) => text.replace(/--[^\n]*/g, '').split(',')
     .map(part => part.trim().split(/\s+/)[0]!).filter(Boolean);
@@ -60,7 +71,7 @@ describe('SQL arguments and browser request helpers', () => {
 });
 
 describe('every explicit SQL refusal has a student message', () => {
-  for (const name of ['check_answer', 'submit_flag', 'my_flags'] as const) {
+  for (const name of ['check_answer', 'submit_flag', 'my_flags', 'delete_my_account', 'update_display_name'] as const) {
     const messages = declaration(name).messages;
     if (name !== 'my_flags') {
       it(`${name} exposes refusals for this contract check to cover`, () => {
@@ -100,5 +111,163 @@ describe('my_flags and the exported reports contract', () => {
     const csv = exportCsv(data).find(file => file.fileName === 'reports.csv');
     expect(csv).toBeDefined();
     expect(csv!.text.split('\r\n')[0]!.split(',')).toEqual(expected);
+  });
+});
+
+describe('record_study_events contract (Task 140)', () => {
+  const studyEventsSql = readFileSync(
+    new URL('../../supabase/migrations/20261102100000_study_events.sql', import.meta.url), 'utf8',
+  );
+  const body = /create\s+function\s+public\.record_study_events[\s\S]*?as\s*\$\$([\s\S]*?)\$\$;/i.exec(studyEventsSql)![1]!;
+
+  it('takes one jsonb argument named events and returns the number stored', () => {
+    expect(declaration('record_study_events').arguments).toEqual(['events']);
+    expect(studyEventsSql).toMatch(/create\s+function\s+public\.record_study_events\(events jsonb\)\s+returns integer\s/i);
+  });
+
+  it('raises exactly these literal refusals, which the Task 146 recorder handles', () => {
+    // A change here is a contract change for the browser recorder: update it in the same pull request.
+    expect(declaration('record_study_events').messages).toEqual([
+      'sign in to record study activity',
+      'confirm your email to use this',
+      'send between 1 and 50 study events',
+      'a study event has the wrong shape',
+      'a study event time must be between 7 days ago and 5 minutes from now',
+      'a study event names a question that was not found',
+      'too many study events recorded recently; try again later',
+    ]);
+  });
+
+  it('accepts exactly the agreed event keys, kinds and marks', () => {
+    const list = (pattern: RegExp) => [...pattern.exec(body)![1]!.matchAll(/'([^']*)'/g)].map(m => m[1]);
+    expect(list(/k\s*<>\s*all\s*\(array\[([^\]]*)\]\)/i).sort())
+      .toEqual(['at', 'item_id', 'kind', 'mark', 'ms_on_item', 'version_id']);
+    expect(list(/'kind'\)\s*<>\s*all\s*\(array\[([^\]]*)\]\)/i)).toEqual(['answered', 'marked', 'skipped']);
+    expect(list(/'mark'\)\s*<>\s*all\s*\(array\[([^\]]*)\]\)/i)).toEqual(['know', 'learning']);
+    expect(body).toMatch(/> 1800000/);
+    expect(body).toMatch(/n_events < 1 or n_events > 50/);
+  });
+
+  it('is signed-in only, security definer with an empty search_path, and writes as the caller', () => {
+    expect(studyEventsSql).toMatch(/returns integer\s+language plpgsql\s+security definer\s+set search_path = ''/i);
+    expect(studyEventsSql).toContain('revoke execute on function public.record_study_events(jsonb) from public, anon, authenticated;');
+    expect(studyEventsSql).toContain('grant execute on function public.record_study_events(jsonb) to authenticated;');
+    expect(body).toMatch(/select uid, \(e ->> 'item_id'\)::uuid/);
+  });
+
+  it('gives students only select on their own rows, which the export loader reads', () => {
+    expect(studyEventsSql).toContain('grant select on table public.study_events to authenticated;');
+    expect(studyEventsSql).not.toMatch(/grant\s+(insert|update|delete)[^;]*to\s+authenticated/i);
+    expect(studyEventsSql).toContain('alter table public.study_events enable row level security;');
+    expect(studyEventsSql).toMatch(/for select\s+to authenticated\s+using \(\(select auth\.uid\(\)\) = user_id\)/);
+    // Every column the export loader selects exists in the table.
+    const table = /create table public\.study_events \(([\s\S]*?)\n\);/.exec(studyEventsSql)![1]!;
+    for (const column of 'id,item_id,item_version_id,kind,ms_on_item,mark,at,created_at'.split(',')) {
+      expect(table).toMatch(new RegExp(`^\\s+${column} `, 'm'));
+    }
+    expect(table).toMatch(/user_id uuid not null references auth\.users \(id\) on delete cascade/);
+  });
+});
+
+describe('delete_my_account migration replay order', () => {
+  it('has unique versions and replays the recent-auth proof after the staging MFA restatement', () => {
+    const names = readdirSync(new URL('../../supabase/migrations/', import.meta.url))
+      .filter(name => /^\d{14}_.+\.sql$/.test(name)).sort();
+    const versions = names.map(name => name.slice(0, 14));
+    expect(new Set(versions).size).toBe(versions.length);
+    expect(names).toContain('20261112020000_restate_delete_my_account_mfa.sql');
+    expect(names.at(-1)).toBe('20261116235000_delete_account_recent_amr_proof.sql');
+    expect(names.indexOf('20261112020000_restate_delete_my_account_mfa.sql'))
+      .toBeLessThan(names.indexOf('20261116235000_delete_account_recent_amr_proof.sql'));
+  });
+});
+
+describe('delete_my_account contract (Tasks 60, 206)', () => {
+  const deleteSql = readFileSync(
+    new URL('../../supabase/migrations/20261116235000_delete_account_recent_amr_proof.sql', import.meta.url), 'utf8',
+  );
+
+  it('takes the shown account id and returns nothing, so the browser calls supabase.rpc(\'delete_my_account\', { expected_user_id })', () => {
+    expect(declaration('delete_my_account').arguments).toEqual(['expected_user_id']);
+    expect(deleteSql).toMatch(/create\s+or\s+replace\s+function\s+public\.delete_my_account\(expected_user_id uuid\)\s+returns void\s/i);
+    expect(deleteSql).not.toMatch(/drop function if exists public\.delete_my_account\(\);/i);
+  });
+
+  it('keeps the sign-in, identity, two-factor and fresh-token refusals the account page handles', () => {
+    expect(declaration('delete_my_account').messages).toEqual([
+      'sign in to delete your account',
+      'the account signed in on this device changed; nothing was deleted',
+      'complete two-factor sign-in to continue',
+      'please sign in again to delete your account',
+    ]);
+    expect(deleteSql).toContain('app_private.mfa_access_allowed()');
+    expect(deleteSql).toContain('expected_user_id is distinct from uid');
+  });
+
+  it('is signed-in only and security definer with an empty search_path', () => {
+    expect(deleteSql).toMatch(/returns void\s+language plpgsql\s+security definer\s+set search_path = ''/i);
+    expect(deleteSql).toContain('revoke execute on function public.delete_my_account(uuid) from public, anon, authenticated;');
+    expect(deleteSql).toContain('grant execute on function public.delete_my_account(uuid) to authenticated;');
+    expect(deleteSql).not.toMatch(/grant\s+execute[^;]*to\s+(anon|public)\b/i);
+  });
+});
+
+describe('update_display_name contract (Task 59, Codex on #230)', () => {
+  const nameSql = readFileSync(
+    new URL('../../supabase/migrations/20261102140000_update_display_name.sql', import.meta.url), 'utf8',
+  );
+
+  it('takes one text argument named new_name, which the account page sends, and returns the saved name', async () => {
+    expect(declaration('update_display_name').arguments).toEqual(['new_name']);
+    expect(nameSql).toMatch(/create function public\.update_display_name\(new_name text\)\s+returns text\s/i);
+    const rpc = vi.fn(async () => ({ data: 'Sample', error: null }));
+    const client = { rpc } as unknown as AccountClient;
+    expect(await adaptersFor(client).writeName('Sample')).toBe('Sample');
+    expect(rpc).toHaveBeenCalledWith('update_display_name', { new_name: 'Sample' });
+  });
+
+  it('is signed-in only, security definer with an empty search_path, rate limited, and the only way in', () => {
+    expect(nameSql).toMatch(/returns text\s+language plpgsql\s+security definer\s+set search_path = ''/i);
+    expect(nameSql).toContain('revoke execute on function public.update_display_name(text) from public, anon, authenticated;');
+    expect(nameSql).toContain('grant execute on function public.update_display_name(text) to authenticated;');
+    expect(nameSql).toContain('revoke update (display_name) on table public.profiles from authenticated;');
+    expect(nameSql).toMatch(/pg_advisory_xact_lock\(hashtextextended\('display-name:' \|\| uid::text, 0\)\)/);
+    expect(nameSql).toMatch(/where p\.id = uid;/);
+    // No grant to students in this file: the limit's two columns are written only by the function.
+    expect(nameSql).not.toMatch(/\bgrant\s+(insert|update|delete)[^;]*\bto\s+(anon|authenticated|public)\b/i);
+    expect(nameSql).not.toMatch(/create\s+table/i);
+  });
+
+  it('keeps the limit in two profile columns, which export-my-data reads', () => {
+    expect(nameSql).toMatch(/add column name_change_window_start timestamptz,/);
+    expect(nameSql).toMatch(/add column name_changes_in_window smallint not null default 0/);
+    const exportSource = readFileSync(new URL('../../src/islands/exportload.ts', import.meta.url), 'utf8');
+    expect(exportSource).toContain("profiles: 'display_name,created_at,name_change_window_start,name_changes_in_window',");
+  });
+});
+
+describe('my_sessions contract (Task 309)', () => {
+  const sessionsSql = readFileSync(new URL('../../supabase/migrations/20261102170000_my_sessions.sql', import.meta.url), 'utf8');
+
+  it('takes no arguments and returns the cursor id plus exactly the exported session fields', () => {
+    expect(declaration('my_sessions').arguments).toEqual([]);
+    const camel = (name: string) => name.replace(/_([a-z])/g, (_, letter: string) => letter.toUpperCase());
+    const session: NonNullable<ExportData['sessions']>[number] = {
+      createdAt: '2026-11-01T00:00:00.000Z', updatedAt: null, notAfter: null, userAgent: 'sample browser', ip: '203.0.113.5',
+    };
+    const columns = declaration('my_sessions').columns;
+    expect(columns[0]).toBe('id');
+    const json = JSON.parse(exportJson({ sessions: [session] }, '2026-11-01'));
+    expect(Object.keys(json.sessions[0]).sort()).toEqual(columns.slice(1).map(camel).sort());
+    const csv = exportCsv({ sessions: [session] }).find(file => file.fileName === 'sessions.csv')!;
+    expect(csv.text.split('\r\n')[0]!.split(',').sort()).toEqual(columns.slice(1).map(camel).sort());
+  });
+
+  it('is signed-in only, security definer with an empty search_path, and reads only the caller\'s sessions', () => {
+    expect(sessionsSql).toMatch(/language sql\s+stable\s+security definer\s+set search_path = ''/i);
+    expect(sessionsSql).toContain('revoke execute on function public.my_sessions() from public, anon, authenticated;');
+    expect(sessionsSql).toContain('grant execute on function public.my_sessions() to authenticated;');
+    expect(sessionsSql).not.toMatch(/grant\s+execute[^;]*to\s+(anon|public)\b/i);
+    expect(sessionsSql).toMatch(/where s\.user_id = \(select auth\.uid\(\)\)/);
   });
 });

@@ -46,20 +46,24 @@ describe('private game stats on /play (D-76)', () => {
     expect(localDay(new Date(2027, 11, 31, 12))).toBe('2027-12-31');
   });
 
-  it('is off until the record exists, and turning off deletes it', () => {
+  it('is always on where storage works (2026-11-17: no switch), and "forget" deletes the record', () => {
     const storage = memoryStorage();
-    expect(loadStats(storage, TODAY)).toEqual({ on: false, stats: [] });
+    expect(loadStats(storage, TODAY)).toEqual({ on: true, stats: [] });
+    // Only a browser without storage keeps nothing.
+    expect(loadStats(undefined, TODAY)).toEqual({ on: false, stats: [] });
+    expect(loadStats({ getItem() { throw new Error('blocked'); }, setItem() {}, removeItem() {} }, TODAY)).toEqual({ on: false, stats: [] });
     expect(saveStats(storage, [])).toBe(true);
     expect(loadStats(storage, TODAY)).toEqual({ on: true, stats: [] });
 
     const result = { game: 'pulse', day: '2026-11-01', solved: true, tries: 1 } as const;
+    const vialoResult = { ...result, game: 'vialo' } as const;
     expect(saveStats(storage, [result])).toBe(true);
     expect(JSON.parse(storage.data.get(STATS_STORAGE_KEY)!)).toEqual({ version: 1, results: [result] });
-    expect(loadStats(storage, TODAY)).toEqual({ on: true, stats: [result] });
+    expect(loadStats(storage, TODAY)).toEqual({ on: true, stats: [vialoResult] });
 
     expect(deleteStats(storage)).toBe(true);
     expect(storage.data.has(STATS_STORAGE_KEY)).toBe(false);
-    expect(loadStats(storage, TODAY)).toEqual({ on: false, stats: [] });
+    expect(loadStats(storage, TODAY)).toEqual({ on: true, stats: [] });
   });
 
   it('keeps stats on with an empty record when the saved one can’t be read', () => {
@@ -78,9 +82,9 @@ describe('private game stats on /play (D-76)', () => {
   });
 
   it('says each game’s tries in its own words, fewest first', () => {
-    expect(triesInWords('pulse', { 3: 2, 1: 1 })).toBe('1 beat on 1 day, 3 beats on 2 days.');
-    expect(triesInWords('triage', { 0: 3 })).toBe('0 slips on 3 days.');
-    expect(triesInWords('cueword', { 1: 1 })).toBe('1 cue on 1 day.');
+    expect(triesInWords('pulse', { 3: 2, 1: 1 })).toBe('1 guess on 1 day, 3 guesses on 2 days.');
+    expect(triesInWords('triage', { 0: 3, 1: 1 })).toBe('0 errors on 3 days, 1 error on 1 day.');
+    expect(triesInWords('cueword', { 1: 1 })).toBe('1 check or reveal on 1 day.');
     expect(triesInWords('suture', { 2: 1, 1: 4 })).toBe('1 loose stitch on 4 days, 2 loose stitches on 1 day.');
     expect(triesInWords('pulse', {})).toBe('');
   });
@@ -101,9 +105,10 @@ describe('private game stats on /play (D-76)', () => {
     const storage = memoryStorage();
     const old = { game: 'pulse', day: '2025-09-27', solved: true, tries: 2 } as const;
     const edge = { game: 'pulse', day: '2025-09-28', solved: false, tries: 7 } as const;
+    const vialoEdge = { ...edge, game: 'vialo' } as const;
     const recent = { game: 'triage', day: '2026-10-31', solved: true, tries: 0 } as const;
     expect(saveStats(storage, [old, edge, recent])).toBe(true);
-    expect(loadStats(storage, '2026-11-01')).toEqual({ on: true, stats: [edge, recent] });
+    expect(loadStats(storage, '2026-11-01')).toEqual({ on: true, stats: [vialoEdge, recent] });
     // A student who comes back after a long time finds stats still on, with nothing old left.
     expect(loadStats(storage, '2028-01-01')).toEqual({ on: true, stats: [] });
   });

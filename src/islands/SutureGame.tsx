@@ -1,10 +1,47 @@
-import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
+import '../styles/wordpath.css';
+import { useEffect, useId, useRef, useState, type KeyboardEvent, type PointerEvent } from 'react';
 import { dayLabel } from './daily';
 import { localDay, reportRound } from './gameresults';
-import { cellLabel, clearTrace, foundWord, isDone, parsePuzzle, shareLine, startSuture, stitch, tapCell, traceInWords, wordsLeft, type Cell, type SuturePuzzle } from './suture';
+import { printGame } from './gameprint';
+import { GameHelpCard, useGameHelp } from './GameHelp';
+import GameHeader from './GameHeader';
+import { site } from '../config/site';
+import { announceProgress } from './suturepath';
+import PrintLogo from './PrintLogo';
+import { cellLabel, clearPick, foundWord, isDone, moveCursor, outcomeInWords, parsePuzzle, pick, printableWords, selection, shareLine, startSuture, type Cell, type SuturePuzzle } from './suture';
 
 interface Props { puzzle: SuturePuzzle; name: string }
+const printFoot = new URL(site.url).host;
 const button = 'min-h-11 min-w-11 rounded-md border border-control bg-page px-4 py-2 text-ink disabled:opacity-50';
+// These static classes keep the grid width CSP-safe: style-src permits no inline styles.
+const columnClass: Record<number, string> = {
+  3: 'wordpath-cols-3', 4: 'wordpath-cols-4', 5: 'wordpath-cols-5',
+  6: 'wordpath-cols-6', 7: 'wordpath-cols-7', 8: 'wordpath-cols-8',
+  9: 'wordpath-cols-9', 10: 'wordpath-cols-10', 11: 'wordpath-cols-11',
+};
+/**
+ * A gentle sideways shake for a wrong pick, through the Web Animations API, so no stylesheet is injected (the CSP allows
+ * none) and the distance and timing come from the design tokens. Nothing moves when the device asks for reduced motion.
+ */
+export function shake(element: HTMLElement | null) {
+  if (!element || typeof element.animate !== 'function') return;
+  const motion = window.matchMedia?.('(prefers-reduced-motion: reduce)');
+  if (motion?.matches) return;
+  const tokens = getComputedStyle(element);
+  const step = tokens.getPropertyValue('--spacing').trim();
+  const duration = Number.parseFloat(tokens.getPropertyValue('--duration-base'));
+  if (!step || !Number.isFinite(duration)) return;
+  const away = (sign: number) => ({ translate: `calc(${step} * ${sign}) 0` });
+  const animation = element.animate([{ translate: '0 0' }, away(-1), away(1), away(-1), { translate: '0 0' }], { duration, easing: 'ease-in-out' });
+  // A preference change must also stop a shake that has already started.
+  const stop = (event: MediaQueryListEvent) => {
+    if (event.matches) animation.cancel();
+  };
+  const cleanup = () => motion?.removeEventListener('change', stop);
+  motion?.addEventListener('change', stop);
+  // Cancellation rejects finished; handle both paths and release the media listener.
+  void animation.finished.then(cleanup, cleanup);
+}
 
 function Board({ puzzle, name }: Props) {
   const [state, setState] = useState(() => startSuture(puzzle));
@@ -13,11 +50,15 @@ function Board({ puzzle, name }: Props) {
   const [copied, setCopied] = useState('');
   const [today] = useState(() => new Date());
   const result = useRef<HTMLDivElement>(null);
+  const board = useRef<HTMLDivElement>(null);
   const buttons = useRef(new Map<number, HTMLButtonElement>());
   const help = useId();
+  const howToPlay = useGameHelp('suture-search');
+  const title = useId();
   const done = isDone(state);
   const width = puzzle.grid[0]!.length;
   const shared = shareLine(state, dayLabel(today), name);
+  const picked = selection(state);
 
   useEffect(() => { if (done) result.current?.focus(); }, [done]);
 
@@ -26,28 +67,55 @@ function Board({ puzzle, name }: Props) {
   useEffect(() => {
     if (!done || reported.current) return;
     reported.current = true;
-    reportRound({ game: 'suture', day: localDay(today), solved: true, tries: state.looseStitches });
+    reportRound({
+      game: 'suture',
+      day: localDay(today),
+      solved: true,
+      tries: state.misses,
+      card: {
+        game: 'suture',
+        name,
+        date: dayLabel(today),
+        result: `${state.found.length} / ${state.totalWords}`,
+        shareResult: `${state.found.length} of ${state.totalWords} words`,
+        summary: 'you found every word in today\'s path.',
+        stats: [
+          { label: 'words found', value: `${state.found.length}` },
+          { label: 'wrong picks', value: `${state.misses}` },
+        ],
+        path: '/play/word-path',
+      },
+    });
   }, [done]);
 
-  const tap = (cell: Cell) => {
-    const next = tapCell(state, puzzle, cell);
-    if (next === state) {
-      setSaid('choose a touching letter, up, down, left or right. a found word stays in place.');
+  const choose = (cell: Cell) => {
+    const next = pick(state, puzzle, cell);
+    if (next.outcome.kind === 'ignored') {
+      if (!done) setSaid('that letter is in a word you found. pick another letter.');
       return;
     }
-    setState(next);
-    setSaid(traceInWords(next, puzzle));
+    setState(next.state);
+    setSaid(outcomeInWords(next.state, puzzle, next.outcome));
+    // The day's first word tells /play's daily status list that word path is in progress (#761).
+    if (next.outcome.kind === 'found' && next.state.found.length === 1) announceProgress(localDay(today));
+    if (next.outcome.kind === 'miss') shake(board.current);
+  };
+
+  const hover = (event: PointerEvent<HTMLButtonElement>, cell: Cell) => {
+    if (event.pointerType === 'mouse') setState((current) => moveCursor(current, puzzle, cell));
+  };
+
+  const clear = () => {
+    if (!state.anchor) return;
+    setState(clearPick(state));
+    setSaid('pick cleared.');
   };
 
   const key = (event: KeyboardEvent<HTMLButtonElement>, cell: Cell) => {
     if (done || event.altKey || event.ctrlKey || event.metaKey) return;
-    if (event.key === 'Enter' || event.key === ' ') {
-      event.preventDefault(); tap(cell); return;
-    }
-    if (event.key === 'Backspace') {
-      event.preventDefault();
-      const last = state.trace.at(-1);
-      if (last) tap(last);
+    if (event.key === 'Escape' || event.key === 'Backspace') {
+      if (state.anchor) event.preventDefault();
+      clear();
       return;
     }
     let [row, col] = cell;
@@ -55,20 +123,12 @@ function Board({ puzzle, name }: Props) {
     else if (event.key === 'ArrowRight') col++;
     else if (event.key === 'ArrowUp') row--;
     else if (event.key === 'ArrowDown') row++;
-    else return;
+    else return; // Enter and Space reach the letter's button as a click.
     event.preventDefault();
     if (row < 0 || col < 0 || row >= puzzle.grid.length || col >= width) return;
     const next = row * width + col;
     setFocused(next);
     buttons.current.get(next)?.focus();
-  };
-
-  const sew = () => {
-    const outcome = stitch(state, puzzle);
-    setState(outcome.state);
-    setSaid(outcome.found
-      ? `found word ${outcome.word}: ${puzzle.words[outcome.word! - 1]!.answer.toLowerCase()}.${isDone(outcome.state) ? ' all words found.' : ''}`
-      : "loose stitch: those letters aren't one of the words.");
   };
 
   const share = async () => {
@@ -77,53 +137,120 @@ function Board({ puzzle, name }: Props) {
   };
 
   return (
-    <section aria-label={`${name} puzzle`} data-testid="suture">
-      {puzzle.sample && <p className="text-sm text-ink-soft">today's puzzle is a sample</p>}
-      <p className="mt-2 text-sm text-ink-soft">{wordsLeft(state)} words left · {state.looseStitches} loose {state.looseStitches === 1 ? 'stitch' : 'stitches'}</p>
-      <p id={help} className="mt-3 text-sm text-ink-soft">tap touching letters, then stitch. arrows move; enter or space chooses a letter. backspace removes the last letter. words run up, down, left or right.</p>
-      <div className="mt-4 max-w-full overflow-x-auto">
-        <div role="grid" aria-label={`${name} letters`} aria-describedby={help} aria-rowcount={puzzle.grid.length} aria-colcount={width} className="mx-auto flex w-max flex-col gap-1 p-1">
-          {puzzle.grid.map((row, r) => <div role="row" aria-rowindex={r + 1} key={r} className="flex gap-1">
+    <section aria-labelledby={puzzle.theme ? title : undefined} aria-label={puzzle.theme ? undefined : `${name} puzzle`} data-testid="suture" data-print-area="suture" className="wordpath">
+      {/* The corner row (Christian's brief): the gear at the top left (word path has no settings of its own, so it holds
+          the shared ones); print and the "?" at the top right. */}
+      <GameHeader
+        name={name}
+        help={howToPlay}
+        end={
+          <button type="button" className="wordpath-round" aria-label="print" data-testid="suture-print" onClick={() => printGame('suture')}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
+              <path d="M6 9V3h12v6" />
+              <rect x="3" y="9" width="18" height="9" rx="2" />
+              <path d="M7 14h10v7H7z" />
+            </svg>
+          </button>
+        }
+      />
+      <PrintLogo />
+      <GameHelpCard help={howToPlay} name={name} />
+      <div className="wordpath-panel -mx-6 mt-6 sm:mx-0 sm:px-(--spacing-stack)">
+      {puzzle.theme && <p className="wordpath-label px-4 text-center text-ink-soft sm:px-0">cue of the day</p>}
+      {puzzle.theme && <h3 id={title} className="display px-4 sm:px-0 text-center text-2xl text-ink sm:text-3xl" data-testid="suture-theme">{puzzle.theme}</h3>}
+      <div
+        className="wordpath-board-scroll mt-4"
+        role="region"
+        aria-label={`${name} letters scroll area`}
+        aria-describedby={help}
+      >
+        <div
+          ref={board}
+          role="grid"
+          aria-label={`${name} letters`}
+          aria-describedby={help}
+          aria-rowcount={puzzle.grid.length}
+          aria-colcount={width}
+          className={`wordpath-board ${columnClass[width]} flex flex-col border-(length:--border-board) border-transparent text-ink sm:p-3`}
+        >
+          {puzzle.grid.map((row, r) => (
+          <div key={r} role="row" aria-rowindex={r + 1} className="wordpath-row">
             {[...row].map((letter, c) => {
               const cell: Cell = [r, c];
               const index = r * width + c;
-              const position = state.trace.findIndex(([row, col]) => row === r && col === c);
               const word = foundWord(state, puzzle, cell);
-              return <div role="gridcell" aria-colindex={c + 1} aria-selected={position >= 0} key={c}>
-                <button
-                  ref={(element) => { if (element) buttons.current.set(index, element); else buttons.current.delete(index); }}
-                  type="button" tabIndex={index === focused ? 0 : -1} disabled={done}
-                  aria-label={cellLabel(state, puzzle, cell)} aria-pressed={position >= 0}
-                  aria-disabled={word !== undefined || done} data-cell={index}
-                  className={`relative flex size-11 items-center justify-center rounded-sm border text-lg text-ink ${position >= 0 ? 'border-b-4 border-ink bg-surface outline outline-2 outline-ink' : 'border-control bg-page'}`}
-                  onFocus={() => setFocused(index)} onClick={() => tap(cell)} onKeyDown={(event) => key(event, cell)}
-                >
-                  <span aria-hidden="true">{letter}</span>
-                  {position >= 0 && <span aria-hidden="true" className="absolute left-0 top-0 px-1 text-xs">{position + 1}</span>}
-                  {word !== undefined && <span aria-hidden="true" className="absolute right-0 bottom-0 px-1 text-xs">{word} ✓</span>}
-                </button>
-              </div>;
+              const isFirst = state.anchor?.[0] === r && state.anchor?.[1] === c;
+              const inPick = picked.some(([pr, pc]) => pr === r && pc === c);
+              const look = word !== undefined
+                ? 'bg-soft underline decoration-2 underline-offset-2 print:no-underline'
+                : isFirst
+                  ? 'bg-button text-on-button'
+                  : inPick
+                    ? 'wordpath-pick'
+                    : 'wordpath-plain';
+              return (
+                <div key={c} role="gridcell" aria-colindex={c + 1} aria-selected={inPick} className="sm:p-0.5">
+                  <button
+                    ref={(element) => { if (element) buttons.current.set(index, element); else buttons.current.delete(index); }}
+                    type="button"
+                    tabIndex={index === focused ? 0 : -1}
+                    disabled={done}
+                    aria-label={cellLabel(state, puzzle, cell)}
+                    data-cell={`${r},${c}`}
+                    className={`flex aspect-square w-full items-center justify-center overflow-hidden rounded-full text-base leading-none font-bold sm:text-xl sm:leading-none ${look}`}
+                    onFocus={() => { setFocused(index); setState((current) => moveCursor(current, puzzle, cell)); }}
+                    onPointerEnter={(event) => hover(event, cell)}
+                    onClick={() => choose(cell)}
+                    onKeyDown={(event) => key(event, cell)}
+                  >
+                    <span aria-hidden="true">{letter}</span>
+                  </button>
+                </div>
+              );
             })}
-          </div>)}
+          </div>
+          ))}
         </div>
       </div>
-      <p className="mt-3 text-sm text-ink-soft" data-testid="suture-trace">{traceInWords(state, puzzle)}</p>
-      {!done && <div className="mt-3 flex flex-wrap gap-2">
-        <button type="button" className={button} onClick={sew} disabled={!state.trace.length}>stitch</button>
-        <button type="button" className={button} onClick={() => { setState(clearTrace(state)); setSaid('trace cleared.'); }} disabled={!state.trace.length}>clear</button>
-      </div>}
-      <ol className="mt-6 flex flex-col gap-3" aria-label="word cues">
-        {puzzle.words.map((word, i) => <li key={i} className="rounded-md border border-line p-3">
-          <span className="font-medium">{i + 1}. </span>{state.found.includes(i) && <span>found: {word.answer.toLowerCase()}. </span>}{word.cue} ({word.answer.length})
-        </li>)}
-      </ol>
-      {done && <div ref={result} tabIndex={-1} className="mt-6 rounded-md border border-control p-4" data-testid="suture-result">
-        <p className="text-lg font-medium">all words found.</p>
-        <p className="mt-2">{shared}</p>
-        <button type="button" className={`${button} mt-3`} onClick={share}>copy my result</button>
-        {copied && <p className="mt-2 text-sm text-ink-soft" aria-live="polite">{copied}</p>}
-      </div>}
-      <p className="mt-3 text-sm text-ink-soft" aria-live="polite" aria-atomic="true" data-testid="suture-live">{said}</p>
+      </div>
+      <ul className="mt-6 columns-3 gap-x-4 text-sm font-bold sm:text-lg" aria-label="words to find" data-testid="suture-words" data-print-hidden>
+        {puzzle.words.map((word, i) => {
+          const isFound = state.found.includes(i);
+          return (
+            <li key={i} className="break-inside-avoid break-words">
+              {isFound
+                ? <><s className="text-ink-soft">{word.answer.toLowerCase()}</s><span className="sr-only"> (found)</span></>
+                : <span className="text-ink">{word.answer.toLowerCase()}</span>}
+            </li>
+          );
+        })}
+      </ul>
+      <p className="mt-2 text-center text-ink-soft" data-print-hidden>find all {state.totalWords} words. they run up, down, left or right.</p>
+      <p id={help} className="mt-2 text-center text-sm text-ink-soft" data-print-hidden>
+        tap a word's first letter, then its last letter. tap the first letter again to start over. on a keyboard, arrows
+        move, enter or space picks, and escape clears.
+      </p>
+      {/* On paper only: every word to find, never crossed out, and where the puzzle came from. */}
+      <div className="wordpath-print-words" data-print-only data-testid="suture-print-words">
+        <p className="text-center font-bold">words to find</p>
+        <ul className="mt-2 columns-3 gap-x-4 text-lg font-bold">
+          {printableWords(puzzle).map((word, i) => <li key={i} className="break-inside-avoid break-words">{word}</li>)}
+        </ul>
+      </div>
+      <p className="wordpath-print-foot text-sm" data-print-only data-testid="suture-print-foot">{printFoot}</p>
+      <div className="mt-4 flex flex-wrap justify-between gap-2 text-sm text-ink-soft" data-print-hidden>
+        <p data-testid="suture-count">{state.found.length} of {state.totalWords} found</p>
+        {puzzle.sample && <p>sample puzzle</p>}
+      </div>
+      {done && (
+        <div ref={result} tabIndex={-1} className="mt-6 rounded-md border border-control p-4" data-testid="suture-result" data-print-hidden>
+          <p className="text-lg font-medium">all words found.</p>
+          <p className="mt-2">{shared}</p>
+          <button type="button" className={`${button} mt-3`} onClick={share}>copy my result</button>
+          {copied && <p className="mt-2 text-sm text-ink-soft" aria-live="polite">{copied}</p>}
+        </div>
+      )}
+      <p className="mt-3 text-sm text-ink-soft" aria-live="polite" aria-atomic="true" data-testid="suture-live" data-print-hidden>{said}</p>
     </section>
   );
 }

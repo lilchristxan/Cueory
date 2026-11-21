@@ -1,0 +1,64 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { courses, roadmap } from '../config/courses';
+
+const plannedCourses = courses.filter((c) => c.status === 'coming-soon');
+import { lessonEntryHref } from '../lessons/draftgate';
+const entryHref = lessonEntryHref();
+---
+
+<Layout
+  title="coming soon"
+  description="explore planned cueory courses and study features, and find an available lesson to start today."
+  noindex
+>
+  <div class="mx-auto w-full max-w-page py-section">
+    <header class="mx-auto max-w-prose space-y-4 text-center">
+      <h1 class="display text-title text-ink sm:text-title-lg">coming soon</h1>
+      <p class="text-ink-soft">what we are currently building for future releases.</p>
+    </header>
+
+    <div class="mt-10 space-y-6">
+      <section class="veil min-w-0 p-6 sm:p-10" aria-labelledby="planned-courses-heading">
+        <h2 id="planned-courses-heading" class="display wrap-anywhere text-2xl text-ink sm:text-title">
+          planned courses
+        </h2>
+        <ul class="mt-6 grid gap-4 sm:grid-cols-2">
+          {
+            plannedCourses.map((course) => (
+              <li class="min-w-0 rounded-lg border border-line bg-surface p-5">
+                <h3 class="wrap-anywhere text-lg font-semibold text-ink">{course.title}</h3>
+                <p class="mt-2 wrap-anywhere text-ink-soft">{course.description}</p>
+              </li>
+            ))
+          }
+        </ul>
+      </section>
+
+      <section class="veil min-w-0 p-6 sm:p-10" aria-labelledby="roadmap-features-heading">
+        <h2 id="roadmap-features-heading" class="display wrap-anywhere text-2xl text-ink sm:text-title">
+          study features
+        </h2>
+        <ul class="mt-6 grid gap-4 sm:grid-cols-2">
+          {
+            roadmap.map((item) => (
+              <li class="min-w-0 rounded-lg border border-line bg-surface p-5">
+                <h3 class="wrap-anywhere text-lg font-semibold text-ink">{item.title}</h3>
+                <p class="mt-2 wrap-anywhere text-ink-soft">{item.description}</p>
+              </li>
+            ))
+          }
+        </ul>
+      </section>
+    </div>
+
+    <div class="mt-10 text-center">
+      <a
+        href={entryHref}
+        class="glass-button inline-flex min-h-11 items-center justify-center"
+      >
+        explore available lessons
+      </a>
+    </div>
+  </div>
+</Layout>

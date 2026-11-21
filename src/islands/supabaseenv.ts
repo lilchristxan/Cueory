@@ -26,8 +26,9 @@ export type SupabaseSettings = SupabaseEnabled | SupabaseDisabled;
  * - no port (only a local address keeps its port)
  * - a single subdomain under supabase.co with a 20-char lowercase alphanum ref
  * - no path, query string or fragment
+ * Exported so the batch importer (scripts/import_batch.ts) checks a project address exactly the same way.
  */
-function validateUrl(raw: string | undefined): string | null {
+export function validateUrl(raw: string | undefined): string | null {
   if (!raw || raw.trim() === '') return null;
   const value = raw.trim();
   let parsed: URL;
@@ -42,6 +43,8 @@ function validateUrl(raw: string | undefined): string | null {
   const isLocal = parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1';
   if (isLocal) {
     if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return null;
+    // Local endpoints must follow the same origin-only rule as hosted projects.
+    if (parsed.pathname !== '/' || parsed.search !== '' || parsed.hash !== '') return null;
     return parsed.origin;
   }
   if (parsed.protocol !== 'https:') return null;
@@ -108,6 +111,12 @@ export function supabaseSettings(env: {
       };
     }
     if (p && (p.hostname === 'localhost' || p.hostname === '127.0.0.1')) {
+      if (p.pathname !== '/' || p.search !== '' || p.hash !== '') {
+        return {
+          enabled: false,
+          reason: 'accounts are misconfigured: local Supabase URL must not contain a path, query string, or fragment',
+        };
+      }
       return {
         enabled: false,
         reason: 'accounts are misconfigured: local Supabase must use http://localhost or http://127.0.0.1',

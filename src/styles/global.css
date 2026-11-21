@@ -1,6 +1,49 @@
 @import "tailwindcss";
 @import "./tokens.css";
-@import "@fontsource-variable/inter";
+
+/*
+  Lato (SIL Open Font License, public/fonts/lato-OFL.txt) for body text, interface and buttons (Christian,
+  2026-11-01). Latin subset, self-hosted, regular and bold with italics. font-display: swap so text always shows.
+*/
+@font-face {
+  font-family: "Lato";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/lato-latin-400-normal.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "Lato";
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/lato-latin-400-italic.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "Lato";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/fonts/lato-latin-700-normal.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "Lato";
+  font-style: italic;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/fonts/lato-latin-700-italic.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
 
 /*
   Bodoni Moda (SIL Open Font License, public/fonts/bodoni-moda-OFL.txt) for marketing headings only (D-41).
@@ -84,6 +127,14 @@
     border-radius: var(--radius-sm);
   }
 
+  /* Date and time inputs keep keyboard focus on an inner field (month, day, hour...). In WebKit and Firefox the input
+     itself does not match :focus-visible then, so the rule above draws nothing; :focus-within does match. */
+  input:is([type="date"], [type="time"], [type="datetime-local"], [type="month"], [type="week"]):focus-within {
+    outline: var(--focus-width) solid var(--color-focus);
+    outline-offset: var(--focus-offset);
+    border-radius: var(--radius-sm);
+  }
+
   @media (prefers-reduced-motion: reduce) {
     *,
     *::before,
@@ -101,6 +152,24 @@
   Every color is a brand color from tokens.css, some mixed toward transparent; tests/unit/tokens.test.ts checks text
   contrast on the darkest and lightest points of each background.
 */
+@layer components {
+  /*
+    A link that opens in a new tab shows a small ↗ after it, so sighted visitors know before they click, not only
+    screen reader users (who hear "(opens in a new tab)" from each link's own text). The ↗ itself is silent: the
+    "/ ''" alternative text keeps it from being read out. Links that already show their own cue carry
+    data-new-tab-cue and get no second one.
+  */
+  a[target="_blank"]:not([data-new-tab-cue])::after {
+    content: "\2197";
+    content: "\2197" / "";
+    display: inline-block;
+    margin-inline-start: var(--new-tab-cue-gap);
+    font-size: var(--new-tab-cue-size);
+    line-height: 1;
+    text-decoration: none;
+  }
+}
+
 @layer components {
   /*
     Draped silk scenes (D-41, D-53): diagonal folds of light and shade, a soft sheen and a faint grain. The home page
@@ -148,8 +217,9 @@
         rgb(var(--silk-fold-rgb) / calc(var(--silk-fold-alpha) / 2)) 63%,
         transparent 82%
       ),
+      linear-gradient(rgb(var(--silk-wash-rgb) / var(--silk-wash-alpha)) 0 0),
       linear-gradient(180deg, var(--scene-base), var(--color-silk-shade));
-    background-size: 220px 220px, auto, auto, auto, auto;
+    background-size: 220px 220px, auto, auto, auto, auto, auto;
     -webkit-mask-image: linear-gradient(
       180deg,
       transparent,
@@ -170,6 +240,156 @@
   .scene-hero {
     --scene-fade-top: 0px;
   }
+
+  /*
+    Home hero figure (redesign P5): Christian's anatomy picture has its own pale backdrop, so its top and left edges
+    fade into the silk (a mask, never over text). Evening dims it so the pale backdrop doesn't glow on the dark page.
+  */
+  .hero-figure {
+    -webkit-mask-image:
+      linear-gradient(to right, transparent, currentColor var(--hero-figure-fade)),
+      linear-gradient(to bottom, transparent, currentColor var(--hero-figure-fade)),
+      linear-gradient(to top, transparent, currentColor var(--hero-figure-fade-bottom));
+    -webkit-mask-composite: source-in;
+    mask-image:
+      linear-gradient(to right, transparent, currentColor var(--hero-figure-fade)),
+      linear-gradient(to bottom, transparent, currentColor var(--hero-figure-fade)),
+      linear-gradient(to top, transparent, currentColor var(--hero-figure-fade-bottom));
+    mask-composite: intersect;
+    pointer-events: none;
+    user-select: none;
+  }
+
+  :root[data-theme="dark"] .hero-figure {
+    filter: brightness(var(--hero-figure-evening-dim));
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .hero-figure {
+      filter: brightness(var(--hero-figure-evening-dim));
+    }
+  }
+
+  .hero-eyebrow {
+    font-size: var(--text-sm);
+    line-height: var(--text-sm--line-height);
+  }
+
+  .hero-caps {
+    letter-spacing: var(--tracking-caps);
+  }
+
+  /* "simpler." in copper (a solid copper: Copper Deep on Ivory is 3.6:1, above the 3:1 large text needs; lighter in Evening). */
+  .hero-accent {
+    color: var(--color-copper-deep);
+  }
+
+  :root[data-theme="dark"] .hero-accent {
+    color: var(--color-copper);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .hero-accent {
+      color: var(--color-copper);
+    }
+  }
+
+  /* The curve under the headline: decorative, copper, as wide as the headline's text column. */
+  .hero-curve {
+    display: block;
+    inline-size: 60%;
+    block-size: var(--spacing-stack);
+    margin-block-start: var(--spacing);
+    margin-inline-start: auto;
+    color: var(--color-copper-deep);
+  }
+
+  /* The "coming soon" tag inside the closed call to action: words, so it never relies on colour alone. */
+  .hero-soon {
+    border: 1px solid var(--cueory-copper-ink);
+    border-radius: var(--radius-pill);
+    padding-inline: calc(var(--spacing) * 2);
+    font-size: var(--text-sm);
+    font-weight: 400;
+  }
+
+  .hero-icon,
+  .hero-icon-lg {
+    flex: none;
+    inline-size: var(--icon-size);
+    block-size: var(--icon-size);
+  }
+
+  .hero-icon-lg {
+    inline-size: var(--icon-size-lg);
+    block-size: var(--icon-size-lg);
+  }
+
+  .hero-icon-copper {
+    color: var(--color-copper-deep);
+  }
+
+  /* The support card as drawn: a rounded card tinted with copper glow, a hairline copper rim and a soft shadow. */
+  .hero-support {
+    border: 1px solid color-mix(in srgb, var(--color-copper-glow) 70%, transparent);
+    border-radius: var(--radius-card-lg);
+    background-image: linear-gradient(
+      110deg,
+      color-mix(in srgb, var(--color-copper-glow) 55%, transparent),
+      color-mix(in srgb, var(--color-copper) 38%, transparent)
+    );
+    box-shadow: var(--shadow-soft);
+  }
+
+  :root[data-theme="dark"] .hero-support {
+    background-image: linear-gradient(
+      110deg,
+      color-mix(in srgb, var(--color-copper-deep) 26%, transparent),
+      color-mix(in srgb, var(--color-copper) 16%, transparent)
+    );
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .hero-support {
+      background-image: linear-gradient(
+        110deg,
+        color-mix(in srgb, var(--color-copper-deep) 26%, transparent),
+        color-mix(in srgb, var(--color-copper) 16%, transparent)
+      );
+    }
+  }
+
+  .hero-icon-mug {
+    flex: none;
+    inline-size: var(--icon-size-mug);
+    block-size: var(--icon-size-mug-height);
+  }
+
+  .hero-icon-mug-heart {
+    fill: var(--color-copper-shine);
+  }
+
+  .hero-support-body {
+    min-inline-size: 0;
+    flex: 1;
+  }
+
+  .explore-tile {
+    min-block-size: calc(var(--tap-min) * 2.25);
+    border: 1px solid var(--cueory-glass-border);
+    border-radius: var(--radius-lg);
+    background-color: rgb(var(--veil-rgb) / var(--veil-alpha));
+  }
+
+  .explore-tile:hover {
+    border-color: var(--color-control);
+  }
+
+  /* The coming-soon call to action: copper like the others, but it never acts. It still takes focus so it can be read out. */
+  .copper-button[aria-disabled="true"] {
+    cursor: default;
+  }
+
 
   /* "ways to study": Linen (Evening: Walnut), the folds falling the other way, light from the upper right. */
   .scene-tint {
@@ -197,8 +417,64 @@
   /* The same cloth without folds, for whole pages behind text. */
   .silk-quiet {
     background-color: var(--color-silk-base);
-    background-image: var(--silk-grain), linear-gradient(180deg, var(--color-silk-base), var(--color-silk-shade));
-    background-size: 220px 220px, auto;
+    background-image:
+      var(--silk-grain),
+      /* Diagonal folds: a soft ridge of peach with a lighter sheen beside it, as in the renderings. */
+      linear-gradient(115deg, transparent 12%, rgb(var(--silk-peach-rgb) / calc(var(--silk-peach-alpha) * 0.7)) 26%, color-mix(in srgb, var(--color-silk-sheen) 55%, transparent) 34%, transparent 46%),
+      linear-gradient(245deg, transparent 50%, rgb(var(--silk-peach-rgb) / calc(var(--silk-peach-alpha) * 0.8)) 64%, color-mix(in srgb, var(--color-silk-sheen) 45%, transparent) 72%, transparent 86%),
+      radial-gradient(ellipse 65% 50% at 4% 6%, rgb(var(--silk-peach-rgb) / var(--silk-peach-alpha)), transparent 72%),
+      radial-gradient(ellipse 60% 55% at 96% 20%, rgb(var(--silk-peach-rgb) / calc(var(--silk-peach-alpha) * 0.8)), transparent 70%),
+      radial-gradient(ellipse 75% 45% at 22% 80%, rgb(var(--silk-peach-rgb) / calc(var(--silk-peach-alpha) * 0.7)), transparent 72%),
+      linear-gradient(rgb(var(--silk-wash-rgb) / var(--silk-wash-alpha)) 0 0),
+      linear-gradient(180deg, var(--color-silk-tint), var(--color-silk-base) 55%, var(--color-silk-shade));
+    background-size: 220px 220px, auto, auto, auto, auto, auto, auto, auto;
+  }
+
+  /* The boards' fold shape (a colourless mask) over a token-coloured layer, tiled down the page behind the content. */
+  .silk-quiet {
+    position: relative;
+    isolation: isolate;
+  }
+
+  .silk-quiet::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background-color: rgb(var(--silk-peach-rgb) / calc(var(--silk-peach-alpha) * var(--silk-fold-layer)));
+    -webkit-mask-image: url("/design/silk-fold-mask.svg");
+    mask-image: url("/design/silk-fold-mask.svg");
+    -webkit-mask-size: 100% var(--silk-fold-height);
+    mask-size: 100% var(--silk-fold-height);
+    -webkit-mask-repeat: repeat-y;
+    mask-repeat: repeat-y;
+  }
+
+  /* Transparent with a fade, as in HomeV2-1.png: the page's silk shows through and the strip melts into it. */
+  .building-strip {
+    background-image: linear-gradient(180deg, color-mix(in srgb, var(--color-surface) 60%, transparent), transparent);
+  }
+
+  .building-strip-icon {
+    display: inline-block;
+  }
+
+  /* The approved cup-and-leaf mark is dark artwork: in Evening it sits on a light disc so it stays visible. */
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .building-strip-icon {
+      box-sizing: content-box;
+      padding: var(--notice-icon-disc);
+      border-radius: var(--radius-pill);
+      background-color: var(--color-ink);
+    }
+  }
+
+  :root[data-theme="dark"] .building-strip-icon {
+    box-sizing: content-box;
+    padding: var(--notice-icon-disc);
+    border-radius: var(--radius-pill);
+    background-color: var(--color-ink);
   }
 
   /* Frosted panel: brand surface color, partly see-through, blurred, with a 1 px hairline and one soft shadow. */
@@ -321,9 +597,12 @@
   }
 
   /* Glassy pill button: translucent brand glass, a crisp light rim, a small soft shadow (D-62). */
+  /* It never grows past its column: with large text on a narrow screen (320px, 32px text) its words wrap inside it. */
   .glass-button {
     display: inline-block;
+    max-inline-size: 100%;
     padding: calc(var(--spacing) * 3.5) calc(var(--spacing) * 8);
+    overflow-wrap: break-word;
     border-radius: var(--radius-pill);
     color: var(--color-on-button);
     text-decoration: none;
@@ -340,6 +619,30 @@
   .glass-button:hover {
     color: var(--color-on-button);
     background-color: rgb(var(--glass-hover-rgb) / var(--glass-hover-alpha));
+  }
+
+  /* The one shared copper button (redesign, #889 palette): the renderings' copper sweep, Charcoal ink at full opacity
+     (4.65:1 or better on every stop), a 44 px minimum target. Pages add only layout utilities, never their own copper. */
+  .copper-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: calc(var(--spacing) * 2);
+    min-block-size: var(--tap-min);
+    max-inline-size: 100%;
+    padding: calc(var(--spacing) * 3.5) calc(var(--spacing) * 8);
+    overflow-wrap: break-word;
+    border: 1px solid transparent; /* shows as a real border in forced-colors mode, where the gradient is dropped */
+    border-radius: var(--radius-pill);
+    color: var(--cueory-copper-ink);
+    text-decoration: none;
+    background-image: linear-gradient(110deg, var(--cueory-copper-start), var(--cueory-copper-end) 72%, var(--cueory-copper-shine));
+    box-shadow: var(--shadow-button);
+  }
+
+  .copper-button:hover,
+  .copper-button:visited {
+    color: var(--cueory-copper-ink);
   }
 
   /* Social profile links (D-54): the platform's one-color mark in the text color, on a 44 px target. */
@@ -710,24 +1013,126 @@ html:has(dialog.menu-panel[open]) {
 }
 
 /*
-  "ways to study" on the home page (D-50, D-60). Without JavaScript, a row of cards that scrolls sideways and snaps
-  each card to the middle. With it, the merry-go-round below. Either way the row runs the full width of the window,
-  and nothing masks, fades or blurs a card: its words keep the frosted-panel contrast checked in
-  tests/unit/tokens.test.ts.
+  "ways to study" on the home page (D-50, D-60): Christian's vials since Task 109, matching the prototype he approved
+  on 2026-11-01 (docs/screenshots/approved-2026-11-01/vial-carousel-*). Without JavaScript, a row of vials that scrolls
+  sideways and snaps each vial to the middle. With it, the ring below. Nothing masks, fades or blurs a vial's words:
+  only the bottle image is dimmed (.vial-img), and the label stays cream in both palettes, so its words are always
+  dark (--vial-ink).
+
+  The prototype's sizes, built from the spacing token. (Task 109 may only add the cap colors to tokens.css, so these
+  live here; the director can move them there.)
 */
 @layer components {
+  .modes {
+    /* The projected carousel vials must not widen the document at 200% text zoom.
+       Keep vertical hover motion and the no-JavaScript row's own scrolling. */
+    overflow-x: clip;
+    --vial-width: clamp(calc(var(--spacing) * 30), 13vw, calc(var(--spacing) * 40)); /* 120 to 160 px */
+    --vial-ratio: 2.111;                              /* the bottle images are 225 × 475 */
+    --vial-stand: calc(var(--spacing) * 21.5);        /* 86 px: how high above the stage's foot the vials stand */
+    --vial-headroom: calc(var(--spacing) * 10);       /* room above the front vial for its hover lift */
+    --vial-stage-height: calc(var(--vial-width) * var(--vial-ratio) + var(--vial-stand) + var(--vial-headroom));
+    --vial-step-rise: calc(var(--spacing) * 1.25);    /* 5 px higher per step out, squared: the arc */
+    --vial-step-depth: calc(var(--spacing) * 22.5);   /* 90 px further back per step out */
+    --vial-perspective: calc(var(--spacing) * 400);   /* 1600 px */
+    --vial-hover-rise: calc(var(--spacing) * -1.5);   /* the front vial rises 6 px under the mouse */
+    --vial-pedestal-width: min(calc(var(--spacing) * 275), 92vw); /* up to 1100 px */
+    --vial-pedestal-height: calc(var(--spacing) * 30); /* 120 px */
+    --vial-pedestal-foot: calc(var(--spacing) * 10);  /* 40 px */
+    --vial-arrow: calc(var(--spacing) * 14);          /* 56 px arrows beside the vials on wider screens */
+    --vial-preview-bottle: clamp(calc(var(--spacing) * 26), 24vw, calc(var(--spacing) * 52)); /* 104 to 208 px */
+    --vial-preview-width: calc(var(--container-mode-preview) * 1.75); /* the two-column preview, 784 px */
+    --vial-glide: 700ms cubic-bezier(0.22, 0.8, 0.24, 1); /* RING_MS and RING_EASING in src/scripts/carousel.ts */
+    --vial-hover: 220ms var(--ease-soft);             /* brand bar for hover: 200 to 240 ms */
+    --tracking-kicker: 0.24em;                        /* "ways to study" */
+    /* The label's words: Espresso by day, Charcoal in the evening. Both dark, because the label is cream in both. */
+    --vial-ink: var(--color-on-panel-button);
+  }
+
+  .modes-kicker {
+    font-size: calc(var(--text-sm) * 0.8);
+    letter-spacing: var(--tracking-kicker);
+    color: var(--color-ink-soft);
+  }
+
+  .vial-stage {
+    position: relative;
+  }
+
+  /* The soft light behind the vials, one diagonal light and the oval pedestal they stand on. Decoration only. */
+  .vial-scenery {
+    position: absolute;
+    inset-inline: 0;
+    inset-block-start: 0;
+    block-size: var(--vial-stage-height);
+    pointer-events: none;
+  }
+
+  .modes:not([data-ring]) .vial-scenery {
+    display: none;
+  }
+
+  /* The glow and the light fade out at the stage's top and bottom, so the stage has no visible edge. */
+  .vial-glow,
+  .vial-light {
+    position: absolute;
+    inset: 0;
+    -webkit-mask-image: linear-gradient(180deg, transparent, currentColor 25%, currentColor 70%, transparent);
+    mask-image: linear-gradient(180deg, transparent, currentColor 25%, currentColor 70%, transparent);
+  }
+
+  .vial-glow {
+    background-image: radial-gradient(60% 70% at 50% 55%, color-mix(in srgb, var(--color-silk-sheen) 80%, transparent), transparent 72%);
+  }
+
+  .vial-light {
+    background-image: linear-gradient(
+      118deg,
+      transparent 30%,
+      rgb(var(--glass-rim-rgb) / 0.55) 42%,
+      rgb(var(--glass-rim-rgb) / 0.15) 52%,
+      transparent 62%
+    );
+    mix-blend-mode: soft-light;
+  }
+
+  .vial-pedestal {
+    position: absolute;
+    inset-inline-start: 50%;
+    inset-block-end: var(--vial-pedestal-foot);
+    inline-size: var(--vial-pedestal-width);
+    block-size: var(--vial-pedestal-height);
+    translate: -50% 0;
+    border-radius: 50%;
+    background-image: radial-gradient(
+      70% 60% at 50% 35%,
+      color-mix(in srgb, var(--color-silk-sheen) 75%, var(--color-silk-tint)),
+      color-mix(in srgb, var(--color-silk-tint) 85%, var(--color-soft)) 70%,
+      color-mix(in srgb, var(--color-soft) 55%, var(--color-silk-shade))
+    );
+    box-shadow:
+      0 calc(var(--spacing) * 7.5) calc(var(--spacing) * 12.5) rgb(var(--shadow-tint) / 0.18),
+      inset 0 calc(var(--spacing) * -2.5) calc(var(--spacing) * 4.5) rgb(var(--shadow-tint) / 0.1);
+  }
+
+  .vial-pedestal::after {
+    content: "";
+    position: absolute;
+    inset: 46% 4% 18%;
+    border-radius: 50%;
+    background-image: linear-gradient(180deg, rgb(var(--shadow-tint) / 0.06), transparent);
+  }
+
   .modes-track {
     position: relative;
     display: flex;
-    gap: var(--gap-mode-card);
+    gap: calc(var(--spacing) * 6);
     overflow-x: auto;
     overscroll-behavior-x: contain;
     scroll-snap-type: x mandatory;
     scrollbar-width: none;
-    /* Room below for a hovered card's deeper shadow (D-51); the negative margin keeps the buttons where they were. */
-    padding-block: calc(var(--spacing) * 6) calc(var(--spacing) * 20);
-    margin-block-end: calc(var(--spacing) * -10);
-    padding-inline: calc((100% - var(--container-mode-card)) / 2);
+    padding-block: calc(var(--spacing) * 6);
+    padding-inline: calc((100% - var(--vial-width)) / 2);
   }
 
   .modes-track::-webkit-scrollbar {
@@ -737,102 +1142,279 @@ html:has(dialog.menu-panel[open]) {
   .mode-card {
     position: relative;
     display: flex;
-    flex: 0 0 var(--container-mode-card);
+    flex: 0 0 var(--vial-width);
     flex-direction: column;
-    padding: calc(var(--spacing) * 6);
+    align-items: center;
+    gap: calc(var(--spacing) * 4);
     scroll-snap-align: center;
   }
 
   /*
-    The merry-go-round (D-60), once the script has taken over (data-ring). Every card sits in the same spot in the
-    middle, and the script's numbers move it out to its place: --ring-shift card widths and --ring-gaps gaps sideways,
-    so neighbours sit edge to edge; --ring-scale its size (1, then 0.88 and 0.76: stepping back); and --ring-turn
-    degrees turned away, round the ring. Only the card in the middle and its neighbours show: one on each side on
-    phones and tablets, two on wider screens. A turn takes 240 ms, easing out (RING_MS in src/scripts/carousel.ts).
+    The ring (D-60, Task 109), once the script has taken over (data-ring). Every vial stands in the same spot in the
+    middle of the stage, and the script's numbers move it out to its place on the arc: --ring-shift vial widths
+    sideways, --ring-rise steps up, --ring-depth steps back, at --ring-scale of its size. Four show on each side of the
+    front vial. A turn takes 700 ms (RING_MS in src/scripts/carousel.ts), and none at all with reduced motion.
   */
   .modes[data-ring] .modes-track {
-    display: grid;
-    grid-template-areas: "ring";
-    justify-content: center;
+    display: block;
+    block-size: var(--vial-stage-height);
     /*
-      Still a scroll box, as the plain row was (but nothing to scroll), so the switch causes no layout shift. The row's
-      padding leaves room for the lift of the card in the middle.
+      Still a scroll box, as the plain row was (but nothing to scroll), so the switch causes no layout shift and the
+      outer vials end at the window's edges.
     */
     overflow: hidden;
     scroll-snap-type: none;
-    padding-inline: 0;
+    padding: 0;
+    perspective: var(--vial-perspective);
     touch-action: pan-y;
   }
 
   .modes[data-ring] .mode-card {
-    grid-area: ring;
-    inline-size: var(--container-mode-card);
-    visibility: hidden;
+    position: absolute;
+    inset-inline-start: 50%;
+    inset-block-end: var(--vial-stand);
+    inline-size: var(--vial-width);
     z-index: var(--ring-layer, 0);
-    transform: perspective(calc(var(--container-mode-card) * 4))
-      translateX(calc(var(--ring-shift, 0) * var(--container-mode-card) + var(--ring-gaps, 0) * var(--gap-mode-card)))
-      rotateY(calc(var(--ring-turn, 0) * 1deg)) scale(var(--ring-scale, 1));
+    transform-origin: 50% 100%;
+    transform: translateX(calc(-50% + var(--ring-shift, 0) * var(--vial-width)))
+      translateY(calc(var(--ring-rise, 0) * -1 * var(--vial-step-rise)))
+      translateZ(calc(var(--ring-depth, 0) * -1 * var(--vial-step-depth))) scale(var(--ring-scale, 1));
     transition:
-      transform 240ms cubic-bezier(0.2, 0.8, 0.2, 1),
-      visibility 240ms,
-      scale 200ms ease,
-      box-shadow 200ms ease;
+      transform 700ms cubic-bezier(0.22, 0.8, 0.24, 1),
+      visibility 700ms,
+      scale var(--vial-hover),
+      translate var(--vial-hover);
   }
 
-  .modes[data-ring] .mode-card:is([data-offset="-1"], [data-offset="0"], [data-offset="1"]) {
-    visibility: visible;
+  .modes[data-ring] .mode-card[data-far] {
+    visibility: hidden;
   }
 
-  @media (width >= 64rem) {
-    .modes[data-ring] .mode-card:is([data-offset="-2"], [data-offset="2"]) {
-      visibility: visible;
-    }
-  }
-
-  /* Going round the back, or a jump of several cards, switches at once instead of sweeping across the row. */
+  /* Going round the back, or a jump of several vials, switches at once instead of sweeping across the row. */
   .modes[data-ring] .mode-card[data-jump] {
     transition: none;
   }
 
-  /*
-    Side cards are quieter: no shadow, a softer drawing, and the heading in the second ink. Their words keep the
-    frosted-panel contrast, since both inks are checked on it. A tap anywhere on a side card brings it to the middle,
-    so its own link waits until it is there.
-  */
   .modes[data-ring] .mode-card:not([data-offset="0"]) {
-    box-shadow: none;
     cursor: pointer;
   }
 
-  .modes[data-ring] .mode-card:not([data-offset="0"]) h3 {
-    color: var(--color-ink-soft);
-  }
-
-  .modes[data-ring] .mode-card:not([data-offset="0"]) a {
-    pointer-events: none;
-  }
-
-  .modes[data-ring] .mode-card:not([data-offset="0"]) .ill {
-    opacity: 0.6;
+  /* With the ring, the preview has the link ("start …"), so the plain row's links under the vials step aside. */
+  .modes[data-ring] .mode-card-link {
+    display: none;
   }
 
   /*
-    The card's preview button (D-51) covers the whole card, so a tap anywhere on it opens the preview; its focus ring
-    outlines the card. The card's own link sits above it and still goes straight to the mode.
+    The vial's preview button (D-51) covers the whole bottle, so a tap anywhere on it opens the preview (or, on a
+    side vial, brings it to the front); its focus ring outlines the vial.
   */
   .mode-open {
     position: absolute;
     inset: 0;
     z-index: 1;
     border: 0;
-    border-radius: inherit;
+    border-radius: var(--radius-lg);
     background-color: transparent;
     cursor: pointer;
+  }
+
+  .mode-open:focus-visible {
+    border-radius: var(--radius-lg);
   }
 
   .mode-card a {
     position: relative;
     z-index: 2;
+  }
+
+  /* One vial: the bottle, the shading and shine over its glass, the label's words, and a soft shadow at its foot. */
+  .vial {
+    position: relative;
+    isolation: isolate;
+    inline-size: 100%;
+    container-type: inline-size;
+  }
+
+  .vial-img {
+    display: block;
+    inline-size: 100%;
+    block-size: auto;
+    user-select: none;
+    filter: brightness(var(--ring-bright, 1)) saturate(var(--ring-saturate, 1))
+      drop-shadow(0 calc(var(--spacing) * 4.5) calc(var(--spacing) * 4) rgb(var(--shadow-tint) / 0.22));
+    transition: filter var(--vial-glide);
+  }
+
+  .mode-card[data-jump] .vial-img {
+    transition: none;
+  }
+
+  /* Faint shade at the label's left and right edges, under the words, so the flat label reads as curved glass. */
+  .vial-curve {
+    position: absolute;
+    inset: 32.6% 1% 8%;
+    border-radius: var(--radius-sm);
+    background-image: linear-gradient(
+      90deg,
+      rgb(var(--shadow-tint) / 0.18),
+      transparent 22%,
+      rgb(var(--glass-rim-rgb) / 0.1) 45%,
+      transparent 70%,
+      rgb(var(--shadow-tint) / 0.2)
+    );
+    mix-blend-mode: multiply;
+    pointer-events: none;
+  }
+
+  /* The brighter glass under the mouse (front vial only, below). */
+  .vial-shine {
+    position: absolute;
+    inset: 22% 3% 3%;
+    border-radius: var(--radius-md);
+    background-image: linear-gradient(
+      100deg,
+      transparent 52%,
+      rgb(var(--glass-rim-rgb) / 0.42) 66%,
+      rgb(var(--glass-rim-rgb) / 0.12) 74%,
+      transparent 82%
+    );
+    mix-blend-mode: screen;
+    opacity: 0;
+    transition: opacity var(--vial-hover);
+    pointer-events: none;
+  }
+
+  /* The label's words. Sizes follow the vial's own width (cqi), so a small vial and the preview's big one match. */
+  .vial-label {
+    position: absolute;
+    inset: 36% 8% 11% 10%;
+    display: flex;
+    flex-direction: column;
+    color: var(--vial-ink);
+    line-height: 1.5;
+    pointer-events: none;
+  }
+
+  .vial-name {
+    inline-size: 66%;
+    margin-block-start: 1.5cqi;
+    font-size: 11cqi;
+    font-weight: 700;
+    line-height: 1.5;
+    letter-spacing: -0.01em;
+    overflow-wrap: anywhere;
+  }
+
+  .vial-rule {
+    display: block;
+    inline-size: 21cqi;
+    block-size: 0.95cqi;
+    margin-block-start: 3cqi;
+    background-color: var(--vial-ink);
+  }
+
+  /* The logo down the label's right edge: the Espresso artwork, turned on its side, otherwise untouched. */
+  .vial-logo {
+    position: absolute;
+    inset-block-start: 4%;
+    inset-inline-start: 97%;
+    inline-size: 80cqi;
+    max-inline-size: none;
+    block-size: auto;
+    transform-origin: 0 0;
+    rotate: 90deg;
+  }
+
+  .vial-meta {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    inline-size: 76%;
+    margin-block-start: auto;
+    border-block-start: 1px solid var(--vial-ink);
+    font-size: 4.7cqi;
+  }
+
+  .vial-meta span {
+    padding: 1.9cqi 1.25cqi;
+    border-block-end: 1px solid color-mix(in srgb, var(--vial-ink) 45%, transparent);
+  }
+
+  .vial-shadow {
+    position: absolute;
+    inset-inline: 12%;
+    inset-block-end: -5cqi;
+    z-index: -1;
+    block-size: 11cqi;
+    border-radius: 50%;
+    background-image: radial-gradient(closest-side, rgb(var(--shadow-tint) / 0.32), transparent);
+    transition: scale var(--vial-hover);
+  }
+
+  /* The ring's bottle steps out while the preview shows it (it is the same bottle), and steps back on close. */
+  .mode-card[data-lent] .vial {
+    visibility: hidden;
+  }
+
+  /* Under the stage: the arrows (on phones, either side of the dots) and the dots. */
+  .modes-controls {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: calc(var(--spacing) * 3);
+  }
+
+  /* With large text on a narrow phone the dots wrap between the arrows, so the arrows never leave the screen or shrink. */
+  .modes-controls > .vial-arrow {
+    flex-shrink: 0;
+  }
+
+  .modes-dots {
+    display: flex;
+    min-inline-size: 0;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: calc(var(--spacing) * 1.5);
+  }
+
+  .modes-dot {
+    inline-size: calc(var(--spacing) * 2.25);
+    block-size: calc(var(--spacing) * 2.25);
+    border-radius: var(--radius-pill);
+    background-color: var(--color-line);
+    transition:
+      inline-size var(--duration-slow) var(--ease-soft),
+      background-color var(--duration-slow) var(--ease-soft);
+  }
+
+  /* The front vial's dot stretches into a pill: shape, not only color. */
+  .modes-dot[data-on] {
+    inline-size: calc(var(--spacing) * 6);
+    background-color: var(--color-ink);
+  }
+
+  @media (width >= 40rem) {
+    .modes-dots {
+      gap: calc(var(--spacing) * 2.5);
+    }
+
+    /* Beside the vials, halfway up the stage, as in the approved desktop design. */
+    .vial-arrow {
+      position: absolute;
+      z-index: 1;
+      inset-block-start: calc(var(--vial-stage-height) / 2);
+      inline-size: var(--vial-arrow);
+      block-size: var(--vial-arrow);
+      translate: 0 -50%;
+    }
+
+    .vial-arrow-prev {
+      inset-inline-start: calc(var(--spacing) * 7);
+    }
+
+    .vial-arrow-next {
+      inset-inline-end: calc(var(--spacing) * 7);
+    }
   }
 
   .mode-art {
@@ -958,11 +1540,12 @@ html:has(dialog.menu-panel[open]) {
 }
 
 /*
-  The illustration loops play only on the card in the middle and in the open preview, only once the script has checked
-  the visitor's motion setting (data-motion), and stop with either pause button (data-paused). Without them every illustration is still and
+  The illustration loops play only on the card in the middle, only while the carousel is on screen with no preview open
+  and the visitor's motion setting allows it (data-looping, set by the script from illustrationsMayLoop), and stop with
+  either pause button. The preview's scrim is a plain translucent color: a blur over the live page cost WebKit its frames (#634). Without them every illustration is still and
   complete. Each loop is 6 s, the same as the auto-advance.
 */
-.modes[data-motion]:not([data-paused]) :is(.mode-card[data-active], .mode-preview) {
+.modes[data-motion]:not([data-paused])[data-looping] .mode-card[data-active] {
   & .ill-video-press { animation: ill-video-press 6s ease-in-out infinite both; }
   & .ill-video-progress { animation: ill-video-progress 6s ease-in-out infinite both; }
 
@@ -1017,162 +1600,14 @@ html:has(dialog.menu-panel[open]) {
     scroll-behavior: auto;
   }
 
-  .modes[data-ring] .mode-card {
+  /* Reduced motion: the vials switch at once, with no glide, no lift and no fading shine (Task 109). */
+  .modes[data-ring] .mode-card,
+  .vial-img,
+  .vial-shine,
+  .vial-shadow,
+  .modes-dot,
+  .mode-preview a {
     transition: none;
-  }
-}
-
-/*
-  pulse, the word game on /play (D-61). Each guess is a row of round letters with its mark under each one, as a
-  symbol (● in place, ○ elsewhere in the word, · not in the word) and in words for screen readers, so nothing depends
-  on color. A letter in place is filled, one elsewhere is ringed, and one not in the word is plain and quieter. Brand
-  colors only, and no tile grid.
-*/
-@layer components {
-  .pulse-board {
-    display: flex;
-    flex-direction: column;
-    gap: calc(var(--spacing) * 3);
-  }
-
-  .pulse-board:empty {
-    display: none;
-  }
-
-  /* Letters share the row's width, up to 40 px each, so a 7-letter guess fits a 320 px screen on one line. */
-  .pulse-row {
-    display: flex;
-    gap: calc(var(--spacing) * 1.5);
-  }
-
-  .pulse-letter {
-    display: inline-flex;
-    flex: 0 1 calc(var(--spacing) * 10);
-    flex-direction: column;
-    align-items: center;
-    gap: calc(var(--spacing) * 1);
-    min-inline-size: 0;
-  }
-
-  .pulse-char {
-    display: grid;
-    place-items: center;
-    inline-size: 100%;
-    aspect-ratio: 1;
-    min-block-size: 0;
-    line-height: 1;
-    border: 2px solid transparent;
-    border-radius: var(--radius-pill);
-    font-size: var(--text-lg);
-    font-weight: 500;
-    color: var(--color-ink);
-  }
-
-  .pulse-here .pulse-char {
-    border-color: var(--color-button);
-    color: var(--color-on-button);
-    background-color: var(--color-button);
-  }
-
-  .pulse-elsewhere .pulse-char {
-    border-color: var(--color-ink);
-  }
-
-  .pulse-absent .pulse-char {
-    color: var(--color-ink-soft);
-  }
-
-  .pulse-symbol {
-    font-size: var(--text-sm);
-    line-height: 1;
-    color: var(--color-ink-soft);
-  }
-
-  .pulse-cue {
-    padding-inline-start: calc(var(--spacing) * 3);
-    border-inline-start: 2px solid var(--color-line);
-  }
-
-  .pulse-field {
-    inline-size: 11ch;
-    font-size: var(--text-lg);
-    letter-spacing: var(--tracking-guess);
-  }
-
-  .pulse-cue-button {
-    min-block-size: calc(var(--spacing) * 11);
-    padding-inline: calc(var(--spacing) * 4);
-    border: 1px dashed var(--color-control);
-    border-radius: var(--radius-pill);
-    color: var(--color-ink);
-  }
-
-  .pulse-cue-button:disabled {
-    color: var(--color-ink-soft);
-    cursor: default;
-  }
-
-  /*
-    The letter buttons share each row's width, up to 40 px each and 4 px apart, and on phones they also use the
-    panel's side padding. At 320 px a key is about 23 px wide and 44 px tall, with middles about 27 px apart, so the
-    targets meet WCAG 2.5.8's spacing rule and nothing scrolls sideways (WCAG 1.4.10).
-  */
-  .pulse-keys {
-    display: flex;
-    flex-direction: column;
-    gap: calc(var(--spacing) * 2);
-    margin-inline: calc(var(--spacing) * -4);
-  }
-
-  @media (width >= 40rem) {
-    .pulse-keys {
-      margin-inline: 0;
-    }
-  }
-
-  .pulse-key-row {
-    display: flex;
-    justify-content: center;
-    gap: calc(var(--spacing) * 1);
-  }
-
-  .pulse-key {
-    display: inline-flex;
-    flex: 1 1 0;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    min-inline-size: 0;
-    max-inline-size: calc(var(--spacing) * 10);
-    min-block-size: calc(var(--spacing) * 11);
-    border: 1px solid var(--color-control);
-    border-radius: var(--radius-md);
-    line-height: 1.1;
-    color: var(--color-ink);
-    background-color: var(--color-page);
-  }
-
-  .pulse-key-wide {
-    flex: 0 1 calc(var(--spacing) * 24);
-    max-inline-size: none;
-  }
-
-  .pulse-key.pulse-here {
-    border-color: var(--color-button);
-    color: var(--color-on-button);
-    background-color: var(--color-button);
-  }
-
-  .pulse-key.pulse-elsewhere {
-    border: 2px solid var(--color-ink);
-  }
-
-  .pulse-key.pulse-absent {
-    color: var(--color-ink-soft);
-  }
-
-  .pulse-key-symbol {
-    font-size: var(--text-sm);
   }
 }
 
@@ -1258,13 +1693,22 @@ html:has(dialog.menu-panel[open]) {
 }
 
 /*
-  Hover zoom (D-51): with a mouse, the card in the middle grows a little and lifts under the pointer or keyboard
-  focus. Polish only: touch screens and reduced motion skip it, and nothing depends on it.
+  Hover (D-51, Task 109): with a mouse, the vial in front grows to 104%, rises 6 px, its glass brightens and the shadow
+  at its foot widens, over 220 ms, and settles back when the pointer leaves; keyboard focus does the same. The vials
+  beside it stay exactly as they are. Polish only: touch screens and reduced motion skip it, and nothing depends on it.
 */
 @media (hover: hover) and (pointer: fine) {
   .modes[data-motion] .mode-card[data-active]:is(:hover, :has(.mode-open:focus-visible)) {
     scale: var(--zoom-mode-card);
-    box-shadow: var(--shadow-lift);
+    translate: 0 var(--vial-hover-rise);
+  }
+
+  .modes[data-motion] [data-active]:is(:hover, :has(.mode-open:focus-visible)) .vial-shine {
+    opacity: 1;
+  }
+
+  .modes[data-motion] [data-active]:is(:hover, :has(.mode-open:focus-visible)) .vial-shadow {
+    scale: 1.12 1;
   }
 }
 
@@ -1292,9 +1736,27 @@ html:has(dialog.menu-panel[open]) {
 }
 
 /*
-  The study-mode preview (D-51): a native modal <dialog> that fills the window. Behind the panel, the page is darkened
-  and softly frosted (the scrim); the panel itself is opaque, in the frosted cards' own color (Ivory, Evening: Walnut),
-  so its text has the plain page-color contrast the token tests check. The grow and shrink are drawn by the script.
+  Study-mode preview dialog under reduced motion: no transition and no animation is created inside it. The blanket rule
+  above gives every element a 0.01ms duration, which Chromium finishes before the next frame but Firefox still lists in
+  getAnimations() (18 of them, release run 44422471256). Setting the property to none creates nothing at all, so the
+  dialog opens and closes at once.
+*/
+@media (prefers-reduced-motion: reduce) {
+  .mode-preview,
+  .mode-preview *,
+  .mode-preview *::before,
+  .mode-preview *::after {
+    transition: none;
+    animation-name: none;
+  }
+}
+
+/*
+  The study-mode preview (D-51, Task 109): a native modal <dialog> that fills the window. Behind the panel, the page is
+  darkened and softly frosted (the scrim). The panel's cream surface is its own layer, so the script can open it around
+  the bottle; it is opaque, in the frosted cards' own color (Ivory, Evening: Walnut), so its text has the plain
+  page-color contrast the token tests check. Wider screens: the big vial on the left, the words on the right. Phones:
+  the vial on top. The grow and shrink are drawn by the script.
 */
 @layer components {
   .mode-preview {
@@ -1327,19 +1789,95 @@ html:has(dialog.menu-panel[open]) {
     position: fixed;
     inset: 0;
     background-color: rgb(var(--shadow-tint) / var(--scrim-alpha));
-    -webkit-backdrop-filter: blur(var(--blur-scrim));
-    backdrop-filter: blur(var(--blur-scrim));
   }
 
   .mode-preview-panel {
     position: relative;
+    display: grid;
+    justify-items: center;
+    gap: calc(var(--spacing) * 6);
     inline-size: 100%;
     max-inline-size: var(--container-mode-preview);
-    padding: calc(var(--spacing) * 5) calc(var(--spacing) * 6) calc(var(--spacing) * 7);
+    padding: calc(var(--spacing) * 14) calc(var(--spacing) * 6) calc(var(--spacing) * 7);
+  }
+
+  .mode-preview-surface {
+    position: absolute;
+    inset: 0;
     border: 1px solid color-mix(in srgb, var(--color-line) 55%, transparent);
     border-radius: var(--radius-xl);
     background-color: rgb(var(--veil-rgb));
     box-shadow: var(--shadow-lift);
+  }
+
+  .mode-preview-close {
+    position: absolute;
+    z-index: 1;
+    inset-block-start: calc(var(--spacing) * 4);
+    inset-inline-end: calc(var(--spacing) * 4);
+  }
+
+  /*
+    The preview's round buttons sit on the opaque cream surface, so their frosted blur has only a flat color to blur and
+    shows nothing; inside the words' fading groups it has nothing at all (a faded ancestor is the blur's backdrop root).
+    In WebKit it still costs a blurred offscreen copy per button on every frame, and the arrow and close buttons stayed
+    "not stable" for Playwright's click (#634). Plain translucent color looks the same.
+  */
+  .mode-preview .corner-button {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+
+  .mode-preview-bottle {
+    position: relative;
+    inline-size: var(--vial-preview-bottle);
+    transform-origin: 50% 50%;
+  }
+
+  .mode-preview-details {
+    position: relative;
+    justify-self: stretch;
+  }
+
+  .mode-preview-rule {
+    display: block;
+    inline-size: calc(var(--spacing) * 8);
+    block-size: 1px;
+    margin-block-start: calc(var(--spacing) * 2);
+    background-color: var(--color-ink);
+  }
+
+  /* The feature rows, inside the preview's ⓘ panel. */
+  .mode-features {
+    display: grid;
+    gap: calc(var(--spacing) * 2);
+  }
+
+  .mode-features[hidden] {
+    display: none;
+  }
+
+  .mode-features li {
+    display: flex;
+    align-items: center;
+    gap: calc(var(--spacing) * 3);
+  }
+
+  .mode-feature-icon {
+    flex: none;
+    inline-size: calc(var(--spacing) * 5.5);
+    block-size: calc(var(--spacing) * 5.5);
+    color: var(--color-ink);
+  }
+
+  @media (width >= 48rem) {
+    .mode-preview-panel {
+      grid-template-columns: auto 1fr;
+      align-items: center;
+      gap: calc(var(--spacing) * 10);
+      max-inline-size: var(--vial-preview-width);
+      padding: calc(var(--spacing) * 12) calc(var(--spacing) * 12) calc(var(--spacing) * 10);
+    }
   }
 
   /* "coming soon" in the button's place: an outline, not a button, since there is nothing to press yet. */
@@ -1362,6 +1900,40 @@ html:has(dialog.menu-panel[open]) {
   While the preview is open the page behind stays put. Where scrollbars take up room, that room is kept so nothing
   shifts, and tinted like the darkened page.
 */
+@layer components {
+  .result-dialog-overlay {
+    background-color: rgb(var(--shadow-tint) / var(--scrim-alpha));
+    -webkit-backdrop-filter: blur(var(--blur-scrim));
+    backdrop-filter: blur(var(--blur-scrim));
+  }
+
+  /*
+    The finished-game card's close button (issue 743) floats in the top corner and sticks there while the card scrolls, so
+    large text on a narrow screen can neither push it off the edge nor scroll it out of sight. Focused controls stop
+    below it.
+  */
+  .result-dialog {
+    scroll-padding-block-start: calc(var(--tap-min) + var(--spacing) * 2);
+  }
+
+  .result-dialog::before {
+    content: '';
+    display: block;
+    float: inline-start;
+    inline-size: calc(var(--tap-min) + var(--spacing) * 3);
+    block-size: calc(var(--tap-min) + var(--spacing) * 2);
+  }
+
+  .result-dialog-close {
+    position: sticky;
+    inset-block-start: 0;
+    z-index: 1;
+    float: inline-end;
+    margin-inline-start: calc(var(--spacing) * 3);
+    margin-block-end: calc(var(--spacing) * 2);
+  }
+}
+
 html:has(dialog.mode-preview[open]) {
   overflow: hidden;
   scrollbar-gutter: stable;
@@ -1468,4 +2040,479 @@ html:has(dialog.mode-preview[open]) {
   0%, 45% { opacity: 0; transform: translateY(8px); }
   55%, 92% { opacity: 1; transform: none; }
   100% { opacity: 0; transform: none; }
+}
+
+/*
+  ============================================================
+  Batch-2 utility classes (Task 77): motion, depth, and the
+  segmented control. All animations are off under
+  prefers-reduced-motion: reduce.
+  ============================================================
+*/
+
+/*
+  .lift — a card or button that rises 2 px and gains a deeper shadow on
+  hover / focus-visible. Apply to any interactive surface.
+*/
+@layer components {
+  .lift {
+    transition:
+      translate var(--duration-base) var(--ease-soft),
+      box-shadow var(--duration-base) var(--ease-soft);
+  }
+
+  .lift:hover,
+  .lift:focus-visible {
+    translate: 0 calc(var(--lift-rise) * -1);
+    box-shadow: var(--shadow-card-hover);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .lift:hover,
+    .lift:focus-visible {
+      translate: none;
+    }
+  }
+}
+
+/*
+  .press — scales slightly on :active so buttons feel physical.
+*/
+@layer components {
+  .press {
+    transition: scale var(--duration-fast) var(--ease-soft);
+  }
+
+  .press:active {
+    scale: 0.98;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .press:active {
+      scale: none;
+    }
+  }
+}
+
+/*
+  .flip — a 3D card that flips on .is-flipped. The outer .flip sets the
+  perspective; .flip-inner rotates; .flip-face and .flip-back are the two
+  sides. Under reduced motion the flip becomes a crossfade so the content
+  still changes without any 3D transform.
+*/
+@layer components {
+  .flip {
+    perspective: var(--flip-perspective);
+  }
+
+  .flip-inner {
+    position: relative;
+    transform-style: preserve-3d;
+    transition: transform var(--duration-slow) var(--ease-soft);
+  }
+
+  .flip.is-flipped .flip-inner {
+    transform: rotateY(180deg);
+  }
+
+  .flip-face,
+  .flip-back {
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+  }
+
+  .flip-back {
+    position: absolute;
+    inset: 0;
+    transform: rotateY(180deg);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .flip-inner {
+      transform-style: flat;
+      transition: none;
+    }
+
+    .flip.is-flipped .flip-inner {
+      transform: none;
+    }
+
+    /* The faces swap in one step: the base-layer reset (reduced-motion.css) removes every transition under reduced
+       motion anyway, so a cross-fade here never ran (lane 8). */
+    .flip-face {
+      transition: none;
+    }
+
+    .flip.is-flipped .flip-face {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .flip-back {
+      transform: none;
+      backface-visibility: visible;
+      -webkit-backface-visibility: visible;
+      opacity: 0;
+      pointer-events: none;
+      transition: none;
+    }
+
+    .flip.is-flipped .flip-back {
+      opacity: 1;
+      pointer-events: auto;
+    }
+  }
+}
+
+/*
+  .progress-track / .progress-fill — a rounded progress bar.
+
+  The fill's width is controlled by a CSS custom property --progress (0 to 1)
+  using transform: scaleX(), with transform-origin: left. JavaScript sets this
+  with element.style.setProperty('--progress', value) on the .progress-fill
+  element itself, which is how the existing carousel (--ring-shift etc.) works.
+  This avoids a width: N% inline style while keeping CSP-compatible rendering.
+
+  For a purely server-rendered initial value, add a data-progress attribute and
+  a tiny inline script that calls setProperty once; the component that uses this
+  pattern can supply the nonce-hashed script.
+*/
+@layer components {
+  .progress-track {
+    height: var(--progress-height);
+    border-radius: var(--radius-pill);
+    background-color: var(--color-surface);
+    overflow: hidden;
+  }
+
+  .progress-fill {
+    height: 100%;
+    border-radius: var(--radius-pill);
+    background-color: var(--color-ink);
+    transform-origin: left center;
+    transform: scaleX(var(--progress, 0));
+    transition: transform var(--duration-base) var(--ease-soft);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .progress-fill {
+      transition: none;
+    }
+  }
+}
+
+/*
+  .skeleton — a soft shimmer placeholder shown while content loads. Under
+  reduced motion the pulse stops and the block is shown as a static tinted box.
+*/
+@layer components {
+  @keyframes skeleton-pulse {
+    0%, 100% { opacity: 0.5; }
+    50% { opacity: 1; }
+  }
+
+  .skeleton {
+    border-radius: var(--radius-md);
+    background-color: var(--color-surface);
+    animation: skeleton-pulse 1.6s var(--ease-soft) infinite;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .skeleton {
+      animation: none;
+      opacity: 0.7;
+    }
+  }
+}
+
+/*
+  .enter — fade and rise 8 px on first paint. Applied once by a script; nothing
+  depends on it, and it is always off under reduced motion.
+*/
+@layer components {
+  @keyframes enter-rise {
+    from {
+      opacity: 0;
+      translate: 0 var(--enter-rise);
+    }
+    to {
+      opacity: 1;
+      translate: none;
+    }
+  }
+
+  .enter {
+    animation: enter-rise var(--duration-slow) var(--ease-emphasis) both;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .enter {
+      animation: none;
+    }
+  }
+}
+
+/*
+  .segmented / .segmented-option — a pill-shaped segmented control.
+
+  Each .segmented-option wraps a visually hidden <input type="radio"> so the
+  control works without JavaScript and is fully keyboard-navigable with arrow
+  keys. The selected option is highlighted via :has(:checked).
+*/
+@layer components {
+  .segmented {
+    display: inline-flex;
+    flex-wrap: wrap;
+    max-inline-size: 100%;
+    align-items: center;
+    padding: var(--segmented-inset);
+    border: 1px solid var(--color-control);
+    border-radius: var(--radius-pill);
+    background-color: var(--color-surface);
+  }
+
+  .segmented-option {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--segmented-gap);
+    padding: var(--segmented-pad-y) var(--segmented-pad-x);
+    min-height: var(--tap-min);
+    border-radius: var(--radius-pill);
+    cursor: pointer;
+    color: var(--color-ink-soft);
+    font-size: var(--text-sm);
+    user-select: none;
+    /* Switch the foreground and fill together: interpolating either can lose
+       text contrast when a palette or selected option changes. */
+    transition: none;
+  }
+
+  /* The label's color is inherited by its text and icon. Reduced motion sets a 0.01ms transition on every element (see
+     the base layer), which keeps the old color for a frame in Firefox and WebKit, so a just-picked option was read as
+     low contrast. No property may transition inside the control. */
+  .segmented-option,
+  .segmented-option * {
+    transition: none;
+  }
+
+  .segmented-option:has(:checked) {
+    background-color: var(--color-ink);
+    color: var(--color-on-button);
+  }
+
+  /* Button versions (aria-pressed, e.g. the sudoku level switch) also show a check mark and bold text, so the pick
+     never relies on color alone and survives forced colors. */
+  .segmented-option[aria-pressed] { border: 0; background-color: transparent; }
+  .segmented-option[aria-pressed="true"] { background-color: var(--color-ink); color: var(--color-on-button); font-weight: 700; }
+
+  .segmented-option:focus-within {
+    outline: var(--focus-width) solid var(--color-focus);
+    outline-offset: var(--focus-offset);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .segmented-option {
+      transition: none;
+    }
+  }
+}
+
+/*
+  Cross-document view transitions: a short fade between pages. Reduced-motion
+  users get none (the @starting-style / overlay approach is modern but safe —
+  browsers that don't support @view-transition ignore this block entirely).
+*/
+@view-transition {
+  navigation: auto;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  ::view-transition-old(root) {
+    animation: view-fade-out var(--duration-fast) var(--ease-soft) both;
+  }
+
+  ::view-transition-new(root) {
+    animation: view-fade-in var(--duration-fast) var(--ease-soft) both;
+  }
+
+  @keyframes view-fade-out {
+    to { opacity: 0; }
+  }
+
+  @keyframes view-fade-in {
+    from { opacity: 0; }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-image-pair(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+}
+
+/* Task 234: forced colors removes the segmented labels' background selection.
+   Restore the native radio so the checked state survives the system palette. */
+@media (forced-colors: active) {
+  .segmented-option input[type="radio"] {
+    position: static;
+    opacity: 1;
+  }
+}
+
+
+/* Sudoku game page (Task 625): sizes and colors come from tokens.css. */
+@layer components {
+  .sudoku-game { position: relative; margin-block: calc(var(--spacing) * 8); }
+  .sudoku-icon-button, .sudoku-small-button { display: inline-flex; min-inline-size: var(--tap-min); min-block-size: var(--tap-min); align-items: center; justify-content: center; border: var(--sudoku-line) solid var(--color-control); border-radius: var(--radius-pill); background: var(--color-page); color: var(--color-ink); cursor: pointer; }
+  .sudoku-how { position: absolute; z-index: 5; inset-inline-end: 0; inset-block-start: 100%; inline-size: min(100%, var(--container-prose)); padding: calc(var(--spacing) * 5); border: var(--sudoku-line) solid var(--color-line); border-radius: var(--radius-lg); background: var(--color-page); box-shadow: var(--shadow-card); }
+  .sudoku-how ol { margin-block: calc(var(--spacing) * 2) 0; padding-inline-start: calc(var(--spacing) * 6); }
+  /* The board's square size lives on the panel, so the time line and the tool row can match the board's width. Its
+     container units resolve where it is used, against the panel. */
+  .sudoku-panel { --sudoku-cell-fit: max(var(--sudoku-cell-floor), min(calc((100cqi - var(--sudoku-board-frame)) / 9), clamp(var(--sudoku-cell-min), min(calc((100vh - var(--sudoku-height-reserve)) / 9), calc((100vw - var(--sudoku-width-reserve)) / 9)), var(--sudoku-cell-max)))); --sudoku-board-width: calc(var(--sudoku-cell-fit) * 9 + var(--sudoku-box-line) * 2); container: sudoku-panel / inline-size; display: flex; flex-direction: column; align-items: center; gap: calc(var(--spacing) * 3); }
+  /* Top to bottom: levels, the time and error line, five equal icon buttons spread across the board's width, the board. */
+  .sudoku-status { display: flex; inline-size: min(100%, var(--sudoku-board-width)); flex-wrap: wrap; align-items: center; justify-content: space-between; gap: calc(var(--spacing) * 2); }
+  .sudoku-time:empty, .sudoku-errors:empty { display: none; }
+  .sudoku-errors { margin-inline-start: auto; }
+  .sudoku-toolbar { position: relative; display: flex; inline-size: min(100%, var(--sudoku-board-width)); flex-wrap: wrap; align-items: center; justify-content: space-between; gap: calc(var(--spacing) * 2) 0; }
+  /* The five toolbar buttons are exactly one tap target square: a floor as well as a size, border-box, and nothing
+     that could scale them at rest (Firefox measured the pause button at 43.99997 px, release run 44422471256). */
+  .sudoku-toolbar > .sudoku-icon-button { box-sizing: border-box; flex: none; inline-size: var(--tap-min); block-size: var(--tap-min); min-inline-size: var(--tap-min); min-block-size: var(--tap-min); transform: none; scale: none; translate: none; }
+  /* Five equal buttons leave four gaps. Use at most half a gap on either side, and none if the row wraps. */
+  .sudoku-pause-button { position: relative; }
+  .sudoku-pause-button:enabled::before {
+    --sudoku-pause-inline-reach: clamp(0%, (min(100cqi, var(--sudoku-board-width)) - 5 * var(--tap-min)) / 8, var(--spacing) / 2);
+    position: absolute;
+    inset-block: calc(-1 * (var(--sudoku-line) + var(--spacing) / 2));
+    inset-inline: calc(-1 * (var(--sudoku-line) + var(--sudoku-pause-inline-reach)));
+    content: "";
+  }
+  .sudoku-board.is-paused .sudoku-paused-mark { display: block; inline-size: calc(var(--sudoku-cell-size) / 4); block-size: var(--sudoku-entered-line); border-radius: var(--radius-pill); background: currentColor; }
+  .sudoku-board-scroll { inline-size: 100%; overflow-x: auto; }
+  /* Square size: the brief's clamp(44px, min((100vh − 460px) / 9, (100vw − 150px) / 9), 84px), but never wider than
+     the panel allows (100cqi minus the outer box lines), so the whole board fits a 390 px phone (D-pending). It never
+     drops below --sudoku-cell-floor, which grows with root text: with enlarged text the board scrolls in its own box. */
+  .sudoku-board { --sudoku-cell-size: var(--sudoku-cell-fit); display: grid; inline-size: max-content; grid-template-rows: repeat(9, var(--sudoku-cell-size)); margin-inline: auto; border: var(--sudoku-box-line) solid var(--color-ink); background: var(--color-ink); }
+  .sudoku-row { display: grid; grid-template-columns: repeat(9, var(--sudoku-cell-size)); }
+  .sudoku-cell { position: relative; display: flex; inline-size: var(--sudoku-cell-size); block-size: var(--sudoku-cell-size); align-items: center; justify-content: center; border: 0; border-inline-end: var(--sudoku-line) solid var(--color-line); border-block-end: var(--sudoku-line) solid var(--color-line); background: var(--color-page); color: var(--color-ink); cursor: pointer; font-size: calc(var(--sudoku-cell-size) / 2); line-height: 1; }
+  .sudoku-cell:last-child { border-inline-end: 0; }
+  .sudoku-row:last-child .sudoku-cell { border-block-end: 0; }
+  .sudoku-cell.sudoku-box-right { border-inline-end: var(--sudoku-box-line) solid var(--color-ink); }
+  .sudoku-cell.sudoku-box-bottom { border-block-end: var(--sudoku-box-line) solid var(--color-ink); }
+  .sudoku-cell.is-given { background: var(--color-sudoku-given); font-weight: 700; }
+  .sudoku-cell.is-entered { color: var(--color-sudoku-entered); }
+  .sudoku-cell.is-entered::after { position: absolute; inset-inline: calc(var(--spacing) * 2); inset-block-end: calc(var(--spacing) * 1.5); block-size: var(--sudoku-entered-line); border-radius: var(--radius-pill); background: currentColor; content: ""; }
+  .sudoku-cell.is-related { background: var(--color-sudoku-related); }
+  .sudoku-cell.is-box-related { background: var(--color-sudoku-box-related); }
+  .sudoku-cell.is-identical { background: var(--color-sudoku-identical); color: var(--color-on-sudoku-identical); font-weight: 700; }
+  .sudoku-cell.is-conflict::before { position: absolute; inset: calc(var(--spacing) * 1); border: var(--sudoku-line) dashed var(--color-sudoku-conflict); border-radius: var(--radius-sm); content: ""; }
+  /* The selected square is the focal point: plain fill inside a strong outline, after every tint so it always wins. */
+  .sudoku-cell.is-selected { z-index: 1; background: var(--color-page); color: var(--color-ink); outline: var(--sudoku-selected-line) solid var(--color-sudoku-selected); outline-offset: calc(-1 * var(--sudoku-selected-line)); }
+  /* Keyboard focus on the selected square doubles its ring, so focus on the grid is visible apart from selection (Task 210). */
+  .sudoku-cell.is-selected:focus-visible { outline-width: calc(var(--sudoku-selected-line) + var(--focus-width)); outline-offset: calc(-1 * (var(--sudoku-selected-line) + var(--focus-width))); }
+  .sudoku-candidates { display: grid; inline-size: 100%; block-size: 100%; grid-template-columns: repeat(3, 1fr); font-size: var(--sudoku-candidate-size); line-height: 1; }
+  .sudoku-candidates i { display: flex; align-items: center; justify-content: center; font-style: normal; }
+  .sudoku-mark { color: var(--color-ink-soft); }
+  /* Issue 720: a wrong entry gets a slash across it and "wrong" in its label, so it never depends on color. */
+  .sudoku-wrong-mark { position: absolute; inset: calc(var(--spacing) * 1.5); background: linear-gradient(to top right, transparent calc(50% - var(--sudoku-wrong-line)), currentColor calc(50% - var(--sudoku-wrong-line)), currentColor calc(50% + var(--sudoku-wrong-line)), transparent calc(50% + var(--sudoku-wrong-line))); pointer-events: none; }
+  .sudoku-cell.is-wrong { font-style: italic; }
+  .sudoku-cell.has-candidates { color: var(--color-ink-soft); }
+  .sudoku-tools { display: flex; flex: 1 0 100%; order: 1; flex-wrap: wrap; align-items: center; justify-content: center; gap: calc(var(--spacing) * 2); }
+  .sudoku-tool-button, .sudoku-text-button { min-inline-size: var(--tap-min); min-block-size: var(--tap-min); padding-inline: calc(var(--spacing) * 4); border: var(--sudoku-line) solid var(--color-control); border-radius: var(--radius-pill); background: var(--color-page); color: var(--color-ink); cursor: pointer; }
+  .sudoku-tool-button:disabled { color: var(--color-ink-soft); cursor: not-allowed; }
+  .sudoku-text-button { margin-block-start: calc(var(--spacing) * 3); }
+  .sudoku-stats table { inline-size: 100%; margin-block: calc(var(--spacing) * 3); border-collapse: collapse; }
+  .sudoku-stats th, .sudoku-stats td { padding: calc(var(--spacing) * 1.5) calc(var(--spacing) * 2); border-block-end: var(--sudoku-line) solid var(--color-line); text-align: start; }
+  .sudoku-stats thead th { color: var(--color-ink-soft); font-size: var(--text-sm); font-weight: 400; }
+  .sudoku-board.is-paused .sudoku-cell { background: var(--color-surface); color: var(--color-ink-soft); }
+  .sudoku-pad-wrap { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: calc(var(--spacing) * 3); inline-size: 100%; }
+  .sudoku-number-row { display: grid; flex: 1 0 100%; order: -1; grid-template-columns: repeat(auto-fit, minmax(var(--tap-min), 1fr)); gap: calc(var(--spacing) * 2); }
+  /* Two even rows of five on a phone (5 × 44 px + gaps = 15.75rem), one row of ten once ten fit (32rem). */
+  @container sudoku-panel (min-width: 16rem) {
+    .sudoku-number-row { grid-template-columns: repeat(5, minmax(var(--tap-min), 1fr)); }
+  }
+  @container sudoku-panel (min-width: 32rem) {
+    .sudoku-number-row { grid-template-columns: repeat(10, minmax(var(--tap-min), 1fr)); }
+  }
+  @media (orientation: landscape) {
+    @container sudoku-panel (min-width: 48rem) {
+      .sudoku-pad-wrap { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; }
+      .sudoku-number-row { order: 0; }
+      .sudoku-tools { grid-column: 1 / -1; }
+    }
+  }
+  .sudoku-number-row button { min-inline-size: var(--tap-min); min-block-size: var(--tap-min); border: var(--sudoku-line) solid var(--color-control); border-radius: var(--radius-md); background: var(--color-page); color: var(--color-ink); font-weight: 700; }
+  /* The labels stay on one line while they fit and wrap at large text sizes, so the longer "auto candidates" label
+     (issue 720) never pushes the page sideways at 320px with 32px root text. */
+  .sudoku-setting-button { display: inline-flex; max-inline-size: 100%; min-block-size: var(--tap-min); align-items: center; gap: calc(var(--spacing) * 2); border: 0; background: transparent; color: var(--color-ink); text-align: start; overflow-wrap: anywhere; cursor: pointer; }
+  .sudoku-solved { margin-block-start: calc(var(--spacing) * 6); padding: calc(var(--spacing) * 5); border: var(--sudoku-line) solid var(--color-line); border-radius: var(--radius-lg); text-align: center; }
+  .sudoku-print-footer { display: none; }
+  /* Narrow screens keep more room for the settings text (320px with 32px root text, issue 743). */
+  @media (width < 40rem) {
+    /*
+      The 6 × 8 word path board sits in a panel that bleeds into the card's padding (-mx-6). With 32px text on a 320px screen its squares
+      need more room than that, and it used to spill past the card on the right only, ending under a pixel from the
+      screen edge (over it with some fonts). It now stays centred on the card, so it spills evenly and fits the screen.
+      With room to spare the offset is zero.
+    */
+    .wordpath[data-format="path"] .wordpath-board { position: relative; inset-inline-start: 50%; translate: -50% 0; }
+  }
+  @media (orientation: portrait), (max-width: 50rem) {
+    /* The number pad's layout lives with .sudoku-pad-wrap above (container queries on the panel's width). */
+    .sudoku-status { row-gap: 0; }
+  }
+  @media print {
+    body > :not(main), .sudoku-levels, .sudoku-status, .sudoku-toolbar, .game-help-first, .sudoku-pad-wrap, .sudoku-solved, .sr-only { display: none !important; }
+    :root[data-print-game="sudoku"] main article > :not(.sudoku-section) { display: none !important; }
+    :root[data-print-game="sudoku"] .sudoku-section > :not(.sudoku-mount) { display: none !important; }
+    :root[data-print-game="sudoku"] main article { max-inline-size: none; padding: 0; background: transparent; box-shadow: none; }
+    :root[data-print-game="sudoku"] .sudoku-section, :root[data-print-game="sudoku"] .sudoku-mount { margin: 0 !important; }
+    main { max-inline-size: none !important; padding: 0 !important; }
+    .sudoku-game { margin: 0; }
+    .sudoku-board-scroll { overflow: visible; }
+    /* As large as the paper allows, up to --sudoku-cell-max, so the whole grid stays inside the page's width. */
+    .sudoku-board { --sudoku-cell-size: min(var(--sudoku-cell-max), calc((100cqi - var(--sudoku-board-frame)) / 9)); }
+    .sudoku-cell { background: var(--color-page) !important; box-shadow: none !important; outline: 0 !important; color: var(--color-ink) !important; }
+    .sudoku-cell[data-given="false"] > * { display: none !important; }
+    .sudoku-cell[data-given="false"]::after, .sudoku-cell[data-given="false"]::before { display: none !important; }
+    .sudoku-print-footer { display: block; margin-block-start: calc(var(--spacing) * 5); text-align: center; font-size: var(--text-sm); }
+  }
+}
+
+/*
+  Anatomy lab worksheet (src/islands/AnatomyLab.tsx). On screen the write-in lines are tall enough to write on once
+  printed. Printing marks the page data-print-game="anatomy-worksheet" (src/islands/gameprint.ts): then only the
+  worksheet is printed, black on white in Daytime and Evening alike, with its credit lines and without its buttons.
+*/
+@layer components {
+  .anatomy-worksheet-blank { min-block-size: var(--worksheet-blank); }
+
+  @media print {
+    :root[data-print-game="anatomy-worksheet"] main *:not(:has(.anatomy-worksheet)):not(.anatomy-worksheet):not(.anatomy-worksheet *) {
+      display: none !important;
+    }
+    :root[data-print-game="anatomy-worksheet"] main { padding-block: 0 !important; }
+    :root[data-print-game="anatomy-worksheet"] .anatomy-worksheet {
+      border: 0;
+      padding: 0;
+      background: var(--print-paper);
+      color: var(--print-ink);
+    }
+    :root[data-print-game="anatomy-worksheet"] .anatomy-worksheet * { color: var(--print-ink) !important; border-color: var(--print-ink) !important; }
+    :root[data-print-game="anatomy-worksheet"] .anatomy-worksheet > * + * { margin-block-start: var(--print-gap); }
+    :root[data-print-game="anatomy-worksheet"] .anatomy-worksheet img { inline-size: var(--print-figure); max-inline-size: 100%; break-inside: avoid; }
+    :root[data-print-game="anatomy-worksheet"] .anatomy-worksheet li { break-inside: avoid; }
+    :root[data-print-game="anatomy-worksheet"] .anatomy-worksheet-tools { display: none !important; }
+  }
+}
+
+/* The lesson hub's mode tiles (lane 23): as many columns as fit, so they stack when text is enlarged. sm and up use the
+   utility column counts on the page. */
+@layer components {
+  .mode-grid-fit {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--container-mode-tile)), 1fr));
+  }
 }

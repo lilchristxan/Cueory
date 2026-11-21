@@ -16,12 +16,19 @@ const wait = (page: Page, ms: number) => page.clock.runFor(ms);
 
 test.describe('once-only promo panel (D-59)', () => {
   test.beforeEach(async ({ page }) => {
-    await page.clock.install();
+    // The clock is installed AND paused before the page loads, so the panel's 5-second timer can neither arm nor fire
+    // until a test runs the clock. An unpaused fake clock keeps real time flowing: on a busy machine the page's load
+    // time (1.7 s measured) counted toward the 5 seconds and "hidden at 4.5 seconds" failed. Pausing after the page has
+    // loaded would be too late, so the page loads at a clock that stands still.
+    const start = new Date('2026-11-18T09:00:00');
+    await page.clock.install({ time: start });
+    await page.clock.pauseAt(new Date(start.getTime() + 1_000));
   });
 
   test('slides down after 5 seconds, takes focus without scrolling, moves nothing and passes axe', async ({ page }) => {
     await page.goto('/');
-    await page.evaluate(() => document.fonts.ready);
+    // document.fonts.ready never settles while the page's clock is paused, so poll the status from here instead.
+    await expect.poll(() => page.evaluate(() => document.fonts.status)).toBe('loaded');
     const headline = page.locator('h1');
     const before = await headline.boundingBox();
 
@@ -68,11 +75,25 @@ test.describe('once-only promo panel (D-59)', () => {
       expect(size.height).toBeGreaterThanOrEqual(44);
     }
 
+    // axe schedules work on the page's timers, which never fire while the clock is paused: every timing assertion
+    // above is done, so let time flow again for the scan.
+    await page.clock.resume();
     const results = await axe(page);
     expect(results.violations.map((v) => `${v.id}: ${v.help}`)).toEqual([]);
 
     // Remembered on this device only: a date in local storage.
     expect(Number(await page.evaluate((key) => localStorage.getItem(key), KEY))).toBeGreaterThan(0);
+  });
+
+  test('a slow host cannot use up the 5 seconds: real time passing changes nothing, only the page clock does', async ({ page }) => {
+    await page.goto('/');
+    await expect.poll(() => page.evaluate(() => document.fonts.status)).toBe('loaded');
+    await page.waitForTimeout(5_500); // real time, longer than the panel's whole delay
+    await expect(promoPanel(page)).toBeHidden();
+    await wait(page, 4_500);
+    await expect(promoPanel(page)).toBeHidden();
+    await wait(page, 1_000);
+    await expect(promoPanel(page)).toBeVisible();
   });
 
   test('comes as soon as the visitor scrolls halfway down, before 5 seconds', async ({ page }) => {
@@ -113,7 +134,7 @@ test.describe('once-only promo panel (D-59)', () => {
 
   test('Escape closes it, and focus goes back where it was', async ({ page }) => {
     await page.goto('/');
-    const hero = page.getByRole('link', { name: 'create your free account' });
+    const hero = page.getByTestId('explore-games');
     await hero.focus();
     await wait(page, 5_500);
     const panel = promoPanel(page);
@@ -149,9 +170,9 @@ test.describe('once-only promo panel (D-59)', () => {
 
   test('a link that opens a new tab closes the panel, and focus comes back where it was', async ({ page }) => {
     // Nothing leaves the test machine: the supporting-our-mission page's address is answered with an error.
-    await page.context().route(/ko-fi\.com/, (route) => route.abort());
+    await page.context().route(/^https?:\/\/(?:[^/]*\.)?ko-fi\.com(?:[/:?#]|$)/, (route) => route.abort());
     await page.goto('/');
-    const hero = page.getByRole('link', { name: 'create your free account' });
+    const hero = page.getByTestId('explore-games');
     await hero.focus();
     await wait(page, 5_500);
     const popup = page.waitForEvent('popup');
@@ -178,7 +199,7 @@ test.describe('once-only promo panel (D-59)', () => {
 
   test('waits while the ☰ panel is open, then appears once it closes', async ({ page }) => {
     await page.goto('/');
-    await page.getByRole('button', { name: 'menu', exact: true }).click();
+    await page.getByRole('button', { name: 'open site menu', exact: true }).click();
     await expect(page.getByTestId('site-menu')).toBeVisible();
     await wait(page, 7_000);
     await expect(promoPanel(page)).toBeHidden();
@@ -192,7 +213,7 @@ test.describe('once-only promo panel (D-59)', () => {
 
   test('waits until the ☰ panel has finished closing, so its focus never takes over', async ({ page }) => {
     await page.goto('/');
-    await page.getByRole('button', { name: 'menu', exact: true }).click();
+    await page.getByRole('button', { name: 'open site menu', exact: true }).click();
     await wait(page, 7_000);
     // The browser sends a dialog's "close" event a moment after the dialog closes, and the ☰ panel moves focus back to
     // its button then. Hold that event back, so the moment in between lasts long enough to test.
@@ -210,7 +231,7 @@ test.describe('once-only promo panel (D-59)', () => {
 
     // The event arrives: focus goes back to ☰, and then the panel comes and takes it.
     await page.getByTestId('site-menu').evaluate((menu) => menu.dispatchEvent(new Event('close')));
-    await expect(page.getByRole('button', { name: 'menu', exact: true })).toHaveAttribute('aria-expanded', 'false');
+    await expect(page.getByRole('button', { name: 'open site menu', exact: true })).toHaveAttribute('aria-expanded', 'false');
     await wait(page, 600);
     await expect(promoPanel(page)).toBeVisible();
     await expect(promoPanel(page).getByRole('button', { name: 'close' })).toBeFocused();
