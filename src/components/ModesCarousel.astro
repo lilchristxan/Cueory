@@ -1070,6 +1070,10 @@ const icons: Record<StudyFeatureIcon, string> = {
     background: var(--cueory-copper-glow);
     border: var(--border-vial-arrow) solid var(--cueory-copper-start);
     box-shadow: 0 calc(var(--spacing) * 1) calc(var(--spacing) * 3) rgb(var(--shadow-tint) / 0.16);
+    /* The glow is an opaque color, so the corner button's frosted blur shows nothing here. It only made WebKit blur
+       the turning ring behind each arrow on every frame (#634). */
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
   }
 
   .modes-p6 .vial-arrow:hover {
