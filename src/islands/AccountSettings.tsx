@@ -1,10 +1,12 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import {
-  accountMessage, adaptersFor, deleteGate, deleteMyAccount, deletionLines, offerFile, prepareDownloadFor,
-  otherAccountNow, sameIdentity, saveDisplayName, signOutHere, type AccountAdapters, type AccountClient, type DownloadFile,
+  accountMessage, adaptersFor, deleteGate, deleteMyAccount, deletionLines, offerIfOpen, offerSpreadsheets, prepareDownloadFor,
+  otherAccountNow, sameIdentity, saveDisplayName, signOutHere, watchExport, type AccountAdapters, type AccountClient,
+  type DownloadFile, type ExportWatch,
 } from './accountsettings';
 import { AccountsUnavailable, authButton, authInput } from './SignIn.tsx';
 import { getSupabase } from './supabaseclient';
+import { reauthHref } from './deleteaccount';
 import { localDay } from '../scripts/progress';
 import { browserStorage, type KeyValueStorage } from '../scripts/storage';
 
@@ -156,40 +158,57 @@ function DataSection({ adapters, userId, email, onStale }: {
   const [busy, setBusy] = useState(false);
   const [csv, setCsv] = useState<DownloadFile[] | null>(null);
   const [message, setMessage] = useState('');
+  // #757: one watch for as long as this section is open. Another account signing in (even A→B→A) or the section
+  // closing cancels any download in progress and every file not yet offered, for good.
+  const watch = useRef<ExportWatch | null>(null);
+  useEffect(() => {
+    const current = watchExport(adapters, userId, () => setCsv(null));
+    watch.current = current;
+    return () => current.close();
+  }, [adapters, userId]);
+
+  /**
+   * Ends the download without a file. A sign-in event has already closed this section or made the page reload for
+   * whoever is signed in now; a change found only by reading the session reloads it here.
+   */
+  const stopped = (current: ExportWatch | null) => {
+    setBusy(false);
+    setCsv(null);
+    if (current?.state() === 'open') onStale(accountMessage('identity-changed'));
+  };
 
   const download = async () => {
-    if (busy) return;
+    const current = watch.current;
+    if (busy || !current) return;
+    if (current.state() !== 'open') return stopped(current);
     setBusy(true);
     setMessage('');
     setCsv(null);
     const today = localDay(new Date());
     let signInDetails: unknown;
-    if (!(await sameIdentity(adapters, userId))) {
-      setBusy(false);
-      return onStale(accountMessage('identity-changed'));
-    }
+    if (!(await sameIdentity(adapters, userId)) || current.state() !== 'open') return stopped(current);
     try {
       signInDetails = await adapters.signInDetails?.();
     } catch {
       // All or nothing, like the database sections: no file without the sign-in details.
+      if (current.state() !== 'open') return stopped(current);
       setBusy(false);
       return setMessage(accountMessage('export-failed'));
     }
-    const files = await prepareDownloadFor(adapters, userId, { email, signInDetails, storage: browserStorage(), today });
+    const files = await prepareDownloadFor(adapters, userId, { email, signInDetails, storage: browserStorage(), today }, current.signal);
+    if (current.state() !== 'open' || (!files.ok && 'changed' in files)) return stopped(current);
     setBusy(false);
-    if (!files.ok) {
-      if ('changed' in files) return onStale(files.message);
-      return setMessage(files.message);
-    }
-    offerFile(files.json, dom());
+    if (!files.ok) return setMessage(files.message);
+    if (!offerIfOpen(files.json, current, dom())) return stopped(current);
     setCsv(files.csv);
     setMessage(accountMessage('export-downloading'));
   };
 
-  const spreadsheets = () => {
-    if (!csv) return;
-    // One at a time, a moment apart: browsers can drop downloads started together.
-    csv.forEach((file, index) => window.setTimeout(() => offerFile(file, dom()), index * 300));
+  const spreadsheets = async () => {
+    const current = watch.current;
+    if (!csv || !current) return;
+    if (current.state() !== 'open' || !(await sameIdentity(adapters, userId)) || current.state() !== 'open') return stopped(current);
+    offerSpreadsheets(csv, current, dom());
     setMessage(accountMessage('export-csv-downloading'));
   };
 
@@ -199,7 +218,7 @@ function DataSection({ adapters, userId, email, onStale }: {
       <button type="button" aria-disabled={busy} className={`${primary} sm:w-auto sm:px-8`} onClick={() => { void download(); }}>
         {busy ? 'getting your data…' : 'download my data'}
       </button>
-      {csv && <button type="button" className={`${authButton} sm:w-auto sm:px-8`} onClick={spreadsheets}>
+      {csv && <button type="button" className={`${authButton} sm:w-auto sm:px-8`} onClick={() => { void spreadsheets(); }}>
         download spreadsheet files
       </button>}
     </div>
@@ -296,6 +315,8 @@ function DeleteSection({ adapters, userId, email, busy, onStale, onDeleted }: {
           </div>
         </form>
         <p role="status" aria-atomic="true" className="mt-3 text-sm">{message}</p>
+        {message.includes("sign in again to delete your account") &&
+          <a href={reauthHref()} className="mt-2 inline-flex min-h-12 items-center underline">sign in again</a>}
       </div>
     </>}
   </section>;

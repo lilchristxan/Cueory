@@ -1,17 +1,17 @@
 /**
- * Private daily-game stats on /play (D-76). Each game reports a finished round; the stats panel keeps the results
- * only when the student has turned stats on. The record itself (first result of each game and day, no streaks) is the
- * helper's logic in ./gamestats, and results older than 400 days are dropped by today's date.
+ * Private daily-game stats (D-76). Each game reports a finished round and the stats panel keeps it. The record itself (first result of each game and day; pillo's and word path's
+ * streaks are worked out from it, and the crossword keeps a streak flag; Task 719, #722, Task 721) is the helper's logic in ./gamestats, and results older than 400 days are dropped by today's date.
  *
- * Stats are off until the student turns them on: turned on means the record exists in this browser's storage, and
- * turning them off deletes it. Nothing here is ever sent anywhere.
+ * Stats are always kept in this browser (Christian's decision, 2026-11-17; there is no on/off switch any more), and
+ * "forget" deletes them. Only a browser that won't store anything (private browsing, blocked site data) keeps none.
+ * Nothing here is ever sent anywhere.
  */
 import type { KeyValueStorage } from '../scripts/storage';
 import { dayLabel } from './daily';
-import type { SudokuResult } from './sudoku';
+import { LEVEL_LABELS, type SudokuResult } from './sudoku';
 import type { StatRoundResult } from './stat';
 import { statGame } from '../config/games';
-import { parseStats, serialize, type GameId, type GameStats } from './gamestats';
+import { migratePilloStatsToVialo, parseStats, serialize, type GameId, type GameStats } from './gamestats';
 
 /** The event a game sends on `window` when a round ends. */
 export const GAME_RESULT_EVENT = 'cueory:game-result';
@@ -66,22 +66,32 @@ export interface GameResultCard {
 /** Maps Worker 1's completion payload into the same display-only result card as every other game. */
 export function sudokuResultCard(detail: SudokuResult): GameResultCard {
   const errors = `${detail.errors} ${detail.errors === 1 ? 'error' : 'errors'}`;
+  // The level as players see it (easy, mid, hard); an unknown level falls back to its id.
+  const level = LEVEL_LABELS[detail.level] ?? detail.level;
   return {
     game: 'sudoku',
     name: 'sudoku',
     date: resultDayLabel(detail.day),
-    level: detail.level,
+    level,
     result: detail.solved ? 'solved' : 'not solved',
-    shareResult: `${detail.level} · ${detail.solved ? '' : 'not solved · '}${detail.time} · ${errors}`,
+    shareResult: `${level} · ${detail.solved ? '' : 'not solved · '}${detail.time} · ${errors}`,
     summary: detail.solved
-      ? `${detail.level} completed in ${detail.time} with ${errors}.`
-      : `${detail.level} ended after ${detail.time} with ${errors}.`,
+      ? `${level} completed in ${detail.time} with ${errors}.`
+      : `${level} ended after ${detail.time} with ${errors}.`,
     stats: [
       { label: 'time', value: detail.time },
       { label: 'errors', value: String(detail.errors) },
     ],
     path: '/play/sudoku',
   };
+}
+
+/**
+ * A solved daily sudoku as a round for the shared stats record (#720), under its game id `triage`. Tries are the errors
+ * counted while solving. The first round of the day counts, whichever level it was.
+ */
+export function sudokuRoundResult(detail: SudokuResult): RoundResult {
+  return { game: 'triage', day: detail.day, solved: detail.solved, tries: detail.errors };
 }
 
 /** Display-only Stat result. Questions, keys and private stats are never included. */
@@ -142,61 +152,8 @@ export function inertOutside(dialog: InertNode, body: InertNode): () => void {
   };
 }
 
-interface ScrollRoot {
-  style: Pick<CSSStyleDeclaration, 'overflow' | 'overscrollBehavior'>;
-}
-
-interface ScrollBody {
-  style: Pick<CSSStyleDeclaration, 'position' | 'top' | 'left' | 'right' | 'width' | 'overflow' | 'overscrollBehavior'>;
-}
-
-interface ScrollView {
-  readonly scrollX: number;
-  readonly scrollY: number;
-  scrollTo(x: number, y: number): void;
-}
-
-/** Prevents wheel and touch scrolling behind a dialog, including iOS, then restores the exact inline state. */
-export function lockPageScroll(root: ScrollRoot, body: ScrollBody, view: ScrollView): () => void {
-  const x = view.scrollX;
-  const y = view.scrollY;
-  const rootBefore = { overflow: root.style.overflow, overscrollBehavior: root.style.overscrollBehavior };
-  const bodyBefore = {
-    position: body.style.position,
-    top: body.style.top,
-    left: body.style.left,
-    right: body.style.right,
-    width: body.style.width,
-    overflow: body.style.overflow,
-    overscrollBehavior: body.style.overscrollBehavior,
-  };
-
-  root.style.overflow = 'hidden';
-  root.style.overscrollBehavior = 'none';
-  body.style.position = 'fixed';
-  body.style.top = `${-y}px`;
-  body.style.left = `${-x}px`;
-  body.style.right = '0';
-  body.style.width = '100%';
-  body.style.overflow = 'hidden';
-  body.style.overscrollBehavior = 'none';
-
-  let active = true;
-  return () => {
-    if (!active) return;
-    active = false;
-    root.style.overflow = rootBefore.overflow;
-    root.style.overscrollBehavior = rootBefore.overscrollBehavior;
-    body.style.position = bodyBefore.position;
-    body.style.top = bodyBefore.top;
-    body.style.left = bodyBefore.left;
-    body.style.right = bodyBefore.right;
-    body.style.width = bodyBefore.width;
-    body.style.overflow = bodyBefore.overflow;
-    body.style.overscrollBehavior = bodyBefore.overscrollBehavior;
-    view.scrollTo(x, y);
-  };
-}
+// The page-scroll lock is shared with the sign-up pop-up, so it lives in its own small module.
+export { lockPageScroll } from '../scripts/scrolllock';
 
 /** The exact, plain one-line share format approved for finished games. */
 export function buildResultShareLine(card: Pick<GameResultCard, 'name' | 'date' | 'result' | 'shareResult'>): string {
@@ -225,13 +182,27 @@ export function discardPendingResultCard(card: GameResultCard): void {
 /** Where the stats record is kept, when the student has turned stats on. */
 export const STATS_STORAGE_KEY = 'cueory-game-stats';
 
+/**
+ * Sudoku's own per-level record (#720): the day, level and solve time of each level's first solve of a day. It is kept
+ * like the other stats (always, in this browser), and "forget all" deletes it with the shared record (./sudokustats).
+ */
+export const SUDOKU_STATS_STORAGE_KEY = 'cueory-sudoku-stats';
+
 export interface RoundResult {
   game: GameId;
   /** The day of the puzzle that was played, in the visitor's own time zone, written YYYY-MM-DD. */
   day: string;
   solved: boolean;
-  /** Guesses for pillo, slips for the retired sort record, cues for the crossword and loose stitches for word path. */
+  /** Guesses for pillo, errors for sudoku, checks or reveals for the crossword and loose stitches for word path. */
   tries: number;
+  /** Set when the round ended on another local day than its puzzle's own: it then never extends a streak. */
+  offDay?: true;
+  /** Crossword only: whether the solve extends the streak (no Check, Reveal or Autocheck, within 48 hours). */
+  streak?: boolean;
+  /** Word path boards only (#722): hints used. */
+  hints?: number;
+  /** Word path boards only (#722): whether the special answer was found first. */
+  specialFirst?: boolean;
   /** When present, the same completion also opens the shared finished-game dialog. */
   card?: GameResultCard;
 }
@@ -243,8 +214,8 @@ export function localDay(date: Date): string {
 }
 
 /**
- * Rounds finished on this page that aren't kept yet, in memory only. A round waits here while stats are off, in case
- * the student turns them on next, and while the stats panel's own code is still loading. Every island on the page
+ * Rounds finished on this page that aren't kept yet, in memory only. A round waits here while the stats panel's own
+ * code is still loading. Every island on the page
  * shares this module, so they share the list.
  */
 const held: RoundResult[] = [];
@@ -267,6 +238,21 @@ if (typeof window !== 'undefined') {
   window.addEventListener('pageshow', (event) => {
     if (event.persisted) forgetHeldRounds();
   });
+}
+
+/** The event a game sends on `window` once today's round has its first move (read by the /play daily status). */
+export const GAME_PROGRESS_EVENT = 'cueory:game-progress';
+
+export interface ProgressDetail {
+  game: GameId;
+  /** The puzzle's day in the visitor's own time zone, YYYY-MM-DD. */
+  day: string;
+}
+
+/** Tells the page that today's round has started. Nothing is stored or sent anywhere. */
+export function reportProgress(detail: ProgressDetail): void {
+  if (typeof window === 'undefined') return;
+  window.dispatchEvent(new CustomEvent<ProgressDetail>(GAME_PROGRESS_EVENT, { detail: { game: detail.game, day: detail.day } }));
 }
 
 /** Tells the page that a round has ended: the round waits to be kept, and an event tells the stats panel. */
@@ -292,27 +278,29 @@ export function firstKeptDay(today: string): string {
 }
 
 export interface SavedStats {
-  /** Whether the student has turned stats on in this browser. */
+  /** Whether this browser can keep stats (false only when its storage is missing or blocked). */
   on: boolean;
   stats: GameStats;
 }
 
 /**
  * What this browser keeps, as of `today` in the visitor's own time zone: results from before the last 400 days are
- * left out. Missing or blocked storage means stats are off; a record that can't be read starts empty.
+ * left out. No record yet means nothing kept so far (stats are always on); missing or blocked storage means none can
+ * be kept; a record that can't be read starts empty.
  */
 export function loadStats(storage: KeyValueStorage | undefined, today: string): SavedStats {
   try {
-    const text = storage?.getItem(STATS_STORAGE_KEY) ?? null;
-    if (text === null) return { on: false, stats: [] };
+    if (!storage) return { on: false, stats: [] };
+    const text = storage.getItem(STATS_STORAGE_KEY);
+    if (text === null) return { on: true, stats: [] };
     const first = firstKeptDay(today);
-    return { on: true, stats: parseStats(text).filter((result) => result.day >= first) };
+    return { on: true, stats: migratePilloStatsToVialo(parseStats(text)).filter((result) => result.day >= first) };
   } catch {
     return { on: false, stats: [] };
   }
 }
 
-/** Keeps the record (which also turns stats on). False when the browser won't store it. */
+/** Keeps the record. False when the browser won't store it. */
 export function saveStats(storage: KeyValueStorage | undefined, stats: GameStats): boolean {
   try {
     if (!storage) return false;
@@ -323,10 +311,11 @@ export function saveStats(storage: KeyValueStorage | undefined, stats: GameStats
   }
 }
 
-/** Turns stats off by deleting the record. False when the browser won't let us. */
+/** Forgets every kept result by deleting the record. False when the browser won't let us. */
 export function deleteStats(storage: KeyValueStorage | undefined): boolean {
   try {
     if (!storage) return false;
+    storage.removeItem(SUDOKU_STATS_STORAGE_KEY);
     storage.removeItem(STATS_STORAGE_KEY);
     return true;
   } catch {
@@ -335,10 +324,11 @@ export function deleteStats(storage: KeyValueStorage | undefined): boolean {
 }
 
 /** What each game counts as a try, in the words its own rules use. */
-const TRIES: Record<GameId, { one: string; many: string }> = {
+const TRIES: Record<string, { one: string; many: string }> = {
+  vialo: { one: 'guess', many: 'guesses' },
   pulse: { one: 'guess', many: 'guesses' },
-  triage: { one: 'slip', many: 'slips' },
-  cueword: { one: 'cue', many: 'cues' },
+  triage: { one: 'error', many: 'errors' },
+  cueword: { one: 'check or reveal', many: 'checks or reveals' },
   suture: { one: 'loose stitch', many: 'loose stitches' },
 };
 

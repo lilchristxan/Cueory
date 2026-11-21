@@ -1,6 +1,8 @@
 ---
 import { getEntry } from 'astro:content';
 import Layout from '../../../layouts/Layout.astro';
+import LessonComingSoon from '../../../components/LessonComingSoon.astro';
+import { lessonIsHeldBack } from '../../../lessons/holdback';
 import ContentLabel from '../../../components/ContentLabel.astro';
 import InfoTip from '../../../components/InfoTip.astro';
 import QuestionsSample from '../../../islands/QuestionsSample';
@@ -9,8 +11,10 @@ const lesson = await getEntry('lessons', 'study-skills-01');
 if (!lesson) {
   throw new Error('Lesson file content/lessons/study-skills-01.json is missing.');
 }
+const hold = await lessonIsHeldBack('study-skills-01');
 ---
 
+{hold ? <LessonComingSoon /> : (
 <Layout
   title="questions: lesson 1"
   description="practice questions with rationales for lesson 1 of how to study for nursing school."
@@ -20,7 +24,7 @@ if (!lesson) {
     <header class="space-y-3">
       <p class="text-sm font-medium text-ink-soft" data-testid="questions-lesson-name">{lesson.data.title}</p>
       <div class="flex flex-wrap items-center gap-x-1">
-        <h1 class="text-2xl">questions</h1>
+        <h1 class="wrap-anywhere text-2xl">questions</h1>
         <InfoTip
           id="lesson-intro-info"
           label="questions"
@@ -85,6 +89,7 @@ if (!lesson) {
     </div>
   </div>
 </Layout>
+)}
 
 <style is:global>
   /* Task 77 owns the shared shadow token. Until it lands, use the existing soft shadow rather than a raw value. */

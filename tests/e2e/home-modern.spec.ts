@@ -1,15 +1,20 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
+import { newsletter, signupState, site } from '../../src/config/site';
 
-const featureLinks = [
-  ['feature-cards', '/learn/study-skills/cards'],
-  ['feature-offline', '/learn/study-skills'],
-] as const;
+// The hero's ways in (redesign P5): the explore row's tiles, each to a page that exists today. The "start studying" call
+// to action is closed (not a link) and the old quiet join link is gone.
+const heroLinks: ReadonlyArray<readonly [string, string]> = [
+  ['explore-lessons', '/learn'],
+  ['explore-materials', '#ways-to-study'],
+  ['explore-games', '/play'],
+  ['explore-suggestions', '/message'],
+];
 
 test.beforeEach(async ({ page }) => {
   // The once-only marketing panel must not interrupt navigation and accessibility checks.
   await page.addInitScript(() => {
-    try { localStorage.setItem('cueory-promo-seen', String(Date.now())); }
+    try { localStorage.setItem('cueory-promo-seen', String(Date.now())); localStorage.setItem('cueory-signup-popup-seen', String(Date.now())); }
     catch { /* Storage may be blocked; the page still works. */ }
   });
 });
@@ -22,43 +27,54 @@ for (const size of [
   test.describe('home at ' + size.name + ' width', () => {
     test.use({ viewport: size.viewport });
 
-    test('keeps the approved hero, all sections and valid feature links', async ({ page }) => {
+    test('shows the redesigned hero, all sections and valid hero links', async ({ page }) => {
       const response = await page.goto('/');
       expect(response?.status()).toBe(200);
 
-      // The approved hero is not rewritten by Task 83.
-      await expect(page.locator('main h1')).toHaveText('nursing school is hard enough.');
-      await expect(page.locator('#hero-heading + p')).toHaveText('cueory makes studying simpler.');
-      await expect(page.getByRole('link', { name: 'create your free account' })).toHaveAttribute('href', '/#signup');
+      // The redesigned hero (P5): motto, headline, a closed call to action, two value points, the Ko-fi card.
+      await expect(page.locator('main h1')).toHaveText('nursing school made simpler.');
+      await expect(page.getByText('by nursing students, for nursing students').first()).toBeVisible();
+      const start = page.getByTestId('hero-start');
+      await expect(start).toHaveText(/start studying for free/);
+      // The browser-test build may show drafts, so the button is a link to the open sample lesson (the live build's
+      // closed button is checked in tests/unit/home-sections.test.ts).
+      await expect(start).toHaveAttribute('href', '/learn/study-skills');
+      await expect(page.getByTestId('hero-join')).toHaveCount(0);
+      await expect(page.locator('.scene-hero').getByText('adhd friendly')).toHaveCount(0);
+      await expect(page.getByTestId('hero-support')).toHaveAttribute('href', site.tipPageUrl);
       // No line under the button restates it (Christian, 2026-11-02).
       await expect(page.getByText('save your progress and pick up where you left off.')).toHaveCount(0);
-      await expect(page.getByRole('heading', { level: 2, name: 'how it works' })).toBeVisible();
-      await expect(page.locator('#how-it-works li')).toHaveCount(3);
-      await expect(page.getByRole('heading', { level: 3, name: "come back to what you're still learning" })).toBeVisible();
+      await expect(page.locator('#how-it-works')).toHaveCount(0);
       await expect(page.getByRole('heading', { level: 2, name: 'ways to study' })).toBeVisible();
-      await expect(page.getByRole('heading', { level: 2, name: 'made for the way you study' })).toBeVisible();
-      await expect(page.getByRole('heading', { level: 2, name: 'daily games' })).toBeVisible();
+      await expect(page.getByRole('heading', { level: 2, name: 'a few minutes, every day.' })).toBeVisible();
+      await expect(page.getByRole('heading', { level: 2, name: 'coming soon' })).toBeVisible();
+      const lowerSectionIds = await page.locator('main > section[id]').evaluateAll((sections) => sections.map((section) => section.id));
+      expect(lowerSectionIds).toEqual([
+        'ways-to-study', 'daily-games', 'signup',
+      ]);
+      await expect(page.getByTestId('games-stage')).toBeVisible();
+      // The old feature tiles repeated the vials and the lesson link, so they left the home page.
+      await expect(page.locator('#study-features')).toHaveCount(0);
 
-      for (const [testId, href] of featureLinks) {
+      for (const [testId, href] of heroLinks) {
         const link = page.getByTestId(testId);
         await expect(link).toHaveAttribute('href', href);
-        const destination = await page.request.get(href);
+        const destination = await page.request.get(href.replace(/#.*$/, '') || '/');
         expect(destination.status(), href).toBe(200);
       }
-      // Exactly the two tiles: daily games has its own section, and unapproved break ideas are never linked.
-      await expect(page.locator('#study-features a')).toHaveCount(featureLinks.length);
+      // Unapproved break ideas are never linked.
       await expect(page.locator('main a[href="/breaks"]')).toHaveCount(0);
       await expect(page.getByRole('complementary', { name: 'continue studying' })).toHaveCount(0);
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     });
 
-    test('has accessible sections and comfortable feature-link targets', async ({ page }) => {
+    test('has accessible sections and comfortable hero-link targets', async ({ page }) => {
       await page.goto('/');
       const results = await new AxeBuilder({ page })
         .withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa']).analyze();
       expect(results.violations.map((v) => v.id + ': ' + v.help)).toEqual([]);
 
-      for (const [testId] of featureLinks) {
+      for (const [testId] of heroLinks) {
         const box = await page.getByTestId(testId).boundingBox();
         expect(box?.height ?? 0).toBeGreaterThanOrEqual(44);
         expect(box?.width ?? 0).toBeGreaterThanOrEqual(44);
@@ -70,24 +86,40 @@ for (const size of [
 test.describe('home without JavaScript', () => {
   test.use({ javaScriptEnabled: false });
 
-  test('shows all sections and their links without a reveal script', async ({ page }) => {
+  test('shows the approved lower sections and their links without a reveal script', async ({ page }) => {
     const response = await page.goto('/');
     expect(response?.status()).toBe(200);
-    await expect(page.getByRole('heading', { level: 2, name: 'how it works' })).toBeVisible();
-    await expect(page.getByRole('heading', { level: 2, name: 'made for the way you study' })).toBeVisible();
-    await expect(page.locator('#how-it-works li')).toHaveCount(3);
-    for (const [testId, href] of featureLinks) {
+    await expect(page.locator('#how-it-works')).toHaveCount(0);
+    for (const [testId, href] of heroLinks) {
       await expect(page.getByTestId(testId)).toHaveAttribute('href', href);
       await expect(page.getByTestId(testId)).toBeVisible();
     }
-    await expect(page.getByRole('heading', { level: 2, name: 'daily games' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 2, name: 'a few minutes, every day.' })).toBeVisible();
+    await expect(page.getByTestId('games-stage')).toBeVisible();
+    await expect(page.getByRole('heading', { level: 2, name: 'coming soon' })).toBeVisible();
+    // The landmark names the signup, not only its "coming soon" heading.
+    await expect(page.locator('#signup')).toHaveAccessibleName('launch updates coming soon');
+    await expect(page.getByRole('region', { name: 'launch updates coming soon', exact: true })).toBeVisible();
+    if (signupState(newsletter.formAction, newsletter.landingUrl) === 'form') {
+      // This is intentionally not submitted: the browser must retain a useful, native form without a Kit script.
+      const form = page.getByTestId('signup-form');
+      const email = form.getByLabel('email address');
+      const submit = form.getByRole('button', { name: 'join the list' });
+      await expect(form).toBeVisible();
+      await expect(email).toHaveAttribute('type', 'email');
+      await expect(email).toHaveAttribute('placeholder', 'your email');
+      await expect(submit).toBeVisible();
+      await email.focus();
+      await page.keyboard.press('Tab');
+      await expect(submit).toBeFocused();
+    }
   });
 });
 
 test('reduced motion never hides the new sections', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.goto('/');
-  for (const section of ['#how-it-works', '#study-features']) {
+  for (const section of ['#daily-games']) {
     const target = page.locator(section + ' [data-reveal-section]');
     await expect(target).toBeVisible();
     await expect(target).not.toHaveAttribute('data-reveal', 'waiting');

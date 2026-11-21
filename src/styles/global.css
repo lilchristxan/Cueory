@@ -127,6 +127,14 @@
     border-radius: var(--radius-sm);
   }
 
+  /* Date and time inputs keep keyboard focus on an inner field (month, day, hour...). In WebKit and Firefox the input
+     itself does not match :focus-visible then, so the rule above draws nothing; :focus-within does match. */
+  input:is([type="date"], [type="time"], [type="datetime-local"], [type="month"], [type="week"]):focus-within {
+    outline: var(--focus-width) solid var(--color-focus);
+    outline-offset: var(--focus-offset);
+    border-radius: var(--radius-sm);
+  }
+
   @media (prefers-reduced-motion: reduce) {
     *,
     *::before,
@@ -144,6 +152,24 @@
   Every color is a brand color from tokens.css, some mixed toward transparent; tests/unit/tokens.test.ts checks text
   contrast on the darkest and lightest points of each background.
 */
+@layer components {
+  /*
+    A link that opens in a new tab shows a small ↗ after it, so sighted visitors know before they click, not only
+    screen reader users (who hear "(opens in a new tab)" from each link's own text). The ↗ itself is silent: the
+    "/ ''" alternative text keeps it from being read out. Links that already show their own cue carry
+    data-new-tab-cue and get no second one.
+  */
+  a[target="_blank"]:not([data-new-tab-cue])::after {
+    content: "\2197";
+    content: "\2197" / "";
+    display: inline-block;
+    margin-inline-start: var(--new-tab-cue-gap);
+    font-size: var(--new-tab-cue-size);
+    line-height: 1;
+    text-decoration: none;
+  }
+}
+
 @layer components {
   /*
     Draped silk scenes (D-41, D-53): diagonal folds of light and shade, a soft sheen and a faint grain. The home page
@@ -191,8 +217,9 @@
         rgb(var(--silk-fold-rgb) / calc(var(--silk-fold-alpha) / 2)) 63%,
         transparent 82%
       ),
+      linear-gradient(rgb(var(--silk-wash-rgb) / var(--silk-wash-alpha)) 0 0),
       linear-gradient(180deg, var(--scene-base), var(--color-silk-shade));
-    background-size: 220px 220px, auto, auto, auto, auto;
+    background-size: 220px 220px, auto, auto, auto, auto, auto;
     -webkit-mask-image: linear-gradient(
       180deg,
       transparent,
@@ -213,6 +240,156 @@
   .scene-hero {
     --scene-fade-top: 0px;
   }
+
+  /*
+    Home hero figure (redesign P5): Christian's anatomy picture has its own pale backdrop, so its top and left edges
+    fade into the silk (a mask, never over text). Evening dims it so the pale backdrop doesn't glow on the dark page.
+  */
+  .hero-figure {
+    -webkit-mask-image:
+      linear-gradient(to right, transparent, currentColor var(--hero-figure-fade)),
+      linear-gradient(to bottom, transparent, currentColor var(--hero-figure-fade)),
+      linear-gradient(to top, transparent, currentColor var(--hero-figure-fade-bottom));
+    -webkit-mask-composite: source-in;
+    mask-image:
+      linear-gradient(to right, transparent, currentColor var(--hero-figure-fade)),
+      linear-gradient(to bottom, transparent, currentColor var(--hero-figure-fade)),
+      linear-gradient(to top, transparent, currentColor var(--hero-figure-fade-bottom));
+    mask-composite: intersect;
+    pointer-events: none;
+    user-select: none;
+  }
+
+  :root[data-theme="dark"] .hero-figure {
+    filter: brightness(var(--hero-figure-evening-dim));
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .hero-figure {
+      filter: brightness(var(--hero-figure-evening-dim));
+    }
+  }
+
+  .hero-eyebrow {
+    font-size: var(--text-sm);
+    line-height: var(--text-sm--line-height);
+  }
+
+  .hero-caps {
+    letter-spacing: var(--tracking-caps);
+  }
+
+  /* "simpler." in copper (a solid copper: Copper Deep on Ivory is 3.6:1, above the 3:1 large text needs; lighter in Evening). */
+  .hero-accent {
+    color: var(--color-copper-deep);
+  }
+
+  :root[data-theme="dark"] .hero-accent {
+    color: var(--color-copper);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .hero-accent {
+      color: var(--color-copper);
+    }
+  }
+
+  /* The curve under the headline: decorative, copper, as wide as the headline's text column. */
+  .hero-curve {
+    display: block;
+    inline-size: 60%;
+    block-size: var(--spacing-stack);
+    margin-block-start: var(--spacing);
+    margin-inline-start: auto;
+    color: var(--color-copper-deep);
+  }
+
+  /* The "coming soon" tag inside the closed call to action: words, so it never relies on colour alone. */
+  .hero-soon {
+    border: 1px solid var(--cueory-copper-ink);
+    border-radius: var(--radius-pill);
+    padding-inline: calc(var(--spacing) * 2);
+    font-size: var(--text-sm);
+    font-weight: 400;
+  }
+
+  .hero-icon,
+  .hero-icon-lg {
+    flex: none;
+    inline-size: var(--icon-size);
+    block-size: var(--icon-size);
+  }
+
+  .hero-icon-lg {
+    inline-size: var(--icon-size-lg);
+    block-size: var(--icon-size-lg);
+  }
+
+  .hero-icon-copper {
+    color: var(--color-copper-deep);
+  }
+
+  /* The support card as drawn: a rounded card tinted with copper glow, a hairline copper rim and a soft shadow. */
+  .hero-support {
+    border: 1px solid color-mix(in srgb, var(--color-copper-glow) 70%, transparent);
+    border-radius: var(--radius-card-lg);
+    background-image: linear-gradient(
+      110deg,
+      color-mix(in srgb, var(--color-copper-glow) 55%, transparent),
+      color-mix(in srgb, var(--color-copper) 38%, transparent)
+    );
+    box-shadow: var(--shadow-soft);
+  }
+
+  :root[data-theme="dark"] .hero-support {
+    background-image: linear-gradient(
+      110deg,
+      color-mix(in srgb, var(--color-copper-deep) 26%, transparent),
+      color-mix(in srgb, var(--color-copper) 16%, transparent)
+    );
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .hero-support {
+      background-image: linear-gradient(
+        110deg,
+        color-mix(in srgb, var(--color-copper-deep) 26%, transparent),
+        color-mix(in srgb, var(--color-copper) 16%, transparent)
+      );
+    }
+  }
+
+  .hero-icon-mug {
+    flex: none;
+    inline-size: var(--icon-size-mug);
+    block-size: var(--icon-size-mug-height);
+  }
+
+  .hero-icon-mug-heart {
+    fill: var(--color-copper-shine);
+  }
+
+  .hero-support-body {
+    min-inline-size: 0;
+    flex: 1;
+  }
+
+  .explore-tile {
+    min-block-size: calc(var(--tap-min) * 2.25);
+    border: 1px solid var(--cueory-glass-border);
+    border-radius: var(--radius-lg);
+    background-color: rgb(var(--veil-rgb) / var(--veil-alpha));
+  }
+
+  .explore-tile:hover {
+    border-color: var(--color-control);
+  }
+
+  /* The coming-soon call to action: copper like the others, but it never acts. It still takes focus so it can be read out. */
+  .copper-button[aria-disabled="true"] {
+    cursor: default;
+  }
+
 
   /* "ways to study": Linen (Evening: Walnut), the folds falling the other way, light from the upper right. */
   .scene-tint {
@@ -240,8 +417,64 @@
   /* The same cloth without folds, for whole pages behind text. */
   .silk-quiet {
     background-color: var(--color-silk-base);
-    background-image: var(--silk-grain), linear-gradient(180deg, var(--color-silk-base), var(--color-silk-shade));
-    background-size: 220px 220px, auto;
+    background-image:
+      var(--silk-grain),
+      /* Diagonal folds: a soft ridge of peach with a lighter sheen beside it, as in the renderings. */
+      linear-gradient(115deg, transparent 12%, rgb(var(--silk-peach-rgb) / calc(var(--silk-peach-alpha) * 0.7)) 26%, color-mix(in srgb, var(--color-silk-sheen) 55%, transparent) 34%, transparent 46%),
+      linear-gradient(245deg, transparent 50%, rgb(var(--silk-peach-rgb) / calc(var(--silk-peach-alpha) * 0.8)) 64%, color-mix(in srgb, var(--color-silk-sheen) 45%, transparent) 72%, transparent 86%),
+      radial-gradient(ellipse 65% 50% at 4% 6%, rgb(var(--silk-peach-rgb) / var(--silk-peach-alpha)), transparent 72%),
+      radial-gradient(ellipse 60% 55% at 96% 20%, rgb(var(--silk-peach-rgb) / calc(var(--silk-peach-alpha) * 0.8)), transparent 70%),
+      radial-gradient(ellipse 75% 45% at 22% 80%, rgb(var(--silk-peach-rgb) / calc(var(--silk-peach-alpha) * 0.7)), transparent 72%),
+      linear-gradient(rgb(var(--silk-wash-rgb) / var(--silk-wash-alpha)) 0 0),
+      linear-gradient(180deg, var(--color-silk-tint), var(--color-silk-base) 55%, var(--color-silk-shade));
+    background-size: 220px 220px, auto, auto, auto, auto, auto, auto, auto;
+  }
+
+  /* The boards' fold shape (a colourless mask) over a token-coloured layer, tiled down the page behind the content. */
+  .silk-quiet {
+    position: relative;
+    isolation: isolate;
+  }
+
+  .silk-quiet::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background-color: rgb(var(--silk-peach-rgb) / calc(var(--silk-peach-alpha) * var(--silk-fold-layer)));
+    -webkit-mask-image: url("/design/silk-fold-mask.svg");
+    mask-image: url("/design/silk-fold-mask.svg");
+    -webkit-mask-size: 100% var(--silk-fold-height);
+    mask-size: 100% var(--silk-fold-height);
+    -webkit-mask-repeat: repeat-y;
+    mask-repeat: repeat-y;
+  }
+
+  /* Transparent with a fade, as in HomeV2-1.png: the page's silk shows through and the strip melts into it. */
+  .building-strip {
+    background-image: linear-gradient(180deg, color-mix(in srgb, var(--color-surface) 60%, transparent), transparent);
+  }
+
+  .building-strip-icon {
+    display: inline-block;
+  }
+
+  /* The approved cup-and-leaf mark is dark artwork: in Evening it sits on a light disc so it stays visible. */
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .building-strip-icon {
+      box-sizing: content-box;
+      padding: var(--notice-icon-disc);
+      border-radius: var(--radius-pill);
+      background-color: var(--color-ink);
+    }
+  }
+
+  :root[data-theme="dark"] .building-strip-icon {
+    box-sizing: content-box;
+    padding: var(--notice-icon-disc);
+    border-radius: var(--radius-pill);
+    background-color: var(--color-ink);
   }
 
   /* Frosted panel: brand surface color, partly see-through, blurred, with a 1 px hairline and one soft shadow. */
@@ -364,9 +597,12 @@
   }
 
   /* Glassy pill button: translucent brand glass, a crisp light rim, a small soft shadow (D-62). */
+  /* It never grows past its column: with large text on a narrow screen (320px, 32px text) its words wrap inside it. */
   .glass-button {
     display: inline-block;
+    max-inline-size: 100%;
     padding: calc(var(--spacing) * 3.5) calc(var(--spacing) * 8);
+    overflow-wrap: break-word;
     border-radius: var(--radius-pill);
     color: var(--color-on-button);
     text-decoration: none;
@@ -383,6 +619,30 @@
   .glass-button:hover {
     color: var(--color-on-button);
     background-color: rgb(var(--glass-hover-rgb) / var(--glass-hover-alpha));
+  }
+
+  /* The one shared copper button (redesign, #889 palette): the renderings' copper sweep, Charcoal ink at full opacity
+     (4.65:1 or better on every stop), a 44 px minimum target. Pages add only layout utilities, never their own copper. */
+  .copper-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: calc(var(--spacing) * 2);
+    min-block-size: var(--tap-min);
+    max-inline-size: 100%;
+    padding: calc(var(--spacing) * 3.5) calc(var(--spacing) * 8);
+    overflow-wrap: break-word;
+    border: 1px solid transparent; /* shows as a real border in forced-colors mode, where the gradient is dropped */
+    border-radius: var(--radius-pill);
+    color: var(--cueory-copper-ink);
+    text-decoration: none;
+    background-image: linear-gradient(110deg, var(--cueory-copper-start), var(--cueory-copper-end) 72%, var(--cueory-copper-shine));
+    box-shadow: var(--shadow-button);
+  }
+
+  .copper-button:hover,
+  .copper-button:visited {
+    color: var(--cueory-copper-ink);
   }
 
   /* Social profile links (D-54): the platform's one-color mark in the text color, on a 44 px target. */
@@ -1103,9 +1363,17 @@ html:has(dialog.menu-panel[open]) {
     gap: calc(var(--spacing) * 3);
   }
 
+  /* With large text on a narrow phone the dots wrap between the arrows, so the arrows never leave the screen or shrink. */
+  .modes-controls > .vial-arrow {
+    flex-shrink: 0;
+  }
+
   .modes-dots {
     display: flex;
+    min-inline-size: 0;
+    flex-wrap: wrap;
     align-items: center;
+    justify-content: center;
     gap: calc(var(--spacing) * 1.5);
   }
 
@@ -1272,11 +1540,12 @@ html:has(dialog.menu-panel[open]) {
 }
 
 /*
-  The illustration loops play only on the card in the middle and in the open preview, only once the script has checked
-  the visitor's motion setting (data-motion), and stop with either pause button (data-paused). Without them every illustration is still and
+  The illustration loops play only on the card in the middle, only while the carousel is on screen with no preview open
+  and the visitor's motion setting allows it (data-looping, set by the script from illustrationsMayLoop), and stop with
+  either pause button. The preview's scrim is a plain translucent color: a blur over the live page cost WebKit its frames (#634). Without them every illustration is still and
   complete. Each loop is 6 s, the same as the auto-advance.
 */
-.modes[data-motion]:not([data-paused]) :is(.mode-card[data-active], .mode-preview) {
+.modes[data-motion]:not([data-paused])[data-looping] .mode-card[data-active] {
   & .ill-video-press { animation: ill-video-press 6s ease-in-out infinite both; }
   & .ill-video-progress { animation: ill-video-progress 6s ease-in-out infinite both; }
 
@@ -1467,6 +1736,22 @@ html:has(dialog.menu-panel[open]) {
 }
 
 /*
+  Study-mode preview dialog under reduced motion: no transition and no animation is created inside it. The blanket rule
+  above gives every element a 0.01ms duration, which Chromium finishes before the next frame but Firefox still lists in
+  getAnimations() (18 of them, release run 44422471256). Setting the property to none creates nothing at all, so the
+  dialog opens and closes at once.
+*/
+@media (prefers-reduced-motion: reduce) {
+  .mode-preview,
+  .mode-preview *,
+  .mode-preview *::before,
+  .mode-preview *::after {
+    transition: none;
+    animation-name: none;
+  }
+}
+
+/*
   The study-mode preview (D-51, Task 109): a native modal <dialog> that fills the window. Behind the panel, the page is
   darkened and softly frosted (the scrim). The panel's cream surface is its own layer, so the script can open it around
   the bottle; it is opaque, in the frosted cards' own color (Ivory, Evening: Walnut), so its text has the plain
@@ -1504,8 +1789,6 @@ html:has(dialog.menu-panel[open]) {
     position: fixed;
     inset: 0;
     background-color: rgb(var(--shadow-tint) / var(--scrim-alpha));
-    -webkit-backdrop-filter: blur(var(--blur-scrim));
-    backdrop-filter: blur(var(--blur-scrim));
   }
 
   .mode-preview-panel {
@@ -1532,6 +1815,17 @@ html:has(dialog.menu-panel[open]) {
     z-index: 1;
     inset-block-start: calc(var(--spacing) * 4);
     inset-inline-end: calc(var(--spacing) * 4);
+  }
+
+  /*
+    The preview's round buttons sit on the opaque cream surface, so their frosted blur has only a flat color to blur and
+    shows nothing; inside the words' fading groups it has nothing at all (a faded ancestor is the blur's backdrop root).
+    In WebKit it still costs a blurred offscreen copy per button on every frame, and the arrow and close buttons stayed
+    "not stable" for Playwright's click (#634). Plain translucent color looks the same.
+  */
+  .mode-preview .corner-button {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
   }
 
   .mode-preview-bottle {
@@ -1613,9 +1907,30 @@ html:has(dialog.menu-panel[open]) {
     backdrop-filter: blur(var(--blur-scrim));
   }
 
-  .result-meta {
-    font-variant-caps: all-small-caps;
-    letter-spacing: var(--tracking-label);
+  /*
+    The finished-game card's close button (issue 743) floats in the top corner and sticks there while the card scrolls, so
+    large text on a narrow screen can neither push it off the edge nor scroll it out of sight. Focused controls stop
+    below it.
+  */
+  .result-dialog {
+    scroll-padding-block-start: calc(var(--tap-min) + var(--spacing) * 2);
+  }
+
+  .result-dialog::before {
+    content: '';
+    display: block;
+    float: inline-start;
+    inline-size: calc(var(--tap-min) + var(--spacing) * 3);
+    block-size: calc(var(--tap-min) + var(--spacing) * 2);
+  }
+
+  .result-dialog-close {
+    position: sticky;
+    inset-block-start: 0;
+    z-index: 1;
+    float: inline-end;
+    margin-inline-start: calc(var(--spacing) * 3);
+    margin-block-end: calc(var(--spacing) * 2);
   }
 }
 
@@ -1822,8 +2137,10 @@ html:has(dialog.mode-preview[open]) {
       transform: none;
     }
 
+    /* The faces swap in one step: the base-layer reset (reduced-motion.css) removes every transition under reduced
+       motion anyway, so a cross-fade here never ran (lane 8). */
     .flip-face {
-      transition: opacity var(--duration-base) var(--ease-soft);
+      transition: none;
     }
 
     .flip.is-flipped .flip-face {
@@ -1837,7 +2154,7 @@ html:has(dialog.mode-preview[open]) {
       -webkit-backface-visibility: visible;
       opacity: 0;
       pointer-events: none;
-      transition: opacity var(--duration-base) var(--ease-soft);
+      transition: none;
     }
 
     .flip.is-flipped .flip-back {
@@ -1971,6 +2288,14 @@ html:has(dialog.mode-preview[open]) {
     transition: none;
   }
 
+  /* The label's color is inherited by its text and icon. Reduced motion sets a 0.01ms transition on every element (see
+     the base layer), which keeps the old color for a frame in Firefox and WebKit, so a just-picked option was read as
+     low contrast. No property may transition inside the control. */
+  .segmented-option,
+  .segmented-option * {
+    transition: none;
+  }
+
   .segmented-option:has(:checked) {
     background-color: var(--color-ink);
     color: var(--color-on-button);
@@ -2042,19 +2367,35 @@ html:has(dialog.mode-preview[open]) {
 /* Sudoku game page (Task 625): sizes and colors come from tokens.css. */
 @layer components {
   .sudoku-game { position: relative; margin-block: calc(var(--spacing) * 8); }
-  .sudoku-title-row { display: flex; min-block-size: var(--tap-min); justify-content: flex-end; margin-block-end: calc(var(--spacing) * 3); }
-  .sudoku-corner-actions { display: flex; gap: calc(var(--spacing) * 2); }
   .sudoku-icon-button, .sudoku-small-button { display: inline-flex; min-inline-size: var(--tap-min); min-block-size: var(--tap-min); align-items: center; justify-content: center; border: var(--sudoku-line) solid var(--color-control); border-radius: var(--radius-pill); background: var(--color-page); color: var(--color-ink); cursor: pointer; }
   .sudoku-how { position: absolute; z-index: 5; inset-inline-end: 0; inset-block-start: 100%; inline-size: min(100%, var(--container-prose)); padding: calc(var(--spacing) * 5); border: var(--sudoku-line) solid var(--color-line); border-radius: var(--radius-lg); background: var(--color-page); box-shadow: var(--shadow-card); }
   .sudoku-how ol { margin-block: calc(var(--spacing) * 2) 0; padding-inline-start: calc(var(--spacing) * 6); }
-  .sudoku-panel { container: sudoku-panel / inline-size; display: flex; flex-direction: column; align-items: center; gap: calc(var(--spacing) * 3); }
-  .sudoku-toolbar { display: grid; inline-size: 100%; grid-template-columns: 1fr auto 1fr; align-items: center; gap: calc(var(--spacing) * 2); }
-  .sudoku-time { display: flex; align-items: center; gap: calc(var(--spacing) * 2); }
-  .sudoku-errors { justify-self: end; }
-  .sudoku-board-scroll { inline-size: 100%; }
+  /* The board's square size lives on the panel, so the time line and the tool row can match the board's width. Its
+     container units resolve where it is used, against the panel. */
+  .sudoku-panel { --sudoku-cell-fit: max(var(--sudoku-cell-floor), min(calc((100cqi - var(--sudoku-board-frame)) / 9), clamp(var(--sudoku-cell-min), min(calc((100vh - var(--sudoku-height-reserve)) / 9), calc((100vw - var(--sudoku-width-reserve)) / 9)), var(--sudoku-cell-max)))); --sudoku-board-width: calc(var(--sudoku-cell-fit) * 9 + var(--sudoku-box-line) * 2); container: sudoku-panel / inline-size; display: flex; flex-direction: column; align-items: center; gap: calc(var(--spacing) * 3); }
+  /* Top to bottom: levels, the time and error line, five equal icon buttons spread across the board's width, the board. */
+  .sudoku-status { display: flex; inline-size: min(100%, var(--sudoku-board-width)); flex-wrap: wrap; align-items: center; justify-content: space-between; gap: calc(var(--spacing) * 2); }
+  .sudoku-time:empty, .sudoku-errors:empty { display: none; }
+  .sudoku-errors { margin-inline-start: auto; }
+  .sudoku-toolbar { position: relative; display: flex; inline-size: min(100%, var(--sudoku-board-width)); flex-wrap: wrap; align-items: center; justify-content: space-between; gap: calc(var(--spacing) * 2) 0; }
+  /* The five toolbar buttons are exactly one tap target square: a floor as well as a size, border-box, and nothing
+     that could scale them at rest (Firefox measured the pause button at 43.99997 px, release run 44422471256). */
+  .sudoku-toolbar > .sudoku-icon-button { box-sizing: border-box; flex: none; inline-size: var(--tap-min); block-size: var(--tap-min); min-inline-size: var(--tap-min); min-block-size: var(--tap-min); transform: none; scale: none; translate: none; }
+  /* Five equal buttons leave four gaps. Use at most half a gap on either side, and none if the row wraps. */
+  .sudoku-pause-button { position: relative; }
+  .sudoku-pause-button:enabled::before {
+    --sudoku-pause-inline-reach: clamp(0%, (min(100cqi, var(--sudoku-board-width)) - 5 * var(--tap-min)) / 8, var(--spacing) / 2);
+    position: absolute;
+    inset-block: calc(-1 * (var(--sudoku-line) + var(--spacing) / 2));
+    inset-inline: calc(-1 * (var(--sudoku-line) + var(--sudoku-pause-inline-reach)));
+    content: "";
+  }
+  .sudoku-board.is-paused .sudoku-paused-mark { display: block; inline-size: calc(var(--sudoku-cell-size) / 4); block-size: var(--sudoku-entered-line); border-radius: var(--radius-pill); background: currentColor; }
+  .sudoku-board-scroll { inline-size: 100%; overflow-x: auto; }
   /* Square size: the brief's clamp(44px, min((100vh − 460px) / 9, (100vw − 150px) / 9), 84px), but never wider than
-     the panel allows (100cqi minus the outer box lines), so the whole board fits a 390 px phone (D-pending). */
-  .sudoku-board { --sudoku-cell-size: min(calc((100cqi - var(--sudoku-board-frame)) / 9), clamp(var(--sudoku-cell-min), min(calc((100vh - var(--sudoku-height-reserve)) / 9), calc((100vw - var(--sudoku-width-reserve)) / 9)), var(--sudoku-cell-max))); display: grid; inline-size: max-content; grid-template-rows: repeat(9, var(--sudoku-cell-size)); margin-inline: auto; border: var(--sudoku-box-line) solid var(--color-ink); background: var(--color-ink); }
+     the panel allows (100cqi minus the outer box lines), so the whole board fits a 390 px phone (D-pending). It never
+     drops below --sudoku-cell-floor, which grows with root text: with enlarged text the board scrolls in its own box. */
+  .sudoku-board { --sudoku-cell-size: var(--sudoku-cell-fit); display: grid; inline-size: max-content; grid-template-rows: repeat(9, var(--sudoku-cell-size)); margin-inline: auto; border: var(--sudoku-box-line) solid var(--color-ink); background: var(--color-ink); }
   .sudoku-row { display: grid; grid-template-columns: repeat(9, var(--sudoku-cell-size)); }
   .sudoku-cell { position: relative; display: flex; inline-size: var(--sudoku-cell-size); block-size: var(--sudoku-cell-size); align-items: center; justify-content: center; border: 0; border-inline-end: var(--sudoku-line) solid var(--color-line); border-block-end: var(--sudoku-line) solid var(--color-line); background: var(--color-page); color: var(--color-ink); cursor: pointer; font-size: calc(var(--sudoku-cell-size) / 2); line-height: 1; }
   .sudoku-cell:last-child { border-inline-end: 0; }
@@ -2075,10 +2416,20 @@ html:has(dialog.mode-preview[open]) {
   .sudoku-candidates { display: grid; inline-size: 100%; block-size: 100%; grid-template-columns: repeat(3, 1fr); font-size: var(--sudoku-candidate-size); line-height: 1; }
   .sudoku-candidates i { display: flex; align-items: center; justify-content: center; font-style: normal; }
   .sudoku-mark { color: var(--color-ink-soft); }
+  /* Issue 720: a wrong entry gets a slash across it and "wrong" in its label, so it never depends on color. */
+  .sudoku-wrong-mark { position: absolute; inset: calc(var(--spacing) * 1.5); background: linear-gradient(to top right, transparent calc(50% - var(--sudoku-wrong-line)), currentColor calc(50% - var(--sudoku-wrong-line)), currentColor calc(50% + var(--sudoku-wrong-line)), transparent calc(50% + var(--sudoku-wrong-line))); pointer-events: none; }
+  .sudoku-cell.is-wrong { font-style: italic; }
+  .sudoku-cell.has-candidates { color: var(--color-ink-soft); }
+  .sudoku-tools { display: flex; flex: 1 0 100%; order: 1; flex-wrap: wrap; align-items: center; justify-content: center; gap: calc(var(--spacing) * 2); }
+  .sudoku-tool-button, .sudoku-text-button { min-inline-size: var(--tap-min); min-block-size: var(--tap-min); padding-inline: calc(var(--spacing) * 4); border: var(--sudoku-line) solid var(--color-control); border-radius: var(--radius-pill); background: var(--color-page); color: var(--color-ink); cursor: pointer; }
+  .sudoku-tool-button:disabled { color: var(--color-ink-soft); cursor: not-allowed; }
+  .sudoku-text-button { margin-block-start: calc(var(--spacing) * 3); }
+  .sudoku-stats table { inline-size: 100%; margin-block: calc(var(--spacing) * 3); border-collapse: collapse; }
+  .sudoku-stats th, .sudoku-stats td { padding: calc(var(--spacing) * 1.5) calc(var(--spacing) * 2); border-block-end: var(--sudoku-line) solid var(--color-line); text-align: start; }
+  .sudoku-stats thead th { color: var(--color-ink-soft); font-size: var(--text-sm); font-weight: 400; }
   .sudoku-board.is-paused .sudoku-cell { background: var(--color-surface); color: var(--color-ink-soft); }
   .sudoku-pad-wrap { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: calc(var(--spacing) * 3); inline-size: 100%; }
   .sudoku-number-row { display: grid; flex: 1 0 100%; order: -1; grid-template-columns: repeat(auto-fit, minmax(var(--tap-min), 1fr)); gap: calc(var(--spacing) * 2); }
-  .sudoku-settings-trigger { margin-inline-start: auto; }
   /* Two even rows of five on a phone (5 × 44 px + gaps = 15.75rem), one row of ten once ten fit (32rem). */
   @container sudoku-panel (min-width: 16rem) {
     .sudoku-number-row { grid-template-columns: repeat(5, minmax(var(--tap-min), 1fr)); }
@@ -2090,36 +2441,31 @@ html:has(dialog.mode-preview[open]) {
     @container sudoku-panel (min-width: 48rem) {
       .sudoku-pad-wrap { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; }
       .sudoku-number-row { order: 0; }
+      .sudoku-tools { grid-column: 1 / -1; }
     }
   }
   .sudoku-number-row button { min-inline-size: var(--tap-min); min-block-size: var(--tap-min); border: var(--sudoku-line) solid var(--color-control); border-radius: var(--radius-md); background: var(--color-page); color: var(--color-ink); font-weight: 700; }
-  .sudoku-setting-button { display: inline-flex; min-block-size: var(--tap-min); align-items: center; gap: calc(var(--spacing) * 2); border: 0; background: transparent; color: var(--color-ink); cursor: pointer; white-space: nowrap; }
+  /* The labels stay on one line while they fit and wrap at large text sizes, so the longer "auto candidates" label
+     (issue 720) never pushes the page sideways at 320px with 32px root text. */
+  .sudoku-setting-button { display: inline-flex; max-inline-size: 100%; min-block-size: var(--tap-min); align-items: center; gap: calc(var(--spacing) * 2); border: 0; background: transparent; color: var(--color-ink); text-align: start; overflow-wrap: anywhere; cursor: pointer; }
   .sudoku-solved { margin-block-start: calc(var(--spacing) * 6); padding: calc(var(--spacing) * 5); border: var(--sudoku-line) solid var(--color-line); border-radius: var(--radius-lg); text-align: center; }
-  .sudoku-overlay { position: fixed; inset: 0; inline-size: 100%; block-size: 100%; max-inline-size: none; max-block-size: none; margin: 0; padding: calc(var(--spacing) * 5); border: 0; background: rgb(var(--shadow-tint) / var(--scrim-alpha)); color: var(--color-ink); backdrop-filter: blur(var(--blur-scrim)); }
-  .sudoku-overlay[open] { display: flex; align-items: center; justify-content: center; }
-  .sudoku-overlay::backdrop { background: transparent; }
-  /* The card always fits the screen and scrolls inside itself. */
-  .sudoku-settings { inline-size: min(100%, var(--container-prose)); max-block-size: 100%; overflow: auto; overscroll-behavior: contain; padding: calc(var(--spacing) * 6); border-radius: var(--radius-xl); background: var(--color-page); box-shadow: var(--shadow-lift); }
-  .sudoku-settings-heading { display: flex; align-items: center; justify-content: space-between; }
-  .sudoku-settings h3 { font-size: var(--text-2xl); }
-  .sudoku-settings fieldset { margin-block-start: calc(var(--spacing) * 5); border: 0; padding: 0; }
-  .sudoku-settings legend { padding-block-end: calc(var(--spacing) * 2); color: var(--color-ink-soft); font-size: var(--text-sm); }
-  .sudoku-option { display: flex; min-block-size: var(--tap-min); align-items: center; justify-content: space-between; gap: calc(var(--spacing) * 4); border-block-start: var(--sudoku-line) solid var(--color-line); padding-block: calc(var(--spacing) * 2); cursor: pointer; }
-  .sudoku-option span { display: flex; flex-direction: column; }
-  .sudoku-check-option { justify-content: flex-start; }
-  .sudoku-option input { flex: none; }
-  .sudoku-settings fieldset + fieldset { margin-block-start: calc(var(--spacing) * 6); }
-  .sudoku-option small { color: var(--color-ink-soft); }
-  .sudoku-option input { inline-size: calc(var(--spacing) * 6); block-size: calc(var(--spacing) * 6); accent-color: var(--color-button); }
   .sudoku-print-footer { display: none; }
+  /* Narrow screens keep more room for the settings text (320px with 32px root text, issue 743). */
+  @media (width < 40rem) {
+    /*
+      The 6 × 8 word path board sits in a panel that bleeds into the card's padding (-mx-6). With 32px text on a 320px screen its squares
+      need more room than that, and it used to spill past the card on the right only, ending under a pixel from the
+      screen edge (over it with some fonts). It now stays centred on the card, so it spills evenly and fits the screen.
+      With room to spare the offset is zero.
+    */
+    .wordpath[data-format="path"] .wordpath-board { position: relative; inset-inline-start: 50%; translate: -50% 0; }
+  }
   @media (orientation: portrait), (max-width: 50rem) {
     /* The number pad's layout lives with .sudoku-pad-wrap above (container queries on the panel's width). */
-    .sudoku-toolbar { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    .sudoku-time { flex-wrap: wrap; }
-    .sudoku-toolbar .segmented { grid-column: 1 / -1; grid-row: 1; justify-self: center; }
+    .sudoku-status { row-gap: 0; }
   }
   @media print {
-    body > :not(main), .sudoku-title-row, .sudoku-toolbar, .sudoku-pad-wrap, .sudoku-solved, .sudoku-overlay, .sr-only { display: none !important; }
+    body > :not(main), .sudoku-levels, .sudoku-status, .sudoku-toolbar, .game-help-first, .sudoku-pad-wrap, .sudoku-solved, .sr-only { display: none !important; }
     :root[data-print-game="sudoku"] main article > :not(.sudoku-section) { display: none !important; }
     :root[data-print-game="sudoku"] .sudoku-section > :not(.sudoku-mount) { display: none !important; }
     :root[data-print-game="sudoku"] main article { max-inline-size: none; padding: 0; background: transparent; box-shadow: none; }
@@ -2127,7 +2473,8 @@ html:has(dialog.mode-preview[open]) {
     main { max-inline-size: none !important; padding: 0 !important; }
     .sudoku-game { margin: 0; }
     .sudoku-board-scroll { overflow: visible; }
-    .sudoku-board { --sudoku-cell-size: var(--sudoku-cell-max); }
+    /* As large as the paper allows, up to --sudoku-cell-max, so the whole grid stays inside the page's width. */
+    .sudoku-board { --sudoku-cell-size: min(var(--sudoku-cell-max), calc((100cqi - var(--sudoku-board-frame)) / 9)); }
     .sudoku-cell { background: var(--color-page) !important; box-shadow: none !important; outline: 0 !important; color: var(--color-ink) !important; }
     .sudoku-cell[data-given="false"] > * { display: none !important; }
     .sudoku-cell[data-given="false"]::after, .sudoku-cell[data-given="false"]::before { display: none !important; }
@@ -2159,5 +2506,13 @@ html:has(dialog.mode-preview[open]) {
     :root[data-print-game="anatomy-worksheet"] .anatomy-worksheet img { inline-size: var(--print-figure); max-inline-size: 100%; break-inside: avoid; }
     :root[data-print-game="anatomy-worksheet"] .anatomy-worksheet li { break-inside: avoid; }
     :root[data-print-game="anatomy-worksheet"] .anatomy-worksheet-tools { display: none !important; }
+  }
+}
+
+/* The lesson hub's mode tiles (lane 23): as many columns as fit, so they stack when text is enlarged. sm and up use the
+   utility column counts on the page. */
+@layer components {
+  .mode-grid-fit {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--container-mode-tile)), 1fr));
   }
 }

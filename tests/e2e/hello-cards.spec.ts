@@ -1,5 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
+import { markPanelsSeen } from './clock';
 import data from '../../content/games/hello-cards/starters.json' with { type: 'json' };
 
 const card = (page: Page) => page.getByTestId('hello-card');
@@ -13,7 +14,7 @@ const textsFor = (level: string) => data.starters.filter((s) => s.depth === leve
 test.beforeEach(async ({ page }) => {
   // The once-only promo panel would take keyboard focus mid-test (as in play.spec.ts).
   await page.addInitScript(() => {
-    try { localStorage.setItem('cueory-promo-seen', String(Date.now())); } catch { /* storage blocked */ }
+    try { localStorage.setItem('cueory-promo-seen', String(Date.now())); localStorage.setItem('cueory-signup-popup-seen', String(Date.now())); } catch { /* storage blocked */ }
   });
   await page.goto('/play/hello-cards');
   await expect(card(page)).toBeEnabled();
@@ -38,6 +39,19 @@ test('the card flips by click and by keyboard and shows a starter', async ({ pag
   await expect(card(page)).toHaveAttribute('aria-pressed', 'false');
   await page.keyboard.press('Enter');
   await expect(card(page)).toHaveAttribute('aria-pressed', 'true');
+  expect(await card(page).evaluate((el) => el.matches(':focus-visible') && parseFloat(getComputedStyle(el).outlineWidth) > 0)).toBe(true);
+});
+
+// Engine run 44460645965 (E8): a mouse click alone never forces the ring; a keyboard press after it shows it.
+test('a click turns the card without a focus ring; Enter after it shows the ring', async ({ page }) => {
+  await card(page).click();
+  await expect(card(page)).toHaveAttribute('aria-pressed', 'true');
+  expect(await card(page).evaluate((el) => el.matches(':focus-visible'))).toBe(false);
+  // Safari's buttons don't take focus from a click, so put it there the way the flip test does.
+  await card(page).focus();
+  await page.keyboard.press('Enter');
+  await expect(card(page)).toHaveAttribute('aria-pressed', 'false');
+  await expect(card(page)).toBeFocused();
   expect(await card(page).evaluate((el) => el.matches(':focus-visible') && parseFloat(getComputedStyle(el).outlineWidth) > 0)).toBe(true);
 });
 
@@ -142,6 +156,7 @@ test('with reduced motion the switch thumb does not slide', async ({ page }) => 
 
 test('the prompt of the day shows today\'s date, is the same on reload and changes the next day', async ({ page }) => {
   await page.clock.setFixedTime(new Date('2026-11-07T10:00:00'));
+  await markPanelsSeen(page);
   await page.reload();
   const daily = page.getByTestId('hello-daily-text');
   await expect(page.getByTestId('hello-daily')).toContainText('sat 7 nov');
@@ -150,6 +165,7 @@ test('the prompt of the day shows today\'s date, is the same on reload and chang
   await page.reload();
   await expect(daily).toHaveText(first);
   await page.clock.setFixedTime(new Date('2026-11-08T10:00:00'));
+  await markPanelsSeen(page);
   await page.reload();
   await expect(daily).not.toHaveText(first);
   await expect(page.getByTestId('hello-daily')).toContainText('sun 8 nov');
@@ -175,6 +191,7 @@ test('sharing today\'s card uses the production hello result adapter', async ({ 
 
 test('a tab left open across local midnight moves on to the new day\'s prompt', async ({ page }) => {
   await page.clock.install({ time: new Date('2026-11-07T23:59:30') });
+  await markPanelsSeen(page);
   await page.goto('/play/hello-cards');
   await expect(card(page)).toBeEnabled();
   const daily = page.getByTestId('hello-daily-text');

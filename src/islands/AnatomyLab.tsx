@@ -141,6 +141,10 @@ function prefersReducedMotion(): boolean {
 /** A label on the 3D view: its box, and its name's lines (with "(behind)" for a structure hidden from this side). */
 type OverlayLabel = PlacedLabel & Pick<ReturnType<typeof labelLines>, 'lines' | 'mark'>;
 
+// Keep the no-label state referentially stable. The scene calls its render callback for the first
+// frame even when labels are off; a freshly allocated [] would make React schedule needless work.
+const EMPTY_OVERLAY_LABELS: OverlayLabel[] = [];
+
 /** The label box's measurements, read from the same token-backed classes the label is drawn with. */
 interface LabelMetrics {
   fontPx: number;
@@ -327,7 +331,7 @@ function AnatomyLabView({ systems: baseSystems, fixture, drafts, modelBytes = {}
       }
     };
     if (!scene || !canvas || ids.length === 0) {
-      setPlaced([]);
+      setPlaced(EMPTY_OVERLAY_LABELS);
       showNotes([]);
       return;
     }
@@ -1443,7 +1447,7 @@ function AnatomyLabView({ systems: baseSystems, fixture, drafts, modelBytes = {}
                   )}
                   {quiz.feedback?.kind === 'wrong' && (
                     <p className="text-ink" data-feedback="wrong">
-                      <span aria-hidden="true">✗ </span>not this one: you picked {names.get(quiz.feedback.picked) ?? quiz.feedback.picked}. try again, or tap show me.
+                      <span aria-hidden="true">✗ </span>not this one: you picked {names.get(quiz.feedback.picked) ?? quiz.feedback.picked}. try again, or choose show me.
                     </p>
                   )}
                   {quiz.feedback?.kind === 'shown' && <p className="text-ink" data-feedback="shown">here it is: {targetName}.</p>}
@@ -1555,7 +1559,7 @@ function AnatomyLabView({ systems: baseSystems, fixture, drafts, modelBytes = {}
                   )}
                   {recall.feedback?.kind === 'wrong' && (
                     <p className="text-ink" data-feedback="wrong">
-                      <span aria-hidden="true">✗ </span>not this one: {recall.feedback.how === 'typed' ? 'you typed' : 'you picked'} {recall.feedback.answer}. try again, or tap show me.
+                      <span aria-hidden="true">✗ </span>not this one: {recall.feedback.how === 'typed' ? 'you typed' : 'you picked'} {recall.feedback.answer}. try again, or choose show me.
                     </p>
                   )}
                   {recall.feedback?.kind === 'shown' && (
@@ -1856,7 +1860,7 @@ function LabelOverlay({
   setterRef: MutableRefObject<((labels: OverlayLabel[]) => void) | null>;
   onMount: () => void;
 }) {
-  const [placed, setPlaced] = useState<OverlayLabel[]>([]);
+  const [placed, setPlaced] = useState<OverlayLabel[]>(EMPTY_OVERLAY_LABELS);
   useEffect(() => {
     setterRef.current = setPlaced;
     onMount();

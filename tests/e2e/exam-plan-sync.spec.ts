@@ -38,18 +38,24 @@ test.beforeAll(async () => {
       // '&slow=list' holds the account load back long enough for the student to act first.
       const listWait = params.get('slow') === 'list' ? 1500 : 50;
       const refused = { code: '500', message: 'provider-private-detail' };
+      // Every row belongs to account A. Row-level security as whoever is signed in now (window.fixtureUser) plus the
+      // adapter's user_id filter: a call only reaches the rows when both name A (#755).
+      const OWNER = '00000000-0000-4000-8000-000000000001';
+      window.fixtureUser = OWNER;
+      const owns = (userId) => window.fixtureUser === OWNER && userId === OWNER;
       window.fixtureClient = {
         from(table) {
           if (table !== 'exam_plans') throw new Error('unexpected table ' + table);
           return {
-            select: (columns) => ({ limit: (n) => {
+            select: (columns) => ({ eq: (column, userId) => ({ limit: (n) => {
               log('list ' + columns + ' ' + n);
-              return reply(fail === 'list' ? { data: null, error: refused } : { data: rows.map(r => ({ ...r })), error: null }, listWait);
-            } }),
-            update: (patch) => ({ eq: (column, value) => ({ select: () => {
-              log('update ' + value + ' ' + patch.exam_date);
+              const visible = owns(userId) ? rows.map(r => ({ ...r })) : [];
+              return reply(fail === 'list' ? { data: null, error: refused } : { data: visible, error: null }, listWait);
+            } }) }),
+            update: (patch) => ({ match: (filter) => ({ select: () => {
+              log('update ' + filter.course + ' ' + patch.exam_date);
               if (fail === 'update') return reply({ data: null, error: refused });
-              const hit = rows.filter(r => r[column] === value);
+              const hit = owns(filter.user_id) ? rows.filter(r => r.course === filter.course) : [];
               hit.forEach(r => { r.exam_date = patch.exam_date; });
               return reply({ data: hit.map(r => ({ course: r.course })), error: null });
             } }) }),
@@ -58,14 +64,14 @@ test.beforeAll(async () => {
               rows.push({ ...row });
               return reply({ error: null });
             },
-            delete: () => ({ eq: (column, value) => {
-              log('delete ' + value);
+            delete: () => ({ match: (filter) => {
+              log('delete ' + filter.course);
               // '&fail=delete-once': the first removal fails, as a dropped connection would.
               if (fail === 'delete-once' && !window.deleteFailed) {
                 window.deleteFailed = true;
                 return reply({ error: refused });
               }
-              rows.splice(0, rows.length, ...rows.filter(r => r[column] !== value));
+              if (owns(filter.user_id)) rows.splice(0, rows.length, ...rows.filter(r => r.course !== filter.course));
               return reply({ error: null });
             } }),
           };
@@ -89,8 +95,8 @@ test.beforeAll(async () => {
         export async function sessionCheckFrom(client) {
           // '&session=fail-once': the first session check is rejected, as a dropped connection would.
           if (params.get('session') === 'fail-once' && checks++ === 0) throw new Error('session-private-detail');
-          if (!client || params.has('signed-out')) return { signedIn: false };
-          return { signedIn: true, userId: '00000000-0000-4000-8000-000000000001', email: '' };
+          if (!client || params.has('signed-out') || !window.fixtureUser) return { signedIn: false };
+          return { signedIn: true, userId: window.fixtureUser, email: '' };
         }
       `, loader: 'js' }));
     } }],
@@ -358,6 +364,44 @@ test.describe('exam date, signed in', () => {
     await page.keyboard.press('Enter');
     await expect(note).toHaveText('your exam date is cleared from your account too.');
     await expect(retry).toHaveCount(0);
+  });
+
+  test("A→B: after another tab switches accounts, the setup is kept on the device and nothing reaches B (#755)", async ({ page }) => {
+    await open(page, 'start', { course: 'med-surg-1', examDate: SERVER_DATE, done: true }, '', [
+      { course: 'med-surg-1', exam_date: SERVER_DATE },
+    ]);
+    await toExam(page);
+    await expect(page.getByLabel('when is your exam?')).toHaveValue(SERVER_DATE);
+    await page.evaluate(() => { (window as unknown as { fixtureUser: string }).fixtureUser = '00000000-0000-4000-8000-00000000000b'; });
+    await page.getByLabel('when is your exam?').fill(NEW_DATE);
+    await page.getByRole('button', { name: 'save my answers' }).click();
+    await expect(page.getByTestId('exam-sync')).toHaveText(
+      'a different account is signed in now, so your exam date is saved on this device only. nothing was sent to that account.',
+    );
+    await expect(page.getByRole('button', { name: 'try saving again' })).toHaveCount(0);
+    await expect(page.getByRole('link', { name: 'start studying' })).toBeVisible();
+    expect(await deviceAnswers(page)).toEqual({ course: 'med-surg-1', examDate: NEW_DATE, done: true });
+    expect(await calls(page)).toEqual(['list course,exam_date 10']);
+    expect(await page.evaluate(() => (window as unknown as { planRows: unknown }).planRows))
+      .toEqual([{ course: 'med-surg-1', exam_date: SERVER_DATE }]);
+  });
+
+  test('A→B→A: back as the first account before finishing, the setup saves to it as usual (#755)', async ({ page }) => {
+    await open(page, 'start', { course: 'med-surg-1', examDate: SERVER_DATE, done: true }, '', [
+      { course: 'med-surg-1', exam_date: SERVER_DATE },
+    ]);
+    await toExam(page);
+    await expect(page.getByLabel('when is your exam?')).toHaveValue(SERVER_DATE);
+    await page.evaluate(() => {
+      const w = window as unknown as { fixtureUser: string };
+      const first = w.fixtureUser;
+      w.fixtureUser = '00000000-0000-4000-8000-00000000000b';
+      w.fixtureUser = first;
+    });
+    await page.getByLabel('when is your exam?').fill(NEW_DATE);
+    await page.getByRole('button', { name: 'save my answers' }).click();
+    await expect(page.getByTestId('exam-sync')).toHaveText('your exam date is saved to your account too.');
+    expect(await calls(page)).toEqual(['list course,exam_date 10', `update med-surg-1 ${NEW_DATE}`]);
   });
 
   test('a failed load leaves the device date and says so', async ({ page }) => {

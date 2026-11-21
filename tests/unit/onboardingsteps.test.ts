@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  ONBOARDING_FIELDS, nextOnboardingStep, previousOnboardingStep, skipOnboardingStep,
+  ONBOARDING_FIELDS, focusAfterRender, movedOn, nextOnboardingStep, previousOnboardingStep, skipOnboardingStep,
   type OnboardingStep,
 } from '../../src/islands/onboardingsteps';
 
@@ -38,5 +38,76 @@ describe('onboarding step navigation', () => {
       step = previous ?? 0;
     }
     expect(nextOnboardingStep(1)).toEqual({ kind: 'finish' });
+  });
+});
+
+describe('onboarding focus after a step change', () => {
+  const element = (connected = true) => ({ isConnected: connected }) as unknown as Element;
+  const setup = (start: Element | null) => {
+    const body = element();
+    let active: Element | null = start;
+    let pending: (() => void) | null = null;
+    const heading = { focused: 0, focus() { this.focused += 1; } };
+    focusAfterRender(() => heading, {
+      active: () => active,
+      body: () => body,
+      schedule: (run) => { pending = run; },
+    });
+    return {
+      body, heading,
+      moveTo: (next: Element | null) => { active = next; },
+      render: () => pending?.(),
+    };
+  };
+
+  it('moves focus to the new question when focus stayed put', () => {
+    const radio = element();
+    const page = setup(radio);
+    page.render();
+    expect(page.heading.focused).toBe(1);
+  });
+
+  it('moves focus when the focused control disappeared with the old question', () => {
+    const page = setup(element());
+    page.moveTo(page.body);
+    page.render();
+    expect(page.heading.focused).toBe(1);
+  });
+
+  it('leaves focus alone when the student already moved on, e.g. to "save my answers"', () => {
+    const page = setup(element());
+    page.moveTo(element());
+    page.render();
+    expect(page.heading.focused).toBe(0);
+  });
+
+  it('treats the html element like the body: focus left on the page itself still moves (engine run 44460645965)', () => {
+    const html = element();
+    const body = { isConnected: true, parentElement: html } as unknown as Element;
+    expect(movedOn(element(), html, body)).toBe(false);
+    expect(movedOn(element(), element(), body)).toBe(true);
+  });
+
+  it('compares with the control the student pressed, not with what had focus after the render', () => {
+    const pressed = element();
+    const html = element();
+    const body = { isConnected: true, parentElement: html } as unknown as Element;
+    const run = (activeAtRender: Element) => {
+      let pending: (() => void) | null = null;
+      const heading = { focused: 0, focus() { this.focused += 1; } };
+      // By the time the effect runs, Back is gone and the browser has put focus somewhere on the page.
+      focusAfterRender(() => heading, { active: () => activeAtRender, body: () => body, schedule: (go) => { pending = go; } }, pressed);
+      pending!();
+      return heading.focused;
+    };
+    expect(run(html)).toBe(1);
+    expect(run(body)).toBe(1);
+    expect(run(pressed)).toBe(1);
+    expect(run(element())).toBe(0);
+  });
+
+  it('ignores a focused element that is no longer on the page', () => {
+    expect(movedOn(element(), element(false), element())).toBe(false);
+    expect(movedOn(element(), null, element())).toBe(false);
   });
 });

@@ -10,7 +10,7 @@ test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
     try {
       localStorage.removeItem('cueory-theme');
-      localStorage.setItem('cueory-promo-seen', String(Date.now()));
+      localStorage.setItem('cueory-promo-seen', String(Date.now())); localStorage.setItem('cueory-signup-popup-seen', String(Date.now()));
     } catch { /* Device theme and the no-promo layout still work when storage is blocked. */ }
   });
 });
@@ -87,7 +87,9 @@ test('sheet works at phone, tablet and desktop in both palettes, with keyboard a
 
   for (const theme of ['light', 'dark'] as const) {
     await page.emulateMedia({ colorScheme: theme });
-    const response = await page.goto(route);
+    // The second pass loads the same page again, and WebKit then reports its revalidation's 304 as the navigation
+    // status (webkit-desktop: "Expected: 200, Received: 304"). A different query makes each visit a fresh fetch.
+    const response = await page.goto(route + (theme === 'dark' ? '?scheme=dark' : ''));
     expect(response?.status()).toBe(200);
     const palette = await page.evaluate((expectedTheme) => {
       const root = document.documentElement;

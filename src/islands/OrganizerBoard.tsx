@@ -223,6 +223,11 @@ function Board({ set, page = ORGANIZER_PAGE }: Props) {
 
   const checkAndSave = () => {
     const next = check(state, set);
+    // The check button turns off once nothing new is placed, so focus can't stay on it. Hand it to the first item that
+    // went back to the tray, or else the first item still waiting there. When every item is right, the result takes it.
+    if (next !== state && !isDone(next)) {
+      focusItem.current = next.last?.returned[0] ?? next.order.find((id) => next.positions[id] === 'tray');
+    }
     setState(next);
     setPicked(undefined);
     setSaid(resultInWords(next));

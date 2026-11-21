@@ -53,7 +53,7 @@ const libraries = [
         allowedBooks.map((book) => (
           <li>
             <strong class="key-term">{book.book}</strong>, licensed{' '}
-            <a href={book.licenseUrl} rel="license">{book.licenseTitle ?? book.license}</a>.
+            <a href={book.licenseUrl} rel="license noopener">{book.licenseTitle ?? book.license}</a>.
             Credit as shown on the site: "{book.credit}" We have changed the material we use (for example by shortening
             text, or by grouping, simplifying and colouring 3D structures), and those changes are ours, not the
             original authors'.
@@ -71,7 +71,7 @@ const libraries = [
     <h2>Fonts</h2>
     <p>
       The site's fonts are served from our own files, not from a font service. Each is licensed under the{' '}
-      <a href="https://openfontlicense.org" rel="license">SIL Open Font License, Version 1.1</a>,
+      <a href="https://openfontlicense.org" rel="license noopener">SIL Open Font License, Version 1.1</a>,
       and its full licence text is in the file linked here.
     </p>
     <ul>
@@ -90,7 +90,7 @@ const libraries = [
       {
         libraries.map((library) => (
           <li>
-            <a href={library.href}>{library.name}</a>, {library.license} licence.
+            <a href={library.href} rel="noopener">{library.name}</a>, {library.license} licence.
           </li>
         ))
       }

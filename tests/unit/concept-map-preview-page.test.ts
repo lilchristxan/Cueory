@@ -45,6 +45,7 @@ describe('concept map preview page', () => {
       '../../layouts/Layout.astro',
       '../../islands/ConceptMap',
       '../../islands/concept-map.ts',
+      '../../islands/anatomylab',
     ]);
     expect(page).not.toMatch(/\b(?:fetch|localStorage|sessionStorage|createClient|supabase)\s*\(/i);
     expect(page).not.toMatch(/<form\b/i);

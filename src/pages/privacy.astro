@@ -105,19 +105,26 @@ const format = (value: number) => value.toLocaleString('en-US');
     <p>
       On your first visit, a small panel about the launch list may slide down from the top of the page. Your browser
       remembers on your device that it showed you the panel, using <code>cueory-promo-seen</code>, so it stays away for{' '}
-      {promo.rememberDays} days. That isn't a cookie, and it never reaches us.
+      {promo.rememberDays} days. That isn't a cookie, and it never reaches us. A separate signup pop-up may appear
+      after 10 seconds of viewing; the browser saves the time under <code>cueory-signup-popup-seen</code> to keep the pop-up away
+      for three hours.
     </p>
     <p>
       On <a href="/play">daily games</a> you can turn on stats. They're off unless you do. When they're on, your browser
       keeps, for each game you finish, the day, whether you solved it and how many tries it took. Anything older than 400
       days is deleted the next time you open daily games. It stays on your device and never reaches us, and there are no
       streaks. "Forget", or turning stats off, deletes it. The storage key for these results is{' '}
-      <code>cueory-game-stats</code>.
+      <code>cueory-game-stats</code>. For sudoku, per-level solve times are saved under{' '}
+      <code>cueory-sudoku-stats</code>.
     </p>
     <p>
       Daily Sudoku remembers your play preferences, such as highlighting, checking guesses, sound and timer options,
       in this browser under <code>cueory-sudoku-settings</code>. It saves those choices, not the numbers you enter
-      on the puzzle board. Clearing this site's data removes these preferences.
+      on the puzzle board. Crossword settings are remembered under <code>cueory-crossword-settings</code>. Shared game
+      settings such as sound, contrast and motion are stored under <code>cueory-game-settings</code>. Daily hard mode
+      choices are remembered under <code>cueory-vialo-hard-mode</code> and <code>cueory-pillo-hard-mode</code>. Which games'
+      instructions you have seen are stored under <code>cueory-game-help-seen</code>. Clearing this site's data removes
+      these preferences.
     </p>
     <p>
       After you finish daily puzzles on three different days, the daily games page may suggest adding Cueory to your

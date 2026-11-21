@@ -1,4 +1,5 @@
 import { expect, test, type Locator } from '@playwright/test';
+import { markPanelsSeen } from './clock';
 
 async function expectStill(root: Locator) {
   const moving = await root.evaluate((element) => {
@@ -27,25 +28,29 @@ async function expectStill(root: Locator) {
 
 test.beforeEach(async ({ page }) => {
   await page.clock.setFixedTime(new Date('2026-11-01T15:00:00'));
+  await markPanelsSeen(page);
   await page.addInitScript(() => {
-    try { localStorage.setItem('cueory-promo-seen', String(Date.now())); } catch { /* optional storage */ }
+    try { localStorage.setItem('cueory-promo-seen', String(Date.now())); localStorage.setItem('cueory-signup-popup-seen', String(Date.now())); } catch { /* optional storage */ }
   });
 });
 
 for (const colorScheme of ['light', 'dark'] as const) {
   test(`pillo, crossword and sudoku remain still during input in ${colorScheme}`, async ({ page }) => {
     await page.emulateMedia({ reducedMotion: 'reduce', colorScheme });
-    await page.goto('/play');
+    // Each game is on its own page (2026-11-17).
+    await page.goto('/play/pillo');
     const pillo = page.getByTestId('pulse');
     await pillo.getByLabel('your guess', { exact: true }).fill('a');
     await expect(pillo.locator('.pillo-typed')).toHaveCount(1);
     await expectStill(pillo);
+    await page.goto('/play/crossword');
     const crossword = page.getByTestId('cueword');
-    const square = crossword.getByRole('button', { name: /^row 1, column 2,/ });
+    const square = crossword.getByRole('button', { name: /^(?:\d+, )?row 1, column 2,/ });
     await square.click();
     await page.keyboard.type('a');
     await expect(square).toContainText(/a/i);
     await expectStill(crossword);
+    await page.goto('/play/sudoku');
     const sudoku = page.getByTestId('sudoku');
     const empty = sudoku.locator('[role="gridcell"][data-given="false"]').first();
     await empty.click();
@@ -63,7 +68,10 @@ for (const colorScheme of ['light', 'dark'] as const) {
         return original.apply(this, args);
       };
     });
-    await page.goto('/play');
+    // The older word search sample (sample-06), whose wrong pick takes two taps.
+    await page.clock.setFixedTime(new Date('2026-11-06T15:00:00'));
+    await markPanelsSeen(page);
+    await page.goto('/play/word-path');
     const game = page.getByTestId('suture');
     await game.locator('[data-cell="0,0"]').click();
     await game.locator('[data-cell="0,2"]').click();
@@ -86,7 +94,10 @@ for (const colorScheme of ['light', 'dark'] as const) {
         return animation;
       };
     });
-    await page.goto('/play');
+    // The older word search sample (sample-06), whose wrong pick takes two taps.
+    await page.clock.setFixedTime(new Date('2026-11-06T15:00:00'));
+    await markPanelsSeen(page);
+    await page.goto('/play/word-path');
     const game = page.getByTestId('suture');
     const board = game.locator('.wordpath-board');
     await game.locator('[data-cell="0,0"]').click();
@@ -122,6 +133,7 @@ for (const colorScheme of ['light', 'dark'] as const) {
   test(`stat keeps readable time without a moving transition in ${colorScheme}`, async ({ page }) => {
     await page.emulateMedia({ reducedMotion: 'reduce', colorScheme });
     await page.clock.install({ time: new Date('2026-11-01T15:00:00') });
+    await markPanelsSeen(page);
     await page.goto('/play/stat');
     await page.getByTestId('stat-start').click();
     await expect(page.getByTestId('stat-progress')).toHaveText('question 1 of 15');

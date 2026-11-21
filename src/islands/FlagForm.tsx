@@ -1,5 +1,6 @@
-import { useEffect, useId, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { site } from '../config/site';
+import { flagMailto } from '../scripts/footer';
 import type { SendResult } from './flagsend';
 import { charactersLeft, checkReport, PATIENT_INFO_WARNING, REASONS, reasonInWords, type FlagProblem, type FlagReport, type Reason } from './flag';
 
@@ -32,14 +33,14 @@ export default function FlagForm(props: Props) {
 }
 
 
-/** A signed-out student can still report a problem by email while accounts are being set up. */
-export function SignedOutReportHelp() {
-  return <div>
+/** A signed-out student can still report a problem by email while accounts are being set up. The email names this page. */
+export function SignedOutReportHelp({ page = '/' }: { page?: string }) {
+  return <div className="wrap-anywhere">
     <p className="text-ink">
-    a free account is needed to send a report. you can email us at{' '}
-    <a href={`mailto:${site.contactEmail}`} className="underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2">
+    email us at{' '}
+    <a href={flagMailto(site.contactEmail, page)} className="underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2">
       {site.contactEmail}
-    </a> instead.
+    </a> and we'll read it.
     </p>
     <p className="mt-2 text-sm text-ink" data-testid="flag-patient-warning">{PATIENT_INFO_WARNING}</p>
   </div>;
@@ -68,7 +69,31 @@ function ReportForm({ page, itemId, itemVersionId, signedIn, send, onOpen, varia
     if (field) (field === 'reason' ? firstReason.current : field === 'comment' ? commentBox.current : context.current)?.focus();
   }, [problems]);
 
-  const close = () => { isOpen.current = false; setOpen(false); trigger.current?.focus(); };
+  const opener = useRef<HTMLElement | null>(null);
+  const show = useCallback((source: HTMLElement) => {
+    opener.current = source;
+    if (isOpen.current) {
+      panel.current?.focus();
+      return;
+    }
+    setAnnouncement(''); setProblems([]); isOpen.current = true; setOpen(true); onOpen?.();
+  }, [onOpen]);
+  useEffect(() => {
+    if (!icon) return;
+    const openFromGame = (event: MouseEvent) => {
+      if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+      const link = event.target instanceof Element ? event.target.closest<HTMLAnchorElement>('a[data-game-flag]') : null;
+      if (!link) return;
+      event.preventDefault();
+      show(link);
+    };
+    document.addEventListener('click', openFromGame);
+    return () => document.removeEventListener('click', openFromGame);
+  }, [icon, show]);
+  const close = () => {
+    isOpen.current = false; setOpen(false);
+    (opener.current?.isConnected ? opener.current : trigger.current)?.focus();
+  };
   const error = (field: FlagProblem['field']) => problems.find(problem => problem.field === field);
   const errorId = (field: FlagProblem['field']) => `${id}-${field}-error`;
   const problemText = (field: FlagProblem['field']) => error(field) && <p id={errorId(field)} className="mt-2 text-sm text-ink">{error(field)!.message}</p>;
@@ -94,7 +119,7 @@ function ReportForm({ page, itemId, itemVersionId, signedIn, send, onOpen, varia
     <button ref={trigger} type="button" aria-expanded={open} aria-controls={panelId}
       className={icon ? 'inline-flex size-12 items-center justify-center rounded-pill text-ink hover:bg-surface' : control}
       aria-label={icon ? 'flag or comment' : undefined}
-      onClick={() => { if (open) close(); else { setAnnouncement(''); setProblems([]); isOpen.current = true; setOpen(true); onOpen?.(); } }}>
+      onClick={event => open ? close() : show(event.currentTarget)}>
       {icon
         ? <svg viewBox="0 0 24 24" className="size-6" aria-hidden="true" focusable="false">
             <path d="M5 21V4M5 4h12l-3 4.5 3 4.5H5" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
@@ -103,10 +128,10 @@ function ReportForm({ page, itemId, itemVersionId, signedIn, send, onOpen, varia
     </button>
     {open && <div ref={panel} id={panelId} tabIndex={-1}
       className={icon
-        ? 'absolute bottom-full left-0 z-10 mb-2 max-h-96 w-flag-panel overflow-y-auto rounded-md border border-line bg-page p-4 shadow-lift'
+        ? 'absolute bottom-full left-0 z-10 mb-2 max-h-(--height-flag-panel) w-flag-panel overflow-y-auto wrap-anywhere rounded-md border border-line bg-page p-4 shadow-lift'
         : 'mt-3 rounded-md border border-line bg-page p-4'}
       onKeyDown={event => { if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); close(); } }}>
-      {signedIn === null ? <p className="text-ink">checking your account…</p> : !signedIn ? <SignedOutReportHelp /> : <form noValidate onSubmit={event => { event.preventDefault(); void submit(); }}>
+      {signedIn === null ? <p className="text-ink">checking your account…</p> : !signedIn ? <SignedOutReportHelp page={page} /> : <form noValidate onSubmit={event => { event.preventDefault(); void submit(); }}>
         <fieldset disabled={pending} aria-describedby={error('reason') ? errorId('reason') : undefined}>
           <legend className="font-medium">what's wrong?</legend>
           <div className="mt-2 grid gap-2">

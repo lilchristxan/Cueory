@@ -1,12 +1,14 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
+import { visibleFooterLinks } from '../../src/config/legalfooter';
+import { footerLinks } from '../../src/config/site';
 
 // The welcome promo takes focus after 5 seconds. Its own spec tests that behavior.
 // Keep this page-specific footer and accessibility test independent of the promo timer.
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
     try {
-      localStorage.setItem('cueory-promo-seen', String(Date.now()));
+      localStorage.setItem('cueory-promo-seen', String(Date.now())); localStorage.setItem('cueory-signup-popup-seen', String(Date.now()));
     } catch {
       // With storage blocked, the welcome promo does not appear.
     }
@@ -49,6 +51,13 @@ for (const viewport of viewports) {
         { name: 'support cueory', href: '/support' },
       ]) {
         await expect(footer.getByRole('link', { name: link.name, exact: true })).toHaveAttribute('href', link.href);
+      }
+      // #747: each legal link shows once its page is approved (same rule as the footer).
+      const shown = new Set(visibleFooterLinks(footerLinks).map((link) => link.href));
+      for (const [name, href] of [['terms', '/terms'], ['disclaimer', '/disclaimer']] as const) {
+        const link = footer.getByRole('link', { name, exact: true });
+        if (shown.has(href)) await expect(link).toHaveAttribute('href', href);
+        else await expect(link).toHaveCount(0);
       }
 
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);

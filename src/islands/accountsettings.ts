@@ -11,7 +11,8 @@ import { afterDeletion, confirmState, deletionSummary, SESSION_KEYS_AFTER_DELETI
 import { checkDisplayName } from './displayname';
 import { exportCsvBlobs, exportJsonBlob, type ExportData } from './exportdata';
 import { fromSupabase, loadExport, type ExportReader, type SupabaseExportClient } from './exportload';
-import { loadStats } from './gameresults';
+import { loadStats, STATS_STORAGE_KEY, SUDOKU_STATS_STORAGE_KEY } from './gameresults';
+import { loadSudokuStats } from './sudokustats';
 import { DELETE_IDENTITY, studentMessage } from './rpcerrors';
 import { AUTH_STORAGE_KEY, sessionCheckFrom, type SessionReader, type SessionState } from './supabaseclient';
 import { migrateLegacyStars } from '../scripts/progress';
@@ -221,6 +222,10 @@ export async function gatherExport(reader: ExportReader, { email, signInDetails,
   // The same reading /progress uses: older per-deck stars move into the record first, so the file has all of it.
   const progress = migrateLegacyStars(storage);
   const stats = loadStats(storage, today);
+  const sudoku = loadSudokuStats(storage, today);
+  const stored = (key: string): boolean => {
+    try { return storage?.getItem(key) != null; } catch { return false; }
+  };
   return {
     ok: true,
     data: {
@@ -228,7 +233,9 @@ export async function gatherExport(reader: ExportReader, { email, signInDetails,
       profile: { ...loaded.data.profile, email: email || null },
       signInDetails: detailRows(signInDetails),
       progress,
-      ...(stats.on ? { gameStats: stats.stats } : {}),
+      // Stats are always kept (2026-11-17); the file lists them when this browser holds a record of them.
+      ...(stats.on && stored(STATS_STORAGE_KEY) ? { gameStats: stats.stats } : {}),
+      ...(sudoku.on && stored(SUDOKU_STATS_STORAGE_KEY) ? { sudokuStats: sudoku.solves } : {}),
     },
   };
 }
@@ -251,13 +258,16 @@ export type DownloadResult =
   | { ok: false; message: string };
 
 /** The JSON file and the spreadsheet files, built from the pages without joining a long study history into one string. */
-export function downloadFiles(data: ExportData, today: string): DownloadResult {
+export function downloadFiles(data: ExportData, today: string, readmeText?: string): DownloadResult {
   try {
     const name = `cueory-data-${today}`;
+    // README.txt goes first with the spreadsheet files: one plain line for every file in the download.
+    const readme = readmeText === undefined ? []
+      : [{ fileName: `${name}-README.txt`, blob: new Blob([readmeText], { type: 'text/plain;charset=utf-8' }) }];
     return {
       ok: true,
       json: { fileName: `${name}.json`, blob: exportJsonBlob(data, today) },
-      csv: exportCsvBlobs(data).map(({ fileName, blob }) => ({ fileName: `${name}-${fileName}`, blob })),
+      csv: [...readme, ...exportCsvBlobs(data).map(({ fileName, blob }) => ({ fileName: `${name}-${fileName}`, blob }))],
     };
   } catch {
     return { ok: false, message: accountMessage('export-failed') };
@@ -267,18 +277,80 @@ export function downloadFiles(data: ExportData, today: string): DownloadResult {
 /** Loads, adds this browser's data and builds the files. Any failure offers no file at all. */
 export async function prepareDownload(reader: ExportReader, options: GatherOptions): Promise<DownloadResult> {
   const gathered = await gatherExport(reader, options);
-  return gathered.ok ? downloadFiles(gathered.data, options.today) : gathered;
+  if (!gathered.ok) return gathered;
+  // The README's text loads only when a download is made, so it adds nothing to the page's first load. It explains
+  // the files; if it can't load (offline), the data files still download without it.
+  const readme = await import('./exportreadme').then(m => m.exportReadmeText(options.today), () => undefined);
+  return downloadFiles(gathered.data, options.today, readme);
 }
 
-/** Like prepareDownload, but for the account the page was opened for: no file if the signed-in account differs before or after reading. */
+/**
+ * Like prepareDownload, but for the account the page was opened for: no file if the signed-in account differs before
+ * or after reading, or if `signal` aborted at any point meanwhile (#757: A→B→A while reading still matches both
+ * checks, but the reads in between ran as B).
+ */
 export async function prepareDownloadFor(
-  adapters: Pick<AccountAdapters, 'session' | 'reader'>, userId: string, options: GatherOptions,
+  adapters: Pick<AccountAdapters, 'session' | 'reader'>, userId: string, options: GatherOptions, signal?: AbortSignal,
 ): Promise<DownloadResult | { ok: false; message: string; changed: true }> {
   const changed = { ok: false as const, message: accountMessage('identity-changed'), changed: true as const };
-  if (!(await sameIdentity(adapters, userId))) return changed;
+  if (signal?.aborted || !(await sameIdentity(adapters, userId))) return changed;
   const files = await prepareDownload(adapters.reader, options);
+  if (signal?.aborted) return changed;
   if (files.ok && !(await sameIdentity(adapters, userId))) return changed;
-  return files;
+  return signal?.aborted ? changed : files;
+}
+
+/**
+ * Download my data, for one account and one open section (#757). From the moment the section opens, any sign-in
+ * change to another account (or signed out), even A→B→A, ends it for good: `signal` aborts and `state()` says
+ * 'changed'. Closing the section (`close()`, when it unmounts) ends it as 'closed'. No file is offered unless the
+ * state is 'open' at the instant of offering, the same permanent-cancel pattern as account deletion.
+ */
+export interface ExportWatch {
+  state(): 'open' | 'changed' | 'closed';
+  readonly signal: AbortSignal;
+  close(): void;
+}
+
+export function watchExport(
+  adapters: Pick<AccountAdapters, 'onIdentityChange'>, userId: string, onChanged: () => void = () => {},
+): ExportWatch {
+  const controller = new AbortController();
+  let state: 'open' | 'changed' | 'closed' = 'open';
+  const stop = adapters.onIdentityChange?.(next => {
+    // The same account again (a token refresh, another tab's sign-in event) changes nothing.
+    if (next === userId || state !== 'open') return;
+    state = 'changed';
+    controller.abort();
+    onChanged();
+  });
+  return {
+    state: () => state,
+    signal: controller.signal,
+    close() {
+      if (state === 'open') state = 'closed';
+      controller.abort();
+      stop?.();
+    },
+  };
+}
+
+/** Offers the file only while the watch is open. True when it was offered. */
+export function offerIfOpen(file: DownloadFile, watch: Pick<ExportWatch, 'state'>, dom: DownloadDom): boolean {
+  if (watch.state() !== 'open') return false;
+  offerFile(file, dom);
+  return true;
+}
+
+/**
+ * Offers the spreadsheet files one at a time, `gapMs` apart (browsers can drop downloads started together). Each one
+ * checks the watch when its turn comes, so a sign-in change or a closed section stops the rest.
+ */
+export function offerSpreadsheets(files: readonly DownloadFile[], watch: Pick<ExportWatch, 'state'>, dom: DownloadDom, gapMs = 300): void {
+  files.forEach((file, index) => {
+    if (index === 0) offerIfOpen(file, watch, dom);
+    else dom.later(() => { offerIfOpen(file, watch, dom); }, index * gapMs);
+  });
 }
 
 export interface DownloadDom {

@@ -1,9 +1,37 @@
 ---
 import Layout from '../../layouts/Layout.astro';
-import GameShareLanding from '../../components/GameShareLanding.astro';
+import GamePage from '../../components/GamePage.astro';
+import CuewordToday from '../../islands/CuewordToday';
 import { dailyGames } from '../../config/games';
+import { crosswordSamples } from '../../config/gamesamples';
+import { crosswordShown, pageBuildEnv } from '../../config/crossword';
+
 const game = dailyGames.find((item) => item.id === 'cueword')!;
+// While the crossword is closed (site.ts) the live build never loads the sample puzzles at all.
+const shown = crosswordShown(pageBuildEnv());
+const samples = shown ? await crosswordSamples() : [];
 ---
-<Layout title={game.name} description={game.line} socialImage="/share/games-scene.png" promo={false}>
-  <GameShareLanding name={game.name} line={game.line} playHref="/play#crossword-heading" />
+{shown ? (
+<Layout title={game.name} description={game.line} socialImage="/share/games-scene.png">
+<GamePage game={game} wide>
+  <h1 slot="title" id="crossword-heading" class="display mt-4 text-center text-title wrap-anywhere sm:text-title-lg">{game.name}</h1>
+  {/* data-game-print and crossword-print-host: the crossword's print rules (crossword.css) print only the host. */}
+  <section class="mt-6" aria-labelledby="crossword-heading" data-game-print="crossword">
+    <div class="crossword-print-host">
+      <CuewordToday client:only="react" puzzles={samples} name={game.name} />
+      <noscript><p>{game.name} needs JavaScript.</p></noscript>
+    </div>
+  </section>
+</GamePage>
 </Layout>
+) : (
+<Layout title={game.name} description="the small daily crossword is coming soon. pick another daily game while you wait." socialImage="/share/games-scene.png" promo={false} noindex>
+  <article class="veil mx-auto mt-6 max-w-prose p-6 sm:mt-10 sm:p-10">
+    <h1 class="display text-center text-title wrap-anywhere sm:text-title-lg">{game.name}</h1>
+    <p class="mt-6 text-center" data-testid="crossword-soon">{game.name} is coming soon.</p>
+    <a href="/play" class="mx-auto mt-10 flex min-h-(--tap-min) w-fit items-center rounded-pill border border-control px-5 py-2.5 text-ink">
+      back to daily games
+    </a>
+  </article>
+</Layout>
+)}

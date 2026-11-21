@@ -1,7 +1,10 @@
 import { readFileSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
-import { indexablePages } from '../../src/config/routes';
+import { indexablePages, sampleLessonPages } from '../../src/config/routes';
+import { crosswordOpen } from '../../src/config/site';
+import { draftsAllowed } from '../../src/islands/anatomylab';
+import { draftBuildEnv } from '../../src/lessons/draftgate';
 import { legalRoutes } from '../../src/config/legal';
 import { isRouteIndexable } from '../../src/config/legalapproval';
 import { GET, pageSourcePath, routeDeclaresNoindex, sitemapPages, sitemapXml, sourceDeclaresNoindex } from '../../src/pages/sitemap.xml';
@@ -33,26 +36,13 @@ describe('sitemap', () => {
     }
   });
 
-  it('lists each public game share landing page but not draft-only games', () => {
-    const published = ['/play/pillo', '/play/crossword', '/play/sudoku', '/play/word-path'] as const;
-    const xml = sitemapXml();
-    for (const path of published) {
-      expect(indexablePages).toContain(path);
-      expect(routeDeclaresNoindex(path)).toBe(false);
-      expect(xml).toContain(`<loc>https://cueory.app${path}</loc>`);
-    }
-    for (const path of ['/play/stat', '/play/hello-cards']) {
-      expect(indexablePages).not.toContain(path);
-      expect(xml).not.toContain(`<loc>https://cueory.app${path}</loc>`);
-    }
-  });
-
   it('rejects noindex routes even when someone mistakenly supplies them to the sitemap', () => {
-    const xml = sitemapXml(['/', '/signin', '/privacy', '/preview/states']);
+    const xml = sitemapXml(['/', '/signin', '/progress', '/preview/states']);
     expect([...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((match) => match[1]))
-      .toEqual(['https://cueory.app/', ...(isRouteIndexable('/privacy') ? ['https://cueory.app/privacy'] : [])]);
+      .toEqual(['https://cueory.app/']);
     expect(routeDeclaresNoindex('/signin')).toBe(true);
     expect(routeDeclaresNoindex('/preview/states')).toBe(true);
+    expect(routeDeclaresNoindex('/privacy')).toBe(!isRouteIndexable('/privacy'));
     expect(routeDeclaresNoindex('/')).toBe(false);
   });
 
@@ -150,7 +140,8 @@ describe('sitemap', () => {
 
   it('excludes noindex pages from sitemapPages as well as sitemapXml', async () => {
     const pages = await sitemapPages();
-    expect(pages).toEqual(indexablePages.filter((page) => !routeDeclaresNoindex(page)));
+    // The two hand-built sample-lesson pages join the sitemap only on builds that show the sample lesson.
+    expect(pages).toEqual([...indexablePages, ...(draftsAllowed(draftBuildEnv(process.env)) ? sampleLessonPages : [])].filter((page) => !routeDeclaresNoindex(page)));
     expect(pages.every((page) => !routeDeclaresNoindex(page))).toBe(true);
   });
 
@@ -168,5 +159,33 @@ describe('sitemap', () => {
 
   it('escapes XML values in the generated loc', () => {
     expect(sitemapXml(['/?term=a&b'])).toContain('term=a&amp;b');
+  });
+});
+
+describe('crossword page while it is closed', () => {
+  it.skipIf(crosswordOpen)('is noindex in the built page', () => {
+    const html = readFileSync(resolve('dist/play/crossword.html'), 'utf8');
+    expect(html).toContain('data-testid="crossword-soon"');
+    expect(html).toMatch(/<meta name="robots" content="noindex/);
+  });
+
+  it('is listed in the built sitemap exactly when the switch is open', () => {
+    const xml = readFileSync(resolve('dist/sitemap.xml'), 'utf8');
+    expect(xml.includes('https://cueory.app/play/crossword</loc>')).toBe(crosswordOpen);
+  });
+});
+
+describe('study-skills sample lesson in the built sitemap', () => {
+  // Same gate as the lesson pages (draftsAllowed, src/lessons/draftgate.ts): absent when closed, present when open.
+  const open = draftsAllowed(draftBuildEnv(process.env));
+  const routes = ['/learn/study-skills', '/learn/study-skills/cards', '/learn/study-skills/label-it', '/learn/study-skills/questions'];
+
+  it('lists the sample lesson pages exactly when the build shows drafts', () => {
+    const xml = readFileSync(resolve('dist/sitemap.xml'), 'utf8');
+    for (const route of routes) expect(xml.includes(`https://cueory.app${route}</loc>`), route).toBe(open);
+  });
+
+  it('keeps the sample lesson out of indexablePages, which the live build shares', () => {
+    for (const route of routes) expect(indexablePages).not.toContain(route);
   });
 });

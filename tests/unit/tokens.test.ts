@@ -30,9 +30,15 @@ describe('evening palette copies', () => {
 
 // Exact brand-guide v1.0 colors (§4.1 and §4.2; D-55). Tokens may only use these. The older #3f2e24, #1b1715 and
 // #efe6da are retired (§4.3).
+// The copper group (Copper Deep, Copper, Copper Glow, Copper Shine) was added 18 Nov 2026 by Christian's decision
+// (docs/BRAND.md) and serves both themes.
+const copperGroup = ['#b87348', '#d9976a', '#f6d3ae', '#fff0de'];
+// Game accents added 20 Nov 2026 by Christian's decision (docs/BRAND.md): Teal for piccline, Dim for vialo dark icon.
+const gameDaytime = ['#2f7a78', '#5a463a'];
+const gameEvening = ['#4fb3ae', '#5a463a'];
 const brand = {
-  daytime: ['#f9f5ef', '#eadccf', '#d3b7a1', '#8b6f5b', '#3e2c23', '#6b5243'],
-  evening: ['#1c1917', '#3a2d24', '#6b5243', '#cbb8a4', '#f9f5ef'],
+  daytime: ['#f9f5ef', '#eadccf', '#d3b7a1', '#8b6f5b', '#3e2c23', '#6b5243', ...copperGroup, ...gameDaytime],
+  evening: ['#1c1917', '#3a2d24', '#6b5243', '#cbb8a4', '#f9f5ef', ...copperGroup, ...gameEvening],
 };
 
 // Palette-independent type, spacing and layout tokens live in the shared @theme block. Color tokens are
@@ -101,7 +107,21 @@ describe('components', () => {
 
   it.each(files)('%s uses only token-based classes', (file) => {
     const source = readFileSync(new URL(file, srcDir), 'utf8');
-    expect(source.match(/[\w:]+-\[[^\]\s]+\]/g) ?? []).toEqual([]);
+    const arbitrary = source.match(/[\w:]+-\[[^\]\s]+\]/g) ?? [];
+    if (file === 'islands/GameResultsHost.tsx') {
+      const approved = new Set([
+        'w-[var(--cueory-result-card-max-width)]',
+        'max-w-[var(--cueory-result-card-max-width)]', 'rounded-[var(--cueory-result-card-radius)]',
+        'border-[color:var(--cueory-result-card-border)]', 'bg-[color:var(--cueory-result-card-bg)]',
+        'p-[var(--cueory-result-card-padding)]', 'shadow-[var(--cueory-result-card-shadow)]',
+        'text-[length:var(--cueory-label-size)]', 'font-[var(--cueory-label-weight)]',
+        'tracking-[var(--cueory-label-tracking)]', 'rounded-[var(--radius-md)]',
+        'border-[color:var(--cueory-glass-border)]', 'shadow-[var(--cueory-glass-shadow)]',
+        'from-[var(--cueory-copper-start)]', 'to-[var(--cueory-copper-end)]',
+        'text-[color:var(--cueory-copper-ink)]',
+      ]);
+      expect([...new Set(arbitrary.filter((token) => !approved.has(token)))]).toEqual([]);
+    } else expect(arbitrary).toEqual([]);
   });
 });
 

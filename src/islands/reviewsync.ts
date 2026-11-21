@@ -18,6 +18,12 @@
  * Each sync belongs to the account that was signed in when it started (Task 302). Before every request it reads the
  * browser's session again, as studyrecorder.ts does; if nobody is signed in or someone else is, it drops every row
  * still waiting and stops for good, so one student's reviews are never written under another student's sign-in.
+ *
+ * A point-in-time check can miss A→B→A between two requests (audit #741 P2), so each sync also listens for sign-in
+ * changes from the moment its rows start loading: any change to another account, or signing out, is permanent. It
+ * fails a load still in progress (a paged load could otherwise mix A's and B's rows) and drops every row still
+ * waiting, even after A signs back in. Every update also names the owner's id with the question's, so a late update
+ * can only ever match the owner's own row.
  */
 import { nextReview, type Review } from './review';
 import type { ReviewStateRow } from './reviewqueue';
@@ -38,10 +44,16 @@ interface Reply { data?: unknown; error?: unknown }
  * session (to check whose rows these are before each write).
  */
 export interface ReviewStateClient extends SessionReader {
+  auth: SessionReader['auth'] & {
+    /** supabase-js `auth.onAuthStateChange`; fires on sign-in changes, including from other tabs. */
+    onAuthStateChange?(callback: (event: string, session: { user?: { id?: unknown } | null } | null) => void): {
+      data: { subscription: { unsubscribe(): void } };
+    };
+  };
   from(table: 'review_state'): {
     select(columns: typeof COLUMNS): ReadQuery;
     update(values: ReviewStateUpdate): {
-      eq(column: 'item_id', value: string): { select(columns: 'item_id'): PromiseLike<Reply> };
+      match(filter: { item_id: string; user_id: string }): { select(columns: 'item_id'): PromiseLike<Reply> };
     };
     insert(values: ReviewStateInsert): PromiseLike<Reply>;
   };
@@ -117,19 +129,24 @@ function parseRow(value: unknown): ReviewStateRow | undefined {
  * or repeat a row). Any bad reply, bad row, duplicate or out-of-order page fails the whole load: half a list would let
  * a review overwrite progress the student already has.
  */
-export async function loadReviewState(client: ReviewStateClient):
+export async function loadReviewState(client: ReviewStateClient, stillOwner?: () => Promise<boolean>):
 Promise<{ ok: true; rows: ReviewStateRow[] } | { ok: false; message: string }> {
   const rows: ReviewStateRow[] = [];
   let cursor: string | undefined;
   try {
     for (;;) {
+      // With an owner, every page is read only while the owner is signed in; any change fails the whole load.
+      if (stillOwner && !(await stillOwner())) return { ok: false, message: MESSAGES.load };
       let query = client.from('review_state').select(COLUMNS);
       if (cursor !== undefined) query = query.gt('item_id', cursor);
       const reply = await query.order('item_id', { ascending: true }).limit(PAGE_SIZE);
       if (!reply || reply.error != null || !Array.isArray(reply.data) || reply.data.length > PAGE_SIZE) {
         return { ok: false, message: MESSAGES.load };
       }
-      if (reply.data.length === 0) return { ok: true, rows };
+      if (reply.data.length === 0) {
+        if (stillOwner && !(await stillOwner())) return { ok: false, message: MESSAGES.load };
+        return { ok: true, rows };
+      }
       for (const value of reply.data) {
         const row = parseRow(value);
         // Strictly ascending also rules out duplicates and a page that ignored the cursor.
@@ -202,6 +219,37 @@ class OwnerChanged extends Error {
   constructor() { super('the signed-in account changed'); }
 }
 
+/**
+ * Listens for sign-in changes for one owner. `lost()` turns true for good on any change to another account or to
+ * signed out (A→B→A stays lost). Without a listener (an older client or a test stand-in) it never turns true by
+ * itself, and the session check before each request is the guard.
+ */
+export interface OwnerWatch {
+  lost(): boolean;
+  stop(): void;
+}
+
+export function watchOwner(client: ReviewStateClient, ownerId: string, onLost: () => void = () => {}): OwnerWatch {
+  let lost = false;
+  let unsubscribe = () => {};
+  const listen = client.auth.onAuthStateChange;
+  if (typeof listen === 'function') {
+    try {
+      // Called on its object: supabase-js relies on the receiver.
+      const { data } = listen.call(client.auth, (_event, session) => {
+        const id = session?.user?.id;
+        if (lost || (typeof id === 'string' && id === ownerId)) return;
+        lost = true;
+        onLost();
+      });
+      unsubscribe = () => data.subscription.unsubscribe();
+    } catch {
+      // No listener: the session check before each request still guards every write.
+    }
+  }
+  return { lost: () => lost, stop: () => unsubscribe() };
+}
+
 /** True only while the owner is the one signed in on this browser. */
 async function ownerSignedIn(client: ReviewStateClient, ownerId: string): Promise<boolean> {
   const session = await sessionStateFrom(client);
@@ -216,22 +264,25 @@ function changed(reply: Reply | undefined): number {
 
 type Guard = () => Promise<void>;
 
-async function update(client: ReviewStateClient, row: ReviewStateRow, guard: Guard): Promise<number> {
+async function update(client: ReviewStateClient, ownerId: string, row: ReviewStateRow, guard: Guard): Promise<number> {
   await guard();
   const values: ReviewStateUpdate = { level: row.level, last_reviewed: row.last_reviewed, next_review: row.next_review };
-  return changed(await client.from('review_state').update(values).eq('item_id', row.item_id).select('item_id'));
+  return changed(await client.from('review_state').update(values).match({ item_id: row.item_id, user_id: ownerId }).select('item_id'));
 }
 
-/** Update the student's row, or add it. If another tab added it in between (23505), update once more. */
-async function writeRow(client: ReviewStateClient, row: ReviewStateRow, guard: Guard): Promise<void> {
-  if (await update(client, row, guard) === 1) return;
+/**
+ * Update the student's row, or add it. If another tab added it in between (23505), update once more. An insert can't
+ * name the owner (the database fills in user_id from the token), so the guard runs right before it.
+ */
+async function writeRow(client: ReviewStateClient, ownerId: string, row: ReviewStateRow, guard: Guard): Promise<void> {
+  if (await update(client, ownerId, row, guard) === 1) return;
   await guard();
   const values: ReviewStateInsert = { item_id: row.item_id, level: row.level, last_reviewed: row.last_reviewed, next_review: row.next_review };
   const reply = await client.from('review_state').insert(values);
   if (!reply) throw new WriteError(undefined);
   if (reply.error == null) return;
   const code = (reply.error as { code?: unknown }).code;
-  if (code === '23505' && await update(client, row, guard) === 1) return;
+  if (code === '23505' && await update(client, ownerId, row, guard) === 1) return;
   throw new WriteError(reply.error);
 }
 
@@ -240,6 +291,8 @@ export interface ReviewSync {
   record(itemId: string, history: readonly Review[], today: string, examDay?: string): Promise<SyncOutcome>;
   /** Try every row that hasn't been saved yet again. */
   retry(): Promise<SyncOutcome>;
+  /** Stops listening for sign-in changes (when the review closes). Nothing is sent afterwards. */
+  close?(): void;
 }
 
 /**
@@ -247,19 +300,21 @@ export interface ReviewSync {
  * step can never land after a newer one. Questions are independent: a row that is refused (for example a question
  * unpublished before its first save) stays waiting and is reported, and every other row is still sent.
  */
-export function createReviewSync(client: ReviewStateClient, ownerId: string): ReviewSync {
+export function createReviewSync(client: ReviewStateClient, ownerId: string, watch?: OwnerWatch): ReviewSync {
   if (typeof ownerId !== 'string' || ownerId === '') throw new Error('A review sync needs the signed-in account id.');
   const waiting = new Map<string, ReviewStateRow>();
   let queue: Promise<unknown> = Promise.resolve();
   let dropped = false;
   const signedOut: SyncOutcome = { ok: false, message: MESSAGES.signedOut };
-  const guard: Guard = async () => {
-    if (dropped || !(await ownerSignedIn(client, ownerId))) throw new OwnerChanged();
-  };
   const drop = (): SyncOutcome => {
     dropped = true;
     waiting.clear();
     return signedOut;
+  };
+  // The watch from the load when there is one, so a change while the rows loaded still counts.
+  const owner = watch ?? watchOwner(client, ownerId);
+  const guard: Guard = async () => {
+    if (dropped || owner.lost() || !(await ownerSignedIn(client, ownerId)) || owner.lost()) throw new OwnerChanged();
   };
 
   const flush = (): Promise<SyncOutcome> => {
@@ -269,7 +324,7 @@ export function createReviewSync(client: ReviewStateClient, ownerId: string): Re
       let message: string | undefined;
       for (const [id, row] of [...waiting]) {
         try {
-          await writeRow(client, row, guard);
+          await writeRow(client, ownerId, row, guard);
         } catch (error) {
           // Signed out, or another account: nothing waiting may be sent any more, by anyone.
           if (error instanceof OwnerChanged) return drop();
@@ -289,6 +344,7 @@ export function createReviewSync(client: ReviewStateClient, ownerId: string): Re
   return {
     record(itemId, history, today, examDay) {
       if (!isItemId(itemId)) return Promise.resolve({ ok: true });
+      if (owner.lost()) drop();
       if (dropped) return Promise.resolve(signedOut);
       let row: ReviewStateRow;
       try {
@@ -301,6 +357,10 @@ export function createReviewSync(client: ReviewStateClient, ownerId: string): Re
       return flush();
     },
     retry: flush,
+    close() {
+      owner.stop();
+      drop();
+    },
   };
 }
 
@@ -315,9 +375,19 @@ export type ReviewSyncStart =
  */
 export async function startReviewSync(client: ReviewStateClient | null, session: SessionState): Promise<ReviewSyncStart> {
   if (!client || !session.signedIn) return { mode: 'device' };
-  const loaded = await loadReviewState(client);
-  if (!loaded.ok) return { mode: 'device', message: loaded.message };
-  // The rows came back under whoever is signed in now; use them only if that is still the same student.
-  if (!(await ownerSignedIn(client, session.userId))) return { mode: 'device', message: MESSAGES.signedOut };
-  return { mode: 'account', sync: createReviewSync(client, session.userId), rows: loaded.rows };
+  const ownerId = session.userId;
+  // Listening starts before the first page, so A→B→A while the rows load is caught even if every check says A.
+  const watch = watchOwner(client, ownerId);
+  const stillOwner = async () => !watch.lost() && await ownerSignedIn(client, ownerId) && !watch.lost();
+  const loaded = await loadReviewState(client, stillOwner);
+  // The rows came back under whoever is signed in now; use them only if that is still the same student throughout.
+  if (watch.lost() || !(await ownerSignedIn(client, ownerId))) {
+    watch.stop();
+    return { mode: 'device', message: MESSAGES.signedOut };
+  }
+  if (!loaded.ok) {
+    watch.stop();
+    return { mode: 'device', message: loaded.message };
+  }
+  return { mode: 'account', sync: createReviewSync(client, ownerId, watch), rows: loaded.rows };
 }

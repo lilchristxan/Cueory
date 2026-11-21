@@ -1,13 +1,15 @@
 ---
 /**
  * "ways to study" on the home page (D-50, D-60), drawn as Christian's vials (Task 109, the prototype he approved on
- * 2026-11-01: docs/screenshots/approved-2026-11-01/vial-carousel-*). A small "ways to study" heading and the serif
- * line, then the eleven vials standing in a shallow arc on a soft pedestal, with the arrows and the dots under it. No
- * caption repeats the vial's name (Christian, 2026-11-02: no description that only restates its label).
+ * 2026-11-01: docs/screenshots/approved-2026-11-01/vial-carousel-*), restyled to HomeV2 (P6): the copy deck's serif
+ * heading "one lesson, multiple ways to study" and its line, then the vials standing side by side in a straight row on
+ * a glossy platform, with copper-rimmed arrows and the dots. No two vials overlap, and a vial that would not fit whole
+ * is hidden rather than cut off (rowPlace in src/scripts/carousel.ts). No caption repeats the vial's name (Christian,
+ * 2026-11-02: no description that only restates its label).
  *
  * Without JavaScript it still works: the vials are a row that scrolls sideways and snaps each vial to the middle, each
  * with its link (or "coming soon") under it. The script turns the row into the ring: the vial in front is the largest
- * and brightest, and the others step back on both sides, smaller, further back, a little higher and dimmer. Next
+ * and brightest, and the others stand beside it on both sides, each a little smaller and dimmer than the last. Next
  * after the last vial is the first again, and previous before the first is the last. The arrows, the arrow keys, a
  * swipe or a tap on a side vial turn it; a tap or Enter on the vial in front opens its preview. A gentle auto-advance
  * stops for good once the visitor uses it, pauses while a mouse rests on the vials or keyboard focus is inside, and
@@ -22,9 +24,14 @@
  * follows. With a mouse, the vial in front lifts a little and its glass brightens under the pointer or keyboard focus.
  */
 import { studyModes, type StudyFeatureIcon } from '../config/modes';
-import { accountHref } from '../config/site';
+import { accountHref, accountLaunch, accountsOpen } from '../config/site';
 import InfoTip from './InfoTip.astro';
 import ModeVial from './ModeVial.astro';
+import { sampleLessonShown } from '../lessons/draftgate';
+
+// The live build holds the sample lesson back: no mode links to it there (the vials say "coming soon" instead).
+const sampleShown = sampleLessonShown();
+const linkOf = (mode: (typeof studyModes)[number]) => (sampleShown ? mode.link : undefined);
 
 const count = studyModes.length;
 const first = studyModes[0]!;
@@ -53,7 +60,7 @@ const icons: Record<StudyFeatureIcon, string> = {
 
 <section
   id="ways-to-study"
-  class="modes scene scene-tint py-section scroll-mt-section"
+  class="modes modes-p6 scene scene-tint py-section scroll-mt-section"
   role="region"
   aria-labelledby="modes-heading"
   aria-roledescription="carousel"
@@ -62,8 +69,9 @@ const icons: Record<StudyFeatureIcon, string> = {
   <!-- The heading, the vials and their buttons fade in together the first time they come into view (D-62). -->
   <div data-reveal-section>
   <div class="mx-auto max-w-page px-gutter text-center">
-    <h2 id="modes-heading" class="modes-kicker">ways to study</h2>
-    <p class="display mt-2 text-title sm:text-title-lg">one lesson, eleven ways in</p>
+    <!-- HomeV2 and the copy deck: the serif heading in two lines, no eyebrow above it, and the one line under it. -->
+    <h2 id="modes-heading" class="display text-title wrap-anywhere sm:text-title-lg"><span class="block">one lesson,</span> <span class="block">multiple ways to study</span></h2>
+    <p class="mt-3 text-body text-ink-soft">pick the method that fits your brain today.</p>
   </div>
 
   <div class="vial-stage mt-8">
@@ -91,7 +99,7 @@ const icons: Record<StudyFeatureIcon, string> = {
             aria-label={`${index + 1} of ${count}`}
             data-mode-card
             data-name={mode.name}
-            data-href={mode.link?.href}
+            data-href={linkOf(mode)?.href}
           >
             <button
               type="button"
@@ -104,11 +112,11 @@ const icons: Record<StudyFeatureIcon, string> = {
               data-mode-open
             />
             <ModeVial mode={mode} summaryId={`mode-${mode.id}-summary`} />
-            {mode.link ? (
+            {linkOf(mode) ? (
               // The ring hides these links (its preview has "start …"). The hide sits in the utilities layer as a
               // variant, because global.css's components-layer rule loses to the utility `inline-flex` here.
-              <a href={mode.link.href} class="mode-card-link inline-flex min-h-11 items-center justify-center px-3 [[data-ring]_&]:hidden">
-                {mode.link.label}
+              <a href={linkOf(mode)!.href} class="mode-card-link inline-flex min-h-11 items-center justify-center px-3 [[data-ring]_&]:hidden">
+                {linkOf(mode)!.label}
               </a>
             ) : (
               <p class="mode-card-link text-sm text-ink-soft">coming soon</p>
@@ -189,7 +197,7 @@ const icons: Record<StudyFeatureIcon, string> = {
             <span data-mode-preview-try-label>start</span><span aria-hidden="true"> →</span>
           </a>
           <p class="mode-soon" data-mode-preview-soon>coming soon</p>
-          <a href={accountHref} class="text-sm text-ink-soft hover:text-ink">create your free account</a>
+          <a href={accountHref} class="text-sm text-ink-soft hover:text-ink">{accountLaunch(accountsOpen).promoJoinLabel}</a>
         </div>
         <div class="mt-7 flex gap-3">
           <button type="button" class="corner-button" aria-label="previous study mode" data-mode-preview-prev>
@@ -216,9 +224,17 @@ const icons: Record<StudyFeatureIcon, string> = {
     PREVIEW_MS,
     PREVIEW_SPLIT,
     REST_MS,
+    RING_MS,
+    SETTLE_GRACE_MS,
+    releaseAnimations,
     STEP_MS,
+    autoplayHold,
     canAutoAdvance,
+    illustrationsMayLoop,
     canEnhanceCarousel,
+    carouselState,
+    enterMatchesMouseMove,
+    type PreviewPhase,
     clipAround,
     flipFrom,
     glides,
@@ -226,9 +242,12 @@ const icons: Record<StudyFeatureIcon, string> = {
     keyTarget,
     ringOffset,
     ringPlace,
+    rowPlace,
+    ROW_GAP,
     slideAnnouncement,
     swipeTurn,
     wrap,
+    shouldClearDocumentExit,
   } from '../scripts/carousel';
   import { relabelInfoTip } from '../scripts/infotip';
   import { isCloseKey, wrapFocus } from '../scripts/menu';
@@ -279,7 +298,50 @@ const icons: Record<StudyFeatureIcon, string> = {
       hovering: false,
       focusInside: false,
       onScreen: false,
+      previewOpen: false,
     };
+
+    /*
+      One deterministic state (root[data-carousel-state], carouselState in src/scripts/carousel.ts): "settled" only
+      once no glide and no preview animation is in flight, so nothing has to guess with a fixed wait.
+    */
+    let turning = false;
+    let previewPhase: PreviewPhase = 'closed';
+    const showState = () => {
+      root.dataset.carouselState = carouselState(previewPhase, turning);
+    };
+
+    /** The finite animations and transitions still running (or about to start) on these elements and inside them. */
+    const busy = (elements: readonly Element[]) =>
+      elements
+        .flatMap((element) => element.getAnimations({ subtree: true }))
+        .filter((animation) => animation.effect?.getComputedTiming().iterations !== Infinity)
+        .filter((animation) => animation.pending || animation.playState === 'running' || animation.playState === 'paused');
+
+    /**
+     * Resolves once every one of these animations has finished or been cancelled. Any still unfinished `limit` ms from
+     * now is finished at once (SETTLE_GRACE_MS), so the carousel reaches its resting state on time even in a browser
+     * too busy to draw.
+     */
+    const settle = (animations: readonly Animation[], limit: number) =>
+      new Promise<void>((resolve) => {
+        const cap = window.setTimeout(() => {
+          for (const animation of animations) {
+            if (animation.playState === 'finished' || animation.playState === 'idle') continue;
+            try {
+              animation.finish();
+            } catch {
+              animation.cancel();
+            }
+          }
+          resolve();
+        }, limit);
+        void Promise.allSettled(animations.map((animation) => animation.finished)).then(() => {
+          window.clearTimeout(cap);
+          resolve();
+        });
+      });
+
     /** The vial in front. */
     let active = 0;
     /** The card last written to the live region (none yet). */
@@ -295,22 +357,69 @@ const icons: Record<StudyFeatureIcon, string> = {
      * Puts every vial in its place on the arc around the one in front. The styles draw each place from the numbers set
      * here (global.css); a vial going round the back, or the first placing, switches at once instead of gliding.
      */
+    const prevArrow = root.querySelector<HTMLElement>('[data-modes-prev]');
+    /**
+     * How many vial widths the row has from its middle to the nearest thing it must not cross: the stage's edge, or
+     * the arrow beside the vials on wider screens, less one gap. A vial that would pass it is hidden, never cut off.
+     */
+    const rowRoom = () => {
+      const width = cards[active]!.offsetWidth;
+      if (!width) return Number.POSITIVE_INFINITY;
+      const stage = track.getBoundingClientRect();
+      const middle = stage.left + stage.width / 2;
+      let reach = stage.width / 2;
+      if (prevArrow && getComputedStyle(prevArrow).position === 'absolute') {
+        reach = Math.min(reach, middle - prevArrow.getBoundingClientRect().right);
+      }
+      return (reach - ROW_GAP * width) / width;
+    };
+
+    /** How much room the row had when it was last laid out (rowRoom), so a resize that changes nothing is skipped. */
+    let laidOutIn = Number.NaN;
+
+    /**
+     * After every placing the ring counts as turning until the vials' and dots' transitions have all finished, then as
+     * settled. A newer placing takes over.
+     */
+    let placing = 0;
+    const settleRing = () => {
+      const round = ++placing;
+      turning = true;
+      showState();
+      const check = () => {
+        if (round !== placing) return;
+        const gliding = busy([...cards, ...dots]);
+        if (gliding.length === 0) {
+          turning = false;
+          showState();
+          return;
+        }
+        void settle(gliding, RING_MS + SETTLE_GRACE_MS).then(check);
+      };
+      // getAnimations() brings the styles up to date first, so the transitions this placing starts are already there.
+      queueMicrotask(check);
+    };
+
     const place = () => {
+      const room = rowRoom();
+      laidOutIn = room;
       cards.forEach((card, index) => {
         const offset = ringOffset(index, active, cards.length);
         const spot = ringPlace(offset);
+        // HomeV2's straight row (P6): the ring's sizes and light, but side by side with a gap, and only what fits.
+        const row = rowPlace(offset, room);
         const before = offsets[index]!;
         offsets[index] = offset;
         card.toggleAttribute('data-jump', Number.isNaN(before) || !glides(before, offset));
         card.dataset.offset = String(offset);
-        card.style.setProperty('--ring-shift', String(spot.shift));
+        card.style.setProperty('--ring-shift', String(row.shift));
         card.style.setProperty('--ring-rise', String(spot.rise));
         card.style.setProperty('--ring-depth', String(spot.depth));
         card.style.setProperty('--ring-scale', String(spot.scale));
         card.style.setProperty('--ring-bright', String(spot.bright));
         card.style.setProperty('--ring-saturate', String(spot.saturate));
         card.style.setProperty('--ring-layer', String(spot.layer));
-        card.toggleAttribute('data-far', !spot.shown);
+        card.toggleAttribute('data-far', !row.shown);
         card.toggleAttribute('data-active', offset === 0);
         // Only the vial in front is in the Tab order. A side vial is one tap, or one arrow key, away.
         const button = openButtons[index];
@@ -324,7 +433,24 @@ const icons: Record<StudyFeatureIcon, string> = {
         for (const link of card.querySelectorAll('a')) link.tabIndex = -1;
       });
       dots.forEach((dot, index) => dot.toggleAttribute('data-on', index === active));
+      settleRing();
     };
+
+    /*
+      A new window width or text size changes how much room the row has, so it is laid out again. The room comes from
+      everything the vials must fit between: the stage's width, the arrows' place and the vials' own width (larger text
+      widens the vials and the arrows without changing the window). So the stage and the vials are both watched, and
+      the row is laid out again whenever the room they leave has changed, not only when the stage is a new width.
+    */
+    const relayout = () => {
+      if (rowRoom() === laidOutIn) return;
+      place();
+    };
+    if (typeof ResizeObserver === 'function') {
+      const watcher = new ResizeObserver(relayout);
+      watcher.observe(track);
+      for (const card of cards) watcher.observe(card);
+    } else window.addEventListener('resize', relayout);
 
     /**
      * Only the card where the merry-go-round comes to rest is announced: a run of quick presses or swipes reads out
@@ -356,7 +482,41 @@ const icons: Record<StudyFeatureIcon, string> = {
     const takeOver = () => {
       state.tookOver = true;
       live?.setAttribute('aria-live', 'polite');
+      syncAutoplay();
     };
+
+    /*
+      Auto-advance: one countdown, started afresh (the full AUTO_ADVANCE_MS) each time nothing stops it and cleared the
+      moment something does, so the vial in front always gets its whole time: after the carousel comes into view, after
+      the pointer leaves it or focus moves out, after play. Every change to `state` calls syncAutoplay synchronously,
+      could land a moment after the carousel came into view or the pointer left it. data-autoplay-hold gives the active
+      hold reason whenever it is off. Never a free-running interval, whose next tick could land a moment after the
+      carousel came into view or the pointer left it.
+    */
+    const controls = root.querySelector<HTMLElement>('[data-modes-controls]');
+    let countdown = 0;
+    function syncAutoplay() {
+      const hold = autoplayHold(state);
+      const allowed = hold === undefined;
+      root!.dataset.autoplay = allowed ? 'on' : 'off';
+      root!.toggleAttribute('data-looping', illustrationsMayLoop(state));
+      if (hold) root!.dataset.autoplayHold = hold;
+      else delete root!.dataset.autoplayHold;
+      if (!allowed) {
+        window.clearTimeout(countdown);
+        countdown = 0;
+      } else if (!countdown) {
+        countdown = window.setTimeout(autoAdvance, AUTO_ADVANCE_MS);
+      }
+    }
+    function autoAdvance() {
+      countdown = 0;
+      // syncAutoplay and this callback intentionally share canAutoAdvance's one event-derived state. A separate
+      // CSS :hover veto can be stale even after the pointer has moved away, leaving the countdown visibly "on" but
+      // unable to advance.
+      if (canAutoAdvance(state)) goTo(active + 1);
+      syncAutoplay();
+    }
 
     root.querySelector('[data-modes-prev]')?.addEventListener('click', () => {
       takeOver();
@@ -376,10 +536,16 @@ const icons: Record<StudyFeatureIcon, string> = {
     });
 
     // A tap on a side vial brings it to the front; a tap (or Enter) on the vial in front opens its preview.
+    // The flag is used up by the one click it is there to stop, and a new touch clears it, so a later real tap (even
+    // while the ring is still gliding) is never mistaken for the end of an earlier swipe.
     let swiped = false;
+    let swipeExpiry = 0;
     openButtons.forEach((button, index) => {
       button?.addEventListener('click', () => {
-        if (swiped) return;
+        if (swiped) {
+          swiped = false;
+          return;
+        }
         if (index === active) {
           preview?.(index);
           return;
@@ -408,7 +574,8 @@ const icons: Record<StudyFeatureIcon, string> = {
       if (!turn) return;
       // The tap that some browsers report at the end of a swipe is not a tap on a card.
       swiped = true;
-      window.setTimeout(() => {
+      window.clearTimeout(swipeExpiry);
+      swipeExpiry = window.setTimeout(() => {
         swiped = false;
       }, REST_MS);
       takeOver();
@@ -452,22 +619,62 @@ const icons: Record<StudyFeatureIcon, string> = {
 
     // A mouse resting on the cards or their buttons pauses the auto-advance. The words around them don't: the section
     // is taller than many windows, so pausing for the whole of it would stop the auto-advance for good on a computer.
-    const hovered = new Set<HTMLElement>();
-    for (const area of [track, root.querySelector<HTMLElement>('[data-modes-controls]')]) {
+    // Firefox can later replay a trusted pointerenter at an old in-track coordinate after the pointer has already
+    // moved away. Gate the state on an actual pointermove target instead: after a move, a stale enter has no matching
+    // coordinate. A first stationary enter remains genuine, and a scroll reconciles the recorded point with its live
+    // hit target so moving an area out from beneath the mouse clears the hold too.
+    let lastMouseMove: { x: number; y: number } | undefined;
+    const isPauseArea = (target: EventTarget | null) =>
+      target instanceof Node && [track, controls].some((area) => area?.contains(target));
+    const setHovering = (next: boolean) => {
+      if (state.hovering === next) return;
+      state.hovering = next;
+      syncAutoplay();
+    };
+    window.addEventListener('pointermove', (event) => {
+      if (event.pointerType !== 'mouse') return;
+      lastMouseMove = { x: event.clientX, y: event.clientY };
+      setHovering(isPauseArea(event.target));
+    }, { passive: true });
+    for (const area of [track, controls]) {
       area?.addEventListener('pointerenter', (event) => {
-        if (event.pointerType === 'mouse') hovered.add(area);
-        state.hovering = hovered.size > 0;
-      });
-      area?.addEventListener('pointerleave', () => {
-        hovered.delete(area);
-        state.hovering = hovered.size > 0;
+        if (event.pointerType !== 'mouse') return;
+        const enter = { x: event.clientX, y: event.clientY };
+        // A stationary pointer can gain an area when layout moves underneath it. Once a move is known, a stale enter
+        // reports a different coordinate; before the first move, an enter is the only genuine position we have.
+        if (enterMatchesMouseMove(lastMouseMove, enter)) {
+          lastMouseMove = enter;
+          setHovering(true);
+        }
       });
     }
+    window.addEventListener('scroll', () => {
+      if (state.hovering && lastMouseMove) {
+        setHovering(isPauseArea(document.elementFromPoint(lastMouseMove.x, lastMouseMove.y)));
+      }
+    }, { capture: true, passive: true });
+    // There is no final in-window pointermove when the mouse exits into browser chrome. Clear only that genuine
+    // document exit. Firefox can replay a trusted null-relatedTarget exit at an old in-track coordinate after a real
+    // hover; ignore that stale exit only when its old coordinate still hits a pause area. A mismatched exit that is
+    // outside the viewport or outside the pause areas remains genuine. Ordinary handoffs have a related target.
+    window.addEventListener('mouseout', (event) => {
+      if (
+        event.isTrusted &&
+        event.relatedTarget === null &&
+        shouldClearDocumentExit(
+          lastMouseMove,
+          { x: event.clientX, y: event.clientY },
+          isPauseArea(document.elementFromPoint(event.clientX, event.clientY)),
+        )
+      ) setHovering(false);
+    }, { passive: true });
     root.addEventListener('focusin', () => {
       state.focusInside = true;
+      syncAutoplay();
     });
     root.addEventListener('focusout', (event) => {
       if (!root.contains(event.relatedTarget as Node | null)) state.focusInside = false;
+      syncAutoplay();
     });
 
     /** The pause button stops the auto-advance, the only thing here that moves by itself. */
@@ -483,6 +690,7 @@ const icons: Record<StudyFeatureIcon, string> = {
       // Playing again lets the auto-advance run again, even after the visitor took over.
       if (!state.paused) state.tookOver = false;
       showPaused();
+      syncAutoplay();
     });
 
     const applyMotion = () => {
@@ -491,12 +699,14 @@ const icons: Record<StudyFeatureIcon, string> = {
       // With reduced motion nothing moves by itself, so there is nothing to pause: the button keeps its space only.
       pauseButton?.classList.toggle('invisible', state.reducedMotion);
       place();
+      syncAutoplay();
     };
     reducedMotion.addEventListener('change', applyMotion);
 
     let intersecting = false;
     const showing = () => {
       state.onScreen = intersecting && !document.hidden;
+      syncAutoplay();
     };
     new IntersectionObserver(
       ([entry]) => {
@@ -506,10 +716,6 @@ const icons: Record<StudyFeatureIcon, string> = {
       { threshold: 0.5 },
     ).observe(track);
     document.addEventListener('visibilitychange', showing);
-
-    window.setInterval(() => {
-      if (canAutoAdvance(state)) goTo(active + 1);
-    }, AUTO_ADVANCE_MS);
 
     /*
       The preview (D-51, Task 109). The vial in front opens one shared <dialog>. Opening measures the vial, shows the
@@ -524,6 +730,7 @@ const icons: Record<StudyFeatureIcon, string> = {
     const bottle = dialog?.querySelector<HTMLElement>('[data-mode-preview-vial]');
     const surface = dialog?.querySelector<HTMLElement>('[data-mode-preview-surface]');
     if (dialog && panel && scrim && bottle && surface && typeof dialog.showModal === 'function') {
+      const closeButton = dialog.querySelector<HTMLButtonElement>('[data-mode-preview-close]');
       const fades = [...dialog.querySelectorAll<HTMLElement>('[data-mode-preview-fade]')];
       const title = dialog.querySelector<HTMLElement>('[data-mode-preview-title]');
       const info = dialog.querySelector<HTMLElement>('[data-infotip]');
@@ -533,8 +740,24 @@ const icons: Record<StudyFeatureIcon, string> = {
       const features = [...dialog.querySelectorAll<HTMLElement>('[data-mode-preview-features]')];
       const previewLive = dialog.querySelector<HTMLElement>('[data-mode-preview-live]');
       let shown = 0;
-      let closing = false;
       let returnFocus = true;
+      /** Each open, step and close starts a new round; a phase change from an older round is ignored. */
+      let previewRound = 0;
+      const setPreview = (phase: PreviewPhase) => {
+        previewPhase = phase;
+        state.previewOpen = phase !== 'closed';
+        syncAutoplay();
+        showState();
+      };
+      /** Once this round's animations are done (or finished on time by settle), the preview is open and still. */
+      const restWhenDone = (animations: readonly Animation[], limit: number) => {
+        const round = previewRound;
+        void settle(animations, limit).then(() => {
+          // The grow and the nudge fill nothing, so releasing them changes nothing on screen.
+          releaseAnimations(animations);
+          if (round === previewRound && dialog.open) setPreview('open');
+        });
+      };
       // How far a step nudges the panel sideways: the --nudge-mode-preview token, read once.
       const nudge = getComputedStyle(panel).getPropertyValue('--nudge-mode-preview').trim() || '0px';
       const radius = getComputedStyle(surface).borderTopLeftRadius || '0px';
@@ -598,7 +821,11 @@ const icons: Record<StudyFeatureIcon, string> = {
         returnFocus = true;
         quiet = true;
         dialog.showModal();
+        // Focus goes inside at once, so Escape and Tab start from inside the dialog (#888).
+        closeButton?.focus();
         lend(index);
+        previewRound += 1;
+        setPreview(state.reducedMotion ? 'open' : 'opening');
         if (state.reducedMotion) return;
         const to = bottle.getBoundingClientRect();
         const box = panel.getBoundingClientRect();
@@ -606,33 +833,37 @@ const icons: Record<StudyFeatureIcon, string> = {
         const full = clipAround(box, box, radius);
         const split = PREVIEW_SPLIT;
         const timing = { duration: PREVIEW_MS, easing: PREVIEW_EASING };
-        // 1. The same bottle grows from its place toward the middle while the page darkens...
-        bottle.animate(
-          [{ transform: flipFrom(from, to) }, { transform: 'none', offset: split }, { transform: 'none' }],
-          timing,
-        );
-        scrim.animate([{ opacity: 0 }, { opacity: 1, offset: split }, { opacity: 1 }], { ...timing, easing: 'ease' });
-        // 2. ...then the cream panel opens around it, and its words fade in.
-        surface.animate(
-          [
-            { opacity: 0, clipPath: around },
-            { opacity: 0, clipPath: around, offset: split - 0.05 },
-            { opacity: 1, clipPath: around, offset: split + 0.05 },
-            { opacity: 1, clipPath: full },
-          ],
-          timing,
-        );
-        for (const words of fades) words.animate([{ opacity: 0 }, { opacity: 0, offset: split }, { opacity: 1 }], timing);
+        const grow = [
+          // 1. The same bottle grows from its place toward the middle while the page darkens...
+          bottle.animate(
+            [{ transform: flipFrom(from, to) }, { transform: 'none', offset: split }, { transform: 'none' }],
+            timing,
+          ),
+          scrim.animate([{ opacity: 0 }, { opacity: 1, offset: split }, { opacity: 1 }], { ...timing, easing: 'ease' }),
+          // 2. ...then the cream panel opens around it, and its words fade in.
+          surface.animate(
+            [
+              { opacity: 0, clipPath: around },
+              { opacity: 0, clipPath: around, offset: split - 0.05 },
+              { opacity: 1, clipPath: around, offset: split + 0.05 },
+              { opacity: 1, clipPath: full },
+            ],
+            timing,
+          ),
+          ...fades.map((words) => words.animate([{ opacity: 0 }, { opacity: 0, offset: split }, { opacity: 1 }], timing)),
+        ];
+        restWhenDone(grow, PREVIEW_MS + SETTLE_GRACE_MS);
       };
 
       /** Closes the panel around the bottle, shrinks the bottle back into the vial in front, then closes the dialog. */
       const close = async () => {
-        if (!dialog.open || closing) return;
+        if (!dialog.open || previewPhase === 'closing') return;
         if (state.reducedMotion) {
           dialog.close();
           return;
         }
-        closing = true;
+        const round = ++previewRound;
+        setPreview('closing');
         const into = vialOf(shown).getBoundingClientRect();
         // Closing in the middle of the grow or a nudge closes from where everything is now.
         const was = stopAll();
@@ -642,39 +873,41 @@ const icons: Record<StudyFeatureIcon, string> = {
         const home = flipFrom(into, to);
         const timing = { duration: PREVIEW_MS, easing: PREVIEW_EASING, fill: 'forwards' as const };
         const split = PREVIEW_SPLIT;
-        let shrink: Animation;
+        let shrink: Animation[];
         if (was.running) {
           // Part-way open: everything goes straight back from where it is.
-          shrink = bottle.animate([{ transform: was.bottle }, { transform: home }], timing);
-          surface.animate([{ opacity: was.surface, clipPath: was.clip === 'none' ? around : was.clip }, { opacity: 0, clipPath: around }], timing);
-          for (const words of fades) words.animate([{ opacity: was.words }, { opacity: 0 }], timing);
-          scrim.animate([{ opacity: was.shade }, { opacity: 0 }], { ...timing, easing: 'ease' });
+          shrink = [
+            bottle.animate([{ transform: was.bottle }, { transform: home }], timing),
+            surface.animate([{ opacity: was.surface, clipPath: was.clip === 'none' ? around : was.clip }, { opacity: 0, clipPath: around }], timing),
+            ...fades.map((words) => words.animate([{ opacity: was.words }, { opacity: 0 }], timing)),
+            scrim.animate([{ opacity: was.shade }, { opacity: 0 }], { ...timing, easing: 'ease' }),
+          ];
         } else {
           // Fully open: the words fade and the panel closes around the bottle, then the bottle goes home.
-          for (const words of fades) words.animate([{ opacity: 1 }, { opacity: 0, offset: split }, { opacity: 0 }], timing);
-          surface.animate(
-            [
-              { opacity: 1, clipPath: clipAround(box, box, radius) },
-              { opacity: 1, clipPath: around, offset: split - 0.05 },
-              { opacity: 0, clipPath: around, offset: split + 0.05 },
-              { opacity: 0, clipPath: around },
-            ],
-            timing,
-          );
-          shrink = bottle.animate([{ transform: 'none' }, { transform: 'none', offset: split }, { transform: home }], timing);
-          scrim.animate([{ opacity: 1 }, { opacity: 1, offset: split }, { opacity: 0 }], { ...timing, easing: 'ease' });
+          shrink = [
+            bottle.animate([{ transform: 'none' }, { transform: 'none', offset: split }, { transform: home }], timing),
+            ...fades.map((words) => words.animate([{ opacity: 1 }, { opacity: 0, offset: split }, { opacity: 0 }], timing)),
+            surface.animate(
+              [
+                { opacity: 1, clipPath: clipAround(box, box, radius) },
+                { opacity: 1, clipPath: around, offset: split - 0.05 },
+                { opacity: 0, clipPath: around, offset: split + 0.05 },
+                { opacity: 0, clipPath: around },
+              ],
+              timing,
+            ),
+            scrim.animate([{ opacity: 1 }, { opacity: 1, offset: split }, { opacity: 0 }], { ...timing, easing: 'ease' }),
+          ];
         }
-        try {
-          await shrink.finished;
-        } catch {
-          // Cancelled because the dialog was closed some other way: nothing left to do.
-        }
-        if (dialog.open) dialog.close();
+        // The dialog closes once the shrink is done, or on time even if a busy browser never reports it done. If it
+        // was closed some other way meanwhile (a link inside), there is nothing left to do.
+        await settle(shrink, PREVIEW_MS + SETTLE_GRACE_MS);
+        if (round === previewRound && dialog.open) dialog.close();
       };
 
       /** Previous and next inside the preview: the next mode in the ring's order, and the ring behind follows. */
       const step = (delta: number) => {
-        if (closing) return;
+        if (previewPhase === 'closing') return;
         const next = wrap(shown + delta, cards.length);
         // "start …" disappears for a mode that isn't open yet; if it had focus, focus moves to the arrow going that way.
         const tryHadFocus = !!tryLink && document.activeElement === tryLink;
@@ -687,15 +920,18 @@ const icons: Record<StudyFeatureIcon, string> = {
         goTo(next);
         if (previewLive) previewLive.textContent = slideAnnouncement(cards[next]!.dataset.name ?? '', next, cards.length);
         if (!state.reducedMotion) {
-          panel.animate([{ transform: `translateX(calc(${delta} * ${nudge}))` }, { transform: 'none' }], {
+          previewRound += 1;
+          setPreview('stepping');
+          const nudged = panel.animate([{ transform: `translateX(calc(${delta} * ${nudge}))` }, { transform: 'none' }], {
             duration: STEP_MS,
             easing: PREVIEW_EASING,
           });
+          restWhenDone([nudged], STEP_MS + SETTLE_GRACE_MS);
         }
       };
 
       preview = open;
-      dialog.querySelector('[data-mode-preview-close]')?.addEventListener('click', () => void close());
+      closeButton?.addEventListener('click', () => void close());
       dialog.querySelector('[data-mode-preview-prev]')?.addEventListener('click', () => step(-1));
       dialog.querySelector('[data-mode-preview-next]')?.addEventListener('click', () => step(1));
 
@@ -768,8 +1004,28 @@ const icons: Record<StudyFeatureIcon, string> = {
         });
       }
 
+      // An open ⓘ gets its own Escape first; its panel must close without closing the preview around it.
+      const isOpenInfoTip = (target: EventTarget | null) => {
+        const element = target instanceof Element ? target : null;
+        if (!element) return false;
+        const button = element.closest<HTMLElement>('[data-infotip]');
+        if (button?.getAttribute('aria-expanded') === 'true') return true;
+        const panel = element.closest<HTMLElement>('[data-infotip-panel]');
+        return !!panel && !panel.hidden;
+      };
+
+      // This backs up the dialog listener for every focus location a modal dialog can contain, including Safari's
+      // native Escape route. The dialog listener still handles ordinary keys; capture makes closing independent of
+      // where the browser delivers this one key.
+      document.addEventListener('keydown', (event) => {
+        if (!dialog.open || event.defaultPrevented || !isCloseKey(event.key) || isOpenInfoTip(event.target)) return;
+        event.preventDefault();
+        void close();
+      }, true);
+
       dialog.addEventListener('close', () => {
-        closing = false;
+        previewRound += 1;
+        setPreview('closed');
         quiet = false;
         announced = active;
         for (const animation of animations()) animation.cancel();
@@ -786,3 +1042,44 @@ const icons: Record<StudyFeatureIcon, string> = {
     root.querySelector('[data-modes-controls]')?.classList.remove('invisible');
   }
 </script>
+
+<style>
+  /*
+    HomeV2's straight row: every vial on one baseline, side by side with a gap (rowPlace in src/scripts/carousel.ts
+    sets --ring-shift so no two bottles overlap, and hides any that would not fit whole).
+  */
+  .modes-p6[data-ring] .mode-card {
+    transform: translateX(calc(-50% + var(--ring-shift, 0) * var(--vial-width))) scale(var(--ring-scale, 1));
+  }
+
+  /*
+    HomeV2's glossy platform: a raised white disc with a rim. The top is the pedestal itself (a bright sheen over the
+    ivory), the rim is its lower edge drawn as a band of soft shade under it.
+  */
+  .modes-p6 .vial-pedestal {
+    background-image:
+      radial-gradient(60% 55% at 50% 30%, rgb(var(--glass-rim-rgb) / 0.95), transparent 70%),
+      linear-gradient(180deg, var(--color-silk-sheen), color-mix(in srgb, var(--color-silk-sheen) 70%, var(--color-silk-tint)));
+    box-shadow:
+      0 calc(var(--spacing) * 3) 0 color-mix(in srgb, var(--color-silk-tint) 70%, var(--color-silk-shade)),
+      0 calc(var(--spacing) * 9) calc(var(--spacing) * 12) rgb(var(--shadow-tint) / 0.2),
+      inset 0 calc(var(--spacing) * 0.5) 0 rgb(var(--glass-rim-rgb) / 0.9),
+      inset 0 calc(var(--spacing) * -2) calc(var(--spacing) * 3) rgb(var(--shadow-tint) / 0.08);
+  }
+
+  /* HomeV2's arrows: pale copper-glow discs with a copper rim and a dark chevron (Charcoal on the glow in both themes). */
+  .modes-p6 .vial-arrow {
+    color: var(--cueory-copper-ink);
+    background: var(--cueory-copper-glow);
+    border: var(--border-vial-arrow) solid var(--cueory-copper-start);
+    box-shadow: 0 calc(var(--spacing) * 1) calc(var(--spacing) * 3) rgb(var(--shadow-tint) / 0.16);
+    /* The glow is an opaque color, so the corner button's frosted blur shows nothing here. It only made WebKit blur
+       the turning ring behind each arrow on every frame (#634). */
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+
+  .modes-p6 .vial-arrow:hover {
+    background: var(--cueory-copper-shine);
+  }
+</style>

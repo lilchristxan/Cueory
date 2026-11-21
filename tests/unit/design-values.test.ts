@@ -61,6 +61,12 @@ const exceptions: Exception[] = [
   },
   {
     kind: 'size',
+    path: 'styles/vialo.css',
+    matches: text => /^@media \(width (?:<|>=) 40rem\) \{$/.test(text.trim()),
+    reason: 'the Vialo board changes layout at a responsive media-query breakpoint',
+  },
+  {
+    kind: 'size',
     path: 'styles/global.css',
     matches: text => /@media \(orientation: portrait\), \(max-width: 50rem\)/.test(text),
     reason: 'the Sudoku board and keypad use a mobile-only layout boundary to keep every control reachable',

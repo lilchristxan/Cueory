@@ -185,7 +185,7 @@ test.describe('flag or comment with accounts on', () => {
     const { rpcCalls, accessToken } = await fixture(page, { signedIn: false });
     await flagButton(page).click();
     const panel = page.getByTestId('flag-form');
-    await expect(panel).toContainText('a free account is needed to send a report');
+    await expect(panel).toContainText('email us at');
     await flagButton(page).click();
     await expect(flagButton(page)).toHaveAttribute('aria-expanded', 'false');
 
@@ -204,7 +204,7 @@ test.describe('flag or comment with accounts on', () => {
 
     await flagButton(page).click();
     await expect(page.getByRole('radio', { name: 'something confusing' })).toBeVisible();
-    await expect(panel).not.toContainText('a free account is needed to send a report');
+    await expect(panel).not.toContainText('email us at');
     await page.getByRole('radio', { name: 'something confusing' }).check();
     await page.getByRole('button', { name: 'send', exact: true }).click();
     await expect(page.getByTestId('flag-result')).toHaveText('thank you. your report is in.');
@@ -215,7 +215,7 @@ test.describe('flag or comment with accounts on', () => {
     const { rpcCalls, otherCalls } = await fixture(page, { signedIn: false });
     await flagButton(page).click();
     const panel = page.getByTestId('flag-form');
-    await expect(panel).toContainText('a free account is needed to send a report');
+    await expect(panel).toContainText('email us at');
     await expect(panel.getByRole('link', { name: 'hello@cueory.app' })).toBeVisible();
     await expect(panel.getByTestId('flag-patient-warning')).toContainText('please don\'t include patient names');
     await expect(panel.getByRole('button', { name: 'send', exact: true })).toHaveCount(0);

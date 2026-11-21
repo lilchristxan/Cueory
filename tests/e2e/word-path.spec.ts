@@ -1,13 +1,15 @@
 import AxeBuilder from '@axe-core/playwright';
 import { readFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
+import { markPanelsSeen } from './clock';
 
 /**
- * Word path as a themed word search (Task 97, D-71). The clock is set to 1 November 2026, so today's puzzle is the first
- * sample, "study break" (content/games/suture/sample-01.json). The tests read the word places from that file.
+ * Word path's older format, the themed word search (Task 97, D-71), which still loads beside the board format (#722,
+ * word-path-board.spec.ts). The clock is set to 6 November 2026, so today's puzzle is the sixth sample, "study break"
+ * (content/games/suture/sample-06.json), the one older-format sample. The tests read the word places from that file.
  */
 type Cell = [number, number];
-const sample = JSON.parse(readFileSync(new URL('../../content/games/suture/sample-01.json', import.meta.url), 'utf8')) as {
+const sample = JSON.parse(readFileSync(new URL('../../content/games/suture/sample-06.json', import.meta.url), 'utf8')) as {
   theme: string;
   grid: string[];
   words: { answer: string; path: Cell[] }[];
@@ -23,14 +25,38 @@ const listed = (page: Page, word: string) => page.getByRole('list', { name: 'wor
 test.beforeEach(async ({ page }) => {
   // The once-only promo panel (D-59) would take focus part-way through, so it counts as already shown (as in play.spec.ts).
   await page.addInitScript(() => {
-    try { localStorage.setItem('cueory-promo-seen', String(Date.now())); } catch { /* storage blocked: no panel */ }
+    try { localStorage.setItem('cueory-promo-seen', String(Date.now())); localStorage.setItem('cueory-signup-popup-seen', String(Date.now())); } catch { /* storage blocked: no panel */ }
   });
-  await page.clock.setFixedTime(new Date('2026-11-01T15:00:00'));
-  await page.goto('/play');
+  await page.clock.setFixedTime(new Date('2026-11-06T15:00:00'));
+  await markPanelsSeen(page);
+  await page.goto('/play/word-path');
   await expect(game(page)).toBeVisible();
 });
 
-test.describe('word path: themed word search (Task 97)', () => {
+test.describe('word path: themed word search, the older format (Task 97)', () => {
+  test('at 320px with 32px root text, letters remain whole in a contained scroll area', async ({ page }) => {
+    await page.setViewportSize({ width: 320, height: 844 });
+    await page.evaluate(() => document.documentElement.style.setProperty('font-size', '32px', 'important'));
+
+    const region = game(page).getByRole('region', { name: 'word path letters scroll area' });
+    const grid = region.getByRole('grid', { name: 'word path letters' });
+    await expect(region).toHaveCSS('overflow-x', 'auto');
+    expect(await region.evaluate((element) => element.scrollWidth > element.clientWidth)).toBe(true);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
+
+    const cells = grid.getByRole('gridcell');
+    for (const cell of await cells.all()) {
+      const button = cell.getByRole('button');
+      const box = await button.boundingBox();
+      expect(box?.width).toBeGreaterThanOrEqual(44);
+      expect(box?.height).toBeGreaterThanOrEqual(44);
+      expect(await button.evaluate((element) => element.scrollWidth <= element.clientWidth && element.scrollHeight <= element.clientHeight)).toBe(true);
+    }
+    await cells.last().scrollIntoViewIfNeeded();
+    await expect(cells.last()).toBeInViewport({ ratio: 1 });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
+  });
+
   test('the theme is the title, with the word list, the count and the sample label', async ({ page }) => {
     await expect(game(page).getByRole('heading', { level: 3, name: 'study break' })).toBeVisible();
     await expect(game(page)).toContainText('find all 12 words. they run up, down, left or right.');
@@ -66,7 +92,7 @@ test.describe('word path: themed word search (Task 97)', () => {
     await resultDialog.getByRole('button', { name: 'close results' }).click();
     const result = page.getByTestId('suture-result');
     await expect(result).toBeFocused();
-    await expect(result).toContainText('cueory word path, sun 1 nov: found 12 of 12 words with 0 wrong picks.');
+    await expect(result).toContainText('cueory word path, fri 6 nov: found 12 of 12 words with 0 wrong picks.');
     await expect(page.getByTestId('suture-count')).toHaveText('12 of 12 found');
   });
 
@@ -122,13 +148,13 @@ test.describe('word path: themed word search (Task 97)', () => {
       };
     });
     const shakes = () => page.evaluate(() => (window as unknown as { shakes?: number }).shakes ?? 0);
-    await page.goto('/play');
+    await page.goto('/play/word-path');
     await cell(page, [0, 0]).click();
     await cell(page, [0, 2]).click();
     await expect(live(page)).toHaveText('not a word in this puzzle.');
     expect(await shakes()).toBe(1);
     await page.emulateMedia({ reducedMotion: 'reduce' });
-    await page.goto('/play');
+    await page.goto('/play/word-path');
     await cell(page, [0, 0]).click();
     await cell(page, [0, 2]).click();
     await expect(live(page)).toHaveText('not a word in this puzzle.');
@@ -147,9 +173,10 @@ test.describe('word path: themed word search (Task 97)', () => {
 
   test('at 320 px every sample fits, letters stay at least 24 px and other buttons 44 px', async ({ page }) => {
     await page.setViewportSize({ width: 320, height: 700 });
-    for (const day of ['2026-11-01', '2026-11-02', '2026-11-03', '2026-11-04', '2026-11-05']) {
+    for (const day of ['2026-11-01', '2026-11-02', '2026-11-03', '2026-11-04', '2026-11-05', '2026-11-06']) {
       await page.clock.setFixedTime(new Date(`${day}T15:00:00`));
-      await page.goto('/play');
+      await markPanelsSeen(page);
+      await page.goto('/play/word-path');
       await expect(game(page)).toBeVisible();
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
       const boxes = await game(page).getByRole('button').evaluateAll((els) =>

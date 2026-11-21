@@ -1,6 +1,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 import { dailySudokuSeed, generateSudoku } from '../../src/islands/sudoku';
+import { markPanelsSeen } from './clock';
 
 const daily = generateSudoku(dailySudokuSeed('2026-11-01', 'easy'), 'easy');
 const empty = daily.puzzle.findIndex((digit) => digit === 0);
@@ -11,9 +12,10 @@ const cells = (page: Page) => grid(page).getByRole('gridcell');
 
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
-    try { localStorage.setItem('cueory-promo-seen', String(Date.now())); } catch { /* optional */ }
+    try { localStorage.setItem('cueory-promo-seen', String(Date.now())); localStorage.setItem('cueory-signup-popup-seen', String(Date.now())); } catch { /* optional */ }
   });
   await page.clock.setFixedTime(new Date('2026-11-01T15:00:00'));
+  await markPanelsSeen(page);
 });
 
 for (const [size, width, height] of [['phone', 390, 844], ['tablet', 820, 1180], ['desktop', 1440, 900]] as const) {
@@ -21,7 +23,7 @@ for (const [size, width, height] of [['phone', 390, 844], ['tablet', 820, 1180],
     test('Sudoku keyboard and accessible controls: ' + size + ' / ' + scheme, async ({ page }) => {
       await page.setViewportSize({ width, height });
       await page.emulateMedia({ colorScheme: scheme, reducedMotion: 'reduce' });
-      await page.goto('/play');
+      await page.goto('/play/sudoku');
       await expect(game(page)).toBeVisible();
       await expect(cells(page)).toHaveCount(81);
 
@@ -83,7 +85,7 @@ for (const colorScheme of ['light', 'dark'] as const) {
     async ({ page }, testInfo) => {
       await page.setViewportSize({ width: 390, height: 844 });
       await page.emulateMedia({ colorScheme, reducedMotion: 'reduce' });
-      await page.goto('/play');
+      await page.goto('/play/sudoku');
       await expect(game(page)).toBeVisible();
       await cells(page).nth(empty).click();
 

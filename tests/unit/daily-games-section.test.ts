@@ -1,6 +1,5 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { dailyGames, statGame } from '../../src/config/games';
 
 // The verify script builds dist/ before unit tests, so these assertions check the actual visitor-facing HTML.
 const html = readFileSync(new URL('../../dist/index.html', import.meta.url), 'utf8');
@@ -17,16 +16,17 @@ function summaryText(): string {
   return markup.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
 }
 
-describe('home daily games summary', () => {
-  it('names all ready games from the shared config and the separate stat preview', () => {
+describe('home daily games stage', () => {
+  it('uses the approved Home copy and keeps closed cards visible but gated', () => {
     const summary = summaryText();
-    const readyNames = dailyGames.filter((game) => game.ready).map((game) => game.name);
-    const list = new Intl.ListFormat('en', { style: 'long', type: 'conjunction' }).format(readyNames);
+    const section = gamesSection();
 
-    expect(summary).toContain(list);
-    for (const name of readyNames) expect(summary).toContain(name);
-    for (const game of dailyGames.filter((game) => !game.ready)) expect(summary).not.toContain(game.name);
-    expect(summary).toContain(`${statGame.name} is in preview`);
+    expect(summary).toBe('a new set of nursing games each day. play one, or all three.');
+    expect([...section.matchAll(/data-game-card=/g)]).toHaveLength(5);
+    expect(section).toMatch(/data-game-card="crossword"[\s\S]*?crossword[\s\S]*?coming soon/);
+    expect(section).toMatch(/data-game-card="hello cards"[\s\S]*?hello cards[\s\S]*?coming soon/);
+    expect(section).toContain('sudoku');
+    expect(section).toContain('fill every row, column and box with the numbers one through nine.');
     expect(summary).not.toMatch(/\bsort\b/i);
     expect(summary).toBe(summary.toLowerCase());
   });
@@ -41,7 +41,7 @@ describe('home daily games summary', () => {
     expect(section).toContain('the date changes at midnight on your device. some sample puzzles repeat.');
   });
 
-  it('keeps the single call to action on /play, without a direct stat link', () => {
+  it('keeps the single call to action on /play, without direct game-card links', () => {
     const section = gamesSection();
     const links = [...section.matchAll(/<a\b[^>]*\bhref="([^"]+)"[^>]*>/g)].map((match) => match[1]);
     expect(links).toEqual(['/play']);

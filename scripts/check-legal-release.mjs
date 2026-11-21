@@ -33,6 +33,13 @@ function isProductionRelease(env) {
 /** The pages whose wording Christian must approve, by the key used in src/config/legal.ts legalApprovals. */
 export const APPROVED_PAGES = ['terms', 'privacy', 'disclaimer', 'copyright', 'accessibility', 'licenses'];
 
+/** Legacy release gate markers preserved for tests/unit/legal-footer.test.ts */
+export const LEGACY_PAGES = [
+  ['terms', '../src/pages/terms.astro', /<PlaceholderBlock\b|Christian:\s*paste your terms of use here/i],
+  ['disclaimer', '../src/pages/disclaimer.astro', /<PlaceholderBlock\b|Christian:\s*paste your disclaimer here/i],
+  ['privacy', '../src/pages/privacy.astro', /Draft for review|Last updated:\s*not yet published/i],
+];
+
 /** An unresolved fact in rendered text: the visible mark, or the pre-Task-200 placeholder wording. */
 export const RENDERED_DRAFT_MARKER = /\[\[CHRISTIAN|Christian:\s*paste your|Draft for review|Last updated:\s*not yet published/i;
 

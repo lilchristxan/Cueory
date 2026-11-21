@@ -12,6 +12,7 @@ import {
 } from '../../scripts/legal-digest.mjs';
 import { legal, legalApprovals, type LegalApproval, type LegalPage } from '../../src/config/legal';
 import { currentLegalDigest, isLegalPageApproved, legalManifest } from '../../src/config/legalapproval';
+import { newsletter } from '../../src/config/site';
 
 /**
  * Task 200: the production legal gate must fail while the minimum age is not one of Christian's allowed choices, while
@@ -139,15 +140,15 @@ describe('legal release gate (Task 200)', () => {
     expect(structuralProblems('16', approved)).toEqual(APPROVED_PAGES.map((page) =>
       `${page} is not approved by Christian in src/config/legal.ts (no date, no digest, or the text or an imported value changed since approval).`));
     for (const change of [
-      { minimumAge: '18' }, { newsletterOpen: true }, { newsletterFormActionOrigin: 'https://other-service.example.test' },
+      { minimumAge: '18' }, { newsletterOpen: !manifest.newsletterOpen }, { newsletterFormActionOrigin: 'https://other-service.example.test' },
       { tipPageUrl: 'https://example.test/support' },
       { approvalComponent: 'changed component source' }, { approvalLineApproved: 'changed wording' }, { approvalLinePending: 'changed wording' },
     ]) {
       expect(isLegalPageApproved('terms', allApproved, { ...manifest, ...change }), JSON.stringify(change)).toBe(false);
     }
     // The manifest reads these from the live modules, so flipping them in code changes the digest.
-    expect(manifest.newsletterOpen).toBe(false);
-    expect(manifest.newsletterFormActionOrigin).toBe('');
+    expect(manifest.newsletterOpen).toBe(Boolean(newsletter.formAction));
+    expect(manifest.newsletterFormActionOrigin).toBe(new URL(newsletter.formAction).origin);
     expect(manifest.tipPageUrl).toBe('https://ko-fi.com/cueory');
     expect(manifest.approvalComponent).toContain('data-legal-approval');
     expect(manifest.approvalLinePending).toMatch(/^\[\[CHRISTIAN/);

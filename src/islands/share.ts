@@ -2,7 +2,7 @@
  * Pure logic for sharing achievements (Task 103, D-pending). Share text, links and card images carry nothing personal:
  * no name, email, puzzle answer or tracking value. Game names come only from src/config/games.ts (D-66, D-67).
  */
-import { dailyGames, gameName, type DailyGame } from '../config/games';
+import { dailyGames, gameName, gamePages, type DailyGame } from '../config/games';
 
 export const SHARE_STYLES = ['scene', 'ivory', 'bronze-coin'] as const;
 export type ShareStyle = (typeof SHARE_STYLES)[number];
@@ -18,15 +18,9 @@ export const STYLE_LABELS: Record<ShareStyle, string> = {
   'bronze-coin': 'coin',
 };
 
-/**
- * Where a share link lands: the exact tool it came from. Games point at their own section of /play, using the heading
- * ids that page already gives each game; a unit test checks those ids still exist.
- */
+/** Where a share link lands: the exact tool it came from. Each game has its own page (2026-11-17). */
 export const TOOL_PATHS: Record<ShareToolId, string> = {
-  pulse: '/play#pulse-heading',
-  triage: '/play#triage-heading',
-  cueword: '/play#crossword-heading',
-  suture: '/play#word-path-heading',
+  ...gamePages,
   study: '/learn/study-skills',
 };
 
@@ -39,6 +33,17 @@ export function toolName(tool: ShareToolId): string {
 export function shareImagePath(tool: ShareToolId, style: ShareStyle): string {
   const group = tool === 'study' ? 'study' : 'games';
   return `/share/${group}-${style}.png`;
+}
+
+/**
+ * Widths of the small WebP previews the share sheet shows (scripts/build-share-previews.mjs): enough for its card
+ * (--container-share-card, at most 280 CSS px) on 1x and 2x screens, and on 3x screens.
+ */
+export const SHARE_PREVIEW_WIDTHS = [560, 840] as const;
+
+/** A card's preview image at one of SHARE_PREVIEW_WIDTHS. The file that is shared stays the full PNG. */
+export function sharePreviewPath(tool: ShareToolId, style: ShareStyle, width: (typeof SHARE_PREVIEW_WIDTHS)[number]): string {
+  return shareImagePath(tool, style).replace(/^\/share\/(.+)\.png$/, `/share/previews/$1-${width}.webp`);
 }
 
 /** The file name a shared card image gets. */

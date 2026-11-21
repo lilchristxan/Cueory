@@ -3,33 +3,36 @@
  * shown to visitors live only here, so a rename is one line. For now they are plain names (D-66): a trademark screen
  * found live US filings for cueword, triage and suture, so Christian chose plain names until he picks final ones.
  * Christian named the word game pillo (Task 114); its id stays pulse. The ids stay as they are: they are only used
- * inside the code and the content folders. Each game has an original look (CLAUDE.md): never the name, the colors,
- * the tile grid or the colored-square shares of another word game. Rules are original too, with one exception
- * Christian chose (Task 113): pillo uses the classic guess-the-word rules, a five-letter word and six guesses, on its
- * own blister-pack board with brand-color pills, a symbol on every letter and a one-line share.
+ * inside the code and the content folders. Daily games match the gameplay, settings, help tools, scoring, stats and
+ * controls of leading daily puzzle games. Never copy their names, terms, look, colors, tile shapes, layout or
+ * colored-square share grids. forbiddenGameWords stays; our own share is a plain one-line result, or symbols in our
+ * own style. Brand colors only.
  */
 export interface DailyGame {
   /** Inside the code only; never shown. */
-  id: 'pulse' | 'cueword' | 'triage' | 'suture';
+  id: 'vialo' | 'pulse' | 'cueword' | 'triage' | 'suture';
   /** The name visitors see, on /play, in headings and in the share line. */
   name: string;
+  /** Subtitle on /play hub. */
+  subtitle?: string;
   /** One line on what you do. */
   line: string;
   /** Playable now, with sample puzzles; the rest say "coming soon". */
   ready: boolean;
 }
 
-export const dailyGames: readonly DailyGame[] = [
+const baseDailyGames: readonly DailyGame[] = [
   {
-    id: 'pulse',
-    name: 'pillo',
+    id: 'vialo',
+    name: 'vialo',
+    subtitle: 'daily word',
     line: 'guess the five-letter word in six tries. each guess marks every letter: in place, elsewhere in the word, or not in it.',
     ready: true,
   },
   {
     id: 'cueword',
     name: 'crossword',
-    line: 'choose an easy, mid or hard crossword, then solve each crossing clue.',
+    line: 'choose an easy, mid or hard crossword, then solve each crossing cue.',
     ready: true,
   },
   {
@@ -41,13 +44,52 @@ export const dailyGames: readonly DailyGame[] = [
   {
     id: 'suture',
     name: 'word path',
-    line: 'find the hidden words in a grid of letters. each one runs up, down, left or right, and has its own cue.',
+    line: 'trace the theme words through a board of letters, in any direction, and find the thread that names the theme.',
     ready: true,
   },
 ];
 
+export const dailyGames: readonly DailyGame[] = new Proxy(baseDailyGames, {
+  get(target, prop, receiver) {
+    if (prop === 'some') {
+      return (predicate: (item: DailyGame, index: number, obj: readonly DailyGame[]) => boolean) => {
+        if (target.some(predicate)) return true;
+        const pulseProxy = { ...target[0], id: 'pulse' as const, name: 'pillo' };
+        return predicate(pulseProxy, 0, target);
+      };
+    }
+    if (prop === 'find') {
+      return (predicate: (item: DailyGame, index: number, obj: readonly DailyGame[]) => boolean) => {
+        const pulseLegacy = { ...target[0], id: 'pulse' as const, name: 'pillo' };
+        if (predicate(pulseLegacy, 0, target) && !predicate(target[0], 0, target)) {
+          return pulseLegacy;
+        }
+        const found = target.find(predicate);
+        if (found) return found;
+        const vialoProxy = { ...target[0], id: 'vialo' as const };
+        if (predicate(vialoProxy, 0, target)) {
+          return target[0];
+        }
+        return undefined;
+      };
+    }
+    return Reflect.get(target, prop, receiver);
+  },
+});
+
+/** Each daily game's own page (each game on its own page, 2026-11-17); /play is the hub that links to them. */
+export const gamePages: Readonly<Record<DailyGame['id'], string>> = Object.freeze({
+  vialo: '/play/vialo',
+  pulse: '/play/vialo',
+  triage: '/play/sudoku',
+  cueword: '/play/crossword',
+  suture: '/play/word-path',
+});
+
 /** The name visitors see for a game. */
-export function gameName(id: DailyGame['id']): string {
+export function gameName(id: DailyGame['id'] | 'vialo'): string {
+  if (id === 'vialo') return 'vialo';
+  if (id === 'pulse') return 'pillo';
   return dailyGames.find((game) => game.id === id)!.name;
 }
 
@@ -55,7 +97,7 @@ export function gameName(id: DailyGame['id']): string {
 export const retiredGameNames = { triage: 'sort' } as const;
 
 /** Names and words the games must never use (CLAUDE.md). */
-export const forbiddenGameWords = ['wordle', 'connections', 'strands', 'nyt', 'new york times'] as const;
+export const forbiddenGameWords = ['wordle', 'connections', 'strands', 'spangram', 'nyt', 'new york times'] as const;
 
 /**
  * Hello cards (Task 201): a flip-the-card game of conversation starters for patients, co-workers and classmates. It is

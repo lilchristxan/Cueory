@@ -58,6 +58,25 @@ test('the library shows real counts from the CSV and a link only to an open less
   expect(destination?.status()).toBe(200);
 });
 
+test('the featured lesson link keeps a 44px keyboard target with visible focus', async ({ page }) => {
+  await page.goto('/learn');
+  const start = page.locator('main').getByRole('link', { name: 'start the lesson: how to study for nursing school' });
+
+  await start.focus();
+  await expect(start).toBeFocused();
+  const visibleFocus = await start.evaluate((element) => {
+    const style = getComputedStyle(element);
+    return element.matches(':focus-visible') && style.outlineStyle !== 'none' &&
+      Number.parseFloat(style.outlineWidth) > 0 && style.outlineColor !== 'transparent';
+  });
+  expect(visibleFocus).toBe(true);
+
+  const target = await start.boundingBox();
+  expect(target?.width ?? 0).toBeGreaterThanOrEqual(44);
+  expect(target?.height ?? 0).toBeGreaterThanOrEqual(44);
+  await Promise.all([page.waitForURL(/\/learn\/study-skills\/?$/), page.keyboard.press('Enter')]);
+});
+
 test('the library uses actual device progress, not a sample percentage from the design', async ({ page }) => {
   const cards = deck.cards;
   await page.addInitScript((ids: string[]) => {

@@ -15,10 +15,13 @@ const googleCircle = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAFAAAABQCAYA
 export const authButton = 'inline-flex min-h-12 w-full items-center justify-center rounded-pill border border-control px-4 py-3 leading-relaxed aria-disabled:opacity-50';
 export const authInput = 'mt-2 block h-12.5 w-full rounded-lg border border-control bg-page px-4 text-ink leading-relaxed';
 
-export function AccountsUnavailable() {
+/** The launch-updates signup on the home page (accountLaunch(false).accountHref in src/config/site.ts). */
+export const LAUNCH_UPDATES_HREF = '/#signup';
+
+export function AccountsUnavailable({ updatesHref = LAUNCH_UPDATES_HREF }: { updatesHref?: string } = {}) {
   return <div data-testid="signin-unavailable" className="text-center">
     <p className="text-ink-soft">{signInMessage('unavailable')}</p>
-    <a href="/#signup" className="mt-4 inline-flex min-h-12 items-center underline">get launch updates</a>
+    <a href={updatesHref} className="mt-4 inline-flex min-h-12 items-center underline">get launch updates</a>
   </div>;
 }
 
@@ -59,10 +62,23 @@ function Divider() {
   </div>;
 }
 
-interface Props { auth?: SignInAuth | null; mode?: 'signin' | 'signup'; children?: ReactNode }
+interface Props {
+  auth?: SignInAuth | null;
+  mode?: 'signin' | 'signup';
+  /**
+   * The page's accounts gate (src/config/accountsgate.ts), decided when the page is built. Closed by default: while it
+   * is closed the form never shows and Supabase is never loaded or called, whatever client is configured or supplied.
+   */
+  accountsOn?: boolean;
+  /** Where "get launch updates" goes while accounts are closed. */
+  updatesHref?: string;
+  children?: ReactNode;
+}
 
 // An omitted client uses Task 55's shared singleton after hydration. Explicit null keeps accounts off.
-export default function SignIn({ auth: suppliedAuth, mode = 'signin', children }: Props) {
+export default function SignIn({ auth: givenAuth, mode = 'signin', accountsOn = false, updatesHref, children }: Props) {
+  // A closed gate counts as "no accounts" before anything else, so no client is ever loaded or used.
+  const suppliedAuth = accountsOn ? givenAuth : null;
   const id = useId();
   const [clientState, setClientState] = useState<
     { kind: 'loading' | 'unavailable' | 'failed' } | { kind: 'ready'; auth: SignInAuth }
@@ -160,7 +176,7 @@ export default function SignIn({ auth: suppliedAuth, mode = 'signin', children }
         <p role="alert">sign-in could not load. please try again.</p>
         <button type="button" className={`${authButton} mt-4 bg-button text-on-button hover:bg-button-hover`}
           onClick={() => { setClientState({ kind: 'loading' }); setAttempt(value => value + 1); }}>try again</button>
-      </div> : !auth ? <AccountsUnavailable /> : <>
+      </div> : !auth ? <AccountsUnavailable updatesHref={updatesHref} /> : <>
       {mode === 'signup' && <div className="mb-8 text-center">
         <a href={`#${id}-form`} className={`${authButton} bg-button text-on-button hover:bg-button-hover`}
           onClick={() => form.current?.querySelector('input')?.focus()}>create your free account</a>

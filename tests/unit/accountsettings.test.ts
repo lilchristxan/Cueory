@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
   accountMessage, adaptersFor, deleteGate, deleteMyAccount, deletionLines, downloadFiles, gatherExport, offerFile, prepareDownloadFor, sameIdentity, otherAccountNow,
+  offerIfOpen, offerSpreadsheets, watchExport,
   prepareDownload, saveDisplayName, signOutHere, type AccountClient, type AccountMessage, type DownloadDom,
 } from '../../src/islands/accountsettings';
 import { afterDeletion, SESSION_KEYS_AFTER_DELETION } from '../../src/islands/deleteaccount';
@@ -139,7 +140,7 @@ describe('download my data', () => {
     }
   });
 
-  it('leaves game stats out when they are off in this browser', async () => {
+  it('leaves game stats out when nothing is kept in this browser', async () => {
     const result = await gatherExport(reader(), { email: '', storage: new MemoryStorage(), today });
     expect(result.ok && 'gameStats' in result.data).toBe(false);
     expect(result.ok && result.data.profile?.email).toBeNull();
@@ -680,5 +681,148 @@ describe('a different account signed in from another tab (Codex on #230)', () =>
     expect(seen).toEqual(['b', null]);
     stop();
     expect(unsubscribe).toHaveBeenCalled();
+  });
+});
+
+describe('download my data stops on an account change or a closed section (#757)', () => {
+  const options = () => ({ email: 'a@example.test', signInDetails: undefined, storage: new MemoryStorage(), today });
+  const asA = async () => ({ signedIn: true as const, userId: 'a', email: 'a@example.test' });
+  /** A sign-in event source like onIdentityChange, so a test can play A→B, A→B→A or sign-out. */
+  function events() {
+    const listeners = new Set<(userId: string | null) => void>();
+    return {
+      emit: (userId: string | null) => listeners.forEach(listener => listener(userId)),
+      count: () => listeners.size,
+      adapters: { onIdentityChange(callback: (userId: string | null) => void) { listeners.add(callback); return () => listeners.delete(callback); } },
+    };
+  }
+  function fakeDom() {
+    const later: (() => void)[] = [];
+    const offered: string[] = [];
+    const dom: DownloadDom = {
+      urls: { createObjectURL: vi.fn(() => 'blob:sample'), revokeObjectURL: vi.fn() },
+      document: {
+        createElement: vi.fn(() => {
+          const link = { href: '', download: '', click: () => offered.push(link.download), remove: vi.fn() };
+          return link;
+        }),
+        body: { append: vi.fn() },
+      } as unknown as DownloadDom['document'],
+      later: (run) => later.push(run),
+    };
+    return { dom, offered, runLater: () => later.splice(0).forEach(run => run()) };
+  }
+  const file = (fileName: string) => ({ fileName, blob: new Blob(['x']) });
+
+  it('A→B ends the watch for good and aborts its signal; the same account again changes nothing', () => {
+    const source = events();
+    const changed = vi.fn();
+    const watch = watchExport(source.adapters, 'a', changed);
+    source.emit('a');
+    expect(watch.state()).toBe('open');
+    expect(watch.signal.aborted).toBe(false);
+    source.emit('b');
+    expect(watch.state()).toBe('changed');
+    expect(watch.signal.aborted).toBe(true);
+    source.emit('a');
+    expect(watch.state()).toBe('changed');
+    expect(changed).toHaveBeenCalledOnce();
+  });
+
+  it('signing out counts as a change', () => {
+    const source = events();
+    const watch = watchExport(source.adapters, 'a');
+    source.emit(null);
+    expect(watch.state()).toBe('changed');
+  });
+
+  it('closing the section aborts, unsubscribes, and stays closed', () => {
+    const source = events();
+    const watch = watchExport(source.adapters, 'a');
+    expect(source.count()).toBe(1);
+    watch.close();
+    expect(watch.state()).toBe('closed');
+    expect(watch.signal.aborted).toBe(true);
+    expect(source.count()).toBe(0);
+    source.emit('b');
+    expect(watch.state()).toBe('closed');
+  });
+
+  it('works without an identity source (tests, older adapters)', () => {
+    const watch = watchExport({}, 'a');
+    expect(watch.state()).toBe('open');
+    watch.close();
+    expect(watch.state()).toBe('closed');
+  });
+
+  it('A→B→A while the data is read: both session checks say A, yet no file is built', async () => {
+    const source = events();
+    const watch = watchExport(source.adapters, 'a');
+    const base = reader();
+    const slow: ExportReader = {
+      ...base,
+      select(table, columns) {
+        // Another tab signs in as B and back as A while this read is on its way.
+        source.emit('b');
+        source.emit('a');
+        return base.select(table, columns);
+      },
+    };
+    const result = await prepareDownloadFor({ session: asA, reader: slow }, 'a', options(), watch.signal);
+    expect(result).toEqual({ ok: false, message: accountMessage('identity-changed'), changed: true });
+  });
+
+  it('an already aborted signal reads nothing', async () => {
+    const controller = new AbortController();
+    controller.abort();
+    const read = vi.fn();
+    const result = await prepareDownloadFor({ session: asA, reader: { ...reader(), select: read } }, 'a', options(), controller.signal);
+    expect(result).toMatchObject({ ok: false, changed: true });
+    expect(read).not.toHaveBeenCalled();
+  });
+
+  it('an open watch still gives the files', async () => {
+    const watch = watchExport(events().adapters, 'a');
+    expect((await prepareDownloadFor({ session: asA, reader: reader() }, 'a', options(), watch.signal)).ok).toBe(true);
+  });
+
+  it('offers a file only while the watch is open', () => {
+    const source = events();
+    const { dom, offered } = fakeDom();
+    const watch = watchExport(source.adapters, 'a');
+    expect(offerIfOpen(file('one.json'), watch, dom)).toBe(true);
+    source.emit('b');
+    expect(offerIfOpen(file('two.json'), watch, dom)).toBe(false);
+    const closed = watchExport(events().adapters, 'a');
+    closed.close();
+    expect(offerIfOpen(file('three.json'), closed, dom)).toBe(false);
+    expect(offered).toEqual(['one.json']);
+  });
+
+  it('spreadsheet files still waiting their turn are never offered after A→B→A or after the section closes', () => {
+    const source = events();
+    const first = fakeDom();
+    const watch = watchExport(source.adapters, 'a');
+    offerSpreadsheets([file('a.csv'), file('b.csv'), file('c.csv')], watch, first.dom);
+    expect(first.offered).toEqual(['a.csv']);
+    source.emit('b');
+    source.emit('a');
+    first.runLater();
+    expect(first.offered).toEqual(['a.csv']);
+
+    const second = fakeDom();
+    const open = watchExport(events().adapters, 'a');
+    offerSpreadsheets([file('a.csv'), file('b.csv')], open, second.dom);
+    open.close();
+    second.runLater();
+    expect(second.offered).toEqual(['a.csv']);
+  });
+
+  it('spreadsheet files are offered one at a time while the watch stays open', () => {
+    const { dom, offered, runLater } = fakeDom();
+    const watch = watchExport(events().adapters, 'a');
+    offerSpreadsheets([file('a.csv'), file('b.csv'), file('c.csv')], watch, dom);
+    runLater();
+    expect(offered).toEqual(['a.csv', 'b.csv', 'c.csv']);
   });
 });

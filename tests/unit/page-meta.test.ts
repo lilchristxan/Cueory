@@ -72,7 +72,7 @@ const COPY_EXCEPTIONS: Readonly<Record<string, { title?: string; description?: s
   '/': { title: 'cueory' }, // Brand wordmark is intentionally six characters; owner must decide a longer search title.
   '/about': { description: 'About cueory and our mission.' }, // Existing about-page placeholder is below 50 chars.
   '/coming-soon': { description: 'Planned courses and features for cueory.' }, // Existing teaser is below 50 chars.
-  '/courses': { description: 'Nursing courses on cueory.' }, // Existing course intro is below 50 chars.
+  '/courses': { description: 'nursing courses on cueory.' }, // Existing course intro is below 50 chars.
   // Private/noindex routes: their current text is pinned, not silently exempted from all checks.
   '/account': { description: 'Your cueory account settings.' },
   '/admin/flags': { description: "cueory's private report inbox." },

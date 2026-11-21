@@ -9,8 +9,8 @@
   body:has(main [data-testid="study-reader"]),
   body:has(main [data-testid="study-reader"]) main,
   body:has(main [data-testid="study-reader"]) main * {
-    color: black !important;
-    background-color: white !important;
+    color: var(--print-ink) !important;
+    background-color: var(--print-paper) !important;
     background-image: none !important;
     box-shadow: none !important;
     text-shadow: none !important;
@@ -142,5 +142,23 @@
   [data-print-cards] [data-print-card-credits] {
     break-inside: avoid;
     page-break-inside: avoid;
+  }
+}
+
+/* The cueory logo at the top middle of a printed puzzle (src/islands/PrintLogo.tsx). Christian's PNG artwork is a
+   background that exists only inside this print rule, so no engine fetches it on screen; the element carries the name
+   "cueory" for assistive technology. The artwork is 960 x 303, so the width follows the printed height. */
+@media print {
+  .game-print-logo {
+    inline-size: calc(var(--print-logo) * 960 / 303) !important;
+    block-size: var(--print-logo) !important;
+    max-inline-size: 100%;
+    margin: 0 auto var(--print-gap) !important;
+    background-image: url("/brand/v1/logo-full-light-960.png?print");
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: contain;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
 }

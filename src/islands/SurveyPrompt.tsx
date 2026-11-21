@@ -151,7 +151,7 @@ export default function SurveyPrompt({
             did you use Cueory for a final or exit exam this semester?
           </legend>
           <div className="mt-2 flex flex-wrap gap-4 text-sm">
-            <label className="inline-flex items-center gap-2 cursor-pointer">
+            <label className="inline-flex min-h-12 items-center gap-2 cursor-pointer">
               <input
                 type="radio"
                 name={`${id}-used`}
@@ -161,7 +161,7 @@ export default function SurveyPrompt({
               />
               <span>yes</span>
             </label>
-            <label className="inline-flex items-center gap-2 cursor-pointer">
+            <label className="inline-flex min-h-12 items-center gap-2 cursor-pointer">
               <input
                 type="radio"
                 name={`${id}-used`}

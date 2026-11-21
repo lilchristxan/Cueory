@@ -1099,3 +1099,115 @@ One line each, newest at the bottom. Reasons are kept short on purpose.
 - **D-135** (Task 308) CI runs the browser tests in four parallel parts behind one gate check named "Type check, build and test", and static route sweeps (status codes, headers, meta tags, titles, links, structured data) opt into running once, in Chromium desktop, with `runStaticCheckOnce`; anything a person sees or touches still runs in every project (D-48). Reason: everyday pull requests were reaching the 15-minute limit as sweeps were added, and the repository is public, so the extra runners cost nothing.
 
 - **D-136** (Task 309) Keep Google sign-in and widen CLAUDE.md rule 2 to name the details Google shares at sign-in (name, profile-photo link, Google account id and whether the email is verified) and the sign-in sessions Supabase keeps (device and IP address, until sign-out); Cueory itself never reads or shows the photo. Turn off Supabase's "Write audit logs to the database". Reason: Christian's decision in chat, 2026-11-02, about 7:15 pm Phoenix, as the lead recorded it ("Keep Google sign-in, and widen rule 2 so it names the Google sign-in fields: name, profile-photo link, Google account id, and email verified. Cueory itself never reads or shows the photo." and "Turn OFF Supabase's 'Write audit logs to the database'").
+
+- **D-137** (Task 720) Sudoku shows streaks and best/average times per level, and records its first solve of each day in the shared stats under game id `triage` (shown as sudoku, tries counted as errors). This replaces Task 625's pending note that kept triage stats under Sort only; older Sort results in that record now show under sudoku. Reason: the games parity spec (docs/GAMES-PARITY.md) and the lead's request.
+
+- **D-138** (Task 719) pillo accepts guesses from a five-letter list taken from the MIT-licensed word-list package (license kept in src/islands/pillowords.txt, loaded only when the game needs it; any five letters are accepted if it can't load). A streak counts only puzzles solved on their own local day: a round finished on a later day is saved with an extra offDay note and never extends a streak. At introduction, pillo's settings lasted for the visit and were not saved, so no new browser storage key was added; high contrast later moved to the shared remembered setting in #805. Reason: GAMES-PARITY.md, Christian's approval 2026-11-14.
+
+- **D-139** (#722) Word path's board format: `"format": "path"`, `clue`, 8 rows of 6 letters, `words` with one `"special": true` answer named "the thread" in the game (our own term), and optional `extras`, the other words of 4+ letters that count toward cues (listed per puzzle, so no dictionary ships). Files without `format` stay the older word search and keep loading. Stats keep two more word path details (cues used, thread found first) in `cueory-game-stats`; streaks are worked out from the days already kept. Reason: GAMES-PARITY.md, and Christian's Sunday puzzles may still use the older format.
+
+- **D-140** (Task 725) Require a recent server-signed password, OAuth, OTP or aal2 TOTP event within ten minutes before deleting an account. Token refresh or a newly issued JWT alone never proves reauthentication. Founder approval and an ordered staging migration are required.
+
+- **D-141** (#734) Reduced motion has two choices, "follow device" (default) and "always reduce"; there is no way to force motion on when the device asks for less. Game sounds default on, and a game plays a sound only when both the shared switch and its own sound setting allow it. Reason: respect prefers-reduced-motion and never change a game's existing sound behavior silently.
+
+- **D-142** (Issue #746) The HTTP Content-Security-Policy header carries the full hash-based policy, generated at build time from Astro's per-page `<meta>` policies; public/_headers keeps only the header-only directives and the `<meta>` stays on each page. Reason: a `<meta>` policy doesn't cover scripts before it, and Astro has no static-header output without an adapter.
+
+- **D-143** (Task 210) Match gameplay, settings, scoring and controls of leading daily puzzle games; never their names, look, colors or colored-square shares. Reason: Christian, 2026-11-14 (docs/GAMES-PARITY.md).
+
+- **D-144** (Task 721) The crossword keeps its own streak alongside pillo and word path; sudoku statistics stay per level (replacing "there are no streaks" from D-76): a day counts when it is solved without Check, Reveal or Autocheck within 48 hours of the puzzle's date, and a helped day ends the run. It lives in the opt-in stats record (`cueory-game-stats`, a new optional `streak` flag; a crossword "try" is now a check or reveal). Crossword settings are kept in a new browser key, `cueory-crossword-settings`, listed on /privacy and cleared by delete-my-account. Inside the grid Tab and Shift+Tab move between clues; Tab on the last clue, Shift+Tab on the first, or Escape leaves the grid, so it is never a keyboard trap. Rebus squares are skipped: every puzzle uses one letter per square.
+
+- **D-145** (Task 178) The lab's recall mode is called "name it". It offers four names drawn from the same system (same group first) plus a typed answer, which must be the official name; capitals, extra spaces and punctuation are ignored, and there is no fuzzy spelling. It is unscored guided practice like "find it". Reason: Christian's default on !102 (2026-11-11, "we can change it later"); names stay exactly as BodyParts3D gives them.
+
+- **D-146** (Task 178) A worksheet numbers at most 12 structures, the same limit as on-screen labels. Reason: Christian's default on !102 (2026-11-11).
+
+- **D-147** (Task 178) The old study-tools work (GitHub #651: search, nearby, say it, review list, saved views, compare) is not brought over to GitLab for now. Reason: it carries a database migration, which needs Christian's separate approval.
+
+- **D-148** (Task 178) On a build that shows drafts, the lab preview page's initial JavaScript limit is 114,795 gzip bytes (109,328 measured at !102 plus about 5%), in `tests/unit/build-output.test.ts`. The live build's budget for that page is unchanged, and the live page still loads no lab script. Reason: Christian's default on !102; the drafts-build check was already failing on `staging` (105,070 against 97,930).
+
+- **D-149** (Task 178) The working lab is a study screen: it uses the study layout (`variant="study"`), the same quiet top bar as every other study screen, with no main navigation and nothing decorative. Reason: the CLAUDE.md study-screen rule; the lab page already did this, so no code changed.
+
+- **D-150** (claude/gitlab-migration) GitLab CI runs only fast checks and gitleaks on each ready merge request (about 3 minutes); Semgrep, full-history gitleaks and npm audit run weekly and on release merge requests; browser tests run in Claude's review for every merge request and on Christian's Mac runner for release merge requests. Reason: one full Chromium run on GitLab's runners took about 91 of the 400 free minutes a month.
+
+- **D-151** (claude/sudoku-highlight) In Light, a 3:1 gap between the tint and plain squares can't coexist with 4.5:1 dark numbers on the tint, so the tint is the darkest one that keeps numbers readable (about 2.6:1 against plain squares, 2.4:1 against givens). Evening reaches 3.3:1 and 2.9:1. Entered numbers now use the main text color (they keep their underline) so they stay readable on the tint.
+
+- **D-152** (claude/sudoku-layout) Sudoku squares use the brief's size, clamp(44px, min((100vh − 460px)/9, (100vw − 150px)/9), 84px), but never wider than the panel allows, so the whole board fits without sideways scrolling. On a 390 px phone that means about 32 px squares (never under the 24 px WCAG 2.2 minimum at 320 px or wider); number-pad buttons stay at least 44 px. This replaces Task 625's "keep 44 px cells in a scroller" choice. The settings panel adds a "follow device" row next to the rendering's light and dark rows, so it matches the footer's three choices.
+
+- **D-153** (Lane 10) A security definer function that must stay executable by PUBLIC or anon needs a comment in its migration: `-- grant-exception: schema.name: <why>`. Reason: the rpc-grants guard otherwise fails, and the reason stays next to the code for review.
+
+- **D-154** (lane 14) The home hero's glassy button goes to /play, with one quiet underlined link to the launch list, shown only once accounts are open or the Kit form or Kit landing page is set (its label and address follow accountLaunch, so it becomes "create your free account" → /signup when accounts open). This updates D-55's one-link hero. Reason: accounts are not open, so "create your free account" led to a box that says "sign ups open soon", and the daily games launching Thursday had no way in from the first screen.
+
+- **D-155** (lane 14) Until the Kit form exists, the launch-updates box links out to Christian's Kit landing page (newsletter.landingUrl, https on kit.com only) with a glassy "get launch updates" link that opens in a new tab like the site's other outside links (D-54); no Kit script and no CSP change. "sign ups open soon." shows only when neither the form nor the landing page is set.
+
+- **D-156** (lane 14) The launch-updates pop-up uses a green palette outside BRAND.md v1.0 (base #26492A from the Kit landing page, Ivory text, a soft yellow-green button), at Christian's request. Its colors are --popup-* tokens in tokens.css, not --color-* tokens, so the brand-only palette checks stay unchanged; tests/unit/signup-popup.test.ts checks their contrast. It ships with a plain green texture; a photo goes in --popup-photo once Christian supplies one he has rights to. Also, it stays off each game's own page (/play/<game>), not only /learn, so it never interrupts a game in progress; the /play hub still shows it, and Christian can change this.
+
+- **D-157** (lane 5) Puzzle files in Christian's private store are named by the day they play (2026-11-20.json; crossword 2026-11-20-easy.json) and say "status": "draft"; only made-up samples say "sample". content:check accepts any status outside the repository and only "sample" inside it. Reason: the database loader for real puzzles isn't built yet, so the private store needs its own dates and a label that can never be mistaken for a public sample.
+
+- **D-158** (lane 5) `accountsOpen` now also gates sign-in on the live site: a Workers Build of `main` (or one that doesn't name its branch) opens /signin and /signup only when `accountsOpen` is true, and no build variable can override it there. Reason: a stray Production variable must never open accounts before launch.
+
+- **D-159** (lane 8, approved by the lead 2026-11-17) The single game page JavaScript budget is re-measured from the real game pages (heaviest 119.3 KiB + 10% = 132 KiB) because /play/<game> stopped being a share landing with no game; it is not a loosening of the same page. The four route baselines are re-measured too. Splitting the shared React and flag code goes on the after-launch list.
+
+- **D-160** (lane 8) Without stats on, the hub can't mark a game finished on its own page as done (it was only remembered while both were on one page); the separate "stats always kept" change fixes this.
+
+- **D-161** Christian approved the exact visible and exported BodyParts3D reference-model wording on 2026-11-05: "Male's Anatomy (BodyParts3D reference model, adult human male)". Manual acceptance of the protected staging preview remains pending; publication and production release remain separately held.
+
+- **D-162** (Task 201) The 60 hello-cards starters are draft samples awaiting Christian's wording approval; the page stays labeled and noindex, but noindex is not approval. Reason: he reviews the wording of anything students or patients may hear, even when it is not clinical.
+
+- **D-163** (Task 202) The admin console is built in three phases, each approved separately; every admin action is a security definer function that starts with is_admin() (admins row plus two-factor), hiding is a reversible hidden_at switch, and every action writes an append-only audit row. Reason: Christian asked for a master account to post, hide, edit and see the backend, and CLAUDE.md rule 1 keeps admin data behind permission-checked functions. Audit-log retention is 2 years (decided 2026-11-05). Importer and service-role publish path need the same approval receipt (separate needs-christian PR); real content stays unpublished until decided. Audit log is pseudonymous (linkable to a student while their report exists); export treatment is still open.
+
+- **D-164** (Task 202b) Every publish of a question version, by the console, the importer or the service role, requires an approval receipt for that exact version and content digest, enforced by the database guard trigger; a student's own admin-action audit rows are included in export-my-data. Reason: Christian's answers in chat on 2026-11-05 to the open questions in docs/ADMIN-CONSOLE.md.
+
+- **D-165** (Task 202c) The publish gate on item_versions.status is enforced by revoking service_role UPDATE and re-granting non-status columns (or by security definer functions only), plus the receipt and digest trigger as an independent check. Reason: Supabase documents that the service role bypasses row-level security, so only grants and triggers can bind it.
+
+- **D-166** (Task 206) Require expected_user_id = auth.uid() for delete_my_account at execution, retaining MFA and recent-sign-in checks. A founder-controlled cutover must not expose the insecure no-argument RPC.
+
+- **D-167** (Task 39) The auto-merge bot retries a failed Codex review at most 3 times per head commit, one nudge per failed summary, and never when Codex finished with findings, is still running, or reviewed an older commit. Reason: pull requests sat for hours on Codex's own setup failures until a person commented.
+
+- **D-168** (Task 625) Keep 44px Sudoku cells in contained board/keypad scrollers at 390px until Christian chooses a smaller-cell exception, and retain legacy triage stats under Sort without recording Sudoku until a separate stats id is approved.
+
+- **D-169** (Task 626) Per-score link previews need a server route and are intentionally not built. Per-game 1200×630 preview images are left out to keep this change smaller; all game pages use the existing games-scene image.
+
+- **D-170** (Task 627) Replace every [sample clue] and sample letter grid with Christian's reviewed batches before release, and confirm the explicit 24–40px hard-grid exception to the global 44px touch-target rule (easy and mid squares stay at least 44px).
+
+- **D-171** (Task 634) The open preview's own illustration is still while the preview is open (loops live only on the card in front). Reason: the live loop plus the blur starved hosted WebKit of frames; the director asked for loops off while the preview is open.
+
+- **D-172** (Task 634) The hover assertion owns autoplay through the visible pause control because its subject is the active vial's hover treatment, while autoplay behavior remains covered separately. Reason: the retained Linux WebKit trace proved the prior failure was an elapsed-time fixture race, not an absent hover rule.
+
+- **D-173** (Task 640) The verdict under 6 right is a placeholder of our own: "a hard set today. a new one comes tomorrow." (13+ "top of the unit today.", 10+ "solid shift.", 6+ "warming up." are Christian's). Reason: he picks the wording.
+
+- **D-174** (Task 640) Real questions are not wired yet. `remoteStatGrader` grades through the existing permission-checked `check_answer` RPC via the questions player's adapter (questionsremote.ts), but there is no published daily set of fifteen single-answer items to load, and a question with no answer can't be sent (check_answer needs a letter), so its key stays unknown. Wiring needs a way to publish and fetch the day's fifteen (likely a new table or RPC), which is a database change for Christian's approval. Rationales in the review list wait for the same step.
+
+- **D-175** (Task 640) When the clock runs out on a question that already has a pick, the pick counts (as in the design mockup); `TIMEOUT_KEEPS_PICK` in stat.ts flips this to "only picks confirmed with next count". Reason: Christian's call on how strict the clock is.
+
+- **D-176** (Task 640) Per-score preview of the shared results card and adding stat to the private stats panel wait for Task 626 (stat is not a GameId there yet); the share line drops the mockup's "9 s avg" to match the agreed format. Reason: one share system for all games.
+
+- **D-177** (#736) All four games share /play, so the first-visit rules are a card above each board instead of four dialogs opening at once; the "?" dialog holds the same rules plus every setting. Reason: stacked pop-ups would block the page on a first visit.
+
+- **D-178** (launch home copy) Public sample rotations repeat. Say when the date changes and that sample puzzles repeat, not that fresh content always arrives each midnight. Copy-only and easy to revise.
+
+- **D-179** (#747) Until src/config/legal.ts (#659) reaches staging, "approved" in the footer means the same fail-closed placeholder check the release gate uses; #659 swaps in isLegalPageApproved. Reason: staging has no approval record yet.
+
+- **D-180** (W08-2) Prevent changes to difficulty and hint settings while paused so an active board cannot reset unnoticed; controls become usable after resume. Reversible if Christian chooses otherwise.
+
+- **D-181** (CI) Release browser tests run in more parts instead of longer jobs. Reason: on 2026-11-19 the Release run could not finish: Chromium part 4 hit its 30-minute limit and both desktop engine jobs hit 60 minutes, so the required check could never pass. More parts keeps each job short and the limits unchanged.
+
+- **D-182** (Task crossword) The crossword stays closed on the live build until Christian's real, day-scheduled puzzles are in place; the sample cue files stay unreachable there. Reason: Christian's decision on 2026-11-17 (15:16).
+
+- **D-183** (E2) Under reduced motion, `transition-property` is `none` on every element, replacing one-component fixes (segmented options, game settings, study-mode preview). Reason: the same one-frame stale color kept coming back in WebKit and Firefox; nothing on the site needs a transition while reduced motion is on (the promo panel already hides at once).
+
+- **D-184** (Games v2) Oxblood `#6E2019` and dark green `#0E5A3D` become game tokens with Evening versions. Reason: Christian chose them on the canvas (2026-11-20), and both are outside the brand palette.
+
+- **D-185** (Games v2) Vialo tile letters use Bodoni Moda, not Times New Roman. Reason: Times New Roman can't be self-hosted; Christian decides on staging.
+
+- **D-186** (Games v2) Vialo pill states also differ by finish (solid shine, inner ring band, flat matte), so colour isn't the only signal. Reason: CLAUDE.md rule 6; Christian removed the symbols on the canvas.
+
+- **D-187** /start is held as coming-soon in the live build while accounts are closed (Christian, 18 Nov)
+
+- **D-188** Copper Glow (`#f6d3ae`) at partial strength over Ivory is the Light silk on marketing pages only, through the tokens `--silk-peach-rgb` and `--silk-peach-alpha`. Reason: the lead's ruling on #893 (16:45, 18 Nov 2026); BRAND.md otherwise limits copper to buttons, pills and accents.
+
+- **D-189** (P5) The hero's "start studying for free" button is a link only where a lesson is open (the draft gate's answer), and a disabled coming-soon button in the live build; the old quiet "join the launch list" link left the hero with the old design. Reason: copy deck rule [T], no live link may lead nowhere.
+
+- **D-190** keep "adhd friendly / less overwhelm, more focus" off the hero until Christian approves the wording, then it is a one-line add.
+
+- **D-191** (redesign) Copper accent added to the palette on 18 Nov 2026 by Christian, to match the redesign renderings; only for copper buttons, pills and accents; brand guide v1.0 itself is unchanged. Reason: the renderings' copper is not in guide v1.0.
+
+- **D-192** (P6) The home carousel shows only the vials that fit whole beside the front one (one each side on phones), instead of four each side running past the window's edges. Reason: lead's note on #888 (every label fully visible, no overlap at 390 and 1440).

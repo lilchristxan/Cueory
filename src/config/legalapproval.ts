@@ -27,7 +27,7 @@ export function legalManifest(): Record<string, unknown> {
     newsletterProvider: newsletter.provider,
     // The privacy page says the list is not open while this is empty, and that support goes to Ko-fi.
     // The origin (not just the boolean) is tracked so switching from Kit to another service invalidates approval.
-    newsletterOpen: newsletter.formAction !== '',
+    newsletterOpen: Boolean(newsletter.formAction),
     newsletterFormActionOrigin: newsletter.formAction ? new URL(newsletter.formAction).origin : '',
     tipPageUrl: site.tipPageUrl,
     promoRememberDays: promo.rememberDays,

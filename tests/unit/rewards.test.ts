@@ -59,6 +59,12 @@ describe('rewards: fixed rules and input validation', () => {
     expect(replay.pointsEarned).toBe(0);
     expect(replay.achievementsEarned).toEqual([]);
     expect(state.games).toHaveLength(4);
+
+    // Replay with legacy/canonical alias (pulse vs vialo) is rejected as duplicate
+    const aliasReplay = applyResult(state, game('2026-11-01', 'vialo' as any, true, 0, 0), '2026-11-01');
+    expect(aliasReplay.accepted).toBe(false);
+    expect(aliasReplay.state).toBe(state);
+    expect(aliasReplay.pointsEarned).toBe(0);
   });
 
   it('counts each study session once and caps the daily study award at fifty points', () => {

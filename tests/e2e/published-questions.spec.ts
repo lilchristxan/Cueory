@@ -42,6 +42,15 @@ test.beforeAll(async () => {
     stdin: { contents: `
       import React, { useEffect, useState } from 'react';
       import { createRoot } from 'react-dom/client';
+      import { getSupabase } from './src/islands/supabaseclient';
+      window.fixtureSwitch = async id => {
+        const client = await getSupabase();
+        const value = JSON.parse(localStorage.getItem('cueory-auth'));
+        value.user.id = id;
+        value.access_token = 'fixture-access-token-for-' + id;
+        localStorage.setItem('cueory-auth', JSON.stringify(value));
+        await client.auth._notifyAllSubscribers('SIGNED_IN', value);
+      };
       import PublishedQuestions from './src/islands/PublishedQuestions.tsx';
       import FlagMount from './src/islands/FlagMount.tsx';
       import { onFlagItem } from './src/islands/flagitem.ts';
@@ -195,6 +204,21 @@ test.describe('Task 172: real questions with a fake project', () => {
     expect(errors).toEqual([]);
   });
 
+  for (const back of [false, true]) test(`account switch stops the player${back ? ' after A -> B -> A too' : ''}`, async ({ page }) => {
+    const seen = await mockProject(page);
+    await openFixture(page, { signedIn: true });
+    await page.getByLabel('sample circle').check();
+    await page.evaluate(async back => {
+      const fixture = window as unknown as { fixtureSwitch(id: string): Promise<void> };
+      await fixture.fixtureSwitch('00000000-0000-4000-8000-000000000099');
+      if (back) await fixture.fixtureSwitch('00000000-0000-4000-8000-00000000002a');
+    }, back);
+    await expect(page.getByRole('status').filter({ hasText: 'your signed-in account changed.' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'check', exact: true })).toHaveCount(0);
+    await expect(page.getByTestId('flag-probe')).toHaveText('none');
+    expect(seen.filter(request => request.path === '/rest/v1/rpc/check_answer')).toEqual([]);
+  });
+
   test('a malformed check_answer reply shows a calm retry message, never feedback', async ({ page }) => {
     await mockProject(page, { checkReply: { correct: true, key: ['a'], rationales: {}, version_id: uuid(21) } });
     await openFixture(page, { signedIn: true });
@@ -316,7 +340,12 @@ test.describe('W20: clear question loading, empty, and retry states', () => {
     const seen = await mockProject(page, { empty: true, failConceptReads: 1 });
     await openFixture(page, { signedIn: true });
     await expect(page.getByRole('alert')).toHaveText("couldn't load questions. please try again.");
-    await page.getByRole('button', { name: 'try again' }).click();
+    // Keyboard recovery keeps Firefox in keyboard modality while the app moves focus
+    // to the empty guidance, so Tab reaches its library link with a visible ring.
+    const retry = page.getByRole('button', { name: 'try again' });
+    await retry.focus();
+    await expect(retry).toBeFocused();
+    await page.keyboard.press('Enter');
     const empty = page.getByTestId('questions-not-found');
     await expect(empty).toContainText('there are no published questions for this topic yet.');
     await expect(empty).toBeFocused();
@@ -325,8 +354,6 @@ test.describe('W20: clear question loading, empty, and retry states', () => {
     const backRect = await back.boundingBox();
     expect(backRect?.width ?? 0).toBeGreaterThanOrEqual(44);
     expect(backRect?.height ?? 0).toBeGreaterThanOrEqual(44);
-    await back.focus();
-    await page.keyboard.press('Shift+Tab');
     await page.keyboard.press('Tab');
     await expect(back).toBeFocused();
     await expect(back).toHaveCSS('outline-style', 'solid');

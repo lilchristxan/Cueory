@@ -68,16 +68,18 @@ describe('Sudoku keyboard and pad parity (W08)', () => {
     const selected = game.puzzle.indexOf(0);
     const keyboardNumber = sudokuKeyAction('7', selected);
     expect(keyboardNumber).toEqual({ kind: 'enter', value: 7 });
-    if (!keyboardNumber || keyboardNumber.kind === 'select') throw new Error('Expected Sudoku edit');
+    if (keyboardNumber?.kind !== 'enter') throw new Error('Expected Sudoku edit');
     const fromKeyboard = applySudokuEdit(game.puzzle, game.puzzle, new Set(), selected, keyboardNumber);
     const fromPad = applySudokuEdit(game.puzzle, game.puzzle, new Set(), selected, { kind: 'enter', value: 7 });
     expect(fromKeyboard).toEqual(fromPad);
     expect(fromKeyboard?.entries[selected]).toBe(7);
 
-    for (const key of ['x', 'X', 'Backspace', 'Delete']) {
+    // Backspace and Delete clear the square (#720); x stays the mark key.
+    for (const key of ['Backspace', 'Delete']) expect(sudokuKeyAction(key, selected)).toEqual({ kind: 'clear' });
+    for (const key of ['x', 'X']) {
       const keyboardMark = sudokuKeyAction(key, selected);
       expect(keyboardMark).toEqual({ kind: 'mark' });
-      if (!keyboardMark || keyboardMark.kind === 'select') throw new Error('Expected Sudoku mark');
+      if (keyboardMark?.kind !== 'mark') throw new Error('Expected Sudoku mark');
       expect(applySudokuEdit(game.puzzle, game.puzzle, new Set(), selected, keyboardMark))
         .toEqual(applySudokuEdit(game.puzzle, game.puzzle, new Set(), selected, { kind: 'mark' }));
     }

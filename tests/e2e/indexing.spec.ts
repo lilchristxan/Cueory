@@ -113,6 +113,9 @@ test.describe('Task 127: indexing', () => {
       await expect(robots(page)).toHaveCount(approved ? 0 : 1);
       await expect(page.locator('main[data-pagefind-body]')).toHaveCount(approved ? 1 : 0);
     }
+  });
+
+  test('public support remains searchable while non-public sign-in stays out of site search', async ({ page }) => {
     await page.goto('/support');
     await expect(robots(page)).toHaveCount(0);
     await expect(page.locator('main[data-pagefind-body]')).toHaveCount(1);
