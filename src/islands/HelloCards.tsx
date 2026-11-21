@@ -27,10 +27,15 @@ export default function HelloCards({ starters }: { starters: readonly HelloStart
   const [current, setCurrent] = useState<HelloStarter | null>(null);
   const [seen, setSeen] = useState<string[]>([]);
   const [flipped, setFlipped] = useState(false);
+  const [flipsToday, setFlipsToday] = useState(0);
+  const [revealedToday, setRevealedToday] = useState<ReadonlySet<string>>(() => new Set());
+  const [completionDismissed, setCompletionDismissed] = useState(false);
+  const [favorites, setFavorites] = useState<ReadonlySet<string>>(() => new Set());
   const [notice, setNotice] = useState('');
   const [ready, setReady] = useState(false);
   const cardRef = useRef<HTMLButtonElement>(null);
   const [today, setToday] = useState(() => new Date());
+  const dayRef = useRef(dayIndex(today));
   const daily = useMemo(() => promptOfTheDay(starters, today, depth), [starters, today, depth]);
 
   // The first card is drawn after hydration so the server and browser never disagree about a random pick.
@@ -72,6 +77,17 @@ export default function HelloCards({ starters }: { starters: readonly HelloStart
     };
   }, []);
 
+  // The five-flip encouragement belongs to the local day, but remains deliberately session-only like the cards.
+  useEffect(() => {
+    const nextDay = dayIndex(today);
+    if (nextDay === dayRef.current) return;
+    dayRef.current = nextDay;
+    setFlipsToday(0);
+    setRevealedToday(new Set());
+    setCompletionDismissed(false);
+    setNotice('a new day, with five new cards to flip.');
+  }, [today]);
+
   const draw = (nextDepth: HelloDepth, history: string[], last: string | null) => {
     const result = nextStarter(starters, 'all', nextDepth, history, last);
     setCurrent(result.starter);
@@ -91,6 +107,10 @@ export default function HelloCards({ starters }: { starters: readonly HelloStart
     if (!current) return;
     const next = !flipped;
     setFlipped(next);
+    if (next && !revealedToday.has(current.id)) {
+      setRevealedToday((previous) => new Set(previous).add(current.id));
+      setFlipsToday((previous) => Math.min(5, previous + 1));
+    }
     setNotice(next ? `card turned over. ${current && isReflective(current.category) ? 'ask yourself' : 'try asking'}: ${current.text}` : 'card turned face down.');
     // Enter or Space after a click: Firefox keeps the card without its focus ring (focusring.ts).
     if (event.detail === 0) showFocusRing(event.currentTarget);
@@ -100,6 +120,23 @@ export default function HelloCards({ starters }: { starters: readonly HelloStart
     draw(depth, seen, current?.id ?? null);
     setNotice('a new card is face down.');
     cardRef.current?.focus();
+  };
+
+  const toggleFavorite = () => {
+    if (!current) return;
+    setFavorites((previous) => {
+      const next = new Set(previous);
+      if (next.has(current.id)) next.delete(current.id);
+      else next.add(current.id);
+      return next;
+    });
+    setNotice(favorites.has(current.id) ? 'removed this card from favorites for this visit.' : 'saved this card as a favorite for this visit.');
+  };
+
+  const keepGoing = () => {
+    setCompletionDismissed(true);
+    another();
+    setNotice('keep going. a new card is face down.');
   };
 
   const count = startersFor(starters, 'all', depth).length;
@@ -149,30 +186,58 @@ export default function HelloCards({ starters }: { starters: readonly HelloStart
         </span>
       </div>
 
-      <div className={`flip mt-stack${flipped ? ' is-flipped' : ''}`}>
-        <button
-          ref={cardRef}
-          type="button"
-          aria-pressed={flipped}
-          aria-label="conversation card"
-          aria-describedby="hello-card-hint hello-card-question"
-          disabled={!ready || !current}
-          onClick={flip}
-          data-testid="hello-card"
-          className="press block w-full cursor-pointer touch-manipulation rounded-xl text-left disabled:cursor-default"
-        >
-          <span className="flip-inner grid min-w-0 grid-cols-1">
-            <span className={`flip-face ${faceClass}`} aria-hidden={flipped || undefined}>
-              <span className="text-sm text-ink-soft">{HELLO_DEPTH_LABELS[depth]}</span>
-              <span className="mt-3 text-xl font-bold">tap to turn over</span>
-            </span>
-            <span className={`flip-back relative ${faceClass}`} aria-hidden={!flipped || undefined} data-testid="hello-card-back">
-              <span className="text-sm text-ink-soft">{current && isReflective(current.category) ? 'ask yourself' : 'try asking'}</span>
-              <span className="mt-3 wrap-anywhere text-xl" data-testid="hello-card-text">{current?.text ?? ''}</span>
-            </span>
-          </span>
-        </button>
-      </div>
+      <section className="mt-stack" aria-label="today's conversation card board">
+        <div className="mb-5 flex items-center justify-center gap-2" role="status" aria-label={`${flipsToday} of 5 cards flipped today`} data-testid="hello-flip-progress">
+          {Array.from({ length: 5 }, (_, index) => (
+            <span
+              key={index}
+              aria-hidden="true"
+              className={`size-3 rounded-full border-2 border-control ${index < flipsToday ? 'bg-ink' : 'bg-surface'}`}
+            />
+          ))}
+          <span className="sr-only">{flipsToday} of 5 cards flipped today</span>
+        </div>
+
+        <div className="relative mx-auto grid w-full max-w-md grid-cols-1 py-5 sm:py-7">
+          <span aria-hidden="true" className="col-start-1 row-start-1 mx-6 min-h-72 rotate-[-6deg] rounded-xl bg-ink shadow-card" />
+          <span aria-hidden="true" className="col-start-1 row-start-1 mx-6 min-h-72 rotate-[5deg] rounded-xl bg-ink shadow-card" />
+          <div className={`flip col-start-1 row-start-1${flipped ? ' is-flipped' : ''}`}>
+            <button
+              ref={cardRef}
+              type="button"
+              aria-pressed={flipped}
+              aria-label="conversation card"
+              aria-describedby="hello-card-hint hello-card-question"
+              disabled={!ready || !current}
+              onClick={flip}
+              data-testid="hello-card"
+              className="press relative block w-full cursor-pointer touch-manipulation rounded-xl text-left disabled:cursor-default"
+            >
+              <span className="flip-inner grid min-w-0 grid-cols-1">
+                <span className={`flip-face ${faceClass}`} aria-hidden={flipped || undefined}>
+                  <span className="text-sm text-ink-soft">{HELLO_DEPTH_LABELS[depth]}</span>
+                  <span className="mt-3 text-xl font-bold">tap to turn over</span>
+                </span>
+                <span className={`flip-back relative ${faceClass}`} aria-hidden={!flipped || undefined} data-testid="hello-card-back">
+                  <span className="text-sm text-ink-soft">{current && isReflective(current.category) ? 'ask yourself' : 'try asking'}</span>
+                  <span className="mt-3 wrap-anywhere text-xl" data-testid="hello-card-text">{current?.text ?? ''}</span>
+                </span>
+              </span>
+            </button>
+          </div>
+        </div>
+
+        {flipsToday === 5 && !completionDismissed && (
+          <section className="mx-auto mt-4 max-w-md rounded-xl border-2 border-control bg-surface p-6 text-center shadow-card" aria-labelledby="hello-complete-heading" data-testid="hello-complete">
+            <h2 id="hello-complete-heading" className="text-3xl font-bold">congrats!</h2>
+            <p className="mt-2">You made the world friendlier today.</p>
+            <p className="mt-3 text-sm font-bold uppercase tracking-wide text-ink-soft">5 of 5 cards flipped</p>
+            <button type="button" className="press mt-5 min-h-(--tap-min) rounded-pill bg-button px-5 py-2.5 text-on-button hover:bg-button-hover" onClick={keepGoing}>
+              Keep going
+            </button>
+          </section>
+        )}
+      </section>
       <p id="hello-card-question" className="sr-only">
         {flipped && current ? `${isReflective(current.category) ? 'ask yourself' : 'try asking'}: ${current.text}` : ''}
       </p>
@@ -180,16 +245,33 @@ export default function HelloCards({ starters }: { starters: readonly HelloStart
         {flipped ? 'press the card again to turn it face down.' : 'press the card to turn it over.'}
       </p>
 
-      <div className="mt-stack flex flex-wrap items-center gap-3">
+      <div className="mt-stack flex flex-wrap items-center justify-center gap-3">
         <button
           type="button"
           disabled={!ready || !current}
           onClick={another}
           className="press min-h-(--tap-min) rounded-pill bg-button px-5 py-2.5 text-on-button hover:bg-button-hover disabled:opacity-60"
         >
-          next card
+          Flip next card
         </button>
-        <p className="text-sm text-ink-soft">{count} cards in this pile, shuffled</p>
+        <button
+          type="button"
+          disabled={!ready || !current}
+          aria-pressed={Boolean(current && favorites.has(current.id))}
+          onClick={toggleFavorite}
+          className={`press min-h-(--tap-min) rounded-pill border border-control px-5 py-2.5 disabled:opacity-60 ${current && favorites.has(current.id) ? 'bg-button text-on-button' : ''}`}
+        >
+          {current && favorites.has(current.id) ? 'Favorite saved' : 'Favorite'}
+        </button>
+        <button
+          type="button"
+          disabled={!ready || !current}
+          onClick={another}
+          className="press min-h-(--tap-min) rounded-pill border border-control px-5 py-2.5 disabled:opacity-60"
+        >
+          Shuffle
+        </button>
+        <p className="w-full text-center text-sm text-ink-soft">{count} cards in this pile, shuffled · favorites last for this visit only</p>
       </div>
       <p className="sr-only" role="status" aria-label="hello cards update" aria-atomic="true">{notice}</p>
     </div>
