@@ -4,7 +4,7 @@
  * "play one, or all three") follow it and are never typed by hand. The card order and the two drawn lines (word path,
  * hello cards) are the deck's "ship" column.
  */
-import { dailyGames, gameName, helloCardsGame, type DailyGame } from './games';
+import { dailyGames, helloCardsGame, type DailyGame } from './games';
 
 export interface HomeGameCard {
   /** Stable key for tests (data-game-card); the visitor-facing name. */
@@ -27,8 +27,8 @@ const drawnLines: Partial<Record<DailyGame['id'], string>> = {
 };
 const helloCardsLine = 'flip a card, start a conversation.';
 
-/** Deck order: pillo, crossword, sudoku, word path, hello cards (card positions as drawn). */
-const deckOrder: readonly DailyGame['id'][] = ['pulse', 'cueword', 'triage', 'suture'];
+/** Deck order: vialo, crossword, sudoku, word path, hello cards (card positions as drawn). */
+const deckOrder: readonly DailyGame['id'][] = ['vialo', 'cueword', 'triage', 'suture'];
 
 /**
  * The stage's cards. `crosswordOpen` is the crossword's launch switch (site.ts); closed, its line is "coming soon."
@@ -39,7 +39,7 @@ export function homeGameCards(crosswordOpen: boolean): HomeGameCard[] {
     const game = dailyGames.find((entry) => entry.id === id)!;
     const available = game.ready && (id !== 'cueword' || crosswordOpen);
     const line = available ? (drawnLines[id] ?? firstSentence(game.line)) : 'coming soon.';
-    return { name: gameName(id), line, available };
+    return { name: game.name, line, available };
   });
   return [...daily, { name: helloCardsGame.name, line: helloCardsLine, available: false }];
 }

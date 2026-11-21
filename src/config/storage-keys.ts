@@ -13,6 +13,7 @@ import { RESUME_STORAGE_KEY } from '../scripts/resume';
 import { SIGNUP_POPUP_STORAGE_KEY } from '../scripts/signuppopup';
 import { THEME_STORAGE_KEY } from '../scripts/theme';
 import { CROSSWORD_SETTINGS_KEY } from '../islands/cuewordkeys';
+import { PILLO_HARD_MODE_STORAGE_KEY, VIALO_HARD_MODE_STORAGE_KEY } from '../islands/vialokeys';
 import { STATS_STORAGE_KEY, SUDOKU_STATS_STORAGE_KEY } from '../islands/gameresults';
 import { GAME_SETTINGS_STORAGE_KEY } from '../islands/gamesettings';
 import { GAME_HELP_STORAGE_KEY } from '../islands/gamehelpkeys';
@@ -62,6 +63,8 @@ export const storageKeys: readonly StorageKey[] = Object.freeze([
   { name: CROSSWORD_SETTINGS_KEY, storage: 'local', holds: 'crossword settings', purpose: 'remember crossword settings', onDeletion: 'cleared', disclosure: sharedSettings },
   { name: SUDOKU_SETTINGS_KEY, storage: 'local', holds: 'sudoku settings', purpose: 'remember sudoku settings', onDeletion: 'cleared', disclosure: sharedSettings },
   { name: GAME_SETTINGS_STORAGE_KEY, storage: 'local', holds: 'high contrast, reduced motion and game sounds', purpose: 'remember the shared game settings', onDeletion: 'cleared', disclosure: sharedSettings },
+  { name: VIALO_HARD_MODE_STORAGE_KEY, storage: 'local', holds: 'hard mode setting for today', purpose: 'remember hard mode choice after the first guess of the day', onDeletion: 'cleared', disclosure: sharedSettings },
+  { name: PILLO_HARD_MODE_STORAGE_KEY, storage: 'local', holds: 'legacy hard mode setting for today', purpose: 'migrate legacy hard mode setting', onDeletion: 'cleared', disclosure: sharedSettings },
   { name: GAME_HELP_STORAGE_KEY, storage: 'local', holds: "which daily games' rules you've seen (game names only)", purpose: "stop showing a game's first-visit rules once you've seen them", onDeletion: 'cleared', disclosure: { section: SETTINGS, phrase: 'which games’ instructions you have seen' } },
   { name: HOME_TIP_STORAGE_KEY, storage: 'local', holds: 'up to three days you finished a puzzle, and whether you dismissed the tip', purpose: 'decide when to suggest adding cueory to the home screen', onDeletion: 'cleared', disclosure: { section: SETTINGS, phrase: 'up to three dates on which you finished a puzzle' } },
   { name: LAST_WELCOME_STORAGE_KEY, storage: 'local', holds: 'the previous welcome note', purpose: 'show a different one next visit', onDeletion: 'cleared', disclosure: { section: SETTINGS, phrase: 'the last welcome note on this device' } },

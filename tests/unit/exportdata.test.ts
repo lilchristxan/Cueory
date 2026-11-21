@@ -167,7 +167,7 @@ describe('JSON export', () => {
     const storage = sampleStorage();
     storage.setItem(STATS_STORAGE_KEY, serialize(sample.gameStats));
     const gameStats = loadStats(storage, '2026-11-01').stats;
-    expect(json({ gameStats }).gameStats).toEqual(sample.gameStats);
+    expect(json({ gameStats }).gameStats).toEqual([{ ...sample.gameStats[0], game: 'vialo' }]);
   });
 
   it('uses fixed field order regardless of the input property order', () => {

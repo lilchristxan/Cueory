@@ -86,7 +86,7 @@ export default function PlayStatus({ games, isComingSoonCrossword = false }: Pro
       if (round.game && round.day && round.card?.result) {
         const match = /^(\d+)\s*\/\s*(\d+)$/.exec(round.card.result);
         if (match) {
-          map[heardKey(round.game, round.day)] = { wordsFound: Number(match[1]), totalWords: Number(match[2]) };
+          map[heardKey(round.game as GameId, round.day)] = { wordsFound: Number(match[1]), totalWords: Number(match[2]) };
         }
       }
     }
@@ -142,10 +142,11 @@ export default function PlayStatus({ games, isComingSoonCrossword = false }: Pro
     };
   }, []);
 
-  const game = (id: GameId) => games.find((row) => row.id === id);
-  const pilloGame = game('pulse');
-  const pilloStatus = statusFor('pulse', today, saved.stats, heard);
-  const pilloText = statusDisplayFor('pulse', pilloStatus);
+  const game = (id: GameId | string) => games.find((row) => row.id === id);
+  const pilloGame = game('vialo') || game('pulse');
+  const wordGameId = (pilloGame?.id ?? 'vialo') as GameId;
+  const pilloStatus = statusFor(wordGameId, today, saved.stats, heard);
+  const pilloText = statusDisplayFor(wordGameId, pilloStatus);
   const side = (['cueword', 'triage', 'suture'] as const).flatMap((id) => {
     const row = game(id);
     if (!row) return [];
@@ -164,11 +165,14 @@ export default function PlayStatus({ games, isComingSoonCrossword = false }: Pro
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
                 {/* Title, line, blister pack */}
                 <div className="flex flex-col min-w-0">
-                  <h3 className="display text-3xl sm:text-4xl text-ink font-medium break-words">
-                    <a href={pilloGame.href} className={CARD_LINK}>
-                      {pilloGame.name}
-                    </a>
-                  </h3>
+                  <div className="flex flex-wrap items-baseline gap-x-3">
+                    <h3 className="display text-3xl sm:text-4xl text-ink font-medium break-words">
+                      <a href={pilloGame.href} className={CARD_LINK}>
+                        {pilloGame.name}
+                      </a>
+                    </h3>
+                    <span className="text-sm font-medium text-ink-soft">daily word</span>
+                  </div>
                   <p className="mt-2 text-sm text-ink-soft">{pilloGame.line}</p>
 
                   {/* Blister pack illustration - sits directly under the line */}
