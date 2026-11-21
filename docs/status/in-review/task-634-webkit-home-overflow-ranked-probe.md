@@ -1,0 +1,1 @@
+status: Task 634 WebKit Home 320/32 ranked overflow probe: on the existing failure only, retain elements nearest the document scroll boundary with own scroll metrics and horizontal clipping ancestry; remove this diagnostic in the eventual source-fix PR.
