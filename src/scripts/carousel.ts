@@ -217,6 +217,14 @@ export interface MotionState {
   previewOpen: boolean;
 }
 
+/** A pointer enter may hold the carousel when it is the first observed position or agrees with the last mouse move. */
+export function enterMatchesMouseMove(
+  lastMove: { x: number; y: number } | undefined,
+  enter: { x: number; y: number },
+): boolean {
+  return lastMove === undefined || (lastMove.x === enter.x && lastMove.y === enter.y);
+}
+
 /**
  * The first active condition that holds the carousel still. Kept separate from canAutoAdvance so the rendered
  * carousel can expose the same reason that its timer uses without changing its existing motion policy.

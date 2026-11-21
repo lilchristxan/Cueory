@@ -1197,6 +1197,16 @@ test.describe('"ways to study" merry-go-round (D-50, D-60)', () => {
       if (diagnoseAutoplayStart) await markAutoplayPointerParkDiagnostic(page, 'before-pointer-park');
       // The mouse over the section's words, not its cards: that doesn't pause it.
       await page.mouse.move(0, 0);
+      // Firefox has replayed an in-track enter at (636, 423) after this real park. It must not pause without a
+      // matching pointer move, while the real card/control hover and visitor takeover checks below stay unchanged.
+      await section(page).locator('[data-modes-track]').evaluate((track) => {
+        track.dispatchEvent(new PointerEvent('pointerenter', {
+          bubbles: false,
+          clientX: 636,
+          clientY: 423,
+          pointerType: 'mouse',
+        }));
+      });
       if (diagnoseAutoplayStart) await markAutoplayPointerParkDiagnostic(page, 'after-pointer-park');
       if (diagnoseAutoplayStart) await markAutoplayPointerParkDiagnostic(page, 'first-poll:begin');
       await expect.poll(() => middleCard(page), { timeout: 9000 }).toBe('cards');
