@@ -1,15 +1,15 @@
-# Thursday launch day — 19 November 2026
+# Monday launch day — 23 November 2026
 
 Proposed times in **Phoenix (America/Phoenix)**; Christian and the lead can move
 them together. This is the **games-and-public-pages launch with accounts closed**.
-The [Thursday launch checklist](../LAUNCH-2026-11-19.md) controls every go/no-go
+The [Monday launch checklist](../LAUNCH-2026-11-23.md) controls every go/no-go
 decision. The older full-account [go-live guide](../GO-LIVE.md) is a separate launch.
 
 | Time | Owner and action | What must be visible before continuing |
 | --- | --- | --- |
 | 08:00 | Lead records the chosen staging SHA, its locked preview and the previous production deployment identifier. | One exact candidate and a known previous version; no unreviewed game redesign is added afterward. |
 | 09:00 | Lead checks release CI and legal gates. Christian completes the real-iPhone check below. | Required Chromium, WebKit and Firefox checks pass on the chosen candidate. Missing or failing evidence means hold. |
-| 10:00 | Christian and lead confirm the Thursday checklist, including accounts closed and production database untouched. | Legal approval/release checks permit this candidate. Placeholder legal copy or a bypassed gate means hold. |
+| 10:00 | Christian and lead confirm the Monday checklist, including accounts closed and production database untouched. | Legal approval/release checks permit this candidate. Placeholder legal copy or a bypassed gate means hold. |
 | 11:00 | **Only after explicit go:** lead supplies the actual release PR, staging to main; Christian reviews and merges it. | The intended SHA reaches the production deployment successfully. #634 is a CI-only dry run marked do not merge; do not use it as an automatic launch button. |
 | 11:15 | Christian opens the live site in a private window and repeats the smoke check. | Home and games work without Cloudflare sign-in; staging still requires its lock; accounts remain closed. |
 | 12:00 | Lead checks existing analytics and the approved feedback/report channel. | Record what is actually available. An unconfigured analytics screen is not proof of zero visitors. Keep account/reporting access as approved. |

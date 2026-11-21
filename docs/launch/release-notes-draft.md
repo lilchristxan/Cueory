@@ -2,7 +2,7 @@
 
 **Draft for Christian's review. Not published, not approved.** Written from the commit subjects in
 `git log origin/main..origin/staging` (2,630 commits at the time of writing) and the launch scope in
-[LAUNCH-2026-11-19.md](../LAUNCH-2026-11-19.md): the daily games and public pages go live, and **accounts stay
+[LAUNCH-2026-11-23.md](../LAUNCH-2026-11-23.md): the daily games and public pages go live, and **accounts stay
 closed**. The longer inventory is in [RELEASE-2026-11-19.md](../RELEASE-2026-11-19.md). Nothing below is a clinical
 claim, and no item is promised until the release PR is merged and checked on the live site.
 
