@@ -211,10 +211,13 @@ test.describe('footer theme picker', () => {
 
     await page.keyboard.press('ArrowRight');
     await expect(dark).toBeChecked();
+    await expect(dark).toBeFocused();
     await page.keyboard.press('ArrowRight');
     await expect(device).toBeChecked();
+    await expect(device).toBeFocused();
     await page.keyboard.press('ArrowLeft');
     await expect(dark).toBeChecked();
+    await expect(dark).toBeFocused();
   });
 
   for (const size of [
