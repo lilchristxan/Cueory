@@ -1,0 +1,1 @@
+status: Task 634 WebKit Home 320/32 overflow probe: attach bounded descendant and visible pseudo-element geometry only when the existing no-horizontal-overflow assertion fails; remove this probe in the eventual source-fix PR.
