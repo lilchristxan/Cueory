@@ -46,6 +46,13 @@ for (const path of ['/support', '/play/word-path']) {
 
     // Phones hide both full-logo copies; wider screens hide the other palette's copy.
     expect(hiddenFull.length).toBeGreaterThan(0);
+    // Game pages also render the shared Frame, whose visible sidebar logo eagerly requests the same full-logo URL.
+    // Keep the header's lazy attribute covered there, but only make the no-request claim where the header owns the
+    // page's logo requests (the standalone support page).
+    if (path === '/play/word-path') {
+      for (const img of hiddenFull) expect(img.loading).toBe('lazy');
+      return;
+    }
     for (const img of hiddenFull) {
       const started = isDownloadStarted(img, requestedUrls);
       expect({ src: img.src, loading: img.loading, started }, String(img.src)).toEqual({
