@@ -15,7 +15,7 @@ const options = {
 
 describe('story result text fitting', () => {
   it('reads every story-canvas font weight from a named token', () => {
-    const source = readFileSync(new URL('../../src/islands/share.ts', import.meta.url), 'utf8');
+    const source = readFileSync(new URL('../../src/islands/storyimage.ts', import.meta.url), 'utf8');
     const css = readFileSync(new URL('../../src/styles/tokens.css', import.meta.url), 'utf8');
     for (const [token, weight] of [
       ['--share-story-display-weight', 500],
