@@ -229,6 +229,7 @@ const icons: Record<StudyFeatureIcon, string> = {
     STEP_MS,
     autoplayHold,
     canAutoAdvance,
+    illustrationsMayLoop,
     canEnhanceCarousel,
     carouselState,
     enterMatchesMouseMove,
@@ -496,6 +497,7 @@ const icons: Record<StudyFeatureIcon, string> = {
       const hold = autoplayHold(state);
       const allowed = hold === undefined;
       root!.dataset.autoplay = allowed ? 'on' : 'off';
+      root!.toggleAttribute('data-looping', illustrationsMayLoop(state));
       if (hold) root!.dataset.autoplayHold = hold;
       else delete root!.dataset.autoplayHold;
       if (!allowed) {

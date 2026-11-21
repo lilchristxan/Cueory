@@ -252,6 +252,15 @@ export function canAutoAdvance(state: MotionState): boolean {
   return autoplayHold(state) === undefined;
 }
 
+/**
+ * The 6 s illustration loops on the card in front run only while the carousel is on screen, not paused, not under
+ * reduced motion, and while no preview is open (the page behind a modal is not looked at, and its loops cost frames,
+ * #634). The page script writes this to `data-looping` on the section.
+ */
+export function illustrationsMayLoop(state: Pick<MotionState, 'reducedMotion' | 'paused' | 'onScreen' | 'previewOpen'>): boolean {
+  return !state.reducedMotion && !state.paused && state.onScreen && !state.previewOpen;
+}
+
 /** Where the preview is: closed, growing out of its vial, open and still, stepping to another mode, or shrinking back. */
 export type PreviewPhase = 'closed' | 'opening' | 'open' | 'stepping' | 'closing';
 
