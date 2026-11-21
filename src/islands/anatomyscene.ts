@@ -223,6 +223,7 @@ interface Options {
   canvas: HTMLCanvasElement;
   reducedMotion: boolean;
   colors: LabColors;
+  posture?: Posture;
   /** Called after every frame the scene draws, so the labels can follow the camera. */
   onRender: () => void;
 }
@@ -233,7 +234,7 @@ const VISIBILITY_IDLE_MS = 120;
 /** The ID picture's size: about this many pixels, whatever the view's size (enough to find small visible parts). */
 const ID_PICTURE_PIXELS = 360_000;
 
-export function createLabScene({ canvas, reducedMotion, colors: initialColors, onRender }: Options): LabScene {
+export function createLabScene({ canvas, reducedMotion, colors: initialColors, posture: initialPosture, onRender }: Options): LabScene {
   let colors = initialColors;
   let currentReducedMotion = reducedMotion;
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
@@ -290,7 +291,7 @@ export function createLabScene({ canvas, reducedMotion, colors: initialColors, o
   let unlabeled: THREE.Mesh[] = [];
   let appearance: Appearance = { hidden: new Set(), selected: null };
   const home = { position: new THREE.Vector3(0, 0, 5), target: new THREE.Vector3(), distance: 5 };
-  let posture: Posture = 'standing';
+  let posture: Posture = initialPosture ?? 'standing';
   let loadId = 0;
   /** A camera move in progress (none with reduced motion: the camera jumps). */
   let move: { from: { position: THREE.Vector3; target: THREE.Vector3 }; to: { position: Vec3; target: Vec3 }; start: number; duration: number } | null = null;
@@ -626,6 +627,7 @@ export function createLabScene({ canvas, reducedMotion, colors: initialColors, o
     const rotated = rotateX({ x: direction[0], y: direction[1], z: direction[2] }, postureAngleX(posture));
     const dir = new THREE.Vector3(rotated.x, rotated.y, rotated.z);
     if (dir.lengthSq() < 1e-12) return;
+    move = null;
     const distance = home.position.distanceTo(home.target);
     controls.target.copy(home.target);
     camera.position.copy(home.target).add(dir.setLength(distance));

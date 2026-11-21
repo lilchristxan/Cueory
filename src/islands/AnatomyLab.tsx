@@ -468,6 +468,8 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
     const attempt = openGate.begin();
     if (attempt === null) return;
     setBulkPrompt(null);
+    setPosture('standing');
+    postureRef.current = 'standing';
     // A retry must not expose the previous system's ready state before its new GLB starts.
     setLoad({ state: 'loading' });
     setSelected(null);
@@ -499,6 +501,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
         canvas,
         reducedMotion: prefersReducedMotion(),
         colors: nextColors,
+        posture: postureRef.current,
         onRender: () => updateLabelsRef.current(),
       });
       if (!openGate.current(attempt)) {
@@ -1004,7 +1007,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
     import('./anatomyscene')
       .then(({ createLabScene }) => {
         if (!live) return;
-        scene = createLabScene({ canvas, reducedMotion: prefersReducedMotion(), colors, onRender: () => {} });
+        scene = createLabScene({ canvas, reducedMotion: prefersReducedMotion(), colors, posture: postureRef.current, onRender: () => {} });
         compareSceneRef.current = scene;
         compareSyncRef.current = createCompareSync(() => {
           const main = sceneRef.current;
@@ -1079,6 +1082,8 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
       setExportNote('');
       setLabelNote([]);
       setBulkPrompt(null);
+      setPosture('standing');
+      postureRef.current = 'standing';
       setPhase('error');
     };
 

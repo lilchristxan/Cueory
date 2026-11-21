@@ -389,3 +389,22 @@ describe('camera posture normalization', () => {
     expect(lyingCam.z).toBeCloseTo(0.3);
   });
 });
+
+describe('camera animation cancellation and posture synchronization', () => {
+  it('cancels active camera transitions when viewFrom is called', () => {
+    const source = readFileSync(new URL('../../src/islands/anatomyscene.ts', import.meta.url), 'utf8');
+    const viewFromBlock = source.slice(source.indexOf('function viewFrom('), source.indexOf('function setReducedMotion('));
+    expect(viewFromBlock).toContain('move = null;');
+  });
+
+  it('resets posture to standing during WebGL context loss and scene open recovery', () => {
+    const labSource = readFileSync(new URL('../../src/islands/AnatomyLab.tsx', import.meta.url), 'utf8');
+    const onContextLostBlock = labSource.slice(labSource.indexOf('const onContextLost ='), labSource.indexOf("canvas.addEventListener('webglcontextlost'"));
+    expect(onContextLostBlock).toContain("setPosture('standing')");
+    expect(onContextLostBlock).toContain("postureRef.current = 'standing'");
+
+    const openBlock = labSource.slice(labSource.indexOf('const open = useCallback('), labSource.indexOf('createLabScene({'));
+    expect(openBlock).toContain("setPosture('standing')");
+    expect(openBlock).toContain("postureRef.current = 'standing'");
+  });
+});
