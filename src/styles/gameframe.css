@@ -96,8 +96,8 @@
 }
 
 .game-frame-logo {
-  height: var(--game-frame-logo-height);
   width: var(--game-frame-logo-width);
+  height: auto;
 }
 
 .game-frame-game-badge {
@@ -195,10 +195,10 @@
 
 .game-frame-tagline {
   margin: 0;
-  font-family: var(--font-display);
+  font-family: var(--font-body);
   font-weight: 500;
   font-size: var(--game-frame-tagline-size);
-  line-height: 1.35;
+  line-height: 1.5;
   color: var(--color-ink);
   text-align: center;
 }
