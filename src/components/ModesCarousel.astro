@@ -245,7 +245,7 @@ const icons: Record<StudyFeatureIcon, string> = {
     slideAnnouncement,
     swipeTurn,
     wrap,
-    exitMatchesMouseMove,
+    shouldClearDocumentExit,
   } from '../scripts/carousel';
   import { relabelInfoTip } from '../scripts/infotip';
   import { isCloseKey, wrapFocus } from '../scripts/menu';
@@ -652,13 +652,17 @@ const icons: Record<StudyFeatureIcon, string> = {
     }, { capture: true, passive: true });
     // There is no final in-window pointermove when the mouse exits into browser chrome. Clear only that genuine
     // document exit. Firefox can replay a trusted null-relatedTarget exit at an old in-track coordinate after a real
-    // hover; ignore that stale exit when it disagrees with the last physical mouse position. Ordinary track/control
-    // handoffs have a related target and continue through pointermove instead.
+    // hover; ignore that stale exit only when its old coordinate still hits a pause area. A mismatched exit that is
+    // outside the viewport or outside the pause areas remains genuine. Ordinary handoffs have a related target.
     window.addEventListener('mouseout', (event) => {
       if (
         event.isTrusted &&
         event.relatedTarget === null &&
-        exitMatchesMouseMove(lastMouseMove, { x: event.clientX, y: event.clientY })
+        shouldClearDocumentExit(
+          lastMouseMove,
+          { x: event.clientX, y: event.clientY },
+          isPauseArea(document.elementFromPoint(event.clientX, event.clientY)),
+        )
       ) setHovering(false);
     }, { passive: true });
     root.addEventListener('focusin', () => {

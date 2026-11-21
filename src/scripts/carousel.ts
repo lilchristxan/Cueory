@@ -225,12 +225,13 @@ export function enterMatchesMouseMove(
   return lastMove === undefined || (lastMove.x === enter.x && lastMove.y === enter.y);
 }
 
-/** A trusted null-relatedTarget exit is genuine only when it reports the last physical mouse position. */
-export function exitMatchesMouseMove(
+/** A mismatched exit is stale only when its old coordinate still hits a pause area. */
+export function shouldClearDocumentExit(
   lastMove: { x: number; y: number } | undefined,
   exit: { x: number; y: number },
+  hitPauseArea: boolean,
 ): boolean {
-  return lastMove === undefined || (lastMove.x === exit.x && lastMove.y === exit.y);
+  return lastMove === undefined || (lastMove.x === exit.x && lastMove.y === exit.y) || !hitPauseArea;
 }
 
 /**
