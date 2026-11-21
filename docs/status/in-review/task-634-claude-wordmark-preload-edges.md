@@ -1,0 +1,1 @@
+status: Task 634, unit tests for the desktop wordmark preload (`src/scripts/wordmark-preload.ts`): intent events, file choice by width and pixel density, hidden logos, decode failures. Test-only; no product code change.
