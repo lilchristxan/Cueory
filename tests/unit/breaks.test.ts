@@ -45,6 +45,8 @@ describe('break settings', () => {
     { focusMinutes: 25, breakMinutes: 16 },
     { focusMinutes: 25.5, breakMinutes: 5 },
     { focusMinutes: 25, breakMinutes: '5' },
+    { focusMinutes: Number.NaN, breakMinutes: 5 },
+    { focusMinutes: 25, breakMinutes: Number.POSITIVE_INFINITY },
   ])('uses both defaults for old or malformed settings: %j', (value) => {
     expect(parseSettings(value)).toEqual({ focusMinutes: 25, breakMinutes: 5 });
   });

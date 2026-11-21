@@ -1,3 +1,4 @@
+import { appendFileSync, writeSync } from 'node:fs';
 import { test, type Browser, type Page, type TestInfo } from '@playwright/test';
 
 /*
@@ -37,10 +38,17 @@ type CaseReceipt = {
   setupError?: string;
 };
 
+let wroteStepSummaryHeader = false;
+
+const markdownCell = (value: unknown): string => String(value ?? 'null')
+  .replaceAll('|', '\\|').replaceAll('\r', ' ').replaceAll('\n', ' ');
+const stepSummaryColumns = ['Viewport', 'Case', 'Treatment', 'Preview', 'Count', 'Median ms', 'P95 ms', 'Max ms', 'Missed', 'Error'] as const;
+const stepSummaryDividers = ['---', '---', '---', '---', '---:', '---:', '---:', '---:', '---', '---'] as const;
+
 function logCaseReceipt(entry: CaseReceipt) {
   const measurement = entry.measurement;
   // Keep this compact receipt in runner stdout too: retained failure reports may omit test attachments.
-  console.log('frame-pacing ' + JSON.stringify({
+  const summary = {
     viewport: entry.viewport,
     case: entry.name,
     count: measurement?.count ?? null,
@@ -49,7 +57,25 @@ function logCaseReceipt(entry: CaseReceipt) {
     max: measurement?.maxMs ?? null,
     missed: measurement?.missedFrames ?? null,
     error: entry.setupError ?? measurement?.error ?? null,
-  }));
+  };
+  console.log('frame-pacing ' + JSON.stringify(summary));
+
+  const stepSummary = process.env.GITHUB_STEP_SUMMARY;
+  if (!stepSummary) return;
+  try {
+    if (!wroteStepSummaryHeader) {
+      appendFileSync(stepSummary, `\n| ${stepSummaryColumns.join(' | ')} |\n| ${stepSummaryDividers.join(' | ')} |\n`);
+      wroteStepSummaryHeader = true;
+    }
+    const viewport = `${summary.viewport.width}×${summary.viewport.height}`;
+    appendFileSync(stepSummary, `| ${markdownCell(viewport)} | ${markdownCell(summary.case)} | ${markdownCell(entry.treatment)} | ${markdownCell(entry.preview)} | ${markdownCell(summary.count)} | ${markdownCell(summary.median)} | ${markdownCell(summary.p95)} | ${markdownCell(summary.max)} | ${markdownCell(summary.missed)} | ${markdownCell(summary.error)} |\n`);
+    // The browser-free GitHub-reporter probe verified this direct stdout notice survives reporter capture.
+    const notice = JSON.stringify(summary)
+      .replaceAll('%', '%25').replaceAll('\r', '%0D').replaceAll('\n', '%0A');
+    writeSync(1, `::notice title=Frame pacing receipt ${viewport}::${notice}\n`);
+  } catch {
+    // Receipt reporting is best effort; attachment and test behavior remain unchanged if a runner disallows it.
+  }
 }
 
 const percentile = (sorted: readonly number[], fraction: number) => {
@@ -237,8 +263,8 @@ async function freshPage(browser: Browser, testInfo: TestInfo): Promise<{ page: 
   return { page: await context.newPage(), close: () => context.close() };
 }
 
-test('temporary WebKit frame-pacing receipt for Home treatments', async ({ browser }, testInfo) => {
-  test.skip(testInfo.project.use.browserName !== 'webkit', 'temporary WebKit-only diagnostic; Chromium and Windows coverage stay unchanged');
+test('temporary WebKit frame-pacing receipt for Home treatments', async ({ browser, browserName }, testInfo) => {
+  test.skip(browserName !== 'webkit', 'temporary WebKit-only diagnostic; Chromium and Windows coverage stay unchanged');
 
   const viewport = testInfo.project.use.viewport ?? { width: 1440, height: 900 };
   const cases: readonly { name: CaseName; treatment: Treatment; preview: boolean }[] = [

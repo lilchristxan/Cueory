@@ -59,6 +59,7 @@ describe('cardKeyAction', () => {
   it('Arrow keys in INPUT → null', () => {
     expect(cardKeyAction(inField('ArrowLeft', 'INPUT'))).toBeNull();
     expect(cardKeyAction(inField('ArrowRight', 'INPUT'))).toBeNull();
+    expect(cardKeyAction(inField('ArrowRight', 'SELECT'))).toBeNull();
   });
 
   it('cmd+Space → null (meta modifier)', () => {

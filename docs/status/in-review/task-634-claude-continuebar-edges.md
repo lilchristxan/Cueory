@@ -1,0 +1,1 @@
+status: Task 634, unit tests for the home-page continue bar rules (`src/islands/continue-bar.ts`): item bounds, safe links, expiry by the supplied date, tool names and bad records. Test-only; no product code change.

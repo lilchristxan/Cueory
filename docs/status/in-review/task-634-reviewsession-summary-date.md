@@ -1,0 +1,1 @@
+status: Task 634 review-session validation: a neutral fixture-only unit preserves rejection of an invalid explicit summary exam date for an empty session; no schedule, storage, account or content behavior changes.

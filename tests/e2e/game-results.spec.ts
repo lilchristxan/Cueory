@@ -140,9 +140,15 @@ test('result card matches the P4 capture notes: plain close, solid share pill, s
   await expect(dialog.getByTestId('result-share-line')).toHaveCSS('border-top-style', 'solid');
   const close = dialog.getByRole('button', { name: 'close results' });
   await expect(close).toHaveCSS('border-top-width', '0px');
-  const box = await close.boundingBox();
-  expect(box!.width).toBeGreaterThanOrEqual(44);
-  expect(box!.height).toBeGreaterThanOrEqual(44);
+  for (const [name, control] of [
+    ['close', close],
+    ['share', dialog.getByRole('button', { name: 'share', exact: true })],
+    ['copy', dialog.getByRole('button', { name: 'copy', exact: true })],
+  ] as const) {
+    const box = await control.boundingBox();
+    expect(box!.width, name).toBeGreaterThanOrEqual(44);
+    expect(box!.height, name).toBeGreaterThanOrEqual(44);
+  }
   // Keyboard focus back onto the close control still draws the visible focus ring.
   await page.keyboard.press('Tab');
   await page.keyboard.press('Shift+Tab');
