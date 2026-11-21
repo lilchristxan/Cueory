@@ -1,6 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { writeFile } from 'node:fs/promises';
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page, type TestInfo } from '@playwright/test';
 import { accountLaunch, accountsOpen, menuSmallLinks, newsletter, showsHeroJoin, socials } from '../../src/config/site';
 import { visibleFooterLinks } from '../../src/config/legalfooter';
 import { REST_MS } from '../../src/scripts/carousel';
@@ -33,6 +33,81 @@ async function openFooterLinks(page: Page) {
 const middleCard = (page: Page) =>
   page.locator('#ways-to-study [data-mode-card][data-offset="0"]').getAttribute('data-name');
 
+/** Failure-only Firefox and WebKit desktop evidence for the pointer-park start of the carousel autoplay assertion. */
+async function installAutoplayPointerParkDiagnostic(page: Page) {
+  await page.addInitScript(() => {
+    type Rect = { left: number; top: number; right: number; bottom: number; width: number; height: number } | null;
+    type Entry = {
+      phase: string;
+      t: number;
+      autoplay: string | null;
+      hold: string | null;
+      active: string | null;
+      track: Rect;
+      viewport: { width: number; height: number };
+      intersection: number | null;
+      visibility: string;
+      reducedMotion: boolean;
+    };
+    type ProbeWindow = Window & { __cueoryAutoplayPointerParkDiagnostic?: { entries: Entry[]; mark: (phase: string) => void } };
+    const entries: Entry[] = [];
+    const cap = 80;
+    let intersection: number | null = null;
+    const sample = () => {
+      const root = document.querySelector<HTMLElement>('[data-modes]');
+      const track = root?.querySelector<HTMLElement>('[data-modes-track]') ?? null;
+      const rect = track?.getBoundingClientRect();
+      return {
+        autoplay: root?.dataset.autoplay ?? null,
+        hold: root?.dataset.autoplayHold ?? null,
+        active: root?.querySelector<HTMLElement>('[data-mode-card][data-offset="0"]')?.dataset.name ?? null,
+        track: rect ? { left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom, width: rect.width, height: rect.height } : null,
+        viewport: { width: window.innerWidth, height: window.innerHeight },
+        intersection,
+        visibility: document.visibilityState,
+        reducedMotion: window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+      };
+    };
+    const note = (phase: string) => {
+      entries.push({ phase, t: performance.now(), ...sample() });
+      if (entries.length > cap) entries.splice(0, entries.length - cap);
+    };
+    (window as ProbeWindow).__cueoryAutoplayPointerParkDiagnostic = { entries, mark: note };
+    document.addEventListener('DOMContentLoaded', () => {
+      const root = document.querySelector<HTMLElement>('[data-modes]');
+      const track = root?.querySelector<HTMLElement>('[data-modes-track]');
+      if (!root || !track) return note('carousel:missing');
+      note('carousel:ready');
+      new MutationObserver((mutations) => {
+        for (const mutation of mutations) note(`attribute:${mutation.attributeName}`);
+      }).observe(root, { attributes: true, attributeFilter: ['data-autoplay', 'data-autoplay-hold'] });
+      new IntersectionObserver((observations) => {
+        for (const observation of observations) {
+          intersection = observation.intersectionRatio;
+          note('intersection');
+        }
+      }, { threshold: [0, 0.01, 1] }).observe(track);
+    });
+  });
+}
+
+async function markAutoplayPointerParkDiagnostic(page: Page, phase: string) {
+  await page.evaluate((label) => {
+    type ProbeWindow = Window & { __cueoryAutoplayPointerParkDiagnostic?: { mark: (phase: string) => void } };
+    (window as ProbeWindow).__cueoryAutoplayPointerParkDiagnostic?.mark(label);
+  }, phase).catch(() => {});
+}
+
+async function attachAutoplayPointerParkDiagnostic(page: Page, testInfo: TestInfo) {
+  const entries = await page.evaluate(() => {
+    type ProbeWindow = Window & { __cueoryAutoplayPointerParkDiagnostic?: { entries: unknown[] } };
+    return (window as ProbeWindow).__cueoryAutoplayPointerParkDiagnostic?.entries ?? [];
+  }).catch(() => []);
+  await testInfo.attach('carousel-autoplay-pointer-park-path', {
+    body: JSON.stringify({ entries }, null, 2),
+    contentType: 'application/json',
+  });
+}
 /** Test-only D-51 close observation; it captures IDs and event state, never DOM content or user text. */
 async function installPreviewCloseDiagnostic(page: Page) {
   await page.addInitScript(() => {
@@ -1112,24 +1187,44 @@ test.describe('"ways to study" merry-go-round (D-50, D-60)', () => {
   }, testInfo) => {
     test.skip(!isDesktopOfEachEngine(testInfo), 'a timing test that rests a mouse on the cards: once per engine, at desktop size');
     test.slow();
-    await page.goto('/');
-    await section(page).scrollIntoViewIfNeeded();
-    // The mouse over the section's words, not its cards: that doesn't pause it.
-    await page.mouse.move(0, 0);
-    await expect.poll(() => middleCard(page), { timeout: 9000 }).toBe('cards');
+    const engine = testInfo.project.use.browserName ?? testInfo.project.use.defaultBrowserType;
+    const diagnoseAutoplayStart = engine === 'firefox' || engine === 'webkit';
+    if (diagnoseAutoplayStart) await installAutoplayPointerParkDiagnostic(page);
+    let failed = false;
+    try {
+      await page.goto('/');
+      await section(page).scrollIntoViewIfNeeded();
+      if (diagnoseAutoplayStart) await markAutoplayPointerParkDiagnostic(page, 'before-pointer-park');
+      // The mouse over the section's words, not its cards: that doesn't pause it.
+      await page.mouse.move(0, 0);
+      if (diagnoseAutoplayStart) await markAutoplayPointerParkDiagnostic(page, 'after-pointer-park');
+      if (diagnoseAutoplayStart) await markAutoplayPointerParkDiagnostic(page, 'first-poll:begin');
+      await expect.poll(() => middleCard(page), { timeout: 9000 }).toBe('cards');
 
-    // Resting on the cards pauses it; moving off lets it go on.
-    await page.getByRole('group', { name: 'study mode cards' }).hover();
-    await page.waitForTimeout(7000);
-    expect(await middleCard(page)).toBe('cards');
-    await page.mouse.move(0, 0);
-    await expect.poll(() => middleCard(page), { timeout: 9000 }).toBe('learn');
+      // Resting on the cards pauses it; moving off lets it go on.
+      await page.getByRole('group', { name: 'study mode cards' }).hover();
+      await page.waitForTimeout(7000);
+      expect(await middleCard(page)).toBe('cards');
+      await page.mouse.move(0, 0);
+      await expect.poll(() => middleCard(page), { timeout: 9000 }).toBe('learn');
 
-    await section(page).getByRole('button', { name: 'next study mode' }).click();
-    await expect.poll(() => middleCard(page)).toBe('fill-in');
-    await page.mouse.move(0, 0);
-    await page.waitForTimeout(7000);
-    expect(await middleCard(page)).toBe('fill-in');
+      await section(page).getByRole('button', { name: 'next study mode' }).click();
+      await expect.poll(() => middleCard(page)).toBe('fill-in');
+      await page.mouse.move(0, 0);
+      await page.waitForTimeout(7000);
+      expect(await middleCard(page)).toBe('fill-in');
+    } catch (error) {
+      failed = true;
+      throw error;
+    } finally {
+      if (failed && diagnoseAutoplayStart) {
+        try {
+          await attachAutoplayPointerParkDiagnostic(page, testInfo);
+        } catch {
+          // Best effort: do not replace the failed autoplay assertion.
+        }
+      }
+    }
   });
 });
 
