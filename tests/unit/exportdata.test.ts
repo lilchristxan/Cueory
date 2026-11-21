@@ -170,6 +170,24 @@ describe('JSON export', () => {
     expect(json({ gameStats }).gameStats).toEqual([{ ...sample.gameStats[0], game: 'vialo' }]);
   });
 
+  it('round-trips the optional game-history details in JSON and keeps old rows valid', () => {
+    const current = {
+      gameStats: [
+        { game: 'cueword', day: '2026-10-31', solved: true, tries: 3, streak: true },
+        { game: 'suture', day: '2026-10-30', solved: true, tries: 1, hints: 2, specialFirst: true },
+        { game: 'vialo', day: '2026-10-29', solved: false, tries: 7, offDay: true },
+      ],
+    };
+    expect(json(current).gameStats).toEqual(current.gameStats);
+    expect(json({ gameStats: [{ game: 'vialo', day: '2026-10-31', solved: true, tries: 1 }] }).dropped).toEqual([]);
+    expect(parseRows(file(current, 'gameStats'))).toEqual([
+      ['game', 'day', 'solved', 'tries', 'offDay', 'streak', 'hints', 'specialFirst'],
+      ['cueword', '2026-10-31', 'true', '3', '', 'true', '', ''],
+      ['suture', '2026-10-30', 'true', '1', '', '', '2', 'true'],
+      ['vialo', '2026-10-29', 'false', '7', 'true', '', '', ''],
+    ]);
+  });
+
   it('uses fixed field order regardless of the input property order', () => {
     const reordered = {
       sudokuStats: [{ seconds: 412, day: '2026-10-31', level: 'medium' }],
@@ -313,7 +331,10 @@ describe('CSV export', () => {
       ['id', 'result', 'date', 'deckId', 'progressVersion', 'course', 'examDate', 'done'],
       ['sample-item', 'true', '2026-10-31', '', '', '', '', ''],
     ]);
-    expect(parseRows(file(sample, 'gameStats'))).toEqual([['game', 'day', 'solved', 'tries'], ['pulse', '2026-10-31', 'false', '7']]);
+    expect(parseRows(file(sample, 'gameStats'))).toEqual([
+      ['game', 'day', 'solved', 'tries', 'offDay', 'streak', 'hints', 'specialFirst'],
+      ['pulse', '2026-10-31', 'false', '7', '', '', '', ''],
+    ]);
   });
 
   it('preserves sample commas, quotes, Unicode and embedded LF/CRLF after parsing', () => {
