@@ -17,7 +17,8 @@ export const EVENT_MAX_AGE_DAYS = 1;
 
 const DAY_MS = 86_400_000;
 const VERSION = 1 as const;
-const gameIds = new Set<string>(dailyGames.map((game) => game.id));
+const gameIds = new Set<string>([...dailyGames.map((game) => game.id), 'pulse', 'pillo']);
+const normalizeGameId = (id: string): string => (id === 'pulse' || id === 'pillo' ? 'vialo' : id);
 export type GameId = DailyGame['id'];
 export type StudyMode = 'cards' | 'learn' | 'review';
 
@@ -127,7 +128,7 @@ function readGame(value: unknown, event = false): FinishedGame | null {
   if (!v || (event && (v.type !== 'game' || v.finished !== true)) ||
       typeof v.game !== 'string' || !gameIds.has(v.game) || dayIndex(v.day) === null ||
       typeof v.solved !== 'boolean' || !count(v.slips) || !count(v.cues)) return null;
-  return { game: v.game as GameId, day: v.day as string, solved: v.solved, slips: v.slips, cues: v.cues };
+  return { game: normalizeGameId(v.game) as GameId, day: v.day as string, solved: v.solved, slips: v.slips, cues: v.cues };
 }
 function readStudy(value: unknown, event = false): FinishedStudy | null {
   const keys = ['id', 'day', 'mode', ...(event ? ['type', 'finished'] : [])];
@@ -210,12 +211,12 @@ function totals(games: readonly FinishedGame[], studies: readonly FinishedStudy[
   for (const game of games) {
     let seen = perGameDay.get(game.day);
     if (!seen) { seen = new Set<GameId>(); perGameDay.set(game.day, seen); }
-    seen.add(game.game);
+    seen.add(normalizeGameId(game.game) as GameId);
     const flawless = game.solved && game.slips === 0 && game.cues === 0;
     if (flawless) perfect++;
     points += GAME_POINTS + (flawless ? PERFECT_GAME_BONUS : 0);
   }
-  for (const set of perGameDay.values()) if (set.size === gameIds.size) points += ALL_FOUR_GAMES_BONUS;
+  for (const set of perGameDay.values()) if (set.size === dailyGames.length) points += ALL_FOUR_GAMES_BONUS;
 
   const perStudyDay = new Map<string, number>();
   for (const study of studies) perStudyDay.set(study.day, (perStudyDay.get(study.day) ?? 0) + 1);
@@ -227,7 +228,7 @@ function totals(games: readonly FinishedGame[], studies: readonly FinishedStudy[
   const usedWeeks = gameRun.usedWeeks;
   return {
     points, games: games.length, perfect,
-    allFour: [...perGameDay.values()].some((set) => set.size === gameIds.size),
+    allFour: [...perGameDay.values()].some((set) => set.size === dailyGames.length),
     studySessions: studies.length, studyRun: studyStreak(studies),
     currentStreak, bestStreak: gameRun.best, usedWeeks,
   };

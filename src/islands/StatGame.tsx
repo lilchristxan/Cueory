@@ -41,6 +41,7 @@ interface Props {
   questions: readonly StatQuestion[];
   /** Sample mode only: the labeled sample key from content/games/stat. Real mode will grade through check_answer. */
   sampleKey: Readonly<Record<string, StatLetter>>;
+  game?: 'stat' | 'tachyyy';
 }
 
 type Phase = 'ready' | 'playing' | 'grading' | 'done' | 'failed';
@@ -83,7 +84,7 @@ function Ring({ left }: { left: number }) {
  * stat: fifteen timed questions, graded only at the end. All rules live in ./stat.ts; this file renders them and runs
  * the clock. Keys: a to d pick, Enter goes on (unless a button has focus, where Enter presses that button).
  */
-export default function StatGame({ questions, sampleKey }: Props) {
+export default function StatGame({ questions, sampleKey, game = 'stat' }: Props) {
   const grader = useMemo(() => sampleGrader(sampleKey), [sampleKey]);
   const [phase, setPhase] = useState<Phase>('ready');
   const [state, setState] = useState<StatState>(() => startStat(0));
@@ -235,12 +236,12 @@ export default function StatGame({ questions, sampleKey }: Props) {
   });
 
   // Only a fully graded round can create a display result. It never enters private game stats.
-  const result = getResult(rows, state.answers, today, rounds > 1);
+  const result = getResult(rows, state.answers, today, rounds > 1, game);
   useEffect(() => {
     if (phase !== 'done' || !result || reportedRound.current === rounds) return;
     reportedRound.current = rounds;
     showResultCard(statResultCard(result));
-  }, [phase, rows, state.answers, rounds, today]);
+  }, [phase, rows, state.answers, rounds, today, game]);
 
   const copy = async () => {
     if (!result) return;

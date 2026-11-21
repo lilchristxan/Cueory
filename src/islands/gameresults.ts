@@ -96,8 +96,11 @@ export function sudokuRoundResult(detail: SudokuResult): RoundResult {
 
 /** Display-only Stat result. Questions, keys and private stats are never included. */
 export function statResultCard(detail: StatRoundResult): GameResultCard {
+  const isTachyyy = (detail.game as string) === 'tachyyy';
   return {
-    game: 'stat', name: statGame.name, date: resultDayLabel(detail.day),
+    game: detail.game ?? 'stat',
+    name: isTachyyy ? 'tachyyy' : statGame.name,
+    date: resultDayLabel(detail.day),
     result: `${detail.score}/${detail.total}`,
     summary: detail.practice ? 'practice round complete.' : 'round complete.',
     nextMessage: 'reviewed daily sets will come later.',
@@ -106,7 +109,7 @@ export function statResultCard(detail: StatRoundResult): GameResultCard {
       { label: 'average answer time', value: `${detail.averageSeconds} s` },
       { label: 'round', value: detail.practice ? 'practice' : 'today' },
     ],
-    path: '/play/stat',
+    path: isTachyyy ? '/play/tachyyy' : '/play/stat',
   };
 }
 
@@ -324,7 +327,8 @@ export function deleteStats(storage: KeyValueStorage | undefined): boolean {
 }
 
 /** What each game counts as a try, in the words its own rules use. */
-const TRIES: Record<GameId, { one: string; many: string }> = {
+const TRIES: Record<string, { one: string; many: string }> = {
+  vialo: { one: 'guess', many: 'guesses' },
   pulse: { one: 'guess', many: 'guesses' },
   triage: { one: 'error', many: 'errors' },
   cueword: { one: 'check or reveal', many: 'checks or reveals' },

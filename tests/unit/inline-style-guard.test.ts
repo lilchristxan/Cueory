@@ -20,6 +20,7 @@ function quotedStyleLines(source: string): number[] {
 // path -> [expected count of JSX style props, reason]
 const jsxStyleAllowlist: Record<string, [number, string]> = {
   'islands/PulseGame.tsx': [1, 'sets only the --pillo-share custom property, which the stylesheet turns into a bar length'],
+  'islands/VialoGame.tsx': [1, 'sets only the --pillo-share custom property, which the stylesheet turns into a bar length'],
   'islands/LabelItBoard.tsx': [1, 'label boxes are positioned from submitted image percentages at runtime'],
   'islands/AnatomyLab.tsx': [1, 'bulk-download preview boxes are positioned from measured pixel geometry at runtime'],
   'islands/ShareSheet.tsx': [1, 'false positive: `style` is a card-option prop naming a share style, not CSS'],

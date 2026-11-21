@@ -77,8 +77,11 @@ const initialJsBudget = {
   // Each game on its own page (2026-11-17, D-pending): these routes stopped being share landings and now load their game.
   // Measured from a local Node 24 build of lane8/game-pages; the old 89,662 baseline was a page with no game on it.
   'play/crossword.html': 121556,
+  'play/piccline.html': 125986,
   'play/pillo.html': 119797,
   'play/sudoku.html': 122156,
+  'play/tachyyy.html': 87996,
+  'play/vialo.html': 124013,
   'play/word-path.html': 120824,
   'preview/admin-flags.html': 92161,
   'preview/anatomy-text.html': 89104,

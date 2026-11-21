@@ -4,9 +4,11 @@
  * `gamePageForHash`, so it can be unit tested; loaded by src/pages/play.astro as a bundled module (no inline script).
  */
 const HASH_PAGES: Readonly<Record<string, string>> = Object.freeze({
-  'pulse-heading': '/play/pillo',
-  pillo: '/play/pillo',
-  pulse: '/play/pillo',
+  'vialo-heading': '/play/vialo',
+  vialo: '/play/vialo',
+  'pulse-heading': '/play/vialo',
+  pillo: '/play/vialo',
+  pulse: '/play/vialo',
   'triage-heading': '/play/sudoku',
   'sudoku-heading': '/play/sudoku',
   sudoku: '/play/sudoku',
@@ -17,6 +19,12 @@ const HASH_PAGES: Readonly<Record<string, string>> = Object.freeze({
   'word-path-heading': '/play/word-path',
   'word-path': '/play/word-path',
   suture: '/play/word-path',
+  'piccline-heading': '/play/piccline',
+  piccline: '/play/piccline',
+  'tachyyy-heading': '/play/tachyyy',
+  tachyyy: '/play/tachyyy',
+  'stat-heading': '/play/tachyyy',
+  stat: '/play/tachyyy',
 });
 
 /** The game page an old /play hash pointed at, or undefined to stay on the hub. */

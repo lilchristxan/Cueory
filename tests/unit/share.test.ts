@@ -52,7 +52,7 @@ describe('share links go to the exact tool', () => {
   });
 
   it('strips a trailing slash and never adds tracking parameters', () => {
-    expect(buildShareUrl('pulse', `${SITE}/`)).toBe(`${SITE}/play/pillo`);
+    expect(buildShareUrl('vialo', `${SITE}/`)).toBe(`${SITE}/play/vialo`);
     for (const tool of TOOLS) expect(new URL(buildShareUrl(tool, SITE)).search).toBe('');
   });
 });

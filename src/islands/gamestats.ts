@@ -1,7 +1,7 @@
 /** Optional private game history. No storage, clock, network or visible game names. */
 import type { DailyGame } from '../config/games';
 
-export type GameId = DailyGame['id'];
+export type GameId = DailyGame['id'] | 'vialo' | 'pillo' | 'tachyyy' | 'stat' | 'piccline';
 export interface GameResult {
   game: GameId;
   day: string;
@@ -27,7 +27,7 @@ export interface GameSummary {
   triesCounts: Record<number, number>;
 }
 
-const GAMES: readonly string[] = ['pulse', 'cueword', 'triage', 'suture'];
+const GAMES: readonly string[] = ['vialo', 'pulse', 'pillo', 'cueword', 'triage', 'suture', 'piccline', 'tachyyy', 'stat'];
 const DAY = 86_400_000;
 const WINDOW_DAYS = 400;
 const VERSION = 1;
@@ -47,9 +47,9 @@ function readResult(value: unknown): GameResult | undefined {
       typeof solved !== 'boolean' || typeof tries !== 'number' || !Number.isSafeInteger(tries) || tries < 0 ||
       (offDay !== undefined && offDay !== true)) return;
     if (streak !== undefined && typeof streak !== 'boolean') return;
-    // The two word path details are optional, and only word path keeps them.
-    if (hints !== undefined && (game !== 'suture' || typeof hints !== 'number' || !Number.isSafeInteger(hints) || hints < 0)) return;
-    if (specialFirst !== undefined && (game !== 'suture' || typeof specialFirst !== 'boolean')) return;
+    // The two word path details are optional, and only word path (suture / piccline) keeps them.
+    if (hints !== undefined && (game !== 'suture' && game !== 'piccline' || typeof hints !== 'number' || !Number.isSafeInteger(hints) || hints < 0)) return;
+    if (specialFirst !== undefined && (game !== 'suture' && game !== 'piccline' || typeof specialFirst !== 'boolean')) return;
     return {
       game: game as GameId, day: day as string, solved, tries,
       ...(offDay === true ? { offDay: true as const } : {}),
@@ -69,15 +69,29 @@ function trim(results: GameStats): GameResult[] {
   return results.filter((result) => dayNumber(result.day)! >= latest.get(result.game)! - WINDOW_DAYS + 1);
 }
 
+export function sameGame(a: string, b: string): boolean {
+  if (a === b) return true;
+  if ((a === 'suture' || a === 'piccline') && (b === 'suture' || b === 'piccline')) return true;
+  if ((a === 'pulse' || a === 'pillo' || a === 'vialo') && (b === 'pulse' || b === 'pillo' || b === 'vialo')) return true;
+  if ((a === 'stat' || a === 'tachyyy') && (b === 'stat' || b === 'tachyyy')) return true;
+  return false;
+}
+
 /** First result for a game/day wins. Replay never rewrites it or another game's history. */
 export function recordResult(stats: GameStats, result: unknown): GameStats {
   const valid = readResult(result);
-  if (!valid || stats.some((entry) => entry.game === valid.game && entry.day === valid.day)) return stats;
+  if (!valid || stats.some((entry) => sameGame(entry.game, valid.game) && entry.day === valid.day)) return stats;
   return trim([...stats, valid]);
 }
 
 export function summary(stats: GameStats, game: string): GameSummary {
-  const results = stats.filter((entry) => entry.game === game);
+  const seenDays = new Set<string>();
+  const results = stats.filter((entry) => {
+    if (!sameGame(entry.game, game)) return false;
+    if (seenDays.has(entry.day)) return false;
+    seenDays.add(entry.day);
+    return true;
+  });
   const triesCounts: Record<number, number> = {};
   for (const result of results) triesCounts[result.tries] = (triesCounts[result.tries] ?? 0) + 1;
   return { played: results.length, solved: results.filter((entry) => entry.solved).length, triesCounts };
@@ -99,7 +113,13 @@ export interface DailyStats {
  * streak still stands today until today's puzzle is played, and a puzzle lost today ends it.
  */
 export function dailyStats(stats: GameStats, game: string, today: string, maxTries: number): DailyStats {
-  const results = stats.filter((entry) => entry.game === game);
+  const seenDays = new Set<string>();
+  const results = stats.filter((entry) => {
+    if (!sameGame(entry.game, game)) return false;
+    if (seenDays.has(entry.day)) return false;
+    seenDays.add(entry.day);
+    return true;
+  });
   const solved = results.filter((entry) => entry.solved);
   const distribution = Array.from({ length: maxTries }, () => 0);
   for (const result of solved) if (result.tries >= 1 && result.tries <= maxTries) distribution[result.tries - 1] = (distribution[result.tries - 1] ?? 0) + 1;
@@ -147,6 +167,73 @@ export function serialize(stats: GameStats): string {
   return JSON.stringify({ version: VERSION, results: trim(results) });
 }
 
+/** If cueory-game-stats holds pillo or pulse data under an old key, canonicalize it to vialo so nobody loses a streak. */
+export function migratePilloStatsToVialo(stats: GameStats): GameStats {
+  const vialoDays = new Set(stats.filter((r) => r.game === 'vialo').map((r) => r.day));
+  const migrated: GameResult[] = [];
+  for (const r of stats) {
+    if ((r.game as string) === 'pillo' || (r.game as string) === 'pulse') {
+      if (!vialoDays.has(r.day)) {
+        migrated.push({
+          ...r,
+          game: 'vialo' as GameId,
+        });
+        vialoDays.add(r.day);
+      }
+    } else {
+      migrated.push(r);
+    }
+  }
+  return trim(migrated);
+}
+
+/**
+ * If cueory-game-stats holds legacy game data (suture, stat), copy to the rebranded names
+ * (piccline, tachyyy) so nobody loses a streak or history.
+ */
+export function migrateStatAndSutureStatsToTachyyyAndPiccline(stats: GameStats): GameStats {
+  const picclineDays = new Set(stats.filter((r) => r.game === 'piccline').map((r) => r.day));
+  const tachyyyDays = new Set(stats.filter((r) => r.game === 'tachyyy').map((r) => r.day));
+  const sutureDays = new Set(stats.filter((r) => r.game === 'suture').map((r) => r.day));
+  const statDays = new Set(stats.filter((r) => r.game === 'stat').map((r) => r.day));
+  const migrated: GameResult[] = [...stats];
+  for (const r of stats) {
+    if ((r.game as string) === 'suture' && !picclineDays.has(r.day)) {
+      migrated.push({
+        ...r,
+        game: 'piccline' as GameId,
+      });
+      picclineDays.add(r.day);
+    }
+    if ((r.game as string) === 'piccline' && !sutureDays.has(r.day)) {
+      migrated.push({
+        ...r,
+        game: 'suture' as GameId,
+      });
+      sutureDays.add(r.day);
+    }
+    if ((r.game as string) === 'stat' && !tachyyyDays.has(r.day)) {
+      migrated.push({
+        ...r,
+        game: 'tachyyy' as GameId,
+      });
+      tachyyyDays.add(r.day);
+    }
+    if ((r.game as string) === 'tachyyy' && !statDays.has(r.day)) {
+      migrated.push({
+        ...r,
+        game: 'stat' as GameId,
+      });
+      statDays.add(r.day);
+    }
+  }
+  return trim(migrated);
+}
+
+export function migrateLegacyGameStats(stats: GameStats): GameStats {
+  return migrateStatAndSutureStatsToTachyyyAndPiccline(migratePilloStatsToVialo(stats));
+}
+
 /** Bad or old data starts empty. One invalid entry invalidates the whole saved record. */
 export function parseStats(text: unknown): GameStats {
   try {
@@ -187,7 +274,15 @@ export interface WordPathSummary {
  * visitor's own YYYY-MM-DD day.
  */
 export function wordPathSummary(stats: GameStats, today: string): WordPathSummary {
-  const results = stats.filter((entry) => entry.game === 'suture');
+  const byDay = new Map<string, GameResult>();
+  for (const entry of stats) {
+    if ((entry.game as string) === 'piccline') {
+      byDay.set(entry.day, entry);
+    } else if (entry.game === 'suture' && !byDay.has(entry.day)) {
+      byDay.set(entry.day, entry);
+    }
+  }
+  const results = [...byDay.values()];
   const solved = results.filter((entry) => entry.solved);
   const days = [...new Set(solved.map((entry) => dayNumber(entry.day)!))].sort((a, b) => a - b);
   let longest = 0;
@@ -217,7 +312,18 @@ export function wordPathSummaryInWords(value: WordPathSummary): string {
 }
 
 export function forget(stats: GameStats, game?: string): GameStats {
-  return game === undefined ? [] : stats.filter((result) => result.game !== game);
+  if (game === undefined) return [];
+  const aliases: Record<string, string[]> = {
+    suture: ['suture', 'piccline'],
+    piccline: ['suture', 'piccline'],
+    pulse: ['pulse', 'pillo', 'vialo'],
+    pillo: ['pulse', 'pillo', 'vialo'],
+    vialo: ['pulse', 'pillo', 'vialo'],
+    stat: ['stat', 'tachyyy'],
+    tachyyy: ['stat', 'tachyyy'],
+  };
+  const toForget = new Set(aliases[game] ?? [game]);
+  return stats.filter((result) => !toForget.has(result.game as string));
 }
 
 /** Whether a kept result extends the streak. Results kept before Task 721 had no help tools, so a clean solve counts. */
