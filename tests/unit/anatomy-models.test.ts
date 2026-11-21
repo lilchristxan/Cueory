@@ -1,6 +1,7 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { ancestorsOf, commonParent, GROUP_MIN, GROUP_SPLIT_ABOVE, groupHeadings } from '../../scripts/anatomy-groups.mjs';
+import { ancestryIds } from '../../scripts/build-anatomy.mjs';
 import { MAX_SIZE_BYTES, MAX_TRIANGLES } from '../../src/islands/bodyviewer-logic';
 import {
   allowedBooks,
@@ -350,6 +351,69 @@ describe('the anatomy models', () => {
         const inSmall = [...sizes.values()].filter((n) => n < GROUP_MIN).reduce((a, b) => a + b, 0);
         expect(inSmall, [...sizes].join('; ')).toBeLessThanOrEqual(visual.labels.length / 3);
       });
+
+      // Task 178: optional fields a rebuild (parents) or a reviewed edit (also) may add. Files without them pass.
+      it('gives parents, when present, as non-empty names, root first, passing through the group', () => {
+        for (const label of visual.labels as LabelWithStudyFields[]) {
+          if (label.parents === undefined) continue;
+          expect(Array.isArray(label.parents), label.id).toBe(true);
+          expect(label.parents.length, label.id).toBeGreaterThan(0);
+          for (const name of label.parents) expect(typeof name === 'string' && name.trim().length > 0, label.id).toBe(true);
+          // The group is a concept above the structure, so the ancestry names it; the structure is not its own parent.
+          expect(label.parents, `${label.id} group ${label.group}`).toContain(label.group);
+          expect(label.parents, label.id).not.toContain(label.text);
+          // The root is the top of the chain, so it never reappears below.
+          expect(new Set(label.parents).size, label.id).toBe(label.parents.length);
+        }
+      });
+
+      it('gives alternative names (also), when present, as non-empty strings different from the official name', () => {
+        for (const label of visual.labels as LabelWithStudyFields[]) {
+          if (label.also === undefined) continue;
+          expect(Array.isArray(label.also), label.id).toBe(true);
+          for (const name of label.also) {
+            expect(typeof name === 'string' && name.trim().length > 0, label.id).toBe(true);
+            expect(name, label.id).not.toBe(label.text);
+          }
+        }
+      });
     });
   }
+});
+
+/** A label with the optional study fields of Task 178 (src/content.config.ts). */
+type LabelWithStudyFields = Visual['labels'][number] & { parents?: string[]; also?: string[] };
+
+describe('the PART-OF ancestry a rebuild writes (scripts/build-anatomy.mjs ancestryIds)', () => {
+  // A synthetic hierarchy: ids only, no anatomy. body > region > organ > part; organ is also part of "system".
+  const parents = new Map<string, string[]>([
+    ['region', ['body']],
+    ['system', ['body']],
+    ['organ', ['region', 'system']],
+    ['part', ['organ']],
+    ['piece', ['part']],
+  ]);
+
+  it('is the path above the structure with the concepts above the root climbed to the top, root first', () => {
+    expect(ancestryIds('piece', ['organ', 'part', 'piece'], 'part', parents)).toEqual(['body', 'region', 'organ', 'part']);
+    expect(ancestryIds('organ', ['organ'], 'region', parents)).toEqual(['body', 'region']);
+  });
+
+  it('climbs through the heading when the heading is above the root and the root has several wholes', () => {
+    expect(ancestryIds('organ', ['organ'], 'system', parents)).toEqual(['body', 'system']);
+    expect(ancestryIds('part', ['organ', 'part'], 'system', parents)).toEqual(['body', 'system', 'organ']);
+  });
+
+  it('takes the first whole in file order when none leads to the heading, and ends on a loop', () => {
+    expect(ancestryIds('part', ['organ', 'part'], undefined, parents)).toEqual(['body', 'region', 'organ']);
+    const loop = new Map<string, string[]>([
+      ['a', ['b']],
+      ['b', ['a']],
+    ]);
+    expect(ancestryIds('x', ['a', 'x'], 'a', loop)).toEqual(['b', 'a']);
+  });
+
+  it('never lists the structure itself', () => {
+    expect(ancestryIds('piece', ['piece'], undefined, parents)).toEqual(['part', 'organ', 'region', 'body'].reverse());
+  });
 });
