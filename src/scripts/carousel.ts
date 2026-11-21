@@ -225,6 +225,15 @@ export function enterMatchesMouseMove(
   return lastMove === undefined || (lastMove.x === enter.x && lastMove.y === enter.y);
 }
 
+/** A mismatched exit is stale only when its old coordinate still hits a pause area. */
+export function shouldClearDocumentExit(
+  lastMove: { x: number; y: number } | undefined,
+  exit: { x: number; y: number },
+  hitPauseArea: boolean,
+): boolean {
+  return lastMove === undefined || (lastMove.x === exit.x && lastMove.y === exit.y) || !hitPauseArea;
+}
+
 /**
  * The first active condition that holds the carousel still. Kept separate from canAutoAdvance so the rendered
  * carousel can expose the same reason that its timer uses without changing its existing motion policy.
