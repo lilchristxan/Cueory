@@ -85,7 +85,8 @@ test('with 32 px text at 320 px the corner row wraps instead of pushing any game
     await page.goto(game.path);
     await page.evaluate(() => document.documentElement.style.setProperty('font-size', '32px', 'important'));
     await expect(page.getByTestId(game.testId)).toBeVisible();
-    const help = (await page.getByTestId(game.testId).getByRole('button', { name: `how to play ${game.name}` }).boundingBox())!;
+    const helpLocator = game.name === 'crossword' ? page.getByTestId('game-frame-help-button') : page.getByTestId(game.testId).getByRole('button', { name: `how to play ${game.name}` });
+    const help = (await helpLocator.boundingBox())!;
     expect(help.x + help.width, game.name).toBeLessThanOrEqual(320);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth), game.name).toBe(true);
   }
