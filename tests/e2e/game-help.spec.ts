@@ -102,6 +102,24 @@ for (const game of games) {
   });
 }
 
+test('word path help opens from the keyboard at phone width and restores focus', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/play/word-path');
+
+  const area = page.getByTestId('suture');
+  const button = area.getByRole('button', { name: 'how to play word path' });
+  await button.focus();
+  await expect(button).toBeFocused();
+
+  await page.keyboard.press('Enter');
+  const dialog = page.getByRole('dialog', { name: 'how to play word path' });
+  await expect(dialog).toBeVisible();
+
+  await page.keyboard.press('Escape');
+  await expect(dialog).toHaveCount(0);
+  await expect(button).toBeFocused();
+});
+
 test('the help dialog fits a phone without sideways scrolling, in light and evening', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   for (const scheme of ['light', 'dark'] as const) {
