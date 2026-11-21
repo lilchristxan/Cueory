@@ -297,6 +297,10 @@
   z-index: 15;
 }
 
+.game-frame-controls-row.is-wide {
+  max-width: var(--game-frame-max-board-wide);
+}
+
 .game-frame-btn {
   width: var(--game-frame-btn-size);
   height: var(--game-frame-btn-size);
@@ -326,8 +330,13 @@
 }
 
 .game-frame-gear-icon {
-  font-size: var(--game-frame-gear-size);
-  line-height: 1;
+  width: var(--game-frame-gear-size);
+  height: var(--game-frame-gear-size);
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .game-frame-controls-middle {

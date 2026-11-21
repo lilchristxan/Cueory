@@ -305,7 +305,7 @@ const activeDateLine = propDateLine ?? formatGameDateLine(new Date());
 
       <!-- Row above the board: Settings gear (top-left), middle slot for game-specific controls, ? popover (top-right) -->
       {framed && (
-        <GameFrameControls client:load gameName={currentConfig.name} steps={activeSteps} hasPillLegend={currentConfig.hasPillLegend} bridge={bridge}>
+        <GameFrameControls client:load gameName={currentConfig.name} steps={activeSteps} hasPillLegend={currentConfig.hasPillLegend} bridge={bridge} wide={wide}>
           <slot name="controls" />
         </GameFrameControls>
       )}
