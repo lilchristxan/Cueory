@@ -57,7 +57,8 @@ for (const game of games) {
 
   test(`${game.name}: the gear opens its settings with the shared ones, and Escape returns to the gear`, async ({ page }) => {
     await page.goto(game.path);
-    const gear = page.getByTestId(game.testId).getByRole('button', { name: `${game.name} settings` });
+    const framed = game.name !== 'pillo';
+    const gear = framed ? page.getByTestId('game-frame-gear') : page.getByTestId(game.testId).getByRole('button', { name: `${game.name} settings` });
     await gear.click();
     const dialog = page.getByRole('dialog', { name: `${game.name} settings` });
     await expect(dialog).toBeVisible();
