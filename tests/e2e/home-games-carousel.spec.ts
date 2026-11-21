@@ -387,4 +387,126 @@ test.describe('home games carousel (Home v2 Lane 5)', () => {
     const transform = await track.evaluate((el) => el.style.transform);
     expect(transform).toMatch(/translateX\(-616px\)/);
   });
+
+  test('daily game status badges reconcile at midnight and restore default when day changes', async ({ browser }, testInfo) => {
+    test.skip(!isDesktopOfEachEngine(testInfo), 'a clock test runs once per browser engine');
+
+    const context = await browser.newContext({
+      baseURL: testInfo.project.use.baseURL,
+      timezoneId: 'America/New_York',
+      reducedMotion: 'reduce',
+    });
+    try {
+      const page = await context.newPage();
+      await page.clock.install({ time: new Date('2026-11-11T23:59:00-05:00') });
+      await markPanelsSeen(page);
+
+      // Seed localStorage with completion for 2026-11-11
+      await context.addInitScript(() => {
+        try {
+          localStorage.setItem(
+            'cueory-game-stats',
+            JSON.stringify({
+              version: 1,
+              results: [
+                { game: 'vialo', day: '2026-11-11', solved: true, tries: 3 },
+                { game: 'tachyyy', day: '2026-11-11', solved: true, tries: 2 },
+              ],
+            })
+          );
+        } catch {
+          // Ignore
+        }
+      });
+
+      await page.clock.pauseAt(new Date('2026-11-11T23:59:58-05:00'));
+      await page.goto('/');
+      const section = page.locator('#daily-games');
+      await section.scrollIntoViewIfNeeded();
+
+      const vialoStatus = section.locator('[data-game-status="vialo"]');
+      const tachyyyStatus = section.locator('[data-game-status="tachyyy"]');
+      const picclineStatus = section.locator('[data-game-status="piccline"]');
+
+      await expect(vialoStatus).toContainText('done today');
+      await expect(tachyyyStatus).toContainText('done today');
+      await expect(picclineStatus).toContainText('not started');
+
+      // Advance clock past midnight
+      await page.clock.runFor(3_000);
+
+      // Statuses reconcile to the new day (2026-11-12): neither game has a result for today
+      await expect(vialoStatus).toContainText('not started');
+      await expect(tachyyyStatus).toContainText('not started');
+      await expect(picclineStatus).toContainText('not started');
+    } finally {
+      await context.close();
+    }
+  });
+
+  test('status badges reconcile on page resume (pageshow persisted, focus, storage)', async ({ browser }, testInfo) => {
+    test.skip(!isDesktopOfEachEngine(testInfo), 'a clock test runs once per browser engine');
+
+    const context = await browser.newContext({
+      baseURL: testInfo.project.use.baseURL,
+      timezoneId: 'America/New_York',
+      reducedMotion: 'reduce',
+    });
+    try {
+      const page = await context.newPage();
+      await page.clock.install({ time: new Date('2026-11-11T23:59:00-05:00') });
+      await markPanelsSeen(page);
+
+      // Seed localStorage with completion for 2026-11-11
+      await context.addInitScript(() => {
+        try {
+          localStorage.setItem(
+            'cueory-game-stats',
+            JSON.stringify({
+              version: 1,
+              results: [{ game: 'vialo', day: '2026-11-11', solved: true, tries: 3 }],
+            })
+          );
+        } catch {
+          // Ignore
+        }
+      });
+
+      await page.clock.pauseAt(new Date('2026-11-11T23:59:58-05:00'));
+      await page.goto('/');
+      const section = page.locator('#daily-games');
+      await section.scrollIntoViewIfNeeded();
+      const vialoStatus = section.locator('[data-game-status="vialo"]');
+      await expect(vialoStatus).toContainText('done today');
+
+      // Jump time to next day without running scheduled timers
+      await page.clock.setFixedTime(new Date('2026-11-12T08:00:00-05:00'));
+
+      // pageshow persisted (BFCache resume)
+      await page.evaluate(() => window.dispatchEvent(new PageTransitionEvent('pageshow', { persisted: true })));
+      await expect(vialoStatus).toContainText('not started');
+
+      // Update storage with a result for today (2026-11-12) and dispatch storage event
+      await page.evaluate(() => {
+        localStorage.setItem(
+          'cueory-game-stats',
+          JSON.stringify({
+            version: 1,
+            results: [{ game: 'vialo', day: '2026-11-12', solved: true, tries: 2 }],
+          })
+        );
+        window.dispatchEvent(new StorageEvent('storage', { key: 'cueory-game-stats' }));
+      });
+      await expect(vialoStatus).toContainText('done today');
+
+      // Clear storage and dispatch storage event
+      await page.evaluate(() => {
+        localStorage.removeItem('cueory-game-stats');
+        window.dispatchEvent(new StorageEvent('storage', { key: 'cueory-game-stats' }));
+      });
+      await expect(vialoStatus).toContainText('not started');
+    } finally {
+      await context.close();
+    }
+  });
 });

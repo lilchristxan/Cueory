@@ -3,6 +3,10 @@
  * Wraps 6 playing cards (280x392), handles previous/next buttons, arrow keys, touch swipe,
  * and maintains data-carousel-state="settled|turning".
  */
+import { msUntilLocalMidnight } from '../islands/daily';
+
+const DEFAULT_STATUS_HTML = '<span class="gstatus-sym" aria-hidden="true">○</span> not started';
+const DONE_STATUS_HTML = '<span class="gstatus-sym" aria-hidden="true">✓</span> done today';
 
 function matchesGame(cardGameId: string, resultGame: string | undefined): boolean {
   if (!resultGame) return false;
@@ -17,30 +21,42 @@ function matchesGame(cardGameId: string, resultGame: string | undefined): boolea
 export function hydrateGameStatuses(root: HTMLElement): void {
   try {
     const pad = (n: number) => String(n).padStart(2, '0');
-    const now = new Date();
-    const today = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+    let today = '';
+    try {
+      const now = new Date();
+      if (Number.isFinite(now.getTime())) {
+        today = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+      }
+    } catch {
+      // If clock is unavailable, default status remains
+    }
     const raw = localStorage.getItem('cueory-game-stats');
-    if (!raw) return;
 
     let results: Array<{ game?: string; day?: string; solved?: boolean }> = [];
-    const parsed = JSON.parse(raw);
-    if (Array.isArray(parsed)) {
-      results = parsed;
-    } else if (parsed && typeof parsed === 'object' && Array.isArray((parsed as { results?: unknown }).results)) {
-      results = (parsed as { results: Array<{ game?: string; day?: string; solved?: boolean }> }).results;
+    if (raw) {
+      try {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          results = parsed;
+        } else if (parsed && typeof parsed === 'object' && Array.isArray((parsed as { results?: unknown }).results)) {
+          results = (parsed as { results: Array<{ game?: string; day?: string; solved?: boolean }> }).results;
+        }
+      } catch {
+        results = [];
+      }
     }
-
-    if (results.length === 0) return;
 
     const statusEls = root.querySelectorAll<HTMLElement>('[data-game-status]');
     statusEls.forEach((el) => {
       const gameId = el.getAttribute('data-game-status');
-      if (!gameId || gameId === 'hello-cards') return;
-      const done = results.some(
-        (r) => matchesGame(gameId, r?.game) && r?.day === today
-      );
-      if (done) {
-        el.innerHTML = '<span class="gstatus-sym" aria-hidden="true">✓</span> done today';
+      if (!gameId) return;
+      const done =
+        Boolean(today) &&
+        gameId !== 'hello-cards' &&
+        results.some((r) => matchesGame(gameId, r?.game) && r?.day === today);
+      const targetHtml = done ? DONE_STATUS_HTML : DEFAULT_STATUS_HTML;
+      if (el.innerHTML !== targetHtml) {
+        el.innerHTML = targetHtml;
       }
     });
   } catch {
@@ -192,17 +208,47 @@ export function initGamesCarousel(): void {
     }
   }, { passive: true });
 
-  hydrateGameStatuses(root);
+  let midnightTimer: number | undefined;
+
+  const refreshStatuses = () => {
+    if (midnightTimer !== undefined) window.clearTimeout(midnightTimer);
+    hydrateGameStatuses(root);
+    let now: Date | null = null;
+    try {
+      now = new Date();
+    } catch {
+      // Ignore clock errors
+    }
+    const delay = (msUntilLocalMidnight(now) ?? 60_000) + 200;
+    midnightTimer = window.setTimeout(refreshStatuses, delay);
+  };
+
+  refreshStatuses();
+
+  // Hidden tabs may have throttled timers, so update immediately when visitor returns.
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) refreshStatuses();
+  });
+
+  // Restored pages (BFCache) can skip visibilitychange while their midnight timer was suspended.
+  window.addEventListener('pageshow', (event) => {
+    if (event.persisted) refreshStatuses();
+  });
+
+  // Switching back to this window also reconciles device clock or time-zone changes.
+  window.addEventListener('focus', () => {
+    if (!document.hidden) refreshStatuses();
+  });
 
   window.addEventListener('cueory:game-result', () => {
-    hydrateGameStatuses(root);
+    refreshStatuses();
   });
   window.addEventListener('cueory:sudoku-solved', () => {
-    hydrateGameStatuses(root);
+    refreshStatuses();
   });
   window.addEventListener('storage', (e) => {
     if (e.key === 'cueory-game-stats') {
-      hydrateGameStatuses(root);
+      refreshStatuses();
     }
   });
 
