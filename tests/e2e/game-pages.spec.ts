@@ -35,6 +35,7 @@ for (const game of games) {
   test.describe(`${game.name} on its own page`, () => {
     test('shows only this game, with its name at the top and a link back to all games', async ({ page }) => {
       await page.goto(game.path);
+      test.skip(game.name === 'crossword' && await page.getByTestId('crossword-soon').count() > 0, 'crossword is closed in this build');
       const heading = page.getByRole('heading', { level: 1, name: game.name });
       await expect(heading).toBeVisible();
       await expect(heading).toHaveCSS('text-align', 'center');

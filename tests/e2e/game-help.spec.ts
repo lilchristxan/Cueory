@@ -55,6 +55,7 @@ test('the first visit shows each game\'s rules above its board, and "got it" put
 for (const game of games) {
   test(`${game.name}: the "?" opens the rules in a focus-trapped dialog that Escape closes`, async ({ page }) => {
     await page.goto(game.path);
+    test.skip(game.name === 'crossword' && await page.getByTestId('crossword-soon').count() > 0, 'crossword is closed in this build');
     const area = page.getByTestId(game.testId);
     const button = game.id === 'triage'
       ? page.getByTestId('game-frame-help-button')

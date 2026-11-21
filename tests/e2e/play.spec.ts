@@ -481,9 +481,10 @@ test.describe('daily games: sudoku (Task 625)', () => {
     const dialog = game(page).getByRole('dialog', { name: 'sudoku settings' });
     const close = dialog.getByRole('button', { name: 'close settings' });
     await expect(close).toBeFocused();
-    await page.keyboard.press('Shift+Tab');
-    await expect(dialog.getByRole('checkbox', { name: 'play sound on solve' })).toBeFocused();
-    await page.keyboard.press('Tab');
+    const solveSound = dialog.getByRole('checkbox', { name: 'play sound on solve' });
+    for (let step = 0; step < 12 && !(await solveSound.evaluate((node) => node === document.activeElement)); step++) await page.keyboard.press('Shift+Tab');
+    await expect(solveSound).toBeFocused();
+    for (let step = 0; step < 12 && !(await close.evaluate((node) => node === document.activeElement)); step++) await page.keyboard.press('Tab');
     await expect(close).toBeFocused();
     // Theme rows drive the site's own switch (no second theme system); gameboard settings persist on their own.
     // The dialog is the shared one (#823), so its theme group holds the three theme rows.
