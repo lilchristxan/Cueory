@@ -962,13 +962,24 @@ const icons: Record<StudyFeatureIcon, string> = {
         });
       }
 
-      // Escape while focus is somewhere outside the open dialog (a browser that left it on the page) still closes it the
-      // same way. Inside, the dialog's own keydown handles it, after an open ⓘ has had its turn.
+      // An open ⓘ gets its own Escape first; its panel must close without closing the preview around it.
+      const isOpenInfoTip = (target: EventTarget | null) => {
+        const element = target instanceof Element ? target : null;
+        if (!element) return false;
+        const button = element.closest<HTMLElement>('[data-infotip]');
+        if (button?.getAttribute('aria-expanded') === 'true') return true;
+        const panel = element.closest<HTMLElement>('[data-infotip-panel]');
+        return !!panel && !panel.hidden;
+      };
+
+      // This backs up the dialog listener for every focus location a modal dialog can contain, including Safari's
+      // native Escape route. The dialog listener still handles ordinary keys; capture makes closing independent of
+      // where the browser delivers this one key.
       document.addEventListener('keydown', (event) => {
-        if (!dialog.open || !isCloseKey(event.key) || dialog.contains(event.target as Node | null)) return;
+        if (!dialog.open || event.defaultPrevented || !isCloseKey(event.key) || isOpenInfoTip(event.target)) return;
         event.preventDefault();
         void close();
-      });
+      }, true);
 
       dialog.addEventListener('close', () => {
         previewRound += 1;
