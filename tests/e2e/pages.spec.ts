@@ -1,6 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { writeFile } from 'node:fs/promises';
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page, type TestInfo } from '@playwright/test';
 import { accountLaunch, accountsOpen, menuSmallLinks, newsletter, showsHeroJoin, socials } from '../../src/config/site';
 import { visibleFooterLinks } from '../../src/config/legalfooter';
 import { REST_MS } from '../../src/scripts/carousel';
@@ -78,6 +78,156 @@ async function installPreviewCloseDiagnostic(page: Page) {
       }
       note('dialog:observed', identity(dialog));
     });
+  });
+}
+
+/** Test-only capture for the Firefox autoplay trace: event delivery, geometry, CSS hover, and hold changes. */
+async function installAutoplayHoverDiagnostic(page: Page) {
+  await page.addInitScript(() => {
+    type Identity = {
+      tag: string | null;
+      id: string | null;
+      track: boolean;
+      controls: boolean;
+      insideTrack: boolean;
+      insideControls: boolean;
+    };
+    type Bounds = { left: number; top: number; right: number; bottom: number; width: number; height: number } | null;
+    type Entry = {
+      phase: string;
+      sampleT: number;
+      autoplay: string | null;
+      hold: string | null;
+      track: { bounds: Bounds; hover: boolean | null };
+      controls: { bounds: Bounds; hover: boolean | null };
+      event?: {
+        eventT: number;
+        type: string;
+        trusted: boolean;
+        pointerType: string;
+        pointerId: number;
+        clientX: number;
+        clientY: number;
+        target: Identity;
+        relatedTarget: Identity;
+        hit: Identity;
+        targetHasCapture: boolean;
+        trackHasCapture: boolean;
+        controlsHasCapture: boolean;
+      };
+      attribute?: { name: string | null; oldValue: string | null };
+    };
+    type PointerFields = {
+      eventT: number;
+      type: string;
+      trusted: boolean;
+      pointerType: string;
+      pointerId: number;
+      clientX: number;
+      clientY: number;
+      target: EventTarget | null;
+      relatedTarget: EventTarget | null;
+    };
+    type ProbeWindow = Window & { __cueoryAutoplayHoverDiagnostic?: Entry[] };
+
+    const entries: Entry[] = [];
+    (window as ProbeWindow).__cueoryAutoplayHoverDiagnostic = entries;
+    const cap = 120;
+    const identity = (node: EventTarget | null, track: HTMLElement | null, controls: HTMLElement | null): Identity => {
+      const element = node instanceof Element ? node : null;
+      return {
+        tag: element?.tagName ?? null,
+        id: element?.id ?? null,
+        track: element === track,
+        controls: element === controls,
+        insideTrack: element !== null && track?.contains(element) === true,
+        insideControls: element !== null && controls?.contains(element) === true,
+      };
+    };
+    const bounds = (element: HTMLElement | null): Bounds => {
+      if (!element) return null;
+      const rect = element.getBoundingClientRect();
+      const round = (value: number) => Math.round(value * 100) / 100;
+      return { left: round(rect.left), top: round(rect.top), right: round(rect.right), bottom: round(rect.bottom), width: round(rect.width), height: round(rect.height) };
+    };
+    const snapshot = () => {
+      const root = document.querySelector<HTMLElement>('[data-modes]');
+      const track = root?.querySelector<HTMLElement>('[data-modes-track]') ?? null;
+      const controls = root?.querySelector<HTMLElement>('[data-modes-controls]') ?? null;
+      return {
+        autoplay: root?.dataset.autoplay ?? null,
+        hold: root?.dataset.autoplayHold ?? null,
+        track: { bounds: bounds(track), hover: track?.matches(':hover') ?? null },
+        controls: { bounds: bounds(controls), hover: controls?.matches(':hover') ?? null },
+      };
+    };
+    const note = (phase: string, event?: PointerFields, attribute?: Entry['attribute']) => {
+      const state = snapshot();
+      const track = document.querySelector<HTMLElement>('[data-modes] [data-modes-track]');
+      const controls = document.querySelector<HTMLElement>('[data-modes] [data-modes-controls]');
+      const entry: Entry = { phase, sampleT: performance.now(), ...state, attribute };
+      if (event) {
+        const target = event.target instanceof HTMLElement ? event.target : null;
+        entry.event = {
+          eventT: event.eventT,
+          type: event.type,
+          trusted: event.trusted,
+          pointerType: event.pointerType,
+          pointerId: event.pointerId,
+          clientX: event.clientX,
+          clientY: event.clientY,
+          target: identity(event.target, track, controls),
+          relatedTarget: identity(event.relatedTarget, track, controls),
+          hit: identity(document.elementFromPoint(event.clientX, event.clientY), track, controls),
+          targetHasCapture: target?.hasPointerCapture(event.pointerId) ?? false,
+          trackHasCapture: track?.hasPointerCapture(event.pointerId) ?? false,
+          controlsHasCapture: controls?.hasPointerCapture(event.pointerId) ?? false,
+        };
+      }
+      entries.push(entry);
+      if (entries.length > cap) entries.splice(0, entries.length - cap);
+    };
+    const observe = (event: PointerEvent) => {
+      // Filter and copy event fields in capture phase without layout reads. A later task samples only after dispatch.
+      const target = event.target;
+      if (!(target instanceof HTMLElement) || !target.matches('[data-modes-track], [data-modes-controls]')) return;
+      const fields: PointerFields = {
+        eventT: performance.now(),
+        type: event.type,
+        trusted: event.isTrusted,
+        pointerType: event.pointerType,
+        pointerId: event.pointerId,
+        clientX: event.clientX,
+        clientY: event.clientY,
+        target: event.target,
+        relatedTarget: event.relatedTarget,
+      };
+      window.setTimeout(() => note(`pointer:${fields.type}:post-dispatch`, fields), 0);
+    };
+
+    document.addEventListener('pointerenter', observe, true);
+    document.addEventListener('pointerleave', observe, true);
+    document.addEventListener('DOMContentLoaded', () => {
+      const root = document.querySelector<HTMLElement>('[data-modes]');
+      if (!root) return note('root:missing');
+      note('root:observed');
+      new MutationObserver((mutations) => {
+        for (const mutation of mutations) {
+          note(`attribute:${mutation.attributeName}`, undefined, { name: mutation.attributeName, oldValue: mutation.oldValue });
+        }
+      }).observe(root, { attributes: true, attributeOldValue: true, attributeFilter: ['data-autoplay', 'data-autoplay-hold'] });
+    });
+  });
+}
+
+async function attachAutoplayHoverDiagnostic(page: Page, testInfo: TestInfo) {
+  const entries = await page.evaluate(() => {
+    type ProbeWindow = Window & { __cueoryAutoplayHoverDiagnostic?: unknown[] };
+    return (window as ProbeWindow).__cueoryAutoplayHoverDiagnostic ?? [];
+  }).catch(() => []);
+  await testInfo.attach('carousel-autoplay-hover-path', {
+    body: JSON.stringify({ entries }, null, 2),
+    contentType: 'application/json',
   });
 }
 
@@ -1063,24 +1213,42 @@ test.describe('"ways to study" merry-go-round (D-50, D-60)', () => {
   }, testInfo) => {
     test.skip(!isDesktopOfEachEngine(testInfo), 'a timing test that rests a mouse on the cards: once per engine, at desktop size');
     test.slow();
-    await page.goto('/');
-    await section(page).scrollIntoViewIfNeeded();
-    // The mouse over the section's words, not its cards: that doesn't pause it.
-    await page.mouse.move(0, 0);
-    await expect.poll(() => middleCard(page), { timeout: 9000 }).toBe('cards');
+    const engine = testInfo.project.use.browserName ?? testInfo.project.use.defaultBrowserType;
+    const diagnoseFirefox = engine === 'firefox';
+    if (diagnoseFirefox) await installAutoplayHoverDiagnostic(page);
+    let failed = false;
+    try {
+      await page.goto('/');
+      await section(page).scrollIntoViewIfNeeded();
+      // The mouse over the section's words, not its cards: that doesn't pause it.
+      await page.mouse.move(0, 0);
+      await expect.poll(() => middleCard(page), { timeout: 9000 }).toBe('cards');
 
-    // Resting on the cards pauses it; moving off lets it go on.
-    await page.getByRole('group', { name: 'study mode cards' }).hover();
-    await page.waitForTimeout(7000);
-    expect(await middleCard(page)).toBe('cards');
-    await page.mouse.move(0, 0);
-    await expect.poll(() => middleCard(page), { timeout: 9000 }).toBe('learn');
+      // Resting on the cards pauses it; moving off lets it go on.
+      await page.getByRole('group', { name: 'study mode cards' }).hover();
+      await page.waitForTimeout(7000);
+      expect(await middleCard(page)).toBe('cards');
+      await page.mouse.move(0, 0);
+      await expect.poll(() => middleCard(page), { timeout: 9000 }).toBe('learn');
 
-    await section(page).getByRole('button', { name: 'next study mode' }).click();
-    await expect.poll(() => middleCard(page)).toBe('fill-in');
-    await page.mouse.move(0, 0);
-    await page.waitForTimeout(7000);
-    expect(await middleCard(page)).toBe('fill-in');
+      await section(page).getByRole('button', { name: 'next study mode' }).click();
+      await expect.poll(() => middleCard(page)).toBe('fill-in');
+      await page.mouse.move(0, 0);
+      await page.waitForTimeout(7000);
+      expect(await middleCard(page)).toBe('fill-in');
+    } catch (error) {
+      failed = true;
+      throw error;
+    } finally {
+      if (failed && diagnoseFirefox) {
+        // Diagnostics must never replace the original assertion failure.
+        try {
+          await attachAutoplayHoverDiagnostic(page, testInfo);
+        } catch {
+          // Best effort only: Playwright will preserve the assertion error already in flight.
+        }
+      }
+    }
   });
 });
 
