@@ -84,6 +84,55 @@ async function installPreviewCloseDiagnostic(page: Page) {
   });
 }
 
+/** Failure-only D-51 navigation evidence. The assertions and timing remain the test's existing contract. */
+async function capturePreviewNavigationFailure(page: Page, lastAction: string) {
+  return page.evaluate((lastAction) => {
+    const describe = (element: Element | null) => {
+      if (!(element instanceof HTMLElement)) return null;
+      const bounds = element.getBoundingClientRect();
+      return {
+        tag: element.tagName.toLowerCase(),
+        id: element.id || null,
+        classes: [...element.classList],
+        previewPart: element.getAttribute('data-mode-preview') ?? null,
+        bounds: { x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height },
+      };
+    };
+    const dialog = document.querySelector<HTMLDialogElement>('[data-mode-preview]');
+    const animations = dialog?.getAnimations({ subtree: true }).map((animation, index) => {
+      const effect = animation.effect;
+      const timing = effect?.getComputedTiming();
+      const localTime = typeof timing?.localTime === 'number' ? timing.localTime : null;
+      const delay = typeof timing?.delay === 'number' ? timing.delay : null;
+      const endTime = typeof timing?.endTime === 'number' ? timing.endTime : null;
+      const phase = localTime === null || delay === null || endTime === null ? null :
+        localTime < delay ? 'before' : localTime >= endTime ? 'after' : 'active';
+      return {
+        index,
+        playState: animation.playState,
+        pending: animation.pending,
+        currentTime: animation.currentTime,
+        phase,
+        progress: timing?.progress ?? null,
+        duration: timing?.activeDuration ?? null,
+        delay,
+        endTime,
+        target: describe(effect instanceof KeyframeEffect ? effect.target : null),
+      };
+    }) ?? [];
+    return {
+      lastAction,
+      activeElement: describe(document.activeElement),
+      preview: {
+        open: dialog?.open ?? false,
+        bounds: describe(dialog)?.bounds ?? null,
+        carouselState: document.querySelector<HTMLElement>('[data-modes]')?.dataset.carouselState ?? null,
+      },
+      animations,
+    };
+  }, lastAction);
+}
+
 /** Measure cards only after their turn transitions finish, including on a loaded runner. */
 const waitForCardTurn = async (page: Page) => {
   await expect.poll(() => page.locator('#ways-to-study [data-mode-card]').evaluateAll((cards) =>
@@ -1240,31 +1289,47 @@ test.describe('study-mode preview (D-51)', () => {
 
   test('previous and next move through the modes with the row behind; the X and the darkened page close it', async ({
     page,
-  }) => {
-    await openPreview(page, 'cards');
-    const preview = dialog(page);
-    await preview.getByRole('button', { name: 'next study mode' }).click();
-    await expect(page.getByRole('dialog', { name: 'learn' })).toBeVisible();
-    await expect(preview.getByRole('link', { name: 'start learn' })).toHaveAttribute('href', '/learn/study-skills/learn-mode');
-    await expect(preview.locator('[data-mode-preview-live]')).toHaveText('learn, 3 of 11');
+  }, testInfo) => {
+    let lastAction = 'open preview cards';
+    try {
+      await openPreview(page, 'cards');
+      const preview = dialog(page);
+      lastAction = 'click next study mode';
+      await preview.getByRole('button', { name: 'next study mode' }).click();
+      await expect(page.getByRole('dialog', { name: 'learn' })).toBeVisible();
+      await expect(preview.getByRole('link', { name: 'start learn' })).toHaveAttribute('href', '/learn/study-skills/learn-mode');
+      await expect(preview.locator('[data-mode-preview-live]')).toHaveText('learn, 3 of 11');
 
-    await preview.getByRole('button', { name: 'previous study mode' }).click();
-    await preview.getByRole('button', { name: 'previous study mode' }).click();
-    await expect(page.getByRole('dialog', { name: 'video' })).toBeVisible();
-    await expect(preview.getByText('coming soon')).toBeVisible();
-    await expect(preview.locator('[data-mode-preview-try]')).toBeHidden();
-    await expect(preview.locator('[data-mode-preview-live]')).toHaveText('video, 1 of 11');
-    // The merry-go-round behind follows, so closing shrinks the preview into the video card.
-    await expect(page.locator('#mode-video')).toHaveAttribute('data-active', '');
+      lastAction = 'click first previous study mode';
+      await preview.getByRole('button', { name: 'previous study mode' }).click();
+      lastAction = 'click second previous study mode';
+      await preview.getByRole('button', { name: 'previous study mode' }).click();
+      await expect(page.getByRole('dialog', { name: 'video' })).toBeVisible();
+      await expect(preview.getByText('coming soon')).toBeVisible();
+      await expect(preview.locator('[data-mode-preview-try]')).toBeHidden();
+      await expect(preview.locator('[data-mode-preview-live]')).toHaveText('video, 1 of 11');
+      // The merry-go-round behind follows, so closing shrinks the preview into the video card.
+      await expect(page.locator('#mode-video')).toHaveAttribute('data-active', '');
 
-    await preview.getByRole('button', { name: 'close preview' }).click();
-    await expect(preview).toBeHidden();
-    await expect(page.getByRole('button', { name: 'preview video' })).toBeFocused();
+      lastAction = 'click close preview';
+      await preview.getByRole('button', { name: 'close preview' }).click();
+      await expect(preview).toBeHidden();
+      await expect(page.getByRole('button', { name: 'preview video' })).toBeFocused();
 
-    await page.getByRole('button', { name: 'preview video' }).click();
-    await expect(page.getByRole('dialog', { name: 'video' })).toBeVisible();
-    await page.mouse.click(4, 4);
-    await expect(preview).toBeHidden();
+      lastAction = 'reopen preview video';
+      await page.getByRole('button', { name: 'preview video' }).click();
+      await expect(page.getByRole('dialog', { name: 'video' })).toBeVisible();
+      lastAction = 'click preview scrim';
+      await page.mouse.click(4, 4);
+      await expect(preview).toBeHidden();
+    } catch (error) {
+      const payload = await capturePreviewNavigationFailure(page, lastAction).catch(() => ({ lastAction, capture: 'unavailable' }));
+      await testInfo.attach('preview-navigation-failure', {
+        body: JSON.stringify(payload, null, 2),
+        contentType: 'application/json',
+      });
+      throw error;
+    }
   });
 
   test('moving to a mode that is not open yet keeps focus in the preview when "start …" had it', async ({ page }) => {
