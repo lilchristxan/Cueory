@@ -131,13 +131,13 @@ export const helloCardsGame = {
 } as const;
 
 /**
- * tachyyy: fifteen hard clinical questions in 30 seconds, score at the end. Rebrands stat.
+ * tachyyy: fifteen hard clinical questions, 20 seconds each, score at the end. Rebrands stat.
  */
 export const tachyyyGame = {
   name: 'tachyyy',
-  subtitle: '30 seconds',
+  subtitle: '20 seconds each',
   href: '/play/tachyyy',
-  line: 'fifteen fast clinical questions in 30 seconds. how sharp are you on shift today?',
+  line: 'fifteen fast clinical questions, 20 seconds each. how sharp are you on shift today?',
 } as const;
 
 /**
