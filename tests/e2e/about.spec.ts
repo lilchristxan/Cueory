@@ -54,6 +54,10 @@ test.describe('about page', () => {
     await page.goto('/about');
     await tabTo(page, signup, 'join the mailing list');
     await expect(signup).toBeFocused();
+    // A keyboard round trip establishes :focus-visible across Chromium's page-load focus state.
+    await page.keyboard.press('Shift+Tab');
+    await page.keyboard.press('Tab');
+    await expect(signup).toBeFocused();
     await expectKeyboardFocusRing(signup);
     await Promise.all([
       page.waitForURL(/\/#signup$/),
@@ -69,6 +73,9 @@ test.describe('about page', () => {
       await page.goto('/about');
       const support = page.getByRole('link', { name: 'support on Ko-fi (opens in a new tab)' });
       await tabTo(page, support, 'support on Ko-fi');
+      await expect(support).toBeFocused();
+      await page.keyboard.press('Shift+Tab');
+      await page.keyboard.press('Tab');
       await expect(support).toBeFocused();
       await expectKeyboardFocusRing(support);
 
