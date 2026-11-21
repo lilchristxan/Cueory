@@ -14,7 +14,7 @@ test.beforeEach(async ({ page }) => {
   await expect(page.getByTestId('vialo')).toBeVisible();
 });
 
-test('vialo virtual keys keep 44px targets and can type, delete, and submit a guess', async ({ page }) => {
+test('vialo virtual keys keep 44px targets and can type, delete, and submit a committed guess', async ({ page }) => {
   const vialo = page.getByTestId('vialo');
   const keys = vialo.getByRole('group', { name: 'letters' });
   const buttons = keys.getByRole('button');
@@ -31,8 +31,8 @@ test('vialo virtual keys keep 44px targets and can type, delete, and submit a gu
   await keys.getByRole('button', { name: 'delete', exact: true }).click();
   await expect(guess).toHaveValue('');
 
-  for (const letter of 'grace') await keys.getByRole('button', { name: letter, exact: true }).click();
-  await expect(guess).toHaveValue('grace');
+  for (const letter of 'crane') await keys.getByRole('button', { name: letter, exact: true }).click();
+  await expect(guess).toHaveValue('crane');
   await keys.getByRole('button', { name: 'enter', exact: true }).click();
-  await expect(page.getByTestId('game-result-dialog')).toBeVisible();
+  await expect(vialo.getByRole('list', { name: 'your guesses' }).getByRole('listitem')).toHaveAccessibleName(/^guess 1: crane\./);
 });
