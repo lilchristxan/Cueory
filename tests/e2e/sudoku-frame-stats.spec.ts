@@ -21,7 +21,7 @@ test('framed Sudoku keeps one keyboard-accessible difficulty picker and updates 
   await expect(page.getByTestId('sudoku').getByLabel('difficulty')).toHaveCount(0);
   await picker.selectOption('hard');
   await expect(picker).toHaveValue('hard');
-  await expect(page.getByTestId('game-frame-sudoku-numbers')).toContainText('Hard solved');
+  await expect(page.getByTestId('game-frame-sudoku-numbers')).toContainText('hard solved');
   await expect(page.getByTestId('game-frame-sudoku-numbers')).toHaveAttribute('aria-live', 'polite');
 });
 

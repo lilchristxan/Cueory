@@ -8,8 +8,12 @@
   holder; the outer GameFrame keeps its independent full-height surface.
 */
 @layer components {
+  [data-game-page] .game-frame-board > :has(astro-island) {
+    min-block-size: 0;
+  }
+
   @media (scripting: enabled) {
-    [data-game-page] .game-frame-board > :has(astro-island:empty) {
+    [data-game-page] .game-frame-board > :has(astro-island[ssr]) {
       min-block-size: 100svh;
     }
   }

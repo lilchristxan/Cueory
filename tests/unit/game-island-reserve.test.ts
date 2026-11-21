@@ -14,7 +14,7 @@ describe('game pages keep room for the game until it renders (performance, 2026-
     const html = readFileSync(`${dist}${page}`, 'utf8');
     expect(html).toMatch(/<article\b[^>]*data-game-page="[^"]+"/);
     const css = linkedCss(html).replace(/\s+/g, '');
-    expect(css).toMatch(/@media\(scripting:enabled\)\{\[data-game-page\]\.game-frame-board>:has\(astro-island:empty\)\{min-block-size:100svh\}/);
+    expect(css).toMatch(/@media\(scripting:enabled\)\{\[data-game-page\]\.game-frame-board>:has\(astro-island\[ssr\]\)\{min-block-size:100svh\}/);
   });
 
   it('GamePage adds no wrapper around the game, so the print rules still see the article\'s direct children', () => {
@@ -25,7 +25,7 @@ describe('game pages keep room for the game until it renders (performance, 2026-
 
   it('the built CSS has the rule once, so it is not copied onto pages without a game', () => {
     const files = readdirSync(`${dist}_astro`).filter((name) => name.endsWith('.css'));
-    const holders = files.filter((name) => readFileSync(`${dist}_astro/${name}`, 'utf8').includes('astro-island:empty'));
+    const holders = files.filter((name) => readFileSync(`${dist}_astro/${name}`, 'utf8').includes('astro-island[ssr]'));
     expect(holders).toHaveLength(1);
   });
 });

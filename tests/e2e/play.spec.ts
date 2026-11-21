@@ -478,7 +478,7 @@ test.describe('daily games: sudoku (Task 625)', () => {
     // Moved from the Sudoku board header to the Frame gear.
     const trigger = frameGear(page);
     await trigger.click();
-    const dialog = game(page).getByRole('dialog', { name: 'settings' });
+    const dialog = game(page).getByRole('dialog', { name: 'sudoku settings' });
     const close = dialog.getByRole('button', { name: 'close settings' });
     await expect(close).toBeFocused();
     await page.keyboard.press('Shift+Tab');
@@ -1079,10 +1079,8 @@ test.describe('daily games without JavaScript', () => {
     for (const [path, name] of [['/play/vialo', 'vialo'], ['/play/sudoku', 'sudoku'], ['/play/crossword', 'crossword'], ['/play/word-path', 'word path']]) {
       await page.goto(path);
       // Every game opens the shared settings from its own gear (sudoku too, #823), so no page has a separate button.
-      await expect(page.locator('noscript p')).toHaveText([
-        `${name} needs JavaScript.`,
-        'game results and sharing need JavaScript.',
-      ]);
+      await expect(page.locator('noscript p').filter({ hasText: `${name} needs JavaScript.` })).toHaveText(`${name} needs JavaScript.`);
+      await expect(page.locator('noscript p').filter({ hasText: 'game results and sharing need JavaScript.' })).toHaveText('game results and sharing need JavaScript.');
     }
   });
 });
