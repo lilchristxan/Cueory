@@ -20,7 +20,8 @@ test.describe('GameFrame shared layout (Scope 1)', () => {
       await expect(backLink).toBeVisible();
       await expect(backLink).toHaveAttribute('href', '/play');
 
-      const logo = page.locator('.game-frame-logo').first();
+      const logo = page.locator('.game-frame-logo:visible');
+      await expect(logo).toHaveCount(1);
       await expect(logo).toBeVisible();
 
       // Stats
@@ -80,6 +81,29 @@ test.describe('GameFrame shared layout (Scope 1)', () => {
       }
     });
   }
+
+  test('framed Sudoku keeps keyboard focus inside and after the forget-all confirmation', async ({ page }) => {
+    await page.goto('/play/sudoku');
+    const settings = page.getByRole('button', { name: 'sudoku settings' });
+    await settings.focus();
+    await page.keyboard.press('Enter');
+
+    const forget = page.getByRole('button', { name: 'forget all my stats' });
+    await forget.focus();
+    await page.keyboard.press('Enter');
+    const confirm = page.getByRole('button', { name: 'yes, forget all my stats' });
+    const cancel = page.getByRole('button', { name: 'keep my stats' });
+    await expect(confirm).toBeFocused();
+    await page.keyboard.press('Tab');
+    await expect(cancel).toBeFocused();
+    await page.keyboard.press('Enter');
+    await expect(forget).toBeFocused();
+
+    await page.keyboard.press('Enter');
+    await expect(confirm).toBeFocused();
+    await page.keyboard.press('Enter');
+    await expect(forget).toBeFocused();
+  });
 
   // Responsive and Evening checks
   for (const [size, width, height] of [['390', 390, 844], ['820', 820, 1180], ['1440', 1440, 900]] as const) {

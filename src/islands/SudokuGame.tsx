@@ -66,6 +66,9 @@ export default function SudokuGame({ framed = false }: { framed?: boolean } = {}
   const howOpen = help.open;
   const [said, setSaid] = useState('');
   const settingsButton = useRef<HTMLButtonElement>(null);
+  const forgetAllStatsButton = useRef<HTMLButtonElement>(null);
+  const confirmForgetAllButton = useRef<HTMLButtonElement>(null);
+  const restoreForgetAllFocus = useRef(false);
   const solvedResult = useRef<HTMLDivElement>(null);
   const cells = useRef(new Map<number, HTMLButtonElement>());
   const { entries, marks, notes } = board;
@@ -287,8 +290,23 @@ export default function SudokuGame({ framed = false }: { framed?: boolean } = {}
     forgetHeldRounds();
     reportStatsChanged();
     setKept(loadSudokuStats(browserStorage(), day));
+    restoreForgetAllFocus.current = true;
     setConfirmingForgetAll(false);
     setSaid(forgotten ? 'all your stats are forgotten. new games are kept from now on.' : "this browser didn't let us delete your stats, so they are still kept.");
+  };
+
+  useEffect(() => {
+    if (confirmingForgetAll) confirmForgetAllButton.current?.focus();
+    else if (restoreForgetAllFocus.current) {
+      forgetAllStatsButton.current?.focus();
+      restoreForgetAllFocus.current = false;
+    }
+  }, [confirmingForgetAll]);
+
+  const openForgetAllConfirmation = () => setConfirmingForgetAll(true);
+  const cancelForgetAllConfirmation = () => {
+    restoreForgetAllFocus.current = true;
+    setConfirmingForgetAll(false);
   };
 
   // Holding Shift flips the mode for that moment; letting go (or leaving the page) flips it back.
@@ -415,10 +433,10 @@ export default function SudokuGame({ framed = false }: { framed?: boolean } = {}
       </fieldset>
       {framed && <fieldset>
         <legend>your data</legend>
-        {!confirmingForgetAll ? <button type="button" className="game-settings-data-button" onClick={() => setConfirmingForgetAll(true)}>forget all my stats</button> : <div role="group" aria-labelledby="forget-stats-question" className="game-settings-confirm">
+        {!confirmingForgetAll ? <button ref={forgetAllStatsButton} type="button" className="game-settings-data-button" onClick={openForgetAllConfirmation}>forget all my stats</button> : <div role="group" aria-labelledby="forget-stats-question" className="game-settings-confirm">
           <p id="forget-stats-question">forget all game stats on this device? this can’t be undone.</p>
-          <button type="button" className="game-settings-data-button" onClick={forgetAllStats}>yes, forget all my stats</button>
-          <button type="button" className="game-settings-data-button" onClick={() => setConfirmingForgetAll(false)}>keep my stats</button>
+          <button ref={confirmForgetAllButton} type="button" className="game-settings-data-button" onClick={forgetAllStats}>yes, forget all my stats</button>
+          <button type="button" className="game-settings-data-button" onClick={cancelForgetAllConfirmation}>keep my stats</button>
         </div>}
       </fieldset>}
     </GameSettingsDialog>
