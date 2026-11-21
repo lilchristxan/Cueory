@@ -1817,6 +1817,17 @@ html:has(dialog.menu-panel[open]) {
     inset-inline-end: calc(var(--spacing) * 4);
   }
 
+  /*
+    The preview's round buttons sit on the opaque cream surface, so their frosted blur has only a flat color to blur and
+    shows nothing; inside the words' fading groups it has nothing at all (a faded ancestor is the blur's backdrop root).
+    In WebKit it still costs a blurred offscreen copy per button on every frame, and the arrow and close buttons stayed
+    "not stable" for Playwright's click (#634). Plain translucent color looks the same.
+  */
+  .mode-preview .corner-button {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+
   .mode-preview-bottle {
     position: relative;
     inline-size: var(--vial-preview-bottle);
