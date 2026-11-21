@@ -16,8 +16,6 @@ const gameHolder = (page: import('@playwright/test').Page) =>
   page.locator('article[data-game-page] .game-frame-board > *').filter({ has: page.locator('astro-island') }).first();
 
 const gameFrame = (page: import('@playwright/test').Page) => page.locator('article[data-game-page] > .game-frame');
-const statsPanel = (page: import('@playwright/test').Page, path: string) =>
-  path === '/play/sudoku' ? page.getByTestId('game-frame-sudoku-stats') : page.getByTestId('game-stats');
 
 for (const { path, script } of games) {
   test(`${path}: before the game renders, what follows it starts below the first screen`, async ({ page }) => {
@@ -25,13 +23,13 @@ for (const { path, script } of games) {
     const held = new Promise<void>((resolve) => { release = resolve; });
     await page.route(script, async (route) => { await held; await route.continue(); });
     await page.goto(path, { waitUntil: 'domcontentloaded' });
-    const stats = statsPanel(page, path);
+    const stats = page.getByTestId('game-stats');
     await expect(stats).toBeAttached();
     const viewport = page.viewportSize()!.height;
     const holder = gameHolder(page);
     expect(await holder.evaluate((el) => el.getBoundingClientRect().height)).toBeGreaterThanOrEqual(viewport);
     expect(await gameFrame(page).evaluate((el) => el.getBoundingClientRect().height)).toBeGreaterThanOrEqual(viewport);
-    if (path !== '/play/sudoku') expect(await stats.evaluate((el) => el.getBoundingClientRect().top)).toBeGreaterThanOrEqual(viewport);
+    expect(await stats.evaluate((el) => el.getBoundingClientRect().top)).toBeGreaterThanOrEqual(viewport);
 
     release();
     // Once the game is on the page the room is released, and the game itself is taller than one screen.

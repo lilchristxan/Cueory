@@ -2,7 +2,6 @@
 import '../styles/gameframe.css';
 import GameFrameControls from '../islands/GameFrameControls';
 import GameFrameStats from '../islands/GameFrameStats';
-import SudokuFrameStats from '../islands/SudokuFrameStats';
 import { formatGameDateLine } from '../scripts/gamedateline';
 
 interface Props {
@@ -286,10 +285,6 @@ const activeDateLine = propDateLine ?? formatGameDateLine(new Date());
             <span class="game-frame-stat-label">played</span>
           </div>
         </> : <GameFrameStats client:load game={currentConfig.id} />}
-        {currentConfig.id === 'triage' && <>
-          <SudokuFrameStats client:only="react" />
-          <noscript><p>Sudoku level statistics appear when JavaScript is available.</p></noscript>
-        </>}
       </div>}
     </aside>
 
