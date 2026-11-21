@@ -16,10 +16,12 @@ test('home fits 320px with 32px text, carousel arrows on screen', async ({ page 
 
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   if (overflow > 0) {
-    // Keep this failure-only and bounded: the next retained WebKit failure needs an owner, not another page-wide width.
+    // Keep this failure-only and bounded: retain likely contributors rather than a DOM-order slice of every pseudo-element.
     const geometry = await page.evaluate(() => {
       const root = document.documentElement;
       const viewport = { width: root.clientWidth, height: root.clientHeight };
+      const documentRight = root.scrollWidth;
+      const clipsHorizontally = (overflowX: string) => ['auto', 'scroll', 'hidden', 'clip'].includes(overflowX);
       const visiblePseudo = (element: Element, pseudo: '::before' | '::after') => {
         const style = getComputedStyle(element, pseudo);
         const content = style.content;
@@ -36,20 +38,61 @@ test('home fits 320px with 32px text, carousel arrows on screen', async ({ page 
           transform: style.transform,
         };
       };
-      const candidates = [...document.querySelectorAll('*')].flatMap((element) => {
+      const candidates = [...document.querySelectorAll<HTMLElement>('*')].flatMap((element) => {
         const rect = element.getBoundingClientRect();
         const pseudos = [visiblePseudo(element, '::before'), visiblePseudo(element, '::after')].filter(Boolean);
-        const outside = rect.left < -0.5 || rect.right > viewport.width + 0.5 || rect.width > viewport.width + 0.5;
-        if (!outside && pseudos.length === 0) return [];
         const style = getComputedStyle(element);
+        const ownOverflow = Math.max(0, element.scrollWidth - element.clientWidth);
+        const anchors = element === document.body || element.matches('main, footer, section');
+        const outside = rect.left < -0.5 || rect.right > viewport.width + 0.5 || rect.width > viewport.width + 0.5;
+        if (!anchors && !outside && ownOverflow === 0 && pseudos.length === 0) return [];
+
+        let clippedLeft = -Infinity;
+        let clippedRight = Infinity;
+        const horizontalClips: { tag: string; id?: string; className?: string; overflowX: string; clientWidth: number; scrollWidth: number; left: number; right: number }[] = [];
+        for (let ancestor = element.parentElement; ancestor; ancestor = ancestor.parentElement) {
+          const ancestorStyle = getComputedStyle(ancestor);
+          if (!clipsHorizontally(ancestorStyle.overflowX)) continue;
+          const ancestorRect = ancestor.getBoundingClientRect();
+          const left = ancestorRect.left + ancestor.clientLeft;
+          const right = left + ancestor.clientWidth;
+          clippedLeft = Math.max(clippedLeft, left);
+          clippedRight = Math.min(clippedRight, right);
+          horizontalClips.push({
+            tag: ancestor.tagName.toLowerCase(),
+            id: ancestor.id || undefined,
+            className: ancestor.getAttribute('class') || undefined,
+            overflowX: ancestorStyle.overflowX,
+            clientWidth: ancestor.clientWidth,
+            scrollWidth: ancestor.scrollWidth,
+            left,
+            right,
+          });
+        }
+        const effectiveLeft = Math.max(rect.left, clippedLeft);
+        const effectiveRight = Math.min(rect.right, clippedRight);
+        const whollyClipped = rect.width > 0 && effectiveRight <= effectiveLeft;
+        const edgeDistance = Math.abs(effectiveRight - documentRight);
+        const score = (whollyClipped ? -100000 : 0)
+          + ownOverflow * 10000
+          + Math.max(0, viewport.width - edgeDistance)
+          + (effectiveRight > viewport.width + 0.5 ? 1000 : 0)
+          + (anchors ? 100 : 0);
         return [{
+          score,
           tag: element.tagName.toLowerCase(),
           id: element.id || undefined,
           className: element.getAttribute('class') || undefined,
           rect: { left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom, width: rect.width, height: rect.height },
+          effectiveLeft,
+          effectiveRight,
+          whollyClipped,
+          clientWidth: element.clientWidth,
+          scrollWidth: element.scrollWidth,
           position: style.position,
           overflowX: style.overflowX,
           transform: style.transform,
+          horizontalClips,
           pseudos,
         }];
       });
@@ -58,7 +101,8 @@ test('home fits 320px with 32px text, carousel arrows on screen', async ({ page 
         clientWidth: root.clientWidth,
         overflow: root.scrollWidth - root.clientWidth,
         viewport,
-        candidates: candidates.slice(0, 80),
+        candidateTotal: candidates.length,
+        candidates: candidates.sort((a, b) => b.score - a.score).slice(0, 80),
         truncatedCandidates: Math.max(0, candidates.length - 80),
       };
     });

@@ -1,0 +1,1 @@
+status: Task 634 WebKit preview navigation diagnostic: on the existing navigation test's failure, attach the last action, active element, preview state, and animation timing/target/bounds without changing assertions or motion.

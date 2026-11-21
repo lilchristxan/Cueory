@@ -33,11 +33,8 @@ async function openFooterLinks(page: Page) {
 const middleCard = (page: Page) =>
   page.locator('#ways-to-study [data-mode-card][data-offset="0"]').getAttribute('data-name');
 
-/** Park on the carousel's visible words, outside its cards and controls, so each engine receives a durable hover target. */
-const parkMouseOutsideCards = (page: Page) => page.locator('#modes-heading').hover();
-
-/** Failure-only Firefox and WebKit desktop evidence for the start of the carousel autoplay assertion. */
-async function installAutoplayStartDiagnostic(page: Page) {
+/** Failure-only Firefox and WebKit desktop evidence for the pointer-park start of the carousel autoplay assertion. */
+async function installAutoplayPointerParkDiagnostic(page: Page) {
   await page.addInitScript(() => {
     type Rect = { left: number; top: number; right: number; bottom: number; width: number; height: number } | null;
     type Entry = {
@@ -52,7 +49,7 @@ async function installAutoplayStartDiagnostic(page: Page) {
       visibility: string;
       reducedMotion: boolean;
     };
-    type ProbeWindow = Window & { __cueoryAutoplayStartDiagnostic?: { entries: Entry[]; mark: (phase: string) => void } };
+    type ProbeWindow = Window & { __cueoryAutoplayPointerParkDiagnostic?: { entries: Entry[]; mark: (phase: string) => void } };
     const entries: Entry[] = [];
     const cap = 80;
     let intersection: number | null = null;
@@ -75,7 +72,7 @@ async function installAutoplayStartDiagnostic(page: Page) {
       entries.push({ phase, t: performance.now(), ...sample() });
       if (entries.length > cap) entries.splice(0, entries.length - cap);
     };
-    (window as ProbeWindow).__cueoryAutoplayStartDiagnostic = { entries, mark: note };
+    (window as ProbeWindow).__cueoryAutoplayPointerParkDiagnostic = { entries, mark: note };
     document.addEventListener('DOMContentLoaded', () => {
       const root = document.querySelector<HTMLElement>('[data-modes]');
       const track = root?.querySelector<HTMLElement>('[data-modes-track]');
@@ -94,24 +91,23 @@ async function installAutoplayStartDiagnostic(page: Page) {
   });
 }
 
-async function markAutoplayStartDiagnostic(page: Page, phase: string) {
+async function markAutoplayPointerParkDiagnostic(page: Page, phase: string) {
   await page.evaluate((label) => {
-    type ProbeWindow = Window & { __cueoryAutoplayStartDiagnostic?: { mark: (phase: string) => void } };
-    (window as ProbeWindow).__cueoryAutoplayStartDiagnostic?.mark(label);
+    type ProbeWindow = Window & { __cueoryAutoplayPointerParkDiagnostic?: { mark: (phase: string) => void } };
+    (window as ProbeWindow).__cueoryAutoplayPointerParkDiagnostic?.mark(label);
   }, phase).catch(() => {});
 }
 
-async function attachAutoplayStartDiagnostic(page: Page, testInfo: TestInfo) {
+async function attachAutoplayPointerParkDiagnostic(page: Page, testInfo: TestInfo) {
   const entries = await page.evaluate(() => {
-    type ProbeWindow = Window & { __cueoryAutoplayStartDiagnostic?: { entries: unknown[] } };
-    return (window as ProbeWindow).__cueoryAutoplayStartDiagnostic?.entries ?? [];
+    type ProbeWindow = Window & { __cueoryAutoplayPointerParkDiagnostic?: { entries: unknown[] } };
+    return (window as ProbeWindow).__cueoryAutoplayPointerParkDiagnostic?.entries ?? [];
   }).catch(() => []);
-  await testInfo.attach('carousel-autoplay-start-path', {
+  await testInfo.attach('carousel-autoplay-pointer-park-path', {
     body: JSON.stringify({ entries }, null, 2),
     contentType: 'application/json',
   });
 }
-
 /** Test-only D-51 close observation; it captures IDs and event state, never DOM content or user text. */
 async function installPreviewCloseDiagnostic(page: Page) {
   await page.addInitScript(() => {
@@ -158,6 +154,55 @@ async function installPreviewCloseDiagnostic(page: Page) {
       note('dialog:observed', identity(dialog));
     });
   });
+}
+
+/** Failure-only D-51 navigation evidence. The assertions and timing remain the test's existing contract. */
+async function capturePreviewNavigationFailure(page: Page, lastAction: string) {
+  return page.evaluate((lastAction) => {
+    const describe = (element: Element | null) => {
+      if (!(element instanceof HTMLElement)) return null;
+      const bounds = element.getBoundingClientRect();
+      return {
+        tag: element.tagName.toLowerCase(),
+        id: element.id || null,
+        classes: [...element.classList],
+        previewPart: element.getAttribute('data-mode-preview') ?? null,
+        bounds: { x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height },
+      };
+    };
+    const dialog = document.querySelector<HTMLDialogElement>('[data-mode-preview]');
+    const animations = dialog?.getAnimations({ subtree: true }).map((animation, index) => {
+      const effect = animation.effect;
+      const timing = effect?.getComputedTiming();
+      const localTime = typeof timing?.localTime === 'number' ? timing.localTime : null;
+      const delay = typeof timing?.delay === 'number' ? timing.delay : null;
+      const endTime = typeof timing?.endTime === 'number' ? timing.endTime : null;
+      const phase = localTime === null || delay === null || endTime === null ? null :
+        localTime < delay ? 'before' : localTime >= endTime ? 'after' : 'active';
+      return {
+        index,
+        playState: animation.playState,
+        pending: animation.pending,
+        currentTime: animation.currentTime,
+        phase,
+        progress: timing?.progress ?? null,
+        duration: timing?.activeDuration ?? null,
+        delay,
+        endTime,
+        target: describe(effect instanceof KeyframeEffect ? effect.target : null),
+      };
+    }) ?? [];
+    return {
+      lastAction,
+      activeElement: describe(document.activeElement),
+      preview: {
+        open: dialog?.open ?? false,
+        bounds: describe(dialog)?.bounds ?? null,
+        carouselState: document.querySelector<HTMLElement>('[data-modes]')?.dataset.carouselState ?? null,
+      },
+      animations,
+    };
+  }, lastAction);
 }
 
 /** Measure cards only after their turn transitions finish, including on a loaded runner. */
@@ -1144,28 +1189,28 @@ test.describe('"ways to study" merry-go-round (D-50, D-60)', () => {
     test.slow();
     const engine = testInfo.project.use.browserName ?? testInfo.project.use.defaultBrowserType;
     const diagnoseAutoplayStart = engine === 'firefox' || engine === 'webkit';
-    if (diagnoseAutoplayStart) await installAutoplayStartDiagnostic(page);
+    if (diagnoseAutoplayStart) await installAutoplayPointerParkDiagnostic(page);
     let failed = false;
     try {
       await page.goto('/');
       await section(page).scrollIntoViewIfNeeded();
-      if (diagnoseAutoplayStart) await markAutoplayStartDiagnostic(page, 'before-heading-hover');
+      if (diagnoseAutoplayStart) await markAutoplayPointerParkDiagnostic(page, 'before-pointer-park');
       // The mouse over the section's words, not its cards: that doesn't pause it.
-      await parkMouseOutsideCards(page);
-      if (diagnoseAutoplayStart) await markAutoplayStartDiagnostic(page, 'after-heading-hover');
-      if (diagnoseAutoplayStart) await markAutoplayStartDiagnostic(page, 'first-poll:begin');
+      await page.mouse.move(0, 0);
+      if (diagnoseAutoplayStart) await markAutoplayPointerParkDiagnostic(page, 'after-pointer-park');
+      if (diagnoseAutoplayStart) await markAutoplayPointerParkDiagnostic(page, 'first-poll:begin');
       await expect.poll(() => middleCard(page), { timeout: 9000 }).toBe('cards');
 
       // Resting on the cards pauses it; moving off lets it go on.
       await page.getByRole('group', { name: 'study mode cards' }).hover();
       await page.waitForTimeout(7000);
       expect(await middleCard(page)).toBe('cards');
-      await parkMouseOutsideCards(page);
+      await page.mouse.move(0, 0);
       await expect.poll(() => middleCard(page), { timeout: 9000 }).toBe('learn');
 
       await section(page).getByRole('button', { name: 'next study mode' }).click();
       await expect.poll(() => middleCard(page)).toBe('fill-in');
-      await parkMouseOutsideCards(page);
+      await page.mouse.move(0, 0);
       await page.waitForTimeout(7000);
       expect(await middleCard(page)).toBe('fill-in');
     } catch (error) {
@@ -1174,7 +1219,7 @@ test.describe('"ways to study" merry-go-round (D-50, D-60)', () => {
     } finally {
       if (failed && diagnoseAutoplayStart) {
         try {
-          await attachAutoplayStartDiagnostic(page, testInfo);
+          await attachAutoplayPointerParkDiagnostic(page, testInfo);
         } catch {
           // Best effort: do not replace the failed autoplay assertion.
         }
@@ -1336,31 +1381,47 @@ test.describe('study-mode preview (D-51)', () => {
 
   test('previous and next move through the modes with the row behind; the X and the darkened page close it', async ({
     page,
-  }) => {
-    await openPreview(page, 'cards');
-    const preview = dialog(page);
-    await preview.getByRole('button', { name: 'next study mode' }).click();
-    await expect(page.getByRole('dialog', { name: 'learn' })).toBeVisible();
-    await expect(preview.getByRole('link', { name: 'start learn' })).toHaveAttribute('href', '/learn/study-skills/learn-mode');
-    await expect(preview.locator('[data-mode-preview-live]')).toHaveText('learn, 3 of 11');
+  }, testInfo) => {
+    let lastAction = 'open preview cards';
+    try {
+      await openPreview(page, 'cards');
+      const preview = dialog(page);
+      lastAction = 'click next study mode';
+      await preview.getByRole('button', { name: 'next study mode' }).click();
+      await expect(page.getByRole('dialog', { name: 'learn' })).toBeVisible();
+      await expect(preview.getByRole('link', { name: 'start learn' })).toHaveAttribute('href', '/learn/study-skills/learn-mode');
+      await expect(preview.locator('[data-mode-preview-live]')).toHaveText('learn, 3 of 11');
 
-    await preview.getByRole('button', { name: 'previous study mode' }).click();
-    await preview.getByRole('button', { name: 'previous study mode' }).click();
-    await expect(page.getByRole('dialog', { name: 'video' })).toBeVisible();
-    await expect(preview.getByText('coming soon')).toBeVisible();
-    await expect(preview.locator('[data-mode-preview-try]')).toBeHidden();
-    await expect(preview.locator('[data-mode-preview-live]')).toHaveText('video, 1 of 11');
-    // The merry-go-round behind follows, so closing shrinks the preview into the video card.
-    await expect(page.locator('#mode-video')).toHaveAttribute('data-active', '');
+      lastAction = 'click first previous study mode';
+      await preview.getByRole('button', { name: 'previous study mode' }).click();
+      lastAction = 'click second previous study mode';
+      await preview.getByRole('button', { name: 'previous study mode' }).click();
+      await expect(page.getByRole('dialog', { name: 'video' })).toBeVisible();
+      await expect(preview.getByText('coming soon')).toBeVisible();
+      await expect(preview.locator('[data-mode-preview-try]')).toBeHidden();
+      await expect(preview.locator('[data-mode-preview-live]')).toHaveText('video, 1 of 11');
+      // The merry-go-round behind follows, so closing shrinks the preview into the video card.
+      await expect(page.locator('#mode-video')).toHaveAttribute('data-active', '');
 
-    await preview.getByRole('button', { name: 'close preview' }).click();
-    await expect(preview).toBeHidden();
-    await expect(page.getByRole('button', { name: 'preview video' })).toBeFocused();
+      lastAction = 'click close preview';
+      await preview.getByRole('button', { name: 'close preview' }).click();
+      await expect(preview).toBeHidden();
+      await expect(page.getByRole('button', { name: 'preview video' })).toBeFocused();
 
-    await page.getByRole('button', { name: 'preview video' }).click();
-    await expect(page.getByRole('dialog', { name: 'video' })).toBeVisible();
-    await page.mouse.click(4, 4);
-    await expect(preview).toBeHidden();
+      lastAction = 'reopen preview video';
+      await page.getByRole('button', { name: 'preview video' }).click();
+      await expect(page.getByRole('dialog', { name: 'video' })).toBeVisible();
+      lastAction = 'click preview scrim';
+      await page.mouse.click(4, 4);
+      await expect(preview).toBeHidden();
+    } catch (error) {
+      const payload = await capturePreviewNavigationFailure(page, lastAction).catch(() => ({ lastAction, capture: 'unavailable' }));
+      await testInfo.attach('preview-navigation-failure', {
+        body: JSON.stringify(payload, null, 2),
+        contentType: 'application/json',
+      });
+      throw error;
+    }
   });
 
   test('moving to a mode that is not open yet keeps focus in the preview when "start …" had it', async ({ page }) => {

@@ -1,0 +1,2 @@
+status: #634 restores the autoplay test's prior absolute mouse parking after the heading-based parking introduced by #1021 caused the first WebKit desktop autoplay transition to remain on Video for the full opening poll. Assertions, timing, retries, and skips are unchanged.
+decision: This isolates the new WebKit regression from #1021; it does not prove that Firefox autoplay is fixed. No product carousel behavior changes.
