@@ -321,8 +321,8 @@ test.describe('the /play hub (each game on its own page, 2026-11-17)', () => {
     // The date comes from the visitor's clock, not the build day (the page is built ahead of time).
     await expect(page.getByTestId('play-date')).toHaveText('sun 1 nov');
     await expect(page.getByTestId('play-date')).toHaveAttribute('datetime', '2026-11-01');
-    for (const [id, name, path] of [['vialo', 'vialo', '/play/vialo'], ['triage', 'sudoku', '/play/sudoku'], ['cueword', 'crossword', '/play/crossword'], ['suture', 'word path', '/play/word-path']]) {
-      const card = page.getByTestId(`play-status-${id}`).getByRole('link');
+    for (const [name, path, testId] of [['vialo', '/play/vialo', 'pulse'], ['sudoku', '/play/sudoku', 'triage'], ['crossword', '/play/crossword', 'cueword'], ['word path', '/play/word-path', 'suture']]) {
+      const card = page.getByTestId(`play-status-${testId}`).getByRole('link');
       await expect(card).toContainText(name);
       await expect(card).toHaveAttribute('href', path);
     }

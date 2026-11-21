@@ -27,14 +27,15 @@ for (const size of [{ width: 390, height: 844 }, { width: 1440, height: 900 }]) 
     test('every game shows "not started" in words and a symbol, with 44 px targets and no sideways scroll', async ({ page }) => {
       await page.goto('/play');
       await expect(list(page).getByRole('heading', { name: 'today' })).toBeVisible();
-      for (const [game, name] of [['vialo', 'vialo'], ['triage', 'sudoku'], ['cueword', 'crossword'], ['suture', 'word path']]) {
-        await expect(row(page, game)).toHaveAttribute('data-status', 'not-started');
-        await expect(row(page, game)).toContainText(name);
-        await expect(row(page, game)).toContainText('○');
-        await expect(row(page, game)).toContainText('not started');
-        const box = await row(page, game).getByRole('link').boundingBox();
+      for (const [game, name, testId] of [['vialo', 'vialo', 'pulse'], ['triage', 'sudoku', 'triage'], ['cueword', 'crossword', 'cueword'], ['suture', 'word path', 'suture']]) {
+        const card = row(page, testId);
+        await expect(card).toHaveAttribute('data-status', 'not-started');
+        await expect(card).toContainText(name);
+        await expect(card).toContainText('○');
+        await expect(card).toContainText('not started');
+        const box = await card.getByRole('link').boundingBox();
         // Each card opens the game's own page (2026-11-17).
-        await expect(row(page, game).getByRole('link')).toHaveAttribute('href', { vialo: '/play/vialo', triage: '/play/sudoku', cueword: '/play/crossword', suture: '/play/word-path' }[game]!);
+        await expect(card.getByRole('link')).toHaveAttribute('href', { vialo: '/play/vialo', triage: '/play/sudoku', cueword: '/play/crossword', suture: '/play/word-path' }[game]!);
         expect(box!.height).toBeGreaterThanOrEqual(44);
       }
       // Stats are always kept (2026-11-17), so the "turn on stats" note is gone; it shows only where storage is blocked.
@@ -82,7 +83,7 @@ for (const size of [{ width: 390, height: 844 }, { width: 1440, height: 900 }]) 
 test('a started round shows in progress, and vialo finished on its own page shows done back on /play', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/play');
-  await expect(row(page, 'vialo')).toHaveAttribute('data-status', 'not-started');
+  await expect(row(page, 'pulse')).toHaveAttribute('data-status', 'not-started');
   await page.evaluate(() => window.dispatchEvent(new CustomEvent('cueory:game-progress', { detail: { game: 'suture', day: '2026-11-01' } })));
   await expect(row(page, 'suture')).toHaveAttribute('data-status', 'in-progress');
   await expect(row(page, 'suture')).toContainText('◐');
@@ -90,7 +91,7 @@ test('a started round shows in progress, and vialo finished on its own page show
   // Each game is on its own page (2026-11-17): with stats kept, a finished game is still marked when you come back.
   // Stats are always kept (2026-11-17): there is no switch to turn on.
   await expect(page.getByTestId('game-stats').getByRole('switch')).toHaveCount(0);
-  await row(page, 'vialo').getByRole('link').click();
+  await row(page, 'pulse').getByRole('link').click();
   await expect(page).toHaveURL(/\/play\/vialo$/);
   const field = page.getByLabel('your guess', { exact: true });
   await field.fill('grace');
@@ -98,7 +99,7 @@ test('a started round shows in progress, and vialo finished on its own page show
   await expect(page.getByTestId('vialo-result')).toContainText('solved.');
   await page.getByTestId('game-result-dialog').getByRole('button', { name: 'close results' }).click();
   await page.getByRole('link', { name: 'all games' }).click();
-  await expect(row(page, 'vialo')).toHaveAttribute('data-status', 'done');
+  await expect(row(page, 'pulse')).toHaveAttribute('data-status', 'done');
 });
 
 test('each card opens its game by keyboard', async ({ page }) => {

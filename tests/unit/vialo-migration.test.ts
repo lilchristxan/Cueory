@@ -16,6 +16,7 @@ import {
   VIALO_HARD_MODE_STORAGE_KEY,
 } from '../../src/islands/vialo';
 import { startPulse } from '../../src/islands/pulse';
+import { loadStats, STATS_STORAGE_KEY } from '../../src/islands/gameresults';
 
 function memoryStorage(initial: Record<string, string> = {}) {
   const map = new Map<string, string>(Object.entries(initial));
@@ -71,6 +72,19 @@ describe('vialo stats migration and share format', () => {
     expect(migrated.some((r) => r.game === 'vialo' && r.day === '2026-11-18')).toBe(true);
     expect(migrated.some((r) => r.game === 'vialo' && r.day === '2026-11-19')).toBe(true);
     expect(migrated.some((r) => r.game === 'vialo' && r.day === '2026-11-20')).toBe(true);
+  });
+
+  it('loads legacy records as vialo records so the rebranded stats panel keeps the history', () => {
+    const storage = memoryStorage({
+      [STATS_STORAGE_KEY]: JSON.stringify({
+        version: 1,
+        results: [{ game: 'pulse', day: '2026-11-19', solved: true, tries: 3 }],
+      }),
+    });
+
+    expect(loadStats(storage, '2026-11-20').stats).toEqual([
+      { game: 'vialo', day: '2026-11-19', solved: true, tries: 3 },
+    ]);
   });
 
   it('formats vialo share line as "vialo · [date] · [score] · cueory.app"', () => {
