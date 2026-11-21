@@ -125,7 +125,14 @@ async function applyTreatment(page: Page, treatment: Treatment): Promise<Record<
   }, treatment);
 }
 
-async function measureFrames(page: Page): Promise<FrameMeasurement> {
+type NodeTimers = Pick<typeof globalThis, 'setTimeout' | 'clearTimeout'>;
+
+const nodeTimers: NodeTimers = {
+  setTimeout: globalThis.setTimeout.bind(globalThis),
+  clearTimeout: globalThis.clearTimeout.bind(globalThis),
+};
+
+export async function measureFrames(page: Pick<Page, 'evaluate'>, timers: NodeTimers = nodeTimers): Promise<FrameMeasurement> {
   const startedAt = Date.now();
   const measurement = page.evaluate((sampleMs) => new Promise<{
     elapsedMs: number;
@@ -156,10 +163,12 @@ async function measureFrames(page: Page): Promise<FrameMeasurement> {
     window.requestAnimationFrame(tick);
   }), SAMPLE_MS);
 
-  const completed = await Promise.race([
-    measurement,
-    new Promise<null>((resolve) => window.setTimeout(() => resolve(null), WALL_CLOCK_LIMIT_MS)),
-  ]);
+  let wallClockTimer: ReturnType<typeof setTimeout> | undefined;
+  const wallClockDeadline = new Promise<null>((resolve) => {
+    wallClockTimer = timers.setTimeout(() => resolve(null), WALL_CLOCK_LIMIT_MS);
+  });
+  const completed = await Promise.race([measurement, wallClockDeadline]);
+  if (wallClockTimer !== undefined) timers.clearTimeout(wallClockTimer);
   if (completed === null) {
     void measurement.catch(() => undefined);
     return {
