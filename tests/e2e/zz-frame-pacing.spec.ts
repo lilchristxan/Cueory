@@ -37,6 +37,21 @@ type CaseReceipt = {
   setupError?: string;
 };
 
+function logCaseReceipt(entry: CaseReceipt) {
+  const measurement = entry.measurement;
+  // Keep this compact receipt in runner stdout too: retained failure reports may omit test attachments.
+  console.log('frame-pacing ' + JSON.stringify({
+    viewport: entry.viewport,
+    case: entry.name,
+    count: measurement?.count ?? null,
+    median: measurement?.medianMs ?? null,
+    p95: measurement?.p95Ms ?? null,
+    max: measurement?.maxMs ?? null,
+    missed: measurement?.missedFrames ?? null,
+    error: entry.setupError ?? measurement?.error ?? null,
+  }));
+}
+
 const percentile = (sorted: readonly number[], fraction: number) => {
   if (sorted.length === 0) return null;
   return sorted[Math.min(sorted.length - 1, Math.max(0, Math.ceil(sorted.length * fraction) - 1))]!;
@@ -259,6 +274,7 @@ test('temporary WebKit frame-pacing receipt for Home treatments', async ({ brows
         entry.setupError = error instanceof Error ? error.message : String(error);
       } finally {
         receipt.cases.push(entry);
+        logCaseReceipt(entry);
         await close();
       }
     }
