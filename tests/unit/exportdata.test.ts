@@ -279,6 +279,44 @@ describe('JSON export', () => {
     expect(json({ gameStats: games }).gameStats).toEqual(games);
   });
 
+  it('exports new game-result fields (streak, hints, specialFirst, offDay) in JSON and CSV, keeping them optional', () => {
+    const currentRecords: ExportData['gameStats'] = [
+      { game: 'vialo', day: '2026-11-01', solved: true, tries: 3, offDay: true },
+      { game: 'cueword', day: '2026-11-02', solved: true, tries: 0, streak: true },
+      { game: 'suture', day: '2026-11-03', solved: true, tries: 4, hints: 2, specialFirst: true },
+      { game: 'triage', day: '2026-11-04', solved: false, tries: 5 },
+    ];
+    const result = json({ gameStats: currentRecords });
+    expect(result.gameStats).toEqual(currentRecords);
+    expect(result.dropped).toEqual([]);
+
+    const csvRows = parseRows(file({ gameStats: currentRecords }, 'gameStats'));
+    expect(csvRows).toEqual([
+      ['game', 'day', 'solved', 'tries', 'streak', 'hints', 'specialFirst', 'offDay'],
+      ['vialo', '2026-11-01', 'true', '3', '', '', '', 'true'],
+      ['cueword', '2026-11-02', 'true', '0', 'true', '', '', ''],
+      ['suture', '2026-11-03', 'true', '4', '', '2', 'true', ''],
+      ['triage', '2026-11-04', 'false', '5', '', '', '', ''],
+    ]);
+  });
+
+  it('drops rows with invalid new game-result fields and records them in dropped', () => {
+    const invalidRecords = [
+      { game: 'pulse', day: '2026-11-01', solved: true, tries: 3, streak: 'yes' },
+      { game: 'suture', day: '2026-11-02', solved: true, tries: 1, hints: -1 },
+      { game: 'suture', day: '2026-11-03', solved: true, tries: 1, specialFirst: 'true' },
+      { game: 'vialo', day: '2026-11-04', solved: true, tries: 2, offDay: false },
+    ];
+    const result = json({ gameStats: invalidRecords });
+    expect(result.gameStats).toEqual([]);
+    expect(result.dropped).toEqual([
+      'gameStats[0]', 'gameStats[0].streak',
+      'gameStats[1]', 'gameStats[1].hints',
+      'gameStats[2]', 'gameStats[2].specialFirst',
+      'gameStats[3]', 'gameStats[3].offDay',
+    ]);
+  });
+
   it('does not mutate input or share arrays with the parsed download', () => {
     const input = structuredClone(sample);
     Object.freeze(input.profile);
@@ -313,7 +351,10 @@ describe('CSV export', () => {
       ['id', 'result', 'date', 'deckId', 'progressVersion', 'course', 'examDate', 'done'],
       ['sample-item', 'true', '2026-10-31', '', '', '', '', ''],
     ]);
-    expect(parseRows(file(sample, 'gameStats'))).toEqual([['game', 'day', 'solved', 'tries'], ['pulse', '2026-10-31', 'false', '7']]);
+    expect(parseRows(file(sample, 'gameStats'))).toEqual([
+      ['game', 'day', 'solved', 'tries', 'streak', 'hints', 'specialFirst', 'offDay'],
+      ['pulse', '2026-10-31', 'false', '7', '', '', '', ''],
+    ]);
   });
 
   it('preserves sample commas, quotes, Unicode and embedded LF/CRLF after parsing', () => {
