@@ -3,6 +3,7 @@ import { browserStorage } from '../scripts/storage';
 import { GAME_STATS_CHANGED_EVENT, loadStats, localDay } from './gameresults';
 import { currentStreak, dailyStats, longestStreak, wordPathSummary, type GameId, type GameStats } from './gamestats';
 import { GUESSES } from './pulse';
+import { loadSudokuStats } from './sudokustats';
 
 interface Props {
   game: string;
@@ -72,6 +73,9 @@ export default function GameFrameStats({ game }: Props) {
     const refresh = () => {
       const today = localDay(new Date());
       const saved = loadStats(browserStorage(), today);
+      // GameStatsPanel used to do this whenever a game page opened. Framed Sudoku
+      // keeps that 400-day cleanup lifecycle without mounting a second stats UI.
+      if (resolveGameId(game) === 'triage') loadSudokuStats(browserStorage(), today);
       setStats(computeStats(game, saved.stats, today));
     };
 

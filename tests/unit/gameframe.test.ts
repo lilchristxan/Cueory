@@ -74,6 +74,12 @@ describe('GameFrame (Scope 1)', () => {
     expect(panelCode).toContain('reportStatsChanged()');
   });
 
+  it('keeps Sudoku’s existing 400-day solve cleanup in the framed stats lifecycle only', () => {
+    const statsCode = readFileSync(resolve(root, 'src/islands/GameFrameStats.tsx'), 'utf-8');
+    expect(statsCode).toContain("import { loadSudokuStats } from './sudokustats'");
+    expect(statsCode).toContain("if (resolveGameId(game) === 'triage') loadSudokuStats(browserStorage(), today)");
+  });
+
   it('uses the crossword assisted-solve eligibility for the sidebar best streak', () => {
     const statsCode = readFileSync(resolve(root, 'src/islands/GameFrameStats.tsx'), 'utf-8');
     expect(statsCode).toContain("id === 'cueword' ? longestStreak(stats, id) : ds.longestStreak");
