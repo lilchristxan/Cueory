@@ -505,7 +505,7 @@ function jsonParts(data: unknown, exportDate: string): (string | Blob)[] {
   const clean = prepare(data);
   const { studyEvents, ...before } = clean.data;
   const head = JSON.stringify({ format: 'cueory-export-1', exportDate: exportDay(exportDate), ...before }, null, 2);
-  const files = [
+  return [
     head.slice(0, -'\n}'.length), ',\n  "studyEvents": ',
     ...(studyEvents.count ? ['[\n', ...studyEvents.json, '\n  ]'] : ['[]']),
     ',\n  "dropped": ', JSON.stringify(clean.dropped, null, 2).replace(/\n/g, '\n  '), '\n}',
@@ -582,7 +582,7 @@ function csvParts(data: unknown): { fileName: string; parts: (string | Blob)[] }
   }
   const recordRows = (value: Row) => Object.keys(value).length ? [value] : [];
   const file = (fileName: string, headers: string[], rows: Row[]) => ({ fileName, parts: [csv(headers, rows)] });
-  return [
+  const files = [
     file('profile.csv', Object.keys(profileSchema), recordRows(clean.data.profile)),
     file('signInDetails.csv', Object.keys(signInDetailSchema), clean.data.signInDetails),
     file('account.csv', ['field', 'value'], accountRows(clean.data.account)),
