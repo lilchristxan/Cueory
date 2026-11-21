@@ -615,17 +615,28 @@ const icons: Record<StudyFeatureIcon, string> = {
 
     // A mouse resting on the cards or their buttons pauses the auto-advance. The words around them don't: the section
     // is taller than many windows, so pausing for the whole of it would stop the auto-advance for good on a computer.
-    const hovered = new Set<HTMLElement>();
+    // Firefox can later replay a trusted pointerenter at an old in-track coordinate after the pointer has already
+    // moved away. Gate the state on an actual pointermove target instead: a stale enter has no matching move, while a
+    // real entry, a control hover, and an element moving beneath a stationary pointer are all still represented.
+    let lastMouseMove: { x: number; y: number } | undefined;
+    const isPauseArea = (target: EventTarget | null) =>
+      target instanceof Node && [track, controls].some((area) => area?.contains(target));
+    const setHovering = (next: boolean) => {
+      if (state.hovering === next) return;
+      state.hovering = next;
+      syncAutoplay();
+    };
+    window.addEventListener('pointermove', (event) => {
+      if (event.pointerType !== 'mouse') return;
+      lastMouseMove = { x: event.clientX, y: event.clientY };
+      setHovering(isPauseArea(event.target));
+    }, { passive: true });
     for (const area of [track, controls]) {
       area?.addEventListener('pointerenter', (event) => {
-        if (event.pointerType === 'mouse') hovered.add(area);
-        state.hovering = hovered.size > 0;
-        syncAutoplay();
-      });
-      area?.addEventListener('pointerleave', () => {
-        hovered.delete(area);
-        state.hovering = hovered.size > 0;
-        syncAutoplay();
+        if (event.pointerType !== 'mouse') return;
+        // A stationary pointer can gain an area when layout moves underneath it. A stale enter reports a different
+        // coordinate than the last physical move, so it cannot pause the carousel by itself.
+        if (lastMouseMove?.x === event.clientX && lastMouseMove.y === event.clientY) setHovering(true);
       });
     }
     root.addEventListener('focusin', () => {

@@ -1,0 +1,3 @@
+status: #634 Firefox hover-gate fix ignores a stale trusted in-track pointerenter at (636, 423) after the test's real (0, 0) pointer park, using actual mouse-move targets while retaining the stationary-layout fallback, card/control pause, and visitor takeover behavior.
+evidence: Retained Firefox trace from release head 54bd73f records the stale enter without a matching move; run 44868648462 then shows recurrent hover holds and no carousel advance after the same park. Exact hosted Firefox proof remains pending.
+decision: Product fix with paired regressions. No assertion, retry, skip, timeout, fixture, or test-only diagnostic weakening; no local browser run.

@@ -446,6 +446,17 @@ test('auto-advance gives the vial in front its full six seconds from when the ri
   await page.mouse.move(0, 0);
   await expect(carousel).toHaveAttribute('data-autoplay', 'on');
   await expect(carousel).not.toHaveAttribute('data-autoplay-hold');
+
+  // The controls are a pause area too; a real pointer move over one holds the same fresh countdown.
+  await carousel.getByRole('button', { name: 'next study mode' }).hover();
+  await expect(carousel).toHaveAttribute('data-autoplay', 'off');
+  await expect(carousel).toHaveAttribute('data-autoplay-hold', 'hover');
+  await page.clock.runFor(20_000);
+  await expect(carousel.locator('#mode-cards')).toHaveAttribute('data-active', '');
+  await page.mouse.move(0, 0);
+  await expect(carousel).toHaveAttribute('data-autoplay', 'on');
+  await expect(carousel).not.toHaveAttribute('data-autoplay-hold');
+
   await page.clock.runFor(5_900);
   await expect(carousel.locator('#mode-cards')).toHaveAttribute('data-active', '');
   await page.clock.runFor(200);
