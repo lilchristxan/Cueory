@@ -208,6 +208,15 @@ test('home fits 320px with 32px text, carousel arrows on screen', async ({ page 
   });
   expect(modesHeadingFits).toBe(true);
 
+  const gamesHeading = page.locator('#games-heading');
+  const gamesHeadingFits = await gamesHeading.evaluate((element) => {
+    const range = document.createRange();
+    range.selectNodeContents(element);
+    const box = element.getBoundingClientRect();
+    return [...range.getClientRects()].every((rect) => rect.right <= box.right + 0.5);
+  });
+  expect(gamesHeadingFits).toBe(true);
+
   for (const name of ['previous study mode', 'next study mode', 'pause the slideshow']) {
     const button = page.getByRole('button', { name });
     await button.scrollIntoViewIfNeeded();
