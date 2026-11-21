@@ -14,7 +14,7 @@ describe('game pages keep room for the game until it renders (performance, 2026-
     const html = readFileSync(`${dist}${page}`, 'utf8');
     expect(html).toMatch(/<article\b[^>]*data-game-page="[^"]+"/);
     const css = linkedCss(html).replace(/\s+/g, '');
-    expect(css).toMatch(/@media\(scripting:enabled\)\{\[data-game-page\]>:has\(astro-island:empty\)\{min-block-size:100svh\}/);
+    expect(css).toMatch(/@media\(scripting:enabled\)\{\[data-game-page\]\.game-frame-board>:has\(astro-island:empty\)\{min-block-size:100svh\}/);
   });
 
   it('GamePage adds no wrapper around the game, so the print rules still see the article\'s direct children', () => {
