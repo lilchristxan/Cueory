@@ -72,7 +72,7 @@ test('players read "cue", never "clue": the box, its settings and its help', asy
   await expect(settings.getByRole('group', { name: 'cue text size' })).toBeVisible();
   expect(await seenText(page, '[data-testid="game-settings"]')).not.toContain('clue');
   await page.keyboard.press('Escape');
-  await board(page).getByRole('button', { name: 'how to play crossword' }).click();
+  await page.getByTestId('game-frame-help-button').click();
   const help = page.getByRole('dialog', { name: 'how to play crossword' });
   await expect(help).toBeVisible();
   const text = await seenText(page, '[data-testid="game-help"]');
