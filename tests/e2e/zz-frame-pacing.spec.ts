@@ -1,3 +1,4 @@
+import { appendFileSync, writeSync } from 'node:fs';
 import { test, type Browser, type Page, type TestInfo } from '@playwright/test';
 
 /*
@@ -40,7 +41,7 @@ type CaseReceipt = {
 function logCaseReceipt(entry: CaseReceipt) {
   const measurement = entry.measurement;
   // Keep this compact receipt in runner stdout too: retained failure reports may omit test attachments.
-  console.log('frame-pacing ' + JSON.stringify({
+  const summary = {
     viewport: entry.viewport,
     case: entry.name,
     count: measurement?.count ?? null,
@@ -49,7 +50,20 @@ function logCaseReceipt(entry: CaseReceipt) {
     max: measurement?.maxMs ?? null,
     missed: measurement?.missedFrames ?? null,
     error: entry.setupError ?? measurement?.error ?? null,
-  }));
+  };
+  console.log('frame-pacing ' + JSON.stringify(summary));
+
+  const stepSummary = process.env.GITHUB_STEP_SUMMARY;
+  if (!stepSummary) return;
+  try {
+    appendFileSync(stepSummary, `\n#### Frame pacing: ${entry.name}\n\n\`\`\`json\n${JSON.stringify(summary)}\n\`\`\`\n`);
+    // The browser-free GitHub-reporter probe verified this direct stdout notice survives reporter capture.
+    const notice = `case=${entry.name}; count=${summary.count}; median=${summary.median}; p95=${summary.p95}; max=${summary.max}; missed=${summary.missed}; error=${summary.error}`
+      .replaceAll('%', '%25').replaceAll('\r', '%0D').replaceAll('\n', '%0A');
+    writeSync(1, `::notice title=Frame pacing receipt::${notice}\n`);
+  } catch {
+    // Receipt reporting is best effort; attachment and test behavior remain unchanged if a runner disallows it.
+  }
 }
 
 const percentile = (sorted: readonly number[], fraction: number) => {
