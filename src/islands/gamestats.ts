@@ -1,7 +1,7 @@
 /** Optional private game history. No storage, clock, network or visible game names. */
 import type { DailyGame } from '../config/games';
 
-export type GameId = DailyGame['id'];
+export type GameId = DailyGame['id'] | 'vialo' | 'pillo';
 export interface GameResult {
   game: GameId;
   day: string;
@@ -27,7 +27,7 @@ export interface GameSummary {
   triesCounts: Record<number, number>;
 }
 
-const GAMES: readonly string[] = ['pulse', 'cueword', 'triage', 'suture'];
+const GAMES: readonly string[] = ['vialo', 'pulse', 'pillo', 'cueword', 'triage', 'suture'];
 const DAY = 86_400_000;
 const WINDOW_DAYS = 400;
 const VERSION = 1;
@@ -147,6 +147,26 @@ export function serialize(stats: GameStats): string {
   return JSON.stringify({ version: VERSION, results: trim(results) });
 }
 
+/** If cueory-game-stats holds pillo or pulse data under an old key, canonicalize it to vialo so nobody loses a streak. */
+export function migratePilloStatsToVialo(stats: GameStats): GameStats {
+  const vialoDays = new Set(stats.filter((r) => r.game === 'vialo').map((r) => r.day));
+  const migrated: GameResult[] = [];
+  for (const r of stats) {
+    if ((r.game as string) === 'pillo' || (r.game as string) === 'pulse') {
+      if (!vialoDays.has(r.day)) {
+        migrated.push({
+          ...r,
+          game: 'vialo' as GameId,
+        });
+        vialoDays.add(r.day);
+      }
+    } else {
+      migrated.push(r);
+    }
+  }
+  return trim(migrated);
+}
+
 /** Bad or old data starts empty. One invalid entry invalidates the whole saved record. */
 export function parseStats(text: unknown): GameStats {
   try {
@@ -217,7 +237,18 @@ export function wordPathSummaryInWords(value: WordPathSummary): string {
 }
 
 export function forget(stats: GameStats, game?: string): GameStats {
-  return game === undefined ? [] : stats.filter((result) => result.game !== game);
+  if (game === undefined) return [];
+  const aliases: Record<string, string[]> = {
+    suture: ['suture', 'piccline'],
+    piccline: ['suture', 'piccline'],
+    pulse: ['pulse', 'pillo', 'vialo'],
+    pillo: ['pulse', 'pillo', 'vialo'],
+    vialo: ['pulse', 'pillo', 'vialo'],
+    stat: ['stat', 'tachyyy'],
+    tachyyy: ['stat', 'tachyyy'],
+  };
+  const toForget = new Set(aliases[game] ?? [game]);
+  return stats.filter((result) => !toForget.has(result.game as string));
 }
 
 /** Whether a kept result extends the streak. Results kept before Task 721 had no help tools, so a clean solve counts. */

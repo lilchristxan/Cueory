@@ -1,0 +1,1 @@
+status: Task 634 WebKit preview-navigation diagnostic follow-up: preserve the last bounded pre-action preview state in the test process so a timed-out click can emit failure-only phase, target and animation evidence after its page closes. Existing actions, assertions and timing are unchanged; remove this receipt with the proven repair.

@@ -67,6 +67,12 @@ const exceptions: Exception[] = [
   },
   {
     kind: 'size',
+    path: 'styles/vialo.css',
+    matches: text => /^@media \(width (?:<|>=) 40rem\) \{$/.test(text.trim()),
+    reason: 'the Vialo board changes layout at a responsive media-query breakpoint',
+  },
+  {
+    kind: 'size',
     path: 'styles/global.css',
     matches: text => /@media \(orientation: portrait\), \(max-width: 50rem\)/.test(text),
     reason: 'the Sudoku board and keypad use a mobile-only layout boundary to keep every control reachable',
@@ -131,6 +137,14 @@ describe('design values', () => {
 
   it('allows only the documented 40rem Pillo breakpoints', () => {
     const finding = (text: string): Finding => ({ kind: 'size', path: 'styles/pillo.css', line: 1, text });
+    expect(exceptionFor(finding('  @media (width < 40rem) {'))?.reason).toBeTruthy();
+    expect(exceptionFor(finding('  @media (width >= 40rem) {'))?.reason).toBeTruthy();
+    expect(exceptionFor(finding('  @media (width < 41rem) {'))).toBeUndefined();
+    expect(exceptionFor(finding('  padding: 40rem;'))).toBeUndefined();
+  });
+
+  it('allows only the documented 40rem Vialo breakpoints', () => {
+    const finding = (text: string): Finding => ({ kind: 'size', path: 'styles/vialo.css', line: 1, text });
     expect(exceptionFor(finding('  @media (width < 40rem) {'))?.reason).toBeTruthy();
     expect(exceptionFor(finding('  @media (width >= 40rem) {'))?.reason).toBeTruthy();
     expect(exceptionFor(finding('  @media (width < 41rem) {'))).toBeUndefined();
