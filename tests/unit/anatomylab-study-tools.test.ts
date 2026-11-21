@@ -397,6 +397,12 @@ describe('camera animation cancellation and posture synchronization', () => {
     expect(viewFromBlock).toContain('move = null;');
   });
 
+  it('cancels active camera transitions when direct manipulation starts on OrbitControls', () => {
+    const source = readFileSync(new URL('../../src/islands/anatomyscene.ts', import.meta.url), 'utf8');
+    expect(source).toContain("controls.addEventListener('start', onControlsStart);");
+    expect(source).toContain('move = null;');
+  });
+
   it('resets posture to standing during WebGL context loss and scene open recovery', () => {
     const labSource = readFileSync(new URL('../../src/islands/AnatomyLab.tsx', import.meta.url), 'utf8');
     const onContextLostBlock = labSource.slice(labSource.indexOf('const onContextLost ='), labSource.indexOf("canvas.addEventListener('webglcontextlost'"));

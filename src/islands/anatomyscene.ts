@@ -281,6 +281,10 @@ export function createLabScene({ canvas, reducedMotion, colors: initialColors, p
     requestRender();
     scheduleVisibility();
   };
+  const onControlsStart = () => {
+    move = null;
+  };
+  controls.addEventListener('start', onControlsStart);
   controls.addEventListener('change', onCameraChange);
 
   let root: THREE.Object3D | null = null;
@@ -1049,6 +1053,7 @@ export function createLabScene({ canvas, reducedMotion, colors: initialColors, p
       loadId++;
       scheduler.dispose();
       observer.disconnect();
+      controls.removeEventListener('start', onControlsStart);
       controls.removeEventListener('change', onCameraChange);
       controls.dispose();
       disposeModel();
