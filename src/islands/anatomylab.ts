@@ -980,6 +980,42 @@ export function fitDistance(size: { x: number; y: number; z: number }, fovDeg: n
   return fit * FIT_MARGIN + size.z / 2;
 }
 
+/**
+ * Expresses an axis-aligned box's size in the camera's viewing frame:
+ * x = screen width, y = screen height, z = line-of-sight depth.
+ */
+export function boxSizeInCameraFrame(
+  worldSize: Vec3,
+  direction: Vec3,
+  up: Vec3 = { x: 0, y: 1, z: 0 },
+): Vec3 {
+  const dLen = Math.hypot(direction.x, direction.y, direction.z) || 1;
+  const d = { x: direction.x / dLen, y: direction.y / dLen, z: direction.z / dLen };
+
+  let rx = up.y * d.z - up.z * d.y;
+  let ry = up.z * d.x - up.x * d.z;
+  let rz = up.x * d.y - up.y * d.x;
+  let rLen = Math.hypot(rx, ry, rz);
+  if (rLen < 1e-6) {
+    const alt = Math.abs(d.y) > 0.9 ? { x: 0, y: 0, z: -1 } : { x: 0, y: 1, z: 0 };
+    rx = alt.y * d.z - alt.z * d.y;
+    ry = alt.z * d.x - alt.x * d.z;
+    rz = alt.x * d.y - alt.y * d.x;
+    rLen = Math.hypot(rx, ry, rz) || 1;
+  }
+  const r = { x: rx / rLen, y: ry / rLen, z: rz / rLen };
+  const ux = d.y * r.z - d.z * r.y;
+  const uy = d.z * r.x - d.x * r.z;
+  const uz = d.x * r.y - d.y * r.x;
+  const uLen = Math.hypot(ux, uy, uz) || 1;
+  const u = { x: ux / uLen, y: uy / uLen, z: uz / uLen };
+
+  const x = Math.abs(r.x) * worldSize.x + Math.abs(r.y) * worldSize.y + Math.abs(r.z) * worldSize.z;
+  const y = Math.abs(u.x) * worldSize.x + Math.abs(u.y) * worldSize.y + Math.abs(u.z) * worldSize.z;
+  const z = Math.abs(d.x) * worldSize.x + Math.abs(d.y) * worldSize.y + Math.abs(d.z) * worldSize.z;
+  return { x, y, z };
+}
+
 // ---------------------------------------------------------------------------------------------------------------------
 // Interaction modes (Task 178, study tools A): what a tap on the 3D view does
 // ---------------------------------------------------------------------------------------------------------------------

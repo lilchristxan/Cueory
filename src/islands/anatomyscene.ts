@@ -16,6 +16,7 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
 import {
   BEHIND_MARK,
+  boxSizeInCameraFrame,
   EXPORT_SIZES,
   cameraForPreset,
   cameraMoveDuration,
@@ -34,6 +35,7 @@ import {
   pictureTitleLayout,
   postureAngleX,
   preparePictureFonts,
+  presetDirection,
   rotateX,
   wrapText,
   type ExportSize,
@@ -528,10 +530,12 @@ export function createLabScene({ canvas, reducedMotion, colors: initialColors, o
     const box = visibleBox();
     if (!box) return;
     const sphere = box.getBoundingSphere(new THREE.Sphere());
-    const distance = fitDistance(box.getSize(new THREE.Vector3()), camera.fov, camera.aspect);
+    const center = box.getCenter(new THREE.Vector3());
+    const homeDir = posture === 'lying' ? { x: 0, y: 1, z: 0 } : { x: 0, y: 0, z: 1 };
+    const camSize = boxSizeInCameraFrame(box.getSize(new THREE.Vector3()), homeDir);
+    const distance = fitDistance(camSize, camera.fov, camera.aspect);
     // glTF's convention: the front of an asset faces +Z, with +Y up. The lab starts with a front view; a model lying
     // on its back (setPosture) is shown from above.
-    const center = box.getCenter(new THREE.Vector3());
     home.target.copy(center);
     home.distance = distance;
     const position = cameraForPreset(homePreset(posture), center, distance);
@@ -572,7 +576,9 @@ export function createLabScene({ canvas, reducedMotion, colors: initialColors, o
     const box = visibleBox();
     if (!box) return;
     const center = box.getCenter(new THREE.Vector3());
-    const distance = fitDistance(box.getSize(new THREE.Vector3()), camera.fov, camera.aspect);
+    const dir = rotateX(presetDirection(preset), postureAngleX(posture));
+    const camSize = boxSizeInCameraFrame(box.getSize(new THREE.Vector3()), dir);
+    const distance = fitDistance(camSize, camera.fov, camera.aspect);
     moveCamera(cameraForPreset(preset, center, distance, posture), center);
   }
 
@@ -580,7 +586,9 @@ export function createLabScene({ canvas, reducedMotion, colors: initialColors, o
     const box = boxes.get(id);
     if (!box || appearance.hidden.has(id) || (meshesById.get(id)?.length ?? 0) === 0) return false;
     const center = box.getCenter(new THREE.Vector3());
-    const distance = Math.max(controls.minDistance, fitDistance(box.getSize(new THREE.Vector3()), camera.fov, camera.aspect));
+    const dir = { x: camera.position.x - controls.target.x, y: camera.position.y - controls.target.y, z: camera.position.z - controls.target.z };
+    const camSize = boxSizeInCameraFrame(box.getSize(new THREE.Vector3()), dir);
+    const distance = Math.max(controls.minDistance, fitDistance(camSize, camera.fov, camera.aspect));
     moveCamera(focusCamera(camera.position, controls.target, center, distance), center);
     return true;
   }

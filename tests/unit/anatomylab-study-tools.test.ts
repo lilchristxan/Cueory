@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import {
   CAMERA_MOVE_MS,
+  boxSizeInCameraFrame,
   cameraToModelFrame,
   cameraToWorldFrame,
   COMPARE_SYNC_MS,
@@ -368,5 +369,23 @@ describe('camera posture normalization', () => {
     const lyingTop = cameraForPreset('top', center, 10, 'lying');
     expect(lyingTop.x).toBe(0);
     expect(lyingTop.z).toBeCloseTo(-10);
+  });
+
+  it('expresses world bounding box size in camera viewing frame', () => {
+    // Model dimensions: width = 0.5, height = 1.72, depth = 0.3
+    // 1. Standing front view: camera looks from +Z
+    const standingWorld = { x: 0.5, y: 1.72, z: 0.3 };
+    const standingCam = boxSizeInCameraFrame(standingWorld, { x: 0, y: 0, z: 1 });
+    expect(standingCam.x).toBeCloseTo(0.5);
+    expect(standingCam.y).toBeCloseTo(1.72);
+    expect(standingCam.z).toBeCloseTo(0.3);
+
+    // 2. Lying home view (seen from above): rotated -pi/2 around X, world size has y=0.3, z=1.72
+    const lyingWorld = { x: 0.5, y: 0.3, z: 1.72 };
+    const lyingCam = boxSizeInCameraFrame(lyingWorld, { x: 0, y: 1, z: 0 });
+    // Screen width is model width (0.5), screen height is model length (1.72), depth is model thickness (0.3)
+    expect(lyingCam.x).toBeCloseTo(0.5);
+    expect(lyingCam.y).toBeCloseTo(1.72);
+    expect(lyingCam.z).toBeCloseTo(0.3);
   });
 });
