@@ -1288,18 +1288,27 @@ test.describe('study-mode preview (D-51)', () => {
     page,
   }, testInfo) => {
     let lastAction = 'open preview cards';
+    // Keep the latest bounded state in the test process. A timed-out click closes its page before the catch block can
+    // evaluate it, but the state immediately before that existing action remains available for a failure-only receipt.
+    let latestObservation: unknown = { lastAction, capture: 'not sampled' };
+    const observeBeforeAction = async () => {
+      latestObservation = await capturePreviewNavigationFailure(page, lastAction).catch(() => latestObservation);
+    };
     try {
       await openPreview(page, 'cards');
       const preview = dialog(page);
       lastAction = 'click next study mode';
+      await observeBeforeAction();
       await preview.getByRole('button', { name: 'next study mode' }).click();
       await expect(page.getByRole('dialog', { name: 'learn' })).toBeVisible();
       await expect(preview.getByRole('link', { name: 'start learn' })).toHaveAttribute('href', '/learn/study-skills/learn-mode');
       await expect(preview.locator('[data-mode-preview-live]')).toHaveText('learn, 3 of 11');
 
       lastAction = 'click first previous study mode';
+      await observeBeforeAction();
       await preview.getByRole('button', { name: 'previous study mode' }).click();
       lastAction = 'click second previous study mode';
+      await observeBeforeAction();
       await preview.getByRole('button', { name: 'previous study mode' }).click();
       await expect(page.getByRole('dialog', { name: 'video' })).toBeVisible();
       await expect(preview.getByText('coming soon')).toBeVisible();
@@ -1309,6 +1318,7 @@ test.describe('study-mode preview (D-51)', () => {
       await expect(page.locator('#mode-video')).toHaveAttribute('data-active', '');
 
       lastAction = 'click close preview';
+      await observeBeforeAction();
       await preview.getByRole('button', { name: 'close preview' }).click();
       await expect(preview).toBeHidden();
       await expect(page.getByRole('button', { name: 'preview video' })).toBeFocused();
@@ -1317,12 +1327,12 @@ test.describe('study-mode preview (D-51)', () => {
       await page.getByRole('button', { name: 'preview video' }).click();
       await expect(page.getByRole('dialog', { name: 'video' })).toBeVisible();
       lastAction = 'click preview scrim';
+      await observeBeforeAction();
       await page.mouse.click(4, 4);
       await expect(preview).toBeHidden();
     } catch (error) {
-      const payload = await capturePreviewNavigationFailure(page, lastAction).catch(() => ({ lastAction, capture: 'unavailable' }));
       await testInfo.attach('preview-navigation-failure', {
-        body: JSON.stringify(payload, null, 2),
+        body: JSON.stringify({ lastAction, observation: latestObservation }, null, 2),
         contentType: 'application/json',
       });
       throw error;
