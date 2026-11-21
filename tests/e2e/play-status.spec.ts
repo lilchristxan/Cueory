@@ -131,5 +131,8 @@ test.describe('without JavaScript', () => {
     for (const name of ['pillo', 'sudoku', 'crossword', 'word path']) {
       await expect(page.getByTestId('play-links').getByRole('link', { name, exact: true })).toBeVisible();
     }
+    const wordPath = page.getByTestId('play-links').getByRole('link', { name: 'word path', exact: true });
+    const bounds = await wordPath.boundingBox();
+    expect(bounds?.height ?? 0).toBeGreaterThanOrEqual(44);
   });
 });

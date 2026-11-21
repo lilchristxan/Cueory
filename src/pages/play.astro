@@ -84,7 +84,7 @@ const statsGames = hubGames.filter((game) => showCrossword || game.id !== 'cuewo
                 </>
               ) : (
                 <>
-                  <a href={game.href} class="font-medium">
+                  <a href={game.href} class="inline-flex min-h-(--tap-min) items-center font-medium">
                     {game.name}
                   </a>
                   <span class="text-ink-soft">: {game.line}</span>
