@@ -97,7 +97,10 @@ test('with 32 px text at 320 px each game\'s settings dialog wraps inside its ca
   for (const game of games) {
     await page.goto(game.path);
     await page.evaluate(() => document.documentElement.style.setProperty('font-size', '32px', 'important'));
-    await page.getByTestId(game.testId).getByRole('button', { name: `${game.name} settings` }).click();
+    const settings = game.name === 'crossword'
+      ? page.getByTestId('game-frame-gear')
+      : page.getByTestId(game.testId).getByRole('button', { name: `${game.name} settings` });
+    await settings.click();
     const card = page.getByRole('dialog', { name: `${game.name} settings` }).locator('.game-settings');
     await expect(card).toBeVisible();
     const [scrollWidth, clientWidth] = await card.evaluate((element) => [element.scrollWidth, element.clientWidth]);
