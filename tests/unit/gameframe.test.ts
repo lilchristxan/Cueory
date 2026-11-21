@@ -95,9 +95,14 @@ describe('GameFrame (Scope 1)', () => {
   it('makes framing an explicit route opt-in and retains legacy controls elsewhere', () => {
     const frame = readFileSync(resolve(root, 'src/components/GameFrame.astro'), 'utf-8');
     const page = readFileSync(resolve(root, 'src/components/GamePage.astro'), 'utf-8');
+    const helloCards = readFileSync(resolve(root, 'src/pages/play/hello-cards.astro'), 'utf-8');
     const header = readFileSync(resolve(root, 'src/islands/GameHeader.tsx'), 'utf-8');
     expect(frame).toContain('framed = true');
+    expect(frame).toContain('staticNoScoreStats = false');
+    expect(frame).toContain('{staticNoScoreStats ? <>');
+    expect(frame).toContain('questions asked');
     expect(frame).toContain('<GameFrameStats client:load game={currentConfig.id} />');
+    expect(helloCards).toContain('<GameFrame game="hello-cards" staticNoScoreStats>');
     expect(page).toContain('framed = false');
     expect(page).toContain('{!framed && <div class="game-page-stats-container');
     expect(page).toContain('<GameStatsPersistence client:only="react" />');
