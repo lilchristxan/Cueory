@@ -217,12 +217,12 @@ export interface MotionState {
   previewOpen: boolean;
 }
 
-/** A pointer enter may hold the carousel only when it agrees with the last physical mouse move. */
+/** A pointer enter may hold the carousel when it is the first observed position or agrees with the last mouse move. */
 export function enterMatchesMouseMove(
   lastMove: { x: number; y: number } | undefined,
   enter: { x: number; y: number },
 ): boolean {
-  return lastMove?.x === enter.x && lastMove.y === enter.y;
+  return lastMove === undefined || (lastMove.x === enter.x && lastMove.y === enter.y);
 }
 
 /**

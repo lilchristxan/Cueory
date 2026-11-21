@@ -261,10 +261,10 @@ describe('"ways to study" merry-go-round (D-50, D-60)', () => {
     expect(canAutoAdvance({ ...idle, previewOpen: true })).toBe(false);
   });
 
-  it('accepts a hover entry only when it matches the last real mouse move', () => {
+  it('accepts a first stationary hover entry or one that matches the last real mouse move', () => {
     expect(enterMatchesMouseMove({ x: 0, y: 0 }, { x: 636, y: 423 })).toBe(false);
     expect(enterMatchesMouseMove({ x: 636, y: 423 }, { x: 636, y: 423 })).toBe(true);
-    expect(enterMatchesMouseMove(undefined, { x: 636, y: 423 })).toBe(false);
+    expect(enterMatchesMouseMove(undefined, { x: 636, y: 423 })).toBe(true);
   });
 
   it('names the active autoplay hold without changing the motion policy', () => {

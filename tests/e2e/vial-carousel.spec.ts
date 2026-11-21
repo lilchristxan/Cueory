@@ -505,6 +505,33 @@ test('auto-advance uses the event-derived hover gate, not an independent CSS hov
   await expect(carousel.locator('#mode-cards')).toHaveAttribute('data-active', '');
 });
 
+test('a first stationary in-track entry pauses, and scrolling the track away reconciles the hold', async ({ page }, testInfo) => {
+  test.skip(!isDesktopOfEachEngine(testInfo), 'checks the fine-pointer autoplay gate once per engine, at desktop size');
+  await page.clock.install({ time: new Date('2026-11-20T07:00:00') });
+  await markPanelsSeen(page);
+  await page.goto('/');
+  await page.clock.pauseAt(new Date('2026-11-20T07:05:00'));
+  const carousel = section(page);
+  await carousel.scrollIntoViewIfNeeded();
+  // No page.mouse call: a pointer first observed when the carousel scrolls beneath it must still pause.
+  await carousel.locator('[data-modes-track]').evaluate((track) => {
+    const bounds = track.getBoundingClientRect();
+    track.dispatchEvent(new PointerEvent('pointerenter', {
+      clientX: bounds.left + bounds.width / 2,
+      clientY: bounds.top + bounds.height / 2,
+      pointerType: 'mouse',
+    }));
+  });
+  await expect(carousel).toHaveAttribute('data-autoplay-hold', 'hover');
+
+  // The pointer stays still while the page scrolls: the previous track point is no longer inside either pause area.
+  await page.evaluate(() => window.scrollBy(0, 320));
+  await expect(carousel).toHaveAttribute('data-autoplay', 'on');
+  await expect(carousel).not.toHaveAttribute('data-autoplay-hold');
+  await page.clock.runFor(6_100);
+  await expect(carousel.locator('#mode-cards')).toHaveAttribute('data-active', '');
+});
+
 test('touch screens never get the hover lift; reduced motion never lifts either', async ({ page }, testInfo) => {
   test.skip(!testInfo.project.use.hasTouch, 'a touch-screen check');
   await showRing(page);
