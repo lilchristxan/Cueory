@@ -278,6 +278,13 @@ test.describe('daily games: pillo settings and finish screen (Task 719)', () => 
   test('the finish screen shows the result, stats with today marked, the share line and the next word time', async ({ page }) => {
     // Stats are always kept (2026-11-17): there is no switch to turn on.
     await expect(page.getByTestId('game-stats').getByRole('switch')).toHaveCount(0);
+    // The retained Pillo page reads a prior Pillo result through the canonical Vialo history, while its new result
+    // still follows the unchanged legacy write path until the redirect lands.
+    await page.evaluate(() => localStorage.setItem('cueory-game-stats', JSON.stringify({
+      version: 1,
+      results: [{ game: 'pulse', day: '2026-10-31', solved: true, tries: 3 }],
+    })));
+    await page.reload();
     await field(page).fill('crane');
     await field(page).press('Enter');
     await field(page).fill('grace');
@@ -287,7 +294,7 @@ test.describe('daily games: pillo settings and finish screen (Task 719)', () => 
     await expect(result).toContainText('solved.');
     await expect(result).toContainText('cueory pillo, sun 1 nov: solved in 2 of 6');
     const stats = page.getByTestId('pulse-stats');
-    for (const [label, value] of [['played', '1'], ['win %', '100'], ['current streak', '1'], ['longest streak', '1']]) {
+    for (const [label, value] of [['played', '2'], ['win %', '100'], ['current streak', '2'], ['longest streak', '2']]) {
       await expect(stats.locator('.pillo-stat').filter({ hasText: label })).toContainText(value);
     }
     await expect(stats.getByRole('list', { name: 'guesses it took' }).getByRole('listitem')).toHaveCount(6);
