@@ -61,4 +61,18 @@ describe('home daily games stage', () => {
       '/play/hello-cards',
     ]);
   });
+
+  it('shows coming soon instead of play-status badges for unreleased games on production builds', () => {
+    const section = gamesSection();
+    // Released games show play-status badges
+    expect(section).toContain('data-game-status="vialo"');
+    expect(section).toContain('data-game-status="piccline"');
+    expect(section).toContain('data-game-status="sudoku"');
+
+    // Unreleased games in production build show "coming soon" instead of play-status badges
+    expect(section).not.toContain('data-game-status="tachyyy"');
+    expect(section).not.toContain('data-game-status="crossword"');
+    expect(section).not.toContain('data-game-status="hello-cards"');
+    expect([...section.matchAll(/class="gstatus"[^>]*>\s*coming soon\s*<\/span>/g)]).toHaveLength(3);
+  });
 });

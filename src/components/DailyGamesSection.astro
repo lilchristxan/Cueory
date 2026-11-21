@@ -14,7 +14,22 @@
  * Prev/next navigation buttons (52px >= 44px tap target), arrow keys, swipe on touch, wrapping.
  * Brand tokens only, no arbitrary tailwind classes, no inline styles or raw hex.
  */
-import { gameName, helloCardsGame, tachyyyGame } from '../config/games';
+import { getCollection } from 'astro:content';
+import { gameName, helloCardsGame, helloCardsIndexWhenApproved, tachyyyGame } from '../config/games';
+import { crosswordShown, pageBuildEnv } from '../config/crossword';
+import { draftsAllowed } from '../islands/anatomylab';
+import { helloCardsPage } from '../islands/hello-cards';
+
+const env = pageBuildEnv();
+const tachyyyAvailable = draftsAllowed(env);
+const crosswordAvailable = crosswordShown(env);
+
+const helloEntries = await getCollection('hello-cards');
+const helloCardsAvailable = helloCardsPage(
+  helloEntries.map(({ data }) => data),
+  env,
+  helloCardsIndexWhenApproved
+).shown;
 ---
 
 <section id="daily-games" class="games-section" aria-labelledby="games-heading">
@@ -81,9 +96,13 @@ import { gameName, helloCardsGame, tachyyyGame } from '../config/games';
               <img src="/brand/games/tachyyy-wordmark-light.svg" alt={tachyyyGame.name} width="168" height="60" loading="lazy" decoding="async" />
             </span>
             <span class="gdesc">quick questions against the clock.</span>
-            <span class="gstatus" data-game-status="tachyyy">
-              <span class="gstatus-sym" aria-hidden="true">○</span> not started
-            </span>
+            {tachyyyAvailable ? (
+              <span class="gstatus" data-game-status="tachyyy">
+                <span class="gstatus-sym" aria-hidden="true">○</span> not started
+              </span>
+            ) : (
+              <span class="gstatus">coming soon</span>
+            )}
             <span class="gdemo" aria-hidden="true">
               <span class="tq">
                 <span class="tbar"><i></i></span>
@@ -142,9 +161,13 @@ import { gameName, helloCardsGame, tachyyyGame } from '../config/games';
               <span class="serif">{gameName('cueword')}</span>
             </span>
             <span class="gdesc">a mini crossword from this week's lessons.</span>
-            <span class="gstatus" data-game-status="crossword">
-              <span class="gstatus-sym" aria-hidden="true">○</span> not started
-            </span>
+            {crosswordAvailable ? (
+              <span class="gstatus" data-game-status="crossword">
+                <span class="gstatus-sym" aria-hidden="true">○</span> not started
+              </span>
+            ) : (
+              <span class="gstatus">coming soon</span>
+            )}
             <span class="gdemo" aria-hidden="true">
               <span class="xg">
                 <span><em class="d-0">C</em></span>
@@ -217,9 +240,13 @@ import { gameName, helloCardsGame, tachyyyGame } from '../config/games';
               <span class="serif">{helloCardsGame.name}</span>
             </span>
             <span class="gdesc">flip a card,<br />start a conversation.</span>
-            <span class="gstatus" data-game-status="hello-cards">
-              <span class="gstatus-sym" aria-hidden="true">○</span> not started
-            </span>
+            {helloCardsAvailable ? (
+              <span class="gstatus" data-game-status="hello-cards">
+                <span class="gstatus-sym" aria-hidden="true">○</span> not started
+              </span>
+            ) : (
+              <span class="gstatus">coming soon</span>
+            )}
             <span class="gdemo gdemo-perspective" aria-hidden="true">
               <span class="hflip">
                 <span class="hface front">hello card<br />tap to flip</span>
