@@ -11,6 +11,7 @@ import { STATS_STORAGE_KEY } from '../../src/islands/gameresults';
 import { AUTH_STORAGE_KEY } from '../../src/islands/supabaseclient';
 import { BREAK_STORAGE_KEY } from '../../src/scripts/breakstore';
 import { legacyStarsKey, PROGRESS_STORAGE_KEY } from '../../src/scripts/progress';
+import { saveResume } from '../../src/scripts/resume';
 import { THEME_STORAGE_KEY } from '../../src/scripts/theme';
 import type { KeyValueStorage } from '../../src/scripts/storage';
 
@@ -144,6 +145,23 @@ describe('download my data', () => {
     const result = await gatherExport(reader(), { email: '', storage: new MemoryStorage(), today });
     expect(result.ok && 'gameStats' in result.data).toBe(false);
     expect(result.ok && result.data.profile?.email).toBeNull();
+  });
+
+  it('includes the validated unfinished study response in JSON and CSV downloads', async () => {
+    const local = new MemoryStorage();
+    expect(saveResume(local, {
+      tool: 'fill-in', page: '/learn/sample', module: 'module-1', step: 'step-2', itemIndex: 1, itemId: 'item-2',
+      totalItems: 3, answers: { 'item-2': 'student answer' }, timer: null, phase: 'working',
+    }, Date.now())).toBe(true);
+    const result = await gatherExport(reader(), { email: '', storage: local, today });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.data.resume).toMatchObject({ tool: 'fill-in', page: '/learn/sample', itemIndex: 1, answers: { 'item-2': 'student answer' } });
+    const files = downloadFiles(result.data, today);
+    expect(files.ok).toBe(true);
+    if (!files.ok) return;
+    expect(JSON.parse(await files.json.blob.text()).resume).toMatchObject({ tool: 'fill-in', answers: { 'item-2': 'student answer' } });
+    expect(files.csv.map(file => file.fileName)).toContain(`cueory-data-${today}-resume.csv`);
   });
 
   it("builds the JSON file and the spreadsheet files from loadExport's pages", async () => {
