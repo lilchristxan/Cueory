@@ -36,7 +36,7 @@ const middleCard = (page: Page) =>
 /** Park on the carousel's visible words, outside its cards and controls, so each engine receives a durable hover target. */
 const parkMouseOutsideCards = (page: Page) => page.locator('#modes-heading').hover();
 
-/** Failure-only Firefox evidence for the start of the carousel autoplay assertion. */
+/** Failure-only Firefox and WebKit desktop evidence for the start of the carousel autoplay assertion. */
 async function installAutoplayStartDiagnostic(page: Page) {
   await page.addInitScript(() => {
     type Rect = { left: number; top: number; right: number; bottom: number; width: number; height: number } | null;
@@ -1142,17 +1142,18 @@ test.describe('"ways to study" merry-go-round (D-50, D-60)', () => {
   }, testInfo) => {
     test.skip(!isDesktopOfEachEngine(testInfo), 'a timing test that rests a mouse on the cards: once per engine, at desktop size');
     test.slow();
-    const diagnoseFirefox = (testInfo.project.use.browserName ?? testInfo.project.use.defaultBrowserType) === 'firefox';
-    if (diagnoseFirefox) await installAutoplayStartDiagnostic(page);
+    const engine = testInfo.project.use.browserName ?? testInfo.project.use.defaultBrowserType;
+    const diagnoseAutoplayStart = engine === 'firefox' || engine === 'webkit';
+    if (diagnoseAutoplayStart) await installAutoplayStartDiagnostic(page);
     let failed = false;
     try {
       await page.goto('/');
       await section(page).scrollIntoViewIfNeeded();
-      if (diagnoseFirefox) await markAutoplayStartDiagnostic(page, 'before-heading-hover');
+      if (diagnoseAutoplayStart) await markAutoplayStartDiagnostic(page, 'before-heading-hover');
       // The mouse over the section's words, not its cards: that doesn't pause it.
       await parkMouseOutsideCards(page);
-      if (diagnoseFirefox) await markAutoplayStartDiagnostic(page, 'after-heading-hover');
-      if (diagnoseFirefox) await markAutoplayStartDiagnostic(page, 'first-poll:begin');
+      if (diagnoseAutoplayStart) await markAutoplayStartDiagnostic(page, 'after-heading-hover');
+      if (diagnoseAutoplayStart) await markAutoplayStartDiagnostic(page, 'first-poll:begin');
       await expect.poll(() => middleCard(page), { timeout: 9000 }).toBe('cards');
 
       // Resting on the cards pauses it; moving off lets it go on.
@@ -1171,7 +1172,7 @@ test.describe('"ways to study" merry-go-round (D-50, D-60)', () => {
       failed = true;
       throw error;
     } finally {
-      if (failed && diagnoseFirefox) {
+      if (failed && diagnoseAutoplayStart) {
         try {
           await attachAutoplayStartDiagnostic(page, testInfo);
         } catch {
