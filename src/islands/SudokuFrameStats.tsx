@@ -18,6 +18,7 @@ const LEVELS: readonly SudokuLevel[] = ['easy', 'medium', 'hard'];
 export default function SudokuFrameStats() {
   const [level, setLevel] = useState<SudokuLevel>('easy');
   const [stats, setStats] = useState<SudokuValues>();
+  const [paused, setPaused] = useState(() => document.querySelector('[data-testid="sudoku"]')?.getAttribute('data-paused') === 'true');
 
   useEffect(() => {
     const refresh = () => {
@@ -44,11 +45,17 @@ export default function SudokuFrameStats() {
       if (typeof next === 'string' && LEVELS.includes(next as SudokuLevel)) setLevel(next as SudokuLevel);
     };
     window.addEventListener('cueory:game-frame-sudoku-level-change', onLevel);
+    const onPaused = (event: Event) => {
+      const next = (event as CustomEvent<unknown>).detail;
+      if (typeof next === 'boolean') setPaused(next);
+    };
+    window.addEventListener('cueory:sudoku-paused', onPaused);
     return () => {
       window.removeEventListener(GAME_STATS_CHANGED_EVENT, refresh);
       window.removeEventListener('storage', refresh);
       window.removeEventListener('pageshow', onPageShow);
       window.removeEventListener('cueory:game-frame-sudoku-level-change', onLevel);
+      window.removeEventListener('cueory:sudoku-paused', onPaused);
     };
   }, [level]);
 
@@ -59,7 +66,7 @@ export default function SudokuFrameStats() {
 
   return <section className="game-frame-sudoku-stats" aria-label="sudoku level stats" data-testid="game-frame-sudoku-stats">
     <label htmlFor="game-frame-sudoku-level">difficulty</label>
-    <select id="game-frame-sudoku-level" value={level} onChange={(event) => chooseLevel(event.target.value as SudokuLevel)}>
+    <select id="game-frame-sudoku-level" value={level} disabled={paused} onChange={(event) => chooseLevel(event.target.value as SudokuLevel)}>
       {LEVELS.map((choice) => <option key={choice} value={choice}>{LEVEL_LABELS[choice]}</option>)}
     </select>
     <div aria-live="polite" aria-atomic="true" data-testid="game-frame-sudoku-numbers">

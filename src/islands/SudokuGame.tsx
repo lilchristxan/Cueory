@@ -129,6 +129,10 @@ export default function SudokuGame({ framed = false }: { framed?: boolean } = {}
   }, [framed, level]);
 
   useEffect(() => {
+    if (framed) window.dispatchEvent(new CustomEvent('cueory:sudoku-paused', { detail: paused }));
+  }, [framed, paused]);
+
+  useEffect(() => {
     const fresh = newSudokuBoard(puzzle.puzzle);
     ownNotes.current = [...fresh.notes];
     setBoard(settings.autoCandidates ? withAutoNotes(fresh) : fresh); setHistory([]); setChecked(new Set());
@@ -173,6 +177,7 @@ export default function SudokuGame({ framed = false }: { framed?: boolean } = {}
     reportRound(sudokuRoundResult(result));
     // Per-level stats are kept only while the shared stats switch is on (./sudokustats).
     const now = keepSudokuSolve(browserStorage(), day, { level, day, seconds });
+    reportStatsChanged();
     setKept(now);
     setSaid(`solved in ${result.time} with ${errors} ${errors === 1 ? 'error' : 'errors'}.${now.on ? ' added to your sudoku stats.' : ''}`);
   }, [solved, day, level, seconds, errors, settings.playSound]);
@@ -354,7 +359,7 @@ export default function SudokuGame({ framed = false }: { framed?: boolean } = {}
   const printPuzzle = () => printGame('sudoku');
   const elapsed = `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`;
 
-  return <section className="sudoku-game" data-testid="sudoku">
+  return <section className="sudoku-game" data-testid="sudoku" data-paused={paused ? 'true' : 'false'}>
     <div className="sudoku-panel">
       <PrintLogo />
       {!framed && <div className="segmented sudoku-levels" aria-label="difficulty">{LEVELS.map((choice) => <button key={choice} type="button" className="segmented-option" aria-pressed={level === choice} disabled={paused} onClick={() => { if (!paused) setLevel(choice); }}>{level === choice && <span className="segmented-check" aria-hidden="true">✓</span>}{LEVEL_LABELS[choice]}</button>)}</div>}
