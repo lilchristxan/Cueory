@@ -1337,8 +1337,15 @@ test.describe('study-mode preview (D-51)', () => {
   }, testInfo) => {
     test.skip(!isDesktopOfEachEngine(testInfo), 'hover needs a mouse');
     await page.goto('/');
-    await page.locator('#ways-to-study').scrollIntoViewIfNeeded();
+    const carousel = page.locator('#ways-to-study');
+    await carousel.scrollIntoViewIfNeeded();
+    // The retained Linux WebKit trace for run 44834721132 showed hover actionability taking 13 seconds, long enough
+    // for the six-second autoplay to move Video aside before the pointer arrived. Pause through the real visitor
+    // control so this test continues to check the active vial's hover treatment rather than timing the slideshow.
+    await carousel.getByRole('button', { name: 'pause the slideshow' }).click();
+    await expect(carousel).toHaveAttribute('data-paused', '');
     const card = page.locator('#mode-video');
+    await expect(card).toHaveAttribute('data-active', '');
     expect(await card.evaluate((el) => getComputedStyle(el).scale)).toBe('none');
     await card.hover();
     await expect.poll(() => card.evaluate((el) => getComputedStyle(el).scale)).toBe('1.04');
