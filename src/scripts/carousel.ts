@@ -225,6 +225,15 @@ export function enterMatchesMouseMove(
   return lastMove === undefined || (lastMove.x === enter.x && lastMove.y === enter.y);
 }
 
+/** A mismatched exit is stale only when its old coordinate still hits a pause area. */
+export function shouldClearDocumentExit(
+  lastMove: { x: number; y: number } | undefined,
+  exit: { x: number; y: number },
+  hitPauseArea: boolean,
+): boolean {
+  return lastMove === undefined || (lastMove.x === exit.x && lastMove.y === exit.y) || !hitPauseArea;
+}
+
 /**
  * The first active condition that holds the carousel still. Kept separate from canAutoAdvance so the rendered
  * carousel can expose the same reason that its timer uses without changing its existing motion policy.
@@ -250,6 +259,15 @@ export function autoplayHold(state: MotionState): AutoplayHold | undefined {
  */
 export function canAutoAdvance(state: MotionState): boolean {
   return autoplayHold(state) === undefined;
+}
+
+/**
+ * The 6 s illustration loops on the card in front run only while the carousel is on screen, not paused, not under
+ * reduced motion, and while no preview is open (the page behind a modal is not looked at, and its loops cost frames,
+ * #634). The page script writes this to `data-looping` on the section.
+ */
+export function illustrationsMayLoop(state: Pick<MotionState, 'reducedMotion' | 'paused' | 'onScreen' | 'previewOpen'>): boolean {
+  return !state.reducedMotion && !state.paused && state.onScreen && !state.previewOpen;
 }
 
 /** Where the preview is: closed, growing out of its vial, open and still, stepping to another mode, or shrinking back. */
