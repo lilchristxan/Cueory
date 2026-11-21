@@ -337,6 +337,9 @@
   --crossword-marker: 1ch;          /* room for the current-clue marker in the clue list */
   --crossword-hatch: 3px;           /* the stripes on a blocked square, so it never looks like the selected one (2026-11-17) */
   --crossword-print-cell: 2rem;      /* a printed square; colors on paper use --print-paper / --print-ink (Task 641) */
+  --crossword-size-picker: 13.125rem; /* the Games v2 Mini/Midi/Full selector, measured at 210px in the approved reference */
+  --crossword-size-inset: 0.125rem;  /* keeps the active size segment clear of the control rim */
+  --crossword-board-pad: 0.25rem;    /* quiet frame around the crossword grid */
   --wordpath-cell-min: 1.5rem;       /* a letter square's floor: 24 px (WCAG 2.2) at default text, 48 px at 32 px root text, when the grid scrolls */
   --wordpath-letter-inset: 10%;      /* a 6 × 8 board letter's circle sits this far inside its square, leaving room for the joining lines */
   --border-wordpath-panel: 1px;      /* the hairline rim of the word path panel (the rendering shows a 1 px light edge) */

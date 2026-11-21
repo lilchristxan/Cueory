@@ -570,8 +570,7 @@ test.describe('daily games: crossword levels (Task 627)', () => {
 
   test('starts on the 5 by 5 sample with a cue bar and no side cue list', async ({ page }) => {
     await expect(page.getByRole('heading', { level: 1, name: 'crossword' })).toBeVisible();
-    // The level picker is the same pressed-button control as sudoku's (Christian's brief).
-    await expect(page.getByTestId('crossword-levels').getByRole('button', { name: 'easy, 5 by 5' })).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.getByTestId('crossword-levels').getByRole('slider', { name: 'puzzle size' })).toHaveAttribute('aria-valuetext', 'mini, 5 by 5');
     // No sample line in the game box (Christian's brief); the /play hub says the puzzles are samples.
     await expect(board(page)).not.toContainText('sample puzzle');
     await expect(board(page)).not.toContainText("today's puzzle is a sample");
@@ -589,9 +588,8 @@ test.describe('daily games: crossword levels (Task 627)', () => {
   test('switches among 5, 7 and 15 square boards without overflow at 390, 820 or 1440 px', async ({ page }) => {
     for (const width of [390, 820, 1440]) {
       await page.setViewportSize({ width, height: 900 });
-      for (const [label, size] of [['mid, 7 by 7', '7'], ['hard, 15 by 15', '15'], ['easy, 5 by 5', '5']] as const) {
-        await page.getByTestId('crossword-levels').getByRole('button', { name: label }).click();
-        await expect(page.getByTestId('crossword-levels').getByRole('button', { name: label })).toHaveAttribute('aria-pressed', 'true');
+      for (const [key, size] of [['ArrowRight', '7'], ['End', '15'], ['Home', '5']] as const) {
+        await page.getByTestId('crossword-levels').getByRole('slider', { name: 'puzzle size' }).press(key);
         const grid = board(page).getByRole('grid', { name: 'crossword grid' });
         await expect(grid).toHaveAttribute('aria-rowcount', size);
         expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
@@ -692,7 +690,7 @@ test.describe('daily games: crossword levels (Task 627)', () => {
   test('phone controls remain 44 px and hard mode never scrolls the page sideways', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto('/play/crossword');
-    await page.getByTestId('crossword-levels').getByRole('button', { name: 'hard, 15 by 15' }).click();
+    await page.getByTestId('crossword-levels').getByRole('slider', { name: 'puzzle size' }).press('End');
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
     const hardCell = await board(page).locator('.crossword-cell').first().boundingBox();
     expect(hardCell?.width).toBeGreaterThanOrEqual(44);
@@ -712,7 +710,7 @@ test.describe('daily games: crossword levels (Task 627)', () => {
       await page.evaluate((size) => {
         document.documentElement.style.setProperty('font-size', `${size}px`, 'important');
       }, rootText);
-      await page.getByTestId('crossword-levels').getByRole('button', { name: 'hard, 15 by 15' }).click();
+      await page.getByTestId('crossword-levels').getByRole('slider', { name: 'puzzle size' }).press('End');
       const region = board(page).getByRole('region', { name: 'crossword board scroll area' });
       const grid = region.getByRole('grid', { name: 'crossword grid' });
       await expect(grid).toHaveAttribute('aria-colcount', '15');
@@ -796,7 +794,7 @@ test.describe('daily games: crossword levels (Task 627)', () => {
   }
 
   test('printing a hard board removes scroll containment', async ({ page }) => {
-    await page.getByTestId('crossword-levels').getByRole('button', { name: 'hard, 15 by 15' }).click();
+    await page.getByTestId('crossword-levels').getByRole('slider', { name: 'puzzle size' }).press('End');
     await page.evaluate(() => { window.print = () => undefined; });
     await board(page).getByRole('button', { name: 'print this puzzle' }).click();
     await page.emulateMedia({ media: 'print' });

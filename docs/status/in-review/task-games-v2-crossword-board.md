@@ -1,0 +1,2 @@
+status: Games v2 Crossword board: replaces the level buttons with an accessible Mini/Midi/Full slider, and restyles the grid, cue bar, Check, and Reveal controls without changing puzzle rules, saved progress, stats, or results.
+decision: D-pending (Games v2) The staging defaults awaiting Christian's confirmation are oxblood #6E2019 and green #0E5A3D game tokens with Evening variants; Bodoni Moda for Vialo letters; and non-color Vialo pill finishes (solid shine, inner ring band, flat matte, and copper ring for unscored).

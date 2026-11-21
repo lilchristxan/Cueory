@@ -4,7 +4,7 @@ import { markPanelsSeen } from './clock';
 
 /**
  * Christian's crossword brief (2026-11-17): no description or sample line in the game box, no pen/pencil, the level
- * picker looks like sudoku's, blocked squares differ from the selected square by pattern too, "cue" instead of "clue"
+ * size picker is a labelled native slider, blocked squares differ from the selected square by pattern too, "cue" instead of "clue"
  * wherever players read it, and the hard board fits without scrolling from tablet width up (phones still scroll it
  * inside its own box). Easy November sample.
  */
@@ -33,22 +33,20 @@ test.beforeEach(async ({ page }) => {
   await expect(board(page)).toBeVisible();
 });
 
-test('the level picker is pressed buttons with a check mark, like sudoku\'s', async ({ page }) => {
-  const easy = levels(page).getByRole('button', { name: 'easy, 5 by 5' });
-  await expect(easy).toHaveAttribute('aria-pressed', 'true');
-  await expect(easy).toContainText('✓');
-  const mid = levels(page).getByRole('button', { name: 'mid, 7 by 7' });
-  await mid.press('Enter');
-  await expect(mid).toHaveAttribute('aria-pressed', 'true');
-  await expect(mid).toContainText('✓');
-  await expect(easy).toHaveAttribute('aria-pressed', 'false');
+test('the labelled Mini/Midi/Full slider works with arrow keys', async ({ page }) => {
+  const slider = levels(page).getByRole('slider', { name: 'puzzle size' });
+  await expect(slider).toHaveAttribute('aria-valuetext', 'mini, 5 by 5');
+  await slider.focus();
+  await page.keyboard.press('ArrowRight');
+  await expect(slider).toHaveAttribute('aria-valuetext', 'midi, 7 by 7');
+  await expect(levels(page)).toHaveAttribute('data-level', 'mid');
   await expect(board(page).getByRole('grid', { name: 'crossword grid' })).toHaveAttribute('aria-rowcount', '7');
-  const box = (await mid.boundingBox())!;
+  const box = (await slider.boundingBox())!;
   expect(box.height).toBeGreaterThanOrEqual(44);
 });
 
 test('a blocked square is striped, the selected square is solid: they differ by pattern, not only color', async ({ page }) => {
-  await levels(page).getByRole('button', { name: 'mid, 7 by 7' }).click();
+  await levels(page).getByRole('slider', { name: 'puzzle size' }).press('ArrowRight');
   const grid = board(page).getByRole('grid', { name: 'crossword grid' });
   const blocked = grid.getByRole('gridcell', { name: 'black square' }).first();
   await expect(blocked).toBeVisible();
@@ -93,7 +91,7 @@ test('no description and no sample line in the game box', async ({ page }) => {
 for (const [width, scrolls] of [[390, true], [820, false], [1440, false]] as const) {
   test(`the hard board at ${width} px ${scrolls ? 'scrolls inside its own box' : 'fits without any scrolling'}`, async ({ page }) => {
     await page.setViewportSize({ width, height: 1000 });
-    await levels(page).getByRole('button', { name: 'hard, 15 by 15' }).click();
+    await levels(page).getByRole('slider', { name: 'puzzle size' }).press('End');
     const wrap = board(page).locator('.crossword-board-wrap');
     await expect(board(page).getByRole('grid', { name: 'crossword grid' })).toHaveAttribute('aria-rowcount', '15');
     const [scrollWidth, clientWidth] = await wrap.evaluate((element) => [element.scrollWidth, element.clientWidth]);
@@ -106,8 +104,9 @@ for (const [width, scrolls] of [[390, true], [820, false], [1440, false]] as con
 }
 
 test('a numbered square\'s name starts with the number it shows (axe label-content-name-mismatch)', async ({ page }) => {
-  for (const level of ['easy, 5 by 5', 'mid, 7 by 7', 'hard, 15 by 15']) {
-    await levels(page).getByRole('button', { name: level }).click();
+  for (const [level, value] of [['mini', '0'], ['midi', '1'], ['full', '2']] as const) {
+    const slider = levels(page).getByRole('slider', { name: 'puzzle size' });
+    await slider.press(value === '0' ? 'Home' : value === '1' ? 'ArrowRight' : 'End');
     const numbered = board(page).locator('.crossword-cell:has(.crossword-number)');
     expect(await numbered.count()).toBeGreaterThan(0);
     for (const [shown, name] of await numbered.evaluateAll((cells) => cells.map((cell) => [cell.querySelector('.crossword-number')!.textContent, cell.getAttribute('aria-label')]))) {

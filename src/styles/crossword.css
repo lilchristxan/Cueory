@@ -8,6 +8,27 @@
 */
 @layer components {
   .crossword-panel { position: relative; }
+  /* Games v2: a native range keeps the Mini/Midi/Full selector fully keyboard-operable. The visible three-part
+     control is deliberately decorative; the range remains the single, labelled accessible control. */
+  .crossword-size-picker {
+    position: relative;
+    display: grid;
+    inline-size: min(100%, var(--crossword-size-picker));
+    min-block-size: var(--tap-min);
+    grid-template-columns: repeat(3, 1fr);
+    align-items: center;
+    border: var(--crossword-line) solid var(--color-line);
+    border-radius: var(--radius-pill);
+    background: var(--color-page);
+    box-shadow: var(--shadow-card);
+  }
+  .crossword-size-input { position: absolute; z-index: 2; inset: 0; inline-size: 100%; block-size: 100%; margin: 0; cursor: pointer; opacity: 0; }
+  .crossword-size-picker:has(.crossword-size-input:focus-visible) { outline: var(--focus-width) solid var(--color-focus); outline-offset: var(--focus-width); }
+  .crossword-size-thumb { position: absolute; z-index: 0; inset-block: var(--crossword-size-inset); inset-inline-start: var(--crossword-size-inset); inline-size: calc((100% - var(--crossword-size-inset) * 2) / 3); block-size: calc(100% - var(--crossword-size-inset) * 2); border-radius: var(--radius-pill); background: var(--color-button); transition: transform var(--duration-fast) var(--ease-soft); }
+  .crossword-size-picker[data-level="mid"] .crossword-size-thumb { transform: translateX(100%); }
+  .crossword-size-picker[data-level="hard"] .crossword-size-thumb { transform: translateX(200%); }
+  .crossword-size-labels { position: relative; z-index: 1; display: grid; grid-column: 1 / -1; grid-template-columns: repeat(3, 1fr); pointer-events: none; font-size: var(--text-sm); font-weight: 700; letter-spacing: var(--tracking-label); text-align: center; text-transform: lowercase; }
+  .crossword-size-picker[data-level="easy"] .crossword-size-labels span:nth-child(1), .crossword-size-picker[data-level="mid"] .crossword-size-labels span:nth-child(2), .crossword-size-picker[data-level="hard"] .crossword-size-labels span:nth-child(3) { color: var(--color-on-button); }
   .crossword-toolbar { position: relative; display: flex; justify-content: flex-end; gap: var(--spacing); }
   .crossword-help { position: static; }
   .crossword-help summary { list-style: none; font-weight: 700; cursor: pointer; }
@@ -38,7 +59,7 @@
     margin-inline: calc(50% - 50vw + var(--spacing) * 2);
     overflow: visible;
   }
-  .crossword-board { --crossword-cell: min(var(--crossword-cell-easy), calc((100cqw - 4 * var(--crossword-gap)) / 5)); display: flex; inline-size: max-content; max-inline-size: 100%; margin-inline: auto; flex-direction: column; gap: var(--crossword-gap); }
+  .crossword-board { --crossword-cell: min(var(--crossword-cell-easy), calc((100cqw - 4 * var(--crossword-gap)) / 5)); display: flex; inline-size: max-content; max-inline-size: 100%; margin-inline: auto; padding: var(--crossword-board-pad); flex-direction: column; gap: var(--crossword-gap); border-radius: var(--radius-lg); background: var(--color-soft); }
   .crossword-board[data-level="mid"] { --crossword-cell: min(var(--crossword-cell-mid), calc((100cqw - 6 * var(--crossword-gap)) / 7)); }
   .crossword-board[data-level="hard"] { --crossword-cell: var(--crossword-cell-hard); }
   /* Keep the large board's overflow inside a named, keyboard-focusable region.
@@ -66,14 +87,14 @@
   /* Keyboard focus on the selected square doubles its ring, so focus on the grid is visible apart from selection (Task 210). */
   .crossword-cell-current:focus-visible { outline-width: calc(var(--focus-width) * 2); outline-offset: calc(-2 * var(--focus-width)); }
   .crossword-number { position: absolute; inset-block-start: 0; inset-inline-start: 0; padding: var(--crossword-gap); font-size: var(--crossword-number); line-height: 1; }
-  .crossword-clue-bar { display: flex; min-block-size: var(--tap-min); align-items: center; justify-content: center; gap: calc(var(--spacing) * 3); margin-block-start: calc(var(--spacing) * 3); padding: calc(var(--spacing) * 2) calc(var(--spacing) * 3); border-block: var(--crossword-line) solid var(--color-line); text-align: start; }
+  .crossword-clue-bar { display: flex; min-block-size: var(--tap-min); align-items: center; justify-content: center; gap: calc(var(--spacing) * 3); margin-block-start: calc(var(--spacing) * 3); padding: calc(var(--spacing) * 2) calc(var(--spacing) * 3); border-radius: var(--radius-lg); background: var(--color-surface); text-align: start; }
   .crossword-print-clues, .crossword-print-footer { display: none; }
 
   /* Task 721: pen and pencil, check and reveal marks, settings, pause and the clue list. */
   .crossword-toolbar { flex-wrap: wrap; align-items: center; }
   .crossword-mode { margin-inline-end: auto; }
   .crossword-help-pair { display: flex; flex-wrap: wrap; align-items: center; gap: var(--spacing); }
-  .crossword-menu-button { display: inline-flex; align-items: center; list-style: none; cursor: pointer; }
+  .crossword-menu-button { display: inline-flex; align-items: center; border-radius: var(--radius-pill); list-style: none; cursor: pointer; }
   .crossword-menu-button::-webkit-details-marker { display: none; }
   .crossword-menu-panel { display: flex; flex-direction: column; gap: var(--crossword-panel-gap); }
   .crossword-settings { display: flex; flex-direction: column; gap: var(--crossword-panel-gap); }
@@ -115,6 +136,10 @@
   .crossword-clue-item[aria-current="true"] { background: var(--color-surface); font-weight: 700; }
   .crossword-clue-marker { flex: none; inline-size: var(--crossword-marker); }
   .crossword-badge { font-weight: 700; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .crossword-size-thumb { transition: none; }
 }
 
 @media print {
