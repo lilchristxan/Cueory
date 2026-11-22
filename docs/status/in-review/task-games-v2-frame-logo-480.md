@@ -1,0 +1,1 @@
+status: in review. Game Frame logos use the 480 px files (shown at 80 px) instead of the share image's 960 px files, which fixes the WebKit "native image sharing waits for a fresh click" browser test on staging.

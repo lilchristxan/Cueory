@@ -20,16 +20,15 @@ export function revealInstantly(section: HTMLElement, observer?: Pick<Intersecti
 }
 
 /**
- * Once a waiting section has been made visible, let the browser finish the
- * focus scroll against its final (untranslated) layout. WebKit can otherwise
- * keep the newly focused control a few pixels below the viewport edge.
+ * Once a waiting section has been made visible, align the still-focused target
+ * against its final (untranslated) layout. This must happen in the focus-in
+ * turn: WebKit can defer an animation frame while leaving the target below the
+ * viewport edge.
  */
 export function keepFocusedTargetInView(target: HTMLElement): void {
-  window.requestAnimationFrame(() => {
-    if (document.activeElement === target) {
-      target.scrollIntoView({ block: 'nearest', inline: 'nearest' });
-    }
-  });
+  if (document.activeElement === target) {
+    target.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  }
 }
 
 export function revealSections(): void {

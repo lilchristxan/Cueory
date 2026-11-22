@@ -1,1 +1,0 @@
-status: Task P11, word path restyle (/play/word-path): frosted panel, "cue of the day" caps label and "letter path game" tagline, ivory letter circles, copper ring and glow on picked letters with copper joining lines; game logic, help text and results card untouched.

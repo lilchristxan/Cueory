@@ -1,1 +1,0 @@
-status: [ag] test: verify real logo download via pre-navigation request events and PerformanceResourceTiming for lazy logos in header and home hero. Fixes WebKit false positive where currentSrc is populated before resource download, and catches responsive srcset candidates and in-flight requests.

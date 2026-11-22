@@ -1,1 +1,0 @@
-status: Task 634 puzzle-feed validation: a neutral fixture-only unit preserves rejection of duplicate triage terms that differ only by outer whitespace; no application, content, storage or account behavior changes.

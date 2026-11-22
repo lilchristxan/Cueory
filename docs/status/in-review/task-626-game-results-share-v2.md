@@ -1,2 +1,0 @@
-status: Task 626 (rebuilt on current staging, replaces !2 and !100): one accessible finished-game dialog for pillo, crossword, sudoku, word path, stat and hello cards, the exact plain share line, on-demand 1080×1920 story images, tracker-free platform links and crawlable game landing pages are in review.
-decision: D-pending (Task 626) Per-score link previews need a server route and are intentionally not built. Per-game 1200×630 preview images are left out to keep this change smaller; all game pages use the existing games-scene image.

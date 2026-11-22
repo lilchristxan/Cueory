@@ -28,7 +28,7 @@ for (const [width, height] of [[820, 1180], [1180, 820]] as const) {
         expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth), name).toBeLessThanOrEqual(0);
 
         // The middle of the column the game sits in (the main content box, inside its side padding).
-        const middle = await page.locator('main').evaluate((main) => {
+        const middle = await page.locator('.game-frame-main').evaluate((main) => {
           const box = main.getBoundingClientRect();
           const style = getComputedStyle(main);
           return (box.left + parseFloat(style.paddingLeft) + box.right - parseFloat(style.paddingRight)) / 2;

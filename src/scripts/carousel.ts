@@ -292,6 +292,17 @@ export function carouselState(preview: PreviewPhase, turning: boolean): Carousel
  */
 export const SETTLE_GRACE_MS = 150;
 
+/**
+ * Takes away the animations of a preview round that has come to rest (the grow and the step nudge). None of them fills
+ * forwards, so a finished one changes nothing on screen; cancelling it only stops the browser listing it. WebKit keeps
+ * listing a finished animation in getAnimations() until its next rendering update, and a still page has none, so the
+ * open preview looked busy for seconds (five animations at the 5 s mark, #634). Never use this for an animation that
+ * fills forwards (the shrink).
+ */
+export function releaseAnimations(animations: readonly Pick<Animation, 'cancel'>[]): void {
+  for (const animation of animations) animation.cancel();
+}
+
 /** A box on screen, as getBoundingClientRect gives it. */
 export interface Box {
   left: number;

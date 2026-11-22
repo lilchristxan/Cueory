@@ -199,8 +199,8 @@ export default function HelloCards({ starters }: { starters: readonly HelloStart
         </div>
 
         <div className="relative mx-auto grid w-full max-w-md grid-cols-1 py-5 sm:py-7">
-          <span aria-hidden="true" className="col-start-1 row-start-1 mx-6 min-h-72 rotate-[-6deg] rounded-xl bg-ink shadow-card" />
-          <span aria-hidden="true" className="col-start-1 row-start-1 mx-6 min-h-72 rotate-[5deg] rounded-xl bg-ink shadow-card" />
+          <span aria-hidden="true" className="col-start-1 row-start-1 mx-6 min-h-72 rotate-(--hello-stack-tilt-back) rounded-xl bg-ink shadow-card" />
+          <span aria-hidden="true" className="col-start-1 row-start-1 mx-6 min-h-72 rotate-(--hello-stack-tilt-front) rounded-xl bg-ink shadow-card" />
           <div className={`flip col-start-1 row-start-1${flipped ? ' is-flipped' : ''}`}>
             <button
               ref={cardRef}

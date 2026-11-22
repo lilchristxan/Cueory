@@ -1,1 +1,0 @@
-status: Performance, game pages: while a game is still loading, its page keeps one screen of room for it, so the stats panel and footer no longer jump down when it appears (layout shift on phones 0.52-0.57 to 0-0.005 on pillo, sudoku and word path).

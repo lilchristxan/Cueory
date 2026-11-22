@@ -1,1 +1,0 @@
-status: Task 634: added post-build check script (scripts/prod-prune-guard.mjs) and unit tests verifying that production builds drop /preview/ pages and draft assets across all branch cases without modifying protected configurations.
