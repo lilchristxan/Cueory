@@ -237,7 +237,7 @@
   font-family: var(--font-body);
   font-weight: 900;
   font-size: var(--game-frame-stat-value-size);
-  line-height: 1.1;
+  line-height: 1.5;
   color: var(--color-ink);
 }
 
@@ -650,6 +650,11 @@
     padding: calc(var(--spacing) * 5) calc(var(--spacing) * 4) calc(var(--spacing) * 12);
   }
 
+  /* The Frame's side gutter here is 4 units; Word Path's panel bleeds exactly that far until sm:mx-0 (40rem). */
+  .game-frame-board {
+    --wordpath-bleed: calc(var(--spacing) * 4);
+  }
+
   .game-frame-deck-slot {
     position: static;
     transform: none;
@@ -700,9 +705,9 @@
     font-size: var(--game-frame-stat-label-phone);
   }
 
-  /* Match the Frame's 12px phone gutters so Word Path retains 44px cells without document overflow. */
-  .game-frame-board .wordpath-panel {
-    margin-inline: calc(var(--spacing) * -3);
+  /* Match the Frame's 3-unit phone gutters so Word Path keeps 44px cells without document overflow. */
+  .game-frame-board {
+    --wordpath-bleed: calc(var(--spacing) * 3);
   }
 }
 

@@ -12,7 +12,7 @@ vi.mock('react', () => ({
 }));
 
 import { GameStatsPersistence } from '../../src/islands/GameStatsPanel';
-import { forgetHeldRounds, heldRounds, loadStats, reportRound } from '../../src/islands/gameresults';
+import { currentStatsStatus, forgetHeldRounds, GAME_STATS_STATUS_EVENT, heldRounds, loadStats, reportRound } from '../../src/islands/gameresults';
 
 function memoryStorage(): KeyValueStorage {
   const data = new Map<string, string>();
@@ -68,4 +68,26 @@ describe('framed game stats persistence', () => {
     expect(heldRounds()).toEqual([]);
     expect(loadStats(storage, '2026-11-01').stats).toEqual([beforeHydration, afterHydration]);
   });
+
+  it('tells the framed page when the browser will not keep a finished result', () => {
+    // A browser that reads storage but refuses every write (full or blocked storage).
+    const refusing: KeyValueStorage = {
+      getItem: () => null,
+      setItem: () => { throw new Error('QuotaExceededError'); },
+      removeItem: () => undefined,
+    };
+    vi.stubGlobal('window', Object.assign(new EventTarget(), { localStorage: refusing }));
+    const messages: string[] = [];
+    window.addEventListener(GAME_STATS_STATUS_EVENT, (event) => {
+      messages.push((event as CustomEvent<{ message: string }>).detail.message);
+    });
+
+    hydratePersistence();
+    reportRound({ game: 'cueword', day: '2026-11-01', solved: true, tries: 0 });
+
+    // The visible Frame stats island listens for this event and shows it in its role=status notice.
+    expect(messages.at(-1)).toMatch(/won't keep stats/);
+    expect(currentStatsStatus()).toMatch(/won't keep stats/);
+  });
 });
+

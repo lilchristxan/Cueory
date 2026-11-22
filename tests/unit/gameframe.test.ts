@@ -92,7 +92,7 @@ describe('GameFrame (Scope 1)', () => {
     expect(styles).toMatch(/\.game-frame-serif-title\s*\{[^}]*font-family:\s*var\(--font-body\);[^}]*line-height:\s*1\.5;/s);
     expect(styles).toMatch(/\.game-frame-dateline\s*\{[^}]*font-style:\s*normal;[^}]*overflow-wrap:\s*anywhere;/s);
     expect(styles).toContain('max-inline-size: 100%');
-    expect(styles).toMatch(/\.game-frame-board \.wordpath-panel\s*\{\s*margin-inline: calc\(var\(--spacing\) \* -3\);/s);
+    expect(styles).toMatch(/\.game-frame-board\s*\{\s*--wordpath-bleed: calc\(var\(--spacing\) \* 3\);/s);
   });
 
   it('keeps Sudoku-owned stats out of the shared framed stats lifecycle', () => {
@@ -152,7 +152,13 @@ describe('GameFrame (Scope 1)', () => {
 
   it('gives Word Path its Frame gutter back so phone cells keep the 44px floor', () => {
     const css = readFileSync(resolve(root, 'src/styles/gameframe.css'), 'utf-8');
-    expect(css).toMatch(/\.game-frame-board \.wordpath-panel \{\s*margin-inline: calc\(var\(--spacing\) \* -3\);/);
+    // Below 30rem the gutter is 3 units, from 30rem to 64rem it is 4; the panel's bleed matches each (sm:mx-0 from 40rem).
+    expect(css).toMatch(/@media \(width < 30rem\)[\s\S]*\.game-frame-board \{\s*--wordpath-bleed: calc\(var\(--spacing\) \* 3\);/);
+    expect(css).toMatch(/@media \(width < 64rem\)[\s\S]*\.game-frame-board \{\s*--wordpath-bleed: calc\(var\(--spacing\) \* 4\);/);
+    expect(css).toMatch(/\.game-frame-stat-value \{[^}]*line-height: 1\.5;/);
+    for (const file of ['src/islands/SutureGame.tsx', 'src/islands/SuturePathBoard.tsx']) {
+      expect(readFileSync(resolve(root, file), 'utf-8')).toContain('wordpath-panel -mx-(--wordpath-bleed) ');
+    }
   });
 });
 
