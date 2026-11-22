@@ -92,6 +92,21 @@ const game = dailyGames.find((item) => item.id === 'triage')!;
     inline-size: min(calc(100% + var(--sudoku-box-line)), var(--sudoku-board-width));
   }
 
+  /* The framed stats table must reflow inside the shared settings card when text is enlarged. Its five columns retain
+   * their semantics and values, but may wrap instead of contributing an intrinsic minimum wider than the card. */
+  :global(.sudoku-stats-table) {
+    inline-size: 100%;
+    max-inline-size: 100%;
+    table-layout: fixed;
+    overflow-wrap: anywhere;
+  }
+
+  :global(.sudoku-stats-table th),
+  :global(.sudoku-stats-table td) {
+    min-inline-size: 0;
+    overflow-wrap: anywhere;
+  }
+
   :global(.sudoku-icon-button) {
     border-color: var(--cueory-result-card-border);
     background: var(--color-page);

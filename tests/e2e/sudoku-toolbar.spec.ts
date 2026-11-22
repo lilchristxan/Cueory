@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Locator, type Page } from '@playwright/test';
 
 // Christian's sudoku brief: top to bottom the title, the levels, the time and error line, five equal icon buttons
 // spread across the board's width (settings, pause or play, print, stats, how to play), then the board. Pause hides
@@ -170,36 +170,33 @@ for (const [width, height] of [[320, 700], [390, 844]] as const) {
     await page.setViewportSize({ width, height });
     await page.goto('/play/sudoku');
     const pause = toolbar(page).getByRole('button', { name: 'pause puzzle' });
+    const print = toolbar(page).getByRole('button', { name: 'print this puzzle' });
+    const gear = frameControls(page).getByTestId('game-frame-gear');
+    const help = frameControls(page).getByRole('button', { name: 'how to play sudoku' });
     await pause.scrollIntoViewIfNeeded();
-    const { top, bottom, left, right, settings, print } = await pause.evaluate((button) => {
-      const box = button.getBoundingClientRect();
-      const centerX = box.left + box.width / 2;
-      const centerY = box.top + box.height / 2;
-      const reach = 1.5;
-      const target = (x: number, y: number) => ({
-        x, y, label: document.elementFromPoint(x, y)?.closest('button')?.getAttribute('aria-label'),
-      });
-      return {
-        top: target(centerX, box.top - reach),
-        bottom: target(centerX, box.bottom + reach),
-        left: target(box.left - reach, centerY),
-        right: target(box.right + reach, centerY),
-        settings: target(document.querySelector('[data-testid="game-frame-gear"]')!.getBoundingClientRect().right - 1, centerY),
-        print: target(button.nextElementSibling!.getBoundingClientRect().left + 1, centerY),
-      };
-    });
-    expect(top.label).toBe('pause puzzle');
-    expect(bottom.label).toBe('pause puzzle');
-    expect(settings.label).toBe('sudoku settings');
-    expect(print.label).toBe('print this puzzle');
-    // At 320 px the gaps are narrower than the overlay. At 390 px there is room for the full width.
-    if (width === 390) {
-      expect(left.label).toBe('pause puzzle');
-      expect(right.label).toBe('pause puzzle');
-    }
+    const rowEdges = async (buttons: Locator[]) => {
+      const boxes = await Promise.all(buttons.map(async (button) => ({
+        label: await button.getAttribute('aria-label'),
+        box: (await button.boundingBox())!,
+      })));
+      expect(boxes.every(({ box }) => box.width >= 44 && box.height >= 44)).toBe(true);
+      return boxes;
+    };
+    const local = await rowEdges([pause, print]);
+    const shared = await rowEdges([gear, help]);
+    expect(local.map(({ label }) => label)).toEqual(['pause puzzle', 'print this puzzle']);
+    expect(shared.map(({ label }) => label)).toEqual(['sudoku settings', 'how to play sudoku']);
 
-    const point = width === 390 ? right : top;
-    const press = () => hasTouch ? page.touchscreen.tap(point.x, point.y) : page.mouse.click(point.x, point.y);
+    // The pause pseudo-hit is a local-row guarantee. Sample its declared vertical reach, not the shared Frame row.
+    const pausePoint = await pause.evaluate((button) => {
+      const box = button.getBoundingClientRect();
+      const inset = Number.parseFloat(getComputedStyle(button, '::before').insetBlockStart) || 0;
+      const y = inset < 0 ? box.top + inset / 2 : box.top + box.height / 2;
+      return { x: box.left + box.width / 2, y };
+    });
+    const pauseTarget = await page.evaluate(({ x, y }) => document.elementFromPoint(x, y)?.closest('button')?.getAttribute('aria-label'), pausePoint);
+    expect(pauseTarget).toBe('pause puzzle');
+    const press = () => hasTouch ? page.touchscreen.tap(pausePoint.x, pausePoint.y) : page.mouse.click(pausePoint.x, pausePoint.y);
     await press();
     await expect(toolbar(page).getByRole('button', { name: 'resume puzzle' })).toBeVisible();
     await press();

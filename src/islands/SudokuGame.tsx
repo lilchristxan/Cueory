@@ -443,7 +443,7 @@ export default function SudokuGame({ framed = false }: { framed?: boolean } = {}
       {framed && <fieldset>
         <legend>your sudoku stats</legend>
         {kept.on ? <>
-          <table data-testid="sudoku-stats">
+          <table data-testid="sudoku-stats" className="sudoku-stats-table">
             <caption className="sr-only">solved, best time, average time and streak for each level</caption>
             <thead><tr><th scope="col">level</th><th scope="col">solved</th><th scope="col">best</th><th scope="col">average</th><th scope="col">streak</th></tr></thead>
             <tbody>{LEVELS.map((choice) => {
