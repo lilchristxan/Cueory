@@ -511,6 +511,7 @@
     --game-card-ink-soft: #6b5243;
     --game-card-name-ink: #3e2c23;
     --game-card-on-dark: #f9f5ef;
+    --game-demo-active-bg: #3e2c23;
     --game-card-shadow: inset 0 1px 0 rgb(249 245 239), 0 18px 40px rgb(62 44 35 / 0.16), 0 4px 10px rgb(62 44 35 / 0.08);
     --game-card-lift: -0.5rem;
     --game-card-shadow-hover: 0 0 0 1px rgb(246 211 174 / 0.7), 0 26px 50px rgb(62 44 35 / 0.22);
@@ -900,12 +901,14 @@
   #daily-games {
     --game-pip-bg: var(--color-surface);
     --game-pip-ink: var(--color-page);
+    --game-demo-active-bg: var(--color-surface);
   }
 }
 
 :root[data-theme="dark"] #daily-games {
   --game-pip-bg: var(--color-surface);
   --game-pip-ink: var(--color-page);
+  --game-demo-active-bg: var(--color-surface);
 }
 
 @theme static {

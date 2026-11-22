@@ -726,7 +726,7 @@ const helloCardsAvailable = helloCardsPage(
 
   @keyframes gfill {
     0%, 8% { background: var(--game-demo-vialo-cell-bg); border-color: var(--game-demo-border); color: transparent; }
-    18%, 86% { background: var(--game-card-ink); border-color: var(--game-card-ink); color: var(--game-card-on-dark); }
+    18%, 86% { background: var(--game-demo-active-bg); border-color: var(--game-demo-active-bg); color: var(--game-card-on-dark); }
     100% { background: var(--game-demo-vialo-cell-bg); border-color: var(--game-demo-border); color: transparent; }
   }
 
@@ -790,7 +790,7 @@ const helloCardsAvailable = helloCardsPage(
 
   @keyframes tok {
     0%, 45% { background: var(--game-demo-tachyyy-bg); border-color: var(--game-demo-border); color: var(--game-card-ink); }
-    55%, 90% { background: var(--game-card-ink); color: var(--game-card-on-dark); border-color: var(--game-card-ink); }
+    55%, 90% { background: var(--game-demo-active-bg); color: var(--game-card-on-dark); border-color: var(--game-demo-active-bg); }
     100% { background: var(--game-demo-tachyyy-bg); color: var(--game-card-ink); }
   }
 
@@ -857,8 +857,8 @@ const helloCardsAvailable = helloCardsPage(
   }
 
   .xg span.b {
-    background: var(--game-card-ink);
-    border-color: var(--game-card-ink);
+    background: var(--game-demo-active-bg);
+    border-color: var(--game-demo-active-bg);
   }
 
   .xg em,
@@ -879,7 +879,7 @@ const helloCardsAvailable = helloCardsPage(
     display: grid;
     grid-template-columns: repeat(3, var(--game-demo-sudoku-cell-size));
     gap: 0;
-    border: var(--game-demo-sudoku-border) solid var(--game-card-ink);
+    border: var(--game-demo-sudoku-border) solid var(--game-demo-active-bg);
   }
 
   .sg span {
@@ -940,7 +940,7 @@ const helloCardsAvailable = helloCardsPage(
   }
 
   .hface.front {
-    background: var(--game-card-ink);
+    background: var(--game-demo-active-bg);
     color: var(--game-card-on-dark);
   }
 
