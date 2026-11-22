@@ -8,7 +8,7 @@ import { wordPathSamples } from '../../config/gamesamples';
 const game = dailyGames.find((item) => item.id === 'suture')!;
 const samples = await wordPathSamples();
 ---
-<Layout title="word path" description="trace the theme words through a board of letters, in any direction, and find the thread that names the theme." socialImage="/share/games-scene.png">
+<Layout title={game.name} description={game.line} socialImage="/share/games-scene.png">
 <GamePage game={game} showcase>
   <h1 slot="title" id="word-path-heading" class="display mt-4 text-center text-display wrap-anywhere sm:text-display-lg">{game.name}</h1>
   <p class="wordpath-label mt-2 text-center text-ink-soft">letter path game</p>
