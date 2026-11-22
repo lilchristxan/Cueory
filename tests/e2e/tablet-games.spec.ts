@@ -8,7 +8,7 @@ const boards = [
   { name: 'pillo keys', path: '/play/pillo', board: '.pillo-keys', square: null },
   { name: 'sudoku', path: '/play/sudoku', board: '.sudoku-board', square: '.sudoku-cell' },
   { name: 'crossword', path: '/play/crossword', board: '.crossword-board', square: '.crossword-cell' },
-  { name: 'word path', path: '/play/word-path', board: '.wordpath-board', square: '.wordpath-board button[data-path]' },
+  { name: 'piccline', path: '/play/word-path', board: '.wordpath-board', square: '.wordpath-board button[data-path]' },
 ] as const;
 
 for (const [width, height] of [[820, 1180], [1180, 820]] as const) {

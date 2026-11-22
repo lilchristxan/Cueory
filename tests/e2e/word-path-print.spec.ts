@@ -33,7 +33,7 @@ test.beforeEach(async ({ page }) => {
 
 const printed = (page: Page) => page.evaluate(() => (window as unknown as { printed: number }).printed);
 
-test.describe('word path: print for a patient (Task 641)', () => {
+test.describe('piccline: print for a patient (Task 641)', () => {
   test('a round print button, at least 44 × 44, in the top right corner beside the "?"', async ({ page }) => {
     await expect(printButton(page)).toBeVisible();
     const box = (await printButton(page).boundingBox())!;
@@ -42,7 +42,7 @@ test.describe('word path: print for a patient (Task 641)', () => {
     await expect(printButton(page)).toHaveCSS('border-top-left-radius', /^(?:[2-9]\d|\d{3,})(?:\.\d+)?px$/);
     // The "?" takes the top right corner on every game (Christian's brief); print sits just to its left, on the same row.
     const area = (await game(page).boundingBox())!;
-    const help = (await game(page).getByRole('button', { name: 'how to play word path' }).boundingBox())!;
+    const help = (await game(page).getByRole('button', { name: 'how to play piccline' }).boundingBox())!;
     expect(help.x + help.width).toBeGreaterThan(area.x + area.width - 2);
     expect(box.x + box.width).toBeLessThanOrEqual(help.x);
     expect(help.x - (box.x + box.width)).toBeLessThanOrEqual(16);
@@ -57,7 +57,7 @@ test.describe('word path: print for a patient (Task 641)', () => {
     // and once more on print.
     await cell(page, [0, 0]).focus();
     await page.keyboard.press('Shift+Tab');
-    await expect(game(page).getByRole('button', { name: 'how to play word path' })).toBeFocused();
+    await expect(game(page).getByRole('button', { name: 'how to play piccline' })).toBeFocused();
     await page.keyboard.press('Shift+Tab');
     await expect(printButton(page)).toBeFocused();
     await page.keyboard.press('Enter');
@@ -121,7 +121,7 @@ test.describe('word path: print for a patient (Task 641)', () => {
     await expect(page.getByTestId('suture-print-words')).toBeVisible();
     // Without the button's mark, the rest of the page prints as before.
     // (each game on its own page, 2026-11-17: the page's title is the game's name)
-    await expect(page.getByRole('heading', { level: 1, name: 'word path' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: 'piccline' })).toBeVisible();
   });
 
   test('axe passes with the print button', async ({ page }) => {

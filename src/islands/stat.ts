@@ -16,10 +16,10 @@
  * Time is read from a deadline, not counted by a timer, so a tab that was in the background still loses its time: on
  * return every question whose clock ran out moves on with no answer, and the student can never get extra seconds.
  */
-import { statGame } from '../config/games';
 import { dayLabel } from './daily';
 import { localDay } from './gameresults';
 import { remoteChecker, type RemoteQuestions } from './questionsremote';
+import { tachyyyShareLine } from './tachyyy';
 
 /** Questions in a round. */
 export const STAT_QUESTIONS = 15;
@@ -222,7 +222,7 @@ export function verdict(score: number): string {
 
 /** The plain one-line share: no colored squares, nothing personal. */
 export function statShareLine(date: Date, score: number): string {
-  return `${statGame.name} · ${dayLabel(date)} · ${score}/${STAT_QUESTIONS} · cueory.app`;
+  return `stat · ${dayLabel(date)} · ${score}/${STAT_QUESTIONS} · cueory.app`;
 }
 
 /** Every review label is plain language, with a symbol as a second signal (never color alone). */
@@ -256,7 +256,7 @@ export function reviewWords(row: StatReviewRow): {
  * is true for every finished round (each one ends with a score).
  */
 export interface StatRoundResult {
-  game: 'stat';
+  game: 'stat' | 'tachyyy';
   /** YYYY-MM-DD in the visitor's own time zone (localDay). */
   day: string;
   solved: boolean;
@@ -276,18 +276,19 @@ export function getResult(
   answers: readonly StatAnswer[],
   date: Date,
   practice: boolean,
+  game: 'stat' | 'tachyyy' = 'stat',
 ): StatRoundResult | null {
   if (!rows || rows.length !== STAT_QUESTIONS) return null;
   const score = scoreOf(rows);
   return {
-    game: 'stat',
+    game,
     day: localDay(date),
     solved: true,
     tries: STAT_QUESTIONS - score,
     score,
     total: STAT_QUESTIONS,
     averageSeconds: averageSeconds(answers),
-    share: statShareLine(date, score),
+    share: game === 'tachyyy' ? tachyyyShareLine(date, score) : statShareLine(date, score),
     practice,
   };
 }

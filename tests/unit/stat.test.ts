@@ -342,6 +342,17 @@ describe('stat grading and results', () => {
       share: 'stat · wed 11 nov · 12/15 · cueory.app',
       practice: true,
     });
+    expect(getResult(rows, over.answers, date, true, 'tachyyy')).toEqual({
+      game: 'tachyyy',
+      day: '2026-11-11',
+      solved: true,
+      tries: 3,
+      score: 12,
+      total: 15,
+      averageSeconds: 5,
+      share: 'tachyyy · wed 11 nov · 12/15 · cueory.app',
+      practice: true,
+    });
   });
 });
 

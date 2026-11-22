@@ -2,7 +2,8 @@
  * Pure logic for sharing achievements (Task 103, D-pending). Share text, links and card images carry nothing personal:
  * no name, email, puzzle answer or tracking value. Game names come only from src/config/games.ts (D-66, D-67).
  */
-import { dailyGames, gameName, gamePages, type DailyGame } from '../config/games';
+import { dailyGames, gameName, type DailyGame } from '../config/games';
+import { gamePages } from '../config/game-pages';
 
 export const SHARE_STYLES = ['scene', 'ivory', 'bronze-coin'] as const;
 export type ShareStyle = (typeof SHARE_STYLES)[number];

@@ -47,8 +47,9 @@ test('the games page links to stat, which says its questions are samples and sta
   await expect(page.getByTestId('stat-sample-note')).toHaveText('sample questions · awaiting content');
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', 'noindex, nofollow');
   await page.goto('/play');
-  await page.getByTestId('stat-link').click();
-  await expect(page).toHaveURL(/\/play\/stat\/?$/);
+  // The hub links the canonical tachyyy page; /play/stat stays as the legacy page tested above.
+  await page.getByTestId('tachyyy-link').click();
+  await expect(page).toHaveURL(/\/play\/tachyyy\/?$/);
 });
 
 test('keyboard: a to d pick and change the answer, Enter goes on, nothing is graded until the end', async ({ page }) => {

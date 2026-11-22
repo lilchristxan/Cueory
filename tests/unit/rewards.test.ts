@@ -126,6 +126,15 @@ describe('rewards: fixed rules and input validation', () => {
     expect(() => applyResult({ ...first, achievements: [{ id: 'made-up', name: 'fake', rule: '', earnedDate: '2026-11-01' }] }, study('round'), '2026-11-01')).toThrow();
   });
 
+  it('normalizes a legacy pulse record before rejecting its replay', () => {
+    const canonical = applyResult(emptyRewards(), game('2026-11-01', 'pulse'), '2026-11-01').state;
+    const legacy = { ...canonical, games: [{ ...canonical.games[0], game: 'pulse' as never }] };
+    const replay = applyResult(legacy, game('2026-11-01', 'pulse'), '2026-11-01');
+
+    expect(replay.accepted).toBe(false);
+    expect(replay.state.games).toEqual([{ ...legacy.games[0], game: 'vialo' }]);
+  });
+
   it('never looks up the current clock or any browser service', () => {
     // Explicitly passing the date produces repeatable state regardless of runtime time zones.
     const a = applyResult(emptyRewards(), game('2026-11-01'), '2026-11-01');

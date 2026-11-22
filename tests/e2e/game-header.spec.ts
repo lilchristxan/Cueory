@@ -10,7 +10,7 @@ import { markPanelsSeen } from './clock';
 const games = [
   { path: '/play/pillo', testId: 'pulse', name: 'pillo', own: 'hard mode' },
   { path: '/play/crossword', testId: 'cueword', name: 'crossword', own: 'show the timer' },
-  { path: '/play/word-path', testId: 'suture', name: 'word path', own: null },
+  { path: '/play/word-path', testId: 'suture', name: 'piccline', own: null },
 ] as const;
 
 test.beforeEach(async ({ page }) => {
@@ -35,7 +35,7 @@ for (const game of games) {
         await expect(box).toBeVisible();
         const area = (await box.boundingBox())!;
         // Framed Crossword/Sudoku move shared controls out of the island; Pillo and Word Path retain legacy headers.
-        const framed = game.name !== 'pillo' && game.name !== 'word path';
+        const framed = game.name !== 'pillo' && game.name !== 'piccline';
         const gear = framed ? page.getByTestId('game-frame-gear') : box.getByRole('button', { name: `${game.name} settings` });
         const help = framed ? page.getByTestId('game-frame-help-button') : box.getByRole('button', { name: `how to play ${game.name}` });
         const g = (await gear.boundingBox())!;
@@ -58,7 +58,7 @@ for (const game of games) {
 
   test(`${game.name}: the gear opens its settings with the shared ones, and Escape returns to the gear`, async ({ page }) => {
     await page.goto(game.path);
-    const framed = game.name !== 'pillo' && game.name !== 'word path';
+    const framed = game.name !== 'pillo' && game.name !== 'piccline';
     const gear = framed ? page.getByTestId('game-frame-gear') : page.getByTestId(game.testId).getByRole('button', { name: `${game.name} settings` });
     await gear.click();
     const dialog = page.getByRole('dialog', { name: `${game.name} settings` });
