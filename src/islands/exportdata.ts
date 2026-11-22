@@ -25,6 +25,7 @@
  */
 import { dailyGames } from '../config/games';
 import { isCourse, isExamDate, PROGRESS_VERSION, type DeckProgress, type Progress } from '../scripts/progress';
+import { MAX_ANSWER_TEXT } from '../scripts/resume';
 import type { GameStats } from './gamestats';
 import type { SudokuSolves } from './sudokustats';
 
@@ -228,9 +229,29 @@ const identitySchema: Schema = { provider: providerName, identityData: jsonObjec
 const sessionSchema: Schema = {
   createdAt: nullableDate, updatedAt: nullableDate, notAfter: nullableDate, userAgent: nullableText, ip: nullableText,
 };
+/** Resume answers use the parser's 500-entry limit, rather than the generic 200-key JSON limit. */
+const resumeAnswers = (value: unknown): boolean => {
+  if (!plain(value)) return false;
+  const entries = Object.entries(value);
+  if (entries.length > 500) return false;
+  return entries.every(([key, answer]) => {
+    if (!/^[a-z0-9][a-z0-9_-]{0,79}$/i.test(key) || ['__proto__', 'prototype', 'constructor'].includes(key)) return false;
+    if (answer === null || typeof answer === 'boolean') return true;
+    if (typeof answer === 'string') return [...answer].length <= MAX_ANSWER_TEXT &&
+      !/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/.test(answer);
+    if (typeof answer === 'number') return Number.isFinite(answer) && Math.abs(answer) <= 1_000_000;
+    if (Array.isArray(answer)) return answer.length <= 50 && answer.every(item => typeof item === 'string' &&
+      [...item].length <= MAX_ANSWER_TEXT && !/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/.test(item));
+    if (!plain(answer)) return false;
+    const fields = Object.entries(answer);
+    return fields.length <= 50 && fields.every(([field, item]) =>
+      !['__proto__', 'prototype', 'constructor'].includes(field) && typeof item === 'string' &&
+      [...item].length <= MAX_ANSWER_TEXT && !/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/.test(item));
+  });
+};
 const resumeSchema: Schema = {
   version: whole, tool: text, page: text, module: text, step: text, itemIndex: whole, itemId: text,
-  totalItems: whole, answers: jsonObject, timer: value => value === null || jsonObject(value), phase: text, savedAt: whole,
+  totalItems: whole, answers: resumeAnswers, timer: value => value === null || jsonObject(value), phase: text, savedAt: whole,
 };
 const sections = ['profile', 'signInDetails', 'account', 'onboarding', 'progress', 'reviewState', 'gameStats', 'sudokuStats', 'attempts', 'examPlans', 'reviewRows', 'reports', 'sessions', 'resume', 'studyEvents'] as const;
 const rowCaps: Partial<Record<Section, number>> = {

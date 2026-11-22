@@ -45,6 +45,19 @@ describe('JSON export', () => {
     ]);
   });
 
+  it('preserves all 500 validated resume answers in JSON and CSV', () => {
+    const answers = Object.fromEntries(Array.from({ length: 500 }, (_, index) => [`item-${index}`, 'answer']));
+    const resume = {
+      version: 1, tool: 'fill-in', page: '/learn/sample', itemIndex: 0, totalItems: 500,
+      answers, timer: null, phase: 'working', savedAt: 1_795_200_000_000,
+    };
+    expect(Object.keys(json({ resume }).resume.answers)).toHaveLength(500);
+    expect(json({ resume }).resume.answers['item-499']).toBe('answer');
+    const rows = parseRows(file({ resume }, 'resume'));
+    expect(rows).toHaveLength(2);
+    expect(JSON.parse(rows[1][8]!)).toEqual(answers);
+  });
+
   it('round-trips every allowed sample section with a caller-supplied date and format', () => {
     expect(json(sample)).toEqual({ format: 'cueory-export-1', exportDate, ...sample, signInDetails: [], account: {}, attempts: [], examPlans: [], reviewRows: [], reports: [], sessions: [], studyEvents: [], dropped: [] });
     expect(exportJson(sample, exportDate)).toContain('\n  "profile": {\n    "displayName": "Sample Student",');
