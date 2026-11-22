@@ -21,6 +21,8 @@ export interface DailyGame {
   ready: boolean;
 }
 
+export const forbiddenGameWords = ['wordle', 'connections', 'strands', 'spangram', 'nyt', 'new york times'] as const;
+
 const baseDailyGames: readonly DailyGame[] = [
   {
     id: 'vialo',

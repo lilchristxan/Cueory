@@ -3,7 +3,7 @@ import { cpSync, existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, wri
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { forbiddenGameWords } from '../../src/config/game-words';
+import { forbiddenGameWords } from '../../src/config/games';
 import { buildFromSheet, parseCells, parseCsv, readSheet } from '../../scripts/content/csv';
 import {
   buildCalendar, calendarLines, fileDay, forbiddenWordIn, gameFor, isBoardSizeMessage, parseDay, puzzleFindings, reportText,
