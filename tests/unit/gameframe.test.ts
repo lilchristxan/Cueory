@@ -89,11 +89,10 @@ describe('GameFrame (Scope 1)', () => {
 
   it('keeps framed interface text upright, readable, and inside the shell', () => {
     const styles = readFileSync(resolve(root, 'src/styles/gameframe.css'), 'utf-8');
-    const wordPathStyles = readFileSync(resolve(root, 'src/styles/wordpath.css'), 'utf-8');
     expect(styles).toMatch(/\.game-frame-serif-title\s*\{[^}]*font-family:\s*var\(--font-body\);[^}]*line-height:\s*1\.5;/s);
     expect(styles).toMatch(/\.game-frame-dateline\s*\{[^}]*font-style:\s*normal;[^}]*overflow-wrap:\s*anywhere;/s);
     expect(styles).toContain('max-inline-size: 100%');
-    expect(wordPathStyles).toContain('.game-frame .wordpath-panel');
+    expect(styles).toMatch(/\.game-frame-board \.wordpath-panel\s*\{\s*margin-inline: 0;/s);
   });
 
   it('keeps Sudoku-owned stats out of the shared framed stats lifecycle', () => {
