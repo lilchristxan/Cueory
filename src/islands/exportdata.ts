@@ -25,6 +25,7 @@
  */
 import { dailyGames } from '../config/games';
 import { isCourse, isExamDate, PROGRESS_VERSION, type DeckProgress, type Progress } from '../scripts/progress';
+import { MAX_ANSWER_TEXT } from '../scripts/resume';
 import type { GameStats } from './gamestats';
 import type { SudokuSolves } from './sudokustats';
 
@@ -76,6 +77,8 @@ export interface ExportData {
    * loadExport supplies StudyEventPages; a short list can also be passed as rows.
    */
   studyEvents?: readonly StudyEventRow[] | StudyEventPages;
+  /** The validated device-local study checkpoint, including only the student's submitted answers. */
+  resume?: JsonObject;
 }
 export interface StudyEventRow {
   itemId: string; itemVersionId: string; kind: string; msOnItem: number; mark: string | null; at: string; createdAt: string;
@@ -226,7 +229,31 @@ const identitySchema: Schema = { provider: providerName, identityData: jsonObjec
 const sessionSchema: Schema = {
   createdAt: nullableDate, updatedAt: nullableDate, notAfter: nullableDate, userAgent: nullableText, ip: nullableText,
 };
-const sections = ['profile', 'signInDetails', 'account', 'onboarding', 'progress', 'reviewState', 'gameStats', 'sudokuStats', 'attempts', 'examPlans', 'reviewRows', 'reports', 'sessions', 'studyEvents'] as const;
+/** Resume answers use the parser's 500-entry limit, rather than the generic 200-key JSON limit. */
+const resumeAnswers = (value: unknown): boolean => {
+  if (!plain(value)) return false;
+  const entries = Object.entries(value);
+  if (entries.length > 500) return false;
+  return entries.every(([key, answer]) => {
+    if (!/^[a-z0-9][a-z0-9_-]{0,79}$/i.test(key) || ['__proto__', 'prototype', 'constructor'].includes(key)) return false;
+    if (answer === null || typeof answer === 'boolean') return true;
+    if (typeof answer === 'string') return [...answer].length <= MAX_ANSWER_TEXT &&
+      !/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/.test(answer);
+    if (typeof answer === 'number') return Number.isFinite(answer) && Math.abs(answer) <= 1_000_000;
+    if (Array.isArray(answer)) return answer.length <= 50 && answer.every(item => typeof item === 'string' &&
+      [...item].length <= MAX_ANSWER_TEXT && !/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/.test(item));
+    if (!plain(answer)) return false;
+    const fields = Object.entries(answer);
+    return fields.length <= 50 && fields.every(([field, item]) =>
+      !['__proto__', 'prototype', 'constructor'].includes(field) && typeof item === 'string' &&
+      [...item].length <= MAX_ANSWER_TEXT && !/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/.test(item));
+  });
+};
+const resumeSchema: Schema = {
+  version: whole, tool: text, page: text, module: text, step: text, itemIndex: whole, itemId: text,
+  totalItems: whole, answers: resumeAnswers, timer: value => value === null || jsonObject(value), phase: text, savedAt: whole,
+};
+const sections = ['profile', 'signInDetails', 'account', 'onboarding', 'progress', 'reviewState', 'gameStats', 'sudokuStats', 'attempts', 'examPlans', 'reviewRows', 'reports', 'sessions', 'resume', 'studyEvents'] as const;
 const rowCaps: Partial<Record<Section, number>> = {
   signInDetails: 100,
   attempts: 50_000, examPlans: 10, reviewRows: 50_000, reports: 10_000, sessions: 10_000,
@@ -253,6 +280,7 @@ interface Sections {
   reviewRows: Row[];
   reports: Row[];
   sessions: Row[];
+  resume?: Row;
   studyEvents: StudyEventText;
 }
 /** Study events already written out: JSON array elements and CSV lines, as text or as one Blob per page. */
@@ -480,6 +508,7 @@ function prepare(data: unknown): { data: Sections; dropped: string[] } {
       reviewRows,
       reports,
       sessions,
+      ...(Object.hasOwn(source, 'resume') ? { resume: recordSection('resume', resumeSchema) } : {}),
       studyEvents,
     },
     dropped: [...dropped].sort(),
@@ -574,7 +603,7 @@ function csvParts(data: unknown): { fileName: string; parts: (string | Blob)[] }
   }
   const recordRows = (value: Row) => Object.keys(value).length ? [value] : [];
   const file = (fileName: string, headers: string[], rows: Row[]) => ({ fileName, parts: [csv(headers, rows)] });
-  return [
+  const files = [
     file('profile.csv', Object.keys(profileSchema), recordRows(clean.data.profile)),
     file('signInDetails.csv', Object.keys(signInDetailSchema), clean.data.signInDetails),
     file('account.csv', ['field', 'value'], accountRows(clean.data.account)),
@@ -591,6 +620,8 @@ function csvParts(data: unknown): { fileName: string; parts: (string | Blob)[] }
     { fileName: 'studyEvents.csv', parts: [csv(studyEventHeaders, []), ...clean.data.studyEvents.csv] },
     file('dropped.csv', ['dropped'], clean.dropped.map(dropped => ({ dropped }))),
   ];
+  if (clean.data.resume) files.splice(-1, 0, file('resume.csv', Object.keys(resumeSchema), recordRows(clean.data.resume)));
+  return files;
 }
 
 /**

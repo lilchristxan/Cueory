@@ -33,6 +33,31 @@ function sampleGuest() {
 }
 
 describe('JSON export', () => {
+  it('round-trips a validated study resume snapshot in JSON and CSV', () => {
+    const resume = {
+      version: 1, tool: 'fill-in', page: '/learn/sample', module: 'module-1', step: 'step-2', itemIndex: 1,
+      itemId: 'item-2', totalItems: 3, answers: { 'item-2': 'student answer' }, timer: null, phase: 'working', savedAt: 1_795_200_000_000,
+    };
+    expect(json({ resume }).resume).toEqual(resume);
+    expect(parseRows(file({ resume }, 'resume'))).toEqual([
+      ['version', 'tool', 'page', 'module', 'step', 'itemIndex', 'itemId', 'totalItems', 'answers', 'timer', 'phase', 'savedAt'],
+      ['1', 'fill-in', '/learn/sample', 'module-1', 'step-2', '1', 'item-2', '3', '{"item-2":"student answer"}', '', 'working', '1795200000000'],
+    ]);
+  });
+
+  it('preserves all 500 validated resume answers in JSON and CSV', () => {
+    const answers = Object.fromEntries(Array.from({ length: 500 }, (_, index) => [`item-${index}`, 'answer']));
+    const resume = {
+      version: 1, tool: 'fill-in', page: '/learn/sample', itemIndex: 0, totalItems: 500,
+      answers, timer: null, phase: 'working', savedAt: 1_795_200_000_000,
+    };
+    expect(Object.keys(json({ resume }).resume.answers)).toHaveLength(500);
+    expect(json({ resume }).resume.answers['item-499']).toBe('answer');
+    const rows = parseRows(file({ resume }, 'resume'));
+    expect(rows).toHaveLength(2);
+    expect(JSON.parse(rows[1][8]!)).toEqual(answers);
+  });
+
   it('round-trips every allowed sample section with a caller-supplied date and format', () => {
     expect(json(sample)).toEqual({ format: 'cueory-export-1', exportDate, ...sample, signInDetails: [], account: {}, attempts: [], examPlans: [], reviewRows: [], reports: [], sessions: [], studyEvents: [], dropped: [] });
     expect(exportJson(sample, exportDate)).toContain('\n  "profile": {\n    "displayName": "Sample Student",');
