@@ -185,6 +185,7 @@
 }
 
 .game-frame-serif-title {
+  /* Interface label, not a marketing heading: Lato at 1.5 or more (CLAUDE.md Design, D-41). */
   font-family: var(--font-body);
   font-weight: 500;
   font-size: var(--game-frame-title-size);
@@ -222,7 +223,7 @@
   margin: 0;
   color: var(--color-ink-soft);
   font-size: var(--game-frame-stat-label-size);
-  line-height: 1.4;
+  line-height: 1.5;
   text-align: center;
 }
 
@@ -280,10 +281,12 @@
   font-size: var(--game-frame-dateline-size);
   line-height: var(--game-frame-dateline-lh);
   color: var(--color-ink-soft);
+  /* Accent lines are plain upright Lato; wrap so enlarged text at 320px never hides the date. */
   font-style: normal;
   text-align: center;
-  max-inline-size: 100%;
+  white-space: normal;
   overflow-wrap: anywhere;
+  max-inline-size: 100%;
 }
 
 .game-frame-cue-slot {
@@ -742,5 +745,13 @@
     margin: 0 !important;
     width: 100% !important;
     max-width: none !important;
+  }
+}
+
+/* Word Path keeps its full-bleed panel on phones elsewhere (-mx-6). Inside the Frame the column
+   only has the Frame's own padding, so the panel stays within the board column and nothing is clipped. */
+@media (width < 40rem) {
+  .game-frame-board .wordpath-panel {
+    margin-inline: 0;
   }
 }
