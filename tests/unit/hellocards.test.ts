@@ -307,3 +307,15 @@ describe('helloCardsPage: what each kind of build ships', () => {
     expect(readFileSync('src/pages/play.astro', 'utf8')).toContain('helloCardsPage(');
   });
 });
+
+describe('hello cards deck stack', () => {
+  it('tilts the two cards behind the deck with tokens that exist', () => {
+    // Tailwind writes rotate: var(--name) even when the token is missing, so a renamed token would silently flatten the stack.
+    const island = readFileSync('src/islands/HelloCards.tsx', 'utf8');
+    const tokens = readFileSync('src/styles/tokens.css', 'utf8');
+    for (const name of ['--hello-stack-tilt-back', '--hello-stack-tilt-front']) {
+      expect(island).toContain(`rotate-(${name})`);
+      expect(tokens).toMatch(new RegExp(`${name}: -?\\d+deg;`));
+    }
+  });
+});
