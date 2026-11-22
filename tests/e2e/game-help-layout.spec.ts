@@ -9,10 +9,10 @@ import { markPanelsSeen } from './clock';
 
 // Each game is on its own page (2026-11-17).
 const games = [
-  { testId: 'pulse', name: 'pillo', path: '/play/pillo' },
+  { testId: 'pulse', name: 'pillo', path: '/play/pillo', framed: false },
   { testId: 'sudoku', name: 'sudoku', path: '/play/sudoku', framed: true },
-  { testId: 'cueword', name: 'crossword', path: '/play/crossword' },
-  { testId: 'suture', name: 'piccline', path: '/play/word-path' },
+  { testId: 'cueword', name: 'crossword', path: '/play/crossword', framed: true },
+  { testId: 'suture', name: 'piccline', path: '/play/word-path', framed: false },
 ] as const;
 const screens = [[390, 844], [320, 568], [844, 390]] as const;
 const fonts = [20, 32] as const;
