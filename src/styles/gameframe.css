@@ -185,10 +185,10 @@
 }
 
 .game-frame-serif-title {
-  font-family: var(--font-display);
+  font-family: var(--font-body);
   font-weight: 500;
   font-size: var(--game-frame-title-size);
-  line-height: 1;
+  line-height: 1.5;
   color: var(--color-ink);
   text-align: center;
 }
@@ -280,9 +280,10 @@
   font-size: var(--game-frame-dateline-size);
   line-height: var(--game-frame-dateline-lh);
   color: var(--color-ink-soft);
-  font-style: italic;
+  font-style: normal;
   text-align: center;
-  white-space: nowrap;
+  max-inline-size: 100%;
+  overflow-wrap: anywhere;
 }
 
 .game-frame-cue-slot {
