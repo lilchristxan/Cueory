@@ -10,13 +10,9 @@
 import { afterDeletion, confirmState, deletionSummary, SESSION_KEYS_AFTER_DELETION } from './deleteaccount';
 import { checkDisplayName } from './displayname';
 import { exportCsvBlobs, exportJsonBlob, type ExportData } from './exportdata';
-import { fromSupabase, loadExport, type ExportReader, type SupabaseExportClient } from './exportload';
-import { loadStats, STATS_STORAGE_KEY, SUDOKU_STATS_STORAGE_KEY } from './gameresults';
-import { loadSudokuStats } from './sudokustats';
+import type { ExportReader, SupabaseExportClient } from './exportload';
 import { DELETE_IDENTITY, studentMessage } from './rpcerrors';
 import { AUTH_STORAGE_KEY, sessionCheckFrom, type SessionReader, type SessionState } from './supabaseclient';
-import { migrateLegacyStars } from '../scripts/progress';
-import { readResume } from '../scripts/resume';
 import type { KeyValueStorage } from '../scripts/storage';
 
 // ── Messages ──────────────────────────────────────────────────────────────────
@@ -139,7 +135,7 @@ export function adaptersFor(client: AccountClient): AccountAdapters {
       if (typeof data !== 'string') throw new Error('display name not saved');
       return data;
     },
-    reader: fromSupabase(client),
+    reader: lazyExportReader(client),
     async signInDetails() {
       // https://supabase.com/docs/reference/javascript/auth-getsession: the session's user carries user_metadata.
       const { data, error } = await client.auth.getSession();
@@ -167,6 +163,21 @@ export function adaptersFor(client: AccountClient): AccountAdapters {
       const { error } = await client.auth.signOut({ scope: 'local' });
       if (error != null) throw new Error('sign out failed');
     },
+  };
+}
+
+/** Keep the account page's initial bundle free of the full export reader. It loads only when a data action reads it. */
+function lazyExportReader(client: SupabaseExportClient): ExportReader {
+  const loaded = import('./exportload').then(({ fromSupabase }) => fromSupabase(client));
+  return {
+    select: (...args) => loaded.then(reader => reader.select(...args)),
+    selectPages: (...args) => ({
+      async *[Symbol.asyncIterator]() {
+        yield* (await loaded).selectPages(...args);
+      },
+    }),
+    rpc: (...args) => loaded.then(reader => reader.rpc(...args)),
+    user: (...args) => loaded.then(reader => reader.user(...args)),
   };
 }
 
@@ -218,6 +229,13 @@ export type GatherResult = { ok: true; data: ExportData } | { ok: false; message
  * load is never returned.
  */
 export async function gatherExport(reader: ExportReader, { email, signInDetails, storage, today }: GatherOptions): Promise<GatherResult> {
+  const [{ loadExport }, { loadStats, STATS_STORAGE_KEY, SUDOKU_STATS_STORAGE_KEY }, { loadSudokuStats }, { migrateLegacyStars }, { readResume }] = await Promise.all([
+    import('./exportload'),
+    import('./gameresults'),
+    import('./sudokustats'),
+    import('../scripts/progress'),
+    import('../scripts/resume'),
+  ]);
   const loaded = await loadExport(reader);
   if (!loaded.ok) return { ok: false, message: loaded.message };
   // The same reading /progress uses: older per-deck stars move into the record first, so the file has all of it.
