@@ -3,7 +3,7 @@
  * Wraps 6 playing cards (280x392), handles previous/next buttons, arrow keys, touch swipe,
  * and maintains data-carousel-state="settled|turning".
  */
-import { msUntilLocalMidnight } from '../islands/daily';
+import { msUntilLocalMidnight } from '../islands/localmidnight';
 
 const DEFAULT_STATUS_HTML = '<span class="gstatus-sym" aria-hidden="true">○</span> not started';
 const DONE_STATUS_HTML = '<span class="gstatus-sym" aria-hidden="true">✓</span> done today';

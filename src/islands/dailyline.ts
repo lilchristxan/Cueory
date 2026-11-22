@@ -1,5 +1,6 @@
 /** The home-page date is local to the visitor, never frozen at build time (W01-2). */
-import { dayLabel, msUntilLocalMidnight } from './daily';
+import { dayLabel } from './daily';
+import { msUntilLocalMidnight } from './localmidnight';
 
 export { msUntilLocalMidnight };
 
