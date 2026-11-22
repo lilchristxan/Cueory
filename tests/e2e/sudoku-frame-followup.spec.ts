@@ -1,0 +1,82 @@
+import { expect, test } from '@playwright/test';
+import { markPanelsSeen } from './clock';
+
+const game = (page: import('@playwright/test').Page) => page.getByTestId('sudoku');
+
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => {
+    try {
+      localStorage.setItem('cueory-promo-seen', String(Date.now()));
+      localStorage.setItem('cueory-signup-popup-seen', String(Date.now()));
+      localStorage.setItem('cueory-game-help-seen', JSON.stringify(['triage']));
+    } catch { /* optional browser storage */ }
+  });
+  await markPanelsSeen(page);
+});
+
+test('framed Sudoku has one difficulty picker, pauses it, and keeps the picker synchronized', async ({ page }) => {
+  await page.goto('/play/sudoku');
+  await expect(game(page).getByRole('gridcell')).toHaveCount(81);
+  const picker = page.getByTestId('game-frame-sudoku-difficulty');
+  await expect(picker).toHaveValue('easy');
+  await picker.selectOption('hard');
+  await expect(picker).toHaveValue('hard');
+
+  await game(page).getByRole('button', { name: 'pause puzzle' }).click();
+  await expect(picker).toBeDisabled();
+  await expect(picker).toHaveValue('hard');
+  await game(page).getByRole('button', { name: 'resume puzzle' }).click();
+  await expect(picker).toBeEnabled();
+  await picker.selectOption('medium');
+  await expect(picker).toHaveValue('medium');
+});
+
+test('paused Sudoku prevents auto-cue setting changes until resume', async ({ page }) => {
+  await page.goto('/play/sudoku');
+  await expect(game(page).getByRole('gridcell')).toHaveCount(81);
+  const gear = page.getByTestId('game-frame-gear');
+  await game(page).getByRole('button', { name: 'pause puzzle' }).click();
+  await gear.click();
+  const settings = page.getByRole('dialog', { name: 'sudoku settings' });
+  const auto = settings.getByRole('checkbox', { name: 'start in auto cue mode' });
+  await expect(auto).toBeDisabled();
+  await page.keyboard.press('Escape');
+  await game(page).getByRole('button', { name: 'resume puzzle' }).click();
+  await gear.click();
+  const resumedSettings = page.getByRole('dialog', { name: 'sudoku settings' });
+  const resumedAuto = resumedSettings.getByRole('checkbox', { name: 'start in auto cue mode' });
+  await expect(resumedAuto).toBeEnabled();
+  const before = await resumedAuto.isChecked();
+  await resumedAuto.setChecked(!before);
+  await expect(resumedAuto).toBeChecked({ checked: !before });
+});
+
+test('framed Sudoku settings returns focus to the shared gear without duplicate controls', async ({ page }) => {
+  await page.goto('/play/sudoku');
+  await expect(game(page).getByRole('gridcell')).toHaveCount(81);
+  await expect(page.getByTestId('game-frame-gear')).toHaveCount(1);
+  await expect(game(page).getByRole('button', { name: 'sudoku settings' })).toHaveCount(0);
+  const gear = page.getByTestId('game-frame-gear');
+  await gear.click();
+  await expect(page.getByRole('dialog', { name: 'sudoku settings' })).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('dialog', { name: 'sudoku settings' })).toHaveCount(0);
+  await expect(gear).toBeFocused();
+});
+
+for (const [width, height] of [[390, 844], [820, 1180], [1440, 900]] as const) {
+  for (const colorScheme of ['light', 'dark'] as const) {
+    test(`framed Sudoku controls fit at ${width}px (${colorScheme})`, async ({ page }) => {
+      await page.setViewportSize({ width, height });
+      await page.emulateMedia({ colorScheme });
+      await page.goto('/play/sudoku');
+      await expect(game(page).getByRole('gridcell')).toHaveCount(81);
+      const controls = page.locator('[data-testid="game-frame-gear"], [data-testid="game-frame-help-button"], [data-testid="game-frame-sudoku-difficulty"]');
+      for (const box of await controls.evaluateAll((elements) => elements.map((element) => element.getBoundingClientRect().toJSON()))) {
+        expect(box.width).toBeGreaterThanOrEqual(44);
+        expect(box.height).toBeGreaterThanOrEqual(44);
+      }
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+    });
+  }
+}
