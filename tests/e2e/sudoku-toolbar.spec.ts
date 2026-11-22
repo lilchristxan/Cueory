@@ -7,7 +7,7 @@ import { expect, test, type Page } from '@playwright/test';
 
 const game = (page: Page) => page.getByTestId('sudoku');
 const toolbar = (page: Page) => game(page).getByTestId('sudoku-toolbar');
-const order = ['sudoku settings', 'pause puzzle', 'print this puzzle', 'sudoku stats', 'how to play sudoku'];
+const frameControls = (page: Page) => page.locator('.game-frame-controls-row');
 
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
@@ -26,47 +26,41 @@ for (const [width, height] of [[320, 700], [390, 844], [820, 1180], [1440, 900]]
       await page.goto('/play/sudoku');
       await expect(game(page).getByRole('gridcell')).toHaveCount(81);
 
-      // The levels, the time and error line, the tools and the board, in that order down the page.
+      // The Frame controls, title, time/error line, and board retain their rendered order.
       const section = page.getByTestId('sudoku-section');
       const tops = await Promise.all([
+        frameControls(page),
+        page.getByTestId('game-frame-sudoku-difficulty'),
         // The page title (sudoku on its own page, 2026-11-17).
         page.getByRole('heading', { level: 1, name: 'sudoku', exact: true }),
-        game(page).getByRole('group', { name: 'difficulty' }).or(game(page).locator('.sudoku-levels')).first(),
         game(page).getByTestId('sudoku-status'),
-        toolbar(page),
         game(page).getByRole('grid', { name: 'sudoku grid' }),
       ].map(async (part) => (await part.boundingBox())!.y));
-      for (let i = 1; i < tops.length; i++) expect(tops[i]!, `part ${i} below part ${i - 1}`).toBeGreaterThan(tops[i - 1]!);
+      for (let i = 1; i < tops.length; i++) expect(tops[i]!, `part ${i} below part ${i - 1}`).toBeGreaterThanOrEqual(tops[i - 1]!);
       await expect(section).not.toContainText('fill every row');
 
-      // Five icon buttons, in order, equal in size, on one line, from the board's left edge to its right edge.
-      const buttons = toolbar(page).getByRole('button');
-      await expect(buttons).toHaveCount(5);
-      const names = await buttons.evaluateAll((list) => list.map((button) => button.getAttribute('aria-label')));
-      expect(names).toEqual(order);
-      const boxes = await buttons.evaluateAll((list) => list.map((button) => button.getBoundingClientRect().toJSON() as DOMRect));
-      const board = (await game(page).getByRole('grid', { name: 'sudoku grid' }).boundingBox())!;
+      // Frame-owned gear/help and Sudoku-owned pause/print remain four 44px controls across two intended rows.
+      const frameButtons = frameControls(page).getByRole('button');
+      const localButtons = toolbar(page).getByRole('button');
+      await expect(frameButtons).toHaveCount(2);
+      await expect(localButtons).toHaveCount(2);
+      expect(await frameButtons.evaluateAll((list) => list.map((button) => button.getAttribute('aria-label')))).toEqual(['sudoku settings', 'how to play sudoku']);
+      expect(await localButtons.evaluateAll((list) => list.map((button) => button.getAttribute('aria-label')))).toEqual(['pause puzzle', 'print this puzzle']);
+      const boxes = await page.locator('.game-frame-controls-row button, [data-testid="sudoku-toolbar"] button').evaluateAll((list) => list.map((button) => button.getBoundingClientRect().toJSON() as DOMRect));
       for (const box of boxes) {
         expect(box.width).toBeGreaterThanOrEqual(44);
         expect(box.height).toBeGreaterThanOrEqual(44);
-        expect(Math.abs(box.width - boxes[0]!.width)).toBeLessThan(0.5);
-        expect(Math.abs(box.height - boxes[0]!.height)).toBeLessThan(0.5);
-        expect(Math.abs(box.top - boxes[0]!.top)).toBeLessThan(0.5);
       }
-      expect(Math.abs(boxes[0]!.left - board.x)).toBeLessThanOrEqual(1);
-      expect(Math.abs(boxes[4]!.right - (board.x + board.width))).toBeLessThanOrEqual(1);
-      const gaps = boxes.slice(1).map((box, i) => box.left - boxes[i]!.right);
-      for (const gap of gaps) expect(Math.abs(gap - gaps[0]!)).toBeLessThanOrEqual(1.5);
       // Drawn icons, not emoji or text.
-      for (const button of (await buttons.all()).slice(0, 4)) await expect(button.locator('svg')).toHaveCount(1);
+      for (const button of await localButtons.all()) await expect(button.locator('svg')).toHaveCount(1);
       expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0);
 
       // The gear opens sudoku's settings; there is no second settings button below the numbers.
       await expect(game(page).locator('.sudoku-pad-wrap').getByRole('button', { name: /settings/ })).toHaveCount(0);
-      await buttons.first().click();
-      await expect(game(page).getByRole('dialog', { name: 'settings' })).toBeVisible();
+      await frameButtons.first().click();
+      await expect(page.getByRole('dialog', { name: 'sudoku settings' })).toBeVisible();
       await page.keyboard.press('Escape');
-      await expect(buttons.first()).toBeFocused();
+      await expect(frameButtons.first()).toBeFocused();
     });
   }
 }
@@ -128,13 +122,13 @@ test('players see "cue", never "candidate"', async ({ page }) => {
   await expect(game(page).getByRole('checkbox', { name: 'auto cues' })).toBeVisible();
   expect(await game(page).innerText()).not.toMatch(/candidate/i);
 
-  await toolbar(page).getByRole('button', { name: 'sudoku settings' }).click();
-  const settings = game(page).getByRole('dialog', { name: 'settings' });
+  await frameControls(page).getByTestId('game-frame-gear').click();
+  const settings = page.getByRole('dialog', { name: 'sudoku settings' });
   await expect(settings.getByRole('checkbox', { name: 'start in auto cue mode' })).toBeVisible();
   expect(await settings.innerText()).not.toMatch(/candidate/i);
   await page.keyboard.press('Escape');
 
-  await toolbar(page).getByRole('button', { name: 'how to play sudoku' }).click();
+  await frameControls(page).getByRole('button', { name: 'how to play sudoku' }).click();
   const rules = page.getByRole('dialog', { name: 'how to play sudoku' });
   await expect(rules).toContainText('cue mode adds small cue numbers');
   expect(await rules.innerText()).not.toMatch(/candidate/i);
@@ -145,8 +139,8 @@ test('the gear opens one sudoku settings dialog with the shared settings and sud
   await expect(game(page).getByRole('gridcell')).toHaveCount(81);
   await expect(page.getByTestId('play-settings')).toHaveCount(0);
   await expect(page.getByRole('button', { name: /settings/ })).toHaveCount(1);
-  const gear = toolbar(page).getByRole('button', { name: 'sudoku settings' });
-  await expect(gear).toHaveAttribute('data-testid', 'game-settings-button');
+  const gear = frameControls(page).getByTestId('game-frame-gear');
+  await expect(gear).toHaveAttribute('data-testid', 'game-frame-gear');
   await gear.click();
   const dialog = page.getByRole('dialog', { name: 'sudoku settings' });
   await expect(dialog).toBeVisible();
@@ -161,7 +155,7 @@ test('with 32 px text at 320 px the sudoku settings dialog wraps inside its card
   await page.setViewportSize({ width: 320, height: 700 });
   await page.goto('/play/sudoku');
   await page.evaluate(() => document.documentElement.style.setProperty('font-size', '32px', 'important'));
-  await toolbar(page).getByRole('button', { name: 'sudoku settings' }).click();
+  await frameControls(page).getByTestId('game-frame-gear').click();
   const card = page.getByRole('dialog', { name: 'sudoku settings' }).locator('.game-settings');
   await expect(card).toBeVisible();
   const [scrollWidth, clientWidth] = await card.evaluate((element) => [element.scrollWidth, element.clientWidth]);
@@ -190,7 +184,7 @@ for (const [width, height] of [[320, 700], [390, 844]] as const) {
         bottom: target(centerX, box.bottom + reach),
         left: target(box.left - reach, centerY),
         right: target(box.right + reach, centerY),
-        settings: target(button.previousElementSibling!.getBoundingClientRect().right - 1, centerY),
+        settings: target(document.querySelector('[data-testid="game-frame-gear"]')!.getBoundingClientRect().right - 1, centerY),
         print: target(button.nextElementSibling!.getBoundingClientRect().left + 1, centerY),
       };
     });

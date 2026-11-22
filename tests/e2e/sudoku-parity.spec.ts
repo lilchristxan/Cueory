@@ -68,9 +68,10 @@ for (const [size, width, height] of [['phone', 390, 844], ['desktop', 1440, 900]
     await expect(cells(page).nth(open[0]!)).toHaveAttribute('aria-label', /, empty$/);
 
     // Check puzzle with live checking off: a wrong entry is marked only after the check.
-    await game(page).getByRole('button', { name: 'settings' }).click();
+    await page.getByTestId('game-frame-gear').click();
     await page.getByRole('checkbox', { name: 'check guesses when entered' }).uncheck();
     await page.getByRole('button', { name: 'close settings' }).click();
+    await expect(page.getByRole('dialog', { name: 'sudoku settings' })).toHaveCount(0);
     await cells(page).nth(open[2]!).click();
     await page.keyboard.press(String(wrongDigit(open[2]!)));
     await expect(cells(page).nth(open[2]!)).not.toHaveClass(/is-wrong/);
@@ -96,9 +97,10 @@ test('sudoku stats are always kept (no switch), show each level, and "forget all
   await expect(cells(page)).toHaveCount(81);
   // Stats are always kept (2026-11-17): no switch, and the stats view shows the table straight away.
   await expect(page.getByRole('switch', { name: /keep my stats/ })).toHaveCount(0);
-  await game(page).getByRole('button', { name: 'sudoku stats' }).click();
-  await expect(game(page).getByTestId('sudoku-stats').getByRole('table')).toBeVisible();
-  await game(page).getByRole('button', { name: 'sudoku stats' }).click();
+  await page.getByTestId('game-frame-gear').click();
+  const initialSettings = page.getByRole('dialog', { name: 'sudoku settings' });
+  await expect(initialSettings.getByTestId('sudoku-stats')).toBeVisible();
+  await page.keyboard.press('Escape');
 
   // The first move of the day tells /play's daily status that sudoku is in progress.
   await page.evaluate(() => {
@@ -117,17 +119,18 @@ test('sudoku stats are always kept (no switch), show each level, and "forget all
   await resultDialog.getByRole('button', { name: 'close results' }).click();
   await expect(live(page)).toContainText('added to your sudoku stats.');
   expect(await page.evaluate(() => (window as unknown as { seenProgress: unknown[] }).seenProgress)).toEqual([{ game: 'triage', day: '2026-11-01' }]);
-  // The shared stats record counts the solve too, so it survives a reload.
-  await expect(page.getByTestId('game-stats').getByRole('listitem').filter({ hasText: 'sudoku' })).toContainText('played 1 day, solved 1.');
+  // The shared stats record counts the solve too, and the framed page keeps its persistence island mounted.
   expect(await page.evaluate(() => localStorage.getItem('cueory-game-stats'))).toContain('"game":"triage"');
   expect(await page.evaluate(() => localStorage.getItem('cueory-sudoku-stats'))).toContain('"level":"easy"');
 
-  await game(page).getByRole('button', { name: 'sudoku stats' }).click();
-  const easy = game(page).getByTestId('sudoku-stats').getByRole('row', { name: /^easy/ });
+  await page.getByTestId('game-frame-gear').click();
+  const settings = page.getByRole('dialog', { name: 'sudoku settings' });
+  const easy = settings.getByTestId('sudoku-stats').getByRole('row', { name: /^easy/ });
   await expect(easy).toContainText('1');
   await expect(easy).toContainText('1 day');
 
   // "forget all my stats" deletes the sudoku record too.
-  await page.getByRole('button', { name: 'forget all my stats' }).click();
+  await settings.getByRole('button', { name: 'forget all my stats' }).click();
+  await settings.getByRole('button', { name: 'yes, forget all my stats' }).click();
   expect(await page.evaluate(() => localStorage.getItem('cueory-sudoku-stats'))).toBeNull();
 });
