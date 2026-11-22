@@ -24,7 +24,6 @@
   overflow-x: hidden;
   box-sizing: border-box;
 }
-
 .game-frame-layout {
   display: flex;
   flex: 1;
@@ -700,6 +699,11 @@
   .game-frame-stat-label {
     font-size: var(--game-frame-stat-label-phone);
   }
+
+  /* Match the Frame's 12px phone gutters so Word Path retains 44px cells without document overflow. */
+  .game-frame-board .wordpath-panel {
+    margin-inline: calc(var(--spacing) * -3);
+  }
 }
 
 /* ---------------- Reduced Motion ---------------- */
@@ -746,10 +750,4 @@
     width: 100% !important;
     max-width: none !important;
   }
-}
-
-/* Word Path's panel bleeds past its column on phones elsewhere (-mx-6; sm:mx-0 from 40rem). Inside the
-   Frame the column only has the Frame's own padding, so the panel stays within it at every width. */
-.game-frame-board .wordpath-panel {
-  margin-inline: 0;
 }

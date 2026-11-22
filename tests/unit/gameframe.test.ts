@@ -92,7 +92,7 @@ describe('GameFrame (Scope 1)', () => {
     expect(styles).toMatch(/\.game-frame-serif-title\s*\{[^}]*font-family:\s*var\(--font-body\);[^}]*line-height:\s*1\.5;/s);
     expect(styles).toMatch(/\.game-frame-dateline\s*\{[^}]*font-style:\s*normal;[^}]*overflow-wrap:\s*anywhere;/s);
     expect(styles).toContain('max-inline-size: 100%');
-    expect(styles).toMatch(/\.game-frame-board \.wordpath-panel\s*\{\s*margin-inline: 0;/s);
+    expect(styles).toMatch(/\.game-frame-board \.wordpath-panel\s*\{\s*margin-inline: calc\(var\(--spacing\) \* -3\);/s);
   });
 
   it('keeps Sudoku-owned stats out of the shared framed stats lifecycle', () => {
@@ -150,9 +150,9 @@ describe('GameFrame (Scope 1)', () => {
     expect(block('.game-frame-stats-status')).toContain('line-height: 1.5');
   });
 
-  it('keeps Word Path\'s board panel inside the Frame column on phones', () => {
+  it('gives Word Path its Frame gutter back so phone cells keep the 44px floor', () => {
     const css = readFileSync(resolve(root, 'src/styles/gameframe.css'), 'utf-8');
-    expect(css).toMatch(/\.game-frame-board \.wordpath-panel \{\s*margin-inline: 0;/);
+    expect(css).toMatch(/\.game-frame-board \.wordpath-panel \{\s*margin-inline: calc\(var\(--spacing\) \* -3\);/);
   });
 });
 

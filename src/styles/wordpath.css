@@ -11,11 +11,6 @@
   page, and the word path part of it still prints clean (print.css hides [data-print-hidden], shows [data-print-only]).
 */
 @layer components {
-  /* The framed shell has 12px phone gutters; keep this panel full-bleed without extending into its clipped edge. */
-  @media (width < 30rem) {
-    .game-frame .wordpath-panel { margin-inline: calc(var(--spacing) * -3); }
-  }
-
   /* The frosted panel around the board (WordPath.png): the shared glass tokens, rounded like the other panels. */
   .wordpath-panel {
     padding-block: var(--spacing-stack);
