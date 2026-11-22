@@ -233,43 +233,21 @@ test.describe('home games carousel (Home v2 Lane 5)', () => {
       await expect(cards.nth(0)).toHaveClass(/on/);
 
       // Simulate touch swipe left on car element (dx < -40)
-      await car.evaluate((el) => {
-        const touchStart = new Touch({
-          identifier: 0,
-          target: el,
-          clientX: 300,
-          clientY: 200,
-        });
-        const touchEnd = new Touch({
-          identifier: 0,
-          target: el,
-          clientX: 100,
-          clientY: 200,
-        });
-        el.dispatchEvent(new TouchEvent('touchstart', { touches: [touchStart], changedTouches: [touchStart], bubbles: true }));
-        el.dispatchEvent(new TouchEvent('touchend', { touches: [], changedTouches: [touchEnd], bubbles: true }));
-      });
+      const swipe = async (startX: number, endX: number) => {
+        const start = { identifier: 0, clientX: startX, clientY: 200 };
+        const move = { identifier: 0, clientX: (startX + endX) / 2, clientY: 200 };
+        const end = { identifier: 0, clientX: endX, clientY: 200 };
+        await car.dispatchEvent('touchstart', { touches: [start], targetTouches: [start], changedTouches: [start] });
+        await car.dispatchEvent('touchmove', { touches: [move], targetTouches: [move], changedTouches: [move] });
+        await car.dispatchEvent('touchend', { touches: [], targetTouches: [], changedTouches: [end] });
+      };
+      await swipe(300, 100);
 
       // After swipe left, active card advances to index 1 (tachyyy)
       await expect(cards.nth(1)).toHaveClass(/on/);
 
       // Simulate touch swipe right on car element (dx > 40)
-      await car.evaluate((el) => {
-        const touchStart = new Touch({
-          identifier: 0,
-          target: el,
-          clientX: 100,
-          clientY: 200,
-        });
-        const touchEnd = new Touch({
-          identifier: 0,
-          target: el,
-          clientX: 300,
-          clientY: 200,
-        });
-        el.dispatchEvent(new TouchEvent('touchstart', { touches: [touchStart], changedTouches: [touchStart], bubbles: true }));
-        el.dispatchEvent(new TouchEvent('touchend', { touches: [], changedTouches: [touchEnd], bubbles: true }));
-      });
+      await swipe(100, 300);
 
       // Moves back to index 0 (vialo)
       await expect(cards.nth(0)).toHaveClass(/on/);
