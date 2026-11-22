@@ -6,6 +6,8 @@ import { GUESSES, playGuess, startPulse } from '../../src/islands/pulse';
 import { shareLine as wordPathShare, type SutureState } from '../../src/islands/suture';
 import { triageShareText, type TriageState } from '../../src/islands/triage';
 import { vialoShareText } from '../../src/islands/vialo';
+import { picclineShareText } from '../../src/islands/piccline';
+import { tachyyyShareText } from '../../src/islands/tachyyy';
 
 // Exercise every result branch, including singular/plural counts. No puzzle answer or letter grid belongs in a share.
 const won = playGuess(startPulse('tones'), 'tones');
@@ -71,4 +73,15 @@ describe('all /play game shares use plain one-line words (Task 229)', () => {
       }
     });
   }
+
+  it('piccline and tachyyy share lines use plain approved middle dot format', () => {
+    const day = '1 nov 2026';
+    const piccline = picclineShareText({ found: [0, 1], totalWords: 4 }, day);
+    expect(piccline).toBe(`piccline · ${day} · 2/4 · cueory.app`);
+    expect(piccline).toMatch(/^[\x20-\x7e\u00b7]+$/);
+
+    const tachyyy = tachyyyShareText(13, day);
+    expect(tachyyy).toBe(`tachyyy · ${day} · 13/15 · cueory.app`);
+    expect(tachyyy).toMatch(/^[\x20-\x7e\u00b7]+$/);
+  });
 });

@@ -189,8 +189,8 @@ test('every vial on show has its whole label in view, and no two vials overlap, 
     // Check the row where it starts and after one turn each way, once each glide has finished.
     for (const turn of [undefined, 'next', 'previous'] as const) {
       if (turn) await section(page).getByRole('button', { name: `${turn} study mode` }).click();
-      await settled(page);
-      const { shown } = await measureRow(page);
+      // Require two equal idle frames so WebKit cannot report a finished card transition before its rendered label settles.
+      const { shown } = await measureRow(page, true);
       // The front vial and at least one neighbour on each side.
       expect(shown.length, `${colorScheme} ${turn ?? 'start'}`).toBeGreaterThanOrEqual(3);
       expectWhole(shown);

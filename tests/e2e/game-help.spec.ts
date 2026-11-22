@@ -10,7 +10,7 @@ const games = [
   { testId: 'pulse', name: 'pillo', id: 'pulse', path: '/play/pillo' },
   { testId: 'sudoku', name: 'sudoku', id: 'triage', path: '/play/sudoku' },
   { testId: 'cueword', name: 'crossword', id: 'cueword', path: '/play/crossword' },
-  { testId: 'suture', name: 'word path', id: 'suture', path: '/play/word-path' },
+  { testId: 'suture', name: 'piccline', id: 'suture', path: '/play/word-path' },
 ] as const;
 
 const seen = (page: Page) => page.evaluate(() => localStorage.getItem('cueory-game-help-seen'));
@@ -108,17 +108,17 @@ for (const game of games) {
   });
 }
 
-test('word path help opens from the keyboard at phone width and restores focus', async ({ page }) => {
+test('piccline help opens from the keyboard at phone width and restores focus', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/play/word-path');
 
   const area = page.getByTestId('suture');
-  const button = area.getByRole('button', { name: 'how to play word path' });
+  const button = area.getByRole('button', { name: 'how to play piccline' });
   await button.focus();
   await expect(button).toBeFocused();
 
   await page.keyboard.press('Enter');
-  const dialog = page.getByRole('dialog', { name: 'how to play word path' });
+  const dialog = page.getByRole('dialog', { name: 'how to play piccline' });
   await expect(dialog).toBeVisible();
 
   await page.keyboard.press('Escape');

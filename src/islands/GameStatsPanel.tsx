@@ -104,7 +104,7 @@ function useStatsPersistence(setSaved: SetSaved, setSaid: SetText, setBlocked: S
       let stats = current.stats;
       let message = '';
       for (const result of waiting) {
-        const name = dailyGames.find((game) => game.id === result.game)?.name ?? '';
+        const name = gameName(result.game);
         const next = recordResult(stats, result);
         // The first result of each game and day counts; a replay changes nothing.
         if (name) message = next === stats ? `${name}: today's first game is already in your stats.` : `${name} added to your stats.`;

@@ -3,7 +3,7 @@ import { expect, test } from '@playwright/test';
 const games = [
   { path: '/play/pillo', name: 'pillo', framed: false, bridge: false },
   { path: '/play/stat', name: 'stat', framed: true, bridge: false },
-  { path: '/play/word-path', name: 'word path', framed: false, bridge: false },
+  { path: '/play/word-path', name: 'piccline', framed: false, bridge: false },
   { path: '/play/crossword', name: 'crossword', framed: true, bridge: true },
   { path: '/play/hello-cards', name: 'hello cards', framed: true, bridge: false },
 ] as const;
