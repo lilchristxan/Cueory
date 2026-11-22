@@ -583,22 +583,6 @@
     --game-demo-hello-font-size: 0.8125rem;
   }
 
-  @media (prefers-color-scheme: dark) {
-    #daily-games {
-      --game-card-ink: var(--color-page);
-      --game-card-name-ink: var(--color-page);
-      --game-pip-bg: var(--color-surface);
-      --game-pip-ink: var(--color-page);
-    }
-  }
-
-  :root[data-theme="dark"] #daily-games {
-    --game-card-ink: var(--color-page);
-    --game-card-name-ink: var(--color-page);
-    --game-pip-bg: var(--color-surface);
-    --game-pip-ink: var(--color-page);
-  }
-
 /*
   Launch-updates pop-up (lane 14, D-pending): the green look of Christian's Kit landing page, at his request. These
   colors are OUTSIDE the brand guide v1.0 palette, so they are not --color-* tokens (those stay brand-only) and they are
@@ -908,6 +892,24 @@
   --game-frame-popover-shadow: 0 18px 44px rgb(var(--shadow-tint) / 0.40);
 }
 
+
+/* Keep the carousel's scoped Evening aliases after both canonical palette blocks. The strict token readers consume
+   the first device/picked-theme blocks as the source of truth. */
+@media (prefers-color-scheme: dark) {
+  #daily-games {
+    --game-card-ink: var(--color-page);
+    --game-card-name-ink: var(--color-page);
+    --game-pip-bg: var(--color-surface);
+    --game-pip-ink: var(--color-page);
+  }
+}
+
+:root[data-theme="dark"] #daily-games {
+  --game-card-ink: var(--color-page);
+  --game-card-name-ink: var(--color-page);
+  --game-pip-bg: var(--color-surface);
+  --game-pip-ink: var(--color-page);
+}
 
 @theme static {
   /* ---------- Sudoku (Task 625) ---------- */

@@ -52,7 +52,7 @@ describe('home daily games stage', () => {
   it('links each card to its game route', () => {
     const section = gamesSection();
     const links = [...section.matchAll(/<a\b[^>]*\bhref="([^"]+)"[^>]*>/g)].map((match) => match[1]);
-    expect(links).toEqual([
+    expect(links.filter((href) => href !== '/play')).toEqual([
       '/play/vialo',
       '/play/tachyyy',
       '/play/piccline',
@@ -60,6 +60,7 @@ describe('home daily games stage', () => {
       '/play/sudoku',
       '/play/hello-cards',
     ]);
+    expect(links.filter((href) => href === '/play')).toEqual(['/play']);
   });
 
   it('shows coming soon instead of play-status badges for unreleased games on production builds', () => {
