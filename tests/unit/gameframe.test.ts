@@ -125,4 +125,26 @@ describe('GameFrame (Scope 1)', () => {
     expect(sudoku).toContain('<GameHelpCard help={help} name={gameName(\'triage\')} />');
     expect(header).toContain('{framed && end &&');
   });
+
+  it('keeps Frame interface text in upright Lato at readable line spacing, and lets the dateline wrap', () => {
+    const css = readFileSync(resolve(root, 'src/styles/gameframe.css'), 'utf-8');
+    const astro = readFileSync(resolve(root, 'src/components/GameFrame.astro'), 'utf-8');
+    const block = (sel: string) => css.slice(css.indexOf(`${sel} {`), css.indexOf('}', css.indexOf(`${sel} {`)));
+    const title = block('.game-frame-serif-title');
+    expect(title).toContain('font-family: var(--font-body)');
+    expect(title).toContain('line-height: 1.5');
+    const date = block('.game-frame-dateline');
+    expect(date).toContain('font-style: normal');
+    expect(date).not.toContain('italic');
+    expect(date).toContain('white-space: normal');
+    expect(date).not.toContain('nowrap');
+    expect(astro).not.toMatch(/data-game-frame-dateline[^>]*><i>/);
+    expect(block('.game-frame-stats-status')).toContain('line-height: 1.5');
+  });
+
+  it('keeps Word Path\'s board panel inside the Frame column on phones', () => {
+    const css = readFileSync(resolve(root, 'src/styles/gameframe.css'), 'utf-8');
+    expect(css).toMatch(/\.game-frame-board \.wordpath-panel \{\s*margin-inline: 0;/);
+  });
 });
+
