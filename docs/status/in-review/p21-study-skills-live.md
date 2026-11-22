@@ -1,1 +1,0 @@
-status: Launch smoke test (L21): on the live build every study-skills sample lesson, card, question and activity page shows a plain coming-soon page (noindex, neutral title and description, not in the sitemap); the staging and preview builds keep the sample lesson.

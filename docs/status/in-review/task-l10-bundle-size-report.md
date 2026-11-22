@@ -1,1 +1,0 @@
-status: Lane 10, report docs/launch/bundle-size-x5.md: initial JS and CSS for all 53 built pages and the 5 largest wins (biggest: load React for the footer flag form only on first tap, about 72 KB gz off 31 pages).

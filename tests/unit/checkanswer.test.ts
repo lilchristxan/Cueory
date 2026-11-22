@@ -40,6 +40,14 @@ describe('checkArguments', () => {
     expect(transport.rpc).not.toHaveBeenCalled();
   });
 
+  it('explains an empty pick without contacting the answer service', async () => {
+    const transport = fake();
+    expect(await checkAnswer(transport, item, [])).toEqual({
+      ok: false, message: 'choose between one and five different answers.',
+    });
+    expect(transport.rpc).not.toHaveBeenCalled();
+  });
+
   it('does not invoke getters or accept inherited identifiers', async () => {
     const read = vi.fn(() => { throw new Error('sample: getter must not run'); });
     const getterItem = Object.defineProperty({ item_id: item.item_id }, 'id', { get: read });

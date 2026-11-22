@@ -202,6 +202,14 @@ describe('syntheticHistory', () => {
     }
   });
 
+  it('uses a valid stored shortened schedule for due selection, not reconstructed history', () => {
+    const shortened = row('shortened', {
+      level: 2, last_reviewed: '2026-10-25', next_review: '2026-10-26',
+    });
+    expect(nextReview(syntheticHistory(shortened))).toBe('2026-11-01');
+    expect(dueItems([shortened], '2026-10-26')).toEqual(['shortened']);
+  });
+
   it('throws for invalid row', () => {
     // @ts-expect-error intentional
     expect(() => syntheticHistory(null)).toThrow();

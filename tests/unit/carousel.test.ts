@@ -4,10 +4,14 @@ import { existsSync } from 'node:fs';
 import { studyModes } from '../../src/config/modes';
 import {
   AUTO_ADVANCE_MS,
+  autoplayHold,
   canAutoAdvance,
+  illustrationsMayLoop,
   canEnhanceCarousel,
   carouselState,
   clipAround,
+  enterMatchesMouseMove,
+  shouldClearDocumentExit,
   flipFrom,
   glides,
   isSwipeDown,
@@ -259,6 +263,32 @@ describe('"ways to study" merry-go-round (D-50, D-60)', () => {
     expect(canAutoAdvance({ ...idle, previewOpen: true })).toBe(false);
   });
 
+  it('accepts a first stationary hover entry or one that matches the last real mouse move', () => {
+    expect(enterMatchesMouseMove({ x: 0, y: 0 }, { x: 636, y: 423 })).toBe(false);
+    expect(enterMatchesMouseMove({ x: 636, y: 423 }, { x: 636, y: 423 })).toBe(true);
+    expect(enterMatchesMouseMove(undefined, { x: 636, y: 423 })).toBe(true);
+  });
+
+  it('clears genuine document exits while rejecting only stale in-pause-area coordinates', () => {
+    expect(shouldClearDocumentExit({ x: 720, y: 508 }, { x: 636, y: 423 }, true)).toBe(false);
+    expect(shouldClearDocumentExit({ x: 720, y: 508 }, { x: 636, y: 423 }, false)).toBe(true);
+    expect(shouldClearDocumentExit({ x: 720, y: 508 }, { x: 720, y: 508 }, true)).toBe(true);
+    expect(shouldClearDocumentExit(undefined, { x: 636, y: 423 }, true)).toBe(true);
+  });
+
+  it('names the active autoplay hold without changing the motion policy', () => {
+    expect(autoplayHold(idle)).toBeUndefined();
+    expect(autoplayHold({ ...idle, reducedMotion: true })).toBe('reduced-motion');
+    expect(autoplayHold({ ...idle, paused: true })).toBe('paused');
+    expect(autoplayHold({ ...idle, tookOver: true })).toBe('takeover');
+    expect(autoplayHold({ ...idle, hovering: true })).toBe('hover');
+    expect(autoplayHold({ ...idle, focusInside: true })).toBe('focus');
+    expect(autoplayHold({ ...idle, onScreen: false })).toBe('offscreen');
+    expect(autoplayHold({ ...idle, previewOpen: true })).toBe('preview');
+    // The first hold mirrors canAutoAdvance's existing short-circuit order.
+    expect(autoplayHold({ ...idle, paused: true, hovering: true })).toBe('paused');
+  });
+
   it('reports one carousel state: settled only with no glide and no preview, the preview phase while it is open', () => {
     expect(carouselState('closed', false)).toBe('settled');
     expect(carouselState('closed', true)).toBe('turning');
@@ -387,5 +417,21 @@ describe("HomeV2's straight row of vials (P6)", () => {
     expect([1, 2, 3, 4, 5].map((o) => rowPlace(o, desktop).shown)).toEqual([true, true, true, true, false]);
     // The front vial always shows, even in a room narrower than itself.
     expect(rowPlace(0, 0.1).shown).toBe(true);
+  });
+});
+
+describe('illustration loops (#634)', () => {
+  const on = { reducedMotion: false, paused: false, onScreen: true, previewOpen: false };
+  it('run only while on screen, playing, motion allowed and no preview open', () => {
+    expect(illustrationsMayLoop(on)).toBe(true);
+    expect(illustrationsMayLoop({ ...on, reducedMotion: true })).toBe(false);
+    expect(illustrationsMayLoop({ ...on, paused: true })).toBe(false);
+    expect(illustrationsMayLoop({ ...on, onScreen: false })).toBe(false);
+    expect(illustrationsMayLoop({ ...on, previewOpen: true })).toBe(false);
+  });
+  it('are gated by data-looping in the stylesheet, and the preview scrim has no blur', () => {
+    const css = readFileSync('src/styles/global.css', 'utf8');
+    expect(css).toMatch(/\.modes\[data-motion\]:not\(\[data-paused\]\)\[data-looping\] \.mode-card\[data-active\]/);
+    expect(css).not.toMatch(/\.mode-preview-scrim \{[^}]*backdrop-filter/);
   });
 });

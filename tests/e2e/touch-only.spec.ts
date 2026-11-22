@@ -96,8 +96,9 @@ test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
     try {
       localStorage.setItem('cueory-promo-seen', String(Date.now()));
+      localStorage.setItem('cueory-signup-popup-seen', String(Date.now()));
     } catch {
-      // Storage is blocked: the panel never shows then anyway.
+      // Storage is blocked: the panels never show then anyway.
     }
   });
 });
@@ -124,7 +125,7 @@ test.describe('touch only (no hover)', () => {
       if (process.platform === 'linux' && browserName === 'webkit') {
         await recordLinuxWebkitTouchInput(page, testInfo);
       }
-      if (process.platform === 'darwin' && browserName === 'webkit') {
+      if (browserName === 'webkit') {
         await expectNativeTouchInput(page);
       } else {
         expect(media.maxTouchPoints).toBeGreaterThan(0);

@@ -1,0 +1,337 @@
+---
+import '../styles/gameframe.css';
+import GameFrameControls from '../islands/GameFrameControls';
+import GameFrameStats from '../islands/GameFrameStats';
+import { formatGameDateLine } from '../scripts/gamedateline';
+
+interface Props {
+  game: string;
+  tagline?: string;
+  dateLine?: string;
+  howSteps?: readonly string[];
+  puzzleNumber?: number | string;
+  wide?: boolean;
+  showcase?: boolean;
+  /** Opted-in game pages move visible page controls and stats to this Frame. */
+  framed?: boolean;
+  /** True only where a framed island receives the Frame's named control events. */
+  bridge?: boolean;
+  /** Renders the standard no-score rows without a stats island for a route that persists no game history. */
+  staticNoScoreStats?: boolean;
+}
+
+const {
+  game,
+  tagline: propTagline,
+  dateLine: propDateLine,
+  howSteps: propHowSteps,
+  wide = false,
+  showcase = false,
+  framed = true,
+  bridge = false,
+  staticNoScoreStats = false,
+} = Astro.props;
+
+type GameConfig = {
+  id: string;
+  name: string;
+  brandName: string;
+  defaultTagline: string;
+  iconType: 'img' | 'tachyyy' | 'grid' | '9' | 'hi';
+  iconSrc?: string;
+  wordmarkType: 'img' | 'serif';
+  wordmarkSrc?: string;
+  wordmarkText?: string;
+  defaultSteps: readonly string[];
+  hasPillLegend: boolean;
+};
+
+const configs: Record<string, GameConfig> = {
+  pulse: {
+    id: 'pulse',
+    name: 'pillo',
+    brandName: 'vialo',
+    defaultTagline: "Find today's word",
+    iconType: 'img',
+    iconSrc: '/design/games-v2/assets/vialo-icon-silver-oxblood.svg',
+    wordmarkType: 'img',
+    wordmarkSrc: '/design/games-v2/assets/vialo-wordmark-oxblood-v3.svg',
+    defaultSteps: [
+      'Type a five-letter word.',
+      'Each pill shows if a letter is in place, elsewhere or not in the word.',
+      'Solve it in six tries.',
+    ],
+    hasPillLegend: true,
+  },
+  stat: {
+    id: 'stat',
+    name: 'stat',
+    brandName: 'tachyyy',
+    defaultTagline: 'Beat the clock',
+    iconType: 'tachyyy',
+    wordmarkType: 'img',
+    wordmarkSrc: '/design/games-v2/assets/tachyyy-wordmark-light-bar.svg',
+    defaultSteps: [
+      'Read the question.',
+      'Pick one answer before the timer runs out.',
+      'See the rationale after each one.',
+    ],
+    hasPillLegend: false,
+  },
+  suture: {
+    id: 'suture',
+    name: 'word path',
+    brandName: 'piccline',
+    defaultTagline: "Trace today's words",
+    iconType: 'img',
+    iconSrc: '/brand/games/piccline-dark.svg',
+    wordmarkType: 'img',
+    wordmarkSrc: '/brand/games/piccline-wordmark-dark.svg',
+    defaultSteps: [
+      'Drag, tap or use the arrow keys to link touching letters.',
+      'Every letter belongs to one word.',
+      'Find the theme word to finish.',
+    ],
+    hasPillLegend: false,
+  },
+  cueword: {
+    id: 'cueword',
+    name: 'crossword',
+    brandName: 'crossword',
+    defaultTagline: "Solve today's mini",
+    iconType: 'grid',
+    wordmarkType: 'serif',
+    wordmarkText: 'crossword',
+    defaultSteps: [
+      'Pick a square or a clue.',
+      'Type your answer.',
+      'Check a square, a word or the whole grid.',
+    ],
+    hasPillLegend: false,
+  },
+  triage: {
+    id: 'triage',
+    name: 'sudoku',
+    brandName: 'sudoku',
+    defaultTagline: "Fill today's grid",
+    iconType: '9',
+    wordmarkType: 'serif',
+    wordmarkText: 'sudoku',
+    defaultSteps: [
+      'Pick a square.',
+      'Type or tap a number. Pencil marks are on the P key.',
+      'Each number appears once per row, column and box.',
+    ],
+    hasPillLegend: false,
+  },
+  'hello-cards': {
+    id: 'hello-cards',
+    name: 'hello cards',
+    brandName: 'hello cards',
+    defaultTagline: 'Start a conversation',
+    iconType: 'hi',
+    wordmarkType: 'serif',
+    wordmarkText: 'hello cards',
+    defaultSteps: [
+      'Flip the top card.',
+      'Ask the person next to you.',
+      'Save the ones you like.',
+    ],
+    hasPillLegend: false,
+  },
+};
+
+// Aliases
+const key =
+  game === 'pillo' || game === 'vialo'
+    ? 'pulse'
+    : game === 'tachyyy'
+      ? 'stat'
+      : game === 'word-path' || game === 'piccline'
+        ? 'suture'
+        : game === 'crossword'
+          ? 'cueword'
+          : game === 'sudoku'
+            ? 'triage'
+            : game === 'hello cards'
+              ? 'hello-cards'
+              : game;
+
+const currentConfig: GameConfig = configs[key] ?? configs.pulse!;
+
+const activeTagline = propTagline ?? currentConfig.defaultTagline;
+const activeSteps = propHowSteps ?? currentConfig.defaultSteps;
+// The static fallback makes the page useful before hydration. The browser replaces it with the visitor's own day
+// below; a build date must never identify a later visitor's daily puzzle.
+const activeDateLine = propDateLine ?? formatGameDateLine(new Date());
+---
+
+<div class="game-frame">
+  <div class="game-frame-layout">
+    <!-- Left panel (full height above footer) -->
+    <aside class="game-frame-sidebar" aria-label="Game details and stats">
+      <div class="game-frame-sidebar-top">
+        <a href="/play" class="game-frame-back" aria-label="all games" data-testid="all-games-link">
+          <span aria-hidden="true">‹</span>&nbsp;games
+        </a>
+        <a href="/" class="game-frame-logo-wrap" aria-label="cueory home">
+          <img
+            src="/brand/v1/logo-full-light-480.png"
+            alt="cueory"
+            class="game-frame-logo dark:hidden"
+            width="80"
+            height="20"
+            loading="lazy"
+            data-image-priority="header"
+            decoding="async"
+          />
+          <img
+            src="/brand/v1/logo-full-dark-480.png"
+            alt="cueory"
+            class="game-frame-logo hidden dark:block"
+            width="80"
+            height="20"
+            loading="lazy"
+            data-image-priority="header"
+            decoding="async"
+          />
+        </a>
+      </div>
+
+      <div class="game-frame-game-badge">
+        <div class="game-frame-icon-wrap" aria-hidden="true">
+          {currentConfig.iconType === 'img' && currentConfig.iconSrc && (
+            <img src={currentConfig.iconSrc} alt="" aria-hidden="true" class="game-frame-icon-img" width="72" height="72" loading="lazy" decoding="async" />
+          )}
+          {currentConfig.iconType === 'tachyyy' && (
+            <svg width="72" height="72" viewBox="0 0 120 120" aria-hidden="true" class="block">
+              <rect x="52" y="4" width="16" height="10" rx="3" fill="var(--color-copper-deep)"></rect>
+              <circle cx="60" cy="66" r="44" fill="none" stroke="var(--color-line)" stroke-width="7"></circle>
+              <circle cx="60" cy="66" r="44" fill="none" stroke="var(--color-copper-deep)" stroke-width="7" stroke-linecap="round" stroke-dasharray="165.9 276.5" transform="rotate(-90 60 66)"></circle>
+              <g transform="translate(20 27) scale(0.8)">
+                <path d="M50 90 C20 68 8 50 8 34 C8 20 19 10 31 10 C39 10 46 14 50 22 C54 14 61 10 69 10 C81 10 92 20 92 34 C92 50 80 68 50 90 Z" transform="translate(6 19) scale(0.62)" fill="var(--color-ink)" fill-opacity="0.22"></path>
+                <path d="M50 90 C20 68 8 50 8 34 C8 20 19 10 31 10 C39 10 46 14 50 22 C54 14 61 10 69 10 C81 10 92 20 92 34 C92 50 80 68 50 90 Z" transform="translate(19 19) scale(0.62)" fill="var(--color-ink)" fill-opacity="0.5"></path>
+                <path d="M50 90 C20 68 8 50 8 34 C8 20 19 10 31 10 C39 10 46 14 50 22 C54 14 61 10 69 10 C81 10 92 20 92 34 C92 50 80 68 50 90 Z" transform="translate(32 19) scale(0.62)" fill="var(--color-copper-deep)"></path>
+              </g>
+            </svg>
+          )}
+          {currentConfig.iconType === 'grid' && (
+            <span class="game-frame-emblem">
+              <span class="game-frame-emblem-grid">
+                <span class="game-frame-emblem-cell is-filled"></span>
+                <span class="game-frame-emblem-cell"></span>
+                <span class="game-frame-emblem-cell"></span>
+                <span class="game-frame-emblem-cell"></span>
+                <span class="game-frame-emblem-cell is-filled"></span>
+                <span class="game-frame-emblem-cell"></span>
+                <span class="game-frame-emblem-cell"></span>
+                <span class="game-frame-emblem-cell"></span>
+                <span class="game-frame-emblem-cell is-filled"></span>
+              </span>
+            </span>
+          )}
+          {currentConfig.iconType === '9' && (
+            <span class="game-frame-emblem">
+              <span class="game-frame-emblem-9">9</span>
+            </span>
+          )}
+          {currentConfig.iconType === 'hi' && (
+            <span class="game-frame-emblem">
+              <span class="game-frame-emblem-hi">hi</span>
+            </span>
+          )}
+        </div>
+
+        <div class="game-frame-wordmark-wrap">
+          {currentConfig.wordmarkType === 'img' && currentConfig.wordmarkSrc && (
+            <img
+              src={currentConfig.wordmarkSrc}
+              alt=""
+              aria-hidden="true"
+              class="game-frame-wordmark-img"
+              width="180"
+              height="60"
+              loading="lazy"
+              decoding="async"
+            />
+          )}
+          {currentConfig.wordmarkType === 'serif' && (
+            <span class="game-frame-serif-title">{currentConfig.wordmarkText}</span>
+          )}
+        </div>
+
+        <p class="game-frame-tagline">{activeTagline}</p>
+      </div>
+
+      <div class="game-frame-divider" aria-hidden="true"></div>
+
+      <!-- Most framed routes hydrate their saved history; no-score callers keep the same sidebar rows as static markup. -->
+      {framed && <div class="game-frame-stats" data-testid="game-frame-stats" aria-label="your stats">
+        {staticNoScoreStats ? <>
+          <div class="game-frame-stat">
+            <span class="game-frame-stat-value">0</span>
+            <span class="game-frame-stat-label">questions asked</span>
+          </div>
+          <div class="game-frame-stat">
+            <span class="game-frame-stat-value">0</span>
+            <span class="game-frame-stat-label">current streak</span>
+          </div>
+          <div class="game-frame-stat">
+            <span class="game-frame-stat-value">0</span>
+            <span class="game-frame-stat-label">best streak</span>
+          </div>
+          <div class="game-frame-stat">
+            <span class="game-frame-stat-value">0</span>
+            <span class="game-frame-stat-label">played</span>
+          </div>
+        </> : <GameFrameStats client:load game={currentConfig.id} />}
+      </div>}
+    </aside>
+
+    <!-- Center area -->
+    <div class="game-frame-main">
+      <!-- Date line centered above the board -->
+      <p class="game-frame-dateline" data-game-frame-dateline={propDateLine === undefined ? '' : undefined}>{activeDateLine}</p>
+
+      <!-- Slot for piccline cue line ("TODAY'S CUE · ...") -->
+      <div class="game-frame-cue-slot">
+        <slot name="cue" />
+      </div>
+
+      <!-- Row above the board: Settings gear (top-left), middle slot for game-specific controls, ? popover (top-right) -->
+      {framed && (
+        <GameFrameControls client:load gameName={currentConfig.name} steps={activeSteps} hasPillLegend={currentConfig.hasPillLegend} bridge={bridge} wide={wide}>
+          <slot name="controls" />
+        </GameFrameControls>
+      )}
+
+      <!-- Slot for page title -->
+      <slot name="title" />
+
+      <!-- The board slot -->
+      <div class:list={['game-frame-board', wide && 'is-wide', showcase && 'is-showcase']}>
+        <slot />
+      </div>
+
+      <!-- Card deck slot (placeholder for Item 2) -->
+      <div class="game-frame-deck-slot">
+        <slot name="deck" />
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer slot (placeholder for Item 3) -->
+  <div class="game-frame-footer-slot">
+    <slot name="footer" />
+  </div>
+</div>
+
+{propDateLine === undefined && (
+  <script>
+    import { formatGameDateLine } from '../scripts/gamedateline';
+
+    for (const line of document.querySelectorAll<HTMLElement>('[data-game-frame-dateline]')) {
+      line.textContent = formatGameDateLine(new Date());
+    }
+  </script>
+)}

@@ -76,6 +76,73 @@
   --cueory-cell-min: var(--wordpath-cell-min);
   --cueory-cell-max: var(--wordpath-cell-max);
 
+  /* Games v2 frame tokens (PR #1020 / task-games-v2; D-145) */
+  --game-oxblood: #6e2019;
+  --game-dark-green: #0e5a3d;
+  --game-dark-green-light: #3f8a68;
+  --game-dark-green-deep: #053321;
+  --game-oxblood-light: #a0413a;
+  --game-oxblood-deep: #4a100d;
+
+  --game-frame-sidebar-width: 15rem;     /* 240px */
+  --game-frame-sidebar-bg: var(--color-surface); /* Linen (#eadccf) */
+  --game-frame-border: var(--color-line);
+  --game-frame-btn-size: 2.75rem;        /* 44px minimum tap target */
+  --game-frame-btn-bg: var(--color-page);
+  --game-frame-btn-border: 1.5px solid var(--color-highlight);
+  --game-frame-btn-shadow: 0 6px 16px rgb(var(--shadow-tint) / 0.14);
+  --game-frame-popover-width: 21.25rem;  /* 340px */
+  --game-frame-popover-bg: var(--color-page);
+  --game-frame-popover-border: 1px solid var(--color-line);
+  --game-frame-popover-shadow: 0 18px 44px rgb(var(--shadow-tint) / 0.22);
+  --game-frame-max-board: 38.75rem;      /* 620px */
+  --game-frame-icon-size: 4.5rem;        /* 72px */
+  --game-frame-emblem-size: 2.5rem;      /* 40px */
+  --game-frame-emblem-cell: 0.8125rem;   /* 13px */
+  --game-frame-badge-size: 1.75rem;      /* 28px */
+  --game-frame-pill-width: 3.875rem;     /* 62px */
+  --game-frame-pill-height: 1.625rem;    /* 26px */
+  --game-frame-step-num-size: 1.75rem;   /* 28px */
+  --game-frame-grid-major: 45rem 31.25rem; /* 720px 500px */
+  --game-frame-grid-mid: 5rem 5rem;      /* 80px 80px */
+  --game-frame-grid-minor: 0.5rem 0.5rem; /* 8px 8px */
+  --game-frame-line: 1px;
+  --game-frame-grid-line: 1px;
+  --game-frame-grid-pos: -0.5px -0.5px;
+  --game-frame-logo-height: 1.25rem;     /* 20px */
+  --game-frame-logo-width: 6rem;         /* 96px */
+  --game-frame-emblem-radius: 1.125rem;  /* 18px */
+  --game-frame-emblem-gap: 0.125rem;     /* 2px */
+  --game-frame-emblem-9-size: 2.4375rem; /* 39px */
+  --game-frame-emblem-hi-size: 2.0625rem;/* 33px */
+  --game-frame-wordmark-height: 3.75rem; /* 60px */
+  --game-frame-title-size: 2.5rem;       /* 40px */
+  --game-frame-tagline-size: 1.5rem;     /* 24px */
+  --game-frame-stat-value-size: 1.75rem; /* 28px */
+  --game-frame-stat-label-size: 0.8125rem; /* 13px */
+  --game-frame-dateline-size: 0.875rem;  /* 14px */
+  --game-frame-dateline-lh: 1.3125rem;   /* 21px, 1.5 at 14px */
+  --game-frame-gear-size: 1.5rem;        /* 24px */
+  --game-frame-how-font-size: 1.25rem;   /* 20px */
+  --game-frame-popover-radius: 1.25rem;  /* 20px */
+  --game-frame-popover-padding: 1.25rem 1.375rem; /* 20px 22px */
+  --game-frame-popover-title-size: 0.75rem; /* 12px */
+  --game-frame-popover-title-tracking: 0.125rem; /* 2px */
+  --game-frame-step-num-border: 1.5px solid var(--color-ink);
+  --game-frame-pill-font-size: 1.125rem; /* 18px */
+  --game-frame-pill-text-color: #ffffff;
+  --game-frame-pill-text-shadow: 0 1px 1.5px rgb(40 12 8 / 0.45);
+  --game-frame-pill-shadow: inset 0 -3px 5px rgb(0 0 0 / 0.18), 0 2px 4px rgb(60 40 25 / 0.2);
+  --game-frame-pill-ivory-bg: radial-gradient(120% 140% at 30% 20%, #ffffff 0%, var(--color-page) 55%, var(--color-surface) 100%);
+  --game-frame-max-board-wide: 51.25rem; /* 820px */
+  --game-frame-max-board-showcase: 45rem; /* 720px */
+  --game-frame-sidebar-compact-emblem-size: 2.75rem; /* 44px */
+  --game-frame-sidebar-compact-emblem-radius: 0.75rem; /* 12px */
+  --game-frame-sidebar-compact-emblem-cell: 0.5rem; /* 8px */
+  --game-frame-sidebar-compact-wordmark-height: 2.25rem; /* 36px */
+  --game-frame-stat-label-compact: 0.6875rem; /* 11px */
+  --game-frame-stat-label-phone: 0.625rem; /* 10px */
+
   /* ---------- Marketing pages only (D-41): draped-silk background and frosted panels (no embossed logo: D-55) ---------- */
   --color-silk-base: #f9f5ef;   /* Ivory    — silk background */
   --color-silk-sheen: #f9f5ef;  /* Ivory    — light catching a fold */
@@ -101,6 +168,8 @@
   --color-board-given: color-mix(in srgb, #eadccf 50%, #f9f5ef); /* Linen + Ivory — sudoku given numbers, lighter than the tint */
   --color-board-match: #6b5243;    /* Bronze   — sudoku squares holding the selected number */
   --color-on-board-match: #f9f5ef; /* Ivory    — numbers on those squares */
+  /* How opaque a faded structure is (Task 178 study tools): see-through enough to look past, solid enough to tap. */
+  --anatomy-faded-opacity: 0.35;
   --color-board-cell: #f9f5ef;     /* Ivory    — an empty square */
   --color-board-ink: #3e2c23;      /* Espresso — numbers and grid lines on the board */
   --color-board-ink-soft: #6b5243; /* Bronze   — pencil marks on the board */
@@ -438,6 +507,9 @@
   --crossword-print-cell: 2rem;      /* a printed square; colors on paper use --print-paper / --print-ink (Task 641) */
   --wordpath-cell-min: 1.5rem;       /* a letter square's floor: 24 px (WCAG 2.2) at default text, 48 px at 32 px root text, when the grid scrolls */
   --wordpath-letter-inset: 10%;      /* a 6 × 8 board letter's circle sits this far inside its square, leaving room for the joining lines */
+  --hello-stack-tilt-back: -6deg; /* the two cards peeking behind the Hello Cards deck */
+  --hello-stack-tilt-front: 5deg;
+  --wordpath-bleed: calc(var(--spacing) * 6); /* how far the Word Path panel bleeds past its column on phones; the game Frame narrows it to its own gutter */
   --border-wordpath-panel: 1px;      /* the hairline rim of the word path panel (the rendering shows a 1 px light edge) */
   --wordpath-ring: 2px;              /* the copper ring round a picked letter (WordPath.png shows about 2 px at 1440) */
   --wordpath-line: 3px;              /* the line that joins the letters of a word, from circle edge to circle edge */
@@ -628,6 +700,7 @@
     --color-board-given: color-mix(in srgb, #cbb8a4 90%, #6b5243); /* Sand + Bronze, lighter than the tint */
     --color-board-match: #6b5243;    /* Bronze */
     --color-on-board-match: #f9f5ef; /* Ivory */
+    --anatomy-faded-opacity: 0.35;
     --color-board-cell: #cbb8a4;     /* Sand: light squares on the dark page, like Daytime */
     --color-board-ink: #1c1917;      /* Charcoal */
     --color-board-ink-soft: #3a2d24; /* Walnut */
@@ -679,6 +752,23 @@
     /* Evening: --shadow-tint is Charcoal (darker), so raise opacity for visible depth. */
     --shadow-card: 0 1px 3px rgb(var(--shadow-tint) / 0.18), 0 4px 12px rgb(var(--shadow-tint) / 0.28);
     --shadow-card-hover: 0 2px 8px rgb(var(--shadow-tint) / 0.28), 0 12px 28px rgb(var(--shadow-tint) / 0.40);
+
+    /* Games v2 frame tokens (PR #1020 / task-games-v2; D-145) */
+    --game-oxblood: #a0413a;
+    --game-dark-green: #3f8a68;
+    --game-dark-green-light: #52a781;
+    --game-dark-green-deep: #0e5a3d;
+    --game-oxblood-light: #c25951;
+    --game-oxblood-deep: #6e2019;
+
+    --game-frame-sidebar-bg: var(--color-surface); /* Walnut (#3a2d24) */
+    --game-frame-border: var(--color-control);
+    --game-frame-btn-bg: var(--color-surface);
+    --game-frame-btn-border: 1.5px solid var(--color-control);
+    --game-frame-btn-shadow: 0 6px 16px rgb(var(--shadow-tint) / 0.28);
+    --game-frame-popover-bg: var(--color-surface);
+    --game-frame-popover-border: 1px solid var(--color-control);
+    --game-frame-popover-shadow: 0 18px 44px rgb(var(--shadow-tint) / 0.40);
   }
 }
 
@@ -720,6 +810,7 @@
   --color-board-given: color-mix(in srgb, #cbb8a4 90%, #6b5243); /* Sand + Bronze, lighter than the tint */
   --color-board-match: #6b5243;    /* Bronze */
   --color-on-board-match: #f9f5ef; /* Ivory */
+  --anatomy-faded-opacity: 0.35;
   --color-board-cell: #cbb8a4;     /* Sand: light squares on the dark page, like Daytime */
   --color-board-ink: #1c1917;      /* Charcoal */
   --color-board-ink-soft: #3a2d24; /* Walnut */
@@ -771,6 +862,23 @@
   /* Evening: --shadow-tint is Charcoal (darker), so raise opacity for visible depth. */
   --shadow-card: 0 1px 3px rgb(var(--shadow-tint) / 0.18), 0 4px 12px rgb(var(--shadow-tint) / 0.28);
   --shadow-card-hover: 0 2px 8px rgb(var(--shadow-tint) / 0.28), 0 12px 28px rgb(var(--shadow-tint) / 0.40);
+
+  /* Games v2 frame tokens (PR #1020 / task-games-v2; D-145) */
+  --game-oxblood: #a0413a;
+  --game-dark-green: #3f8a68;
+  --game-dark-green-light: #52a781;
+  --game-dark-green-deep: #0e5a3d;
+  --game-oxblood-light: #c25951;
+  --game-oxblood-deep: #6e2019;
+
+  --game-frame-sidebar-bg: var(--color-surface); /* Walnut (#3a2d24) */
+  --game-frame-border: var(--color-control);
+  --game-frame-btn-bg: var(--color-surface);
+  --game-frame-btn-border: 1.5px solid var(--color-control);
+  --game-frame-btn-shadow: 0 6px 16px rgb(var(--shadow-tint) / 0.28);
+  --game-frame-popover-bg: var(--color-surface);
+  --game-frame-popover-border: 1px solid var(--color-control);
+  --game-frame-popover-shadow: 0 18px 44px rgb(var(--shadow-tint) / 0.40);
 }
 
 

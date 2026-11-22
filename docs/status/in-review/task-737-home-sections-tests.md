@@ -1,1 +1,0 @@
-status: Task 737, homepage how-it-works and feature grid tests (#61): built-HTML unit tests check heading order, three ordered steps, two feature cards, real route destinations and token-only styling; no wording or layout changes.

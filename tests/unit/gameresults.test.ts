@@ -56,9 +56,10 @@ describe('private game stats on /play (D-76)', () => {
     expect(loadStats(storage, TODAY)).toEqual({ on: true, stats: [] });
 
     const result = { game: 'pulse', day: '2026-11-01', solved: true, tries: 1 } as const;
+    const vialoResult = { ...result, game: 'vialo' } as const;
     expect(saveStats(storage, [result])).toBe(true);
     expect(JSON.parse(storage.data.get(STATS_STORAGE_KEY)!)).toEqual({ version: 1, results: [result] });
-    expect(loadStats(storage, TODAY)).toEqual({ on: true, stats: [result] });
+    expect(loadStats(storage, TODAY)).toEqual({ on: true, stats: [vialoResult] });
 
     expect(deleteStats(storage)).toBe(true);
     expect(storage.data.has(STATS_STORAGE_KEY)).toBe(false);
@@ -104,9 +105,10 @@ describe('private game stats on /play (D-76)', () => {
     const storage = memoryStorage();
     const old = { game: 'pulse', day: '2025-09-27', solved: true, tries: 2 } as const;
     const edge = { game: 'pulse', day: '2025-09-28', solved: false, tries: 7 } as const;
+    const vialoEdge = { ...edge, game: 'vialo' } as const;
     const recent = { game: 'triage', day: '2026-10-31', solved: true, tries: 0 } as const;
     expect(saveStats(storage, [old, edge, recent])).toBe(true);
-    expect(loadStats(storage, '2026-11-01')).toEqual({ on: true, stats: [edge, recent] });
+    expect(loadStats(storage, '2026-11-01')).toEqual({ on: true, stats: [vialoEdge, recent] });
     // A student who comes back after a long time finds stats still on, with nothing old left.
     expect(loadStats(storage, '2028-01-01')).toEqual({ on: true, stats: [] });
   });

@@ -1,0 +1,1 @@
+status: Task 634, unit tests for the launch-updates pop-up helpers (`src/scripts/signuppopup.ts`): wait boundaries both directions, bad saved values, blocked storage, study and game path matching, report selector. Test-only; no product code change.

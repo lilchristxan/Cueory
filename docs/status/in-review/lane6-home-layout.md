@@ -1,1 +1,0 @@
-status: Lane 6, home at 320px with 32px text: the "get launch updates" heading wraps instead of pushing the page 34px sideways, and the study-mode carousel keeps its arrows whole and on screen (the dots wrap between them); new e2e.

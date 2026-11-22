@@ -32,7 +32,7 @@ const helloCardsAvailable = helloCardsPage(
 ).shown;
 ---
 
-<section id="daily-games" class="games-section" aria-labelledby="games-heading">
+<section id="daily-games" class="games-section" aria-labelledby="games-heading" data-reveal-section>
   <div class="games-container" role="region" aria-roledescription="carousel" aria-label="daily games" data-games-carousel data-carousel-state="settled">
     <div class="games-header">
       <div class="games-nav-slot games-nav-prev">
@@ -575,6 +575,41 @@ const helloCardsAvailable = helloCardsPage(
   .gstatus-sym {
     font-family: var(--font-body);
     font-weight: 700;
+  }
+
+  /* At enlarged text on a phone, the rem-sized playing card must contract to the carousel viewport. Keep the
+   * decorative offscreen track clipped, but never clip the active card's name, description or status. */
+  @media (max-width: 40em) {
+    .gcard {
+      width: min(var(--game-card-width), calc(100vw - 64px));
+      height: auto;
+      aspect-ratio: 280 / 392;
+    }
+
+    .gface {
+      width: calc(100% - (2 * var(--game-card-padding)));
+      height: calc(100% - (2 * var(--game-card-padding)));
+    }
+
+    .gname {
+      height: min(var(--game-face-header-height), 96px);
+    }
+
+    .gname img {
+      max-width: 100%;
+    }
+
+    .gname span {
+      font-size: min(var(--game-serif-name-size), 40px);
+    }
+
+    .gdesc {
+      font-size: min(var(--game-desc-size), 16px);
+    }
+
+    .gstatus {
+      font-size: min(var(--game-status-size), 14px);
+    }
   }
 
   /* Demos */

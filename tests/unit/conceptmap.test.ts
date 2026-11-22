@@ -42,6 +42,10 @@ describe('concept map input', () => {
     const input = [{ ...items[0], concept: '😀'.repeat(200), description: 'a'.repeat(1_000) }];
     expect(parseItems(input)).toEqual(input);
   });
+  it('rejects a concept name at 201 Unicode code points', () => {
+    expect(() => parseItems([{ ...items[0], concept: '😀'.repeat(201) }]))
+      .toThrow('a concept name can have at most 200 characters.');
+  });
   it.each(['concept', 'description'])('rejects combined exam and prediction wording in %s without echoing it', field => {
     for (const value of [
       'Your predicted exam score is 85%.',

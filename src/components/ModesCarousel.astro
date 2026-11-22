@@ -70,7 +70,7 @@ const icons: Record<StudyFeatureIcon, string> = {
   <div data-reveal-section>
   <div class="mx-auto max-w-page px-gutter text-center">
     <!-- HomeV2 and the copy deck: the serif heading in two lines, no eyebrow above it, and the one line under it. -->
-    <h2 id="modes-heading" class="display text-title sm:text-title-lg"><span class="block">one lesson,</span> <span class="block">multiple ways to study</span></h2>
+    <h2 id="modes-heading" class="display text-title wrap-anywhere sm:text-title-lg"><span class="block">one lesson,</span> <span class="block">multiple ways to study</span></h2>
     <p class="mt-3 text-body text-ink-soft">pick the method that fits your brain today.</p>
   </div>
 
@@ -226,10 +226,14 @@ const icons: Record<StudyFeatureIcon, string> = {
     REST_MS,
     RING_MS,
     SETTLE_GRACE_MS,
+    releaseAnimations,
     STEP_MS,
+    autoplayHold,
     canAutoAdvance,
+    illustrationsMayLoop,
     canEnhanceCarousel,
     carouselState,
+    enterMatchesMouseMove,
     type PreviewPhase,
     clipAround,
     flipFrom,
@@ -243,6 +247,7 @@ const icons: Record<StudyFeatureIcon, string> = {
     slideAnnouncement,
     swipeTurn,
     wrap,
+    shouldClearDocumentExit,
   } from '../scripts/carousel';
   import { relabelInfoTip } from '../scripts/infotip';
   import { isCloseKey, wrapFocus } from '../scripts/menu';
@@ -484,15 +489,19 @@ const icons: Record<StudyFeatureIcon, string> = {
       Auto-advance: one countdown, started afresh (the full AUTO_ADVANCE_MS) each time nothing stops it and cleared the
       moment something does, so the vial in front always gets its whole time: after the carousel comes into view, after
       the pointer leaves it or focus moves out, after play. Every change to `state` calls syncAutoplay synchronously,
-      and root[data-autoplay] says whether the countdown is running. Never a free-running interval, whose next tick
-      could land a moment after the carousel came into view or the pointer left it.
+      could land a moment after the carousel came into view or the pointer left it. data-autoplay-hold gives the active
+      hold reason whenever it is off. Never a free-running interval, whose next tick could land a moment after the
+      carousel came into view or the pointer left it.
     */
     const controls = root.querySelector<HTMLElement>('[data-modes-controls]');
-    const finePointer = window.matchMedia('(hover: hover) and (pointer: fine)');
     let countdown = 0;
     function syncAutoplay() {
-      const allowed = canAutoAdvance(state);
+      const hold = autoplayHold(state);
+      const allowed = hold === undefined;
       root!.dataset.autoplay = allowed ? 'on' : 'off';
+      root!.toggleAttribute('data-looping', illustrationsMayLoop(state));
+      if (hold) root!.dataset.autoplayHold = hold;
+      else delete root!.dataset.autoplayHold;
       if (!allowed) {
         window.clearTimeout(countdown);
         countdown = 0;
@@ -502,10 +511,10 @@ const icons: Record<StudyFeatureIcon, string> = {
     }
     function autoAdvance() {
       countdown = 0;
-      // The pointer's real place is checked too, in case a browser left out an enter event: a mouse resting on the
-      // vials or their buttons always holds the vial in front.
-      const resting = finePointer.matches && [track, controls].some((area) => area?.matches(':hover'));
-      if (canAutoAdvance(state) && !resting) goTo(active + 1);
+      // syncAutoplay and this callback intentionally share canAutoAdvance's one event-derived state. A separate
+      // CSS :hover veto can be stale even after the pointer has moved away, leaving the countdown visibly "on" but
+      // unable to advance.
+      if (canAutoAdvance(state)) goTo(active + 1);
       syncAutoplay();
     }
 
@@ -610,19 +619,55 @@ const icons: Record<StudyFeatureIcon, string> = {
 
     // A mouse resting on the cards or their buttons pauses the auto-advance. The words around them don't: the section
     // is taller than many windows, so pausing for the whole of it would stop the auto-advance for good on a computer.
-    const hovered = new Set<HTMLElement>();
+    // Firefox can later replay a trusted pointerenter at an old in-track coordinate after the pointer has already
+    // moved away. Gate the state on an actual pointermove target instead: after a move, a stale enter has no matching
+    // coordinate. A first stationary enter remains genuine, and a scroll reconciles the recorded point with its live
+    // hit target so moving an area out from beneath the mouse clears the hold too.
+    let lastMouseMove: { x: number; y: number } | undefined;
+    const isPauseArea = (target: EventTarget | null) =>
+      target instanceof Node && [track, controls].some((area) => area?.contains(target));
+    const setHovering = (next: boolean) => {
+      if (state.hovering === next) return;
+      state.hovering = next;
+      syncAutoplay();
+    };
+    window.addEventListener('pointermove', (event) => {
+      if (event.pointerType !== 'mouse') return;
+      lastMouseMove = { x: event.clientX, y: event.clientY };
+      setHovering(isPauseArea(event.target));
+    }, { passive: true });
     for (const area of [track, controls]) {
       area?.addEventListener('pointerenter', (event) => {
-        if (event.pointerType === 'mouse') hovered.add(area);
-        state.hovering = hovered.size > 0;
-        syncAutoplay();
-      });
-      area?.addEventListener('pointerleave', () => {
-        hovered.delete(area);
-        state.hovering = hovered.size > 0;
-        syncAutoplay();
+        if (event.pointerType !== 'mouse') return;
+        const enter = { x: event.clientX, y: event.clientY };
+        // A stationary pointer can gain an area when layout moves underneath it. Once a move is known, a stale enter
+        // reports a different coordinate; before the first move, an enter is the only genuine position we have.
+        if (enterMatchesMouseMove(lastMouseMove, enter)) {
+          lastMouseMove = enter;
+          setHovering(true);
+        }
       });
     }
+    window.addEventListener('scroll', () => {
+      if (state.hovering && lastMouseMove) {
+        setHovering(isPauseArea(document.elementFromPoint(lastMouseMove.x, lastMouseMove.y)));
+      }
+    }, { capture: true, passive: true });
+    // There is no final in-window pointermove when the mouse exits into browser chrome. Clear only that genuine
+    // document exit. Firefox can replay a trusted null-relatedTarget exit at an old in-track coordinate after a real
+    // hover; ignore that stale exit only when its old coordinate still hits a pause area. A mismatched exit that is
+    // outside the viewport or outside the pause areas remains genuine. Ordinary handoffs have a related target.
+    window.addEventListener('mouseout', (event) => {
+      if (
+        event.isTrusted &&
+        event.relatedTarget === null &&
+        shouldClearDocumentExit(
+          lastMouseMove,
+          { x: event.clientX, y: event.clientY },
+          isPauseArea(document.elementFromPoint(event.clientX, event.clientY)),
+        )
+      ) setHovering(false);
+    }, { passive: true });
     root.addEventListener('focusin', () => {
       state.focusInside = true;
       syncAutoplay();
@@ -708,6 +753,8 @@ const icons: Record<StudyFeatureIcon, string> = {
       const restWhenDone = (animations: readonly Animation[], limit: number) => {
         const round = previewRound;
         void settle(animations, limit).then(() => {
+          // The grow and the nudge fill nothing, so releasing them changes nothing on screen.
+          releaseAnimations(animations);
           if (round === previewRound && dialog.open) setPreview('open');
         });
       };
@@ -957,13 +1004,24 @@ const icons: Record<StudyFeatureIcon, string> = {
         });
       }
 
-      // Escape while focus is somewhere outside the open dialog (a browser that left it on the page) still closes it the
-      // same way. Inside, the dialog's own keydown handles it, after an open ⓘ has had its turn.
+      // An open ⓘ gets its own Escape first; its panel must close without closing the preview around it.
+      const isOpenInfoTip = (target: EventTarget | null) => {
+        const element = target instanceof Element ? target : null;
+        if (!element) return false;
+        const button = element.closest<HTMLElement>('[data-infotip]');
+        if (button?.getAttribute('aria-expanded') === 'true') return true;
+        const panel = element.closest<HTMLElement>('[data-infotip-panel]');
+        return !!panel && !panel.hidden;
+      };
+
+      // This backs up the dialog listener for every focus location a modal dialog can contain, including Safari's
+      // native Escape route. The dialog listener still handles ordinary keys; capture makes closing independent of
+      // where the browser delivers this one key.
       document.addEventListener('keydown', (event) => {
-        if (!dialog.open || !isCloseKey(event.key) || dialog.contains(event.target as Node | null)) return;
+        if (!dialog.open || event.defaultPrevented || !isCloseKey(event.key) || isOpenInfoTip(event.target)) return;
         event.preventDefault();
         void close();
-      });
+      }, true);
 
       dialog.addEventListener('close', () => {
         previewRound += 1;
@@ -1015,6 +1073,10 @@ const icons: Record<StudyFeatureIcon, string> = {
     background: var(--cueory-copper-glow);
     border: var(--border-vial-arrow) solid var(--cueory-copper-start);
     box-shadow: 0 calc(var(--spacing) * 1) calc(var(--spacing) * 3) rgb(var(--shadow-tint) / 0.16);
+    /* The glow is an opaque color, so the corner button's frosted blur shows nothing here. It only made WebKit blur
+       the turning ring behind each arrow on every frame (#634). */
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
   }
 
   .modes-p6 .vial-arrow:hover {

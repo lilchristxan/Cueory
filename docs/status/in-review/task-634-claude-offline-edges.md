@@ -1,0 +1,1 @@
+status: Task 634, unit tests for the page side of the offline service worker (`src/scripts/offline.ts`): first-visit address rules and the 60 limit, switched-off cleanup failures, insecure and unsupported pages. Test-only; no product code change.

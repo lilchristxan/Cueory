@@ -43,16 +43,17 @@ describe('home page sections fade in once (D-62)', () => {
     expect(called).toBe(false);
   });
 
-  it('keeps a revealed focused target in view after the next frame', () => {
+  it('keeps a revealed focused target in view synchronously without a frame callback', () => {
     const scrollIntoView = vi.fn();
     const target = { scrollIntoView } as unknown as HTMLElement;
     vi.stubGlobal('window', {
-      requestAnimationFrame: (callback: FrameRequestCallback) => callback(0),
+      requestAnimationFrame: vi.fn(),
     });
     vi.stubGlobal('document', { activeElement: target });
 
     keepFocusedTargetInView(target);
 
     expect(scrollIntoView).toHaveBeenCalledWith({ block: 'nearest', inline: 'nearest' });
+    expect(window.requestAnimationFrame).not.toHaveBeenCalled();
   });
 });

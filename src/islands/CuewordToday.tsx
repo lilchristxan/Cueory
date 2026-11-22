@@ -3,10 +3,10 @@ import CuewordGame from './CuewordGame';
 import { crosswordLevels, type CrosswordLevel, type CuewordPuzzle } from './cueword';
 import { dayNumber, puzzleForDay } from './pulse';
 
-interface Props { puzzles: CuewordPuzzle[]; name: string; }
+interface Props { puzzles: CuewordPuzzle[]; name: string; framed?: boolean; }
 const labels: Record<CrosswordLevel, string> = { easy: 'easy', mid: 'mid', hard: 'hard' };
 
-export default function CuewordToday({ puzzles, name }: Props) {
+export default function CuewordToday({ puzzles, name, framed = false }: Props) {
   const [level, setLevel] = useState<CrosswordLevel>('easy');
   const choices = useMemo(
     () => Object.fromEntries(crosswordLevels.map(({ level: option }) => [
@@ -30,7 +30,7 @@ export default function CuewordToday({ puzzles, name }: Props) {
           ))}
         </div>
       </div>
-      {puzzle ? <CuewordGame key={level + '-' + puzzle.id} puzzle={puzzle} name={name} /> : <p role="alert">no {level} sample puzzle today.</p>}
+      {puzzle ? <CuewordGame key={level + '-' + puzzle.id} puzzle={puzzle} name={name} framed={framed} /> : <p role="alert">no {level} sample puzzle today.</p>}
     </section>
   );
 }

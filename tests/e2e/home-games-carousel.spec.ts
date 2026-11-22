@@ -388,7 +388,7 @@ test.describe('home games carousel (Home v2 Lane 5)', () => {
     expect(transform).toMatch(/translateX\(-616px\)/);
   });
 
-  test('phone (390px) with 32px root font size: header reflows without horizontal overflow', async ({ browser }, testInfo) => {
+  test('phone (390px) with 32px root font size: header and active card contents fit', async ({ browser }, testInfo) => {
     test.skip(!isDesktopOfEachEngine(testInfo), 'runs once per browser engine');
 
     const context = await browser.newContext({
@@ -419,6 +419,9 @@ test.describe('home games carousel (Home v2 Lane 5)', () => {
       const heading = section.locator('#games-heading');
       const prevBtn = section.locator('[data-games-prev]');
       const nextBtn = section.locator('[data-games-next]');
+      const carousel = section.locator('[data-games-carousel]');
+      const viewport = section.locator('[data-games-car]');
+      const cards = section.locator('[data-game-card]');
 
       await expect(heading).toBeVisible();
       await expect(prevBtn).toBeVisible();
@@ -450,9 +453,35 @@ test.describe('home games carousel (Home v2 Lane 5)', () => {
       expect(headerOverflow).toBeLessThanOrEqual(0);
 
       // Prev and next buttons can be clicked
-      await nextBtn.click();
-      const secondCard = section.locator('[data-game-card]').nth(1);
-      await expect(secondCard).toHaveClass(/on/);
+      const checkActiveCard = async () => {
+        await expect(carousel).toHaveAttribute('data-carousel-state', 'settled');
+        const active = section.locator('[data-game-card].on');
+        await expect(active).toHaveCount(1);
+        const cardBox = await active.boundingBox();
+        const viewportBox = await viewport.boundingBox();
+        expect(cardBox).not.toBeNull();
+        expect(viewportBox).not.toBeNull();
+        expect(cardBox!.width).toBeLessThanOrEqual(viewportBox!.width + 1);
+        expect(cardBox!.x).toBeGreaterThanOrEqual(viewportBox!.x - 1);
+        expect(cardBox!.x + cardBox!.width).toBeLessThanOrEqual(viewportBox!.x + viewportBox!.width + 1);
+
+        for (const selector of ['.gface', '.gname', '.gdesc', '.gstatus']) {
+          const content = active.locator(selector);
+          await expect(content).toBeVisible();
+          const contentBox = await content.boundingBox();
+          expect(contentBox).not.toBeNull();
+          expect(contentBox!.x).toBeGreaterThanOrEqual(cardBox!.x - 1);
+          expect(contentBox!.x + contentBox!.width).toBeLessThanOrEqual(cardBox!.x + cardBox!.width + 1);
+          expect(contentBox!.y).toBeGreaterThanOrEqual(cardBox!.y - 1);
+          expect(contentBox!.y + contentBox!.height).toBeLessThanOrEqual(cardBox!.y + cardBox!.height + 1);
+        }
+      };
+
+      await checkActiveCard();
+      for (let step = 0; step < await cards.count(); step++) {
+        await nextBtn.click();
+        await checkActiveCard();
+      }
     } finally {
       await context.close();
     }
