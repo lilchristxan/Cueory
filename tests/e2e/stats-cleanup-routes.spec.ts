@@ -24,7 +24,8 @@ for (const path of ['/play', '/play/pillo', '/play/sudoku']) {
       } catch { /* optional storage */ }
     }, { old, recent });
     await page.goto(path);
-    await expect(page.getByTestId('game-stats').getByRole('heading', { name: 'your stats' })).toBeVisible();
+    const routeSurface = path === '/play/sudoku' ? page.getByTestId('game-frame-stats') : page.getByTestId('game-stats').getByRole('heading', { name: 'your stats' });
+    await expect(routeSurface).toBeVisible();
     await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('cueory-sudoku-stats') ?? 'null')?.solves))
       .toEqual([recent]);
   });
@@ -42,7 +43,8 @@ for (const path of ['/play', '/play/pillo', '/play/sudoku']) {
       } catch { /* optional storage */ }
     }, old);
     await page.goto(path);
-    await expect(page.getByTestId('game-stats').getByRole('heading', { name: 'your stats' })).toBeVisible();
+    const routeSurface = path === '/play/sudoku' ? page.getByTestId('game-frame-stats') : page.getByTestId('game-stats').getByRole('heading', { name: 'your stats' });
+    await expect(routeSurface).toBeVisible();
     await expect.poll(() => page.evaluate(() => localStorage.getItem('cueory-sudoku-stats'))).toBeNull();
   });
 }

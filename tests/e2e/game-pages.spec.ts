@@ -10,10 +10,10 @@ import { markPanelsSeen } from './clock';
  */
 
 const games = [
-  { path: '/play/vialo', name: 'vialo', testId: 'vialo', id: 'vialo' },
-  { path: '/play/sudoku', name: 'sudoku', testId: 'sudoku', id: 'triage' },
-  { path: '/play/crossword', name: 'crossword', testId: 'cueword', id: 'cueword' },
-  { path: '/play/word-path', name: 'piccline', testId: 'suture', id: 'suture' },
+  { path: '/play/vialo', name: 'vialo', testId: 'vialo', id: 'vialo', framed: false },
+  { path: '/play/sudoku', name: 'sudoku', testId: 'sudoku', id: 'triage', framed: true },
+  { path: '/play/crossword', name: 'crossword', testId: 'cueword', id: 'cueword', framed: true },
+  { path: '/play/word-path', name: 'piccline', testId: 'suture', id: 'suture', framed: false },
 ] as const;
 const others = (testId: string) => games.map((game) => game.testId).filter((other) => other !== testId);
 
@@ -50,9 +50,10 @@ for (const game of games) {
       await expect(back).toHaveAttribute('href', '/play');
       const box = (await back.boundingBox())!;
       expect(box.height).toBeGreaterThanOrEqual(44);
-      test.skip(game.name === 'crossword' && await page.getByTestId('game-settings-button').count() === 0, 'crossword controls are not rendered in this build');
-      await expect(page.getByTestId('game-settings-button')).toBeVisible();
-      await expect(page.getByTestId('game-stats')).toBeVisible();
+      const settings = game.framed ? page.getByTestId('game-frame-gear') : page.getByTestId('game-settings-button');
+      test.skip(game.name === 'crossword' && await settings.count() === 0, 'crossword controls are not rendered in this build');
+      await expect(settings).toBeVisible();
+      await expect(game.framed ? page.getByTestId('game-frame-stats') : page.getByTestId('game-stats')).toBeVisible();
       // The share tags stay those of the game, so a shared result still previews as before.
       await expect(page).toHaveTitle(new RegExp(`^${game.name}`));
       expect(await page.locator('meta[property="og:image"]').getAttribute('content')).toBe('https://cueory.app/share/games-scene.png');
@@ -61,12 +62,12 @@ for (const game of games) {
 
     test('the keyboard reaches the back link, the settings and the game\'s own "?"', async ({ page }) => {
       await page.goto(game.path);
-      test.skip(game.name === 'crossword' && await page.getByTestId(game.testId).getByRole('button', { name: `how to play ${game.name}` }).count() === 0, 'crossword Help is not rendered in this build');
+      const help = game.framed ? page.getByTestId('game-frame-help-button') : page.getByTestId(game.testId).getByRole('button', { name: `how to play ${game.name}` });
+      test.skip(game.name === 'crossword' && await help.count() === 0, 'crossword Help is not rendered in this build');
       await expect(page.getByTestId(game.testId)).toBeVisible();
       const back = page.getByRole('link', { name: 'all games' });
       await back.focus();
       await expect(back).toBeFocused();
-      const help = page.getByTestId(game.testId).getByRole('button', { name: `how to play ${game.name}` });
       for (let step = 0; step < 40 && !(await help.evaluate((node) => node === document.activeElement)); step++) await page.keyboard.press('Tab');
       await expect(help).toBeFocused();
       await page.keyboard.press('Enter');

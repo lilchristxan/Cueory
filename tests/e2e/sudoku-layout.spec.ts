@@ -94,7 +94,7 @@ for (const scheme of ['light', 'dark'] as const) {
       expect(box.left).toBeGreaterThanOrEqual(rowBox.left - 0.5);
       expect(box.right).toBeLessThanOrEqual(Math.min(rowBox.right, width) + 0.5);
     }
-    for (const control of [game(page).getByRole('checkbox', { name: /auto cues/ }), game(page).getByRole('button', { name: /settings/ })]) {
+    for (const control of [game(page).getByRole('checkbox', { name: /auto cues/ }), page.getByTestId('game-frame-gear')]) {
       await expect(control).toBeVisible();
       const box = await rect(control);
       expect(box.left).toBeGreaterThanOrEqual(0);
@@ -102,23 +102,14 @@ for (const scheme of ['light', 'dark'] as const) {
     }
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 
-    // The chosen level shows a check mark and bold text, not only a darker fill.
-    await game(page).getByRole('button', { name: 'medium' }).click();
-    const medium = game(page).getByRole('button', { name: 'medium' });
-    const easy = game(page).getByRole('button', { name: 'easy' });
-    await expect(medium).toHaveAttribute('aria-pressed', 'true');
-    await expect(medium.locator('.segmented-check')).toHaveText('✓');
-    await expect(medium.locator('.segmented-check')).toBeVisible();
-    await expect(medium).toHaveCSS('font-weight', '700');
-    await expect(easy).toHaveAttribute('aria-pressed', 'false');
-    await expect(easy.locator('.segmented-check')).toHaveCount(0);
-    expect(await easy.evaluate((element) => getComputedStyle(element).fontWeight)).not.toBe('700');
-
-    if (scheme === 'light') {
-      for (const label of ['easy', 'medium', 'hard']) {
-        const level = game(page).getByRole('button', { name: label, exact: true });
-        const look = await painted(level);
-        expect(contrast(look.color, look.background), `${label} Light difficulty text`).toBeGreaterThanOrEqual(4.5);
+    // The selected level remains explicit in the framed difficulty picker.
+    const difficulty = page.getByTestId('game-frame-sudoku-difficulty');
+    for (const level of ['easy', 'medium', 'hard']) {
+      await difficulty.selectOption(level);
+      await expect(difficulty).toHaveValue(level);
+      if (scheme === 'light') {
+        const look = await painted(difficulty);
+        expect(contrast(look.color, look.background), `${level} Light difficulty text`).toBeGreaterThanOrEqual(4.5);
       }
     }
 
@@ -144,8 +135,8 @@ for (const scheme of ['light', 'dark'] as const) {
     expect(contrast(status.color, status.background), `${scheme} status text`).toBeGreaterThanOrEqual(4.5);
 
     // Settings fits the screen, scrolls inside itself, and its theme rows drive the footer's theme switch.
-    await game(page).getByRole('button', { name: /settings/ }).click();
-    const dialog = game(page).getByRole('dialog', { name: 'settings' });
+    await page.getByTestId('game-frame-gear').click();
+    const dialog = page.getByRole('dialog', { name: 'sudoku settings' });
     await expect(dialog).toBeVisible();
     const card = dialog.locator('.game-settings');
     const cardBox = await rect(card);
@@ -168,7 +159,7 @@ for (const scheme of ['light', 'dark'] as const) {
 
     await page.keyboard.press('Escape');
     await expect(dialog).toBeHidden();
-    await expect(game(page).getByRole('button', { name: /settings/ })).toBeFocused();
+    await expect(page.getByTestId('game-frame-gear')).toBeFocused();
   });
 }
 
@@ -208,11 +199,12 @@ test('sudoku keeps usable cells in a contained scroll area at 320px with 32px ro
 // stats row header all use the same LEVEL_LABELS, so nobody hears "mid" while the button says "medium".
 test('the medium level is announced and listed as "medium"', async ({ page }) => {
   await page.goto('/play/sudoku');
-  const medium = game(page).getByRole('button', { name: 'medium', exact: true });
-  await medium.click();
-  await expect(medium).toHaveAttribute('aria-pressed', 'true');
+  const medium = page.getByTestId('game-frame-sudoku-difficulty');
+  await medium.selectOption('medium');
+  await expect(medium).toHaveValue('medium');
   await expect(game(page).getByTestId('sudoku-live')).toHaveText(/^medium puzzle ready\./);
-  await game(page).getByRole('button', { name: 'sudoku stats' }).click();
+  await page.getByTestId('game-frame-gear').click();
+  await expect(page.getByRole('dialog', { name: 'sudoku settings' })).toBeVisible();
   await expect(page.getByRole('rowheader', { name: 'medium', exact: true })).toBeVisible();
   await expect(page.getByRole('rowheader', { name: 'mid', exact: true })).toHaveCount(0);
 });

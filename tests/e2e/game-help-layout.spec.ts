@@ -10,7 +10,7 @@ import { markPanelsSeen } from './clock';
 // Each game is on its own page (2026-11-17).
 const games = [
   { testId: 'pulse', name: 'pillo', path: '/play/pillo' },
-  { testId: 'sudoku', name: 'sudoku', path: '/play/sudoku' },
+  { testId: 'sudoku', name: 'sudoku', path: '/play/sudoku', framed: true },
   { testId: 'cueword', name: 'crossword', path: '/play/crossword' },
   { testId: 'suture', name: 'piccline', path: '/play/word-path' },
 ] as const;
@@ -61,7 +61,9 @@ for (const [width, height] of screens) {
       for (const game of games) {
         await page.goto(game.path);
         await page.evaluate((size) => document.documentElement.style.setProperty('font-size', `${size}px`, 'important'), font);
-        const button = page.getByTestId(game.testId).getByRole('button', { name: `how to play ${game.name}` });
+        const button = game.framed
+          ? page.getByTestId('game-frame-help-button')
+          : page.getByTestId(game.testId).getByRole('button', { name: `how to play ${game.name}` });
         test.skip(game.name === 'crossword' && await button.count() === 0, 'crossword Help is not rendered in this build');
         await button.click();
         const dialog = page.getByRole('dialog', { name: `how to play ${game.name}` });
