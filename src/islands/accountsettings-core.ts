@@ -79,12 +79,19 @@ export function adaptersFor(client: AccountClient): AccountAdapters {
 }
 
 function lazyExportReader(client: SupabaseExportClient): ExportReader {
-  const loaded = import('./exportload').then(({ fromSupabase }) => fromSupabase(client));
+  let loaded: Promise<ExportReader> | undefined;
+  const load = () => {
+    loaded ??= import('./exportload').then(({ fromSupabase }) => fromSupabase(client)).catch(error => {
+      loaded = undefined;
+      throw error;
+    });
+    return loaded;
+  };
   return {
-    select: (...args) => loaded.then(reader => reader.select(...args)),
-    selectPages: (...args) => ({ async *[Symbol.asyncIterator]() { yield* (await loaded).selectPages(...args); } }),
-    rpc: (...args) => loaded.then(reader => reader.rpc(...args)),
-    user: (...args) => loaded.then(reader => reader.user(...args)),
+    select: (...args) => load().then(reader => reader.select(...args)),
+    selectPages: (...args) => ({ async *[Symbol.asyncIterator]() { yield* (await load()).selectPages(...args); } }),
+    rpc: (...args) => load().then(reader => reader.rpc(...args)),
+    user: (...args) => load().then(reader => reader.user(...args)),
   };
 }
 

@@ -195,8 +195,15 @@ function DataSection({ adapters, userId, email, onStale }: {
       setBusy(false);
       return setMessage(accountMessage('export-failed'));
     }
-    const { prepareDownloadFor } = await import('./accountsettings');
-    const files = await prepareDownloadFor(adapters, userId, { email, signInDetails, storage: browserStorage(), today }, current.signal);
+    let files: Awaited<ReturnType<(typeof import('./accountsettings'))['prepareDownloadFor']>>;
+    try {
+      const { prepareDownloadFor } = await import('./accountsettings');
+      files = await prepareDownloadFor(adapters, userId, { email, signInDetails, storage: browserStorage(), today }, current.signal);
+    } catch {
+      if (current.state() !== 'open') return stopped(current);
+      setBusy(false);
+      return setMessage(accountMessage('export-failed'));
+    }
     if (current.state() !== 'open' || (!files.ok && 'changed' in files)) return stopped(current);
     setBusy(false);
     if (!files.ok) return setMessage(files.message);
@@ -247,9 +254,13 @@ function DeleteSection({ adapters, userId, email, busy, onStale, onDeleted }: {
     setOpen(true);
     setSummary({ kind: 'loading' });
     requestAnimationFrame(() => confirm.current?.focus());
-    const { deletionLines } = await import('./accountsettings');
-    const result = await deletionLines(adapters.reader, { email, storage: browserStorage(), today: localDay(new Date()) });
-    setSummary(result.ok ? { kind: 'lines', lines: result.lines } : { kind: 'failed', message: result.message });
+    try {
+      const { deletionLines } = await import('./accountsettings');
+      const result = await deletionLines(adapters.reader, { email, storage: browserStorage(), today: localDay(new Date()) });
+      setSummary(result.ok ? { kind: 'lines', lines: result.lines } : { kind: 'failed', message: result.message });
+    } catch {
+      setSummary({ kind: 'failed', message: accountMessage('summary-failed') });
+    }
   };
 
   const close = () => {
@@ -276,6 +287,8 @@ function DeleteSection({ adapters, userId, email, busy, onStale, onDeleted }: {
         otherAccountNow: () => otherAccountNow(adapters, userId), deleteAccount: adapters.deleteAccount,
         signOut: adapters.signOut, local: browserStorage(), session: tabStorage(),
       });
+    } catch {
+      result = { kind: 'failed', message: accountMessage('delete-failed') };
     } finally {
       stop?.();
       busy.current = false;
