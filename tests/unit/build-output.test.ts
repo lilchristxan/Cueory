@@ -80,6 +80,7 @@ const initialJsBudget = {
   'play/crossword.html': 121556,
   'play/pillo.html': 119797,
   'play/sudoku.html': 122156,
+  'play/vialo.html': 124013,
   'play/word-path.html': 120824,
   'play/piccline.html': 120824, // Canonical Piccline keeps Word Path's same game bundle baseline.
   'preview/admin-flags.html': 92161,

@@ -1,1 +1,0 @@
-status: Adds tests/unit/pillo-originality.test.ts, a guard that pillo and puzzle tokens, components and the two pillo images never use green or yellow hues, and that src, content, public and docs name no third-party puzzle outside lines that forbid them. Test-only, no source change; ready for review.

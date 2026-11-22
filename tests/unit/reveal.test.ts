@@ -1,5 +1,9 @@
-import { describe, expect, it } from 'vitest';
-import { revealInstantly, waitsForReveal } from '../../src/scripts/reveal';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { keepFocusedTargetInView, revealInstantly, waitsForReveal } from '../../src/scripts/reveal';
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
 
 describe('home page sections fade in once (D-62)', () => {
   it('only a section that starts below the window waits to fade in; one already on screen never hides', () => {
@@ -37,5 +41,19 @@ describe('home page sections fade in once (D-62)', () => {
     revealInstantly(section, observer);
     expect(section.dataset.reveal).toBe('shown');
     expect(called).toBe(false);
+  });
+
+  it('keeps a revealed focused target in view synchronously without a frame callback', () => {
+    const scrollIntoView = vi.fn();
+    const target = { scrollIntoView } as unknown as HTMLElement;
+    vi.stubGlobal('window', {
+      requestAnimationFrame: vi.fn(),
+    });
+    vi.stubGlobal('document', { activeElement: target });
+
+    keepFocusedTargetInView(target);
+
+    expect(scrollIntoView).toHaveBeenCalledWith({ block: 'nearest', inline: 'nearest' });
+    expect(window.requestAnimationFrame).not.toHaveBeenCalled();
   });
 });

@@ -77,4 +77,45 @@ describe('reveal section runtime guards', () => {
     expect(section.dataset.reveal).toBe('instant');
     expect(unobserved).toContain(section);
   });
+
+  it('aligns a focused target in a waiting section in the focusin turn, without waiting for a frame', () => {
+    const listeners: Record<string, (event?: FocusEvent) => void> = {};
+    const scrollIntoView = vi.fn();
+    const requestAnimationFrame = vi.fn();
+    class AvailableElement {
+      scrollIntoView = scrollIntoView;
+    }
+    const target = new AvailableElement() as unknown as HTMLElement;
+    class AvailableObserver {
+      observe() {}
+      unobserve() {}
+    }
+    const section = {
+      dataset: { reveal: '' },
+      getBoundingClientRect: () => ({ top: 1000 }),
+      addEventListener: (type: string, fn: (event?: FocusEvent) => void) => {
+        listeners[type] = fn;
+      },
+      removeEventListener: () => {},
+    };
+    vi.stubGlobal('IntersectionObserver', AvailableObserver);
+    vi.stubGlobal('HTMLElement', AvailableElement);
+    vi.stubGlobal('window', {
+      innerHeight: 800,
+      matchMedia: () => ({ matches: false }),
+      requestAnimationFrame,
+      IntersectionObserver: AvailableObserver,
+    });
+    vi.stubGlobal('document', {
+      activeElement: target,
+      querySelectorAll: () => [section],
+    });
+
+    revealSections();
+    listeners.focusin({ target } as unknown as FocusEvent);
+
+    expect(section.dataset.reveal).toBe('instant');
+    expect(scrollIntoView).toHaveBeenCalledWith({ block: 'nearest', inline: 'nearest' });
+    expect(requestAnimationFrame).not.toHaveBeenCalled();
+  });
 });

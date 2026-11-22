@@ -95,6 +95,11 @@ describe('review session words', () => {
     expect(summaryInWords(state)).toContain('next review: tomorrow.');
     expect(summaryInWords(state, '2026-11-20')).toContain('next review: in 3 days.');
   });
+
+  it('validates an explicit summary exam date even for an empty session', () => {
+    expect(() => summaryInWords(startSession([], {}, today), '2026-02-30')).toThrow('calendar day');
+  });
+
   it('does not invent score predictions or pressure', () => {
     expect(summaryInWords(answer(startSession(cards.slice(0, 1), {}, today), 'knew'))).not.toMatch(/streak|score|chance|percent|%|predict/i);
   });

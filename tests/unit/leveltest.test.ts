@@ -164,4 +164,11 @@ describe('unit level-test question errors', () => {
     const bank = [{ ...questions[0]!, id: '😀'.repeat(200), concept: 'a'.repeat(200) }];
     expect(nextInLevelTest(bank, [], 0)).toBe(bank[0]!.id);
   });
+
+  it('counts astral concept names by code point at the limit', () => {
+    const atLimit = [{ ...questions[0]!, concept: '😀'.repeat(200) }];
+    const overLimit = [{ ...questions[0]!, concept: '😀'.repeat(201) }];
+    expect(nextInLevelTest(atLimit, [], 0)).toBe(atLimit[0]!.id);
+    expect(() => nextInLevelTest(overLimit, [], 0)).toThrow('a concept name can have at most 200 characters.');
+  });
 });

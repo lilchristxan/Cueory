@@ -19,6 +19,18 @@ export function revealInstantly(section: HTMLElement, observer?: Pick<Intersecti
   }
 }
 
+/**
+ * Once a waiting section has been made visible, align the still-focused target
+ * against its final (untranslated) layout. This must happen in the focus-in
+ * turn: WebKit can defer an animation frame while leaving the target below the
+ * viewport edge.
+ */
+export function keepFocusedTargetInView(target: HTMLElement): void {
+  if (document.activeElement === target) {
+    target.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  }
+}
+
 export function revealSections(): void {
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches || !('IntersectionObserver' in window)) return;
   const observer = new IntersectionObserver(
@@ -39,10 +51,14 @@ export function revealSections(): void {
   for (const section of document.querySelectorAll<HTMLElement>('[data-reveal-section]')) {
     if (!waitsForReveal(section.getBoundingClientRect().top, window.innerHeight)) continue;
     section.dataset.reveal = 'waiting';
-    const onFocusIn = () => {
+    const onFocusIn = (event?: FocusEvent) => {
       if (section.dataset.reveal === 'waiting') {
         revealInstantly(section, observer);
         section.removeEventListener('focusin', onFocusIn);
+        const target = event?.target;
+        if (target && typeof HTMLElement !== 'undefined' && target instanceof HTMLElement) {
+          keepFocusedTargetInView(target);
+        }
       }
     };
     section.addEventListener('focusin', onFocusIn);

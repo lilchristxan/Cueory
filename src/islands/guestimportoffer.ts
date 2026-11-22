@@ -91,6 +91,12 @@ export interface AcceptOptions {
   today: string;
   cardsDb: GuestImportDb;
   plansDb: ExamPlanDb;
+  /**
+   * Reads made as the currently signed-in account. The database's existing RLS policies decide which rows are
+   * visible; this adapter never supplies a user ID. It closes the small window where another tab's confirmed
+   * database write is visible before its local completion marker arrives in this tab.
+   */
+  completionDb?: ImportCompletionDb;
   lock?: LockRunner;
   /**
    * Who the shared client is signed in as right now (read fresh from its session), or null when signed out.
@@ -102,7 +108,8 @@ export interface AcceptOptions {
 
 export type AcceptOutcome =
   | { kind: 'done'; contents: OfferContents }
-  | { kind: 'handled' }
+  /** An existing marker or nothing left to import stopped this request without database writes. */
+  | { kind: 'handled'; reason: 'imported' | 'declined' | 'nothing' }
   | { kind: 'account-changed' }
   | { kind: 'error'; message: string };
 
@@ -114,14 +121,58 @@ export function sessionUserId(session: { user?: { id?: unknown } | null } | null
 
 const RETRY = "that didn't work. please try again.";
 
+type Completion = 'complete' | 'partial' | 'error';
+
+/**
+ * Check only the rows this device would import. A row from the signed-in account is enough for a card: importing
+ * guest progress must not overwrite a newer review state. An exam plan must also retain the exact requested date.
+ */
+async function completionOf(
+  db: ImportCompletionDb,
+  progress: Progress,
+  idMap: IdMap,
+  today: string,
+  wanted: OfferContents,
+): Promise<Completion> {
+  const candidate = examPlanRow(progress.onboarding, today);
+  if (wanted.examPlan && !candidate.ok) return 'partial';
+
+  let rows: GuestImportRow[] = [];
+  if (wanted.cards) {
+    try {
+      rows = importRows(progress, idMap, today).rows;
+    } catch {
+      return 'partial';
+    }
+  }
+
+  if (candidate.ok) {
+    const plans = await db.readPlans(candidate.row.course);
+    if (plans.error || !plans.data) return 'error';
+    if (!plans.data.some((plan) => plan.course === candidate.row.course && plan.exam_date === candidate.row.exam_date)) {
+      return 'partial';
+    }
+  }
+
+  if (rows.length) {
+    const cards = await db.readCards(rows.map((row) => row.item_id));
+    if (cards.error || !cards.data) return 'error';
+    const present = new Set(cards.data.map((card) => card.item_id));
+    if (rows.some((row) => !present.has(row.item_id))) return 'partial';
+  }
+
+  return 'complete';
+}
+
 async function acceptLocked({
-  storage, userId, idMap, today, cardsDb, plansDb, currentUserId,
+  storage, userId, idMap, today, cardsDb, plansDb, completionDb, currentUserId,
 }: AcceptOptions): Promise<AcceptOutcome> {
   if (!storage || !userId) return { kind: 'error', message: RETRY };
   const key = markerKey(userId);
   try {
     // Checked again inside the lock: another tab may have finished while this one waited.
-    if (storage.getItem(key) !== null) return { kind: 'handled' };
+    const existing = storage.getItem(key);
+    if (existing !== null) return { kind: 'handled', reason: existing === DECLINED_MARKER ? 'declined' : 'imported' };
   } catch {
     return { kind: 'error', message: RETRY };
   }
@@ -130,7 +181,23 @@ async function acceptLocked({
 
   const progress = readProgress(storage);
   const wanted = contentsOf(progress, idMap, today);
-  if (!wanted.cards && !wanted.examPlan) return { kind: 'handled' };
+  if (!wanted.cards && !wanted.examPlan) return { kind: 'handled', reason: 'nothing' };
+
+  if (completionDb) {
+    const completion = await completionOf(completionDb, progress, idMap, today, wanted);
+    if (completion === 'error') return { kind: 'error', message: RETRY };
+    // Reads and writes both use the shared signed-in client. Do not mark the old account after a switch that
+    // happened while its RLS-scoped reads were in flight.
+    if ((await currentUserId()) !== userId) return { kind: 'account-changed' };
+    if (completion === 'complete') {
+      try {
+        storage.setItem(key, IMPORTED_MARKER);
+      } catch {
+        return { kind: 'error', message: RETRY };
+      }
+      return { kind: 'handled', reason: 'imported' };
+    }
+  }
 
   // The exam plan goes first: saving it again on a retry only rewrites the same date.
   if (wanted.examPlan) {
@@ -185,6 +252,39 @@ export interface ImportClient {
         select(columns: 'user_id'): PromiseLike<{ data: { user_id: string }[] | null; error: { code?: string; message?: string } | null }>;
       };
     };
+  };
+}
+
+type CompletionReply<Row> = { data: Row[] | null; error: { code?: string; message?: string } | null };
+
+/** The two existing SELECT grants, intentionally without user_id: RLS supplies the signed-in account boundary. */
+export interface ImportCompletionClient {
+  from(table: 'exam_plans'): {
+    select(columns: 'course,exam_date'): {
+      eq(column: 'course', value: string): PromiseLike<CompletionReply<{ course: string; exam_date: string }>>;
+    };
+  };
+  from(table: 'review_state'): {
+    select(columns: 'item_id'): {
+      in(column: 'item_id', values: string[]): PromiseLike<CompletionReply<{ item_id: string }>>;
+    };
+  };
+}
+
+export interface ImportCompletionDb {
+  readPlans(course: string): Promise<CompletionReply<{ course: string; exam_date: string }>>;
+  readCards(itemIds: string[]): Promise<CompletionReply<{ item_id: string }>>;
+}
+
+/** RLS-scoped reads for checking a completed import after another tab has released the shared lock. */
+export function completionDbFrom(client: ImportCompletionClient): ImportCompletionDb {
+  return {
+    async readPlans(course) {
+      return client.from('exam_plans').select('course,exam_date').eq('course', course);
+    },
+    async readCards(itemIds) {
+      return client.from('review_state').select('item_id').in('item_id', itemIds);
+    },
   };
 }
 

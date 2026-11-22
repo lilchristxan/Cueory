@@ -70,6 +70,7 @@ const ALWAYS_HELD_PREFIXES = [
 ];
 const ALWAYS_HELD_FILES = new Set([
   'automation.json',
+  '.node-version', // The Node every build and test runs on; nothing else reads this file, so the bot can't check it (5 Nov audit).
   'scripts/staging_automerge.ts',
   'CLAUDE.md',
   'AGENTS.md',
@@ -149,11 +150,11 @@ function isSensitiveAuthSource(path: string): boolean {
 }
 
 /**
- * Also held once the site is live: the rest of the brief's sensitive list, plus the Node version every build uses and
- * the newsletter form settings (AGENTS.md sensitive areas).
+ * Also held once the site is live: the rest of the brief's sensitive list and the newsletter form settings (AGENTS.md
+ * sensitive areas). The Node version moved to the always-held files on 5 Nov 2026.
  */
 const LAUNCHED_HELD_PREFIXES = ['brand-source/', 'public/brand/'];
-const LAUNCHED_HELD_FILES = new Set(['.node-version']);
+const LAUNCHED_HELD_FILES = new Set<string>();
 /** A dependency list anywhere in the tree counts, not just the root one. */
 const LAUNCHED_HELD_BASENAMES = new Set(['package.json', 'package-lock.json']);
 

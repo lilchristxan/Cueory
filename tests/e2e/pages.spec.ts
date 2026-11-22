@@ -1,6 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { writeFile } from 'node:fs/promises';
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page, type TestInfo } from '@playwright/test';
 import { accountLaunch, accountsOpen, menuSmallLinks, newsletter, showsHeroJoin, socials } from '../../src/config/site';
 import { visibleFooterLinks } from '../../src/config/legalfooter';
 import { REST_MS } from '../../src/scripts/carousel';
@@ -33,6 +33,182 @@ async function openFooterLinks(page: Page) {
 const middleCard = (page: Page) =>
   page.locator('#ways-to-study [data-mode-card][data-offset="0"]').getAttribute('data-name');
 
+/** Failure-only Firefox and WebKit desktop evidence for the carousel autoplay assertion. */
+async function installAutoplayPointerParkDiagnostic(page: Page) {
+  await page.addInitScript(() => {
+    type Rect = { left: number; top: number; right: number; bottom: number; width: number; height: number } | null;
+    type Target = { tag: string | null; id: string | null; mode: string | null };
+    type Detail = {
+      event?: string;
+      eventT?: number;
+      trusted?: boolean;
+      pointerType?: string;
+      x?: number;
+      y?: number;
+      target?: Target;
+      related?: Target;
+      hit?: Target;
+      trackHover?: boolean;
+      controlsHover?: boolean;
+    };
+    type Entry = {
+      phase: string;
+      t: number;
+      autoplay: string | null;
+      hold: string | null;
+      active: string | null;
+      track: Rect;
+      viewport: { width: number; height: number };
+      intersection: number | null;
+      visibility: string;
+      reducedMotion: boolean;
+      detail?: Detail;
+    };
+    type ProbeWindow = Window & { __cueoryAutoplayPointerParkDiagnostic?: { entries: Entry[]; mark: (phase: string) => void } };
+    const entries: Entry[] = [];
+    const cap = 120;
+    let intersection: number | null = null;
+    let postHover = false;
+    let lastMouse: { x: number; y: number } | undefined;
+    const target = (value: EventTarget | null): Target => {
+      const element = value instanceof Element ? value : null;
+      return {
+        tag: element?.tagName.toLowerCase() ?? null,
+        id: element?.id ?? null,
+        mode: element?.closest<HTMLElement>('[data-mode-card]')?.dataset.name ?? null,
+      };
+    };
+    const push = (entry: Entry) => {
+      entries.push(entry);
+      if (entries.length > cap) entries.splice(0, entries.length - cap);
+    };
+    const sample = () => {
+      const root = document.querySelector<HTMLElement>('[data-modes]');
+      const track = root?.querySelector<HTMLElement>('[data-modes-track]') ?? null;
+      const rect = track?.getBoundingClientRect();
+      return {
+        autoplay: root?.dataset.autoplay ?? null,
+        hold: root?.dataset.autoplayHold ?? null,
+        active: root?.querySelector<HTMLElement>('[data-mode-card][data-offset="0"]')?.dataset.name ?? null,
+        track: rect ? { left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom, width: rect.width, height: rect.height } : null,
+        viewport: { width: window.innerWidth, height: window.innerHeight },
+        intersection,
+        visibility: document.visibilityState,
+        reducedMotion: window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+      };
+    };
+    const note = (phase: string, detail?: Detail) => {
+      push({ phase, t: performance.now(), ...sample(), detail });
+    };
+    const notePostDispatch = (phase: string, detail: Detail, track: HTMLElement, controls: HTMLElement | null) => {
+      window.setTimeout(() => {
+        const hit = lastMouse ? document.elementFromPoint(lastMouse.x, lastMouse.y) : null;
+        note(`${phase}:post-dispatch`, {
+          ...detail,
+          hit: target(hit),
+          trackHover: track.matches(':hover'),
+          controlsHover: controls?.matches(':hover') ?? false,
+        });
+      }, 0);
+    };
+    (window as ProbeWindow).__cueoryAutoplayPointerParkDiagnostic = {
+      entries,
+      mark: (phase) => {
+        if (phase === 'intentional-hover:before') postHover = true;
+        note(phase);
+      },
+    };
+    document.addEventListener('DOMContentLoaded', () => {
+      const root = document.querySelector<HTMLElement>('[data-modes]');
+      const track = root?.querySelector<HTMLElement>('[data-modes-track]');
+      if (!root || !track) return note('carousel:missing');
+      const controls = root.querySelector<HTMLElement>('[data-modes-controls]');
+      const isPauseArea = (value: EventTarget | null) =>
+        value instanceof Node && [track, controls].some((area) => area?.contains(value));
+      // Event capture must not force layout ahead of the carousel's own listener.
+      const eventState = () => ({
+        autoplay: root.dataset.autoplay ?? null,
+        hold: root.dataset.autoplayHold ?? null,
+        active: root.querySelector<HTMLElement>('[data-mode-card][data-offset="0"]')?.dataset.name ?? null,
+        track: null,
+        viewport: { width: window.innerWidth, height: window.innerHeight },
+        intersection,
+        visibility: document.visibilityState,
+        reducedMotion: window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+      });
+      const recordPointer = (event: PointerEvent) => {
+        if (!postHover || event.pointerType !== 'mouse' || (!isPauseArea(event.target) && !isPauseArea(event.relatedTarget))) return;
+        lastMouse = { x: event.clientX, y: event.clientY };
+        const detail: Detail = {
+          event: event.type,
+          eventT: event.timeStamp,
+          trusted: event.isTrusted,
+          pointerType: event.pointerType,
+          x: event.clientX,
+          y: event.clientY,
+          target: target(event.target),
+          related: target(event.relatedTarget),
+        };
+        // Capture only event fields synchronously. Geometry and hit testing run after the carousel's listener.
+        push({ phase: `pointer:${event.type}`, t: performance.now(), ...eventState(), detail });
+        notePostDispatch(`pointer:${event.type}`, detail, track, controls);
+      };
+      const recordMouseOut = (event: MouseEvent) => {
+        if (!postHover || (!isPauseArea(event.target) && !isPauseArea(event.relatedTarget))) return;
+        const detail: Detail = {
+          event: event.type,
+          eventT: event.timeStamp,
+          trusted: event.isTrusted,
+          x: event.clientX,
+          y: event.clientY,
+          target: target(event.target),
+          related: target(event.relatedTarget),
+        };
+        push({ phase: 'mouse:mouseout', t: performance.now(), ...eventState(), detail });
+        notePostDispatch('mouse:mouseout', detail, track, controls);
+      };
+      note('carousel:ready');
+      new MutationObserver((mutations) => {
+        for (const mutation of mutations) note(`attribute:${mutation.attributeName}`);
+      }).observe(root, { attributes: true, attributeFilter: ['data-autoplay', 'data-autoplay-hold'] });
+      new IntersectionObserver((observations) => {
+        for (const observation of observations) {
+          intersection = observation.intersectionRatio;
+          note('intersection');
+        }
+      }, { threshold: [0, 0.01, 1] }).observe(track);
+      for (const type of ['pointerenter', 'pointerleave', 'pointermove', 'pointerover', 'pointerout'] as const) {
+        window.addEventListener(type, recordPointer, { capture: true, passive: true });
+      }
+      window.addEventListener('mouseout', recordMouseOut, { capture: true, passive: true });
+      window.addEventListener('scroll', (event) => {
+        if (!postHover) return;
+        const detail: Detail = { event: 'scroll', eventT: event.timeStamp, trusted: event.isTrusted };
+        // The product's capture listener reconciles hover from elementFromPoint. Sample only after it has returned.
+        push({ phase: 'scroll', t: performance.now(), ...eventState(), detail });
+        notePostDispatch('scroll', detail, track, controls);
+      }, { capture: true, passive: true });
+    });
+  });
+}
+
+async function markAutoplayPointerParkDiagnostic(page: Page, phase: string) {
+  await page.evaluate((label) => {
+    type ProbeWindow = Window & { __cueoryAutoplayPointerParkDiagnostic?: { mark: (phase: string) => void } };
+    (window as ProbeWindow).__cueoryAutoplayPointerParkDiagnostic?.mark(label);
+  }, phase).catch(() => {});
+}
+
+async function attachAutoplayPointerParkDiagnostic(page: Page, testInfo: TestInfo) {
+  const entries = await page.evaluate(() => {
+    type ProbeWindow = Window & { __cueoryAutoplayPointerParkDiagnostic?: { entries: unknown[] } };
+    return (window as ProbeWindow).__cueoryAutoplayPointerParkDiagnostic?.entries ?? [];
+  }).catch(() => []);
+  await testInfo.attach('carousel-autoplay-pointer-park-path', {
+    body: JSON.stringify({ entries }, null, 2),
+    contentType: 'application/json',
+  });
+}
 /** Test-only D-51 close observation; it captures IDs and event state, never DOM content or user text. */
 async function installPreviewCloseDiagnostic(page: Page) {
   await page.addInitScript(() => {
@@ -79,6 +255,55 @@ async function installPreviewCloseDiagnostic(page: Page) {
       note('dialog:observed', identity(dialog));
     });
   });
+}
+
+/** Failure-only D-51 navigation evidence. The assertions and timing remain the test's existing contract. */
+async function capturePreviewNavigationFailure(page: Page, lastAction: string) {
+  return page.evaluate((lastAction) => {
+    const describe = (element: Element | null) => {
+      if (!(element instanceof HTMLElement)) return null;
+      const bounds = element.getBoundingClientRect();
+      return {
+        tag: element.tagName.toLowerCase(),
+        id: element.id || null,
+        classes: [...element.classList],
+        previewPart: element.getAttribute('data-mode-preview') ?? null,
+        bounds: { x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height },
+      };
+    };
+    const dialog = document.querySelector<HTMLDialogElement>('[data-mode-preview]');
+    const animations = dialog?.getAnimations({ subtree: true }).map((animation, index) => {
+      const effect = animation.effect;
+      const timing = effect?.getComputedTiming();
+      const localTime = typeof timing?.localTime === 'number' ? timing.localTime : null;
+      const delay = typeof timing?.delay === 'number' ? timing.delay : null;
+      const endTime = typeof timing?.endTime === 'number' ? timing.endTime : null;
+      const phase = localTime === null || delay === null || endTime === null ? null :
+        localTime < delay ? 'before' : localTime >= endTime ? 'after' : 'active';
+      return {
+        index,
+        playState: animation.playState,
+        pending: animation.pending,
+        currentTime: animation.currentTime,
+        phase,
+        progress: timing?.progress ?? null,
+        duration: timing?.activeDuration ?? null,
+        delay,
+        endTime,
+        target: describe(effect instanceof KeyframeEffect ? effect.target : null),
+      };
+    }) ?? [];
+    return {
+      lastAction,
+      activeElement: describe(document.activeElement),
+      preview: {
+        open: dialog?.open ?? false,
+        bounds: describe(dialog)?.bounds ?? null,
+        carouselState: document.querySelector<HTMLElement>('[data-modes]')?.dataset.carouselState ?? null,
+      },
+      animations,
+    };
+  }, lastAction);
 }
 
 /** Measure cards only after their turn transitions finish, including on a loaded runner. */
@@ -804,8 +1029,12 @@ test.describe('"ways to study" merry-go-round (D-50, D-60)', () => {
     await section(page).scrollIntoViewIfNeeded();
     await section(page).getByRole('button', { name: 'next study mode' }).click();
     await expect.poll(() => middleCard(page)).toBe('cards');
-    // Let the 700 ms glide finish (Task 109).
+    // Let the 700 ms glide finish (Task 109), and the section's own first fade-in rise (D-62), which moves every vial
+    // 10 px between the separate measurements below on a slow machine.
     await waitForCardTurn(page);
+    await expect
+      .poll(() => section(page).locator('[data-reveal-section]').evaluate((el) => getComputedStyle(el).translate))
+      .toMatch(/^(none|0px)$/);
     const look = (id: string) =>
       page.locator(`#mode-${id}`).evaluate((card) => {
         const box = card.getBoundingClientRect();
@@ -1059,24 +1288,56 @@ test.describe('"ways to study" merry-go-round (D-50, D-60)', () => {
   }, testInfo) => {
     test.skip(!isDesktopOfEachEngine(testInfo), 'a timing test that rests a mouse on the cards: once per engine, at desktop size');
     test.slow();
-    await page.goto('/');
-    await section(page).scrollIntoViewIfNeeded();
-    // The mouse over the section's words, not its cards: that doesn't pause it.
-    await page.mouse.move(0, 0);
-    await expect.poll(() => middleCard(page), { timeout: 9000 }).toBe('cards');
+    const engine = testInfo.project.use.browserName ?? testInfo.project.use.defaultBrowserType;
+    const diagnoseAutoplayStart = engine === 'firefox' || engine === 'webkit';
+    if (diagnoseAutoplayStart) await installAutoplayPointerParkDiagnostic(page);
+    let failed = false;
+    try {
+      await page.goto('/');
+      await section(page).scrollIntoViewIfNeeded();
+      if (diagnoseAutoplayStart) await markAutoplayPointerParkDiagnostic(page, 'before-pointer-park');
+      // The mouse over the section's words, not its cards: that doesn't pause it.
+      await page.mouse.move(0, 0);
+      // Firefox has replayed an in-track enter at (636, 423) after this real park. It must not pause without a
+      // matching pointer move, while the real card/control hover and visitor takeover checks below stay unchanged.
+      await section(page).locator('[data-modes-track]').evaluate((track) => {
+        track.dispatchEvent(new PointerEvent('pointerenter', {
+          bubbles: false,
+          clientX: 636,
+          clientY: 423,
+          pointerType: 'mouse',
+        }));
+      });
+      if (diagnoseAutoplayStart) await markAutoplayPointerParkDiagnostic(page, 'after-pointer-park');
+      if (diagnoseAutoplayStart) await markAutoplayPointerParkDiagnostic(page, 'first-poll:begin');
+      await expect.poll(() => middleCard(page), { timeout: 9000 }).toBe('cards');
 
-    // Resting on the cards pauses it; moving off lets it go on.
-    await page.getByRole('group', { name: 'study mode cards' }).hover();
-    await page.waitForTimeout(7000);
-    expect(await middleCard(page)).toBe('cards');
-    await page.mouse.move(0, 0);
-    await expect.poll(() => middleCard(page), { timeout: 9000 }).toBe('learn');
+      // Resting on the cards pauses it; moving off lets it go on.
+      if (diagnoseAutoplayStart) await markAutoplayPointerParkDiagnostic(page, 'intentional-hover:before');
+      await page.getByRole('group', { name: 'study mode cards' }).hover();
+      if (diagnoseAutoplayStart) await markAutoplayPointerParkDiagnostic(page, 'intentional-hover:after');
+      await page.waitForTimeout(7000);
+      expect(await middleCard(page)).toBe('cards');
+      await page.mouse.move(0, 0);
+      await expect.poll(() => middleCard(page), { timeout: 9000 }).toBe('learn');
 
-    await section(page).getByRole('button', { name: 'next study mode' }).click();
-    await expect.poll(() => middleCard(page)).toBe('fill-in');
-    await page.mouse.move(0, 0);
-    await page.waitForTimeout(7000);
-    expect(await middleCard(page)).toBe('fill-in');
+      await section(page).getByRole('button', { name: 'next study mode' }).click();
+      await expect.poll(() => middleCard(page)).toBe('fill-in');
+      await page.mouse.move(0, 0);
+      await page.waitForTimeout(7000);
+      expect(await middleCard(page)).toBe('fill-in');
+    } catch (error) {
+      failed = true;
+      throw error;
+    } finally {
+      if (failed && diagnoseAutoplayStart) {
+        try {
+          await attachAutoplayPointerParkDiagnostic(page, testInfo);
+        } catch {
+          // Best effort: do not replace the failed autoplay assertion.
+        }
+      }
+    }
   });
 });
 
@@ -1233,31 +1494,57 @@ test.describe('study-mode preview (D-51)', () => {
 
   test('previous and next move through the modes with the row behind; the X and the darkened page close it', async ({
     page,
-  }) => {
-    await openPreview(page, 'cards');
-    const preview = dialog(page);
-    await preview.getByRole('button', { name: 'next study mode' }).click();
-    await expect(page.getByRole('dialog', { name: 'learn' })).toBeVisible();
-    await expect(preview.getByRole('link', { name: 'start learn' })).toHaveAttribute('href', '/learn/study-skills/learn-mode');
-    await expect(preview.locator('[data-mode-preview-live]')).toHaveText('learn, 3 of 11');
+  }, testInfo) => {
+    let lastAction = 'open preview cards';
+    // Keep the latest bounded state in the test process. A timed-out click closes its page before the catch block can
+    // evaluate it, but the state immediately before that existing action remains available for a failure-only receipt.
+    let latestObservation: unknown = { lastAction, capture: 'not sampled' };
+    const observeBeforeAction = async () => {
+      latestObservation = await capturePreviewNavigationFailure(page, lastAction).catch(() => latestObservation);
+    };
+    try {
+      await openPreview(page, 'cards');
+      const preview = dialog(page);
+      lastAction = 'click next study mode';
+      await observeBeforeAction();
+      await preview.getByRole('button', { name: 'next study mode' }).click();
+      await expect(page.getByRole('dialog', { name: 'learn' })).toBeVisible();
+      await expect(preview.getByRole('link', { name: 'start learn' })).toHaveAttribute('href', '/learn/study-skills/learn-mode');
+      await expect(preview.locator('[data-mode-preview-live]')).toHaveText('learn, 3 of 11');
 
-    await preview.getByRole('button', { name: 'previous study mode' }).click();
-    await preview.getByRole('button', { name: 'previous study mode' }).click();
-    await expect(page.getByRole('dialog', { name: 'video' })).toBeVisible();
-    await expect(preview.getByText('coming soon')).toBeVisible();
-    await expect(preview.locator('[data-mode-preview-try]')).toBeHidden();
-    await expect(preview.locator('[data-mode-preview-live]')).toHaveText('video, 1 of 11');
-    // The merry-go-round behind follows, so closing shrinks the preview into the video card.
-    await expect(page.locator('#mode-video')).toHaveAttribute('data-active', '');
+      lastAction = 'click first previous study mode';
+      await observeBeforeAction();
+      await preview.getByRole('button', { name: 'previous study mode' }).click();
+      lastAction = 'click second previous study mode';
+      await observeBeforeAction();
+      await preview.getByRole('button', { name: 'previous study mode' }).click();
+      await expect(page.getByRole('dialog', { name: 'video' })).toBeVisible();
+      await expect(preview.getByText('coming soon')).toBeVisible();
+      await expect(preview.locator('[data-mode-preview-try]')).toBeHidden();
+      await expect(preview.locator('[data-mode-preview-live]')).toHaveText('video, 1 of 11');
+      // The merry-go-round behind follows, so closing shrinks the preview into the video card.
+      await expect(page.locator('#mode-video')).toHaveAttribute('data-active', '');
 
-    await preview.getByRole('button', { name: 'close preview' }).click();
-    await expect(preview).toBeHidden();
-    await expect(page.getByRole('button', { name: 'preview video' })).toBeFocused();
+      lastAction = 'click close preview';
+      await observeBeforeAction();
+      await preview.getByRole('button', { name: 'close preview' }).click();
+      await expect(preview).toBeHidden();
+      await expect(page.getByRole('button', { name: 'preview video' })).toBeFocused();
 
-    await page.getByRole('button', { name: 'preview video' }).click();
-    await expect(page.getByRole('dialog', { name: 'video' })).toBeVisible();
-    await page.mouse.click(4, 4);
-    await expect(preview).toBeHidden();
+      lastAction = 'reopen preview video';
+      await page.getByRole('button', { name: 'preview video' }).click();
+      await expect(page.getByRole('dialog', { name: 'video' })).toBeVisible();
+      lastAction = 'click preview scrim';
+      await observeBeforeAction();
+      await page.mouse.click(4, 4);
+      await expect(preview).toBeHidden();
+    } catch (error) {
+      await testInfo.attach('preview-navigation-failure', {
+        body: JSON.stringify({ lastAction, observation: latestObservation }, null, 2),
+        contentType: 'application/json',
+      });
+      throw error;
+    }
   });
 
   test('moving to a mode that is not open yet keeps focus in the preview when "start …" had it', async ({ page }) => {
@@ -1333,8 +1620,15 @@ test.describe('study-mode preview (D-51)', () => {
   }, testInfo) => {
     test.skip(!isDesktopOfEachEngine(testInfo), 'hover needs a mouse');
     await page.goto('/');
-    await page.locator('#ways-to-study').scrollIntoViewIfNeeded();
+    const carousel = page.locator('#ways-to-study');
+    await carousel.scrollIntoViewIfNeeded();
+    // The retained Linux WebKit trace for run 44834721132 showed hover actionability taking 13 seconds, long enough
+    // for the six-second autoplay to move Video aside before the pointer arrived. Pause through the real visitor
+    // control so this test continues to check the active vial's hover treatment rather than timing the slideshow.
+    await carousel.getByRole('button', { name: 'pause the slideshow' }).click();
+    await expect(carousel).toHaveAttribute('data-paused', '');
     const card = page.locator('#mode-video');
+    await expect(card).toHaveAttribute('data-active', '');
     expect(await card.evaluate((el) => getComputedStyle(el).scale)).toBe('none');
     await card.hover();
     await expect.poll(() => card.evaluate((el) => getComputedStyle(el).scale)).toBe('1.04');

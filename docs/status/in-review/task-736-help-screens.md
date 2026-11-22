@@ -1,2 +1,0 @@
-status: #736, how to play for every daily game: the rules show above each board on the first visit (with "got it"), then behind a "?" corner button that opens a focus-trapped dialog Escape closes. New browser key cueory-game-help-seen (game ids only) is on /privacy and cleared by account deletion.
-decision: D-pending (#736) All four games share /play, so the first-visit rules are a card above each board instead of four dialogs opening at once; the "?" dialog holds the same rules plus every setting. Reason: stacked pop-ups would block the page on a first visit.

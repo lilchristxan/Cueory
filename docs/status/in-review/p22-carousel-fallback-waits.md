@@ -1,1 +1,0 @@
-status: test reliability: three slow-engine waits fixed for the WebKit release run: the carousel fallback waits for the navigation itself, the CSP sweep stops waiting on networkidle, and the stats-panel hold tests no longer wait for a load event the held script blocks. Tests only.

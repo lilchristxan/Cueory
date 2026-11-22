@@ -3,7 +3,7 @@ import { markPanelsSeen } from './clock';
 
 /**
  * Today's status for each daily game on /play (#735), from this device only. The clock is set to 1 November 2026, when
- * pillo's sample word is "grace" (content/games/pulse/sample-01.json).
+ * vialo's sample word is "grace" (content/games/pulse/sample-01.json).
  */
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
@@ -27,14 +27,15 @@ for (const size of [{ width: 390, height: 844 }, { width: 1440, height: 900 }]) 
     test('every game shows "not started" in words and a symbol, with 44 px targets and no sideways scroll', async ({ page }) => {
       await page.goto('/play');
       await expect(list(page).getByRole('heading', { name: 'today' })).toBeVisible();
-      for (const [game, name] of [['pulse', 'vialo'], ['triage', 'sudoku'], ['cueword', 'crossword'], ['suture', 'piccline']]) {
-        await expect(row(page, game)).toHaveAttribute('data-status', 'not-started');
-        await expect(row(page, game)).toContainText(name);
-        await expect(row(page, game)).toContainText('○');
-        await expect(row(page, game)).toContainText('not started');
-        const box = await row(page, game).getByRole('link').boundingBox();
+      for (const [game, name, testId] of [['vialo', 'vialo', 'pulse'], ['triage', 'sudoku', 'triage'], ['cueword', 'crossword', 'cueword'], ['suture', 'piccline', 'suture']]) {
+        const card = row(page, testId);
+        await expect(card).toHaveAttribute('data-status', 'not-started');
+        await expect(card).toContainText(name);
+        await expect(card).toContainText('○');
+        await expect(card).toContainText('not started');
+        const box = await card.getByRole('link').boundingBox();
         // Each card opens the game's own page (2026-11-17).
-        await expect(row(page, game).getByRole('link')).toHaveAttribute('href', { pulse: '/play/vialo', triage: '/play/sudoku', cueword: '/play/crossword', suture: '/play/piccline' }[game]!);
+        await expect(card.getByRole('link')).toHaveAttribute('href', { vialo: '/play/vialo', triage: '/play/sudoku', cueword: '/play/crossword', suture: '/play/piccline' }[game]!);
         expect(box!.height).toBeGreaterThanOrEqual(44);
       }
       // Stats are always kept (2026-11-17), so the "turn on stats" note is gone; it shows only where storage is blocked.
@@ -79,7 +80,7 @@ for (const size of [{ width: 390, height: 844 }, { width: 1440, height: 900 }]) 
   });
 }
 
-test('a started round shows in progress, and pillo finished on its own page shows done back on /play', async ({ page }) => {
+test('a started round shows in progress, and vialo finished on its own page shows done back on /play', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/play');
   await expect(row(page, 'pulse')).toHaveAttribute('data-status', 'not-started');
@@ -91,11 +92,11 @@ test('a started round shows in progress, and pillo finished on its own page show
   // Stats are always kept (2026-11-17): there is no switch to turn on.
   await expect(page.getByTestId('game-stats').getByRole('switch')).toHaveCount(0);
   await row(page, 'pulse').getByRole('link').click();
-  await expect(page).toHaveURL(/\/play\/pillo$/);
+  await expect(page).toHaveURL(/\/play\/vialo$/);
   const field = page.getByLabel('your guess', { exact: true });
   await field.fill('grace');
   await field.press('Enter');
-  await expect(page.getByTestId('pulse-result')).toContainText('solved.');
+  await expect(page.getByTestId('vialo-result')).toContainText('solved.');
   await page.getByTestId('game-result-dialog').getByRole('button', { name: 'close results' }).click();
   await page.getByRole('link', { name: 'all games' }).click();
   await expect(row(page, 'pulse')).toHaveAttribute('data-status', 'done');
@@ -112,7 +113,7 @@ test('each card opens its game by keyboard', async ({ page }) => {
 });
 
 test('old links to a game\'s section of /play go on to its own page', async ({ page }) => {
-  for (const [hash, path] of [['#pulse-heading', '/play/vialo'], ['#triage-heading', '/play/sudoku'], ['#sudoku-heading', '/play/sudoku'], ['#crossword-heading', '/play/crossword'], ['#piccline-heading', '/play/piccline']]) {
+  for (const [hash, path] of [['#vialo-heading', '/play/vialo'], ['#pulse-heading', '/play/vialo'], ['#triage-heading', '/play/sudoku'], ['#sudoku-heading', '/play/sudoku'], ['#crossword-heading', '/play/crossword'], ['#piccline-heading', '/play/piccline']]) {
     await page.goto('/play' + hash);
     await expect(page).toHaveURL(new RegExp(path.replaceAll('/', '\\/') + '$'));
   }

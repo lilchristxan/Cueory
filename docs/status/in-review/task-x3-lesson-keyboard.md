@@ -1,1 +1,0 @@
-status: Task x3, lesson keyboard walkthrough: organizer no longer drops keyboard focus to the page after "check"; new Playwright walk presses every control in all seven study modes and fails if focus falls onto the page body.

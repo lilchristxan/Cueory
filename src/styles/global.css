@@ -1540,11 +1540,12 @@ html:has(dialog.menu-panel[open]) {
 }
 
 /*
-  The illustration loops play only on the card in the middle and in the open preview, only once the script has checked
-  the visitor's motion setting (data-motion), and stop with either pause button (data-paused). Without them every illustration is still and
+  The illustration loops play only on the card in the middle, only while the carousel is on screen with no preview open
+  and the visitor's motion setting allows it (data-looping, set by the script from illustrationsMayLoop), and stop with
+  either pause button. The preview's scrim is a plain translucent color: a blur over the live page cost WebKit its frames (#634). Without them every illustration is still and
   complete. Each loop is 6 s, the same as the auto-advance.
 */
-.modes[data-motion]:not([data-paused]) :is(.mode-card[data-active], .mode-preview) {
+.modes[data-motion]:not([data-paused])[data-looping] .mode-card[data-active] {
   & .ill-video-press { animation: ill-video-press 6s ease-in-out infinite both; }
   & .ill-video-progress { animation: ill-video-progress 6s ease-in-out infinite both; }
 
@@ -1788,8 +1789,6 @@ html:has(dialog.menu-panel[open]) {
     position: fixed;
     inset: 0;
     background-color: rgb(var(--shadow-tint) / var(--scrim-alpha));
-    -webkit-backdrop-filter: blur(var(--blur-scrim));
-    backdrop-filter: blur(var(--blur-scrim));
   }
 
   .mode-preview-panel {
@@ -1816,6 +1815,17 @@ html:has(dialog.menu-panel[open]) {
     z-index: 1;
     inset-block-start: calc(var(--spacing) * 4);
     inset-inline-end: calc(var(--spacing) * 4);
+  }
+
+  /*
+    The preview's round buttons sit on the opaque cream surface, so their frosted blur has only a flat color to blur and
+    shows nothing; inside the words' fading groups it has nothing at all (a faded ancestor is the blur's backdrop root).
+    In WebKit it still costs a blurred offscreen copy per button on every frame, and the arrow and close buttons stayed
+    "not stable" for Playwright's click (#634). Plain translucent color looks the same.
+  */
+  .mode-preview .corner-button {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
   }
 
   .mode-preview-bottle {
@@ -2456,7 +2466,7 @@ html:has(dialog.mode-preview[open]) {
   }
   @media print {
     body > :not(main), .sudoku-levels, .sudoku-status, .sudoku-toolbar, .game-help-first, .sudoku-pad-wrap, .sudoku-solved, .sr-only { display: none !important; }
-    :root[data-print-game="sudoku"] main article > :not(.sudoku-section) { display: none !important; }
+    :root[data-print-game="sudoku"] main article > :not(.sudoku-section):not(:has(.sudoku-section)) { display: none !important; }
     :root[data-print-game="sudoku"] .sudoku-section > :not(.sudoku-mount) { display: none !important; }
     :root[data-print-game="sudoku"] main article { max-inline-size: none; padding: 0; background: transparent; box-shadow: none; }
     :root[data-print-game="sudoku"] .sudoku-section, :root[data-print-game="sudoku"] .sudoku-mount { margin: 0 !important; }

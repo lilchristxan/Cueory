@@ -1,1 +1,0 @@
-status: Lane 12, report docs/launch/a11y-manual-x5.md: a step-by-step VoiceOver script (Mac and iPhone) for home, the sample lesson and its cards, and pillo, with expected announcements from the accessibility tree and 7 spots to check.

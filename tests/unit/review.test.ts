@@ -51,6 +51,10 @@ describe('exam limits', () => {
     expect(nextReview(history, '2026-10-31')).toBe('2026-11-15');
     expect(nextReview(history, '2026-11-03', '2026-11-04')).toBe('2026-11-15');
   });
+  it('keeps a normal due day that already equals the day before an active exam', () => {
+    const dueToday = [knew('2026-11-01')];
+    expect(nextReview(dueToday, '2026-11-05', '2026-11-04')).toBe('2026-11-04');
+  });
   it('uses tomorrow when the day before an active exam is already past or today', () => {
     expect(nextReview(history, '2026-11-01')).toBe('2026-11-02');
     expect(nextReview(history, '2026-11-02')).toBe('2026-11-02');

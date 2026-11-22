@@ -17,8 +17,8 @@ export const EVENT_MAX_AGE_DAYS = 1;
 
 const DAY_MS = 86_400_000;
 const VERSION = 1 as const;
-const gameIds = new Set<string>([...dailyGames.map((game) => game.id), 'pulse']);
-const normalizeGameId = (id: string): string => (id === 'pulse' ? 'vialo' : id);
+const gameIds = new Set<string>([...dailyGames.map((game) => game.id), 'pulse', 'pillo']);
+const normalizeGameId = (id: string): string => (id === 'pulse' || id === 'pillo' ? 'vialo' : id);
 export type GameId = DailyGame['id'];
 export type StudyMode = 'cards' | 'learn' | 'review';
 
@@ -128,7 +128,7 @@ function readGame(value: unknown, event = false): FinishedGame | null {
   if (!v || (event && (v.type !== 'game' || v.finished !== true)) ||
       typeof v.game !== 'string' || !gameIds.has(v.game) || dayIndex(v.day) === null ||
       typeof v.solved !== 'boolean' || !count(v.slips) || !count(v.cues)) return null;
-  return { game: v.game as GameId, day: v.day as string, solved: v.solved, slips: v.slips, cues: v.cues };
+  return { game: normalizeGameId(v.game) as GameId, day: v.day as string, solved: v.solved, slips: v.slips, cues: v.cues };
 }
 function readStudy(value: unknown, event = false): FinishedStudy | null {
   const keys = ['id', 'day', 'mode', ...(event ? ['type', 'finished'] : [])];
