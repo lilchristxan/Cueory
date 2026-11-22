@@ -27,7 +27,7 @@ import { PILLO_HARD_MODE_STORAGE_KEY, VIALO_HARD_MODE_STORAGE_KEY } from '../../
 import { GAME_SETTINGS_STORAGE_KEY } from '../../src/islands/gamesettings';
 import { GAME_HELP_STORAGE_KEY } from '../../src/islands/gamehelpkeys';
 import { storageKeys } from '../../src/config/storage-keys';
-import { promo } from '../../src/config/site';
+import { newsletter, promo } from '../../src/config/site';
 
 const privacyPath = fileURLToPath(new URL('../../dist/privacy.html', import.meta.url));
 
@@ -198,8 +198,8 @@ describe.skipIf(!existsSync(privacyPath))('privacy page browser storage disclosu
     expect(html).toContain('deleting an account won\'t take you off it');
     expect(html).toContain('unsubscribe link');
     expect(html.replace(/\s+/g, ' ')).toContain('Signing out removes them.');
-    // Task 200: the list is not live (src/config/site.ts formAction is empty), so the page must not say it is.
-    expect(html).toContain('The launch-updates list is not open yet');
+    // The form is live (src/config/site.ts formAction posts straight to Kit).
+    expect(html).toContain('sends the email address you type straight to ' + newsletter.provider);
   });
 
   it('names each detail Google shares, the sign-in sessions and the service logs (Task 309, CLAUDE.md rule 2)', () => {

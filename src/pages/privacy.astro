@@ -1,7 +1,7 @@
 ---
 /**
  * The privacy page (Task 200 rewrite of Task 422's page). Every sentence describes what the staging code does:
- *   newsletter: src/config/site.ts (formAction '' means the form is not live yet, so this says "when it opens");
+ *   newsletter: src/config/site.ts (formAction posts straight to Kit);
  *   sign-in: src/islands/signin.ts (Google, or email and password with confirmation and reset emails; no magic links);
  *   PKCE code verifier keys: src/islands/supabaseclient.ts;
  *   export-my-data contents and caps: src/islands/exportload.ts (LIMITS) and exportdata.ts;
@@ -110,12 +110,18 @@ const format = (value: number) => value.toLocaleString('en-US');
       for three hours.
     </p>
     <p>
-      On <a href="/play">daily games</a> you can turn on stats. They're off unless you do. When they're on, your browser
-      keeps, for each game you finish, the day, whether you solved it and how many tries it took. Anything older than 400
-      days is deleted the next time you open daily games. It stays on your device and never reaches us, and there are no
-      streaks. "Forget", or turning stats off, deletes it. The storage key for these results is{' '}
-      <code>cueory-game-stats</code>. For sudoku, per-level solve times are saved under{' '}
-      <code>cueory-sudoku-stats</code>.
+      On <a href="/play">daily games</a>, if your browser allows storage, it automatically saves finished games on this
+      device. Playing a game does not send your score to Cueory. For each result the browser can remember the puzzle
+      date, whether you solved it, how many tries it took and whether you finished on a later day. Crossword results can
+      record whether a solve counts toward a streak. Word path can also record how many cues you used and whether you
+      found the special answer first. For sudoku, the browser saves the level, date and time taken for your first solve of
+      each level each day. The games use these records to show results, times and streaks.
+    </p>
+    <p>
+      Opening daily games or a game page checks your saved records. Anything older than 400 days is deleted. You can forget
+      your stats for any single game, or forget all of your stats at once using the controls on the stats panel.
+      The storage key for general daily results is <code>cueory-game-stats</code>, and sudoku’s per-level solve times
+      are stored under <code>cueory-sudoku-stats</code>. Clearing browser data removes both.
     </p>
     <p>
       Daily Sudoku remembers your play preferences, such as highlighting, checking guesses, sound and timer options,
@@ -133,10 +139,10 @@ const format = (value: number) => value.toLocaleString('en-US');
       on this device and is not sent to us. Clearing this site's data removes it.
     </p>
     <p>
-      To let the lessons open without a connection, your browser may keep copies of the pages you visit (lessons
-      and the home page; daily games are never kept) and of the site's own files, on your device. That is a normal browser
-      feature, the copies never leave your device, and nothing about your answers or progress is in them. Clearing this
-      site's data in your browser removes them.
+      Your browser may keep copies of the homepage, lessons you visit and site files so that you can reopen them offline.
+      These copies contain the page content. Your answers and progress are stored separately. Cueory’s offline cache
+      excludes daily games; daily games are never kept. That is a normal browser feature, the copies never leave your
+      device, and nothing about your answers or progress is in them. Clearing this site's data in your browser removes them.
     </p>
 
     <h2>Features that are still being built</h2>
@@ -170,10 +176,11 @@ const format = (value: number) => value.toLocaleString('en-US');
 
     <h2>Launch-updates emails</h2>
     <p>
-      The launch-updates list is not open yet: the signup box says "opening soon" and sends nothing anywhere. When it
-      opens, signing up will send your email address straight to {newsletter.provider}, the service that will store it
-      and send those emails for us; no {newsletter.provider} code runs on our pages. You'll get a confirmation email
-      first, and every email will have an unsubscribe link. We will use your address only for {site.name} updates.
+      The “get launch updates” email box (on the home page and in the signup pop-up) sends the email address you type
+      straight to {newsletter.provider}; Cueory's own servers never receive it. No {newsletter.provider} code runs on
+      our pages. If you join the list, {newsletter.provider} stores your email address and sends launch updates and
+      study tips for us. You get a confirmation email first, and every email has an unsubscribe link. We will use your
+      address only for {site.name} updates.
     </p>
     <p>
       That list will be separate from {site.name} accounts, so deleting an account won't take you off it. To leave it,
@@ -389,7 +396,7 @@ const format = (value: number) => value.toLocaleString('en-US');
     <h2>Who handles data for us</h2>
     <ul>
       <li>Cloudflare hosts the website, serves every page, and counts visits.</li>
-      <li>{newsletter.provider} will store newsletter signups and send launch-update emails once the list opens.</li>
+      <li>{newsletter.provider} stores newsletter signups and sends launch-update emails.</li>
       <li>
         Supabase stores account and study data for people who create an account, their sign-in sessions, password
         hashes and two-factor secrets, and sends account emails. Google handles Google sign-in if you choose it.
