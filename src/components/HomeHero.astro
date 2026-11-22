@@ -193,3 +193,26 @@ const startHref = heroStartHref();
     </nav>
   </div>
 </section>
+
+<script>
+  // The Home games link keeps native navigation, but keyboard activation should not carry the Home fade into /play.
+  // Pointer activation and every other cross-document transition remain unchanged.
+  const gamesLink = document.querySelector<HTMLAnchorElement>('[data-testid="explore-games"]');
+  if (gamesLink) {
+    let keyboardActivation = false;
+    gamesLink.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') keyboardActivation = true;
+    });
+    gamesLink.addEventListener('keyup', (event) => {
+      if (event.key === 'Enter') keyboardActivation = false;
+    });
+    window.addEventListener('pageswap', (event) => {
+      if (!keyboardActivation) return;
+      keyboardActivation = false;
+      const transition = (event as Event & {
+        viewTransition?: { skipTransition: () => void };
+      }).viewTransition;
+      transition?.skipTransition();
+    });
+  }
+</script>
