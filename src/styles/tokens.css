@@ -582,6 +582,8 @@
     --color-copper: #d9976a;        /* Copper */
     --color-copper-glow: #f6d3ae;   /* Copper Glow */
     --color-copper-shine: #fff0de;  /* Copper Shine */
+  --color-game-teal: #4fb3ae;     /* Teal Light   — piccline accent in Evening */
+  --color-game-dim: #5a463a;      /* Dim          — vialo unlit cells on dark */
     --color-game-teal: #4fb3ae;     /* Teal Light   — piccline accent in Evening */
     --color-game-dim: #5a463a;      /* Dim          — vialo unlit cells on dark */
 

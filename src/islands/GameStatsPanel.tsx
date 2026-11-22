@@ -236,16 +236,7 @@ export default function GameStatsPanel({ games: order }: Props) {
     else setSaid(`this browser didn't let us delete your stats, so they are still kept. ${SITE_DATA}`);
   };
 
-  const games = order.flatMap((id) => {
-    const list = dailyGames.filter((game) => (game.id === id || (id === 'pulse' && game.id === 'vialo') || (id === 'vialo' && game.id === 'pulse')) && game.ready);
-    if (list.length > 0) {
-      if (id === 'pulse') {
-        return list.map((g) => ({ ...g, id: 'pulse' as const, name: 'pillo' }));
-      }
-      return list;
-    }
-    return [];
-  });
+  const games = order.flatMap((id) => dailyGames.filter((game) => game.id === id && game.ready));
 
   return (
     <section className="mt-16" aria-labelledby="stats-heading" data-testid="game-stats">
@@ -268,7 +259,7 @@ export default function GameStatsPanel({ games: order }: Props) {
           <ul className="mt-6 flex flex-col gap-5" aria-label="stats for each game">
             {games.map((game) => {
               const result = summary(saved.stats, game.id);
-              const displayName = gameName(game.id) || game.name;
+              const displayName = game.name;
               return (
                 <li key={game.id}>
                   <h3
