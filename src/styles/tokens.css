@@ -500,6 +500,7 @@
     --game-card-width: 17.5rem;
     --game-card-height: 24.5rem;
     --game-card-phone-width: calc(100vw - 88px);
+    --game-card-phone-inline-inset: 1.5rem;
     --game-card-phone-min-width: 280px;
     --game-card-phone-min-height: 392px;
     --game-card-radius: 1.375rem;
@@ -897,16 +898,12 @@
    the first device/picked-theme blocks as the source of truth. */
 @media (prefers-color-scheme: dark) {
   #daily-games {
-    --game-card-ink: var(--color-page);
-    --game-card-name-ink: var(--color-page);
     --game-pip-bg: var(--color-surface);
     --game-pip-ink: var(--color-page);
   }
 }
 
 :root[data-theme="dark"] #daily-games {
-  --game-card-ink: var(--color-page);
-  --game-card-name-ink: var(--color-page);
   --game-pip-bg: var(--color-surface);
   --game-pip-ink: var(--color-page);
 }

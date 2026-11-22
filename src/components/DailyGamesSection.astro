@@ -617,7 +617,7 @@ const helloCardsAvailable = helloCardsPage(
    * decorative offscreen track clipped, but never clip the active card's name, description or status. */
   @media (max-width: 40em) {
     .gcard {
-      width: clamp(var(--game-card-phone-min-width), var(--game-card-phone-width), var(--game-card-width));
+      width: clamp(var(--game-card-phone-min-width), calc(100% - var(--game-card-phone-inline-inset)), var(--game-card-width));
       height: auto;
       min-height: var(--game-card-phone-min-height);
       aspect-ratio: auto;
@@ -627,10 +627,12 @@ const helloCardsAvailable = helloCardsPage(
       width: calc(100% - (2 * var(--game-card-padding)));
       height: auto;
       min-height: 0;
+      min-width: 0;
     }
 
     .gname {
       height: min(var(--game-face-header-height), var(--game-face-phone-header-height));
+      min-width: 0;
     }
 
     .gname img {
@@ -643,10 +645,14 @@ const helloCardsAvailable = helloCardsPage(
 
     .gdesc {
       font-size: min(var(--game-desc-size), var(--game-desc-phone-size));
+      min-width: 0;
+      overflow-wrap: anywhere;
     }
 
     .gstatus {
       font-size: min(var(--game-status-size), var(--game-status-phone-size));
+      min-width: 0;
+      max-width: 100%;
     }
   }
 

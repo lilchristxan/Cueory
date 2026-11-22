@@ -118,4 +118,48 @@ describe('reveal section runtime guards', () => {
     expect(scrollIntoView).toHaveBeenCalledWith({ block: 'nearest', inline: 'nearest' });
     expect(requestAnimationFrame).not.toHaveBeenCalled();
   });
+
+  it('keeps a waiting section instant when intersection follows focus-induced scrolling', () => {
+    let intersection: ((entries: Array<{ isIntersecting: boolean; target: unknown }>) => void) | undefined;
+    const unobserved: unknown[] = [];
+    class AvailableElement {
+      scrollIntoView = vi.fn();
+    }
+    const target = new AvailableElement() as unknown as HTMLElement;
+    const section = {
+      dataset: { reveal: '' },
+      getBoundingClientRect: () => ({ top: 1000 }),
+      contains: (node: unknown) => node === target,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    };
+    class AvailableObserver {
+      constructor(callback: (entries: Array<{ isIntersecting: boolean; target: unknown }>) => void) {
+        intersection = callback;
+      }
+      observe() {}
+      unobserve(element: unknown) {
+        unobserved.push(element);
+      }
+    }
+    vi.stubGlobal('HTMLElement', AvailableElement);
+    vi.stubGlobal('IntersectionObserver', AvailableObserver);
+    vi.stubGlobal('window', {
+      innerHeight: 800,
+      matchMedia: () => ({ matches: false }),
+      IntersectionObserver: AvailableObserver,
+    });
+    vi.stubGlobal('document', {
+      activeElement: target,
+      querySelectorAll: () => [section],
+    });
+
+    revealSections();
+    expect(section.dataset.reveal).toBe('waiting');
+    intersection?.([{ isIntersecting: true, target: section }]);
+
+    expect(section.dataset.reveal).toBe('instant');
+    expect(unobserved).toContain(section);
+    expect(target.scrollIntoView).toHaveBeenCalledWith({ block: 'nearest', inline: 'nearest' });
+  });
 });

@@ -200,9 +200,12 @@ test.describe('home games carousel (Home v2 Lane 5)', () => {
 
       // Cards are 280px wide
       const firstCard = section.locator('[data-game-card]').first();
-      const cardBox = await firstCard.boundingBox();
-      expect(cardBox?.width).toBe(280);
-      expect(cardBox?.height).toBe(392);
+      const cardSize = await firstCard.evaluate((el) => {
+        const card = el as HTMLElement;
+        return { width: card.offsetWidth, height: card.offsetHeight };
+      });
+      expect(cardSize.width).toBe(280);
+      expect(cardSize.height).toBe(392);
     } finally {
       await context.close();
     }
