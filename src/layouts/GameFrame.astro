@@ -1,0 +1,22 @@
+---
+import GameFrameComponent from '../components/GameFrame.astro';
+
+interface Props {
+  game: string;
+  tagline?: string;
+  dateLine?: string;
+  puzzleNumber?: number | string;
+  howSteps?: readonly string[];
+  wide?: boolean;
+  showcase?: boolean;
+}
+---
+
+<GameFrameComponent {...Astro.props}>
+  <slot name="cue" slot="cue" />
+  <slot name="controls" slot="controls" />
+  <slot name="title" slot="title" />
+  <slot />
+  <slot name="deck" slot="deck" />
+  <slot name="footer" slot="footer" />
+</GameFrameComponent>

@@ -17,6 +17,11 @@ const seen = (page: Page) => page.evaluate(() => localStorage.getItem('cueory-ga
 const axe = (page: Page, selector: string) =>
   new AxeBuilder({ page }).include(selector).withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa']).analyze();
 
+const helpButton = (page: Page, game: (typeof games)[number]) =>
+  game.id === 'cueword'
+    ? page.getByTestId('game-frame-help-button')
+    : page.getByTestId(game.testId).getByRole('button', { name: `how to play ${game.name}` });
+
 test.beforeEach(async ({ page }) => {
   await page.clock.setFixedTime(new Date('2026-11-01T15:00:00'));
   await markPanelsSeen(page);
@@ -55,8 +60,9 @@ test('the first visit shows each game\'s rules above its board, and "got it" put
 for (const game of games) {
   test(`${game.name}: the "?" opens the rules in a focus-trapped dialog that Escape closes`, async ({ page }) => {
     await page.goto(game.path);
+    test.skip(game.name === 'crossword' && await page.getByTestId('crossword-soon').count() > 0, 'crossword is closed in this build');
     const area = page.getByTestId(game.testId);
-    const button = area.getByRole('button', { name: `how to play ${game.name}` });
+    const button = helpButton(page, game);
     await expect(button).toBeVisible();
     const box = await button.boundingBox();
     expect(box!.width).toBeGreaterThanOrEqual(44);
@@ -125,7 +131,8 @@ test('the help dialog fits a phone without sideways scrolling, in light and even
   for (const scheme of ['light', 'dark'] as const) {
     await page.emulateMedia({ colorScheme: scheme });
     await page.goto('/play/crossword');
-    await page.getByTestId('cueword').getByRole('button', { name: 'how to play crossword' }).click();
+    const button = page.getByTestId('game-frame-help-button');
+    await button.click();
     const panel = page.getByTestId('game-help').locator('.game-help');
     await expect(panel).toBeVisible();
     const box = await panel.boundingBox();
