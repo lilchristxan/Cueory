@@ -47,6 +47,7 @@ describe('home lower sections', () => {
       '/play/crossword',
       '/play/sudoku',
       '/play/hello-cards',
+      '/play',
     ]);
     expect(plain(games)).toContain("crossword a mini crossword from this week's lessons.");
     expect(plain(games)).toMatch(/hello cards flip a card,\s*start a conversation\./);

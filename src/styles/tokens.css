@@ -482,6 +482,7 @@
     --game-section-padding: 4.5rem 2.5rem 1.5rem;
     --game-section-padding-phone: 3rem 1rem 1.25rem;
     --game-container-gap: 1.125rem;
+    --game-stage-padding: var(--spacing-section) var(--spacing-gutter);
     --game-header-gap: 1rem;
     --game-nav-size: 3.25rem;
     --game-nav-border: rgb(249 245 239 / 0.35);
@@ -499,6 +500,7 @@
     --game-card-width: 17.5rem;
     --game-card-height: 24.5rem;
     --game-card-phone-width: calc(100vw - 88px);
+    --game-card-phone-min-width: 280px;
     --game-card-phone-min-height: 392px;
     --game-card-radius: 1.375rem;
     --game-card-padding: 1rem;
@@ -579,6 +581,22 @@
     --game-demo-hello-radius: 0.75rem;
     --game-demo-hello-padding: 0.5rem;
     --game-demo-hello-font-size: 0.8125rem;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    #daily-games {
+      --game-card-ink: var(--color-page);
+      --game-card-name-ink: var(--color-page);
+      --game-pip-bg: var(--color-surface);
+      --game-pip-ink: var(--color-page);
+    }
+  }
+
+  :root[data-theme="dark"] #daily-games {
+    --game-card-ink: var(--color-page);
+    --game-card-name-ink: var(--color-page);
+    --game-pip-bg: var(--color-surface);
+    --game-pip-ink: var(--color-page);
   }
 
 /*

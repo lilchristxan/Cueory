@@ -37,8 +37,8 @@ const helloCardsAvailable = helloCardsPage(
 ).shown;
 ---
 
-<section id="daily-games" class="games-section" aria-labelledby="games-heading" data-reveal-section>
-  <div class="games-container" role="region" aria-roledescription="carousel" aria-label="daily games" data-games-carousel data-carousel-state="settled">
+<section id="daily-games" class="scene scene-play scroll-mt-section py-section" aria-labelledby="games-heading">
+  <div class="games-container games-stage" role="region" aria-roledescription="carousel" aria-label="daily games" data-games-carousel data-carousel-state="settled" data-testid="games-stage" data-reveal-section>
     <div class="games-header">
       <div class="games-nav-slot games-nav-prev">
         <button type="button" class="glass gs-nav" data-games-prev aria-label="previous game" aria-controls="games-track">
@@ -267,6 +267,9 @@ const helloCardsAvailable = helloCardsPage(
     <p class="games-date-note" data-testid="daily-games-day" data-daily-games-date aria-live="polite" aria-atomic="true">
       the date changes at midnight on your device. some sample puzzles repeat.
     </p>
+    <a href="/play" class="games-stage-action" data-testid="games-link">
+      play today's <span aria-hidden="true">→</span>
+    </a>
   </div>
 </section>
 
@@ -290,6 +293,12 @@ const helloCardsAvailable = helloCardsPage(
     flex-direction: column;
     gap: var(--game-container-gap);
     width: 100%;
+  }
+
+  .games-stage {
+    padding: var(--game-stage-padding);
+    background: var(--color-silk-base);
+    color: var(--color-ink);
   }
 
   .games-header {
@@ -367,6 +376,27 @@ const helloCardsAvailable = helloCardsPage(
     line-height: 1.5;
     color: var(--color-ink-soft);
     min-width: 0;
+  }
+
+  .games-stage-action {
+    align-self: center;
+    display: inline-flex;
+    min-height: var(--tap-min);
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing);
+    margin-inline: auto;
+    padding-inline: calc(var(--spacing) * 6);
+    border: var(--border-hairline) solid var(--color-ink);
+    border-radius: var(--radius-pill);
+    color: var(--color-ink);
+    font-weight: 700;
+    text-decoration: none;
+  }
+
+  .games-stage-action:focus-visible {
+    outline: var(--focus-width) solid var(--color-copper-deep);
+    outline-offset: var(--focus-offset);
   }
 
   @media (min-width: 48em) {
@@ -587,7 +617,7 @@ const helloCardsAvailable = helloCardsPage(
    * decorative offscreen track clipped, but never clip the active card's name, description or status. */
   @media (max-width: 40em) {
     .gcard {
-      width: min(var(--game-card-width), var(--game-card-phone-width));
+      width: clamp(var(--game-card-phone-min-width), var(--game-card-phone-width), var(--game-card-width));
       height: auto;
       min-height: var(--game-card-phone-min-height);
       aspect-ratio: auto;
