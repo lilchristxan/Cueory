@@ -74,14 +74,12 @@ const initialJsBudget = {
   'play.html': 104558,
   'play/hello-cards.html': 91427,
   'play/stat.html': 96284, // Task 640: measured from a local Node 24.22.2 build, not yet from CI
-  'play/tachyyy.html': 96284, // Canonical Tachyyy keeps Stat's same game bundle baseline.
+  'play/tachyyy.html': 96284, // Tachyyy retains Stat's canonical game bundle baseline.
   // Each game on its own page (2026-11-17, D-pending): these routes stopped being share landings and now load their game.
   // Measured from a local Node 24 build of lane8/game-pages; the old 89,662 baseline was a page with no game on it.
   'play/crossword.html': 121556,
-  'play/piccline.html': 125986,
   'play/pillo.html': 119797,
   'play/sudoku.html': 122156,
-  'play/tachyyy.html': 87996,
   'play/vialo.html': 124013,
   'play/word-path.html': 120824,
   'play/piccline.html': 120824, // Canonical Piccline keeps Word Path's same game bundle baseline.

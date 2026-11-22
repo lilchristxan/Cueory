@@ -463,7 +463,7 @@ test.describe('home games carousel (Home v2 Lane 5)', () => {
         expect(viewportBox).not.toBeNull();
         expect(cardBox!.width).toBeLessThanOrEqual(viewportBox!.width + 1);
         expect(cardBox!.x).toBeGreaterThanOrEqual(viewportBox!.x - 1);
-        expect(cardBox!.x + cardBox!.width).toBeLessThanOrEqual(viewportBox!.x + viewportBox!.width + 1);
+        expect(cardBox!.x + cardBox!.width, `${await active.getAttribute('data-game-card')}: card ${JSON.stringify(cardBox)} exceeds carousel ${JSON.stringify(viewportBox)}`).toBeLessThanOrEqual(viewportBox!.x + viewportBox!.width + 1);
 
         for (const selector of ['.gface', '.gname', '.gdesc', '.gstatus']) {
           const content = active.locator(selector);
@@ -473,7 +473,7 @@ test.describe('home games carousel (Home v2 Lane 5)', () => {
           expect(contentBox!.x).toBeGreaterThanOrEqual(cardBox!.x - 1);
           expect(contentBox!.x + contentBox!.width).toBeLessThanOrEqual(cardBox!.x + cardBox!.width + 1);
           expect(contentBox!.y).toBeGreaterThanOrEqual(cardBox!.y - 1);
-          expect(contentBox!.y + contentBox!.height).toBeLessThanOrEqual(cardBox!.y + cardBox!.height + 1);
+          expect(contentBox!.y + contentBox!.height, `${selector} exceeds active card bottom`).toBeLessThanOrEqual(cardBox!.y + cardBox!.height + 1);
         }
       };
 

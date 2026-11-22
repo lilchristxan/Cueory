@@ -113,7 +113,10 @@ export function initGamesCarousel(): void {
     const step = getStep();
     const carWidth = car.clientWidth || 320;
     const totalScroll = track.scrollWidth || count * step;
-    const maxScroll = Math.max(0, totalScroll - carWidth);
+    // scrollWidth is measured from the track's content edge while the viewport's clientWidth includes its
+    // horizontal padding. Account for the trailing padding so the final active card is not left clipped.
+    const paddingRight = parseFloat(getComputedStyle(car).paddingRight) || 0;
+    const maxScroll = Math.max(0, totalScroll - carWidth + paddingRight);
 
     let offset = activeIndex * step;
     if (offset > maxScroll) offset = maxScroll;
