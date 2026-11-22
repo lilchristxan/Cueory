@@ -53,9 +53,9 @@ const baseDailyGames: readonly DailyGame[] = [
 export const dailyGames: readonly DailyGame[] = baseDailyGames;
 
 /** The name visitors see for a game. */
-export function gameName(id: DailyGame['id'] | 'vialo' | 'piccline' | 'tachyyy' | 'stat'): string {
+export function gameName(id: DailyGame['id'] | 'vialo' | 'pillo' | 'piccline' | 'tachyyy' | 'stat'): string {
   if (id === 'vialo') return 'vialo';
-  if (id === 'pulse') return 'pillo';
+  if (id === 'pulse' || id === 'pillo') return 'pillo';
   if (id === 'piccline') return 'piccline';
   if (id === 'tachyyy' || id === 'stat') return 'tachyyy';
   return dailyGames.find((game) => game.id === id)!.name;
