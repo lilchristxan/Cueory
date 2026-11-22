@@ -4,6 +4,7 @@
   "kind": "model",
   "lessonIds": ["U04-T01-L01"],
   "status": "draft",
+  "hierarchyTree": "isa",
   "model": { "file": "/models/anatomy/vessels.glb", "release": "BodyParts3D 4.0", "via": "official download from dbarchive.biosciencedbc.jp" },
   "labels": [
     { "id": "FMA50872", "text": "right pulmonary artery", "group": "artery", "layer": "vessels", "source": "bp3d-FMA50872" },

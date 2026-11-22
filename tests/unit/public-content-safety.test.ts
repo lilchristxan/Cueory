@@ -7,7 +7,11 @@ type Kind = 'sample' | 'placeholder' | 'documentation' | 'empty-sentinel' |
   'curriculum-metadata' | 'visual-source-metadata' | 'empty-video-placeholder';
 type PublicFile = { kind: Kind; sha256: string };
 
-// Public corpus at staging 1de038ad. These fingerprints deliberately cover ALL bytes,
+// Public corpus at staging 1de038ad, with an explicitly reviewed 2026-11-14 metadata-only anatomy update.
+// All 11 anatomy manifests were diffed against staging: ONLY the optional hierarchyTree classification was added,
+// preserving all original labels, descriptions, sources, model files, and draft status. This fingerprint update
+// does not publish or approve anatomy content. Christian still controls content review and publication.
+// These fingerprints deliberately cover ALL bytes,
 // including unknown/nested fields, CSV cells and prose, rather than guessing whether
 // a sentence is clinical or whether an answer is real. A sample label alone must
 // never authorize a new payload. Review changed content before updating this list;
@@ -64,17 +68,17 @@ const publicFiles: Record<string, PublicFile> = {
   'samples/templates/pillo.csv': { kind: 'sample', sha256: '9dc222f7565cab3fe61db7e2641e246d2aed26d4d10b3b215c9058b9b436d832' },
   'samples/templates/word-path.csv': { kind: 'sample', sha256: '96223e4c791d5267b85a4d24820d83bd39eb8393aa573299d484c40c6d5055d8' },
   'videos/study-skills-01.json': { kind: 'empty-video-placeholder', sha256: '81ea27e6b2ef303ee616d2f5a59ed78a71bc8b09c9b93599628bc659ee2a4893' },
-  'visuals/anatomy-digestive.json': { kind: 'visual-source-metadata', sha256: 'aab9102a096f6660ba7c7b3bb8d7fe7ca66a7db226284614f18c6017b788856a' },
-  'visuals/anatomy-heart.json': { kind: 'visual-source-metadata', sha256: 'e765f7d4265bb1e96d0a2d012beb0ca7bdc4e25f6fd2caa2576d7eb3f57205c8' },
-  'visuals/anatomy-kidneys.json': { kind: 'visual-source-metadata', sha256: 'f83cdd282a34cba4eaf6f4444ce1342b0a56f59ca12f45f8d3563b92c20ad67c' },
-  'visuals/anatomy-lungs.json': { kind: 'visual-source-metadata', sha256: '2c2e38a20fa6b7db0f4a140da7361cff2c5d5f2e6e85a364dbe43bbbdc9e2c51' },
-  'visuals/anatomy-muscle.json': { kind: 'visual-source-metadata', sha256: 'e5194edfe155cbfff700cc3e12681db36056a3bead33897ff28823ed4a3f92d8' },
-  'visuals/anatomy-nerves.json': { kind: 'visual-source-metadata', sha256: '005240de1eb40d8f1f12858776d46c149fc822f60bdc015fe3de683bc78a9d03' },
-  'visuals/anatomy-nervous.json': { kind: 'visual-source-metadata', sha256: '8f88a8923db117abc92f2f8f8dd6418cdcd42cc7491b0616c16da1e5573b519f' },
-  'visuals/anatomy-skeleton-axial.json': { kind: 'visual-source-metadata', sha256: '06520f0e922ee29a692634be158f31b15a316cc3af418512be3f27233f7a345b' },
-  'visuals/anatomy-skeleton-limbs.json': { kind: 'visual-source-metadata', sha256: '16092a3221f6054bfabb8efe4494a6a0a61af480370ed9df458255fe801e5efa' },
-  'visuals/anatomy-skin.json': { kind: 'visual-source-metadata', sha256: 'fd7213ce255eb4e28b7946cf5787d369dcf99af614663de8ba5123463860dfce' },
-  'visuals/anatomy-vessels.json': { kind: 'visual-source-metadata', sha256: '3b0a9bbf9eaa71dc163c7112a570751b4483a6a15e22bcb2593cb521261bfa9a' },
+  'visuals/anatomy-digestive.json': { kind: 'visual-source-metadata', sha256: 'af31ba3f17323e6b59a851dc6da45a7310500122b922b1a2fc79a0544957144a' },
+  'visuals/anatomy-heart.json': { kind: 'visual-source-metadata', sha256: 'c29f46a6f993aeee992a7c09e5260d29cc48072593a3e57558c2a8acbb30a89c' },
+  'visuals/anatomy-kidneys.json': { kind: 'visual-source-metadata', sha256: '5a0b2df32d4f59f10b46c0ddb7d4d317569b323bb401f74cf97d62582f83954e' },
+  'visuals/anatomy-lungs.json': { kind: 'visual-source-metadata', sha256: '2716292081659ca71ff1a6bab6105d9fd8db74e5dc47f22674ec414c46764d1e' },
+  'visuals/anatomy-muscle.json': { kind: 'visual-source-metadata', sha256: 'ccd47902edbf2aea295d0f8cbfbfb87fbe4137690a75ff710a00d90aaa3f05a8' },
+  'visuals/anatomy-nerves.json': { kind: 'visual-source-metadata', sha256: 'efc30fc7c2af48f6724c6e68f1bd95a85a99c03f2bb55b25012098b9f0bc2fd9' },
+  'visuals/anatomy-nervous.json': { kind: 'visual-source-metadata', sha256: '987cace7e1f75a680e71ca5d83b7432b8978fa8a1094c560bbacf2cd6f64dbba' },
+  'visuals/anatomy-skeleton-axial.json': { kind: 'visual-source-metadata', sha256: 'd709049438a8f0c6918933b7df4875ca22ff7bcaa340d328c9499a486d018167' },
+  'visuals/anatomy-skeleton-limbs.json': { kind: 'visual-source-metadata', sha256: '234f2f05c0a55575c77d1403390d5c3a79e7bdb3ac87bbd323a361a95965b401' },
+  'visuals/anatomy-skin.json': { kind: 'visual-source-metadata', sha256: '73f20f878e9a85585efa9a710c455ef5c37bfc9ba8aaf738df741d7c3c2979e7' },
+  'visuals/anatomy-vessels.json': { kind: 'visual-source-metadata', sha256: '32328b9f797275a5b8ef54db1f7c3937164b0e222af74a96ee40dce131fbe7cf' },
   'visuals/fluid-compartments.json': { kind: 'visual-source-metadata', sha256: '2eae0645afe44a8a615704280bea45d3936e9d2af0056e769de92df7ebf774be' },
   'visuals/osmosis-fluid-shifts.json': { kind: 'visual-source-metadata', sha256: '4f8d84befcfcd5eb49502f5924525402fc175d119587769b378073309d026aa2' },
   'visuals/sodium-potassium-pump.json': { kind: 'visual-source-metadata', sha256: 'fb11c2fbf2b72d9dfada6c14537eb478ee86fd12cb529283a6a99c7007915ec3' },
