@@ -34,7 +34,7 @@ test.beforeEach(async ({ page }) => {
 });
 
 test.describe('word path: themed word search, the older format (Task 97)', () => {
-  test('at 320px with 32px root text, letters remain whole in a contained scroll area', async ({ page }) => {
+  test('piccline at 320px with 32px root text, letters remain whole in a contained scroll area', async ({ page }) => {
     await page.setViewportSize({ width: 320, height: 844 });
     await page.evaluate(() => document.documentElement.style.setProperty('font-size', '32px', 'important'));
 
@@ -73,7 +73,7 @@ test.describe('word path: themed word search, the older format (Task 97)', () =>
     expect(tops[1]).toBeGreaterThan(tops[0]!);
   });
 
-  test('tapping each first and last letter finds every word, crossed out and said in words', async ({ page }) => {
+  test('piccline tapping each first and last letter finds every word, crossed out and said in words', async ({ page }) => {
     for (const [i, { word, first, last }] of words.entries()) {
       await cell(page, first).click();
       await expect(live(page)).toHaveText(`first letter: ${word[0]}. now pick the last letter.`);

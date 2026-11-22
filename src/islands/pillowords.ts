@@ -2,7 +2,7 @@
  * The five-letter words pillo accepts as guesses (Task 719), from ./pillowords.txt (MIT-licensed list, notice in the
  * file). The list is loaded only when the game first needs it, so it never slows the page down.
  */
-import { forbiddenGameWords } from '../config/games';
+import { forbiddenGameWords } from '../config/game-words';
 import { WORD_LENGTH } from './pulse';
 
 /** Reads the list: one word a line; notes (#) and anything that isn't five lowercase letters are skipped. */

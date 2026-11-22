@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { dailyGames, forbiddenGameWords } from '../../src/config/games';
+import { dailyGames } from '../../src/config/games';
+import { forbiddenGameWords } from '../../src/config/game-words';
 import {
   GAME_HELP, GAME_HELP_STORAGE_KEY, HELP_GAMES, SHARED_SETTINGS_NOTE, helpSeen, markHelpSeen, parseHelpSeen,
 } from '../../src/islands/gamehelpcontent';

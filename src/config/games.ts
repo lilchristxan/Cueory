@@ -50,60 +50,7 @@ const baseDailyGames: readonly DailyGame[] = [
   },
 ];
 
-export const dailyGames: readonly DailyGame[] = new Proxy(baseDailyGames, {
-  get(target, prop, receiver) {
-    if (prop === 'some') {
-      return (predicate: (item: DailyGame, index: number, obj: readonly DailyGame[]) => boolean) => {
-        if (target.some(predicate)) return true;
-        const pulseProxy = { ...target[0], id: 'pulse' as const, name: 'pillo' };
-        if (predicate(pulseProxy, 0, target)) return true;
-        const wordPathProxy = { ...target[3], id: 'suture' as const, name: 'word path' };
-        return predicate(wordPathProxy, 3, target);
-      };
-    }
-    if (prop === 'find') {
-      return (predicate: (item: DailyGame, index: number, obj: readonly DailyGame[]) => boolean) => {
-        const pulseLegacy = { ...target[0], id: 'pulse' as const, name: 'pillo' };
-        if (predicate(pulseLegacy, 0, target) && !predicate(target[0], 0, target)) {
-          return pulseLegacy;
-        }
-        const sutureLegacy = {
-          ...target[3],
-          id: 'suture' as const,
-          name: 'word path',
-          line: 'trace the theme words through a board of letters, in any direction, and find the thread that names the theme.',
-        };
-        if (predicate(sutureLegacy, 3, target) && !predicate(target[3], 3, target)) {
-          return sutureLegacy;
-        }
-        const found = target.find(predicate);
-        if (found) return found;
-        const vialoProxy = { ...target[0], id: 'vialo' as const };
-        if (predicate(vialoProxy, 0, target)) {
-          return target[0];
-        }
-        const picclineProxy = { ...target[3], id: 'piccline' as const };
-        if (predicate(picclineProxy, 3, target)) {
-          return target[3];
-        }
-        return undefined;
-      };
-    }
-    return Reflect.get(target, prop, receiver);
-  },
-});
-
-/** Each daily game's own page (each game on its own page, 2026-11-17); /play is the hub that links to them. */
-export const gamePages: Readonly<Record<DailyGame['id'], string>> = Object.freeze({
-  vialo: '/play/vialo',
-  pulse: '/play/vialo',
-  triage: '/play/sudoku',
-  cueword: '/play/crossword',
-  suture: '/play/piccline',
-  piccline: '/play/piccline',
-  tachyyy: '/play/tachyyy',
-  stat: '/play/tachyyy',
-});
+export const dailyGames: readonly DailyGame[] = baseDailyGames;
 
 /** The name visitors see for a game. */
 export function gameName(id: DailyGame['id'] | 'vialo' | 'piccline' | 'tachyyy' | 'stat'): string {
@@ -117,9 +64,6 @@ export function gameName(id: DailyGame['id'] | 'vialo' | 'piccline' | 'tachyyy' 
 /** Names retained only for unmounted legacy game logic and its regression tests. */
 export const retiredGameNames = { triage: 'sort' } as const;
 
-/** Names and words the games must never use (CLAUDE.md). */
-export const forbiddenGameWords = ['wordle', 'connections', 'strands', 'spangram', 'nyt', 'new york times'] as const;
-
 /**
  * Hello cards (Task 201): a flip-the-card game of conversation starters for patients, co-workers and classmates. It is
  * not a daily puzzle, so it sits outside dailyGames (no score, no streak, no share). It is listed on /play.
@@ -128,16 +72,6 @@ export const helloCardsGame = {
   name: 'hello cards',
   href: '/play/hello-cards',
   line: 'flip a card for a friendly conversation starter, for anyone you work or study with. choose small talk or a deeper conversation.',
-} as const;
-
-/**
- * tachyyy: fifteen hard clinical questions, 20 seconds each, score at the end. Rebrands stat.
- */
-export const tachyyyGame = {
-  name: 'tachyyy',
-  subtitle: '20 seconds each',
-  href: '/play/tachyyy',
-  line: 'fifteen fast clinical questions, 20 seconds each. how sharp are you on shift today?',
 } as const;
 
 /**

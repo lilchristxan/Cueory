@@ -1,6 +1,7 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { dailyGames, forbiddenGameWords } from '../../src/config/games';
+import { dailyGames } from '../../src/config/games';
+import { forbiddenGameWords } from '../../src/config/game-words';
 import { contrastRatio, parseHex, readColorTokens } from './contrast';
 import {
   cleanGuess,

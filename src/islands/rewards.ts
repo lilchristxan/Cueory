@@ -324,8 +324,8 @@ function checkState(input: unknown): RewardsState {
       const a = value as Record<string, unknown>;
       return { id: a.id as string, name: a.name as string, rule: a.rule as string, earnedDate: a.earnedDate as string };
     }),
-    currentStreak: m.current,
-    bestStreak: m.best,
+    currentStreak: m.currentStreak,
+    bestStreak: m.bestStreak,
     passesLeftThisWeek: available ? WEEKLY_FREE_PASSES : 0,
     lastEvaluatedDay: evaluationDay,
   };
@@ -346,19 +346,21 @@ export function applyResult(state: unknown, event: unknown, today: string): Appl
   const currentDay = dayIndex(today);
   if (currentDay === null) throw new Error('use a real local calendar day (YYYY-MM-DD).');
   const before = checkState(state);
+  const unchangedState = JSON.stringify(before) === JSON.stringify(state);
+  const rejectedState = unchangedState ? state as RewardsState : before;
   const parsedGame = readGame(event, true);
   const game = parsedGame === null ? null : canonicalGame(parsedGame);
   const study = game ? null : readStudy(event, true);
   const parsed = game ?? study;
   if (!parsed || (before.lastEvaluatedDay !== null && today < before.lastEvaluatedDay)) {
-    return { state: before, accepted: false, pointsEarned: 0, achievementsEarned: [], streakMessage: null };
+    return { state: rejectedState, accepted: false, pointsEarned: 0, achievementsEarned: [], streakMessage: null };
   }
   const age = currentDay - dayIndex(parsed.day)!;
   const duplicate = game
     ? before.games.some((entry) => entry.day === game.day && entry.game === game.game)
     : before.studies.some((entry) => entry.id === study!.id);
   if (age < 0 || age > EVENT_MAX_AGE_DAYS || duplicate) {
-    return { state: before, accepted: false, pointsEarned: 0, achievementsEarned: [], streakMessage: null };
+    return { state: rejectedState, accepted: false, pointsEarned: 0, achievementsEarned: [], streakMessage: null };
   }
 
   const games = [...before.games.map((entry) => ({ ...entry })), ...(game ? [game] : [])];

@@ -2,7 +2,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it, vi } from 'vitest';
 import { GAME_PROGRESS_EVENT, reportProgress } from '../../src/islands/gameresults';
-import { forbiddenGameWords } from '../../src/config/games';
+import { forbiddenGameWords } from '../../src/config/game-words';
 import { parseWordList } from '../../src/islands/pillowords';
 import {
   canSetHardMode,

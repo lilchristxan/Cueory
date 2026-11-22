@@ -163,7 +163,7 @@ const reviewRowSchema: Schema = { itemId: uuid, level, lastReviewed: day, nextRe
 const reviewSchema: Schema = { id: value => text(value) && !!(value as string).trim(), nextDueDate: day, interval: whole };
 const gameOptionalKeys: ReadonlySet<string> = new Set(['streak', 'hints', 'specialFirst', 'offDay']);
 const gameSchema: Schema = {
-  game: value => dailyGames.some(game => game.id === value),
+  game: value => dailyGames.some(game => game.id === value) || value === 'pulse' || value === 'pillo',
   day,
   solved: bool,
   tries: whole,

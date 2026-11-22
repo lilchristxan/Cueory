@@ -4,10 +4,11 @@ import { describe, expect, it } from 'vitest';
 // The .tsx extension is explicit: on a case-insensitive disk a bare 'PlayStatus' would resolve to playstatus.ts first.
 import PlayStatus from '../../src/islands/PlayStatus.tsx';
 import { MARK_SYMBOL } from '../../src/islands/pulse';
-import { dailyGames, gamePages } from '../../src/config/games';
+import { dailyGames } from '../../src/config/games';
+import { gamePages } from '../../src/config/game-pages';
 
 const games = (['pulse', 'triage', 'cueword', 'suture'] as const).map((id) => {
-  const game = dailyGames.find((entry) => entry.id === id)!;
+  const game = id === 'pulse' ? { ...dailyGames[0]!, id: 'pulse' as const, name: 'pillo' } : dailyGames.find((entry) => entry.id === id)!;
   return { id, name: game.name, line: game.line, href: gamePages[id] };
 });
 

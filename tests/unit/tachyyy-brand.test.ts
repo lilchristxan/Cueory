@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { tachyyyGame } from '../../src/config/games';
+import { tachyyyGame } from '../../src/config/tachyyy';
 import { STAT_SECONDS } from '../../src/islands/stat';
 
 describe('tachyyy public duration', () => {

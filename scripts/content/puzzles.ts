@@ -5,7 +5,7 @@
  * wrong and what to do. The games' own checks (parsePuzzle, parseWordPath, countSolutions) run unchanged, so this can
  * never pass a puzzle the site would refuse.
  */
-import { forbiddenGameWords } from '../../src/config/games.ts';
+import { forbiddenGameWords } from '../../src/config/game-words.ts';
 import { parsePuzzle, words as crosswordWords, levelSize, type CrosswordLevel } from '../../src/islands/cueword.ts';
 import { dayNumber, puzzleForDay, WORD_LENGTH } from '../../src/islands/pulse.ts';
 import { countSolutions, conflictIndices, dailySudokuSeed, generateSudoku, type SudokuLevel } from '../../src/islands/sudoku.ts';
