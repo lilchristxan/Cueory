@@ -88,6 +88,10 @@ export default function SudokuGame({ framed = false }: { framed?: boolean } = {}
   const started = useRef(false);
 
   useEffect(() => {
+    if (framed) setKept(loadSudokuStats(browserStorage(), day));
+  }, [framed, day]);
+
+  useEffect(() => {
     if (!framed) return;
     const detailFor = (event: Event) => {
       const detail = (event as CustomEvent<unknown>).detail;
@@ -436,6 +440,21 @@ export default function SudokuGame({ framed = false }: { framed?: boolean } = {}
           return <label key={key} className="game-settings-option"><span>{labels[key]}</span><input type="checkbox" checked={settings[key]} disabled={paused && key === 'autoCandidates'} onChange={() => updateSetting(key)} /></label>;
         })}
       </fieldset>
+      {framed && <fieldset>
+        <legend>your sudoku stats</legend>
+        {kept.on ? <>
+          <table data-testid="sudoku-stats">
+            <caption className="sr-only">solved, best time, average time and streak for each level</caption>
+            <thead><tr><th scope="col">level</th><th scope="col">solved</th><th scope="col">best</th><th scope="col">average</th><th scope="col">streak</th></tr></thead>
+            <tbody>{LEVELS.map((choice) => {
+              const stats = sudokuLevelStats(kept.solves, choice, day);
+              return <tr key={choice}><th scope="row">{LEVEL_LABELS[choice]}</th><td>{stats.solved}</td><td>{stats.bestSeconds === null ? '–' : sudokuTime(stats.bestSeconds)}</td><td>{stats.averageSeconds === null ? '–' : sudokuTime(stats.averageSeconds)}</td><td>{plural(stats.streak, 'day', 'days')}</td></tr>;
+            })}</tbody>
+          </table>
+          <p className="text-sm text-ink-soft">your first solve of each level each day counts. they stay in this browser and never reach us.</p>
+        </> : <p>this browser won't keep stats (private browsing or blocked site data), so your sudoku times and streaks can't be shown.</p>}
+        {kept.solves.length > 0 && <button type="button" className="sudoku-text-button" onClick={forgetSudokuStats}>forget sudoku stats</button>}
+      </fieldset>}
       {framed && <fieldset>
         <legend>your data</legend>
         {!confirmingForgetAll ? <button ref={forgetAllStatsButton} type="button" className="game-settings-data-button" onClick={openForgetAllConfirmation}>forget all my stats</button> : <div role="group" aria-labelledby="forget-stats-question" className="game-settings-confirm">

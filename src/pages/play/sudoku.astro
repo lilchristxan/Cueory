@@ -46,7 +46,7 @@ const game = dailyGames.find((item) => item.id === 'triage')!;
 
   :global(.game-frame-select) {
     min-block-size: var(--game-frame-btn-size);
-    min-inline-size: 7rem;
+    inline-size: min(100%, var(--game-frame-sidebar-width));
     padding-inline: var(--spacing-2);
     border: var(--game-frame-btn-border);
     border-radius: var(--radius-pill);

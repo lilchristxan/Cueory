@@ -64,6 +64,24 @@ test('framed Sudoku settings returns focus to the shared gear without duplicate 
   await expect(gear).toBeFocused();
 });
 
+test('framed Sudoku keeps per-level stats and forget-all in the shared settings dialog', async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem('cueory-game-stats', JSON.stringify({ version: 1, results: [] }));
+    localStorage.setItem('cueory-sudoku-stats', JSON.stringify({ version: 1, solves: [
+      { level: 'easy', day: '2026-11-22', seconds: 61 },
+      { level: 'hard', day: '2026-11-21', seconds: 121 },
+    ] }));
+  });
+  await page.goto('/play/sudoku');
+  await page.getByTestId('game-frame-gear').click();
+  const settings = page.getByRole('dialog', { name: 'sudoku settings' });
+  await expect(settings.getByTestId('sudoku-stats')).toBeVisible();
+  await expect(settings.getByTestId('sudoku-stats')).toContainText('easy');
+  await expect(settings.getByTestId('sudoku-stats')).toContainText('01:01');
+  await expect(settings.getByRole('button', { name: 'forget sudoku stats' })).toBeVisible();
+  await expect(settings.getByRole('button', { name: 'forget all my stats' })).toBeVisible();
+});
+
 for (const [width, height] of [[390, 844], [820, 1180], [1440, 900]] as const) {
   for (const colorScheme of ['light', 'dark'] as const) {
     test(`framed Sudoku controls fit at ${width}px (${colorScheme})`, async ({ page }) => {
