@@ -1,1 +1,0 @@
-status: Lesson questions keep keyboard focus in Firefox: after a control is pressed, focus moves to the question text (a focusable span inside the legend) instead of falling to the page. Fixes the Firefox failure of lesson-keyboard-focus.spec.ts:96 seen on release PR #634; all 7 cases of the unchanged spec pass in Firefox.

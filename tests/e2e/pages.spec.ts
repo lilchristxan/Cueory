@@ -33,10 +33,24 @@ async function openFooterLinks(page: Page) {
 const middleCard = (page: Page) =>
   page.locator('#ways-to-study [data-mode-card][data-offset="0"]').getAttribute('data-name');
 
-/** Failure-only Firefox and WebKit desktop evidence for the pointer-park start of the carousel autoplay assertion. */
+/** Failure-only Firefox and WebKit desktop evidence for the carousel autoplay assertion. */
 async function installAutoplayPointerParkDiagnostic(page: Page) {
   await page.addInitScript(() => {
     type Rect = { left: number; top: number; right: number; bottom: number; width: number; height: number } | null;
+    type Target = { tag: string | null; id: string | null; mode: string | null };
+    type Detail = {
+      event?: string;
+      eventT?: number;
+      trusted?: boolean;
+      pointerType?: string;
+      x?: number;
+      y?: number;
+      target?: Target;
+      related?: Target;
+      hit?: Target;
+      trackHover?: boolean;
+      controlsHover?: boolean;
+    };
     type Entry = {
       phase: string;
       t: number;
@@ -48,11 +62,26 @@ async function installAutoplayPointerParkDiagnostic(page: Page) {
       intersection: number | null;
       visibility: string;
       reducedMotion: boolean;
+      detail?: Detail;
     };
     type ProbeWindow = Window & { __cueoryAutoplayPointerParkDiagnostic?: { entries: Entry[]; mark: (phase: string) => void } };
     const entries: Entry[] = [];
-    const cap = 80;
+    const cap = 120;
     let intersection: number | null = null;
+    let postHover = false;
+    let lastMouse: { x: number; y: number } | undefined;
+    const target = (value: EventTarget | null): Target => {
+      const element = value instanceof Element ? value : null;
+      return {
+        tag: element?.tagName.toLowerCase() ?? null,
+        id: element?.id ?? null,
+        mode: element?.closest<HTMLElement>('[data-mode-card]')?.dataset.name ?? null,
+      };
+    };
+    const push = (entry: Entry) => {
+      entries.push(entry);
+      if (entries.length > cap) entries.splice(0, entries.length - cap);
+    };
     const sample = () => {
       const root = document.querySelector<HTMLElement>('[data-modes]');
       const track = root?.querySelector<HTMLElement>('[data-modes-track]') ?? null;
@@ -68,15 +97,76 @@ async function installAutoplayPointerParkDiagnostic(page: Page) {
         reducedMotion: window.matchMedia('(prefers-reduced-motion: reduce)').matches,
       };
     };
-    const note = (phase: string) => {
-      entries.push({ phase, t: performance.now(), ...sample() });
-      if (entries.length > cap) entries.splice(0, entries.length - cap);
+    const note = (phase: string, detail?: Detail) => {
+      push({ phase, t: performance.now(), ...sample(), detail });
     };
-    (window as ProbeWindow).__cueoryAutoplayPointerParkDiagnostic = { entries, mark: note };
+    const notePostDispatch = (phase: string, detail: Detail, track: HTMLElement, controls: HTMLElement | null) => {
+      window.setTimeout(() => {
+        const hit = lastMouse ? document.elementFromPoint(lastMouse.x, lastMouse.y) : null;
+        note(`${phase}:post-dispatch`, {
+          ...detail,
+          hit: target(hit),
+          trackHover: track.matches(':hover'),
+          controlsHover: controls?.matches(':hover') ?? false,
+        });
+      }, 0);
+    };
+    (window as ProbeWindow).__cueoryAutoplayPointerParkDiagnostic = {
+      entries,
+      mark: (phase) => {
+        if (phase === 'intentional-hover:before') postHover = true;
+        note(phase);
+      },
+    };
     document.addEventListener('DOMContentLoaded', () => {
       const root = document.querySelector<HTMLElement>('[data-modes]');
       const track = root?.querySelector<HTMLElement>('[data-modes-track]');
       if (!root || !track) return note('carousel:missing');
+      const controls = root.querySelector<HTMLElement>('[data-modes-controls]');
+      const isPauseArea = (value: EventTarget | null) =>
+        value instanceof Node && [track, controls].some((area) => area?.contains(value));
+      // Event capture must not force layout ahead of the carousel's own listener.
+      const eventState = () => ({
+        autoplay: root.dataset.autoplay ?? null,
+        hold: root.dataset.autoplayHold ?? null,
+        active: root.querySelector<HTMLElement>('[data-mode-card][data-offset="0"]')?.dataset.name ?? null,
+        track: null,
+        viewport: { width: window.innerWidth, height: window.innerHeight },
+        intersection,
+        visibility: document.visibilityState,
+        reducedMotion: window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+      });
+      const recordPointer = (event: PointerEvent) => {
+        if (!postHover || event.pointerType !== 'mouse' || (!isPauseArea(event.target) && !isPauseArea(event.relatedTarget))) return;
+        lastMouse = { x: event.clientX, y: event.clientY };
+        const detail: Detail = {
+          event: event.type,
+          eventT: event.timeStamp,
+          trusted: event.isTrusted,
+          pointerType: event.pointerType,
+          x: event.clientX,
+          y: event.clientY,
+          target: target(event.target),
+          related: target(event.relatedTarget),
+        };
+        // Capture only event fields synchronously. Geometry and hit testing run after the carousel's listener.
+        push({ phase: `pointer:${event.type}`, t: performance.now(), ...eventState(), detail });
+        notePostDispatch(`pointer:${event.type}`, detail, track, controls);
+      };
+      const recordMouseOut = (event: MouseEvent) => {
+        if (!postHover || (!isPauseArea(event.target) && !isPauseArea(event.relatedTarget))) return;
+        const detail: Detail = {
+          event: event.type,
+          eventT: event.timeStamp,
+          trusted: event.isTrusted,
+          x: event.clientX,
+          y: event.clientY,
+          target: target(event.target),
+          related: target(event.relatedTarget),
+        };
+        push({ phase: 'mouse:mouseout', t: performance.now(), ...eventState(), detail });
+        notePostDispatch('mouse:mouseout', detail, track, controls);
+      };
       note('carousel:ready');
       new MutationObserver((mutations) => {
         for (const mutation of mutations) note(`attribute:${mutation.attributeName}`);
@@ -87,6 +177,17 @@ async function installAutoplayPointerParkDiagnostic(page: Page) {
           note('intersection');
         }
       }, { threshold: [0, 0.01, 1] }).observe(track);
+      for (const type of ['pointerenter', 'pointerleave', 'pointermove', 'pointerover', 'pointerout'] as const) {
+        window.addEventListener(type, recordPointer, { capture: true, passive: true });
+      }
+      window.addEventListener('mouseout', recordMouseOut, { capture: true, passive: true });
+      window.addEventListener('scroll', (event) => {
+        if (!postHover) return;
+        const detail: Detail = { event: 'scroll', eventT: event.timeStamp, trusted: event.isTrusted };
+        // The product's capture listener reconciles hover from elementFromPoint. Sample only after it has returned.
+        push({ phase: 'scroll', t: performance.now(), ...eventState(), detail });
+        notePostDispatch('scroll', detail, track, controls);
+      }, { capture: true, passive: true });
     });
   });
 }
@@ -1212,7 +1313,9 @@ test.describe('"ways to study" merry-go-round (D-50, D-60)', () => {
       await expect.poll(() => middleCard(page), { timeout: 9000 }).toBe('cards');
 
       // Resting on the cards pauses it; moving off lets it go on.
+      if (diagnoseAutoplayStart) await markAutoplayPointerParkDiagnostic(page, 'intentional-hover:before');
       await page.getByRole('group', { name: 'study mode cards' }).hover();
+      if (diagnoseAutoplayStart) await markAutoplayPointerParkDiagnostic(page, 'intentional-hover:after');
       await page.waitForTimeout(7000);
       expect(await middleCard(page)).toBe('cards');
       await page.mouse.move(0, 0);

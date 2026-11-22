@@ -4,6 +4,7 @@ import { browserStorage } from '../scripts/storage';
 import {
   forgetHeldRounds,
   GAME_RESULT_EVENT,
+  reportStatsStatus,
   reportStatsChanged,
   heldRounds,
   loadStats,
@@ -139,12 +140,12 @@ function useStatsPersistence(setSaved: SetSaved, setSaid: SetText, setBlocked: S
 }
 
 const ignoreSaved: SetSaved = () => undefined;
-const ignoreText: SetText = () => undefined;
 const ignoreBlocked: SetBlocked = () => undefined;
+const announceStatus: SetText = (value) => reportStatsStatus(typeof value === 'function' ? value('') : value);
 
 /** Keeps finished rounds durable on framed pages without rendering a second stats panel. */
 export function GameStatsPersistence() {
-  useStatsPersistence(ignoreSaved, ignoreText, ignoreBlocked);
+  useStatsPersistence(ignoreSaved, announceStatus, ignoreBlocked);
   return null;
 }
 

@@ -1,0 +1,1 @@
+status: Task 634, unit tests for the game help data helpers (`src/islands/gamehelpcontent.ts`): saved-value parsing, seen marks, vialo/pulse alias, blocked storage, content shape. No help wording is asserted. Test-only; no product code change.

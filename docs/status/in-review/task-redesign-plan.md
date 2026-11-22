@@ -1,1 +1,0 @@
-status: redesign plan from Christian's renderings (artifact "Cueory redesign renderings"): gap list per launch route and a 14-PR build plan; launch moved by Christian (18 Nov) until the launch pages match. Docs only.

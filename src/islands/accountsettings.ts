@@ -16,6 +16,7 @@ import { loadSudokuStats } from './sudokustats';
 import { DELETE_IDENTITY, studentMessage } from './rpcerrors';
 import { AUTH_STORAGE_KEY, sessionCheckFrom, type SessionReader, type SessionState } from './supabaseclient';
 import { migrateLegacyStars } from '../scripts/progress';
+import { readResume } from '../scripts/resume';
 import type { KeyValueStorage } from '../scripts/storage';
 
 // ── Messages ──────────────────────────────────────────────────────────────────
@@ -223,6 +224,7 @@ export async function gatherExport(reader: ExportReader, { email, signInDetails,
   const progress = migrateLegacyStars(storage);
   const stats = loadStats(storage, today);
   const sudoku = loadSudokuStats(storage, today);
+  const resume = readResume(storage);
   const stored = (key: string): boolean => {
     try { return storage?.getItem(key) != null; } catch { return false; }
   };
@@ -236,6 +238,7 @@ export async function gatherExport(reader: ExportReader, { email, signInDetails,
       // Stats are always kept (2026-11-17); the file lists them when this browser holds a record of them.
       ...(stats.on && stored(STATS_STORAGE_KEY) ? { gameStats: stats.stats } : {}),
       ...(sudoku.on && stored(SUDOKU_STATS_STORAGE_KEY) ? { sudokuStats: sudoku.solves } : {}),
+      ...(resume ? { resume: JSON.parse(JSON.stringify(resume)) as ExportData['resume'] } : {}),
     },
   };
 }

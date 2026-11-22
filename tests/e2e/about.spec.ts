@@ -1,5 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
-import { expect, test } from '@playwright/test';
+import { expect, test, type Locator, type Page } from '@playwright/test';
+import { markPanelsSeen } from './clock';
 
 const headings = [
   'we know nursing school is hard.',
@@ -8,6 +9,23 @@ const headings = [
   "what's coming",
   'help keep cueory free.',
 ] as const;
+
+async function tabTo(page: Page, target: Locator, label: string) {
+  for (let attempts = 0; attempts < 24; attempts++) {
+    await page.keyboard.press('Tab');
+    if (await target.evaluate((element) => document.activeElement === element)) return;
+  }
+  throw new Error(`Keyboard focus did not reach ${label}`);
+}
+
+async function expectKeyboardFocusRing(target: Locator) {
+  const focus = await target.evaluate((element) => {
+    const style = getComputedStyle(element);
+    return { kind: style.outlineStyle, width: Number.parseFloat(style.outlineWidth) };
+  });
+  expect(focus.kind).not.toBe('none');
+  expect(focus.width).toBeGreaterThanOrEqual(1);
+}
 
 test.describe('about page', () => {
   test('shows the design sections with founder-owned copy, without publishing unfinished text', async ({ page }) => {
@@ -30,6 +48,49 @@ test.describe('about page', () => {
     await expect(page.getByRole('link', { name: 'join the mailing list' })).toHaveAttribute('href', '/#signup');
     await expect(page.getByRole('link', { name: 'support on Ko-fi (opens in a new tab)' })).toHaveAttribute('href', 'https://ko-fi.com/cueory');
     await expect(page.getByRole('link', { name: 'support on Ko-fi (opens in a new tab)' })).toHaveAttribute('target', '_blank');
+  });
+
+  test('page calls to action receive natural keyboard focus and activate safely', async ({ page, context }) => {
+    const signup = page.getByRole('link', { name: 'join the mailing list' });
+    // This test owns the page CTAs, not either once-only launch panel that can take focus after navigation.
+    await markPanelsSeen(page);
+    await page.goto('/about');
+    await tabTo(page, signup, 'join the mailing list');
+    await expect(signup).toBeFocused();
+    // A keyboard round trip establishes :focus-visible across Chromium's page-load focus state.
+    await page.keyboard.press('Shift+Tab');
+    await page.keyboard.press('Tab');
+    await expect(signup).toBeFocused();
+    await expectKeyboardFocusRing(signup);
+    await Promise.all([
+      page.waitForURL(/\/#signup$/),
+      page.keyboard.press('Enter'),
+    ]);
+
+    // The outbound destination is intercepted so this keyboard check never contacts Ko-fi.
+    await context.route('https://ko-fi.com/cueory', (route) => route.fulfill({
+      contentType: 'text/html',
+      body: '<title>intercepted Ko-fi destination</title>',
+    }));
+    try {
+      await page.goto('/about');
+      const support = page.getByRole('link', { name: 'support on Ko-fi (opens in a new tab)' });
+      await tabTo(page, support, 'support on Ko-fi');
+      await expect(support).toBeFocused();
+      await page.keyboard.press('Shift+Tab');
+      await page.keyboard.press('Tab');
+      await expect(support).toBeFocused();
+      await expectKeyboardFocusRing(support);
+
+      const popupPromise = page.waitForEvent('popup');
+      await page.keyboard.press('Enter');
+      const popup = await popupPromise;
+      await popup.waitForLoadState('domcontentloaded');
+      expect(popup.url()).toBe('https://ko-fi.com/cueory');
+      await expect(popup).toHaveTitle('intercepted Ko-fi destination');
+    } finally {
+      await context.unroute('https://ko-fi.com/cueory');
+    }
   });
 
   for (const width of [320, 390]) {

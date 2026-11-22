@@ -1,1 +1,0 @@
-status: #755, exam-date setup stays bound to one account: the exam-plan adapter records the account at load, filters every read, update and delete by that account's id, and checks the client is still signed in as it before every write and retry, so a setup started as A is never saved to B (needs Christian).

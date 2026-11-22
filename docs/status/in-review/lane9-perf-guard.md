@@ -1,1 +1,0 @@
-status: Lane 9, performance guard (lane9/perf-guard): tests/unit/perf-budget.test.ts now fails if any built page goes over the JavaScript budget for its page type; the JS scanner moved unchanged to tests/unit/perf-scan.ts so the route and type budgets count the same way; docs/PERFORMANCE.md JS-per-page numbers corrected (+11 KiB per page) and the islands review recorded.

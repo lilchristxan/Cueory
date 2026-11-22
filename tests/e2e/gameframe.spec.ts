@@ -5,7 +5,6 @@ const games = [
   { path: '/play/stat', name: 'stat', framed: true, bridge: false },
   { path: '/play/word-path', name: 'word path', framed: false, bridge: false },
   { path: '/play/crossword', name: 'crossword', framed: true, bridge: true },
-  { path: '/play/sudoku', name: 'sudoku', framed: true, bridge: true },
   { path: '/play/hello-cards', name: 'hello cards', framed: true, bridge: false },
 ] as const;
 
@@ -21,6 +20,7 @@ test.describe('GameFrame shared layout (Scope 1)', () => {
       await expect(backLink).toHaveAttribute('href', '/play');
 
       const logo = page.locator('.game-frame-logo:visible');
+      await expect(logo).toHaveCount(1);
       await expect(logo).toBeVisible();
 
       // Stats
@@ -68,7 +68,6 @@ test.describe('GameFrame shared layout (Scope 1)', () => {
         await expect(page.getByRole('button', { name: `how to play ${game.name}` })).toHaveCount(1);
         await expect(page.getByTestId('game-settings-button')).toHaveCount(0);
         await expect(page.getByTestId('game-help-button')).toHaveCount(0);
-        if (game.name === 'sudoku') await expect(page.getByRole('button', { name: 'sudoku stats' })).toHaveCount(0);
         await helpBtn.click();
         const dialog = page.getByRole('dialog', { name: `how to play ${game.name}` });
         await expect(dialog).toBeVisible();

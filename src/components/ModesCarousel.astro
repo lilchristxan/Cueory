@@ -226,9 +226,11 @@ const icons: Record<StudyFeatureIcon, string> = {
     REST_MS,
     RING_MS,
     SETTLE_GRACE_MS,
+    releaseAnimations,
     STEP_MS,
     autoplayHold,
     canAutoAdvance,
+    illustrationsMayLoop,
     canEnhanceCarousel,
     carouselState,
     enterMatchesMouseMove,
@@ -245,6 +247,7 @@ const icons: Record<StudyFeatureIcon, string> = {
     slideAnnouncement,
     swipeTurn,
     wrap,
+    shouldClearDocumentExit,
   } from '../scripts/carousel';
   import { relabelInfoTip } from '../scripts/infotip';
   import { isCloseKey, wrapFocus } from '../scripts/menu';
@@ -496,6 +499,7 @@ const icons: Record<StudyFeatureIcon, string> = {
       const hold = autoplayHold(state);
       const allowed = hold === undefined;
       root!.dataset.autoplay = allowed ? 'on' : 'off';
+      root!.toggleAttribute('data-looping', illustrationsMayLoop(state));
       if (hold) root!.dataset.autoplayHold = hold;
       else delete root!.dataset.autoplayHold;
       if (!allowed) {
@@ -650,9 +654,19 @@ const icons: Record<StudyFeatureIcon, string> = {
       }
     }, { capture: true, passive: true });
     // There is no final in-window pointermove when the mouse exits into browser chrome. Clear only that genuine
-    // document exit; ordinary track/control handoffs have a related target and continue through pointermove instead.
+    // document exit. Firefox can replay a trusted null-relatedTarget exit at an old in-track coordinate after a real
+    // hover; ignore that stale exit only when its old coordinate still hits a pause area. A mismatched exit that is
+    // outside the viewport or outside the pause areas remains genuine. Ordinary handoffs have a related target.
     window.addEventListener('mouseout', (event) => {
-      if (event.isTrusted && event.relatedTarget === null) setHovering(false);
+      if (
+        event.isTrusted &&
+        event.relatedTarget === null &&
+        shouldClearDocumentExit(
+          lastMouseMove,
+          { x: event.clientX, y: event.clientY },
+          isPauseArea(document.elementFromPoint(event.clientX, event.clientY)),
+        )
+      ) setHovering(false);
     }, { passive: true });
     root.addEventListener('focusin', () => {
       state.focusInside = true;
@@ -739,6 +753,8 @@ const icons: Record<StudyFeatureIcon, string> = {
       const restWhenDone = (animations: readonly Animation[], limit: number) => {
         const round = previewRound;
         void settle(animations, limit).then(() => {
+          // The grow and the nudge fill nothing, so releasing them changes nothing on screen.
+          releaseAnimations(animations);
           if (round === previewRound && dialog.open) setPreview('open');
         });
       };
@@ -1057,6 +1073,10 @@ const icons: Record<StudyFeatureIcon, string> = {
     background: var(--cueory-copper-glow);
     border: var(--border-vial-arrow) solid var(--cueory-copper-start);
     box-shadow: 0 calc(var(--spacing) * 1) calc(var(--spacing) * 3) rgb(var(--shadow-tint) / 0.16);
+    /* The glow is an opaque color, so the corner button's frosted blur shows nothing here. It only made WebKit blur
+       the turning ring behind each arrow on every frame (#634). */
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
   }
 
   .modes-p6 .vial-arrow:hover {

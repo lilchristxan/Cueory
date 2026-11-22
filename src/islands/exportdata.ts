@@ -25,6 +25,7 @@
  */
 import { dailyGames } from '../config/games';
 import { isCourse, isExamDate, PROGRESS_VERSION, type DeckProgress, type Progress } from '../scripts/progress';
+import { MAX_ANSWER_TEXT } from '../scripts/resume';
 import type { GameStats } from './gamestats';
 import type { SudokuSolves } from './sudokustats';
 
@@ -76,6 +77,8 @@ export interface ExportData {
    * loadExport supplies StudyEventPages; a short list can also be passed as rows.
    */
   studyEvents?: readonly StudyEventRow[] | StudyEventPages;
+  /** The validated device-local study checkpoint, including only the student's submitted answers. */
+  resume?: JsonObject;
 }
 export interface StudyEventRow {
   itemId: string; itemVersionId: string; kind: string; msOnItem: number; mark: string | null; at: string; createdAt: string;
@@ -158,8 +161,16 @@ const studyEventSchema: Schema = {
 };
 const reviewRowSchema: Schema = { itemId: uuid, level, lastReviewed: day, nextReview: day, updatedAt: date };
 const reviewSchema: Schema = { id: value => text(value) && !!(value as string).trim(), nextDueDate: day, interval: whole };
+const gameOptionalKeys: ReadonlySet<string> = new Set(['streak', 'hints', 'specialFirst', 'offDay']);
 const gameSchema: Schema = {
-  game: value => dailyGames.some(game => game.id === value), day, solved: bool, tries: whole,
+  game: value => dailyGames.some(game => game.id === value),
+  day,
+  solved: bool,
+  tries: whole,
+  streak: bool,
+  hints: whole,
+  specialFirst: bool,
+  offDay: value => value === true,
 };
 const sudokuSchema: Schema = {
   level: value => value === 'easy' || value === 'medium' || value === 'hard', day, seconds: whole,
@@ -218,7 +229,31 @@ const identitySchema: Schema = { provider: providerName, identityData: jsonObjec
 const sessionSchema: Schema = {
   createdAt: nullableDate, updatedAt: nullableDate, notAfter: nullableDate, userAgent: nullableText, ip: nullableText,
 };
-const sections = ['profile', 'signInDetails', 'account', 'onboarding', 'progress', 'reviewState', 'gameStats', 'sudokuStats', 'attempts', 'examPlans', 'reviewRows', 'reports', 'sessions', 'studyEvents'] as const;
+/** Resume answers use the parser's 500-entry limit, rather than the generic 200-key JSON limit. */
+const resumeAnswers = (value: unknown): boolean => {
+  if (!plain(value)) return false;
+  const entries = Object.entries(value);
+  if (entries.length > 500) return false;
+  return entries.every(([key, answer]) => {
+    if (!/^[a-z0-9][a-z0-9_-]{0,79}$/i.test(key) || ['__proto__', 'prototype', 'constructor'].includes(key)) return false;
+    if (answer === null || typeof answer === 'boolean') return true;
+    if (typeof answer === 'string') return [...answer].length <= MAX_ANSWER_TEXT &&
+      !/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/.test(answer);
+    if (typeof answer === 'number') return Number.isFinite(answer) && Math.abs(answer) <= 1_000_000;
+    if (Array.isArray(answer)) return answer.length <= 50 && answer.every(item => typeof item === 'string' &&
+      [...item].length <= MAX_ANSWER_TEXT && !/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/.test(item));
+    if (!plain(answer)) return false;
+    const fields = Object.entries(answer);
+    return fields.length <= 50 && fields.every(([field, item]) =>
+      !['__proto__', 'prototype', 'constructor'].includes(field) && typeof item === 'string' &&
+      [...item].length <= MAX_ANSWER_TEXT && !/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/.test(item));
+  });
+};
+const resumeSchema: Schema = {
+  version: whole, tool: text, page: text, module: text, step: text, itemIndex: whole, itemId: text,
+  totalItems: whole, answers: resumeAnswers, timer: value => value === null || jsonObject(value), phase: text, savedAt: whole,
+};
+const sections = ['profile', 'signInDetails', 'account', 'onboarding', 'progress', 'reviewState', 'gameStats', 'sudokuStats', 'attempts', 'examPlans', 'reviewRows', 'reports', 'sessions', 'resume', 'studyEvents'] as const;
 const rowCaps: Partial<Record<Section, number>> = {
   signInDetails: 100,
   attempts: 50_000, examPlans: 10, reviewRows: 50_000, reports: 10_000, sessions: 10_000,
@@ -245,6 +280,7 @@ interface Sections {
   reviewRows: Row[];
   reports: Row[];
   sessions: Row[];
+  resume?: Row;
   studyEvents: StudyEventText;
 }
 /** Study events already written out: JSON array elements and CSV lines, as text or as one Blob per page. */
@@ -267,14 +303,21 @@ function own(source: object, key: string): unknown {
   return descriptor && 'value' in descriptor ? descriptor.value : undefined;
 }
 
-function cleanRow(value: unknown, schema: Schema, path: string, dropped: Set<string>, required = false): Row | undefined {
+function cleanRow(
+  value: unknown,
+  schema: Schema,
+  path: string,
+  dropped: Set<string>,
+  required = false,
+  optionalKeys?: ReadonlySet<string>,
+): Row | undefined {
   if (!plain(value)) { dropped.add(path); return; }
   const row: Row = {};
   for (const key of Object.keys(value)) if (!Object.hasOwn(schema, key)) dropped.add(`${path}.${key}`);
   let complete = true;
   for (const [key, valid] of Object.entries(schema)) {
-    if (!Object.hasOwn(value, key)) {
-      if (required) { dropped.add(`${path}.${key}`); complete = false; }
+    if (!Object.hasOwn(value, key) || (optionalKeys?.has(key) && own(value, key) === undefined)) {
+      if (required && !optionalKeys?.has(key)) { dropped.add(`${path}.${key}`); complete = false; }
       continue;
     }
     const field = own(value, key);
@@ -285,13 +328,21 @@ function cleanRow(value: unknown, schema: Schema, path: string, dropped: Set<str
   return row;
 }
 
-function cleanList(value: unknown, schema: Schema, path: string, dropped: Set<string>, cap = Infinity, offset = 0): Row[] {
+function cleanList(
+  value: unknown,
+  schema: Schema,
+  path: string,
+  dropped: Set<string>,
+  cap = Infinity,
+  offset = 0,
+  optionalKeys?: ReadonlySet<string>,
+): Row[] {
   if (!Array.isArray(value)) { dropped.add(path); return []; }
   const rows: Row[] = [];
   const limit = Math.min(value.length, cap);
   if (value.length > cap) dropped.add(`${path}[${cap}+]`);
   for (let index = 0; index < limit; index++) {
-    const row = cleanRow(own(value, String(index)), schema, `${path}[${offset + index}]`, dropped, true);
+    const row = cleanRow(own(value, String(index)), schema, `${path}[${offset + index}]`, dropped, true, optionalKeys);
     if (row) rows.push(row);
   }
   // Custom array properties are metadata, not the student's records.
@@ -392,8 +443,8 @@ function prepare(data: unknown): { data: Sections; dropped: string[] } {
   for (const key of Object.keys(source)) if (!(sections as readonly string[]).includes(key)) dropped.add(key);
   const recordSection = (key: Section, schema: Schema) => Object.hasOwn(source, key)
     ? cleanRow(own(source, key), schema, key, dropped) ?? {} : {};
-  const listSection = (key: Section, schema: Schema) => Object.hasOwn(source, key)
-    ? cleanList(own(source, key), schema, key, dropped, rowCaps[key]) : [];
+  const listSection = (key: Section, schema: Schema, optionalKeys?: ReadonlySet<string>) => Object.hasOwn(source, key)
+    ? cleanList(own(source, key), schema, key, dropped, rowCaps[key], 0, optionalKeys) : [];
   const profile = recordSection('profile', profileSchema);
   if (typeof profile.createdAt === 'string') profile.createdAt = utcDate(profile.createdAt)!;
   if (typeof profile.nameChangeWindowStart === 'string') profile.nameChangeWindowStart = utcDate(profile.nameChangeWindowStart)!;
@@ -450,13 +501,14 @@ function prepare(data: unknown): { data: Sections; dropped: string[] } {
       onboarding: recordSection('onboarding', onboardingSchema),
       progress,
       reviewState: listSection('reviewState', reviewSchema),
-      gameStats: listSection('gameStats', gameSchema),
+      gameStats: listSection('gameStats', gameSchema, gameOptionalKeys),
       sudokuStats: listSection('sudokuStats', sudokuSchema),
       attempts,
       examPlans,
       reviewRows,
       reports,
       sessions,
+      ...(Object.hasOwn(source, 'resume') ? { resume: recordSection('resume', resumeSchema) } : {}),
       studyEvents,
     },
     dropped: [...dropped].sort(),
@@ -551,7 +603,7 @@ function csvParts(data: unknown): { fileName: string; parts: (string | Blob)[] }
   }
   const recordRows = (value: Row) => Object.keys(value).length ? [value] : [];
   const file = (fileName: string, headers: string[], rows: Row[]) => ({ fileName, parts: [csv(headers, rows)] });
-  return [
+  const files = [
     file('profile.csv', Object.keys(profileSchema), recordRows(clean.data.profile)),
     file('signInDetails.csv', Object.keys(signInDetailSchema), clean.data.signInDetails),
     file('account.csv', ['field', 'value'], accountRows(clean.data.account)),
@@ -568,6 +620,8 @@ function csvParts(data: unknown): { fileName: string; parts: (string | Blob)[] }
     { fileName: 'studyEvents.csv', parts: [csv(studyEventHeaders, []), ...clean.data.studyEvents.csv] },
     file('dropped.csv', ['dropped'], clean.dropped.map(dropped => ({ dropped }))),
   ];
+  if (clean.data.resume) files.splice(-1, 0, file('resume.csv', Object.keys(resumeSchema), recordRows(clean.data.resume)));
+  return files;
 }
 
 /**

@@ -1,1 +1,0 @@
-status: lane 2, setup exam-date checks: on /start a typed date in the past, more than two years ahead (730 days, the account's limit) or left unfinished gets one clear message, focus stays on the field, and nothing is saved; a blank date is still fine.

@@ -407,8 +407,6 @@ test.describe('daily games: sudoku (Task 625)', () => {
   const game = (page: Page) => page.getByTestId('sudoku');
   const grid = (page: Page) => game(page).getByRole('grid', { name: 'sudoku grid' });
   const cells = (page: Page) => grid(page).getByRole('gridcell');
-  const difficulty = (page: Page) => page.getByTestId('game-frame-sudoku-stats').getByLabel('difficulty');
-  const frameGear = (page: Page) => page.getByTestId('game-frame-gear');
 
   test.beforeEach(async ({ page }) => {
     await fixClock(page, new Date('2026-11-01T15:00:00'));
@@ -422,9 +420,8 @@ test.describe('daily games: sudoku (Task 625)', () => {
     await expect(grid(page).getByRole('row')).toHaveCount(9);
     for (const row of await grid(page).getByRole('row').all()) await expect(row.getByRole('gridcell')).toHaveCount(9);
     await expect(grid(page).locator('[data-given="true"]')).toHaveCount(40);
-    // Moved from the in-board level buttons to the Frame difficulty picker.
-    await expect(difficulty(page)).toHaveValue('easy');
-    const controls = page.locator('[data-testid="game-frame-gear"], [data-testid="game-frame-help-button"], [data-testid="game-frame-sudoku-stats"] select, [data-testid="sudoku"] .sudoku-icon-button, [data-testid="sudoku"] .sudoku-small-button, [data-testid="sudoku"] .sudoku-number-row button');
+    await expect(game(page).getByRole('button', { name: 'easy' })).toHaveAttribute('aria-pressed', 'true');
+    const controls = game(page).locator('.sudoku-icon-button, .sudoku-small-button, .sudoku-number-row button');
     const boxes = await controls.evaluateAll((elements) => elements.map((element) => element.getBoundingClientRect()));
     for (const box of boxes) expect(box.height).toBeGreaterThanOrEqual(44);
     const results = await axe(page);
@@ -451,11 +448,9 @@ test.describe('daily games: sudoku (Task 625)', () => {
     await game(page).getByRole('button', { name: String(daily.solution[second]), exact: true }).click();
     await expect(cells(page).nth(second)).toContainText(String(daily.solution[second]));
 
-    // Moved from the in-board level buttons to the Frame difficulty picker.
-    await difficulty(page).selectOption('medium');
+    await game(page).getByRole('button', { name: 'medium', exact: true }).click();
     await expect(grid(page).locator('[data-given="true"]')).toHaveCount(32);
-    // Moved from the in-board level buttons to the Frame difficulty picker.
-    await difficulty(page).selectOption('hard');
+    await game(page).getByRole('button', { name: 'hard' }).click();
     await expect(grid(page).locator('[data-given="true"]')).toHaveCount(26);
   });
 
@@ -475,8 +470,7 @@ test.describe('daily games: sudoku (Task 625)', () => {
     await expect(game(page).locator('.sudoku-time')).toHaveText(before);
     await game(page).getByRole('button', { name: 'resume puzzle' }).click();
 
-    // Moved from the Sudoku board header to the Frame gear.
-    const trigger = frameGear(page);
+    const trigger = game(page).getByRole('button', { name: /settings/i });
     await trigger.click();
     const dialog = game(page).getByRole('dialog', { name: 'settings' });
     const close = dialog.getByRole('button', { name: 'close settings' });
@@ -493,8 +487,7 @@ test.describe('daily games: sudoku (Task 625)', () => {
     await expect(trigger).toBeFocused();
 
     await page.reload();
-    // Moved from the Sudoku board header to the Frame gear.
-    await frameGear(page).click();
+    await game(page).getByRole('button', { name: /settings/i }).click();
     await expect(game(page).getByRole('dialog', { name: 'settings' }).getByRole('checkbox', { name: 'start in auto cue mode' })).toBeChecked();
     await page.keyboard.press('Escape');
     const hints = game(page).getByRole('checkbox', { name: /auto cues/i });
@@ -1079,10 +1072,8 @@ test.describe('daily games without JavaScript', () => {
     for (const [path, name] of [['/play/vialo', 'vialo'], ['/play/sudoku', 'sudoku'], ['/play/crossword', 'crossword'], ['/play/word-path', 'word path']]) {
       await page.goto(path);
       // Every game opens the shared settings from its own gear (sudoku too, #823), so no page has a separate button.
-      await expect(page.locator('noscript p')).toHaveText([
-        `${name} needs JavaScript.`,
-        'game results and sharing need JavaScript.',
-      ]);
+      await expect(page.locator('noscript p').filter({ hasText: `${name} needs JavaScript.` })).toHaveText(`${name} needs JavaScript.`);
+      await expect(page.locator('noscript p').filter({ hasText: 'game results and sharing need JavaScript.' })).toHaveText('game results and sharing need JavaScript.');
     }
   });
 });

@@ -12,7 +12,7 @@ Each link has a one-line summary and says whether Christian needs to read it. Gu
 - [Setup](SETUP.md) — Follow step-by-step instructions for accounts and site setup. **Christian:** Read when setting up a service.
 - [Go-live steps](GO-LIVE.md) — Check what to do before launch, on launch day, and if a release fails. **Christian:** Read before launch.
 - [Games launch checklist](LAUNCH.md) — Check every gate before the games-only launch, the launch-day clicks, and the first week. **Christian:** Read before the games launch.
-- [Thursday launch checklist](LAUNCH-2026-11-19.md) — The click-by-click plan for the Thursday 19 November games launch. **Christian:** Read before the games launch.
+- [Monday launch checklist](LAUNCH-2026-11-23.md) — The click-by-click plan for the Monday 23 November games launch. **Christian:** Read before the games launch.
 - [Games parity spec](GAMES-PARITY.md) — See the approved shared gameplay, accessibility, and sharing rules for daily games. **Christian:** Read when approving game work.
 - [Brand guide](BRAND.md) — See approved colors, fonts, the logo, and design rules. **Christian:** Read when approving designs.
 - [Content formats](CONTENT-FORMAT.md) — See the JSON fields and sample rules for lessons and study activities. **Christian:** Read when preparing content.
@@ -60,7 +60,7 @@ Review note: [release inventory status](status/in-review/lane4-release-notes.md)
 
 Review note: [merged-note sweep](status/in-review/lane12-status-sweep-1.md) — Fourteen verified merged PRs folded into the central status and decisions.
 
-Runbook: [Thursday launch day](runbooks/launch-day.md) — Proposed Phoenix-time schedule and smoke checks for the games-only launch.
+Runbook: [Monday launch day](runbooks/launch-day.md) — Proposed Phoenix-time schedule and smoke checks for the games-only launch.
 Review note: [launch-day status](status/in-review/lane4-launch-day.md) — Planning only; every release gate still applies.
 
 Review note: [go-live corrections](status/in-review/lane12-go-live-followup.md) — Date, repository migration inventory and unmet legal release gates; documentation only.

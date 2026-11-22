@@ -31,7 +31,7 @@ for (const shared of [true, false]) {
     const cells = game.getByRole('grid', { name: 'sudoku grid' }).getByRole('gridcell');
     await expect(cells).toHaveCount(81);
     // Sudoku's own setting stays on, so only the shared switch decides.
-    await page.getByRole('button', { name: 'sudoku settings' }).click();
+    await game.getByRole('button', { name: 'sudoku settings' }).click();
     await expect(page.getByRole('dialog', { name: 'sudoku settings' }).getByRole('checkbox', { name: 'play sound on solve' })).toBeChecked();
     await page.keyboard.press('Escape');
     for (const index of open) {
@@ -68,7 +68,7 @@ test('game sounds turned off in the sudoku dialog keep the solve silent even whe
   const cells = game.getByRole('grid', { name: 'sudoku grid' }).getByRole('gridcell');
   await expect(cells).toHaveCount(81);
 
-  await page.getByRole('button', { name: 'sudoku settings' }).click();
+  await game.getByRole('button', { name: 'sudoku settings' }).click();
   const dialog = page.getByRole('dialog', { name: 'sudoku settings' });
   const sounds = dialog.getByRole('checkbox', { name: /game sounds/ });
   await expect(sounds).toBeChecked();

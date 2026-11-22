@@ -156,6 +156,18 @@ describe('adaptive question selection', () => {
     expect(questions).toEqual(inputQuestions);
     expect(attempts).toEqual(inputAttempts);
   });
+
+  it('keeps the first duplicate question id so malformed data cannot create a second concept', () => {
+    const duplicateId: AdaptiveQuestion[] = [
+      { id: 'shared', concept: 'colors', level: 1 },
+      { id: 'shared', concept: 'shapes', level: 3 },
+      { id: 'color-1b', concept: 'colors', level: 1 },
+    ];
+    expect(nextQuestion(duplicateId, [], 0)).toEqual({ id: 'shared', why: "'colors' is new to you." });
+    expect(conceptStatus(duplicateId, [])).toEqual([
+      { concept: 'colors', status: 'not started', description: "'colors' has not been started." },
+    ]);
+  });
 });
 
 describe('concept status', () => {

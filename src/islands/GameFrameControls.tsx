@@ -7,6 +7,7 @@ interface Props {
   hasPillLegend?: boolean;
   /** Framed daily-game islands listen for the events and retain their existing dialogs. */
   bridge?: boolean;
+  wide?: boolean;
   children?: ReactNode;
 }
 
@@ -33,7 +34,7 @@ export function registerFrameHelpButton(gameName: string, button: HTMLButtonElem
 }
 
 /** The shared Frame owns the visible controls; the framed island retains its established dialog content and state. */
-export default function GameFrameControls({ gameName, steps, hasPillLegend = false, bridge = false, children }: Props) {
+export default function GameFrameControls({ gameName, steps, hasPillLegend = false, bridge = false, wide = false, children }: Props) {
   const gearRef = useRef<HTMLButtonElement>(null);
   const helpRef = useRef<HTMLDivElement>(null);
   const helpBtnRef = useRef<HTMLButtonElement>(null);
@@ -79,7 +80,7 @@ export default function GameFrameControls({ gameName, steps, hasPillLegend = fal
   };
 
   return (
-    <div className="game-frame-controls-row" data-print-hidden>
+    <div className={`game-frame-controls-row${wide ? ' is-wide' : ''}`} data-print-hidden>
       {/* Settings (gear) sits at top-left of the board */}
       <button
         ref={gearRef}
@@ -90,7 +91,10 @@ export default function GameFrameControls({ gameName, steps, hasPillLegend = fal
         data-testid="game-frame-gear"
         onClick={() => open(GAME_FRAME_SETTINGS_EVENT, gearRef.current)}
       >
-        <span aria-hidden="true" className="game-frame-gear-icon">⚙</span>
+        <svg viewBox="0 0 24 24" className="game-frame-gear-icon" aria-hidden="true" focusable="false">
+          <circle cx="12" cy="12" r="3" />
+          <path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1" />
+        </svg>
       </button>
 
       {/* Middle slot for game-specific controls (e.g. crossword slider, hello-cards dots) */}

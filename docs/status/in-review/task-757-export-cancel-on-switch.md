@@ -1,1 +1,0 @@
-status: #757, download my data cancels on an account change: one watch per open data section aborts any download in progress and every spreadsheet file still waiting its turn as soon as another account signs in (A→B→A included) or the section closes, so no file is ever offered after either (needs Christian).

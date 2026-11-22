@@ -1,1 +1,0 @@
-status: Public-repo audit (Agent K), the unit-level secret guard (tests/unit/security-public-repo.test.ts) now also refuses an age private key (`AGE-SECRET-KEY-1…`), since the nightly backup flow uses age keys (docs/BACKUPS.md). Test-only change; gitleaks in CI stays the main defence. In review.

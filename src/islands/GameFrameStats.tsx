@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { browserStorage } from '../scripts/storage';
-import { GAME_STATS_CHANGED_EVENT, loadStats, localDay } from './gameresults';
+import { currentStatsStatus, GAME_STATS_CHANGED_EVENT, GAME_STATS_STATUS_EVENT, loadStats, localDay } from './gameresults';
 import { currentStreak, dailyStats, longestStreak, wordPathSummary, type GameId, type GameStats } from './gamestats';
 import { GUESSES } from './pulse';
 
@@ -62,6 +62,7 @@ function computeStats(game: string, stats: GameStats, today: string): StatValues
 }
 
 export default function GameFrameStats({ game }: Props) {
+  const [status, setStatus] = useState(currentStatsStatus);
   const [stats, setStats] = useState<StatValues>(() => {
     const today = localDay(new Date());
     const saved = loadStats(browserStorage(), today);
@@ -73,16 +74,25 @@ export default function GameFrameStats({ game }: Props) {
       const saved = loadStats(browserStorage(), today);
       setStats(computeStats(game, saved.stats, today));
     };
+    const onPageShow = (event: PageTransitionEvent) => {
+      if (event.persisted) refresh();
+    };
+    const onStatus = (event: WindowEventMap['cueory:game-stats-status']) => setStatus(event.detail.message);
 
     window.addEventListener(GAME_STATS_CHANGED_EVENT, refresh);
+    window.addEventListener(GAME_STATS_STATUS_EVENT, onStatus);
     window.addEventListener('storage', refresh);
+    window.addEventListener('pageshow', onPageShow);
     return () => {
       window.removeEventListener(GAME_STATS_CHANGED_EVENT, refresh);
+      window.removeEventListener(GAME_STATS_STATUS_EVENT, onStatus);
       window.removeEventListener('storage', refresh);
+      window.removeEventListener('pageshow', onPageShow);
     };
   }, [game]);
 
   return <>
+      {status && <p className="game-frame-stats-status" data-testid="game-frame-stats-status" role="status" aria-live="polite">{status}</p>}
       <div className="game-frame-stat">
         <span className="game-frame-stat-value">{stats.winPercent}</span>
         <span className="game-frame-stat-label">{stats.firstLabel}</span>

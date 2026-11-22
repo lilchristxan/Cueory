@@ -1,1 +1,0 @@
-status: Task 634 Safari preview Escape repair: ensure Escape closes the Home study-mode preview from any ordinary control in its modal dialog and restores the opener's focus; an open info tip retains its own Escape behavior. Source check and diff check only; no local browser run or hosted rerun.

@@ -42,7 +42,6 @@
   overflow-x: hidden;
   box-sizing: border-box;
 }
-
 .game-frame-layout {
   display: flex;
   flex: 1;
@@ -114,8 +113,8 @@
 }
 
 .game-frame-logo {
-  height: var(--game-frame-logo-height);
   width: var(--game-frame-logo-width);
+  height: auto;
 }
 
 .game-frame-game-badge {
@@ -203,20 +202,21 @@
 }
 
 .game-frame-serif-title {
-  font-family: var(--font-display);
+  /* Interface label, not a marketing heading: Lato at 1.5 or more (CLAUDE.md Design, D-41). */
+  font-family: var(--font-body);
   font-weight: 500;
   font-size: var(--game-frame-title-size);
-  line-height: 1;
+  line-height: 1.5;
   color: var(--color-ink);
   text-align: center;
 }
 
 .game-frame-tagline {
   margin: 0;
-  font-family: var(--font-display);
+  font-family: var(--font-body);
   font-weight: 500;
   font-size: var(--game-frame-tagline-size);
-  line-height: 1.35;
+  line-height: 1.5;
   color: var(--color-ink);
   text-align: center;
 }
@@ -236,6 +236,14 @@
   width: 100%;
 }
 
+.game-frame-stats-status {
+  margin: 0;
+  color: var(--color-ink-soft);
+  font-size: var(--game-frame-stat-label-size);
+  line-height: 1.5;
+  text-align: center;
+}
+
 .game-frame-stat {
   display: flex;
   flex-direction: column;
@@ -247,7 +255,7 @@
   font-family: var(--font-body);
   font-weight: 900;
   font-size: var(--game-frame-stat-value-size);
-  line-height: 1.1;
+  line-height: 1.5;
   color: var(--color-ink);
 }
 
@@ -290,9 +298,12 @@
   font-size: var(--game-frame-dateline-size);
   line-height: var(--game-frame-dateline-lh);
   color: var(--color-ink-soft);
-  font-style: italic;
+  /* Accent lines are plain upright Lato; wrap so enlarged text at 320px never hides the date. */
+  font-style: normal;
   text-align: center;
-  white-space: nowrap;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  max-inline-size: 100%;
 }
 
 .game-frame-cue-slot {
@@ -313,6 +324,10 @@
   margin-bottom: 0;
   position: relative;
   z-index: 15;
+}
+
+.game-frame-controls-row.is-wide {
+  max-width: var(--game-frame-max-board-wide);
 }
 
 .game-frame-controls-row-unframed {
@@ -348,8 +363,13 @@
 }
 
 .game-frame-gear-icon {
-  font-size: var(--game-frame-gear-size);
-  line-height: 1;
+  width: var(--game-frame-gear-size);
+  height: var(--game-frame-gear-size);
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .game-frame-controls-middle {
@@ -546,6 +566,20 @@
   margin-block: auto;
 }
 
+/*
+  Study screens stay plain (AGENTS.md, D-41): the question container and question stem on /play/stat
+  sit on an opaque plain background with no decorative grid lines or texture behind question text.
+  Tokens only.
+*/
+.game-frame[data-game="stat"] .game-frame-board,
+.game-frame-board:has([data-testid="stat"]),
+.game-frame-board:has([data-testid="stat"]) article,
+.game-frame-board [data-testid="stat"],
+.game-frame-board [data-testid="stat"] section {
+  background-color: var(--color-page);
+  background-image: none;
+}
+
 .game-frame-board > * {
   width: 100%;
 }
@@ -679,6 +713,11 @@
     padding: calc(var(--spacing) * 5) calc(var(--spacing) * 4) 0;
   }
 
+  /* The Frame's side gutter here is 4 units; Word Path's panel bleeds exactly that far until sm:mx-0 (40rem). */
+  .game-frame-board {
+    --wordpath-bleed: calc(var(--spacing) * 4);
+  }
+
   .game-frame-deck-slot {
     position: static;
     transform: none;
@@ -727,6 +766,11 @@
 
   .game-frame-stat-label {
     font-size: var(--game-frame-stat-label-phone);
+  }
+
+  /* Match the Frame's 3-unit phone gutters so Word Path keeps 44px cells without document overflow. */
+  .game-frame-board {
+    --wordpath-bleed: calc(var(--spacing) * 3);
   }
 }
 

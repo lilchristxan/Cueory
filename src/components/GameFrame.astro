@@ -2,7 +2,6 @@
 import '../styles/gameframe.css';
 import GameFrameControls from '../islands/GameFrameControls';
 import GameFrameStats from '../islands/GameFrameStats';
-import SudokuFrameStats from '../islands/SudokuFrameStats';
 import { formatGameDateLine } from '../scripts/gamedateline';
 
 interface Props {
@@ -167,7 +166,7 @@ const activeSteps = propHowSteps ?? currentConfig.defaultSteps;
 const activeDateLine = propDateLine ?? formatGameDateLine(new Date());
 ---
 
-<div class="game-frame">
+<div class="game-frame" data-game={currentConfig.id}>
   <div class="game-frame-layout">
     <!-- Left panel (full height above footer) -->
     <aside class="game-frame-sidebar" aria-label="Game details and stats">
@@ -177,22 +176,22 @@ const activeDateLine = propDateLine ?? formatGameDateLine(new Date());
         </a>
         <a href="/" class="game-frame-logo-wrap" aria-label="cueory home">
           <img
-            src="/brand/v1/logo-full-light-960.png"
+            src="/brand/v1/logo-full-light-480.png"
             alt="cueory"
             class="game-frame-logo dark:hidden"
             width="80"
             height="20"
-            loading="eager"
+            loading="lazy"
             data-image-priority="header"
             decoding="async"
           />
           <img
-            src="/brand/v1/logo-full-dark-960.png"
+            src="/brand/v1/logo-full-dark-480.png"
             alt="cueory"
             class="game-frame-logo hidden dark:block"
             width="80"
             height="20"
-            loading="eager"
+            loading="lazy"
             data-image-priority="header"
             decoding="async"
           />
@@ -286,17 +285,13 @@ const activeDateLine = propDateLine ?? formatGameDateLine(new Date());
             <span class="game-frame-stat-label">played</span>
           </div>
         </> : <GameFrameStats client:load game={currentConfig.id} />}
-        {currentConfig.id === 'triage' && <>
-          <SudokuFrameStats client:only="react" />
-          <noscript><p>Sudoku level statistics appear when JavaScript is available.</p></noscript>
-        </>}
       </div>}
     </aside>
 
     <!-- Center area -->
     <div class="game-frame-main">
       <!-- Date line centered above the board -->
-      <p class="game-frame-dateline" data-game-frame-dateline={propDateLine === undefined ? '' : undefined}><i>{activeDateLine}</i></p>
+      <p class="game-frame-dateline" data-game-frame-dateline={propDateLine === undefined ? '' : undefined}>{activeDateLine}</p>
 
       <!-- Slot for piccline cue line ("TODAY'S CUE · ...") -->
       <div class="game-frame-cue-slot">
@@ -305,7 +300,7 @@ const activeDateLine = propDateLine ?? formatGameDateLine(new Date());
 
       <!-- Row above the board: Settings gear (top-left), middle slot for game-specific controls, ? popover (top-right) -->
       {framed ? (
-        <GameFrameControls client:load gameName={currentConfig.name} steps={activeSteps} hasPillLegend={currentConfig.hasPillLegend} bridge={bridge}>
+        <GameFrameControls client:load gameName={currentConfig.name} steps={activeSteps} hasPillLegend={currentConfig.hasPillLegend} bridge={bridge} wide={wide}>
           <slot name="controls" />
         </GameFrameControls>
       ) : (

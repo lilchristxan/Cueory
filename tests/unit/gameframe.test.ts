@@ -14,7 +14,12 @@ describe('GameFrame (Scope 1)', () => {
     expect(content).toContain('game-frame-sidebar');
     expect(content).toContain('href="/play"');
     expect(content).toContain('aria-label="all games"');
-    expect(content).toContain('logo-full-light-960.png');
+    expect(content).toContain('/brand/v1/logo-full-light-480.png');
+    expect(content).toContain('/brand/v1/logo-full-dark-480.png');
+    // The 80 px Frame logo must not reuse the share image's 960 px logo: WebKit would then serve the share image's logo
+    // from memory cache, and the "preparing image" state in game-results.spec.ts could never be observed.
+    const share = readFileSync(resolve(root, 'src/islands/share.ts'), 'utf-8');
+    for (const url of share.match(/\/brand\/v1\/logo-full-[a-z]+-\d+\.png/g) ?? []) expect(content).not.toContain(url);
     expect(content).toContain('GameFrameStats');
     // Date line and controls
     expect(content).toContain('game-frame-dateline');
@@ -73,18 +78,36 @@ describe('GameFrame (Scope 1)', () => {
     expect(statsCode).not.toContain('GAME_RESULT_EVENT');
     expect(resultCode).toContain("'cueory:game-stats-changed'");
     expect(panelCode).toContain('reportStatsChanged()');
+    expect(statsCode).toContain("addEventListener('pageshow', onPageShow)");
+    expect(statsCode).toContain('if (event.persisted) refresh()');
   });
 
-  it('keeps Sudoku’s existing 400-day solve cleanup in the framed stats lifecycle only', () => {
+  it('surfaces framed persistence status without mounting a second stats panel', () => {
+    const statsCode = readFileSync(resolve(root, 'src/islands/GameFrameStats.tsx'), 'utf-8');
+    const resultCode = readFileSync(resolve(root, 'src/islands/gameresults.ts'), 'utf-8');
+    const panelCode = readFileSync(resolve(root, 'src/islands/GameStatsPanel.tsx'), 'utf-8');
+    expect(resultCode).toContain("'cueory:game-stats-status'");
+    expect(panelCode).toContain('reportStatsStatus');
+    expect(statsCode).toContain('game-frame-stats-status');
+    expect(statsCode).toContain("role=\"status\"");
+  });
+
+  it('keeps framed interface text upright, readable, and inside the shell', () => {
+    const styles = readFileSync(resolve(root, 'src/styles/gameframe.css'), 'utf-8');
+    expect(styles).toMatch(/\.game-frame-serif-title\s*\{[^}]*font-family:\s*var\(--font-body\);[^}]*line-height:\s*1\.5;/s);
+    expect(styles).toMatch(/\.game-frame-dateline\s*\{[^}]*font-style:\s*normal;[^}]*overflow-wrap:\s*anywhere;/s);
+    expect(styles).toContain('max-inline-size: 100%');
+    expect(styles).toMatch(/\.game-frame-board\s*\{\s*--wordpath-bleed: calc\(var\(--spacing\) \* 3\);/s);
+  });
+
+  it('keeps Sudoku-owned stats out of the shared framed stats lifecycle', () => {
     const frame = readFileSync(resolve(root, 'src/components/GameFrame.astro'), 'utf-8');
     const statsCode = readFileSync(resolve(root, 'src/islands/GameFrameStats.tsx'), 'utf-8');
-    const sudokuCode = readFileSync(resolve(root, 'src/islands/SudokuFrameStats.tsx'), 'utf-8');
-    expect(frame).toContain("currentConfig.id === 'triage' && <>");
-    expect(frame).toContain('<SudokuFrameStats client:only="react" />');
-    expect(frame).toContain('Sudoku level statistics appear when JavaScript is available.');
+    expect(frame).not.toContain("currentConfig.id === 'triage' && <>");
+    expect(frame).not.toContain('SudokuFrameStats');
+    expect(frame).not.toContain('Sudoku level statistics appear when JavaScript is available.');
     expect(statsCode).not.toContain('lazy(');
     expect(statsCode).not.toContain('Suspense');
-    expect(sudokuCode).toContain('loadSudokuStats(browserStorage(), today)');
   });
 
   it('uses the crossword assisted-solve eligibility for the sidebar best streak', () => {
@@ -111,7 +134,36 @@ describe('GameFrame (Scope 1)', () => {
     expect(header).toContain('GAME_FRAME_HELP_EVENT');
     expect(header).toContain('<GameHelpDialog help={help} name={name} extra={helpExtra} />');
     const sudoku = readFileSync(resolve(root, 'src/islands/SudokuGame.tsx'), 'utf-8');
-    expect(sudoku).toContain('<GameHelpDialog help={help} name={gameName(\'triage\')} />');
+    expect(sudoku).toContain('<GameHelpButton help={help} name={gameName(\'triage\')} className="sudoku-icon-button" />');
+    expect(sudoku).toContain('<GameHelpCard help={help} name={gameName(\'triage\')} />');
     expect(header).toContain('{framed && end &&');
   });
+
+  it('keeps Frame interface text in upright Lato at readable line spacing, and lets the dateline wrap', () => {
+    const css = readFileSync(resolve(root, 'src/styles/gameframe.css'), 'utf-8');
+    const astro = readFileSync(resolve(root, 'src/components/GameFrame.astro'), 'utf-8');
+    const block = (sel: string) => css.slice(css.indexOf(`${sel} {`), css.indexOf('}', css.indexOf(`${sel} {`)));
+    const title = block('.game-frame-serif-title');
+    expect(title).toContain('font-family: var(--font-body)');
+    expect(title).toContain('line-height: 1.5');
+    const date = block('.game-frame-dateline');
+    expect(date).toContain('font-style: normal');
+    expect(date).not.toContain('italic');
+    expect(date).toContain('white-space: normal');
+    expect(date).not.toContain('nowrap');
+    expect(astro).not.toMatch(/data-game-frame-dateline[^>]*><i>/);
+    expect(block('.game-frame-stats-status')).toContain('line-height: 1.5');
+  });
+
+  it('gives Word Path its Frame gutter back so phone cells keep the 44px floor', () => {
+    const css = readFileSync(resolve(root, 'src/styles/gameframe.css'), 'utf-8');
+    // Below 30rem the gutter is 3 units, from 30rem to 64rem it is 4; the panel's bleed matches each (sm:mx-0 from 40rem).
+    expect(css).toMatch(/@media \(width < 30rem\)[\s\S]*\.game-frame-board \{\s*--wordpath-bleed: calc\(var\(--spacing\) \* 3\);/);
+    expect(css).toMatch(/@media \(width < 64rem\)[\s\S]*\.game-frame-board \{\s*--wordpath-bleed: calc\(var\(--spacing\) \* 4\);/);
+    expect(css).toMatch(/\.game-frame-stat-value \{[^}]*line-height: 1\.5;/);
+    for (const file of ['src/islands/SutureGame.tsx', 'src/islands/SuturePathBoard.tsx']) {
+      expect(readFileSync(resolve(root, file), 'utf-8')).toContain('wordpath-panel -mx-(--wordpath-bleed) ');
+    }
+  });
 });
+

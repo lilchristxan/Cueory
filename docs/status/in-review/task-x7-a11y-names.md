@@ -1,1 +1,0 @@
-status: Adds a source-level guard test (tests/unit/accessible-names-source.test.ts) that every button, link, image, form control and svg in src/components and src/islands has an accessible name or is hidden as decoration, and that status and alert live regions stay coherent. No product code changed; the audit found no current gaps. Ready for review.

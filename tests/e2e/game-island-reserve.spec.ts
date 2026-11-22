@@ -11,9 +11,11 @@ const games = [
   { path: '/play/word-path', script: /\/_astro\/SutureToday\.[\w-]+\.js$/ },
 ];
 
-/** The article child that holds the game's island (the island is display: contents, so measure its holder). */
+/** The board child that holds the game's island (the island is display: contents, so measure its holder). */
 const gameHolder = (page: import('@playwright/test').Page) =>
-  page.locator('article[data-game-page] > *').filter({ has: page.locator('astro-island') }).first();
+  page.locator('article[data-game-page] .game-frame-board > *').filter({ has: page.locator('astro-island') }).first();
+
+const gameFrame = (page: import('@playwright/test').Page) => page.locator('article[data-game-page] > .game-frame');
 
 for (const { path, script } of games) {
   test(`${path}: before the game renders, what follows it starts below the first screen`, async ({ page }) => {
@@ -26,12 +28,14 @@ for (const { path, script } of games) {
     const viewport = page.viewportSize()!.height;
     const holder = gameHolder(page);
     expect(await holder.evaluate((el) => el.getBoundingClientRect().height)).toBeGreaterThanOrEqual(viewport);
+    expect(await gameFrame(page).evaluate((el) => el.getBoundingClientRect().height)).toBeGreaterThanOrEqual(viewport);
     expect(await stats.evaluate((el) => el.getBoundingClientRect().top)).toBeGreaterThanOrEqual(viewport);
 
     release();
     // Once the game is on the page the room is released, and the game itself is taller than one screen.
     await expect.poll(() => holder.evaluate((el) => getComputedStyle(el).minHeight)).toBe('0px');
     expect(await holder.evaluate((el) => el.getBoundingClientRect().height)).toBeGreaterThan(viewport);
+    expect(await gameFrame(page).evaluate((el) => el.getBoundingClientRect().height)).toBeGreaterThanOrEqual(viewport);
   });
 }
 
@@ -41,6 +45,9 @@ test.describe('without JavaScript', () => {
     test(`${path}: no empty room is kept for a game that cannot load`, async ({ page }) => {
       await page.goto(path);
       await expect(gameHolder(page)).toHaveCSS('min-height', '0px');
+      const frameHeight = await gameFrame(page).evaluate((el) => ({ css: getComputedStyle(el).minHeight, px: el.getBoundingClientRect().height }));
+      expect(frameHeight.px).toBeGreaterThanOrEqual(page.viewportSize()!.height);
+      expect(frameHeight.css).toMatch(/^(100vh|\d+(?:\.\d+)?px)$/);
     });
   }
 });
