@@ -26,8 +26,13 @@ interface Sample { phase: SamplePhase; theme: string | undefined; color: string 
 
 async function recordFirstFrames(page: Page) {
   await page.addInitScript(() => {
-    const w = window as unknown as { __themeSamples: Sample[] };
+    const w = window as unknown as {
+      __themeSamples: Sample[];
+      __themeFirstFrame: Promise<void>;
+      __resolveThemeFirstFrame: () => void;
+    };
     w.__themeSamples = [];
+    w.__themeFirstFrame = new Promise<void>((resolve) => { w.__resolveThemeFirstFrame = resolve; });
     const theme = () => document.documentElement.dataset.theme;
     const record = (phase: SamplePhase) => {
       w.__themeSamples.push({
@@ -44,7 +49,10 @@ async function recordFirstFrames(page: Page) {
         // discarded by WebKit during navigation, leaving the no-flash assertion without a rendered-frame sample.
         // These two scheduling records are diagnostic only: only the rAF callback may provide a first-frame color.
         record('rAF requested');
-        requestAnimationFrame(() => record('first rendered frame'));
+        requestAnimationFrame(() => {
+          record('first rendered frame');
+          w.__resolveThemeFirstFrame();
+        });
         setTimeout(() => record('next task'), 0);
       }
     }).observe(document, { childList: true, subtree: true });
@@ -52,7 +60,9 @@ async function recordFirstFrames(page: Page) {
 }
 
 async function settled(page: Page): Promise<Sample> {
-  // Long enough for any transition on the page color to end and for the body-created frame callback to run.
+  // Await this navigation's original body-created rAF sample before the existing settle window.
+  await page.evaluate(() => (window as unknown as { __themeFirstFrame: Promise<void> }).__themeFirstFrame);
+  // Long enough for any transition on the page color to end.
   await page.waitForTimeout(600);
   return page.evaluate(() => ({
     phase: 'settled',

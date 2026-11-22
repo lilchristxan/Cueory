@@ -341,20 +341,16 @@ test.describe('the /play hub (each game on its own page, 2026-11-17)', () => {
 });
 
 test.describe('daily games on the home page (D-61)', () => {
-  test('the approved games stage after "ways to study" leads to /play', async ({ page }) => {
+  test('the approved games carousel after "ways to study" shows 6 cards', async ({ page }) => {
     await page.goto('/');
     const headings = await page.getByRole('heading', { level: 2 }).allTextContents();
-    expect(headings.indexOf('a few minutes, every day.')).toBe(headings.indexOf('one lesson, multiple ways to study') + 1);
-    const stage = page.getByTestId('games-stage');
-    await expect(stage.locator('[data-game-card]')).toHaveCount(5);
-    await expect(stage.locator('[data-game-card="crossword"]')).toContainText('coming soon');
-    await expect(stage.locator('[data-game-card="hello cards"]')).toContainText('coming soon');
-    const link = page.getByTestId('games-link');
-    await expect(link).toHaveText("play today's →");
-    await expect(link).toHaveAttribute('href', '/play');
-    await link.click();
-    await expect(page).toHaveURL(/\/play$/);
-    await expect(page.getByRole('heading', { level: 1, name: 'daily games' })).toBeVisible();
+    expect(headings.indexOf("nurse's station games")).toBe(headings.indexOf('one lesson, multiple ways to study') + 1);
+    const section = page.locator('#daily-games');
+    await expect(section.locator('[data-game-card]')).toHaveCount(6);
+    const vialoLink = section.locator('[data-game-card="vialo"]');
+    await expect(vialoLink).toHaveAttribute('href', '/play/vialo');
+    await vialoLink.click();
+    await expect(page).toHaveURL(/\/play\/vialo$/);
   });
 });
 

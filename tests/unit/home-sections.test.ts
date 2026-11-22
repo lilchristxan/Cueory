@@ -32,18 +32,26 @@ describe('home lower sections', () => {
     const ids = [...main!.matchAll(/<section\b[^>]*\bid="([^"]+)"/g)].map((match) => match[1]);
     expect(ids.filter((id) => ['ways-to-study', 'daily-games', 'signup'].includes(id))).toEqual(['ways-to-study', 'daily-games', 'signup']);
     expect(titles(section('ways-to-study'), 2).filter(Boolean)).toEqual(['one lesson, multiple ways to study']);
-    expect(titles(section('daily-games'), 2)).toEqual(['a few minutes, every day.']);
+    expect(titles(section('daily-games'), 2)).toEqual(["nurse's station games"]);
     expect(titles(section('signup'), 2)).toEqual(['coming soon']);
     expect(main).not.toContain('id="how-it-works"');
   });
 
-  it('keeps the games action, closed-game gates and Kit signup contract', () => {
+  it('keeps the games cards and Kit signup contract', () => {
     const games = section('daily-games');
     const signup = section('signup');
-    expect(links(games)).toEqual(['/play']);
-    expect(plain(games)).toContain('crossword coming soon');
-    expect(plain(games)).toMatch(/hello cards flip a card, start a conversation\. coming soon/);
-    expect(plain(games)).toContain('sudoku fill every row, column and box with the numbers one through nine.');
+    expect(links(games)).toEqual([
+      '/play/vialo',
+      '/play/tachyyy',
+      '/play/piccline',
+      '/play/crossword',
+      '/play/sudoku',
+      '/play/hello-cards',
+      '/play',
+    ]);
+    expect(plain(games)).toContain("crossword a mini crossword from this week's lessons.");
+    expect(plain(games)).toMatch(/hello cards flip a card,\s*start a conversation\./);
+    expect(plain(games)).toContain('sudoku a calm numbers break.');
     expect(signup).toContain('id="signup"');
     // The signup landmark is named by its "launch updates" eyebrow and its heading together.
     expect(signup).toMatch(/<section\b[^>]*\baria-labelledby="signup-eyebrow signup-heading"/);
