@@ -2324,7 +2324,7 @@ html:has(dialog.mode-preview[open]) {
   browsers that don't support @view-transition ignore this block entirely).
 */
 @view-transition {
-  navigation: auto;
+  navigation: none;
 }
 
 @media (prefers-reduced-motion: no-preference) {
