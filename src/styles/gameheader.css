@@ -22,6 +22,14 @@
     gap: calc(var(--spacing) * 2);
   }
 
+  /* Firefox measured these exactly-44 px buttons as 43.99997 px at fractional page offsets (staging run 44976015204,
+     word path in Evening), so like the standalone links (standalone-link-targets.spec.ts) their floor is one step higher:
+     48 px. The tests still hold the measured box to the real 44 px tap minimum. */
+  .game-header .corner-button {
+    inline-size: calc(var(--spacing) * 12);
+    block-size: calc(var(--spacing) * 12);
+  }
+
   .game-header-gear svg {
     inline-size: calc(var(--spacing) * 6);
     block-size: calc(var(--spacing) * 6);

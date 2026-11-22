@@ -14,7 +14,12 @@ describe('GameFrame (Scope 1)', () => {
     expect(content).toContain('game-frame-sidebar');
     expect(content).toContain('href="/play"');
     expect(content).toContain('aria-label="all games"');
-    expect(content).toContain('logo-full-light-960.png');
+    expect(content).toContain('/brand/v1/logo-full-light-480.png');
+    expect(content).toContain('/brand/v1/logo-full-dark-480.png');
+    // The 80 px Frame logo must not reuse the share image's 960 px logo: WebKit would then serve the share image's logo
+    // from memory cache, and the "preparing image" state in game-results.spec.ts could never be observed.
+    const share = readFileSync(resolve(root, 'src/islands/share.ts'), 'utf-8');
+    for (const url of share.match(/\/brand\/v1\/logo-full-[a-z]+-\d+\.png/g) ?? []) expect(content).not.toContain(url);
     expect(content).toContain('GameFrameStats');
     // Date line and controls
     expect(content).toContain('game-frame-dateline');
