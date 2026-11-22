@@ -748,10 +748,8 @@
   }
 }
 
-/* Word Path keeps its full-bleed panel on phones elsewhere (-mx-6). Inside the Frame the column
-   only has the Frame's own padding, so the panel stays within the board column and nothing is clipped. */
-@media (width < 40rem) {
-  .game-frame-board .wordpath-panel {
-    margin-inline: 0;
-  }
+/* Word Path's panel bleeds past its column on phones elsewhere (-mx-6; sm:mx-0 from 40rem). Inside the
+   Frame the column only has the Frame's own padding, so the panel stays within it at every width. */
+.game-frame-board .wordpath-panel {
+  margin-inline: 0;
 }
