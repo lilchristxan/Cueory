@@ -74,7 +74,7 @@ test('game dialogs fit a sideways phone without sideways scroll', async ({ page 
   await check('.game-settings');
   await page.getByRole('dialog', { name: 'sudoku settings' }).getByRole('button', { name: 'close settings' }).click();
 
-  for (const [game, gameName] of [['pulse', 'pillo'], ['triage', 'sudoku'], ['cueword', 'crossword'], ['suture', 'word path']]) {
+  for (const [game, gameName] of [['pulse', 'pillo'], ['triage', 'sudoku'], ['cueword', 'crossword'], ['suture', 'piccline']]) {
     await page.evaluate(({ game, gameName }) => {
       window.dispatchEvent(new CustomEvent('cueory:game-result-card', {
         detail: {

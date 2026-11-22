@@ -13,7 +13,7 @@ const games = [
   { path: '/play/vialo', name: 'vialo', testId: 'vialo', id: 'vialo' },
   { path: '/play/sudoku', name: 'sudoku', testId: 'sudoku', id: 'triage' },
   { path: '/play/crossword', name: 'crossword', testId: 'cueword', id: 'cueword' },
-  { path: '/play/word-path', name: 'word path', testId: 'suture', id: 'suture' },
+  { path: '/play/word-path', name: 'piccline', testId: 'suture', id: 'suture' },
 ] as const;
 const others = (testId: string) => games.map((game) => game.testId).filter((other) => other !== testId);
 
@@ -111,7 +111,7 @@ test('a finished vialo on its own page opens the result dialog and keeps stats o
 for (const game of [
   { path: '/play/sudoku', name: 'sudoku', testId: 'sudoku', print: 'print this puzzle' },
   { path: '/play/crossword', name: 'crossword', testId: 'cueword', print: 'print this puzzle' },
-  { path: '/play/word-path', name: 'word path', testId: 'suture', print: 'print' },
+  { path: '/play/word-path', name: 'piccline', testId: 'suture', print: 'print' },
 ] as const) {
   test(`printing ${game.name} from its own page prints only the game`, async ({ page }) => {
     await page.addInitScript(() => {
