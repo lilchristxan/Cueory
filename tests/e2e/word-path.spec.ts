@@ -38,8 +38,8 @@ test.describe('word path: themed word search, the older format (Task 97)', () =>
     await page.setViewportSize({ width: 320, height: 844 });
     await page.evaluate(() => document.documentElement.style.setProperty('font-size', '32px', 'important'));
 
-    const region = game(page).getByRole('region', { name: 'word path letters scroll area' });
-    const grid = region.getByRole('grid', { name: 'word path letters' });
+    const region = game(page).getByRole('region', { name: 'piccline letters scroll area' });
+    const grid = region.getByRole('grid', { name: 'piccline letters' });
     await expect(region).toHaveCSS('overflow-x', 'auto');
     expect(await region.evaluate((element) => element.scrollWidth > element.clientWidth)).toBe(true);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
@@ -92,7 +92,7 @@ test.describe('word path: themed word search, the older format (Task 97)', () =>
     await resultDialog.getByRole('button', { name: 'close results' }).click();
     const result = page.getByTestId('suture-result');
     await expect(result).toBeFocused();
-    await expect(result).toContainText('cueory word path, fri 6 nov: found 12 of 12 words with 0 wrong picks.');
+    await expect(result).toContainText('cueory piccline, fri 6 nov: found 12 of 12 words with 0 wrong picks.');
     await expect(page.getByTestId('suture-count')).toHaveText('12 of 12 found');
   });
 
