@@ -82,6 +82,31 @@ test('framed Sudoku keeps per-level stats and forget-all in the shared settings 
   await expect(settings.getByRole('button', { name: 'forget all my stats' })).toBeVisible();
 });
 
+test('framed Sudoku refreshes per-level stats when settings reopens', async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem('cueory-game-stats', JSON.stringify({ version: 1, results: [] }));
+    localStorage.setItem('cueory-sudoku-stats', JSON.stringify({ version: 1, solves: [
+      { level: 'easy', day: '2026-11-22', seconds: 61 },
+    ] }));
+  });
+  await page.goto('/play/sudoku');
+  const gear = page.getByTestId('game-frame-gear');
+  await gear.click();
+  const settings = page.getByRole('dialog', { name: 'sudoku settings' });
+  await expect(settings.getByTestId('sudoku-stats')).toContainText('01:01');
+  await page.keyboard.press('Escape');
+  await expect(settings).toHaveCount(0);
+
+  await page.evaluate(() => {
+    localStorage.setItem('cueory-sudoku-stats', JSON.stringify({ version: 1, solves: [
+      { level: 'medium', day: '2026-11-22', seconds: 122 },
+    ] }));
+  });
+  await gear.click();
+  await expect(settings.getByTestId('sudoku-stats')).toContainText('02:02');
+  await expect(settings.getByTestId('sudoku-stats')).not.toContainText('01:01');
+});
+
 for (const [width, height] of [[390, 844], [820, 1180], [1440, 900]] as const) {
   for (const colorScheme of ['light', 'dark'] as const) {
     test(`framed Sudoku controls fit at ${width}px (${colorScheme})`, async ({ page }) => {

@@ -99,7 +99,12 @@ export default function SudokuGame({ framed = false }: { framed?: boolean } = {}
       const { gameName, trigger } = detail as { gameName?: unknown; trigger?: unknown };
       return gameName === 'sudoku' && trigger instanceof HTMLButtonElement ? trigger : undefined;
     };
-    const openSettings = (event: Event) => { if (detailFor(event)) setSettingsOpen(true); };
+    const openSettings = (event: Event) => {
+      if (!detailFor(event)) return;
+      // Re-read on every open so a solve or forget from another tab is reflected in the framed dialog.
+      setKept(loadSudokuStats(browserStorage(), day));
+      setSettingsOpen(true);
+    };
     const setHelpReturnTarget = (trigger = frameHelpButton('sudoku')) => {
       if (trigger) help.button.current = trigger;
     };
@@ -126,7 +131,7 @@ export default function SudokuGame({ framed = false }: { framed?: boolean } = {}
       window.removeEventListener(GAME_FRAME_HELP_READY_EVENT, setHelpWhenReady);
       window.removeEventListener('cueory:game-frame-sudoku-level', chooseLevel);
     };
-  }, [framed, help]);
+  }, [framed, help, day]);
 
   useEffect(() => {
     if (framed) window.dispatchEvent(new CustomEvent('cueory:game-frame-sudoku-level-change', { detail: level }));
