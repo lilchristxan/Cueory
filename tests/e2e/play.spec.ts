@@ -328,7 +328,7 @@ test.describe('the /play hub (each game on its own page, 2026-11-17)', () => {
     // The date comes from the visitor's clock, not the build day (the page is built ahead of time).
     await expect(page.getByTestId('play-date')).toHaveText('sun 1 nov');
     await expect(page.getByTestId('play-date')).toHaveAttribute('datetime', '2026-11-01');
-    for (const [name, path, testId] of [['vialo', '/play/vialo', 'pulse'], ['sudoku', '/play/sudoku', 'triage'], ['crossword', '/play/crossword', 'cueword'], ['word path', '/play/word-path', 'suture']]) {
+    for (const [name, path, testId] of [['vialo', '/play/vialo', 'pulse'], ['sudoku', '/play/sudoku', 'triage'], ['crossword', '/play/crossword', 'cueword'], ['piccline', '/play/piccline', 'suture']]) {
       const card = page.getByTestId(`play-status-${testId}`).getByRole('link');
       await expect(card).toContainText(name);
       await expect(card).toHaveAttribute('href', path);
@@ -341,20 +341,16 @@ test.describe('the /play hub (each game on its own page, 2026-11-17)', () => {
 });
 
 test.describe('daily games on the home page (D-61)', () => {
-  test('the approved games stage after "ways to study" leads to /play', async ({ page }) => {
+  test('the approved games carousel after "ways to study" shows 6 cards', async ({ page }) => {
     await page.goto('/');
     const headings = await page.getByRole('heading', { level: 2 }).allTextContents();
-    expect(headings.indexOf('a few minutes, every day.')).toBe(headings.indexOf('one lesson, multiple ways to study') + 1);
-    const stage = page.getByTestId('games-stage');
-    await expect(stage.locator('[data-game-card]')).toHaveCount(5);
-    await expect(stage.locator('[data-game-card="crossword"]')).toContainText('coming soon');
-    await expect(stage.locator('[data-game-card="hello cards"]')).toContainText('coming soon');
-    const link = page.getByTestId('games-link');
-    await expect(link).toHaveText("play today's →");
-    await expect(link).toHaveAttribute('href', '/play');
-    await link.click();
-    await expect(page).toHaveURL(/\/play$/);
-    await expect(page.getByRole('heading', { level: 1, name: 'daily games' })).toBeVisible();
+    expect(headings.indexOf("nurse's station games")).toBe(headings.indexOf('one lesson, multiple ways to study') + 1);
+    const section = page.locator('#daily-games');
+    await expect(section.locator('[data-game-card]')).toHaveCount(6);
+    const vialoLink = section.locator('[data-game-card="vialo"]');
+    await expect(vialoLink).toHaveAttribute('href', '/play/vialo');
+    await vialoLink.click();
+    await expect(page).toHaveURL(/\/play\/vialo$/);
   });
 });
 
@@ -820,7 +816,8 @@ test.describe('daily games: word path (D-71)', () => {
   test("today's sample is labeled and themed, and axe passes", async ({ page }) => {
     await fixClock(page, new Date('2026-11-01T15:00:00'));
     await page.goto('/play/word-path');
-    await expect(page.getByRole('heading', { level: 1, name: 'word path' })).toBeVisible();
+    // The legacy address keeps working and shows the game under its new name (the tachyyy/piccline rebrand, #1006).
+    await expect(page.getByRole('heading', { level: 1, name: 'piccline' })).toBeVisible();
     await expect(page.getByTestId('suture').getByRole('heading', { level: 3, name: 'a calm study break' })).toBeVisible();
     await expect(page.getByTestId('suture')).toContainText('sample puzzle');
     await expect(page.getByTestId('suture').getByRole('gridcell')).toHaveCount(48);
@@ -1068,8 +1065,8 @@ test.describe('daily games without JavaScript', () => {
       "to add cueory to your home screen, use your browser's menu. daily games need JavaScript.",
     ]);
     await expect(page.getByTestId('sample-note')).toBeVisible();
-    await expect(page.getByTestId('play-links').getByRole('link')).toHaveText(['vialo', 'sudoku', 'crossword', 'word path']);
-    for (const [path, name] of [['/play/vialo', 'vialo'], ['/play/sudoku', 'sudoku'], ['/play/crossword', 'crossword'], ['/play/word-path', 'word path']]) {
+    await expect(page.getByTestId('play-links').getByRole('link')).toHaveText(['vialo', 'sudoku', 'crossword', 'piccline']);
+    for (const [path, name] of [['/play/vialo', 'vialo'], ['/play/sudoku', 'sudoku'], ['/play/crossword', 'crossword'], ['/play/piccline', 'piccline']]) {
       await page.goto(path);
       // Every game opens the shared settings from its own gear (sudoku too, #823), so no page has a separate button.
       await expect(page.locator('noscript p').filter({ hasText: `${name} needs JavaScript.` })).toHaveText(`${name} needs JavaScript.`);

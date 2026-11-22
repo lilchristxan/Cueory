@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { aboutLinks, navLinks, visibleAboutLinks } from '../../src/config/sitenav';
 import { legalFooterRoutes } from '../../src/config/legalfooter';
-import { dailyGames, gamePages } from '../../src/config/games';
+import { dailyGames } from '../../src/config/games';
+import { gamePages } from '../../src/config/game-pages';
 
 describe('top bar links (redesign P2)', () => {
   it('lists study, games and support, in the renderings order, all lowercase', () => {

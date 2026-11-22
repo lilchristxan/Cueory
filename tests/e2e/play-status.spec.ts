@@ -27,7 +27,7 @@ for (const size of [{ width: 390, height: 844 }, { width: 1440, height: 900 }]) 
     test('every game shows "not started" in words and a symbol, with 44 px targets and no sideways scroll', async ({ page }) => {
       await page.goto('/play');
       await expect(list(page).getByRole('heading', { name: 'today' })).toBeVisible();
-      for (const [game, name, testId] of [['vialo', 'vialo', 'pulse'], ['triage', 'sudoku', 'triage'], ['cueword', 'crossword', 'cueword'], ['suture', 'word path', 'suture']]) {
+      for (const [game, name, testId] of [['vialo', 'vialo', 'pulse'], ['triage', 'sudoku', 'triage'], ['cueword', 'crossword', 'cueword'], ['suture', 'piccline', 'suture']]) {
         const card = row(page, testId);
         await expect(card).toHaveAttribute('data-status', 'not-started');
         await expect(card).toContainText(name);
@@ -35,7 +35,7 @@ for (const size of [{ width: 390, height: 844 }, { width: 1440, height: 900 }]) 
         await expect(card).toContainText('not started');
         const box = await card.getByRole('link').boundingBox();
         // Each card opens the game's own page (2026-11-17).
-        await expect(card.getByRole('link')).toHaveAttribute('href', { vialo: '/play/vialo', triage: '/play/sudoku', cueword: '/play/crossword', suture: '/play/word-path' }[game]!);
+        await expect(card.getByRole('link')).toHaveAttribute('href', { vialo: '/play/vialo', triage: '/play/sudoku', cueword: '/play/crossword', suture: '/play/piccline' }[game]!);
         expect(box!.height).toBeGreaterThanOrEqual(44);
       }
       // Stats are always kept (2026-11-17), so the "turn on stats" note is gone; it shows only where storage is blocked.
@@ -113,7 +113,7 @@ test('each card opens its game by keyboard', async ({ page }) => {
 });
 
 test('old links to a game\'s section of /play go on to its own page', async ({ page }) => {
-  for (const [hash, path] of [['#vialo-heading', '/play/vialo'], ['#pulse-heading', '/play/vialo'], ['#triage-heading', '/play/sudoku'], ['#sudoku-heading', '/play/sudoku'], ['#crossword-heading', '/play/crossword'], ['#word-path-heading', '/play/word-path']]) {
+  for (const [hash, path] of [['#vialo-heading', '/play/vialo'], ['#pulse-heading', '/play/vialo'], ['#triage-heading', '/play/sudoku'], ['#sudoku-heading', '/play/sudoku'], ['#crossword-heading', '/play/crossword'], ['#piccline-heading', '/play/piccline']]) {
     await page.goto('/play' + hash);
     await expect(page).toHaveURL(new RegExp(path.replaceAll('/', '\\/') + '$'));
   }
@@ -129,8 +129,11 @@ test.describe('without JavaScript', () => {
     await page.goto('/play');
     await expect(page.getByRole('heading', { level: 1, name: 'daily games' })).toBeVisible();
     await expect(list(page)).toHaveCount(0);
-    for (const name of ['vialo', 'sudoku', 'crossword', 'word path']) {
+    for (const name of ['vialo', 'sudoku', 'crossword', 'piccline']) {
       await expect(page.getByTestId('play-links').getByRole('link', { name, exact: true })).toBeVisible();
     }
+    const piccline = page.getByTestId('play-links').getByRole('link', { name: 'piccline', exact: true });
+    const bounds = await piccline.boundingBox();
+    expect(bounds?.height ?? 0).toBeGreaterThanOrEqual(44);
   });
 });

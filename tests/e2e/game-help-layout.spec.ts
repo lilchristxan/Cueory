@@ -12,7 +12,7 @@ const games = [
   { testId: 'pulse', name: 'pillo', path: '/play/pillo' },
   { testId: 'sudoku', name: 'sudoku', path: '/play/sudoku' },
   { testId: 'cueword', name: 'crossword', path: '/play/crossword' },
-  { testId: 'suture', name: 'word path', path: '/play/word-path' },
+  { testId: 'suture', name: 'piccline', path: '/play/word-path' },
 ] as const;
 const screens = [[390, 844], [320, 568], [844, 390]] as const;
 const fonts = [20, 32] as const;

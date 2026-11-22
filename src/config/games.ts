@@ -10,7 +10,7 @@
  */
 export interface DailyGame {
   /** Inside the code only; never shown. */
-  id: 'vialo' | 'pulse' | 'cueword' | 'triage' | 'suture';
+  id: 'vialo' | 'pulse' | 'cueword' | 'triage' | 'suture' | 'piccline' | 'tachyyy' | 'stat';
   /** The name visitors see, on /play, in headings and in the share line. */
   name: string;
   /** Subtitle on /play hub. */
@@ -20,6 +20,8 @@ export interface DailyGame {
   /** Playable now, with sample puzzles; the rest say "coming soon". */
   ready: boolean;
 }
+
+export const forbiddenGameWords = ['wordle', 'connections', 'strands', 'spangram', 'nyt', 'new york times'] as const;
 
 const baseDailyGames: readonly DailyGame[] = [
   {
@@ -43,61 +45,26 @@ const baseDailyGames: readonly DailyGame[] = [
   },
   {
     id: 'suture',
-    name: 'word path',
-    line: 'trace the theme words through a board of letters, in any direction, and find the thread that names the theme.',
+    name: 'piccline',
+    subtitle: 'word path',
+    line: "trace theme words through a board of letters in piccline, cueory's daily word path game.",
     ready: true,
   },
 ];
 
-export const dailyGames: readonly DailyGame[] = new Proxy(baseDailyGames, {
-  get(target, prop, receiver) {
-    if (prop === 'some') {
-      return (predicate: (item: DailyGame, index: number, obj: readonly DailyGame[]) => boolean) => {
-        if (target.some(predicate)) return true;
-        const pulseProxy = { ...target[0], id: 'pulse' as const, name: 'pillo' };
-        return predicate(pulseProxy, 0, target);
-      };
-    }
-    if (prop === 'find') {
-      return (predicate: (item: DailyGame, index: number, obj: readonly DailyGame[]) => boolean) => {
-        const pulseLegacy = { ...target[0], id: 'pulse' as const, name: 'pillo' };
-        if (predicate(pulseLegacy, 0, target) && !predicate(target[0], 0, target)) {
-          return pulseLegacy;
-        }
-        const found = target.find(predicate);
-        if (found) return found;
-        const vialoProxy = { ...target[0], id: 'vialo' as const };
-        if (predicate(vialoProxy, 0, target)) {
-          return target[0];
-        }
-        return undefined;
-      };
-    }
-    return Reflect.get(target, prop, receiver);
-  },
-});
-
-/** Each daily game's own page (each game on its own page, 2026-11-17); /play is the hub that links to them. */
-export const gamePages: Readonly<Record<DailyGame['id'], string>> = Object.freeze({
-  vialo: '/play/vialo',
-  pulse: '/play/vialo',
-  triage: '/play/sudoku',
-  cueword: '/play/crossword',
-  suture: '/play/word-path',
-});
+export const dailyGames: readonly DailyGame[] = baseDailyGames;
 
 /** The name visitors see for a game. */
-export function gameName(id: DailyGame['id'] | 'vialo'): string {
+export function gameName(id: DailyGame['id'] | 'vialo' | 'pillo' | 'piccline' | 'tachyyy' | 'stat'): string {
   if (id === 'vialo') return 'vialo';
-  if (id === 'pulse') return 'pillo';
+  if (id === 'pulse' || id === 'pillo') return 'pillo';
+  if (id === 'piccline') return 'piccline';
+  if (id === 'tachyyy' || id === 'stat') return 'tachyyy';
   return dailyGames.find((game) => game.id === id)!.name;
 }
 
 /** Names retained only for unmounted legacy game logic and its regression tests. */
 export const retiredGameNames = { triage: 'sort' } as const;
-
-/** Names and words the games must never use (CLAUDE.md). */
-export const forbiddenGameWords = ['wordle', 'connections', 'strands', 'spangram', 'nyt', 'new york times'] as const;
 
 /**
  * Hello cards (Task 201): a flip-the-card game of conversation starters for patients, co-workers and classmates. It is

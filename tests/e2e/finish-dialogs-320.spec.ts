@@ -23,7 +23,7 @@ const cards = [
     path: '/play/crossword',
   },
   {
-    game: 'suture', name: 'word path', date: 'nov 11, 2026', result: '8 / 8', shareResult: '8 of 8 answers, 1 cue',
+    game: 'suture', name: 'piccline', date: 'nov 11, 2026', result: '8 / 8', shareResult: '8 of 8 answers, 1 cue',
     summary: 'you found every answer on today\'s board.',
     stats: [{ label: 'answers found', value: '8' }, { label: 'cues used', value: '1' }, { label: 'the thread found first', value: 'yes' }],
     path: '/play/word-path',
