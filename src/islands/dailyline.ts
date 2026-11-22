@@ -1,5 +1,8 @@
 /** The home-page date is local to the visitor, never frozen at build time (W01-2). */
 import { dayLabel } from './daily';
+import { msUntilLocalMidnight } from './localmidnight';
+
+export { msUntilLocalMidnight };
 
 export const MIDNIGHT_MESSAGE = 'the date changes at midnight on your device. some sample puzzles repeat.';
 const UNAVAILABLE_MESSAGE = "your device's date is unavailable. " + MIDNIGHT_MESSAGE;
@@ -21,21 +24,6 @@ export function dailyLineFromClock(clock: () => Date): string {
     return dailyLine(clock());
   } catch {
     return UNAVAILABLE_MESSAGE;
-  }
-}
-
-/** The local Date constructor accounts for 23-hour and 25-hour DST days. */
-export function msUntilLocalMidnight(date: Date | null): number | null {
-  try {
-    if (!(date instanceof Date) || !Number.isFinite(date.getTime())) return null;
-    // Date(year, ...) maps years 0–99 to 1900–1999, creating an overflowing timer on a bad device clock.
-    // Clone first, then move to the next local midnight without changing the caller's Date.
-    const next = new Date(date.getTime());
-    next.setHours(24, 0, 0, 0);
-    const remaining = next.getTime() - date.getTime();
-    return Number.isFinite(remaining) && remaining > 0 ? remaining : null;
-  } catch {
-    return null;
   }
 }
 
