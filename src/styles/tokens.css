@@ -898,16 +898,16 @@
 /* Keep the carousel's scoped Evening aliases after both canonical palette blocks. The strict token readers consume
    the first device/picked-theme blocks as the source of truth. */
 @media (prefers-color-scheme: dark) {
-  #daily-games {
+  :root:not([data-theme="light"]) #daily-games {
     --game-pip-bg: var(--color-surface);
-    --game-pip-ink: var(--color-page);
+    --game-pip-ink: var(--color-ink);
     --game-demo-active-bg: var(--color-surface);
   }
 }
 
 :root[data-theme="dark"] #daily-games {
   --game-pip-bg: var(--color-surface);
-  --game-pip-ink: var(--color-page);
+  --game-pip-ink: var(--color-ink);
   --game-demo-active-bg: var(--color-surface);
 }
 
