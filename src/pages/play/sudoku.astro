@@ -32,17 +32,18 @@ const game = dailyGames.find((item) => item.id === 'triage')!;
     const request = event as typeof pendingHelp;
     if (request?.detail?.gameName === 'sudoku' && request.detail.trigger instanceof HTMLButtonElement) pendingHelp = request;
   };
-  window.addEventListener(helpEvent, rememberHelp);
-
-  // The board publishes its initial level from the effect after it installs the Help listener.
-  // Replay an activation made while the visible Frame control was ready but the board was still mounting.
-  window.addEventListener('cueory:game-frame-sudoku-level-change', () => {
-    window.removeEventListener(helpEvent, rememberHelp);
-    if (!pendingHelp) return;
-    const { detail } = pendingHelp;
-    pendingHelp = undefined;
-    if (detail.trigger.isConnected) window.dispatchEvent(new CustomEvent(helpEvent, { detail }));
-  }, { once: true });
+  // The island may already be listening when this module starts.
+  const section = document.querySelector('.sudoku-section');
+  if (section && !section.hasAttribute('data-sudoku-help-ready')) {
+    window.addEventListener(helpEvent, rememberHelp);
+    section.addEventListener('cueory:sudoku-help-ready', () => {
+      window.removeEventListener(helpEvent, rememberHelp);
+      if (!pendingHelp) return;
+      const { detail } = pendingHelp;
+      pendingHelp = undefined;
+      if (detail.trigger.isConnected) window.dispatchEvent(new CustomEvent(helpEvent, { detail }));
+    }, { once: true });
+  }
 
   const picker = document.querySelector<HTMLSelectElement>('#game-frame-sudoku-difficulty');
   if (picker) {
