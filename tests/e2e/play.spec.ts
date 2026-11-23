@@ -416,7 +416,7 @@ test.describe('daily games: sudoku (Task 625)', () => {
     await expect(grid(page).getByRole('row')).toHaveCount(9);
     for (const row of await grid(page).getByRole('row').all()) await expect(row.getByRole('gridcell')).toHaveCount(9);
     await expect(grid(page).locator('[data-given="true"]')).toHaveCount(40);
-    await expect(game(page).getByRole('button', { name: 'easy' })).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.getByTestId('game-frame-sudoku-difficulty')).toHaveValue('easy');
     const controls = game(page).locator('.sudoku-icon-button, .sudoku-small-button, .sudoku-number-row button');
     const boxes = await controls.evaluateAll((elements) => elements.map((element) => element.getBoundingClientRect()));
     for (const box of boxes) expect(box.height).toBeGreaterThanOrEqual(44);
@@ -444,9 +444,9 @@ test.describe('daily games: sudoku (Task 625)', () => {
     await game(page).getByRole('button', { name: String(daily.solution[second]), exact: true }).click();
     await expect(cells(page).nth(second)).toContainText(String(daily.solution[second]));
 
-    await game(page).getByRole('button', { name: 'medium', exact: true }).click();
+    await page.getByTestId('game-frame-sudoku-difficulty').selectOption('medium');
     await expect(grid(page).locator('[data-given="true"]')).toHaveCount(32);
-    await game(page).getByRole('button', { name: 'hard' }).click();
+    await page.getByTestId('game-frame-sudoku-difficulty').selectOption('hard');
     await expect(grid(page).locator('[data-given="true"]')).toHaveCount(26);
   });
 
@@ -466,13 +466,19 @@ test.describe('daily games: sudoku (Task 625)', () => {
     await expect(game(page).locator('.sudoku-time')).toHaveText(before);
     await game(page).getByRole('button', { name: 'resume puzzle' }).click();
 
-    const trigger = game(page).getByRole('button', { name: /settings/i });
+    const trigger = page.getByTestId('game-frame-gear');
     await trigger.click();
     const dialog = game(page).getByRole('dialog', { name: 'settings' });
     const close = dialog.getByRole('button', { name: 'close settings' });
+    const forgetStats = dialog.getByRole('button', { name: 'forget all my stats' });
+    const playSound = dialog.getByRole('checkbox', { name: 'play sound on solve' });
     await expect(close).toBeFocused();
     await page.keyboard.press('Shift+Tab');
-    await expect(dialog.getByRole('checkbox', { name: 'play sound on solve' })).toBeFocused();
+    await expect(forgetStats).toBeFocused();
+    await page.keyboard.press('Shift+Tab');
+    await expect(playSound).toBeFocused();
+    await page.keyboard.press('Tab');
+    await expect(forgetStats).toBeFocused();
     await page.keyboard.press('Tab');
     await expect(close).toBeFocused();
     // Theme rows drive the site's own switch (no second theme system); gameboard settings persist on their own.
@@ -483,7 +489,7 @@ test.describe('daily games: sudoku (Task 625)', () => {
     await expect(trigger).toBeFocused();
 
     await page.reload();
-    await game(page).getByRole('button', { name: /settings/i }).click();
+    await page.getByTestId('game-frame-gear').click();
     await expect(game(page).getByRole('dialog', { name: 'settings' }).getByRole('checkbox', { name: 'start in auto cue mode' })).toBeChecked();
     await page.keyboard.press('Escape');
     const hints = game(page).getByRole('checkbox', { name: /auto cues/i });

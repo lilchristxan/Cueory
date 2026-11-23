@@ -18,7 +18,7 @@ const axe = (page: Page, selector: string) =>
   new AxeBuilder({ page }).include(selector).withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa']).analyze();
 
 const helpButton = (page: Page, game: (typeof games)[number]) =>
-  game.id === 'cueword'
+  game.id === 'cueword' || game.id === 'triage'
     ? page.getByTestId('game-frame-help-button')
     : page.getByTestId(game.testId).getByRole('button', { name: `how to play ${game.name}` });
 
@@ -47,7 +47,7 @@ test('the first visit shows each game\'s rules above its board, and "got it" put
   await gotIt.press('Enter');
   await expect(sudoku.getByTestId('game-help-first')).toHaveCount(0);
   // Focus goes to the "?" that brings the rules back.
-  await expect(sudoku.getByRole('button', { name: 'how to play sudoku' })).toBeFocused();
+  await expect(page.getByTestId('game-frame-help-button')).toBeFocused();
   expect(JSON.parse((await seen(page))!)).toEqual(['triage']);
 
   await page.reload();
@@ -151,7 +151,7 @@ test('typing in the sudoku help dialog never changes the board', async ({ page }
   await expect(sudoku.getByRole('gridcell')).toHaveCount(81);
   await expect(sudoku.locator('[data-given="true"]').first()).toBeVisible();
   const before = await sudoku.getByRole('gridcell').evaluateAll((cells) => cells.map((cell) => cell.getAttribute('aria-label')));
-  await sudoku.getByRole('button', { name: 'how to play sudoku' }).click();
+  await page.getByTestId('game-frame-help-button').click();
   await expect(page.getByRole('dialog', { name: 'how to play sudoku' })).toBeVisible();
   await page.keyboard.press('5');
   await page.keyboard.press('Control+z');

@@ -70,7 +70,7 @@ test('game dialogs fit a sideways phone without sideways scroll', async ({ page 
 
   await open(page, '/play/sudoku');
   // Sudoku's gear opens the shared settings dialog with its own settings in it (#823).
-  await page.getByTestId('sudoku-section').getByRole('button', { name: 'sudoku settings' }).click();
+  await page.getByTestId('game-frame-gear').click();
   await check('.game-settings');
   await page.getByRole('dialog', { name: 'sudoku settings' }).getByRole('button', { name: 'close settings' }).click();
 
