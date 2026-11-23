@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
 import { markPanelsSeen } from './clock';
 
@@ -85,5 +86,29 @@ test.describe('phone layouts follow the desktop design', () => {
     const link = page.getByTestId('signin-unavailable').getByRole('link', { name: 'get launch updates' });
     await expect(link).toBeVisible();
     expect((await link.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+  });
+
+  /* The coming-soon panel sits on study screens (held-back lessons), which stay plain Lato. Held-back lessons only exist
+     in the live build, so this puts the panel's own heading classes on a study-variant page and reads the computed font. */
+  test('the coming-soon panel heading is Lato on a study screen, and the marketing serif is not used', async ({ page }) => {
+    const source = readFileSync(new URL('../../src/components/ComingSoonPanel.astro', import.meta.url), 'utf8');
+    const classes = /<h1 class="([^"]+)">coming soon<\/h1>/.exec(source)?.[1];
+    expect(classes).toBeTruthy();
+    expect(classes!.split(' ')).not.toContain('display');
+    await open(page, '/breaks');
+    const fonts = await page.evaluate((cls) => {
+      const h = document.createElement('h1');
+      h.className = cls;
+      h.textContent = 'coming soon';
+      document.querySelector('main')!.append(h);
+      const serif = document.createElement('h1');
+      serif.className = `display ${cls}`;
+      serif.textContent = 'serif control';
+      document.querySelector('main')!.append(serif);
+      return { panel: getComputedStyle(h).fontFamily, control: getComputedStyle(serif).fontFamily };
+    }, classes!);
+    expect(fonts.panel).toContain('Lato');
+    expect(fonts.panel).not.toContain('Bodoni Moda');
+    expect(fonts.control).toContain('Bodoni Moda');
   });
 });
