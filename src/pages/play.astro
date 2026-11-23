@@ -58,22 +58,22 @@ const statsLinks = Object.fromEntries(statsGames.map((id) => [id, gamePages[id]]
   socialImage="/share/games-scene.png"
   wide
 >
-  <div class="mx-auto w-full max-w-(--play-hub-max)">
+  <div class="@container mx-auto w-full max-w-(--play-hub-max)">
     {/* Home screen tip (L2): only after puzzles finished on 3 different days, decided on page load, never mid-game. */}
-    <div class="px-gutter lg:px-0">
+    <div class="px-gutter @5xl:px-0">
       <HomeScreenTip client:only="react" />
     </div>
     <noscript><p>to add cueory to your home screen, use your browser's menu. daily games need JavaScript.</p></noscript>
 
     {/* Option B (Christian, 2026-11-23): the left panel above the games on phones and tablets, beside them on desktop. */}
-    <div class="grid gap-6 px-gutter py-4 sm:py-6 lg:grid-cols-(--play-hub-split) lg:gap-0 lg:p-0">
-      <section class="flex flex-col gap-5 rounded-xl bg-surface p-6 lg:rounded-none lg:p-12" aria-labelledby="play-hub-heading">
+    <div class="grid gap-6 px-gutter py-4 sm:py-6 @5xl:grid-cols-(--play-hub-split) @5xl:gap-0 @5xl:p-0">
+      <section class="flex min-w-0 flex-col gap-5 rounded-xl bg-surface p-6 @5xl:rounded-none @5xl:p-12" aria-labelledby="play-hub-heading">
         {/* "daily games · [date]": today's date from the visitor's clock (src/scripts/playdate.ts). */}
         <p class="flex flex-wrap items-center gap-1.5 text-sm font-medium tracking-label text-ink-soft">
           <span>daily games</span>
           <span data-play-date hidden><span aria-hidden="true">·</span> <time data-testid="play-date"></time></span>
         </p>
-        <h1 id="play-hub-heading" class="display text-wrap text-(length:--play-hub-headline-size-phone) leading-tight font-medium text-ink lg:mt-6 lg:text-(length:--play-hub-headline-size)">
+        <h1 id="play-hub-heading" class="display text-wrap wrap-anywhere text-(length:--play-hub-headline-size-phone) leading-tight font-medium text-ink @5xl:mt-6 @5xl:text-(length:--play-hub-headline-size)">
           {hubHeadline(hubGames.length)}
         </h1>
         {/* One quiet line (Christian's brief): the puzzles are labelled samples for now. */}
@@ -83,7 +83,7 @@ const statsLinks = Object.fromEntries(statsGames.map((id) => [id, gamePages[id]]
         <PlayTotals client:load />
       </section>
 
-      <div class="min-w-0 lg:bg-page lg:px-16 lg:py-14">
+      <div class="@container min-w-0 @5xl:bg-page @5xl:px-16 @5xl:py-14">
         <PlayStatus client:load games={hubGames} />
 
         {/* Private stats (D-76): kept only in this browser, with "forget" buttons. */}

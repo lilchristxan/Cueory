@@ -49,7 +49,7 @@ export default function PlayTotals() {
       {items.map(([label, value]) => (
         <div key={label} className="flex min-w-0 flex-1 basis-(--play-hub-total-min) flex-col gap-0.5">
           <dt className="text-sm text-ink-soft">{label}</dt>
-          <dd className="order-first text-(length:--play-hub-total-size) leading-tight font-black text-ink" data-testid={`play-total-${label.replace(' ', '-')}`}>
+          <dd className="order-first text-(length:--play-hub-total-size) leading-normal font-black text-ink" data-testid={`play-total-${label.replace(' ', '-')}`}>
             {value ?? <span aria-hidden="true">–</span>}
           </dd>
         </div>

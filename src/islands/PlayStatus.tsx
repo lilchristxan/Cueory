@@ -75,14 +75,14 @@ function Tile({ row }: { row: Row }) {
 
 function Name({ row }: { row: Row }) {
   if (!row.art) {
-    return <span className="display text-(length:--play-hub-name-size-phone) leading-none text-ink wrap-anywhere lg:text-(length:--play-hub-name-size)">{row.name}</span>;
+    return <span className="display text-(length:--play-hub-name-size-phone) leading-none text-ink wrap-anywhere @4xl:text-(length:--play-hub-name-size)">{row.name}</span>;
   }
   const art = WORDMARK[row.art];
   return (
-    <span className="logo block h-(--play-hub-wordmark-height-phone) lg:h-(--play-hub-wordmark-height)">
+    <span className="logo block h-(--play-hub-wordmark-height-phone) @4xl:h-(--play-hub-wordmark-height)">
       <span className="sr-only">{row.name}</span>
-      <img className="logo-day h-full w-auto" src={art.day} alt="" aria-hidden="true" loading="lazy" width={art.width} height={art.height} decoding="async" />
-      <img className="logo-evening h-full w-auto" src={art.evening} alt="" aria-hidden="true" loading="lazy" width={art.width} height={art.height} decoding="async" />
+      <img className="logo-day h-full w-auto max-w-full object-contain object-left" src={art.day} alt="" aria-hidden="true" loading="lazy" width={art.width} height={art.height} decoding="async" />
+      <img className="logo-evening h-full w-auto max-w-full object-contain object-left" src={art.evening} alt="" aria-hidden="true" loading="lazy" width={art.width} height={art.height} decoding="async" />
     </span>
   );
 }
@@ -143,7 +143,7 @@ export default function PlayStatus({ games }: Props) {
   return (
     <section aria-labelledby="today-status-heading" data-testid="play-status">
       <h2 id="today-status-heading" className="sr-only">today</h2>
-      <ul className="flex flex-col gap-3 lg:gap-0 lg:border-b lg:border-line">
+      <ul className="flex flex-col gap-3 @4xl:gap-0 @4xl:border-b @4xl:border-line">
         {games.map((row) => {
           const daily = row.id !== 'hello-cards';
           const status = loaded && daily && row.open ? statusFor(row.id as GameId, today, saved.stats, heard) : undefined;
@@ -160,26 +160,29 @@ export default function PlayStatus({ games }: Props) {
               data-testid={`play-status-${row.testId}`}
               data-status={status}
               data-closed={row.open ? undefined : 'true'}
-              className="relative grid grid-cols-(--play-hub-cols-stacked) bg-page items-center gap-x-4 gap-y-3 rounded-xl border border-line p-4 lg:grid-cols-(--play-hub-cols) lg:gap-x-6 lg:rounded-none lg:border-0 lg:border-t lg:px-0 lg:py-5"
+              className="relative grid grid-cols-(--play-hub-cols-stacked) bg-page items-center gap-x-4 gap-y-3 rounded-xl border border-line p-4 @4xl:grid-cols-(--play-hub-cols) @4xl:gap-x-6 @4xl:rounded-none @4xl:border-0 @4xl:border-t @4xl:px-0 @4xl:py-5"
             >
               <Tile row={row} />
-              <span className="col-span-2 min-w-0 lg:col-span-1">
+              <span className="min-w-0 @4xl:col-span-1">
                 <Name row={row} />
               </span>
-              <p className="col-span-3 text-base text-ink lg:col-span-1">{row.line}</p>
-              <p className="col-span-2 text-sm font-medium text-ink-soft lg:col-span-1" data-testid="play-status-words">
-                {words ?? <span aria-hidden="true">–</span>}
-              </p>
-              {action && (
-                <a
-                  href={row.href}
-                  className={`${action === 'result' ? RESULT : PLAY} justify-self-end`}
-                  aria-label={`${action} ${row.name}`}
-                  data-testid={row.linkTestId}
-                >
-                  {action}
-                </a>
-              )}
+              <p className="col-span-2 text-base text-ink @4xl:col-span-1">{row.line}</p>
+              {/* Status on the left and the button on the right; they wrap under each other when text is enlarged. */}
+              <div className="col-span-2 flex flex-wrap items-center justify-between gap-3 @4xl:contents">
+                <p className="text-sm font-medium text-ink-soft" data-testid="play-status-words">
+                  {words ?? <span aria-hidden="true">–</span>}
+                </p>
+                {action && (
+                  <a
+                    href={row.href}
+                    className={`${action === 'result' ? RESULT : PLAY} @4xl:justify-self-end`}
+                    aria-label={`${action} ${row.name}`}
+                    data-testid={row.linkTestId}
+                  >
+                    {action}
+                  </a>
+                )}
+              </div>
             </li>
           );
         })}

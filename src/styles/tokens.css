@@ -947,7 +947,7 @@
   --play-hub-max: 90rem;                /* the hub's widest width (1440 px); wider screens keep it centred */
   --play-hub-panel-width: 25rem;        /* the left panel on desktop (400 px) */
   --play-hub-split: var(--play-hub-panel-width) 1fr; /* desktop: left panel, then the rows */
-  --play-hub-cols-stacked: auto 1fr auto; /* phone and tablet row: tile, then the wordmark, with the button at the right end */
+  --play-hub-cols-stacked: auto minmax(0, 1fr); /* phone and tablet row: tile, then the wordmark; line and status row span both */
   --play-hub-cols: 4rem 12.5rem 1fr 11rem 7.5rem; /* desktop row: icon tile, wordmark, line, status, button */
   --play-hub-tile: 4rem;                /* the game's icon tile (64 px) */
   --play-hub-tile-icon: 2.875rem;       /* the artwork inside the tile (46 px) */
