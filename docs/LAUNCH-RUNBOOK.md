@@ -21,50 +21,61 @@ Use this runbook for the games-and-public-pages launch. Accounts and production 
 12. Confirm that every required check on the release pull request is green.
 13. Confirm that the all-engine browser checks belong to the recorded final release SHA.
 14. Do not merge CI-only #634.
-15. Open the release pull request's merge menu.
-16. Choose the normal merge option.
-17. Confirm the merge into `main`.
-18. Wait for Cloudflare to start the production deployment.
-19. Open the Worker deployment history.
-20. Confirm that the new `main` deployment becomes active within ten minutes.
-21. Hold the release if the deployment does not become active within ten minutes.
-22. Hold the release if Cloudflare reports a build or deployment failure.
+15. Close the CI-only #634 dry-run before opening a separate real `staging` to `main` release pull request for the same branch pair.
+16. Open the release pull request's merge menu.
+17. Choose `Create a merge commit`.
+18. Confirm the merge into `main`.
+19. Wait for Cloudflare to start the production deployment.
+20. Open the Worker deployment history.
+21. Confirm that the new `main` deployment becomes active within ten minutes.
+22. Hold the release if the deployment does not become active within ten minutes.
+23. Hold the release if Cloudflare reports a build or deployment failure.
 
 ## Five-minute production smoke
 
-23. Open `https://cueory.app` in a private window.
-24. Confirm that the approved Home version appears over HTTPS.
-25. Open `https://cueory.app/play`.
-26. Confirm that the public game hub appears.
-27. Open `https://cueory.app/play/vialo`.
-28. Enter one letter guess and confirm that the Vialo board responds.
-29. Open `https://cueory.app/play/sudoku`.
-30. Select a level and enter one digit in an empty cell.
-31. Confirm that the Sudoku board responds.
-32. Open `https://cueory.app/play/piccline`.
-33. Select one available word-path action and confirm that the board responds.
-34. Open `https://cueory.app/play/crossword`.
-35. Confirm that the closed Crossword gate says it is coming soon.
-36. Open `https://cueory.app/play/pillo`.
-37. Confirm that the retained Pillo address still loads its public game page.
-38. Open `https://cueory.app/play/word-path`.
-39. Confirm that the retained Word Path address still loads the Piccline page.
-40. Open `https://cueory.app/privacy`.
-41. Confirm that the privacy page matches the released public behavior.
-42. Open `https://cueory.app/launch-runbook-check-404`.
-43. Confirm that the unknown address returns HTTP 404.
-44. Complete the smoke within five minutes of the active deployment appearing.
-45. Hold the release if any smoke check differs from the approved staging result.
+24. Open `https://cueory.app` in a private window.
+25. Confirm that the approved Home version appears over HTTPS.
+26. Open `https://cueory.app/play`.
+27. Confirm that the public game hub appears.
+28. Open `https://cueory.app/play/vialo`.
+29. Enter one letter guess and confirm that the Vialo board responds.
+30. Open `https://cueory.app/play/sudoku`.
+31. Select a level and enter one digit in an empty cell.
+32. Confirm that the Sudoku board responds.
+33. Open `https://cueory.app/play/piccline`.
+34. Select one available word-path action and confirm that the board responds.
+35. Open `https://cueory.app/play/crossword`.
+36. Confirm that the closed Crossword gate says it is coming soon.
+37. Open `https://cueory.app/play/pillo`.
+38. Confirm that the retained Pillo address still loads its public game page.
+39. Open `https://cueory.app/play/word-path`.
+40. Confirm that the retained Word Path address still loads the Piccline page.
+41. Open `https://cueory.app/privacy`.
+42. Confirm that the privacy page matches the released public behavior.
+43. Open `https://cueory.app/launch-runbook-check-404`.
+44. Confirm that the unknown address returns HTTP 404.
+45. Complete the smoke within five minutes of the active deployment appearing.
+46. Hold the release if any smoke check differs from the approved staging result.
 
 ## Rollback
 
-46. Open the actual merged release pull request if a rollback is needed.
-47. Click its `Revert` button.
-48. If GitHub cannot create the revert, create a rollback branch from `main`.
-49. Revert the production merge commit with its first parent on that rollback branch.
-50. Open the rollback pull request into `main`.
-51. Do not reset or force-push `main`.
-52. Merge the rollback pull request only after Christian approves it.
-53. Wait for the rollback production deployment to become active.
-54. Repeat the home, play, published-game, privacy, and unknown-route smoke checks.
-55. Hold the rollback if the deployment or smoke checks fail.
+47. Open the Worker deployment history if a live release breaks the site.
+48. Find the newest version built from `main` that is older than the broken release.
+49. Click the three dots beside that version.
+50. Click `Rollback`.
+51. Open `https://cueory.app` in a private window.
+52. Confirm that the previous version is live again.
+53. Open the actual merged release pull request.
+54. Click its `Revert` button when GitHub can create the source revert.
+55. Create a rollback branch from the current `staging` branch when GitHub cannot create that revert safely.
+56. Revert the production merge commit with first-parent semantics on that rollback branch.
+57. Open the rollback pull request into `staging`.
+58. Wait for the rollback pull request checks to pass.
+59. Verify the reverted source on the locked staging site.
+60. Open the verified `staging` to `main` release pull request.
+61. Let Christian merge that verified release pull request into `main`.
+62. Do not merge a rollback branch directly into `main`.
+63. Do not reset or force-push `main`.
+64. Wait for the rollback production deployment to become active.
+65. Repeat the home, play, published-game, privacy, and unknown-route smoke checks.
+66. Hold the rollback if the deployment or smoke checks fail.
