@@ -28,13 +28,13 @@ try {
 const { questions, sampleKey } = shown ? parsed : { questions: [], sampleKey: {} };
 ---
 
+{shown ? (
 <Layout
   title={tachyyyGame.name}
   description="fifteen fast clinical questions, 20 seconds each. how sharp are you on shift today?"
   noindex={true}
   promo={false}
 >
-{shown ? (
     <GameFrame game="tachyyy">
       <article class="mx-auto max-w-prose w-full" data-pagefind-ignore>
         {shown && <p class="text-sm text-ink-soft" data-testid="stat-sample-note">sample questions · awaiting content</p>}
@@ -56,7 +56,17 @@ const { questions, sampleKey } = shown ? parsed : { questions: [], sampleKey: {}
         </a>
       </article>
     </GameFrame>
+
+  {shown && <GameResultsHost client:only="react" />}
+  {shown && <noscript><p>game results and sharing need JavaScript.</p></noscript>}
+</Layout>
 ) : (
+<Layout
+  title={tachyyyGame.name}
+  description="fifteen fast clinical questions, 20 seconds each. how sharp are you on shift today?"
+  noindex={true}
+  promo={false}
+>
   <article class="veil mx-auto mt-6 max-w-prose p-6 sm:mt-10 sm:p-10">
     <h1 class="display text-center text-title wrap-anywhere sm:text-title-lg"><TachyyyTitle name={tachyyyGame.name} /></h1>
     <p class="mt-6 text-center" data-testid="stat-soon">{tachyyyGame.name} is coming soon.</p>
@@ -64,7 +74,5 @@ const { questions, sampleKey } = shown ? parsed : { questions: [], sampleKey: {}
       back to daily games
     </a>
   </article>
-)}
-  {shown && <GameResultsHost client:only="react" />}
-  {shown && <noscript><p>game results and sharing need JavaScript.</p></noscript>}
 </Layout>
+)}

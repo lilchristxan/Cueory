@@ -56,7 +56,7 @@ const exceptions: Exception[] = [
   {
     kind: 'size',
     path: 'styles/pillo.css',
-    matches: text => /^@media \(width (?:<|>=) 40rem\) \{$/.test(text.trim()),
+    matches: text => /^@media \(width (?:<|>=) 40rem\) \{$/.test(text.trim()) || /^@media \(width < 30rem\) \{$/.test(text.trim()),
     reason: 'the Pillo board changes layout at a responsive media-query breakpoint',
   },
   {
@@ -68,8 +68,20 @@ const exceptions: Exception[] = [
   {
     kind: 'size',
     path: 'styles/vialo.css',
-    matches: text => /^@media \(width (?:<|>=) 40rem\) \{$/.test(text.trim()),
+    matches: text => /^@media \(width (?:<|>=) 40rem\) \{$/.test(text.trim()) || /^@media \(width < 30rem\) \{$/.test(text.trim()),
     reason: 'the Vialo board changes layout at a responsive media-query breakpoint',
+  },
+  {
+    kind: 'size',
+    path: 'styles/gamehelp.css',
+    matches: text => /^@media \(max-width: 47\.99rem\) \{$/.test(text.trim()),
+    reason: 'the first-visit rules card folds below the tablet breakpoint (48rem) so the board comes first on a phone',
+  },
+  {
+    kind: 'size',
+    path: 'islands/GameHelp.tsx',
+    matches: text => /window\.matchMedia\('\(min-width: 48rem\)'\)/.test(text),
+    reason: 'the first-visit rules card reads the same 48rem tablet breakpoint to decide whether it starts folded',
   },
   {
     kind: 'size',

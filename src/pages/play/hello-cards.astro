@@ -20,8 +20,8 @@ const page = helloCardsPage(entries.map(({ data }) => data), env, helloCardsInde
 const { shown, starters } = page;
 ---
 
-<Layout title={helloCardsGame.name} description="Flip a card for a friendly conversation starter to use with patients, co-workers or classmates." noindex={page.noindex} promo={false}>
 {shown ? (
+<Layout title={helloCardsGame.name} description="Flip a card for a friendly conversation starter to use with patients, co-workers or classmates." noindex={page.noindex} promo={false}>
     <GameFrame game="hello-cards" staticNoScoreStats>
       <article class="mx-auto max-w-prose w-full" data-pagefind-ignore>
         {page.label && <p class="text-sm text-ink-soft">{page.label}</p>}
@@ -47,7 +47,12 @@ const { shown, starters } = page;
         </a>
       </article>
     </GameFrame>
+
+  {shown && <GameResultsHost client:only="react" />}
+  {shown && <noscript><p>game results and sharing need JavaScript.</p></noscript>}
+</Layout>
 ) : (
+<Layout title={helloCardsGame.name} description="Flip a card for a friendly conversation starter to use with patients, co-workers or classmates." noindex={page.noindex} promo={false}>
   <article class="veil mx-auto mt-6 max-w-prose p-6 sm:mt-10 sm:p-10">
     <h1 class="display text-center text-title wrap-anywhere sm:text-title-lg">{helloCardsGame.name}</h1>
     <p class="mt-6 text-center" data-testid="hello-cards-soon">hello cards are coming soon.</p>
@@ -55,7 +60,5 @@ const { shown, starters } = page;
       back to daily games
     </a>
   </article>
-)}
-  {shown && <GameResultsHost client:only="react" />}
-  {shown && <noscript><p>game results and sharing need JavaScript.</p></noscript>}
 </Layout>
+)}

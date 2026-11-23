@@ -65,8 +65,15 @@
   display: none;
 }
 /* The desktop sidebar is only 192 px inside, so "games", the flag and the logo share it with no side padding on "games". */
-@media (width >= 64rem) {
-  .game-frame-sidebar-top .game-frame-back {
+.game-frame-sidebar-top .game-frame-back {
+  padding-inline: 0;
+}
+.game-frame-flag-slot {
+  flex: 0 0 auto;
+  margin-inline: calc(var(--spacing) * 1);
+}
+
+.game-frame-back {
     padding-inline: 0;
   }
   .game-frame-flag-slot {
@@ -575,6 +582,15 @@
 
 /* ---------------- Responsive: Tablet and Mobile ---------------- */
 @media (width < 64rem) {
+  .game-frame-sidebar-top .game-frame-back {
+    padding-inline: calc(var(--spacing) * 3);
+  }
+
+  .game-frame-flag-slot {
+    flex: 1 1 auto;
+    margin-inline: 0;
+  }
+
   .game-frame-layout {
     flex-direction: column;
   }
