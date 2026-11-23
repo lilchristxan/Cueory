@@ -282,7 +282,7 @@
 
   /* On a phone the letter keys drop their side padding (still 44 px square), so seven fit a row and the keyboard is
      one row shorter. */
-  @media (width < 30rem) {
+  @media (width < 40rem) {
     .vialo-key:not(.vialo-key-wide) {
       padding-inline: 0;
     }

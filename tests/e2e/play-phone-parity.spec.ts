@@ -12,32 +12,24 @@ test.beforeEach(async ({ page }) => {
   });
 });
 
-for (const [path, testId, name] of [['/play/vialo', 'vialo', 'vialo'], ['/play/sudoku', 'sudoku', 'sudoku'], ['/play/piccline', 'suture', 'piccline']] as const) {
-  test(`${name}: on a phone the rules start folded and the board comes first`, async ({ page }, info) => {
+for (const [path, name] of [['/play/vialo', 'vialo'], ['/play/sudoku', 'sudoku'], ['/play/piccline', 'piccline']] as const) {
+  test(`${name}: on a phone there is no rules card in front of the board, and the board is in the first screen`, async ({ page }, info) => {
     test.skip(info.project.name.includes('desktop') || info.project.name.includes('tablet'), 'phone layout');
     await page.goto(path);
-    const card = page.getByTestId('game-help-first');
-    const toggle = card.getByRole('button', { name: `new to ${name}? here's how to play` });
-    await expect(toggle).toHaveAttribute('aria-expanded', 'false');
-    const box = await toggle.boundingBox();
+    await expect(page.getByTestId('game-help-first')).toHaveCount(0);
+    const help = page.getByTestId('game-frame-help-button');
+    await expect(help).toBeVisible();
+    const box = await help.boundingBox();
     expect(box!.height).toBeGreaterThanOrEqual(44);
-    await expect(card.getByRole('button', { name: 'got it' })).toBeHidden();
-    // The folded card is above the board, not a screen-tall block in front of it.
-    const cardBox = await card.boundingBox();
-    expect(cardBox!.height).toBeLessThan(120);
-    await toggle.click();
-    await expect(toggle).toHaveAttribute('aria-expanded', 'true');
-    await expect(card.getByRole('button', { name: 'got it' })).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
-    void testId;
   });
 }
 
 test('vialo: the help legend keeps each swatch and its label on one line', async ({ page }, info) => {
   test.skip(info.project.name.includes('desktop') || info.project.name.includes('tablet'), 'phone layout');
   await page.goto('/play/vialo');
-  await page.getByTestId('game-help-first').getByRole('button', { name: /here's how to play/ }).click();
-  const rows = page.getByTestId('game-help-first').getByTestId('vialo-legend').locator('li');
+  await page.getByRole('button', { name: 'how to play vialo' }).click();
+  const rows = page.getByTestId('game-help').getByTestId('vialo-legend').locator('li');
   await expect(rows).toHaveCount(3);
   for (let i = 0; i < 3; i += 1) {
     const swatch = await rows.nth(i).locator('.vialo-pill').boundingBox();
@@ -58,14 +50,27 @@ test('game pages: the flag button sits in the header row beside "games" and the 
   expect(Math.abs(flagBox!.y + flagBox!.height / 2 - (backBox!.y + backBox!.height / 2))).toBeLessThan(12);
 });
 
-test('vialo: the keys are at least 44 px tall and the stats labels are at least 14 px', async ({ page }) => {
+test('vialo: every letter key is at least 44 px wide and tall', async ({ page }) => {
   await page.goto('/play/vialo');
   const keys = page.getByRole('group', { name: 'letters' }).getByRole('button');
-  const count = await keys.count();
-  for (let i = 0; i < count; i += 1) {
+  // Wait for the whole keyboard (26 letters, delete and enter), so the loop below can never run over nothing.
+  await expect(keys).toHaveCount(28);
+  for (let i = 0; i < 28; i += 1) {
     const box = await keys.nth(i).boundingBox();
     expect(box!.height).toBeGreaterThanOrEqual(44);
     expect(box!.width).toBeGreaterThanOrEqual(44);
+  }
+});
+
+test('sudoku: the four stats labels beside the board are at least 14 px on a phone and a tablet', async ({ page }, info) => {
+  test.skip(info.project.name.includes('desktop'), 'phone and tablet layout; the desktop sidebar keeps its own size');
+  await page.goto('/play/sudoku');
+  const labels = page.getByTestId('game-frame-stats').locator('.game-frame-stat-label');
+  await expect(labels).toHaveCount(4);
+  for (let i = 0; i < 4; i += 1) {
+    await expect(labels.nth(i)).toBeVisible();
+    const size = await labels.nth(i).evaluate((node) => Number.parseFloat(getComputedStyle(node).fontSize));
+    expect(size).toBeGreaterThanOrEqual(14);
   }
 });
 
