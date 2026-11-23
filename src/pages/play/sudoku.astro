@@ -111,6 +111,12 @@ const game = dailyGames.find((item) => item.id === 'triage')!;
     inline-size: min(calc(100% + var(--sudoku-box-line)), var(--sudoku-board-width));
   }
 
+  /* The pseudo-element starts at the padding edge. Leave room for Firefox to round
+   * a fractional pointer coordinate down without missing the vertical hit area. */
+  :global(.sudoku-section .sudoku-pause-button:enabled::before) {
+    inset-block: calc(-1 * (2 * var(--sudoku-line) + var(--spacing) / 2));
+  }
+
   /* The framed stats table must reflow inside the shared settings card when text is enlarged. Its five columns retain
    * their semantics and values, but may wrap instead of contributing an intrinsic minimum wider than the card. */
   :global(.sudoku-stats-table) {
