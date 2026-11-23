@@ -76,6 +76,13 @@ test.describe('Task 270: sticky header overlap', () => {
         await expect(overlay).toHaveCSS('position', 'absolute');
         return;
       }
+      // Game pages use the Games v2 frame and carry no site header on purpose (D-pending), so there is nothing
+      // sticky that could cover a heading or a focused control. Assert that contract instead of a header.
+      if (await page.locator('.game-frame').count() > 0) {
+        await expect(header, `${route}: a game page must not have a sticky site header`).toHaveCount(0);
+        await expect(page.locator('header'), `${route}: a game page has no site header at all`).toHaveCount(0);
+        return;
+      }
       await expect(header, `${route}: expected a sticky header`).toHaveCount(1);
       await heading.evaluate((element) => element.scrollIntoView({ block: 'start', inline: 'nearest' }));
       await expect.poll(() => header.evaluate((element) => element.getBoundingClientRect().height)).toBeGreaterThan(0);
