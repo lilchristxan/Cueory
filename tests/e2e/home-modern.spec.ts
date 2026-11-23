@@ -251,7 +251,7 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 1440, height: 900 
         const word = page.locator('.hero-accent');
         const box = (await word.boundingBox())!;
         const clip = { x: box.x, y: box.y, width: box.width, height: box.height };
-        const grab = async () => sharp(await page.screenshot({ clip })).removeAlpha().raw().toBuffer({ resolveWithObject: true });
+        const grab = async () => sharp(await page.screenshot({ clip, scale: 'css' })).removeAlpha().raw().toBuffer({ resolveWithObject: true });
         const drawn = await grab();
         await word.evaluate((el) => {
           el.style.setProperty('color', 'transparent');
@@ -285,8 +285,7 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 1440, height: 900 
         return worst;
       }
 
-      test('keeps 3:1 at 0%, 25%, 50%, 75% and 100% of the animation', async ({ page }, testInfo) => {
-        test.skip(testInfo.project.name !== 'desktop', 'sets its own viewport and measures screenshot pixels, so it runs once, in the plain desktop browser');
+      test('keeps 3:1 at 0%, 25%, 50%, 75% and 100% of the animation', async ({ page }) => {
         await page.addInitScript(() => {
           try { localStorage.setItem('cueory-promo-seen', String(Date.now())); localStorage.setItem('cueory-signup-popup-seen', String(Date.now())); } catch { /* optional */ }
         });
@@ -302,8 +301,7 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 1440, height: 900 
         }
       });
 
-      test('shows a still, legible word under reduced motion', async ({ page }, testInfo) => {
-        test.skip(testInfo.project.name !== 'desktop', 'sets its own viewport and measures screenshot pixels, so it runs once, in the plain desktop browser');
+      test('shows a still, legible word under reduced motion', async ({ page }) => {
         await page.emulateMedia({ reducedMotion: 'reduce', colorScheme: scheme });
         await page.addInitScript(() => {
           try { localStorage.setItem('cueory-promo-seen', String(Date.now())); localStorage.setItem('cueory-signup-popup-seen', String(Date.now())); } catch { /* optional */ }
