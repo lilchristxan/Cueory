@@ -82,9 +82,9 @@ for (const [size, width, height] of [['phone', 390, 844], ['tablet', 820, 1180],
 
 
 for (const colorScheme of ['light', 'dark'] as const) {
-  test('on a 390px phone the nine digits and the gear’s x-mark button fit and work without a horizontal swipe: ' + colorScheme,
+  for (const width of [320, 390]) test(`on a ${width}px phone the nine digits and the gear’s x-mark button fit and work without a horizontal swipe: ${colorScheme}`,
     async ({ page }, testInfo) => {
-      await page.setViewportSize({ width: 390, height: 844 });
+      await page.setViewportSize({ width, height: 844 });
       await page.emulateMedia({ colorScheme, reducedMotion: 'reduce' });
       await page.goto('/play/sudoku');
       await expect(game(page)).toBeVisible();
@@ -100,6 +100,15 @@ for (const colorScheme of ['light', 'dark'] as const) {
       expect(dimensions.scrollWidth).toBeLessThanOrEqual(dimensions.clientWidth + 1);
       const digits = pad.getByRole('group', { name: 'numbers', exact: true }).getByRole('button');
       await expect(digits).toHaveText(['1', '2', '3', '4', '5', '6', '7', '8', '9']);
+      const rows = await digits.evaluateAll((buttons) => {
+        const byTop = new Map<number, string>();
+        for (const button of buttons) {
+          const top = Math.round(button.getBoundingClientRect().top);
+          byTop.set(top, (byTop.get(top) ?? '') + button.textContent);
+        }
+        return [...byTop.values()];
+      });
+      expect(rows).toEqual(['12345', '6789']);
       for (const button of await digits.all()) {
         const box = await button.boundingBox();
         expect(box).not.toBeNull();
@@ -109,7 +118,7 @@ for (const colorScheme of ['light', 'dark'] as const) {
         expect(box!.x).toBeGreaterThanOrEqual(padBox!.x - 1);
         expect(box!.x + box!.width).toBeLessThanOrEqual(padBox!.x + padBox!.width + 1);
         expect(box!.x).toBeGreaterThanOrEqual(0);
-        expect(box!.x + box!.width).toBeLessThanOrEqual(391);
+        expect(box!.x + box!.width).toBeLessThanOrEqual(width + 1);
         if (testInfo.project.use.hasTouch) await button.tap();
         else await button.click();
       }
@@ -120,7 +129,7 @@ for (const colorScheme of ['light', 'dark'] as const) {
       expect(markBox.width).toBeGreaterThanOrEqual(44);
       expect(markBox.height).toBeGreaterThanOrEqual(44);
       expect(markBox.x).toBeGreaterThanOrEqual(0);
-      expect(markBox.x + markBox.width).toBeLessThanOrEqual(391);
+      expect(markBox.x + markBox.width).toBeLessThanOrEqual(width + 1);
       if (testInfo.project.use.hasTouch) await mark.tap();
       else await mark.click();
       await expect(cells(page).nth(empty)).toHaveText('x');
