@@ -22,3 +22,8 @@ Tests changed on purpose (CI round 2)
 
 Deck breakpoint: token `--breakpoint-deck: 70rem` (Tailwind breakpoint, used as `@variant max-deck`) (1120 px) in tokens.css. Below it the other games are a plain row under the board, from it the fanned deck. Only the deck slot rules moved from the 64rem query to a new 70rem query; the sidebar and column layout still switch at 64rem. gameframe.css now starts with `@reference "./global.css"` so Tailwind processes it.
 Printed title: the page title now prints through `not-print:sr-only` (global print rule hides `.sr-only`).
+
+Round 3 (23 Nov afternoon)
+- Tachyyy and hello cards (drafts-only) now pass `bareHeader` and sit inside a `data-game-page` wrapper, so their frame spans the window like every game page and the existing game-page checks (dark-mode, sticky-header-overlap, stats routes) treat them the same. No test was loosened.
+- gameframe.spec.ts: new test that the deck slot's right edge equals the window's right edge at 1440 on all six game pages; new test that the sudoku pause button sits on whole pixels (Firefox read 43.99997 px). Cause: `.sudoku-status` was 29.6875 px tall; it now has `min-block-size: var(--sudoku-status-row)` (2rem, token in tokens.css; global.css rule).
+- Frame controls hold an open request (gear or "?") until the game island says it is listening, then send it (`cueory:game-frame-listening`, GameFrameControls, SudokuGame, GameHeader), so a tap that comes before the game hydrates is no longer lost (WebKit flake in escape-closes-all).
