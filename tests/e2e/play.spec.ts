@@ -581,7 +581,7 @@ test.describe('daily games: crossword levels (Task 627)', () => {
   test('starts on the 5 by 5 sample with a cue bar and no side cue list', async ({ page }) => {
     await expect(page.getByRole('heading', { level: 1, name: 'crossword' })).toBeVisible();
     // The level picker is the same pressed-button control as sudoku's (Christian's brief).
-    await expect(page.getByTestId('crossword-levels').getByRole('button', { name: 'easy, 5 by 5' })).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.getByTestId('crossword-levels').getByRole('button', { name: 'small, 5 by 5' })).toHaveAttribute('aria-pressed', 'true');
     // No sample line in the game box (Christian's brief); the /play hub says the puzzles are samples.
     await expect(board(page)).not.toContainText('sample puzzle');
     await expect(board(page)).not.toContainText("today's puzzle is a sample");
@@ -599,7 +599,7 @@ test.describe('daily games: crossword levels (Task 627)', () => {
   test('switches among 5, 7 and 15 square boards without overflow at 390, 820 or 1440 px', async ({ page }) => {
     for (const width of [390, 820, 1440]) {
       await page.setViewportSize({ width, height: 900 });
-      for (const [label, size] of [['mid, 7 by 7', '7'], ['hard, 15 by 15', '15'], ['easy, 5 by 5', '5']] as const) {
+      for (const [label, size] of [['medium, 7 by 7', '7'], ['large, 15 by 15', '15'], ['small, 5 by 5', '5']] as const) {
         await page.getByTestId('crossword-levels').getByRole('button', { name: label }).click();
         await expect(page.getByTestId('crossword-levels').getByRole('button', { name: label })).toHaveAttribute('aria-pressed', 'true');
         const grid = board(page).getByRole('grid', { name: 'crossword grid' });
@@ -674,7 +674,7 @@ test.describe('daily games: crossword levels (Task 627)', () => {
     const result = board(page).getByTestId('cueword-result');
     await expect(result).toBeFocused();
     await expect(result).toContainText('solved.');
-    await expect(result).toContainText('easy');
+    await expect(result).toContainText('small');
   });
 
   test('print isolates a blank grid, every clue and the cueory.app footer', async ({ page }) => {
@@ -702,7 +702,7 @@ test.describe('daily games: crossword levels (Task 627)', () => {
   test('phone controls remain 44 px and hard mode never scrolls the page sideways', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto('/play/crossword');
-    await page.getByTestId('crossword-levels').getByRole('button', { name: 'hard, 15 by 15' }).click();
+    await page.getByTestId('crossword-levels').getByRole('button', { name: 'large, 15 by 15' }).click();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
     const hardCell = await board(page).locator('.crossword-cell').first().boundingBox();
     expect(hardCell?.width).toBeGreaterThanOrEqual(44);
@@ -722,7 +722,7 @@ test.describe('daily games: crossword levels (Task 627)', () => {
       await page.evaluate((size) => {
         document.documentElement.style.setProperty('font-size', `${size}px`, 'important');
       }, rootText);
-      await page.getByTestId('crossword-levels').getByRole('button', { name: 'hard, 15 by 15' }).click();
+      await page.getByTestId('crossword-levels').getByRole('button', { name: 'large, 15 by 15' }).click();
       const region = board(page).getByRole('region', { name: 'crossword board scroll area' });
       const grid = region.getByRole('grid', { name: 'crossword grid' });
       await expect(grid).toHaveAttribute('aria-colcount', '15');
@@ -806,7 +806,7 @@ test.describe('daily games: crossword levels (Task 627)', () => {
   }
 
   test('printing a hard board removes scroll containment', async ({ page }) => {
-    await page.getByTestId('crossword-levels').getByRole('button', { name: 'hard, 15 by 15' }).click();
+    await page.getByTestId('crossword-levels').getByRole('button', { name: 'large, 15 by 15' }).click();
     await page.evaluate(() => { window.print = () => undefined; });
     await board(page).getByRole('button', { name: 'print this puzzle' }).click();
     await page.emulateMedia({ media: 'print' });

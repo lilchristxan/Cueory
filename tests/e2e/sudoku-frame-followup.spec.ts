@@ -31,6 +31,30 @@ test('framed Sudoku has one difficulty picker, pauses it, and keeps the picker s
   await expect(picker).toHaveValue('medium');
 });
 
+test('the board adopts the last difficulty selected before it loads', async ({ page }) => {
+  const moduleUrl = '**/SudokuGame.*.js';
+  let releaseBoard!: () => void;
+  const ready = new Promise<void>(resolve => { releaseBoard = resolve; });
+  await page.route(moduleUrl, async route => {
+    await ready;
+    await route.continue();
+  });
+  const picker = page.getByTestId('game-frame-sudoku-difficulty');
+  try {
+    await Promise.all([
+      page.waitForRequest(moduleUrl),
+      page.goto('/play/sudoku', { waitUntil: 'commit' }),
+    ]);
+    await expect(game(page)).toHaveCount(0);
+    await picker.selectOption('hard');
+    await picker.selectOption('medium');
+  } finally {
+    releaseBoard();
+  }
+  await expect(game(page).getByTestId('sudoku-live')).toHaveText(/^medium puzzle ready\./);
+  await expect(picker).toHaveValue('medium');
+});
+
 test('paused Sudoku prevents auto-cue setting changes until resume', async ({ page }) => {
   await page.goto('/play/sudoku');
   await expect(game(page).getByRole('gridcell')).toHaveCount(81);
