@@ -42,3 +42,22 @@ test('the Vialo blister artwork carries the live pills and their spoken marks', 
   await page.emulateMedia({ reducedMotion: 'reduce' });
   expect(await committed.locator('.vialo-here').first().evaluate((pill) => getComputedStyle(pill, '::before').animationName)).toBe('none');
 });
+
+test('Vialo preserves three distinct result outlines when both contrast settings are active', async ({ page }) => {
+  await fixClock(page, new Date('2026-11-01T15:00:00'));
+  await page.emulateMedia({ forcedColors: 'active' });
+  await page.addInitScript(() => {
+    localStorage.setItem('cueory-game-settings', JSON.stringify({ highContrast: true }));
+  });
+  await page.goto('/play/vialo');
+  const game = page.getByTestId('vialo');
+  await expect(game).toHaveClass(/vialo-contrast/);
+  expect(await page.evaluate(() => matchMedia('(forced-colors: active)').matches)).toBe(true);
+  const guess = game.getByLabel('your guess', { exact: true });
+  await guess.fill('crane');
+  await guess.press('Enter');
+  const committed = game.getByRole('list', { name: 'your guesses' }).getByRole('listitem');
+  for (const [finish, outline] of [['here', 'solid'], ['elsewhere', 'double'], ['absent', 'dashed']]) {
+    await expect(committed.locator('.vialo-' + finish).first()).toHaveCSS('border-top-style', outline);
+  }
+});

@@ -499,17 +499,9 @@
   .vialo-contrast .vialo-pill {
     background-image: none;
   }
-  .vialo-contrast .vialo-pocket > .vialo-pill {
+  /* The well outline leaves the result-specific outlines in forced colors free to win. */
+  :where(.vialo-contrast) .vialo-pocket > .vialo-pill {
     border: var(--border-pillo-key) solid var(--color-control);
-  }
-
-  @media (forced-colors: active) {
-    .vialo-pack { background-image: none; }
-    .vialo-pocket > .vialo-pill { border: var(--border-pillo-key) solid CanvasText; }
-    .vialo-pill.vialo-here { border: var(--pillo-contrast-rim) solid CanvasText; }
-    .vialo-pill.vialo-elsewhere { border: var(--pillo-contrast-rim) double CanvasText; }
-    .vialo-pill.vialo-absent { border: var(--border-pillo-key) dashed CanvasText; }
-    .vialo-pill.vialo-typed, .vialo-pill.vialo-next { outline: var(--pillo-ring) solid Highlight; }
   }
 
   .vialo-contrast .vialo-pack {
@@ -557,6 +549,15 @@
   .vialo-contrast .vialo-key-mark {
     font-size: var(--pillo-mark-contrast);
     font-weight: 700;
+  }
+
+  @media (forced-colors: active) {
+    .vialo-pack { background-image: none; }
+    .vialo-pocket > .vialo-pill { border: var(--border-pillo-key) solid CanvasText; }
+    .vialo-pill.vialo-here { border: var(--pillo-contrast-rim) solid CanvasText; }
+    .vialo-pill.vialo-elsewhere { border: var(--pillo-contrast-rim) double CanvasText; }
+    .vialo-pill.vialo-absent { border: var(--border-pillo-key) dashed CanvasText; }
+    .vialo-pill.vialo-typed, .vialo-pill.vialo-next { outline: var(--pillo-ring) solid Highlight; }
   }
 
   @media (prefers-reduced-motion: reduce) {
