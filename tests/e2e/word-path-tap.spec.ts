@@ -50,7 +50,7 @@ test('word-path: tap two letter cells at 390x844, checking aria-selected and the
   const wordItem = page.getByRole('list', { name: 'words to find' }).getByRole('listitem').filter({ hasText: 'snack' });
   await expect(wordItem).toContainText('(found)');
   await expect(wordItem.locator('s')).toHaveText('snack');
-  await expect(page.getByTestId('suture-count')).toContainText('1 of 12 words found');
+  await expect(page.getByTestId('suture-count')).toHaveText('1 of 12 found');
 
   // Check the cells now reflect the found word
   await expect(firstButton).toHaveAccessibleName(/found: snack$/);

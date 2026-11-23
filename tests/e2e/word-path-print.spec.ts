@@ -72,7 +72,7 @@ test.describe('piccline: print for a patient (Task 641)', () => {
     const first = sample.words[0]!;
     await cell(page, first.path[0]!).click();
     await cell(page, first.path.at(-1)!).click();
-    await expect(page.getByTestId('suture-count')).toContainText(`1 of ${sample.words.length} words found`);
+    await expect(page.getByTestId('suture-count')).toHaveText(`1 of ${sample.words.length} found`);
 
     await printButton(page).click();
     expect(await printed(page)).toBe(1);

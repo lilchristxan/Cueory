@@ -5,12 +5,13 @@ import { localDay, reportRound } from './gameresults';
 import { printGame } from './gameprint';
 import { GameHelpCard, useGameHelp } from './GameHelp';
 import GameHeader from './GameHeader';
+import PicclineCue from './PicclineCue';
 import { site } from '../config/site';
 import { announceProgress } from './suturepath';
 import PrintLogo from './PrintLogo';
 import { cellLabel, clearPick, foundWord, isDone, moveCursor, outcomeInWords, parsePuzzle, pick, printableWords, selection, shareLine, startSuture, type Cell, type SuturePuzzle } from './suture';
 
-interface Props { puzzle: SuturePuzzle; name: string }
+interface Props { puzzle: SuturePuzzle; name: string; framed?: boolean }
 const printFoot = new URL(site.url).host;
 const button = 'min-h-11 min-w-11 rounded-md border border-control bg-page px-4 py-2 text-ink disabled:opacity-50';
 // These static classes keep the grid width CSP-safe: style-src permits no inline styles.
@@ -43,7 +44,7 @@ export function shake(element: HTMLElement | null) {
   void animation.finished.then(cleanup, cleanup);
 }
 
-function Board({ puzzle, name }: Props) {
+function Board({ puzzle, name, framed }: Props) {
   const [state, setState] = useState(() => startSuture(puzzle));
   const [focused, setFocused] = useState(0);
   const [said, setSaid] = useState('');
@@ -138,9 +139,11 @@ function Board({ puzzle, name }: Props) {
 
   return (
     <section aria-labelledby={puzzle.theme ? title : undefined} aria-label={puzzle.theme ? undefined : `${name} puzzle`} data-testid="suture" data-print-area="suture" className="wordpath">
+      {puzzle.theme && <PicclineCue id={title} text={puzzle.theme} framed={framed} />}
       {/* The corner row (Christian's brief): the gear at the top left (word path has no settings of its own, so it holds
           the shared ones); print and the "?" at the top right. */}
       <GameHeader
+        framed={framed}
         name={name}
         help={howToPlay}
         end={
@@ -154,10 +157,8 @@ function Board({ puzzle, name }: Props) {
         }
       />
       <PrintLogo />
-      <GameHelpCard help={howToPlay} name={name} />
+      {!framed && <GameHelpCard help={howToPlay} name={name} />}
       <div className="wordpath-panel -mx-(--wordpath-bleed) mt-6 sm:mx-0 sm:px-(--spacing-stack)">
-      {puzzle.theme && <p className="wordpath-label px-4 text-center text-ink-soft sm:px-0">cue of the day</p>}
-      {puzzle.theme && <h3 id={title} className="display px-4 sm:px-0 text-center text-2xl text-ink sm:text-3xl" data-testid="suture-theme">{puzzle.theme}</h3>}
       <div
         className="wordpath-board-scroll mt-4"
         role="region"
@@ -256,9 +257,9 @@ function Board({ puzzle, name }: Props) {
 }
 
 /** Reviewed puzzle data and the configurable display name are supplied by the page. */
-export default function SutureGame({ puzzle, name }: Props) {
+export default function SutureGame({ puzzle, name, framed }: Props) {
   try {
     const parsed = parsePuzzle(puzzle);
-    return <Board key={JSON.stringify(parsed)} puzzle={parsed} name={name} />;
+    return <Board key={JSON.stringify(parsed)} puzzle={parsed} name={name} framed={framed} />;
   } catch { return <p role="alert">this puzzle could not be loaded. please try again later.</p>; }
 }

@@ -58,6 +58,10 @@ test('picked letters are joined edge to edge, with no order numbers', async ({ p
   const picked = other.path.slice(0, 3);
   for (const at of picked) await cell(page, at).click();
   await edgeToEdge(page, 'picked', picked);
+  const activeLine = lines(page, 'picked').first();
+  await expect(activeLine).toHaveCSS('stroke-width', '14px');
+  const teal = await cell(page, picked[0]!).locator('.wordpath-dot').evaluate((dot) => getComputedStyle(dot).backgroundColor);
+  await expect(activeLine).toHaveCSS('stroke', teal);
   await expect(game(page).locator('.wordpath-step')).toHaveCount(0);
   // The order is still spoken.
   await expect(cell(page, picked[1]!)).toHaveAttribute('aria-label', /letter 2 of the word/);
@@ -70,7 +74,11 @@ test('a found answer keeps its joining line', async ({ page }) => {
   await game(page).getByRole('button', { name: 'submit' }).click();
   await expect(cell(page, theme.path[0]!)).toHaveAttribute('data-look', 'theme');
   await edgeToEdge(page, 'theme', theme.path);
-  await expect(lines(page, 'theme').first()).toHaveCSS('stroke-width', '3px');
+  const foundLine = lines(page, 'theme').first();
+  await expect(foundLine).toHaveCSS('stroke-width', '18px');
+  const tan = await cell(page, theme.path[0]!).locator('.wordpath-dot').evaluate((dot) => getComputedStyle(dot).backgroundColor);
+  await expect(foundLine).toHaveCSS('stroke', tan);
+  await expect(game(page).locator('.wordpath-found-pill')).toHaveCSS('background-color', tan);
 });
 
 test('a drag draws a line on to the finger and the board never scrolls the page', async ({ page }) => {

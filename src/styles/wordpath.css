@@ -30,13 +30,34 @@
     text-transform: uppercase;
   }
 
-  /* A Piccline active trace uses the existing teal game token. The inner ring remains a visible non-colour boundary. */
-  .wordpath-pick {
-    background-color: var(--color-game-teal);
-    box-shadow: inset 0 0 0 var(--wordpath-ring) var(--color-page);
-    color: var(--color-page);
+  .wordpath-cue {
+    margin-block-end: calc(var(--spacing) * 3);
+    color: var(--color-game-teal);
+    text-align: center;
+    overflow-wrap: anywhere;
   }
-  .wordpath-found { background-color: var(--color-soft); }
+
+  .wordpath[data-format="path"] .wordpath-panel {
+    border: 0;
+    border-radius: 0;
+    background: none;
+    box-shadow: none;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+
+  /* The two-endpoint search keeps its anchor and hover treatment. */
+  .wordpath-pick {
+    background-color: var(--color-copper-glow);
+    box-shadow: inset 0 0 0 var(--wordpath-ring) var(--color-copper-deep);
+    color: var(--cueory-copper-ink);
+  }
+  .wordpath-dot.wordpath-pick {
+    background-color: var(--color-game-teal);
+    box-shadow: none;
+  }
+  .wordpath-found { background-color: var(--color-panel-ink-soft); }
+  .wordpath-found-ink { color: var(--color-on-panel-button); }
   /* An unpicked letter: a page-colour circle with a hairline rim so it reads against the frosted panel in both palettes. */
   .wordpath-plain {
     background-color: var(--color-page);
@@ -72,20 +93,29 @@
     block-size: calc(var(--spacing) * 5);
   }
 
-  /* Found answers sit directly under Piccline's 6 × 8 board as tangible tan pills, ahead of the controls. */
-  .wordpath-found:not(.wordpath-dot) {
-    background: transparent;
-  }
-  .wordpath-found-pill {
-    min-block-size: var(--tap-min);
-    padding-inline: calc(var(--spacing) * 3);
+  .wordpath-answer-pills ul:empty { display: none; }
+  .wordpath-found-pill,
+  .wordpath-active-pill,
+  .wordpath-missing-pill {
     border-radius: var(--radius-pill);
-    background-color: var(--color-soft);
-    color: var(--color-ink);
+    padding: var(--spacing) calc(var(--spacing) * 3);
+    overflow-wrap: anywhere;
+    max-inline-size: 100%;
     font-size: var(--text-sm);
     font-weight: 700;
   }
-  .wordpath-found-count { min-block-size: var(--tap-min); }
+  .wordpath-found-pill {
+    color: var(--color-on-panel-button);
+    background: var(--color-panel-ink-soft);
+  }
+  .wordpath-active-pill {
+    color: var(--color-page);
+    background: var(--color-game-teal);
+  }
+  .wordpath-missing-pill {
+    border: var(--border-wordpath-panel) dashed var(--color-control);
+    color: var(--color-ink-soft);
+  }
 
   /* Keep large-text letter grids inside a named scroll region. The grid's
      squares stay large enough to tap and to show their enlarged letters. */
@@ -246,16 +276,14 @@
 
   .wordpath-line {
     stroke: var(--color-game-teal);
-    stroke-width: var(--wordpath-line);
+    stroke-width: calc(var(--spacing) * 3.5);
     stroke-linecap: round;
   }
 
-  .wordpath-line-theme {
-    stroke: var(--color-soft);
-  }
-
+  .wordpath-line-theme,
   .wordpath-line-special {
-    stroke: var(--color-soft);
+    stroke: var(--color-panel-ink-soft);
+    stroke-width: calc(var(--spacing) * 4.5);
   }
 
   .wordpath-mark {
@@ -264,11 +292,6 @@
     inset-inline-end: 12%;
     inline-size: calc(var(--spacing) * 2);
     block-size: calc(var(--spacing) * 2);
-  }
-
-  .wordpath-list-mark {
-    inline-size: calc(var(--spacing) * 2.5);
-    block-size: calc(var(--spacing) * 2.5);
   }
 
   .wordpath-step {
