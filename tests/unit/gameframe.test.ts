@@ -170,12 +170,12 @@ describe('GameFrame (Scope 1)', () => {
   it('switches from the plain row of cards to the deck at the one token width (70rem)', () => {
     const tokens = readFileSync(resolve(root, 'src/styles/tokens.css'), 'utf-8');
     const css = readFileSync(resolve(root, 'src/styles/gameframe.css'), 'utf-8');
-    const token = /--game-deck-breakpoint:\s*([\d.]+)rem/.exec(tokens)?.[1];
-    expect(token).toBe('70');
-    // The query is the same number, and it holds the deck slot's plain-row rules (static, not absolute).
-    const block = css.slice(css.indexOf(`@media (width < ${token}rem)`));
-    expect(block.startsWith(`@media (width < ${token}rem)`)).toBe(true);
+    expect(/--breakpoint-deck:\s*70rem/.test(tokens)).toBe(true);
+    // The plain-row rules use the token's variant, never a raw width.
+    const block = css.slice(css.indexOf('@variant max-deck'));
+    expect(block.startsWith('@variant max-deck')).toBe(true);
     expect(block.slice(0, block.indexOf('/* ----------------', 10))).toContain('.game-frame-deck-slot');
+    expect(css).not.toMatch(/70rem\)/);
   });
 });
 
