@@ -230,6 +230,7 @@ Christian, 11:30: everything else ships as drawn. Not shipped as drawn, by rule:
 5. [F] social share buttons and "play sound on solve": not brought back. (The three support-modal cards are back, as drawn, per Christian 11:30.)
 6. [B] message form: email-only page until a backend exists.
 7. [S] sample vial names, sample words, "NURSE", "[a question]", dates and times: replaced with real or generated data.
+8. Crossword size names: the board said mini, midi, full and the build said easy, mid, hard. The crossword's three choices are named small, medium, large (Christian, 23 Nov 2026). Sudoku keeps easy, mid, hard. Internal ids stay easy, mid, hard.
 
 ## Needs Christian or the lead (open)
 

@@ -140,8 +140,8 @@
   --game-frame-sidebar-compact-emblem-radius: 0.75rem; /* 12px */
   --game-frame-sidebar-compact-emblem-cell: 0.5rem; /* 8px */
   --game-frame-sidebar-compact-wordmark-height: 2.25rem; /* 36px */
-  --game-frame-stat-label-compact: 0.6875rem; /* 11px */
-  --game-frame-stat-label-phone: 0.625rem; /* 10px */
+  --game-frame-stat-label-compact: 0.875rem; /* 14px, the smallest text on a game screen */
+  --game-frame-stat-label-phone: 0.875rem; /* 14px */
 
   /* ---------- Marketing pages only (D-41): draped-silk background and frosted panels (no embossed logo: D-55) ---------- */
   --color-silk-base: #f9f5ef;   /* Ivory    — silk background */

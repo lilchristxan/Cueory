@@ -46,6 +46,7 @@ export default function SudokuGame({ framed = false }: { framed?: boolean } = {}
   const today = useMemo(() => new Date(), []);
   const day = useMemo(() => localDay(today), [today]);
   const [level, setLevel] = useState<SudokuLevel>('easy');
+  const requestedFrameLevel = useRef<SudokuLevel>('easy');
   const puzzle = useMemo(() => generateSudoku(dailySudokuSeed(day, level), level), [day, level]);
   const [board, setBoard] = useState<SudokuBoard>(() => newSudokuBoard(puzzle.puzzle));
   const [history, setHistory] = useState<SudokuBoard[]>([]);
@@ -115,26 +116,45 @@ export default function SudokuGame({ framed = false }: { framed?: boolean } = {}
       help.show();
     };
     const setHelpWhenReady = (event: Event) => { setHelpReturnTarget(detailFor(event)); };
-    const chooseLevel = (event: Event) => {
-      const level = (event as CustomEvent<unknown>).detail;
-      if (typeof level === 'string' && LEVELS.includes(level as SudokuLevel) && !pausedNow.current) setLevel(level as SudokuLevel);
-    };
     // The Frame control may have hydrated before this island, or may announce itself afterwards.
     setHelpReturnTarget();
     window.addEventListener(GAME_FRAME_SETTINGS_EVENT, openSettings);
     window.addEventListener(GAME_FRAME_HELP_EVENT, openHelp);
     window.addEventListener(GAME_FRAME_HELP_READY_EVENT, setHelpWhenReady);
-    window.addEventListener('cueory:game-frame-sudoku-level', chooseLevel);
     return () => {
       window.removeEventListener(GAME_FRAME_SETTINGS_EVENT, openSettings);
       window.removeEventListener(GAME_FRAME_HELP_EVENT, openHelp);
       window.removeEventListener(GAME_FRAME_HELP_READY_EVENT, setHelpWhenReady);
-      window.removeEventListener('cueory:game-frame-sudoku-level', chooseLevel);
     };
   }, [framed, help, day]);
 
+  // A player can change the native picker before either the route script or the board is ready.
   useEffect(() => {
-    if (framed) window.dispatchEvent(new CustomEvent('cueory:game-frame-sudoku-level-change', { detail: level }));
+    if (!framed) return;
+    const picker = document.querySelector<HTMLSelectElement>('#game-frame-sudoku-difficulty');
+    if (!picker) return;
+    const requestLevel = (value: unknown) => {
+      const next = LEVELS.find(choice => choice === value);
+      if (!next || pausedNow.current || next === requestedFrameLevel.current) return;
+      requestedFrameLevel.current = next;
+      setLevel(next);
+    };
+    const readPicker = () => requestLevel(picker.value);
+    const readEvent = (event: Event) => requestLevel((event as CustomEvent<unknown>).detail);
+    picker.addEventListener('change', readPicker);
+    window.addEventListener('cueory:game-frame-sudoku-level', readEvent);
+    readPicker();
+    return () => {
+      picker.removeEventListener('change', readPicker);
+      window.removeEventListener('cueory:game-frame-sudoku-level', readEvent);
+    };
+  }, [framed]);
+
+  useEffect(() => {
+    // On first mount, the initial Easy render may precede the selection just adopted above.
+    if (framed && level === requestedFrameLevel.current) {
+      window.dispatchEvent(new CustomEvent('cueory:game-frame-sudoku-level-change', { detail: level }));
+    }
   }, [framed, level]);
 
   useEffect(() => {

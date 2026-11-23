@@ -280,6 +280,14 @@
     background-color: var(--color-page);
   }
 
+  /* On a phone the letter keys drop their side padding (still 44 px square), so seven fit a row and the keyboard is
+     one row shorter. */
+  @media (width < 40rem) {
+    .vialo-key:not(.vialo-key-wide) {
+      padding-inline: 0;
+    }
+  }
+
   .vialo-key.vialo-here {
     border-color: var(--color-pillo-ring);
     color: var(--color-on-pillo-here);
@@ -322,7 +330,7 @@
 
   .vialo-legend-row {
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     overflow-wrap: anywhere;
     align-items: center;
     gap: calc(var(--spacing) * 3);
@@ -332,6 +340,12 @@
     flex: none;
     inline-size: var(--pillo-swatch);
     block-size: calc(var(--pillo-swatch) * 0.6);
+  }
+
+  /* Swatch and label share one line at every width (the label wraps inside its own column). */
+  .vialo-legend-row > span:last-child {
+    flex: 1 1 0;
+    min-inline-size: 0;
   }
 
   .vialo-legend .vialo-mark {

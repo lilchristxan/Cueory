@@ -14,7 +14,7 @@
 import type { KeyValueStorage } from '../scripts/storage';
 import { GAME_HELP_STORAGE_KEY } from './gamehelpkeys';
 import { GUESSES, MARK_SYMBOL, WORD_LENGTH } from './pulse';
-import { crosswordLevels } from './cueword';
+import { crosswordLevelLabels, crosswordLevels } from './cueword';
 import { MIN_WORD, WORDS_PER_HINT } from './suturepath';
 import { gameName } from '../config/games';
 
@@ -42,7 +42,7 @@ export interface GameHelpContent {
 export const SHARED_SETTINGS_NOTE =
   'theme, high contrast, motion and game sounds are shared by every game. change them with the gear at the top left of a game (on sudoku, with game settings above the game).';
 
-const sizes = crosswordLevels.map(({ level, size }) => `${level} is ${size} by ${size}`).join(', ');
+const sizes = crosswordLevels.map(({ level, size }) => `${crosswordLevelLabels[level]} is ${size} by ${size}`).join(', ');
 
 export const GAME_HELP: Readonly<Record<HelpTopic, GameHelpContent>> = Object.freeze({
   vialo: {

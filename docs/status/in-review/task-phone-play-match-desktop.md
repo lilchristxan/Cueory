@@ -1,0 +1,1 @@
+status: Phone and tablet parity for the games hub and game pages: flag button moved into the game header row, vialo legend swatch and label share a line, vialo keys seven to a row, closed games are one short card, closed hub card looks disabled, hub stats rows get a play button, game stats labels at least 14 px.
