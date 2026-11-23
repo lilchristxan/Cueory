@@ -311,7 +311,7 @@
     position: absolute;
     inset: -160%;
     z-index: -1;
-    background: conic-gradient(from 0deg, transparent 0deg, transparent 230deg, var(--color-copper-glow) 290deg, var(--hero-sheen-white) 322deg, var(--color-copper-glow) 340deg, transparent 360deg);
+    background: conic-gradient(from 0deg, transparent 0deg, transparent 230deg, var(--color-copper-glow) 290deg, var(--hero-sheen-peak) 322deg, var(--color-copper-glow) 340deg, transparent 360deg);
     animation: hero-ring-spin 3.4s linear infinite;
   }
 
