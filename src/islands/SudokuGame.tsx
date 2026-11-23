@@ -125,7 +125,11 @@ export default function SudokuGame({ framed = false }: { framed?: boolean } = {}
     window.addEventListener(GAME_FRAME_HELP_EVENT, openHelp);
     window.addEventListener(GAME_FRAME_HELP_READY_EVENT, setHelpWhenReady);
     window.addEventListener('cueory:game-frame-sudoku-level', chooseLevel);
+    const section = document.querySelector('.sudoku-section');
+    section?.setAttribute('data-sudoku-help-ready', '');
+    section?.dispatchEvent(new Event('cueory:sudoku-help-ready'));
     return () => {
+      section?.removeAttribute('data-sudoku-help-ready');
       window.removeEventListener(GAME_FRAME_SETTINGS_EVENT, openSettings);
       window.removeEventListener(GAME_FRAME_HELP_EVENT, openHelp);
       window.removeEventListener(GAME_FRAME_HELP_READY_EVENT, setHelpWhenReady);

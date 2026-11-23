@@ -26,6 +26,25 @@ const game = dailyGames.find((item) => item.id === 'triage')!;
 </Layout>
 
 <script>
+  const helpEvent = 'cueory:game-frame-help';
+  let pendingHelp: CustomEvent<{ gameName: string; trigger: HTMLButtonElement }> | undefined;
+  const rememberHelp = (event: Event) => {
+    const request = event as typeof pendingHelp;
+    if (request?.detail?.gameName === 'sudoku' && request.detail.trigger instanceof HTMLButtonElement) pendingHelp = request;
+  };
+  // The island may already be listening when this module starts.
+  const section = document.querySelector('.sudoku-section');
+  if (section && !section.hasAttribute('data-sudoku-help-ready')) {
+    window.addEventListener(helpEvent, rememberHelp);
+    section.addEventListener('cueory:sudoku-help-ready', () => {
+      window.removeEventListener(helpEvent, rememberHelp);
+      if (!pendingHelp) return;
+      const { detail } = pendingHelp;
+      pendingHelp = undefined;
+      if (detail.trigger.isConnected) window.dispatchEvent(new CustomEvent(helpEvent, { detail }));
+    }, { once: true });
+  }
+
   const picker = document.querySelector<HTMLSelectElement>('#game-frame-sudoku-difficulty');
   if (picker) {
     picker.addEventListener('change', () => window.dispatchEvent(new CustomEvent('cueory:game-frame-sudoku-level', { detail: picker.value })));
