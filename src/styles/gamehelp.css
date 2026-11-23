@@ -104,22 +104,21 @@
   .game-help-first-chevron {
     display: none;
   }
-  @media (max-width: 47.99rem) {
-    .game-help-first {
-      padding-block: calc(var(--spacing) * 2);
-    }
-    .game-help-first-toggle {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: calc(var(--spacing) * 3);
-      text-align: start;
-      font-size: var(--text-base);
-    }
-    .game-help-first-chevron {
-      display: inline;
-      font-size: var(--text-xl);
-    }
+  /* A card that folds (phones; the game frame's stylesheet decides) is one line until its heading opens it. */
+  .game-help-first[data-folds='true'] {
+    padding-block: calc(var(--spacing) * 2);
+  }
+  .game-help-first[data-folds='true'] .game-help-first-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: calc(var(--spacing) * 3);
+    text-align: start;
+    font-size: var(--text-base);
+  }
+  .game-help-first[data-folds='true'] .game-help-first-chevron {
+    display: inline;
+    font-size: var(--text-xl);
   }
 
   .game-help-line {

@@ -58,14 +58,27 @@ test('game pages: the flag button sits in the header row beside "games" and the 
   expect(Math.abs(flagBox!.y + flagBox!.height / 2 - (backBox!.y + backBox!.height / 2))).toBeLessThan(12);
 });
 
-test('vialo: the keys are at least 44 px tall and the stats labels are at least 14 px', async ({ page }) => {
+test('vialo: every letter key is at least 44 px wide and tall', async ({ page }) => {
   await page.goto('/play/vialo');
   const keys = page.getByRole('group', { name: 'letters' }).getByRole('button');
-  const count = await keys.count();
-  for (let i = 0; i < count; i += 1) {
+  // Wait for the whole keyboard (26 letters, delete and enter), so the loop below can never run over nothing.
+  await expect(keys).toHaveCount(28);
+  for (let i = 0; i < 28; i += 1) {
     const box = await keys.nth(i).boundingBox();
     expect(box!.height).toBeGreaterThanOrEqual(44);
     expect(box!.width).toBeGreaterThanOrEqual(44);
+  }
+});
+
+test('sudoku: the four stats labels beside the board are at least 14 px on a phone and a tablet', async ({ page }, info) => {
+  test.skip(info.project.name.includes('desktop'), 'phone and tablet layout; the desktop sidebar keeps its own size');
+  await page.goto('/play/sudoku');
+  const labels = page.getByTestId('game-frame-stats').locator('.game-frame-stat-label');
+  await expect(labels).toHaveCount(4);
+  for (let i = 0; i < 4; i += 1) {
+    await expect(labels.nth(i)).toBeVisible();
+    const size = await labels.nth(i).evaluate((node) => Number.parseFloat(getComputedStyle(node).fontSize));
+    expect(size).toBeGreaterThanOrEqual(14);
   }
 });
 

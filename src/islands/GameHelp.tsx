@@ -134,18 +134,22 @@ export function GameHelpButton({ help, name, className, extra }: { help: GameHel
   </>;
 }
 
-/** Phones and small tablets start with the rules folded, so the board is the first thing on screen. */
-function startsOpen(): boolean {
-  return typeof window === 'undefined' || !window.matchMedia || window.matchMedia('(min-width: 48rem)').matches;
+/** Phones start with the rules folded, so the board is the first thing on screen. The game frame's stylesheet owns the
+ *  breakpoint and raises a flag on the frame (gameframe.css), so no screen width is written here. */
+function foldsOnThisScreen(): boolean {
+  if (typeof document === 'undefined') return false;
+  const frame = document.querySelector('.game-frame');
+  return frame !== null && getComputedStyle(frame).getPropertyValue('--game-help-first-fold').trim() === '1';
 }
 
 /** The rules above the board on a game's first visit. "got it" (or the "?") puts them away for good on this device.
  *  On a phone the card starts folded to one 44 px line so the board stays first; the heading opens it. */
 export function GameHelpCard({ help, name, extra }: { help: GameHelpState; name: string; extra?: ReactNode }) {
   const id = useId();
-  const [open, setOpen] = useState(startsOpen);
+  const [folds] = useState(foldsOnThisScreen);
+  const [open, setOpen] = useState(!folds);
   if (!help.firstVisit) return null;
-  return <section className="game-help-first" aria-labelledby={`${id}-title`} data-testid="game-help-first" data-open={open}>
+  return <section className="game-help-first" aria-labelledby={`${id}-title`} data-testid="game-help-first" data-open={open} data-folds={folds}>
     <h3 id={`${id}-title`} className="game-help-subheading game-help-first-heading">
       <button type="button" className="game-help-first-toggle" aria-expanded={open} aria-controls={`${id}-body`} onClick={() => setOpen((now) => !now)}>
         new to {name}? here's how to play

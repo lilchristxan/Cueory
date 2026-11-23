@@ -20,7 +20,19 @@ const page = helloCardsPage(entries.map(({ data }) => data), env, helloCardsInde
 const { shown, starters } = page;
 ---
 
-{shown ? (
+{/* The closed card comes first in this file so the open game's result dialog stays the last thing in it, after
+    every article (a filtered article would trap the dialog). */}
+{!shown ? (
+<Layout title={helloCardsGame.name} description="Flip a card for a friendly conversation starter to use with patients, co-workers or classmates." noindex={page.noindex} promo={false}>
+  <article class="veil mx-auto mt-6 max-w-prose p-6 sm:mt-10 sm:p-10">
+    <h1 class="display text-center text-title wrap-anywhere sm:text-title-lg">{helloCardsGame.name}</h1>
+    <p class="mt-6 text-center" data-testid="hello-cards-soon">hello cards are coming soon.</p>
+    <a href="/play" class="mx-auto mt-8 flex min-h-(--tap-min) w-fit items-center rounded-pill border border-control px-5 py-2.5 text-ink">
+      back to daily games
+    </a>
+  </article>
+</Layout>
+) : (
 <Layout title={helloCardsGame.name} description="Flip a card for a friendly conversation starter to use with patients, co-workers or classmates." noindex={page.noindex} promo={false}>
     <GameFrame game="hello-cards" staticNoScoreStats>
       <article class="mx-auto max-w-prose w-full" data-pagefind-ignore>
@@ -50,15 +62,5 @@ const { shown, starters } = page;
 
   {shown && <GameResultsHost client:only="react" />}
   {shown && <noscript><p>game results and sharing need JavaScript.</p></noscript>}
-</Layout>
-) : (
-<Layout title={helloCardsGame.name} description="Flip a card for a friendly conversation starter to use with patients, co-workers or classmates." noindex={page.noindex} promo={false}>
-  <article class="veil mx-auto mt-6 max-w-prose p-6 sm:mt-10 sm:p-10">
-    <h1 class="display text-center text-title wrap-anywhere sm:text-title-lg">{helloCardsGame.name}</h1>
-    <p class="mt-6 text-center" data-testid="hello-cards-soon">hello cards are coming soon.</p>
-    <a href="/play" class="mx-auto mt-8 flex min-h-(--tap-min) w-fit items-center rounded-pill border border-control px-5 py-2.5 text-ink">
-      back to daily games
-    </a>
-  </article>
 </Layout>
 )}

@@ -74,15 +74,6 @@
 }
 
 .game-frame-back {
-    padding-inline: 0;
-  }
-  .game-frame-flag-slot {
-    flex: 0 0 auto;
-    margin-inline: calc(var(--spacing) * 1);
-  }
-}
-
-.game-frame-back {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -707,6 +698,12 @@
 }
 
 @media (width < 30rem) {
+  /* Phones start the first-visit rules folded so the board comes first. GameHelp.tsx reads this flag, so the
+     breakpoint is written only here. */
+  .game-frame {
+    --game-help-first-fold: 1;
+  }
+
   .game-frame-sidebar {
     padding: calc(var(--spacing) * 2.5) calc(var(--spacing) * 3);
     gap: calc(var(--spacing) * 2);
