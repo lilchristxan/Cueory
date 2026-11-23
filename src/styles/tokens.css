@@ -244,17 +244,20 @@
   --text-display-hero: clamp(1rem, 100cqi / 7.6, 5.5rem);
   --text-display-hero--line-height: 1.05;
   /* Phones draw the headline on four large lines (nursing / school / made / simpler.), sized by the same column width. */
-  --text-display-hero-phone: clamp(1rem, 100cqi / 4.6, 5.5rem);
+  --text-display-hero-xl: 5.75rem; /* the headline on the two-column hero (final board: 92 px) */
+  --text-display-hero-phone: clamp(1rem, 100cqi / 7.6, 3rem); /* two natural lines on phones, capped near 48 px */
   --text-display-hero-phone--line-height: 1.05;
   /* Phones draw the About headline on two or three lines, sized by the header's width (container query). Its longest
      line, "we know nursing", is about 6.6 times its font size in Bodoni Moda; 7 leaves room for the fallback serifs and
      enlarged text. */
   --text-display-about-phone: clamp(1rem, 100cqi / 7, 5.5rem);
   --text-display-about-phone--line-height: 1.05;
-  --text-title-explore: 2rem;   /* the explore row's heading */
+  --text-title-explore: 2.125rem;   /* the explore row's heading */
   --text-title-explore--line-height: 1.2;
   --text-title: 2.375rem;       /* marketing page title (38px) */
   --text-title--line-height: 1.12;
+  --text-title-phone: 2.0625rem; /* home section headings on phones (33px) */
+  --text-title-phone--line-height: 1.12;
   --text-title-lg: 3rem;        /* marketing page title on wider screens (48px) */
   --text-title-lg--line-height: 1.12;
   /* Study-screen page title (the coming-soon panel): the marketing title sizes with the 1.5 study line spacing. */
@@ -284,6 +287,7 @@
   --spacing: 0.25rem;           /* base unit: p-4 = 4 × 0.25rem = 1rem */
   --spacing-gutter: 1.25rem;    /* page side padding on phones */
   --spacing-section: 4.5rem;    /* space between page sections */
+  --spacing-section-phone: 2rem; /* half the gap between two home sections on phones (64 px between them) */
   --spacing-stack: 1.25rem;     /* space between paragraphs and blocks */
   --new-tab-cue-gap: 0.25em;    /* space before the ↗ that marks a link opening in a new tab */
   --new-tab-cue-size: 0.85em;   /* size of that ↗, relative to the link text */
@@ -297,18 +301,49 @@
   --container-game-showcase: 61.25rem; /* a game page that opts in (word path): the rendering's 900 px panel (WordPath.png, 270 to 1170 at 1440) plus the article's 40 px side padding */
   --container-headline: 18ch;   /* home headline wraps at about 18 letters */
   --container-hero: 46rem;      /* the centered hero column */
-  --container-hero-copy: 40rem; /* the home hero's text column beside the figure */
-  --container-hero-card: 34rem; /* the Ko-fi support card under the hero's value points */
-  --hero-figure-width: min(46vw, 42rem); /* the anatomy figure from large screens up */
-  --hero-figure-phone: min(100%, 26rem); /* and under the text on phones */
+  --container-hero-copy: 44rem; /* the home hero's text column beside the figure */
+  --container-hero-card: 36.75rem; /* the Ko-fi support card under the hero's value points */
+  --hero-figure-width: min(52%, 53.75rem); /* the anatomy figure's box from the xl width up (final board: 52%, at most 860 px) */
+  --hero-figure-height: min(53.75rem, 60vw); /* its height; the halo ring and the bleed scale with it */
+  --hero-figure-top: 5.5rem;    /* where the figure starts below the top of the hero */
+  --hero-figure-end: calc(var(--hero-figure-height) * -0.07); /* it bleeds a little past the right edge, as on the board */
+  --hero-halo-size: calc(var(--hero-figure-height) * 0.786); /* the glisten ring, pinned to the halo painted in the picture */
+  --hero-halo-top: calc(var(--hero-figure-height) * 0.031);
+  --hero-halo-end: calc(var(--hero-figure-height) * 0.17);
+  --hero-figure-mask-xl: linear-gradient(to right, transparent 0%, rgb(0 0 0 / 0.12) 18%, rgb(0 0 0 / 0.6) 36%, #000 52%, #000 82%, transparent 100%), linear-gradient(to bottom, transparent 0%, rgb(0 0 0 / 0.5) 9%, #000 22%, #000 68%, transparent 100%); /* fades out to the left so the text sits on clean background */
+  --hero-copy-width: 39.25rem;  /* the text column on the two-column hero (board: 628 px) */
+  --hero-copy-offset: 4.75rem;  /* ...and how far it sits right of the old position */
+  --hero-points-width: 43.75rem; /* the row of three value points, a little wider than the column, centered on it */
+  --hero-eyebrow-rule: 5.625rem; /* the two lines beside the motto (board: 90 px) */
+  --hero-curve-width: 18.75rem;
+  --hero-curve-shift: 7.1875rem; /* the curve sits under "simpler.", right of the column's middle */
+  --hero-figure-phone: min(72%, 24rem); /* and under the text on phones */
   --hero-figure-fade: 26%;      /* how much of the figure's top and left edge fades into the silk */
+  --hero-figure-fade-right: 10%; /* the right edge, so the picture never ends in a hard line inside the page */
   --hero-figure-fade-bottom: 14%; /* the bottom edge, where it meets the explore row */
   --hero-figure-evening-dim: 0.5; /* Evening: the figure's pale backdrop is dimmed so it doesn't glow */
+  --disabled-grayscale: 0.7;     /* how muted a closed (coming soon) button looks */
+  --hero-points-start: 50%;     /* the value points row starts at the column's middle and is pulled back by half its own width */
+  --hero-eyebrow-gap-xl: 1.125rem; /* space between the motto and its two rules on the two-column hero */
+  /* The hero's lights are Copper Shine (docs/BRAND.md, the copper accent's light sweep) at different strengths; no
+     white or other highlight colour is added. */
+  --hero-ring-light: color-mix(in srgb, var(--color-copper-shine) 95%, transparent); /* the glisten travelling round the figure's halo */
+  --hero-ring-band: 6px;        /* the halo glisten's ring: outer width, edge and blur */
+  --hero-ring-edge: 4px;
+  --hero-ring-inner: 1px;
+  --hero-ring-blur: 1.5px;
+  --hero-halo-glow: 0 0 30px color-mix(in srgb, var(--color-copper-shine) 35%, transparent);
+  --hero-button-ring: 3px;      /* the light round the start button */
+  --hero-sheen-peak: var(--color-copper-shine); /* the brightest point of the start button's light */
+  --explore-glint: color-mix(in srgb, var(--color-copper-shine) 70%, transparent); /* the hover glint across an explore tile */
+  --hero-accent-day: color-mix(in srgb, var(--color-copper-deep) 62%, var(--color-ink)); /* "simpler." in Daytime: dark enough to stay 3:1 or more through the whole shine */
+  --hero-accent-day-peak: color-mix(in srgb, var(--color-copper-deep) 82%, var(--color-ink)); /* the lightest moment of the shine */
   --hero-min-height: 60rem;     /* the hero is about this tall on large screens, so the explore row starts below the fold */
   --container-explore: 80rem;  /* the explore row under the hero */
   --hero-top-clear: 1rem;       /* space above the hero's logo row (the corner buttons sit in the page's top 4.5 rem) */
   --hero-logo-inset: calc(var(--header-inline-gutter) + var(--tap-min) + var(--header-corner-gap) - var(--spacing-gutter));
   --hero-eyebrow-gap: 2.5rem;   /* between the logo row and the motto */
+  --radius-panel: 2.125rem;     /* the home explore panel's corners (board: 34 px) */
   --radius-card-lg: 1.75rem;    /* the hero's support card corners */
   --icon-size-mug: 2.5rem;      /* the Ko-fi cup mark, width */
   --icon-size-mug-height: 1.875rem; /* and height */
@@ -431,6 +466,13 @@
   --wordpath-columns: 11;            /* each puzzle overrides this with its validated grid width */
 }
 
+/* From the xl width the hero figure uses the long fade-out mask (kept here because media conditions in components may not hold values). */
+@media (min-width: 80rem) {
+  :root {
+    --hero-figure-mask: var(--hero-figure-mask-xl);
+  }
+}
+
 /* Pillo rules are a separate entry: always emit their shared theme variables. */
 @theme static {
   /* ---------- Shared game settings (#734); static so the panel's own stylesheet can always use it ---------- */
@@ -539,8 +581,10 @@
     --game-section-padding-phone: 3rem 1rem 1.25rem;
     --game-container-gap: 1.125rem;
     --game-stage-padding: var(--spacing-section) var(--spacing-gutter);
+    --game-stage-padding-phone: 0 var(--spacing-gutter);
     --game-header-gap: 1rem;
     --game-nav-size: 3.25rem;
+    --game-nav-size-phone: 44px; /* phones: a fixed 44 px target, so large text leaves the "play today's" button its room */
     --game-nav-border: rgb(249 245 239 / 0.35);
     --game-nav-bg: rgb(249 245 239 / 0.08);
     --game-nav-bg-hover: rgb(249 245 239 / 0.18);
@@ -551,8 +595,12 @@
     --game-subtitle-margin-bottom: 1.25rem;
     --game-subtitle-size: 1.125rem;
     --game-date-note-margin-top: 0.75rem;
+    --game-pager-dot: 0.5rem;   /* 8 px dots; the current one is a 26 x 8 px pill */
+    --game-pager-pill: 1.625rem;
+    --game-pager-gap: 0.125rem; /* 2 px between the 44 px boxes: browsers hit-test flush neighbours about 1 px into each other, so a hair of space keeps every box exact */
     --game-car-padding: 0.75rem 0.375rem 2.75rem;
     --game-track-gap: 1.75rem;
+    --game-track-gap-phone: 0.75rem; /* tighter on phones so at least 48 px of the next card shows inside the carousel's clip */
     --game-card-width: 17.5rem;
     --game-card-height: 24.5rem;
     --game-card-phone-width: calc(100vw - 88px);
