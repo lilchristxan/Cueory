@@ -133,3 +133,18 @@ test.describe('deck or plain row by width (--breakpoint-deck)', () => {
     }
   }
 });
+
+// Same spot on every game page (Christian's canvas comment): at 1440 the frame spans the whole window, so the deck slot's
+// right edge is the window's right edge on all six games, tachyyy and hello cards included (drafts build).
+test.describe('the frame spans the window on every game page', () => {
+  for (const path of ['/play/vialo', '/play/sudoku', '/play/piccline', '/play/crossword', '/play/tachyyy', '/play/hello-cards']) {
+    test(`${path} at 1440 px: the deck slot ends at the window's right edge`, async ({ page }) => {
+      await page.setViewportSize({ width: 1440, height: 900 });
+      await page.goto(path);
+      const slot = page.locator('.game-frame-deck-slot');
+      await expect(slot).toHaveCount(1);
+      const box = await slot.boundingBox();
+      expect(Math.round(box!.x + box!.width)).toBe(1440);
+    });
+  }
+});

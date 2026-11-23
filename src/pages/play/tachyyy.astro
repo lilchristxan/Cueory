@@ -9,6 +9,7 @@ import TachyyyTitle from '../../components/TachyyyTitle.astro';
 import StatGame from '../../islands/StatGame';
 import GameResultsHost from '../../islands/GameResultsHost';
 import { tachyyyGame } from '../../config/tachyyy';
+import { gamePagesBareHeader } from '../../config/games';
 import { draftsAllowed } from '../../islands/anatomylab';
 import { parseStatSample } from '../../islands/stat';
 import sample from '../../../content/games/stat/sample.json';
@@ -34,6 +35,7 @@ const { questions, sampleKey } = shown ? parsed : { questions: [], sampleKey: {}
   description="fifteen fast clinical questions, 20 seconds each. how sharp are you on shift today?"
   noindex={true}
   promo={false}
+  bareHeader={gamePagesBareHeader}
 >
     <GameFrame game="tachyyy">
       <article class="mx-auto max-w-prose w-full" data-pagefind-ignore>

@@ -9,7 +9,7 @@ import Layout from '../../layouts/Layout.astro';
 import GameFrame from '../../components/GameFrame.astro';
 import HelloCards from '../../islands/HelloCards';
 import GameResultsHost from '../../islands/GameResultsHost';
-import { helloCardsGame, helloCardsIndexWhenApproved } from '../../config/games';
+import { gamePagesBareHeader, helloCardsGame, helloCardsIndexWhenApproved } from '../../config/games';
 import { helloCardsPage } from '../../islands/hello-cards';
 
 const entries = await getCollection('hello-cards');
@@ -33,7 +33,7 @@ const { shown, starters } = page;
   </article>
 </Layout>
 ) : (
-<Layout title={helloCardsGame.name} description="Flip a card for a friendly conversation starter to use with patients, co-workers or classmates." noindex={page.noindex} promo={false}>
+<Layout title={helloCardsGame.name} description="Flip a card for a friendly conversation starter to use with patients, co-workers or classmates." noindex={page.noindex} promo={false} bareHeader={gamePagesBareHeader}>
     <GameFrame game="hello-cards" staticNoScoreStats>
       <article class="mx-auto max-w-prose w-full" data-pagefind-ignore>
         {page.label && <p class="text-sm text-ink-soft">{page.label}</p>}
