@@ -108,7 +108,7 @@ describe('home lower sections', () => {
     expect(support).toContain('rel="noopener noreferrer"');
     expect(support).toContain('opens in a new tab');
     // The figure loads at once and is decorative.
-    expect(hero).toMatch(/<img\b(?=[^>]*hero-anatomy-figure\.webp)(?=[^>]*loading="eager")(?=[^>]*alt="")[^>]*>/);
+    expect(hero).toMatch(/<img\b(?=[^>]*hero-figure-halo\.webp)(?=[^>]*loading="eager")(?=[^>]*alt="")[^>]*>/);
   });
 
   it('draws the hairline rule between the hero value points from the tablet width up, as in HomeV2-1', () => {
@@ -120,12 +120,18 @@ describe('home lower sections', () => {
     }
   });
 
-  it('centers the one-column hero (phone, tablet) and keeps the desktop two-column layout in the page container', () => {
+  it('centers the one-column hero (phone, tablet) and keeps the two-column layout from the xl width', () => {
     const source = readFileSync(new URL('../../src/components/HomeHero.astro', import.meta.url), 'utf8');
     expect(source).toMatch(/<div class="@container[^"]*\bmx-auto\b[^"]*\btext-center\b/);
-    expect(source).toMatch(/<div class="hero-logo-row flex items-center justify-center lg:justify-start">/);
+    expect(source).toMatch(/<div class="hero-logo-row flex items-center justify-center sm:justify-start sm:ps-\(--hero-logo-inset\)">/);
     expect(source).toContain('max-w-(--container-explore)');
-    expect(source).not.toContain('ps-(--hero-logo-inset)');
+    // The two columns start at the xl width, so the figure never sits over the text at laptop widths.
+    expect(source).not.toMatch(/\blg:(absolute|w-\(--hero-figure)/);
+    expect(source).toContain('xl:text-display-hero-xl');
+    // The final board's motion: the halo glisten, the light round the start button, and the copper shine on "simpler.".
+    expect(source).toContain('class="hero-halo');
+    expect(source).toContain('hero-start-ring');
+    expect(source).toContain('/design/home-v2/hero-figure-halo.webp');
     // The headline is two natural lines on phones, never one word per line.
     expect(source).not.toContain('max-sm:block');
     // The closed live button is muted and sits beside a working link to the daily games.

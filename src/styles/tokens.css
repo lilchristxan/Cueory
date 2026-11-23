@@ -237,6 +237,8 @@
   --text-display-hero: clamp(1rem, 100cqi / 7.6, 5.5rem);
   --text-display-hero--line-height: 1.05;
   /* Phones draw the headline on four large lines (nursing / school / made / simpler.), sized by the same column width. */
+  --text-display-hero-xl: 5.75rem; /* the headline on the two-column hero (final board: 92 px) */
+  --text-display-hero-xl--line-height: 0.98;
   --text-display-hero-phone: clamp(1rem, 100cqi / 7.6, 3rem); /* two natural lines on phones, capped near 48 px */
   --text-display-hero-phone--line-height: 1.05;
   /* Phones draw the About headline on four large lines (we know / nursing / school is / hard.), sized by the header's
@@ -244,7 +246,7 @@
      room for the fallback serifs and enlarged text. */
   --text-display-about-phone: clamp(1rem, 100cqi / 5, 5.5rem);
   --text-display-about-phone--line-height: 1.05;
-  --text-title-explore: 2rem;   /* the explore row's heading */
+  --text-title-explore: 2.125rem;   /* the explore row's heading */
   --text-title-explore--line-height: 1.2;
   --text-title: 2.375rem;       /* marketing page title (38px) */
   --text-title--line-height: 1.12;
@@ -286,8 +288,21 @@
   --container-headline: 18ch;   /* home headline wraps at about 18 letters */
   --container-hero: 46rem;      /* the centered hero column */
   --container-hero-copy: 44rem; /* the home hero's text column beside the figure */
-  --container-hero-card: 34rem; /* the Ko-fi support card under the hero's value points */
-  --hero-figure-width: min(46vw, 34rem); /* the anatomy figure from large screens up */
+  --container-hero-card: 36.75rem; /* the Ko-fi support card under the hero's value points */
+  --hero-figure-width: min(52%, 53.75rem); /* the anatomy figure's box from the xl width up (final board: 52%, at most 860 px) */
+  --hero-figure-height: min(53.75rem, 60vw); /* its height; the halo ring and the bleed scale with it */
+  --hero-figure-top: 5.5rem;    /* where the figure starts below the top of the hero */
+  --hero-figure-end: calc(var(--hero-figure-height) * -0.07); /* it bleeds a little past the right edge, as on the board */
+  --hero-halo-size: calc(var(--hero-figure-height) * 0.786); /* the glisten ring, pinned to the halo painted in the picture */
+  --hero-halo-top: calc(var(--hero-figure-height) * 0.031);
+  --hero-halo-end: calc(var(--hero-figure-height) * 0.17);
+  --hero-figure-mask-xl: linear-gradient(to right, transparent 0%, rgb(0 0 0 / 0.12) 18%, rgb(0 0 0 / 0.6) 36%, #000 52%, #000 82%, transparent 100%), linear-gradient(to bottom, transparent 0%, rgb(0 0 0 / 0.5) 9%, #000 22%, #000 68%, transparent 100%); /* fades out to the left so the text sits on clean background */
+  --hero-copy-width: 39.25rem;  /* the text column on the two-column hero (board: 628 px) */
+  --hero-copy-offset: 4.75rem;  /* ...and how far it sits right of the old position */
+  --hero-points-width: 43.75rem; /* the row of three value points, a little wider than the column, centered on it */
+  --hero-eyebrow-rule: 5.625rem; /* the two lines beside the motto (board: 90 px) */
+  --hero-curve-width: 18.75rem;
+  --hero-curve-shift: 7.1875rem; /* the curve sits under "simpler.", right of the column's middle */
   --hero-figure-phone: min(72%, 24rem); /* and under the text on phones */
   --hero-figure-fade: 26%;      /* how much of the figure's top and left edge fades into the silk */
   --hero-figure-fade-right: 10%; /* the right edge, so the picture never ends in a hard line inside the page */
@@ -299,6 +314,7 @@
   --hero-top-clear: 1rem;       /* space above the hero's logo row (the corner buttons sit in the page's top 4.5 rem) */
   --hero-logo-inset: calc(var(--header-inline-gutter) + var(--tap-min) + var(--header-corner-gap) - var(--spacing-gutter));
   --hero-eyebrow-gap: 2.5rem;   /* between the logo row and the motto */
+  --radius-panel: 2.125rem;     /* the home explore panel's corners (board: 34 px) */
   --radius-card-lg: 1.75rem;    /* the hero's support card corners */
   --icon-size-mug: 2.5rem;      /* the Ko-fi cup mark, width */
   --icon-size-mug-height: 1.875rem; /* and height */
