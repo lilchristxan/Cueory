@@ -69,15 +69,21 @@ test('game pages: the flag button sits in the frame header with "games" and the 
   }
 });
 
-test('vialo: every letter key is at least 44 px wide and tall', async ({ page }) => {
+// The keys are a three-row keyboard now (Christian, 23 Nov 2026). On a phone a letter key may be at least 32 px wide
+// and 52 px tall, as phone keyboards are (his approved exception, D-pending); everywhere else keys keep 44 px.
+// tests/e2e/vialo-keys.spec.ts checks the layout, the gaps and the marks.
+test('vialo: every key is a comfortable target for its screen', async ({ page }, info) => {
   await page.goto('/play/vialo');
   const keys = page.getByRole('group', { name: 'letters' }).getByRole('button');
-  // Wait for the whole keyboard (26 letters, delete and enter), so the loop below can never run over nothing.
+  // Wait for the whole keyboard (26 letters, enter and delete), so the loop below can never run over nothing.
   await expect(keys).toHaveCount(28);
+  const phone = info.project.name.includes('phone');
   for (let i = 0; i < 28; i += 1) {
-    const box = await keys.nth(i).boundingBox();
-    expect(box!.height).toBeGreaterThanOrEqual(44);
-    expect(box!.width).toBeGreaterThanOrEqual(44);
+    const key = keys.nth(i);
+    const box = await key.boundingBox();
+    const wide = await key.evaluate((node) => node.classList.contains('vialo-key-wide'));
+    expect(box!.height).toBeGreaterThanOrEqual(phone ? 52 : 44);
+    expect(box!.width).toBeGreaterThanOrEqual(phone && !wide ? 32 : 44);
   }
 });
 

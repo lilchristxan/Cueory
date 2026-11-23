@@ -43,8 +43,8 @@ export default function BreakIdeasList({ ideas }: { ideas: readonly BreakIdea[] 
       <p className="mt-2 text-xl" data-testid="picked-break-idea">{selected.text}</p>
     </section>}
     <h2 id="break-list-heading" className="mt-8 text-lg font-bold">all the ideas</h2>
-    {list.length > 0 ? <ul aria-labelledby="break-list-heading" className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      {list.map(idea => <li key={idea.id} className="rounded-lg border border-line bg-surface p-5">{idea.text}</li>)}
+    {list.length > 0 ? <ul aria-labelledby="break-list-heading" className="mt-4 grid gap-4 max-sm:gap-0 max-sm:border-t max-sm:border-line sm:grid-cols-2 lg:grid-cols-3">
+      {list.map(idea => <li key={idea.id} className="rounded-lg border border-line bg-surface p-5 max-sm:rounded-none max-sm:border-0 max-sm:border-b max-sm:bg-transparent max-sm:px-0 max-sm:py-4">{idea.text}</li>)}
     </ul> : <p className="mt-4">there are no break ideas here yet.</p>}
   </div>;
 }

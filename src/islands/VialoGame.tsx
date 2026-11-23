@@ -37,6 +37,7 @@ import { useGameHelp } from './GameHelp';
 import GameHeader from './GameHeader';
 import { useSharedGameSettings } from './GameSettings.tsx';
 import { browserStorage } from '../scripts/storage';
+import { VIALO_KEY_ROWS } from './vialokeys';
 
 interface Puzzle {
   word: string;
@@ -48,7 +49,6 @@ interface Props {
   puzzles: Puzzle[];
 }
 
-const LETTERS = 'abcdefghijklmnopqrstuvwxyz';
 const primaryButton = 'rounded-pill bg-button px-5 py-2.5 text-on-button hover:bg-button-hover';
 const columns = Array.from({ length: WORD_LENGTH }, (_, i) => i);
 
@@ -360,35 +360,45 @@ export default function VialoGame({ puzzles }: Props) {
 
       {playing ? (
         <div className="vialo-keys mt-6" role="group" aria-label="letters">
-          <div className="vialo-key-row">
-            {Array.from(LETTERS, (letter) => {
-              const mark = marks.get(letter);
-              return (
-                <button
-                  key={letter}
-                  type="button"
-                  className={`vialo-key${mark ? ` vialo-${mark}` : ''}`}
-                  aria-label={keyLabel(letter, mark)}
-                  onClick={() => type(text + letter)}
-                >
-                  <span aria-hidden="true">{letter}</span>
-                  {mark && (
-                    <span className="vialo-key-mark" aria-hidden="true">
-                      {MARK_SYMBOL[mark]}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-          <div className="vialo-key-row">
-            <button type="button" className="vialo-key vialo-key-wide" aria-label="delete" onClick={() => type(text.slice(0, -1))}>
-              ⌫
-            </button>
-            <button type="button" className="vialo-key vialo-key-wide" onClick={() => void submit()}>
-              enter
-            </button>
-          </div>
+          {VIALO_KEY_ROWS.map((row, index) => {
+            const last = index === VIALO_KEY_ROWS.length - 1;
+            return (
+              <div key={row} className="vialo-key-row">
+                {last && (
+                  <button type="button" className="vialo-key vialo-key-wide" onClick={() => void submit()}>
+                    enter
+                  </button>
+                )}
+                {Array.from(row, (letter) => {
+                  const mark = marks.get(letter);
+                  return (
+                    <button
+                      key={letter}
+                      type="button"
+                      className={`vialo-key${mark ? ` vialo-${mark}` : ''}`}
+                      aria-label={keyLabel(letter, mark)}
+                      onClick={() => type(text + letter)}
+                    >
+                      <span aria-hidden="true">{letter}</span>
+                      {mark && (
+                        <span className="vialo-key-mark" aria-hidden="true">
+                          {MARK_SYMBOL[mark]}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+                {last && (
+                  <button type="button" className="vialo-key vialo-key-wide" aria-label="delete" onClick={() => type(text.slice(0, -1))}>
+                    <svg className="vialo-key-icon" viewBox="0 0 28 20" aria-hidden="true" focusable="false">
+                      <path d="M9.5 1.5h15a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2h-15a2 2 0 0 1-1.5-.7L1.6 10 8 2.2a2 2 0 0 1 1.5-.7z" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+                      <path d="M13.5 6.5l7 7m0-7l-7 7" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                    </svg>
+                  </button>
+                )}
+              </div>
+            );
+          })}
         </div>
       ) : (
         <div ref={result} tabIndex={-1} className="vialo-result mt-6" data-testid="vialo-result">
