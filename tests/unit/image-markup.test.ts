@@ -62,7 +62,9 @@ function problems(html: string): string[] {
     const isAboveFoldBrand = ((a['data-image-priority'] === 'header' || a['data-image-priority'] === 'hero') &&
       /^\/brand\/v1\/(logo-full|emblem)-(light|dark)-(960|192)\.png$/.test(a.src ?? '')) ||
       // The home hero's anatomy figure (redesign P5): the one non-logo picture approved above the fold.
-      (a['data-image-priority'] === 'hero' && a.src === '/design/hero-anatomy-figure.webp');
+      (a['data-image-priority'] === 'hero' && a.src === '/design/hero-anatomy-figure.webp') ||
+      // pillo's wordmark (PR #887): it is /play/pillo's heading, the top of that page.
+      (a['data-image-priority'] === 'title' && a.src === '/design/logo-pillo.webp');
     if (a.loading !== 'lazy' && !(isAboveFoldBrand && a.loading === 'eager')) {
       errors.push('not lazy or approved above-the-fold brand image');
     }
@@ -87,6 +89,10 @@ describe('Task 207 built image markup', () => {
     expect(problems(figure + ' data-image-priority="hero">')).toEqual([]);
     expect(problems(figure + '>')).toHaveLength(1);
     expect(problems(figure.replace('hero-anatomy-figure', 'other') + ' data-image-priority="hero">')).toHaveLength(1);
+    const wordmark = '<img src="/design/logo-pillo.webp" alt="pillo" width="550" height="208" loading="eager"';
+    expect(problems(wordmark + ' data-image-priority="title">')).toEqual([]);
+    expect(problems(wordmark + '>')).toHaveLength(1);
+    expect(problems(wordmark.replace('logo-pillo', 'other') + ' data-image-priority="title">')).toHaveLength(1);
   });
   it('ignores raw-text/comment image lookalikes without joining fragments', () => {
     const valid = '<img src="/real" alt="real" width="1" height="1" loading="lazy">';
