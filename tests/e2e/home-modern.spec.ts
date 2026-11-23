@@ -230,6 +230,66 @@ test('a valid on-device study snapshot shows a resume strip linking to the saved
 });
 
 
+// The start link sits inside a wrapper that carries a travelling light, clipped to the wrapper's shape. If that clip
+// ever catches the link again, its focus outline keeps the right computed style and still cannot be seen. So this looks
+// at the pixels: tabbing onto the link must paint the focus colour in the outline's band outside the link's edge, on
+// all four sides, and nothing is painted there before.
+for (const viewport of [{ width: 390, height: 844 }, { width: 1440, height: 900 }]) {
+  for (const scheme of ['light', 'dark'] as const) {
+    test(`the start link's keyboard focus ring is painted, not clipped, at ${viewport.width} wide in ${scheme}`, async ({ browser }) => {
+      const context = await browser.newContext({ viewport, colorScheme: scheme, reducedMotion: 'reduce' });
+      const page = await context.newPage();
+      await page.addInitScript(() => {
+        try { localStorage.setItem('cueory-promo-seen', String(Date.now())); localStorage.setItem('cueory-signup-popup-seen', String(Date.now())); }
+        catch { /* Storage may be blocked; the page still works. */ }
+      });
+      await page.goto('/');
+      const start = page.getByTestId('hero-start');
+      await expect(start).toBeVisible();
+      const ring = page.locator('.hero-start-ring');
+      await ring.scrollIntoViewIfNeeded();
+
+      const readBand = async () => {
+        const box = (await start.boundingBox())!;
+        const { width: line, offset, colour } = await ring.evaluate((el) => {
+          const probe = document.createElement('span');
+          probe.style.cssText = 'outline: var(--focus-width) solid var(--color-focus); outline-offset: var(--focus-offset)';
+          el.append(probe);
+          const style = getComputedStyle(probe);
+          const out = { width: parseFloat(style.outlineWidth), offset: parseFloat(style.outlineOffset), colour: style.outlineColor };
+          probe.remove();
+          return out;
+        });
+        const pad = Math.ceil(offset + line) + 4;
+        const clip = { x: Math.floor(box.x) - pad, y: Math.floor(box.y) - pad, width: Math.ceil(box.width) + 2 * pad, height: Math.ceil(box.height) + 2 * pad };
+        const { data, info } = await sharp(await page.screenshot({ clip, scale: 'css' })).removeAlpha().raw().toBuffer({ resolveWithObject: true });
+        const want = colour.match(/[\d.]+/g)!.slice(0, 3).map(Number);
+        const pixel = (x: number, y: number) => { const i = (Math.round(y) * info.width + Math.round(x)) * info.channels; return [data[i], data[i + 1], data[i + 2]]; };
+        const near = (a: number[]) => a.every((channel, i) => Math.abs(channel - want[i]) <= 36);
+        // The middle of the outline band: offset plus half the line's width outside the link's edge.
+        const out = offset + line / 2;
+        const left = box.x - clip.x, top = box.y - clip.y;
+        const points = {
+          above: pixel(left + box.width / 2, top - out),
+          below: pixel(left + box.width / 2, top + box.height + out),
+          before: pixel(left - out, top + box.height / 2),
+          after: pixel(left + box.width + out, top + box.height / 2),
+        };
+        return Object.fromEntries(Object.entries(points).map(([side, rgb]) => [side, near(rgb)]));
+      };
+
+      expect(await readBand(), 'no ring before the link has keyboard focus').toEqual({ above: false, below: false, before: false, after: false });
+      // Keyboard, not script: leave the link and come back with Tab so :focus-visible is certain in every engine.
+      await start.focus();
+      await page.keyboard.press('Shift+Tab');
+      await page.keyboard.press('Tab');
+      await expect(start).toBeFocused();
+      expect(await readBand(), 'the focus colour is painted outside the link on every side').toEqual({ above: true, below: true, before: true, after: true });
+      await context.close();
+    });
+  }
+}
+
 // "simpler." is large text, so it needs 3:1 against the silk behind it at every moment of the copper shine (11 s loop), in
 // Light and Evening, and in the still state reduced motion shows. The glyph pixels are found by taking the word twice,
 // once as drawn and once with the letters hidden, and comparing each interior glyph pixel with the pixel behind it.

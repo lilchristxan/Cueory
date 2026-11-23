@@ -296,21 +296,29 @@
     50% { opacity: 1; }
   }
 
-  /* The start button's light travelling round its border (final board: .ring). Only where the button works. */
+  /* The start button's light travelling round its border (final board: .ring). Only where the button works. The light
+     is clipped inside its own layer, never by the wrapper, so the link's keyboard focus outline is not cut off. */
   .hero-start-ring {
     position: relative;
     display: inline-flex;
     padding: var(--hero-button-ring);
-    overflow: hidden;
     isolation: isolate;
     border-radius: var(--radius-pill);
   }
 
-  .hero-start-ring::before {
+  .hero-start-light {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    overflow: hidden;
+    border-radius: inherit;
+    pointer-events: none;
+  }
+
+  .hero-start-light::before {
     content: "";
     position: absolute;
     inset: -160%;
-    z-index: -1;
     background: conic-gradient(from 0deg, transparent 0deg, transparent 230deg, var(--color-copper-glow) 290deg, var(--hero-sheen-peak) 322deg, var(--color-copper-glow) 340deg, transparent 360deg);
     animation: hero-ring-spin 3.4s linear infinite;
   }
@@ -333,7 +341,7 @@
   @media (prefers-reduced-motion: reduce) {
     .hero-halo::before,
     .hero-halo::after,
-    .hero-start-ring::before,
+    .hero-start-light::before,
     .hero-accent {
       animation: none;
     }
