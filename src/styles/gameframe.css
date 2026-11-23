@@ -222,12 +222,6 @@
   text-align: center;
 }
 
-.game-frame-divider {
-  height: var(--game-frame-line);
-  background-color: var(--game-frame-border);
-  width: 100%;
-}
-
 /* ---------------- Stats in Left Panel ---------------- */
 .game-frame-stats {
   display: flex;
@@ -622,6 +616,21 @@
   line-height: 1.5;
   color: var(--color-ink-soft);
 }
+.game-deck-corner {
+  display: inline-flex;
+  align-items: center;
+  gap: calc(var(--spacing) * 1.5);
+}
+.game-deck-icon,
+.game-deck-glyph {
+  inline-size: var(--game-deck-icon-size);
+  block-size: var(--game-deck-icon-size);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  flex: none;
+}
 .game-deck-corner-top {
   inset-block-start: calc(var(--spacing) * 3);
   inset-inline-start: calc(var(--spacing) * 3);
@@ -763,8 +772,32 @@
     --wordpath-bleed: calc(var(--spacing) * 4);
   }
 
-  /* The deck has no room beside a phone or tablet board. */
+  /* The deck has no room beside a phone or tablet board, so the other games are a row of plain cards under the stats. */
   .game-frame-deck-slot {
+    order: 5;
+    position: static;
+    transform: none;
+    padding: 0 calc(var(--spacing) * 3) calc(var(--spacing) * 8);
+  }
+  .game-deck-list {
+    display: flex;
+    gap: calc(var(--spacing) * 3);
+    inline-size: auto;
+    block-size: auto;
+  }
+  .game-deck-item {
+    position: static;
+    rotate: none;
+    flex: 1 1 0;
+    min-inline-size: 0;
+    inline-size: auto;
+    block-size: calc(var(--game-frame-btn-size) * 2);
+  }
+  .game-deck-item:hover .game-deck-card,
+  .game-deck-card:focus-visible {
+    transform: none;
+  }
+  .game-deck-corner {
     display: none;
   }
 
@@ -786,22 +819,23 @@
     padding: calc(var(--spacing) * 2) calc(var(--spacing) * 3) 0;
     box-sizing: border-box;
   }
-  .game-frame-logo-wrap {
-    display: none;
-  }
+  /* Row 1: "games", the logo and the flag. Row 2: the game's icon and wordmark. The tagline waits for the desktop panel. */
+  .game-frame-back { order: 1; }
+  .game-frame-logo-wrap { order: 2; }
   .game-frame-flag-slot {
+    order: 3;
+    flex: 0 0 auto;
     justify-content: flex-end;
   }
   .game-frame-game-badge {
     order: 2;
+    flex-direction: row;
     justify-content: center;
-    min-block-size: var(--game-frame-btn-size);
-    margin-block-start: calc(-1 * var(--game-frame-btn-size));
-    pointer-events: none;
+    gap: calc(var(--spacing) * 3);
+    margin: 0;
+    padding-inline: calc(var(--spacing) * 3);
   }
-  .game-frame-icon-wrap,
-  .game-frame-tagline,
-  .game-frame-divider {
+  .game-frame-tagline {
     display: none;
   }
   .game-frame-main {

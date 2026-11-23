@@ -28,7 +28,7 @@ interface Props {
 }
 const { game, wide = false, showcase = false, framed = false } = Astro.props;
 ---
-<article class:list={["game-page-frame", wide && "md:max-w-page", showcase && "md:max-w-game-showcase"]} data-game-page={game.id}>
+<article class="game-page-frame" data-game-page={game.id}>
   <GameFrame game={game.id} wide={wide} showcase={showcase} framed={framed} bridge={framed} stats>
   <Fragment slot="flag">
     <a

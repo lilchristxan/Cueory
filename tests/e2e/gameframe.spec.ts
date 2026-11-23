@@ -25,19 +25,16 @@ test.describe('GameFrame shared layout (Scope 1)', () => {
 
       // Stats
       const stats = page.locator('.game-frame-stats');
-      if (game.framed) {
-        await expect(stats).toBeVisible();
-        await expect(stats).toContainText(game.name === 'hello cards' ? 'questions asked' : '% solved');
-        await expect(stats).toContainText('played');
-        const statsIsland = page.locator('astro-island[component-url*="GameFrameStats"]');
-        if (game.name === 'hello cards') {
-          await expect(stats).toHaveText(/0\s*questions asked\s*0\s*current streak\s*0\s*best streak\s*0\s*played/);
-          await expect(statsIsland).toHaveCount(0);
-        } else {
-          await expect(statsIsland).toHaveCount(1);
-        }
+      // Every game page shows its four stats in the left panel (Games v2, 23 Nov), framed controls or not.
+      await expect(stats).toBeVisible();
+      await expect(stats).toContainText(game.name === 'hello cards' ? 'questions asked' : '% solved');
+      await expect(stats).toContainText('played');
+      const statsIsland = page.locator('astro-island[component-url*="GameFrameStats"]');
+      if (game.name === 'hello cards') {
+        await expect(stats).toHaveText(/0\s*questions asked\s*0\s*current streak\s*0\s*best streak\s*0\s*played/);
+        await expect(statsIsland).toHaveCount(0);
       } else {
-        await expect(stats).toHaveCount(0);
+        await expect(statsIsland).toHaveCount(1);
       }
 
       // Date line
@@ -94,5 +91,21 @@ test.describe('GameFrame shared layout (Scope 1)', () => {
         expect(scrollWidth).toBeLessThanOrEqual(clientWidth);
       });
     }
+  }
+});
+
+test.describe('game page frame (Games v2, 23 Nov)', () => {
+  for (const path of ['/play/vialo', '/play/sudoku', '/play/piccline']) {
+    test(`${path}: no site menu bar or building strip, the other open games as deck cards, a skip link`, async ({ page }) => {
+      await page.goto(path);
+      await expect(page.locator('header')).toHaveCount(0);
+      await expect(page.getByTestId('building-notice')).toHaveCount(0);
+      await expect(page.getByRole('link', { name: 'skip to content' })).toHaveCount(1);
+      const links = page.locator('.game-deck-card');
+      // The test build opens every game, the live build only these three; either way no card is a dead end.
+      expect(await links.count()).toBeGreaterThanOrEqual(2);
+      await expect(page.locator('.game-deck-item')).toHaveCount(await links.count());
+      for (const link of await links.all()) await expect(link).toHaveAttribute('href', /^\/play\/[a-z-]+$/);
+    });
   }
 });

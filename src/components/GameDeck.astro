@@ -3,7 +3,7 @@
  * The fanned card deck at the right edge of a game page (Games v2): one card for each of the other games, like a hand
  * of playing cards. A card shows its game's name in the middle and in two corners; on hover or focus it slides left so
  * the name is whole. Only the card moves, not its hit area, so it never flickers. A game that is closed in this build
- * is a plain card with no link. Hidden below the tablet width, where the page has no room for it, and under reduced
+ * is left out of the deck. Hidden below the tablet width, where the page has no room for it, and under reduced
  * motion the cards simply do not slide (gameframe.css).
  */
 import { crosswordShown, pageBuildEnv } from '../config/crossword';
@@ -16,33 +16,26 @@ interface Props {
 const { current } = Astro.props;
 const env = pageBuildEnv();
 const drafts = draftsAllowed(env);
-const all = [
-  { id: 'pulse', name: 'vialo', href: '/play/vialo', open: true },
-  { id: 'suture', name: 'piccline', href: '/play/piccline', open: true },
-  { id: 'triage', name: 'sudoku', href: '/play/sudoku', open: true },
-  { id: 'cueword', name: 'crossword', href: '/play/crossword', open: crosswordShown(env) },
-  { id: 'stat', name: 'tachyyy', href: '/play/tachyyy', open: drafts },
-  { id: 'hello-cards', name: 'hello cards', href: '/play/hello-cards', open: drafts },
+const all: { id: string; name: string; href: string; open: boolean; icon?: string; glyph?: string }[] = [
+  { id: 'pulse', name: 'vialo', href: '/play/vialo', open: true, icon: '/design/games-v2/assets/vialo-icon-silver-oxblood.svg' },
+  { id: 'suture', name: 'piccline', href: '/play/piccline', open: true, icon: '/brand/games/piccline-dark.svg' },
+  { id: 'triage', name: 'sudoku', href: '/play/sudoku', open: true, glyph: '9' },
+  { id: 'cueword', name: 'crossword', href: '/play/crossword', open: crosswordShown(env), glyph: '+' },
+  { id: 'stat', name: 'tachyyy', href: '/play/tachyyy', open: drafts, glyph: '0' },
+  { id: 'hello-cards', name: 'hello cards', href: '/play/hello-cards', open: drafts, glyph: 'hi' },
 ];
-const cards = all.filter((card) => card.id !== current);
+// A game that is closed in this build is left out: a card that goes nowhere would mislead.
+const cards = all.filter((card) => card.id !== current && card.open);
 ---
 <nav class="game-deck" aria-label="other games">
   <ul class="game-deck-list">
     {cards.map((card) => (
       <li class="game-deck-item">
-        {card.open ? (
-          <a href={card.href} class="game-deck-card">
-            <span class="game-deck-corner game-deck-corner-top" aria-hidden="true">{card.name}</span>
-            <span class="game-deck-name">{card.name}</span>
-            <span class="game-deck-corner game-deck-corner-bottom" aria-hidden="true">{card.name}</span>
-          </a>
-        ) : (
-          <span class="game-deck-card is-closed">
-            <span class="game-deck-corner game-deck-corner-top" aria-hidden="true">{card.name}</span>
-            <span class="game-deck-name">{card.name}</span>
-            <span class="game-deck-corner game-deck-corner-bottom" aria-hidden="true">{card.name}</span>
-          </span>
-        )}
+        <a href={card.href} class="game-deck-card">
+          <span class="game-deck-corner game-deck-corner-top" aria-hidden="true">{card.icon ? <img class="game-deck-icon" src={card.icon} alt="" width="20" height="20" loading="lazy" decoding="async" /> : <span class="game-deck-glyph">{card.glyph}</span>}{card.name}</span>
+          <span class="game-deck-name">{card.name}</span>
+          <span class="game-deck-corner game-deck-corner-bottom" aria-hidden="true">{card.icon ? <img class="game-deck-icon" src={card.icon} alt="" width="20" height="20" loading="lazy" decoding="async" /> : <span class="game-deck-glyph">{card.glyph}</span>}{card.name}</span>
+        </a>
       </li>
     ))}
   </ul>

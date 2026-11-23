@@ -140,6 +140,7 @@
   --game-deck-card-height: 17rem;        /* 272px */
   --game-deck-step: 3.5rem;              /* 56px between fanned cards */
   --game-deck-reveal: 3.5rem;            /* 56px of each card that shows at rest */
+  --game-deck-icon-size: 1.25rem;        /* 20px, a game's icon in a deck card corner */
   --game-deck-slide: 9rem;               /* 144px a card slides out on hover or focus */
   --game-frame-sidebar-compact-emblem-size: 2.75rem; /* 44px */
   --game-frame-sidebar-compact-emblem-radius: 0.75rem; /* 12px */

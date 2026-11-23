@@ -17,7 +17,7 @@ for (const [path, name] of [['/play/vialo', 'vialo'], ['/play/sudoku', 'sudoku']
     test.skip(info.project.name.includes('desktop') || info.project.name.includes('tablet'), 'phone layout');
     await page.goto(path);
     await expect(page.getByTestId('game-help-first')).toHaveCount(0);
-    const help = page.getByTestId('game-frame-help-button');
+    const help = page.getByRole('button', { name: `how to play ${name}` });
     await expect(help).toBeVisible();
     const box = await help.boundingBox();
     expect(box!.height).toBeGreaterThanOrEqual(44);
