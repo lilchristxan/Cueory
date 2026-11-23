@@ -2535,3 +2535,13 @@ html:has(dialog.mode-preview[open]) {
     grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--container-mode-tile)), 1fr));
   }
 }
+
+/* Unlayered so it outranks the buttons' own disabled opacity utility. */
+/* Disabled actions on the progress screen stay readable (full-strength ink, a dashed outline) instead of fading. */
+[data-progress-actions] button:disabled {
+  opacity: 1;
+  cursor: not-allowed;
+  background-color: transparent;
+  color: var(--color-ink-soft);
+  border: 1px dashed var(--color-control);
+}

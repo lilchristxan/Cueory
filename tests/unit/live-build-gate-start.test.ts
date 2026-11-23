@@ -24,7 +24,7 @@ describe('onboarding gate', () => {
     expect(source).toContain("onboardingShown } from '../lessons/draftgate'");
     expect(source).toMatch(/const shown = onboardingShown\(\)/);
     expect(source).toMatch(/\{shown \? \(/);
-    expect(source).toContain('data-testid="start-soon"');
+    expect(source).toContain('messageTestId="start-soon"');
     expect(source.match(/\bnoindex\b/g)?.length).toBe(2);
   });
 

@@ -1,0 +1,1 @@
+status: Phone layouts for /start, /learn/questions and /progress (shared coming-soon panel, centred questions header, plain study background and readable disabled actions on /progress); needs Christian because these pages are on the sensitive list.
