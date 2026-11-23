@@ -309,7 +309,7 @@ const activeDateLine = propDateLine ?? formatGameDateLine(new Date());
       )}
 
       <!-- Slot for page title -->
-      <div class="sr-only game-frame-title"><slot name="title" /></div>
+      <div class="not-print:sr-only game-frame-title"><slot name="title" /></div>
 
       <!-- The board slot -->
       <div class:list={['game-frame-board', wide && 'is-wide', showcase && 'is-showcase']}>

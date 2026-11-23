@@ -24,7 +24,7 @@ const lessonCount = unit.topics.reduce((count, topic) => count + topic.lessons.l
     <summary class="flex min-h-14 cursor-pointer items-center gap-3 p-4 focus-visible:outline-2 focus-visible:outline-focus focus-visible:outline-offset-2">
       <span class="min-w-0 flex-1">
         <span role="heading" aria-level="3" class="block text-sm font-medium text-ink">{unit.title}</span>
-        <span class="mt-1 block text-sm text-ink-soft">{availability.hasLessons ? `${availability.open.length} open now` : 'coming soon'}</span>
+        <span class:list={['block text-sm text-ink-soft', availability.hasLessons ? 'mt-1' : 'max-sm:sr-only sm:mt-1']}>{availability.hasLessons ? `${availability.open.length} open now` : 'coming soon'}</span>
       </span>
       <span class="shrink-0 text-sm font-medium text-ink-soft" aria-hidden="true">{lessonCount}</span>
       <span class="chevron shrink-0 text-ink-soft" aria-hidden="true">›</span>
