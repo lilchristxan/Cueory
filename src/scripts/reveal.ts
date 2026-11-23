@@ -42,12 +42,6 @@ export function revealSections(): void {
           observer.unobserve(target);
           continue;
         }
-        const active = document.activeElement;
-        if (active instanceof HTMLElement && target.contains(active) && target.dataset.reveal === 'waiting') {
-          revealInstantly(target, observer);
-          keepFocusedTargetInView(active);
-          continue;
-        }
         target.dataset.reveal = 'shown';
         observer.unobserve(target);
       }
@@ -58,20 +52,13 @@ export function revealSections(): void {
     if (!waitsForReveal(section.getBoundingClientRect().top, window.innerHeight)) continue;
     section.dataset.reveal = 'waiting';
     const onFocusIn = (event?: FocusEvent) => {
-      const target = event?.target;
-      const focusTarget = target && typeof HTMLElement !== 'undefined' && target instanceof HTMLElement ? target : undefined;
-      const inSection = focusTarget ? (typeof section.contains === 'function' ? section.contains(focusTarget) : true) : !event?.target;
-      if (
-        (section.dataset.reveal === 'waiting' || section.dataset.reveal === 'shown') &&
-        inSection
-      ) {
-        if (section.dataset.reveal === 'waiting') revealInstantly(section, observer);
-        else {
-          section.dataset.reveal = 'instant';
-          observer.unobserve(section);
-        }
+      if (section.dataset.reveal === 'waiting') {
+        revealInstantly(section, observer);
         section.removeEventListener('focusin', onFocusIn);
-        if (focusTarget) keepFocusedTargetInView(focusTarget);
+        const target = event?.target;
+        if (target && typeof HTMLElement !== 'undefined' && target instanceof HTMLElement) {
+          keepFocusedTargetInView(target);
+        }
       }
     };
     section.addEventListener('focusin', onFocusIn);

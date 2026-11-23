@@ -33,34 +33,19 @@ for (const width of widths) {
 
         const section = page.locator('#daily-games');
         const summary = section.getByTestId('daily-games-summary');
+        const link = section.getByTestId('games-link');
         const day = section.getByTestId('daily-games-day');
         await section.scrollIntoViewIfNeeded();
         await expect(summary).toBeVisible();
+        await expect(link).toBeVisible();
+        await expect(link).toHaveAttribute('href', '/play');
         await expect(day).toBeVisible();
         await expect(day).toContainText(/today's set: [a-z]{3} \d{1,2} [a-z]{3}/);
         await expect(day).toContainText('the date changes at midnight on your device. some sample puzzles repeat.');
 
-        const cards = section.locator('[data-game-card]');
-        await expect(cards).toHaveCount(6);
-        const firstCard = cards.first();
-        await expect(firstCard).toHaveAttribute('href', '/play/vialo');
-
-        const prevBtn = section.locator('[data-games-prev]');
-        const nextBtn = section.locator('[data-games-next]');
-        await expect(prevBtn).toBeVisible();
-        await expect(nextBtn).toBeVisible();
-
-        const prevBounds = await prevBtn.boundingBox();
-        expect(prevBounds?.width ?? 0).toBeGreaterThanOrEqual(44);
-        expect(prevBounds?.height ?? 0).toBeGreaterThanOrEqual(44);
-
-        const nextBounds = await nextBtn.boundingBox();
-        expect(nextBounds?.width ?? 0).toBeGreaterThanOrEqual(44);
-        expect(nextBounds?.height ?? 0).toBeGreaterThanOrEqual(44);
-
-        const cardBounds = await firstCard.boundingBox();
-        expect(cardBounds?.width ?? 0).toBeGreaterThanOrEqual(44);
-        expect(cardBounds?.height ?? 0).toBeGreaterThanOrEqual(44);
+        const bounds = await link.boundingBox();
+        expect(bounds?.width ?? 0).toBeGreaterThanOrEqual(44);
+        expect(bounds?.height ?? 0).toBeGreaterThanOrEqual(44);
 
         const axe = await new AxeBuilder({ page })
           .include('#daily-games')
@@ -73,11 +58,11 @@ for (const width of widths) {
         expect(overflow).toBeLessThanOrEqual(0);
 
         // Shift+Tab then Tab establishes real keyboard focus, rather than accepting a programmatic focus alone.
-        await firstCard.focus();
+        await link.focus();
         await page.keyboard.press('Shift+Tab');
         await page.keyboard.press('Tab');
-        await expect(firstCard).toBeFocused();
-        const visibleFocus = await firstCard.evaluate((element) => {
+        await expect(link).toBeFocused();
+        const visibleFocus = await link.evaluate((element) => {
           const style = getComputedStyle(element);
           return element.matches(':focus-visible') &&
             style.outlineStyle !== 'none' &&
@@ -87,10 +72,10 @@ for (const width of widths) {
         expect(visibleFocus).toBe(true);
 
         await page.keyboard.press('Enter');
-        await expect(page).toHaveURL(/\/play\/vialo\/?$/);
+        await expect(page).toHaveURL(/\/play\/?$/);
         await page.goBack();
-        await firstCard.tap();
-        await expect(page).toHaveURL(/\/play\/vialo\/?$/);
+        await page.getByTestId('games-link').tap();
+        await expect(page).toHaveURL(/\/play\/?$/);
       } finally {
         await context.close();
       }

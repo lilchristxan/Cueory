@@ -46,7 +46,7 @@ for (const size of [
       await expect(page.getByText('save your progress and pick up where you left off.')).toHaveCount(0);
       await expect(page.locator('#how-it-works')).toHaveCount(0);
       await expect(page.getByRole('heading', { level: 2, name: 'ways to study' })).toBeVisible();
-    await expect(page.getByRole('heading', { level: 2, name: "nurse's station games" })).toBeVisible();
+      await expect(page.getByRole('heading', { level: 2, name: 'a few minutes, every day.' })).toBeVisible();
       await expect(page.getByRole('heading', { level: 2, name: 'coming soon' })).toBeVisible();
       const lowerSectionIds = await page.locator('main > section[id]').evaluateAll((sections) => sections.map((section) => section.id));
       expect(lowerSectionIds).toEqual([
@@ -94,7 +94,7 @@ test.describe('home without JavaScript', () => {
       await expect(page.getByTestId(testId)).toHaveAttribute('href', href);
       await expect(page.getByTestId(testId)).toBeVisible();
     }
-      await expect(page.getByRole('heading', { level: 2, name: "nurse's station games" })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 2, name: 'a few minutes, every day.' })).toBeVisible();
     await expect(page.getByTestId('games-stage')).toBeVisible();
     await expect(page.getByRole('heading', { level: 2, name: 'coming soon' })).toBeVisible();
     // The landmark names the signup, not only its "coming soon" heading.
