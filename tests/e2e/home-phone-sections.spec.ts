@@ -133,7 +133,7 @@ test.describe('home section order', () => {
   });
 });
 
-// Christian's dot pager under the games carousel (23 Nov): 8 px dots 8 px apart, the current one a 26 x 8 px pill, each a
+// Christian's dot pager under the games carousel (23 Nov): 8 px dots 16 px apart, the current one a 26 x 8 px pill, each a
 // real button with a 44 x 44 hit area, in step with the arrows and the keyboard. Every size.
 test.describe('games carousel dot pager', () => {
   test('one real button per card, sized as picked, moving the carousel and following the arrows and keys', async ({ page }) => {
@@ -162,10 +162,11 @@ test.describe('games carousel dot pager', () => {
       expect(dot.w).toBeCloseTo(8, 0);
       expect(dot.h).toBeCloseTo(8, 0);
       // 44 px tall; sideways it reaches halfway into the gaps (44 px wide boxes would overlap and steal each other's taps).
-      expect(dot.hitW).toBeGreaterThanOrEqual(16);
+      expect(dot.hitW).toBeGreaterThanOrEqual(24);
       expect(dot.hitH).toBeGreaterThanOrEqual(44);
     }
-    expect(sizes[1]!.x - (sizes[0]!.x + sizes[0]!.w)).toBeCloseTo(8, 0);
+    // 16 px apart (the picked 8 px fails the 24 px target-size rule: centres must be 24 px apart).
+    expect(sizes[1]!.x - (sizes[0]!.x + sizes[0]!.w)).toBeCloseTo(16, 0);
 
     // The accessible names say the game and the place.
     await expect(section.getByRole('button', { name: 'vialo, 1 of 6' })).toBeVisible();

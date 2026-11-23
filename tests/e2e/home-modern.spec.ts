@@ -46,11 +46,12 @@ for (const size of [
       await expect(page.getByText('save your progress and pick up where you left off.')).toHaveCount(0);
       await expect(page.locator('#how-it-works')).toHaveCount(0);
       await expect(page.getByRole('heading', { level: 2, name: 'ways to study' })).toBeVisible();
-    await expect(page.getByRole('heading', { level: 2, name: "nurse's station games" })).toBeVisible();
+      await expect(page.getByRole('heading', { level: 2, name: "nurse's station games" })).toBeVisible();
       await expect(page.getByRole('heading', { level: 2, name: 'coming soon' })).toBeVisible();
       const lowerSectionIds = await page.locator('main > section[id]').evaluateAll((sections) => sections.map((section) => section.id));
+      // Christian's final home board (20 Nov): the games come before the vials.
       expect(lowerSectionIds).toEqual([
-        'ways-to-study', 'daily-games', 'signup',
+        'daily-games', 'ways-to-study', 'signup',
       ]);
       await expect(page.getByTestId('games-stage')).toBeVisible();
       // The old feature tiles repeated the vials and the lesson link, so they left the home page.
