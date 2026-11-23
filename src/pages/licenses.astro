@@ -1,0 +1,110 @@
+---
+/**
+ * Third-party attributions (Task 200). Every licence name here is read from the repository, never guessed:
+ * src/visuals/sources.ts (the open textbook and BodyParts3D, with the credit lines their licences ask for),
+ * public/fonts/*-OFL.txt (the fonts) and each package's package.json "license" field (the libraries).
+ * The textbook and model credits render from allowedBooks so this page and the lesson credits can never differ.
+ */
+import Layout from '../layouts/Layout.astro';
+import LegalApproval from '../components/LegalApproval.astro';
+import { isLegalPageApproved } from '../config/legalapproval';
+import Prose from '../components/Prose.astro';
+import { site } from '../config/site';
+import { allowedBooks } from '../visuals/sources';
+
+/** Self-hosted fonts, each under the SIL Open Font License 1.1; the full licence text ships beside each font. */
+const fonts = [
+  { name: 'Lato', holder: 'tyPoland Lukasz Dziedzic', file: '/fonts/lato-OFL.txt' },
+  { name: 'Bodoni Moda', holder: 'The Bodoni Moda Project Authors', file: '/fonts/bodoni-moda-OFL.txt' },
+  { name: 'Kalam', holder: 'Indian Type Foundry', file: '/fonts/kalam-OFL.txt' }, // the handwriting on glove notes
+] as const;
+
+/** Open-source software the site is built with. Licence names are the packages' own declarations. */
+const libraries = [
+  { name: 'Astro', license: 'MIT', href: 'https://astro.build' },
+  { name: 'React and React DOM', license: 'MIT', href: 'https://react.dev' },
+  { name: 'Tailwind CSS', license: 'MIT', href: 'https://tailwindcss.com' },
+  { name: 'supabase-js', license: 'MIT', href: 'https://github.com/supabase/supabase-js' },
+  { name: 'three.js', license: 'MIT', href: 'https://threejs.org' },
+  { name: 'Pagefind', license: 'MIT', href: 'https://pagefind.app' },
+  { name: 'Simple Icons', license: 'CC0 1.0', href: 'https://simpleicons.org' },
+] as const;
+---
+
+<Layout title="licences" description="Who made the open content, fonts and software that Cueory is built on, and under which licences." noindex={!isLegalPageApproved("licenses")}>
+  <Prose>
+    <h1>licences and credits</h1>
+    <LegalApproval page="licenses" />
+
+    <h2>Cueory's own work</h2>
+    <p>
+      The lessons, questions, cards, puzzles, design, name and logo of {site.name} belong to us and are not open
+      source. Our code is public on GitHub so anyone can see how the site is built; GitHub's terms let other GitHub users
+      view and fork it within GitHub, and nothing more is granted. See the <a href="/copyright">copyright page</a>.
+    </p>
+
+    <h2>Open content we adapt</h2>
+    <p>
+      Where a lesson or a visual quotes or adapts open material, the credit the licence asks for appears beside it on
+      the page. These are the sources:
+    </p>
+    <ul>
+      {
+        allowedBooks.map((book) => (
+          <li>
+            <strong class="key-term">{book.book}</strong>, licensed{' '}
+            <a href={book.licenseUrl} rel="license noopener">{book.licenseTitle ?? book.license}</a>.
+            Credit as shown on the site: "{book.credit}" We have changed the material we use (for example by shortening
+            text, or by grouping, simplifying and colouring 3D structures), and those changes are ours, not the
+            original authors'.
+          </li>
+        ))
+      }
+    </ul>
+
+    <p>
+      The 3D anatomy models on the site are built from BodyParts3D Release 4.0, downloaded from its official archive;
+      every model view and every exported picture carries the credit above. No other anatomy atlas is used. The glove
+      and vial illustrations, the loader artwork and the logo are Cueory's own.
+    </p>
+
+    <h2>Fonts</h2>
+    <p>
+      The site's fonts are served from our own files, not from a font service. Each is licensed under the{' '}
+      <a href="https://openfontlicense.org" rel="license noopener">SIL Open Font License, Version 1.1</a>,
+      and its full licence text is in the file linked here.
+    </p>
+    <ul>
+      {
+        fonts.map((font) => (
+          <li>
+            <strong class="key-term">{font.name}</strong>, copyright {font.holder}: <a href={font.file}>licence text</a>.
+          </li>
+        ))
+      }
+    </ul>
+
+    <h2>Software</h2>
+    <p>The site is built with these open-source projects, under the licences their authors chose:</p>
+    <ul>
+      {
+        libraries.map((library) => (
+          <li>
+            <a href={library.href} rel="noopener">{library.name}</a>, {library.license} licence.
+          </li>
+        ))
+      }
+    </ul>
+    <p>
+      Many smaller packages are used to build and test the site; their licences are in the project's dependency tree on
+      GitHub. The site is hosted by Cloudflare, accounts run on Supabase, and lesson videos play from YouTube; those are
+      services with their own terms, not open-source work we redistribute.
+    </p>
+
+    <h2>Something missing or wrong?</h2>
+    <p>
+      If you hold rights in something used here and the credit is missing or incorrect, email{' '}
+      <a href={`mailto:${site.contactEmail}`}>{site.contactEmail}</a> and we will fix it.
+    </p>
+  </Prose>
+</Layout>

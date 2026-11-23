@@ -3,6 +3,7 @@ import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
+import { isRouteIndexable } from '../../src/config/legalapproval';
 import { indexablePages } from '../../src/config/routes';
 
 const root = fileURLToPath(new URL('../../dist/', import.meta.url));
@@ -22,7 +23,7 @@ function fileFor(route: string): string {
 describe('placeholder pages stay out of the public site', () => {
   it('no page in indexablePages shows placeholder text', () => {
     expect(existsSync(root), 'dist is missing: run npm run build before npm test').toBe(true);
-    for (const route of indexablePages) {
+    for (const route of indexablePages.filter((route) => isRouteIndexable(route))) {
       const file = fileFor(route);
       expect(existsSync(file), `${route} is not built`).toBe(true);
       expect(PLACEHOLDER.test(readFileSync(file, 'utf8')), `${route} shows placeholder text`).toBe(false);

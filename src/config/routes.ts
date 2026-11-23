@@ -15,10 +15,13 @@ export const indexablePages = [
   '/play/sudoku',
   '/play/word-path',
   '/support',
-  // Final legal text (Christian, 2026-11-17).
+  // Founder-approved legal pages become indexable only after their source digests match.
   '/terms',
-  '/disclaimer',
   '/privacy',
+  '/disclaimer',
+  '/copyright',
+  '/accessibility',
+  '/licenses',
 ] as const;
 
 /**

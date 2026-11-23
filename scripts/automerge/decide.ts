@@ -105,7 +105,15 @@ const ALWAYS_HELD_FILES = new Set([
   'src/pages/privacy.astro',
   'src/pages/terms.astro',
   'src/pages/disclaimer.astro',
+  'src/pages/copyright.astro',
+  'src/pages/accessibility.astro',
+  'src/pages/licenses.astro',
   'src/config/routes.ts',
+  // The founder's legal approvals (dates, digests, minimum age) and the code that judges and shows them (#726).
+  'src/config/legal.ts',
+  'src/config/legalapproval.ts',
+  'scripts/legal-digest.mjs',
+  'src/components/LegalApproval.astro',
   // Account session/menu and newsletter form code are security-sensitive even before launch.
   'src/config/site.ts',
   'src/components/AccountCorner.astro',

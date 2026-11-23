@@ -218,7 +218,8 @@ describe('download my progress', () => {
     const progress = withStars(emptyProgress(), 'deck-a', ['c1']);
     const file = JSON.parse(exportProgress(progress, '2026-11-01'));
     expect(Object.keys(file)).toEqual(['about', 'exportedOn', 'version', 'onboarding', 'decks']);
-    expect(file.about).toMatch(/nothing here was sent to cueory/);
+    expect(file.about).toMatch(/made from what this browser saved on this device/);
+    expect(file.about).toMatch(/may also be saved to your account; nothing else here was sent to cueory/);
     expect(file.exportedOn).toBe('2026-11-01');
     expect(file.decks).toEqual(progress.decks);
   });

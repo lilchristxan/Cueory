@@ -25,6 +25,8 @@ export const linkHosts = new Set([
   'cueory.kit.com', // Kit landing page for launch updates (plain link)
   'app.kit.com', // Kit form address the launch-updates email box posts to (plain HTML form, no Kit script)
   'creativecommons.org', 'dbarchive.biosciencedbc.jp', // licence and source credits for the anatomy models
+  'openfontlicense.org', // font licence linked from /licenses
+  'astro.build', 'react.dev', 'tailwindcss.com', 'github.com', 'threejs.org', 'pagefind.app', 'simpleicons.org', // software projects linked from /licenses
 ]);
 /** Hosts the page itself may load from (only the click-to-play lesson video frame). */
 export const embedHosts = new Set(['www.youtube-nocookie.com']);

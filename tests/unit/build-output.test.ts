@@ -47,6 +47,10 @@ const requiredPages = [
 const initialJsBudget = {
   '404.html': 147695,
   'about.html': 90627,
+  // New legal routes: initial gzip budgets from original #659 build, checked against staging in CI.
+  'accessibility.html': 90690,
+  'copyright.html': 90690,
+  'licenses.html': 90690,
   'account.html': 123795,
   'account/two-factor.html': 110576,
   'admin/flags.html': 92161,

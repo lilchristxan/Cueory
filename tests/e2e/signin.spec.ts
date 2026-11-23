@@ -257,6 +257,26 @@ test.describe('shared client loading', () => {
 });
 
 test.describe('enabled account components with fake shared auth', () => {
+  test('the sign-up form says what creating an account agrees to, with working links (Task 200)', async ({ page }) => {
+    await fixture(page, 'mode=signup');
+    const agreement = page.getByTestId('signup-agreement');
+    await expect(agreement).toContainText('by creating an account you agree to the terms of use and the privacy page');
+    await expect(agreement).toContainText('or older.');
+    await expect(agreement.getByRole('link', { name: 'terms of use' })).toHaveAttribute('href', '/terms');
+    await expect(agreement.getByRole('link', { name: 'privacy page' })).toHaveAttribute('href', '/privacy');
+    // It explains; it never blocks. Submitting with the fields filled still calls sign-up.
+    await page.getByLabel('display name').fill('Student Example');
+    await page.getByLabel('email', { exact: true }).fill('student@example.test');
+    await page.getByLabel('password', { exact: true }).fill(fakePassword);
+    await page.getByRole('button', { name: 'create account', exact: true }).click();
+    await expect.poll(() => calls(page)).toEqual(['signup']);
+  });
+
+  test('the sign-in form carries no agreement line', async ({ page }) => {
+    await fixture(page, 'mode=signin');
+    await expect(page.getByTestId('signup-agreement')).toHaveCount(0);
+  });
+
   test('signup initials, validation, show/hide, duplicate guard and cooldown work', async ({ page }) => {
     await fixture(page, 'mode=signup');
     await page.getByRole('button', { name: 'create account', exact: true }).click();

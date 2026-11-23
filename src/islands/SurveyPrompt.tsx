@@ -1,5 +1,6 @@
 import { useEffect, useId, useState, type FormEvent } from 'react';
 import { browserStorage, type KeyValueStorage } from '../scripts/storage';
+import { SURVEY_STORAGE_KEYS } from './surveykeys';
 
 export interface SurveySubmission {
   usedForFinal: boolean | null;
@@ -19,7 +20,7 @@ export interface SurveyPromptProps {
   onDismiss?: () => void;
 }
 
-const STORAGE_KEY_DEFAULT = 'cueory-finals-survey-dismissed';
+const STORAGE_KEY_DEFAULT = SURVEY_STORAGE_KEYS[0];
 const MAX_FEEDBACK_CHARS = 200;
 
 const primaryButton =

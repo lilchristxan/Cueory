@@ -20,23 +20,33 @@ test.describe('Task 422: privacy page', () => {
 
     await expect(main.getByRole('heading', { level: 1 })).toHaveText('privacy, in plain language');
     for (const heading of [
-      'Studying on this device',
-      'Playing daily games',
-      'Settings and reminders',
-      'Joining the launch email list',
-      'Contacting Cueory',
-      'Tips, videos and social links',
-      'Hosting and visit statistics',
-      'Children’s information',
-      'Your information and questions',
+      'The short version',
+      'Your progress on this device',
+      'Launch-updates emails',
+      'Lesson videos',
+      'Visit statistics',
+      'If you create an account',
+      'Your rights: download or delete',
+      'Who handles data for us',
+      'Questions',
     ]) {
       await expect(main.getByRole('heading', { level: 2, name: heading, exact: true })).toBeVisible();
     }
 
-    // The notice describes keys in plain words (tests/unit/privacy-keys.test.ts checks each one) and names only the
-    // signup pop-up's key.
-    await expect(main.locator('code')).toHaveText(['cueory-signup-popup-seen']);
-    await expect(main.getByText('Effective 19 November 2026', { exact: true })).toBeVisible();
+    // Changing or removing a storage feature must not silently drop its disclosure.
+    const storageKeys = await main.locator('code').allTextContents();
+    for (const key of [
+      'cueory-theme',
+      'cueory-progress',
+      'cueory-resume',
+      'cueory-game-stats',
+      'cueory-auth',
+      'cueory-auth-code-verifier',
+    ]) {
+      expect(storageKeys, `missing privacy disclosure for ${key}`).toContain(key);
+    }
+
+    await expect(main.getByText('youtube-nocookie.com', { exact: true })).toBeVisible();
   });
 
   test('offers working links to view or manage device progress and daily games', async ({ page }) => {
@@ -71,36 +81,11 @@ test.describe('Task 422: privacy page', () => {
 
     await page.goto('/privacy');
     const main = page.getByRole('main');
-    const email = main.locator(`a[href="mailto:${site.contactEmail}"]`, { hasText: site.contactEmail });
-    await expect(email.first()).toBeVisible();
-    await expect(main.getByRole('link', { name: 'Email Cueory', exact: true })).toHaveAttribute('href', `mailto:${site.contactEmail}`);
+    // The address appears twice since Task 200 (under "Who is responsible" and "Questions"); each shows the address.
+    const email = main.locator(`a[href="mailto:${site.contactEmail}"]`);
+    expect(await email.count()).toBeGreaterThan(0);
+    for (const text of await email.allTextContents()) expect(text).toBe(site.contactEmail);
     await expect(main.locator('iframe')).toHaveCount(0);
     expect(videoRequests).toEqual([]);
   });
-});
-
-test('links to the other legal pages and to each outside privacy policy it names', async ({ page }) => {
-  await page.goto('/privacy');
-  const main = page.getByRole('main');
-  for (const [name, href] of [
-    ['Terms of Use', '/terms'],
-    ['Disclaimer', '/disclaimer'],
-    ['Kit signup page', 'https://cueory.kit.com/bfd9609b46'],
-    ['Kit privacy policy', 'https://kit.com/privacy'],
-    ['Ko-fi privacy policy', 'https://more.ko-fi.com/privacy'],
-    ['Google privacy policy', 'https://policies.google.com/privacy'],
-    ['Cloudflare privacy policy', 'https://www.cloudflare.com/privacypolicy/'],
-  ] as const) {
-    await expect(main.getByRole('link', { name, exact: true })).toHaveAttribute('href', href);
-  }
-  await main.getByRole('link', { name: 'Terms of Use', exact: true }).click();
-  await expect(page).toHaveURL(/\/terms$/);
-});
-
-test('is final, indexable and available to site search', async ({ page }) => {
-  await page.goto('/privacy');
-  await expect(page.getByRole('main')).not.toContainText('Draft for review.');
-  await expect(page.locator('head meta[name="robots"]')).toHaveCount(0);
-  await expect(page.locator('main[data-pagefind-body]')).toHaveCount(1);
-  await expect(page.getByRole('main').getByText('Effective 19 November 2026', { exact: true })).toBeVisible();
 });

@@ -1,67 +1,72 @@
 ---
+/**
+ * Educational disclaimer (Task 200). Plain language. It repeats the content notice from src/config/site.ts so the two
+ * can never disagree. No clinical facts are written here (CLAUDE.md rule 5). Not legal advice; attorney review pending.
+ */
 import Layout from '../layouts/Layout.astro';
+import LegalApproval from '../components/LegalApproval.astro';
+import { isLegalPageApproved } from '../config/legalapproval';
 import Prose from '../components/Prose.astro';
 import { site } from '../config/site';
-
-// FINAL: legal text v5, adopted 13–0 on 2026-11-17 (file SHA-256 fc0e5514…f052). Word for word; change it only with
-// Christian's approval.
-const email = site.contactEmail;
-const mail = `mailto:${email}`;
 ---
 
-<Layout title="disclaimer" description="Cueory is a study aid, not medical advice.">
+<Layout title="disclaimer" description="Cueory is a study aid, not medical advice." noindex={!isLegalPageApproved("disclaimer")}>
   <Prose>
     <h1>disclaimer</h1>
-    <p class="text-sm text-ink-soft">Last updated 17 November 2026</p>
+    <LegalApproval page="disclaimer" />
 
+    <h2>What Cueory is</h2>
     <p>
-      Cueory is for nursing students to practice and review what they’re learning. It does not provide medical, nursing or
-      clinical advice or replace instruction or supervised clinical training. Never use Cueory to make a decision about a
-      real patient, check a medication dose for care, or decide what to do about your own or someone else’s health.
-    </p>
-    <p>
-      <strong>In an emergency, call 911 in the United States or your local emergency number.</strong> In a clinical
-      facility, alert staff immediately and follow the facility’s emergency procedures. Cueory is not monitored for
-      emergencies and cannot respond to one.
+      {site.name} is a free study website made to help nursing students learn and review. Everything on it, including
+      lessons, questions, cards, puzzles, videos and the anatomy lab, is for education only.
     </p>
 
-    <h2>Protect patient information</h2>
+    <h2>What Cueory is not</h2>
+    <ul>
+      <li>
+        It is <strong class="key-term">not medical, nursing or clinical advice</strong>, and not a diagnosis, treatment
+        plan or instruction for caring for any real person.
+      </li>
+      <li>
+        It is <strong class="key-term">not a substitute for your school</strong>: your program's curriculum, your
+        faculty, your textbooks, your clinical instructors and your facility's policies come first. Where the site and
+        they disagree, follow them.
+      </li>
+      <li>It is not a licensed health-care provider, a school, or an exam board, and it does not speak for any of them.</li>
+      <li>It is not an emergency service. If someone needs care, contact a clinician or local emergency services.</li>
+    </ul>
+
+    <h2>Never use it with a real patient</h2>
     <p>
-      Use invented examples only. Keep information about real patients off Cueory and out of emails to us, even if you
-      leave out their names. Photos, screenshots, dates, room numbers and details from a clinical placement can identify
-      someone.
-    </p>
-    <p>
-      If you send us patient information by mistake, promptly follow your school’s or facility’s reporting procedure.
-      Start a new email to <a href={mail}>{email}</a> with the approximate time and where you sent it so we can locate it
-      and address the disclosure. Do not forward the original, attach a screenshot or repeat any patient details.
+      Do not use anything on {site.name} to make a decision about a real patient, to calculate a real dose, or to carry
+      out a real procedure. Nursing care depends on the individual person, the setting, current evidence and the
+      judgement of licensed professionals, none of which a study website can provide.
     </p>
 
-    <h2>Follow your school’s and clinical site’s rules</h2>
+    <h2>Accuracy and review</h2>
     <p>
-      Use Cueory during an exam or graded assignment only if the rules for that activity expressly allow it. Keep
-      confidential questions and answers to yourself, including anything recalled from an exam. In clinical placements
-      and at work, follow facility policies and ask your instructor, preceptor or supervising clinician about patient
-      care.
+      We try to keep the content accurate and up to date, but nursing knowledge changes and mistakes happen.{' '}
+      {site.contentNotice}. Where a lesson is a sample, a draft or not yet reviewed, the page says so. Check anything
+      that matters against your course materials and other trusted sources, and tell us about errors with the "Flag or
+      comment" button at the bottom of every page.
     </p>
 
-    <h2>Check what you learn</h2>
+    <h2>Exams, grades and licensure</h2>
     <p>
-      Some study activities are samples, and some pages contain placeholder text. Material may lack citations or review
-      by a licensed nurse. Check what you learn against your assigned materials and current textbooks. If sources
-      disagree, ask your instructor before relying on the information. To flag a possible error, email the page title or
-      link and a description to <a href={mail}>{email}</a>. Leave out patient details and confidential exam material.
-    </p>
-    <p>
-      The daily puzzles currently use everyday words. Some repeat. Neither a puzzle result nor a practice score tells you
-      whether you’re ready to care for patients or pass an exam. Using Cueory does not guarantee a grade, a passing score
-      on the NCLEX or any other exam outcome.
-    </p>
-    <p>
-      Cueory is independent. No school, nursing program, testing organization or licensing board runs or endorses it.
-      Names and marks belonging to those organizations remain theirs.
+      {site.name} does not promise a grade, a passing score, graduation, a licence or a job, and never predicts your
+      chance of passing an exam. Exam, school and publisher names appear on the site only to describe what a lesson is
+      about. They do not mean that organisation sponsors, endorses or is affiliated with {site.name}, and {site.name} is
+      not an official preparation product for any exam.
     </p>
 
-    <p><a href="/terms">Terms of Use</a> · <a href="/privacy">Privacy Notice</a></p>
+    <h2>Your responsibility</h2>
+    <p>
+      How you use what you learn here is up to you. By using the site you accept that {site.name} is a study aid,
+      provided as is, and that we are not responsible for decisions you make based on it. Our{' '}
+      <a href="/terms">terms of use</a> set out the limits on our liability.
+    </p>
+
+    <h2>Questions</h2>
+    <p>Email <a href={`mailto:${site.contactEmail}`}>{site.contactEmail}</a>.</p>
   </Prose>
 </Layout>

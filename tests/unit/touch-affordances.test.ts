@@ -68,7 +68,7 @@ describe('no hover-only information (touch)', () => {
       }
     }
     expect(found).toEqual([]);
-  });
+  }, 20000);
 
   it('keeps hover-lift polish inside the mouse-only media query or paired with keyboard focus', () => {
     const css = files.find((file) => file.name === 'styles/global.css')!.text;

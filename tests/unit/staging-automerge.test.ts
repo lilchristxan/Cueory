@@ -187,6 +187,25 @@ describe('held paths', () => {
     expect(isHeldPath(path, 'launched')).toBe(false);
   });
 
+  // #726: legal approval records, the code that judges them and the newer legal page sources never auto-merge.
+  const legalApprovalSources = [
+    'src/config/legal.ts',
+    'src/config/legalapproval.ts',
+    'scripts/legal-digest.mjs',
+    'src/components/LegalApproval.astro',
+    'src/pages/copyright.astro',
+    'src/pages/accessibility.astro',
+    'src/pages/licenses.astro',
+  ];
+
+  it.each(legalApprovalSources)('%s waits for Christian in prelaunch mode (#726)', (path) => {
+    expect(isHeldPath(path, 'prelaunch')).toBe(true);
+  });
+
+  it.each(legalApprovalSources)('%s waits for Christian in launched mode (#726)', (path) => {
+    expect(isHeldPath(path, 'launched')).toBe(true);
+  });
+
   it('counts both sides of a rename', () => {
     const renamed = [{ filename: 'docs/old-headers.txt', previous_filename: 'public/_headers' }];
     expect(heldPaths(renamed, 'launched')).toEqual(['public/_headers']);

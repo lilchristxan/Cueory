@@ -1,0 +1,20 @@
+---
+/**
+ * The effective-date and approval line at the top of every legal page (Task 200). It asks src/config/legalapproval.ts (date and digest of the approved text):
+ * approved, it says "Effective …. Approved by Christian, founder, on …"; without one it shows a visible
+ * [[CHRISTIAN: …]] mark, and scripts/check-legal-release.mjs refuses a production build.
+ */
+import { approvalLine, type LegalPage } from '../config/legal';
+import { isLegalPageApproved } from '../config/legalapproval';
+
+interface Props {
+  page: LegalPage;
+}
+
+const { page } = Astro.props;
+const approved = isLegalPageApproved(page);
+---
+
+<p class="text-sm text-ink-soft" data-legal-approval={approved ? 'approved' : 'pending'}>
+  {approved ? approvalLine(page, true) : <strong class="key-term" data-placeholder="CHRISTIAN-TEXT">{approvalLine(page, false)}</strong>}
+</p>

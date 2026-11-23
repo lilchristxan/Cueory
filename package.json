@@ -8,6 +8,7 @@
   "scripts": {
     "dev": "astro dev",
     "prebuild": "node scripts/check-legal-release.mjs",
+    "postbuild": "node scripts/check-legal-release.mjs --rendered",
     "build": "astro build && node scripts/prune-preview.mjs && pagefind --site dist",
     "preview": "astro preview",
     "astro": "astro",
@@ -30,6 +31,7 @@
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "astro": "^7.4.12",
+    "htmlparser2": "12.0.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "tailwindcss": "^4.3.3",

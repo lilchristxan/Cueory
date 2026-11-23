@@ -146,7 +146,7 @@ test('card piles and stars show on the progress page; download and forget work',
   expect(file.suggestedFilename()).toMatch(/^cueory-progress-\d{4}-\d{2}-\d{2}\.json$/);
   const content = JSON.parse(readFileSync((await file.path())!, 'utf8'));
   expect(content.decks['study-skills-01'].know).toEqual(['ss01-c01']);
-  expect(content.about).toMatch(/nothing here was sent to cueory/);
+  expect(content.about).toMatch(/made from what this browser saved on this device/);
 
   await page.getByRole('button', { name: 'forget my progress on this device' }).click();
   const keep = page.getByRole('button', { name: 'keep it' });

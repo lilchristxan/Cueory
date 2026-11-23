@@ -1,11 +1,15 @@
 import { expect, test, type Page } from '@playwright/test';
 import { existsSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { isRouteIndexable } from '../../src/config/legalapproval';
+import { legalRoutes } from '../../src/config/legal';
 import { indexablePages as fixedPages } from '../../src/config/routes';
 import { lessonRoutes } from '../lessonroutes';
 
 // The fixed pages plus every lesson page generated from /content (Task 300), as the sitemap lists them.
-const indexablePages = [...new Set([...fixedPages, ...lessonRoutes])];
+// Legal pages are noindex until Christian sets their approval date in src/config/legal.ts (Task 200).
+const indexablePages = [...new Set([...fixedPages, ...lessonRoutes])].filter((page) => isRouteIndexable(page));
+const unapprovedLegalPages = Object.keys(legalRoutes).filter((route) => !isRouteIndexable(route));
 
 /**
  * Task 127: which pages search engines may index. `Layout.astro` writes
@@ -24,6 +28,7 @@ const previewPages = existsSync(previewDir)
 
 const noindexPages = [
   ...previewPages,
+  ...unapprovedLegalPages,
   '/auth/callback',
   '/reset-password',
   '/signin',
@@ -100,18 +105,13 @@ test.describe('Task 127: indexing', () => {
     }
   });
 
-  test('final legal pages are searchable, in site search, and carry final dated text', async ({ page }) => {
-    for (const [path, date] of [
-      ['/terms', /^Last updated \d{1,2} [A-Z][a-z]+ \d{4}$/],
-      ['/disclaimer', /^Last updated \d{1,2} [A-Z][a-z]+ \d{4}$/],
-      ['/privacy', /^Effective \d{1,2} [A-Z][a-z]+ \d{4}$/],
-    ] as const) {
-      const response = await page.goto(path);
+  test('legal pages are indexable and searchable once approved, noindex and unsearchable before, like sign-in', async ({ page }) => {
+    for (const route of Object.keys(legalRoutes)) {
+      const response = await page.goto(route);
       expect(response?.status()).toBe(200);
-      await expect(robots(page)).toHaveCount(0);
-      await expect(page.locator('main[data-pagefind-body]')).toHaveCount(1);
-      await expect(page.locator('p.text-sm.text-ink-soft')).toHaveText(date);
-      await expect(page.locator('main')).not.toContainText(/Draft for review|Last updated:\s*not yet published/i);
+      const approved = isRouteIndexable(route);
+      await expect(robots(page)).toHaveCount(approved ? 0 : 1);
+      await expect(page.locator('main[data-pagefind-body]')).toHaveCount(approved ? 1 : 0);
     }
   });
 

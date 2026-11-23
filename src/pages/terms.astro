@@ -1,136 +1,224 @@
 ---
+/**
+ * Terms of Use (Task 200). Plain language, one idea per section. Facts only Christian can supply are
+ * <LegalPlaceholder> marks; scripts/check-legal-release.mjs blocks a production build while any remain.
+ * Acceptable use is a section here rather than its own page: the legal research drafts treat it as part of the Terms.
+ * Nothing on this page is legal advice; a licensed attorney reviews it before launch (docs/status note, D-pending).
+ */
 import Layout from '../layouts/Layout.astro';
+import LegalPlaceholder from '../components/LegalPlaceholder.astro';
+import LegalApproval from '../components/LegalApproval.astro';
 import Prose from '../components/Prose.astro';
+import { legal } from '../config/legal';
+import { isLegalPageApproved } from '../config/legalapproval';
 import { site } from '../config/site';
-
-// FINAL: Terms v6, adopted 10–0 on 2026-11-17 (file SHA-256 0d21a91b…ce37). Word for word; change it only with
-// Christian's approval.
-const email = site.contactEmail;
-const mail = `mailto:${email}`;
 ---
 
-<Layout title="terms" description="The terms for using Cueory.">
+<Layout title="terms" description="Terms for using Cueory, including accounts, study content, acceptable use and limits." noindex={!isLegalPageApproved("terms")}>
   <Prose>
     <h1>terms of use</h1>
-    <p class="text-sm text-ink-soft">Last updated 17 November 2026</p>
+    <LegalApproval page="terms" />
 
+    <h2>The short version</h2>
     <p>
-      Cueory is a free study site for nursing students. An individual in Arizona, USA, owns and runs it. In these terms,
-      “Cueory,” “we” and “us” mean that owner. Please read these terms and the <a href="/disclaimer">Disclaimer</a> before
-      using the site. Use Cueory only if you agree to both.
-    </p>
-
-    <h2>Who can use Cueory</h2>
-    <p>
-      You must be at least 16. If you are at least 16 and still a minor where you live, a parent or legal guardian must
-      read these terms with you and agree to them before you use Cueory.
-    </p>
-    <p>
-      We do not knowingly collect personal information from children under 13. If you believe a child under 13 has shared
-      personal information with us, email <a href={mail}>{email}</a>. Please leave sensitive details out of your first
-      message. If we learn we have collected personal information from a child under 13, we will promptly delete it from
-      our records and ask any provider holding it for us to do the same, except where the law requires us to keep it.
+      {site.name} is a free study website for nursing students. It helps you study. It is not medical advice, not a
+      substitute for your school or faculty, and it comes with no guarantees. Be decent to the site and to other people,
+      and we will do our best to keep it useful.
     </p>
 
-    <h2>What you can use today</h2>
+    <h2>Who we are</h2>
     <p>
-      You can try sample study activities and daily puzzles without an account. Some pages are placeholders. Public
-      account registration has not opened. You can join the launch email list through the “get launch updates” email box
-      (on the home page and in the signup pop-up), which sends your address straight to Kit, or through Cueory’s signup
-      page on Kit. You can send feedback by email to <a href={mail}>{email}</a>.
-    </p>
-    <p>
-      Cueory is free to use. If we introduce a charge for access, we’ll announce it on the site before it takes effect. We
-      may change, pause or discontinue a feature.
+      {site.name} is run by{' '}
+      <LegalPlaceholder what="legal entity name and type, for example 'Cueory LLC, an Arizona limited liability company', or 'Christian [surname], doing business as Cueory'" />,
+      with a mailing address at <LegalPlaceholder what="business mailing address; a lawyer should say which filings need a physical street address" />.
+      "We", "us" and "our" mean that operator. You can reach us at{' '}
+      <a href={`mailto:${site.contactEmail}`}>{site.contactEmail}</a>.
     </p>
 
-    <h2>Using and sharing study materials</h2>
+    <h2>Agreeing to these terms</h2>
     <p>
-      You may use our materials for personal, noncommercial study, including taking notes and printing study materials
-      for yourself. Cueory or its licensors own the site’s content, name, logo and design. If material carries a separate
-      license, that license governs its use. These terms preserve uses permitted by law.
+      By using {site.name}, whether or not you create an account, you agree to these terms, to our{' '}
+      <a href="/privacy">privacy page</a>, and to the rules on our <a href="/copyright">copyright page</a>. If you
+      don't agree, please don't use the site.
     </p>
-    <p>These rules apply when you use Cueory.</p>
+
+    <h2>Who may use the site</h2>
     <ul>
       <li>
-        Get our written permission before selling, republishing or distributing our materials beyond the uses allowed
-        above.
+        You must be at least <strong class="key-term">{legal.minimumAge}</strong>{' '}
+        years old to create an account or send us anything through the site. The sign-up form tells you this; by
+        creating an account you are telling us you meet it, although the form does not yet make you tick a box to say
+        so.
       </li>
+      <li>Nobody under 13 may create an account or send us personal information, and we don't knowingly collect it.</li>
       <li>
-        Keep confidential or unreleased exam material off Cueory and out of messages to us. This includes school and
-        licensing exam questions or answers you remember from a test.
-      </li>
-      <li>Do not interfere with the site, overload it, bypass its security or use bots to collect its content in bulk.</li>
-      <li>
-        Do not send unlawful or harmful material, anyone else’s private information, or information about a real patient.
+        If we learn that someone under the minimum age has an account, we will close it and delete the data we hold
+        for it. If you think that has happened, email us.
       </li>
     </ul>
-    <p>We may limit or block access for violations of these terms.</p>
 
-    <h2>Feedback and copyright concerns</h2>
+    <h2>Study help, not medical advice</h2>
     <p>
-      To report a mistake, send the page title or link and a short description to <a href={mail}>{email}</a>. Leave out
-      patient details and confidential exam material. If you send an idea or correction, we may use it to improve Cueory
-      without paying you. You keep any rights you have in what you send.
-    </p>
-    <p>
-      If you believe something on Cueory infringes your copyright, email us at the same address. Identify your work, link
-      to the material on Cueory, tell us how to reach you and say whether you own the rights or represent the owner.
-      We’ll review the report and remove material when appropriate.
+      Everything on {site.name} is for studying. It is not medical, nursing or clinical advice, and it is not instructions
+      for caring for a real person. Never use the site to make a decision about a patient. Your school's curriculum,
+      your faculty, your textbooks and your clinical instructors come first; where the site disagrees with them, follow
+      them. Our <a href="/disclaimer">disclaimer</a> says more.
     </p>
 
-    <h2>Other services and optional tips</h2>
+    <h2>No promises about exams or licensure</h2>
     <p>
-      Cueory links to YouTube and our other social media pages. If you choose to use an outside service, its terms and
-      privacy policy also apply. Our launch email list is run by Kit: the email box sends your address straight to Kit,
-      and Kit’s terms and privacy policy apply when you sign up. You must be at least 16 to join.
-    </p>
-    <p>
-      Ko-fi requires users to be at least 18, so please tip only if you are 18 or older. If you choose to tip through
-      Ko-fi, the tip goes to Cueory through a payment provider. A tip is optional and gives you no extra access. For a
-      mistaken tip or a refund request, email <a href={mail}>{email}</a>.
-      <a href="https://more.ko-fi.com/terms" rel="noopener noreferrer">Ko-fi’s terms</a>
-    </p>
-    <p>
-      For information about data on your device and how we handle personal information, see the
-      <a href="/privacy">Privacy Notice</a>.
+      We don't promise a grade, a passing score, graduation, a licence or a job. Exam names and publisher names on the
+      site identify what a lesson is about; they don't mean that exam board, school or publisher sponsors, endorses or
+      is affiliated with {site.name}. Some lessons are samples or works in progress and may not yet have citations or
+      review by a licensed nurse; the site says so where that is the case.
     </p>
 
-    <h2>Warranties and limits on liability</h2>
+    <h2>Accounts</h2>
+    <ul>
+      <li>An account is optional. Lessons work without one.</li>
+      <li>Give us a working email address, and keep your password and two-factor device to yourself.</li>
+      <li>One account per person. Don't share it, sell it or use someone else's.</li>
+      <li>You are responsible for what happens under your account until you tell us it has been compromised.</li>
+      <li>
+        You can request deletion on your account page without contacting us. For security, you may need to sign in
+        again if your current sign-in is not recent enough. Once the required sign-in check passes, deletion removes
+        your account and the linked study data, as the <a href="/privacy">privacy page</a> explains.
+      </li>
+    </ul>
+
+    <h2>Acceptable use</h2>
+    <p>Use {site.name} to study, lawfully. Don't:</p>
+    <ul>
+      <li>try to get around sign-in, access limits, rate limits or someone else's data;</li>
+      <li>probe, scan, overload or disrupt the site or the services behind it;</li>
+      <li>
+        copy, scrape or bulk-download our own lessons, questions, answer keys or other Cueory-owned material, by hand or
+        by script, or hammer our servers with automated access; material that carries a CC BY 4.0 credit (the adapted
+        textbook text and the anatomy models) is not covered by this and may be reused under its own licence, with
+        attribution;
+      </li>
+      <li>re-sell, re-publish or build a competing product from Cueory-owned content (text, layout, branding);</li>
+      <li>upload or send anything unlawful, harassing, infringing, or that contains someone else's private or health information;</li>
+      <li>put a real patient's details into a report, comment or any other form;</li>
+      <li>impersonate anyone, or misrepresent your connection to {site.name};</li>
+      <li>use the site in any way that breaks the law where you are.</li>
+    </ul>
+
+    <h2>What you send us</h2>
     <p>
-      <strong>Cueory is provided “as is” and “as available.” To the extent the law allows, we disclaim express and implied
-      warranties, including warranties of merchantability, fitness for a particular purpose and non-infringement. We
-      cannot promise that the site will always be available, secure, accurate, complete or up to date.</strong>
+      Two different kinds of things reach us. Your account and study data (your email, display name, setup answers,
+      answers, study time and review events) is personal data, handled only as the <a href="/privacy">privacy
+      page</a> says; these terms grant us no licence over it. Content you submit, which today means reports and comments
+      sent with the "Flag or comment" button, is different: you keep whatever rights you have in it, and you give us a
+      worldwide, royalty-free, permanent licence to use, copy, edit and act on it to run and improve {site.name},
+      including fixing the content you flagged. Only send what you have the right to send, and never a real patient's
+      details. We may remove anything you submit at any time, and we may refuse or remove content on a copyright
+      complaint as the <a href="/copyright">copyright page</a> explains.{' '}
+      <LegalPlaceholder what="with a lawyer: confirm this licence should cover only submitted feedback and never personal records, and whether a future public-content feature needs its own clause" />
     </p>
+
+    <h2>Our content and our rights</h2>
     <p>
-      <strong>To the extent the law allows, Cueory and the people who help run it are not liable for indirect, incidental,
-      special, consequential or punitive damages arising from use of the site, or for lost data, lost income or losses
-      related to grades or exam results. For other claims arising from use of the site, the combined total liability of
-      Cueory and the people who help run it to you, across all claims, is limited to US $50.</strong>
+      The lessons, questions, cards, puzzles, design, name and logo that {site.name} made belong to us. Our code is
+      public to view on GitHub but is not open source. You may use the site for your own personal, non-commercial
+      study; please don't copy, scrape, re-publish or re-sell what is ours. We reserve rights only in what we own.
+      Where a piece of material on the site carries a third-party or open licence, such as the open textbook we adapt
+      and the anatomy models (both CC BY 4.0), you may reuse that piece under its own licence without asking us, as long
+      as you keep the credit, the licence link and any notice of changes that the licence requires. Our branding and
+      everything that carries no such notice stay reserved. The <a href="/licenses">licences page</a> lists each
+      source.{' '}
+      <LegalPlaceholder what="with a lawyer: confirm this wording, and confirm the provenance of each anatomy model before any is published" />
     </p>
+
+    <h2>Free service, as is</h2>
     <p>
-      These limits and disclaimers do not apply to fraud, intentional misconduct or gross negligence. You keep any rights
-      or remedies that the law does not allow you to give up.
+      {site.name} is free. It is provided "as is" and "as available", with no warranty of any kind, express or implied,
+      including no warranty that it is accurate, complete, current, fit for a particular purpose, uninterrupted or
+      error-free. We may change, pause or close any part of the site at any time. Some places don't allow some of
+      these exclusions, so some may not apply to you.
+    </p>
+
+    <h2>Limits on our liability</h2>
+    <p>
+      To the fullest extent the law allows, we are not liable for any indirect, incidental, special, consequential or
+      punitive damages, or for lost data, lost profits or lost opportunities, arising from your use of or inability to
+      use {site.name}. To the fullest extent the law allows, our total liability to you for everything arising from the
+      site, added together, is limited to the greater of the amount you paid us to use it in the twelve months before the
+      claim, which for this free service is zero dollars ($0), or one hundred US dollars ($100). Where the law doesn't
+      allow a limit this low, our liability is limited to the smallest amount it does allow. Nothing here limits or
+      excludes liability that the law says cannot be limited or excluded, such as for fraud, or for death or personal
+      injury caused by negligence where the law does not allow that to be excluded.
+    </p>
+
+    <h2>Your responsibility to us</h2>
+    <p>
+      If you misuse {site.name}, break these terms or the law, or infringe someone's rights while using the site, and
+      someone makes a claim against us because of it, you agree to defend us and to cover the losses, costs and
+      reasonable legal fees that result, to the extent the law allows.
+    </p>
+
+    <h2>Ending access</h2>
+    <p>
+      We may suspend or close your account, or block your use of the site, at any time and at our discretion,
+      including if we think you have broken these terms. Where we reasonably can, we will tell you why. You may stop
+      using the site, or delete your account, at any time. The sections on our content, liability, your responsibility
+      to us, disputes and governing law survive.
+    </p>
+
+    <h2>Supporting Cueory</h2>
+    <p>
+      The site is free, and it has no payments of its own. If you choose to support us, the support page sends you to
+      Ko-fi, where the payment is taken by PayPal or Stripe through Ko-fi's platform under their own terms. We don't process payments, see your card
+      details or sell anything on the site, and a tip doesn't buy a feature, a result or a say in the content.
+    </p>
+
+    <h2>Other websites and services</h2>
+    <p>
+      Lesson videos play from YouTube when you tap play, Google handles Google sign-in, and the support page links to
+      Ko-fi. Those services have their own terms and privacy rules, which we don't control.
     </p>
 
     <h2>Changes to these terms</h2>
     <p>
-      We’ll post changes on this page and update the date. For an important change, we’ll also post a notice on the site
-      explaining the change and its effective date at least 14 days in advance. Other changes apply when posted. Changes
-      apply to future use and do not affect claims arising before the change takes effect. We’ll ask for your agreement
-      when the law requires it. If you disagree with an update, stop using Cueory once it takes effect.
+      We may update these terms. A change takes effect when we post the new version here with its new effective date,
+      and using the site after that date means you accept it. For a change that matters to you (for example to the
+      limits on our liability, to disputes or to what you may do on the site) we will also, when practical, put a notice
+      on the home page for at least{' '}
+      <LegalPlaceholder what="confirm the lead time, for example '14 days'" /> before the new version takes effect. The
+      dated versions are kept in the public history of our code.{' '}
+      <LegalPlaceholder what="emailing account holders about changes needs a real sending mechanism and a matching line on the privacy page before it can be promised here; today account email is only sign-up confirmation and password reset" />
     </p>
 
-    <h2>Governing law and agreement</h2>
+    <h2>Disputes</h2>
     <p>
-      Arizona law governs these terms, without regard to its conflict-of-law rules. Disputes arising from these terms or
-      your use of Cueory belong in a state or federal court with jurisdiction in Maricopa County, Arizona. You keep any
-      mandatory protections and any right to bring a claim elsewhere that the law where you live gives you.
+      If you have a problem with {site.name}, tell us first: send a written notice of the dispute to{' '}
+      <a href={`mailto:${site.contactEmail}`}>{site.contactEmail}</a> with your name, how to reach you, what happened
+      and what you would like us to do. We will do the same if we have a problem with you. Both of us agree to try in
+      good faith to sort it out informally for 60 days from that notice before starting any court case.
     </p>
     <p>
-      These terms and the Disclaimer are the entire agreement about your use of Cueory. If a court finds one part
-      unenforceable, the rest still applies. If we do not enforce a term right away, we may still enforce it later.
+      <LegalPlaceholder what="with a lawyer: decide whether to add arbitration and a class-action waiver here, or to leave disputes with the courts named below. Nothing is decided yet, and nothing in this section waives a right until it is." />
     </p>
-    <p>Questions about these terms? Email <a href={mail}>{email}</a>.</p>
+
+    <h2>Governing law and venue</h2>
+    <p>
+      These terms are governed by the laws of{' '}
+      <LegalPlaceholder what="confirm the governing law; Arizona was proposed by the research drafts but is not decided" />,
+      without regard to its conflict-of-law rules. Unless the law where you live gives you a right to sue at home,
+      any court case about these terms or the site must be brought in the state or federal courts located in{' '}
+      <LegalPlaceholder what="confirm the venue, for example 'Maricopa County, Arizona'" />, and you agree to those
+      courts' jurisdiction.
+    </p>
+
+    <h2>The rest</h2>
+    <ul>
+      <li>If a court finds part of these terms unenforceable, the rest stays in effect, and that part is applied as far as the law allows.</li>
+      <li>If we don't enforce a term right away, we can still enforce it later.</li>
+      <li>These terms, the privacy page, the disclaimer and the copyright page are the whole agreement between you and us about the site.</li>
+      <li>You may not transfer your rights under these terms; we may transfer ours to whoever runs {site.name} after us.</li>
+    </ul>
+
+    <h2>Questions</h2>
+    <p>Email <a href={`mailto:${site.contactEmail}`}>{site.contactEmail}</a>.</p>
   </Prose>
 </Layout>

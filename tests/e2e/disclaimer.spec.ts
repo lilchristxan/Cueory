@@ -22,16 +22,17 @@ const viewports = [
 
 for (const viewport of viewports) {
   test.describe(`/disclaimer at ${viewport.name} size`, () => {
-    test(`shows its disclaimer heading, approved text, and legal links`, async ({ page }) => {
+    test(`shows its disclaimer sections and legal links`, async ({ page }) => {
       await page.setViewportSize({ width: viewport.width, height: viewport.height });
 
       const response = await page.goto('/disclaimer');
       expect(response?.status()).toBe(200);
       await expect(page).toHaveTitle('disclaimer · cueory');
       await expect(page.getByRole('heading', { level: 1, name: 'disclaimer' })).toBeVisible();
-      // Christian's approved text, not the placeholder.
-      await expect(page.locator('main')).not.toContainText(/Christian:|paste your|Placeholder:/);
-      await expect(page.locator('main').getByText(/^Last updated \d/)).toBeVisible();
+      await expect(page.getByRole('heading', { level: 2, name: 'What Cueory is not' })).toBeVisible();
+      await expect(page.getByRole('heading', { level: 2, name: 'Never use it with a real patient' })).toBeVisible();
+      // The disclaimer repeats the one content notice from src/config/site.ts, so the two can't drift apart.
+      await expect(page.getByRole('main')).toContainText('some lessons are samples or placeholders');
 
       const footer = page.getByRole('contentinfo');
       // The site's footer links are intentionally closed until the visitor opens them.
@@ -42,6 +43,11 @@ for (const viewport of viewports) {
       await expect(toggle).toHaveAttribute('aria-expanded', 'true');
       for (const link of [
         { name: 'privacy', href: '/privacy' },
+        { name: 'terms', href: '/terms' },
+        { name: 'disclaimer', href: '/disclaimer' },
+        { name: 'copyright', href: '/copyright' },
+        { name: 'accessibility', href: '/accessibility' },
+        { name: 'licences', href: '/licenses' },
         { name: 'support cueory', href: '/support' },
       ]) {
         await expect(footer.getByRole('link', { name: link.name, exact: true })).toHaveAttribute('href', link.href);

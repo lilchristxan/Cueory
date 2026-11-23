@@ -6,6 +6,7 @@
 import { fixedLocalKeysToClear, localPrefixesToClear, sessionKeysToClear } from '../config/storage-keys';
 import type { Progress } from '../scripts/progress';
 import type { KeyValueStorage } from '../scripts/storage';
+
 import type { ExportData } from './exportdata';
 import { isPkceVerifierKey } from './supabaseclient';
 import { DELETE_REAUTH, DELETE_REAUTH_CODE, DELETE_SIGNED_OUT, studentMessage } from './rpcerrors';

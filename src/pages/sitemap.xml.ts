@@ -2,6 +2,8 @@ import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { relative, resolve } from 'node:path';
 import type { APIRoute } from 'astro';
 import { site } from '../config/site';
+import { legalRoutes } from '../config/legal';
+import { isRouteIndexable } from '../config/legalapproval';
 import { indexablePages, sampleLessonPages } from '../config/routes';
 import { buildCatalog, contentEntryId, generatedRoutes, type CompanionFile, type LessonFile } from '../lessons/catalog';
 import { parseLessonMap } from '../islands/lessonmap';
@@ -170,7 +172,16 @@ export function pageSourcePath(route: string): string | undefined {
 /** Fail closed: unresolved routes must never appear in the sitemap. */
 export function routeDeclaresNoindex(route: string): boolean {
   const source = pageSourcePath(route);
-  return source === undefined || sourceDeclaresNoindex(readFileSync(source, 'utf8'));
+  if (source === undefined) return true;
+  const legalPage = legalRoutes[route];
+  if (legalPage !== undefined) {
+    // Legal pages have approval-dependent noindex. Never treat an unapproved page as public.
+    // Preserve the guarded Layout prop as well as the source-digest requirement.
+    const sourceText = readFileSync(source, 'utf8');
+    const guardedNoindex = `noindex={!isLegalPageApproved("${legalPage}")}`;
+    return !sourceText.includes(guardedNoindex) || !isRouteIndexable(route);
+  }
+  return sourceDeclaresNoindex(readFileSync(source, 'utf8'));
 }
 
 export function sitemapXml(pages: readonly string[] = indexablePages): string {

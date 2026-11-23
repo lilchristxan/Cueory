@@ -4,10 +4,12 @@ This repository is public so that anyone can see how Cueory is built. It is not 
 
 Unless a file says otherwise, the source code, the cueory name, logo and other brand assets, and the content in this
 repository belong to Cueory. You may view them on GitHub. You may not copy, modify, distribute, or use them in
-another product or service without written permission from Cueory.
+another product or service without written permission from Cueory. Because this repository is public on GitHub,
+GitHub's Terms of Service let other GitHub users view it and fork it within GitHub; that is GitHub's grant, not an
+open-source licence, and it does not allow use outside GitHub.
 
 Files made by others keep their own licenses, which are noted where they are used (for example the self-hosted fonts
-under the SIL Open Font License, icons from Simple Icons under CC0, and anatomy models from Z-Anatomy under CC BY-SA
-4.0).
+under the SIL Open Font License, icons from Simple Icons under CC0, and anatomy models from BodyParts3D under CC BY
+4.0). The site lists them at https://cueory.app/licenses.
 
 Contact: hello@cueory.app

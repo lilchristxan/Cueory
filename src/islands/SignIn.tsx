@@ -3,6 +3,7 @@ import { initialsFor } from './account';
 import { getSupabase } from './supabaseclient';
 import { afterSignIn } from './twofactor';
 import { performAuthAction, resendSeconds, safeNext, signInMessage, type AuthAction, type SignInAuth } from './signin.ts';
+import { signupAgreement } from '../config/legal';
 export type { SignInAuth } from './signin.ts';
 
 // Google's unchanged, pre-approved light/pill artwork (including its prescribed lettering).
@@ -165,6 +166,8 @@ export default function SignIn({ auth: givenAuth, mode = 'signin', accountsOn = 
     setMessage('');
   };
   const destination = `${mode === 'signup' ? '/signin' : '/signup'}?next=${encodeURIComponent(next)}`;
+  // Task 200: the Terms, the privacy page and the age line sit under the button, so agreeing is part of creating the account.
+  const agreement = signupAgreement();
 
   return <div className="font-body leading-relaxed">
     {children}
@@ -220,6 +223,10 @@ export default function SignIn({ auth: givenAuth, mode = 'signin', accountsOn = 
           aria-disabled={locked} aria-describedby={seconds > 0 ? `${id}-countdown` : undefined}>
           {pending === 'google' ? 'opening google…' : pending ? 'please wait…' : forgot ? 'send reset link' : mode === 'signup' ? 'create account' : 'sign in'}
         </button>
+        {mode === 'signup' && <p className="text-sm text-ink-soft" data-testid="signup-agreement">
+          {agreement.before}<a href="/terms" className="underline">terms of use</a>{agreement.between}
+          <a href="/privacy" className="underline">privacy page</a>{agreement.after}
+        </p>}
       </form>
       {seconds > 0 && <p id={`${id}-countdown`} className="mt-2 text-sm text-ink-soft">
         you can try again in {seconds} {seconds === 1 ? 'second' : 'seconds'}.

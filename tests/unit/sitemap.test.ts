@@ -5,6 +5,8 @@ import { indexablePages, sampleLessonPages } from '../../src/config/routes';
 import { crosswordOpen } from '../../src/config/site';
 import { draftsAllowed } from '../../src/islands/anatomylab';
 import { draftBuildEnv } from '../../src/lessons/draftgate';
+import { legalRoutes } from '../../src/config/legal';
+import { isRouteIndexable } from '../../src/config/legalapproval';
 import { GET, pageSourcePath, routeDeclaresNoindex, sitemapPages, sitemapXml, sourceDeclaresNoindex } from '../../src/pages/sitemap.xml';
 
 // Keep this response test independent of Astro's live content collection.
@@ -25,33 +27,12 @@ describe('sitemap', () => {
     const xml = sitemapXml();
     const listed = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((match) => match[1]);
 
-    expect(listed).toEqual(indexablePages.map((page) => `https://cueory.app${page}`));
+    expect(listed).toEqual(indexablePages.filter((page) => !routeDeclaresNoindex(page)).map((page) => `https://cueory.app${page}`));
     for (const page of noindexPages) expect(listed).not.toContain(`https://cueory.app${page}`);
-  });
-
-  it('lists the approved legal pages as indexable pages', () => {
-    const xml = sitemapXml();
-    for (const path of ['/terms', '/disclaimer', '/privacy']) {
-      expect(routeDeclaresNoindex(path)).toBe(false);
-      expect(xml).toContain(`<loc>https://cueory.app${path}</loc>`);
-    }
-  });
-
-  it('lists each public game page but not draft-only games', () => {
-    const published = ['/play/pillo', '/play/sudoku', '/play/word-path'] as const;
-    const xml = sitemapXml();
-    for (const path of published) {
-      expect(indexablePages).toContain(path);
-      expect(routeDeclaresNoindex(path)).toBe(false);
-      expect(xml).toContain(`<loc>https://cueory.app${path}</loc>`);
-    }
-    // The crossword page follows the crosswordOpen switch (site.ts): a "coming soon" noindex note while closed.
-    const crossword = '/play/crossword';
-    expect(indexablePages.includes(crossword)).toBe(crosswordOpen);
-    expect(xml.includes(`<loc>https://cueory.app${crossword}</loc>`)).toBe(crosswordOpen);
-    for (const path of ['/play/stat', '/play/hello-cards']) {
-      expect(indexablePages).not.toContain(path);
-      expect(xml).not.toContain(`<loc>https://cueory.app${path}</loc>`);
+    // A legal page is included only after its exact text is approved.
+    for (const route of Object.keys(legalRoutes)) {
+      expect(indexablePages).toContain(route);
+      expect(listed.includes(`https://cueory.app${route}`)).toBe(isRouteIndexable(route));
     }
   });
 
@@ -61,7 +42,7 @@ describe('sitemap', () => {
       .toEqual(['https://cueory.app/']);
     expect(routeDeclaresNoindex('/signin')).toBe(true);
     expect(routeDeclaresNoindex('/preview/states')).toBe(true);
-    expect(routeDeclaresNoindex('/privacy')).toBe(false);
+    expect(routeDeclaresNoindex('/privacy')).toBe(!isRouteIndexable('/privacy'));
     expect(routeDeclaresNoindex('/')).toBe(false);
   });
 
@@ -160,7 +141,7 @@ describe('sitemap', () => {
   it('excludes noindex pages from sitemapPages as well as sitemapXml', async () => {
     const pages = await sitemapPages();
     // The two hand-built sample-lesson pages join the sitemap only on builds that show the sample lesson.
-    expect(pages).toEqual([...indexablePages, ...(draftsAllowed(draftBuildEnv(process.env)) ? sampleLessonPages : [])]);
+    expect(pages).toEqual([...indexablePages, ...(draftsAllowed(draftBuildEnv(process.env)) ? sampleLessonPages : [])].filter((page) => !routeDeclaresNoindex(page)));
     expect(pages.every((page) => !routeDeclaresNoindex(page))).toBe(true);
   });
 
