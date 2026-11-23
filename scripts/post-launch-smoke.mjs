@@ -37,6 +37,7 @@ const requiredHeaders = [
   'referrer-policy',
   'permissions-policy',
   'x-frame-options',
+  'cross-origin-opener-policy',
 ];
 
 function urlFor(path) {
@@ -46,16 +47,33 @@ function urlFor(path) {
 function checkHeaders(headers, label) {
   const missing = requiredHeaders.filter((name) => !headers[name]);
   if (missing.length) throw new Error(`${label}: missing security headers: ${missing.join(', ')}`);
+  if (headers['strict-transport-security'].toLowerCase() !== 'max-age=31536000; includesubdomains') throw new Error(`${label}: unexpected Strict-Transport-Security`);
   if (headers['x-frame-options'].toLowerCase() !== 'deny') throw new Error(`${label}: X-Frame-Options must be DENY`);
+  if (headers['x-content-type-options'].toLowerCase() !== 'nosniff') throw new Error(`${label}: X-Content-Type-Options must be nosniff`);
+  if (headers['referrer-policy'].toLowerCase() !== 'strict-origin-when-cross-origin') throw new Error(`${label}: unexpected Referrer-Policy`);
+  if (headers['cross-origin-opener-policy'].toLowerCase() !== 'same-origin') throw new Error(`${label}: Cross-Origin-Opener-Policy must be same-origin`);
   const csp = headers['content-security-policy'];
-  if (/unsafe-(?:inline|eval)/i.test(csp)) throw new Error(`${label}: CSP contains unsafe-inline or unsafe-eval`);
-  for (const directive of ["frame-ancestors 'none'", "object-src 'none'"]) {
-    if (!new RegExp(`(?:^|;)\\s*${directive.replace(/[']/g, "'")}(?:\\s|;|$)`, 'i').test(csp)) {
-      throw new Error(`${label}: CSP is missing ${directive}`);
-    }
+  const directives = new Map();
+  for (const segment of csp.split(';')) {
+    const tokens = segment.trim().split(/\s+/).filter(Boolean);
+    if (!tokens.length) continue;
+    const name = tokens.shift().toLowerCase();
+    if (directives.has(name)) throw new Error(`${label}: CSP repeats ${name}`);
+    directives.set(name, tokens);
   }
-  for (const directive of ['frame-src', 'script-src']) {
-    if (!new RegExp(`(?:^|;)\\s*${directive}(?:\\s|;|$)`, 'i').test(csp)) throw new Error(`${label}: CSP is missing ${directive}`);
+  const exact = (name, sources) => {
+    const actual = directives.get(name);
+    if (!actual || actual.length !== sources.length || actual.some((source, index) => source !== sources[index])) {
+      throw new Error(`${label}: CSP ${name} must be exactly ${sources.join(' ')}`);
+    }
+  };
+  exact('frame-ancestors', ["'none'"]);
+  exact('object-src', ["'none'"]);
+  exact('frame-src', ['https://www.youtube-nocookie.com']);
+  const scriptSources = directives.get('script-src');
+  if (!scriptSources?.length) throw new Error(`${label}: CSP script-src is missing or empty`);
+  if ([...directives.values()].flat().some((source) => /^'unsafe-(?:inline|eval)'$/i.test(source))) {
+    throw new Error(`${label}: CSP contains unsafe-inline or unsafe-eval`);
   }
 }
 
