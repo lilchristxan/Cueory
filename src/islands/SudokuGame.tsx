@@ -387,6 +387,10 @@ export default function SudokuGame({ framed = false }: { framed?: boolean } = {}
   };
   // The shared print helper (Task 641): marks the page for sudoku's print rules and clears the mark after printing.
   const printPuzzle = () => printGame('sudoku');
+  const runFromSettings = (action: () => void) => {
+    setSettingsOpen(false);
+    action();
+  };
   const elapsed = `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`;
 
   return <section className="sudoku-game" data-testid="sudoku" data-paused={paused ? 'true' : 'false'}>
@@ -463,17 +467,38 @@ export default function SudokuGame({ framed = false }: { framed?: boolean } = {}
             {auto && <span className="sudoku-toggle-mark" aria-hidden="true">✓ </span>}Hint
           </button>
         </div>
-        <div className="sudoku-tools" role="group" aria-label="additional board tools">
-          <button type="button" className="sudoku-tool-button" onClick={mark} aria-label="add or remove x mark" disabled={paused || solved}>x</button>
-          <button type="button" className="sudoku-tool-button" onClick={clearCell} disabled={paused || solved}>clear cell</button>
-          <button type="button" className="sudoku-tool-button" onClick={checkPuzzle} disabled={paused || solved}>check puzzle</button>
-        </div>
       </div>
     </div>
     {solved && <div ref={solvedResult} className="sudoku-solved" tabIndex={-1} role="status" data-testid="sudoku-result"><p className="text-lg font-medium">solved.</p><p>{elapsed} · {errors} {errors === 1 ? 'error' : 'errors'}</p><p className="text-sm text-ink-soft">a new sudoku comes out tomorrow.</p></div>}
     {/* The same settings dialog as the other games (#823): the shared settings first, then sudoku's own. */}
     {framed && <GameHelpDialog help={help} name={gameName('triage')} />}
     <GameSettingsDialog open={settingsOpen} onClose={() => setSettingsOpen(false)} title="sudoku settings" returnFocusTo={framed ? undefined : settingsButton}>
+      <fieldset>
+        <legend>this puzzle</legend>
+        <label className="game-settings-option">
+          <span>difficulty</span>
+          <select value={level} disabled={paused} onChange={(event) => {
+            const next = LEVELS.find((choice) => choice === event.currentTarget.value);
+            if (next) {
+              requestedFrameLevel.current = next;
+              setLevel(next);
+            }
+          }}>
+            {LEVELS.map((choice) => <option key={choice} value={choice}>{LEVEL_LABELS[choice]}</option>)}
+          </select>
+        </label>
+        <label className="game-settings-option">
+          <span>automatic pencil marks for this puzzle</span>
+          <input type="checkbox" checked={auto} disabled={paused || solved} onChange={() => toggleAuto(!auto)} />
+        </label>
+        <div className="sudoku-tools">
+          <button type="button" className="sudoku-tool-button" onClick={() => runFromSettings(mark)} aria-label="add or remove x mark" disabled={paused || solved}>x mark</button>
+          <button type="button" className="sudoku-tool-button" onClick={() => runFromSettings(clearCell)} disabled={paused || solved}>clear cell</button>
+          <button type="button" className="sudoku-tool-button" onClick={() => runFromSettings(checkPuzzle)} disabled={paused || solved}>check puzzle</button>
+          <button type="button" className="sudoku-tool-button" onClick={() => runFromSettings(togglePause)} disabled={solved}>{paused ? 'resume puzzle' : 'pause puzzle'}</button>
+          <button type="button" className="sudoku-tool-button" onClick={() => runFromSettings(() => requestAnimationFrame(printPuzzle))}>print this puzzle</button>
+        </div>
+      </fieldset>
       <fieldset>
         <legend>gameboard settings</legend>
         {(Object.keys(DEFAULT_SUDOKU_SETTINGS) as Array<keyof SudokuSettings>).map((key) => {

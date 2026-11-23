@@ -66,7 +66,8 @@ for (const [size, width, height] of [['phone', 390, 844], ['desktop', 1440, 900]
 
     // Clear cell by button and by Backspace.
     await page.keyboard.press(String(daily.solution[open[1]!]));
-    await game(page).getByRole('button', { name: 'clear cell' }).click();
+    await page.getByTestId('game-frame-gear').click();
+    await page.getByRole('dialog', { name: 'sudoku settings' }).getByRole('button', { name: 'clear cell' }).click();
     await expect(cells(page).nth(open[1]!)).toHaveAttribute('aria-label', /, empty$/);
     await cells(page).nth(open[0]!).click();
     await page.keyboard.press('Backspace');
@@ -90,7 +91,8 @@ for (const [size, width, height] of [['phone', 390, 844], ['desktop', 1440, 900]
     await cells(page).nth(open[2]!).click();
     await page.keyboard.press(String(wrongDigit(open[2]!)));
     await expect(cells(page).nth(open[2]!)).not.toHaveClass(/is-wrong/);
-    await game(page).getByRole('button', { name: 'check puzzle' }).click();
+    await page.getByTestId('game-frame-gear').click();
+    await page.getByRole('dialog', { name: 'sudoku settings' }).getByRole('button', { name: 'check puzzle' }).click();
     await expect(cells(page).nth(open[2]!)).toHaveClass(/is-wrong/);
     await expect(live(page)).toContainText('1 square is wrong');
 

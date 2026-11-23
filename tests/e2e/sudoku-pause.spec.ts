@@ -102,11 +102,15 @@ test('paused keypad and keyboard cannot change entries, marks, errors, or the li
   const errorsBefore = await game(page).locator('.sudoku-errors').innerText();
 
   await game(page).getByRole('button', { name: 'pause puzzle' }).click();
-  const pad = game(page).locator('.sudoku-number-row button, button[aria-label="add or remove x mark"]');
-  await expect(pad).toHaveCount(10);
+  const pad = game(page).locator('.sudoku-number-row button');
+  await expect(pad).toHaveCount(9);
   for (const button of await pad.all()) {
     await expect(button).toBeDisabled();
   }
+  await page.getByTestId('game-frame-gear').click();
+  const settings = page.getByRole('dialog', { name: 'sudoku settings' });
+  await expect(settings.getByRole('button', { name: 'add or remove x mark' })).toBeDisabled();
+  await page.keyboard.press('Escape');
   await expect(game(page).getByTestId('sudoku-live')).toHaveText('puzzle paused. every number is hidden until you press play.');
   await expect(game(page).locator('[aria-live="polite"]')).toHaveCount(1);
   // A pause cannot silently reset the board or change the hint setting.

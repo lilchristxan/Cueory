@@ -512,8 +512,12 @@ test.describe('daily games: sudoku (Task 625)', () => {
       expect(box.left).toBeGreaterThanOrEqual(panel.x - 0.5);
       expect(box.right).toBeLessThanOrEqual(panel.x + panel.width + 0.5);
     }
-    const pad = await game(page).locator('.sudoku-number-row button, button[aria-label="add or remove x mark"]').evaluateAll((elements) => elements.map((element) => element.getBoundingClientRect().toJSON()));
+    const digits = await game(page).locator('.sudoku-number-row button').evaluateAll((elements) => elements.map((element) => element.getBoundingClientRect().toJSON()));
+    await page.getByTestId('game-frame-gear').click();
+    const mark = page.getByRole('dialog', { name: 'sudoku settings' }).getByRole('button', { name: 'add or remove x mark' });
+    const pad = [...digits, (await mark.boundingBox())!];
     expect(pad).toHaveLength(10);
+    await page.keyboard.press('Escape');
     for (const box of pad) {
       expect(box.width).toBeGreaterThanOrEqual(44);
       expect(box.height).toBeGreaterThanOrEqual(44);

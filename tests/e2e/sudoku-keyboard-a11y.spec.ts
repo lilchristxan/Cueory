@@ -55,7 +55,8 @@ for (const [size, width, height] of [['phone', 390, 844], ['tablet', 820, 1180],
       await expect(cells(page).nth(secondEmpty)).toHaveText('x');
       await expect(cells(page).nth(secondEmpty)).toHaveAttribute('aria-label', /x mark/);
       await expect(game(page).getByTestId('sudoku-live')).toHaveText('x mark added.');
-      await game(page).getByRole('button', { name: 'add or remove x mark' }).click();
+      await page.getByTestId('game-frame-gear').click();
+      await page.getByRole('dialog', { name: 'sudoku settings' }).getByRole('button', { name: 'add or remove x mark' }).click();
       await expect(cells(page).nth(secondEmpty)).toBeEmpty();
       await expect(game(page).getByTestId('sudoku-live')).toHaveText('mark removed.');
 
@@ -81,7 +82,7 @@ for (const [size, width, height] of [['phone', 390, 844], ['tablet', 820, 1180],
 
 
 for (const colorScheme of ['light', 'dark'] as const) {
-  test('on a 390px phone all 10 Sudoku pad buttons fit and work without a horizontal swipe: ' + colorScheme,
+  test('on a 390px phone the nine digits and the gear’s x-mark button fit and work without a horizontal swipe: ' + colorScheme,
     async ({ page }, testInfo) => {
       await page.setViewportSize({ width: 390, height: 844 });
       await page.emulateMedia({ colorScheme, reducedMotion: 'reduce' });
@@ -99,8 +100,7 @@ for (const colorScheme of ['light', 'dark'] as const) {
       expect(dimensions.scrollWidth).toBeLessThanOrEqual(dimensions.clientWidth + 1);
       const digits = pad.getByRole('group', { name: 'numbers', exact: true }).getByRole('button');
       await expect(digits).toHaveText(['1', '2', '3', '4', '5', '6', '7', '8', '9']);
-      const mark = pad.getByRole('button', { name: 'add or remove x mark' });
-      for (const button of [...await digits.all(), mark]) {
+      for (const button of await digits.all()) {
         const box = await button.boundingBox();
         expect(box).not.toBeNull();
         expect(box!.width).toBeGreaterThanOrEqual(44);
@@ -114,6 +114,15 @@ for (const colorScheme of ['light', 'dark'] as const) {
         else await button.click();
       }
 
+      await page.getByTestId('game-frame-gear').click();
+      const mark = page.getByRole('dialog', { name: 'sudoku settings' }).getByRole('button', { name: 'add or remove x mark' });
+      const markBox = (await mark.boundingBox())!;
+      expect(markBox.width).toBeGreaterThanOrEqual(44);
+      expect(markBox.height).toBeGreaterThanOrEqual(44);
+      expect(markBox.x).toBeGreaterThanOrEqual(0);
+      expect(markBox.x + markBox.width).toBeLessThanOrEqual(391);
+      if (testInfo.project.use.hasTouch) await mark.tap();
+      else await mark.click();
       await expect(cells(page).nth(empty)).toHaveText('x');
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
     });

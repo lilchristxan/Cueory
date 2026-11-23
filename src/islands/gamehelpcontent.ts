@@ -84,7 +84,7 @@ export const GAME_HELP: Readonly<Record<HelpTopic, GameHelpContent>> = Object.fr
       'pick easy, mid or hard. each level has one puzzle a day.',
       'pick a square, then type or tap a number. arrow keys move between squares.',
       'normal mode fills the square; pencil mode adds small pencil marks. p or space switches modes, and holding shift switches for that moment. hint fills in possible pencil marks for you.',
-      'undo takes back your last move, clear empties the square (backspace does too), and check puzzle marks wrong squares with a slash. x adds your own mark.',
+      'undo takes back your last move. in settings, clear cell empties the square, check puzzle marks wrong squares with a slash, and x mark adds your own mark. backspace clears and x marks from the grid.',
       'pause hides every number, the original ones too, until you press play. leaving the page pauses it for you.',
     ],
     settingsIntro: 'sudoku settings are behind the gear button above the board. they stay on this device.',

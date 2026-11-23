@@ -257,6 +257,12 @@ const game = dailyGames.find((item) => item.id === 'triage')!;
     gap: calc(var(--spacing) * 2.5);
   }
 
+  :global(.sudoku-game .game-settings select) {
+    max-inline-size: 100%;
+    min-block-size: var(--tap-min);
+    font: inherit;
+  }
+
   :global(.sudoku-solved) {
     border-color: var(--cueory-result-card-border);
     background: var(--cueory-result-card-bg);

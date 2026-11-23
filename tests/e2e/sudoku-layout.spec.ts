@@ -101,7 +101,7 @@ for (const scheme of ['light', 'dark'] as const) {
       expect(box.left).toBeGreaterThanOrEqual(rowBox.left - 0.5);
       expect(box.right).toBeLessThanOrEqual(Math.min(rowBox.right, width) + 0.5);
     }
-    for (const control of [...await tools.getByRole('button').all(), game(page).getByRole('button', { name: 'add or remove x mark' }), page.getByTestId('game-frame-gear')]) {
+    for (const control of [...await tools.getByRole('button').all(), page.getByTestId('game-frame-gear')]) {
       await expect(control).toBeVisible();
       const box = await rect(control);
       expect(box.width).toBeGreaterThanOrEqual(44);
