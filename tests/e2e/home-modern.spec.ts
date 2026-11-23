@@ -285,7 +285,8 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 1440, height: 900 
         return worst;
       }
 
-      test('keeps 3:1 at 0%, 25%, 50%, 75% and 100% of the animation', async ({ page }) => {
+      test('keeps 3:1 at 0%, 25%, 50%, 75% and 100% of the animation', async ({ page }, testInfo) => {
+        test.skip(testInfo.project.name !== 'desktop', 'sets its own viewport and measures screenshot pixels, so it runs once, in the plain desktop browser');
         await page.addInitScript(() => {
           try { localStorage.setItem('cueory-promo-seen', String(Date.now())); localStorage.setItem('cueory-signup-popup-seen', String(Date.now())); } catch { /* optional */ }
         });
@@ -301,7 +302,8 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 1440, height: 900 
         }
       });
 
-      test('shows a still, legible word under reduced motion', async ({ page }) => {
+      test('shows a still, legible word under reduced motion', async ({ page }, testInfo) => {
+        test.skip(testInfo.project.name !== 'desktop', 'sets its own viewport and measures screenshot pixels, so it runs once, in the plain desktop browser');
         await page.emulateMedia({ reducedMotion: 'reduce', colorScheme: scheme });
         await page.addInitScript(() => {
           try { localStorage.setItem('cueory-promo-seen', String(Date.now())); localStorage.setItem('cueory-signup-popup-seen', String(Date.now())); } catch { /* optional */ }

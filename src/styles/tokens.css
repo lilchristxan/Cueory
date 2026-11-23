@@ -238,7 +238,6 @@
   --text-display-hero--line-height: 1.05;
   /* Phones draw the headline on four large lines (nursing / school / made / simpler.), sized by the same column width. */
   --text-display-hero-xl: 5.75rem; /* the headline on the two-column hero (final board: 92 px) */
-  --text-display-hero-xl--line-height: 0.98;
   --text-display-hero-phone: clamp(1rem, 100cqi / 7.6, 3rem); /* two natural lines on phones, capped near 48 px */
   --text-display-hero-phone--line-height: 1.05;
   /* Phones draw the About headline on four large lines (we know / nursing / school is / hard.), sized by the header's
