@@ -13,6 +13,7 @@ Each link has a one-line summary and says whether Christian needs to read it. Gu
 - [Go-live steps](GO-LIVE.md) — Check what to do before launch, on launch day, and if a release fails. **Christian:** Read before launch.
 - [Games launch checklist](LAUNCH.md) — Check every gate before the games-only launch, the launch-day clicks, and the first week. **Christian:** Read before the games launch.
 - [Monday launch checklist](LAUNCH-2026-11-23.md) — The click-by-click plan for the Monday 23 November games launch. **Christian:** Read before the games launch.
+- [Launch runbook](LAUNCH-RUNBOOK.md) — Follow the release handoff, the staging-to-main merge, the five-minute smoke test, and rollback. **Christian:** Read on launch day.
 - [Games parity spec](GAMES-PARITY.md) — See the approved shared gameplay, accessibility, and sharing rules for daily games. **Christian:** Read when approving game work.
 - [Brand guide](BRAND.md) — See approved colors, fonts, the logo, and design rules. **Christian:** Read when approving designs.
 - [Content formats](CONTENT-FORMAT.md) — See the JSON fields and sample rules for lessons and study activities. **Christian:** Read when preparing content.
