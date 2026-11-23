@@ -239,7 +239,7 @@ test.describe('word path: board format (#722)', () => {
       }
       if (width === 1440) {
         const first = cell(page, [0, 0]);
-        expect(await first.evaluate((letter) => letter.offsetWidth)).toBe(62);
+        expect(await first.evaluate((letter) => (letter as HTMLButtonElement).offsetWidth)).toBe(62);
         expect(await first.locator('.wordpath-dot').evaluate((dot) => (dot as HTMLElement).offsetWidth)).toBe(52);
       }
     });
