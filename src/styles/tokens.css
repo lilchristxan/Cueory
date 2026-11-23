@@ -237,7 +237,7 @@
   --text-display-hero: clamp(1rem, 100cqi / 7.6, 5.5rem);
   --text-display-hero--line-height: 1.05;
   /* Phones draw the headline on four large lines (nursing / school / made / simpler.), sized by the same column width. */
-  --text-display-hero-phone: clamp(1rem, 100cqi / 4.6, 5.5rem);
+  --text-display-hero-phone: clamp(1rem, 100cqi / 7.6, 3rem); /* two natural lines on phones, capped near 48 px */
   --text-display-hero-phone--line-height: 1.05;
   /* Phones draw the About headline on four large lines (we know / nursing / school is / hard.), sized by the header's
      width (container query). Its longest line, "we know", is about 3.9 times its font size in Bodoni Moda; 5 leaves
@@ -285,13 +285,15 @@
   --container-game-showcase: 61.25rem; /* a game page that opts in (word path): the rendering's 900 px panel (WordPath.png, 270 to 1170 at 1440) plus the article's 40 px side padding */
   --container-headline: 18ch;   /* home headline wraps at about 18 letters */
   --container-hero: 46rem;      /* the centered hero column */
-  --container-hero-copy: 40rem; /* the home hero's text column beside the figure */
+  --container-hero-copy: 44rem; /* the home hero's text column beside the figure */
   --container-hero-card: 34rem; /* the Ko-fi support card under the hero's value points */
-  --hero-figure-width: min(46vw, 42rem); /* the anatomy figure from large screens up */
-  --hero-figure-phone: min(100%, 26rem); /* and under the text on phones */
+  --hero-figure-width: min(46vw, 34rem); /* the anatomy figure from large screens up */
+  --hero-figure-phone: min(72%, 24rem); /* and under the text on phones */
   --hero-figure-fade: 26%;      /* how much of the figure's top and left edge fades into the silk */
+  --hero-figure-fade-right: 10%; /* the right edge, so the picture never ends in a hard line inside the page */
   --hero-figure-fade-bottom: 14%; /* the bottom edge, where it meets the explore row */
   --hero-figure-evening-dim: 0.5; /* Evening: the figure's pale backdrop is dimmed so it doesn't glow */
+  --disabled-grayscale: 0.7;     /* how muted a closed (coming soon) button looks */
   --hero-min-height: 60rem;     /* the hero is about this tall on large screens, so the explore row starts below the fold */
   --container-explore: 80rem;  /* the explore row under the hero */
   --hero-top-clear: 1rem;       /* space above the hero's logo row (the corner buttons sit in the page's top 4.5 rem) */

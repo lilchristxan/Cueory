@@ -91,8 +91,10 @@ describe('home lower sections', () => {
     // The old quiet launch-list link went away with the old hero (copy deck, "hero quiet link"); the form is lower down.
     expect(hero).not.toContain('data-testid="hero-join"');
     expect(accountLaunch(true)).toMatchObject({ accountHref: '/signup', promoJoinLabel: 'create your free account' });
-    // The third value point stays held: there is no support for "adhd friendly" yet.
-    expect(plain(hero)).not.toMatch(/adhd/i);
+    // The third value point shipped (Christian approved it, 23 Nov, D-190).
+    expect(plain(hero)).toContain('adhd friendly');
+    expect(plain(hero)).toContain('less overwhelm, more focus');
+    expect((hero.match(/<ul\b[^>]*aria-label="what you get"[\s\S]*?<\/ul>/)?.[0].match(/<li\b/g) ?? []).length).toBe(3);
     expect(plain(hero)).toContain('structured learning');
     expect(plain(hero)).toContain('multiple ways to study');
     // Explore tiles: only places that exist today; "resources" waits until that page is live.
@@ -111,9 +113,24 @@ describe('home lower sections', () => {
 
   it('draws the hairline rule between the hero value points from the tablet width up, as in HomeV2-1', () => {
     const source = readFileSync(new URL('../../src/components/HomeHero.astro', import.meta.url), 'utf8');
-    const ruled = source.match(/<li class="([^"]*)" data-hero-point-rule>/);
-    expect(ruled, 'second value point carries the rule').not.toBeNull();
-    expect(ruled![1].split(' ')).toEqual(expect.arrayContaining(['sm:border-s', 'sm:border-line', 'sm:ps-5']));
+    const ruled = [...source.matchAll(/<li class="([^"]*)" data-hero-point-rule>/g)];
+    expect(ruled.length, 'second and third value points carry the rule').toBe(2);
+    for (const match of ruled) {
+      expect(match[1].split(' ')).toEqual(expect.arrayContaining(['sm:border-s', 'sm:border-line', 'sm:ps-5']));
+    }
+  });
+
+  it('centers the one-column hero (phone, tablet) and keeps the desktop two-column layout in the page container', () => {
+    const source = readFileSync(new URL('../../src/components/HomeHero.astro', import.meta.url), 'utf8');
+    expect(source).toMatch(/<div class="@container[^"]*\bmx-auto\b[^"]*\btext-center\b/);
+    expect(source).toMatch(/<div class="hero-logo-row flex items-center justify-center lg:justify-start">/);
+    expect(source).toContain('max-w-(--container-explore)');
+    expect(source).not.toContain('ps-(--hero-logo-inset)');
+    // The headline is two natural lines on phones, never one word per line.
+    expect(source).not.toContain('max-sm:block');
+    // The closed live button is muted and sits beside a working link to the daily games.
+    expect(source).toContain('data-testid="hero-play-games"');
+    expect(source).toContain('href="/play"');
   });
 
   it('the hero start button follows the draft gate: closed live, a link to the open lesson elsewhere', () => {

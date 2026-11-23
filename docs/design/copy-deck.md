@@ -48,7 +48,7 @@ and decorative letters in demo animations (board letters, "term" chips) are plac
 | hero quiet link | (none) | (none) | as drawn; the old quiet "join the launch list" link goes away with the new hero. The launch-updates form is lower on the page |
 | value row 1 | structured learning / from basics to med-surg | structured learning / from basics to med-surg | same, true today (courses.ts) |
 | value row 2 | multiple ways to study / learn the way that works for you | same | same, true (11 study modes) |
-| value row 3 | adhd friendly / less overwhelm, more focus | hold (not shipped) | rule [T]: not true / no support for the claim. default (lead, 18 Nov), Christian may change |
+| value row 3 | adhd friendly / less overwhelm, more focus | shipped (Christian approved, 23 Nov) | D-190 resolved: Christian approved "adhd friendly / less overwhelm, more focus" on the hero |
 | support card | support on Ko-fi | support on Ko-fi | as drawn (Christian, 11:30) |
 | support card body | support our mission to expand our resources, help nursing students struggling in class, and keep building ways we can help students and nurses. | support our mission to expand our resources, help nursing students struggling in class, and keep building ways we can help students and nurses. | as drawn (Christian, 11:30) |
 | explore label | EXPLORE | EXPLORE | as drawn (Christian, 11:30) |
