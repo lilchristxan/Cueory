@@ -74,7 +74,7 @@ for (const game of games) {
 
 test('the /play hub has no settings button: each game\'s gear holds the shared settings', async ({ page }) => {
   await page.goto('/play');
-  await expect(page.getByRole('heading', { level: 1, name: 'daily games' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: 'six games, new every day.' })).toBeVisible();
   await expect(page.getByTestId('play-status')).toBeVisible();
   await expect(page.getByTestId('game-settings-button')).toHaveCount(0);
 });

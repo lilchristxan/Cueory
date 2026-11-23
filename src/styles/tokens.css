@@ -1056,9 +1056,22 @@
 }
 
 @theme static {
-  /* ---------- /play hub (redesign P8): room kept for the browser-only cards until they render ---------- */
-  /* Measured rendered heights plus each island's own top margin (mt-4 cards, mt-16 stats), 2026-11-19. */
-  --play-hub-cards-reserve: min(100svh, 74.5rem); /* the cards in one column, under 1024 px wide (at least 1194 px); a screen is enough on phones */
-  --play-hub-cards-reserve-lg: 44.75rem; /* the pillo card beside the other three, from 1024 px (716 px) */
+  /* ---------- /play hub (option B, Christian 2026-11-23): left panel, one row per game ---------- */
+  --play-hub-max: 90rem;                /* the hub's widest width (1440 px); wider screens keep it centred */
+  --play-hub-panel-width: 25rem;        /* the left panel on desktop (400 px) */
+  --play-hub-split: var(--play-hub-panel-width) 1fr; /* desktop: left panel, then the rows */
+  --play-hub-cols-stacked: auto minmax(0, 1fr); /* phone and tablet row: tile, then the wordmark; line and status row span both */
+  --play-hub-cols: 4rem 12.5rem 1fr 11rem 7.5rem; /* desktop row: icon tile, wordmark, line, status, button */
+  --play-hub-tile: 4rem;                /* the game's icon tile (64 px) */
+  --play-hub-tile-icon: 2.875rem;       /* the artwork inside the tile (46 px) */
+  --play-hub-wordmark-height: 2.625rem; /* wordmark artwork (42 px) */
+  --play-hub-wordmark-height-phone: 2rem; /* the same artwork in the stacked row on phones and tablets */
+  --play-hub-name-size: 2.125rem;       /* the serif name of a game with no artwork (34 px) */
+  --play-hub-name-size-phone: 1.75rem;
+  --play-hub-total-size: 1.75rem;       /* the four totals (28 px) */
+  --play-hub-total-min: 4rem;           /* a total wraps to the next line below this width, never overflows */
+  --play-hub-headline-size: 3rem;       /* the panel headline (48 px: "new every" has to fit the 400 px panel) */
+  --play-hub-headline-size-phone: 2.5rem;
+  /* room kept for the stats panel (browser-only) until it renders; the game rows render on the server */
   --play-hub-stats-reserve: 34rem;      /* the stats panel at every width (at least 550 px) */
 }
