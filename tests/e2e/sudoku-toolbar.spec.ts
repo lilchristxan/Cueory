@@ -120,7 +120,7 @@ test('players see "Pencil", never "candidate"', async ({ page }) => {
   const mode = game(page).getByTestId('sudoku-mode');
   const pencil = mode.getByRole('button', { name: 'Pencil' });
   const hint = game(page).getByRole('button', { name: 'hint' });
-  await expect(pencil).toHaveText('Pencil');
+  await expect(pencil).toHaveText('Pencil · P');
   await expect(hint).toBeVisible();
   await expect(pencil).toHaveAttribute('aria-pressed', 'false');
   await expect(hint).toHaveAttribute('aria-pressed', 'false');

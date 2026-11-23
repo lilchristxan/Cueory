@@ -62,13 +62,13 @@ test('paused Sudoku prevents auto-cue setting changes until resume', async ({ pa
   await game(page).getByRole('button', { name: 'pause puzzle' }).click();
   await gear.click();
   const settings = page.getByRole('dialog', { name: 'sudoku settings' });
-  const auto = settings.getByRole('checkbox', { name: 'start in auto cue mode' });
+  const auto = settings.getByRole('checkbox', { name: 'start in auto pencil mode' });
   await expect(auto).toBeDisabled();
   await page.keyboard.press('Escape');
   await game(page).getByRole('button', { name: 'resume puzzle' }).click();
   await gear.click();
   const resumedSettings = page.getByRole('dialog', { name: 'sudoku settings' });
-  const resumedAuto = resumedSettings.getByRole('checkbox', { name: 'start in auto cue mode' });
+  const resumedAuto = resumedSettings.getByRole('checkbox', { name: 'start in auto pencil mode' });
   await expect(resumedAuto).toBeEnabled();
   const before = await resumedAuto.isChecked();
   await resumedAuto.setChecked(!before);

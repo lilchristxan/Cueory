@@ -83,7 +83,7 @@ export const GAME_HELP: Readonly<Record<HelpTopic, GameHelpContent>> = Object.fr
       'fill each row, column and 3 by 3 box with 1 to 9, with no repeats.',
       'pick easy, mid or hard. each level has one puzzle a day.',
       'pick a square, then type or tap a number. arrow keys move between squares.',
-      'normal mode fills the square; pencil mode adds small pencil marks. space switches modes, and holding shift switches for that moment. hint fills in possible pencil marks for you.',
+      'normal mode fills the square; pencil mode adds small pencil marks. p or space switches modes, and holding shift switches for that moment. hint fills in possible pencil marks for you.',
       'undo takes back your last move, clear empties the square (backspace does too), and check puzzle marks wrong squares with a slash. x adds your own mark.',
       'pause hides every number, the original ones too, until you press play. leaving the page pauses it for you.',
     ],

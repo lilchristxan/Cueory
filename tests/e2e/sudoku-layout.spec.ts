@@ -3,7 +3,7 @@ import { expect, test, type Locator, type Page } from '@playwright/test';
 import { markPanelsSeen } from './clock';
 
 // Visual-check regressions (#86): every project size (390 / 820 / 1440) in Light and Evening shows the whole board and
-// all ten number buttons, marks the chosen level with more than color, and keeps settings on screen.
+// all nine numbers and the separate x-mark button, marks the chosen level with more than color, and keeps settings on screen.
 const game = (page: Page) => page.getByTestId('sudoku');
 const rect = (locator: Locator) => locator.evaluate((element) => element.getBoundingClientRect().toJSON() as DOMRect);
 
@@ -82,21 +82,30 @@ for (const scheme of ['light', 'dark'] as const) {
     await expect(boardCells.last()).toBeInViewport({ ratio: 1 });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 
-    // All of 1–9 and x are on screen, 44 px or more, with nothing hidden in a sideways scroller.
+    // All nine digits are in reading order and every control, including x, keeps its tap target.
     const row = game(page).locator('.sudoku-number-row');
     expect(await row.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
     const rowBox = await rect(row);
     const pad = await row.getByRole('button').evaluateAll((buttons) => buttons.map((button) => button.getBoundingClientRect().toJSON() as DOMRect));
-    expect(pad).toHaveLength(10);
+    await expect(row.getByRole('button')).toHaveText(['1', '2', '3', '4', '5', '6', '7', '8', '9']);
+    const tools = game(page).getByRole('group', { name: 'board tools', exact: true });
+    await expect(tools.getByRole('button')).toHaveText(['Pencil · P', 'Undo', 'Hint']);
+    const toolsBox = await rect(tools);
+    expect(toolsBox.top).toBeGreaterThanOrEqual(rowBox.bottom);
+    const rowPositions = new Set(pad.map((key) => Math.round(key.top)));
+    if (width >= 820) expect(rowPositions.size).toBe(1);
+    if (width === 390) expect(rowPositions.size).toBe(2);
     for (const box of pad) {
       expect(box.width).toBeGreaterThanOrEqual(44);
       expect(box.height).toBeGreaterThanOrEqual(44);
       expect(box.left).toBeGreaterThanOrEqual(rowBox.left - 0.5);
       expect(box.right).toBeLessThanOrEqual(Math.min(rowBox.right, width) + 0.5);
     }
-    for (const control of [game(page).getByRole('button', { name: 'hint' }), page.getByTestId('game-frame-gear')]) {
+    for (const control of [...await tools.getByRole('button').all(), game(page).getByRole('button', { name: 'add or remove x mark' }), page.getByTestId('game-frame-gear')]) {
       await expect(control).toBeVisible();
       const box = await rect(control);
+      expect(box.width).toBeGreaterThanOrEqual(44);
+      expect(box.height).toBeGreaterThanOrEqual(44);
       expect(box.left).toBeGreaterThanOrEqual(0);
       expect(box.right).toBeLessThanOrEqual(width);
     }

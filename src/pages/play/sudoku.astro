@@ -223,6 +223,40 @@ const game = dailyGames.find((item) => item.id === 'triage')!;
     border-color: var(--cueory-copper-start);
   }
 
+  /* The two digit groups share one row where all nine keys fit and wrap in order on a phone. */
+  :global(.sudoku-pad-wrap) {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: calc(var(--spacing) * 3);
+  }
+
+  :global(.sudoku-number-row),
+  :global(.sudoku-pad-digits) {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: calc(var(--spacing) * 1.5);
+    max-inline-size: 100%;
+  }
+
+  :global(.sudoku-number-row),
+  :global(.sudoku-tools) {
+    order: 0;
+    flex: none;
+    inline-size: 100%;
+  }
+
+  :global(.sudoku-number-row button) {
+    inline-size: var(--tap-min);
+    min-block-size: calc(var(--spacing) * 12);
+    background: var(--color-surface);
+  }
+
+  :global(.sudoku-tools) {
+    gap: calc(var(--spacing) * 2.5);
+  }
+
   :global(.sudoku-solved) {
     border-color: var(--cueory-result-card-border);
     background: var(--cueory-result-card-bg);

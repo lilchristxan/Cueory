@@ -512,7 +512,7 @@ test.describe('daily games: sudoku (Task 625)', () => {
       expect(box.left).toBeGreaterThanOrEqual(panel.x - 0.5);
       expect(box.right).toBeLessThanOrEqual(panel.x + panel.width + 0.5);
     }
-    const pad = await game(page).locator('.sudoku-number-row button').evaluateAll((elements) => elements.map((element) => element.getBoundingClientRect().toJSON()));
+    const pad = await game(page).locator('.sudoku-number-row button, button[aria-label="add or remove x mark"]').evaluateAll((elements) => elements.map((element) => element.getBoundingClientRect().toJSON()));
     expect(pad).toHaveLength(10);
     for (const box of pad) {
       expect(box.width).toBeGreaterThanOrEqual(44);

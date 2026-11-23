@@ -89,7 +89,7 @@ for (const colorScheme of ['light', 'dark'] as const) {
       await expect(game(page)).toBeVisible();
       await cells(page).nth(empty).click();
 
-      const pad = game(page).locator('.sudoku-number-row');
+      const pad = game(page).locator('.sudoku-pad-wrap');
       const padBox = await pad.boundingBox();
       expect(padBox).not.toBeNull();
       const dimensions = await pad.evaluate((element) => ({
@@ -97,9 +97,10 @@ for (const colorScheme of ['light', 'dark'] as const) {
         scrollWidth: element.scrollWidth,
       }));
       expect(dimensions.scrollWidth).toBeLessThanOrEqual(dimensions.clientWidth + 1);
-      await expect(pad.getByRole('button')).toHaveCount(10);
-
-      for (const button of await pad.getByRole('button').all()) {
+      const digits = pad.getByRole('group', { name: 'numbers', exact: true }).getByRole('button');
+      await expect(digits).toHaveText(['1', '2', '3', '4', '5', '6', '7', '8', '9']);
+      const mark = pad.getByRole('button', { name: 'add or remove x mark' });
+      for (const button of [...await digits.all(), mark]) {
         const box = await button.boundingBox();
         expect(box).not.toBeNull();
         expect(box!.width).toBeGreaterThanOrEqual(44);

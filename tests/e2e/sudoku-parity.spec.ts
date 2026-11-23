@@ -46,6 +46,10 @@ for (const [size, width, height] of [['phone', 390, 844], ['desktop', 1440, 900]
     // Tap back to normal and enter a wrong number: it is marked wrong with a slash and the word "wrong".
     await pencil.click();
     await cells(page).nth(open[1]!).click();
+    await page.keyboard.press('p');
+    await expect(pencil).toHaveAttribute('aria-pressed', 'true');
+    await page.keyboard.press('p');
+    await expect(pencil).toHaveAttribute('aria-pressed', 'false');
     await page.keyboard.press(String(wrongDigit(open[1]!)));
     await expect(cells(page).nth(open[1]!)).toHaveClass(/is-wrong/);
     await expect(cells(page).nth(open[1]!)).toHaveAttribute('aria-label', /, wrong/);

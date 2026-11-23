@@ -110,7 +110,7 @@ export type SudokuEdit = { kind: 'enter'; value: number } | { kind: 'mark' };
 export type SudokuKeyAction = SudokuEdit | { kind: 'select'; index: number } | { kind: 'clear' } | { kind: 'toggle-mode' };
 
 /**
- * Arrow keys stop at the board edges, rather than wrapping to another row or column. Space switches between normal
+ * Arrow keys stop at the board edges, rather than wrapping to another row or column. Space or P switches between normal
  * and candidate (Pencil) mode; Backspace and Delete clear the square; x toggles the x mark. With Shift held a number key gives
  * a symbol on most layouts, so the physical key (`code`, Digit1 or Numpad1) still names the number.
  */
@@ -125,7 +125,7 @@ export function sudokuKeyAction(key: string, selected: number, code = ''): Sudok
   if (/^[1-9]$/.test(key)) return { kind: 'enter', value: Number(key) };
   const physical = /^(?:Digit|Numpad)([1-9])$/.exec(code);
   if (physical) return { kind: 'enter', value: Number(physical[1]) };
-  if (key === ' ' || key === 'Spacebar') return { kind: 'toggle-mode' };
+  if (key === ' ' || key === 'Spacebar' || key.toLowerCase() === 'p') return { kind: 'toggle-mode' };
   if (key === 'Backspace' || key === 'Delete') return { kind: 'clear' };
   if (key === 'x' || key === 'X') return { kind: 'mark' };
 }

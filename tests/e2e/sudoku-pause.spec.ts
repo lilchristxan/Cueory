@@ -102,8 +102,9 @@ test('paused keypad and keyboard cannot change entries, marks, errors, or the li
   const errorsBefore = await game(page).locator('.sudoku-errors').innerText();
 
   await game(page).getByRole('button', { name: 'pause puzzle' }).click();
-  await expect(game(page).locator('.sudoku-number-row button')).toHaveCount(10);
-  for (const button of await game(page).locator('.sudoku-number-row button').all()) {
+  const pad = game(page).locator('.sudoku-number-row button, button[aria-label="add or remove x mark"]');
+  await expect(pad).toHaveCount(10);
+  for (const button of await pad.all()) {
     await expect(button).toBeDisabled();
   }
   await expect(game(page).getByTestId('sudoku-live')).toHaveText('puzzle paused. every number is hidden until you press play.');

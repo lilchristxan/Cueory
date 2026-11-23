@@ -15,6 +15,7 @@ import PrintLogo from './PrintLogo';
 
 const LEVELS: SudokuLevel[] = ['easy', 'medium', 'hard'];
 const NUMBERS = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+const PAD_GROUPS = [NUMBERS.slice(0, 5), NUMBERS.slice(5)];
 
 const where = (index: number) => `row ${Math.floor(index / 9) + 1}, column ${index % 9 + 1}`;
 const plural = (count: number, one: string, many: string) => `${count} ${count === 1 ? one : many}`;
@@ -444,14 +445,29 @@ export default function SudokuGame({ framed = false }: { framed?: boolean } = {}
         </div>
       </div>
       <div className="sudoku-pad-wrap">
-        <div className="sudoku-tools">
-          <div role="group" aria-label="entry mode" data-testid="sudoku-mode"><button type="button" className="sudoku-tool-button sudoku-pencil-button" aria-pressed={activeMode === 'candidate'} disabled={paused || solved} onClick={() => switchMode()}>{activeMode === 'candidate' && <span className="segmented-check sudoku-toggle-mark" aria-hidden="true">✓</span>}Pencil</button></div>
-          <button type="button" className="sudoku-tool-button" onClick={undo} disabled={paused || solved || history.length === 0}>undo</button>
-          <button type="button" className="sudoku-tool-button sudoku-hint-button" aria-pressed={auto} onClick={() => toggleAuto(!auto)} disabled={paused || solved}>{auto && <span className="segmented-check sudoku-toggle-mark" aria-hidden="true">✓</span>}hint</button>
+        <div className="sudoku-number-row" role="group" aria-label={activeMode === 'candidate' ? 'pencil numbers' : 'numbers'}>
+          {PAD_GROUPS.map((digits) => (
+            <div className="sudoku-pad-digits" key={digits[0]}>
+              {digits.map((number) => (
+                <button type="button" key={number} onClick={() => enter(number)} disabled={paused || solved}>{number}</button>
+              ))}
+            </div>
+          ))}
+        </div>
+        <div className="sudoku-tools" role="group" aria-label="board tools" data-testid="sudoku-mode">
+          <button type="button" className="sudoku-tool-button" aria-pressed={activeMode === 'candidate'} aria-keyshortcuts="P" disabled={paused || solved} onClick={() => switchMode()}>
+            {activeMode === 'candidate' && <span className="sudoku-toggle-mark" aria-hidden="true">✓ </span>}Pencil <span aria-hidden="true">· P</span>
+          </button>
+          <button type="button" className="sudoku-tool-button" onClick={undo} disabled={paused || solved || history.length === 0}>Undo</button>
+          <button type="button" className="sudoku-tool-button" aria-pressed={auto} onClick={() => toggleAuto(!auto)} disabled={paused || solved}>
+            {auto && <span className="sudoku-toggle-mark" aria-hidden="true">✓ </span>}Hint
+          </button>
+        </div>
+        <div className="sudoku-tools" role="group" aria-label="additional board tools">
+          <button type="button" className="sudoku-tool-button" onClick={mark} aria-label="add or remove x mark" disabled={paused || solved}>x</button>
           <button type="button" className="sudoku-tool-button" onClick={clearCell} disabled={paused || solved}>clear cell</button>
           <button type="button" className="sudoku-tool-button" onClick={checkPuzzle} disabled={paused || solved}>check puzzle</button>
         </div>
-        <div className="sudoku-number-row" aria-label={activeMode === 'candidate' ? 'pencil numbers' : 'numbers'}>{NUMBERS.map((number) => <button key={number} type="button" onClick={() => enter(number)} disabled={paused || solved}>{number}</button>)}<button type="button" onClick={mark} aria-label="add or remove x mark" disabled={paused || solved}>x</button></div>
       </div>
     </div>
     {solved && <div ref={solvedResult} className="sudoku-solved" tabIndex={-1} role="status" data-testid="sudoku-result"><p className="text-lg font-medium">solved.</p><p>{elapsed} · {errors} {errors === 1 ? 'error' : 'errors'}</p><p className="text-sm text-ink-soft">a new sudoku comes out tomorrow.</p></div>}
