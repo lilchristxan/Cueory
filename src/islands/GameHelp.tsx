@@ -134,30 +134,10 @@ export function GameHelpButton({ help, name, className, extra }: { help: GameHel
   </>;
 }
 
-/** Phones and small tablets start with the rules folded, so the board is the first thing on screen. */
-function startsOpen(): boolean {
-  return typeof window === 'undefined' || !window.matchMedia || window.matchMedia('(min-width: 48rem)').matches;
-}
-
-/** The rules above the board on a game's first visit. "got it" (or the "?") puts them away for good on this device.
- *  On a phone the card starts folded to one 44 px line so the board stays first; the heading opens it. */
-export function GameHelpCard({ help, name, extra }: { help: GameHelpState; name: string; extra?: ReactNode }) {
-  const id = useId();
-  const [open, setOpen] = useState(startsOpen);
-  if (!help.firstVisit) return null;
-  return <section className="game-help-first" aria-labelledby={`${id}-title`} data-testid="game-help-first" data-open={open}>
-    <h3 id={`${id}-title`} className="game-help-subheading game-help-first-heading">
-      <button type="button" className="game-help-first-toggle" aria-expanded={open} aria-controls={`${id}-body`} onClick={() => setOpen((now) => !now)}>
-        new to {name}? here's how to play
-        <span className="game-help-first-chevron" aria-hidden="true">{open ? '\u2212' : '+'}</span>
-      </button>
-    </h3>
-    <div id={`${id}-body`} hidden={!open}>
-      {gameLine(help.content) && <p className="game-help-line">{gameLine(help.content)}</p>}
-      {extra}
-      <PlaySteps content={help.content} />
-      <p className="game-help-note">the ? button shows this again, with every setting.</p>
-      <div className="game-help-actions"><button type="button" className="game-help-action" onClick={help.dismiss}>got it</button></div>
-    </div>
-  </section>;
+/**
+ * The first-visit rules card is gone (Games v2): the steps live behind the "?" button, which also marks them seen. The
+ * component stays so each game keeps its import; it renders nothing.
+ */
+export function GameHelpCard(_props: { help: GameHelpState; name: string; extra?: ReactNode }) {
+  return null;
 }

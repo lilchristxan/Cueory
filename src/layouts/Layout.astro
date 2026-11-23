@@ -42,9 +42,14 @@ interface Props {
    * flag button stay signed out and never load the Supabase client.
    */
   accountsOff?: boolean;
+  /**
+   * Leaves out the "still building" strip and the site menu bar, so a full-page game board (the Games v2 frame) owns
+   * the top of the screen. One switch for every game page: src/components/GamePage.astro passes it. Off by default.
+   */
+  bareHeader?: boolean;
 }
 
-const { title, description = site.description, variant = 'default', noindex = false, promo = true, flagItem, hideFlag = false, socialImage: socialImagePath = '/share/study-ivory.png', accountsOff = false } = Astro.props;
+const { title, description = site.description, variant = 'default', noindex = false, promo = true, flagItem, hideFlag = false, socialImage: socialImagePath = '/share/study-ivory.png', accountsOff = false, bareHeader = false } = Astro.props;
 // Browser-tab titles use the lowercase brand voice: "privacy · cueory" (D-47).
 const fullTitle = title === site.name || title === site.wordmarkName ? site.wordmarkName : `${title} · ${site.wordmarkName}`;
 // Astro's static file build may expose /index.html or /privacy.html as the pathname.
@@ -118,9 +123,9 @@ const searchTitle = isHome ? 'home' : title;
     >
       skip to content
     </a>
-    <BuildingNotice />
+    {!bareHeader && <BuildingNotice />}
     {
-      isHome ? (
+      bareHeader ? null : isHome ? (
         <div class="relative z-20 h-0">
           <SiteHeader overlay accountsOff={accountsOff} />
         </div>

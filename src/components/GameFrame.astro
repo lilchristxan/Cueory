@@ -2,6 +2,7 @@
 import '../styles/gameframe.css';
 import GameFrameControls from '../islands/GameFrameControls';
 import GameFrameStats from '../islands/GameFrameStats';
+import GameDeck from './GameDeck.astro';
 import { formatGameDateLine } from '../scripts/gamedateline';
 
 interface Props {
@@ -18,6 +19,8 @@ interface Props {
   bridge?: boolean;
   /** Renders the standard no-score rows without a stats island for a route that persists no game history. */
   staticNoScoreStats?: boolean;
+  /** Shows the four stats in the panel even where the page keeps its own controls (framed off). Default: with framed. */
+  stats?: boolean;
 }
 
 const {
@@ -30,6 +33,7 @@ const {
   framed = true,
   bridge = false,
   staticNoScoreStats = false,
+  stats: showStats,
 } = Astro.props;
 
 type GameConfig = {
@@ -267,7 +271,7 @@ const activeDateLine = propDateLine ?? formatGameDateLine(new Date());
       <div class="game-frame-divider" aria-hidden="true"></div>
 
       <!-- Most framed routes hydrate their saved history; no-score callers keep the same sidebar rows as static markup. -->
-      {framed && <div class="game-frame-stats" data-testid="game-frame-stats" aria-label="your stats">
+      {(showStats ?? framed) && <div class="game-frame-stats" data-testid="game-frame-stats" aria-label="your stats">
         {staticNoScoreStats ? <>
           <div class="game-frame-stat">
             <span class="game-frame-stat-value">0</span>
@@ -307,7 +311,7 @@ const activeDateLine = propDateLine ?? formatGameDateLine(new Date());
       )}
 
       <!-- Slot for page title -->
-      <slot name="title" />
+      <div class="sr-only"><slot name="title" /></div>
 
       <!-- The board slot -->
       <div class:list={['game-frame-board', wide && 'is-wide', showcase && 'is-showcase']}>
@@ -316,6 +320,7 @@ const activeDateLine = propDateLine ?? formatGameDateLine(new Date());
 
       <!-- Card deck slot (placeholder for Item 2) -->
       <div class="game-frame-deck-slot">
+        <GameDeck current={currentConfig.id} />
         <slot name="deck" />
       </div>
     </div>

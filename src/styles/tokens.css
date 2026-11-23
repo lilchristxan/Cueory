@@ -136,6 +136,11 @@
   --game-frame-pill-ivory-bg: radial-gradient(120% 140% at 30% 20%, #ffffff 0%, var(--color-page) 55%, var(--color-surface) 100%);
   --game-frame-max-board-wide: 51.25rem; /* 820px */
   --game-frame-max-board-showcase: 45rem; /* 720px */
+  --game-deck-card-width: 13rem;         /* 208px, the fanned card deck at the right edge */
+  --game-deck-card-height: 17rem;        /* 272px */
+  --game-deck-step: 3.5rem;              /* 56px between fanned cards */
+  --game-deck-reveal: 3.5rem;            /* 56px of each card that shows at rest */
+  --game-deck-slide: 9rem;               /* 144px a card slides out on hover or focus */
   --game-frame-sidebar-compact-emblem-size: 2.75rem; /* 44px */
   --game-frame-sidebar-compact-emblem-radius: 0.75rem; /* 12px */
   --game-frame-sidebar-compact-emblem-cell: 0.5rem; /* 8px */

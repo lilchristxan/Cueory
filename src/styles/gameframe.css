@@ -74,15 +74,6 @@
 }
 
 .game-frame-back {
-    padding-inline: 0;
-  }
-  .game-frame-flag-slot {
-    flex: 0 0 auto;
-    margin-inline: calc(var(--spacing) * 1);
-  }
-}
-
-.game-frame-back {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -565,6 +556,82 @@
   max-width: var(--game-frame-max-board-showcase);
 }
 
+/* ---------------- Card deck (right edge) ---------------- */
+.game-deck {
+  position: relative;
+}
+.game-deck-list {
+  position: relative;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  inline-size: calc(var(--game-deck-card-width) - var(--game-deck-slide) + var(--game-deck-reveal));
+  block-size: calc(var(--game-deck-card-height) + var(--game-deck-step) * 5);
+}
+.game-deck-item {
+  position: absolute;
+  inset-inline-end: calc(-1 * (var(--game-deck-card-width) - var(--game-deck-reveal)));
+  inline-size: var(--game-deck-card-width);
+  block-size: var(--game-deck-card-height);
+}
+.game-deck-item:nth-child(1) { inset-block-start: 0; rotate: -8deg; }
+.game-deck-item:nth-child(2) { inset-block-start: var(--game-deck-step); rotate: -5deg; }
+.game-deck-item:nth-child(3) { inset-block-start: calc(var(--game-deck-step) * 2); rotate: -2deg; }
+.game-deck-item:nth-child(4) { inset-block-start: calc(var(--game-deck-step) * 3); rotate: 1deg; }
+.game-deck-item:nth-child(5) { inset-block-start: calc(var(--game-deck-step) * 4); rotate: 4deg; }
+/* The item (the hit area) stays put; only the card inside it slides. */
+.game-deck-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  inline-size: 100%;
+  block-size: 100%;
+  box-sizing: border-box;
+  padding: calc(var(--spacing) * 3);
+  background: var(--color-page);
+  border: var(--game-frame-line) solid var(--color-line);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--game-frame-btn-shadow);
+  color: var(--color-ink);
+  text-decoration: none;
+  transition: transform 0.2s ease;
+}
+.game-deck-item:hover .game-deck-card,
+.game-deck-card:focus-visible {
+  transform: translateX(calc(-1 * var(--game-deck-slide)));
+}
+.game-deck-card:focus-visible {
+  outline: var(--focus-width) solid var(--color-focus);
+  outline-offset: var(--focus-offset);
+}
+.game-deck-card.is-closed {
+  border-style: dashed;
+  color: var(--color-ink-soft);
+}
+.game-deck-name {
+  font-family: var(--font-display);
+  font-size: var(--game-frame-how-font-size);
+  line-height: 1.5;
+  text-align: center;
+}
+.game-deck-corner {
+  position: absolute;
+  font-size: var(--game-frame-dateline-size);
+  line-height: 1.5;
+  color: var(--color-ink-soft);
+}
+.game-deck-corner-top {
+  inset-block-start: calc(var(--spacing) * 3);
+  inset-inline-start: calc(var(--spacing) * 3);
+}
+.game-deck-corner-bottom {
+  inset-block-end: calc(var(--spacing) * 3);
+  inset-inline-end: calc(var(--spacing) * 3);
+  rotate: 180deg;
+}
+
 /* ---------------- Deck and Footer Slots ---------------- */
 .game-frame-deck-slot {
   position: absolute;
@@ -696,13 +763,67 @@
     --wordpath-bleed: calc(var(--spacing) * 4);
   }
 
+  /* The deck has no room beside a phone or tablet board. */
   .game-frame-deck-slot {
-    position: static;
-    transform: none;
-    width: 100%;
-    margin-top: calc(var(--spacing) * 6);
+    display: none;
+  }
+
+  /*
+    One compact top area, derived from the desktop panel (Games v2). The sidebar stops being a box and its parts are
+    placed one under another: row 1 is "games", the game's wordmark centred and the flag; row 2 (inside the main area)
+    is the gear, the date line and the "?". No second logo, tagline or icon. Then the board and its controls, and the
+    four stats in one strip underneath.
+  */
+  .game-frame-layout {
     display: flex;
+    flex-direction: column;
+  }
+  .game-frame-sidebar {
+    display: contents;
+  }
+  .game-frame-sidebar-top {
+    order: 1;
+    padding: calc(var(--spacing) * 2) calc(var(--spacing) * 3) 0;
+    box-sizing: border-box;
+  }
+  .game-frame-logo-wrap {
+    display: none;
+  }
+  .game-frame-flag-slot {
+    justify-content: flex-end;
+  }
+  .game-frame-game-badge {
+    order: 2;
     justify-content: center;
+    min-block-size: var(--game-frame-btn-size);
+    margin-block-start: calc(-1 * var(--game-frame-btn-size));
+    pointer-events: none;
+  }
+  .game-frame-icon-wrap,
+  .game-frame-tagline,
+  .game-frame-divider {
+    display: none;
+  }
+  .game-frame-main {
+    order: 3;
+    padding-block-start: calc(var(--spacing) * 2);
+  }
+  .game-frame-board {
+    order: 3;
+  }
+  .game-frame-controls-row {
+    margin-block-end: calc(var(--spacing) * 3);
+  }
+  /* The date line has its own line above the controls. */
+  .game-frame-dateline {
+    margin-block-end: calc(var(--spacing) * 2);
+  }
+  .game-frame-stats {
+    order: 4;
+    inline-size: 100%;
+    box-sizing: border-box;
+    margin-block-end: calc(var(--spacing) * 6);
+    padding-inline: calc(var(--spacing) * 3);
   }
 }
 

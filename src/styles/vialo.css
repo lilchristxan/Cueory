@@ -286,6 +286,9 @@
     .vialo-key:not(.vialo-key-wide) {
       padding-inline: 0;
     }
+    .vialo-key-row {
+      gap: calc(var(--spacing) * 0.5);
+    }
   }
 
   .vialo-key.vialo-here {
