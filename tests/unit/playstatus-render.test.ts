@@ -4,11 +4,12 @@ import { describe, expect, it } from 'vitest';
 // The .tsx extension is explicit: on a case-insensitive disk a bare 'PlayStatus' would resolve to playstatus.ts first.
 import PlayStatus from '../../src/islands/PlayStatus.tsx';
 import PlayTotals from '../../src/islands/PlayTotals';
-import { helloCardsGame, dailyGames } from '../../src/config/games';
+import { helloCardsGame } from '../../src/config/games';
 import { gamePages } from '../../src/config/game-pages';
+import { hubLines } from '../../src/config/homegames';
 import { hubHeadline, hubTotals, playedLabel, statusWords } from '../../src/islands/playhub';
 
-const line = (id: 'vialo' | 'cueword' | 'triage' | 'suture') => dailyGames.find((game) => game.id === id)!.line;
+const line = (id: 'vialo' | 'cueword') => ({ vialo: hubLines.vialo, cueword: hubLines.crossword })[id];
 const games = (crosswordOpen: boolean) => [
   { id: 'vialo' as const, testId: 'pulse', name: 'vialo', line: line('vialo'), href: gamePages.vialo, open: true, art: 'vialo' as const },
   { id: 'cueword' as const, testId: 'cueword', name: 'crossword', line: line('cueword'), href: gamePages.cueword, open: crosswordOpen },
@@ -35,10 +36,10 @@ describe('the /play hub rows (option B)', () => {
     expect(html).not.toContain('new today');
   });
 
-  it('shows the real one-line descriptions unshortened', () => {
+  it('shows the short lines the home page game cards use', () => {
     const html = render(true);
     expect(html).toContain(line('vialo'));
-    expect(html).toContain(line('cueword'));
+    expect(html).toContain(line('cueword').replace(/'/g, '&#x27;'));
   });
 
   it('uses the wordmark artwork for vialo and a serif name for the others', () => {

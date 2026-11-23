@@ -13,6 +13,7 @@ import PlayStatus from '../islands/PlayStatus.tsx';
 import PlayTotals from '../islands/PlayTotals';
 import { dailyGames, helloCardsGame, helloCardsIndexWhenApproved } from '../config/games';
 import { hubHeadline } from '../islands/playhub';
+import { hubLines } from '../config/homegames';
 import { gamePages } from '../config/game-pages';
 import { tachyyyGame } from '../config/tachyyy';
 import { helloCardsPage } from '../islands/hello-cards';
@@ -34,17 +35,17 @@ const showHello = helloPage.linked;
 // stat (Task 640) runs on labeled samples, so its link shows only where its page does (src/pages/play/stat.astro).
 const showStat = draftsAllowed(helloEnv);
 
-// Each game on the hub, in the order of the picked board (option B): the real name and one-line description from
-// src/config/games.ts (tachyyy's from src/config/tachyyy.ts), one source. A game closed in this build says "coming soon".
+// Each game on the hub, in the order of the picked board (option B): the real name from src/config/games.ts and the
+// short line the home page's game cards use (src/config/homegames.ts). A game closed in this build says "coming soon".
 const game = (id: 'vialo' | 'cueword' | 'triage' | 'suture') => dailyGames.find((entry) => entry.id === id)!;
 const showCrossword = crosswordShown(helloEnv);
 const hubGames = [
-  { id: 'vialo' as const, testId: 'pulse', name: game('vialo').name, line: game('vialo').line, href: gamePages.vialo, open: true, art: 'vialo' as const },
-  { id: 'tachyyy' as const, testId: 'tachyyy', name: tachyyyGame.name, line: tachyyyGame.line, href: tachyyyGame.href, open: showStat, art: 'tachyyy' as const, linkTestId: 'tachyyy-link' },
-  { id: 'suture' as const, testId: 'suture', name: game('suture').name, line: game('suture').line, href: gamePages.suture, open: true, art: 'piccline' as const },
-  { id: 'cueword' as const, testId: 'cueword', name: game('cueword').name, line: game('cueword').line, href: gamePages.cueword, open: showCrossword },
-  { id: 'triage' as const, testId: 'triage', name: game('triage').name, line: game('triage').line, href: gamePages.triage, open: true },
-  { id: 'hello-cards' as const, testId: 'hello-cards', name: helloCardsGame.name, line: helloCardsGame.line, href: helloCardsGame.href, open: showHello, cards: showHello ? helloPage.starters.length : undefined, linkTestId: 'hello-cards-link' },
+  { id: 'vialo' as const, testId: 'pulse', name: game('vialo').name, line: hubLines.vialo, href: gamePages.vialo, open: true, art: 'vialo' as const },
+  { id: 'tachyyy' as const, testId: 'tachyyy', name: tachyyyGame.name, line: hubLines.tachyyy, href: tachyyyGame.href, open: showStat, art: 'tachyyy' as const, linkTestId: 'tachyyy-link' },
+  { id: 'suture' as const, testId: 'suture', name: game('suture').name, line: hubLines.piccline, href: gamePages.suture, open: true, art: 'piccline' as const },
+  { id: 'cueword' as const, testId: 'cueword', name: game('cueword').name, line: hubLines.crossword, href: gamePages.cueword, open: showCrossword },
+  { id: 'triage' as const, testId: 'triage', name: game('triage').name, line: hubLines.sudoku, href: gamePages.triage, open: true },
+  { id: 'hello-cards' as const, testId: 'hello-cards', name: helloCardsGame.name, line: hubLines.helloCards, href: helloCardsGame.href, open: showHello, cards: showHello ? helloPage.starters.length : undefined, linkTestId: 'hello-cards-link' },
 ];
 // The stats list leaves the crossword out while it is closed, like the rows' "coming soon" (site.ts crosswordOpen).
 const statsGames = (['vialo', 'cueword', 'triage', 'suture'] as const).filter((id) => showCrossword || id !== 'cueword');
