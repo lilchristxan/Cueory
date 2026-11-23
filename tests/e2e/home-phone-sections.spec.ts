@@ -11,8 +11,8 @@ import { sizeOf } from './projects';
 test.describe('home below the hero on a phone', () => {
   test.beforeEach(async ({ page }, testInfo) => {
     test.skip(sizeOf(testInfo) !== 'phone', 'phone layout only');
-    await page.goto('/');
     await markPanelsSeen(page);
+    await page.goto('/');
   });
 
   test('vial shelf: about five vials, 44 px arrows at the sides, dots and a readable caption', async ({ page }) => {
@@ -41,6 +41,10 @@ test.describe('home below the hero on a phone', () => {
     // The dots show the position (they are a picture, not buttons); one readable line under them names the front vial.
     await expect(section.locator('.modes-dots')).toBeVisible();
     const caption = section.locator('[data-modes-caption]');
+    // The ring slides on its own every six seconds, so take it over first (Home on the card group is a keyboard use):
+    // "video then cards" only holds once autoplay is off and the video vial is in front.
+    await section.getByRole('group', { name: 'study mode cards' }).press('Home');
+    await expect(section).toHaveAttribute('data-autoplay', 'off');
     await expect(caption).toHaveText(`${studyModes[0]!.name}, ${studyModes[0]!.time} min`);
     await section.getByRole('button', { name: 'next study mode' }).first().click();
     await expect(caption).toHaveText(`${studyModes[1]!.name}, ${studyModes[1]!.time} min`);
@@ -55,14 +59,21 @@ test.describe('home below the hero on a phone', () => {
     await expect(section.locator('[data-games-carousel]')).toHaveAttribute('data-carousel-state', 'settled');
 
     const first = (await section.locator('[data-game-card]').nth(0).boundingBox())!;
-    const second = (await section.locator('[data-game-card]').nth(1).boundingBox())!;
     // The desktop card is 280 × 392.
     expect(Math.round(first.width)).toBe(280);
     expect(first.height).toBeGreaterThanOrEqual(392);
     expect(first.height).toBeLessThan(420);
-    // The next card shows at least 48 px, and is cut off by the window, so it reads as "more this way".
-    expect(390 - second.x).toBeGreaterThanOrEqual(48);
-    expect(second.x + second.width).toBeGreaterThan(390);
+    // What is really VISIBLE of the next card: its box cut by the carousel's clip box and by the document. At least
+    // 48 px shows, and the card runs on past the clip, so it reads as "more this way".
+    const visible = await section.evaluate((root) => {
+      const car = root.querySelector('[data-games-car]')!.getBoundingClientRect();
+      const next = root.querySelectorAll('[data-game-card]')[1]!.getBoundingClientRect();
+      const left = Math.max(next.left, car.left, 0);
+      const right = Math.min(next.right, car.right, document.documentElement.clientWidth);
+      return { width: right - left, clipsAt: Math.min(car.right, document.documentElement.clientWidth), nextRight: next.right };
+    });
+    expect(visible.width).toBeGreaterThanOrEqual(48);
+    expect(visible.nextRight).toBeGreaterThan(visible.clipsAt);
 
     // The status line sits at the foot of the face (not right under the description), as on desktop.
     const status = (await section.locator('[data-game-card]').nth(0).locator('.gstatus').boundingBox())!;
@@ -94,15 +105,97 @@ test.describe('home below the hero on a phone', () => {
         return Math.max(...els.map((el) => el.getBoundingClientRect().bottom + scrollY));
       };
       const top = (selector: string) => document.querySelector(selector)!.getBoundingClientRect().top + scrollY;
-      const pause = bottom('#ways-to-study', '[data-modes-pause]');
-      const gamesHeading = top('#games-heading');
       const playLink = bottom('#daily-games', '[data-testid="games-link"]');
+      const shelfHeading = top('#modes-heading');
+      const pause = bottom('#ways-to-study', '[data-modes-pause]');
       const signupCard = top('.signup-card');
-      return { shelf: gamesHeading - pause, signup: signupCard - playLink };
+      return { shelf: shelfHeading - playLink, signup: signupCard - pause };
     });
     expect(gaps.shelf).toBeLessThanOrEqual(96);
     expect(gaps.shelf).toBeGreaterThanOrEqual(32);
     expect(gaps.signup).toBeLessThanOrEqual(96);
     expect(gaps.signup).toBeGreaterThanOrEqual(32);
+  });
+});
+
+// Christian's final home board (20 Nov), on every size: hero, explore bar, nurse's station games, one lesson / multiple
+// ways to study, launch updates. The explore bar's "study materials" tile still lands on the vial section.
+test.describe('home section order', () => {
+  test('games come before the vials, then the signup; #ways-to-study still anchors the vials', async ({ page }) => {
+    await page.goto('/');
+    const tops = await page.evaluate(() =>
+      ['daily-games', 'ways-to-study', 'signup'].map((id) => document.getElementById(id)!.getBoundingClientRect().top + scrollY),
+    );
+    expect(tops[0]).toBeLessThan(tops[1]!);
+    expect(tops[1]).toBeLessThan(tops[2]!);
+    await page.goto('/#ways-to-study');
+    await expect(page.locator('#ways-to-study')).toBeInViewport();
+  });
+});
+
+// Christian's dot pager under the games carousel (23 Nov): 8 px dots 8 px apart, the current one a 26 x 8 px pill, each a
+// real button with a 44 x 44 hit area, in step with the arrows and the keyboard. Every size.
+test.describe('games carousel dot pager', () => {
+  test('one real button per card, sized as picked, moving the carousel and following the arrows and keys', async ({ page }) => {
+    await markPanelsSeen(page);
+    await page.goto('/');
+    const section = page.locator('#daily-games');
+    await section.scrollIntoViewIfNeeded();
+    await expect(section.locator('[data-games-carousel]')).toHaveAttribute('data-carousel-state', 'settled');
+
+    const dots = section.locator('[data-games-dot]');
+    await expect(dots).toHaveCount(6);
+    const current = section.locator('[data-games-dot][aria-current="true"]');
+    await expect(current).toHaveCount(1);
+    await expect(dots.nth(0)).toHaveAttribute('aria-current', 'true');
+
+    const sizes = await dots.evaluateAll((els) =>
+      els.map((el) => {
+        const rect = el.getBoundingClientRect();
+        const hit = getComputedStyle(el, '::before');
+        return { w: rect.width, h: rect.height, x: rect.x, hitW: parseFloat(hit.width), hitH: parseFloat(hit.height) };
+      }),
+    );
+    expect(sizes[0]!.w).toBeCloseTo(26, 0);
+    expect(sizes[0]!.h).toBeCloseTo(8, 0);
+    for (const dot of sizes.slice(1)) {
+      expect(dot.w).toBeCloseTo(8, 0);
+      expect(dot.h).toBeCloseTo(8, 0);
+      // 44 px tall; sideways it reaches halfway into the gaps (44 px wide boxes would overlap and steal each other's taps).
+      expect(dot.hitW).toBeGreaterThanOrEqual(16);
+      expect(dot.hitH).toBeGreaterThanOrEqual(44);
+    }
+    expect(sizes[1]!.x - (sizes[0]!.x + sizes[0]!.w)).toBeCloseTo(8, 0);
+
+    // The accessible names say the game and the place.
+    await expect(section.getByRole('button', { name: 'vialo, 1 of 6' })).toBeVisible();
+
+    // A dot moves the carousel; the card and the pill follow.
+    // A tap just above the dot's own box (inside its hit area) still picks that dot.
+    const box = (await dots.nth(3).boundingBox())!;
+    await page.mouse.click(box.x + box.width / 2, box.y - 14);
+    await expect(section.locator('[data-game-card]').nth(3)).toHaveClass(/on/);
+    await expect(dots.nth(3)).toHaveAttribute('aria-current', 'true');
+    await expect(current).toHaveCount(1);
+
+    // The arrows and the keyboard keep it in step.
+    await section.getByRole('button', { name: 'next game' }).click();
+    await expect(dots.nth(4)).toHaveAttribute('aria-current', 'true');
+    await section.getByRole('button', { name: 'previous game' }).click();
+    await expect(dots.nth(3)).toHaveAttribute('aria-current', 'true');
+    await section.locator('[data-game-card]').nth(3).focus();
+    await page.keyboard.press('ArrowLeft');
+    await expect(dots.nth(2)).toHaveAttribute('aria-current', 'true');
+
+    // Keyboard: a dot takes focus with a visible ring and Enter moves the carousel.
+    await dots.nth(5).focus();
+    await expect(dots.nth(5)).toBeFocused();
+    const ring = await dots.nth(5).evaluate((el) => parseFloat(getComputedStyle(el).outlineWidth));
+    expect(ring).toBeGreaterThan(0);
+    await page.keyboard.press('Enter');
+    await expect(dots.nth(5)).toHaveAttribute('aria-current', 'true');
+    await expect(section.locator('[data-game-card]').nth(5)).toHaveClass(/on/);
+
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(await page.evaluate(() => innerWidth));
   });
 });

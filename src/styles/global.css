@@ -1036,7 +1036,7 @@ html:has(dialog.menu-panel[open]) {
     --vial-step-depth: calc(var(--spacing) * 22.5);   /* 90 px further back per step out */
     --vial-perspective: calc(var(--spacing) * 400);   /* 1600 px */
     --vial-hover-rise: calc(var(--spacing) * -1.5);   /* the front vial rises 6 px under the mouse */
-    --vial-pedestal-width: min(calc(var(--spacing) * 275), 92vw); /* up to 1100 px */
+    --vial-pedestal-width: min(calc(var(--spacing) * 295), 92vw); /* up to 1180 px, the final board's platter */
     --vial-pedestal-height: calc(var(--spacing) * 30); /* 120 px */
     --vial-pedestal-foot: calc(var(--spacing) * 10);  /* 40 px */
     --vial-arrow: calc(var(--spacing) * 14);          /* 56 px arrows beside the vials on wider screens */
@@ -1414,6 +1414,28 @@ html:has(dialog.menu-panel[open]) {
 
     .vial-arrow-next {
       inset-inline-end: calc(var(--spacing) * 7);
+    }
+  }
+
+  /*
+    The final board (20 Nov) sits the arrows on the platter at its two ends, level with the pedestal. They only fit
+    beside the nine vials on a wide desktop, where the row's reach no longer depends on them (--vial-arrow-reserves).
+  */
+  @media (width >= 64rem) {
+    .modes {
+      --vial-arrow-reserves: 0;
+    }
+
+    .vial-arrow {
+      inset-block-start: calc(var(--vial-stage-height) - var(--vial-pedestal-foot) - var(--vial-pedestal-height) / 2);
+    }
+
+    .vial-arrow-prev {
+      inset-inline-start: calc(50% - var(--vial-pedestal-width) / 2 - var(--spacing) * 8);
+    }
+
+    .vial-arrow-next {
+      inset-inline-end: calc(50% - var(--vial-pedestal-width) / 2 - var(--spacing) * 8);
     }
   }
 

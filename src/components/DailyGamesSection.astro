@@ -29,6 +29,16 @@ const tachyyyGame = {
   line: 'fifteen fast clinical questions in 30 seconds. how sharp are you on shift today?',
 } as const;
 
+// One pager dot per card, in card order; the name is read out with its place in the row.
+const pagerGames = [
+  gameName('vialo'),
+  tachyyyGame.name,
+  gameName('piccline'),
+  gameName('cueword'),
+  gameName('triage'),
+  helloCardsGame.name,
+];
+
 const helloEntries = await getCollection('hello-cards');
 const helloCardsAvailable = helloCardsPage(
   helloEntries.map(({ data }) => data),
@@ -264,6 +274,12 @@ const helloCardsAvailable = helloCardsPage(
       </div>
     </div>
 
+    <div class="games-pager" role="group" aria-label="choose a game">
+      {pagerGames.map((game, idx) => (
+        <button type="button" class="games-dot" data-games-dot aria-label={`${game}, ${idx + 1} of ${pagerGames.length}`} aria-current={idx === 0 ? 'true' : undefined}></button>
+      ))}
+    </div>
+
     <p class="games-date-note" data-testid="daily-games-day" data-daily-games-date aria-live="polite" aria-atomic="true">
       the date changes at midnight on your device. some sample puzzles repeat.
     </p>
@@ -293,11 +309,13 @@ const helloCardsAvailable = helloCardsPage(
     flex-direction: column;
     gap: var(--game-container-gap);
     width: 100%;
+    /* The final board keeps the heading row and the cards inside one 1280 px column (arrows at its two ends). */
+    max-width: var(--game-section-max-width);
+    margin-inline: auto;
   }
 
   .games-stage {
     padding: var(--game-stage-padding);
-    background: var(--color-silk-base);
     color: var(--color-ink);
   }
 
@@ -347,6 +365,17 @@ const helloCardsAvailable = helloCardsPage(
 
   .gs-nav:hover {
     background: var(--game-nav-bg-hover);
+  }
+
+  /* The final board draws these as the same copper-glow discs as the vial shelf's arrows. */
+  .gs-nav {
+    border-color: var(--cueory-copper-start);
+    background: var(--cueory-copper-glow);
+    color: var(--cueory-copper-ink);
+  }
+
+  .gs-nav:hover {
+    background: var(--cueory-copper-shine);
   }
 
   .gs-nav:focus-visible {
@@ -416,6 +445,7 @@ const helloCardsAvailable = helloCardsPage(
         "heading heading heading"
         "subtitle subtitle subtitle"
         "car car car"
+        "pager pager pager"
         "note note note"
         "prev action next";
       align-items: center;
@@ -438,6 +468,10 @@ const helloCardsAvailable = helloCardsPage(
     .gcar {
       grid-area: car;
       inline-size: 100%;
+    }
+
+    .games-pager {
+      grid-area: pager;
     }
 
     .games-date-note {
@@ -477,10 +511,6 @@ const helloCardsAvailable = helloCardsPage(
       line-height: var(--text-base--line-height);
     }
 
-    .gs-nav {
-      border-color: var(--color-ink-soft);
-      background: var(--color-surface);
-    }
   }
 
   @media (min-width: 48em) {
@@ -497,6 +527,59 @@ const helloCardsAvailable = helloCardsPage(
 
     .games-nav-next {
       justify-self: end;
+    }
+  }
+
+  /* Dot pager (Christian, 23 Nov): one dot per position, the current one a pill. Each dot is a real button whose
+     hit area is a pseudo-element, so the dots can stay small and close. It is 44 px tall; sideways it reaches halfway
+     into the gap on each side, because 44 px wide boxes on dots 16 px apart would overlap and the neighbour would
+     take the tap meant for this dot. */
+  .games-pager {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--game-pager-gap);
+  }
+
+  .games-dot {
+    position: relative;
+    flex: none;
+    inline-size: var(--game-pager-dot);
+    block-size: var(--game-pager-dot);
+    padding: 0;
+    border: 0;
+    border-radius: var(--radius-pill);
+    background-color: var(--color-line);
+    cursor: pointer;
+    transition:
+      inline-size var(--duration-slow) var(--ease-soft),
+      background-color var(--duration-slow) var(--ease-soft);
+  }
+
+  .games-dot::before {
+    content: '';
+    position: absolute;
+    inset-block-start: 50%;
+    inset-inline-start: 50%;
+    inline-size: calc(100% + var(--game-pager-gap));
+    min-inline-size: var(--game-pager-dot);
+    block-size: var(--tap-min);
+    transform: translate(-50%, -50%);
+  }
+
+  .games-dot[aria-current='true'] {
+    inline-size: var(--game-pager-pill);
+    background-color: var(--color-ink);
+  }
+
+  .games-dot:focus-visible {
+    outline: var(--focus-width) solid var(--color-copper-deep);
+    outline-offset: var(--focus-offset);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .games-dot {
+      transition: none;
     }
   }
 
@@ -700,6 +783,10 @@ const helloCardsAvailable = helloCardsPage(
   /* At enlarged text on a phone, the rem-sized playing card must contract to the carousel viewport. Keep the
    * decorative offscreen track clipped, but never clip the active card's name, description or status. */
   @media (max-width: 40em) {
+    .gtrack {
+      gap: var(--game-track-gap-phone);
+    }
+
     .gcard {
       width: clamp(var(--game-card-phone-min-width), calc(100% - var(--game-card-phone-inline-inset)), var(--game-card-width));
       height: auto;
