@@ -428,6 +428,18 @@ test('with a mouse, the front vial lifts to 104% with brighter glass; its neighb
       shine: getComputedStyle(card.querySelector('.vial-shine')!).opacity,
       glass: getComputedStyle(card.querySelector('.vial-img')!).filter,
     }));
+  // Pin the ring first (Home on the card group is a keyboard use): the six-second autoplay must not move the front
+  // vial out from under the pointer on a slow runner. The video vial is in front and nothing is gliding.
+  await section(page).getByRole('group', { name: 'study mode cards' }).press('Home');
+  await expect(section(page)).toHaveAttribute('data-autoplay', 'off');
+  await expect(page.locator('#mode-video')).toHaveAttribute('data-active', '');
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () => document.getAnimations().filter((a) => a.effect?.getComputedTiming().iterations !== Infinity && a.playState === 'running').length,
+      ),
+    )
+    .toBe(0);
   const sideBefore = await look('cards');
   await page.locator('#mode-video [data-mode-open]').hover();
   await expect.poll(async () => (await look('video')).scale).toBe('1.04');
