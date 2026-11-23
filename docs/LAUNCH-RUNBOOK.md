@@ -10,6 +10,14 @@ Use this runbook for the games-and-public-pages launch. Accounts and production 
 4. Merge this runbook into `staging`.
 5. Record the new staging SHA after all approved merges finish.
 6. Wait for every required check on that new staging SHA to pass.
+6.1. Confirm the `Type check, build and test` aggregate is green.
+6.2. Confirm every Chromium browser shard is green.
+6.3. Confirm every WebKit browser shard is green.
+6.4. Confirm every Firefox browser shard is green.
+6.5. Confirm CodeQL is green.
+6.6. Confirm Database is green.
+6.7. Confirm the Workers build is green.
+6.8. Confirm any additional check required by branch protection is green.
 7. Wait for the approved all-engine browser results on that same SHA.
 8. Record the final approved SHA in the actual release pull request and launch checklist.
 9. Stop if the SHA in the release record differs from the SHA tested by all engines.
@@ -66,9 +74,9 @@ Use this runbook for the games-and-public-pages launch. Accounts and production 
 51. Open `https://cueory.app` in a private window.
 52. Confirm that the previous version is live again.
 53. Open the actual merged release pull request.
-54. Click its `Revert` button when GitHub can create the source revert.
-55. Create a rollback branch from the current `staging` branch when GitHub cannot create that revert safely.
-56. Revert the production merge commit with first-parent semantics on that rollback branch.
+54. Record its production launch merge commit.
+55. Create a rollback branch from the current `staging` branch.
+56. Run `git revert -m 1 <production-launch-merge-commit>` on that rollback branch.
 57. Open the rollback pull request into `staging`.
 58. Wait for the rollback pull request checks to pass.
 59. Verify the reverted source on the locked staging site.
