@@ -139,6 +139,7 @@ function Board({ puzzle, name }: Props) {
 
   return (
     <section aria-labelledby={puzzle.theme ? title : undefined} aria-label={puzzle.theme ? undefined : `${name} puzzle`} data-testid="suture" data-print-area="suture" className="wordpath">
+      <PrintLogo />
       {puzzle.theme && <PicclineCue id={title} text={puzzle.theme} />}
       {/* The corner row (Christian's brief): the gear at the top left (word path has no settings of its own, so it holds
           the shared ones); print and the "?" at the top right. */}
@@ -155,7 +156,6 @@ function Board({ puzzle, name }: Props) {
           </button>
         }
       />
-      <PrintLogo />
       <GameHelpCard help={howToPlay} name={name} />
       <div className="wordpath-panel -mx-(--wordpath-bleed) mt-6 sm:mx-0 sm:px-(--spacing-stack)">
       <div

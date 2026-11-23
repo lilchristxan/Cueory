@@ -336,6 +336,7 @@ export function PathBoard({ puzzle, name }: Props) {
 
   return (
     <section aria-labelledby={title} data-testid="suture" data-format="path" data-print-area="suture" className="wordpath">
+      <PrintLogo />
       <PicclineCue id={title} text={puzzle.clue} />
       {/* The corner row (Christian's brief): the gear at the top left (word path has no settings of its own, so it holds
           the shared ones); print and the "?" at the top right. */}
@@ -353,7 +354,6 @@ export function PathBoard({ puzzle, name }: Props) {
         }
       />
       {printNote && <p className="mt-2 text-center text-sm text-ink-soft" data-testid="suture-print-note" data-print-hidden>{printNote}</p>}
-      <PrintLogo />
       <GameHelpCard help={howToPlay} name={name} />
       <div className="wordpath-panel -mx-(--wordpath-bleed) mt-6 sm:mx-0 sm:px-(--spacing-stack)">
       <div
