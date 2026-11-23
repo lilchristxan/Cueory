@@ -390,6 +390,25 @@
     cursor: default;
   }
 
+  /* A signed-out visitor's "get launch updates" link on the sign-in, sign-up and account screens reads as a real 44 px
+     button. Styling only: the link, its address and the screen's sign-in code are unchanged. */
+  [data-testid="signin-unavailable"] > a {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-block-size: var(--tap-min);
+    padding: calc(var(--spacing) * 3) calc(var(--spacing) * 6);
+    border: 1px solid var(--color-control);
+    border-radius: var(--radius-pill);
+    color: var(--color-ink);
+    text-decoration: none;
+  }
+
+  [data-testid="signin-unavailable"] > a:hover {
+    background-color: var(--color-surface);
+  }
+
+
 
   /* "ways to study": Linen (Evening: Walnut), the folds falling the other way, light from the upper right. */
   .scene-tint {
@@ -2515,4 +2534,14 @@ html:has(dialog.mode-preview[open]) {
   .mode-grid-fit {
     grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--container-mode-tile)), 1fr));
   }
+}
+
+/* Unlayered so it outranks the buttons' own disabled opacity utility. */
+/* Disabled actions on the progress screen stay readable (full-strength ink, a dashed outline) instead of fading. */
+[data-progress-actions] button:disabled {
+  opacity: 1;
+  cursor: not-allowed;
+  background-color: transparent;
+  color: var(--color-ink-soft);
+  border: 1px dashed var(--color-control);
 }

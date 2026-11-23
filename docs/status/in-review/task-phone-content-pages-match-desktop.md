@@ -1,0 +1,1 @@
+status: Phone and tablet layouts for the content pages match the desktop design (shared coming-soon panel, flatter lists, readable disabled actions); draft PR, touches start, learn/questions and progress pages so it needs Christian.

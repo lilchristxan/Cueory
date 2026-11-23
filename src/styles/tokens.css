@@ -239,10 +239,10 @@
   /* Phones draw the headline on four large lines (nursing / school / made / simpler.), sized by the same column width. */
   --text-display-hero-phone: clamp(1rem, 100cqi / 4.6, 5.5rem);
   --text-display-hero-phone--line-height: 1.05;
-  /* Phones draw the About headline on four large lines (we know / nursing / school is / hard.), sized by the header's
-     width (container query). Its longest line, "we know", is about 3.9 times its font size in Bodoni Moda; 5 leaves
-     room for the fallback serifs and enlarged text. */
-  --text-display-about-phone: clamp(1rem, 100cqi / 5, 5.5rem);
+  /* Phones draw the About headline on two or three lines, sized by the header's width (container query). Its longest
+     line, "we know nursing", is about 6.6 times its font size in Bodoni Moda; 7 leaves room for the fallback serifs and
+     enlarged text. */
+  --text-display-about-phone: clamp(1rem, 100cqi / 7, 5.5rem);
   --text-display-about-phone--line-height: 1.05;
   --text-title-explore: 2rem;   /* the explore row's heading */
   --text-title-explore--line-height: 1.2;
@@ -387,6 +387,7 @@
   --segmented-pad-y: 0.375rem;        /* .segmented-option */
   --segmented-pad-x: 0.875rem;        /* .segmented-option */
   --tap-min: 2.75rem;                 /* 44 px minimum tap target */
+  --coming-soon-min-height: 55svh;    /* a coming-soon page fills the first screen instead of sitting half empty */
 
   /* ---------- Crossword levels (Task 627) ---------- */
   --crossword-cell-easy: clamp(2.75rem, 12vw, 4.5rem);

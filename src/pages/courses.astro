@@ -29,11 +29,11 @@ import { courses } from '../config/courses';
               <p class="text-sm text-ink-soft">{course.description}</p>
             </div>
 
-            <div class="mt-4">
+            <div class:list={[isAvailable ? 'mt-4' : 'mt-4 max-sm:sr-only']}>
               {isAvailable ? (
                 <a
                   href={course.href}
-                  class="inline-flex min-h-11 items-center justify-center rounded-md border border-control bg-page px-4 text-sm text-ink hover:border-ink focus-visible:outline-2"
+                  class="inline-flex min-h-11 items-center justify-center rounded-md border border-control bg-page px-4 text-base text-ink hover:border-ink focus-visible:outline-2 max-sm:w-full"
                 >
                   open course
                 </a>
