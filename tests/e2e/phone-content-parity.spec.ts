@@ -105,8 +105,10 @@ test.describe('phone layouts follow the desktop design', () => {
       serif.className = `display ${cls}`;
       serif.textContent = 'serif control';
       document.querySelector('main')!.append(serif);
-      return { panel: getComputedStyle(h).fontFamily, control: getComputedStyle(serif).fontFamily };
+      const cs = getComputedStyle(h);
+      return { lineRatio: Number.parseFloat(cs.lineHeight) / Number.parseFloat(cs.fontSize), panel: cs.fontFamily, control: getComputedStyle(serif).fontFamily };
     }, classes!);
+    expect(fonts.lineRatio).toBeGreaterThanOrEqual(1.5);
     expect(fonts.panel).toContain('Lato');
     expect(fonts.panel).not.toContain('Bodoni Moda');
     expect(fonts.control).toContain('Bodoni Moda');
