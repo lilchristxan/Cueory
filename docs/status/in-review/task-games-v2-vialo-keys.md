@@ -1,6 +1,7 @@
 status: vialo's on-screen keys are a three-row q-w-e-r-t-y keyboard of raised key caps (Christian's pick, 23 Nov: "make the on screen letters look more typable", then "I like the look you are building better"). Enter starts the last row and delete ends it. Marks show by finish and by name: green cap in place, oxblood cap with a ring elsewhere, flat and struck through when not in the word.
 
 D-pending: phone letter-key size exception for vialo (Christian, 23 Nov). On phones a letter key may be at least 32 px wide and 52 px tall with at least 4 px between keys, as phone keyboards are; tablet and desktop keys keep 44 px. He approved it in chat after seeing both keyboards side by side.
+D-pending: screens narrower than 360 px (Christian to confirm). Ten 32 px keys with 4 px gaps need 356 px, so below 360 px the keys share the screen width: 28 px wide at 320 px, still 54 px tall, enter and delete 44 px wide. That phone's own keyboard has 26 px keys. The keyboard runs edge to edge on phones, so 360 px and wider keep at least 32 px (35 px at 390).
 D-pending: the key marks are finishes, not symbols (Games v2 README, D-pending 3). The ● ○ · symbols still show on the keys in high contrast.
 D-pending: oxblood and dark green on the keys are the Games v2 game colours, outside the brand palette (Games v2 README, D-pending 1).
 Follow-up: the crossword letter pad and the retired pillo route still list a to z.

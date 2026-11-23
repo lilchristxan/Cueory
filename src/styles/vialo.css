@@ -305,12 +305,21 @@
     block-size: auto;
   }
 
-  /* Phones: a narrower gap and a slightly smaller letter, and vialo's frame runs from edge to edge of the screen
-     (it gives up the page's side padding), so ten keys of about 33 px fit a 390 px screen. With the padding the keys
-     would be 29 px. */
+  /* Phones: the keyboard runs from edge to edge of the screen, as a phone's own keyboard does, with a narrower gap
+     and a slightly smaller letter. vialo's frame gives up the page's side padding, and the keys span the whole frame
+     whatever padding sits in between, so a letter key is 35 px wide at 390 px, 33.5 at 375 and 32 at 360. Below 360 px
+     ten keys cannot be 32 px without scrolling sideways, so they share the width (28 px at 320 px). */
   @media (width < 40rem) {
     .game-page-frame[data-game-page="vialo"] {
+      container: vialo-page / inline-size;
       margin-inline: calc(var(--spacing-gutter) * -1);
+    }
+
+    .vialo-keys {
+      --vialo-keys-span: calc(100cqi - var(--vialo-key-edge-gap) * 2);
+      inline-size: var(--vialo-keys-span);
+      max-inline-size: none;
+      margin-inline: calc((100% - var(--vialo-keys-span)) / 2) 0;
     }
 
     .vialo-key-row {

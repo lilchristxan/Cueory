@@ -72,6 +72,39 @@ test('vialo keys are a three-row keyboard with comfortable targets, and they typ
   await expect(vialo.getByRole('list', { name: 'your guesses' }).getByRole('listitem')).toHaveAccessibleName(/^guess 1: crane\./);
 });
 
+// Narrower phones (phone projects only): the keyboard runs edge to edge, so a letter key keeps the approved 32 px
+// down to a 360 px screen. Below that ten keys of 32 px and nine 4 px gaps (356 px) no longer fit, so the keys share
+// the width, as that phone's own keyboard does: 28 px at 320 px (D-pending in the status note). Enter and delete stay
+// at least 44 px wide, every key stays at least 52 px tall and 4 px from its neighbour, and nothing scrolls sideways.
+test('vialo keys keep their size on narrower phones without sideways scrolling', async ({ page }, info) => {
+  test.skip(!info.project.name.includes('phone'), 'phone keyboards only');
+  const keys = page.getByTestId('vialo').getByRole('group', { name: 'letters' });
+  await expect(keys.getByRole('button')).toHaveCount(28);
+  for (const [width, letterMin] of [[375, 32], [360, 32], [320, 27.9]] as const) {
+    await page.setViewportSize({ width, height: 844 });
+    const rows = await keys.locator('.vialo-key-row').evaluateAll((nodes) =>
+      nodes.map((row) =>
+        Array.from(row.querySelectorAll('button'), (key) => {
+          const box = key.getBoundingClientRect();
+          return { wide: key.classList.contains('vialo-key-wide'), x: box.x, width: box.width, height: box.height };
+        }),
+      ),
+    );
+    expect(rows.map((row) => row.length)).toEqual([10, 9, 9]);
+    for (const row of rows) {
+      for (const [index, key] of row.entries()) {
+        expect(key.width, `${width} px screen, key width`).toBeGreaterThanOrEqual(key.wide ? 44 : letterMin);
+        expect(key.height, `${width} px screen, key height`).toBeGreaterThanOrEqual(52);
+        const next = row[index + 1];
+        if (next) expect(next.x - (key.x + key.width), `${width} px screen, gap`).toBeGreaterThanOrEqual(3.99);
+      }
+      expect(row[0].x).toBeGreaterThanOrEqual(0);
+      expect(row.at(-1)!.x + row.at(-1)!.width).toBeLessThanOrEqual(width + 0.01);
+    }
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), `${width} px screen, no sideways scroll`).toBe(true);
+  }
+});
+
 // A key's mark shows without colour: "in place" is a solid cap, "elsewhere" carries a ring inside its edge, and a
 // letter that is not in the word is struck through and sits down flat. Each key's name says the mark in words.
 test('vialo keys show each mark by finish and by name, never by colour alone', async ({ page }) => {
