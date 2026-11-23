@@ -74,11 +74,20 @@ test('no medication wording anywhere on the vials or in their preview', async ({
   for (const mode of studyModes) expect(mode.features.map((feature) => feature.text).join(' ')).not.toMatch(banned);
 });
 
-test('the dots follow the vial in front, with no caption repeating its name; the dot is a pill, not only a color', async ({ page }) => {
+test('the dots follow the vial in front; no caption on tablet or desktop, one readable line on phones; the dot is a pill, not only a color', async ({ page }, testInfo) => {
   await showRing(page);
   const on = () => section(page).locator('[data-modes-dot][data-on]');
   await expect(on()).toHaveCount(1);
-  await expect(section(page).locator('[data-modes-caption]')).toHaveCount(0);
+  // Changed for phone parity: phone vial labels are small, so phones alone get one line naming the front vial under the
+  // dots (the new phone spec checks its text and size). Tablet and desktop still show no caption.
+  const caption = section(page).locator('[data-modes-caption]');
+  if (sizeOf(testInfo) === 'phone') await expect(caption).toBeVisible();
+  else await expect(caption).toBeHidden();
+  // The ring slides on its own every six seconds: take it over (Home on the card group is a keyboard use) so the first
+  // vial is in front and "next" goes to index 1.
+  await section(page).locator('[data-modes-track]').press('Home');
+  await expect(section(page)).toHaveAttribute('data-autoplay', 'off');
+  await expect(section(page).locator('#mode-video')).toHaveAttribute('data-active', '');
   await section(page).getByRole('button', { name: 'next study mode' }).click();
   const widths = () =>
     section(page)
@@ -98,12 +107,34 @@ test('phones put the arrows under the pedestal, either side of the dots; wider s
   const next = (await section(page).locator('[data-modes-next]').boundingBox())!;
   const dots = (await section(page).locator('.modes-dots').boundingBox())!;
   if (sizeOf(testInfo) === 'phone') {
-    expect(prev.y).toBeGreaterThanOrEqual(track.y + track.height - 2);
-    expect(prev.x + prev.width).toBeLessThanOrEqual(dots.x);
-    expect(next.x).toBeGreaterThanOrEqual(dots.x + dots.width);
+    // Changed for phone parity: the arrows now stand at the shelf's left and right ends (above the lower outer vials),
+    // 44 px each, and the dots sit alone under the pedestal.
+    expect(prev.width).toBeGreaterThanOrEqual(44);
+    expect(next.width).toBeGreaterThanOrEqual(44);
+    expect(prev.x).toBeLessThan(track.width / 8);
+    expect(next.x + next.width).toBeGreaterThan((track.width * 7) / 8);
+    expect(dots.y).toBeGreaterThanOrEqual(track.y + track.height - 2);
   } else {
-    const middle = track.y + track.height / 2;
-    expect(Math.abs(prev.y + prev.height / 2 - middle)).toBeLessThan(2);
+    // Changed on purpose (final home board, 20 Nov): from 1024 px wide the arrows sit on the platter's two ends, level
+    // with the pedestal; on a tablet they stay beside the vials, mid-height.
+    const wide = page.viewportSize()!.width >= 1024;
+    // One geometry read: both arrow centres against the rendered pedestal (wide) or the track's mid-height (tablet).
+    const geo = await page.evaluate(() => {
+      const root = document.querySelector('#ways-to-study')!;
+      const mid = (el: Element) => {
+        const r = el.getBoundingClientRect();
+        return r.y + r.height / 2;
+      };
+      return {
+        pedestal: mid(root.querySelector('.vial-pedestal')!),
+        track: mid(root.querySelector('[data-modes-track]')!),
+        prev: mid(root.querySelector('[data-modes-prev]')!),
+        next: mid(root.querySelector('[data-modes-next]')!),
+      };
+    });
+    const level = wide ? geo.pedestal : geo.track;
+    expect(Math.abs(geo.prev - level), 'previous arrow centre').toBeLessThan(2);
+    expect(Math.abs(geo.next - level), 'next arrow centre').toBeLessThan(2);
     expect(prev.x).toBeLessThan(track.width / 4);
     expect(next.x).toBeGreaterThan((track.width * 3) / 4);
   }
@@ -397,6 +428,18 @@ test('with a mouse, the front vial lifts to 104% with brighter glass; its neighb
       shine: getComputedStyle(card.querySelector('.vial-shine')!).opacity,
       glass: getComputedStyle(card.querySelector('.vial-img')!).filter,
     }));
+  // Pin the ring first (Home on the card group is a keyboard use): the six-second autoplay must not move the front
+  // vial out from under the pointer on a slow runner. The video vial is in front and nothing is gliding.
+  await section(page).getByRole('group', { name: 'study mode cards' }).press('Home');
+  await expect(section(page)).toHaveAttribute('data-autoplay', 'off');
+  await expect(page.locator('#mode-video')).toHaveAttribute('data-active', '');
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () => document.getAnimations().filter((a) => a.effect?.getComputedTiming().iterations !== Infinity && a.playState === 'running').length,
+      ),
+    )
+    .toBe(0);
   const sideBefore = await look('cards');
   await page.locator('#mode-video [data-mode-open]').hover();
   await expect.poll(async () => (await look('video')).scale).toBe('1.04');
