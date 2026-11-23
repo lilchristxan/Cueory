@@ -63,8 +63,8 @@ function Tile({ row }: { row: Row }) {
     >
       {row.art ? (
         <span className="logo size-(--play-hub-tile-icon)">
-          <img className="logo-day" src={ICON[row.art].day} alt="" width="100" height="100" decoding="async" />
-          <img className="logo-evening" src={ICON[row.art].evening} alt="" width="100" height="100" decoding="async" />
+          <img className="logo-day" src={ICON[row.art].day} alt="" aria-hidden="true" loading="lazy" width="100" height="100" decoding="async" />
+          <img className="logo-evening" src={ICON[row.art].evening} alt="" aria-hidden="true" loading="lazy" width="100" height="100" decoding="async" />
         </span>
       ) : (
         row.name.slice(0, 1)
@@ -81,8 +81,8 @@ function Name({ row }: { row: Row }) {
   return (
     <span className="logo block h-(--play-hub-wordmark-height-phone) lg:h-(--play-hub-wordmark-height)">
       <span className="sr-only">{row.name}</span>
-      <img className="logo-day h-full w-auto" src={art.day} alt="" aria-hidden="true" width={art.width} height={art.height} decoding="async" />
-      <img className="logo-evening h-full w-auto" src={art.evening} alt="" aria-hidden="true" width={art.width} height={art.height} decoding="async" />
+      <img className="logo-day h-full w-auto" src={art.day} alt="" aria-hidden="true" loading="lazy" width={art.width} height={art.height} decoding="async" />
+      <img className="logo-evening h-full w-auto" src={art.evening} alt="" aria-hidden="true" loading="lazy" width={art.width} height={art.height} decoding="async" />
     </span>
   );
 }
@@ -160,7 +160,7 @@ export default function PlayStatus({ games }: Props) {
               data-testid={`play-status-${row.testId}`}
               data-status={status}
               data-closed={row.open ? undefined : 'true'}
-              className="relative grid grid-cols-[auto_1fr_auto] bg-page items-center gap-x-4 gap-y-3 rounded-xl border border-line p-4 lg:grid-cols-(--play-hub-cols) lg:gap-x-6 lg:rounded-none lg:border-0 lg:border-t lg:px-0 lg:py-5"
+              className="relative grid grid-cols-(--play-hub-cols-stacked) bg-page items-center gap-x-4 gap-y-3 rounded-xl border border-line p-4 lg:grid-cols-(--play-hub-cols) lg:gap-x-6 lg:rounded-none lg:border-0 lg:border-t lg:px-0 lg:py-5"
             >
               <Tile row={row} />
               <span className="col-span-2 min-w-0 lg:col-span-1">
