@@ -530,15 +530,15 @@ const helloCardsAvailable = helloCardsPage(
     }
   }
 
-  /* Dot pager (Christian, 23 Nov): one dot per position, 8 px dots 16 px apart, the current one a 26 x 8 px pill. Each
-     dot is a real button with a 44 x 44 box; the dot itself is drawn by ::after. The negative side margins pull the
-     boxes together so the drawn dots keep their spacing, and clip-path cuts each box's reach sideways so neighbouring
-     hit areas never overlap (a box is 44 px tall and reaches halfway into the gaps), which also keeps taps exact. */
+  /* Dot pager (Christian, 23 Nov): one dot per position, 8 px dots, the current one a 26 x 8 px pill. Each dot is a real
+     button whose whole 44 x 44 box takes the tap; the dot itself is drawn inside it by ::after. The boxes sit side by
+     side with a hair of space (never overlapping, never clipped), and the row wraps instead of scrolling sideways at large text. */
   .games-pager {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     justify-content: center;
+    column-gap: var(--game-pager-gap);
   }
 
   .games-dot {
@@ -546,12 +546,10 @@ const helloCardsAvailable = helloCardsPage(
     flex: none;
     inline-size: var(--tap-min);
     block-size: var(--tap-min);
-    margin-inline: calc((var(--game-pager-dot) + var(--game-pager-gap) - var(--tap-min)) / 2);
     padding: 0;
     border: 0;
     background: none;
     cursor: pointer;
-    clip-path: inset(0 calc((var(--tap-min) - var(--game-pager-dot) - var(--game-pager-gap)) / 2));
   }
 
   .games-dot::after {
@@ -566,24 +564,16 @@ const helloCardsAvailable = helloCardsPage(
     transform: translate(-50%, -50%);
   }
 
-  .games-dot[aria-current='true'] {
-    margin-inline: calc((var(--game-pager-pill) + var(--game-pager-gap) - var(--tap-min)) / 2);
-    clip-path: inset(0 calc((var(--tap-min) - var(--game-pager-pill) - var(--game-pager-gap)) / 2));
-  }
-
   .games-dot[aria-current='true']::after {
     inline-size: var(--game-pager-pill);
     background-color: var(--color-ink);
   }
 
-  /* The ring hugs the dot (no offset) so the clip above never cuts it. */
+  /* Keyboard focus: a round ring just inside the whole 44 px box, so nothing clips it. */
   .games-dot:focus-visible {
-    outline: none;
-  }
-
-  .games-dot:focus-visible::after {
+    border-radius: var(--radius-pill);
     outline: var(--focus-width) solid var(--color-copper-deep);
-    outline-offset: 0;
+    outline-offset: calc(-1 * var(--focus-width));
   }
 
   .games-date-note {

@@ -118,9 +118,23 @@ test('phones put the arrows under the pedestal, either side of the dots; wider s
     // Changed on purpose (final home board, 20 Nov): from 1024 px wide the arrows sit on the platter's two ends, level
     // with the pedestal; on a tablet they stay beside the vials, mid-height.
     const wide = page.viewportSize()!.width >= 1024;
-    const pedestal = (await section(page).locator('.vial-pedestal').boundingBox())!;
-    const level = wide ? pedestal.y + pedestal.height / 2 : track.y + track.height / 2;
-    expect(Math.abs(prev.y + prev.height / 2 - level)).toBeLessThan(wide ? 8 : 2);
+    // One geometry read: both arrow centres against the rendered pedestal (wide) or the track's mid-height (tablet).
+    const geo = await page.evaluate(() => {
+      const root = document.querySelector('#ways-to-study')!;
+      const mid = (el: Element) => {
+        const r = el.getBoundingClientRect();
+        return r.y + r.height / 2;
+      };
+      return {
+        pedestal: mid(root.querySelector('.vial-pedestal')!),
+        track: mid(root.querySelector('[data-modes-track]')!),
+        prev: mid(root.querySelector('[data-modes-prev]')!),
+        next: mid(root.querySelector('[data-modes-next]')!),
+      };
+    });
+    const level = wide ? geo.pedestal : geo.track;
+    expect(Math.abs(geo.prev - level), 'previous arrow centre').toBeLessThan(2);
+    expect(Math.abs(geo.next - level), 'next arrow centre').toBeLessThan(2);
     expect(prev.x).toBeLessThan(track.width / 4);
     expect(next.x).toBeGreaterThan((track.width * 3) / 4);
   }
