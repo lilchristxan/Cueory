@@ -1814,11 +1814,15 @@ html:has(dialog.menu-panel[open]) {
     translate: 0 var(--vial-hover-rise);
   }
 
-  .modes[data-motion] [data-active]:is(:hover, :has(.mode-open:focus-visible)) .vial-shine {
+  /* The children are styled by one plain selector per state (no :has() inside :is() on the way to a descendant), so
+     Firefox restyles them when the pointer arrives; with the combined selector it left the shine at 0. */
+  .modes[data-motion] [data-active]:hover .vial-shine,
+  .modes[data-motion] [data-active]:has(.mode-open:focus-visible) .vial-shine {
     opacity: 1;
   }
 
-  .modes[data-motion] [data-active]:is(:hover, :has(.mode-open:focus-visible)) .vial-shadow {
+  .modes[data-motion] [data-active]:hover .vial-shadow,
+  .modes[data-motion] [data-active]:has(.mode-open:focus-visible) .vial-shadow {
     scale: 1.12 1;
   }
 }
