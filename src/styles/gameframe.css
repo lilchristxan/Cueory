@@ -54,23 +54,27 @@
   width: 100%;
 }
 
-/* The page's "flag or comment" button sits in the header row between "games" and the logo, not in a row of its own. */
+/* The page's "flag or comment" button belongs to the frame's header, not to a row above the frame. The desktop sidebar
+   is only 191 px inside, which cannot hold "games", a 44 px flag and the logo at its full width side by side, so there
+   "games" and the logo share the first line and the flag sits on a line of its own under them. On tablets and phones
+   (the compact layout below) all three share one row. */
+.game-frame-sidebar-top {
+  flex-wrap: wrap;
+  row-gap: calc(var(--spacing) * 1);
+}
 .game-frame-flag-slot {
   display: flex;
   align-items: center;
-  justify-content: center;
-  flex: 1 1 auto;
+  justify-content: flex-start;
+  order: 1;
+  flex: 0 0 100%;
 }
 .game-frame-flag-slot:empty {
   display: none;
 }
-/* The desktop sidebar is only 192 px inside, so "games", the flag and the logo share it with no side padding on "games". */
-.game-frame-sidebar-top .game-frame-back {
-  padding-inline: 0;
-}
-.game-frame-flag-slot {
-  flex: 0 0 auto;
-  margin-inline: calc(var(--spacing) * 1);
+/* The logo never gives up width to its neighbours. */
+.game-frame-logo-wrap {
+  flex: none;
 }
 
 .game-frame-back {
@@ -577,9 +581,14 @@
     padding-inline: calc(var(--spacing) * 3);
   }
 
+  .game-frame-sidebar-top {
+    flex-wrap: nowrap;
+  }
+
   .game-frame-flag-slot {
+    order: 0;
     flex: 1 1 auto;
-    margin-inline: 0;
+    justify-content: center;
   }
 
   .game-frame-layout {
