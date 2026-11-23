@@ -135,10 +135,11 @@
     The 6 × 8 letter board (SuturePathBoard) is as wide as the column, so on a short screen (a phone turned sideways,
     844 × 390) it grew far taller than the screen and a path could not be dragged from top to bottom without scrolling.
     Its width is capped so all 8 rows fit the screen's height (squares: width = height × 6 / 8), never below 44px
-    squares. On a tablet or desktop the column is wide, so squares also stop at --wordpath-cell-max (72px) instead of
-    growing to almost 100px. --wordpath-board-edge is the board's own padding and border around the squares.
+    squares. The reference spaces the desktop centres 62px apart with 52px dots. The board edge includes padding and border.
   */
   .wordpath[data-format="path"] .wordpath-board {
+    --wordpath-cell-max: calc(var(--spacing) * 15.5);
+    --wordpath-letter-inset: calc(var(--spacing) * 1.25);
     --wordpath-board-edge: calc(var(--spacing) * 6 + var(--border-board) * 2);
     max-inline-size: min(
       calc(var(--wordpath-cell-max) * 6 + var(--wordpath-board-edge)),

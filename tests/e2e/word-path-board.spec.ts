@@ -221,7 +221,7 @@ test.describe('word path: board format (#722)', () => {
     expect(await page.evaluate(() => (window as unknown as { progress: unknown[] }).progress)).toEqual([{ game: 'suture', day: '2026-11-01' }]);
   });
 
-  for (const width of [320, 390]) {
+  for (const width of [320, 390, 1440]) {
     test(`the board fits ${width} px with square letters, 44 px buttons and no sideways scrolling`, async ({ page }) => {
       await page.setViewportSize({ width, height: 800 });
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
@@ -236,6 +236,11 @@ test.describe('word path: board format (#722)', () => {
         expect(box.width).toBeGreaterThanOrEqual(44);
         expect(box.height).toBeGreaterThanOrEqual(44);
         if (letter) expect(Math.abs(box.width - box.height)).toBeLessThan(1);
+      }
+      if (width === 1440) {
+        const first = cell(page, [0, 0]);
+        expect(await first.evaluate((letter) => letter.offsetWidth)).toBe(62);
+        expect(await first.locator('.wordpath-dot').evaluate((dot) => (dot as HTMLElement).offsetWidth)).toBe(52);
       }
     });
   }
