@@ -137,7 +137,6 @@ describe('GameFrame (Scope 1)', () => {
     expect(header).toContain('<GameHelpDialog help={help} name={name} extra={helpExtra} />');
     const sudoku = readFileSync(resolve(root, 'src/islands/SudokuGame.tsx'), 'utf-8');
     expect(sudoku).toContain('<GameHelpButton help={help} name={gameName(\'triage\')} className="sudoku-icon-button" />');
-    expect(sudoku).toContain('<GameHelpCard help={help} name={gameName(\'triage\')} />');
     expect(header).toContain('{framed && end &&');
   });
 

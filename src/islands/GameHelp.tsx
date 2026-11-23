@@ -11,7 +11,6 @@ import { trappedFocusIndex } from './gamesettings';
  *
  *   const help = useGameHelp('triage');
  *   <GameHelpButton help={help} name="sudoku" className="sudoku-icon-button" />  // the "?" and its dialog
- *   <GameHelpCard help={help} name="sudoku" />                                    // the rules, on the first visit only
  *
  * The dialog traps focus, closes with Escape, the × or "got it", and gives focus back to the "?" button.
  */
@@ -132,12 +131,4 @@ export function GameHelpButton({ help, name, className, extra }: { help: GameHel
     </button>
     <GameHelpDialog help={help} name={name} extra={extra} />
   </>;
-}
-
-/**
- * The first-visit rules card is gone (Games v2): the steps live behind the "?" button, which also marks them seen. The
- * component stays so each game keeps its import; it renders nothing.
- */
-export function GameHelpCard(_props: { help: GameHelpState; name: string; extra?: ReactNode }) {
-  return null;
 }

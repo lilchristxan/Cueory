@@ -862,12 +862,6 @@
 }
 
 @media (width < 30rem) {
-  /* Phones start the first-visit rules folded so the board comes first. GameHelp.tsx reads this flag, so the
-     breakpoint is written only here. */
-  .game-frame {
-    --game-help-first-fold: 1;
-  }
-
   .game-frame-sidebar {
     padding: calc(var(--spacing) * 2.5) calc(var(--spacing) * 3);
     gap: calc(var(--spacing) * 2);

@@ -3,7 +3,7 @@ import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from 
 import { browserStorage } from '../scripts/storage';
 import { localDay, reportRound } from './gameresults';
 import { printGame } from './gameprint';
-import { GameHelpCard, useGameHelp } from './GameHelp';
+import { useGameHelp } from './GameHelp';
 import GameHeader from './GameHeader';
 import ResultBrandMark from './ResultBrandMark';
 import { dayLabel } from './daily';
@@ -279,7 +279,6 @@ function Board({ puzzle, name, framed = false }: Props) {
         </div>
       </div>
 
-      <GameHelpCard help={howToPlay} name={name} />
 
       {asking && (
         <div className="crossword-warning crossword-no-print" role="alertdialog" aria-labelledby={warning + '-title'} aria-describedby={warning} data-testid="crossword-warning"
