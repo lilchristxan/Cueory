@@ -35,6 +35,14 @@ test('the Vialo blister artwork carries the live pills and their spoken marks', 
   const committed = pack.getByRole('listitem');
   await expect(committed).toHaveAccessibleName(/^guess 1: crane\./);
   await expect(committed.locator('.vialo-letter')).toHaveText([...'crane']);
+  const pockets = committed.locator('.vialo-pill');
+  await expect(pockets).toHaveClass(['elsewhere', 'here', 'here', 'absent', 'here'].map((mark) => `vialo-pill vialo-${mark}`));
+  await expect(pockets).toHaveText([...'crane']);
+  await expect(pockets.first()).toHaveCSS('font-family', /^"?Times New Roman"?,/);
+  await expect(pockets.nth(0)).toHaveCSS('color', 'rgb(255, 255, 255)');
+  await expect(pockets.nth(1)).toHaveCSS('color', 'rgb(255, 255, 255)');
+  await expect(pockets.nth(3)).toHaveCSS('background-color', 'rgb(255, 255, 255)');
+  await expect(pockets.nth(3)).toHaveCSS('color', 'rgb(107, 82, 67)');
   await expect(committed.locator('.vialo-here').first()).toHaveCSS('background-image', /gradient/);
   await expect(committed.locator('.vialo-elsewhere').first()).toHaveCSS('box-shadow', /inset/);
   await expect(committed.locator('.vialo-absent').first()).toHaveCSS('background-image', 'none');

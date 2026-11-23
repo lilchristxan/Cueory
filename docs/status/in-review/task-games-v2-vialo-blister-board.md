@@ -1,3 +1,1 @@
-status: Vialo's six live guess rows line up with the approved blister image. Lowercase Bodoni Moda letters show the scored finishes, and unscored letters have a copper ring. The shine respects reduced motion.
-
-decision: D-pending (Games v2, Christian, 23 Nov). Use Bodoni Moda for lowercase board letters pending the final serif choice. The approved game-only oxblood and dark green finishes repeat the keyboard meanings.
+status: Vialo’s six live guess rows line up with the approved blister image. Lowercase Times New Roman letters follow Christian’s November 23 canvas decision. Absent letters use Bronze on a white pill. Correct letters use white on dark green, with a shine that respects reduced motion. Misplaced letters use white on oxblood with an inset ring. Unscored letters have a copper ring. Each scored row also announces the result of each letter in words.
