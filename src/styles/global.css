@@ -245,17 +245,109 @@
     Home hero figure (redesign P5): Christian's anatomy picture has its own pale backdrop, so its top and left edges
     fade into the silk (a mask, never over text). Evening dims it so the pale backdrop doesn't glow on the dark page.
   */
-  .hero-figure {
-    -webkit-mask-image:
-      linear-gradient(to right, transparent, currentColor var(--hero-figure-fade)),
-      linear-gradient(to bottom, transparent, currentColor var(--hero-figure-fade)),
-      linear-gradient(to top, transparent, currentColor var(--hero-figure-fade-bottom));
+  .hero-figure-wrap {
+    position: relative;
+    -webkit-mask-image: var(--hero-figure-mask, linear-gradient(to right, transparent, currentColor var(--hero-figure-fade)), linear-gradient(to left, transparent, currentColor var(--hero-figure-fade-right)), linear-gradient(to bottom, transparent, currentColor var(--hero-figure-fade)), linear-gradient(to top, transparent, currentColor var(--hero-figure-fade-bottom)));
     -webkit-mask-composite: source-in;
-    mask-image:
-      linear-gradient(to right, transparent, currentColor var(--hero-figure-fade)),
-      linear-gradient(to bottom, transparent, currentColor var(--hero-figure-fade)),
-      linear-gradient(to top, transparent, currentColor var(--hero-figure-fade-bottom));
+    mask-image: var(--hero-figure-mask, linear-gradient(to right, transparent, currentColor var(--hero-figure-fade)), linear-gradient(to left, transparent, currentColor var(--hero-figure-fade-right)), linear-gradient(to bottom, transparent, currentColor var(--hero-figure-fade)), linear-gradient(to top, transparent, currentColor var(--hero-figure-fade-bottom)));
     mask-composite: intersect;
+    pointer-events: none;
+    user-select: none;
+  }
+
+  /* The slow glisten travelling along the halo ring painted in the picture (final board: .halo-glint). Decorative. */
+  .hero-halo {
+    position: absolute;
+    inset-block-start: var(--hero-halo-top);
+    inset-inline-end: var(--hero-halo-end);
+    inline-size: var(--hero-halo-size);
+    block-size: var(--hero-halo-size);
+    border-radius: 50%;
+    pointer-events: none;
+  }
+
+  .hero-halo::before,
+  .hero-halo::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+  }
+
+  .hero-halo::before {
+    background: conic-gradient(from 0deg, transparent 0deg, transparent 285deg, var(--hero-ring-light) 322deg, transparent 350deg);
+    -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - var(--hero-ring-band)), black calc(100% - var(--hero-ring-edge)), black calc(100% - var(--hero-ring-inner)), transparent 100%);
+    mask: radial-gradient(farthest-side, transparent calc(100% - var(--hero-ring-band)), black calc(100% - var(--hero-ring-edge)), black calc(100% - var(--hero-ring-inner)), transparent 100%);
+    filter: blur(var(--hero-ring-blur));
+    animation: hero-ring-spin 11s linear infinite;
+  }
+
+  .hero-halo::after {
+    box-shadow: var(--hero-halo-glow);
+    animation: hero-halo-glow 5.5s ease-in-out infinite;
+  }
+
+  @keyframes hero-ring-spin {
+    to { transform: rotate(360deg); }
+  }
+
+  @keyframes hero-halo-glow {
+    0%, 100% { opacity: 0.35; }
+    50% { opacity: 1; }
+  }
+
+  /* The start button's light travelling round its border (final board: .ring). Only where the button works. The light
+     is clipped inside its own layer, never by the wrapper, so the link's keyboard focus outline is not cut off. */
+  .hero-start-ring {
+    position: relative;
+    display: inline-flex;
+    padding: var(--hero-button-ring);
+    isolation: isolate;
+    border-radius: var(--radius-pill);
+  }
+
+  .hero-start-light {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    overflow: hidden;
+    border-radius: inherit;
+    pointer-events: none;
+  }
+
+  .hero-start-light::before {
+    content: "";
+    position: absolute;
+    inset: -160%;
+    background: conic-gradient(from 0deg, transparent 0deg, transparent 230deg, var(--color-copper-glow) 290deg, var(--hero-sheen-peak) 322deg, var(--color-copper-glow) 340deg, transparent 360deg);
+    animation: hero-ring-spin 3.4s linear infinite;
+  }
+
+  /* "simpler." with the copper shine drifting across it; the text stays copper if the gradient is not painted. */
+  .hero-accent {
+    background-image: linear-gradient(110deg, var(--hero-accent-base) 0%, var(--hero-accent-base) 38%, var(--hero-accent-peak) 50%, var(--hero-accent-base) 62%, var(--hero-accent-base) 100%);
+    background-size: 260% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: hero-shine 11s linear infinite;
+  }
+
+  @keyframes hero-shine {
+    0% { background-position: 180% 0; }
+    100% { background-position: -80% 0; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .hero-halo::before,
+    .hero-halo::after,
+    .hero-start-light::before,
+    .hero-accent {
+      animation: none;
+    }
+  }
+
+  .hero-figure {
     pointer-events: none;
     user-select: none;
   }
@@ -271,26 +363,41 @@
   }
 
   .hero-eyebrow {
-    font-size: var(--text-sm);
-    line-height: var(--text-sm--line-height);
+    font-size: var(--text-base);
+    line-height: var(--text-base--line-height);
   }
 
   .hero-caps {
     letter-spacing: var(--tracking-caps);
   }
 
-  /* "simpler." in copper (a solid copper: Copper Deep on Ivory is 3.6:1, above the 3:1 large text needs; lighter in Evening). */
+  /*
+    "simpler." in copper. Large text needs 3:1 at every moment of the shine, so Daytime sweeps a narrow lighter band over
+    a darker copper (both from tokens.css, measured in tests/e2e/home-modern.spec.ts); Evening is the lighter copper
+    with a brighter band, which only raises contrast on the dark page.
+  */
   .hero-accent {
-    color: var(--color-copper-deep);
+    --hero-accent-base: var(--hero-accent-day);
+    --hero-accent-peak: var(--hero-accent-day-peak);
+    color: var(--hero-accent-base);
   }
 
   :root[data-theme="dark"] .hero-accent {
-    color: var(--color-copper);
+    --hero-accent-base: var(--color-copper);
+    --hero-accent-peak: color-mix(in srgb, var(--color-copper) 50%, var(--color-copper-glow));
   }
 
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) .hero-accent {
-      color: var(--color-copper);
+      --hero-accent-base: var(--color-copper);
+      --hero-accent-peak: color-mix(in srgb, var(--color-copper) 50%, var(--color-copper-glow));
+    }
+  }
+
+  @media (forced-colors: active) {
+    .hero-accent {
+      -webkit-text-fill-color: currentColor;
+      background-image: none;
     }
   }
 
@@ -300,7 +407,7 @@
     inline-size: 60%;
     block-size: var(--spacing-stack);
     margin-block-start: var(--spacing);
-    margin-inline-start: auto;
+    margin-inline: auto;
     color: var(--color-copper-deep);
   }
 
@@ -309,8 +416,27 @@
     border: 1px solid var(--cueory-copper-ink);
     border-radius: var(--radius-pill);
     padding-inline: calc(var(--spacing) * 2);
-    font-size: var(--text-sm);
+    font-size: var(--text-base);
     font-weight: 400;
+  }
+
+  /* The secondary action beside the start button: an outline pill, never copper (one copper button per screen). */
+  .hero-secondary-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: calc(var(--spacing) * 2);
+    min-block-size: var(--tap-min);
+    padding: calc(var(--spacing) * 3) calc(var(--spacing) * 6);
+    border: 1px solid var(--color-control);
+    border-radius: var(--radius-pill);
+    font-weight: 700;
+    color: var(--color-ink);
+    text-decoration: none;
+  }
+
+  .hero-secondary-link:hover {
+    background-color: rgb(var(--glass-hover-rgb) / var(--glass-hover-alpha));
   }
 
   .hero-icon,
@@ -381,13 +507,64 @@
     background-color: rgb(var(--veil-rgb) / var(--veil-alpha));
   }
 
-  .explore-tile:hover {
+  .explore-tile {
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+    transition: transform 150ms ease, border-color 150ms ease;
+  }
+
+  .explore-tile:hover,
+  .explore-tile:focus-visible {
     border-color: var(--color-control);
+    transform: translateY(calc(var(--spacing) * -1));
+  }
+
+  /* The hover glint from the final board: a soft light sweeps across the tile once. */
+  .explore-tile::after {
+    content: "";
+    position: absolute;
+    inset-block: -30%;
+    inset-inline-start: -80%;
+    inline-size: 50%;
+    background: linear-gradient(100deg, transparent 0%, var(--explore-glint) 50%, transparent 100%);
+    transform: skewX(-22deg);
+    pointer-events: none;
+    z-index: -1;
+  }
+
+  .explore-tile:hover::after,
+  .explore-tile:focus-visible::after {
+    animation: explore-glint 800ms ease-out;
+  }
+
+  @keyframes explore-glint {
+    from { inset-inline-start: -80%; }
+    to { inset-inline-start: 140%; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .explore-tile:hover,
+    .explore-tile:focus-visible {
+      transform: none;
+    }
+
+    .explore-tile:hover::after,
+    .explore-tile:focus-visible::after {
+      animation: none;
+    }
+  }
+
+  /* The explore panel as drawn: rounder corners than the other frosted panels. */
+  .explore-panel {
+    border-radius: var(--radius-panel);
   }
 
   /* The coming-soon call to action: copper like the others, but it never acts. It still takes focus so it can be read out. */
   .copper-button[aria-disabled="true"] {
     cursor: default;
+    box-shadow: none;
+    filter: grayscale(var(--disabled-grayscale));
   }
 
   /* A signed-out visitor's "get launch updates" link on the sign-in, sign-up and account screens reads as a real 44 px

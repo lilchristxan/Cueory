@@ -720,7 +720,7 @@ test.describe('theme switch', () => {
 });
 
 test.describe('marketing look (D-41)', () => {
-  test('the home hero: logo, motto, a serif headline (two lines wide, four large lines on phones) with a copper accent, the start link (P5)', async ({
+  test('the home hero: logo, motto, a serif headline (two lines on every size) with a copper accent, the start link (P5)', async ({
     page,
   }) => {
     await page.goto('/');
@@ -746,7 +746,7 @@ test.describe('marketing look (D-41)', () => {
       const box = (await element.boundingBox())!;
       expect(box.y + box.height).toBeLessThanOrEqual(height);
     }
-    // Two lines from the sm breakpoint up, four large lines below it (as HomeV2-390 draws), nothing cut off, inside the screen.
+    // Two natural lines on every size (phones no longer stack one word per line), nothing cut off, inside the screen.
     const fit = await headline.evaluate((el) => {
       const style = getComputedStyle(el);
       const box = el.getBoundingClientRect();
@@ -756,8 +756,7 @@ test.describe('marketing look (D-41)', () => {
         inside: box.left >= 0 && box.right <= window.innerWidth,
       };
     });
-    const phone = page.viewportSize()!.width < 640;
-    expect(Math.round(fit.lines)).toBe(phone ? 4 : 2);
+    expect(Math.round(fit.lines)).toBe(2);
     expect(fit.clipped).toBe(false);
     expect(fit.inside).toBe(true);
     expect(await headline.evaluate((el) => getComputedStyle(el).fontFamily)).toMatch(/^"?Bodoni Moda/);
