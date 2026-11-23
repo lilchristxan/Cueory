@@ -148,3 +148,20 @@ test.describe('the frame spans the window on every game page', () => {
     });
   }
 });
+
+// Firefox loses about 0.00003 px on a control that sits at a fractional page offset, which makes a 44 px control read as
+// 43.99997. On the sudoku page the pause button therefore lands on whole pixels (the status row above it is 2rem tall).
+test.describe('sudoku controls land on whole pixels', () => {
+  for (const scheme of ['light', 'dark'] as const) {
+    test(`the pause button at 1440 px in ${scheme}`, async ({ page }) => {
+      await page.setViewportSize({ width: 1440, height: 900 });
+      await page.emulateMedia({ colorScheme: scheme });
+      await page.goto('/play/sudoku');
+      const box = await page.getByRole('button', { name: 'pause puzzle' }).evaluate((el) => {
+        const b = el.getBoundingClientRect();
+        return [b.left + window.scrollX, b.top + window.scrollY, b.width, b.height];
+      });
+      for (const value of box) expect(Number.isInteger(value), `${box}`).toBe(true);
+    });
+  }
+});
