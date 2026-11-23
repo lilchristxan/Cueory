@@ -4,17 +4,15 @@ Use this runbook for the games-and-public-pages launch. Accounts and production 
 
 ## Release handoff
 
-1. Record the current staging SHA as `fe32826e30eb6c59f2cbee1db753f490853bd922`.
+1. Record the starting staging SHA as `fe32826e30eb6c59f2cbee1db753f490853bd922`.
 2. Wait for the fallback decision before choosing the release candidate.
 3. Merge the approved fallback or carousel fix into `staging`.
 4. Merge this runbook into `staging`.
 5. Record the new staging SHA after all approved merges finish.
 6. Wait for every required check on that new staging SHA to pass.
 7. Wait for the approved all-engine browser results on that same SHA.
-8. Replace `FINAL_RELEASE_SHA_PENDING` below with that exact approved SHA.
+8. Record the final approved SHA in the actual release pull request and launch checklist.
 9. Stop if the SHA in the release record differs from the SHA tested by all engines.
-
-Release SHA: `FINAL_RELEASE_SHA_PENDING`
 
 ## Christian-only release
 
@@ -32,28 +30,41 @@ Release SHA: `FINAL_RELEASE_SHA_PENDING`
 21. Hold the release if the deployment does not become active within ten minutes.
 22. Hold the release if Cloudflare reports a build or deployment failure.
 
-## Production smoke
+## Five-minute production smoke
 
 23. Open `https://cueory.app` in a private window.
-24. Confirm that the home page loads over HTTPS.
+24. Confirm that the approved Home version appears over HTTPS.
 25. Open `https://cueory.app/play`.
-26. Confirm that the play hub shows the currently published games.
-27. Open each currently published game from the play hub.
-28. Confirm that each published game loads and accepts its normal public interaction.
-29. Confirm that an expected coming-soon gate remains a coming-soon page where a game is not published.
-30. Open `https://cueory.app/privacy`.
-31. Confirm that the privacy page matches the released public behavior.
-32. Open an unknown address such as `https://cueory.app/launch-runbook-check-404`.
-33. Confirm that the unknown address returns HTTP 404.
-34. Hold the release if any smoke check is different from the approved staging result.
+26. Confirm that the public game hub appears.
+27. Open `https://cueory.app/play/vialo`.
+28. Enter one letter guess and confirm that the Vialo board responds.
+29. Open `https://cueory.app/play/sudoku`.
+30. Select a level and enter one digit in an empty cell.
+31. Confirm that the Sudoku board responds.
+32. Open `https://cueory.app/play/piccline`.
+33. Select one available word-path action and confirm that the board responds.
+34. Open `https://cueory.app/play/crossword`.
+35. Confirm that the closed Crossword gate says it is coming soon.
+36. Open `https://cueory.app/play/pillo`.
+37. Confirm that the retained Pillo address still loads its public game page.
+38. Open `https://cueory.app/play/word-path`.
+39. Confirm that the retained Word Path address still loads the Piccline page.
+40. Open `https://cueory.app/privacy`.
+41. Confirm that the privacy page matches the released public behavior.
+42. Open `https://cueory.app/launch-runbook-check-404`.
+43. Confirm that the unknown address returns HTTP 404.
+44. Complete the smoke within five minutes of the active deployment appearing.
+45. Hold the release if any smoke check differs from the approved staging result.
 
 ## Rollback
 
-35. Record the production launch merge commit if a rollback is needed.
-36. Open a Christian-owned pull request from a rollback branch into `main`.
-37. Revert the launch merge commit in that rollback pull request.
-38. Do not reset or force-push `main`.
-39. Merge the rollback pull request only after Christian approves it.
-40. Wait for the rollback production deployment to become active.
-41. Repeat the home, play, published-game, privacy, and unknown-route smoke checks.
-42. Hold the rollback if the deployment or smoke checks fail.
+46. Open the actual merged release pull request if a rollback is needed.
+47. Click its `Revert` button.
+48. If GitHub cannot create the revert, create a rollback branch from `main`.
+49. Revert the production merge commit with its first parent on that rollback branch.
+50. Open the rollback pull request into `main`.
+51. Do not reset or force-push `main`.
+52. Merge the rollback pull request only after Christian approves it.
+53. Wait for the rollback production deployment to become active.
+54. Repeat the home, play, published-game, privacy, and unknown-route smoke checks.
+55. Hold the rollback if the deployment or smoke checks fail.
