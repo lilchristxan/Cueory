@@ -1,11 +1,11 @@
 import { expect, test, type Page } from '@playwright/test';
 
 /**
- * Performance (2026-11-19): the /play hub's cards and stats render in the browser. While each island is still empty,
- * its holder keeps the room the island will take (src/styles/playhub.css), so the sample note, the stats and the
+ * Performance (2026-11-19): the /play hub's stats render in the browser. While each island is still empty,
+ * the stats holder keeps the room the island will take (src/styles/playhub.css), so the sample note, the stats and the
  * footer do not jump when they appear: each either stays put (within a few pixels) or stays below the first screen.
  */
-const islands = /\/_astro\/(PlayStatus|GameStatsPanel)\.[\w-]+\.js$/;
+const islands = /\/_astro\/(GameStatsPanel)\.[\w-]+\.js$/;
 
 const tops = (page: Page) =>
   page.evaluate(() =>
@@ -28,7 +28,7 @@ test('/play: what follows the cards and stats does not move into or within the f
   release();
   await expect(page.getByTestId('play-status')).toBeVisible({ timeout: 30_000 });
   await expect(page.getByTestId('game-stats')).toBeAttached({ timeout: 30_000 });
-  for (const holder of ['.play-hub-cards', '.play-hub-stats']) {
+  for (const holder of ['.play-hub-stats']) {
     await expect.poll(() => page.locator(holder).evaluate((el) => getComputedStyle(el).minHeight)).toBe('0px');
   }
   const after = await tops(page);
@@ -42,7 +42,6 @@ test.describe('without JavaScript', () => {
   test.use({ javaScriptEnabled: false });
   test('/play: no empty room is kept for islands that cannot load', async ({ page }) => {
     await page.goto('/play');
-    await expect(page.locator('.play-hub-cards')).toHaveCSS('min-height', '0px');
     await expect(page.locator('.play-hub-stats')).toHaveCSS('min-height', '0px');
   });
 });
