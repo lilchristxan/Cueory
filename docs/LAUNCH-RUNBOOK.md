@@ -2,29 +2,29 @@
 
 Use this runbook for the games-and-public-pages launch. Accounts and production database changes stay closed.
 
-## Release handoff
+## Monday, November 23, 2026 — staging freeze
 
-1. Record the starting staging SHA as `fe32826e30eb6c59f2cbee1db753f490853bd922`.
-2. Wait for the fallback decision before choosing the release candidate.
-3. Merge the approved Home fallback or carousel fix and any approved Sudoku fix or revert into `staging`.
-4. Merge this runbook into `staging`.
-5. Record the new staging SHA after all approved merges finish.
-6. Record the completed CI-only #634 dry-run link in the launch checklist.
-7. Record the approved release SHA in the launch checklist.
-8. Have Christian close the still-open CI-only #634 dry-run.
-9. Wait for every required check on the new staging SHA to pass.
-10. Confirm the `Type check, build and test` aggregate is green.
-11. Confirm every Chromium browser shard is green.
-12. Confirm every WebKit browser shard is green.
-13. Confirm every Firefox browser shard is green.
-14. Confirm CodeQL is green.
-15. Confirm Database is green.
-16. Confirm the Workers build is green.
-17. Confirm any additional check required by branch protection is green.
-18. Wait for the approved all-engine browser results on that same SHA.
-19. Stop if the SHA in the release record differs from the SHA tested by all engines.
+1. Freeze `staging` at 6:00 p.m. Phoenix on Monday, November 23 (01:00 UTC on Tuesday, November 24).
+2. Copy the full commit SHA at the tip of frozen `staging` into the launch checklist.
+3. Immediately after the freeze, open the Checks tab on CI-only dry-run PR #634.
+4. Start the all-engine release run for the frozen SHA if GitHub has not already started one for it.
+5. Have Christian approve the workflow if GitHub requests approval.
+6. Wait for the release run on the frozen SHA to finish.
+7. Confirm the `Type check, build and test` aggregate is green.
+8. Confirm every Chromium browser shard is green.
+9. Confirm every WebKit browser shard is green.
+10. Confirm every Firefox browser shard is green.
+11. Confirm CodeQL is green.
+12. Confirm Database is green.
+13. Confirm the Workers build is green.
+14. Confirm any additional check required by branch protection is green.
+15. Stop the handoff if any required result is missing or red.
+16. Confirm that the staging head tested by the successful run matches the full SHA recorded at the freeze.
+17. Record the completed #634 dry-run link in the launch checklist.
+18. Mark that frozen SHA as approved in the launch checklist.
+19. Have Christian close the CI-only #634 dry run before opening the actual release pull request.
 
-## Christian-only release
+## Tuesday morning, November 24, 2026 — Christian-only release
 
 20. Open the actual release pull request from `staging` to `main`.
 21. Copy the approved SHA and completed #634 dry-run link into the release pull request description.
@@ -35,7 +35,7 @@ Use this runbook for the games-and-public-pages launch. Accounts and production 
 26. Confirm that CI-only #634 is closed before continuing.
 27. Open the release pull request's merge menu.
 28. Choose `Create a merge commit`.
-29. Confirm the merge into `main`.
+29. Have Christian confirm the merge into `main`.
 30. Wait for Cloudflare to start the production deployment.
 31. Open the Worker deployment history.
 32. Confirm that the new `main` deployment becomes active within ten minutes.
