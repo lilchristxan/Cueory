@@ -928,6 +928,17 @@
 
 /* ---------------- Print Media ---------------- */
 @media print {
+  /* The page title is screen-reader only on screen (the wordmark is in the left panel); a printed puzzle shows it. */
+  .game-frame-title {
+    position: static;
+    inline-size: auto;
+    block-size: auto;
+    margin: 0;
+    overflow: visible;
+    clip-path: none;
+    white-space: normal;
+  }
+
   .game-frame-sidebar,
   .game-frame-dateline,
   .game-frame-controls-row,
