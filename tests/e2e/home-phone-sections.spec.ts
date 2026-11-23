@@ -149,32 +149,32 @@ test.describe('games carousel dot pager', () => {
     await expect(current).toHaveCount(1);
     await expect(dots.nth(0)).toHaveAttribute('aria-current', 'true');
 
+    // The drawn dot (::after) is 8 x 8, the current one 26 x 8, 16 px apart (8 px apart leaves the clear hit areas under axe's 24 px rule); each button's box is 44 x 44.
     const sizes = await dots.evaluateAll((els) =>
       els.map((el) => {
         const rect = el.getBoundingClientRect();
-        const hit = getComputedStyle(el, '::before');
-        return { w: rect.width, h: rect.height, x: rect.x, hitW: parseFloat(hit.width), hitH: parseFloat(hit.height) };
+        const dot = getComputedStyle(el, '::after');
+        const w = parseFloat(dot.width);
+        const centre = rect.x + rect.width / 2;
+        return { boxW: rect.width, boxH: rect.height, w, h: parseFloat(dot.height), left: centre - w / 2, right: centre + w / 2 };
       }),
     );
-    expect(sizes[0]!.w).toBeCloseTo(26, 0);
-    expect(sizes[0]!.h).toBeCloseTo(8, 0);
-    for (const dot of sizes.slice(1)) {
-      expect(dot.w).toBeCloseTo(8, 0);
+    for (const dot of sizes) {
+      expect(dot.boxW).toBeGreaterThanOrEqual(44);
+      expect(dot.boxH).toBeGreaterThanOrEqual(44);
       expect(dot.h).toBeCloseTo(8, 0);
-      // 44 px tall; sideways it reaches halfway into the gaps (44 px wide boxes would overlap and steal each other's taps).
-      expect(dot.hitW).toBeGreaterThanOrEqual(24);
-      expect(dot.hitH).toBeGreaterThanOrEqual(44);
     }
-    // 16 px apart (the picked 8 px fails the 24 px target-size rule: centres must be 24 px apart).
-    expect(sizes[1]!.x - (sizes[0]!.x + sizes[0]!.w)).toBeCloseTo(16, 0);
+    expect(sizes[0]!.w).toBeCloseTo(26, 0);
+    for (const dot of sizes.slice(1)) expect(dot.w).toBeCloseTo(8, 0);
+    for (let i = 1; i < sizes.length; i += 1) expect(sizes[i]!.left - sizes[i - 1]!.right).toBeCloseTo(16, 0);
 
     // The accessible names say the game and the place.
     await expect(section.getByRole('button', { name: 'vialo, 1 of 6' })).toBeVisible();
 
     // A dot moves the carousel; the card and the pill follow.
-    // A tap just above the dot's own box (inside its hit area) still picks that dot.
+    // A tap a little above the drawn dot (inside its 44 px hit area) still picks that dot.
     const box = (await dots.nth(3).boundingBox())!;
-    await page.mouse.click(box.x + box.width / 2, box.y - 14);
+    await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2 - 14);
     await expect(section.locator('[data-game-card]').nth(3)).toHaveClass(/on/);
     await expect(dots.nth(3)).toHaveAttribute('aria-current', 'true');
     await expect(current).toHaveCount(1);

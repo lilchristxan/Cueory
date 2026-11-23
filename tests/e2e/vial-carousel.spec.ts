@@ -83,6 +83,11 @@ test('the dots follow the vial in front; no caption on tablet or desktop, one re
   const caption = section(page).locator('[data-modes-caption]');
   if (sizeOf(testInfo) === 'phone') await expect(caption).toBeVisible();
   else await expect(caption).toBeHidden();
+  // The ring slides on its own every six seconds: take it over (Home on the card group is a keyboard use) so the first
+  // vial is in front and "next" goes to index 1.
+  await section(page).locator('[data-modes-track]').press('Home');
+  await expect(section(page)).toHaveAttribute('data-autoplay', 'off');
+  await expect(section(page).locator('#mode-video')).toHaveAttribute('data-active', '');
   await section(page).getByRole('button', { name: 'next study mode' }).click();
   const widths = () =>
     section(page)
@@ -110,8 +115,12 @@ test('phones put the arrows under the pedestal, either side of the dots; wider s
     expect(next.x + next.width).toBeGreaterThan((track.width * 7) / 8);
     expect(dots.y).toBeGreaterThanOrEqual(track.y + track.height - 2);
   } else {
-    const middle = track.y + track.height / 2;
-    expect(Math.abs(prev.y + prev.height / 2 - middle)).toBeLessThan(2);
+    // Changed on purpose (final home board, 20 Nov): from 1024 px wide the arrows sit on the platter's two ends, level
+    // with the pedestal; on a tablet they stay beside the vials, mid-height.
+    const wide = page.viewportSize()!.width >= 1024;
+    const pedestal = (await section(page).locator('.vial-pedestal').boundingBox())!;
+    const level = wide ? pedestal.y + pedestal.height / 2 : track.y + track.height / 2;
+    expect(Math.abs(prev.y + prev.height / 2 - level)).toBeLessThan(wide ? 8 : 2);
     expect(prev.x).toBeLessThan(track.width / 4);
     expect(next.x).toBeGreaterThan((track.width * 3) / 4);
   }

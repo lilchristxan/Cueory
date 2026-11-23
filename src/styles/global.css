@@ -414,6 +414,18 @@
     --scene-fade-bottom: var(--spacing-section);
   }
 
+  /* On phones the sections are 64 px apart (half of it each side), so each scene's fade is no taller than the
+     padding it sits in and never reaches over the words (D-53). */
+  @media (width < 40rem) {
+    .scene:not(.scene-hero) {
+      --scene-fade-top: var(--spacing-section-phone);
+    }
+
+    .scene-low {
+      --scene-fade-bottom: var(--spacing-section-phone);
+    }
+  }
+
   /* The same cloth without folds, for whole pages behind text. */
   .silk-quiet {
     background-color: var(--color-silk-base);

@@ -530,57 +530,60 @@ const helloCardsAvailable = helloCardsPage(
     }
   }
 
-  /* Dot pager (Christian, 23 Nov): one dot per position, the current one a pill. Each dot is a real button whose
-     hit area is a pseudo-element, so the dots can stay small and close. It is 44 px tall; sideways it reaches halfway
-     into the gap on each side, because 44 px wide boxes on dots 16 px apart would overlap and the neighbour would
-     take the tap meant for this dot. */
+  /* Dot pager (Christian, 23 Nov): one dot per position, 8 px dots 16 px apart, the current one a 26 x 8 px pill. Each
+     dot is a real button with a 44 x 44 box; the dot itself is drawn by ::after. The negative side margins pull the
+     boxes together so the drawn dots keep their spacing, and clip-path cuts each box's reach sideways so neighbouring
+     hit areas never overlap (a box is 44 px tall and reaches halfway into the gaps), which also keeps taps exact. */
   .games-pager {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     justify-content: center;
-    gap: var(--game-pager-gap);
   }
 
   .games-dot {
     position: relative;
     flex: none;
-    inline-size: var(--game-pager-dot);
-    block-size: var(--game-pager-dot);
+    inline-size: var(--tap-min);
+    block-size: var(--tap-min);
+    margin-inline: calc((var(--game-pager-dot) + var(--game-pager-gap) - var(--tap-min)) / 2);
     padding: 0;
     border: 0;
-    border-radius: var(--radius-pill);
-    background-color: var(--color-line);
+    background: none;
     cursor: pointer;
-    transition:
-      inline-size var(--duration-slow) var(--ease-soft),
-      background-color var(--duration-slow) var(--ease-soft);
+    clip-path: inset(0 calc((var(--tap-min) - var(--game-pager-dot) - var(--game-pager-gap)) / 2));
   }
 
-  .games-dot::before {
+  .games-dot::after {
     content: '';
     position: absolute;
     inset-block-start: 50%;
     inset-inline-start: 50%;
-    inline-size: calc(100% + var(--game-pager-gap));
-    min-inline-size: var(--game-pager-dot);
-    block-size: var(--tap-min);
+    inline-size: var(--game-pager-dot);
+    block-size: var(--game-pager-dot);
+    border-radius: var(--radius-pill);
+    background-color: var(--color-line);
     transform: translate(-50%, -50%);
   }
 
   .games-dot[aria-current='true'] {
+    margin-inline: calc((var(--game-pager-pill) + var(--game-pager-gap) - var(--tap-min)) / 2);
+    clip-path: inset(0 calc((var(--tap-min) - var(--game-pager-pill) - var(--game-pager-gap)) / 2));
+  }
+
+  .games-dot[aria-current='true']::after {
     inline-size: var(--game-pager-pill);
     background-color: var(--color-ink);
   }
 
+  /* The ring hugs the dot (no offset) so the clip above never cuts it. */
   .games-dot:focus-visible {
-    outline: var(--focus-width) solid var(--color-copper-deep);
-    outline-offset: var(--focus-offset);
+    outline: none;
   }
 
-  @media (prefers-reduced-motion: reduce) {
-    .games-dot {
-      transition: none;
-    }
+  .games-dot:focus-visible::after {
+    outline: var(--focus-width) solid var(--color-copper-deep);
+    outline-offset: 0;
   }
 
   .games-date-note {

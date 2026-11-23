@@ -1372,9 +1372,9 @@ test.describe('silk scenes down the home page (D-53)', () => {
         };
       }),
     );
-    // The approved home has the hero, carousel, daily games and launch updates in that order.
+    // Christian's final home board: the hero, daily games, the carousel and launch updates in that order.
     expect(scenes.map((scene) => scene.kind)).toEqual([
-      'scene-hero', 'scene-tint', 'scene-play', 'scene-low',
+      'scene-hero', 'scene-play', 'scene-tint', 'scene-low',
     ]);
     for (const scene of scenes) expect(scene).toMatchObject({ drawn: true, behind: '-20', fades: true });
 
@@ -1420,7 +1420,7 @@ test.describe('silk scenes down the home page (D-53)', () => {
       return { bands, hits };
     });
     expect(covered.bands.map(({ scene, edge }) => [scene, edge])).toEqual([
-      ['scene-tint', 'top'], ['scene-play', 'top'], ['scene-low', 'top'], ['scene-low', 'bottom'],
+      ['scene-play', 'top'], ['scene-tint', 'top'], ['scene-low', 'top'], ['scene-low', 'bottom'],
     ]); // Three top fades between the four scenes, then the launch-updates scene fades into the footer.
     expect(covered.hits).toEqual([]);
   });

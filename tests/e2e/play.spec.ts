@@ -341,10 +341,11 @@ test.describe('the /play hub (each game on its own page, 2026-11-17)', () => {
 });
 
 test.describe('daily games on the home page (D-61)', () => {
-  test('the approved games carousel after "ways to study" shows 6 cards', async ({ page }) => {
+  test('the approved games carousel before "ways to study" shows 6 cards', async ({ page }) => {
     await page.goto('/');
     const headings = await page.getByRole('heading', { level: 2 }).allTextContents();
-    expect(headings.indexOf("nurse's station games")).toBe(headings.indexOf('one lesson, multiple ways to study') + 1);
+    // Christian's final home board: the games come first, then the vials.
+    expect(headings.indexOf('one lesson, multiple ways to study')).toBe(headings.indexOf("nurse's station games") + 1);
     const section = page.locator('#daily-games');
     await expect(section.locator('[data-game-card]')).toHaveCount(6);
     const vialoLink = section.locator('[data-game-card="vialo"]');

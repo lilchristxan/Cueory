@@ -27,17 +27,18 @@ test.describe('home page-specific behavior', () => {
     await expect(page.locator('main > section')).toHaveCount(4);
     await expect(identifiedSections).toHaveCount(3);
     const sectionIds = await identifiedSections.evaluateAll((sections) => sections.map((section) => section.id));
+    // Christian's final home board: games before the vials.
     expect(sectionIds).toEqual([
-      'ways-to-study',
       'daily-games',
+      'ways-to-study',
       'signup',
     ]);
 
     await expect(page.getByTestId('games-link')).toHaveAttribute('href', '/play');
     await expect(page.getByRole('heading', { level: 2 })).toHaveText([
       'start with what you need.',
-      'one lesson, multiple ways to study',
       "nurse's station games",
+      'one lesson, multiple ways to study',
       'coming soon',
     ]);
 
