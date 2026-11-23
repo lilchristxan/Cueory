@@ -58,7 +58,7 @@ const startHref = heroStartHref();
 
     <!-- A size container: the headline's size follows the text column's width, so its longer line always fits. -->
     <div class="@container relative z-10 mx-auto mt-(--hero-eyebrow-gap) w-full max-w-(--container-hero-copy) text-center xl:ms-(--hero-copy-offset) xl:me-0 xl:max-w-(--hero-copy-width)">
-      <p class="hero-eyebrow flex items-center justify-center gap-3 text-ink-soft xl:gap-[1.125rem] xl:text-lg">
+      <p class="hero-eyebrow flex items-center justify-center gap-3 text-ink-soft xl:gap-(--hero-eyebrow-gap-xl) xl:text-lg">
         <span class="hidden h-px w-10 shrink-0 bg-control sm:block xl:w-(--hero-eyebrow-rule)" aria-hidden="true"></span>
         <span>by nursing students, for nursing students</span>
         <span class="hidden h-px w-10 shrink-0 bg-control sm:block xl:w-(--hero-eyebrow-rule)" aria-hidden="true"></span>
@@ -122,7 +122,7 @@ const startHref = heroStartHref();
     </div>
 
     <div class="relative z-10 mx-auto w-full max-w-(--container-hero-copy) text-center xl:ms-(--hero-copy-offset) xl:me-0 xl:max-w-(--hero-copy-width)">
-      <ul class="mx-auto mt-10 grid w-fit gap-5 sm:w-auto sm:grid-cols-3 xl:ms-[50%] xl:w-(--hero-points-width) xl:-translate-x-1/2" aria-label="what you get">
+      <ul class="mx-auto mt-10 grid w-fit gap-5 sm:w-auto sm:grid-cols-3 xl:ms-(--hero-points-start) xl:w-(--hero-points-width) xl:-translate-x-1/2" aria-label="what you get">
         <li class="flex items-start gap-3 text-ink sm:justify-center">
           <svg class="hero-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
             <path d="M12 3 3 8l9 5 9-5-9-5Z M3 12l9 5 9-5 M3 16l9 5 9-5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" />

@@ -247,27 +247,12 @@
   */
   .hero-figure-wrap {
     position: relative;
-    -webkit-mask-image:
-      linear-gradient(to right, transparent, currentColor var(--hero-figure-fade)),
-      linear-gradient(to left, transparent, currentColor var(--hero-figure-fade-right)),
-      linear-gradient(to bottom, transparent, currentColor var(--hero-figure-fade)),
-      linear-gradient(to top, transparent, currentColor var(--hero-figure-fade-bottom));
+    -webkit-mask-image: var(--hero-figure-mask, linear-gradient(to right, transparent, currentColor var(--hero-figure-fade)), linear-gradient(to left, transparent, currentColor var(--hero-figure-fade-right)), linear-gradient(to bottom, transparent, currentColor var(--hero-figure-fade)), linear-gradient(to top, transparent, currentColor var(--hero-figure-fade-bottom)));
     -webkit-mask-composite: source-in;
-    mask-image:
-      linear-gradient(to right, transparent, currentColor var(--hero-figure-fade)),
-      linear-gradient(to left, transparent, currentColor var(--hero-figure-fade-right)),
-      linear-gradient(to bottom, transparent, currentColor var(--hero-figure-fade)),
-      linear-gradient(to top, transparent, currentColor var(--hero-figure-fade-bottom));
+    mask-image: var(--hero-figure-mask, linear-gradient(to right, transparent, currentColor var(--hero-figure-fade)), linear-gradient(to left, transparent, currentColor var(--hero-figure-fade-right)), linear-gradient(to bottom, transparent, currentColor var(--hero-figure-fade)), linear-gradient(to top, transparent, currentColor var(--hero-figure-fade-bottom)));
     mask-composite: intersect;
     pointer-events: none;
     user-select: none;
-  }
-
-  @media (min-width: 80rem) {
-    .hero-figure-wrap {
-      -webkit-mask-image: var(--hero-figure-mask-xl);
-      mask-image: var(--hero-figure-mask-xl);
-    }
   }
 
   /* The slow glisten travelling along the halo ring painted in the picture (final board: .halo-glint). Decorative. */
@@ -290,15 +275,15 @@
   }
 
   .hero-halo::before {
-    background: conic-gradient(from 0deg, transparent 0deg, transparent 285deg, rgb(255 248 236 / 0.95) 322deg, transparent 350deg);
-    -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 6px), #000 calc(100% - 4px), #000 calc(100% - 1px), transparent 100%);
-    mask: radial-gradient(farthest-side, transparent calc(100% - 6px), #000 calc(100% - 4px), #000 calc(100% - 1px), transparent 100%);
-    filter: blur(1.5px);
+    background: conic-gradient(from 0deg, transparent 0deg, transparent 285deg, var(--hero-ring-light) 322deg, transparent 350deg);
+    -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - var(--hero-ring-band)), black calc(100% - var(--hero-ring-edge)), black calc(100% - var(--hero-ring-inner)), transparent 100%);
+    mask: radial-gradient(farthest-side, transparent calc(100% - var(--hero-ring-band)), black calc(100% - var(--hero-ring-edge)), black calc(100% - var(--hero-ring-inner)), transparent 100%);
+    filter: blur(var(--hero-ring-blur));
     animation: hero-ring-spin 11s linear infinite;
   }
 
   .hero-halo::after {
-    box-shadow: 0 0 30px rgb(255 236 214 / 0.35);
+    box-shadow: var(--hero-halo-glow);
     animation: hero-halo-glow 5.5s ease-in-out infinite;
   }
 
@@ -315,7 +300,7 @@
   .hero-start-ring {
     position: relative;
     display: inline-flex;
-    padding: 3px;
+    padding: var(--hero-button-ring);
     overflow: hidden;
     isolation: isolate;
     border-radius: var(--radius-pill);
@@ -326,13 +311,13 @@
     position: absolute;
     inset: -160%;
     z-index: -1;
-    background: conic-gradient(from 0deg, transparent 0deg, transparent 230deg, var(--color-copper-glow) 290deg, #fff 322deg, var(--color-copper-glow) 340deg, transparent 360deg);
+    background: conic-gradient(from 0deg, transparent 0deg, transparent 230deg, var(--color-copper-glow) 290deg, var(--hero-sheen-white) 322deg, var(--color-copper-glow) 340deg, transparent 360deg);
     animation: hero-ring-spin 3.4s linear infinite;
   }
 
   /* "simpler." with the copper shine drifting across it; the text stays copper if the gradient is not painted. */
   .hero-accent {
-    background-image: linear-gradient(110deg, var(--hero-accent-base) 0%, var(--hero-accent-base) 30%, color-mix(in srgb, var(--hero-accent-base) 50%, var(--color-copper-glow)) 50%, var(--hero-accent-base) 70%, var(--hero-accent-base) 100%);
+    background-image: linear-gradient(110deg, var(--hero-accent-base) 0%, var(--hero-accent-base) 38%, var(--hero-accent-peak) 50%, var(--hero-accent-base) 62%, var(--hero-accent-base) 100%);
     background-size: 260% 100%;
     -webkit-background-clip: text;
     background-clip: text;
@@ -378,19 +363,26 @@
     letter-spacing: var(--tracking-caps);
   }
 
-  /* "simpler." in copper (a solid copper: Copper Deep on Ivory is 3.6:1, above the 3:1 large text needs; lighter in Evening). */
+  /*
+    "simpler." in copper. Large text needs 3:1 at every moment of the shine, so Daytime sweeps a narrow lighter band over
+    a darker copper (both from tokens.css, measured in tests/e2e/home-modern.spec.ts); Evening is the lighter copper
+    with a brighter band, which only raises contrast on the dark page.
+  */
   .hero-accent {
-    --hero-accent-base: var(--color-copper-deep);
+    --hero-accent-base: var(--hero-accent-day);
+    --hero-accent-peak: var(--hero-accent-day-peak);
     color: var(--hero-accent-base);
   }
 
   :root[data-theme="dark"] .hero-accent {
     --hero-accent-base: var(--color-copper);
+    --hero-accent-peak: color-mix(in srgb, var(--color-copper) 50%, var(--color-copper-glow));
   }
 
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) .hero-accent {
       --hero-accent-base: var(--color-copper);
+      --hero-accent-peak: color-mix(in srgb, var(--color-copper) 50%, var(--color-copper-glow));
     }
   }
 
@@ -527,7 +519,7 @@
     inset-block: -30%;
     inset-inline-start: -80%;
     inline-size: 50%;
-    background: linear-gradient(100deg, transparent 0%, rgb(255 255 255 / 0.7) 50%, transparent 100%);
+    background: linear-gradient(100deg, transparent 0%, var(--explore-glint) 50%, transparent 100%);
     transform: skewX(-22deg);
     pointer-events: none;
     z-index: -1;

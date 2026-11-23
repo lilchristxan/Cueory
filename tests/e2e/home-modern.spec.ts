@@ -1,5 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
+import sharp from 'sharp';
 import { newsletter, signupState, site } from '../../src/config/site';
 
 // The hero's ways in (redesign P5): the explore row's tiles, each to a page that exists today. The "start studying" call
@@ -227,3 +228,88 @@ test('a valid on-device study snapshot shows a resume strip linking to the saved
   await link.click();
   await expect(page).toHaveURL(/\/learn\/study-skills\/cards$/);
 });
+
+
+// "simpler." is large text, so it needs 3:1 against the silk behind it at every moment of the copper shine (11 s loop), in
+// Light and Evening, and in the still state reduced motion shows. The glyph pixels are found by taking the word twice,
+// once as drawn and once with the letters hidden, and comparing each interior glyph pixel with the pixel behind it.
+const luminance = ([r, g, b]: number[]) => {
+  const f = (c: number) => { const v = c / 255; return v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; };
+  return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b);
+};
+const contrast = (a: number[], b: number[]) => {
+  const [x, y] = [luminance(a), luminance(b)];
+  return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05);
+};
+
+for (const viewport of [{ width: 390, height: 844 }, { width: 1440, height: 900 }]) {
+  for (const scheme of ['light', 'dark'] as const) {
+    test.describe(`the copper shine on "simpler." at ${viewport.width} wide in ${scheme}`, () => {
+      test.use({ viewport, colorScheme: scheme });
+
+      async function worstContrast(page: import('@playwright/test').Page): Promise<number> {
+        const word = page.locator('.hero-accent');
+        const box = (await word.boundingBox())!;
+        const clip = { x: box.x, y: box.y, width: box.width, height: box.height };
+        const grab = async () => sharp(await page.screenshot({ clip })).removeAlpha().raw().toBuffer({ resolveWithObject: true });
+        const drawn = await grab();
+        await word.evaluate((el) => {
+          el.style.setProperty('color', 'transparent');
+          el.style.setProperty('-webkit-text-fill-color', 'transparent');
+          el.style.setProperty('background-image', 'none');
+        });
+        const behind = await grab();
+        await word.evaluate((el) => {
+          el.style.removeProperty('color');
+          el.style.removeProperty('-webkit-text-fill-color');
+          el.style.removeProperty('background-image');
+        });
+        const { data: a, info } = drawn;
+        const b = behind.data;
+        const isGlyph = (x: number, y: number) => {
+          const i = (y * info.width + x) * 3;
+          return Math.abs(a[i] - b[i]) + Math.abs(a[i + 1] - b[i + 1]) + Math.abs(a[i + 2] - b[i + 2]) > 150;
+        };
+        let worst = Infinity;
+        let counted = 0;
+        for (let y = 2; y < info.height - 2; y++) {
+          for (let x = 2; x < info.width - 2; x++) {
+            // Interior pixels only: the anti-aliased edge blends the letter with the background.
+            if (!(isGlyph(x, y) && isGlyph(x - 2, y) && isGlyph(x + 2, y) && isGlyph(x, y - 2) && isGlyph(x, y + 2))) continue;
+            const i = (y * info.width + x) * 3;
+            counted++;
+            worst = Math.min(worst, contrast([a[i], a[i + 1], a[i + 2]], [b[i], b[i + 1], b[i + 2]]));
+          }
+        }
+        expect(counted).toBeGreaterThan(100);
+        return worst;
+      }
+
+      test('keeps 3:1 at 0%, 25%, 50%, 75% and 100% of the animation', async ({ page }) => {
+        await page.addInitScript(() => {
+          try { localStorage.setItem('cueory-promo-seen', String(Date.now())); localStorage.setItem('cueory-signup-popup-seen', String(Date.now())); } catch { /* optional */ }
+        });
+        await page.goto('/');
+        const word = page.locator('.hero-accent');
+        await expect(word).toBeVisible();
+        for (const phase of [0, 0.25, 0.5, 0.75, 1]) {
+          await word.evaluate((el, p) => {
+            el.style.animationPlayState = 'paused';
+            el.style.animationDelay = `-${p * 11}s`;
+          }, phase);
+          expect(await worstContrast(page), `at ${phase * 100}%`).toBeGreaterThanOrEqual(3);
+        }
+      });
+
+      test('shows a still, legible word under reduced motion', async ({ page }) => {
+        await page.emulateMedia({ reducedMotion: 'reduce', colorScheme: scheme });
+        await page.addInitScript(() => {
+          try { localStorage.setItem('cueory-promo-seen', String(Date.now())); localStorage.setItem('cueory-signup-popup-seen', String(Date.now())); } catch { /* optional */ }
+        });
+        await page.goto('/');
+        await expect(page.locator('.hero-accent')).toHaveCSS('animation-name', 'none');
+        expect(await worstContrast(page)).toBeGreaterThanOrEqual(3);
+      });
+    });
+  }
+}
