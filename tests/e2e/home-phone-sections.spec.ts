@@ -58,6 +58,12 @@ test.describe('home below the hero on a phone', () => {
     await section.scrollIntoViewIfNeeded();
     await expect(section.locator('[data-games-carousel]')).toHaveAttribute('data-carousel-state', 'settled');
 
+    // Measure from a settled start: no card is still easing (a transform in flight reads a hair under its size).
+    await expect
+      .poll(() =>
+        section.evaluate((el) => el.getAnimations({ subtree: true }).filter((a) => a.effect?.getComputedTiming().iterations !== Infinity && a.playState === 'running').length),
+      )
+      .toBe(0);
     const first = (await section.locator('[data-game-card]').nth(0).boundingBox())!;
     // The desktop card is 280 × 392.
     expect(Math.round(first.width)).toBe(280);

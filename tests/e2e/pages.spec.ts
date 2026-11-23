@@ -942,11 +942,12 @@ test.describe('marketing look (D-41)', () => {
       sections.nth(index).evaluate((el) => [el.getAttribute('data-reveal'), getComputedStyle(el).opacity, getComputedStyle(el).translate]);
     // All of them start below the first screen, so they wait, lowered and clear.
     for (const index of all) expect(await look(index)).toEqual(['waiting', '0', '0px 10px']);
-    await page.locator('#ways-to-study').scrollIntoViewIfNeeded();
+    // Bring the very block the page watches (the vials, inside the section) into view, as a visitor scrolling to them does.
+    await sections.nth(ways).scrollIntoViewIfNeeded();
     await expect.poll(() => look(ways)).toEqual(['shown', '1', 'none']);
     // Once only: scrolling away and back changes nothing.
     await page.evaluate(() => window.scrollTo(0, 0));
-    await page.locator('#ways-to-study').scrollIntoViewIfNeeded();
+    await sections.nth(ways).scrollIntoViewIfNeeded();
     expect(await look(ways)).toEqual(['shown', '1', 'none']);
 
     // With reduced motion nothing waits or moves.
@@ -1636,6 +1637,8 @@ test.describe('study-mode preview (D-51)', () => {
     await page.goto('/');
     const carousel = page.locator('#ways-to-study');
     await carousel.scrollIntoViewIfNeeded();
+    // Pin the ring on video first (keyboard Home takes it over), so the slideshow cannot move the vial in front.
+    await holdOnVideo(page);
     // The retained Linux WebKit trace for run 44834721132 showed hover actionability taking 13 seconds, long enough
     // for the six-second autoplay to move Video aside before the pointer arrived. Pause through the real visitor
     // control so this test continues to check the active vial's hover treatment rather than timing the slideshow.

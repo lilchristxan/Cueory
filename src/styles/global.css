@@ -1505,7 +1505,8 @@ html:has(dialog.menu-panel[open]) {
 
   .vial-name {
     inline-size: 66%;
-    margin-block-start: 1.5cqi;
+    /* The name and its rule sit around the middle of the label's height (Christian, 20 Nov), not at its top edge. */
+    margin-block-start: 40cqi;
     font-size: 11cqi;
     font-weight: 700;
     line-height: 1.5;
@@ -1538,6 +1539,8 @@ html:has(dialog.menu-panel[open]) {
     grid-template-columns: 1fr 1fr;
     inline-size: 76%;
     margin-block-start: auto;
+    /* Slightly higher than the label's bottom edge (Christian, 20 Nov). */
+    margin-block-end: 3cqi;
     border-block-start: 1px solid var(--vial-ink);
     font-size: 4.7cqi;
   }
