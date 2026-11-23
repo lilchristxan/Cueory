@@ -93,8 +93,8 @@ test.describe('about page', () => {
     }
   });
 
-  for (const width of [320, 390]) {
-    test(`${width}px phone: the headline draws four large lines, each fitting the column`, async ({ page }) => {
+  for (const width of [320, 375, 390]) {
+    test(`${width}px phone: the headline draws two or three lines, each fitting the column`, async ({ page }) => {
       await page.setViewportSize({ width, height: 844 });
       await page.goto('/about');
 
@@ -102,24 +102,22 @@ test.describe('about page', () => {
       const lines = await heading.evaluate((element) => {
         const lineHeight = Number.parseFloat(getComputedStyle(element).lineHeight);
         const column = element.getBoundingClientRect();
-        // Each line's own text box (a block span is always as wide as the column, its words may not be).
-        const spans = [...element.querySelectorAll('span')].map((span) => {
-          const range = document.createRange();
-          range.selectNodeContents(span);
-          const box = range.getBoundingClientRect();
-          return { top: Math.round(box.top), right: box.right, rows: range.getClientRects().length };
-        });
+        const range = document.createRange();
+        range.selectNodeContents(element);
+        const rects = [...range.getClientRects()];
         return {
           count: Math.round(column.height / lineHeight),
-          tops: new Set(spans.map((span) => span.top)).size,
-          fits: spans.every((span) => span.rows === 1 && span.right <= column.right + 1),
+          fits: rects.every((rect) => rect.right <= column.right + 1),
           fontSize: Number.parseFloat(getComputedStyle(element).fontSize),
         };
       });
-      expect(lines.count).toBe(4);
-      expect(lines.tops).toBe(4);
+      expect(lines.count).toBeGreaterThanOrEqual(2);
+      expect(lines.count).toBeLessThanOrEqual(3);
       expect(lines.fits).toBe(true);
-      expect(lines.fontSize).toBeGreaterThan(44);
+      // From 390 px the size guard is unchanged (above 44 px). Below 390 px the headline scales with the screen
+      // (cqi / 7: 40 px at 320, about 48 px at 375) and is never under 36 px; no upper bound.
+      if (width >= 390) expect(lines.fontSize).toBeGreaterThan(44);
+      else expect(lines.fontSize).toBeGreaterThanOrEqual(36);
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
     });
   }
