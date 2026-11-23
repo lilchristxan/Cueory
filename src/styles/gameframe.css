@@ -3,9 +3,27 @@
   Tokens only. Every target at least 44px. Works across 390, 820, and 1440 widths.
 */
 
+:root:has(.game-frame) main#main {
+  display: flex;
+  flex-direction: column;
+}
+
+:root:has(.game-frame) [data-site-footer],
+:root:has(.game-frame) footer {
+  margin-block-start: 0;
+}
+
+.game-page-frame {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  width: 100%;
+  min-height: 0;
+}
+
 .game-frame {
   width: 100%;
-  min-height: 100vh;
+  flex: 1;
   background-color: var(--color-page);
   background-image:
     linear-gradient(to right, color-mix(in srgb, var(--color-copper-deep) 35%, transparent) var(--game-frame-grid-line), transparent var(--game-frame-grid-line)),
@@ -28,7 +46,7 @@
   display: flex;
   flex: 1;
   width: 100%;
-  min-height: 100%;
+  min-height: 0;
   position: relative;
 }
 
@@ -270,7 +288,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: calc(var(--spacing) * 8) calc(var(--spacing) * 6) calc(var(--spacing) * 16);
+  padding: calc(var(--spacing) * 8) calc(var(--spacing) * 6) 0;
   box-sizing: border-box;
   position: relative;
 }
@@ -303,13 +321,17 @@
   width: 100%;
   max-width: var(--game-frame-max-board);
   gap: calc(var(--spacing) * 4);
-  margin-bottom: calc(var(--spacing) * 4);
+  margin-bottom: 0;
   position: relative;
   z-index: 15;
 }
 
 .game-frame-controls-row.is-wide {
   max-width: var(--game-frame-max-board-wide);
+}
+
+.game-frame-controls-row-unframed {
+  min-height: var(--game-frame-btn-size);
 }
 
 .game-frame-btn {
@@ -514,6 +536,24 @@
   text-shadow: none;
 }
 
+.game-frame-cue-slot:empty,
+.game-frame-deck-slot:empty,
+.game-frame-footer-slot:empty {
+  display: none;
+}
+
+.game-frame-play-area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: safe center;
+  align-content: safe center;
+  width: 100%;
+  flex: 1;
+  min-height: 0;
+  position: relative;
+}
+
 /* ---------------- Board Mount Area ---------------- */
 .game-frame-board {
   width: 100%;
@@ -523,10 +563,33 @@
   align-items: center;
   position: relative;
   z-index: 5;
+  margin-block: auto;
+}
+
+/*
+  Study screens stay plain (AGENTS.md, D-41): the question container and question stem on /play/stat
+  sit on an opaque plain background with no decorative grid lines or texture behind question text.
+  Tokens only.
+*/
+.game-frame[data-game="stat"] .game-frame-board,
+.game-frame-board:has([data-testid="stat"]),
+.game-frame-board:has([data-testid="stat"]) article,
+.game-frame-board [data-testid="stat"],
+.game-frame-board [data-testid="stat"] section {
+  background-color: var(--color-page);
+  background-image: none;
 }
 
 .game-frame-board > * {
   width: 100%;
+}
+
+.game-frame-board > *:first-child {
+  margin-block-start: 0;
+}
+
+.game-frame-board > *:last-child {
+  margin-block-end: 0;
 }
 
 .game-frame-board.is-wide {
@@ -647,7 +710,7 @@
   }
 
   .game-frame-main {
-    padding: calc(var(--spacing) * 5) calc(var(--spacing) * 4) calc(var(--spacing) * 12);
+    padding: calc(var(--spacing) * 5) calc(var(--spacing) * 4) 0;
   }
 
   /* The Frame's side gutter here is 4 units; Word Path's panel bleeds exactly that far until sm:mx-0 (40rem). */
@@ -672,7 +735,7 @@
   }
 
   .game-frame-main {
-    padding: calc(var(--spacing) * 2.5) calc(var(--spacing) * 3) calc(var(--spacing) * 6);
+    padding: calc(var(--spacing) * 2.5) calc(var(--spacing) * 3) 0;
   }
 
   .game-frame-dateline {
@@ -680,7 +743,7 @@
   }
 
   .game-frame-controls-row {
-    margin-bottom: calc(var(--spacing) * 3);
+    margin-bottom: 0;
   }
 
   .game-frame-serif-title {
