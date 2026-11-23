@@ -109,3 +109,27 @@ test.describe('game page frame (Games v2, 23 Nov)', () => {
     });
   }
 });
+
+// The fanned deck fits only from 70rem (1120 px; --game-deck-breakpoint). Below it the other games are a plain row of
+// cards under the board, and nothing lies over the game; from it the deck sits at the right edge.
+test.describe('deck or plain row by width (--game-deck-breakpoint)', () => {
+  for (const path of ['/play/vialo', '/play/sudoku', '/play/word-path']) {
+    for (const [width, deck] of [[1024, false], [1056, false], [1100, false], [1119, false], [1120, true], [1280, true]] as const) {
+      test(`${path} at ${width} px shows ${deck ? 'the deck' : 'the plain row'}`, async ({ page }) => {
+        await page.setViewportSize({ width, height: 900 });
+        await page.goto(path);
+        const slot = page.locator('.game-frame-deck-slot');
+        await expect(slot).toHaveCSS('position', deck ? 'absolute' : 'static');
+        const overlap = await page.evaluate(() => {
+          const board = document.querySelector('.game-frame-board')!.getBoundingClientRect();
+          return [...document.querySelectorAll('.game-deck-item')].some((item) => {
+            const box = item.getBoundingClientRect();
+            return box.left < board.right && box.right > board.left && box.top < board.bottom && box.bottom > board.top;
+          });
+        });
+        expect(overlap, 'no card lies over the game').toBe(false);
+        expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
+      });
+    }
+  }
+});

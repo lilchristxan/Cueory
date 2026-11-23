@@ -328,9 +328,6 @@
     .vialo-key:not(.vialo-key-wide) {
       font-size: var(--vialo-key-letter-phone);
     }
-    .vialo-key-row {
-      gap: calc(var(--spacing) * 0.5);
-    }
   }
 
   .vialo-key.vialo-here {

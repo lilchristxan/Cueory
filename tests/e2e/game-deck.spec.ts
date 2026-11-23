@@ -270,7 +270,7 @@ test.describe('card deck at 1440 x 900', () => {
     });
   }
 
-  for (const width of [1112, 1120, 1280, 1440]) {
+  for (const width of [1120, 1280, 1440]) {
     test(`at ${width} px the cards at rest cover no part of vialo, sudoku or piccline and never scroll sideways`, async ({ page }) => {
       await page.setViewportSize({ width, height: 900 });
       for (const path of ['/play/vialo', '/play/sudoku', '/play/piccline']) {
@@ -278,6 +278,28 @@ test.describe('card deck at 1440 x 900', () => {
         await expect(page.locator('.game-deck-item').first()).toBeVisible();
         expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth), `${path} at ${width}`).toBeLessThanOrEqual(0);
         expect(await clashes(page), `${path} at ${width}`).toEqual([]);
+      }
+    });
+  }
+
+  // The overhanging cards must not make the page scrollable sideways, at rest or with the front card hovered.
+  for (const width of [1120, 1440]) {
+    test(`at ${width} px the page cannot be scrolled sideways, at rest or with the front card hovered`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 900 });
+      for (const path of ['/play/vialo', '/play/sudoku', '/play/piccline']) {
+        await page.goto(path);
+        await expect(page.locator('.game-deck-item').first()).toBeVisible();
+        const check = async (when: string) => {
+          const w = await page.evaluate(() => { const e = document.scrollingElement!; window.scrollTo(9999, 0); return { sw: e.scrollWidth, cw: e.clientWidth, x: window.scrollX }; });
+          expect(w.sw, `${path} ${when}`).toBe(w.cw);
+          expect(w.x, `${path} ${when}`).toBe(0);
+        };
+        await check('at rest');
+        const box = (await page.locator('.game-deck-item').first().boundingBox())!;
+        await page.mouse.move(box.x + box.width * 0.3, box.y + box.height * 0.5);
+        await page.waitForTimeout(600);
+        await check('hovered');
+        await page.mouse.move(0, 0);
       }
     });
   }
@@ -295,8 +317,8 @@ test.describe('card deck at 1440 x 900', () => {
   });
 });
 
-test.describe('below 64rem the other games are a plain row of cards', () => {
-  for (const [width, height] of [[390, 844], [820, 1180]] as const) {
+test.describe('below 70rem (1120 px) the other games are a plain row of cards, the deck is hidden', () => {
+  for (const [width, height] of [[390, 844], [820, 1180], [1024, 900], [1056, 900], [1100, 900], [1119, 900]] as const) {
     test(`${width} px: one tidy row, plain cards, no label, no tilt`, async ({ page }) => {
       await page.setViewportSize({ width, height });
       await page.goto('/play/vialo');

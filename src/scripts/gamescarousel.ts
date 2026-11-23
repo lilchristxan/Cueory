@@ -18,6 +18,22 @@ function matchesGame(cardGameId: string, resultGame: string | undefined): boolea
   return resultGame === cardGameId;
 }
 
+/** Wraps a carousel position into 0..count-1 (the arrows, swipe and keyboard all go round and round). */
+export function wrapPosition(index: number, count: number): number {
+  if (count <= 0) return 0;
+  return ((Math.trunc(index) % count) + count) % count;
+}
+
+/** The accessible name of a pager dot: its place in the row and the game it opens. */
+export function pagerDotLabel(game: string, index: number, count: number): string {
+  return `${game}, ${index + 1} of ${count}`;
+}
+
+/** Which dot is current: exactly one, and none when the position is out of range. */
+export function pagerCurrentFlags(count: number, activeIndex: number): boolean[] {
+  return Array.from({ length: Math.max(0, count) }, (_, idx) => idx === activeIndex);
+}
+
 export function hydrateGameStatuses(root: HTMLElement): void {
   try {
     const pad = (n: number) => String(n).padStart(2, '0');
@@ -73,6 +89,7 @@ export function initGamesCarousel(): void {
   const prevBtn = root.querySelector<HTMLButtonElement>('[data-games-prev]');
   const nextBtn = root.querySelector<HTMLButtonElement>('[data-games-next]');
   const cards = Array.from(root.querySelectorAll<HTMLAnchorElement>('[data-game-card]'));
+  const dots = Array.from(root.querySelectorAll<HTMLButtonElement>('[data-games-dot]'));
 
   if (!track || !car || cards.length === 0) return;
 
@@ -104,10 +121,16 @@ export function initGamesCarousel(): void {
   };
 
   const updatePosition = (newIndex: number) => {
-    activeIndex = ((newIndex % count) + count) % count;
+    activeIndex = wrapPosition(newIndex, count);
 
     cards.forEach((card, idx) => {
       card.classList.toggle('on', idx === activeIndex);
+    });
+    // The pager follows every way of moving (arrows, swipe, keyboard, focus and the dots themselves).
+    const flags = pagerCurrentFlags(dots.length, activeIndex);
+    dots.forEach((dot, idx) => {
+      if (flags[idx]) dot.setAttribute('aria-current', 'true');
+      else dot.removeAttribute('aria-current');
     });
 
     const step = getStep();
@@ -150,6 +173,12 @@ export function initGamesCarousel(): void {
 
   nextBtn?.addEventListener('click', () => {
     updatePosition(activeIndex + 1);
+  });
+
+  dots.forEach((dot, idx) => {
+    dot.addEventListener('click', () => {
+      updatePosition(idx);
+    });
   });
 
   root.addEventListener('keydown', (e) => {

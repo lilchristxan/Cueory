@@ -1,5 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
+import sharp from 'sharp';
 import { newsletter, signupState, site } from '../../src/config/site';
 
 // The hero's ways in (redesign P5): the explore row's tiles, each to a page that exists today. The "start studying" call
@@ -31,7 +32,7 @@ for (const size of [
       const response = await page.goto('/');
       expect(response?.status()).toBe(200);
 
-      // The redesigned hero (P5): motto, headline, a closed call to action, two value points, the Ko-fi card.
+      // The redesigned hero (P5): motto, headline, a closed call to action, three value points, the Ko-fi card.
       await expect(page.locator('main h1')).toHaveText('nursing school made simpler.');
       await expect(page.getByText('by nursing students, for nursing students').first()).toBeVisible();
       const start = page.getByTestId('hero-start');
@@ -40,17 +41,20 @@ for (const size of [
       // closed button is checked in tests/unit/home-sections.test.ts).
       await expect(start).toHaveAttribute('href', '/learn/study-skills');
       await expect(page.getByTestId('hero-join')).toHaveCount(0);
-      await expect(page.locator('.scene-hero').getByText('adhd friendly')).toHaveCount(0);
+      await expect(page.locator('.scene-hero').getByText('adhd friendly')).toBeVisible();
+      await expect(page.locator('.scene-hero').getByText('less overwhelm, more focus')).toBeVisible();
+      await expect(page.getByRole('list', { name: 'what you get' }).getByRole('listitem')).toHaveCount(3);
       await expect(page.getByTestId('hero-support')).toHaveAttribute('href', site.tipPageUrl);
       // No line under the button restates it (Christian, 2026-11-02).
       await expect(page.getByText('save your progress and pick up where you left off.')).toHaveCount(0);
       await expect(page.locator('#how-it-works')).toHaveCount(0);
       await expect(page.getByRole('heading', { level: 2, name: 'ways to study' })).toBeVisible();
-    await expect(page.getByRole('heading', { level: 2, name: "nurse's station games" })).toBeVisible();
+      await expect(page.getByRole('heading', { level: 2, name: "nurse's station games" })).toBeVisible();
       await expect(page.getByRole('heading', { level: 2, name: 'coming soon' })).toBeVisible();
       const lowerSectionIds = await page.locator('main > section[id]').evaluateAll((sections) => sections.map((section) => section.id));
+      // Christian's final home board (20 Nov): the games come before the vials.
       expect(lowerSectionIds).toEqual([
-        'ways-to-study', 'daily-games', 'signup',
+        'daily-games', 'ways-to-study', 'signup',
       ]);
       await expect(page.getByTestId('games-stage')).toBeVisible();
       // The old feature tiles repeated the vials and the lesson link, so they left the home page.
@@ -66,6 +70,80 @@ for (const size of [
       await expect(page.locator('main a[href="/breaks"]')).toHaveCount(0);
       await expect(page.getByRole('complementary', { name: 'continue studying' })).toHaveCount(0);
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    });
+
+    test('centers every hero item on its column (the page on phone and tablet, the text column on desktop) and fades the figure', async ({ page }) => {
+      await page.goto('/');
+      const twoColumn = size.viewport.width >= 1280;
+      const measured = await page.evaluate((wide) => {
+        const box = (el: Element | null) => {
+          const r = el!.getBoundingClientRect();
+          return { left: r.left, right: r.right };
+        };
+        const centerOf = (b: { left: number; right: number }) => (b.left + b.right) / 2;
+        const column = box(document.querySelector('.scene-hero .\\@container'));
+        // The real layout viewport: a scrollbar (headed Firefox) makes it narrower than the configured width.
+        const middle = wide ? centerOf(column) : document.documentElement.clientWidth / 2;
+        const group = [...document.querySelectorAll('[data-testid="hero-start"], #hero-start-soon, [data-testid="hero-play-games"]')].map(box);
+        const groupBox = { left: Math.min(...group.map((g) => g.left)), right: Math.max(...group.map((g) => g.right)) };
+        return {
+          middle,
+          columnCenter: centerOf(column),
+          eyebrow: centerOf(box(document.querySelector('.hero-eyebrow'))),
+          h1: centerOf(box(document.querySelector('main h1'))),
+          buttons: centerOf(groupBox),
+          points: centerOf(box(document.querySelector('ul[aria-label="what you get"]'))),
+          kofi: centerOf(box(document.querySelector('[data-testid="hero-support"]'))),
+          curve: wide ? null : centerOf(box(document.querySelector('.hero-curve'))),
+        };
+      }, twoColumn);
+      if (!twoColumn) expect(Math.abs(measured.columnCenter - measured.middle)).toBeLessThanOrEqual(2);
+      for (const key of ['eyebrow', 'h1', 'buttons', 'points', 'kofi'] as const) {
+        expect(Math.abs(measured[key] - measured.middle), key).toBeLessThanOrEqual(2);
+      }
+      if (measured.curve !== null) expect(Math.abs(measured.curve - measured.middle)).toBeLessThanOrEqual(2);
+
+      // The figure fades out (a mask on its box) and, on the two-column layout, stays inside the page and clear of the text.
+      const figure = page.locator('.hero-figure-wrap');
+      await expect(figure).toHaveCSS('mask-image', /gradient/);
+      if (twoColumn) {
+        const box = (await figure.boundingBox())!;
+        const text = (await page.locator('.scene-hero .\\@container').boundingBox())!;
+        expect(box.x).toBeGreaterThan(text.x);
+        const column = (await page.locator('main h1').boundingBox())!;
+        expect(column.x + column.width).toBeLessThanOrEqual(box.x + (box.width * 0.2));
+      }
+    });
+
+    test('keeps the hero decorations quiet under reduced motion', async ({ page }) => {
+      await page.emulateMedia({ reducedMotion: 'reduce' });
+      await page.goto('/');
+      await expect(page.locator('.hero-accent')).toHaveCSS('animation-name', 'none');
+      if (size.viewport.width >= 1280) {
+        await expect(page.locator('.hero-halo')).toBeVisible();
+        const names = await page.locator('.hero-halo').evaluate((el) => [getComputedStyle(el, '::before').animationName, getComputedStyle(el, '::after').animationName]);
+        expect(names).toEqual(['none', 'none']);
+      }
+    });
+
+    test('keeps the gap between the Ko-fi card and the Explore panel at normal section spacing below the desktop layout', async ({ page }) => {
+      test.skip(size.viewport.width >= 1280, 'the desktop hero lays the figure beside the text');
+      await page.goto('/');
+      const gap = await page.evaluate(() => {
+        const card = document.querySelector('[data-testid="hero-support"]')!.getBoundingClientRect();
+        const explore = document.querySelector('nav[aria-labelledby="explore-heading"]')!.getBoundingClientRect();
+        const probe = document.createElement('div');
+        probe.style.height = 'var(--spacing-section)';
+        document.body.appendChild(probe);
+        const section = probe.getBoundingClientRect().height;
+        probe.remove();
+        // Both sides are rounded to the same 1/100 px grid so sub-pixel layout noise cannot fail the approved spacing.
+        const grid = (value: number) => Math.round(value * 100) / 100;
+        return { gap: grid(explore.top - card.bottom), section: grid(section) };
+      });
+      expect(gap.section).toBeGreaterThan(0);
+      expect(gap.gap).toBeGreaterThan(0);
+      expect(Math.round(gap.gap)).toBeLessThanOrEqual(Math.round(gap.section));
     });
 
     test('has accessible sections and comfortable hero-link targets', async ({ page }) => {
@@ -151,3 +229,148 @@ test('a valid on-device study snapshot shows a resume strip linking to the saved
   await link.click();
   await expect(page).toHaveURL(/\/learn\/study-skills\/cards$/);
 });
+
+
+// The start link sits inside a wrapper that carries a travelling light, clipped to the wrapper's shape. If that clip
+// ever catches the link again, its focus outline keeps the right computed style and still cannot be seen. So this looks
+// at the pixels: tabbing onto the link must paint the focus colour in the outline's band outside the link's edge, on
+// all four sides, and nothing is painted there before.
+for (const viewport of [{ width: 390, height: 844 }, { width: 1440, height: 900 }]) {
+  for (const scheme of ['light', 'dark'] as const) {
+    test(`the start link's keyboard focus ring is painted, not clipped, at ${viewport.width} wide in ${scheme}`, async ({ browser }) => {
+      const context = await browser.newContext({ viewport, colorScheme: scheme, reducedMotion: 'reduce' });
+      const page = await context.newPage();
+      await page.addInitScript(() => {
+        try { localStorage.setItem('cueory-promo-seen', String(Date.now())); localStorage.setItem('cueory-signup-popup-seen', String(Date.now())); }
+        catch { /* Storage may be blocked; the page still works. */ }
+      });
+      await page.goto('/');
+      const start = page.getByTestId('hero-start');
+      await expect(start).toBeVisible();
+      const ring = page.locator('.hero-start-ring');
+      await ring.scrollIntoViewIfNeeded();
+
+      const readBand = async () => {
+        const box = (await start.boundingBox())!;
+        const { width: line, offset, colour } = await ring.evaluate((el) => {
+          const probe = document.createElement('span');
+          probe.style.cssText = 'outline: var(--focus-width) solid var(--color-focus); outline-offset: var(--focus-offset)';
+          el.append(probe);
+          const style = getComputedStyle(probe);
+          const out = { width: parseFloat(style.outlineWidth), offset: parseFloat(style.outlineOffset), colour: style.outlineColor };
+          probe.remove();
+          return out;
+        });
+        const pad = Math.ceil(offset + line) + 4;
+        const clip = { x: Math.floor(box.x) - pad, y: Math.floor(box.y) - pad, width: Math.ceil(box.width) + 2 * pad, height: Math.ceil(box.height) + 2 * pad };
+        const { data, info } = await sharp(await page.screenshot({ clip, scale: 'css' })).removeAlpha().raw().toBuffer({ resolveWithObject: true });
+        const want = colour.match(/[\d.]+/g)!.slice(0, 3).map(Number);
+        const pixel = (x: number, y: number) => { const i = (Math.round(y) * info.width + Math.round(x)) * info.channels; return [data[i], data[i + 1], data[i + 2]]; };
+        const near = (a: number[]) => a.every((channel, i) => Math.abs(channel - want[i]) <= 36);
+        // The middle of the outline band: offset plus half the line's width outside the link's edge.
+        const out = offset + line / 2;
+        const left = box.x - clip.x, top = box.y - clip.y;
+        const points = {
+          above: pixel(left + box.width / 2, top - out),
+          below: pixel(left + box.width / 2, top + box.height + out),
+          before: pixel(left - out, top + box.height / 2),
+          after: pixel(left + box.width + out, top + box.height / 2),
+        };
+        return Object.fromEntries(Object.entries(points).map(([side, rgb]) => [side, near(rgb)]));
+      };
+
+      expect(await readBand(), 'no ring before the link has keyboard focus').toEqual({ above: false, below: false, before: false, after: false });
+      // Keyboard, not script: leave the link and come back with Tab so :focus-visible is certain in every engine.
+      await start.focus();
+      await page.keyboard.press('Shift+Tab');
+      await page.keyboard.press('Tab');
+      await expect(start).toBeFocused();
+      expect(await readBand(), 'the focus colour is painted outside the link on every side').toEqual({ above: true, below: true, before: true, after: true });
+      await context.close();
+    });
+  }
+}
+
+// "simpler." is large text, so it needs 3:1 against the silk behind it at every moment of the copper shine (11 s loop), in
+// Light and Evening, and in the still state reduced motion shows. The glyph pixels are found by taking the word twice,
+// once as drawn and once with the letters hidden, and comparing each interior glyph pixel with the pixel behind it.
+const luminance = ([r, g, b]: number[]) => {
+  const f = (c: number) => { const v = c / 255; return v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; };
+  return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b);
+};
+const contrast = (a: number[], b: number[]) => {
+  const [x, y] = [luminance(a), luminance(b)];
+  return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05);
+};
+
+for (const viewport of [{ width: 390, height: 844 }, { width: 1440, height: 900 }]) {
+  for (const scheme of ['light', 'dark'] as const) {
+    test.describe(`the copper shine on "simpler." at ${viewport.width} wide in ${scheme}`, () => {
+      test.use({ viewport, colorScheme: scheme });
+
+      async function worstContrast(page: import('@playwright/test').Page): Promise<number> {
+        const word = page.locator('.hero-accent');
+        const box = (await word.boundingBox())!;
+        const clip = { x: box.x, y: box.y, width: box.width, height: box.height };
+        const grab = async () => sharp(await page.screenshot({ clip, scale: 'css' })).removeAlpha().raw().toBuffer({ resolveWithObject: true });
+        const drawn = await grab();
+        await word.evaluate((el) => {
+          el.style.setProperty('color', 'transparent');
+          el.style.setProperty('-webkit-text-fill-color', 'transparent');
+          el.style.setProperty('background-image', 'none');
+        });
+        const behind = await grab();
+        await word.evaluate((el) => {
+          el.style.removeProperty('color');
+          el.style.removeProperty('-webkit-text-fill-color');
+          el.style.removeProperty('background-image');
+        });
+        const { data: a, info } = drawn;
+        const b = behind.data;
+        const isGlyph = (x: number, y: number) => {
+          const i = (y * info.width + x) * 3;
+          return Math.abs(a[i] - b[i]) + Math.abs(a[i + 1] - b[i + 1]) + Math.abs(a[i + 2] - b[i + 2]) > 150;
+        };
+        let worst = Infinity;
+        let counted = 0;
+        for (let y = 2; y < info.height - 2; y++) {
+          for (let x = 2; x < info.width - 2; x++) {
+            // Interior pixels only: the anti-aliased edge blends the letter with the background.
+            if (!(isGlyph(x, y) && isGlyph(x - 2, y) && isGlyph(x + 2, y) && isGlyph(x, y - 2) && isGlyph(x, y + 2))) continue;
+            const i = (y * info.width + x) * 3;
+            counted++;
+            worst = Math.min(worst, contrast([a[i], a[i + 1], a[i + 2]], [b[i], b[i + 1], b[i + 2]]));
+          }
+        }
+        expect(counted).toBeGreaterThan(100);
+        return worst;
+      }
+
+      test('keeps 3:1 at 0%, 25%, 50%, 75% and 100% of the animation', async ({ page }) => {
+        await page.addInitScript(() => {
+          try { localStorage.setItem('cueory-promo-seen', String(Date.now())); localStorage.setItem('cueory-signup-popup-seen', String(Date.now())); } catch { /* optional */ }
+        });
+        await page.goto('/');
+        const word = page.locator('.hero-accent');
+        await expect(word).toBeVisible();
+        for (const phase of [0, 0.25, 0.5, 0.75, 1]) {
+          await word.evaluate((el, p) => {
+            el.style.animationPlayState = 'paused';
+            el.style.animationDelay = `-${p * 11}s`;
+          }, phase);
+          expect(await worstContrast(page), `at ${phase * 100}%`).toBeGreaterThanOrEqual(3);
+        }
+      });
+
+      test('shows a still, legible word under reduced motion', async ({ page }) => {
+        await page.emulateMedia({ reducedMotion: 'reduce', colorScheme: scheme });
+        await page.addInitScript(() => {
+          try { localStorage.setItem('cueory-promo-seen', String(Date.now())); localStorage.setItem('cueory-signup-popup-seen', String(Date.now())); } catch { /* optional */ }
+        });
+        await page.goto('/');
+        await expect(page.locator('.hero-accent')).toHaveCSS('animation-name', 'none');
+        expect(await worstContrast(page)).toBeGreaterThanOrEqual(3);
+      });
+    });
+  }
+}

@@ -732,6 +732,58 @@
   z-index: 10;
 }
 
+/* ---------------- Deck breakpoint ---------------- */
+/* The fanned deck at the right edge fits only from 70rem (1120 px); below it the other games are a plain row under the
+   board. A media query cannot read a custom property, so the value is --game-deck-breakpoint in tokens.css and
+   tests/unit/gameframe.test.ts checks that this query uses the same number. This is the only rule block that moved
+   from the 64rem layout query; the sidebar and column layout still switch at 64rem. */
+@media (width < 70rem) {
+  /* The deck has no room beside the board below 70rem (1120 px, token --game-deck-breakpoint in tokens.css), so the other games are a row of plain cards under the stats. */
+  .game-frame-deck-slot {
+    order: 5;
+    inline-size: 100%;
+    box-sizing: border-box;
+    position: static;
+    padding: 0 calc(var(--spacing) * 3) calc(var(--spacing) * 8);
+  }
+  .game-deck-list {
+    display: flex;
+    gap: calc(var(--spacing) * 3);
+    inline-size: auto;
+    block-size: auto;
+  }
+  .game-deck-item {
+    position: static;
+    rotate: none;
+    z-index: auto;
+    flex: 1 1 0;
+    min-inline-size: 0;
+    inline-size: auto;
+    block-size: calc(var(--game-frame-btn-size) * 2);
+  }
+  .game-deck-item:hover .game-deck-card,
+  .game-deck-card:focus-visible {
+    translate: none;
+    rotate: none;
+  }
+  .game-deck-top,
+  .game-deck-bottom,
+  .game-deck-label {
+    display: none;
+  }
+  .game-deck-name {
+    inset-block-start: 0;
+    inset-block-end: 0;
+    translate: none;
+    align-items: center;
+    padding-inline: calc(var(--spacing) * 2);
+    font-size: var(--game-frame-how-font-size);
+  }
+  .game-deck-wordmark-mid {
+    block-size: var(--game-deck-logo-row);
+  }
+}
+
 /* ---------------- Responsive: Tablet and Mobile ---------------- */
 @media (width < 64rem) {
   .game-frame-sidebar-top .game-frame-back {
@@ -851,49 +903,6 @@
   /* The Frame's side gutter here is 4 units; Word Path's panel bleeds exactly that far until sm:mx-0 (40rem). */
   .game-frame-board {
     --wordpath-bleed: calc(var(--spacing) * 4);
-  }
-
-  /* The deck has no room beside a phone or tablet board, so the other games are a row of plain cards under the stats. */
-  .game-frame-deck-slot {
-    order: 5;
-    position: static;
-    padding: 0 calc(var(--spacing) * 3) calc(var(--spacing) * 8);
-  }
-  .game-deck-list {
-    display: flex;
-    gap: calc(var(--spacing) * 3);
-    inline-size: auto;
-    block-size: auto;
-  }
-  .game-deck-item {
-    position: static;
-    rotate: none;
-    z-index: auto;
-    flex: 1 1 0;
-    min-inline-size: 0;
-    inline-size: auto;
-    block-size: calc(var(--game-frame-btn-size) * 2);
-  }
-  .game-deck-item:hover .game-deck-card,
-  .game-deck-card:focus-visible {
-    translate: none;
-    rotate: none;
-  }
-  .game-deck-top,
-  .game-deck-bottom,
-  .game-deck-label {
-    display: none;
-  }
-  .game-deck-name {
-    inset-block-start: 0;
-    inset-block-end: 0;
-    translate: none;
-    align-items: center;
-    padding-inline: calc(var(--spacing) * 2);
-    font-size: var(--game-frame-how-font-size);
-  }
-  .game-deck-wordmark-mid {
-    block-size: var(--game-deck-logo-row);
   }
 
   /*

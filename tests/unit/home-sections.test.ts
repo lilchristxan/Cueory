@@ -30,7 +30,8 @@ describe('home lower sections', () => {
   it('has one h1 and the approved lower-section order', () => {
     expect([...main!.matchAll(/<h1\b[^>]*>/g)]).toHaveLength(1);
     const ids = [...main!.matchAll(/<section\b[^>]*\bid="([^"]+)"/g)].map((match) => match[1]);
-    expect(ids.filter((id) => ['ways-to-study', 'daily-games', 'signup'].includes(id))).toEqual(['ways-to-study', 'daily-games', 'signup']);
+    // Christian's final home board (20 Nov): the games come before the vials (the order was ways-to-study, daily-games).
+    expect(ids.filter((id) => ['ways-to-study', 'daily-games', 'signup'].includes(id))).toEqual(['daily-games', 'ways-to-study', 'signup']);
     expect(titles(section('ways-to-study'), 2).filter(Boolean)).toEqual(['one lesson, multiple ways to study']);
     expect(titles(section('daily-games'), 2)).toEqual(["nurse's station games"]);
     expect(titles(section('signup'), 2)).toEqual(['coming soon']);
@@ -91,8 +92,10 @@ describe('home lower sections', () => {
     // The old quiet launch-list link went away with the old hero (copy deck, "hero quiet link"); the form is lower down.
     expect(hero).not.toContain('data-testid="hero-join"');
     expect(accountLaunch(true)).toMatchObject({ accountHref: '/signup', promoJoinLabel: 'create your free account' });
-    // The third value point stays held: there is no support for "adhd friendly" yet.
-    expect(plain(hero)).not.toMatch(/adhd/i);
+    // The third value point shipped (Christian approved it, 23 Nov, D-190).
+    expect(plain(hero)).toContain('adhd friendly');
+    expect(plain(hero)).toContain('less overwhelm, more focus');
+    expect((hero.match(/<ul\b[^>]*aria-label="what you get"[\s\S]*?<\/ul>/)?.[0].match(/<li\b/g) ?? []).length).toBe(3);
     expect(plain(hero)).toContain('structured learning');
     expect(plain(hero)).toContain('multiple ways to study');
     // Explore tiles: only places that exist today; "resources" waits until that page is live.
@@ -106,14 +109,35 @@ describe('home lower sections', () => {
     expect(support).toContain('rel="noopener noreferrer"');
     expect(support).toContain('opens in a new tab');
     // The figure loads at once and is decorative.
-    expect(hero).toMatch(/<img\b(?=[^>]*hero-anatomy-figure\.webp)(?=[^>]*loading="eager")(?=[^>]*alt="")[^>]*>/);
+    expect(hero).toMatch(/<img\b(?=[^>]*hero-figure-halo\.webp)(?=[^>]*loading="eager")(?=[^>]*alt="")[^>]*>/);
   });
 
   it('draws the hairline rule between the hero value points from the tablet width up, as in HomeV2-1', () => {
     const source = readFileSync(new URL('../../src/components/HomeHero.astro', import.meta.url), 'utf8');
-    const ruled = source.match(/<li class="([^"]*)" data-hero-point-rule>/);
-    expect(ruled, 'second value point carries the rule').not.toBeNull();
-    expect(ruled![1].split(' ')).toEqual(expect.arrayContaining(['sm:border-s', 'sm:border-line', 'sm:ps-5']));
+    const ruled = [...source.matchAll(/<li class="([^"]*)" data-hero-point-rule>/g)];
+    expect(ruled.length, 'second and third value points carry the rule').toBe(2);
+    for (const match of ruled) {
+      expect(match[1].split(' ')).toEqual(expect.arrayContaining(['sm:border-s', 'sm:border-line', 'sm:ps-5']));
+    }
+  });
+
+  it('centers the one-column hero (phone, tablet) and keeps the two-column layout from the xl width', () => {
+    const source = readFileSync(new URL('../../src/components/HomeHero.astro', import.meta.url), 'utf8');
+    expect(source).toMatch(/<div class="@container[^"]*\bmx-auto\b[^"]*\btext-center\b/);
+    expect(source).toMatch(/<div class="hero-logo-row flex items-center justify-center sm:justify-start sm:ps-\(--hero-logo-inset\)">/);
+    expect(source).toContain('max-w-(--container-explore)');
+    // The two columns start at the xl width, so the figure never sits over the text at laptop widths.
+    expect(source).not.toMatch(/\blg:(absolute|w-\(--hero-figure)/);
+    expect(source).toContain('xl:text-display-hero-xl');
+    // The final board's motion: the halo glisten, the light round the start button, and the copper shine on "simpler.".
+    expect(source).toContain('class="hero-halo');
+    expect(source).toContain('hero-start-ring');
+    expect(source).toContain('/design/home-v2/hero-figure-halo.webp');
+    // The headline is two natural lines on phones, never one word per line.
+    expect(source).not.toContain('max-sm:block');
+    // The closed live button is muted and sits beside a working link to the daily games.
+    expect(source).toContain('data-testid="hero-play-games"');
+    expect(source).toContain('href="/play"');
   });
 
   it('the hero start button follows the draft gate: closed live, a link to the open lesson elsewhere', () => {
