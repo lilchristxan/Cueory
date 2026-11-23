@@ -21,6 +21,8 @@ Use this runbook for the games-and-public-pages launch. Accounts and production 
 7. Wait for the approved all-engine browser results on that same SHA.
 8. Record the final approved SHA in the actual release pull request and launch checklist.
 9. Stop if the SHA in the release record differs from the SHA tested by all engines.
+9.1. Record the completed CI-only #634 dry-run link beside the approved SHA.
+9.2. Have Christian close the still-open CI-only #634 dry-run.
 
 ## Christian-only release
 
@@ -29,7 +31,7 @@ Use this runbook for the games-and-public-pages launch. Accounts and production 
 12. Confirm that every required check on the release pull request is green.
 13. Confirm that the all-engine browser checks belong to the recorded final release SHA.
 14. Do not merge CI-only #634.
-15. Close the CI-only #634 dry-run before opening a separate real `staging` to `main` release pull request for the same branch pair.
+15. Confirm that the CI-only #634 dry-run is closed before continuing.
 16. Open the release pull request's merge menu.
 17. Choose `Create a merge commit`.
 18. Confirm the merge into `main`.
