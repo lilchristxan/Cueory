@@ -511,14 +511,16 @@
   --vialo-key-action-bottom: var(--color-surface);
   --vialo-key-absent: color-mix(in srgb, var(--color-surface) 55%, var(--color-page));
   --vialo-key-absent-edge: color-mix(in srgb, var(--color-line) 55%, var(--color-page));
-  /* The marked caps keep one deep green and one deep oxblood in Daytime and Evening (the key colours on the LOCKED v1
-     board), so the white letter is at least 5:1 on every part of either cap in both palettes. */
-  --vialo-key-here-top: #1c7a54;        /* in place: a dark green cap, lit at the top */
+  /* The marked caps use only the two game colours Christian chose for vialo (D-184, docs/BRAND.md "Game accents"):
+     dark green in place, oxblood elsewhere. A cap is the colour itself, its deep step as the lip and a little of its
+     light step at the lit top. The caps keep the Daytime values in Evening too, as the pills on the LOCKED v1 board
+     do, so the white letter is at least 5:1 on every part of either cap in both palettes. */
+  --vialo-key-here-top: color-mix(in srgb, #3f8a68 30%, #0e5a3d);       /* in place: a dark green cap, lit at the top */
   --vialo-key-here-bottom: #0e5a3d;
   --vialo-key-here-lip: #053321;
-  --vialo-key-elsewhere-top: #8c3027;   /* elsewhere in the word: an oxblood cap */
-  --vialo-key-elsewhere-bottom: #5e1914;
-  --vialo-key-elsewhere-lip: #3f0e0b;
+  --vialo-key-elsewhere-top: color-mix(in srgb, #a0413a 35%, #6e2019);  /* elsewhere in the word: an oxblood cap */
+  --vialo-key-elsewhere-bottom: #6e2019;
+  --vialo-key-elsewhere-lip: #4a100d;
   --vialo-key-on-mark: #ffffff;         /* the letter on a green or oxblood key */
   --vialo-key-ring-color: rgb(255 255 255 / 0.6);
   --vialo-key-shine: rgb(255 255 255 / 0.35);  /* the lit top edge of a green key */

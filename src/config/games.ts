@@ -34,7 +34,7 @@ const baseDailyGames: readonly DailyGame[] = [
   {
     id: 'cueword',
     name: 'crossword',
-    line: 'choose an easy, mid or hard crossword, then solve each crossing cue.',
+    line: 'choose a small, medium or large crossword, then solve each crossing cue.',
     ready: true,
   },
   {
