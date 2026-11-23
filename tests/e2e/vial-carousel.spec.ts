@@ -74,11 +74,15 @@ test('no medication wording anywhere on the vials or in their preview', async ({
   for (const mode of studyModes) expect(mode.features.map((feature) => feature.text).join(' ')).not.toMatch(banned);
 });
 
-test('the dots follow the vial in front, with no caption repeating its name; the dot is a pill, not only a color', async ({ page }) => {
+test('the dots follow the vial in front; no caption on tablet or desktop, one readable line on phones; the dot is a pill, not only a color', async ({ page }, testInfo) => {
   await showRing(page);
   const on = () => section(page).locator('[data-modes-dot][data-on]');
   await expect(on()).toHaveCount(1);
-  await expect(section(page).locator('[data-modes-caption]')).toHaveCount(0);
+  // Changed for phone parity: phone vial labels are small, so phones alone get one line naming the front vial under the
+  // dots (the new phone spec checks its text and size). Tablet and desktop still show no caption.
+  const caption = section(page).locator('[data-modes-caption]');
+  if (sizeOf(testInfo) === 'phone') await expect(caption).toBeVisible();
+  else await expect(caption).toBeHidden();
   await section(page).getByRole('button', { name: 'next study mode' }).click();
   const widths = () =>
     section(page)
@@ -98,9 +102,13 @@ test('phones put the arrows under the pedestal, either side of the dots; wider s
   const next = (await section(page).locator('[data-modes-next]').boundingBox())!;
   const dots = (await section(page).locator('.modes-dots').boundingBox())!;
   if (sizeOf(testInfo) === 'phone') {
-    expect(prev.y).toBeGreaterThanOrEqual(track.y + track.height - 2);
-    expect(prev.x + prev.width).toBeLessThanOrEqual(dots.x);
-    expect(next.x).toBeGreaterThanOrEqual(dots.x + dots.width);
+    // Changed for phone parity: the arrows now stand at the shelf's left and right ends (above the lower outer vials),
+    // 44 px each, and the dots sit alone under the pedestal.
+    expect(prev.width).toBeGreaterThanOrEqual(44);
+    expect(next.width).toBeGreaterThanOrEqual(44);
+    expect(prev.x).toBeLessThan(track.width / 8);
+    expect(next.x + next.width).toBeGreaterThan((track.width * 7) / 8);
+    expect(dots.y).toBeGreaterThanOrEqual(track.y + track.height - 2);
   } else {
     const middle = track.y + track.height / 2;
     expect(Math.abs(prev.y + prev.height / 2 - middle)).toBeLessThan(2);

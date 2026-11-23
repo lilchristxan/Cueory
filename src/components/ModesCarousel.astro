@@ -60,7 +60,7 @@ const icons: Record<StudyFeatureIcon, string> = {
 
 <section
   id="ways-to-study"
-  class="modes modes-p6 scene scene-tint py-section scroll-mt-section"
+  class="modes modes-p6 scene scene-tint py-section-phone sm:py-section scroll-mt-section"
   role="region"
   aria-labelledby="modes-heading"
   aria-roledescription="carousel"
@@ -70,7 +70,7 @@ const icons: Record<StudyFeatureIcon, string> = {
   <div data-reveal-section>
   <div class="mx-auto max-w-page px-gutter text-center">
     <!-- HomeV2 and the copy deck: the serif heading in two lines, no eyebrow above it, and the one line under it. -->
-    <h2 id="modes-heading" class="display text-title wrap-anywhere sm:text-title-lg"><span class="block">one lesson,</span> <span class="block">multiple ways to study</span></h2>
+    <h2 id="modes-heading" class="display text-title-phone wrap-anywhere sm:text-title-lg"><span class="block">one lesson,</span> <span class="block">multiple ways to study</span></h2>
     <p class="mt-3 text-body text-ink-soft">pick the method that fits your brain today.</p>
   </div>
 
@@ -99,6 +99,7 @@ const icons: Record<StudyFeatureIcon, string> = {
             aria-label={`${index + 1} of ${count}`}
             data-mode-card
             data-name={mode.name}
+            data-time={mode.time}
             data-href={linkOf(mode)?.href}
           >
             <button
@@ -136,6 +137,8 @@ const icons: Record<StudyFeatureIcon, string> = {
         <div class="modes-dots" aria-hidden="true">
           {studyModes.map((_, index) => <span class="modes-dot" data-modes-dot data-on={index === 0 ? '' : undefined} />)}
         </div>
+        <!-- Phones only: the vial labels are small there, so this one line under the dots names the vial in front in readable type. -->
+        <p class="modes-caption text-base text-ink" aria-hidden="true" data-modes-caption>{first.name}, {first.time} min</p>
         <button type="button" class="corner-button vial-arrow vial-arrow-next" aria-label="next study mode" data-modes-next>
           <svg viewBox="0 0 24 24" class="size-6" aria-hidden="true" focusable="false">
             <path d="M9.5 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path>
@@ -289,6 +292,7 @@ const icons: Record<StudyFeatureIcon, string> = {
     const live = root.querySelector<HTMLElement>('[data-modes-live]');
     const pauseButton = root.querySelector<HTMLButtonElement>('[data-modes-pause]');
     const dots = [...root.querySelectorAll<HTMLElement>('[data-modes-dot]')];
+    const caption = root.querySelector<HTMLElement>('[data-modes-caption]');
     const reducedMotion = motionQuery!;
 
     const state = {
@@ -368,7 +372,12 @@ const icons: Record<StudyFeatureIcon, string> = {
       const stage = track.getBoundingClientRect();
       const middle = stage.left + stage.width / 2;
       let reach = stage.width / 2;
-      if (prevArrow && getComputedStyle(prevArrow).position === 'absolute') {
+      // On phones the arrows sit above the outer vials (--vial-arrow-reserves: 0), so they take no room from the row.
+      if (
+        prevArrow &&
+        getComputedStyle(prevArrow).position === 'absolute' &&
+        getComputedStyle(prevArrow).getPropertyValue('--vial-arrow-reserves').trim() !== '0'
+      ) {
         reach = Math.min(reach, middle - prevArrow.getBoundingClientRect().right);
       }
       return (reach - ROW_GAP * width) / width;
@@ -433,6 +442,7 @@ const icons: Record<StudyFeatureIcon, string> = {
         for (const link of card.querySelectorAll('a')) link.tabIndex = -1;
       });
       dots.forEach((dot, index) => dot.toggleAttribute('data-on', index === active));
+      if (caption) caption.textContent = `${cards[active]!.dataset.name ?? ''}, ${cards[active]!.dataset.time ?? ''} min`;
       settleRing();
     };
 

@@ -1417,6 +1417,64 @@ html:has(dialog.menu-panel[open]) {
     }
   }
 
+  .modes-caption {
+    display: none;
+    margin: 0;
+  }
+
+  /*
+    Phones (HomeV2 parity): the same shelf as on desktop, just smaller: about five vials with their arrows at the
+    sides. The arrows sit in the headroom above the outer vials (which stand lower), so they take no width from the row
+    (--vial-arrow-reserves, read by rowRoom in ModesCarousel.astro). The dots are only a picture, so a "3 of 11" counter
+    replaces them here.
+  */
+  @media (width < 40rem) {
+    .modes {
+      --vial-width: calc(var(--spacing) * 18.5); /* in rem, so larger text still lays the row out again */
+      --vial-stand: calc(var(--spacing) * 10);
+      --vial-headroom: calc(var(--spacing) * 6);
+      --vial-pedestal-height: calc(var(--spacing) * 14);
+      --vial-pedestal-foot: calc(var(--spacing) * 3);
+      --vial-arrow-reserves: 0;
+    }
+
+    .modes .vial-name {
+      font-size: 15cqi;
+      inline-size: 72%;
+    }
+
+    .modes .vial-meta {
+      font-size: 6cqi;
+    }
+
+    .modes .vial-arrow {
+      position: absolute;
+      z-index: 1;
+      inset-block-start: 0;
+      inline-size: var(--tap-min);
+      block-size: var(--tap-min);
+    }
+
+    .modes .vial-arrow-prev {
+      inset-inline-start: calc(var(--spacing) * 1);
+    }
+
+    .modes .vial-arrow-next {
+      inset-inline-end: calc(var(--spacing) * 1);
+    }
+
+    .modes .modes-caption {
+      display: block;
+      flex-basis: 100%;
+      text-align: center;
+    }
+
+    .modes .modes-controls {
+      flex-wrap: wrap;
+      row-gap: calc(var(--spacing) * 3);
+    }
+  }
+
   .mode-art {
     aspect-ratio: 10 / 7;
     border-radius: var(--radius-md);

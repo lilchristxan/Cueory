@@ -248,6 +248,8 @@
   --text-title-explore--line-height: 1.2;
   --text-title: 2.375rem;       /* marketing page title (38px) */
   --text-title--line-height: 1.12;
+  --text-title-phone: 2.0625rem; /* home section headings on phones (33px) */
+  --text-title-phone--line-height: 1.12;
   --text-title-lg: 3rem;        /* marketing page title on wider screens (48px) */
   --text-title-lg--line-height: 1.12;
   --text-accent: 1.375rem;      /* italic serif accent line under a headline */
@@ -272,6 +274,7 @@
   --spacing: 0.25rem;           /* base unit: p-4 = 4 × 0.25rem = 1rem */
   --spacing-gutter: 1.25rem;    /* page side padding on phones */
   --spacing-section: 4.5rem;    /* space between page sections */
+  --spacing-section-phone: 2rem; /* half the gap between two home sections on phones (64 px between them) */
   --spacing-stack: 1.25rem;     /* space between paragraphs and blocks */
   --new-tab-cue-gap: 0.25em;    /* space before the ↗ that marks a link opening in a new tab */
   --new-tab-cue-size: 0.85em;   /* size of that ↗, relative to the link text */
@@ -483,8 +486,10 @@
     --game-section-padding-phone: 3rem 1rem 1.25rem;
     --game-container-gap: 1.125rem;
     --game-stage-padding: var(--spacing-section) var(--spacing-gutter);
+    --game-stage-padding-phone: 0 var(--spacing-gutter);
     --game-header-gap: 1rem;
     --game-nav-size: 3.25rem;
+    --game-nav-size-phone: 44px; /* phones: a fixed 44 px target, so large text leaves the "play today's" button its room */
     --game-nav-border: rgb(249 245 239 / 0.35);
     --game-nav-bg: rgb(249 245 239 / 0.08);
     --game-nav-bg-hover: rgb(249 245 239 / 0.18);
