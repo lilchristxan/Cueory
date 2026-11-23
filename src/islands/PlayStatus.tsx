@@ -230,7 +230,8 @@ export default function PlayStatus({ games, isComingSoonCrossword = false }: Pro
             return (
               <div key={row.id} data-testid={`play-status-${row.id}`} data-status={status} className="min-w-0">
                 <div
-                  className={`veil relative flex flex-col justify-between p-6 min-h-36 text-ink${closed ? '' : ' hover:border-line transition-colors'}`}
+                  className={`veil relative flex flex-col justify-between p-6 min-h-36 text-ink${closed ? ' border-dashed border-control' : ' hover:border-line transition-colors'}`}
+                  data-closed={closed ? 'true' : undefined}
                 >
                   <div>
                     <h3 className="display text-2xl text-ink font-medium wrap-anywhere">
@@ -243,7 +244,7 @@ export default function PlayStatus({ games, isComingSoonCrossword = false }: Pro
                     <p className="mt-2 text-sm text-ink-soft">{row.line}</p>
                   </div>
                   <div className="mt-4 pt-2">
-                    {closed ? <span className="text-sm font-semibold text-ink">coming soon</span> : <StatusLine text={text} />}
+                    {closed ? <span className="inline-flex min-h-8 items-center rounded-pill border border-dashed border-control px-3 text-sm font-semibold text-ink">coming soon</span> : <StatusLine text={text} />}
                   </div>
                 </div>
               </div>
