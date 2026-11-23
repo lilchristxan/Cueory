@@ -490,6 +490,7 @@
   --vialo-key-height: 3.375rem;         /* 54px, on every screen */
   --vialo-key-gap: 0.375rem;            /* 6px between keys */
   --vialo-key-gap-phone: 0.25rem;       /* 4px on phones, so ten keys of about 33 px fit across the screen */
+  --vialo-key-edge-gap: 0.125rem;       /* 2px between the keyboard and the edge of a phone screen, as on phone keyboards */
   --vialo-key-row-gap: 0.5625rem;       /* 9px between rows */
   --vialo-key-radius: 0.5625rem;        /* 9px */
   --vialo-key-lip: 3px;                 /* the solid edge under a cap */
