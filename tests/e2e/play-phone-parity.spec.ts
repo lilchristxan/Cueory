@@ -26,15 +26,35 @@ test('vialo: the help legend keeps each swatch and its label on one line', async
   }
 });
 
-test('game pages: the flag button sits in the header row beside "games" and the logo', async ({ page }) => {
+test('game pages: the flag button sits in the frame header with "games" and the logo, and the logo keeps its width', async ({ page }, info) => {
   await page.goto('/play/vialo');
   const flag = page.locator('a[data-game-flag]');
   const back = page.getByTestId('all-games-link');
-  const flagBox = await flag.boundingBox();
-  const backBox = await back.boundingBox();
-  expect(flagBox!.width).toBeGreaterThanOrEqual(44);
-  expect(flagBox!.height).toBeGreaterThanOrEqual(44);
-  expect(Math.abs(flagBox!.y + flagBox!.height / 2 - (backBox!.y + backBox!.height / 2))).toBeLessThan(12);
+  const logo = page.locator('.game-frame-logo-wrap');
+  const flagBox = (await flag.boundingBox())!;
+  const backBox = (await back.boundingBox())!;
+  const logoBox = (await logo.boundingBox())!;
+  expect(flagBox.width).toBeGreaterThanOrEqual(44);
+  expect(flagBox.height).toBeGreaterThanOrEqual(44);
+  expect(backBox.width).toBeGreaterThanOrEqual(44);
+  // The cueory logo is never squeezed under its drawn width (96 px) by its neighbours.
+  expect((await logo.locator('img:visible').boundingBox())!.width).toBeGreaterThanOrEqual(96);
+  const centre = (box: { y: number; height: number }) => box.y + box.height / 2;
+  // "games" and the logo always share a line.
+  expect(Math.abs(centre(logoBox) - centre(backBox))).toBeLessThan(12);
+  expect(logoBox.x).toBeGreaterThanOrEqual(backBox.x + backBox.width - 1);
+  if (info.project.name.includes('desktop')) {
+    // The desktop sidebar is too narrow for all three at full size, so the flag takes the next line, inside the sidebar.
+    expect(flagBox.y).toBeGreaterThanOrEqual(backBox.y + backBox.height - 1);
+    const sidebar = (await page.locator('.game-frame-sidebar').boundingBox())!;
+    expect(flagBox.x).toBeGreaterThanOrEqual(sidebar.x);
+    expect(flagBox.x + flagBox.width).toBeLessThanOrEqual(sidebar.x + sidebar.width);
+  } else {
+    // Phones and tablets: one row, the flag between "games" and the logo, nothing overlapping.
+    expect(Math.abs(centre(flagBox) - centre(backBox))).toBeLessThan(12);
+    expect(flagBox.x).toBeGreaterThanOrEqual(backBox.x + backBox.width - 1);
+    expect(logoBox.x).toBeGreaterThanOrEqual(flagBox.x + flagBox.width - 1);
+  }
 });
 
 test('vialo: every letter key is at least 44 px wide and tall', async ({ page }) => {
