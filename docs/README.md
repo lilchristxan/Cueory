@@ -28,6 +28,7 @@ Each link has a one-line summary and says whether Christian needs to read it. Gu
 - [Break suggestions plan](BREAKS.md) — Review the proposal for students to suggest breaks safely. **Christian:** Read if approving this feature.
 - [Study together plan](TOGETHER.md) — Review ideas for leaderboards, profiles, and shared studying. **Christian:** Read before deciding on social features.
 - [Operations](OPERATIONS.md) — Find recovery and rollback instructions if something stops working. **Christian:** Read when handling an incident.
+- [Week 1 daily watch list](runbooks/week-1-daily-watch-list.md) — Check aggregate analytics, Worker errors, the private flag inbox, and Kit sign-ups without changing provider or application state. **Christian:** Read during the first week after launch.
 
 Game guides for videos: the [games folder](games/) has one plain page per daily game ([pillo](games/pillo.md), [sudoku](games/sudoku.md), [crossword](games/crossword.md), [word path](games/word-path.md)) with how to play, every setting and how scoring works. **Christian:** Read before recording a game video.
 
@@ -65,3 +66,4 @@ Runbook: [Monday launch day](runbooks/launch-day.md) — Proposed Phoenix-time s
 Review note: [launch-day status](status/in-review/lane4-launch-day.md) — Planning only; every release gate still applies.
 
 Review note: [go-live corrections](status/in-review/lane12-go-live-followup.md) — Date, repository migration inventory and unmet legal release gates; documentation only.
+Review note: [Week 1 daily watch list](status/in-review/daily-watch-list.md) — Held documentation-only draft for the first-week checks.
