@@ -1,13 +1,13 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import {
-  accountMessage, adaptersFor, deleteGate, deleteMyAccount, deletionLines, offerIfOpen, offerSpreadsheets, prepareDownloadFor,
+  accountMessage, adaptersFor, deleteGate, offerIfOpen, offerSpreadsheets,
   otherAccountNow, sameIdentity, saveDisplayName, signOutHere, watchExport, type AccountAdapters, type AccountClient,
   type DownloadFile, type ExportWatch,
-} from './accountsettings';
+} from './accountsettings-core';
 import { AccountsUnavailable, authButton, authInput } from './SignIn.tsx';
 import { getSupabase } from './supabaseclient';
 import { reauthHref } from './deleteaccount';
-import { localDay } from '../scripts/progress';
+import { localDay } from '../scripts/localday';
 import { browserStorage, type KeyValueStorage } from '../scripts/storage';
 
 const primary = `${authButton} bg-button text-on-button hover:bg-button-hover`;
@@ -195,7 +195,15 @@ function DataSection({ adapters, userId, email, onStale }: {
       setBusy(false);
       return setMessage(accountMessage('export-failed'));
     }
-    const files = await prepareDownloadFor(adapters, userId, { email, signInDetails, storage: browserStorage(), today }, current.signal);
+    let files: Awaited<ReturnType<(typeof import('./accountsettings'))['prepareDownloadFor']>>;
+    try {
+      const { prepareDownloadFor } = await import('./accountsettings');
+      files = await prepareDownloadFor(adapters, userId, { email, signInDetails, storage: browserStorage(), today }, current.signal);
+    } catch {
+      if (current.state() !== 'open') return stopped(current);
+      setBusy(false);
+      return setMessage(accountMessage('export-failed'));
+    }
     if (current.state() !== 'open' || (!files.ok && 'changed' in files)) return stopped(current);
     setBusy(false);
     if (!files.ok) return setMessage(files.message);
@@ -246,8 +254,13 @@ function DeleteSection({ adapters, userId, email, busy, onStale, onDeleted }: {
     setOpen(true);
     setSummary({ kind: 'loading' });
     requestAnimationFrame(() => confirm.current?.focus());
-    const result = await deletionLines(adapters.reader, { email, storage: browserStorage(), today: localDay(new Date()) });
-    setSummary(result.ok ? { kind: 'lines', lines: result.lines } : { kind: 'failed', message: result.message });
+    try {
+      const { deletionLines } = await import('./accountsettings');
+      const result = await deletionLines(adapters.reader, { email, storage: browserStorage(), today: localDay(new Date()) });
+      setSummary(result.ok ? { kind: 'lines', lines: result.lines } : { kind: 'failed', message: result.message });
+    } catch {
+      setSummary({ kind: 'failed', message: accountMessage('summary-failed') });
+    }
   };
 
   const close = () => {
@@ -266,13 +279,16 @@ function DeleteSection({ adapters, userId, email, busy, onStale, onDeleted }: {
     // A -> B -> A is still a changed sign-in. Keep a permanent abort signal from the instant of confirmation.
     const controller = new AbortController();
     const stop = adapters.onIdentityChange?.(nextId => { if (nextId !== userId) controller.abort(); });
-    let result: Awaited<ReturnType<typeof deleteMyAccount>>;
+    let result: Awaited<ReturnType<(typeof import('./accountsettings'))['deleteMyAccount']>>;
     try {
+      const { deleteMyAccount } = await import('./accountsettings');
       result = await deleteMyAccount({
         userId, typed, signal: controller.signal, stillSame: () => sameIdentity(adapters, userId),
         otherAccountNow: () => otherAccountNow(adapters, userId), deleteAccount: adapters.deleteAccount,
         signOut: adapters.signOut, local: browserStorage(), session: tabStorage(),
       });
+    } catch {
+      result = { kind: 'failed', message: accountMessage('delete-failed') };
     } finally {
       stop?.();
       busy.current = false;

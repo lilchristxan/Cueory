@@ -1,5 +1,0 @@
-status: in review. P4 result card (the shared finished-game dialog): result-card, glass, label and copper tokens; label, headline and stat tiles centred beside the sticky 44 px close button; copper share button plus copy. Not only tokens: the five social links are removed from the card (held out by decision), the default footnote is now "on a phone, share opens your device options." (a game's own note still wins), and the last tab stop is copy.
-
-Latest round, 19 Nov: the close control is a plain x with its 44 px target and a round focus ring; the share line has a solid pill outline; the Daytime card is solid Ivory again and Evening keeps the Walnut veil; the label has one caps treatment (the uppercase class; the leftover small-caps rule is gone); share shows a busy cursor while an image is prepared; the share-button unit test matches the visible text exactly again. The reference footnote's second sentence is not added (no invented copy).
-
-Which checks ran, and on which commit, is written in the pull request description, so this note does not name a commit that later goes stale.

@@ -21,7 +21,7 @@ for (const path of ['/support', '/play/word-path']) {
     page.on('request', (req) => requestedUrls.add(req.url()));
 
     await page.goto(path, { waitUntil: 'load' });
-    const home = page.getByRole('link', { name: 'cueory home' });
+    const home = page.locator('header').getByRole('link', { name: 'cueory home' });
     await expect(home).toBeVisible();
     const shown = home.locator('.logo img').filter({ visible: true });
     await expect(shown).toHaveCount(1);
@@ -46,8 +46,21 @@ for (const path of ['/support', '/play/word-path']) {
 
     // Phones hide both full-logo copies; wider screens hide the other palette's copy.
     expect(hiddenFull.length).toBeGreaterThan(0);
+    // Game pages also render the shared Frame, whose visible sidebar logo can request the same full-logo URL as one
+    // of the header's hidden copies. A request is allowed only for a URL that a visible image on the page shows; any
+    // other hidden copy (for example the other palette's) must still never download.
+    const shownUrls = new Set(
+      await page.locator('img').evaluateAll((imgs) =>
+        imgs
+          .filter((img) => img.getClientRects().length > 0 && getComputedStyle(img).visibility !== 'hidden')
+          .flatMap((img) => [(img as HTMLImageElement).currentSrc, (img as HTMLImageElement).src])
+          .filter((url) => url !== ''),
+      ),
+    );
     for (const img of hiddenFull) {
-      const started = isDownloadStarted(img, requestedUrls);
+      const absolute = img.src === null ? '' : new URL(img.src, page.url()).href;
+      const sharedWithVisible = shownUrls.has(img.currentSrc) || shownUrls.has(absolute);
+      const started = isDownloadStarted(img, requestedUrls) && !sharedWithVisible;
       expect({ src: img.src, loading: img.loading, started }, String(img.src)).toEqual({
         src: img.src,
         loading: 'lazy',
@@ -62,7 +75,7 @@ test('/support: responsive candidates: started detection catches a non-fallback 
   page.on('request', (req) => requestedUrls.add(req.url()));
 
   await page.goto('/support', { waitUntil: 'load' });
-  const home = page.getByRole('link', { name: 'cueory home' });
+  const home = page.locator('header').getByRole('link', { name: 'cueory home' });
   await expect(home).toBeVisible();
 
   const nonFallbackUrl = await home.locator('.logo img[src*="logo-full"]').evaluateAll((imgs) => {

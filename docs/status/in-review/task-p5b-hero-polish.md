@@ -1,3 +1,0 @@
-status: task p5b (home hero polish): the ko-fi support card is restyled as drawn (copper-tinted rounded card, filled copper cup with heart, tokens only, no new action). The third value point "adhd friendly" is not added: the copy deck (row 51, rule [T]) holds it because nothing supports the claim yet. In review.
-decision: D-pending: keep "adhd friendly / less overwhelm, more focus" off the hero until Christian approves the wording, then it is a one-line add.
-Lead (08:30 UTC): adds the hairline rule between the two value points from the sm width up (divider token --color-line, the faint rule HomeV2-1 draws).

@@ -9,6 +9,8 @@ import { markPanelsSeen } from './clock';
 
 const SAMPLE = ['.ABC.', 'DEFGH', 'IJKLM', 'NOPQR', '.STU.'];
 const board = (page: Page) => page.getByTestId('cueword');
+const frameStats = (page: Page) => page.getByTestId('game-frame-stats');
+const frameGear = (page: Page) => page.getByTestId('game-frame-gear');
 const grid = (page: Page) => board(page).getByRole('grid', { name: 'crossword grid' });
 const square = (page: Page, row: number, column: number) =>
   board(page).getByRole('button', { name: new RegExp('^(?:\\d+, )?row ' + row + ', column ' + column + ',') });
@@ -110,12 +112,14 @@ test.describe('crossword parity (Task 721)', () => {
 
   test('an unassisted solve gets the "solved without help" badge and starts the crossword streak', async ({ page }) => {
     // Stats are always kept (2026-11-17): there is no switch to turn on.
-    await expect(page.getByTestId('game-stats').getByRole('switch')).toHaveCount(0);
+    await expect(frameStats(page).getByRole('switch')).toHaveCount(0);
     await fill(page);
     await closeResultDialog(page);
     await expect(board(page).getByTestId('crossword-badge')).toHaveText(/solved without help/);
     await expect(board(page).getByTestId('crossword-streak-note')).toContainText('extends your streak');
-    await expect(page.getByTestId('crossword-streak')).toHaveText('streak: 1 day solved without help.');
+    // Moved from the legacy page stats panel to the Frame sidebar.
+    const currentStreak = frameStats(page).locator('.game-frame-stat').filter({ hasText: 'current streak' });
+    await expect(currentStreak.locator('.game-frame-stat-value')).toHaveText('1');
     const kept = JSON.parse((await page.evaluate(() => localStorage.getItem('cueory-game-stats')))!);
     expect(kept.results).toContainEqual({ game: 'cueword', day: '2026-11-01', solved: true, tries: 0, streak: true });
   });
@@ -175,8 +179,8 @@ test.describe('crossword parity (Task 721)', () => {
   test('settings hide the timer, change the clue size, and are remembered in this browser', async ({ page }) => {
     await expect(board(page).getByTestId('crossword-time')).toBeVisible();
     await board(page).getByRole('grid', { name: 'crossword grid' }).waitFor();
-    // The crossword's settings open from the gear at the top left (Christian's brief), with the shared ones.
-    await board(page).getByRole('button', { name: 'crossword settings' }).click();
+    // Moved from the crossword board header to the Frame gear (Christian's brief), with the shared settings.
+    await frameGear(page).click();
     const settings = page.getByRole('dialog', { name: 'crossword settings' }).getByTestId('crossword-settings');
     await settings.getByRole('checkbox', { name: 'show the timer' }).uncheck();
     await expect(board(page).getByTestId('crossword-time')).toHaveCount(0);
@@ -193,7 +197,8 @@ test.describe('crossword parity (Task 721)', () => {
   });
 
   test('autocheck marks letters as they are typed', async ({ page }) => {
-    await board(page).getByRole('button', { name: 'crossword settings' }).click();
+    // Moved from the crossword board header to the Frame gear.
+    await frameGear(page).click();
     await page.getByRole('dialog', { name: 'crossword settings' }).getByRole('checkbox', { name: /^autocheck/ }).check();
     // Close the dialog first: it holds the page behind it inert.
     await page.keyboard.press('Escape');

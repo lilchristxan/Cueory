@@ -55,9 +55,11 @@ type FinishStats = { on: false } | { on: true; stats: DailyStats; todayRow: numb
 function finishStats(day: string): FinishStats {
   const saved = loadStats(browserStorage(), day);
   if (!saved.on) return { on: false };
-  const all = heldRounds().reduce<GameStats>((kept, round) => recordResult(kept, round), saved.stats);
-  const today = all.find((result) => result.game === 'pulse' && result.day === day);
-  return { on: true, stats: dailyStats(all, 'pulse', day, GUESSES), todayRow: today?.solved ? today.tries : undefined };
+  // Legacy Pillo writes remain `pulse`, but loading canonicalizes saved history to Vialo. The retained Pillo page
+  // reads the same canonical history for its finish display without changing any stored record or write path.
+  const all = heldRounds().reduce<GameStats>((kept, round) => recordResult(kept, round.game === 'pulse' ? { ...round, game: 'vialo' } : round), saved.stats);
+  const today = all.find((result) => result.game === 'vialo' && result.day === day);
+  return { on: true, stats: dailyStats(all, 'vialo', day, GUESSES), todayRow: today?.solved ? today.tries : undefined };
 }
 
 /** What each mark means, drawn as the pills on the board. Shown in pillo's help (the ? dialog and the first-visit card). */

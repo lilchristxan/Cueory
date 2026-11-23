@@ -1,5 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { kitFormAction, kitLandingUrl, newsletter, signupState } from '../../src/config/site';
+import { crosswordShown, pageBuildEnv } from '../../src/config/crossword';
+import { helloCardsShown } from '../../src/islands/hello-cards';
 import { sizeOf } from './projects';
 
 const homeSizes = new Set(['phone', 'desktop']);
@@ -35,16 +37,19 @@ test.describe('home page-specific behavior', () => {
     await expect(page.getByRole('heading', { level: 2 })).toHaveText([
       'start with what you need.',
       'one lesson, multiple ways to study',
-      'a few minutes, every day.',
+      "nurse's station games",
       'coming soon',
     ]);
 
-    await expect(page.getByText('a new set of nursing games each day. play one, or all three.')).toBeVisible();
+    await expect(page.getByText('inspired by your favorite daily games for you and your patients')).toBeVisible();
     const games = page.getByTestId('games-stage');
-    await expect(games.locator('[data-game-card]')).toHaveCount(5);
-    await expect(games.locator('[data-game-card="crossword"]')).toContainText('coming soon');
-    await expect(games.locator('[data-game-card="hello cards"]')).toContainText('coming soon');
-    await expect(games.locator('[data-game-card="sudoku"]')).toContainText('fill every row, column and box with the numbers one through nine.');
+    await expect(games.locator('[data-game-card]')).toHaveCount(6);
+    // The Playwright web server builds a draft-enabled preview (see playwright.config.ts), so derive the expected
+    // card labels from that preview environment rather than the runner's own shell variables.
+    const buildEnv = { ...pageBuildEnv(), CUEORY_ANATOMY_DRAFTS: '1' };
+    await expect(games.locator('[data-game-card="crossword"]')).toContainText(crosswordShown(buildEnv) ? 'not started' : 'coming soon');
+    await expect(games.locator('[data-game-card="hello cards"]')).toContainText(helloCardsShown('sample', buildEnv) ? 'not started' : 'coming soon');
+    await expect(games.locator('[data-game-card="sudoku"]')).toContainText('a calm numbers break.');
 
     // The launch-updates box follows src/config/site.ts: Kit's form, a link to Kit's landing page, or the pending line.
     const state = signupState(newsletter.formAction, newsletter.landingUrl);

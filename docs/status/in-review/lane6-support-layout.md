@@ -1,1 +1,0 @@
-status: Lane 6, /support at 320px with 32px text: the glass "support our mission" button no longer pushes the page 22px sideways (glass buttons stay within their column and wrap their words); new e2e.

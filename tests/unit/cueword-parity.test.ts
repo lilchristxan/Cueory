@@ -6,7 +6,7 @@ import {
   parseCrosswordSettings, reveal, saveCrosswordSettings, selectCell, CROSSWORD_SETTINGS_KEY,
   type CrosswordSettings, type CuewordPuzzle,
 } from '../../src/islands/cueword';
-import { currentStreak, parseStats, recordResult, serialize } from '../../src/islands/gamestats';
+import { currentStreak, longestStreak, parseStats, recordResult, serialize } from '../../src/islands/gamestats';
 
 // Same everyday example as cueword.test.ts. Cells: 1 across 0-2, 4 across 5-7, 5 across 10-12; 1 down 0,5,10.
 const puzzle: CuewordPuzzle = {
@@ -199,6 +199,19 @@ describe('the crossword streak', () => {
     expect(currentStreak(stats, 'cueword', '2026-11-18')).toBe(0);
     expect(parseStats(serialize(today))).toEqual(today);
     expect(currentStreak(stats, 'pulse', '2026-11-16')).toBe(0);
+  });
+  it('excludes assisted crossword solves from the historical best streak', () => {
+    const clean = [
+      { game: 'cueword' as const, day: '2026-11-14', solved: true, tries: 0, streak: true },
+      { game: 'cueword' as const, day: '2026-11-15', solved: true, tries: 0, streak: true },
+    ];
+    const assisted = [
+      { game: 'cueword' as const, day: '2026-11-14', solved: true, tries: 0, streak: false },
+      { game: 'cueword' as const, day: '2026-11-15', solved: true, tries: 0, streak: false },
+      { game: 'cueword' as const, day: '2026-11-16', solved: true, tries: 0, streak: false },
+    ];
+    expect(longestStreak(clean, 'cueword')).toBe(2);
+    expect(longestStreak(assisted, 'cueword')).toBe(0);
   });
   it('treats an older clean crossword result without the flag as counting, and rejects a malformed flag', () => {
     const old = recordResult([], { game: 'cueword', day: '2026-11-15', solved: true, tries: 0 });

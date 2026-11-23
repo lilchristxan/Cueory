@@ -1,2 +1,0 @@
-status: #747, footer hides unapproved legal pages: Terms and Disclaimer get no footer link while they hold placeholder copy (the release gate's own test); Privacy always shows; a link returns on its own once its page is approved.
-decision: D-pending (#747) Until src/config/legal.ts (#659) reaches staging, "approved" in the footer means the same fail-closed placeholder check the release gate uses; #659 swaps in isLegalPageApproved. Reason: staging has no approval record yet.

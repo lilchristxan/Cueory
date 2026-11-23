@@ -1,1 +1,0 @@
-status: Lane 7, every target=_blank link keeps rel=noopener and its screen-reader text, and now shows sighted visitors a small ↗ (global.css); links with their own icon or text carry data-new-tab-cue; unit test added.

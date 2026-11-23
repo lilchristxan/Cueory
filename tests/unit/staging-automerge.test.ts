@@ -161,13 +161,13 @@ describe('held paths', () => {
     'src/components/SignupForm.astro',
     'src/scripts/accountcorner.ts',
     'src/scripts/studyeventqueue.ts',
+    '.node-version',
   ];
   const launchedOnly = [
     'brand-source/cueory-geometry-master-v1.0.json',
     'public/brand/cueory-square-dark.svg',
     'package.json',
     'package-lock.json',
-    '.node-version',
     'tools/extra/package.json',
   ];
   const never = ['src/islands/cards.ts', 'docs/STATUS.md', 'tests/unit/x.test.ts', 'public/favicon.svg', 'scripts/check_batch.ts'];

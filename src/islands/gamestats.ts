@@ -69,12 +69,18 @@ function trim(results: GameStats): GameResult[] {
   return results.filter((result) => dayNumber(result.day)! >= latest.get(result.game)! - WINDOW_DAYS + 1);
 }
 
+const FAMILY: Record<string, string> = { piccline: 'suture', pillo: 'pulse', vialo: 'pulse', tachyyy: 'stat' };
+const family = (game: string): string => FAMILY[game] ?? game;
+
+/** Old and new names of one game (suture/piccline, pulse/pillo/vialo, stat/tachyyy) share one history. */
 export function sameGame(a: string, b: string): boolean {
-  if (a === b) return true;
-  if ((a === 'suture' || a === 'piccline') && (b === 'suture' || b === 'piccline')) return true;
-  if ((a === 'pulse' || a === 'pillo' || a === 'vialo') && (b === 'pulse' || b === 'pillo' || b === 'vialo')) return true;
-  if ((a === 'stat' || a === 'tachyyy') && (b === 'stat' || b === 'tachyyy')) return true;
-  return false;
+  return family(a) === family(b);
+}
+
+/** One result per day for a game and its other names, the first one kept. */
+function oneEachDay(stats: GameStats, game: string): GameResult[] {
+  const seenDays = new Set<string>();
+  return stats.filter((entry) => sameGame(entry.game, game) && !seenDays.has(entry.day) && Boolean(seenDays.add(entry.day)));
 }
 
 /** First result for a game/day wins. Replay never rewrites it or another game's history. */
@@ -85,13 +91,7 @@ export function recordResult(stats: GameStats, result: unknown): GameStats {
 }
 
 export function summary(stats: GameStats, game: string): GameSummary {
-  const seenDays = new Set<string>();
-  const results = stats.filter((entry) => {
-    if (!sameGame(entry.game, game)) return false;
-    if (seenDays.has(entry.day)) return false;
-    seenDays.add(entry.day);
-    return true;
-  });
+  const results = oneEachDay(stats, game);
   const triesCounts: Record<number, number> = {};
   for (const result of results) triesCounts[result.tries] = (triesCounts[result.tries] ?? 0) + 1;
   return { played: results.length, solved: results.filter((entry) => entry.solved).length, triesCounts };
@@ -113,13 +113,7 @@ export interface DailyStats {
  * streak still stands today until today's puzzle is played, and a puzzle lost today ends it.
  */
 export function dailyStats(stats: GameStats, game: string, today: string, maxTries: number): DailyStats {
-  const seenDays = new Set<string>();
-  const results = stats.filter((entry) => {
-    if (!sameGame(entry.game, game)) return false;
-    if (seenDays.has(entry.day)) return false;
-    seenDays.add(entry.day);
-    return true;
-  });
+  const results = oneEachDay(stats, game);
   const solved = results.filter((entry) => entry.solved);
   const distribution = Array.from({ length: maxTries }, () => 0);
   for (const result of solved) if (result.tries >= 1 && result.tries <= maxTries) distribution[result.tries - 1] = (distribution[result.tries - 1] ?? 0) + 1;
@@ -329,6 +323,25 @@ export function forget(stats: GameStats, game?: string): GameStats {
 /** Whether a kept result extends the streak. Results kept before Task 721 had no help tools, so a clean solve counts. */
 function extendsStreak(result: GameResult): boolean {
   return result.solved && (result.streak ?? result.tries === 0);
+}
+
+/**
+ * The longest run of consecutive puzzle days that extend a streak. This shares the crossword's assisted-solve
+ * eligibility with currentStreak(), so a checked or revealed puzzle breaks historical runs too.
+ */
+export function longestStreak(stats: GameStats, game: string): number {
+  const won = new Set<number>();
+  for (const result of stats) {
+    if (result.game === game && extendsStreak(result)) won.add(dayNumber(result.day)!);
+  }
+  let longest = 0;
+  for (const day of won) {
+    if (won.has(day - 1)) continue;
+    let run = 1;
+    while (won.has(day + run)) run++;
+    longest = Math.max(longest, run);
+  }
+  return longest;
 }
 
 /**

@@ -73,6 +73,10 @@ test('the study-mode preview on the home page', async ({ page }) => {
 
   const dialog = page.locator('#mode-preview');
   await expect(dialog).toHaveAccessibleName('cards');
+  // Escape must work from another control inside the native dialog, not only the close button that receives initial focus.
+  const next = dialog.getByRole('button', { name: 'next study mode' });
+  await next.focus();
+  await expect(next).toBeFocused();
   await escapeBack(page, opener, dialog);
 });
 
@@ -89,7 +93,7 @@ test('an info tip', async ({ page }) => {
 for (const game of [
   { name: 'pillo', path: '/play/pillo' },
   { name: 'sudoku', path: '/play/sudoku' },
-  { name: 'word path', path: '/play/word-path' },
+  { name: 'piccline', path: '/play/word-path' },
 ]) {
   test(`${game.name}: the rules and the settings dialogs`, async ({ page }) => {
     await page.goto(game.path);

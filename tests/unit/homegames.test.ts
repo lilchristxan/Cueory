@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { dailyGames, forbiddenGameWords } from '../../src/config/games';
+import { dailyGames } from '../../src/config/games';
+import { forbiddenGameWords } from '../../src/config/games';
 import { countWord, firstSentence, homeGameCards, homeGamesSummary, stageCounter } from '../../src/config/homegames';
 
 describe('home daily-games cards (copy deck, home rows "games line" to "game 5")', () => {

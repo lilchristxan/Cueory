@@ -1,1 +1,0 @@
-status: Adds an inline-style guard test (no style="" attributes; JSX style objects only from a documented runtime-geometry allowlist) and moves the 3D body viewer canvas sizing from an inline style object to token classes. Awaiting CI and review.

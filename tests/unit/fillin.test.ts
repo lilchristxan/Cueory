@@ -142,6 +142,12 @@ describe('fill-in submission bounds (Codex on #219)', () => {
     expect(boundTyped('ho\u0001ney\u007f')).toBe('honey');
     expect(boundTyped('honey')).toBe('honey');
   });
+
+  it('rejects a saved attempt beyond the persisted character cap, including astral characters', () => {
+    const atLimit = '\u{1F600}'.repeat(MAX_TYPED);
+    expect(parseSavedFillInAttempt(`n:${atLimit}`)).toMatchObject({ text: atLimit, kind: 'typed' });
+    expect(parseSavedFillInAttempt(`n:${atLimit}\u{1F600}`)).toBeNull();
+  });
 });
 
 describe('blank options construction', () => {

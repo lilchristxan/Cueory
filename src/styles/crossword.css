@@ -28,15 +28,11 @@
     /* Long words such as "shift+tab" wrap instead of pushing a 320px screen sideways at 32px text. */
     overflow-wrap: anywhere;
   }
-  .crossword-board-wrap { container-type: inline-size; max-inline-size: 100%; overflow: clip; }
+  .crossword-board-wrap { container-type: inline-size; max-inline-size: 100%; overflow: hidden; }
   .crossword-board-wrap {
     position: relative;
-    inline-size: calc(100vw - var(--spacing) * 4);
-    max-inline-size: none;
-    /* Center the full-bleed scroller without a transformed scroll ancestor.
-       Firefox otherwise adds its moved scrollable overflow to the document. */
-    margin-inline: calc(50% - 50vw + var(--spacing) * 2);
-    overflow: visible;
+    inline-size: 100%;
+    margin-inline: 0;
   }
   .crossword-board { --crossword-cell: min(var(--crossword-cell-easy), calc((100cqw - 4 * var(--crossword-gap)) / 5)); display: flex; inline-size: max-content; max-inline-size: 100%; margin-inline: auto; flex-direction: column; gap: var(--crossword-gap); }
   .crossword-board[data-level="mid"] { --crossword-cell: min(var(--crossword-cell-mid), calc((100cqw - 6 * var(--crossword-gap)) / 7)); }
@@ -120,7 +116,7 @@
 @media print {
   html[data-print-game="crossword"] body > :not(main),
   html[data-print-game="crossword"] main > :not(article),
-  html[data-print-game="crossword"] main > article > :not([data-game-print="crossword"]),
+  html[data-print-game="crossword"] main > article > :not([data-game-print="crossword"]):not(:has([data-game-print="crossword"])),
   html[data-print-game="crossword"] [data-game-print="crossword"] > :not(.crossword-print-host) { display: none !important; }
   html[data-print-game="crossword"] main,
   html[data-print-game="crossword"] main > article,

@@ -17,8 +17,9 @@ export const EVENT_MAX_AGE_DAYS = 1;
 
 const DAY_MS = 86_400_000;
 const VERSION = 1 as const;
-const gameIds = new Set<string>([...dailyGames.map((game) => game.id), 'pulse']);
-const normalizeGameId = (id: string): string => (id === 'pulse' ? 'vialo' : id);
+const gameIds = new Set<string>([...dailyGames.map((game) => game.id), 'pulse', 'pillo']);
+const normalizeGameId = (id: string): string => (id === 'pulse' || id === 'pillo' ? 'vialo' : id);
+const canonicalGame = (game: FinishedGame): FinishedGame => ({ ...game, game: normalizeGameId(game.game) as GameId });
 export type GameId = DailyGame['id'];
 export type StudyMode = 'cards' | 'learn' | 'review';
 
@@ -128,7 +129,7 @@ function readGame(value: unknown, event = false): FinishedGame | null {
   if (!v || (event && (v.type !== 'game' || v.finished !== true)) ||
       typeof v.game !== 'string' || !gameIds.has(v.game) || dayIndex(v.day) === null ||
       typeof v.solved !== 'boolean' || !count(v.slips) || !count(v.cues)) return null;
-  return { game: v.game as GameId, day: v.day as string, solved: v.solved, slips: v.slips, cues: v.cues };
+  return { game: normalizeGameId(v.game) as GameId, day: v.day as string, solved: v.solved, slips: v.slips, cues: v.cues };
 }
 function readStudy(value: unknown, event = false): FinishedStudy | null {
   const keys = ['id', 'day', 'mode', ...(event ? ['type', 'finished'] : [])];
@@ -275,7 +276,8 @@ function checkState(input: unknown): RewardsState {
   const seenGames = new Set<string>();
   const seenStudies = new Set<string>();
   for (const item of v.games) {
-    const game = readGame(item);
+    const parsed = readGame(item);
+    const game = parsed === null ? null : canonicalGame(parsed);
     if (!game || (evaluationDay !== null && game.day > evaluationDay)) {
       throw new Error('invalid rewards state.');
     }
@@ -313,7 +315,20 @@ function checkState(input: unknown): RewardsState {
   if (ACHIEVEMENTS.some((def) => eligible(def.id, m) !== seenAchievements.has(def.id))) {
     throw new Error('invalid rewards state.');
   }
-  return input as RewardsState;
+  return {
+    version: VERSION,
+    points: m.points,
+    games: games.map((game) => ({ ...game })),
+    studies: studies.map((study) => ({ ...study })),
+    achievements: v.achievements.map((value) => {
+      const a = value as Record<string, unknown>;
+      return { id: a.id as string, name: a.name as string, rule: a.rule as string, earnedDate: a.earnedDate as string };
+    }),
+    currentStreak: m.currentStreak,
+    bestStreak: m.bestStreak,
+    passesLeftThisWeek: available ? WEEKLY_FREE_PASSES : 0,
+    lastEvaluatedDay: evaluationDay,
+  };
 }
 
 /** A gentle description, with the best result remembered even after a reset. */
@@ -331,18 +346,21 @@ export function applyResult(state: unknown, event: unknown, today: string): Appl
   const currentDay = dayIndex(today);
   if (currentDay === null) throw new Error('use a real local calendar day (YYYY-MM-DD).');
   const before = checkState(state);
-  const game = readGame(event, true);
+  const unchangedState = JSON.stringify(before) === JSON.stringify(state);
+  const rejectedState = unchangedState ? state as RewardsState : before;
+  const parsedGame = readGame(event, true);
+  const game = parsedGame === null ? null : canonicalGame(parsedGame);
   const study = game ? null : readStudy(event, true);
   const parsed = game ?? study;
   if (!parsed || (before.lastEvaluatedDay !== null && today < before.lastEvaluatedDay)) {
-    return { state: before, accepted: false, pointsEarned: 0, achievementsEarned: [], streakMessage: null };
+    return { state: rejectedState, accepted: false, pointsEarned: 0, achievementsEarned: [], streakMessage: null };
   }
   const age = currentDay - dayIndex(parsed.day)!;
   const duplicate = game
     ? before.games.some((entry) => entry.day === game.day && entry.game === game.game)
     : before.studies.some((entry) => entry.id === study!.id);
   if (age < 0 || age > EVENT_MAX_AGE_DAYS || duplicate) {
-    return { state: before, accepted: false, pointsEarned: 0, achievementsEarned: [], streakMessage: null };
+    return { state: rejectedState, accepted: false, pointsEarned: 0, achievementsEarned: [], streakMessage: null };
   }
 
   const games = [...before.games.map((entry) => ({ ...entry })), ...(game ? [game] : [])];

@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import type { IdMap } from './guestimport';
 import {
-  acceptOffer, cardsDbFrom, contentsWords, declineOffer, isMarkerEvent, offerDecision, plansDbFrom, sessionUserId,
-  type ImportClient, type LockRunner, type OfferContents,
+  acceptOffer, cardsDbFrom, completionDbFrom, contentsWords, declineOffer, isMarkerEvent, offerDecision, plansDbFrom, sessionUserId,
+  type ImportClient, type ImportCompletionClient, type LockRunner, type OfferContents,
 } from './guestimportoffer';
 import { getSessionState, getSupabase } from './supabaseclient';
 import { localDay } from '../scripts/progress';
@@ -29,6 +29,15 @@ function browserLock(): LockRunner | undefined {
 }
 
 const isPlural = ({ cards, examPlan }: OfferContents) => cards > 1 || (cards > 0 && examPlan);
+
+/** Move focus somewhere visible before removing the offer that held it. */
+function focusPageHeading(): void {
+  const heading = document.querySelector<HTMLElement>('main h1');
+  if (heading) {
+    heading.tabIndex = -1;
+    heading.focus();
+  }
+}
 
 /** The part of the shared client this island listens to for sign-in and sign-out, in this tab or another. */
 interface AuthEvents {
@@ -142,6 +151,7 @@ export default function GuestImportOffer({ idMap = NO_CARD_MATCHES }: { idMap?: 
       today: localDay(new Date()),
       cardsDb: cardsDbFrom(current.client),
       plansDb: plansDbFrom(current.client, current.userId),
+      completionDb: completionDbFrom(current.client as unknown as ImportCompletionClient),
       lock: browserLock(),
       currentUserId: signedInNow,
     });
@@ -151,8 +161,14 @@ export default function GuestImportOffer({ idMap = NO_CARD_MATCHES }: { idMap?: 
       generation.current += 1;
       account.current = null;
       setView({ kind: 'hidden' });
-    } else if (outcome.kind === 'done') setView({ kind: 'done', contents: outcome.contents });
-    else if (outcome.kind === 'handled') setView({ kind: 'hidden' });
+    } else if (outcome.kind === 'done' || (outcome.kind === 'handled' && outcome.reason === 'imported')) {
+      // A completed import found through the RLS check is still a success from this keyboard user's action.
+      // Keep the normal confirmation/focus target instead of unmounting the focused button with no replacement.
+      setView({ kind: 'done', contents });
+    } else if (outcome.kind === 'handled') {
+      setView({ kind: 'hidden' });
+      focusPageHeading();
+    }
     else setView({ kind: 'offer', contents, message: outcome.message });
   };
 
@@ -165,11 +181,7 @@ export default function GuestImportOffer({ idMap = NO_CARD_MATCHES }: { idMap?: 
     }
     setView({ kind: 'hidden' });
     // The offer is gone, so keyboard focus moves to the page heading instead of being lost.
-    const heading = document.querySelector<HTMLElement>('main h1');
-    if (heading) {
-      heading.tabIndex = -1;
-      heading.focus();
-    }
+    focusPageHeading();
   };
 
   const working = view.kind === 'working';

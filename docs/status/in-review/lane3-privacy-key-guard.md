@@ -1,1 +1,0 @@
-status: Lane 3 privacy key guard: a unit test scans every cueory- string in src/ and fails if one isn't in src/config/storage-keys.ts (so on /privacy and cleared on deletion) or on a short list of non-storage names, each with its reason.

@@ -202,7 +202,7 @@ test.describe('word path: board format (#722)', () => {
     await resultDialog.getByRole('button', { name: 'close results' }).click();
     const result = page.getByTestId('suture-result');
     await expect(result).toBeFocused();
-    await expect(result).toContainText(`cueory word path, sun 1 nov: found ${total} of ${total} answers, the thread 1st, 0 cues.`);
+    await expect(result).toContainText(`cueory piccline, sun 1 nov: found ${total} of ${total} answers, the thread 1st, 0 cues.`);
     const kept = JSON.parse((await page.evaluate(() => localStorage.getItem('cueory-game-stats')))!);
     expect(kept.results).toContainEqual({ game: 'suture', day: '2026-11-01', solved: true, tries: 0, hints: 0, specialFirst: true });
     await expect(page.getByTestId('word-path-stats')).toHaveText(

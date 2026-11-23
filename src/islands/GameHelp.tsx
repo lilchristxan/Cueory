@@ -52,14 +52,14 @@ export function useGameHelp(topic: HelpTopic): GameHelpState {
 
 /** The game's one-line description (src/config/games.ts), shown at the top of its help. */
 function gameLine(content: GameHelpContent): string | undefined {
-  return dailyGames.find((game) => game.id === content.game)?.line;
+  return (content.game === 'pulse' ? dailyGames[0] : dailyGames.find((game) => game.id === content.game))?.line;
 }
 
 function PlaySteps({ content }: { content: GameHelpContent }) {
   return <ol className="game-help-steps">{content.play.map((step) => <li key={step}>{step}</li>)}</ol>;
 }
 
-function GameHelpDialog({ help, name, extra }: { help: GameHelpState; name: string; extra?: ReactNode }) {
+export function GameHelpDialog({ help, name, extra }: { help: GameHelpState; name: string; extra?: ReactNode }) {
   const overlay = useRef<HTMLDialogElement>(null);
   const panel = useRef<HTMLDivElement>(null);
   const id = useId();
