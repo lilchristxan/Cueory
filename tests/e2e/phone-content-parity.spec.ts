@@ -89,10 +89,11 @@ test.describe('phone layouts follow the desktop design', () => {
     expect(await download.evaluate((el) => getComputedStyle(el).opacity)).toBe('1');
   });
 
-  test('/signin: "get launch updates" is a 44 px button when accounts are closed', async ({ page }) => {
+  test('/signin: "get launch updates" is a visible 44 px button while accounts are closed', async ({ page }) => {
+    // The launch configuration keeps accounts closed (src/config/accountsgate.ts), so the link must be there.
     await open(page, '/signin');
     const link = page.getByTestId('signin-unavailable').getByRole('link', { name: 'get launch updates' });
-    test.skip((await link.count()) === 0, 'accounts are open in this build');
+    await expect(link).toBeVisible();
     expect((await link.boundingBox())!.height).toBeGreaterThanOrEqual(44);
   });
 });

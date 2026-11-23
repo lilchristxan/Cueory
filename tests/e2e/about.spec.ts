@@ -114,7 +114,9 @@ test.describe('about page', () => {
       expect(lines.count).toBeGreaterThanOrEqual(2);
       expect(lines.count).toBeLessThanOrEqual(3);
       expect(lines.fits).toBe(true);
-      expect(lines.fontSize).toBeGreaterThanOrEqual(36);
+      // Two or three lines need a smaller size on the narrowest phone: 40 px at 320 (cqi / 7), above 44 px from 390.
+      if (width >= 390) expect(lines.fontSize).toBeGreaterThan(44);
+      else expect(lines.fontSize).toBeGreaterThanOrEqual(36);
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
     });
   }
