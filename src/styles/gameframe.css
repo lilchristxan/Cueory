@@ -667,6 +667,12 @@
    board. The width is the Tailwind breakpoint --breakpoint-deck (tokens.css) used through @variant, so there is one source.
    This is the only rule block that moved from the 64rem layout query; the sidebar and column layout still switch at 64rem. */
 @variant max-deck {
+  /* From 64rem to 70rem the sidebar and the column are still side by side; the row of cards gets its own full-width line under them, so the game keeps its width. */
+  @variant lg {
+    .game-frame-layout {
+      flex-wrap: wrap;
+    }
+  }
   /* The deck has no room beside the board below 70rem (1120 px, token --breakpoint-deck in tokens.css), so the other games are a row of plain cards under the stats. */
   .game-frame-deck-slot {
     order: 5;
@@ -682,7 +688,8 @@
     inline-size: auto;
     block-size: auto;
   }
-  .game-deck-item {
+  .game-deck-item,
+  .game-deck-item:nth-child(n) {
     position: static;
     rotate: none;
     flex: 1 1 0;

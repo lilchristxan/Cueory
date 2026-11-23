@@ -165,3 +165,29 @@ test.describe('sudoku controls land on whole pixels', () => {
     });
   }
 });
+
+// Between 64rem and 70rem the sidebar and the column are side by side and the deck is a plain row. The row gets its own
+// full-width line under them, so the game keeps the width it has at 1120 and the cards never sit beside it (review on #1145).
+test.describe('plain row of cards under the game, game keeps its size (1024 to 1119 px)', () => {
+  for (const path of ['/play/vialo', '/play/sudoku', '/play/piccline']) {
+    test(`${path}: the board is as wide as at 1120 px and the cards are below it`, async ({ page }) => {
+      await page.setViewportSize({ width: 1120, height: 900 });
+      await page.goto(path);
+      const reference = (await page.locator('.game-frame-board').boundingBox())!.width;
+      expect(reference).toBeGreaterThan(300);
+      for (const width of [1024, 1056, 1100, 1119]) {
+        await page.setViewportSize({ width, height: 900 });
+        const board = (await page.locator('.game-frame-board').boundingBox())!;
+        expect(board.width, `${path} at ${width}: the game keeps its width`).toBe(reference);
+        const cards = await page.locator('.game-deck-item').evaluateAll((items) => items.map((item) => item.getBoundingClientRect()).map((box) => ({ top: box.top, left: box.left, right: box.right })));
+        expect(cards.length).toBeGreaterThanOrEqual(2);
+        for (const card of cards) {
+          expect(card.top, `${path} at ${width}: cards start under the game`).toBeGreaterThanOrEqual(board.y + board.height);
+          expect(card.left).toBeGreaterThanOrEqual(0);
+          expect(card.right).toBeLessThanOrEqual(width);
+        }
+        expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
+      }
+    });
+  }
+});
