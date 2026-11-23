@@ -1,1 +1,1 @@
-status: Phone and tablet layouts for the content pages match the desktop design (shared coming-soon panel, flatter lists, readable disabled actions); draft PR, touches start, learn/questions and progress pages so it needs Christian.
+status: Phone and tablet layouts for the content pages match the desktop design (shared coming-soon panel for held-back lessons, flatter lists, readable video caption, sign-in link button). The three sensitive pages (start, learn/questions, progress) moved to a separate small PR.
