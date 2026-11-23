@@ -136,6 +136,7 @@
   --game-frame-pill-ivory-bg: radial-gradient(120% 140% at 30% 20%, #ffffff 0%, var(--color-page) 55%, var(--color-surface) 100%);
   --game-frame-max-board-wide: 51.25rem; /* 820px */
   --game-frame-max-board-showcase: 45rem; /* 720px */
+  --game-deck-breakpoint: 70rem;         /* 1120 px: the deck shows from here, a plain row of cards below it (gameframe.css repeats it; a unit test keeps both equal) */
   --game-deck-card-width: 13rem;         /* 208px, the fanned card deck at the right edge */
   --game-deck-card-height: 17rem;        /* 272px */
   --game-deck-step: 3.5rem;              /* 56px between fanned cards */
