@@ -63,10 +63,9 @@ test('game pages: the flag button sits in the frame header with "games" and the 
     expect(flagBox.x).toBeGreaterThanOrEqual(sidebar.x);
     expect(flagBox.x + flagBox.width).toBeLessThanOrEqual(sidebar.x + sidebar.width);
   } else {
-    // Phones and tablets: one row, the flag between "games" and the logo, nothing overlapping.
+    // Phones and tablets (Games v2 frame): one row, "games", the logo, then the flag at the right, nothing overlapping.
     expect(Math.abs(centre(flagBox) - centre(backBox))).toBeLessThan(12);
-    expect(flagBox.x).toBeGreaterThanOrEqual(backBox.x + backBox.width - 1);
-    expect(logoBox.x).toBeGreaterThanOrEqual(flagBox.x + flagBox.width - 1);
+    expect(flagBox.x).toBeGreaterThanOrEqual(logoBox.x + logoBox.width - 1);
   }
 });
 

@@ -204,10 +204,13 @@ test.describe('word path: board format (#722)', () => {
     await expect(result).toContainText(`cueory piccline, sun 1 nov: found ${total} of ${total} answers, the thread 1st, 0 cues.`);
     const kept = JSON.parse((await page.evaluate(() => localStorage.getItem('cueory-game-stats')))!);
     expect(kept.results).toContainEqual({ game: 'suture', day: '2026-11-01', solved: true, tries: 0, hints: 0, specialFirst: true });
+    expect(await page.evaluate(() => (window as unknown as { progress: unknown[] }).progress)).toEqual([{ game: 'suture', day: '2026-11-01' }]);
+    // The detailed stats are in the stats panel on the games hub (a game page shows only its four frame stats).
+    await expect(page.getByTestId('game-frame-stats')).toContainText('played');
+    await page.goto('/play');
     await expect(page.getByTestId('word-path-stats')).toHaveText(
       'completed 1, solve rate 100%. streak: 1 day, longest 1 day. the thread found first: 1. solved without cues: 1.',
     );
-    expect(await page.evaluate(() => (window as unknown as { progress: unknown[] }).progress)).toEqual([{ game: 'suture', day: '2026-11-01' }]);
   });
 
   for (const width of [320, 390]) {
