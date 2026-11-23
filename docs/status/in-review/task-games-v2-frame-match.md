@@ -20,5 +20,5 @@ Tests changed on purpose (CI round 2)
 - game-results.spec.ts "an open result locks page scrolling": the desktop game page is about 100 px shorter without the header, so the needed scroll room is 150 px, not 300 (the lock, restore and styles are checked as before).
 - gameframe.spec.ts and tests/unit/gameframe.test.ts: new checks for the deck/plain-row switch.
 
-Deck breakpoint: token `--game-deck-breakpoint: 70rem` (1120 px) in tokens.css. Below it the other games are a plain row under the board, from it the fanned deck. Only the deck slot rules moved from the 64rem query to a new 70rem query; the sidebar and column layout still switch at 64rem. A media query cannot read a token, so a unit test keeps the two numbers equal.
+Deck breakpoint: token `--breakpoint-deck: 70rem` (Tailwind breakpoint, used as `@variant max-deck`) (1120 px) in tokens.css. Below it the other games are a plain row under the board, from it the fanned deck. Only the deck slot rules moved from the 64rem query to a new 70rem query; the sidebar and column layout still switch at 64rem. gameframe.css now starts with `@reference "./global.css"` so Tailwind processes it.
 Printed title: the page title now prints through `not-print:sr-only` (global print rule hides `.sr-only`).

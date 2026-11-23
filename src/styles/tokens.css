@@ -20,6 +20,10 @@
   /* Remove Tailwind's built-in palette so only brand colors can be used. */
   --color-*: initial;
 
+  /* The card deck shows from 70rem (1120 px); below it the other games are a plain row under the board. Tailwind turns
+     this into the deck: and max-deck: variants, which gameframe.css uses through @variant. */
+  --breakpoint-deck: 70rem;
+
   /* ---------- Daytime palette (brand guide) ---------- */
   --color-page: #f9f5ef;        /* Ivory    — page background */
   --color-surface: #eadccf;     /* Linen    — cards and panels */
@@ -136,7 +140,6 @@
   --game-frame-pill-ivory-bg: radial-gradient(120% 140% at 30% 20%, #ffffff 0%, var(--color-page) 55%, var(--color-surface) 100%);
   --game-frame-max-board-wide: 51.25rem; /* 820px */
   --game-frame-max-board-showcase: 45rem; /* 720px */
-  --game-deck-breakpoint: 70rem;         /* 1120 px: the deck shows from here, a plain row of cards below it (gameframe.css repeats it; a unit test keeps both equal) */
   /* The fanned card deck at the right edge (Christian's canvas comments, 23 Nov): the FRONT card is the fixed point. */
   --game-deck-card-width: 13.75rem;      /* 220px */
   --game-deck-card-height: 19.25rem;     /* 308px */

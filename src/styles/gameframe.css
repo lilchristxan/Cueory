@@ -1,3 +1,5 @@
+@reference "./global.css";
+
 /*
   Games v2 Shared Frame Styles (docs/design/games-v2/README.md)
   Tokens only. Every target at least 44px. Works across 390, 820, and 1440 widths.
@@ -734,11 +736,10 @@
 
 /* ---------------- Deck breakpoint ---------------- */
 /* The fanned deck at the right edge fits only from 70rem (1120 px); below it the other games are a plain row under the
-   board. A media query cannot read a custom property, so the value is --game-deck-breakpoint in tokens.css and
-   tests/unit/gameframe.test.ts checks that this query uses the same number. This is the only rule block that moved
-   from the 64rem layout query; the sidebar and column layout still switch at 64rem. */
-@media (width < 70rem) {
-  /* The deck has no room beside the board below 70rem (1120 px, token --game-deck-breakpoint in tokens.css), so the other games are a row of plain cards under the stats. */
+   board. The width is the Tailwind breakpoint --breakpoint-deck (tokens.css) used through @variant, so there is one source.
+   This is the only rule block that moved from the 64rem layout query; the sidebar and column layout still switch at 64rem. */
+@variant max-deck {
+  /* The deck has no room beside the board below 70rem (1120 px, token --breakpoint-deck in tokens.css), so the other games are a row of plain cards under the stats. */
   .game-frame-deck-slot {
     order: 5;
     inline-size: 100%;
