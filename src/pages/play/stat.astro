@@ -27,27 +27,37 @@ const { questions, sampleKey } = shown ? parsed : { questions: [], sampleKey: {}
 ---
 
 <Layout title={statGame.name} description="fifteen hard clinical questions, 20 seconds each. your score shows at the end." noindex promo={false}>
-  <GameFrame game="stat">
-    <article class="mx-auto max-w-prose w-full" data-pagefind-ignore>
-      {shown && <p class="text-sm text-ink-soft" data-testid="stat-sample-note">sample questions · awaiting content</p>}
-      <h1 class="text-base font-medium">{statGame.name}</h1>
-      {
-        shown ? (
-          <div>
-            <StatGame client:only="react" questions={questions} sampleKey={sampleKey} />
-            <noscript>
-              <p>{statGame.name} needs JavaScript for its clock. you can still <a href="/play">go back to the daily games</a>.</p>
-            </noscript>
-          </div>
-        ) : (
-          <p class="mt-8" data-testid="stat-soon">{statGame.name} is coming soon.</p>
-        )
-      }
-      <a href="/play" class="mt-10 inline-flex min-h-(--tap-min) items-center rounded-pill border border-control px-5 py-2.5 text-ink">
-        back to daily games
-      </a>
-    </article>
-  </GameFrame>
+{shown ? (
+    <GameFrame game="stat">
+      <article class="mx-auto max-w-prose w-full" data-pagefind-ignore>
+        {shown && <p class="text-sm text-ink-soft" data-testid="stat-sample-note">sample questions · awaiting content</p>}
+        <h1 class="text-base font-medium">{statGame.name}</h1>
+        {
+          shown ? (
+            <div>
+              <StatGame client:only="react" questions={questions} sampleKey={sampleKey} />
+              <noscript>
+                <p>{statGame.name} needs JavaScript for its clock. you can still <a href="/play">go back to the daily games</a>.</p>
+              </noscript>
+            </div>
+          ) : (
+            <p class="mt-8" data-testid="stat-soon">{statGame.name} is coming soon.</p>
+          )
+        }
+        <a href="/play" class="mt-10 inline-flex min-h-(--tap-min) items-center rounded-pill border border-control px-5 py-2.5 text-ink">
+          back to daily games
+        </a>
+      </article>
+    </GameFrame>
+) : (
+  <article class="veil mx-auto mt-6 max-w-prose p-6 sm:mt-10 sm:p-10">
+    <h1 class="display text-center text-title wrap-anywhere sm:text-title-lg">{statGame.name}</h1>
+    <p class="mt-6 text-center" data-testid="stat-soon">{statGame.name} is coming soon.</p>
+    <a href="/play" class="mx-auto mt-8 flex min-h-(--tap-min) w-fit items-center rounded-pill border border-control px-5 py-2.5 text-ink">
+      back to daily games
+    </a>
+  </article>
+)}
   {shown && <GameResultsHost client:only="react" />}
   {shown && <noscript><p>game results and sharing need JavaScript.</p></noscript>}
 </Layout>

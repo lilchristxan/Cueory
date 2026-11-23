@@ -54,6 +54,27 @@
   width: 100%;
 }
 
+/* The page's "flag or comment" button sits in the header row between "games" and the logo, not in a row of its own. */
+.game-frame-flag-slot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1 1 auto;
+}
+.game-frame-flag-slot:empty {
+  display: none;
+}
+/* The desktop sidebar is only 192 px inside, so "games", the flag and the logo share it with no side padding on "games". */
+@media (width >= 64rem) {
+  .game-frame-sidebar-top .game-frame-back {
+    padding-inline: 0;
+  }
+  .game-frame-flag-slot {
+    flex: 0 0 auto;
+    margin-inline: calc(var(--spacing) * 1);
+  }
+}
+
 .game-frame-back {
   display: inline-flex;
   align-items: center;
@@ -611,10 +632,13 @@
 
   .game-frame-wordmark-wrap {
     min-height: auto;
+    /* The wordmark artwork keeps its full width; the tagline beside it wraps instead (tachyyy's was squeezed). */
+    flex: none;
   }
 
   .game-frame-wordmark-img {
     height: var(--game-frame-sidebar-compact-wordmark-height);
+    max-width: none;
   }
 
   .game-frame-serif-title {
@@ -623,6 +647,7 @@
 
   .game-frame-tagline {
     font-size: var(--game-frame-pill-font-size);
+    min-width: 0;
   }
 
   .game-frame-stats {
