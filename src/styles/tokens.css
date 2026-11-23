@@ -143,6 +143,15 @@
   --game-frame-stat-label-compact: 0.875rem; /* 14px, the smallest text on a game screen */
   --game-frame-stat-label-phone: 0.875rem; /* 14px */
 
+  /* Live Vialo pills follow the approved 1230 × 1180 blister artwork. Percentages are measured
+     against the pack width (outside the well grid) or the individual cell width (inside it). */
+  --vialo-art-ratio: 1230 / 1180;
+  --vialo-art-top: 4.64%;
+  --vialo-art-sides: 4.5% 4.58%;
+  --vialo-art-row-ratio: 1118.4 / 170.6;
+  --vialo-art-pill-inset: 15.1% 13.7% 12.6%; /* the smaller capsule inside each photographed well, as on the locked board */
+  --vialo-pill-shine-period: 4.2s;
+
   /* ---------- Marketing pages only (D-41): draped-silk background and frosted panels (no embossed logo: D-55) ---------- */
   --color-silk-base: #f9f5ef;   /* Ivory    — silk background */
   --color-silk-sheen: #f9f5ef;  /* Ivory    — light catching a fold */
