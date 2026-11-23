@@ -23,10 +23,10 @@ const entryHref = lessonEntryHref();
         <h2 id="planned-courses-heading" class="display wrap-anywhere text-2xl text-ink sm:text-title">
           planned courses
         </h2>
-        <ul class="mt-6 grid gap-4 sm:grid-cols-2">
+        <ul class="mt-6 grid gap-4 max-sm:gap-0 sm:grid-cols-2">
           {
             plannedCourses.map((course) => (
-              <li class="min-w-0 rounded-lg border border-line bg-surface p-5">
+              <li class="min-w-0 rounded-lg border border-line bg-surface p-5 max-sm:rounded-none max-sm:border-0 max-sm:border-t max-sm:bg-transparent max-sm:px-0 max-sm:first:border-t-0 max-sm:first:pt-0 max-sm:last:pb-0">
                 <h3 class="wrap-anywhere text-lg font-semibold text-ink">{course.title}</h3>
                 <p class="mt-2 wrap-anywhere text-ink-soft">{course.description}</p>
               </li>
@@ -39,10 +39,10 @@ const entryHref = lessonEntryHref();
         <h2 id="roadmap-features-heading" class="display wrap-anywhere text-2xl text-ink sm:text-title">
           study features
         </h2>
-        <ul class="mt-6 grid gap-4 sm:grid-cols-2">
+        <ul class="mt-6 grid gap-4 max-sm:gap-0 sm:grid-cols-2">
           {
             roadmap.map((item) => (
-              <li class="min-w-0 rounded-lg border border-line bg-surface p-5">
+              <li class="min-w-0 rounded-lg border border-line bg-surface p-5 max-sm:rounded-none max-sm:border-0 max-sm:border-t max-sm:bg-transparent max-sm:px-0 max-sm:first:border-t-0 max-sm:first:pt-0 max-sm:last:pb-0">
                 <h3 class="wrap-anywhere text-lg font-semibold text-ink">{item.title}</h3>
                 <p class="mt-2 wrap-anywhere text-ink-soft">{item.description}</p>
               </li>
