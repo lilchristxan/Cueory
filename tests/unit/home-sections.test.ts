@@ -30,7 +30,8 @@ describe('home lower sections', () => {
   it('has one h1 and the approved lower-section order', () => {
     expect([...main!.matchAll(/<h1\b[^>]*>/g)]).toHaveLength(1);
     const ids = [...main!.matchAll(/<section\b[^>]*\bid="([^"]+)"/g)].map((match) => match[1]);
-    expect(ids.filter((id) => ['ways-to-study', 'daily-games', 'signup'].includes(id))).toEqual(['ways-to-study', 'daily-games', 'signup']);
+    // Christian's final home board (20 Nov): the games come before the vials (the order was ways-to-study, daily-games).
+    expect(ids.filter((id) => ['ways-to-study', 'daily-games', 'signup'].includes(id))).toEqual(['daily-games', 'ways-to-study', 'signup']);
     expect(titles(section('ways-to-study'), 2).filter(Boolean)).toEqual(['one lesson, multiple ways to study']);
     expect(titles(section('daily-games'), 2)).toEqual(["nurse's station games"]);
     expect(titles(section('signup'), 2)).toEqual(['coming soon']);

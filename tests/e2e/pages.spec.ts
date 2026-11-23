@@ -33,6 +33,18 @@ async function openFooterLinks(page: Page) {
 const middleCard = (page: Page) =>
   page.locator('#ways-to-study [data-mode-card][data-offset="0"]').getAttribute('data-name');
 
+/**
+ * Puts the ring in manual mode on the first vial (video): Home on the card group is a keyboard use, which takes the
+ * ring over (data-autoplay turns off), so the six-second slideshow cannot move the vial in front while a slow machine
+ * is still scrolling or waiting for a button. The tests that start from "video in front" call this first.
+ */
+async function holdOnVideo(page: Page) {
+  const carousel = page.locator('#ways-to-study');
+  await carousel.getByRole('group', { name: 'study mode cards' }).press('Home');
+  await expect(carousel).toHaveAttribute('data-autoplay', 'off');
+  await expect.poll(() => middleCard(page)).toBe('video');
+}
+
 /** Failure-only Firefox and WebKit desktop evidence for the carousel autoplay assertion. */
 async function installAutoplayPointerParkDiagnostic(page: Page) {
   await page.addInitScript(() => {
@@ -919,13 +931,13 @@ test.describe('marketing look (D-41)', () => {
   }) => {
     await page.goto('/');
     const sections = page.locator('[data-reveal-section]');
-    // The approved home keeps the carousel, daily games, then the launch-updates panel; how-it-works has been removed.
+    // Christian's final home board (20 Nov): daily games, the vial carousel, then the launch-updates panel.
     await expect(sections).toHaveCount(3);
     expect(await sections.evaluateAll((items) => items.map((item) => item.closest('section')?.id))).toEqual([
-      'ways-to-study', 'daily-games', 'signup',
+      'daily-games', 'ways-to-study', 'signup',
     ]);
     const all = [0, 1, 2];
-    const ways = 0;
+    const ways = 1;
     const look = (index: number) =>
       sections.nth(index).evaluate((el) => [el.getAttribute('data-reveal'), getComputedStyle(el).opacity, getComputedStyle(el).translate]);
     // All of them start below the first screen, so they wait, lowered and clear.
@@ -969,13 +981,14 @@ test.describe('"ways to study" merry-go-round (D-50, D-60)', () => {
   }) => {
     await page.goto('/');
     await section(page).scrollIntoViewIfNeeded();
+    await holdOnVideo(page);
     await expect(section(page)).toHaveAttribute('role', 'region');
     await expect(section(page)).toHaveAttribute('aria-roledescription', 'carousel');
     await expect(page.getByRole('heading', { name: 'ways to study' })).toBeVisible();
     // The first vial in front, with the last one as its left neighbour. HomeV2's straight row (P6) shows as many on each
     // side as fit whole (four at 1440, fewer on narrower screens, never cut off), and the one straight behind is hidden.
     const ring = ['review', 'label it', 'adaptive quiz', 'level test', 'video', 'cards', 'learn', 'fill-in', 'matching'];
-    const perSide = { phone: 1, tablet: 2, desktop: 4 }[sizeOf(test.info())];
+    const perSide = { phone: 2, tablet: 2, desktop: 4 }[sizeOf(test.info())];
     await expect.poll(() => onScreen(page)).toEqual(ring.slice(4 - perSide, 5 + perSide));
     await expect(section(page).getByRole('group', { name: '1 of 11', exact: true })).toHaveAttribute('data-active', '');
 
@@ -1026,6 +1039,7 @@ test.describe('"ways to study" merry-go-round (D-50, D-60)', () => {
   }) => {
     await page.goto('/');
     await section(page).scrollIntoViewIfNeeded();
+    await holdOnVideo(page);
     await section(page).getByRole('button', { name: 'next study mode' }).click();
     await expect.poll(() => middleCard(page)).toBe('cards');
     // Let the 700 ms glide finish (Task 109), and the section's own first fade-in rise (D-62), which moves every vial
@@ -1143,6 +1157,7 @@ test.describe('"ways to study" merry-go-round (D-50, D-60)', () => {
     test.skip(!testInfo.project.use.hasTouch, 'a touch-screen gesture');
     await page.goto('/');
     await section(page).scrollIntoViewIfNeeded();
+    await holdOnVideo(page);
     const centre = async () => {
       const box = (await page.getByRole('group', { name: 'study mode cards' }).boundingBox())!;
       return { x: Math.round(box.x + box.width / 2), y: Math.round(box.y + box.height / 2) };
@@ -1356,9 +1371,9 @@ test.describe('silk scenes down the home page (D-53)', () => {
         };
       }),
     );
-    // The approved home has the hero, carousel, daily games and launch updates in that order.
+    // Christian's final home board: the hero, daily games, the carousel and launch updates in that order.
     expect(scenes.map((scene) => scene.kind)).toEqual([
-      'scene-hero', 'scene-tint', 'scene-play', 'scene-low',
+      'scene-hero', 'scene-play', 'scene-tint', 'scene-low',
     ]);
     for (const scene of scenes) expect(scene).toMatchObject({ drawn: true, behind: '-20', fades: true });
 
@@ -1404,7 +1419,7 @@ test.describe('silk scenes down the home page (D-53)', () => {
       return { bands, hits };
     });
     expect(covered.bands.map(({ scene, edge }) => [scene, edge])).toEqual([
-      ['scene-tint', 'top'], ['scene-play', 'top'], ['scene-low', 'top'], ['scene-low', 'bottom'],
+      ['scene-play', 'top'], ['scene-tint', 'top'], ['scene-low', 'top'], ['scene-low', 'bottom'],
     ]); // Three top fades between the four scenes, then the launch-updates scene fades into the footer.
     expect(covered.hits).toEqual([]);
   });
