@@ -49,8 +49,9 @@ function keyboardNavigationKey(browserName: string): 'Tab' | 'Alt+Tab' {
   return isMacOSWebKit(browserName) ? 'Alt+Tab' : 'Tab';
 }
 
-async function tabAudit(page: Page, key = 'Tab', waitForNativeFocusScroll = false): Promise<string[]> {
+async function tabAudit(page: Page, key = 'Tab', waitForNativeFocusScroll = false): Promise<{ problems: string[]; signupFocusTimeline?: unknown[] }> {
   const problems: string[] = [];
+  let signupFocusTimeline: unknown[] | undefined;
   const selector = 'a[href], button, input, select, textarea, [tabindex], details > summary:first-of-type';
 
   // Save each element's UNFOCUSED appearance. A permanent outline must not
@@ -140,6 +141,47 @@ async function tabAudit(page: Page, key = 'Tab', waitForNativeFocusScroll = fals
     };
   }, { query: selector, baselines: eligible });
 
+  const readSignupFocus = (stage: string) => page.evaluate((stageName) => {
+    const input = document.querySelector<HTMLInputElement>('#signup-email');
+    if (!input) return { stage: stageName, missing: true };
+    const rectOf = (element: Element) => {
+      const rect = element.getBoundingClientRect();
+      return { left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom, width: rect.width, height: rect.height };
+    };
+    const reveal = input.closest('#signup')?.querySelector<HTMLElement>('[data-reveal-section]');
+    const scrollChain = [] as { tag: string; id?: string; className?: string; overflowX: string; overflowY: string; scrollLeft: number; scrollTop: number; scrollWidth: number; scrollHeight: number; clientWidth: number; clientHeight: number; rect: ReturnType<typeof rectOf> }[];
+    for (let ancestor = input.parentElement; ancestor; ancestor = ancestor.parentElement) {
+      const style = getComputedStyle(ancestor);
+      if (!['auto', 'scroll', 'hidden', 'clip'].includes(style.overflowX) && !['auto', 'scroll', 'hidden', 'clip'].includes(style.overflowY)) continue;
+      scrollChain.push({
+        tag: ancestor.tagName.toLowerCase(),
+        id: ancestor.id || undefined,
+        className: ancestor.getAttribute('class') || undefined,
+        overflowX: style.overflowX,
+        overflowY: style.overflowY,
+        scrollLeft: ancestor.scrollLeft,
+        scrollTop: ancestor.scrollTop,
+        scrollWidth: ancestor.scrollWidth,
+        scrollHeight: ancestor.scrollHeight,
+        clientWidth: ancestor.clientWidth,
+        clientHeight: ancestor.clientHeight,
+        rect: rectOf(ancestor),
+      });
+    }
+    const revealStyle = reveal ? getComputedStyle(reveal) : undefined;
+    return {
+      stage: stageName,
+      time: performance.now(),
+      activeElement: document.activeElement === input ? '#signup-email' : document.activeElement instanceof HTMLElement ? `${document.activeElement.tagName.toLowerCase()}${document.activeElement.id ? `#${document.activeElement.id}` : ''}` : null,
+      viewport: { width: innerWidth, height: innerHeight, scrollX, scrollY },
+      root: { scrollWidth: document.documentElement.scrollWidth, scrollHeight: document.documentElement.scrollHeight, clientWidth: document.documentElement.clientWidth, clientHeight: document.documentElement.clientHeight },
+      input: rectOf(input),
+      signup: input.closest('#signup') ? rectOf(input.closest('#signup')!) : undefined,
+      reveal: reveal ? { state: reveal.dataset.reveal || 'unset', rect: rectOf(reveal), opacity: revealStyle?.opacity, translate: revealStyle?.translate, transform: revealStyle?.transform } : undefined,
+      scrollChain,
+    };
+  }, stage);
+
   for (let step = 0; step < maxTabs; step++) {
     await page.keyboard.press(key);
     let focused = await readFocused();
@@ -149,6 +191,28 @@ async function tabAudit(page: Page, key = 'Tab', waitForNativeFocusScroll = fals
     // viewport; no scripted scroll is performed, and focus loss still fails.
     if (waitForNativeFocusScroll && focused && !focused.inViewport) {
       const expectedIndex = focused.index;
+      const observesSignup = focused.name === 'input#signup-email';
+      const beforeSignupFocus = observesSignup ? await readSignupFocus('before-native-focus-wait') : undefined;
+      if (observesSignup) {
+        // Observational only: the callback reads state on the next frame and never focuses, scrolls, or changes styles.
+        await page.evaluate(() => {
+          requestAnimationFrame(() => {
+            const input = document.querySelector<HTMLInputElement>('#signup-email');
+            if (!input) return;
+            const rect = input.getBoundingClientRect();
+            const reveal = input.closest('#signup')?.querySelector<HTMLElement>('[data-reveal-section]');
+            const revealStyle = reveal ? getComputedStyle(reveal) : undefined;
+            (window as Window & { __signupFocusRaf?: unknown }).__signupFocusRaf = {
+              stage: 'request-animation-frame',
+              time: performance.now(),
+              activeElement: document.activeElement === input ? '#signup-email' : document.activeElement instanceof HTMLElement ? `${document.activeElement.tagName.toLowerCase()}${document.activeElement.id ? `#${document.activeElement.id}` : ''}` : null,
+              viewport: { width: innerWidth, height: innerHeight, scrollX, scrollY },
+              input: { left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom, width: rect.width, height: rect.height },
+              reveal: reveal ? { state: reveal.dataset.reveal || 'unset', opacity: revealStyle?.opacity, translate: revealStyle?.translate, transform: revealStyle?.transform } : undefined,
+            };
+          });
+        });
+      }
       await page.waitForFunction(({ query, expectedIndex }) => {
         const el = document.activeElement;
         if (!(el instanceof HTMLElement)) return true;
@@ -162,6 +226,11 @@ async function tabAudit(page: Page, key = 'Tab', waitForNativeFocusScroll = fals
         if (!String(error).includes('Timeout')) throw error;
       });
       const settled = await readFocused();
+      if (observesSignup) {
+        const afterSignupFocus = await readSignupFocus('after-native-focus-wait');
+        const rafSignupFocus = await page.evaluate(() => (window as Window & { __signupFocusRaf?: unknown }).__signupFocusRaf);
+        if (beforeSignupFocus && afterSignupFocus) signupFocusTimeline = [beforeSignupFocus, rafSignupFocus, afterSignupFocus].filter(Boolean);
+      }
       if (!settled || settled.index !== expectedIndex) {
         problems.push(focused.name + ': native focus scroll did not retain its target');
       }
@@ -222,7 +291,7 @@ async function tabAudit(page: Page, key = 'Tab', waitForNativeFocusScroll = fals
       missing.map((control) => control.label).join(', '));
   }
   if (!finished) problems.push('Tab traversal did not finish within ' + maxTabs + ' presses');
-  return problems;
+  return { problems, signupFocusTimeline };
 }
 
 test.describe('Task 74: full-site accessibility sweep', () => {
@@ -269,12 +338,24 @@ test.describe('Task 74: full-site accessibility sweep', () => {
       // at the first interactive element rather than halfway down the page.
       await page.goto(route);
       await waitForIslands(page, route);
-      problems.push(...await tabAudit(page, tabKey, webkitFocusScroll));
+      const tabResult = await tabAudit(page, tabKey, webkitFocusScroll);
+      problems.push(...tabResult.problems);
 
       const results = await new AxeBuilder({ page }).withTags(axeTags).analyze();
       for (const violation of results.violations) {
         const targets = violation.nodes.flatMap((node) => node.target).join(', ');
         problems.push(`axe ${violation.id}: ${violation.help} (${targets})`);
+      }
+
+      if (tabResult.signupFocusTimeline && tabResult.problems.includes('input#signup-email: focus is outside the visible viewport')) {
+        try {
+          await testInfo.attach('signup-focus-timeline.json', {
+            body: JSON.stringify(tabResult.signupFocusTimeline, null, 2),
+            contentType: 'application/json',
+          });
+        } catch {
+          // The original accessibility finding below remains authoritative if diagnostics cannot attach.
+        }
       }
 
       // One failure per page, with *every* finding in the assertion output.
@@ -311,7 +392,7 @@ test.describe('keyboard traversal regression cases', () => {
       }
     });
 
-    expect(await tabAudit(page)).toEqual([]);
+    expect((await tabAudit(page)).problems).toEqual([]);
     await expect(page.locator('#save')).toHaveAttribute('data-visited', 'yes');
     await expect(page.locator('#skip')).toHaveAttribute('data-visited', 'yes');
   });
@@ -321,7 +402,7 @@ test.describe('keyboard traversal regression cases', () => {
       '<style>button { outline: 2px solid black; }</style>' +
       '<button id="always-outlined">always outlined</button><button>next</button>',
     );
-    expect((await tabAudit(page)).some((problem) =>
+    expect((await tabAudit(page)).problems.some((problem) =>
       problem.includes('#always-outlined: keyboard focus has no visible outline'))).toBe(true);
   });
 
@@ -331,7 +412,7 @@ test.describe('keyboard traversal regression cases', () => {
       'button:focus-visible { outline-offset: 4px; }</style>' +
       '<button id="offset-only">offset changes on focus</button><button>next</button>',
     );
-    expect(await tabAudit(page)).toEqual([]);
+    expect((await tabAudit(page)).problems).toEqual([]);
   });
 
   test('a transparent focus outline does not count as visible', async ({ page }) => {
@@ -339,7 +420,7 @@ test.describe('keyboard traversal regression cases', () => {
       '<style>:focus-visible { outline: 2px solid transparent; }</style>' +
       '<button id="transparent-outline">transparent</button><button>next</button>',
     );
-    expect((await tabAudit(page)).some((problem) =>
+    expect((await tabAudit(page)).problems.some((problem) =>
       problem.includes('#transparent-outline: keyboard focus has no visible outline'))).toBe(true);
   });
 
@@ -354,7 +435,7 @@ test.describe('keyboard traversal regression cases', () => {
       });
     });
 
-    const problems = await tabAudit(page);
+    const { problems } = await tabAudit(page);
     expect(problems.some((message) => message.includes('keyboard focus did not advance'))).toBe(true);
     expect(problems.some((message) => message.includes('did not reach') && message.includes('#later'))).toBe(true);
   });

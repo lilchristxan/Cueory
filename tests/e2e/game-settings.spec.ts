@@ -18,7 +18,7 @@ test('opens as a focus-trapped dialog that Escape closes, returning focus to its
   expect(box!.width).toBeGreaterThanOrEqual(44);
   expect(box!.height).toBeGreaterThanOrEqual(44);
   await button.click();
-  const dialog = page.getByRole('dialog', { name: 'word path settings' });
+  const dialog = page.getByRole('dialog', { name: 'piccline settings' });
   await expect(dialog).toBeVisible();
   const close = dialog.getByRole('button', { name: 'close settings' });
   await expect(close).toBeFocused();
@@ -46,7 +46,7 @@ test('high contrast, reduced motion and sound are remembered and applied to the 
   const html = page.locator('html');
   await expect(html).not.toHaveAttribute('data-game-contrast', /.*/);
   await page.getByTestId('game-settings-button').click();
-  const dialog = page.getByRole('dialog', { name: 'word path settings' });
+  const dialog = page.getByRole('dialog', { name: 'piccline settings' });
   await dialog.getByRole('checkbox', { name: /high contrast/ }).check();
   await dialog.getByRole('group', { name: 'motion' }).getByRole('radio', { name: /always reduce/ }).check();
   await dialog.getByRole('checkbox', { name: /game sounds/ }).uncheck();

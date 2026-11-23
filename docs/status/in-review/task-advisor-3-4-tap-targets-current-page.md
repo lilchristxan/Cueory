@@ -1,1 +1,0 @@
-status: advisor findings #903 (lanes 3 and 4): the desktop nav underlines the current page so colour is not the only visible cue; the /start coming-soon links, the lesson cards page's two action links and the survey's yes/no choices are 44 px tap targets.

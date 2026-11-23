@@ -55,14 +55,19 @@ for (const { name, url } of pages) {
   });
 }
 
-for (const game of ['pillo', 'sudoku', 'crossword', 'word-path']) {
-  test(`the ${game} corner opens the shared footer report while signed out`, async ({ page }) => {
-    await page.goto(`/play/${game}`);
+for (const game of [
+  { path: 'pillo', name: 'pillo' },
+  { path: 'sudoku', name: 'sudoku' },
+  { path: 'crossword', name: 'crossword' },
+  { path: 'word-path', name: 'piccline' },
+]) {
+  test(`the ${game.name} corner opens the shared footer report while signed out`, async ({ page }) => {
+    await page.goto(`/play/${game.path}`);
     const link = page.locator('a[data-game-flag]');
     const footer = page.locator('#footer-flag');
     const trigger = footer.getByRole('button', { name: 'flag or comment', exact: true });
     await expect(trigger).toBeVisible();
-    await expect(link).toHaveAccessibleName(`flag or comment on ${game.replace('-', ' ')}`);
+    await expect(link).toHaveAccessibleName(`flag or comment on ${game.name}`);
     const box = await link.boundingBox();
     expect(box?.width).toBeGreaterThanOrEqual(44);
     expect(box?.height).toBeGreaterThanOrEqual(44);

@@ -3,12 +3,14 @@ import { followOldGameHash, gamePageForHash } from '../../src/scripts/playhash';
 
 describe('old /play game links (each game on its own page)', () => {
   it('sends each old section link to its game page', () => {
-    expect(gamePageForHash('#pulse-heading')).toBe('/play/pillo');
+    expect(gamePageForHash('#vialo-heading')).toBe('/play/vialo');
+    expect(gamePageForHash('#vialo')).toBe('/play/vialo');
+    expect(gamePageForHash('#pulse-heading')).toBe('/play/vialo');
     expect(gamePageForHash('#triage-heading')).toBe('/play/sudoku');
     expect(gamePageForHash('#sudoku-heading')).toBe('/play/sudoku');
     expect(gamePageForHash('#crossword-heading')).toBe('/play/crossword');
     expect(gamePageForHash('#word-path-heading')).toBe('/play/word-path');
-    expect(gamePageForHash('#PILLO')).toBe('/play/pillo');
+    expect(gamePageForHash('#PILLO')).toBe('/play/vialo');
   });
 
   it('stays on the hub for anything else, including object property names', () => {

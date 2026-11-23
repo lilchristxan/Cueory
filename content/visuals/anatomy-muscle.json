@@ -4,6 +4,7 @@
   "kind": "model",
   "lessonIds": ["U11-T01-L01"],
   "status": "draft",
+  "hierarchyTree": "isa",
   "model": { "file": "/models/anatomy/muscle.glb", "release": "BodyParts3D 4.0", "via": "official download from dbarchive.biosciencedbc.jp" },
   "labels": [
     { "id": "FMA46733", "text": "uvular muscle", "group": "muscle of palate", "layer": "muscle", "source": "bp3d-FMA46733" },

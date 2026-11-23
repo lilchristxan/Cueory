@@ -20,16 +20,15 @@ export function revealInstantly(section: HTMLElement, observer?: Pick<Intersecti
 }
 
 /**
- * Once a waiting section has been made visible, let the browser finish the
- * focus scroll against its final (untranslated) layout. WebKit can otherwise
- * keep the newly focused control a few pixels below the viewport edge.
+ * Once a waiting section has been made visible, align the still-focused target
+ * against its final (untranslated) layout. This must happen in the focus-in
+ * turn: WebKit can defer an animation frame while leaving the target below the
+ * viewport edge.
  */
 export function keepFocusedTargetInView(target: HTMLElement): void {
-  window.requestAnimationFrame(() => {
-    if (document.activeElement === target) {
-      target.scrollIntoView({ block: 'nearest', inline: 'nearest' });
-    }
-  });
+  if (document.activeElement === target) {
+    target.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  }
 }
 
 export function revealSections(): void {
@@ -43,6 +42,12 @@ export function revealSections(): void {
           observer.unobserve(target);
           continue;
         }
+        const active = document.activeElement;
+        if (active instanceof HTMLElement && target.contains(active) && target.dataset.reveal === 'waiting') {
+          revealInstantly(target, observer);
+          keepFocusedTargetInView(active);
+          continue;
+        }
         target.dataset.reveal = 'shown';
         observer.unobserve(target);
       }
@@ -53,13 +58,20 @@ export function revealSections(): void {
     if (!waitsForReveal(section.getBoundingClientRect().top, window.innerHeight)) continue;
     section.dataset.reveal = 'waiting';
     const onFocusIn = (event?: FocusEvent) => {
-      if (section.dataset.reveal === 'waiting') {
-        revealInstantly(section, observer);
-        section.removeEventListener('focusin', onFocusIn);
-        const target = event?.target;
-        if (target && typeof HTMLElement !== 'undefined' && target instanceof HTMLElement) {
-          keepFocusedTargetInView(target);
+      const target = event?.target;
+      const focusTarget = target && typeof HTMLElement !== 'undefined' && target instanceof HTMLElement ? target : undefined;
+      const inSection = focusTarget ? (typeof section.contains === 'function' ? section.contains(focusTarget) : true) : !event?.target;
+      if (
+        (section.dataset.reveal === 'waiting' || section.dataset.reveal === 'shown') &&
+        inSection
+      ) {
+        if (section.dataset.reveal === 'waiting') revealInstantly(section, observer);
+        else {
+          section.dataset.reveal = 'instant';
+          observer.unobserve(section);
         }
+        section.removeEventListener('focusin', onFocusIn);
+        if (focusTarget) keepFocusedTargetInView(focusTarget);
       }
     };
     section.addEventListener('focusin', onFocusIn);

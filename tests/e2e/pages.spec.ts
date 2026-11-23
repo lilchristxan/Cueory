@@ -33,6 +33,182 @@ async function openFooterLinks(page: Page) {
 const middleCard = (page: Page) =>
   page.locator('#ways-to-study [data-mode-card][data-offset="0"]').getAttribute('data-name');
 
+/** Failure-only Firefox and WebKit desktop evidence for the carousel autoplay assertion. */
+async function installAutoplayPointerParkDiagnostic(page: Page) {
+  await page.addInitScript(() => {
+    type Rect = { left: number; top: number; right: number; bottom: number; width: number; height: number } | null;
+    type Target = { tag: string | null; id: string | null; mode: string | null };
+    type Detail = {
+      event?: string;
+      eventT?: number;
+      trusted?: boolean;
+      pointerType?: string;
+      x?: number;
+      y?: number;
+      target?: Target;
+      related?: Target;
+      hit?: Target;
+      trackHover?: boolean;
+      controlsHover?: boolean;
+    };
+    type Entry = {
+      phase: string;
+      t: number;
+      autoplay: string | null;
+      hold: string | null;
+      active: string | null;
+      track: Rect;
+      viewport: { width: number; height: number };
+      intersection: number | null;
+      visibility: string;
+      reducedMotion: boolean;
+      detail?: Detail;
+    };
+    type ProbeWindow = Window & { __cueoryAutoplayPointerParkDiagnostic?: { entries: Entry[]; mark: (phase: string) => void } };
+    const entries: Entry[] = [];
+    const cap = 120;
+    let intersection: number | null = null;
+    let postHover = false;
+    let lastMouse: { x: number; y: number } | undefined;
+    const target = (value: EventTarget | null): Target => {
+      const element = value instanceof Element ? value : null;
+      return {
+        tag: element?.tagName.toLowerCase() ?? null,
+        id: element?.id ?? null,
+        mode: element?.closest<HTMLElement>('[data-mode-card]')?.dataset.name ?? null,
+      };
+    };
+    const push = (entry: Entry) => {
+      entries.push(entry);
+      if (entries.length > cap) entries.splice(0, entries.length - cap);
+    };
+    const sample = () => {
+      const root = document.querySelector<HTMLElement>('[data-modes]');
+      const track = root?.querySelector<HTMLElement>('[data-modes-track]') ?? null;
+      const rect = track?.getBoundingClientRect();
+      return {
+        autoplay: root?.dataset.autoplay ?? null,
+        hold: root?.dataset.autoplayHold ?? null,
+        active: root?.querySelector<HTMLElement>('[data-mode-card][data-offset="0"]')?.dataset.name ?? null,
+        track: rect ? { left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom, width: rect.width, height: rect.height } : null,
+        viewport: { width: window.innerWidth, height: window.innerHeight },
+        intersection,
+        visibility: document.visibilityState,
+        reducedMotion: window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+      };
+    };
+    const note = (phase: string, detail?: Detail) => {
+      push({ phase, t: performance.now(), ...sample(), detail });
+    };
+    const notePostDispatch = (phase: string, detail: Detail, track: HTMLElement, controls: HTMLElement | null) => {
+      window.setTimeout(() => {
+        const hit = lastMouse ? document.elementFromPoint(lastMouse.x, lastMouse.y) : null;
+        note(`${phase}:post-dispatch`, {
+          ...detail,
+          hit: target(hit),
+          trackHover: track.matches(':hover'),
+          controlsHover: controls?.matches(':hover') ?? false,
+        });
+      }, 0);
+    };
+    (window as ProbeWindow).__cueoryAutoplayPointerParkDiagnostic = {
+      entries,
+      mark: (phase) => {
+        if (phase === 'intentional-hover:before') postHover = true;
+        note(phase);
+      },
+    };
+    document.addEventListener('DOMContentLoaded', () => {
+      const root = document.querySelector<HTMLElement>('[data-modes]');
+      const track = root?.querySelector<HTMLElement>('[data-modes-track]');
+      if (!root || !track) return note('carousel:missing');
+      const controls = root.querySelector<HTMLElement>('[data-modes-controls]');
+      const isPauseArea = (value: EventTarget | null) =>
+        value instanceof Node && [track, controls].some((area) => area?.contains(value));
+      // Event capture must not force layout ahead of the carousel's own listener.
+      const eventState = () => ({
+        autoplay: root.dataset.autoplay ?? null,
+        hold: root.dataset.autoplayHold ?? null,
+        active: root.querySelector<HTMLElement>('[data-mode-card][data-offset="0"]')?.dataset.name ?? null,
+        track: null,
+        viewport: { width: window.innerWidth, height: window.innerHeight },
+        intersection,
+        visibility: document.visibilityState,
+        reducedMotion: window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+      });
+      const recordPointer = (event: PointerEvent) => {
+        if (!postHover || event.pointerType !== 'mouse' || (!isPauseArea(event.target) && !isPauseArea(event.relatedTarget))) return;
+        lastMouse = { x: event.clientX, y: event.clientY };
+        const detail: Detail = {
+          event: event.type,
+          eventT: event.timeStamp,
+          trusted: event.isTrusted,
+          pointerType: event.pointerType,
+          x: event.clientX,
+          y: event.clientY,
+          target: target(event.target),
+          related: target(event.relatedTarget),
+        };
+        // Capture only event fields synchronously. Geometry and hit testing run after the carousel's listener.
+        push({ phase: `pointer:${event.type}`, t: performance.now(), ...eventState(), detail });
+        notePostDispatch(`pointer:${event.type}`, detail, track, controls);
+      };
+      const recordMouseOut = (event: MouseEvent) => {
+        if (!postHover || (!isPauseArea(event.target) && !isPauseArea(event.relatedTarget))) return;
+        const detail: Detail = {
+          event: event.type,
+          eventT: event.timeStamp,
+          trusted: event.isTrusted,
+          x: event.clientX,
+          y: event.clientY,
+          target: target(event.target),
+          related: target(event.relatedTarget),
+        };
+        push({ phase: 'mouse:mouseout', t: performance.now(), ...eventState(), detail });
+        notePostDispatch('mouse:mouseout', detail, track, controls);
+      };
+      note('carousel:ready');
+      new MutationObserver((mutations) => {
+        for (const mutation of mutations) note(`attribute:${mutation.attributeName}`);
+      }).observe(root, { attributes: true, attributeFilter: ['data-autoplay', 'data-autoplay-hold'] });
+      new IntersectionObserver((observations) => {
+        for (const observation of observations) {
+          intersection = observation.intersectionRatio;
+          note('intersection');
+        }
+      }, { threshold: [0, 0.01, 1] }).observe(track);
+      for (const type of ['pointerenter', 'pointerleave', 'pointermove', 'pointerover', 'pointerout'] as const) {
+        window.addEventListener(type, recordPointer, { capture: true, passive: true });
+      }
+      window.addEventListener('mouseout', recordMouseOut, { capture: true, passive: true });
+      window.addEventListener('scroll', (event) => {
+        if (!postHover) return;
+        const detail: Detail = { event: 'scroll', eventT: event.timeStamp, trusted: event.isTrusted };
+        // The product's capture listener reconciles hover from elementFromPoint. Sample only after it has returned.
+        push({ phase: 'scroll', t: performance.now(), ...eventState(), detail });
+        notePostDispatch('scroll', detail, track, controls);
+      }, { capture: true, passive: true });
+    });
+  });
+}
+
+async function markAutoplayPointerParkDiagnostic(page: Page, phase: string) {
+  await page.evaluate((label) => {
+    type ProbeWindow = Window & { __cueoryAutoplayPointerParkDiagnostic?: { mark: (phase: string) => void } };
+    (window as ProbeWindow).__cueoryAutoplayPointerParkDiagnostic?.mark(label);
+  }, phase).catch(() => {});
+}
+
+async function attachAutoplayPointerParkDiagnostic(page: Page, testInfo: TestInfo) {
+  const entries = await page.evaluate(() => {
+    type ProbeWindow = Window & { __cueoryAutoplayPointerParkDiagnostic?: { entries: unknown[] } };
+    return (window as ProbeWindow).__cueoryAutoplayPointerParkDiagnostic?.entries ?? [];
+  }).catch(() => []);
+  await testInfo.attach('carousel-autoplay-pointer-park-path', {
+    body: JSON.stringify({ entries }, null, 2),
+    contentType: 'application/json',
+  });
+}
 /** Test-only D-51 close observation; it captures IDs and event state, never DOM content or user text. */
 async function installPreviewCloseDiagnostic(page: Page) {
   await page.addInitScript(() => {
@@ -81,154 +257,53 @@ async function installPreviewCloseDiagnostic(page: Page) {
   });
 }
 
-/** Test-only capture for the Firefox autoplay trace: event delivery, geometry, CSS hover, and hold changes. */
-async function installAutoplayHoverDiagnostic(page: Page) {
-  await page.addInitScript(() => {
-    type Identity = {
-      tag: string | null;
-      id: string | null;
-      track: boolean;
-      controls: boolean;
-      insideTrack: boolean;
-      insideControls: boolean;
-    };
-    type Bounds = { left: number; top: number; right: number; bottom: number; width: number; height: number } | null;
-    type Entry = {
-      phase: string;
-      sampleT: number;
-      autoplay: string | null;
-      hold: string | null;
-      track: { bounds: Bounds; hover: boolean | null };
-      controls: { bounds: Bounds; hover: boolean | null };
-      event?: {
-        eventT: number;
-        type: string;
-        trusted: boolean;
-        pointerType: string;
-        pointerId: number;
-        clientX: number;
-        clientY: number;
-        target: Identity;
-        relatedTarget: Identity;
-        hit: Identity;
-        targetHasCapture: boolean;
-        trackHasCapture: boolean;
-        controlsHasCapture: boolean;
-      };
-      attribute?: { name: string | null; oldValue: string | null };
-    };
-    type PointerFields = {
-      eventT: number;
-      type: string;
-      trusted: boolean;
-      pointerType: string;
-      pointerId: number;
-      clientX: number;
-      clientY: number;
-      target: EventTarget | null;
-      relatedTarget: EventTarget | null;
-    };
-    type ProbeWindow = Window & { __cueoryAutoplayHoverDiagnostic?: Entry[] };
-
-    const entries: Entry[] = [];
-    (window as ProbeWindow).__cueoryAutoplayHoverDiagnostic = entries;
-    const cap = 120;
-    const identity = (node: EventTarget | null, track: HTMLElement | null, controls: HTMLElement | null): Identity => {
-      const element = node instanceof Element ? node : null;
+/** Failure-only D-51 navigation evidence. The assertions and timing remain the test's existing contract. */
+async function capturePreviewNavigationFailure(page: Page, lastAction: string) {
+  return page.evaluate((lastAction) => {
+    const describe = (element: Element | null) => {
+      if (!(element instanceof HTMLElement)) return null;
+      const bounds = element.getBoundingClientRect();
       return {
-        tag: element?.tagName ?? null,
-        id: element?.id ?? null,
-        track: element === track,
-        controls: element === controls,
-        insideTrack: element !== null && track?.contains(element) === true,
-        insideControls: element !== null && controls?.contains(element) === true,
+        tag: element.tagName.toLowerCase(),
+        id: element.id || null,
+        classes: [...element.classList],
+        previewPart: element.getAttribute('data-mode-preview') ?? null,
+        bounds: { x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height },
       };
     };
-    const bounds = (element: HTMLElement | null): Bounds => {
-      if (!element) return null;
-      const rect = element.getBoundingClientRect();
-      const round = (value: number) => Math.round(value * 100) / 100;
-      return { left: round(rect.left), top: round(rect.top), right: round(rect.right), bottom: round(rect.bottom), width: round(rect.width), height: round(rect.height) };
-    };
-    const snapshot = () => {
-      const root = document.querySelector<HTMLElement>('[data-modes]');
-      const track = root?.querySelector<HTMLElement>('[data-modes-track]') ?? null;
-      const controls = root?.querySelector<HTMLElement>('[data-modes-controls]') ?? null;
+    const dialog = document.querySelector<HTMLDialogElement>('[data-mode-preview]');
+    const animations = dialog?.getAnimations({ subtree: true }).map((animation, index) => {
+      const effect = animation.effect;
+      const timing = effect?.getComputedTiming();
+      const localTime = typeof timing?.localTime === 'number' ? timing.localTime : null;
+      const delay = typeof timing?.delay === 'number' ? timing.delay : null;
+      const endTime = typeof timing?.endTime === 'number' ? timing.endTime : null;
+      const phase = localTime === null || delay === null || endTime === null ? null :
+        localTime < delay ? 'before' : localTime >= endTime ? 'after' : 'active';
       return {
-        autoplay: root?.dataset.autoplay ?? null,
-        hold: root?.dataset.autoplayHold ?? null,
-        track: { bounds: bounds(track), hover: track?.matches(':hover') ?? null },
-        controls: { bounds: bounds(controls), hover: controls?.matches(':hover') ?? null },
+        index,
+        playState: animation.playState,
+        pending: animation.pending,
+        currentTime: animation.currentTime,
+        phase,
+        progress: timing?.progress ?? null,
+        duration: timing?.activeDuration ?? null,
+        delay,
+        endTime,
+        target: describe(effect instanceof KeyframeEffect ? effect.target : null),
       };
+    }) ?? [];
+    return {
+      lastAction,
+      activeElement: describe(document.activeElement),
+      preview: {
+        open: dialog?.open ?? false,
+        bounds: describe(dialog)?.bounds ?? null,
+        carouselState: document.querySelector<HTMLElement>('[data-modes]')?.dataset.carouselState ?? null,
+      },
+      animations,
     };
-    const note = (phase: string, event?: PointerFields, attribute?: Entry['attribute']) => {
-      const state = snapshot();
-      const track = document.querySelector<HTMLElement>('[data-modes] [data-modes-track]');
-      const controls = document.querySelector<HTMLElement>('[data-modes] [data-modes-controls]');
-      const entry: Entry = { phase, sampleT: performance.now(), ...state, attribute };
-      if (event) {
-        const target = event.target instanceof HTMLElement ? event.target : null;
-        entry.event = {
-          eventT: event.eventT,
-          type: event.type,
-          trusted: event.trusted,
-          pointerType: event.pointerType,
-          pointerId: event.pointerId,
-          clientX: event.clientX,
-          clientY: event.clientY,
-          target: identity(event.target, track, controls),
-          relatedTarget: identity(event.relatedTarget, track, controls),
-          hit: identity(document.elementFromPoint(event.clientX, event.clientY), track, controls),
-          targetHasCapture: target?.hasPointerCapture(event.pointerId) ?? false,
-          trackHasCapture: track?.hasPointerCapture(event.pointerId) ?? false,
-          controlsHasCapture: controls?.hasPointerCapture(event.pointerId) ?? false,
-        };
-      }
-      entries.push(entry);
-      if (entries.length > cap) entries.splice(0, entries.length - cap);
-    };
-    const observe = (event: PointerEvent) => {
-      // Filter and copy event fields in capture phase without layout reads. A later task samples only after dispatch.
-      const target = event.target;
-      if (!(target instanceof HTMLElement) || !target.matches('[data-modes-track], [data-modes-controls]')) return;
-      const fields: PointerFields = {
-        eventT: performance.now(),
-        type: event.type,
-        trusted: event.isTrusted,
-        pointerType: event.pointerType,
-        pointerId: event.pointerId,
-        clientX: event.clientX,
-        clientY: event.clientY,
-        target: event.target,
-        relatedTarget: event.relatedTarget,
-      };
-      window.setTimeout(() => note(`pointer:${fields.type}:post-dispatch`, fields), 0);
-    };
-
-    document.addEventListener('pointerenter', observe, true);
-    document.addEventListener('pointerleave', observe, true);
-    document.addEventListener('DOMContentLoaded', () => {
-      const root = document.querySelector<HTMLElement>('[data-modes]');
-      if (!root) return note('root:missing');
-      note('root:observed');
-      new MutationObserver((mutations) => {
-        for (const mutation of mutations) {
-          note(`attribute:${mutation.attributeName}`, undefined, { name: mutation.attributeName, oldValue: mutation.oldValue });
-        }
-      }).observe(root, { attributes: true, attributeOldValue: true, attributeFilter: ['data-autoplay', 'data-autoplay-hold'] });
-    });
-  });
-}
-
-async function attachAutoplayHoverDiagnostic(page: Page, testInfo: TestInfo) {
-  const entries = await page.evaluate(() => {
-    type ProbeWindow = Window & { __cueoryAutoplayHoverDiagnostic?: unknown[] };
-    return (window as ProbeWindow).__cueoryAutoplayHoverDiagnostic ?? [];
-  }).catch(() => []);
-  await testInfo.attach('carousel-autoplay-hover-path', {
-    body: JSON.stringify({ entries }, null, 2),
-    contentType: 'application/json',
-  });
+  }, lastAction);
 }
 
 /** Measure cards only after their turn transitions finish, including on a loaded runner. */
@@ -1214,18 +1289,33 @@ test.describe('"ways to study" merry-go-round (D-50, D-60)', () => {
     test.skip(!isDesktopOfEachEngine(testInfo), 'a timing test that rests a mouse on the cards: once per engine, at desktop size');
     test.slow();
     const engine = testInfo.project.use.browserName ?? testInfo.project.use.defaultBrowserType;
-    const diagnoseFirefox = engine === 'firefox';
-    if (diagnoseFirefox) await installAutoplayHoverDiagnostic(page);
+    const diagnoseAutoplayStart = engine === 'firefox' || engine === 'webkit';
+    if (diagnoseAutoplayStart) await installAutoplayPointerParkDiagnostic(page);
     let failed = false;
     try {
       await page.goto('/');
       await section(page).scrollIntoViewIfNeeded();
+      if (diagnoseAutoplayStart) await markAutoplayPointerParkDiagnostic(page, 'before-pointer-park');
       // The mouse over the section's words, not its cards: that doesn't pause it.
       await page.mouse.move(0, 0);
+      // Firefox has replayed an in-track enter at (636, 423) after this real park. It must not pause without a
+      // matching pointer move, while the real card/control hover and visitor takeover checks below stay unchanged.
+      await section(page).locator('[data-modes-track]').evaluate((track) => {
+        track.dispatchEvent(new PointerEvent('pointerenter', {
+          bubbles: false,
+          clientX: 636,
+          clientY: 423,
+          pointerType: 'mouse',
+        }));
+      });
+      if (diagnoseAutoplayStart) await markAutoplayPointerParkDiagnostic(page, 'after-pointer-park');
+      if (diagnoseAutoplayStart) await markAutoplayPointerParkDiagnostic(page, 'first-poll:begin');
       await expect.poll(() => middleCard(page), { timeout: 9000 }).toBe('cards');
 
       // Resting on the cards pauses it; moving off lets it go on.
+      if (diagnoseAutoplayStart) await markAutoplayPointerParkDiagnostic(page, 'intentional-hover:before');
       await page.getByRole('group', { name: 'study mode cards' }).hover();
+      if (diagnoseAutoplayStart) await markAutoplayPointerParkDiagnostic(page, 'intentional-hover:after');
       await page.waitForTimeout(7000);
       expect(await middleCard(page)).toBe('cards');
       await page.mouse.move(0, 0);
@@ -1240,12 +1330,11 @@ test.describe('"ways to study" merry-go-round (D-50, D-60)', () => {
       failed = true;
       throw error;
     } finally {
-      if (failed && diagnoseFirefox) {
-        // Diagnostics must never replace the original assertion failure.
+      if (failed && diagnoseAutoplayStart) {
         try {
-          await attachAutoplayHoverDiagnostic(page, testInfo);
+          await attachAutoplayPointerParkDiagnostic(page, testInfo);
         } catch {
-          // Best effort only: Playwright will preserve the assertion error already in flight.
+          // Best effort: do not replace the failed autoplay assertion.
         }
       }
     }
@@ -1405,31 +1494,57 @@ test.describe('study-mode preview (D-51)', () => {
 
   test('previous and next move through the modes with the row behind; the X and the darkened page close it', async ({
     page,
-  }) => {
-    await openPreview(page, 'cards');
-    const preview = dialog(page);
-    await preview.getByRole('button', { name: 'next study mode' }).click();
-    await expect(page.getByRole('dialog', { name: 'learn' })).toBeVisible();
-    await expect(preview.getByRole('link', { name: 'start learn' })).toHaveAttribute('href', '/learn/study-skills/learn-mode');
-    await expect(preview.locator('[data-mode-preview-live]')).toHaveText('learn, 3 of 11');
+  }, testInfo) => {
+    let lastAction = 'open preview cards';
+    // Keep the latest bounded state in the test process. A timed-out click closes its page before the catch block can
+    // evaluate it, but the state immediately before that existing action remains available for a failure-only receipt.
+    let latestObservation: unknown = { lastAction, capture: 'not sampled' };
+    const observeBeforeAction = async () => {
+      latestObservation = await capturePreviewNavigationFailure(page, lastAction).catch(() => latestObservation);
+    };
+    try {
+      await openPreview(page, 'cards');
+      const preview = dialog(page);
+      lastAction = 'click next study mode';
+      await observeBeforeAction();
+      await preview.getByRole('button', { name: 'next study mode' }).click();
+      await expect(page.getByRole('dialog', { name: 'learn' })).toBeVisible();
+      await expect(preview.getByRole('link', { name: 'start learn' })).toHaveAttribute('href', '/learn/study-skills/learn-mode');
+      await expect(preview.locator('[data-mode-preview-live]')).toHaveText('learn, 3 of 11');
 
-    await preview.getByRole('button', { name: 'previous study mode' }).click();
-    await preview.getByRole('button', { name: 'previous study mode' }).click();
-    await expect(page.getByRole('dialog', { name: 'video' })).toBeVisible();
-    await expect(preview.getByText('coming soon')).toBeVisible();
-    await expect(preview.locator('[data-mode-preview-try]')).toBeHidden();
-    await expect(preview.locator('[data-mode-preview-live]')).toHaveText('video, 1 of 11');
-    // The merry-go-round behind follows, so closing shrinks the preview into the video card.
-    await expect(page.locator('#mode-video')).toHaveAttribute('data-active', '');
+      lastAction = 'click first previous study mode';
+      await observeBeforeAction();
+      await preview.getByRole('button', { name: 'previous study mode' }).click();
+      lastAction = 'click second previous study mode';
+      await observeBeforeAction();
+      await preview.getByRole('button', { name: 'previous study mode' }).click();
+      await expect(page.getByRole('dialog', { name: 'video' })).toBeVisible();
+      await expect(preview.getByText('coming soon')).toBeVisible();
+      await expect(preview.locator('[data-mode-preview-try]')).toBeHidden();
+      await expect(preview.locator('[data-mode-preview-live]')).toHaveText('video, 1 of 11');
+      // The merry-go-round behind follows, so closing shrinks the preview into the video card.
+      await expect(page.locator('#mode-video')).toHaveAttribute('data-active', '');
 
-    await preview.getByRole('button', { name: 'close preview' }).click();
-    await expect(preview).toBeHidden();
-    await expect(page.getByRole('button', { name: 'preview video' })).toBeFocused();
+      lastAction = 'click close preview';
+      await observeBeforeAction();
+      await preview.getByRole('button', { name: 'close preview' }).click();
+      await expect(preview).toBeHidden();
+      await expect(page.getByRole('button', { name: 'preview video' })).toBeFocused();
 
-    await page.getByRole('button', { name: 'preview video' }).click();
-    await expect(page.getByRole('dialog', { name: 'video' })).toBeVisible();
-    await page.mouse.click(4, 4);
-    await expect(preview).toBeHidden();
+      lastAction = 'reopen preview video';
+      await page.getByRole('button', { name: 'preview video' }).click();
+      await expect(page.getByRole('dialog', { name: 'video' })).toBeVisible();
+      lastAction = 'click preview scrim';
+      await observeBeforeAction();
+      await page.mouse.click(4, 4);
+      await expect(preview).toBeHidden();
+    } catch (error) {
+      await testInfo.attach('preview-navigation-failure', {
+        body: JSON.stringify({ lastAction, observation: latestObservation }, null, 2),
+        contentType: 'application/json',
+      });
+      throw error;
+    }
   });
 
   test('moving to a mode that is not open yet keeps focus in the preview when "start …" had it', async ({ page }) => {

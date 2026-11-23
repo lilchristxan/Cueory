@@ -1,1 +1,0 @@
-status: /privacy is final: the adopted Privacy Notice p4 (Claude panel; Codex vote YES on 2026-11-17; Christian confirmed Cloudflare Web Analytics and approved #835). The draft line and noindex are removed, /privacy joins the sitemap and site search like /terms and /disclaimer, and the production legal audit now passes for all three pages.

@@ -1,0 +1,37 @@
+---
+/**
+ * tachyyy's game title mark: the SVG wordmark outline.
+ * Plain text "tachyyy" for screen readers, SVGs for Daytime and Evening palettes.
+ */
+interface Props {
+  name?: string;
+}
+
+const { name = 'tachyyy' } = Astro.props;
+---
+
+<span class="inline-flex items-center gap-3" data-testid="tachyyy-title">
+  <span class="sr-only">{name}</span>
+  <span class="logo flex items-center" aria-hidden="true">
+    <img
+      class="logo-day h-10 sm:h-12 w-auto"
+      src="/brand/games/tachyyy-wordmark-light.svg"
+      alt=""
+      aria-hidden="true"
+      width="273"
+      height="100"
+      loading="lazy"
+      decoding="async"
+    />
+    <img
+      class="logo-evening h-10 sm:h-12 w-auto"
+      src="/brand/games/tachyyy-wordmark-dark.svg"
+      alt=""
+      aria-hidden="true"
+      width="273"
+      height="100"
+      loading="lazy"
+      decoding="async"
+    />
+  </span>
+</span>

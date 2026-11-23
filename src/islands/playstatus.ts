@@ -33,8 +33,20 @@ export const heardKey = (game: GameId, day: string) => `${game}:${day}`;
 /** One game's status on `today` (YYYY-MM-DD, local day). Finished wins over started; a stored result wins over both. */
 export function statusFor(game: GameId, today: string, stats: GameStats, heard: HeardToday): DayStatus {
   const key = heardKey(game, today);
-  if (heard.finished.has(key) || stats.some((result) => result.game === game && result.day === today)) return 'done';
-  if (heard.started.has(key)) return 'in-progress';
+  const altKey =
+    game === 'vialo' ? heardKey('pulse' as GameId, today) : game === 'pulse' ? heardKey('vialo' as GameId, today) : undefined;
+  if (
+    heard.finished.has(key) ||
+    (altKey && heard.finished.has(altKey)) ||
+    stats.some(
+      (result) =>
+        (result.game === game || (altKey && (result.game as string) === (game === 'vialo' ? 'pulse' : 'vialo'))) &&
+        result.day === today
+    )
+  ) {
+    return 'done';
+  }
+  if (heard.started.has(key) || (altKey && heard.started.has(altKey))) return 'in-progress';
   return 'not-started';
 }
 
@@ -104,7 +116,12 @@ export function readHeard(detail: unknown, games: readonly GameId[], game?: Game
     const value = detail as Record<string, unknown>;
     const id = game ?? value.game;
     const { day } = value;
-    if (typeof id !== 'string' || !games.includes(id as GameId)) return;
+    const matchesGame =
+      typeof id === 'string' &&
+      (games.includes(id as GameId) ||
+        (id === 'pulse' && games.includes('vialo' as GameId)) ||
+        (id === 'vialo' && games.includes('pulse' as GameId)));
+    if (!matchesGame) return;
     if (typeof day !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(day)) return;
     return heardKey(id as GameId, day);
   } catch {

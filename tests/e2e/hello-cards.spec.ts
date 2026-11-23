@@ -8,7 +8,7 @@ const text = (page: Page) => page.getByTestId('hello-card-text');
 const depthSwitch = (page: Page) => page.getByRole('switch', { name: 'deep convo', exact: true });
 const update = (page: Page) => page.getByRole('status', { name: 'hello cards update' });
 const lead = (text: string) => (data.starters.find((s) => s.text === text)!.category === 'yourself' ? 'ask yourself' : 'try asking');
-const next = (page: Page) => page.getByRole('button', { name: 'next card', exact: true });
+const next = (page: Page) => page.getByRole('button', { name: 'Flip next card', exact: true });
 const textsFor = (level: string) => data.starters.filter((s) => s.depth === level).map((s) => s.text);
 
 test.beforeEach(async ({ page }) => {
@@ -40,6 +40,24 @@ test('the card flips by click and by keyboard and shows a starter', async ({ pag
   await page.keyboard.press('Enter');
   await expect(card(page)).toHaveAttribute('aria-pressed', 'true');
   expect(await card(page).evaluate((el) => el.matches(':focus-visible') && parseFloat(getComputedStyle(el).outlineWidth) > 0)).toBe(true);
+});
+
+test('five daily flips fill the indicators, announce the exact encouragement, and can keep going', async ({ page }) => {
+  const progress = page.getByTestId('hello-flip-progress');
+  await expect(progress).toHaveAccessibleName('0 of 5 cards flipped today');
+
+  for (let count = 1; count <= 5; count++) {
+    await card(page).click();
+    await expect(progress).toHaveAccessibleName(`${count} of 5 cards flipped today`);
+    if (count < 5) await next(page).click();
+  }
+
+  const complete = page.getByTestId('hello-complete');
+  await expect(complete).toContainText('congrats!');
+  await expect(complete).toContainText('You made the world friendlier today.');
+  await complete.getByRole('button', { name: 'Keep going', exact: true }).click();
+  await expect(complete).toHaveCount(0);
+  await expect(card(page)).toHaveAttribute('aria-pressed', 'false');
 });
 
 // Engine run 44460645965 (E8): a mouse click alone never forces the ring; a keyboard press after it shows it.

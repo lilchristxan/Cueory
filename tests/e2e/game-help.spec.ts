@@ -10,12 +10,17 @@ const games = [
   { testId: 'pulse', name: 'pillo', id: 'pulse', path: '/play/pillo' },
   { testId: 'sudoku', name: 'sudoku', id: 'triage', path: '/play/sudoku' },
   { testId: 'cueword', name: 'crossword', id: 'cueword', path: '/play/crossword' },
-  { testId: 'suture', name: 'word path', id: 'suture', path: '/play/word-path' },
+  { testId: 'suture', name: 'piccline', id: 'suture', path: '/play/word-path' },
 ] as const;
 
 const seen = (page: Page) => page.evaluate(() => localStorage.getItem('cueory-game-help-seen'));
 const axe = (page: Page, selector: string) =>
   new AxeBuilder({ page }).include(selector).withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa']).analyze();
+
+const helpButton = (page: Page, game: (typeof games)[number]) =>
+  game.id === 'cueword' || game.id === 'triage'
+    ? page.getByTestId('game-frame-help-button')
+    : page.getByTestId(game.testId).getByRole('button', { name: `how to play ${game.name}` });
 
 test.beforeEach(async ({ page }) => {
   await page.clock.setFixedTime(new Date('2026-11-01T15:00:00'));
@@ -42,7 +47,7 @@ test('the first visit shows each game\'s rules above its board, and "got it" put
   await gotIt.press('Enter');
   await expect(sudoku.getByTestId('game-help-first')).toHaveCount(0);
   // Focus goes to the "?" that brings the rules back.
-  await expect(sudoku.getByRole('button', { name: 'how to play sudoku' })).toBeFocused();
+  await expect(page.getByTestId('game-frame-help-button')).toBeFocused();
   expect(JSON.parse((await seen(page))!)).toEqual(['triage']);
 
   await page.reload();
@@ -55,8 +60,9 @@ test('the first visit shows each game\'s rules above its board, and "got it" put
 for (const game of games) {
   test(`${game.name}: the "?" opens the rules in a focus-trapped dialog that Escape closes`, async ({ page }) => {
     await page.goto(game.path);
+    test.skip(game.name === 'crossword' && await page.getByTestId('crossword-soon').count() > 0, 'crossword is closed in this build');
     const area = page.getByTestId(game.testId);
-    const button = area.getByRole('button', { name: `how to play ${game.name}` });
+    const button = helpButton(page, game);
     await expect(button).toBeVisible();
     const box = await button.boundingBox();
     expect(box!.width).toBeGreaterThanOrEqual(44);
@@ -102,12 +108,31 @@ for (const game of games) {
   });
 }
 
+test('piccline help opens from the keyboard at phone width and restores focus', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/play/word-path');
+
+  const area = page.getByTestId('suture');
+  const button = area.getByRole('button', { name: 'how to play piccline' });
+  await button.focus();
+  await expect(button).toBeFocused();
+
+  await page.keyboard.press('Enter');
+  const dialog = page.getByRole('dialog', { name: 'how to play piccline' });
+  await expect(dialog).toBeVisible();
+
+  await page.keyboard.press('Escape');
+  await expect(dialog).toHaveCount(0);
+  await expect(button).toBeFocused();
+});
+
 test('the help dialog fits a phone without sideways scrolling, in light and evening', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   for (const scheme of ['light', 'dark'] as const) {
     await page.emulateMedia({ colorScheme: scheme });
     await page.goto('/play/crossword');
-    await page.getByTestId('cueword').getByRole('button', { name: 'how to play crossword' }).click();
+    const button = page.getByTestId('game-frame-help-button');
+    await button.click();
     const panel = page.getByTestId('game-help').locator('.game-help');
     await expect(panel).toBeVisible();
     const box = await panel.boundingBox();
@@ -126,7 +151,7 @@ test('typing in the sudoku help dialog never changes the board', async ({ page }
   await expect(sudoku.getByRole('gridcell')).toHaveCount(81);
   await expect(sudoku.locator('[data-given="true"]').first()).toBeVisible();
   const before = await sudoku.getByRole('gridcell').evaluateAll((cells) => cells.map((cell) => cell.getAttribute('aria-label')));
-  await sudoku.getByRole('button', { name: 'how to play sudoku' }).click();
+  await page.getByTestId('game-frame-help-button').click();
   await expect(page.getByRole('dialog', { name: 'how to play sudoku' })).toBeVisible();
   await page.keyboard.press('5');
   await page.keyboard.press('Control+z');

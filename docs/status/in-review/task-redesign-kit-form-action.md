@@ -1,2 +1,0 @@
-status: in review. Turns on the launch-updates email box: newsletter.formAction is now the Kit form address Christian sent (form 10204219), so the plain HTML form shows and the CSP form-action allows https://app.kit.com only. No Kit script. app.kit.com added to the allowed link hosts on purpose.
-needs Christian: confirm his Kit account email (Kit banner) so confirmation emails send; then one real sign-up test on staging.

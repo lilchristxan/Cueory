@@ -289,6 +289,15 @@ describe('acceptPuzzle — triage duplicate terms', () => {
     expect(result.ok).toBe(false);
   });
 
+  it('refuses an oddOne that differs from a group term only by outer whitespace', () => {
+    const puzzle = {
+      groups: [{ name: 'sample: g1', terms: ['sample-token'] }],
+      oddOne: ' sample-token ',
+    };
+    const result = acceptPuzzle({ game: 'triage', date: TODAY, puzzle }, TODAY);
+    expect(result).toEqual({ ok: false, message: 'each term must appear only once.' });
+  });
+
   it('accepts a triage puzzle with all unique terms', () => {
     const result = acceptPuzzle({ game: 'triage', date: TODAY, puzzle: triagePuzzle }, TODAY);
     expect(result.ok).toBe(true);

@@ -248,6 +248,13 @@ export function needsBulkLayerConfirmation(narrowViewport: boolean, missingFiles
   return narrowViewport && Number.isSafeInteger(missingFiles) && missingFiles >= 2;
 }
 
+/** A saved view's exact missing GLB list is different from the blanket "show all" download.
+ * On a phone even one uncached file needs approval before restoring the view; desktop can load directly.
+ */
+export function needsSavedViewConsent(narrowViewport: boolean, missingFiles: readonly string[]): boolean {
+  return narrowViewport && missingFiles.length > 0;
+}
+
 /**
  * "Show all" in the lazy view: the structures to unhide right away (those in layers whose files are all loaded, and any
  * in no layer) and the layers that must be fetched first, each shown only once its files are there.

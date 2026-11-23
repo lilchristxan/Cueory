@@ -10,19 +10,24 @@
  */
 export interface DailyGame {
   /** Inside the code only; never shown. */
-  id: 'pulse' | 'cueword' | 'triage' | 'suture';
+  id: 'vialo' | 'pulse' | 'cueword' | 'triage' | 'suture' | 'piccline' | 'tachyyy' | 'stat';
   /** The name visitors see, on /play, in headings and in the share line. */
   name: string;
+  /** Subtitle on /play hub. */
+  subtitle?: string;
   /** One line on what you do. */
   line: string;
   /** Playable now, with sample puzzles; the rest say "coming soon". */
   ready: boolean;
 }
 
-export const dailyGames: readonly DailyGame[] = [
+export const forbiddenGameWords = ['wordle', 'connections', 'strands', 'spangram', 'nyt', 'new york times'] as const;
+
+const baseDailyGames: readonly DailyGame[] = [
   {
-    id: 'pulse',
-    name: 'pillo',
+    id: 'vialo',
+    name: 'vialo',
+    subtitle: 'daily word',
     line: 'guess the five-letter word in six tries. each guess marks every letter: in place, elsewhere in the word, or not in it.',
     ready: true,
   },
@@ -40,30 +45,26 @@ export const dailyGames: readonly DailyGame[] = [
   },
   {
     id: 'suture',
-    name: 'word path',
-    line: 'trace the theme words through a board of letters, in any direction, and find the thread that names the theme.',
+    name: 'piccline',
+    subtitle: 'word path',
+    line: "trace theme words through a board of letters in piccline, cueory's daily word path game.",
     ready: true,
   },
 ];
 
-/** Each daily game's own page (each game on its own page, 2026-11-17); /play is the hub that links to them. */
-export const gamePages: Readonly<Record<DailyGame['id'], string>> = Object.freeze({
-  pulse: '/play/pillo',
-  triage: '/play/sudoku',
-  cueword: '/play/crossword',
-  suture: '/play/word-path',
-});
+export const dailyGames: readonly DailyGame[] = baseDailyGames;
 
 /** The name visitors see for a game. */
-export function gameName(id: DailyGame['id']): string {
+export function gameName(id: DailyGame['id'] | 'vialo' | 'pillo' | 'piccline' | 'tachyyy' | 'stat'): string {
+  if (id === 'vialo') return 'vialo';
+  if (id === 'pulse' || id === 'pillo') return 'pillo';
+  if (id === 'piccline') return 'piccline';
+  if (id === 'tachyyy' || id === 'stat') return 'tachyyy';
   return dailyGames.find((game) => game.id === id)!.name;
 }
 
 /** Names retained only for unmounted legacy game logic and its regression tests. */
 export const retiredGameNames = { triage: 'sort' } as const;
-
-/** Names and words the games must never use (CLAUDE.md). */
-export const forbiddenGameWords = ['wordle', 'connections', 'strands', 'spangram', 'nyt', 'new york times'] as const;
 
 /**
  * Hello cards (Task 201): a flip-the-card game of conversation starters for patients, co-workers and classmates. It is

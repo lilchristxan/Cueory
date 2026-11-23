@@ -1,1 +1,0 @@
-status: Lane 5, one e2e sweep that Escape closes every dialog and pop-up (site menu, account menu, about dropdown, study-mode preview, info tip, game rules and settings, launch-updates pop-up) and puts focus back on its trigger; all already behave.

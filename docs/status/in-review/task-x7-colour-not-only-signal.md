@@ -1,1 +1,0 @@
-status: Adds a screen-only underline to found cells in the Suture letter grid (they were a fill colour only; print stays unmarked) and a guard test that each game island pairs right, wrong and found states with a text, symbol or shape cue. Ready for review; no founder decision needed.

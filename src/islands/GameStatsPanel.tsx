@@ -1,9 +1,11 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { dailyGames } from '../config/games';
+import { useEffect, useLayoutEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react';
+import { dailyGames, gameName } from '../config/games';
 import { browserStorage } from '../scripts/storage';
 import {
   forgetHeldRounds,
   GAME_RESULT_EVENT,
+  reportStatsStatus,
+  reportStatsChanged,
   heldRounds,
   loadStats,
   localDay,
@@ -58,10 +60,99 @@ interface Props {
   games: readonly GameId[];
 }
 
-/** pillo's win % and streaks in words (Task 719). */
-function pilloLine(stats: GameStats): string {
+type SetSaved = Dispatch<SetStateAction<SavedStats>>;
+type SetText = Dispatch<SetStateAction<string>>;
+type SetBlocked = Dispatch<SetStateAction<boolean>>;
+
+/**
+ * The durable side of the stats panel. Framed game pages use this without the panel so a result
+ * completed before either stats island hydrates is still kept through the same retry path.
+ */
+function useStatsPersistence(setSaved: SetSaved, setSaid: SetText, setBlocked: SetBlocked) {
+  useEffect(() => {
+    // Results from before the last 400 days are deleted now, so nothing older stays in this browser.
+    const now = latest();
+    // Only rewrite a record that exists, so a visitor who never finished a game has nothing saved.
+    if (now.on && hasRecord() && saveStats(browserStorage(), now.stats)) reportStatsChanged();
+    // Sudoku's per-level solve times follow the same 400 days: opening daily games or any game page deletes older
+    // ones from storage, not only when the sudoku stats view opens (Codex on #831).
+    loadSudokuStats(browserStorage(), localDay(new Date()));
+    setSaved(now);
+
+    const keep = (stats: GameStats, message: string): boolean => {
+      if (!saveStats(browserStorage(), stats)) {
+        setBlocked(true);
+        setSaid("this browser won't keep stats, so nothing was saved.");
+        return false;
+      }
+      setBlocked(false);
+      setSaved({ on: true, stats });
+      setSaid(message);
+      reportStatsChanged();
+      return true;
+    };
+    // Keeps the rounds waiting in ./gameresults. Stats are always kept; only a browser that won't store them keeps none.
+    const keepWaiting = () => {
+      const waiting = heldRounds();
+      if (waiting.length === 0) return;
+      const current = latest();
+      if (!current.on) {
+        setSaid("this browser won't keep stats, so this game wasn't kept.");
+        setSaved(current);
+        return;
+      }
+      let stats = current.stats;
+      let message = '';
+      for (const result of waiting) {
+        const name = gameName(result.game);
+        const next = recordResult(stats, result);
+        // The first result of each game and day counts; a replay changes nothing.
+        if (name) message = next === stats ? `${name}: today's first game is already in your stats.` : `${name} added to your stats.`;
+        stats = next;
+      }
+      if (stats === current.stats) {
+        forgetHeldRounds();
+        setSaved(current);
+        setSaid(message);
+        return;
+      }
+      if (keep(stats, message)) forgetHeldRounds();
+    };
+    // Another tab changed the stats, or this page came back from the back/forward cache. ./gameresults has already
+    // dropped any waiting rounds; this shows what storage holds now.
+    const onStorage = (event: StorageEvent) => {
+      if (event.key === null || event.key === STATS_STORAGE_KEY) setSaved(latest());
+    };
+    const onPageShow = (event: PageTransitionEvent) => {
+      if (event.persisted) setSaved(latest());
+    };
+    // Rounds finished before this island loaded are kept now, then each one as it ends.
+    keepWaiting();
+    window.addEventListener(GAME_RESULT_EVENT, keepWaiting);
+    window.addEventListener('storage', onStorage);
+    window.addEventListener('pageshow', onPageShow);
+    return () => {
+      window.removeEventListener(GAME_RESULT_EVENT, keepWaiting);
+      window.removeEventListener('storage', onStorage);
+      window.removeEventListener('pageshow', onPageShow);
+    };
+  }, [setBlocked, setSaid, setSaved]);
+}
+
+const ignoreSaved: SetSaved = () => undefined;
+const ignoreBlocked: SetBlocked = () => undefined;
+const announceStatus: SetText = (value) => reportStatsStatus(typeof value === 'function' ? value('') : value);
+
+/** Keeps finished rounds durable on framed pages without rendering a second stats panel. */
+export function GameStatsPersistence() {
+  useStatsPersistence(ignoreSaved, announceStatus, ignoreBlocked);
+  return null;
+}
+
+/** vialo's win % and streaks in words. */
+function vialoLine(stats: GameStats): string {
   const days = (n: number) => `${n} ${n === 1 ? 'day' : 'days'}`;
-  const value = dailyStats(stats, 'pulse', localDay(new Date()), GUESSES);
+  const value = dailyStats(stats, 'vialo', localDay(new Date()), GUESSES);
   return `won ${value.winPercent}%. current streak ${days(value.currentStreak)}, longest ${days(value.longestStreak)}.`;
 }
 
@@ -84,74 +175,7 @@ export default function GameStatsPanel({ games: order }: Props) {
     (target === 'switch' ? toggleButton.current : headings.current.get(target))?.focus();
   });
 
-  const keep = (stats: GameStats, message: string): boolean => {
-    if (!saveStats(browserStorage(), stats)) {
-      setBlocked(true);
-      setSaid("this browser won't keep stats, so nothing was saved.");
-      return false;
-    }
-    setBlocked(false);
-    setSaved({ on: true, stats });
-    setSaid(message);
-    return true;
-  };
-
-  useEffect(() => {
-    // Results from before the last 400 days are deleted now, so nothing older stays in this browser.
-    const now = latest();
-    // Only rewrite a record that exists, so a visitor who never finished a game has nothing saved.
-    if (now.on && hasRecord()) saveStats(browserStorage(), now.stats);
-    // Sudoku's per-level solve times follow the same 400 days: opening daily games or any game page deletes older
-    // ones from storage, not only when the sudoku stats view opens (Codex on #831).
-    loadSudokuStats(browserStorage(), localDay(new Date()));
-    setSaved(now);
-
-    // Keeps the rounds waiting in ./gameresults. Stats are always kept; only a browser that won't store them keeps none.
-    const keepWaiting = () => {
-      const waiting = heldRounds();
-      if (waiting.length === 0) return;
-      const now = latest();
-      if (!now.on) {
-        setSaid("this browser won't keep stats, so this game wasn't kept.");
-        setSaved(now);
-        return;
-      }
-      let stats = now.stats;
-      let message = '';
-      for (const result of waiting) {
-        const name = dailyGames.find((game) => game.id === result.game)?.name ?? '';
-        const next = recordResult(stats, result);
-        // The first result of each game and day counts; a replay changes nothing.
-        if (name) message = next === stats ? `${name}: today's first game is already in your stats.` : `${name} added to your stats.`;
-        stats = next;
-      }
-      if (stats === now.stats) {
-        forgetHeldRounds();
-        setSaved(now);
-        setSaid(message);
-        return;
-      }
-      if (keep(stats, message)) forgetHeldRounds();
-    };
-    // Another tab changed the stats, or this page came back from the back/forward cache. ./gameresults has already
-    // dropped any waiting rounds; this shows what storage holds now.
-    const onStorage = (event: StorageEvent) => {
-      if (event.key === null || event.key === STATS_STORAGE_KEY) setSaved(latest());
-    };
-    const onPageShow = (event: PageTransitionEvent) => {
-      if (event.persisted) setSaved(latest());
-    };
-    // Rounds finished before this panel loaded are kept now, then each one as it ends.
-    keepWaiting();
-    window.addEventListener(GAME_RESULT_EVENT, keepWaiting);
-    window.addEventListener('storage', onStorage);
-    window.addEventListener('pageshow', onPageShow);
-    return () => {
-      window.removeEventListener(GAME_RESULT_EVENT, keepWaiting);
-      window.removeEventListener('storage', onStorage);
-      window.removeEventListener('pageshow', onPageShow);
-    };
-  }, []);
+  useStatsPersistence(setSaved, setSaid, setBlocked);
 
   /** What storage holds now, or undefined (and the switch shows off) when stats were turned off meanwhile. */
   const stillOn = (): GameStats | undefined => {
@@ -173,6 +197,7 @@ export default function GameStatsPanel({ games: order }: Props) {
       if (!storage) return false;
       if (stats.length === 0) storage.removeItem(STATS_STORAGE_KEY);
       else storage.setItem(STATS_STORAGE_KEY, serialize(stats));
+      reportStatsChanged();
       return true;
     } catch {
       return false;
@@ -220,7 +245,7 @@ export default function GameStatsPanel({ games: order }: Props) {
         your stats
       </h2>
       <p className="mt-2 text-ink-soft" data-testid="stats-note">
-        kept in this browser, on this device, and never sent to us. {order.includes('cueword') ? 'pillo, the crossword and word path' : 'pillo and word path'} also count your
+        kept in this browser, on this device, and never sent to us. {order.includes('cueword') ? `${gameName('vialo')}, the crossword and word path` : `${gameName('vialo')} and word path`} also count your
         streaks, and sudoku shows its own times and streak for each level. forget them below at any time.
       </p>
       {blocked || !saved.on ? (
@@ -251,7 +276,7 @@ export default function GameStatsPanel({ games: order }: Props) {
                   {(result.played > 0 || (game.id === 'triage' && sudokuKept())) && (
                     <>
                       <p className="mt-1 text-sm text-ink-soft">{triesInWords(game.id, result.triesCounts)}</p>
-                      {game.id === 'pulse' && <p className="mt-1 text-sm text-ink-soft">{pilloLine(saved.stats)}</p>}
+                      {(game.id === 'pulse' || game.id === 'vialo') && <p className="mt-1 text-sm text-ink-soft">{vialoLine(saved.stats)}</p>}
                       {game.id === 'cueword' && (() => {
                         const run = currentStreak(saved.stats, game.id, localDay(new Date()));
                         return <p className="mt-1 text-sm" data-testid="crossword-streak">streak: {run} {run === 1 ? 'day' : 'days'} solved without help.</p>;

@@ -21,8 +21,8 @@ import { gameName } from '../config/games';
 export { GAME_HELP_STORAGE_KEY };
 
 /** The four daily games, by their ids in src/config/games.ts. */
-export const HELP_GAMES = ['pulse', 'triage', 'cueword', 'suture'] as const;
-export type HelpGame = (typeof HELP_GAMES)[number];
+export const HELP_GAMES = ['vialo', 'triage', 'cueword', 'suture'] as const;
+export type HelpGame = (typeof HELP_GAMES)[number] | 'pulse';
 
 /** Which help text to show. Word path has two board formats, so it has two texts but one "seen" mark. */
 export type HelpTopic = HelpGame | 'suture-search';
@@ -45,6 +45,22 @@ export const SHARED_SETTINGS_NOTE =
 const sizes = crosswordLevels.map(({ level, size }) => `${level} is ${size} by ${size}`).join(', ');
 
 export const GAME_HELP: Readonly<Record<HelpTopic, GameHelpContent>> = Object.freeze({
+  vialo: {
+    game: 'vialo',
+    play: [
+      `guess the ${WORD_LENGTH}-letter word in ${GUESSES} guesses. there's one word a day.`,
+      'type a word and press enter, or tap the letters below the board.',
+      `after each guess every letter gets a mark: ${MARK_SYMBOL.here} in its place, ${MARK_SYMBOL.elsewhere} in the word but somewhere else, ${MARK_SYMBOL.absent} not in the word. the letter keys show the same marks.`,
+      'a letter you use twice is marked twice only if the word has it twice.',
+      "a word that isn't in the word list doesn't use up a guess.",
+      'when you finish you see your result, a one-line share and the time until the next word.',
+    ],
+    settingsIntro: `${gameName('vialo')} settings are behind the gear at the top left. hard mode and on-screen keyboard only last for this visit.`,
+    settings: [
+      { name: 'hard mode', detail: 'letters shown in place or in the word must be used in every later guess. you can change it only before your first guess of the day.' },
+      { name: 'on-screen keyboard only', detail: 'only the letter keys below type, so your device keyboard stays closed.' },
+    ],
+  },
   pulse: {
     game: 'pulse',
     play: [
@@ -131,6 +147,8 @@ export const GAME_HELP: Readonly<Record<HelpTopic, GameHelpContent>> = Object.fr
   },
 });
 
+const VALID_HELP_GAMES: readonly string[] = ['pulse', ...HELP_GAMES];
+
 /** Only known game ids are kept; anything else in the saved value is ignored. */
 export function parseHelpSeen(raw: string | null | undefined): Set<HelpGame> {
   if (!raw) return new Set();
@@ -141,12 +159,15 @@ export function parseHelpSeen(raw: string | null | undefined): Set<HelpGame> {
     return new Set();
   }
   if (!Array.isArray(value)) return new Set();
-  return new Set(value.filter((id): id is HelpGame => (HELP_GAMES as readonly unknown[]).includes(id)));
+  return new Set(value.filter((id): id is HelpGame => VALID_HELP_GAMES.includes(id as string)));
 }
 
 export function helpSeen(storage: KeyValueStorage | undefined, game: HelpGame): boolean {
   try {
-    return parseHelpSeen(storage?.getItem(GAME_HELP_STORAGE_KEY)).has(game);
+    const seen = parseHelpSeen(storage?.getItem(GAME_HELP_STORAGE_KEY));
+    if (seen.has(game)) return true;
+    if (game === 'vialo' && seen.has('pulse')) return true;
+    return false;
   } catch {
     return false;
   }
@@ -158,7 +179,8 @@ export function markHelpSeen(storage: KeyValueStorage | undefined, game: HelpGam
     const seen = parseHelpSeen(storage?.getItem(GAME_HELP_STORAGE_KEY));
     if (seen.has(game)) return;
     seen.add(game);
-    storage?.setItem(GAME_HELP_STORAGE_KEY, JSON.stringify(HELP_GAMES.filter((id) => seen.has(id))));
+    if (game === 'vialo') seen.add('pulse');
+    storage?.setItem(GAME_HELP_STORAGE_KEY, JSON.stringify(VALID_HELP_GAMES.filter((id) => seen.has(id as HelpGame))));
   } catch {
     // Not remembered.
   }

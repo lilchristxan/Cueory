@@ -6,7 +6,7 @@ import PulseGame from '../../islands/PulseGame';
 import { dailyGames } from '../../config/games';
 import { pilloSamples } from '../../config/gamesamples';
 
-const game = dailyGames.find((item) => item.id === 'pulse')!;
+const game = { ...dailyGames[0]!, id: 'pulse' as const, name: 'pillo' };
 const samples = await pilloSamples();
 ---
 <Layout title={game.name} description={game.line} socialImage="/share/games-scene.png">

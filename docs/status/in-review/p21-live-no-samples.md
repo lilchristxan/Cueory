@@ -1,1 +1,0 @@
-status: Launch smoke test (L21): the live build no longer ships [sample ...] placeholder text on /resources and /preview/concept-map; both show a plain coming-soon page there and keep the drafts on staging and previews.

@@ -189,8 +189,8 @@ test('every vial on show has its whole label in view, and no two vials overlap, 
     // Check the row where it starts and after one turn each way, once each glide has finished.
     for (const turn of [undefined, 'next', 'previous'] as const) {
       if (turn) await section(page).getByRole('button', { name: `${turn} study mode` }).click();
-      await settled(page);
-      const { shown } = await measureRow(page);
+      // Require two equal idle frames so WebKit cannot report a finished card transition before its rendered label settles.
+      const { shown } = await measureRow(page, true);
       // The front vial and at least one neighbour on each side.
       expect(shown.length, `${colorScheme} ${turn ?? 'start'}`).toBeGreaterThanOrEqual(3);
       expectWhole(shown);
@@ -324,7 +324,53 @@ test('wider screens show the preview in two columns, phones stacked with the via
   await section(page).locator('#mode-video [data-mode-open]').click();
   const preview = page.getByRole('dialog', { name: 'video' });
   await expect(preview).toBeVisible();
-  await expect.poll(() => page.evaluate(() => document.querySelector('[data-mode-preview]')!.getAnimations({ subtree: true }).length)).toBe(0);
+  try {
+    await expect.poll(() => page.evaluate(() => document.querySelector('[data-mode-preview]')!.getAnimations({ subtree: true }).length)).toBe(0);
+  } catch (error) {
+    // Failure-only evidence for WebKit: retain the existing idle assertion while identifying every animation that
+    // prevented the layout measurement from starting. This does not change preview behavior or timing.
+    const animations = await page.evaluate(() => {
+      const preview = document.querySelector<HTMLElement>('[data-mode-preview]')!;
+      const describeTarget = (target: Element | null) => {
+        if (!target) return null;
+        const element = target as HTMLElement;
+        const rect = element.getBoundingClientRect();
+        return {
+          tag: element.tagName.toLowerCase(),
+          id: element.id || null,
+          classes: [...element.classList],
+          previewPart: element.getAttribute('data-mode-preview') ?? null,
+          bounds: { x: rect.x, y: rect.y, width: rect.width, height: rect.height },
+        };
+      };
+      return preview.getAnimations({ subtree: true }).map((animation, index) => {
+        const effect = animation.effect;
+        const timing = effect?.getComputedTiming();
+        const localTime = typeof timing?.localTime === 'number' ? timing.localTime : null;
+        const delay = typeof timing?.delay === 'number' ? timing.delay : null;
+        const endTime = typeof timing?.endTime === 'number' ? timing.endTime : null;
+        const phase = localTime === null || delay === null || endTime === null ? null :
+          localTime < delay ? 'before' : localTime >= endTime ? 'after' : 'active';
+        return {
+          index,
+          playState: animation.playState,
+          pending: animation.pending,
+          currentTime: animation.currentTime,
+          phase,
+          progress: timing?.progress ?? null,
+          duration: timing?.activeDuration ?? null,
+          delay,
+          endTime,
+          target: describeTarget(effect instanceof KeyframeEffect ? effect.target : null),
+        };
+      });
+    });
+    await testInfo.attach('preview-layout-animations', {
+      body: JSON.stringify({ viewport: page.viewportSize(), animations }, null, 2),
+      contentType: 'application/json',
+    });
+    throw error;
+  }
   const bottle = (await preview.locator('[data-mode-preview-vial]').boundingBox())!;
   const words = (await preview.locator('.mode-preview-details').boundingBox())!;
   if (sizeOf(testInfo) === 'phone') expect(words.y).toBeGreaterThanOrEqual(bottle.y + bottle.height);
@@ -396,10 +442,18 @@ test('auto-advance gives the vial in front its full six seconds from when the ri
   await expect(carousel).toHaveAttribute('data-autoplay-hold', 'hover');
   await page.clock.runFor(20_000);
   await expect(carousel.locator('#mode-cards')).toHaveAttribute('data-active', '');
-  // Moving off starts a fresh six seconds, not whatever was left before the pause.
-  await page.mouse.move(0, 0);
+  // A real handoff from a vial to a control keeps the hover hold; it is not an out-of-document exit.
+  await carousel.getByRole('button', { name: 'next study mode' }).hover();
+  await expect(carousel).toHaveAttribute('data-autoplay', 'off');
+  await expect(carousel).toHaveAttribute('data-autoplay-hold', 'hover');
+  await page.clock.runFor(20_000);
+  await expect(carousel.locator('#mode-cards')).toHaveAttribute('data-active', '');
+
+  // Exiting into browser chrome has no following in-window pointermove; it still starts a fresh six seconds.
+  await page.mouse.move(-1, -1);
   await expect(carousel).toHaveAttribute('data-autoplay', 'on');
   await expect(carousel).not.toHaveAttribute('data-autoplay-hold');
+
   await page.clock.runFor(5_900);
   await expect(carousel.locator('#mode-cards')).toHaveAttribute('data-active', '');
   await page.clock.runFor(200);
@@ -423,6 +477,59 @@ test('auto-advance gives the vial in front its full six seconds from when the ri
   await expect(carousel.locator('#mode-learn')).toHaveAttribute('data-active', '');
   await expect(carousel).toHaveAttribute('data-autoplay', 'off');
   await expect(carousel).toHaveAttribute('data-autoplay-hold', 'takeover');
+});
+
+test('auto-advance uses the event-derived hover gate, not an independent CSS hover veto', async ({ page }, testInfo) => {
+  test.skip(!isDesktopOfEachEngine(testInfo), 'checks the fine-pointer autoplay gate once per engine, at desktop size');
+  // This isolates the old bypass: product state is unhovered after the real park, but CSS :hover reports stale true.
+  // The production gate must advance from its event-derived state rather than querying that stale CSS result again.
+  await page.addInitScript(() => {
+    const matches = Element.prototype.matches;
+    Object.defineProperty(Element.prototype, 'matches', {
+      configurable: true,
+      value: function (this: Element, selector: string) {
+        if (selector === ':hover' && this.id === 'modes-track') return true;
+        return matches.call(this, selector);
+      },
+    });
+  });
+  await page.clock.install({ time: new Date('2026-11-20T07:00:00') });
+  await markPanelsSeen(page);
+  await page.goto('/');
+  await page.clock.pauseAt(new Date('2026-11-20T07:05:00'));
+  const carousel = section(page);
+  await page.mouse.move(0, 0);
+  await carousel.scrollIntoViewIfNeeded();
+  await expect(carousel).toHaveAttribute('data-autoplay', 'on');
+  await page.clock.runFor(6_100);
+  await expect(carousel.locator('#mode-cards')).toHaveAttribute('data-active', '');
+});
+
+test('a first stationary in-track entry pauses, and scrolling the track away reconciles the hold', async ({ page }, testInfo) => {
+  test.skip(!isDesktopOfEachEngine(testInfo), 'checks the fine-pointer autoplay gate once per engine, at desktop size');
+  await page.clock.install({ time: new Date('2026-11-20T07:00:00') });
+  await markPanelsSeen(page);
+  await page.goto('/');
+  await page.clock.pauseAt(new Date('2026-11-20T07:05:00'));
+  const carousel = section(page);
+  await carousel.scrollIntoViewIfNeeded();
+  // No page.mouse call: a pointer first observed when the carousel scrolls beneath it must still pause.
+  await carousel.locator('[data-modes-track]').evaluate((track) => {
+    const bounds = track.getBoundingClientRect();
+    track.dispatchEvent(new PointerEvent('pointerenter', {
+      clientX: bounds.left + bounds.width / 2,
+      clientY: bounds.top + bounds.height / 2,
+      pointerType: 'mouse',
+    }));
+  });
+  await expect(carousel).toHaveAttribute('data-autoplay-hold', 'hover');
+
+  // The pointer stays still while the page scrolls: the previous track point is no longer inside either pause area.
+  await page.evaluate(() => window.scrollBy(0, 320));
+  await expect(carousel).toHaveAttribute('data-autoplay', 'on');
+  await expect(carousel).not.toHaveAttribute('data-autoplay-hold');
+  await page.clock.runFor(6_100);
+  await expect(carousel.locator('#mode-cards')).toHaveAttribute('data-active', '');
 });
 
 test('touch screens never get the hover lift; reduced motion never lifts either', async ({ page }, testInfo) => {

@@ -28,7 +28,7 @@ for (const [size, width, height] of [['phone', 390, 844], ['tablet', 820, 1180],
       await page.goto('/play/sudoku');
       await expect(cells(page)).toHaveCount(81);
       // The help text must describe the same privacy behavior as the paused board.
-      const how = game(page).getByRole('button', { name: 'how to play' });
+      const how = page.getByTestId('game-frame-help-button');
       await how.click();
       // The "?" opens the rules in a dialog (#736); Escape closes it and gives focus back to the "?".
       const rules = page.getByRole('dialog', { name: 'how to play sudoku' });
@@ -112,10 +112,9 @@ test('paused keypad and keyboard cannot change entries, marks, errors, or the li
   const hintsControl = game(page).getByRole('button', { name: 'hint' });
   await expect(hintsControl).toBeDisabled();
   const hintsBefore = await hintsControl.getAttribute('aria-pressed');
-  for (const difficulty of ['easy', 'medium', 'hard']) {
-    await expect(game(page).getByRole('button', { name: difficulty, exact: true })).toBeDisabled();
-  }
-  await expect(game(page).getByRole('button', { name: 'easy', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  const difficulty = page.getByTestId('game-frame-sudoku-difficulty');
+  await expect(difficulty).toBeDisabled();
+  await expect(difficulty).toHaveValue('easy');
   await expect(hintsControl).toHaveAttribute('aria-pressed', hintsBefore!);
   // Pausing conceals the current selection, and tapping another cell cannot replace it.
   await expect(game(page).locator('.sudoku-cell.is-selected')).toHaveCount(0);
@@ -131,8 +130,8 @@ test('paused keypad and keyboard cannot change entries, marks, errors, or the li
 
   await game(page).getByRole('button', { name: 'resume puzzle' }).click();
   await expect(hintsControl).toBeEnabled();
-  await expect(game(page).getByRole('button', { name: 'medium', exact: true })).toBeEnabled();
-  await expect(game(page).getByRole('button', { name: 'easy', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await expect(difficulty).toBeEnabled();
+  await expect(difficulty).toHaveValue('easy');
   await expect(hintsControl).toHaveAttribute('aria-pressed', hintsBefore!);
   await expect(cells(page).nth(empty)).toHaveAttribute('aria-selected', 'true');
   await expect(cells(page).nth(marked)).toHaveAttribute('aria-selected', 'false');

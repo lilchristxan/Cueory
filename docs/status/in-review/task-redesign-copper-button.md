@@ -1,1 +1,0 @@
-status: in review. Adds the one shared .copper-button rule to global.css (copper sweep from the #889 tokens, Charcoal ink at full opacity, 44 px minimum target, forced-colors border) with a unit test that it is defined once. Lead decision: this is the canonical rule; #884, #885, #891 and #899 drop their own definitions and use this class.

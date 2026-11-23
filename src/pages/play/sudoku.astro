@@ -7,23 +7,52 @@ import { dailyGames } from '../../config/games';
 const game = dailyGames.find((item) => item.id === 'triage')!;
 ---
 <Layout title={game.name} description={game.line} socialImage="/share/games-scene.png">
-<GamePage game={game}>
+<GamePage game={game} framed>
+  <label slot="controls" class="sr-only" for="game-frame-sudoku-difficulty">difficulty</label>
+  <select slot="controls" id="game-frame-sudoku-difficulty" data-testid="game-frame-sudoku-difficulty" aria-label="difficulty" class="game-frame-select">
+    <option value="easy">easy</option>
+    <option value="medium">medium</option>
+    <option value="hard">hard</option>
+  </select>
   <h1 slot="title" id="sudoku-heading" class="display mt-4 text-center text-title wrap-anywhere sm:text-title-lg">{game.name}</h1>
   {/* sudoku-section and sudoku-mount: sudoku's print rules (global.css) print only the mount. */}
   <section class="sudoku-section mt-6" aria-labelledby="sudoku-heading" data-testid="sudoku-section">
     <div class="sudoku-mount">
-      <SudokuGame client:only="react" />
+      <SudokuGame client:only="react" framed />
       <noscript><p>{game.name} needs JavaScript.</p></noscript>
     </div>
   </section>
 </GamePage>
 </Layout>
 
+<script>
+  const picker = document.querySelector<HTMLSelectElement>('#game-frame-sudoku-difficulty');
+  if (picker) {
+    picker.addEventListener('change', () => window.dispatchEvent(new CustomEvent('cueory:game-frame-sudoku-level', { detail: picker.value })));
+    window.addEventListener('cueory:game-frame-sudoku-level-change', (event) => {
+      const level = (event as CustomEvent<string>).detail;
+      if (level === 'easy' || level === 'medium' || level === 'hard') picker.value = level;
+    });
+    window.addEventListener('cueory:sudoku-paused', (event) => { picker.disabled = Boolean((event as CustomEvent<boolean>).detail); });
+  }
+</script>
+
 <style>
   /* P10 surface: keep the existing game structure and interaction contract, but bring the board into the approved
    * copper/glass visual language. Shared settings, print rules and reduced-motion rules remain owned elsewhere. */
   :global(.sudoku-section) {
     container-type: inline-size;
+  }
+
+  :global(.game-frame-select) {
+    min-block-size: var(--game-frame-btn-size);
+    inline-size: min(100%, var(--game-frame-sidebar-width));
+    padding-inline: var(--spacing);
+    border: var(--game-frame-btn-border);
+    border-radius: var(--radius-pill);
+    background: var(--game-frame-btn-bg);
+    box-shadow: var(--game-frame-btn-shadow);
+    color: var(--color-ink);
   }
 
   :global(.sudoku-game) {
@@ -61,6 +90,27 @@ const game = dailyGames.find((item) => item.id === 'triage')!;
   :global(.sudoku-toolbar) {
     padding-block: var(--spacing);
     inline-size: min(calc(100% + var(--sudoku-box-line)), var(--sudoku-board-width));
+  }
+
+  /* The pseudo-element starts at the padding edge. Leave room for Firefox to round
+   * a fractional pointer coordinate down without missing the vertical hit area. */
+  :global(.sudoku-section .sudoku-pause-button:enabled::before) {
+    inset-block: calc(-1 * (2 * var(--sudoku-line) + var(--spacing) / 2));
+  }
+
+  /* The framed stats table must reflow inside the shared settings card when text is enlarged. Its five columns retain
+   * their semantics and values, but may wrap instead of contributing an intrinsic minimum wider than the card. */
+  :global(.sudoku-stats-table) {
+    inline-size: 100%;
+    max-inline-size: 100%;
+    table-layout: fixed;
+    overflow-wrap: anywhere;
+  }
+
+  :global(.sudoku-stats-table th),
+  :global(.sudoku-stats-table td) {
+    min-inline-size: 0;
+    overflow-wrap: anywhere;
   }
 
   :global(.sudoku-icon-button) {

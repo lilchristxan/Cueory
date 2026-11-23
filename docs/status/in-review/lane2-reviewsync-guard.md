@@ -1,1 +1,0 @@
-status: audit #741 P2, reviewsync.ts stays bound to its owner: a sign-in listener from the first page of the load makes any change to another account (A→B→A included) permanent, failing a load in progress and dropping every waiting row, and every update names the owner's user_id as well as the question  The review island closes the sync when it unmounts (needs Christian).
