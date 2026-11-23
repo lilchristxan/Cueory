@@ -38,7 +38,7 @@ async function checkEveningColors(page: import('@playwright/test').Page): Promis
 
     // Game pages have no site header (Games v2 frame): the frame's own panel and column stand in for it, so the same
     // Evening check still covers the top of the screen.
-    const topRegion = document.querySelector('.game-frame') ? '.game-frame' : 'header';
+    const topRegion = document.querySelector('[data-game-page] .game-frame') ? '.game-frame' : 'header';
     for (const regionName of ['main', topRegion, 'footer']) {
       const region = document.querySelector(regionName);
       if (!region) {
