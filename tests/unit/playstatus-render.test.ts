@@ -3,46 +3,79 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 // The .tsx extension is explicit: on a case-insensitive disk a bare 'PlayStatus' would resolve to playstatus.ts first.
 import PlayStatus from '../../src/islands/PlayStatus.tsx';
-import { MARK_SYMBOL } from '../../src/islands/pulse';
-import { dailyGames } from '../../src/config/games';
+import PlayTotals from '../../src/islands/PlayTotals';
+import { helloCardsGame, dailyGames } from '../../src/config/games';
 import { gamePages } from '../../src/config/game-pages';
+import { hubHeadline, hubTotals, playedLabel, statusWords } from '../../src/islands/playhub';
 
-const games = (['pulse', 'triage', 'cueword', 'suture'] as const).map((id) => {
-  const game = id === 'pulse' ? { ...dailyGames[0]!, id: 'pulse' as const, name: 'pillo' } : dailyGames.find((entry) => entry.id === id)!;
-  return { id, name: game.name, line: game.line, href: gamePages[id] };
-});
+const line = (id: 'vialo' | 'cueword' | 'triage' | 'suture') => dailyGames.find((game) => game.id === id)!.line;
+const games = (crosswordOpen: boolean) => [
+  { id: 'vialo' as const, testId: 'pulse', name: 'vialo', line: line('vialo'), href: gamePages.vialo, open: true, art: 'vialo' as const },
+  { id: 'cueword' as const, testId: 'cueword', name: 'crossword', line: line('cueword'), href: gamePages.cueword, open: crosswordOpen },
+  { id: 'hello-cards' as const, testId: 'hello-cards', name: helloCardsGame.name, line: helloCardsGame.line, href: helloCardsGame.href, open: false },
+];
+const render = (crosswordOpen: boolean) => renderToStaticMarkup(createElement(PlayStatus, { games: games(crosswordOpen) }));
 
-const render = (isComingSoonCrossword: boolean) =>
-  renderToStaticMarkup(createElement(PlayStatus, { games, isComingSoonCrossword }));
-
-describe('the /play hub cards (redesign P8)', () => {
-  it('draws a closed crossword as a card with no link and no focus stop', () => {
-    const html = render(true);
-    const card = html.slice(html.indexOf('data-testid="play-status-cueword"'), html.indexOf('data-testid="play-status-triage"'));
+describe('the /play hub rows (option B)', () => {
+  it('draws a closed game as "coming soon" with no link, no button and no focus stop', () => {
+    const html = render(false);
+    const card = html.slice(html.indexOf('data-testid="play-status-cueword"'), html.indexOf('data-testid="play-status-hello-cards"'));
     expect(card).toContain('coming soon');
     expect(card).not.toMatch(/<a\b|href=|tabindex/);
     expect(html).not.toContain('href="/play/crossword"');
+    expect(html).not.toContain('href="/play/hello-cards"');
   });
 
-  it('links the crossword only when it is open', () => {
-    expect(render(false)).toContain('href="/play/crossword"');
+  it('links an open game once, from its play button, and shows a dash until the browser has been read', () => {
+    const html = render(true);
+    expect(html).toContain('href="/play/crossword"');
+    expect(html.match(/href="\/play\/vialo"/g)).toHaveLength(1);
+    expect(html).toContain('aria-label="play vialo"');
+    expect(html).toContain('<span aria-hidden="true">–</span>');
+    expect(html).not.toContain('new today');
   });
 
-  it('uses the pillo game\'s own marks in the sample pack and its key, never green or yellow classes', () => {
-    const html = render(false);
-    for (const mark of Object.values(MARK_SYMBOL)) expect(html).toContain(mark);
-    expect(html).not.toMatch(/green|yellow|amber/);
-    expect(html).toContain('bg-pillo-elsewhere');
-    // The key's marks are decoration for screen readers; the words carry the meaning.
-    for (const mark of Object.values(MARK_SYMBOL)) expect(html).toContain(`<span aria-hidden="true">${mark} </span>`);
+  it('shows the real one-line descriptions unshortened', () => {
+    const html = render(true);
+    expect(html).toContain(line('vialo'));
+    expect(html).toContain(line('cueword'));
   });
 
-  it('makes only each game\'s name the link, so the key and status are not read as part of it', () => {
-    const html = render(false);
-    for (const game of games) {
-      expect(html).toMatch(new RegExp(`<h3[^>]*><a href="${game.href}"[^>]*>${game.name}</a></h3>`));
-      expect(html).toContain(game.line.replace(/'/g, '&#x27;'));
-    }
-    expect(html).not.toMatch(/<a\b[^>]*>(?:(?!<\/a>)[\s\S])*how to read the pack/);
+  it('uses the wordmark artwork for vialo and a serif name for the others', () => {
+    const html = render(true);
+    expect(html).toContain('vialo-wordmark-oxblood-v3.svg');
+    expect(html).toContain('vialo-wordmark-dark.svg');
+    expect(html).toMatch(/display[^>]*>crossword</);
+  });
+
+  it('renders the totals as dashes on the server', () => {
+    const html = renderToStaticMarkup(createElement(PlayTotals));
+    expect(html.match(/aria-hidden="true">–</g)).toHaveLength(4);
+    expect(html).not.toMatch(/>0</);
+  });
+});
+
+describe('the hub totals and words', () => {
+  const stats = [
+    { game: 'vialo' as const, day: '2026-11-22', solved: true, tries: 4 },
+    { game: 'triage' as const, day: '2026-11-22', solved: false, tries: 1 },
+    { game: 'vialo' as const, day: '2026-11-21', solved: true, tries: 3 },
+    { game: 'suture' as const, day: '2026-11-10', solved: true, tries: 0 },
+  ];
+  it('counts played, solved percent and day streaks, ending yesterday while today has no game', () => {
+    expect(hubTotals(stats, '2026-11-23')).toEqual({ played: 4, solvedPercent: 75, dayStreak: 2, bestStreak: 2 });
+    expect(hubTotals(stats, '2026-11-25').dayStreak).toBe(0);
+    expect(hubTotals([], '2026-11-23')).toEqual({ played: 0, solvedPercent: undefined, dayStreak: 0, bestStreak: 0 });
+  });
+  it('words each status in lowercase', () => {
+    expect(statusWords('not-started', '')).toBe('new today');
+    expect(statusWords('in-progress', '')).toBe('in progress');
+    expect(playedLabel('vialo', stats[0])).toBe('played · solved in 4');
+    expect(playedLabel('triage', stats[1])).toBe('played · not solved');
+    expect(playedLabel('suture', stats[3])).toBe('played · solved');
+  });
+  it('claims only the number of games listed', () => {
+    expect(hubHeadline(6)).toBe('six games, new every day.');
+    expect(hubHeadline(4)).toBe('four games, new every day.');
   });
 });
