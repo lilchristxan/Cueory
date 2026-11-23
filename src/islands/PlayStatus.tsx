@@ -53,6 +53,8 @@ const ICON: Readonly<Record<Art, { day: string; evening: string }>> = {
 
 const BUTTON = 'inline-flex min-h-11 min-w-24 items-center justify-center rounded-pill border-2 px-6 font-bold no-underline after:absolute after:inset-0';
 const PLAY = `${BUTTON} border-button bg-button text-on-button hover:border-button-hover hover:bg-button-hover`;
+/** The game page starts a fresh round (it keeps no saved result), so after a finished game the button says so. D-pending until a saved-result view exists. */
+export const PLAY_AGAIN = 'play again';
 const RESULT = `${BUTTON} border-ink bg-transparent text-ink hover:bg-surface`;
 
 function Tile({ row }: { row: Row }) {
@@ -153,7 +155,7 @@ export default function PlayStatus({ games }: Props) {
           if (!row.open) words = 'coming soon';
           else if (!daily) words = row.cards === undefined ? undefined : `${row.cards} cards`;
           else if (status) words = statusWords(status, playedLabel(row.id, result));
-          const action = row.open ? (status === 'done' ? 'result' : 'play') : undefined;
+          const action = row.open ? (status === 'done' ? PLAY_AGAIN : 'play') : undefined;
           return (
             <li
               key={row.id}
@@ -175,7 +177,7 @@ export default function PlayStatus({ games }: Props) {
                 {action && (
                   <a
                     href={row.href}
-                    className={`${action === 'result' ? RESULT : PLAY} @4xl:justify-self-end`}
+                    className={`${action === PLAY_AGAIN ? RESULT : PLAY} @4xl:justify-self-end`}
                     aria-label={`${action} ${row.name}`}
                     data-testid={row.linkTestId}
                   >

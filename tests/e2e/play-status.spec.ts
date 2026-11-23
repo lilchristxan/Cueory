@@ -53,7 +53,7 @@ for (const size of [{ width: 390, height: 844 }, { width: 820, height: 1180 }, {
       await page.goto('/play');
       await expect(row(page, 'pulse')).toHaveAttribute('data-status', 'done');
       await expect(words(page, 'pulse')).toHaveText('played · solved in 4');
-      await expect(row(page, 'pulse').getByRole('link')).toHaveText('result');
+      await expect(row(page, 'pulse').getByRole('link')).toHaveText('play again');
       await expect(words(page, 'triage')).toHaveText('played · not solved');
       await expect(words(page, 'suture')).toHaveText('new today');
       await expect(row(page, 'suture').getByRole('link')).toHaveText('play');
@@ -108,7 +108,7 @@ test('a started round shows in progress, and vialo finished on its own page show
   await page.getByTestId('game-result-dialog').getByRole('button', { name: 'close results' }).click();
   await page.getByRole('link', { name: 'all games' }).click();
   await expect(row(page, 'pulse')).toHaveAttribute('data-status', 'done');
-  await expect(row(page, 'pulse').getByRole('link')).toHaveText('result');
+  await expect(row(page, 'pulse').getByRole('link')).toHaveText('play again');
 });
 
 test('a browser that cannot save shows no totals and every open game as play', async ({ page }) => {
