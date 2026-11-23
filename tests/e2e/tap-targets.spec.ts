@@ -60,6 +60,14 @@ test.describe('Task 209: main-content tap targets', () => {
           // D-pending (claude/sudoku-layout): sudoku squares shrink so the whole 9 × 9 board fits a phone, never under
           // 24 px (WCAG 2.2). Limited to the grid's squares; sudoku's number pad and other controls still need 44 px.
           const sudokuSquare = el.matches('button[role="gridcell"]') && !!el.closest('[data-testid="sudoku"] .sudoku-board');
+          // D-pending (task-games-v2/vialo-keys; Christian, 23 Nov 2026): vialo's letter keys are a three-row phone
+          // keyboard, so on a phone ten of them share one row. He approved letter keys at least 32 px wide there as long
+          // as they are at least 52 px tall (a phone's own keyboard keys are narrower). Limited to vialo's letter keys on
+          // a phone-width screen: enter, delete, every other control, and the same keys on tablet and desktop still need
+          // 44 px. tests/e2e/vialo-keys.spec.ts checks the exact sizes and gaps.
+          const vialoPhoneLetterKey = el.matches('.vialo-key:not(.vialo-key-wide)') && !!el.closest('[data-testid="vialo"]') &&
+            window.innerWidth < 640;
+          if (vialoPhoneLetterKey && rect.width >= 32 && rect.height >= 52) return [];
           const minimum = sutureLetterCell || sudokuSquare ? 24 : 44;
           if (rect.width >= minimum && rect.height >= minimum) return [];
           return [{

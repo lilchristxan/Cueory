@@ -473,6 +473,49 @@
   --pillo-cruet: 0.3em;                 /* the cruet's width; its height is about a third of the l's */
   --pillo-cruet-gap: 0.06em;            /* space between the final o and the cruet */
   --pillo-cruet-rise: 0.28em;           /* how far below the top of the name's line the cruet's top sits */
+  /* ---------- vialo's letter keys (Christian, 23 Nov 2026) ----------
+     Three q-w-e-r-t-y rows of raised key caps, so they read as keys you can press. A cap is a lit face over a solid
+     lip. A key that is in place is a green cap, one that is elsewhere in the word is an oxblood cap with a light ring,
+     and one that is not in the word sits down flat with its letter struck through. */
+  --vialo-key-width: 2.875rem;          /* 46px: a letter key on tablet and desktop */
+  --vialo-key-height: 3.375rem;         /* 54px, on every screen */
+  --vialo-key-gap: 0.375rem;            /* 6px between keys */
+  --vialo-key-gap-phone: 0.25rem;       /* 4px on phones, so ten keys of about 33 px fit across the screen */
+  --vialo-key-edge-gap: 0.125rem;       /* 2px between the keyboard and the edge of a phone screen, as on phone keyboards */
+  --vialo-key-row-gap: 0.5625rem;       /* 9px between rows */
+  --vialo-key-radius: 0.5625rem;        /* 9px */
+  --vialo-key-lip: 3px;                 /* the solid edge under a cap */
+  --vialo-key-press: 2px;               /* how far a cap drops while it is pressed */
+  --vialo-key-rest: 3px;                /* a key that is out of the word sits this far down, as if already pressed */
+  --vialo-key-letter: 1.3125rem;        /* 21px */
+  --vialo-key-letter-phone: 1.1875rem;  /* 19px */
+  --vialo-key-word: 0.875rem;           /* 14px: the word "enter" */
+  --vialo-key-icon: 1.625rem;           /* 26px: the delete icon */
+  --vialo-key-ring: 2px;                /* the light ring inside an "elsewhere" key */
+  --vialo-key-ring-gap: 3px;            /* how far that ring sits inside the key's edge */
+  --vialo-key-strike: 2px;              /* the line through a letter that is not in the word */
+  --vialo-key-face-top: #ffffff;        /* a cap's lit top */
+  --vialo-key-face-bottom: color-mix(in srgb, var(--color-surface) 30%, var(--color-page));
+  --vialo-key-edge: var(--color-line);
+  --vialo-key-lip-color: color-mix(in srgb, var(--color-ink-soft) 25%, var(--color-line));
+  --vialo-key-action-top: color-mix(in srgb, var(--color-surface) 55%, var(--color-page));  /* enter and delete */
+  --vialo-key-action-bottom: var(--color-surface);
+  --vialo-key-absent: color-mix(in srgb, var(--color-surface) 55%, var(--color-page));
+  --vialo-key-absent-edge: color-mix(in srgb, var(--color-line) 55%, var(--color-page));
+  /* The marked caps use only the two game colours Christian chose for vialo (D-184, docs/BRAND.md "Game accents"):
+     dark green in place, oxblood elsewhere. A cap is the colour itself, its deep step as the lip and a little of its
+     light step at the lit top. The caps keep the Daytime values in Evening too, as the pills on the LOCKED v1 board
+     do, so the white letter is at least 5:1 on every part of either cap in both palettes. */
+  --vialo-key-here-top: color-mix(in srgb, #3f8a68 30%, #0e5a3d);       /* in place: a dark green cap, lit at the top */
+  --vialo-key-here-bottom: #0e5a3d;
+  --vialo-key-here-lip: #053321;
+  --vialo-key-elsewhere-top: color-mix(in srgb, #a0413a 35%, #6e2019);  /* elsewhere in the word: an oxblood cap */
+  --vialo-key-elsewhere-bottom: #6e2019;
+  --vialo-key-elsewhere-lip: #4a100d;
+  --vialo-key-on-mark: #ffffff;         /* the letter on a green or oxblood key */
+  --vialo-key-ring-color: rgb(255 255 255 / 0.6);
+  --vialo-key-shine: rgb(255 255 255 / 0.35);  /* the lit top edge of a green key */
+  --shadow-vialo-key: 0 8px 12px rgb(var(--shadow-tint) / 0.13);
 }
   #daily-games {
     /* These tokens are scoped to the Home carousel; component styles consume the semantic names below. */
@@ -762,6 +805,14 @@
     --pillo-absent-mix: 20%;
     --pillo-key-mix: 25%;
     --pillo-gloss-mix: 45%;
+    /* vialo keys in Evening: Walnut caps with a Bronze edge over a dark lip; out-of-the-word keys sink into the page. */
+    --vialo-key-face-top: color-mix(in srgb, var(--color-ink-soft) 16%, var(--color-surface));
+    --vialo-key-face-bottom: var(--color-surface);
+    --vialo-key-lip-color: rgb(0 0 0 / 0.55);
+    --vialo-key-action-top: color-mix(in srgb, var(--color-line) 60%, var(--color-surface));
+    --vialo-key-action-bottom: color-mix(in srgb, var(--color-line) 32%, var(--color-surface));
+    --vialo-key-absent: color-mix(in srgb, var(--color-surface) 40%, var(--color-page));
+    --vialo-key-absent-edge: color-mix(in srgb, var(--color-line) 45%, var(--color-page));
     /* Evening: --shadow-tint is Charcoal (darker), so raise opacity for visible depth. */
     --shadow-card: 0 1px 3px rgb(var(--shadow-tint) / 0.18), 0 4px 12px rgb(var(--shadow-tint) / 0.28);
     --shadow-card-hover: 0 2px 8px rgb(var(--shadow-tint) / 0.28), 0 12px 28px rgb(var(--shadow-tint) / 0.40);
@@ -872,6 +923,14 @@
   --pillo-absent-mix: 20%;
   --pillo-key-mix: 25%;
   --pillo-gloss-mix: 45%;
+  /* vialo keys in Evening: Walnut caps with a Bronze edge over a dark lip; out-of-the-word keys sink into the page. */
+  --vialo-key-face-top: color-mix(in srgb, var(--color-ink-soft) 16%, var(--color-surface));
+  --vialo-key-face-bottom: var(--color-surface);
+  --vialo-key-lip-color: rgb(0 0 0 / 0.55);
+  --vialo-key-action-top: color-mix(in srgb, var(--color-line) 60%, var(--color-surface));
+  --vialo-key-action-bottom: color-mix(in srgb, var(--color-line) 32%, var(--color-surface));
+  --vialo-key-absent: color-mix(in srgb, var(--color-surface) 40%, var(--color-page));
+  --vialo-key-absent-edge: color-mix(in srgb, var(--color-line) 45%, var(--color-page));
   /* Evening: --shadow-tint is Charcoal (darker), so raise opacity for visible depth. */
   --shadow-card: 0 1px 3px rgb(var(--shadow-tint) / 0.18), 0 4px 12px rgb(var(--shadow-tint) / 0.28);
   --shadow-card-hover: 0 2px 8px rgb(var(--shadow-tint) / 0.28), 0 12px 28px rgb(var(--shadow-tint) / 0.40);
