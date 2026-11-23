@@ -165,7 +165,7 @@ test('the gear controls the current puzzle, and the Frame picker stays in sync',
   await expect(settings).toHaveCount(0);
   await expect(board.getByTestId('sudoku-live')).toContainText('empty');
   await expect(board.locator('.sudoku-time strong')).toHaveCount(0);
-  await expect(board.getByRole('button', { name: 'hint', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await expect(board.getByRole('button', { name: 'Hint', exact: true })).toHaveAttribute('aria-pressed', 'true');
   await expect(gear).toBeFocused();
 
   await gear.click();

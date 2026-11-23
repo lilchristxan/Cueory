@@ -257,6 +257,10 @@ const game = dailyGames.find((item) => item.id === 'triage')!;
     gap: calc(var(--spacing) * 2.5);
   }
 
+  :global(.sudoku-pad-wrap .sudoku-tool-button) {
+    padding-inline: clamp(calc(var(--spacing) * 2), 3cqi, calc(var(--spacing) * 5.5));
+  }
+
   :global(.sudoku-game .game-settings select) {
     max-inline-size: 100%;
     min-block-size: var(--tap-min);

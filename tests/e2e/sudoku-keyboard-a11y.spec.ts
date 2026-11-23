@@ -109,6 +109,10 @@ for (const colorScheme of ['light', 'dark'] as const) {
         return [...byTop.values()];
       });
       expect(rows).toEqual(['12345', '6789']);
+      const tools = pad.getByRole('group', { name: 'board tools', exact: true }).getByRole('button');
+      await expect(tools).toHaveText(['Pencil · P', 'Undo', 'Hint']);
+      const toolTops = await tools.evaluateAll((buttons) => buttons.map(button => Math.round(button.getBoundingClientRect().top)));
+      expect(new Set(toolTops).size).toBe(1);
       for (const button of await digits.all()) {
         const box = await button.boundingBox();
         expect(box).not.toBeNull();
