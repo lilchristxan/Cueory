@@ -932,13 +932,13 @@ test.describe('marketing look (D-41)', () => {
   }) => {
     await page.goto('/');
     const sections = page.locator('[data-reveal-section]');
-    // The approved home keeps the carousel, daily games, then the launch-updates panel; how-it-works has been removed.
+    // Christian's final home board (20 Nov): daily games, the vial carousel, then the launch-updates panel.
     await expect(sections).toHaveCount(3);
     expect(await sections.evaluateAll((items) => items.map((item) => item.closest('section')?.id))).toEqual([
-      'ways-to-study', 'daily-games', 'signup',
+      'daily-games', 'ways-to-study', 'signup',
     ]);
     const all = [0, 1, 2];
-    const ways = 0;
+    const ways = 1;
     const look = (index: number) =>
       sections.nth(index).evaluate((el) => [el.getAttribute('data-reveal'), getComputedStyle(el).opacity, getComputedStyle(el).translate]);
     // All of them start below the first screen, so they wait, lowered and clear.
