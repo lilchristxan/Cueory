@@ -105,7 +105,7 @@ const statsGames = hubGames.filter((game) => showCrossword || game.id !== 'cuewo
 
     {/* Private stats (D-76): off until the student turns them on, kept only in this browser. */}
     <div class="play-hub-island play-hub-stats">
-      <GameStatsPanel client:only="react" games={statsGames} />
+      <GameStatsPanel client:only="react" games={statsGames} playLinks={Object.fromEntries(hubGames.map((game) => [game.id, game.href]))} />
     </div>
 
     {

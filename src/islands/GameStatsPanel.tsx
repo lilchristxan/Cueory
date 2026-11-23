@@ -58,6 +58,8 @@ const hasRecord = (): boolean => {
 interface Props {
   /** The games in the order the page shows them. */
   games: readonly GameId[];
+  /** On the games hub: a "play" link beside each game that has no results yet, keyed by game id. */
+  playLinks?: Readonly<Record<string, string>>;
 }
 
 type SetSaved = Dispatch<SetStateAction<SavedStats>>;
@@ -156,7 +158,7 @@ function vialoLine(stats: GameStats): string {
   return `won ${value.winPercent}%. current streak ${days(value.currentStreak)}, longest ${days(value.longestStreak)}.`;
 }
 
-export default function GameStatsPanel({ games: order }: Props) {
+export default function GameStatsPanel({ games: order, playLinks }: Props) {
   const [saved, setSaved] = useState(latest);
   const [said, setSaid] = useState('');
   const [blocked, setBlocked] = useState(false);
@@ -261,7 +263,8 @@ export default function GameStatsPanel({ games: order }: Props) {
               const result = summary(saved.stats, game.id);
               const displayName = game.name;
               return (
-                <li key={game.id}>
+                <li key={game.id} className={result.played === 0 && playLinks?.[game.id] ? 'flex items-center justify-between gap-4' : undefined}>
+                  <div className="min-w-0">
                   <h3
                     ref={(node) => {
                       if (node) headings.current.set(game.id, node);
@@ -273,6 +276,7 @@ export default function GameStatsPanel({ games: order }: Props) {
                     {displayName}
                   </h3>
                   <p className="mt-1">{result.played === 0 ? 'not played yet.' : summaryInWords(result)}</p>
+                  </div>
                   {(result.played > 0 || (game.id === 'triage' && sudokuKept())) && (
                     <>
                       <p className="mt-1 text-sm text-ink-soft">{triesInWords(game.id, result.triesCounts)}</p>
@@ -290,6 +294,11 @@ export default function GameStatsPanel({ games: order }: Props) {
                         forget {displayName}
                       </button>
                     </>
+                  )}
+                  {result.played === 0 && playLinks?.[game.id] && (
+                    <a href={playLinks[game.id]} className={`${button} inline-flex shrink-0 items-center`} aria-label={`play ${displayName}`}>
+                      play
+                    </a>
                   )}
                 </li>
               );
