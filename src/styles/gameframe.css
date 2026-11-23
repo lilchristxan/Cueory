@@ -205,7 +205,34 @@
   height: var(--game-frame-wordmark-height);
   width: auto;
   max-width: 100%;
+}
+
+/* Daytime and Evening wordmark art, switched as the site switches its other logos (global.css .logo-day / .logo-evening):
+   the device setting, unless the visitor picked Light or Dark in the footer; print always shows the Daytime art. */
+.game-frame-wordmark-evening {
+  display: none;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .game-frame-wordmark-day {
+    display: none;
+  }
+  :root:not([data-theme="light"]) .game-frame-wordmark-evening {
+    display: block;
+  }
+}
+:root[data-theme="dark"] .game-frame-wordmark-day {
+  display: none;
+}
+:root[data-theme="dark"] .game-frame-wordmark-evening {
   display: block;
+}
+@media print {
+  .game-frame-wordmark-day {
+    display: block !important;
+  }
+  .game-frame-wordmark-evening {
+    display: none !important;
+  }
 }
 
 .game-frame-serif-title {

@@ -191,3 +191,36 @@ test.describe('plain row of cards under the game, game keeps its size (1024 to 1
     });
   }
 });
+
+// Evening: the left panel shows each game's dark-background art, chosen the way the site chooses its other Light/Evening
+// art (device setting, or the footer's Light/Dark pick), never by recolouring (review of the Evening picture).
+test.describe('the left panel wordmark in Evening', () => {
+  const wordmarks = [
+    { path: '/play/vialo', day: '/design/games-v2/assets/vialo-wordmark-oxblood-v3.svg', evening: '/brand/games/vialo-wordmark-dark.svg' },
+    { path: '/play/tachyyy', day: '/design/games-v2/assets/tachyyy-wordmark-light-bar.svg', evening: '/brand/games/tachyyy-wordmark-dark.svg' },
+    { path: '/play/piccline', day: '/brand/games/piccline-wordmark-dark.svg', evening: '/brand/games/piccline-wordmark-dark.svg' },
+  ];
+  for (const { path, day, evening } of wordmarks) {
+    test(`${path}: dark shows ${evening}, light shows ${day}`, async ({ page }) => {
+      for (const [scheme, expected] of [['dark', evening], ['light', day]] as const) {
+        await page.emulateMedia({ colorScheme: scheme });
+        await page.goto(path);
+        const visible = await page.locator('.game-frame-wordmark-img:visible').evaluateAll((imgs) => imgs.map((img) => new URL((img as HTMLImageElement).src).pathname));
+        expect(visible, `${path} in ${scheme}`).toEqual([expected]);
+      }
+      // The footer's Dark pick wins over a light device.
+      await page.emulateMedia({ colorScheme: 'light' });
+      await page.goto(path);
+      await page.evaluate(() => { localStorage.setItem('cueory-theme', 'dark'); document.documentElement.dataset.theme = 'dark'; });
+      const picked = await page.locator('.game-frame-wordmark-img:visible').evaluateAll((imgs) => imgs.map((img) => new URL((img as HTMLImageElement).src).pathname));
+      expect(picked).toEqual([evening]);
+    });
+  }
+  test('crossword, sudoku and hello cards name themselves in ink text, which follows the theme', async ({ page }) => {
+    for (const path of ['/play/crossword', '/play/sudoku', '/play/hello-cards']) {
+      await page.emulateMedia({ colorScheme: 'dark' });
+      await page.goto(path);
+      await expect(page.locator('.game-frame-wordmark-img:visible'), path).toHaveCount(0);
+    }
+  });
+});
