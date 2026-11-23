@@ -33,7 +33,7 @@ Keep the routes, game rules, saved progress, stats and results logic you already
 - The ? sits at the board's top-right corner, on the same row, with the same gap to the board.
 - The ? opens the game's steps on hover, focus or tap. Vialo's ? also shows a legend of the pill states.
 - Piccline: its cue line ("TODAY'S CUE · …") sits above this row.
-- Crossword: a size slider (mini · midi · full) sits centred between the gear and the ?.
+- Crossword: a size slider (mini · midi · full on the board; named small · medium · large, Christian, 23 Nov 2026) sits centred between the gear and the ?.
 - Hello cards: a row of five progress circles sits centred between the gear and the ?.
 
 **The board** is centred in the space between the left panel and the deck.

@@ -1,8 +1,9 @@
 import { expect, test } from '@playwright/test';
 import { markPanelsSeen } from './clock';
 
-// Phone parity for the games hub and game pages: the board comes before the rules, the flag sits in the header row,
-// the legend keeps swatch and label on one line, and a game that is not open yet is one short card.
+// Phone parity for the games hub and game pages: the flag sits in the header row, the legend keeps swatch and label on
+// one line, and a game that is not open yet is one short card. (The first-visit rules card is unchanged here; the
+// Games v2 frame replaces it with the "?" steps.)
 
 test.beforeEach(async ({ page }) => {
   await page.clock.setFixedTime(new Date('2026-11-01T15:00:00'));
@@ -12,31 +13,9 @@ test.beforeEach(async ({ page }) => {
   });
 });
 
-for (const [path, testId, name] of [['/play/vialo', 'vialo', 'vialo'], ['/play/sudoku', 'sudoku', 'sudoku'], ['/play/piccline', 'suture', 'piccline']] as const) {
-  test(`${name}: on a phone the rules start folded and the board comes first`, async ({ page }, info) => {
-    test.skip(info.project.name.includes('desktop') || info.project.name.includes('tablet'), 'phone layout');
-    await page.goto(path);
-    const card = page.getByTestId('game-help-first');
-    const toggle = card.getByRole('button', { name: `new to ${name}? here's how to play` });
-    await expect(toggle).toHaveAttribute('aria-expanded', 'false');
-    const box = await toggle.boundingBox();
-    expect(box!.height).toBeGreaterThanOrEqual(44);
-    await expect(card.getByRole('button', { name: 'got it' })).toBeHidden();
-    // The folded card is above the board, not a screen-tall block in front of it.
-    const cardBox = await card.boundingBox();
-    expect(cardBox!.height).toBeLessThan(120);
-    await toggle.click();
-    await expect(toggle).toHaveAttribute('aria-expanded', 'true');
-    await expect(card.getByRole('button', { name: 'got it' })).toBeVisible();
-    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
-    void testId;
-  });
-}
-
 test('vialo: the help legend keeps each swatch and its label on one line', async ({ page }, info) => {
   test.skip(info.project.name.includes('desktop') || info.project.name.includes('tablet'), 'phone layout');
   await page.goto('/play/vialo');
-  await page.getByTestId('game-help-first').getByRole('button', { name: /here's how to play/ }).click();
   const rows = page.getByTestId('game-help-first').getByTestId('vialo-legend').locator('li');
   await expect(rows).toHaveCount(3);
   for (let i = 0; i < 3; i += 1) {
@@ -47,15 +26,35 @@ test('vialo: the help legend keeps each swatch and its label on one line', async
   }
 });
 
-test('game pages: the flag button sits in the header row beside "games" and the logo', async ({ page }) => {
+test('game pages: the flag button sits in the frame header with "games" and the logo, and the logo keeps its width', async ({ page }, info) => {
   await page.goto('/play/vialo');
   const flag = page.locator('a[data-game-flag]');
   const back = page.getByTestId('all-games-link');
-  const flagBox = await flag.boundingBox();
-  const backBox = await back.boundingBox();
-  expect(flagBox!.width).toBeGreaterThanOrEqual(44);
-  expect(flagBox!.height).toBeGreaterThanOrEqual(44);
-  expect(Math.abs(flagBox!.y + flagBox!.height / 2 - (backBox!.y + backBox!.height / 2))).toBeLessThan(12);
+  const logo = page.locator('.game-frame-logo-wrap');
+  const flagBox = (await flag.boundingBox())!;
+  const backBox = (await back.boundingBox())!;
+  const logoBox = (await logo.boundingBox())!;
+  expect(flagBox.width).toBeGreaterThanOrEqual(44);
+  expect(flagBox.height).toBeGreaterThanOrEqual(44);
+  expect(backBox.width).toBeGreaterThanOrEqual(44);
+  // The cueory logo is never squeezed under its drawn width (96 px) by its neighbours.
+  expect((await logo.locator('img:visible').boundingBox())!.width).toBeGreaterThanOrEqual(96);
+  const centre = (box: { y: number; height: number }) => box.y + box.height / 2;
+  // "games" and the logo always share a line.
+  expect(Math.abs(centre(logoBox) - centre(backBox))).toBeLessThan(12);
+  expect(logoBox.x).toBeGreaterThanOrEqual(backBox.x + backBox.width - 1);
+  if (info.project.name.includes('desktop')) {
+    // The desktop sidebar is too narrow for all three at full size, so the flag takes the next line, inside the sidebar.
+    expect(flagBox.y).toBeGreaterThanOrEqual(backBox.y + backBox.height - 1);
+    const sidebar = (await page.locator('.game-frame-sidebar').boundingBox())!;
+    expect(flagBox.x).toBeGreaterThanOrEqual(sidebar.x);
+    expect(flagBox.x + flagBox.width).toBeLessThanOrEqual(sidebar.x + sidebar.width);
+  } else {
+    // Phones and tablets: one row, the flag between "games" and the logo, nothing overlapping.
+    expect(Math.abs(centre(flagBox) - centre(backBox))).toBeLessThan(12);
+    expect(flagBox.x).toBeGreaterThanOrEqual(backBox.x + backBox.width - 1);
+    expect(logoBox.x).toBeGreaterThanOrEqual(flagBox.x + flagBox.width - 1);
+  }
 });
 
 test('vialo: every letter key is at least 44 px wide and tall', async ({ page }) => {

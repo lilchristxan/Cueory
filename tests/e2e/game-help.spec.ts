@@ -17,12 +17,6 @@ const seen = (page: Page) => page.evaluate(() => localStorage.getItem('cueory-ga
 const axe = (page: Page, selector: string) =>
   new AxeBuilder({ page }).include(selector).withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa']).analyze();
 
-// On a phone the first-visit card starts folded so the board comes first (phone parity); open it to read or dismiss it.
-const openFirstVisitCard = async (page: Page) => {
-  const toggle = page.getByTestId('game-help-first').getByRole('button', { name: /here's how to play/ });
-  if ((await toggle.getAttribute('aria-expanded')) === 'false') await toggle.click();
-};
-
 const helpButton = (page: Page, game: (typeof games)[number]) =>
   game.id === 'cueword' || game.id === 'triage'
     ? page.getByTestId('game-frame-help-button')
@@ -41,14 +35,12 @@ test('the first visit shows each game\'s rules above its board, and "got it" put
     await page.goto(game.path);
     const card = page.getByTestId(game.testId).getByTestId('game-help-first');
     await expect(card).toBeVisible();
-    await openFirstVisitCard(page);
     await expect(card.getByRole('heading', { name: `new to ${game.name}? here's how to play` })).toBeVisible();
     expect((await axe(page, '[data-testid="game-help-first"]')).violations).toEqual([]);
   }
 
   await page.goto('/play/sudoku');
   const sudoku = page.getByTestId('sudoku');
-  await openFirstVisitCard(page);
   const gotIt = sudoku.getByTestId('game-help-first').getByRole('button', { name: 'got it' });
   const box = await gotIt.boundingBox();
   expect(box!.height).toBeGreaterThanOrEqual(44);
