@@ -114,9 +114,13 @@ test.describe('about page', () => {
       expect(lines.count).toBeGreaterThanOrEqual(2);
       expect(lines.count).toBeLessThanOrEqual(3);
       expect(lines.fits).toBe(true);
-      // Two or three lines need a smaller size on the narrowest phone: 40 px at 320 (cqi / 7), above 44 px from 390.
+      // From 390 px the size guard is unchanged (above 44 px). Below 390 px the headline may be 36 to 44 px so it sets
+      // in two or three lines (lead approval, 23 Nov; D-pending in the status note).
       if (width >= 390) expect(lines.fontSize).toBeGreaterThan(44);
-      else expect(lines.fontSize).toBeGreaterThanOrEqual(36);
+      else {
+        expect(lines.fontSize).toBeGreaterThanOrEqual(36);
+        expect(lines.fontSize).toBeLessThanOrEqual(44);
+      }
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
     });
   }
