@@ -127,7 +127,9 @@ describe('GameFrame (Scope 1)', () => {
     expect(frame).toContain('<GameFrameStats client:load game={currentConfig.id} />');
     expect(helloCards).toContain('<GameFrame game="hello-cards" staticNoScoreStats>');
     expect(page).toContain('framed = false');
-    expect(page).toContain('{!framed && <div class="game-page-stats-container');
+    // The four stats sit in the frame's left panel on every game page, so no separate stats block follows the frame.
+    expect(page).not.toContain('game-page-stats-container');
+    expect(page).toContain('bridge={framed} stats>');
     expect(page).toContain('<GameStatsPersistence client:only="react" />');
     expect(page).toContain('finish a game with JavaScript to keep its result in this browser.');
     expect(header).toContain('GAME_FRAME_SETTINGS_EVENT');
