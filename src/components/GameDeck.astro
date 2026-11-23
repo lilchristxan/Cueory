@@ -32,9 +32,9 @@ const cards = all.filter((card) => card.id !== current && card.open);
     {cards.map((card) => (
       <li class="game-deck-item">
         <a href={card.href} class="game-deck-card">
-          <span class="game-deck-corner game-deck-corner-top" aria-hidden="true">{card.icon ? <img class="game-deck-icon" src={card.icon} alt="" width="20" height="20" loading="lazy" decoding="async" /> : <span class="game-deck-glyph">{card.glyph}</span>}{card.name}</span>
+          <span class="game-deck-corner game-deck-corner-top" aria-hidden="true">{card.icon ? <img class="game-deck-icon" src={card.icon} alt="" aria-hidden="true" width="20" height="20" loading="lazy" decoding="async" /> : <span class="game-deck-glyph">{card.glyph}</span>}{card.name}</span>
           <span class="game-deck-name">{card.name}</span>
-          <span class="game-deck-corner game-deck-corner-bottom" aria-hidden="true">{card.icon ? <img class="game-deck-icon" src={card.icon} alt="" width="20" height="20" loading="lazy" decoding="async" /> : <span class="game-deck-glyph">{card.glyph}</span>}{card.name}</span>
+          <span class="game-deck-corner game-deck-corner-bottom" aria-hidden="true">{card.icon ? <img class="game-deck-icon" src={card.icon} alt="" aria-hidden="true" width="20" height="20" loading="lazy" decoding="async" /> : <span class="game-deck-glyph">{card.glyph}</span>}{card.name}</span>
         </a>
       </li>
     ))}
