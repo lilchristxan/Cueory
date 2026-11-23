@@ -1,12 +1,14 @@
 ---
 /**
- * The fanned card deck at the right edge of a game page (Games v2): one card for each of the other games, like a hand
- * of playing cards. A card shows its game's name in the middle and in two corners; on hover or focus it slides left so
- * the name is whole. Only the card moves, not its hit area, so it never flickers. A game that is closed in this build
- * is left out of the deck. Hidden below the tablet width, where the page has no room for it, and under reduced
- * motion the cards simply do not slide (gameframe.css).
+ * The fanned card deck at the right edge of a game page (Games v2), at one fixed spot on every game page. One card for
+ * each other open game, like a hand of playing cards. The FRONT card is the next game in the loop (config/gamedeck.ts)
+ * and says so ("next game ›"); the cards behind it follow in order. A card shows its game's icon and name in the top
+ * corner, its name in the middle and the icon again, upside down, in the bottom corner. On hover or keyboard focus the
+ * card's face slides left so the name is whole; only the face moves, not its hit area, so it never flickers. A game
+ * that is closed in this build is left out. Below 64rem the cards become a plain row (gameframe.css).
  */
 import { crosswordShown, pageBuildEnv } from '../config/crossword';
+import { deckOrder, type DeckGameId } from '../config/gamedeck';
 import { draftsAllowed } from '../islands/anatomylab';
 
 interface Props {
@@ -16,25 +18,54 @@ interface Props {
 const { current } = Astro.props;
 const env = pageBuildEnv();
 const drafts = draftsAllowed(env);
-const all: { id: string; name: string; href: string; open: boolean; icon?: string; glyph?: string }[] = [
-  { id: 'pulse', name: 'vialo', href: '/play/vialo', open: true, icon: '/design/games-v2/assets/vialo-icon-silver-oxblood.svg' },
-  { id: 'suture', name: 'piccline', href: '/play/piccline', open: true, icon: '/brand/games/piccline-dark.svg' },
-  { id: 'triage', name: 'sudoku', href: '/play/sudoku', open: true, glyph: '9' },
-  { id: 'cueword', name: 'crossword', href: '/play/crossword', open: crosswordShown(env), glyph: '+' },
-  { id: 'stat', name: 'tachyyy', href: '/play/tachyyy', open: drafts, glyph: '0' },
-  { id: 'hello-cards', name: 'hello cards', href: '/play/hello-cards', open: drafts, glyph: 'hi' },
+
+interface DeckGame {
+  name: string;
+  href: string;
+  open: boolean;
+  /** Icon art in public/brand/games (<slug>-light.svg for Light, <slug>-dark.svg for Evening). */
+  art?: string;
+  /** The game's wordmark art (<slug>-wordmark-light.svg / -dark.svg) and its picture width at 100 tall. */
+  wordmark?: { slug: string; width: number };
+  /** What the tile shows for a game without icon art. */
+  glyph?: string;
+}
+const games: Record<DeckGameId, DeckGame> = {
+  pulse: { name: 'vialo', href: '/play/vialo', open: true, art: 'vialo', wordmark: { slug: 'vialo', width: 267 } },
+  'hello-cards': { name: 'hello cards', href: '/play/hello-cards', open: drafts, glyph: 'hi' },
+  triage: { name: 'sudoku', href: '/play/sudoku', open: true, glyph: '9' },
+  cueword: { name: 'crossword', href: '/play/crossword', open: crosswordShown(env), glyph: '+' },
+  suture: { name: 'piccline', href: '/play/piccline', open: true, art: 'piccline', wordmark: { slug: 'piccline', width: 248 } },
+  stat: { name: 'tachyyy', href: '/play/tachyyy', open: drafts, art: 'tachyyy', wordmark: { slug: 'tachyyy', width: 273 } },
+};
+// Front card first; a game that is closed in this build is skipped, so a card never goes nowhere.
+const cards = deckOrder(current, (id) => games[id].open).map((id, index) => ({ id, ...games[id], front: index === 0 }));
+const themes = [
+  { suffix: 'light', cls: 'game-deck-day' },
+  { suffix: 'dark', cls: 'game-deck-evening' },
 ];
-// A game that is closed in this build is left out: a card that goes nowhere would mislead.
-const cards = all.filter((card) => card.id !== current && card.open);
 ---
 <nav class="game-deck" aria-label="other games">
   <ul class="game-deck-list">
     {cards.map((card) => (
-      <li class="game-deck-item">
+      <li class="game-deck-item" data-game={card.id} data-front={card.front ? 'true' : undefined}>
         <a href={card.href} class="game-deck-card">
-          <span class="game-deck-corner game-deck-corner-top" aria-hidden="true">{card.icon ? <img class="game-deck-icon" src={card.icon} alt="" aria-hidden="true" width="20" height="20" loading="lazy" decoding="async" /> : <span class="game-deck-glyph">{card.glyph}</span>}{card.name}</span>
-          <span class="game-deck-name">{card.name}</span>
-          <span class="game-deck-corner game-deck-corner-bottom" aria-hidden="true">{card.icon ? <img class="game-deck-icon" src={card.icon} alt="" aria-hidden="true" width="20" height="20" loading="lazy" decoding="async" /> : <span class="game-deck-glyph">{card.glyph}</span>}{card.name}</span>
+          <span class="sr-only">{card.name}</span>
+          <span class="game-deck-top" aria-hidden="true">
+            <span class="game-deck-tile">
+              {card.art ? themes.map((t) => <img class={`game-deck-tile-art ${t.cls}`} src={`/brand/games/${card.art}-${t.suffix}.svg`} alt="" aria-hidden="true" width="40" height="40" loading="lazy" decoding="async" />) : <span class:list={['game-deck-glyph', card.glyph === 'hi' && 'is-italic']}>{card.glyph}</span>}
+            </span>
+            <span class="game-deck-top-name">
+              {card.wordmark ? themes.map((t) => <img class={`game-deck-wordmark game-deck-wordmark-top ${t.cls}`} src={`/brand/games/${card.wordmark!.slug}-wordmark-${t.suffix}.svg`} alt="" aria-hidden="true" width={card.wordmark!.width} height="100" loading="lazy" decoding="async" />) : card.name}
+            </span>
+          </span>
+          <span class="game-deck-name" aria-hidden="true">
+            {card.wordmark ? themes.map((t) => <img class={`game-deck-wordmark game-deck-wordmark-mid ${t.cls}`} src={`/brand/games/${card.wordmark!.slug}-wordmark-${t.suffix}.svg`} alt="" aria-hidden="true" width={card.wordmark!.width} height="100" loading="lazy" decoding="async" />) : card.name}
+          </span>
+          {card.front && <span class="game-deck-label" aria-hidden="true">next game ›</span>}
+          <span class="game-deck-bottom game-deck-tile" aria-hidden="true">
+            {card.art ? themes.map((t) => <img class={`game-deck-tile-art ${t.cls}`} src={`/brand/games/${card.art}-${t.suffix}.svg`} alt="" aria-hidden="true" width="40" height="40" loading="lazy" decoding="async" />) : <span class:list={['game-deck-glyph', card.glyph === 'hi' && 'is-italic']}>{card.glyph}</span>}
+          </span>
         </a>
       </li>
     ))}
