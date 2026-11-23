@@ -265,7 +265,7 @@ test.describe('crossword parity (Task 721)', () => {
       await board(page).getByRole('button', { name: 'show cue list' }).click();
       await inView();
       await noSidewaysScroll(page);
-      await page.getByTestId('crossword-levels').getByRole('button', { name: 'hard, 15 by 15' }).click();
+      await page.getByTestId('crossword-levels').getByRole('button', { name: 'large, 15 by 15' }).click();
       await board(page).getByRole('button', { name: 'show cue list' }).click();
       await inView();
       await noSidewaysScroll(page);

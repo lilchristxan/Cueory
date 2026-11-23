@@ -34,10 +34,10 @@ test.beforeEach(async ({ page }) => {
 });
 
 test('the level picker is pressed buttons with a check mark, like sudoku\'s', async ({ page }) => {
-  const easy = levels(page).getByRole('button', { name: 'easy, 5 by 5' });
+  const easy = levels(page).getByRole('button', { name: 'small, 5 by 5' });
   await expect(easy).toHaveAttribute('aria-pressed', 'true');
   await expect(easy).toContainText('✓');
-  const mid = levels(page).getByRole('button', { name: 'mid, 7 by 7' });
+  const mid = levels(page).getByRole('button', { name: 'medium, 7 by 7' });
   await mid.press('Enter');
   await expect(mid).toHaveAttribute('aria-pressed', 'true');
   await expect(mid).toContainText('✓');
@@ -48,7 +48,7 @@ test('the level picker is pressed buttons with a check mark, like sudoku\'s', as
 });
 
 test('a blocked square is striped, the selected square is solid: they differ by pattern, not only color', async ({ page }) => {
-  await levels(page).getByRole('button', { name: 'mid, 7 by 7' }).click();
+  await levels(page).getByRole('button', { name: 'medium, 7 by 7' }).click();
   const grid = board(page).getByRole('grid', { name: 'crossword grid' });
   const blocked = grid.getByRole('gridcell', { name: 'black square' }).first();
   await expect(blocked).toBeVisible();
@@ -94,7 +94,7 @@ test('no description and no sample line in the game box', async ({ page }) => {
 for (const [width, scrolls] of [[390, true], [820, false], [1440, false]] as const) {
   test(`the hard board at ${width} px ${scrolls ? 'scrolls inside its own box' : 'fits without any scrolling'}`, async ({ page }) => {
     await page.setViewportSize({ width, height: 1000 });
-    await levels(page).getByRole('button', { name: 'hard, 15 by 15' }).click();
+    await levels(page).getByRole('button', { name: 'large, 15 by 15' }).click();
     const wrap = board(page).locator('.crossword-board-wrap');
     await expect(board(page).getByRole('grid', { name: 'crossword grid' })).toHaveAttribute('aria-rowcount', '15');
     const [scrollWidth, clientWidth] = await wrap.evaluate((element) => [element.scrollWidth, element.clientWidth]);
@@ -107,7 +107,7 @@ for (const [width, scrolls] of [[390, true], [820, false], [1440, false]] as con
 }
 
 test('a numbered square\'s name starts with the number it shows (axe label-content-name-mismatch)', async ({ page }) => {
-  for (const level of ['easy, 5 by 5', 'mid, 7 by 7', 'hard, 15 by 15']) {
+  for (const level of ['small, 5 by 5', 'medium, 7 by 7', 'large, 15 by 15']) {
     await levels(page).getByRole('button', { name: level }).click();
     const numbered = board(page).locator('.crossword-cell:has(.crossword-number)');
     expect(await numbered.count()).toBeGreaterThan(0);
