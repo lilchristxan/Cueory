@@ -62,3 +62,16 @@ export function stageCounter(position: number, total: number): string {
   const pad = (value: number) => String(value).padStart(2, '0');
   return `${pad(position)} / ${pad(total)}`;
 }
+
+/**
+ * The short line for each game on the /play hub, in the same words the home page's daily-games cards show
+ * (src/components/DailyGamesSection.astro, the approved Home v2 copy), so a hub row is one or two lines.
+ */
+export const hubLines = {
+  vialo: 'guess the five-letter word in six tries.',
+  tachyyy: 'quick questions against the clock.',
+  piccline: 'trace hidden words through the letters.',
+  crossword: "a mini crossword from this week's lessons.",
+  sudoku: 'a calm numbers break.',
+  helloCards: helloCardsLine,
+} as const;

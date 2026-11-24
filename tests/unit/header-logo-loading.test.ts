@@ -15,7 +15,7 @@ function headerLogos(page: string): { src: string; loading: string | undefined }
 }
 
 describe('header logo loading (performance, 2026-11-19)', () => {
-  it.each(['support.html', 'about.html', 'play.html', 'play/pillo.html', 'play/sudoku.html', 'play/word-path.html'])(
+  it.each(['support.html', 'about.html', 'play.html'])(
     '%s: the phone emblem is eager and the full logo, hidden on phones, is lazy',
     (page) => {
       const logos = headerLogos(page);

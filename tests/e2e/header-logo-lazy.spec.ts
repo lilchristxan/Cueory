@@ -15,7 +15,7 @@ function isDownloadStarted(
  * copy, and CSS shows one. The full logo is lazy, so a copy the page hides (the full logo on phones, the other
  * palette's copy everywhere) is never downloaded, while the copy that shows still loads.
  */
-for (const path of ['/support', '/play/word-path']) {
+for (const path of ['/support', '/privacy']) {
   test(`${path}: the header downloads only the logo it shows`, async ({ page }) => {
     const requestedUrls = new Set<string>();
     page.on('request', (req) => requestedUrls.add(req.url()));
