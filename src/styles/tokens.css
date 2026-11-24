@@ -631,6 +631,20 @@
     --game-face-header-height: 6rem;
     --game-face-phone-header-height: 96px;
     --game-face-padding: 1.125rem 1rem;
+    --game-card-landscape-width: 11.625rem;   /* phone landscape board: 186 x 260 cards, four across */
+    --game-card-landscape-height: 16.25rem;
+    --game-card-landscape-padding: 0.5rem;
+    --game-pip-landscape-size: 1.875rem;      /* 30 px pips inset 10 px */
+    --game-pip-landscape-inset: 0.625rem;
+    --game-pip-landscape-xcell: 0.4375rem;
+    --game-pip-landscape-glyph: 1.125rem;
+    --game-face-landscape-header-height: 3.5rem;
+    --game-wordmark-landscape-max-width: 8.25rem; /* 132 x 46 px */
+    --game-wordmark-landscape-max-height: 2.875rem;
+    --game-serif-name-landscape-size: 1.875rem;   /* crossword, sudoku: 30 px */
+    --game-desc-landscape-size: 0.75rem;
+    --game-status-landscape-size: 0.6875rem;
+    --game-track-gap-landscape: 1rem;
     --game-wordmark-max-width: 10.5rem;
     --game-wordmark-max-height: 3.75rem;
     --game-serif-name-size: 2.5rem;

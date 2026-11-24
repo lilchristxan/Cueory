@@ -1142,6 +1142,76 @@ const helloCardsAvailable = helloCardsPage(
   .d-270 { animation-delay: 2.7s; }
   .d-300 { animation-delay: 3s; }
 
+  /*
+    Phone landscape (844 x 390, Christian's final board): four 186 x 260 cards across, and everything inside a card stays
+    inside its edges: the face is the card's inner size, wordmark images are at most 132 x 46 px, text wordmarks are 30 px,
+    pips are 30 px inset 10 px, and the status pill sits left of the bottom-right pip, never under it.
+  */
+  @media (orientation: landscape) and (max-height: 32em) {
+    .gtrack {
+      gap: var(--game-track-gap-landscape);
+    }
+
+    .gcard {
+      width: var(--game-card-landscape-width);
+      height: var(--game-card-landscape-height);
+      min-height: 0;
+      padding: var(--game-card-landscape-padding);
+    }
+
+    .gface {
+      width: 100%;
+      height: auto;
+      min-height: 0;
+      min-width: 0;
+      grid-template-rows: var(--game-face-landscape-header-height) auto auto;
+      row-gap: var(--game-card-landscape-padding);
+      padding: var(--game-card-landscape-padding);
+    }
+
+    .gname {
+      height: var(--game-face-landscape-header-height);
+      min-width: 0;
+    }
+
+    .gname img {
+      max-width: var(--game-wordmark-landscape-max-width);
+      max-height: var(--game-wordmark-landscape-max-height);
+    }
+
+    .gname span {
+      font-size: var(--game-serif-name-landscape-size);
+    }
+
+    .gdesc {
+      font-size: var(--game-desc-landscape-size);
+    }
+
+    .gstatus {
+      align-self: start;
+      font-size: var(--game-status-landscape-size);
+      margin-inline-end: calc(var(--game-pip-landscape-size) + var(--game-pip-landscape-inset));
+    }
+
+    .gpip {
+      width: var(--game-pip-landscape-size);
+      height: var(--game-pip-landscape-size);
+      --game-pip-xgrid-size: var(--game-pip-landscape-xcell);
+      --game-pip-sudoku-size: var(--game-pip-landscape-glyph);
+      --game-pip-hello-size: var(--game-pip-landscape-glyph);
+    }
+
+    .gpip.tl {
+      top: var(--game-pip-landscape-inset);
+      left: var(--game-pip-landscape-inset);
+    }
+
+    .gpip.br {
+      bottom: var(--game-pip-landscape-inset);
+      right: var(--game-pip-landscape-inset);
+    }
+  }
+
   /* Reduced Motion */
   @media (prefers-reduced-motion: reduce) {
     *,

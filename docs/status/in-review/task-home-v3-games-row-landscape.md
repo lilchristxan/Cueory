@@ -1,0 +1,1 @@
+status: Home v3 games row: phone landscape uses the board's four 186 x 260 cards with everything inside the card edges; new browser test checks no card child overflows at 390, 844 and 1440; in review.
