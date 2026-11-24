@@ -1,0 +1,2 @@
+status: in review · task-home-v3/design-handoff · Home v3 hand-off: approved Light and Evening home boards for desktop and phone (pictures and board sources), hero stage photos, rebuilt 912 px study-method vials in `/public/vials/v2/` and small board pieces. Docs and static files only, no page changes.
+decision: D-pending Home v3 replaces the current home hero and sections (Christian approved the canvas design, 2026-11-23). Off-brand board values (Playfair Display, italic eyebrow, non-palette colours) are built with the brand version, and the builder lists each swap.
