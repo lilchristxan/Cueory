@@ -1138,7 +1138,7 @@
     --stage-heading-gap: 1.25rem;
     --stage-eyebrow-size: .875rem;
     --stage-eyebrow-rule: 2.25rem;
-    --stage-action-margin: 1.875rem auto 1.375rem;
+    --stage-action-margin: 1.375rem auto 1.25rem;
     --stage-margin: 9.375rem auto 0;
     --stage-width: min(100%, 36rem);
     --stage-height: 15.75rem;

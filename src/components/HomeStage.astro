@@ -77,4 +77,13 @@ h1 { margin: var(--stage-heading-gap) auto 0; max-width: var(--stage-heading-wid
 .stage-tip svg { width: var(--stage-tip-icon); }
 .stage-tip span { line-height: inherit; text-align: start; }
 .stage-tip strong { display: block; }
+/* The landscape board puts the photograph between its headline and start action. */
+@media (orientation: landscape) and (40rem <= width < 60rem) and (height < 32rem) {
+  .home-stage { display: flex; flex-direction: column; align-items: center; }
+  .stage-copy { display: contents; }
+  .hero-eyebrow, h1 { order: 1; }
+  .stage-scene { order: 2; }
+  .stage-actions { order: 3; }
+  .stage-points { order: 4; }
+}
 </style>
