@@ -36,7 +36,10 @@ async function checkEveningColors(page: import('@playwright/test').Page): Promis
     const body = getComputedStyle(document.body).backgroundColor.replace(/\s+/g, '').toLowerCase();
     if (forbidden[body]) problems.push('body: Daytime ' + forbidden[body] + ' background (' + body + ')');
 
-    for (const regionName of ['main', 'header', 'footer']) {
+    // Game pages have no site header (Games v2 frame): the frame's own panel and column stand in for it, so the same
+    // Evening check still covers the top of the screen.
+    const topRegion = document.querySelector('[data-game-page] .game-frame') ? '.game-frame' : 'header';
+    for (const regionName of ['main', topRegion, 'footer']) {
       const region = document.querySelector(regionName);
       if (!region) {
         problems.push(regionName + ': missing landmark');

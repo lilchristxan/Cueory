@@ -26,13 +26,11 @@ for (const [width, height] of [[320, 700], [390, 844], [820, 1180], [1440, 900]]
       await page.goto('/play/sudoku');
       await expect(game(page).getByRole('gridcell')).toHaveCount(81);
 
-      // The Frame controls, title, time/error line, and board retain their rendered order.
+      // The Frame controls, time/error line, and board retain their rendered order. The page title is screen-reader only in the Games v2 frame (the wordmark is in the left panel), so it is not part of the visual order.
       const section = page.getByTestId('sudoku-section');
       const tops = await Promise.all([
         frameControls(page),
         page.getByTestId('game-frame-sudoku-difficulty'),
-        // The page title (sudoku on its own page, 2026-11-17).
-        page.getByRole('heading', { level: 1, name: 'sudoku', exact: true }),
         game(page).getByTestId('sudoku-status'),
         game(page).getByRole('grid', { name: 'sudoku grid' }),
       ].map(async (part) => (await part.boundingBox())!.y));

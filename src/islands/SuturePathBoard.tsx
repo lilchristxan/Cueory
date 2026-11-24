@@ -4,7 +4,7 @@ import { useEffect, useId, useLayoutEffect, useRef, useState, type KeyboardEvent
 import { dayLabel } from './daily';
 import { localDay, reportRound } from './gameresults';
 import { printGame } from './gameprint';
-import { GameHelpCard, useGameHelp } from './GameHelp';
+import { useGameHelp } from './GameHelp';
 import GameHeader from './GameHeader';
 import { site } from '../config/site';
 import { shake } from './SutureGame';
@@ -350,7 +350,6 @@ export function PathBoard({ puzzle, name }: Props) {
       />
       {printNote && <p className="mt-2 text-center text-sm text-ink-soft" data-testid="suture-print-note" data-print-hidden>{printNote}</p>}
       <PrintLogo />
-      <GameHelpCard help={howToPlay} name={name} />
       <div className="wordpath-panel -mx-(--wordpath-bleed) mt-6 sm:mx-0 sm:px-(--spacing-stack)">
       <p className="wordpath-label px-4 text-center text-ink-soft sm:px-0">cue of the day</p>
       <h3 id={title} className="display px-4 sm:px-0 text-center text-2xl text-ink sm:text-3xl" data-testid="suture-theme">{puzzle.clue}</h3>

@@ -127,7 +127,9 @@ describe('GameFrame (Scope 1)', () => {
     expect(frame).toContain('<GameFrameStats client:load game={currentConfig.id} />');
     expect(helloCards).toContain('<GameFrame game="hello-cards" staticNoScoreStats>');
     expect(page).toContain('framed = false');
-    expect(page).toContain('{!framed && <div class="game-page-stats-container');
+    // The four stats sit in the frame's left panel on every game page, so no separate stats block follows the frame.
+    expect(page).not.toContain('game-page-stats-container');
+    expect(page).toContain('bridge={framed} stats>');
     expect(page).toContain('<GameStatsPersistence client:only="react" />');
     expect(page).toContain('finish a game with JavaScript to keep its result in this browser.');
     expect(header).toContain('GAME_FRAME_SETTINGS_EVENT');
@@ -135,7 +137,6 @@ describe('GameFrame (Scope 1)', () => {
     expect(header).toContain('<GameHelpDialog help={help} name={name} extra={helpExtra} />');
     const sudoku = readFileSync(resolve(root, 'src/islands/SudokuGame.tsx'), 'utf-8');
     expect(sudoku).toContain('<GameHelpButton help={help} name={gameName(\'triage\')} className="sudoku-icon-button" />');
-    expect(sudoku).toContain('<GameHelpCard help={help} name={gameName(\'triage\')} />');
     expect(header).toContain('{framed && end &&');
   });
 
@@ -164,6 +165,17 @@ describe('GameFrame (Scope 1)', () => {
     for (const file of ['src/islands/SutureGame.tsx', 'src/islands/SuturePathBoard.tsx']) {
       expect(readFileSync(resolve(root, file), 'utf-8')).toContain('wordpath-panel -mx-(--wordpath-bleed) ');
     }
+  });
+
+  it('switches from the plain row of cards to the deck at the one token width (70rem)', () => {
+    const tokens = readFileSync(resolve(root, 'src/styles/tokens.css'), 'utf-8');
+    const css = readFileSync(resolve(root, 'src/styles/gameframe.css'), 'utf-8');
+    expect(/--breakpoint-deck:\s*70rem/.test(tokens)).toBe(true);
+    // The plain-row rules use the token's variant, never a raw width.
+    const block = css.slice(css.indexOf('@variant max-deck'));
+    expect(block.startsWith('@variant max-deck')).toBe(true);
+    expect(block.slice(0, block.indexOf('/* ----------------', 10))).toContain('.game-frame-deck-slot');
+    expect(css).not.toMatch(/70rem\)/);
   });
 });
 

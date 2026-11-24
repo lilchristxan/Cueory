@@ -1,0 +1,1 @@
+status: in review. Keep the phone carousel’s 280 × 392 px cards on whole pixels during the home section reveal. At 390 px, the continuous 10 px rise produced bounds as low as 391.9999694824219 px even though the layout box remained 392 px. The phone reveal now rises in ten steps while the opacity still fades smoothly.

@@ -2666,7 +2666,7 @@ html:has(dialog.mode-preview[open]) {
      container units resolve where it is used, against the panel. */
   .sudoku-panel { --sudoku-cell-fit: max(var(--sudoku-cell-floor), min(calc((100cqi - var(--sudoku-board-frame)) / 9), clamp(var(--sudoku-cell-min), min(calc((100vh - var(--sudoku-height-reserve)) / 9), calc((100vw - var(--sudoku-width-reserve)) / 9)), var(--sudoku-cell-max)))); --sudoku-board-width: calc(var(--sudoku-cell-fit) * 9 + var(--sudoku-box-line) * 2); container: sudoku-panel / inline-size; display: flex; flex-direction: column; align-items: center; gap: calc(var(--spacing) * 3); }
   /* Top to bottom: levels, the time and error line, five equal icon buttons spread across the board's width, the board. */
-  .sudoku-status { display: flex; inline-size: min(100%, var(--sudoku-board-width)); flex-wrap: wrap; align-items: center; justify-content: space-between; gap: calc(var(--spacing) * 2); }
+  .sudoku-status { display: flex; inline-size: min(100%, var(--sudoku-board-width)); flex-wrap: wrap; align-items: center; min-block-size: var(--sudoku-status-row); justify-content: space-between; gap: calc(var(--spacing) * 2); }
   .sudoku-time:empty, .sudoku-errors:empty { display: none; }
   .sudoku-errors { margin-inline-start: auto; }
   .sudoku-toolbar { position: relative; display: flex; inline-size: min(100%, var(--sudoku-board-width)); flex-wrap: wrap; align-items: center; justify-content: space-between; gap: calc(var(--spacing) * 2) 0; }
@@ -2757,7 +2757,7 @@ html:has(dialog.mode-preview[open]) {
     .sudoku-status { row-gap: 0; }
   }
   @media print {
-    body > :not(main), .sudoku-levels, .sudoku-status, .sudoku-toolbar, .game-help-first, .sudoku-pad-wrap, .sudoku-solved, .sr-only { display: none !important; }
+    body > :not(main), .sudoku-levels, .sudoku-status, .sudoku-toolbar, .sudoku-pad-wrap, .sudoku-solved, .sr-only { display: none !important; }
     :root[data-print-game="sudoku"] main article > :not(.sudoku-section):not(:has(.sudoku-section)) { display: none !important; }
     :root[data-print-game="sudoku"] .sudoku-section > :not(.sudoku-mount) { display: none !important; }
     :root[data-print-game="sudoku"] main article { max-inline-size: none; padding: 0; background: transparent; box-shadow: none; }
