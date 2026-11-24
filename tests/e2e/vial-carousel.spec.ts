@@ -54,7 +54,7 @@ test('every vial is a blank bottle with its label in live text: name and time, w
     await expect(card.locator('.vial-name')).toHaveText(mode.name);
     await expect(card.locator('.vial-meta')).toHaveText(`time${mode.time} min`);
     // The logo is Christian's artwork, not typed.
-    await expect(card.locator('img.vial-logo')).toHaveAttribute('src', '/brand/v1/logo-full-light-480.png');
+    await expect(card.locator('img.vial-logo')).toHaveAttribute('src', '/brand/v1/logo-full-light-960.png');
   }
   // Screen readers hear the method and its two lines: "cards, best for recall, about 5 minutes". The checks above can
   // outlast the six-second auto-advance on a slow machine, so first bring the first vial to the front by keyboard

@@ -1657,7 +1657,7 @@ test.describe('study-mode preview (D-51)', () => {
   });
 });
 
-function homeMenuOpener(page: Page) {
+export function homeMenuOpener(page: Page) {
   const name = page.viewportSize()!.width >= 640 ? 'search the site' : 'open site menu';
   return page.getByRole('button', { name, exact: true });
 }
