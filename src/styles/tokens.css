@@ -1087,6 +1087,20 @@
   --play-hub-stats-reserve: 34rem;      /* the stats panel at every width (at least 550 px) */
 }
 
+/* The explore dock overlaps the bottom of the stage by the board's margin-top of -92 px (docs/design/home-v3, nav margin -92 px
+   under the stage) on desktop, tablet and phone portrait; phone landscape has it as a normal block under the points. */
+.scene-hero {
+  --stage-dock-overlap: 5.75rem;
+  --silk-wash-alpha: 0;      /* the board's hero is a lighter, greyer beige: no Copper Glow wash on this scene (the other home scenes keep theirs) */
+  --stage-bottom-gap: 0px;   /* space under the dock: the next section brings its own top padding, so desktop adds none */
+}
+@media (width < 40rem) {
+  .scene-hero { --stage-bottom-gap: var(--spacing-section-phone); } /* board: about 63 px from the dock to the next heading */
+}
+@media (orientation: landscape) and (40rem <= width < 60rem) and (height < 32rem) {
+  .scene-hero { --stage-dock-overlap: 0px; }
+}
+
 /* Approved Home v3 camera crop and layout, from the 1440 and 390 boards. */
 .home-stage {
   --stage-heading-width: none;
@@ -1097,9 +1111,17 @@
   --stage-point-row-gap: .6em;
   --stage-point-column-gap: 1em;
   --stage-icon-gap: .4em;
-  --stage-tip-padding: .4em 1em;
   --stage-eyebrow-rule: 3rem;
-  --stage-heading-size: clamp(2.5rem, 5vw, 4.125rem);
+  --stage-heading-size: clamp(2.25rem, 4.5vw, 3.7rem); /* board: 66 px in a lighter serif; Bodoni Moda at 700 is wider, so this size gives the board's line length (772 px at 1440) */
+  --stage-heading-weight: 600;
+  --stage-heading-leading: 1.08;
+  --stage-button-leading: 1.5;
+  --stage-button-size: 1rem;   /* board: 16 px label, a 45 px high button (the shared button is 60 px) */
+  --stage-button-padding: calc(var(--spacing) * 2.4) calc(var(--spacing) * 7);
+  --stage-tip-small: .6875rem;             /* board: "support on" 11 px over "Ko-fi" 17 px, a 52 px high pill */
+  --stage-tip-name: 1.0625rem;
+  --stage-tip-leading: 1.12;
+  --stage-tip-padding: .625rem 1.125rem .625rem .875rem;
   --stage-action-margin: clamp(2.375rem, 5.75vw, 5.25rem) auto 2.375rem;
   --stage-width: min(100%, 60rem);
   --stage-margin: 2.25rem auto 0;
@@ -1116,6 +1138,7 @@
   --stage-tip-icon: 1.75rem;
   --stage-hairline: 1px;
   --stage-points-size: var(--text-sm);
+  --stage-points-row-gap: .6em;
   --stage-points-width: none;
   --stage-points-margin: 0 auto;
 }
@@ -1123,20 +1146,23 @@
 @media (width < 40rem) {
   .home-stage {
     --stage-heading-width: 20.625rem;
+    --stage-heading-size: 2.25rem;
+    --stage-heading-leading: 1.25;  /* board: lines 45 px apart */
     --stage-eyebrow-size: .8125rem;
     --stage-eyebrow-rule: 1.375rem;
     --stage-action-margin: 1.375rem auto 1rem;
     --stage-points-size: .8125rem;
     --stage-points-width: 20rem;
+    --stage-points-row-gap: .1em;   /* board: the two rows of points are 21 px apart */
     --stage-margin: .25rem auto 0;
-    --stage-height: 22rem;
+    --stage-height: 28.45rem;  /* the board's stage plus the part the dock overlaps */
     --stage-photo-width: 47.5rem;
-    --stage-photo-top: -2.75rem;
+    --stage-photo-top: -3.25rem;
     --stage-photo-mask: linear-gradient(transparent, currentColor 24%, currentColor 74%, transparent 96%);
-    --stage-halo-top: 11.25rem;
+    --stage-halo-top: 10.75rem;  /* centred on the ring painted in the photo, so the travelling light follows it */
     --stage-halo-width: 20rem;
     --stage-tip-top: auto;
-    --stage-tip-bottom: .375rem;
+    --stage-tip-bottom: calc(var(--stage-dock-overlap) + 2.1875rem);  /* above the dock, as on the board */
     --stage-tip-left: 50%;
     --stage-tip-offset: translateX(-50%);
   }
@@ -1145,20 +1171,20 @@
 /* The landscape phone board is the centred desktop composition at about 60% scale: the button sits inside the top of the ring and the points under the pedestal. */
 @media (orientation: landscape) and (40rem <= width < 60rem) and (height < 32rem) {
   .home-stage {
-    --stage-heading-size: 3rem;
+    --stage-heading-size: 2.6875rem;
     --stage-heading-gap: 1.25rem;
     --stage-eyebrow-size: .875rem;
     --stage-eyebrow-rule: 2.25rem;
-    --stage-action-margin: 3rem auto 0;
+    --stage-action-margin: 3.9375rem auto 0;
     --stage-margin: -10.25rem auto 0;
     --stage-points-margin: 1.25rem auto 1.75rem;
     --stage-width: min(100%, 36rem);
-    --stage-height: 26.3rem;
+    --stage-height: 27.9rem;
     --stage-photo-width: 56.5rem;
-    --stage-photo-top: -1rem;
-    --stage-halo-top: 15.7rem;
+    --stage-photo-top: -.5rem;
+    --stage-halo-top: 16.2rem;
     --stage-halo-width: 22.625rem;
-    --stage-tip-top: 13.2rem;
+    --stage-tip-top: 14.75rem;
     --stage-tip-left: max(-10%, calc((100% - 100vw) / 2 + var(--spacing-gutter)));
   }
 
