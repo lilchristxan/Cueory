@@ -178,6 +178,8 @@ describe('home lower sections', () => {
     expect((source.match(/testid: 'explore-/g) ?? []).length).toBe(5);
     expect(source).toContain('justify-content: center');
     expect(source).toContain('--explore-tile-basis-min');
+    expect(source).toContain('--explore-landscape-width');
+    expect(source).toContain('EXPLORE');
     expect(source).toContain('grid-template-columns: repeat(5, minmax(0, 1fr))');
     expect(source).toContain('/design/home-v3/icon-games.webp');
     expect(existsSync(new URL('../../public/design/home-v3/icon-games.webp', import.meta.url))).toBe(true);

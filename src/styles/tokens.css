@@ -338,6 +338,7 @@
   --hero-eyebrow-gap: 2.5rem;   /* between the logo row and the motto */
   --explore-overlap: -5.75rem;      /* the explore dock overlaps the bottom of the hero stage (board: 92 px at 1440) */
   --explore-landscape-gap: 1.5rem;  /* phone landscape: the dock sits this far under the hero's points, no overlap */
+  --explore-landscape-width: 38.75rem; /* phone landscape: the dock is at most 620 px wide */
   --explore-dock-width: 51.5rem;    /* board: about 825 px at 1440 */
   --explore-dock-gap: 1rem;
   --explore-dock-padding: 1.25rem;

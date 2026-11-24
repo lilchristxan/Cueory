@@ -17,7 +17,7 @@ const tiles = [
 <div class="explore-dock-wrap px-gutter">
   <nav class="veil explore-panel explore-dock" aria-labelledby="explore-heading">
     <div class="explore-dock-heading">
-      <p class="hero-caps">explore</p>
+      <p class="hero-caps">EXPLORE</p>
       <h2 id="explore-heading" class="display">start with what you need.</h2>
     </div>
     <ul class="explore-dock-tiles">
@@ -109,6 +109,9 @@ const tiles = [
   /* Phone landscape (844 x 390): the stage has the button and points below it, so the dock is a normal block about
      24 px under the three points and does not overlap anything. */
   @media (orientation: landscape) and (max-height: 32em) {
+    .explore-dock {
+      max-inline-size: var(--explore-landscape-width);
+    }
     :global(.scene-hero:has(.home-stage)) .explore-dock-wrap {
       margin-block-start: var(--explore-landscape-gap);
     }
