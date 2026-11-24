@@ -3,26 +3,6 @@ import Wordmark from './Wordmark.astro';
 import { site } from '../config/site';
 import { heroStartHref } from '../lessons/draftgate';
 
-/**
- * The home hero (redesign P5, renderings HomeV2-1.png and HomeV2-390.png; copy: docs/design/copy-deck.md, "/ (HomeV2)",
- * ship column). Layout: the logo, Christian's motto, the headline with "simpler." in copper, the "start studying for
- * free" call to action, the value points, the Ko-fi support card, the anatomy figure and the "explore" row.
- *
- * Settled rules that win over the picture:
- * - The call to action follows the draft gate (heroStartHref in src/lessons/draftgate.ts, the same answer the menu and
- *   the library use): where a lesson is open (staging, previews, local and test builds) it is a copper link to it; in the
- *   live build, which holds the sample lesson back, it is a disabled button tagged "coming soon", never a link that leads
- *   nowhere (copy-deck, hero button). Once a real lesson is open live, the guard's answer changes and so does this button.
- * - The third value point ("adhd friendly / less overwhelm, more focus") is shipped: Christian approved it on 23 Nov (D-190).
- * - Final board (home-v2.dc.html, 20 Nov): phones and tablets are one centered column; from the xl width (80rem) the hero is
- *   two columns: the text column (every item centered on its middle line) right of the old position, the larger figure on
- *   the right with its halo ring, fading out to the left so the text sits on clean background.
- * - The headline is two natural lines on phones, capped near 48 px, so the button and value points show on the first screen.
- * - Where the start button is closed (live build) it looks muted and a working "play today's games" link sits beside it.
- * - The accent words and the motto are upright (brand guide: accent lines are never italic or script).
- * - "resources" is left out of the explore row until /resources is live (its live build is a plain coming-soon page).
- * - "give us suggestions" goes to /message (email only, no form yet).
- */
 const exploreTiles = [
   { label: 'lessons', href: '/learn', testid: 'explore-lessons', icon: 'book' },
   { label: 'study materials', href: '#ways-to-study', testid: 'explore-materials', icon: 'layers' },
@@ -31,13 +11,18 @@ const exploreTiles = [
 ] as const;
 
 const startHref = heroStartHref();
+const points = [
+  { title: 'structured learning', icon: 'M3 7l9-4 9 4-9 5zM3 12l9 5 9-5M3 17l9 5 9-5' },
+  { title: 'multiple ways to study', icon: 'M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-4 0a5 5 0 1 1-10 0 5 5 0 0 1 10 0Z' },
+  { title: 'adhd friendly', icon: 'm12 3 2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5Z' },
+];
 ---
 
 <section
-  class="scene scene-hero relative overflow-hidden pb-section"
+  class="scene scene-hero relative overflow-hidden"
   aria-labelledby="hero-heading"
 >
-  <div class="relative mx-auto flex w-full max-w-(--container-explore) flex-col px-gutter xl:static pt-(--hero-top-clear) max-xl:pb-section xl:min-h-(--hero-min-height)">
+  <div class="relative mx-auto flex w-full flex-col pt-(--hero-top-clear)">
     <!--
       The home header is two corner buttons laid over the top of the page (Layout.astro), so the hero draws its own logo
       beside the menu button: the emblem on phones, the full logo from 640 px wide, as the other pages' headers do.
@@ -56,139 +41,43 @@ const startHref = heroStartHref();
       />
     </div>
 
-    <!-- A size container: the headline's size follows the text column's width, so its longer line always fits. -->
-    <div class="@container relative z-10 mx-auto mt-(--hero-eyebrow-gap) w-full max-w-(--container-hero-copy) text-center xl:ms-(--hero-copy-offset) xl:me-0 xl:max-w-(--hero-copy-width)">
-      <p class="hero-eyebrow flex items-center justify-center gap-3 text-ink-soft xl:gap-(--hero-eyebrow-gap-xl) xl:text-lg">
-        <span class="hidden h-px w-10 shrink-0 bg-control sm:block xl:w-(--hero-eyebrow-rule)" aria-hidden="true"></span>
-        <span>by nursing students, for nursing students</span>
-        <span class="hidden h-px w-10 shrink-0 bg-control sm:block xl:w-(--hero-eyebrow-rule)" aria-hidden="true"></span>
-      </p>
-      <h1 id="hero-heading" class="display mt-6 text-display-hero-phone wrap-break-word sm:text-display-hero xl:text-display-hero-xl xl:tracking-tight">
-        nursing school made <span class="hero-accent">simpler.</span>
-      </h1>
-      <svg class="hero-curve xl:w-(--hero-curve-width) xl:translate-x-(--hero-curve-shift)" viewBox="0 0 300 20" preserveAspectRatio="none" aria-hidden="true" focusable="false">
-        <path d="M2 14 C 80 2, 190 2, 298 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" vector-effect="non-scaling-stroke" />
+    <div class="home-stage">
+  <div class="stage-copy">
+    <p class="hero-eyebrow">by nursing students, for nursing students</p>
+    <h1 id="hero-heading" class="display">
+      nursing school made <span class="stage-word"><span class="hero-accent">simpler.</span><svg class="stage-underline" aria-hidden="true" viewBox="0 0 220 18" preserveAspectRatio="none"><path d="M4 13.5C58 4.5 148 3.5 216 11.5" fill="none" stroke="currentColor" stroke-width="3.6" stroke-linecap="round"/></svg></span>
+    </h1>
+    <div class="stage-actions">
+      {startHref ? (
+        <a href={startHref} class="copper-button" data-testid="hero-start">start studying for free <span aria-hidden="true">→</span></a>
+      ) : (
+        <>
+          <button type="button" aria-disabled="true" aria-describedby="hero-start-soon" class="copper-button" data-testid="hero-start">start studying for free <span aria-hidden="true">→</span></button>
+          <span id="hero-start-soon" class="hero-soon">coming soon</span>
+          <a href="/play" class="hero-secondary-link" data-testid="hero-play-games">play today's games <span aria-hidden="true">→</span></a>
+        </>
+      )}
+    </div>
+    <ul class="stage-points" aria-label="what you get">
+      {points.map(({title, icon}) => <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d={icon} fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round"/></svg>{title}</li>)}
+    </ul>
+  </div>
+  <div class="stage-scene">
+    <div class="stage-photo" aria-hidden="true"></div>
+    <div class="stage-halo" aria-hidden="true"><i></i></div>
+    {site.tipPageUrl && <a class="stage-tip" data-testid="hero-support" data-new-tab-cue href={site.tipPageUrl} rel="noopener noreferrer" target="_blank">
+      <svg viewBox="0 0 32 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7">
+        <path d="M3 5h18v9a7 7 0 0 1-7 7h-4a7 7 0 0 1-7-7Zm18 2h3a4 4 0 0 1 0 8h-3"/>
+        <path d="m12 16-4-4c-2-3 2-5 4-2 2-3 6-1 4 2Z" fill="currentColor"/>
       </svg>
-
-      <div class="mt-10 flex flex-col items-center gap-3 sm:flex-row sm:flex-wrap sm:justify-center">
-        {
-          startHref ? (
-            <span class="hero-start-ring">
-              <span class="hero-start-light" aria-hidden="true"></span>
-              <a
-                href={startHref}
-                class="copper-button text-center font-bold"
-                data-testid="hero-start"
-              >
-                start studying for free <span aria-hidden="true">→</span>
-              </a>
-            </span>
-          ) : (
-            <span class="flex flex-wrap items-center justify-center gap-3">
-              <button
-                type="button"
-                class="copper-button text-center font-bold"
-                aria-disabled="true"
-                aria-describedby="hero-start-soon"
-                data-testid="hero-start"
-              >
-                start studying for free <span aria-hidden="true">→</span>
-              </button>
-              <span id="hero-start-soon" class="hero-soon">coming soon</span>
-            </span>
-          )
-        }
-        <a href="/play" class="hero-secondary-link" data-testid="hero-play-games">
-          play today's games <span aria-hidden="true">→</span>
-        </a>
-      </div>
-    </div>
-
-    <!-- Decorative: the figure carries no information the text doesn't. It is the first thing on the page, so it loads at once. -->
-    <div class="hero-figure-wrap mx-auto mt-10 w-(--hero-figure-phone) xl:absolute xl:end-(--hero-figure-end) xl:top-(--hero-figure-top) xl:z-0 xl:mt-0 xl:h-(--hero-figure-height) xl:w-(--hero-figure-width)" aria-hidden="true">
-      <img
-        src="/design/home-v2/hero-figure-halo.webp"
-        alt=""
-        aria-hidden="true"
-        data-image-priority="hero"
-        width="673"
-        height="692"
-        loading="eager"
-        fetchpriority="high"
-        decoding="async"
-        draggable="false"
-        class="hero-figure block h-auto w-full xl:h-full xl:object-cover xl:object-right-top"
-      />
-      <span class="hero-halo hidden xl:block"></span>
-    </div>
-
-    <div class="relative z-10 mx-auto w-full max-w-(--container-hero-copy) text-center xl:ms-(--hero-copy-offset) xl:me-0 xl:max-w-(--hero-copy-width)">
-      <ul class="mx-auto mt-10 grid w-fit gap-5 sm:w-auto sm:grid-cols-3 xl:ms-(--hero-points-start) xl:w-(--hero-points-width) xl:-translate-x-1/2" aria-label="what you get">
-        <li class="flex items-start gap-3 text-ink sm:justify-center">
-          <svg class="hero-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-            <path d="M12 3 3 8l9 5 9-5-9-5Z M3 12l9 5 9-5 M3 16l9 5 9-5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" />
-          </svg>
-          <span class="flex flex-col text-start">
-            <strong class="font-bold">structured learning</strong>
-            <span class="text-base text-ink-soft xl:text-sm">from basics to med-surg</span>
-          </span>
-        </li>
-        <li class="flex items-start gap-3 text-ink sm:justify-center sm:border-s sm:border-line sm:ps-5 " data-hero-point-rule>
-          <svg class="hero-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-            <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.5" />
-            <circle cx="12" cy="12" r="5" fill="none" stroke="currentColor" stroke-width="1.5" />
-            <circle cx="12" cy="12" r="1.5" fill="currentColor" />
-          </svg>
-          <span class="flex flex-col text-start">
-            <strong class="font-bold">multiple ways to study</strong>
-            <span class="text-base text-ink-soft xl:text-sm">learn the way that works for you</span>
-          </span>
-        </li>
-        <li class="flex items-start gap-3 text-ink sm:justify-center sm:border-s sm:border-line sm:ps-5 " data-hero-point-rule>
-          <svg class="hero-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-            <path d="M12 3c.6 5 3.4 8.4 9 9-5.6.6-8.4 4-9 9-.6-5-3.4-8.4-9-9 5.6-.6 8.4-4 9-9Z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" />
-          </svg>
-          <span class="flex flex-col text-start">
-            <strong class="font-bold">adhd friendly</strong>
-            <span class="text-base text-ink-soft xl:text-sm">less overwhelm, more focus</span>
-          </span>
-        </li>
-      </ul>
-
-      {
-        site.tipPageUrl && (
-          <a
-            href={site.tipPageUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            class="hero-support mx-auto mt-10 flex max-w-(--container-hero-card) flex-wrap items-center gap-4 text-start p-4 text-ink no-underline sm:flex-nowrap"
-            data-testid="hero-support"
-            data-new-tab-cue
-          >
-            <!-- The Ko-fi cup: a filled copper cup with a heart, the handle on the right (drawn like the rendering's mark). -->
-            <svg class="hero-icon-mug hero-icon-copper" viewBox="0 0 32 24" aria-hidden="true" focusable="false">
-              <path d="M3 6h20v8a8 8 0 0 1-8 8H11a8 8 0 0 1-8-8V6Z" fill="currentColor" />
-              <path d="M23 8h2.5a4 4 0 0 1 0 8H23" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" />
-              <path d="M13 17.4 8.8 13.3a2.5 2.5 0 0 1 3.5-3.5l.7.7.7-.7a2.5 2.5 0 0 1 3.5 3.5L13 17.4Z" class="hero-icon-mug-heart" />
-            </svg>
-            <span class="flex flex-col text-start">
-              <span class="text-base text-ink-soft xl:text-sm">support on</span>
-              <strong class="text-lg font-bold">Ko-fi</strong>
-            </span>
-            <span class="hero-support-body order-last basis-full text-base sm:order-none sm:basis-0 sm:border-s sm:border-control sm:ps-4">
-              support our mission to expand our resources, help nursing students struggling in class, and keep building ways we can help students and nurses.
-              <span class="sr-only"> (opens in a new tab)</span>
-            </span>
-            <svg class="hero-icon ms-auto shrink-0 sm:ms-0" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-              <path d="M14 4h6v6 M20 4 11 13 M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
-            </svg>
-          </a>
-        )
-      }
-    </div>
+      <span>support on <strong>Ko-fi</strong></span>
+      <span class="sr-only">(opens in a new tab)</span>
+    </a>}
+  </div>
+</div>
   </div>
 
-  <div class="px-gutter">
+  <div class="px-gutter hero-dock">
     <nav class="veil explore-panel mx-auto flex max-w-(--container-explore) flex-col gap-6 p-6 lg:flex-row lg:items-center lg:gap-10 lg:p-8" aria-labelledby="explore-heading">
       <div class="shrink-0 text-center lg:text-start">
         <p class="hero-caps text-base text-ink-soft">EXPLORE</p>
@@ -218,3 +107,46 @@ const startHref = heroStartHref();
     </nav>
   </div>
 </section>
+<style>
+.home-stage {
+  position: relative;
+  isolation: isolate;
+  overflow-x: clip;
+  text-align: center;
+}
+.stage-copy { position: relative; z-index: 2; padding-inline: var(--spacing-gutter); }
+.hero-eyebrow, .stage-actions, .stage-points, .stage-points li, .stage-tip { display: flex; align-items: center; justify-content: center; }
+.hero-eyebrow { font-size: var(--stage-eyebrow-size); gap: var(--stage-eyebrow-gap); font-family: var(--font-body); font-style: normal; color: var(--color-ink-soft); }
+.hero-eyebrow::before, .hero-eyebrow::after { content: ''; inline-size: var(--stage-eyebrow-rule); border-top: var(--stage-hairline) solid var(--color-line); }
+h1 { margin: var(--stage-heading-gap) auto 0; max-width: var(--stage-heading-width); font-size: var(--stage-heading-size); font-weight: var(--stage-heading-weight); line-height: var(--stage-heading-leading); }
+.stage-word { position: relative; display: inline-block; }
+.home-stage .hero-accent { color: var(--stage-accent-ink); background: none; -webkit-text-fill-color: currentColor; -webkit-text-stroke-width: var(--stage-accent-stroke); animation: none; }
+.stage-underline { position: absolute; inset: auto -2% -.14em; width: 104%; height: .22em; color: var(--color-copper-deep); }
+.stage-actions { gap: calc(2 * var(--spacing)); flex-wrap: wrap; margin: var(--stage-action-margin); }
+.stage-points { gap: var(--stage-points-row-gap) 1em; flex-wrap: wrap; color: var(--color-ink-soft); font-size: var(--stage-points-size); max-width: var(--stage-points-width); margin: var(--stage-points-margin); }
+.stage-points li { gap: var(--stage-icon-gap); }
+.stage-points svg { width: 1.1em; height: 1.1em; }
+.stage-scene { position: relative; width: var(--stage-width); margin: var(--stage-margin); height: var(--stage-height); }
+.stage-photo { position: absolute; inset-inline-start: 50%; transform: translateX(-50%); top: var(--stage-photo-top); width: var(--stage-photo-width); aspect-ratio: 2880/1607; background: var(--stage-photo) center / contain no-repeat; mask-image: var(--stage-photo-mask); }
+.home-stage { --stage-accent-ink: color-mix(in srgb, var(--color-ink) 75%, var(--color-copper-deep)); --stage-photo: url('/design/home-v3/stage-light.webp'); }
+:global(:root[data-theme="dark"]) .home-stage { --stage-accent-ink: color-mix(in srgb, var(--color-copper-glow) 75%, var(--color-copper)); --stage-photo: url('/design/home-v3/stage-evening.webp'); }
+@media (prefers-color-scheme: dark) {
+  :global(:root:not([data-theme="light"])) .home-stage { --stage-accent-ink: color-mix(in srgb, var(--color-copper-glow) 75%, var(--color-copper)); --stage-photo: url('/design/home-v3/stage-evening.webp'); }
+}
+.stage-halo { position: absolute; left: 50%; top: var(--stage-halo-top); width: var(--stage-halo-width); aspect-ratio: 1; transform: translate(-50%, -50%); clip-path: inset(0 0 19%); mask-image: radial-gradient(closest-side, transparent 93%, currentColor 96%, currentColor 97%, transparent); pointer-events: none; }
+.stage-halo i { display: block; width: 100%; height: 100%; border-radius: 50%; background: conic-gradient(transparent 250deg, var(--color-copper-glow) 325deg, var(--color-copper-shine) 355deg, transparent); }
+@media (prefers-reduced-motion: no-preference) { .stage-halo i { animation: stage-orbit 7s linear infinite; } }
+@keyframes stage-orbit { to { transform: rotate(1turn); } }
+.stage-tip { position: absolute; top: var(--stage-tip-top); bottom: var(--stage-tip-bottom); left: var(--stage-tip-left); transform: var(--stage-tip-offset); gap: var(--stage-point-row-gap); font-size: var(--text-sm); min-height: var(--tap-min); padding: var(--stage-tip-padding); border: var(--stage-hairline) solid var(--color-line); border-radius: 100vw; color: var(--color-ink); background-color: var(--color-page); text-decoration: none; }
+.stage-tip svg { width: var(--stage-tip-icon); }
+.stage-tip span { line-height: var(--stage-tip-leading); text-align: start; font-size: var(--stage-tip-small); }
+.stage-tip strong { display: block; font-size: var(--stage-tip-name); }
+.stage-actions .copper-button { font-size: var(--stage-button-size); line-height: var(--stage-button-leading); padding: var(--stage-button-padding); }
+/* The dock overlaps the stage by the board's amount (token in tokens.css) and sits above the stage's lower edge. */
+.hero-dock { position: relative; z-index: 5; margin-block-start: calc(-1 * var(--stage-dock-overlap)); }
+.scene-hero { padding-block-end: var(--stage-bottom-gap); }
+/* The strip under the dock is the gap to the next section, so that section does not add its own top padding on top of it. */
+:global(.scene-hero + .scene-play.scene) { padding-block-start: var(--stage-next-top-pad); }
+:global(.scene-hero + .scene-play .games-container) { padding-block-start: 0; }
+:global(.scene-hero + .scene-play.scene) { --scene-fade-top: var(--stage-bottom-gap); }
+</style>

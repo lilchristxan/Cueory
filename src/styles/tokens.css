@@ -20,6 +20,10 @@
   /* Remove Tailwind's built-in palette so only brand colors can be used. */
   --color-*: initial;
 
+  /* The card deck shows from 70rem (1120 px); below it the other games are a plain row under the board. Tailwind turns
+     this into the deck: and max-deck: variants, which gameframe.css uses through @variant. */
+  --breakpoint-deck: 70rem;
+
   /* ---------- Daytime palette (brand guide) ---------- */
   --color-page: #f9f5ef;        /* Ivory    — page background */
   --color-surface: #eadccf;     /* Linen    — cards and panels */
@@ -136,6 +140,12 @@
   --game-frame-pill-ivory-bg: radial-gradient(120% 140% at 30% 20%, #ffffff 0%, var(--color-page) 55%, var(--color-surface) 100%);
   --game-frame-max-board-wide: 51.25rem; /* 820px */
   --game-frame-max-board-showcase: 45rem; /* 720px */
+  --game-deck-card-width: 13rem;         /* 208px, the fanned card deck at the right edge */
+  --game-deck-card-height: 17rem;        /* 272px */
+  --game-deck-step: 3.5rem;              /* 56px between fanned cards */
+  --game-deck-reveal: 3.5rem;            /* 56px of each card that shows at rest */
+  --game-deck-icon-size: 1.25rem;        /* 20px, a game's icon in a deck card corner */
+  --game-deck-slide: 9rem;               /* 144px a card slides out on hover or focus */
   --game-frame-sidebar-compact-emblem-size: 2.75rem; /* 44px */
   --game-frame-sidebar-compact-emblem-radius: 0.75rem; /* 12px */
   --game-frame-sidebar-compact-emblem-cell: 0.5rem; /* 8px */
@@ -1031,6 +1041,7 @@
   --sudoku-cell-max: 5.25rem;
   --sudoku-height-reserve: 28.75rem;
   --sudoku-width-reserve: 9.375rem;
+  --sudoku-status-row: 2rem;           /* the status row is a whole number of pixels tall (32 px), so the controls under it land on whole pixels (Firefox loses 0.00003 px on a fractional offset) */
   --sudoku-line: 1px;
   --sudoku-box-line: 3px;
   --sudoku-board-frame: calc(var(--sudoku-box-line) * 2 + 1px); /* outer box lines + 1px so rounding never overflows */
@@ -1074,4 +1085,119 @@
   --play-hub-headline-size-phone: 2.5rem;
   /* room kept for the stats panel (browser-only) until it renders; the game rows render on the server */
   --play-hub-stats-reserve: 34rem;      /* the stats panel at every width (at least 550 px) */
+}
+
+/* The explore dock overlaps the bottom of the stage by the board's margin-top of -92 px (docs/design/home-v3, nav margin -92 px
+   under the stage) on desktop, tablet and phone portrait; phone landscape has it as a normal block under the points. */
+:root {
+  --stage-next-top-pad: 1.3125rem;   /* 21 px: the 86 px heading's letters reach 19 px above its line box, so the fade (D-53) never touches the words */
+  --stage-bottom-gap: 2.375rem;   /* with the 21 px above: 59 px from the dock to the next heading (board 59). The next scene fades in over this strip, so no text sits in it */
+}
+@media (width < 40rem) {
+  :root { --stage-bottom-gap: var(--spacing-section-phone); --stage-next-top-pad: var(--spacing-section-phone); } /* board: 64 px (this strip plus the next section's 32 px) */
+}
+.scene-hero {
+  --stage-dock-overlap: 5.75rem;
+  --silk-wash-alpha: 0;      /* the board's hero is a lighter, greyer beige: no Copper Glow wash on this scene (the other home scenes keep theirs) */
+}
+@media (orientation: landscape) and (40rem <= width < 60rem) and (height < 32rem) {
+  .scene-hero { --stage-dock-overlap: 0px; }
+}
+
+/* Approved Home v3 camera crop and layout, from the 1440 and 390 boards. */
+.home-stage {
+  --stage-heading-width: none;
+  --stage-accent-stroke: 0;
+  --stage-eyebrow-size: 1rem;
+  --stage-eyebrow-gap: .8em;
+  --stage-heading-gap: .25em;
+  --stage-point-row-gap: .6em;
+  --stage-point-column-gap: 1em;
+  --stage-icon-gap: .4em;
+  --stage-eyebrow-rule: 3rem;
+  --stage-heading-size: clamp(2.25rem, 4.5vw, 3.7rem); /* board: 66 px in a lighter serif; Bodoni Moda at 700 is wider, so this size gives the board's line length (772 px at 1440) */
+  --stage-heading-weight: 600;
+  --stage-heading-leading: 1.08;
+  --stage-button-leading: 1.5;
+  --stage-button-size: 1rem;   /* board: 16 px label, a 45 px high button (the shared button is 60 px) */
+  --stage-button-padding: calc(var(--spacing) * 2.4) calc(var(--spacing) * 7);
+  --stage-tip-small: .6875rem;             /* board: "support on" 11 px over "Ko-fi" 17 px, a 52 px high pill */
+  --stage-tip-name: 1.0625rem;
+  --stage-tip-leading: 1.12;
+  --stage-tip-padding: .625rem 1.125rem .625rem .875rem;
+  --stage-action-margin: clamp(2.375rem, 5.75vw, 5.25rem) auto 2.375rem;
+  --stage-width: min(100%, 60rem);
+  --stage-margin: 2.25rem auto 0;
+  --stage-height: clamp(20rem, 36vw, 26.25rem);
+  --stage-photo-top: max(-22.9vw, -20.625rem);
+  --stage-photo-width: min(100vw, 90rem);
+  --stage-photo-mask: linear-gradient(transparent, currentColor 14%, currentColor 82%, transparent);
+  --stage-halo-top: min(6.5vw, 5.875rem);
+  --stage-halo-width: min(42vw, 37.75rem);
+  --stage-tip-top: 15%;
+  --stage-tip-bottom: auto;
+  --stage-tip-left: 4%;
+  --stage-tip-offset: none;
+  --stage-tip-icon: 1.75rem;
+  --stage-hairline: 1px;
+  --stage-points-size: var(--text-sm);
+  --stage-points-row-gap: .6em;
+  --stage-points-width: none;
+  --stage-points-margin: 0 auto;
+}
+
+@media (width < 40rem) {
+  .home-stage {
+    --stage-heading-width: 20.625rem;
+    --stage-heading-size: 2.25rem;
+    --stage-heading-leading: 1.25;  /* board: lines 45 px apart */
+    --stage-eyebrow-size: .8125rem;
+    --stage-eyebrow-rule: 1.375rem;
+    --stage-action-margin: 1.375rem auto 1rem;
+    --stage-points-size: .8125rem;
+    --stage-points-width: 20rem;
+    --stage-points-row-gap: .1em;   /* board: the two rows of points are 21 px apart */
+    --stage-margin: .25rem auto 0;
+    --stage-height: 28.45rem;  /* the board's stage plus the part the dock overlaps */
+    --stage-photo-width: 47.5rem;
+    --stage-photo-top: -3.25rem;
+    --stage-photo-mask: linear-gradient(transparent, currentColor 24%, currentColor 74%, transparent 96%);
+    --stage-halo-top: 10.75rem;  /* centred on the ring painted in the photo, so the travelling light follows it */
+    --stage-halo-width: 20rem;
+    --stage-tip-top: auto;
+    --stage-tip-bottom: calc(var(--stage-dock-overlap) + 2.1875rem);  /* above the dock, as on the board */
+    --stage-tip-left: 50%;
+    --stage-tip-offset: translateX(-50%);
+  }
+}
+
+/* The landscape phone board is the centred desktop composition at about 60% scale: the button sits inside the top of the ring and the points under the pedestal. */
+@media (orientation: landscape) and (40rem <= width < 60rem) and (height < 32rem) {
+  .home-stage {
+    --stage-heading-size: 2.6875rem;
+    --stage-heading-gap: 1.25rem;
+    --stage-eyebrow-size: .875rem;
+    --stage-eyebrow-rule: 2.25rem;
+    --stage-action-margin: 3.9375rem auto 0;
+    --stage-margin: -10.25rem auto 0;
+    --stage-points-margin: 1.25rem auto 1.75rem;
+    --stage-width: min(100%, 36rem);
+    --stage-height: 27.9rem;
+    --stage-photo-width: 56.5rem;
+    --stage-photo-top: -.5rem;
+    --stage-halo-top: 16.2rem;
+    --stage-halo-width: 22.625rem;
+    --stage-tip-top: 14.75rem;
+    --stage-tip-left: max(-10%, calc((100% - 100vw) / 2 + var(--spacing-gutter)));
+  }
+
+  .home-stage { display: flex; flex-direction: column; }
+  .stage-copy { display: contents; }
+  .hero-eyebrow { order: 1; }
+  #hero-heading { order: 2; }
+  .stage-actions { order: 3; }
+  .stage-scene { order: 4; }
+  .stage-points { order: 5; }
+  .stage-actions, .stage-points { position: relative; z-index: 2; padding-inline: var(--spacing-gutter); }
+  .hero-eyebrow, #hero-heading { position: relative; z-index: 2; margin-inline: auto; }
 }

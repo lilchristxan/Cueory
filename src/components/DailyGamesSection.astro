@@ -434,6 +434,12 @@ const helloCardsAvailable = helloCardsPage(
     (display: contents) so its pieces can take their places in the container's grid.
   */
   @media (max-width: 47.99em) {
+    /* The section rises 10 px. Keep its track on whole pixels during the reveal so a
+       392 px card retains both of its edges while scrolling on a phone. */
+    .games-stage[data-reveal="shown"] {
+      transition-timing-function: ease-out, steps(10, end);
+    }
+
     .games-stage {
       padding: var(--game-stage-padding-phone);
     }
