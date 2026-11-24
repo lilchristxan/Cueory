@@ -83,7 +83,7 @@ const landingUrl = kitLandingUrl(newsletter.landingUrl);
     display: grid;
     grid-template-columns: minmax(0, 1fr);
     gap: calc(var(--spacing) * 3);
-    max-inline-size: 56.25rem;
+    max-inline-size: var(--soon-card-max-width);
     margin-inline: auto;
     padding: calc(var(--spacing) * 5.5);
     border-color: var(--cueory-glass-border);
@@ -112,7 +112,7 @@ const landingUrl = kitLandingUrl(newsletter.landingUrl);
     min-inline-size: 0;
     min-block-size: calc(var(--spacing) * 12);
     padding-inline: calc(var(--spacing) * 4);
-    border: 1px solid var(--color-control);
+    border: var(--border-soon-input) solid var(--color-control);
     border-radius: var(--radius-pill);
     background-color: var(--color-page);
     color: var(--color-ink);
@@ -123,6 +123,10 @@ const landingUrl = kitLandingUrl(newsletter.landingUrl);
     padding-block: 0;
     padding-inline: calc(var(--spacing) * 6);
     font-weight: 700;
+    /* The shared copper gradient starts inside the 1 px transparent border, so it repeats there and shows a copper
+       sliver at the pill's right end: draw it from the border edge instead. */
+    background-origin: border-box;
+    background-repeat: no-repeat;
   }
 
   .soon-help {
@@ -160,7 +164,7 @@ const landingUrl = kitLandingUrl(newsletter.landingUrl);
     }
 
     .soon-card {
-      max-inline-size: 38.75rem;
+      max-inline-size: var(--cueory-result-card-max-width);
       padding: calc(var(--spacing) * 4.5) calc(var(--spacing) * 5);
       column-gap: calc(var(--spacing) * 3);
     }

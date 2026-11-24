@@ -60,6 +60,22 @@ async function insideCard(page: Page, parts: Locator[]) {
   }
 }
 
+async function buttonFullyInside(page: Page) {
+  const [c, b] = await Promise.all([box(card(page)), box(button(page))]);
+  // The whole pill and its soft shadow (about 12 px) sit inside the card.
+  expect(b.x).toBeGreaterThanOrEqual(c.x + 12);
+  expect(b.x + b.width).toBeLessThanOrEqual(c.x + c.width - 12);
+  expect(b.y).toBeGreaterThanOrEqual(c.y);
+  expect(b.y + b.height).toBeLessThanOrEqual(c.y + c.height);
+  // Nothing clips the form or the card, and the gradient is drawn from the border edge so it never repeats a sliver.
+  expect(await button(page).evaluate((el) => getComputedStyle(el).backgroundOrigin)).toBe('border-box');
+  for (const selector of ['.soon-card', '.soon-form']) {
+    expect(await page.locator(selector).evaluate((el) => getComputedStyle(el).overflow)).toBe('visible');
+  }
+  const form = await box(page.locator('.soon-form'));
+  expect(b.x + b.width).toBeLessThanOrEqual(form.x + form.width + 0.5);
+}
+
 async function bigEnough(parts: Locator[]) {
   for (const part of parts) {
     const b = await box(part);
@@ -81,6 +97,7 @@ test.describe('layout', () => {
     expect(Math.abs(field.y + field.height / 2 - (join.y + join.height / 2))).toBeLessThan(2);
     await insideCard(page, [copy(page), email(page), button(page)]);
     await bigEnough([email(page), button(page)]);
+    await buttonFullyInside(page);
     await noSidewaysScroll(page);
   });
 
@@ -92,6 +109,7 @@ test.describe('layout', () => {
     expect(Math.abs(field.width - join.width)).toBeLessThan(2);
     await insideCard(page, [copy(page), email(page), button(page)]);
     await bigEnough([email(page), button(page)]);
+    await buttonFullyInside(page);
     await noSidewaysScroll(page);
   });
 
@@ -104,6 +122,7 @@ test.describe('layout', () => {
     expect(Math.abs(field.y + field.height / 2 - (join.y + join.height / 2))).toBeLessThan(2);
     await insideCard(page, [copy(page), email(page), button(page)]);
     await bigEnough([email(page), button(page)]);
+    await buttonFullyInside(page);
     await noSidewaysScroll(page);
   });
 });
