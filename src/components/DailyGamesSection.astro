@@ -47,7 +47,7 @@ const helloCardsAvailable = helloCardsPage(
 ).shown;
 ---
 
-<section id="daily-games" class="scene scene-play scroll-mt-section py-section-phone sm:py-section" aria-labelledby="games-heading">
+<section id="daily-games" class="scene scene-play games-scene scroll-mt-section" aria-labelledby="games-heading">
   <div class="games-container games-stage" role="region" aria-roledescription="carousel" aria-label="daily games" data-games-carousel data-carousel-state="settled" data-testid="games-stage" data-reveal-section>
     <div class="games-header">
       <div class="games-nav-slot games-nav-prev">
@@ -309,9 +309,15 @@ const helloCardsAvailable = helloCardsPage(
     flex-direction: column;
     gap: var(--game-container-gap);
     width: 100%;
-    /* The final board keeps the heading row and the cards inside one 1280 px column (arrows at its two ends). */
-    max-width: var(--game-section-max-width);
+    /* The final board keeps the heading row and the cards inside one 1280 px column (arrows at its two ends); the box
+       includes the stage's side padding, so that is added to the width. */
+    max-width: calc(var(--game-section-max-width) + 2 * var(--game-stage-inline));
     margin-inline: auto;
+  }
+
+  /* Home v3 board: no space above the heading (the hero's own bottom padding is the gap), a short space below. */
+  .games-scene {
+    padding-block: 0 var(--game-section-bottom);
   }
 
   .games-stage {
@@ -428,91 +434,6 @@ const helloCardsAvailable = helloCardsPage(
     outline-offset: var(--focus-offset);
   }
 
-  /*
-    Phones (HomeV2 parity): the same stack as on desktop (heading, line, cards, date note, "play today's"), with the
-    arrows beside "play today's" so they sit by the thumb and nothing floats above the cards. The header steps aside
-    (display: contents) so its pieces can take their places in the container's grid.
-  */
-  @media (max-width: 47.99em) {
-    .games-stage {
-      padding: var(--game-stage-padding-phone);
-    }
-
-    .games-container {
-      display: grid;
-      grid-template-columns: auto minmax(0, 1fr) auto;
-      grid-template-areas:
-        "heading heading heading"
-        "subtitle subtitle subtitle"
-        "car car car"
-        "pager pager pager"
-        "note note note"
-        "prev action next";
-      align-items: center;
-      justify-items: center;
-    }
-
-    .games-header {
-      display: contents;
-    }
-
-    .games-header > .games-heading {
-      grid-area: heading;
-    }
-
-    .games-header > .games-subtitle {
-      grid-area: subtitle;
-      margin-block-end: 0;
-    }
-
-    .gcar {
-      grid-area: car;
-      inline-size: 100%;
-    }
-
-    .games-pager {
-      grid-area: pager;
-    }
-
-    .games-date-note {
-      grid-area: note;
-    }
-
-    .games-nav-prev {
-      grid-area: prev;
-      justify-self: start;
-    }
-
-    .games-nav-next {
-      grid-area: next;
-      justify-self: end;
-    }
-
-    /* At very large text the arrows grow too, so the button may wrap instead of pushing the page sideways. */
-    .games-stage-action {
-      grid-area: action;
-      min-width: 0;
-      padding-block: calc(var(--spacing) * 2);
-      padding-inline: calc(var(--spacing) * 3);
-      flex-wrap: wrap;
-      text-align: center;
-    }
-
-    .games-nav-slot .gs-nav {
-      width: var(--game-nav-size-phone);
-      height: var(--game-nav-size-phone);
-      min-width: var(--game-nav-size-phone);
-      min-height: var(--game-nav-size-phone);
-    }
-
-    /* Body text on a phone is at least 16 px. */
-    .games-date-note {
-      font-size: var(--text-base);
-      line-height: var(--text-base--line-height);
-    }
-
-  }
-
   @media (min-width: 48em) {
     .games-header {
       grid-template-columns: minmax(auto, var(--game-nav-size)) minmax(0, 1fr) minmax(auto, var(--game-nav-size));
@@ -541,6 +462,8 @@ const helloCardsAvailable = helloCardsPage(
     align-items: center;
     justify-content: center;
     column-gap: var(--game-pager-gap);
+    /* The board puts the dots 18 px under the cards' shadow room, with the 8 px dot (not its 44 px box) at that spot. */
+    margin-block: var(--game-pager-pull) var(--game-pager-pull-end);
   }
 
   .games-dot {
@@ -579,7 +502,7 @@ const helloCardsAvailable = helloCardsPage(
   }
 
   .games-date-note {
-    margin: var(--game-date-note-margin-top) 0 0;
+    margin: 0;
     text-align: center;
     font-family: var(--font-body);
     font-size: var(--text-sm);
@@ -776,6 +699,74 @@ const helloCardsAvailable = helloCardsPage(
     font-weight: 700;
   }
 
+  /*
+    Phones (Home v3 board, 390): the arrows flank the heading as on desktop (44 px discs at the two edges), the line sits
+    under the heading in the middle column, and the cards run edge to edge so the next card peeks in at the right.
+  */
+  @media (max-width: 47.99em) {
+    .games-scene {
+      padding-block-end: var(--game-section-bottom-phone);
+    }
+
+    .games-stage {
+      padding: var(--game-stage-padding-phone);
+    }
+
+    .games-header {
+      grid-template-columns: var(--game-nav-size-phone) minmax(0, 1fr) var(--game-nav-size-phone);
+      grid-template-areas:
+        "prev heading next"
+        ". subtitle .";
+      gap: var(--game-header-gap-phone);
+    }
+
+    .games-heading {
+      font-size: var(--game-heading-size-phone);
+    }
+
+    .games-subtitle {
+      margin: var(--game-subtitle-margin-top-phone) 0 0;
+      font-size: var(--game-subtitle-size-phone);
+    }
+
+    .gcar {
+      padding: var(--game-car-padding-phone);
+      margin-inline: calc(-1 * var(--game-stage-inline-phone));
+      margin-block-end: var(--game-car-shadow-pull-phone);
+      max-width: none;
+    }
+
+    .games-nav-prev {
+      justify-self: start;
+    }
+
+    .games-nav-next {
+      justify-self: end;
+    }
+
+    .games-nav-slot .gs-nav {
+      width: var(--game-nav-size-phone);
+      height: var(--game-nav-size-phone);
+      min-width: var(--game-nav-size-phone);
+      min-height: var(--game-nav-size-phone);
+    }
+
+    /* The "play today's" pill may wrap instead of pushing the page sideways at very large text. */
+    .games-stage-action {
+      min-width: 0;
+      padding-block: calc(var(--spacing) * 2);
+      padding-inline: calc(var(--spacing) * 3);
+      flex-wrap: wrap;
+      text-align: center;
+    }
+
+    /* Body text on a phone is at least 16 px. */
+    .games-date-note {
+      font-size: var(--text-base);
+      line-height: var(--text-base--line-height);
+    }
+  }
+
   /* At enlarged text on a phone, the rem-sized playing card must contract to the carousel viewport. Keep the
    * decorative offscreen track clipped, but never clip the active card's name, description or status. */
   @media (max-width: 40em) {
@@ -784,10 +775,12 @@ const helloCardsAvailable = helloCardsPage(
     }
 
     .gcard {
-      width: clamp(var(--game-card-phone-min-width), calc(100% - var(--game-card-phone-inline-inset)), var(--game-card-width));
+      /* At enlarged text the rem-sized card contracts to the row, so it never spills past the screen. */
+      width: min(var(--game-card-phone-width), 100%);
       height: auto;
-      min-height: var(--game-card-phone-min-height);
+      min-height: var(--game-card-phone-height);
       aspect-ratio: auto;
+      scroll-snap-align: center;
     }
 
     .gface {
@@ -1151,6 +1144,49 @@ const helloCardsAvailable = helloCardsPage(
     pips are 30 px inset 10 px, and the status pill sits left of the bottom-right pip, never under it.
   */
   @media (orientation: landscape) and (max-height: 32em) {
+    .games-scene {
+      padding-block-end: var(--game-section-bottom-landscape);
+    }
+
+    .games-stage {
+      padding: var(--game-stage-padding-landscape);
+    }
+
+    .games-container {
+      gap: var(--game-container-gap-landscape);
+    }
+
+    .games-header {
+      grid-template-columns: var(--game-nav-size-landscape) minmax(0, 1fr) var(--game-nav-size-landscape);
+      grid-template-areas:
+        "prev heading next"
+        ". subtitle .";
+      gap: var(--game-header-gap);
+    }
+
+    .games-heading {
+      font-size: var(--game-heading-size-landscape);
+    }
+
+    .games-subtitle {
+      margin: var(--game-subtitle-margin-top-landscape) 0 0;
+      font-size: var(--game-subtitle-size-landscape);
+    }
+
+    .games-nav-slot .gs-nav {
+      width: var(--game-nav-size-landscape);
+      height: var(--game-nav-size-landscape);
+      min-width: var(--game-nav-size-landscape);
+      min-height: var(--game-nav-size-landscape);
+    }
+
+    /* Four cards sit centred in the row; the clip's side padding is whatever the row has left over. */
+    .gcar {
+      padding: var(--game-car-padding-landscape);
+      padding-inline: max(var(--game-car-landscape-min-inset), calc((100% - (4 * var(--game-card-landscape-width)) - (3 * var(--game-track-gap-landscape))) / 2));
+      margin-block-end: var(--game-car-shadow-pull-landscape);
+    }
+
     .gtrack {
       gap: var(--game-track-gap-landscape);
     }

@@ -573,8 +573,32 @@
     --game-section-padding: 4.5rem 2.5rem 1.5rem;
     --game-section-padding-phone: 3rem 1rem 1.25rem;
     --game-container-gap: 1.125rem;
-    --game-stage-padding: var(--spacing-section) var(--spacing-gutter);
-    --game-stage-padding-phone: 0 var(--spacing-gutter);
+    /* Home v3 board gaps (measured from home-light / home-phone-light / home-landscape-light .dc.html). The hero's own
+       bottom padding is the space above the heading, so the section adds none. */
+    --game-stage-inline: 2.5rem;              /* 40 px each side; the 1280 px column then holds the heading row and cards (arrows at its ends) */
+    --game-stage-padding: 0 var(--game-stage-inline);
+    --game-stage-inline-phone: 1rem;
+    --game-stage-padding-phone: 0 var(--game-stage-inline-phone);
+    --game-stage-padding-landscape: 0 1.5rem;
+    --game-section-bottom: 3.5rem;            /* below "play today's": the board's dots-to-next-heading gap minus the next section's own padding */
+    --game-section-bottom-phone: 1.5rem;
+    --game-section-bottom-landscape: 0px;
+    --game-header-gap-phone: 0.375rem;
+    --game-heading-size-phone: 2.125rem;      /* 34 px */
+    --game-heading-size-landscape: 2.625rem;  /* 42 px */
+    --game-subtitle-margin-top-phone: 0.375rem;
+    --game-subtitle-margin-top-landscape: 0.25rem;
+    --game-subtitle-size-phone: 0.9375rem;    /* 15 px */
+    --game-subtitle-size-landscape: 0.875rem; /* 14 px */
+    --game-nav-size-landscape: 2.5rem;
+    --game-container-gap-landscape: 0.625rem;
+    --game-car-padding-phone: 0.75rem 1rem 5rem;       /* net 36 px under the cards once the pull below is taken off */
+    --game-car-shadow-pull-phone: -2.75rem;
+    --game-car-padding-landscape: 0.5rem 0 5rem;       /* net 30 px */
+    --game-car-shadow-pull-landscape: -3.125rem;
+    --game-car-landscape-min-inset: 0px;
+    --game-pager-pull: -2rem;                 /* puts the 8 px dot, not its 44 px box, where the board puts it */
+    --game-pager-pull-end: -0.75rem;
     --game-header-gap: 1rem;
     --game-nav-size: 3.25rem;
     --game-nav-size-phone: 44px; /* phones: a fixed 44 px target, so large text leaves the "play today's" button its room */
@@ -584,23 +608,20 @@
     --game-nav-outline-width: 0.1875rem;
     --game-nav-outline-offset: 0.1875rem;
     --game-heading-size-min: 2rem;
-    --game-heading-size-max: 5.75rem;
+    --game-heading-size-max: 4.125rem;
     --game-subtitle-margin-bottom: 1.25rem;
     --game-subtitle-size: 1.125rem;
-    --game-date-note-margin-top: 0.75rem;
     --game-pager-dot: 0.5rem;   /* 8 px dots; the current one is a 26 x 8 px pill */
     --game-pager-pill: 1.625rem;
     --game-pager-gap: 0.125rem; /* 2 px between the 44 px boxes: browsers hit-test flush neighbours about 1 px into each other, so a hair of space keeps every box exact */
     --game-car-padding: 0.75rem 0.375rem 5rem; /* the bottom padding holds the whole card shadow (18 px down + 40 px blur) so it fades out instead of being cut */
     --game-car-shadow-pull: -2.25rem;     /* pulls the following row back up by the extra padding, so spacing is unchanged */
     --game-track-gap: 1.75rem;
-    --game-track-gap-phone: 0.75rem; /* tighter on phones so at least 48 px of the next card shows inside the carousel's clip */
+    --game-track-gap-phone: 0.875rem; /* board phone: 14 px between cards */
     --game-card-width: 17.5rem;
     --game-card-height: 24.5rem;
-    --game-card-phone-width: calc(100vw - 88px);
-    --game-card-phone-inline-inset: 1.5rem;
-    --game-card-phone-min-width: 280px;
-    --game-card-phone-min-height: 392px;
+    --game-card-phone-width: 15.625rem;       /* board phone: 250 x 350 cards, the next one peeking in */
+    --game-card-phone-height: 21.875rem;
     --game-card-radius: 1.375rem;
     --game-card-padding: 1rem;
     --game-card-border: 1px solid #eadccf;
@@ -645,7 +666,7 @@
     --game-serif-name-landscape-size: 1.875rem;   /* crossword, sudoku: 30 px */
     --game-desc-landscape-size: 0.75rem;
     --game-status-landscape-size: 0.6875rem;
-    --game-track-gap-landscape: 1rem;
+    --game-track-gap-landscape: 0.75rem;
     --game-wordmark-max-width: 10.5rem;
     --game-wordmark-max-height: 3.75rem;
     --game-serif-name-size: 2.5rem;
