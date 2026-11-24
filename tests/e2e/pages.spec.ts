@@ -1036,7 +1036,7 @@ test.describe('silk scenes down the home page (D-53)', () => {
   });
 });
 
-function homeMenuOpener(page: Page) {
+export function homeMenuOpener(page: Page) {
   const name = page.viewportSize()!.width >= 640 ? 'search the site' : 'open site menu';
   return page.getByRole('button', { name, exact: true });
 }
@@ -1122,12 +1122,12 @@ test.describe('☰ side panel and account corner (D-46)', () => {
     const account = page.locator('[data-account-toggle]');
     const menu = page.getByTestId('account-menu');
     await expect(menu).toBeHidden();
-    await expect(account).toHaveAttribute('aria-label', 'open account menu');
+    await expect(account).toHaveAttribute('aria-label', 'sign in, open account menu');
     await account.focus();
     await page.keyboard.press('Enter');
     await expect(menu).toBeVisible();
     await expect(account).toHaveAttribute('aria-expanded', 'true');
-    await expect(account).toHaveAttribute('aria-label', 'close account menu');
+    await expect(account).toHaveAttribute('aria-label', 'sign in, close account menu');
     await expect(menu.getByRole('link', { name: /create free account/ })).toHaveAttribute('href', '/#signup');
     await expect(menu.getByRole('link', { name: /sign in/ })).toHaveAttribute('href', '/#signup');
     await expect(menu.getByText('coming soon')).toHaveCount(2);
@@ -1149,16 +1149,16 @@ test.describe('☰ side panel and account corner (D-46)', () => {
     await page.keyboard.press('Escape');
     await expect(menu).toBeHidden();
     await expect(account).toBeFocused();
-    await expect(account).toHaveAttribute('aria-label', 'open account menu');
+    await expect(account).toHaveAttribute('aria-label', 'sign in, open account menu');
 
     // A tap anywhere else closes it too.
     await account.click();
     await expect(menu).toBeVisible();
-    await expect(account).toHaveAttribute('aria-label', 'close account menu');
+    await expect(account).toHaveAttribute('aria-label', 'sign in, close account menu');
     // The headline's top-left corner: on a phone the open account menu now covers the rest of the (higher) headline.
     await page.getByRole('heading', { level: 1 }).click({ position: { x: 5, y: 5 } });
     await expect(menu).toBeHidden();
-    await expect(account).toHaveAttribute('aria-label', 'open account menu');
+    await expect(account).toHaveAttribute('aria-label', 'sign in, open account menu');
   });
 
   test('corner buttons are at least 44 by 44 px', async ({ page }) => {
@@ -1166,7 +1166,7 @@ test.describe('☰ side panel and account corner (D-46)', () => {
       await page.goto(path);
       // The Home v3 header opens the menu from search on screens 640 px and wider (see homeMenuOpener).
       const menuOpener = path === '/' ? homeMenuOpener(page).first() : page.getByRole('button', { name: 'open site menu', exact: true });
-      for (const opener of [menuOpener, page.getByRole('button', { name: 'open account menu', exact: true })]) {
+      for (const opener of [menuOpener, page.getByRole('button', { name: path === '/' ? 'sign in, open account menu' : 'open account menu', exact: true })]) {
         const box = (await opener.boundingBox())!;
         expect(box.width).toBeGreaterThanOrEqual(44);
         expect(box.height).toBeGreaterThanOrEqual(44);
