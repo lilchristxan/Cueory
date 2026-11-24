@@ -42,7 +42,7 @@ for (const size of [
       await expect(start).toHaveAttribute('href', '/learn/study-skills');
       await expect(page.getByTestId('hero-join')).toHaveCount(0);
       await expect(page.locator('.scene-hero').getByText('adhd friendly')).toBeVisible();
-      await expect(page.locator('.scene-hero').getByText('less overwhelm, more focus')).toBeVisible();
+      await expect(page.locator('.scene-hero .stage-points li').last()).toHaveText('adhd friendly');
       await expect(page.getByRole('list', { name: 'what you get' }).getByRole('listitem')).toHaveCount(3);
       await expect(page.getByTestId('hero-support')).toHaveAttribute('href', site.tipPageUrl);
       // No line under the button restates it (Christian, 2026-11-02).
@@ -72,78 +72,59 @@ for (const size of [
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     });
 
-    test('centers every hero item on its column (the page on phone and tablet, the text column on desktop) and fades the figure', async ({ page }) => {
+    test('centers the hero, underlines the final word, and keeps the support pill on the stage', async ({ page }) => {
       await page.goto('/');
-      const twoColumn = size.viewport.width >= 1280;
-      const measured = await page.evaluate((wide) => {
-        const box = (el: Element | null) => {
-          const r = el!.getBoundingClientRect();
-          return { left: r.left, right: r.right };
+      await page.evaluate(() => document.fonts.ready);
+      const measured = await page.evaluate(() => {
+        const box = (selector: string) => document.querySelector(selector)!.getBoundingClientRect();
+        const mid = (selector: string) => {
+          const r = box(selector);
+          return r.left + r.width / 2;
         };
-        const centerOf = (b: { left: number; right: number }) => (b.left + b.right) / 2;
-        const column = box(document.querySelector('.scene-hero .\\@container'));
-        // The real layout viewport: a scrollbar (headed Firefox) makes it narrower than the configured width.
-        const middle = wide ? centerOf(column) : document.documentElement.clientWidth / 2;
-        const group = [...document.querySelectorAll('[data-testid="hero-start"], #hero-start-soon, [data-testid="hero-play-games"]')].map(box);
-        const groupBox = { left: Math.min(...group.map((g) => g.left)), right: Math.max(...group.map((g) => g.right)) };
+        const stage = box('.stage-scene');
+        const tip = box('.stage-tip');
         return {
-          middle,
-          columnCenter: centerOf(column),
-          eyebrow: centerOf(box(document.querySelector('.hero-eyebrow'))),
-          h1: centerOf(box(document.querySelector('main h1'))),
-          buttons: centerOf(groupBox),
-          points: centerOf(box(document.querySelector('ul[aria-label="what you get"]'))),
-          kofi: centerOf(box(document.querySelector('[data-testid="hero-support"]'))),
-          curve: wide ? null : centerOf(box(document.querySelector('.hero-curve'))),
+          middle: document.documentElement.clientWidth / 2,
+          centers: ['.hero-eyebrow', '#hero-heading', '.stage-actions', '.stage-points', '.stage-photo'].map(mid),
+          underlineOffset: Math.abs(mid('.stage-underline') - mid('.stage-word')),
+          pointsBeforeStage: box('.stage-points').bottom <= stage.top,
+          tipLeft: tip.left - stage.left,
+          tipRight: stage.right - tip.right,
+          tipBottom: stage.bottom - tip.bottom,
+          tipCenter: mid('.stage-tip'),
         };
-      }, twoColumn);
-      if (!twoColumn) expect(Math.abs(measured.columnCenter - measured.middle)).toBeLessThanOrEqual(2);
-      for (const key of ['eyebrow', 'h1', 'buttons', 'points', 'kofi'] as const) {
-        expect(Math.abs(measured[key] - measured.middle), key).toBeLessThanOrEqual(2);
-      }
-      if (measured.curve !== null) expect(Math.abs(measured.curve - measured.middle)).toBeLessThanOrEqual(2);
-
-      // The figure fades out (a mask on its box) and, on the two-column layout, stays inside the page and clear of the text.
-      const figure = page.locator('.hero-figure-wrap');
-      await expect(figure).toHaveCSS('mask-image', /gradient/);
-      if (twoColumn) {
-        const box = (await figure.boundingBox())!;
-        const text = (await page.locator('.scene-hero .\\@container').boundingBox())!;
-        expect(box.x).toBeGreaterThan(text.x);
-        const column = (await page.locator('main h1').boundingBox())!;
-        expect(column.x + column.width).toBeLessThanOrEqual(box.x + (box.width * 0.2));
-      }
+      });
+      for (const position of measured.centers) expect(Math.abs(position - measured.middle)).toBeLessThanOrEqual(2);
+      expect(measured.underlineOffset).toBeLessThanOrEqual(2);
+      expect(measured.pointsBeforeStage).toBe(true);
+      expect(measured.tipLeft).toBeGreaterThanOrEqual(0);
+      expect(measured.tipRight).toBeGreaterThanOrEqual(0);
+      expect(measured.tipBottom).toBeGreaterThanOrEqual(0);
+      if (size.viewport.width < 640) expect(Math.abs(measured.tipCenter - measured.middle)).toBeLessThanOrEqual(2);
+      else expect(measured.tipCenter).toBeLessThan(measured.middle);
+      await expect(page.locator('.stage-photo')).toHaveCSS('mask-image', /gradient/);
     });
 
-    test('keeps the hero decorations quiet under reduced motion', async ({ page }) => {
-      await page.emulateMedia({ reducedMotion: 'reduce' });
+    test('stops the seven-second halo orbit under reduced motion', async ({ page }) => {
+      await page.emulateMedia({ reducedMotion: 'no-preference' });
       await page.goto('/');
+      const halo = page.locator('.stage-halo i');
+      await expect(halo).toBeVisible();
+      await expect(halo).toHaveCSS('animation-duration', '7s');
+      await page.emulateMedia({ reducedMotion: 'reduce' });
+      await expect(halo).toHaveCSS('animation-name', 'none');
       await expect(page.locator('.hero-accent')).toHaveCSS('animation-name', 'none');
-      if (size.viewport.width >= 1280) {
-        await expect(page.locator('.hero-halo')).toBeVisible();
-        const names = await page.locator('.hero-halo').evaluate((el) => [getComputedStyle(el, '::before').animationName, getComputedStyle(el, '::after').animationName]);
-        expect(names).toEqual(['none', 'none']);
-      }
     });
 
-    test('keeps the gap between the Ko-fi card and the Explore panel at normal section spacing below the desktop layout', async ({ page }) => {
-      test.skip(size.viewport.width >= 1280, 'the desktop hero lays the figure beside the text');
+    test('keeps the explore dock immediately after the illustrated stage', async ({ page }) => {
       await page.goto('/');
       const gap = await page.evaluate(() => {
-        const card = document.querySelector('[data-testid="hero-support"]')!.getBoundingClientRect();
-        const explore = document.querySelector('nav[aria-labelledby="explore-heading"]')!.getBoundingClientRect();
-        const probe = document.createElement('div');
-        probe.style.height = 'var(--spacing-section)';
-        document.body.appendChild(probe);
-        const section = probe.getBoundingClientRect().height;
-        probe.remove();
-        // Both sides are rounded to the same 1/100 px grid so sub-pixel layout noise cannot fail the approved spacing.
-        const grid = (value: number) => Math.round(value * 100) / 100;
-        return { gap: grid(explore.top - card.bottom), section: grid(section) };
+        const stage = document.querySelector('.stage-scene')!.getBoundingClientRect();
+        const dock = document.querySelector('nav[aria-labelledby="explore-heading"]')!.getBoundingClientRect();
+        return dock.top - stage.bottom;
       });
-      expect(gap.section).toBeGreaterThan(0);
-      expect(gap.gap).toBeGreaterThan(0);
-      expect(Math.round(gap.gap)).toBeLessThanOrEqual(Math.round(gap.section));
+      expect(gap).toBeGreaterThanOrEqual(-8);
+      expect(gap).toBeLessThanOrEqual(2);
     });
 
     test('has accessible sections and comfortable hero-link targets', async ({ page }) => {

@@ -1075,3 +1075,46 @@
   /* room kept for the stats panel (browser-only) until it renders; the game rows render on the server */
   --play-hub-stats-reserve: 34rem;      /* the stats panel at every width (at least 550 px) */
 }
+
+/* Approved Home v3 camera crop and layout, from the 1440 and 390 boards. */
+.home-stage {
+  --stage-heading-width: none;
+  --stage-heading-size: clamp(2.5rem, 5vw, 4.125rem);
+  --stage-action-margin: 2.375rem auto;
+  --stage-width: min(100%, 60rem);
+  --stage-margin: 2.25rem auto 0;
+  --stage-height: clamp(20rem, 36vw, 26.25rem);
+  --stage-photo-top: max(-22.9vw, -20.625rem);
+  --stage-photo-width: min(100vw, 90rem);
+  --stage-photo-mask: linear-gradient(transparent, black 14%, black 82%, transparent);
+  --stage-halo-top: min(6.5vw, 5.875rem);
+  --stage-halo-width: min(42vw, 37.75rem);
+  --stage-tip-top: 15%;
+  --stage-tip-bottom: auto;
+  --stage-tip-left: 4%;
+  --stage-tip-offset: none;
+  --stage-tip-icon: 1.75rem;
+  --stage-hairline: 1px;
+  --stage-points-size: var(--text-sm);
+  --stage-points-width: none;
+}
+
+@media (width < 40rem) {
+  .home-stage {
+    --stage-heading-width: 20.625rem;
+    --stage-action-margin: 1.375rem auto 1rem;
+    --stage-points-size: .8125rem;
+    --stage-points-width: 20rem;
+    --stage-margin: .25rem auto 0;
+    --stage-height: 22rem;
+    --stage-photo-width: 47.5rem;
+    --stage-photo-top: -2.75rem;
+    --stage-photo-mask: linear-gradient(transparent, black 24%, black 74%, transparent 96%);
+    --stage-halo-top: 11.25rem;
+    --stage-halo-width: 20rem;
+    --stage-tip-top: auto;
+    --stage-tip-bottom: .375rem;
+    --stage-tip-left: 50%;
+    --stage-tip-offset: translateX(-50%);
+  }
+}

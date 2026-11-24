@@ -94,7 +94,6 @@ describe('home lower sections', () => {
     expect(accountLaunch(true)).toMatchObject({ accountHref: '/signup', promoJoinLabel: 'create your free account' });
     // The third value point shipped (Christian approved it, 23 Nov, D-190).
     expect(plain(hero)).toContain('adhd friendly');
-    expect(plain(hero)).toContain('less overwhelm, more focus');
     expect((hero.match(/<ul\b[^>]*aria-label="what you get"[\s\S]*?<\/ul>/)?.[0].match(/<li\b/g) ?? []).length).toBe(3);
     expect(plain(hero)).toContain('structured learning');
     expect(plain(hero)).toContain('multiple ways to study');
@@ -108,34 +107,21 @@ describe('home lower sections', () => {
     expect(support).toContain('target="_blank"');
     expect(support).toContain('rel="noopener noreferrer"');
     expect(support).toContain('opens in a new tab');
-    // The figure loads at once and is decorative.
-    expect(hero).toMatch(/<img\b(?=[^>]*hero-figure-halo\.webp)(?=[^>]*loading="eager")(?=[^>]*alt="")[^>]*>/);
+    expect(hero).toMatch(/<div[^>]*class="stage-photo"[^>]*aria-hidden="true"/);
   });
 
-  it('draws the hairline rule between the hero value points from the tablet width up, as in HomeV2-1', () => {
-    const source = readFileSync(new URL('../../src/components/HomeHero.astro', import.meta.url), 'utf8');
-    const ruled = [...source.matchAll(/<li class="([^"]*)" data-hero-point-rule>/g)];
-    expect(ruled.length, 'second and third value points carry the rule').toBe(2);
-    for (const match of ruled) {
-      expect(match[1].split(' ')).toEqual(expect.arrayContaining(['sm:border-s', 'sm:border-line', 'sm:ps-5']));
+  it('uses the approved day and evening photos and places the value points above the stage', () => {
+    const source = readFileSync(new URL('../../src/components/HomeStage.astro', import.meta.url), 'utf8');
+    for (const mode of ['light', 'evening']) {
+      const filename = '/design/home-v3/stage-' + mode + '.webp';
+      expect(source).toContain(filename);
+      expect(existsSync(new URL('../../public' + filename, import.meta.url))).toBe(true);
     }
-  });
-
-  it('centers the one-column hero (phone, tablet) and keeps the two-column layout from the xl width', () => {
-    const source = readFileSync(new URL('../../src/components/HomeHero.astro', import.meta.url), 'utf8');
-    expect(source).toMatch(/<div class="@container[^"]*\bmx-auto\b[^"]*\btext-center\b/);
-    expect(source).toMatch(/<div class="hero-logo-row flex items-center justify-center sm:justify-start sm:ps-\(--hero-logo-inset\)">/);
-    expect(source).toContain('max-w-(--container-explore)');
-    // The two columns start at the xl width, so the figure never sits over the text at laptop widths.
-    expect(source).not.toMatch(/\blg:(absolute|w-\(--hero-figure)/);
-    expect(source).toContain('xl:text-display-hero-xl');
-    // The final board's motion: the halo glisten, the light round the start button, and the copper shine on "simpler.".
-    expect(source).toContain('class="hero-halo');
-    expect(source).toContain('hero-start-ring');
-    expect(source).toContain('/design/home-v2/hero-figure-halo.webp');
-    // The headline is two natural lines on phones, never one word per line.
-    expect(source).not.toContain('max-sm:block');
-    // The closed live button is muted and sits beside a working link to the daily games.
+    const positions = ['stage-copy', 'hero-heading', 'stage-actions', 'stage-points', 'stage-scene', 'stage-halo', 'hero-support'].map(selector => source.indexOf(selector));
+    expect(positions.every(index => index >= 0)).toBe(true);
+    expect(positions).toEqual([...positions].sort((a, b) => a - b));
+    expect(source).toContain('prefers-reduced-motion: no-preference');
+    expect(source).toContain('stage-orbit 7s linear infinite');
     expect(source).toContain('data-testid="hero-play-games"');
     expect(source).toContain('href="/play"');
   });
@@ -151,7 +137,7 @@ describe('home lower sections', () => {
     expect(heroStartHref({ WORKERS_CI: '1', WORKERS_CI_BRANCH: 'task-p5/home-hero' })).toBe('/learn/study-skills');
     expect(heroStartHref({ CUEORY_ANATOMY_DRAFTS: '1' })).toBe('/learn/study-skills');
     // The hero asks the guard; it never decides on its own.
-    const source = readFileSync(new URL('../../src/components/HomeHero.astro', import.meta.url), 'utf8');
+    const source = readFileSync(new URL('../../src/components/HomeStage.astro', import.meta.url), 'utf8');
     expect(source).toContain('heroStartHref()');
     expect(source).toMatch(/startHref \? \(/);
   });
