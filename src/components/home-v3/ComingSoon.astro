@@ -1,0 +1,185 @@
+---
+/**
+ * Home v3 "coming soon" section (docs/design/home-v3/, boards home-*): one frosted panel with the heading, one line
+ * about what is next, the email field and the copper "join the list" button. Same Kit form as the rest of the site:
+ * a plain HTML form that posts straight to Kit (no Kit script), with Kit's landing page link or "sign ups open soon."
+ * as the fallbacks (signupState in src/config/site.ts). Wide screens put the words and the form on one row, phones
+ * stack them, and phone landscape keeps one compact row (the board's 844 × 390 layout). Lowercase brand voice (D-47).
+ */
+import { kitFormAction, kitLandingUrl, newsletter, signupState } from '../../config/site';
+
+const state = signupState(newsletter.formAction, newsletter.landingUrl);
+const ready = state === 'form';
+const landingUrl = kitLandingUrl(newsletter.landingUrl);
+---
+
+<section id="coming-soon-section" class="soon-section px-gutter" aria-labelledby="soon-heading" data-coming-soon>
+  <div class="soon-card veil" data-reveal-section>
+    <div class="soon-copy">
+      <h2 id="soon-heading" class="display soon-heading">coming soon</h2>
+      <p class="soon-line">Mental Health I and Med Math are next. Get one email when they open.</p>
+    </div>
+    {
+      ready ? (
+        <form
+          action={kitFormAction(newsletter.formAction)}
+          method="post"
+          class="soon-form"
+          data-testid="soon-form"
+        >
+          <label for="soon-email" class="sr-only">
+            email address
+          </label>
+          <input
+            id="soon-email"
+            name={newsletter.emailFieldName}
+            type="email"
+            required
+            maxlength="254"
+            autocomplete="email"
+            inputmode="email"
+            aria-describedby="soon-help"
+            placeholder="your email"
+            class="soon-input"
+          />
+          <button type="submit" class="copper-button soon-button">join the list</button>
+        </form>
+      ) : state === 'landing' ? (
+        <a
+          href={landingUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          class="copper-button soon-button soon-link"
+          aria-label="get launch updates (opens in a new tab)"
+          data-testid="soon-landing"
+        >
+          get launch updates
+        </a>
+      ) : (
+        <p class="soon-line" data-testid="soon-pending">sign ups open soon.</p>
+      )
+    }
+    {
+      ready ? (
+        <p id="soon-help" class="soon-help">
+          a few emails about new lessons and the launch. unsubscribe any time. emails are sent by {newsletter.provider};
+          see our <a href="/privacy">privacy page</a>.
+        </p>
+      ) : state === 'landing' ? (
+        <p class="soon-help">
+          you sign up on {newsletter.provider}'s page; see our <a href="/privacy">privacy page</a>.
+        </p>
+      ) : null
+    }
+  </div>
+</section>
+
+<style>
+  .soon-section {
+    margin-block: calc(var(--spacing) * 10);
+  }
+
+  .soon-card {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: calc(var(--spacing) * 3);
+    max-inline-size: 56.25rem;
+    margin-inline: auto;
+    padding: calc(var(--spacing) * 5.5);
+    border-color: var(--cueory-glass-border);
+    border-radius: var(--cueory-result-card-radius);
+  }
+
+  .soon-heading {
+    font-size: var(--text-xl);
+    line-height: 1.2;
+    overflow-wrap: break-word;
+  }
+
+  .soon-line {
+    margin-block-start: calc(var(--spacing) * 1.5);
+    color: var(--color-ink-soft);
+  }
+
+  .soon-form {
+    display: grid;
+    gap: calc(var(--spacing) * 3);
+    min-inline-size: 0;
+  }
+
+  .soon-input {
+    inline-size: 100%;
+    min-inline-size: 0;
+    min-block-size: calc(var(--spacing) * 12);
+    padding-inline: calc(var(--spacing) * 4);
+    border: 1px solid var(--color-control);
+    border-radius: var(--radius-pill);
+    background-color: var(--color-page);
+    color: var(--color-ink);
+  }
+
+  .soon-button {
+    min-block-size: calc(var(--spacing) * 12);
+    padding-block: 0;
+    padding-inline: calc(var(--spacing) * 6);
+    font-weight: 700;
+  }
+
+  .soon-help {
+    color: var(--color-ink-soft);
+    font-size: var(--text-sm);
+  }
+
+  /* Tablet and desktop: the words, the field and the button on one row, the small print under them. */
+  @media (min-width: 40em) {
+    .soon-card {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+      align-items: center;
+      column-gap: calc(var(--spacing) * 5);
+      padding: calc(var(--spacing) * 8);
+    }
+
+    .soon-form {
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: center;
+    }
+
+    .soon-heading {
+      font-size: var(--text-title-explore);
+    }
+
+    .soon-help {
+      grid-column: 1 / -1;
+    }
+  }
+
+  /* Phone landscape (844 × 390): the board's compact single row. */
+  @media (orientation: landscape) and (max-height: 32em) {
+    .soon-section {
+      margin-block: calc(var(--spacing) * 6);
+    }
+
+    .soon-card {
+      max-inline-size: 38.75rem;
+      padding: calc(var(--spacing) * 4.5) calc(var(--spacing) * 5);
+      column-gap: calc(var(--spacing) * 3);
+    }
+
+    .soon-heading {
+      font-size: var(--text-xl);
+    }
+
+    .soon-line {
+      font-size: var(--text-sm);
+    }
+
+    .soon-input,
+    .soon-button {
+      min-block-size: var(--tap-min);
+    }
+
+    .soon-button {
+      padding-inline: calc(var(--spacing) * 4.5);
+    }
+  }
+</style>
