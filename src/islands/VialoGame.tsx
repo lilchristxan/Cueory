@@ -33,7 +33,7 @@ import { heldRounds, loadStats, localDay, reportProgress, reportRound } from './
 import { dailyStats, recordResult, type DailyStats, type GameStats } from './gamestats';
 import { loadWordList } from './pillowords';
 import ResultBrandMark from './ResultBrandMark';
-import { GameHelpCard, useGameHelp } from './GameHelp';
+import { useGameHelp } from './GameHelp';
 import GameHeader from './GameHeader';
 import { useSharedGameSettings } from './GameSettings.tsx';
 import { browserStorage } from '../scripts/storage';
@@ -289,7 +289,6 @@ export default function VialoGame({ puzzles }: Props) {
         }
       />
       <p className="sr-only" data-testid="vialo-status">guess the {WORD_LENGTH}-letter word · {leftWords}</p>
-      <GameHelpCard help={howToPlay} name={gameName('vialo')} extra={<VialoLegend />} />
 
       <div className="vialo-pack mt-4">
         <ol className="vialo-board" aria-label="your guesses">

@@ -2,6 +2,7 @@
 import '../styles/gameframe.css';
 import GameFrameControls from '../islands/GameFrameControls';
 import GameFrameStats from '../islands/GameFrameStats';
+import GameDeck from './GameDeck.astro';
 import { formatGameDateLine } from '../scripts/gamedateline';
 
 interface Props {
@@ -18,6 +19,8 @@ interface Props {
   bridge?: boolean;
   /** Renders the standard no-score rows without a stats island for a route that persists no game history. */
   staticNoScoreStats?: boolean;
+  /** Shows the four stats in the panel even where the page keeps its own controls (framed off). Default: with framed. */
+  stats?: boolean;
 }
 
 const {
@@ -30,6 +33,7 @@ const {
   framed = true,
   bridge = false,
   staticNoScoreStats = false,
+  stats: showStats,
 } = Astro.props;
 
 type GameConfig = {
@@ -41,6 +45,8 @@ type GameConfig = {
   iconSrc?: string;
   wordmarkType: 'img' | 'serif';
   wordmarkSrc?: string;
+  /** The Evening art for the wordmark, when the Daytime art would not read on the dark panel. */
+  wordmarkEveningSrc?: string;
   wordmarkText?: string;
   defaultSteps: readonly string[];
   hasPillLegend: boolean;
@@ -56,6 +62,7 @@ const configs: Record<string, GameConfig> = {
     iconSrc: '/design/games-v2/assets/vialo-icon-silver-oxblood.svg',
     wordmarkType: 'img',
     wordmarkSrc: '/design/games-v2/assets/vialo-wordmark-oxblood-v3.svg',
+    wordmarkEveningSrc: '/brand/games/vialo-wordmark-dark.svg',
     defaultSteps: [
       'Type a five-letter word.',
       'Each pill shows if a letter is in place, elsewhere or not in the word.',
@@ -71,6 +78,7 @@ const configs: Record<string, GameConfig> = {
     iconType: 'tachyyy',
     wordmarkType: 'img',
     wordmarkSrc: '/design/games-v2/assets/tachyyy-wordmark-light-bar.svg',
+    wordmarkEveningSrc: '/brand/games/tachyyy-wordmark-dark.svg',
     defaultSteps: [
       'Read the question.',
       'Pick one answer before the timer runs out.',
@@ -82,7 +90,7 @@ const configs: Record<string, GameConfig> = {
     id: 'suture',
     name: 'word path',
     brandName: 'piccline',
-    defaultTagline: "Trace today's words",
+    defaultTagline: "Picc today's words",
     iconType: 'img',
     iconSrc: '/brand/games/piccline-dark.svg',
     wordmarkType: 'img',
@@ -98,7 +106,7 @@ const configs: Record<string, GameConfig> = {
     id: 'cueword',
     name: 'crossword',
     brandName: 'crossword',
-    defaultTagline: "Solve today's mini",
+    defaultTagline: "solve today's mini",
     iconType: 'grid',
     wordmarkType: 'serif',
     wordmarkText: 'crossword',
@@ -113,7 +121,7 @@ const configs: Record<string, GameConfig> = {
     id: 'triage',
     name: 'sudoku',
     brandName: 'sudoku',
-    defaultTagline: "Fill today's grid",
+    defaultTagline: "fill today's grid",
     iconType: '9',
     wordmarkType: 'serif',
     wordmarkText: 'sudoku',
@@ -128,7 +136,7 @@ const configs: Record<string, GameConfig> = {
     id: 'hello-cards',
     name: 'hello cards',
     brandName: 'hello cards',
-    defaultTagline: 'Start a conversation',
+    defaultTagline: 'start a convo',
     iconType: 'hi',
     wordmarkType: 'serif',
     wordmarkText: 'hello cards',
@@ -249,7 +257,21 @@ const activeDateLine = propDateLine ?? formatGameDateLine(new Date());
               src={currentConfig.wordmarkSrc}
               alt=""
               aria-hidden="true"
-              class="game-frame-wordmark-img"
+              class:list={['game-frame-wordmark-img', currentConfig.wordmarkEveningSrc && 'game-frame-wordmark-day']}
+              data-wordmark="day"
+              width="180"
+              height="60"
+              loading="lazy"
+              decoding="async"
+            />
+          )}
+          {currentConfig.wordmarkType === 'img' && currentConfig.wordmarkEveningSrc && (
+            <img
+              src={currentConfig.wordmarkEveningSrc}
+              alt=""
+              aria-hidden="true"
+              class="game-frame-wordmark-img game-frame-wordmark-evening"
+              data-wordmark="evening"
               width="180"
               height="60"
               loading="lazy"
@@ -264,10 +286,8 @@ const activeDateLine = propDateLine ?? formatGameDateLine(new Date());
         <p class="game-frame-tagline">{activeTagline}</p>
       </div>
 
-      <div class="game-frame-divider" aria-hidden="true"></div>
-
       <!-- Most framed routes hydrate their saved history; no-score callers keep the same sidebar rows as static markup. -->
-      {framed && <div class="game-frame-stats" data-testid="game-frame-stats" aria-label="your stats">
+      {(showStats ?? framed) && <div class="game-frame-stats" data-testid="game-frame-stats" aria-label="your stats">
         {staticNoScoreStats ? <>
           <div class="game-frame-stat">
             <span class="game-frame-stat-value">0</span>
@@ -307,17 +327,19 @@ const activeDateLine = propDateLine ?? formatGameDateLine(new Date());
       )}
 
       <!-- Slot for page title -->
-      <slot name="title" />
+      <div class="not-print:sr-only game-frame-title"><slot name="title" /></div>
 
       <!-- The board slot -->
       <div class:list={['game-frame-board', wide && 'is-wide', showcase && 'is-showcase']}>
         <slot />
       </div>
 
-      <!-- Card deck slot (placeholder for Item 2) -->
-      <div class="game-frame-deck-slot">
-        <slot name="deck" />
-      </div>
+    </div>
+
+    <!-- The other open games as a fanned deck (desktop) or a row of cards under the stats (compact) -->
+    <div class="game-frame-deck-slot">
+      <GameDeck current={currentConfig.id} />
+      <slot name="deck" />
     </div>
   </div>
 

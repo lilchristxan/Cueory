@@ -6,7 +6,7 @@ import { expect, test } from '@playwright/test';
  * into view below the header (the site's scroll-padding-top, SiteHeader.astro), never partly under it.
  */
 for (const [width, height] of [[390, 844], [1440, 900]] as const) {
-  test(`at ${width} px with reduced motion, Tab to keys r to v near the footer shows each key fully below the header`, async ({ page }) => {
+  test(`at ${width} px with reduced motion, Tab to keys r to v near the footer shows each key fully on screen, below any header`, async ({ page }) => {
     await page.setViewportSize({ width, height });
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await page.addInitScript(() => {
@@ -33,9 +33,11 @@ for (const [width, height] of [[390, 844], [1440, 900]] as const) {
       await expect(key).toBeFocused();
       await expect.poll(async () => {
         return key.evaluate((element) => {
-          const header = document.querySelector('header[data-scroll-header]')!.getBoundingClientRect();
+          // Game pages have no site header (Games v2 frame), so the key must sit fully inside the screen; if a header
+          // ever returns, the key must also clear it.
+          const header = document.querySelector('header[data-scroll-header]')?.getBoundingClientRect();
           const box = element.getBoundingClientRect();
-          return box.top >= header.bottom - 0.5 && box.bottom <= window.innerHeight + 0.5;
+          return box.top >= (header ? header.bottom : 0) - 0.5 && box.bottom <= window.innerHeight + 0.5;
         });
       }, { message: `${letter} fully visible below the header` }).toBe(true);
       // Nothing covers the middle of the key either.

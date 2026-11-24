@@ -60,6 +60,8 @@ for (const game of [
   { path: 'sudoku', name: 'sudoku' },
   { path: 'crossword', name: 'crossword' },
   { path: 'word-path', name: 'piccline' },
+  { path: 'tachyyy', name: 'tachyyy' },
+  { path: 'hello-cards', name: 'hello cards' },
 ]) {
   test(`the ${game.name} corner opens the shared footer report while signed out`, async ({ page }) => {
     await page.goto(`/play/${game.path}`);
