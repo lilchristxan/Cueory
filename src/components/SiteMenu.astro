@@ -317,6 +317,10 @@ const current = currentHref(
     for (const link of dialog.querySelectorAll('a')) {
       link.addEventListener('click', () => {
         returnFocus = false;
+        // Put the page back before the browser follows the link: a link to a spot on this page (ways to study) must
+        // scroll after the lock is released, or the release would carry the page back to where it was.
+        unlockScroll?.();
+        unlockScroll = undefined;
         dialog.close();
       });
     }
