@@ -12,13 +12,10 @@ import { currentHref } from '../scripts/menu';
 
 interface Props { home?: boolean }
 const { home = false } = Astro.props;
-const links = home
-  ? navLinks.flatMap(link => link.href === '/courses' ? [link, { href: '/anatomy-lab', label: 'anatomy lab' }] : [link])
-  : navLinks;
 const about = visibleAboutLinks();
 const current = currentHref(
   Astro.url.pathname,
-  [...links, ...about].map((link) => link.href),
+  [...navLinks, ...about].map((link) => link.href),
 );
 ---
 
@@ -26,12 +23,17 @@ const current = currentHref(
   <nav aria-label="main" class="veil flex min-w-0 flex-wrap items-center justify-center gap-1 rounded-pill px-3 py-1">
     <ul class="flex flex-wrap items-center justify-center gap-1">
       {
-        links.map((link) => (
+        navLinks.map((link) => (
+          <>
           <li>
             <a href={link.href} class="inline-flex min-h-(--tap-min) items-center rounded-pill px-4 text-ink no-underline hover:bg-surface nav-pill" aria-current={link.href === current ? 'page' : undefined}>
               {link.label}
             </a>
           </li>
+          {home && link.href === '/courses' && (
+            <li><span aria-disabled="true" class="inline-flex min-h-(--tap-min) items-center px-4 text-ink-soft">anatomy lab<span class="sr-only">, coming soon</span></span></li>
+          )}
+          </>
         ))
       }
       {
