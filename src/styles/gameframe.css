@@ -761,6 +761,16 @@
   z-index: 10;
 }
 
+/* From 70rem the fanned cards reach about 180 px in from the right edge. While the screen is narrow the main area gives
+   up room on its right (and its padding on its left), so a board at its full width, such as a 720 px grid at 1120 px,
+   never sits under a card. The usual padding is back by --game-deck-reserve-until. */
+@variant deck {
+  .game-frame-main {
+    padding-inline-start: clamp(var(--game-deck-reserve-start), calc(var(--game-deck-reserve-start) + (100vw - var(--breakpoint-deck)) * var(--game-deck-reserve-start-slope)), calc(var(--spacing) * 6));
+    padding-inline-end: clamp(calc(var(--spacing) * 6), calc(calc(var(--spacing) * 6) + (var(--game-deck-reserve-until) - 100vw) * var(--game-deck-reserve-slope)), var(--game-deck-reserve-end));
+  }
+}
+
 /* ---------------- Deck breakpoint ---------------- */
 /* The fanned deck at the right edge fits only from 70rem (1120 px); below it the other games are a plain row under the
    board. The width is the Tailwind breakpoint --breakpoint-deck (tokens.css) used through @variant, so there is one source.

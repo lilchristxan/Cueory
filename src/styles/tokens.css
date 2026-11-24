@@ -151,6 +151,11 @@
   --game-deck-step-up: 2.625rem;         /* 42px: each card behind sits this much higher... */
   --game-deck-step-out: 1.125rem;        /* 18px: ...this much further out past the edge... */
   --game-deck-step-tilt: 2.5deg;         /* ...and this much less tilted */
+  --game-deck-reserve-end: 9.375rem;    /* 150px: at 1120 px the main area gives up this much on its right, so a full-width board stays left of the fanned cards... */
+  --game-deck-reserve-start: 0px;          /* ...and keeps none on its left (the usual padding comes back as the screen widens) */
+  --game-deck-reserve-until: 83.75rem;   /* 1340px: from here the usual padding is enough */
+  --game-deck-reserve-slope: 0.46;       /* right padding handed back per px of width (150 - 48 over 220 px) */
+  --game-deck-reserve-start-slope: 0.22; /* left padding handed back per px of width (48 over 220 px) */
   --game-deck-slide: 10.625rem;          /* 170px a card moves left on hover or focus */
   --game-deck-hover-tilt: -2deg;
   --game-deck-shadow: 0 0.625rem 1.5rem rgb(var(--shadow-tint) / 0.14);
