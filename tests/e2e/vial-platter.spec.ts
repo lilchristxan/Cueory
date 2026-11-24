@@ -83,6 +83,17 @@ test.describe('wide layout (desktop 1440)', () => {
     await expect(target.locator('.platter-name')).toHaveCSS('color', 'rgb(62, 44, 35)');
   });
 
+  test('is the "ways to study" anchor (with a scroll margin for the sticky header) and has the board spacing above and below', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto('/preview/vial-platter#ways-to-study');
+    const root = page.locator('#ways-to-study[data-platter]');
+    await expect(root).toHaveCount(1);
+    await expect(root).toHaveAttribute('data-platter-state', 'settled');
+    await expect(root).toHaveCSS('padding-top', '96px');
+    await expect(root).toHaveCSS('padding-bottom', '40px');
+    await expect(root).toHaveCSS('scroll-margin-top', /^[1-9]/);
+  });
+
   test('keyboard focus lifts the front vial, and the arrow keys turn the platter with focus following', async ({ page }) => {
     await open(page, { width: 1440, height: 900 });
     await front(page).focus();
@@ -137,6 +148,23 @@ test.describe('wide layout (desktop 1440)', () => {
   });
 });
 
+test.describe('touch screen (no hovering pointer)', () => {
+  test.use({ hasTouch: true, isMobile: true });
+
+  test('a pointer resting on a vial does not leave it lifted, but keyboard focus still lifts it', async ({ page }) => {
+    await open(page, { width: 820, height: 1180 });
+    expect(await page.evaluate(() => matchMedia('(hover: hover) and (pointer: fine)').matches)).toBe(false);
+    const target = vials(page).nth(1);
+    await target.hover();
+    await expect(target).toHaveCSS('translate', 'none');
+    await expect(target).toHaveCSS('filter', 'none');
+    await front(page).focus();
+    await page.keyboard.press('Tab');
+    await page.keyboard.press('Shift+Tab');
+    await expect(front(page)).toHaveCSS('translate', /-8px/);
+  });
+});
+
 test.describe('portrait phone (390)', () => {
   test('shows three vials, the dots under the platter, and both arrows 16 px in at the same height', async ({ page }) => {
     await open(page, { width: 390, height: 844 });
@@ -164,7 +192,17 @@ test.describe('portrait phone (390)', () => {
     expect((await box(dots[3]!)).x - (await box(dots[2]!)).x).toBeCloseTo(22, 0);
     const platter = await box(page.locator('.platter-top'));
     expect(first.y).toBeGreaterThan(platter.y + platter.height - 1);
+    // The board puts both arrows in the dots' row under the platter: their middles line up with the dots' middle.
+    expect(prev.y + prev.height / 2).toBeCloseTo(first.y + first.height / 2, 0);
+    expect(next.y + next.height / 2).toBeCloseTo(first.y + first.height / 2, 0);
+    expect(prev.y).toBeGreaterThan(platter.y + platter.height - 1);
     await noSidewaysScroll(page);
+  });
+
+  test('has the board spacing above and below the section (40 / 16)', async ({ page }) => {
+    const root = await open(page, { width: 390, height: 844 });
+    await expect(root).toHaveCSS('padding-top', '40px');
+    await expect(root).toHaveCSS('padding-bottom', '16px');
   });
 
   test('a swipe or a tap on a side vial brings the next one to the front', async ({ page }) => {
@@ -192,6 +230,8 @@ test.describe('phone landscape (844 × 390)', () => {
       expect(b.x).toBeGreaterThanOrEqual(stage.x);
       expect(b.x + b.width).toBeLessThanOrEqual(stage.x + stage.width);
     }
+    await expect(page.locator('[data-platter]')).toHaveCSS('padding-top', '40px');
+    await expect(page.locator('[data-platter]')).toHaveCSS('padding-bottom', '10px');
     const dotRow = await box(page.locator('.platter-dots'));
     const frontBox = await box(front(page));
     expect(dotRow.y + dotRow.height).toBeLessThanOrEqual(frontBox.y + 1);
