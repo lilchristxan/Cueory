@@ -35,7 +35,7 @@ const phone = platterSpots(count, 0, 'phone');
 
 <section
   id="ways-to-study"
-  class="platter scene scene-tint scroll-mt-section py-section-phone sm:py-section"
+  class="platter scene scene-tint scroll-mt-section"
   aria-labelledby="platter-heading"
   data-platter
   data-count={count}
@@ -84,11 +84,12 @@ const phone = platterSpots(count, 0, 'phone');
                 <span class="platter-kicker">study method:</span>
                 <span class="platter-name">{mode.name}</span>
                 <span class="platter-meta"><span>time</span><span>{shortTime(mode.time)}</span></span>
+                {/* The 960 file, not the 480 one: the header's hidden day logo requests the 480 file, so it would look already loaded (home-hero-logo-lazy.spec.ts). */}
                 <img
                   class="platter-logo"
-                  src="/brand/v1/logo-full-light-480.png"
-                  width="480"
-                  height="151"
+                  src="/brand/v1/logo-full-light-960.png"
+                  width="960"
+                  height="303"
                   alt=""
                   aria-hidden="true"
                   loading="lazy"

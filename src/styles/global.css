@@ -2834,6 +2834,17 @@ html:has(dialog.mode-preview[open]) {
     --platter-glide: 550ms cubic-bezier(0.2, 0.7, 0.2, 1);
     --platter-ink: var(--color-on-panel-button);  /* label words: dark in both palettes, because the label is cream in both */
     --platter-ring: var(--color-copper-deep);
+    /* The board's space above and below the section (design pixels): 96 / 40 on desktop and tablet, 40 / 16 on a portrait phone, 40 / 10 on a phone turned sideways. */
+    --platter-pad-top: 96;
+    --platter-pad-bottom: 40;
+    padding-block: calc(var(--platter-pad-top) * var(--platter-px)) calc(var(--platter-pad-bottom) * var(--platter-px));
+  }
+
+  @media (orientation: landscape) and (height < 40rem) {
+    .platter {
+      --platter-pad-top: 40;
+      --platter-pad-bottom: 10;
+    }
   }
 
   .platter-stage {
@@ -2930,7 +2941,7 @@ html:has(dialog.mode-preview[open]) {
     filter: drop-shadow(0 0 calc(14 * var(--platter-px)) var(--platter-glow));
   }
 
-  /* A tap leaves :hover stuck on a touch screen, so the mouse lift only applies where there is a real hover (touch-only spec). */
+  /* Hover only where there is a real hovering pointer: a tap on a touch screen must not leave a vial lifted. */
   @media (hover: hover) and (pointer: fine) {
     .platter-vial:hover {
       color: var(--platter-ink);
@@ -3216,6 +3227,8 @@ html:has(dialog.mode-preview[open]) {
       --platter-arrow: 44;
       --platter-dot: 7;
       --platter-dot-gap: 15;
+      --platter-pad-top: 40;
+      --platter-pad-bottom: 16;
     }
 
     .platter-stage {
@@ -3265,6 +3278,11 @@ html:has(dialog.mode-preview[open]) {
       pointer-events: none;
     }
 
+    /* The board puts both arrows in the dots' row under the platter, 16 px in from each edge. */
+    .platter-arrow {
+      inset-block-start: calc(var(--platter-th) * var(--platter-scale) * var(--platter-px));
+    }
+
     .platter-arrow-prev {
       inset-inline-start: calc(16 * var(--platter-px));
     }
@@ -3275,7 +3293,7 @@ html:has(dialog.mode-preview[open]) {
     }
 
     .platter-dots {
-      inset-block-start: calc(var(--platter-th) * var(--platter-scale) * var(--platter-px) + 25 * var(--platter-px));
+      inset-block-start: calc(var(--platter-th) * var(--platter-scale) * var(--platter-px) + var(--platter-arrow) / 2 * var(--platter-px));
       gap: 0;
     }
 

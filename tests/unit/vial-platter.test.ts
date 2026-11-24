@@ -134,6 +134,35 @@ describe('vial platter styles', () => {
   });
 });
 
+describe('vial platter section', () => {
+  const css = readFileSync(new URL('../../src/styles/global.css', import.meta.url), 'utf8');
+  const component = readFileSync(new URL('../../src/components/VialPlatter.astro', import.meta.url), 'utf8');
+
+  it('is the "ways to study" anchor, with the section scroll margin', () => {
+    const tag = /<section\b[^>]*>/.exec(component)?.[0] ?? '';
+    expect(tag).toContain('id="ways-to-study"');
+    expect(tag).toContain('scroll-mt-section');
+  });
+
+  it("draws the label logo from the 960 file, so the header's hidden 480 day logo never makes it look loaded", () => {
+    expect(component).toContain('/brand/v1/logo-full-light-960.png');
+    expect(component).not.toContain('logo-full-light-480.png');
+  });
+
+  it('lifts a vial on hover only for a real hovering pointer; keyboard focus always lifts', () => {
+    expect(css).toMatch(/@media \(hover: hover\) and \(pointer: fine\) \{\s*\.platter-vial:hover \{/);
+    const outside = css.replace(/@media \(hover: hover\) and \(pointer: fine\) \{[\s\S]*?\n  \}\n/, '');
+    expect(outside).toMatch(/\.platter-vial:focus-visible \{\s*color: var\(--platter-ink\);\s*translate: 0 calc\(-8/);
+    expect(outside).not.toMatch(/\.platter-vial:hover,\s*\.platter-vial:focus-visible \{\s*color/);
+  });
+
+  it("uses the board's space above and below: 96 / 40, 40 / 16 on a portrait phone, 40 / 10 sideways", () => {
+    expect(css).toMatch(/--platter-pad-top: 96;\s*--platter-pad-bottom: 40;/);
+    expect(css).toMatch(/orientation: landscape\) and \(height < 40rem\) \{\s*\.platter \{\s*--platter-pad-top: 40;\s*--platter-pad-bottom: 10;/);
+    expect(css).toMatch(/--platter-pad-top: 40;\s*--platter-pad-bottom: 16;/);
+  });
+});
+
 describe('vial platter pictures', () => {
   it('has a v2 picture for every study mode, sized as the config says', () => {
     for (const mode of studyModes) {
