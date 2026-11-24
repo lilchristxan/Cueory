@@ -69,7 +69,7 @@ h1 { margin: .25em auto 0; max-width: var(--stage-heading-width); font-size: var
 @media (prefers-color-scheme: dark) {
   :global(:root:not([data-theme="light"])) .home-stage { --stage-photo: url('/design/home-v3/stage-evening.webp'); }
 }
-.stage-halo { position: absolute; left: 50%; top: var(--stage-halo-top); width: var(--stage-halo-width); aspect-ratio: 1; transform: translate(-50%, -50%); clip-path: inset(0 0 19%); mask-image: radial-gradient(closest-side, transparent 93%, black 96%, black 97%, transparent); pointer-events: none; }
+.stage-halo { position: absolute; left: 50%; top: var(--stage-halo-top); width: var(--stage-halo-width); aspect-ratio: 1; transform: translate(-50%, -50%); clip-path: inset(0 0 19%); mask-image: radial-gradient(closest-side, transparent 93%, currentColor 96%, currentColor 97%, transparent); pointer-events: none; }
 .stage-halo i { display: block; width: 100%; height: 100%; border-radius: 50%; background: conic-gradient(transparent 250deg, var(--color-copper-glow) 325deg, var(--color-copper-shine) 355deg, transparent); }
 @media (prefers-reduced-motion: no-preference) { .stage-halo i { animation: stage-orbit 7s linear infinite; } }
 @keyframes stage-orbit { to { transform: rotate(1turn); } }
