@@ -142,6 +142,28 @@ for (const size of [
   });
 }
 
+// Phone turned sideways (844 x 390): the button sits inside the top of the ring, then the stage with its Ko-fi pill, then
+// the points and the explore dock. Keyboard focus follows that order: start, Ko-fi, the first explore tile.
+test.describe('home hero in landscape on a phone', () => {
+  test.use({ viewport: { width: 844, height: 390 } });
+
+  test('keyboard focus follows the drawn order: start, Ko-fi, explore', async ({ page }) => {
+    await page.goto('/');
+    const top = (id: string) => page.getByTestId(id).evaluate((el) => el.getBoundingClientRect().top + window.scrollY);
+    expect(await top('hero-start')).toBeLessThan(await top('hero-support'));
+    expect(await top('hero-support')).toBeLessThan(await top('explore-lessons'));
+    await page.getByTestId('hero-start').focus();
+    const focused = async () => page.evaluate(() => document.activeElement?.getAttribute('data-testid'));
+    const seen: Array<string | null | undefined> = [await focused()];
+    for (let i = 0; i < 4 && seen[seen.length - 1] !== 'explore-lessons'; i++) {
+      await page.keyboard.press('Tab');
+      seen.push(await focused());
+    }
+    const ours = seen.filter((id) => id === 'hero-start' || id === 'hero-support' || id === 'explore-lessons');
+    expect(ours).toEqual(['hero-start', 'hero-support', 'explore-lessons']);
+  });
+});
+
 test.describe('home without JavaScript', () => {
   test.use({ javaScriptEnabled: false });
 
