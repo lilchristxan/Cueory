@@ -29,9 +29,6 @@ export const indexablePages = [
   '/play',
   // Playable games (vialo, sudoku, piccline; the crossword once crosswordOpen is on) come from games.ts.
   ...playableGamePages,
-  // Retained legacy routes for old bookmarks.
-  '/play/pillo',
-  '/play/word-path',
   '/support',
   // Final legal text (Christian, 2026-11-17).
   '/terms',
