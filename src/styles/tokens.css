@@ -1147,6 +1147,6 @@
     --stage-halo-top: 3.5rem;
     --stage-halo-width: 22.625rem;
     --stage-tip-top: 2.3125rem;
-    --stage-tip-left: -10%;
+    --stage-tip-left: max(-10%, calc((100% - 100vw) / 2 + var(--spacing-gutter)));
   }
 }
