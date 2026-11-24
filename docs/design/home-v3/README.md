@@ -37,4 +37,4 @@ each swap in your status note as `D-pending` for Christian:
 - **Fonts:** Playfair Display → Bodoni Moda for the headline and section headings. The italic serif eyebrow → plain upright Lato (BRAND.md: accent lines are plain upright Lato, never italic). Body text stays Lato.
 - **Colours:** every colour comes from the Daytime or Evening palette in `src/styles/tokens.css`. Map each board value to the nearest token and add no new hex values.
 - **Contrast:** "simpler." must pass the contrast tests on the photo in every engine. The last hero failed in WebKit with a 1.7–2.6 ratio.
-- **No third-party fonts or CDNs.** The boards load fonts from Google; we self-host.
+- **No third-party fonts or CDNs.** The board drafts used Google-hosted fonts (those links are removed here); we self-host.
