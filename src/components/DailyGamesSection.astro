@@ -315,9 +315,9 @@ const helloCardsAvailable = helloCardsPage(
     margin-inline: auto;
   }
 
-  /* Home v3 board: no space above the heading (the hero's own bottom padding is the gap), a short space below. */
+  /* Home v3 board: almost no space above the heading (the hero's own bottom padding is the gap); below, as tall as the next scene's fade (D-53). */
   .games-scene {
-    padding-block: 0 var(--game-section-bottom);
+    padding-block: var(--game-section-top) var(--game-section-bottom);
   }
 
   .games-stage {

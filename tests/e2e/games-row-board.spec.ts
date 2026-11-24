@@ -9,9 +9,9 @@ const TOLERANCE = 2;
 type Rect = { left: number; right: number; top: number; bottom: number; width: number; height: number };
 
 const sizes = [
-  { name: 'desktop', width: 1440, height: 900, arrow: 52, edge: 80, cardW: 280, cardH: 392, gap: 28, subToCards: 50, cardsToDot: 52, belowPill: 56 },
-  { name: 'phone', width: 390, height: 844, arrow: 44, edge: 16, cardW: 250, cardH: 350, gap: 14, subToCards: 30, cardsToDot: 44, belowPill: 24 },
-  { name: 'phone landscape', width: 844, height: 390, arrow: 40, edge: 24, cardW: 186, cardH: 260, gap: 12, subToCards: 18, cardsToDot: 30, belowPill: 0 },
+  { name: 'desktop', width: 1440, height: 900, arrow: 52, edge: 80, cardW: 280, cardH: 392, gap: 28, subToCards: 50, cardsToDot: 52, belowPill: 72 },
+  { name: 'phone', width: 390, height: 844, arrow: 44, edge: 16, cardW: 250, cardH: 350, gap: 14, subToCards: 30, cardsToDot: 44, belowPill: 32 },
+  { name: 'phone landscape', width: 844, height: 390, arrow: 40, edge: 24, cardW: 186, cardH: 260, gap: 12, subToCards: 18, cardsToDot: 30, belowPill: 72 },
 ] as const;
 
 for (const size of sizes) {
@@ -74,8 +74,9 @@ for (const size of sizes) {
       expect(Math.abs(m.cards[0].top - m.sub.bottom - size.subToCards)).toBeLessThanOrEqual(TOLERANCE);
       expect(Math.abs(m.dotCenter - m.cards[0].bottom - size.cardsToDot)).toBeLessThanOrEqual(TOLERANCE);
       expect(Math.abs(m.section.bottom - m.pill.bottom - size.belowPill)).toBeLessThanOrEqual(TOLERANCE);
-      // The section adds no space above its heading (the hero's own bottom padding is the gap).
-      expect(Math.abs(m.heading.top - m.section.top)).toBeLessThanOrEqual(TOLERANCE);
+      // The section adds only 16 px above its heading (the hero's own bottom padding is the gap); that keeps the
+      // heading's glyphs out of the scene fade above it (D-53).
+      expect(Math.abs(m.heading.top - m.section.top - 16)).toBeLessThanOrEqual(TOLERANCE);
 
       if (size.name === 'phone') {
         // One card and a peek of the next: the second card starts inside the screen with at least 100 px showing.
