@@ -1,20 +1,7 @@
 import { expect, test } from '@playwright/test';
 
-/**
- * Checks whether an image has started downloading, either recorded in resource timing or currently in flight.
- */
-function isDownloadStarted(
-  img: { currentSrc: string; resourceLoaded: boolean },
-  requestedUrls: ReadonlySet<string>,
-): boolean {
-  return img.resourceLoaded || (img.currentSrc !== '' && requestedUrls.has(img.currentSrc));
-}
-
-/**
- * Performance (2026-11-19): the home hero draws its own logo row, the phone emblem and the full logo, each in a Daytime
- * and an Evening copy, and CSS shows one. The full logo is lazy, so a copy the page hides (the full logo on phones, the
- * other palette's copy everywhere) is never downloaded, while the copy that shows still loads.
- */
+/** The compact phone and two-row desktop headers use the same official full wordmark.
+ * Its unused palette image is lazy and must stay off the network. */
 test('/: the hero logo row downloads only the logo it shows', async ({ page }) => {
   const requestedUrls = new Set<string>();
   page.on('request', (req) => requestedUrls.add(req.url()));

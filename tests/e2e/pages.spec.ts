@@ -792,7 +792,7 @@ test.describe('marketing look (D-41)', () => {
     const hero = page.locator('.home-board-header .home-brand');
     await openFooterLinks(page);
     await page.getByRole('radio', { name: 'Light' }).check();
-    // The home hero draws its own logo beside the menu button (P5): the full logo from 640 px wide, the emblem on phones.
+    // The Home header renders the official full logo in the selected palette at each board width.
     const heroWide = page.viewportSize()!.width >= 640;
     const heroFile = (palette: 'light' | 'dark') =>
       new RegExp(`\\/brand\\/v1\\/logo-full-${palette}-\\d+\\.png$`);
