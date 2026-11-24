@@ -2664,7 +2664,7 @@ html:has(dialog.mode-preview[open]) {
   .sudoku-how ol { margin-block: calc(var(--spacing) * 2) 0; padding-inline-start: calc(var(--spacing) * 6); }
   /* The board's square size lives on the panel, so the time line and the tool row can match the board's width. Its
      container units resolve where it is used, against the panel. */
-  .sudoku-panel { --sudoku-cell-fit: max(var(--sudoku-cell-floor), min(calc((100cqi - var(--sudoku-board-frame)) / 9), clamp(var(--sudoku-cell-min), min(calc((100vh - var(--sudoku-height-reserve)) / 9), calc((100vw - var(--sudoku-width-reserve)) / 9)), var(--sudoku-cell-max)))); --sudoku-board-width: calc(var(--sudoku-cell-fit) * 9 + var(--sudoku-box-line) * 2); container: sudoku-panel / inline-size; display: flex; flex-direction: column; align-items: center; gap: calc(var(--spacing) * 3); }
+  .sudoku-panel { --sudoku-cell-fit: max(var(--sudoku-cell-floor), round(down, min(calc((100cqi - var(--sudoku-board-frame)) / 9), clamp(var(--sudoku-cell-min), min(calc((100vh - var(--sudoku-height-reserve)) / 9), calc((100vw - var(--sudoku-width-reserve)) / 9)), var(--sudoku-cell-max))), 1px)); --sudoku-board-width: calc(var(--sudoku-cell-fit) * 9 + var(--sudoku-box-line) * 2); container: sudoku-panel / inline-size; display: flex; flex-direction: column; align-items: center; gap: calc(var(--spacing) * 3); }
   /* Top to bottom: levels, the time and error line, five equal icon buttons spread across the board's width, the board. */
   .sudoku-status { display: flex; inline-size: min(100%, var(--sudoku-board-width)); flex-wrap: wrap; align-items: center; min-block-size: var(--sudoku-status-row); justify-content: space-between; gap: calc(var(--spacing) * 2); }
   .sudoku-time:empty, .sudoku-errors:empty { display: none; }
