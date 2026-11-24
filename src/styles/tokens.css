@@ -1080,7 +1080,7 @@
 .home-stage {
   --stage-heading-width: none;
   --stage-heading-size: clamp(2.5rem, 5vw, 4.125rem);
-  --stage-action-margin: 2.375rem auto;
+  --stage-action-margin: clamp(2.375rem, 5.75vw, 5.25rem) auto 2.375rem;
   --stage-width: min(100%, 60rem);
   --stage-margin: 2.25rem auto 0;
   --stage-height: clamp(20rem, 36vw, 26.25rem);
