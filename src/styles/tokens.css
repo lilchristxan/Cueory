@@ -1086,7 +1086,7 @@
   --stage-height: clamp(20rem, 36vw, 26.25rem);
   --stage-photo-top: max(-22.9vw, -20.625rem);
   --stage-photo-width: min(100vw, 90rem);
-  --stage-photo-mask: linear-gradient(transparent, black 14%, black 82%, transparent);
+  --stage-photo-mask: linear-gradient(transparent, currentColor 14%, currentColor 82%, transparent);
   --stage-halo-top: min(6.5vw, 5.875rem);
   --stage-halo-width: min(42vw, 37.75rem);
   --stage-tip-top: 15%;
@@ -1109,7 +1109,7 @@
     --stage-height: 22rem;
     --stage-photo-width: 47.5rem;
     --stage-photo-top: -2.75rem;
-    --stage-photo-mask: linear-gradient(transparent, black 24%, black 74%, transparent 96%);
+    --stage-photo-mask: linear-gradient(transparent, currentColor 24%, currentColor 74%, transparent 96%);
     --stage-halo-top: 11.25rem;
     --stage-halo-width: 20rem;
     --stage-tip-top: auto;
