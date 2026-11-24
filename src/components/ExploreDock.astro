@@ -1,0 +1,128 @@
+---
+/**
+ * The explore dock (Home v3, docs/design/home-v3): a frosted panel that overlaps the bottom of the hero stage, with
+ * "explore / start with what you need." and five tiles. Desktop and landscape phones: heading left, five tiles in a
+ * row. Phone portrait: heading on top, three tiles then two, the bottom two centred.
+ * Brand rules win over the board: the heading is upright Bodoni Moda (the board's italic serif is off-brand).
+ */
+const tiles = [
+  { label: 'lessons', href: '/learn', testid: 'explore-lessons', icon: 'book' },
+  { label: 'study materials', href: '#ways-to-study', testid: 'explore-materials', icon: 'layers' },
+  { label: 'daily games', href: '/play', testid: 'explore-games', icon: 'games' },
+  { label: 'resources', href: '/resources', testid: 'explore-resources', icon: 'compass' },
+  { label: 'give us suggestions', href: '/message', testid: 'explore-suggestions', icon: 'chat' },
+] as const;
+---
+
+<div class="explore-dock-wrap px-gutter">
+  <nav class="veil explore-panel explore-dock" aria-labelledby="explore-heading">
+    <div class="explore-dock-heading">
+      <p class="hero-caps">explore</p>
+      <h2 id="explore-heading" class="display">start with what you need.</h2>
+    </div>
+    <ul class="explore-dock-tiles">
+      {
+        tiles.map((tile) => (
+          <li>
+            <a href={tile.href} class="explore-tile explore-dock-tile text-ink no-underline" data-testid={tile.testid}>
+              {tile.icon === 'games' ? (
+                <img src="/design/home-v3/icon-games.webp" alt="" aria-hidden="true" width="40" height="40" loading="lazy" decoding="async" />
+              ) : (
+                <svg class="hero-icon-lg" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                  {tile.icon === 'book' && <path d="M4 5.5C6.5 4 9.5 4 12 5.5 14.5 4 17.5 4 20 5.5V19c-2.5-1.5-5.5-1.5-8 0-2.5-1.5-5.5-1.5-8 0V5.5Z M12 5.5V19" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" />}
+                  {tile.icon === 'layers' && <path d="M12 3 3 8l9 5 9-5-9-5Z M3 12l9 5 9-5 M3 16l9 5 9-5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" />}
+                  {tile.icon === 'compass' && <><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.5" /><path d="M15.5 8.5l-2 5-5 2 2-5z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" /></>}
+                  {tile.icon === 'chat' && <path d="M4 5h16v11H9l-5 4V5Z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" />}
+                </svg>
+              )}
+              <span>{tile.label}</span>
+            </a>
+          </li>
+        ))
+      }
+    </ul>
+  </nav>
+</div>
+
+<style>
+  .explore-dock-wrap {
+    position: relative;
+    z-index: 5;
+    margin-block-start: var(--explore-overlap);
+  }
+  .explore-dock {
+    display: flex;
+    flex-direction: column;
+    gap: var(--explore-dock-gap);
+    align-items: stretch;
+    max-inline-size: var(--explore-dock-width);
+    margin-inline: auto;
+    padding: var(--explore-dock-padding);
+  }
+  .explore-dock-heading {
+    text-align: center;
+  }
+  .explore-dock-heading .hero-caps {
+    font-size: var(--text-sm);
+    color: var(--color-ink-soft);
+  }
+  .explore-dock-heading h2 {
+    margin-block-start: 0.25rem;
+    font-size: var(--explore-dock-title);
+    line-height: 1.2;
+  }
+  .explore-dock-tiles {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: var(--explore-dock-tile-gap);
+  }
+  .explore-dock-tiles > li {
+    grid-column: span 2;
+    display: flex;
+  }
+  /* Phone portrait: 3 + 2, the bottom two centred. */
+  .explore-dock-tiles > li:nth-child(4) {
+    grid-column: 2 / span 2;
+  }
+  .explore-dock-tiles > li:nth-child(5) {
+    grid-column: 4 / span 2;
+  }
+  .explore-dock-tile {
+    display: flex;
+    inline-size: 100%;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.75rem 0.5rem;
+    text-align: center;
+    font-size: var(--text-sm);
+    line-height: 1.5;
+    min-block-size: var(--explore-tile-min);
+  }
+  .explore-dock-tile :global(.hero-icon-lg),
+  .explore-dock-tile img {
+    inline-size: var(--explore-icon);
+    block-size: var(--explore-icon);
+    object-fit: contain;
+  }
+  @media (min-width: 48rem) {
+    .explore-dock {
+      flex-direction: row;
+      align-items: center;
+    }
+    .explore-dock-heading {
+      flex: 0 0 var(--explore-dock-heading-width);
+      text-align: start;
+    }
+    .explore-dock-tiles {
+      flex: 1 1 auto;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+    }
+    .explore-dock-tiles > li,
+    .explore-dock-tiles > li:nth-child(4),
+    .explore-dock-tiles > li:nth-child(5) {
+      grid-column: auto;
+    }
+  }
+</style>

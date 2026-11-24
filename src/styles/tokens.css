@@ -336,6 +336,15 @@
   --hero-top-clear: 1rem;       /* space above the hero's logo row (the corner buttons sit in the page's top 4.5 rem) */
   --hero-logo-inset: calc(var(--header-inline-gutter) + var(--tap-min) + var(--header-corner-gap) - var(--spacing-gutter));
   --hero-eyebrow-gap: 2.5rem;   /* between the logo row and the motto */
+  --explore-overlap: -5.75rem;      /* the explore dock overlaps the bottom of the hero stage (board: 92 px at 1440) */
+  --explore-dock-width: 48.75rem;   /* board: 780 px */
+  --explore-dock-gap: 1rem;
+  --explore-dock-padding: 1.25rem;
+  --explore-dock-tile-gap: 0.625rem;
+  --explore-dock-title: 1.75rem;
+  --explore-dock-heading-width: 9rem;
+  --explore-tile-min: 5.125rem;     /* board: 82 px */
+  --explore-icon: 1.5rem;
   --radius-panel: 2.125rem;     /* the home explore panel's corners (board: 34 px) */
   --radius-card-lg: 1.75rem;    /* the hero's support card corners */
   --icon-size-mug: 2.5rem;      /* the Ko-fi cup mark, width */

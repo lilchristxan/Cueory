@@ -1,5 +1,6 @@
 ---
 import Wordmark from './Wordmark.astro';
+import ExploreDock from './ExploreDock.astro';
 import { site } from '../config/site';
 import { heroStartHref } from '../lessons/draftgate';
 
@@ -20,16 +21,9 @@ import { heroStartHref } from '../lessons/draftgate';
  * - The headline is two natural lines on phones, capped near 48 px, so the button and value points show on the first screen.
  * - Where the start button is closed (live build) it looks muted and a working "play today's games" link sits beside it.
  * - The accent words and the motto are upright (brand guide: accent lines are never italic or script).
- * - "resources" is left out of the explore row until /resources is live (its live build is a plain coming-soon page).
+ * - The explore dock (ExploreDock.astro) now includes "resources": the page exists, and its live build is a plain coming-soon page.
  * - "give us suggestions" goes to /message (email only, no form yet).
  */
-const exploreTiles = [
-  { label: 'lessons', href: '/learn', testid: 'explore-lessons', icon: 'book' },
-  { label: 'study materials', href: '#ways-to-study', testid: 'explore-materials', icon: 'layers' },
-  { label: 'daily games', href: '/play', testid: 'explore-games', icon: 'games' },
-  { label: 'give us suggestions', href: '/message', testid: 'explore-suggestions', icon: 'chat' },
-] as const;
-
 const startHref = heroStartHref();
 ---
 
@@ -188,33 +182,5 @@ const startHref = heroStartHref();
     </div>
   </div>
 
-  <div class="px-gutter">
-    <nav class="veil explore-panel mx-auto flex max-w-(--container-explore) flex-col gap-6 p-6 lg:flex-row lg:items-center lg:gap-10 lg:p-8" aria-labelledby="explore-heading">
-      <div class="shrink-0 text-center lg:text-start">
-        <p class="hero-caps text-base text-ink-soft">EXPLORE</p>
-        <h2 id="explore-heading" class="display mt-2 text-title-explore">start with what you need.</h2>
-      </div>
-      <ul class="grid flex-1 grid-cols-2 gap-3 sm:grid-cols-4">
-        {
-          exploreTiles.map((tile) => (
-            <li class="flex">
-              <a
-                href={tile.href}
-                class="explore-tile flex w-full flex-col items-center justify-center gap-2 p-4 text-center text-ink no-underline"
-                data-testid={tile.testid}
-              >
-                <svg class="hero-icon-lg" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                  {tile.icon === 'book' && <path d="M4 5.5C6.5 4 9.5 4 12 5.5 14.5 4 17.5 4 20 5.5V19c-2.5-1.5-5.5-1.5-8 0-2.5-1.5-5.5-1.5-8 0V5.5Z M12 5.5V19" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" />}
-                  {tile.icon === 'layers' && <path d="M12 3 3 8l9 5 9-5-9-5Z M3 12l9 5 9-5 M3 16l9 5 9-5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" />}
-                  {tile.icon === 'games' && <path d="M4 6h6v6H4Z M14 6h6v6h-6Z M4 15h16v4H4Z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" />}
-                  {tile.icon === 'chat' && <path d="M4 5h16v11H9l-5 4V5Z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" />}
-                </svg>
-                <span>{tile.label}</span>
-              </a>
-            </li>
-          ))
-        }
-      </ul>
-    </nav>
-  </div>
+  <ExploreDock />
 </section>
