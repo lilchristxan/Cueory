@@ -41,7 +41,7 @@ interface Props {
  */
 const WORDMARK: Readonly<Record<Art, { day: string; evening: string; width: number; height: number }>> = {
   vialo: { day: '/design/games-v2/assets/vialo-wordmark-oxblood-v3.svg', evening: '/brand/games/vialo-wordmark-dark.svg', width: 4326, height: 1620 },
-  tachyyy: { day: '/design/games-v2/assets/tachyyy-wordmark-light-bar.svg', evening: '/brand/games/tachyyy-wordmark-dark.svg', width: 5729, height: 2100 },
+  tachyyy: { day: '/brand/games/tachyyy-wordmark-light.svg', evening: '/brand/games/tachyyy-wordmark-dark.svg', width: 5729, height: 2100 },
   piccline: { day: '/brand/games/piccline-wordmark-light.svg', evening: '/brand/games/piccline-wordmark-dark.svg', width: 248, height: 60 },
 };
 /** The icon artwork the game pages use; tachyyy's changes with the palette. */
