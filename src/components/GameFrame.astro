@@ -77,7 +77,7 @@ const configs: Record<string, GameConfig> = {
     defaultTagline: 'Beat the clock',
     iconType: 'tachyyy',
     wordmarkType: 'img',
-    wordmarkSrc: '/design/games-v2/assets/tachyyy-wordmark-light-bar.svg',
+    wordmarkSrc: '/brand/games/tachyyy-wordmark-light.svg',
     wordmarkEveningSrc: '/brand/games/tachyyy-wordmark-dark.svg',
     defaultSteps: [
       'Read the question.',
@@ -213,16 +213,10 @@ const activeDateLine = propDateLine ?? formatGameDateLine(new Date());
             <img src={currentConfig.iconSrc} alt="" aria-hidden="true" class="game-frame-icon-img" width="72" height="72" loading="lazy" decoding="async" />
           )}
           {currentConfig.iconType === 'tachyyy' && (
-            <svg width="72" height="72" viewBox="0 0 120 120" aria-hidden="true" class="block">
-              <rect x="52" y="4" width="16" height="10" rx="3" fill="var(--color-copper-deep)"></rect>
-              <circle cx="60" cy="66" r="44" fill="none" stroke="var(--color-line)" stroke-width="7"></circle>
-              <circle cx="60" cy="66" r="44" fill="none" stroke="var(--color-copper-deep)" stroke-width="7" stroke-linecap="round" stroke-dasharray="165.9 276.5" transform="rotate(-90 60 66)"></circle>
-              <g transform="translate(20 27) scale(0.8)">
-                <path d="M50 90 C20 68 8 50 8 34 C8 20 19 10 31 10 C39 10 46 14 50 22 C54 14 61 10 69 10 C81 10 92 20 92 34 C92 50 80 68 50 90 Z" transform="translate(6 19) scale(0.62)" fill="var(--color-ink)" fill-opacity="0.22"></path>
-                <path d="M50 90 C20 68 8 50 8 34 C8 20 19 10 31 10 C39 10 46 14 50 22 C54 14 61 10 69 10 C81 10 92 20 92 34 C92 50 80 68 50 90 Z" transform="translate(19 19) scale(0.62)" fill="var(--color-ink)" fill-opacity="0.5"></path>
-                <path d="M50 90 C20 68 8 50 8 34 C8 20 19 10 31 10 C39 10 46 14 50 22 C54 14 61 10 69 10 C81 10 92 20 92 34 C92 50 80 68 50 90 Z" transform="translate(32 19) scale(0.62)" fill="var(--color-copper-deep)"></path>
-              </g>
-            </svg>
+            <span class="logo game-frame-icon-img">
+              <img class="logo-day" src="/brand/games/tachyyy-light.svg" alt="" width="72" height="72" loading="lazy" decoding="async" />
+              <img class="logo-evening" src="/brand/games/tachyyy-dark.svg" alt="" width="72" height="72" loading="lazy" decoding="async" />
+            </span>
           )}
           {currentConfig.iconType === 'grid' && (
             <span class="game-frame-emblem">

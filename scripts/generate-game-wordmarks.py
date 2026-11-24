@@ -185,11 +185,13 @@ y1_d = get_y_path(y1_x)
 y2_d = get_y_path(y2_x)
 y3_d = get_y_path(y3_x)
 
+# The bar across the t (Christian's final tachyyy wordmark, Games v2 boards): one rect over the t's crossbar.
 tachyyy_light_svg = f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {t_width} {t_height}" role="img" aria-label="tachyyy">
   <path d="{tach_d}" fill="#3e2c23" />
   <path d="{y1_d}" fill="rgba(62,44,35,0.22)" />
   <path d="{y2_d}" fill="rgba(62,44,35,0.5)" />
   <path d="{y3_d}" fill="#b87348" />
+  <rect x="40" y="572" width="560" height="90" fill="#3e2c23" />
 </svg>'''
 
 tachyyy_dark_svg = f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {t_width} {t_height}" role="img" aria-label="tachyyy">
@@ -197,6 +199,7 @@ tachyyy_dark_svg = f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {t_w
   <path d="{y1_d}" fill="rgba(249,245,239,0.22)" />
   <path d="{y2_d}" fill="rgba(249,245,239,0.5)" />
   <path d="{y3_d}" fill="#d9976a" />
+  <rect x="40" y="572" width="560" height="90" fill="#f9f5ef" />
 </svg>'''
 
 with open(os.path.join(OUT_DIR, "tachyyy-wordmark-light.svg"), "w") as f:
@@ -307,22 +310,33 @@ with open(os.path.join(OUT_DIR, "vialo-dark.svg"), "w") as f:
     f.write(vialo_icon_dark)
 
 # --- TACHYYY ICON ---
+# Christian's final tachyyy mark (Games v2 boards): three hearts inside a stopwatch, on the game's square tile.
 # Heart path M50 90 C20 68 8 50 8 34 C8 20 19 10 31 10 C39 10 46 14 50 22 C54 14 61 10 69 10 C81 10 92 20 92 34 C92 50 80 68 50 90 Z
-# scaled 0.62, three copies at translate(6,19), (19,19), (32,19).
 heart_d = "M50 90 C20 68 8 50 8 34 C8 20 19 10 31 10 C39 10 46 14 50 22 C54 14 61 10 69 10 C81 10 92 20 92 34 C92 50 80 68 50 90 Z"
+
+
+def tachyyy_stopwatch(crown, track, arc, ink):
+    # Drawn on a 120 x 120 grid (crown, ring, a 60% arc, three hearts), then placed at 65% inside the 100 x 100 tile.
+    return f'''  <g transform="translate(11 11) scale(0.65)">
+    <rect x="52" y="4" width="16" height="10" rx="3" fill="{crown}" />
+    <circle cx="60" cy="66" r="44" fill="none" stroke="{track}" stroke-width="7" />
+    <circle cx="60" cy="66" r="44" fill="none" stroke="{arc}" stroke-width="7" stroke-linecap="round" stroke-dasharray="165.9 276.5" transform="rotate(-90 60 66)" />
+    <g transform="translate(20 27) scale(0.8)">
+      <path d="{heart_d}" transform="translate(6 19) scale(0.62)" fill="{ink}" fill-opacity="0.22" />
+      <path d="{heart_d}" transform="translate(19 19) scale(0.62)" fill="{ink}" fill-opacity="0.5" />
+      <path d="{heart_d}" transform="translate(32 19) scale(0.62)" fill="{arc}" />
+    </g>
+  </g>'''
+
 
 tachyyy_icon_light = f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-label="tachyyy">
   <rect width="100" height="100" rx="23" fill="#f9f5ef" />
-  <path d="{heart_d}" transform="translate(6 19) scale(0.62)" fill="#3e2c23" fill-opacity="0.22" />
-  <path d="{heart_d}" transform="translate(19 19) scale(0.62)" fill="#3e2c23" fill-opacity="0.5" />
-  <path d="{heart_d}" transform="translate(32 19) scale(0.62)" fill="#b87348" />
+{tachyyy_stopwatch("#b87348", "#d3b7a1", "#b87348", "#3e2c23")}
 </svg>'''
 
 tachyyy_icon_dark = f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-label="tachyyy">
   <rect width="100" height="100" rx="23" fill="#3e2c23" stroke="rgba(249,245,239,0.16)" stroke-width="1" />
-  <path d="{heart_d}" transform="translate(6 19) scale(0.62)" fill="#f9f5ef" fill-opacity="0.22" />
-  <path d="{heart_d}" transform="translate(19 19) scale(0.62)" fill="#f9f5ef" fill-opacity="0.5" />
-  <path d="{heart_d}" transform="translate(32 19) scale(0.62)" fill="#d9976a" />
+{tachyyy_stopwatch("#d9976a", "rgba(249,245,239,0.28)", "#d9976a", "#f9f5ef")}
 </svg>'''
 
 with open(os.path.join(OUT_DIR, "tachyyy-light.svg"), "w") as f:

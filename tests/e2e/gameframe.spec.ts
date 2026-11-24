@@ -197,7 +197,7 @@ test.describe('plain row of cards under the game, game keeps its size (1024 to 1
 test.describe('the left panel wordmark in Evening', () => {
   const wordmarks = [
     { path: '/play/vialo', day: '/design/games-v2/assets/vialo-wordmark-oxblood-v3.svg', evening: '/brand/games/vialo-wordmark-dark.svg' },
-    { path: '/play/tachyyy', day: '/design/games-v2/assets/tachyyy-wordmark-light-bar.svg', evening: '/brand/games/tachyyy-wordmark-dark.svg' },
+    { path: '/play/tachyyy', day: '/brand/games/tachyyy-wordmark-light.svg', evening: '/brand/games/tachyyy-wordmark-dark.svg' },
     { path: '/play/piccline', day: '/brand/games/piccline-wordmark-dark.svg', evening: '/brand/games/piccline-wordmark-dark.svg' },
   ];
   for (const { path, day, evening } of wordmarks) {
