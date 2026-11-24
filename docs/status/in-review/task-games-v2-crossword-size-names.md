@@ -1,1 +1,0 @@
-status: in review. The crossword's three choices read small, medium and large (Christian, 23 Nov 2026). Internal ids stay easy, mid and hard, so saved games keep working. Sudoku keeps easy, mid, hard.
