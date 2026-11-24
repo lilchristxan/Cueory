@@ -95,6 +95,7 @@ const initialJsBudget = {
   'preview/reminders.html': 148152,
   'preview/rewards.html': 89731,
   'preview/share.html': 151522,
+  'preview/home-social.html': 88021,
   'preview/states.html': 146752,
   'preview/survey.html': 90800,
   'privacy.html': 148122,

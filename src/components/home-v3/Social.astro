@@ -1,0 +1,118 @@
+---
+/**
+ * Home v3 social section (docs/design/home-v3/, boards home-*): one centred row of Cueory's social marks under the
+ * coming-soon panel. The profile addresses live in `socials` in `src/config/site.ts` (D-54, D-65); only profiles with an
+ * address show. Marks are Simple Icons paths drawn inline (nothing loads from the platforms), each a 48 px circle target
+ * that opens the profile in a new tab and says so. On hover or keyboard focus a mark lifts and turns copper; reduced
+ * motion keeps only the color. The footer links are not part of this section.
+ */
+import { siFacebook, siInstagram, siPinterest, siTiktok, siX, siYoutube } from 'simple-icons';
+import { socials } from '../../config/site';
+
+const marks = {
+  instagram: siInstagram,
+  tiktok: siTiktok,
+  youtube: siYoutube,
+  x: siX,
+  facebook: siFacebook,
+  pinterest: siPinterest,
+} as const;
+const shown = socials.filter((social) => social.href);
+---
+
+{
+  shown.length > 0 && (
+    <section class="social-section px-gutter" aria-label="follow cueory" data-social-section>
+      <ul class="social-row" aria-label="cueory elsewhere">
+        {shown.map((social) => (
+          <li>
+            <a
+              href={social.href}
+              target="_blank"
+              rel="noopener noreferrer"
+              class="social-mark"
+              aria-label={`cueory on ${social.name} (opens in a new tab)`}
+              data-social={social.id}
+            >
+              <svg viewBox="0 0 24 24" class="social-mark-icon" aria-hidden="true" focusable="false">
+                <path d={marks[social.id].path} fill="currentColor" />
+              </svg>
+            </a>
+          </li>
+        ))}
+      </ul>
+    </section>
+  )
+}
+
+<style>
+  .social-section {
+    margin-block: calc(var(--spacing) * 10) calc(var(--spacing) * 2);
+  }
+
+  .social-row {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: calc(var(--spacing) * 3);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .social-mark {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    inline-size: calc(var(--spacing) * 12);
+    block-size: calc(var(--spacing) * 12);
+    border-radius: var(--radius-pill);
+    color: var(--color-ink);
+    transition:
+      color 0.2s ease,
+      transform 0.2s ease,
+      filter 0.2s ease;
+  }
+
+  .social-mark-icon {
+    inline-size: calc(var(--spacing) * 6.5);
+    block-size: calc(var(--spacing) * 6.5);
+  }
+
+  .social-mark:hover,
+  .social-mark:focus-visible {
+    color: var(--color-copper-deep);
+    transform: translateY(-3px) scale(1.12);
+    filter: var(--social-glow);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .social-mark {
+      transition: color 0.2s ease;
+    }
+
+    .social-mark:hover,
+    .social-mark:focus-visible {
+      transform: none;
+      filter: none;
+    }
+  }
+
+  /* Phones: the six marks stay on one row with a tighter gap (390 px). */
+  @media (max-width: 29.99em) {
+    .social-row {
+      gap: calc(var(--spacing) * 1.5);
+    }
+  }
+
+  /* Phone landscape (844 × 390): a little smaller and closer, as on the board. */
+  @media (orientation: landscape) and (max-height: 32em) {
+    .social-section {
+      margin-block-start: calc(var(--spacing) * 6);
+    }
+
+    .social-row {
+      gap: calc(var(--spacing) * 1.5);
+    }
+  }
+</style>
