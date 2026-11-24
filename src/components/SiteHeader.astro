@@ -77,12 +77,13 @@ const bar = !quiet;
 <style>
   header.home-board-header {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    --home-utilities-width: calc(2 * var(--tap-min) + var(--header-corner-gap));
+    grid-template-columns: minmax(var(--home-utilities-width), 1fr) minmax(0, max-content) minmax(var(--home-utilities-width), 1fr);
     align-items: center;
     row-gap: var(--spacing);
   }
-  .home-brand { grid-area: 1 / 2; }
-  .home-brand :global(.home-brand-art) { display: block; width: var(--home-header-brand-width); }
+  .home-brand { grid-area: 1 / 2; width: var(--home-header-brand-width); max-width: 100%; }
+  .home-brand :global(.home-brand-art) { display: block; width: 100%; }
   .home-menu { grid-area: 1 / 1; }
   .home-menu-bar, .home-menu-bar :global([data-site-nav]) { display: contents; }
   .home-menu-bar :global(nav) { grid-area: 2 / 2; justify-self: center; }

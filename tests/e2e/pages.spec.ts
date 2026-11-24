@@ -1652,17 +1652,25 @@ test.describe('study-mode preview (D-51)', () => {
   });
 });
 
+function homeMenuOpener(page: Page) {
+  const name = page.viewportSize()!.width >= 640 ? 'search the site' : 'open site menu';
+  return page.getByRole('button', { name, exact: true });
+}
+
 test.describe('☰ side panel and account corner (D-46)', () => {
   for (const path of ['/', '/privacy', '/learn/study-skills']) {
     test(`☰ opens the side panel on ${path}, keeps focus inside, and Escape brings focus back`, async ({ page }) => {
       await page.goto(path);
-      const open = page.getByRole('button', { name: 'open site menu', exact: true });
+      const open = path === '/' ? homeMenuOpener(page) : page.getByRole('button', { name: 'open site menu', exact: true });
       await expect(open).toHaveAttribute('aria-expanded', 'false');
       await open.click();
       const panel = page.getByTestId('site-menu');
       await expect(panel).toBeVisible();
       await expect(open).toHaveAttribute('aria-expanded', 'true');
-      await expect(panel.getByRole('button', { name: 'close site menu' })).toBeFocused();
+      const initialFocus = path === '/' && page.viewportSize()!.width >= 640
+        ? panel.getByRole('searchbox', { name: 'search the site' })
+        : panel.getByRole('button', { name: 'close site menu' });
+      await expect(initialFocus).toBeFocused();
 
       const nav = panel.getByRole('navigation', { name: 'site' });
       for (const name of ['home', 'ways to study', 'lessons', 'daily games', 'my progress', 'support cueory']) {
@@ -1702,7 +1710,7 @@ test.describe('☰ side panel and account corner (D-46)', () => {
 
   test('the close button and a tap on the dimmed page close the side panel', async ({ page }) => {
     await page.goto('/');
-    const open = page.getByRole('button', { name: 'open site menu', exact: true });
+    const open = homeMenuOpener(page);
     const panel = page.getByTestId('site-menu');
     await open.click();
     await panel.getByRole('button', { name: 'close site menu' }).click();
@@ -1718,7 +1726,7 @@ test.describe('☰ side panel and account corner (D-46)', () => {
 
   test('a side-panel link to a spot on the home page closes the panel and goes there', async ({ page }) => {
     await page.goto('/');
-    await page.getByRole('button', { name: 'open site menu', exact: true }).click();
+    await homeMenuOpener(page).click();
     await page.getByTestId('site-menu').getByRole('link', { name: 'ways to study' }).click();
     await expect(page.getByTestId('site-menu')).toBeHidden();
     await expect(page).toHaveURL(/#ways-to-study$/);
@@ -1784,7 +1792,7 @@ test.describe('☰ side panel and account corner (D-46)', () => {
 test.describe('site search in the ☰ panel (D-49)', () => {
   test('finds pages as you type, works by keyboard, and goes to the result', async ({ page }) => {
     await page.goto('/');
-    await page.getByRole('button', { name: 'open site menu', exact: true }).click();
+    await homeMenuOpener(page).click();
     const panel = page.getByTestId('site-menu');
     const field = panel.getByRole('searchbox', { name: 'search the site' });
     await expect(field).toHaveAttribute('placeholder', 'search');
@@ -1816,7 +1824,7 @@ test.describe('site search in the ☰ panel (D-49)', () => {
 
   test('a new search while a result has keyboard focus keeps focus in the panel', async ({ page }) => {
     await page.goto('/');
-    await page.getByRole('button', { name: 'open site menu', exact: true }).click();
+    await homeMenuOpener(page).click();
     const panel = page.getByTestId('site-menu');
     const field = panel.getByRole('searchbox', { name: 'search the site' });
     const results = panel.getByRole('list', { name: 'search results' });
