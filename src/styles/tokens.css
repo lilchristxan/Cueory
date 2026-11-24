@@ -615,7 +615,8 @@
     --game-pager-dot: 0.5rem;   /* 8 px dots; the current one is a 26 x 8 px pill */
     --game-pager-pill: 1.625rem;
     --game-pager-gap: 0.125rem; /* 2 px between the 44 px boxes: browsers hit-test flush neighbours about 1 px into each other, so a hair of space keeps every box exact */
-    --game-car-padding: 0.75rem 0.375rem 2.75rem;
+    --game-car-padding: 0.75rem 0.375rem 5rem; /* the bottom padding holds the whole card shadow (18 px down + 40 px blur) so it fades out instead of being cut */
+    --game-car-shadow-pull: -2.25rem;     /* pulls the following row back up by the extra padding, so spacing is unchanged */
     --game-track-gap: 1.75rem;
     --game-track-gap-phone: 0.75rem; /* tighter on phones so at least 48 px of the next card shows inside the carousel's clip */
     --game-card-width: 17.5rem;
@@ -655,6 +656,20 @@
     --game-face-header-height: 6rem;
     --game-face-phone-header-height: 96px;
     --game-face-padding: 1.125rem 1rem;
+    --game-card-landscape-width: 11.625rem;   /* phone landscape board: 186 x 260 cards, four across */
+    --game-card-landscape-height: 16.25rem;
+    --game-card-landscape-padding: 0.5rem;
+    --game-pip-landscape-size: 1.875rem;      /* 30 px pips inset 10 px */
+    --game-pip-landscape-inset: 0.625rem;
+    --game-pip-landscape-xcell: 0.4375rem;
+    --game-pip-landscape-glyph: 1.125rem;
+    --game-face-landscape-header-height: 3.5rem;
+    --game-wordmark-landscape-max-width: 8.25rem; /* 132 x 46 px */
+    --game-wordmark-landscape-max-height: 2.875rem;
+    --game-serif-name-landscape-size: 1.875rem;   /* crossword, sudoku: 30 px */
+    --game-desc-landscape-size: 0.75rem;
+    --game-status-landscape-size: 0.6875rem;
+    --game-track-gap-landscape: 1rem;
     --game-wordmark-max-width: 10.5rem;
     --game-wordmark-max-height: 3.75rem;
     --game-serif-name-size: 2.5rem;
