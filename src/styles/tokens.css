@@ -20,6 +20,10 @@
   /* Remove Tailwind's built-in palette so only brand colors can be used. */
   --color-*: initial;
 
+  /* The card deck shows from 70rem (1120 px); below it the other games are a plain row under the board. Tailwind turns
+     this into the deck: and max-deck: variants, which gameframe.css uses through @variant. */
+  --breakpoint-deck: 70rem;
+
   /* ---------- Daytime palette (brand guide) ---------- */
   --color-page: #f9f5ef;        /* Ivory    — page background */
   --color-surface: #eadccf;     /* Linen    — cards and panels */
@@ -136,6 +140,12 @@
   --game-frame-pill-ivory-bg: radial-gradient(120% 140% at 30% 20%, #ffffff 0%, var(--color-page) 55%, var(--color-surface) 100%);
   --game-frame-max-board-wide: 51.25rem; /* 820px */
   --game-frame-max-board-showcase: 45rem; /* 720px */
+  --game-deck-card-width: 13rem;         /* 208px, the fanned card deck at the right edge */
+  --game-deck-card-height: 17rem;        /* 272px */
+  --game-deck-step: 3.5rem;              /* 56px between fanned cards */
+  --game-deck-reveal: 3.5rem;            /* 56px of each card that shows at rest */
+  --game-deck-icon-size: 1.25rem;        /* 20px, a game's icon in a deck card corner */
+  --game-deck-slide: 9rem;               /* 144px a card slides out on hover or focus */
   --game-frame-sidebar-compact-emblem-size: 2.75rem; /* 44px */
   --game-frame-sidebar-compact-emblem-radius: 0.75rem; /* 12px */
   --game-frame-sidebar-compact-emblem-cell: 0.5rem; /* 8px */
@@ -1067,6 +1077,7 @@
   --sudoku-cell-max: 5.25rem;
   --sudoku-height-reserve: 28.75rem;
   --sudoku-width-reserve: 9.375rem;
+  --sudoku-status-row: 2rem;           /* the status row is a whole number of pixels tall (32 px), so the controls under it land on whole pixels (Firefox loses 0.00003 px on a fractional offset) */
   --sudoku-line: 1px;
   --sudoku-box-line: 3px;
   --sudoku-board-frame: calc(var(--sudoku-box-line) * 2 + 1px); /* outer box lines + 1px so rounding never overflows */

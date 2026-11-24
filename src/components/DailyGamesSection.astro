@@ -704,6 +704,12 @@ const helloCardsAvailable = helloCardsPage(
     under the heading in the middle column, and the cards run edge to edge so the next card peeks in at the right.
   */
   @media (max-width: 47.99em) {
+    /* The section rises 10 px. Keep its track on whole pixels during the reveal so a
+       card retains both of its edges while scrolling on a phone. */
+    .games-stage[data-reveal="shown"] {
+      transition-timing-function: ease-out, steps(10, end);
+    }
+
     .games-scene {
       padding-block-end: var(--game-section-bottom-phone);
     }

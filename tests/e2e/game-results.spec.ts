@@ -205,7 +205,8 @@ async function tryScroll(page: Page, browserName: string, isMobile: boolean | un
 }
 
 test('an open result locks page scrolling and restores the exact page position and styles', async ({ page, browserName, isMobile }) => {
-  // Sudoku's page is tall enough on a phone to scroll 300 px past the starting point; any game page has the dialog.
+  // Sudoku's page must have room to scroll past the starting point, so an unlocked page would visibly move. Without the
+  // site header (Games v2 frame) the desktop page is about 300 px of travel, so the room needed is 150 px, not 300.
   await page.goto('/play/sudoku');
   await expect(page.getByTestId('sudoku').getByRole('gridcell')).toHaveCount(81);
   const before = await page.evaluate(() => {
@@ -231,7 +232,7 @@ test('an open result locks page scrolling and restores the exact page position a
       },
     };
   });
-  expect(before.maxY).toBeGreaterThan(before.y + 300);
+  expect(before.maxY).toBeGreaterThan(before.y + 150);
   await expect.poll(() => page.evaluate(() => scrollY)).toBe(before.y);
 
   const dialog = await openResult(page);

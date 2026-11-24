@@ -30,31 +30,12 @@ test.beforeEach(async ({ page }) => {
   });
 });
 
-test('the first visit shows each game\'s rules above its board, and "got it" puts them away for good', async ({ page }) => {
+test('there is no first-visit rules card: the rules sit behind "?" on every game page', async ({ page }) => {
   for (const game of games) {
     await page.goto(game.path);
-    const card = page.getByTestId(game.testId).getByTestId('game-help-first');
-    await expect(card).toBeVisible();
-    await expect(card.getByRole('heading', { name: `new to ${game.name}? here's how to play` })).toBeVisible();
-    expect((await axe(page, '[data-testid="game-help-first"]')).violations).toEqual([]);
+    await expect(page.getByTestId('game-help-first')).toHaveCount(0);
+    await expect(helpButton(page, game)).toBeVisible();
   }
-
-  await page.goto('/play/sudoku');
-  const sudoku = page.getByTestId('sudoku');
-  const gotIt = sudoku.getByTestId('game-help-first').getByRole('button', { name: 'got it' });
-  const box = await gotIt.boundingBox();
-  expect(box!.height).toBeGreaterThanOrEqual(44);
-  await gotIt.press('Enter');
-  await expect(sudoku.getByTestId('game-help-first')).toHaveCount(0);
-  // Focus goes to the "?" that brings the rules back.
-  await expect(page.getByTestId('game-frame-help-button')).toBeFocused();
-  expect(JSON.parse((await seen(page))!)).toEqual(['triage']);
-
-  await page.reload();
-  await expect(page.getByTestId('sudoku').getByRole('grid')).toBeVisible();
-  await expect(page.getByTestId('sudoku').getByTestId('game-help-first')).toHaveCount(0);
-  await page.goto('/play/pillo');
-  await expect(page.getByTestId('pulse').getByTestId('game-help-first')).toBeVisible();
 });
 
 for (const game of games) {
