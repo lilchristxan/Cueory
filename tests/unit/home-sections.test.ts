@@ -176,9 +176,8 @@ describe('home lower sections', () => {
   it('lays the explore dock out as five tiles: a row from the tablet width, 3 + 2 with the bottom two centred on phones', () => {
     const source = readFileSync(new URL('../../src/components/ExploreDock.astro', import.meta.url), 'utf8');
     expect((source.match(/testid: 'explore-/g) ?? []).length).toBe(5);
-    expect(source).toContain('.explore-dock-tiles > li:nth-child(4)');
-    expect(source).toContain('grid-column: 2 / span 2');
-    expect(source).toContain('grid-column: 4 / span 2');
+    expect(source).toContain('justify-content: center');
+    expect(source).toContain('--explore-tile-basis-min');
     expect(source).toContain('grid-template-columns: repeat(5, minmax(0, 1fr))');
     expect(source).toContain('/design/home-v3/icon-games.webp');
     expect(existsSync(new URL('../../public/design/home-v3/icon-games.webp', import.meta.url))).toBe(true);

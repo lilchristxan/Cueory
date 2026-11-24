@@ -48,6 +48,9 @@ const tiles = [
   .explore-dock-wrap {
     position: relative;
     z-index: 5;
+  }
+  /* The overlap needs the illustrated stage (HomeStage) to overlap; on any other hero the dock is a normal block. */
+  :global(.scene-hero:has(.home-stage)) .explore-dock-wrap {
     margin-block-start: var(--explore-overlap);
   }
   .explore-dock {
@@ -72,21 +75,17 @@ const tiles = [
     font-size: var(--explore-dock-title);
     line-height: 1.2;
   }
+  /* Phone portrait: three tiles, then two centred. Wrapping flex keeps every tile at least 5.75rem wide, so at 320 px
+     or with enlarged text it falls back to 2 + 2 + 1 instead of squeezing tiles under the 44 px minimum. */
   .explore-dock-tiles {
-    display: grid;
-    grid-template-columns: repeat(6, minmax(0, 1fr));
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
     gap: var(--explore-dock-tile-gap);
   }
   .explore-dock-tiles > li {
-    grid-column: span 2;
     display: flex;
-  }
-  /* Phone portrait: 3 + 2, the bottom two centred. */
-  .explore-dock-tiles > li:nth-child(4) {
-    grid-column: 2 / span 2;
-  }
-  .explore-dock-tiles > li:nth-child(5) {
-    grid-column: 4 / span 2;
+    flex: 0 0 max(calc((100% - 2 * var(--explore-dock-tile-gap)) / 3), var(--explore-tile-basis-min));
   }
   .explore-dock-tile {
     display: flex;
@@ -110,7 +109,7 @@ const tiles = [
   /* Phone landscape (844 x 390): the stage has the button and points below it, so the dock is a normal block about
      24 px under the three points and does not overlap anything. */
   @media (orientation: landscape) and (max-height: 32em) {
-    .explore-dock-wrap {
+    :global(.scene-hero:has(.home-stage)) .explore-dock-wrap {
       margin-block-start: var(--explore-landscape-gap);
     }
   }
@@ -125,12 +124,11 @@ const tiles = [
     }
     .explore-dock-tiles {
       flex: 1 1 auto;
+      display: grid;
       grid-template-columns: repeat(5, minmax(0, 1fr));
     }
-    .explore-dock-tiles > li,
-    .explore-dock-tiles > li:nth-child(4),
-    .explore-dock-tiles > li:nth-child(5) {
-      grid-column: auto;
+    .explore-dock-tiles > li {
+      flex: none;
     }
   }
 </style>

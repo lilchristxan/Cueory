@@ -344,6 +344,7 @@
   --explore-dock-tile-gap: 0.625rem;
   --explore-dock-title: 1.25rem;
   --explore-dock-heading-width: 9.5rem;
+  --explore-tile-basis-min: 5.75rem; /* a phone tile never gets narrower than this; the row wraps instead */
   --explore-tile-min: 5.125rem;     /* board: 82 px */
   --explore-icon: 1.5rem;
   --radius-panel: 2.125rem;     /* the home explore panel's corners (board: 34 px) */
