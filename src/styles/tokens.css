@@ -374,6 +374,9 @@
   --drop-mode-card: 1rem;       /* how much lower a neighbouring card sits, per card away from the middle */
   --zoom-mode-card: 1.04;       /* a "ways to study" card under the mouse or keyboard focus grows this much (D-51) */
   --soon-card-max-width: 56.25rem;  /* Home v3 coming-soon panel (the board's 900 px) */
+  --soon-heading: 1.875rem;     /* the coming-soon heading: 30 px on tablet and desktop (the board) */
+  --soon-heading-phone: 1.75rem;     /* 28 px on a portrait phone */
+  --soon-heading-landscape: 1.5rem;  /* 24 px on a phone turned sideways */
   --border-soon-input: 1px;     /* the coming-soon email field's rim */
   --social-glow: drop-shadow(0 6px 10px color-mix(in srgb, var(--color-copper-deep) 35%, transparent)); /* Home v3 social marks: the soft copper glow on hover or focus */
   --border-vial-arrow: 1px;     /* the copper rim round the home carousel's arrows (HomeV2, P6) */

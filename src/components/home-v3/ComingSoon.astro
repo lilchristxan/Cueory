@@ -75,8 +75,9 @@ const landingUrl = kitLandingUrl(newsletter.landingUrl);
 </section>
 
 <style>
+  /* The board's space above the panel (28 px on a phone, 40 px on a wider screen, 24 px sideways); the social row under it brings its own 40 px. */
   .soon-section {
-    margin-block: calc(var(--spacing) * 10);
+    margin-block: calc(var(--spacing) * 7) 0;
   }
 
   .soon-card {
@@ -91,7 +92,7 @@ const landingUrl = kitLandingUrl(newsletter.landingUrl);
   }
 
   .soon-heading {
-    font-size: var(--text-xl);
+    font-size: var(--soon-heading-phone);
     line-height: 1.2;
     overflow-wrap: break-word;
   }
@@ -136,6 +137,10 @@ const landingUrl = kitLandingUrl(newsletter.landingUrl);
 
   /* Tablet and desktop: the words, the field and the button on one row, the small print under them. */
   @media (min-width: 40em) {
+    .soon-section {
+      margin-block-start: calc(var(--spacing) * 10);
+    }
+
     .soon-card {
       grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
       align-items: center;
@@ -149,7 +154,7 @@ const landingUrl = kitLandingUrl(newsletter.landingUrl);
     }
 
     .soon-heading {
-      font-size: var(--text-title-explore);
+      font-size: var(--soon-heading);
     }
 
     .soon-help {
@@ -160,7 +165,7 @@ const landingUrl = kitLandingUrl(newsletter.landingUrl);
   /* Phone landscape (844 × 390): the board's compact single row. */
   @media (orientation: landscape) and (max-height: 32em) {
     .soon-section {
-      margin-block: calc(var(--spacing) * 6);
+      margin-block-start: calc(var(--spacing) * 6);
     }
 
     .soon-card {
@@ -170,7 +175,7 @@ const landingUrl = kitLandingUrl(newsletter.landingUrl);
     }
 
     .soon-heading {
-      font-size: var(--text-xl);
+      font-size: var(--soon-heading-landscape);
     }
 
     .soon-line {

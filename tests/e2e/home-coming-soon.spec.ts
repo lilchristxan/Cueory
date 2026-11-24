@@ -127,6 +127,35 @@ test.describe('layout', () => {
   });
 });
 
+test.describe('anchor, heading size and spacing (the boards)', () => {
+  test('is the #signup anchor with the section scroll margin', async ({ page }) => {
+    await open(page, sizes.desktop);
+    const section = page.locator('section#signup[data-coming-soon]');
+    await expect(section).toHaveCount(1);
+    await expect(section).toHaveCSS('scroll-margin-top', /^[1-9]/);
+  });
+
+  for (const [name, size, heading, top] of [
+    ['desktop', sizes.desktop, '30px', '40px'],
+    ['phone', sizes.phone, '28px', '28px'],
+    ['landscape', sizes.landscape, '24px', '24px'],
+  ] as const) {
+    test(`${name}: heading ${heading}, ${top} above the panel, nothing below it`, async ({ page }) => {
+      await open(page, size);
+      await expect(page.locator('#soon-heading')).toHaveCSS('font-size', heading);
+      const section = page.locator('[data-coming-soon]');
+      await expect(section).toHaveCSS('margin-top', top);
+      await expect(section).toHaveCSS('margin-bottom', '0px');
+    });
+  }
+
+  test('keeps the Kit and privacy small print', async ({ page }) => {
+    await open(page, sizes.desktop);
+    await expect(page.locator('#soon-help')).toContainText('unsubscribe any time');
+    await expect(page.locator('#soon-help a[href="/privacy"]')).toBeVisible();
+  });
+});
+
 test.describe('keyboard', () => {
   test('Tab reaches the field, then the button, each with a visible focus ring; the field is labelled', async ({ page }) => {
     await open(page, sizes.desktop);
