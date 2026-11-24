@@ -42,14 +42,24 @@ test.beforeAll(async () => {
     stdin: { contents: `
       import React, { useEffect, useState } from 'react';
       import { createRoot } from 'react-dom/client';
+      import { getSupabase } from './src/islands/supabaseclient';
+      window.fixtureSwitch = async id => {
+        const client = await getSupabase();
+        const value = JSON.parse(localStorage.getItem('cueory-auth'));
+        value.user.id = id;
+        value.access_token = 'fixture-access-token-for-' + id;
+        localStorage.setItem('cueory-auth', JSON.stringify(value));
+        await client.auth._notifyAllSubscribers('SIGNED_IN', value);
+      };
       import PublishedQuestions from './src/islands/PublishedQuestions.tsx';
+      import FlagMount from './src/islands/FlagMount.tsx';
       import { onFlagItem } from './src/islands/flagitem.ts';
       function FlagProbe() {
         const [item, setItem] = useState('none');
         useEffect(() => onFlagItem(next => setItem(next ? next.itemId + ' ' + next.itemVersionId : 'none')), []);
         return <p data-testid="flag-probe">{item}</p>;
       }
-      createRoot(document.getElementById('fixture')).render(<><PublishedQuestions /><FlagProbe /></>);
+      createRoot(document.getElementById('fixture')).render(<><PublishedQuestions /><FlagProbe />{new URLSearchParams(location.search).has('flag') && <div className="mt-section pt-section"><div className="mt-section pt-section"><FlagMount page="/learn/questions" variant="icon" /></div></div>}</>);
     `, resolveDir: process.cwd(), loader: 'tsx' },
     bundle: true, write: false, format: 'iife', platform: 'browser', jsx: 'automatic', logLevel: 'silent',
     resolveExtensions: ['.ts', '.tsx', '.js', '.jsx', '.json'],
@@ -65,9 +75,10 @@ test.beforeAll(async () => {
 interface Seen { method: string; path: string; query: URLSearchParams; auth: string | null; body: unknown }
 
 /** Answers the fake project's REST and RPC calls the way the website's grants and policies would. */
-async function mockProject(page: Page, options: { checkReply?: unknown } = {}) {
+async function mockProject(page: Page, options: { checkReply?: unknown; empty?: boolean; failConceptReads?: number } = {}) {
+  let failuresLeft = options.failConceptReads ?? 0;
   const seen: Seen[] = [];
-  const rows: Record<string, Record<string, unknown>[]> = { concepts: [concept], items, item_versions: versions, item_choices: choices };
+  const rows: Record<string, Record<string, unknown>[]> = { concepts: [concept], items: options.empty ? [] : items, item_versions: versions, item_choices: choices };
   await page.route(`${PROJECT}/**`, async (route) => {
     const request: Request = route.request();
     const url = new URL(request.url());
@@ -75,11 +86,20 @@ async function mockProject(page: Page, options: { checkReply?: unknown } = {}) {
     seen.push({ method: request.method(), path: url.pathname, query: url.searchParams, auth: request.headers()['authorization'] ?? null, body });
     const headers = { 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'content-type': 'application/json' };
     if (request.method() === 'OPTIONS') return route.fulfill({ status: 204, headers });
+    if (url.pathname === '/rest/v1/rpc/submit_flag' && request.method() === 'POST') {
+      return route.fulfill({ status: 200, headers, body: JSON.stringify(uuid(99)) });
+    }
     if (url.pathname === '/rest/v1/rpc/check_answer' && request.method() === 'POST') {
       return route.fulfill({ status: 200, headers, body: JSON.stringify(options.checkReply ?? feedback) });
     }
     const table = /^\/rest\/v1\/(\w+)$/.exec(url.pathname)?.[1];
     if (request.method() === 'GET' && table && table in rows) {
+      if (table === 'concepts' && failuresLeft > 0) {
+        failuresLeft--;
+        // 503/520 are automatically retried by Supabase's PostgREST client. Use a non-retryable
+        // failure so this test exercises our error UI rather than the client's transient retry policy.
+        return route.fulfill({ status: 500, headers, body: JSON.stringify({ message: 'sample private server detail' }) });
+      }
       const columns = (url.searchParams.get('select') ?? '').split(',');
       // PostgREST filters as supabase-js sends them: column=eq.value and column=in.(a,b).
       const filters = [...url.searchParams].filter(([name]) => !['select', 'order', 'offset', 'limit'].includes(name));
@@ -184,6 +204,21 @@ test.describe('Task 172: real questions with a fake project', () => {
     expect(errors).toEqual([]);
   });
 
+  for (const back of [false, true]) test(`account switch stops the player${back ? ' after A -> B -> A too' : ''}`, async ({ page }) => {
+    const seen = await mockProject(page);
+    await openFixture(page, { signedIn: true });
+    await page.getByLabel('sample circle').check();
+    await page.evaluate(async back => {
+      const fixture = window as unknown as { fixtureSwitch(id: string): Promise<void> };
+      await fixture.fixtureSwitch('00000000-0000-4000-8000-000000000099');
+      if (back) await fixture.fixtureSwitch('00000000-0000-4000-8000-00000000002a');
+    }, back);
+    await expect(page.getByRole('status').filter({ hasText: 'your signed-in account changed.' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'check', exact: true })).toHaveCount(0);
+    await expect(page.getByTestId('flag-probe')).toHaveText('none');
+    expect(seen.filter(request => request.path === '/rest/v1/rpc/check_answer')).toEqual([]);
+  });
+
   test('a malformed check_answer reply shows a calm retry message, never feedback', async ({ page }) => {
     await mockProject(page, { checkReply: { correct: true, key: ['a'], rationales: {}, version_id: uuid(21) } });
     await openFixture(page, { signedIn: true });
@@ -199,11 +234,14 @@ test.describe('Task 172: real questions with a fake project', () => {
     const seen = await mockProject(page);
     await openFixture(page, { signedIn: false });
     const sentence = page.getByTestId('questions-signed-out');
-    await expect(sentence).toHaveText('create a free account to answer real questions, or sign in.');
+    await expect(sentence).toHaveText('sign in to answer real questions, or create a free account.');
     const next = encodeURIComponent('/__questions-fixture?concept=sample-concept');
     await expect(sentence.getByRole('link', { name: 'create a free account' })).toHaveAttribute('href', `/signup?next=${next}`);
     await expect(sentence.getByRole('link', { name: 'sign in' })).toHaveAttribute('href', `/signin?next=${next}`);
     expect(seen.filter(request => request.path.startsWith('/rest/'))).toEqual([]);
+    const linkHeights = await sentence.getByRole('link').evaluateAll(links =>
+      links.map(link => link.getBoundingClientRect().height));
+    expect(linkHeights.every(height => height >= 44)).toBe(true);
     await expect(page.getByTestId('flag-probe')).toHaveText('none');
   });
 
@@ -212,5 +250,230 @@ test.describe('Task 172: real questions with a fake project', () => {
     await openFixture(page, { signedIn: true, search: '?concept=sample-missing' });
     await expect(page.getByTestId('questions-not-found')).toContainText('there are no published questions for this topic yet.');
     expect(seen.filter(request => request.path.startsWith('/rest/')).map(request => request.path)).toEqual(['/rest/v1/concepts']);
+  });
+});
+
+test.describe('W20: clear question loading, empty, and retry states', () => {
+  test('announces loading until the concept request finishes', async ({ page }) => {
+    await mockProject(page);
+    let release!: () => void;
+    const gate = new Promise<void>(resolve => { release = resolve; });
+    await page.route(/\/rest\/v1\/concepts(?:\?|$)/, async route => {
+      await gate;
+      await route.fallback();
+    });
+    try {
+      await openFixture(page, { signedIn: true });
+      await expect(page.getByTestId('questions-loading')).toHaveText('loading questions…');
+      await expect(page.getByTestId('questions-loading')).toHaveAttribute('role', 'status');
+    } finally {
+      release();
+    }
+    await expect(page.getByTestId('questions-concept')).toHaveText('sample concept (fixture)');
+    await expect(page.getByTestId('questions-loading')).toHaveCount(0);
+  });
+
+  test('explains when there are no published questions and never renders a player', async ({ page }) => {
+    const seen = await mockProject(page, { empty: true });
+    await openFixture(page, { signedIn: true });
+    const empty = page.getByTestId('questions-not-found');
+    await expect(empty).toContainText('there are no published questions for this topic yet.');
+    await expect(empty).toHaveAttribute('role', 'status');
+    await expect(empty.getByRole('link', { name: 'back to the course library' })).toHaveAttribute('href', '/learn');
+    await expect(page.locator('fieldset')).toHaveCount(0);
+    expect(seen.filter(request => request.method === 'GET').map(request => request.path))
+      .toEqual(['/rest/v1/concepts', '/rest/v1/items']);
+    const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa']).analyze();
+    expect(results.violations.map(result => result.id + ': ' + result.help)).toEqual([]);
+  });
+
+  test('keeps failure details private; keyboard and pointer retries recover', async ({ page }) => {
+    const seen = await mockProject(page, { failConceptReads: 2 });
+    // Hold the first retry open so keyboard focus can be verified while loading.
+    let conceptReads = 0;
+    let releaseRetry!: () => void;
+    const gate = new Promise<void>(resolve => { releaseRetry = resolve; });
+    await page.route(/\/rest\/v1\/concepts(?:\?|$)/, async route => {
+      conceptReads++;
+      if (conceptReads === 2) await gate;
+      await route.fallback();
+    });
+    await openFixture(page, { signedIn: true });
+    await expect(page.getByRole('alert')).toHaveText("couldn't load questions. please try again.");
+    await expect(page.getByText('sample private server detail')).toHaveCount(0);
+    const retry = page.getByRole('button', { name: 'try again', exact: true });
+    await expect(retry).toBeVisible();
+    const retryRect = await retry.boundingBox();
+    expect(retryRect?.width ?? 0).toBeGreaterThanOrEqual(44);
+    expect(retryRect?.height ?? 0).toBeGreaterThanOrEqual(44);
+    const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa']).analyze();
+    expect(results.violations.map(result => result.id + ': ' + result.help)).toEqual([]);
+
+    await page.keyboard.press('Tab');
+    await expect(retry).toBeFocused();
+    await expect(retry).toHaveCSS('outline-style', 'solid');
+    await page.keyboard.press('Enter');
+    try {
+      await expect(page.getByTestId('questions-retry-loading')).toHaveText('loading questions…');
+      await expect(retry).toHaveAttribute('aria-disabled', 'true');
+      await expect(retry).toBeFocused();
+      await expect(page.getByRole('alert')).toHaveCount(0);
+      // A repeated keyboard activation while busy must not send a second retry.
+      await expect.poll(() => conceptReads).toBe(2);
+      await page.keyboard.press('Enter');
+      expect(conceptReads).toBe(2);
+    } finally {
+      releaseRetry();
+    }
+    await expect(page.getByRole('alert')).toHaveText("couldn't load questions. please try again.");
+    await expect(retry).toHaveAttribute('aria-disabled', 'false');
+    await expect(retry).toBeFocused();
+    await retry.click();
+    const conceptResult = page.getByTestId('questions-concept');
+    await expect(conceptResult).toHaveText('sample concept (fixture)');
+    await expect(conceptResult).toBeFocused();
+    expect(seen.filter(request => request.method === 'GET' && request.path === '/rest/v1/concepts')).toHaveLength(3);
+  });
+
+
+  test('failed load can recover to an empty state and moves focus to the next guidance', async ({ page }) => {
+    const seen = await mockProject(page, { empty: true, failConceptReads: 1 });
+    await openFixture(page, { signedIn: true });
+    await expect(page.getByRole('alert')).toHaveText("couldn't load questions. please try again.");
+    // Keyboard recovery keeps Firefox in keyboard modality while the app moves focus
+    // to the empty guidance, so Tab reaches its library link with a visible ring.
+    const retry = page.getByRole('button', { name: 'try again' });
+    await retry.focus();
+    await expect(retry).toBeFocused();
+    await page.keyboard.press('Enter');
+    const empty = page.getByTestId('questions-not-found');
+    await expect(empty).toContainText('there are no published questions for this topic yet.');
+    await expect(empty).toBeFocused();
+    const back = empty.getByRole('link', { name: 'back to the course library' });
+    await expect(back).toHaveAttribute('href', '/learn');
+    const backRect = await back.boundingBox();
+    expect(backRect?.width ?? 0).toBeGreaterThanOrEqual(44);
+    expect(backRect?.height ?? 0).toBeGreaterThanOrEqual(44);
+    await page.keyboard.press('Tab');
+    await expect(back).toBeFocused();
+    await expect(back).toHaveCSS('outline-style', 'solid');
+    await expect.poll(() => seen.filter(request => request.path === '/rest/v1/concepts').length).toBe(2);
+    expect(seen.filter(request => request.path === '/rest/v1/concepts')).toHaveLength(2);
+    await expect(page.locator('fieldset')).toHaveCount(0);
+  });
+
+  test('a real touchscreen tap retries a failed concept load and reaches empty guidance', async ({ browser }, testInfo) => {
+    // hasTouch and .tap() exercise touch events rather than Playwright mouse clicks.
+    const context = await browser.newContext({
+      baseURL: testInfo.project.use.baseURL,
+      viewport: { width: 390, height: 844 },
+      hasTouch: true,
+      reducedMotion: 'reduce',
+      serviceWorkers: 'block',
+    });
+    try {
+      const touchPage = await context.newPage();
+      const seen = await mockProject(touchPage, { empty: true, failConceptReads: 1 });
+      await openFixture(touchPage, { signedIn: true });
+      await expect(touchPage.getByRole('alert')).toHaveText("couldn't load questions. please try again.");
+      await expect(touchPage.getByText('sample private server detail')).toHaveCount(0);
+
+      const retry = touchPage.getByRole('button', { name: 'try again', exact: true });
+      await expect(retry).toBeVisible();
+      const box = await retry.boundingBox();
+      expect(box?.width ?? 0).toBeGreaterThanOrEqual(44);
+      expect(box?.height ?? 0).toBeGreaterThanOrEqual(44);
+      await retry.tap();
+
+      const empty = touchPage.getByTestId('questions-not-found');
+      await expect(empty).toContainText('there are no published questions for this topic yet.');
+      await expect(empty).toBeFocused();
+      await expect(empty.getByRole('link', { name: 'back to the course library' })).toHaveAttribute('href', '/learn');
+      await expect(touchPage.getByText('sample private server detail')).toHaveCount(0);
+      await expect(touchPage.locator('fieldset')).toHaveCount(0);
+      expect(seen.filter(request => request.method === 'GET' && request.path === '/rest/v1/concepts')).toHaveLength(2);
+    } finally {
+      await context.close();
+    }
+  });
+
+  test('an invalid concept slug is empty without requesting any public question data', async ({ page }) => {
+    const seen = await mockProject(page);
+    await openFixture(page, { signedIn: true, search: '?concept=bad%20slug' });
+    await expect(page.getByTestId('questions-not-found'))
+      .toContainText('there are no published questions for this topic yet.');
+    expect(seen.filter(request => request.path.startsWith('/rest/v1/'))).toEqual([]);
+  });
+
+  test('fits phone, tablet, and desktop in Light and Evening, with reduced motion and axe', async ({ page }) => {
+    await mockProject(page);
+    await openFixture(page, { signedIn: true });
+    await expect(page.getByText('question 1 of 2')).toBeVisible();
+    for (const viewport of [
+      { width: 390, height: 844 },
+      { width: 820, height: 1180 },
+      { width: 1440, height: 900 },
+    ]) {
+      await page.setViewportSize(viewport);
+      const paletteColors = new Set<string>();
+      for (const colorScheme of ['light', 'dark'] as const) {
+        await page.emulateMedia({ colorScheme, reducedMotion: 'reduce' });
+        // Test the actual Cueory theme tokens, not only a device preference change.
+        await page.evaluate(mode => { document.documentElement.dataset.theme = mode; }, colorScheme);
+        const pageColor = await page.evaluate(() =>
+          getComputedStyle(document.documentElement).getPropertyValue('--color-page').trim());
+        expect(pageColor.length).toBeGreaterThan(0);
+        paletteColors.add(pageColor);
+        expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+        await expect(page.getByText('question 1 of 2')).toBeVisible();
+        const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa']).analyze();
+        expect(results.violations.map(result => result.id + ': ' + result.help)).toEqual([]);
+      }
+      expect(paletteColors.size).toBe(2);
+    }
+  });
+});
+
+test.describe('Task 172: the real flag form on the real questions page', () => {
+  test('reports carry the question being shown, and none after the last one', async ({ page }) => {
+    const seen = await mockProject(page);
+    await openFixture(page, { signedIn: true, search: '?concept=sample-concept&flag=1' });
+    await expect(page.getByText('question 1 of 2')).toBeVisible();
+
+    const send = async (words: string) => {
+      await page.getByRole('button', { name: 'flag or comment', exact: true }).click();
+      await page.getByRole('radio', { name: 'something confusing' }).check();
+      await page.getByLabel('anything to add? (optional)').fill(words);
+      await page.getByRole('button', { name: 'send', exact: true }).click();
+      await expect(page.getByTestId('flag-result')).toHaveText('thank you. your report is in.');
+    };
+    const flags = () => seen.filter(request => request.path === '/rest/v1/rpc/submit_flag').map(request => request.body);
+
+    await send('first question');
+    await page.getByLabel('sample circle').check();
+    await page.getByRole('button', { name: 'check', exact: true }).click();
+    await page.getByRole('button', { name: 'next question' }).click();
+    await expect(page.getByText('question 2 of 2')).toBeVisible();
+    await send('second question');
+
+    // Finish the set: the second question's reply, then "next question". The probe and the form both lose the item.
+    await page.route(`${PROJECT}/rest/v1/rpc/check_answer`, route => route.request().method() === 'POST'
+      ? route.fulfill({
+        status: 200, headers: { 'access-control-allow-origin': '*', 'content-type': 'application/json' },
+        body: JSON.stringify({ correct: true, key: ['a', 'c'], rationales: { a: 'sample rationale a', b: 'sample rationale b', c: 'sample rationale c' }, version_id: uuid(22) }),
+      })
+      : route.fallback());
+    await page.getByLabel('sample red').check();
+    await page.getByLabel('sample blue').check();
+    await page.getByRole('button', { name: 'check', exact: true }).click();
+    await page.getByRole('button', { name: 'next question' }).click();
+    await expect(page.getByTestId('flag-probe')).toHaveText('none');
+    await send('after the set');
+
+    expect(flags()).toMatchObject([
+      { item_id: uuid(11), item_version_id: uuid(21), comment: 'first question' },
+      { item_id: uuid(12), item_version_id: uuid(22), comment: 'second question' },
+      { item_id: null, item_version_id: null, comment: 'after the set' },
+    ]);
   });
 });

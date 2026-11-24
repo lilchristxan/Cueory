@@ -181,8 +181,9 @@ describe('brand v1.0', () => {
       expect(component).toContain('class="logo-day"');
       expect(component).toContain('class="logo-evening"');
       expect(component).not.toMatch(/style=|\w-\[/);
-      const page = file('src/pages/play.astro').toString();
-      expect(page).toMatch(/<h2 id="pulse-heading" class="display [^"]*"><PilloTitle name=\{pulse\.name\} \/><\/h2>/);
+      // pillo's own page (each game on its own page, 2026-11-17) carries the mark in its title.
+      const page = file('src/pages/play/pillo.astro').toString();
+      expect(page).toMatch(/<h1 slot="title" id="pulse-heading" class="display [^"]*"><PilloTitle name=\{game\.name\} \/><\/h1>/);
     });
   });
 });

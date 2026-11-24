@@ -1,11 +1,13 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import {
-  accountMessage, adaptersFor, deleteGate, deleteMyAccount, deletionLines, offerFile, prepareDownloadFor,
-  sameIdentity, saveDisplayName, signOutHere, type AccountAdapters, type AccountClient, type DownloadFile,
-} from './accountsettings';
+  accountMessage, adaptersFor, deleteGate, offerIfOpen, offerSpreadsheets,
+  otherAccountNow, sameIdentity, saveDisplayName, signOutHere, watchExport, type AccountAdapters, type AccountClient,
+  type DownloadFile, type ExportWatch,
+} from './accountsettings-core';
 import { AccountsUnavailable, authButton, authInput } from './SignIn.tsx';
 import { getSupabase } from './supabaseclient';
-import { localDay } from '../scripts/progress';
+import { reauthHref } from './deleteaccount';
+import { localDay } from '../scripts/localday';
 import { browserStorage, type KeyValueStorage } from '../scripts/storage';
 
 const primary = `${authButton} bg-button text-on-button hover:bg-button-hover`;
@@ -156,40 +158,65 @@ function DataSection({ adapters, userId, email, onStale }: {
   const [busy, setBusy] = useState(false);
   const [csv, setCsv] = useState<DownloadFile[] | null>(null);
   const [message, setMessage] = useState('');
+  // #757: one watch for as long as this section is open. Another account signing in (even A→B→A) or the section
+  // closing cancels any download in progress and every file not yet offered, for good.
+  const watch = useRef<ExportWatch | null>(null);
+  useEffect(() => {
+    const current = watchExport(adapters, userId, () => setCsv(null));
+    watch.current = current;
+    return () => current.close();
+  }, [adapters, userId]);
+
+  /**
+   * Ends the download without a file. A sign-in event has already closed this section or made the page reload for
+   * whoever is signed in now; a change found only by reading the session reloads it here.
+   */
+  const stopped = (current: ExportWatch | null) => {
+    setBusy(false);
+    setCsv(null);
+    if (current?.state() === 'open') onStale(accountMessage('identity-changed'));
+  };
 
   const download = async () => {
-    if (busy) return;
+    const current = watch.current;
+    if (busy || !current) return;
+    if (current.state() !== 'open') return stopped(current);
     setBusy(true);
     setMessage('');
     setCsv(null);
     const today = localDay(new Date());
     let signInDetails: unknown;
-    if (!(await sameIdentity(adapters, userId))) {
-      setBusy(false);
-      return onStale(accountMessage('identity-changed'));
-    }
+    if (!(await sameIdentity(adapters, userId)) || current.state() !== 'open') return stopped(current);
     try {
       signInDetails = await adapters.signInDetails?.();
     } catch {
       // All or nothing, like the database sections: no file without the sign-in details.
+      if (current.state() !== 'open') return stopped(current);
       setBusy(false);
       return setMessage(accountMessage('export-failed'));
     }
-    const files = await prepareDownloadFor(adapters, userId, { email, signInDetails, storage: browserStorage(), today });
-    setBusy(false);
-    if (!files.ok) {
-      if ('changed' in files) return onStale(files.message);
-      return setMessage(files.message);
+    let files: Awaited<ReturnType<(typeof import('./accountsettings'))['prepareDownloadFor']>>;
+    try {
+      const { prepareDownloadFor } = await import('./accountsettings');
+      files = await prepareDownloadFor(adapters, userId, { email, signInDetails, storage: browserStorage(), today }, current.signal);
+    } catch {
+      if (current.state() !== 'open') return stopped(current);
+      setBusy(false);
+      return setMessage(accountMessage('export-failed'));
     }
-    offerFile(files.json, dom());
+    if (current.state() !== 'open' || (!files.ok && 'changed' in files)) return stopped(current);
+    setBusy(false);
+    if (!files.ok) return setMessage(files.message);
+    if (!offerIfOpen(files.json, current, dom())) return stopped(current);
     setCsv(files.csv);
     setMessage(accountMessage('export-downloading'));
   };
 
-  const spreadsheets = () => {
-    if (!csv) return;
-    // One at a time, a moment apart: browsers can drop downloads started together.
-    csv.forEach((file, index) => window.setTimeout(() => offerFile(file, dom()), index * 300));
+  const spreadsheets = async () => {
+    const current = watch.current;
+    if (!csv || !current) return;
+    if (current.state() !== 'open' || !(await sameIdentity(adapters, userId)) || current.state() !== 'open') return stopped(current);
+    offerSpreadsheets(csv, current, dom());
     setMessage(accountMessage('export-csv-downloading'));
   };
 
@@ -199,7 +226,7 @@ function DataSection({ adapters, userId, email, onStale }: {
       <button type="button" aria-disabled={busy} className={`${primary} sm:w-auto sm:px-8`} onClick={() => { void download(); }}>
         {busy ? 'getting your data…' : 'download my data'}
       </button>
-      {csv && <button type="button" className={`${authButton} sm:w-auto sm:px-8`} onClick={spreadsheets}>
+      {csv && <button type="button" className={`${authButton} sm:w-auto sm:px-8`} onClick={() => { void spreadsheets(); }}>
         download spreadsheet files
       </button>}
     </div>
@@ -227,8 +254,13 @@ function DeleteSection({ adapters, userId, email, busy, onStale, onDeleted }: {
     setOpen(true);
     setSummary({ kind: 'loading' });
     requestAnimationFrame(() => confirm.current?.focus());
-    const result = await deletionLines(adapters.reader, { email, storage: browserStorage(), today: localDay(new Date()) });
-    setSummary(result.ok ? { kind: 'lines', lines: result.lines } : { kind: 'failed', message: result.message });
+    try {
+      const { deletionLines } = await import('./accountsettings');
+      const result = await deletionLines(adapters.reader, { email, storage: browserStorage(), today: localDay(new Date()) });
+      setSummary(result.ok ? { kind: 'lines', lines: result.lines } : { kind: 'failed', message: result.message });
+    } catch {
+      setSummary({ kind: 'failed', message: accountMessage('summary-failed') });
+    }
   };
 
   const close = () => {
@@ -244,14 +276,29 @@ function DeleteSection({ adapters, userId, email, busy, onStale, onDeleted }: {
     setDeleting(true);
     busy.current = true;
     setMessage('');
-    const result = await deleteMyAccount({
-      typed, stillSame: () => sameIdentity(adapters, userId), deleteAccount: adapters.deleteAccount, signOut: adapters.signOut, local: browserStorage(), session: tabStorage(),
-    });
-    busy.current = false;
-    setDeleting(false);
+    // A -> B -> A is still a changed sign-in. Keep a permanent abort signal from the instant of confirmation.
+    const controller = new AbortController();
+    const stop = adapters.onIdentityChange?.(nextId => { if (nextId !== userId) controller.abort(); });
+    let result: Awaited<ReturnType<(typeof import('./accountsettings'))['deleteMyAccount']>>;
+    try {
+      const { deleteMyAccount } = await import('./accountsettings');
+      result = await deleteMyAccount({
+        userId, typed, signal: controller.signal, stillSame: () => sameIdentity(adapters, userId),
+        otherAccountNow: () => otherAccountNow(adapters, userId), deleteAccount: adapters.deleteAccount,
+        signOut: adapters.signOut, local: browserStorage(), session: tabStorage(),
+      });
+    } catch {
+      result = { kind: 'failed', message: accountMessage('delete-failed') };
+    } finally {
+      stop?.();
+      busy.current = false;
+      setDeleting(false);
+    }
     if (result.kind === 'deleted') onDeleted(result.message, result.next);
     else {
-      if (result.kind === 'identity-changed') return onStale(result.message);
+      // A network abort cannot prove whether deletion reached the server. Show that warning,
+      // then reload for the current account instead of leaving A's stale settings on screen for B.
+      if (result.kind === 'identity-changed' || controller.signal.aborted) return onStale(result.message);
       setMessage(result.message);
     }
   };
@@ -284,6 +331,8 @@ function DeleteSection({ adapters, userId, email, busy, onStale, onDeleted }: {
           </div>
         </form>
         <p role="status" aria-atomic="true" className="mt-3 text-sm">{message}</p>
+        {message.includes("sign in again to delete your account") &&
+          <a href={reauthHref()} className="mt-2 inline-flex min-h-12 items-center underline">sign in again</a>}
       </div>
     </>}
   </section>;

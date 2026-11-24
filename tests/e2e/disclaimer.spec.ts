@@ -1,12 +1,14 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
+import { visibleFooterLinks } from '../../src/config/legalfooter';
+import { footerLinks } from '../../src/config/site';
 
 // The welcome promo takes focus after 5 seconds. Its own spec tests that behavior.
 // Keep this page-specific footer and accessibility test independent of the promo timer.
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
     try {
-      localStorage.setItem('cueory-promo-seen', String(Date.now()));
+      localStorage.setItem('cueory-promo-seen', String(Date.now())); localStorage.setItem('cueory-signup-popup-seen', String(Date.now()));
     } catch {
       // With storage blocked, the welcome promo does not appear.
     }
@@ -20,15 +22,16 @@ const viewports = [
 
 for (const viewport of viewports) {
   test.describe(`/disclaimer at ${viewport.name} size`, () => {
-    test(`shows its disclaimer heading, placeholder, and legal links`, async ({ page }) => {
+    test(`shows its disclaimer heading, approved text, and legal links`, async ({ page }) => {
       await page.setViewportSize({ width: viewport.width, height: viewport.height });
 
       const response = await page.goto('/disclaimer');
       expect(response?.status()).toBe(200);
       await expect(page).toHaveTitle('disclaimer · cueory');
       await expect(page.getByRole('heading', { level: 1, name: 'disclaimer' })).toBeVisible();
-      await expect(page.getByText('Placeholder: Disclaimer text')).toBeVisible();
-      await expect(page.getByText('Christian: paste your disclaimer here.')).toBeVisible();
+      // Christian's approved text, not the placeholder.
+      await expect(page.locator('main')).not.toContainText(/Christian:|paste your|Placeholder:/);
+      await expect(page.locator('main').getByText(/^Last updated \d/)).toBeVisible();
 
       const footer = page.getByRole('contentinfo');
       // The site's footer links are intentionally closed until the visitor opens them.
@@ -39,11 +42,16 @@ for (const viewport of viewports) {
       await expect(toggle).toHaveAttribute('aria-expanded', 'true');
       for (const link of [
         { name: 'privacy', href: '/privacy' },
-        { name: 'terms', href: '/terms' },
-        { name: 'disclaimer', href: '/disclaimer' },
         { name: 'support cueory', href: '/support' },
       ]) {
         await expect(footer.getByRole('link', { name: link.name, exact: true })).toHaveAttribute('href', link.href);
+      }
+      // #747: each legal link shows once its page is approved (same rule as the footer).
+      const shown = new Set(visibleFooterLinks(footerLinks).map((link) => link.href));
+      for (const [name, href] of [['terms', '/terms'], ['disclaimer', '/disclaimer']] as const) {
+        const link = footer.getByRole('link', { name, exact: true });
+        if (shown.has(href)) await expect(link).toHaveAttribute('href', href);
+        else await expect(link).toHaveCount(0);
       }
 
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);

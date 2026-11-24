@@ -29,6 +29,18 @@ describe('remote question checking', () => {
     expect(rpc).toHaveBeenCalledExactlyOnceWith('check_answer', { item_id: itemId, version_id: versionId, picked: ['a'] });
   });
 
+  it('refuses stale players and discards feedback after an account change', async () => {
+    const { remote, rpc } = setup();
+    let current = false;
+    remote.isCurrent = () => current;
+    const check = remoteChecker(questions, remote);
+    await expect(check(itemId, ['a'])).rejects.toThrow('sign in');
+    expect(rpc).not.toHaveBeenCalled();
+    current = true;
+    rpc.mockImplementation(async () => { current = false; return { data: feedback, error: null }; });
+    await expect(check(itemId, ['a'])).rejects.toThrow('account changed');
+  });
+
   it('preserves the RPC receiver', async () => {
     const client: AnswerTransport = { rpc() {
       expect(this).toBe(client);

@@ -59,6 +59,12 @@ describe('rewards: fixed rules and input validation', () => {
     expect(replay.pointsEarned).toBe(0);
     expect(replay.achievementsEarned).toEqual([]);
     expect(state.games).toHaveLength(4);
+
+    // Replay with legacy/canonical alias (pulse vs vialo) is rejected as duplicate
+    const aliasReplay = applyResult(state, game('2026-11-01', 'vialo' as any, true, 0, 0), '2026-11-01');
+    expect(aliasReplay.accepted).toBe(false);
+    expect(aliasReplay.state).toBe(state);
+    expect(aliasReplay.pointsEarned).toBe(0);
   });
 
   it('counts each study session once and caps the daily study award at fifty points', () => {
@@ -118,6 +124,15 @@ describe('rewards: fixed rules and input validation', () => {
     expect(() => applyResult({ ...first, version: 9 }, study('round'), '2026-11-01')).toThrow();
     expect(() => applyResult({ ...first, games: [...first.games, first.games[0]] }, study('round'), '2026-11-01')).toThrow();
     expect(() => applyResult({ ...first, achievements: [{ id: 'made-up', name: 'fake', rule: '', earnedDate: '2026-11-01' }] }, study('round'), '2026-11-01')).toThrow();
+  });
+
+  it('normalizes a legacy pulse record before rejecting its replay', () => {
+    const canonical = applyResult(emptyRewards(), game('2026-11-01', 'pulse'), '2026-11-01').state;
+    const legacy = { ...canonical, games: [{ ...canonical.games[0], game: 'pulse' as never }] };
+    const replay = applyResult(legacy, game('2026-11-01', 'pulse'), '2026-11-01');
+
+    expect(replay.accepted).toBe(false);
+    expect(replay.state.games).toEqual([{ ...legacy.games[0], game: 'vialo' }]);
   });
 
   it('never looks up the current clock or any browser service', () => {

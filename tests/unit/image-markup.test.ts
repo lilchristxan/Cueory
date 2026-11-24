@@ -59,8 +59,10 @@ function problems(html: string): string[] {
     }
     // Static HTML cannot determine the fold. Lazy-load every image except explicitly
     // approved above-the-fold brand artwork (header logos and the home hero).
-    const isAboveFoldBrand = (a['data-image-priority'] === 'header' || a['data-image-priority'] === 'hero') &&
-      /^\/brand\/v1\/(logo-full|emblem)-(light|dark)-(960|192)\.png$/.test(a.src ?? '');
+    const isAboveFoldBrand = ((a['data-image-priority'] === 'header' || a['data-image-priority'] === 'hero') &&
+      /^\/brand\/v1\/(logo-full|emblem)-(light|dark)-(960|192)\.png$/.test(a.src ?? '')) ||
+      // The home hero's anatomy figure (redesign P5): the one non-logo picture approved above the fold.
+      (a['data-image-priority'] === 'hero' && a.src === '/design/home-v2/hero-figure-halo.webp');
     if (a.loading !== 'lazy' && !(isAboveFoldBrand && a.loading === 'eager')) {
       errors.push('not lazy or approved above-the-fold brand image');
     }
@@ -80,6 +82,11 @@ describe('Task 207 built image markup', () => {
   it('does not permit arbitrary eager images or markup in scripts/comments', () => {
     expect(problems('<img src="/x" alt="x" width="1" height="1" loading="eager" data-image-priority="header">')).toHaveLength(1);
     expect(problems('<!-- <img> --><script>const x = "<img>";</script>')).toEqual([]);
+    // Only the hero figure is approved besides the logos, and only marked as hero artwork.
+    const figure = '<img src="/design/home-v2/hero-figure-halo.webp" alt="" aria-hidden="true" width="673" height="692" loading="eager"';
+    expect(problems(figure + ' data-image-priority="hero">')).toEqual([]);
+    expect(problems(figure + '>')).toHaveLength(1);
+    expect(problems(figure.replace('hero-figure-halo', 'other') + ' data-image-priority="hero">')).toHaveLength(1);
   });
   it('ignores raw-text/comment image lookalikes without joining fragments', () => {
     const valid = '<img src="/real" alt="real" width="1" height="1" loading="lazy">';

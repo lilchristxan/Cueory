@@ -1,6 +1,7 @@
 ---
 import AccountCorner from './AccountCorner.astro';
 import SiteMenu from './SiteMenu.astro';
+import SiteNav from './SiteNav.astro';
 import Wordmark from './Wordmark.astro';
 import { site } from '../config/site';
 
@@ -13,25 +14,33 @@ interface Props {
    * still fills the first screen and nothing moves.
    */
   overlay?: boolean;
+  /** The page's accounts gate is closed: the account corner stays signed out and never loads Supabase. */
+  accountsOff?: boolean;
 }
 
-const { quiet = false, overlay = false } = Astro.props;
+const { quiet = false, overlay = false, accountsOff = false } = Astro.props;
+// Redesign P2: from the large breakpoint up, pages that aren't study screens show the persistent pill between the
+// logo and the account corner (SiteNav.astro). Study screens keep the quiet corners only, and below that breakpoint
+// the ☰ panel stays the menu, so nothing changes on phones and tablets.
+const bar = !quiet;
 ---
 
 <header
   data-scroll-header={overlay ? undefined : ''}
   class:list={[
     'z-20 flex w-full items-center gap-(--header-corner-gap) px-(--header-inline-gutter) py-4',
+    // With enlarged text the pill can be wider than the screen: let the bar wrap onto a second row, never scroll sideways.
+    bar && 'lg:flex-wrap',
     overlay ? 'absolute inset-x-0 top-0' : 'sticky top-0 site-header-sticky',
   ]}
 >
   <!-- ☰ in the top-left corner, the account in the top-right (D-46). -->
-  <div class="flex flex-1 justify-start">
+  <div class:list={['flex flex-1 justify-start', bar && 'lg:flex-none']}>
     <SiteMenu quiet={quiet} />
   </div>
   {
     overlay ? (
-      <span />
+      <span class:list={[bar && 'lg:hidden']} />
     ) : (
       <a href="/" class="p-(--logo-clear) text-ink" aria-label={`${site.name} home`}>
         {/*
@@ -39,20 +48,30 @@ const { quiet = false, overlay = false } = Astro.props;
           compact emblem (guide §6.1: small, unobtrusive branding during study). Other pages get the full logo at
           240px (guide §3.5) where it fits beside the two corner buttons, and the emblem on phones, where 240px plus
           the corners, gaps and gutters would be wider than the screen.
+          The full logo loads lazily (performance, 2026-11-19): phones hide it, and a hidden lazy picture is never
+          downloaded, so a phone no longer fetches both 960px full-logo files (about 70 KB) it never shows. From 640px
+          the shown copy loads as soon as the page is laid out. The phone emblem stays eager.
         */}
         {quiet ? (
           <Wordmark loading="eager" variant="emblem" class="w-(--logo-emblem)" sizes="2.25rem" />
         ) : (
           <>
             <Wordmark loading="eager" variant="emblem" class="w-(--logo-emblem) sm:hidden" sizes="2.25rem" />
-            <Wordmark loading="eager" class="hidden w-(--logo-width) sm:block" sizes="15rem" />
+            <Wordmark class="hidden w-(--logo-width) sm:block" sizes="15rem" />
           </>
         )}
       </a>
     )
   }
-  <div class="flex flex-1 justify-end">
-    <AccountCorner quiet={quiet} />
+  {
+    bar && (
+      <div class="hidden min-w-0 lg:flex lg:flex-1 lg:justify-center">
+        <SiteNav />
+      </div>
+    )
+  }
+  <div class:list={['flex flex-1 justify-end', bar && 'lg:flex-none']}>
+    <AccountCorner quiet={quiet} accountsOff={accountsOff} />
   </div>
 </header>
 

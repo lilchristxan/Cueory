@@ -15,7 +15,9 @@ import SocialLinks from './SocialLinks.astro';
 import ThemePicker from './ThemePicker.astro';
 import Wordmark from './Wordmark.astro';
 import { footerLinks, site } from '../config/site';
+import { visibleFooterLinks } from '../config/legalfooter';
 import FlagMount from '../islands/FlagMount';
+import { PATIENT_INFO_WARNING } from '../islands/flag';
 import { flagItemContext } from '../islands/flagconnect';
 import { FOOTER_TOGGLE_LABELS, flagMailto, publicPath } from '../scripts/footer';
 
@@ -24,31 +26,44 @@ interface Props {
   hideFlag?: boolean;
   /** The real item a question page shows (database uuids), passed down from the layout. Sample pages pass none. */
   flagItem?: { itemId: string; itemVersionId: string };
+  /** The page's accounts gate is closed (/signin, /signup): the flag form stays signed out and never loads Supabase. */
+  accountsOff?: boolean;
 }
 
-const { hideFlag = false, flagItem } = Astro.props;
+const { hideFlag = false, flagItem, accountsOff = false } = Astro.props;
 // Fails the build for a sample slug or half a pair: submit_flag only takes real ids.
 const item = flagItemContext(flagItem);
+// #747: a legal page that isn't approved yet gets no footer link (Privacy always shows).
+const links = visibleFooterLinks(footerLinks);
 const year = new Date().getFullYear();
 const barButton =
   'inline-flex size-12 items-center justify-center rounded-pill text-ink hover:bg-surface';
 ---
 
-<footer class="mt-section flex flex-col-reverse border-t border-line" data-site-footer>
-  <div class="mx-auto grid h-14 w-full max-w-page grid-cols-3 items-center px-gutter">
+<footer class="mt-section flex flex-col-reverse" data-site-footer>
+  <!-- The bar and the link row share one positioned box. In the footer the report panel (FlagForm, opened from the
+       flag) is placed against this box instead of against the flag, so it opens above the link row and never covers
+       part of a link: the two long classes un-position the form's own wrapper here and keep the panel in line with
+       the flag (the page gutter). The bar still comes first in the page; flex-col-reverse draws the link row above it. -->
+  <div
+    class="relative mx-auto flex w-full max-w-page flex-col-reverse [&_[data-testid=flag-form]]:static [&_[data-testid=flag-form]>.absolute]:left-gutter"
+    data-footer-base
+  >
+  <div class="grid h-14 w-full grid-cols-3 items-center px-gutter">
     {
       !hideFlag && (
-        <div class="col-start-1 justify-self-start" data-footer-flag>
+        <div class="col-start-1 justify-self-start" id="footer-flag" data-footer-flag>
           <FlagMount
             client:only="react"
             page={Astro.url.pathname}
             itemId={item.itemId}
             itemVersionId={item.itemVersionId}
             variant="icon"
+            {...(accountsOff ? { accountsOff: true } : {})}
           >
+            <div slot="fallback" class="flex items-center gap-2">
             <a
-              slot="fallback"
-              href={flagMailto(site.contactEmail, Astro.url.pathname)}
+                            href={flagMailto(site.contactEmail, Astro.url.pathname)}
               class={barButton}
               aria-label="flag or comment"
             >
@@ -62,6 +77,8 @@ const barButton =
                   stroke-linejoin="round"></path>
               </svg>
             </a>
+              <p class="max-w-56 text-xs leading-tight text-ink" data-testid="flag-fallback-warning">{PATIENT_INFO_WARNING}</p>
+            </div>
           </FlagMount>
         </div>
       )
@@ -96,34 +113,38 @@ const barButton =
     </button>
   </div>
 
-  <div id="site-footer-panel" class="border-b border-line" data-footer-panel>
+  <!-- The footer's links as drawn (HomeV2-3): one centered row of small underlined links, always visible. It sits after the bar
+       in the page and, with flex-col-reverse, is drawn between the extras panel and the bar. -->
+  <nav aria-label="footer" class="w-full px-gutter">
+    <ul class="flex flex-wrap justify-center gap-x-5 text-sm">
+      {
+        links.map((link) => (
+          <li>
+            <a
+              href={link.href}
+              class="inline-flex min-h-(--tap-min) items-center text-ink underline underline-offset-4 wrap-anywhere hover:text-ink-soft"
+              aria-current={link.href === publicPath(Astro.url.pathname) ? 'page' : undefined}
+            >
+              {link.label}
+            </a>
+          </li>
+        ))
+      }
+    </ul>
+  </nav>
+  </div>
+
+  <div id="site-footer-panel" data-footer-panel>
     <div
-      class="mx-auto flex w-full max-w-page flex-col gap-6 px-gutter py-8 text-sm text-ink-soft sm:flex-row sm:items-start sm:justify-between"
+      class="mx-auto flex w-full max-w-page flex-col items-center gap-6 px-gutter py-8 text-center text-sm text-ink-soft"
     >
-      <div class="flex flex-col gap-2">
+      <div class="flex flex-col items-center gap-2">
         <p class="font-bold text-ink">{site.tagline}</p>
-        <nav aria-label="footer">
-          <ul class="flex flex-wrap gap-x-5 gap-y-2">
-            {
-              footerLinks.map((link) => (
-                <li>
-                  <a
-                    href={link.href}
-                    class="text-ink-soft hover:text-ink"
-                    aria-current={link.href === publicPath(Astro.url.pathname) ? 'page' : undefined}
-                  >
-                    {link.label}
-                  </a>
-                </li>
-              ))
-            }
-          </ul>
-        </nav>
         <SocialLinks />
         {
           site.contactEmail && (
             <p>
-              <a href={`mailto:${site.contactEmail}`} class="text-ink-soft hover:text-ink">
+              <a href={`mailto:${site.contactEmail}`} class="inline-flex min-h-(--tap-min) max-w-full items-center text-ink-soft wrap-anywhere hover:text-ink">
                 {site.contactEmail}
               </a>
             </p>

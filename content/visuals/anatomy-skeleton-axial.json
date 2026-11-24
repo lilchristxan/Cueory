@@ -4,6 +4,7 @@
   "kind": "model",
   "lessonIds": ["U11-T01-L01"],
   "status": "draft",
+  "hierarchyTree": "isa",
   "model": { "file": "/models/anatomy/skeleton-axial.glb", "release": "BodyParts3D 4.0", "via": "official download from dbarchive.biosciencedbc.jp" },
   "labels": [
     { "id": "FMA7486", "text": "manubrium", "group": "anatomical structure", "layer": "skeleton", "source": "bp3d-FMA7486" },

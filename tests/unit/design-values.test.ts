@@ -61,6 +61,30 @@ const exceptions: Exception[] = [
   },
   {
     kind: 'size',
+    path: 'styles/gameframe.css',
+    matches: text => /^@media \(width < (?:64|30)rem\) \{$/.test(text.trim()),
+    reason: 'the game frame adapts sidebar and controls at tablet and phone breakpoints',
+  },
+  {
+    kind: 'size',
+    path: 'styles/vialo.css',
+    matches: text => /^@media \(width (?:<|>=) 40rem\) \{$/.test(text.trim()),
+    reason: 'the Vialo board changes layout at a responsive media-query breakpoint',
+  },
+  {
+    kind: 'size',
+    path: 'styles/global.css',
+    matches: text => /@media \(orientation: portrait\), \(max-width: 50rem\)/.test(text),
+    reason: 'the Sudoku board and keypad use a mobile-only layout boundary to keep every control reachable',
+  },
+  {
+    kind: 'size',
+    path: 'styles/global.css',
+    matches: text => /^@container sudoku-panel \(min-width: (?:16|32|48)rem\) \{$/.test(text.trim()),
+    reason: 'the Sudoku number pad switches between 5 and 10 columns where 44 px buttons fit; container conditions cannot read tokens',
+  },
+  {
+    kind: 'size',
     path: 'styles/global.css',
     matches: text =>
       /@media .*\b(?:40|48|64)rem\b/.test(text) ||
@@ -117,6 +141,29 @@ describe('design values', () => {
     expect(exceptionFor(finding('  @media (width >= 40rem) {'))?.reason).toBeTruthy();
     expect(exceptionFor(finding('  @media (width < 41rem) {'))).toBeUndefined();
     expect(exceptionFor(finding('  padding: 40rem;'))).toBeUndefined();
+  });
+
+  it('allows only the documented 40rem Vialo breakpoints', () => {
+    const finding = (text: string): Finding => ({ kind: 'size', path: 'styles/vialo.css', line: 1, text });
+    expect(exceptionFor(finding('  @media (width < 40rem) {'))?.reason).toBeTruthy();
+    expect(exceptionFor(finding('  @media (width >= 40rem) {'))?.reason).toBeTruthy();
+    expect(exceptionFor(finding('  @media (width < 41rem) {'))).toBeUndefined();
+    expect(exceptionFor(finding('  padding: 40rem;'))).toBeUndefined();
+  });
+
+  it('allows only the documented 64rem and 30rem game frame breakpoints', () => {
+    const finding = (text: string): Finding => ({ kind: 'size', path: 'styles/gameframe.css', line: 1, text });
+    expect(exceptionFor(finding('  @media (width < 64rem) {'))?.reason).toBeTruthy();
+    expect(exceptionFor(finding('  @media (width < 30rem) {'))?.reason).toBeTruthy();
+    expect(exceptionFor(finding('  @media (width < 40rem) {'))).toBeUndefined();
+    expect(exceptionFor(finding('  padding: 64rem;'))).toBeUndefined();
+  });
+
+  it('allows only the documented Sudoku panel container breakpoints', () => {
+    const finding = (text: string): Finding => ({ kind: 'size', path: 'styles/global.css', line: 1, text });
+    for (const size of ['16', '32', '48']) expect(exceptionFor(finding(`  @container sudoku-panel (min-width: ${size}rem) {`))?.reason).toBeTruthy();
+    expect(exceptionFor(finding('  @container sudoku-panel (min-width: 20rem) {'))).toBeUndefined();
+    expect(exceptionFor(finding('  @container other (min-width: 32rem) {'))).toBeUndefined();
   });
 
   it('limits the anatomy phone breakpoint exception to its exact viewport condition', () => {

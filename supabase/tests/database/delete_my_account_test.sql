@@ -4,7 +4,7 @@
 -- only inside this test.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(35);
+select plan(38);
 
 insert into auth.users (id, email) values
   ('00000000-0000-4000-8000-000000000001', 'one@example.com'),
@@ -78,33 +78,35 @@ begin
 end
 $f$;
 
--- Signs in as one student for the rest of the transaction, with a token issued `age` seconds ago (null: no iat claim).
--- delete_my_account needs a token from the last 10 minutes (20261102160000_fresh_sign_in_and_name_rules.sql).
+-- Signs in with a freshly issued JWT but an authentication event that can be older. A token refresh
+-- advances iat without advancing the signed password AMR timestamp. Null age means no AMR.
 create function pg_temp.sign_in(p_uid uuid, age integer)
 returns void
 language sql
 as $f$
   select set_config('request.jwt.claims',
-    (jsonb_build_object('sub', p_uid, 'role', 'authenticated')
+    (jsonb_build_object('sub', p_uid, 'role', 'authenticated', 'aal', 'aal1',
+                        'iat', extract(epoch from now())::bigint)
       || case when age is null then '{}'::jsonb
-              else jsonb_build_object('iat', extract(epoch from now())::bigint - age) end)::text, true),
+              else jsonb_build_object('amr', jsonb_build_array(
+                jsonb_build_object('method', 'password', 'timestamp', extract(epoch from now())::bigint - age))) end)::text, true),
     set_config('request.jwt.claim.sub', p_uid::text, true);
 $f$;
 
 -- ---- Who may do what.
 select ok(
-  has_function_privilege('authenticated', 'public.delete_my_account()', 'execute')
-    and not has_function_privilege('anon', 'public.delete_my_account()', 'execute'),
+  has_function_privilege('authenticated', 'public.delete_my_account(uuid)', 'execute')
+    and not has_function_privilege('anon', 'public.delete_my_account(uuid)', 'execute'),
   'signed-in students can run delete_my_account and signed-out visitors cannot'
 );
 select ok(
-  (select prosecdef from pg_proc where oid = 'public.delete_my_account()'::regprocedure)
-    and (select proconfig @> array['search_path=""'] from pg_proc where oid = 'public.delete_my_account()'::regprocedure),
+  (select prosecdef from pg_proc where oid = 'public.delete_my_account(uuid)'::regprocedure)
+    and (select proconfig @> array['search_path=""'] from pg_proc where oid = 'public.delete_my_account(uuid)'::regprocedure),
   'delete_my_account is security definer with an empty search_path'
 );
 select results_eq(
-  $$ select pg_get_function_identity_arguments('public.delete_my_account()'::regprocedure) $$,
-  $$ values ('') $$, 'it takes no arguments, so a caller can never name another account'
+  $$ select pg_get_function_identity_arguments('public.delete_my_account(uuid)'::regprocedure) $$,
+  $$ values ('expected_user_id uuid') $$, 'it takes only the account id the page shows, which must equal the signed-in account'
 );
 
 -- ---- Every table that holds a student's rows goes with the account.
@@ -137,7 +139,7 @@ set local role anon;
 set local "request.jwt.claims" to '{"role": "anon"}';
 set local "request.jwt.claim.sub" to '';
 select throws_ok(
-  $$ select public.delete_my_account() $$, '42501', null, 'a signed-out visitor cannot run delete_my_account'
+  $$ select public.delete_my_account('00000000-0000-4000-8000-000000000001'::uuid) $$, '42501', null, 'a signed-out visitor cannot run delete_my_account'
 );
 
 -- The authenticated role with no student in the request (no sub) is refused by the function itself.
@@ -145,7 +147,7 @@ set local role authenticated;
 set local "request.jwt.claims" to '{"role": "authenticated"}';
 set local "request.jwt.claim.sub" to '';
 select throws_ok(
-  $$ select public.delete_my_account() $$, '28000', 'sign in to delete your account',
+  $$ select public.delete_my_account('00000000-0000-4000-8000-000000000001'::uuid) $$, '28000', 'sign in to delete your account',
   'with no one signed in it refuses, with a plain message'
 );
 
@@ -160,52 +162,70 @@ select is_empty(
   'and no rows'
 );
 
--- ---- A sign-in older than 10 minutes, or a token with no usable iat, is refused (Task 302).
+-- ---- An authentication older than ten minutes is refused even after a JWT token refresh (Task 725).
 select pg_temp.sign_in('00000000-0000-4000-8000-000000000001', 601);
 set local role authenticated;
 select throws_ok(
-  $$ select public.delete_my_account() $$, '28R01', 'please sign in again to delete your account',
-  'a token issued just over 10 minutes ago is refused, with a plain message and its own code'
+  $$ select public.delete_my_account('00000000-0000-4000-8000-000000000001'::uuid) $$, '28R01', 'please sign in again to delete your account',
+  'a newly issued token with eleven-minute-old password authentication is refused'
 );
 reset role;
 select pg_temp.sign_in('00000000-0000-4000-8000-000000000001', 3600);
 set local role authenticated;
 select throws_ok(
-  $$ select public.delete_my_account() $$, '28R01', 'please sign in again to delete your account',
-  'an hour-old token (a copied one, still unexpired) is refused'
+  $$ select public.delete_my_account('00000000-0000-4000-8000-000000000001'::uuid) $$, '28R01', 'please sign in again to delete your account',
+  'a refreshed token does not renew a one-hour-old password authentication'
 );
 reset role;
 select pg_temp.sign_in('00000000-0000-4000-8000-000000000001', null);
 set local role authenticated;
 select throws_ok(
-  $$ select public.delete_my_account() $$, '28R01', 'please sign in again to delete your account',
-  'a token with no iat claim is refused'
+  $$ select public.delete_my_account('00000000-0000-4000-8000-000000000001'::uuid) $$, '28R01', 'please sign in again to delete your account',
+  'a token without a server-signed authentication event is refused'
 );
 reset role;
 select set_config('request.jwt.claims',
-  '{"sub": "00000000-0000-4000-8000-000000000001", "role": "authenticated", "iat": "now"}', true);
+  '{"sub": "00000000-0000-4000-8000-000000000001", "role": "authenticated", "iat": 1794860000, "amr": [{"method":"password","timestamp":"now"}]}', true);
 set local role authenticated;
 select throws_ok(
-  $$ select public.delete_my_account() $$, '28R01', 'please sign in again to delete your account',
-  'an iat that is not a number is refused'
+  $$ select public.delete_my_account('00000000-0000-4000-8000-000000000001'::uuid) $$, '28R01', 'please sign in again to delete your account',
+  'an AMR authentication timestamp that is not numeric is refused'
 );
 reset role;
 select results_eq(
-  $$ select count(*)::int from auth.users $$, $$ values (2) $$, 'a refused stale sign-in deletes no account'
+  $$ select count(*)::int from auth.users $$, $$ values (2) $$, 'a refused stale authentication event deletes no account'
 );
 select is_empty(
   $$ select relation from pg_temp.rows_for('00000000-0000-4000-8000-000000000001') where n = 0 $$,
   'and none of that student''s rows'
 );
 select ok(
-  (select prosrc from pg_proc where oid = 'public.delete_my_account()'::regprocedure) like '%max_age_seconds constant integer := 600%',
-  'the limit is 10 minutes'
+  (select prosrc from pg_proc where oid = 'public.delete_my_account(uuid)'::regprocedure) like '%max_age_seconds constant integer := 600%',
+  'the signed authentication-event limit is ten minutes'
 );
 
--- ---- Student one deletes their account, signed in 9 minutes ago.
+-- ---- Identity binding (Task 206): a fresh session for student one cannot delete a different account.
+select pg_temp.sign_in('00000000-0000-4000-8000-000000000001', 0);
+set local role authenticated;
+select throws_ok(
+  $$ select public.delete_my_account('00000000-0000-4000-8000-000000000002'::uuid) $$, '28000',
+  'the account signed in on this device changed; nothing was deleted',
+  'naming another account is refused, even with a fresh token'
+);
+select throws_ok(
+  $$ select public.delete_my_account(null) $$, '28000',
+  'the account signed in on this device changed; nothing was deleted',
+  'naming no account is refused'
+);
+reset role;
+select results_eq(
+  $$ select count(*)::int from auth.users $$, $$ values (2) $$, 'a mismatched id deletes no account'
+);
+
+-- ---- Student one deletes their account, with a password event recorded nine minutes ago.
 select pg_temp.sign_in('00000000-0000-4000-8000-000000000001', 540);
 set local role authenticated;
-select lives_ok($$ select public.delete_my_account() $$, 'a signed-in student with a recent sign-in can delete their own account');
+select lives_ok($$ select public.delete_my_account('00000000-0000-4000-8000-000000000001'::uuid) $$, 'a signed-in student with recent server-signed password authentication can delete their own account');
 
 reset role;
 select is_empty(
@@ -245,7 +265,7 @@ select results_eq(
 -- ---- Running it again is safe.
 set local role authenticated;
 select lives_ok(
-  $$ select public.delete_my_account() $$,
+  $$ select public.delete_my_account('00000000-0000-4000-8000-000000000001'::uuid) $$,
   'calling it again with the same (still unexpired) sign-in does not fail'
 );
 reset role;
@@ -260,7 +280,7 @@ select results_eq(
 -- ---- Student two deletes theirs too, with a token issued just now.
 select pg_temp.sign_in('00000000-0000-4000-8000-000000000002', 0);
 set local role authenticated;
-select lives_ok($$ select public.delete_my_account() $$, 'a second student with a fresh token can delete their own account');
+select lives_ok($$ select public.delete_my_account('00000000-0000-4000-8000-000000000002'::uuid) $$, 'a second student with a fresh token can delete their own account');
 reset role;
 select is_empty(
   $$ select relation || ': ' || n from pg_temp.rows_for('00000000-0000-4000-8000-000000000002') where n <> 0 $$,

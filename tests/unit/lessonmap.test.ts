@@ -54,6 +54,12 @@ describe('outline grouping and lookup', () => {
     expect(result.units).toHaveLength(2);
   });
 
+  it('allows the reserved U00 introduction unit', () => {
+    const result = parseLessonMap(csv([{ ...sample, lesson_id: 'U00-T01-L01', unit_code: '00' }]));
+    expect(result.problems).toEqual([]);
+    expect(result.units).toMatchObject([{ id: 'U00', topics: [{ id: 'U00-T01', lessons: [{ lesson_id: 'U00-T01-L01' }] }] }]);
+  });
+
   it('returns an empty outline for a header-only CSV and unknown units', () => {
     expect(parseLessonMap(csv([]))).toEqual({ units: [], problems: [] });
     expect(lessonsFor(parseLessonMap(csv()).units, 'U99')).toEqual([]);

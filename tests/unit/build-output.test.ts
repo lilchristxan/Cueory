@@ -3,11 +3,15 @@
  */
 import { createHash } from 'node:crypto';
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
-import { isAbsolute, join, relative } from 'node:path';
+import { join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { gzipSync } from 'node:zlib';
 import { describe, expect, it } from 'vitest';
-import { newsletter, site } from '../../src/config/site';
+import { kitFormAction, kitLandingUrl, newsletter, site } from '../../src/config/site';
+import { draftsAllowed } from '../../src/islands/anatomylab';
+import { draftBuildEnv } from '../../src/lessons/draftgate';
+import { initialJsFiles, initialJsGzipBytes, inlineScriptBodies } from './perf-scan';
+import { isProductionBuild } from '../../scripts/prune-preview.mjs';
 
 const dist = fileURLToPath(new URL('../../dist/', import.meta.url));
 
@@ -59,24 +63,42 @@ const initialJsBudget = {
   'learn/study-skills/learn-mode.html': 153947,
   'learn/study-skills/matching.html': 154728,
   'learn/study-skills/organizer.html': 153555,
+  'learn/study-skills/print-cards.html': 89731, // #46: measured on merge 3c918c0f with Node 24.22.1 and this scanner
   'learn/study-skills/questions.html': 151681,
   'learn/study-skills.html': 147632,
   'learn/video-sample.html': 148178,
   'learn.html': 150346,
-  'play.html': 168467,
+  'message.html': 89731,
+  // The hub (2026-11-17): no game loads here any more. Measured from a local Node 24 build of lane8/play-hub; it was
+  // 168,467 with all four games on the page.
+  'play.html': 104558,
+  'play/hello-cards.html': 91427,
+  'play/stat.html': 96284, // Task 640: measured from a local Node 24.22.2 build, not yet from CI
+  'play/tachyyy.html': 96284, // Canonical Tachyyy keeps Stat's same game bundle baseline.
+  // Each game on its own page (2026-11-17, D-pending): these routes stopped being share landings and now load their game.
+  // Measured from a local Node 24 build of lane8/game-pages; the old 89,662 baseline was a page with no game on it.
+  'play/crossword.html': 121556,
+  'play/pillo.html': 119797,
+  'play/sudoku.html': 122156,
+  'play/vialo.html': 124013,
+  'play/word-path.html': 120824,
+  'play/piccline.html': 120824, // Canonical Piccline keeps Word Path's same game bundle baseline.
   'preview/admin-flags.html': 92161,
   'preview/anatomy-text.html': 89104,
   'preview/anatomy-lab.html': 89027,
   'preview/body-viewer.html': 151504,
+  'preview/concept-map.html': 91589,
   'preview/email.html': 146752,
   'preview/prose.html': 146752,
   'preview/reminders.html': 148152,
+  'preview/rewards.html': 89731,
   'preview/share.html': 151522,
   'preview/states.html': 146752,
   'preview/survey.html': 90800,
   'privacy.html': 148122,
   'progress.html': 153183,
   'reset-password.html': 167326,
+  'resources.html': 89662,
   'signin.html': 166433,
   'signup.html': 166433,
   'start.html': 152098,
@@ -85,66 +107,17 @@ const initialJsBudget = {
   'terms.html': 148122,
 } satisfies Record<string, number>;
 
-function initialJsFiles(page: string): string[] {
-  const html = readFileSync(page, 'utf8');
-  const queue = [...html.matchAll(/(?:src|component-url|renderer-url)="([^"]+\.js(?:\?[^" ]*)?)"/g)].map((match) => match[1]!);
-  const files = new Set<string>();
-  const resolveAsset = (from: string, url: string) => {
-    if (isAbsolute(url) && url.startsWith(dist)) return url;
-    return url.startsWith('/') ? join(dist, url.slice(1)) : join(from, '..', url);
-  };
+// A build that shows drafts (staging, previews and the browser tests: CUEORY_ANATOMY_DRAFTS=1) puts the anatomy lab
+// itself on its preview page; the live build shows "coming soon" there and loads no lab script, so the budget above
+// stays as it is for the live build. This is the lab page's own limit on a drafts build: 109,328 gzip bytes measured at
+// merge request !102 (local Node 24 build) plus about 5%. Christian's decision 2026-11-11 (D-pending, Task 178).
+const draftsBuildJsLimit: Record<string, number> = {
+  'preview/anatomy-lab.html': 114795,
+};
 
-  while (queue.length > 0) {
-    const url = queue.shift()!.split('?')[0]!;
-    const file = resolveAsset(page, url);
-    if (files.has(file) || !file.endsWith('.js') || !existsSync(file)) continue;
-    files.add(file);
-    const source = readFileSync(file, 'utf8');
-    for (const match of source.matchAll(/(?:import|export)\s*(?:[^"'();]*?\bfrom\s*)?["']([^"']+\.js)["']/g)) {
-      const imported = match[1]!.split('?')[0]!;
-      queue.push(imported.startsWith('/') ? imported : join(file, '..', imported));
-    }
-  }
-  return [...files];
-}
-
-/**
- * Read script bodies in our built HTML without an incomplete closing-tag regex.
- * End tags can use mixed case and whitespace or additional text before >.
- */
-function inlineScriptBodies(html: string): string[] {
-  // ASCII-only case folding preserves positions even around non-ASCII text.
-  const lower = html.replace(/[A-Z]/g, (letter) => letter.toLowerCase());
-  const isBoundary = (character: string | undefined) =>
-    character === undefined || character === '>' || character === '/' || /\s/u.test(character);
-  const bodies: string[] = [];
-  let at = 0;
-  for (;;) {
-    const open = lower.indexOf('<script', at);
-    if (open === -1) return bodies;
-    if (!isBoundary(lower[open + 7])) {
-      at = open + 7;
-      continue;
-    }
-    const startEnd = lower.indexOf('>', open + 7);
-    if (startEnd === -1) return bodies;
-    let close = lower.indexOf('</script', startEnd + 1);
-    while (close !== -1 && !isBoundary(lower[close + 8])) {
-      close = lower.indexOf('</script', close + 8);
-    }
-    if (close === -1) return bodies;
-    const closeEnd = lower.indexOf('>', close + 8);
-    if (closeEnd === -1) return bodies;
-    bodies.push(html.slice(startEnd + 1, close));
-    at = closeEnd + 1;
-  }
-}
-
-function initialJsGzipBytes(page: string): number {
-  const html = readFileSync(page, 'utf8');
-  const external = initialJsFiles(page).reduce((total, file) => total + gzipSync(readFileSync(file)).length, 0);
-  const inline = inlineScriptBodies(html).reduce((total, body) => total + gzipSync(body).length, 0);
-  return external + inline;
+/** True when a built page carries the anatomy lab island, which only a build that shows drafts renders. */
+function showsDraftLab(page: string): boolean {
+  return existsSync(page) && /component-url="[^"]*AnatomyLab\./.test(readFileSync(page, 'utf8'));
 }
 
 describe('inline JavaScript collection', () => {
@@ -178,6 +151,12 @@ function markupOutsideScripts(html: string): string {
 
 describe.skipIf(!existsSync(dist))('built site', () => {
   const pages = htmlFiles(dist);
+  const latoPreloads = ['/fonts/lato-latin-400-normal.woff2', '/fonts/lato-latin-700-normal.woff2'];
+
+  it('keeps canonical game aliases on their retained legacy route budgets', () => {
+    expect(initialJsBudget['play/tachyyy.html']).toBe(initialJsBudget['play/stat.html']);
+    expect(initialJsBudget['play/piccline.html']).toBe(initialJsBudget['play/word-path.html']);
+  });
 
   it('keeps each route within 10% of its initial JavaScript gzip budget', () => {
     const routes = pages.map((page) => relative(dist, page).replaceAll('\\', '/'));
@@ -186,10 +165,16 @@ describe.skipIf(!existsSync(dist))('built site', () => {
       missingBudgets.map((page) => `${page}: ${initialJsGzipBytes(join(dist, page))} gzip bytes`),
       'Every built route must have a measured JavaScript budget',
     ).toEqual([]);
-    expect(routes.sort()).toEqual(Object.keys(initialJsBudget).sort());
-    const overBudget = Object.entries(initialJsBudget).flatMap(([page, budget]) => {
+    // The live build removes /preview/* (scripts/prune-preview.mjs). Which build this is comes from the environment,
+    // never from the output, so a staging build that wrongly lost its previews fails here instead of passing.
+    const previewPruned = isProductionBuild(process.env);
+    expect(existsSync(join(dist, 'preview')), 'dist/preview exists exactly when this is not the production build').toBe(!previewPruned);
+    const budgeted = Object.entries(initialJsBudget).filter(([page]) => !(previewPruned && page.startsWith('preview/')));
+    expect(routes.sort()).toEqual(budgeted.map(([page]) => page).sort());
+    const overBudget = budgeted.flatMap(([page, budget]) => {
       const actual = initialJsGzipBytes(join(dist, page));
-      const limit = Math.ceil(budget * 1.1);
+      const draftsLimit = draftsBuildJsLimit[page];
+      const limit = draftsLimit !== undefined && showsDraftLab(join(dist, page)) ? draftsLimit : Math.ceil(budget * 1.1);
       return actual > limit ? [`${page}: ${actual} gzip bytes exceeds limit ${limit} (baseline ${budget})`] : [];
     });
     // Only compute and report bundle contributions when the invariant fails. This
@@ -219,8 +204,31 @@ describe.skipIf(!existsSync(dist))('built site', () => {
       expect(hrefs, page).toContain('/fonts/bodoni-moda-latin-opsz-normal.woff2');
       for (const href of hrefs) expect(existsSync(join(dist, href)), href).toBe(true);
     }
-    // Study screens stay quiet: no display font, nothing extra to download.
-    expect(preloads(readFileSync(join(dist, 'learn/study-skills.html'), 'utf8'))).toEqual([]);
+    // Study screens stay quiet: no display font. They preload only the two Lato files every page uses (lane 9).
+    expect(preloads(readFileSync(join(dist, 'learn/study-skills.html'), 'utf8'))).toEqual(latoPreloads);
+  });
+
+  it('every page preloads exactly the two Lato weights in use, and each file exists (lane 9, fonts)', () => {
+    for (const page of pages) {
+      const html = readFileSync(page, 'utf8');
+      const fonts = [...html.matchAll(/<link\b[^>]*rel="preload"[^>]*>/g)]
+        .map((m) => m[0])
+        .filter((link) => link.includes('as="font"'));
+      for (const link of fonts) {
+        expect(link, relative(dist, page)).toContain('type="font/woff2"');
+        expect(link, relative(dist, page)).toMatch(/\scrossorigin[\s>]/);
+      }
+      const hrefs = fonts.map((link) => /href="([^"]+)"/.exec(link)![1]!);
+      expect(hrefs.filter((href) => href.includes('/lato-')), relative(dist, page)).toEqual(latoPreloads);
+    }
+    for (const href of latoPreloads) expect(existsSync(join(dist, href)), href).toBe(true);
+    // Every @font-face that can swap keeps font-display: swap; only the preloaded serif may be optional.
+    const css = readdirSync(join(dist, '_astro')).filter((f) => f.endsWith('.css'))
+      .map((f) => readFileSync(join(dist, '_astro', f), 'utf8')).join('\n');
+    const faces = [...css.matchAll(/@font-face\s*\{([^}]*)\}/g)].map((m) => m[1]!);
+    const lato = faces.filter((face) => /font-family:\s*["']?Lato/.test(face));
+    expect(lato.length).toBeGreaterThanOrEqual(2);
+    for (const face of lato) expect(face).toMatch(/font-display:\s*swap/);
   });
 
   it('does not preload unused italic Bodoni on home, while retaining its font file (Task 187)', () => {
@@ -254,28 +262,45 @@ describe.skipIf(!existsSync(dist))('built site', () => {
     expect(csp!.replace(scriptSrc, '')).not.toContain('wasm-unsafe-eval');
   });
 
-  it('gives every indexable page complete, unique social metadata', () => {
-    const indexableTitles = new Map<string, string>();
+  it('gives every indexable page and about/support/404 complete, unique social metadata', () => {
+    const socialTitles = new Map<string, string>();
+    const informationPages = new Set(['about.html', 'support.html', '404.html']);
+    expect(pages.map((page) => relative(dist, page))).toEqual(expect.arrayContaining([...informationPages]));
     const meta = (html: string, property: string) =>
       new RegExp(`<meta property="${property}" content="([^"]*)"`).exec(html)?.[1];
+    const twitter = (html: string, name: string) =>
+      new RegExp(`<meta name="${name}" content="([^"]*)"`).exec(html)?.[1];
 
     for (const pagePath of pages) {
-      const page = pagePath.replace(`${dist}/`, '');
+      const page = relative(dist, pagePath);
       const html = readFileSync(pagePath, 'utf8');
-      if (html.includes('<meta name="robots" content="noindex')) continue;
+      // A page kept out of search still needs an image and identity when someone shares its link.
+      if (html.includes('<meta name="robots" content="noindex') && !informationPages.has(page)) continue;
 
       const title = /<title>([^<]+)<\/title>/.exec(html)?.[1];
       const description = /<meta name="description" content="([^"]*)"/.exec(html)?.[1];
       expect(title, `${page}: title`).toBeTruthy();
       expect(description, `${page}: description`).toBeTruthy();
-      expect(indexableTitles.has(title!), `${page}: duplicate title`).toBe(false);
-      indexableTitles.set(title!, page);
+      expect(socialTitles.has(title!), `${page}: duplicate title`).toBe(false);
+      socialTitles.set(title!, page);
 
       expect(html, `${page}: canonical`).toContain(`rel="canonical" href="https://cueory.app/`);
       expect(meta(html, 'og:title'), `${page}: og:title`).toBe(title);
       expect(meta(html, 'og:description'), `${page}: og:description`).toBe(description);
-      expect(meta(html, 'og:image'), `${page}: og:image`).toBe('https://cueory.app/share/study-ivory.png');
-      expect(existsSync(join(dist, 'share/study-ivory.png')), `${page}: og:image file`).toBe(true);
+      const gameImage = page === 'play.html' || /^play\/(pillo|crossword|word-path|sudoku)\.html$/.test(page);
+      const expectedOgImage = gameImage ? 'https://cueory.app/share/games-scene.png' : 'https://cueory.app/share/study-ivory.png';
+      expect(meta(html, 'og:image'), `${page}: og:image`).toBe(expectedOgImage);
+      expect(existsSync(join(dist, gameImage ? 'share/games-scene.png' : 'share/study-ivory.png')), `${page}: og:image file`).toBe(true);
+      expect(twitter(html, 'twitter:card'), `${page}: twitter:card`).toBe('summary_large_image');
+      expect(twitter(html, 'twitter:title'), `${page}: twitter:title`).toBe(title);
+      expect(twitter(html, 'twitter:description'), `${page}: twitter:description`).toBe(description);
+      expect(twitter(html, 'twitter:image'), `${page}: twitter:image`).toBe(meta(html, 'og:image'));
+      if (informationPages.has(page)) {
+        const image = readFileSync(join(dist, 'share/study-ivory.png'));
+        expect(image.equals(readFileSync(join(process.cwd(), 'public/share/study-ivory.png')))).toBe(true);
+        expect([...image.subarray(0, 8)]).toEqual([137, 80, 78, 71, 13, 10, 26, 10]);
+        expect([image.readUInt32BE(16), image.readUInt32BE(20)]).toEqual([1200, 630]);
+      }
     }
   });
 
@@ -294,7 +319,8 @@ describe.skipIf(!existsSync(dist))('built site', () => {
     });
 
     expect(entry.languages?.en?.page_count).toBe(searchablePages.length);
-    expect(searchablePages).not.toEqual(expect.arrayContaining(pages.filter((page) => page.includes('/preview/'))));
+    // No preview page may be indexed in any build, and a pruned build has none to index.
+    expect(searchablePages.filter((page) => page.includes('/preview/'))).toEqual([]);
     expect(searchablePages.every((page) => !readFileSync(page, 'utf8').includes('content="noindex'))).toBe(true);
   });
 
@@ -320,11 +346,23 @@ describe.skipIf(!existsSync(dist))('built site', () => {
     }
   });
 
-  it.runIf(site.showBuildingNotice).each(pages.map((p) => [p.replace(dist, '')]))(
+  // Game pages (the Games v2 frame, Christian 2026-11-23) have no building strip and no site menu bar; every other page keeps the strip.
+  const isGamePage = (page: string) => readFileSync(join(dist, page), 'utf8').includes('data-game-page=');
+  it.runIf(site.showBuildingNotice).each(pages.map((p) => [p.replace(dist, '')]).filter(([p]) => !isGamePage(p!)))(
     '%s shows the building notice',
     (page) => {
       const html = readFileSync(join(dist, page), 'utf8');
       expect(html).toContain("we're still building. more coming soon.");
+    },
+  );
+
+  it.each(pages.map((p) => [p.replace(dist, '')]).filter(([p]) => isGamePage(p!)))(
+    '%s (a game page) has no building strip and no site menu bar',
+    (page) => {
+      const html = readFileSync(join(dist, page), 'utf8');
+      expect(html).not.toContain("we're still building. more coming soon.");
+      expect(html).not.toContain('<header');
+      expect(html).toContain('skip to content');
     },
   );
 
@@ -337,8 +375,10 @@ describe.skipIf(!existsSync(dist))('built site', () => {
       expect(markup, label.text).not.toMatch(new RegExp(`\\b${label.text}\\b`, 'i'));
     }
     const props = [...html.matchAll(/<astro-island[^>]*\sprops="([^"]*)"/g)].map((m) => m[1]);
+    // The live (drafts-closed) build holds the sample lesson back behind a coming-soon page: only the flag island is left.
+    const heldBack = html.includes('data-testid="lesson-soon"');
     expect(props).toEqual([
-      '{&quot;src&quot;:[0,&quot;/learn/study-skills/label-it/study-skills-01.json&quot;]}',
+      ...(heldBack ? [] : ['{&quot;src&quot;:[0,&quot;/learn/study-skills/label-it/study-skills-01.json&quot;]}']),
       '{&quot;page&quot;:[0,&quot;/learn/study-skills/label-it.html&quot;],&quot;itemId&quot;:[0],&quot;itemVersionId&quot;:[0],&quot;variant&quot;:[0,&quot;icon&quot;]}',
     ]);
     const served = JSON.parse(readFileSync(join(dist, 'learn/study-skills/label-it/study-skills-01.json'), 'utf8'));
@@ -356,8 +396,10 @@ describe.skipIf(!existsSync(dist))('built site', () => {
     }
     expect(markup).not.toMatch(/&quot;key&quot;|"key"/);
     const props = [...html.matchAll(/<astro-island[^>]*\sprops="([^"]*)"/g)].map((m) => m[1]);
+    // The live (drafts-closed) build holds the sample lesson back behind a coming-soon page: only the flag island is left.
+    const heldBack = html.includes('data-testid="lesson-soon"');
     expect(props).toEqual([
-      '{&quot;src&quot;:[0,&quot;/learn/study-skills/questions/study-skills-01.json&quot;]}',
+      ...(heldBack ? [] : ['{&quot;src&quot;:[0,&quot;/learn/study-skills/questions/study-skills-01.json&quot;]}']),
       '{&quot;page&quot;:[0,&quot;/learn/study-skills/questions.html&quot;],&quot;itemId&quot;:[0],&quot;itemVersionId&quot;:[0],&quot;variant&quot;:[0,&quot;icon&quot;]}',
     ]);
     const served = JSON.parse(readFileSync(join(dist, 'learn/study-skills/questions/study-skills-01.json'), 'utf8'));
@@ -383,10 +425,12 @@ describe.skipIf(!existsSync(dist))('built site', () => {
       expect(match, `card ${id}`).not.toBeNull();
       return { name: match![1]!.trim(), href: match![2] };
     };
+    // The live (drafts-closed) build holds the sample lesson back, so its vials say coming soon instead of linking to it.
+    const sampleHref = (mode: string) => (draftsAllowed(draftBuildEnv(process.env)) ? `/learn/study-skills/${mode}` : undefined);
     expect(card('video')).toEqual({ name: 'video', href: undefined });
-    expect(card('learn')).toEqual({ name: 'learn', href: '/learn/study-skills/learn-mode' });
-    expect(card('fill-in')).toEqual({ name: 'fill-in', href: '/learn/study-skills/fill-in' });
-    expect(card('questions')).toEqual({ name: 'questions', href: '/learn/study-skills/questions' });
+    expect(card('learn')).toEqual({ name: 'learn', href: sampleHref('learn-mode') });
+    expect(card('fill-in')).toEqual({ name: 'fill-in', href: sampleHref('fill-in') });
+    expect(card('questions')).toEqual({ name: 'questions', href: sampleHref('questions') });
     expect(card('review')).toEqual({ name: 'review', href: undefined });
     expect(card('level-test')).toEqual({ name: 'level test', href: undefined });
     expect(html).not.toContain('id="mode-lesson"');
@@ -401,15 +445,22 @@ describe.skipIf(!existsSync(dist))('built site', () => {
     const html = readFileSync(join(dist, 'index.html'), 'utf8');
     const csp = /<meta http-equiv="content-security-policy" content="([^"]+)"/.exec(html)![1];
     const formAction = /form-action ([^;]+)/.exec(csp)![1].trim();
-    if (newsletter.formAction) {
-      expect(html).toContain(`action="${newsletter.formAction}"`);
+    if (kitFormAction(newsletter.formAction)) {
+      expect(html).toContain(`action="${kitFormAction(newsletter.formAction)}"`);
       expect(html).toContain(`name="${newsletter.emailFieldName}"`);
-      expect(formAction).toBe(`'self' ${new URL(newsletter.formAction).origin}`);
+      expect(formAction).toBe(`'self' ${new URL(kitFormAction(newsletter.formAction)).origin}`);
     } else {
-      expect(html).toContain('signups open soon.');
+      // No form: a plain link to Kit's landing page (no Kit script, so form-action stays 'self'), or the pending line.
       expect(html).not.toContain('<form');
       expect(formAction).toBe("'self'");
+      if (kitLandingUrl(newsletter.landingUrl)) {
+        expect(html).toContain(`href="${kitLandingUrl(newsletter.landingUrl)}"`);
+        expect(html).not.toContain('sign ups open soon.');
+      } else {
+        expect(html).toContain('sign ups open soon.');
+      }
     }
+    expect(html).not.toMatch(/<script\b[^>]*\bsrc="https?:\/\/[^"]*kit\.com/i);
   });
 
   it('ships the security headers file', () => {

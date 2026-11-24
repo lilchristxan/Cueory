@@ -57,6 +57,7 @@ describe('theme choice', () => {
   it('keeps working when browser storage is blocked', () => {
     expect(readChoice(blockedStorage)).toBe('device');
     expect(() => saveChoice(blockedStorage, 'dark')).not.toThrow();
+    expect(() => saveChoice(blockedStorage, 'device')).not.toThrow();
   });
 
   it('sets data-theme for Light and Dark and removes it for Follow device', () => {

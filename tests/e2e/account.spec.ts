@@ -11,6 +11,17 @@ async function keyboardWalk(page: Page) {
   const count = await controls.count();
   expect(count).toBeGreaterThan(0);
   const reached = new Set<number>();
+  // Start Tab at the top of the page. The second walk begins right after a click on "delete my account", and Tab goes on
+  // from the clicked control. Chromium wraps round to the controls above it after the last stop; Firefox keeps focus
+  // on the last control, so those controls above were never reached. Focus and drop a marker at the very start of the
+  // page (the browser then starts sequential focus navigation from there).
+  await page.evaluate(() => {
+    const marker = document.createElement('span');
+    marker.tabIndex = -1;
+    document.body.prepend(marker);
+    marker.focus();
+    marker.remove();
+  });
   for (let press = 0; press < count + 30 && reached.size < count; press++) {
     await page.keyboard.press('Tab');
     for (let index = 0; index < count; index++) {
@@ -95,18 +106,41 @@ test.beforeAll(async () => {
         }],
       };
       let name = 'Sample Student';
+      const firstUser = uuid(9);
+      const secondUser = uuid(8);
+      let activeUser = firstUser;
+      const subscribers = new Set();
+      window.fixtureOriginalUserId = firstUser;
+      window.fixtureOtherUserId = secondUser;
+      window.fixtureServerDeletes = 0;
+      window.fixtureSwitchUser = next => {
+        activeUser = next;
+        for (const listener of subscribers) {
+          listener(next ? 'SIGNED_IN' : 'SIGNED_OUT', next ? { user: { id: next } } : null);
+        }
+      };
       const query = table => {
         const q = {
           order: () => q, gt: () => q,
-          range: async () => params.has('export-fails') && table === 'attempts'
-            ? { data: null, error: { message: 'provider-private-detail' } } : { data: tables[table], error: null },
+          range: async () => {
+            // '&export-held': the attempts read waits until the test releases it, so the account can change meanwhile.
+            if (params.has('export-held') && table === 'attempts') {
+              await new Promise(resolve => { window.fixtureReleaseExport = resolve; });
+            }
+            return params.has('export-fails') && table === 'attempts'
+              ? { data: null, error: { message: 'provider-private-detail' } } : { data: tables[table], error: null };
+          },
         };
         return q;
       };
       const client = {
         auth: {
-          getSession: async () => ({ data: { session: params.has('signed-out') ? null : { user: { id: uuid(9), email: 'student@example.test', user_metadata: { full_name: 'Sample Student' } } } }, error: null }),
+          getSession: async () => ({ data: { session: params.has('signed-out') || !activeUser ? null : { user: { id: activeUser, email: 'student@example.test', user_metadata: { full_name: 'Sample Student' } } } }, error: params.has('session-read-error') ? { message: 'unavailable' } : null }),
           signOut: async options => { calls.push('signOut:' + options.scope); return { error: null }; },
+          onAuthStateChange(callback) {
+            subscribers.add(callback);
+            return { data: { subscription: { unsubscribe: () => subscribers.delete(callback) } } };
+          },
           // Task 309 requires the authenticated user's own Auth record in addition to the five data tables.
           getUser: async () => ({ data: { user: {
             id: uuid(9), created_at: when, last_sign_in_at: when,
@@ -118,7 +152,9 @@ test.beforeAll(async () => {
           return {
             select() {
               const q = query(table);
-              q.eq = () => ({ maybeSingle: async () => ({ data: { display_name: name }, error: null }) });
+              q.eq = (_column, ownerId) => ({ maybeSingle: async () => ({
+                data: { display_name: ownerId === firstUser ? name : 'Second Student' }, error: null,
+              }) });
               return q;
             },
 
@@ -136,8 +172,27 @@ test.beforeAll(async () => {
             return Promise.resolve({ data: name, error: null });
           }
           calls.push('rpc:' + fn);
-          return Promise.resolve(params.has('delete-refused')
-            ? { data: null, error: { message: 'sign in to delete your account', code: '28000' } } : { data: null, error: null });
+          if (fn === 'delete_my_account' && params.has('delete-held')) {
+            let signal;
+            let finish;
+            const held = new Promise(resolve => {
+              finish = () => {
+                const succeeded = params.has('force-delete-success') || !signal?.aborted;
+                if (succeeded) window.fixtureServerDeletes += 1;
+                resolve(succeeded
+                  ? { data: null, error: null }
+                  : { data: null, error: { message: 'request was cancelled before dispatch' } });
+              };
+            });
+            window.fixtureReleaseDelete = finish;
+            // Models the abortSignal method on the PostgREST request builder.
+            held.abortSignal = nextSignal => { signal = nextSignal; return held; };
+            return held;
+          }
+          return Promise.resolve(params.has('auth-stale-refresh')
+            ? { data: null, error: { message: 'please sign in again to delete your account', code: '28R01' } }
+            : params.has('delete-refused')
+              ? { data: null, error: { message: 'sign in to delete your account', code: '28000' } } : { data: null, error: null });
         },
       };
       window.fixtureClient = client;
@@ -166,6 +221,17 @@ test.beforeAll(async () => {
           const { data } = await client.auth.getSession();
           const user = data.session && data.session.user;
           return user ? { signedIn: true, userId: user.id, email: user.email } : { signedIn: false };
+        }
+        export async function sessionCheckFrom(client) {
+          if (!client) return { signedIn: false };
+          try {
+            const { data, error } = await client.auth.getSession();
+            if (error) return { error: true };
+            const user = data.session && data.session.user;
+            return user ? { signedIn: true, userId: user.id, email: user.email } : { signedIn: false };
+          } catch {
+            return { error: true };
+          }
         }
       `, loader: 'js' }));
     } }],
@@ -201,6 +267,14 @@ test.describe('/account signed out and accounts off (fake client)', () => {
     await expect(page.getByTestId('account-signed-out')).toHaveText("you're signed out. sign in");
     await expect(page.getByRole('link', { name: 'sign in', exact: true })).toHaveAttribute('href', '/signin?next=%2Faccount');
     await keyboardWalk(page);
+    await axe(page);
+  });
+
+  test('a failed session read never presents the old account as deletable', async ({ page }) => {
+    await fixture(page, '&session-read-error');
+    await expect(page.getByRole('alert')).toHaveText('your account could not load. please try again.');
+    await expect(page.getByRole('button', { name: 'delete my account', exact: true })).toHaveCount(0);
+    expect(await calls(page)).toEqual([]);
     await axe(page);
   });
 
@@ -278,10 +352,15 @@ test.describe('/account signed in (fake client)', () => {
     page.on('download', download => files.push(download));
     await page.getByRole('button', { name: 'download spreadsheet files', exact: true }).click();
     await expect(page.getByText('your spreadsheet files are downloading.')).toBeVisible();
-    await expect.poll(() => files.length, { timeout: 15_000 }).toBe(14);
+    // 15 spreadsheet files since sudokuStats.csv joined the export (#720), README.txt first (lane 2), plus the JSON
+    // file: 17 object URLs.
+    await expect.poll(() => files.length, { timeout: 15_000 }).toBe(16);
+    expect(files[0]!.suggestedFilename()).toBe(`${file.suggestedFilename().slice(0, -5)}-README.txt`);
+    expect(readFileSync((await files[0]!.path())!, 'utf8')).toContain(`${file.suggestedFilename().slice(0, -5)}-studyEvents.csv`);
     expect(files.map(download => download.suggestedFilename())).toContain(`${file.suggestedFilename().slice(0, -5)}-studyEvents.csv`);
-    await expect.poll(async () => (await urls(page)).revoked, { timeout: 15_000 }).toBe(15);
-    expect((await urls(page)).made).toBe(15);
+    expect(files.map(download => download.suggestedFilename())).toContain(`${file.suggestedFilename().slice(0, -5)}-sudokuStats.csv`);
+    await expect.poll(async () => (await urls(page)).revoked, { timeout: 15_000 }).toBe(17);
+    expect((await urls(page)).made).toBe(17);
   });
 
   test('offers no file when a read fails, and never shows provider detail', async ({ page }) => {
@@ -296,7 +375,50 @@ test.describe('/account signed in (fake client)', () => {
     expect((await urls(page)).made).toBe(0);
   });
 
-  test('delete stays disabled until "delete" is typed, then deletes, signs out and clears this device', async ({ page }) => {
+  test('switching A to B to A while the data is read offers no file and reloads for the current account (#757)', async ({ page }) => {
+    await fixture(page, '&export-held');
+    const files: Download[] = [];
+    page.on('download', download => files.push(download));
+    await page.getByRole('button', { name: 'download my data', exact: true }).click();
+    await expect.poll(() => page.evaluate(() => typeof (window as unknown as { fixtureReleaseExport?: unknown }).fixtureReleaseExport)).toBe('function');
+    await page.evaluate(() => {
+      const w = window as unknown as { fixtureSwitchUser: (userId: string) => void; fixtureOtherUserId: string; fixtureOriginalUserId: string };
+      w.fixtureSwitchUser(w.fixtureOtherUserId);
+      w.fixtureSwitchUser(w.fixtureOriginalUserId);
+    });
+    await page.evaluate(() => (window as unknown as { fixtureReleaseExport: () => void }).fixtureReleaseExport());
+    await expect(page.getByRole('alert')).toContainText('the account signed in on this device changed, so nothing was done.');
+    await expect(page.getByRole('button', { name: 'download my data', exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'download spreadsheet files' })).toHaveCount(0);
+    await page.waitForTimeout(500);
+    expect(files).toEqual([]);
+    expect((await urls(page)).made).toBe(0);
+    await axe(page);
+  });
+
+  test('switching to B while the spreadsheet files are on their way stops the rest (#757)', async ({ page }) => {
+    await fixture(page);
+    const json = page.waitForEvent('download');
+    await page.getByRole('button', { name: 'download my data', exact: true }).click();
+    await json;
+    const files: Download[] = [];
+    page.on('download', download => files.push(download));
+    await page.getByRole('button', { name: 'download spreadsheet files', exact: true }).click();
+    await expect.poll(() => files.length).toBeGreaterThan(0);
+    await page.evaluate(() => {
+      const w = window as unknown as { fixtureSwitchUser: (userId: string) => void; fixtureOtherUserId: string };
+      w.fixtureSwitchUser(w.fixtureOtherUserId);
+    });
+    await expect(page.getByRole('alert')).toContainText('the account signed in on this device changed, so nothing was done.');
+    const offered = files.length;
+    // 15 files 300 ms apart would take over four seconds; wait past that and check none came after the switch.
+    await page.waitForTimeout(5_000);
+    expect(files.length).toBe(offered);
+    expect(offered).toBeLessThan(15);
+    await expect(page.getByRole('button', { name: 'download spreadsheet files' })).toHaveCount(0);
+  });
+
+  test('delete stays disabled until "delete" is typed, then deletes and clears only this device', async ({ page }) => {
     await fixture(page);
     await page.evaluate(() => {
       for (const key of [
@@ -329,9 +451,68 @@ test.describe('/account signed in (fake client)', () => {
     const done = page.getByText('your account is deleted, and this device no longer keeps your cueory data.');
     await expect(done).toBeFocused();
     await expect(page.getByRole('link', { name: 'go to the home page' })).toHaveAttribute('href', '/');
-    expect(await calls(page)).toEqual(['rpc:delete_my_account', 'signOut:local']);
+    expect(await calls(page)).toEqual(['rpc:delete_my_account']); // Never sign out a replacement account.
     expect(await page.evaluate(() => Object.keys(localStorage))).toEqual(['not-cueory']);
     expect(await page.evaluate(() => sessionStorage.getItem('cueory-break-timer'))).toBeNull();
+    await axe(page);
+  });
+
+  test('switching A to B during the deletion response never clears B after A is deleted', async ({ page }) => {
+    await fixture(page, '&delete-held&force-delete-success');
+    await page.evaluate(() => {
+      localStorage.setItem('cueory-auth', 'a-session');
+      localStorage.setItem('cueory-progress', 'a-progress');
+    });
+    await page.getByRole('button', { name: 'delete my account', exact: true }).click();
+    await page.getByLabel('type delete to confirm').fill('delete');
+    await deleteButton(page).click();
+    await expect.poll(() => calls(page)).toContain('rpc:delete_my_account');
+    await page.evaluate(() => {
+      const w = window as unknown as {
+        fixtureSwitchUser: (userId: string) => void;
+        fixtureOtherUserId: string;
+      };
+      localStorage.setItem('cueory-auth', 'b-session');
+      localStorage.setItem('cueory-progress', 'b-progress');
+      w.fixtureSwitchUser(w.fixtureOtherUserId);
+    });
+    await page.evaluate(() => (window as unknown as { fixtureReleaseDelete: () => void }).fixtureReleaseDelete());
+    await expect(page.getByText('your account is deleted, but this browser changed or could not confirm its sign-in, so its saved data was left alone.')).toBeVisible();
+    expect(await page.evaluate(() => (window as unknown as { fixtureServerDeletes: number }).fixtureServerDeletes)).toBe(1);
+    expect(await calls(page)).toEqual(['rpc:delete_my_account']);
+    expect(await page.evaluate(() => [localStorage.getItem('cueory-auth'), localStorage.getItem('cueory-progress')]))
+      .toEqual(['b-session', 'b-progress']);
+    await axe(page);
+  });
+
+  test('switching A to B to A before delayed dispatch cancels deletion and reloads account settings', async ({ page }) => {
+    await fixture(page, '&delete-held');
+    await page.evaluate(() => {
+      localStorage.setItem('cueory-auth', 'a-session');
+      localStorage.setItem('cueory-progress', 'a-progress');
+    });
+    await page.getByRole('button', { name: 'delete my account', exact: true }).click();
+    await page.getByLabel('type delete to confirm').fill('delete');
+    await deleteButton(page).click();
+    await expect.poll(() => calls(page)).toContain('rpc:delete_my_account');
+    await page.evaluate(() => {
+      const w = window as unknown as {
+        fixtureSwitchUser: (userId: string) => void;
+        fixtureOtherUserId: string;
+        fixtureOriginalUserId: string;
+      };
+      w.fixtureSwitchUser(w.fixtureOtherUserId);
+      localStorage.setItem('cueory-auth', 'b-session');
+      w.fixtureSwitchUser(w.fixtureOriginalUserId);
+      localStorage.setItem('cueory-auth', 'a-new-session');
+    });
+    await page.evaluate(() => (window as unknown as { fixtureReleaseDelete: () => void }).fixtureReleaseDelete());
+    await expect(page.getByRole('alert')).toContainText('we could not confirm deletion after the sign-in changed');
+    await expect(page.getByRole('button', { name: 'delete my account', exact: true })).toBeVisible();
+    expect(await page.evaluate(() => (window as unknown as { fixtureServerDeletes: number }).fixtureServerDeletes)).toBe(0);
+    expect(await calls(page)).toEqual(['rpc:delete_my_account']);
+    expect(await page.evaluate(() => [localStorage.getItem('cueory-auth'), localStorage.getItem('cueory-progress')]))
+      .toEqual(['a-new-session', 'a-progress']);
     await axe(page);
   });
 
@@ -342,8 +523,23 @@ test.describe('/account signed in (fake client)', () => {
     await page.getByLabel('type delete to confirm').fill('delete');
     await deleteButton(page).click();
     await expect(page.getByText('please sign in again to delete your account.')).toBeVisible();
+    await expect(page.getByRole('link', { name: 'sign in again', exact: true })).toHaveAttribute('href', '/signin?next=%2Faccount%23delete');
     expect(await calls(page)).toEqual(['rpc:delete_my_account']);
     expect(await page.evaluate(() => localStorage.getItem('cueory-auth'))).toBe('1');
+  });
+
+  test('a refreshed token with stale credentials cannot delete, and keeps browser data', async ({ page }) => {
+    await fixture(page, '&auth-stale-refresh');
+    await page.evaluate(() => localStorage.setItem('cueory-auth', 'existing-session'));
+    await page.getByRole('button', { name: 'delete my account', exact: true }).click();
+    await page.getByLabel('type delete to confirm').fill('delete');
+    await deleteButton(page).click();
+    await expect(page.getByText('for your safety, please sign in again to delete your account.')).toBeVisible();
+    await expect(page.getByRole('link', { name: 'sign in again', exact: true }))
+      .toHaveAttribute('href', '/signin?next=%2Faccount%23delete');
+    expect(await calls(page)).toEqual(['rpc:delete_my_account']);
+    expect(await page.evaluate(() => localStorage.getItem('cueory-auth'))).toBe('existing-session');
+    await axe(page);
   });
 
   test('keep my account closes the panel and returns focus', async ({ page }) => {

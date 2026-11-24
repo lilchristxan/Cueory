@@ -54,7 +54,7 @@ export default function SentenceStepper({ sentences }: Props) {
           type="button"
           onClick={() => setState(back)}
           disabled={state.shown <= 1}
-          className="rounded-pill border border-line px-5 py-2.5 text-ink disabled:opacity-50"
+          className="min-h-(--tap-min) rounded-pill border border-line px-5 py-2.5 text-ink disabled:opacity-50"
         >
           back
         </button>
@@ -62,7 +62,7 @@ export default function SentenceStepper({ sentences }: Props) {
           type="button"
           onClick={() => setState(next)}
           disabled={done}
-          className="rounded-pill bg-button px-5 py-2.5 text-on-button hover:bg-button-hover disabled:opacity-50"
+          className="min-h-(--tap-min) rounded-pill bg-button px-5 py-2.5 text-on-button hover:bg-button-hover disabled:opacity-50"
         >
           next sentence
         </button>
@@ -70,7 +70,7 @@ export default function SentenceStepper({ sentences }: Props) {
           <button
             type="button"
             onClick={() => setState(showAll)}
-            className="rounded-pill px-3 py-2.5 text-ink-soft underline"
+            className="min-h-(--tap-min) rounded-pill px-3 py-2.5 text-ink-soft underline"
           >
             show all
           </button>

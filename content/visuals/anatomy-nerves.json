@@ -4,6 +4,7 @@
   "kind": "model",
   "lessonIds": ["U11-T01-L01"],
   "status": "draft",
+  "hierarchyTree": "isa",
   "model": { "file": "/models/anatomy/nerves.glb", "release": "BodyParts3D 4.0", "via": "official download from dbarchive.biosciencedbc.jp" },
   "labels": [
     { "id": "FMA62045", "text": "optic chiasm", "group": "nerve trunk", "layer": "nerves", "source": "bp3d-FMA62045" },

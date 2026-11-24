@@ -103,7 +103,7 @@ describe('global.css utility classes', () => {
 
   it('@view-transition is defined', () => {
     expect(global).toContain('@view-transition');
-    expect(global).toContain('navigation: auto');
+    expect(global).toContain('navigation: none');
   });
 
   it('view transitions are off under prefers-reduced-motion: reduce', () => {

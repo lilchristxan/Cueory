@@ -73,6 +73,10 @@ export default function LearnSession({ cards, lessonHref = '/learn/study-skills'
   const cardRef = useRef<HTMLDivElement>(null);
   const fillRef = useRef<HTMLDivElement>(null);
   const inputId = useId();
+  const inputRef = useRef<HTMLInputElement>(null);
+  // An empty answer is explained, not silently refused: the message is text (not colour), tied to the field with
+  // aria-describedby and aria-invalid, and announced through the always-present live region below.
+  const [problem, setProblem] = useState('');
 
   // Cards rise in (.enter, Task 77) only after the student does something: the first card is there at once on page
   // load, so nothing waits to fade in.
@@ -99,20 +103,27 @@ export default function LearnSession({ cards, lessonHref = '/learn/study-skills'
   };
   const moveOn = () => {
     setTyped('');
+    setProblem('');
     act((s) => advance(s, cards));
   };
   const check = (e: FormEvent) => {
     e.preventDefault();
+    if (typed.trim() === '') {
+      setProblem('type an answer first, or look at the card again.');
+      inputRef.current?.focus();
+      return;
+    }
+    setProblem('');
     act((s) => submit(s, cards, typed));
   };
 
   const progressBar = (
-    <div className="flex items-center gap-4">
-      <p className="shrink-0 text-sm text-ink-soft">
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+      <p className="text-sm text-ink-soft">
         recalled today {mastered} of {total}
       </p>
       <div
-        className="progress-track min-w-0 flex-1"
+        className="progress-track min-w-24 flex-1"
         role="progressbar"
         aria-label="Cards recalled today"
         aria-valuemin={0}
@@ -177,7 +188,7 @@ export default function LearnSession({ cards, lessonHref = '/learn/study-skills'
           <p data-testid="learn-step" className="text-sm text-ink-soft">
             {stepLabel[step]}
           </p>
-          <p data-testid="learn-prompt" className="mt-3 text-xl">
+          <p data-testid="learn-prompt" className="mt-3 wrap-anywhere text-xl">
             {card.front}
           </p>
 
@@ -256,21 +267,30 @@ export default function LearnSession({ cards, lessonHref = '/learn/study-skills'
       )}
 
       {(step === 'type' || step === 'fill') && !result && (
-        <form onSubmit={check} className="mt-stack">
+        <form onSubmit={check} noValidate className="mt-stack">
           <label htmlFor={inputId} className="block text-sm text-ink-soft">
             {step === 'fill' ? 'The missing words' : 'Your answer'}
           </label>
           <input
             id={inputId}
+            ref={inputRef}
             type="text"
             value={typed}
-            onChange={(e) => setTyped(e.currentTarget.value)}
+            onChange={(e) => {
+              setTyped(e.currentTarget.value);
+              setProblem('');
+            }}
+            aria-invalid={problem ? true : undefined}
+            aria-describedby={problem ? `${inputId}-problem` : undefined}
             autoComplete="off"
             autoCapitalize="off"
             spellCheck={false}
             className="mt-2 min-h-(--tap-min) w-full rounded-xl border border-control bg-page px-5 py-4 text-lg text-ink"
           />
-          <button type="submit" disabled={typed.trim() === ''} className={`mt-stack ${primaryButton} disabled:opacity-50`}>
+          <p id={`${inputId}-problem`} role="alert" className="mt-2 text-sm text-ink" data-testid="answer-problem">
+            {problem && <><span className="font-medium">problem:</span> {problem}</>}
+          </p>
+          <button type="submit" className={`mt-stack ${primaryButton}`}>
             Check
           </button>
         </form>

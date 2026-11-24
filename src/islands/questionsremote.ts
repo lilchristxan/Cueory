@@ -9,6 +9,8 @@ import type { StudyRecorder } from './studyrecorder';
 
 export interface RemoteQuestions {
   signedIn: boolean;
+  /** One-way account guard; stale feedback must never reach the player or recorder. */
+  isCurrent?: () => boolean;
   transport: AnswerTransport;
   versions: readonly CheckItem[];
   /**
@@ -44,7 +46,7 @@ export function remoteChecker(questions: Question[], remote: RemoteQuestions): C
   const transport: AnswerTransport = { rpc: (name, args) => remote.transport.rpc(name, args) };
 
   return async (id, picked) => {
-    if (remote.signedIn !== true) throw new RemoteAnswerError('please sign in to check answers.');
+    if (remote.signedIn !== true || remote.isCurrent?.() === false) throw new RemoteAnswerError('please sign in to check answers.');
     const question = byId.get(id);
     const version = versions.get(id);
     if (!question || !version) throw new RemoteAnswerError('this question did not load correctly. please reload the page.');
@@ -55,6 +57,7 @@ export function remoteChecker(questions: Question[], remote: RemoteQuestions): C
     }
     const chosen = [...picked];
     const outcome = await checkAnswer(transport, version, chosen);
+    if (remote.isCurrent?.() === false) throw new RemoteAnswerError('your signed-in account changed. reload questions to start again.');
     if (!outcome.ok) throw new RemoteAnswerError(outcome.message);
     // Reuse the player's all-or-nothing and choice validation before displaying any server feedback.
     return validateResult(question, chosen, {
