@@ -1128,27 +1128,21 @@
 /* Official full logo at the 52 px desktop and 38 px phone heights in the Home v3 boards. */
 .home-board-header { --home-header-brand-width: 10.25rem; }
 @media (width < 40rem) { .home-board-header { --home-header-brand-width: 7.5rem; } }
-/* Phone turned sideways: the 844 × 390 board sets the text beside the stage. */
+/* The landscape phone board is the centred desktop composition at about 60% scale. */
 @media (orientation: landscape) and (40rem <= width < 60rem) and (height < 32rem) {
   .home-stage {
-    --stage-layout: grid;
-    --stage-columns: minmax(0, 1fr) minmax(0, 45%);
-    --stage-heading-size: 2.75rem;
-    --stage-heading-width: 26.25rem;
-    --stage-eyebrow-size: .8125rem;
-    --stage-eyebrow-rule: 1.375rem;
-    --stage-action-margin: 1.25rem auto .875rem;
-    --stage-margin: 0;
-    --stage-width: 100%;
-    --stage-height: 20.625rem;
-    --stage-photo-width: 40rem;
-    --stage-photo-top: -1.5rem;
-    --stage-photo-mask: radial-gradient(ellipse 50% 50% at 50% 47%, currentColor 66%, transparent 100%);
-    --stage-halo-top: 10.25rem;
-    --stage-halo-width: 16.875rem;
-    --stage-tip-top: auto;
-    --stage-tip-bottom: 0;
-    --stage-tip-left: 50%;
-    --stage-tip-offset: translateX(-50%);
+    --stage-heading-size: 2.625rem;
+    --stage-eyebrow-size: .75rem;
+    --stage-eyebrow-rule: 1.875rem;
+    --stage-action-margin: 1rem auto 1.375rem;
+    --stage-margin: 1.75rem auto 0;
+    --stage-width: min(100%, 36rem);
+    --stage-height: 15.75rem;
+    --stage-photo-width: 54rem;
+    --stage-photo-top: -12.375rem;
+    --stage-halo-top: 3.5rem;
+    --stage-halo-width: 22.625rem;
+    --stage-tip-top: 2.3125rem;
+    --stage-tip-left: -10%;
   }
 }
