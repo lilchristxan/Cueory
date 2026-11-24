@@ -45,6 +45,8 @@ type GameConfig = {
   iconSrc?: string;
   wordmarkType: 'img' | 'serif';
   wordmarkSrc?: string;
+  /** The Evening art for the wordmark, when the Daytime art would not read on the dark panel. */
+  wordmarkEveningSrc?: string;
   wordmarkText?: string;
   defaultSteps: readonly string[];
   hasPillLegend: boolean;
@@ -60,6 +62,7 @@ const configs: Record<string, GameConfig> = {
     iconSrc: '/design/games-v2/assets/vialo-icon-silver-oxblood.svg',
     wordmarkType: 'img',
     wordmarkSrc: '/design/games-v2/assets/vialo-wordmark-oxblood-v3.svg',
+    wordmarkEveningSrc: '/brand/games/vialo-wordmark-dark.svg',
     defaultSteps: [
       'Type a five-letter word.',
       'Each pill shows if a letter is in place, elsewhere or not in the word.',
@@ -75,6 +78,7 @@ const configs: Record<string, GameConfig> = {
     iconType: 'tachyyy',
     wordmarkType: 'img',
     wordmarkSrc: '/design/games-v2/assets/tachyyy-wordmark-light-bar.svg',
+    wordmarkEveningSrc: '/brand/games/tachyyy-wordmark-dark.svg',
     defaultSteps: [
       'Read the question.',
       'Pick one answer before the timer runs out.',
@@ -253,7 +257,21 @@ const activeDateLine = propDateLine ?? formatGameDateLine(new Date());
               src={currentConfig.wordmarkSrc}
               alt=""
               aria-hidden="true"
-              class="game-frame-wordmark-img"
+              class:list={['game-frame-wordmark-img', currentConfig.wordmarkEveningSrc && 'game-frame-wordmark-day']}
+              data-wordmark="day"
+              width="180"
+              height="60"
+              loading="lazy"
+              decoding="async"
+            />
+          )}
+          {currentConfig.wordmarkType === 'img' && currentConfig.wordmarkEveningSrc && (
+            <img
+              src={currentConfig.wordmarkEveningSrc}
+              alt=""
+              aria-hidden="true"
+              class="game-frame-wordmark-img game-frame-wordmark-evening"
+              data-wordmark="evening"
               width="180"
               height="60"
               loading="lazy"

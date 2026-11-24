@@ -318,20 +318,20 @@ test.describe('daily games: pillo settings and finish screen (Task 719)', () => 
 });
 
 test.describe('the /play hub (each game on its own page, 2026-11-17)', () => {
-  test('names the four games as cards, says the puzzles are samples once, loads no game, and passes axe', async ({ page }) => {
+  test('lists every game as a row, says the puzzles are samples once, loads no game, and passes axe', async ({ page }) => {
     await fixClock(page, new Date('2026-11-01T15:00:00'));
     await page.goto('/play');
-    await expect(page.getByRole('heading', { level: 1, name: 'daily games' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: 'six games, new every day.' })).toBeVisible();
     await expect(page.getByTestId('sample-note')).toHaveText('for now these are sample puzzles with everyday words.');
-    // The pack key says the share line is plain words (lead, after the 8c35ebf capture); the builder's note framing stays out.
-    await expect(page.getByTestId('pillo-share-note')).toHaveText('the share line is plain words. no colored squares.');
     // The date comes from the visitor's clock, not the build day (the page is built ahead of time).
     await expect(page.getByTestId('play-date')).toHaveText('sun 1 nov');
     await expect(page.getByTestId('play-date')).toHaveAttribute('datetime', '2026-11-01');
-    for (const [name, path, testId] of [['vialo', '/play/vialo', 'pulse'], ['sudoku', '/play/sudoku', 'triage'], ['crossword', '/play/crossword', 'cueword'], ['piccline', '/play/piccline', 'suture']]) {
+    // Option B (2026-11-23): one row per open game, its button the row's one link; a closed game has no link.
+    for (const [name, path, testId] of [['vialo', '/play/vialo', 'pulse'], ['sudoku', '/play/sudoku', 'triage'], ['piccline', '/play/piccline', 'suture']]) {
       const card = page.getByTestId(`play-status-${testId}`).getByRole('link');
-      await expect(card).toContainText(name);
+      await expect(card).toHaveText('play');
       await expect(card).toHaveAttribute('href', path);
+      await expect(card).toHaveAttribute('aria-label', `play ${name}`);
     }
     for (const game of ['vialo', 'sudoku', 'cueword', 'suture']) await expect(page.getByTestId(game)).toHaveCount(0);
     const results = await axe(page);
@@ -1100,7 +1100,8 @@ test.describe('daily games without JavaScript', () => {
       "to add cueory to your home screen, use your browser's menu. daily games need JavaScript.",
     ]);
     await expect(page.getByTestId('sample-note')).toBeVisible();
-    await expect(page.getByTestId('play-links').getByRole('link')).toHaveText(['vialo', 'sudoku', 'crossword', 'piccline']);
+    // The rows are rendered on the server, so every open game is a plain link here.
+    for (const path of ['/play/vialo', '/play/sudoku', '/play/piccline']) await expect(page.getByTestId('play-status').locator(`a[href="${path}"]`)).toHaveText('play');
     for (const [path, name] of [['/play/vialo', 'vialo'], ['/play/sudoku', 'sudoku'], ['/play/crossword', 'crossword'], ['/play/piccline', 'piccline']]) {
       await page.goto(path);
       // Every game opens the shared settings from its own gear (sudoku too, #823), so no page has a separate button.
