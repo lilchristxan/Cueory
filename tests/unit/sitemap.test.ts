@@ -1,7 +1,8 @@
 import { readFileSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
-import { indexablePages, sampleLessonPages } from '../../src/config/routes';
+import { indexablePages, playableGamePages, sampleLessonPages } from '../../src/config/routes';
+import { dailyGames } from '../../src/config/games';
 import { crosswordOpen } from '../../src/config/site';
 import { draftsAllowed } from '../../src/islands/anatomylab';
 import { draftBuildEnv } from '../../src/lessons/draftgate';
@@ -52,6 +53,19 @@ describe('sitemap', () => {
     for (const path of ['/play/stat', '/play/hello-cards']) {
       expect(indexablePages).not.toContain(path);
       expect(xml).not.toContain(`<loc>https://cueory.app${path}</loc>`);
+    }
+  });
+
+  it('lists exactly the playable daily games, none of the coming-soon or account pages', () => {
+    const listed = [...sitemapXml().matchAll(/<loc>([^<]+)<\/loc>/g)].map((match) => match[1].replace('https://cueory.app', ''));
+    // Playable games follow games.ts (ready) and the crossword switch; the legacy bookmark routes are the only other /play pages.
+    const expected = ['/play/vialo', '/play/sudoku', '/play/piccline', ...(crosswordOpen ? ['/play/crossword'] : [])];
+    expect([...playableGamePages].sort()).toEqual([...expected].sort());
+    expect(dailyGames.filter((game) => game.ready).length).toBeGreaterThanOrEqual(3);
+    const legacy = ['/play/pillo', '/play/word-path'];
+    expect(listed.filter((path) => path.startsWith('/play/') && !legacy.includes(path)).sort()).toEqual([...expected].sort());
+    for (const path of ['/about', '/resources', '/coming-soon', '/play/tachyyy', '/play/stat', '/play/hello-cards', '/signin', '/signup', '/account', '/account/two-factor', '/reset-password', '/auth/callback', '/progress', '/start', '/subscribed', ...(crosswordOpen ? [] : ['/play/crossword'])]) {
+      expect(listed).not.toContain(path);
     }
   });
 
