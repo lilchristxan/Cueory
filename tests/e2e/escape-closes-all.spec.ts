@@ -54,32 +54,6 @@ test('the "about" dropdown in the desktop navigation', async ({ page }, info) =>
   await expect(trigger).toBeFocused();
 });
 
-test('the study-mode preview on the home page', async ({ page }) => {
-  await page.emulateMedia({ reducedMotion: 'no-preference' });
-  await page.goto('/');
-  const carousel = page.locator('#ways-to-study');
-  await expect(carousel).toHaveAttribute('data-ring', '');
-  const track = carousel.locator('[data-modes-track]');
-  await track.focus();
-  await expect(track).toBeFocused();
-
-  // Take over from autoplay and choose a non-first card to catch focus returning to the wrong opener.
-  await page.keyboard.press('Home');
-  await page.keyboard.press('ArrowRight');
-  const activeCard = carousel.locator('#mode-cards');
-  await expect(activeCard).toHaveAttribute('data-active', '');
-  const opener = activeCard.getByRole('button', { name: 'preview cards', exact: true });
-  await openByKeyboard(page, opener);
-
-  const dialog = page.locator('#mode-preview');
-  await expect(dialog).toHaveAccessibleName('cards');
-  // Escape must work from another control inside the native dialog, not only the close button that receives initial focus.
-  const next = dialog.getByRole('button', { name: 'next study mode' });
-  await next.focus();
-  await expect(next).toBeFocused();
-  await escapeBack(page, opener, dialog);
-});
-
 test('an info tip', async ({ page }) => {
   await page.goto('/learn/study-skills/fill-in');
   const trigger = page.getByRole('button', { name: 'more about fill-in' });

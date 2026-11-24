@@ -640,17 +640,15 @@ test.describe('without JavaScript', () => {
     }
   });
 
-  test('"ways to study" is a row of all eleven cards that scrolls sideways, and the buttons keep their space', async ({
+  test('"ways to study" is the vial platter: all eleven vials are built and the front one shows without scripts', async ({
     page,
   }) => {
     await page.goto('/');
-    await expect(page.locator('[data-mode-card]')).toHaveCount(11);
-    const row = page.getByRole('group', { name: 'study mode cards' });
-    await row.scrollIntoViewIfNeeded();
-    expect(await row.evaluate((el) => el.scrollWidth > el.clientWidth)).toBe(true);
-    await row.evaluate((el) => el.scrollTo({ left: el.scrollWidth, behavior: 'instant' }));
-    await expect(page.locator('#mode-level-test')).toBeInViewport();
-    await expect(page.locator('#ways-to-study').getByRole('button', { name: 'next study mode' })).toBeHidden();
+    const platter = page.locator('#ways-to-study');
+    await expect(platter.locator('[data-platter-vial]')).toHaveCount(11);
+    await platter.scrollIntoViewIfNeeded();
+    await expect(platter.getByRole('heading', { level: 2, name: 'one lesson, multiple ways to study' })).toBeVisible();
+    await expect(platter.locator('[data-platter-vial][data-active]')).toBeVisible();
   });
 });
 
@@ -668,11 +666,11 @@ test('home page has a launch-updates signup that works by keyboard', async ({ pa
   await page.goto('/');
   const signup = page.locator('#signup');
   await expect(signup.getByRole('heading', { name: 'coming soon', exact: true })).toBeVisible();
-  const form = page.getByTestId('signup-form');
+  const form = page.getByTestId('soon-form');
   if ((await form.count()) === 0) {
     // Before the Kit form exists: a link to Kit's landing page, or the pending line when there is none.
-    if (await page.getByTestId('signup-landing').count()) await expect(page.getByTestId('signup-landing')).toBeVisible();
-    else await expect(page.getByTestId('signup-pending')).toBeVisible();
+    if (await page.getByTestId('soon-landing').count()) await expect(page.getByTestId('soon-landing')).toBeVisible();
+    else await expect(page.getByTestId('soon-pending')).toBeVisible();
     return;
   }
   const email = form.getByLabel('Email address');
@@ -931,28 +929,28 @@ test.describe('marketing look (D-41)', () => {
   }) => {
     await page.goto('/');
     const sections = page.locator('[data-reveal-section]');
-    // Christian's final home board (20 Nov): daily games, the vial carousel, then the launch-updates panel.
-    await expect(sections).toHaveCount(3);
+    // Home v3: the games row and the coming-soon panel fade in; the vial platter and the social row do not wait.
+    await expect(sections).toHaveCount(2);
     expect(await sections.evaluateAll((items) => items.map((item) => item.closest('section')?.id))).toEqual([
-      'daily-games', 'ways-to-study', 'signup',
+      'daily-games', 'signup',
     ]);
-    const all = [0, 1, 2];
-    const ways = 1;
+    const all = [0, 1];
+    const lower = 1;
     const look = (index: number) =>
       sections.nth(index).evaluate((el) => [el.getAttribute('data-reveal'), getComputedStyle(el).opacity, getComputedStyle(el).translate]);
     // The ones that start below the first screen wait, lowered and clear. The Home v3 hero is compact, so on a tall
     // tablet screen (820 x 1180) the first games row already begins inside the first screen and is simply there, never waiting.
     const belowFirstScreen = await sections.evaluateAll((items) => items.map((item) => item.getBoundingClientRect().top >= window.innerHeight));
-    expect(belowFirstScreen[ways]).toBe(true);
+    expect(belowFirstScreen[lower]).toBe(true);
     for (const index of all) {
       expect(await look(index)).toEqual(belowFirstScreen[index] ? ['waiting', '0', '0px 10px'] : [null, '1', 'none']);
     }
-    await page.locator('#ways-to-study').scrollIntoViewIfNeeded();
-    await expect.poll(() => look(ways)).toEqual(['shown', '1', 'none']);
+    await page.locator('#signup').scrollIntoViewIfNeeded();
+    await expect.poll(() => look(lower)).toEqual(['shown', '1', 'none']);
     // Once only: scrolling away and back changes nothing.
     await page.evaluate(() => window.scrollTo(0, 0));
-    await page.locator('#ways-to-study').scrollIntoViewIfNeeded();
-    expect(await look(ways)).toEqual(['shown', '1', 'none']);
+    await page.locator('#signup').scrollIntoViewIfNeeded();
+    expect(await look(lower)).toEqual(['shown', '1', 'none']);
 
     // With reduced motion nothing waits or moves.
     await page.emulateMedia({ reducedMotion: 'reduce' });
@@ -965,398 +963,6 @@ test.describe('marketing look (D-41)', () => {
     expect(await page.evaluate(() => getComputedStyle(document.body).backgroundImage)).toBe('none');
     await page.goto('/privacy');
     expect(await page.evaluate(() => getComputedStyle(document.body).backgroundImage)).not.toBe('none');
-  });
-});
-
-test.describe('"ways to study" merry-go-round (D-50, D-60)', () => {
-  const section = (page: Page) => page.locator('#ways-to-study');
-  /** The names of the cards on screen, left to right. */
-  const onScreen = (page: Page) =>
-    section(page)
-      .locator('[data-mode-card]')
-      .evaluateAll((cards) =>
-        cards
-          .filter((card) => getComputedStyle(card).visibility === 'visible')
-          .sort((a, b) => a.getBoundingClientRect().left - b.getBoundingClientRect().left)
-          .map((card) => (card as HTMLElement).dataset.name),
-      );
-
-  test('the card in the middle has neighbours on both sides, and the arrows, keys and side cards turn it, endlessly', async ({
-    page,
-  }) => {
-    await page.goto('/');
-    await section(page).scrollIntoViewIfNeeded();
-    await holdOnVideo(page);
-    await expect(section(page)).toHaveAttribute('role', 'region');
-    await expect(section(page)).toHaveAttribute('aria-roledescription', 'carousel');
-    await expect(page.getByRole('heading', { name: 'ways to study' })).toBeVisible();
-    // The first vial in front, with the last one as its left neighbour. HomeV2's straight row (P6) shows as many on each
-    // side as fit whole (four at 1440, fewer on narrower screens, never cut off), and the one straight behind is hidden.
-    const ring = ['review', 'label it', 'adaptive quiz', 'level test', 'video', 'cards', 'learn', 'fill-in', 'matching'];
-    const perSide = { phone: 2, tablet: 2, desktop: 4 }[sizeOf(test.info())];
-    await expect.poll(() => onScreen(page)).toEqual(ring.slice(4 - perSide, 5 + perSide));
-    await expect(section(page).getByRole('group', { name: '1 of 11', exact: true })).toHaveAttribute('data-active', '');
-
-    // Previous from the first card goes round to the last, and next from the last comes back to the first.
-    await section(page).getByRole('button', { name: 'previous study mode' }).click();
-    await expect.poll(() => middleCard(page)).toBe('level test');
-    await section(page).getByRole('button', { name: 'next study mode' }).click();
-    await section(page).getByRole('button', { name: 'next study mode' }).click();
-    await expect.poll(() => middleCard(page)).toBe('cards');
-
-    // A tap on a side vial brings it to the front (the front vial overlaps its inner edge, so the tap is near its
-    // outer edge).
-    const learn = section(page).getByRole('button', { name: 'show learn' });
-    const learnBox = (await learn.boundingBox())!;
-    await learn.click({ position: { x: learnBox.width - 16, y: learnBox.height / 2 } });
-    await expect.poll(() => middleCard(page)).toBe('learn');
-    await expect(section(page).getByRole('button', { name: 'preview learn' })).toBeVisible();
-
-    // The arrow keys, Home and End, round and round.
-    await page.getByRole('group', { name: 'study mode cards' }).focus();
-    await page.keyboard.press('End');
-    await expect.poll(() => middleCard(page)).toBe('level test');
-    await page.keyboard.press('ArrowRight');
-    await expect.poll(() => middleCard(page)).toBe('video');
-    await page.keyboard.press('ArrowLeft');
-    await expect.poll(() => middleCard(page)).toBe('level test');
-
-    // Once the visitor is using it, the card where it comes to rest is announced.
-    const live = section(page).locator('[data-modes-live]');
-    await expect(live).toHaveAttribute('aria-live', 'polite');
-    await expect(live).toHaveText('level test, 11 of 11');
-
-    // Only the card in the middle is in the Tab order; side cards are a tap or an arrow key away.
-    const tabbable = await section(page)
-      .locator('[data-mode-card] :is(button, a)')
-      .evaluateAll((items) => items.filter((item) => (item as HTMLElement).tabIndex === 0).length);
-    expect(tabbable).toBe(1);
-
-    const axe = await new AxeBuilder({ page })
-      .include('#ways-to-study')
-      .withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa'])
-      .analyze();
-    expect(axe.violations.map((v) => `${v.id}: ${v.help}`)).toEqual([]);
-  });
-
-  test("neighbours stand beside the front vial, smaller and dimmer, never overlapping, and no vial's words are ever faded", async ({
-    page,
-  }) => {
-    await page.goto('/');
-    await section(page).scrollIntoViewIfNeeded();
-    await holdOnVideo(page);
-    await section(page).getByRole('button', { name: 'next study mode' }).click();
-    await expect.poll(() => middleCard(page)).toBe('cards');
-    // Let the 700 ms glide finish (Task 109), and the section's own first fade-in rise (D-62), which moves every vial
-    // 10 px between the separate measurements below on a slow machine.
-    await waitForCardTurn(page);
-    await expect
-      .poll(() => section(page).locator('[data-reveal-section]').evaluate((el) => getComputedStyle(el).translate))
-      .toMatch(/^(none|0px)$/);
-    const look = (id: string) =>
-      page.locator(`#mode-${id}`).evaluate((card) => {
-        const box = card.getBoundingClientRect();
-        return {
-          x: box.x,
-          width: box.width,
-          bottom: box.bottom,
-          bright: (card as HTMLElement).style.getPropertyValue('--ring-bright'),
-          glass: getComputedStyle(card.querySelector('.vial-img')!).filter,
-        };
-      });
-    const front = await look('cards');
-    const near = await look('learn');
-    const left = await look('video');
-    const far = await look('fill-in');
-    expect(near.width / front.width).toBeGreaterThan(0.78);
-    expect(near.width / front.width).toBeLessThan(0.9);
-    expect(far.width / front.width).toBeGreaterThan(0.6);
-    expect(far.width / front.width).toBeLessThan(0.78);
-    // HomeV2 keeps the vials on one glossy baseline instead of the old fanned arc.
-    expect(Math.abs(near.bottom - front.bottom)).toBeLessThan(1);
-    expect(Math.abs(far.bottom - front.bottom)).toBeLessThan(1);
-    // Side by side, never overlapping (P6): each vial starts after the one before it ends.
-    expect(near.x).toBeGreaterThanOrEqual(front.x + front.width);
-    expect(far.x).toBeGreaterThanOrEqual(near.x + near.width);
-    expect(left.x + left.width).toBeLessThanOrEqual(front.x);
-    // Quieter: the glass (only the bottle image, never the words) is dimmer per step out.
-    expect([front.bright, near.bright, left.bright, far.bright]).toEqual(['1', '0.95', '0.95', '0.9']);
-    expect(near.glass).not.toBe(front.glass);
-
-    // Nothing fades a card's words: from each card's words up to the page there is no mask, no filter and full
-    // opacity, so the text keeps the frosted-panel contrast checked in tests/unit/tokens.test.ts. (First the section's
-    // own fade-in, the first time it comes into view, has to finish: D-62.)
-    await expect
-      .poll(() => section(page).locator('[data-reveal-section]').evaluate((el) => getComputedStyle(el).opacity))
-      .toBe('1');
-    const faded = await page.locator('[data-mode-card] h3, [data-mode-card] p, [data-mode-card] a').evaluateAll((texts) =>
-      texts.flatMap((text) => {
-        const found: string[] = [];
-        for (let el: Element | null = text; el; el = el.parentElement) {
-          const style = getComputedStyle(el);
-          const mask = style.maskImage || style.getPropertyValue('-webkit-mask-image');
-          if (style.opacity !== '1' || style.filter !== 'none' || (mask && mask !== 'none')) {
-            found.push(`${el.tagName.toLowerCase()}.${[...el.classList].join('.')}`);
-          }
-        }
-        return found;
-      }),
-    );
-    expect(faded).toEqual([]);
-  });
-
-  /** Every text the live region is given from now on. */
-  const listen = (page: Page) =>
-    page.locator('#ways-to-study [data-modes-live]').evaluate((live) => {
-      const heard: string[] = [];
-      (window as unknown as { heard: string[] }).heard = heard;
-      new MutationObserver(() => heard.push(live.textContent ?? '')).observe(live, {
-        childList: true,
-        characterData: true,
-        subtree: true,
-      });
-    });
-  const heard = (page: Page) => page.evaluate(() => (window as unknown as { heard: string[] }).heard);
-
-  test('quick real Next presses replace each pending announcement and announce the final card once', async ({ page }) => {
-    // Keep the page clock still between interactions. The controlled gaps make this a real rapid-input contract rather
-    // than relying on how long Playwright takes to deliver four separate click actions in a loaded browser.
-    const clockStart = new Date('2026-11-20T00:00:00');
-    await page.clock.install({ time: clockStart });
-    // An installed Playwright clock otherwise continues with host time; pause before the page creates its timers.
-    await page.clock.pauseAt(new Date(clockStart.getTime() + 1_000));
-    await page.goto('/');
-    await section(page).scrollIntoViewIfNeeded();
-    await listen(page);
-    const next = section(page).getByRole('button', { name: 'next study mode' });
-
-    // These are actual button clicks, 250 ms apart: every gap is nonzero and below REST_MS. The first timer would be
-    // due 10 ms after the fourth click if a later click failed to clear it, well before the final timer's deadline.
-    const gap = 250;
-    for (let i = 0; i < 4; i++) {
-      await next.click();
-      if (i < 3) await page.clock.runFor(gap);
-    }
-    await expect.poll(() => middleCard(page)).toBe('matching');
-
-    const staleDeadlineAfterLastClick = REST_MS - gap * 3;
-    expect(staleDeadlineAfterLastClick).toBeGreaterThan(0);
-    await page.clock.runFor(staleDeadlineAfterLastClick);
-    await expect(section(page).locator('[data-modes-live]')).toHaveText('');
-    expect(await heard(page)).toEqual([]);
-
-    await page.clock.runFor(REST_MS - staleDeadlineAfterLastClick - 1);
-    await expect(section(page).locator('[data-modes-live]')).toHaveText('');
-    expect(await heard(page)).toEqual([]);
-
-    await page.clock.runFor(1);
-    await expect(section(page).locator('[data-modes-live]')).toHaveText('matching, 5 of 11');
-    await page.clock.runFor(600);
-    expect(await heard(page)).toEqual(['matching, 5 of 11']);
-  });
-
-  test('a sideways swipe turns it one card each way; a short or mostly up-and-down one does not', async ({
-    page,
-    browserName,
-  }, testInfo) => {
-    test.skip(!testInfo.project.use.hasTouch, 'a touch-screen gesture');
-    await page.goto('/');
-    await section(page).scrollIntoViewIfNeeded();
-    await holdOnVideo(page);
-    const centre = async () => {
-      const box = (await page.getByRole('group', { name: 'study mode cards' }).boundingBox())!;
-      return { x: Math.round(box.x + box.width / 2), y: Math.round(box.y + box.height / 2) };
-    };
-    /**
-     * Every engine: the pointer events a finger sends (down, six moves, up), dispatched on whatever is under it.
-     * Playwright can only tap, not drag, a finger in WebKit and Firefox, so this is how Safari's engine is tested. Some
-     * browsers also report a tap where a swipe ends, so a swipe that turns the cards is followed by that click too,
-     * and it must not count as a tap on a card.
-     */
-    const dispatchedSwipe = async (dx: number, dy = 0) => {
-      const { x, y } = await centre();
-      await page.evaluate(
-        ({ x, y, dx, dy }) => {
-          const target = document.elementFromPoint(x, y)!;
-          const send = (type: string, step: number) =>
-            target.dispatchEvent(
-              new PointerEvent(type, {
-                pointerId: 7,
-                pointerType: 'touch',
-                isPrimary: true,
-                bubbles: true,
-                cancelable: true,
-                composed: true,
-                clientX: x + (dx * step) / 6,
-                clientY: y + (dy * step) / 6,
-              }),
-            );
-          send('pointerdown', 0);
-          for (let step = 1; step <= 6; step++) send('pointermove', step);
-          send('pointerup', 6);
-          if (Math.abs(dx) >= 100 && Math.abs(dx) > Math.abs(dy)) {
-            target.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, composed: true, clientX: x + dx, clientY: y + dy }));
-          }
-        },
-        { x, y, dx, dy },
-      );
-    };
-    /** Chromium only, on top of that: the browser's own touch input (DevTools protocol), so its touch-action handling is exercised too. */
-    const realSwipe = async (dx: number, dy = 0) => {
-      const cdp = await page.context().newCDPSession(page);
-      const { x, y } = await centre();
-      await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y }] });
-      for (let step = 1; step <= 6; step++) {
-        const point = { x: Math.round(x + (dx * step) / 6), y: Math.round(y + (dy * step) / 6) };
-        await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [point] });
-      }
-      await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
-      await cdp.detach();
-    };
-    const swipes = browserName === 'chromium' ? [dispatchedSwipe, realSwipe] : [dispatchedSwipe];
-    for (const swipe of swipes) {
-      await swipe(-120);
-      await expect.poll(() => middleCard(page)).toBe('cards');
-      await swipe(120);
-      await expect.poll(() => middleCard(page)).toBe('video');
-      await swipe(-30);
-      await swipe(-30, 160);
-      await page.waitForTimeout(500);
-      expect(await middleCard(page)).toBe('video');
-      // A swipe is never a tap: no preview opened on the way.
-      await expect(page.locator('#mode-preview')).toBeHidden();
-      // The vertical swipe may have scrolled the page (real touch input does); bring the cards back for the next round.
-      await section(page).scrollIntoViewIfNeeded();
-    }
-  });
-
-  test('each card links to its mode when it is open, and says "coming soon" otherwise', async ({ page }) => {
-    await page.goto('/');
-    const open: Record<string, [string, string]> = {
-      cards: ['try the cards', '/learn/study-skills/cards'],
-      learn: ['try learn mode', '/learn/study-skills/learn-mode'],
-      matching: ['try matching', '/learn/study-skills/matching'],
-      organizer: ['try the organizer', '/learn/study-skills/organizer'],
-      'fill-in': ['try fill-in', '/learn/study-skills/fill-in'],
-      'label-it': ['try label it', '/learn/study-skills/label-it'],
-      questions: ['try the questions', '/learn/study-skills/questions'],
-    };
-    const modes = [
-      ['video', 'video'],
-      ['cards', 'cards'],
-      ['learn', 'learn'],
-      ['fill-in', 'fill-in'],
-      ['matching', 'matching'],
-      ['organizer', 'organizer'],
-      ['questions', 'questions'],
-      ['review', 'review'],
-      ['label-it', 'label it'],
-      ['adaptive-quiz', 'adaptive quiz'],
-      ['level-test', 'level test'],
-    ];
-    for (const [id, name] of modes) {
-      const card = page.locator(`#mode-${id}`);
-      await expect(card.locator('h3')).toHaveText(name!);
-      const link = open[id!];
-      if (link) await expect(card.locator(`a[href="${link[1]}"]`)).toHaveText(link[0]);
-      else await expect(card.getByText('coming soon', { exact: true })).toHaveCount(1);
-    }
-  });
-
-  test('the pause button stops the motion, and with reduced motion it just switches, without a glide', async ({
-    page,
-  }) => {
-    await page.goto('/');
-    // The pause button stops the auto-advance (the vials have no loops of their own: Task 109).
-    await section(page).getByRole('button', { name: 'pause the slideshow' }).click();
-    await expect(section(page).getByRole('button', { name: 'play the slideshow' })).toBeVisible();
-    await expect(section(page)).toHaveAttribute('data-paused', '');
-    await section(page).getByRole('button', { name: 'play the slideshow' }).click();
-    await expect(section(page).getByRole('button', { name: 'pause the slideshow' })).toBeVisible();
-    await expect(section(page)).not.toHaveAttribute('data-paused', '');
-
-    // A turn glides, in the approved 700 ms, and the side vials step back.
-    await section(page).getByRole('button', { name: 'next study mode' }).click();
-    const learn = section(page).locator('#mode-learn');
-    expect(await learn.evaluate((el) => getComputedStyle(el).transitionDuration)).toContain('0.7s');
-    expect(await learn.evaluate((el) => el.style.getPropertyValue('--ring-scale'))).toBe('0.87');
-
-    await page.emulateMedia({ reducedMotion: 'reduce' });
-    await page.reload();
-    await expect(section(page).getByRole('button', { name: 'next study mode' })).toBeVisible();
-    await expect(section(page).locator('[data-modes-pause]')).toBeHidden();
-    await section(page).getByRole('button', { name: 'next study mode' }).click();
-    await expect.poll(() => middleCard(page)).toBe('cards');
-    const still = await section(page)
-      .locator('#mode-learn')
-      .evaluate((el) => [
-        getComputedStyle(el).transitionDuration,
-        getComputedStyle(el.querySelector('.vial-img')!).transitionDuration,
-        el.style.getPropertyValue('--ring-scale'),
-      ]);
-    // Instant: no transition at all (the site-wide reduced-motion rule leaves 0.01 ms at most).
-    for (const durations of still.slice(0, 2)) {
-      expect(Math.max(...durations!.split(',').map((d) => parseFloat(d)))).toBeLessThan(0.001);
-    }
-    // The vials still step back; they just don't glide there.
-    expect(still[2]).toBe('0.87');
-  });
-
-  test('auto-advance moves on after about six seconds, pauses on the cards, and stops once the visitor takes over', async ({
-    page,
-  }, testInfo) => {
-    test.skip(!isDesktopOfEachEngine(testInfo), 'a timing test that rests a mouse on the cards: once per engine, at desktop size');
-    test.slow();
-    const engine = testInfo.project.use.browserName ?? testInfo.project.use.defaultBrowserType;
-    const diagnoseAutoplayStart = engine === 'firefox' || engine === 'webkit';
-    if (diagnoseAutoplayStart) await installAutoplayPointerParkDiagnostic(page);
-    let failed = false;
-    try {
-      await page.goto('/');
-      await section(page).scrollIntoViewIfNeeded();
-      if (diagnoseAutoplayStart) await markAutoplayPointerParkDiagnostic(page, 'before-pointer-park');
-      // The mouse over the section's words, not its cards: that doesn't pause it.
-      await page.mouse.move(0, 0);
-      // Firefox has replayed an in-track enter at (636, 423) after this real park. It must not pause without a
-      // matching pointer move, while the real card/control hover and visitor takeover checks below stay unchanged.
-      await section(page).locator('[data-modes-track]').evaluate((track) => {
-        track.dispatchEvent(new PointerEvent('pointerenter', {
-          bubbles: false,
-          clientX: 636,
-          clientY: 423,
-          pointerType: 'mouse',
-        }));
-      });
-      if (diagnoseAutoplayStart) await markAutoplayPointerParkDiagnostic(page, 'after-pointer-park');
-      if (diagnoseAutoplayStart) await markAutoplayPointerParkDiagnostic(page, 'first-poll:begin');
-      await expect.poll(() => middleCard(page), { timeout: 9000 }).toBe('cards');
-
-      // Resting on the cards pauses it; moving off lets it go on.
-      if (diagnoseAutoplayStart) await markAutoplayPointerParkDiagnostic(page, 'intentional-hover:before');
-      await page.getByRole('group', { name: 'study mode cards' }).hover();
-      if (diagnoseAutoplayStart) await markAutoplayPointerParkDiagnostic(page, 'intentional-hover:after');
-      await page.waitForTimeout(7000);
-      expect(await middleCard(page)).toBe('cards');
-      await page.mouse.move(0, 0);
-      await expect.poll(() => middleCard(page), { timeout: 9000 }).toBe('learn');
-
-      await section(page).getByRole('button', { name: 'next study mode' }).click();
-      await expect.poll(() => middleCard(page)).toBe('fill-in');
-      await page.mouse.move(0, 0);
-      await page.waitForTimeout(7000);
-      expect(await middleCard(page)).toBe('fill-in');
-    } catch (error) {
-      failed = true;
-      throw error;
-    } finally {
-      if (failed && diagnoseAutoplayStart) {
-        try {
-          await attachAutoplayPointerParkDiagnostic(page, testInfo);
-        } catch {
-          // Best effort: do not replace the failed autoplay assertion.
-        }
-      }
-    }
   });
 });
 
@@ -1376,9 +982,9 @@ test.describe('silk scenes down the home page (D-53)', () => {
         };
       }),
     );
-    // Christian's final home board: the hero, daily games, the carousel and launch updates in that order.
+    // Home v3: the hero, daily games and the vial platter are silk scenes; the coming-soon panel and the social row sit on the page itself.
     expect(scenes.map((scene) => scene.kind)).toEqual([
-      'scene-hero', 'scene-play', 'scene-tint', 'scene-low',
+      'scene-hero', 'scene-play', 'scene-tint',
     ]);
     for (const scene of scenes) expect(scene).toMatchObject({ drawn: true, behind: '-20', fades: true });
 
@@ -1424,236 +1030,9 @@ test.describe('silk scenes down the home page (D-53)', () => {
       return { bands, hits };
     });
     expect(covered.bands.map(({ scene, edge }) => [scene, edge])).toEqual([
-      ['scene-play', 'top'], ['scene-tint', 'top'], ['scene-low', 'top'], ['scene-low', 'bottom'],
-    ]); // Three top fades between the four scenes, then the launch-updates scene fades into the footer.
+      ['scene-play', 'top'], ['scene-tint', 'top'],
+    ]); // Two top fades between the three scenes (Home v3: the coming-soon panel is not a scene).
     expect(covered.hits).toEqual([]);
-  });
-});
-
-test.describe('study-mode preview (D-51)', () => {
-  const dialog = (page: Page) => page.locator('#mode-preview');
-  /** Turns the merry-go-round until `name` is in the middle, where a tap opens its preview. */
-  const bringToMiddle = async (page: Page, name: string) => {
-    await page.locator('#ways-to-study').scrollIntoViewIfNeeded();
-    for (let i = 0; i < 11 && (await middleCard(page)) !== name; i++) {
-      await page.locator('#ways-to-study').getByRole('button', { name: 'next study mode' }).click();
-    }
-    await expect.poll(() => middleCard(page)).toBe(name);
-  };
-  const openPreview = async (page: Page, name: string) => {
-    await page.goto('/');
-    await bringToMiddle(page, name);
-    await page.getByRole('button', { name: `preview ${name}` }).click();
-    await expect(page.getByRole('dialog', { name })).toBeVisible();
-  };
-
-  test('the card in the middle grows into its preview, which passes axe; Escape shrinks it back and focus returns', async ({
-    page,
-  }, testInfo) => {
-    const pageErrors: string[] = [];
-    page.on('pageerror', (error) => pageErrors.push(error.name));
-    await installPreviewCloseDiagnostic(page);
-    try {
-      await page.goto('/');
-    await bringToMiddle(page, 'cards');
-    // Let the turn finish, so the card has come to rest before it is measured.
-    await waitForCardTurn(page);
-    // The grow starts with the preview's bottle exactly over the vial it came from (Task 109: the same bottle moves
-    // forward). (A click without moving the mouse there, so the hover lift doesn't change the vial while it is
-    // measured.)
-    const start = await page.evaluate(() => {
-      const vial = document.querySelector('#mode-cards [data-vial]')!.getBoundingClientRect();
-      document.querySelector<HTMLButtonElement>('#mode-cards [data-mode-open]')!.click();
-      const bottle = document.querySelector<HTMLElement>('[data-mode-preview-vial]')!;
-      const [grow] = bottle.getAnimations();
-      if (!grow) return undefined;
-      grow.pause();
-      grow.currentTime = 0;
-      const box = bottle.getBoundingClientRect();
-      grow.play();
-      return [box.left - vial.left, box.top - vial.top, box.width - vial.width, box.height - vial.height];
-    });
-    expect(start).toBeDefined();
-    for (const gap of start!) expect(Math.abs(gap)).toBeLessThan(2);
-
-    const preview = page.getByRole('dialog', { name: 'cards' });
-    await expect(preview).toBeVisible();
-    await expect(preview.getByRole('heading', { level: 2, name: 'cards' })).toBeVisible();
-    // Its feature rows wait behind the ⓘ beside the name (Christian, 2026-11-02).
-    await expect(preview.getByRole('button', { name: 'more about cards' })).toHaveAttribute('aria-expanded', 'false');
-    await expect(preview.getByRole('link', { name: 'start cards' })).toHaveAttribute('href', '/learn/study-skills/cards');
-    await expect(preview.getByRole('link', { name: 'join the launch list', exact: true })).toHaveAttribute(
-      'href',
-      '/#signup',
-    );
-    await expect(preview.getByRole('button', { name: 'close preview' })).toBeFocused();
-    // The same bottle, with its label, stands in the preview; its four feature rows are behind the ⓘ.
-    await expect(preview.locator('[data-mode-preview-vial] .vial-name')).toHaveText('cards');
-    await expect(preview.locator('[data-mode-preview-features="cards"] li')).toHaveCount(4);
-    await expect
-      .poll(() => page.evaluate(() => document.querySelector('[data-mode-preview]')!.getAnimations({ subtree: true }).length))
-      .toBe(0);
-
-    const axe = await new AxeBuilder({ page })
-      .include('#mode-preview')
-      .withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa'])
-      .analyze();
-    expect(axe.violations.map((v) => `${v.id}: ${v.help}`)).toEqual([]);
-
-    await page.keyboard.press('Escape');
-    await expect(dialog(page)).toBeHidden();
-      await expect(page.getByRole('button', { name: 'preview cards' })).toBeFocused();
-    } finally {
-      const entries = await page.evaluate(() => (window as Window & { __cueoryD51Diagnostic?: unknown[] }).__cueoryD51Diagnostic ?? []).catch(() => []);
-      const payload = JSON.stringify({ entries, pageErrors }, null, 2);
-      await testInfo.attach('carousel-d51-close-path', { body: payload, contentType: 'application/json' });
-      if (process.env.CUEORY_CAROUSEL_DIAG_PATH) await writeFile(`${process.env.CUEORY_CAROUSEL_DIAG_PATH}.d51.json`, payload);
-    }
-  });
-
-  test('previous and next move through the modes with the row behind; the X and the darkened page close it', async ({
-    page,
-  }, testInfo) => {
-    let lastAction = 'open preview cards';
-    // Keep the latest bounded state in the test process. A timed-out click closes its page before the catch block can
-    // evaluate it, but the state immediately before that existing action remains available for a failure-only receipt.
-    let latestObservation: unknown = { lastAction, capture: 'not sampled' };
-    const observeBeforeAction = async () => {
-      latestObservation = await capturePreviewNavigationFailure(page, lastAction).catch(() => latestObservation);
-    };
-    try {
-      await openPreview(page, 'cards');
-      const preview = dialog(page);
-      lastAction = 'click next study mode';
-      await observeBeforeAction();
-      await preview.getByRole('button', { name: 'next study mode' }).click();
-      await expect(page.getByRole('dialog', { name: 'learn' })).toBeVisible();
-      await expect(preview.getByRole('link', { name: 'start learn' })).toHaveAttribute('href', '/learn/study-skills/learn-mode');
-      await expect(preview.locator('[data-mode-preview-live]')).toHaveText('learn, 3 of 11');
-
-      lastAction = 'click first previous study mode';
-      await observeBeforeAction();
-      await preview.getByRole('button', { name: 'previous study mode' }).click();
-      lastAction = 'click second previous study mode';
-      await observeBeforeAction();
-      await preview.getByRole('button', { name: 'previous study mode' }).click();
-      await expect(page.getByRole('dialog', { name: 'video' })).toBeVisible();
-      await expect(preview.getByText('coming soon')).toBeVisible();
-      await expect(preview.locator('[data-mode-preview-try]')).toBeHidden();
-      await expect(preview.locator('[data-mode-preview-live]')).toHaveText('video, 1 of 11');
-      // The merry-go-round behind follows, so closing shrinks the preview into the video card.
-      await expect(page.locator('#mode-video')).toHaveAttribute('data-active', '');
-
-      lastAction = 'click close preview';
-      await observeBeforeAction();
-      await preview.getByRole('button', { name: 'close preview' }).click();
-      await expect(preview).toBeHidden();
-      await expect(page.getByRole('button', { name: 'preview video' })).toBeFocused();
-
-      lastAction = 'reopen preview video';
-      await page.getByRole('button', { name: 'preview video' }).click();
-      await expect(page.getByRole('dialog', { name: 'video' })).toBeVisible();
-      lastAction = 'click preview scrim';
-      await observeBeforeAction();
-      await page.mouse.click(4, 4);
-      await expect(preview).toBeHidden();
-    } catch (error) {
-      await testInfo.attach('preview-navigation-failure', {
-        body: JSON.stringify({ lastAction, observation: latestObservation }, null, 2),
-        contentType: 'application/json',
-      });
-      throw error;
-    }
-  });
-
-  test('moving to a mode that is not open yet keeps focus in the preview when "start …" had it', async ({ page }) => {
-    await openPreview(page, 'cards');
-    const preview = dialog(page);
-    await preview.getByRole('link', { name: 'start cards' }).focus();
-    await page.keyboard.press('ArrowLeft');
-    await expect(page.getByRole('dialog', { name: 'video' })).toBeVisible();
-    await expect(preview.getByRole('button', { name: 'previous study mode' })).toBeFocused();
-    // The arrow keys still work from there, round to the last card.
-    await page.keyboard.press('ArrowLeft');
-    await expect(page.getByRole('dialog', { name: 'level test' })).toBeVisible();
-  });
-
-  test('closing in the middle of the grow still shrinks the bottle exactly back into its vial', async ({ page }) => {
-    await page.goto('/');
-    await page.locator('#ways-to-study').scrollIntoViewIfNeeded();
-    const gaps = await page.evaluate(async () => {
-      document.querySelector<HTMLButtonElement>('#mode-video [data-mode-open]')!.click();
-      // Escape a tenth of a second into the 320 ms grow.
-      await new Promise((resolve) => setTimeout(resolve, 100));
-      const card = document.querySelector('#mode-video [data-vial]')!.getBoundingClientRect();
-      document.activeElement!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
-      const panel = document.querySelector<HTMLElement>('[data-mode-preview-vial]')!;
-      const [shrink] = panel.getAnimations();
-      if (!shrink) return undefined;
-      shrink.pause();
-      shrink.currentTime = Number(shrink.effect!.getComputedTiming().endTime);
-      const box = panel.getBoundingClientRect();
-      return [box.left - card.left, box.top - card.top, box.width - card.width, box.height - card.height];
-    });
-    expect(gaps).toBeDefined();
-    for (const gap of gaps!) expect(Math.abs(gap)).toBeLessThan(2);
-  });
-
-  test('keyboard focus stays inside the open preview', async ({ page }) => {
-    await openPreview(page, 'cards');
-    for (let i = 0; i < 9; i++) {
-      await page.keyboard.press(i % 3 === 2 ? 'Shift+Tab' : 'Tab');
-      expect(await page.evaluate(() => !!document.activeElement?.closest('#mode-preview'))).toBe(true);
-    }
-  });
-
-  test('with reduced motion it opens and closes at once', async ({ page }) => {
-    await page.emulateMedia({ reducedMotion: 'reduce' });
-    await openPreview(page, 'video');
-    expect(await page.evaluate(() => document.querySelector('[data-mode-preview]')!.getAnimations({ subtree: true }).length)).toBe(0);
-    await page.keyboard.press('Escape');
-    expect(await dialog(page).evaluate((el) => (el as HTMLDialogElement).open)).toBe(false);
-  });
-
-  test('a swipe down closes it on touch screens, a short one does not', async ({ page }, testInfo) => {
-    test.skip(!testInfo.project.use.hasTouch, 'a touch-screen gesture');
-    await openPreview(page, 'video');
-    // Playwright builds the touch points in each engine's own way (WebKit has no Touch constructor, so it uses
-    // document.createTouch there), so the same swipe runs in Chromium and Safari's engine.
-    const panel = page.locator('[data-mode-preview-panel]');
-    const swipe = async (distance: number) => {
-      const start = { identifier: 1, clientX: 200, clientY: 300 };
-      await panel.dispatchEvent('touchstart', { touches: [start], targetTouches: [start], changedTouches: [start] });
-      await panel.dispatchEvent('touchend', { touches: [], targetTouches: [], changedTouches: [{ ...start, clientY: 300 + distance }] });
-    };
-    await swipe(40);
-    await page.waitForTimeout(500);
-    await expect(dialog(page)).toBeVisible();
-    await swipe(120);
-    await expect(dialog(page)).toBeHidden();
-    await expect(page.getByRole('button', { name: 'preview video' })).toBeFocused();
-  });
-
-  test('with a mouse, the card in the middle grows a little under the pointer, and side cards stay as they are', async ({
-    page,
-  }, testInfo) => {
-    test.skip(!isDesktopOfEachEngine(testInfo), 'hover needs a mouse');
-    await page.goto('/');
-    const carousel = page.locator('#ways-to-study');
-    await carousel.scrollIntoViewIfNeeded();
-    // The retained Linux WebKit trace for run 44834721132 showed hover actionability taking 13 seconds, long enough
-    // for the six-second autoplay to move Video aside before the pointer arrived. Pause through the real visitor
-    // control so this test continues to check the active vial's hover treatment rather than timing the slideshow.
-    await carousel.getByRole('button', { name: 'pause the slideshow' }).click();
-    await expect(carousel).toHaveAttribute('data-paused', '');
-    const card = page.locator('#mode-video');
-    await expect(card).toHaveAttribute('data-active', '');
-    expect(await card.evaluate((el) => getComputedStyle(el).scale)).toBe('none');
-    await card.hover();
-    await expect.poll(() => card.evaluate((el) => getComputedStyle(el).scale)).toBe('1.04');
-    const side = page.locator('#mode-cards');
-    await side.hover();
-    await expect.poll(() => side.evaluate((el) => getComputedStyle(el).scale)).toBe('none');
   });
 });
 

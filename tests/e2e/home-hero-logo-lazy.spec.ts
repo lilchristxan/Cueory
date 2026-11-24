@@ -29,8 +29,13 @@ test('/: the hero logo row downloads only the logo it shows', async ({ page }) =
       .map((img) => {
         const htmlImg = img as HTMLImageElement;
         const currentSrc = htmlImg.currentSrc;
-        const resourceLoaded = currentSrc !== '' && resourceUrls.has(currentSrc);
+        // Home v3: the vial platter's labels use the light 480 px logo, so the network can't tell whose request it was;
+        // for that file only, the hidden copy must still be unstarted (complete is false until its own load runs).
+        const sharedElsewhere = [...document.images].some((other) => other !== img && other.getClientRects().length > 0 && other.currentSrc === currentSrc);
+        const resourceLoaded = currentSrc !== '' && resourceUrls.has(currentSrc) && !sharedElsewhere;
         return {
+          sharedElsewhere,
+          complete: htmlImg.complete,
           src: img.getAttribute('src'),
           currentSrc,
           loading: htmlImg.loading,
@@ -42,7 +47,7 @@ test('/: the hero logo row downloads only the logo it shows', async ({ page }) =
   // All sizes show a full wordmark and hide the unused palette.
   expect(hiddenFull.length).toBeGreaterThan(0);
   for (const img of hiddenFull) {
-    const started = isDownloadStarted(img, requestedUrls);
+    const started = isDownloadStarted(img, img.sharedElsewhere ? new Set() : requestedUrls) || img.complete;
     expect({ src: img.src, loading: img.loading, started }, String(img.src)).toEqual({
       src: img.src,
       loading: 'lazy',

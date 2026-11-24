@@ -198,6 +198,8 @@ test.describe('once-only promo panel (D-59)', () => {
   });
 
   test('waits while the ☰ panel is open, then appears once it closes', async ({ page }) => {
+    // Home v3: from the desktop width the home header shows the menu bar instead of the ☰ button, so use the phone width where the button is.
+    await page.setViewportSize({ width: 390, height: 844 });
     await page.goto('/');
     await page.getByRole('button', { name: 'open site menu', exact: true }).click();
     await expect(page.getByTestId('site-menu')).toBeVisible();
@@ -212,6 +214,8 @@ test.describe('once-only promo panel (D-59)', () => {
   });
 
   test('waits until the ☰ panel has finished closing, so its focus never takes over', async ({ page }) => {
+    // Home v3: from the desktop width the home header shows the menu bar instead of the ☰ button, so use the phone width where the button is.
+    await page.setViewportSize({ width: 390, height: 844 });
     await page.goto('/');
     await page.getByRole('button', { name: 'open site menu', exact: true }).click();
     await wait(page, 7_000);

@@ -54,14 +54,13 @@ describe('home lower sections', () => {
     expect(plain(games)).toMatch(/hello cards flip a card,\s*start a conversation\./);
     expect(plain(games)).toContain('sudoku a calm numbers break.');
     expect(signup).toContain('id="signup"');
-    // The signup landmark is named by its "launch updates" eyebrow and its heading together.
-    expect(signup).toMatch(/<section\b[^>]*\baria-labelledby="signup-eyebrow signup-heading"/);
-    expect(plain(signup.match(/<p\b[^>]*\bid="signup-eyebrow"[^>]*>[\s\S]*?<\/p>/)?.[0] ?? '')).toBe('launch updates');
+    // Home v3: the coming-soon panel (keeps the #signup anchor) is named by its heading.
+    expect(signup).toMatch(/<section\b[^>]*\baria-labelledby="soon-heading"/);
     expect(plain(signup)).toContain('Mental Health I and Med Math are next. Get one email when they open.');
   });
 
   it('keeps surviving lower-section style values in tokens, not inline styles or raw colors', () => {
-    for (const file of ['DailyGamesSection.astro', 'SignupForm.astro']) {
+    for (const file of ['DailyGamesSection.astro', 'home-v3/ComingSoon.astro']) {
       const source = readFileSync(new URL('../../src/components/' + file, import.meta.url), 'utf8');
       expect(source).not.toMatch(/\bstyle\s*=/i);
       expect(source).not.toMatch(/#[\da-f]{3,8}\b/i);

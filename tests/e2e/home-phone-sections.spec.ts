@@ -1,11 +1,9 @@
 import { expect, test } from '@playwright/test';
-import { studyModes } from '../../src/config/modes';
 import { markPanelsSeen } from './clock';
 import { sizeOf } from './projects';
 
 /*
-  Phone parity for the home page below the hero: the vial shelf shows about five vials with arrows at the sides and a
-  "1 of 11" counter instead of dots, the games carousel keeps the desktop card with a clear peek of the next card, and
+  Phone parity for the home page below the hero: the games carousel keeps the desktop card with a clear peek of the next card, and
   the sections sit about 64 px apart. Phone-size only: the desktop layout is covered by the other home specs.
 */
 test.describe('home below the hero on a phone', () => {
@@ -13,44 +11,6 @@ test.describe('home below the hero on a phone', () => {
     test.skip(sizeOf(testInfo) !== 'phone', 'phone layout only');
     await markPanelsSeen(page);
     await page.goto('/');
-  });
-
-  test('vial shelf: about five vials, 44 px arrows at the sides, dots and a readable caption', async ({ page }) => {
-    const section = page.locator('#ways-to-study');
-    await section.scrollIntoViewIfNeeded();
-    await expect(section).toHaveAttribute('data-ring', '');
-    await expect(section.locator('[data-modes-controls]')).not.toHaveClass(/invisible/);
-
-    const shown = section.locator('[data-mode-card]:not([data-far])');
-    await expect(shown).toHaveCount(5);
-
-    // The front vial's name is readable: at least 10 px (it was a few vials too big before, now smaller but legible).
-    const nameSize = await section.locator('[data-mode-card][data-active] .vial-name').evaluate((el) => parseFloat(getComputedStyle(el).fontSize));
-    expect(nameSize).toBeGreaterThanOrEqual(10);
-
-    for (const label of ['previous study mode', 'next study mode']) {
-      const arrow = section.locator('[data-modes-controls]').getByRole('button', { name: label });
-      const box = (await arrow.boundingBox())!;
-      expect(box.width).toBeGreaterThanOrEqual(44);
-      expect(box.height).toBeGreaterThanOrEqual(44);
-      // Beside the vials, not under them: inside the window and above the shelf's pedestal.
-      expect(box.x).toBeGreaterThanOrEqual(0);
-      expect(box.x + box.width).toBeLessThanOrEqual(390);
-    }
-
-    // The dots show the position (they are a picture, not buttons); one readable line under them names the front vial.
-    await expect(section.locator('.modes-dots')).toBeVisible();
-    const caption = section.locator('[data-modes-caption]');
-    // The ring slides on its own every six seconds, so take it over first (Home on the card group is a keyboard use):
-    // "video then cards" only holds once autoplay is off and the video vial is in front.
-    await section.getByRole('group', { name: 'study mode cards' }).press('Home');
-    await expect(section).toHaveAttribute('data-autoplay', 'off');
-    await expect(caption).toHaveText(`${studyModes[0]!.name}, ${studyModes[0]!.time} min`);
-    await section.getByRole('button', { name: 'next study mode' }).first().click();
-    await expect(caption).toHaveText(`${studyModes[1]!.name}, ${studyModes[1]!.time} min`);
-    expect(await caption.evaluate((el) => parseFloat(getComputedStyle(el).fontSize))).toBeGreaterThanOrEqual(16);
-
-    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
   });
 
   test('games carousel: the desktop card, arrows beside "play today\'s" and a clear peek of the next card', async ({ page }) => {
@@ -106,9 +66,9 @@ test.describe('home below the hero on a phone', () => {
       };
       const top = (selector: string) => document.querySelector(selector)!.getBoundingClientRect().top + scrollY;
       const playLink = bottom('#daily-games', '[data-testid="games-link"]');
-      const shelfHeading = top('#modes-heading');
-      const pause = bottom('#ways-to-study', '[data-modes-pause]');
-      const signupCard = top('.signup-card');
+      const shelfHeading = top('#platter-heading');
+      const pause = bottom('#ways-to-study', '[data-platter-stage]');
+      const signupCard = top('.soon-card');
       return { shelf: shelfHeading - playLink, signup: signupCard - pause };
     });
     expect(gaps.shelf).toBeLessThanOrEqual(96);

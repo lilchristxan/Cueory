@@ -116,15 +116,17 @@ for (const size of [
       await expect(page.locator('.hero-accent')).toHaveCSS('animation-name', 'none');
     });
 
-    test('keeps the explore dock immediately after the illustrated stage', async ({ page }) => {
+    test('keeps the explore dock overlapping the bottom of the illustrated stage by the designed amount (Home v3)', async ({ page }) => {
       await page.goto('/');
-      const gap = await page.evaluate(() => {
+      const { gap, overlap } = await page.evaluate(() => {
         const stage = document.querySelector('.stage-scene')!.getBoundingClientRect();
+        const wrap = document.querySelector('.explore-dock-wrap') as HTMLElement;
         const dock = document.querySelector('nav[aria-labelledby="explore-heading"]')!.getBoundingClientRect();
-        return dock.top - stage.bottom;
+        return { gap: dock.top - stage.bottom, overlap: parseFloat(getComputedStyle(wrap).marginBlockStart) };
       });
-      expect(gap).toBeGreaterThanOrEqual(-8);
-      expect(gap).toBeLessThanOrEqual(2);
+      // The board overlaps the dock onto the stage (--explore-overlap, a negative top margin); never a gap, never off by more than 2 px.
+      expect(overlap).toBeLessThan(0);
+      expect(Math.abs(gap - overlap)).toBeLessThanOrEqual(2);
     });
 
     test('has accessible sections and comfortable hero-link targets', async ({ page }) => {
@@ -178,12 +180,12 @@ test.describe('home without JavaScript', () => {
       await expect(page.getByRole('heading', { level: 2, name: "nurse's station games" })).toBeVisible();
     await expect(page.getByTestId('games-stage')).toBeVisible();
     await expect(page.getByRole('heading', { level: 2, name: 'coming soon' })).toBeVisible();
-    // The landmark names the signup, not only its "coming soon" heading.
-    await expect(page.locator('#signup')).toHaveAccessibleName('launch updates coming soon');
-    await expect(page.getByRole('region', { name: 'launch updates coming soon', exact: true })).toBeVisible();
+    // Home v3: the coming-soon panel (anchor #signup) is a region named by its heading.
+    await expect(page.locator('#signup')).toHaveAccessibleName('coming soon');
+    await expect(page.getByRole('region', { name: 'coming soon', exact: true })).toBeVisible();
     if (signupState(newsletter.formAction, newsletter.landingUrl) === 'form') {
       // This is intentionally not submitted: the browser must retain a useful, native form without a Kit script.
-      const form = page.getByTestId('signup-form');
+      const form = page.getByTestId('soon-form');
       const email = form.getByLabel('email address');
       const submit = form.getByRole('button', { name: 'join the list' });
       await expect(form).toBeVisible();

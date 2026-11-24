@@ -2924,11 +2924,19 @@ html:has(dialog.mode-preview[open]) {
       filter 250ms ease;
   }
 
-  .platter-vial:hover,
   .platter-vial:focus-visible {
     color: var(--platter-ink);
     translate: 0 calc(-8 * var(--platter-px));
     filter: drop-shadow(0 0 calc(14 * var(--platter-px)) var(--platter-glow));
+  }
+
+  /* A tap leaves :hover stuck on a touch screen, so the mouse lift only applies where there is a real hover (touch-only spec). */
+  @media (hover: hover) and (pointer: fine) {
+    .platter-vial:hover {
+      color: var(--platter-ink);
+      translate: 0 calc(-8 * var(--platter-px));
+      filter: drop-shadow(0 0 calc(14 * var(--platter-px)) var(--platter-glow));
+    }
   }
 
   .platter-vial:focus-visible {
