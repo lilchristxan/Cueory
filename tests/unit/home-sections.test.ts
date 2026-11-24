@@ -1,7 +1,6 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { draftsAllowed } from '../../src/islands/anatomylab';
-import { draftBuildEnv, heroStartHref, lessonEntryHref } from '../../src/lessons/draftgate';
+import { heroStartHref, lessonEntryHref } from '../../src/lessons/draftgate';
 import { accountLaunch, accountsOpen, showsHeroJoin } from '../../src/config/site';
 
 // Verify the built visitor-facing HTML after npm run build, not only Astro source text.
@@ -72,22 +71,14 @@ describe('home lower sections', () => {
     const heading = hero.match(/<h1\b[^>]*>([\s\S]*?)<\/h1>/)?.[1] ?? '';
     expect(plain(heading)).toBe('nursing school made simpler.');
     expect(plain(hero)).toContain('by nursing students, for nursing students');
-    // The "start studying" call to action follows the draft gate (heroStartHref): a copper link to the open lesson where
-    // drafts may show, and in the live build a disabled button tagged "coming soon", never a link that leads nowhere.
-    const open = draftsAllowed(draftBuildEnv(process.env));
-    const startTag = hero.match(/<(a|button)\b(?=[^>]*data-testid="hero-start")[^>]*>([\s\S]*?)<\/\1>/);
-    expect(plain(startTag?.[2] ?? '')).toBe('start studying for free →');
-    if (open) {
-      expect(startTag?.[1]).toBe('a');
-      expect(startTag?.[0]).toContain('href="' + lessonEntryHref(process.env) + '"');
-      expect(startTag?.[0]).toContain('copper-button');
-      expect(startTag?.[0]).not.toContain('aria-disabled');
-    } else {
-      expect(startTag?.[1]).toBe('button');
-      expect(startTag?.[0]).toContain('aria-disabled="true"');
-      expect(startTag?.[0]).not.toContain('href=');
-      expect(hero).toContain('coming soon');
-    }
+    // The one "start studying" call to action is always a copper link (heroStartHref): the open lesson where drafts may
+    // show, the lesson library on the live build. No "coming soon" pill and no second link beside it.
+    const startTag = hero.match(/<a\b(?=[^>]*data-testid="hero-start")[^>]*>([\s\S]*?)<\/a>/);
+    expect(plain(startTag?.[1] ?? '')).toBe('start studying for free →');
+    expect(startTag?.[0]).toContain('href="' + lessonEntryHref(process.env) + '"');
+    expect(startTag?.[0]).toContain('copper-button');
+    expect(hero).not.toContain('coming soon');
+    expect(hero).not.toContain('data-testid="hero-play-games"');
     // The old quiet launch-list link went away with the old hero (copy deck, "hero quiet link"); the form is lower down.
     expect(hero).not.toContain('data-testid="hero-join"');
     expect(accountLaunch(true)).toMatchObject({ accountHref: '/signup', promoJoinLabel: 'create your free account' });
@@ -121,24 +112,20 @@ describe('home lower sections', () => {
     expect(positions).toEqual([...positions].sort((a, b) => a - b));
     expect(source).toContain('prefers-reduced-motion: no-preference');
     expect(source).toContain('stage-orbit 7s linear infinite');
-    expect(source).toContain('data-testid="hero-play-games"');
-    expect(source).toContain('href="/play"');
+    expect(source).not.toContain('hero-play-games');
   });
 
-  it('the hero start button follows the draft gate: closed live, a link to the open lesson elsewhere', () => {
-    // The live build (a Workers Build of main) holds the sample lesson back, so there is no link to show.
-    expect(heroStartHref({ WORKERS_CI: '1', WORKERS_CI_BRANCH: 'main' })).toBeNull();
-    expect(heroStartHref({ WORKERS_CI: '1', WORKERS_CI_BRANCH: 'refs/heads/main' })).toBeNull();
-    expect(heroStartHref({ WORKERS_CI: '1' })).toBeNull();
-    expect(heroStartHref({})).toBeNull();
-    // Staging, previews and the browser-test build show the sample lesson, and the button links to it.
+  it('the hero start button always links: the open lesson where drafts show, the lesson library on the live build', () => {
+    expect(heroStartHref({ WORKERS_CI: '1', WORKERS_CI_BRANCH: 'main' })).toBe('/learn');
+    expect(heroStartHref({ WORKERS_CI: '1', WORKERS_CI_BRANCH: 'refs/heads/main' })).toBe('/learn');
+    expect(heroStartHref({ WORKERS_CI: '1' })).toBe('/learn');
+    expect(heroStartHref({})).toBe('/learn');
     expect(heroStartHref({ WORKERS_CI: '1', WORKERS_CI_BRANCH: 'staging' })).toBe('/learn/study-skills');
     expect(heroStartHref({ WORKERS_CI: '1', WORKERS_CI_BRANCH: 'task-p5/home-hero' })).toBe('/learn/study-skills');
     expect(heroStartHref({ CUEORY_ANATOMY_DRAFTS: '1' })).toBe('/learn/study-skills');
-    // The hero asks the guard; it never decides on its own.
     const source = readFileSync(new URL('../../src/components/HomeHero.astro', import.meta.url), 'utf8');
     expect(source).toContain('heroStartHref()');
-    expect(source).toMatch(/startHref \? \(/);
+    expect(source).not.toContain('hero-soon');
   });
 
   it('shows the hero join link only when it leads to a real next step', () => {

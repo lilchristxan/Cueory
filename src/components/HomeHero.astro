@@ -23,15 +23,7 @@ const points = [
       nursing school made <span class="stage-word"><span class="hero-accent">simpler.</span><svg class="stage-underline" aria-hidden="true" viewBox="0 0 220 18" preserveAspectRatio="none"><path d="M4 13.5C58 4.5 148 3.5 216 11.5" fill="none" stroke="currentColor" stroke-width="3.6" stroke-linecap="round"/></svg></span>
     </h1>
     <div class="stage-actions">
-      {startHref ? (
-        <a href={startHref} class="copper-button" data-testid="hero-start">start studying for free <span aria-hidden="true">→</span></a>
-      ) : (
-        <>
-          <button type="button" aria-disabled="true" aria-describedby="hero-start-soon" class="copper-button" data-testid="hero-start">start studying for free <span aria-hidden="true">→</span></button>
-          <span id="hero-start-soon" class="hero-soon">coming soon</span>
-          <a href="/play" class="hero-secondary-link" data-testid="hero-play-games">play today's games <span aria-hidden="true">→</span></a>
-        </>
-      )}
+      <a href={startHref} class="copper-button" data-testid="hero-start">start studying for free <span aria-hidden="true">→</span></a>
     </div>
     <ul class="stage-points" aria-label="what you get">
       {points.map(({title, icon}) => <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d={icon} fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round"/></svg>{title}</li>)}

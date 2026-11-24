@@ -349,17 +349,22 @@
   --explore-overlap: -5.75rem;      /* the explore dock overlaps the bottom of the hero stage (board: 92 px at 1440) */
   --explore-landscape-gap: 0.5rem;  /* phone landscape: the dock sits this far under the hero's points (which carry 28 px of their own: about 36 px in all, board 35), no overlap */
   --explore-landscape-width: 40.875rem; /* phone landscape: the dock is at most 654 px wide (board) */
-  --explore-landscape-heading-width: 8.5rem; /* holds "what you need." (132 px at 20 px) on one line */
-  --explore-landscape-tile-text: 0.75rem; /* board: 12 px tile labels on phone landscape */
+  --explore-landscape-heading-width: 8.125rem; /* board: 130 px; "what you need." in Bodoni at 18 px fits on one line */
   --explore-dock-width: 51.625rem;  /* board: 826 px at 1440 (780 + padding + border) */
-  --explore-dock-gap: 1rem;
-  --explore-dock-padding: 1.25rem;
+  --explore-dock-gap: 1.125rem;     /* board: 18 px between heading and tiles (phone 12, landscape 12) */
+  --explore-dock-padding: 1rem 1.25rem 1rem 1.5rem; /* board: 16 20 16 24 (phone 16 all round, landscape 12 14 12 18) */
   --explore-dock-tile-gap: 0.625rem;
-  --explore-dock-title: 1.25rem;
-  --explore-dock-heading-width: 9.5rem;
+  --explore-dock-title: 1.25rem;     /* board: 20 px (phone 26, landscape 21) */
+  --explore-tile-text: 0.75rem;      /* board: 12 px labels (phone 13, landscape 11) */
+  --explore-tile-padding: calc(var(--spacing) * 3) calc(var(--spacing) * 2); /* board: 12 8 (phone 10 4, landscape 8 2) */
+  --explore-tile-inner-gap: calc(var(--spacing) * 2); /* icon to label: board 8 (landscape 6) */
+  --explore-wrap-gutter: var(--spacing-gutter); /* the dock's side margin: the page gutter (phone board: 16) */
+  --explore-dock-heading-width: 8.875rem; /* board: heading column 142 px at 1440 (tiles 116 wide) */
+  --explore-caps-size: 0.75rem;     /* board: EXPLORE at 12 px, 6 px above the title */
+  --explore-caps-gap: 0.375rem;
   --explore-tile-basis-min: 5.75rem; /* a phone tile never gets narrower than this; the row wraps instead */
-  --explore-tile-min: 5.125rem;     /* board: 82 px */
-  --explore-icon: 1.5rem;
+  --explore-tile-min: 6.75rem;      /* board: 108 px (phone 108, landscape 88) */
+  --explore-icon: 1.25rem;           /* board: 20 px icons (phone 28, landscape 24) */
   --radius-panel: 2.125rem;     /* the home explore panel's corners (board: 34 px) */
   --radius-card-lg: 1.75rem;    /* the hero's support card corners */
   --icon-size-mug: 2.5rem;      /* the Ko-fi cup mark, width */
@@ -788,6 +793,10 @@
   --silk-wash-rgb: 246 211 174; /* Copper Glow */
   --silk-wash-alpha: 0.75;
   --silk-fold-layer: 1.4; /* how strongly the fold mask shows the peach layer: the creases and glints (P3c) */
+  /* Home ground (boards, 24 Nov): from the hero down the home page is one even, slightly grey beige, left to right (board #d8cebd to #e9e2d7), with no peach bands between sections. Palette mixes only. */
+  --home-ground-a: color-mix(in srgb, var(--color-surface) 86%, var(--color-highlight)); /* Linen + a little Mocha */
+  --home-ground-b: color-mix(in srgb, var(--color-surface) 70%, var(--color-page));  /* Linen + Ivory */
+  --home-ground: linear-gradient(90deg, var(--home-ground-a), var(--home-ground-b));
   --silk-fold-height: 47.5rem; /* one tile of the boards' fold mask (public/design/silk-fold-mask.svg, 1440 x 760) */
   /* Frosted panels: Ivory, three-quarters opaque. A plain rgb() so every browser gets the right panel color. */
   --veil-rgb: 249 245 239;      /* Ivory */
@@ -913,6 +922,9 @@
     --silk-peach-rgb: 58 45 36;    /* Walnut: Evening stays quiet */
     --silk-peach-alpha: 0.7;
     --silk-fold-layer: 0.6; /* Evening keeps the creases as quiet as before */
+    --home-ground-a: var(--color-page); /* Evening: one even Charcoal (the board is a shade darker than the palette goes) */
+    --home-ground-b: var(--color-page);
+    --home-ground: linear-gradient(90deg, var(--home-ground-a), var(--home-ground-b));
     --silk-wash-rgb: 58 45 36;    /* Walnut */
     --silk-wash-alpha: 0;         /* no wash in Evening */
     --veil-rgb: 58 45 36;         /* Walnut */
@@ -1040,6 +1052,9 @@
   --silk-peach-rgb: 58 45 36;    /* Walnut: Evening stays quiet */
   --silk-peach-alpha: 0.7;
   --silk-fold-layer: 0.6; /* Evening keeps the creases as quiet as before */
+  --home-ground-a: var(--color-page); /* Evening: one even Charcoal (the board is a shade darker than the palette goes) */
+  --home-ground-b: var(--color-page);
+  --home-ground: linear-gradient(90deg, var(--home-ground-a), var(--home-ground-b));
   --silk-wash-rgb: 58 45 36;    /* Walnut */
   --silk-wash-alpha: 0;         /* no wash in Evening */
   --veil-rgb: 58 45 36;         /* Walnut */
@@ -1183,6 +1198,7 @@
   --stage-bottom-gap: 2.6875rem;   /* 43 + 16 = 59 px from the dock to the next heading (board 59); the next scene fades in over this strip, so no text sits in it */
 }
 @media (width < 40rem) {
+  :root { --explore-dock-gap: 0.75rem; --explore-dock-padding: 1rem; --explore-dock-title: 1.625rem; --explore-tile-text: 0.8125rem; --explore-tile-padding: calc(var(--spacing) * 2.5) var(--spacing); --explore-dock-tile-gap: 0.5rem; --explore-wrap-gutter: 1rem; --explore-icon: 1.75rem; }
   :root { --stage-bottom-gap: 3rem; --stage-next-top-pad: 1rem; } /* board: 64 px (this 48 px strip plus the next section's 16 px) */
 }
 .scene-hero {
@@ -1191,6 +1207,10 @@
 }
 @media (orientation: landscape) and (40rem <= width < 60rem) and (height < 32rem) {
   .scene-hero { --stage-dock-overlap: 0px; }
+}
+
+@media (orientation: landscape) and (max-height: 32em) {
+  :root { --explore-dock-gap: 0.75rem; --explore-dock-padding: 0.75rem 0.875rem 0.75rem 1.125rem; --explore-dock-title: 1.125rem; --explore-tile-text: 0.6875rem; --explore-tile-padding: calc(var(--spacing) * 2) calc(var(--spacing) * .5); --explore-tile-inner-gap: calc(var(--spacing) * 1.5); --explore-icon: 1.5rem; --explore-tile-min: 5.5rem; --explore-dock-tile-gap: 0.4375rem; }
 }
 
 /* Approved Home v3 camera crop and layout, from the 1440 and 390 boards. */
@@ -1214,16 +1234,16 @@
   --stage-tip-name: 1.0625rem;
   --stage-tip-leading: 1.12;
   --stage-tip-padding: .625rem 1.125rem .625rem .875rem;
-  --stage-action-margin: clamp(2.375rem, 5.75vw, 5.25rem) auto 2.375rem;
+  --stage-action-margin: clamp(2.375rem, calc(5.75vw + .1875rem), 5.4375rem) auto 2.375rem;
   --stage-width: min(100%, 60rem);
-  --stage-margin: 2.25rem auto 0;
+  --stage-margin: 2.0625rem auto 0;
   --stage-height: clamp(20rem, 36vw, 26.25rem);
   --stage-photo-top: max(-22.9vw, -20.625rem);
   --stage-photo-width: min(100vw, 90rem);
   --stage-photo-mask: linear-gradient(transparent, currentColor 14%, currentColor 82%, transparent);
   --stage-halo-top: min(6.5vw, 5.875rem);
   --stage-halo-width: min(42vw, 37.75rem);
-  --stage-tip-top: 15%;
+  --stage-tip-top: calc(15% - .375rem);
   --stage-tip-bottom: auto;
   --stage-tip-left: 4%;
   --stage-tip-offset: none;
@@ -1254,7 +1274,7 @@
     --stage-halo-top: 10.75rem;  /* centred on the ring painted in the photo, so the travelling light follows it */
     --stage-halo-width: 20rem;
     --stage-tip-top: auto;
-    --stage-tip-bottom: calc(var(--stage-dock-overlap) + 2.1875rem);  /* above the dock, as on the board */
+    --stage-tip-bottom: calc(var(--stage-dock-overlap) + 1.25rem);  /* above the dock, as on the board (pill 15 px lower than before) */
     --stage-tip-left: 50%;
     --stage-tip-offset: translateX(-50%);
   }
@@ -1271,8 +1291,8 @@
     --stage-heading-gap: 1.25rem;
     --stage-eyebrow-size: .875rem;
     --stage-eyebrow-rule: 2.25rem;
-    --stage-action-margin: 3.9375rem auto 0;
-    --stage-margin: -10.25rem auto 0;
+    --stage-action-margin: 4.125rem auto 0;
+    --stage-margin: -10.4375rem auto 0;
     --stage-points-margin: 1.25rem auto 1.75rem;
     --stage-width: min(100%, 36rem);
     --stage-height: 27.9rem;
@@ -1280,7 +1300,11 @@
     --stage-photo-top: -.5rem;
     --stage-halo-top: 16.2rem;
     --stage-halo-width: 22.625rem;
-    --stage-tip-top: 14.75rem;
+    --stage-tip-top: 14.875rem;
+    --stage-tip-small: .5625rem;
+    --stage-tip-name: .875rem;
+    --stage-tip-icon: 1.375rem;
+    --stage-tip-padding: .375rem .75rem .375rem .625rem;
     --stage-tip-left: max(-10%, calc((100% - 100vw) / 2 + var(--spacing-gutter)));
   }
 
