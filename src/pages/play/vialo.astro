@@ -3,13 +3,13 @@ import Layout from '../../layouts/Layout.astro';
 import GamePage from '../../components/GamePage.astro';
 import VialoTitle from '../../components/VialoTitle.astro';
 import VialoGame from '../../islands/VialoGame';
-import { dailyGames } from '../../config/games';
+import { dailyGames, gamePagesBareHeader } from '../../config/games';
 import { pilloSamples } from '../../config/gamesamples';
 
 const game = dailyGames.find((item) => item.id === 'vialo')!;
 const samples = await pilloSamples();
 ---
-<Layout title={game.name} description="a daily vial of words: guess the five-letter word in six tries. each guess marks every letter." noindex={true} socialImage="/share/games-scene.png">
+<Layout title={game.name} description="a daily vial of words: guess the five-letter word in six tries. each guess marks every letter." noindex={true} socialImage="/share/games-scene.png" bareHeader={gamePagesBareHeader}>
 <GamePage game={game}>
   <h1 slot="title" id="vialo-heading" class="display mt-4 text-center text-title wrap-anywhere sm:text-title-lg"><VialoTitle name={game.name} /></h1>
   <section class="mt-6" aria-labelledby="vialo-heading">

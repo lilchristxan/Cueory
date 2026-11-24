@@ -1,9 +1,8 @@
 import { expect, test } from '@playwright/test';
 import { markPanelsSeen } from './clock';
 
-// Phone parity for the games hub and game pages: the flag sits in the header row, the legend keeps swatch and label on
-// one line, and a game that is not open yet is one short card. (The first-visit rules card is unchanged here; the
-// Games v2 frame replaces it with the "?" steps.)
+// Phone parity for the games hub and game pages: the board comes before the rules, the flag sits in the header row,
+// the legend keeps swatch and label on one line, and a game that is not open yet is one short card.
 
 test.beforeEach(async ({ page }) => {
   await page.clock.setFixedTime(new Date('2026-11-01T15:00:00'));
@@ -13,10 +12,24 @@ test.beforeEach(async ({ page }) => {
   });
 });
 
+for (const [path, name] of [['/play/vialo', 'vialo'], ['/play/sudoku', 'sudoku'], ['/play/piccline', 'piccline']] as const) {
+  test(`${name}: on a phone there is no rules card in front of the board, and the board is in the first screen`, async ({ page }, info) => {
+    test.skip(info.project.name.includes('desktop') || info.project.name.includes('tablet'), 'phone layout');
+    await page.goto(path);
+    await expect(page.getByTestId('game-help-first')).toHaveCount(0);
+    const help = page.getByRole('button', { name: `how to play ${name}` });
+    await expect(help).toBeVisible();
+    const box = await help.boundingBox();
+    expect(box!.height).toBeGreaterThanOrEqual(44);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  });
+}
+
 test('vialo: the help legend keeps each swatch and its label on one line', async ({ page }, info) => {
   test.skip(info.project.name.includes('desktop') || info.project.name.includes('tablet'), 'phone layout');
   await page.goto('/play/vialo');
-  const rows = page.getByTestId('game-help-first').getByTestId('vialo-legend').locator('li');
+  await page.getByRole('button', { name: 'how to play vialo' }).click();
+  const rows = page.getByTestId('game-help').getByTestId('vialo-legend').locator('li');
   await expect(rows).toHaveCount(3);
   for (let i = 0; i < 3; i += 1) {
     const swatch = await rows.nth(i).locator('.vialo-pill').boundingBox();
@@ -50,10 +63,9 @@ test('game pages: the flag button sits in the frame header with "games" and the 
     expect(flagBox.x).toBeGreaterThanOrEqual(sidebar.x);
     expect(flagBox.x + flagBox.width).toBeLessThanOrEqual(sidebar.x + sidebar.width);
   } else {
-    // Phones and tablets: one row, the flag between "games" and the logo, nothing overlapping.
+    // Phones and tablets (Games v2 frame): one row, "games", the logo, then the flag at the right, nothing overlapping.
     expect(Math.abs(centre(flagBox) - centre(backBox))).toBeLessThan(12);
-    expect(flagBox.x).toBeGreaterThanOrEqual(backBox.x + backBox.width - 1);
-    expect(logoBox.x).toBeGreaterThanOrEqual(flagBox.x + flagBox.width - 1);
+    expect(flagBox.x).toBeGreaterThanOrEqual(logoBox.x + logoBox.width - 1);
   }
 });
 
