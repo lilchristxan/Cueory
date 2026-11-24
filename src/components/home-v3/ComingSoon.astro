@@ -3,8 +3,10 @@
  * Home v3 "coming soon" section (docs/design/home-v3/, boards home-*): one frosted panel with the heading, one line
  * about what is next, the email field and the copper "join the list" button. Same Kit form as the rest of the site:
  * a plain HTML form that posts straight to Kit (no Kit script), with Kit's landing page link or "sign ups open soon."
- * as the fallbacks (signupState in src/config/site.ts). Wide screens put the words and the form on one row, phones
- * stack them, and phone landscape keeps one compact row (the board's 844 × 390 layout). Lowercase brand voice (D-47).
+ * as the fallbacks (signupState in src/config/site.ts). Wide screens and phone landscape put the words and the form on
+ * one row (the boards' flex rules: the words and the field share the free room, the button keeps its size), phones
+ * stack them. The privacy line the boards do not have sits as one small centred line under the panel, so the panel
+ * itself keeps the board's size. Lowercase brand voice (D-47).
  */
 import { kitFormAction, kitLandingUrl, newsletter, signupState } from '../../config/site';
 
@@ -13,7 +15,7 @@ const ready = state === 'form';
 const landingUrl = kitLandingUrl(newsletter.landingUrl);
 ---
 
-<section id="signup" class="soon-section scroll-mt-section px-gutter" aria-labelledby="soon-heading" data-coming-soon>
+<section id="signup" class="soon-section scroll-mt-section" aria-labelledby="soon-heading" data-coming-soon>
   <div class="soon-card veil" data-reveal-section>
     <div class="soon-copy">
       <h2 id="soon-heading" class="display soon-heading">coming soon</h2>
@@ -59,59 +61,73 @@ const landingUrl = kitLandingUrl(newsletter.landingUrl);
         <p class="soon-line" data-testid="soon-pending">sign ups open soon.</p>
       )
     }
-    {
-      ready ? (
-        <p id="soon-help" class="soon-help">
-          a few emails about new lessons and the launch. unsubscribe any time. emails are sent by {newsletter.provider};
-          see our <a href="/privacy">privacy page</a>.
-        </p>
-      ) : state === 'landing' ? (
-        <p class="soon-help">
-          you sign up on {newsletter.provider}'s page; see our <a href="/privacy">privacy page</a>.
-        </p>
-      ) : null
-    }
   </div>
+  {
+    ready ? (
+      <p id="soon-help" class="soon-help" data-testid="soon-help">
+        a few emails about new lessons and the launch. unsubscribe any time. emails are sent by {newsletter.provider}; see
+        our <a href="/privacy">privacy page</a>.
+      </p>
+    ) : state === 'landing' ? (
+      <p class="soon-help" data-testid="soon-help">
+        you sign up on {newsletter.provider}'s page; see our <a href="/privacy">privacy page</a>.
+      </p>
+    ) : null
+  }
 </section>
 
 <style>
-  /* The board's space above the panel (28 px on a phone, 40 px on a wider screen, 24 px sideways); the social row under it brings its own 40 px. */
+  /* The board's space above the panel (28 px on a phone, 40 px on a wider screen, 24 px on a phone turned sideways);
+     the social row under it brings its own. */
   .soon-section {
     margin-block: calc(var(--spacing) * 7) 0;
+    padding-inline: calc(var(--spacing) * 4);
   }
 
+  /* Phone: the words, the field and the button each take a full row. */
   .soon-card {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
     gap: calc(var(--spacing) * 3);
     max-inline-size: var(--soon-card-max-width);
     margin-inline: auto;
     padding: calc(var(--spacing) * 5.5);
     border-color: var(--cueory-glass-border);
-    border-radius: var(--cueory-result-card-radius);
+    border-radius: var(--soon-radius-phone);
+  }
+
+  .soon-copy {
+    flex: 1 1 100%;
+    min-inline-size: 0;
   }
 
   .soon-heading {
     font-size: var(--soon-heading-phone);
-    line-height: 1.2;
+    line-height: var(--soon-heading-line);
     overflow-wrap: break-word;
   }
 
   .soon-line {
     margin-block-start: calc(var(--spacing) * 1.5);
+    font-size: var(--soon-line-size);
+    line-height: var(--soon-line-height);
     color: var(--color-ink-soft);
   }
 
   .soon-form {
-    display: grid;
+    display: flex;
+    flex-wrap: wrap;
+    flex: 1 1 100%;
     gap: calc(var(--spacing) * 3);
     min-inline-size: 0;
   }
 
   .soon-input {
-    inline-size: 100%;
+    flex: 1 1 100%;
+    box-sizing: border-box;
     min-inline-size: 0;
-    min-block-size: calc(var(--spacing) * 12);
+    min-block-size: var(--soon-input-height);
     padding-inline: calc(var(--spacing) * 4);
     border: var(--border-soon-input) solid var(--color-control);
     border-radius: var(--radius-pill);
@@ -120,6 +136,7 @@ const landingUrl = kitLandingUrl(newsletter.landingUrl);
   }
 
   .soon-button {
+    flex: 1 1 100%;
     min-block-size: calc(var(--spacing) * 12);
     padding-block: 0;
     padding-inline: calc(var(--spacing) * 6);
@@ -130,48 +147,84 @@ const landingUrl = kitLandingUrl(newsletter.landingUrl);
     background-repeat: no-repeat;
   }
 
+  /* The privacy line: one small centred line under the panel (it wraps to a few lines on a phone). */
   .soon-help {
+    max-inline-size: var(--soon-card-max-width);
+    margin-inline: auto;
+    margin-block-start: calc(var(--spacing) * 1.5);
     color: var(--color-ink-soft);
-    font-size: var(--text-sm);
+    font-size: var(--soon-help-size);
+    line-height: var(--soon-help-line);
+    text-align: center;
   }
 
-  /* Tablet and desktop: the words, the field and the button on one row, the small print under them. */
+  .soon-help a {
+    color: var(--color-ink);
+  }
+
+  /* Tablet and desktop: the words, the field and the button on one row. The words (basis 300) and the form (basis 404.5:
+     a 254 px field, the 16 px gap and the 134.5 px button) share what is left, as the board's flex rules do. */
   @media (min-width: 40em) {
     .soon-section {
       margin-block-start: calc(var(--spacing) * 10);
+      padding-inline: var(--spacing-gutter);
     }
 
     .soon-card {
-      grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
-      align-items: center;
-      column-gap: calc(var(--spacing) * 5);
+      gap: calc(var(--spacing) * 4);
       padding: calc(var(--spacing) * 8);
+      border-radius: var(--soon-radius);
+    }
+
+    .soon-copy {
+      flex: 1 1 var(--soon-copy-basis);
     }
 
     .soon-form {
-      grid-template-columns: minmax(0, 1fr) auto;
-      align-items: center;
+      flex-wrap: nowrap;
+      flex: 1 1 var(--soon-form-basis);
+      gap: calc(var(--spacing) * 4);
+    }
+
+    .soon-input {
+      flex: 1 1 0;
+    }
+
+    .soon-button {
+      flex: 0 0 auto;
+      padding-inline: calc(var(--spacing) * 5.5);
     }
 
     .soon-heading {
       font-size: var(--soon-heading);
     }
-
-    .soon-help {
-      grid-column: 1 / -1;
-    }
   }
 
-  /* Phone landscape (844 × 390): the board's compact single row. */
+  /* Phone landscape (844 x 390): the board's compact single row. */
   @media (orientation: landscape) and (max-height: 32em) {
     .soon-section {
       margin-block-start: calc(var(--spacing) * 6);
     }
 
     .soon-card {
-      max-inline-size: var(--cueory-result-card-max-width);
+      flex-wrap: nowrap;
+      max-inline-size: var(--soon-card-max-width-landscape);
       padding: calc(var(--spacing) * 4.5) calc(var(--spacing) * 5);
-      column-gap: calc(var(--spacing) * 3);
+      gap: calc(var(--spacing) * 3);
+      border-radius: var(--soon-radius-landscape);
+    }
+
+    .soon-copy {
+      flex: 1 1 auto;
+    }
+
+    .soon-form {
+      flex: 0 0 auto;
+      gap: calc(var(--spacing) * 3);
+    }
+
+    .soon-help {
+      max-inline-size: var(--soon-card-max-width-landscape);
     }
 
     .soon-heading {
@@ -179,16 +232,20 @@ const landingUrl = kitLandingUrl(newsletter.landingUrl);
     }
 
     .soon-line {
+      font-size: var(--soon-line-size-landscape);
+      line-height: var(--soon-line-height-landscape);
+    }
+
+    .soon-input {
+      flex: 0 0 var(--soon-input-width-landscape);
+      min-block-size: var(--tap-min);
       font-size: var(--text-sm);
     }
 
-    .soon-input,
     .soon-button {
       min-block-size: var(--tap-min);
-    }
-
-    .soon-button {
       padding-inline: calc(var(--spacing) * 4.5);
+      font-size: var(--text-sm);
     }
   }
 </style>

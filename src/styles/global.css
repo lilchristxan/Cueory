@@ -2825,25 +2825,61 @@ html:has(dialog.mode-preview[open]) {
     --platter-scale: 1;
     --platter-head: 0;
     --platter-below: 0;
+    --platter-sideways: 0;        /* 1 on a phone turned sideways (the script then fits the track at the board's 60%) */
     --platter-tw: 1240;
     --platter-th: 440;
     --platter-arrow-x: 365;
     --platter-arrow: 56;
     --platter-dot: 10;
-    --platter-dot-gap: 18;
+    --platter-dot-scale: var(--platter-scale);   /* the dots shrink with the platter, so their 44-pitch rhythm stays the board's */
+    --platter-dot-gap: 34;        /* 44 px between dot middles (a 10 px dot plus 34) at full size */
     --platter-glide: 550ms cubic-bezier(0.2, 0.7, 0.2, 1);
     --platter-ink: var(--color-on-panel-button);  /* label words: dark in both palettes, because the label is cream in both */
     --platter-ring: var(--color-copper-deep);
     /* The board's space above and below the section (design pixels): 96 / 40 on desktop and tablet, 40 / 16 on a portrait phone, 40 / 10 on a phone turned sideways. */
     --platter-pad-top: 96;
-    --platter-pad-bottom: 40;
+    --platter-pad-bottom: 75;     /* the board's 840 px section: 40 px of padding under a 704 px box, the stage ending 75 px above the bottom */
+    /* The words above the stage (design pixels, from the boards): heading size and line, the space above it, the gap to
+       the line under it and from that line to the stage. */
+    --platter-heading-size: 66;
+    --platter-heading-lh: 1.15;
+    --platter-heading-top: 8;
+    --platter-sub-size: 18;
+    --platter-sub-gap: 22;
+    --platter-stage-gap: 20;
+    --platter-dots-y: 32;         /* the dots' middle, under the stage's top edge */
     padding-block: calc(var(--platter-pad-top) * var(--platter-px)) calc(var(--platter-pad-bottom) * var(--platter-px));
   }
 
+  .platter-intro {
+    padding-inline: var(--spacing-gutter);
+  }
+
+  .platter-heading {
+    margin-block: calc(var(--platter-heading-top) * var(--platter-px)) 0;
+    font-size: calc(var(--platter-heading-size) * var(--platter-px));
+    line-height: var(--platter-heading-lh);
+  }
+
+  .platter-sub {
+    margin-block: calc(var(--platter-sub-gap) * var(--platter-px)) calc(var(--platter-stage-gap) * var(--platter-px));
+    font-size: calc(var(--platter-sub-size) * var(--platter-px));
+    line-height: 1.5;
+  }
+
+  /* Phone landscape (844 x 390): the board's 40 / 10 padding, 42 px heading and 14 px line, the arrows a 44 px target. */
   @media (orientation: landscape) and (height < 40rem) {
     .platter {
       --platter-pad-top: 40;
       --platter-pad-bottom: 10;
+      --platter-heading-size: 42;
+      --platter-heading-top: 4;
+      --platter-sub-size: 14;
+      --platter-sub-gap: 15;
+      --platter-stage-gap: 6;
+      --platter-arrow: 44;
+      --platter-dots-y: 23;
+      --platter-sideways: 1;
     }
   }
 
@@ -3178,7 +3214,7 @@ html:has(dialog.mode-preview[open]) {
   /* Arrows (wide: level with the dots above the front vial) and dots (only a picture of where the platter stands). */
   .platter-arrow {
     position: absolute;
-    inset-block-start: 0;
+    inset-block-start: calc(1 * var(--platter-px)); /* the boards' two arrows stand 2 px above and 4 px below the stage's top: this is the middle */
     z-index: 40;
     inline-size: calc(var(--platter-arrow) * var(--platter-px));
     block-size: calc(var(--platter-arrow) * var(--platter-px));
@@ -3195,26 +3231,26 @@ html:has(dialog.mode-preview[open]) {
   .platter-dots {
     position: absolute;
     inset-inline-start: 50%;
-    inset-block-start: calc(var(--platter-arrow) / 2 * var(--platter-px));
+    inset-block-start: calc(var(--platter-dots-y) * var(--platter-px));
     display: flex;
     align-items: center;
-    gap: calc(var(--platter-dot-gap) * var(--platter-px));
+    gap: calc(var(--platter-dot-gap) * var(--platter-dot-scale) * var(--platter-px));
     transform: translate(-50%, -50%);
   }
 
   .platter-dot {
-    inline-size: calc(var(--platter-dot) * var(--platter-px));
-    block-size: calc(var(--platter-dot) * var(--platter-px));
+    inline-size: calc(var(--platter-dot) * var(--platter-dot-scale) * var(--platter-px));
+    block-size: calc(var(--platter-dot) * var(--platter-dot-scale) * var(--platter-px));
     border-radius: var(--radius-pill);
     background-color: color-mix(in srgb, var(--color-ink-soft) 45%, transparent);
     transition:
-      inline-size 200ms ease,
+      transform 200ms ease,
       background-color 200ms ease;
   }
 
-  /* The front vial's dot stretches into a pill: shape, not only color. */
+  /* The front vial's dot is darker and a quarter bigger (the board's scale 1.25): shape, not only color. */
   .platter-dot[data-on] {
-    inline-size: calc(var(--platter-dot) * 2.2 * var(--platter-px));
+    transform: scale(1.25);
     background-color: var(--color-ink);
   }
 
@@ -3226,9 +3262,18 @@ html:has(dialog.mode-preview[open]) {
       --platter-below: 50;
       --platter-arrow: 44;
       --platter-dot: 7;
+      --platter-dot-scale: 1;
       --platter-dot-gap: 15;
       --platter-pad-top: 40;
       --platter-pad-bottom: 16;
+      --platter-heading-size: 36;   /* the board's 38 px is Playfair; Bodoni Moda is wider, and 36 px keeps "multiple ways to study" on one line in 358 px */
+      --platter-heading-lh: 1.18;   /* two lines 85 px tall, as the board's */
+      --platter-sub-size: 16;
+      --platter-stage-gap: 6;
+    }
+
+    .platter-intro {
+      padding-inline: calc(16 * var(--platter-px));
     }
 
     .platter-stage {

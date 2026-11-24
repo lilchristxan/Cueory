@@ -103,11 +103,15 @@ export function platterScale(stageWidth: number, mode: PlatterMode): number {
   return Math.round(Math.min(1, stageWidth / DESIGN[mode].trackWidth) * 1000) / 1000;
 }
 
+/** How far the track shrinks on a phone turned sideways: the landscape board draws the desktop track at 60% (844 x 390). */
+export const SIDEWAYS_SCALE = 0.6;
+
 /**
- * Room above the track for the dots and arrows (wide layout, where they sit in a row above the front vial): the track's
- * empty headroom shrinks with the scale but the 44 px dot buttons do not, so the stage adds what is missing.
+ * Room above the track for the dots (wide layout, where they sit in a row above the front vial, their bottom edge about
+ * 30 px under the stage's top; the arrows stand beside the vials): the track's empty headroom shrinks with the scale
+ * but the dots' place does not, so the stage adds what is missing (the boards' 4 px at 60%).
  */
-export const CONTROLS_ROW = 52;
+export const CONTROLS_ROW = 34;
 export function stageHeadroom(scale: number, mode: PlatterMode): number {
   if (mode === 'phone') return 0;
   const design = DESIGN.wide;

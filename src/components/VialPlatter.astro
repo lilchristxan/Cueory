@@ -28,7 +28,9 @@ import { platterSpots } from '../scripts/platter';
 const sampleShown = sampleLessonShown();
 const linkOf = (mode: (typeof studyModes)[number]) => (sampleShown ? mode.link : undefined);
 
-const count = studyModes.length;
+const modes = studyModes;
+
+const count = modes.length;
 const wide = platterSpots(count, 0, 'wide');
 const phone = platterSpots(count, 0, 'phone');
 ---
@@ -40,17 +42,17 @@ const phone = platterSpots(count, 0, 'phone');
   data-platter
   data-count={count}
 >
-  <div class="mx-auto max-w-page px-gutter text-center">
-    <h2 id="platter-heading" class="display text-title-phone wrap-anywhere sm:text-title-lg"><span class="block">one lesson,</span> <span class="block">multiple ways to study</span></h2>
-    <p class="mt-3 text-body text-ink-soft">pick the method that fits your brain today.</p>
+  <div class="platter-intro mx-auto max-w-page text-center">
+    <h2 id="platter-heading" class="display platter-heading wrap-anywhere"><span class="block">one lesson,</span> <span class="block">multiple ways to study</span></h2>
+    <p class="platter-sub text-ink-soft">pick the method that fits your brain today.</p>
   </div>
 
-  <div class="platter-stage mx-auto mt-8" role="group" aria-roledescription="carousel" aria-label="study methods" data-platter-stage>
+  <div class="platter-stage mx-auto" role="group" aria-roledescription="carousel" aria-label="study methods" data-platter-stage>
     <div class="platter-track" data-platter-track>
       <span class="platter-edge" aria-hidden="true"></span>
       <span class="platter-top" aria-hidden="true"></span>
       {
-        studyModes.map((mode, index) => {
+        modes.map((mode, index) => {
           const link = linkOf(mode);
           const size = VIAL_V2_SIZES[mode.vial];
           const w = wide[index]!;
@@ -104,7 +106,7 @@ const phone = platterSpots(count, 0, 'phone');
     </div>
 
     <div class="platter-dots" aria-hidden="true">
-      {studyModes.map((_, index) => <span class="platter-dot" data-platter-dot data-on={index === 0 ? '' : undefined} />)}
+      {modes.map((_, index) => <span class="platter-dot" data-platter-dot data-on={index === 0 ? '' : undefined} />)}
     </div>
 
     <button type="button" class="corner-button platter-arrow platter-arrow-prev" aria-label="previous study method" data-platter-prev>
@@ -129,6 +131,7 @@ const phone = platterSpots(count, 0, 'phone');
     platterMode,
     platterScale,
     platterSpots,
+    SIDEWAYS_SCALE,
     ringOffset,
     slideAnnouncement,
     stageHeadroom,
@@ -160,7 +163,10 @@ const phone = platterSpots(count, 0, 'phone');
     const fit = () => {
       const kind = mode();
       const content = stage.clientWidth - 2 * parseFloat(getComputedStyle(stage).paddingLeft || '0');
-      const scale = platterScale(content > 0 ? content : stage.clientWidth, kind);
+      // A phone turned sideways shows the board's 60% track (the styles' landscape block says so in --platter-sideways).
+      const sideways = Number.parseFloat(getComputedStyle(root).getPropertyValue('--platter-sideways')) === 1;
+      const fitted = platterScale(content > 0 ? content : stage.clientWidth, kind);
+      const scale = sideways && kind === 'wide' ? Math.min(fitted, SIDEWAYS_SCALE) : fitted;
       root.style.setProperty('--platter-scale', String(scale));
       root.style.setProperty('--platter-head', String(stageHeadroom(scale, kind)));
       root.style.setProperty('--platter-arrow-x', String(Math.max(ARROW_X * scale, ARROW_X_MIN)));

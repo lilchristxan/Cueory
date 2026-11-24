@@ -318,9 +318,14 @@ const helloCardsAvailable = helloCardsPage(
   /* Home v3 board: almost no space above the heading (the hero's own bottom padding is the gap); below, as tall as the next scene's fade (D-53). */
   .games-scene {
     padding-block: var(--game-section-top) var(--game-section-bottom);
+    /* The vial platter's silk fades in over the last 72 px of this section (D-53: nothing but empty space and the dots
+       there, since the boards leave only 24 px under the dots). Standing above it keeps the dots drawn in full ink
+       instead of washed out by that fade. */
+    z-index: 1;
   }
 
   .games-stage {
+    position: relative;
     padding: var(--game-stage-padding);
     color: var(--color-ink);
   }
@@ -413,8 +418,27 @@ const helloCardsAvailable = helloCardsPage(
     min-width: 0;
   }
 
+  /*
+    The boards draw nothing under the dots: no "today's set" line and no "play today's" button. Both stay in the page for
+    screen readers and the keyboard (the line is read out as the day changes; the button is the first thing the Tab key
+    reveals after the dots, drawn over the dots' row while it has focus), but take no room in the row.
+  */
+  .games-date-note {
+    position: absolute;
+    inline-size: var(--border-hairline);
+    block-size: var(--border-hairline);
+    margin: calc(-1 * var(--border-hairline));
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
   .games-stage-action {
-    align-self: center;
+    position: absolute;
+    inset-block-end: 0;
+    inset-inline: 0;
+    inline-size: max-content;
+    max-inline-size: 100%;
     display: inline-flex;
     min-height: var(--tap-min);
     align-items: center;
@@ -424,9 +448,16 @@ const helloCardsAvailable = helloCardsPage(
     padding-inline: calc(var(--spacing) * 6);
     border: var(--border-hairline) solid var(--color-ink);
     border-radius: var(--radius-pill);
+    background: var(--color-page);
     color: var(--color-ink);
     font-weight: 700;
     text-decoration: none;
+    z-index: 2;
+    clip-path: inset(50%);
+  }
+
+  .games-stage-action:focus-visible {
+    clip-path: none;
   }
 
   .games-stage-action:focus-visible {
@@ -464,6 +495,12 @@ const helloCardsAvailable = helloCardsPage(
     column-gap: var(--game-pager-gap);
     /* The board puts the dots 18 px under the cards' shadow room, with the 8 px dot (not its 44 px box) at that spot. */
     margin-block: var(--game-pager-pull) var(--game-pager-pull-end);
+  }
+
+  @media (orientation: landscape) and (max-height: 32em) {
+    .games-pager {
+      margin-block-start: var(--game-pager-pull-landscape);
+    }
   }
 
   .games-dot {
@@ -686,6 +723,7 @@ const helloCardsAvailable = helloCardsPage(
     gap: var(--game-status-gap);
     font-family: var(--font-body);
     font-size: var(--game-status-size);
+    line-height: var(--game-status-line-height);
     padding: var(--game-status-padding);
     border-radius: var(--radius-pill);
     border: var(--border-hairline) solid var(--game-status-border);
@@ -694,9 +732,10 @@ const helloCardsAvailable = helloCardsPage(
     transition: opacity 0.25s ease;
   }
 
-  .gstatus-sym {
+  /* :global because the status script rewrites this span at run time (it carries no scope attribute then). */
+  .gstatus :global(.gstatus-sym) {
     font-family: var(--font-body);
-    font-weight: 700;
+    margin-inline-end: var(--game-status-sym-gap);
   }
 
   /*
@@ -790,7 +829,8 @@ const helloCardsAvailable = helloCardsPage(
     }
 
     .gface {
-      width: calc(100% - (2 * var(--game-card-padding)));
+      /* The board's 204 px face (a 172 px wordmark and line), narrower only when enlarged text shrinks the card. */
+      width: min(var(--game-face-width), calc(100% - (2 * var(--game-card-padding))));
       height: auto;
       /* The desktop face's height, so the name, line and status sit where they do on desktop (status at the foot). */
       min-height: var(--game-face-height);
@@ -1204,14 +1244,16 @@ const helloCardsAvailable = helloCardsPage(
       padding: var(--game-card-landscape-padding);
     }
 
+    /* The board's landscape face: it fills the card, the wordmark row sits 46 px under the card's top and the status
+       pill stands level with the bottom-right pip (see .gstatus below). */
     .gface {
       width: 100%;
-      height: auto;
+      height: 100%;
       min-height: 0;
       min-width: 0;
-      grid-template-rows: var(--game-face-landscape-header-height) auto auto;
-      row-gap: var(--game-card-landscape-padding);
-      padding: var(--game-card-landscape-padding);
+      grid-template-rows: var(--game-face-landscape-header-height) auto 1fr;
+      row-gap: 0;
+      padding: var(--game-face-landscape-padding);
     }
 
     .gname {
@@ -1233,9 +1275,11 @@ const helloCardsAvailable = helloCardsPage(
     }
 
     .gstatus {
-      align-self: start;
+      align-self: end;
+      justify-self: start;
       font-size: var(--game-status-landscape-size);
-      margin-inline-end: calc(var(--game-pip-landscape-size) + var(--game-pip-landscape-inset));
+      margin-block-end: var(--game-status-landscape-drop);
+      max-width: calc(100% - var(--game-pip-landscape-size) - var(--game-pip-landscape-inset));
     }
 
     .gpip {

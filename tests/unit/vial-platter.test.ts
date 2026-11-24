@@ -9,6 +9,7 @@ import {
   keyTarget,
   platterMode,
   platterScale,
+  SIDEWAYS_SCALE,
   platterSpots,
   stageHeadroom,
   vialLabel,
@@ -87,15 +88,16 @@ describe('vial platter layout (docs/design/home-v3 boards)', () => {
     expect(platterScale(390, 'phone')).toBe(1);
     expect(platterScale(360, 'phone')).toBeCloseTo(0.923, 3);
     expect(platterScale(0, 'wide')).toBe(1);
+    expect(SIDEWAYS_SCALE).toBe(0.6);
   });
 
   it('adds headroom for the controls only when the track is scaled down', () => {
     expect(stageHeadroom(1, 'wide')).toBe(0);
     expect(stageHeadroom(0.6, 'wide')).toBeGreaterThan(0);
     expect(stageHeadroom(0.5, 'phone')).toBe(0);
-    // The lifted front vial's top never rises into the 52 px control row.
+    // The lifted front vial's top never rises into the dots' row (its bottom edge is about 30 px under the stage's top).
     const front = DESIGN.wide.trackHeight - vialSpot(0, 'wide').bottom - vialSpot(0, 'wide').width * VIAL_RATIO;
-    expect((front * 0.6 + stageHeadroom(0.6, 'wide') - LIFT)).toBeGreaterThanOrEqual(52 - 0.1);
+    expect((front * 0.6 + stageHeadroom(0.6, 'wide') - LIFT)).toBeGreaterThanOrEqual(34 - 0.1);
   });
 
   it('turns with the arrow keys, Home and End, and ignores other keys', () => {
@@ -156,8 +158,8 @@ describe('vial platter section', () => {
     expect(outside).not.toMatch(/\.platter-vial:hover,\s*\.platter-vial:focus-visible \{\s*color/);
   });
 
-  it("uses the board's space above and below: 96 / 40, 40 / 16 on a portrait phone, 40 / 10 sideways", () => {
-    expect(css).toMatch(/--platter-pad-top: 96;\s*--platter-pad-bottom: 40;/);
+  it("uses the board's space above and below: 96 / 75 (an 840 px section), 40 / 16 on a portrait phone, 40 / 10 sideways", () => {
+    expect(css).toMatch(/--platter-pad-top: 96;\s*--platter-pad-bottom: 75;/);
     expect(css).toMatch(/orientation: landscape\) and \(height < 40rem\) \{\s*\.platter \{\s*--platter-pad-top: 40;\s*--platter-pad-bottom: 10;/);
     expect(css).toMatch(/--platter-pad-top: 40;\s*--platter-pad-bottom: 16;/);
   });

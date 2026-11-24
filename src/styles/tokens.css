@@ -373,11 +373,39 @@
   --gap-mode-card: 1rem;        /* space between "ways to study" cards */
   --drop-mode-card: 1rem;       /* how much lower a neighbouring card sits, per card away from the middle */
   --zoom-mode-card: 1.04;       /* a "ways to study" card under the mouse or keyboard focus grows this much (D-51) */
-  --soon-card-max-width: 56.25rem;  /* Home v3 coming-soon panel (the board's 900 px) */
+  --footer-pad-top: 0.625rem;          /* the boards' footer: links 32 px under its top and the page ends 96 px under it (1440) */
+  --footer-pad-bottom: 2.625rem;
+  --footer-pad-top-phone: 0.25rem;     /* 26 px / 74 px on a phone */
+  --footer-pad-bottom-phone: 1.625rem;
+  --footer-pad-top-landscape: 0;       /* 20 px / 57 px on a phone turned sideways */
+  --footer-pad-bottom-landscape: 0.8125rem;
+  --footer-link-gap: 1.125rem;         /* 18 px between the links' 44 px boxes puts the words where the board has them */
+  --footer-link-gap-phone: 0.75rem;    /* the five links fit the 302 px between the flag and the chevron */
+  --footer-link-size: 0.875rem;        /* 14 px */
+  --footer-link-size-landscape: 0.8125rem; /* 13 px */
+  --footer-link-line: 1.15;
+  --soon-card-max-width: 60.375rem;  /* Home v3 coming-soon panel: the board's 900 px of content plus 32 px padding each side and the rim (966 px) */
+  --soon-card-max-width-landscape: 41.375rem; /* phone landscape: 620 + 20 + 20 + the rim (662 px) */
+  --soon-radius: 1.75rem;       /* 28 px */
+  --soon-radius-phone: 1.375rem;     /* 22 px */
+  --soon-radius-landscape: 1.125rem; /* 18 px */
   --soon-heading: 1.875rem;     /* the coming-soon heading: 30 px on tablet and desktop (the board) */
   --soon-heading-phone: 1.75rem;     /* 28 px on a portrait phone */
   --soon-heading-landscape: 1.5rem;  /* 24 px on a phone turned sideways */
+  --soon-heading-line: 1.15;
+  --soon-line-size: 1rem;       /* the board's line under the heading: 16 px, 18 px apart */
+  --soon-line-height: 1.125;
+  --soon-line-size-landscape: 0.8125rem;   /* 13 px */
+  --soon-line-height-landscape: 1.15;
+  --soon-help-size: 0.75rem;      /* the privacy line under the panel: 12 px */
+  --soon-help-line: 1.5;
+  --soon-input-height: 3.125rem;  /* the board's field: 48 px plus its rim = 50 px */
+  --soon-input-width-landscape: 14.625rem;  /* 234 px */
+  --soon-copy-basis: 18.75rem;    /* 300 px */
+  --soon-form-basis: 25.28125rem; /* 404.5 px: the 254 px field, the gap and the 134.5 px button */
   --border-soon-input: 1px;     /* the coming-soon email field's rim */
+  --social-icon-landscape: 1.381rem; /* 22.1 px: the board's 26 px marks at 85% on a phone turned sideways */
+  --social-cue-size: 0.75rem;     /* the ↗ shown on hover and focus */
   --social-glow: drop-shadow(0 6px 10px color-mix(in srgb, var(--color-copper-deep) 35%, transparent)); /* Home v3 social marks: the soft copper glow on hover or focus */
   --border-vial-arrow: 1px;     /* the copper rim round the home carousel's arrows (HomeV2, P6) */
   --container-mode-tile: 7.5rem; /* narrowest a lesson-hub mode tile gets: two fit a phone, one fits when text is enlarged */
@@ -613,9 +641,9 @@
     /* Below "play today's": the next scene fades in over the last --scene-fade-top of this section (D-53), so the space
        is at least that tall and no word sits in the fade. This is the one place the board's tighter gap gives way. */
     --game-section-top: 1rem;                 /* the heading's glyphs reach up to 14 px above its line box; this keeps them out of the scene fade above (D-53) */
-    --game-section-bottom: var(--spacing-section);
-    --game-section-bottom-phone: var(--spacing-section-phone);
-    --game-section-bottom-landscape: var(--spacing-section);
+    --game-section-bottom: 1.375rem;             /* board: the platter section starts 482 px under the card tops on desktop */
+    --game-section-bottom-phone: 0.375rem;      /* 6 px: the platter section starts 416 px under the card tops on a phone */
+    --game-section-bottom-landscape: 0.9375rem; /* 15 px: 320 px under the card tops on a phone turned sideways */
     --game-header-gap-phone: 0.375rem;
     --game-heading-size-phone: 2.125rem;      /* 34 px */
     --game-heading-size-landscape: 2.625rem;  /* 42 px */
@@ -630,7 +658,8 @@
     --game-car-padding-landscape: 0.5rem 0 5rem;       /* net 30 px */
     --game-car-shadow-pull-landscape: -3.125rem;
     --game-car-landscape-min-inset: 0px;
-    --game-pager-pull: -2rem;                 /* puts the 8 px dot, not its 44 px box, where the board puts it */
+    --game-pager-pull: -1.625rem;             /* puts the 8 px dot, not its 44 px box, where the board puts it (dot centre 450 px under the card tops on desktop) */
+    --game-pager-pull-landscape: -1.6875rem;  /* the same on a phone turned sideways (27 px) */
     --game-pager-pull-end: -0.75rem;
     --game-header-gap: 1rem;
     --game-nav-size: 3.25rem;
@@ -688,12 +717,14 @@
     --game-face-padding: 1.125rem 1rem;
     --game-card-landscape-width: 11.625rem;   /* phone landscape board: 186 x 260 cards, four across */
     --game-card-landscape-height: 16.25rem;
-    --game-card-landscape-padding: 0.5rem;
+    --game-card-landscape-padding: 0.75rem;
     --game-pip-landscape-size: 1.875rem;      /* 30 px pips inset 10 px */
     --game-pip-landscape-inset: 0.625rem;
     --game-pip-landscape-xcell: 0.4375rem;
     --game-pip-landscape-glyph: 1.125rem;
-    --game-face-landscape-header-height: 3.5rem;
+    --game-face-landscape-header-height: 4rem;    /* 64 px */
+    --game-face-landscape-padding: 2.875rem 0.625rem 3.25rem; /* 46 / 10 / 52 px */
+    --game-status-landscape-drop: -2.375rem;  /* the pill drops 38 px into the face's foot padding, level with the pip */
     --game-wordmark-landscape-max-width: 8.25rem; /* 132 x 46 px */
     --game-wordmark-landscape-max-height: 2.875rem;
     --game-serif-name-landscape-size: 1.875rem;   /* crossword, sudoku: 30 px */
@@ -707,7 +738,9 @@
     --game-desc-margin-top: 0.375rem;
     --game-desc-size: 0.875rem;
     --game-desc-phone-size: 16px;
-    --game-status-gap: 0.375rem;
+    --game-status-gap: 0;
+    --game-status-sym-gap: 0.25rem;           /* the board's one text run "○ not started": a plain space between the symbol and the words */
+    --game-status-line-height: 1.15;
     --game-status-size: 0.8125rem;
     --game-status-phone-size: 14px;
     --game-status-padding: 0.25rem 0.625rem;

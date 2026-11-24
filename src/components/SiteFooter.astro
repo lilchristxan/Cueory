@@ -1,8 +1,9 @@
 ---
 /**
- * The footer (Task 85, Christian's final shape, 2026-11-01): one slim bar at the end of every page, never fixed or
- * sticky. Bottom-left: a flag icon ("flag or comment"). Center: the small logo, a link home. Bottom-right: a chevron
- * that opens the links panel above the bar (the motto, footer links, social links, contact email, copyright and the
+ * The footer: one slim row at the end of every page, never fixed or sticky. Since the home boards (2026-11-24) the row is
+ * the boards' five small underlined links, centred (about us, privacy, terms, disclaimer, contact); the flag icon
+ * ("flag or comment") stands at its left end and a chevron at its right end, which opens the extras panel above the row
+ * (the small logo, courses, coming soon and support cueory, the motto, social links, contact email, copyright and the
  * theme switch).
  *
  * Without JavaScript the panel is simply open and the chevron stays hidden (its space is kept). The panel comes after
@@ -34,110 +35,134 @@ const { hideFlag = false, flagItem, accountsOff = false } = Astro.props;
 // Fails the build for a sample slug or half a pair: submit_flag only takes real ids.
 const item = flagItemContext(flagItem);
 // #747: a legal page that isn't approved yet gets no footer link (Privacy always shows).
-const links = visibleFooterLinks(footerLinks);
+const visible = visibleFooterLinks(footerLinks);
+// The boards' row: about us, privacy, terms, disclaimer, contact. The other pages stay one tap away behind the chevron
+// (the extras panel); they are all in the site menu too, except "coming soon".
+const rowHrefs = ['/about', '/privacy', '/terms', '/disclaimer', '/message'];
+const links = visible.filter((link) => rowHrefs.includes(link.href));
+const moreLinks = visible.filter((link) => !rowHrefs.includes(link.href));
 const year = new Date().getFullYear();
 const barButton =
-  'inline-flex size-12 items-center justify-center rounded-pill text-ink hover:bg-surface';
+  'inline-flex size-(--tap-min) items-center justify-center rounded-pill text-ink hover:bg-surface';
 ---
 
-<footer class="mt-section flex flex-col-reverse" data-site-footer>
-  <!-- The bar and the link row share one positioned box. In the footer the report panel (FlagForm, opened from the
+<footer class="footer-shell flex flex-col-reverse" data-site-footer>
+  <!-- The row and the report panel share one positioned box. In the footer the report panel (FlagForm, opened from the
        flag) is placed against this box instead of against the flag, so it opens above the link row and never covers
-       part of a link: the two long classes un-position the form's own wrapper here and keep the panel in line with
-       the flag (the page gutter). The bar still comes first in the page; flex-col-reverse draws the link row above it. -->
+       part of a link: the long classes un-position the form's own wrapper here and keep the panel in line with the
+       flag (the row's left edge). The panel comes after the row in the page; flex-col-reverse draws it above. -->
   <div
-    class="relative mx-auto flex w-full max-w-page flex-col-reverse [&_[data-testid=flag-form]]:static [&_[data-testid=flag-form]>.absolute]:left-gutter"
+    class="relative mx-auto w-full max-w-page [&_[data-testid=flag-form]]:static"
     data-footer-base
   >
-  <div class="grid h-14 w-full grid-cols-3 items-center px-gutter">
-    {
-      !hideFlag && (
-        <div class="col-start-1 justify-self-start" id="footer-flag" data-footer-flag>
-          <FlagMount
-            client:only="react"
-            page={Astro.url.pathname}
-            itemId={item.itemId}
-            itemVersionId={item.itemVersionId}
-            variant="icon"
-            {...(accountsOff ? { accountsOff: true } : {})}
-          >
-            <div slot="fallback" class="flex items-center gap-2">
-            <a
-                            href={flagMailto(site.contactEmail, Astro.url.pathname)}
-              class={barButton}
-              aria-label="flag or comment"
-            >
-              <svg viewBox="0 0 24 24" class="size-6" aria-hidden="true" focusable="false">
-                <path
-                  d="M5 21V4M5 4h12l-3 4.5 3 4.5H5"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="1.6"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"></path>
-              </svg>
-            </a>
-              <p class="max-w-56 text-xs leading-tight text-ink" data-testid="flag-fallback-warning">{PATIENT_INFO_WARNING}</p>
-            </div>
-          </FlagMount>
-        </div>
-      )
-    }
-
-    <a
-      href="/"
-      class="col-start-2 inline-flex min-h-12 items-center justify-self-center px-1 text-ink"
-      aria-label={`${site.wordmarkName}, home`}
-    >
-      <Wordmark class="w-16.5" sizes="4.125rem" />
-    </a>
-
-    <button
-      type="button"
-      class:list={[barButton, 'group invisible col-start-3 justify-self-end']}
-      aria-label={FOOTER_TOGGLE_LABELS.open}
-      aria-expanded="true"
-      aria-controls="site-footer-panel"
-      data-footer-toggle
-    >
-      <!-- Points up while the panel is closed (it opens above), down while it is open. -->
-      <svg
-        viewBox="0 0 24 24"
-        class="size-6 transition-transform duration-(--duration-base) ease-(--ease-soft) group-aria-expanded:rotate-180 motion-reduce:transition-none"
-        aria-hidden="true"
-        focusable="false"
-      >
-        <path d="M6 15l6-6 6 6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"
-        ></path>
-      </svg>
-    </button>
-  </div>
-
-  <!-- The footer's links as drawn (HomeV2-3): one centered row of small underlined links, always visible. It sits after the bar
-       in the page and, with flex-col-reverse, is drawn between the extras panel and the bar. -->
-  <nav aria-label="footer" class="w-full px-gutter pt-6">
-    <ul class="flex flex-wrap justify-center gap-x-5 text-sm">
+    <!-- The boards' footer is one centred row of links. The flag stays at its left end and the chevron (which opens the
+         extras panel) at its right end, in their own 44 px columns, so the row itself never moves. -->
+    <div class="footer-row">
       {
-        links.map((link) => (
-          <li>
-            <a
-              href={link.href}
-              class="inline-flex min-h-(--tap-min) min-w-(--tap-min) items-center justify-center text-ink-soft underline underline-offset-4 wrap-anywhere hover:text-ink"
-              aria-current={link.href === publicPath(Astro.url.pathname) ? 'page' : undefined}
+        !hideFlag && (
+          <div class="footer-flag" id="footer-flag" data-footer-flag>
+            <FlagMount
+              client:only="react"
+              page={Astro.url.pathname}
+              itemId={item.itemId}
+              itemVersionId={item.itemVersionId}
+              variant="icon"
+              {...(accountsOff ? { accountsOff: true } : {})}
             >
-              {link.label}
-            </a>
-          </li>
-        ))
+              <div slot="fallback" class="flex items-center gap-2">
+              <a
+                              href={flagMailto(site.contactEmail, Astro.url.pathname)}
+                class={barButton}
+                aria-label="flag or comment"
+              >
+                <svg viewBox="0 0 24 24" class="size-6" aria-hidden="true" focusable="false">
+                  <path
+                    d="M5 21V4M5 4h12l-3 4.5 3 4.5H5"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.6"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"></path>
+                </svg>
+              </a>
+                <p class="max-w-56 text-xs leading-tight text-ink" data-testid="flag-fallback-warning">{PATIENT_INFO_WARNING}</p>
+              </div>
+            </FlagMount>
+          </div>
+        )
       }
-    </ul>
-  </nav>
+
+      <!-- The footer's links as drawn (home boards): one centred row of small underlined links, always visible. -->
+      <nav aria-label="footer" class="footer-nav">
+        <ul class="footer-links">
+          {
+            links.map((link) => (
+              <li>
+                <a
+                  href={link.href}
+                  class="footer-link underline-offset-4"
+                  aria-current={link.href === publicPath(Astro.url.pathname) ? 'page' : undefined}
+                >
+                  {link.label}
+                </a>
+              </li>
+            ))
+          }
+        </ul>
+      </nav>
+
+      <button
+        type="button"
+        class:list={[barButton, 'footer-toggle group invisible']}
+        aria-label={FOOTER_TOGGLE_LABELS.open}
+        aria-expanded="true"
+        aria-controls="site-footer-panel"
+        data-footer-toggle
+      >
+        <!-- Points up while the panel is closed (it opens above), down while it is open. -->
+        <svg
+          viewBox="0 0 24 24"
+          class="size-6 transition-transform duration-(--duration-base) ease-(--ease-soft) group-aria-expanded:rotate-180 motion-reduce:transition-none"
+          aria-hidden="true"
+          focusable="false"
+        >
+          <path d="M6 15l6-6 6 6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"
+          ></path>
+        </svg>
+      </button>
+    </div>
   </div>
 
   <div id="site-footer-panel" data-footer-panel>
     <div
       class="mx-auto flex w-full max-w-page flex-col items-center gap-6 px-gutter py-8 text-center text-sm text-ink-soft"
     >
+      <a
+        href="/"
+        class="inline-flex min-h-12 items-center px-1 text-ink"
+        aria-label={`${site.wordmarkName}, home`}
+      >
+        <Wordmark class="w-16.5" sizes="4.125rem" />
+      </a>
+      {
+        moreLinks.length > 0 && (
+          <nav aria-label="more pages">
+            <ul class="flex flex-wrap justify-center gap-x-5">
+              {moreLinks.map((link) => (
+                <li>
+                  <a
+                    href={link.href}
+                    class="footer-link underline-offset-4"
+                    aria-current={link.href === publicPath(Astro.url.pathname) ? 'page' : undefined}
+                  >
+                    {link.label}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </nav>
+        )
+      }
       <div class="flex flex-col items-center gap-2">
         <p class="font-bold text-ink">{site.tagline}</p>
         <SocialLinks />
@@ -156,6 +181,93 @@ const barButton =
     </div>
   </div>
 </footer>
+
+<style is:global>
+  /* The boards' footer (home boards, 1440 / 390 / 844): the links sit 32 / 26 / 20 px under the footer's top, the page ends
+     96 / 74 / 57 px under it. The row is 44 px tall (the links' touch target), so the padding is what is left. */
+  .footer-row {
+    display: grid;
+    grid-template-columns: var(--tap-min) minmax(0, 1fr) var(--tap-min);
+    align-items: center;
+    padding-block: var(--footer-pad-top) var(--footer-pad-bottom);
+  }
+
+  .footer-flag {
+    grid-column: 1;
+    justify-self: start;
+  }
+
+  /* The flag's own button is 48 px; here it is the 44 px column (still a 44 px target). */
+  .footer-flag [aria-label='flag or comment'] {
+    inline-size: var(--tap-min);
+    block-size: var(--tap-min);
+  }
+
+  .footer-nav {
+    grid-column: 2;
+    min-inline-size: 0;
+  }
+
+  .footer-toggle {
+    grid-column: 3;
+    justify-self: end;
+  }
+
+  .footer-links {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    column-gap: var(--footer-link-gap);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-size: var(--footer-link-size);
+    line-height: var(--footer-link-line);
+  }
+
+  .footer-link {
+    display: inline-flex;
+    min-block-size: var(--tap-min);
+    min-inline-size: var(--tap-min);
+    align-items: center;
+    justify-content: center;
+    color: var(--color-ink-soft);
+    text-decoration: underline;
+    overflow-wrap: anywhere;
+  }
+
+  .footer-link:hover {
+    color: var(--color-ink);
+  }
+
+  /* Portrait phones: the five links share the 302 px between the flag and the chevron, so the gap is tighter. */
+  @media (max-width: 29.99em) {
+    .footer-links {
+      column-gap: var(--footer-link-gap-phone);
+    }
+  }
+
+  @media (max-width: 39.99em) {
+    .footer-row {
+      padding-block: var(--footer-pad-top-phone) var(--footer-pad-bottom-phone);
+    }
+  }
+
+  @media (orientation: landscape) and (max-height: 32em) {
+    .footer-row {
+      padding-block: var(--footer-pad-top-landscape) var(--footer-pad-bottom-landscape);
+    }
+
+    .footer-links {
+      font-size: var(--footer-link-size-landscape);
+    }
+  }
+
+  /* On the home page the social row's own bottom edge is where the footer starts (the boards leave no gap). */
+  main:has(.social-section) + [data-site-footer] {
+    margin-block-start: 0;
+  }
+</style>
 
 <script>
   import { isFooterPanelOpen, setFooterPanel } from '../scripts/footer';
