@@ -1092,6 +1092,12 @@
   --stage-heading-width: none;
   --stage-accent-stroke: 0;
   --stage-eyebrow-size: 1rem;
+  --stage-eyebrow-gap: .8em;
+  --stage-heading-gap: .25em;
+  --stage-point-row-gap: .6em;
+  --stage-point-column-gap: 1em;
+  --stage-icon-gap: .4em;
+  --stage-tip-padding: .4em 1em;
   --stage-eyebrow-rule: 3rem;
   --stage-heading-size: clamp(2.5rem, 5vw, 4.125rem);
   --stage-action-margin: clamp(2.375rem, 5.75vw, 5.25rem) auto 2.375rem;
@@ -1119,7 +1125,6 @@
     --stage-heading-width: 20.625rem;
     --stage-eyebrow-size: .8125rem;
     --stage-eyebrow-rule: 1.375rem;
-    --stage-accent-stroke: .025em;
     --stage-action-margin: 1.375rem auto 1rem;
     --stage-points-size: .8125rem;
     --stage-points-width: 20rem;
@@ -1140,9 +1145,10 @@
 /* The landscape phone board is the centred desktop composition at about 60% scale: the button sits inside the top of the ring and the points under the pedestal. */
 @media (orientation: landscape) and (40rem <= width < 60rem) and (height < 32rem) {
   .home-stage {
-    --stage-heading-size: 2.625rem;
-    --stage-eyebrow-size: .75rem;
-    --stage-eyebrow-rule: 1.875rem;
+    --stage-heading-size: 3rem;
+    --stage-heading-gap: 1.25rem;
+    --stage-eyebrow-size: .875rem;
+    --stage-eyebrow-rule: 2.25rem;
     --stage-action-margin: 3rem auto 0;
     --stage-margin: -10.25rem auto 0;
     --stage-points-margin: 1.25rem auto 1.75rem;
@@ -1153,7 +1159,7 @@
     --stage-halo-top: 15.7rem;
     --stage-halo-width: 22.625rem;
     --stage-tip-top: 13.2rem;
-    --stage-tip-left: -10%;
+    --stage-tip-left: max(-10%, calc((100% - 100vw) / 2 + var(--spacing-gutter)));
   }
 
   .home-stage { display: flex; flex-direction: column; }
