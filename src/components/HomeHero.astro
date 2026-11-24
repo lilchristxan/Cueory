@@ -143,5 +143,10 @@ h1 { margin: var(--stage-heading-gap) auto 0; max-width: var(--stage-heading-wid
 .stage-tip strong { display: block; font-size: var(--stage-tip-name); }
 .stage-actions .copper-button { font-size: var(--stage-button-size); line-height: var(--stage-button-leading); padding: var(--stage-button-padding); }
 /* The dock overlaps the stage by the board's amount (token in tokens.css) and sits above the stage's lower edge. */
-.hero-dock { position: relative; z-index: 5; margin-block-start: calc(-1 * var(--stage-dock-overlap)); padding-block-end: var(--stage-bottom-gap); }
+.hero-dock { position: relative; z-index: 5; margin-block-start: calc(-1 * var(--stage-dock-overlap)); }
+.scene-hero { padding-block-end: var(--stage-bottom-gap); }
+/* The strip under the dock is the gap to the next section, so that section does not add its own top padding on top of it. */
+:global(.scene-hero + .scene-play.scene) { padding-block-start: var(--stage-next-top-pad); }
+:global(.scene-hero + .scene-play .games-container) { padding-block-start: 0; }
+:global(.scene-hero + .scene-play.scene) { --scene-fade-top: var(--stage-bottom-gap); }
 </style>
