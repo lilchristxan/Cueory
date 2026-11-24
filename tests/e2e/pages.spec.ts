@@ -753,7 +753,8 @@ test.describe('marketing look (D-41)', () => {
     await expect(page.getByTestId('hero-join')).toHaveCount(0);
     await expect(hero.getByTestId('hero-play')).toHaveCount(0);
     await expect(hero.locator('.glass-button')).toHaveCount(0);
-    await expect(hero.locator('.logo')).toHaveCount(2); // the emblem and the full logo; one shows per screen width
+    await expect(hero.locator('.logo')).toHaveCount(0);
+    await expect(page.locator('.home-board-header .logo')).toHaveCount(1);
     for (const element of [headline, button]) {
       const box = (await element.boundingBox())!;
       expect(box.y + box.height).toBeLessThanOrEqual(height);
@@ -788,22 +789,21 @@ test.describe('marketing look (D-41)', () => {
           .map((img) => ({ src: (img as HTMLImageElement).currentSrc, alt: img.getAttribute('alt') })),
       );
     await page.goto('/');
-    const hero = page.locator('.scene-hero');
+    const hero = page.locator('.home-board-header .home-brand');
     await openFooterLinks(page);
     await page.getByRole('radio', { name: 'Light' }).check();
-    // The home hero draws its own logo beside the menu button (P5): the full logo from 640 px wide, the emblem on phones.
+    // The Home header renders the official full logo in the selected palette at each board width.
     const heroWide = page.viewportSize()!.width >= 640;
     const heroFile = (palette: 'light' | 'dark') =>
-      new RegExp(`\\/brand\\/v1\\/${heroWide ? 'logo-full' : 'emblem'}-${palette}-\\d+\\.png$`);
+      new RegExp(`\\/brand\\/v1\\/logo-full-${palette}-\\d+\\.png$`);
     let images = await shown(hero);
     expect(images).toHaveLength(1);
     expect(images[0]!.src).toMatch(heroFile('light'));
     expect(images[0]!.alt).toBe('');
     expect(await hero.locator('.logo img').first().evaluate((img) => (img as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
-    if (heroWide) {
-      const width = (await hero.locator('.logo:visible').boundingBox())!.width;
-      expect(width).toBeGreaterThanOrEqual(239);
-    }
+    const width = (await hero.locator('.logo:visible').boundingBox())!.width;
+    const font = await page.locator('html').evaluate(el => parseFloat(getComputedStyle(el).fontSize));
+    expect(width).toBeCloseTo(font * (heroWide ? 10.25 : 7.5), 0);
 
     await page.getByRole('radio', { name: 'Dark' }).check();
     images = await shown(hero);
@@ -1657,17 +1657,25 @@ test.describe('study-mode preview (D-51)', () => {
   });
 });
 
+function homeMenuOpener(page: Page) {
+  const name = page.viewportSize()!.width >= 640 ? 'search the site' : 'open site menu';
+  return page.getByRole('button', { name, exact: true });
+}
+
 test.describe('☰ side panel and account corner (D-46)', () => {
   for (const path of ['/', '/privacy', '/learn/study-skills']) {
     test(`☰ opens the side panel on ${path}, keeps focus inside, and Escape brings focus back`, async ({ page }) => {
       await page.goto(path);
-      const open = page.getByRole('button', { name: 'open site menu', exact: true });
+      const open = path === '/' ? homeMenuOpener(page) : page.getByRole('button', { name: 'open site menu', exact: true });
       await expect(open).toHaveAttribute('aria-expanded', 'false');
       await open.click();
       const panel = page.getByTestId('site-menu');
       await expect(panel).toBeVisible();
       await expect(open).toHaveAttribute('aria-expanded', 'true');
-      await expect(panel.getByRole('button', { name: 'close site menu' })).toBeFocused();
+      const initialFocus = path === '/' && page.viewportSize()!.width >= 640
+        ? panel.getByRole('searchbox', { name: 'search the site' })
+        : panel.getByRole('button', { name: 'close site menu' });
+      await expect(initialFocus).toBeFocused();
 
       const nav = panel.getByRole('navigation', { name: 'site' });
       for (const name of ['home', 'ways to study', 'lessons', 'daily games', 'my progress', 'support cueory']) {
@@ -1707,7 +1715,7 @@ test.describe('☰ side panel and account corner (D-46)', () => {
 
   test('the close button and a tap on the dimmed page close the side panel', async ({ page }) => {
     await page.goto('/');
-    const open = page.getByRole('button', { name: 'open site menu', exact: true });
+    const open = homeMenuOpener(page);
     const panel = page.getByTestId('site-menu');
     await open.click();
     await panel.getByRole('button', { name: 'close site menu' }).click();
@@ -1723,7 +1731,7 @@ test.describe('☰ side panel and account corner (D-46)', () => {
 
   test('a side-panel link to a spot on the home page closes the panel and goes there', async ({ page }) => {
     await page.goto('/');
-    await page.getByRole('button', { name: 'open site menu', exact: true }).click();
+    await homeMenuOpener(page).click();
     await page.getByTestId('site-menu').getByRole('link', { name: 'ways to study' }).click();
     await expect(page.getByTestId('site-menu')).toBeHidden();
     await expect(page).toHaveURL(/#ways-to-study$/);
@@ -1777,8 +1785,10 @@ test.describe('☰ side panel and account corner (D-46)', () => {
   test('corner buttons are at least 44 by 44 px', async ({ page }) => {
     for (const path of ['/', '/learn/study-skills']) {
       await page.goto(path);
-      for (const name of ['open site menu', 'open account menu']) {
-        const box = (await page.getByRole('button', { name, exact: true }).boundingBox())!;
+      // The Home v3 header opens the menu from search on screens 640 px and wider (see homeMenuOpener).
+      const menuOpener = path === '/' ? homeMenuOpener(page).first() : page.getByRole('button', { name: 'open site menu', exact: true });
+      for (const opener of [menuOpener, page.getByRole('button', { name: 'open account menu', exact: true })]) {
+        const box = (await opener.boundingBox())!;
         expect(box.width).toBeGreaterThanOrEqual(44);
         expect(box.height).toBeGreaterThanOrEqual(44);
       }
@@ -1789,7 +1799,7 @@ test.describe('☰ side panel and account corner (D-46)', () => {
 test.describe('site search in the ☰ panel (D-49)', () => {
   test('finds pages as you type, works by keyboard, and goes to the result', async ({ page }) => {
     await page.goto('/');
-    await page.getByRole('button', { name: 'open site menu', exact: true }).click();
+    await homeMenuOpener(page).click();
     const panel = page.getByTestId('site-menu');
     const field = panel.getByRole('searchbox', { name: 'search the site' });
     await expect(field).toHaveAttribute('placeholder', 'search');
@@ -1821,7 +1831,7 @@ test.describe('site search in the ☰ panel (D-49)', () => {
 
   test('a new search while a result has keyboard focus keeps focus in the panel', async ({ page }) => {
     await page.goto('/');
-    await page.getByRole('button', { name: 'open site menu', exact: true }).click();
+    await homeMenuOpener(page).click();
     const panel = page.getByTestId('site-menu');
     const field = panel.getByRole('searchbox', { name: 'search the site' });
     const results = panel.getByRole('list', { name: 'search results' });
