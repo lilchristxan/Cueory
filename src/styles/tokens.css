@@ -1090,8 +1090,8 @@
 /* The explore dock overlaps the bottom of the stage by the board's margin-top of -92 px (docs/design/home-v3, nav margin -92 px
    under the stage) on desktop, tablet and phone portrait; phone landscape has it as a normal block under the points. */
 :root {
-  --stage-next-top-pad: 0px;       /* the next section adds none: the strip above already is the gap */
-  --stage-bottom-gap: 3.6875rem;   /* board: 59 px from the dock to the next heading. The next scene fades in over this strip, so no text sits in it */
+  --stage-next-top-pad: 1.3125rem;   /* 21 px: the 86 px heading's letters reach 19 px above its line box, so the fade (D-53) never touches the words */
+  --stage-bottom-gap: 2.375rem;   /* with the 21 px above: 59 px from the dock to the next heading (board 59). The next scene fades in over this strip, so no text sits in it */
 }
 @media (width < 40rem) {
   :root { --stage-bottom-gap: var(--spacing-section-phone); --stage-next-top-pad: var(--spacing-section-phone); } /* board: 64 px (this strip plus the next section's 32 px) */
