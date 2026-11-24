@@ -6,8 +6,10 @@
  * hidden (its space is kept, so nothing moves) and the footer links still work.
  */
 import { menuLinks, menuSmallLinks } from '../config/site';
+import { visibleFooterLinks } from '../config/legalfooter';
 import SocialLinks from './SocialLinks.astro';
 import { currentHref, groupMenuLinks } from '../scripts/menu';
+import { SAMPLE_LESSON_HREF, sampleLessonShown } from '../lessons/draftgate';
 
 interface Props {
   /** Study screens: the same button, without the frosted circle. */
@@ -15,10 +17,15 @@ interface Props {
 }
 
 const { quiet = false } = Astro.props;
-const grouped = groupMenuLinks(menuLinks, menuSmallLinks);
+// #747: a legal page that isn't approved yet gets no menu link either (Privacy always shows).
+const smallLinks = visibleFooterLinks(menuSmallLinks);
+// The live build holds the sample lesson back, so the panel doesn't link to it there.
+const sampleShown = sampleLessonShown();
+const links = menuLinks.filter((link) => sampleShown || link.href !== SAMPLE_LESSON_HREF);
+const grouped = groupMenuLinks(links, smallLinks);
 const current = currentHref(
   Astro.url.pathname,
-  [...menuLinks, ...menuSmallLinks].map((link) => link.href),
+  [...links, ...smallLinks].map((link) => link.href),
 );
 ---
 
@@ -133,7 +140,7 @@ const current = currentHref(
 
 <script>
   import { isCloseKey, wrapFocus } from '../scripts/menu';
-  import { cleanUrl, excerptParts, keepFocus, MAX_RESULTS, moveFocus, PAGEFIND_URL, statusText } from '../scripts/search';
+  import { cleanUrl, createSearchLoader, excerptParts, keepFocus, MAX_RESULTS, moveFocus, searchModuleUrl, statusText } from '../scripts/search';
 
   /** The parts of Pagefind's browser API the panel uses (https://pagefind.app/docs/api/). */
   interface PagefindResult {
@@ -154,19 +161,15 @@ const current = currentHref(
     const list = root.querySelector<HTMLUListElement>('[data-search-results]');
     if (!input || !status || !list) return;
 
-    let pagefind: Promise<Pagefind> | undefined;
-    const load = () => {
-      pagefind ??= (async () => {
-        // A plain URL, so the bundler leaves it alone: the index is built after the site, by `pagefind --site dist`.
-        const url: string = PAGEFIND_URL;
-        const module = (await import(/* @vite-ignore */ url)) as Pagefind;
-        // Search on the page itself rather than in a worker, so the content security policy needs no `blob:`.
-        await module.options({ noWorker: true });
-        await module.init();
-        return module;
-      })();
-      return pagefind;
-    };
+    const load = createSearchLoader(async (attempt) => {
+      // A plain URL, so the bundler leaves it alone: the index is built after the site, by `pagefind --site dist`.
+      const url: string = searchModuleUrl(attempt);
+      const module = (await import(/* @vite-ignore */ url)) as Pagefind;
+      // Search on the page itself rather than in a worker, so the content security policy needs no `blob:`.
+      await module.options({ noWorker: true });
+      await module.init();
+      return module;
+    });
 
     const links = () => [...list.querySelectorAll<HTMLAnchorElement>('a')];
     let latest = 0;
@@ -246,26 +249,34 @@ const current = currentHref(
   }
 
   const dialog = document.querySelector<HTMLDialogElement>('#site-menu');
-  const openButton = document.querySelector<HTMLButtonElement>('[data-menu-open]');
+  // ☰ and, on wide screens, the round search button in the top bar: both open this panel.
+  const openButtons = [...document.querySelectorAll<HTMLButtonElement>('[data-menu-open]')];
+  const openButton = openButtons[0];
   const closeButton = dialog?.querySelector<HTMLButtonElement>('[data-menu-close]');
 
   if (dialog && openButton && closeButton && typeof dialog.showModal === 'function') {
     let returnFocus = true;
+    let opener: HTMLButtonElement = openButton;
 
-    openButton.addEventListener('click', () => {
-      returnFocus = true;
-      dialog.showModal();
-      // Focus starts on the close button. Left to itself, the browser focuses the first focusable thing in the panel,
-      // and once the links are taller than the window the panel's own scrolling box counts as one: Chromium would
-      // focus that box, which comes before the close button, instead of a control.
-      closeButton.focus();
-      openButton.setAttribute('aria-expanded', 'true');
-    });
+    for (const button of openButtons) {
+      button.addEventListener('click', () => {
+        returnFocus = true;
+        opener = button;
+        dialog.showModal();
+        // Focus starts on the close button. Left to itself, the browser focuses the first focusable thing in the panel,
+        // and once the links are taller than the window the panel's own scrolling box counts as one: Chromium would
+        // focus that box, which comes before the close button, instead of a control.
+        // The top bar's search button goes straight to the search field instead.
+        if (button.hasAttribute('data-menu-search')) dialog.querySelector<HTMLInputElement>('[data-search-input]')?.focus();
+        else closeButton.focus();
+        button.setAttribute('aria-expanded', 'true');
+      });
+    }
 
     dialog.addEventListener('close', () => {
-      openButton.setAttribute('aria-expanded', 'false');
+      for (const button of openButtons) button.setAttribute('aria-expanded', 'false');
       // After a link to a spot on this page, focus follows the link instead of jumping back to the top.
-      if (returnFocus) openButton.focus({ preventScroll: true });
+      if (returnFocus) opener.focus({ preventScroll: true });
     });
 
     dialog.addEventListener('keydown', (event) => {
@@ -308,6 +319,6 @@ const current = currentHref(
     const search = dialog.querySelector<HTMLElement>('[data-site-search]');
     if (search) setUpSearch(search);
 
-    openButton.classList.remove('invisible');
+    for (const button of openButtons) button.classList.remove('invisible');
   }
 </script>

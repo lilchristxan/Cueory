@@ -19,6 +19,10 @@ const secondary = 'min-h-11 rounded-pill border border-control px-5 py-2.5 text-
 export default function ReviewSession(props: Props) {
   // A keyed child may reset while an earlier snapshot is still being saved.
   const saveQueue = useRef<Promise<void>>(Promise.resolve());
+  // The account sync listens for sign-in changes (reviewsync.ts); stop it when the review closes or gets a new sync.
+  // Here, not in the keyed Session, so a reset for new cards keeps the same sync working.
+  const { sync } = props;
+  useEffect(() => () => sync?.close?.(), [sync]);
   return <Session key={JSON.stringify([props.cards, props.today, props.examDay])} {...props} saveQueue={saveQueue} />;
 }
 

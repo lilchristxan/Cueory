@@ -2,10 +2,25 @@
 import Layout from '../../layouts/Layout.astro';
 import Prose from '../../components/Prose.astro';
 import Callout from '../../components/Callout.astro';
+import { draftsAllowed } from '../../islands/anatomylab';
+
+// Filler text only builds where drafts may show; the live build gets a plain coming-soon page.
+const shown = draftsAllowed({
+  WORKERS_CI: process.env.WORKERS_CI,
+  WORKERS_CI_BRANCH: process.env.WORKERS_CI_BRANCH,
+  CUEORY_ANATOMY_DRAFTS: process.env.CUEORY_ANATOMY_DRAFTS,
+});
 ---
 
 <!-- Placeholder-only page for reviewing reading rhythm in both palettes. Never indexed or treated as a lesson. -->
 <Layout title="reading preview" description="A private preview of Cueory's reading layout." noindex promo={false}>
+  {!shown && (
+    <Prose>
+      <h1>reading preview</h1>
+      <p>coming soon.</p>
+    </Prose>
+  )}
+  {shown && (
   <Prose>
     <h1>reading preview</h1>
     <p>
@@ -47,4 +62,5 @@ import Callout from '../../components/Callout.astro';
       <p>ut enim ad minim veniam, quis nostrud exercitation ullamco laboris.</p>
     </Callout>
   </Prose>
+  )}
 </Layout>

@@ -43,7 +43,7 @@ export function checkPassword(value: unknown): string | null {
 }
 
 export type SignInMessage = 'signup-sent' | 'reset-sent' | 'too-many' | 'google-failed' |
-  'signin-failed' | 'signup-failed' | 'reset-failed' | 'reset-done' | 'unavailable' | 'recovery-required';
+  'signin-failed' | 'signup-failed' | 'reset-failed' | 'reset-done' | 'unavailable' | 'recovery-required' | 'recovery-changed' | 'recovery-interrupted';
 
 export function signInMessage(kind: SignInMessage): string {
   const messages: Record<SignInMessage, string> = {
@@ -56,6 +56,8 @@ export function signInMessage(kind: SignInMessage): string {
     'reset-failed': 'your password could not be changed. please try again or request a new reset link.',
     'reset-done': 'your password has been changed.',
     unavailable: 'accounts open soon. you can get launch updates below.',
+    'recovery-interrupted': 'your signed-in account changed while saving. request a new reset link to check your password.',
+    'recovery-changed': 'your signed-in account changed. nothing was saved. request a new reset link.',
     'recovery-required': 'open the reset link from your email in the browser where you requested it. you can request a new link below.',
   };
   return messages[kind];
@@ -84,6 +86,7 @@ export interface SignInAuth {
   };
 }
 export interface ResetPasswordAuth {
+  getSession(): Promise<{ data: { session: { user: { id: string } } | null }; error: unknown }>;
   updateUser(attributes: { password: string }): Promise<AuthResult>;
 }
 export type AuthAction = 'signin' | 'signup' | 'google' | 'forgot';
@@ -147,14 +150,20 @@ export async function performAuthAction(auth: SignInAuth | null, action: AuthAct
   }
 }
 
-/** recoveryReady comes from establishRecovery (recovery.ts), never from a query parameter. */
-export async function changePassword(auth: ResetPasswordAuth | null, recoveryReady: boolean, password: string):
+/** recoveryUserId comes from the code exchange (recovery.ts), never from a query parameter. */
+export async function changePassword(auth: ResetPasswordAuth | null, recoveryUserId: string | null, password: string, isCurrent: () => boolean):
   Promise<{ ok: boolean; message: string }> {
-  if (!auth || !recoveryReady) return { ok: false, message: signInMessage('recovery-required') };
+  if (!auth || !recoveryUserId) return { ok: false, message: signInMessage('recovery-required') };
   const problem = checkPassword(password);
   if (problem) return { ok: false, message: problem };
   try {
+    const changed = () => ({ ok: false, message: signInMessage('recovery-changed') });
+    if (!isCurrent()) return changed();
+    const { data, error: sessionError } = await auth.getSession();
+    // Recheck after the await: an A -> B -> A switch also invalidates this recovery.
+    if (!isCurrent() || sessionError || data.session?.user.id !== recoveryUserId) return changed();
     const { error } = await auth.updateUser({ password });
+    if (!isCurrent()) return { ok: false, message: signInMessage('recovery-interrupted') };
     return { ok: !error, message: signInMessage(error ? 'reset-failed' : 'reset-done') };
   } catch {
     return { ok: false, message: signInMessage('reset-failed') };

@@ -36,7 +36,10 @@ async function checkEveningColors(page: import('@playwright/test').Page): Promis
     const body = getComputedStyle(document.body).backgroundColor.replace(/\s+/g, '').toLowerCase();
     if (forbidden[body]) problems.push('body: Daytime ' + forbidden[body] + ' background (' + body + ')');
 
-    for (const regionName of ['main', 'header', 'footer']) {
+    // Game pages have no site header (Games v2 frame): the frame's own panel and column stand in for it, so the same
+    // Evening check still covers the top of the screen.
+    const topRegion = document.querySelector('[data-game-page] .game-frame') ? '.game-frame' : 'header';
+    for (const regionName of ['main', topRegion, 'footer']) {
       const region = document.querySelector(regionName);
       if (!region) {
         problems.push(regionName + ': missing landmark');
@@ -76,7 +79,7 @@ test.describe('Task 94: full-site Evening palette audit', () => {
         try {
           // The promo tests own its timing and focus. Don't let a delayed
           // promo cover the page while this color-contrast audit runs.
-          localStorage.setItem('cueory-promo-seen', String(Date.now()));
+          localStorage.setItem('cueory-promo-seen', String(Date.now())); localStorage.setItem('cueory-signup-popup-seen', String(Date.now()));
           // First verify the DEVICE-dark palette before explicitly choosing
           // the footer's "dark" option.
           localStorage.removeItem('cueory-theme');
@@ -166,6 +169,11 @@ test.describe('Task 94: full-site Evening palette audit', () => {
 
       findings.push(...await checkEveningColors(page));
 
+      // Run axe from the top of the page, with the sticky header back in place (as play.spec.ts's axe helper does):
+      // picking Dark scrolls to the footer, and with reduced motion the header stays shown there, so axe would count
+      // it as covering whatever page controls happen to sit under it at that scroll position (lane 8, #823).
+      await page.evaluate(() => window.scrollTo(0, 0));
+      await page.waitForFunction(() => (document.querySelector('header')?.getBoundingClientRect().top ?? 0) >= 0);
       // WCAG AA includes axe's color-contrast rule. Do not turn it off.
       const result = await new AxeBuilder({ page }).withTags(axeTags).analyze();
       for (const violation of result.violations) {

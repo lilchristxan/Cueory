@@ -1,0 +1,1010 @@
+@reference "./global.css";
+
+/*
+  Games v2 Shared Frame Styles (docs/design/games-v2/README.md)
+  Tokens only. Every target at least 44px. Works across 390, 820, and 1440 widths.
+*/
+
+.game-frame {
+  width: 100%;
+  min-height: 100vh;
+  background-color: var(--color-page);
+  background-image:
+    linear-gradient(to right, color-mix(in srgb, var(--color-copper-deep) 35%, transparent) var(--game-frame-grid-line), transparent var(--game-frame-grid-line)),
+    linear-gradient(to bottom, color-mix(in srgb, var(--color-copper-deep) 35%, transparent) var(--game-frame-grid-line), transparent var(--game-frame-grid-line)),
+    linear-gradient(to right, color-mix(in srgb, var(--color-copper-deep) 16%, transparent) var(--game-frame-grid-line), transparent var(--game-frame-grid-line)),
+    linear-gradient(to bottom, color-mix(in srgb, var(--color-copper-deep) 16%, transparent) var(--game-frame-grid-line), transparent var(--game-frame-grid-line)),
+    linear-gradient(to right, color-mix(in srgb, var(--color-copper-deep) 6%, transparent) var(--game-frame-grid-line), transparent var(--game-frame-grid-line)),
+    linear-gradient(to bottom, color-mix(in srgb, var(--color-copper-deep) 6%, transparent) var(--game-frame-grid-line), transparent var(--game-frame-grid-line));
+  background-size: var(--game-frame-grid-major), var(--game-frame-grid-major), var(--game-frame-grid-mid), var(--game-frame-grid-mid), var(--game-frame-grid-minor), var(--game-frame-grid-minor);
+  background-position: var(--game-frame-grid-pos);
+  font-family: var(--font-body);
+  color: var(--color-ink);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow-x: hidden;
+  box-sizing: border-box;
+}
+.game-frame-layout {
+  display: flex;
+  flex: 1;
+  width: 100%;
+  min-height: 100%;
+  position: relative;
+}
+
+/* ---------------- Left Panel (240px wide) ---------------- */
+.game-frame-sidebar {
+  width: var(--game-frame-sidebar-width);
+  flex-shrink: 0;
+  background-color: var(--game-frame-sidebar-bg);
+  border-right: var(--game-frame-line) solid var(--game-frame-border);
+  padding: calc(var(--spacing) * 8) calc(var(--spacing) * 6);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--spacing) * 5);
+  position: relative;
+  z-index: 10;
+}
+
+.game-frame-sidebar-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+/* The page's "flag or comment" button belongs to the frame's header, not to a row above the frame. The desktop sidebar
+   is only 191 px inside, which cannot hold "games", a 44 px flag and the logo at its full width side by side, so there
+   "games" and the logo share the first line and the flag sits on a line of its own under them. On tablets and phones
+   (the compact layout below) all three share one row. */
+.game-frame-sidebar-top {
+  flex-wrap: wrap;
+  row-gap: calc(var(--spacing) * 1);
+}
+.game-frame-flag-slot {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  order: 1;
+  flex: 0 0 100%;
+}
+.game-frame-flag-slot:empty {
+  display: none;
+}
+/* The logo never gives up width to its neighbours. */
+.game-frame-logo-wrap {
+  flex: none;
+}
+
+.game-frame-back {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--game-frame-btn-size);
+  min-width: var(--game-frame-btn-size);
+  padding: calc(var(--spacing) * 2) calc(var(--spacing) * 3);
+  font-size: var(--text-sm);
+  color: var(--color-ink-soft);
+  text-decoration: none;
+  border-radius: var(--radius-md);
+  box-sizing: border-box;
+  transition: color 0.15s ease;
+}
+
+.game-frame-back:hover,
+.game-frame-back:focus-visible {
+  color: var(--color-ink);
+}
+
+.game-frame-back:focus-visible {
+  outline: var(--focus-width) solid var(--color-focus);
+  outline-offset: var(--focus-offset);
+}
+
+.game-frame-logo-wrap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--game-frame-btn-size);
+  min-width: var(--game-frame-btn-size);
+  border-radius: var(--radius-md);
+  box-sizing: border-box;
+}
+
+.game-frame-logo-wrap:focus-visible {
+  outline: var(--focus-width) solid var(--color-focus);
+  outline-offset: var(--focus-offset);
+}
+
+.game-frame-logo {
+  width: var(--game-frame-logo-width);
+  height: auto;
+}
+
+.game-frame-game-badge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: calc(var(--spacing) * 4);
+  margin-top: calc(var(--spacing) * 2);
+  text-align: center;
+}
+
+.game-frame-icon-wrap {
+  width: var(--game-frame-icon-size);
+  height: var(--game-frame-icon-size);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.game-frame-icon-img {
+  width: var(--game-frame-icon-size);
+  height: var(--game-frame-icon-size);
+  display: block;
+}
+
+.game-frame-emblem {
+  width: var(--game-frame-icon-size);
+  height: var(--game-frame-icon-size);
+  border-radius: var(--game-frame-emblem-radius);
+  background: var(--color-surface);
+  border: var(--game-frame-line) solid var(--color-line);
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--color-ink);
+}
+
+.game-frame-emblem-9 {
+  font-family: var(--font-display);
+  font-size: var(--game-frame-emblem-9-size);
+  line-height: 1;
+  color: var(--color-ink);
+}
+
+.game-frame-emblem-hi {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: var(--game-frame-emblem-hi-size);
+  line-height: 1;
+  color: var(--color-ink);
+}
+
+.game-frame-emblem-grid {
+  display: grid;
+  grid-template-columns: repeat(3, var(--game-frame-emblem-cell));
+  gap: var(--game-frame-emblem-gap);
+}
+
+.game-frame-emblem-cell {
+  height: var(--game-frame-emblem-cell);
+  border: var(--game-frame-line) solid var(--color-line);
+  box-sizing: border-box;
+}
+
+.game-frame-emblem-cell.is-filled {
+  background: var(--color-ink);
+  border-color: var(--color-ink);
+}
+
+.game-frame-wordmark-wrap {
+  min-height: var(--game-frame-wordmark-height);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.game-frame-wordmark-img {
+  height: var(--game-frame-wordmark-height);
+  width: auto;
+  max-width: 100%;
+}
+
+/* Daytime and Evening wordmark art, switched as the site switches its other logos (global.css .logo-day / .logo-evening):
+   the device setting, unless the visitor picked Light or Dark in the footer; print always shows the Daytime art. */
+.game-frame-wordmark-evening {
+  display: none;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .game-frame-wordmark-day {
+    display: none;
+  }
+  :root:not([data-theme="light"]) .game-frame-wordmark-evening {
+    display: block;
+  }
+}
+:root[data-theme="dark"] .game-frame-wordmark-day {
+  display: none;
+}
+:root[data-theme="dark"] .game-frame-wordmark-evening {
+  display: block;
+}
+@media print {
+  .game-frame-wordmark-day {
+    display: block !important;
+  }
+  .game-frame-wordmark-evening {
+    display: none !important;
+  }
+}
+
+.game-frame-serif-title {
+  /* Interface label, not a marketing heading: Lato at 1.5 or more (CLAUDE.md Design, D-41). */
+  font-family: var(--font-body);
+  font-weight: 500;
+  font-size: var(--game-frame-title-size);
+  line-height: 1.5;
+  color: var(--color-ink);
+  text-align: center;
+}
+
+.game-frame-tagline {
+  margin: 0;
+  font-family: var(--font-body);
+  font-weight: 500;
+  font-size: var(--game-frame-tagline-size);
+  line-height: 1.5;
+  color: var(--color-ink);
+  text-align: center;
+}
+
+/* ---------------- Stats in Left Panel ---------------- */
+.game-frame-stats {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--spacing) * 5);
+  text-align: center;
+  width: 100%;
+}
+
+.game-frame-stats-status {
+  margin: 0;
+  color: var(--color-ink-soft);
+  font-size: var(--game-frame-stat-label-size);
+  line-height: 1.5;
+  text-align: center;
+}
+
+.game-frame-stat {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--spacing) * 0.5);
+  align-items: center;
+}
+
+.game-frame-stat-value {
+  font-family: var(--font-body);
+  font-weight: 900;
+  font-size: var(--game-frame-stat-value-size);
+  line-height: 1.5;
+  color: var(--color-ink);
+}
+
+.game-frame-stat-label {
+  font-size: var(--game-frame-stat-label-size);
+  color: var(--color-ink-soft);
+  text-transform: lowercase;
+}
+
+.game-frame-sudoku-stats {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--spacing) * 2);
+  inline-size: 100%;
+}
+
+.game-frame-sudoku-stats select {
+  min-block-size: var(--tap-min);
+  border: var(--game-frame-line) solid var(--game-frame-border);
+  border-radius: var(--radius-pill);
+  background: var(--color-page);
+  color: var(--color-ink);
+  padding-inline: calc(var(--spacing) * 3);
+}
+
+/* ---------------- Center Main Area ---------------- */
+.game-frame-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: calc(var(--spacing) * 8) calc(var(--spacing) * 6) calc(var(--spacing) * 16);
+  box-sizing: border-box;
+  position: relative;
+}
+
+.game-frame-dateline {
+  margin: 0 0 calc(var(--spacing) * 6);
+  font-size: var(--game-frame-dateline-size);
+  line-height: var(--game-frame-dateline-lh);
+  color: var(--color-ink-soft);
+  /* Accent lines are plain upright Lato; wrap so enlarged text at 320px never hides the date. */
+  font-style: normal;
+  text-align: center;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  max-inline-size: 100%;
+}
+
+.game-frame-cue-slot {
+  width: 100%;
+  max-width: var(--game-frame-max-board);
+  margin-bottom: calc(var(--spacing) * 3);
+  text-align: center;
+}
+
+/* ---------------- Controls Row above Board ---------------- */
+.game-frame-controls-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  max-width: var(--game-frame-max-board);
+  gap: calc(var(--spacing) * 4);
+  margin-bottom: calc(var(--spacing) * 4);
+  position: relative;
+  z-index: 15;
+}
+
+.game-frame-controls-row.is-wide {
+  max-width: var(--game-frame-max-board-wide);
+}
+
+.game-frame-btn {
+  width: var(--game-frame-btn-size);
+  height: var(--game-frame-btn-size);
+  min-width: var(--game-frame-btn-size);
+  min-height: var(--game-frame-btn-size);
+  border-radius: var(--radius-pill);
+  border: var(--game-frame-btn-border);
+  background: var(--game-frame-btn-bg);
+  box-shadow: var(--game-frame-btn-shadow);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-ink);
+  cursor: pointer;
+  padding: 0;
+  box-sizing: border-box;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.game-frame-btn:hover {
+  transform: translateY(calc(var(--game-frame-line) * -1));
+}
+
+.game-frame-btn:focus-visible {
+  outline: var(--focus-width) solid var(--color-copper-deep);
+  outline-offset: var(--focus-offset);
+}
+
+.game-frame-gear-icon {
+  width: var(--game-frame-gear-size);
+  height: var(--game-frame-gear-size);
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.game-frame-controls-middle {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+}
+
+/* ? Button & Popover */
+.game-frame-how {
+  width: var(--game-frame-btn-size);
+  height: var(--game-frame-btn-size);
+  min-width: var(--game-frame-btn-size);
+  min-height: var(--game-frame-btn-size);
+  border-radius: var(--radius-pill);
+  border: var(--game-frame-btn-border);
+  background: var(--game-frame-btn-bg);
+  box-shadow: var(--game-frame-btn-shadow);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-ink);
+  cursor: pointer;
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: var(--game-frame-how-font-size);
+  position: relative;
+  z-index: 25;
+  box-sizing: border-box;
+}
+
+.game-frame-how:hover {
+  transform: translateY(calc(var(--game-frame-line) * -1));
+}
+
+.game-frame-how:focus-visible {
+  outline: var(--focus-width) solid var(--color-copper-deep);
+  outline-offset: var(--focus-offset);
+}
+
+.game-frame-how-q {
+  line-height: 1;
+}
+
+.game-frame-popover {
+  display: none;
+  position: absolute;
+  right: 0;
+  top: calc(var(--game-frame-btn-size) + calc(var(--spacing) * 2.5));
+  width: var(--game-frame-popover-width);
+  max-width: min(calc(100vw - calc(var(--spacing) * 8)), var(--game-frame-popover-width));
+  padding: var(--game-frame-popover-padding);
+  border-radius: var(--game-frame-popover-radius);
+  background: var(--game-frame-popover-bg);
+  border: var(--game-frame-popover-border);
+  box-shadow: var(--game-frame-popover-shadow);
+  font-family: var(--font-body);
+  font-weight: 400;
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  color: var(--color-ink);
+  text-align: left;
+  z-index: 50;
+  box-sizing: border-box;
+}
+
+.game-frame-how-wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.game-frame-how-wrap[data-open="true"] .game-frame-popover {
+  display: block;
+}
+
+.game-frame-popover-title {
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: var(--game-frame-popover-title-size);
+  letter-spacing: var(--game-frame-popover-title-tracking);
+  color: var(--color-ink-soft);
+  margin-bottom: calc(var(--spacing) * 3);
+}
+
+.game-frame-popover-steps {
+  margin: 0 0 calc(var(--spacing) * 3.5);
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--spacing) * 2.5);
+}
+
+.game-frame-popover-step {
+  display: flex;
+  gap: calc(var(--spacing) * 3.5);
+  align-items: flex-start;
+}
+
+.game-frame-step-num {
+  width: var(--game-frame-step-num-size);
+  height: var(--game-frame-step-num-size);
+  border-radius: var(--radius-pill);
+  border: var(--game-frame-step-num-border);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--game-frame-stat-label-size);
+  font-weight: 700;
+  color: var(--color-ink);
+  flex-shrink: 0;
+}
+
+.game-frame-step-text {
+  line-height: 1.5;
+  font-size: var(--text-sm);
+}
+
+.game-frame-legend {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--spacing) * 2.5);
+  margin-top: calc(var(--spacing) * 3.5);
+  padding-top: calc(var(--spacing) * 3);
+  border-top: var(--game-frame-line) solid var(--color-line);
+}
+
+.game-frame-legend-item {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--spacing) * 3.5);
+  font-size: var(--text-sm);
+}
+
+.game-frame-pill-cap {
+  width: var(--game-frame-pill-width);
+  height: var(--game-frame-pill-height);
+  border-radius: var(--radius-pill);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: var(--game-frame-pill-font-size);
+  color: var(--game-frame-pill-text-color);
+  text-shadow: var(--game-frame-pill-text-shadow);
+  box-shadow: var(--game-frame-pill-shadow);
+  flex-shrink: 0;
+}
+
+.game-frame-pill-green {
+  background: radial-gradient(120% 140% at 30% 20%, var(--game-dark-green-light) 0%, var(--game-dark-green) 55%, var(--game-dark-green-deep) 100%);
+}
+
+.game-frame-pill-oxblood {
+  background: radial-gradient(120% 140% at 30% 20%, var(--game-oxblood-light) 0%, var(--game-oxblood) 55%, var(--game-oxblood-deep) 100%);
+}
+
+.game-frame-pill-ivory {
+  background: var(--game-frame-pill-ivory-bg);
+  color: var(--color-ink-soft);
+  text-shadow: none;
+}
+
+/* ---------------- Board Mount Area ---------------- */
+.game-frame-board {
+  width: 100%;
+  max-width: var(--game-frame-max-board);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  z-index: 5;
+}
+
+.game-frame-board > * {
+  width: 100%;
+}
+
+.game-frame-board.is-wide {
+  max-width: var(--game-frame-max-board-wide);
+}
+
+.game-frame-board.is-showcase {
+  max-width: var(--game-frame-max-board-showcase);
+}
+
+/* ---------------- Card deck (right edge) ---------------- */
+.game-deck {
+  position: relative;
+}
+.game-deck-list {
+  position: relative;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  inline-size: calc(var(--game-deck-card-width) - var(--game-deck-slide) + var(--game-deck-reveal));
+  block-size: calc(var(--game-deck-card-height) + var(--game-deck-step) * 5);
+}
+.game-deck-item {
+  position: absolute;
+  inset-inline-end: calc(-1 * (var(--game-deck-card-width) - var(--game-deck-reveal)));
+  inline-size: var(--game-deck-card-width);
+  block-size: var(--game-deck-card-height);
+}
+.game-deck-item:nth-child(1) { inset-block-start: 0; rotate: -8deg; }
+.game-deck-item:nth-child(2) { inset-block-start: var(--game-deck-step); rotate: -5deg; }
+.game-deck-item:nth-child(3) { inset-block-start: calc(var(--game-deck-step) * 2); rotate: -2deg; }
+.game-deck-item:nth-child(4) { inset-block-start: calc(var(--game-deck-step) * 3); rotate: 1deg; }
+.game-deck-item:nth-child(5) { inset-block-start: calc(var(--game-deck-step) * 4); rotate: 4deg; }
+/* The item (the hit area) stays put; only the card inside it slides. */
+.game-deck-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  inline-size: 100%;
+  block-size: 100%;
+  box-sizing: border-box;
+  padding: calc(var(--spacing) * 3);
+  background: var(--color-page);
+  border: var(--game-frame-line) solid var(--color-line);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--game-frame-btn-shadow);
+  color: var(--color-ink);
+  text-decoration: none;
+  transition: transform 0.2s ease;
+}
+.game-deck-item:hover .game-deck-card,
+.game-deck-card:focus-visible {
+  transform: translateX(calc(-1 * var(--game-deck-slide)));
+}
+.game-deck-card:focus-visible {
+  outline: var(--focus-width) solid var(--color-focus);
+  outline-offset: var(--focus-offset);
+}
+.game-deck-card.is-closed {
+  border-style: dashed;
+  color: var(--color-ink-soft);
+}
+.game-deck-name {
+  font-family: var(--font-display);
+  font-size: var(--game-frame-how-font-size);
+  line-height: 1.5;
+  text-align: center;
+}
+.game-deck-corner {
+  position: absolute;
+  font-size: var(--game-frame-dateline-size);
+  line-height: 1.5;
+  color: var(--color-ink-soft);
+}
+.game-deck-corner {
+  display: inline-flex;
+  align-items: center;
+  gap: calc(var(--spacing) * 1.5);
+}
+.game-deck-icon,
+.game-deck-glyph {
+  inline-size: var(--game-deck-icon-size);
+  block-size: var(--game-deck-icon-size);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  flex: none;
+}
+.game-deck-corner-top {
+  inset-block-start: calc(var(--spacing) * 3);
+  inset-inline-start: calc(var(--spacing) * 3);
+}
+.game-deck-corner-bottom {
+  inset-block-end: calc(var(--spacing) * 3);
+  inset-inline-end: calc(var(--spacing) * 3);
+  rotate: 180deg;
+}
+
+/* ---------------- Deck and Footer Slots ---------------- */
+.game-frame-deck-slot {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 10;
+}
+
+.game-frame-footer-slot {
+  width: 100%;
+  margin-top: auto;
+  z-index: 10;
+}
+
+/* ---------------- Deck breakpoint ---------------- */
+/* The fanned deck at the right edge fits only from 70rem (1120 px); below it the other games are a plain row under the
+   board. The width is the Tailwind breakpoint --breakpoint-deck (tokens.css) used through @variant, so there is one source.
+   This is the only rule block that moved from the 64rem layout query; the sidebar and column layout still switch at 64rem. */
+@variant max-deck {
+  /* From 64rem to 70rem the sidebar and the column are still side by side; the row of cards gets its own full-width line under them, so the game keeps its width. */
+  @variant lg {
+    .game-frame-layout {
+      flex-wrap: wrap;
+    }
+  }
+  /* The deck has no room beside the board below 70rem (1120 px, token --breakpoint-deck in tokens.css), so the other games are a row of plain cards under the stats. */
+  .game-frame-deck-slot {
+    order: 5;
+    inline-size: 100%;
+    box-sizing: border-box;
+    position: static;
+    transform: none;
+    padding: 0 calc(var(--spacing) * 3) calc(var(--spacing) * 8);
+  }
+  .game-deck-list {
+    display: flex;
+    gap: calc(var(--spacing) * 3);
+    inline-size: auto;
+    block-size: auto;
+  }
+  .game-deck-item,
+  .game-deck-item:nth-child(n) {
+    position: static;
+    rotate: none;
+    flex: 1 1 0;
+    min-inline-size: 0;
+    inline-size: auto;
+    block-size: calc(var(--game-frame-btn-size) * 2);
+  }
+  .game-deck-item:hover .game-deck-card,
+  .game-deck-card:focus-visible {
+    transform: none;
+  }
+  .game-deck-corner {
+    display: none;
+  }
+}
+
+/* ---------------- Responsive: Tablet and Mobile ---------------- */
+@media (width < 64rem) {
+  .game-frame-sidebar-top .game-frame-back {
+    padding-inline: calc(var(--spacing) * 3);
+  }
+
+  .game-frame-sidebar-top {
+    flex-wrap: nowrap;
+  }
+
+  .game-frame-flag-slot {
+    order: 0;
+    flex: 1 1 auto;
+    justify-content: center;
+  }
+
+  .game-frame-layout {
+    flex-direction: column;
+  }
+
+  .game-frame-sidebar {
+    width: 100%;
+    height: auto;
+    border-right: none;
+    border-bottom: var(--game-frame-line) solid var(--game-frame-border);
+    padding: calc(var(--spacing) * 4) calc(var(--spacing) * 5);
+    gap: calc(var(--spacing) * 3.5);
+  }
+
+  .game-frame-sidebar-compact-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+  }
+
+  .game-frame-game-badge {
+    flex-direction: row;
+    gap: calc(var(--spacing) * 3);
+    margin-top: 0;
+  }
+
+  .game-frame-icon-wrap {
+    width: var(--game-frame-sidebar-compact-emblem-size);
+    height: var(--game-frame-sidebar-compact-emblem-size);
+  }
+
+  .game-frame-icon-img,
+  .game-frame-emblem {
+    width: var(--game-frame-sidebar-compact-emblem-size);
+    height: var(--game-frame-sidebar-compact-emblem-size);
+    border-radius: var(--game-frame-sidebar-compact-emblem-radius);
+  }
+
+  .game-frame-emblem-9 {
+    font-size: var(--game-frame-gear-size);
+  }
+
+  .game-frame-emblem-hi {
+    font-size: var(--game-frame-how-font-size);
+  }
+
+  .game-frame-emblem-grid {
+    grid-template-columns: repeat(3, var(--game-frame-sidebar-compact-emblem-cell));
+    gap: var(--game-frame-line);
+  }
+
+  .game-frame-emblem-cell {
+    height: var(--game-frame-sidebar-compact-emblem-cell);
+  }
+
+  .game-frame-wordmark-wrap {
+    min-height: auto;
+    /* The wordmark artwork keeps its full width; the tagline beside it wraps instead (tachyyy's was squeezed). */
+    flex: none;
+  }
+
+  .game-frame-wordmark-img {
+    height: var(--game-frame-sidebar-compact-wordmark-height);
+    max-width: none;
+  }
+
+  .game-frame-serif-title {
+    font-size: var(--game-frame-stat-value-size);
+  }
+
+  .game-frame-tagline {
+    font-size: var(--game-frame-pill-font-size);
+    min-width: 0;
+  }
+
+  .game-frame-stats {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: space-around;
+    gap: calc(var(--spacing) * 3);
+    padding-top: calc(var(--spacing) * 2.5);
+    border-top: var(--game-frame-line) solid color-mix(in srgb, var(--game-frame-border) 40%, transparent);
+  }
+
+  .game-frame-stat {
+    gap: 0;
+  }
+
+  .game-frame-stat-value {
+    font-size: var(--game-frame-how-font-size);
+  }
+
+  .game-frame-stat-label {
+    font-size: var(--game-frame-stat-label-compact);
+  }
+
+  .game-frame-main {
+    padding: calc(var(--spacing) * 5) calc(var(--spacing) * 4) calc(var(--spacing) * 12);
+  }
+
+  /* The Frame's side gutter here is 4 units; Word Path's panel bleeds exactly that far until sm:mx-0 (40rem). */
+  .game-frame-board {
+    --wordpath-bleed: calc(var(--spacing) * 4);
+  }
+
+  /*
+    One compact top area, derived from the desktop panel (Games v2). The sidebar stops being a box and its parts are
+    placed one under another: row 1 is "games", the game's wordmark centred and the flag; row 2 (inside the main area)
+    is the gear, the date line and the "?". No second logo, tagline or icon. Then the board and its controls, and the
+    four stats in one strip underneath.
+  */
+  .game-frame-layout {
+    display: flex;
+    flex-direction: column;
+  }
+  .game-frame-sidebar {
+    display: contents;
+  }
+  .game-frame-sidebar-top {
+    order: 1;
+    padding: calc(var(--spacing) * 2) calc(var(--spacing) * 3) 0;
+    box-sizing: border-box;
+  }
+  /* Row 1: "games", the logo and the flag. Row 2: the game's icon and wordmark. The tagline waits for the desktop panel. */
+  .game-frame-back { order: 1; }
+  .game-frame-logo-wrap { order: 2; }
+  .game-frame-flag-slot {
+    order: 3;
+    flex: 0 0 auto;
+    justify-content: flex-end;
+  }
+  .game-frame-game-badge {
+    order: 2;
+    flex-direction: row;
+    justify-content: center;
+    gap: calc(var(--spacing) * 3);
+    margin: 0;
+    padding-inline: calc(var(--spacing) * 3);
+  }
+  .game-frame-tagline {
+    display: none;
+  }
+  .game-frame-main {
+    order: 3;
+    padding-block-start: calc(var(--spacing) * 2);
+  }
+  .game-frame-board {
+    order: 3;
+  }
+  .game-frame-controls-row {
+    margin-block-end: calc(var(--spacing) * 3);
+  }
+  /* The date line has its own line above the controls. */
+  .game-frame-dateline {
+    margin-block-end: calc(var(--spacing) * 2);
+  }
+  .game-frame-stats {
+    order: 4;
+    inline-size: 100%;
+    box-sizing: border-box;
+    margin-block-end: calc(var(--spacing) * 6);
+    padding-inline: calc(var(--spacing) * 3);
+  }
+}
+
+@media (width < 30rem) {
+  .game-frame-sidebar {
+    padding: calc(var(--spacing) * 2.5) calc(var(--spacing) * 3);
+    gap: calc(var(--spacing) * 2);
+  }
+
+  .game-frame-main {
+    padding: calc(var(--spacing) * 2.5) calc(var(--spacing) * 3) calc(var(--spacing) * 6);
+  }
+
+  .game-frame-dateline {
+    margin: 0 0 calc(var(--spacing) * 3);
+  }
+
+  .game-frame-controls-row {
+    margin-bottom: calc(var(--spacing) * 3);
+  }
+
+  .game-frame-serif-title {
+    font-size: var(--game-frame-gear-size);
+  }
+
+  .game-frame-tagline {
+    font-size: calc(var(--spacing) * 4);
+  }
+
+  .game-frame-stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: calc(var(--spacing) * 1.5);
+  }
+
+  .game-frame-stat-value {
+    font-size: var(--game-frame-pill-font-size);
+  }
+
+  .game-frame-stat-label {
+    font-size: var(--game-frame-stat-label-phone);
+  }
+
+  /* Match the Frame's 3-unit phone gutters so Word Path keeps 44px cells without document overflow. */
+  .game-frame-board {
+    --wordpath-bleed: calc(var(--spacing) * 3);
+  }
+}
+
+/* ---------------- Reduced Motion ---------------- */
+@media (prefers-reduced-motion: reduce) {
+  .game-frame-btn,
+  .game-frame-how,
+  .game-frame-back {
+    transition: none !important;
+    transform: none !important;
+  }
+}
+
+/* ---------------- Print Media ---------------- */
+@media print {
+  /* The page title is screen-reader only on screen (the wordmark is in the left panel); a printed puzzle shows it. */
+  /* (the screen-reader-only look is the not-print:sr-only utility on the element, so print needs no override) */
+
+  .game-frame-sidebar,
+  .game-frame-dateline,
+  .game-frame-controls-row,
+  .game-frame-deck-slot,
+  .game-frame-cue {
+    display: none !important;
+  }
+
+  .game-frame {
+    display: block !important;
+    background: transparent !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+
+  .game-frame-main {
+    display: block !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    max-width: none !important;
+  }
+
+  .game-frame-board {
+    display: block !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    max-width: none !important;
+  }
+}

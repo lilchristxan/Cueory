@@ -1,14 +1,136 @@
 ---
 import Layout from '../layouts/Layout.astro';
-import PlaceholderBlock from '../components/PlaceholderBlock.astro';
 import Prose from '../components/Prose.astro';
+import { site } from '../config/site';
+
+// FINAL: Terms v6, adopted 10–0 on 2026-11-17 (file SHA-256 0d21a91b…ce37). Word for word; change it only with
+// Christian's approval.
+const email = site.contactEmail;
+const mail = `mailto:${email}`;
 ---
 
-<Layout title="terms" description="The terms for using Cueory." noindex>
+<Layout title="terms" description="The terms for using Cueory.">
   <Prose>
     <h1>terms of use</h1>
-    <PlaceholderBlock label="Terms of use">
-      <p>Christian: paste your terms of use here. Have a qualified person review them before launch.</p>
-    </PlaceholderBlock>
+    <p class="text-sm text-ink-soft">Last updated 17 November 2026</p>
+
+    <p>
+      Cueory is a free study site for nursing students. An individual in Arizona, USA, owns and runs it. In these terms,
+      “Cueory,” “we” and “us” mean that owner. Please read these terms and the <a href="/disclaimer">Disclaimer</a> before
+      using the site. Use Cueory only if you agree to both.
+    </p>
+
+    <h2>Who can use Cueory</h2>
+    <p>
+      You must be at least 16. If you are at least 16 and still a minor where you live, a parent or legal guardian must
+      read these terms with you and agree to them before you use Cueory.
+    </p>
+    <p>
+      We do not knowingly collect personal information from children under 13. If you believe a child under 13 has shared
+      personal information with us, email <a href={mail}>{email}</a>. Please leave sensitive details out of your first
+      message. If we learn we have collected personal information from a child under 13, we will promptly delete it from
+      our records and ask any provider holding it for us to do the same, except where the law requires us to keep it.
+    </p>
+
+    <h2>What you can use today</h2>
+    <p>
+      You can try sample study activities and daily puzzles without an account. Some pages are placeholders. Public
+      account registration has not opened. You can join the launch email list through the “get launch updates” email box
+      (on the home page and in the signup pop-up), which sends your address straight to Kit, or through Cueory’s signup
+      page on Kit. You can send feedback by email to <a href={mail}>{email}</a>.
+    </p>
+    <p>
+      Cueory is free to use. If we introduce a charge for access, we’ll announce it on the site before it takes effect. We
+      may change, pause or discontinue a feature.
+    </p>
+
+    <h2>Using and sharing study materials</h2>
+    <p>
+      You may use our materials for personal, noncommercial study, including taking notes and printing study materials
+      for yourself. Cueory or its licensors own the site’s content, name, logo and design. If material carries a separate
+      license, that license governs its use. These terms preserve uses permitted by law.
+    </p>
+    <p>These rules apply when you use Cueory.</p>
+    <ul>
+      <li>
+        Get our written permission before selling, republishing or distributing our materials beyond the uses allowed
+        above.
+      </li>
+      <li>
+        Keep confidential or unreleased exam material off Cueory and out of messages to us. This includes school and
+        licensing exam questions or answers you remember from a test.
+      </li>
+      <li>Do not interfere with the site, overload it, bypass its security or use bots to collect its content in bulk.</li>
+      <li>
+        Do not send unlawful or harmful material, anyone else’s private information, or information about a real patient.
+      </li>
+    </ul>
+    <p>We may limit or block access for violations of these terms.</p>
+
+    <h2>Feedback and copyright concerns</h2>
+    <p>
+      To report a mistake, send the page title or link and a short description to <a href={mail}>{email}</a>. Leave out
+      patient details and confidential exam material. If you send an idea or correction, we may use it to improve Cueory
+      without paying you. You keep any rights you have in what you send.
+    </p>
+    <p>
+      If you believe something on Cueory infringes your copyright, email us at the same address. Identify your work, link
+      to the material on Cueory, tell us how to reach you and say whether you own the rights or represent the owner.
+      We’ll review the report and remove material when appropriate.
+    </p>
+
+    <h2>Other services and optional tips</h2>
+    <p>
+      Cueory links to YouTube and our other social media pages. If you choose to use an outside service, its terms and
+      privacy policy also apply. Our launch email list is run by Kit: the email box sends your address straight to Kit,
+      and Kit’s terms and privacy policy apply when you sign up. You must be at least 16 to join.
+    </p>
+    <p>
+      Ko-fi requires users to be at least 18, so please tip only if you are 18 or older. If you choose to tip through
+      Ko-fi, the tip goes to Cueory through a payment provider. A tip is optional and gives you no extra access. For a
+      mistaken tip or a refund request, email <a href={mail}>{email}</a>.{' '}
+      <a href="https://more.ko-fi.com/terms" rel="noopener noreferrer">Ko-fi’s terms</a>
+    </p>
+    <p>
+      For information about data on your device and how we handle personal information, see the{' '}
+      <a href="/privacy">Privacy Notice</a>.
+    </p>
+
+    <h2>Warranties and limits on liability</h2>
+    <p>
+      <strong>Cueory is provided “as is” and “as available.” To the extent the law allows, we disclaim express and implied
+      warranties, including warranties of merchantability, fitness for a particular purpose and non-infringement. We
+      cannot promise that the site will always be available, secure, accurate, complete or up to date.</strong>
+    </p>
+    <p>
+      <strong>To the extent the law allows, Cueory and the people who help run it are not liable for indirect, incidental,
+      special, consequential or punitive damages arising from use of the site, or for lost data, lost income or losses
+      related to grades or exam results. For other claims arising from use of the site, the combined total liability of
+      Cueory and the people who help run it to you, across all claims, is limited to US $50.</strong>
+    </p>
+    <p>
+      These limits and disclaimers do not apply to fraud, intentional misconduct or gross negligence. You keep any rights
+      or remedies that the law does not allow you to give up.
+    </p>
+
+    <h2>Changes to these terms</h2>
+    <p>
+      We’ll post changes on this page and update the date. For an important change, we’ll also post a notice on the site
+      explaining the change and its effective date at least 14 days in advance. Other changes apply when posted. Changes
+      apply to future use and do not affect claims arising before the change takes effect. We’ll ask for your agreement
+      when the law requires it. If you disagree with an update, stop using Cueory once it takes effect.
+    </p>
+
+    <h2>Governing law and agreement</h2>
+    <p>
+      Arizona law governs these terms, without regard to its conflict-of-law rules. Disputes arising from these terms or
+      your use of Cueory belong in a state or federal court with jurisdiction in Maricopa County, Arizona. You keep any
+      mandatory protections and any right to bring a claim elsewhere that the law where you live gives you.
+    </p>
+    <p>
+      These terms and the Disclaimer are the entire agreement about your use of Cueory. If a court finds one part
+      unenforceable, the rest still applies. If we do not enforce a term right away, we may still enforce it later.
+    </p>
+    <p>Questions about these terms? Email <a href={mail}>{email}</a>.</p>
   </Prose>
 </Layout>

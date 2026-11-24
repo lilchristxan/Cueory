@@ -1,5 +1,7 @@
 ---
 import Layout from '../../layouts/Layout.astro';
+import { lessonEntryHref } from '../../lessons/draftgate';
+const entryHref = lessonEntryHref();
 
 // Sample data only. There is no sender, recipient or live unsubscribe endpoint on this page.
 // The production email is in emails/review-reminder.html, not in this preview's CSS.
@@ -7,7 +9,7 @@ const example = {
   count: 6,
   module: 'module 1',
   minutes: 8,
-  reviewUrl: '/learn/study-skills/cards',
+  reviewUrl: entryHref === '/learn' ? '/learn' : '/learn/study-skills/cards',
 } as const;
 
 const plainText = [

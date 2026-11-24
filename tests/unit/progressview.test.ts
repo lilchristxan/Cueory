@@ -84,5 +84,6 @@ describe('exam date is a calendar countdown, never an exam prediction', () => {
   it('does not make up a countdown for missing or invalid dates', () => {
     expect(examCountdown(null, '2026-11-02')).toBeNull();
     expect(examCountdown('2026-02-30', '2026-11-02')).toBeNull();
+    expect(examCountdown('2026-11-03', '2026-02-30')).toBeNull();
   });
 });

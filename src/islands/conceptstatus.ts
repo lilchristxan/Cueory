@@ -1,6 +1,6 @@
 /** Adapts stored attempts to the existing adaptive rules; it does not define another progress model. */
 import { conceptStatus, type AdaptiveAttempt, type AdaptiveQuestion } from './adaptive';
-import { parseItems, type ConceptItem } from './conceptmap.ts';
+import { parseItems, type ConceptItem } from './concept-map.ts';
 
 export interface ConceptAttempt {
   item_id: string;

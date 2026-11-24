@@ -1,4 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
+import { visibleFooterLinks } from '../../src/config/legalfooter';
+import { footerLinks } from '../../src/config/site';
 import { expect, test, type Page } from '@playwright/test';
 import { isDesktopOfEachEngine } from './projects';
 
@@ -9,7 +11,7 @@ import { isDesktopOfEachEngine } from './projects';
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
     try {
-      localStorage.setItem('cueory-promo-seen', String(Date.now()));
+      localStorage.setItem('cueory-promo-seen', String(Date.now())); localStorage.setItem('cueory-signup-popup-seen', String(Date.now()));
     } catch {
       // Storage blocked: panel never shows anyway.
     }
@@ -82,7 +84,7 @@ test.describe('footer bar', () => {
       await expect(footerOf(page).getByRole('button', { name: 'flag or comment', exact: true })).toBeVisible();
       await flags.click();
       await expect(flags).toHaveAttribute('aria-expanded', 'true');
-      await expect(page.getByTestId('flag-form')).toContainText('a free account is needed to send a report');
+      await expect(page.getByTestId('flag-form')).toContainText('email us at');
     }
   });
 
@@ -91,7 +93,9 @@ test.describe('footer bar', () => {
     const footer = footerOf(page);
     const panel = footer.locator('#site-footer-panel');
     await expect(panel).toBeHidden();
-    await expect(footer.getByRole('link', { name: 'terms' })).toBeHidden();
+    // The link row is drawn above the bar and stays visible while the extras panel is closed.
+    await expect(footer.getByRole('link', { name: 'privacy', exact: true })).toBeVisible();
+    await expect(footer.getByRole('link', { name: 'hello@cueory.app', exact: true })).toBeHidden();
 
     await chevron(page).click();
     await expect(chevron(page)).toHaveAttribute('aria-expanded', 'true');
@@ -99,8 +103,15 @@ test.describe('footer bar', () => {
     await expect(panel).toBeVisible();
     // Above the bar.
     expect((await panel.boundingBox())!.y).toBeLessThan((await chevron(page).boundingBox())!.y);
-    for (const name of ['courses', 'coming soon', 'privacy', 'terms', 'disclaimer', 'support cueory', 'hello@cueory.app']) {
+    for (const name of ['about us', 'courses', 'coming soon', 'privacy', 'support cueory', 'contact', 'hello@cueory.app']) {
       await expect(footer.getByRole('link', { name, exact: true })).toBeVisible();
+    }
+    // #747: Terms and Disclaimer show only once their pages are approved (same rule as the footer).
+    const approved = new Set(visibleFooterLinks(footerLinks).map((link) => link.href));
+    for (const [name, href] of [['terms', '/terms'], ['disclaimer', '/disclaimer']] as const) {
+      const link = footer.getByRole('link', { name, exact: true });
+      if (approved.has(href)) await expect(link).toBeVisible();
+      else await expect(link).toHaveCount(0);
     }
     await expect(footer.getByText('by nursing students, for nursing students.', { exact: true })).toBeVisible();
     await expect(footer.getByText(/^© \d{4} cueory\. study help, not medical advice\.$/)).toBeVisible();
@@ -114,6 +125,8 @@ test.describe('footer bar', () => {
     await chevron(page).focus();
     await page.keyboard.press('Enter');
     await expect(panel).toBeVisible();
+    await page.keyboard.press('Tab');
+    await expect(footer.getByRole('link', { name: 'about us', exact: true })).toBeFocused();
     await page.keyboard.press('Tab');
     await expect(footer.getByRole('link', { name: 'courses', exact: true })).toBeFocused();
     await page.keyboard.press('Tab');
@@ -142,10 +155,10 @@ test.describe('footer without JavaScript', () => {
     await page.goto('/privacy');
     const footer = footerOf(page);
     await expect(footer.locator('#site-footer-panel')).toBeVisible();
-    await expect(footer.getByRole('link', { name: 'terms', exact: true })).toBeVisible();
+    await expect(footer.getByRole('link', { name: 'privacy', exact: true })).toBeVisible();
     const flag = footer.getByRole('link', { name: 'flag or comment', exact: true });
     await expect(flag).toBeVisible();
-    await expect(flag).toHaveAttribute('href', `mailto:hello@cueory.app?subject=${encodeURIComponent('flag or comment: /privacy')}`);
+    await expect(flag).toHaveAttribute('href', `mailto:hello@cueory.app?subject=${encodeURIComponent('flag or comment: /privacy')}&body=${encodeURIComponent("please don't include patient names, dates of birth, medical record numbers, or other details that could identify a real person.\n\n")}`);
     await expect(chevron(page)).toBeHidden();
     expect((await chevron(page).evaluate((el) => el.getBoundingClientRect().width))).toBeGreaterThan(0);
   });
@@ -198,10 +211,13 @@ test.describe('footer theme picker', () => {
 
     await page.keyboard.press('ArrowRight');
     await expect(dark).toBeChecked();
+    await expect(dark).toBeFocused();
     await page.keyboard.press('ArrowRight');
     await expect(device).toBeChecked();
+    await expect(device).toBeFocused();
     await page.keyboard.press('ArrowLeft');
     await expect(dark).toBeChecked();
+    await expect(dark).toBeFocused();
   });
 
   for (const size of [

@@ -9,14 +9,47 @@ export function waitsForReveal(top: number, viewportHeight: number): boolean {
   return top >= viewportHeight;
 }
 
+/**
+ * When keyboard focus lands in a waiting section, reveal it instantly without motion and stop observing it.
+ */
+export function revealInstantly(section: HTMLElement, observer?: Pick<IntersectionObserver, 'unobserve'>): void {
+  if (section.dataset.reveal === 'waiting') {
+    section.dataset.reveal = 'instant';
+    observer?.unobserve(section);
+  }
+}
+
+/**
+ * Once a waiting section has been made visible, align the still-focused target
+ * against its final (untranslated) layout. This must happen in the focus-in
+ * turn: WebKit can defer an animation frame while leaving the target below the
+ * viewport edge.
+ */
+export function keepFocusedTargetInView(target: HTMLElement): void {
+  if (document.activeElement === target) {
+    target.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  }
+}
+
 export function revealSections(): void {
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches || !('IntersectionObserver' in window)) return;
   const observer = new IntersectionObserver(
     (entries) => {
       for (const entry of entries) {
         if (!entry.isIntersecting) continue;
-        (entry.target as HTMLElement).dataset.reveal = 'shown';
-        observer.unobserve(entry.target);
+        const target = entry.target as HTMLElement;
+        if (target.dataset.reveal === 'instant') {
+          observer.unobserve(target);
+          continue;
+        }
+        const active = document.activeElement;
+        if (active instanceof HTMLElement && target.contains(active) && target.dataset.reveal === 'waiting') {
+          revealInstantly(target, observer);
+          keepFocusedTargetInView(active);
+          continue;
+        }
+        target.dataset.reveal = 'shown';
+        observer.unobserve(target);
       }
     },
     { rootMargin: '0px 0px -8% 0px' },
@@ -24,6 +57,24 @@ export function revealSections(): void {
   for (const section of document.querySelectorAll<HTMLElement>('[data-reveal-section]')) {
     if (!waitsForReveal(section.getBoundingClientRect().top, window.innerHeight)) continue;
     section.dataset.reveal = 'waiting';
+    const onFocusIn = (event?: FocusEvent) => {
+      const target = event?.target;
+      const focusTarget = target && typeof HTMLElement !== 'undefined' && target instanceof HTMLElement ? target : undefined;
+      const inSection = focusTarget ? (typeof section.contains === 'function' ? section.contains(focusTarget) : true) : !event?.target;
+      if (
+        (section.dataset.reveal === 'waiting' || section.dataset.reveal === 'shown') &&
+        inSection
+      ) {
+        if (section.dataset.reveal === 'waiting') revealInstantly(section, observer);
+        else {
+          section.dataset.reveal = 'instant';
+          observer.unobserve(section);
+        }
+        section.removeEventListener('focusin', onFocusIn);
+        if (focusTarget) keepFocusedTargetInView(focusTarget);
+      }
+    };
+    section.addEventListener('focusin', onFocusIn);
     observer.observe(section);
   }
 }

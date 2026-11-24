@@ -9,7 +9,8 @@
  * "draft · labels waiting for review".
  */
 import Layout from '../../layouts/Layout.astro';
-import AnatomyLab from '../../islands/AnatomyLab.tsx';
+import AnatomyLabOpen from '../../islands/AnatomyLabOpen.tsx';
+import { modelBytesFor } from '../../islands/anatomymodelsize';
 import { labDataForBuild } from '../../islands/anatomylab';
 import fixtureJson from '../../../tests/fixtures/anatomy-fixture.json';
 
@@ -23,6 +24,8 @@ const lab = labDataForBuild(files, fixtureJson, {
 // Pass only individual systems to React. The combined whole-body view is derived after opening,
 // avoiding a duplicate copy of every structure in the initial serialized page.
 const hasSystems = lab.systems.length > 0 || lab.fixture !== null;
+// Model download size shown on the cover without loading any GLBs.
+const modelBytes = modelBytesFor(lab.systems, new URL('../../../public/', import.meta.url));
 ---
 
 <Layout title="preview: anatomy lab" description="Preview of the anatomy lab." variant="study" noindex>
@@ -42,7 +45,7 @@ const hasSystems = lab.systems.length > 0 || lab.fixture !== null;
     {
       hasSystems ? (
         <>
-          <AnatomyLab client:only="react" systems={lab.systems} fixture={lab.fixture} drafts={lab.drafts} />
+          <AnatomyLabOpen client:only="react" systems={lab.systems} fixture={lab.fixture} drafts={lab.drafts} modelBytes={modelBytes} />
           <noscript>
             <p class="rounded-lg border border-line p-4 text-ink">
               the 3D anatomy lab needs javascript. <a href="/preview/anatomy-text" class="underline">read structure names without JavaScript</a>, or <a href="/learn" class="underline">browse lessons</a> instead.

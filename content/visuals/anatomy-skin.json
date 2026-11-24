@@ -4,6 +4,7 @@
   "kind": "model",
   "lessonIds": ["U11-T01-L01"],
   "status": "draft",
+  "hierarchyTree": "isa",
   "model": { "file": "/models/anatomy/skin.glb", "release": "BodyParts3D 4.0", "via": "official download from dbarchive.biosciencedbc.jp" },
   "labels": [
     { "id": "FMA7163", "text": "skin", "group": "nonparenchymatous organ", "layer": "skin", "source": "bp3d-FMA7163" }

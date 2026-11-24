@@ -2,7 +2,10 @@
 /** Preview-only interface examples, not a lesson or a public course. */
 import EmptyState from '../../components/EmptyState.astro';
 import Skeleton from '../../islands/Skeleton';
+import { ErrorBoundaryDemo } from '../../islands/ErrorBoundary';
 import Layout from '../../layouts/Layout.astro';
+import { lessonEntryHref } from '../../lessons/draftgate';
+const entryHref = lessonEntryHref();
 ---
 
 <Layout
@@ -49,7 +52,7 @@ import Layout from '../../layouts/Layout.astro';
           description="try another search or browse the available lessons."
           icon="search"
           actionLabel="browse lessons"
-          actionHref="/learn/study-skills"
+          actionHref={entryHref}
           headingLevel={3}
         />
         <EmptyState
@@ -63,7 +66,7 @@ import Layout from '../../layouts/Layout.astro';
           description="open a lesson to find cards worth keeping."
           icon="book"
           actionLabel="open a lesson"
-          actionHref="/learn/study-skills"
+          actionHref={entryHref}
           headingLevel={3}
         />
         <EmptyState
@@ -71,7 +74,30 @@ import Layout from '../../layouts/Layout.astro';
           description="new items will appear here when they're ready."
           headingLevel={3}
         />
+        <div data-puzzle-feed-state="none-today">
+          <EmptyState
+            title="today's puzzle isn't ready."
+            description="there isn't a puzzle for today yet. try again later."
+            retryLabel="try again"
+            headingLevel={3}
+          />
+        </div>
+        <div data-puzzle-feed-state="failed">
+          <EmptyState
+            title="today's puzzle isn't ready."
+            description="we couldn't load today's puzzle. try again later."
+            retryLabel="try again"
+            headingLevel={3}
+          />
+        </div>
       </div>
+    </section>
+
+    <section aria-labelledby="error-heading" class="space-y-5" data-error-preview>
+      <h2 id="error-heading" class="text-xl font-semibold text-ink">when an interactive part fails</h2>
+      <p class="text-sm text-ink-soft">choose the sample button to simulate a failed part. the rest of the page stays usable.</p>
+      <ErrorBoundaryDemo client:only="react" />
+      <noscript><p>the interactive error preview needs JavaScript. the rest of this page remains available.</p></noscript>
     </section>
   </div>
 </Layout>

@@ -50,6 +50,14 @@ test.beforeAll(async () => {
           version: 1, onboarding: { course: 'fundamentals', examDate, done: true }, decks: {},
         }));
       }
+      // A tab can begin an action before a marker event from another tab is delivered. This fixture option holds that
+      // notification so the second tab exercises its inside-lock marker read instead of hiding before the click.
+      if (params.has('hold-marker-events')) {
+        const addEventListener = window.addEventListener.bind(window);
+        window.addEventListener = (type, listener, options) => {
+          if (type !== 'storage') addEventListener(type, listener, options);
+        };
+      }
       createRoot(document.getElementById('fixture')).render(<GuestImportOffer />);
     `, resolveDir: process.cwd(), loader: 'tsx' },
     bundle: true, write: false, format: 'iife', platform: 'browser', jsx: 'automatic',
@@ -64,9 +72,46 @@ test.beforeAll(async () => {
           calls.push(call);
           localStorage.setItem('fixture-db-calls', JSON.stringify(calls));
         };
-        const answer = () => new Promise(resolve => setTimeout(() => resolve({
-          error: params.has('fail') ? { code: '08006', message: 'provider-private-detail' } : null,
+        const answer = (extra = {}, canFail = true) => new Promise(resolve => setTimeout(() => resolve({
+          error: canFail && params.has('fail') ? { code: '08006', message: 'provider-private-detail' } : null,
+          ...extra,
         }), 200));
+        // The tables behave like the database's: rows are kept in localStorage (so two tabs share them) and the
+        // unique keys are enforced. exam_plans is unique per (user_id, course); review_state per (user_id, item_id),
+        // and a bulk insert with any duplicate is refused as a whole, as Postgres does. A duplicate answers with
+        // code 23505, the code the real client sees. The writing account is whoever is signed in when the
+        // request is made (auth.uid()), never a column the page sends.
+        const readRows = () => JSON.parse(localStorage.getItem('fixture-db-rows') || '{"exam_plans":[],"review_state":[]}');
+        const keyOf = (table, row) => table === 'review_state' ? row.user_id + '|' + row.item_id : row.user_id + '|' + row.course;
+        const insertRows = (table, input) => {
+          const rows = readRows();
+          const added = (Array.isArray(input) ? input : [input]).map(row => ({ ...row, user_id: signedInAs() }));
+          const taken = new Set(rows[table].map(row => keyOf(table, row)));
+          const seen = new Set();
+          for (const row of added) {
+            const key = keyOf(table, row);
+            if (taken.has(key) || seen.has(key)) return { error: { code: '23505', message: 'duplicate key value' } };
+            seen.add(key);
+          }
+          rows[table].push(...added);
+          localStorage.setItem('fixture-db-rows', JSON.stringify(rows));
+          return null;
+        };
+        const updateRows = (table, patch, filter) => {
+          const rows = readRows();
+          // Row-level security: only the signed-in account's own rows can change.
+          const matched = rows[table].filter(row => row.user_id === signedInAs()
+            && Object.entries(filter).every(([column, value]) => row[column] === value));
+          for (const row of matched) Object.assign(row, patch);
+          localStorage.setItem('fixture-db-rows', JSON.stringify(rows));
+          return matched.map(row => ({ user_id: row.user_id }));
+        };
+        const selectedRows = (table, columns, filter) => readRows()[table]
+          // The SELECT policy is the same RLS boundary as the real tables: this client can see only its own rows.
+          .filter(row => row.user_id === signedInAs() && Object.entries(filter).every(([column, value]) => {
+            return Array.isArray(value) ? value.includes(row[column]) : row[column] === value;
+          }))
+          .map(row => Object.fromEntries(columns.split(',').map(column => [column, row[column]])));
         // The signed-in account can be switched through localStorage ('none' = signed out). Like supabase-js's
         // cross-tab broadcast, a switch made in another tab is announced to onAuthStateChange listeners here;
         // a switch made in this tab is not, which stands in for a missed announcement.
@@ -84,8 +129,26 @@ test.beforeAll(async () => {
             },
           },
           from: (table) => ({
-            insert: (row) => { record(['insert', table, row]); return answer(); },
-            update: (patch) => ({ eq: (column, value) => { record(['update', table, patch, column, value]); return answer(); } }),
+            insert: (row) => {
+              record(['insert', table, row]);
+              // The failure switch refuses the write; otherwise the database's unique keys decide.
+              const refused = params.has('fail') ? null : insertRows(table, row);
+              return answer(refused ?? {});
+            },
+            update: (patch) => ({ match: (filter) => ({ select: () => {
+              record(['update', table, patch, filter]);
+              return answer({ data: params.has('fail') ? null : updateRows(table, patch, filter) });
+            } }) }),
+            select: (columns) => ({
+              eq: (column, value) => {
+                record(['select', table, columns, column, value]);
+                return answer({ data: selectedRows(table, columns, { [column]: value }) }, false);
+              },
+              in: (column, values) => {
+                record(['select', table, columns, column, values]);
+                return answer({ data: selectedRows(table, columns, { [column]: values }) }, false);
+              },
+            }),
           }),
         };
         export async function getSupabase() { return params.get('client') === 'off' ? null : client; }
@@ -148,16 +211,34 @@ test.describe('guest import offer after sign-in', () => {
     await page.getByRole('button', { name: 'bring it in' }).dblclick();
     await expect(page.getByRole('status')).toHaveText('your exam date is in your account now.');
     await expect(page.getByRole('status')).toBeFocused();
-    const calls = await dbCalls(page);
-    expect(calls).toHaveLength(1);
-    expect(calls[0]!.slice(0, 2)).toEqual(['insert', 'exam_plans']);
-    expect(Object.keys(calls[0]![2] as object).sort()).toEqual(['course', 'exam_date']);
+    const writes = (await dbCalls(page)).filter(call => call[0] === 'insert' || call[0] === 'update');
+    expect(writes).toHaveLength(1);
+    expect(writes[0]!.slice(0, 2)).toEqual(['insert', 'exam_plans']);
+    expect(Object.keys(writes[0]![2] as object).sort()).toEqual(['course', 'exam_date']);
     expect(await marker(page)).toBe('1');
 
     await open(page, 'x=1');
     await page.waitForTimeout(300);
     await expect(page.getByRole('button', { name: 'bring it in' })).toHaveCount(0);
-    expect(await dbCalls(page)).toHaveLength(1);
+    expect((await dbCalls(page)).filter(call => call[0] === 'insert' || call[0] === 'update')).toHaveLength(1);
+  });
+
+  test('marks a completed RLS-visible import without another database write when the local marker is stale', async ({ page }) => {
+    await open(page, 'seed=1');
+    await expect(offer(page)).toBeVisible();
+    const examDate = await page.evaluate(() => JSON.parse(localStorage.getItem('cueory-progress')!).onboarding.examDate as string);
+    await page.evaluate(({ userId, examDate }) => localStorage.setItem('fixture-db-rows', JSON.stringify({
+      exam_plans: [{ user_id: userId, course: 'fundamentals', exam_date: examDate }],
+      review_state: [],
+    })), { userId: USER, examDate });
+
+    await page.getByRole('button', { name: 'bring it in' }).click();
+    await expect(page.getByRole('status')).toHaveText('your exam date is in your account now.');
+    await expect(page.getByRole('status')).toBeFocused();
+    expect(await marker(page)).toBe('1');
+    const calls = await dbCalls(page);
+    expect(calls.filter(call => call[0] === 'insert' || call[0] === 'update')).toEqual([]);
+    expect(calls).toContainEqual(['select', 'exam_plans', 'course,exam_date', 'course', 'fundamentals']);
   });
 
   test('"not now" hides the offer for good and saves nothing', async ({ page }) => {
@@ -196,12 +277,49 @@ test.describe('guest import offer after sign-in', () => {
     await expect.poll(() => marker(page)).toBe('1');
     await expect(offer(page)).toHaveCount(0);
     await expect(offer(second)).toHaveCount(0);
-    expect((await dbCalls(page)).filter(call => call[0] === 'insert')).toHaveLength(1);
+    const calls = await dbCalls(page);
+    const inserts = calls.filter(call => call[0] === 'insert');
+    const updates = calls.filter(call => call[0] === 'update');
+    const plans = await page.evaluate(() => JSON.parse(localStorage.getItem('fixture-db-rows') || '{}').exam_plans as { user_id: string; exam_date: string }[]);
+    if (await page.evaluate(() => 'locks' in navigator)) {
+      // With Web Locks the second tab waits its turn, finds the marker and sends nothing at all.
+      expect(inserts).toHaveLength(1);
+      expect(updates).toEqual([]);
+    } else {
+      // Without them (Safari before 15.4) both tabs can send the insert at once. The database's unique key refuses the
+      // second one and the import falls back to the same-value update, so each request after the first is a refused
+      // insert followed by an update that writes the same date. Never more than two tabs' worth of requests.
+      expect(inserts.length).toBeGreaterThanOrEqual(1);
+      expect(inserts.length).toBeLessThanOrEqual(2);
+      expect(updates).toHaveLength(inserts.length - 1);
+      for (const update of updates) expect((update[2] as { exam_date: string }).exam_date).toBe(plans[0]!.exam_date);
+    }
+    // Either way the end state is the same: one exam plan for the account, and no card rows.
+    expect(plans).toHaveLength(1);
+    expect(plans[0]!.user_id).toBe(USER);
+    expect(await page.evaluate(() => JSON.parse(localStorage.getItem('fixture-db-rows') || '{}').review_state)).toEqual([]);
 
     const third = await context.newPage();
     await open(third, 'x=1');
     await third.waitForTimeout(300);
     await expect(third.getByRole('button', { name: 'bring it in' })).toHaveCount(0);
+  });
+
+  test('two tabs: a decline that arrives before accept dismisses with visible focus and no success claim', async ({ page, context }) => {
+    await open(page, 'seed=1');
+    const second = await context.newPage();
+    await open(second, 'x=1&hold-marker-events=1');
+    await expect(offer(page)).toBeVisible();
+    await expect(offer(second)).toBeVisible();
+
+    await page.getByRole('button', { name: 'not now' }).click();
+    expect(await marker(page)).toBe('declined');
+    // The held event keeps the second tab's stale offer visible, as when it receives the other tab's marker late.
+    await second.getByRole('button', { name: 'bring it in' }).click();
+    await expect(offer(second)).toHaveCount(0);
+    await expect(second.locator('h1')).toBeFocused();
+    await expect(second.getByRole('status')).toHaveCount(0);
+    expect((await dbCalls(second)).filter(call => call[0] === 'insert' || call[0] === 'update')).toEqual([]);
   });
 
   test('another tab saying "not now" removes this tab\'s offer', async ({ page, context }) => {

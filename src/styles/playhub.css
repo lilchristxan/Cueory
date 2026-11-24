@@ -1,0 +1,19 @@
+/*
+  Room for the /play hub's browser-only islands until they render (src/pages/play.astro; performance, 2026-11-19).
+  The stats panel (GameStatsPanel) is client:only, so until its script runs the footer would sit right under the game
+  rows and then jump down (layout shift 0.29 on a throttled phone). The game rows are rendered on the server, so only
+  the stats panel needs room. While it has drawn nothing yet, and only when scripts can run, its holder keeps the room
+  it will take (flow-root keeps its top margin inside the holder). The rule stops matching as soon as it renders. The same approach as the game pages
+  (gamepage.css, #921), which keep their own rule.
+*/
+@layer components {
+  .play-hub-island {
+    display: flow-root;
+  }
+
+  @media (scripting: enabled) {
+    .play-hub-stats:not(:has(> astro-island > *)) {
+      min-block-size: var(--play-hub-stats-reserve);
+    }
+  }
+}

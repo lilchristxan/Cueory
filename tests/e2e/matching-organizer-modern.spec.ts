@@ -1,5 +1,5 @@
 import AxeBuilder from '@axe-core/playwright';
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Locator, type Page } from '@playwright/test';
 
 const sizes = [
   { width: 320, height: 720 },
@@ -10,7 +10,7 @@ const sizes = [
 test.beforeEach(async ({ page }) => {
   // The once-per-visit welcome panel has its own tests; avoid interrupting study controls here.
   await page.addInitScript(() => {
-    try { localStorage.setItem('cueory-promo-seen', String(Date.now())); } catch { /* blocked storage */ }
+    try { localStorage.setItem('cueory-promo-seen', String(Date.now())); localStorage.setItem('cueory-signup-popup-seen', String(Date.now())); } catch { /* blocked storage */ }
   });
 });
 
@@ -18,6 +18,13 @@ async function checkAccessible(page: Page) {
   const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa']).analyze();
   expect(results.violations.map((v) => `${v.id}: ${v.help}`)).toEqual([]);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+}
+
+async function expect44pxTarget(control: Locator) {
+  const box = await control.boundingBox();
+  expect(box).not.toBeNull();
+  expect(box!.width).toBeGreaterThanOrEqual(44);
+  expect(box!.height).toBeGreaterThanOrEqual(44);
 }
 
 test('matching has accessible cards, progress and a complete keyboard flow at three sizes', async ({ page }) => {
@@ -30,6 +37,8 @@ test('matching has accessible cards, progress and a complete keyboard flow at th
     await expect(progress).toHaveAttribute('aria-valuemin', '0');
     await expect(progress).toHaveAttribute('aria-valuemax', '3');
     await expect(progress).toHaveAttribute('aria-valuenow', '0');
+    await expect44pxTarget(terms.getByRole('button').first());
+    await expect44pxTarget(meanings.getByRole('button').first());
 
     for (let n = 1; n <= 3; n++) {
       const term = terms.getByRole('button', { name: new RegExp(`^Placeholder card ${n}, front\\.`) });
@@ -52,6 +61,7 @@ test('matching has accessible cards, progress and a complete keyboard flow at th
     await expect(page.getByText('All 3 matched.')).toBeVisible();
     await checkAccessible(page);
     const playAgain = page.getByRole('button', { name: 'Play again' });
+    await expect44pxTarget(playAgain);
     await playAgain.focus();
     await page.keyboard.press('Enter');
     await expect(progress).toHaveAttribute('aria-valuenow', '0');
@@ -178,3 +188,32 @@ for (const mode of ['matching', 'organizer'] as const) {
     await expect.poll(() => page.evaluate(() => (window as Window & { __cueoryFeedback?: Animation[] }).__cueoryFeedback?.map((animation) => animation.playState))).toEqual(mode === 'matching' ? ['idle', 'idle'] : ['idle']);
   });
 }
+
+test('organizer keeps keyboard focus on the board after a check that turns the check button off', async ({ page }) => {
+  await page.goto('/learn/study-skills/organizer');
+  const board = page.getByTestId('organizer');
+  const item = (text: string) => board.getByRole('button', { name: new RegExp(`^${text}(?:\\s|$)`) });
+  const checkButton = board.getByRole('button', { name: 'check' });
+
+  // A wrong placement goes back to the tray and focus lands on it, not on the page body.
+  await item('apple').focus();
+  await page.keyboard.press('2');
+  await item('pear').focus();
+  await page.keyboard.press('1');
+  await expect(checkButton).toBeEnabled();
+  await checkButton.focus();
+  await page.keyboard.press('Enter');
+  await expect(board.getByTestId('organizer-live')).toHaveText('1 right, 1 back in the tray to try again.');
+  await expect(checkButton).toBeDisabled();
+  await expect(item('apple')).toBeFocused();
+  await expect(item('apple')).toContainText('back in the tray to try again');
+
+  // All placed items right but others still waiting: focus goes to the first item left in the tray.
+  await item('apple').focus();
+  await page.keyboard.press('1');
+  await checkButton.focus();
+  await page.keyboard.press('Enter');
+  await expect(board.getByTestId('organizer-live')).toHaveText('1 right, 0 back in the tray to try again.');
+  await expect(board.getByRole('list', { name: 'tray' }).getByRole('button').first()).toBeFocused();
+  expect(await page.evaluate(() => document.activeElement === document.body)).toBe(false);
+});

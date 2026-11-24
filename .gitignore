@@ -37,3 +37,9 @@ backup/
 # real review batches hold answer keys and reviewer results: never commit them (DECISIONS.md, D-07, D-26)
 content/batches/*
 !content/batches/.gitkeep
+
+# content:check --report writes this when it checks a folder inside the repository
+/content-report.txt
+
+# wrangler dev keeps its local state here: never commit it
+.wrangler/

@@ -63,6 +63,12 @@ describe('glove note palm text', () => {
       .toEqual({ lines: ['sample 😀'], fontPx: 32 });
   });
 
+  it('keeps an embedded tab inside one token instead of using it as a wrap boundary', () => {
+    expect(fitPalmText('alpha\tbeta', { width: 80, height: 16 }, measure,
+      { minPx: 16, maxPx: 16, lineHeight: 1 }))
+      .toEqual({ lines: ['alpha\tbeta'], fontPx: 16 });
+  });
+
   it('fits 60-character text deterministically with a bounded number of measurements', () => {
     const text = 'abc '.repeat(14) + 'abcd';
     expect(Array.from(text)).toHaveLength(60);

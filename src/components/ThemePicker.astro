@@ -39,7 +39,7 @@ const options = [
     {
       options.map((option) => (
         <label class="segmented-option relative">
-          <input type="radio" name="theme" value={option.value} class="absolute inset-0 cursor-pointer opacity-0 focus-visible:outline-hidden" />
+          <input type="radio" name="theme" value={option.value} class="absolute inset-0 h-full w-full cursor-pointer opacity-0 focus-visible:outline-hidden" />
           <Fragment set:html={option.icon} />
           <span>{option.label}</span>
         </label>
