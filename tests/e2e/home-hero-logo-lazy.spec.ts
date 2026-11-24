@@ -10,17 +10,14 @@ function isDownloadStarted(
   return img.resourceLoaded || (img.currentSrc !== '' && requestedUrls.has(img.currentSrc));
 }
 
-/**
- * Performance (2026-11-19): the home hero draws its own logo row, the phone emblem and the full logo, each in a Daytime
- * and an Evening copy, and CSS shows one. The full logo is lazy, so a copy the page hides (the full logo on phones, the
- * other palette's copy everywhere) is never downloaded, while the copy that shows still loads.
- */
+/** The compact phone and two-row desktop headers use the same official full wordmark.
+ * Its unused palette image is lazy and must stay off the network. */
 test('/: the hero logo row downloads only the logo it shows', async ({ page }) => {
   const requestedUrls = new Set<string>();
   page.on('request', (req) => requestedUrls.add(req.url()));
 
   await page.goto('/', { waitUntil: 'load' });
-  const row = page.locator('.scene-hero .logo').first().locator('xpath=..');
+  const row = page.locator('.home-board-header .home-brand');
   const shown = row.locator('.logo img').filter({ visible: true });
   await expect(shown).toHaveCount(1);
   await expect.poll(() => shown.evaluate((img) => (img as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
@@ -42,7 +39,7 @@ test('/: the hero logo row downloads only the logo it shows', async ({ page }) =
       });
   });
 
-  // Phones hide both full-logo copies; wider screens hide the other palette's copy.
+  // All sizes show a full wordmark and hide the unused palette.
   expect(hiddenFull.length).toBeGreaterThan(0);
   for (const img of hiddenFull) {
     const started = isDownloadStarted(img, requestedUrls);

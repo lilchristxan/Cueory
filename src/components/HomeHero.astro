@@ -1,5 +1,4 @@
 ---
-import Wordmark from './Wordmark.astro';
 import { site } from '../config/site';
 import { heroStartHref } from '../lessons/draftgate';
 
@@ -22,25 +21,7 @@ const points = [
   class="scene scene-hero relative overflow-hidden pb-section"
   aria-labelledby="hero-heading"
 >
-  <div class="relative mx-auto flex w-full flex-col pt-(--hero-top-clear)">
-    <!--
-      The home header is two corner buttons laid over the top of the page (Layout.astro), so the hero draws its own logo
-      beside the menu button: the emblem on phones, the full logo from 640 px wide, as the other pages' headers do.
-    -->
-    {/*
-      The full logo loads lazily (performance, 2026-11-19): phones hide it, and a hidden lazy picture is never
-      downloaded, so a phone no longer fetches both 960px full-logo files (about 73 KB) it never shows. From 640px the
-      shown copy loads as soon as the page is laid out. The phone emblem stays eager.
-    */}
-    <div class="hero-logo-row flex items-center justify-center sm:justify-start sm:ps-(--hero-logo-inset)">
-      <Wordmark loading="eager" variant="emblem" class="w-(--logo-emblem) sm:hidden" sizes="2.25rem" />
-      <Wordmark
-        class="hidden w-(--logo-width) sm:block"
-        sizes="15rem"
-        preloadBothOnDesktop
-      />
-    </div>
-
+  <div class="relative mx-auto w-full pt-(--hero-top-clear)">
     <div class="home-stage">
   <div class="stage-copy">
     <p class="hero-eyebrow">by nursing students, for nursing students</p>
@@ -141,4 +122,8 @@ h1 { margin: var(--stage-heading-gap) auto 0; max-width: var(--stage-heading-wid
 .stage-tip svg { width: var(--stage-tip-icon); }
 .stage-tip span { line-height: inherit; text-align: start; }
 .stage-tip strong { display: block; }
+/* The header lies over the top of the page. When the "continue studying" strip is there it sits below the header and the
+   hero then starts right under it, so the header never covers the strip. */
+:global(main aside[aria-label="continue studying"]) { margin-top: var(--hero-top-clear); }
+:global(main:has(aside[aria-label="continue studying"])) .scene-hero > div { padding-top: var(--spacing); }
 </style>

@@ -2,6 +2,12 @@ import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 import { socials } from '../../src/config/site';
 
+/** The Home header opens the side panel from the hamburger on phones and from the search button from 640 px wide. */
+function homeMenuOpener(page: Page) {
+  const name = page.viewportSize()!.width >= 640 ? 'search the site' : 'open site menu';
+  return page.getByRole('button', { name, exact: true });
+}
+
 /**
  * The once-only promo panel (D-59). The page's clock is faked, so "5 seconds later" takes no real time. The other
  * browser tests (pages.spec.ts) start as if the panel had already been shown, so it never interrupts them.
@@ -199,7 +205,7 @@ test.describe('once-only promo panel (D-59)', () => {
 
   test('waits while the ☰ panel is open, then appears once it closes', async ({ page }) => {
     await page.goto('/');
-    await page.getByRole('button', { name: 'open site menu', exact: true }).click();
+    await homeMenuOpener(page).click();
     await expect(page.getByTestId('site-menu')).toBeVisible();
     await wait(page, 7_000);
     await expect(promoPanel(page)).toBeHidden();
@@ -213,7 +219,7 @@ test.describe('once-only promo panel (D-59)', () => {
 
   test('waits until the ☰ panel has finished closing, so its focus never takes over', async ({ page }) => {
     await page.goto('/');
-    await page.getByRole('button', { name: 'open site menu', exact: true }).click();
+    await homeMenuOpener(page).click();
     await wait(page, 7_000);
     // The browser sends a dialog's "close" event a moment after the dialog closes, and the ☰ panel moves focus back to
     // its button then. Hold that event back, so the moment in between lasts long enough to test.
@@ -231,7 +237,7 @@ test.describe('once-only promo panel (D-59)', () => {
 
     // The event arrives: focus goes back to ☰, and then the panel comes and takes it.
     await page.getByTestId('site-menu').evaluate((menu) => menu.dispatchEvent(new Event('close')));
-    await expect(page.getByRole('button', { name: 'open site menu', exact: true })).toHaveAttribute('aria-expanded', 'false');
+    await expect(homeMenuOpener(page)).toHaveAttribute('aria-expanded', 'false');
     await wait(page, 600);
     await expect(promoPanel(page)).toBeVisible();
     await expect(promoPanel(page).getByRole('button', { name: 'close' })).toBeFocused();

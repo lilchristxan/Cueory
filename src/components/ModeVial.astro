@@ -40,11 +40,12 @@ const { mode, summaryId } = Astro.props;
   <div class="vial-label">
     <h3 class="vial-name">{mode.name}</h3>
     <span class="vial-rule" aria-hidden="true"></span>
+    {/* The 960 px copy on purpose: the Evening home header keeps its Daytime 480 px logo hidden, and a shared URL would make that hidden logo look downloaded (the vials fetch it), so the header's "downloads only the logo it shows" test could not tell. */}
     <img
       class="vial-logo"
-      src="/brand/v1/logo-full-light-480.png"
-      width="480"
-      height="151"
+      src="/brand/v1/logo-full-light-960.png"
+      width="960"
+      height="303"
       alt=""
       aria-hidden="true"
       loading="lazy"
