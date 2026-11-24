@@ -54,7 +54,7 @@ test.describe('640 CSS px reflow', () => {
   test.beforeEach(async ({ page }, info) => {
     test.skip(info.project.name !== 'desktop', 'fixed-width desktop reflow sweep');
     await page.addInitScript(() => {
-      try { localStorage.setItem('cueory-promo-seen', String(Date.now())); } catch { /* blocked storage */ }
+      try { localStorage.setItem('cueory-promo-seen', String(Date.now())); localStorage.setItem('cueory-signup-popup-seen', String(Date.now())); } catch { /* blocked storage */ }
     });
   });
 
@@ -85,13 +85,31 @@ test.describe('640 CSS px reflow', () => {
         problems.push(...await horizontalClipping(opener));
       }
     }
-    for (const control of await controls.all()) {
-      if (!(await control.isVisible())) continue;
-      if (await control.evaluate((element) => !!element.closest('[inert], [hidden], [aria-hidden="true"]'))) continue;
-      if (await control.evaluate((element) => element.matches('[data-modes][data-ring] [data-mode-open]'))) continue;
-      await control.scrollIntoViewIfNeeded();
-      problems.push(...await horizontalClipping(control));
-    }
+    // Inspect every control in the browser instead of making several protocol
+    // round trips per grid cell. Reduced motion and settled islands make the
+    // synchronous scroll/geometry measurements deterministic.
+    problems.push(...await controls.evaluateAll((elements) => {
+      const findings: string[] = [];
+      for (const element of elements) {
+        const style = getComputedStyle(element);
+        const before = element.getBoundingClientRect();
+        if (style.visibility === 'hidden' || style.visibility === 'collapse' || !before.width || !before.height) continue;
+        if (element.closest('[inert], [hidden], [aria-hidden="true"]')) continue;
+        if (element.matches('[data-modes][data-ring] [data-mode-open]')) continue;
+        element.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'instant' });
+        const rect = element.getBoundingClientRect();
+        const width = document.documentElement.clientWidth;
+        const label = `${element.tagName.toLowerCase()}${element.id ? `#${element.id}` : ''} (${element.getAttribute('aria-label') ?? element.textContent?.trim().slice(0, 60) ?? ''})`;
+        if (rect.left < -1 || rect.right > width + 1) findings.push(`${label}: outside viewport (${rect.left}, ${rect.right})`);
+        for (let parent = element.parentElement; parent; parent = parent.parentElement) {
+          if (!['hidden', 'clip', 'auto', 'scroll'].includes(getComputedStyle(parent).overflowX)) continue;
+          const left = parent.getBoundingClientRect().left + parent.clientLeft;
+          const right = left + parent.clientWidth;
+          if (rect.left < left - 1 || rect.right > right + 1) findings.push(`${label}: clipped by ${parent.tagName.toLowerCase()}${parent.id ? `#${parent.id}` : ''}`);
+        }
+      }
+      return findings;
+    }));
     expect(problems, `${route}\n${problems.join('\n')}`).toEqual([]);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
   });

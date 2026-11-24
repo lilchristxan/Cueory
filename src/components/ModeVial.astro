@@ -11,6 +11,7 @@
  * shading, the shine and the shadow are decoration; the words are what screen readers read.
  */
 import type { StudyMode } from '../config/modes';
+import { VIAL_SIZES } from '../config/vialsizes';
 import { shortTime, vialSummary } from '../scripts/carousel';
 
 interface Props {
@@ -26,8 +27,8 @@ const { mode, summaryId } = Astro.props;
   <img
     class="vial-img"
     src={`/vials/vial-${mode.vial}.webp`}
-    width="225"
-    height="475"
+    width={VIAL_SIZES[mode.vial].width}
+    height={VIAL_SIZES[mode.vial].height}
     alt=""
     aria-hidden="true"
     loading="lazy"

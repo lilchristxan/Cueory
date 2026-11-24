@@ -11,7 +11,7 @@ test.beforeEach(async ({ page }) => {
   await page.route('https://www.youtube-nocookie.com/**', (route) => route.fulfill({ status: 200, contentType: 'text/html', body: '<p>player</p>' }));
   // Suppress the promo panel so it doesn't interfere.
   await page.addInitScript(() => {
-    try { localStorage.setItem('cueory-promo-seen', String(Date.now())); } catch { /* blocked */ }
+    try { localStorage.setItem('cueory-promo-seen', String(Date.now())); localStorage.setItem('cueory-signup-popup-seen', String(Date.now())); } catch { /* blocked */ }
   });
 });
 

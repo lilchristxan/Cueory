@@ -6,7 +6,7 @@ test('finals survey prompt renders, validates character limits, passes axe, and 
   // Clearing the survey key in addInitScript would also erase it on reload.
   await page.addInitScript(() => {
     try {
-      localStorage.setItem('cueory-promo-seen', String(Date.now()));
+      localStorage.setItem('cueory-promo-seen', String(Date.now())); localStorage.setItem('cueory-signup-popup-seen', String(Date.now()));
     } catch {
       // storage blocked
     }

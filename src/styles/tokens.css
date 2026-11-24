@@ -20,6 +20,10 @@
   /* Remove Tailwind's built-in palette so only brand colors can be used. */
   --color-*: initial;
 
+  /* The card deck shows from 70rem (1120 px); below it the other games are a plain row under the board. Tailwind turns
+     this into the deck: and max-deck: variants, which gameframe.css uses through @variant. */
+  --breakpoint-deck: 70rem;
+
   /* ---------- Daytime palette (brand guide) ---------- */
   --color-page: #f9f5ef;        /* Ivory    — page background */
   --color-surface: #eadccf;     /* Linen    — cards and panels */
@@ -35,6 +39,119 @@
   --color-button-hover: #6b5243; /* main button on hover (Bronze) */
   --color-on-button: #f9f5ef;   /* text on main buttons (Ivory) */
   --color-focus: #6b5243;       /* keyboard focus outline (Bronze) */
+
+  /* ---------- Redesign interface (Phase 0 P1) ----------
+     Semantic aliases for the rendering builders. Keep these aliases pointed at
+     existing brand/silk/cell roles so the redesign does not create a second
+     palette or rename established tokens. */
+  /* Copper accent (added 18 Nov 2026 by Christian's decision, to match the redesign renderings; docs/BRAND.md). Only
+     for copper buttons, pills and accents. The same four colours serve Daytime and Evening. */
+  --color-copper-deep: #b87348;   /* Copper Deep  — gradient edges */
+  --color-copper: #d9976a;        /* Copper       — gradient body */
+  --color-copper-glow: #f6d3ae;   /* Copper Glow  — soft highlight */
+  --color-copper-shine: #fff0de;  /* Copper Shine — the light sweep */
+  --cueory-copper-start: var(--color-copper-deep);
+  --cueory-copper-end: var(--color-copper);
+  --cueory-copper-glow: var(--color-copper-glow);
+  --cueory-copper-shine: var(--color-copper-shine);
+  /* Ivory and Espresso text fail 4.5:1 on the copper stops; Charcoal passes on all four (4.65 or more). */
+  --cueory-copper-ink: #1c1917;   /* Charcoal — text on the gradient, in both themes */
+  /* Game accents (Christian, 20 Nov 2026; docs/BRAND.md). Teal is for piccline only; dim is for vialo's unlit board cells on dark. */
+  --color-game-teal: #2f7a78;     /* Teal         — piccline accent in Daytime */
+  --color-game-dim: #5a463a;      /* Dim          — vialo unlit cells on dark */
+  --cueory-glass-bg: rgb(var(--glass-rgb) / var(--glass-alpha));
+  --cueory-glass-border: rgb(var(--glass-rim-rgb) / var(--glass-rim-alpha));
+  --cueory-glass-shadow: var(--shadow-soft);
+  /* The finished-game card is solid Ivory in Daytime, not frosted (matches PilloDone); Evening keeps the Walnut veil. */
+  --cueory-result-card-bg: var(--color-page);
+  --cueory-result-card-border: var(--color-line);
+  --cueory-result-card-shadow: var(--shadow-lift);
+  --cueory-result-card-radius: var(--radius-xl);
+  --cueory-result-card-padding: var(--spacing-stack);
+  --cueory-result-card-max-width: 38.75rem;
+  /* C5 caps label: 12px with the rendering's .22em tracking. */
+  --cueory-label-size: 0.75rem;
+  --cueory-label-tracking: 0.22em;
+  --cueory-label-weight: 700;
+  --cueory-mesh-base: var(--color-silk-base);
+  --cueory-mesh-sheen: var(--color-silk-sheen);
+  --cueory-mesh-shade: var(--color-silk-shade);
+  --cueory-mesh-tint: var(--color-silk-tint);
+  --cueory-cell-min: var(--wordpath-cell-min);
+  --cueory-cell-max: var(--wordpath-cell-max);
+
+  /* Games v2 frame tokens (PR #1020 / task-games-v2; D-145) */
+  --game-oxblood: #6e2019;
+  --game-dark-green: #0e5a3d;
+  --game-dark-green-light: #3f8a68;
+  --game-dark-green-deep: #053321;
+  --game-oxblood-light: #a0413a;
+  --game-oxblood-deep: #4a100d;
+
+  --game-frame-sidebar-width: 15rem;     /* 240px */
+  --game-frame-sidebar-bg: var(--color-surface); /* Linen (#eadccf) */
+  --game-frame-border: var(--color-line);
+  --game-frame-btn-size: 2.75rem;        /* 44px minimum tap target */
+  --game-frame-btn-bg: var(--color-page);
+  --game-frame-btn-border: 1.5px solid var(--color-highlight);
+  --game-frame-btn-shadow: 0 6px 16px rgb(var(--shadow-tint) / 0.14);
+  --game-frame-popover-width: 21.25rem;  /* 340px */
+  --game-frame-popover-bg: var(--color-page);
+  --game-frame-popover-border: 1px solid var(--color-line);
+  --game-frame-popover-shadow: 0 18px 44px rgb(var(--shadow-tint) / 0.22);
+  --game-frame-max-board: 38.75rem;      /* 620px */
+  --game-frame-icon-size: 4.5rem;        /* 72px */
+  --game-frame-emblem-size: 2.5rem;      /* 40px */
+  --game-frame-emblem-cell: 0.8125rem;   /* 13px */
+  --game-frame-badge-size: 1.75rem;      /* 28px */
+  --game-frame-pill-width: 3.875rem;     /* 62px */
+  --game-frame-pill-height: 1.625rem;    /* 26px */
+  --game-frame-step-num-size: 1.75rem;   /* 28px */
+  --game-frame-grid-major: 45rem 31.25rem; /* 720px 500px */
+  --game-frame-grid-mid: 5rem 5rem;      /* 80px 80px */
+  --game-frame-grid-minor: 0.5rem 0.5rem; /* 8px 8px */
+  --game-frame-line: 1px;
+  --game-frame-grid-line: 1px;
+  --game-frame-grid-pos: -0.5px -0.5px;
+  --game-frame-logo-height: 1.25rem;     /* 20px */
+  --game-frame-logo-width: 6rem;         /* 96px */
+  --game-frame-emblem-radius: 1.125rem;  /* 18px */
+  --game-frame-emblem-gap: 0.125rem;     /* 2px */
+  --game-frame-emblem-9-size: 2.4375rem; /* 39px */
+  --game-frame-emblem-hi-size: 2.0625rem;/* 33px */
+  --game-frame-wordmark-height: 3.75rem; /* 60px */
+  --game-frame-title-size: 2.5rem;       /* 40px */
+  --game-frame-tagline-size: 1.5rem;     /* 24px */
+  --game-frame-stat-value-size: 1.75rem; /* 28px */
+  --game-frame-stat-label-size: 0.8125rem; /* 13px */
+  --game-frame-dateline-size: 0.875rem;  /* 14px */
+  --game-frame-dateline-lh: 1.3125rem;   /* 21px, 1.5 at 14px */
+  --game-frame-gear-size: 1.5rem;        /* 24px */
+  --game-frame-how-font-size: 1.25rem;   /* 20px */
+  --game-frame-popover-radius: 1.25rem;  /* 20px */
+  --game-frame-popover-padding: 1.25rem 1.375rem; /* 20px 22px */
+  --game-frame-popover-title-size: 0.75rem; /* 12px */
+  --game-frame-popover-title-tracking: 0.125rem; /* 2px */
+  --game-frame-step-num-border: 1.5px solid var(--color-ink);
+  --game-frame-pill-font-size: 1.125rem; /* 18px */
+  --game-frame-pill-text-color: #ffffff;
+  --game-frame-pill-text-shadow: 0 1px 1.5px rgb(40 12 8 / 0.45);
+  --game-frame-pill-shadow: inset 0 -3px 5px rgb(0 0 0 / 0.18), 0 2px 4px rgb(60 40 25 / 0.2);
+  --game-frame-pill-ivory-bg: radial-gradient(120% 140% at 30% 20%, #ffffff 0%, var(--color-page) 55%, var(--color-surface) 100%);
+  --game-frame-max-board-wide: 51.25rem; /* 820px */
+  --game-frame-max-board-showcase: 45rem; /* 720px */
+  --game-deck-card-width: 13rem;         /* 208px, the fanned card deck at the right edge */
+  --game-deck-card-height: 17rem;        /* 272px */
+  --game-deck-step: 3.5rem;              /* 56px between fanned cards */
+  --game-deck-reveal: 3.5rem;            /* 56px of each card that shows at rest */
+  --game-deck-icon-size: 1.25rem;        /* 20px, a game's icon in a deck card corner */
+  --game-deck-slide: 9rem;               /* 144px a card slides out on hover or focus */
+  --game-frame-sidebar-compact-emblem-size: 2.75rem; /* 44px */
+  --game-frame-sidebar-compact-emblem-radius: 0.75rem; /* 12px */
+  --game-frame-sidebar-compact-emblem-cell: 0.5rem; /* 8px */
+  --game-frame-sidebar-compact-wordmark-height: 2.25rem; /* 36px */
+  --game-frame-stat-label-compact: 0.875rem; /* 14px, the smallest text on a game screen */
+  --game-frame-stat-label-phone: 0.875rem; /* 14px */
 
   /* ---------- Marketing pages only (D-41): draped-silk background and frosted panels (no embossed logo: D-55) ---------- */
   --color-silk-base: #f9f5ef;   /* Ivory    — silk background */
@@ -55,12 +172,47 @@
   --color-model: #8b6f5b;          /* Mocha    — a structure */
   --color-model-alt: #d3b7a1;      /* Taupe    — every other structure */
   --color-model-selected: #3e2c23; /* Espresso — the selected structure */
+  /* Sudoku board (P10, Sudoku.png): light squares, dark lines and numbers in both palettes, so Evening reads like
+     Daytime; a pale row, column and box tint; the selected square is Copper Shine inside a deep copper outline. */
+  --color-board-tint: color-mix(in srgb, #f6d3ae 80%, #d3b7a1); /* Copper Glow + Taupe — row, column and box of the selected square, pale as drawn */
+  --color-board-given: color-mix(in srgb, #eadccf 50%, #f9f5ef); /* Linen + Ivory — sudoku given numbers, lighter than the tint */
+  --color-board-match: #6b5243;    /* Bronze   — sudoku squares holding the selected number */
+  --color-on-board-match: #f9f5ef; /* Ivory    — numbers on those squares */
+  /* How opaque a faded structure is (Task 178 study tools): see-through enough to look past, solid enough to tap. */
+  --anatomy-faded-opacity: 0.35;
+  --color-board-cell: #f9f5ef;     /* Ivory    — an empty square */
+  --color-board-ink: #3e2c23;      /* Espresso — numbers and grid lines on the board */
+  --color-board-ink-soft: #6b5243; /* Bronze   — pencil marks on the board */
+  --color-board-paused: #eadccf;   /* Linen    — squares while the game is paused */
+  --color-board-selected: #fff0de; /* Copper Shine — the selected square */
+  --color-board-selected-line: color-mix(in srgb, #b87348 75%, #3e2c23); /* Copper Deep + Espresso — the selected square's outline, at least 3:1 against every square it touches */
 
   /* ---------- Fonts ---------- */
   --font-body: "Lato", system-ui, -apple-system, "Segoe UI", sans-serif; /* headings, body, UI, buttons */
   /* Marketing headings and the italic accent line only (brand spec section 4; D-41). Self-hosted in public/fonts. */
   --font-display: "Bodoni Moda", "Bodoni 72", Didot, Georgia, serif;
   --font-mono: ui-monospace, "SF Mono", Menlo, monospace;
+  /* Finished-game story image canvas (Task 626). Unitless pixels because CanvasRenderingContext2D requires pixels. */
+  --share-story-display-weight: 500;
+  --share-story-emphasis-weight: 700;
+  --share-story-site-weight: 400;
+  --share-story-width: 1080;
+  --share-story-height: 1920;
+  --share-story-logo-width: 480;
+  --share-story-logo-top: 120;
+  --share-story-label-y: 690;
+  --share-story-result-y: 960;
+  --share-story-challenge-y: 1240;
+  --share-story-site-y: 1680;
+  --share-story-label-size: 34;
+  --share-story-result-size: 132;
+  --share-story-result-min-size: 56;
+  --share-story-result-max-width: 880;
+  --share-story-result-line-height: 1.15;
+  --share-story-result-max-lines: 3;
+  --share-story-challenge-size: 52;
+  --share-story-site-size: 42;
+  --share-story-dark-logo: 0;  /* Daytime uses the Espresso artwork; Evening overrides this to Ivory. */
   /* The logo is Christian's PNG artwork (Wordmark.astro, public/brand/v1/), never typed in a font (D-55). */
 
   /* ---------- Type scale (mobile first; large and readable) ----------
@@ -90,10 +242,32 @@
   */
   --text-display-fit: clamp(1rem, 100cqi / 14, 4.5rem);
   --text-display-fit--line-height: 1.12;
+  /* The home hero headline sits on two lines ("nursing school" / "made simpler."): its size follows the hero text
+     column's width (container query), so the longer line always fits, even with enlarged text. */
+  --text-display-hero: clamp(1rem, 100cqi / 7.6, 5.5rem);
+  --text-display-hero--line-height: 1.05;
+  /* Phones draw the headline on four large lines (nursing / school / made / simpler.), sized by the same column width. */
+  --text-display-hero-xl: 5.75rem; /* the headline on the two-column hero (final board: 92 px) */
+  --text-display-hero-phone: clamp(1rem, 100cqi / 7.6, 3rem); /* two natural lines on phones, capped near 48 px */
+  --text-display-hero-phone--line-height: 1.05;
+  /* Phones draw the About headline on two or three lines, sized by the header's width (container query). Its longest
+     line, "we know nursing", is about 6.6 times its font size in Bodoni Moda; 7 leaves room for the fallback serifs and
+     enlarged text. */
+  --text-display-about-phone: clamp(1rem, 100cqi / 7, 5.5rem);
+  --text-display-about-phone--line-height: 1.05;
+  --text-title-explore: 2.125rem;   /* the explore row's heading */
+  --text-title-explore--line-height: 1.2;
   --text-title: 2.375rem;       /* marketing page title (38px) */
   --text-title--line-height: 1.12;
+  --text-title-phone: 2.0625rem; /* home section headings on phones (33px) */
+  --text-title-phone--line-height: 1.12;
   --text-title-lg: 3rem;        /* marketing page title on wider screens (48px) */
   --text-title-lg--line-height: 1.12;
+  /* Study-screen page title (the coming-soon panel): the marketing title sizes with the 1.5 study line spacing. */
+  --text-study-title: 2.375rem;
+  --text-study-title--line-height: 1.5;
+  --text-study-title-lg: 3rem;
+  --text-study-title-lg--line-height: 1.5;
   --text-accent: 1.375rem;      /* italic serif accent line under a headline */
   --text-accent--line-height: 1.5;
   --text-accent-lg: 1.75rem;
@@ -109,13 +283,17 @@
   /* ---------- Letter spacing ---------- */
   --tracking-label: 0.02em;     /* small label above the home headline */
   --tracking-display: -0.025em; /* serif display headings (brand spec) */
+  --tracking-caps: 0.18em;      /* small all-capital labels such as EXPLORE */
   --tracking-menu: 0.04em;      /* ☰ side panel links: medium Inter, slightly wide */
 
   /* ---------- Spacing ---------- */
   --spacing: 0.25rem;           /* base unit: p-4 = 4 × 0.25rem = 1rem */
   --spacing-gutter: 1.25rem;    /* page side padding on phones */
   --spacing-section: 4.5rem;    /* space between page sections */
+  --spacing-section-phone: 2rem; /* half the gap between two home sections on phones (64 px between them) */
   --spacing-stack: 1.25rem;     /* space between paragraphs and blocks */
+  --new-tab-cue-gap: 0.25em;    /* space before the ↗ that marks a link opening in a new tab */
+  --new-tab-cue-size: 0.85em;   /* size of that ↗, relative to the link text */
   /* Header reflows with enlarged text without shrinking the corner controls (Task 280). */
   --header-inline-gutter: min(var(--spacing-gutter), 5vw);
   --header-corner-gap: min(calc(var(--spacing) * 4), 2.5vw);
@@ -123,16 +301,69 @@
   /* ---------- Widths ---------- */
   --container-prose: 40rem;     /* comfortable reading width */
   --container-page: 64rem;      /* widest content width */
+  --container-game-showcase: 61.25rem; /* a game page that opts in (word path): the rendering's 900 px panel (WordPath.png, 270 to 1170 at 1440) plus the article's 40 px side padding */
   --container-headline: 18ch;   /* home headline wraps at about 18 letters */
   --container-hero: 46rem;      /* the centered hero column */
+  --container-hero-copy: 44rem; /* the home hero's text column beside the figure */
+  --container-hero-card: 36.75rem; /* the Ko-fi support card under the hero's value points */
+  --hero-figure-width: min(52%, 53.75rem); /* the anatomy figure's box from the xl width up (final board: 52%, at most 860 px) */
+  --hero-figure-height: min(53.75rem, 60vw); /* its height; the halo ring and the bleed scale with it */
+  --hero-figure-top: 5.5rem;    /* where the figure starts below the top of the hero */
+  --hero-figure-end: calc(var(--hero-figure-height) * -0.07); /* it bleeds a little past the right edge, as on the board */
+  --hero-halo-size: calc(var(--hero-figure-height) * 0.786); /* the glisten ring, pinned to the halo painted in the picture */
+  --hero-halo-top: calc(var(--hero-figure-height) * 0.031);
+  --hero-halo-end: calc(var(--hero-figure-height) * 0.17);
+  --hero-figure-mask-xl: linear-gradient(to right, transparent 0%, rgb(0 0 0 / 0.12) 18%, rgb(0 0 0 / 0.6) 36%, #000 52%, #000 82%, transparent 100%), linear-gradient(to bottom, transparent 0%, rgb(0 0 0 / 0.5) 9%, #000 22%, #000 68%, transparent 100%); /* fades out to the left so the text sits on clean background */
+  --hero-copy-width: 39.25rem;  /* the text column on the two-column hero (board: 628 px) */
+  --hero-copy-offset: 4.75rem;  /* ...and how far it sits right of the old position */
+  --hero-points-width: 43.75rem; /* the row of three value points, a little wider than the column, centered on it */
+  --hero-eyebrow-rule: 5.625rem; /* the two lines beside the motto (board: 90 px) */
+  --hero-curve-width: 18.75rem;
+  --hero-curve-shift: 7.1875rem; /* the curve sits under "simpler.", right of the column's middle */
+  --hero-figure-phone: min(72%, 24rem); /* and under the text on phones */
+  --hero-figure-fade: 26%;      /* how much of the figure's top and left edge fades into the silk */
+  --hero-figure-fade-right: 10%; /* the right edge, so the picture never ends in a hard line inside the page */
+  --hero-figure-fade-bottom: 14%; /* the bottom edge, where it meets the explore row */
+  --hero-figure-evening-dim: 0.5; /* Evening: the figure's pale backdrop is dimmed so it doesn't glow */
+  --disabled-grayscale: 0.7;     /* how muted a closed (coming soon) button looks */
+  --hero-points-start: 50%;     /* the value points row starts at the column's middle and is pulled back by half its own width */
+  --hero-eyebrow-gap-xl: 1.125rem; /* space between the motto and its two rules on the two-column hero */
+  /* The hero's lights are Copper Shine (docs/BRAND.md, the copper accent's light sweep) at different strengths; no
+     white or other highlight colour is added. */
+  --hero-ring-light: color-mix(in srgb, var(--color-copper-shine) 95%, transparent); /* the glisten travelling round the figure's halo */
+  --hero-ring-band: 6px;        /* the halo glisten's ring: outer width, edge and blur */
+  --hero-ring-edge: 4px;
+  --hero-ring-inner: 1px;
+  --hero-ring-blur: 1.5px;
+  --hero-halo-glow: 0 0 30px color-mix(in srgb, var(--color-copper-shine) 35%, transparent);
+  --hero-button-ring: 3px;      /* the light round the start button */
+  --hero-sheen-peak: var(--color-copper-shine); /* the brightest point of the start button's light */
+  --explore-glint: color-mix(in srgb, var(--color-copper-shine) 70%, transparent); /* the hover glint across an explore tile */
+  --hero-accent-day: color-mix(in srgb, var(--color-copper-deep) 62%, var(--color-ink)); /* "simpler." in Daytime: dark enough to stay 3:1 or more through the whole shine */
+  --hero-accent-day-peak: color-mix(in srgb, var(--color-copper-deep) 82%, var(--color-ink)); /* the lightest moment of the shine */
+  --hero-min-height: 60rem;     /* the hero is about this tall on large screens, so the explore row starts below the fold */
+  --container-explore: 80rem;  /* the explore row under the hero */
+  --hero-top-clear: 1rem;       /* space above the hero's logo row (the corner buttons sit in the page's top 4.5 rem) */
+  --hero-logo-inset: calc(var(--header-inline-gutter) + var(--tap-min) + var(--header-corner-gap) - var(--spacing-gutter));
+  --hero-eyebrow-gap: 2.5rem;   /* between the logo row and the motto */
+  --radius-panel: 2.125rem;     /* the home explore panel's corners (board: 34 px) */
+  --radius-card-lg: 1.75rem;    /* the hero's support card corners */
+  --icon-size-mug: 2.5rem;      /* the Ko-fi cup mark, width */
+  --icon-size-mug-height: 1.875rem; /* and height */
+  --icon-size: 1.75rem;         /* a small line icon beside a label */
+  --icon-size-lg: 2rem;         /* a line icon above a tile label */
+  --sudoku-board-max: 62rem;    /* measured board cap from docs/design/renderings/Sudoku.png */
   --container-menu: min(85vw, 22.5rem); /* the ☰ side panel: most of a phone, 360px on bigger screens */
   --container-account-menu: 15rem; /* the small account menu */
   --container-mode-card: min(68vw, 20rem); /* a "ways to study" card: most of a phone, 320px on bigger screens */
   --gap-mode-card: 1rem;        /* space between "ways to study" cards */
   --drop-mode-card: 1rem;       /* how much lower a neighbouring card sits, per card away from the middle */
   --zoom-mode-card: 1.04;       /* a "ways to study" card under the mouse or keyboard focus grows this much (D-51) */
+  --border-vial-arrow: 1px;     /* the copper rim round the home carousel's arrows (HomeV2, P6) */
+  --container-mode-tile: 7.5rem; /* narrowest a lesson-hub mode tile gets: two fit a phone, one fits when text is enlarged */
   --container-mode-preview: 28rem; /* the study-mode preview panel (D-51) */
   --container-flag-panel: min(calc(100vw - 2rem), 28rem); /* the flag form, opened from the footer's flag icon */
+  --height-flag-panel: min(24rem, calc(100dvh - 8rem)); /* its tallest, so it never runs past a small or zoomed screen */
   --nudge-mode-preview: 1rem;   /* how far the preview slides in when previous or next changes the mode (D-51) */
   --container-promo: 24rem;     /* the once-only promo panel at the top of marketing pages (D-59) */
 
@@ -148,6 +379,7 @@
   --radius-lg: 1rem;
   --radius-xl: 1rem;            /* frosted panels and cards on marketing pages (16 px, D-62) */
   --radius-pill: 999px;
+  --notice-icon-disc: 0.125rem; /* light disc margin around the building-strip icon in Evening */
 
   /* ---------- Depth (marketing pages) ---------- */
   --shadow-soft: 0 12px 32px rgb(var(--shadow-tint) / 0.08); /* one soft shadow for frosted panels (D-62) */
@@ -171,6 +403,18 @@
   /* ---------- Word path board (Task 97) ---------- */
   --border-board: 2.5px;        /* the frame around the word search grid (Christian's design, 2026-11-01) */
 
+  /* ---------- Printed puzzles (Task 641) ---------- */
+  /* Paper, not a screen palette: a printed puzzle is black ink on white paper in Daytime and Evening alike. These are
+     CSS color keywords, not --color-* tokens, so no utility class can put them on screen. */
+  --print-paper: white;
+  --print-ink: black;
+  --print-board: 16cm;          /* the word path grid's width on paper: fits letter and A4 inside default margins */
+  --print-letter: 16pt;         /* a letter in the printed grid, large enough to read at arm's length */
+  --print-gap: 0.5cm;           /* space between the grid, the word list and the footer on paper */
+  --print-logo: 1.3cm;          /* the cueory logo at the top of a printed puzzle (about 49 px tall) */
+  --print-figure: 13cm;         /* an anatomy worksheet's picture on paper: leaves room for the numbered list below */
+  --worksheet-blank: 1.75rem;   /* the height of a write-in line on an anatomy worksheet */
+
   /* ---------- Motion (D-41 brand bar: 150–400 ms, soft not bouncy, always off under reduced-motion) ---------- */
   --ease-soft: cubic-bezier(0.4, 0, 0.2, 1);     /* gentle UI transitions */
   --ease-emphasis: cubic-bezier(0.2, 0, 0, 1);   /* snappier entrances */
@@ -193,10 +437,50 @@
   --segmented-pad-y: 0.375rem;        /* .segmented-option */
   --segmented-pad-x: 0.875rem;        /* .segmented-option */
   --tap-min: 2.75rem;                 /* 44 px minimum tap target */
+  --coming-soon-min-height: 55svh;    /* a coming-soon page fills the first screen instead of sitting half empty */
+
+  /* ---------- Crossword levels (Task 627) ---------- */
+  --crossword-cell-easy: clamp(2.75rem, 12vw, 4.5rem);
+  --crossword-cell-mid: clamp(2.75rem, 7vw, 3.875rem);
+  --crossword-cell-hard: var(--tap-min); /* large boards scroll inside their wrapper, keeping 44 px targets */
+  --crossword-gap: 0.0625rem;
+  --crossword-line: 0.0625rem;
+  --crossword-number: clamp(0.45rem, 1.5vw, 0.75rem);
+  --crossword-letter: clamp(0.75rem, 3vw, 1.5rem);
+  --crossword-help: min(20rem, calc(100vw - var(--spacing-gutter) - var(--spacing-gutter)));
+  --crossword-pencil-inset: 12%;    /* the dashed box drawn inside a pencil square (Task 721) */
+  --crossword-pencil-weight: 300;   /* pencil letters are lighter as well as boxed, never told apart by color alone */
+  --crossword-pencil-scale: 0.8;    /* pencil letters are a little smaller than pen letters */
+  --crossword-mark-size: 30%;       /* the corner triangle on a revealed square */
+  --crossword-panel-gap: calc(var(--spacing) * 2);
+  --crossword-check-size: 1.25rem;  /* settings checkboxes and radio buttons */
+  --crossword-marker: 1ch;          /* room for the current-clue marker in the clue list */
+  --crossword-hatch: 3px;           /* the stripes on a blocked square, so it never looks like the selected one (2026-11-17) */
+  --crossword-print-cell: 2rem;      /* a printed square; colors on paper use --print-paper / --print-ink (Task 641) */
+  --wordpath-cell-min: 1.5rem;       /* a letter square's floor: 24 px (WCAG 2.2) at default text, 48 px at 32 px root text, when the grid scrolls */
+  --wordpath-letter-inset: 10%;      /* a 6 × 8 board letter's circle sits this far inside its square, leaving room for the joining lines */
+  --hello-stack-tilt-back: -6deg; /* the two cards peeking behind the Hello Cards deck */
+  --hello-stack-tilt-front: 5deg;
+  --wordpath-bleed: calc(var(--spacing) * 6); /* how far the Word Path panel bleeds past its column on phones; the game Frame narrows it to its own gutter */
+  --border-wordpath-panel: 1px;      /* the hairline rim of the word path panel (the rendering shows a 1 px light edge) */
+  --wordpath-ring: 2px;              /* the copper ring round a picked letter (WordPath.png shows about 2 px at 1440) */
+  --wordpath-line: 3px;              /* the line that joins the letters of a word, from circle edge to circle edge */
+  --wordpath-cell-max: 4.5rem;       /* a 6 × 8 board square's ceiling: 72 px, as large as a crossword square, so tablet and desktop boards are not oversized */
+  --wordpath-columns: 11;            /* each puzzle overrides this with its validated grid width */
+}
+
+/* From the xl width the hero figure uses the long fade-out mask (kept here because media conditions in components may not hold values). */
+@media (min-width: 80rem) {
+  :root {
+    --hero-figure-mask: var(--hero-figure-mask-xl);
+  }
 }
 
 /* Pillo rules are a separate entry: always emit their shared theme variables. */
 @theme static {
+  /* ---------- Shared game settings (#734); static so the panel's own stylesheet can always use it ---------- */
+  --border-game-settings: 1px;      /* the shared game settings button's rim and the lines between its rows (#734) */
+
   /* ---------- pillo, the blister-pack word game on /play (Task 114) ----------
      Pill colors by mark (letters on them also carry ● ○ ·, so color is never the only signal). Evening values are in
      the two Evening copies below; tests/unit/pulse.test.ts checks every letter on its pill for AA contrast. */
@@ -230,15 +514,15 @@
   --pillo-mark: 0.625rem;               /* the ● ○ · under a letter */
   --pillo-letter-lift: -0.3125rem;      /* a guessed letter moves up this much to make room for its mark */
   --pillo-mark-drop: -0.125rem;         /* the mark's line sits this far into the pill's bottom edge */
-  --pillo-key: 3rem;                    /* letter key height (48 px, above the 44 px minimum) */
-  --pillo-key-max: 2.75rem;             /* a letter key's widest */
-  --pillo-key-wide: 4.25rem;            /* ⌫ and enter, at their widest */
-  --pillo-key-wide-share: 1.5;          /* ⌫ and enter take about one and a half letters' room in a narrow row */
+  --pillo-keys-width: 24rem;             /* the letter keys wrap within this width, the same as the crossword's keys */
   --pillo-strip-pill: 0.875rem;         /* a pill in the guesses-left strip */
   --pillo-strip-height: 1.75rem;
   --pillo-swatch: 2.75rem;              /* the sample pills in "how to play" */
   --pillo-ring: 2px;                    /* the next empty pocket's ring */
   --pillo-pop: 0.9;                     /* a typed pill grows from this size (never under reduced motion) */
+  --pillo-contrast-rim: 3px;            /* high contrast (Task 719): the solid rim of an "elsewhere" pill or key */
+  --pillo-mark-contrast: 0.875rem;      /* high contrast: the larger ● ○ · under a letter */
+  --pillo-bar-min: 1.75rem;             /* the shortest bar in the guess distribution, so its count fits */
   --shadow-pillo-pack: 0 1px 2px rgb(var(--shadow-tint) / 0.12), 0 14px 30px rgb(var(--shadow-tint) / 0.16);
   --shadow-pillo-pocket: inset 0 2px 4px rgb(var(--shadow-tint) / 0.2), inset 0 -1px 1px rgb(var(--shadow-tint) / 0.06);
   --shadow-pillo-pill: 0 2px 3px rgb(var(--shadow-tint) / 0.28), inset 0 -3px 4px rgb(var(--shadow-tint) / 0.14);
@@ -247,6 +531,189 @@
   --pillo-cruet: 0.3em;                 /* the cruet's width; its height is about a third of the l's */
   --pillo-cruet-gap: 0.06em;            /* space between the final o and the cruet */
   --pillo-cruet-rise: 0.28em;           /* how far below the top of the name's line the cruet's top sits */
+  /* ---------- vialo's letter keys (Christian, 23 Nov 2026) ----------
+     Three q-w-e-r-t-y rows of raised key caps, so they read as keys you can press. A cap is a lit face over a solid
+     lip. A key that is in place is a green cap, one that is elsewhere in the word is an oxblood cap with a light ring,
+     and one that is not in the word sits down flat with its letter struck through. */
+  --vialo-key-width: 2.875rem;          /* 46px: a letter key on tablet and desktop */
+  --vialo-key-height: 3.375rem;         /* 54px, on every screen */
+  --vialo-key-gap: 0.375rem;            /* 6px between keys */
+  --vialo-key-gap-phone: 0.25rem;       /* 4px on phones, so ten keys of about 33 px fit across the screen */
+  --vialo-key-edge-gap: 0.125rem;       /* 2px between the keyboard and the edge of a phone screen, as on phone keyboards */
+  --vialo-key-row-gap: 0.5625rem;       /* 9px between rows */
+  --vialo-key-radius: 0.5625rem;        /* 9px */
+  --vialo-key-lip: 3px;                 /* the solid edge under a cap */
+  --vialo-key-press: 2px;               /* how far a cap drops while it is pressed */
+  --vialo-key-rest: 3px;                /* a key that is out of the word sits this far down, as if already pressed */
+  --vialo-key-letter: 1.3125rem;        /* 21px */
+  --vialo-key-letter-phone: 1.1875rem;  /* 19px */
+  --vialo-key-word: 0.875rem;           /* 14px: the word "enter" */
+  --vialo-key-icon: 1.625rem;           /* 26px: the delete icon */
+  --vialo-key-ring: 2px;                /* the light ring inside an "elsewhere" key */
+  --vialo-key-ring-gap: 3px;            /* how far that ring sits inside the key's edge */
+  --vialo-key-strike: 2px;              /* the line through a letter that is not in the word */
+  --vialo-key-face-top: #ffffff;        /* a cap's lit top */
+  --vialo-key-face-bottom: color-mix(in srgb, var(--color-surface) 30%, var(--color-page));
+  --vialo-key-edge: var(--color-line);
+  --vialo-key-lip-color: color-mix(in srgb, var(--color-ink-soft) 25%, var(--color-line));
+  --vialo-key-action-top: color-mix(in srgb, var(--color-surface) 55%, var(--color-page));  /* enter and delete */
+  --vialo-key-action-bottom: var(--color-surface);
+  --vialo-key-absent: color-mix(in srgb, var(--color-surface) 55%, var(--color-page));
+  --vialo-key-absent-edge: color-mix(in srgb, var(--color-line) 55%, var(--color-page));
+  /* The marked caps use only the two game colours Christian chose for vialo (D-184, docs/BRAND.md "Game accents"):
+     dark green in place, oxblood elsewhere. A cap is the colour itself, its deep step as the lip and a little of its
+     light step at the lit top. The caps keep the Daytime values in Evening too, as the pills on the LOCKED v1 board
+     do, so the white letter is at least 5:1 on every part of either cap in both palettes. */
+  --vialo-key-here-top: color-mix(in srgb, #3f8a68 30%, #0e5a3d);       /* in place: a dark green cap, lit at the top */
+  --vialo-key-here-bottom: #0e5a3d;
+  --vialo-key-here-lip: #053321;
+  --vialo-key-elsewhere-top: color-mix(in srgb, #a0413a 35%, #6e2019);  /* elsewhere in the word: an oxblood cap */
+  --vialo-key-elsewhere-bottom: #6e2019;
+  --vialo-key-elsewhere-lip: #4a100d;
+  --vialo-key-on-mark: #ffffff;         /* the letter on a green or oxblood key */
+  --vialo-key-ring-color: rgb(255 255 255 / 0.6);
+  --vialo-key-shine: rgb(255 255 255 / 0.35);  /* the lit top edge of a green key */
+  --shadow-vialo-key: 0 8px 12px rgb(var(--shadow-tint) / 0.13);
+}
+  #daily-games {
+    /* These tokens are scoped to the Home carousel; component styles consume the semantic names below. */
+    --border-hairline: 1px;
+    --border-game-cell: 1px;
+    --game-section-max-width: 80rem;
+    --game-section-padding: 4.5rem 2.5rem 1.5rem;
+    --game-section-padding-phone: 3rem 1rem 1.25rem;
+    --game-container-gap: 1.125rem;
+    --game-stage-padding: var(--spacing-section) var(--spacing-gutter);
+    --game-stage-padding-phone: 0 var(--spacing-gutter);
+    --game-header-gap: 1rem;
+    --game-nav-size: 3.25rem;
+    --game-nav-size-phone: 44px; /* phones: a fixed 44 px target, so large text leaves the "play today's" button its room */
+    --game-nav-border: rgb(249 245 239 / 0.35);
+    --game-nav-bg: rgb(249 245 239 / 0.08);
+    --game-nav-bg-hover: rgb(249 245 239 / 0.18);
+    --game-nav-outline-width: 0.1875rem;
+    --game-nav-outline-offset: 0.1875rem;
+    --game-heading-size-min: 2rem;
+    --game-heading-size-max: 5.75rem;
+    --game-subtitle-margin-bottom: 1.25rem;
+    --game-subtitle-size: 1.125rem;
+    --game-date-note-margin-top: 0.75rem;
+    --game-pager-dot: 0.5rem;   /* 8 px dots; the current one is a 26 x 8 px pill */
+    --game-pager-pill: 1.625rem;
+    --game-pager-gap: 0.125rem; /* 2 px between the 44 px boxes: browsers hit-test flush neighbours about 1 px into each other, so a hair of space keeps every box exact */
+    --game-car-padding: 0.75rem 0.375rem 2.75rem;
+    --game-track-gap: 1.75rem;
+    --game-track-gap-phone: 0.75rem; /* tighter on phones so at least 48 px of the next card shows inside the carousel's clip */
+    --game-card-width: 17.5rem;
+    --game-card-height: 24.5rem;
+    --game-card-phone-width: calc(100vw - 88px);
+    --game-card-phone-inline-inset: 1.5rem;
+    --game-card-phone-min-width: 280px;
+    --game-card-phone-min-height: 392px;
+    --game-card-radius: 1.375rem;
+    --game-card-padding: 1rem;
+    --game-card-border: 1px solid #eadccf;
+    --game-card-bg: #f9f5ef;
+    --game-card-ink: #3e2c23;
+    --game-card-ink-soft: #6b5243;
+    --game-card-name-ink: #3e2c23;
+    --game-card-on-dark: #f9f5ef;
+    --game-demo-active-bg: #3e2c23;
+    --game-card-shadow: inset 0 1px 0 rgb(249 245 239), 0 18px 40px rgb(62 44 35 / 0.16), 0 4px 10px rgb(62 44 35 / 0.08);
+    --game-card-lift: -0.5rem;
+    --game-card-shadow-hover: 0 0 0 1px rgb(246 211 174 / 0.7), 0 26px 50px rgb(62 44 35 / 0.22);
+    --game-card-shadow-on: 0 0 0 1px rgb(246 211 174 / 0.6), 0 0 26px rgb(246 211 174 / 0.3), 0 18px 40px rgb(62 44 35 / 0.16);
+    --game-card-outline-width: 0.1875rem;
+    --game-card-outline-offset: 0.25rem;
+    --game-pip-size: 3.25rem;
+    --game-pip-radius: 0.8125rem;
+    --game-pip-shadow: 0 6px 14px rgb(62 44 35 / 0.22);
+    --game-pip-inset: 0.875rem;
+    --game-pip-bg: #eadccf;
+    --game-pip-ink: #3e2c23;
+    --game-pip-line: #cbb8a4;
+    --game-pip-xgrid-size: 0.625rem;
+    --game-pip-xgrid-gap: 0.125rem;
+    --game-pip-sudoku-size: 1.75rem;
+    --game-pip-hello-size: 1.5rem;
+    --game-face-width: 12.75rem;
+    --game-face-height: 14.75rem;
+    --game-face-header-height: 6rem;
+    --game-face-phone-header-height: 96px;
+    --game-face-padding: 1.125rem 1rem;
+    --game-wordmark-max-width: 10.5rem;
+    --game-wordmark-max-height: 3.75rem;
+    --game-serif-name-size: 2.5rem;
+    --game-name-phone-size: 40px;
+    --game-desc-margin-top: 0.375rem;
+    --game-desc-size: 0.875rem;
+    --game-desc-phone-size: 16px;
+    --game-status-gap: 0.375rem;
+    --game-status-size: 0.8125rem;
+    --game-status-phone-size: 14px;
+    --game-status-padding: 0.25rem 0.625rem;
+    --game-status-ink: #3e2c23;
+    --game-status-border: #cbb8a4;
+    --game-status-bg: #f9f5ef;
+    --game-demo-border: #cbb8a4;
+    --game-demo-top: 6.5rem;
+    --game-demo-vialo-grid-gap: 0.375rem;
+    --game-demo-vialo-row-gap: 0.3125rem;
+    --game-demo-vialo-cell-size: 1.75rem;
+    --game-demo-vialo-cell-border: 1.5px;
+    --game-demo-vialo-font-size: 0.8125rem;
+    --game-demo-vialo-cell-bg: #f9f5ef;
+    --game-demo-tachyyy-width: 10.625rem;
+    --game-demo-tachyyy-radius: 0.75rem;
+    --game-demo-tachyyy-padding: 0.625rem;
+    --game-demo-tachyyy-font-size: 0.75rem;
+    --game-demo-tachyyy-gap: 0.375rem;
+    --game-demo-tachyyy-bar-height: 0.375rem;
+    --game-demo-tachyyy-choice-padding: 0.1875rem 0.5rem;
+    --game-demo-tachyyy-bg: #f9f5ef;
+    --game-demo-piccline-cell-size: 1.875rem;
+    --game-demo-piccline-gap: 0.25rem;
+    --game-demo-piccline-font-size: 0.875rem;
+    --game-demo-piccline-line-height: 1.875rem;
+    --game-demo-piccline-stroke: 9;
+    --game-demo-crossword-cell-size: 1.75rem;
+    --game-demo-crossword-gap: 0.125rem;
+    --game-demo-crossword-font-size: 0.8125rem;
+    --game-demo-crossword-bg: #f9f5ef;
+    --game-demo-sudoku-cell-size: 2.125rem;
+    --game-demo-sudoku-border: 2px;
+    --game-demo-sudoku-font-size: 1.0625rem;
+    --game-demo-sudoku-bg: #f9f5ef;
+    --game-demo-hello-perspective: 500px;
+    --game-demo-hello-width: 9.375rem;
+    --game-demo-hello-height: 6rem;
+    --game-demo-hello-radius: 0.75rem;
+    --game-demo-hello-padding: 0.5rem;
+    --game-demo-hello-font-size: 0.8125rem;
+  }
+
+/*
+  Launch-updates pop-up (lane 14, D-pending): the green look of Christian's Kit landing page, at his request. These
+  colors are OUTSIDE the brand guide v1.0 palette, so they are not --color-* tokens (those stay brand-only) and they are
+  used only by src/components/SignupPopup.astro. The same in Light and Evening. tests/unit/signup-popup.test.ts checks
+  their contrast.
+*/
+:root {
+  --popup-green: #26492a;        /* the pop-up's base, from the Kit landing page */
+  --popup-green-deep: #1b361f;   /* the darker folds of its plain texture */
+  --popup-green-light: #335d38;  /* the lighter folds of its plain texture */
+  --popup-cream: #f9f5ef;        /* Ivory: all text and the close icon on the green */
+  --popup-button: #d6e4a3;       /* the soft yellow-green "subscribe" button */
+  --popup-button-hover: #e4eebf; /* the button on hover */
+  --popup-button-ink: #26492a;   /* text on the button */
+  --popup-width: 30rem;          /* the pop-up is at most this wide */
+  --popup-scrim-mix: 60%;        /* how much deep green dims the page behind the pop-up */
+  /*
+    A photo goes here once Christian supplies one he has rights to, for example url("/popup/photo.webp"). It sits
+    under the green shade below, so the cream text keeps its contrast; raise --popup-photo-shade if it doesn't.
+  */
+  --popup-photo: none;
+  --popup-photo-shade: 0.72;
 }
 
 /* Strengths and images for the marketing background (D-41). Daytime values; the Evening ones are below. */
@@ -255,6 +722,14 @@
   /* Fold shadows: Taupe at 16%, faint so Bronze text keeps AA contrast. Plain rgb() so every browser draws them right. */
   --silk-fold-rgb: 211 183 161; /* Taupe */
   --silk-fold-alpha: 0.16;
+  /* Page silk peach (follow-up to P3): the redesign's warm cloth is Copper Glow at partial strength over Ivory. */
+  --silk-peach-rgb: 246 211 174; /* Copper Glow */
+  --silk-peach-alpha: 0.55;
+  /* The renderings' warm wash under every fold (Light only; Evening sets the alpha to 0): Copper Glow over Ivory. */
+  --silk-wash-rgb: 246 211 174; /* Copper Glow */
+  --silk-wash-alpha: 0.75;
+  --silk-fold-layer: 1.4; /* how strongly the fold mask shows the peach layer: the creases and glints (P3c) */
+  --silk-fold-height: 47.5rem; /* one tile of the boards' fold mask (public/design/silk-fold-mask.svg, 1440 x 760) */
   /* Frosted panels: Ivory, three-quarters opaque. A plain rgb() so every browser gets the right panel color. */
   --veil-rgb: 249 245 239;      /* Ivory */
   --veil-alpha: 0.74;
@@ -307,6 +782,7 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --color-page: #1c1917;      /* Charcoal      — page background */
+    --share-story-dark-logo: 1;
     --color-surface: #3a2d24;   /* Walnut        — cards and panels */
     --color-soft: #3a2d24;      /* Walnut        — notice bar */
     --color-highlight: #6b5243; /* Bronze        — accents and highlights (not for text) */
@@ -319,6 +795,14 @@
     --color-button-hover: #f9f5ef; /* Ivory */
     --color-on-button: #1c1917; /* Charcoal */
     --color-focus: #cbb8a4;     /* Sand */
+    --color-copper-deep: #b87348;   /* Copper Deep  — same copper in Evening */
+    --color-copper: #d9976a;        /* Copper */
+    --color-copper-glow: #f6d3ae;   /* Copper Glow */
+    --color-copper-shine: #fff0de;  /* Copper Shine */
+  --color-game-teal: #4fb3ae;     /* Teal Light   — piccline accent in Evening */
+  --color-game-dim: #5a463a;      /* Dim          — vialo unlit cells on dark */
+    --color-game-teal: #4fb3ae;     /* Teal Light   — piccline accent in Evening */
+    --color-game-dim: #5a463a;      /* Dim          — vialo unlit cells on dark */
 
     --color-silk-base: #1c1917;   /* Charcoal */
     --color-silk-sheen: #3a2d24;  /* Walnut */
@@ -332,11 +816,28 @@
     --color-model: #cbb8a4;          /* Sand */
     --color-model-alt: #6b5243;      /* Bronze */
     --color-model-selected: #f9f5ef; /* Ivory */
+    --color-board-tint: color-mix(in srgb, #cbb8a4 70%, #6b5243); /* Sand + Bronze */
+    --color-board-given: color-mix(in srgb, #cbb8a4 90%, #6b5243); /* Sand + Bronze, lighter than the tint */
+    --color-board-match: #6b5243;    /* Bronze */
+    --color-on-board-match: #f9f5ef; /* Ivory */
+    --anatomy-faded-opacity: 0.35;
+    --color-board-cell: #cbb8a4;     /* Sand: light squares on the dark page, like Daytime */
+    --color-board-ink: #1c1917;      /* Charcoal */
+    --color-board-ink-soft: #3a2d24; /* Walnut */
+    --color-board-paused: #cbb8a4;   /* Sand */
+    --color-board-selected: #fff0de; /* Copper Shine */
+    --color-board-selected-line: color-mix(in srgb, #b87348 40%, #1c1917); /* Copper Deep + Charcoal: at least 3:1 against the tint */
     --shadow-tint: 28 25 23;      /* Charcoal */
     --silk-fold-rgb: 58 45 36;    /* Walnut */
     --silk-fold-alpha: 0.7;
+    --silk-peach-rgb: 58 45 36;    /* Walnut: Evening stays quiet */
+    --silk-peach-alpha: 0.7;
+    --silk-fold-layer: 0.6; /* Evening keeps the creases as quiet as before */
+    --silk-wash-rgb: 58 45 36;    /* Walnut */
+    --silk-wash-alpha: 0;         /* no wash in Evening */
     --veil-rgb: 58 45 36;         /* Walnut */
     --veil-alpha: 0.78;
+    --cueory-result-card-bg: rgb(var(--veil-rgb) / var(--veil-alpha));
     --silk-grain: url("/textures/grain-evening.svg");
     --glass-rgb: 203 184 164;     /* Sand */
     --glass-alpha: 0.82;
@@ -368,14 +869,40 @@
     --pillo-absent-mix: 20%;
     --pillo-key-mix: 25%;
     --pillo-gloss-mix: 45%;
+    /* vialo keys in Evening: Walnut caps with a Bronze edge over a dark lip; out-of-the-word keys sink into the page. */
+    --vialo-key-face-top: color-mix(in srgb, var(--color-ink-soft) 16%, var(--color-surface));
+    --vialo-key-face-bottom: var(--color-surface);
+    --vialo-key-lip-color: rgb(0 0 0 / 0.55);
+    --vialo-key-action-top: color-mix(in srgb, var(--color-line) 60%, var(--color-surface));
+    --vialo-key-action-bottom: color-mix(in srgb, var(--color-line) 32%, var(--color-surface));
+    --vialo-key-absent: color-mix(in srgb, var(--color-surface) 40%, var(--color-page));
+    --vialo-key-absent-edge: color-mix(in srgb, var(--color-line) 45%, var(--color-page));
     /* Evening: --shadow-tint is Charcoal (darker), so raise opacity for visible depth. */
     --shadow-card: 0 1px 3px rgb(var(--shadow-tint) / 0.18), 0 4px 12px rgb(var(--shadow-tint) / 0.28);
     --shadow-card-hover: 0 2px 8px rgb(var(--shadow-tint) / 0.28), 0 12px 28px rgb(var(--shadow-tint) / 0.40);
+
+    /* Games v2 frame tokens (PR #1020 / task-games-v2; D-145) */
+    --game-oxblood: #a0413a;
+    --game-dark-green: #3f8a68;
+    --game-dark-green-light: #52a781;
+    --game-dark-green-deep: #0e5a3d;
+    --game-oxblood-light: #c25951;
+    --game-oxblood-deep: #6e2019;
+
+    --game-frame-sidebar-bg: var(--color-surface); /* Walnut (#3a2d24) */
+    --game-frame-border: var(--color-control);
+    --game-frame-btn-bg: var(--color-surface);
+    --game-frame-btn-border: 1.5px solid var(--color-control);
+    --game-frame-btn-shadow: 0 6px 16px rgb(var(--shadow-tint) / 0.28);
+    --game-frame-popover-bg: var(--color-surface);
+    --game-frame-popover-border: 1px solid var(--color-control);
+    --game-frame-popover-shadow: 0 18px 44px rgb(var(--shadow-tint) / 0.40);
   }
 }
 
 :root[data-theme="dark"] {
   --color-page: #1c1917;      /* Charcoal      — page background */
+  --share-story-dark-logo: 1;
   --color-surface: #3a2d24;   /* Walnut        — cards and panels */
   --color-soft: #3a2d24;      /* Walnut        — notice bar */
   --color-highlight: #6b5243; /* Bronze        — accents and highlights (not for text) */
@@ -388,6 +915,12 @@
   --color-button-hover: #f9f5ef; /* Ivory */
   --color-on-button: #1c1917; /* Charcoal */
   --color-focus: #cbb8a4;     /* Sand */
+  --color-copper-deep: #b87348;   /* Copper Deep  — same copper in Evening */
+  --color-copper: #d9976a;        /* Copper */
+  --color-copper-glow: #f6d3ae;   /* Copper Glow */
+  --color-copper-shine: #fff0de;  /* Copper Shine */
+  --color-game-teal: #4fb3ae;     /* Teal Light   — piccline accent in Evening */
+  --color-game-dim: #5a463a;      /* Dim          — vialo unlit cells on dark */
 
   --color-silk-base: #1c1917;   /* Charcoal */
   --color-silk-sheen: #3a2d24;  /* Walnut */
@@ -401,11 +934,28 @@
   --color-model: #cbb8a4;          /* Sand */
   --color-model-alt: #6b5243;      /* Bronze */
   --color-model-selected: #f9f5ef; /* Ivory */
+  --color-board-tint: color-mix(in srgb, #cbb8a4 70%, #6b5243); /* Sand + Bronze */
+  --color-board-given: color-mix(in srgb, #cbb8a4 90%, #6b5243); /* Sand + Bronze, lighter than the tint */
+  --color-board-match: #6b5243;    /* Bronze */
+  --color-on-board-match: #f9f5ef; /* Ivory */
+  --anatomy-faded-opacity: 0.35;
+  --color-board-cell: #cbb8a4;     /* Sand: light squares on the dark page, like Daytime */
+  --color-board-ink: #1c1917;      /* Charcoal */
+  --color-board-ink-soft: #3a2d24; /* Walnut */
+  --color-board-paused: #cbb8a4;   /* Sand */
+  --color-board-selected: #fff0de; /* Copper Shine */
+  --color-board-selected-line: color-mix(in srgb, #b87348 40%, #1c1917); /* Copper Deep + Charcoal: at least 3:1 against the tint */
   --shadow-tint: 28 25 23;      /* Charcoal */
   --silk-fold-rgb: 58 45 36;    /* Walnut */
   --silk-fold-alpha: 0.7;
+  --silk-peach-rgb: 58 45 36;    /* Walnut: Evening stays quiet */
+  --silk-peach-alpha: 0.7;
+  --silk-fold-layer: 0.6; /* Evening keeps the creases as quiet as before */
+  --silk-wash-rgb: 58 45 36;    /* Walnut */
+  --silk-wash-alpha: 0;         /* no wash in Evening */
   --veil-rgb: 58 45 36;         /* Walnut */
   --veil-alpha: 0.78;
+  --cueory-result-card-bg: rgb(var(--veil-rgb) / var(--veil-alpha));
   --silk-grain: url("/textures/grain-evening.svg");
   --glass-rgb: 203 184 164;     /* Sand */
   --glass-alpha: 0.82;
@@ -437,7 +987,102 @@
   --pillo-absent-mix: 20%;
   --pillo-key-mix: 25%;
   --pillo-gloss-mix: 45%;
+  /* vialo keys in Evening: Walnut caps with a Bronze edge over a dark lip; out-of-the-word keys sink into the page. */
+  --vialo-key-face-top: color-mix(in srgb, var(--color-ink-soft) 16%, var(--color-surface));
+  --vialo-key-face-bottom: var(--color-surface);
+  --vialo-key-lip-color: rgb(0 0 0 / 0.55);
+  --vialo-key-action-top: color-mix(in srgb, var(--color-line) 60%, var(--color-surface));
+  --vialo-key-action-bottom: color-mix(in srgb, var(--color-line) 32%, var(--color-surface));
+  --vialo-key-absent: color-mix(in srgb, var(--color-surface) 40%, var(--color-page));
+  --vialo-key-absent-edge: color-mix(in srgb, var(--color-line) 45%, var(--color-page));
   /* Evening: --shadow-tint is Charcoal (darker), so raise opacity for visible depth. */
   --shadow-card: 0 1px 3px rgb(var(--shadow-tint) / 0.18), 0 4px 12px rgb(var(--shadow-tint) / 0.28);
   --shadow-card-hover: 0 2px 8px rgb(var(--shadow-tint) / 0.28), 0 12px 28px rgb(var(--shadow-tint) / 0.40);
+
+  /* Games v2 frame tokens (PR #1020 / task-games-v2; D-145) */
+  --game-oxblood: #a0413a;
+  --game-dark-green: #3f8a68;
+  --game-dark-green-light: #52a781;
+  --game-dark-green-deep: #0e5a3d;
+  --game-oxblood-light: #c25951;
+  --game-oxblood-deep: #6e2019;
+
+  --game-frame-sidebar-bg: var(--color-surface); /* Walnut (#3a2d24) */
+  --game-frame-border: var(--color-control);
+  --game-frame-btn-bg: var(--color-surface);
+  --game-frame-btn-border: 1.5px solid var(--color-control);
+  --game-frame-btn-shadow: 0 6px 16px rgb(var(--shadow-tint) / 0.28);
+  --game-frame-popover-bg: var(--color-surface);
+  --game-frame-popover-border: 1px solid var(--color-control);
+  --game-frame-popover-shadow: 0 18px 44px rgb(var(--shadow-tint) / 0.40);
+}
+
+
+/* Keep the carousel's scoped Evening aliases after both canonical palette blocks. The strict token readers consume
+   the first device/picked-theme blocks as the source of truth. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) #daily-games {
+    --game-pip-bg: var(--color-surface);
+    --game-pip-ink: var(--color-ink);
+    --game-demo-active-bg: var(--color-surface);
+  }
+}
+
+:root[data-theme="dark"] #daily-games {
+  --game-pip-bg: var(--color-surface);
+  --game-pip-ink: var(--color-ink);
+  --game-demo-active-bg: var(--color-surface);
+}
+
+@theme static {
+  /* ---------- Sudoku (Task 625) ---------- */
+  --sudoku-cell-min: 2.75rem;
+  --sudoku-cell-floor: 1.5rem;        /* a square's floor: 24 px (WCAG 2.2) at default text, 48 px at 32 px root text, when the board scrolls */
+  --sudoku-cell-max: 5.25rem;
+  --sudoku-height-reserve: 28.75rem;
+  --sudoku-width-reserve: 9.375rem;
+  --sudoku-status-row: 2rem;           /* the status row is a whole number of pixels tall (32 px), so the controls under it land on whole pixels (Firefox loses 0.00003 px on a fractional offset) */
+  --sudoku-line: 1px;
+  --sudoku-box-line: 3px;
+  --sudoku-board-frame: calc(var(--sudoku-box-line) * 2 + 1px); /* outer box lines + 1px so rounding never overflows */
+  --sudoku-candidate-size: 0.625rem;
+  --sudoku-entered-line: 2px;
+  --sudoku-wrong-line: 2px;                          /* the slash across a wrong entry (issue 720) */
+  --sudoku-selected-line: 3px;                       /* the selected square's outline */
+  /* Highlights (Christian, 2026-11-12; pale as drawn in Sudoku.png, P10): the tint is darker than the given-number shading;
+     squares with the selected number are the strongest fill plus bold; numbers keep 4.5:1 on every fill. */
+  --color-sudoku-given: var(--color-board-given);
+  --color-sudoku-related: var(--color-board-tint);
+  --color-sudoku-box-related: var(--color-board-tint);
+  --color-sudoku-identical: var(--color-board-match);
+  --color-on-sudoku-identical: var(--color-on-board-match);
+  --color-sudoku-selected: var(--color-board-selected-line);
+  --color-sudoku-selected-fill: var(--color-board-selected);
+  --color-sudoku-entered: var(--color-board-ink);
+  --color-sudoku-cell: var(--color-board-cell);
+  --color-sudoku-ink: var(--color-board-ink);
+  --color-sudoku-ink-soft: var(--color-board-ink-soft);
+  --color-sudoku-paused: var(--color-board-paused);
+  --color-sudoku-conflict: currentColor;
+}
+
+@theme static {
+  /* ---------- /play hub (option B, Christian 2026-11-23): left panel, one row per game ---------- */
+  --play-hub-max: 90rem;                /* the hub's widest width (1440 px); wider screens keep it centred */
+  --play-hub-panel-width: 25rem;        /* the left panel on desktop (400 px) */
+  --play-hub-split: var(--play-hub-panel-width) 1fr; /* desktop: left panel, then the rows */
+  --play-hub-cols-stacked: auto minmax(0, 1fr); /* phone and tablet row: tile, then the wordmark; line and status row span both */
+  --play-hub-cols: 4rem 12.5rem 1fr 11rem 7.5rem; /* desktop row: icon tile, wordmark, line, status, button */
+  --play-hub-tile: 4rem;                /* the game's icon tile (64 px) */
+  --play-hub-tile-icon: 2.875rem;       /* the artwork inside the tile (46 px) */
+  --play-hub-wordmark-height: 2.625rem; /* wordmark artwork (42 px) */
+  --play-hub-wordmark-height-phone: 2rem; /* the same artwork in the stacked row on phones and tablets */
+  --play-hub-name-size: 2.125rem;       /* the serif name of a game with no artwork (34 px) */
+  --play-hub-name-size-phone: 1.75rem;
+  --play-hub-total-size: 1.75rem;       /* the four totals (28 px) */
+  --play-hub-total-min: 4rem;           /* a total wraps to the next line below this width, never overflows */
+  --play-hub-headline-size: 3rem;       /* the panel headline (48 px: "new every" has to fit the 400 px panel) */
+  --play-hub-headline-size-phone: 2.5rem;
+  /* room kept for the stats panel (browser-only) until it renders; the game rows render on the server */
+  --play-hub-stats-reserve: 34rem;      /* the stats panel at every width (at least 550 px) */
 }

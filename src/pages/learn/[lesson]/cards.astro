@@ -2,6 +2,8 @@
 /** A lesson's cards (Task 300: built for every lesson whose deck may show; src/lessons/catalog.ts). */
 import { getEntry } from 'astro:content';
 import Layout from '../../../layouts/Layout.astro';
+import LessonComingSoon from '../../../components/LessonComingSoon.astro';
+import { lessonIsHeldBack } from '../../../lessons/holdback';
 import ContentLabel from '../../../components/ContentLabel.astro';
 import CardDeck from '../../../islands/CardDeck';
 import { pathsFor, statusNotice, type CatalogLesson } from '../../../lessons/catalog';
@@ -12,6 +14,7 @@ export async function getStaticPaths() {
 }
 
 const { lesson } = Astro.props as { lesson: CatalogLesson };
+const hold = await lessonIsHeldBack(lesson.id);
 const deck = lesson.cards && await getEntry('cards', lesson.cards.id);
 if (!deck) throw new Error(`The card file for lesson ${lesson.id} is missing.`);
 const { title, cards, status } = deck.data;
@@ -19,6 +22,7 @@ const cardsNotice = statusNotice(status, 'cards');
 const page = `${lesson.href}/cards`;
 ---
 
+{hold ? <LessonComingSoon /> : (
 <Layout title={title} description={`cards for ${lesson.about}.`} variant="study">
   <div class="mx-auto max-w-prose pt-8">
     <p class="text-sm text-ink-soft">{lesson.context} · cards</p>
@@ -42,12 +46,14 @@ const page = `${lesson.href}/cards`;
       </noscript>
     </div>
 
+    {/* 48 px, one step above the 44 px tap minimum: at exactly 44 px Firefox measured 43.99994 (engine run 44460645965). */}
     <ul class="mt-section space-y-2 text-sm">
-      <li><a href={`${lesson.href}/learn-mode`}>learn these cards in learn mode</a></li>
-      <li><a href={lesson.href}>back to the lesson</a></li>
+      <li><a class="inline-flex min-h-12 items-center" href={`${lesson.href}/learn-mode`}>learn these cards in learn mode</a></li>
+      <li><a class="inline-flex min-h-12 items-center" href={lesson.href}>back to the lesson</a></li>
     </ul>
     <div class="mt-8">
       <ContentLabel />
     </div>
   </div>
 </Layout>
+)}

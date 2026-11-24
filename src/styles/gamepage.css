@@ -1,0 +1,12 @@
+/*
+  A game that has not rendered yet (src/components/GamePage.astro; performance, 2026-11-19, changed 2026-11-23).
+  Each game is a browser-only island, so until its script runs the article child that holds it is empty. Before the
+  Games v2 frame this file kept one screen of room for it; the frame now owns that: GameFrame keeps a full-screen
+  minimum height before and after the game renders (gameframe.css), so the footer starts below the first screen and
+  never moves up, and the board's own holder keeps no room of its own.
+*/
+@layer components {
+  [data-game-page] .game-frame-board > :has(astro-island) {
+    min-block-size: 0;
+  }
+}

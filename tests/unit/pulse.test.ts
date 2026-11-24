@@ -1,6 +1,7 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { dailyGames, forbiddenGameWords } from '../../src/config/games';
+import { dailyGames } from '../../src/config/games';
+import { forbiddenGameWords } from '../../src/config/games';
 import { contrastRatio, parseHex, readColorTokens } from './contrast';
 import {
   cleanGuess,
@@ -22,9 +23,9 @@ import {
 
 describe('daily games (task-114)', () => {
   it("lists the four games with pillo's new name, lowercase, all playable", () => {
-    expect(dailyGames.map((game) => game.name)).toEqual(['pillo', 'crossword', 'sort', 'word path']);
-    expect(dailyGames.map((game) => game.id)).toEqual(['pulse', 'cueword', 'triage', 'suture']);
-    expect(dailyGames.filter((game) => game.ready).map((game) => game.id)).toEqual(['pulse', 'cueword', 'triage', 'suture']);
+    expect(dailyGames.map((game) => game.name)).toEqual(['vialo', 'crossword', 'sudoku', 'piccline']);
+    expect(dailyGames.map((game) => game.id)).toEqual(['vialo', 'cueword', 'triage', 'suture']);
+    expect(dailyGames.filter((game) => game.ready).map((game) => game.id)).toEqual(['vialo', 'cueword', 'triage', 'suture']);
     for (const game of dailyGames) {
       expect(game.name).toBe(game.name.toLowerCase());
       expect(game.line).toBe(game.line.toLowerCase());
@@ -38,6 +39,7 @@ describe('daily games (task-114)', () => {
       '../../src/islands/PulseGame.tsx',
       '../../src/islands/pulse.ts',
       '../../src/islands/TriageGame.tsx',
+      '../../src/islands/SudokuGame.tsx',
       '../../src/islands/triage.ts',
       '../../src/islands/CuewordGame.tsx',
       '../../src/islands/CuewordToday.tsx',

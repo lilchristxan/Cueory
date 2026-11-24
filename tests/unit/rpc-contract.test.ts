@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { describe, expect, it, vi } from 'vitest';
 import { checkAnswer, type AnswerTransport } from '../../src/islands/checkanswer';
 import { exportCsv, exportJson, type ExportData } from '../../src/islands/exportdata';
@@ -16,6 +16,9 @@ const sql = [
   '20261102135000_confirmed_accounts_only.sql',
   '20261102140000_update_display_name.sql',
   '20261102170000_my_sessions.sql',
+  '20261112020000_restate_delete_my_account_mfa.sql',
+  '20261114151643_delete_my_account_identity_and_mfa.sql',
+  '20261116235000_delete_account_recent_amr_proof.sql',
 ].map(name => readFileSync(new URL(`../../supabase/migrations/${name}`, import.meta.url), 'utf8')).join('\n');
 
 type FunctionName =
@@ -166,25 +169,45 @@ describe('record_study_events contract (Task 140)', () => {
   });
 });
 
-describe('delete_my_account contract (Task 60)', () => {
+describe('delete_my_account migration replay order', () => {
+  it('has unique versions and replays the recent-auth proof after the staging MFA restatement', () => {
+    const names = readdirSync(new URL('../../supabase/migrations/', import.meta.url))
+      .filter(name => /^\d{14}_.+\.sql$/.test(name)).sort();
+    const versions = names.map(name => name.slice(0, 14));
+    expect(new Set(versions).size).toBe(versions.length);
+    expect(names).toContain('20261112020000_restate_delete_my_account_mfa.sql');
+    expect(names.at(-1)).toBe('20261116235000_delete_account_recent_amr_proof.sql');
+    expect(names.indexOf('20261112020000_restate_delete_my_account_mfa.sql'))
+      .toBeLessThan(names.indexOf('20261116235000_delete_account_recent_amr_proof.sql'));
+  });
+});
+
+describe('delete_my_account contract (Tasks 60, 206)', () => {
   const deleteSql = readFileSync(
-    new URL('../../supabase/migrations/20261102110000_delete_my_account.sql', import.meta.url), 'utf8',
+    new URL('../../supabase/migrations/20261116235000_delete_account_recent_amr_proof.sql', import.meta.url), 'utf8',
   );
 
-  it('takes no arguments and returns nothing, so the browser calls supabase.rpc(\'delete_my_account\')', () => {
-    expect(declaration('delete_my_account').arguments).toEqual([]);
-    expect(deleteSql).toMatch(/create\s+function\s+public\.delete_my_account\(\)\s+returns void\s/i);
+  it('takes the shown account id and returns nothing, so the browser calls supabase.rpc(\'delete_my_account\', { expected_user_id })', () => {
+    expect(declaration('delete_my_account').arguments).toEqual(['expected_user_id']);
+    expect(deleteSql).toMatch(/create\s+or\s+replace\s+function\s+public\.delete_my_account\(expected_user_id uuid\)\s+returns void\s/i);
+    expect(deleteSql).not.toMatch(/drop function if exists public\.delete_my_account\(\);/i);
   });
 
-  it('raises exactly this literal refusal, which the account page handles', () => {
-    // A change here is a contract change for the /account page: update it in the same pull request.
-    expect(declaration('delete_my_account').messages).toEqual(['sign in to delete your account']);
+  it('keeps the sign-in, identity, two-factor and fresh-token refusals the account page handles', () => {
+    expect(declaration('delete_my_account').messages).toEqual([
+      'sign in to delete your account',
+      'the account signed in on this device changed; nothing was deleted',
+      'complete two-factor sign-in to continue',
+      'please sign in again to delete your account',
+    ]);
+    expect(deleteSql).toContain('app_private.mfa_access_allowed()');
+    expect(deleteSql).toContain('expected_user_id is distinct from uid');
   });
 
   it('is signed-in only and security definer with an empty search_path', () => {
     expect(deleteSql).toMatch(/returns void\s+language plpgsql\s+security definer\s+set search_path = ''/i);
-    expect(deleteSql).toContain('revoke execute on function public.delete_my_account() from public, anon, authenticated;');
-    expect(deleteSql).toContain('grant execute on function public.delete_my_account() to authenticated;');
+    expect(deleteSql).toContain('revoke execute on function public.delete_my_account(uuid) from public, anon, authenticated;');
+    expect(deleteSql).toContain('grant execute on function public.delete_my_account(uuid) to authenticated;');
     expect(deleteSql).not.toMatch(/grant\s+execute[^;]*to\s+(anon|public)\b/i);
   });
 });

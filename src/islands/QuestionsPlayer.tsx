@@ -79,7 +79,7 @@ function Session({ questions, check, events, onCurrent }: SessionProps) {
   const [focusStep, setFocusStep] = useState(0);
   const request = useRef(0);
   const inFlight = useRef(false);
-  const stem = useRef<HTMLLegendElement>(null);
+  const stem = useRef<HTMLSpanElement>(null);
   const end = useRef<HTMLDivElement>(null);
   const id = useId();
   const question = currentQuestion(state);
@@ -144,7 +144,9 @@ function Session({ questions, check, events, onCurrent }: SessionProps) {
         <>
           <p className="text-sm text-ink-soft">question {state.index + 1} of {state.questions.length}</p>
           <fieldset className="mt-4 min-w-0" disabled={waiting || !!answer} aria-describedby={question.type === 'sata' ? `${id}-instruction` : undefined}>
-            <legend ref={stem} tabIndex={-1} className="w-full text-lg font-medium">{question.stem}</legend>
+            <legend className="w-full text-lg font-medium">
+              <span ref={stem} tabIndex={-1}>{question.stem}</span>
+            </legend>
             {question.type === 'sata' && <p id={`${id}-instruction`} className="mt-2 text-sm text-ink-soft">select all that apply</p>}
             <div className="mt-4 flex flex-col gap-3">
               {question.choices.map((choice) => {
@@ -152,8 +154,10 @@ function Session({ questions, check, events, onCurrent }: SessionProps) {
                 const words = mark ? MARKS[mark] : undefined;
                 return (
                   <div key={choice.id}>
-                    <label className="flex min-h-11 cursor-pointer items-start gap-3 rounded-md border border-control px-4 py-3">
-                      <input className="mt-1 shrink-0" type={question.type === 'single' ? 'radio' : 'checkbox'} name={`${id}-answer`}
+                    {/* The native radio or checkbox is 24 px (WebKit's own is smaller, under the WCAG 2.2 target size), and the
+                        whole label is a 44 px tap area. */}
+                    <label className="flex min-h-(--tap-min) min-w-(--tap-min) cursor-pointer items-start gap-3 rounded-md border border-control px-4 py-3">
+                      <input className="size-6 shrink-0" type={question.type === 'single' ? 'radio' : 'checkbox'} name={`${id}-answer`}
                         value={choice.id} checked={state.picked.includes(choice.id)}
                         onChange={() => { setState((previous) => pick(previous, choice.id)); setError(''); }} />
                       <span className="min-w-0 break-words">{choice.text}</span>

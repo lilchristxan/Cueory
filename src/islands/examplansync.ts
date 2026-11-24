@@ -10,6 +10,11 @@
  * (tests/unit/examplansync.test.ts). Row-level security and `exam_plans_guard()` in
  * supabase/migrations/20261101110000_review_state_and_exam_plans.sql remain the real checks.
  *
+ * Bound to one account (#755): the adapter remembers which account was signed in when it was made, every read and
+ * change names that account's id as well as the course, and every write first checks the page's client is still
+ * signed in as that account. The client writes as whoever is signed in now, so if another tab switched to account B,
+ * nothing set up for account A is ever sent to B (and A's rows are never read as B's).
+ *
  * Why update-then-insert instead of an upsert: the migration grants a student `insert (course, exam_date)` but only
  * `update (exam_date)`. PostgREST builds an upsert as `on conflict … do update set <every sent column>`, so an upsert
  * would also set `course` and be refused for lacking update rights on that column. An update of `exam_date` by course,
@@ -23,8 +28,15 @@ export interface DbError {
   message?: string;
 }
 
+/** Whether the page's client is still signed in as the adapter's account. 'unknown': the check itself failed. */
+export type AccountCheck = 'same' | 'changed' | 'unknown';
+
 /** The four calls this file makes, each on the signed-in student's own rows only (RLS). */
 export interface ExamPlanSyncDb {
+  /** The account this adapter was made for. */
+  readonly accountId: string;
+  /** Read fresh before every write, since the client writes as whoever is signed in now. */
+  accountCheck(): Promise<AccountCheck>;
   list(): PromiseLike<{ data: readonly unknown[] | null; error: DbError | null }>;
   /** Changes the exam date of the plan for one course and returns the rows it changed. */
   update(course: CourseId, examDate: string): PromiseLike<{ data: readonly unknown[] | null; error: DbError | null }>;
@@ -43,7 +55,23 @@ export const SYNC_MESSAGES = {
   connectFailed: 'your exam date is saved on this device, but we couldn’t check your sign-in, so it hasn’t been saved to your account. try again, or carry on and it stays on this device.',
   failed: 'your exam date is saved on this device, but it couldn’t be saved to your account. try again later.',
   removeFailed: 'your exam date is cleared on this device, but it couldn’t be cleared from your account. try again later.',
+  accountChanged: 'a different account is signed in now, so your exam date is saved on this device only. nothing was sent to that account.',
 } as const;
+
+/**
+ * Null when the client is still signed in as the adapter's account; otherwise the refusal to return instead of
+ * writing. A changed account is final (no retry); a failed check is the ordinary, retryable failure.
+ */
+async function accountRefusal(db: ExamPlanSyncDb, fallback: string): Promise<SaveResult | null> {
+  let check: AccountCheck;
+  try {
+    check = await db.accountCheck();
+  } catch {
+    check = 'unknown';
+  }
+  if (check === 'same') return null;
+  return { status: 'failed', message: check === 'changed' ? SYNC_MESSAGES.accountChanged : fallback };
+}
 
 const failure = (error: DbError | null | undefined, fallback: string): string => {
   if (error?.code === '54000') return SYNC_MESSAGES.tooMany;
@@ -172,6 +200,8 @@ export type SaveResult =
 /** Removes the account's plan for one course. Never throws. */
 async function removePlan(db: ExamPlanSyncDb, course: CourseId): Promise<SaveResult> {
   try {
+    const refused = await accountRefusal(db, SYNC_MESSAGES.removeFailed);
+    if (refused) return refused;
     const result = await db.remove(course);
     if (!result || result.error) return { status: 'failed', message: failure(result?.error, SYNC_MESSAGES.removeFailed) };
     return { status: 'removed', message: SYNC_MESSAGES.removed };
@@ -240,7 +270,9 @@ export async function saveExamPlan(
   if (!candidate.ok) return { status: 'failed', message: SYNC_MESSAGES.outOfWindow };
   const { course, exam_date: examDate } = candidate.row;
 
-  const changed = async (): Promise<'yes' | 'no' | DbError> => {
+  const changed = async (): Promise<'yes' | 'no' | DbError | { refused: SaveResult }> => {
+    const refused = await accountRefusal(db, SYNC_MESSAGES.failed);
+    if (refused) return { refused };
     const result = await db.update(course, examDate);
     if (!result || result.error) return result?.error ?? {};
     if (!Array.isArray(result.data)) return {};
@@ -250,8 +282,11 @@ export async function saveExamPlan(
   try {
     const first = await changed();
     if (first === 'yes') return { status: 'saved', message: SYNC_MESSAGES.saved };
+    if (typeof first === 'object' && 'refused' in first) return first.refused;
     if (first !== 'no') return { status: 'failed', message: failure(first, SYNC_MESSAGES.failed) };
 
+    const refused = await accountRefusal(db, SYNC_MESSAGES.failed);
+    if (refused) return refused;
     const inserted = await db.insert({ course, exam_date: examDate });
     if (!inserted) return { status: 'failed', message: SYNC_MESSAGES.failed };
     if (!inserted.error) return { status: 'saved', message: SYNC_MESSAGES.saved };
@@ -260,6 +295,7 @@ export async function saveExamPlan(
     // Another tab added this course's plan between the two calls: change that one instead.
     const retry = await changed();
     if (retry === 'yes') return { status: 'saved', message: SYNC_MESSAGES.saved };
+    if (typeof retry === 'object' && 'refused' in retry) return retry.refused;
     return { status: 'failed', message: failure(retry === 'no' ? null : retry, SYNC_MESSAGES.failed) };
   } catch {
     return { status: 'failed', message: SYNC_MESSAGES.failed };
@@ -268,32 +304,46 @@ export async function saveExamPlan(
 
 type Thenable<T> = PromiseLike<T>;
 type Rows = { data: unknown[] | null; error: DbError | null };
+type PlanFilter = { course: string; user_id: string };
 
 /** The few supabase-js calls used here, so the adapter can be tested with a stand-in. */
 export interface ExamPlanClient {
   from(table: 'exam_plans'): {
-    select(columns: string): { limit(count: number): Thenable<Rows> };
-    update(patch: { exam_date: string }): { eq(column: 'course', value: string): { select(columns: string): Thenable<Rows> } };
+    select(columns: string): { eq(column: 'user_id', value: string): { limit(count: number): Thenable<Rows> } };
+    update(patch: { exam_date: string }): { match(filter: PlanFilter): { select(columns: string): Thenable<Rows> } };
     insert(row: { course: string; exam_date: string }): Thenable<{ error: DbError | null }>;
-    delete(): { eq(column: 'course', value: string): Thenable<{ error: DbError | null }> };
+    delete(): { match(filter: PlanFilter): Thenable<{ error: DbError | null }> };
   };
 }
 
-/** The adapter over the page's Supabase client. Row-level security limits every call to the student's own rows. */
-export function supabaseExamPlans(client: ExamPlanClient): ExamPlanSyncDb {
+/**
+ * The adapter over the page's Supabase client, for one account. Row-level security limits every call to whoever is
+ * signed in now; the `user_id` filter also limits it to `accountId`, so after a switch to another account a late read
+ * or change matches nothing. An insert can't name the account (the column grant is `course, exam_date` and the
+ * database fills in `user_id`), so `accountCheck` runs right before it, as before every write.
+ */
+export function supabaseExamPlans(
+  client: ExamPlanClient,
+  accountId: string,
+  accountCheck: () => Promise<AccountCheck>,
+): ExamPlanSyncDb {
   const table = () => client.from('exam_plans');
   return {
+    accountId,
+    accountCheck,
     // The database caps a student at ten plans.
-    list: () => table().select('course,exam_date').limit(10),
-    update: (course, examDate) => table().update({ exam_date: examDate }).eq('course', course).select('course'),
+    list: () => table().select('course,exam_date').eq('user_id', accountId).limit(10),
+    update: (course, examDate) => table().update({ exam_date: examDate }).match({ course, user_id: accountId }).select('course'),
     insert: (row) => table().insert({ course: row.course, exam_date: row.exam_date }),
-    remove: (course) => table().delete().eq('course', course),
+    remove: (course) => table().delete().match({ course, user_id: accountId }),
   };
 }
+
+type SessionCheck = { signedIn: boolean; userId?: string } | ConnectFailure;
 
 interface ClientModule {
   getSupabase(): Promise<unknown>;
-  sessionCheckFrom(client: never): Promise<{ signedIn: boolean } | ConnectFailure>;
+  sessionCheckFrom(client: never): Promise<SessionCheck>;
 }
 
 /** The session or client couldn't be checked: unlike `null` (accounts off, or confirmed signed out). */
@@ -314,7 +364,20 @@ export async function connectExamPlans(
     if (!client) return null;
     const session = await sessionCheckFrom(client as never);
     if (isConnectFailure(session)) return session;
-    return session.signedIn ? supabaseExamPlans(client as ExamPlanClient) : null;
+    if (!session.signedIn) return null;
+    // Signed in, but with no account id the writes can't be bound to anyone: treat it as a failed check.
+    const accountId = session.userId;
+    if (typeof accountId !== 'string' || accountId === '') return { error: true };
+    const accountCheck = async (): Promise<AccountCheck> => {
+      try {
+        const now = await sessionCheckFrom(client as never);
+        if (isConnectFailure(now)) return 'unknown';
+        return now.signedIn && now.userId === accountId ? 'same' : 'changed';
+      } catch {
+        return 'unknown';
+      }
+    };
+    return supabaseExamPlans(client as ExamPlanClient, accountId, accountCheck);
   } catch {
     // Not the same as signed out: the session couldn't be checked, so a signed-in student may still have an account.
     return { error: true };

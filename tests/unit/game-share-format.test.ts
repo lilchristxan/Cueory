@@ -2,9 +2,12 @@ import { describe, expect, it } from 'vitest';
 import { dailyGames, gameName } from '../../src/config/games';
 import { dayLabel } from '../../src/islands/daily';
 import { shareLine as crosswordShare } from '../../src/islands/cueword';
-import { GUESSES, playGuess, shareText as pilloShare, startPulse } from '../../src/islands/pulse';
+import { GUESSES, playGuess, startPulse } from '../../src/islands/pulse';
 import { shareLine as wordPathShare, type SutureState } from '../../src/islands/suture';
 import { triageShareText, type TriageState } from '../../src/islands/triage';
+import { vialoShareText } from '../../src/islands/vialo';
+import { picclineShareText } from '../../src/islands/piccline';
+import { tachyyyShareText } from '../../src/islands/tachyyy';
 
 // Exercise every result branch, including singular/plural counts. No puzzle answer or letter grid belongs in a share.
 const won = playGuess(startPulse('tones'), 'tones');
@@ -20,9 +23,9 @@ const sorted = (slips: number): TriageState => ({
 const out: TriageState = { terms: ['sample'], placed: {}, slips: 3, status: 'out' };
 
 const shares: Record<string, Array<(day: string) => string>> = {
-  pulse: [
-    (day) => pilloShare(won, day),
-    (day) => pilloShare(lost, day),
+  vialo: [
+    (day) => vialoShareText(won, day),
+    (day) => vialoShareText(lost, day),
   ],
   cueword: [
     (day) => crosswordShare({ solved: true, seconds: 252, cues: 0 }, day, gameName('cueword')),
@@ -53,14 +56,32 @@ describe('all /play game shares use plain one-line words (Task 229)', () => {
       for (const result of shares[game.id]!) {
         const line = result(day);
         // Printable ASCII rejects colored squares, emoji, decorative grid symbols, newlines and invisible controls.
-        expect(line).toMatch(/^[\x20-\x7e]+$/);
         expect(line).toBe(line.trim());
         expect(line).toBe(line.toLowerCase());
-        expect(line.startsWith(`cueory ${game.name}, ${day}: `)).toBe(true);
-        expect(line.slice(line.indexOf(': ') + 2)).toMatch(/[a-z]{2,}/);
+        if (game.id === 'vialo') {
+          expect(line).toMatch(/^[\x20-\x7e\u00b7]+$/);
+          expect(line.startsWith(`vialo · ${day} · `)).toBe(true);
+          expect(line.endsWith(' · cueory.app')).toBe(true);
+        } else {
+          expect(line).toMatch(/^[\x20-\x7e]+$/);
+          const expectedName = game.id === 'triage' ? 'sort' : game.name;
+          expect(line.startsWith(`cueory ${expectedName}, ${day}: `)).toBe(true);
+          expect(line.slice(line.indexOf(': ') + 2)).toMatch(/[a-z]{2,}/);
+        }
         expect(line).not.toContain('tones');
         expect(line).not.toContain('crane');
       }
     });
   }
+
+  it('piccline and tachyyy share lines use plain approved middle dot format', () => {
+    const day = '1 nov 2026';
+    const piccline = picclineShareText({ found: [0, 1], totalWords: 4 }, day);
+    expect(piccline).toBe(`piccline · ${day} · 2/4 · cueory.app`);
+    expect(piccline).toMatch(/^[\x20-\x7e\u00b7]+$/);
+
+    const tachyyy = tachyyyShareText(13, day);
+    expect(tachyyy).toBe(`tachyyy · ${day} · 13/15 · cueory.app`);
+    expect(tachyyy).toMatch(/^[\x20-\x7e\u00b7]+$/);
+  });
 });

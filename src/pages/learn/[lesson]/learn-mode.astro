@@ -2,6 +2,8 @@
 /** Learn mode for a lesson's cards (Task 300: built for every lesson whose deck may show; src/lessons/catalog.ts). */
 import { getEntry } from 'astro:content';
 import Layout from '../../../layouts/Layout.astro';
+import LessonComingSoon from '../../../components/LessonComingSoon.astro';
+import { lessonIsHeldBack } from '../../../lessons/holdback';
 import ContentLabel from '../../../components/ContentLabel.astro';
 import InfoTip from '../../../components/InfoTip.astro';
 import LearnSession from '../../../islands/LearnSession';
@@ -13,6 +15,7 @@ export async function getStaticPaths() {
 }
 
 const { lesson } = Astro.props as { lesson: CatalogLesson };
+const hold = await lessonIsHeldBack(lesson.id);
 const deck = lesson.cards && await getEntry('cards', lesson.cards.id);
 if (!deck) throw new Error(`The card file for lesson ${lesson.id} is missing.`);
 const { title, cards, status } = deck.data;
@@ -23,6 +26,7 @@ const olderLessons = (await lessonCatalog()).lessons.filter((candidate) => !cand
 const context = !lesson.curriculumId && olderLessons > 1 ? `${lesson.context} of ${olderLessons}` : lesson.context;
 ---
 
+{hold ? <LessonComingSoon /> : (
 <Layout title={`learn mode: ${title}`} description={`learn mode for ${lesson.about}.`} variant="study">
   <div class="mx-auto max-w-prose pt-8">
     <p class="text-sm text-ink-soft">{context}</p>
@@ -52,3 +56,4 @@ const context = !lesson.curriculumId && olderLessons > 1 ? `${lesson.context} of
     </div>
   </div>
 </Layout>
+)}

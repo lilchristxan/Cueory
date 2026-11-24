@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { countsInWords, filterItems, parseItems, STATUS_ORDER, type ConceptItem } from '../../src/islands/conceptmap.ts';
+import { countsInWords, filterItems, parseItems, STATUS_ORDER, type ConceptItem } from '../../src/islands/concept-map.ts';
 
 const items: ConceptItem[] = [
   { concept: 'Colors', status: 'got it', description: 'everyday color names' },
@@ -41,6 +41,10 @@ describe('concept map input', () => {
   it('accepts names up to 200 and descriptions up to 1,000 Unicode code points', () => {
     const input = [{ ...items[0], concept: '😀'.repeat(200), description: 'a'.repeat(1_000) }];
     expect(parseItems(input)).toEqual(input);
+  });
+  it('rejects a concept name at 201 Unicode code points', () => {
+    expect(() => parseItems([{ ...items[0], concept: '😀'.repeat(201) }]))
+      .toThrow('a concept name can have at most 200 characters.');
   });
   it.each(['concept', 'description'])('rejects combined exam and prediction wording in %s without echoing it', field => {
     for (const value of [

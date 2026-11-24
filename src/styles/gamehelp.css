@@ -1,0 +1,136 @@
+/*
+  How to play, for every daily game (issue #736; src/islands/GameHelp.tsx). The dialog reuses the shared settings
+  dialog's overlay and panel (gamesettings.css); this file adds the rules list, the settings list and the first-visit
+  card. Every color, size and spacing value is a token.
+*/
+@layer components {
+  /* The help dialog's own panel: a header row (title, then ×) that never scrolls, over a body that does. The title
+     always sits above the rules and the rules use the full width, at every screen size and text size. */
+  /* A narrower frame than the settings dialog, so a 320 px phone with enlarged text keeps a wide column for the rules. */
+  .game-settings-overlay.game-help-overlay {
+    padding: calc(var(--spacing) * 2);
+  }
+
+  .game-help {
+    display: flex;
+    flex-direction: column;
+    inline-size: min(100%, var(--container-prose));
+    max-block-size: 100%;
+    overflow: hidden;
+    border-radius: var(--radius-xl);
+    background: var(--color-page);
+    box-shadow: var(--shadow-lift);
+  }
+
+  .game-help-header {
+    display: flex;
+    flex: none;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: calc(var(--spacing) * 3);
+    padding: calc(var(--spacing) * 3) calc(var(--spacing) * 3) calc(var(--spacing) * 2);
+    border-block-end: var(--border-game-settings) solid var(--color-line);
+  }
+
+  .game-help-balance {
+    flex: none;
+    inline-size: var(--tap-min);
+  }
+
+  .game-help-title {
+    flex: 1 1 auto;
+    text-align: center;
+    min-inline-size: 0;
+    padding-block-start: calc(var(--spacing) * 1);
+    /* Smaller than the settings title, so with enlarged text on a short landscape phone the rules keep most of the height. */
+    font-size: var(--text-xl);
+    line-height: var(--text-xl--line-height);
+    overflow-wrap: anywhere;
+  }
+
+  .game-help-header .game-settings-close {
+    flex: none;
+  }
+
+  .game-help-body {
+    flex: 1 1 auto;
+    min-block-size: 0;
+    overflow: auto;
+    overscroll-behavior: contain;
+    padding: calc(var(--spacing) * 2) calc(var(--spacing) * 4) calc(var(--spacing) * 5);
+    overflow-wrap: anywhere;
+  }
+
+  .game-help-subheading {
+    margin-block-start: calc(var(--spacing) * 5);
+    font-size: var(--text-lg);
+    line-height: var(--text-lg--line-height);
+    font-weight: 600;
+  }
+
+  .game-help-line {
+    margin-block-start: calc(var(--spacing) * 2);
+    color: var(--color-ink-soft);
+    text-align: center;
+  }
+
+  .game-help-actions {
+    display: flex;
+    justify-content: center;
+  }
+
+  .game-help-steps {
+    display: flex;
+    flex-direction: column;
+    gap: calc(var(--spacing) * 2);
+    margin-block-start: calc(var(--spacing) * 3);
+    padding-inline-start: calc(var(--spacing) * 6);
+    list-style: decimal;
+  }
+
+  .game-help-settings {
+    display: flex;
+    flex-direction: column;
+    margin-block-start: calc(var(--spacing) * 3);
+  }
+
+  .game-help-settings > div {
+    border-block-start: var(--border-game-settings) solid var(--color-line);
+    padding-block: calc(var(--spacing) * 2);
+  }
+
+  .game-help-settings dt {
+    font-weight: 600;
+  }
+
+  .game-help-settings dd {
+    color: var(--color-ink-soft);
+  }
+
+  .game-help-note {
+    margin-block-start: calc(var(--spacing) * 3);
+    color: var(--color-ink-soft);
+    font-size: var(--text-sm);
+    line-height: var(--text-sm--line-height);
+  }
+
+  .game-help-action {
+    display: inline-flex;
+    min-block-size: var(--tap-min);
+    min-inline-size: var(--tap-min);
+    max-inline-size: 100%;
+    align-items: center;
+    justify-content: center;
+    margin-block-start: calc(var(--spacing) * 4);
+    border: var(--border-game-settings) solid var(--color-control);
+    border-radius: var(--radius-xl);
+    padding-inline: calc(var(--spacing) * 5);
+    background: transparent;
+    color: var(--color-ink);
+    cursor: pointer;
+  }
+
+  .game-help-action:hover {
+    background: var(--color-surface);
+  }
+}

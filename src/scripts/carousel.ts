@@ -8,6 +8,39 @@
  * the arrows, the arrow keys, swipes, a tap on a side vial to bring it to the front, and a gentle auto-advance.
  */
 
+/**
+ * The native snap-scrolling links are the accessible baseline. Turn them into a ring only when every
+ * browser feature used by the modal preview is present. This pure check also guards older browsers
+ * without the Web Animations API, matchMedia or IntersectionObserver.
+ */
+export interface CarouselCapabilities {
+  nativeDialog: boolean;
+  dialog: { showModal?: unknown; close?: unknown } | null | undefined;
+  animationTargets: readonly ({ animate?: unknown; getAnimations?: unknown } | null | undefined)[];
+  matchMedia: unknown;
+  motionQuery: { matches?: unknown; addEventListener?: unknown } | null | undefined;
+  intersectionObserver: unknown;
+  replaceChildren: unknown;
+}
+
+export function canEnhanceCarousel(capabilities: CarouselCapabilities): boolean {
+  return (
+    capabilities.nativeDialog &&
+    typeof capabilities.dialog?.showModal === 'function' &&
+    typeof capabilities.dialog?.close === 'function' &&
+    typeof capabilities.matchMedia === 'function' &&
+    typeof capabilities.motionQuery?.matches === 'boolean' &&
+    typeof capabilities.motionQuery?.addEventListener === 'function' &&
+    typeof capabilities.intersectionObserver === 'function' &&
+    typeof capabilities.replaceChildren === 'function' &&
+    // Panel, scrim, bottle, surface, and both word-fade containers all animate.
+    capabilities.animationTargets.length >= 6 &&
+    capabilities.animationTargets.every(
+      (element) => typeof element?.animate === 'function' && typeof element?.getAnimations === 'function',
+    )
+  );
+}
+
 /** Time each vial stays in front before the next one comes in, when nobody is using the carousel. */
 export const AUTO_ADVANCE_MS = 6000;
 
@@ -102,6 +135,36 @@ export function ringPlace(offset: number): RingPlace {
   };
 }
 
+/** The gap between two vials in HomeV2's straight row (P6), in vial widths: they stand apart, never overlapping. */
+export const ROW_GAP = 0.08;
+
+/** Where a vial stands in HomeV2's straight row (P6). */
+export interface RowPlace {
+  /** How far sideways its middle is from the middle of the row, in vial widths. */
+  shift: number;
+  /** Whether it shows: only vials whose whole bottle fits inside the room, so no label is ever cut off. */
+  shown: boolean;
+}
+
+/**
+ * HomeV2's straight row (P6): each vial keeps ringPlace's size, brightness and layer, but stands beside its neighbour
+ * with a gap of ROW_GAP vial widths, so the bottles never overlap and every label stays whole. `room` is how many vial
+ * widths there are from the middle of the row to the nearest thing it must not cross (the window's edge, or an arrow
+ * beside the vials). A vial whose outer edge would pass it is hidden instead of cut off.
+ */
+export function rowPlace(offset: number, room: number): RowPlace {
+  const distance = Math.abs(offset);
+  const scaleAt = (step: number) => ringPlace(step).scale;
+  let middle = 0;
+  for (let step = 1; step <= distance; step += 1) middle += (scaleAt(step - 1) + scaleAt(step)) / 2 + ROW_GAP;
+  const edge = middle + scaleAt(distance) / 2;
+  return {
+    shift: round(Math.sign(offset) * middle),
+    // The front vial always shows: it is the one the visitor is on.
+    shown: distance === 0 || (distance <= FARTHEST_SHOWN && edge <= room + 1e-9),
+  };
+}
+
 /**
  * Whether a vial glides to its new place or simply appears there. A turn of one or two vials glides; a vial going
  * round the back of the ring, or a jump of several vials (Home, End), switches at once instead of sweeping across the
@@ -150,21 +213,94 @@ export interface MotionState {
   focusInside: boolean;
   /** Most of the carousel is on screen and the tab is visible. */
   onScreen: boolean;
+  /** The preview is open (or still opening or closing). */
+  previewOpen: boolean;
+}
+
+/** A pointer enter may hold the carousel when it is the first observed position or agrees with the last mouse move. */
+export function enterMatchesMouseMove(
+  lastMove: { x: number; y: number } | undefined,
+  enter: { x: number; y: number },
+): boolean {
+  return lastMove === undefined || (lastMove.x === enter.x && lastMove.y === enter.y);
+}
+
+/** A mismatched exit is stale only when its old coordinate still hits a pause area. */
+export function shouldClearDocumentExit(
+  lastMove: { x: number; y: number } | undefined,
+  exit: { x: number; y: number },
+  hitPauseArea: boolean,
+): boolean {
+  return lastMove === undefined || (lastMove.x === exit.x && lastMove.y === exit.y) || !hitPauseArea;
+}
+
+/**
+ * The first active condition that holds the carousel still. Kept separate from canAutoAdvance so the rendered
+ * carousel can expose the same reason that its timer uses without changing its existing motion policy.
+ */
+export type AutoplayHold = 'reduced-motion' | 'paused' | 'takeover' | 'hover' | 'focus' | 'offscreen' | 'preview';
+
+export function autoplayHold(state: MotionState): AutoplayHold | undefined {
+  if (state.reducedMotion) return 'reduced-motion';
+  if (state.paused) return 'paused';
+  if (state.tookOver) return 'takeover';
+  if (state.hovering) return 'hover';
+  if (state.focusInside) return 'focus';
+  if (!state.onScreen) return 'offscreen';
+  if (state.previewOpen) return 'preview';
+  return undefined;
 }
 
 /**
  * Auto-advance runs only while nobody is using the carousel: never with reduced motion, after the pause button,
- * once the visitor has taken over, while it is hovered or focused, or while it is off screen.
+ * once the visitor has taken over, while it is hovered or focused, while it is off screen, or while the preview is
+ * open. The page script restarts the full AUTO_ADVANCE_MS countdown each time this turns true and stops it the moment
+ * it turns false, so the vial in front always gets its whole time.
  */
 export function canAutoAdvance(state: MotionState): boolean {
-  return (
-    !state.reducedMotion &&
-    !state.paused &&
-    !state.tookOver &&
-    !state.hovering &&
-    !state.focusInside &&
-    state.onScreen
-  );
+  return autoplayHold(state) === undefined;
+}
+
+/**
+ * The 6 s illustration loops on the card in front run only while the carousel is on screen, not paused, not under
+ * reduced motion, and while no preview is open (the page behind a modal is not looked at, and its loops cost frames,
+ * #634). The page script writes this to `data-looping` on the section.
+ */
+export function illustrationsMayLoop(state: Pick<MotionState, 'reducedMotion' | 'paused' | 'onScreen' | 'previewOpen'>): boolean {
+  return !state.reducedMotion && !state.paused && state.onScreen && !state.previewOpen;
+}
+
+/** Where the preview is: closed, growing out of its vial, open and still, stepping to another mode, or shrinking back. */
+export type PreviewPhase = 'closed' | 'opening' | 'open' | 'stepping' | 'closing';
+
+/**
+ * What the carousel is doing, written to `data-carousel-state` on the section: `settled` when nothing is in flight
+ * (no glide, no preview), `turning` while the vials glide, or the preview's own phase while it is open. Tests and
+ * anything else that needs a still carousel wait for this instead of a fixed time.
+ */
+export type CarouselState = 'settled' | 'turning' | Exclude<PreviewPhase, 'closed'>;
+
+export function carouselState(preview: PreviewPhase, turning: boolean): CarouselState {
+  if (preview !== 'closed') return preview;
+  return turning ? 'turning' : 'settled';
+}
+
+/**
+ * How much longer than planned a glide, grow, shrink or nudge may take before the script finishes it itself. A browser
+ * too busy to draw can leave an animation's `finished` waiting for seconds (seen in WebKit and Firefox on release runs);
+ * the carousel still reaches its resting state on time.
+ */
+export const SETTLE_GRACE_MS = 150;
+
+/**
+ * Takes away the animations of a preview round that has come to rest (the grow and the step nudge). None of them fills
+ * forwards, so a finished one changes nothing on screen; cancelling it only stops the browser listing it. WebKit keeps
+ * listing a finished animation in getAnimations() until its next rendering update, and a still page has none, so the
+ * open preview looked busy for seconds (five animations at the 5 s mark, #634). Never use this for an animation that
+ * fills forwards (the shrink).
+ */
+export function releaseAnimations(animations: readonly Pick<Animation, 'cancel'>[]): void {
+  for (const animation of animations) animation.cancel();
 }
 
 /** A box on screen, as getBoundingClientRect gives it. */

@@ -16,20 +16,33 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
 import {
   BEHIND_MARK,
+  boxSizeInCameraFrame,
   EXPORT_SIZES,
+  cameraForPreset,
+  cameraMoveDuration,
   encodeId,
   exportRegion,
   findVisibleAnchors,
   fitDistance,
+  focusCamera,
+  homePreset,
   labelLines,
   labelRoomFor,
+  lerpVec3,
+  moveProgress,
   placeLabels,
   pickedStructure,
   pictureTitleLayout,
+  postureAngleX,
   preparePictureFonts,
+  presetDirection,
+  rotateX,
   wrapText,
   type ExportSize,
+  type Posture,
   type Rect,
+  type Vec3,
+  type ViewPreset,
   type VisibilityTarget,
   visibleSelection,
 } from './anatomylab';
@@ -46,6 +59,8 @@ export interface LabColors {
   modelSelected: string;
   /** How opaque the other structures are while one is selected. */
   dimAlpha: number;
+  /** How opaque a faded structure is (--anatomy-faded-opacity). */
+  fadedOpacity: number;
   /** The interface font (--font-body). */
   font: string;
 }
@@ -54,6 +69,7 @@ export function readColors(root: HTMLElement = document.documentElement): LabCol
   const style = getComputedStyle(root);
   const get = (name: string) => style.getPropertyValue(name).trim();
   const alpha = Number.parseFloat(get('--model-dim-alpha'));
+  const faded = Number.parseFloat(get('--anatomy-faded-opacity'));
   return {
     page: get('--color-page'),
     surface: get('--color-surface'),
@@ -64,6 +80,7 @@ export function readColors(root: HTMLElement = document.documentElement): LabCol
     modelAlt: get('--color-model-alt'),
     modelSelected: get('--color-model-selected'),
     dimAlpha: Number.isFinite(alpha) ? alpha : 0.2,
+    fadedOpacity: Number.isFinite(faded) ? faded : 0.35,
     font: get('--font-body') || 'sans-serif',
   };
 }
@@ -121,6 +138,8 @@ export function readExportTokens(root: HTMLElement = document.documentElement): 
 export interface Appearance {
   hidden: ReadonlySet<string>;
   selected: string | null;
+  /** Faded structures: drawn semi-transparent (--anatomy-faded-opacity) but still there to tap and label. */
+  faded?: ReadonlySet<string>;
 }
 
 export interface LoadResult {
@@ -167,19 +186,44 @@ export interface LabScene {
   /** The quiz uses nearest-hit picking so earlier answers do not bias later taps. */
   pick(clientX: number, clientY: number, preferSelected?: boolean): string | null;
   project(ids: readonly string[]): ProjectedPoint[];
+  /** Where the structures' centers are on screen, in CSS pixels, without changing which labels the scene tracks. */
+  locate(ids: readonly string[]): ProjectedPoint[];
   /** The visible model's box on screen, in CSS pixels, or null when nothing is in front of the camera. */
   extent(): Rect | null;
   orbit(yaw: number, pitch: number): void;
   zoom(factor: number): void;
   resetView(): void;
+  /** Looks at the model's center from `direction` (model frame, any length) at the starting distance. */
+  viewFrom(direction: readonly [number, number, number]): void;
+  /** Turns drag inertia off (reduced motion) or on; follows the device setting while the lab is open. */
+  setReducedMotion(reduced: boolean): void;
+  /** One of the six standard views of the visible model (animated unless reduced motion is on). */
+  viewPreset(preset: ViewPreset): void;
+  /** Frames one structure's box; false when it is not in the model or is hidden. */
+  focusOn(id: string): boolean;
+  /** Turns the whole model to stand or lie on its back, then shows it from that posture's home view. */
+  setPosture(posture: Posture): void;
+  /** Every loaded structure's world-space box (min and max corners), for "what is nearby" (Task 178). */
+  boundsById(): Map<string, { min: { x: number; y: number; z: number }; max: { x: number; y: number; z: number } }>;
+  /** Where the camera is, what it looks at and which way is up, as plain number triples (saved views, compare view). */
+  cameraState(): CameraState;
+  /** Puts the camera exactly where `state` says, at once (no animation); ignores a state with non-finite numbers. */
+  applyCameraState(state: CameraState): void;
   exportPicture(request: ExportRequest): Promise<ExportResult>;
   dispose(): void;
+}
+
+export interface CameraState {
+  position: [number, number, number];
+  target: [number, number, number];
+  up: [number, number, number];
 }
 
 interface Options {
   canvas: HTMLCanvasElement;
   reducedMotion: boolean;
   colors: LabColors;
+  posture?: Posture;
   /** Called after every frame the scene draws, so the labels can follow the camera. */
   onRender: () => void;
 }
@@ -190,8 +234,9 @@ const VISIBILITY_IDLE_MS = 120;
 /** The ID picture's size: about this many pixels, whatever the view's size (enough to find small visible parts). */
 const ID_PICTURE_PIXELS = 360_000;
 
-export function createLabScene({ canvas, reducedMotion, colors: initialColors, onRender }: Options): LabScene {
+export function createLabScene({ canvas, reducedMotion, colors: initialColors, posture: initialPosture, onRender }: Options): LabScene {
   let colors = initialColors;
+  let currentReducedMotion = reducedMotion;
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.setClearColor(new THREE.Color(0, 0, 0), 0); // transparent: the canvas's own bg-page shows through
@@ -236,6 +281,10 @@ export function createLabScene({ canvas, reducedMotion, colors: initialColors, o
     requestRender();
     scheduleVisibility();
   };
+  const onControlsStart = () => {
+    move = null;
+  };
+  controls.addEventListener('start', onControlsStart);
   controls.addEventListener('change', onCameraChange);
 
   let root: THREE.Object3D | null = null;
@@ -245,8 +294,11 @@ export function createLabScene({ canvas, reducedMotion, colors: initialColors, o
   let boxes = new Map<string, THREE.Box3>();
   let unlabeled: THREE.Mesh[] = [];
   let appearance: Appearance = { hidden: new Set(), selected: null };
-  const home = { position: new THREE.Vector3(0, 0, 5), target: new THREE.Vector3() };
+  const home = { position: new THREE.Vector3(0, 0, 5), target: new THREE.Vector3(), distance: 5 };
+  let posture: Posture = initialPosture ?? 'standing';
   let loadId = 0;
+  /** A camera move in progress (none with reduced motion: the camera jumps). */
+  let move: { from: { position: THREE.Vector3; target: THREE.Vector3 }; to: { position: Vec3; target: Vec3 }; start: number; duration: number } | null = null;
 
   const resize = () => {
     const width = canvas.clientWidth || 1;
@@ -259,8 +311,19 @@ export function createLabScene({ canvas, reducedMotion, colors: initialColors, o
   };
   // OrbitControls.update() returns true while damping still moves the camera (three.js r187).
   // Only those moving frames are repeated. Camera changes reset a single delayed visibility check.
-  const tick = (): boolean => {
-    const moving = controls.enableDamping ? controls.update() : false;
+  const tick = (time: number): boolean => {
+    let moving = controls.enableDamping ? controls.update() : false;
+    if (move) {
+      const t = moveProgress(time - move.start, move.duration);
+      const position = lerpVec3(move.from.position, move.to.position, t);
+      const target = lerpVec3(move.from.target, move.to.target, t);
+      camera.position.set(position.x, position.y, position.z);
+      controls.target.set(target.x, target.y, target.z);
+      if (t >= 1) move = null;
+      else moving = true;
+      camera.lookAt(controls.target);
+      onCameraChange();
+    }
     if (visibilityDirty && root) {
       // Both timestamps use performance.now(). A delayed frame that fires early
       // must re-arm the visibility check rather than leaving stale occlusion labels.
@@ -315,20 +378,24 @@ export function createLabScene({ canvas, reducedMotion, colors: initialColors, o
 
   function applyAppearance() {
     const { hidden, selected } = appearance;
+    const faded = appearance.faded ?? new Set<string>();
     const highlighted = visibleSelection(selected, hidden);
     order.forEach((id, index) => {
       const isSelected = id === highlighted;
       const dim = highlighted !== null && !isSelected;
+      // A faded structure stays see-through even while selected; dimming (another one selected) goes further.
+      const fade = faded.has(id);
+      const opacity = dim ? Math.min(colors.dimAlpha, fade ? colors.fadedOpacity : 1) : fade ? colors.fadedOpacity : 1;
       const color = isSelected ? colors.modelSelected : index % 2 === 0 ? colors.model : colors.modelAlt;
       for (const mesh of meshesById.get(id) ?? []) {
         mesh.visible = !hidden.has(id);
         const material = mesh.material as THREE.MeshLambertMaterial;
         material.color.set(color);
-        material.transparent = dim;
-        material.opacity = dim ? colors.dimAlpha : 1;
-        material.depthWrite = !dim;
+        material.transparent = opacity < 1;
+        material.opacity = opacity;
+        material.depthWrite = opacity >= 1;
         material.needsUpdate = true;
-        mesh.renderOrder = dim ? 1 : 0;
+        mesh.renderOrder = opacity < 1 ? 1 : 0;
       }
     });
     for (const mesh of unlabeled) {
@@ -441,20 +508,43 @@ export function createLabScene({ canvas, reducedMotion, colors: initialColors, o
     return out;
   }
 
-  function frame() {
+  /** The visible model's box in world space (the whole model when everything is hidden), or null with no model. */
+  function visibleBox(): THREE.Box3 | null {
     const box = new THREE.Box3();
     for (const [id, meshes] of meshesById) {
       if (appearance.hidden.has(id)) continue;
       for (const mesh of meshes) box.expandByObject(mesh);
     }
     if (box.isEmpty() && root) box.setFromObject(root);
-    if (box.isEmpty()) return;
+    return box.isEmpty() ? null : box;
+  }
+
+  /** Every structure's world box and center, worked out again (after a posture change turns the whole model). */
+  function recomputeBounds() {
+    root?.updateMatrixWorld(true);
+    for (const [id, meshes] of meshesById) {
+      const box = new THREE.Box3();
+      for (const mesh of meshes) box.expandByObject(mesh);
+      centers.set(id, box.getCenter(new THREE.Vector3()));
+      boxes.set(id, box);
+    }
+    visibilityDirty = true;
+  }
+
+  function frame() {
+    const box = visibleBox();
+    if (!box) return;
     const sphere = box.getBoundingSphere(new THREE.Sphere());
-    const distance = fitDistance(box.getSize(new THREE.Vector3()), camera.fov, camera.aspect);
-    // glTF's convention: the front of an asset faces +Z, with +Y up. The lab starts with a front view.
     const center = box.getCenter(new THREE.Vector3());
+    const homeDir = posture === 'lying' ? { x: 0, y: 1, z: 0 } : { x: 0, y: 0, z: 1 };
+    const camSize = boxSizeInCameraFrame(box.getSize(new THREE.Vector3()), homeDir);
+    const distance = fitDistance(camSize, camera.fov, camera.aspect);
+    // glTF's convention: the front of an asset faces +Z, with +Y up. The lab starts with a front view; a model lying
+    // on its back (setPosture) is shown from above.
     home.target.copy(center);
-    home.position.copy(center).add(new THREE.Vector3(0, 0, distance));
+    home.distance = distance;
+    const position = cameraForPreset(homePreset(posture), center, distance);
+    home.position.set(position.x, position.y, position.z);
     camera.near = Math.max(distance / 200, 1e-3);
     camera.far = distance * 20;
     camera.updateProjectionMatrix();
@@ -462,12 +552,116 @@ export function createLabScene({ canvas, reducedMotion, colors: initialColors, o
     controls.maxDistance = distance * 6;
   }
 
+  /** Moves the camera to `position`, looking at `target`: at once with reduced motion, else over CAMERA_MOVE_MS. */
+  function moveCamera(position: Vec3, target: Vec3) {
+    camera.up.copy(UP);
+    const duration = cameraMoveDuration(currentReducedMotion);
+    if (duration === 0) {
+      move = null;
+      camera.position.set(position.x, position.y, position.z);
+      controls.target.set(target.x, target.y, target.z);
+      controls.update();
+      requestRender();
+      return;
+    }
+    move = {
+      from: { position: camera.position.clone(), target: controls.target.clone() },
+      to: { position, target },
+      start: performance.now(),
+      duration,
+    };
+    requestRender();
+  }
+
   function resetView() {
-    camera.position.copy(home.position);
+    moveCamera(home.position, home.target);
+  }
+
+  function viewPreset(preset: ViewPreset) {
+    const box = visibleBox();
+    if (!box) return;
+    const center = box.getCenter(new THREE.Vector3());
+    const dir = rotateX(presetDirection(preset), postureAngleX(posture));
+    const camSize = boxSizeInCameraFrame(box.getSize(new THREE.Vector3()), dir);
+    const distance = fitDistance(camSize, camera.fov, camera.aspect);
+    moveCamera(cameraForPreset(preset, center, distance, posture), center);
+  }
+
+  function focusOn(id: string): boolean {
+    const box = boxes.get(id);
+    if (!box || appearance.hidden.has(id) || (meshesById.get(id)?.length ?? 0) === 0) return false;
+    const center = box.getCenter(new THREE.Vector3());
+    const dir = { x: camera.position.x - controls.target.x, y: camera.position.y - controls.target.y, z: camera.position.z - controls.target.z };
+    const camSize = boxSizeInCameraFrame(box.getSize(new THREE.Vector3()), dir);
+    const distance = Math.max(controls.minDistance, fitDistance(camSize, camera.fov, camera.aspect));
+    moveCamera(focusCamera(camera.position, controls.target, center, distance), center);
+    return true;
+  }
+
+  function boundsById() {
+    const out = new Map<string, { min: { x: number; y: number; z: number }; max: { x: number; y: number; z: number } }>();
+    for (const [id, box] of boxes) {
+      if ((meshesById.get(id)?.length ?? 0) === 0) continue;
+      out.set(id, { min: { x: box.min.x, y: box.min.y, z: box.min.z }, max: { x: box.max.x, y: box.max.y, z: box.max.z } });
+    }
+    return out;
+  }
+
+  function cameraState(): CameraState {
+    return {
+      position: [camera.position.x, camera.position.y, camera.position.z],
+      target: [controls.target.x, controls.target.y, controls.target.z],
+      up: [camera.up.x, camera.up.y, camera.up.z],
+    };
+  }
+
+  function applyCameraState(state: CameraState) {
+    const triple = (v: readonly number[]) => v.length === 3 && v.every((n) => Number.isFinite(n));
+    if (!triple(state.position) || !triple(state.target) || !triple(state.up)) return;
+    move = null;
+    camera.up.set(state.up[0], state.up[1], state.up[2]);
+    camera.position.set(state.position[0], state.position[1], state.position[2]);
+    controls.target.set(state.target[0], state.target[1], state.target[2]);
+    camera.lookAt(controls.target);
+    const distance = camera.position.distanceTo(controls.target);
+    if (Number.isFinite(distance) && distance > 0) {
+      if (distance < controls.minDistance) controls.minDistance = distance;
+      if (distance > controls.maxDistance) controls.maxDistance = distance;
+      if (distance * 2 > camera.far) {
+        camera.far = distance * 20;
+        camera.updateProjectionMatrix();
+      }
+    }
+    controls.update();
+    requestRender();
+  }
+
+  function viewFrom(direction: readonly [number, number, number]) {
+    const rotated = rotateX({ x: direction[0], y: direction[1], z: direction[2] }, postureAngleX(posture));
+    const dir = new THREE.Vector3(rotated.x, rotated.y, rotated.z);
+    if (dir.lengthSq() < 1e-12) return;
+    move = null;
+    const distance = home.position.distanceTo(home.target);
     controls.target.copy(home.target);
+    camera.position.copy(home.target).add(dir.setLength(distance));
     camera.up.copy(UP);
     controls.update();
     requestRender();
+  }
+
+  function setReducedMotion(reduced: boolean) {
+    currentReducedMotion = reduced;
+    controls.enableDamping = !reduced;
+    requestRender();
+  }
+
+  function setPosture(next: Posture) {
+    posture = next;
+    if (!root) return;
+    root.rotation.set(postureAngleX(next), 0, 0);
+    recomputeBounds();
+    frame();
+    resetView();
   }
 
   async function fetchGroup(urls: string | readonly string[]): Promise<THREE.Group> {
@@ -531,9 +725,17 @@ export function createLabScene({ canvas, reducedMotion, colors: initialColors, o
     // its result, but reassigning from raw ids here would undo that guarantee.
     order = [...new Set(ids)].filter((id) => (meshesById.get(id)?.length ?? 0) > 0);
     appearance = { hidden: new Set(), selected: null };
+    // A new model takes the posture already chosen (its root is fresh, so the turn is applied, not added).
+    root!.rotation.set(postureAngleX(posture), 0, 0);
+    recomputeBounds();
     applyAppearance();
     frame();
-    resetView();
+    move = null;
+    camera.position.copy(home.position);
+    controls.target.copy(home.target);
+    camera.up.copy(UP);
+    controls.update();
+    requestRender();
     return result;
   }
 
@@ -545,6 +747,9 @@ export function createLabScene({ canvas, reducedMotion, colors: initialColors, o
       return null;
     }
     const result = integrate(group, ids, false);
+    // The boxes integrate() worked out used the group's own matrices; with the model turned (lying), work them out
+    // again from the world.
+    if (posture !== 'standing') recomputeBounds();
     applyAppearance();
     requestRender();
     return result;
@@ -603,6 +808,7 @@ export function createLabScene({ canvas, reducedMotion, colors: initialColors, o
   }
 
   function orbit(yaw: number, pitch: number) {
+    move = null;
     const offset = camera.position.clone().sub(controls.target);
     if (yaw) offset.applyAxisAngle(UP, yaw);
     if (pitch) {
@@ -615,6 +821,7 @@ export function createLabScene({ canvas, reducedMotion, colors: initialColors, o
   }
 
   function zoom(factor: number) {
+    move = null;
     const offset = camera.position.clone().sub(controls.target);
     const length = Math.min(controls.maxDistance, Math.max(controls.minDistance, offset.length() * factor));
     camera.position.copy(controls.target).add(offset.setLength(length));
@@ -826,15 +1033,27 @@ export function createLabScene({ canvas, reducedMotion, colors: initialColors, o
       }
       return projectWith(camera, ids, canvas.clientWidth, canvas.clientHeight);
     },
+    locate(ids) {
+      return projectWith(camera, ids, canvas.clientWidth, canvas.clientHeight, new Map());
+    },
     extent() {
       return extentWith(camera, canvas.clientWidth, canvas.clientHeight);
     },
     orbit,
     zoom,
     resetView,
+    viewFrom,
+    setReducedMotion,
+    viewPreset,
+    focusOn,
+    setPosture,
+    boundsById,
+    cameraState,
+    applyCameraState,
     exportPicture,
     clear() {
       loadId++;
+      move = null;
       disposeModel();
       appearance = { hidden: new Set(), selected: null };
       requestRender();
@@ -843,6 +1062,7 @@ export function createLabScene({ canvas, reducedMotion, colors: initialColors, o
       loadId++;
       scheduler.dispose();
       observer.disconnect();
+      controls.removeEventListener('start', onControlsStart);
       controls.removeEventListener('change', onCameraChange);
       controls.dispose();
       disposeModel();

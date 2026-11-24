@@ -12,6 +12,7 @@ const sample = {
   progress: [{ id: 'sample-item', result: true, date: '2026-10-31' }],
   reviewState: [{ id: 'sample-card', nextDueDate: '2026-11-03', interval: 3 }],
   gameStats: [{ game: 'pulse', day: '2026-10-31', solved: false, tries: 7 }],
+  sudokuStats: [{ level: 'medium', day: '2026-10-31', seconds: 412 }],
 } satisfies ExportData;
 const json = (data: unknown) => JSON.parse(exportJson(data, exportDate));
 const file = (data: unknown, name: string) => exportCsv(data).find(entry => entry.fileName === `${name}.csv`)!.text;
@@ -32,6 +33,31 @@ function sampleGuest() {
 }
 
 describe('JSON export', () => {
+  it('round-trips a validated study resume snapshot in JSON and CSV', () => {
+    const resume = {
+      version: 1, tool: 'fill-in', page: '/learn/sample', module: 'module-1', step: 'step-2', itemIndex: 1,
+      itemId: 'item-2', totalItems: 3, answers: { 'item-2': 'student answer' }, timer: null, phase: 'working', savedAt: 1_795_200_000_000,
+    };
+    expect(json({ resume }).resume).toEqual(resume);
+    expect(parseRows(file({ resume }, 'resume'))).toEqual([
+      ['version', 'tool', 'page', 'module', 'step', 'itemIndex', 'itemId', 'totalItems', 'answers', 'timer', 'phase', 'savedAt'],
+      ['1', 'fill-in', '/learn/sample', 'module-1', 'step-2', '1', 'item-2', '3', '{"item-2":"student answer"}', '', 'working', '1795200000000'],
+    ]);
+  });
+
+  it('preserves all 500 validated resume answers in JSON and CSV', () => {
+    const answers = Object.fromEntries(Array.from({ length: 500 }, (_, index) => [`item-${index}`, 'answer']));
+    const resume = {
+      version: 1, tool: 'fill-in', page: '/learn/sample', itemIndex: 0, totalItems: 500,
+      answers, timer: null, phase: 'working', savedAt: 1_795_200_000_000,
+    };
+    expect(Object.keys(json({ resume }).resume.answers)).toHaveLength(500);
+    expect(json({ resume }).resume.answers['item-499']).toBe('answer');
+    const rows = parseRows(file({ resume }, 'resume'));
+    expect(rows).toHaveLength(2);
+    expect(JSON.parse(rows[1][8]!)).toEqual(answers);
+  });
+
   it('round-trips every allowed sample section with a caller-supplied date and format', () => {
     expect(json(sample)).toEqual({ format: 'cueory-export-1', exportDate, ...sample, signInDetails: [], account: {}, attempts: [], examPlans: [], reviewRows: [], reports: [], sessions: [], studyEvents: [], dropped: [] });
     expect(exportJson(sample, exportDate)).toContain('\n  "profile": {\n    "displayName": "Sample Student",');
@@ -166,11 +192,12 @@ describe('JSON export', () => {
     const storage = sampleStorage();
     storage.setItem(STATS_STORAGE_KEY, serialize(sample.gameStats));
     const gameStats = loadStats(storage, '2026-11-01').stats;
-    expect(json({ gameStats }).gameStats).toEqual(sample.gameStats);
+    expect(json({ gameStats }).gameStats).toEqual([{ ...sample.gameStats[0], game: 'vialo' }]);
   });
 
   it('uses fixed field order regardless of the input property order', () => {
     const reordered = {
+      sudokuStats: [{ seconds: 412, day: '2026-10-31', level: 'medium' }],
       gameStats: [{ tries: 7, solved: false, day: '2026-10-31', game: 'pulse' }],
       reviewState: [{ interval: 3, nextDueDate: '2026-11-03', id: 'sample-card' }],
       progress: [{ date: '2026-10-31', result: true, id: 'sample-item' }],
@@ -178,7 +205,7 @@ describe('JSON export', () => {
       profile: { createdAt: '2026-10-01T12:00:00.000Z', email: 'sample@example.invalid', displayName: 'Sample Student' },
     };
     expect(exportJson(reordered, exportDate)).toBe(exportJson(sample, exportDate));
-    expect(Object.keys(json(sample))).toEqual(['format', 'exportDate', 'profile', 'signInDetails', 'account', 'onboarding', 'progress', 'reviewState', 'gameStats', 'attempts', 'examPlans', 'reviewRows', 'reports', 'sessions', 'studyEvents', 'dropped']);
+    expect(Object.keys(json(sample))).toEqual(['format', 'exportDate', 'profile', 'signInDetails', 'account', 'onboarding', 'progress', 'reviewState', 'gameStats', 'sudokuStats', 'attempts', 'examPlans', 'reviewRows', 'reports', 'sessions', 'studyEvents', 'dropped']);
   });
 
   it('preserves attempt and history row order, false, zero, null and Unicode', () => {
@@ -196,7 +223,7 @@ describe('JSON export', () => {
 
   it('makes empty sections explicit without inventing profile values or records', () => {
     expect(json({})).toEqual({
-      format: 'cueory-export-1', exportDate, profile: {}, signInDetails: [], account: {}, onboarding: {}, progress: [], reviewState: [], gameStats: [], attempts: [], examPlans: [], reviewRows: [], reports: [], sessions: [], studyEvents: [], dropped: [],
+      format: 'cueory-export-1', exportDate, profile: {}, signInDetails: [], account: {}, onboarding: {}, progress: [], reviewState: [], gameStats: [], sudokuStats: [], attempts: [], examPlans: [], reviewRows: [], reports: [], sessions: [], studyEvents: [], dropped: [],
     });
   });
 
@@ -277,6 +304,44 @@ describe('JSON export', () => {
     expect(json({ gameStats: games }).gameStats).toEqual(games);
   });
 
+  it('exports new game-result fields (streak, hints, specialFirst, offDay) in JSON and CSV, keeping them optional', () => {
+    const currentRecords: ExportData['gameStats'] = [
+      { game: 'vialo', day: '2026-11-01', solved: true, tries: 3, offDay: true },
+      { game: 'cueword', day: '2026-11-02', solved: true, tries: 0, streak: true },
+      { game: 'suture', day: '2026-11-03', solved: true, tries: 4, hints: 2, specialFirst: true },
+      { game: 'triage', day: '2026-11-04', solved: false, tries: 5 },
+    ];
+    const result = json({ gameStats: currentRecords });
+    expect(result.gameStats).toEqual(currentRecords);
+    expect(result.dropped).toEqual([]);
+
+    const csvRows = parseRows(file({ gameStats: currentRecords }, 'gameStats'));
+    expect(csvRows).toEqual([
+      ['game', 'day', 'solved', 'tries', 'streak', 'hints', 'specialFirst', 'offDay'],
+      ['vialo', '2026-11-01', 'true', '3', '', '', '', 'true'],
+      ['cueword', '2026-11-02', 'true', '0', 'true', '', '', ''],
+      ['suture', '2026-11-03', 'true', '4', '', '2', 'true', ''],
+      ['triage', '2026-11-04', 'false', '5', '', '', '', ''],
+    ]);
+  });
+
+  it('drops rows with invalid new game-result fields and records them in dropped', () => {
+    const invalidRecords = [
+      { game: 'pulse', day: '2026-11-01', solved: true, tries: 3, streak: 'yes' },
+      { game: 'suture', day: '2026-11-02', solved: true, tries: 1, hints: -1 },
+      { game: 'suture', day: '2026-11-03', solved: true, tries: 1, specialFirst: 'true' },
+      { game: 'vialo', day: '2026-11-04', solved: true, tries: 2, offDay: false },
+    ];
+    const result = json({ gameStats: invalidRecords });
+    expect(result.gameStats).toEqual([]);
+    expect(result.dropped).toEqual([
+      'gameStats[0]', 'gameStats[0].streak',
+      'gameStats[1]', 'gameStats[1].hints',
+      'gameStats[2]', 'gameStats[2].specialFirst',
+      'gameStats[3]', 'gameStats[3].offDay',
+    ]);
+  });
+
   it('does not mutate input or share arrays with the parsed download', () => {
     const input = structuredClone(sample);
     Object.freeze(input.profile);
@@ -305,13 +370,16 @@ describe('JSON export', () => {
 describe('CSV export', () => {
   it('returns section files in fixed order with RFC 4180 record endings', () => {
     const files = exportCsv(sample);
-    expect(files.map(entry => entry.fileName)).toEqual(['profile.csv', 'signInDetails.csv', 'account.csv', 'onboarding.csv', 'progress.csv', 'reviewState.csv', 'gameStats.csv', 'attempts.csv', 'examPlans.csv', 'reviewRows.csv', 'reports.csv', 'sessions.csv', 'studyEvents.csv', 'dropped.csv']);
+    expect(files.map(entry => entry.fileName)).toEqual(['profile.csv', 'signInDetails.csv', 'account.csv', 'onboarding.csv', 'progress.csv', 'reviewState.csv', 'gameStats.csv', 'sudokuStats.csv', 'attempts.csv', 'examPlans.csv', 'reviewRows.csv', 'reports.csv', 'sessions.csv', 'studyEvents.csv', 'dropped.csv']);
     expect(files.every(entry => entry.text.endsWith('\r\n'))).toBe(true);
     expect(parseRows(file(sample, 'progress'))).toEqual([
       ['id', 'result', 'date', 'deckId', 'progressVersion', 'course', 'examDate', 'done'],
       ['sample-item', 'true', '2026-10-31', '', '', '', '', ''],
     ]);
-    expect(parseRows(file(sample, 'gameStats'))).toEqual([['game', 'day', 'solved', 'tries'], ['pulse', '2026-10-31', 'false', '7']]);
+    expect(parseRows(file(sample, 'gameStats'))).toEqual([
+      ['game', 'day', 'solved', 'tries', 'streak', 'hints', 'specialFirst', 'offDay'],
+      ['pulse', '2026-10-31', 'false', '7', '', '', '', ''],
+    ]);
   });
 
   it('preserves sample commas, quotes, Unicode and embedded LF/CRLF after parsing', () => {
@@ -348,9 +416,9 @@ describe('CSV export', () => {
 
   it('includes only headers for empty sections and the empty dropped report', () => {
     const files = exportCsv({});
-    expect(files).toHaveLength(14);
+    expect(files).toHaveLength(15);
     expect(files.every(entry => parseRows(entry.text).length === 1)).toBe(true);
-    expect(files[13]).toEqual({ fileName: 'dropped.csv', text: 'dropped\r\n' });
+    expect(files[14]).toEqual({ fileName: 'dropped.csv', text: 'dropped\r\n' });
   });
 
   it('returns fresh files and the same stable output for repeated exports', () => {

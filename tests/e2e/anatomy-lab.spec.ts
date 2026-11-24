@@ -1,4 +1,5 @@
 import AxeBuilder from '@axe-core/playwright';
+import { recordCspEvents, withoutWebkitSelectReports } from './csp-allow';
 import { readFile } from 'node:fs/promises';
 import { expect, test, type Page } from '@playwright/test';
 import { isDesktopOfEachEngine } from './projects';
@@ -13,8 +14,10 @@ const axeTags = ['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa'];
 const URL = '/preview/anatomy-lab?fixture';
 const NAMES = ['fixture cube A', 'fixture cube B', 'fixture block C', 'fixture point D', 'fixture slab E'];
 
-function watchCsp(page: Page): string[] {
+async function watchCsp(page: Page): Promise<string[]> {
   const errors: string[] = [];
+  // The structured violations decide the WebKit select exception (csp-allow.ts); console text alone never does.
+  await recordCspEvents(page);
   page.on('console', (msg) => {
     if (msg.type() === 'error' && /content security policy|refused to/i.test(msg.text())) errors.push(msg.text());
   });
@@ -154,6 +157,10 @@ test.describe('anatomy lab', () => {
     const bodyCredit = wholeCatalog.getByTestId('anatomy-fallback-attribution');
     await expect(bodyCredit).toContainText('3D model: Cueory, adapted from BodyParts3D');
     await expect(bodyCredit).toContainText('draft model, built from BodyParts3D 4.0');
+    await expect(bodyCredit).toContainText("Male's Anatomy (BodyParts3D reference model, adult human male)");
+    await expect(bodyCredit.getByRole('link', { name: 'source details' })).toHaveAttribute(
+      'href', 'https://dbarchive.biosciencedbc.jp/data/bodyparts3d/LATEST/README_e.html',
+    );
     await expect(bodyCredit.getByRole('link', { name: 'CC Attribution 4.0 International' }))
       .toHaveAttribute('href', 'https://creativecommons.org/licenses/by/4.0/');
     await expect(bodyCredit.getByRole('link', { name: 'CC Attribution 4.0 International' }))
@@ -320,7 +327,7 @@ test.describe('anatomy lab', () => {
   });
 
   test('opens the fixture with its draft note, credit and release, and no CSP errors', async ({ page }) => {
-    const csp = watchCsp(page);
+    const csp = await watchCsp(page);
     const glb: string[] = [];
     page.on('request', (req) => {
       if (req.url().endsWith('.glb')) glb.push(new globalThis.URL(req.url()).pathname);
@@ -332,7 +339,23 @@ test.describe('anatomy lab', () => {
     await expect(page.locator('canvas')).toBeFocused();
     for (const name of NAMES) await expect(list(page).getByRole('button', { name, exact: true })).toBeVisible();
     expect(glb).toEqual(['/preview/anatomy-fixture/fixture.glb']);
-    expect(csp).toEqual([]);
+    // WebKit's native <select> report is set aside, narrowly (csp-allow.ts, #862).
+    expect(await withoutWebkitSelectReports(page, csp)).toEqual([]);
+  });
+
+  test('the WebKit select exception never hides a console-only CSP line on the real lab page (#862)', async ({ page }) => {
+    const csp = await watchCsp(page);
+    await openLab(page);
+    // Whatever the lab's own native select legitimately reports (in WebKit one event and its console mirror) is gone.
+    const baseline = await withoutWebkitSelectReports(page, csp);
+    const before = csp.length;
+    // WebKit's own wording, raised with no securitypolicyviolation event behind it: nothing qualifies it, so it stays.
+    const line = "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy.";
+    await page.evaluate((text) => console.error(text), line);
+    await expect.poll(() => csp.length).toBeGreaterThan(before);
+    const after = await withoutWebkitSelectReports(page, csp);
+    expect(after).toHaveLength(baseline.length + 1);
+    expect(after.some((message) => message.includes('Refused to apply a stylesheet'))).toBe(true);
   });
 
   test('keyboard path: search, select from the list, name card, hide, show only, show all', async ({ page }) => {
@@ -419,7 +442,8 @@ test.describe('anatomy lab', () => {
     // previously raycast (often to nothing) and silently cleared selection.
     const canvas = page.locator('canvas');
     for (const button of ['right', 'middle'] as const) {
-      await canvas.click({ button, position: { x: 3, y: 3 } });
+      // 24px is blank in the fixture but inside rounded-lg's 16px hit region; (3,3) is outside that corner in Firefox.
+      await canvas.click({ button, position: { x: 24, y: 24 } });
       await expect(cube, `${button} click must not change the selected mesh`)
         .toHaveAttribute('aria-pressed', 'true');
       await expect(nameCard).toBeVisible();
@@ -865,6 +889,43 @@ test.describe('anatomy lab whole body loads layers on demand', () => {
     await expect(prompt).toHaveCount(0);
     await expect(showAll).toBeFocused();
     await expect.poll(() => requests.length).toBeGreaterThan(0);
+  });
+
+  test('phone restore all keeps fades on cancellation and changes them only after consent', async ({ page }) => {
+    test.skip((page.viewportSize()?.width ?? 1024) >= 768, 'phone-width safety check');
+    await page.goto('/preview/anatomy-lab');
+    await page.getByRole('button', { name: 'open the anatomy lab' }).click();
+    await expect(page.locator('canvas')).toBeFocused({ timeout: 15_000 });
+    const whole = page.getByRole('group', { name: 'body system' }).getByRole('button', { name: 'whole body', exact: true });
+    await expect(whole).toBeVisible({ timeout: 15_000 });
+    await whole.click();
+    await expect(page.getByTestId('anatomy-files')).toContainText('model files loaded: 1 of 11', { timeout: 20_000 });
+
+    await page.getByLabel('find a structure').fill('FMA7163');
+    const skin = page.getByRole('region', { name: 'structures' }).getByRole('button', { name: /^skin/ });
+    await skin.click();
+    await page.getByRole('region', { name: 'skin' }).getByRole('button', { name: 'fade this' }).click();
+    await expect(skin).toContainText('(faded)');
+    const restore = page.getByRole('button', { name: 'restore all', exact: true });
+    await restore.click();
+    const prompt = page.getByTestId('anatomy-bulk-confirm');
+    await expect(prompt).toBeVisible();
+    await expect(skin).toContainText('(faded)');
+
+    await prompt.getByRole('button', { name: 'keep current view' }).click();
+    await expect(prompt).toHaveCount(0);
+    await expect(restore).toBeFocused();
+    await expect(skin).toContainText('(faded)');
+    await expect(page.getByTestId('anatomy-announce')).not.toContainText('restored all structures.');
+
+    // Block the heavy models after consent, so CI does not render the full body on a phone.
+    await page.route(/\/models\/anatomy\/[^/]+\.glb(?:\?|$)/, (route) => route.abort());
+    await restore.click();
+    await expect(prompt).toBeVisible();
+    await prompt.getByRole('button', { name: 'load every layer' }).click();
+    await expect(prompt).toHaveCount(0);
+    await expect(restore).toBeFocused();
+    await expect(skin).not.toContainText('(faded)');
   });
 
   test('disables whole-body layer actions until the first model is ready', async ({ page }, info) => {

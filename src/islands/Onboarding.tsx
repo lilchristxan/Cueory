@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import {
-  COURSES, emptyProgress, examDateWords, isExamDate, localDay, readProgress, saveProgress, withOnboarding,
+  COURSES, emptyProgress, examDateWords, localDay, readProgress, saveProgress, withOnboarding,
   type Onboarding as Answers,
 } from '../scripts/progress';
 import { browserStorage } from '../scripts/storage';
@@ -8,10 +8,20 @@ import {
   connectExamPlans, isConnectFailure, type ConnectFailure, loadExamPlans, resolveAccountAnswers, saveSetupToAccount, SYNC_MESSAGES, withServerPlan,
   type ExamPlanSyncDb, type ScreenAnswers, type ServerPlan, type Touched,
 } from './examplansync';
+import { setupDateProblem } from './setupdate';
+import {
+  ONBOARDING_FIELDS, focusAfterRender, nextOnboardingStep, previousOnboardingStep, skipOnboardingStep, type OnboardingStep,
+} from './onboardingsteps';
+import { moveRadioWithArrows } from './radioarrows';
+
+/** The account signed in now isn't the one first connected on this visit. */
+const ACCOUNT_CHANGED = { accountChanged: true } as const;
+type AccountChanged = typeof ACCOUNT_CHANGED;
+const isAccountChanged = (value: unknown): value is AccountChanged => value === ACCOUNT_CHANGED;
 
 const primaryButton = 'min-h-11 rounded-pill bg-button px-5 py-2.5 text-on-button hover:bg-button-hover';
 const quietButton = 'min-h-11 rounded-pill px-3 py-2.5 text-ink-soft underline';
-const TOTAL_QUESTIONS = 2;
+const TOTAL_QUESTIONS = ONBOARDING_FIELDS.length;
 
 /**
  * D-69's two optional answers, shown one question per screen (Task 108).
@@ -27,13 +37,19 @@ const TOTAL_QUESTIONS = 2;
  * device at once and shows the result; the account save waits for the plans and reconciles then: untouched answers
  * take the account's values (on the device and in the summary), and a date the student cleared or skipped removes
  * that course's plan. Waiting instead (with a time limit) would still need this reconcile for a load that outlasts it.
+ *
+ * One account per visit (#755): the first account connected here is the only one this screen ever writes to. Every
+ * write checks the client is still signed in as it (examplansync.ts), and a retry that finds another account signed
+ * in sends nothing, so answers set up while signed in as A never reach B. Back as A, a retry saves to A again.
  */
 export default function Onboarding() {
   const [storage] = useState(browserStorage);
   const [saved] = useState(() => readProgress(storage).onboarding);
   const [course, setCourse] = useState<string>(saved.course ?? '');
   const [examDate, setExamDate] = useState(saved.examDate ?? '');
-  const [step, setStep] = useState<0 | 1>(0);
+  // WebKit retains a partial native date value after assigning ''. Incrementing this remounts the control on clear.
+  const [dateControlVersion, setDateControlVersion] = useState(0);
+  const [step, setStep] = useState<OnboardingStep>(0);
   const [dateProblem, setDateProblem] = useState('');
   const [result, setResult] = useState<'saved' | 'skipped' | 'not-kept' | null>(null);
   const resultRef = useRef<HTMLDivElement>(null);
@@ -49,7 +65,9 @@ export default function Onboarding() {
   const [accountSave, setAccountSave] = useState<'pending' | 'done' | 'retry'>('done');
   const retrySave = useRef<() => void>(() => {});
   /** Resolves once the account is known: its adapter and plans (null plans: they couldn't be read). Null: no account. */
-  const account = useRef<Promise<{ db: ExamPlanSyncDb; plans: ServerPlan[] | null } | ConnectFailure | null>>(Promise.resolve(null));
+  const account = useRef<Promise<{ db: ExamPlanSyncDb; plans: ServerPlan[] | null } | ConnectFailure | AccountChanged | null>>(Promise.resolve(null));
+  /** The first account connected on this visit: the only one this screen writes to. */
+  const firstAccount = useRef<string | null>(null);
   /** The account's plans once loaded, for keeping an untouched date in step with the course. */
   const plans = useRef<ServerPlan[] | null>(null);
   const finished = useRef(false);
@@ -72,12 +90,21 @@ export default function Onboarding() {
     touched.current.examDate = true;
     show({ ...answers.current, examDate: value, dateFromAccount: false });
   };
+  const clearExamDate = () => {
+    changeExamDate('');
+    setDateProblem('');
+    setDateControlVersion((version) => version + 1);
+    // The date control is replaced to clear WebKit's internal partial value. Focus the replacement after it commits.
+    requestAnimationFrame(() => dateRef.current?.focus());
+  };
 
   const connectAccount = () =>
     (async () => {
       const db = await connectExamPlans();
       if (!db) return null;
       if (isConnectFailure(db)) return db;
+      if (firstAccount.current === null) firstAccount.current = db.accountId;
+      else if (firstAccount.current !== db.accountId) return ACCOUNT_CHANGED;
       const loaded = await loadExamPlans(db);
       if (!loaded.ok) {
         if (!finished.current) setSyncNote(loaded.message);
@@ -106,6 +133,10 @@ export default function Onboarding() {
   const saveToAccount = async (deviceBefore: Answers, done: ScreenAnswers, acted: Touched, outcome: 'saved' | 'skipped') => {
     const known = await account.current;
     if (!known) return setAccountSave('done');
+    if (isAccountChanged(known)) {
+      if (outcome === 'saved') setSyncNote(SYNC_MESSAGES.accountChanged);
+      return setAccountSave('done');
+    }
     if (isConnectFailure(known)) {
       // The session couldn't be checked, so don't say it was saved: keep the device save and offer another try.
       if (outcome === 'skipped') return setAccountSave('done');
@@ -118,6 +149,12 @@ export default function Onboarding() {
         resultRef.current?.focus();
       };
       return setAccountSave('retry');
+    }
+    // Another tab may have switched accounts since the plans loaded: then they aren't this account's, so they neither
+    // fill in the device nor get sent anywhere. A failed check carries on, and the save itself checks again.
+    if ((await known.db.accountCheck().catch(() => 'unknown' as const)) === 'changed') {
+      if (outcome === 'saved') setSyncNote(SYNC_MESSAGES.accountChanged);
+      return setAccountSave('done');
     }
     let final: ScreenAnswers = done;
     if (known.plans) {
@@ -154,11 +191,38 @@ export default function Onboarding() {
     await send();
   };
 
-  const focusQuestion = (next: 0 | 1) => {
+  /** The question that should take focus once it has rendered; set by focusQuestion, consumed by the effect below. */
+  const pendingFocus = useRef<{ step: OnboardingStep; before: Element | null } | null>(null);
+  const focusPending = (next: OnboardingStep, before: Element | null) => {
+    // Not if the student has already focused something else, or Enter would land on the heading (flaky e2e).
+    focusAfterRender(() => {
+      const target = ONBOARDING_FIELDS[next] === 'course' ? courseLegendRef.current : dateHeadingRef.current;
+      // Firefox needs this new legend's layout to be committed before it accepts focus after Back replaces the button.
+      if (ONBOARDING_FIELDS[next] === 'course') target?.getBoundingClientRect();
+      return target;
+    }, {
+      active: () => document.activeElement,
+      body: () => document.body,
+      schedule: (run) => requestAnimationFrame(run),
+    }, before);
+  };
+  // Focus is placed after React has committed the new question, so the target exists however the browser schedules
+  // the frame (Firefox ran the frame before the commit, and the legend or heading was not there yet).
+  useEffect(() => {
+    const pending = pendingFocus.current;
+    if (pending === null) return;
+    pendingFocus.current = null;
+    focusPending(pending.step, pending.before);
+  }, [step]);
+  const focusQuestion = (next: OnboardingStep) => {
+    // Remember the focus now, before the render can remove the pressed button (Firefox start.spec 78).
+    const before = document.activeElement;
+    if (next === step) {
+      focusPending(next, before);
+      return;
+    }
+    pendingFocus.current = { step: next, before };
     setStep(next);
-    requestAnimationFrame(() => {
-      (next === 0 ? courseLegendRef.current : dateHeadingRef.current)?.focus();
-    });
   };
 
   const finish = (done: ScreenAnswers, outcome: 'saved' | 'skipped', acted: Touched = touched.current) => {
@@ -174,8 +238,15 @@ export default function Onboarding() {
   };
 
   const saveAnswers = () => {
-    if (examDate && !isExamDate(examDate)) {
-      setDateProblem('that date doesn’t look right. use the date picker, or leave it blank.');
+    // A past, too-distant or unfinished date is never saved: say what to do and keep the student on the field.
+    const problem = setupDateProblem({
+      value: examDate,
+      unfinished: dateRef.current?.validity.badInput ?? false,
+      typed: touched.current.examDate,
+      today: localDay(new Date()),
+    });
+    if (problem) {
+      setDateProblem(problem);
       dateRef.current?.focus();
       return;
     }
@@ -185,20 +256,21 @@ export default function Onboarding() {
 
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (step === 0) focusQuestion(1);
+    const move = nextOnboardingStep(step);
+    if (move.kind === 'question') focusQuestion(move.step);
     else saveAnswers();
   };
 
   const skipQuestion = () => {
-    if (step === 0) {
-      // Only this answer is cleared. The exam-date answer stays in state.
-      changeCourse('');
-      focusQuestion(1);
-    } else {
+    const skipped = skipOnboardingStep(step);
+    // Keep the account-sync touched flags and all other answers exactly as before.
+    if (skipped.clear === 'course') changeCourse('');
+    else {
       changeExamDate('');
       setDateProblem('');
-      finish(answers.current, 'saved');
     }
+    if (skipped.move.kind === 'question') focusQuestion(skipped.move.step);
+    else finish(answers.current, 'saved');
   };
 
   const skipForNow = () => {
@@ -246,7 +318,7 @@ export default function Onboarding() {
           question {step + 1} of {TOTAL_QUESTIONS}
         </p>
         <div aria-hidden="true" className="flex items-center gap-2">
-          {[0, 1].map((index) => (
+          {ONBOARDING_FIELDS.map((_, index) => (
             <span
               key={index}
               className={`block size-3 rounded-pill ${step === index ? 'bg-ink' : 'bg-soft'}`}
@@ -255,15 +327,17 @@ export default function Onboarding() {
         </div>
       </div>
 
-      {step === 0 ? (
+      {ONBOARDING_FIELDS[step] === 'course' ? (
         <fieldset
           className="min-w-0 space-y-4"
           onKeyDown={(event) => {
-            // Enter advances from a selected radio. Arrow keys continue to
-            // change the selection using the browser's normal radio behavior.
+            // Arrow keys move the choice with a visible focus ring in every engine (radioarrows.ts).
+            if (moveRadioWithArrows(event)) return;
+            // Enter advances from a selected radio.
             if (event.key === 'Enter' && event.target instanceof HTMLInputElement && event.target.type === 'radio') {
               event.preventDefault();
-              focusQuestion(1);
+              const move = nextOnboardingStep(step);
+              if (move.kind === 'question') focusQuestion(move.step);
             }
           }}
         >
@@ -301,6 +375,7 @@ export default function Onboarding() {
             optional. later, reviews will be paced to this date.
           </p>
           <input
+            key={dateControlVersion}
             ref={dateRef}
             id="exam-date"
             type="date"
@@ -320,15 +395,10 @@ export default function Onboarding() {
             className="block min-h-14 w-full rounded-xl border border-control bg-page px-4 text-ink"
           />
           {dateProblem && <p id="exam-date-problem" className="text-sm" role="alert">{dateProblem}</p>}
-          {examDate && (
+          {(examDate || dateProblem) && (
             <button
               type="button"
-              onClick={() => {
-                changeExamDate('');
-                setDateProblem('');
-                // This button disappears after clearing; restore focus to the date field.
-                dateRef.current?.focus();
-              }}
+              onClick={clearExamDate}
               className={quietButton}
             >
               clear the date
@@ -338,14 +408,23 @@ export default function Onboarding() {
       )}
 
       <div className="flex flex-wrap items-center gap-3">
-        {step === 0 ? (
+        {previousOnboardingStep(step) === null ? (
           <a href="/" className={quietButton}>back</a>
         ) : (
-          <button type="button" onClick={() => focusQuestion(0)} className={quietButton}>back</button>
+          <button
+            type="button"
+            onClick={() => {
+              const previous = previousOnboardingStep(step);
+              if (previous !== null) focusQuestion(previous);
+            }}
+            className={quietButton}
+          >
+            back
+          </button>
         )}
         <button type="button" onClick={skipQuestion} className={quietButton}>skip</button>
         <button type="submit" className={primaryButton}>
-          {step === 0 ? 'continue' : 'save my answers'}
+          {nextOnboardingStep(step).kind === 'question' ? 'continue' : 'save my answers'}
         </button>
       </div>
       <button type="button" onClick={skipForNow} className={`${quietButton} block`}>

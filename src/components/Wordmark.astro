@@ -21,6 +21,8 @@ interface Props {
   class?: string;
   /** Header logos and home hero opt out of lazy loading. */
   loading?: 'lazy' | 'eager';
+  /** Prepares both full palette files only when this wordmark is shown on desktop. */
+  preloadBothOnDesktop?: boolean;
 }
 
 const files = {
@@ -28,14 +30,19 @@ const files = {
   emblem: { name: 'emblem', widths: [96, 192, 384], width: 384, height: 428 },
 } as const;
 
-const { variant = 'full', sizes, label, class: className, loading = 'lazy' } = Astro.props;
+const { variant = 'full', sizes, label, class: className, loading = 'lazy', preloadBothOnDesktop = false } = Astro.props;
 const art = files[variant];
 const path = (mode: 'light' | 'dark', width: number) => `/brand/v1/${art.name}-${mode}-${width}.png`;
 const srcset = (mode: 'light' | 'dark') => art.widths.map((width) => `${path(mode, width)} ${width}w`).join(', ');
 const shownAt = sizes ?? (variant === 'full' ? '15rem' : '2.25rem');
 ---
 
-<span class:list={['logo', className]} role={label ? 'img' : undefined} aria-label={label}>
+<span
+  class:list={['logo', className]}
+  role={label ? 'img' : undefined}
+  aria-label={label}
+  data-wordmark-preload={preloadBothOnDesktop ? '' : undefined}
+>
   <img
     class="logo-day"
     src={path('light', art.widths[1])}
@@ -65,3 +72,13 @@ const shownAt = sizes ?? (variant === 'full' ? '15rem' : '2.25rem');
     draggable="false"
   />
 </span>
+
+{
+  preloadBothOnDesktop && (
+    <script>
+      import { prepareDesktopWordmarks } from '../scripts/wordmark-preload';
+
+      prepareDesktopWordmarks();
+    </script>
+  )
+}
