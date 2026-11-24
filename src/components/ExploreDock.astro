@@ -18,7 +18,7 @@ const tiles = [
   <nav class="veil explore-panel explore-dock" aria-labelledby="explore-heading">
     <div class="explore-dock-heading">
       <p class="hero-caps">EXPLORE</p>
-      <h2 id="explore-heading" class="display">start with what you need.</h2>
+      <h2 id="explore-heading" class="display"><span class="explore-dock-line">start with</span> <span class="explore-dock-line">what you need.</span></h2>
     </div>
     <ul class="explore-dock-tiles">
       {
@@ -68,6 +68,10 @@ const tiles = [
   .explore-dock-heading .hero-caps {
     font-size: var(--text-sm);
     color: var(--color-ink-soft);
+  }
+  /* The board breaks the heading as "start with / what you need." at every size. */
+  .explore-dock-line {
+    display: block;
   }
   .explore-dock-heading h2 {
     margin-block-start: var(--spacing);

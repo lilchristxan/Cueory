@@ -347,11 +347,11 @@
   --hero-logo-inset: calc(var(--header-inline-gutter) + var(--tap-min) + var(--header-corner-gap) - var(--spacing-gutter));
   --hero-eyebrow-gap: 2.5rem;   /* between the logo row and the motto */
   --explore-overlap: -5.75rem;      /* the explore dock overlaps the bottom of the hero stage (board: 92 px at 1440) */
-  --explore-landscape-gap: 1.5rem;  /* phone landscape: the dock sits this far under the hero's points, no overlap */
-  --explore-landscape-width: 38.75rem; /* phone landscape: the dock is at most 620 px wide */
-  --explore-landscape-heading-width: 7.5rem;
+  --explore-landscape-gap: 0.5rem;  /* phone landscape: the dock sits this far under the hero's points (which carry 28 px of their own: about 36 px in all, board 35), no overlap */
+  --explore-landscape-width: 40.875rem; /* phone landscape: the dock is at most 654 px wide (board) */
+  --explore-landscape-heading-width: 8.5rem; /* holds "what you need." (132 px at 20 px) on one line */
   --explore-landscape-tile-text: 0.75rem; /* board: 12 px tile labels on phone landscape */
-  --explore-dock-width: 51.5rem;    /* board: about 825 px at 1440 */
+  --explore-dock-width: 51.625rem;  /* board: 826 px at 1440 (780 + padding + border) */
   --explore-dock-gap: 1rem;
   --explore-dock-padding: 1.25rem;
   --explore-dock-tile-gap: 0.625rem;
