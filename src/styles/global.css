@@ -2808,3 +2808,483 @@ html:has(dialog.mode-preview[open]) {
     grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--container-mode-tile)), 1fr));
   }
 }
+
+/*
+  Home v3 vial platter (src/components/VialPlatter.astro, src/scripts/platter.ts, docs/design/home-v3/). The script
+  writes every size as a unitless number (design pixels); here each is multiplied by one pixel (--platter-px) and the
+  whole track is scaled to fit the stage. Wide layout: all vials, arrows at the sides, dots above the front vial.
+  Portrait phones (under 40rem): three vials, the dots under the platter, the arrows 16 px in from the edges.
+*/
+@layer components {
+  .platter {
+    overflow-x: clip;
+    --platter-scale: 1;
+    --platter-head: 0;
+    --platter-below: 0;
+    --platter-tw: 1240;
+    --platter-th: 440;
+    --platter-arrow-x: 365;
+    --platter-arrow: 56;
+    --platter-dot: 10;
+    --platter-dot-gap: 18;
+    --platter-glide: 550ms cubic-bezier(0.2, 0.7, 0.2, 1);
+    --platter-ink: var(--color-on-panel-button);  /* label words: dark in both palettes, because the label is cream in both */
+    --platter-ring: var(--color-copper-deep);
+  }
+
+  .platter-stage {
+    position: relative;
+    inline-size: 100%;
+    max-inline-size: calc((var(--platter-tw) + 80) * var(--platter-px));
+    padding-inline: calc(40 * var(--platter-px));
+    block-size: calc((var(--platter-th) * var(--platter-scale) + var(--platter-head) + var(--platter-below)) * var(--platter-px));
+  }
+
+  .platter-track {
+    position: absolute;
+    inset-inline-start: 50%;
+    inset-block-end: 0;
+    inline-size: calc(var(--platter-tw) * var(--platter-px));
+    block-size: calc(var(--platter-th) * var(--platter-px));
+    transform: translateX(-50%) scale(var(--platter-scale));
+    transform-origin: 50% 100%;
+  }
+
+  /* The platter: a round edge with a lighter top face. */
+  .platter-edge,
+  .platter-top {
+    position: absolute;
+    inset-inline-start: 50%;
+    inline-size: calc(var(--platter-tw) * var(--platter-px));
+    block-size: calc(150 * var(--platter-px));
+    margin-inline-start: calc(var(--platter-tw) * var(--platter-px) / -2);
+    border-radius: 50%;
+  }
+
+  .platter-edge {
+    inset-block-end: 0;
+    background: var(--platter-edge);
+    box-shadow: var(--platter-edge-shadow);
+  }
+
+  .platter-edge::before {
+    content: '';
+    position: absolute;
+    inset-inline: 0;
+    inset-block-start: calc(39 * var(--platter-px));
+    block-size: calc(38 * var(--platter-px));
+    background: var(--platter-edge);
+  }
+
+  .platter-edge::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: linear-gradient(180deg, transparent 55%, rgb(var(--shadow-tint) / var(--platter-edge-shade)) 100%);
+  }
+
+  .platter-top {
+    inset-block-end: calc(36 * var(--platter-px));
+    background: var(--platter-top);
+    box-shadow: var(--platter-top-shadow);
+  }
+
+  /* One vial. Its place comes from --w-* (wide) or --p-* (phone): width, sideways shift, foot height and layer. */
+  .platter-vial {
+    --vw: var(--w-w);
+    --vx: var(--w-x);
+    --vb: var(--w-b);
+    --vz: var(--w-z);
+    position: absolute;
+    inset-inline-start: 50%;
+    inset-block-end: calc(var(--vb) * var(--platter-px));
+    inline-size: calc(var(--vw) * var(--platter-px));
+    z-index: var(--vz);
+    transform: translateX(calc(-50% + var(--vx) * var(--platter-px)));
+    container-type: inline-size;
+    display: block;
+    padding: 0;
+    border: 0;
+    border-radius: calc(14 * var(--platter-px));
+    background: none;
+    color: var(--platter-ink);
+    text-align: start;
+    cursor: pointer;
+    -webkit-box-reflect: below calc(-5 * var(--platter-px)) linear-gradient(transparent 80%, color-mix(in srgb, var(--color-copper-shine) calc(var(--platter-reflect) * 100%), transparent));
+    transition:
+      transform var(--platter-glide),
+      inline-size var(--platter-glide),
+      inset-block-end var(--platter-glide),
+      translate 250ms ease,
+      filter 250ms ease;
+  }
+
+  .platter-vial:hover,
+  .platter-vial:focus-visible {
+    color: var(--platter-ink);
+    translate: 0 calc(-8 * var(--platter-px));
+    filter: drop-shadow(0 0 calc(14 * var(--platter-px)) var(--platter-glow));
+  }
+
+  .platter-vial:focus-visible {
+    outline: calc(3 * var(--platter-px)) solid var(--platter-ring);
+    outline-offset: calc(6 * var(--platter-px));
+  }
+
+  .platter-vial::before {
+    content: '';
+    position: absolute;
+    inset-inline: -8%;
+    inset-block-end: -4.5%;
+    block-size: 11%;
+    border-radius: 50%;
+    background: radial-gradient(closest-side, rgb(var(--shadow-tint) / var(--platter-foot-a)) 0%, rgb(var(--shadow-tint) / var(--platter-foot-b)) 55%, transparent 100%);
+  }
+
+  /*
+    Where each vial stands, by its steps from the front vial (data-offset): the wide layout's width, sideways shift,
+    foot height and layer (--w-*) and the phone layout's (--p-*), in design pixels. These are src/scripts/platter.ts's
+    vialSpot written out, so every vial is placed before any script runs; tests/unit/vial-platter.test.ts checks that
+    each line still matches it.
+  */
+  .platter-vial[data-offset='-5'] {
+    --w-w: 62.3;
+    --w-x: -574.8;
+    --w-b: 94.4;
+    --w-z: 15;
+    --p-w: 97.7;
+    --p-x: -128.8;
+    --p-b: 34.2;
+    --p-z: 19;
+  }
+
+  .platter-vial[data-offset='-4'] {
+    --w-w: 73;
+    --w-x: -491.1;
+    --w-b: 77.7;
+    --w-z: 16;
+    --p-w: 97.7;
+    --p-x: -128.8;
+    --p-b: 34.2;
+    --p-z: 19;
+  }
+
+  .platter-vial[data-offset='-3'] {
+    --w-w: 86.6;
+    --w-x: -395.3;
+    --w-b: 67.4;
+    --w-z: 17;
+    --p-w: 97.7;
+    --p-x: -128.8;
+    --p-b: 34.2;
+    --p-z: 19;
+  }
+
+  .platter-vial[data-offset='-2'] {
+    --w-w: 103.4;
+    --w-x: -284.3;
+    --w-b: 59.9;
+    --w-z: 18;
+    --p-w: 97.7;
+    --p-x: -128.8;
+    --p-b: 34.2;
+    --p-z: 19;
+  }
+
+  .platter-vial[data-offset='-1'] {
+    --w-w: 124.6;
+    --w-x: -154.3;
+    --w-b: 55;
+    --w-z: 19;
+    --p-w: 97.7;
+    --p-x: -128.8;
+    --p-b: 34.2;
+    --p-z: 19;
+  }
+
+  .platter-vial[data-offset='0'] {
+    --w-w: 152;
+    --w-x: 0;
+    --w-b: 53;
+    --w-z: 20;
+    --p-w: 132;
+    --p-x: 0;
+    --p-b: 30;
+    --p-z: 20;
+  }
+
+  .platter-vial[data-offset='1'] {
+    --w-w: 124.6;
+    --w-x: 154.3;
+    --w-b: 55;
+    --w-z: 19;
+    --p-w: 97.7;
+    --p-x: 128.8;
+    --p-b: 34.2;
+    --p-z: 19;
+  }
+
+  .platter-vial[data-offset='2'] {
+    --w-w: 103.4;
+    --w-x: 284.3;
+    --w-b: 59.9;
+    --w-z: 18;
+    --p-w: 97.7;
+    --p-x: 128.8;
+    --p-b: 34.2;
+    --p-z: 19;
+  }
+
+  .platter-vial[data-offset='3'] {
+    --w-w: 86.6;
+    --w-x: 395.3;
+    --w-b: 67.4;
+    --w-z: 17;
+    --p-w: 97.7;
+    --p-x: 128.8;
+    --p-b: 34.2;
+    --p-z: 19;
+  }
+
+  .platter-vial[data-offset='4'] {
+    --w-w: 73;
+    --w-x: 491.1;
+    --w-b: 77.7;
+    --w-z: 16;
+    --p-w: 97.7;
+    --p-x: 128.8;
+    --p-b: 34.2;
+    --p-z: 19;
+  }
+
+  .platter-vial[data-offset='5'] {
+    --w-w: 62.3;
+    --w-x: 574.8;
+    --w-b: 94.4;
+    --w-z: 15;
+    --p-w: 97.7;
+    --p-x: 128.8;
+    --p-b: 34.2;
+    --p-z: 19;
+  }
+
+  .platter-vial[data-hide-wide] {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+  }
+
+  .platter-img {
+    position: relative;
+    display: block;
+    inline-size: 100%;
+    block-size: auto;
+  }
+
+  /* The label's live words, laid over the blank label in container units so they scale with the vial. */
+  .platter-label {
+    position: absolute;
+    inset-block: 33% 7%;
+    inset-inline: 3%;
+    pointer-events: none;
+    font-family: var(--font-body);
+  }
+
+  .platter-kicker {
+    position: absolute;
+    inset-inline-start: 9cqi;
+    inset-block-start: 39cqi;
+    font-size: 4.6cqi;
+    line-height: 1.2;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+  }
+
+  .platter-name {
+    position: absolute;
+    inset-inline-start: 9cqi;
+    inset-block-start: 47cqi;
+    inline-size: 58cqi;
+    font-size: 9cqi;
+    font-weight: 700;
+    line-height: 1.05;
+    letter-spacing: 0.01em;
+    text-transform: uppercase;
+  }
+
+  .platter-name::after {
+    content: '';
+    display: block;
+    inline-size: 20cqi;
+    block-size: 0.8cqi;
+    margin-block-start: 4cqi;
+    background: var(--platter-ink);
+  }
+
+  .platter-meta {
+    position: absolute;
+    inset-inline-start: 9cqi;
+    inset-block-end: 9cqi;
+    inline-size: 58cqi;
+    display: grid;
+    grid-template-columns: 1fr 1.3fr;
+    font-size: 4cqi;
+    line-height: 1.5;
+    border-block: 0.4cqi solid color-mix(in srgb, var(--platter-ink) 55%, transparent);
+  }
+
+  .platter-meta > span {
+    padding: 1cqi 1.5cqi;
+  }
+
+  .platter-meta > span:first-child {
+    border-inline-end: 0.3cqi solid color-mix(in srgb, var(--platter-ink) 40%, transparent);
+  }
+
+  .platter-logo {
+    position: absolute;
+    inset-block-start: 12cqi;
+    inset-inline-start: calc(100% - 3cqi);
+    inline-size: 66cqi;
+    block-size: auto;
+    transform-origin: 0 0;
+    transform: rotate(90deg);
+  }
+
+  /* Arrows (wide: level with the dots above the front vial) and dots (only a picture of where the platter stands). */
+  .platter-arrow {
+    position: absolute;
+    inset-block-start: 0;
+    z-index: 40;
+    inline-size: calc(var(--platter-arrow) * var(--platter-px));
+    block-size: calc(var(--platter-arrow) * var(--platter-px));
+  }
+
+  .platter-arrow-prev {
+    inset-inline-start: calc(50% - (var(--platter-arrow-x) + var(--platter-arrow) / 2) * var(--platter-px));
+  }
+
+  .platter-arrow-next {
+    inset-inline-start: calc(50% + (var(--platter-arrow-x) - var(--platter-arrow) / 2) * var(--platter-px));
+  }
+
+  .platter-dots {
+    position: absolute;
+    inset-inline-start: 50%;
+    inset-block-start: calc(var(--platter-arrow) / 2 * var(--platter-px));
+    display: flex;
+    align-items: center;
+    gap: calc(var(--platter-dot-gap) * var(--platter-px));
+    transform: translate(-50%, -50%);
+  }
+
+  .platter-dot {
+    inline-size: calc(var(--platter-dot) * var(--platter-px));
+    block-size: calc(var(--platter-dot) * var(--platter-px));
+    border-radius: var(--radius-pill);
+    background-color: color-mix(in srgb, var(--color-ink-soft) 45%, transparent);
+    transition:
+      inline-size 200ms ease,
+      background-color 200ms ease;
+  }
+
+  /* The front vial's dot stretches into a pill: shape, not only color. */
+  .platter-dot[data-on] {
+    inline-size: calc(var(--platter-dot) * 2.2 * var(--platter-px));
+    background-color: var(--color-ink);
+  }
+
+  /* Portrait phones: the front vial and one each side; dots under the platter; arrows 16 px in from the edges. */
+  @media (width < 40rem) {
+    .platter {
+      --platter-tw: 390;
+      --platter-th: 330;
+      --platter-below: 50;
+      --platter-arrow: 44;
+      --platter-dot: 7;
+      --platter-dot-gap: 15;
+    }
+
+    .platter-stage {
+      max-inline-size: none;
+      padding-inline: 0;
+    }
+
+    .platter-track {
+      inset-block-end: auto;
+      inset-block-start: 0;
+      transform-origin: 50% 0;
+    }
+
+    .platter-edge,
+    .platter-top {
+      inline-size: calc(420 * var(--platter-px));
+      margin-inline-start: calc(-210 * var(--platter-px));
+      block-size: calc(62 * var(--platter-px));
+    }
+
+    .platter-edge::before {
+      inset-block-start: calc(16 * var(--platter-px));
+      block-size: calc(16 * var(--platter-px));
+    }
+
+    .platter-top {
+      inset-block-end: calc(15 * var(--platter-px));
+    }
+
+    .platter-vial {
+      --vw: var(--p-w);
+      --vx: var(--p-x);
+      --vb: var(--p-b);
+      --vz: var(--p-z);
+      -webkit-box-reflect: none;
+    }
+
+    .platter-vial[data-hide-wide] {
+      opacity: 1;
+      visibility: visible;
+      pointer-events: auto;
+    }
+
+    .platter-vial[data-hide-phone] {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    .platter-arrow-prev {
+      inset-inline-start: calc(16 * var(--platter-px));
+    }
+
+    .platter-arrow-next {
+      inset-inline-start: auto;
+      inset-inline-end: calc(16 * var(--platter-px));
+    }
+
+    .platter-dots {
+      inset-block-start: calc(var(--platter-th) * var(--platter-scale) * var(--platter-px) + 25 * var(--platter-px));
+      gap: 0;
+    }
+
+    .platter-dot {
+      margin-inline: calc(7.5 * var(--platter-px));
+    }
+  }
+
+  /* Reduced motion: no lift and no glide; the glow stays. */
+  @media (prefers-reduced-motion: reduce) {
+    .platter-vial {
+      transition: none;
+    }
+
+    .platter-vial:hover,
+    .platter-vial:focus-visible {
+      translate: none;
+    }
+
+    .platter-dot {
+      transition: none;
+    }
+  }
+}

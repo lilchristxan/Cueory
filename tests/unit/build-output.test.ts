@@ -90,6 +90,7 @@ const initialJsBudget = {
   'preview/concept-map.html': 91589,
   'preview/email.html': 146752,
   'preview/prose.html': 146752,
+  'preview/vial-platter.html': 90952,
   'preview/reminders.html': 148152,
   'preview/rewards.html': 89731,
   'preview/share.html': 151522,
