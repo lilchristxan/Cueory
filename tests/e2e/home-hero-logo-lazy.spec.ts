@@ -1,5 +1,15 @@
 import { expect, test } from '@playwright/test';
 
+/**
+ * Checks whether an image has started downloading, either recorded in resource timing or currently in flight.
+ */
+function isDownloadStarted(
+  img: { currentSrc: string; resourceLoaded: boolean },
+  requestedUrls: ReadonlySet<string>,
+): boolean {
+  return img.resourceLoaded || (img.currentSrc !== '' && requestedUrls.has(img.currentSrc));
+}
+
 /** The compact phone and two-row desktop headers use the same official full wordmark.
  * Its unused palette image is lazy and must stay off the network. */
 test('/: the hero logo row downloads only the logo it shows', async ({ page }) => {

@@ -1785,8 +1785,10 @@ test.describe('☰ side panel and account corner (D-46)', () => {
   test('corner buttons are at least 44 by 44 px', async ({ page }) => {
     for (const path of ['/', '/learn/study-skills']) {
       await page.goto(path);
-      for (const name of ['open site menu', 'open account menu']) {
-        const box = (await page.getByRole('button', { name, exact: true }).boundingBox())!;
+      // The Home v3 header opens the menu from search on screens 640 px and wider (see homeMenuOpener).
+      const menuOpener = path === '/' ? homeMenuOpener(page).first() : page.getByRole('button', { name: 'open site menu', exact: true });
+      for (const opener of [menuOpener, page.getByRole('button', { name: 'open account menu', exact: true })]) {
+        const box = (await opener.boundingBox())!;
         expect(box.width).toBeGreaterThanOrEqual(44);
         expect(box.height).toBeGreaterThanOrEqual(44);
       }

@@ -122,4 +122,8 @@ h1 { margin: var(--stage-heading-gap) auto 0; max-width: var(--stage-heading-wid
 .stage-tip svg { width: var(--stage-tip-icon); }
 .stage-tip span { line-height: inherit; text-align: start; }
 .stage-tip strong { display: block; }
+/* The header lies over the top of the page. When the "continue studying" strip is there it sits below the header and the
+   hero then starts right under it, so the header never covers the strip. */
+:global(main aside[aria-label="continue studying"]) { margin-top: var(--hero-top-clear); }
+:global(main:has(aside[aria-label="continue studying"])) .scene-hero > div { padding-top: var(--spacing); }
 </style>
