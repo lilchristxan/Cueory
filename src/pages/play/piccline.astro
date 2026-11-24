@@ -7,14 +7,14 @@ import Layout from '../../layouts/Layout.astro';
 import GamePage from '../../components/GamePage.astro';
 import PicclineTitle from '../../components/PicclineTitle.astro';
 import SutureToday from '../../islands/SutureToday';
-import { dailyGames } from '../../config/games';
+import { dailyGames, gamePagesBareHeader } from '../../config/games';
 import { wordPathSamples } from '../../config/gamesamples';
 
 const game = dailyGames[3]!;
 const samples = await wordPathSamples();
 ---
 
-<Layout title="piccline" description={game.line} socialImage="/share/games-scene.png" noindex={true}>
+<Layout title="piccline" description={game.line} socialImage="/share/games-scene.png" noindex={true} bareHeader={gamePagesBareHeader}>
   <GamePage game={game} showcase>
     <h1 slot="title" id="piccline-heading" class="display mt-4 flex flex-col items-center">
       <PicclineTitle name="piccline" />

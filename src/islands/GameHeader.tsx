@@ -2,7 +2,7 @@ import '../styles/gameheader.css';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { GameSettingsDialog } from './GameSettings.tsx';
 import { GameHelpButton, GameHelpDialog, type GameHelpState } from './GameHelp';
-import { frameHelpButton, GAME_FRAME_HELP_EVENT, GAME_FRAME_HELP_READY_EVENT, GAME_FRAME_SETTINGS_EVENT } from './GameFrameControls';
+import { announceFrameListening, frameHelpButton, GAME_FRAME_HELP_EVENT, GAME_FRAME_HELP_READY_EVENT, GAME_FRAME_SETTINGS_EVENT } from './GameFrameControls';
 
 /**
  * The same corner row on every game box (Christian's brief, 2026-11-17): a drawn gear at the top left opens the game's
@@ -48,7 +48,9 @@ export default function GameHeader({ name, help, helpExtra, settings, end, frame
     window.addEventListener(GAME_FRAME_SETTINGS_EVENT, openSettings);
     window.addEventListener(GAME_FRAME_HELP_EVENT, openHelp);
     window.addEventListener(GAME_FRAME_HELP_READY_EVENT, setHelpWhenReady);
+    const stopListening = announceFrameListening(name);
     return () => {
+      stopListening();
       window.removeEventListener(GAME_FRAME_SETTINGS_EVENT, openSettings);
       window.removeEventListener(GAME_FRAME_HELP_EVENT, openHelp);
       window.removeEventListener(GAME_FRAME_HELP_READY_EVENT, setHelpWhenReady);

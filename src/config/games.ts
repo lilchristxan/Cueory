@@ -88,3 +88,9 @@ export const statGame = {
 
 /** Keep the hello cards page out of search until Christian says otherwise, even once its wording is approved. */
 export const helloCardsIndexWhenApproved = false;
+
+/**
+ * Game pages hide the site's "still building" strip and menu bar when this is true, as Christian's Games v2 boards show
+ * (a full-page frame). On (Christian, 23 Nov: game pages match the Games v2 boards, no menu bar or building strip); every game page reads it, so it is one switch.
+ */
+export const gamePagesBareHeader = true;
