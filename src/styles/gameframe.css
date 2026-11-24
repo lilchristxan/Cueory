@@ -680,7 +680,7 @@
   block-size: 100%;
 }
 .game-deck-glyph {
-  font-family: var(--font-display);
+  font-family: var(--font-body);
   font-size: var(--game-deck-tile-glyph-size);
   line-height: 1;
 }
@@ -694,7 +694,7 @@
   display: flex;
   align-items: center;
   block-size: var(--game-deck-name-height);
-  font-family: var(--font-display);
+  font-family: var(--font-body);
   font-weight: 500;
   font-size: var(--game-deck-name-size);
   line-height: 1;
@@ -707,7 +707,7 @@
   translate: 0 -50%;
   display: flex;
   justify-content: center;
-  font-family: var(--font-display);
+  font-family: var(--font-body);
   font-weight: 500;
   font-size: var(--game-deck-name-mid-size);
   line-height: 1;
@@ -811,11 +811,15 @@
     inset-block-end: 0;
     translate: none;
     align-items: center;
-    padding-inline: calc(var(--spacing) * 2);
+    padding-inline: var(--spacing);
     font-size: var(--game-frame-how-font-size);
+    white-space: normal;
+    overflow-wrap: anywhere;
   }
   .game-deck-wordmark-mid {
+    max-inline-size: 100%;
     block-size: var(--game-deck-logo-row);
+    object-fit: contain;
   }
 }
 

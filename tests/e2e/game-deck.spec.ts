@@ -332,6 +332,11 @@ test.describe('below 70rem (1120 px) the other games are a plain row of cards, t
         expect(h).toBeGreaterThanOrEqual(44);
         expect(x! + w!).toBeLessThanOrEqual(width + 0.5);
       }
+      const names = page.locator('.game-deck-name');
+      const fits = await names.evaluateAll((labels) => labels.map((label) =>
+        label.scrollWidth <= label.clientWidth && label.scrollHeight <= label.clientHeight,
+      ));
+      expect(fits).toEqual(Array(5).fill(true));
       expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0);
     });
   }
