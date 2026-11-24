@@ -732,7 +732,7 @@ test.describe('theme switch', () => {
 });
 
 test.describe('marketing look (D-41)', () => {
-  test('the home hero: logo, motto, a serif headline (two lines on every size) with a copper accent, the start link (P5)', async ({
+  test('the home hero: logo, motto, a serif headline (two lines on phone and one on larger screens) with a copper accent, the start link (P5)', async ({
     page,
   }) => {
     await page.goto('/');
@@ -758,7 +758,7 @@ test.describe('marketing look (D-41)', () => {
       const box = (await element.boundingBox())!;
       expect(box.y + box.height).toBeLessThanOrEqual(height);
     }
-    // Two natural lines on every size (phones no longer stack one word per line), nothing cut off, inside the screen.
+    // The 390 board wraps into two lines; the wide board fits the headline on one.
     const fit = await headline.evaluate((el) => {
       const style = getComputedStyle(el);
       const box = el.getBoundingClientRect();
@@ -768,7 +768,7 @@ test.describe('marketing look (D-41)', () => {
         inside: box.left >= 0 && box.right <= window.innerWidth,
       };
     });
-    expect(Math.round(fit.lines)).toBe(2);
+    expect(Math.round(fit.lines)).toBe(page.viewportSize()!.width < 640 ? 2 : 1);
     expect(fit.clipped).toBe(false);
     expect(fit.inside).toBe(true);
     expect(await headline.evaluate((el) => getComputedStyle(el).fontFamily)).toMatch(/^"?Bodoni Moda/);
@@ -940,8 +940,13 @@ test.describe('marketing look (D-41)', () => {
     const ways = 1;
     const look = (index: number) =>
       sections.nth(index).evaluate((el) => [el.getAttribute('data-reveal'), getComputedStyle(el).opacity, getComputedStyle(el).translate]);
-    // All of them start below the first screen, so they wait, lowered and clear.
-    for (const index of all) expect(await look(index)).toEqual(['waiting', '0', '0px 10px']);
+    // The ones that start below the first screen wait, lowered and clear. The Home v3 hero is compact, so on a tall
+    // tablet screen (820 x 1180) the first games row already begins inside the first screen and is simply there, never waiting.
+    const belowFirstScreen = await sections.evaluateAll((items) => items.map((item) => item.getBoundingClientRect().top >= window.innerHeight));
+    expect(belowFirstScreen[ways]).toBe(true);
+    for (const index of all) {
+      expect(await look(index)).toEqual(belowFirstScreen[index] ? ['waiting', '0', '0px 10px'] : [null, '1', 'none']);
+    }
     await page.locator('#ways-to-study').scrollIntoViewIfNeeded();
     await expect.poll(() => look(ways)).toEqual(['shown', '1', 'none']);
     // Once only: scrolling away and back changes nothing.
