@@ -228,7 +228,7 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 1440, height: 900 
       await page.goto('/');
       const start = page.getByTestId('hero-start');
       await expect(start).toBeVisible();
-      const ring = page.locator('.hero-start-ring');
+      const ring = page.locator('.stage-actions');
       await ring.scrollIntoViewIfNeeded();
 
       const readBand = async () => {
