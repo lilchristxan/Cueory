@@ -14,7 +14,7 @@ const tiles = [
 ] as const;
 ---
 
-<div class="explore-dock-wrap px-gutter">
+<div class="explore-dock-wrap">
   <nav class="veil explore-panel explore-dock" aria-labelledby="explore-heading">
     <div class="explore-dock-heading">
       <p class="hero-caps">EXPLORE</p>
@@ -48,6 +48,7 @@ const tiles = [
   .explore-dock-wrap {
     position: relative;
     z-index: 5;
+    padding-inline: var(--explore-wrap-gutter);
   }
   /* The overlap needs the illustrated stage (HomeStage) to overlap; on any other hero the dock is a normal block. */
   :global(.scene-hero:has(.home-stage)) .explore-dock-wrap {
@@ -66,7 +67,8 @@ const tiles = [
     text-align: center;
   }
   .explore-dock-heading .hero-caps {
-    font-size: var(--text-sm);
+    font-size: var(--explore-caps-size);
+    line-height: 0.9;
     color: var(--color-ink-soft);
   }
   /* The board breaks the heading as "start with / what you need." at every size. */
@@ -74,10 +76,10 @@ const tiles = [
     display: block;
   }
   .explore-dock-heading h2 {
-    margin-block-start: var(--spacing);
+    margin-block-start: var(--explore-caps-gap);
     text-wrap: balance;
     font-size: var(--explore-dock-title);
-    line-height: 1.2;
+    line-height: 1.15;
   }
   /* Phone portrait: three tiles, then two centred. Wrapping flex keeps every tile at least 5.75rem wide, so at 320 px
      or with enlarged text it falls back to 2 + 2 + 1 instead of squeezing tiles under the 44 px minimum. */
@@ -97,12 +99,12 @@ const tiles = [
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: calc(var(--spacing) * 2);
-    padding: calc(var(--spacing) * 3) calc(var(--spacing) * 2);
+    gap: var(--explore-tile-inner-gap);
+    padding: var(--explore-tile-padding);
     text-align: center;
     overflow-wrap: anywhere;
-    font-size: var(--text-sm);
-    line-height: 1.5;
+    font-size: var(--explore-tile-text);
+    line-height: 1.25;
     min-block-size: var(--explore-tile-min);
   }
   .explore-dock-tile :global(.hero-icon-lg),
@@ -140,8 +142,6 @@ const tiles = [
       flex-basis: var(--explore-landscape-heading-width);
     }
     .explore-dock-tile {
-      padding-inline: var(--spacing);
-      font-size: var(--explore-landscape-tile-text);
     }
     :global(.scene-hero:has(.home-stage)) .explore-dock-wrap {
       margin-block-start: var(--explore-landscape-gap);

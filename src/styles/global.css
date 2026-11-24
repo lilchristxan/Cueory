@@ -236,6 +236,27 @@
     );
   }
 
+  /*
+    Home ground (boards): from the hero down, the home page is one even beige (Evening: one even Charcoal) with no folds,
+    peach bands or grain between sections. Every scene and the page behind it paint the same flat ground, so the fade
+    between scenes (kept, D-53) blends the ground into itself and never touches a word. Palette mixes only (--home-ground).
+  */
+  body:has(.scene-hero) {
+    background-color: var(--home-ground-b);
+    background-image: var(--home-ground);
+    background-size: auto;
+  }
+
+  body:has(.scene-hero).silk-quiet::before {
+    content: none;
+  }
+
+  body:has(.scene-hero) .scene::before {
+    background-color: var(--home-ground-b);
+    background-image: var(--home-ground);
+    background-size: auto;
+  }
+
   /* The hero: Ivory, light from the upper left. It starts at the top of the page, so nothing fades in above it. */
   .scene-hero {
     --scene-fade-top: 0px;
@@ -409,34 +430,6 @@
     margin-block-start: var(--spacing);
     margin-inline: auto;
     color: var(--color-copper-deep);
-  }
-
-  /* The "coming soon" tag inside the closed call to action: words, so it never relies on colour alone. */
-  .hero-soon {
-    border: 1px solid var(--cueory-copper-ink);
-    border-radius: var(--radius-pill);
-    padding-inline: calc(var(--spacing) * 2);
-    font-size: var(--text-base);
-    font-weight: 400;
-  }
-
-  /* The secondary action beside the start button: an outline pill, never copper (one copper button per screen). */
-  .hero-secondary-link {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: calc(var(--spacing) * 2);
-    min-block-size: var(--tap-min);
-    padding: calc(var(--spacing) * 3) calc(var(--spacing) * 6);
-    border: 1px solid var(--color-control);
-    border-radius: var(--radius-pill);
-    font-weight: 700;
-    color: var(--color-ink);
-    text-decoration: none;
-  }
-
-  .hero-secondary-link:hover {
-    background-color: rgb(var(--glass-hover-rgb) / var(--glass-hover-alpha));
   }
 
   .hero-icon,
