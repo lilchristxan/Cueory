@@ -534,6 +534,8 @@ const helloCardsAvailable = helloCardsPage(
      button whose whole 44 x 44 box takes the tap; the dot itself is drawn inside it by ::after. The boxes sit side by
      side with a hair of space (never overlapping, never clipped), and the row wraps instead of scrolling sideways at large text. */
   .games-pager {
+    position: relative;
+    z-index: 1;
     display: flex;
     flex-wrap: wrap;
     align-items: center;
@@ -589,6 +591,7 @@ const helloCardsAvailable = helloCardsPage(
   .gcar {
     overflow: hidden;
     padding: var(--game-car-padding);
+    margin-block-end: var(--game-car-shadow-pull);
     touch-action: pan-y;
     max-width: 100%;
   }
