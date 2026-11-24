@@ -13,16 +13,16 @@ test.describe('home below the hero on a phone', () => {
     await page.goto('/');
   });
 
-  test('games carousel: the desktop card, arrows beside "play today\'s" and a clear peek of the next card', async ({ page }) => {
+  test('games carousel: the board\'s 250 × 350 card, arrows flanking the heading and a clear peek of the next card', async ({ page }) => {
     const section = page.locator('#daily-games');
     await section.scrollIntoViewIfNeeded();
     await expect(section.locator('[data-games-carousel]')).toHaveAttribute('data-carousel-state', 'settled');
 
     const first = (await section.locator('[data-game-card]').nth(0).boundingBox())!;
-    // The desktop card is 280 × 392.
-    expect(Math.round(first.width)).toBe(280);
-    expect(first.height).toBeGreaterThanOrEqual(392);
-    expect(first.height).toBeLessThan(420);
+    // The board's phone card is 250 × 350 (an intentional design change from the old 280 × 392).
+    expect(Math.round(first.width)).toBe(250);
+    expect(first.height).toBeGreaterThanOrEqual(350);
+    expect(first.height).toBeLessThan(380);
     // What is really VISIBLE of the next card: its box cut by the carousel's clip box and by the document. At least
     // 48 px shows, and the card runs on past the clip, so it reads as "more this way".
     const visible = await section.evaluate((root) => {
@@ -39,15 +39,20 @@ test.describe('home below the hero on a phone', () => {
     const status = (await section.locator('[data-game-card]').nth(0).locator('.gstatus').boundingBox())!;
     expect(first.y + first.height - (status.y + status.height)).toBeLessThan(120);
 
-    // The arrows are at least 44 × 44, in the same row as "play today's", and none floats above the cards.
-    const action = (await section.getByTestId('games-link').boundingBox())!;
+    // The arrows are at least 44 × 44 and flank the heading, level with it, on either side of its words
+    // (Home v3 board; they used to sit beside "play today's").
+    const heading = (await section.locator('#games-heading').boundingBox())!;
     for (const name of ['previous game', 'next game']) {
       const box = (await section.getByRole('button', { name }).boundingBox())!;
       expect(box.width).toBeGreaterThanOrEqual(44);
       expect(box.height).toBeGreaterThanOrEqual(44);
-      expect(box.y).toBeGreaterThan(first.y + first.height);
-      expect(Math.abs(box.y + box.height / 2 - (action.y + action.height / 2))).toBeLessThan(8);
+      expect(box.y + box.height).toBeLessThan(first.y);
+      expect(Math.abs(box.y + box.height / 2 - (heading.y + heading.height / 2))).toBeLessThan(4);
     }
+    const prev = (await section.getByRole('button', { name: 'previous game' }).boundingBox())!;
+    const next = (await section.getByRole('button', { name: 'next game' }).boundingBox())!;
+    expect(prev.x + prev.width).toBeLessThanOrEqual(heading.x + 1);
+    expect(next.x).toBeGreaterThanOrEqual(heading.x + heading.width - 1);
     await section.getByRole('button', { name: 'next game' }).click();
     await expect(section.locator('[data-game-card]').nth(1)).toHaveClass(/on/);
   });
