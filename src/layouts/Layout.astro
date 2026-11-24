@@ -128,7 +128,9 @@ const searchTitle = isHome ? 'home' : title;
     {!bareHeader && <BuildingNotice />}
     {
       bareHeader ? null : isHome ? (
-        <SiteHeader overlay accountsOff={accountsOff} />
+        <div class="relative z-20 h-0">
+          <SiteHeader overlay accountsOff={accountsOff} />
+        </div>
       ) : (
         <SiteHeader quiet={isStudy} accountsOff={accountsOff} />
       )

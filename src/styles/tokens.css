@@ -343,7 +343,7 @@
   --hero-accent-day-peak: color-mix(in srgb, var(--color-copper-deep) 82%, var(--color-ink)); /* the lightest moment of the shine */
   --hero-min-height: 60rem;     /* the hero is about this tall on large screens, so the explore row starts below the fold */
   --container-explore: 80rem;  /* the explore row under the hero */
-  --hero-top-clear: 1rem;       /* space above the hero's logo row (the corner buttons sit in the page's top 4.5 rem) */
+  --hero-top-clear: 9.5rem;     /* the two-row header (logo, then menu bar) laid over the page's top on desktop; 5.25 rem on phones */
   --hero-logo-inset: calc(var(--header-inline-gutter) + var(--tap-min) + var(--header-corner-gap) - var(--spacing-gutter));
   --hero-eyebrow-gap: 2.5rem;   /* between the logo row and the motto */
   --radius-panel: 2.125rem;     /* the home explore panel's corners (board: 34 px) */
@@ -1144,6 +1144,7 @@
 
 /* Official full logo at the 52 px desktop and 38 px phone heights in the Home v3 boards. */
 .home-board-header { --home-header-brand-width: 10.25rem; }
+@media (width < 40rem) { :root { --hero-top-clear: 5.25rem; } }
 @media (width < 40rem) { .home-board-header { --home-header-brand-width: 7.5rem; } }
 /* The landscape phone board is the centred desktop composition at about 60% scale: the button sits inside the top of the ring and the points under the pedestal. */
 @media (orientation: landscape) and (40rem <= width < 60rem) and (height < 32rem) {
