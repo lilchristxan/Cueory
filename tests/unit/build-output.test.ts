@@ -346,11 +346,23 @@ describe.skipIf(!existsSync(dist))('built site', () => {
     }
   });
 
-  it.runIf(site.showBuildingNotice).each(pages.map((p) => [p.replace(dist, '')]))(
+  // Game pages (the Games v2 frame, Christian 2026-11-23) have no building strip and no site menu bar; every other page keeps the strip.
+  const isGamePage = (page: string) => readFileSync(join(dist, page), 'utf8').includes('data-game-page=');
+  it.runIf(site.showBuildingNotice).each(pages.map((p) => [p.replace(dist, '')]).filter(([p]) => !isGamePage(p!)))(
     '%s shows the building notice',
     (page) => {
       const html = readFileSync(join(dist, page), 'utf8');
       expect(html).toContain("we're still building. more coming soon.");
+    },
+  );
+
+  it.each(pages.map((p) => [p.replace(dist, '')]).filter(([p]) => isGamePage(p!)))(
+    '%s (a game page) has no building strip and no site menu bar',
+    (page) => {
+      const html = readFileSync(join(dist, page), 'utf8');
+      expect(html).not.toContain("we're still building. more coming soon.");
+      expect(html).not.toContain('<header');
+      expect(html).toContain('skip to content');
     },
   );
 

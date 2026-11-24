@@ -940,8 +940,13 @@ test.describe('marketing look (D-41)', () => {
     const ways = 1;
     const look = (index: number) =>
       sections.nth(index).evaluate((el) => [el.getAttribute('data-reveal'), getComputedStyle(el).opacity, getComputedStyle(el).translate]);
-    // All of them start below the first screen, so they wait, lowered and clear.
-    for (const index of all) expect(await look(index)).toEqual(['waiting', '0', '0px 10px']);
+    // The ones that start below the first screen wait, lowered and clear. The Home v3 hero is compact, so on a tall
+    // tablet screen (820 x 1180) the first games row already begins inside the first screen and is simply there, never waiting.
+    const belowFirstScreen = await sections.evaluateAll((items) => items.map((item) => item.getBoundingClientRect().top >= window.innerHeight));
+    expect(belowFirstScreen[ways]).toBe(true);
+    for (const index of all) {
+      expect(await look(index)).toEqual(belowFirstScreen[index] ? ['waiting', '0', '0px 10px'] : [null, '1', 'none']);
+    }
     await page.locator('#ways-to-study').scrollIntoViewIfNeeded();
     await expect.poll(() => look(ways)).toEqual(['shown', '1', 'none']);
     // Once only: scrolling away and back changes nothing.

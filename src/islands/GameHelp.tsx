@@ -11,7 +11,6 @@ import { trappedFocusIndex } from './gamesettings';
  *
  *   const help = useGameHelp('triage');
  *   <GameHelpButton help={help} name="sudoku" className="sudoku-icon-button" />  // the "?" and its dialog
- *   <GameHelpCard help={help} name="sudoku" />                                    // the rules, on the first visit only
  *
  * The dialog traps focus, closes with Escape, the × or "got it", and gives focus back to the "?" button.
  */
@@ -132,18 +131,4 @@ export function GameHelpButton({ help, name, className, extra }: { help: GameHel
     </button>
     <GameHelpDialog help={help} name={name} extra={extra} />
   </>;
-}
-
-/** The rules above the board on a game's first visit. "got it" (or the "?") puts them away for good on this device. */
-export function GameHelpCard({ help, name, extra }: { help: GameHelpState; name: string; extra?: ReactNode }) {
-  const id = useId();
-  if (!help.firstVisit) return null;
-  return <section className="game-help-first" aria-labelledby={`${id}-title`} data-testid="game-help-first">
-    <h3 id={`${id}-title`} className="game-help-subheading">new to {name}? here's how to play</h3>
-    {gameLine(help.content) && <p className="game-help-line">{gameLine(help.content)}</p>}
-    {extra}
-    <PlaySteps content={help.content} />
-    <p className="game-help-note">the ? button shows this again, with every setting.</p>
-    <div className="game-help-actions"><button type="button" className="game-help-action" onClick={help.dismiss}>got it</button></div>
-  </section>;
 }

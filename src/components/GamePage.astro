@@ -9,7 +9,7 @@
  * wordpath.css) still print only the game.
  */
 import GameFrame from './GameFrame.astro';
-import GameStatsPanel, { GameStatsPersistence } from '../islands/GameStatsPanel';
+import { GameStatsPersistence } from '../islands/GameStatsPanel';
 import GameResultsHost from '../islands/GameResultsHost';
 import type { DailyGame } from '../config/games';
 import { site } from '../config/site';
@@ -28,8 +28,8 @@ interface Props {
 }
 const { game, wide = false, showcase = false, framed = false } = Astro.props;
 ---
-<article class:list={["game-page-frame", wide && "md:max-w-page", showcase && "md:max-w-game-showcase"]} data-game-page={game.id}>
-  <GameFrame game={game.id} wide={wide} showcase={showcase} framed={framed} bridge={framed}>
+<article class="game-page-frame" data-game-page={game.id}>
+  <GameFrame game={game.id} wide={wide} showcase={showcase} framed={framed} bridge={framed} stats>
   <Fragment slot="flag">
     <a
       href={flagMailto(site.contactEmail, Astro.url.pathname)}
@@ -50,13 +50,8 @@ const { game, wide = false, showcase = false, framed = false } = Astro.props;
     <slot name="deck" slot="deck" />
     <slot name="footer" slot="footer" />
   </GameFrame>
-  {!framed && <div class="game-page-stats-container max-w-prose mx-auto px-6 pb-12" data-print-hidden>
-    <GameStatsPanel client:only="react" games={[game.id]} />
-  </div>}
-  {framed && <>
-    <GameStatsPersistence client:only="react" />
-    <noscript><p>finish a game with JavaScript to keep its result in this browser.</p></noscript>
-  </>}
+  <GameStatsPersistence client:only="react" />
+  <noscript><p>finish a game with JavaScript to keep its result in this browser.</p></noscript>
 </article>
 <GameResultsHost client:only="react" />
 <noscript><p>game results and sharing need JavaScript.</p></noscript>

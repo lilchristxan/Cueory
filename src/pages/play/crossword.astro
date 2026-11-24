@@ -2,7 +2,7 @@
 import Layout from '../../layouts/Layout.astro';
 import GamePage from '../../components/GamePage.astro';
 import CuewordToday from '../../islands/CuewordToday';
-import { dailyGames } from '../../config/games';
+import { dailyGames, gamePagesBareHeader } from '../../config/games';
 import { crosswordSamples } from '../../config/gamesamples';
 import { crosswordShown, pageBuildEnv } from '../../config/crossword';
 
@@ -12,7 +12,7 @@ const shown = crosswordShown(pageBuildEnv());
 const samples = shown ? await crosswordSamples() : [];
 ---
 {shown ? (
-<Layout title={game.name} description={game.line} socialImage="/share/games-scene.png">
+<Layout title={game.name} description={game.line} socialImage="/share/games-scene.png" bareHeader={gamePagesBareHeader}>
 <GamePage game={game} wide framed>
   <h1 slot="title" id="crossword-heading" class="display mt-4 text-center text-title wrap-anywhere sm:text-title-lg">{game.name}</h1>
   {/* data-game-print and crossword-print-host: the crossword's print rules (crossword.css) print only the host. */}

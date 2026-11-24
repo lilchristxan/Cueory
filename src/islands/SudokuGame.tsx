@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { browserStorage } from '../scripts/storage';
 import { printGame } from './gameprint';
-import { GameHelpButton, GameHelpCard, GameHelpDialog, useGameHelp } from './GameHelp';
+import { GameHelpButton, GameHelpDialog, useGameHelp } from './GameHelp';
 import { gameName } from '../config/games';
 import { deleteStats, forgetHeldRounds, localDay, reportStatsChanged, showResultCard, sudokuResultCard } from './gameresults';
 import { GameSettingsDialog } from './GameSettings.tsx';
-import { frameHelpButton, GAME_FRAME_HELP_EVENT, GAME_FRAME_HELP_READY_EVENT, GAME_FRAME_SETTINGS_EVENT } from './GameFrameControls';
+import { announceFrameListening, frameHelpButton, GAME_FRAME_HELP_EVENT, GAME_FRAME_HELP_READY_EVENT, GAME_FRAME_SETTINGS_EVENT } from './GameFrameControls';
 import { GAME_SETTINGS_EVENT, GAME_SETTINGS_STORAGE_KEY, gameSoundAllowed, loadGameSettings, parseGameSettings, type SharedGameSettings } from './gamesettings';
 import { sudokuCellClasses } from './sudokuhighlight';
 import { DEFAULT_SUDOKU_SETTINGS, GAME_PROGRESS_EVENT, LEVEL_LABELS, sudokuProgressDetail, LEVEL_RULES, advanceSudokuSeconds, autoCandidateNotes, checkSudoku, conflictIndices, dailySudokuSeed, editSudokuBoard, effectiveSudokuMode, generateSudoku, getResult, loadSudokuSettings, newSudokuBoard, noteDigits, pushSudokuHistory, saveSudokuSettings, sudokuCellPresentation, sudokuKeyAction, sudokuWrongCells, undoSudoku, type SudokuBoard, type SudokuBoardAction, type SudokuLevel, type SudokuMode, type SudokuSettings } from './sudoku';
@@ -121,7 +121,9 @@ export default function SudokuGame({ framed = false }: { framed?: boolean } = {}
     window.addEventListener(GAME_FRAME_SETTINGS_EVENT, openSettings);
     window.addEventListener(GAME_FRAME_HELP_EVENT, openHelp);
     window.addEventListener(GAME_FRAME_HELP_READY_EVENT, setHelpWhenReady);
+    const stopListening = announceFrameListening('sudoku');
     return () => {
+      stopListening();
       window.removeEventListener(GAME_FRAME_SETTINGS_EVENT, openSettings);
       window.removeEventListener(GAME_FRAME_HELP_EVENT, openHelp);
       window.removeEventListener(GAME_FRAME_HELP_READY_EVENT, setHelpWhenReady);
@@ -421,7 +423,6 @@ export default function SudokuGame({ framed = false }: { framed?: boolean } = {}
           </> : <p>this browser won't keep stats (private browsing or blocked site data), so your sudoku times and streaks can't be shown.</p>}
         </div>}
       </div>
-      <GameHelpCard help={help} name={gameName('triage')} />
       <div className="sudoku-board-scroll" role="region" aria-label="sudoku grid scroll area" tabIndex={0}>
         <div className={`sudoku-board${paused ? ' is-paused' : ''}`} role="grid" aria-label="sudoku grid" aria-rowcount={9} aria-colcount={9}>
         {Array.from({ length: 9 }, (_, row) => <div key={row} className="sudoku-row" role="row">

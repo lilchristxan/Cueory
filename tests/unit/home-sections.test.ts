@@ -111,13 +111,13 @@ describe('home lower sections', () => {
   });
 
   it('uses the approved day and evening photos and places the value points above the stage', () => {
-    const source = readFileSync(new URL('../../src/components/HomeStage.astro', import.meta.url), 'utf8');
+    const source = readFileSync(new URL('../../src/components/HomeHero.astro', import.meta.url), 'utf8');
     for (const mode of ['light', 'evening']) {
       const filename = '/design/home-v3/stage-' + mode + '.webp';
       expect(source).toContain(filename);
       expect(existsSync(new URL('../../public' + filename, import.meta.url))).toBe(true);
     }
-    const positions = ['stage-copy', 'hero-heading', 'stage-actions', 'stage-points', 'stage-scene', 'stage-halo', 'hero-support'].map(selector => source.indexOf(selector));
+    const positions = ['class="stage-copy"', 'id="hero-heading"', 'class="stage-actions"', 'class="stage-points"', 'class="stage-scene"', 'class="stage-halo"', 'data-testid="hero-support"'].map(selector => source.indexOf(selector));
     expect(positions.every(index => index >= 0)).toBe(true);
     expect(positions).toEqual([...positions].sort((a, b) => a - b));
     expect(source).toContain('prefers-reduced-motion: no-preference');
@@ -137,7 +137,7 @@ describe('home lower sections', () => {
     expect(heroStartHref({ WORKERS_CI: '1', WORKERS_CI_BRANCH: 'task-p5/home-hero' })).toBe('/learn/study-skills');
     expect(heroStartHref({ CUEORY_ANATOMY_DRAFTS: '1' })).toBe('/learn/study-skills');
     // The hero asks the guard; it never decides on its own.
-    const source = readFileSync(new URL('../../src/components/HomeStage.astro', import.meta.url), 'utf8');
+    const source = readFileSync(new URL('../../src/components/HomeHero.astro', import.meta.url), 'utf8');
     expect(source).toContain('heroStartHref()');
     expect(source).toMatch(/startHref \? \(/);
   });

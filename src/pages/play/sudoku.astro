@@ -2,11 +2,11 @@
 import Layout from '../../layouts/Layout.astro';
 import GamePage from '../../components/GamePage.astro';
 import SudokuGame from '../../islands/SudokuGame';
-import { dailyGames } from '../../config/games';
+import { dailyGames, gamePagesBareHeader } from '../../config/games';
 
 const game = dailyGames.find((item) => item.id === 'triage')!;
 ---
-<Layout title={game.name} description={game.line} socialImage="/share/games-scene.png">
+<Layout title={game.name} description={game.line} socialImage="/share/games-scene.png" bareHeader={gamePagesBareHeader}>
 <GamePage game={game} framed>
   <label slot="controls" class="sr-only" for="game-frame-sudoku-difficulty">difficulty</label>
   <select slot="controls" id="game-frame-sudoku-difficulty" data-testid="game-frame-sudoku-difficulty" aria-label="difficulty" class="game-frame-select">
