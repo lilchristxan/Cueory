@@ -47,7 +47,8 @@ const shown = socials.filter((social) => social.href);
 
 <style>
   .social-section {
-    margin-block: calc(var(--spacing) * 10) calc(var(--spacing) * 2);
+    /* The board's space: 40 px above the row at every size, none below (the footer links bring their own). */
+    margin-block: calc(var(--spacing) * 10) 0;
   }
 
   .social-row {
@@ -107,10 +108,6 @@ const shown = socials.filter((social) => social.href);
 
   /* Phone landscape (844 × 390): a little smaller and closer, as on the board. */
   @media (orientation: landscape) and (max-height: 32em) {
-    .social-section {
-      margin-block-start: calc(var(--spacing) * 6);
-    }
-
     .social-row {
       gap: calc(var(--spacing) * 1.5);
     }

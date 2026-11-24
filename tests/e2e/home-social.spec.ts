@@ -69,6 +69,15 @@ test.describe('layout', () => {
     });
   }
 
+  for (const [name, size] of Object.entries(sizes)) {
+    test(`${name}: 40 px above the row and none below, as on the board`, async ({ page }) => {
+      await open(page, size);
+      const section = page.locator('[data-social-section]');
+      await expect(section).toHaveCSS('margin-top', '40px');
+      await expect(section).toHaveCSS('margin-bottom', '0px');
+    });
+  }
+
   test('each mark opens its profile from site.ts in a new tab, safely, and says so', async ({ page }) => {
     await open(page, sizes.desktop);
     for (const social of shown) {

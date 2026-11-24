@@ -1,2 +1,2 @@
-status: Home v3 social section built as a standalone component with a preview page (/preview/home-social) and its own tests; it replaces the home page's social row when the Home v3 page lands. In review.
+status: Home v3 social section (board spacing: 40 px above, none below) built as a standalone component with a preview page (/preview/home-social) and its own tests; it replaces the home page's social row when the Home v3 page lands. In review.
 decision: D-pending: the new-tab arrow stays after each mark (repo rule for links that open a new tab), which the board does not show; profile addresses are the ones already confirmed in src/config/site.ts (D-65).
