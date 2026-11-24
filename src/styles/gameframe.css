@@ -697,7 +697,7 @@
   font-family: var(--font-body);
   font-weight: 500;
   font-size: var(--game-deck-name-size);
-  line-height: 1;
+  line-height: 1.5;
   white-space: nowrap;
 }
 .game-deck-name {
@@ -710,7 +710,7 @@
   font-family: var(--font-body);
   font-weight: 500;
   font-size: var(--game-deck-name-mid-size);
-  line-height: 1;
+  line-height: 1.5;
   text-align: center;
   white-space: nowrap;
 }
@@ -794,7 +794,13 @@
     flex: 1 1 0;
     min-inline-size: 0;
     inline-size: auto;
-    block-size: calc(var(--game-frame-btn-size) * 2);
+    block-size: auto;
+  }
+  .game-deck-card {
+    display: grid;
+    align-items: center;
+    block-size: 100%;
+    min-block-size: calc(var(--game-frame-btn-size) * 2);
   }
   .game-deck-item:hover .game-deck-card,
   .game-deck-card:focus-visible {
@@ -807,8 +813,7 @@
     display: none;
   }
   .game-deck-name {
-    inset-block-start: 0;
-    inset-block-end: 0;
+    position: static;
     translate: none;
     align-items: center;
     padding-inline: var(--spacing);
