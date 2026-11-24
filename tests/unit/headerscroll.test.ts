@@ -70,8 +70,8 @@ describe('header scroll decisions', () => {
 
 describe('header integration guard', () => {
   const component = readFileSync(new URL('../../src/components/SiteHeader.astro', import.meta.url), 'utf8');
-  it('keeps the home board header in flow and the ordinary header sticky', () => {
-    expect(component).toContain("overlay ? 'home-board-header relative' : 'sticky top-0 site-header-sticky'");
+  it('keeps the home board header an overlay and the ordinary header sticky', () => {
+    expect(component).toContain("overlay ? 'home-board-header absolute inset-x-0 top-0' : 'sticky top-0 site-header-sticky'");
     expect(component).toContain("data-scroll-header={overlay ? undefined : ''}");
   });
 
