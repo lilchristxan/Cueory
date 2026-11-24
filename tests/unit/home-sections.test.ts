@@ -98,10 +98,10 @@ describe('home lower sections', () => {
     expect((hero.match(/<ul\b[^>]*aria-label="what you get"[\s\S]*?<\/ul>/)?.[0].match(/<li\b/g) ?? []).length).toBe(3);
     expect(plain(hero)).toContain('structured learning');
     expect(plain(hero)).toContain('multiple ways to study');
-    // Explore tiles: only places that exist today; "resources" waits until that page is live.
+    // Explore dock tiles (Home v3): five places that exist today, resources included.
     const explore = hero.match(/<nav\b[^>]*aria-labelledby="explore-heading"[\s\S]*?<\/nav>/)?.[0] ?? '';
-    expect(links(explore)).toEqual(['/learn', '#ways-to-study', '/play', '/message']);
-    expect(plain(explore)).not.toMatch(/resources/i);
+    expect(links(explore)).toEqual(['/learn', '#ways-to-study', '/play', '/resources', '/message']);
+    expect(plain(explore)).toMatch(/resources/i);
     for (const href of ['/learn', '/play', '/message']) expect(existsSync(new URL('../../dist' + href + '.html', import.meta.url)) || existsSync(new URL('../../dist' + href + '/index.html', import.meta.url))).toBe(true);
     // Ko-fi card: the supporting-our-mission page, opened in a new tab and said so to screen readers.
     const support = hero.match(/<a\b(?=[^>]*data-testid="hero-support")[^>]*>[\s\S]*?<\/a>/)?.[0] ?? '';
@@ -171,5 +171,17 @@ describe('home lower sections', () => {
     // Accounts open: the link creates the free account either way.
     expect(showsHeroJoin(true, '', '')).toBe(true);
     expect(showsHeroJoin(true, form, landing)).toBe(true);
+  });
+
+  it('lays the explore dock out as five tiles: a row from the tablet width, 3 + 2 with the bottom two centred on phones', () => {
+    const source = readFileSync(new URL('../../src/components/ExploreDock.astro', import.meta.url), 'utf8');
+    expect((source.match(/testid: 'explore-/g) ?? []).length).toBe(5);
+    expect(source).toContain('justify-content: center');
+    expect(source).toContain('--explore-tile-basis-min');
+    expect(source).toContain('--explore-landscape-width');
+    expect(source).toContain('EXPLORE');
+    expect(source).toContain('grid-template-columns: repeat(5, minmax(0, 1fr))');
+    expect(source).toContain('/design/home-v3/icon-games.webp');
+    expect(existsSync(new URL('../../public/design/home-v3/icon-games.webp', import.meta.url))).toBe(true);
   });
 });
