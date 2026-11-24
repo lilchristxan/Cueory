@@ -753,7 +753,8 @@ test.describe('marketing look (D-41)', () => {
     await expect(page.getByTestId('hero-join')).toHaveCount(0);
     await expect(hero.getByTestId('hero-play')).toHaveCount(0);
     await expect(hero.locator('.glass-button')).toHaveCount(0);
-    await expect(hero.locator('.logo')).toHaveCount(2); // the emblem and the full logo; one shows per screen width
+    await expect(hero.locator('.logo')).toHaveCount(0);
+    await expect(page.locator('.home-board-header .logo')).toHaveCount(1);
     for (const element of [headline, button]) {
       const box = (await element.boundingBox())!;
       expect(box.y + box.height).toBeLessThanOrEqual(height);
@@ -788,22 +789,21 @@ test.describe('marketing look (D-41)', () => {
           .map((img) => ({ src: (img as HTMLImageElement).currentSrc, alt: img.getAttribute('alt') })),
       );
     await page.goto('/');
-    const hero = page.locator('.scene-hero');
+    const hero = page.locator('.home-board-header .home-brand');
     await openFooterLinks(page);
     await page.getByRole('radio', { name: 'Light' }).check();
     // The home hero draws its own logo beside the menu button (P5): the full logo from 640 px wide, the emblem on phones.
     const heroWide = page.viewportSize()!.width >= 640;
     const heroFile = (palette: 'light' | 'dark') =>
-      new RegExp(`\\/brand\\/v1\\/${heroWide ? 'logo-full' : 'emblem'}-${palette}-\\d+\\.png$`);
+      new RegExp(`\\/brand\\/v1\\/logo-full-${palette}-\\d+\\.png$`);
     let images = await shown(hero);
     expect(images).toHaveLength(1);
     expect(images[0]!.src).toMatch(heroFile('light'));
     expect(images[0]!.alt).toBe('');
     expect(await hero.locator('.logo img').first().evaluate((img) => (img as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
-    if (heroWide) {
-      const width = (await hero.locator('.logo:visible').boundingBox())!.width;
-      expect(width).toBeGreaterThanOrEqual(239);
-    }
+    const width = (await hero.locator('.logo:visible').boundingBox())!.width;
+    const font = await page.locator('html').evaluate(el => parseFloat(getComputedStyle(el).fontSize));
+    expect(width).toBeCloseTo(font * (heroWide ? 10.25 : 7.5), 0);
 
     await page.getByRole('radio', { name: 'Dark' }).check();
     images = await shown(hero);

@@ -1118,3 +1118,7 @@
     --stage-tip-offset: translateX(-50%);
   }
 }
+
+/* Official full logo at the 52 px desktop and 38 px phone heights in the Home v3 boards. */
+.home-board-header { --home-header-brand-width: 10.25rem; }
+@media (width < 40rem) { .home-board-header { --home-header-brand-width: 7.5rem; } }

@@ -20,7 +20,7 @@ test('/: the hero logo row downloads only the logo it shows', async ({ page }) =
   page.on('request', (req) => requestedUrls.add(req.url()));
 
   await page.goto('/', { waitUntil: 'load' });
-  const row = page.locator('.scene-hero .logo').first().locator('xpath=..');
+  const row = page.locator('.home-board-header .home-brand');
   const shown = row.locator('.logo img').filter({ visible: true });
   await expect(shown).toHaveCount(1);
   await expect.poll(() => shown.evaluate((img) => (img as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
@@ -42,7 +42,7 @@ test('/: the hero logo row downloads only the logo it shows', async ({ page }) =
       });
   });
 
-  // Phones hide both full-logo copies; wider screens hide the other palette's copy.
+  // All sizes show a full wordmark and hide the unused palette.
   expect(hiddenFull.length).toBeGreaterThan(0);
   for (const img of hiddenFull) {
     const started = isDownloadStarted(img, requestedUrls);
