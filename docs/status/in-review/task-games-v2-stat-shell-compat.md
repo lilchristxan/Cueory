@@ -1,0 +1,1 @@
+status: in review. The playable /play/stat bookmark now uses the same header-free layout as /play/tachyyy. In WebKit desktop, staging run 45313134420 found the site header covering two focused controls on the retained route. The closed production route keeps its coming-soon layout.
