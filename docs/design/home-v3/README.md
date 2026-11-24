@@ -9,7 +9,7 @@ built"). These files are the hand-off for building it. The canvas stays the sour
 | --- | --- |
 | `home-light-1440.webp`, `home-evening-1440.webp` | Full-page pictures of the approved Light and Evening boards at 1440 px wide. Build to match these. |
 | `home-light.dc.html`, `home-evening.dc.html` | The board sources. Read them for exact sizes, spacing, gradients, the halo animation and the vial layout script. They are design files, not page code: rebuild with our components, tokens and layout. |
-| `home-phone-*.webp` | Phone boards (390 × 844). Claude adds these next; until they land, phone layouts stack the desktop sections in one column. |
+| `home-phone-light-390.webp`, `home-phone-evening-390.webp`, `home-phone-*.dc.html` | Phone boards at 390 wide. The header gets a menu button, with search and sign in as icons; the hero puts the button and points above the stage; the explore dock uses 3 + 2 tiles; game cards swipe; the vial platter shows the front vial plus one each side (D-192), with the arrows under the platter. |
 | `/public/design/home-v3/stage-light.webp`, `stage-evening.webp` | Hero background photo (glove characters on the round pedestal inside the glowing ring), 2880 × 1607. |
 | `/public/design/home-v3/silk-band.svg`, `pip-vialo.svg`, `pip-piccline.svg`, `icon-games.webp` | Small pieces the boards use. |
 | `/public/vials/v2/vial-*.webp` | Rebuilt study-method vials, 912 px wide (clean outlines, curved label edges). They replace `/public/vials/*.webp` once the new carousel ships. The method name, table and logo stay live text and official logo artwork laid over the blank label, as today. |
