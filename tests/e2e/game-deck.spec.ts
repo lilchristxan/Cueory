@@ -271,9 +271,9 @@ test.describe('card deck at 1440 x 900', () => {
   }
 
   for (const width of [1120, 1280, 1440]) {
-    test(`at ${width} px the cards at rest cover no part of vialo, sudoku or piccline and never scroll sideways`, async ({ page }) => {
+    test(`at ${width} px the cards at rest cover no part of vialo, sudoku, piccline or word path and never scroll sideways`, async ({ page }) => {
       await page.setViewportSize({ width, height: 900 });
-      for (const path of ['/play/vialo', '/play/sudoku', '/play/piccline']) {
+      for (const path of ['/play/vialo', '/play/sudoku', '/play/piccline', '/play/word-path']) {
         await page.goto(path);
         await expect(page.locator('.game-deck-item').first()).toBeVisible();
         expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth), `${path} at ${width}`).toBeLessThanOrEqual(0);
