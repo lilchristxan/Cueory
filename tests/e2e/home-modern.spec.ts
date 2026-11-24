@@ -129,6 +129,16 @@ for (const size of [
       expect(Math.abs(gap - overlap)).toBeLessThanOrEqual(2);
     });
 
+    test('keeps the Ko-fi pill above the dock (not covered by the overlap)', async ({ page }) => {
+      await page.goto('/');
+      const clear = await page.evaluate(() => {
+        const tip = document.querySelector('.stage-tip')!.getBoundingClientRect();
+        const dock = document.querySelector('nav[aria-labelledby="explore-heading"]')!.getBoundingClientRect();
+        return { tipBottom: tip.bottom, dockTop: dock.top, sameColumn: tip.right > dock.left && tip.left < dock.right };
+      });
+      if (clear.sameColumn) expect(clear.tipBottom).toBeLessThanOrEqual(clear.dockTop);
+    });
+
     test('has accessible sections and comfortable hero-link targets', async ({ page }) => {
       await page.goto('/');
       const results = await new AxeBuilder({ page })
@@ -163,6 +173,16 @@ test.describe('home hero in landscape on a phone', () => {
     }
     const ours = seen.filter((id) => id === 'hero-start' || id === 'hero-support' || id === 'explore-lessons');
     expect(ours).toEqual(['hero-start', 'hero-support', 'explore-lessons']);
+  });
+
+  test('keeps the explore dock a normal block under the points, with no overlap (docs/design/home-v3 landscape board)', async ({ page }) => {
+    await page.goto('/');
+    const gap = await page.evaluate(() => {
+      const points = document.querySelector('.stage-points')!.getBoundingClientRect();
+      const dock = document.querySelector('nav[aria-labelledby="explore-heading"]')!.getBoundingClientRect();
+      return dock.top - points.bottom;
+    });
+    expect(gap).toBeGreaterThanOrEqual(0);
   });
 });
 

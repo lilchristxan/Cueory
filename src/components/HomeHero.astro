@@ -12,7 +12,7 @@ const points = [
 ---
 
 <section
-  class="scene scene-hero relative overflow-hidden pb-section"
+  class="scene scene-hero relative overflow-hidden"
   aria-labelledby="hero-heading"
 >
   <div class="relative mx-auto w-full pt-(--hero-top-clear)">
@@ -65,12 +65,12 @@ const points = [
 .hero-eyebrow, .stage-actions, .stage-points, .stage-points li, .stage-tip { display: flex; align-items: center; justify-content: center; }
 .hero-eyebrow { font-size: var(--stage-eyebrow-size); gap: var(--stage-eyebrow-gap); font-family: var(--font-body); font-style: normal; color: var(--color-ink-soft); }
 .hero-eyebrow::before, .hero-eyebrow::after { content: ''; inline-size: var(--stage-eyebrow-rule); border-top: var(--stage-hairline) solid var(--color-line); }
-h1 { margin: var(--stage-heading-gap) auto 0; max-width: var(--stage-heading-width); font-size: var(--stage-heading-size); font-weight: 700; line-height: 1.08; }
+h1 { margin: var(--stage-heading-gap) auto 0; max-width: var(--stage-heading-width); font-size: var(--stage-heading-size); font-weight: var(--stage-heading-weight); line-height: var(--stage-heading-leading); }
 .stage-word { position: relative; display: inline-block; }
 .home-stage .hero-accent { color: var(--stage-accent-ink); background: none; -webkit-text-fill-color: currentColor; -webkit-text-stroke-width: var(--stage-accent-stroke); animation: none; }
 .stage-underline { position: absolute; inset: auto -2% -.14em; width: 104%; height: .22em; color: var(--color-copper-deep); }
 .stage-actions { gap: calc(2 * var(--spacing)); flex-wrap: wrap; margin: var(--stage-action-margin); }
-.stage-points { gap: .6em 1em; flex-wrap: wrap; color: var(--color-ink-soft); font-size: var(--stage-points-size); max-width: var(--stage-points-width); margin: var(--stage-points-margin); }
+.stage-points { gap: var(--stage-points-row-gap) 1em; flex-wrap: wrap; color: var(--color-ink-soft); font-size: var(--stage-points-size); max-width: var(--stage-points-width); margin: var(--stage-points-margin); }
 .stage-points li { gap: var(--stage-icon-gap); }
 .stage-points svg { width: 1.1em; height: 1.1em; }
 .stage-scene { position: relative; width: var(--stage-width); margin: var(--stage-margin); height: var(--stage-height); }
@@ -86,8 +86,14 @@ h1 { margin: var(--stage-heading-gap) auto 0; max-width: var(--stage-heading-wid
 @keyframes stage-orbit { to { transform: rotate(1turn); } }
 .stage-tip { position: absolute; top: var(--stage-tip-top); bottom: var(--stage-tip-bottom); left: var(--stage-tip-left); transform: var(--stage-tip-offset); gap: var(--stage-point-row-gap); font-size: var(--text-sm); min-height: var(--tap-min); padding: var(--stage-tip-padding); border: var(--stage-hairline) solid var(--color-line); border-radius: 100vw; color: var(--color-ink); background-color: var(--color-page); text-decoration: none; }
 .stage-tip svg { width: var(--stage-tip-icon); }
-.stage-tip span { line-height: inherit; text-align: start; }
-.stage-tip strong { display: block; }
+.stage-tip span { line-height: var(--stage-tip-leading); text-align: start; font-size: var(--stage-tip-small); }
+.stage-tip strong { display: block; font-size: var(--stage-tip-name); }
+.stage-actions .copper-button { font-size: var(--stage-button-size); line-height: var(--stage-button-leading); padding: var(--stage-button-padding); }
+.scene-hero { padding-block-end: var(--stage-bottom-gap); }
+/* The strip under the dock is the gap to the next section, so that section does not add its own top padding on top of it. */
+:global(.scene-hero + .scene-play.scene) { padding-block-start: var(--stage-next-top-pad); }
+:global(.scene-hero + .scene-play .games-container) { padding-block-start: 0; }
+:global(.scene-hero + .scene-play.scene) { --scene-fade-top: var(--stage-bottom-gap); }
 /* The header lies over the top of the page. When the "continue studying" strip is there it sits below the header and the
    hero then starts right under it, so the header never covers the strip. */
 :global(main aside[aria-label="continue studying"]) { margin-top: var(--hero-top-clear); }
