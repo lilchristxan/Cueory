@@ -2615,6 +2615,87 @@ html:has(dialog.mode-preview[open]) {
 }
 
 /*
+  .theme-slider / .theme-slider-option: a three-position slider (light, dark, device), used by the game settings panel and
+  any other place that offers the site theme. A pill track of three equal columns; each .theme-slider-option wraps a
+  visually hidden <input type="radio"> covering its whole segment, so arrow keys, Tab, Space and taps all work with no
+  script. The thumb is the track's ::before; :has(:checked) puts it under the chosen segment, so it needs no script either.
+  The chosen segment is also bold, so the pick is never color alone. The slide is the only transition and is removed
+  under reduced motion. Logic and labels: src/islands/sitetheme.ts.
+*/
+@layer components {
+  .theme-slider {
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    inline-size: 100%;
+    max-inline-size: 100%;
+    padding: var(--theme-slider-inset);
+    border: 1px solid var(--color-control);
+    border-radius: var(--radius-pill);
+    background-color: var(--color-surface);
+  }
+
+  .theme-slider::before {
+    content: "";
+    position: absolute;
+    inset-block: var(--theme-slider-inset);
+    inset-inline-start: var(--theme-slider-inset);
+    inline-size: calc((100% - 2 * var(--theme-slider-inset)) / 3);
+    border-radius: var(--radius-pill);
+    background-color: var(--color-ink);
+    transition: transform var(--duration-base) var(--ease-soft);
+  }
+
+  .theme-slider:has(.theme-slider-option:nth-child(2) :checked)::before { transform: translateX(100%); }
+  .theme-slider:has(.theme-slider-option:nth-child(3) :checked)::before { transform: translateX(200%); }
+
+  .theme-slider-option {
+    position: relative;
+    display: flex;
+    min-block-size: var(--tap-min);
+    min-inline-size: 0;
+    align-items: center;
+    justify-content: center;
+    padding-inline: var(--theme-slider-pad-x);
+    border-radius: var(--radius-pill);
+    color: var(--color-ink-soft);
+    font-size: var(--text-sm);
+    text-align: center;
+    overflow-wrap: anywhere;
+    cursor: pointer;
+    user-select: none;
+    /* The label color switches at once; only the thumb moves. */
+    transition: none;
+  }
+
+  .theme-slider-option > span { position: relative; pointer-events: none; }
+
+  .theme-slider-option input {
+    position: absolute;
+    inset: 0;
+    inline-size: 100%;
+    block-size: 100%;
+    margin: 0;
+    opacity: 0;
+    cursor: pointer;
+  }
+
+  .theme-slider-option:has(:checked) {
+    color: var(--color-on-button);
+    font-weight: 700;
+  }
+
+  .theme-slider-option:has(:focus-visible) {
+    outline: var(--focus-width) solid var(--color-focus);
+    outline-offset: var(--focus-offset);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .theme-slider::before { transition: none; }
+  }
+}
+
+/*
   Cross-document view transitions: a short fade between pages. Reduced-motion
   users get none (the @starting-style / overlay approach is modern but safe —
   browsers that don't support @view-transition ignore this block entirely).

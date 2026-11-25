@@ -1,0 +1,2 @@
+status: in review: the game settings panel's theme choice is one three-position slider (light, dark, device) instead of three rows; reusable .theme-slider classes ready for the footer.
+decision: D-pending · The theme choice is a segmented slider built from three real radio inputs (arrow keys, one Tab stop, taps), so it needs no script of its own; the footer adopts it in a separate needs-christian PR.
