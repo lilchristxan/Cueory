@@ -220,3 +220,29 @@ describe('W08-2: paused displays across all difficulty levels', () => {
     expect(emptyIndices.every((index) => sudokuCellPresentation(entries, puzzle, marks, index, false).value === 9)).toBe(true);
   });
 });
+
+describe('placedDigits', () => {
+  const grid = (count: Record<number, number>) => {
+    const entries = Array<number>(81).fill(0);
+    let at = 0;
+    for (const [digit, times] of Object.entries(count)) for (let i = 0; i < times; i++) entries[at++] = Number(digit);
+    return entries;
+  };
+  it('lists only digits that appear nine times', async () => {
+    const { placedDigits } = await import('../../src/islands/sudoku');
+    expect([...placedDigits(grid({ 7: 9, 3: 8, 1: 9 }))].sort()).toEqual([1, 7]);
+    expect(placedDigits(Array<number>(81).fill(0)).size).toBe(0);
+  });
+  it('counts wrong entries, goes back when one is erased, and ignores empty squares', async () => {
+    const { placedDigits } = await import('../../src/islands/sudoku');
+    const full = grid({ 5: 9 });
+    expect(placedDigits(full).has(5)).toBe(true);
+    full[0] = 0;
+    expect(placedDigits(full).has(5)).toBe(false);
+  });
+  it('treats more than nine as done and ignores junk values', async () => {
+    const { placedDigits } = await import('../../src/islands/sudoku');
+    expect(placedDigits(grid({ 2: 10 })).has(2)).toBe(true);
+    expect(placedDigits([0, 10, -1, 1.5, 12]).size).toBe(0);
+  });
+});

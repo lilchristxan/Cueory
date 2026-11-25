@@ -69,10 +69,10 @@ function VialoLegend() {
       {(['here', 'elsewhere', 'absent'] as const).map((mark) => (
         <li key={mark} className="vialo-legend-row">
           <span className={`vialo-pill vialo-${mark}`} aria-hidden="true">
-            <span className="vialo-mark">{MARK_SYMBOL[mark]}</span>
+            a
           </span>
           <span>
-            {MARK_SYMBOL[mark]} {mark === 'here' ? 'in its place' : mark === 'elsewhere' ? 'in the word, somewhere else' : 'not in the word'}
+            {mark === 'here' ? 'in its place' : mark === 'elsewhere' ? 'in the word, somewhere else' : 'not in the word'}
           </span>
         </li>
       ))}
@@ -120,8 +120,7 @@ function Pocket({ letter, mark, typed, next }: { letter?: string; mark?: Mark; t
   return (
     <span className="vialo-pocket">
       <span className={`vialo-pill${kind}`}>
-        {letter && <span className="vialo-letter">{letter.toUpperCase()}</span>}
-        {mark && <span className="vialo-mark">{MARK_SYMBOL[mark]}</span>}
+        {letter && <span className="vialo-letter">{letter}</span>}
       </span>
     </span>
   );

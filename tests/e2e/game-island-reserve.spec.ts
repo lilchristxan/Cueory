@@ -1,4 +1,7 @@
 import { expect, test } from '@playwright/test';
+import { markGameRulesSeen } from './clock';
+
+test.beforeEach(async ({ page }) => { await markGameRulesSeen(page); });
 
 /**
  * Performance (2026-11-19, rewritten for the Games v2 frame 2026-11-23): each game renders in the browser. The frame

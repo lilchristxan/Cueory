@@ -1,4 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
+import { markGameRulesSeen } from './clock';
+
+test.beforeEach(async ({ page }) => { await markGameRulesSeen(page); });
 
 // Finished-game cards and their share actions for all four daily games, at 320px wide with 32px root text, in Light
 // and Evening. Each card mirrors the shape its game sends (src/islands/PulseGame.tsx, CuewordGame.tsx, SuturePathBoard.tsx

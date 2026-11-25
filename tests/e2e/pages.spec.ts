@@ -5,6 +5,9 @@ import { accountLaunch, accountsOpen, newsletter, showsHeroJoin, socials } from 
 import { REST_MS } from '../../src/scripts/carousel';
 import { isDesktopOfEachEngine, sizeOf } from './projects';
 import { lessonRoutes } from '../lessonroutes';
+import { markGameRulesSeen } from './clock';
+
+test.beforeEach(async ({ page }) => { await markGameRulesSeen(page); });
 
 // The once-only promo panel (D-59) slides down after 5 seconds and takes keyboard focus, and the launch-updates pop-up
 // (lane 14) opens as a modal after 10, either of which would interrupt these tests part-way, so every page here starts

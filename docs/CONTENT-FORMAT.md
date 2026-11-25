@@ -190,6 +190,12 @@ File: `content/breaks/ideas.json`
 
 This file is imported directly by `src/pages/breaks.astro`, rather than through the Astro collection map. It contains `sample: true` and an `ideas` array. Every idea has a unique lowercase id and non-empty text.
 
+## Message gloves
+
+File: `content/gloves/messages.json`
+
+This file is imported directly by `src/pages/gloves/messages.json.ts` (which publishes the small list the pop-up fetches), rather than through the Astro collection map. It contains `status: "approved"` (Christian's own handwriting, approved as public text) and a `messages` array. Every entry has `id` (`msg-001`, in order), `file` (`msg-001.webp`, a photo in `public/gloves/messages/`), `text` (the handwritten words exactly as written, 1 to 100 characters, without "break idea" and without the little drawings), `ornament` (`heart`, `sparkle`, `smile`, `drop`, `note`, `leaf`, `sun`, `wave`, `swirl`, `sprout` or `null`), `colour` (`periwinkle`, `pink`, `sky blue` or `cream`), and the photo's `width` and `height`. The text is the photo's alt text, so keep it exact. `src/content/glove-messages.ts` checks the file at build time and `tests/unit/glove-messages.test.ts` checks it in tests. The photos are made by `scripts/process-glove-messages.py` (see `public/gloves/README.txt`).
+
 ## Review batches
 
 `content/batches/` is reserved for local review batches and is ignored by git. Its CSV format, answer-key boundary, reviewer files, and checker commands are documented in `docs/BATCHES.md`. Do not place batch files in a pull request or put answer keys and reviewer results in the public repository.
