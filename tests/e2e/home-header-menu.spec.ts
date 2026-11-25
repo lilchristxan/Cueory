@@ -68,10 +68,14 @@ test('the menu button opens the side bar, which dims and locks the page, and Esc
   await expect(open).toHaveAttribute('aria-expanded', 'true');
   await expect(bar.getByRole('button', { name: 'close site menu' })).toBeFocused();
   const nav = bar.getByRole('navigation', { name: 'site' });
-  for (const [name, href] of [['study', '/courses'], ['games', '/play'], ['support', '/support'], ['about us', '/about'], ['contact us', '/message']] as const) {
+  // Revised 2026-11-24: study, anatomy lab (drafts builds), games, support, about; the rest moved to the about page.
+  const rows = await nav.getByRole('link').allInnerTexts();
+  expect(rows.map((row) => row.trim())).toEqual(['study', 'anatomy lab', 'games', 'support', 'about']);
+  for (const [name, href] of [['study', '/courses'], ['games', '/play'], ['support', '/support'], ['about', '/about']] as const) {
     await expect(nav.getByRole('link', { name, exact: true })).toHaveAttribute('href', href);
   }
-  await expect(nav.getByRole('heading', { name: 'about' })).toBeVisible();
+  await expect(nav.getByRole('heading')).toHaveCount(0);
+  await expect(bar.getByRole('link', { name: 'contact us' })).toHaveCount(0);
   // The page behind cannot scroll while the bar is open.
   expect(await page.evaluate(() => getComputedStyle(document.documentElement).overflow)).toBe('hidden');
   await page.keyboard.press('Escape');
@@ -79,6 +83,27 @@ test('the menu button opens the side bar, which dims and locks the page, and Esc
   await expect(open).toBeFocused();
   await expect(open).toHaveAttribute('aria-expanded', 'false');
   expect(await page.evaluate(() => getComputedStyle(document.documentElement).overflow)).not.toBe('hidden');
+});
+
+test('the social icons stay pinned at the bottom edge of the side bar, below the rows and the search', async ({ page }) => {
+  await menuButton(page).click();
+  const bar = page.getByTestId('site-menu');
+  await expect(bar).toBeVisible();
+  const socials = bar.locator('.menu-panel-socials');
+  await expect(socials.locator('[data-social]').first()).toBeInViewport();
+  const { socialsBottom, barBottom, searchBottom, socialsTop, viewport } = await page.evaluate(() => {
+    const rect = (selector: string) => document.querySelector(selector)!.getBoundingClientRect();
+    return {
+      socialsBottom: rect('.menu-panel-socials').bottom,
+      socialsTop: rect('.menu-panel-socials').top,
+      barBottom: rect('#site-menu').bottom,
+      searchBottom: rect('[data-site-search]').bottom,
+      viewport: window.innerHeight,
+    };
+  });
+  expect(socialsBottom).toBeLessThanOrEqual(viewport + 0.5);
+  expect(Math.abs(socialsBottom - barBottom)).toBeLessThanOrEqual(1);
+  expect(searchBottom).toBeLessThanOrEqual(socialsTop + 0.5);
 });
 
 test('a click anywhere on the dimmed page, or the close button, closes the side bar', async ({ page }) => {

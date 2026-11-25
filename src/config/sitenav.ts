@@ -39,20 +39,29 @@ export interface DrawerLink {
 }
 
 /**
- * The main rows of the side bar, as on Christian's boards (2026-11-24). The anatomy lab shows only in builds that may
- * show drafts; it links to its preview page there.
+ * The rows of the side bar, as on Christian's boards (2026-11-24, revised the same day): study, anatomy lab, games,
+ * support and about. The anatomy lab shows only in builds that may show drafts; it links to its preview page there.
+ * Every other page the bar used to list sits on the about page instead (`aboutPageLinks`).
  */
 export const drawerPrimaryLinks: readonly DrawerLink[] = [
   { href: '/courses', label: 'study' },
   { href: '/preview/anatomy-lab', label: 'anatomy lab', draft: true },
   { href: '/play', label: 'games' },
   { href: '/support', label: 'support' },
+  { href: '/about', label: 'about' },
 ];
 
-/** The rows under the "about" label, before the privacy, terms and disclaimer row. */
-export const drawerAboutLinks: readonly DrawerLink[] = [
-  { href: '/about', label: 'about us' },
+/**
+ * The links section of the about page. "how to use cueory" is a draft page, so it is linked only in builds that may show
+ * drafts (never on the live site); the legal pages follow the footer's approval rule (#747, via `visibleFooterLinks`).
+ * "my progress" is here because the side bar no longer lists it and nothing else on the site links to it plainly.
+ */
+export const aboutPageLinks: readonly DrawerLink[] = [
   { href: '/resources', label: 'how to use cueory', draft: true },
   { href: '/coming-soon', label: 'coming soon + mailing list' },
   { href: '/message', label: 'contact us' },
+  { href: '/progress', label: 'my progress' },
+  { href: '/privacy', label: 'privacy' },
+  { href: '/terms', label: 'terms' },
+  { href: '/disclaimer', label: 'disclaimer' },
 ];

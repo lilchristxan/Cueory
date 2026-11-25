@@ -83,8 +83,8 @@ it.runIf(closed)('a drafts-closed build has no link or data-href to any held les
 });
 
 // Menu, mode previews and the library all use the same gate.
-it('the menu, mode previews and library read the same draft gate', () => {
-  for (const path of ['src/components/SiteMenu.astro', 'src/components/VialPlatter.astro', 'src/pages/learn/index.astro']) {
+it('the mode previews and library read the same draft gate (the side bar no longer lists the sample lesson)', () => {
+  for (const path of ['src/components/VialPlatter.astro', 'src/pages/learn/index.astro']) {
     expect(readFileSync(new URL(`../../${path}`, import.meta.url), 'utf8'), path).toMatch(/sampleLessonShown\(\)/);
   }
 });

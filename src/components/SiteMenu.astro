@@ -5,12 +5,9 @@
  * dimmed page; focus then returns to ☰. With reduced motion it simply appears. Without JavaScript the button stays
  * hidden (its space is kept, so nothing moves) and the footer links still work.
  */
-import { menuLinks, menuSmallLinks } from '../config/site';
-import { visibleFooterLinks } from '../config/legalfooter';
-import { drawerAboutLinks, drawerPrimaryLinks, visibleAboutLinks } from '../config/sitenav';
+import { drawerPrimaryLinks } from '../config/sitenav';
 import SocialLinks from './SocialLinks.astro';
-import { currentHref, type MenuEntry } from '../scripts/menu';
-import { SAMPLE_LESSON_HREF, sampleLessonShown } from '../lessons/draftgate';
+import { currentHref } from '../scripts/menu';
 import { draftsAllowed } from '../islands/anatomylab';
 
 interface Props {
@@ -25,27 +22,10 @@ const drafts = draftsAllowed({
   WORKERS_CI_BRANCH: process.env.WORKERS_CI_BRANCH,
   CUEORY_ANATOMY_DRAFTS: process.env.CUEORY_ANATOMY_DRAFTS,
 });
-// The live build holds the sample lesson back, so the bar doesn't link to it there.
-const sampleShown = sampleLessonShown();
-const mainLinks = menuLinks.filter((link) => sampleShown || link.href !== SAMPLE_LESSON_HREF);
 const primary = drawerPrimaryLinks.filter((link) => link.draft !== true || drafts);
-const about = drawerAboutLinks.filter((link) => link.draft !== true || drafts);
-// #747: a legal page that isn't approved yet gets no menu link either (Privacy always shows).
-const legalHrefs = new Set([...visibleFooterLinks(menuSmallLinks), ...visibleAboutLinks()].map((link) => link.href));
-const legal = ['/privacy', '/terms', '/disclaimer']
-  .filter((href) => legalHrefs.has(href))
-  .map((href) => ({ href, label: href.slice(1) }));
-// Every other link the old panel had stays: the ones the four main rows do not already reach.
-const shownHrefs = new Set(primary.map((link) => link.href));
-const more: readonly MenuEntry[] = mainLinks.filter((link) => !shownHrefs.has(link.href));
 const current = currentHref(
   Astro.url.pathname,
-  [
-    ...primary.map((link) => link.href),
-    ...about.map((link) => link.href),
-    ...legal.map((link) => link.href),
-    ...more.map((link) => link.href),
-  ],
+  primary.map((link) => link.href),
 );
 ---
 
@@ -64,6 +44,7 @@ const current = currentHref(
 
 <dialog id="site-menu" class="menu-panel" aria-label="site menu" data-testid="site-menu">
   <div class="menu-panel-inner">
+   <div class="menu-panel-scroll">
     <div class="mb-2.5 flex justify-start">
       <button type="button" class="corner-button corner-button-panel" aria-label="close site menu" data-menu-close>
         <svg viewBox="0 0 24 24" class="size-6" aria-hidden="true" focusable="false">
@@ -77,37 +58,6 @@ const current = currentHref(
         primary.map((link) => (
           <a href={link.href} class="drawer-row" aria-current={link.href === current ? 'page' : undefined}>
             {link.label}
-          </a>
-        ))
-      }
-      <h2 class="drawer-label">about</h2>
-      {
-        about.map((link) => (
-          <a href={link.href} class="drawer-row drawer-row-sub" aria-current={link.href === current ? 'page' : undefined}>
-            {link.label}
-          </a>
-        ))
-      }
-      {
-        legal.length > 0 && (
-          <p class="drawer-legal">
-            {legal.map((link, index) => (
-              <>
-                {index > 0 && <span aria-hidden="true">{index === legal.length - 1 ? ' + ' : ', '}</span>}
-                <a href={link.href} aria-current={link.href === current ? 'page' : undefined}>
-                  {link.label}
-                </a>
-              </>
-            ))}
-          </p>
-        )
-      }
-      <h2 class="drawer-label">more</h2>
-      {
-        more.map((link) => (
-          <a href={link.href} class="drawer-row drawer-row-sub" aria-current={link.href === current ? 'page' : undefined}>
-            {link.label}
-            {link.note && <span class="menu-note">{link.note}</span>}
           </a>
         ))
       }
@@ -139,7 +89,11 @@ const current = currentHref(
       </ul>
     </div>
 
-    <div class="mt-4 mb-4">
+   </div>
+
+    <!-- The social icons stay fixed at the bottom edge of the bar; only the rows above them scroll (on a short, wide screen
+         the whole bar scrolls instead, so the icons never cover a row). -->
+    <div class="menu-panel-socials">
       <SocialLinks panel />
     </div>
   </div>
