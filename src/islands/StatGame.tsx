@@ -263,21 +263,49 @@ export default function StatGame({ questions, sampleKey, game = 'stat' }: Props)
       </p>
 
       {phase === 'ready' && (
-        <div className="flex flex-col items-start gap-4">
-          <ul className="flex list-disc flex-col gap-2 ps-5 text-ink-soft">
-            <li>fifteen hard clinical questions, one at a time.</li>
-            <li>you have {STAT_SECONDS} seconds for each. pick an answer and press next, or the next question starts when the clock runs out.</li>
-            <li>you can change your pick until you press next. answers and your score stay hidden until the end.</li>
-            <li>there is no pause. keys: a to d to pick, enter for next.</li>
-          </ul>
-          <button type="button" className={primaryButton} onClick={begin} data-testid="stat-start">
+        <div className="mx-auto flex w-full max-w-xl flex-col gap-6" data-testid="stat-board">
+          <div className="flex items-center justify-center gap-6">
+            <Ring left={STAT_SECONDS} />
+            <ol className="flex flex-wrap items-center gap-2" aria-hidden="true" data-testid="stat-dots">
+              {Array.from({ length: STAT_QUESTIONS }, (_, i) => (
+                <li key={i} className="size-3 rounded-full border border-line" />
+              ))}
+            </ol>
+          </div>
+          <div className="grid">
+            <section className="[grid-area:1/1] flex flex-col gap-5 rounded-xl border border-line bg-page px-5 py-5" aria-labelledby="stat-rules-title" data-testid="stat-rules">
+              <h2 id="stat-rules-title" className="text-center text-xl font-normal">
+                ready when you are
+              </h2>
+              <ul className="flex list-disc flex-col gap-2 ps-5 text-ink-soft">
+                <li>fifteen hard clinical questions, one at a time.</li>
+                <li>you have {STAT_SECONDS} seconds for each. pick an answer and press next, or the next question starts when the clock runs out.</li>
+                <li>you can change your pick until you press next. answers and your score stay hidden until the end.</li>
+                <li>there is no pause. keys: a to d to pick, enter for next.</li>
+              </ul>
+            </section>
+            {/* An invisible copy of question 1 shares this cell, so the board is as tall now as it will be when the round
+                starts, and nothing moves. It is hidden from everyone: no focus, no reading. */}
+            <div className="invisible flex flex-col gap-5 [grid-area:1/1]" aria-hidden="true" inert>
+              <p className="wrap-anywhere text-center text-xl font-normal">{questions[0]?.stem}</p>
+              <div className="flex flex-col gap-3">
+                {questions[0]?.choices.map((choice) => (
+                  <div key={choice.id} className="flex min-h-14 w-full items-center gap-4 rounded-xl border px-4 py-2.5">
+                    <span className="size-9 shrink-0" />
+                    <span className="min-w-0 flex-1 wrap-anywhere">{choice.text}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+          <button type="button" className={`${primaryButton} w-full`} onClick={begin} data-testid="stat-start">
             start
           </button>
         </div>
       )}
 
       {phase === 'playing' && question && (
-        <div className="mx-auto flex w-full max-w-xl flex-col gap-6">
+        <div className="mx-auto flex w-full max-w-xl flex-col gap-6" data-testid="stat-board">
           <div className="flex items-center justify-center gap-6">
             <Ring left={left} />
             <p className="sr-only" data-testid="stat-progress">
