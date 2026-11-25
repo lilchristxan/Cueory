@@ -537,6 +537,8 @@
   --crossword-cell-mid: clamp(2.75rem, 7vw, 3.875rem);
   --crossword-cell-hard: var(--tap-min); /* large boards scroll inside their wrapper, keeping 44 px targets */
   --crossword-gap: 0.0625rem;
+  --crossword-cell-gap: 0.25rem;    /* space between squares, as drawn on the games-v2 crossword board */
+  --crossword-frame: 0.25rem;       /* the taupe frame round the squares */
   --crossword-line: 0.0625rem;
   --crossword-number: clamp(0.45rem, 1.5vw, 0.75rem);
   --crossword-letter: clamp(0.75rem, 3vw, 1.5rem);
