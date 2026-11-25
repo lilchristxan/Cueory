@@ -33,6 +33,20 @@ export function registerFrameHelpButton(gameName: string, button: HTMLButtonElem
   };
 }
 
+/**
+ * The game island and the Frame controls hydrate on their own clocks, and the game is the later one on most loads. An
+ * open request sent before the game listens would be lost, so the controls hold the latest one and send it again the
+ * moment the game says it is listening (it is never dropped, and never sent twice).
+ */
+export const GAME_FRAME_LISTENING_EVENT = 'cueory:game-frame-listening';
+const listeningGames = new Set<string>();
+
+export function announceFrameListening(gameName: string) {
+  listeningGames.add(gameName);
+  window.dispatchEvent(new CustomEvent(GAME_FRAME_LISTENING_EVENT, { detail: { gameName } }));
+  return () => { listeningGames.delete(gameName); };
+}
+
 /** The shared Frame owns the visible controls; the framed island retains its established dialog content and state. */
 export default function GameFrameControls({ gameName, steps, hasPillLegend = false, bridge = false, wide = false, children }: Props) {
   const gearRef = useRef<HTMLButtonElement>(null);
@@ -70,9 +84,25 @@ export default function GameFrameControls({ gameName, steps, hasPillLegend = fal
     };
   }, [bridge, helpOpen]);
 
+  const waiting = useRef<{ type: string; trigger: HTMLButtonElement } | null>(null);
+  useEffect(() => {
+    if (!bridge) return;
+    const replay = (event: Event) => {
+      const detail = (event as CustomEvent<{ gameName?: string }>).detail;
+      const held = waiting.current;
+      if (!held || detail?.gameName !== gameName) return;
+      waiting.current = null;
+      window.dispatchEvent(new CustomEvent(held.type, { detail: { gameName, trigger: held.trigger } }));
+    };
+    window.addEventListener(GAME_FRAME_LISTENING_EVENT, replay);
+    return () => window.removeEventListener(GAME_FRAME_LISTENING_EVENT, replay);
+  }, [bridge, gameName]);
+
   const open = (type: typeof GAME_FRAME_SETTINGS_EVENT | typeof GAME_FRAME_HELP_EVENT, trigger: HTMLButtonElement | null) => {
     if (bridge) {
-      if (trigger) window.dispatchEvent(new CustomEvent(type, { detail: { gameName, trigger } }));
+      if (!trigger) return;
+      if (!listeningGames.has(gameName)) { waiting.current = { type, trigger }; return; }
+      window.dispatchEvent(new CustomEvent(type, { detail: { gameName, trigger } }));
       return;
     }
     if (type === GAME_FRAME_SETTINGS_EVENT) setSettingsOpen(true);

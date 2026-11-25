@@ -18,6 +18,27 @@ function matchesGame(cardGameId: string, resultGame: string | undefined): boolea
   return resultGame === cardGameId;
 }
 
+/** Wraps a carousel position into 0..count-1 (the arrows, swipe and keyboard all go round and round). */
+export function wrapPosition(index: number, count: number): number {
+  if (count <= 0) return 0;
+  return ((Math.trunc(index) % count) + count) % count;
+}
+
+/** True when the row is too narrow for two whole cards, so the active card is centred (phones in portrait). */
+export function centresActiveCard(rowWidth: number, cardWidth: number, step: number): boolean {
+  return cardWidth > 0 && rowWidth < cardWidth + step;
+}
+
+/** The accessible name of a pager dot: its place in the row and the game it opens. */
+export function pagerDotLabel(game: string, index: number, count: number): string {
+  return `${game}, ${index + 1} of ${count}`;
+}
+
+/** Which dot is current: exactly one, and none when the position is out of range. */
+export function pagerCurrentFlags(count: number, activeIndex: number): boolean[] {
+  return Array.from({ length: Math.max(0, count) }, (_, idx) => idx === activeIndex);
+}
+
 export function hydrateGameStatuses(root: HTMLElement): void {
   try {
     const pad = (n: number) => String(n).padStart(2, '0');
@@ -73,6 +94,7 @@ export function initGamesCarousel(): void {
   const prevBtn = root.querySelector<HTMLButtonElement>('[data-games-prev]');
   const nextBtn = root.querySelector<HTMLButtonElement>('[data-games-next]');
   const cards = Array.from(root.querySelectorAll<HTMLAnchorElement>('[data-game-card]'));
+  const dots = Array.from(root.querySelectorAll<HTMLButtonElement>('[data-games-dot]'));
 
   if (!track || !car || cards.length === 0) return;
 
@@ -104,22 +126,37 @@ export function initGamesCarousel(): void {
   };
 
   const updatePosition = (newIndex: number) => {
-    activeIndex = ((newIndex % count) + count) % count;
+    activeIndex = wrapPosition(newIndex, count);
 
     cards.forEach((card, idx) => {
       card.classList.toggle('on', idx === activeIndex);
+    });
+    // The pager follows every way of moving (arrows, swipe, keyboard, focus and the dots themselves).
+    const flags = pagerCurrentFlags(dots.length, activeIndex);
+    dots.forEach((dot, idx) => {
+      if (flags[idx]) dot.setAttribute('aria-current', 'true');
+      else dot.removeAttribute('aria-current');
     });
 
     const step = getStep();
     const carWidth = car.clientWidth || 320;
     const totalScroll = track.scrollWidth || count * step;
     // scrollWidth is measured from the track's content edge while the viewport's clientWidth includes its
-    // horizontal padding. Account for the trailing padding so the final active card is not left clipped.
-    const paddingRight = parseFloat(getComputedStyle(car).paddingRight) || 0;
-    const maxScroll = Math.max(0, totalScroll - carWidth + paddingRight);
+    // horizontal padding. Account for the padding on both sides so the final card ends exactly at the row's padding.
+    const carStyle = getComputedStyle(car);
+    const paddingRight = parseFloat(carStyle.paddingRight) || 0;
+    const paddingLeftEdge = parseFloat(carStyle.paddingLeft) || 0;
+    const maxScroll = Math.max(0, totalScroll - carWidth + paddingRight + paddingLeftEdge);
 
     let offset = activeIndex * step;
+    // Where fewer than two whole cards fit (phones in portrait), the active card is centred with a peek of its
+    // neighbours on both sides, as on the board; the first and last cards stop at the row's ends.
+    if (centresActiveCard(carWidth, cards[0]?.offsetWidth ?? 0, step)) {
+      const paddingLeft = parseFloat(getComputedStyle(car).paddingLeft) || 0;
+      offset = activeIndex * step + paddingLeft - (carWidth - (cards[0]?.offsetWidth ?? 0)) / 2;
+    }
     if (offset > maxScroll) offset = maxScroll;
+    if (offset < 0) offset = 0;
 
     setState('turning');
     if (isReducedMotion()) {
@@ -150,6 +187,12 @@ export function initGamesCarousel(): void {
 
   nextBtn?.addEventListener('click', () => {
     updatePosition(activeIndex + 1);
+  });
+
+  dots.forEach((dot, idx) => {
+    dot.addEventListener('click', () => {
+      updatePosition(idx);
+    });
   });
 
   root.addEventListener('keydown', (e) => {

@@ -29,6 +29,16 @@ const tachyyyGame = {
   line: 'fifteen fast clinical questions in 30 seconds. how sharp are you on shift today?',
 } as const;
 
+// One pager dot per card, in card order; the name is read out with its place in the row.
+const pagerGames = [
+  gameName('vialo'),
+  tachyyyGame.name,
+  gameName('piccline'),
+  gameName('cueword'),
+  gameName('triage'),
+  helloCardsGame.name,
+];
+
 const helloEntries = await getCollection('hello-cards');
 const helloCardsAvailable = helloCardsPage(
   helloEntries.map(({ data }) => data),
@@ -37,7 +47,7 @@ const helloCardsAvailable = helloCardsPage(
 ).shown;
 ---
 
-<section id="daily-games" class="scene scene-play scroll-mt-section py-section" aria-labelledby="games-heading">
+<section id="daily-games" class="scene scene-play games-scene scroll-mt-section" aria-labelledby="games-heading">
   <div class="games-container games-stage" role="region" aria-roledescription="carousel" aria-label="daily games" data-games-carousel data-carousel-state="settled" data-testid="games-stage" data-reveal-section>
     <div class="games-header">
       <div class="games-nav-slot games-nav-prev">
@@ -264,6 +274,12 @@ const helloCardsAvailable = helloCardsPage(
       </div>
     </div>
 
+    <div class="games-pager" role="group" aria-label="choose a game">
+      {pagerGames.map((game, idx) => (
+        <button type="button" class="games-dot" data-games-dot aria-label={`${game}, ${idx + 1} of ${pagerGames.length}`} aria-current={idx === 0 ? 'true' : undefined}></button>
+      ))}
+    </div>
+
     <p class="games-date-note" data-testid="daily-games-day" data-daily-games-date aria-live="polite" aria-atomic="true">
       the date changes at midnight on your device. some sample puzzles repeat.
     </p>
@@ -293,11 +309,24 @@ const helloCardsAvailable = helloCardsPage(
     flex-direction: column;
     gap: var(--game-container-gap);
     width: 100%;
+    /* The final board keeps the heading row and the cards inside one 1280 px column (arrows at its two ends); the box
+       includes the stage's side padding, so that is added to the width. */
+    max-width: calc(var(--game-section-max-width) + 2 * var(--game-stage-inline));
+    margin-inline: auto;
+  }
+
+  /* Home v3 board: almost no space above the heading (the hero's own bottom padding is the gap); below, as tall as the next scene's fade (D-53). */
+  .games-scene {
+    padding-block: var(--game-section-top) var(--game-section-bottom);
+    /* The vial platter's silk fades in over the last 72 px of this section (D-53: nothing but empty space and the dots
+       there, since the boards leave only 24 px under the dots). Standing above it keeps the dots drawn in full ink
+       instead of washed out by that fade. */
+    z-index: 1;
   }
 
   .games-stage {
+    position: relative;
     padding: var(--game-stage-padding);
-    background: var(--color-silk-base);
     color: var(--color-ink);
   }
 
@@ -349,6 +378,17 @@ const helloCardsAvailable = helloCardsPage(
     background: var(--game-nav-bg-hover);
   }
 
+  /* The final board draws these as the same copper-glow discs as the vial shelf's arrows. */
+  .gs-nav {
+    border-color: var(--cueory-copper-start);
+    background: var(--cueory-copper-glow);
+    color: var(--cueory-copper-ink);
+  }
+
+  .gs-nav:hover {
+    background: var(--cueory-copper-shine);
+  }
+
   .gs-nav:focus-visible {
     outline: var(--game-nav-outline-width) solid var(--color-copper-deep);
     outline-offset: var(--game-nav-outline-offset);
@@ -378,8 +418,27 @@ const helloCardsAvailable = helloCardsPage(
     min-width: 0;
   }
 
+  /*
+    The boards draw nothing under the dots: no "today's set" line and no "play today's" button. Both stay in the page for
+    screen readers and the keyboard (the line is read out as the day changes; the button is the first thing the Tab key
+    reveals after the dots, drawn over the dots' row while it has focus), but take no room in the row.
+  */
+  .games-date-note {
+    position: absolute;
+    inline-size: var(--border-hairline);
+    block-size: var(--border-hairline);
+    margin: calc(-1 * var(--border-hairline));
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
   .games-stage-action {
-    align-self: center;
+    position: absolute;
+    inset-block-end: 0;
+    inset-inline: 0;
+    inline-size: max-content;
+    max-inline-size: 100%;
     display: inline-flex;
     min-height: var(--tap-min);
     align-items: center;
@@ -389,9 +448,16 @@ const helloCardsAvailable = helloCardsPage(
     padding-inline: calc(var(--spacing) * 6);
     border: var(--border-hairline) solid var(--color-ink);
     border-radius: var(--radius-pill);
+    background: var(--color-page);
     color: var(--color-ink);
     font-weight: 700;
     text-decoration: none;
+    z-index: 2;
+    clip-path: inset(50%);
+  }
+
+  .games-stage-action:focus-visible {
+    clip-path: none;
   }
 
   .games-stage-action:focus-visible {
@@ -416,8 +482,64 @@ const helloCardsAvailable = helloCardsPage(
     }
   }
 
+  /* Dot pager (Christian, 23 Nov): one dot per position, 8 px dots, the current one a 26 x 8 px pill. Each dot is a real
+     button whose whole 44 x 44 box takes the tap; the dot itself is drawn inside it by ::after. The boxes sit side by
+     side with a hair of space (never overlapping, never clipped), and the row wraps instead of scrolling sideways at large text. */
+  .games-pager {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    column-gap: var(--game-pager-gap);
+    /* The board puts the dots 18 px under the cards' shadow room, with the 8 px dot (not its 44 px box) at that spot. */
+    margin-block: var(--game-pager-pull) var(--game-pager-pull-end);
+  }
+
+  @media (orientation: landscape) and (max-height: 32em) {
+    .games-pager {
+      margin-block-start: var(--game-pager-pull-landscape);
+    }
+  }
+
+  .games-dot {
+    position: relative;
+    flex: none;
+    inline-size: var(--tap-min);
+    block-size: var(--tap-min);
+    padding: 0;
+    border: 0;
+    background: none;
+    cursor: pointer;
+  }
+
+  .games-dot::after {
+    content: '';
+    position: absolute;
+    inset-block-start: 50%;
+    inset-inline-start: 50%;
+    inline-size: var(--game-pager-dot);
+    block-size: var(--game-pager-dot);
+    border-radius: var(--radius-pill);
+    background-color: var(--color-line);
+    transform: translate(-50%, -50%);
+  }
+
+  .games-dot[aria-current='true']::after {
+    inline-size: var(--game-pager-pill);
+    background-color: var(--color-ink);
+  }
+
+  /* Keyboard focus: a round ring just inside the whole 44 px box, so nothing clips it. */
+  .games-dot:focus-visible {
+    border-radius: var(--radius-pill);
+    outline: var(--focus-width) solid var(--color-copper-deep);
+    outline-offset: calc(-1 * var(--focus-width));
+  }
+
   .games-date-note {
-    margin: var(--game-date-note-margin-top) 0 0;
+    margin: 0;
     text-align: center;
     font-family: var(--font-body);
     font-size: var(--text-sm);
@@ -429,6 +551,7 @@ const helloCardsAvailable = helloCardsPage(
   .gcar {
     overflow: hidden;
     padding: var(--game-car-padding);
+    margin-block-end: var(--game-car-shadow-pull);
     touch-action: pan-y;
     max-width: 100%;
   }
@@ -600,6 +723,7 @@ const helloCardsAvailable = helloCardsPage(
     gap: var(--game-status-gap);
     font-family: var(--font-body);
     font-size: var(--game-status-size);
+    line-height: var(--game-status-line-height);
     padding: var(--game-status-padding);
     border-radius: var(--radius-pill);
     border: var(--border-hairline) solid var(--game-status-border);
@@ -608,25 +732,108 @@ const helloCardsAvailable = helloCardsPage(
     transition: opacity 0.25s ease;
   }
 
-  .gstatus-sym {
+  /* :global because the status script rewrites this span at run time (it carries no scope attribute then). */
+  .gstatus :global(.gstatus-sym) {
     font-family: var(--font-body);
-    font-weight: 700;
+    margin-inline-end: var(--game-status-sym-gap);
+  }
+
+  /*
+    Phones (Home v3 board, 390): the arrows flank the heading as on desktop (44 px discs at the two edges), the line sits
+    under the heading in the middle column, and the cards run edge to edge so the next card peeks in at the right.
+  */
+  @media (max-width: 47.99em) {
+    /* The section rises 10 px. Keep its track on whole pixels during the reveal so a
+       card retains both of its edges while scrolling on a phone. */
+    .games-stage[data-reveal="shown"] {
+      transition-timing-function: ease-out, steps(10, end);
+    }
+
+    .games-scene {
+      padding-block-end: var(--game-section-bottom-phone);
+    }
+
+    .games-stage {
+      padding: var(--game-stage-padding-phone);
+    }
+
+    .games-header {
+      grid-template-columns: var(--game-nav-size-phone) minmax(0, 1fr) var(--game-nav-size-phone);
+      grid-template-areas:
+        "prev heading next"
+        ". subtitle .";
+      gap: var(--game-header-gap-phone);
+    }
+
+    .games-heading {
+      font-size: var(--game-heading-size-phone);
+    }
+
+    .games-subtitle {
+      margin: var(--game-subtitle-margin-top-phone) 0 0;
+      font-size: var(--game-subtitle-size-phone);
+    }
+
+    .gcar {
+      padding: var(--game-car-padding-phone);
+      margin-inline: calc(-1 * var(--game-stage-inline-phone));
+      margin-block-end: var(--game-car-shadow-pull-phone);
+      max-width: none;
+    }
+
+    .games-nav-prev {
+      justify-self: start;
+    }
+
+    .games-nav-next {
+      justify-self: end;
+    }
+
+    .games-nav-slot .gs-nav {
+      width: var(--game-nav-size-phone);
+      height: var(--game-nav-size-phone);
+      min-width: var(--game-nav-size-phone);
+      min-height: var(--game-nav-size-phone);
+    }
+
+    /* The "play today's" pill may wrap instead of pushing the page sideways at very large text. */
+    .games-stage-action {
+      min-width: 0;
+      padding-block: calc(var(--spacing) * 2);
+      padding-inline: calc(var(--spacing) * 3);
+      flex-wrap: wrap;
+      text-align: center;
+    }
+
+    /* Body text on a phone is at least 16 px. */
+    .games-date-note {
+      font-size: var(--text-base);
+      line-height: var(--text-base--line-height);
+    }
   }
 
   /* At enlarged text on a phone, the rem-sized playing card must contract to the carousel viewport. Keep the
    * decorative offscreen track clipped, but never clip the active card's name, description or status. */
   @media (max-width: 40em) {
+    .gtrack {
+      gap: var(--game-track-gap-phone);
+    }
+
     .gcard {
-      width: clamp(var(--game-card-phone-min-width), calc(100% - var(--game-card-phone-inline-inset)), var(--game-card-width));
+      /* At enlarged text the rem-sized card contracts to the row, so it never spills past the screen. */
+      width: min(var(--game-card-phone-width), 100%);
       height: auto;
-      min-height: var(--game-card-phone-min-height);
+      min-height: var(--game-card-phone-height);
       aspect-ratio: auto;
+      scroll-snap-align: center;
     }
 
     .gface {
-      width: calc(100% - (2 * var(--game-card-padding)));
+      /* The board's 204 px face (a 172 px wordmark and line), narrower only when enlarged text shrinks the card. */
+      width: min(var(--game-face-width), calc(100% - (2 * var(--game-card-padding))));
       height: auto;
-      min-height: 0;
+      /* The desktop face's height, so the name, line and status sit where they do on desktop (status at the foot). */
+      min-height: var(--game-face-height);
       min-width: 0;
     }
 
@@ -976,6 +1183,123 @@ const helloCardsAvailable = helloCardsPage(
   .d-252 { animation-delay: 2.52s; }
   .d-270 { animation-delay: 2.7s; }
   .d-300 { animation-delay: 3s; }
+
+  /*
+    Phone landscape (844 x 390, Christian's final board): four 186 x 260 cards across, and everything inside a card stays
+    inside its edges: the face is the card's inner size, wordmark images are at most 132 x 46 px, text wordmarks are 30 px,
+    pips are 30 px inset 10 px, and the status pill sits left of the bottom-right pip, never under it.
+  */
+  @media (orientation: landscape) and (max-height: 32em) {
+    .games-scene {
+      padding-block-end: var(--game-section-bottom-landscape);
+    }
+
+    .games-stage {
+      padding: var(--game-stage-padding-landscape);
+    }
+
+    .games-container {
+      gap: var(--game-container-gap-landscape);
+    }
+
+    .games-header {
+      grid-template-columns: var(--game-nav-size-landscape) minmax(0, 1fr) var(--game-nav-size-landscape);
+      grid-template-areas:
+        "prev heading next"
+        ". subtitle .";
+      gap: var(--game-header-gap);
+    }
+
+    .games-heading {
+      font-size: var(--game-heading-size-landscape);
+    }
+
+    .games-subtitle {
+      margin: var(--game-subtitle-margin-top-landscape) 0 0;
+      font-size: var(--game-subtitle-size-landscape);
+    }
+
+    .games-nav-slot .gs-nav {
+      width: var(--game-nav-size-landscape);
+      height: var(--game-nav-size-landscape);
+      min-width: var(--game-nav-size-landscape);
+      min-height: var(--game-nav-size-landscape);
+    }
+
+    /* Four cards sit centred in the row; the clip's side padding is whatever the row has left over. */
+    .gcar {
+      padding: var(--game-car-padding-landscape);
+      padding-inline: max(var(--game-car-landscape-min-inset), calc((100% - (4 * var(--game-card-landscape-width)) - (3 * var(--game-track-gap-landscape))) / 2));
+      margin-block-end: var(--game-car-shadow-pull-landscape);
+    }
+
+    .gtrack {
+      gap: var(--game-track-gap-landscape);
+    }
+
+    .gcard {
+      width: var(--game-card-landscape-width);
+      height: var(--game-card-landscape-height);
+      min-height: 0;
+      padding: var(--game-card-landscape-padding);
+    }
+
+    /* The board's landscape face: it fills the card, the wordmark row sits 46 px under the card's top and the status
+       pill stands level with the bottom-right pip (see .gstatus below). */
+    .gface {
+      width: 100%;
+      height: 100%;
+      min-height: 0;
+      min-width: 0;
+      grid-template-rows: var(--game-face-landscape-header-height) auto 1fr;
+      row-gap: 0;
+      padding: var(--game-face-landscape-padding);
+    }
+
+    .gname {
+      height: var(--game-face-landscape-header-height);
+      min-width: 0;
+    }
+
+    .gname img {
+      max-width: var(--game-wordmark-landscape-max-width);
+      max-height: var(--game-wordmark-landscape-max-height);
+    }
+
+    .gname span {
+      font-size: var(--game-serif-name-landscape-size);
+    }
+
+    .gdesc {
+      font-size: var(--game-desc-landscape-size);
+    }
+
+    .gstatus {
+      align-self: end;
+      justify-self: start;
+      font-size: var(--game-status-landscape-size);
+      margin-block-end: var(--game-status-landscape-drop);
+      max-width: calc(100% - var(--game-pip-landscape-size) - var(--game-pip-landscape-inset));
+    }
+
+    .gpip {
+      width: var(--game-pip-landscape-size);
+      height: var(--game-pip-landscape-size);
+      --game-pip-xgrid-size: var(--game-pip-landscape-xcell);
+      --game-pip-sudoku-size: var(--game-pip-landscape-glyph);
+      --game-pip-hello-size: var(--game-pip-landscape-glyph);
+    }
+
+    .gpip.tl {
+      top: var(--game-pip-landscape-inset);
+      left: var(--game-pip-landscape-inset);
+    }
+
+    .gpip.br {
+      bottom: var(--game-pip-landscape-inset);
+      right: var(--game-pip-landscape-inset);
+    }
+  }
 
   /* Reduced Motion */
   @media (prefers-reduced-motion: reduce) {

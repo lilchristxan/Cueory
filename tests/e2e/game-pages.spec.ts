@@ -53,7 +53,8 @@ for (const game of games) {
       const settings = game.framed ? page.getByTestId('game-frame-gear') : page.getByTestId('game-settings-button');
       test.skip(game.name === 'crossword' && await settings.count() === 0, 'crossword controls are not rendered in this build');
       await expect(settings).toBeVisible();
-      await expect(game.framed ? page.getByTestId('game-frame-stats') : page.getByTestId('game-stats')).toBeVisible();
+      // Every game page shows its four stats in the frame's left panel; the full stats panel is on the games hub.
+      await expect(page.getByTestId('game-frame-stats')).toBeVisible();
       // The share tags stay those of the game, so a shared result still previews as before.
       await expect(page).toHaveTitle(new RegExp(`^${game.name}`));
       expect(await page.locator('meta[property="og:image"]').getAttribute('content')).toBe('https://cueory.app/share/games-scene.png');
@@ -96,8 +97,8 @@ for (const game of games) {
 
 test('a finished vialo on its own page opens the result dialog and keeps stats only for vialo', async ({ page }) => {
   await page.goto('/play/vialo');
-  // Stats are always kept (2026-11-17): there is no switch to turn on.
-  await expect(page.getByTestId('game-stats').getByRole('switch')).toHaveCount(0);
+  // Stats are always kept (2026-11-17): there is no switch to turn on, and a game page has no full stats panel (Games v2).
+  await expect(page.getByTestId('game-stats')).toHaveCount(0);
   const field = page.getByLabel('your guess', { exact: true });
   await field.fill('grace');
   await field.press('Enter');
@@ -106,7 +107,10 @@ test('a finished vialo on its own page opens the result dialog and keeps stats o
   await expect(page.getByTestId('vialo-result')).toContainText('solved.');
   const kept = JSON.parse((await page.evaluate(() => localStorage.getItem('cueory-game-stats')))!);
   expect(kept.results).toContainEqual(expect.objectContaining({ game: 'vialo', day: '2026-11-01', solved: true, tries: 1 }));
-  await expect(page.getByTestId('game-stats').getByRole('heading', { level: 3 })).toHaveText(['vialo']);
+  // Only vialo has a result; the hub's panel lists the others as not played.
+  expect(kept.results.filter((result: { game: string }) => result.game !== 'vialo')).toEqual([]);
+  await page.goto('/play');
+  await expect(page.getByTestId('game-stats').getByRole('listitem').filter({ has: page.getByRole('heading', { name: 'vialo', exact: true }) })).toContainText('played 1 day, solved 1.');
 });
 
 for (const game of [

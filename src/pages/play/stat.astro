@@ -9,7 +9,7 @@ import Layout from '../../layouts/Layout.astro';
 import GameFrame from '../../components/GameFrame.astro';
 import StatGame from '../../islands/StatGame';
 import GameResultsHost from '../../islands/GameResultsHost';
-import { statGame } from '../../config/games';
+import { gamePagesBareHeader, statGame } from '../../config/games';
 import { draftsAllowed } from '../../islands/anatomylab';
 import { parseStatSample } from '../../islands/stat';
 import sample from '../../../content/games/stat/sample.json';
@@ -27,7 +27,8 @@ const { questions, sampleKey } = shown ? parsed : { questions: [], sampleKey: {}
 ---
 
 {shown ? (
-<Layout title={statGame.name} description="fifteen hard clinical questions, 20 seconds each. your score shows at the end." noindex promo={false}>
+<Layout title={statGame.name} description="fifteen hard clinical questions, 20 seconds each. your score shows at the end." noindex promo={false} bareHeader={gamePagesBareHeader}>
+  <div data-game-page="stat">
     <GameFrame game="stat">
       <article class="mx-auto max-w-prose w-full" data-pagefind-ignore>
         {shown && <p class="text-sm text-ink-soft" data-testid="stat-sample-note">sample questions · awaiting content</p>}
@@ -49,6 +50,7 @@ const { questions, sampleKey } = shown ? parsed : { questions: [], sampleKey: {}
         </a>
       </article>
     </GameFrame>
+  </div>
 
   {shown && <GameResultsHost client:only="react" />}
   {shown && <noscript><p>game results and sharing need JavaScript.</p></noscript>}

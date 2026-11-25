@@ -1,0 +1,2 @@
+status: Home v3 coming-soon section (id signup, board heading size and spacing) built as a standalone component with a preview page (/preview/home-coming-soon) and its own tests; it replaces the home SignupForm when the Home v3 page lands. In review.
+decision: D-pending: the board's heading sizes now have their own tokens (30 px wide, 28 px phone, 24 px sideways) and the panel uses the shared frosted-panel token instead of the board's custom gradient; the small print about Kit and the privacy page stays under the form, as on the live signup card.

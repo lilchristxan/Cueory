@@ -87,12 +87,15 @@ const initialJsBudget = {
   'preview/anatomy-text.html': 89104,
   'preview/anatomy-lab.html': 89027,
   'preview/body-viewer.html': 151504,
+  'preview/home-coming-soon.html': 88021,
   'preview/concept-map.html': 91589,
   'preview/email.html': 146752,
   'preview/prose.html': 146752,
+  'preview/vial-platter.html': 90952,
   'preview/reminders.html': 148152,
   'preview/rewards.html': 89731,
   'preview/share.html': 151522,
+  'preview/home-social.html': 88021,
   'preview/states.html': 146752,
   'preview/survey.html': 90800,
   'privacy.html': 148122,
@@ -287,7 +290,7 @@ describe.skipIf(!existsSync(dist))('built site', () => {
       expect(html, `${page}: canonical`).toContain(`rel="canonical" href="https://cueory.app/`);
       expect(meta(html, 'og:title'), `${page}: og:title`).toBe(title);
       expect(meta(html, 'og:description'), `${page}: og:description`).toBe(description);
-      const gameImage = page === 'play.html' || /^play\/(pillo|crossword|word-path|sudoku)\.html$/.test(page);
+      const gameImage = page === 'play.html' || /^play\/(pillo|vialo|piccline|crossword|word-path|sudoku)\.html$/.test(page);
       const expectedOgImage = gameImage ? 'https://cueory.app/share/games-scene.png' : 'https://cueory.app/share/study-ivory.png';
       expect(meta(html, 'og:image'), `${page}: og:image`).toBe(expectedOgImage);
       expect(existsSync(join(dist, gameImage ? 'share/games-scene.png' : 'share/study-ivory.png')), `${page}: og:image file`).toBe(true);
@@ -346,11 +349,24 @@ describe.skipIf(!existsSync(dist))('built site', () => {
     }
   });
 
-  it.runIf(site.showBuildingNotice).each(pages.map((p) => [p.replace(dist, '')]))(
+  // Game pages (the Games v2 frame, Christian 2026-11-23) have no building strip and no site menu bar; every other page keeps the strip.
+  const isGamePage = (page: string) => readFileSync(join(dist, page), 'utf8').includes('data-game-page=');
+  it.runIf(site.showBuildingNotice).each(pages.map((p) => [p.replace(dist, '')]).filter(([p]) => !isGamePage(p!)))(
     '%s shows the building notice',
     (page) => {
       const html = readFileSync(join(dist, page), 'utf8');
-      expect(html).toContain("we're still building. more coming soon.");
+      expect(html).toContain("we&#39;re still building. please ");
+      expect(html).toContain(' our development. more coming soon!');
+    },
+  );
+
+  it.each(pages.map((p) => [p.replace(dist, '')]).filter(([p]) => isGamePage(p!)))(
+    '%s (a game page) has no building strip and no site menu bar',
+    (page) => {
+      const html = readFileSync(join(dist, page), 'utf8');
+      expect(html).not.toContain("we&#39;re still building. please ");
+      expect(html).not.toContain('<header');
+      expect(html).toContain('skip to content');
     },
   );
 
@@ -408,19 +424,26 @@ describe.skipIf(!existsSync(dist))('built site', () => {
 
   it('home page: "video" comes first, "learn" is Learn mode, and modes not built yet say coming soon (D-43, D-50, D-60)', () => {
     const html = readFileSync(join(dist, 'index.html'), 'utf8');
-    const card = (id: string) => {
-      const match = new RegExp(`<div[^>]*id="mode-${id}"[\\s\\S]*?<h3[^>]*>([^<]+)</h3>[\\s\\S]*?(?:href="([^"]+)"|coming soon)`).exec(html);
-      expect(match, `card ${id}`).not.toBeNull();
-      return { name: match![1]!.trim(), href: match![2] };
+    // Home v3: the study methods are the vial platter's buttons (data-platter-vial, data-name, data-href).
+    const vials = [...html.matchAll(/<button\b(?=[^>]*\bdata-platter-vial\b)[^>]*>/g)].map((m) => ({
+      name: /\bdata-name="([^"]*)"/.exec(m[0])?.[1],
+      href: /\bdata-href="([^"]*)"/.exec(m[0])?.[1],
+    }));
+    const card = (name: string) => {
+      const found = vials.find((vial) => vial.name === name);
+      expect(found, `vial ${name}`).toBeDefined();
+      return found!;
     };
     // The live (drafts-closed) build holds the sample lesson back, so its vials say coming soon instead of linking to it.
     const sampleHref = (mode: string) => (draftsAllowed(draftBuildEnv(process.env)) ? `/learn/study-skills/${mode}` : undefined);
+    expect(vials).toHaveLength(11);
+    expect(vials[0]!.name).toBe('video');
     expect(card('video')).toEqual({ name: 'video', href: undefined });
     expect(card('learn')).toEqual({ name: 'learn', href: sampleHref('learn-mode') });
     expect(card('fill-in')).toEqual({ name: 'fill-in', href: sampleHref('fill-in') });
     expect(card('questions')).toEqual({ name: 'questions', href: sampleHref('questions') });
     expect(card('review')).toEqual({ name: 'review', href: undefined });
-    expect(card('level-test')).toEqual({ name: 'level test', href: undefined });
+    expect(card('level test')).toEqual({ name: 'level test', href: undefined });
     expect(html).not.toContain('id="mode-lesson"');
   });
 

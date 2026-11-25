@@ -23,6 +23,8 @@ interface Props {
   variant?: 'default' | 'study' | 'home';
   /** Keep this page out of search engines. */
   noindex?: boolean;
+  /** Site path of the page this one duplicates (a retained legacy route); the canonical link points there. Default: this page. */
+  canonicalTo?: string;
   /**
    * The once-only promo panel (D-59). Marketing pages show it unless they turn it off (the signup thank-you page does,
    * because its visitor has just joined); study screens never do.
@@ -42,15 +44,22 @@ interface Props {
    * flag button stay signed out and never load the Supabase client.
    */
   accountsOff?: boolean;
+  /**
+   * Leaves out the "still building" strip and the site menu bar, so a full-page game board (the Games v2 frame) owns
+   * the top of the screen. One switch for every game page: src/components/GamePage.astro passes it. Off by default.
+   */
+  bareHeader?: boolean;
+  /** The page lays out its own full width (the /play hub, option B): no page-width cap or side padding on <main>. */
+  wide?: boolean;
 }
 
-const { title, description = site.description, variant = 'default', noindex = false, promo = true, flagItem, hideFlag = false, socialImage: socialImagePath = '/share/study-ivory.png', accountsOff = false } = Astro.props;
+const { title, description = site.description, variant = 'default', noindex = false, canonicalTo, promo = true, flagItem, hideFlag = false, socialImage: socialImagePath = '/share/study-ivory.png', accountsOff = false, bareHeader = false, wide = false } = Astro.props;
 // Browser-tab titles use the lowercase brand voice: "privacy · cueory" (D-47).
 const fullTitle = title === site.name || title === site.wordmarkName ? site.wordmarkName : `${title} · ${site.wordmarkName}`;
 // Astro's static file build may expose /index.html or /privacy.html as the pathname.
 // Canonical URLs must match the public extensionless routes served by Workers.
 const canonicalPath = (Astro.url.pathname.replace(/\/index\.html$/, '') || '/').replace(/\.html$/, '');
-const canonical = new URL(canonicalPath, site.url).href;
+const canonical = new URL(canonicalTo ?? canonicalPath, site.url).href;
 const socialImage = new URL(socialImagePath, site.url).href;
 // The share card's size, type and words for link previews. Only our own cards in public/share/ are allowed, so an
 // unknown image fails the build instead of shipping a preview without a size or a text alternative.
@@ -118,10 +127,10 @@ const searchTitle = isHome ? 'home' : title;
     >
       skip to content
     </a>
-    <BuildingNotice />
+    {!bareHeader && <BuildingNotice />}
     {
-      isHome ? (
-        <div class="relative z-20 h-0">
+      bareHeader ? null : isHome ? (
+        <div class="home-header-wrap relative z-20 h-0">
           <SiteHeader overlay accountsOff={accountsOff} />
         </div>
       ) : (
@@ -134,7 +143,7 @@ const searchTitle = isHome ? 'home' : title;
     -->
     <main
       id="main"
-      class:list={['w-full flex-1', !isHome && 'mx-auto max-w-page px-gutter']}
+      class:list={['w-full flex-1', !isHome && !bareHeader && !wide && 'mx-auto max-w-page px-gutter']}
       data-pagefind-body={noindex ? undefined : ''}
       data-pagefind-meta={noindex ? undefined : `title:${searchTitle}`}
     >

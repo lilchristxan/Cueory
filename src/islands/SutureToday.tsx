@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import SutureGame from './SutureGame';
 import SuturePathBoard from './SuturePathBoard';
 import type { SuturePuzzle } from './suture';
-import { isPathPuzzle, type WordPathPuzzle } from './suturepath';
+import { boardPuzzles, isPathPuzzle, type WordPathPuzzle } from './suturepath';
 import { dayNumber, puzzleForDay } from './pulse';
 
 interface Props {
@@ -10,6 +10,8 @@ interface Props {
   puzzles: WordPathPuzzle[];
   /** The game's name as the page shows it, from src/config/games.ts (D-66). */
   name: string;
+  /** The daily piccline plays board-format puzzles only; the legacy /play/word-path route keeps the older word search. */
+  boardOnly?: boolean;
 }
 
 /**
@@ -17,9 +19,9 @@ interface Props {
  * games, and hands it to the board. Rendered only in the browser (client:only), so "today" is the visitor's day.
  * A board-format puzzle (#722, "format": "path") gets the path board; an older word search keeps its own game.
  */
-export default function SutureToday({ puzzles, name }: Props) {
+export default function SutureToday({ puzzles, name, boardOnly = false }: Props) {
   // /play hands over each sample's theme or clue itself, so nothing more is looked up here.
-  const puzzle = useMemo(() => puzzleForDay(puzzles, dayNumber(new Date())), [puzzles]);
+  const puzzle = useMemo(() => puzzleForDay(boardOnly ? boardPuzzles(puzzles) : puzzles, dayNumber(new Date())), [puzzles, boardOnly]);
   if (!puzzle) return <p>no puzzle today.</p>;
   if (isPathPuzzle(puzzle)) return <SuturePathBoard puzzle={puzzle} name={name} />;
   return <SutureGame puzzle={puzzle as SuturePuzzle} name={name} />;

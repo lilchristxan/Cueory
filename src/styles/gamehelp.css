@@ -61,27 +61,11 @@
     overflow-wrap: anywhere;
   }
 
-  .game-help-first {
-    margin-block: calc(var(--spacing) * 4);
-    padding: calc(var(--spacing) * 5);
-    border: var(--border-game-settings) solid var(--color-line);
-    border-radius: var(--radius-lg);
-    background: var(--color-page);
-    color: var(--color-ink);
-    text-align: start;
-    overflow-wrap: anywhere;
-  }
-
   .game-help-subheading {
     margin-block-start: calc(var(--spacing) * 5);
     font-size: var(--text-lg);
     line-height: var(--text-lg--line-height);
     font-weight: 600;
-  }
-
-  .game-help-first .game-help-subheading {
-    margin-block-start: 0;
-    text-align: center;
   }
 
   .game-help-line {
@@ -148,12 +132,5 @@
 
   .game-help-action:hover {
     background: var(--color-surface);
-  }
-}
-
-/* The rules card is for the screen; a printed puzzle stays the puzzle. */
-@media print {
-  .game-help-first {
-    display: none !important;
   }
 }

@@ -1,0 +1,1 @@
+status: Home v3 games row: matches the board at every size (phone shows one 250 x 350 card plus a peek of the next, arrows flank the heading, board gaps from tokens); new browser test games-row-board.spec.ts; in review.

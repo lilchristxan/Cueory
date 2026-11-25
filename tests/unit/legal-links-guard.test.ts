@@ -48,7 +48,8 @@ describe.runIf(existsSync(join(dist, 'index.html')))('built navigation and sitem
         if (label === 'footer') footers++;
         else menus++;
         for (const href of hidden) expect(part, `${name} ${label} links to ${href}`).not.toContain(`href="${href}"`);
-        expect(part, `${name} ${label} has no Privacy link`).toContain('href="/privacy"');
+        // The side bar no longer lists the legal pages (they sit on the about page), so only the footer must link Privacy.
+        if (label === 'footer') expect(part, `${name} ${label} has no Privacy link`).toContain('href="/privacy"');
       }
     }
     expect(footers).toBeGreaterThan(0);

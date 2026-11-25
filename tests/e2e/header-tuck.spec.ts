@@ -21,9 +21,8 @@ test.beforeEach(async ({ page }) => {
 });
 
 test('a tucked header ignores top-of-page taps, then becomes clickable after scrolling up', async ({ page }) => {
-  await page.goto('/play/crossword');
-  // The game is drawn in the browser; wait for it so the page is full height before scrolling.
-  await expect(page.getByTestId('cueword')).toBeVisible();
+  await page.goto('/privacy');
+  // (a long text page: game pages have no site header since the Games v2 frame, so the tests use this one)
   await expect(header(page)).toBeVisible();
   await scrollTo(page, 700);
   await expect(header(page)).toHaveClass(/\bis-tucked\b/);
@@ -43,9 +42,8 @@ test('a tucked header ignores top-of-page taps, then becomes clickable after scr
 });
 
 test('keyboard focus restores the header instead of being trapped off-screen', async ({ page }) => {
-  await page.goto('/play/crossword');
-  // The game is drawn in the browser; wait for it so the page is full height before scrolling.
-  await expect(page.getByTestId('cueword')).toBeVisible();
+  await page.goto('/privacy');
+  // (a long text page: game pages have no site header since the Games v2 frame, so the tests use this one)
   await scrollTo(page, 700);
   await expect(header(page)).toHaveClass(/\bis-tucked\b/);
   expect(await header(page).evaluate((el) => el.contains(document.activeElement))).toBe(false);
@@ -58,9 +56,8 @@ test('keyboard focus restores the header instead of being trapped off-screen', a
 });
 
 test('header tucks again after focus leaves while the page is scrolled', async ({ page }) => {
-  await page.goto('/play/crossword');
-  // The game is drawn in the browser; wait for it so the page is full height before scrolling.
-  await expect(page.getByTestId('cueword')).toBeVisible();
+  await page.goto('/privacy');
+  // (a long text page: game pages have no site header since the Games v2 frame, so the tests use this one)
   await scrollTo(page, 700);
   await expect(header(page)).toHaveClass(/\bis-tucked\b/);
 
@@ -68,16 +65,15 @@ test('header tucks again after focus leaves while the page is scrolled', async (
   await expect(homeLink(page)).toBeFocused();
   await expect(header(page)).not.toHaveClass(/\bis-tucked\b/);
 
-  await page.locator('main button').first().evaluate((link) => (link as HTMLAnchorElement).focus({ preventScroll: true }));
+  await page.locator('main a[href]').first().evaluate((link) => (link as HTMLAnchorElement).focus({ preventScroll: true }));
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(80);
   await expect(header(page)).toHaveClass(/\bis-tucked\b/);
 });
 
 test('reduced motion leaves the header visible and clickable, even with a stale tucked class', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
-  await page.goto('/play/crossword');
-  // The game is drawn in the browser; wait for it so the page is full height before scrolling.
-  await expect(page.getByTestId('cueword')).toBeVisible();
+  await page.goto('/privacy');
+  // (a long text page: game pages have no site header since the Games v2 frame, so the tests use this one)
   await scrollTo(page, 700);
   await expect(header(page)).not.toHaveClass(/\bis-tucked\b/);
   await expect(header(page)).toBeVisible();

@@ -236,6 +236,27 @@
     );
   }
 
+  /*
+    Home ground (boards): from the hero down, the home page is one even beige (Evening: one even Charcoal) with no folds,
+    peach bands or grain between sections. Every scene and the page behind it paint the same flat ground, so the fade
+    between scenes (kept, D-53) blends the ground into itself and never touches a word. Palette mixes only (--home-ground).
+  */
+  body:has(.scene-hero) {
+    background-color: var(--home-ground-b);
+    background-image: var(--home-ground);
+    background-size: auto;
+  }
+
+  body:has(.scene-hero).silk-quiet::before {
+    content: none;
+  }
+
+  body:has(.scene-hero) .scene::before {
+    background-color: var(--home-ground-b);
+    background-image: var(--home-ground);
+    background-size: auto;
+  }
+
   /* The hero: Ivory, light from the upper left. It starts at the top of the page, so nothing fades in above it. */
   .scene-hero {
     --scene-fade-top: 0px;
@@ -245,17 +266,109 @@
     Home hero figure (redesign P5): Christian's anatomy picture has its own pale backdrop, so its top and left edges
     fade into the silk (a mask, never over text). Evening dims it so the pale backdrop doesn't glow on the dark page.
   */
-  .hero-figure {
-    -webkit-mask-image:
-      linear-gradient(to right, transparent, currentColor var(--hero-figure-fade)),
-      linear-gradient(to bottom, transparent, currentColor var(--hero-figure-fade)),
-      linear-gradient(to top, transparent, currentColor var(--hero-figure-fade-bottom));
+  .hero-figure-wrap {
+    position: relative;
+    -webkit-mask-image: var(--hero-figure-mask, linear-gradient(to right, transparent, currentColor var(--hero-figure-fade)), linear-gradient(to left, transparent, currentColor var(--hero-figure-fade-right)), linear-gradient(to bottom, transparent, currentColor var(--hero-figure-fade)), linear-gradient(to top, transparent, currentColor var(--hero-figure-fade-bottom)));
     -webkit-mask-composite: source-in;
-    mask-image:
-      linear-gradient(to right, transparent, currentColor var(--hero-figure-fade)),
-      linear-gradient(to bottom, transparent, currentColor var(--hero-figure-fade)),
-      linear-gradient(to top, transparent, currentColor var(--hero-figure-fade-bottom));
+    mask-image: var(--hero-figure-mask, linear-gradient(to right, transparent, currentColor var(--hero-figure-fade)), linear-gradient(to left, transparent, currentColor var(--hero-figure-fade-right)), linear-gradient(to bottom, transparent, currentColor var(--hero-figure-fade)), linear-gradient(to top, transparent, currentColor var(--hero-figure-fade-bottom)));
     mask-composite: intersect;
+    pointer-events: none;
+    user-select: none;
+  }
+
+  /* The slow glisten travelling along the halo ring painted in the picture (final board: .halo-glint). Decorative. */
+  .hero-halo {
+    position: absolute;
+    inset-block-start: var(--hero-halo-top);
+    inset-inline-end: var(--hero-halo-end);
+    inline-size: var(--hero-halo-size);
+    block-size: var(--hero-halo-size);
+    border-radius: 50%;
+    pointer-events: none;
+  }
+
+  .hero-halo::before,
+  .hero-halo::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+  }
+
+  .hero-halo::before {
+    background: conic-gradient(from 0deg, transparent 0deg, transparent 285deg, var(--hero-ring-light) 322deg, transparent 350deg);
+    -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - var(--hero-ring-band)), black calc(100% - var(--hero-ring-edge)), black calc(100% - var(--hero-ring-inner)), transparent 100%);
+    mask: radial-gradient(farthest-side, transparent calc(100% - var(--hero-ring-band)), black calc(100% - var(--hero-ring-edge)), black calc(100% - var(--hero-ring-inner)), transparent 100%);
+    filter: blur(var(--hero-ring-blur));
+    animation: hero-ring-spin 11s linear infinite;
+  }
+
+  .hero-halo::after {
+    box-shadow: var(--hero-halo-glow);
+    animation: hero-halo-glow 5.5s ease-in-out infinite;
+  }
+
+  @keyframes hero-ring-spin {
+    to { transform: rotate(360deg); }
+  }
+
+  @keyframes hero-halo-glow {
+    0%, 100% { opacity: 0.35; }
+    50% { opacity: 1; }
+  }
+
+  /* The start button's light travelling round its border (final board: .ring). Only where the button works. The light
+     is clipped inside its own layer, never by the wrapper, so the link's keyboard focus outline is not cut off. */
+  .hero-start-ring {
+    position: relative;
+    display: inline-flex;
+    padding: var(--hero-button-ring);
+    isolation: isolate;
+    border-radius: var(--radius-pill);
+  }
+
+  .hero-start-light {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    overflow: hidden;
+    border-radius: inherit;
+    pointer-events: none;
+  }
+
+  .hero-start-light::before {
+    content: "";
+    position: absolute;
+    inset: -160%;
+    background: conic-gradient(from 0deg, transparent 0deg, transparent 230deg, var(--color-copper-glow) 290deg, var(--hero-sheen-peak) 322deg, var(--color-copper-glow) 340deg, transparent 360deg);
+    animation: hero-ring-spin 3.4s linear infinite;
+  }
+
+  /* "simpler." with the copper shine drifting across it; the text stays copper if the gradient is not painted. */
+  .hero-accent {
+    background-image: linear-gradient(110deg, var(--hero-accent-base) 0%, var(--hero-accent-base) 38%, var(--hero-accent-peak) 50%, var(--hero-accent-base) 62%, var(--hero-accent-base) 100%);
+    background-size: 260% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: hero-shine 11s linear infinite;
+  }
+
+  @keyframes hero-shine {
+    0% { background-position: 180% 0; }
+    100% { background-position: -80% 0; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .hero-halo::before,
+    .hero-halo::after,
+    .hero-start-light::before,
+    .hero-accent {
+      animation: none;
+    }
+  }
+
+  .hero-figure {
     pointer-events: none;
     user-select: none;
   }
@@ -271,26 +384,41 @@
   }
 
   .hero-eyebrow {
-    font-size: var(--text-sm);
-    line-height: var(--text-sm--line-height);
+    font-size: var(--text-base);
+    line-height: var(--text-base--line-height);
   }
 
   .hero-caps {
     letter-spacing: var(--tracking-caps);
   }
 
-  /* "simpler." in copper (a solid copper: Copper Deep on Ivory is 3.6:1, above the 3:1 large text needs; lighter in Evening). */
+  /*
+    "simpler." in copper. Large text needs 3:1 at every moment of the shine, so Daytime sweeps a narrow lighter band over
+    a darker copper (both from tokens.css, measured in tests/e2e/home-modern.spec.ts); Evening is the lighter copper
+    with a brighter band, which only raises contrast on the dark page.
+  */
   .hero-accent {
-    color: var(--color-copper-deep);
+    --hero-accent-base: var(--hero-accent-day);
+    --hero-accent-peak: var(--hero-accent-day-peak);
+    color: var(--hero-accent-base);
   }
 
   :root[data-theme="dark"] .hero-accent {
-    color: var(--color-copper);
+    --hero-accent-base: var(--color-copper);
+    --hero-accent-peak: color-mix(in srgb, var(--color-copper) 50%, var(--color-copper-glow));
   }
 
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) .hero-accent {
-      color: var(--color-copper);
+      --hero-accent-base: var(--color-copper);
+      --hero-accent-peak: color-mix(in srgb, var(--color-copper) 50%, var(--color-copper-glow));
+    }
+  }
+
+  @media (forced-colors: active) {
+    .hero-accent {
+      -webkit-text-fill-color: currentColor;
+      background-image: none;
     }
   }
 
@@ -300,17 +428,8 @@
     inline-size: 60%;
     block-size: var(--spacing-stack);
     margin-block-start: var(--spacing);
-    margin-inline-start: auto;
+    margin-inline: auto;
     color: var(--color-copper-deep);
-  }
-
-  /* The "coming soon" tag inside the closed call to action: words, so it never relies on colour alone. */
-  .hero-soon {
-    border: 1px solid var(--cueory-copper-ink);
-    border-radius: var(--radius-pill);
-    padding-inline: calc(var(--spacing) * 2);
-    font-size: var(--text-sm);
-    font-weight: 400;
   }
 
   .hero-icon,
@@ -381,13 +500,64 @@
     background-color: rgb(var(--veil-rgb) / var(--veil-alpha));
   }
 
-  .explore-tile:hover {
+  .explore-tile {
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+    transition: transform 150ms ease, border-color 150ms ease;
+  }
+
+  .explore-tile:hover,
+  .explore-tile:focus-visible {
     border-color: var(--color-control);
+    transform: translateY(calc(var(--spacing) * -1));
+  }
+
+  /* The hover glint from the final board: a soft light sweeps across the tile once. */
+  .explore-tile::after {
+    content: "";
+    position: absolute;
+    inset-block: -30%;
+    inset-inline-start: -80%;
+    inline-size: 50%;
+    background: linear-gradient(100deg, transparent 0%, var(--explore-glint) 50%, transparent 100%);
+    transform: skewX(-22deg);
+    pointer-events: none;
+    z-index: -1;
+  }
+
+  .explore-tile:hover::after,
+  .explore-tile:focus-visible::after {
+    animation: explore-glint 800ms ease-out;
+  }
+
+  @keyframes explore-glint {
+    from { inset-inline-start: -80%; }
+    to { inset-inline-start: 140%; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .explore-tile:hover,
+    .explore-tile:focus-visible {
+      transform: none;
+    }
+
+    .explore-tile:hover::after,
+    .explore-tile:focus-visible::after {
+      animation: none;
+    }
+  }
+
+  /* The explore panel as drawn: rounder corners than the other frosted panels. */
+  .explore-panel {
+    border-radius: var(--radius-panel);
   }
 
   /* The coming-soon call to action: copper like the others, but it never acts. It still takes focus so it can be read out. */
   .copper-button[aria-disabled="true"] {
     cursor: default;
+    box-shadow: none;
+    filter: grayscale(var(--disabled-grayscale));
   }
 
   /* A signed-out visitor's "get launch updates" link on the sign-in, sign-up and account screens reads as a real 44 px
@@ -433,6 +603,18 @@
     --scene-fade-bottom: var(--spacing-section);
   }
 
+  /* On phones the sections are 64 px apart (half of it each side), so each scene's fade is no taller than the
+     padding it sits in and never reaches over the words (D-53). */
+  @media (width < 40rem) {
+    .scene:not(.scene-hero) {
+      --scene-fade-top: var(--spacing-section-phone);
+    }
+
+    .scene-low {
+      --scene-fade-bottom: var(--spacing-section-phone);
+    }
+  }
+
   /* The same cloth without folds, for whole pages behind text. */
   .silk-quiet {
     background-color: var(--color-silk-base);
@@ -475,25 +657,39 @@
     background-image: linear-gradient(180deg, color-mix(in srgb, var(--color-surface) 60%, transparent), transparent);
   }
 
+  /* The small cup-and-leaf mark, one on each side of the words, bare (no disc). It is one dark ink, so it is drawn as a
+     mask in the text colour: Espresso in Light, Ivory in Evening, legible on both grounds. */
   .building-strip-icon {
     display: inline-block;
-  }
-
-  /* The approved cup-and-leaf mark is dark artwork: in Evening it sits on a light disc so it stays visible. */
-  @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) .building-strip-icon {
-      box-sizing: content-box;
-      padding: var(--notice-icon-disc);
-      border-radius: var(--radius-pill);
-      background-color: var(--color-ink);
-    }
-  }
-
-  :root[data-theme="dark"] .building-strip-icon {
-    box-sizing: content-box;
-    padding: var(--notice-icon-disc);
-    border-radius: var(--radius-pill);
+    inline-size: var(--notice-icon-size);
+    block-size: var(--notice-icon-size);
+    vertical-align: middle;
     background-color: var(--color-ink);
+    -webkit-mask: url("/design/icon-building-notice.webp") center / contain no-repeat;
+    mask: url("/design/icon-building-notice.webp") center / contain no-repeat;
+  }
+
+  .building-strip-icon:first-child {
+    margin-inline-end: var(--notice-icon-gap);
+  }
+
+  .building-strip-icon:last-child {
+    margin-inline-start: var(--notice-icon-gap);
+  }
+
+  /* "support": bold, underlined (the underline, not colour, marks the link). The box is a 44 px target; the negative
+     margin gives back the extra height so the bar is no taller than its text needs. */
+  .building-strip-link {
+    display: inline-flex;
+    align-items: center;
+    min-block-size: var(--tap-min);
+    min-inline-size: var(--tap-min);
+    justify-content: center;
+    margin-block: var(--notice-link-trim);
+    font-weight: 700;
+    text-decoration: underline;
+    text-underline-offset: var(--underline-offset-notice);
+    color: var(--color-ink);
   }
 
   /* Frosted panel: brand surface color, partly see-through, blurred, with a 1 px hairline and one soft shadow. */
@@ -656,6 +852,10 @@
     color: var(--cueory-copper-ink);
     text-decoration: none;
     background-image: linear-gradient(110deg, var(--cueory-copper-start), var(--cueory-copper-end) 72%, var(--cueory-copper-shine));
+    /* Draw the gradient from the border edge and never tile it: from the padding edge it repeats into the transparent
+       border and shows a thin copper sliver at the pill's right end. */
+    background-origin: border-box;
+    background-repeat: no-repeat;
     box-shadow: var(--shadow-button);
   }
 
@@ -685,7 +885,9 @@
     color: var(--color-panel-ink);
   }
 
-  /* The ☰ side panel: full height, from the left, dark glass. A native modal <dialog>. */
+  /* The ☰ side bar: full height, from the left, a light drawer in Daytime and a dark one in Evening (home boards,
+     2026-11-24). A native modal <dialog>. Inside it the panel inks are the page's own inks, so the search field, notes
+     and social icons follow the palette. */
   .menu-panel {
     position: fixed;
     inset: 0 auto 0 0;
@@ -696,14 +898,12 @@
     block-size: 100dvh;
     max-block-size: none;
     border: 0;
-    border-inline-end: 1px solid rgb(var(--glass-rim-rgb) / 0.18);
-    color: var(--color-panel-ink);
-    background-color: rgb(var(--panel-rgb) / var(--panel-alpha));
-    box-shadow: var(--shadow-soft);
-    -webkit-backdrop-filter: blur(var(--blur-veil));
-    backdrop-filter: blur(var(--blur-veil));
-    /* Inside the dark panel, focus outlines and text use the panel's light ink. */
-    --color-focus: var(--color-panel-ink);
+    border-inline-end: 1px solid color-mix(in srgb, var(--color-line) 16%, transparent);
+    --color-panel-ink: var(--color-ink);
+    --color-panel-ink-soft: var(--color-ink-soft);
+    color: var(--color-ink);
+    background-color: var(--color-page);
+    box-shadow: var(--drawer-shadow);
     transform: translateX(-100%);
     transition:
       transform 280ms ease,
@@ -721,20 +921,134 @@
     }
   }
 
+  /* The dimmed page: clicking anywhere on it closes the bar. */
   .menu-panel::backdrop {
-    background-color: rgb(var(--shadow-tint) / var(--scrim-alpha));
-    -webkit-backdrop-filter: blur(2px);
-    backdrop-filter: blur(2px);
+    background-color: var(--drawer-scrim);
+    cursor: pointer;
   }
 
-  /* Fills the whole dialog, so a click on the dialog itself means the dimmed page beside it. */
+  /* Fills the whole dialog, so a click on the dialog itself means the dimmed page beside it. A column: the rows and the
+     search scroll in the middle, the social icons stay pinned to the bottom edge (above the phone's safe area). */
   .menu-panel-inner {
     display: flex;
     flex-direction: column;
     block-size: 100%;
+    overflow: hidden;
+    padding-inline: max(calc(var(--spacing) * 4), env(safe-area-inset-left)) calc(var(--spacing) * 4);
+  }
+
+  .menu-panel-scroll {
+    display: flex;
+    flex-direction: column;
+    gap: calc(var(--spacing) * 0.5);
+    flex: 1 1 auto;
+    min-block-size: 0;
     overflow-y: auto;
-    padding: max(calc(var(--spacing) * 4), env(safe-area-inset-top)) calc(var(--spacing) * 6)
-      max(calc(var(--spacing) * 6), env(safe-area-inset-bottom)) max(calc(var(--spacing) * 6), env(safe-area-inset-left));
+    padding-block-start: max(calc(var(--spacing) * 4.5), env(safe-area-inset-top));
+  }
+
+  .menu-panel-socials {
+    flex: none;
+    padding-block: calc(var(--spacing) * 3) max(calc(var(--spacing) * 4), env(safe-area-inset-bottom));
+    border-block-start: 1px solid color-mix(in srgb, var(--color-line) 16%, transparent);
+  }
+
+  /* A short, wide screen (phone turned sideways): there is no room to pin them, so everything scrolls together. */
+  @media (orientation: landscape) and (max-height: 32em) {
+    .menu-panel-inner {
+      overflow-y: auto;
+    }
+
+    .menu-panel-scroll {
+      flex: none;
+      overflow: visible;
+    }
+
+    .menu-panel-socials {
+      border-block-start: 0;
+    }
+  }
+
+  /* A row of the bar: study, anatomy lab, games, support (large), and the smaller rows under a label. */
+  .drawer-row {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    inline-size: 100%;
+    min-block-size: var(--drawer-row);
+    padding-inline: calc(var(--spacing) * 3.5);
+    border-radius: var(--drawer-row-radius);
+    color: var(--color-panel-ink);
+    font-size: var(--drawer-row-size);
+    line-height: var(--text-lg--line-height);
+    font-weight: 400;
+    text-decoration: none;
+  }
+
+  .drawer-row:hover {
+    background-color: var(--color-surface);
+  }
+
+  .drawer-row-sub {
+    min-block-size: var(--drawer-sub-row);
+    padding-inline-start: var(--drawer-sub-indent);
+    font-size: var(--text-sm);
+    line-height: var(--text-sm--line-height);
+  }
+
+  /* The current page: bolder text and a short line at the row's start, never color alone. */
+  .drawer-row[aria-current="page"] {
+    font-weight: 700;
+  }
+
+  .drawer-row[aria-current="page"]::before {
+    content: "";
+    position: absolute;
+    inset-inline-start: calc(var(--spacing) * 1.5);
+    inset-block: calc(var(--spacing) * 3);
+    inline-size: calc(var(--spacing) * 0.5);
+    border-radius: var(--radius-pill);
+    background-color: currentColor;
+  }
+
+  /* "privacy, terms + disclaimer": one row, each word its own 44 px link. */
+  .drawer-legal {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    min-block-size: var(--drawer-sub-row);
+    padding-inline-start: var(--drawer-sub-indent);
+    font-size: var(--text-sm);
+    line-height: var(--text-sm--line-height);
+  }
+
+  .drawer-legal a {
+    display: inline-flex;
+    align-items: center;
+    min-block-size: var(--drawer-sub-row);
+    color: var(--color-panel-ink);
+    text-decoration: none;
+  }
+
+  .drawer-legal span {
+    white-space: pre;
+  }
+
+  .drawer-legal a:hover {
+    text-decoration: underline;
+  }
+
+  .drawer-label {
+    margin: calc(var(--spacing) * 3.5) calc(var(--spacing) * 3.5) 0;
+    padding-block-start: calc(var(--spacing) * 3.5);
+    border-block-start: 1px solid color-mix(in srgb, var(--color-line) 16%, transparent);
+    color: var(--color-panel-ink-soft);
+    font-size: var(--drawer-label-size);
+    line-height: var(--text-sm--line-height);
+    font-weight: 700;
+    letter-spacing: var(--drawer-label-tracking);
+    text-transform: uppercase;
   }
 
   .menu-link {
@@ -1004,7 +1318,6 @@
       background-color: rgb(var(--glass-hover-rgb));
     }
 
-    .menu-panel,
     .account-menu,
     .promo {
       background-color: rgb(var(--panel-rgb));
@@ -1055,7 +1368,7 @@ html:has(dialog.menu-panel[open]) {
     --vial-step-depth: calc(var(--spacing) * 22.5);   /* 90 px further back per step out */
     --vial-perspective: calc(var(--spacing) * 400);   /* 1600 px */
     --vial-hover-rise: calc(var(--spacing) * -1.5);   /* the front vial rises 6 px under the mouse */
-    --vial-pedestal-width: min(calc(var(--spacing) * 275), 92vw); /* up to 1100 px */
+    --vial-pedestal-width: min(calc(var(--spacing) * 295), 92vw); /* up to 1180 px, the final board's platter */
     --vial-pedestal-height: calc(var(--spacing) * 30); /* 120 px */
     --vial-pedestal-foot: calc(var(--spacing) * 10);  /* 40 px */
     --vial-arrow: calc(var(--spacing) * 14);          /* 56 px arrows beside the vials on wider screens */
@@ -1436,6 +1749,86 @@ html:has(dialog.menu-panel[open]) {
     }
   }
 
+  /*
+    The final board (20 Nov) sits the arrows on the platter at its two ends, level with the pedestal. They only fit
+    beside the nine vials on a wide desktop, where the row's reach no longer depends on them (--vial-arrow-reserves).
+  */
+  @media (width >= 64rem) {
+    .modes {
+      --vial-arrow-reserves: 0;
+    }
+
+    .vial-arrow {
+      inset-block-start: calc(var(--vial-stage-height) - var(--vial-pedestal-foot) - var(--vial-pedestal-height) / 2);
+    }
+
+    .vial-arrow-prev {
+      inset-inline-start: calc(50% - var(--vial-pedestal-width) / 2 - var(--spacing) * 8);
+    }
+
+    .vial-arrow-next {
+      inset-inline-end: calc(50% - var(--vial-pedestal-width) / 2 - var(--spacing) * 8);
+    }
+  }
+
+  .modes-caption {
+    display: none;
+    margin: 0;
+  }
+
+  /*
+    Phones (HomeV2 parity): the same shelf as on desktop, just smaller: about five vials with their arrows at the
+    sides. The arrows sit in the headroom above the outer vials (which stand lower), so they take no width from the row
+    (--vial-arrow-reserves, read by rowRoom in ModesCarousel.astro). The dots are only a picture, so a "3 of 11" counter
+    replaces them here.
+  */
+  @media (width < 40rem) {
+    .modes {
+      --vial-width: calc(var(--spacing) * 18.5); /* in rem, so larger text still lays the row out again */
+      --vial-stand: calc(var(--spacing) * 10);
+      --vial-headroom: calc(var(--spacing) * 6);
+      --vial-pedestal-height: calc(var(--spacing) * 14);
+      --vial-pedestal-foot: calc(var(--spacing) * 3);
+      --vial-arrow-reserves: 0;
+    }
+
+    .modes .vial-name {
+      font-size: 15cqi;
+      inline-size: 72%;
+    }
+
+    .modes .vial-meta {
+      font-size: 6cqi;
+    }
+
+    .modes .vial-arrow {
+      position: absolute;
+      z-index: 1;
+      inset-block-start: 0;
+      inline-size: var(--tap-min);
+      block-size: var(--tap-min);
+    }
+
+    .modes .vial-arrow-prev {
+      inset-inline-start: calc(var(--spacing) * 1);
+    }
+
+    .modes .vial-arrow-next {
+      inset-inline-end: calc(var(--spacing) * 1);
+    }
+
+    .modes .modes-caption {
+      display: block;
+      flex-basis: 100%;
+      text-align: center;
+    }
+
+    .modes .modes-controls {
+      flex-wrap: wrap;
+      row-gap: calc(var(--spacing) * 3);
+    }
+  }
+
   .mode-art {
     aspect-ratio: 10 / 7;
     border-radius: var(--radius-md);
@@ -1722,11 +2115,15 @@ html:has(dialog.menu-panel[open]) {
     translate: 0 var(--vial-hover-rise);
   }
 
-  .modes[data-motion] [data-active]:is(:hover, :has(.mode-open:focus-visible)) .vial-shine {
+  /* The children are styled by one plain selector per state (no :has() inside :is() on the way to a descendant), so
+     Firefox restyles them when the pointer arrives; with the combined selector it left the shine at 0. */
+  .modes[data-motion] [data-active]:hover .vial-shine,
+  .modes[data-motion] [data-active]:has(.mode-open:focus-visible) .vial-shine {
     opacity: 1;
   }
 
-  .modes[data-motion] [data-active]:is(:hover, :has(.mode-open:focus-visible)) .vial-shadow {
+  .modes[data-motion] [data-active]:hover .vial-shadow,
+  .modes[data-motion] [data-active]:has(.mode-open:focus-visible) .vial-shadow {
     scale: 1.12 1;
   }
 }
@@ -2338,6 +2735,87 @@ html:has(dialog.mode-preview[open]) {
 }
 
 /*
+  .theme-slider / .theme-slider-option: a three-position slider (light, dark, device), used by the game settings panel and
+  any other place that offers the site theme. A pill track of three equal columns; each .theme-slider-option wraps a
+  visually hidden <input type="radio"> covering its whole segment, so arrow keys, Tab, Space and taps all work with no
+  script. The thumb is the track's ::before; :has(:checked) puts it under the chosen segment, so it needs no script either.
+  The chosen segment is also bold, so the pick is never color alone. The slide is the only transition and is removed
+  under reduced motion. Logic and labels: src/islands/sitetheme.ts.
+*/
+@layer components {
+  .theme-slider {
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    inline-size: 100%;
+    max-inline-size: 100%;
+    padding: var(--theme-slider-inset);
+    border: 1px solid var(--color-control);
+    border-radius: var(--radius-pill);
+    background-color: var(--color-surface);
+  }
+
+  .theme-slider::before {
+    content: "";
+    position: absolute;
+    inset-block: var(--theme-slider-inset);
+    inset-inline-start: var(--theme-slider-inset);
+    inline-size: calc((100% - 2 * var(--theme-slider-inset)) / 3);
+    border-radius: var(--radius-pill);
+    background-color: var(--color-ink);
+    transition: transform var(--duration-base) var(--ease-soft);
+  }
+
+  .theme-slider:has(.theme-slider-option:nth-child(2) :checked)::before { transform: translateX(100%); }
+  .theme-slider:has(.theme-slider-option:nth-child(3) :checked)::before { transform: translateX(200%); }
+
+  .theme-slider-option {
+    position: relative;
+    display: flex;
+    min-block-size: var(--tap-min);
+    min-inline-size: 0;
+    align-items: center;
+    justify-content: center;
+    padding-inline: var(--theme-slider-pad-x);
+    border-radius: var(--radius-pill);
+    color: var(--color-ink-soft);
+    font-size: var(--text-sm);
+    text-align: center;
+    overflow-wrap: anywhere;
+    cursor: pointer;
+    user-select: none;
+    /* The label color switches at once; only the thumb moves. */
+    transition: none;
+  }
+
+  .theme-slider-option > span { position: relative; pointer-events: none; }
+
+  .theme-slider-option input {
+    position: absolute;
+    inset: 0;
+    inline-size: 100%;
+    block-size: 100%;
+    margin: 0;
+    opacity: 0;
+    cursor: pointer;
+  }
+
+  .theme-slider-option:has(:checked) {
+    color: var(--color-on-button);
+    font-weight: 700;
+  }
+
+  .theme-slider-option:has(:focus-visible) {
+    outline: var(--focus-width) solid var(--color-focus);
+    outline-offset: var(--focus-offset);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .theme-slider::before { transition: none; }
+  }
+}
+
+/*
   Cross-document view transitions: a short fade between pages. Reduced-motion
   users get none (the @starting-style / overlay approach is modern but safe —
   browsers that don't support @view-transition ignore this block entirely).
@@ -2373,6 +2851,17 @@ html:has(dialog.mode-preview[open]) {
   }
 }
 
+/* The theme slider's thumb is a background too, so forced colors shows the native radio inside each segment instead. */
+@media (forced-colors: active) {
+  .theme-slider-option { gap: calc(var(--spacing) * 1); }
+  .theme-slider-option input[type="radio"] {
+    position: static;
+    inline-size: auto;
+    block-size: auto;
+    opacity: 1;
+  }
+}
+
 /* Task 234: forced colors removes the segmented labels' background selection.
    Restore the native radio so the checked state survives the system palette. */
 @media (forced-colors: active) {
@@ -2393,7 +2882,7 @@ html:has(dialog.mode-preview[open]) {
      container units resolve where it is used, against the panel. */
   .sudoku-panel { --sudoku-cell-fit: max(var(--sudoku-cell-floor), min(calc((100cqi - var(--sudoku-board-frame)) / 9), clamp(var(--sudoku-cell-min), min(calc((100vh - var(--sudoku-height-reserve)) / 9), calc((100vw - var(--sudoku-width-reserve)) / 9)), var(--sudoku-cell-max)))); --sudoku-board-width: calc(var(--sudoku-cell-fit) * 9 + var(--sudoku-box-line) * 2); container: sudoku-panel / inline-size; display: flex; flex-direction: column; align-items: center; gap: calc(var(--spacing) * 3); }
   /* Top to bottom: levels, the time and error line, five equal icon buttons spread across the board's width, the board. */
-  .sudoku-status { display: flex; inline-size: min(100%, var(--sudoku-board-width)); flex-wrap: wrap; align-items: center; justify-content: space-between; gap: calc(var(--spacing) * 2); }
+  .sudoku-status { display: flex; inline-size: min(100%, var(--sudoku-board-width)); flex-wrap: wrap; align-items: center; min-block-size: var(--sudoku-status-row); justify-content: space-between; gap: calc(var(--spacing) * 2); }
   .sudoku-time:empty, .sudoku-errors:empty { display: none; }
   .sudoku-errors { margin-inline-start: auto; }
   .sudoku-toolbar { position: relative; display: flex; inline-size: min(100%, var(--sudoku-board-width)); flex-wrap: wrap; align-items: center; justify-content: space-between; gap: calc(var(--spacing) * 2) 0; }
@@ -2484,7 +2973,7 @@ html:has(dialog.mode-preview[open]) {
     .sudoku-status { row-gap: 0; }
   }
   @media print {
-    body > :not(main), .sudoku-levels, .sudoku-status, .sudoku-toolbar, .game-help-first, .sudoku-pad-wrap, .sudoku-solved, .sr-only { display: none !important; }
+    body > :not(main), .sudoku-levels, .sudoku-status, .sudoku-toolbar, .sudoku-pad-wrap, .sudoku-solved, .sr-only { display: none !important; }
     :root[data-print-game="sudoku"] main article > :not(.sudoku-section):not(:has(.sudoku-section)) { display: none !important; }
     :root[data-print-game="sudoku"] .sudoku-section > :not(.sudoku-mount) { display: none !important; }
     :root[data-print-game="sudoku"] main article { max-inline-size: none; padding: 0; background: transparent; box-shadow: none; }
@@ -2533,5 +3022,556 @@ html:has(dialog.mode-preview[open]) {
 @layer components {
   .mode-grid-fit {
     grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--container-mode-tile)), 1fr));
+  }
+}
+
+/*
+  Home v3 vial platter (src/components/VialPlatter.astro, src/scripts/platter.ts, docs/design/home-v3/). The script
+  writes every size as a unitless number (design pixels); here each is multiplied by one pixel (--platter-px) and the
+  whole track is scaled to fit the stage. Wide layout: all vials, arrows at the sides, dots above the front vial.
+  Portrait phones (under 40rem): three vials, the dots under the platter, the arrows 16 px in from the edges.
+*/
+@layer components {
+  .platter {
+    overflow-x: clip;
+    --platter-scale: 1;
+    --platter-head: 0;
+    --platter-below: 0;
+    --platter-sideways: 0;        /* 1 on a phone turned sideways (the script then fits the track at the board's 60%) */
+    --platter-tw: 1240;
+    --platter-th: 440;
+    --platter-arrow-x: 365;
+    --platter-arrow: 56;
+    --platter-dot: 10;
+    --platter-dot-scale: var(--platter-scale);   /* the dots shrink with the platter, so their 44-pitch rhythm stays the board's */
+    --platter-dot-gap: 34;        /* 44 px between dot middles (a 10 px dot plus 34) at full size */
+    --platter-glide: 550ms cubic-bezier(0.2, 0.7, 0.2, 1);
+    --platter-ink: var(--color-on-panel-button);  /* label words: dark in both palettes, because the label is cream in both */
+    --platter-ring: var(--color-copper-deep);
+    /* The board's space above and below the section (design pixels): 96 / 40 on desktop and tablet, 40 / 16 on a portrait phone, 40 / 10 on a phone turned sideways. */
+    --platter-pad-top: 96;
+    --platter-pad-bottom: 75;     /* the board's 840 px section: 40 px of padding under a 704 px box, the stage ending 75 px above the bottom */
+    /* The words above the stage (design pixels, from the boards): heading size and line, the space above it, the gap to
+       the line under it and from that line to the stage. */
+    --platter-heading-size: 66;
+    --platter-heading-lh: 1.15;
+    --platter-heading-top: 8;
+    --platter-sub-size: 18;
+    --platter-sub-gap: 22;
+    --platter-stage-gap: 20;
+    --platter-dots-y: 32;         /* the dots' middle, under the stage's top edge */
+    padding-block: calc(var(--platter-pad-top) * var(--platter-px)) calc(var(--platter-pad-bottom) * var(--platter-px));
+  }
+
+  .platter-intro {
+    padding-inline: var(--spacing-gutter);
+  }
+
+  .platter-heading {
+    margin-block: calc(var(--platter-heading-top) * var(--platter-px)) 0;
+    font-size: calc(var(--platter-heading-size) * var(--platter-px));
+    line-height: var(--platter-heading-lh);
+  }
+
+  .platter-sub {
+    margin-block: calc(var(--platter-sub-gap) * var(--platter-px)) calc(var(--platter-stage-gap) * var(--platter-px));
+    font-size: calc(var(--platter-sub-size) * var(--platter-px));
+    line-height: 1.5;
+  }
+
+  /* Phone landscape (844 x 390): the board's 40 / 10 padding, 42 px heading and 14 px line, the arrows a 44 px target. */
+  @media (orientation: landscape) and (height < 40rem) {
+    .platter {
+      --platter-pad-top: 40;
+      --platter-pad-bottom: 10;
+      --platter-heading-size: 42;
+      --platter-heading-top: 4;
+      --platter-sub-size: 14;
+      --platter-sub-gap: 15;
+      --platter-stage-gap: 6;
+      --platter-arrow: 44;
+      --platter-dots-y: 23;
+      --platter-sideways: 1;
+    }
+  }
+
+  .platter-stage {
+    position: relative;
+    inline-size: 100%;
+    max-inline-size: calc((var(--platter-tw) + 80) * var(--platter-px));
+    padding-inline: calc(40 * var(--platter-px));
+    block-size: calc((var(--platter-th) * var(--platter-scale) + var(--platter-head) + var(--platter-below)) * var(--platter-px));
+  }
+
+  .platter-track {
+    position: absolute;
+    inset-inline-start: 50%;
+    inset-block-end: 0;
+    inline-size: calc(var(--platter-tw) * var(--platter-px));
+    block-size: calc(var(--platter-th) * var(--platter-px));
+    transform: translateX(-50%) scale(var(--platter-scale));
+    transform-origin: 50% 100%;
+  }
+
+  /* The platter: a round edge with a lighter top face. */
+  .platter-edge,
+  .platter-top {
+    position: absolute;
+    inset-inline-start: 50%;
+    inline-size: calc(var(--platter-tw) * var(--platter-px));
+    block-size: calc(150 * var(--platter-px));
+    margin-inline-start: calc(var(--platter-tw) * var(--platter-px) / -2);
+    border-radius: 50%;
+  }
+
+  .platter-edge {
+    inset-block-end: 0;
+    background: var(--platter-edge);
+    box-shadow: var(--platter-edge-shadow);
+  }
+
+  .platter-edge::before {
+    content: '';
+    position: absolute;
+    inset-inline: 0;
+    inset-block-start: calc(39 * var(--platter-px));
+    block-size: calc(38 * var(--platter-px));
+    background: var(--platter-edge);
+  }
+
+  .platter-edge::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: linear-gradient(180deg, transparent 55%, rgb(var(--shadow-tint) / var(--platter-edge-shade)) 100%);
+  }
+
+  .platter-top {
+    inset-block-end: calc(36 * var(--platter-px));
+    background: var(--platter-top);
+    box-shadow: var(--platter-top-shadow);
+  }
+
+  /* One vial. Its place comes from --w-* (wide) or --p-* (phone): width, sideways shift, foot height and layer. */
+  .platter-vial {
+    --vw: var(--w-w);
+    --vx: var(--w-x);
+    --vb: var(--w-b);
+    --vz: var(--w-z);
+    position: absolute;
+    inset-inline-start: 50%;
+    inset-block-end: calc(var(--vb) * var(--platter-px));
+    inline-size: calc(var(--vw) * var(--platter-px));
+    z-index: var(--vz);
+    transform: translateX(calc(-50% + var(--vx) * var(--platter-px)));
+    container-type: inline-size;
+    display: block;
+    padding: 0;
+    border: 0;
+    border-radius: calc(14 * var(--platter-px));
+    background: none;
+    color: var(--platter-ink);
+    text-align: start;
+    cursor: pointer;
+    -webkit-box-reflect: below calc(-5 * var(--platter-px)) linear-gradient(transparent 80%, color-mix(in srgb, var(--color-copper-shine) calc(var(--platter-reflect) * 100%), transparent));
+    transition:
+      transform var(--platter-glide),
+      inline-size var(--platter-glide),
+      inset-block-end var(--platter-glide),
+      translate 250ms ease,
+      filter 250ms ease;
+  }
+
+  .platter-vial:focus-visible {
+    color: var(--platter-ink);
+    translate: 0 calc(-8 * var(--platter-px));
+    filter: drop-shadow(0 0 calc(14 * var(--platter-px)) var(--platter-glow));
+  }
+
+  /* Hover only where there is a real hovering pointer: a tap on a touch screen must not leave a vial lifted. */
+  @media (hover: hover) and (pointer: fine) {
+    .platter-vial:hover {
+      color: var(--platter-ink);
+      translate: 0 calc(-8 * var(--platter-px));
+      filter: drop-shadow(0 0 calc(14 * var(--platter-px)) var(--platter-glow));
+    }
+  }
+
+  .platter-vial:focus-visible {
+    outline: calc(3 * var(--platter-px)) solid var(--platter-ring);
+    outline-offset: calc(6 * var(--platter-px));
+  }
+
+  .platter-vial::before {
+    content: '';
+    position: absolute;
+    inset-inline: -8%;
+    inset-block-end: -4.5%;
+    block-size: 11%;
+    border-radius: 50%;
+    background: radial-gradient(closest-side, rgb(var(--shadow-tint) / var(--platter-foot-a)) 0%, rgb(var(--shadow-tint) / var(--platter-foot-b)) 55%, transparent 100%);
+  }
+
+  /*
+    Where each vial stands, by its steps from the front vial (data-offset): the wide layout's width, sideways shift,
+    foot height and layer (--w-*) and the phone layout's (--p-*), in design pixels. These are src/scripts/platter.ts's
+    vialSpot written out, so every vial is placed before any script runs; tests/unit/vial-platter.test.ts checks that
+    each line still matches it.
+  */
+  .platter-vial[data-offset='-5'] {
+    --w-w: 62.3;
+    --w-x: -574.8;
+    --w-b: 94.4;
+    --w-z: 15;
+    --p-w: 97.7;
+    --p-x: -128.8;
+    --p-b: 34.2;
+    --p-z: 19;
+  }
+
+  .platter-vial[data-offset='-4'] {
+    --w-w: 73;
+    --w-x: -491.1;
+    --w-b: 77.7;
+    --w-z: 16;
+    --p-w: 97.7;
+    --p-x: -128.8;
+    --p-b: 34.2;
+    --p-z: 19;
+  }
+
+  .platter-vial[data-offset='-3'] {
+    --w-w: 86.6;
+    --w-x: -395.3;
+    --w-b: 67.4;
+    --w-z: 17;
+    --p-w: 97.7;
+    --p-x: -128.8;
+    --p-b: 34.2;
+    --p-z: 19;
+  }
+
+  .platter-vial[data-offset='-2'] {
+    --w-w: 103.4;
+    --w-x: -284.3;
+    --w-b: 59.9;
+    --w-z: 18;
+    --p-w: 97.7;
+    --p-x: -128.8;
+    --p-b: 34.2;
+    --p-z: 19;
+  }
+
+  .platter-vial[data-offset='-1'] {
+    --w-w: 124.6;
+    --w-x: -154.3;
+    --w-b: 55;
+    --w-z: 19;
+    --p-w: 97.7;
+    --p-x: -128.8;
+    --p-b: 34.2;
+    --p-z: 19;
+  }
+
+  .platter-vial[data-offset='0'] {
+    --w-w: 152;
+    --w-x: 0;
+    --w-b: 53;
+    --w-z: 20;
+    --p-w: 132;
+    --p-x: 0;
+    --p-b: 30;
+    --p-z: 20;
+  }
+
+  .platter-vial[data-offset='1'] {
+    --w-w: 124.6;
+    --w-x: 154.3;
+    --w-b: 55;
+    --w-z: 19;
+    --p-w: 97.7;
+    --p-x: 128.8;
+    --p-b: 34.2;
+    --p-z: 19;
+  }
+
+  .platter-vial[data-offset='2'] {
+    --w-w: 103.4;
+    --w-x: 284.3;
+    --w-b: 59.9;
+    --w-z: 18;
+    --p-w: 97.7;
+    --p-x: 128.8;
+    --p-b: 34.2;
+    --p-z: 19;
+  }
+
+  .platter-vial[data-offset='3'] {
+    --w-w: 86.6;
+    --w-x: 395.3;
+    --w-b: 67.4;
+    --w-z: 17;
+    --p-w: 97.7;
+    --p-x: 128.8;
+    --p-b: 34.2;
+    --p-z: 19;
+  }
+
+  .platter-vial[data-offset='4'] {
+    --w-w: 73;
+    --w-x: 491.1;
+    --w-b: 77.7;
+    --w-z: 16;
+    --p-w: 97.7;
+    --p-x: 128.8;
+    --p-b: 34.2;
+    --p-z: 19;
+  }
+
+  .platter-vial[data-offset='5'] {
+    --w-w: 62.3;
+    --w-x: 574.8;
+    --w-b: 94.4;
+    --w-z: 15;
+    --p-w: 97.7;
+    --p-x: 128.8;
+    --p-b: 34.2;
+    --p-z: 19;
+  }
+
+  .platter-vial[data-hide-wide] {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+  }
+
+  .platter-img {
+    position: relative;
+    display: block;
+    inline-size: 100%;
+    block-size: auto;
+  }
+
+  /* The label's live words, laid over the blank label in container units so they scale with the vial. */
+  .platter-label {
+    position: absolute;
+    inset-block: 33% 7%;
+    inset-inline: 3%;
+    pointer-events: none;
+    font-family: var(--font-body);
+  }
+
+  .platter-kicker {
+    position: absolute;
+    inset-inline-start: 9cqi;
+    inset-block-start: 39cqi;
+    font-size: 4.6cqi;
+    line-height: 1.2;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+  }
+
+  .platter-name {
+    position: absolute;
+    inset-inline-start: 9cqi;
+    inset-block-start: 47cqi;
+    inline-size: 58cqi;
+    font-size: 9cqi;
+    font-weight: 700;
+    line-height: 1.05;
+    letter-spacing: 0.01em;
+    text-transform: uppercase;
+  }
+
+  .platter-name::after {
+    content: '';
+    display: block;
+    inline-size: 20cqi;
+    block-size: 0.8cqi;
+    margin-block-start: 4cqi;
+    background: var(--platter-ink);
+  }
+
+  .platter-meta {
+    position: absolute;
+    inset-inline-start: 9cqi;
+    inset-block-end: 9cqi;
+    inline-size: 58cqi;
+    display: grid;
+    grid-template-columns: 1fr 1.3fr;
+    font-size: 4cqi;
+    line-height: 1.5;
+    border-block: 0.4cqi solid color-mix(in srgb, var(--platter-ink) 55%, transparent);
+  }
+
+  .platter-meta > span {
+    padding: 1cqi 1.5cqi;
+  }
+
+  .platter-meta > span:first-child {
+    border-inline-end: 0.3cqi solid color-mix(in srgb, var(--platter-ink) 40%, transparent);
+  }
+
+  .platter-logo {
+    position: absolute;
+    inset-block-start: 12cqi;
+    inset-inline-start: calc(100% - 3cqi);
+    inline-size: 66cqi;
+    block-size: auto;
+    transform-origin: 0 0;
+    transform: rotate(90deg);
+  }
+
+  /* Arrows (wide: level with the dots above the front vial) and dots (only a picture of where the platter stands). */
+  .platter-arrow {
+    position: absolute;
+    inset-block-start: calc(1 * var(--platter-px)); /* the boards' two arrows stand 2 px above and 4 px below the stage's top: this is the middle */
+    z-index: 40;
+    inline-size: calc(var(--platter-arrow) * var(--platter-px));
+    block-size: calc(var(--platter-arrow) * var(--platter-px));
+  }
+
+  .platter-arrow-prev {
+    inset-inline-start: calc(50% - (var(--platter-arrow-x) + var(--platter-arrow) / 2) * var(--platter-px));
+  }
+
+  .platter-arrow-next {
+    inset-inline-start: calc(50% + (var(--platter-arrow-x) - var(--platter-arrow) / 2) * var(--platter-px));
+  }
+
+  .platter-dots {
+    position: absolute;
+    inset-inline-start: 50%;
+    inset-block-start: calc(var(--platter-dots-y) * var(--platter-px));
+    display: flex;
+    align-items: center;
+    gap: calc(var(--platter-dot-gap) * var(--platter-dot-scale) * var(--platter-px));
+    transform: translate(-50%, -50%);
+  }
+
+  .platter-dot {
+    inline-size: calc(var(--platter-dot) * var(--platter-dot-scale) * var(--platter-px));
+    block-size: calc(var(--platter-dot) * var(--platter-dot-scale) * var(--platter-px));
+    border-radius: var(--radius-pill);
+    background-color: color-mix(in srgb, var(--color-ink-soft) 45%, transparent);
+    transition:
+      transform 200ms ease,
+      background-color 200ms ease;
+  }
+
+  /* The front vial's dot is darker and a quarter bigger (the board's scale 1.25): shape, not only color. */
+  .platter-dot[data-on] {
+    transform: scale(1.25);
+    background-color: var(--color-ink);
+  }
+
+  /* Portrait phones: the front vial and one each side; dots under the platter; arrows 16 px in from the edges. */
+  @media (width < 40rem) {
+    .platter {
+      --platter-tw: 390;
+      --platter-th: 330;
+      --platter-below: 50;
+      --platter-arrow: 44;
+      --platter-dot: 7;
+      --platter-dot-scale: 1;
+      --platter-dot-gap: 15;
+      --platter-pad-top: 40;
+      --platter-pad-bottom: 16;
+      --platter-heading-size: 36;   /* the board's 38 px is Playfair; Bodoni Moda is wider, and 36 px keeps "multiple ways to study" on one line in 358 px */
+      --platter-heading-lh: 1.18;   /* two lines 85 px tall, as the board's */
+      --platter-sub-size: 16;
+      --platter-stage-gap: 6;
+    }
+
+    .platter-intro {
+      padding-inline: calc(16 * var(--platter-px));
+    }
+
+    .platter-stage {
+      max-inline-size: none;
+      padding-inline: 0;
+    }
+
+    .platter-track {
+      inset-block-end: auto;
+      inset-block-start: 0;
+      transform-origin: 50% 0;
+    }
+
+    .platter-edge,
+    .platter-top {
+      inline-size: calc(420 * var(--platter-px));
+      margin-inline-start: calc(-210 * var(--platter-px));
+      block-size: calc(62 * var(--platter-px));
+    }
+
+    .platter-edge::before {
+      inset-block-start: calc(16 * var(--platter-px));
+      block-size: calc(16 * var(--platter-px));
+    }
+
+    .platter-top {
+      inset-block-end: calc(15 * var(--platter-px));
+    }
+
+    .platter-vial {
+      --vw: var(--p-w);
+      --vx: var(--p-x);
+      --vb: var(--p-b);
+      --vz: var(--p-z);
+      -webkit-box-reflect: none;
+    }
+
+    .platter-vial[data-hide-wide] {
+      opacity: 1;
+      visibility: visible;
+      pointer-events: auto;
+    }
+
+    .platter-vial[data-hide-phone] {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    /* The board puts both arrows in the dots' row under the platter, 16 px in from each edge. */
+    .platter-arrow {
+      inset-block-start: calc(var(--platter-th) * var(--platter-scale) * var(--platter-px));
+    }
+
+    .platter-arrow-prev {
+      inset-inline-start: calc(16 * var(--platter-px));
+    }
+
+    .platter-arrow-next {
+      inset-inline-start: auto;
+      inset-inline-end: calc(16 * var(--platter-px));
+    }
+
+    .platter-dots {
+      inset-block-start: calc(var(--platter-th) * var(--platter-scale) * var(--platter-px) + var(--platter-arrow) / 2 * var(--platter-px));
+      gap: 0;
+    }
+
+    .platter-dot {
+      margin-inline: calc(7.5 * var(--platter-px));
+    }
+  }
+
+  /* Reduced motion: no lift and no glide; the glow stays. */
+  @media (prefers-reduced-motion: reduce) {
+    .platter-vial {
+      transition: none;
+    }
+
+    .platter-vial:hover,
+    .platter-vial:focus-visible {
+      translate: none;
+    }
+
+    .platter-dot {
+      transition: none;
+    }
   }
 }

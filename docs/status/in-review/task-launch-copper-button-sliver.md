@@ -1,0 +1,1 @@
+status: Shared copper button no longer shows a thin copper sliver at its right end: the gradient now draws from the border edge and does not repeat. Browser test and before/after close-ups included. In review.

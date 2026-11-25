@@ -23,7 +23,7 @@ test('tab into the launch-updates email box reveals it and keeps it inside the v
   const section = page.locator('#signup [data-reveal-section]');
   await expect(section).toHaveAttribute('data-reveal', 'waiting');
 
-  const email = page.locator('input#signup-email');
+  const email = page.locator('input#soon-email');
   await expect(email).toBeAttached();
 
   let focused = false;
@@ -34,7 +34,7 @@ test('tab into the launch-updates email box reveals it and keeps it inside the v
       break;
     }
   }
-  expect(focused, 'keyboard focus reached input#signup-email').toBe(true);
+  expect(focused, 'keyboard focus reached input#soon-email').toBe(true);
 
   await expect(section).toHaveAttribute('data-reveal', 'instant');
   await expect(email).toBeVisible();

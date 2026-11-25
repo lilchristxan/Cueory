@@ -7,9 +7,11 @@
 import { getCollection } from 'astro:content';
 import Layout from '../../layouts/Layout.astro';
 import GameFrame from '../../components/GameFrame.astro';
+import { site } from '../../config/site';
+import { flagMailto } from '../../scripts/footer';
 import HelloCards from '../../islands/HelloCards';
 import GameResultsHost from '../../islands/GameResultsHost';
-import { helloCardsGame, helloCardsIndexWhenApproved } from '../../config/games';
+import { gamePagesBareHeader, helloCardsGame, helloCardsIndexWhenApproved } from '../../config/games';
 import { helloCardsPage } from '../../islands/hello-cards';
 
 const entries = await getCollection('hello-cards');
@@ -33,32 +35,47 @@ const { shown, starters } = page;
   </article>
 </Layout>
 ) : (
-<Layout title={helloCardsGame.name} description="Flip a card for a friendly conversation starter to use with patients, co-workers or classmates." noindex={page.noindex} promo={false}>
-    <GameFrame game="hello-cards" staticNoScoreStats>
-      <article class="mx-auto max-w-prose w-full" data-pagefind-ignore>
-        {page.label && <p class="text-sm text-ink-soft">{page.label}</p>}
-        <h1 class="display mt-2 text-title sm:text-title-lg">{helloCardsGame.name}</h1>
-        <p class="mt-3 text-ink-soft">
-          small, friendly questions for getting to know the people around you. pick small talk or a deeper conversation, turn a card over
-          and see what comes up. the cards are for anyone you work or study with. there is no score, and nothing is saved.
-        </p>
-        {
-          shown ? (
-            <div class="mt-8">
-              <HelloCards client:only="react" starters={starters} />
-              <noscript>
-                <p>hello cards needs JavaScript to turn the cards over. you can still <a href="/play">go back to the daily games</a>.</p>
-              </noscript>
-            </div>
-          ) : (
-            <p class="mt-8" data-testid="hello-cards-soon">hello cards are coming soon.</p>
-          )
-        }
-        <a href="/play" class="mt-10 inline-flex min-h-(--tap-min) items-center rounded-pill border border-control px-5 py-2.5 text-ink">
-          back to daily games
-        </a>
-      </article>
-    </GameFrame>
+<Layout title={helloCardsGame.name} description="Flip a card for a friendly conversation starter to use with patients, co-workers or classmates." noindex={page.noindex} promo={false} bareHeader={gamePagesBareHeader}>
+    <div data-game-page="hello-cards">
+      <GameFrame game="hello-cards" staticNoScoreStats>
+        <Fragment slot="flag">
+          <a
+            href={flagMailto(site.contactEmail, Astro.url.pathname)}
+            data-game-flag
+            class="corner-button corner-button-quiet shrink-0"
+            aria-label={`flag or comment on ${helloCardsGame.name}`}
+          >
+            <svg viewBox="0 0 24 24" class="size-6" aria-hidden="true" focusable="false">
+              <path d="M5 21V4M5 4h12l-3 4.5 3 4.5H5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </a>
+        </Fragment>
+
+        <article class="mx-auto max-w-prose w-full" data-pagefind-ignore>
+          {page.label && <p class="text-sm text-ink-soft">{page.label}</p>}
+          <h1 class="display mt-2 text-title sm:text-title-lg">{helloCardsGame.name}</h1>
+          <p class="mt-3 text-ink-soft">
+            small, friendly questions for getting to know the people around you. pick small talk or a deeper conversation, turn a card over
+            and see what comes up. the cards are for anyone you work or study with. there is no score, and nothing is saved.
+          </p>
+          {
+            shown ? (
+              <div class="mt-8">
+                <HelloCards client:only="react" starters={starters} />
+                <noscript>
+                  <p>hello cards needs JavaScript to turn the cards over. you can still <a href="/play">go back to the daily games</a>.</p>
+                </noscript>
+              </div>
+            ) : (
+              <p class="mt-8" data-testid="hello-cards-soon">hello cards are coming soon.</p>
+            )
+          }
+          <a href="/play" class="mt-10 inline-flex min-h-(--tap-min) items-center rounded-pill border border-control px-5 py-2.5 text-ink">
+            back to daily games
+          </a>
+        </article>
+      </GameFrame>
+    </div>
 
   {shown && <GameResultsHost client:only="react" />}
   {shown && <noscript><p>game results and sharing need JavaScript.</p></noscript>}

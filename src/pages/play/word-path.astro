@@ -2,13 +2,13 @@
 import Layout from '../../layouts/Layout.astro';
 import GamePage from '../../components/GamePage.astro';
 import SutureToday from '../../islands/SutureToday';
-import { dailyGames } from '../../config/games';
+import { dailyGames, gamePagesBareHeader } from '../../config/games';
 import { wordPathSamples } from '../../config/gamesamples';
 
 const game = dailyGames.find((item) => item.id === 'suture')!;
 const samples = await wordPathSamples();
 ---
-<Layout title={`${game.name} · legacy word path`} description="trace theme words through a board of letters in piccline, cueory's legacy word path route for retained bookmarks." socialImage="/share/games-scene.png">
+<Layout title={`${game.name} · legacy word path`} description="trace theme words through a board of letters in piccline, cueory's legacy word path route for retained bookmarks." socialImage="/share/games-scene.png" noindex={true} canonicalTo="/play/piccline" bareHeader={gamePagesBareHeader}>
 <GamePage game={game} showcase>
   <h1 slot="title" id="word-path-heading" class="display mt-4 text-center text-display wrap-anywhere sm:text-display-lg">{game.name}</h1>
   <p class="wordpath-label mt-2 text-center text-ink-soft">letter path game</p>
