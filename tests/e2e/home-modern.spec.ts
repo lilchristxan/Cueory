@@ -2,6 +2,9 @@ import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
 import sharp from 'sharp';
 import { newsletter, signupState, site } from '../../src/config/site';
+import { markGameRulesSeen } from './clock';
+
+test.beforeEach(async ({ page }) => { await markGameRulesSeen(page); });
 
 // The hero's ways in (redesign P5): the explore row's tiles, each to a page that exists today. The "start studying" call
 // to action is closed (not a link) and the old quiet join link is gone.

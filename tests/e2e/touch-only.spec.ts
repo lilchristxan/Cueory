@@ -1,5 +1,8 @@
 import { expect, test, type Page, type TestInfo } from '@playwright/test';
 import { sizeOf } from './projects';
+import { markGameRulesSeen } from './clock';
+
+test.beforeEach(async ({ page }) => { await markGameRulesSeen(page); });
 
 type TouchInputObservation = {
   maxTouchPoints: number;

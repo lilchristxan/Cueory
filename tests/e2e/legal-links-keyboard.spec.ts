@@ -1,6 +1,9 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { visibleFooterLinks } from '../../src/config/legalfooter';
 import { footerLinks, menuSmallLinks } from '../../src/config/site';
+import { markGameRulesSeen } from './clock';
+
+test.beforeEach(async ({ page }) => { await markGameRulesSeen(page); });
 
 // Footer and menu legal links (#747): keyboard only, each reachable by Tab, each with a visible focus ring, and Enter
 // opens it. Expectations come from the same rule the pages use, so they follow a legal page's approval on their own.
