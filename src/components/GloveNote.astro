@@ -1,0 +1,275 @@
+---
+/**
+ * The message-glove note (Christian, 24 Nov 2026; D-94 glove notes, rules in src/islands/stickynote.ts): every 30
+ * minutes of the visit, on every page except games and the never-pages, a photo of a gloved hand with a short
+ * handwritten message rises into the corner and links to /breaks (break ideas).
+ *
+ * - This file is only the empty polite live region (aria-live="polite"; not role="status", so pages that already have a status message keep exactly one) the note is put into, plus its look. The page
+ *   script below asks `decideNote` (pure, unit tested) once a second whether a note is due and which glove.
+ * - The visit's clock and what was shown stay in this tab's session storage (`cueory-glove-note`, on /privacy).
+ * - The list of messages is fetched (about 20 KB) only when a note is due, and only the one photo shown is loaded.
+ *   Nothing is preloaded.
+ * - It never takes focus. Escape or the close button dismisses it. The whole photo is one link: its name is the
+ *   message plus "break idea". Reduced motion: no rise.
+ * - Sounds: none yet. The recordings do not exist (src/scripts/notesound.ts keeps `filesExist` false until they do), so
+ *   the sound setting has nothing to play and this script plays nothing.
+ */
+import { pageKindFor } from '../islands/stickynote';
+
+const kind = pageKindFor(Astro.url.pathname);
+---
+
+{
+  kind !== 'never' && kind !== 'game' && (
+    <div class="glove-note-region" aria-live="polite" data-glove-note-region data-testid="glove-note-region" />
+  )
+}
+
+<script>
+  import {
+    decideNote,
+    messageTimeDue,
+    pageKindFor,
+    readVisit,
+    recordShown,
+    startVisit,
+    writeVisit,
+    type Busy,
+    type Visit,
+  } from '../islands/stickynote';
+  import { isTextEntry } from '../scripts/promo';
+
+  interface Glove {
+    file: string;
+    text: string;
+    width: number;
+    height: number;
+  }
+
+  const region = document.querySelector<HTMLElement>('[data-glove-note-region]');
+  if (region && pageKindFor(location.pathname) !== 'never' && pageKindFor(location.pathname) !== 'game') {
+    const page = pageKindFor(location.pathname);
+    const pageStart = performance.now();
+    let storage: Storage | undefined;
+    try {
+      storage = window.sessionStorage;
+    } catch {
+      storage = undefined;
+    }
+    // A browser that can't remember keeps the visit in memory: the 30 minutes then count from this page load.
+    let visit: Visit = startVisit(readVisit(storage), Date.now());
+    const remembered = writeVisit(storage, visit);
+
+    /** A number from 0 (inclusive) to 1 (exclusive) from the browser's secure random source. */
+    const random = () => {
+      const bytes = new Uint32Array(1);
+      crypto.getRandomValues(bytes);
+      return bytes[0]! / 4294967296;
+    };
+
+    // "A pause" means 3 seconds without the visitor touching anything.
+    let lastInteraction = Date.now();
+    let pointerDown = false;
+    const touched = () => {
+      lastInteraction = Date.now();
+    };
+    for (const name of ['pointermove', 'wheel', 'scroll', 'keydown', 'touchstart', 'input']) {
+      window.addEventListener(name, touched, { passive: true, capture: true });
+    }
+    window.addEventListener('pointerdown', () => {
+      pointerDown = true;
+      touched();
+    }, { passive: true, capture: true });
+    for (const name of ['pointerup', 'pointercancel', 'dragend', 'blur']) {
+      window.addEventListener(name, () => {
+        pointerDown = false;
+      }, { passive: true, capture: true });
+    }
+
+    /** Anything that has the visitor's attention. Any open dialog counts as the menu panel, a preview or a form. */
+    const busy = (): Busy => ({
+      typing: isTextEntry(document.activeElement as HTMLElement | null),
+      dragging: pointerDown || document.querySelector('[aria-grabbed="true"], [data-dragging]') !== null,
+      // Study islands can mark an unanswered question with data-note-busy; nothing else says "mid-question".
+      midQuestion: document.querySelector('[data-note-busy]') !== null,
+      menuOpen: document.querySelector('dialog[open]') !== null || document.querySelector('[data-result-dialog]') !== null,
+      previewOpen: document.querySelector('[data-mode-preview][open]') !== null,
+      accountMenuOpen: document.querySelector('#account-menu:not([hidden])') !== null,
+    });
+
+    let gloves: Glove[] | undefined;
+    let loading = false;
+    let retryAfter = 0;
+    const loadGloves = () => {
+      if (loading || Date.now() < retryAfter) return;
+      loading = true;
+      fetch('/gloves/messages.json', { credentials: 'same-origin' })
+        .then((response) => (response.ok ? response.json() : Promise.reject(new Error(String(response.status)))))
+        .then((data: { messages?: Glove[] }) => {
+          gloves = Array.isArray(data.messages) && data.messages.length > 0 ? data.messages : undefined;
+          if (!gloves) retryAfter = Date.now() + 60_000;
+        })
+        .catch(() => {
+          retryAfter = Date.now() + 60_000;
+        })
+        .finally(() => {
+          loading = false;
+        });
+    };
+
+    let open: HTMLElement | null = null;
+    const close = () => {
+      open?.remove();
+      open = null;
+    };
+
+    const show = async (glove: Glove, gloveIndex: number) => {
+      const source = `/gloves/messages/${glove.file}`;
+      // Only this one photo is fetched. It is ready before the note appears, so the note never pops in empty.
+      const probe = new Image();
+      probe.src = source;
+      await probe.decode().catch(() => undefined);
+      // The visitor may have started something while the photo loaded: wait for the next pause instead.
+      const b = busy();
+      if (open || document.hidden || Object.values(b).some(Boolean)) return;
+
+      const note = document.createElement('div');
+      note.className = 'glove-note';
+      note.dataset.gloveNote = '';
+      note.dataset.testid = 'glove-note';
+      // A named region so the note is inside a landmark (axe: all content in landmarks) only while it is on screen.
+      note.setAttribute('role', 'region');
+      note.setAttribute('aria-label', 'glove note');
+      const link = document.createElement('a');
+      link.className = 'glove-note-link';
+      link.href = '/breaks';
+      const image = document.createElement('img');
+      image.src = source;
+      image.alt = glove.text;
+      image.width = glove.width;
+      image.height = glove.height;
+      image.loading = 'lazy';
+      image.decoding = 'async';
+      image.className = 'glove-note-image';
+      const hidden = document.createElement('span');
+      hidden.className = 'sr-only';
+      hidden.textContent = 'break idea';
+      link.append(image, document.createTextNode(' '), hidden);
+      const closeButton = document.createElement('button');
+      closeButton.type = 'button';
+      closeButton.className = 'corner-button glove-note-close';
+      closeButton.setAttribute('aria-label', 'close glove note');
+      closeButton.innerHTML =
+        '<svg viewBox="0 0 24 24" class="size-6" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" /></svg>';
+      closeButton.addEventListener('click', close);
+      note.append(link, closeButton);
+      region.append(note);
+      open = note;
+      visit = recordShown(visit, { show: true, kind: 'message', gloveIndex }, Date.now(), gloves?.length ?? 0);
+      writeVisit(storage, visit);
+    };
+
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && open && !event.defaultPrevented && document.querySelector('dialog[open]') === null) close();
+    });
+
+    const tick = () => {
+      if (document.hidden || open) return;
+      const now = Date.now();
+      if (!messageTimeDue(visit, now)) return;
+      if (!gloves) {
+        loadGloves();
+        return;
+      }
+      const decision = decideNote({
+        visit,
+        remembered,
+        page,
+        secondsOnScreen: (performance.now() - pageStart) / 1000,
+        scrollFraction: 0,
+        secondsIdle: (now - lastInteraction) / 1000,
+        atStepEnd: false,
+        busy: busy(),
+        timerOn: false,
+        timerBreakDue: false,
+        noteOnScreen: null,
+        joinedLaunchList: false,
+        hasAccount: false,
+        lastWelcome: null,
+        random,
+        now,
+        gloveCount: gloves.length,
+      });
+      if (decision.show && decision.kind === 'message') {
+        const glove = gloves[decision.gloveIndex];
+        if (glove) void show(glove, decision.gloveIndex);
+      }
+    };
+    window.setInterval(tick, 1000);
+  }
+</script>
+
+<style is:global>
+  .glove-note-region {
+    position: fixed;
+    inset-inline-end: calc(var(--spacing) * 4);
+    inset-block-end: calc(var(--spacing) * 4);
+    z-index: var(--layer-glove-note);
+    inline-size: min(calc(100% - var(--spacing) * 8), var(--glove-note-width));
+    /* The empty live region takes no clicks; only the note does. */
+    pointer-events: none;
+  }
+
+  .glove-note {
+    position: relative;
+    pointer-events: auto;
+  }
+
+  .glove-note-link {
+    display: block;
+    border-radius: var(--radius-lg);
+  }
+
+  .glove-note-link:focus-visible {
+    outline: var(--focus-width) solid var(--color-focus);
+    outline-offset: var(--focus-offset);
+  }
+
+  .glove-note-image {
+    display: block;
+    inline-size: 100%;
+    block-size: auto;
+    filter: var(--glove-note-drop-shadow);
+  }
+
+  .glove-note-close {
+    position: absolute;
+    inset-block-start: 0;
+    inset-inline-end: 0;
+  }
+
+  .glove-note-close:focus-visible {
+    outline: var(--focus-width) solid var(--color-focus);
+    outline-offset: var(--focus-offset);
+  }
+
+  /* A gentle rise, only for visitors who haven't asked for reduced motion. */
+  @media (prefers-reduced-motion: no-preference) {
+    .glove-note {
+      animation: glove-note-in var(--duration-slow) ease-out;
+    }
+
+    @keyframes glove-note-in {
+      from {
+        opacity: 0;
+        translate: 0 var(--rise-reveal);
+      }
+    }
+  }
+
+  @media print {
+    .glove-note-region {
+      display: none !important;
+    }
+  }
+</style>

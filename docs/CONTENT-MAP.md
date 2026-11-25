@@ -23,6 +23,7 @@ This table includes every folder directly inside `content/` and every subfolder 
 | `content/games/suture/` | Word path boards (6 by 8, the preferred format) and older word-search grids. | Word path on `/play` | Labeled samples only. No unreleased words or clues. |
 | `content/samples/` | Spreadsheet templates for writing puzzles (`templates/pillo.csv`, `crossword.csv`, `word-path.csv`), turned into puzzle files by `npm run content:csv`. | Not shown on the website. | Made-up everyday example rows only. Real puzzles stay in your private store. |
 | `content/games/triage/` | Older sorting-game sample files. | Not the current Sudoku game. Kept for older tests. | Labeled samples only. |
+| `content/gloves/` | The handwritten messages on the message-glove photos (`public/gloves/messages/`). | The glove-note pop-up, every 30 minutes of a visit (not on games) | Christian's own approved public text only. No private content. |
 | `content/label-it/` | Sample images and labels for identifying pictured parts. | `/learn/study-skills/label-it` | Labeled samples with an image credit. Real images need documented rights. |
 | `content/lessons/` | The text and order of each lesson. | `/learn` and `/learn/[lesson]` | Labeled samples or placeholders, or approved public lessons. Never unreleased drafts. |
 | `content/organizer/` | Sample activities for placing items into groups. | `/learn/[lesson]/organizer` | Labeled samples only. |

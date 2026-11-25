@@ -75,7 +75,7 @@ export const storageKeys: readonly StorageKey[] = Object.freeze([
   { name: PKCE_VERIFIER_STORAGE_KEY, storage: 'local', holds: 'a one-time sign-in check', purpose: 'finish a sign-in safely', onDeletion: 'cleared', disclosure: 'accounts-closed' },
   { name: PKCE_FLOW_LIST_STORAGE_KEY, storage: 'local', holds: 'the list of sign-ins in progress', purpose: 'finish a sign-in safely', onDeletion: 'cleared', disclosure: 'accounts-closed' },
   { name: pkceFlowStorageKey('<id>'), prefix: `${AUTH_STORAGE_KEY}-flow-`, storage: 'local', holds: 'a one-time sign-in check for one sign-in', purpose: 'finish a sign-in safely', onDeletion: 'cleared', disclosure: 'accounts-closed' },
-  { name: VISIT_STORAGE_KEY, storage: 'session', holds: 'which glove notes appeared during this visit', purpose: 'not repeat a note', onDeletion: 'cleared', disclosure: { section: SETTINGS, phrase: 'glove notes remember which notes appeared in this tab' } },
+  { name: VISIT_STORAGE_KEY, storage: 'session', holds: 'which glove notes appeared during this visit, when the visit started, when the last message glove appeared and which gloves were used', purpose: 'show a message glove every 30 minutes without repeating one', onDeletion: 'cleared', disclosure: { section: SETTINGS, phrase: 'glove notes remember which notes appeared in this tab' } },
   { name: BREAK_STORAGE_KEY, storage: 'session', holds: "your break timer's state, for up to two hours", purpose: 'keep the timer through a reload', onDeletion: 'cleared', disclosure: { section: SETTINGS, phrase: 'The break timer can remember its state in this tab for up to two hours.' } },
 ] satisfies StorageKey[]);
 
