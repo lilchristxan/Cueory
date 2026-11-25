@@ -28,7 +28,7 @@ async function openFooterLinks(page: Page) {
   await expect(chevron).toHaveAttribute('aria-expanded', 'true');
 }
 
-// Firefox reports sizes in 1/60 px steps, so a 44 px box can read 43.99994. Allow that rounding, nothing more.
+// Firefox reports sizes in 1/60 px steps, so a 44 px box can read 43.99994. Allow that rounding in Firefox only.
 const FIREFOX_ROUNDING_PX = 0.01;
 
 /** The name of the card in the middle of the "ways to study" merry-go-round (D-60). */
@@ -1291,7 +1291,9 @@ test.describe('site search in the ☰ panel (D-49)', () => {
 test.describe('social links (D-54)', () => {
   test("the footer and the ☰ panel link to cueory's profiles in a new tab, only where an address is set", async ({
     page,
+    browserName,
   }) => {
+    const minimum = browserName === 'firefox' ? 44 - FIREFOX_ROUNDING_PX : 44;
     await page.goto('/privacy');
     await openFooterLinks(page);
     const footer = page.getByRole('contentinfo');
@@ -1305,8 +1307,8 @@ test.describe('social links (D-54)', () => {
       // The mark is drawn inline from our own page, never loaded from the platform.
       await expect(link.locator('svg path')).toHaveCount(1);
       const box = (await link.boundingBox())!;
-      expect(box.width).toBeGreaterThanOrEqual(44 - FIREFOX_ROUNDING_PX);
-      expect(box.height).toBeGreaterThanOrEqual(44 - FIREFOX_ROUNDING_PX);
+      expect(box.width).toBeGreaterThanOrEqual(minimum);
+      expect(box.height).toBeGreaterThanOrEqual(minimum);
     }
     await expect(footer.getByRole('link', { name: 'cueory on Instagram (opens in a new tab)' })).toBeVisible();
 
