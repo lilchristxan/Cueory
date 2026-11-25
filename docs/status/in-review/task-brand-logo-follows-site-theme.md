@@ -1,0 +1,2 @@
+status: in review · the cueory logo and the game wordmarks on game pages now follow the site's Light / Dark / Follow-device pick, not only the device (Safari bug: dark device + site Light showed the cream logo on the light rail); touches the shared game frame, so needs-christian
+decision: D-pending · artwork with a Daytime and an Evening file is switched only by the site theme rules (data-theme on html, then the device when there is no pick), never by a bare device media query or a Tailwind dark: class
