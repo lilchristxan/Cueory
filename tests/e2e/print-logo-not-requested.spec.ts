@@ -1,4 +1,7 @@
 import { expect, test } from '@playwright/test';
+import { markGameRulesSeen } from './clock';
+
+test.beforeEach(async ({ page }) => { await markGameRulesSeen(page); });
 
 // The print-only logo is not requested on screen (Firefox aborted the hidden request and the console sweep counted
 // it), and under print its background resolves to the logo and the request succeeds.

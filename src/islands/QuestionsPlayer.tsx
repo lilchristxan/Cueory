@@ -139,7 +139,7 @@ function Session({ questions, check, events, onCurrent }: SessionProps) {
   const message = error || (answer ? answer.correct ? 'right.' : 'not quite.' : '');
 
   return (
-    <div className="text-ink">
+    <div className="text-ink" data-note-busy={question && !answer ? '' : undefined}>
       {question && (
         <>
           <p className="text-sm text-ink-soft">question {state.index + 1} of {state.questions.length}</p>

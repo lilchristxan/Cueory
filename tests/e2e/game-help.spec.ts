@@ -1,6 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
-import { markPanelsSeen } from './clock';
+import { markGameRulesSeen, markPanelsSeen } from './clock';
 
 // Issue #736: every daily game shows its rules on the first visit, and from then on behind a "?" button that opens a
 // focus-trapped dialog Escape closes. The clock is 1 November 2026, so word path's puzzle is a board-format sample.
@@ -24,7 +24,7 @@ const helpButton = (page: Page, game: (typeof games)[number]) =>
 
 test.beforeEach(async ({ page }) => {
   await page.clock.setFixedTime(new Date('2026-11-01T15:00:00'));
-  await markPanelsSeen(page);
+  await markPanelsSeen(page, { rules: false });
   await page.addInitScript(() => {
     try { localStorage.setItem('cueory-promo-seen', String(Date.now())); localStorage.setItem('cueory-signup-popup-seen', String(Date.now())); } catch { /* optional storage */ }
   });
@@ -32,7 +32,6 @@ test.beforeEach(async ({ page }) => {
 
 // First visit: these start from empty storage (the suite default is a returning player).
 test.describe('first visit', () => {
-  test.use({ storageState: { cookies: [], origins: [] } });
 
   test('there is no first-visit rules card: the rules sit behind "?" on every game page', async ({ page }) => {
     for (const game of games) {
@@ -100,6 +99,7 @@ test.describe('first visit', () => {
 });
 
 test('piccline help opens from the keyboard at phone width and restores focus', async ({ page }) => {
+  await markGameRulesSeen(page);
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/play/word-path');
 
@@ -118,6 +118,7 @@ test('piccline help opens from the keyboard at phone width and restores focus', 
 });
 
 test('the help dialog fits a phone without sideways scrolling, in light and evening', async ({ page }) => {
+  await markGameRulesSeen(page);
   await page.setViewportSize({ width: 390, height: 844 });
   for (const scheme of ['light', 'dark'] as const) {
     await page.emulateMedia({ colorScheme: scheme });
@@ -136,6 +137,7 @@ test('the help dialog fits a phone without sideways scrolling, in light and even
 });
 
 test('typing in the sudoku help dialog never changes the board', async ({ page }) => {
+  await markGameRulesSeen(page);
   await page.goto('/play/sudoku');
   const sudoku = page.getByTestId('sudoku');
   // Wait for today's puzzle, so "before" is the finished board and not one still being set up.

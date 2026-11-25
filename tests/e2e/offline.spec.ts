@@ -1,6 +1,9 @@
 import { createServer, request as forward } from 'node:http';
 import type { Socket } from 'node:net';
 import { expect, test, type Page } from '@playwright/test';
+import { markGameRulesSeen } from './clock';
+
+test.beforeEach(async ({ page }) => { await markGameRulesSeen(page); });
 
 // The offline service worker (ROADMAP Task 5). Every other test runs with service workers blocked (playwright.config.ts),
 // because a worker answers requests before a test's page.route() would see them.

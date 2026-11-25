@@ -10,7 +10,8 @@ import type { Page } from '@playwright/test';
  * and the pop-up's 3 hours count as over, and the panels open part-way through a test. A script added after the clock
  * sees the fixed date, so the mark is always "now" for the page, on every load.
  */
-export async function markPanelsSeen(page: Page) {
+export async function markPanelsSeen(page: Page, options: { rules?: boolean } = {}) {
+  if (options.rules !== false) await markGameRulesSeen(page);
   await page.addInitScript(() => {
     try {
       localStorage.setItem('cueory-promo-seen', String(Date.now()));
@@ -25,4 +26,22 @@ export async function markPanelsSeen(page: Page) {
 export async function fixClock(page: Page, date: Date) {
   await page.clock.setFixedTime(date);
   await markPanelsSeen(page);
+}
+
+/**
+ * Marks every game's first-visit rules as seen (cueory-game-help-seen), so the "?" dialog does not open over a game
+ * page at the start of a test. Done per test with an init script, never with a config-level storageState: Firefox cannot
+ * apply a storageState origin to a context that has JavaScript turned off. markPanelsSeen calls it; a spec that checks
+ * the first visit passes `{ rules: false }`.
+ */
+export async function markGameRulesSeen(page: Page) {
+  await page.addInitScript(() => {
+    try {
+      if (localStorage.getItem('cueory-game-help-seen') === null) {
+        localStorage.setItem('cueory-game-help-seen', JSON.stringify(['vialo', 'pulse', 'triage', 'cueword', 'suture']));
+      }
+    } catch {
+      // Storage is blocked: the dialog stays closed then anyway.
+    }
+  });
 }

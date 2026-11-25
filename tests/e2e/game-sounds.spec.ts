@@ -20,7 +20,6 @@ async function setUp(page: Page, sound: boolean) {
   await markPanelsSeen(page);
   await page.addInitScript((on) => {
     try {
-      localStorage.setItem('cueory-game-help-seen', JSON.stringify(['vialo', 'pulse', 'triage', 'cueword', 'suture']));
       if (!on) localStorage.setItem('cueory-game-settings', JSON.stringify({ highContrast: false, motion: 'device', sound: false }));
     } catch { /* optional storage */ }
     const counted = { contexts: 0, starts: 0 };

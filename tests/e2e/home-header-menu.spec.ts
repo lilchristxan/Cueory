@@ -1,4 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
+import { markGameRulesSeen } from './clock';
+
+test.beforeEach(async ({ page }) => { await markGameRulesSeen(page); });
 
 /**
  * Home header (Christian's boards of 2026-11-24): one row with a round menu button at the left, the centred logo, and

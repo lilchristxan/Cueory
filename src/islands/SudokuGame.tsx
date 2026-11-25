@@ -9,7 +9,7 @@ import { announceFrameListening, frameHelpButton, GAME_FRAME_HELP_EVENT, GAME_FR
 import { playGameCue, type GameCue } from './gamesound';
 import { GAME_SETTINGS_EVENT, GAME_SETTINGS_STORAGE_KEY, gameSoundAllowed, loadGameSettings, parseGameSettings, type SharedGameSettings } from './gamesettings';
 import { sudokuCellClasses } from './sudokuhighlight';
-import { DEFAULT_SUDOKU_SETTINGS, GAME_PROGRESS_EVENT, LEVEL_LABELS, sudokuProgressDetail, LEVEL_RULES, advanceSudokuSeconds, autoCandidateNotes, checkSudoku, conflictIndices, dailySudokuSeed, editSudokuBoard, effectiveSudokuMode, generateSudoku, getResult, loadSudokuSettings, newSudokuBoard, noteDigits, pushSudokuHistory, saveSudokuSettings, sudokuCellPresentation, sudokuKeyAction, sudokuWrongCells, undoSudoku, type SudokuBoard, type SudokuBoardAction, type SudokuLevel, type SudokuMode, type SudokuSettings } from './sudoku';
+import { DEFAULT_SUDOKU_SETTINGS, GAME_PROGRESS_EVENT, LEVEL_LABELS, sudokuProgressDetail, LEVEL_RULES, advanceSudokuSeconds, autoCandidateNotes, checkSudoku, conflictIndices, placedDigits, dailySudokuSeed, editSudokuBoard, effectiveSudokuMode, generateSudoku, getResult, loadSudokuSettings, newSudokuBoard, noteDigits, pushSudokuHistory, saveSudokuSettings, sudokuCellPresentation, sudokuKeyAction, sudokuWrongCells, undoSudoku, type SudokuBoard, type SudokuBoardAction, type SudokuLevel, type SudokuMode, type SudokuSettings } from './sudoku';
 import { reportRound, SUDOKU_STATS_STORAGE_KEY, sudokuRoundResult } from './gameresults';
 import { keepSudokuSolve, loadSudokuStats, sudokuLevelStats, sudokuTime, type SavedSudokuStats } from './sudokustats';
 import PrintLogo from './PrintLogo';
@@ -66,6 +66,7 @@ export default function SudokuGame({ framed = false }: { framed?: boolean } = {}
   const conflicts = useMemo(() => new Set(conflictIndices(entries)), [entries]);
   const wrong = useMemo(() => sudokuWrongCells(entries, puzzle.puzzle, puzzle.solution, settings.checkGuesses, checked),
     [entries, puzzle, settings.checkGuesses, checked]);
+  const donePad = useMemo(() => placedDigits(entries), [entries]);
   const noted = useMemo(() => new Set(notes.flatMap((mask, index) => (mask ? [index] : []))), [notes]);
   const activeMode = effectiveSudokuMode(mode, shiftHeld);
   const reported = useRef(false);
@@ -248,6 +249,8 @@ export default function SudokuGame({ framed = false }: { framed?: boolean } = {}
   };
 
   const enter = (value: number) => {
+    // A digit already on the board nine times has nowhere left to go: the pad and the keyboard both ignore it.
+    if (donePad.has(value)) { setSaid(`${value} is all placed.`); cue('invalid'); return; }
     if (activeMode === 'candidate') {
       if (entries[selected] && !puzzle.puzzle[selected]) { setSaid('clear the square first to add pencil marks.'); return; }
       const next = apply({ kind: 'note', value });
@@ -446,7 +449,7 @@ export default function SudokuGame({ framed = false }: { framed?: boolean } = {}
           {PAD_GROUPS.map((digits) => (
             <div className="sudoku-pad-digits" key={digits[0]}>
               {digits.map((number) => (
-                <button type="button" key={number} onClick={() => enter(number)} disabled={paused || solved}>{number}</button>
+                <button type="button" key={number} onClick={() => enter(number)} disabled={paused || solved} aria-disabled={donePad.has(number) ? 'true' : undefined} aria-label={donePad.has(number) ? `${number}, all placed` : undefined} className={donePad.has(number) ? 'is-done' : undefined}>{number}</button>
               ))}
             </div>
           ))}

@@ -1,4 +1,7 @@
 import { expect, test } from '@playwright/test';
+import { markGameRulesSeen } from './clock';
+
+test.beforeEach(async ({ page }) => { await markGameRulesSeen(page); });
 
 const games = [
   { path: '/play/tachyyy', name: /^tachyyy/, root: 'stat-start' },

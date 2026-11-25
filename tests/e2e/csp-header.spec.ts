@@ -3,6 +3,9 @@ import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { themeHeadScript } from '../../src/scripts/theme';
+import { markGameRulesSeen } from './clock';
+
+test.beforeEach(async ({ page }) => { await markGameRulesSeen(page); });
 
 // Issue #746: `astro preview` doesn't read _headers, so this serves a built page with the exact Content-Security-Policy
 // the build wrote into dist/_headers as a real HTTP header, then checks the theme script (which runs before Astro's

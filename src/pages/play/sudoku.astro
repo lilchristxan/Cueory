@@ -282,6 +282,15 @@ const game = dailyGames.find((item) => item.id === 'triage')!;
     font-weight: 700;
   }
 
+  /* A digit with all nine on the board: a dashed outline and a line through it (not colour alone), the same size, still
+   * focusable (aria-disabled), and the soft ink colour, which keeps the contrast of the other disabled controls. */
+  :global(:root .sudoku-pad-wrap .sudoku-number-row button.is-done) {
+    border: var(--sudoku-line) dashed var(--color-ink-soft);
+    color: var(--color-ink-soft);
+    text-decoration: line-through;
+    cursor: not-allowed;
+  }
+
   :global(:root .sudoku-pad-wrap .sudoku-tool-button:disabled) {
     color: var(--color-ink-soft);
   }
