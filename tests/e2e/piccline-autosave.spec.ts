@@ -85,10 +85,10 @@ test.describe('piccline: autosave and cue meter', () => {
     for (const word of sample.extras.slice(0, 4)) await play(page, trace(word));
     await game(page).getByRole('button', { name: /^cue/ }).click();
     await play(page, sample.words[2]!.path);
-    await expect(page.getByTestId('suture-count')).toHaveText(`1 of ${total} found`);
+    await expect(page.getByTestId('suture-count')).toHaveText(`1 of ${total} words found · teal line: the word you are tracing`);
     await page.reload();
     await expect(game(page)).toBeVisible();
-    await expect(page.getByTestId('suture-count')).toHaveText(`1 of ${total} found`);
+    await expect(page.getByTestId('suture-count')).toHaveText(`1 of ${total} words found · teal line: the word you are tracing`);
     await expect(page.getByTestId('suture-found')).toContainText(sample.words[2]!.answer.toLowerCase());
     await expect(meter(page)).toHaveAttribute('data-filled', '1');
     await expect(page.getByTestId('suture-hint-progress')).toHaveText('1 of 3 words toward a cue. other words of 4 letters or more count.');
@@ -102,7 +102,7 @@ test.describe('piccline: autosave and cue meter', () => {
     await page.reload();
     await expect(game(page)).toBeVisible();
     await expect(page.getByTestId('suture-result')).toBeVisible();
-    await expect(page.getByTestId('suture-count')).toHaveText(`${total} of ${total} found`);
+    await expect(page.getByTestId('suture-count')).toHaveText(`${total} of ${total} words found · teal line: the word you are tracing`);
     await expect(cell(page, [0, 0])).toBeDisabled();
     await expect(game(page).getByRole('button', { name: 'submit' })).toBeDisabled();
     await expect(game(page).getByRole('button', { name: /^cue/ })).toBeDisabled();
@@ -112,7 +112,7 @@ test.describe('piccline: autosave and cue meter', () => {
     for (const word of sample.words) expect(saved).not.toContain(word.answer);
 
     await open(page, '2026-11-06');
-    await expect(page.getByTestId('suture-count')).toHaveText(`0 of ${total} found`);
+    await expect(page.getByTestId('suture-count')).toHaveText(`0 of ${total} words found · teal line: the word you are tracing`);
     await expect(page.getByTestId('suture-result')).toHaveCount(0);
     await expect(cell(page, [0, 0])).toBeEnabled();
   });
@@ -123,6 +123,6 @@ test.describe('piccline: autosave and cue meter', () => {
     });
     await open(page, '2026-11-01');
     await play(page, trace(sample.words[0]!.answer));
-    await expect(page.getByTestId('suture-count')).toHaveText(`1 of ${total} found`);
+    await expect(page.getByTestId('suture-count')).toHaveText(`1 of ${total} words found · teal line: the word you are tracing`);
   });
 });

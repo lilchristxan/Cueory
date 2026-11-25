@@ -30,12 +30,37 @@
     text-transform: uppercase;
   }
 
-  /* A picked letter: copper glow with a copper-deep ring, as drawn. Charcoal copper ink reads on it in both palettes. */
+  .wordpath-cue {
+    font-size: var(--wordpath-cue-size);
+    letter-spacing: var(--wordpath-cue-tracking);
+    line-height: 1.5;
+    margin-block-end: calc(var(--spacing) * 3);
+    color: var(--color-game-teal);
+    text-align: center;
+    overflow-wrap: anywhere;
+  }
+
+  .wordpath[data-format="path"] .wordpath-panel {
+    border: 0;
+    border-radius: 0;
+    background: none;
+    box-shadow: none;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+
+  /* The two-endpoint search keeps its anchor and hover treatment. */
   .wordpath-pick {
     background-color: var(--color-copper-glow);
     box-shadow: inset 0 0 0 var(--wordpath-ring) var(--color-copper-deep);
     color: var(--cueory-copper-ink);
   }
+  .wordpath-dot.wordpath-pick {
+    background-color: var(--color-game-teal);
+    box-shadow: none;
+  }
+  .wordpath-found { background-color: var(--color-panel-ink-soft); }
+  .wordpath-found-ink { color: var(--color-on-panel-button); }
   /* An unpicked letter: a page-colour circle with a hairline rim so it reads against the frosted panel in both palettes. */
   .wordpath-plain {
     background-color: var(--color-page);
@@ -58,7 +83,7 @@
     box-sizing: border-box;
   }
   .wordpath-pip-filled { background-color: var(--color-ink); }
-  .wordpath-pick-text { color: var(--cueory-copper-ink); }
+  .wordpath-pick-text { color: var(--color-page); }
 
   .wordpath-corner {
     display: flex;
@@ -88,6 +113,30 @@
     block-size: calc(var(--spacing) * 5);
   }
 
+  .wordpath-answer-pills ul:empty { display: none; }
+  .wordpath-found-pill,
+  .wordpath-active-pill,
+  .wordpath-missing-pill {
+    border-radius: var(--radius-pill);
+    padding: var(--wordpath-pill-pad-y) var(--wordpath-pill-pad-x);
+    overflow-wrap: anywhere;
+    max-inline-size: 100%;
+    font-size: var(--wordpath-pill-size);
+    font-weight: 700;
+  }
+  .wordpath-found-pill {
+    color: var(--color-on-panel-button);
+    background: var(--color-panel-ink-soft);
+  }
+  .wordpath-active-pill {
+    color: var(--color-ink);
+    background: var(--color-surface);
+  }
+  .wordpath-missing-pill {
+    border: var(--border-wordpath-panel) dashed var(--color-control);
+    color: var(--color-ink-soft);
+  }
+
   /* Keep large-text letter grids inside a named scroll region. The grid's
      squares stay large enough to tap and to show their enlarged letters. */
   .wordpath-board-scroll { overflow-x: auto; }
@@ -106,10 +155,11 @@
     The 6 × 8 letter board (SuturePathBoard) is as wide as the column, so on a short screen (a phone turned sideways,
     844 × 390) it grew far taller than the screen and a path could not be dragged from top to bottom without scrolling.
     Its width is capped so all 8 rows fit the screen's height (squares: width = height × 6 / 8), never below 44px
-    squares. On a tablet or desktop the column is wide, so squares also stop at --wordpath-cell-max (72px) instead of
-    growing to almost 100px. --wordpath-board-edge is the board's own padding and border around the squares.
+    squares. The reference spaces the desktop centres 62px apart with 52px dots. The board edge includes padding and border.
   */
   .wordpath[data-format="path"] .wordpath-board {
+    --wordpath-cell-max: calc(var(--spacing) * 15.5);
+    --wordpath-letter-inset: calc(var(--spacing) * 1.25);
     --wordpath-board-edge: calc(var(--spacing) * 6 + var(--border-board) * 2);
     max-inline-size: min(
       calc(var(--wordpath-cell-max) * 6 + var(--wordpath-board-edge)),
@@ -119,6 +169,9 @@
       )
     );
   }
+  /* The board's panel carries no padding of its own (the circles' rim is the edge). */
+  .wordpath[data-format="path"] .wordpath-panel { padding-block: 0; }
+  .wordpath-status { font-size: var(--wordpath-status-size); line-height: 1.5; }
   .wordpath-row { display: grid; grid-template-columns: repeat(var(--wordpath-columns), minmax(var(--wordpath-cell-min), 1fr)); }
 }
 
@@ -246,17 +299,15 @@
   }
 
   .wordpath-line {
-    stroke: var(--color-copper-deep);
-    stroke-width: var(--wordpath-line);
+    stroke: var(--color-game-teal);
+    stroke-width: calc(var(--spacing) * 3.5);
     stroke-linecap: round;
   }
 
-  .wordpath-line-theme {
-    stroke: var(--color-ink-soft);
-  }
-
+  .wordpath-line-theme,
   .wordpath-line-special {
-    stroke: var(--color-button);
+    stroke: var(--color-panel-ink-soft);
+    stroke-width: calc(var(--spacing) * 4.5);
   }
 
   .wordpath-mark {
@@ -265,11 +316,6 @@
     inset-inline-end: 12%;
     inline-size: calc(var(--spacing) * 2);
     block-size: calc(var(--spacing) * 2);
-  }
-
-  .wordpath-list-mark {
-    inline-size: calc(var(--spacing) * 2.5);
-    block-size: calc(var(--spacing) * 2.5);
   }
 
   .wordpath-step {
