@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { THEME_STORAGE_KEY } from '../../src/scripts/theme';
-import { THEME_ROWS, chooseSiteTheme, currentSiteTheme } from '../../src/islands/sitetheme';
+import { THEME_ROWS, chooseSiteTheme, currentSiteTheme, themeDetail } from '../../src/islands/sitetheme';
 
 function memoryStorage(initial: Record<string, string> = {}) {
   const data = new Map(Object.entries(initial));
@@ -12,10 +12,22 @@ function memoryStorage(initial: Record<string, string> = {}) {
   };
 }
 
-describe('sudoku theme rows follow the site theme switch', () => {
+describe('theme slider follows the site theme switch', () => {
   it('offers the same three choices as the footer switch', () => {
     expect(THEME_ROWS.map((row) => row.value)).toEqual(['light', 'dark', 'device']);
     for (const row of THEME_ROWS) expect(row.label.length).toBeGreaterThan(0);
+  });
+
+  it('shows one short word per segment and keeps the full accessible names', () => {
+    expect(THEME_ROWS.map((row) => row.short)).toEqual(['light', 'dark', 'device']);
+    expect(THEME_ROWS.map((row) => row.label)).toEqual(['light mode', 'dark mode', 'follow device']);
+    // Label in name: the visible word is always part of the accessible name.
+    for (const row of THEME_ROWS) expect(row.label).toContain(row.short);
+  });
+
+  it('gives the helper line the detail of the chosen position', () => {
+    for (const row of THEME_ROWS) expect(themeDetail(row.value)).toBe(row.detail);
+    expect(new Set(THEME_ROWS.map((row) => row.detail)).size).toBe(3);
   });
 
   it('reads the current pick from the site theme storage', () => {
