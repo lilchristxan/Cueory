@@ -1,0 +1,1 @@
+status: in review · task-accounts/readiness · new test tests/unit/go-live-migrations.test.ts fails if docs/GO-LIVE.md section 1.5 (Christian's prod database list) misses, repeats or misorders a file in supabase/migrations or states the wrong file count; reads files only, no behaviour change, accounts stay closed.
