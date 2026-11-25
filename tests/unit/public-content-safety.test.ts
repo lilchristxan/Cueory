@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 type Kind = 'sample' | 'placeholder' | 'documentation' | 'empty-sentinel' |
-  'curriculum-metadata' | 'visual-source-metadata' | 'empty-video-placeholder';
+  'curriculum-metadata' | 'visual-source-metadata' | 'empty-video-placeholder' | 'approved-public-text';
 type PublicFile = { kind: Kind; sha256: string };
 
 // Public corpus at staging 1de038ad, with an explicitly reviewed 2026-11-14 metadata-only anatomy update.
@@ -20,6 +20,9 @@ type PublicFile = { kind: Kind; sha256: string };
 const publicFiles: Record<string, PublicFile> = {
   'README.md': { kind: 'documentation', sha256: 'faf6c82dc0a62df7a442aec9480383dade356f483b702594d1e1dbb862e0d0e8' },
   'batches/.gitkeep': { kind: 'empty-sentinel', sha256: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855' },
+  // Christian's own handwritten glove messages (24 Nov 2026), approved as public text; the labels, wording and photo
+  // files are checked in tests/unit/glove-messages.test.ts.
+  'gloves/messages.json': { kind: 'approved-public-text', sha256: '0a671d8dad984f8a101304b7f7ca56b2c558b4830c2c4301a3806f37da120112' },
   'breaks/ideas.json': { kind: 'sample', sha256: '106106dbc858aeb88c24540a9693f4709aa3f8fa646d44899414f54c3d95175e' },
   'cards/study-skills-01.json': { kind: 'placeholder', sha256: 'b418d781233bba743de42ef9aea130ce19cea87fabad5108a20915051a9d373f' },
   'curriculum/blocks-v4.csv': { kind: 'curriculum-metadata', sha256: 'e79f28456e35c5647f60d0e622d34b64c6c3d48d08a85edcb73590f50af1c33c' },
@@ -108,6 +111,9 @@ function inspectFile(path: string, bytes: Buffer, inventory = publicFiles): stri
   }
   if (expected.kind === 'sample' && !(record.status === 'sample' || (record.status === undefined && record.sample === true))) {
     findings.push(`${path}: explicit sample label required`);
+  }
+  if (expected.kind === 'approved-public-text' && record.status !== 'approved') {
+    findings.push(`${path}: approved label required`);
   }
   if (expected.kind === 'placeholder' && record.status !== 'placeholder') {
     findings.push(`${path}: placeholder label required`);

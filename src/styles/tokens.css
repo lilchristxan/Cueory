@@ -869,6 +869,9 @@
   --popup-button-hover: #e4eebf; /* the button on hover */
   --popup-button-ink: #26492a;   /* text on the button */
   --popup-width: 30rem;          /* the pop-up is at most this wide */
+  --glove-note-width: 22rem;     /* the message-glove note is at most this wide (photos are 720 px, about 2x) */
+  --glove-note-drop-shadow: drop-shadow(0 0.5rem 1rem rgb(var(--shadow-tint) / 0.25)); /* soft shadow that follows the glove's outline */
+  --layer-glove-note: 25;        /* above the page, below the header (30) and any dialog */
   --popup-scrim-mix: 60%;        /* how much deep green dims the page behind the pop-up */
   /*
     A photo goes here once Christian supplies one he has rights to, for example url("/popup/photo.webp"). It sits
