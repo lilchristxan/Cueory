@@ -537,6 +537,8 @@
   --crossword-cell-mid: clamp(2.75rem, 7vw, 3.875rem);
   --crossword-cell-hard: var(--tap-min); /* large boards scroll inside their wrapper, keeping 44 px targets */
   --crossword-gap: 0.0625rem;
+  --crossword-cell-gap: 0.25rem;    /* space between squares, as drawn on the games-v2 crossword board */
+  --crossword-frame: 0.25rem;       /* the taupe frame round the squares */
   --crossword-line: 0.0625rem;
   --crossword-number: clamp(0.45rem, 1.5vw, 0.75rem);
   --crossword-letter: clamp(0.75rem, 3vw, 1.5rem);
@@ -1218,6 +1220,13 @@
   --sudoku-cell-min: 2.75rem;
   --sudoku-cell-floor: 1.5rem;        /* a square's floor: 24 px (WCAG 2.2) at default text, 48 px at 32 px root text, when the board scrolls */
   --sudoku-cell-max: 5.25rem;
+  --sudoku-cell-board: 2.875rem;       /* Christian's board: 46 px squares on desktop and landscape tablet */
+  --sudoku-board-radius: 0.625rem;     /* the grid's corners on his board (10 px) */
+  --sudoku-pad-radius: 0.625rem;       /* the number keys' corners (10 px) */
+  --sudoku-pad-text: 1.1875rem;        /* number keys: 19 px bold */
+  --sudoku-pill-text: 0.9375rem;       /* Pencil, Undo and Hint: 15 px bold */
+  --sudoku-pill-pad: 1.375rem;         /* pill side padding (22 px) */
+  --sudoku-pill-line: 1.5px;           /* pill outline */
   --sudoku-height-reserve: 28.75rem;
   --sudoku-width-reserve: 9.375rem;
   --sudoku-status-row: 2rem;           /* the status row is a whole number of pixels tall (32 px), so the controls under it land on whole pixels (Firefox loses 0.00003 px on a fractional offset) */

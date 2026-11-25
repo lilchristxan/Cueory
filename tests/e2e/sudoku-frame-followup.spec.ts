@@ -62,13 +62,13 @@ test('paused Sudoku prevents auto-cue setting changes until resume', async ({ pa
   await game(page).getByRole('button', { name: 'pause puzzle' }).click();
   await gear.click();
   const settings = page.getByRole('dialog', { name: 'sudoku settings' });
-  const auto = settings.getByRole('checkbox', { name: 'start in auto cue mode' });
+  const auto = settings.getByRole('checkbox', { name: 'start in auto pencil mode' });
   await expect(auto).toBeDisabled();
   await page.keyboard.press('Escape');
   await game(page).getByRole('button', { name: 'resume puzzle' }).click();
   await gear.click();
   const resumedSettings = page.getByRole('dialog', { name: 'sudoku settings' });
-  const resumedAuto = resumedSettings.getByRole('checkbox', { name: 'start in auto cue mode' });
+  const resumedAuto = resumedSettings.getByRole('checkbox', { name: 'start in auto pencil mode' });
   await expect(resumedAuto).toBeEnabled();
   const before = await resumedAuto.isChecked();
   await resumedAuto.setChecked(!before);
@@ -147,3 +147,45 @@ for (const [width, height] of [[390, 844], [820, 1180], [1440, 900]] as const) {
     });
   }
 }
+
+test('the gear controls the current puzzle, and the Frame picker stays in sync', async ({ page }) => {
+  await page.goto('/play/sudoku');
+  const board = game(page);
+  await expect(board.getByRole('gridcell')).toHaveCount(81);
+  const gear = page.getByTestId('game-frame-gear');
+  const settings = page.getByRole('dialog', { name: 'sudoku settings' });
+  const picker = page.getByTestId('game-frame-sudoku-difficulty');
+
+  await gear.click();
+  await settings.getByRole('combobox', { name: 'difficulty' }).selectOption('medium');
+  await expect(picker).toHaveValue('medium');
+  await settings.getByRole('checkbox', { name: 'show timer' }).uncheck();
+  await settings.getByRole('checkbox', { name: 'automatic pencil marks for this puzzle' }).check();
+  await settings.getByRole('button', { name: 'check puzzle' }).click();
+  await expect(settings).toHaveCount(0);
+  await expect(board.getByTestId('sudoku-live')).toContainText('empty');
+  await expect(board.locator('.sudoku-time strong')).toHaveCount(0);
+  await expect(board.getByRole('button', { name: 'Hint', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await expect(gear).toBeFocused();
+
+  await gear.click();
+  await settings.getByRole('button', { name: 'pause puzzle' }).click();
+  await expect(board).toHaveAttribute('data-paused', 'true');
+  await gear.click();
+  await expect(settings.getByRole('combobox', { name: 'difficulty' })).toBeDisabled();
+  await expect(settings.getByRole('button', { name: 'check puzzle' })).toBeDisabled();
+  await settings.getByRole('button', { name: 'resume puzzle' }).click();
+  await expect(board).toHaveAttribute('data-paused', 'false');
+
+  await page.evaluate(() => {
+    window.print = () => {
+      document.body.dataset.printedGame = document.documentElement.dataset.printGame;
+      window.dispatchEvent(new Event('afterprint'));
+    };
+  });
+  await gear.click();
+  await settings.getByRole('button', { name: 'print this puzzle' }).click();
+  await expect(settings).toHaveCount(0);
+  await expect(page.locator('body')).toHaveAttribute('data-printed-game', 'sudoku');
+  await expect(gear).toBeFocused();
+});

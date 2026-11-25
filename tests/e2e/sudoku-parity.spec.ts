@@ -1,4 +1,4 @@
-/** Sudoku parity (#720): modes, Shift, auto candidates, undo, clear cell, check puzzle and per-level stats. */
+/** Sudoku parity (#720): Pencil mode, Shift, auto candidates, undo, hint, clear cell, check puzzle and per-level stats. */
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 import { dailySudokuSeed, generateSudoku } from '../../src/islands/sudoku';
@@ -27,24 +27,29 @@ for (const [size, width, height] of [['phone', 390, 844], ['desktop', 1440, 900]
     await expect(cells(page)).toHaveCount(81);
     const mode = game(page).getByTestId('sudoku-mode');
 
-    // Space switches to cue mode; numbers then add small cues.
+    // Space switches to Pencil mode; numbers then add small pencil marks.
     await cells(page).nth(open[0]!).click();
     await page.keyboard.press('Space');
-    await expect(mode.getByRole('button', { name: 'cue', exact: true })).toHaveAttribute('aria-pressed', 'true');
+    const pencil = mode.getByRole('button', { name: /pencil/i });
+    await expect(pencil).toHaveAttribute('aria-pressed', 'true');
     await page.keyboard.press('3');
     await page.keyboard.press('5');
-    await expect(cells(page).nth(open[0]!)).toHaveAttribute('aria-label', /empty, cues 3, 5/);
+    await expect(cells(page).nth(open[0]!)).toHaveAttribute('aria-label', /empty, pencil marks 3, 5/);
     await expect(cells(page).nth(open[0]!)).toHaveClass(/has-candidates/);
 
     // Holding Shift flips back to normal for that moment only.
     await page.keyboard.down('Shift');
-    await expect(mode.getByRole('button', { name: 'normal' })).toHaveAttribute('aria-pressed', 'true');
+    await expect(pencil).toHaveAttribute('aria-pressed', 'false');
     await page.keyboard.up('Shift');
-    await expect(mode.getByRole('button', { name: 'cue', exact: true })).toHaveAttribute('aria-pressed', 'true');
+    await expect(pencil).toHaveAttribute('aria-pressed', 'true');
 
     // Tap back to normal and enter a wrong number: it is marked wrong with a slash and the word "wrong".
-    await mode.getByRole('button', { name: 'normal' }).click();
+    await pencil.click();
     await cells(page).nth(open[1]!).click();
+    await page.keyboard.press('p');
+    await expect(pencil).toHaveAttribute('aria-pressed', 'true');
+    await page.keyboard.press('p');
+    await expect(pencil).toHaveAttribute('aria-pressed', 'false');
     await page.keyboard.press(String(wrongDigit(open[1]!)));
     await expect(cells(page).nth(open[1]!)).toHaveClass(/is-wrong/);
     await expect(cells(page).nth(open[1]!)).toHaveAttribute('aria-label', /, wrong/);
@@ -61,10 +66,21 @@ for (const [size, width, height] of [['phone', 390, 844], ['desktop', 1440, 900]
 
     // Clear cell by button and by Backspace.
     await page.keyboard.press(String(daily.solution[open[1]!]));
-    await game(page).getByRole('button', { name: 'clear cell' }).click();
+    await page.getByTestId('game-frame-gear').click();
+    await page.getByRole('dialog', { name: 'sudoku settings' }).getByRole('button', { name: 'clear cell' }).click();
     await expect(cells(page).nth(open[1]!)).toHaveAttribute('aria-label', /, empty$/);
     await cells(page).nth(open[0]!).click();
     await page.keyboard.press('Backspace');
+    await expect(cells(page).nth(open[0]!)).toHaveAttribute('aria-label', /, empty$/);
+
+    // Hint is the established automatic-pencil-mark cue: it keeps entries, history and result accounting unchanged.
+    await cells(page).nth(open[0]!).click();
+    await game(page).getByRole('button', { name: 'hint' }).click();
+    await expect(game(page).getByRole('button', { name: 'hint' })).toHaveAttribute('aria-pressed', 'true');
+    await expect(cells(page).nth(open[0]!)).toHaveAttribute('aria-label', /empty, pencil marks/);
+    await expect(live(page)).toContainText('auto pencil marks on');
+    await game(page).getByRole('button', { name: 'hint' }).click();
+    await expect(game(page).getByRole('button', { name: 'hint' })).toHaveAttribute('aria-pressed', 'false');
     await expect(cells(page).nth(open[0]!)).toHaveAttribute('aria-label', /, empty$/);
 
     // Check puzzle with live checking off: a wrong entry is marked only after the check.
@@ -75,13 +91,14 @@ for (const [size, width, height] of [['phone', 390, 844], ['desktop', 1440, 900]
     await cells(page).nth(open[2]!).click();
     await page.keyboard.press(String(wrongDigit(open[2]!)));
     await expect(cells(page).nth(open[2]!)).not.toHaveClass(/is-wrong/);
-    await game(page).getByRole('button', { name: 'check puzzle' }).click();
+    await page.getByTestId('game-frame-gear').click();
+    await page.getByRole('dialog', { name: 'sudoku settings' }).getByRole('button', { name: 'check puzzle' }).click();
     await expect(cells(page).nth(open[2]!)).toHaveClass(/is-wrong/);
     await expect(live(page)).toContainText('1 square is wrong');
 
-    // Auto cues fill every empty square.
-    await game(page).getByRole('checkbox', { name: /auto cues/ }).click();
-    await expect(cells(page).nth(open[3]!)).toHaveAttribute('aria-label', /empty, cues/);
+    // Auto pencil marks fill every empty square.
+    await game(page).getByRole('button', { name: 'hint' }).click();
+    await expect(cells(page).nth(open[3]!)).toHaveAttribute('aria-label', /empty, pencil marks/);
 
     for (const box of await game(page).locator('.sudoku-tools button').evaluateAll((buttons) => buttons.map((b) => b.getBoundingClientRect().toJSON()))) {
       expect(box.width).toBeGreaterThanOrEqual(44);

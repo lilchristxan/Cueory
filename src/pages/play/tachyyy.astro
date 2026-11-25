@@ -56,7 +56,7 @@ const { questions, sampleKey } = shown ? parsed : { questions: [], sampleKey: {}
 
         <article class="mx-auto max-w-prose w-full" data-pagefind-ignore>
           {shown && <p class="text-sm text-ink-soft" data-testid="stat-sample-note">sample questions · awaiting content</p>}
-          <h1 class="text-base font-medium"><TachyyyTitle name={tachyyyGame.name} /></h1>
+          <h1 class="sr-only"><TachyyyTitle name={tachyyyGame.name} /></h1>
           {
             shown ? (
               <div>
