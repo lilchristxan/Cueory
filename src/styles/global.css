@@ -2790,6 +2790,26 @@ html:has(dialog.mode-preview[open]) {
 
   .theme-slider-option > span { position: relative; pointer-events: none; }
 
+  /* A hidden, bold copy of the word (the label's data-text) shares the word's grid cell and reserves the bold width, so choosing a
+     segment (it turns bold) never changes the width of any segment, the slider or the panel around it: the box is the same in every
+     state. A pseudo-element, so it is never read aloud. */
+  .theme-slider-option[data-text] {
+    display: grid;
+    place-items: center;
+  }
+
+  .theme-slider-option[data-text] > span,
+  .theme-slider-option[data-text]::after {
+    grid-area: 1 / 1;
+  }
+
+  .theme-slider-option[data-text]::after {
+    content: attr(data-text);
+    visibility: hidden;
+    font-weight: 700;
+    pointer-events: none;
+  }
+
   .theme-slider-option input {
     position: absolute;
     inset: 0;
@@ -3069,6 +3089,13 @@ html:has(dialog.mode-preview[open]) {
     padding-block: calc(var(--platter-pad-top) * var(--platter-px)) calc(var(--platter-pad-bottom) * var(--platter-px));
   }
 
+  /* A preview page's title: a line of whole pixels less a quarter, so the header's half pixel above it and this quarter make everything
+     below start on a quarter pixel (404.25, never 404.5): exact in both binary floats and Firefox's sixtieths, and a rounded
+     position (Math.round) is never left on a half. */
+  .preview-page-title {
+    --tw-leading: calc(round(calc(var(--text-title-phone) * var(--text-title-phone--line-height)), var(--whole-pixel)) - var(--quarter-pixel));
+  }
+
   .platter-intro {
     padding-inline: var(--spacing-gutter);
   }
@@ -3076,7 +3103,8 @@ html:has(dialog.mode-preview[open]) {
   .platter-heading {
     margin-block: calc(var(--platter-heading-top) * var(--platter-px)) 0;
     font-size: calc(var(--platter-heading-size) * var(--platter-px));
-    line-height: var(--platter-heading-lh);
+    /* Whole pixels per line, so the stage (and the arrows set 1 px inside it) never start on a fraction of a pixel: Firefox then reads a 44 px arrow as 43.99998. */
+    line-height: round(calc(var(--platter-heading-size) * var(--platter-heading-lh) * var(--platter-px)), var(--platter-px));
   }
 
   .platter-sub {
@@ -3445,6 +3473,9 @@ html:has(dialog.mode-preview[open]) {
     z-index: 40;
     inline-size: calc(var(--platter-arrow) * var(--platter-px));
     block-size: calc(var(--platter-arrow) * var(--platter-px));
+    min-inline-size: calc(var(--platter-arrow) * var(--platter-px));
+    min-block-size: calc(var(--platter-arrow) * var(--platter-px));
+    flex: none;
   }
 
   .platter-arrow-prev {

@@ -169,7 +169,7 @@ const phone = platterSpots(count, 0, 'phone');
       const scale = sideways && kind === 'wide' ? Math.min(fitted, SIDEWAYS_SCALE) : fitted;
       root.style.setProperty('--platter-scale', String(scale));
       root.style.setProperty('--platter-head', String(stageHeadroom(scale, kind)));
-      root.style.setProperty('--platter-arrow-x', String(Math.max(ARROW_X * scale, ARROW_X_MIN)));
+      root.style.setProperty('--platter-arrow-x', String(Math.round(Math.max(ARROW_X * scale, ARROW_X_MIN))));
       root.dataset.mode = kind;
     };
 
