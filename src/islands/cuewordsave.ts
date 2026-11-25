@@ -27,7 +27,7 @@ export function loadCuewordSave(puzzle: CuewordPuzzle, day: string, storage: Key
   if (!Array.isArray(entries) || entries.length !== cells) return null;
   if (!entries.every((entry, i) => typeof entry === 'string' && (entry === '' || (letters[i] !== '.' && /^[a-z]$/i.test(entry))))) return null;
   if (!whole(cell, cells - 1) || letters[cell] === '.' || (direction !== 'across' && direction !== 'down')) return null;
-  if (!Array.isArray(cued) || cued.length > 3 || !cued.every((i) => whole(i, cells - 1) && letters[i] !== '.') || new Set(cued).size !== cued.length) return null;
+  if (!Array.isArray(cued) || cued.length > cells || !cued.every((i) => whole(i, cells - 1) && letters[i] !== '.') || new Set(cued).size !== cued.length) return null;
   if (!Array.isArray(checks) || checks.length !== cells || !checks.every((mark) => mark === null || mark === 'right' || mark === 'wrong' || mark === 'empty')) return null;
   if (!whole(assists, 10_000) || !whole(elapsed, 359_999)) return null;
   const state: CuewordState = {

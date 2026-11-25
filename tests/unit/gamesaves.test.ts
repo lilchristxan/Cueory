@@ -76,6 +76,16 @@ describe('sudoku autosave', () => {
     expect(loadSudokuSave(medium.puzzle, DAY, 'medium', storage)).toBeNull();
     expect(loadSudokuSave(easy.puzzle, '2026-11-26', 'easy', storage)).toBeNull();
   });
+  it('keeps the personal pencil marks while auto marks are on, and drops them when auto is off', () => {
+    const storage = memory();
+    const own = Array<number>(81).fill(0); own[2] = 0b1010;
+    saveSudokuProgress(easy.puzzle, DAY, 'easy', { ...played(), auto: true, own }, storage);
+    expect(loadSudokuSave(easy.puzzle, DAY, 'easy', storage)!.own).toEqual(own);
+    saveSudokuProgress(easy.puzzle, DAY, 'easy', { ...played(), auto: false, own }, storage);
+    expect(loadSudokuSave(easy.puzzle, DAY, 'easy', storage)!.own).toBeUndefined();
+    storage.setItem(SUDOKU_SAVE_KEY, JSON.stringify({ v: 1, owner: 'device', day: DAY, boards: { easy: { ...JSON.parse(storage.getItem(SUDOKU_SAVE_KEY)!).boards.easy, own: [1, 2] } } }));
+    expect(loadSudokuSave(easy.puzzle, DAY, 'easy', storage)).toBeNull();
+  });
   it('keeps a solved board solved', () => {
     const storage = memory();
     const board = { entries: [...easy.solution], notes: Array<number>(81).fill(0), marks: new Set<number>() };
@@ -118,6 +128,17 @@ describe('crossword autosave', () => {
     const full = { ...emptyState(puzzle), entries: [...puzzle.grid.join('')].map((c) => (c === '.' ? '' : c)) };
     saveCuewordProgress(puzzle, DAY, { state: full, elapsed: 90 }, storage);
     expect(loadCuewordSave(puzzle, DAY, storage)!.state.entries).toEqual(full.entries);
+  });
+  it('keeps a board with every square revealed (reveal puzzle), not only three', () => {
+    const storage = memory();
+    const letters = [...puzzle.grid.join('')];
+    const cells = letters.flatMap((c, i) => (c === '.' ? [] : [i]));
+    expect(cells.length).toBeGreaterThan(3);
+    const full = { ...emptyState(puzzle), entries: letters.map((c) => (c === '.' ? '' : c)), cued: cells, checks: letters.map((c) => (c === '.' ? undefined : ('right' as const))), assists: 1 };
+    saveCuewordProgress(puzzle, DAY, { state: full, elapsed: 120 }, storage);
+    const back = loadCuewordSave(puzzle, DAY, storage)!;
+    expect(back.state.cued).toEqual(cells);
+    expect(back.state.entries).toEqual(full.entries);
   });
   it('starts fresh on a new day, and rejects letters on blocked squares', () => {
     const storage = memory();

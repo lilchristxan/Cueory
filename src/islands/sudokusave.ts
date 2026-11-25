@@ -15,6 +15,8 @@ export interface SudokuProgress {
   seconds: number;
   errors: number;
   auto: boolean;
+  /** The player's own pencil marks from before auto marks filled the board, kept while auto is on so turning it off brings them back. */
+  own?: number[];
 }
 
 /** Whether the board is just the puzzle as dealt (nothing worth saving). */
@@ -27,17 +29,18 @@ export function untouched(progress: SudokuProgress, puzzle: readonly number[]): 
 export function loadSudokuSave(puzzle: readonly number[], day: string, level: SudokuLevel, storage: KeyValueStorage | undefined = browserStorage()): SudokuProgress | null {
   const saved = readSavedBoard(storage, SUDOKU_SAVE_KEY, MAX_LENGTH, day, level);
   if (!isObject(saved)) return null;
-  const { entries, notes, marks, seconds, errors, auto } = saved;
+  const { entries, notes, marks, seconds, errors, auto, own } = saved;
   if (!Array.isArray(entries) || entries.length !== CELLS || !entries.every((value, i) => whole(value, 9) && (puzzle[i] === 0 || value === puzzle[i]))) return null;
   if (!Array.isArray(notes) || notes.length !== CELLS || !notes.every((mask) => whole(mask, 511))) return null;
   if (!Array.isArray(marks) || marks.length > CELLS || !marks.every((i) => whole(i, CELLS - 1)) || new Set(marks).size !== marks.length) return null;
   if (!whole(seconds, 359_999) || !whole(errors, 10_000) || typeof auto !== 'boolean') return null;
-  return { board: { entries: entries as number[], notes: notes as number[], marks: new Set(marks as number[]) }, seconds, errors, auto };
+  if (own !== undefined && (!Array.isArray(own) || own.length !== CELLS || !own.every((mask) => whole(mask, 511)))) return null;
+  return { board: { entries: entries as number[], notes: notes as number[], marks: new Set(marks as number[]) }, seconds, errors, auto, ...(own ? { own: own as number[] } : {}) };
 }
 
 /** Saves this level's board after a move; a board back at the start drops its record. */
 export function saveSudokuProgress(puzzle: readonly number[], day: string, level: SudokuLevel, progress: SudokuProgress, storage: KeyValueStorage | undefined = browserStorage()): void {
-  const { board, seconds, errors, auto } = progress;
+  const { board, seconds, errors, auto, own } = progress;
   writeSavedBoard(storage, SUDOKU_SAVE_KEY, MAX_LENGTH, day, level,
-    untouched(progress, puzzle) ? null : { entries: board.entries, notes: board.notes, marks: [...board.marks], seconds, errors, auto });
+    untouched(progress, puzzle) ? null : { entries: board.entries, notes: board.notes, marks: [...board.marks], seconds, errors, auto, ...(auto && own ? { own } : {}) });
 }

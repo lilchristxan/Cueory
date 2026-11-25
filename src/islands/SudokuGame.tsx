@@ -171,7 +171,7 @@ export default function SudokuGame({ framed = false }: { framed?: boolean } = {}
     // A board played earlier today on this device (this level) comes back as it was; a finished one stays finished.
     const saved = loadSudokuSave(puzzle.puzzle, day, level, browserStorage());
     const fresh = newSudokuBoard(puzzle.puzzle);
-    ownNotes.current = [...fresh.notes];
+    ownNotes.current = saved?.own ? [...saved.own] : [...fresh.notes];
     setBoard(saved ? saved.board : settings.autoCandidates ? withAutoNotes(fresh) : fresh); setHistory([]); setChecked(new Set());
     setSelected(firstOpen(puzzle.puzzle));
     setSeconds(saved?.seconds ?? 0); setErrors(saved?.errors ?? 0); setPaused(false); setAuto(saved ? saved.auto : settings.autoCandidates);
@@ -184,7 +184,7 @@ export default function SudokuGame({ framed = false }: { framed?: boolean } = {}
   // Autosave after every move. The latest progress is also kept in a ref and written again when the page is hidden or
   // closed, so a reload right after a move cannot beat the effect.
   const latest = useRef<(() => void) | null>(null);
-  latest.current = boardFor === puzzle ? () => saveSudokuProgress(puzzle.puzzle, day, level, { board, seconds, errors, auto }, browserStorage()) : null;
+  latest.current = boardFor === puzzle ? () => saveSudokuProgress(puzzle.puzzle, day, level, { board, seconds, errors, auto, own: ownNotes.current }, browserStorage()) : null;
   useEffect(() => {
     latest.current?.();
   }, [board, errors, auto, paused, boardFor]);
