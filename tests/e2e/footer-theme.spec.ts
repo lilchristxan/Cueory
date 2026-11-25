@@ -209,12 +209,13 @@ test.describe('footer theme picker', () => {
 
     await light.check();
     await light.focus();
-    const ring = await light.evaluate((el) => getComputedStyle(el.closest('label')!).outlineStyle);
-    expect(ring).toBe('solid');
 
     await page.keyboard.press('ArrowRight');
     await expect(dark).toBeChecked();
     await expect(dark).toBeFocused();
+    // Focus moved by a key shows the ring on its segment (:focus-visible does not apply to a script's focus() call).
+    const ring = await dark.evaluate((el) => getComputedStyle(el.closest('label')!).outlineStyle);
+    expect(ring).toBe('solid');
     await page.keyboard.press('ArrowRight');
     await expect(device).toBeChecked();
     await expect(device).toBeFocused();
@@ -238,7 +239,7 @@ test.describe('footer theme picker', () => {
         await page.goto('/');
         await openFooterLinks(page);
         await page.getByRole('radio', { name: palette.name }).check();
-        // The pill's colors ease over 150 ms (.segmented-option); check them once they have settled.
+        // The slider's thumb eases over a short moment (.theme-slider); check the colors once it has settled.
         await page.waitForFunction(() => document.querySelector('footer')!.getAnimations({ subtree: true }).every((a) => a.playState !== 'running'));
 
         const results = await new AxeBuilder({ page })

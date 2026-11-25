@@ -2851,6 +2851,17 @@ html:has(dialog.mode-preview[open]) {
   }
 }
 
+/* The theme slider's thumb is a background too, so forced colors shows the native radio inside each segment instead. */
+@media (forced-colors: active) {
+  .theme-slider-option { gap: calc(var(--spacing) * 1); }
+  .theme-slider-option input[type="radio"] {
+    position: static;
+    inline-size: auto;
+    block-size: auto;
+    opacity: 1;
+  }
+}
+
 /* Task 234: forced colors removes the segmented labels' background selection.
    Restore the native radio so the checked state survives the system palette. */
 @media (forced-colors: active) {
