@@ -1435,9 +1435,17 @@ test.describe('study-mode preview (D-51)', () => {
     }
     await expect.poll(() => middleCard(page)).toBe(name);
   };
-  const openPreview = async (page: Page, name: string) => {
+  const openPreview = async (page: Page, name: string, { pause = false }: { pause?: boolean } = {}) => {
     await page.goto('/');
     await bringToMiddle(page, name);
+    // Video is the vial already in front, so bringing it to the middle takes no turn and the visitor has not taken
+    // over: the six-second slideshow can still move it aside before a slow runner's tap lands. Pause through the real
+    // visitor control, as the hover test does, so the tap meets the vial that bringToMiddle found.
+    if (pause) {
+      await page.locator('#ways-to-study').getByRole('button', { name: 'pause the slideshow' }).click();
+      await expect(page.locator('#ways-to-study')).toHaveAttribute('data-paused', '');
+      expect(await middleCard(page)).toBe(name);
+    }
     await page.getByRole('button', { name: `preview ${name}` }).click();
     await expect(page.getByRole('dialog', { name })).toBeVisible();
   };
@@ -1612,7 +1620,7 @@ test.describe('study-mode preview (D-51)', () => {
 
   test('a swipe down closes it on touch screens, a short one does not', async ({ page }, testInfo) => {
     test.skip(!testInfo.project.use.hasTouch, 'a touch-screen gesture');
-    await openPreview(page, 'video');
+    await openPreview(page, 'video', { pause: true });
     // Playwright builds the touch points in each engine's own way (WebKit has no Touch constructor, so it uses
     // document.createTouch there), so the same swipe runs in Chromium and Safari's engine.
     const panel = page.locator('[data-mode-preview-panel]');
