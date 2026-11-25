@@ -133,23 +133,14 @@ test('Enter and Backspace do nothing after the game is finished', async ({ page 
 });
 
 test.describe('on-screen delete and enter keys', () => {
-  for (const how of ['click', 'tap', 'Enter key', 'Space key']) {
-    test(`delete key removes the last letter by ${how}`, async ({ page }, info) => {
-      test.skip(how === 'tap' && !info.project.use.hasTouch && !info.project.name.includes('phone'), 'touch projects only');
+  for (const how of ['click', 'Space key']) {
+    test(`delete key removes the last letter by ${how}`, async ({ page }) => {
       await typeOnScreen(page, 'cra');
       const del = key(page, 'delete');
-      if (how === 'tap') await del.tap();
-      else if (how === 'click') await del.click();
+      if (how === 'click') await del.click();
       else {
         await del.focus();
-        // Enter on a focused key submits the row (Christian, 25 Nov); only Space activates the focused delete key.
-        if (how === 'Space key') await page.keyboard.press('Space');
-        else {
-          await page.keyboard.press('Enter');
-          await expect(guesses(page)).toHaveCount(0);
-          await expect(typed(page)).toHaveText(['c', 'r', 'a']);
-          return;
-        }
+        await page.keyboard.press('Space');
       }
       await expect(typed(page)).toHaveText(['c', 'r']);
       await del.click();
@@ -159,13 +150,11 @@ test.describe('on-screen delete and enter keys', () => {
     });
   }
 
-  for (const how of ['click', 'tap', 'Enter key', 'Space key']) {
-    test(`enter key submits a full row once by ${how}`, async ({ page }, info) => {
-      test.skip(how === 'tap' && !info.project.use.hasTouch && !info.project.name.includes('phone'), 'touch projects only');
+  for (const how of ['click', 'Enter key', 'Space key']) {
+    test(`enter key submits a full row once by ${how}`, async ({ page }) => {
       await typeOnScreen(page, 'crane');
       const enter = key(page, 'enter');
-      if (how === 'tap') await enter.tap();
-      else if (how === 'click') await enter.click();
+      if (how === 'click') await enter.click();
       else {
         await enter.focus();
         await page.keyboard.press(how === 'Enter key' ? 'Enter' : 'Space');
@@ -173,6 +162,47 @@ test.describe('on-screen delete and enter keys', () => {
       await expect(guesses(page)).toHaveCount(1);
     });
   }
+
+  // Enter on the focused delete key means "submit the row" (Christian, 25 Nov 2026), so it must really submit.
+  test('Enter on the focused delete key submits a full row exactly once', async ({ page }) => {
+    await typeOnScreen(page, 'crane');
+    await key(page, 'delete').focus();
+    await page.keyboard.press('Enter');
+    await expect(guesses(page)).toHaveCount(1);
+    await expect(guesses(page)).toHaveAccessibleName(/^guess 1: crane\./);
+    await expect(guesses(page).first().locator('.vialo-pill.vialo-here, .vialo-pill.vialo-elsewhere, .vialo-pill.vialo-absent')).toHaveCount(5);
+    await expect(typed(page)).toHaveCount(0);
+  });
+
+  test('Enter on the focused delete key with a short row shows the game message and submits nothing', async ({ page }) => {
+    await typeOnScreen(page, 'cra');
+    await key(page, 'delete').focus();
+    await page.keyboard.press('Enter');
+    await expect(page.getByTestId('vialo-problem')).toBeVisible();
+    await expect(guesses(page)).toHaveCount(0);
+    await expect(typed(page)).toHaveText(['c', 'r', 'a']);
+  });
+});
+
+test.describe('on-screen keys by touch', () => {
+  // Playwright's isMobile hangs Firefox, so it is set only for Chromium and WebKit; hasTouch stays on everywhere.
+  test.use({
+    hasTouch: true,
+    isMobile: async ({ browserName }, use) => {
+      await use(browserName === 'chromium' || browserName === 'webkit');
+    },
+  });
+
+  test('tapping delete removes the last letter and tapping enter submits once', async ({ page }) => {
+    for (const letter of 'crane') await key(page, letter).tap();
+    await expect(typed(page)).toHaveCount(5);
+    await key(page, 'delete').tap();
+    await expect(typed(page)).toHaveText([...'cran']);
+    await key(page, 'e').tap();
+    await key(page, 'enter').tap();
+    await expect(guesses(page)).toHaveCount(1);
+    await expect(guesses(page)).toHaveAccessibleName(/^guess 1: crane\./);
+  });
 });
 
 // Christian (25 Nov 2026): when a game ends the word of the day is not shown, to sight or to screen readers.
