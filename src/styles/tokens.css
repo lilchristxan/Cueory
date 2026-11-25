@@ -343,7 +343,7 @@
   --hero-accent-day-peak: color-mix(in srgb, var(--color-copper-deep) 82%, var(--color-ink)); /* the lightest moment of the shine */
   --hero-min-height: 60rem;     /* the hero is about this tall on large screens, so the explore row starts below the fold */
   --container-explore: 80rem;  /* the explore row under the hero */
-  --hero-top-clear: 9.5rem;     /* the two-row header (logo, then menu bar) laid over the page's top on desktop; 5.25 rem on phones */
+  --hero-top-clear: 4.5rem;     /* the one-row home header laid over the page's top: its 52 px row plus the board's 20 px; 4.25 rem on phones */
   --hero-logo-inset: calc(var(--header-inline-gutter) + var(--tap-min) + var(--header-corner-gap) - var(--spacing-gutter));
   --hero-eyebrow-gap: 2.5rem;   /* between the logo row and the motto */
   --explore-overlap: -5.75rem;      /* the explore dock overlaps the bottom of the hero stage (board: 92 px at 1440) */
@@ -372,7 +372,7 @@
   --icon-size: 1.75rem;         /* a small line icon beside a label */
   --icon-size-lg: 2rem;         /* a line icon above a tile label */
   --sudoku-board-max: 62rem;    /* measured board cap from docs/design/renderings/Sudoku.png */
-  --container-menu: min(85vw, 22.5rem); /* the ☰ side panel: most of a phone, 360px on bigger screens */
+  --container-menu: min(84vw, 21.25rem); /* the ☰ side bar (home boards, 2026-11-24): 340px, never more than 84% of the screen */
   --container-account-menu: 15rem; /* the small account menu */
   --container-mode-card: min(68vw, 20rem); /* a "ways to study" card: most of a phone, 320px on bigger screens */
   --gap-mode-card: 1rem;        /* space between "ways to study" cards */
@@ -1281,9 +1281,56 @@
 }
 
 /* Official full logo at the 52 px desktop and 38 px phone heights in the Home v3 boards. */
-.home-board-header { --home-header-brand-width: 10.25rem; --home-signin-width: 6.75rem; /* the copper "sign in" pill: icon, gap and words */ }
-@media (width < 40rem) { :root { --hero-top-clear: 5.25rem; } }
-@media (width < 40rem) { .home-board-header { --home-header-brand-width: 7.5rem; } }
+/* The home header is one row (boards of 2026-11-24): menu button, logo, then search and sign in. Desktop and tablet 48 px
+   buttons, phone 44 px, phone landscape 40 px drawn (still a 44 px hit area, see SiteHeader.astro). */
+.home-board-header {
+  --home-header-brand-width: 10.25rem;
+  --home-btn: 3rem;
+  --home-signin-height: 3.125rem;   /* the copper pill: 48 px plus its 1 px border */
+  --home-signin-pad: 1.5rem;
+  --home-signin-gap: 0.625rem;
+  --home-signin-size: var(--text-base);
+  --home-signin-icon: 1.125rem;
+  --home-icon: 1.25rem;
+  --home-header-gap: 0.625rem;      /* between search and sign in */
+  --home-header-gutter: 1.75rem;    /* 28 px each side */
+  --home-header-pad-top: 0;
+}
+@media (width < 40rem) {
+  :root { --hero-top-clear: 4.25rem; }
+  .home-board-header {
+    --home-header-brand-width: 7.5rem;
+    --home-btn: 2.75rem;
+    --home-signin-height: 2.875rem;
+    --home-header-gutter: 1rem;
+    --home-header-gap: 0.5rem;
+    --home-header-pad-top: 0.25rem;
+  }
+}
+@media (orientation: landscape) and (40rem <= width < 60rem) and (height < 32rem) {
+  :root { --hero-top-clear: 4.25rem; }
+  .home-board-header {
+    --home-header-brand-width: 6.73rem;
+    --home-btn: 2.5rem;
+    --home-signin-height: 2.625rem;
+    --home-signin-pad: 1.0625rem;
+    --home-signin-gap: 0.5rem;
+    --home-signin-size: var(--text-sm);
+    --home-header-gutter: 1.25rem;
+  }
+}
+/* The side bar (SiteMenu.astro), as on the boards: light drawer in Daytime, dark in Evening; rows 48 px, sub rows 44 px. */
+:root {
+  --drawer-row: 3rem;
+  --drawer-row-size: 1.0625rem;
+  --drawer-sub-row: 2.75rem;
+  --drawer-sub-indent: 1.75rem;
+  --drawer-row-radius: 0.75rem;
+  --drawer-label-size: 0.6875rem;
+  --drawer-label-tracking: 0.14em;
+  --drawer-shadow: 18px 0 60px rgb(var(--shadow-tint) / 0.32);
+  --drawer-scrim: rgb(var(--shadow-tint) / 0.58);
+}
 /* The landscape phone board is the centred desktop composition at about 60% scale: the button sits inside the top of the ring and the points under the pedestal. */
 @media (orientation: landscape) and (40rem <= width < 60rem) and (height < 32rem) {
   .home-stage {
@@ -1326,11 +1373,10 @@
 @container (width < 21rem) {
   header.home-board-header.home-board-header.home-board-header { grid-template-columns: minmax(0, 1fr) auto; }
   header.home-board-header.home-board-header .home-menu { grid-area: 1 / 1; }
-  header.home-board-header.home-board-header .home-account,
-  header.home-board-header.home-board-header .home-menu-bar [data-menu-search] { grid-area: 1 / 2; }
+  header.home-board-header.home-board-header .home-utilities { grid-area: 1 / 2; }
   header.home-board-header.home-board-header .home-brand { grid-area: 2 / 1 / 3 / 3; justify-self: center; }
 }
 
 /* Very narrow screens or enlarged text (the page is under 21 rem wide: 336 px at the normal text size): the logo sits on a
    row of its own under the corner buttons (SiteHeader.astro), so the hero starts a row lower. */
-@media (width < 21rem) { :root { --hero-top-clear: 7.9rem; } }
+@media (width < 21rem) { :root { --hero-top-clear: 6.9rem; } }

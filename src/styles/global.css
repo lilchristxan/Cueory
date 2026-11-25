@@ -871,7 +871,9 @@
     color: var(--color-panel-ink);
   }
 
-  /* The ☰ side panel: full height, from the left, dark glass. A native modal <dialog>. */
+  /* The ☰ side bar: full height, from the left, a light drawer in Daytime and a dark one in Evening (home boards,
+     2026-11-24). A native modal <dialog>. Inside it the panel inks are the page's own inks, so the search field, notes
+     and social icons follow the palette. */
   .menu-panel {
     position: fixed;
     inset: 0 auto 0 0;
@@ -882,14 +884,12 @@
     block-size: 100dvh;
     max-block-size: none;
     border: 0;
-    border-inline-end: 1px solid rgb(var(--glass-rim-rgb) / 0.18);
-    color: var(--color-panel-ink);
-    background-color: rgb(var(--panel-rgb) / var(--panel-alpha));
-    box-shadow: var(--shadow-soft);
-    -webkit-backdrop-filter: blur(var(--blur-veil));
-    backdrop-filter: blur(var(--blur-veil));
-    /* Inside the dark panel, focus outlines and text use the panel's light ink. */
-    --color-focus: var(--color-panel-ink);
+    border-inline-end: 1px solid color-mix(in srgb, var(--color-line) 16%, transparent);
+    --color-panel-ink: var(--color-ink);
+    --color-panel-ink-soft: var(--color-ink-soft);
+    color: var(--color-ink);
+    background-color: var(--color-page);
+    box-shadow: var(--drawer-shadow);
     transform: translateX(-100%);
     transition:
       transform 280ms ease,
@@ -907,20 +907,103 @@
     }
   }
 
+  /* The dimmed page: clicking anywhere on it closes the bar. */
   .menu-panel::backdrop {
-    background-color: rgb(var(--shadow-tint) / var(--scrim-alpha));
-    -webkit-backdrop-filter: blur(2px);
-    backdrop-filter: blur(2px);
+    background-color: var(--drawer-scrim);
+    cursor: pointer;
   }
 
   /* Fills the whole dialog, so a click on the dialog itself means the dimmed page beside it. */
   .menu-panel-inner {
     display: flex;
     flex-direction: column;
+    gap: calc(var(--spacing) * 0.5);
     block-size: 100%;
     overflow-y: auto;
-    padding: max(calc(var(--spacing) * 4), env(safe-area-inset-top)) calc(var(--spacing) * 6)
-      max(calc(var(--spacing) * 6), env(safe-area-inset-bottom)) max(calc(var(--spacing) * 6), env(safe-area-inset-left));
+    padding: max(calc(var(--spacing) * 4.5), env(safe-area-inset-top)) calc(var(--spacing) * 4)
+      max(calc(var(--spacing) * 6), env(safe-area-inset-bottom)) max(calc(var(--spacing) * 4), env(safe-area-inset-left));
+  }
+
+  /* A row of the bar: study, anatomy lab, games, support (large), and the smaller rows under a label. */
+  .drawer-row {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    inline-size: 100%;
+    min-block-size: var(--drawer-row);
+    padding-inline: calc(var(--spacing) * 3.5);
+    border-radius: var(--drawer-row-radius);
+    color: var(--color-panel-ink);
+    font-size: var(--drawer-row-size);
+    line-height: var(--text-lg--line-height);
+    font-weight: 400;
+    text-decoration: none;
+  }
+
+  .drawer-row:hover {
+    background-color: var(--color-surface);
+  }
+
+  .drawer-row-sub {
+    min-block-size: var(--drawer-sub-row);
+    padding-inline-start: var(--drawer-sub-indent);
+    font-size: var(--text-sm);
+    line-height: var(--text-sm--line-height);
+  }
+
+  /* The current page: bolder text and a short line at the row's start, never color alone. */
+  .drawer-row[aria-current="page"] {
+    font-weight: 700;
+  }
+
+  .drawer-row[aria-current="page"]::before {
+    content: "";
+    position: absolute;
+    inset-inline-start: calc(var(--spacing) * 1.5);
+    inset-block: calc(var(--spacing) * 3);
+    inline-size: calc(var(--spacing) * 0.5);
+    border-radius: var(--radius-pill);
+    background-color: currentColor;
+  }
+
+  /* "privacy, terms + disclaimer": one row, each word its own 44 px link. */
+  .drawer-legal {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    min-block-size: var(--drawer-sub-row);
+    padding-inline-start: var(--drawer-sub-indent);
+    font-size: var(--text-sm);
+    line-height: var(--text-sm--line-height);
+  }
+
+  .drawer-legal a {
+    display: inline-flex;
+    align-items: center;
+    min-block-size: var(--drawer-sub-row);
+    color: var(--color-panel-ink);
+    text-decoration: none;
+  }
+
+  .drawer-legal span {
+    white-space: pre;
+  }
+
+  .drawer-legal a:hover {
+    text-decoration: underline;
+  }
+
+  .drawer-label {
+    margin: calc(var(--spacing) * 3.5) calc(var(--spacing) * 3.5) 0;
+    padding-block-start: calc(var(--spacing) * 3.5);
+    border-block-start: 1px solid color-mix(in srgb, var(--color-line) 16%, transparent);
+    color: var(--color-panel-ink-soft);
+    font-size: var(--drawer-label-size);
+    line-height: var(--text-sm--line-height);
+    font-weight: 700;
+    letter-spacing: var(--drawer-label-tracking);
+    text-transform: uppercase;
   }
 
   .menu-link {
@@ -1190,7 +1273,6 @@
       background-color: rgb(var(--glass-hover-rgb));
     }
 
-    .menu-panel,
     .account-menu,
     .promo {
       background-color: rgb(var(--panel-rgb));

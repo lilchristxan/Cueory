@@ -44,7 +44,8 @@ test('the account menu', async ({ page }) => {
 
 test('the "about" dropdown in the desktop navigation', async ({ page }, info) => {
   test.skip(sizeOf(info) !== 'desktop', 'the navigation bar shows from the desktop width up');
-  await page.goto('/');
+  // Not the home page: its header has no link bar (boards of 2026-11-24), only the ☰ button.
+  await page.goto('/support');
   const menu = page.locator('[data-about-menu]');
   const trigger = menu.locator('summary');
   await openByKeyboard(page, trigger);
