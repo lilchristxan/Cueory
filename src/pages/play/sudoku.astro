@@ -98,6 +98,7 @@ const game = dailyGames.find((item) => item.id === 'triage')!;
   @supports (margin-inline-start: round(nearest, 1%, 1%)) {
     :global(.game-frame-board:has(.sudoku-section)) {
       align-self: flex-start;
+      justify-self: start; /* the play area is a grid now: the same left edge on its column axis */
       margin-inline-start: round(nearest, max(0%, (100% - var(--game-frame-max-board)) / 2), var(--sudoku-line));
     }
 

@@ -1,0 +1,2 @@
+status: in review · task-blockers/footer-privacy-tab · footer privacy keyboard test starts where the link is.
+Test-only. "footer privacy link opens with Enter" focused the chevron and tabbed forward, but the privacy link sits in the always-visible row before the chevron, so focus only reached it by wrapping round the whole page: Chromium wraps, Firefox leaves the document (failed on three release runs). The test now starts at the flag, like the first test in the file, and keeps the same checks: reached by Tab, visible focus ring, Enter opens /privacy.

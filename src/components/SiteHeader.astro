@@ -8,11 +8,7 @@ import { site } from '../config/site';
 interface Props {
   /** Study screens: the same corners, kept quiet (no frosted circles). */
   quiet?: boolean;
-  /**
-   * The home page: only the two corners, laid over the top of the full-screen hero, which shows its own logo. The
-   * header leaves the page flow there (Layout.astro wraps it in a zero-height box under the notice), so the hero
-   * still fills the first screen and nothing moves.
-   */
+  /** Home uses the two-row board header. Other pages use the existing sticky or quiet header. */
   overlay?: boolean;
   /** The page's accounts gate is closed: the account corner stays signed out and never loads Supabase. */
   accountsOff?: boolean;
@@ -28,19 +24,22 @@ const bar = !quiet;
 <header
   data-scroll-header={overlay ? undefined : ''}
   class:list={[
-    'z-20 flex w-full items-center gap-(--header-corner-gap) px-(--header-inline-gutter) py-4',
+    'z-20 w-full',
+    !overlay && 'flex items-center gap-(--header-corner-gap) px-(--header-inline-gutter) py-4',
     // With enlarged text the pill can be wider than the screen: let the bar wrap onto a second row, never scroll sideways.
-    bar && 'lg:flex-wrap',
-    overlay ? 'absolute inset-x-0 top-0' : 'sticky top-0 site-header-sticky',
+    !overlay && bar && 'lg:flex-wrap',
+    overlay ? 'home-board-header absolute inset-x-0 top-0' : 'sticky top-0 site-header-sticky',
   ]}
 >
-  <!-- ☰ in the top-left corner, the account in the top-right (D-46). -->
-  <div class:list={['flex flex-1 justify-start', bar && 'lg:flex-none']}>
+  <!-- ☰ in the top-left corner, the account in the top-right (D-46). Home (boards of 2026-11-24) is one row: ☰, logo, search + sign in; its links are in the side bar. -->
+  <div class:list={['flex flex-1 justify-start', overlay && 'home-menu', !overlay && bar && 'lg:flex-none']}>
     <SiteMenu quiet={quiet} />
   </div>
   {
     overlay ? (
-      <span class:list={[bar && 'lg:hidden']} />
+      <a href="/" aria-label={`${site.name} home`} class="home-brand justify-self-center">
+        <Wordmark class="home-brand-art" sizes="10.25rem" preloadBothOnDesktop />
+      </a>
     ) : (
       <a href="/" class="p-(--logo-clear) text-ink" aria-label={`${site.name} home`}>
         {/*
@@ -64,19 +63,98 @@ const bar = !quiet;
     )
   }
   {
-    bar && (
-      <div class="hidden min-w-0 lg:flex lg:flex-1 lg:justify-center">
-        <SiteNav />
+    overlay ? (
+      <div class="home-utilities">
+        <SiteNav home />
+        <AccountCorner quiet={quiet} accountsOff={accountsOff} pill />
       </div>
+    ) : (
+      <>
+        {bar && (
+          <div class="hidden min-w-0 lg:flex lg:flex-1 lg:justify-center">
+            <SiteNav />
+          </div>
+        )}
+        <div class:list={['flex flex-1 justify-end', bar && 'lg:flex-none']}>
+          <AccountCorner quiet={quiet} accountsOff={accountsOff} />
+        </div>
+      </>
     )
   }
-  <div class:list={['flex flex-1 justify-end', bar && 'lg:flex-none']}>
-    <AccountCorner quiet={quiet} accountsOff={accountsOff} />
-  </div>
 </header>
 
-<!-- Home keeps its existing absolute hero overlay. All other headers stick above the reading surface. -->
+<!-- Home stays in normal flow; other headers retain their sticky reading controls. -->
 <style>
+  /* Home: one row, as on the boards. Menu button left, the logo centred, search and sign in right. */
+  header.home-board-header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    align-items: center;
+    padding-inline: var(--home-header-gutter);
+    padding-block-start: var(--home-header-pad-top);
+  }
+  .home-brand { grid-area: 1 / 2; width: var(--home-header-brand-width); max-width: 100%; }
+  .home-brand :global(.home-brand-art) { display: block; width: 100%; }
+  .home-menu { grid-area: 1 / 1; }
+  .home-utilities {
+    grid-area: 1 / 3;
+    justify-self: end;
+    display: flex;
+    align-items: center;
+    gap: var(--home-header-gap);
+  }
+  .home-utilities :global([data-site-nav]) { display: contents; }
+  /* The three round buttons share one size; a button drawn under 44 px keeps a 44 px hit area around it. */
+  .home-menu :global([data-menu-open]),
+  .home-utilities :global([data-menu-search]) {
+    position: relative;
+    inline-size: var(--home-btn);
+    block-size: var(--home-btn);
+  }
+  .home-menu :global([data-menu-open])::after,
+  .home-utilities :global([data-menu-search])::after,
+  .home-utilities :global([data-account-toggle])::after {
+    content: '';
+    position: absolute;
+    inset: min(var(--spacing) * 0, calc((var(--home-btn) - var(--tap-min)) / 2));
+  }
+  .home-menu :global([data-menu-open] svg),
+  .home-utilities :global([data-menu-search] svg) {
+    inline-size: var(--home-icon);
+    block-size: var(--home-icon);
+  }
+  .home-menu :global([data-menu-open] path),
+  .home-utilities :global([data-menu-search] path),
+  .home-utilities :global([data-menu-search] circle) { stroke-width: 1.8; }
+  /* The account is the copper button of the board: a round icon on phones, the "sign in" pill from 640 px. */
+  .home-utilities :global([data-account-toggle]) {
+    position: relative;
+    inline-size: var(--home-signin-height);
+    block-size: var(--home-signin-height);
+    color: var(--cueory-copper-ink);
+    border-color: transparent;
+    background-color: transparent;
+    background-image: linear-gradient(110deg, var(--cueory-copper-start), var(--cueory-copper-end) 72%, var(--cueory-copper-shine));
+    background-origin: border-box; /* the 1 px border would otherwise show the gradient's next tile */
+    box-shadow: var(--shadow-button);
+    gap: var(--home-signin-gap);
+    font-size: var(--home-signin-size);
+  }
+  .home-utilities :global([data-account-toggle]::after) { inset: min(var(--spacing) * 0, calc((var(--home-signin-height) - var(--tap-min)) / 2)); }
+  .home-utilities :global([data-account-toggle] svg) { inline-size: var(--home-signin-icon); block-size: var(--home-signin-icon); }
+  .home-utilities :global([data-account-toggle] svg *) { stroke-width: 1.8; }
+  .home-utilities :global([data-account-toggle]:hover) { filter: brightness(1.04); }
+  .home-utilities :global(.account-pill-label) { display: none; font-weight: 700; font-size: var(--home-signin-size); }
+  @media (min-width: 40rem) {
+    .home-utilities :global([data-account-toggle]:not([data-signed-in])) {
+      inline-size: auto;
+      padding-inline: var(--home-signin-pad);
+    }
+    .home-utilities :global([data-account-toggle]:not([data-signed-in]) .account-pill-label) { display: inline; }
+  }
+
+  :global(.home-header-wrap) { container-type: inline-size; }
+
   header.site-header-sticky {
     /* The page tint stays legible in both palettes. The existing glass opacity and blur are shared tokens. */
     background-color: var(--color-page);

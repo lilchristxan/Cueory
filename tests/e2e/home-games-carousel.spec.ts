@@ -204,14 +204,14 @@ test.describe('home games carousel (Home v2 Lane 5)', () => {
       expect(nextBox?.width ?? 0).toBeGreaterThanOrEqual(44);
       expect(nextBox?.height ?? 0).toBeGreaterThanOrEqual(44);
 
-      // Cards are 280px wide
+      // Cards are the board's phone size, 250 x 350
       const firstCard = section.locator('[data-game-card]').first();
       const cardSize = await firstCard.evaluate((el) => {
         const card = el as HTMLElement;
         return { width: card.offsetWidth, height: card.offsetHeight };
       });
-      expect(cardSize.width).toBe(280);
-      expect(cardSize.height).toBe(392);
+      expect(cardSize.width).toBe(250);
+      expect(cardSize.height).toBe(350);
     } finally {
       await context.close();
     }
@@ -414,13 +414,16 @@ test.describe('home games carousel (Home v2 Lane 5)', () => {
       await expect(prevBtn).toBeVisible();
       await expect(nextBtn).toBeVisible();
 
-      // Controls and heading are on separate rows: buttons are below heading
+      // Home v3 board: the arrows flank the heading (one at each side, level with it), never over its words.
       const headingBox = await heading.boundingBox();
       const prevBox = await prevBtn.boundingBox();
       const nextBox = await nextBtn.boundingBox();
 
-      expect(prevBox?.y ?? 0).toBeGreaterThanOrEqual((headingBox?.y ?? 0) + (headingBox?.height ?? 0));
-      expect(nextBox?.y ?? 0).toBeGreaterThanOrEqual((headingBox?.y ?? 0) + (headingBox?.height ?? 0));
+      expect((prevBox?.x ?? 0) + (prevBox?.width ?? 0)).toBeLessThanOrEqual((headingBox?.x ?? 0) + 1);
+      expect(nextBox?.x ?? 0).toBeGreaterThanOrEqual((headingBox?.x ?? 0) + (headingBox?.width ?? 0) - 1);
+      const headingMid = (headingBox?.y ?? 0) + (headingBox?.height ?? 0) / 2;
+      expect(Math.abs((prevBox?.y ?? 0) + (prevBox?.height ?? 0) / 2 - headingMid)).toBeLessThanOrEqual(2);
+      expect(Math.abs((nextBox?.y ?? 0) + (nextBox?.height ?? 0) / 2 - headingMid)).toBeLessThanOrEqual(2);
 
       // Buttons are clickable and >= 44px
       expect(prevBox?.width ?? 0).toBeGreaterThanOrEqual(44);

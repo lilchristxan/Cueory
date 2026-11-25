@@ -1,6 +1,6 @@
 # Status
 
-Last updated: 2026-11-21 (verified merged-note sweep; older dated review lists below remain historical snapshots)
+Last updated: 2026-11-24 (status-note batch for notes merged to staging by 23 Nov; older dated review lists remain historical snapshots)
 
 ## Recent documentation
 - Added [docs/TESTING.md](TESTING.md), a plain-language map of the available type, build, unit, browser and batch checks.
@@ -950,6 +950,56 @@ These are historical source-note summaries from their original merged PRs, folde
 - Task 634, unit tests for the sort game logic (`src/islands/triage.ts`): unknown terms, frozen finished rounds, slip clamping, place helpers, share text for each status. Test-only; no product code change.
 - #634 WebKit signup keyboard focus repair. When focus enters a Home reveal section that is still waiting, the section becomes instant and the still-focused target is aligned with `scrollIntoView({ block: "nearest", inline: "nearest" })` in the same focus-in turn. The repair deliberately does not wait for `requestAnimationFrame`: retained WebKit phone evidence at c0b5af1 (run 44881993266, job 136779245487) showed `#signup-email` still below the 390x844 viewport after the existing 250 ms audit wait, with the reveal already instant and no diagnostic frame callback captured. Already-revealed content, reduced-motion handling, native focus behavior, and the existing a11y audit timing are unchanged. The focused unit regression holds animation-frame callbacks and requires alignment before one can run. The separate original network-idle timeout had no retained pending-request identity and is not addressed here. The temporary failure-only #1039 timeline probe remains until a hosted browser result verifies this repair, then should be removed in its own scoped cleanup.
 
+## Done (director docs batch, 2026-11-24: notes from pull requests merged into `staging`)
+- Daily games rebrand 1/3: game accent tokens, brand notes and the vialo, tachyyy and piccline icon and wordmark SVGs. No page changes. (#1003)
+- Daily games rebrand 2/3: /play/vialo page and blister-pack board, hub and Home updates, stats migration from pillo and pulse, same-day hard mode lock, plain one-line share format, initial JavaScript budget. (#1005)
+- Daily games rebrand 3/3: /play/tachyyy and /play/piccline pages, hub and Home updates, stats migration from suture and stat records, plain one-line share formats. (#1006)
+- Task 634, /learn featured lesson entry: keyboard focus, 44px target and Enter navigation covered. (#1054)
+- Task 634, unit tests for src/scripts/scrolllock.ts (offsets, restoring inline styles, one-shot unlock, nested locks). (#1073)
+- Task 634, 390 x 844 keyboard test for the Word Path help control (open, Escape, focus return). Test-only. (#1076)
+- Games v2 shared GameFrame layout (sidebar or phone top bar, dateline, controls row); Sudoku and crossword framed, Hello Cards uses the static Frame rows; Pillo and Word Path unframed at that point. (#1027)
+- /play/hello-cards board: fanned five-card stack, five daily flip indicators, session-only Favorite and Shuffle, reduced-motion-safe completion panel. Sample-content gate, sharing and no-storage promise unchanged. (#1089)
+- Task 634, unit tests for the home continue bar rules. Test-only. (#1098)
+- Task 634, unit tests for the rewards preview rows. Test-only. (#1099)
+- Task 634, unit tests for the daily puzzle feed checks. Test-only. (#1101)
+- Task 634, unit tests for the inline email error rules. Test-only. (#1102)
+- Folded 390 merged status notes into STATUS.md and 48 decisions into DECISIONS.md (D-145 to D-192); launch gates dated Monday 23 Nov. Documentation only. (#1103)
+- Task 634, unit tests for the sudoku highlight classes. Test-only. (#1104)
+- Task 634, unit tests for the launch-updates pop-up helpers. Test-only. (#1105)
+- Task 634, unit tests for the page side of the offline service worker. Test-only. (#1106)
+- Task 634, unit tests for the desktop wordmark preload. Test-only. (#1107)
+- Task 634, unit tests for the game help data helpers. Test-only. (#1108)
+- Task 634, unit tests for sudoku's pure logic. Test-only. (#1109)
+- Export my data now includes the validated study-resume snapshot (up to 500 submitted answers) in JSON and resume.csv. (#1110)
+- Export my data: streak, hints, specialFirst and offDay added (optional) to gameSchema and gameStats.csv; older records still export cleanly. (#1111)
+- Task 178, Anatomy Lab core and study tools, rebuilt without a database change; in-memory fallback for saved views and misses while the migration is held for Christian. Reachable only at /preview/anatomy-lab. (#1112)
+- Game Frame logos use the 480 px files (shown at 80 px), fixing the WebKit native-sharing browser test. The note came from #1113, which was closed unmerged; the commit merged through #1114. (#1114)
+- Game corner buttons (gear, ?, print) are 48 px so Firefox never measures them under 44 px. (#1114)
+- Sudoku opts into the GameFrame without duplicate gear, help, stats or difficulty controls; paused auto-cue setting is disabled while paused. (#1115)
+- Task 634, WebKit phone vial-label test waits for two equal idle frames before measuring. Test-only. (#1116)
+- Account settings keep the export, progress and deletion helpers out of the initial island path (saves 6172 bytes gzip). Touches account code; merged under Christian's approval rule. (#1117)
+- Task 634, theme-no-flash browser harness fix: each navigation exposes the original first-frame sample before the settle window. Test-only. (#1118)
+- Home launch-updates email focus target has a token-based scroll margin so keyboard reveal keeps the 390px field in view. (#1119)
+- Cross-document view transitions are off site-wide to avoid the WebKit keyboard navigation stall (#1121). (#1123)
+- Docs-only launch runbook: starting snapshot, final-SHA handoff, Christian-only staging-to-main release, five-minute smoke, rollback. (#1125)
+- Home promo waits while a game card has keyboard focus (WebKit desktop carousel test). (#1128)
+- Sudoku's expanded pause and resume hit area survives Firefox pointer rounding. (#1129)
+- Docs index lists the launch runbook, and a test keeps its rollback section. (#1130)
+- Public half of the Cueory backup key added so the nightly production backup can encrypt; a test checks it holds one public key and no secret key. (#1134)
+- Launch runbook updated for the 23 Nov 6 p.m. Phoenix staging freeze and Christian's 24 Nov morning release. (#1135)
+- Framed Sudoku difficulty picker binds when the board is ready. (#1136)
+- Phone and tablet parity for the games hub and game pages (flag button in the header row, vialo legend and keys, closed-game cards, hub play buttons, 14 px stat labels). (#1137)
+- Home hero redesign: centered on phone and tablet, two columns on desktop, 'adhd friendly' value point, two-line phone headline, muted closed start button with a working 'play today's games' button; hero values are tokens. (#1138)
+- Phone and tablet layouts of the content pages match desktop; the sensitive pages (start, learn/questions, progress) went to #1141. (#1139)
+- Home below the hero follows the desktop design on phones (vial shelf, games carousel and dot pager, signup panel, section spacing). (#1140)
+- /about, /message and /resources match Christian's final boards (heading sizes, card padding, resources contents label). (#1142)
+- /play rebuilt to Christian's option B: left panel with four totals read in the browser, one row per game, closed games say coming soon. (#1143)
+- vialo's on-screen keys are a three-row q-w-e-r-t-y keyboard of raised caps; marks show by finish and by name; phone keys at least 32 x 52 px. (#1144)
+- Game pages use the Games v2 frame (no site header or building strip, left panel with four stats, fanned deck of other games, compact phone layout); matching test changes and a 70rem deck breakpoint token. (#1145)
+- Crossword choices read small, medium and large; internal ids unchanged so saved games keep working. (#1146)
+- tachyyy logo files match Christian's final design (three hearts in a stopwatch, bar across the t); tachyyy stays closed at launch. (#1152)
+- Phone games carousel cards stay on whole pixels during the Home section reveal. (#1153)
+
 ## In review
 - Open pull requests on 2026-11-05, midday:
   - #625, Task 178, built-asset production audit before deployment: `needs-christian` (it touches deployment); waits for Christian.
@@ -1001,6 +1051,15 @@ Targets: first visuals by about 14 November, the full kit by about 12 December (
 - **Signup form** shows "signups open soon" until the Kit form exists (SETUP.md, Part I).
 
 ## Needs Christian's hands
+
+### Open pull requests waiting on you (24 Nov 2026)
+None of these is merged yet.
+- [ ] Approve (they touch the site header, footer or other held paths): the header (#1156), the footer (#1167), the phone content pages (#1141) and the phone menu fixes (#1148).
+- [ ] Merge the launch fixes: #1158, #1157, #1154 and #1160.
+- [ ] Merge the Home v3 pieces in this order: #1151, then #1161, then #1162, then #1163 to #1166 and #1149.
+- [ ] Close the duplicate #1159.
+- [ ] Reset Codex.
+- [ ] CLAUDE.md line "Every page uses `Layout.astro`": game pages now have no site header or building strip (#1145, D-207); the line needs your edit.
 
 ### Monday 23 Nov 2026 launch gates (games & public pages only, accounts closed)
 - [ ] Legal text approval: compare rendered `/terms` and `/disclaimer` against approved Terms v6, verify `/privacy` separately, and run `CUEORY_LEGAL_RELEASE_AUDIT=1 node scripts/check-legal-release.mjs`. Do not release placeholder copy.

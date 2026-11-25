@@ -1,7 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { revealSections } from '../../src/scripts/reveal';
+import { revealSections, settleReveal } from '../../src/scripts/reveal';
 
 afterEach(() => {
+  vi.useRealTimers();
   vi.unstubAllGlobals();
 });
 
@@ -161,5 +162,50 @@ describe('reveal section runtime guards', () => {
     expect(section.dataset.reveal).toBe('instant');
     expect(unobserved).toContain(section);
     expect(target.scrollIntoView).toHaveBeenCalledWith({ block: 'nearest', inline: 'nearest' });
+  });
+});
+
+describe('reveal safety net', () => {
+  it('finishes a shown section\'s animations about a second after it is shown', () => {
+    vi.useFakeTimers();
+    vi.stubGlobal('window', { setTimeout: globalThis.setTimeout.bind(globalThis), matchMedia: () => ({ matches: false }) });
+    const finish = vi.fn();
+    const cancel = vi.fn();
+    settleReveal({ getAnimations: () => [{ finish, cancel }] } as never);
+    vi.advanceTimersByTime(999);
+    expect(finish).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(1);
+    expect(finish).toHaveBeenCalledTimes(1);
+    expect(cancel).not.toHaveBeenCalled();
+  });
+
+  it('cancels an animation that refuses to finish, and runs when the observer shows a section', () => {
+    vi.useFakeTimers();
+    vi.stubGlobal('window', { setTimeout: globalThis.setTimeout.bind(globalThis), matchMedia: () => ({ matches: false }), innerHeight: 800 });
+    let callback: (entries: unknown[]) => void = () => {};
+    class FakeObserver {
+      constructor(cb: (entries: unknown[]) => void) { callback = cb; }
+      observe() {}
+      unobserve() {}
+    }
+    vi.stubGlobal('IntersectionObserver', FakeObserver);
+    vi.stubGlobal('window', { setTimeout: globalThis.setTimeout.bind(globalThis), matchMedia: () => ({ matches: false }), innerHeight: 800, IntersectionObserver: FakeObserver });
+    const cancel = vi.fn();
+    const section = {
+      dataset: { reveal: '' } as Record<string, string>,
+      getBoundingClientRect: () => ({ top: 1000 }),
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      contains: () => false,
+      getAnimations: () => [{ finish: () => { throw new Error('nope'); }, cancel }],
+    };
+    vi.stubGlobal('document', { querySelectorAll: () => [section], activeElement: null });
+    vi.stubGlobal('HTMLElement', class {});
+    revealSections();
+    expect(section.dataset.reveal).toBe('waiting');
+    callback([{ isIntersecting: true, target: section }]);
+    expect(section.dataset.reveal).toBe('shown');
+    vi.advanceTimersByTime(1000);
+    expect(cancel).toHaveBeenCalledTimes(1);
   });
 });

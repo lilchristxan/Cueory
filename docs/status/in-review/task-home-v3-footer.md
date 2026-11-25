@@ -1,0 +1,1 @@
+status: in review. Home v3 footer: link row restyled to the board (Bronze/Sand text, 24 px above the row, 44 px wide targets); flag, logo, chevron panel, theme switch, contact and legal links unchanged. Draft, needs-christian (footer path).

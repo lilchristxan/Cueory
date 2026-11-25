@@ -83,7 +83,7 @@ test('reduced motion follows the device by default', async ({ page }) => {
   await expect(page.getByRole('dialog').getByRole('group', { name: 'motion' }).getByRole('radio', { name: /follow device/ })).toBeChecked();
 });
 
-test('the theme rows drive the site theme switch', async ({ page }) => {
+test('the theme slider drives the site theme switch', async ({ page }) => {
   await page.goto('/play/word-path');
   await page.getByTestId('game-settings-button').click();
   const theme = page.getByRole('dialog').getByRole('group', { name: 'theme' });
