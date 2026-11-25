@@ -436,6 +436,8 @@
   --segmented-gap: 0.375rem;          /* .segmented: space between options */
   --segmented-pad-y: 0.375rem;        /* .segmented-option */
   --segmented-pad-x: 0.875rem;        /* .segmented-option */
+  --theme-slider-inset: 0.25rem;      /* .theme-slider: space between the track and its sliding thumb */
+  --theme-slider-pad-x: 0.25rem;      /* .theme-slider-option: side padding, small so three words fit at 320 px with enlarged text */
   --tap-min: 2.75rem;                 /* 44 px minimum tap target */
   --coming-soon-min-height: 55svh;    /* a coming-soon page fills the first screen instead of sitting half empty */
 
