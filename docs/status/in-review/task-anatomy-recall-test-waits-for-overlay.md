@@ -1,0 +1,2 @@
+status: in review · task-anatomy/recall-test-waits-for-overlay · anatomy lab recall test reads the labels after the overlay updates.
+Test-only. The recall-mode check read the label numbers in the same instant as the "hide" click, before the overlay had dropped the hidden part's label, so it failed on #1174 (phone) and #1178 (desktop, both attempts) with an extra "1". It now waits for the label count first, the same way the test's first read does, and the exact-numbers assertion is unchanged.
