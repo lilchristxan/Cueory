@@ -81,7 +81,7 @@ export const GAME_HELP: Readonly<Record<HelpTopic, GameHelpContent>> = Object.fr
     game: 'triage',
     play: [
       'fill each row, column and 3 by 3 box with 1 to 9, with no repeats.',
-      'pick easy, mid or hard. each level has one puzzle a day.',
+      'pick easy, medium or hard. each level has one puzzle a day.',
       'pick a square, then type or tap a number. arrow keys move between squares.',
       'normal mode fills the square; pencil mode adds small pencil marks. p or space switches modes, and holding shift switches for that moment. hint fills in possible pencil marks for you.',
       'undo takes back your last move. in settings, clear cell empties the square, check puzzle marks wrong squares with a slash, and x mark adds your own mark. backspace clears and x marks from the grid.',

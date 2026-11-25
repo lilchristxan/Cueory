@@ -19,7 +19,7 @@ const FOCUSABLE = 'button:not([disabled]), a[href], [tabindex]:not([tabindex="-1
 
 export interface GameHelpState {
   content: GameHelpContent;
-  /** True until the rules are dismissed or the "?" is used, on this device. */
+  /** Kept for callers; the first-visit rules open the "?" dialog itself. */
   firstVisit: boolean;
   open: boolean;
   button: RefObject<HTMLButtonElement | null>;
@@ -30,9 +30,20 @@ export interface GameHelpState {
 
 export function useGameHelp(topic: HelpTopic): GameHelpState {
   const content = GAME_HELP[topic];
-  const [firstVisit, setFirstVisit] = useState(() => !helpSeen(browserStorage(), content.game));
+  const [firstVisit, setFirstVisit] = useState(false);
   const [open, setOpen] = useState(false);
   const button = useRef<HTMLButtonElement>(null);
+  // First visit to this game on this device (docs/GAMES-PARITY.md, D-177): open the same "?" dialog once. The saved
+  // "seen" mark is read here, after hydration, so the first client render matches the server HTML.
+  useEffect(() => {
+    const storage = browserStorage();
+    if (!storage || helpSeen(storage, content.game)) return;
+    markHelpSeen(storage, content.game);
+    // Blocked storage can't remember the mark: don't open a dialog over the game on every load.
+    if (!helpSeen(storage, content.game)) return;
+    setFirstVisit(true);
+    setOpen(true);
+  }, [content.game]);
   const seen = () => {
     markHelpSeen(browserStorage(), content.game);
     setFirstVisit(false);
