@@ -893,6 +893,10 @@
   /* Home v3 vial platter (docs/design/home-v3/, src/scripts/platter.ts). One pixel, the unit the platter's unitless
      layout numbers are multiplied by; the platter's colors are mixes of the palette, so they follow the theme. */
   --platter-px: 1px;
+  /* Whole and quarter pixels, for rounding line heights to whole pixels (Firefox reads boxes through 32-bit floats, so a
+     box that starts on a fraction of a pixel measures a hair off; a quarter pixel is exact in floats and in sixtieths). */
+  --whole-pixel: 1px;
+  --quarter-pixel: 0.25px;
   --platter-edge: linear-gradient(90deg, color-mix(in srgb, var(--color-soft) 80%, var(--color-highlight)) 0%, color-mix(in srgb, var(--color-surface) 85%, var(--color-soft)) 22%, var(--color-surface) 48%, color-mix(in srgb, var(--color-surface) 70%, var(--color-soft)) 74%, color-mix(in srgb, var(--color-soft) 70%, var(--color-highlight)) 100%);
   --platter-top: radial-gradient(ellipse at 62% 22%, color-mix(in srgb, var(--color-copper-shine) 30%, var(--color-page)) 0%, color-mix(in srgb, var(--color-page) 70%, var(--color-surface)) 42%, var(--color-surface) 78%, color-mix(in srgb, var(--color-surface) 60%, var(--color-soft)) 100%);
   --platter-edge-shadow: 0 46px 60px -18px rgb(var(--shadow-tint) / 0.34), 0 10px 16px -4px rgb(var(--shadow-tint) / 0.22);
