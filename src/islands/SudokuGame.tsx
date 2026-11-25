@@ -6,6 +6,7 @@ import { gameName } from '../config/games';
 import { deleteStats, forgetHeldRounds, localDay, reportStatsChanged, showResultCard, sudokuResultCard } from './gameresults';
 import { GameSettingsDialog } from './GameSettings.tsx';
 import { announceFrameListening, frameHelpButton, GAME_FRAME_HELP_EVENT, GAME_FRAME_HELP_READY_EVENT, GAME_FRAME_SETTINGS_EVENT } from './GameFrameControls';
+import { playGameCue, type GameCue } from './gamesound';
 import { GAME_SETTINGS_EVENT, GAME_SETTINGS_STORAGE_KEY, gameSoundAllowed, loadGameSettings, parseGameSettings, type SharedGameSettings } from './gamesettings';
 import { sudokuCellClasses } from './sudokuhighlight';
 import { DEFAULT_SUDOKU_SETTINGS, GAME_PROGRESS_EVENT, LEVEL_LABELS, sudokuProgressDetail, LEVEL_RULES, advanceSudokuSeconds, autoCandidateNotes, checkSudoku, conflictIndices, dailySudokuSeed, editSudokuBoard, effectiveSudokuMode, generateSudoku, getResult, loadSudokuSettings, newSudokuBoard, noteDigits, pushSudokuHistory, saveSudokuSettings, sudokuCellPresentation, sudokuKeyAction, sudokuWrongCells, undoSudoku, type SudokuBoard, type SudokuBoardAction, type SudokuLevel, type SudokuMode, type SudokuSettings } from './sudoku';
@@ -30,19 +31,6 @@ function firstOpen(puzzle: readonly number[]): number {
   const index = puzzle.findIndex((value) => value === 0);
   return index < 0 ? 0 : index;
 }
-function playSolvedTone(): void {
-  try {
-    const context = new AudioContext();
-    const oscillator = context.createOscillator();
-    const gain = context.createGain();
-    oscillator.connect(gain); gain.connect(context.destination); oscillator.frequency.value = 523;
-    gain.gain.setValueAtTime(0.08, context.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, context.currentTime + 0.35);
-    oscillator.start(); oscillator.stop(context.currentTime + 0.35);
-    oscillator.addEventListener('ended', () => void context.close(), { once: true });
-  } catch { /* Sound is optional. */ }
-}
-
 export default function SudokuGame({ framed = false }: { framed?: boolean } = {}) {
   const today = useMemo(() => new Date(), []);
   const day = useMemo(() => localDay(today), [today]);
@@ -199,7 +187,7 @@ export default function SudokuGame({ framed = false }: { framed?: boolean } = {}
     reported.current = true;
     solvedResult.current?.focus();
     // The shared "game sounds" switch silences every game, sudoku's solve sound too: its latest value, as followed above.
-    if (gameSoundAllowed(shared.current ?? loadGameSettings(browserStorage()), settings.playSound)) playSolvedTone();
+    if (gameSoundAllowed(shared.current ?? loadGameSettings(browserStorage()), settings.playSound)) playGameCue('solved');
     const result = getResult({ day, level, seconds, errors, solved: true });
     // Queue the display result even if the separate host island has not hydrated yet.
     showResultCard(sudokuResultCard(result));
@@ -237,12 +225,15 @@ export default function SudokuGame({ framed = false }: { framed?: boolean } = {}
     return () => { document.removeEventListener('visibilitychange', hidden); window.removeEventListener('blur', leave); };
   }, [solved]);
 
+  /** Short cues for entries and erasing: only the shared "game sounds" switch applies (the solve sound has its own setting). */
+  const cue = (name: GameCue) => playGameCue(name, gameSoundAllowed(shared.current ?? loadGameSettings(browserStorage())));
+
   /** Every edit goes through the one pure rule and is pushed to the undo history when it changes something. */
   const apply = (action: SudokuBoardAction): SudokuBoard | undefined => {
     if (paused || solved) return;
     const next = editSudokuBoard(board, puzzle.puzzle, selected, action, auto);
     if (!next) {
-      if (puzzle.puzzle[selected]) setSaid('given numbers cannot be changed.');
+      if (puzzle.puzzle[selected]) { setSaid('given numbers cannot be changed.'); cue('invalid'); }
       return;
     }
     setHistory((past) => pushSudokuHistory(past, board));
@@ -260,11 +251,12 @@ export default function SudokuGame({ framed = false }: { framed?: boolean } = {}
     if (activeMode === 'candidate') {
       if (entries[selected] && !puzzle.puzzle[selected]) { setSaid('clear the square first to add pencil marks.'); return; }
       const next = apply({ kind: 'note', value });
-      if (next) setSaid(noteDigits(next.notes[selected]!).includes(value) ? `pencil mark ${value} added.` : `pencil mark ${value} removed.`);
+      if (next) { cue('place'); setSaid(noteDigits(next.notes[selected]!).includes(value) ? `pencil mark ${value} added.` : `pencil mark ${value} removed.`); }
       return;
     }
     if (!apply({ kind: 'enter', value })) return;
     const isWrong = value !== puzzle.solution[selected];
+    cue(isWrong && settings.checkGuesses ? 'invalid' : 'place');
     if (isWrong && settings.checkGuesses) setErrors((count) => count + 1);
     setSaid(isWrong && settings.checkGuesses ? `${value} is not right for ${where(selected)}. error added.` : `${value} entered.`);
   };
@@ -274,7 +266,7 @@ export default function SudokuGame({ framed = false }: { framed?: boolean } = {}
   };
   const clearCell = () => {
     if (paused || solved) return;
-    if (apply({ kind: 'clear' })) setSaid(`${where(selected)} cleared.`);
+    if (apply({ kind: 'clear' })) { cue('remove'); setSaid(`${where(selected)} cleared.`); }
     else if (!puzzle.puzzle[selected]) setSaid('that square is already empty.');
   };
   const undo = () => {

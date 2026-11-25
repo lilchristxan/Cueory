@@ -36,6 +36,7 @@ import ResultBrandMark from './ResultBrandMark';
 import { useGameHelp } from './GameHelp';
 import GameHeader from './GameHeader';
 import { useSharedGameSettings } from './GameSettings.tsx';
+import { playGameCue } from './gamesound';
 import { browserStorage } from '../scripts/storage';
 import { VIALO_KEY_ROWS } from './vialokeys';
 
@@ -139,7 +140,7 @@ export default function VialoGame({ puzzles }: Props) {
   const howToPlay = useGameHelp('vialo');
   const [said, setSaid] = useState('');
   const [copied, setCopied] = useState('');
-  const { settings: shared } = useSharedGameSettings();
+  const { settings: shared, soundAllowed } = useSharedGameSettings();
   const contrast = shared.highContrast;
   const [keysOnly, setKeysOnly] = useState(false);
   const [finish, setFinish] = useState<FinishStats>({ on: false });
@@ -211,10 +212,13 @@ export default function VialoGame({ puzzles }: Props) {
     if (why) {
       setProblem(why);
       setSaid(why);
+      playGameCue('invalid', soundAllowed());
       return;
     }
     const next = playGuess(state, word, list);
     setState(next);
+    // The row's marks are shown the moment it is accepted, so a cue for the reveal tells nothing new.
+    playGameCue(next.status === 'solved' ? 'solved' : next.status === 'out' ? 'invalid' : 'place', soundAllowed());
     if (state.guesses.length === 0) {
       rememberVialoHardMode(browserStorage(), day, Boolean(next.hard));
       reportProgress({ game: 'vialo', day });
@@ -233,7 +237,9 @@ export default function VialoGame({ puzzles }: Props) {
   };
 
   const type = (value: string) => {
-    setText(cleanGuess(value).slice(0, WORD_LENGTH));
+    const clean = cleanGuess(value).slice(0, WORD_LENGTH);
+    if (clean.length !== text.length) playGameCue(clean.length > text.length ? 'place' : 'remove', soundAllowed());
+    setText(clean);
     setProblem('');
   };
 
