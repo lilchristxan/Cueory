@@ -916,6 +916,9 @@ test.describe('daily games: private stats (D-76), always kept (2026-11-17)', () 
     await page.reload();
     await expect(vialoStats(page)).toContainText('played 1 day, solved 1.');
     // Playing the same day again changes nothing: the first result of the day counts.
+    // Autosave (docs/GAMES-PARITY.md) keeps a finished game finished that day, so a same-day second round needs the saved
+    // board gone first; this setup step does that, and nothing below it changed.
+    await page.evaluate(() => localStorage.removeItem('cueory-vialo-save'));
     await solveOnItsPage(page);
     // A game page has no stats panel, so the frame's status line tells a screen-reader user.
     await expect(page.getByTestId('game-frame-stats-status')).toHaveText("vialo: today's first game is already in your stats.");
@@ -978,6 +981,9 @@ test.describe('daily games: private stats (D-76), always kept (2026-11-17)', () 
     expect(await kept(page)).toBeNull();
 
     // Another tab: finish vialo there (kept at once), then forget all stats on the hub.
+    // Autosave (docs/GAMES-PARITY.md) keeps a finished game finished that day, so the other tab needs a fresh board to
+    // play; this setup step clears the saved board first, and nothing below it changed.
+    await page.evaluate(() => localStorage.removeItem('cueory-vialo-save'));
     const other = await context.newPage();
     await fixClock(other, new Date('2026-11-01T15:00:00'));
     await other.goto('/play/vialo');

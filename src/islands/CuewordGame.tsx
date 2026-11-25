@@ -1,5 +1,5 @@
 import '../styles/crossword.css';
-import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, useLayoutEffect } from 'react';
+import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { browserStorage } from '../scripts/storage';
 import { localDay, reportRound } from './gameresults';
 import { printGame } from './gameprint';
@@ -97,7 +97,15 @@ function Board({ puzzle, name, framed = false }: Props) {
 
   useEffect(() => { saveCrosswordSettings(browserStorage(), settings); }, [settings]);
   // Autosave after every move (the clock is kept as of the last move or pause).
-  useLayoutEffect(() => { saveCuewordProgress(puzzle, localDay(today), { state, elapsed }, browserStorage()); }, [state, paused]);
+  const latest = useRef<() => void>(() => {});
+  latest.current = () => saveCuewordProgress(puzzle, localDay(today), { state, elapsed }, browserStorage());
+  useEffect(() => { latest.current(); }, [state, paused]);
+  // Written again when the page is hidden or closed, so a reload right after a move cannot beat the effect.
+  useEffect(() => {
+    const flush = () => latest.current();
+    window.addEventListener('pagehide', flush);
+    return () => { window.removeEventListener('pagehide', flush); };
+  }, []);
 
   useEffect(() => {
     if (solved) result.current?.focus();
