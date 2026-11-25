@@ -16,8 +16,18 @@ export const site = {
   /** The live address. */
   url: 'https://cueory.app',
 
-  /** Shows "we're still building. more coming soon." on every page. Set to false to remove it. */
+  /** Shows the building notice on every page. Set to false to remove it. */
   showBuildingNotice: true,
+
+  /**
+   * The notice's words: "we're still building. please support our development. more coming soon!" The middle word is a
+   * link to the tip page (`tipPageUrl`); with no tip page it is plain text.
+   */
+  buildingNotice: {
+    before: "we're still building. please ",
+    link: 'support',
+    after: ' our development. more coming soon!',
+  },
 
   /** The supporting-our-mission page (Ko-fi; D-94). Leave empty to hide the button on /support. */
   tipPageUrl: 'https://ko-fi.com/cueory',

@@ -23,6 +23,8 @@ interface Props {
   variant?: 'default' | 'study' | 'home';
   /** Keep this page out of search engines. */
   noindex?: boolean;
+  /** Site path of the page this one duplicates (a retained legacy route); the canonical link points there. Default: this page. */
+  canonicalTo?: string;
   /**
    * The once-only promo panel (D-59). Marketing pages show it unless they turn it off (the signup thank-you page does,
    * because its visitor has just joined); study screens never do.
@@ -51,13 +53,13 @@ interface Props {
   wide?: boolean;
 }
 
-const { title, description = site.description, variant = 'default', noindex = false, promo = true, flagItem, hideFlag = false, socialImage: socialImagePath = '/share/study-ivory.png', accountsOff = false, bareHeader = false, wide = false } = Astro.props;
+const { title, description = site.description, variant = 'default', noindex = false, canonicalTo, promo = true, flagItem, hideFlag = false, socialImage: socialImagePath = '/share/study-ivory.png', accountsOff = false, bareHeader = false, wide = false } = Astro.props;
 // Browser-tab titles use the lowercase brand voice: "privacy · cueory" (D-47).
 const fullTitle = title === site.name || title === site.wordmarkName ? site.wordmarkName : `${title} · ${site.wordmarkName}`;
 // Astro's static file build may expose /index.html or /privacy.html as the pathname.
 // Canonical URLs must match the public extensionless routes served by Workers.
 const canonicalPath = (Astro.url.pathname.replace(/\/index\.html$/, '') || '/').replace(/\.html$/, '');
-const canonical = new URL(canonicalPath, site.url).href;
+const canonical = new URL(canonicalTo ?? canonicalPath, site.url).href;
 const socialImage = new URL(socialImagePath, site.url).href;
 // The share card's size, type and words for link previews. Only our own cards in public/share/ are allowed, so an
 // unknown image fails the build instead of shipping a preview without a size or a text alternative.
@@ -128,7 +130,7 @@ const searchTitle = isHome ? 'home' : title;
     {!bareHeader && <BuildingNotice />}
     {
       bareHeader ? null : isHome ? (
-        <div class="relative z-20 h-0">
+        <div class="home-header-wrap relative z-20 h-0">
           <SiteHeader overlay accountsOff={accountsOff} />
         </div>
       ) : (

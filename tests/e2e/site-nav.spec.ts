@@ -39,7 +39,8 @@ test.describe('wide screen', () => {
   });
 
   test('every control is at least 44 by 44 px, dropdown links included, and nothing scrolls sideways', async ({ page }) => {
-    await page.goto('/');
+    // Not the home page: its header has no link bar any more (boards of 2026-11-24; tests/e2e/home-header-menu.spec.ts).
+    await page.goto('/support');
     await page.locator('[data-about-menu] summary').click();
     await expect(page.locator('[data-about-menu]')).toHaveAttribute('open', '');
     for (const control of [

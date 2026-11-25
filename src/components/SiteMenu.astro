@@ -5,11 +5,10 @@
  * dimmed page; focus then returns to ☰. With reduced motion it simply appears. Without JavaScript the button stays
  * hidden (its space is kept, so nothing moves) and the footer links still work.
  */
-import { menuLinks, menuSmallLinks } from '../config/site';
-import { visibleFooterLinks } from '../config/legalfooter';
+import { drawerPrimaryLinks } from '../config/sitenav';
 import SocialLinks from './SocialLinks.astro';
-import { currentHref, groupMenuLinks } from '../scripts/menu';
-import { SAMPLE_LESSON_HREF, sampleLessonShown } from '../lessons/draftgate';
+import { currentHref } from '../scripts/menu';
+import { draftsAllowed } from '../islands/anatomylab';
 
 interface Props {
   /** Study screens: the same button, without the frosted circle. */
@@ -17,15 +16,16 @@ interface Props {
 }
 
 const { quiet = false } = Astro.props;
-// #747: a legal page that isn't approved yet gets no menu link either (Privacy always shows).
-const smallLinks = visibleFooterLinks(menuSmallLinks);
-// The live build holds the sample lesson back, so the panel doesn't link to it there.
-const sampleShown = sampleLessonShown();
-const links = menuLinks.filter((link) => sampleShown || link.href !== SAMPLE_LESSON_HREF);
-const grouped = groupMenuLinks(links, smallLinks);
+// Drafts (the anatomy lab, the resources page) show only where this build may show drafts (staging, previews, local).
+const drafts = draftsAllowed({
+  WORKERS_CI: process.env.WORKERS_CI,
+  WORKERS_CI_BRANCH: process.env.WORKERS_CI_BRANCH,
+  CUEORY_ANATOMY_DRAFTS: process.env.CUEORY_ANATOMY_DRAFTS,
+});
+const primary = drawerPrimaryLinks.filter((link) => link.draft !== true || drafts);
 const current = currentHref(
   Astro.url.pathname,
-  [...links, ...smallLinks].map((link) => link.href),
+  primary.map((link) => link.href),
 );
 ---
 
@@ -44,7 +44,8 @@ const current = currentHref(
 
 <dialog id="site-menu" class="menu-panel" aria-label="site menu" data-testid="site-menu">
   <div class="menu-panel-inner">
-    <div class="flex justify-end">
+   <div class="menu-panel-scroll">
+    <div class="mb-2.5 flex justify-start">
       <button type="button" class="corner-button corner-button-panel" aria-label="close site menu" data-menu-close>
         <svg viewBox="0 0 24 24" class="size-6" aria-hidden="true" focusable="false">
           <path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path>
@@ -52,8 +53,18 @@ const current = currentHref(
       </button>
     </div>
 
+    <nav aria-label="site" class="flex flex-col gap-0.5">
+      {
+        primary.map((link) => (
+          <a href={link.href} class="drawer-row" aria-current={link.href === current ? 'page' : undefined}>
+            {link.label}
+          </a>
+        ))
+      }
+    </nav>
+
     <!-- Site search (D-49): results appear as you type; the index loads only once the field is used. -->
-    <div role="search" class="mt-4" data-site-search>
+    <div role="search" class="mt-6" data-site-search>
       <div class="menu-search">
         <label for="site-search" class="sr-only">search the site</label>
         <input
@@ -78,38 +89,11 @@ const current = currentHref(
       </ul>
     </div>
 
-    <nav aria-label="site" class="my-auto py-section">
-      <ul class="flex flex-col gap-7">
-        {
-          grouped.home.map((link) => (
-            <li>
-              <a href={link.href} class="menu-link" aria-current={link.href === current ? 'page' : undefined}>
-                {link.label}
-              </a>
-            </li>
-          ))
-        }
-        {
-          grouped.sections.map((section) => (
-            <li>
-              <h2 class="menu-section-heading mb-3">{section.heading}</h2>
-              <ul class="flex flex-col gap-3">
-                {section.links.map((link) => (
-                  <li>
-                    <a href={link.href} class="menu-link" aria-current={link.href === current ? 'page' : undefined}>
-                      {link.label}
-                      {link.note && <span class="menu-note">{link.note}</span>}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </li>
-          ))
-        }
-      </ul>
-    </nav>
+   </div>
 
-    <div class="mb-4">
+    <!-- The social icons stay fixed at the bottom edge of the bar; only the rows above them scroll (on a short, wide screen
+         the whole bar scrolls instead, so the icons never cover a row). -->
+    <div class="menu-panel-socials">
       <SocialLinks panel />
     </div>
   </div>

@@ -221,6 +221,8 @@ test.describe('anatomy lab study tools', () => {
 
     // Numbers are stable: hiding cube A leaves the other numbers as they were.
     await page.getByRole('button', { name: 'hide fixture cube A' }).click();
+    // Wait for the overlay to drop the hidden part's label (as the first read above waits for the count), then read.
+    await expect(overlay.locator(':scope > span')).toHaveCount(NAMES.length - 1);
     expect((await overlay.locator(':scope > span').allTextContents()).map((t) => t.trim()).sort()).toEqual(['2', '3', '4', '5']);
     await expect(legend.getByRole('listitem')).toHaveCount(NAMES.length - 1);
 

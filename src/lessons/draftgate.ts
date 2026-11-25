@@ -41,11 +41,11 @@ export function lessonEntryHref(source: Record<string, string | undefined> = pro
 }
 
 /**
- * Where the home hero's "start studying for free" button goes, or null while the build has no open lesson (the live
- * build holds the sample lesson back), when the hero shows it closed and tagged "coming soon" instead of a link.
+ * Where the home hero's one "start studying for free" button goes: the sample lesson where it shows, the lesson library
+ * (/learn, a public page that itself holds the sample back) on the live build.
  */
-export function heroStartHref(source: Record<string, string | undefined> = process.env): string | null {
-  return sampleLessonShown(source) ? lessonEntryHref(source) : null;
+export function heroStartHref(source: Record<string, string | undefined> = process.env): string {
+  return lessonEntryHref(source);
 }
 
 /**
