@@ -39,8 +39,8 @@ const kind = pageKindFor(Astro.url.pathname);
      centres the note, keeping a margin and the device's safe areas clear on every side. It takes no clicks itself. */
   .glove-note-region {
     --glove-note-cap: var(--glove-note-width);
-    --glove-note-inset-inline: max(var(--glove-note-margin), env(safe-area-inset-left, 0px), env(safe-area-inset-right, 0px));
-    --glove-note-inset-block: max(var(--glove-note-margin), env(safe-area-inset-top, 0px), env(safe-area-inset-bottom, 0px));
+    --glove-note-inset-inline: max(var(--glove-note-margin), env(safe-area-inset-left), env(safe-area-inset-right));
+    --glove-note-inset-block: max(var(--glove-note-margin), env(safe-area-inset-top), env(safe-area-inset-bottom));
     position: fixed;
     inset-block-start: 0;
     inset-inline-start: 0;

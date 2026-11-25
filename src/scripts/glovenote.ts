@@ -161,7 +161,8 @@ export function startGloveNote(region: HTMLElement): void {
     veil.dataset.testid = 'glove-note-dim';
     veil.setAttribute('aria-hidden', 'true');
     veil.addEventListener('click', close);
-    region.append(veil, note);
+    region.append(note);
+    region.prepend(veil);
     open = note;
     dim = veil;
     visit = recordShown(visit, { show: true, kind: 'message', gloveIndex }, Date.now(), gloves?.length ?? 0);
