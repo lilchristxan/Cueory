@@ -219,6 +219,26 @@
 }
 
 /* ---------------- Stats in Left Panel ---------------- */
+/* A signed-out player sees this in the slot the stats take (Christian, 2026-11-25): the site's copper button and one
+   line of plain text under it. It sits in the same sidebar position as the stats on every layout. */
+.game-frame-account-bar {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--spacing) * 2);
+  align-items: center;
+  text-align: center;
+  width: 100%;
+}
+
+.game-frame-account-note {
+  margin: 0;
+  color: var(--color-ink-soft);
+  font-family: var(--font-body);
+  font-style: normal;
+  font-size: var(--game-frame-stat-label-compact);
+  line-height: 1.5;
+}
+
 .game-frame-stats {
   display: flex;
   flex-direction: column;
@@ -1027,7 +1047,8 @@
   .game-frame-dateline {
     margin-block-end: calc(var(--spacing) * 2);
   }
-  .game-frame-stats {
+  .game-frame-stats,
+  .game-frame-account-bar {
     order: 4;
     inline-size: 100%;
     box-sizing: border-box;

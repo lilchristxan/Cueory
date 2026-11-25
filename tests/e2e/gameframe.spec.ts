@@ -28,12 +28,17 @@ test.describe('GameFrame shared layout (Scope 1)', () => {
 
       // Stats
       const stats = page.locator('.game-frame-stats');
-      // The four stats are for signed-in players only (2026-11-25): a signed-out visitor gets no panel, no empty box.
-      // The island still mounts (so it can record and, for a signed-in player, show them); it renders nothing.
+      // The four stats are for signed-in players only (2026-11-25): a signed-out visitor gets no stats panel.
+      // The island still mounts (so it can record and, for a signed-in player, show them).
       const statsIsland = page.locator('astro-island[component-url*="GameFrameStats"]:not([ssr])');
       await expect(statsIsland).toHaveCount(1);
       await expect(stats).toHaveCount(0);
-      expect(await statsIsland.evaluate((node) => node.textContent)).toBe('');
+      // In the stats' place a signed-out visitor gets the copper bar and its one line (2026-11-25).
+      const bar = page.getByTestId('game-frame-account-bar');
+      await expect(bar).toBeVisible();
+      await expect(bar.getByRole('link', { name: 'create an account' })).toHaveAttribute('href', /^\/(#signup|signup)$/);
+      await expect(bar).toContainText('to save your daily game stats');
+      expect((await bar.getByRole('link').boundingBox())!.height).toBeGreaterThanOrEqual(44);
 
       // Date line
       const dateLine = page.locator('.game-frame-dateline');

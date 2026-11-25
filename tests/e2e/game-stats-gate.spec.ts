@@ -28,6 +28,13 @@ test.beforeAll(async () => {
       builder.onResolve({ filter: /\/supabaseclient(?:\.ts)?$/ }, () => ({ path: 'session', namespace: 'fixture' }));
       builder.onLoad({ filter: /.*/, namespace: 'fixture' }, () => ({ contents: `
         const params = new URLSearchParams(location.search);
+        // The page's tests drive sign-in and sign-out through this, as another tab would.
+        export async function getSupabase() {
+          return { auth: { onAuthStateChange(cb) {
+            window.fixtureAuth = cb;
+            return { data: { subscription: { unsubscribe() { window.fixtureAuth = null; } } } };
+          } } };
+        }
         export async function getSessionState() {
           const wait = Number(params.get('wait') ?? 0);
           if (wait) await new Promise((resolve) => setTimeout(resolve, wait));
@@ -41,7 +48,7 @@ test.beforeAll(async () => {
 });
 
 /** Opens the frame's sidebar with the stats island and this device's saved results (today and yesterday, both solved). */
-async function open(page: Page, query: string) {
+async function open(page: Page, query: string, seedGame = 'vialo') {
   await page.route('**/__stats-fixture.js', (route) => route.fulfill({ contentType: 'application/javascript', body: fixtureCode }));
   await page.route('**/__stats-fixture?*', (route) => route.fulfill({ contentType: 'text/html', body: `<!doctype html>
     <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -49,27 +56,29 @@ async function open(page: Page, query: string) {
     <body><div class="game-frame"><div class="game-frame-layout"><aside class="game-frame-sidebar"><div class="game-frame-game-badge"><p class="game-frame-tagline">tagline</p></div><div id="fixture"></div></aside>
     <div class="game-frame-main"><div class="game-frame-board"></div></div></div></div><script src="/__stats-fixture.js"></script></body></html>` }));
   await page.goto('/__stats-fixture?none=1');
-  await page.evaluate(() => {
+  await page.evaluate((seed) => {
     const day = (back: number) => {
       const d = new Date();
       d.setDate(d.getDate() - back);
       return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     };
     localStorage.setItem('cueory-game-stats', JSON.stringify({ version: 1, results: [
-      { game: 'vialo', day: day(1), solved: true, tries: 3 },
-      { game: 'vialo', day: day(0), solved: true, tries: 2 },
+      { game: seed, day: day(1), solved: true, tries: 3 },
+      { game: seed, day: day(0), solved: true, tries: 2 },
     ] }));
-  });
+  }, seedGame);
   await page.goto(`/__stats-fixture?${query}`);
 }
 const panel = (page: Page) => page.getByTestId('game-frame-stats');
 const value = (page: Page, label: string) => panel(page).locator('.game-frame-stat').filter({ hasText: label }).locator('.game-frame-stat-value');
+const bar = (page: Page) => page.getByTestId('game-frame-account-bar');
 const noSideways = (page: Page) => page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth);
 
 test.describe('game stats panel, signed in', () => {
   test('shows the saved numbers, labels at least 14 px on a phone and tablet, no sideways scroll', async ({ page }, info) => {
     await open(page, 'session=in');
     await expect(panel(page)).toBeVisible();
+    await expect(bar(page)).toHaveCount(0);
     await expect(value(page, '% solved')).toHaveText('100');
     await expect(value(page, 'current streak')).toHaveText('2');
     await expect(value(page, 'best streak')).toHaveText('2');
@@ -93,11 +102,39 @@ test.describe('game stats panel, signed in', () => {
     await expect(value(page, 'played')).toHaveText('2');
   });
 
+  test('follows sign-out and sign-in from another tab without a reload', async ({ page }) => {
+    await open(page, 'session=in');
+    await expect(panel(page)).toBeVisible();
+    await page.waitForFunction(() => Boolean((window as unknown as { fixtureAuth?: unknown }).fixtureAuth));
+    await page.evaluate(() => (window as unknown as { fixtureAuth: (e: string, s: unknown) => void }).fixtureAuth('SIGNED_OUT', null));
+    await expect(panel(page)).toHaveCount(0);
+    await expect(bar(page)).toBeVisible();
+    await page.evaluate(() => (window as unknown as { fixtureAuth: (e: string, s: unknown) => void }).fixtureAuth('SIGNED_IN', { user: { id: 'u-1' } }));
+    await expect(panel(page)).toBeVisible();
+    await expect(bar(page)).toHaveCount(0);
+    await expect(value(page, 'played')).toHaveText('2');
+  });
+
   test('announces the frame status line again', async ({ page }) => {
     await open(page, 'session=in');
     await expect(panel(page)).toBeVisible();
     await page.evaluate(() => window.dispatchEvent(new CustomEvent('cueory:game-stats-status', { detail: { message: 'vialo added to your stats.' } })));
     await expect(page.getByTestId('game-frame-stats-status')).toHaveText('vialo added to your stats.');
+  });
+
+  test('a returning player with saved stats for every game renders their numbers without console errors', async ({ page }) => {
+    // Moved here from game-qa-fixes.spec.ts: the built pages are signed out, so the signed-in numbers are drawn by the
+    // real island in this harness (client-rendered, so this covers render errors, not server-HTML hydration).
+    const problems: string[] = [];
+    page.on('console', (message) => { if (message.type() === 'error') problems.push(message.text()); });
+    page.on('pageerror', (error) => problems.push(error.message));
+    for (const game of ['vialo', 'cueword', 'triage', 'suture', 'stat']) {
+      await open(page, `session=in&game=${game}`, game);
+      await expect(panel(page)).toBeVisible();
+      const values = await page.locator('.game-frame-stat-value').allTextContents();
+      expect(values.some((v) => v !== '0'), `${game} shows a saved number`).toBe(true);
+    }
+    expect(problems).toEqual([]);
   });
 
   test('hello cards keeps its "questions asked" row, with zeros, as before', async ({ page }) => {
@@ -108,16 +145,28 @@ test.describe('game stats panel, signed in', () => {
 
 test.describe('game stats panel, not signed in', () => {
   for (const query of ['session=out', 'session=fail']) {
-    test(`renders nothing and announces nothing (${query}), and the page does not shift`, async ({ page }) => {
-      await open(page, `${query}&wait=200`);
-      await expect(page.locator('#fixture')).toBeAttached();
-      const before = await page.locator('.game-frame-sidebar').evaluate((node) => node.getBoundingClientRect().height);
+    test(`shows the copper create-an-account bar instead (${query}), and nothing moves when the check resolves`, async ({ page }) => {
+      await open(page, `${query}&wait=400`);
+      const link = bar(page).getByRole('link', { name: 'create an account' });
+      await expect(link).toBeVisible();
+      const sidebar = page.locator('.game-frame-sidebar');
+      const before = await sidebar.evaluate((node) => node.getBoundingClientRect().height);
       await page.evaluate(() => window.dispatchEvent(new CustomEvent('cueory:game-stats-status', { detail: { message: 'vialo added to your stats.' } })));
-      await page.waitForTimeout(500);
+      await page.waitForTimeout(800);
       await expect(panel(page)).toHaveCount(0);
       await expect(page.getByTestId('game-frame-stats-status')).toHaveCount(0);
-      expect(await page.locator('#fixture').evaluate((node) => node.innerHTML)).toBe('');
-      expect(await page.locator('.game-frame-sidebar').evaluate((node) => node.getBoundingClientRect().height)).toBe(before);
+      expect(await sidebar.evaluate((node) => node.getBoundingClientRect().height)).toBe(before);
+      // Exact words, a real address, one accessible name with the line as its description, a 44 px target.
+      await expect(link).toHaveText('create an account');
+      await expect(link).toHaveAttribute('href', /^\/(#signup|signup)$/);
+      await expect(link).toHaveAttribute('aria-describedby', 'game-frame-account-note');
+      await expect(page.locator('#game-frame-account-note')).toHaveText('to save your daily game stats');
+      expect(await page.locator('#game-frame-account-note').evaluate((n) => getComputedStyle(n).fontStyle)).toBe('normal');
+      const box = (await link.boundingBox())!;
+      expect(box.height).toBeGreaterThanOrEqual(44);
+      await page.keyboard.press('Tab');
+      await expect(link).toBeFocused();
+      expect(await link.evaluate((n) => getComputedStyle(n).outlineStyle)).not.toBe('none');
       expect(await noSideways(page)).toBe(true);
     });
   }
