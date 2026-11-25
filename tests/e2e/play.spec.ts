@@ -485,18 +485,18 @@ test.describe('daily games: sudoku (Task 625)', () => {
     // Theme rows drive the site's own switch (no second theme system); gameboard settings persist on their own.
     // The dialog is the shared one (#823), so its theme group holds the three theme rows.
     await expect(dialog.getByRole('group', { name: 'theme' }).getByRole('radio')).toHaveCount(3);
-    await dialog.getByRole('checkbox', { name: 'start in auto cue mode' }).check();
+    await dialog.getByRole('checkbox', { name: 'start in auto pencil mode' }).check();
     await page.keyboard.press('Escape');
     await expect(trigger).toBeFocused();
 
     await page.reload();
     await page.getByTestId('game-frame-gear').click();
-    await expect(game(page).getByRole('dialog', { name: 'settings' }).getByRole('checkbox', { name: 'start in auto cue mode' })).toBeChecked();
+    await expect(game(page).getByRole('dialog', { name: 'settings' }).getByRole('checkbox', { name: 'start in auto pencil mode' })).toBeChecked();
     await page.keyboard.press('Escape');
-    const hints = game(page).getByRole('checkbox', { name: /auto cues/i });
-    await expect(hints).toHaveAttribute('aria-checked', 'true');
+    const hints = game(page).getByRole('button', { name: 'hint' });
+    await expect(hints).toHaveAttribute('aria-pressed', 'true');
     await hints.click();
-    await expect(hints).toHaveAttribute('aria-checked', 'false');
+    await expect(hints).toHaveAttribute('aria-pressed', 'false');
     await expect(game(page).locator('.sudoku-candidates')).toHaveCount(0);
   });
 
@@ -513,8 +513,12 @@ test.describe('daily games: sudoku (Task 625)', () => {
       expect(box.left).toBeGreaterThanOrEqual(panel.x - 0.5);
       expect(box.right).toBeLessThanOrEqual(panel.x + panel.width + 0.5);
     }
-    const pad = await game(page).locator('.sudoku-number-row button').evaluateAll((elements) => elements.map((element) => element.getBoundingClientRect().toJSON()));
+    const digits = await game(page).locator('.sudoku-number-row button').evaluateAll((elements) => elements.map((element) => element.getBoundingClientRect().toJSON()));
+    await page.getByTestId('game-frame-gear').click();
+    const mark = page.getByRole('dialog', { name: 'sudoku settings' }).getByRole('button', { name: 'add or remove x mark' });
+    const pad = [...digits, (await mark.boundingBox())!];
     expect(pad).toHaveLength(10);
+    await page.keyboard.press('Escape');
     for (const box of pad) {
       expect(box.width).toBeGreaterThanOrEqual(44);
       expect(box.height).toBeGreaterThanOrEqual(44);

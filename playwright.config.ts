@@ -23,6 +23,12 @@ export default defineConfig({
   reporter: process.env.CI ? 'github' : 'list',
   use: {
     baseURL: `http://localhost:${port}`,
+    // The games open their rules once on a first visit (D-177). Every test starts as a returning player so that dialog
+    // does not sit over the page; tests/e2e/game-qa-fixes.spec.ts starts with empty storage to check the first visit.
+    storageState: {
+      cookies: [],
+      origins: [{ origin: `http://localhost:${port}`, localStorage: [{ name: 'cueory-game-help-seen', value: JSON.stringify(['vialo', 'pulse', 'triage', 'cueword', 'suture']) }] }],
+    },
     trace: 'retain-on-failure',
     // The offline service worker (tests/e2e/offline.spec.ts turns it back on) would answer requests before a test's
     // page.route() sees them, so every other test runs without one.

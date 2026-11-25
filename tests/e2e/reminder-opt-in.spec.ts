@@ -1,6 +1,9 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 
+// This file lists every cueory- key in storage, so it starts empty (the suite default sets the games' rules-seen key).
+test.use({ storageState: { cookies: [], origins: [] } });
+
 const path = '/preview/reminders';
 const completed = (page: Page) => page.getByTestId('completed-review');
 const openChoices = async (page: Page) => {

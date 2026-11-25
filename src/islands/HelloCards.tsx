@@ -16,7 +16,7 @@ import {
 } from './hello-cards';
 
 const faceClass =
-  'col-start-1 row-start-1 flex min-h-56 min-w-0 flex-col items-center justify-center rounded-xl border border-line bg-surface px-6 py-10 text-center shadow-card sm:px-10';
+  'col-start-1 row-start-1 flex min-h-96 min-w-0 flex-col items-center justify-center rounded-xl border border-line bg-page px-6 py-10 text-center shadow-card sm:px-10';
 
 /**
  * Flip-the-card conversation starters. The card is one real button: tap, click, Enter or Space turns it over
@@ -142,9 +142,9 @@ export default function HelloCards({ starters }: { starters: readonly HelloStart
   const count = startersFor(starters, 'all', depth).length;
 
   return (
-    <div className="text-ink">
+    <div className="flex flex-col text-ink">
       {daily && (
-        <section aria-labelledby="hello-daily-heading" className="mb-8 rounded-xl border-2 border-control bg-surface p-6 text-center shadow-card sm:p-8" data-testid="hello-daily">
+        <section aria-labelledby="hello-daily-heading" className="order-last mt-stack rounded-xl border-2 border-control bg-surface p-6 text-center shadow-card sm:p-8" data-testid="hello-daily">
           <h2 id="hello-daily-heading" className="text-sm font-bold">prompt of the day · {dayLabel(today)} · {HELLO_DEPTH_LABELS[depth]}</h2>
           <p className="mt-1 text-sm text-ink-soft">{isReflective(daily.category) ? 'a question for yourself' : `for ${HELLO_CATEGORY_LABELS[daily.category]}`}</p>
           <p className="mt-3 wrap-anywhere text-2xl" data-testid="hello-daily-text">{daily.text}</p>
@@ -161,7 +161,7 @@ export default function HelloCards({ starters }: { starters: readonly HelloStart
           </button>
         </section>
       )}
-      <div className="mb-6 flex flex-wrap items-center justify-center gap-x-3 gap-y-2 text-center" data-testid="hello-depth">
+      <div className="order-6 mt-stack flex flex-wrap items-center justify-center gap-x-3 gap-y-2 text-center" data-testid="hello-depth">
         <span aria-hidden="true" className={`min-w-0 wrap-anywhere text-lg ${depth === 'small' ? 'font-bold underline underline-offset-4' : 'text-ink-soft'}`}>
           {HELLO_DEPTH_LABELS.small}
         </span>
@@ -186,7 +186,7 @@ export default function HelloCards({ starters }: { starters: readonly HelloStart
         </span>
       </div>
 
-      <section className="mt-stack" aria-label="today's conversation card board">
+      <section className="order-1" aria-label="today's conversation card board">
         <div className="mb-5 flex items-center justify-center gap-2" role="status" aria-label={`${flipsToday} of 5 cards flipped today`} data-testid="hello-flip-progress">
           {Array.from({ length: 5 }, (_, index) => (
             <span
@@ -198,7 +198,7 @@ export default function HelloCards({ starters }: { starters: readonly HelloStart
           <span className="sr-only">{flipsToday} of 5 cards flipped today</span>
         </div>
 
-        <div className="relative mx-auto grid w-full max-w-md grid-cols-1 py-5 sm:py-7">
+        <div className="relative mx-auto grid w-full max-w-xs grid-cols-1 py-5 sm:py-7">
           <span aria-hidden="true" className="col-start-1 row-start-1 mx-6 min-h-72 rotate-(--hello-stack-tilt-back) rounded-xl bg-ink shadow-card" />
           <span aria-hidden="true" className="col-start-1 row-start-1 mx-6 min-h-72 rotate-(--hello-stack-tilt-front) rounded-xl bg-ink shadow-card" />
           <div className={`flip col-start-1 row-start-1${flipped ? ' is-flipped' : ''}`}>
@@ -220,7 +220,7 @@ export default function HelloCards({ starters }: { starters: readonly HelloStart
                 </span>
                 <span className={`flip-back relative ${faceClass}`} aria-hidden={!flipped || undefined} data-testid="hello-card-back">
                   <span className="text-sm text-ink-soft">{current && isReflective(current.category) ? 'ask yourself' : 'try asking'}</span>
-                  <span className="mt-3 wrap-anywhere text-xl" data-testid="hello-card-text">{current?.text ?? ''}</span>
+                  <span className="display mt-3 wrap-anywhere text-2xl tracking-wide" data-testid="hello-card-text">{current?.text ?? ''}</span>
                 </span>
               </span>
             </button>
@@ -238,14 +238,22 @@ export default function HelloCards({ starters }: { starters: readonly HelloStart
           </section>
         )}
       </section>
-      <p id="hello-card-question" className="sr-only">
+      <p id="hello-card-question" className="sr-only order-2">
         {flipped && current ? `${isReflective(current.category) ? 'ask yourself' : 'try asking'}: ${current.text}` : ''}
       </p>
-      <p id="hello-card-hint" className="mt-2 text-sm text-ink-soft">
+      <p id="hello-card-hint" className="order-2 mt-2 text-center text-sm text-ink-soft">
         {flipped ? 'press the card again to turn it face down.' : 'press the card to turn it over.'}
       </p>
 
-      <div className="mt-stack flex flex-wrap items-center justify-center gap-3">
+      <div className="order-3 mt-stack flex flex-wrap items-center justify-center gap-3">
+        <button
+          type="button"
+          disabled={!ready || !current}
+          onClick={another}
+          className="press min-h-(--tap-min) rounded-pill border border-control px-5 py-2.5 disabled:opacity-60"
+        >
+          Shuffle
+        </button>
         <button
           type="button"
           disabled={!ready || !current}
@@ -263,17 +271,9 @@ export default function HelloCards({ starters }: { starters: readonly HelloStart
         >
           {current && favorites.has(current.id) ? 'Favorite saved' : 'Favorite'}
         </button>
-        <button
-          type="button"
-          disabled={!ready || !current}
-          onClick={another}
-          className="press min-h-(--tap-min) rounded-pill border border-control px-5 py-2.5 disabled:opacity-60"
-        >
-          Shuffle
-        </button>
         <p className="w-full text-center text-sm text-ink-soft">{count} cards in this pile, shuffled · favorites last for this visit only</p>
       </div>
-      <p className="sr-only" role="status" aria-label="hello cards update" aria-atomic="true">{notice}</p>
+      <p className="sr-only order-9" role="status" aria-label="hello cards update" aria-atomic="true">{notice}</p>
     </div>
   );
 }
