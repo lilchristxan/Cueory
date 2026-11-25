@@ -52,7 +52,7 @@
   .wordpath-pip {
     inline-size: var(--wordpath-pip);
     block-size: var(--wordpath-pip);
-    border-radius: 9999px;
+    border-radius: var(--radius-pill);
     border: var(--wordpath-pip-ring) solid var(--color-ink);
     background-color: transparent;
     box-sizing: border-box;
