@@ -207,34 +207,6 @@
   max-width: 100%;
 }
 
-/* Daytime and Evening wordmark art, switched as the site switches its other logos (global.css .logo-day / .logo-evening):
-   the device setting, unless the visitor picked Light or Dark in the footer; print always shows the Daytime art. */
-.game-frame-wordmark-evening {
-  display: none;
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .game-frame-wordmark-day {
-    display: none;
-  }
-  :root:not([data-theme="light"]) .game-frame-wordmark-evening {
-    display: block;
-  }
-}
-:root[data-theme="dark"] .game-frame-wordmark-day {
-  display: none;
-}
-:root[data-theme="dark"] .game-frame-wordmark-evening {
-  display: block;
-}
-@media print {
-  .game-frame-wordmark-day {
-    display: block !important;
-  }
-  .game-frame-wordmark-evening {
-    display: none !important;
-  }
-}
-
 .game-frame-serif-title {
   /* Interface label, not a marketing heading: Lato at 1.5 or more (CLAUDE.md Design, D-41). */
   font-family: var(--font-body);
@@ -1122,5 +1094,41 @@
 @media screen {
   .game-frame-title img[aria-hidden="true"] {
     display: none;
+  }
+}
+
+/* Artwork that has a Daytime and an Evening file (the cueory logo and the game wordmarks) follows the site's chosen
+   theme, never the device alone: the same rules as .logo-day and .logo-evening in global.css. Follow device
+   (no data-theme) uses the device setting; with no JavaScript there is no pick, so it also follows the device. */
+.game-frame-evening-art {
+  display: none;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .game-frame-day-art {
+    display: none;
+  }
+
+  :root:not([data-theme="light"]) .game-frame-evening-art {
+    display: block;
+  }
+}
+
+:root[data-theme="dark"] .game-frame-day-art {
+  display: none;
+}
+
+:root[data-theme="dark"] .game-frame-evening-art {
+  display: block;
+}
+
+/* !important: printing always uses the Daytime art, whatever the pick. */
+@media print {
+  .game-frame-day-art {
+    display: block !important;
+  }
+
+  .game-frame-evening-art {
+    display: none !important;
   }
 }
