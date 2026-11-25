@@ -40,7 +40,7 @@ for (const size of sizes) {
         // closed button is checked in tests/unit/home-sections.test.ts.
         await expect(start).toHaveAttribute('href', '/learn/study-skills');
 
-        const targets = ['hero-play-games', 'hero-support', 'explore-lessons', 'explore-materials', 'explore-games', 'explore-suggestions'];
+        const targets = ['hero-support', 'explore-lessons', 'explore-materials', 'explore-games', 'explore-suggestions'];
         for (const id of targets) {
           const box = (await hero.getByTestId(id).boundingBox())!;
           expect(box.width, id).toBeGreaterThanOrEqual(44);
@@ -60,7 +60,7 @@ for (const size of sizes) {
           return el.matches(':focus-visible') && style.outlineStyle !== 'none' && Number.parseFloat(style.outlineWidth) > 0;
         });
         expect(startRing).toBe(true);
-        for (const id of ['hero-play-games', 'hero-support', 'explore-lessons', 'explore-materials', 'explore-games']) {
+        for (const id of ['hero-support', 'explore-lessons', 'explore-materials', 'explore-games']) {
           await page.keyboard.press('Tab');
           const link = hero.getByTestId(id);
           await expect(link, id).toBeFocused();

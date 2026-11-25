@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { pagerCurrentFlags, pagerDotLabel, wrapPosition } from '../../src/scripts/gamescarousel';
+import { centresActiveCard, pagerCurrentFlags, pagerDotLabel, wrapPosition } from '../../src/scripts/gamescarousel';
 
 describe('games carousel pager', () => {
   it('wraps positions round and round', () => {
@@ -23,5 +23,12 @@ describe('games carousel pager', () => {
   it('names each dot with its game and place', () => {
     expect(pagerDotLabel('vialo', 0, 6)).toBe('vialo, 1 of 6');
     expect(pagerDotLabel('hello cards', 5, 6)).toBe('hello cards, 6 of 6');
+  });
+
+  it('centres the active card only where fewer than two whole cards fit (phones in portrait)', () => {
+    expect(centresActiveCard(390, 250, 264)).toBe(true);
+    expect(centresActiveCard(740, 280, 308)).toBe(false);
+    expect(centresActiveCard(796, 186, 198)).toBe(false);
+    expect(centresActiveCard(390, 0, 264)).toBe(false);
   });
 });

@@ -1,1 +1,0 @@
-status: Task 634, unit tests for the daily puzzle feed checks (`src/islands/puzzlefeed.ts`): payload and date refusals, pulse and sort shape rules, no answers in errors, fail-closed feed selection, loader failures. Test-only; no product code change.

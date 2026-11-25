@@ -1,0 +1,304 @@
+---
+/**
+ * The Home v3 "one lesson, multiple ways to study" vial platter (docs/design/home-v3/, approved 2026-11-23): the study
+ * methods as glass vials on a wide round platter. The front vial is the largest; the others are smaller and stand
+ * further back along the platter's front half, with even gaps (src/scripts/platter.ts has the numbers).
+ *
+ * Wide screens (desktop, tablet and phone landscape) show all eleven vials with an arrow at each side and a row of
+ * dots; portrait phones (under 40rem) show the front vial and one each side, the dots under the platter and an arrow
+ * 16 px in from each edge. The styles pick the layout with a media query (global.css, "Home v3 vial platter"), so it is
+ * right before any script runs; the script only turns the platter and fits it to the stage.
+ *
+ * Turning: the arrows, the left and right keys (Home and End too), a swipe, or a tap on a side vial. A tap or Enter on
+ * the front vial opens its lesson (or says "coming soon"). A hovered or keyboard-focused vial lifts 8 px with a soft
+ * copper glow; its label text stays dark in both palettes. Reduced motion drops the lift and the glide, and keeps the
+ * glow. The dots only show where the platter stands (aria-hidden, not controls); only the front vial is in the Tab
+ * order. Nothing here advances by itself.
+ *
+ * This is a standalone component: it replaces ModesCarousel on the Home v3 page once that page is built (see the
+ * status note). Until then /preview/vial-platter shows it, and tests/e2e/vial-platter.spec.ts covers it.
+ */
+import { studyModes } from '../config/modes';
+import { VIAL_V2_SIZES } from '../config/vialsizes-v2';
+import { sampleLessonShown } from '../lessons/draftgate';
+import { shortTime } from '../scripts/carousel';
+import { platterSpots } from '../scripts/platter';
+
+// The live build holds the sample lesson back: no mode links to it there (the vials say "coming soon" instead).
+const sampleShown = sampleLessonShown();
+const linkOf = (mode: (typeof studyModes)[number]) => (sampleShown ? mode.link : undefined);
+
+const modes = studyModes;
+
+const count = modes.length;
+const wide = platterSpots(count, 0, 'wide');
+const phone = platterSpots(count, 0, 'phone');
+---
+
+<section
+  id="ways-to-study"
+  class="platter scene scene-tint scroll-mt-section"
+  aria-labelledby="platter-heading"
+  data-platter
+  data-count={count}
+>
+  <div class="platter-intro mx-auto max-w-page text-center">
+    <h2 id="platter-heading" class="display platter-heading wrap-anywhere"><span class="block">one lesson,</span> <span class="block">multiple ways to study</span></h2>
+    <p class="platter-sub text-ink-soft">pick the method that fits your brain today.</p>
+  </div>
+
+  <div class="platter-stage mx-auto" role="group" aria-roledescription="carousel" aria-label="study methods" data-platter-stage>
+    <div class="platter-track" data-platter-track>
+      <span class="platter-edge" aria-hidden="true"></span>
+      <span class="platter-top" aria-hidden="true"></span>
+      {
+        modes.map((mode, index) => {
+          const link = linkOf(mode);
+          const size = VIAL_V2_SIZES[mode.vial];
+          const w = wide[index]!;
+          const p = phone[index]!;
+          return (
+            <button
+              type="button"
+              class="platter-vial"
+              aria-label={index === 0 ? `${mode.name}: ${link ? 'open' : 'coming soon'}` : `show ${mode.name}`}
+              tabindex={index === 0 ? 0 : -1}
+              data-platter-vial
+              data-name={mode.name}
+              data-href={link?.href}
+              data-offset={w.offset}
+              data-hide-phone={p.shown ? undefined : ''}
+              data-hide-wide={w.shown ? undefined : ''}
+              data-active={index === 0 ? '' : undefined}
+            >
+              <img
+                class="platter-img"
+                src={`/vials/v2/vial-${mode.vial}.webp`}
+                width={size.width}
+                height={size.height}
+                alt=""
+                aria-hidden="true"
+                loading="lazy"
+                decoding="async"
+                draggable="false"
+              />
+              <span class="platter-label" aria-hidden="true">
+                <span class="platter-kicker">study method:</span>
+                <span class="platter-name">{mode.name}</span>
+                <span class="platter-meta"><span>time</span><span>{shortTime(mode.time)}</span></span>
+                {/* The 960 file, not the 480 one: the header's hidden day logo requests the 480 file, so it would look already loaded (home-hero-logo-lazy.spec.ts). */}
+                <img
+                  class="platter-logo"
+                  src="/brand/v1/logo-full-light-960.png"
+                  width="960"
+                  height="303"
+                  alt=""
+                  aria-hidden="true"
+                  loading="lazy"
+                  decoding="async"
+                  draggable="false"
+                />
+              </span>
+            </button>
+          );
+        })
+      }
+    </div>
+
+    <div class="platter-dots" aria-hidden="true">
+      {modes.map((_, index) => <span class="platter-dot" data-platter-dot data-on={index === 0 ? '' : undefined} />)}
+    </div>
+
+    <button type="button" class="corner-button platter-arrow platter-arrow-prev" aria-label="previous study method" data-platter-prev>
+      <svg viewBox="0 0 24 24" class="size-6" aria-hidden="true" focusable="false">
+        <path d="M14.5 6l-6 6 6 6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path>
+      </svg>
+    </button>
+    <button type="button" class="corner-button platter-arrow platter-arrow-next" aria-label="next study method" data-platter-next>
+      <svg viewBox="0 0 24 24" class="size-6" aria-hidden="true" focusable="false">
+        <path d="M9.5 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path>
+      </svg>
+    </button>
+  </div>
+
+  <p class="sr-only" aria-live="off" aria-atomic="true" data-platter-live></p>
+</section>
+
+<script>
+  import {
+    DESIGN,
+    keyTarget,
+    platterMode,
+    platterScale,
+    platterSpots,
+    SIDEWAYS_SCALE,
+    ringOffset,
+    slideAnnouncement,
+    stageHeadroom,
+    swipeTurn,
+    wrap,
+  } from '../scripts/platter';
+
+  /** How long the glide takes, so a late finish never leaves the platter marked "turning" (the vial transition in global.css). */
+  const SETTLE_MS = 700;
+  /** Where the wide layout's arrows stand, as the design's distance from the middle, and the least they may come in to. */
+  const ARROW_X = 365;
+  const ARROW_X_MIN = 190;
+
+  const root = document.querySelector<HTMLElement>('[data-platter]');
+  const stage = root?.querySelector<HTMLElement>('[data-platter-stage]');
+  if (root && stage) {
+    const vials = [...root.querySelectorAll<HTMLButtonElement>('[data-platter-vial]')];
+    const dots = [...root.querySelectorAll<HTMLElement>('[data-platter-dot]')];
+    const live = root.querySelector<HTMLElement>('[data-platter-live]');
+    const count = vials.length;
+    let active = 0;
+    let announced = -1;
+    let tookOver = false;
+
+    // The styles pick the layout (a media query in global.css) and say so in --platter-tw, so script and styles never disagree.
+    const mode = () => platterMode(Number.parseFloat(getComputedStyle(root).getPropertyValue('--platter-tw')) === DESIGN.phone.trackWidth);
+
+    /** Fits the track to the stage: its scale, the headroom the dots need above it, and where the arrows stand. */
+    const fit = () => {
+      const kind = mode();
+      const content = stage.clientWidth - 2 * parseFloat(getComputedStyle(stage).paddingLeft || '0');
+      // A phone turned sideways shows the board's 60% track (the styles' landscape block says so in --platter-sideways).
+      const sideways = Number.parseFloat(getComputedStyle(root).getPropertyValue('--platter-sideways')) === 1;
+      const fitted = platterScale(content > 0 ? content : stage.clientWidth, kind);
+      const scale = sideways && kind === 'wide' ? Math.min(fitted, SIDEWAYS_SCALE) : fitted;
+      root.style.setProperty('--platter-scale', String(scale));
+      root.style.setProperty('--platter-head', String(stageHeadroom(scale, kind)));
+      root.style.setProperty('--platter-arrow-x', String(Math.max(ARROW_X * scale, ARROW_X_MIN)));
+      root.dataset.mode = kind;
+    };
+
+    const settle = () => {
+      root.dataset.platterState = 'turning';
+      const finite = root
+        .getAnimations({ subtree: true })
+        .filter((animation) => animation.effect?.getComputedTiming().iterations !== Infinity);
+      const cap = window.setTimeout(() => (root.dataset.platterState = 'settled'), SETTLE_MS + 200);
+      void Promise.allSettled(finite.map((animation) => animation.finished)).then(() => {
+        window.clearTimeout(cap);
+        root.dataset.platterState = 'settled';
+      });
+    };
+
+    const place = () => {
+      const wide = platterSpots(count, active, 'wide');
+      const phone = platterSpots(count, active, 'phone');
+      vials.forEach((vial, index) => {
+        const w = wide[index]!;
+        const p = phone[index]!;
+        const front = index === active;
+        vial.dataset.offset = String(ringOffset(index, active, count));
+        vial.toggleAttribute('data-active', front);
+        vial.toggleAttribute('data-hide-phone', !p.shown);
+        vial.toggleAttribute('data-hide-wide', !w.shown);
+        vial.tabIndex = front ? 0 : -1;
+        const name = vial.dataset.name ?? '';
+        vial.setAttribute('aria-label', front ? `${name}: ${vial.dataset.href ? 'open' : 'coming soon'}` : `show ${name}`);
+      });
+      dots.forEach((dot, index) => dot.toggleAttribute('data-on', index === active));
+      root.dataset.active = String(active);
+      settle();
+    };
+
+    let rest = 0;
+    const announceAtRest = () => {
+      window.clearTimeout(rest);
+      rest = window.setTimeout(() => {
+        if (!live || announced === active) return;
+        announced = active;
+        live.textContent = slideAnnouncement(vials[active]!.dataset.name ?? '', active, count);
+      }, SETTLE_MS);
+    };
+
+    const takeOver = () => {
+      if (tookOver) return;
+      tookOver = true;
+      live?.setAttribute('aria-live', 'polite');
+    };
+
+    const goTo = (index: number) => {
+      const next = wrap(index, count);
+      if (next === active) return;
+      const focusInside = vials.some((vial) => vial === document.activeElement);
+      active = next;
+      place();
+      announceAtRest();
+      // Keyboard focus on the front vial moves with it to the new front vial.
+      if (focusInside) vials[active]!.focus({ preventScroll: true });
+    };
+
+    root.querySelector('[data-platter-prev]')?.addEventListener('click', () => {
+      takeOver();
+      goTo(active - 1);
+    });
+    root.querySelector('[data-platter-next]')?.addEventListener('click', () => {
+      takeOver();
+      goTo(active + 1);
+    });
+
+    stage.addEventListener('keydown', (event) => {
+      if (!vials.includes(event.target as HTMLButtonElement)) return;
+      const target = keyTarget(event.key, active, count);
+      if (target === undefined) return;
+      event.preventDefault();
+      takeOver();
+      goTo(target);
+    });
+
+    // A tap on a side vial brings it to the front; a tap (or Enter) on the front vial opens its lesson, if it has one.
+    let swiped = false;
+    let swipeExpiry = 0;
+    vials.forEach((vial, index) => {
+      vial.addEventListener('click', () => {
+        if (swiped) {
+          swiped = false;
+          return;
+        }
+        takeOver();
+        if (index !== active) {
+          goTo(index);
+          return;
+        }
+        const href = vial.dataset.href;
+        if (href) window.location.assign(href);
+      });
+    });
+
+    // A finger swiping sideways across the platter turns it one vial. Up and down still scrolls the page.
+    let swipeStart: { x: number; y: number; id: number } | undefined;
+    stage.addEventListener(
+      'pointerdown',
+      (event) => {
+        swiped = false;
+        swipeStart = event.pointerType === 'mouse' ? undefined : { x: event.clientX, y: event.clientY, id: event.pointerId };
+      },
+      { passive: true },
+    );
+    stage.addEventListener('pointerup', (event) => {
+      const start = swipeStart;
+      swipeStart = undefined;
+      if (!start || start.id !== event.pointerId) return;
+      const turn = swipeTurn(event.clientX - start.x, event.clientY - start.y);
+      if (!turn) return;
+      swiped = true;
+      window.clearTimeout(swipeExpiry);
+      swipeExpiry = window.setTimeout(() => (swiped = false), SETTLE_MS);
+      takeOver();
+      goTo(active + turn);
+    });
+    stage.addEventListener('pointercancel', () => {
+      swipeStart = undefined;
+    });
+
+    if (typeof ResizeObserver === 'function') new ResizeObserver(fit).observe(stage);
+    else window.addEventListener('resize', fit);
+    fit();
+    place();
+    // The first placing is not a turn: mark the platter settled once it is drawn.
+  }
+</script>

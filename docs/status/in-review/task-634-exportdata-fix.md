@@ -1,1 +1,0 @@
-status: exports the validated study-resume snapshot, including up to 500 submitted answers, in JSON and resume.csv; game-result fields are supplied by staging/#1111, and focused JSON/CSV/account coverage is passing.

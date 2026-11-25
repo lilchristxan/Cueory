@@ -1,0 +1,1 @@
+status: in review · task-blockers/home-safari-tablet · Home v3 release blockers: copper curve clear of the "simpler." letters (Safari contrast), phone-landscape sign-up button inside its panel in every engine, 44 px tap areas on the side vials of the study-methods platter at tablet size. WebKit and Firefox checks are owed on the release pull request.

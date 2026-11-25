@@ -15,6 +15,7 @@ import { THEME_STORAGE_KEY } from '../scripts/theme';
 import { CROSSWORD_SETTINGS_KEY } from '../islands/cuewordkeys';
 import { PILLO_HARD_MODE_STORAGE_KEY, VIALO_HARD_MODE_STORAGE_KEY } from '../islands/vialokeys';
 import { STATS_STORAGE_KEY, SUDOKU_STATS_STORAGE_KEY } from '../islands/gameresults';
+import { PICCLINE_SAVE_KEY } from '../islands/picclinesave';
 import { GAME_SETTINGS_STORAGE_KEY } from '../islands/gamesettings';
 import { GAME_HELP_STORAGE_KEY } from '../islands/gamehelpkeys';
 import { GUEST_IMPORT_MARKER_PREFIX } from '../islands/guestimportrun';
@@ -60,6 +61,7 @@ export const storageKeys: readonly StorageKey[] = Object.freeze([
   { name: THEME_STORAGE_KEY, storage: 'local', holds: 'Light or Dark, when you pick one', purpose: 'remember your theme pick', onDeletion: 'cleared', disclosure: { section: SETTINGS, phrase: 'whether you chose the light or dark theme' } },
   { name: STATS_STORAGE_KEY, storage: 'local', holds: 'daily game results, when stats are on', purpose: 'show game stats and streaks', onDeletion: 'cleared', disclosure: { section: GAMES, phrase: 'it automatically saves finished games on this device' } },
   { name: SUDOKU_STATS_STORAGE_KEY, storage: 'local', holds: 'sudoku solve days, levels and times, when stats are on', purpose: 'show sudoku stats per level', onDeletion: 'cleared', disclosure: { section: GAMES, phrase: 'the level, date and time taken for your first solve of each level each day' } },
+  { name: PICCLINE_SAVE_KEY, storage: 'local', holds: "today's word path board: answers and other words found, cues used and wrong tries", purpose: 'bring the board back after a reload and keep a finished board finished that day', onDeletion: 'cleared', disclosure: { section: GAMES, phrase: 'piccline also saves the board you are playing today on this device' } },
   { name: CROSSWORD_SETTINGS_KEY, storage: 'local', holds: 'crossword settings', purpose: 'remember crossword settings', onDeletion: 'cleared', disclosure: sharedSettings },
   { name: SUDOKU_SETTINGS_KEY, storage: 'local', holds: 'sudoku settings', purpose: 'remember sudoku settings', onDeletion: 'cleared', disclosure: sharedSettings },
   { name: GAME_SETTINGS_STORAGE_KEY, storage: 'local', holds: 'high contrast, reduced motion and game sounds', purpose: 'remember the shared game settings', onDeletion: 'cleared', disclosure: sharedSettings },
