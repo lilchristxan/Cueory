@@ -657,25 +657,39 @@
     background-image: linear-gradient(180deg, color-mix(in srgb, var(--color-surface) 60%, transparent), transparent);
   }
 
+  /* The small cup-and-leaf mark, one on each side of the words, bare (no disc). It is one dark ink, so it is drawn as a
+     mask in the text colour: Espresso in Light, Ivory in Evening, legible on both grounds. */
   .building-strip-icon {
     display: inline-block;
-  }
-
-  /* The approved cup-and-leaf mark is dark artwork: in Evening it sits on a light disc so it stays visible. */
-  @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) .building-strip-icon {
-      box-sizing: content-box;
-      padding: var(--notice-icon-disc);
-      border-radius: var(--radius-pill);
-      background-color: var(--color-ink);
-    }
-  }
-
-  :root[data-theme="dark"] .building-strip-icon {
-    box-sizing: content-box;
-    padding: var(--notice-icon-disc);
-    border-radius: var(--radius-pill);
+    inline-size: var(--notice-icon-size);
+    block-size: var(--notice-icon-size);
+    vertical-align: middle;
     background-color: var(--color-ink);
+    -webkit-mask: url("/design/icon-building-notice.webp") center / contain no-repeat;
+    mask: url("/design/icon-building-notice.webp") center / contain no-repeat;
+  }
+
+  .building-strip-icon:first-child {
+    margin-inline-end: var(--notice-icon-gap);
+  }
+
+  .building-strip-icon:last-child {
+    margin-inline-start: var(--notice-icon-gap);
+  }
+
+  /* "support": bold, underlined (the underline, not colour, marks the link). The box is a 44 px target; the negative
+     margin gives back the extra height so the bar is no taller than its text needs. */
+  .building-strip-link {
+    display: inline-flex;
+    align-items: center;
+    min-block-size: var(--tap-min);
+    min-inline-size: var(--tap-min);
+    justify-content: center;
+    margin-block: var(--notice-link-trim);
+    font-weight: 700;
+    text-decoration: underline;
+    text-underline-offset: var(--underline-offset-notice);
+    color: var(--color-ink);
   }
 
   /* Frosted panel: brand surface color, partly see-through, blurred, with a 1 px hairline and one soft shadow. */
@@ -913,15 +927,46 @@
     cursor: pointer;
   }
 
-  /* Fills the whole dialog, so a click on the dialog itself means the dimmed page beside it. */
+  /* Fills the whole dialog, so a click on the dialog itself means the dimmed page beside it. A column: the rows and the
+     search scroll in the middle, the social icons stay pinned to the bottom edge (above the phone's safe area). */
   .menu-panel-inner {
     display: flex;
     flex-direction: column;
-    gap: calc(var(--spacing) * 0.5);
     block-size: 100%;
+    overflow: hidden;
+    padding-inline: max(calc(var(--spacing) * 4), env(safe-area-inset-left)) calc(var(--spacing) * 4);
+  }
+
+  .menu-panel-scroll {
+    display: flex;
+    flex-direction: column;
+    gap: calc(var(--spacing) * 0.5);
+    flex: 1 1 auto;
+    min-block-size: 0;
     overflow-y: auto;
-    padding: max(calc(var(--spacing) * 4.5), env(safe-area-inset-top)) calc(var(--spacing) * 4)
-      max(calc(var(--spacing) * 6), env(safe-area-inset-bottom)) max(calc(var(--spacing) * 4), env(safe-area-inset-left));
+    padding-block-start: max(calc(var(--spacing) * 4.5), env(safe-area-inset-top));
+  }
+
+  .menu-panel-socials {
+    flex: none;
+    padding-block: calc(var(--spacing) * 3) max(calc(var(--spacing) * 4), env(safe-area-inset-bottom));
+    border-block-start: 1px solid color-mix(in srgb, var(--color-line) 16%, transparent);
+  }
+
+  /* A short, wide screen (phone turned sideways): there is no room to pin them, so everything scrolls together. */
+  @media (orientation: landscape) and (max-height: 32em) {
+    .menu-panel-inner {
+      overflow-y: auto;
+    }
+
+    .menu-panel-scroll {
+      flex: none;
+      overflow: visible;
+    }
+
+    .menu-panel-socials {
+      border-block-start: 0;
+    }
   }
 
   /* A row of the bar: study, anatomy lab, games, support (large), and the smaller rows under a label. */

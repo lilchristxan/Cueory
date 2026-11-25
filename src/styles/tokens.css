@@ -362,6 +362,8 @@
   --explore-dock-heading-width: 8.875rem; /* board: heading column 142 px at 1440 (tiles 116 wide) */
   --explore-caps-size: 0.75rem;     /* board: EXPLORE at 12 px, 6 px above the title */
   --explore-caps-gap: 0.375rem;
+  --explore-caps-line: 1.5;         /* Lato body text keeps 1.5 line spacing; the board draws the word on a 10.8 px line, so the extra 3.6 px above and below is pulled back with --explore-caps-trim */
+  --explore-caps-trim: -0.3em;
   --explore-tile-basis-min: 5.75rem; /* a phone tile never gets narrower than this; the row wraps instead */
   --explore-tile-min: 6.75rem;      /* board: 108 px (phone 108, landscape 88) */
   --explore-icon: 1.25rem;           /* board: 20 px icons (phone 28, landscape 24) */
@@ -388,7 +390,7 @@
   --footer-link-gap-phone: 0.75rem;    /* the five links fit the 302 px between the flag and the chevron */
   --footer-link-size: 0.875rem;        /* 14 px */
   --footer-link-size-landscape: 0.8125rem; /* 13 px */
-  --footer-link-line: 1.15;
+  --footer-link-line: 1.5;            /* Lato keeps 1.5; the link boxes are 44 px tall anyway, so the row does not grow */
   --soon-card-max-width: 60.375rem;  /* Home v3 coming-soon panel: the board's 900 px of content plus 32 px padding each side and the rim (966 px) */
   --soon-card-max-width-landscape: 41.375rem; /* phone landscape: 620 + 20 + 20 + the rim (662 px) */
   --soon-radius: 1.75rem;       /* 28 px */
@@ -399,9 +401,9 @@
   --soon-heading-landscape: 1.5rem;  /* 24 px on a phone turned sideways */
   --soon-heading-line: 1.15;
   --soon-line-size: 1rem;       /* the board's line under the heading: 16 px, 18 px apart */
-  --soon-line-height: 1.125;
+  --soon-line-height: 1.5;      /* was the board's 18 px lines (1.125); Lato body text keeps 1.5, so the two lines are 24 px apart */
   --soon-line-size-landscape: 0.8125rem;   /* 13 px */
-  --soon-line-height-landscape: 1.15;
+  --soon-line-height-landscape: 1.5;
   --soon-help-size: 0.75rem;      /* the privacy line under the panel: 12 px */
   --soon-help-line: 1.5;
   --soon-input-height: 3.125rem;  /* the board's field: 48 px plus its rim = 50 px */
@@ -432,7 +434,10 @@
   --radius-lg: 1rem;
   --radius-xl: 1rem;            /* frosted panels and cards on marketing pages (16 px, D-62) */
   --radius-pill: 999px;
-  --notice-icon-disc: 0.125rem; /* light disc margin around the building-strip icon in Evening */
+  --notice-icon-size: 1rem;     /* the building notice's cup-and-leaf mark, one on each side of the words */
+  --notice-icon-gap: 0.5rem;
+  --notice-link-trim: calc((var(--tap-min) - 1.5rem) / -2); /* the "support" link's 44 px box minus its 24 px line, split above and below */
+  --underline-offset-notice: 0.2em;
 
   /* ---------- Depth (marketing pages) ---------- */
   --shadow-soft: 0 12px 32px rgb(var(--shadow-tint) / 0.08); /* one soft shadow for frosted panels (D-62) */
@@ -1274,6 +1279,7 @@
   --stage-photo-top: max(-22.9vw, -20.625rem);
   --stage-photo-width: min(100vw, 90rem);
   --stage-photo-mask: linear-gradient(transparent, currentColor 14%, currentColor 82%, transparent);
+  --stage-photo-mask-x: linear-gradient(90deg, transparent, currentColor 20%, currentColor 80%, transparent); /* the sides fade too, so the photo never shows a rectangle on a wide screen (the figures and the ring sit between 28% and 72%) */
   --stage-halo-top: min(6.5vw, 5.875rem);
   --stage-halo-width: min(42vw, 37.75rem);
   --stage-tip-top: calc(15% - .375rem);

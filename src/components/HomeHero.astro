@@ -66,7 +66,7 @@ h1 { margin: var(--stage-heading-gap) auto 0; max-width: var(--stage-heading-wid
 .stage-points li { gap: var(--stage-icon-gap); }
 .stage-points svg { width: 1.1em; height: 1.1em; }
 .stage-scene { position: relative; width: var(--stage-width); margin: var(--stage-margin); height: var(--stage-height); }
-.stage-photo { position: absolute; inset-inline-start: 50%; transform: translateX(-50%); top: var(--stage-photo-top); width: var(--stage-photo-width); aspect-ratio: 2880/1607; background: var(--stage-photo) center / contain no-repeat; mask-image: var(--stage-photo-mask); }
+.stage-photo { position: absolute; inset-inline-start: 50%; transform: translateX(-50%); top: var(--stage-photo-top); width: var(--stage-photo-width); aspect-ratio: 2880/1607; background: var(--stage-photo) center / contain no-repeat; -webkit-mask-image: var(--stage-photo-mask), var(--stage-photo-mask-x); mask-image: var(--stage-photo-mask), var(--stage-photo-mask-x); -webkit-mask-composite: source-in; mask-composite: intersect; }
 .home-stage { --stage-accent-ink: color-mix(in srgb, var(--color-ink) 75%, var(--color-copper-deep)); --stage-photo: url('/design/home-v3/stage-light.webp'); }
 :global(:root[data-theme="dark"]) .home-stage { --stage-accent-ink: color-mix(in srgb, var(--color-copper-glow) 75%, var(--color-copper)); --stage-photo: url('/design/home-v3/stage-evening.webp'); }
 @media (prefers-color-scheme: dark) {

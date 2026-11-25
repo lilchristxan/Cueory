@@ -1,8 +1,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import { writeFile } from 'node:fs/promises';
 import { expect, test, type Page, type TestInfo } from '@playwright/test';
-import { accountLaunch, accountsOpen, menuSmallLinks, newsletter, showsHeroJoin, socials } from '../../src/config/site';
-import { visibleFooterLinks } from '../../src/config/legalfooter';
+import { accountLaunch, accountsOpen, newsletter, showsHeroJoin, socials } from '../../src/config/site';
 import { REST_MS } from '../../src/scripts/carousel';
 import { isDesktopOfEachEngine, sizeOf } from './projects';
 import { lessonRoutes } from '../lessonroutes';
@@ -357,7 +356,16 @@ for (const path of [...new Set(pages)]) {
 
     const res = await page.goto(path);
     expect(res?.status()).toBe(200);
-    await expect(page.getByTestId('building-notice')).toHaveText("we're still building. more coming soon.");
+    const notice = page.getByTestId('building-notice');
+    await expect(notice).toHaveText("we're still building. please support (opens in a new tab) our development. more coming soon!");
+    const support = notice.getByRole('link', { name: /^support/ });
+    await expect(support).toHaveAttribute('href', 'https://ko-fi.com/cueory');
+    await expect(support).toHaveAttribute('target', '_blank');
+    await expect(support).toHaveAttribute('rel', 'noopener noreferrer');
+    expect(await support.evaluate((el) => ({ weight: getComputedStyle(el).fontWeight, line: getComputedStyle(el).textDecorationLine, h: el.getBoundingClientRect().height })))
+      .toMatchObject({ weight: '700', line: 'underline' });
+    expect((await support.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    await expect(notice.locator('.building-strip-icon')).toHaveCount(2);
     await expect(page.locator('h1')).toHaveCount(1);
 
     const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa']).analyze();
@@ -689,7 +697,9 @@ test.describe('theme switch', () => {
 
   test('Light, Dark and Follow device change the palette and are remembered', async ({ page }, testInfo) => {
     const deviceIsDark = testInfo.project.use.colorScheme === 'dark';
-    await page.goto('/');
+    // Not the home page: since the home boards (2026-11-24) its Light ground is one even Linen-and-Mocha beige rather than
+    // the Ivory page colour, so the palette check starts on a page that still uses the plain page colour.
+    await page.goto('/privacy');
     await openFooterLinks(page);
     const picker = page.getByRole('group', { name: 'Theme' });
     await expect(picker.getByRole('radio', { name: 'Follow device' })).toBeChecked();
@@ -1017,9 +1027,17 @@ test.describe('silk scenes down the home page (D-53)', () => {
         if (bottom > 0) bands.push({ scene, edge: 'bottom', from: box.bottom - bottom, to: box.bottom });
       }
       const hits: string[] = [];
+      // Text that is clipped away (the keyboard-only "play today's" button and the screen-reader date line, which the
+      // boards draw nothing for) is not on screen, so no word of it can sit in a fade. The focused button is checked below.
+      const drawn = (node: Node) => {
+        for (let el = node.parentElement; el && el.tagName !== 'MAIN'; el = el.parentElement) {
+          if (getComputedStyle(el).clipPath === 'inset(50%)') return false;
+        }
+        return true;
+      };
       const walker = document.createTreeWalker(document.querySelector('main')!, NodeFilter.SHOW_TEXT);
       for (let node = walker.nextNode(); node; node = walker.nextNode()) {
-        if (!node.textContent?.trim()) continue;
+        if (!node.textContent?.trim() || !drawn(node)) continue;
         const range = document.createRange();
         range.selectNodeContents(node);
         for (const rect of range.getClientRects()) {
@@ -1033,6 +1051,17 @@ test.describe('silk scenes down the home page (D-53)', () => {
       ['scene-play', 'top'], ['scene-tint', 'top'],
     ]); // Two top fades between the three scenes (Home v3: the coming-soon panel is not a scene).
     expect(covered.hits).toEqual([]);
+
+    // The one drawn exception: Tab reveals the "play today's" button over the dots' row, which lies in the fade above the
+    // next scene. Its words must then sit on the button's own solid page-colour fill, never on the fading silk.
+    await page.getByTestId('games-link').focus();
+    const revealed = await page.getByTestId('games-link').evaluate((el) => {
+      const style = getComputedStyle(el);
+      return { clip: style.clipPath, fill: style.backgroundColor, order: style.zIndex };
+    });
+    expect(revealed.clip).toBe('none');
+    expect(revealed.fill).toMatch(/^rgb\(\d+, \d+, \d+\)$/); // fully opaque (no alpha channel)
+    expect(Number(revealed.order)).toBeGreaterThan(0);
   });
 });
 
@@ -1057,14 +1086,13 @@ test.describe('☰ side panel and account corner (D-46)', () => {
       await expect(initialFocus).toBeFocused();
 
       const nav = panel.getByRole('navigation', { name: 'site' });
-      for (const name of ['home', 'ways to study', 'lessons', 'games', 'my progress', 'support']) {
-        await expect(nav.getByRole('link', { name })).toBeVisible();
+      // The bar holds exactly study, anatomy lab (drafts builds only), games, support and about; the other pages,
+      // legal pages included, are linked from the about page (checked in about.spec.ts).
+      for (const name of ['study', 'games', 'support', 'about']) {
+        await expect(nav.getByRole('link', { name, exact: true })).toBeVisible();
       }
-      await expect(panel.getByRole('link', { name: 'privacy' })).toBeVisible();
-      // #747: Terms shows in the menu only once its page is approved (same rule as the footer).
-      const terms = panel.getByRole('link', { name: 'terms' });
-      if (visibleFooterLinks(menuSmallLinks).some((link) => link.href === '/terms')) await expect(terms).toBeVisible();
-      else await expect(terms).toHaveCount(0);
+      await expect(nav.getByRole('link')).toHaveCount(5); // the drafts build also shows the anatomy lab
+      await expect(panel.getByRole('link', { name: 'privacy' })).toHaveCount(0);
 
       // Tab never leaves the panel while it is open.
       for (let i = 0; i < 9; i++) {
@@ -1083,11 +1111,11 @@ test.describe('☰ side panel and account corner (D-46)', () => {
   }
 
   test('the current page is marked in the side panel by more than color', async ({ page }) => {
-    await page.goto('/learn/study-skills/cards');
+    await page.goto('/support');
     await page.getByRole('button', { name: 'open site menu', exact: true }).click();
     const current = page.getByTestId('site-menu').locator('[aria-current="page"]');
     await expect(current).toHaveCount(1);
-    await expect(current).toHaveText('lessons');
+    await expect(current).toHaveText('support');
     // A short line beside the link, drawn by ::before.
     expect(await current.evaluate((el) => getComputedStyle(el, '::before').content)).not.toBe('none');
   });
@@ -1108,13 +1136,14 @@ test.describe('☰ side panel and account corner (D-46)', () => {
     await expect(panel).toBeHidden();
   });
 
-  test('a side-panel link to a spot on the home page closes the panel and goes there', async ({ page }) => {
+  test('a side-panel row opens its page (the bar has no links to spots on the home page any more)', async ({ page }) => {
     await page.goto('/');
     await homeMenuOpener(page).click();
-    await page.getByTestId('site-menu').getByRole('link', { name: 'ways to study' }).click();
-    await expect(page.getByTestId('site-menu')).toBeHidden();
-    await expect(page).toHaveURL(/#ways-to-study$/);
-    await expect(page.getByRole('heading', { name: 'ways to study' })).toBeInViewport();
+    const panel = page.getByTestId('site-menu');
+    await expect(panel.locator('a[href*="#"]')).toHaveCount(0);
+    await panel.getByRole('navigation', { name: 'site' }).getByRole('link', { name: 'about', exact: true }).click();
+    await expect(page).toHaveURL(/\/about$/);
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
   });
 
   test('the account corner offers "create free account" and "sign in", both coming soon', async ({ page }) => {
@@ -1292,7 +1321,9 @@ test.describe('without JavaScript, the corners', () => {
     await page.goto('/privacy');
     await expect(page.getByRole('button', { name: 'open site menu', exact: true })).toBeHidden();
     await expect(page.getByRole('button', { name: 'open account menu', exact: true })).toBeHidden();
-    await expect(page.getByRole('navigation', { name: 'footer' }).getByRole('link', { name: 'support cueory' })).toBeVisible();
+    // Without scripts the footer's extras panel is simply open (its chevron stays hidden), so its links are all there.
+    await expect(page.getByRole('navigation', { name: 'more pages' }).getByRole('link', { name: 'support cueory' })).toBeVisible();
+    await expect(page.getByRole('navigation', { name: 'footer' }).getByRole('link', { name: 'privacy', exact: true })).toBeVisible();
   });
 });
 
