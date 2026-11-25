@@ -193,3 +193,72 @@ test.describe('forgetting stats forgets the saved board', () => {
     await expect(square(2, 1)).toHaveAttribute('aria-label', /empty$/);
   });
 });
+
+// Saves are written only by a player's own move (Codex rounds on #1197): an untouched tab never writes or deletes.
+test.describe('untouched tabs never write or delete a save', () => {
+  test('opening and leaving each game without a move performs no write or delete on a save key', async ({ page }) => {
+    await page.addInitScript(() => {
+      const calls: string[] = [];
+      (window as unknown as { saveCalls: string[] }).saveCalls = calls;
+      for (const name of ['setItem', 'removeItem'] as const) {
+        const real = Storage.prototype[name];
+        Storage.prototype[name] = function (this: Storage, key: string, ...rest: string[]) {
+          if (/^cueory-.*-save$/.test(key)) calls.push(`${name} ${key}`);
+          return (real as (...args: string[]) => void).call(this, key, ...rest);
+        } as typeof real;
+      }
+    });
+    for (const path of ['/play/vialo', '/play/sudoku', '/play/crossword']) {
+      await open(page, path);
+      await page.waitForTimeout(1500);
+      await page.reload();
+      await page.waitForTimeout(500);
+      expect(await page.evaluate(() => (window as unknown as { saveCalls: string[] }).saveCalls)).toEqual([]);
+    }
+  });
+
+  test('sudoku: an untouched second tab closing leaves the finished save intact', async ({ page, context }) => {
+    const daily = generateSudoku(dailySudokuSeed(DAY, 'easy'), 'easy');
+    const empty = daily.puzzle.flatMap((digit, index) => (digit === 0 ? [index] : []));
+    const cellsOf = (p: Page) => p.getByTestId('sudoku').getByRole('grid', { name: 'sudoku grid' }).getByRole('gridcell');
+    await open(page, '/play/sudoku');
+    const second = await context.newPage();
+    await open(second, '/play/sudoku');
+    await expect(cellsOf(second)).toHaveCount(81);
+    await expect(cellsOf(page)).toHaveCount(81);
+    for (const index of empty) {
+      await cellsOf(page).nth(index).click();
+      await page.keyboard.press(String(daily.solution[index]));
+    }
+    await expect(page.getByTestId('sudoku-result')).toBeVisible();
+    await second.reload();
+    await second.close();
+    await page.getByTestId('game-result-dialog').getByRole('button', { name: 'close results' }).click();
+    await page.reload();
+    await expect(cellsOf(page)).toHaveCount(81);
+    await expect(page.getByTestId('sudoku-result')).toBeVisible();
+  });
+
+  test('crossword: an untouched second tab closing leaves the finished save intact', async ({ page, context }) => {
+    const SAMPLE = ['.ABC.', 'DEFGH', 'IJKLM', 'NOPQR', '.STU.'];
+    const squareOf = (p: Page, row: number, column: number) =>
+      p.getByTestId('cueword').getByRole('button', { name: new RegExp('^(?:\\d+, )?row ' + row + ', column ' + column + ',') });
+    await open(page, '/play/crossword');
+    const second = await context.newPage();
+    await open(second, '/play/crossword');
+    await expect(squareOf(second, 2, 1)).toBeVisible();
+    for (const [row, letters] of SAMPLE.entries()) {
+      for (const [column, letter] of [...letters].entries()) {
+        if (letter === '.') continue;
+        await squareOf(page, row + 1, column + 1).click();
+        await page.keyboard.type(letter);
+      }
+    }
+    await expect(page.getByTestId('cueword').getByTestId('crossword-badge')).toHaveText(/solved without help/);
+    await second.reload();
+    await second.close();
+    await page.getByTestId('game-result-dialog').getByRole('button', { name: 'close results' }).click();
+    await page.reload();
+    await expect(page.getByTestId('cueword').getByTestId('crossword-badge')).toHaveText(/solved without help/);
+  });
+});

@@ -11,7 +11,6 @@ import { playSolvedTone } from './solvetone';
 import { useSharedGameSettings } from './GameSettings.tsx';
 import PrintLogo from './PrintLogo';
 import { loadCuewordSave, saveCuewordProgress } from './cuewordsave';
-import { CROSSWORD_SAVE_KEY } from './gamesavekeys';
 import {
   announceFirstEntry, arrow, autocheckAll, crosswordLevelLabels, backspace, check, clueLeavesGrid, countsForStreak, currentWord, deleteLetter, emptyState, enter, getResult,
   isFilledWrong, isLocked, isSolved, loadCrosswordSettings, moveClue, nextWord, numbering, parsePuzzle, previousWord,
@@ -97,23 +96,10 @@ function Board({ puzzle, name, framed = false }: Props) {
   }, [solved, paused]);
 
   useEffect(() => { saveCrosswordSettings(browserStorage(), settings); }, [settings]);
-  // Autosave after every move (the clock is kept as of the last move or pause).
-  const latest = useRef<() => void>(() => {});
-  // The state whose saved copy was forgotten (in another tab's "forget"): it is not written back, by the effect or by
-  // pagehide, until a real move gives a new state.
-  const forgottenState = useRef<CuewordState | null>(null);
-  const stateNow = useRef(state);
-  stateNow.current = state;
-  latest.current = () => { if (forgottenState.current !== state) saveCuewordProgress(puzzle, localDay(today), { state, elapsed }, browserStorage()); };
-  useEffect(() => { latest.current(); }, [state, paused]);
-  // Written again when the page is hidden or closed, so a reload right after a move cannot beat the effect.
-  useEffect(() => {
-    const flush = () => latest.current();
-    const forgot = (event: StorageEvent) => { if (event.key === null || (event.key === CROSSWORD_SAVE_KEY && event.newValue === null)) forgottenState.current = stateNow.current; };
-    window.addEventListener('pagehide', flush);
-    window.addEventListener('storage', forgot);
-    return () => { window.removeEventListener('pagehide', flush); window.removeEventListener('storage', forgot); };
-  }, []);
+  // Autosave: written only at the moment of a real player action that changes the board (a letter, erase, check, reveal,
+  // autocheck) or pauses the clock, with the new state. Nothing writes on mount, on restore, on leaving or on a timer, so
+  // an untouched board never writes or deletes anything, and a tab that did nothing cannot overwrite another tab's progress.
+  const persist = (next: CuewordState) => saveCuewordProgress(puzzle, localDay(today), { state: next, elapsed }, browserStorage());
 
   useEffect(() => {
     if (solved) result.current?.focus();
@@ -161,6 +147,8 @@ function Board({ puzzle, name, framed = false }: Props) {
   const update = (next: CuewordState, focus = true) => {
     focusGrid.current = focus;
     setState(next);
+    // Moving the cursor alone changes nothing worth saving.
+    if (next.entries.join('|') !== state.entries.join('|') || next.checks.join('|') !== state.checks.join('|') || next.cued.join() !== state.cued.join() || next.assists !== state.assists) persist(next);
   };
 
   const closeMenus = () => { for (const menu of menus.current.values()) menu.open = false; setOpenMenu(null); };
@@ -204,6 +192,8 @@ function Board({ puzzle, name, framed = false }: Props) {
     if (solved) return;
     setSaid(paused ? 'puzzle resumed.' : 'puzzle paused. your letters are hidden until you resume.');
     if (paused) focusGrid.current = true;
+    // Pausing keeps the clock with the board, but a board nobody has touched writes nothing.
+    if (!paused && (state.entries.some(Boolean) || state.assists > 0)) persist(state);
     setPaused(!paused);
   };
 
