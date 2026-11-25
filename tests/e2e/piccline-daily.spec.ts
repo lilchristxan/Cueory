@@ -14,5 +14,5 @@ test('piccline on 24 November 2026 shows the 6 by 8 board with submit and cue co
   await expect(game.getByRole('row')).toHaveCount(8);
   await expect(game.getByRole('gridcell')).toHaveCount(48);
   for (const name of ['submit', 'clear', 'cue']) await expect(game.getByRole('button', { name })).toBeVisible();
-  await expect(page.getByTestId('suture-count')).toHaveText(/^0 of \d+ found$/);
+  await expect(page.getByTestId('suture-count')).toHaveText(/^0 of \d+ words found · teal line: the word you are tracing$/);
 });

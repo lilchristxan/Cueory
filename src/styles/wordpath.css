@@ -129,8 +129,8 @@
     background: var(--color-panel-ink-soft);
   }
   .wordpath-active-pill {
-    color: var(--color-page);
-    background: var(--color-game-teal);
+    color: var(--color-ink);
+    background: var(--color-surface);
   }
   .wordpath-missing-pill {
     border: var(--border-wordpath-panel) dashed var(--color-control);
