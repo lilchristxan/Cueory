@@ -567,7 +567,6 @@
   --wordpath-pill-pad-y: 0.5rem;     /* 8 px */
   --wordpath-pill-pad-x: 0.875rem;   /* 14 px */
   --wordpath-status-size: 0.8125rem; /* the "n of N words found" line: 13 px, as the Frame's stat labels */
-  --wordpath-corner-span: 22.625rem; /* the gear and "?" row is as wide as the letter circles (6 × 52 px + 5 × 10 px = 362 px) */
   --wordpath-columns: 11;            /* each puzzle overrides this with its validated grid width */
 }
 

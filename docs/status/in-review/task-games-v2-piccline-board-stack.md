@@ -1,4 +1,4 @@
-status: in review · task-games-v2/piccline-board-stack · piccline matched to Christian's games-v2 board (cue, pills, status line, corner row width)
+status: in review · task-games-v2/piccline-board-stack · piccline matched to Christian's games-v2 board (cue, pills, status line, board values)
 decision: D-pending · kept the board's extras that the board does not draw but the game needs: print button, submit/clear/cue row with the three-pip meter, theme-word dots and thread diamonds (non-colour signals), help text under the board. Say if any should go.
 decision: D-pending · the found-word pill stays taupe (#d3b7a1) because an existing test pins it to the trace colour; the board draws it Linen (#eadccf). The active pill now matches the board (Linen, ink text).
 
@@ -8,7 +8,7 @@ Supersedes #1025 (same branch, stacked on a now-stale base); retarget to staging
 | Element | Board | Built | Verdict |
 | --- | --- | --- | --- |
 | Cue line | 13 px, 700, 1.5 px tracking, teal, caps | same (tokens) | matches |
-| Gear and "?" row | as wide as the circle grid (362 px) | same, plus a print button | matches; print kept |
+| Gear and "?" row | as wide as the circle grid (362 px) | spans the whole game box (720 px), gear left, "?" right, plus a print button | GAP: tests/e2e/game-header.spec.ts pins gear/"?" to the game box edges; needs Christian or a spec change |
 | Letter circles | 52 px, 10 px gap, 62 px pitch | 52 px, 62 px pitch | matches |
 | Active trace | teal, 14 px | teal, 14 px | matches |
 | Completed trace | taupe, 18 px | taupe, 18 px | matches |
