@@ -1,1 +1,1 @@
-status: draft integration check of Home v3 (all nine pieces merged, page wired, old ring/preview and signup card removed); not for merging, the source PRs merge separately
+status: lane C of Home v3 matches the six boards below the explore dock (games row, platter, coming soon, social, footer); footer is a needs-christian path, so Christian merges

@@ -90,7 +90,7 @@ test.describe('layout', () => {
     await expect(page.getByRole('heading', { level: 2, name: 'coming soon' })).toBeVisible();
     await expect(page.getByText('Mental Health I and Med Math are next. Get one email when they open.')).toBeVisible();
     const [c, words, field, join] = await Promise.all([box(card(page)), box(copy(page)), box(email(page)), box(button(page))]);
-    expect(c.width).toBeLessThanOrEqual(900.5);
+    expect(c.width).toBeLessThanOrEqual(966.5); // the board's 900 px of content plus 32 px padding each side and the rim
     expect(Math.abs(c.x + c.width / 2 - 720)).toBeLessThan(2);
     expect(field.x).toBeGreaterThan(words.x + words.width - 1);
     expect(join.x).toBeGreaterThan(field.x + field.width - 1);
@@ -116,7 +116,7 @@ test.describe('layout', () => {
   test('phone landscape 844: words left, field and button right, one compact row', async ({ page }) => {
     await open(page, sizes.landscape);
     const [c, words, field, join] = await Promise.all([box(card(page)), box(copy(page)), box(email(page)), box(button(page))]);
-    expect(c.width).toBeLessThanOrEqual(620.5);
+    expect(c.width).toBeLessThanOrEqual(662.5); // 620 px of content plus 20 px padding each side and the rim
     expect(field.x).toBeGreaterThan(words.x + words.width - 1);
     expect(join.x).toBeGreaterThan(field.x + field.width - 1);
     expect(Math.abs(field.y + field.height / 2 - (join.y + join.height / 2))).toBeLessThan(2);

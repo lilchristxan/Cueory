@@ -56,6 +56,12 @@ const shown = socials.filter((social) => social.href);
     margin-block: calc(var(--spacing) * 7) 0;
   }
 
+  /* The privacy line under the coming-soon panel (6 px above it, 12 px text) takes room out of the board's gap on every
+     size: on a phone it is two lines, so the marks come up to 8 px under it. */
+  :global(.soon-section:has(.soon-help)) + .social-section {
+    margin-block-start: calc(var(--spacing) * 2);
+  }
+
   @media (min-width: 40em) {
     .social-section {
       margin-block-start: calc(var(--spacing) * 10);
@@ -148,7 +154,7 @@ const shown = socials.filter((social) => social.href);
     }
 
     :global(.soon-section:has(.soon-help)) + .social-section {
-      margin-block-start: calc(var(--spacing) * 6);
+      margin-block-start: 0;
     }
 
     .social-row {

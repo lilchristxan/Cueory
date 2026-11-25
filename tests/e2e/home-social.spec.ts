@@ -69,11 +69,13 @@ test.describe('layout', () => {
     });
   }
 
+  // The boards' space above the row: 40 px on desktop, 28 px on a phone, 24 px on a phone turned sideways.
+  const spaceAbove = { desktop: '40px', phone: '28px', landscape: '24px' } as Record<string, string>;
   for (const [name, size] of Object.entries(sizes)) {
-    test(`${name}: 40 px above the row and none below, as on the board`, async ({ page }) => {
+    test(`${name}: ${spaceAbove[name]} above the row and none below, as on the board`, async ({ page }) => {
       await open(page, size);
       const section = page.locator('[data-social-section]');
-      await expect(section).toHaveCSS('margin-top', '40px');
+      await expect(section).toHaveCSS('margin-top', spaceAbove[name]!);
       await expect(section).toHaveCSS('margin-bottom', '0px');
     });
   }

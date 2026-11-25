@@ -76,6 +76,8 @@ test.describe('wide layout (desktop 1440)', () => {
   test('a hovered vial lifts 8 px and glows, and its label text stays dark', async ({ page }) => {
     await open(page, { width: 1440, height: 900 });
     const target = vials(page).nth(1);
+    // The section is as tall as the board's (840 px): bring the vial fully into view first, so hovering does not scroll.
+    await target.scrollIntoViewIfNeeded();
     const before = await box(target);
     await target.hover();
     await expect.poll(async () => Math.round((await box(target)).y - before.y)).toBe(-8);
@@ -90,7 +92,7 @@ test.describe('wide layout (desktop 1440)', () => {
     await expect(root).toHaveCount(1);
     await expect(root).toHaveAttribute('data-platter-state', 'settled');
     await expect(root).toHaveCSS('padding-top', '96px');
-    await expect(root).toHaveCSS('padding-bottom', '40px');
+    await expect(root).toHaveCSS('padding-bottom', '75px'); // the board's 840 px section
     await expect(root).toHaveCSS('scroll-margin-top', /^[1-9]/);
   });
 
@@ -135,6 +137,7 @@ test.describe('wide layout (desktop 1440)', () => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await open(page, { width: 1440, height: 900 });
     const target = vials(page).nth(1);
+    await target.scrollIntoViewIfNeeded();
     const before = await box(target);
     await target.hover();
     await expect(target).toHaveCSS('filter', /drop-shadow/);
@@ -186,7 +189,7 @@ test.describe('portrait phone (390)', () => {
     const first = await box(dots[0]!);
     const second = await box(dots[1]!);
     const lastBox = await box(dots[count - 1]!);
-    expect(first.width).toBeCloseTo(15.4, 0); // the front vial's dot is a 7 px dot stretched into a pill
+    expect(first.width).toBeCloseTo(8.75, 0); // the front vial's dot is the 7 px dot drawn a quarter bigger (the board's scale 1.25)
     expect(second.width).toBeCloseTo(7, 0);
     expect(lastBox.width).toBeCloseTo(7, 0);
     expect((await box(dots[3]!)).x - (await box(dots[2]!)).x).toBeCloseTo(22, 0);

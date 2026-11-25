@@ -3,15 +3,15 @@ import { isDesktopOfEachEngine } from './projects';
 
 // The games row follows Christian's Home v3 boards (home-light, home-phone-light, home-landscape-light .dc.html):
 // arrow places, the phone's one-card-plus-a-peek row, and the gaps around the heading, cards and dots.
-// Tolerance is 2 px; every number below is measured from the board's own CSS.
+// Tolerance is 2 px; every number below is measured from the boards in /home/claude/boards-final (2026-11-24 revision).
 const TOLERANCE = 2;
 
 type Rect = { left: number; right: number; top: number; bottom: number; width: number; height: number };
 
 const sizes = [
-  { name: 'desktop', width: 1440, height: 900, arrow: 52, edge: 80, cardW: 280, cardH: 392, gap: 28, subToCards: 50, cardsToDot: 52, belowPill: 72 },
-  { name: 'phone', width: 390, height: 844, arrow: 44, edge: 16, cardW: 250, cardH: 350, gap: 14, subToCards: 30, cardsToDot: 44, belowPill: 32 },
-  { name: 'phone landscape', width: 844, height: 390, arrow: 40, edge: 24, cardW: 186, cardH: 260, gap: 12, subToCards: 18, cardsToDot: 30, belowPill: 72 },
+  { name: 'desktop', width: 1440, height: 900, arrow: 52, edge: 80, cardW: 280, cardH: 392, gap: 28, subToCards: 50, cardsToDot: 58, platterTop: 482 },
+  { name: 'phone', width: 390, height: 844, arrow: 44, edge: 16, cardW: 250, cardH: 350, gap: 14, subToCards: 30, cardsToDot: 50, platterTop: 416 },
+  { name: 'phone landscape', width: 844, height: 390, arrow: 40, edge: 24, cardW: 186, cardH: 260, gap: 12, subToCards: 18, cardsToDot: 35, platterTop: 320 },
 ] as const;
 
 for (const size of sizes) {
@@ -49,8 +49,8 @@ for (const size of sizes) {
           cards,
           dotCenter: dotBox.top + dotBox.height / 2,
           dotSize,
-          pill: rect(document.querySelector('[data-testid="games-link"]')),
           section: rect(document.querySelector('#daily-games')),
+          platter: rect(document.querySelector('#ways-to-study')),
         };
       });
 
@@ -70,10 +70,11 @@ for (const size of sizes) {
       expect(m.prev.right).toBeLessThanOrEqual(m.heading.left + TOLERANCE);
       expect(m.next.left).toBeGreaterThanOrEqual(m.heading.right - TOLERANCE);
 
-      // Gaps: line to cards, cards to the 8 px dot's centre, "play today's" to the section's bottom edge.
+      // Gaps: line to cards, cards to the 8 px dot's centre, the card tops to where the platter section starts (the boards
+      // draw nothing under the dots: "play today's" and the date line are kept for screen readers and the keyboard only).
       expect(Math.abs(m.cards[0].top - m.sub.bottom - size.subToCards)).toBeLessThanOrEqual(TOLERANCE);
       expect(Math.abs(m.dotCenter - m.cards[0].bottom - size.cardsToDot)).toBeLessThanOrEqual(TOLERANCE);
-      expect(Math.abs(m.section.bottom - m.pill.bottom - size.belowPill)).toBeLessThanOrEqual(TOLERANCE);
+      expect(Math.abs(m.platter.top - m.cards[0].top - size.platterTop)).toBeLessThanOrEqual(TOLERANCE);
       // The section adds only 16 px above its heading (the hero's own bottom padding is the gap); that keeps the
       // heading's glyphs out of the scene fade above it (D-53).
       expect(Math.abs(m.heading.top - m.section.top - 16)).toBeLessThanOrEqual(TOLERANCE);
