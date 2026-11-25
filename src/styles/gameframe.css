@@ -313,7 +313,9 @@
      when the head or the tail needs more than its share the rows simply grow and the page scrolls (nothing clips). */
   grid-template-rows: minmax(auto, 1fr) auto minmax(auto, 1fr);
   justify-items: center;
-  padding: 0 calc(var(--spacing) * 6);
+  --game-frame-main-pl: calc(var(--spacing) * 6);
+  --game-frame-main-pr: calc(var(--spacing) * 6);
+  padding: 0 var(--game-frame-main-pr) 0 var(--game-frame-main-pl);
   box-sizing: border-box;
   position: relative;
   /* Graph-paper backdrop, painted by the play area itself so its middle is the board's middle. Every pitch is odd and
@@ -332,10 +334,14 @@
     var(--game-frame-grid-mid) 100%, 100% var(--game-frame-grid-mid),
     var(--game-frame-grid-line) 100%, 100% var(--game-frame-grid-line);
   background-position: 50% 0, 0 50%, 50% 0, 0 50%, 50% 0, 0 50%;
+  /* The middle is that of the content box, the box the board is centred in: at narrow widths the deck takes room on the
+     right, so it is not always the middle of the whole area. (pl - pr) / 2 moves the usual 50% to it. */
+  --game-frame-grid-x: round(down, calc(50% + (var(--game-frame-main-pl) - var(--game-frame-main-pr)) / 2), var(--game-frame-grid-line));
+  --game-frame-grid-y: round(down, 50%, var(--game-frame-grid-line));
   background-position:
-    round(down, 50%, var(--game-frame-grid-line)) 0, 0 round(down, 50%, var(--game-frame-grid-line)),
-    round(down, 50%, var(--game-frame-grid-line)) 0, 0 round(down, 50%, var(--game-frame-grid-line)),
-    round(down, 50%, var(--game-frame-grid-line)) 0, 0 round(down, 50%, var(--game-frame-grid-line));
+    var(--game-frame-grid-x) 0, 0 var(--game-frame-grid-y),
+    var(--game-frame-grid-x) 0, 0 var(--game-frame-grid-y),
+    var(--game-frame-grid-x) 0, 0 var(--game-frame-grid-y);
 }
 
 .game-frame-main::after {
@@ -795,13 +801,14 @@
   z-index: 10;
 }
 
-/* From 70rem the fanned cards reach about 180 px in from the right edge. While the screen is narrow the main area gives
+/* The two paddings are rounded to whole pixels: a fractional padding made the board a hair off a whole pixel wide in Firefox (620.00003 at 1120 px).
+   From 70rem the fanned cards reach about 180 px in from the right edge. While the screen is narrow the main area gives
    up room on its right (and its padding on its left), so a board at its full width, such as a 720 px grid at 1120 px,
    never sits under a card. The usual padding is back by --game-deck-reserve-until. */
 @variant deck {
   .game-frame-main {
-    padding-inline-start: clamp(var(--game-deck-reserve-start), calc(var(--game-deck-reserve-start) + (100vw - var(--breakpoint-deck)) * var(--game-deck-reserve-start-slope)), calc(var(--spacing) * 6));
-    padding-inline-end: clamp(calc(var(--spacing) * 6), calc(calc(var(--spacing) * 6) + (var(--game-deck-reserve-until) - 100vw) * var(--game-deck-reserve-slope)), var(--game-deck-reserve-end));
+    --game-frame-main-pl: round(nearest, clamp(var(--game-deck-reserve-start), calc(var(--game-deck-reserve-start) + (100vw - var(--breakpoint-deck)) * var(--game-deck-reserve-start-slope)), calc(var(--spacing) * 6)), var(--game-frame-grid-line));
+    --game-frame-main-pr: round(nearest, clamp(calc(var(--spacing) * 6), calc(calc(var(--spacing) * 6) + (var(--game-deck-reserve-until) - 100vw) * var(--game-deck-reserve-slope)), var(--game-deck-reserve-end)), var(--game-frame-grid-line));
   }
 }
 
@@ -875,7 +882,8 @@
 /* ---------------- Responsive: Tablet and Mobile ---------------- */
 @media (width < 64rem) {
   .game-frame-sidebar-top .game-frame-back {
-    padding-inline: calc(var(--spacing) * 3);
+    --game-frame-main-pl: calc(var(--spacing) * 3);
+    --game-frame-main-pr: calc(var(--spacing) * 3);
   }
 
   .game-frame-sidebar-top {
@@ -987,7 +995,8 @@
   .game-frame-main {
     --game-frame-main-pt: calc(var(--spacing) * 5);
     --game-frame-main-pb: calc(var(--spacing) * 12);
-    padding-inline: calc(var(--spacing) * 4);
+    --game-frame-main-pl: calc(var(--spacing) * 4);
+    --game-frame-main-pr: calc(var(--spacing) * 4);
   }
 
   /* The Frame's side gutter here is 4 units; Word Path's panel bleeds exactly that far until sm:mx-0 (40rem). */

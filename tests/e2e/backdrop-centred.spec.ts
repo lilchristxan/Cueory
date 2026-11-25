@@ -31,9 +31,9 @@ const schemes = ['light', 'dark'] as const;
 
 // The ink of every pixel (distance from the page colour) along one row and one column, read in the browser so the
 // test needs no image library.
-async function backdropProfiles(page: Page, png: Buffer, width: number, height: number) {
+async function backdropProfiles(page: Page, png: Buffer, width: number, height: number, ax: number, by: number) {
   return page.evaluate(
-    async ({ b64, width, height }) => {
+    async ({ b64, width, height, ax, by }) => {
       const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
       const bitmap = await createImageBitmap(new Blob([bytes], { type: 'image/png' }));
       const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
@@ -41,8 +41,6 @@ async function backdropProfiles(page: Page, png: Buffer, width: number, height: 
       ctx.drawImage(bitmap, 0, 0);
       const data = ctx.getImageData(0, 0, bitmap.width, bitmap.height).data;
       const at = (x: number, y: number) => (y * bitmap.width + x) * 4;
-      const ax = Math.floor((width - 1) / 2);
-      const by = Math.floor((height - 1) / 2);
       // A pixel on neither a fine nor a medium line (4 px from the centre lines) is the plain paper.
       const bg = at(ax + 4, by + 4);
       const ink = (x: number, y: number) => {
@@ -55,7 +53,7 @@ async function backdropProfiles(page: Page, png: Buffer, width: number, height: 
       for (let y = 0; y < height; y += 1) column.push(ink(ax + 4, y));
       return { row, column, size: [bitmap.width, bitmap.height] };
     },
-    { b64: png.toString('base64'), width, height },
+    { b64: png.toString('base64'), width, height, ax, by },
   );
 }
 
@@ -66,8 +64,7 @@ function strongest(values: number[]) {
   return { at, max, rest };
 }
 
-function mirrored(values: number[]) {
-  const mid = Math.floor((values.length - 1) / 2);
+function mirrored(values: number[], mid: number) {
   const bad: number[] = [];
   for (let d = 1; d <= Math.min(mid, values.length - 1 - mid); d += 1) {
     if (values[mid - d] !== values[mid + d]) bad.push(d);
@@ -97,9 +94,14 @@ test.describe('game backdrop and board are centred in the play area', () => {
             const main = document.querySelector('.game-frame-main')!.getBoundingClientRect();
             const board = document.querySelector('.game-frame-board')!.getBoundingClientRect();
             const head = document.querySelector('.game-frame-head')!.getBoundingClientRect();
+            const style = getComputedStyle(document.querySelector('.game-frame-main')!);
+            const padLeft = parseFloat(style.paddingLeft);
+            const padRight = parseFloat(style.paddingRight);
             return {
               main: { x: main.left + scrollX, y: main.top + scrollY, w: main.width, h: main.height },
               board: { cx: board.left + board.width / 2 + scrollX, cy: board.top + board.height / 2 + scrollY, top: board.top + scrollY, bottom: board.bottom + scrollY },
+              padLeft,
+              padRight,
               headBottom: head.bottom + scrollY,
               viewportHeight: innerHeight,
               noSideways: document.documentElement.scrollWidth <= document.documentElement.clientWidth,
@@ -108,7 +110,8 @@ test.describe('game backdrop and board are centred in the play area', () => {
           expect(box.noSideways, `${label}: no sideways scroll`).toBe(true);
 
           // The board's centre is the play area's centre, left to right and top to bottom (within 1 px).
-          const mainCx = box.main.x + box.main.w / 2;
+          // The play area is the main area's content box (the box the board is centred in): the deck takes room on its right at narrow widths.
+          const mainCx = box.main.x + box.padLeft + (box.main.w - box.padLeft - box.padRight) / 2;
           const mainCy = box.main.y + box.main.h / 2;
           expect(Math.abs(box.board.cx - mainCx), `${label}: board centred left to right`).toBeLessThanOrEqual(1);
           expect(Math.abs(box.board.cy - mainCy), `${label}: board centred top to bottom`).toBeLessThanOrEqual(1);
@@ -124,14 +127,17 @@ test.describe('game backdrop and board are centred in the play area', () => {
           const w = Math.floor(box.main.w);
           const h = Math.floor(box.main.h);
           const png = await page.screenshot({ fullPage: true, clip: { x: box.main.x, y: box.main.y, width: w, height: h } });
-          const { row, column } = await backdropProfiles(page, png, w, h);
+          // The tile is 81 px with its line on pixel 40; its position is rounded down to a whole pixel (the content box's middle).
+          const ax = Math.floor((box.main.w - 81) / 2 + (box.padLeft - box.padRight) / 2) + 40;
+          const by = Math.floor((box.main.h - 81) / 2) + 40;
+          const { row, column } = await backdropProfiles(page, png, w, h, ax, by);
 
           const vertical = strongest(row);
           const horizontal = strongest(column);
-          const ax = Math.floor((w - 1) / 2);
-          const by = Math.floor((h - 1) / 2);
           // Exactly one stronger line each way, on the middle pixel (an even width has no middle pixel: the line is the left one of the two).
           expect(vertical.at, `${label}: one stronger vertical line`).toEqual([ax]);
+          expect(Math.abs(box.main.x + ax + 0.5 - mainCx), `${label}: vertical line on the play area's middle`).toBeLessThanOrEqual(1);
+          expect(Math.abs(box.main.y + by + 0.5 - mainCy), `${label}: horizontal line on the play area's middle`).toBeLessThanOrEqual(1);
           expect(horizontal.at, `${label}: one stronger horizontal line`).toEqual([by]);
           expect(vertical.max, `${label}: the vertical line is stronger than the medium lines`).toBeGreaterThan(vertical.rest * 1.5);
           expect(horizontal.max, `${label}: the horizontal line is stronger than the medium lines`).toBeGreaterThan(horizontal.rest * 1.5);
@@ -139,8 +145,8 @@ test.describe('game backdrop and board are centred in the play area', () => {
           expect(Math.abs(box.main.x + ax + 0.5 - box.board.cx), `${label}: crossing at the board's centre, left to right`).toBeLessThanOrEqual(1);
           expect(Math.abs(box.main.y + by + 0.5 - box.board.cy), `${label}: crossing at the board's centre, top to bottom`).toBeLessThanOrEqual(1);
           // The fine and medium lines mirror left/right and top/bottom about the crossing.
-          expect(mirrored(row), `${label}: mirrored left and right`).toEqual([]);
-          expect(mirrored(column), `${label}: mirrored above and below`).toEqual([]);
+          expect(mirrored(row, ax), `${label}: mirrored left and right`).toEqual([]);
+          expect(mirrored(column, by), `${label}: mirrored above and below`).toEqual([]);
           // The pattern has lines on both sides (the screenshot was not blank).
           expect(row.filter((v) => v > 0).length, `${label}: lines are drawn`).toBeGreaterThan(w / 20);
 
