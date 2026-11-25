@@ -1,6 +1,9 @@
 import { expect, test, type Page, type Request } from '@playwright/test';
 import { build } from 'esbuild';
 import { readFileSync } from 'node:fs';
+import { markGameRulesSeen } from './clock';
+
+test.beforeEach(async ({ page }) => { await markGameRulesSeen(page); });
 
 // Task 147: the real-questions player sends study events through the shared Supabase client.
 // Browser-only fixture: it is intercepted by Playwright, never written into dist or shipped. It bundles the real

@@ -3,6 +3,9 @@ import { kitFormAction, kitLandingUrl, newsletter, signupState } from '../../src
 import { crosswordShown, pageBuildEnv } from '../../src/config/crossword';
 import { helloCardsShown } from '../../src/islands/hello-cards';
 import { sizeOf } from './projects';
+import { markGameRulesSeen } from './clock';
+
+test.beforeEach(async ({ page }) => { await markGameRulesSeen(page); });
 
 const homeSizes = new Set(['phone', 'desktop']);
 

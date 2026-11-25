@@ -58,6 +58,10 @@ test('picked letters are joined edge to edge, with no order numbers', async ({ p
   const picked = other.path.slice(0, 3);
   for (const at of picked) await cell(page, at).click();
   await edgeToEdge(page, 'picked', picked);
+  const activeLine = lines(page, 'picked').first();
+  await expect(activeLine).toHaveCSS('stroke-width', '14px');
+  const teal = await cell(page, picked[0]!).locator('.wordpath-dot').evaluate((dot) => getComputedStyle(dot).backgroundColor);
+  await expect(activeLine).toHaveCSS('stroke', teal);
   await expect(game(page).locator('.wordpath-step')).toHaveCount(0);
   // The order is still spoken.
   await expect(cell(page, picked[1]!)).toHaveAttribute('aria-label', /letter 2 of the word/);
@@ -70,7 +74,11 @@ test('a found answer keeps its joining line', async ({ page }) => {
   await game(page).getByRole('button', { name: 'submit' }).click();
   await expect(cell(page, theme.path[0]!)).toHaveAttribute('data-look', 'theme');
   await edgeToEdge(page, 'theme', theme.path);
-  await expect(lines(page, 'theme').first()).toHaveCSS('stroke-width', '3px');
+  const foundLine = lines(page, 'theme').first();
+  await expect(foundLine).toHaveCSS('stroke-width', '18px');
+  const tan = await cell(page, theme.path[0]!).locator('.wordpath-dot').evaluate((dot) => getComputedStyle(dot).backgroundColor);
+  await expect(foundLine).toHaveCSS('stroke', tan);
+  await expect(game(page).locator('.wordpath-found-pill')).toHaveCSS('background-color', tan);
 });
 
 test('a drag draws a line on to the finger and the board never scrolls the page', async ({ page }) => {
@@ -101,3 +109,24 @@ test('printing an unfinished board counts as a cue and says so in one line', asy
   // Earned cues are not spent by printing.
   await expect(game(page).getByTestId('suture-hint')).toHaveText('cue');
 });
+
+for (const scheme of ['light', 'dark'] as const) {
+  test(`a selected letter is readable on the teal fill (${scheme === 'light' ? 'Light' : 'Evening'}), at least 4.5:1`, async ({ page }) => {
+    await page.emulateMedia({ colorScheme: scheme });
+    await page.reload();
+    await cell(page, other.path[0]!).click();
+    await expect(cell(page, other.path[0]!)).toHaveAttribute('data-look', 'picked');
+    const colours = await cell(page, other.path[0]!).evaluate((button) => {
+      const dot = button.querySelector('.wordpath-dot') as HTMLElement;
+      const text = button as HTMLElement;
+      return { bg: getComputedStyle(dot).backgroundColor, fg: getComputedStyle(text).color };
+    });
+    const rgb = (value: string) => (value.match(/[\d.]+/g) ?? []).slice(0, 3).map(Number);
+    const lum = ([r, g, b]: number[]) => {
+      const [x, y, z] = [r!, g!, b!].map((c) => { const s = c / 255; return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4; });
+      return 0.2126 * x! + 0.7152 * y! + 0.0722 * z!;
+    };
+    const [a, b] = [lum(rgb(colours.bg)), lum(rgb(colours.fg))];
+    expect((Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05)).toBeGreaterThanOrEqual(4.5);
+  });
+}

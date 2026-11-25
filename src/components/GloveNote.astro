@@ -1,0 +1,97 @@
+---
+/**
+ * The message-glove note (Christian, 24 Nov 2026; D-94 glove notes, rules in src/islands/stickynote.ts): every 30
+ * minutes of the visit, on every page except games and the never-pages, a photo of a gloved hand with a short
+ * handwritten message rises into the corner and links to /breaks (break ideas).
+ *
+ * - This file is only the empty polite live region (aria-live="polite"; not role="status", so pages that already have a status message keep exactly one) the note is put into, plus its look. The page
+ *   script below asks `decideNote` (pure, unit tested) once a second whether a note is due and which glove.
+ * - The visit's clock and what was shown stay in this tab's session storage (`cueory-glove-note`, on /privacy).
+ * - The list of messages is fetched (about 20 KB) only when a note is due, and only the one photo shown is loaded.
+ *   Nothing is preloaded.
+ * - It never takes focus. Escape or the close button dismisses it. The whole photo is one link: its name is the
+ *   message plus "break idea". Reduced motion: no rise.
+ * - Sounds: none yet. The recordings do not exist (src/scripts/notesound.ts keeps `filesExist` false until they do), so
+ *   the sound setting has nothing to play and this script plays nothing.
+ */
+import { pageKindFor } from '../islands/stickynote';
+
+const kind = pageKindFor(Astro.url.pathname);
+---
+
+{
+  kind !== 'never' && kind !== 'game' && (
+    <div class="glove-note-region" aria-live="polite" data-glove-note-region data-testid="glove-note-region" />
+  )
+}
+
+<script>
+  // The note's logic loads after the page is ready, so it stays out of every page's first JavaScript.
+  const region = document.querySelector<HTMLElement>('[data-glove-note-region]');
+  if (region) void import('../scripts/glovenote').then((module) => module.startGloveNote(region));
+</script>
+
+<style is:global>
+  .glove-note-region {
+    position: fixed;
+    inset-inline-end: calc(var(--spacing) * 4);
+    inset-block-end: calc(var(--spacing) * 4);
+    z-index: var(--layer-glove-note);
+    inline-size: min(calc(100% - var(--spacing) * 8), var(--glove-note-width));
+    /* The empty live region takes no clicks; only the note does. */
+    pointer-events: none;
+  }
+
+  .glove-note {
+    position: relative;
+    pointer-events: auto;
+  }
+
+  .glove-note-link {
+    display: block;
+    border-radius: var(--radius-lg);
+  }
+
+  .glove-note-link:focus-visible {
+    outline: var(--focus-width) solid var(--color-focus);
+    outline-offset: var(--focus-offset);
+  }
+
+  .glove-note-image {
+    display: block;
+    inline-size: 100%;
+    block-size: auto;
+    filter: var(--glove-note-drop-shadow);
+  }
+
+  .glove-note-close {
+    position: absolute;
+    inset-block-start: 0;
+    inset-inline-end: 0;
+  }
+
+  .glove-note-close:focus-visible {
+    outline: var(--focus-width) solid var(--color-focus);
+    outline-offset: var(--focus-offset);
+  }
+
+  /* A gentle rise, only for visitors who haven't asked for reduced motion. */
+  @media (prefers-reduced-motion: no-preference) {
+    .glove-note {
+      animation: glove-note-in var(--duration-slow) ease-out;
+    }
+
+    @keyframes glove-note-in {
+      from {
+        opacity: 0;
+        translate: 0 var(--rise-reveal);
+      }
+    }
+  }
+
+  @media print {
+    .glove-note-region {
+      display: none !important;
+    }
+  }
+</style>

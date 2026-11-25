@@ -66,12 +66,17 @@ test.beforeEach(async ({ page }) => {
 test.describe('word path: board format (#722)', () => {
   test('the clue is the title, on a 6 by 8 board, with submit, clear and cue buttons', async ({ page }) => {
     await expect(game(page)).toHaveAttribute('data-format', 'path');
-    await expect(game(page).getByRole('heading', { level: 3, name: sample.clue })).toBeVisible();
+    const cue = game(page).getByRole('heading', { level: 3, name: sample.clue });
+    await expect(cue).toBeVisible();
+    const cueBox = (await cue.boundingBox())!;
+    const gearBox = (await game(page).getByTestId('game-settings-button').boundingBox())!;
+    expect(cueBox.y + cueBox.height).toBeLessThanOrEqual(gearBox.y);
+    await expect(game(page).locator('.wordpath-missing-pill')).toHaveCount(total);
     await expect(game(page)).toContainText(`find all ${total} answers. one of them, the thread, names the theme`);
     await expect(game(page)).toContainText('sample puzzle');
     await expect(game(page).getByRole('row')).toHaveCount(8);
     await expect(game(page).getByRole('gridcell')).toHaveCount(48);
-    await expect(page.getByTestId('suture-count')).toHaveText(`0 of ${total} found`);
+    await expect(page.getByTestId('suture-count')).toHaveText(`0 of ${total} words found · teal line: the word you are tracing`);
     for (const name of ['submit', 'clear']) await expect(game(page).getByRole('button', { name })).toBeDisabled();
     await expect(game(page).getByRole('button', { name: 'cue' })).toBeEnabled();
   });
@@ -80,6 +85,8 @@ test.describe('word path: board format (#722)', () => {
     const word = themes[0]!;
     await tapWord(page, word.path);
     await expect(page.getByTestId('suture-picked')).toHaveText(word.answer.toLowerCase());
+    await expect(game(page).locator('.wordpath-active-pill')).toContainText('…');
+    await expect(game(page).locator('.wordpath-missing-pill')).toHaveCount(total - 1);
     await expect(game(page).locator('[role="gridcell"][aria-selected="true"]')).toHaveCount(word.path.length);
     await submitButton(page).click();
     await expect(live(page)).toHaveText(`theme word: ${word.answer.toLowerCase()}, 1 of ${total}.`);
@@ -89,7 +96,11 @@ test.describe('word path: board format (#722)', () => {
     const found = page.getByRole('list', { name: 'answers found' }).getByRole('listitem');
     await expect(found).toHaveCount(1);
     await expect(found.first()).toContainText('(theme word)');
-    await expect(page.getByTestId('suture-count')).toHaveText(`1 of ${total} found`);
+    await expect(page.getByTestId('suture-count')).toHaveText(`1 of ${total} words found · teal line: the word you are tracing`);
+    await expect(found.first()).toHaveClass(/wordpath-found-pill/);
+    await expect(found.first()).toContainText('✓');
+    await expect(game(page).locator('.wordpath-active-pill')).toHaveCount(0);
+    await expect(game(page).locator('.wordpath-missing-pill')).toHaveCount(total - 1);
   });
 
   test('tapping the last letter again submits; the thread gets a second state and a diamond symbol', async ({ page }) => {
@@ -158,7 +169,7 @@ test.describe('word path: board format (#722)', () => {
     expect([...sample.extras, ...sample.words.map((item) => item.answer)]).not.toContain(letters);
     await tapAndSubmit(page, part);
     await expect(live(page)).toHaveText('not a word on this board.');
-    await expect(page.getByTestId('suture-count')).toHaveText(`0 of ${total} found`);
+    await expect(page.getByTestId('suture-count')).toHaveText(`0 of ${total} words found · teal line: the word you are tracing`);
   });
 
   test('every 3 other words earn a cue; a cue marks an answer, a second cue numbers its letters', async ({ page }) => {
@@ -213,7 +224,7 @@ test.describe('word path: board format (#722)', () => {
     );
   });
 
-  for (const width of [320, 390]) {
+  for (const width of [320, 390, 1440]) {
     test(`the board fits ${width} px with square letters, 44 px buttons and no sideways scrolling`, async ({ page }) => {
       await page.setViewportSize({ width, height: 800 });
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
@@ -228,6 +239,11 @@ test.describe('word path: board format (#722)', () => {
         expect(box.width).toBeGreaterThanOrEqual(44);
         expect(box.height).toBeGreaterThanOrEqual(44);
         if (letter) expect(Math.abs(box.width - box.height)).toBeLessThan(1);
+      }
+      if (width === 1440) {
+        const first = cell(page, [0, 0]);
+        expect(await first.evaluate((letter) => (letter as HTMLButtonElement).offsetWidth)).toBe(62);
+        expect(await first.locator('.wordpath-dot').evaluate((dot) => (dot as HTMLElement).offsetWidth)).toBe(52);
       }
     });
   }

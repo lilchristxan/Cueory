@@ -2,6 +2,9 @@ import { expect, test, type Page, type Request } from '@playwright/test';
 import { readdirSync } from 'node:fs';
 import { join, relative, resolve, sep } from 'node:path';
 import { withoutWebkitSelectReports } from './csp-allow';
+import { markGameRulesSeen } from './clock';
+
+test.beforeEach(async ({ page }) => { await markGameRulesSeen(page); });
 
 const dist = resolve('dist');
 const missingPage = '/csp-sweep-page-does-not-exist';

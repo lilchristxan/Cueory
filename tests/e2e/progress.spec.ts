@@ -4,8 +4,6 @@ import { readFileSync } from 'node:fs';
 
 // Guest progress and onboarding (D-69). Everything here is saved in the browser only.
 
-// This file lists every cueory- key in storage, so it starts empty (the suite default sets the games' rules-seen key).
-test.use({ storageState: { cookies: [], origins: [] } });
 
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {

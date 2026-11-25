@@ -1,4 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
+import { markGameRulesSeen } from './clock';
+
+test.beforeEach(async ({ page }) => { await markGameRulesSeen(page); });
 
 /**
  * Performance (2026-11-19): the /play hub's stats render in the browser. While each island is still empty,

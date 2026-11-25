@@ -5,6 +5,7 @@ import { localDay, reportRound } from './gameresults';
 import { printGame } from './gameprint';
 import { useGameHelp } from './GameHelp';
 import GameHeader from './GameHeader';
+import PicclineCue from './PicclineCue';
 import { site } from '../config/site';
 import { announceProgress } from './suturepath';
 import PrintLogo from './PrintLogo';
@@ -138,6 +139,8 @@ function Board({ puzzle, name }: Props) {
 
   return (
     <section aria-labelledby={puzzle.theme ? title : undefined} aria-label={puzzle.theme ? undefined : `${name} puzzle`} data-testid="suture" data-print-area="suture" className="wordpath">
+      <PrintLogo />
+      {puzzle.theme && <PicclineCue id={title} text={puzzle.theme} />}
       {/* The corner row (Christian's brief): the gear at the top left (word path has no settings of its own, so it holds
           the shared ones); print and the "?" at the top right. */}
       <GameHeader
@@ -153,10 +156,7 @@ function Board({ puzzle, name }: Props) {
           </button>
         }
       />
-      <PrintLogo />
       <div className="wordpath-panel -mx-(--wordpath-bleed) mt-6 sm:mx-0 sm:px-(--spacing-stack)">
-      {puzzle.theme && <p className="wordpath-label px-4 text-center text-ink-soft sm:px-0">cue of the day</p>}
-      {puzzle.theme && <h3 id={title} className="display px-4 sm:px-0 text-center text-2xl text-ink sm:text-3xl" data-testid="suture-theme">{puzzle.theme}</h3>}
       <div
         className="wordpath-board-scroll mt-4"
         role="region"

@@ -1,0 +1,1796 @@
+{
+ "status": "approved",
+ "messages": [
+  {
+   "id": "msg-001",
+   "file": "msg-001.webp",
+   "text": "you're doing better than you think.",
+   "ornament": "heart",
+   "colour": "periwinkle",
+   "width": 720,
+   "height": 565
+  },
+  {
+   "id": "msg-002",
+   "file": "msg-002.webp",
+   "text": "your future patients will be lucky to have you.",
+   "ornament": "sparkle",
+   "colour": "pink",
+   "width": 720,
+   "height": 568
+  },
+  {
+   "id": "msg-003",
+   "file": "msg-003.webp",
+   "text": "hard study days build calm nurses.",
+   "ornament": null,
+   "colour": "sky blue",
+   "width": 720,
+   "height": 563
+  },
+  {
+   "id": "msg-004",
+   "file": "msg-004.webp",
+   "text": "scrubs are going to look great on you.",
+   "ornament": "smile",
+   "colour": "cream",
+   "width": 720,
+   "height": 571
+  },
+  {
+   "id": "msg-005",
+   "file": "msg-005.webp",
+   "text": "Someone's going to thank you for this someday.",
+   "ornament": "heart",
+   "colour": "periwinkle",
+   "width": 720,
+   "height": 565
+  },
+  {
+   "id": "msg-006",
+   "file": "msg-006.webp",
+   "text": "you didn't come this far to only come this far.",
+   "ornament": null,
+   "colour": "pink",
+   "width": 720,
+   "height": 568
+  },
+  {
+   "id": "msg-007",
+   "file": "msg-007.webp",
+   "text": "keep going—the pinning ceremony is getting closer.",
+   "ornament": "sparkle",
+   "colour": "sky blue",
+   "width": 720,
+   "height": 562
+  },
+  {
+   "id": "msg-008",
+   "file": "msg-008.webp",
+   "text": "your effort today is someone's care tomorrow.",
+   "ornament": "heart",
+   "colour": "cream",
+   "width": 720,
+   "height": 572
+  },
+  {
+   "id": "msg-009",
+   "file": "msg-009.webp",
+   "text": "drop your shoulders. take a breath.",
+   "ornament": null,
+   "colour": "periwinkle",
+   "width": 720,
+   "height": 565
+  },
+  {
+   "id": "msg-010",
+   "file": "msg-010.webp",
+   "text": "rest is part of studying too.",
+   "ornament": "heart",
+   "colour": "pink",
+   "width": 720,
+   "height": 568
+  },
+  {
+   "id": "msg-011",
+   "file": "msg-011.webp",
+   "text": "Step away from the screen for five.",
+   "ornament": null,
+   "colour": "sky blue",
+   "width": 720,
+   "height": 561
+  },
+  {
+   "id": "msg-012",
+   "file": "msg-012.webp",
+   "text": "you don't have to know it all tonight.",
+   "ornament": null,
+   "colour": "cream",
+   "width": 720,
+   "height": 571
+  },
+  {
+   "id": "msg-013",
+   "file": "msg-013.webp",
+   "text": "be as kind to yourself as you are to others.",
+   "ornament": "heart",
+   "colour": "periwinkle",
+   "width": 720,
+   "height": 564
+  },
+  {
+   "id": "msg-014",
+   "file": "msg-014.webp",
+   "text": "stretch your hands. look out a window.",
+   "ornament": "sparkle",
+   "colour": "pink",
+   "width": 720,
+   "height": 569
+  },
+  {
+   "id": "msg-015",
+   "file": "msg-015.webp",
+   "text": "you're allowed to pause and reset.",
+   "ornament": null,
+   "colour": "sky blue",
+   "width": 720,
+   "height": 561
+  },
+  {
+   "id": "msg-016",
+   "file": "msg-016.webp",
+   "text": "let your eyes rest for a minute.",
+   "ornament": null,
+   "colour": "cream",
+   "width": 720,
+   "height": 572
+  },
+  {
+   "id": "msg-017",
+   "file": "msg-017.webp",
+   "text": "You're a human first, student second.",
+   "ornament": "heart",
+   "colour": "periwinkle",
+   "width": 720,
+   "height": 564
+  },
+  {
+   "id": "msg-018",
+   "file": "msg-018.webp",
+   "text": "Slow progress is still real progress.",
+   "ornament": null,
+   "colour": "pink",
+   "width": 720,
+   "height": 569
+  },
+  {
+   "id": "msg-019",
+   "file": "msg-019.webp",
+   "text": "Shake it off and take five.",
+   "ornament": "smile",
+   "colour": "sky blue",
+   "width": 720,
+   "height": 561
+  },
+  {
+   "id": "msg-020",
+   "file": "msg-020.webp",
+   "text": "one deep breath before whatever's next.",
+   "ornament": null,
+   "colour": "cream",
+   "width": 720,
+   "height": 572
+  },
+  {
+   "id": "msg-021",
+   "file": "msg-021.webp",
+   "text": "recharge, you're not a machine.",
+   "ornament": null,
+   "colour": "periwinkle",
+   "width": 720,
+   "height": 564
+  },
+  {
+   "id": "msg-022",
+   "file": "msg-022.webp",
+   "text": "peace of mind helps memory too.",
+   "ornament": "heart",
+   "colour": "pink",
+   "width": 720,
+   "height": 569
+  },
+  {
+   "id": "msg-023",
+   "file": "msg-023.webp",
+   "text": "little by little becomes a lot.",
+   "ornament": null,
+   "colour": "sky blue",
+   "width": 720,
+   "height": 561
+  },
+  {
+   "id": "msg-024",
+   "file": "msg-024.webp",
+   "text": "you're figuring it out, piece by piece.",
+   "ornament": "sparkle",
+   "colour": "cream",
+   "width": 720,
+   "height": 571
+  },
+  {
+   "id": "msg-025",
+   "file": "msg-025.webp",
+   "text": "consistency beats cramming every time.",
+   "ornament": null,
+   "colour": "periwinkle",
+   "width": 720,
+   "height": 564
+  },
+  {
+   "id": "msg-026",
+   "file": "msg-026.webp",
+   "text": "look how far you've already come.",
+   "ornament": "heart",
+   "colour": "pink",
+   "width": 720,
+   "height": 569
+  },
+  {
+   "id": "msg-027",
+   "file": "msg-027.webp",
+   "text": "one good block changes the whole day.",
+   "ornament": null,
+   "colour": "sky blue",
+   "width": 720,
+   "height": 561
+  },
+  {
+   "id": "msg-028",
+   "file": "msg-028.webp",
+   "text": "hard doesn't mean impossible.",
+   "ornament": null,
+   "colour": "cream",
+   "width": 720,
+   "height": 570
+  },
+  {
+   "id": "msg-029",
+   "file": "msg-029.webp",
+   "text": "You've got more in the tank than you know.",
+   "ornament": null,
+   "colour": "periwinkle",
+   "width": 720,
+   "height": 564
+  },
+  {
+   "id": "msg-030",
+   "file": "msg-030.webp",
+   "text": "every minute you put in counts.",
+   "ornament": "heart",
+   "colour": "pink",
+   "width": 720,
+   "height": 569
+  },
+  {
+   "id": "msg-031",
+   "file": "msg-031.webp",
+   "text": "even ten minutes of real focus changes everything.",
+   "ornament": null,
+   "colour": "sky blue",
+   "width": 720,
+   "height": 561
+  },
+  {
+   "id": "msg-032",
+   "file": "msg-032.webp",
+   "text": "any page you finish now makes next week easier.",
+   "ornament": null,
+   "colour": "cream",
+   "width": 720,
+   "height": 571
+  },
+  {
+   "id": "msg-033",
+   "file": "msg-033.webp",
+   "text": "Starting is the hardest part. you're here.",
+   "ornament": null,
+   "colour": "periwinkle",
+   "width": 720,
+   "height": 564
+  },
+  {
+   "id": "msg-034",
+   "file": "msg-034.webp",
+   "text": "just keep coming back. that's the whole game.",
+   "ornament": null,
+   "colour": "pink",
+   "width": 720,
+   "height": 569
+  },
+  {
+   "id": "msg-035",
+   "file": "msg-035.webp",
+   "text": "give yourself credit for showing up today.",
+   "ornament": "heart",
+   "colour": "sky blue",
+   "width": 720,
+   "height": 561
+  },
+  {
+   "id": "msg-036",
+   "file": "msg-036.webp",
+   "text": "it's not easy, and you're still here.",
+   "ornament": null,
+   "colour": "cream",
+   "width": 720,
+   "height": 572
+  },
+  {
+   "id": "msg-037",
+   "file": "msg-037.webp",
+   "text": "unclench your jaw. you've got time.",
+   "ornament": null,
+   "colour": "periwinkle",
+   "width": 720,
+   "height": 564
+  },
+  {
+   "id": "msg-038",
+   "file": "msg-038.webp",
+   "text": "what you're studying actually matters.",
+   "ornament": "heart",
+   "colour": "pink",
+   "width": 720,
+   "height": 569
+  },
+  {
+   "id": "msg-039",
+   "file": "msg-039.webp",
+   "text": "Showing up on off days is the hard part.",
+   "ornament": null,
+   "colour": "sky blue",
+   "width": 720,
+   "height": 561
+  },
+  {
+   "id": "msg-040",
+   "file": "msg-040.webp",
+   "text": "go drink some water, then come back fresh.",
+   "ornament": "drop",
+   "colour": "cream",
+   "width": 720,
+   "height": 572
+  },
+  {
+   "id": "msg-041",
+   "file": "msg-041.webp",
+   "text": "breathe in. Start where you are today.",
+   "ornament": null,
+   "colour": "periwinkle",
+   "width": 720,
+   "height": 564
+  },
+  {
+   "id": "msg-042",
+   "file": "msg-042.webp",
+   "text": "Small effort still counts. keep at it.",
+   "ornament": "sparkle",
+   "colour": "pink",
+   "width": 720,
+   "height": 569
+  },
+  {
+   "id": "msg-043",
+   "file": "msg-043.webp",
+   "text": "every time you come back, you prove you can.",
+   "ornament": null,
+   "colour": "sky blue",
+   "width": 720,
+   "height": 561
+  },
+  {
+   "id": "msg-044",
+   "file": "msg-044.webp",
+   "text": "most people wouldn't even try this path.",
+   "ornament": null,
+   "colour": "cream",
+   "width": 720,
+   "height": 571
+  },
+  {
+   "id": "msg-045",
+   "file": "msg-045.webp",
+   "text": "quiet effort adds up. Keep going.",
+   "ornament": null,
+   "colour": "periwinkle",
+   "width": 720,
+   "height": 564
+  },
+  {
+   "id": "msg-046",
+   "file": "msg-046.webp",
+   "text": "it's okay if today is a bare-minimum day.",
+   "ornament": "heart",
+   "colour": "sky blue",
+   "width": 720,
+   "height": 563
+  },
+  {
+   "id": "msg-047",
+   "file": "msg-047.webp",
+   "text": "hydrate like you tell your patients to.",
+   "ornament": "smile",
+   "colour": "cream",
+   "width": 720,
+   "height": 572
+  },
+  {
+   "id": "msg-048",
+   "file": "msg-048.webp",
+   "text": "future you in scrubs says thank you.",
+   "ornament": "heart",
+   "colour": "periwinkle",
+   "width": 720,
+   "height": 564
+  },
+  {
+   "id": "msg-049",
+   "file": "msg-049.webp",
+   "text": "even veteran nurses had to learn this once.",
+   "ornament": null,
+   "colour": "pink",
+   "width": 720,
+   "height": 569
+  },
+  {
+   "id": "msg-050",
+   "file": "msg-050.webp",
+   "text": "nobody feels ready. they just keep going.",
+   "ornament": null,
+   "colour": "sky blue",
+   "width": 720,
+   "height": 561
+  },
+  {
+   "id": "msg-051",
+   "file": "msg-051.webp",
+   "text": "take care of the nurse before the patients.",
+   "ornament": "heart",
+   "colour": "cream",
+   "width": 720,
+   "height": 572
+  },
+  {
+   "id": "msg-052",
+   "file": "msg-052.webp",
+   "text": "Coffee helps. Water helps more.",
+   "ornament": "drop",
+   "colour": "periwinkle",
+   "width": 720,
+   "height": 564
+  },
+  {
+   "id": "msg-053",
+   "file": "msg-053.webp",
+   "text": "Someday this chapter will feel like second nature.",
+   "ornament": "sparkle",
+   "colour": "pink",
+   "width": 720,
+   "height": 569
+  },
+  {
+   "id": "msg-054",
+   "file": "msg-054.webp",
+   "text": "every great nurse started right where you are.",
+   "ornament": null,
+   "colour": "sky blue",
+   "width": 720,
+   "height": 561
+  },
+  {
+   "id": "msg-055",
+   "file": "msg-055.webp",
+   "text": "you're learning a skill people trust with their lives.",
+   "ornament": "heart",
+   "colour": "cream",
+   "width": 720,
+   "height": 572
+  },
+  {
+   "id": "msg-056",
+   "file": "msg-056.webp",
+   "text": "Confusion is just the step before it clicks.",
+   "ornament": null,
+   "colour": "periwinkle",
+   "width": 720,
+   "height": 564
+  },
+  {
+   "id": "msg-057",
+   "file": "msg-057.webp",
+   "text": "Pause before burnout makes you.",
+   "ornament": null,
+   "colour": "pink",
+   "width": 720,
+   "height": 569
+  },
+  {
+   "id": "msg-058",
+   "file": "msg-058.webp",
+   "text": "your calmest self learns the fastest.",
+   "ornament": null,
+   "colour": "sky blue",
+   "width": 720,
+   "height": 561
+  },
+  {
+   "id": "msg-059",
+   "file": "msg-059.webp",
+   "text": "you don't have to feel ready to start.",
+   "ornament": null,
+   "colour": "cream",
+   "width": 720,
+   "height": 570
+  },
+  {
+   "id": "msg-060",
+   "file": "msg-060.webp",
+   "text": "you're allowed to learn this more than once.",
+   "ornament": null,
+   "colour": "periwinkle",
+   "width": 720,
+   "height": 564
+  },
+  {
+   "id": "msg-061",
+   "file": "msg-061.webp",
+   "text": "rest now so tomorrow doesn't feel so heavy.",
+   "ornament": "heart",
+   "colour": "pink",
+   "width": 720,
+   "height": 569
+  },
+  {
+   "id": "msg-062",
+   "file": "msg-062.webp",
+   "text": "breathe first. the notes can wait a minute.",
+   "ornament": null,
+   "colour": "sky blue",
+   "width": 720,
+   "height": 561
+  },
+  {
+   "id": "msg-063",
+   "file": "msg-063.webp",
+   "text": "you showed up, and that counts.",
+   "ornament": "sparkle",
+   "colour": "cream",
+   "width": 720,
+   "height": 571
+  },
+  {
+   "id": "msg-064",
+   "file": "msg-064.webp",
+   "text": "roll your neck. you've been locked in.",
+   "ornament": null,
+   "colour": "periwinkle",
+   "width": 720,
+   "height": 564
+  },
+  {
+   "id": "msg-065",
+   "file": "msg-065.webp",
+   "text": "your brain needs water more than flashcards.",
+   "ornament": "drop",
+   "colour": "pink",
+   "width": 720,
+   "height": 569
+  },
+  {
+   "id": "msg-066",
+   "file": "msg-066.webp",
+   "text": "every rationale you read makes you sharper.",
+   "ornament": null,
+   "colour": "sky blue",
+   "width": 720,
+   "height": 561
+  },
+  {
+   "id": "msg-067",
+   "file": "msg-067.webp",
+   "text": "wrong answers now mean fewer mistakes later.",
+   "ornament": null,
+   "colour": "cream",
+   "width": 720,
+   "height": 572
+  },
+  {
+   "id": "msg-068",
+   "file": "msg-068.webp",
+   "text": "you're building instincts, not just memorizing.",
+   "ornament": null,
+   "colour": "periwinkle",
+   "width": 720,
+   "height": 564
+  },
+  {
+   "id": "msg-069",
+   "file": "msg-069.webp",
+   "text": "Someday you'll explain this to a new grad.",
+   "ornament": "heart",
+   "colour": "pink",
+   "width": 720,
+   "height": 569
+  },
+  {
+   "id": "msg-070",
+   "file": "msg-070.webp",
+   "text": "clinical judgment grows one question at a time.",
+   "ornament": null,
+   "colour": "sky blue",
+   "width": 720,
+   "height": 561
+  },
+  {
+   "id": "msg-071",
+   "file": "msg-071.webp",
+   "text": "close your eyes for ten seconds.",
+   "ornament": null,
+   "colour": "cream",
+   "width": 720,
+   "height": 571
+  },
+  {
+   "id": "msg-072",
+   "file": "msg-072.webp",
+   "text": "fix your posture. your back will thank you.",
+   "ornament": null,
+   "colour": "periwinkle",
+   "width": 720,
+   "height": 564
+  },
+  {
+   "id": "msg-073",
+   "file": "msg-073.webp",
+   "text": "this is how competence feels at first: messy.",
+   "ornament": null,
+   "colour": "pink",
+   "width": 720,
+   "height": 569
+  },
+  {
+   "id": "msg-074",
+   "file": "msg-074.webp",
+   "text": "you're studying for real people, not a test.",
+   "ornament": "heart",
+   "colour": "sky blue",
+   "width": 720,
+   "height": 561
+  },
+  {
+   "id": "msg-075",
+   "file": "msg-075.webp",
+   "text": "missing a question is how you learn it.",
+   "ornament": null,
+   "colour": "cream",
+   "width": 720,
+   "height": 573
+  },
+  {
+   "id": "msg-076",
+   "file": "msg-076.webp",
+   "text": "take a lap around the room.",
+   "ornament": null,
+   "colour": "periwinkle",
+   "width": 720,
+   "height": 564
+  },
+  {
+   "id": "msg-077",
+   "file": "msg-077.webp",
+   "text": "your badge is getting closer every day.",
+   "ornament": "sparkle",
+   "colour": "pink",
+   "width": 720,
+   "height": 569
+  },
+  {
+   "id": "msg-078",
+   "file": "msg-078.webp",
+   "text": "Some days are review days. that's fine.",
+   "ornament": null,
+   "colour": "sky blue",
+   "width": 720,
+   "height": 561
+  },
+  {
+   "id": "msg-079",
+   "file": "msg-079.webp",
+   "text": "eat something real before the next block.",
+   "ornament": null,
+   "colour": "cream",
+   "width": 720,
+   "height": 571
+  },
+  {
+   "id": "msg-080",
+   "file": "msg-080.webp",
+   "text": "calm hands start with a calm mind.",
+   "ornament": null,
+   "colour": "periwinkle",
+   "width": 720,
+   "height": 564
+  },
+  {
+   "id": "msg-081",
+   "file": "msg-081.webp",
+   "text": "not every session has to feel productive.",
+   "ornament": null,
+   "colour": "pink",
+   "width": 720,
+   "height": 569
+  },
+  {
+   "id": "msg-082",
+   "file": "msg-082.webp",
+   "text": "you chose a hard path for a good reason.",
+   "ornament": "heart",
+   "colour": "sky blue",
+   "width": 720,
+   "height": 561
+  },
+  {
+   "id": "msg-083",
+   "file": "msg-083.webp",
+   "text": "Somewhere, a patient needs exactly you.",
+   "ornament": "heart",
+   "colour": "cream",
+   "width": 720,
+   "height": 571
+  },
+  {
+   "id": "msg-084",
+   "file": "msg-084.webp",
+   "text": "breathe out longer than you breathe in.",
+   "ornament": null,
+   "colour": "periwinkle",
+   "width": 720,
+   "height": 564
+  },
+  {
+   "id": "msg-085",
+   "file": "msg-085.webp",
+   "text": "your pace is still a pace.",
+   "ornament": null,
+   "colour": "pink",
+   "width": 720,
+   "height": 569
+  },
+  {
+   "id": "msg-086",
+   "file": "msg-086.webp",
+   "text": "today's confusion is next month's easy question.",
+   "ornament": "sparkle",
+   "colour": "sky blue",
+   "width": 720,
+   "height": 561
+  },
+  {
+   "id": "msg-087",
+   "file": "msg-087.webp",
+   "text": "rest your eyes on something far away.",
+   "ornament": null,
+   "colour": "cream",
+   "width": 720,
+   "height": 571
+  },
+  {
+   "id": "msg-088",
+   "file": "msg-088.webp",
+   "text": "good nurses ask questions. so do good students.",
+   "ornament": null,
+   "colour": "periwinkle",
+   "width": 720,
+   "height": 564
+  },
+  {
+   "id": "msg-089",
+   "file": "msg-089.webp",
+   "text": "this material is heavy. go easy on yourself.",
+   "ornament": "heart",
+   "colour": "pink",
+   "width": 720,
+   "height": 567
+  },
+  {
+   "id": "msg-090",
+   "file": "msg-090.webp",
+   "text": "Shoulders down, chin up.",
+   "ornament": null,
+   "colour": "sky blue",
+   "width": 720,
+   "height": 561
+  },
+  {
+   "id": "msg-091",
+   "file": "msg-091.webp",
+   "text": "progress hides on the days you can't see it.",
+   "ornament": "sparkle",
+   "colour": "cream",
+   "width": 720,
+   "height": 574
+  },
+  {
+   "id": "msg-092",
+   "file": "msg-092.webp",
+   "text": "Stretch your wrists before the next set.",
+   "ornament": null,
+   "colour": "periwinkle",
+   "width": 720,
+   "height": 564
+  },
+  {
+   "id": "msg-093",
+   "file": "msg-093.webp",
+   "text": "every expert was once a confused student.",
+   "ornament": null,
+   "colour": "pink",
+   "width": 720,
+   "height": 569
+  },
+  {
+   "id": "msg-094",
+   "file": "msg-094.webp",
+   "text": "your patients won't remember your GPA.",
+   "ornament": null,
+   "colour": "sky blue",
+   "width": 720,
+   "height": 561
+  },
+  {
+   "id": "msg-095",
+   "file": "msg-095.webp",
+   "text": "grab a snack. brains run on fuel.",
+   "ornament": "smile",
+   "colour": "cream",
+   "width": 720,
+   "height": 571
+  },
+  {
+   "id": "msg-096",
+   "file": "msg-096.webp",
+   "text": "don't compare your chapter one to their chapter ten.",
+   "ornament": null,
+   "colour": "periwinkle",
+   "width": 720,
+   "height": 564
+  },
+  {
+   "id": "msg-097",
+   "file": "msg-097.webp",
+   "text": "a short walk can reset your focus.",
+   "ornament": null,
+   "colour": "pink",
+   "width": 720,
+   "height": 569
+  },
+  {
+   "id": "msg-098",
+   "file": "msg-098.webp",
+   "text": "taking care of you is part of the job.",
+   "ornament": "heart",
+   "colour": "cream",
+   "width": 720,
+   "height": 571
+  },
+  {
+   "id": "msg-099",
+   "file": "msg-099.webp",
+   "text": "you don't need a perfect day, just a decent one.",
+   "ornament": null,
+   "colour": "sky blue",
+   "width": 720,
+   "height": 562
+  },
+  {
+   "id": "msg-100",
+   "file": "msg-100.webp",
+   "text": "practice questions are reps for your brain.",
+   "ornament": null,
+   "colour": "periwinkle",
+   "width": 720,
+   "height": 564
+  },
+  {
+   "id": "msg-101",
+   "file": "msg-101.webp",
+   "text": "refill your water before you start again.",
+   "ornament": "drop",
+   "colour": "pink",
+   "width": 720,
+   "height": 569
+  },
+  {
+   "id": "msg-102",
+   "file": "msg-102.webp",
+   "text": "give yourself one minute of quiet.",
+   "ornament": null,
+   "colour": "sky blue",
+   "width": 720,
+   "height": 561
+  },
+  {
+   "id": "msg-103",
+   "file": "msg-103.webp",
+   "text": "future patients are counting on today's effort.",
+   "ornament": "heart",
+   "colour": "cream",
+   "width": 720,
+   "height": 570
+  },
+  {
+   "id": "msg-104",
+   "file": "msg-104.webp",
+   "text": "learn it slowly, keep it forever.",
+   "ornament": null,
+   "colour": "periwinkle",
+   "width": 720,
+   "height": 564
+  },
+  {
+   "id": "msg-105",
+   "file": "msg-105.webp",
+   "text": "sit back and take a real breath.",
+   "ornament": null,
+   "colour": "pink",
+   "width": 720,
+   "height": 569
+  },
+  {
+   "id": "msg-106",
+   "file": "msg-106.webp",
+   "text": "one concept at a time is still progress.",
+   "ornament": null,
+   "colour": "sky blue",
+   "width": 720,
+   "height": 561
+  },
+  {
+   "id": "msg-107",
+   "file": "msg-107.webp",
+   "text": "you're becoming someone people can lean on.",
+   "ornament": "heart",
+   "colour": "cream",
+   "width": 720,
+   "height": 571
+  },
+  {
+   "id": "msg-108",
+   "file": "msg-108.webp",
+   "text": "nursing school is hard on purpose. so are you.",
+   "ornament": null,
+   "colour": "periwinkle",
+   "width": 720,
+   "height": 564
+  },
+  {
+   "id": "msg-109",
+   "file": "msg-109.webp",
+   "text": "a tired brain learns slower. rest counts.",
+   "ornament": null,
+   "colour": "pink",
+   "width": 720,
+   "height": 569
+  },
+  {
+   "id": "msg-110",
+   "file": "msg-110.webp",
+   "text": "look up. blink. breathe.",
+   "ornament": null,
+   "colour": "sky blue",
+   "width": 720,
+   "height": 561
+  },
+  {
+   "id": "msg-111",
+   "file": "msg-111.webp",
+   "text": "sleep is study time your brain does for you.",
+   "ornament": null,
+   "colour": "cream",
+   "width": 720,
+   "height": 572
+  },
+  {
+   "id": "msg-112",
+   "file": "msg-112.webp",
+   "text": "fresh air does wonders. even five minutes.",
+   "ornament": null,
+   "colour": "periwinkle",
+   "width": 720,
+   "height": 564
+  },
+  {
+   "id": "msg-113",
+   "file": "msg-113.webp",
+   "text": "That 'aha' moment is coming.",
+   "ornament": "sparkle",
+   "colour": "pink",
+   "width": 720,
+   "height": 569
+  },
+  {
+   "id": "msg-114",
+   "file": "msg-114.webp",
+   "text": "Small wins still count as wins.",
+   "ornament": "heart",
+   "colour": "sky blue",
+   "width": 720,
+   "height": 561
+  },
+  {
+   "id": "msg-115",
+   "file": "msg-115.webp",
+   "text": "you're learning to stay calm when it counts.",
+   "ornament": null,
+   "colour": "cream",
+   "width": 720,
+   "height": 573
+  },
+  {
+   "id": "msg-116",
+   "file": "msg-116.webp",
+   "text": "today's notes are tomorrow's confidence.",
+   "ornament": null,
+   "colour": "periwinkle",
+   "width": 720,
+   "height": 564
+  },
+  {
+   "id": "msg-117",
+   "file": "msg-117.webp",
+   "text": "if it's not clicking, try a different angle.",
+   "ornament": null,
+   "colour": "pink",
+   "width": 720,
+   "height": 569
+  },
+  {
+   "id": "msg-118",
+   "file": "msg-118.webp",
+   "text": "your worth isn't one exam score.",
+   "ornament": "heart",
+   "colour": "sky blue",
+   "width": 720,
+   "height": 561
+  },
+  {
+   "id": "msg-119",
+   "file": "msg-119.webp",
+   "text": "Stand up and shake out your legs.",
+   "ornament": null,
+   "colour": "cream",
+   "width": 720,
+   "height": 571
+  },
+  {
+   "id": "msg-120",
+   "file": "msg-120.webp",
+   "text": "You can do hard things. you're doing one now.",
+   "ornament": null,
+   "colour": "periwinkle",
+   "width": 720,
+   "height": 564
+  },
+  {
+   "id": "msg-121",
+   "file": "msg-121.webp",
+   "text": "ask for help. nurses work as a team.",
+   "ornament": "heart",
+   "colour": "pink",
+   "width": 720,
+   "height": 569
+  },
+  {
+   "id": "msg-122",
+   "file": "msg-122.webp",
+   "text": "patience with yourself is a clinical skill too.",
+   "ornament": null,
+   "colour": "sky blue",
+   "width": 720,
+   "height": 561
+  },
+  {
+   "id": "msg-123",
+   "file": "msg-123.webp",
+   "text": "pause the timer. check in with yourself.",
+   "ornament": null,
+   "colour": "cream",
+   "width": 720,
+   "height": 571
+  },
+  {
+   "id": "msg-124",
+   "file": "msg-124.webp",
+   "text": "a clear head beats an extra hour of cramming.",
+   "ornament": null,
+   "colour": "periwinkle",
+   "width": 720,
+   "height": 564
+  },
+  {
+   "id": "msg-125",
+   "file": "msg-125.webp",
+   "text": "remember why you started this.",
+   "ornament": "heart",
+   "colour": "pink",
+   "width": 720,
+   "height": 569
+  },
+  {
+   "id": "msg-126",
+   "file": "msg-126.webp",
+   "text": "each review makes the next one faster.",
+   "ornament": null,
+   "colour": "sky blue",
+   "width": 720,
+   "height": 561
+  },
+  {
+   "id": "msg-127",
+   "file": "msg-127.webp",
+   "text": "one breath, one question, one step.",
+   "ornament": null,
+   "colour": "cream",
+   "width": 720,
+   "height": 572
+  },
+  {
+   "id": "msg-128",
+   "file": "msg-128.webp",
+   "text": "rest isn't quitting. it's refueling.",
+   "ornament": null,
+   "colour": "periwinkle",
+   "width": 720,
+   "height": 564
+  },
+  {
+   "id": "msg-129",
+   "file": "msg-129.webp",
+   "text": "you're tougher than this unit.",
+   "ornament": null,
+   "colour": "pink",
+   "width": 720,
+   "height": 569
+  },
+  {
+   "id": "msg-130",
+   "file": "msg-130.webp",
+   "text": "you're allowed to celebrate a good score.",
+   "ornament": "sparkle",
+   "colour": "sky blue",
+   "width": 720,
+   "height": 561
+  },
+  {
+   "id": "msg-131",
+   "file": "msg-131.webp",
+   "text": "today counts, even if it was messy.",
+   "ornament": "heart",
+   "colour": "cream",
+   "width": 720,
+   "height": 571
+  },
+  {
+   "id": "msg-132",
+   "file": "msg-132.webp",
+   "text": "you'll use this knowledge to keep someone safe.",
+   "ornament": "heart",
+   "colour": "periwinkle",
+   "width": 720,
+   "height": 564
+  },
+  {
+   "id": "msg-133",
+   "file": "msg-133.webp",
+   "text": "let your brain catch up for a minute.",
+   "ornament": null,
+   "colour": "pink",
+   "width": 720,
+   "height": 569
+  },
+  {
+   "id": "msg-134",
+   "file": "msg-134.webp",
+   "text": "mistakes in practice are free lessons.",
+   "ornament": null,
+   "colour": "sky blue",
+   "width": 720,
+   "height": 561
+  },
+  {
+   "id": "msg-135",
+   "file": "msg-135.webp",
+   "text": "put your feet flat. reset your posture.",
+   "ornament": null,
+   "colour": "cream",
+   "width": 720,
+   "height": 572
+  },
+  {
+   "id": "msg-136",
+   "file": "msg-136.webp",
+   "text": "learning this well is a gift to your patients.",
+   "ornament": "heart",
+   "colour": "periwinkle",
+   "width": 720,
+   "height": 564
+  },
+  {
+   "id": "msg-137",
+   "file": "msg-137.webp",
+   "text": "the hard part now makes the job easier later.",
+   "ornament": null,
+   "colour": "pink",
+   "width": 720,
+   "height": 569
+  },
+  {
+   "id": "msg-138",
+   "file": "msg-138.webp",
+   "text": "quiet confidence is built on days like this.",
+   "ornament": null,
+   "colour": "sky blue",
+   "width": 720,
+   "height": 561
+  },
+  {
+   "id": "msg-139",
+   "file": "msg-139.webp",
+   "text": "proud of you for still being here.",
+   "ornament": "heart",
+   "colour": "cream",
+   "width": 720,
+   "height": 573
+  },
+  {
+   "id": "msg-140",
+   "file": "msg-140.webp",
+   "text": "Stand up and reach for the ceiling.",
+   "ornament": null,
+   "colour": "periwinkle",
+   "width": 720,
+   "height": 564
+  },
+  {
+   "id": "msg-141",
+   "file": "msg-141.webp",
+   "text": "wash your face with cool water.",
+   "ornament": "drop",
+   "colour": "pink",
+   "width": 720,
+   "height": 569
+  },
+  {
+   "id": "msg-142",
+   "file": "msg-142.webp",
+   "text": "Step outside and feel the air for a minute.",
+   "ornament": null,
+   "colour": "sky blue",
+   "width": 720,
+   "height": 562
+  },
+  {
+   "id": "msg-143",
+   "file": "msg-143.webp",
+   "text": "put on one song you love.",
+   "ornament": "note",
+   "colour": "cream",
+   "width": 720,
+   "height": 572
+  },
+  {
+   "id": "msg-144",
+   "file": "msg-144.webp",
+   "text": "look at something green for a bit.",
+   "ornament": "leaf",
+   "colour": "periwinkle",
+   "width": 720,
+   "height": 564
+  },
+  {
+   "id": "msg-145",
+   "file": "msg-145.webp",
+   "text": "every 20 minutes, look 20 feet away for 20 seconds.",
+   "ornament": null,
+   "colour": "pink",
+   "width": 720,
+   "height": 569
+  },
+  {
+   "id": "msg-146",
+   "file": "msg-146.webp",
+   "text": "make a cup of tea or coffee, slowly.",
+   "ornament": null,
+   "colour": "sky blue",
+   "width": 720,
+   "height": 561
+  },
+  {
+   "id": "msg-147",
+   "file": "msg-147.webp",
+   "text": "text someone you love.",
+   "ornament": "heart",
+   "colour": "cream",
+   "width": 720,
+   "height": 571
+  },
+  {
+   "id": "msg-148",
+   "file": "msg-148.webp",
+   "text": "tidy one small thing near you.",
+   "ornament": null,
+   "colour": "periwinkle",
+   "width": 720,
+   "height": 564
+  },
+  {
+   "id": "msg-149",
+   "file": "msg-149.webp",
+   "text": "give your pet some attention.",
+   "ornament": "heart",
+   "colour": "pink",
+   "width": 720,
+   "height": 569
+  },
+  {
+   "id": "msg-150",
+   "file": "msg-150.webp",
+   "text": "do ten slow squats.",
+   "ornament": null,
+   "colour": "sky blue",
+   "width": 720,
+   "height": 561
+  },
+  {
+   "id": "msg-151",
+   "file": "msg-151.webp",
+   "text": "wiggle your toes. roll your ankles.",
+   "ornament": null,
+   "colour": "cream",
+   "width": 720,
+   "height": 572
+  },
+  {
+   "id": "msg-152",
+   "file": "msg-152.webp",
+   "text": "warm your palms and rest them over your eyes.",
+   "ornament": null,
+   "colour": "periwinkle",
+   "width": 720,
+   "height": 564
+  },
+  {
+   "id": "msg-153",
+   "file": "msg-153.webp",
+   "text": "twist gently in your chair, both sides.",
+   "ornament": null,
+   "colour": "pink",
+   "width": 720,
+   "height": 569
+  },
+  {
+   "id": "msg-154",
+   "file": "msg-154.webp",
+   "text": "open a window if you can.",
+   "ornament": null,
+   "colour": "sky blue",
+   "width": 720,
+   "height": 561
+  },
+  {
+   "id": "msg-155",
+   "file": "msg-155.webp",
+   "text": "find a little sunlight.",
+   "ornament": "sun",
+   "colour": "cream",
+   "width": 720,
+   "height": 571
+  },
+  {
+   "id": "msg-156",
+   "file": "msg-156.webp",
+   "text": "have a piece of fruit.",
+   "ornament": null,
+   "colour": "periwinkle",
+   "width": 720,
+   "height": 564
+  },
+  {
+   "id": "msg-157",
+   "file": "msg-157.webp",
+   "text": "take a quick restroom break.",
+   "ornament": null,
+   "colour": "pink",
+   "width": 720,
+   "height": 569
+  },
+  {
+   "id": "msg-158",
+   "file": "msg-158.webp",
+   "text": "blink slowly a few times.",
+   "ornament": null,
+   "colour": "sky blue",
+   "width": 720,
+   "height": 561
+  },
+  {
+   "id": "msg-159",
+   "file": "msg-159.webp",
+   "text": "hum something for a few seconds.",
+   "ornament": "note",
+   "colour": "cream",
+   "width": 720,
+   "height": 572
+  },
+  {
+   "id": "msg-160",
+   "file": "msg-160.webp",
+   "text": "write down one thing you're grateful for.",
+   "ornament": "heart",
+   "colour": "periwinkle",
+   "width": 720,
+   "height": 571
+  },
+  {
+   "id": "msg-161",
+   "file": "msg-161.webp",
+   "text": "Dance to one song. Nobody's watching. (If they are, give them a show.)",
+   "ornament": "note",
+   "colour": "pink",
+   "width": 720,
+   "height": 572
+  },
+  {
+   "id": "msg-162",
+   "file": "msg-162.webp",
+   "text": "Put some lotion on your hands.",
+   "ornament": "sparkle",
+   "colour": "sky blue",
+   "width": 720,
+   "height": 571
+  },
+  {
+   "id": "msg-163",
+   "file": "msg-163.webp",
+   "text": "Notice five things you can see right now.",
+   "ornament": null,
+   "colour": "cream",
+   "width": 720,
+   "height": 573
+  },
+  {
+   "id": "msg-164",
+   "file": "msg-164.webp",
+   "text": "Breathe in for four, hold for four, out for four.",
+   "ornament": "wave",
+   "colour": "periwinkle",
+   "width": 720,
+   "height": 571
+  },
+  {
+   "id": "msg-165",
+   "file": "msg-165.webp",
+   "text": "Change rooms for a few minutes.",
+   "ornament": "smile",
+   "colour": "pink",
+   "width": 720,
+   "height": 572
+  },
+  {
+   "id": "msg-166",
+   "file": "msg-166.webp",
+   "text": "Check in: hungry, thirsty, or tired?",
+   "ornament": null,
+   "colour": "sky blue",
+   "width": 720,
+   "height": 571
+  },
+  {
+   "id": "msg-167",
+   "file": "msg-167.webp",
+   "text": "Relax your forehead and your tongue.",
+   "ornament": null,
+   "colour": "cream",
+   "width": 720,
+   "height": 571
+  },
+  {
+   "id": "msg-168",
+   "file": "msg-168.webp",
+   "text": "Let your arms hang heavy for a moment.",
+   "ornament": null,
+   "colour": "periwinkle",
+   "width": 720,
+   "height": 571
+  },
+  {
+   "id": "msg-169",
+   "file": "msg-169.webp",
+   "text": "Make your space a little brighter.",
+   "ornament": "sun",
+   "colour": "pink",
+   "width": 720,
+   "height": 573
+  },
+  {
+   "id": "msg-170",
+   "file": "msg-170.webp",
+   "text": "Sit up tall, then let yourself settle.",
+   "ornament": null,
+   "colour": "sky blue",
+   "width": 720,
+   "height": 571
+  },
+  {
+   "id": "msg-171",
+   "file": "msg-171.webp",
+   "text": "Step away and come back with fresh eyes.",
+   "ornament": null,
+   "colour": "cream",
+   "width": 720,
+   "height": 573
+  },
+  {
+   "id": "msg-172",
+   "file": "msg-172.webp",
+   "text": "A short break can help your brain reset.",
+   "ornament": null,
+   "colour": "periwinkle",
+   "width": 720,
+   "height": 571
+  },
+  {
+   "id": "msg-173",
+   "file": "msg-173.webp",
+   "text": "Laugh at something silly for a minute.",
+   "ornament": "smile",
+   "colour": "pink",
+   "width": 720,
+   "height": 573
+  },
+  {
+   "id": "msg-174",
+   "file": "msg-174.webp",
+   "text": "Call someone just to say hi.",
+   "ornament": "heart",
+   "colour": "sky blue",
+   "width": 720,
+   "height": 571
+  },
+  {
+   "id": "msg-175",
+   "file": "msg-175.webp",
+   "text": "Put a hand on your chest and breathe.",
+   "ornament": "wave",
+   "colour": "cream",
+   "width": 720,
+   "height": 572
+  },
+  {
+   "id": "msg-176",
+   "file": "msg-176.webp",
+   "text": "Done is better than perfect.",
+   "ornament": null,
+   "colour": "periwinkle",
+   "width": 720,
+   "height": 571
+  },
+  {
+   "id": "msg-177",
+   "file": "msg-177.webp",
+   "text": "One thing at a time.",
+   "ornament": "sparkle",
+   "colour": "pink",
+   "width": 720,
+   "height": 571
+  },
+  {
+   "id": "msg-178",
+   "file": "msg-178.webp",
+   "text": "Progress isn't always a straight line.",
+   "ornament": "swirl",
+   "colour": "sky blue",
+   "width": 720,
+   "height": 572
+  },
+  {
+   "id": "msg-179",
+   "file": "msg-179.webp",
+   "text": "Focus on what you can control.",
+   "ornament": null,
+   "colour": "cream",
+   "width": 720,
+   "height": 571
+  },
+  {
+   "id": "msg-180",
+   "file": "msg-180.webp",
+   "text": "You can begin again anytime.",
+   "ornament": "sparkle",
+   "colour": "periwinkle",
+   "width": 720,
+   "height": 572
+  },
+  {
+   "id": "msg-181",
+   "file": "msg-181.webp",
+   "text": "Fresh starts don't need a Monday.",
+   "ornament": "smile",
+   "colour": "pink",
+   "width": 720,
+   "height": 573
+  },
+  {
+   "id": "msg-182",
+   "file": "msg-182.webp",
+   "text": "Curiosity is a great place to start.",
+   "ornament": "sparkle",
+   "colour": "sky blue",
+   "width": 720,
+   "height": 572
+  },
+  {
+   "id": "msg-183",
+   "file": "msg-183.webp",
+   "text": "Be curious, not critical.",
+   "ornament": null,
+   "colour": "cream",
+   "width": 720,
+   "height": 573
+  },
+  {
+   "id": "msg-184",
+   "file": "msg-184.webp",
+   "text": "Patience is part of learning.",
+   "ornament": null,
+   "colour": "periwinkle",
+   "width": 720,
+   "height": 574
+  },
+  {
+   "id": "msg-185",
+   "file": "msg-185.webp",
+   "text": "Learning takes time, and that's normal.",
+   "ornament": "heart",
+   "colour": "pink",
+   "width": 720,
+   "height": 572
+  },
+  {
+   "id": "msg-186",
+   "file": "msg-186.webp",
+   "text": "It's okay to go slow.",
+   "ornament": "wave",
+   "colour": "sky blue",
+   "width": 720,
+   "height": 570
+  },
+  {
+   "id": "msg-187",
+   "file": "msg-187.webp",
+   "text": "Growth is often quiet.",
+   "ornament": "sprout",
+   "colour": "cream",
+   "width": 720,
+   "height": 571
+  },
+  {
+   "id": "msg-188",
+   "file": "msg-188.webp",
+   "text": "Rest isn't a reward. It's a need.",
+   "ornament": null,
+   "colour": "periwinkle",
+   "width": 720,
+   "height": 572
+  },
+  {
+   "id": "msg-189",
+   "file": "msg-189.webp",
+   "text": "Good things often take time.",
+   "ornament": "sparkle",
+   "colour": "pink",
+   "width": 720,
+   "height": 573
+  },
+  {
+   "id": "msg-190",
+   "file": "msg-190.webp",
+   "text": "Small steps still move you forward.",
+   "ornament": null,
+   "colour": "sky blue",
+   "width": 720,
+   "height": 571
+  },
+  {
+   "id": "msg-191",
+   "file": "msg-191.webp",
+   "text": "What's one small thing you can do right now?",
+   "ornament": null,
+   "colour": "cream",
+   "width": 720,
+   "height": 571
+  },
+  {
+   "id": "msg-192",
+   "file": "msg-192.webp",
+   "text": "Trying is worth something.",
+   "ornament": "heart",
+   "colour": "periwinkle",
+   "width": 720,
+   "height": 571
+  },
+  {
+   "id": "msg-193",
+   "file": "msg-193.webp",
+   "text": "Kindness toward yourself makes hard things lighter.",
+   "ornament": "sparkle",
+   "colour": "sky blue",
+   "width": 720,
+   "height": 571
+  },
+  {
+   "id": "msg-194",
+   "file": "msg-194.webp",
+   "text": "Not knowing yet is where learning begins.",
+   "ornament": null,
+   "colour": "cream",
+   "width": 720,
+   "height": 572
+  },
+  {
+   "id": "msg-195",
+   "file": "msg-195.webp",
+   "text": "Questions are a sign of a curious mind.",
+   "ornament": "sparkle",
+   "colour": "periwinkle",
+   "width": 720,
+   "height": 571
+  },
+  {
+   "id": "msg-196",
+   "file": "msg-196.webp",
+   "text": "Mistakes are part of how people learn.",
+   "ornament": "smile",
+   "colour": "pink",
+   "width": 720,
+   "height": 571
+  },
+  {
+   "id": "msg-197",
+   "file": "msg-197.webp",
+   "text": "Make the next step small enough to take.",
+   "ornament": null,
+   "colour": "sky blue",
+   "width": 720,
+   "height": 571
+  },
+  {
+   "id": "msg-198",
+   "file": "msg-198.webp",
+   "text": "A clear space can help a clear mind.",
+   "ornament": "sparkle",
+   "colour": "cream",
+   "width": 720,
+   "height": 571
+  },
+  {
+   "id": "msg-199",
+   "file": "msg-199.webp",
+   "text": "Every day is a chance to learn something new.",
+   "ornament": "sparkle",
+   "colour": "pink",
+   "width": 720,
+   "height": 572
+  }
+ ]
+}
