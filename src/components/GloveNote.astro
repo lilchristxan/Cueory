@@ -2,13 +2,16 @@
 /**
  * The message-glove note (Christian, 24 Nov 2026; D-94 glove notes, rules in src/islands/stickynote.ts): every 30
  * minutes of the visit, on every page except games and the never-pages, a photo of a gloved hand with a short
- * handwritten message rises into the corner and links to /breaks (break ideas).
+ * handwritten message rises to the centre of the screen and links to /breaks (break ideas).
  *
  * - This file is only the empty polite live region (aria-live="polite"; not role="status", so pages that already have a status message keep exactly one) the note is put into, plus its look. The page
  *   script below asks `decideNote` (pure, unit tested) once a second whether a note is due and which glove.
  * - The visit's clock and what was shown stay in this tab's session storage (`cueory-glove-note`, on /privacy).
  * - The list of messages is fetched (about 20 KB) only when a note is due, and only the one photo shown is loaded.
  *   Nothing is preloaded.
+ * - While it shows, the page behind dims (Christian, 25 Nov 2026). The dim goes with the note: the close button, Escape,
+ *   or a click or tap anywhere on the dimmed page (that click only dismisses). The dim is a plain layer built by the
+ *   script, so there is none without JavaScript, and nothing new is stored.
  * - It never takes focus. Escape or the close button dismisses it. The whole photo is one link: its name is the
  *   message plus "break idea". Reduced motion: no rise.
  * - Sounds: none yet. The recordings do not exist (src/scripts/notesound.ts keeps `filesExist` false until they do), so
@@ -32,18 +35,46 @@ const kind = pageKindFor(Astro.url.pathname);
 </script>
 
 <style is:global>
+  /* The region fills the window (dynamic height, so a phone's browser bars never push the glove off centre) and
+     centres the note, keeping a margin and the device's safe areas clear on every side. It takes no clicks itself. */
   .glove-note-region {
+    --glove-note-cap: var(--glove-note-width);
+    --glove-note-inset-inline: max(var(--glove-note-margin), env(safe-area-inset-left), env(safe-area-inset-right));
+    --glove-note-inset-block: max(var(--glove-note-margin), env(safe-area-inset-top), env(safe-area-inset-bottom));
     position: fixed;
-    inset-inline-end: calc(var(--spacing) * 4);
-    inset-block-end: calc(var(--spacing) * 4);
+    inset-block-start: 0;
+    inset-inline-start: 0;
+    inline-size: 100%;
+    block-size: 100dvh;
     z-index: var(--layer-glove-note);
-    inline-size: min(calc(100% - var(--spacing) * 8), var(--glove-note-width));
-    /* The empty live region takes no clicks; only the note does. */
+    display: grid;
+    place-items: center;
+    place-content: center;
+    padding-inline: var(--glove-note-inset-inline);
+    padding-block: var(--glove-note-inset-block);
+    box-sizing: border-box;
     pointer-events: none;
+  }
+
+  /* The photos are 720 px wide: on a screen with 1.5 or more device pixels per CSS pixel the note stops at the size where
+     the photo is still sharp (never upscaled past its natural size at 2x). */
+  @media (min-resolution: 1.5dppx) {
+    .glove-note-region {
+      --glove-note-cap: var(--glove-note-width-dense);
+    }
+  }
+
+  /* The dim over the whole page, header included. It is a sibling under the note inside the region. */
+  .glove-note-dim {
+    position: fixed;
+    inset: 0;
+    background-color: var(--glove-note-dim);
+    pointer-events: auto;
   }
 
   .glove-note {
     position: relative;
+    z-index: 1;
     pointer-events: auto;
   }
 
@@ -57,10 +88,13 @@ const kind = pageKindFor(Astro.url.pathname);
     outline-offset: var(--focus-offset);
   }
 
+  /* Natural size, scaled down to fit the window (width and height both capped, ratio kept) with the margin around. */
   .glove-note-image {
     display: block;
-    inline-size: 100%;
+    inline-size: auto;
     block-size: auto;
+    max-inline-size: min(var(--glove-note-cap), 100dvw - 2 * var(--glove-note-inset-inline));
+    max-block-size: calc(100dvh - 2 * var(--glove-note-inset-block));
     filter: var(--glove-note-drop-shadow);
   }
 
@@ -77,6 +111,16 @@ const kind = pageKindFor(Astro.url.pathname);
 
   /* A gentle rise, only for visitors who haven't asked for reduced motion. */
   @media (prefers-reduced-motion: no-preference) {
+    .glove-note-dim {
+      animation: glove-note-dim-in var(--duration-base) ease-out;
+    }
+
+    @keyframes glove-note-dim-in {
+      from {
+        opacity: 0;
+      }
+    }
+
     .glove-note {
       animation: glove-note-in var(--duration-slow) ease-out;
     }
