@@ -238,3 +238,50 @@ for (const scheme of ['light', 'dark'] as const) {
     }
   });
 }
+
+// "on-screen keyboard only" (settings): only the letter keys below type. The physical keyboard must not add, delete
+// or submit, but Enter or Space on a focused key still activates that key.
+async function keysOnlyOn(page: Page) {
+  await page.getByTestId('vialo').getByRole('button', { name: 'vialo settings' }).click();
+  const settings = page.getByRole('dialog', { name: 'vialo settings' });
+  await settings.getByRole('switch', { name: /on-screen keyboard only/ }).click();
+  await page.keyboard.press('Escape');
+  await expect(settings).toBeHidden();
+}
+
+test('with the on-screen keyboard only setting on, the physical keyboard does not type, delete or submit', async ({ page }) => {
+  await keysOnlyOn(page);
+  await typeOnScreen(page, 'crane');
+  await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
+  await page.keyboard.press('a');
+  await page.keyboard.press('Backspace');
+  await page.keyboard.press('Delete');
+  await page.keyboard.press('Enter');
+  await expect(typed(page)).toHaveText([...'crane']);
+  await expect(guesses(page)).toHaveCount(0);
+  await key(page, 'enter').click();
+  await expect(guesses(page)).toHaveCount(1);
+});
+
+test('with the setting on, Enter and Space on a focused on-screen key still activate it', async ({ page }) => {
+  await keysOnlyOn(page);
+  await key(page, 'c').focus();
+  await page.keyboard.press('Enter');
+  await key(page, 'r').focus();
+  await page.keyboard.press('Space');
+  await expect(typed(page)).toHaveText(['c', 'r']);
+  await key(page, 'delete').focus();
+  await page.keyboard.press('Enter');
+  await expect(typed(page)).toHaveText(['c']);
+});
+
+test('with the setting off, the physical keyboard types, deletes and submits', async ({ page }) => {
+  await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
+  for (const letter of 'crane') await page.keyboard.press(letter);
+  await expect(typed(page)).toHaveCount(5);
+  await page.keyboard.press('Backspace');
+  await expect(typed(page)).toHaveCount(4);
+  await page.keyboard.press('e');
+  await page.keyboard.press('Enter');
+  await expect(guesses(page)).toHaveCount(1);
+});

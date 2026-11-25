@@ -245,8 +245,9 @@ export default function VialoGame({ puzzles }: Props) {
     setProblem('');
   };
 
+  // With "on-screen keyboard only" on, only the letter keys below type; Enter or Space on a focused key still activates it.
   onKey.current = (event) => {
-    if (event.defaultPrevented || !playing || event.ctrlKey || event.metaKey || event.altKey) return;
+    if (event.defaultPrevented || !playing || keysOnly || event.ctrlKey || event.metaKey || event.altKey) return;
     const target = event.target instanceof Element ? event.target : null;
     if (document.querySelector('dialog[open]') || target?.closest('dialog, [role="dialog"]')) return;
     // The hidden guess field already types, backspaces and submits natively (only Delete is ours there); any other
