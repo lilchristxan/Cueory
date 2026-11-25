@@ -151,9 +151,16 @@ const game = dailyGames.find((item) => item.id === 'triage')!;
     --color-ink-soft: var(--color-sudoku-ink-soft);
     border-color: var(--color-ink);
     border-radius: var(--sudoku-board-radius);
-    overflow: hidden;
     box-shadow: none;
   }
+
+  /* The corners are rounded on the four corner squares, not by clipping the grid: a clip with rounded corners cuts the
+   * last square's corner in some engines (Safari measured 97.8 % of it visible at 390 px). The squares' radius is the
+   * board's inner radius (its radius minus the outer box line), so the look is the same and nothing clips a square. */
+  :global(.sudoku-row:first-child .sudoku-cell:first-child) { border-start-start-radius: var(--sudoku-board-inner-radius); }
+  :global(.sudoku-row:first-child .sudoku-cell:last-child) { border-start-end-radius: var(--sudoku-board-inner-radius); }
+  :global(.sudoku-row:last-child .sudoku-cell:first-child) { border-end-start-radius: var(--sudoku-board-inner-radius); }
+  :global(.sudoku-row:last-child .sudoku-cell:last-child) { border-end-end-radius: var(--sudoku-board-inner-radius); }
 
   :global(:root[data-theme="dark"] .sudoku-levels) {
     border-color: var(--cueory-glass-border);
