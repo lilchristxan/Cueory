@@ -305,6 +305,7 @@ const activeDateLine = propDateLine ?? formatGameDateLine(new Date());
 
     <!-- Center area -->
     <div class="game-frame-main">
+    <div class="game-frame-head">
       <!-- Date line centered above the board -->
       <p class="game-frame-dateline" data-game-frame-dateline={propDateLine === undefined ? '' : undefined}>{activeDateLine}</p>
 
@@ -322,6 +323,7 @@ const activeDateLine = propDateLine ?? formatGameDateLine(new Date());
 
       <!-- Slot for page title -->
       <div class="not-print:sr-only game-frame-title"><slot name="title" /></div>
+    </div>
 
       <!-- The board slot -->
       <div class:list={['game-frame-board', wide && 'is-wide', showcase && 'is-showcase']}>
