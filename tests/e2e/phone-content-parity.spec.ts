@@ -80,6 +80,16 @@ test.describe('phone layouts follow the desktop design', () => {
     await expect(page.locator('main h1')).toHaveText('video player sample');
   });
 
+  test('/progress: a study screen on the plain page background, with readable disabled actions', async ({ page }) => {
+    await page.addInitScript(() => localStorage.clear());
+    await open(page, '/progress');
+    const bg = await page.locator('body').evaluate((el) => getComputedStyle(el).backgroundImage);
+    expect(bg).toBe('none');
+    const download = page.getByRole('button', { name: 'download my progress' });
+    await expect(download).toBeDisabled();
+    expect(await download.evaluate((el) => getComputedStyle(el).opacity)).toBe('1');
+  });
+
   test('/signin: "get launch updates" is a visible 44 px button while accounts are closed', async ({ page }) => {
     // The launch configuration keeps accounts closed (src/config/accountsgate.ts), so the link must be there.
     await open(page, '/signin');
