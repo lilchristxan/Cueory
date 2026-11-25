@@ -1,0 +1,2 @@
+status: piccline board format autosaves every move on the device for the day (a finished board reopens finished, a new day starts fresh) and shows a three-pip cue meter beside the cue button. Stacked on task-piccline/board-format-daily (PR 1175).
+decision: D-pending · One localStorage key, cueory-piccline-save, holds only today's board progress (no answers, no personal data); /privacy and the storage-key list name it. Touches the privacy page, so it needs Christian.
