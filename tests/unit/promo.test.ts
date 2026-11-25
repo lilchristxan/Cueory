@@ -113,7 +113,7 @@ describe('once-only promo panel (D-59)', () => {
 
   it('is never on study screens and is off on the signup thank-you page', () => {
     const layout = readFileSync(new URL('../../src/layouts/Layout.astro', import.meta.url), 'utf8');
-    expect(layout).toContain('const showPromo = promoSettings.show && promo && !isStudy;');
+    expect(layout).toContain('const showPromo = promoSettings.show && promo && !isStudy && !isGamePath(Astro.url.pathname);');
     const subscribed = readFileSync(new URL('../../src/pages/subscribed.astro', import.meta.url), 'utf8');
     expect(subscribed).toContain('promo={false}');
   });

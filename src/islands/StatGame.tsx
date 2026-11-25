@@ -225,6 +225,7 @@ export default function StatGame({ questions, sampleKey, game = 'stat' }: Props)
         )),
         overlayOpen,
         onActionControl: Boolean(target?.closest('button, a, summary, [role="button"], [role="link"]')),
+        hasAnswer: state.picked !== null,
       });
       if (!action) return;
       event.preventDefault();

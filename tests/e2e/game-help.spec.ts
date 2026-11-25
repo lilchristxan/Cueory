@@ -30,64 +30,74 @@ test.beforeEach(async ({ page }) => {
   });
 });
 
-test('there is no first-visit rules card: the rules sit behind "?" on every game page', async ({ page }) => {
+// First visit: these start from empty storage (the suite default is a returning player).
+test.describe('first visit', () => {
+  test.use({ storageState: { cookies: [], origins: [] } });
+
+  test('there is no first-visit rules card: the rules sit behind "?" on every game page', async ({ page }) => {
+    for (const game of games) {
+      await page.goto(game.path);
+      await expect(page.getByTestId('game-help-first')).toHaveCount(0);
+      await expect(helpButton(page, game)).toBeVisible();
+    }
+  });
+
   for (const game of games) {
-    await page.goto(game.path);
-    await expect(page.getByTestId('game-help-first')).toHaveCount(0);
-    await expect(helpButton(page, game)).toBeVisible();
+    test(`${game.name}: the "?" opens the rules in a focus-trapped dialog that Escape closes`, async ({ page }) => {
+      await page.goto(game.path);
+      test.skip(game.name === 'crossword' && await page.getByTestId('crossword-soon').count() > 0, 'crossword is closed in this build');
+      const area = page.getByTestId(game.testId);
+      const button = helpButton(page, game);
+      // First visit: the same "?" dialog opens by itself once (D-177). Close it, then use the button as a returning player.
+      const first = page.getByRole('dialog', { name: `how to play ${game.name}` });
+      await expect(first).toBeVisible();
+      await page.keyboard.press('Escape');
+      await expect(first).toHaveCount(0);
+      await expect(button).toBeVisible();
+      const box = await button.boundingBox();
+      expect(box!.width).toBeGreaterThanOrEqual(44);
+      expect(box!.height).toBeGreaterThanOrEqual(44);
+
+      await button.click();
+      const dialog = page.getByRole('dialog', { name: `how to play ${game.name}` });
+      await expect(dialog).toBeVisible();
+      await expect(dialog.getByRole('heading', { name: 'settings' })).toBeVisible();
+      // Where the shared settings are now (each game's gear, Christian's brief).
+      await expect(dialog).toContainText('change them with the gear at the top left of a game');
+      // Using the "?" counts as seeing the rules, so the first-visit card goes away.
+      await expect(area.getByTestId('game-help-first')).toHaveCount(0);
+      expect(JSON.parse((await seen(page))!)).toEqual([game.id]);
+
+      const close = dialog.getByRole('button', { name: 'close how to play' });
+      await expect(close).toBeFocused();
+      const closeBox = await close.boundingBox();
+      expect(closeBox!.width).toBeGreaterThanOrEqual(44);
+      expect(closeBox!.height).toBeGreaterThanOrEqual(44);
+      await page.keyboard.press('Shift+Tab');
+      await expect(dialog.getByRole('button', { name: 'got it' })).toBeFocused();
+      await page.keyboard.press('Tab');
+      await expect(close).toBeFocused();
+      for (let step = 0; step < 4; step++) {
+        await page.keyboard.press('Tab');
+        expect(await page.evaluate(() => Boolean(document.activeElement?.closest('[data-testid="game-help"]')))).toBe(true);
+      }
+      expect((await axe(page, '[data-testid="game-help"]')).violations).toEqual([]);
+
+      await page.keyboard.press('Escape');
+      await expect(dialog).toHaveCount(0);
+      await expect(button).toBeFocused();
+
+      // "got it" and the × close it too.
+      await button.click();
+      await dialog.getByRole('button', { name: 'got it' }).click();
+      await expect(dialog).toHaveCount(0);
+      await button.click();
+      await dialog.getByRole('button', { name: 'close how to play' }).click();
+      await expect(dialog).toHaveCount(0);
+      await expect(button).toBeFocused();
+    });
   }
 });
-
-for (const game of games) {
-  test(`${game.name}: the "?" opens the rules in a focus-trapped dialog that Escape closes`, async ({ page }) => {
-    await page.goto(game.path);
-    test.skip(game.name === 'crossword' && await page.getByTestId('crossword-soon').count() > 0, 'crossword is closed in this build');
-    const area = page.getByTestId(game.testId);
-    const button = helpButton(page, game);
-    await expect(button).toBeVisible();
-    const box = await button.boundingBox();
-    expect(box!.width).toBeGreaterThanOrEqual(44);
-    expect(box!.height).toBeGreaterThanOrEqual(44);
-
-    await button.click();
-    const dialog = page.getByRole('dialog', { name: `how to play ${game.name}` });
-    await expect(dialog).toBeVisible();
-    await expect(dialog.getByRole('heading', { name: 'settings' })).toBeVisible();
-    // Where the shared settings are now (each game's gear, Christian's brief).
-    await expect(dialog).toContainText('change them with the gear at the top left of a game');
-    // Using the "?" counts as seeing the rules, so the first-visit card goes away.
-    await expect(area.getByTestId('game-help-first')).toHaveCount(0);
-    expect(JSON.parse((await seen(page))!)).toEqual([game.id]);
-
-    const close = dialog.getByRole('button', { name: 'close how to play' });
-    await expect(close).toBeFocused();
-    const closeBox = await close.boundingBox();
-    expect(closeBox!.width).toBeGreaterThanOrEqual(44);
-    expect(closeBox!.height).toBeGreaterThanOrEqual(44);
-    await page.keyboard.press('Shift+Tab');
-    await expect(dialog.getByRole('button', { name: 'got it' })).toBeFocused();
-    await page.keyboard.press('Tab');
-    await expect(close).toBeFocused();
-    for (let step = 0; step < 4; step++) {
-      await page.keyboard.press('Tab');
-      expect(await page.evaluate(() => Boolean(document.activeElement?.closest('[data-testid="game-help"]')))).toBe(true);
-    }
-    expect((await axe(page, '[data-testid="game-help"]')).violations).toEqual([]);
-
-    await page.keyboard.press('Escape');
-    await expect(dialog).toHaveCount(0);
-    await expect(button).toBeFocused();
-
-    // "got it" and the × close it too.
-    await button.click();
-    await dialog.getByRole('button', { name: 'got it' }).click();
-    await expect(dialog).toHaveCount(0);
-    await button.click();
-    await dialog.getByRole('button', { name: 'close how to play' }).click();
-    await expect(dialog).toHaveCount(0);
-    await expect(button).toBeFocused();
-  });
-}
 
 test('piccline help opens from the keyboard at phone width and restores focus', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
