@@ -76,9 +76,11 @@ test('keyboard: one Tab stop, arrows move and pick, Space and Enter keep the pic
   await page.keyboard.press('ArrowRight');
   await expect(group.getByRole('radio', { name: 'follow device', exact: true })).toBeChecked();
   await expect(page.locator('html')).not.toHaveAttribute('data-theme', /.+/);
-  // Tab leaves the three segments in one step.
-  await page.keyboard.press('Tab');
+  // One Tab stop: a single Shift+Tab leaves the three segments. (The slider is the last control on the page, so a
+  // forward Tab has nowhere in the document to land: Firefox then keeps reporting the radio as the active element.)
+  await page.keyboard.press('Shift+Tab');
   expect(await page.evaluate(() => Boolean(document.activeElement?.closest('.theme-slider')))).toBe(false);
+  await expect(page.locator(':focus')).toHaveCount(1);
 });
 
 test('the footer slider and the game settings slider stay in sync both ways', async ({ page }) => {
