@@ -189,6 +189,9 @@
   /* Live Vialo pills follow the approved 1230 × 1180 blister artwork. Percentages are measured
      against the pack width (outside the well grid) or the individual cell width (inside it). */
   --vialo-art-ratio: 1230 / 1180;
+  --vialo-art-width-per-height: 1.0424; /* 1230 / 1180 as a plain number, so the pack's width can follow the window's height */
+  --vialo-board-reserve: 25.5rem;       /* 408px: the page above the pack plus the keys below it, so pack, guess strip and keys fit a 900px-high desktop window without scrolling */
+  --vialo-board-min: 20rem;             /* 320px: the pack never gets narrower than this on a short window */
   --vialo-art-top: 4.64%;
   --vialo-art-sides: 4.5% 4.58%;
   --vialo-art-row-ratio: 1118.4 / 170.6;

@@ -51,7 +51,9 @@
      measured perforations (#887), even when the surrounding game frame is wider than this pack. */
   .vialo-pack {
     display: flow-root;
-    max-inline-size: var(--game-frame-max-board);
+    /* The pack is as wide as the frame allows, but never so tall that the keys below it drop under the fold: a
+       keyboard user tabbing to the last key would otherwise scroll the page (and wake the promo panel). */
+    max-inline-size: min(var(--game-frame-max-board), max(var(--vialo-board-min), calc((100dvh - var(--vialo-board-reserve)) * var(--vialo-art-width-per-height))));
     aspect-ratio: var(--vialo-art-ratio);
     border-radius: var(--radius-lg);
     background-color: var(--pillo-foil-color);
