@@ -55,7 +55,8 @@ for (const [size, width, height] of [['phone', 390, 844], ['tablet', 820, 1180],
       await expect(cells(page).nth(secondEmpty)).toHaveText('x');
       await expect(cells(page).nth(secondEmpty)).toHaveAttribute('aria-label', /x mark/);
       await expect(game(page).getByTestId('sudoku-live')).toHaveText('x mark added.');
-      await game(page).getByRole('button', { name: 'add or remove x mark' }).click();
+      await page.getByTestId('game-frame-gear').click();
+      await page.getByRole('dialog', { name: 'sudoku settings' }).getByRole('button', { name: 'add or remove x mark' }).click();
       await expect(cells(page).nth(secondEmpty)).toBeEmpty();
       await expect(game(page).getByTestId('sudoku-live')).toHaveText('mark removed.');
 
@@ -81,15 +82,15 @@ for (const [size, width, height] of [['phone', 390, 844], ['tablet', 820, 1180],
 
 
 for (const colorScheme of ['light', 'dark'] as const) {
-  test('on a 390px phone all 10 Sudoku pad buttons fit and work without a horizontal swipe: ' + colorScheme,
+  for (const width of [320, 390]) test(`on a ${width}px phone the nine digits and the gear’s x-mark button fit and work without a horizontal swipe: ${colorScheme}`,
     async ({ page }, testInfo) => {
-      await page.setViewportSize({ width: 390, height: 844 });
+      await page.setViewportSize({ width, height: 844 });
       await page.emulateMedia({ colorScheme, reducedMotion: 'reduce' });
       await page.goto('/play/sudoku');
       await expect(game(page)).toBeVisible();
       await cells(page).nth(empty).click();
 
-      const pad = game(page).locator('.sudoku-number-row');
+      const pad = game(page).locator('.sudoku-pad-wrap');
       const padBox = await pad.boundingBox();
       expect(padBox).not.toBeNull();
       const dimensions = await pad.evaluate((element) => ({
@@ -97,9 +98,22 @@ for (const colorScheme of ['light', 'dark'] as const) {
         scrollWidth: element.scrollWidth,
       }));
       expect(dimensions.scrollWidth).toBeLessThanOrEqual(dimensions.clientWidth + 1);
-      await expect(pad.getByRole('button')).toHaveCount(10);
-
-      for (const button of await pad.getByRole('button').all()) {
+      const digits = pad.getByRole('group', { name: 'numbers', exact: true }).getByRole('button');
+      await expect(digits).toHaveText(['1', '2', '3', '4', '5', '6', '7', '8', '9']);
+      const rows = await digits.evaluateAll((buttons) => {
+        const byTop = new Map<number, string>();
+        for (const button of buttons) {
+          const top = Math.round(button.getBoundingClientRect().top);
+          byTop.set(top, (byTop.get(top) ?? '') + button.textContent);
+        }
+        return [...byTop.values()];
+      });
+      expect(rows).toEqual(['12345', '6789']);
+      const tools = pad.getByRole('group', { name: 'board tools', exact: true }).getByRole('button');
+      await expect(tools).toHaveText(['Pencil · P', 'Undo', 'Hint']);
+      const toolTops = await tools.evaluateAll((buttons) => buttons.map(button => Math.round(button.getBoundingClientRect().top)));
+      expect(new Set(toolTops).size).toBe(1);
+      for (const button of await digits.all()) {
         const box = await button.boundingBox();
         expect(box).not.toBeNull();
         expect(box!.width).toBeGreaterThanOrEqual(44);
@@ -108,11 +122,20 @@ for (const colorScheme of ['light', 'dark'] as const) {
         expect(box!.x).toBeGreaterThanOrEqual(padBox!.x - 1);
         expect(box!.x + box!.width).toBeLessThanOrEqual(padBox!.x + padBox!.width + 1);
         expect(box!.x).toBeGreaterThanOrEqual(0);
-        expect(box!.x + box!.width).toBeLessThanOrEqual(391);
+        expect(box!.x + box!.width).toBeLessThanOrEqual(width + 1);
         if (testInfo.project.use.hasTouch) await button.tap();
         else await button.click();
       }
 
+      await page.getByTestId('game-frame-gear').click();
+      const mark = page.getByRole('dialog', { name: 'sudoku settings' }).getByRole('button', { name: 'add or remove x mark' });
+      const markBox = (await mark.boundingBox())!;
+      expect(markBox.width).toBeGreaterThanOrEqual(44);
+      expect(markBox.height).toBeGreaterThanOrEqual(44);
+      expect(markBox.x).toBeGreaterThanOrEqual(0);
+      expect(markBox.x + markBox.width).toBeLessThanOrEqual(width + 1);
+      if (testInfo.project.use.hasTouch) await mark.tap();
+      else await mark.click();
       await expect(cells(page).nth(empty)).toHaveText('x');
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
     });
