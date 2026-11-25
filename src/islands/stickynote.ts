@@ -49,13 +49,9 @@ export const PAUSE_IDLE_SECONDS = 3;
 /** The order welcome notes rotate in between visits. */
 export const WELCOME_ROTATION: readonly WelcomeContent[] = ['launch-list', 'mission', 'break-idea'];
 
-/** Session storage key for this visit's memory. It stays in the visitor's browser and is never sent to us. */
-export const VISIT_STORAGE_KEY = 'cueory-glove-note';
-/**
- * Local storage key for what the last visit's welcome note said, so the next visit says something else. It stays in
- * the visitor's browser; `/privacy` must list it before the notes are switched on.
- */
-export const LAST_WELCOME_STORAGE_KEY = 'cueory-glove-note-welcome';
+import { LAST_WELCOME_STORAGE_KEY, VISIT_STORAGE_KEY } from './stickynotekeys';
+
+export { LAST_WELCOME_STORAGE_KEY, VISIT_STORAGE_KEY };
 
 /** What this visit remembers. */
 export interface Visit {

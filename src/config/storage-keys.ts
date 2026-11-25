@@ -20,7 +20,7 @@ import { GAME_SETTINGS_STORAGE_KEY } from '../islands/gamesettings';
 import { GAME_HELP_STORAGE_KEY } from '../islands/gamehelpkeys';
 import { GUEST_IMPORT_MARKER_PREFIX } from '../islands/guestimportrun';
 import { HOME_TIP_STORAGE_KEY } from '../islands/home-screen-tip';
-import { LAST_WELCOME_STORAGE_KEY, VISIT_STORAGE_KEY } from '../islands/stickynote';
+import { LAST_WELCOME_STORAGE_KEY, VISIT_STORAGE_KEY } from '../islands/stickynotekeys';
 import { SUDOKU_SETTINGS_KEY } from '../islands/sudoku';
 import { SURVEY_STORAGE_KEYS } from '../islands/surveykeys';
 import {

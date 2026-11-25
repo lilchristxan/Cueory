@@ -248,3 +248,48 @@ test('a slow photo starts only one selection and requests one glove image', asyn
   expect(photoRequests).toHaveLength(1);
   await expect(page.locator('[data-glove-note]')).toHaveCount(1);
 });
+
+test('a photo that fails to load is not shown or recorded, and a later try shows a working one', async ({ page }) => {
+  let calls = 0;
+  await page.route(/\/gloves\/messages\/msg-\d+\.webp/, async (route) => {
+    calls += 1;
+    if (calls === 1) await route.fulfill({ status: 404, contentType: 'text/plain', body: 'missing' });
+    else await route.continue();
+  });
+  await openAt(page, '/');
+  await jump(page, 31);
+  // Keep the once-a-second check running until the list has loaded and the first photo has been asked for.
+  for (let step = 0; step < 20 && calls === 0; step += 1) {
+    await page.clock.runFor(1_000);
+    await page.waitForTimeout(250);
+  }
+  await page.waitForTimeout(800);
+  expect(calls).toBe(1);
+  await expect(note(page)).toHaveCount(0);
+  // Nothing was recorded, and the retry waits about a minute rather than hammering the server.
+  await page.clock.runFor(20_000);
+  await page.waitForTimeout(300);
+  expect(calls).toBe(1);
+  await jump(page, 1);
+  await expect(note(page)).toBeVisible();
+  expect(calls).toBe(2);
+  await expect(page.locator('[data-glove-note]')).toHaveCount(1);
+});
+
+test('a visitor who starts scrolling or moving while the photo loads gets the note only after a new pause', async ({ page }) => {
+  let release!: () => void;
+  const gate = new Promise<void>((resolve) => { release = resolve; });
+  await page.route(/\/gloves\/messages\/msg-\d+\.webp/, async (route) => {
+    await gate;
+    await route.continue();
+  });
+  await openAt(page, '/');
+  await jump(page, 31);
+  await page.mouse.move(200, 200);
+  await page.mouse.move(260, 240);
+  release();
+  await page.waitForTimeout(800);
+  await expect(note(page)).toHaveCount(0);
+  await page.clock.runFor(4_000);
+  await expect(note(page)).toBeVisible();
+});
