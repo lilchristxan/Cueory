@@ -92,8 +92,8 @@ test.describe('home games carousel (Home v2 Lane 5)', () => {
   test('hover and focus plays looping demo, paused when idle', async ({ page }, testInfo) => {
     test.skip(!isDesktopOfEachEngine(testInfo), 'runs once per browser engine');
 
-    await page.goto('/');
     await markPanelsSeen(page);
+    await page.goto('/');
     const section = page.locator('#daily-games');
     await section.scrollIntoViewIfNeeded();
 
@@ -106,6 +106,11 @@ test.describe('home games carousel (Home v2 Lane 5)', () => {
     const firstCard = section.locator('[data-game-card]').first();
     const demo = firstCard.locator('.gdemo');
     await expect(demo).toBeAttached();
+
+    // Center the actual pointer target before sampling idle and hover. Scrolling the
+    // whole section can leave the card clipped and trigger another scroll during hover.
+    await firstCard.evaluate((card) => card.scrollIntoView({ block: 'center', behavior: 'instant' }));
+    await page.mouse.move(0, 0);
 
     // Idle: demo has opacity 0 or animation paused
     const initialPlayState = await demo.locator('.gc').first().evaluate((el) => {
