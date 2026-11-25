@@ -194,3 +194,57 @@ test('has no accessibility violations while open', async ({ page }) => {
   const results = await new AxeBuilder({ page }).include('[data-testid="glove-note"]').analyze();
   expect(results.violations).toEqual([]);
 });
+
+test('waits while a question is open and unanswered, then appears once it is answered', async ({ page }) => {
+  await page.route('**/learn/study-skills/questions/study-skills-01.json', (route) => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({
+      status: 'sample',
+      items: [{
+        id: 'sample-one', status: 'sample', type: 'single', stem: '[sample question 1]',
+        choices: [{ id: 'a', text: '[sample choice A]' }, { id: 'b', text: '[sample choice B]' }],
+        key: ['a'], rationales: { a: '[sample rationale A]', b: '[sample rationale B]' },
+      }],
+    }),
+  }));
+  await openAt(page, '/learn/study-skills/questions');
+  await expect(page.getByTestId('sample-questions-ready')).toBeVisible();
+  await expect(page.locator('[data-note-busy]')).toHaveCount(1);
+  // Radio buttons are not text entry, so only the unanswered-question mark keeps the note away.
+  await jump(page, 31);
+  await page.waitForTimeout(4_000);
+  await page.clock.runFor(5_000);
+  await expect(note(page)).toHaveCount(0);
+  await page.getByLabel('[sample choice A]').check();
+  await page.getByRole('button', { name: 'check' }).click();
+  await expect(page.getByText('next question')).toBeVisible();
+  await expect(page.locator('[data-note-busy]')).toHaveCount(0);
+  await jump(page, 0.2);
+  await page.clock.runFor(5_000);
+  await expect(note(page)).toBeVisible();
+});
+
+test('a slow photo starts only one selection and requests one glove image', async ({ page }) => {
+  const photoRequests: string[] = [];
+  let release!: () => void;
+  const gate = new Promise<void>((resolve) => { release = resolve; });
+  await page.route(/\/gloves\/messages\/msg-\d+\.webp/, async (route) => {
+    photoRequests.push(route.request().url());
+    await gate;
+    await route.continue();
+  });
+  await openAt(page, '/');
+  await jump(page, 31);
+  // Ten more once-a-second checks while the first photo is still loading.
+  await page.clock.runFor(10_000);
+  await page.waitForTimeout(500);
+  expect(new Set(photoRequests).size).toBe(1);
+  expect(photoRequests).toHaveLength(1);
+  await expect(note(page)).toHaveCount(0);
+  release();
+  await page.clock.runFor(1_000);
+  await expect(note(page)).toBeVisible();
+  expect(photoRequests).toHaveLength(1);
+  await expect(page.locator('[data-glove-note]')).toHaveCount(1);
+});

@@ -123,7 +123,17 @@ const kind = pageKindFor(Astro.url.pathname);
       open = null;
     };
 
+    // One selection and one photo load at a time: the once-a-second check must not start another while one is pending.
+    let pending = false;
     const show = async (glove: Glove, gloveIndex: number) => {
+      pending = true;
+      try {
+        await present(glove, gloveIndex);
+      } finally {
+        pending = false;
+      }
+    };
+    const present = async (glove: Glove, gloveIndex: number) => {
       const source = `/gloves/messages/${glove.file}`;
       // Only this one photo is fetched. It is ready before the note appears, so the note never pops in empty.
       const probe = new Image();
@@ -174,7 +184,7 @@ const kind = pageKindFor(Astro.url.pathname);
     });
 
     const tick = () => {
-      if (document.hidden || open) return;
+      if (document.hidden || open || pending) return;
       const now = Date.now();
       if (!messageTimeDue(visit, now)) return;
       if (!gloves) {
