@@ -28,6 +28,9 @@ async function openFooterLinks(page: Page) {
   await expect(chevron).toHaveAttribute('aria-expanded', 'true');
 }
 
+// Firefox reports sizes in 1/60 px steps, so a 44 px box can read 43.99994. Allow that rounding, nothing more.
+const FIREFOX_ROUNDING_PX = 0.01;
+
 /** The name of the card in the middle of the "ways to study" merry-go-round (D-60). */
 const middleCard = (page: Page) =>
   page.locator('#ways-to-study [data-mode-card][data-offset="0"]').getAttribute('data-name');
@@ -1302,8 +1305,8 @@ test.describe('social links (D-54)', () => {
       // The mark is drawn inline from our own page, never loaded from the platform.
       await expect(link.locator('svg path')).toHaveCount(1);
       const box = (await link.boundingBox())!;
-      expect(box.width).toBeGreaterThanOrEqual(44);
-      expect(box.height).toBeGreaterThanOrEqual(44);
+      expect(box.width).toBeGreaterThanOrEqual(44 - FIREFOX_ROUNDING_PX);
+      expect(box.height).toBeGreaterThanOrEqual(44 - FIREFOX_ROUNDING_PX);
     }
     await expect(footer.getByRole('link', { name: 'cueory on Instagram (opens in a new tab)' })).toBeVisible();
 

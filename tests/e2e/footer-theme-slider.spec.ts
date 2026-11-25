@@ -118,7 +118,8 @@ test('the open footer panel does not change size when the choice changes', async
     await picker(page).locator('.theme-slider-option', { hasText: word }).click();
     await settled(page);
     const after = await footer.boundingBox();
-    expect(after!.height).toBe(before!.height);
+    // Firefox reports sizes in 1/60 px steps, so the same height can read 566.9999 and 567.
+    expect(Math.abs(after!.height - before!.height)).toBeLessThan(0.01);
     expect(after!.width).toBe(before!.width);
   }
 });
