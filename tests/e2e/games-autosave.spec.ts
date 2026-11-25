@@ -68,17 +68,18 @@ test.describe('sudoku autosave', () => {
     await cells(page).nth(empty[0]!).click();
     await page.keyboard.press(String(daily.solution[empty[0]!]));
     await cells(page).nth(empty[1]!).click();
-    await page.keyboard.press('Space');
+    await page.getByTestId('sudoku-mode').getByRole('button', { name: /^Pencil/ }).click();
+    await cells(page).nth(empty[1]!).click();
     await page.keyboard.press('3');
     await page.keyboard.press('5');
+    await expect(cells(page).nth(empty[1]!)).toHaveAttribute('aria-label', /empty, pencil marks 3, 5/);
     await page.reload();
     await expect(cells(page)).toHaveCount(81);
     await expect(cells(page).nth(empty[0]!)).toHaveAttribute('aria-label', new RegExp(`, ${daily.solution[empty[0]!]}`));
-    await expect(cells(page).nth(empty[1]!)).toHaveAttribute('aria-label', /empty, cues 3, 5/);
+    await expect(cells(page).nth(empty[1]!)).toHaveAttribute('aria-label', /empty, pencil marks 3, 5/);
     await expect(page.getByTestId('sudoku-result')).toHaveCount(0);
 
-    // Cue mode is still on (it is not saved), so go back to normal, then finish the board.
-    await page.getByTestId('sudoku-mode').getByRole('button', { name: 'normal' }).click();
+    // Pencil mode is not saved, so the board is in normal mode; finish it.
     for (const index of empty.slice(1)) {
       await cells(page).nth(index).click();
       await page.keyboard.press(String(daily.solution[index]));

@@ -1,5 +1,5 @@
 import '../styles/crossword.css';
-import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, useLayoutEffect } from 'react';
 import { browserStorage } from '../scripts/storage';
 import { localDay, reportRound } from './gameresults';
 import { printGame } from './gameprint';
@@ -97,7 +97,7 @@ function Board({ puzzle, name, framed = false }: Props) {
 
   useEffect(() => { saveCrosswordSettings(browserStorage(), settings); }, [settings]);
   // Autosave after every move (the clock is kept as of the last move or pause).
-  useEffect(() => { saveCuewordProgress(puzzle, localDay(today), { state, elapsed }, browserStorage()); }, [state, paused]);
+  useLayoutEffect(() => { saveCuewordProgress(puzzle, localDay(today), { state, elapsed }, browserStorage()); }, [state, paused]);
 
   useEffect(() => {
     if (solved) result.current?.focus();

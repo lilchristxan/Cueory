@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, useLayoutEffect } from 'react';
 import { browserStorage } from '../scripts/storage';
 import { printGame } from './gameprint';
 import { GameHelpButton, GameHelpDialog, useGameHelp } from './GameHelp';
@@ -181,7 +181,8 @@ export default function SudokuGame({ framed = false }: { framed?: boolean } = {}
   }, [puzzle]);
 
   // Autosave after every move (and when the clock is paused or auto cues change), once the board on screen is this level's.
-  useEffect(() => {
+  // A layout effect, so the save is written in the same task as the move and a quick reload cannot beat it.
+  useLayoutEffect(() => {
     if (boardFor !== puzzle) return;
     saveSudokuProgress(puzzle.puzzle, day, level, { board, seconds, errors, auto }, browserStorage());
   }, [board, errors, auto, paused, boardFor]);

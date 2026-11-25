@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react';
 import { dailyGames, gameName } from '../config/games';
+import { forgetSavedBoards } from './gamesavekeys';
 import { browserStorage } from '../scripts/storage';
 import {
   forgetHeldRounds,
@@ -212,6 +213,8 @@ export default function GameStatsPanel({ games: order, playLinks }: Props) {
     const stats = stillOn();
     if (!stats) return;
     forgetHeldRounds(game);
+    // The day's saved board is device data too (autosave): forgetting a game's stats forgets it as well.
+    forgetSavedBoards(browserStorage(), game);
     focusNext.current = game;
     // Forgetting sudoku clears both its shared results and its per-level solve times (Codex on #831).
     const timesGone = game !== 'triage' || forgetSudokuRecord();
@@ -229,6 +232,7 @@ export default function GameStatsPanel({ games: order, playLinks }: Props) {
     if (!stillOn()) return;
     forgetHeldRounds();
     focusNext.current = 'switch';
+    forgetSavedBoards(browserStorage());
     const timesGone = forgetSudokuRecord();
     const resultsGone = storeForgotten([]);
     setSaved(latest());
