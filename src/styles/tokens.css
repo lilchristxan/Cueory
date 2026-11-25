@@ -1218,6 +1218,7 @@
   --sudoku-cell-min: 2.75rem;
   --sudoku-cell-floor: 1.5rem;        /* a square's floor: 24 px (WCAG 2.2) at default text, 48 px at 32 px root text, when the board scrolls */
   --sudoku-cell-max: 5.25rem;
+  --sudoku-cell-step: 1px;            /* the board's square is rounded down to this step: whole pixels, so centred rows land on whole pixels in Firefox */
   --sudoku-height-reserve: 28.75rem;
   --sudoku-width-reserve: 9.375rem;
   --sudoku-status-row: 2rem;           /* the status row is a whole number of pixels tall (32 px), so the controls under it land on whole pixels (Firefox loses 0.00003 px on a fractional offset) */
