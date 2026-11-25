@@ -63,8 +63,8 @@ test('footer links: Tab reaches each one in order with a visible focus ring', as
 test('footer privacy link opens with Enter', async ({ page }) => {
   await page.goto('/support');
   const footer = page.getByRole('contentinfo');
-  await footer.locator('[data-footer-toggle]').focus();
-  await page.keyboard.press('Enter');
+  // "privacy" is in the always-visible row, which comes before the chevron; start at the flag, the row's first control.
+  await footer.getByRole('button', { name: 'flag or comment' }).focus();
   const privacy = footer.getByRole('link', { name: 'privacy', exact: true });
   await tabTo(page, privacy);
   await expectVisibleFocus(privacy);
