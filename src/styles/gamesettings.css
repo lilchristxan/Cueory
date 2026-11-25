@@ -196,6 +196,22 @@ html:root[data-game-motion="reduce"] .game-settings * {
     accent-color: var(--color-button);
   }
 
+  /* The theme slider's helper line: the live line and hidden copies of every detail share one cell (no height change). */
+  .game-settings-theme-detail {
+    display: grid;
+    margin-block-start: calc(var(--spacing) * 2);
+    color: var(--color-ink-soft);
+    overflow-wrap: anywhere;
+  }
+
+  .game-settings-theme-detail > small {
+    grid-area: 1 / 1;
+  }
+
+  .game-settings-theme-detail > small[aria-hidden="true"] {
+    visibility: hidden;
+  }
+
   .game-settings-data-button {
     min-block-size: var(--tap-min);
     border: var(--border-game-settings) solid var(--color-control);
