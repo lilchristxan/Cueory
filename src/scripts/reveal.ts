@@ -4,6 +4,27 @@
  * once it is on screen, and with reduced motion nothing waits at all. The look is in global.css ([data-reveal]).
  */
 
+/** The fade's length: the same 600 ms as the `[data-reveal="shown"]` transition in global.css. */
+export const REVEAL_MS = 600;
+/** How long past the fade a section may still be animating before it is forced to its end state. */
+export const REVEAL_GRACE_MS = 400;
+
+/**
+ * Safety net: a browser that never ticks the transition (seen in WebKit CI) must not leave a shown section at opacity 0.
+ * Shortly after the fade should have ended, any animation still on the section is finished.
+ */
+export function settleReveal(target: Pick<HTMLElement, 'getAnimations'>): void {
+  window.setTimeout(() => {
+    for (const animation of target.getAnimations()) {
+      try {
+        animation.finish();
+      } catch {
+        animation.cancel();
+      }
+    }
+  }, REVEAL_MS + REVEAL_GRACE_MS);
+}
+
 /** A section waits for its reveal only if it starts below the window. */
 export function waitsForReveal(top: number, viewportHeight: number): boolean {
   return top >= viewportHeight;
@@ -50,6 +71,7 @@ export function revealSections(): void {
         }
         target.dataset.reveal = 'shown';
         observer.unobserve(target);
+        settleReveal(target);
       }
     },
     { rootMargin: '0px 0px -8% 0px' },

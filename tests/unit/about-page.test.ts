@@ -21,10 +21,11 @@ describe('about page shell', () => {
       { level: 2, text: 'how we make our lessons' },
       { level: 2, text: "what's coming" },
       { level: 2, text: 'help keep cueory free.' },
+      { level: 2, text: 'more pages' },
     ]);
 
     const sectionIds = [...markup.matchAll(/<section\b[^>]*aria-labelledby="([^"]+)"/g)].map((match) => match[1]);
-    expect(sectionIds).toEqual(['mission-heading', 'lessons-heading', 'coming-heading', 'support-heading']);
+    expect(sectionIds).toEqual(['mission-heading', 'lessons-heading', 'coming-heading', 'support-heading', 'pages-heading']);
     for (const id of sectionIds) {
       expect(markup).toContain(`id="${id}"`);
     }
@@ -52,7 +53,7 @@ describe('about page shell', () => {
   it('uses the existing brand UI and does not index unfinished founder copy', () => {
     expect(markup).toMatch(/<Layout\b[\s\S]*?\bnoindex\b[\s\S]*?>/);
     expect(indexablePages).not.toContain('/about');
-    expect(markup.match(/class="[^"]*\bveil\b/g)).toHaveLength(4);
+    expect(markup.match(/class="[^"]*\bveil\b/g)).toHaveLength(5);
     expect(markup).toContain('class="display');
     expect(markup).toContain('href="/#signup"');
     expect(markup).toContain('href={site.tipPageUrl}');

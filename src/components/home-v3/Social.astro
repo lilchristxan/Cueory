@@ -1,0 +1,169 @@
+---
+/**
+ * Home v3 social section (docs/design/home-v3/, boards home-*): one centred row of Cueory's social marks under the
+ * coming-soon panel. The profile addresses live in `socials` in `src/config/site.ts` (D-54, D-65); only profiles with an
+ * address show. Marks are Simple Icons paths drawn inline (nothing loads from the platforms), each a 48 px circle target
+ * that opens the profile in a new tab and says so: screen readers hear it in the label, and sighted visitors see a small
+ * ↗ at the mark's corner while it is hovered or focused (the boards draw no arrow at rest, so the default always-on
+ * arrow is switched off with data-new-tab-cue). On hover or keyboard focus a mark lifts and turns copper; reduced
+ * motion keeps only the color. The footer links are not part of this section.
+ */
+import { siFacebook, siInstagram, siPinterest, siTiktok, siX, siYoutube } from 'simple-icons';
+import { socials } from '../../config/site';
+
+const marks = {
+  instagram: siInstagram,
+  tiktok: siTiktok,
+  youtube: siYoutube,
+  x: siX,
+  facebook: siFacebook,
+  pinterest: siPinterest,
+} as const;
+const shown = socials.filter((social) => social.href);
+---
+
+{
+  shown.length > 0 && (
+    <section class="social-section px-gutter" aria-label="follow cueory" data-social-section>
+      <ul class="social-row" aria-label="cueory elsewhere">
+        {shown.map((social) => (
+          <li>
+            <a
+              href={social.href}
+              target="_blank"
+              rel="noopener noreferrer"
+              class="social-mark"
+              aria-label={`cueory on ${social.name} (opens in a new tab)`}
+              data-social={social.id}
+              data-new-tab-cue
+            >
+              <svg viewBox="0 0 24 24" class="social-mark-icon" aria-hidden="true" focusable="false">
+                <path d={marks[social.id].path} fill="currentColor" />
+              </svg>
+              <span class="social-cue" aria-hidden="true">↗</span>
+            </a>
+          </li>
+        ))}
+      </ul>
+    </section>
+  )
+}
+
+<style>
+  .social-section {
+    /* The board's space above the row: 28 px on a phone, 40 px on a wider screen, 24 px on a phone turned sideways;
+       none below (the footer links bring their own). */
+    margin-block: calc(var(--spacing) * 7) 0;
+  }
+
+  /* The privacy line under the coming-soon panel (6 px above it, 12 px text) takes room out of the board's gap on every
+     size: on a phone it is two lines, so the marks come up to 8 px under it. */
+  :global(.soon-section:has(.soon-help)) + .social-section {
+    margin-block-start: calc(var(--spacing) * 2);
+  }
+
+  @media (min-width: 40em) {
+    .social-section {
+      margin-block-start: calc(var(--spacing) * 10);
+    }
+
+    /* The privacy line under the coming-soon panel is one line here, and takes its 24 px (6 above, 18 line) out of the 40
+       px the board leaves between the panel and the marks, so the marks stay where the board has them. */
+    :global(.soon-section:has(.soon-help)) + .social-section {
+      margin-block-start: calc(var(--spacing) * 4);
+    }
+  }
+
+  .social-row {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: calc(var(--spacing) * 3);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .social-mark {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    inline-size: calc(var(--spacing) * 12);
+    block-size: calc(var(--spacing) * 12);
+    border-radius: var(--radius-pill);
+    color: var(--color-ink);
+    transition:
+      color 0.2s ease,
+      transform 0.2s ease,
+      filter 0.2s ease;
+  }
+
+  .social-mark-icon {
+    inline-size: calc(var(--spacing) * 6.5);
+    block-size: calc(var(--spacing) * 6.5);
+  }
+
+  /* The new-tab cue: nothing at rest, a small ↗ in the corner of the touch target on hover and keyboard focus. */
+  .social-cue {
+    position: absolute;
+    inset-block-start: calc(var(--spacing) * 1);
+    inset-inline-end: calc(var(--spacing) * 1);
+    font-size: var(--social-cue-size);
+    line-height: 1;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    pointer-events: none;
+  }
+
+  .social-mark:hover .social-cue,
+  .social-mark:focus-visible .social-cue {
+    opacity: 1;
+  }
+
+  .social-mark:hover,
+  .social-mark:focus-visible {
+    color: var(--color-copper-deep);
+    transform: translateY(-3px) scale(1.12);
+    filter: var(--social-glow);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .social-mark {
+      transition: color 0.2s ease;
+    }
+
+    .social-mark:hover,
+    .social-mark:focus-visible {
+      transform: none;
+      filter: none;
+    }
+  }
+
+  /* Phones: the six marks stay on one row with a tighter gap (390 px). */
+  @media (max-width: 29.99em) {
+    .social-row {
+      gap: calc(var(--spacing) * 1.5);
+    }
+  }
+
+  /* Phone landscape (844 × 390): closer, and the marks drawn at 85% as on the board (the 48 px touch target stays). */
+  @media (orientation: landscape) and (max-height: 32em) {
+    .social-section {
+      margin-block-start: calc(var(--spacing) * 6);
+    }
+
+    :global(.soon-section:has(.soon-help)) + .social-section {
+      margin-block-start: 0;
+    }
+
+    .social-row {
+      gap: calc(var(--spacing) * 1.5);
+    }
+
+    .social-mark-icon {
+      inline-size: var(--social-icon-landscape);
+      block-size: var(--social-icon-landscape);
+    }
+  }
+</style>

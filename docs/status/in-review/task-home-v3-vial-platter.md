@@ -1,0 +1,1 @@
+status: Home v3 vial platter built as a standalone component with a preview page (/preview/vial-platter) and its own tests; it replaces the home ModesCarousel when the Home v3 page lands. It carries the id ways-to-study, lifts on hover only for a real pointer, matches the boards' section spacing and puts the phone arrows in the dots' row. In review.

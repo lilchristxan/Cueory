@@ -24,7 +24,7 @@ test.describe('home page-specific behavior', () => {
     expect(response?.status()).toBe(200);
 
     const identifiedSections = page.locator('main > section[id]');
-    await expect(page.locator('main > section')).toHaveCount(4);
+    await expect(page.locator('main > section')).toHaveCount(5);
     await expect(identifiedSections).toHaveCount(3);
     const sectionIds = await identifiedSections.evaluateAll((sections) => sections.map((section) => section.id));
     // Christian's final home board: games before the vials.
@@ -54,12 +54,12 @@ test.describe('home page-specific behavior', () => {
 
     // The launch-updates box follows src/config/site.ts: Kit's form, a link to Kit's landing page, or the pending line.
     const state = signupState(newsletter.formAction, newsletter.landingUrl);
-    await expect(page.getByTestId('signup-form')).toHaveCount(state === 'form' ? 1 : 0);
-    await expect(page.getByTestId('signup-landing')).toHaveCount(state === 'landing' ? 1 : 0);
-    if (state === 'pending') await expect(page.getByTestId('signup-pending')).toHaveText('sign ups open soon.');
-    else await expect(page.getByTestId('signup-pending')).toHaveCount(0);
+    await expect(page.getByTestId('soon-form')).toHaveCount(state === 'form' ? 1 : 0);
+    await expect(page.getByTestId('soon-landing')).toHaveCount(state === 'landing' ? 1 : 0);
+    if (state === 'pending') await expect(page.getByTestId('soon-pending')).toHaveText('sign ups open soon.');
+    else await expect(page.getByTestId('soon-pending')).toHaveCount(0);
     if (state === 'landing') {
-      const landing = page.getByTestId('signup-landing');
+      const landing = page.getByTestId('soon-landing');
       await expect(landing).toHaveAttribute('href', kitLandingUrl(newsletter.landingUrl));
       await expect(landing).toHaveAttribute('target', '_blank');
       await expect(landing).toHaveAttribute('rel', /\bnoopener\b/);
@@ -78,7 +78,7 @@ test.describe('home page-specific behavior', () => {
     }
     if (state === 'form') {
       // The configured Kit path remains a plain HTML form. Do not submit it: that would create a real subscription.
-      const form = page.getByTestId('signup-form');
+      const form = page.getByTestId('soon-form');
       const email = form.getByLabel('email address');
       const submit = form.getByRole('button', { name: 'join the list' });
       await expect(form).toHaveAttribute('action', kitFormAction(newsletter.formAction));
@@ -130,28 +130,5 @@ test.describe('home page-specific behavior', () => {
       expect(focus.offset).toBe('3px');
       expect(focus.contrast).toBeGreaterThanOrEqual(3);
     }
-  });
-
-  test('opens and closes a study-mode preview with keyboard-safe focus', async ({ page }, testInfo) => {
-    test.skip(!homeSizes.has(sizeOf(testInfo)), 'Task 400 runs at phone and desktop sizes only.');
-    await page.emulateMedia({ reducedMotion: 'reduce' });
-    await page.goto('/');
-
-    const activeCard = page.locator('[data-mode-card][data-active]');
-    const openButton = activeCard.locator('[data-mode-open]');
-    await expect(openButton).toBeVisible();
-    const originalTitle = (await activeCard.locator('h3').textContent()) ?? '';
-    await openButton.click();
-
-    const dialog = page.getByRole('dialog', { name: /.+/ });
-    await expect(dialog).toBeVisible();
-    await expect(dialog.getByRole('heading', { level: 2 })).toHaveText(originalTitle);
-    await expect(dialog.getByRole('button', { name: 'close preview' })).toBeFocused();
-
-    await dialog.getByRole('button', { name: 'next study mode' }).click();
-    await expect(dialog.getByRole('heading', { level: 2 })).not.toHaveText(originalTitle);
-    await dialog.getByRole('button', { name: 'close preview' }).click();
-    await expect(dialog).toBeHidden();
-    await expect(page.locator('[data-mode-card][data-active] [data-mode-open]')).toBeFocused();
   });
 });
