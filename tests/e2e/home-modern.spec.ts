@@ -333,6 +333,7 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 1440, height: 900 
     test.describe(`the copper shine on "simpler." at ${viewport.width} wide in ${scheme}`, () => {
       test.use({ viewport, colorScheme: scheme });
 
+      let worstDetail = '';
       async function worstContrast(page: import('@playwright/test').Page): Promise<number> {
         const word = page.locator('.hero-accent');
         const box = (await word.boundingBox())!;
@@ -358,16 +359,23 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 1440, height: 900 
         };
         let worst = Infinity;
         let counted = 0;
+        worstDetail = '';
         for (let y = 2; y < info.height - 2; y++) {
           for (let x = 2; x < info.width - 2; x++) {
             // Interior pixels only: the anti-aliased edge blends the letter with the background.
             if (!(isGlyph(x, y) && isGlyph(x - 2, y) && isGlyph(x + 2, y) && isGlyph(x, y - 2) && isGlyph(x, y + 2))) continue;
             const i = (y * info.width + x) * 3;
             counted++;
-            worst = Math.min(worst, contrast([a[i], a[i + 1], a[i + 2]], [b[i], b[i + 1], b[i + 2]]));
+            const here = contrast([a[i], a[i + 1], a[i + 2]], [b[i], b[i + 1], b[i + 2]]);
+            if (here < worst) {
+              worst = here;
+              // Diagnostic only (shown when the check fails): which pixel was worst, and the two colours compared.
+              worstDetail = `worst pixel x=${x} y=${y} of ${info.width}x${info.height}, drawn rgb(${a[i]},${a[i + 1]},${a[i + 2]}) on behind rgb(${b[i]},${b[i + 1]},${b[i + 2]})`;
+            }
           }
         }
         expect(counted).toBeGreaterThan(100);
+        worstDetail += `, ${counted} glyph pixels`;
         return worst;
       }
 
@@ -383,7 +391,8 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 1440, height: 900 
             el.style.animationPlayState = 'paused';
             el.style.animationDelay = `-${p * 11}s`;
           }, phase);
-          expect(await worstContrast(page), `at ${phase * 100}%`).toBeGreaterThanOrEqual(3);
+          const worst = await worstContrast(page);
+          expect(worst, `at ${phase * 100}%: ${worstDetail}`).toBeGreaterThanOrEqual(3);
         }
       });
 
@@ -394,7 +403,8 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 1440, height: 900 
         });
         await page.goto('/');
         await expect(page.locator('.hero-accent')).toHaveCSS('animation-name', 'none');
-        expect(await worstContrast(page)).toBeGreaterThanOrEqual(3);
+        const worst = await worstContrast(page);
+        expect(worst, worstDetail).toBeGreaterThanOrEqual(3);
       });
     });
   }
