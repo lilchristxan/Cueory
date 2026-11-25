@@ -219,7 +219,7 @@ export function initGamesCarousel(): void {
   };
 
   /** Moves the row by a whole number of cards (positive goes forward, negative back; 0 repaints in place). */
-  const move = (delta: number) => {
+  const move = (delta: number, animate = true) => {
     // Past the look-alikes, swap to the real position first (only after many quick presses in a row).
     if (!fitsClones(virtualIndex + delta, count)) settle();
     virtualIndex += Math.trunc(delta);
@@ -237,7 +237,7 @@ export function initGamesCarousel(): void {
     });
 
     setState('turning');
-    if (isReducedMotion()) {
+    if (isReducedMotion() || !animate) {
       paint(virtualIndex, false);
       settle();
     } else {
@@ -248,8 +248,8 @@ export function initGamesCarousel(): void {
   };
 
   /** Moves to a real card by the shortest way round the circle. */
-  const goTo = (index: number) => {
-    move(shortestDelta(activeIndex, index, count));
+  const goTo = (index: number, animate = true) => {
+    move(shortestDelta(activeIndex, index, count), animate);
   };
 
   track.addEventListener('transitionend', (e) => {
@@ -289,7 +289,8 @@ export function initGamesCarousel(): void {
       // A browser may scroll the clipped row to show a focused card; the row moves by its own transform instead.
       car.scrollLeft = 0;
       if (idx !== activeIndex) {
-        goTo(idx);
+        // Keyboard focus must be on screen the moment it lands, so this move does not slide.
+        goTo(idx, false);
       }
     });
   });
