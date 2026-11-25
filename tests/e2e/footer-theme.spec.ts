@@ -53,6 +53,8 @@ test.describe('footer bar', () => {
     await expect(flag).toHaveText('');
     await expect(more).toHaveText('');
 
+    // The five words only fit on one row in Lato: measure once the fonts have loaded, not in the fallback face.
+    await page.evaluate(() => document.fonts.ready);
     const width = page.viewportSize()!.width;
     const flagBox = (await flag.boundingBox())!;
     const moreBox = (await more.boundingBox())!;

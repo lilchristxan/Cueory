@@ -355,7 +355,8 @@ describe.skipIf(!existsSync(dist))('built site', () => {
     '%s shows the building notice',
     (page) => {
       const html = readFileSync(join(dist, page), 'utf8');
-      expect(html).toContain("we're still building. more coming soon.");
+      expect(html).toContain("we&#39;re still building. please ");
+      expect(html).toContain(' our development. more coming soon!');
     },
   );
 
@@ -363,7 +364,7 @@ describe.skipIf(!existsSync(dist))('built site', () => {
     '%s (a game page) has no building strip and no site menu bar',
     (page) => {
       const html = readFileSync(join(dist, page), 'utf8');
-      expect(html).not.toContain("we're still building. more coming soon.");
+      expect(html).not.toContain("we&#39;re still building. please ");
       expect(html).not.toContain('<header');
       expect(html).toContain('skip to content');
     },
