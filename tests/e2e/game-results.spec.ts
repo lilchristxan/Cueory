@@ -1,5 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
+import { promo } from '../../src/config/site';
 
 const card = {
   game: 'pulse',
@@ -340,22 +341,41 @@ test('a delayed close frame cannot move focus out of a newly opened result', asy
   await expect(returnTo).toBeFocused();
 });
 
-test('first-visit promo waits while the result dialog owns focus', async ({ page }) => {
-  await page.evaluate(() => localStorage.removeItem('cueory-promo-seen'));
-  await page.reload();
+// The promo panel is switched off (`promo.show`); this test runs again when it is turned back on, and the else branch
+// checks that the result dialog is never joined by the panel.
+if (promo.show) {
+  test('first-visit promo waits while the result dialog owns focus', async ({ page }) => {
+    await page.evaluate(() => localStorage.removeItem('cueory-promo-seen'));
+    await page.reload();
 
-  const dialog = await openResult(page);
-  const close = dialog.getByRole('button', { name: 'close results' });
-  await expect(close).toBeFocused();
+    const dialog = await openResult(page);
+    const close = dialog.getByRole('button', { name: 'close results' });
+    await expect(close).toBeFocused();
 
-  await page.clock.runFor(5_500);
+    await page.clock.runFor(5_500);
 
-  await expect(page.getByTestId('promo')).toBeHidden();
-  await expect(close).toBeFocused();
-  await close.click();
-  await page.clock.runFor(500);
-  await expect(page.getByTestId('promo')).toBeVisible();
-});
+    await expect(page.getByTestId('promo')).toBeHidden();
+    await expect(close).toBeFocused();
+    await close.click();
+    await page.clock.runFor(500);
+    await expect(page.getByTestId('promo')).toBeVisible();
+  });
+} else {
+  test('with the promo panel switched off, the result dialog keeps focus and no promo panel appears', async ({ page }) => {
+    await page.evaluate(() => localStorage.removeItem('cueory-promo-seen'));
+    await page.reload();
+
+    const dialog = await openResult(page);
+    const close = dialog.getByRole('button', { name: 'close results' });
+    await expect(close).toBeFocused();
+    await page.clock.runFor(5_500);
+    await expect(page.locator('[data-promo]')).toHaveCount(0);
+    await expect(close).toBeFocused();
+    await close.click();
+    await page.clock.runFor(500);
+    await expect(page.locator('[data-promo]')).toHaveCount(0);
+  });
+}
 
 test('copy fallback stays plain and social destinations remain held', async ({ page }) => {
   const dialog = await openResult(page);
