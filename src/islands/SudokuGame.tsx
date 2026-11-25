@@ -12,6 +12,7 @@ import { DEFAULT_SUDOKU_SETTINGS, GAME_PROGRESS_EVENT, LEVEL_LABELS, sudokuProgr
 import { reportRound, SUDOKU_STATS_STORAGE_KEY, sudokuRoundResult } from './gameresults';
 import { keepSudokuSolve, loadSudokuStats, sudokuLevelStats, sudokuTime, type SavedSudokuStats } from './sudokustats';
 import PrintLogo from './PrintLogo';
+import { loadSudokuSave, saveSudokuProgress } from './sudokusave';
 
 const LEVELS: SudokuLevel[] = ['easy', 'medium', 'hard'];
 const NUMBERS = [1, 2, 3, 4, 5, 6, 7, 8, 9];
@@ -80,6 +81,8 @@ export default function SudokuGame({ framed = false }: { framed?: boolean } = {}
   const noted = useMemo(() => new Set(notes.flatMap((mask, index) => (mask ? [index] : []))), [notes]);
   const activeMode = effectiveSudokuMode(mode, shiftHeld);
   const reported = useRef(false);
+  /** The puzzle the board, clock and errors on screen belong to: set with them, so a save never writes one level's board under another. */
+  const [boardFor, setBoardFor] = useState<typeof puzzle | null>(null);
   /** Read by the auto-pause listeners, which outlive a render. */
   const pausedNow = useRef(paused);
   pausedNow.current = paused;
@@ -164,13 +167,23 @@ export default function SudokuGame({ framed = false }: { framed?: boolean } = {}
   }, [framed, paused]);
 
   useEffect(() => {
+    // A board played earlier today on this device (this level) comes back as it was; a finished one stays finished.
+    const saved = loadSudokuSave(puzzle.puzzle, day, level, browserStorage());
     const fresh = newSudokuBoard(puzzle.puzzle);
     ownNotes.current = [...fresh.notes];
-    setBoard(settings.autoCandidates ? withAutoNotes(fresh) : fresh); setHistory([]); setChecked(new Set());
+    setBoard(saved ? saved.board : settings.autoCandidates ? withAutoNotes(fresh) : fresh); setHistory([]); setChecked(new Set());
     setSelected(firstOpen(puzzle.puzzle));
-    setSeconds(0); setErrors(0); setPaused(false); setAuto(settings.autoCandidates);
-    setSaid(`${LEVEL_LABELS[level]} puzzle ready. ${LEVEL_RULES[level].givens} given numbers.`); reported.current = false;
+    setSeconds(saved?.seconds ?? 0); setErrors(saved?.errors ?? 0); setPaused(false); setAuto(saved ? saved.auto : settings.autoCandidates);
+    reported.current = Boolean(saved) && saved!.board.entries.every((value, index) => value === puzzle.solution[index]);
+    setSaid(saved ? `${LEVEL_LABELS[level]} puzzle restored.` : `${LEVEL_LABELS[level]} puzzle ready. ${LEVEL_RULES[level].givens} given numbers.`);
+    setBoardFor(puzzle);
   }, [puzzle]);
+
+  // Autosave after every move (and when the clock is paused or auto cues change), once the board on screen is this level's.
+  useEffect(() => {
+    if (boardFor !== puzzle) return;
+    saveSudokuProgress(puzzle.puzzle, day, level, { board, seconds, errors, auto }, browserStorage());
+  }, [board, errors, auto, paused, boardFor]);
 
   useEffect(() => {
     if (paused || solved) return;

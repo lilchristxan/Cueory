@@ -38,6 +38,7 @@ import GameHeader from './GameHeader';
 import { useSharedGameSettings } from './GameSettings.tsx';
 import { browserStorage } from '../scripts/storage';
 import { VIALO_KEY_ROWS } from './vialokeys';
+import { loadVialoSave, saveVialoGuesses } from './vialosave';
 
 interface Puzzle {
   word: string;
@@ -130,9 +131,14 @@ export default function VialoGame({ puzzles }: Props) {
   const today = useMemo(() => new Date(), []);
   const day = localDay(today);
   const puzzle = useMemo(() => puzzleForDay(playablePuzzles(puzzles), dayNumber(today)), [puzzles, today]);
+  // A game played earlier today on this device comes back as it was (a finished one stays finished); a new day starts fresh.
+  const [restored] = useState<PulseState | null>(() => {
+    const savedHardMode = loadVialoHardMode(browserStorage(), day);
+    return loadVialoSave(startVialo(puzzle?.word ?? '', savedHardMode, true), day);
+  });
   const [state, setState] = useState<PulseState>(() => {
     const savedHardMode = loadVialoHardMode(browserStorage(), day);
-    return startVialo(puzzle?.word ?? '', savedHardMode, savedHardMode !== undefined);
+    return restored ?? startVialo(puzzle?.word ?? '', savedHardMode, savedHardMode !== undefined);
   });
   const [text, setText] = useState('');
   const [problem, setProblem] = useState('');
@@ -145,7 +151,8 @@ export default function VialoGame({ puzzles }: Props) {
   const [finish, setFinish] = useState<FinishStats>({ on: false });
   const [wait, setWait] = useState('');
   const result = useRef<HTMLDivElement>(null);
-  const reported = useRef(false);
+  // A game that reopens already finished was reported the day it was finished, so it is not reported again.
+  const reported = useRef(restored !== null && restored.status !== 'playing');
   const words = useRef<ReadonlySet<string> | undefined>(undefined);
   const busy = useRef(false);
 
@@ -165,8 +172,12 @@ export default function VialoGame({ puzzles }: Props) {
 
   useEffect(() => {
     if (state.status === 'playing') return;
+    if (reported.current) {
+      // Reopened finished: show the saved stats, without a new result card.
+      if (restored && state === restored) setFinish(finishStats(localDay(new Date())));
+      return;
+    }
     result.current?.focus();
-    if (reported.current) return;
     reported.current = true;
     const tries = GUESSES - guessesLeft(state);
     const solved = state.status === 'solved';
@@ -215,6 +226,7 @@ export default function VialoGame({ puzzles }: Props) {
     }
     const next = playGuess(state, word, list);
     setState(next);
+    saveVialoGuesses(next, day);
     if (state.guesses.length === 0) {
       rememberVialoHardMode(browserStorage(), day, Boolean(next.hard));
       reportProgress({ game: 'vialo', day });
