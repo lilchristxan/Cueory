@@ -1,0 +1,1 @@
+status: local verification pending · Firefox at DPR 3 aborted while waiting on a cancelled animation after keyboard focus changed. Wait for the social links’ current transitions before comparing their exact boxes.

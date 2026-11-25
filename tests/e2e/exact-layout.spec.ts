@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page, type Locator } from '@playwright/test';
 import { markPanelsSeen } from './clock';
 import { isDesktopOfEachEngine } from './projects';
 
@@ -19,6 +19,17 @@ const rects = (page: Page, selector: string) =>
     const rect = element.getBoundingClientRect();
     return { x: rect.x, y: rect.y + window.scrollY, width: rect.width, height: rect.height };
   }), selector);
+
+const settleMarks = (marks: Locator) =>
+  marks.evaluateAll(async (links) => {
+    // Changing focus can cancel a transition and start its replacement.
+    for (;;) {
+      const active = links.flatMap((link) => link.getAnimations({ subtree: true }))
+        .filter((animation) => animation.pending || animation.playState === 'running');
+      if (!active.length) return;
+      await Promise.allSettled(active.map((animation) => animation.finished));
+    }
+  });
 
 for (const ratio of [1, 2, 3]) {
   test.describe(`device pixel ratio ${ratio}`, () => {
@@ -79,13 +90,13 @@ for (const ratio of [1, 2, 3]) {
         await marks.first().scrollIntoViewIfNeeded();
         const before = await rects(page, '[data-social-section] a[data-social]');
         await marks.nth(1).hover();
-        await page.evaluate(() => Promise.all(document.getAnimations().map((animation) => animation.finished)));
+        await settleMarks(marks);
         expect(await rects(page, '[data-social-section] a[data-social]')).toEqual(before);
         await page.mouse.move(0, 0);
         await marks.nth(2).focus();
         await page.keyboard.press('Shift+Tab');
         await page.keyboard.press('Tab');
-        await page.evaluate(() => Promise.all(document.getAnimations().map((animation) => animation.finished)));
+        await settleMarks(marks);
         expect(await rects(page, '[data-social-section] a[data-social]')).toEqual(before);
       }
     });
