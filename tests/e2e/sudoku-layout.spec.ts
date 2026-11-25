@@ -134,7 +134,7 @@ for (const scheme of ['light', 'dark'] as const) {
     const status = await effectivePaint(game(page).getByTestId('sudoku-status'));
     expect(contrast(status.color, status.background), `${scheme} status text`).toBeGreaterThanOrEqual(4.5);
 
-    // Settings fits the screen, scrolls inside itself, and its theme rows drive the footer's theme switch.
+    // Settings fits the screen, scrolls inside itself, and its theme slider drives the footer's theme switch.
     await page.getByTestId('game-frame-gear').click();
     const dialog = page.getByRole('dialog', { name: 'sudoku settings' });
     await expect(dialog).toBeVisible();
