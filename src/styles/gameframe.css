@@ -317,7 +317,7 @@
   box-sizing: border-box;
   position: relative;
   /* Graph-paper backdrop, painted by the play area itself so its middle is the board's middle. Every pitch is odd and
-     every line is 1 px, with a line on the tile's centre pixel; the tile is placed with round(down, 50%, 1px), so the
+     every line is 1 px, with a line on the tile's centre pixel; the tile is placed with round(down, 50%, var(--game-frame-grid-line)), so the
      lines fall on whole pixels and mirror left/right and top/bottom about the one stronger line in each direction. */
   background-image:
     linear-gradient(to right, transparent calc((var(--game-frame-grid-minor) - var(--game-frame-grid-line)) / 2), var(--game-frame-grid-minor-color) 0 calc((var(--game-frame-grid-minor) + var(--game-frame-grid-line)) / 2), transparent 0),
@@ -333,17 +333,19 @@
     var(--game-frame-grid-line) 100%, 100% var(--game-frame-grid-line);
   background-position: 50% 0, 0 50%, 50% 0, 0 50%, 50% 0, 0 50%;
   background-position:
-    round(down, 50%, 1px) 0, 0 round(down, 50%, 1px),
-    round(down, 50%, 1px) 0, 0 round(down, 50%, 1px),
-    round(down, 50%, 1px) 0, 0 round(down, 50%, 1px);
+    round(down, 50%, var(--game-frame-grid-line)) 0, 0 round(down, 50%, var(--game-frame-grid-line)),
+    round(down, 50%, var(--game-frame-grid-line)) 0, 0 round(down, 50%, var(--game-frame-grid-line)),
+    round(down, 50%, var(--game-frame-grid-line)) 0, 0 round(down, 50%, var(--game-frame-grid-line));
 }
 
 .game-frame-main::after {
   content: "";
+  grid-row: 3;
   min-block-size: var(--game-frame-main-pb);
 }
 
 .game-frame-head {
+  grid-row: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -593,6 +595,7 @@
 
 /* ---------------- Board Mount Area ---------------- */
 .game-frame-board {
+  grid-row: 2;
   width: 100%;
   max-width: var(--game-frame-max-board);
   display: flex;
