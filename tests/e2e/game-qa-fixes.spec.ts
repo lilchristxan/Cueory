@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { recordCspEvents, withoutWebkitSelectReports } from './csp-allow';
 
 // Fixes from the 25 Nov gameplay QA (docs/status/in-review/task-games-v2-qa-fixes.md). Each test fails on the build
 // before the fix. Games with a first-visit dialog start from empty storage; the rest of the suite starts as a returning
@@ -18,6 +19,9 @@ test.describe('returning player with saved stats', () => {
       const problems: string[] = [];
       page.on('console', (message) => { if (message.type() === 'error') problems.push(message.text()); });
       page.on('pageerror', (error) => problems.push(error.message));
+      // Structured CSP events, so the check is engine-independent. Only WebKit's native <select> report (the sudoku
+      // difficulty picker, csp-allow.ts, #862) is set aside; any other violation fails.
+      await recordCspEvents(page);
       const day = yesterday();
       await page.addInitScript((seedDay) => {
         const results = ['pulse', 'cueword', 'triage', 'suture', 'stat'].map((game) => ({ game, day: seedDay, solved: true, tries: 3 }));
@@ -26,7 +30,7 @@ test.describe('returning player with saved stats', () => {
       await page.goto(path);
       await expect(page.locator('.game-frame-stat').first()).toBeVisible();
       await page.waitForTimeout(500);
-      expect(problems).toEqual([]);
+      expect(await withoutWebkitSelectReports(page, problems)).toEqual([]);
       // The saved stats did load after hydration: at least one stat is not zero.
       const values = await page.locator('.game-frame-stat-value').allTextContents();
       if (path !== '/play/hello-cards') expect(values.some((value) => value !== '0')).toBe(true);
@@ -88,7 +92,7 @@ test('the launch-list promo panel does not open over a game in play', async ({ p
     await page.goto(path);
     await expect(page.locator('.game-frame, [data-game-page]').first()).toBeVisible();
     await page.clock.runFor(30_000);
-    await page.mouse.wheel(0, 2000);
+    await page.evaluate(() => window.scrollBy(0, 2000));
     await page.clock.runFor(2_000);
     await expect(page.getByTestId('promo')).toBeHidden();
   }
