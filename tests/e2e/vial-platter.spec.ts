@@ -152,7 +152,14 @@ test.describe('wide layout (desktop 1440)', () => {
 });
 
 test.describe('touch screen (no hovering pointer)', () => {
-  test.use({ hasTouch: true, isMobile: true });
+  // Playwright's `isMobile` is not supported in Firefox (it hangs the page), so it is set only for Chromium and WebKit.
+  // The touch screen (`hasTouch`) stays on in every browser, so the test still runs in Firefox.
+  test.use({
+    hasTouch: true,
+    isMobile: async ({ browserName }, use) => {
+      await use(browserName === 'chromium' || browserName === 'webkit');
+    },
+  });
 
   test('a pointer resting on a vial does not leave it lifted, but keyboard focus still lifts it', async ({ page }) => {
     await open(page, { width: 820, height: 1180 });
