@@ -78,13 +78,10 @@ test('keyboard: a to d pick and change the answer, Enter goes on, nothing is gra
   await expect(progress(page)).toHaveText('question 2 of 15');
 });
 
-test('other open dialogs and an expanded account menu never pick a background answer', async ({ page }) => {
+test('another open dialog never picks a background answer', async ({ page }) => {
   await start(page);
-  await page.getByRole('button', { name: 'open account menu' }).click();
-  await expect(page.getByTestId('account-menu')).toBeVisible();
-  await page.keyboard.press('a');
-  await expect(choice(page, 'a')).toHaveAttribute('aria-pressed', 'false');
-  await page.getByRole('button', { name: 'close account menu' }).click();
+  // /play/stat uses the header-free game layout (like every game page), so there is no account menu to open here.
+  await expect(page.getByRole('button', { name: 'open account menu' })).toHaveCount(0);
 
   await page.evaluate(() => {
     const dialog = document.createElement('dialog');
@@ -261,33 +258,13 @@ for (const size of [
   { label: 'desktop', width: 1440, height: 900 },
 ] as const) {
   for (const scheme of ['light', 'dark'] as const) {
-    test(`site menu and search block stat keys at ${size.label} in ${scheme}`, async ({ page }) => {
+    test(`header-free layout, keys and axe at ${size.label} in ${scheme}`, async ({ page }) => {
       await page.setViewportSize({ width: size.width, height: size.height });
       await page.emulateMedia({ colorScheme: scheme, reducedMotion: 'reduce' });
       await start(page);
 
-      const open = page.getByRole('button', { name: 'open site menu' });
-      await expect(open).toBeVisible();
-      await open.click();
-      const dialog = page.getByTestId('site-menu');
-      await expect(dialog).toHaveJSProperty('open', true);
-      await page.keyboard.press('a');
-      await expect(choice(page, 'a')).toHaveAttribute('aria-pressed', 'false');
-
-      const resultLink = dialog.getByRole('navigation', { name: 'site' }).getByRole('link').first();
-      await resultLink.focus();
-      await page.keyboard.press('d');
-      await expect(choice(page, 'd')).toHaveAttribute('aria-pressed', 'false');
-
-      const search = dialog.getByRole('searchbox', { name: 'search the site' });
-      await search.focus();
-      await page.keyboard.press('b');
-      await expect(search).toHaveValue('b');
-      await expect(choice(page, 'b')).toHaveAttribute('aria-pressed', 'false');
-      await page.getByRole('button', { name: 'close site menu' }).click();
-      await expect(dialog).toHaveJSProperty('open', false);
-      // The menu's own close handler resets its toggle; wait for it before typing a shortcut again.
-      await expect(open).toHaveAttribute('aria-expanded', 'false');
+      // The game layout has no site menu or search (header-free, like every game page); the shortcuts work directly.
+      await expect(page.getByRole('button', { name: 'open site menu' })).toHaveCount(0);
 
       await page.getByTestId('stat-stem').focus();
       await page.keyboard.press('a');

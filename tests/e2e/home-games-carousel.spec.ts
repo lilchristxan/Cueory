@@ -97,6 +97,12 @@ test.describe('home games carousel (Home v2 Lane 5)', () => {
     const section = page.locator('#daily-games');
     await section.scrollIntoViewIfNeeded();
 
+    // Ready state, as in the first test: the track is settled and the section's reveal has started (it no longer
+    // waits), so no slide or rise moves the card out from under the pointer before the hover is read.
+    const carousel = section.locator('[data-games-carousel]');
+    await expect(carousel).toHaveAttribute('data-carousel-state', 'settled');
+    await expect(carousel).not.toHaveAttribute('data-reveal', 'waiting');
+
     const firstCard = section.locator('[data-game-card]').first();
     const demo = firstCard.locator('.gdemo');
     await expect(demo).toBeAttached();

@@ -14,7 +14,7 @@ const game = dailyGames[3]!;
 const samples = await wordPathSamples();
 ---
 
-<Layout title="piccline" description={game.line} socialImage="/share/games-scene.png" noindex={true} bareHeader={gamePagesBareHeader}>
+<Layout title="piccline" description={game.line} socialImage="/share/games-scene.png" bareHeader={gamePagesBareHeader}>
   <GamePage game={game} showcase>
     <h1 slot="title" id="piccline-heading" class="display mt-4 flex flex-col items-center">
       <PicclineTitle name="piccline" />

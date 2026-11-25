@@ -30,3 +30,29 @@ export const aboutLinks: readonly NavLink[] = [
 export function visibleAboutLinks(): NavLink[] {
   return visibleFooterLinks(aboutLinks);
 }
+
+export interface DrawerLink {
+  href: string;
+  label: string;
+  /** Shown only where this build may show drafts (staging, previews, local), never on the live site. */
+  draft?: boolean;
+}
+
+/**
+ * The main rows of the side bar, as on Christian's boards (2026-11-24). The anatomy lab shows only in builds that may
+ * show drafts; it links to its preview page there.
+ */
+export const drawerPrimaryLinks: readonly DrawerLink[] = [
+  { href: '/courses', label: 'study' },
+  { href: '/preview/anatomy-lab', label: 'anatomy lab', draft: true },
+  { href: '/play', label: 'games' },
+  { href: '/support', label: 'support' },
+];
+
+/** The rows under the "about" label, before the privacy, terms and disclaimer row. */
+export const drawerAboutLinks: readonly DrawerLink[] = [
+  { href: '/about', label: 'about us' },
+  { href: '/resources', label: 'how to use cueory', draft: true },
+  { href: '/coming-soon', label: 'coming soon + mailing list' },
+  { href: '/message', label: 'contact us' },
+];
