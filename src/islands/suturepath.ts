@@ -192,6 +192,11 @@ export function isPathPuzzle(puzzle: WordPathPuzzle): puzzle is SuturePathPuzzle
   return 'format' in puzzle && puzzle.format === 'path';
 }
 
+/** The board-format puzzles only, in their order: the list the daily piccline rotates through. */
+export function boardPuzzles(puzzles: readonly WordPathPuzzle[]): SuturePathPuzzle[] {
+  return puzzles.filter(isPathPuzzle);
+}
+
 /** Reads a word path puzzle in either format. A file with "format": "path" is a board; one without is the older search. */
 export function parseWordPath(data: unknown): WordPathPuzzle {
   if (record(data) && data.format !== undefined) {
