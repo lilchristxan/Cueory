@@ -50,8 +50,8 @@ type Phase = 'ready' | 'playing' | 'grading' | 'done' | 'failed';
 function Ring({ left }: { left: number }) {
   const low = left <= LOW_SECONDS;
   return (
-    <div role="timer" aria-label="seconds left" className="relative size-16 shrink-0" data-testid="stat-timer">
-      <svg viewBox="0 0 64 64" className="size-16" aria-hidden="true" focusable="false">
+    <div role="timer" aria-label="seconds left" className="relative size-20 shrink-0" data-testid="stat-timer">
+      <svg viewBox="0 0 64 64" className="size-20" aria-hidden="true" focusable="false">
         <circle cx="32" cy="32" r={RADIUS} fill="none" stroke="currentColor" strokeWidth="6" className="text-line" />
         <circle
           cx="32"
@@ -64,7 +64,7 @@ function Ring({ left }: { left: number }) {
           strokeDasharray={CIRCUMFERENCE.toFixed(2)}
           strokeDashoffset={(CIRCUMFERENCE * (1 - ringFraction(left))).toFixed(2)}
           transform="rotate(-90 32 32)"
-          className="text-ink transition-none ease-linear motion-safe:transition-all motion-safe:duration-(--duration-slow)"
+          className="text-copper-deep transition-none ease-linear motion-safe:transition-all motion-safe:duration-(--duration-slow)"
           data-testid="stat-ring"
         />
       </svg>
@@ -276,17 +276,24 @@ export default function StatGame({ questions, sampleKey, game = 'stat' }: Props)
       )}
 
       {phase === 'playing' && question && (
-        <div className="flex flex-col gap-5">
-          <div className="flex items-center justify-between gap-4">
-            <p className="text-ink-soft" data-testid="stat-progress">
-              question <strong className="text-ink">{state.index + 1}</strong> of {STAT_QUESTIONS}
-            </p>
+        <div className="mx-auto flex w-full max-w-xl flex-col gap-6">
+          <div className="flex items-center justify-center gap-6">
             <Ring left={left} />
+            <p className="sr-only" data-testid="stat-progress">
+              question <strong>{state.index + 1}</strong> of {STAT_QUESTIONS}
+            </p>
+            <ol className="flex flex-wrap items-center gap-2" aria-hidden="true" data-testid="stat-dots">
+              {Array.from({ length: STAT_QUESTIONS }, (_, i) => (
+                <li
+                  key={i}
+                  className={`size-3 rounded-full border ${i < state.index ? 'border-ink bg-ink' : i === state.index ? 'border-2 border-ink' : 'border-line'}`}
+                />
+              ))}
+            </ol>
           </div>
 
-          <section className="flex flex-col gap-4 rounded-xl border border-line bg-page p-5 sm:p-7" aria-labelledby="stat-stem">
-            <p className="text-sm font-bold text-ink-soft">clinical question</p>
-            <h3 id="stat-stem" ref={stemRef} tabIndex={-1} className="wrap-anywhere text-lg font-bold" data-testid="stat-stem">
+          <section className="flex flex-col gap-5" aria-labelledby="stat-stem">
+            <h3 id="stat-stem" ref={stemRef} tabIndex={-1} className="wrap-anywhere text-center text-xl font-normal" data-testid="stat-stem">
               {question.stem}
             </h3>
             <div className="flex flex-col gap-3" role="group" aria-labelledby="stat-stem">
@@ -299,11 +306,11 @@ export default function StatGame({ questions, sampleKey, game = 'stat' }: Props)
                     aria-pressed={selected}
                     onClick={() => pick(choice.id)}
                     data-testid={`stat-choice-${choice.id}`}
-                    className={`press flex min-h-14 w-full min-w-0 cursor-pointer touch-manipulation items-center gap-3 rounded-lg bg-surface px-4 py-2.5 text-start ${selected ? 'border-2 border-ink font-bold' : 'border border-control'}`}
+                    className={`press flex min-h-14 w-full min-w-0 cursor-pointer touch-manipulation items-center gap-4 rounded-xl px-4 py-2.5 text-start ${selected ? 'border-2 border-ink bg-surface' : 'border border-line bg-page'}`}
                   >
                     <span
                       aria-hidden="true"
-                      className={`flex size-8 shrink-0 items-center justify-center rounded-full border border-control text-sm font-bold ${selected ? 'bg-button text-on-button' : ''}`}
+                      className={`flex size-9 shrink-0 items-center justify-center rounded-full text-sm font-bold ${selected ? 'bg-button text-on-button' : 'bg-surface'}`}
                     >
                       {letterLabel(choice.id)}
                     </span>
@@ -311,19 +318,17 @@ export default function StatGame({ questions, sampleKey, game = 'stat' }: Props)
                       <span className="sr-only">{letterLabel(choice.id)}. </span>
                       {choice.text}
                     </span>
-                    {selected && <span className="shrink-0 text-sm font-bold">● selected</span>}
+                    {selected && <span className="sr-only">selected</span>}
                   </button>
                 );
               })}
             </div>
-            <p className="text-sm text-ink-soft">pick an answer, then press next. answers and your score show at the end.</p>
+            <p className="sr-only">pick an answer, then lock it in. answers and your score show at the end.</p>
           </section>
 
-          <div className="flex justify-end">
-            <button type="button" className={primaryButton} onClick={next} data-testid="stat-next">
-              {state.index + 1 >= STAT_QUESTIONS ? 'see results' : 'next'} <span aria-hidden="true">&nbsp;→</span>
-            </button>
-          </div>
+          <button type="button" className={`${primaryButton} w-full`} onClick={next} data-testid="stat-next">
+            {state.index + 1 >= STAT_QUESTIONS ? 'see results' : 'lock in answer'}
+          </button>
         </div>
       )}
 

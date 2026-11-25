@@ -71,7 +71,7 @@ describe('levels and the puzzle validator', () => {
 });
 
 describe('normal and candidate modes', () => {
-  it('Space toggles, holding Shift flips the mode for that moment, and Shift+number still names the number', () => {
+  it('Space toggles Pencil mode, holding Shift flips the mode for that moment, and Shift+number still names the number', () => {
     expect(sudokuKeyAction(' ', 0)).toEqual({ kind: 'toggle-mode' });
     expect(effectiveSudokuMode('normal', false)).toBe('normal');
     expect(effectiveSudokuMode('normal', true)).toBe('candidate');
