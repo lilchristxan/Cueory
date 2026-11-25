@@ -1,4 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
+import { markGameRulesSeen } from './clock';
+
+test.beforeEach(async ({ page }) => { await markGameRulesSeen(page); });
 
 // A phone turned sideways (844 × 390): every game board on its own page and every game dialog fits without sideways scroll,
 // and the word path letter board fits the screen's height so a path can be dragged without scrolling.

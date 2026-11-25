@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { markGameRulesSeen } from './clock';
 import { recordCspEvents, withoutWebkitSelectReports } from './csp-allow';
 
 // Fixes from the 25 Nov gameplay QA (docs/status/in-review/task-games-v2-qa-fixes.md). Each test fails on the build
@@ -22,6 +23,7 @@ test.describe('returning player with saved stats', () => {
       // Structured CSP events, so the check is engine-independent. Only WebKit's native <select> report (the sudoku
       // difficulty picker, csp-allow.ts, #862) is set aside; any other violation fails.
       await recordCspEvents(page);
+      await markGameRulesSeen(page);
       const day = yesterday();
       await page.addInitScript((seedDay) => {
         const results = ['pulse', 'cueword', 'triage', 'suture', 'stat'].map((game) => ({ game, day: seedDay, solved: true, tries: 3 }));
@@ -39,7 +41,6 @@ test.describe('returning player with saved stats', () => {
 });
 
 test.describe('first visit', () => {
-  test.use({ storageState: { cookies: [], origins: [] } });
   for (const path of ['/play/vialo', '/play/sudoku', '/play/crossword', '/play/piccline']) {
     test(`${path} shows the rules once`, async ({ page }) => {
       await page.goto(path);
@@ -56,6 +57,7 @@ test.describe('first visit', () => {
 });
 
 test('sudoku help names the levels the picker uses', async ({ page }) => {
+  await markGameRulesSeen(page);
   await page.goto('/play/sudoku');
   await page.getByRole('button', { name: 'how to play sudoku' }).first().click();
   const body = page.getByTestId('game-help-body');
@@ -65,6 +67,7 @@ test('sudoku help names the levels the picker uses', async ({ page }) => {
 
 test.describe('tachyyy', () => {
   test('buttons use the current game name', async ({ page }) => {
+    await markGameRulesSeen(page);
     await page.goto('/play/tachyyy');
     await expect(page.getByRole('button', { name: 'tachyyy settings' })).toHaveCount(1);
     await expect(page.getByRole('button', { name: 'how to play tachyyy' })).toHaveCount(1);
@@ -73,6 +76,7 @@ test.describe('tachyyy', () => {
   });
 
   test('Enter does nothing until an answer is picked', async ({ page }) => {
+    await markGameRulesSeen(page);
     await page.goto('/play/tachyyy');
     await page.getByTestId('stat-start').click();
     const progress = page.getByTestId('stat-progress');
