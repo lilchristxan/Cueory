@@ -13,6 +13,7 @@ import { reportRound, SUDOKU_STATS_STORAGE_KEY, sudokuRoundResult } from './game
 import { keepSudokuSolve, loadSudokuStats, sudokuLevelStats, sudokuTime, type SavedSudokuStats } from './sudokustats';
 import PrintLogo from './PrintLogo';
 import { loadSudokuSave, saveSudokuProgress } from './sudokusave';
+import { SUDOKU_SAVE_KEY } from './gamesavekeys';
 
 const LEVELS: SudokuLevel[] = ['easy', 'medium', 'hard'];
 const NUMBERS = [1, 2, 3, 4, 5, 6, 7, 8, 9];
@@ -183,15 +184,22 @@ export default function SudokuGame({ framed = false }: { framed?: boolean } = {}
   // Autosave after every move (and when the clock is paused or auto cues change), once the board on screen is this level's.
   // Autosave after every move. The latest progress is also kept in a ref and written again when the page is hidden or
   // closed, so a reload right after a move cannot beat the effect.
+  // The board whose saved copy was forgotten ("forget all my stats", here or in another tab): it is not written back,
+  // by the effect or by pagehide, until a real move gives a new board.
+  const forgottenBoard = useRef<SudokuBoard | null>(null);
+  const boardNow = useRef(board);
+  boardNow.current = board;
   const latest = useRef<(() => void) | null>(null);
-  latest.current = boardFor === puzzle ? () => saveSudokuProgress(puzzle.puzzle, day, level, { board, seconds, errors, auto, own: ownNotes.current }, browserStorage()) : null;
+  latest.current = boardFor === puzzle && forgottenBoard.current !== board ? () => saveSudokuProgress(puzzle.puzzle, day, level, { board, seconds, errors, auto, own: ownNotes.current }, browserStorage()) : null;
   useEffect(() => {
     latest.current?.();
   }, [board, errors, auto, paused, boardFor]);
   useEffect(() => {
     const flush = () => latest.current?.();
+    const forgot = (event: StorageEvent) => { if (event.key === null || (event.key === SUDOKU_SAVE_KEY && event.newValue === null)) forgottenBoard.current = boardNow.current; };
     window.addEventListener('pagehide', flush);
-    return () => { window.removeEventListener('pagehide', flush); };
+    window.addEventListener('storage', forgot);
+    return () => { window.removeEventListener('pagehide', flush); window.removeEventListener('storage', forgot); };
   }, []);
 
   useEffect(() => {
@@ -344,6 +352,7 @@ export default function SudokuGame({ framed = false }: { framed?: boolean } = {}
     setSaid('sudoku stats forgotten.');
   };
   const forgetAllStats = () => {
+    forgottenBoard.current = board;
     const forgotten = deleteStats(browserStorage());
     forgetHeldRounds();
     reportStatsChanged();

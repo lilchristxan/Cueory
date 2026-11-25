@@ -137,3 +137,59 @@ test.describe('crossword autosave', () => {
     await expect(board(page).getByTestId('crossword-badge')).toHaveCount(0);
   });
 });
+
+// "Forget" must really forget (Codex on #1197): the saved board is deleted, and the page leaving or reloading must not
+// write it back.
+test.describe('forgetting stats forgets the saved board', () => {
+  test('vialo: another tab forgets, and the reload starts a fresh board', async ({ page, context }) => {
+    await open(page, '/play/vialo');
+    await page.getByRole('textbox', { name: 'your guess' }).fill('crane');
+    await page.getByRole('button', { name: 'enter', exact: true }).click();
+    await expect(page.getByRole('list', { name: 'your guesses' }).getByRole('listitem')).toHaveCount(1);
+    // Another tab forgets (the stats panel removes the key): the open game must not bring it back.
+    const other = await context.newPage();
+    await other.goto('/play/piccline');
+    await other.evaluate(() => localStorage.removeItem('cueory-vialo-save'));
+    await page.reload();
+    await expect(page.getByRole('textbox', { name: 'your guess' })).toBeVisible();
+    await expect(page.getByRole('list', { name: 'your guesses' }).getByRole('listitem')).toHaveCount(0);
+    expect(await page.evaluate(() => localStorage.getItem('cueory-vialo-save'))).toBeNull();
+    await other.close();
+  });
+
+  test('sudoku: "forget all my stats" deletes the saved board and a reload does not write it back', async ({ page }) => {
+    const daily = generateSudoku(dailySudokuSeed(DAY, 'easy'), 'easy');
+    const empty = daily.puzzle.flatMap((digit, index) => (digit === 0 ? [index] : []));
+    const cells = page.getByTestId('sudoku').getByRole('grid', { name: 'sudoku grid' }).getByRole('gridcell');
+    await open(page, '/play/sudoku');
+    await expect(cells).toHaveCount(81);
+    await cells.nth(empty[0]!).click();
+    await page.keyboard.press(String(daily.solution[empty[0]!]));
+    await expect.poll(() => page.evaluate(() => localStorage.getItem('cueory-sudoku-save'))).not.toBeNull();
+    await page.getByTestId('game-frame-gear').click();
+    const settings = page.getByRole('dialog', { name: 'sudoku settings' });
+    await settings.getByRole('button', { name: 'forget all my stats' }).click();
+    await settings.getByRole('button', { name: 'yes, forget all my stats' }).click();
+    expect(await page.evaluate(() => localStorage.getItem('cueory-sudoku-save'))).toBeNull();
+    await page.reload();
+    await expect(cells).toHaveCount(81);
+    expect(await page.evaluate(() => localStorage.getItem('cueory-sudoku-save'))).toBeNull();
+    await expect(cells.nth(empty[0]!)).toHaveAttribute('aria-label', /empty$/);
+  });
+
+  test('crossword: a board forgotten in another tab is not written back by the open tab on reload', async ({ page, context }) => {
+    await open(page, '/play/crossword');
+    const square = (row: number, column: number) => page.getByTestId('cueword').getByRole('button', { name: new RegExp('^(?:\\d+, )?row ' + row + ', column ' + column + ',') });
+    await square(2, 1).click();
+    await page.keyboard.type('d');
+    await expect(square(2, 1)).toHaveAttribute('aria-label', /letter D$/);
+    const other = await context.newPage();
+    await other.goto('/play/vialo');
+    await other.evaluate(() => localStorage.removeItem('cueory-crossword-save'));
+    await other.close();
+    await page.reload();
+    await expect(page.getByTestId('cueword')).toBeVisible();
+    expect(await page.evaluate(() => localStorage.getItem('cueory-crossword-save'))).toBeNull();
+    await expect(square(2, 1)).toHaveAttribute('aria-label', /empty$/);
+  });
+});
