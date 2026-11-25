@@ -557,6 +557,8 @@
   --wordpath-bleed: calc(var(--spacing) * 6); /* how far the Word Path panel bleeds past its column on phones; the game Frame narrows it to its own gutter */
   --border-wordpath-panel: 1px;      /* the hairline rim of the word path panel (the rendering shows a 1 px light edge) */
   --wordpath-ring: 2px;              /* the copper ring round a picked letter (WordPath.png shows about 2 px at 1440) */
+  --wordpath-pip: 14px;              /* the width and height of one pip in the cue meter beside the cue button */
+  --wordpath-pip-ring: 2px;          /* the outline of an empty pip; a filled pip is solid, so the two differ in more than color */
   --wordpath-line: 3px;              /* the line that joins the letters of a word, from circle edge to circle edge */
   --wordpath-cell-max: 4.5rem;       /* a 6 × 8 board square's ceiling: 72 px, as large as a crossword square, so tablet and desktop boards are not oversized */
   --wordpath-columns: 11;            /* each puzzle overrides this with its validated grid width */
