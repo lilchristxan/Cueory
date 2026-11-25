@@ -1,8 +1,9 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import DailyGamesSection from '../components/DailyGamesSection.astro';
-import ModesCarousel from '../components/ModesCarousel.astro';
-import SignupForm from '../components/SignupForm.astro';
+import VialPlatter from '../components/VialPlatter.astro';
+import ComingSoon from '../components/home-v3/ComingSoon.astro';
+import Social from '../components/home-v3/Social.astro';
 import HomeHero from '../components/HomeHero.astro';
 import ContinueBar from '../islands/ContinueBar';
 import { site } from '../config/site';
@@ -21,15 +22,18 @@ import { site } from '../config/site';
   <HomeHero />
 
   <!--
-    Below the hero the silk scenes alternate Ivory and Linen (D-53). The order is Christian's final home board (20 Nov):
-    hero, explore bar (in the hero), nurse's station games (Ivory), one lesson / multiple ways to study (Linen), launch
-    updates. The explore bar's "study materials" tile still jumps to #ways-to-study.
+    Home v3 (approved boards, docs/design/home-v3/README.md): hero with the stage and the explore dock (inside HomeHero),
+    nurse's station games, the vial platter ("one lesson, multiple ways to study"), coming soon (the Kit email form),
+    the social marks, then the footer (in the layout). The explore dock's "study materials" tile jumps to
+    #ways-to-study (the platter's id), and "launch updates" links land on #signup (the coming-soon panel's id).
   -->
   <DailyGamesSection />
 
-  <ModesCarousel />
+  <VialPlatter />
 
-  <SignupForm />
+  <ComingSoon />
+
+  <Social />
 </Layout>
 
 <script>

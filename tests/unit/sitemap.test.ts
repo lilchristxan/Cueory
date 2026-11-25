@@ -1,7 +1,8 @@
 import { readFileSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
-import { indexablePages, sampleLessonPages } from '../../src/config/routes';
+import { indexablePages, playableGamePages, sampleLessonPages } from '../../src/config/routes';
+import { dailyGames } from '../../src/config/games';
 import { crosswordOpen } from '../../src/config/site';
 import { draftsAllowed } from '../../src/islands/anatomylab';
 import { draftBuildEnv } from '../../src/lessons/draftgate';
@@ -38,7 +39,7 @@ describe('sitemap', () => {
   });
 
   it('lists each public game page but not draft-only games', () => {
-    const published = ['/play/pillo', '/play/sudoku', '/play/word-path'] as const;
+    const published = ['/play/vialo', '/play/sudoku', '/play/piccline'] as const;
     const xml = sitemapXml();
     for (const path of published) {
       expect(indexablePages).toContain(path);
@@ -52,6 +53,25 @@ describe('sitemap', () => {
     for (const path of ['/play/stat', '/play/hello-cards']) {
       expect(indexablePages).not.toContain(path);
       expect(xml).not.toContain(`<loc>https://cueory.app${path}</loc>`);
+    }
+  });
+
+  it('lists exactly the playable daily games, none of the coming-soon or account pages', () => {
+    const listed = [...sitemapXml().matchAll(/<loc>([^<]+)<\/loc>/g)].map((match) => match[1].replace('https://cueory.app', ''));
+    // Playable games follow games.ts (ready) and the crossword switch; the legacy bookmark routes are the only other /play pages.
+    const expected = ['/play/vialo', '/play/sudoku', '/play/piccline', ...(crosswordOpen ? ['/play/crossword'] : [])];
+    expect([...playableGamePages].sort()).toEqual([...expected].sort());
+    expect(dailyGames.filter((game) => game.ready).length).toBeGreaterThanOrEqual(3);
+    expect(listed.filter((path) => path.startsWith('/play/')).sort()).toEqual([...expected].sort());
+    // Legacy bookmark routes: noindex, out of the sitemap, canonical to their replacements.
+    for (const [legacy, to] of [['/play/pillo', '/play/vialo'], ['/play/word-path', '/play/piccline']] as const) {
+      expect(listed).not.toContain(legacy);
+      expect(routeDeclaresNoindex(legacy)).toBe(true);
+      const html = readFileSync(resolve('dist', `${legacy.slice(1)}.html`), 'utf8');
+      expect(html).toContain(`rel="canonical" href="https://cueory.app${to}"`);
+    }
+    for (const path of ['/about', '/resources', '/coming-soon', '/play/tachyyy', '/play/stat', '/play/hello-cards', '/signin', '/signup', '/account', '/account/two-factor', '/reset-password', '/auth/callback', '/progress', '/start', '/subscribed', ...(crosswordOpen ? [] : ['/play/crossword'])]) {
+      expect(listed).not.toContain(path);
     }
   });
 

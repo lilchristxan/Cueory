@@ -16,12 +16,10 @@ describe('footer report panel placement', () => {
     const open = /<div\s+class="([^"]*)"\s+data-footer-base\s*>/.exec(footer);
     expect(open, 'data-footer-base').not.toBeNull();
     const classes = open![1].split(/\s+/);
-    // Positioned (the panel is placed against it), and the link row is drawn above the bar that comes first.
+    // Positioned (the panel is placed against it); the flag, links and chevron are one row inside it (home boards, 2026-11-24).
     expect(classes).toContain('relative');
-    expect(classes).toContain('flex-col-reverse');
-    // In the footer the form's own wrapper is not positioned, and the panel keeps the flag's inset.
+    // In the footer the form's own wrapper is not positioned, and the panel starts at the flag (the row's left edge).
     expect(classes).toContain('[&_[data-testid=flag-form]]:static');
-    expect(classes).toContain('[&_[data-testid=flag-form]>.absolute]:left-gutter');
 
     const start = open!.index;
     const end = footer.indexOf('<div id="site-footer-panel"');

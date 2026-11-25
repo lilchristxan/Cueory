@@ -74,7 +74,7 @@ test.describe('courses page', () => {
     await expect(menuButton).toBeVisible();
     await expect(menuButton).toHaveAccessibleName(/menu/);
     await menuButton.click();
-    const coursesLink = page.getByRole('dialog').getByRole('link', { name: 'courses', exact: true });
+    const coursesLink = page.getByRole('dialog').getByRole('link', { name: 'study', exact: true });
     await expect(coursesLink).toBeVisible();
     await expect(coursesLink).toHaveAttribute('href', '/courses');
   });

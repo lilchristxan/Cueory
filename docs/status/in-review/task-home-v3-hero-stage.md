@@ -1,0 +1,4 @@
+status: in review · task-home-v3/hero-stage-lane · Home v3 hero: stage photo, halo, headline, start button, points and Ko-fi pill, matching the 1440, 390 and 844 boards in Light and Evening (landscape: button inside the top of the ring, points under the pedestal); board-difference pass: Ko-fi pill and button sized as the boards, lighter headline, taller phone stage, dock overlap 92 px, hero-only background without the peach wash.
+decision: D-pending — board Playfair Display becomes self-hosted Bodoni Moda for the headline.
+decision: D-pending — board italic eyebrow becomes plain upright self-hosted Lato.
+decision: D-pending — text, copper, borders and light all use the nearest existing Daytime/Evening brand tokens; the accent letters use solid ink (no text stroke, which failed the 3:1 check on Bodoni's thin strokes) and the halo carries the travelling light.

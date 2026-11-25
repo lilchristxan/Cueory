@@ -14,9 +14,11 @@ interface Props {
   quiet?: boolean;
   /** The page's accounts gate is closed (/signin, /signup): keep the signed-out menu and never load Supabase. */
   accountsOff?: boolean;
+  /** Home v3: signed-out visitors on wide screens also see the words "sign in" beside the icon (the pill in the board). */
+  pill?: boolean;
 }
 
-const { quiet = false, accountsOff = false } = Astro.props;
+const { quiet = false, accountsOff = false, pill = false } = Astro.props;
 const items = [
   { label: 'create free account', href: accountHref },
   { label: 'sign in', href: accountsOpen ? '/signin' : accountHref },
@@ -27,7 +29,8 @@ const items = [
   <button
     type="button"
     class:list={['corner-button invisible', quiet && 'corner-button-quiet']}
-    aria-label="open account menu"
+    aria-label={pill ? 'sign in, open account menu' : 'open account menu'}
+    data-sign-in-words={pill ? '' : undefined}
     aria-expanded="false"
     aria-controls="account-menu"
     data-account-toggle
@@ -37,6 +40,7 @@ const items = [
       <path d="M4.75 19.5c1.2-3.6 4-5.25 7.25-5.25s6.05 1.65 7.25 5.25" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path>
     </svg>
     <span class="font-body text-base font-semibold" data-account-initials aria-hidden="true" hidden></span>
+    {pill && <span class="account-pill-label" data-account-label aria-hidden="true">sign in</span>}
   </button>
 
   <div id="account-menu" class="account-menu" hidden data-testid="account-menu">
@@ -72,10 +76,15 @@ const items = [
     let pending: CornerView | null = null;
 
     // Keep a link's keyboard focus intact if auth finishes while the menu is open.
+    // The pill shows the words "sign in" while signed out, so the name starts with them (WCAG 2.5.3, label in name).
+    const setLabel = (open: boolean) => {
+      const words = toggle.hasAttribute('data-sign-in-words') && !toggle.hasAttribute('data-signed-in') ? 'sign in, ' : '';
+      toggle.setAttribute('aria-label', `${words}${open ? 'close' : 'open'} account menu`);
+    };
     const setOpen = (open: boolean) => {
       menu.hidden = !open;
       toggle.setAttribute('aria-expanded', String(open));
-      toggle.setAttribute('aria-label', open ? 'close account menu' : 'open account menu');
+      setLabel(open);
       if (!open && pending) {
         const next = pending;
         pending = null;
@@ -105,6 +114,8 @@ const items = [
 
       icon!.classList.toggle('hidden', view.account.signedIn);
       initials!.hidden = !view.account.signedIn;
+      toggle!.toggleAttribute('data-signed-in', view.account.signedIn);
+      setLabel(toggle!.getAttribute('aria-expanded') === 'true');
       initials!.textContent = view.initials ?? '';
       message!.textContent = '';
 

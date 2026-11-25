@@ -176,10 +176,10 @@ describe('syntheticHistory', () => {
     expect(h).toEqual([{ day: '2026-10-25', result: 'knew' }]);
   });
 
-  it('level 2 → two knew on last_reviewed', () => {
+  it('level 2 → two knew on consecutive days ending on last_reviewed', () => {
     const h = syntheticHistory(row('a', { level: 2, last_reviewed: '2026-10-25', next_review: '2026-11-01' }));
     expect(h.length).toBe(2);
-    expect(h.every((r) => r.result === 'knew' && r.day === '2026-10-25')).toBe(true);
+    expect(h.map((r) => [r.day, r.result])).toEqual([['2026-10-24', 'knew'], ['2026-10-25', 'knew']]);
   });
 
   it('level 3 → three knew on last_reviewed', () => {

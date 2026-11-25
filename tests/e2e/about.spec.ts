@@ -8,6 +8,7 @@ const headings = [
   'how we make our lessons',
   "what's coming",
   'help keep cueory free.',
+  'more pages',
 ] as const;
 
 async function tabTo(page: Page, target: Locator, label: string) {
@@ -34,7 +35,7 @@ test.describe('about page', () => {
     await expect(page.getByText('/ about us', { exact: true })).toBeVisible();
     await expect(page.locator('main h1')).toHaveCount(1);
     await expect(page.locator('main h1, main h2')).toHaveText([...headings]);
-    await expect(page.locator('main section')).toHaveCount(4);
+    await expect(page.locator('main section')).toHaveCount(5);
 
     const paragraphs = page.locator('main p');
     await expect(paragraphs).toHaveCount(6);
@@ -134,7 +135,7 @@ test.describe('about page', () => {
         await page.goto('/about');
 
         await expect(page.getByRole('heading', { level: 1, name: 'we know nursing school is hard.' })).toBeVisible();
-        await expect(page.locator('main .veil')).toHaveCount(4);
+        await expect(page.locator('main .veil')).toHaveCount(5);
 
         const headingFont = await page.locator('main h1').evaluate((element) => getComputedStyle(element).fontFamily);
         const bodyFont = await page.locator('main p').first().evaluate((element) => getComputedStyle(element).fontFamily);

@@ -94,7 +94,8 @@ const configs: Record<string, GameConfig> = {
     iconType: 'img',
     iconSrc: '/brand/games/piccline-dark.svg',
     wordmarkType: 'img',
-    wordmarkSrc: '/brand/games/piccline-wordmark-dark.svg',
+    wordmarkSrc: '/brand/games/piccline-wordmark-light.svg',
+    wordmarkEveningSrc: '/brand/games/piccline-wordmark-dark.svg',
     defaultSteps: [
       'Drag, tap or use the arrow keys to link touching letters.',
       'Every letter belongs to one word.',
@@ -187,7 +188,7 @@ const activeDateLine = propDateLine ?? formatGameDateLine(new Date());
           <img
             src="/brand/v1/logo-full-light-480.png"
             alt="cueory"
-            class="game-frame-logo dark:hidden"
+            class="game-frame-logo game-frame-day-art"
             width="80"
             height="20"
             loading="lazy"
@@ -197,7 +198,7 @@ const activeDateLine = propDateLine ?? formatGameDateLine(new Date());
           <img
             src="/brand/v1/logo-full-dark-480.png"
             alt="cueory"
-            class="game-frame-logo hidden dark:block"
+            class="game-frame-logo game-frame-evening-art"
             width="80"
             height="20"
             loading="lazy"
@@ -251,8 +252,7 @@ const activeDateLine = propDateLine ?? formatGameDateLine(new Date());
               src={currentConfig.wordmarkSrc}
               alt=""
               aria-hidden="true"
-              class:list={['game-frame-wordmark-img', currentConfig.wordmarkEveningSrc && 'game-frame-wordmark-day']}
-              data-wordmark="day"
+              class:list={['game-frame-wordmark-img', currentConfig.wordmarkEveningSrc && 'game-frame-day-art']}
               width="180"
               height="60"
               loading="lazy"
@@ -264,8 +264,7 @@ const activeDateLine = propDateLine ?? formatGameDateLine(new Date());
               src={currentConfig.wordmarkEveningSrc}
               alt=""
               aria-hidden="true"
-              class="game-frame-wordmark-img game-frame-wordmark-evening"
-              data-wordmark="evening"
+              class="game-frame-wordmark-img game-frame-evening-art"
               width="180"
               height="60"
               loading="lazy"
@@ -305,6 +304,7 @@ const activeDateLine = propDateLine ?? formatGameDateLine(new Date());
 
     <!-- Center area -->
     <div class="game-frame-main">
+    <div class="game-frame-head">
       <!-- Date line centered above the board -->
       <p class="game-frame-dateline" data-game-frame-dateline={propDateLine === undefined ? '' : undefined}>{activeDateLine}</p>
 
@@ -322,6 +322,7 @@ const activeDateLine = propDateLine ?? formatGameDateLine(new Date());
 
       <!-- Slot for page title -->
       <div class="not-print:sr-only game-frame-title"><slot name="title" /></div>
+    </div>
 
       <!-- The board slot -->
       <div class:list={['game-frame-board', wide && 'is-wide', showcase && 'is-showcase']}>

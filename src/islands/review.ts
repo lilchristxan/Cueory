@@ -34,6 +34,8 @@ function readHistory(history: readonly Review[]): { last: number | undefined; le
   if (!Array.isArray(history)) throw new Error('Review history must be a list, oldest first.');
   let last: number | undefined;
   let level = 0;
+  // Only one knew per calendar day moves the streak up a step.
+  let lastKnewDay: number | undefined;
   for (const review of history) {
     if (!review || (review.result !== 'knew' && review.result !== 'missed')) {
       throw new Error('Each review needs a day and a knew or missed result.');
@@ -41,7 +43,12 @@ function readHistory(history: readonly Review[]): { last: number | undefined; le
     const day = dayNumber(review.day);
     if (last !== undefined && day < last) throw new Error('Review history must be oldest first.');
     last = day;
-    level = review.result === 'missed' ? 0 : Math.min(level + 1, 3);
+    if (review.result === 'missed') {
+      level = 0;
+    } else if (lastKnewDay !== day) {
+      level = Math.min(level + 1, 3);
+      lastKnewDay = day;
+    }
   }
   return { last, level };
 }
