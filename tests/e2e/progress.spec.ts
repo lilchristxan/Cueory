@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 
 // Guest progress and onboarding (D-69). Everything here is saved in the browser only.
 
+
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
     try {

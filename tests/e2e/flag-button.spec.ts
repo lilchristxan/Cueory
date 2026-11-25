@@ -1,6 +1,9 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 import { lessonRoutes } from '../lessonroutes';
+import { markGameRulesSeen } from './clock';
+
+test.beforeEach(async ({ page }) => { await markGameRulesSeen(page); });
 
 const axe = (page: Page) =>
   new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa']).analyze();
@@ -87,6 +90,7 @@ for (const game of [
 test('a first-visit promo waits while a game report is open', async ({ page }) => {
   // The suite suppresses the promo on the page fixture. A new page starts without that init script.
   const fresh = await page.context().newPage();
+  await markGameRulesSeen(fresh);
   await fresh.goto('/play/pillo');
   const opener = fresh.locator('a[data-game-flag]');
   const footer = fresh.locator('#footer-flag');

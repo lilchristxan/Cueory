@@ -1,12 +1,6 @@
-/*
-  vialo daily word game blister-pack board styling, the word game on /play. The board is a foil blister pack: six rows of five pockets with dashed
-  perforations between them. A guessed letter is a glossy capsule pill with a capital letter and its mark under it
-  (● in place, ○ elsewhere in the word, · not in the word), and each guess is also said in words for screen readers,
-  so color is never the only signal. In place is Espresso (Evening: Walnut), elsewhere is Taupe (Evening: Sand), and not
-  in the word is Ivory with a faded Bronze letter (Evening: frosted Ivory). The row being typed shows plain Ivory pills
-  and rings the next empty pocket. Every color, size and shadow is a token (tokens.css, "pillo"); the foil is drawn
-  with gradients, so there is no image file and nothing the content security policy has to allow.
-*/
+/* The live Vialo pills follow the six rows of wells in the approved blister artwork.
+   Each spoken guess names its letter marks. Shine, an inner band and a matte finish
+   distinguish the three results visually in both palettes. */
 @layer components {
   .vialo {
     /* The foil's grey: Ivory greyed with Bronze by day, Charcoal lit with Sand in the evening. */
@@ -45,7 +39,6 @@
   }
 
   /* The foil itself: a fine cross-hatch and a soft sheen over the grey, rounded like a real blister card. */
-  .vialo-pack,
   .vialo-strip {
     background-color: var(--pillo-foil-color);
     background-image:
@@ -54,105 +47,114 @@
       repeating-linear-gradient(-45deg, var(--pillo-hatch-color) 0 var(--pillo-hatch-width), var(--pillo-hatch-clear) var(--pillo-hatch-width) var(--pillo-hatch-gap));
   }
 
+  /* The artwork provides the foil and the five by six wells. Keep the live rows on the image's
+     measured perforations (#887), even when the surrounding game frame is wider than this pack. */
   .vialo-pack {
-    max-inline-size: var(--pillo-board);
-    padding: calc(var(--spacing) * 2);
+    display: flow-root;
+    /* The pack is as wide as the frame allows, but never so tall that the keys below it drop under the fold: a
+       keyboard user tabbing to the last key would otherwise scroll the page (and wake the promo panel). */
+    max-inline-size: min(var(--game-frame-max-board), max(var(--vialo-board-min), calc((100dvh - var(--vialo-board-reserve)) * var(--vialo-art-width-per-height))));
+    aspect-ratio: var(--vialo-art-ratio);
     border-radius: var(--radius-lg);
+    background-color: var(--pillo-foil-color);
+    background-image: url("/design/pillo-blister-board.webp"),
+      repeating-linear-gradient(45deg, var(--pillo-hatch-color) 0 var(--pillo-hatch-width), var(--pillo-hatch-clear) var(--pillo-hatch-width) var(--pillo-hatch-gap));
+    background-size: 100% 100%, auto;
+    background-repeat: no-repeat, repeat;
     box-shadow: var(--shadow-pillo-pack);
   }
 
-  /* One row of five pockets. Dashed perforations run between rows and between pockets. */
+  .vialo-pack::before {
+    content: "";
+    display: block;
+    padding-block-start: var(--vialo-art-top);
+  }
+
+  .vialo-pack > * {
+    margin-inline: var(--vialo-art-sides);
+  }
+
   .vialo-row {
     position: relative;
     display: grid;
     grid-template-columns: repeat(5, minmax(0, 1fr));
-    border-block-end: var(--border-pillo-perforation) dashed var(--pillo-perforation);
-  }
-
-  .vialo-row-last {
-    border-block-end: none;
+    aspect-ratio: var(--vialo-art-row-ratio);
   }
 
   .vialo-pocket {
     display: grid;
     place-items: stretch;
-    block-size: var(--pillo-pocket);
-    padding: var(--pillo-pill-inset);
-    border-inline-end: var(--border-pillo-perforation) dashed var(--pillo-perforation);
+    min-inline-size: 0;
+    min-block-size: 0;
+    padding: var(--vialo-art-pill-inset);
   }
 
-  .vialo-pocket:last-of-type {
-    border-inline-end: none;
-  }
-
-  @media (width >= 40rem) {
-    .vialo-pocket {
-      block-size: var(--pillo-pocket-lg);
-    }
-  }
-
-  /* The pill, or the empty pocket where a pill will sit. */
   .vialo-pill {
     position: relative;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
+    display: grid;
+    place-items: center;
     border-radius: var(--radius-pill);
-    line-height: var(--text-sm--line-height);
-    box-shadow: var(--shadow-pillo-pocket);
-  }
-
-  .vialo-pill.vialo-here,
-  .vialo-pill.vialo-elsewhere,
-  .vialo-pill.vialo-absent,
-  .vialo-pill.vialo-typed {
-    box-shadow: var(--shadow-pillo-pill);
-  }
-
-  /* The gloss: a small highlight at the top left of each filled pill. */
-  .vialo-pill.vialo-here::before,
-  .vialo-pill.vialo-elsewhere::before,
-  .vialo-pill.vialo-absent::before,
-  .vialo-pill.vialo-typed::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    border-radius: inherit;
-    background-image: radial-gradient(ellipse 30% 22% at 26% 24%, var(--pillo-gloss-color), var(--pillo-gloss-clear));
-    pointer-events: none;
+    font-family: var(--vialo-pill-font);
+    line-height: var(--text-display--line-height);
   }
 
   .vialo-pill.vialo-here {
-    background-color: var(--color-pillo-here);
-    color: var(--color-on-pillo-here);
+    /* A dark shoulder keeps the white letter legible throughout the shine, including in Evening. */
+    --vialo-cap-shoulder: color-mix(in srgb, var(--game-dark-green-light) 38%, var(--game-dark-green-deep));
+    --vialo-cap-face: color-mix(in srgb, var(--game-dark-green) 55%, var(--game-dark-green-deep));
+    color: var(--game-frame-pill-text-color);
+    background-color: var(--vialo-cap-face);
+    background-image: radial-gradient(ellipse 120% 140% at 30% 20%, var(--vialo-cap-shoulder), var(--vialo-cap-face) 55%, var(--game-dark-green-deep));
+    box-shadow: var(--shadow-pillo-pill);
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .vialo-pill.vialo-here::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      pointer-events: none;
+      background: linear-gradient(110deg, var(--pillo-gloss-clear) 40%, color-mix(in srgb, var(--pillo-gloss-color) 16%, var(--pillo-gloss-clear)) 50%, var(--pillo-gloss-clear) 60%);
+      background-size: 250% 100%;
+      background-position: 100% 0;
+      animation: vialo-pill-shine var(--vialo-pill-shine-period) var(--ease-soft) infinite;
+    }
+  }
+
+  @keyframes vialo-pill-shine {
+    0%, 55% { background-position: 100% 0; }
+    85%, 100% { background-position: 0 0; }
   }
 
   .vialo-pill.vialo-elsewhere {
-    background-color: var(--color-pillo-elsewhere);
-    color: var(--color-on-pillo-elsewhere);
+    color: var(--game-frame-pill-text-color);
+    background-color: var(--game-oxblood);
+    background-image: radial-gradient(ellipse 120% 140% at 30% 20%, color-mix(in srgb, var(--game-oxblood-light) 80%, var(--game-oxblood)), var(--game-oxblood) 55%, var(--game-oxblood-deep));
+    box-shadow: inset 0 0 0 var(--pillo-contrast-rim) var(--game-oxblood-light), var(--shadow-pillo-pill);
   }
 
   .vialo-pill.vialo-absent {
-    background-color: color-mix(in srgb, var(--color-pillo-absent) var(--pillo-absent-mix), var(--pillo-foil-color));
-    color: var(--color-on-pillo-absent);
+    color: var(--vialo-absent-ink);
+    background-color: var(--vialo-absent-face);
+    box-shadow: var(--shadow-pillo-pill);
   }
 
   .vialo-pill.vialo-typed {
-    background-color: var(--color-pillo-typed);
     color: var(--color-on-pillo-typed);
+    background-color: var(--color-pillo-typed);
+    box-shadow: inset 0 0 0 var(--pillo-ring) var(--color-copper-deep), var(--shadow-pillo-pill);
     animation: vialo-pop var(--duration-fast) var(--ease-emphasis);
   }
 
-  /* The next empty pocket in the row being typed. */
   .vialo-pill.vialo-next {
-    box-shadow: var(--shadow-pillo-pocket), inset 0 0 0 var(--pillo-ring) var(--color-pillo-ring);
+    box-shadow: inset 0 0 0 var(--pillo-ring) var(--color-pillo-ring);
   }
 
   .vialo-letter {
+    position: relative;
     font-size: var(--pillo-letter);
-    font-weight: 700;
-    line-height: var(--text-sm--line-height);
+    font-weight: 400;
   }
 
   @media (width >= 40rem) {
@@ -161,17 +163,24 @@
     }
   }
 
-  /* A guessed letter sits a little higher, so its mark fits under it inside the pill. */
-  .vialo-pill:has(.vialo-mark) .vialo-letter {
+  /*
+    A committed letter carries its mark under it (● in its place, ○ somewhere else, · not in the word), so the three
+    results differ by shape and not by color alone, in Light and Evening. The row's spoken label already names them,
+    so the drawn mark adds nothing for a screen reader.
+  */
+  .vialo-pill:is(.vialo-here, .vialo-elsewhere, .vialo-absent) .vialo-letter {
     transform: translateY(var(--pillo-letter-lift));
   }
-
-  .vialo-mark {
+  .vialo-pill:is(.vialo-here, .vialo-elsewhere, .vialo-absent)::after {
     position: absolute;
     inset-block-end: var(--pillo-mark-drop);
     font-size: var(--pillo-mark);
     line-height: var(--text-sm--line-height);
+    pointer-events: none;
   }
+  .vialo-pill.vialo-here::after { content: "\25CF" / ""; }
+  .vialo-pill.vialo-elsewhere::after { content: "\25CB" / ""; }
+  .vialo-pill.vialo-absent::after { content: "\00B7" / ""; }
 
   @keyframes vialo-pop {
     from {
@@ -185,9 +194,12 @@
   */
   .vialo-field {
     position: absolute;
-    inset: 0;
+    inset-inline: 0;
+    inset-block-start: 50%;
     inline-size: 100%;
     block-size: 100%;
+    min-block-size: var(--tap-min);
+    transform: translateY(-50%);
     padding: 0;
     border: 0;
     border-radius: var(--radius-md);
@@ -379,7 +391,7 @@
     line-height: var(--text-sm--line-height);
   }
 
-  /* "how to play": one sample pill for each mark, with its symbol and its meaning in words. */
+  /* "how to play": one sample pill for each finish, with its meaning in words. */
   .vialo-legend {
     max-inline-size: var(--pillo-board);
     padding: calc(var(--spacing) * 5);
@@ -412,10 +424,6 @@
   .vialo-legend-row > span:last-child {
     flex: 1 1 0;
     min-inline-size: 0;
-  }
-
-  .vialo-legend .vialo-mark {
-    position: static;
   }
 
   /* Settings (Task 719): a plain disclosure with one switch per setting, each at least 44 px tall. */
@@ -508,6 +516,14 @@
     High contrast (Task 719): no foil texture behind the pills, a solid rim on "elsewhere", a dashed rim on "not in the
     word", full-strength letters and larger marks, so the three marks differ by shape as well as by fill.
   */
+  .vialo-contrast .vialo-pill {
+    background-image: none;
+  }
+  /* The well outline leaves the result-specific outlines in forced colors free to win. */
+  :where(.vialo-contrast) .vialo-pocket > .vialo-pill {
+    border: var(--border-pillo-key) solid var(--color-control);
+  }
+
   .vialo-contrast .vialo-pack {
     background-color: var(--color-page);
     background-image: none;
@@ -550,9 +566,19 @@
     display: none;
   }
   .vialo-contrast .vialo-mark,
+  .vialo-contrast .vialo-pill::after,
   .vialo-contrast .vialo-key-mark {
     font-size: var(--pillo-mark-contrast);
     font-weight: 700;
+  }
+
+  @media (forced-colors: active) {
+    .vialo-pack { background-image: none; }
+    .vialo-pocket > .vialo-pill { border: var(--border-pillo-key) solid CanvasText; }
+    .vialo-pill.vialo-here { border: var(--pillo-contrast-rim) solid CanvasText; }
+    .vialo-pill.vialo-elsewhere { border: var(--pillo-contrast-rim) double CanvasText; }
+    .vialo-pill.vialo-absent { border: var(--border-pillo-key) dashed CanvasText; }
+    .vialo-pill.vialo-typed, .vialo-pill.vialo-next { outline: var(--pillo-ring) solid Highlight; }
   }
 
   @media (prefers-reduced-motion: reduce) {

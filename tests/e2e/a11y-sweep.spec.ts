@@ -2,6 +2,9 @@ import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 import { builtPages } from './built-pages';
 import { isEveningProject } from './projects';
+import { markGameRulesSeen } from './clock';
+
+test.beforeEach(async ({ page }) => { await markGameRulesSeen(page); });
 
 /**
  * Task 74: audit every built HTML page, including 404 and preview pages.

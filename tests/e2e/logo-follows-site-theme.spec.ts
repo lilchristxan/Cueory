@@ -1,5 +1,8 @@
 import { expect, test, type Page } from '@playwright/test';
 import { isDesktopOfEachEngine } from './projects';
+import { markGameRulesSeen } from './clock';
+
+test.beforeEach(async ({ page }) => { await markGameRulesSeen(page); });
 
 /**
  * The cueory logo and the game wordmarks must match the theme the page SHOWS: the site's own Light / Dark pick

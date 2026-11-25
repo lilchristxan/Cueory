@@ -63,11 +63,8 @@ function computeStats(game: string, stats: GameStats, today: string): StatValues
 
 export default function GameFrameStats({ game }: Props) {
   const [status, setStatus] = useState(currentStatsStatus);
-  const [stats, setStats] = useState<StatValues>(() => {
-    const today = localDay(new Date());
-    const saved = loadStats(browserStorage(), today);
-    return computeStats(game, saved.stats, today);
-  });
+  // Start from zeros so the first client render matches the server HTML; saved stats load in the effect below.
+  const [stats, setStats] = useState<StatValues>(() => computeStats(game, [], localDay(new Date())));
   useEffect(() => {
     const refresh = () => {
       const today = localDay(new Date());
@@ -79,6 +76,7 @@ export default function GameFrameStats({ game }: Props) {
     };
     const onStatus = (event: WindowEventMap['cueory:game-stats-status']) => setStatus(event.detail.message);
 
+    refresh();
     window.addEventListener(GAME_STATS_CHANGED_EVENT, refresh);
     window.addEventListener(GAME_STATS_STATUS_EVENT, onStatus);
     window.addEventListener('storage', refresh);

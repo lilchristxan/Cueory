@@ -2,6 +2,9 @@ import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
 import { builtPages } from './built-pages';
 import { isEveningProject, sizeOf } from './projects';
+import { markGameRulesSeen } from './clock';
+
+test.beforeEach(async ({ page }) => { await markGameRulesSeen(page); });
 
 /**
  * Task 94: audit the Evening palette on EVERY built page.

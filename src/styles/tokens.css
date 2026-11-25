@@ -186,6 +186,21 @@
   --game-frame-stat-label-compact: 0.875rem; /* 14px, the smallest text on a game screen */
   --game-frame-stat-label-phone: 0.875rem; /* 14px */
 
+  /* Live Vialo pills follow the approved 1230 × 1180 blister artwork. Percentages are measured
+     against the pack width (outside the well grid) or the individual cell width (inside it). */
+  --vialo-art-ratio: 1230 / 1180;
+  --vialo-art-width-per-height: 1.0424; /* 1230 / 1180 as a plain number, so the pack's width can follow the window's height */
+  --vialo-board-reserve: 25.5rem;       /* 408px: the page above the pack plus the keys below it, so pack, guess strip and keys fit a 900px-high desktop window without scrolling */
+  --vialo-board-min: 20rem;             /* 320px: the pack never gets narrower than this on a short window */
+  --vialo-art-top: 4.64%;
+  --vialo-art-sides: 4.5% 4.58%;
+  --vialo-art-row-ratio: 1118.4 / 170.6;
+  --vialo-art-pill-inset: 15.1% 13.7% 12.6%; /* the smaller capsule inside each photographed well, as on the locked board */
+  --vialo-pill-font: "Times New Roman", Times, serif;
+  --vialo-absent-face: #ffffff;
+  --vialo-absent-ink: #6b5243; /* Bronze remains legible on the white pill in both palettes. */
+  --vialo-pill-shine-period: 4.2s;
+
   /* ---------- Marketing pages only (D-41): draped-silk background and frosted panels (no embossed logo: D-55) ---------- */
   --color-silk-base: #f9f5ef;   /* Ivory    — silk background */
   --color-silk-sheen: #f9f5ef;  /* Ivory    — light catching a fold */
@@ -537,6 +552,8 @@
   --crossword-cell-mid: clamp(2.75rem, 7vw, 3.875rem);
   --crossword-cell-hard: var(--tap-min); /* large boards scroll inside their wrapper, keeping 44 px targets */
   --crossword-gap: 0.0625rem;
+  --crossword-cell-gap: 0.25rem;    /* space between squares, as drawn on the games-v2 crossword board */
+  --crossword-frame: 0.25rem;       /* the taupe frame round the squares */
   --crossword-line: 0.0625rem;
   --crossword-number: clamp(0.45rem, 1.5vw, 0.75rem);
   --crossword-letter: clamp(0.75rem, 3vw, 1.5rem);
@@ -561,6 +578,12 @@
   --wordpath-pip-ring: 2px;          /* the outline of an empty pip; a filled pip is solid, so the two differ in more than color */
   --wordpath-line: 3px;              /* the line that joins the letters of a word, from circle edge to circle edge */
   --wordpath-cell-max: 4.5rem;       /* a 6 × 8 board square's ceiling: 72 px, as large as a crossword square, so tablet and desktop boards are not oversized */
+  --wordpath-cue-size: 0.8125rem;    /* piccline's "today's cue" line on the Games v2 board: 13 px, 700, 1.5 px tracking */
+  --wordpath-cue-tracking: 0.09375rem; /* 1.5 px */
+  --wordpath-pill-size: 0.875rem;    /* the word pills under the 6 × 8 board: 14 px, 700 */
+  --wordpath-pill-pad-y: 0.5rem;     /* 8 px */
+  --wordpath-pill-pad-x: 0.875rem;   /* 14 px */
+  --wordpath-status-size: 0.8125rem; /* the "n of N words found" line: 13 px, as the Frame's stat labels */
   --wordpath-columns: 11;            /* each puzzle overrides this with its validated grid width */
 }
 
@@ -898,6 +921,10 @@
   /* Home v3 vial platter (docs/design/home-v3/, src/scripts/platter.ts). One pixel, the unit the platter's unitless
      layout numbers are multiplied by; the platter's colors are mixes of the palette, so they follow the theme. */
   --platter-px: 1px;
+  /* Whole and quarter pixels, for rounding line heights to whole pixels (Firefox reads boxes through 32-bit floats, so a
+     box that starts on a fraction of a pixel measures a hair off; a quarter pixel is exact in floats and in sixtieths). */
+  --whole-pixel: 1px;
+  --quarter-pixel: 0.25px;
   --platter-edge: linear-gradient(90deg, color-mix(in srgb, var(--color-soft) 80%, var(--color-highlight)) 0%, color-mix(in srgb, var(--color-surface) 85%, var(--color-soft)) 22%, var(--color-surface) 48%, color-mix(in srgb, var(--color-surface) 70%, var(--color-soft)) 74%, color-mix(in srgb, var(--color-soft) 70%, var(--color-highlight)) 100%);
   --platter-top: radial-gradient(ellipse at 62% 22%, color-mix(in srgb, var(--color-copper-shine) 30%, var(--color-page)) 0%, color-mix(in srgb, var(--color-page) 70%, var(--color-surface)) 42%, var(--color-surface) 78%, color-mix(in srgb, var(--color-surface) 60%, var(--color-soft)) 100%);
   --platter-edge-shadow: 0 46px 60px -18px rgb(var(--shadow-tint) / 0.34), 0 10px 16px -4px rgb(var(--shadow-tint) / 0.22);
@@ -1225,6 +1252,14 @@
   --sudoku-cell-min: 2.75rem;
   --sudoku-cell-floor: 1.5rem;        /* a square's floor: 24 px (WCAG 2.2) at default text, 48 px at 32 px root text, when the board scrolls */
   --sudoku-cell-max: 5.25rem;
+  --sudoku-cell-board: 2.875rem;       /* Christian's board: 46 px squares on desktop and landscape tablet */
+  --sudoku-board-radius: 0.625rem;     /* the grid's corners on his board (10 px) */
+  --sudoku-board-inner-radius: max(0px, calc(var(--sudoku-board-radius) - var(--sudoku-box-line))); /* the corner squares' radius: the board's radius inside its outer line */
+  --sudoku-pad-radius: 0.625rem;       /* the number keys' corners (10 px) */
+  --sudoku-pad-text: 1.1875rem;        /* number keys: 19 px bold */
+  --sudoku-pill-text: 0.9375rem;       /* Pencil, Undo and Hint: 15 px bold */
+  --sudoku-pill-pad: 1.375rem;         /* pill side padding (22 px) */
+  --sudoku-pill-line: 1.5px;           /* pill outline */
   --sudoku-height-reserve: 28.75rem;
   --sudoku-width-reserve: 9.375rem;
   --sudoku-status-row: 2rem;           /* the status row is a whole number of pixels tall (32 px), so the controls under it land on whole pixels (Firefox loses 0.00003 px on a fractional offset) */

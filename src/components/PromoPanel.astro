@@ -93,8 +93,19 @@ import { accountHref, promo, site } from '../config/site';
       true,
     );
 
+    // On a game page (/play/<game>) the panel never opens over the board mid-play: it waits until the game has shown a
+    // result dialog, then follows the usual rules below (it still waits while that dialog is open).
+    const onGamePage = /^\/play\/[^/]/.test(location.pathname);
+    let gameFinished = false;
+    if (onGamePage) {
+      const sawResult = () => { if (document.querySelector('[data-result-dialog]')) gameFinished = true; };
+      new MutationObserver(sawResult).observe(document.body, { childList: true, subtree: true });
+      sawResult();
+    }
+
     /** Something else has the visitor's attention: the panel waits instead of interrupting it. */
     const busy = () =>
+      (onGamePage && !gameFinished) ||
       document.hidden ||
       document.querySelector('dialog[open]') !== null ||
       closingDialogs.size > 0 ||

@@ -1,5 +1,8 @@
 import { expect, test } from '@playwright/test';
 import { builtPages } from './built-pages';
+import { markGameRulesSeen } from './clock';
+
+test.beforeEach(async ({ page }) => { await markGameRulesSeen(page); });
 
 const missingPage = '/task-188-phone-page-does-not-exist';
 const pages = builtPages(missingPage);

@@ -7,6 +7,8 @@ export interface StatKeyContext {
   focusInsideOverlay: boolean;
   overlayOpen: boolean;
   onActionControl: boolean;
+  /** True once an answer is picked on the current question. Enter does nothing until then. */
+  hasAnswer: boolean;
 }
 
 export type StatKeyAction =
@@ -25,6 +27,6 @@ export function statKeyAction(context: StatKeyContext): StatKeyAction {
     return { kind: 'pick', letter };
   }
   // Buttons and links already get Enter natively. Don't advance the game as well.
-  if (context.key === 'Enter' && !context.onActionControl) return { kind: 'next' };
+  if (context.key === 'Enter' && !context.onActionControl && context.hasAnswer) return { kind: 'next' };
   return null;
 }
