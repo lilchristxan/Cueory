@@ -2,9 +2,11 @@ import { expect, test } from '@playwright/test';
 import { visibleFooterLinks } from '../../src/config/legalfooter';
 import { footerLinks } from '../../src/config/site';
 
-// The footer as drawn (HomeV2-3.png, HomeV2-390.png): one centered row of small underlined links, visible without
-// opening anything and with no hairline above it. The flag, logo, chevron and the extras panel (theme switch included)
-// stay below and behind the chevron.
+// The footer as drawn (the home boards, 2026-11-24): one centered row of five small underlined links (about us, privacy,
+// terms, disclaimer, contact), visible without opening anything and with no hairline above it. The flag stands at the
+// row's left end and the chevron at its right end; the extras panel behind the chevron holds the logo, the pages the row
+// leaves out (courses, coming soon, support cueory) and the theme switch.
+const rowHrefs = ['/about', '/privacy', '/terms', '/disclaimer', '/message'];
 
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
@@ -17,7 +19,7 @@ test('every footer link is visible without opening the panel, centered, underlin
   const footer = page.locator('[data-site-footer]');
   await expect(footer.locator('[data-footer-toggle]')).toHaveAttribute('aria-expanded', 'false');
   const nav = footer.getByRole('navigation', { name: 'footer' });
-  const expected = visibleFooterLinks(footerLinks);
+  const expected = visibleFooterLinks(footerLinks).filter((link) => rowHrefs.includes(link.href));
   const links = nav.getByRole('link');
   await expect(links).toHaveCount(expected.length);
   for (const [index, link] of expected.entries()) {
@@ -65,13 +67,17 @@ test('the open report panel sits above the link row and covers no footer link', 
   expect(panelBox.x + panelBox.width).toBeLessThanOrEqual(page.viewportSize()!.width);
 });
 
-test('the flag, the logo home link and the chevron stay, and the extras panel still holds the theme switch', async ({ page }) => {
+test('the flag and the chevron stay, and the extras panel holds the logo home link, the other pages and the theme switch', async ({ page }) => {
   const footer = page.locator('[data-site-footer]');
   await expect(footer.getByRole('button', { name: 'flag or comment' })).toBeVisible();
-  await expect(footer.getByRole('link', { name: /home$/ })).toBeVisible();
+  await expect(footer.getByRole('link', { name: /home$/ })).toBeHidden();
   const toggle = footer.locator('[data-footer-toggle]');
   await toggle.click();
   const panel = page.locator('#site-footer-panel');
+  await expect(panel.getByRole('link', { name: /home$/ })).toBeVisible();
+  for (const name of ['courses', 'coming soon', 'support cueory']) {
+    await expect(panel.getByRole('navigation', { name: 'more pages' }).getByRole('link', { name, exact: true })).toBeVisible();
+  }
   await expect(panel.getByRole('group', { name: 'Theme' })).toBeVisible();
   await expect(panel.getByText(/study help, not medical advice/)).toBeVisible();
   await toggle.click();

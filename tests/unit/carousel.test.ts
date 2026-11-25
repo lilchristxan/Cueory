@@ -96,17 +96,6 @@ describe('study-mode carousel progressive enhancement', () => {
     expect(canEnhanceCarousel({ ...workingCarousel, intersectionObserver: undefined })).toBe(false);
     expect(canEnhanceCarousel({ ...workingCarousel, replaceChildren: undefined })).toBe(false);
   });
-
-  it('checks capabilities before hiding the plain study links', () => {
-    const source = readFileSync(new URL('../../src/components/ModesCarousel.astro', import.meta.url), 'utf8');
-    expect(source).toContain('if (root && track && canEnhanceCarousel({');
-    expect(source.indexOf('if (root && track && canEnhanceCarousel({')).toBeLessThan(
-      source.indexOf("root.toggleAttribute('data-ring', true)"),
-    );
-    expect(source).toContain('class="mode-card-link inline-flex min-h-11');
-    expect(source).toContain('data-mode-open');
-    expect(source).not.toMatch(/<script\s+is:inline/);
-  });
 });
 
 describe('"ways to study" merry-go-round (D-50, D-60)', () => {

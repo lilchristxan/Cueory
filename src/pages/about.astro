@@ -1,6 +1,18 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import { site } from '../config/site';
+import { draftsAllowed } from '../islands/anatomylab';
+import { visibleFooterLinks } from '../config/legalfooter';
+import { aboutPageLinks } from '../config/sitenav';
+
+// The side bar no longer lists these pages, so they live here. A draft page is linked only where this build may show
+// drafts (never on the live site); a legal page only once approved (the footer's rule, #747).
+const drafts = draftsAllowed({
+  WORKERS_CI: process.env.WORKERS_CI,
+  WORKERS_CI_BRANCH: process.env.WORKERS_CI_BRANCH,
+  CUEORY_ANATOMY_DRAFTS: process.env.CUEORY_ANATOMY_DRAFTS,
+});
+const pageLinks = visibleFooterLinks(aboutPageLinks).filter((link) => link.draft !== true || drafts);
 ---
 
 <Layout
@@ -65,6 +77,21 @@ import { site } from '../config/site';
           support on Ko-fi<span class="sr-only"> (opens in a new tab)</span>
         </a>
       </div>
+    </section>
+
+    <section class="veil min-w-0 p-6 sm:p-10" aria-labelledby="pages-heading" data-testid="about-links">
+      <h2 id="pages-heading" class="display text-xl text-ink sm:text-2xl">more pages</h2>
+      <ul class="mt-4 flex flex-col">
+        {
+          pageLinks.map((link) => (
+            <li>
+              <a href={link.href} class="inline-flex min-h-11 items-center text-ink underline underline-offset-4 hover:text-ink-soft">
+                {link.label}
+              </a>
+            </li>
+          ))
+        }
+      </ul>
     </section>
   </div>
 </Layout>

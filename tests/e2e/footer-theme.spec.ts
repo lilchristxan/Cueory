@@ -4,8 +4,9 @@ import { footerLinks } from '../../src/config/site';
 import { expect, test, type Page } from '@playwright/test';
 import { isDesktopOfEachEngine } from './projects';
 
-// Task 85: the footer is one slim bar at the end of the page (flag, small logo, chevron); the chevron opens the links
-// panel above it, which holds the motto, links, socials, contact email, copyright and the theme switch.
+// Task 85, reshaped for the home boards (2026-11-24): the footer is one slim row at the end of the page (the five links
+// centred, the flag at its left end and the chevron at its right end); the chevron opens the panel above it, which holds
+// the small logo, the other pages, the motto, socials, contact email, copyright and the theme switch.
 
 // Suppress the promo panel so it doesn't interfere with keyboard focus.
 test.beforeEach(async ({ page }) => {
@@ -29,7 +30,7 @@ async function openFooterLinks(page: Page) {
 }
 
 test.describe('footer bar', () => {
-  test('one slim bar at the end of the page: flag left, logo home in the middle, chevron right', async ({ page }) => {
+  test('one slim row at the end of the page: flag at the left end, the links centred, chevron at the right end', async ({ page }) => {
     await page.goto('/privacy');
     const footer = footerOf(page);
     await expect(footer).toHaveCount(1);
@@ -42,35 +43,37 @@ test.describe('footer bar', () => {
     ).toBe(true);
 
     const flag = footer.getByRole('button', { name: 'flag or comment', exact: true });
-    const home = footer.getByRole('link', { name: 'cueory, home', exact: true });
     const more = footer.getByRole('button', { name: 'show footer links', exact: true });
+    const links = footer.getByRole('navigation', { name: 'footer' }).getByRole('link');
     await expect(flag).toBeVisible();
-    await expect(home).toHaveAttribute('href', '/');
     await expect(more).toHaveAttribute('aria-expanded', 'false');
+    // The logo home link lives in the opened panel now.
+    await expect(footer.getByRole('link', { name: 'cueory, home', exact: true })).toBeHidden();
     // Icons only: no words in the corners.
     await expect(flag).toHaveText('');
     await expect(more).toHaveText('');
 
+    // The five words only fit on one row in Lato: measure once the fonts have loaded, not in the fallback face.
+    await page.evaluate(() => document.fonts.ready);
     const width = page.viewportSize()!.width;
     const flagBox = (await flag.boundingBox())!;
     const moreBox = (await more.boundingBox())!;
-    const logoBox = (await home.locator('.logo').boundingBox())!;
+    const first = (await links.first().boundingBox())!;
+    const last = (await links.last().boundingBox())!;
     for (const box of [flagBox, moreBox]) {
-      expect(Math.round(box.width)).toBe(48);
-      expect(Math.round(box.height)).toBe(48);
+      expect(Math.round(box.width)).toBe(44);
+      expect(Math.round(box.height)).toBe(44);
     }
-    expect(logoBox.width).toBeGreaterThanOrEqual(62);
-    expect(logoBox.width).toBeLessThanOrEqual(70);
     expect(flagBox.x).toBeLessThan(width / 3);
     expect(moreBox.x).toBeGreaterThan((2 * width) / 3 - moreBox.width);
-    expect(Math.abs(logoBox.x + logoBox.width / 2 - width / 2)).toBeLessThanOrEqual(2);
-    // The bar's three controls share one row, about 56 px tall.
-    const bar = (await footer.locator('[data-footer-toggle]').locator('..').boundingBox())!;
-    expect(bar.height).toBeGreaterThanOrEqual(52);
-    expect(bar.height).toBeLessThanOrEqual(60);
-    for (const box of [flagBox, moreBox, logoBox]) {
-      expect(box.y).toBeGreaterThanOrEqual(bar.y);
-      expect(box.y + box.height).toBeLessThanOrEqual(bar.y + bar.height + 1);
+    // The links are centred between the two corner buttons, and never run under them.
+    expect(Math.abs((first.x + last.x + last.width) / 2 - width / 2)).toBeLessThanOrEqual(2);
+    expect(first.x).toBeGreaterThanOrEqual(flagBox.x + flagBox.width - 0.5);
+    expect(last.x + last.width).toBeLessThanOrEqual(moreBox.x + 0.5);
+    // The three parts share one row, 44 px tall.
+    for (const box of [flagBox, moreBox, first, last]) {
+      expect(Math.abs(box.y - flagBox.y)).toBeLessThanOrEqual(1);
+      expect(box.height).toBeLessThanOrEqual(46);
     }
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   });
@@ -93,7 +96,7 @@ test.describe('footer bar', () => {
     const footer = footerOf(page);
     const panel = footer.locator('#site-footer-panel');
     await expect(panel).toBeHidden();
-    // The link row is drawn above the bar and stays visible while the extras panel is closed.
+    // The link row stays visible while the extras panel is closed.
     await expect(footer.getByRole('link', { name: 'privacy', exact: true })).toBeVisible();
     await expect(footer.getByRole('link', { name: 'hello@cueory.app', exact: true })).toBeHidden();
 
@@ -121,18 +124,18 @@ test.describe('footer bar', () => {
     await expect(panel).toBeHidden();
     await expect(chevron(page)).toHaveAccessibleName('show footer links');
 
-    // Keyboard: Enter opens it, and Tab follows the current footer link order.
+    // Keyboard: Enter opens it, and Tab follows the panel's order: the logo, then the pages the link row leaves out.
     await chevron(page).focus();
     await page.keyboard.press('Enter');
     await expect(panel).toBeVisible();
     await page.keyboard.press('Tab');
-    await expect(footer.getByRole('link', { name: 'about us', exact: true })).toBeFocused();
+    await expect(footer.getByRole('link', { name: 'cueory, home', exact: true })).toBeFocused();
     await page.keyboard.press('Tab');
     await expect(footer.getByRole('link', { name: 'courses', exact: true })).toBeFocused();
     await page.keyboard.press('Tab');
     await expect(footer.getByRole('link', { name: 'coming soon', exact: true })).toBeFocused();
     await page.keyboard.press('Tab');
-    await expect(footer.getByRole('link', { name: 'privacy', exact: true })).toBeFocused();
+    await expect(footer.getByRole('link', { name: 'support cueory', exact: true })).toBeFocused();
     await chevron(page).focus();
     await page.keyboard.press('Space');
     await expect(panel).toBeHidden();

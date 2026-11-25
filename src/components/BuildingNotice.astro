@@ -1,5 +1,7 @@
 ---
 import { site } from '../config/site';
+
+const { before, link, after } = site.buildingNotice;
 ---
 
 {
@@ -9,17 +11,26 @@ import { site } from '../config/site';
       role="note"
       data-testid="building-notice"
     >
-      <img
-        src="/design/icon-building-notice.webp"
-        alt=""
-        aria-hidden="true"
-        width="16"
-        height="16"
-        loading="lazy"
-        decoding="async"
-        class="building-strip-icon me-2 size-4"
-      />
-      <span>we're still building. more coming soon.</span>
+      <span class="building-strip-icon" aria-hidden="true"></span>
+      <span class="building-strip-text">
+        {before}
+        {site.tipPageUrl ? (
+          <a
+            href={site.tipPageUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            class="building-strip-link"
+            data-testid="building-notice-support"
+          >
+            {link}
+            <span class="sr-only"> (opens in a new tab)</span>
+          </a>
+        ) : (
+          link
+        )}
+        {after}
+      </span>
+      <span class="building-strip-icon" aria-hidden="true"></span>
     </div>
   )
 }

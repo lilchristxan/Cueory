@@ -376,9 +376,30 @@
   --hero-accent-day-peak: color-mix(in srgb, var(--color-copper-deep) 82%, var(--color-ink)); /* the lightest moment of the shine */
   --hero-min-height: 60rem;     /* the hero is about this tall on large screens, so the explore row starts below the fold */
   --container-explore: 80rem;  /* the explore row under the hero */
-  --hero-top-clear: 1rem;       /* space above the hero's logo row (the corner buttons sit in the page's top 4.5 rem) */
+  --hero-top-clear: 4.5rem;     /* the one-row home header laid over the page's top: its 52 px row plus the board's 20 px; 4.25 rem on phones */
   --hero-logo-inset: calc(var(--header-inline-gutter) + var(--tap-min) + var(--header-corner-gap) - var(--spacing-gutter));
   --hero-eyebrow-gap: 2.5rem;   /* between the logo row and the motto */
+  --explore-overlap: -5.75rem;      /* the explore dock overlaps the bottom of the hero stage (board: 92 px at 1440) */
+  --explore-landscape-gap: 0.5rem;  /* phone landscape: the dock sits this far under the hero's points (which carry 28 px of their own: about 36 px in all, board 35), no overlap */
+  --explore-landscape-width: 40.875rem; /* phone landscape: the dock is at most 654 px wide (board) */
+  --explore-landscape-heading-width: 8.125rem; /* board: 130 px; "what you need." in Bodoni at 18 px fits on one line */
+  --explore-dock-width: 51.625rem;  /* board: 826 px at 1440 (780 + padding + border) */
+  --explore-dock-gap: 1.125rem;     /* board: 18 px between heading and tiles (phone 12, landscape 12) */
+  --explore-dock-padding: 1rem 1.25rem 1rem 1.5rem; /* board: 16 20 16 24 (phone 16 all round, landscape 12 14 12 18) */
+  --explore-dock-tile-gap: 0.625rem;
+  --explore-dock-title: 1.25rem;     /* board: 20 px (phone 26, landscape 21) */
+  --explore-tile-text: 0.75rem;      /* board: 12 px labels (phone 13, landscape 11) */
+  --explore-tile-padding: calc(var(--spacing) * 3) calc(var(--spacing) * 2); /* board: 12 8 (phone 10 4, landscape 8 2) */
+  --explore-tile-inner-gap: calc(var(--spacing) * 2); /* icon to label: board 8 (landscape 6) */
+  --explore-wrap-gutter: var(--spacing-gutter); /* the dock's side margin: the page gutter (phone board: 16) */
+  --explore-dock-heading-width: 8.875rem; /* board: heading column 142 px at 1440 (tiles 116 wide) */
+  --explore-caps-size: 0.75rem;     /* board: EXPLORE at 12 px, 6 px above the title */
+  --explore-caps-gap: 0.375rem;
+  --explore-caps-line: 1.5;         /* Lato body text keeps 1.5 line spacing; the board draws the word on a 10.8 px line, so the extra 3.6 px above and below is pulled back with --explore-caps-trim */
+  --explore-caps-trim: -0.3em;
+  --explore-tile-basis-min: 5.75rem; /* a phone tile never gets narrower than this; the row wraps instead */
+  --explore-tile-min: 6.75rem;      /* board: 108 px (phone 108, landscape 88) */
+  --explore-icon: 1.25rem;           /* board: 20 px icons (phone 28, landscape 24) */
   --radius-panel: 2.125rem;     /* the home explore panel's corners (board: 34 px) */
   --radius-card-lg: 1.75rem;    /* the hero's support card corners */
   --icon-size-mug: 2.5rem;      /* the Ko-fi cup mark, width */
@@ -386,12 +407,46 @@
   --icon-size: 1.75rem;         /* a small line icon beside a label */
   --icon-size-lg: 2rem;         /* a line icon above a tile label */
   --sudoku-board-max: 62rem;    /* measured board cap from docs/design/renderings/Sudoku.png */
-  --container-menu: min(85vw, 22.5rem); /* the ☰ side panel: most of a phone, 360px on bigger screens */
+  --container-menu: min(84vw, 21.25rem); /* the ☰ side bar (home boards, 2026-11-24): 340px, never more than 84% of the screen */
   --container-account-menu: 15rem; /* the small account menu */
   --container-mode-card: min(68vw, 20rem); /* a "ways to study" card: most of a phone, 320px on bigger screens */
   --gap-mode-card: 1rem;        /* space between "ways to study" cards */
   --drop-mode-card: 1rem;       /* how much lower a neighbouring card sits, per card away from the middle */
   --zoom-mode-card: 1.04;       /* a "ways to study" card under the mouse or keyboard focus grows this much (D-51) */
+  --footer-pad-top: 0.625rem;          /* the boards' footer: links 32 px under its top and the page ends 96 px under it (1440) */
+  --footer-pad-bottom: 2.625rem;
+  --footer-pad-top-phone: 0.25rem;     /* 26 px / 74 px on a phone */
+  --footer-pad-bottom-phone: 1.625rem;
+  --footer-pad-top-landscape: 0;       /* 20 px / 57 px on a phone turned sideways */
+  --footer-pad-bottom-landscape: 0.8125rem;
+  --footer-link-gap: 1.125rem;         /* 18 px between the links' 44 px boxes puts the words where the board has them */
+  --footer-link-gap-phone: 0.5rem;     /* the five links share the 302 px between the flag and the chevron; 8 px leaves about 20 px to spare, so a slightly wider font still keeps one centred row */
+  --footer-link-size: 0.875rem;        /* 14 px */
+  --footer-link-size-landscape: 0.8125rem; /* 13 px */
+  --footer-link-line: 1.5;            /* Lato keeps 1.5; the link boxes are 44 px tall anyway, so the row does not grow */
+  --soon-card-max-width: 60.375rem;  /* Home v3 coming-soon panel: the board's 900 px of content plus 32 px padding each side and the rim (966 px) */
+  --soon-card-max-width-landscape: 41.375rem; /* phone landscape: 620 + 20 + 20 + the rim (662 px) */
+  --soon-radius: 1.75rem;       /* 28 px */
+  --soon-radius-phone: 1.375rem;     /* 22 px */
+  --soon-radius-landscape: 1.125rem; /* 18 px */
+  --soon-heading: 1.875rem;     /* the coming-soon heading: 30 px on tablet and desktop (the board) */
+  --soon-heading-phone: 1.75rem;     /* 28 px on a portrait phone */
+  --soon-heading-landscape: 1.5rem;  /* 24 px on a phone turned sideways */
+  --soon-heading-line: 1.15;
+  --soon-line-size: 1rem;       /* the board's line under the heading: 16 px, 18 px apart */
+  --soon-line-height: 1.5;      /* was the board's 18 px lines (1.125); Lato body text keeps 1.5, so the two lines are 24 px apart */
+  --soon-line-size-landscape: 0.8125rem;   /* 13 px */
+  --soon-line-height-landscape: 1.5;
+  --soon-help-size: 0.75rem;      /* the privacy line under the panel: 12 px */
+  --soon-help-line: 1.5;
+  --soon-input-height: 3.125rem;  /* the board's field: 48 px plus its rim = 50 px */
+  --soon-input-width-landscape: 14.625rem;  /* 234 px */
+  --soon-copy-basis: 18.75rem;    /* 300 px */
+  --soon-form-basis: 25.28125rem; /* 404.5 px: the 254 px field, the gap and the 134.5 px button */
+  --border-soon-input: 1px;     /* the coming-soon email field's rim */
+  --social-icon-landscape: 1.381rem; /* 22.1 px: the board's 26 px marks at 85% on a phone turned sideways */
+  --social-cue-size: 0.75rem;     /* the ↗ shown on hover and focus */
+  --social-glow: drop-shadow(0 6px 10px color-mix(in srgb, var(--color-copper-deep) 35%, transparent)); /* Home v3 social marks: the soft copper glow on hover or focus */
   --border-vial-arrow: 1px;     /* the copper rim round the home carousel's arrows (HomeV2, P6) */
   --container-mode-tile: 7.5rem; /* narrowest a lesson-hub mode tile gets: two fit a phone, one fits when text is enlarged */
   --container-mode-preview: 28rem; /* the study-mode preview panel (D-51) */
@@ -412,7 +467,10 @@
   --radius-lg: 1rem;
   --radius-xl: 1rem;            /* frosted panels and cards on marketing pages (16 px, D-62) */
   --radius-pill: 999px;
-  --notice-icon-disc: 0.125rem; /* light disc margin around the building-strip icon in Evening */
+  --notice-icon-size: 1rem;     /* the building notice's cup-and-leaf mark, one on each side of the words */
+  --notice-icon-gap: 0.5rem;
+  --notice-link-trim: calc((var(--tap-min) - 1.5rem) / -2); /* the "support" link's 44 px box minus its 24 px line, split above and below */
+  --underline-offset-notice: 0.2em;
 
   /* ---------- Depth (marketing pages) ---------- */
   --shadow-soft: 0 12px 32px rgb(var(--shadow-tint) / 0.08); /* one soft shadow for frosted panels (D-62) */
@@ -618,8 +676,36 @@
     --game-section-padding: 4.5rem 2.5rem 1.5rem;
     --game-section-padding-phone: 3rem 1rem 1.25rem;
     --game-container-gap: 1.125rem;
-    --game-stage-padding: var(--spacing-section) var(--spacing-gutter);
-    --game-stage-padding-phone: 0 var(--spacing-gutter);
+    /* Home v3 board gaps (measured from home-light / home-phone-light / home-landscape-light .dc.html). The hero's own
+       bottom padding is the space above the heading, so the section adds none. */
+    --game-stage-inline: 2.5rem;              /* 40 px each side; the 1280 px column then holds the heading row and cards (arrows at its ends) */
+    --game-stage-padding: 0 var(--game-stage-inline);
+    --game-stage-inline-phone: 1rem;
+    --game-stage-padding-phone: 0 var(--game-stage-inline-phone);
+    --game-stage-padding-landscape: 0 1.5rem;
+    /* Below "play today's": the next scene fades in over the last --scene-fade-top of this section (D-53), so the space
+       is at least that tall and no word sits in the fade. This is the one place the board's tighter gap gives way. */
+    --game-section-top: 1rem;                 /* the heading's glyphs reach up to 14 px above its line box; this keeps them out of the scene fade above (D-53) */
+    --game-section-bottom: 1.375rem;             /* board: the platter section starts 482 px under the card tops on desktop */
+    --game-section-bottom-phone: 0.375rem;      /* 6 px: the platter section starts 416 px under the card tops on a phone */
+    --game-section-bottom-landscape: 0.9375rem; /* 15 px: 320 px under the card tops on a phone turned sideways */
+    --game-header-gap-phone: 0.375rem;
+    --game-heading-size-phone: 2.125rem;      /* 34 px */
+    --game-heading-size-landscape: 2.625rem;  /* 42 px */
+    --game-subtitle-margin-top-phone: 0.375rem;
+    --game-subtitle-margin-top-landscape: 0.25rem;
+    --game-subtitle-size-phone: 0.9375rem;    /* 15 px */
+    --game-subtitle-size-landscape: 0.875rem; /* 14 px */
+    --game-nav-size-landscape: 2.5rem;
+    --game-container-gap-landscape: 0.625rem;
+    --game-car-padding-phone: 0.75rem 1rem 5rem;       /* net 36 px under the cards once the pull below is taken off */
+    --game-car-shadow-pull-phone: -2.75rem;
+    --game-car-padding-landscape: 0.5rem 0 5rem;       /* net 30 px */
+    --game-car-shadow-pull-landscape: -3.125rem;
+    --game-car-landscape-min-inset: 0px;
+    --game-pager-pull: -1.625rem;             /* puts the 8 px dot, not its 44 px box, where the board puts it (dot centre 450 px under the card tops on desktop) */
+    --game-pager-pull-landscape: -1.6875rem;  /* the same on a phone turned sideways (27 px) */
+    --game-pager-pull-end: -0.75rem;
     --game-header-gap: 1rem;
     --game-nav-size: 3.25rem;
     --game-nav-size-phone: 44px; /* phones: a fixed 44 px target, so large text leaves the "play today's" button its room */
@@ -629,22 +715,20 @@
     --game-nav-outline-width: 0.1875rem;
     --game-nav-outline-offset: 0.1875rem;
     --game-heading-size-min: 2rem;
-    --game-heading-size-max: 5.75rem;
+    --game-heading-size-max: 4.125rem;
     --game-subtitle-margin-bottom: 1.25rem;
     --game-subtitle-size: 1.125rem;
-    --game-date-note-margin-top: 0.75rem;
     --game-pager-dot: 0.5rem;   /* 8 px dots; the current one is a 26 x 8 px pill */
     --game-pager-pill: 1.625rem;
     --game-pager-gap: 0.125rem; /* 2 px between the 44 px boxes: browsers hit-test flush neighbours about 1 px into each other, so a hair of space keeps every box exact */
-    --game-car-padding: 0.75rem 0.375rem 2.75rem;
+    --game-car-padding: 0.75rem 0.375rem 5rem; /* the bottom padding holds the whole card shadow (18 px down + 40 px blur) so it fades out instead of being cut */
+    --game-car-shadow-pull: -2.25rem;     /* pulls the following row back up by the extra padding, so spacing is unchanged */
     --game-track-gap: 1.75rem;
-    --game-track-gap-phone: 0.75rem; /* tighter on phones so at least 48 px of the next card shows inside the carousel's clip */
+    --game-track-gap-phone: 0.875rem; /* board phone: 14 px between cards */
     --game-card-width: 17.5rem;
     --game-card-height: 24.5rem;
-    --game-card-phone-width: calc(100vw - 88px);
-    --game-card-phone-inline-inset: 1.5rem;
-    --game-card-phone-min-width: 280px;
-    --game-card-phone-min-height: 392px;
+    --game-card-phone-width: 15.625rem;       /* board phone: 250 x 350 cards, the next one peeking in */
+    --game-card-phone-height: 21.875rem;
     --game-card-radius: 1.375rem;
     --game-card-padding: 1rem;
     --game-card-border: 1px solid #eadccf;
@@ -676,6 +760,22 @@
     --game-face-header-height: 6rem;
     --game-face-phone-header-height: 96px;
     --game-face-padding: 1.125rem 1rem;
+    --game-card-landscape-width: 11.625rem;   /* phone landscape board: 186 x 260 cards, four across */
+    --game-card-landscape-height: 16.25rem;
+    --game-card-landscape-padding: 0.75rem;
+    --game-pip-landscape-size: 1.875rem;      /* 30 px pips inset 10 px */
+    --game-pip-landscape-inset: 0.625rem;
+    --game-pip-landscape-xcell: 0.4375rem;
+    --game-pip-landscape-glyph: 1.125rem;
+    --game-face-landscape-header-height: 4rem;    /* 64 px */
+    --game-face-landscape-padding: 2.875rem 0.625rem 3.25rem; /* 46 / 10 / 52 px */
+    --game-status-landscape-drop: -2.375rem;  /* the pill drops 38 px into the face's foot padding, level with the pip */
+    --game-wordmark-landscape-max-width: 8.25rem; /* 132 x 46 px */
+    --game-wordmark-landscape-max-height: 2.875rem;
+    --game-serif-name-landscape-size: 1.875rem;   /* crossword, sudoku: 30 px */
+    --game-desc-landscape-size: 0.75rem;
+    --game-status-landscape-size: 0.6875rem;
+    --game-track-gap-landscape: 0.75rem;
     --game-wordmark-max-width: 10.5rem;
     --game-wordmark-max-height: 3.75rem;
     --game-serif-name-size: 2.5rem;
@@ -683,7 +783,9 @@
     --game-desc-margin-top: 0.375rem;
     --game-desc-size: 0.875rem;
     --game-desc-phone-size: 16px;
-    --game-status-gap: 0.375rem;
+    --game-status-gap: 0;
+    --game-status-sym-gap: 0.25rem;           /* the board's one text run "○ not started": a plain space between the symbol and the words */
+    --game-status-line-height: 1.15;
     --game-status-size: 0.8125rem;
     --game-status-phone-size: 14px;
     --game-status-padding: 0.25rem 0.625rem;
@@ -764,6 +866,10 @@
   --silk-wash-rgb: 246 211 174; /* Copper Glow */
   --silk-wash-alpha: 0.75;
   --silk-fold-layer: 1.4; /* how strongly the fold mask shows the peach layer: the creases and glints (P3c) */
+  /* Home ground (boards, 24 Nov): from the hero down the home page is one even, slightly grey beige, left to right (board #d8cebd to #e9e2d7), with no peach bands between sections. Palette mixes only. */
+  --home-ground-a: color-mix(in srgb, var(--color-surface) 86%, var(--color-highlight)); /* Linen + a little Mocha */
+  --home-ground-b: color-mix(in srgb, var(--color-surface) 70%, var(--color-page));  /* Linen + Ivory */
+  --home-ground: linear-gradient(90deg, var(--home-ground-a), var(--home-ground-b));
   --silk-fold-height: 47.5rem; /* one tile of the boards' fold mask (public/design/silk-fold-mask.svg, 1440 x 760) */
   /* Frosted panels: Ivory, three-quarters opaque. A plain rgb() so every browser gets the right panel color. */
   --veil-rgb: 249 245 239;      /* Ivory */
@@ -780,6 +886,18 @@
   --panel-rgb: 62 44 35;        /* Espresso */
   --panel-alpha: 0.92;
   --scrim-alpha: 0.35;          /* the dimmed page behind the open side panel (Espresso shadow tint) */
+  /* Home v3 vial platter (docs/design/home-v3/, src/scripts/platter.ts). One pixel, the unit the platter's unitless
+     layout numbers are multiplied by; the platter's colors are mixes of the palette, so they follow the theme. */
+  --platter-px: 1px;
+  --platter-edge: linear-gradient(90deg, color-mix(in srgb, var(--color-soft) 80%, var(--color-highlight)) 0%, color-mix(in srgb, var(--color-surface) 85%, var(--color-soft)) 22%, var(--color-surface) 48%, color-mix(in srgb, var(--color-surface) 70%, var(--color-soft)) 74%, color-mix(in srgb, var(--color-soft) 70%, var(--color-highlight)) 100%);
+  --platter-top: radial-gradient(ellipse at 62% 22%, color-mix(in srgb, var(--color-copper-shine) 30%, var(--color-page)) 0%, color-mix(in srgb, var(--color-page) 70%, var(--color-surface)) 42%, var(--color-surface) 78%, color-mix(in srgb, var(--color-surface) 60%, var(--color-soft)) 100%);
+  --platter-edge-shadow: 0 46px 60px -18px rgb(var(--shadow-tint) / 0.34), 0 10px 16px -4px rgb(var(--shadow-tint) / 0.22);
+  --platter-top-shadow: inset 0 -4px 5px color-mix(in srgb, var(--color-copper-shine) 75%, transparent), inset 0 3px 8px rgb(var(--shadow-tint) / 0.1);
+  --platter-edge-shade: 0.16;   /* how dark the platter's rim gets toward its bottom */
+  --platter-foot-a: 0.42;       /* the shadow under each vial: centre and middle strength */
+  --platter-foot-b: 0.16;
+  --platter-reflect: 0.22;      /* the glossy reflection under each vial */
+  --platter-glow: color-mix(in srgb, var(--color-copper-deep) 50%, transparent); /* a hovered or focused vial's soft copper glow */
   /* pillo (Task 114): how much tint greys the foil, and how much of their color the frosted pills and keys show. */
   --pillo-foil-mix: 16%;
   --pillo-hatch-mix: 7%;
@@ -846,6 +964,15 @@
     --color-panel-ink: #f9f5ef;   /* Ivory */
     --color-panel-ink-soft: #cbb8a4; /* Sand */
     --color-on-panel-button: #1c1917; /* Charcoal */
+    --platter-edge: linear-gradient(90deg, var(--color-page) 0%, color-mix(in srgb, var(--color-page) 60%, var(--color-surface)) 30%, color-mix(in srgb, var(--color-page) 30%, var(--color-surface)) 50%, color-mix(in srgb, var(--color-page) 70%, var(--color-surface)) 75%, var(--color-page) 100%);
+    --platter-top: radial-gradient(ellipse at 62% 22%, color-mix(in srgb, var(--color-surface) 80%, var(--color-highlight)) 0%, var(--color-surface) 42%, color-mix(in srgb, var(--color-surface) 60%, var(--color-page)) 78%, color-mix(in srgb, var(--color-surface) 25%, var(--color-page)) 100%);
+    --platter-edge-shadow: 0 46px 60px -18px rgb(var(--shadow-tint) / 0.7), 0 10px 16px -4px rgb(var(--shadow-tint) / 0.5);
+    --platter-top-shadow: inset 0 -4px 5px color-mix(in srgb, var(--color-copper-glow) 10%, transparent), inset 0 3px 8px rgb(var(--shadow-tint) / 0.35);
+    --platter-edge-shade: 0.35;
+    --platter-foot-a: 0.6;
+    --platter-foot-b: 0.25;
+    --platter-reflect: 0.1;
+    --platter-glow: color-mix(in srgb, var(--color-copper) 60%, transparent);
     --color-player: #1c1917;      /* Charcoal */
     --color-qr-quiet: #f9f5ef;    /* Ivory: stays light, so a phone can read the QR code */
     --color-model: #cbb8a4;          /* Sand */
@@ -868,6 +995,9 @@
     --silk-peach-rgb: 58 45 36;    /* Walnut: Evening stays quiet */
     --silk-peach-alpha: 0.7;
     --silk-fold-layer: 0.6; /* Evening keeps the creases as quiet as before */
+    --home-ground-a: var(--color-page); /* Evening: one even Charcoal (the board is a shade darker than the palette goes) */
+    --home-ground-b: var(--color-page);
+    --home-ground: linear-gradient(90deg, var(--home-ground-a), var(--home-ground-b));
     --silk-wash-rgb: 58 45 36;    /* Walnut */
     --silk-wash-alpha: 0;         /* no wash in Evening */
     --veil-rgb: 58 45 36;         /* Walnut */
@@ -964,6 +1094,15 @@
   --color-panel-ink: #f9f5ef;   /* Ivory */
   --color-panel-ink-soft: #cbb8a4; /* Sand */
   --color-on-panel-button: #1c1917; /* Charcoal */
+  --platter-edge: linear-gradient(90deg, var(--color-page) 0%, color-mix(in srgb, var(--color-page) 60%, var(--color-surface)) 30%, color-mix(in srgb, var(--color-page) 30%, var(--color-surface)) 50%, color-mix(in srgb, var(--color-page) 70%, var(--color-surface)) 75%, var(--color-page) 100%);
+  --platter-top: radial-gradient(ellipse at 62% 22%, color-mix(in srgb, var(--color-surface) 80%, var(--color-highlight)) 0%, var(--color-surface) 42%, color-mix(in srgb, var(--color-surface) 60%, var(--color-page)) 78%, color-mix(in srgb, var(--color-surface) 25%, var(--color-page)) 100%);
+  --platter-edge-shadow: 0 46px 60px -18px rgb(var(--shadow-tint) / 0.7), 0 10px 16px -4px rgb(var(--shadow-tint) / 0.5);
+  --platter-top-shadow: inset 0 -4px 5px color-mix(in srgb, var(--color-copper-glow) 10%, transparent), inset 0 3px 8px rgb(var(--shadow-tint) / 0.35);
+  --platter-edge-shade: 0.35;
+  --platter-foot-a: 0.6;
+  --platter-foot-b: 0.25;
+  --platter-reflect: 0.1;
+  --platter-glow: color-mix(in srgb, var(--color-copper) 60%, transparent);
   --color-player: #1c1917;      /* Charcoal */
   --color-qr-quiet: #f9f5ef;    /* Ivory: stays light, so a phone can read the QR code */
   --color-model: #cbb8a4;          /* Sand */
@@ -986,6 +1125,9 @@
   --silk-peach-rgb: 58 45 36;    /* Walnut: Evening stays quiet */
   --silk-peach-alpha: 0.7;
   --silk-fold-layer: 0.6; /* Evening keeps the creases as quiet as before */
+  --home-ground-a: var(--color-page); /* Evening: one even Charcoal (the board is a shade darker than the palette goes) */
+  --home-ground-b: var(--color-page);
+  --home-ground: linear-gradient(90deg, var(--home-ground-a), var(--home-ground-b));
   --silk-wash-rgb: 58 45 36;    /* Walnut */
   --silk-wash-alpha: 0;         /* no wash in Evening */
   --veil-rgb: 58 45 36;         /* Walnut */
@@ -1121,3 +1263,194 @@
   /* room kept for the stats panel (browser-only) until it renders; the game rows render on the server */
   --play-hub-stats-reserve: 34rem;      /* the stats panel at every width (at least 550 px) */
 }
+
+/* The explore dock overlaps the bottom of the stage by the board's margin-top of -92 px (docs/design/home-v3, nav margin -92 px
+   under the stage) on desktop, tablet and phone portrait; phone landscape has it as a normal block under the points. */
+:root {
+  --stage-next-top-pad: 1rem;   /* 16 px: the games row's own top padding, which games-row-board.spec expects; the fade (D-53) lies in the strip below, not over the heading */
+  --stage-bottom-gap: 2.6875rem;   /* 43 + 16 = 59 px from the dock to the next heading (board 59); the next scene fades in over this strip, so no text sits in it */
+}
+@media (width < 40rem) {
+  :root { --explore-dock-gap: 0.75rem; --explore-dock-padding: 1rem; --explore-dock-title: 1.625rem; --explore-tile-text: 0.8125rem; --explore-tile-padding: calc(var(--spacing) * 2.5) var(--spacing); --explore-dock-tile-gap: 0.5rem; --explore-wrap-gutter: 1rem; --explore-icon: 1.75rem; }
+  :root { --stage-bottom-gap: 3rem; --stage-next-top-pad: 1rem; } /* board: 64 px (this 48 px strip plus the next section's 16 px) */
+}
+.scene-hero {
+  --stage-dock-overlap: calc(-1 * var(--explore-overlap));  /* one definition: ExploreDock's --explore-overlap (92 px) */
+  --silk-wash-alpha: 0;      /* the board's hero is a lighter, greyer beige: no Copper Glow wash on this scene (the other home scenes keep theirs) */
+}
+@media (orientation: landscape) and (40rem <= width < 60rem) and (height < 32rem) {
+  .scene-hero { --stage-dock-overlap: 0px; }
+}
+
+@media (orientation: landscape) and (max-height: 32em) {
+  :root { --explore-dock-gap: 0.75rem; --explore-dock-padding: 0.75rem 0.875rem 0.75rem 1.125rem; --explore-dock-title: 1.125rem; --explore-tile-text: 0.6875rem; --explore-tile-padding: calc(var(--spacing) * 2) calc(var(--spacing) * .5); --explore-tile-inner-gap: calc(var(--spacing) * 1.5); --explore-icon: 1.5rem; --explore-tile-min: 5.5rem; --explore-dock-tile-gap: 0.4375rem; }
+}
+
+/* Approved Home v3 camera crop and layout, from the 1440 and 390 boards. */
+.home-stage {
+  --stage-heading-width: none;
+  --stage-accent-stroke: 0;
+  --stage-eyebrow-size: 1rem;
+  --stage-eyebrow-gap: .8em;
+  --stage-heading-gap: .25em;
+  --stage-point-row-gap: .6em;
+  --stage-point-column-gap: 1em;
+  --stage-icon-gap: .4em;
+  --stage-eyebrow-rule: 3rem;
+  --stage-heading-size: clamp(2.25rem, 4.5vw, 3.7rem); /* board: 66 px in a lighter serif; Bodoni Moda at 700 is wider, so this size gives the board's line length (772 px at 1440) */
+  --stage-heading-weight: 600;
+  --stage-heading-leading: 1.08;
+  --stage-button-leading: 1.5;
+  --stage-button-size: 1rem;   /* board: 16 px label, a 45 px high button (the shared button is 60 px) */
+  --stage-button-padding: calc(var(--spacing) * 2.4) calc(var(--spacing) * 7);
+  --stage-tip-small: .6875rem;             /* board: "support on" 11 px over "Ko-fi" 17 px, a 52 px high pill */
+  --stage-tip-name: 1.0625rem;
+  --stage-tip-leading: 1.12;
+  --stage-tip-padding: .625rem 1.125rem .625rem .875rem;
+  --stage-action-margin: clamp(2.375rem, calc(5.75vw + .1875rem), 5.4375rem) auto 2.375rem;
+  --stage-width: min(100%, 60rem);
+  --stage-margin: 2.0625rem auto 0;
+  --stage-height: clamp(20rem, 36vw, 26.25rem);
+  --stage-photo-top: max(-22.9vw, -20.625rem);
+  --stage-photo-width: min(100vw, 90rem);
+  --stage-photo-mask: linear-gradient(transparent, currentColor 14%, currentColor 82%, transparent);
+  --stage-photo-mask-x: linear-gradient(90deg, transparent, currentColor 20%, currentColor 80%, transparent); /* the sides fade too, so the photo never shows a rectangle on a wide screen (the figures and the ring sit between 28% and 72%) */
+  --stage-halo-top: min(6.5vw, 5.875rem);
+  --stage-halo-width: min(42vw, 37.75rem);
+  --stage-tip-top: calc(15% - .375rem);
+  --stage-tip-bottom: auto;
+  --stage-tip-left: 4%;
+  --stage-tip-offset: none;
+  --stage-tip-icon: 1.75rem;
+  --stage-hairline: 1px;
+  --stage-points-size: var(--text-sm);
+  --stage-points-row-gap: .6em;
+  --stage-points-width: none;
+  --stage-points-margin: 0 auto;
+}
+
+@media (width < 40rem) {
+  .home-stage {
+    --stage-heading-width: 20.625rem;
+    --stage-heading-size: 2.25rem;
+    --stage-heading-leading: 1.25;  /* board: lines 45 px apart */
+    --stage-eyebrow-size: .8125rem;
+    --stage-eyebrow-rule: 1.375rem;
+    --stage-action-margin: 1.375rem auto 1rem;
+    --stage-points-size: .8125rem;
+    --stage-points-width: 20rem;
+    --stage-points-row-gap: .1em;   /* board: the two rows of points are 21 px apart */
+    --stage-margin: .25rem auto 0;
+    --stage-height: 28.45rem;  /* the board's stage plus the part the dock overlaps */
+    --stage-photo-width: 47.5rem;
+    --stage-photo-top: -3.25rem;
+    --stage-photo-mask: linear-gradient(transparent, currentColor 24%, currentColor 74%, transparent 96%);
+    --stage-halo-top: 10.75rem;  /* centred on the ring painted in the photo, so the travelling light follows it */
+    --stage-halo-width: 20rem;
+    --stage-tip-top: auto;
+    --stage-tip-bottom: calc(var(--stage-dock-overlap) + 1.25rem);  /* above the dock, as on the board (pill 15 px lower than before) */
+    --stage-tip-left: 50%;
+    --stage-tip-offset: translateX(-50%);
+  }
+}
+
+/* Official full logo at the 52 px desktop and 38 px phone heights in the Home v3 boards. */
+/* The home header is one row (boards of 2026-11-24): menu button, logo, then search and sign in. Desktop and tablet 48 px
+   buttons, phone 44 px, phone landscape 40 px drawn (still a 44 px hit area, see SiteHeader.astro). */
+.home-board-header {
+  --home-header-brand-width: 10.25rem;
+  --home-btn: 3rem;
+  --home-signin-height: 3.125rem;   /* the copper pill: 48 px plus its 1 px border */
+  --home-signin-pad: 1.5rem;
+  --home-signin-gap: 0.625rem;
+  --home-signin-size: var(--text-base);
+  --home-signin-icon: 1.125rem;
+  --home-icon: 1.25rem;
+  --home-header-gap: 0.625rem;      /* between search and sign in */
+  --home-header-gutter: 1.75rem;    /* 28 px each side */
+  --home-header-pad-top: 0;
+}
+@media (width < 40rem) {
+  :root { --hero-top-clear: 4.25rem; }
+  .home-board-header {
+    --home-header-brand-width: 7.5rem;
+    --home-btn: 2.75rem;
+    --home-signin-height: 2.875rem;
+    --home-header-gutter: 1rem;
+    --home-header-gap: 0.5rem;
+    --home-header-pad-top: 0.25rem;
+  }
+}
+@media (orientation: landscape) and (40rem <= width < 60rem) and (height < 32rem) {
+  :root { --hero-top-clear: 4.25rem; }
+  .home-board-header {
+    --home-header-brand-width: 6.73rem;
+    --home-btn: 2.5rem;
+    --home-signin-height: 2.625rem;
+    --home-signin-pad: 1.0625rem;
+    --home-signin-gap: 0.5rem;
+    --home-signin-size: var(--text-sm);
+    --home-header-gutter: 1.25rem;
+  }
+}
+/* The side bar (SiteMenu.astro), as on the boards: light drawer in Daytime, dark in Evening; rows 48 px, sub rows 44 px. */
+:root {
+  --drawer-row: 3rem;
+  --drawer-row-size: 1.0625rem;
+  --drawer-sub-row: 2.75rem;
+  --drawer-sub-indent: 1.75rem;
+  --drawer-row-radius: 0.75rem;
+  --drawer-label-size: 0.6875rem;
+  --drawer-label-tracking: 0.14em;
+  --drawer-shadow: 18px 0 60px rgb(var(--shadow-tint) / 0.32);
+  --drawer-scrim: rgb(var(--shadow-tint) / 0.58);
+}
+/* The landscape phone board is the centred desktop composition at about 60% scale: the button sits inside the top of the ring and the points under the pedestal. */
+@media (orientation: landscape) and (40rem <= width < 60rem) and (height < 32rem) {
+  .home-stage {
+    --stage-heading-size: 2.6875rem;
+    --stage-heading-gap: 1.25rem;
+    --stage-eyebrow-size: .875rem;
+    --stage-eyebrow-rule: 2.25rem;
+    --stage-action-margin: 4.125rem auto 0;
+    --stage-margin: -10.4375rem auto 0;
+    --stage-points-margin: 1.25rem auto 1.75rem;
+    --stage-width: min(100%, 36rem);
+    --stage-height: 27.9rem;
+    --stage-photo-width: 56.5rem;
+    --stage-photo-top: -.5rem;
+    --stage-halo-top: 16.2rem;
+    --stage-halo-width: 22.625rem;
+    --stage-tip-top: 14.875rem;
+    --stage-tip-small: .5625rem;
+    --stage-tip-name: .875rem;
+    --stage-tip-icon: 1.375rem;
+    --stage-tip-padding: .375rem .75rem .375rem .625rem;
+    --stage-tip-left: max(-10%, calc((100% - 100vw) / 2 + var(--spacing-gutter)));
+  }
+
+  .home-stage { display: flex; flex-direction: column; }
+  .stage-copy { display: contents; }
+  .hero-eyebrow { order: 1; }
+  #hero-heading { order: 2; }
+  .stage-actions { order: 3; }
+  .stage-scene { order: 4; }
+  .stage-points { order: 5; }
+  .stage-actions, .stage-points { position: relative; z-index: 2; padding-inline: var(--spacing-gutter); }
+  .hero-eyebrow, #hero-heading { position: relative; z-index: 2; margin-inline: auto; }
+}
+
+/* Very narrow screens or enlarged text: the home header is under 21 rem wide (336 px at the normal text size). Two 44 px
+   corner columns, the gap and the gutters leave the 96 px logo minimum exactly 336 px, so below that the corner buttons
+   keep row one and the logo drops to its own centred row. A container query, because a media query ignores the visitor's
+   text size. The repeated class beats the header's own scoped rules (SiteHeader.astro). */
+@container (width < 21rem) {
+  header.home-board-header.home-board-header.home-board-header { grid-template-columns: minmax(0, 1fr) auto; }
+  header.home-board-header.home-board-header .home-menu { grid-area: 1 / 1; }
+  header.home-board-header.home-board-header .home-utilities { grid-area: 1 / 2; }
+  header.home-board-header.home-board-header .home-brand { grid-area: 2 / 1 / 3 / 3; justify-self: center; }
+}
+
+/* Very narrow screens or enlarged text (the page is under 21 rem wide: 336 px at the normal text size): the logo sits on a
+   row of its own under the corner buttons (SiteHeader.astro), so the hero starts a row lower. */
+@media (width < 21rem) { :root { --hero-top-clear: 6.9rem; } }

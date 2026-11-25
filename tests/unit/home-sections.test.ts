@@ -1,7 +1,6 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { draftsAllowed } from '../../src/islands/anatomylab';
-import { draftBuildEnv, heroStartHref, lessonEntryHref } from '../../src/lessons/draftgate';
+import { heroStartHref, lessonEntryHref } from '../../src/lessons/draftgate';
 import { accountLaunch, accountsOpen, showsHeroJoin } from '../../src/config/site';
 
 // Verify the built visitor-facing HTML after npm run build, not only Astro source text.
@@ -54,14 +53,13 @@ describe('home lower sections', () => {
     expect(plain(games)).toMatch(/hello cards flip a card,\s*start a conversation\./);
     expect(plain(games)).toContain('sudoku a calm numbers break.');
     expect(signup).toContain('id="signup"');
-    // The signup landmark is named by its "launch updates" eyebrow and its heading together.
-    expect(signup).toMatch(/<section\b[^>]*\baria-labelledby="signup-eyebrow signup-heading"/);
-    expect(plain(signup.match(/<p\b[^>]*\bid="signup-eyebrow"[^>]*>[\s\S]*?<\/p>/)?.[0] ?? '')).toBe('launch updates');
+    // Home v3: the coming-soon panel (keeps the #signup anchor) is named by its heading.
+    expect(signup).toMatch(/<section\b[^>]*\baria-labelledby="soon-heading"/);
     expect(plain(signup)).toContain('Mental Health I and Med Math are next. Get one email when they open.');
   });
 
   it('keeps surviving lower-section style values in tokens, not inline styles or raw colors', () => {
-    for (const file of ['DailyGamesSection.astro', 'SignupForm.astro']) {
+    for (const file of ['DailyGamesSection.astro', 'home-v3/ComingSoon.astro']) {
       const source = readFileSync(new URL('../../src/components/' + file, import.meta.url), 'utf8');
       expect(source).not.toMatch(/\bstyle\s*=/i);
       expect(source).not.toMatch(/#[\da-f]{3,8}\b/i);
@@ -73,87 +71,61 @@ describe('home lower sections', () => {
     const heading = hero.match(/<h1\b[^>]*>([\s\S]*?)<\/h1>/)?.[1] ?? '';
     expect(plain(heading)).toBe('nursing school made simpler.');
     expect(plain(hero)).toContain('by nursing students, for nursing students');
-    // The "start studying" call to action follows the draft gate (heroStartHref): a copper link to the open lesson where
-    // drafts may show, and in the live build a disabled button tagged "coming soon", never a link that leads nowhere.
-    const open = draftsAllowed(draftBuildEnv(process.env));
-    const startTag = hero.match(/<(a|button)\b(?=[^>]*data-testid="hero-start")[^>]*>([\s\S]*?)<\/\1>/);
-    expect(plain(startTag?.[2] ?? '')).toBe('start studying for free →');
-    if (open) {
-      expect(startTag?.[1]).toBe('a');
-      expect(startTag?.[0]).toContain('href="' + lessonEntryHref(process.env) + '"');
-      expect(startTag?.[0]).toContain('copper-button');
-      expect(startTag?.[0]).not.toContain('aria-disabled');
-    } else {
-      expect(startTag?.[1]).toBe('button');
-      expect(startTag?.[0]).toContain('aria-disabled="true"');
-      expect(startTag?.[0]).not.toContain('href=');
-      expect(hero).toContain('coming soon');
-    }
+    // The one "start studying" call to action is always a copper link (heroStartHref): the open lesson where drafts may
+    // show, the lesson library on the live build. No "coming soon" pill and no second link beside it.
+    const startTag = hero.match(/<a\b(?=[^>]*data-testid="hero-start")[^>]*>([\s\S]*?)<\/a>/);
+    expect(plain(startTag?.[1] ?? '')).toBe('start studying for free →');
+    expect(startTag?.[0]).toContain('href="' + lessonEntryHref(process.env) + '"');
+    expect(startTag?.[0]).toContain('copper-button');
+    expect(hero).not.toContain('coming soon');
+    expect(hero).not.toContain('data-testid="hero-play-games"');
     // The old quiet launch-list link went away with the old hero (copy deck, "hero quiet link"); the form is lower down.
     expect(hero).not.toContain('data-testid="hero-join"');
     expect(accountLaunch(true)).toMatchObject({ accountHref: '/signup', promoJoinLabel: 'create your free account' });
     // The third value point shipped (Christian approved it, 23 Nov, D-190).
     expect(plain(hero)).toContain('adhd friendly');
-    expect(plain(hero)).toContain('less overwhelm, more focus');
     expect((hero.match(/<ul\b[^>]*aria-label="what you get"[\s\S]*?<\/ul>/)?.[0].match(/<li\b/g) ?? []).length).toBe(3);
     expect(plain(hero)).toContain('structured learning');
     expect(plain(hero)).toContain('multiple ways to study');
-    // Explore tiles: only places that exist today; "resources" waits until that page is live.
+    // Explore dock tiles (Home v3): five places that exist today, resources included.
     const explore = hero.match(/<nav\b[^>]*aria-labelledby="explore-heading"[\s\S]*?<\/nav>/)?.[0] ?? '';
-    expect(links(explore)).toEqual(['/learn', '#ways-to-study', '/play', '/message']);
-    expect(plain(explore)).not.toMatch(/resources/i);
+    expect(links(explore)).toEqual(['/learn', '#ways-to-study', '/play', '/resources', '/message']);
+    expect(plain(explore)).toMatch(/resources/i);
     for (const href of ['/learn', '/play', '/message']) expect(existsSync(new URL('../../dist' + href + '.html', import.meta.url)) || existsSync(new URL('../../dist' + href + '/index.html', import.meta.url))).toBe(true);
     // Ko-fi card: the supporting-our-mission page, opened in a new tab and said so to screen readers.
     const support = hero.match(/<a\b(?=[^>]*data-testid="hero-support")[^>]*>[\s\S]*?<\/a>/)?.[0] ?? '';
     expect(support).toContain('target="_blank"');
     expect(support).toContain('rel="noopener noreferrer"');
     expect(support).toContain('opens in a new tab');
-    // The figure loads at once and is decorative.
-    expect(hero).toMatch(/<img\b(?=[^>]*hero-figure-halo\.webp)(?=[^>]*loading="eager")(?=[^>]*alt="")[^>]*>/);
+    expect(hero).toMatch(/<div[^>]*class="stage-photo"[^>]*aria-hidden="true"/);
   });
 
-  it('draws the hairline rule between the hero value points from the tablet width up, as in HomeV2-1', () => {
+  it('uses the approved day and evening photos and places the value points above the stage', () => {
     const source = readFileSync(new URL('../../src/components/HomeHero.astro', import.meta.url), 'utf8');
-    const ruled = [...source.matchAll(/<li class="([^"]*)" data-hero-point-rule>/g)];
-    expect(ruled.length, 'second and third value points carry the rule').toBe(2);
-    for (const match of ruled) {
-      expect(match[1].split(' ')).toEqual(expect.arrayContaining(['sm:border-s', 'sm:border-line', 'sm:ps-5']));
+    for (const mode of ['light', 'evening']) {
+      const filename = '/design/home-v3/stage-' + mode + '.webp';
+      expect(source).toContain(filename);
+      expect(existsSync(new URL('../../public' + filename, import.meta.url))).toBe(true);
     }
+    const positions = ['class="stage-copy"', 'id="hero-heading"', 'class="stage-actions"', 'class="stage-points"', 'class="stage-scene"', 'class="stage-halo"', 'data-testid="hero-support"'].map(selector => source.indexOf(selector));
+    expect(positions.every(index => index >= 0)).toBe(true);
+    expect(positions).toEqual([...positions].sort((a, b) => a - b));
+    expect(source).toContain('prefers-reduced-motion: no-preference');
+    expect(source).toContain('stage-orbit 7s linear infinite');
+    expect(source).not.toContain('hero-play-games');
   });
 
-  it('centers the one-column hero (phone, tablet) and keeps the two-column layout from the xl width', () => {
-    const source = readFileSync(new URL('../../src/components/HomeHero.astro', import.meta.url), 'utf8');
-    expect(source).toMatch(/<div class="@container[^"]*\bmx-auto\b[^"]*\btext-center\b/);
-    expect(source).toMatch(/<div class="hero-logo-row flex items-center justify-center sm:justify-start sm:ps-\(--hero-logo-inset\)">/);
-    expect(source).toContain('max-w-(--container-explore)');
-    // The two columns start at the xl width, so the figure never sits over the text at laptop widths.
-    expect(source).not.toMatch(/\blg:(absolute|w-\(--hero-figure)/);
-    expect(source).toContain('xl:text-display-hero-xl');
-    // The final board's motion: the halo glisten, the light round the start button, and the copper shine on "simpler.".
-    expect(source).toContain('class="hero-halo');
-    expect(source).toContain('hero-start-ring');
-    expect(source).toContain('/design/home-v2/hero-figure-halo.webp');
-    // The headline is two natural lines on phones, never one word per line.
-    expect(source).not.toContain('max-sm:block');
-    // The closed live button is muted and sits beside a working link to the daily games.
-    expect(source).toContain('data-testid="hero-play-games"');
-    expect(source).toContain('href="/play"');
-  });
-
-  it('the hero start button follows the draft gate: closed live, a link to the open lesson elsewhere', () => {
-    // The live build (a Workers Build of main) holds the sample lesson back, so there is no link to show.
-    expect(heroStartHref({ WORKERS_CI: '1', WORKERS_CI_BRANCH: 'main' })).toBeNull();
-    expect(heroStartHref({ WORKERS_CI: '1', WORKERS_CI_BRANCH: 'refs/heads/main' })).toBeNull();
-    expect(heroStartHref({ WORKERS_CI: '1' })).toBeNull();
-    expect(heroStartHref({})).toBeNull();
-    // Staging, previews and the browser-test build show the sample lesson, and the button links to it.
+  it('the hero start button always links: the open lesson where drafts show, the lesson library on the live build', () => {
+    expect(heroStartHref({ WORKERS_CI: '1', WORKERS_CI_BRANCH: 'main' })).toBe('/learn');
+    expect(heroStartHref({ WORKERS_CI: '1', WORKERS_CI_BRANCH: 'refs/heads/main' })).toBe('/learn');
+    expect(heroStartHref({ WORKERS_CI: '1' })).toBe('/learn');
+    expect(heroStartHref({})).toBe('/learn');
     expect(heroStartHref({ WORKERS_CI: '1', WORKERS_CI_BRANCH: 'staging' })).toBe('/learn/study-skills');
     expect(heroStartHref({ WORKERS_CI: '1', WORKERS_CI_BRANCH: 'task-p5/home-hero' })).toBe('/learn/study-skills');
     expect(heroStartHref({ CUEORY_ANATOMY_DRAFTS: '1' })).toBe('/learn/study-skills');
-    // The hero asks the guard; it never decides on its own.
     const source = readFileSync(new URL('../../src/components/HomeHero.astro', import.meta.url), 'utf8');
     expect(source).toContain('heroStartHref()');
-    expect(source).toMatch(/startHref \? \(/);
+    expect(source).not.toContain('hero-soon');
   });
 
   it('shows the hero join link only when it leads to a real next step', () => {
@@ -171,5 +143,17 @@ describe('home lower sections', () => {
     // Accounts open: the link creates the free account either way.
     expect(showsHeroJoin(true, '', '')).toBe(true);
     expect(showsHeroJoin(true, form, landing)).toBe(true);
+  });
+
+  it('lays the explore dock out as five tiles: a row from the tablet width, 3 + 2 with the bottom two centred on phones', () => {
+    const source = readFileSync(new URL('../../src/components/ExploreDock.astro', import.meta.url), 'utf8');
+    expect((source.match(/testid: 'explore-/g) ?? []).length).toBe(5);
+    expect(source).toContain('justify-content: center');
+    expect(source).toContain('--explore-tile-basis-min');
+    expect(source).toContain('--explore-landscape-width');
+    expect(source).toContain('EXPLORE');
+    expect(source).toContain('grid-template-columns: repeat(5, minmax(0, 1fr))');
+    expect(source).toContain('/design/home-v3/icon-games.webp');
+    expect(existsSync(new URL('../../public/design/home-v3/icon-games.webp', import.meta.url))).toBe(true);
   });
 });

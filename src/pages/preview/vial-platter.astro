@@ -1,0 +1,10 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import VialPlatter from '../../components/VialPlatter.astro';
+---
+
+<!-- A private preview of the Home v3 vial platter, for review and its browser tests. Never indexed; the live build prunes /preview/. -->
+<Layout title="vial platter preview" description="A private preview of Cueory's study-methods vial platter." noindex promo={false} wide>
+  <h1 class="display mx-auto max-w-page px-gutter pt-8 text-center text-title-phone">vial platter preview</h1>
+  <VialPlatter />
+</Layout>

@@ -29,7 +29,9 @@ test('is hidden from search, navigation and the sitemap', async ({ page, request
   await expect(page).toHaveTitle('resources · cueory');
   await expect(page.locator('head meta[name="robots"]')).toHaveAttribute('content', /\bnoindex\b/);
   await expect(page.locator('main[data-pagefind-body]')).toHaveCount(0);
-  await expect(page.locator('header a[href="/resources"], footer a[href="/resources"]')).toHaveCount(0);
+  // Not in the header bar or the footer. The side bar lists it ("how to use cueory") on this drafts build only; the live
+  // build leaves it out (tests/unit/sitenav.test.ts), as it does the sitemap.
+  await expect(page.locator('header a[href="/resources"]:not(dialog *), footer a[href="/resources"]')).toHaveCount(0);
 
   const sitemap = await request.get('/sitemap.xml');
   expect(sitemap.status()).toBe(200);
