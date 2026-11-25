@@ -39,7 +39,9 @@
 
   .reading-copy :global(p),
   .reading-copy :global(li) {
-    line-height: var(--text-base--line-height);
+    /* Whole-pixel lines, so a page of paragraphs is a whole number of pixels tall and the footer panel under it starts on a pixel
+       boundary: an engine that stores positions in sixtieths of a pixel (Firefox) then measures the panel without float noise. */
+    line-height: round(calc(1em * var(--text-base--line-height)), var(--whole-pixel));
   }
 
   .reading-copy :global(ul),
