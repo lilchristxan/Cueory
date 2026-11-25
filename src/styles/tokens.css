@@ -1305,7 +1305,8 @@
 /* Approved Home v3 camera crop and layout, from the 1440 and 390 boards. */
 .home-stage {
   --stage-heading-width: none;
-  --stage-accent-stroke: .012em; /* a hair of outline in the word's own colour: Bodoni's thinnest joins are under a pixel wide at this size and Safari draws them half-covered (measured 1.8:1 to 2.4:1 there on 25 Nov), so the outline gives them a full pixel of ink in every engine */
+  --stage-accent-stroke: 0;
+  --stage-accent-opsz: 44; /* "simpler." is set at Bodoni Moda's optical size 44, not the 59 the browser picks from the font size: slightly sturdier thinnest joins, which Safari drew half-covered (1.8:1 to 2.4:1 on 25 Nov) */
   --stage-underline-drop: -.24em; /* the copper curve sits this far under the headline's box: low enough to clear the descender of the p in "simpler.", so no engine draws the letter against the copper (3:1 needed, copper on the word is only 2.6:1) */
   --stage-eyebrow-size: 1rem;
   --stage-eyebrow-gap: .8em;
