@@ -110,8 +110,8 @@ export type SudokuEdit = { kind: 'enter'; value: number } | { kind: 'mark' };
 export type SudokuKeyAction = SudokuEdit | { kind: 'select'; index: number } | { kind: 'clear' } | { kind: 'toggle-mode' };
 
 /**
- * Arrow keys stop at the board edges, rather than wrapping to another row or column. Space switches between normal
- * and candidate mode; Backspace and Delete clear the square; x toggles the x mark. With Shift held a number key gives
+ * Arrow keys stop at the board edges, rather than wrapping to another row or column. Space or P switches between normal
+ * and candidate (Pencil) mode; Backspace and Delete clear the square; x toggles the x mark. With Shift held a number key gives
  * a symbol on most layouts, so the physical key (`code`, Digit1 or Numpad1) still names the number.
  */
 export function sudokuKeyAction(key: string, selected: number, code = ''): SudokuKeyAction | undefined {
@@ -125,7 +125,7 @@ export function sudokuKeyAction(key: string, selected: number, code = ''): Sudok
   if (/^[1-9]$/.test(key)) return { kind: 'enter', value: Number(key) };
   const physical = /^(?:Digit|Numpad)([1-9])$/.exec(code);
   if (physical) return { kind: 'enter', value: Number(physical[1]) };
-  if (key === ' ' || key === 'Spacebar') return { kind: 'toggle-mode' };
+  if (key === ' ' || key === 'Spacebar' || key.toLowerCase() === 'p') return { kind: 'toggle-mode' };
   if (key === 'Backspace' || key === 'Delete') return { kind: 'clear' };
   if (key === 'x' || key === 'X') return { kind: 'mark' };
 }
@@ -341,6 +341,17 @@ export function candidates(grid: SudokuGrid, index: number): number[] {
   if (grid.length !== CELLS || index < 0 || index >= CELLS || grid[index]) return [];
   const used = new Set(peers(index).map((peer) => grid[peer]).filter(Boolean));
   return DIGITS.filter((digit) => !used.has(digit));
+}
+
+/**
+ * The digits (1 to 9) that already fill nine squares of the board, givens and the player's own entries alike. Wrong
+ * entries count, because the pad cannot tell a wrong digit from a right one without checking for the player. Pencil
+ * marks and x marks are not entries, so they never count. A digit that appears more than nine times is also done.
+ */
+export function placedDigits(entries: SudokuGrid): Set<number> {
+  const counts = Array<number>(10).fill(0);
+  for (const value of entries) if (Number.isInteger(value) && value >= 1 && value <= 9) counts[value]!++;
+  return new Set(DIGITS.filter((digit) => counts[digit]! >= 9));
 }
 
 export function conflictIndices(grid: SudokuGrid): number[] {

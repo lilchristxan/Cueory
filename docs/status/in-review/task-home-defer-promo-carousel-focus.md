@@ -1,1 +1,0 @@
-status: In review. Defer opening the promo while a Home game card owns keyboard focus. In #1126 WebKit desktop part 2 (run 45091489811), the promo opened before each failing ArrowLeft. The existing promo retry checks for focus leaving the card, and the existing Escape and close handlers are unchanged. The carousel test is unchanged. Exact browser verification is pending.

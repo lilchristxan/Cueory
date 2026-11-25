@@ -76,9 +76,11 @@ test('keyboard: one Tab stop, arrows move and pick, Space and Enter keep the pic
   await page.keyboard.press('ArrowRight');
   await expect(group.getByRole('radio', { name: 'follow device', exact: true })).toBeChecked();
   await expect(page.locator('html')).not.toHaveAttribute('data-theme', /.+/);
-  // Tab leaves the three segments in one step.
-  await page.keyboard.press('Tab');
+  // One Tab stop: a single Shift+Tab leaves the three segments. (The slider is the last control on the page, so a
+  // forward Tab has nowhere in the document to land: Firefox then keeps reporting the radio as the active element.)
+  await page.keyboard.press('Shift+Tab');
   expect(await page.evaluate(() => Boolean(document.activeElement?.closest('.theme-slider')))).toBe(false);
+  await expect(page.locator(':focus')).toHaveCount(1);
 });
 
 test('the footer slider and the game settings slider stay in sync both ways', async ({ page }) => {
@@ -108,7 +110,7 @@ test('the thumb eases in a short transition and not at all under reduced motion'
   expect(await page.evaluate(() => document.querySelector('footer')!.getAnimations({ subtree: true }).length)).toBe(0);
 });
 
-test('the open footer panel does not change size when the choice changes', async ({ page }) => {
+test('the open footer panel does not change size when the choice changes', async ({ page, browserName }) => {
   await openFooter(page);
   const footer = page.getByRole('contentinfo');
   const before = await footer.boundingBox();
@@ -116,7 +118,9 @@ test('the open footer panel does not change size when the choice changes', async
     await picker(page).locator('.theme-slider-option', { hasText: word }).click();
     await settled(page);
     const after = await footer.boundingBox();
-    expect(after!.height).toBe(before!.height);
+    // Firefox reports sizes in 1/60 px steps, so the same height can read 566.9999 and 567: allow that in Firefox only.
+    if (browserName === 'firefox') expect(Math.abs(after!.height - before!.height)).toBeLessThan(0.01);
+    else expect(after!.height).toBe(before!.height);
     expect(after!.width).toBe(before!.width);
   }
 });

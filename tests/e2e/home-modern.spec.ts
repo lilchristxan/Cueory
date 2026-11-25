@@ -2,6 +2,9 @@ import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
 import sharp from 'sharp';
 import { newsletter, signupState, site } from '../../src/config/site';
+import { markGameRulesSeen } from './clock';
+
+test.beforeEach(async ({ page }) => { await markGameRulesSeen(page); });
 
 // The hero's ways in (redesign P5): the explore row's tiles, each to a page that exists today. The "start studying" call
 // to action is closed (not a link) and the old quiet join link is gone.
@@ -318,7 +321,7 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 1440, height: 900 
 
 // "simpler." is large text, so it needs 3:1 against the silk behind it at every moment of the copper shine (11 s loop), in
 // Light and Evening, and in the still state reduced motion shows. The glyph pixels are found by taking the word twice,
-// once as drawn and once with the letters hidden, and comparing each interior glyph pixel with the pixel behind it.
+// once as drawn and once with the letters hidden, and comparing each interior glyph pixel that is at least 90% the word's solid ink with the pixel behind it.
 const luminance = ([r, g, b]: number[]) => {
   const f = (c: number) => { const v = c / 255; return v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; };
   return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b);
@@ -333,6 +336,7 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 1440, height: 900 
     test.describe(`the copper shine on "simpler." at ${viewport.width} wide in ${scheme}`, () => {
       test.use({ viewport, colorScheme: scheme });
 
+      let worstDetail = '';
       async function worstContrast(page: import('@playwright/test').Page): Promise<number> {
         const word = page.locator('.hero-accent');
         const box = (await word.boundingBox())!;
@@ -356,18 +360,53 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 1440, height: 900 
           const i = (y * info.width + x) * 3;
           return Math.abs(a[i] - b[i]) + Math.abs(a[i + 1] - b[i + 1]) + Math.abs(a[i + 2] - b[i + 2]) > 150;
         };
+        const interior = (x: number, y: number) => isGlyph(x, y) && isGlyph(x - 2, y) && isGlyph(x + 2, y) && isGlyph(x, y - 2) && isGlyph(x, y + 2);
+        // The word's solid ink for this frame: the drawn pixel that differs most from the pixel behind it. The word is one
+        // flat colour (--stage-accent-ink), so its fully covered pixels all share that colour, and taking it from the
+        // drawn frame avoids parsing the computed colour (engines return a colour-mix() result in different formats).
+        // This reference cannot hide a pale ink: a pale ink is still the reference, and its contrast is measured below.
+        let ink: number[] | null = null;
+        let inkDistance = -1;
+        for (let y = 2; y < info.height - 2; y++) {
+          for (let x = 2; x < info.width - 2; x++) {
+            if (!interior(x, y)) continue;
+            const i = (y * info.width + x) * 3;
+            const d = Math.abs(a[i] - b[i]) + Math.abs(a[i + 1] - b[i + 1]) + Math.abs(a[i + 2] - b[i + 2]);
+            if (d > inkDistance) { inkDistance = d; ink = [a[i], a[i + 1], a[i + 2]]; }
+          }
+        }
+        // How far a drawn pixel is from the silk toward the solid ink: 0 is all silk, 1 is all ink. A half-covered
+        // anti-aliased edge pixel (WebKit leaves some inside the 5-point test) is the word's own ink blended with the
+        // silk, not a contrast defect, so only pixels at least 90% ink are measured.
+        const coverage = (i: number) => {
+          const along = [0, 1, 2].reduce((sum, k) => sum + (a[i + k] - b[i + k]) * (ink![k] - b[i + k]), 0);
+          const full = [0, 1, 2].reduce((sum, k) => sum + (ink![k] - b[i + k]) ** 2, 0);
+          return full === 0 ? 0 : along / full;
+        };
         let worst = Infinity;
         let counted = 0;
+        let solid = 0;
+        worstDetail = '';
         for (let y = 2; y < info.height - 2; y++) {
           for (let x = 2; x < info.width - 2; x++) {
             // Interior pixels only: the anti-aliased edge blends the letter with the background.
-            if (!(isGlyph(x, y) && isGlyph(x - 2, y) && isGlyph(x + 2, y) && isGlyph(x, y - 2) && isGlyph(x, y + 2))) continue;
-            const i = (y * info.width + x) * 3;
+            if (!interior(x, y)) continue;
             counted++;
-            worst = Math.min(worst, contrast([a[i], a[i + 1], a[i + 2]], [b[i], b[i + 1], b[i + 2]]));
+            const i = (y * info.width + x) * 3;
+            if (coverage(i) < 0.9) continue;
+            solid++;
+            const here = contrast([a[i], a[i + 1], a[i + 2]], [b[i], b[i + 1], b[i + 2]]);
+            if (here < worst) {
+              worst = here;
+              // Diagnostic only (shown when the check fails): which pixel was worst, and the two colours compared.
+              worstDetail = `worst pixel x=${x} y=${y} of ${info.width}x${info.height}, drawn rgb(${a[i]},${a[i + 1]},${a[i + 2]}) on behind rgb(${b[i]},${b[i + 1]},${b[i + 2]})`;
+            }
           }
         }
         expect(counted).toBeGreaterThan(100);
+        // Guard: enough solid-ink pixels were measured, so the check cannot pass by measuring nothing.
+        expect(solid, 'solid-ink pixels measured').toBeGreaterThan(50);
+        worstDetail += `, ${solid} solid-ink of ${counted} glyph pixels`;
         return worst;
       }
 
@@ -383,7 +422,8 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 1440, height: 900 
             el.style.animationPlayState = 'paused';
             el.style.animationDelay = `-${p * 11}s`;
           }, phase);
-          expect(await worstContrast(page), `at ${phase * 100}%`).toBeGreaterThanOrEqual(3);
+          const worst = await worstContrast(page);
+          expect(worst, `at ${phase * 100}%: ${worstDetail}`).toBeGreaterThanOrEqual(3);
         }
       });
 
@@ -394,7 +434,8 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 1440, height: 900 
         });
         await page.goto('/');
         await expect(page.locator('.hero-accent')).toHaveCSS('animation-name', 'none');
-        expect(await worstContrast(page)).toBeGreaterThanOrEqual(3);
+        const worst = await worstContrast(page);
+        expect(worst, worstDetail).toBeGreaterThanOrEqual(3);
       });
     });
   }

@@ -1,6 +1,9 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { visibleFooterLinks } from '../../src/config/legalfooter';
 import { footerLinks, menuSmallLinks } from '../../src/config/site';
+import { markGameRulesSeen } from './clock';
+
+test.beforeEach(async ({ page }) => { await markGameRulesSeen(page); });
 
 // Footer and menu legal links (#747): keyboard only, each reachable by Tab, each with a visible focus ring, and Enter
 // opens it. Expectations come from the same rule the pages use, so they follow a legal page's approval on their own.
@@ -63,8 +66,8 @@ test('footer links: Tab reaches each one in order with a visible focus ring', as
 test('footer privacy link opens with Enter', async ({ page }) => {
   await page.goto('/support');
   const footer = page.getByRole('contentinfo');
-  await footer.locator('[data-footer-toggle]').focus();
-  await page.keyboard.press('Enter');
+  // "privacy" is in the always-visible row, which comes before the chevron; start at the flag, the row's first control.
+  await footer.getByRole('button', { name: 'flag or comment' }).focus();
   const privacy = footer.getByRole('link', { name: 'privacy', exact: true });
   await tabTo(page, privacy);
   await expectVisibleFocus(privacy);

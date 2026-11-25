@@ -1,4 +1,7 @@
 import { expect, test } from '@playwright/test';
+import { markGameRulesSeen } from './clock';
+
+test.beforeEach(async ({ page }) => { await markGameRulesSeen(page); });
 
 const MOTTO = 'by nursing students, for nursing students.';
 

@@ -1,4 +1,7 @@
 import { expect, test } from '@playwright/test';
+import { markGameRulesSeen } from './clock';
+
+test.beforeEach(async ({ page }) => { await markGameRulesSeen(page); });
 
 // A tablet held upright (820 × 1180) and sideways (1180 × 820): all four daily boards, each on its own page, are centred in the
 // game column, no square grows past 72px (a crossword square) or drops under 44px, and nothing scrolls sideways.

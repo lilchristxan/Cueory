@@ -12,11 +12,11 @@ const names: Record<string, string> = { light: 'light', dark: 'dark', device: 'f
 ---
 
 <fieldset data-theme-picker hidden>
-  <legend class="mb-2">theme</legend>
+  <legend class="mb-2 h-6">theme</legend>
   <div class="theme-slider mx-auto max-w-xs">
     {
       THEME_ROWS.map((row) => (
-        <label class="theme-slider-option">
+        <label class="theme-slider-option" data-text={row.short}>
           <input type="radio" name="theme" value={row.value} aria-label={names[row.value]} />
           <span aria-hidden="true">{row.short}</span>
         </label>
@@ -51,12 +51,20 @@ const names: Record<string, string> = { light: 'light', dark: 'dark', device: 'f
     const selected = picker.querySelector<HTMLInputElement>(`input[value="${current}"]`);
     if (selected) selected.checked = true;
 
+    // One Tab stop for the three segments: only the chosen radio is tabbable. Firefox did not skip the other two on
+    // its own here, so the order is set explicitly (arrow keys still move between all three).
+    const syncTabStops = () => {
+      for (const input of picker.querySelectorAll<HTMLInputElement>('input[type="radio"]')) input.tabIndex = input.checked ? 0 : -1;
+    };
+    syncTabStops();
+
     picker.addEventListener('change', (event) => {
       const value = (event.target as HTMLInputElement).value;
       if (!isThemeChoice(value)) return;
       applyChoice(root, value);
       saveChoice(storage, value);
       syncThemeColor(value);
+      syncTabStops();
     });
 
     picker.hidden = false;

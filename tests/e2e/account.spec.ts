@@ -3,6 +3,7 @@ import { expect, test, type Download, type Page } from '@playwright/test';
 import { build } from 'esbuild';
 import { readFileSync } from 'node:fs';
 
+
 const axeTags = ['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa'];
 
 /** Tab through every visible control; each one must be reached and show a focus outline. */
