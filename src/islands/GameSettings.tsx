@@ -138,7 +138,7 @@ export function GameSettingsDialog({ open, onClose, title = 'game settings', chi
         <legend>theme</legend>
         <div className="theme-slider" data-testid="theme-slider">
           {THEME_ROWS.map((row) => <label key={row.value} className="theme-slider-option">
-            <input type="radio" name={`${id}-theme`} value={row.value} aria-label={row.label} checked={theme === row.value} onChange={() => { setTheme(row.value); chooseSiteTheme(document, browserStorage(), row.value); }} />
+            <input type="radio" name={`${id}-theme`} value={row.value} aria-label={row.label} tabIndex={theme === row.value ? 0 : -1} checked={theme === row.value} onChange={() => { setTheme(row.value); chooseSiteTheme(document, browserStorage(), row.value); }} />
             <span aria-hidden="true">{row.short}</span>
           </label>)}
         </div>
