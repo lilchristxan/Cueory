@@ -2,6 +2,9 @@ import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 import { build } from 'esbuild';
 import { readFileSync } from 'node:fs';
+import { markGameRulesSeen } from './clock';
+
+test.beforeEach(async ({ page }) => { await markGameRulesSeen(page); });
 
 // These tests run in each selected Playwright project. CI currently selects phone and desktop.
 for (const [path, heading, title] of [

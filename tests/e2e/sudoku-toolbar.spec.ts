@@ -1,4 +1,7 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
+import { markGameRulesSeen } from './clock';
+
+test.beforeEach(async ({ page }) => { await markGameRulesSeen(page); });
 
 // Christian's sudoku brief: top to bottom the title, the levels, the time and error line, five equal icon buttons
 // spread across the board's width (settings, pause or play, print, stats, how to play), then the board. Pause hides

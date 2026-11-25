@@ -3,6 +3,9 @@ import { expect, test, type Page } from '@playwright/test';
 import { kitLandingUrl, newsletter, promo, signupState } from '../../src/config/site';
 import { SIGNUP_POPUP_STORAGE_KEY } from '../../src/scripts/signuppopup';
 import { isDesktopOfEachEngine } from './projects';
+import { markGameRulesSeen } from './clock';
+
+test.beforeEach(async ({ page }) => { await markGameRulesSeen(page); });
 
 // The launch-updates pop-up (lane 14): 10 seconds after a page opens, at most once every 3 hours, never on study or
 // game screens, an accessible modal in Light and Evening. Fake time keeps every test fast.

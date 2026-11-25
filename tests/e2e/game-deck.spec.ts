@@ -1,5 +1,8 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
+import { markGameRulesSeen } from './clock';
+
+test.beforeEach(async ({ page }) => { await markGameRulesSeen(page); });
 
 // The fanned card deck at the right edge of every game page (Christian's two canvas comments, 23 Nov). Playwright's
 // build shows drafts, so all six games are open and the deck has five cards.

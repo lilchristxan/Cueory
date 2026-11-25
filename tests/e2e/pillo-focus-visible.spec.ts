@@ -1,4 +1,7 @@
 import { expect, test } from '@playwright/test';
+import { markGameRulesSeen } from './clock';
+
+test.beforeEach(async ({ page }) => { await markGameRulesSeen(page); });
 
 /**
  * WCAG 2.4.11 (focus not obscured) for pillo's letter keys under the sticky header (lane 8, #823). With reduced motion

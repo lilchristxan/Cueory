@@ -1,4 +1,7 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
+import { markGameRulesSeen } from './clock';
+
+test.beforeEach(async ({ page }) => { await markGameRulesSeen(page); });
 
 // Issue #743: at 320px wide with 32px root text, every game dialog on /play fits the screen (nothing scrolls
 // sideways inside it) and its 44px close button stays fully on screen, before and after the dialog scrolls.
