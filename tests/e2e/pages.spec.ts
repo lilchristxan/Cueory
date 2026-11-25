@@ -717,7 +717,7 @@ test.describe('theme switch', () => {
 
     await page.getByRole('radio', { name: 'Light' }).check();
     expect(await pageBackground(page)).toBe(ivory);
-    // The footer pill's colors ease over 150 ms (Task 77); check contrast once they have settled.
+    // The footer slider's thumb eases over a short moment; check contrast once it has settled.
     await page.waitForFunction(() => document.querySelector('footer')!.getAnimations({ subtree: true }).every((a) => a.playState !== 'running'));
     const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa']).analyze();
     expect(results.violations.map((v) => `${v.id}: ${v.help}`)).toEqual([]);
