@@ -151,6 +151,44 @@ describe('crossword autosave', () => {
   });
 });
 
+describe('stale days and size cap', () => {
+  const start = () => startVialo('pilot', undefined, true);
+  it('never writes an older day over a newer one, but same-day and newer-day writes work', () => {
+    const storage = memory();
+    saveVialoGuesses(playGuess(start(), 'grace'), '2026-11-26', storage);
+    const today = storage.data.get(VIALO_SAVE_KEY);
+    saveVialoGuesses(playGuess(playGuess(start(), 'grace'), 'crane'), DAY, storage); // yesterday's tab flushing late
+    expect(storage.data.get(VIALO_SAVE_KEY)).toBe(today);
+    saveVialoGuesses(start(), DAY, storage); // a drop for the older day is ignored too
+    expect(storage.data.get(VIALO_SAVE_KEY)).toBe(today);
+    saveVialoGuesses(playGuess(playGuess(start(), 'grace'), 'crane'), '2026-11-26', storage);
+    expect(loadVialoSave(start(), '2026-11-26', storage)!.guesses).toHaveLength(2);
+    saveVialoGuesses(playGuess(start(), 'grace'), '2026-11-27', storage);
+    expect(loadVialoSave(start(), '2026-11-27', storage)!.guesses).toHaveLength(1);
+    expect(loadVialoSave(start(), '2026-11-26', storage)).toBeNull();
+  });
+  it('two same-day tabs keep each other\'s sudoku levels', () => {
+    const storage = memory();
+    const easy = generateSudoku(dailySudokuSeed(DAY, 'easy'), 'easy');
+    const hard = generateSudoku(dailySudokuSeed(DAY, 'hard'), 'hard');
+    const moved = (p: typeof easy) => { const b = newSudokuBoard(p.puzzle); const i = p.puzzle.indexOf(0); b.entries[i] = p.solution[i]!; return { board: b, seconds: 5, errors: 0, auto: false }; };
+    saveSudokuProgress(easy.puzzle, DAY, 'easy', moved(easy), storage);
+    saveSudokuProgress(hard.puzzle, DAY, 'hard', moved(hard), storage);
+    expect(loadSudokuSave(easy.puzzle, DAY, 'easy', storage)).not.toBeNull();
+    expect(loadSudokuSave(hard.puzzle, DAY, 'hard', storage)).not.toBeNull();
+  });
+  it('a board too big to keep drops its older record instead of leaving stale moves', () => {
+    const storage = memory();
+    const easy = generateSudoku(dailySudokuSeed(DAY, 'easy'), 'easy');
+    const b = newSudokuBoard(easy.puzzle); const i = easy.puzzle.indexOf(0); b.entries[i] = easy.solution[i]!;
+    saveSudokuProgress(easy.puzzle, DAY, 'easy', { board: b, seconds: 1, errors: 0, auto: false }, storage);
+    expect(loadSudokuSave(easy.puzzle, DAY, 'easy', storage)).not.toBeNull();
+    // An absurd record (a huge own-notes list is rejected by the cap): the old copy must not survive.
+    saveSudokuProgress(easy.puzzle, DAY, 'easy', { board: b, seconds: 2, errors: 0, auto: true, own: Array<number>(81).fill(511).concat(Array<number>(5000).fill(511)) }, storage);
+    expect(loadSudokuSave(easy.puzzle, DAY, 'easy', storage)).toBeNull();
+  });
+});
+
 describe('save keys are registered and delete-my-account clears them', () => {
   it.each([VIALO_SAVE_KEY, SUDOKU_SAVE_KEY, CROSSWORD_SAVE_KEY])('%s', (name) => {
     expect(storageKeys.find((key) => key.name === name)?.onDeletion).toBe('cleared');

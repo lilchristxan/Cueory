@@ -32,15 +32,26 @@ export function readSavedBoard(storage: KeyValueStorage | undefined, key: string
   return boardsFor(read(storage, key, maxLength), day)[id];
 }
 
-/** Saves one board (or drops it when `board` is null). Only today's file is kept: opening a new day starts over. */
+/**
+ * Saves one board (or drops it when `board` is null). Only today's file is kept: opening a new day starts over.
+ * Never writes for an older day over a newer one: a tab left open overnight must not wipe what today's tab saved.
+ * Each write re-reads storage first, so two same-day tabs on different levels or sizes keep each other's boards.
+ */
 export function writeSavedBoard(storage: KeyValueStorage | undefined, key: string, maxLength: number, day: string, id: string, board: unknown): void {
   if (!storage) return;
   try {
-    const existing = boardsFor(read(storage, key, maxLength), day);
+    const data = read(storage, key, maxLength);
+    if (isObject(data) && typeof data.day === 'string' && data.day > day) return;
+    const existing = boardsFor(data, day);
     if (board === null && !(id in existing)) return;
     const others = Object.fromEntries(Object.entries(existing).filter(([other]) => other !== id));
-    const boards = board === null ? others : { ...others, [id]: board };
-    const text = JSON.stringify({ v: SAVE_VERSION, owner: SAVE_OWNER, day, boards });
-    if (text.length <= maxLength) storage.setItem(key, text);
+    const write = (boards: Record<string, unknown>) => {
+      const text = JSON.stringify({ v: SAVE_VERSION, owner: SAVE_OWNER, day, boards });
+      if (text.length > maxLength) return false;
+      storage.setItem(key, text);
+      return true;
+    };
+    // Too big to keep: drop this board's record rather than leave an older copy that would restore stale moves.
+    if (board === null || !write({ ...others, [id]: board })) write(others);
   } catch { /* storage blocked or full: the game still plays, it just is not remembered */ }
 }
