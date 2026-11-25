@@ -117,8 +117,10 @@ describe('sudoku keys edges', () => {
     expect(sudokuKeyAction('!', 0, 'KeyA')).toBeUndefined();
     expect(sudokuKeyAction('!', 0, 'Digit12')).toBeUndefined();
   });
-  it('maps space, delete keys and x', () => {
+  it('maps pencil shortcuts, delete keys and x', () => {
     expect(sudokuKeyAction(' ', 0)).toEqual({ kind: 'toggle-mode' });
+    expect(sudokuKeyAction('p', 0)).toEqual({ kind: 'toggle-mode' });
+    expect(sudokuKeyAction('P', 0)).toEqual({ kind: 'toggle-mode' });
     expect(sudokuKeyAction('Spacebar', 0)).toEqual({ kind: 'toggle-mode' });
     expect(sudokuKeyAction('Backspace', 0)).toEqual({ kind: 'clear' });
     expect(sudokuKeyAction('Delete', 0)).toEqual({ kind: 'clear' });

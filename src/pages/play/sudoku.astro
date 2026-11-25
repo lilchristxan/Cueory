@@ -64,11 +64,11 @@ const game = dailyGames.find((item) => item.id === 'triage')!;
     inline-size: 100%;
     box-sizing: border-box;
     margin-inline: auto;
-    padding: var(--spacing);
-    border: var(--border-game-settings) solid var(--cueory-result-card-border);
-    border-radius: var(--radius-xl);
-    background: var(--cueory-result-card-bg);
-    box-shadow: var(--cueory-result-card-shadow);
+    /* Christian's board: the grid, keys and tools sit straight on the page, with no card around them. */
+    padding: 0;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
   }
 
   :global(.sudoku-levels) {
@@ -150,14 +150,9 @@ const game = dailyGames.find((item) => item.id === 'triage')!;
     --color-ink: var(--color-sudoku-ink);
     --color-ink-soft: var(--color-sudoku-ink-soft);
     border-color: var(--color-ink);
-    border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-lift);
-  }
-
-  :global(:root[data-theme="dark"] .sudoku-panel) {
-    border-color: var(--cueory-glass-border);
-    background: var(--color-surface);
-    box-shadow: var(--cueory-glass-shadow);
+    border-radius: var(--sudoku-board-radius);
+    overflow: hidden;
+    box-shadow: none;
   }
 
   :global(:root[data-theme="dark"] .sudoku-levels) {
@@ -212,12 +207,6 @@ const game = dailyGames.find((item) => item.id === 'triage')!;
   }
 
   @media (prefers-color-scheme: dark) {
-    :global(:root:not([data-theme="light"]) .sudoku-panel) {
-      border-color: var(--cueory-glass-border);
-      background: var(--color-surface);
-      box-shadow: var(--cueory-glass-shadow);
-    }
-
     :global(:root:not([data-theme="light"]) .sudoku-levels) {
       border-color: var(--cueory-glass-border);
       background: color-mix(in srgb, var(--cueory-glass-bg) 82%, transparent);
@@ -237,6 +226,63 @@ const game = dailyGames.find((item) => item.id === 'triage')!;
   :global(.sudoku-tool-button:hover),
   :global(.sudoku-setting-button:hover) {
     border-color: var(--cueory-copper-start);
+  }
+
+  /* The two digit groups share one row where all nine keys fit and wrap in order on a phone. */
+  :global(.sudoku-pad-wrap) {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: calc(var(--spacing) * 3);
+  }
+
+  :global(.sudoku-number-row),
+  :global(.sudoku-pad-digits) {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: calc(var(--spacing) * 1.5);
+    max-inline-size: 100%;
+  }
+
+  :global(.sudoku-number-row),
+  :global(.sudoku-tools) {
+    order: 0;
+    flex: none;
+    inline-size: 100%;
+  }
+
+  :global(.sudoku-number-row button) {
+    inline-size: var(--tap-min);
+    min-block-size: calc(var(--spacing) * 12);
+    border: 0;
+    border-radius: var(--sudoku-pad-radius);
+    background: var(--color-surface);
+    font-size: var(--sudoku-pad-text);
+  }
+
+  :global(.sudoku-tools) {
+    gap: calc(var(--spacing) * 2.5);
+  }
+
+  /* The board's tool pills: page-coloured with a 1.5 px Charcoal outline and 15 px bold text. */
+  :global(:root .sudoku-pad-wrap .sudoku-tool-button) {
+    padding-inline: clamp(calc(var(--spacing) * 2), 3cqi, var(--sudoku-pill-pad));
+    border: var(--sudoku-pill-line) solid var(--color-ink);
+    background: var(--color-page);
+    color: var(--color-ink);
+    font-size: var(--sudoku-pill-text);
+    font-weight: 700;
+  }
+
+  :global(:root .sudoku-pad-wrap .sudoku-tool-button:disabled) {
+    color: var(--color-ink-soft);
+  }
+
+  :global(.sudoku-game .game-settings select) {
+    max-inline-size: 100%;
+    min-block-size: var(--tap-min);
+    font: inherit;
   }
 
   :global(.sudoku-solved) {

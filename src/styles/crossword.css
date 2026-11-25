@@ -8,7 +8,7 @@
 */
 @layer components {
   .crossword-panel { position: relative; }
-  .crossword-toolbar { position: relative; display: flex; justify-content: flex-end; gap: var(--spacing); }
+  .crossword-toolbar { position: relative; display: flex; justify-content: center; gap: var(--spacing); margin-block-start: calc(var(--spacing) * 4); }
   .crossword-help { position: static; }
   .crossword-help summary { list-style: none; font-weight: 700; cursor: pointer; }
   .crossword-help summary::-webkit-details-marker { display: none; }
@@ -34,14 +34,17 @@
     inline-size: 100%;
     margin-inline: 0;
   }
-  .crossword-board { --crossword-cell: min(var(--crossword-cell-easy), calc((100cqw - 4 * var(--crossword-gap)) / 5)); display: flex; inline-size: max-content; max-inline-size: 100%; margin-inline: auto; flex-direction: column; gap: var(--crossword-gap); }
-  .crossword-board[data-level="mid"] { --crossword-cell: min(var(--crossword-cell-mid), calc((100cqw - 6 * var(--crossword-gap)) / 7)); }
+  .crossword-board { --crossword-cell: min(var(--crossword-cell-easy), calc((100cqw - 2 * var(--crossword-frame) - 4 * var(--crossword-cell-gap)) / 5)); display: flex; inline-size: max-content; max-inline-size: 100%; margin-inline: auto; flex-direction: column; gap: var(--crossword-cell-gap); }
+  .crossword-board[data-level="mid"] { --crossword-cell: min(var(--crossword-cell-mid), calc((100cqw - 2 * var(--crossword-frame) - 6 * var(--crossword-cell-gap)) / 7)); }
   .crossword-board[data-level="hard"] { --crossword-cell: var(--crossword-cell-hard); }
   /* Keep the large board's overflow inside a named, keyboard-focusable region.
      Its cells keep their tap size even with enlarged text. */
   .crossword-board-wrap[data-level="hard"] { overflow-x: auto; }
   .crossword-board[data-level="hard"] { max-inline-size: none; }
-  .crossword-row { display: flex; gap: var(--crossword-gap); }
+  .crossword-row { display: flex; gap: var(--crossword-cell-gap); }
+  /* Board drawing (games-v2 crossword board): a taupe frame round rounded squares. */
+  .crossword-board { padding: var(--crossword-frame); border-radius: var(--radius-lg); background: var(--color-soft); box-sizing: content-box; }
+  .crossword-board-wrap .crossword-cell, .crossword-board-wrap .crossword-gap { border-radius: var(--radius-md); }
   .crossword-cell, .crossword-gap { inline-size: var(--crossword-cell); block-size: var(--crossword-cell); flex: none; }
   /* A selected square scrolls fully into view with room for its focus ring. Without the margin, a page laid out
      between whole pixels left a hairline of the square under the edge of the screen (the scroll stops on a whole
@@ -55,19 +58,25 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    border: var(--crossword-line) solid var(--color-control);
+    border: 0;
     color: var(--color-ink);
     background: var(--color-page);
     font-size: var(--crossword-letter);
     line-height: 1;
   }
-  .crossword-cell-word { border-block-end-width: var(--border-board); background: var(--color-soft); text-decoration: underline; text-underline-offset: 0.2em; }
-  .crossword-cell-current { z-index: 1; outline: var(--focus-width) solid var(--color-focus); outline-offset: calc(var(--focus-width) * -1); color: var(--color-on-button); background: var(--color-button); }
+  .crossword-cell-word { color: var(--color-board-ink); background: var(--color-board-tint); text-decoration: underline; text-underline-offset: 0.2em; }
+  .crossword-cell-current { z-index: 1; outline: var(--focus-width) solid var(--color-board-selected-line); outline-offset: calc(var(--focus-width) * -1); color: var(--color-board-ink); background: var(--color-board-selected); text-decoration: underline; text-underline-offset: 0.2em; }
   /* Keyboard focus on the selected square doubles its ring, so focus on the grid is visible apart from selection (Task 210). */
   .crossword-cell-current:focus-visible { outline-width: calc(var(--focus-width) * 2); outline-offset: calc(-2 * var(--focus-width)); }
   .crossword-number { position: absolute; inset-block-start: 0; inset-inline-start: 0; padding: var(--crossword-gap); font-size: var(--crossword-number); line-height: 1; }
-  .crossword-clue-bar { display: flex; min-block-size: var(--tap-min); align-items: center; justify-content: center; gap: calc(var(--spacing) * 3); margin-block-start: calc(var(--spacing) * 3); padding: calc(var(--spacing) * 2) calc(var(--spacing) * 3); border-block: var(--crossword-line) solid var(--color-line); text-align: start; }
+  .crossword-clue-bar { display: flex; min-block-size: var(--tap-min); align-items: center; justify-content: center; gap: calc(var(--spacing) * 3); margin-block-start: calc(var(--spacing) * 3); padding: calc(var(--spacing) * 2) calc(var(--spacing) * 3); border-radius: var(--radius-lg); background: var(--color-surface); text-align: start; }
   .crossword-print-clues, .crossword-print-footer { display: none; }
+  /* Check and reveal sit under the clue bar, as drawn. Only the drawing order changes (flex order), so the keyboard order stays: grid, then check and reveal, then the letter keys. */
+  @media screen {
+    .crossword-panel { display: flex; flex-direction: column; }
+    .crossword-toolbar { order: 1; }
+    .crossword-clue-bar ~ * { order: 2; }
+  }
 
   /* Task 721: pen and pencil, check and reveal marks, settings, pause and the clue list. */
   .crossword-toolbar { flex-wrap: wrap; align-items: center; }

@@ -15,6 +15,7 @@ import PrintLogo from './PrintLogo';
 
 const LEVELS: SudokuLevel[] = ['easy', 'medium', 'hard'];
 const NUMBERS = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+const PAD_GROUPS = [NUMBERS.slice(0, 5), NUMBERS.slice(5)];
 
 const where = (index: number) => `row ${Math.floor(index / 9) + 1}, column ${index % 9 + 1}`;
 const plural = (count: number, one: string, many: string) => `${count} ${count === 1 ? one : many}`;
@@ -257,9 +258,9 @@ export default function SudokuGame({ framed = false }: { framed?: boolean } = {}
 
   const enter = (value: number) => {
     if (activeMode === 'candidate') {
-      if (entries[selected] && !puzzle.puzzle[selected]) { setSaid('clear the square first to add cues.'); return; }
+      if (entries[selected] && !puzzle.puzzle[selected]) { setSaid('clear the square first to add pencil marks.'); return; }
       const next = apply({ kind: 'note', value });
-      if (next) setSaid(noteDigits(next.notes[selected]!).includes(value) ? `cue ${value} added.` : `cue ${value} removed.`);
+      if (next) setSaid(noteDigits(next.notes[selected]!).includes(value) ? `pencil mark ${value} added.` : `pencil mark ${value} removed.`);
       return;
     }
     if (!apply({ kind: 'enter', value })) return;
@@ -287,7 +288,7 @@ export default function SudokuGame({ framed = false }: { framed?: boolean } = {}
     if (paused || solved) return;
     const chosen = next ?? (mode === 'normal' ? 'candidate' : 'normal');
     setMode(chosen);
-    setSaid(chosen === 'candidate' ? 'cue mode. numbers add or remove small cues.' : 'normal mode. numbers fill the square.');
+    setSaid(chosen === 'candidate' ? 'pencil mode. numbers add or remove small pencil marks.' : 'normal mode. numbers fill the square.');
   };
   const toggleAuto = (on: boolean) => {
     if (on === auto) return;
@@ -302,7 +303,7 @@ export default function SudokuGame({ framed = false }: { framed?: boolean } = {}
         setBoard({ entries: [...entries], marks: new Set(marks), notes: ownNotes.current.map((mask, index) => (entries[index] || marks.has(index) ? 0 : mask)) });
       }
     }
-    setSaid(on ? 'auto cues on. every empty square shows its possible numbers.' : 'auto cues off. your own cues are back, and undo brings the auto ones back.');
+    setSaid(on ? 'auto pencil marks on. every empty square shows its possible numbers.' : 'auto pencil marks off. your own pencil marks are back, and undo brings the automatic ones back.');
   };
   const checkPuzzle = () => {
     if (paused || solved) return;
@@ -388,6 +389,10 @@ export default function SudokuGame({ framed = false }: { framed?: boolean } = {}
   };
   // The shared print helper (Task 641): marks the page for sudoku's print rules and clears the mark after printing.
   const printPuzzle = () => printGame('sudoku');
+  const runFromSettings = (action: () => void) => {
+    setSettingsOpen(false);
+    action();
+  };
   const elapsed = `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`;
 
   return <section className="sudoku-game" data-testid="sudoku" data-paused={paused ? 'true' : 'false'}>
@@ -436,7 +441,7 @@ export default function SudokuGame({ framed = false }: { framed?: boolean } = {}
           // Keep all styling in the pure highlighter; its pause guard must fail closed for private entries.
           const classes = sudokuCellClasses(index, { selected, entries, givens: puzzle.puzzle, conflicts, paused, settings, wrong, noted }).join(' ');
           const flags = paused || given ? '' : `${wrong.has(index) ? ', wrong' : ''}${settings.highlightConflicts && conflicts.has(index) ? ', conflict' : ''}`;
-          const spoken = display.hidden ? 'hidden until resumed' : display.marked ? 'x mark' : value ? `${value}${flags}` : options.length ? `empty, cues ${options.join(', ')}` : 'empty';
+          const spoken = display.hidden ? 'hidden until resumed' : display.marked ? 'x mark' : value ? `${value}${flags}` : options.length ? `empty, pencil marks ${options.join(', ')}` : 'empty';
           return <button ref={(element) => { if (element) cells.current.set(index, element); else cells.current.delete(index); }} key={index} type="button" role="gridcell" tabIndex={paused ? -1 : selected === index ? 0 : -1} className={classes} aria-rowindex={row + 1} aria-colindex={column + 1} aria-selected={!paused && selected === index} aria-label={`row ${row + 1}, column ${column + 1}, ${spoken}${given && !paused ? ', given' : ''}`} data-given={given ? 'true' : 'false'} onClick={() => { if (!paused) setSelected(index); }}>
             {paused ? <span className="sudoku-paused-mark" aria-hidden="true" /> : display.marked ? <span className="sudoku-mark" aria-hidden="true">x</span> : value ? <span>{value}{!paused && wrong.has(index) && <span className="sudoku-wrong-mark" aria-hidden="true" />}</span> : options.length ? <span className="sudoku-candidates" aria-hidden="true">{NUMBERS.map((number) => <i key={number}>{options.includes(number) ? `${number} ` : ''}</i>)}</span> : null}
           </button>;
@@ -445,14 +450,24 @@ export default function SudokuGame({ framed = false }: { framed?: boolean } = {}
         </div>
       </div>
       <div className="sudoku-pad-wrap">
-        <button type="button" className="sudoku-setting-button sudoku-hints" role="checkbox" aria-checked={auto} disabled={paused} onClick={() => { if (!paused) toggleAuto(!auto); }}><span aria-hidden="true">{auto ? '☑' : '☐'}</span> auto cues</button>
-        <div className="sudoku-tools">
-          <div className="segmented" role="group" aria-label="entry mode" data-testid="sudoku-mode">{(['normal', 'candidate'] as const).map((choice) => <button key={choice} type="button" className="segmented-option" aria-pressed={activeMode === choice} disabled={paused || solved} onClick={() => switchMode(choice)}>{activeMode === choice && <span className="segmented-check" aria-hidden="true">✓</span>}{choice === 'candidate' ? 'cue' : choice}</button>)}</div>
-          <button type="button" className="sudoku-tool-button" onClick={undo} disabled={paused || solved || history.length === 0}>undo</button>
-          <button type="button" className="sudoku-tool-button" onClick={clearCell} disabled={paused || solved}>clear cell</button>
-          <button type="button" className="sudoku-tool-button" onClick={checkPuzzle} disabled={paused || solved}>check puzzle</button>
+        <div className="sudoku-number-row" role="group" aria-label={activeMode === 'candidate' ? 'pencil numbers' : 'numbers'}>
+          {PAD_GROUPS.map((digits) => (
+            <div className="sudoku-pad-digits" key={digits[0]}>
+              {digits.map((number) => (
+                <button type="button" key={number} onClick={() => enter(number)} disabled={paused || solved}>{number}</button>
+              ))}
+            </div>
+          ))}
         </div>
-        <div className="sudoku-number-row" aria-label={activeMode === 'candidate' ? 'cue numbers' : 'numbers'}>{NUMBERS.map((number) => <button key={number} type="button" onClick={() => enter(number)} disabled={paused || solved}>{number}</button>)}<button type="button" onClick={mark} aria-label="add or remove x mark" disabled={paused || solved}>x</button></div>
+        <div className="sudoku-tools" role="group" aria-label="board tools" data-testid="sudoku-mode">
+          <button type="button" className="sudoku-tool-button" aria-pressed={activeMode === 'candidate'} aria-keyshortcuts="P" disabled={paused || solved} onClick={() => switchMode()}>
+            {activeMode === 'candidate' && <span className="sudoku-toggle-mark" aria-hidden="true">✓ </span>}Pencil <span aria-hidden="true">· P</span>
+          </button>
+          <button type="button" className="sudoku-tool-button" onClick={undo} disabled={paused || solved || history.length === 0}>Undo</button>
+          <button type="button" className="sudoku-tool-button" aria-pressed={auto} onClick={() => toggleAuto(!auto)} disabled={paused || solved}>
+            {auto && <span className="sudoku-toggle-mark" aria-hidden="true">✓ </span>}Hint
+          </button>
+        </div>
       </div>
     </div>
     {solved && <div ref={solvedResult} className="sudoku-solved" tabIndex={-1} role="status" data-testid="sudoku-result"><p className="text-lg font-medium">solved.</p><p>{elapsed} · {errors} {errors === 1 ? 'error' : 'errors'}</p><p className="text-sm text-ink-soft">a new sudoku comes out tomorrow.</p></div>}
@@ -460,9 +475,35 @@ export default function SudokuGame({ framed = false }: { framed?: boolean } = {}
     {framed && <GameHelpDialog help={help} name={gameName('triage')} />}
     <GameSettingsDialog open={settingsOpen} onClose={() => setSettingsOpen(false)} title="sudoku settings" returnFocusTo={framed ? undefined : settingsButton}>
       <fieldset>
+        <legend>this puzzle</legend>
+        <label className="game-settings-option">
+          <span>difficulty</span>
+          <select value={level} disabled={paused} onChange={(event) => {
+            const next = LEVELS.find((choice) => choice === event.currentTarget.value);
+            if (next) {
+              requestedFrameLevel.current = next;
+              setLevel(next);
+            }
+          }}>
+            {LEVELS.map((choice) => <option key={choice} value={choice}>{LEVEL_LABELS[choice]}</option>)}
+          </select>
+        </label>
+        <label className="game-settings-option">
+          <span>automatic pencil marks for this puzzle</span>
+          <input type="checkbox" checked={auto} disabled={paused || solved} onChange={() => toggleAuto(!auto)} />
+        </label>
+        <div className="sudoku-tools">
+          <button type="button" className="sudoku-tool-button" onClick={() => runFromSettings(mark)} aria-label="add or remove x mark" disabled={paused || solved}>x mark</button>
+          <button type="button" className="sudoku-tool-button" onClick={() => runFromSettings(clearCell)} disabled={paused || solved}>clear cell</button>
+          <button type="button" className="sudoku-tool-button" onClick={() => runFromSettings(checkPuzzle)} disabled={paused || solved}>check puzzle</button>
+          <button type="button" className="sudoku-tool-button" onClick={() => runFromSettings(togglePause)} disabled={solved}>{paused ? 'resume puzzle' : 'pause puzzle'}</button>
+          <button type="button" className="sudoku-tool-button" onClick={() => runFromSettings(() => requestAnimationFrame(printPuzzle))}>print this puzzle</button>
+        </div>
+      </fieldset>
+      <fieldset>
         <legend>gameboard settings</legend>
         {(Object.keys(DEFAULT_SUDOKU_SETTINGS) as Array<keyof SudokuSettings>).map((key) => {
-          const labels: Record<keyof SudokuSettings, string> = { checkGuesses: 'check guesses when entered', autoCandidates: 'start in auto cue mode', showErrors: 'show error counter', showTimer: 'show timer', highlightConflicts: 'highlight conflicts', highlightRowColumn: 'highlight row and column', highlightBox: 'highlight box', highlightIdentical: 'highlight identical numbers', playSound: 'play sound on solve' };
+          const labels: Record<keyof SudokuSettings, string> = { checkGuesses: 'check guesses when entered', autoCandidates: 'start in auto pencil mode', showErrors: 'show error counter', showTimer: 'show timer', highlightConflicts: 'highlight conflicts', highlightRowColumn: 'highlight row and column', highlightBox: 'highlight box', highlightIdentical: 'highlight identical numbers', playSound: 'play sound on solve' };
           return <label key={key} className="game-settings-option"><span>{labels[key]}</span><input type="checkbox" checked={settings[key]} disabled={paused && key === 'autoCandidates'} onChange={() => updateSetting(key)} /></label>;
         })}
       </fieldset>
