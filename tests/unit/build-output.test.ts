@@ -287,7 +287,7 @@ describe.skipIf(!existsSync(dist))('built site', () => {
       expect(html, `${page}: canonical`).toContain(`rel="canonical" href="https://cueory.app/`);
       expect(meta(html, 'og:title'), `${page}: og:title`).toBe(title);
       expect(meta(html, 'og:description'), `${page}: og:description`).toBe(description);
-      const gameImage = page === 'play.html' || /^play\/(pillo|crossword|word-path|sudoku)\.html$/.test(page);
+      const gameImage = page === 'play.html' || /^play\/(pillo|vialo|piccline|crossword|word-path|sudoku)\.html$/.test(page);
       const expectedOgImage = gameImage ? 'https://cueory.app/share/games-scene.png' : 'https://cueory.app/share/study-ivory.png';
       expect(meta(html, 'og:image'), `${page}: og:image`).toBe(expectedOgImage);
       expect(existsSync(join(dist, gameImage ? 'share/games-scene.png' : 'share/study-ivory.png')), `${page}: og:image file`).toBe(true);
