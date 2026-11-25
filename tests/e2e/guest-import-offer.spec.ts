@@ -3,8 +3,6 @@ import { expect, test, type Page } from '@playwright/test';
 import { build } from 'esbuild';
 import { readFileSync } from 'node:fs';
 
-// This file lists every cueory- key in storage, so it starts empty (the suite default sets the games' rules-seen key).
-test.use({ storageState: { cookies: [], origins: [] } });
 
 const USER = '550e8400-e29b-41d4-a716-446655440001';
 const OTHER = '550e8400-e29b-41d4-a716-446655440002';

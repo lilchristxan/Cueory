@@ -1,5 +1,8 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
+import { markGameRulesSeen } from './clock';
+
+test.beforeEach(async ({ page }) => { await markGameRulesSeen(page); });
 
 /**
  * Redesign P2: the persistent top bar. A pill of links and an "about" dropdown on wide screens; phones and tablets keep

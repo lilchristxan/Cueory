@@ -1,6 +1,9 @@
 import { expect, test } from '@playwright/test';
 import { readdirSync } from 'node:fs';
 import { join, relative, resolve, sep } from 'node:path';
+import { markGameRulesSeen } from './clock';
+
+test.beforeEach(async ({ page }) => { await markGameRulesSeen(page); });
 
 const dist = resolve('dist');
 

@@ -4,6 +4,9 @@ import { readFile } from 'node:fs/promises';
 import { createServer, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { extname, normalize, resolve, sep } from 'node:path';
+import { markGameRulesSeen } from './clock';
+
+test.beforeEach(async ({ page }) => { await markGameRulesSeen(page); });
 
 /**
  * Lane 5, fonts: the two preloaded Lato files are the ones the page really uses, and each is requested once (a

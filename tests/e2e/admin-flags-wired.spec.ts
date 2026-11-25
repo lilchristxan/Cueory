@@ -2,6 +2,9 @@ import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 import { build } from 'esbuild';
 import { readFileSync } from 'node:fs';
+import { markGameRulesSeen } from './clock';
+
+test.beforeEach(async ({ page }) => { await markGameRulesSeen(page); });
 
 /**
  * Task 305: /admin/flags wired to Task 65's database functions. The real island and the built CSS and CSP run on a

@@ -3,6 +3,9 @@ import { builtPages } from './built-pages';
 import { allowedConsoleFinding, consoleAllowances, CONSOLE_MISSING_ROUTE, type ConsoleFinding } from './console-allow';
 import { dropWebkitSelectReports } from './csp-allow';
 import { isDesktopOfEachEngine } from './projects';
+import { markGameRulesSeen } from './clock';
+
+test.beforeEach(async ({ page }) => { await markGameRulesSeen(page); });
 
 /**
  * W15-2 (#58): a page should load and hydrate without unhandled JS errors, console errors,

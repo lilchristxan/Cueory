@@ -1,4 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
+import { markGameRulesSeen } from './clock';
+
+test.beforeEach(async ({ page }) => { await markGameRulesSeen(page); });
 
 // pillo's on-screen keys are the crossword's letter keys (Christian, 2026-11-17): a to z in rows that wrap, then
 // ⌫ and enter in the same style. On phones in portrait, with normal and larger text, no row runs past the screen or
