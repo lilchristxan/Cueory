@@ -247,6 +247,37 @@ const barButton =
     }
   }
 
+  /* Narrow phones (below 384 px: 375 iPhone SE / mini, 360 and 344 Android, 320 the minimum): five links at this size need
+     about 250 px, the gap between the corner buttons is 232 px at 320 (272 at 360). So the row becomes a deliberate
+     3 + 2: three equal columns per row, and a short last row is centred under them, clear of both corner buttons. */
+  @media (max-width: 23.99em) {
+    .footer-links {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      column-gap: 0;
+    }
+
+    .footer-links li {
+      grid-column: span 2;
+    }
+
+    .footer-links li:nth-child(4):nth-last-child(2) {
+      grid-column: 2 / span 2;
+    }
+
+    .footer-links li:nth-child(5):last-child {
+      grid-column: 4 / span 2;
+    }
+
+    .footer-links li:nth-child(4):last-child {
+      grid-column: 3 / span 2;
+    }
+
+    .footer-link {
+      inline-size: 100%;
+    }
+  }
+
   @media (max-width: 39.99em) {
     .footer-row {
       padding-block: var(--footer-pad-top-phone) var(--footer-pad-bottom-phone);
