@@ -1,7 +1,7 @@
 import '../styles/gamesettings.css';
 import { useCallback, useEffect, useId, useRef, useState, type ReactNode, type RefObject } from 'react';
 import { browserStorage } from '../scripts/storage';
-import { THEME_ROWS, chooseSiteTheme, currentSiteTheme } from './sitetheme';
+import { THEME_ROWS, chooseSiteTheme, currentSiteTheme, themeDetail } from './sitetheme';
 import {
   GAME_SETTINGS_EVENT, GAME_SETTINGS_STORAGE_KEY, MOTION_ROWS, applyGameSettings, gameSoundAllowed, loadGameSettings,
   motionReduced, parseGameSettings, saveGameSettings, tabStops, trappedFocusIndex, type SharedGameSettings,
@@ -136,10 +136,17 @@ export function GameSettingsDialog({ open, onClose, title = 'game settings', chi
       </div>
       <fieldset>
         <legend>theme</legend>
-        {THEME_ROWS.map((row) => <label key={row.value} className="game-settings-option">
-          <span>{row.label}<small>{row.detail}</small></span>
-          <input type="radio" name={`${id}-theme`} value={row.value} checked={theme === row.value} onChange={() => { setTheme(row.value); chooseSiteTheme(document, browserStorage(), row.value); }} />
-        </label>)}
+        <div className="theme-slider" data-testid="theme-slider">
+          {THEME_ROWS.map((row) => <label key={row.value} className="theme-slider-option">
+            <input type="radio" name={`${id}-theme`} value={row.value} aria-label={row.label} tabIndex={theme === row.value ? 0 : -1} checked={theme === row.value} onChange={() => { setTheme(row.value); chooseSiteTheme(document, browserStorage(), row.value); }} />
+            <span aria-hidden="true">{row.short}</span>
+          </label>)}
+        </div>
+        {/* The live line shows the chosen detail. Hidden copies of all three share its cell, so the panel never changes height. */}
+        <div className="game-settings-theme-detail">
+          <small aria-live="polite" data-testid="theme-detail">{themeDetail(theme)}</small>
+          {THEME_ROWS.map((row) => <small key={row.value} aria-hidden="true">{row.detail}</small>)}
+        </div>
       </fieldset>
       <fieldset>
         <legend>motion</legend>

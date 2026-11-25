@@ -9,6 +9,7 @@ import GameHeader from './GameHeader';
 import PicclineCue from './PicclineCue';
 import { site } from '../config/site';
 import { shake } from './SutureGame';
+import { loadPicclineSave, savePicclineBoard } from './picclinesave';
 import type { Cell } from './suture';
 import {
   announceProgress, backspace, cellView, cuesUsed, firstWordFound, clearPicked, extend, hintsLeft, MIN_WORD, parsePathPuzzle, pathCellLabel, pathDone, pathShareLine,
@@ -96,12 +97,14 @@ function cellAt(board: HTMLElement | null, x: number, y: number): Cell | null {
 }
 
 export function PathBoard({ puzzle, name }: Props) {
-  const [state, setState] = useState<PathState>(startPath);
+  const [today] = useState(() => new Date());
+  // A board played earlier today on this device comes back as it was (a finished one stays finished); a new day starts fresh.
+  const [restored] = useState(() => loadPicclineSave(puzzle, localDay(today)));
+  const [state, setState] = useState<PathState>(() => restored ?? startPath());
   const current = useRef(state);
   const [focused, setFocused] = useState(0);
   const [said, setSaid] = useState('');
   const [copied, setCopied] = useState('');
-  const [today] = useState(() => new Date());
   const result = useRef<HTMLDivElement>(null);
   const board = useRef<HTMLDivElement>(null);
   const buttons = useRef(new Map<number, HTMLButtonElement>());
@@ -119,9 +122,13 @@ export function PathBoard({ puzzle, name }: Props) {
   const shared = pathShareLine(state, puzzle, dayLabel(today), name);
   const word = pickedWord(state, puzzle).toLowerCase();
 
-  const apply = (next: PathState) => { current.current = next; setState(next); };
+  const apply = (next: PathState) => {
+    current.current = next;
+    setState(next);
+    savePicclineBoard(puzzle, localDay(today), next);
+  };
 
-  useEffect(() => { if (done) result.current?.focus(); }, [done]);
+  useEffect(() => { if (done && !restored) result.current?.focus(); }, [done]);
 
   // Measure every letter's circle, again whenever the board changes size (rotation, text size, a narrower window).
   useLayoutEffect(() => {
@@ -155,7 +162,8 @@ export function PathBoard({ puzzle, name }: Props) {
   };
 
   // A finished board is reported once, for the stats panel, which keeps it only if the student turned stats on (D-76).
-  const reported = useRef(false);
+  // A board that reopens already finished was reported the day it was finished, so it is not reported again.
+  const reported = useRef(restored ? pathDone(restored, puzzle) : false);
   useEffect(() => {
     if (!done || reported.current) return;
     reported.current = true;
@@ -333,6 +341,8 @@ export function PathBoard({ puzzle, name }: Props) {
 
   const left = hintsLeft(state);
   const towardHint = state.extras.length % WORDS_PER_HINT;
+  /** A ready cue shows all three pips filled; otherwise one per other word found toward the next. */
+  const filledPips = left > 0 ? WORDS_PER_HINT : towardHint;
 
   return (
     <section aria-labelledby={title} data-testid="suture" data-format="path" data-print-area="suture" className="wordpath">
@@ -440,9 +450,18 @@ export function PathBoard({ puzzle, name }: Props) {
       <div className="mt-2 flex flex-wrap justify-center gap-2" data-print-hidden>
         <button type="button" className={button} disabled={done || state.picked.length === 0} onClick={send} data-testid="suture-submit">submit</button>
         <button type="button" className={button} disabled={done || state.picked.length === 0} onClick={clear} data-testid="suture-clear">clear</button>
-        <button type="button" className={button} disabled={done} onClick={hint} data-testid="suture-hint" aria-describedby={`${title}-hint`}>
-          cue{left > 0 ? ` (${left})` : ''}
-        </button>
+        <span className="inline-flex items-center">
+          <button type="button" className={button} disabled={done} onClick={hint} data-testid="suture-hint" aria-describedby={`${title}-hint`}>
+            cue{left > 0 ? ` (${left})` : ''}
+          </button>
+          {/* Three pips fill as other words are found: a filled disc is a word found, an outline is one still to find, and the
+              line of words below is the label, so no meaning rests on color. */}
+          <span role="img" aria-labelledby={`${title}-hint`} className="wordpath-meter" data-testid="suture-hint-meter" data-filled={filledPips}>
+            {Array.from({ length: WORDS_PER_HINT }, (_, i) => (
+              <span key={i} aria-hidden="true" data-pip={i < filledPips ? 'filled' : 'empty'} className={`wordpath-pip${i < filledPips ? ' wordpath-pip-filled' : ''}`} />
+            ))}
+          </span>
+        </span>
       </div>
       <p id={`${title}-hint`} className="mt-2 text-center text-sm text-ink-soft" data-testid="suture-hint-progress" data-print-hidden>
         {left > 0

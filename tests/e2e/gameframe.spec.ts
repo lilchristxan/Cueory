@@ -127,7 +127,10 @@ test.describe('deck or plain row by width (--breakpoint-deck)', () => {
             return box.left < board.right && box.right > board.left && box.top < board.bottom && box.bottom > board.top;
           });
         });
-        expect(overlap, 'no card lies over the game').toBe(false);
+        // The deck's cards are tilted and hang over the frame's empty margin, so their upright boxes may touch the board's
+        // box. What matters is that no tilted card covers part of the game itself: game-deck.spec.ts checks that with the
+        // cards' real outlines. The plain row has no tilt, so its boxes must stay clear of the board.
+        if (!deck) expect(overlap, 'no card lies over the game').toBe(false);
         expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
       });
     }
@@ -198,7 +201,7 @@ test.describe('the left panel wordmark in Evening', () => {
   const wordmarks = [
     { path: '/play/vialo', day: '/design/games-v2/assets/vialo-wordmark-oxblood-v3.svg', evening: '/brand/games/vialo-wordmark-dark.svg' },
     { path: '/play/tachyyy', day: '/brand/games/tachyyy-wordmark-light.svg', evening: '/brand/games/tachyyy-wordmark-dark.svg' },
-    { path: '/play/piccline', day: '/brand/games/piccline-wordmark-dark.svg', evening: '/brand/games/piccline-wordmark-dark.svg' },
+    { path: '/play/piccline', day: '/brand/games/piccline-wordmark-light.svg', evening: '/brand/games/piccline-wordmark-dark.svg' },
   ];
   for (const { path, day, evening } of wordmarks) {
     test(`${path}: dark shows ${evening}, light shows ${day}`, async ({ page }) => {

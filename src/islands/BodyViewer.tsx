@@ -219,6 +219,9 @@ export default function BodyViewer({ creditText }: Props) {
       // Color-scheme changes while the viewer is open.
       const mq = window.matchMedia('(prefers-color-scheme: dark)');
       mq.addEventListener('change', applyBg);
+      // The site's own Light / Dark pick sets data-theme on <html>; follow it while the viewer is open.
+      const themeObserver = new MutationObserver(applyBg);
+      themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
 
       cleanupRef.current = () => {
         cancelAnimationFrame(raf);
@@ -226,6 +229,7 @@ export default function BodyViewer({ creditText }: Props) {
         controls.removeEventListener('change', requestRender);
         canvas.removeEventListener('keydown', onKey);
         mq.removeEventListener('change', applyBg);
+        themeObserver.disconnect();
         controls.dispose();
         renderer.dispose();
         requestRenderRef.current = null;

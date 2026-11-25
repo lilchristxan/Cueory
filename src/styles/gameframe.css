@@ -9,15 +9,6 @@
   width: 100%;
   min-height: 100vh;
   background-color: var(--color-page);
-  background-image:
-    linear-gradient(to right, color-mix(in srgb, var(--color-copper-deep) 35%, transparent) var(--game-frame-grid-line), transparent var(--game-frame-grid-line)),
-    linear-gradient(to bottom, color-mix(in srgb, var(--color-copper-deep) 35%, transparent) var(--game-frame-grid-line), transparent var(--game-frame-grid-line)),
-    linear-gradient(to right, color-mix(in srgb, var(--color-copper-deep) 16%, transparent) var(--game-frame-grid-line), transparent var(--game-frame-grid-line)),
-    linear-gradient(to bottom, color-mix(in srgb, var(--color-copper-deep) 16%, transparent) var(--game-frame-grid-line), transparent var(--game-frame-grid-line)),
-    linear-gradient(to right, color-mix(in srgb, var(--color-copper-deep) 6%, transparent) var(--game-frame-grid-line), transparent var(--game-frame-grid-line)),
-    linear-gradient(to bottom, color-mix(in srgb, var(--color-copper-deep) 6%, transparent) var(--game-frame-grid-line), transparent var(--game-frame-grid-line));
-  background-size: var(--game-frame-grid-major), var(--game-frame-grid-major), var(--game-frame-grid-mid), var(--game-frame-grid-mid), var(--game-frame-grid-minor), var(--game-frame-grid-minor);
-  background-position: var(--game-frame-grid-pos);
   font-family: var(--font-body);
   color: var(--color-ink);
   display: flex;
@@ -207,34 +198,6 @@
   max-width: 100%;
 }
 
-/* Daytime and Evening wordmark art, switched as the site switches its other logos (global.css .logo-day / .logo-evening):
-   the device setting, unless the visitor picked Light or Dark in the footer; print always shows the Daytime art. */
-.game-frame-wordmark-evening {
-  display: none;
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .game-frame-wordmark-day {
-    display: none;
-  }
-  :root:not([data-theme="light"]) .game-frame-wordmark-evening {
-    display: block;
-  }
-}
-:root[data-theme="dark"] .game-frame-wordmark-day {
-  display: none;
-}
-:root[data-theme="dark"] .game-frame-wordmark-evening {
-  display: block;
-}
-@media print {
-  .game-frame-wordmark-day {
-    display: block !important;
-  }
-  .game-frame-wordmark-evening {
-    display: none !important;
-  }
-}
-
 .game-frame-serif-title {
   /* Interface label, not a marketing heading: Lato at 1.5 or more (CLAUDE.md Design, D-41). */
   font-family: var(--font-body);
@@ -311,14 +274,62 @@
 
 /* ---------------- Center Main Area ---------------- */
 .game-frame-main {
+  /* Vertical padding lives in two variables so the three rows below (head, board, tail) can be exactly symmetric. */
+  --game-frame-main-pt: calc(var(--spacing) * 8);
+  --game-frame-main-pb: calc(var(--spacing) * 16);
   flex: 1;
   min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  /* Head and tail share the free height equally, so the board's centre is the play area's centre whenever both fit;
+     when the head or the tail needs more than its share the rows simply grow and the page scrolls (nothing clips). */
+  grid-template-rows: minmax(auto, 1fr) auto minmax(auto, 1fr);
+  justify-items: center;
+  --game-frame-main-pl: calc(var(--spacing) * 6);
+  --game-frame-main-pr: calc(var(--spacing) * 6);
+  padding: 0 var(--game-frame-main-pr) 0 var(--game-frame-main-pl);
+  box-sizing: border-box;
+  position: relative;
+  /* Graph-paper backdrop, painted by the play area itself so its middle is the board's middle. Every pitch is odd and
+     every line is 1 px, with a line on the tile's centre pixel; the tile is placed with round(down, 50%, var(--game-frame-grid-line)), so the
+     lines fall on whole pixels and mirror left/right and top/bottom about the one stronger line in each direction. */
+  background-image:
+    linear-gradient(to right, transparent calc((var(--game-frame-grid-minor) - var(--game-frame-grid-line)) / 2), var(--game-frame-grid-minor-color) 0 calc((var(--game-frame-grid-minor) + var(--game-frame-grid-line)) / 2), transparent 0),
+    linear-gradient(to bottom, transparent calc((var(--game-frame-grid-minor) - var(--game-frame-grid-line)) / 2), var(--game-frame-grid-minor-color) 0 calc((var(--game-frame-grid-minor) + var(--game-frame-grid-line)) / 2), transparent 0),
+    linear-gradient(to right, transparent calc((var(--game-frame-grid-mid) - var(--game-frame-grid-line)) / 2), var(--game-frame-grid-mid-color) 0 calc((var(--game-frame-grid-mid) + var(--game-frame-grid-line)) / 2), transparent 0),
+    linear-gradient(to bottom, transparent calc((var(--game-frame-grid-mid) - var(--game-frame-grid-line)) / 2), var(--game-frame-grid-mid-color) 0 calc((var(--game-frame-grid-mid) + var(--game-frame-grid-line)) / 2), transparent 0),
+    linear-gradient(var(--game-frame-grid-center-color), var(--game-frame-grid-center-color)),
+    linear-gradient(var(--game-frame-grid-center-color), var(--game-frame-grid-center-color));
+  background-repeat: repeat-x, repeat-y, repeat-x, repeat-y, no-repeat, no-repeat;
+  background-size:
+    var(--game-frame-grid-minor) 100%, 100% var(--game-frame-grid-minor),
+    var(--game-frame-grid-mid) 100%, 100% var(--game-frame-grid-mid),
+    var(--game-frame-grid-line) 100%, 100% var(--game-frame-grid-line);
+  background-position: 50% 0, 0 50%, 50% 0, 0 50%, 50% 0, 0 50%;
+  /* The middle is that of the content box, the box the board is centred in: at narrow widths the deck takes room on the
+     right, so it is not always the middle of the whole area. (pl - pr) / 2 moves the usual 50% to it. */
+  --game-frame-grid-x: round(down, calc(50% + (var(--game-frame-main-pl) - var(--game-frame-main-pr)) / 2), var(--game-frame-grid-line));
+  --game-frame-grid-y: round(down, 50%, var(--game-frame-grid-line));
+  background-position:
+    var(--game-frame-grid-x) 0, 0 var(--game-frame-grid-y),
+    var(--game-frame-grid-x) 0, 0 var(--game-frame-grid-y),
+    var(--game-frame-grid-x) 0, 0 var(--game-frame-grid-y);
+}
+
+.game-frame-main::after {
+  content: "";
+  grid-row: 3;
+  min-block-size: var(--game-frame-main-pb);
+}
+
+.game-frame-head {
+  grid-row: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: calc(var(--spacing) * 8) calc(var(--spacing) * 6) calc(var(--spacing) * 16);
+  inline-size: 100%;
+  padding-block-start: var(--game-frame-main-pt);
   box-sizing: border-box;
-  position: relative;
 }
 
 .game-frame-dateline {
@@ -562,6 +573,7 @@
 
 /* ---------------- Board Mount Area ---------------- */
 .game-frame-board {
+  grid-row: 2;
   width: 100%;
   max-width: var(--game-frame-max-board);
   display: flex;
@@ -583,7 +595,11 @@
   max-width: var(--game-frame-max-board-showcase);
 }
 
-/* ---------------- Card deck (right edge) ---------------- */
+/* ---------------- Card deck (right edge) ----------------
+   One fixed spot on every game page: the slot is a zero-size anchor at the frame's top-right corner, and the cards are
+   placed from it at fixed distances. The FRONT card (the first one) is the fixed point; each card behind it is one step
+   further out, one step higher and one step less tilted, so with fewer cards the others simply stack behind it. The
+   frame clips what hangs past its right edge. */
 .game-deck {
   position: relative;
 }
@@ -592,94 +608,162 @@
   list-style: none;
   margin: 0;
   padding: 0;
-  inline-size: calc(var(--game-deck-card-width) - var(--game-deck-slide) + var(--game-deck-reveal));
-  block-size: calc(var(--game-deck-card-height) + var(--game-deck-step) * 5);
+  inline-size: 0;
+  block-size: 0;
 }
 .game-deck-item {
+  --depth: 0;
+  --tilt: calc(var(--game-deck-front-tilt) - var(--depth) * var(--game-deck-step-tilt));
   position: absolute;
-  inset-inline-end: calc(-1 * (var(--game-deck-card-width) - var(--game-deck-reveal)));
+  inset-block-start: calc(var(--game-deck-front-top) - var(--depth) * var(--game-deck-step-up));
+  inset-inline-end: calc(-1 * (var(--game-deck-front-hang) + var(--depth) * var(--game-deck-step-out)));
   inline-size: var(--game-deck-card-width);
   block-size: var(--game-deck-card-height);
+  rotate: var(--tilt);
+  z-index: calc(10 - var(--depth));
 }
-.game-deck-item:nth-child(1) { inset-block-start: 0; rotate: -8deg; }
-.game-deck-item:nth-child(2) { inset-block-start: var(--game-deck-step); rotate: -5deg; }
-.game-deck-item:nth-child(3) { inset-block-start: calc(var(--game-deck-step) * 2); rotate: -2deg; }
-.game-deck-item:nth-child(4) { inset-block-start: calc(var(--game-deck-step) * 3); rotate: 1deg; }
-.game-deck-item:nth-child(5) { inset-block-start: calc(var(--game-deck-step) * 4); rotate: 4deg; }
-/* The item (the hit area) stays put; only the card inside it slides. */
+.game-deck-item:nth-child(2) { --depth: 1; }
+.game-deck-item:nth-child(3) { --depth: 2; }
+.game-deck-item:nth-child(4) { --depth: 3; }
+.game-deck-item:nth-child(5) { --depth: 4; }
+.game-deck-item:hover,
+.game-deck-item:focus-within {
+  z-index: 20;
+}
+/* The item (the hit area) stays put; only the card face inside it moves. The face slides straight left on the page
+   (the item is tilted, so the slide is turned back by the tilt) and straightens to the hover tilt. */
 .game-deck-card {
   position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
+  display: block;
   inline-size: 100%;
   block-size: 100%;
   box-sizing: border-box;
-  padding: calc(var(--spacing) * 3);
   background: var(--color-page);
-  border: var(--game-frame-line) solid var(--color-line);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--game-frame-btn-shadow);
+  border: var(--game-deck-card-line) solid var(--color-line);
+  border-radius: var(--game-deck-card-radius);
+  box-shadow: var(--game-deck-shadow);
   color: var(--color-ink);
   text-decoration: none;
-  transition: transform 0.2s ease;
+  transition:
+    translate var(--game-deck-duration) var(--game-deck-ease),
+    rotate var(--game-deck-duration) var(--game-deck-ease),
+    box-shadow var(--game-deck-duration) var(--game-deck-ease);
 }
 .game-deck-item:hover .game-deck-card,
 .game-deck-card:focus-visible {
-  transform: translateX(calc(-1 * var(--game-deck-slide)));
+  translate: calc(cos(var(--tilt)) * -1 * var(--game-deck-slide)) calc(sin(var(--tilt)) * var(--game-deck-slide));
+  rotate: calc(var(--game-deck-hover-tilt) - var(--tilt));
+  box-shadow: var(--game-deck-shadow-hover);
 }
 .game-deck-card:focus-visible {
   outline: var(--focus-width) solid var(--color-focus);
   outline-offset: var(--focus-offset);
 }
-.game-deck-card.is-closed {
-  border-style: dashed;
-  color: var(--color-ink-soft);
+.game-deck-top {
+  display: contents;
 }
-.game-deck-name {
-  font-family: var(--font-display);
-  font-size: var(--game-frame-how-font-size);
-  line-height: 1.5;
-  text-align: center;
-}
-.game-deck-corner {
+.game-deck-tile {
   position: absolute;
-  font-size: var(--game-frame-dateline-size);
-  line-height: 1.5;
-  color: var(--color-ink-soft);
-}
-.game-deck-corner {
-  display: inline-flex;
-  align-items: center;
-  gap: calc(var(--spacing) * 1.5);
-}
-.game-deck-icon,
-.game-deck-glyph {
-  inline-size: var(--game-deck-icon-size);
-  block-size: var(--game-deck-icon-size);
-  display: inline-flex;
+  inset-block-start: var(--game-deck-pad);
+  inset-inline-start: var(--game-deck-pad);
+  display: flex;
   align-items: center;
   justify-content: center;
-  font-family: var(--font-display);
+  inline-size: var(--game-deck-tile-size);
+  block-size: var(--game-deck-tile-size);
+  box-sizing: border-box;
   flex: none;
+  overflow: hidden;
+  border-radius: var(--game-deck-tile-radius);
+  background: var(--color-surface);
+  border: var(--game-frame-line) solid var(--color-line);
+  color: var(--color-ink);
+  line-height: 1;
 }
-.game-deck-corner-top {
-  inset-block-start: calc(var(--spacing) * 3);
-  inset-inline-start: calc(var(--spacing) * 3);
-}
-.game-deck-corner-bottom {
-  inset-block-end: calc(var(--spacing) * 3);
-  inset-inline-end: calc(var(--spacing) * 3);
+.game-deck-bottom {
+  inset-block-start: auto;
+  inset-inline-start: auto;
+  inset-block-end: var(--game-deck-pad);
+  inset-inline-end: var(--game-deck-pad);
   rotate: 180deg;
 }
+.game-deck-tile-art {
+  inline-size: 100%;
+  block-size: 100%;
+}
+.game-deck-glyph {
+  font-family: var(--font-body);
+  font-size: var(--game-deck-tile-glyph-size);
+  line-height: 1;
+}
+.game-deck-glyph.is-italic {
+  font-style: italic;
+}
+.game-deck-top-name {
+  position: absolute;
+  inset-inline-start: var(--game-deck-name-left);
+  inset-block-start: var(--game-deck-name-top);
+  display: flex;
+  align-items: center;
+  block-size: var(--game-deck-name-height);
+  font-family: var(--font-body);
+  font-weight: 500;
+  font-size: var(--game-deck-name-size);
+  line-height: 1.5;
+  white-space: nowrap;
+}
+.game-deck-name {
+  position: absolute;
+  inset-inline: 0;
+  inset-block-start: 50%;
+  translate: 0 -50%;
+  display: flex;
+  justify-content: center;
+  font-family: var(--font-body);
+  font-weight: 500;
+  font-size: var(--game-deck-name-mid-size);
+  line-height: 1.5;
+  text-align: center;
+  white-space: nowrap;
+}
+.game-deck-wordmark {
+  inline-size: auto;
+  max-inline-size: none;
+}
+.game-deck-wordmark-top {
+  block-size: var(--game-deck-logo-top);
+}
+.game-deck-wordmark-mid {
+  block-size: var(--game-deck-logo-mid);
+}
+/* "next game ›" is part of the front card's face: it tilts and slides with the card and is centred between its edges. */
+.game-deck-label {
+  position: absolute;
+  inset-inline: 0;
+  inset-block-start: var(--game-deck-label-top);
+  text-align: center;
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: var(--game-deck-label-size);
+  line-height: 1.5;
+  color: var(--color-ink-soft);
+}
+/* Light art by day, Evening art at night (the same switch as the logo: global.css .logo-day, .logo-evening). */
+.game-deck-evening {
+  display: none;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .game-deck-day { display: none; }
+  :root:not([data-theme="light"]) .game-deck-evening { display: block; }
+}
+:root[data-theme="dark"] .game-deck-day { display: none; }
+:root[data-theme="dark"] .game-deck-evening { display: block; }
 
 /* ---------------- Deck and Footer Slots ---------------- */
 .game-frame-deck-slot {
   position: absolute;
-  right: 0;
-  top: 50%;
-  transform: translateY(-50%);
+  inset-block-start: 0;
+  inset-inline-end: 0;
   z-index: 10;
 }
 
@@ -687,6 +771,17 @@
   width: 100%;
   margin-top: auto;
   z-index: 10;
+}
+
+/* The two paddings are rounded to whole pixels: a fractional padding made the board a hair off a whole pixel wide in Firefox (620.00003 at 1120 px).
+   From 70rem the fanned cards reach about 180 px in from the right edge. While the screen is narrow the main area gives
+   up room on its right (and its padding on its left), so a board at its full width, such as a 720 px grid at 1120 px,
+   never sits under a card. The usual padding is back by --game-deck-reserve-until. */
+@variant deck {
+  .game-frame-main {
+    --game-frame-main-pl: round(nearest, clamp(var(--game-deck-reserve-start), calc(var(--game-deck-reserve-start) + (100vw - var(--breakpoint-deck)) * var(--game-deck-reserve-start-slope)), calc(var(--spacing) * 6)), var(--game-frame-grid-line));
+    --game-frame-main-pr: round(nearest, clamp(calc(var(--spacing) * 6), calc(calc(var(--spacing) * 6) + (var(--game-deck-reserve-until) - 100vw) * var(--game-deck-reserve-slope)), var(--game-deck-reserve-end)), var(--game-frame-grid-line));
+  }
 }
 
 /* ---------------- Deck breakpoint ---------------- */
@@ -706,7 +801,6 @@
     inline-size: 100%;
     box-sizing: border-box;
     position: static;
-    transform: none;
     padding: 0 calc(var(--spacing) * 3) calc(var(--spacing) * 8);
   }
   .game-deck-list {
@@ -719,24 +813,49 @@
   .game-deck-item:nth-child(n) {
     position: static;
     rotate: none;
+    z-index: auto;
     flex: 1 1 0;
     min-inline-size: 0;
     inline-size: auto;
-    block-size: calc(var(--game-frame-btn-size) * 2);
+    block-size: auto;
+  }
+  .game-deck-card {
+    display: grid;
+    align-items: center;
+    block-size: 100%;
+    min-block-size: calc(var(--game-frame-btn-size) * 2);
   }
   .game-deck-item:hover .game-deck-card,
   .game-deck-card:focus-visible {
-    transform: none;
+    translate: none;
+    rotate: none;
   }
-  .game-deck-corner {
+  .game-deck-top,
+  .game-deck-bottom,
+  .game-deck-label {
     display: none;
+  }
+  .game-deck-name {
+    position: static;
+    translate: none;
+    align-items: center;
+    padding-inline: var(--spacing);
+    font-size: var(--game-frame-how-font-size);
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  .game-deck-wordmark-mid {
+    max-inline-size: 100%;
+    block-size: var(--game-deck-logo-row);
+    object-fit: contain;
   }
 }
 
 /* ---------------- Responsive: Tablet and Mobile ---------------- */
 @media (width < 64rem) {
   .game-frame-sidebar-top .game-frame-back {
-    padding-inline: calc(var(--spacing) * 3);
+    --game-frame-main-pl: calc(var(--spacing) * 3);
+    --game-frame-main-pr: calc(var(--spacing) * 3);
   }
 
   .game-frame-sidebar-top {
@@ -846,7 +965,10 @@
   }
 
   .game-frame-main {
-    padding: calc(var(--spacing) * 5) calc(var(--spacing) * 4) calc(var(--spacing) * 12);
+    --game-frame-main-pt: calc(var(--spacing) * 5);
+    --game-frame-main-pb: calc(var(--spacing) * 12);
+    --game-frame-main-pl: calc(var(--spacing) * 4);
+    --game-frame-main-pr: calc(var(--spacing) * 4);
   }
 
   /* The Frame's side gutter here is 4 units; Word Path's panel bleeds exactly that far until sm:mx-0 (40rem). */
@@ -893,7 +1015,7 @@
   }
   .game-frame-main {
     order: 3;
-    padding-block-start: calc(var(--spacing) * 2);
+    --game-frame-main-pt: calc(var(--spacing) * 2);
   }
   .game-frame-board {
     order: 3;
@@ -921,7 +1043,9 @@
   }
 
   .game-frame-main {
-    padding: calc(var(--spacing) * 2.5) calc(var(--spacing) * 3) calc(var(--spacing) * 6);
+    --game-frame-main-pt: calc(var(--spacing) * 2.5);
+    --game-frame-main-pb: calc(var(--spacing) * 6);
+    padding-inline: calc(var(--spacing) * 3);
   }
 
   .game-frame-dateline {
@@ -968,6 +1092,10 @@
     transition: none !important;
     transform: none !important;
   }
+  /* The card still moves, it just does not animate. */
+  .game-deck-card {
+    transition: none;
+  }
 }
 
 /* ---------------- Print Media ---------------- */
@@ -992,8 +1120,18 @@
     box-shadow: none !important;
   }
 
+  .game-frame-main::after {
+    display: none !important;
+  }
+
+  .game-frame-head {
+    display: block !important;
+    padding: 0 !important;
+  }
+
   .game-frame-main {
     display: block !important;
+    background: none !important;
     padding: 0 !important;
     margin: 0 !important;
     width: 100% !important;
@@ -1013,5 +1151,41 @@
 @media screen {
   .game-frame-title img[aria-hidden="true"] {
     display: none;
+  }
+}
+
+/* Artwork that has a Daytime and an Evening file (the cueory logo and the game wordmarks) follows the site's chosen
+   theme, never the device alone: the same rules as .logo-day and .logo-evening in global.css. Follow device
+   (no data-theme) uses the device setting; with no JavaScript there is no pick, so it also follows the device. */
+.game-frame-evening-art {
+  display: none;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .game-frame-day-art {
+    display: none;
+  }
+
+  :root:not([data-theme="light"]) .game-frame-evening-art {
+    display: block;
+  }
+}
+
+:root[data-theme="dark"] .game-frame-day-art {
+  display: none;
+}
+
+:root[data-theme="dark"] .game-frame-evening-art {
+  display: block;
+}
+
+/* !important: printing always uses the Daytime art, whatever the pick. */
+@media print {
+  .game-frame-day-art {
+    display: block !important;
+  }
+
+  .game-frame-evening-art {
+    display: none !important;
   }
 }

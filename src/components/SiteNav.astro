@@ -10,6 +10,9 @@
 import { navLinks, visibleAboutLinks } from '../config/sitenav';
 import { currentHref } from '../scripts/menu';
 
+/** `home`: the home header has no link bar (its links are in the side bar), only the round search button. */
+interface Props { home?: boolean }
+const { home = false } = Astro.props;
 const about = visibleAboutLinks();
 const current = currentHref(
   Astro.url.pathname,
@@ -17,8 +20,8 @@ const current = currentHref(
 );
 ---
 
-<div class="site-nav hidden min-w-0 flex-wrap items-center justify-center gap-3 lg:flex" data-site-nav>
-  <nav aria-label="main" class="veil flex min-w-0 flex-wrap items-center justify-center gap-1 rounded-pill px-3 py-1">
+<div class:list={['site-nav min-w-0 flex-wrap items-center justify-center gap-3', home ? 'flex' : 'hidden lg:flex']} data-site-nav>
+  {!home && <nav aria-label="main" class="veil flex min-w-0 flex-wrap items-center justify-center gap-1 rounded-pill px-3 py-1">
     <ul class="flex flex-wrap items-center justify-center gap-1">
       {
         navLinks.map((link) => (
@@ -50,8 +53,8 @@ const current = currentHref(
         )
       }
     </ul>
-  </nav>
-  <button type="button" class="corner-button invisible" aria-label="search the site" data-menu-open data-menu-search>
+  </nav>}
+  <button type="button" class="corner-button invisible" aria-label="search the site" aria-expanded="false" aria-haspopup="dialog" aria-controls="site-menu" data-menu-open data-menu-search>
     <svg viewBox="0 0 24 24" class="size-6" aria-hidden="true" focusable="false">
       <circle cx="10.5" cy="10.5" r="6" fill="none" stroke="currentColor" stroke-width="1.6"></circle>
       <path d="M15 15l5 5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path>
