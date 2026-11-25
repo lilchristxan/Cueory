@@ -9,6 +9,7 @@ const normal: StatKeyContext = {
   focusInsideOverlay: false,
   overlayOpen: false,
   onActionControl: false,
+  hasAnswer: true,
 };
 
 describe('stat keyboard shortcuts', () => {
@@ -51,6 +52,11 @@ describe('stat keyboard shortcuts', () => {
   it('preserves Enter for next only when focus is not on a button or link', () => {
     expect(statKeyAction({ ...normal, key: 'Enter' })).toEqual({ kind: 'next' });
     expect(statKeyAction({ ...normal, key: 'Enter', onActionControl: true })).toBeNull();
+  });
+
+  it('does nothing on Enter until an answer is picked', () => {
+    expect(statKeyAction({ ...normal, key: 'Enter', hasAnswer: false })).toBeNull();
+    expect(statKeyAction({ ...normal, key: 'a', hasAnswer: false })).toEqual({ kind: 'pick', letter: 'a' });
   });
 
   it('does not capture unrelated keys or multi-letter strings', () => {
