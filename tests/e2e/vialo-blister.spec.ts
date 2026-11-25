@@ -47,6 +47,11 @@ test('the Vialo blister artwork carries the live pills and their spoken marks', 
   await expect(committed.locator('.vialo-elsewhere').first()).toHaveCSS('box-shadow', /inset/);
   await expect(committed.locator('.vialo-absent').first()).toHaveCSS('background-image', 'none');
 
+  // Colour is never the only signal: in normal mode each result also carries its own mark under the letter.
+  const marks = await pockets.evaluateAll((pills) => pills.map((pill) => getComputedStyle(pill, '::after').content.split(' / ')[0]));
+  expect(marks).toEqual(['"\u25CB"', '"\u25CF"', '"\u25CF"', '"\u00B7"', '"\u25CF"']);
+  expect(new Set(marks).size).toBe(3);
+
   await page.emulateMedia({ reducedMotion: 'reduce' });
   expect(await committed.locator('.vialo-here').first().evaluate((pill) => getComputedStyle(pill, '::before').animationName)).toBe('none');
 });

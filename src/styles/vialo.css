@@ -163,6 +163,25 @@
     }
   }
 
+  /*
+    A committed letter carries its mark under it (● in its place, ○ somewhere else, · not in the word), so the three
+    results differ by shape and not by color alone, in Light and Evening. The row's spoken label already names them,
+    so the drawn mark adds nothing for a screen reader.
+  */
+  .vialo-pill:is(.vialo-here, .vialo-elsewhere, .vialo-absent) .vialo-letter {
+    transform: translateY(var(--pillo-letter-lift));
+  }
+  .vialo-pill:is(.vialo-here, .vialo-elsewhere, .vialo-absent)::after {
+    position: absolute;
+    inset-block-end: var(--pillo-mark-drop);
+    font-size: var(--pillo-mark);
+    line-height: var(--text-sm--line-height);
+    pointer-events: none;
+  }
+  .vialo-pill.vialo-here::after { content: "\25CF" / ""; }
+  .vialo-pill.vialo-elsewhere::after { content: "\25CB" / ""; }
+  .vialo-pill.vialo-absent::after { content: "\00B7" / ""; }
+
   @keyframes vialo-pop {
     from {
       transform: scale(var(--vialo-pop));
@@ -547,6 +566,7 @@
     display: none;
   }
   .vialo-contrast .vialo-mark,
+  .vialo-contrast .vialo-pill::after,
   .vialo-contrast .vialo-key-mark {
     font-size: var(--pillo-mark-contrast);
     font-weight: 700;
