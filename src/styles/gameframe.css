@@ -1008,3 +1008,10 @@
     max-width: none !important;
   }
 }
+
+/* The board title supplies the accessible heading on screen and its full artwork in print. */
+@media screen {
+  .game-frame-title img[aria-hidden="true"] {
+    display: none;
+  }
+}
