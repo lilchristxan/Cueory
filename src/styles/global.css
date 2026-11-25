@@ -845,6 +845,10 @@
     color: var(--cueory-copper-ink);
     text-decoration: none;
     background-image: linear-gradient(110deg, var(--cueory-copper-start), var(--cueory-copper-end) 72%, var(--cueory-copper-shine));
+    /* Draw the gradient from the border edge and never tile it: from the padding edge it repeats into the transparent
+       border and shows a thin copper sliver at the pill's right end. */
+    background-origin: border-box;
+    background-repeat: no-repeat;
     box-shadow: var(--shadow-button);
   }
 

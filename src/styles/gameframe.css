@@ -583,7 +583,11 @@
   max-width: var(--game-frame-max-board-showcase);
 }
 
-/* ---------------- Card deck (right edge) ---------------- */
+/* ---------------- Card deck (right edge) ----------------
+   One fixed spot on every game page: the slot is a zero-size anchor at the frame's top-right corner, and the cards are
+   placed from it at fixed distances. The FRONT card (the first one) is the fixed point; each card behind it is one step
+   further out, one step higher and one step less tilted, so with fewer cards the others simply stack behind it. The
+   frame clips what hangs past its right edge. */
 .game-deck {
   position: relative;
 }
@@ -592,94 +596,162 @@
   list-style: none;
   margin: 0;
   padding: 0;
-  inline-size: calc(var(--game-deck-card-width) - var(--game-deck-slide) + var(--game-deck-reveal));
-  block-size: calc(var(--game-deck-card-height) + var(--game-deck-step) * 5);
+  inline-size: 0;
+  block-size: 0;
 }
 .game-deck-item {
+  --depth: 0;
+  --tilt: calc(var(--game-deck-front-tilt) - var(--depth) * var(--game-deck-step-tilt));
   position: absolute;
-  inset-inline-end: calc(-1 * (var(--game-deck-card-width) - var(--game-deck-reveal)));
+  inset-block-start: calc(var(--game-deck-front-top) - var(--depth) * var(--game-deck-step-up));
+  inset-inline-end: calc(-1 * (var(--game-deck-front-hang) + var(--depth) * var(--game-deck-step-out)));
   inline-size: var(--game-deck-card-width);
   block-size: var(--game-deck-card-height);
+  rotate: var(--tilt);
+  z-index: calc(10 - var(--depth));
 }
-.game-deck-item:nth-child(1) { inset-block-start: 0; rotate: -8deg; }
-.game-deck-item:nth-child(2) { inset-block-start: var(--game-deck-step); rotate: -5deg; }
-.game-deck-item:nth-child(3) { inset-block-start: calc(var(--game-deck-step) * 2); rotate: -2deg; }
-.game-deck-item:nth-child(4) { inset-block-start: calc(var(--game-deck-step) * 3); rotate: 1deg; }
-.game-deck-item:nth-child(5) { inset-block-start: calc(var(--game-deck-step) * 4); rotate: 4deg; }
-/* The item (the hit area) stays put; only the card inside it slides. */
+.game-deck-item:nth-child(2) { --depth: 1; }
+.game-deck-item:nth-child(3) { --depth: 2; }
+.game-deck-item:nth-child(4) { --depth: 3; }
+.game-deck-item:nth-child(5) { --depth: 4; }
+.game-deck-item:hover,
+.game-deck-item:focus-within {
+  z-index: 20;
+}
+/* The item (the hit area) stays put; only the card face inside it moves. The face slides straight left on the page
+   (the item is tilted, so the slide is turned back by the tilt) and straightens to the hover tilt. */
 .game-deck-card {
   position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
+  display: block;
   inline-size: 100%;
   block-size: 100%;
   box-sizing: border-box;
-  padding: calc(var(--spacing) * 3);
   background: var(--color-page);
-  border: var(--game-frame-line) solid var(--color-line);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--game-frame-btn-shadow);
+  border: var(--game-deck-card-line) solid var(--color-line);
+  border-radius: var(--game-deck-card-radius);
+  box-shadow: var(--game-deck-shadow);
   color: var(--color-ink);
   text-decoration: none;
-  transition: transform 0.2s ease;
+  transition:
+    translate var(--game-deck-duration) var(--game-deck-ease),
+    rotate var(--game-deck-duration) var(--game-deck-ease),
+    box-shadow var(--game-deck-duration) var(--game-deck-ease);
 }
 .game-deck-item:hover .game-deck-card,
 .game-deck-card:focus-visible {
-  transform: translateX(calc(-1 * var(--game-deck-slide)));
+  translate: calc(cos(var(--tilt)) * -1 * var(--game-deck-slide)) calc(sin(var(--tilt)) * var(--game-deck-slide));
+  rotate: calc(var(--game-deck-hover-tilt) - var(--tilt));
+  box-shadow: var(--game-deck-shadow-hover);
 }
 .game-deck-card:focus-visible {
   outline: var(--focus-width) solid var(--color-focus);
   outline-offset: var(--focus-offset);
 }
-.game-deck-card.is-closed {
-  border-style: dashed;
-  color: var(--color-ink-soft);
+.game-deck-top {
+  display: contents;
 }
-.game-deck-name {
-  font-family: var(--font-display);
-  font-size: var(--game-frame-how-font-size);
-  line-height: 1.5;
-  text-align: center;
-}
-.game-deck-corner {
+.game-deck-tile {
   position: absolute;
-  font-size: var(--game-frame-dateline-size);
-  line-height: 1.5;
-  color: var(--color-ink-soft);
-}
-.game-deck-corner {
-  display: inline-flex;
-  align-items: center;
-  gap: calc(var(--spacing) * 1.5);
-}
-.game-deck-icon,
-.game-deck-glyph {
-  inline-size: var(--game-deck-icon-size);
-  block-size: var(--game-deck-icon-size);
-  display: inline-flex;
+  inset-block-start: var(--game-deck-pad);
+  inset-inline-start: var(--game-deck-pad);
+  display: flex;
   align-items: center;
   justify-content: center;
-  font-family: var(--font-display);
+  inline-size: var(--game-deck-tile-size);
+  block-size: var(--game-deck-tile-size);
+  box-sizing: border-box;
   flex: none;
+  overflow: hidden;
+  border-radius: var(--game-deck-tile-radius);
+  background: var(--color-surface);
+  border: var(--game-frame-line) solid var(--color-line);
+  color: var(--color-ink);
+  line-height: 1;
 }
-.game-deck-corner-top {
-  inset-block-start: calc(var(--spacing) * 3);
-  inset-inline-start: calc(var(--spacing) * 3);
-}
-.game-deck-corner-bottom {
-  inset-block-end: calc(var(--spacing) * 3);
-  inset-inline-end: calc(var(--spacing) * 3);
+.game-deck-bottom {
+  inset-block-start: auto;
+  inset-inline-start: auto;
+  inset-block-end: var(--game-deck-pad);
+  inset-inline-end: var(--game-deck-pad);
   rotate: 180deg;
 }
+.game-deck-tile-art {
+  inline-size: 100%;
+  block-size: 100%;
+}
+.game-deck-glyph {
+  font-family: var(--font-body);
+  font-size: var(--game-deck-tile-glyph-size);
+  line-height: 1;
+}
+.game-deck-glyph.is-italic {
+  font-style: italic;
+}
+.game-deck-top-name {
+  position: absolute;
+  inset-inline-start: var(--game-deck-name-left);
+  inset-block-start: var(--game-deck-name-top);
+  display: flex;
+  align-items: center;
+  block-size: var(--game-deck-name-height);
+  font-family: var(--font-body);
+  font-weight: 500;
+  font-size: var(--game-deck-name-size);
+  line-height: 1.5;
+  white-space: nowrap;
+}
+.game-deck-name {
+  position: absolute;
+  inset-inline: 0;
+  inset-block-start: 50%;
+  translate: 0 -50%;
+  display: flex;
+  justify-content: center;
+  font-family: var(--font-body);
+  font-weight: 500;
+  font-size: var(--game-deck-name-mid-size);
+  line-height: 1.5;
+  text-align: center;
+  white-space: nowrap;
+}
+.game-deck-wordmark {
+  inline-size: auto;
+  max-inline-size: none;
+}
+.game-deck-wordmark-top {
+  block-size: var(--game-deck-logo-top);
+}
+.game-deck-wordmark-mid {
+  block-size: var(--game-deck-logo-mid);
+}
+/* "next game ›" is part of the front card's face: it tilts and slides with the card and is centred between its edges. */
+.game-deck-label {
+  position: absolute;
+  inset-inline: 0;
+  inset-block-start: var(--game-deck-label-top);
+  text-align: center;
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: var(--game-deck-label-size);
+  line-height: 1.5;
+  color: var(--color-ink-soft);
+}
+/* Light art by day, Evening art at night (the same switch as the logo: global.css .logo-day, .logo-evening). */
+.game-deck-evening {
+  display: none;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .game-deck-day { display: none; }
+  :root:not([data-theme="light"]) .game-deck-evening { display: block; }
+}
+:root[data-theme="dark"] .game-deck-day { display: none; }
+:root[data-theme="dark"] .game-deck-evening { display: block; }
 
 /* ---------------- Deck and Footer Slots ---------------- */
 .game-frame-deck-slot {
   position: absolute;
-  right: 0;
-  top: 50%;
-  transform: translateY(-50%);
+  inset-block-start: 0;
+  inset-inline-end: 0;
   z-index: 10;
 }
 
@@ -687,6 +759,16 @@
   width: 100%;
   margin-top: auto;
   z-index: 10;
+}
+
+/* From 70rem the fanned cards reach about 180 px in from the right edge. While the screen is narrow the main area gives
+   up room on its right (and its padding on its left), so a board at its full width, such as a 720 px grid at 1120 px,
+   never sits under a card. The usual padding is back by --game-deck-reserve-until. */
+@variant deck {
+  .game-frame-main {
+    padding-inline-start: clamp(var(--game-deck-reserve-start), calc(var(--game-deck-reserve-start) + (100vw - var(--breakpoint-deck)) * var(--game-deck-reserve-start-slope)), calc(var(--spacing) * 6));
+    padding-inline-end: clamp(calc(var(--spacing) * 6), calc(calc(var(--spacing) * 6) + (var(--game-deck-reserve-until) - 100vw) * var(--game-deck-reserve-slope)), var(--game-deck-reserve-end));
+  }
 }
 
 /* ---------------- Deck breakpoint ---------------- */
@@ -706,7 +788,6 @@
     inline-size: 100%;
     box-sizing: border-box;
     position: static;
-    transform: none;
     padding: 0 calc(var(--spacing) * 3) calc(var(--spacing) * 8);
   }
   .game-deck-list {
@@ -719,17 +800,41 @@
   .game-deck-item:nth-child(n) {
     position: static;
     rotate: none;
+    z-index: auto;
     flex: 1 1 0;
     min-inline-size: 0;
     inline-size: auto;
-    block-size: calc(var(--game-frame-btn-size) * 2);
+    block-size: auto;
+  }
+  .game-deck-card {
+    display: grid;
+    align-items: center;
+    block-size: 100%;
+    min-block-size: calc(var(--game-frame-btn-size) * 2);
   }
   .game-deck-item:hover .game-deck-card,
   .game-deck-card:focus-visible {
-    transform: none;
+    translate: none;
+    rotate: none;
   }
-  .game-deck-corner {
+  .game-deck-top,
+  .game-deck-bottom,
+  .game-deck-label {
     display: none;
+  }
+  .game-deck-name {
+    position: static;
+    translate: none;
+    align-items: center;
+    padding-inline: var(--spacing);
+    font-size: var(--game-frame-how-font-size);
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  .game-deck-wordmark-mid {
+    max-inline-size: 100%;
+    block-size: var(--game-deck-logo-row);
+    object-fit: contain;
   }
 }
 
@@ -967,6 +1072,10 @@
   .game-frame-back {
     transition: none !important;
     transform: none !important;
+  }
+  /* The card still moves, it just does not animate. */
+  .game-deck-card {
+    transition: none;
   }
 }
 
