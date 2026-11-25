@@ -1,3 +1,5 @@
+@reference "./global.css";
+
 /*
   word path (Task 97) on /play: its print button and its printed copy (Task 641).
 
@@ -173,7 +175,7 @@
      "?" row is as wide as the letter circles, as drawn. */
   .wordpath[data-format="path"] .wordpath-panel { padding-block: 0; }
   .wordpath-status { font-size: var(--wordpath-status-size); line-height: 1.5; }
-  @media (min-width: 48rem) {
+  @variant md {
     .wordpath[data-format="path"] .game-header {
       max-inline-size: var(--wordpath-corner-span);
       margin-inline: auto;
