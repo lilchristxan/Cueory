@@ -1,1 +1,0 @@
-status: Task 634, unit tests for sudoku's pure logic (`src/islands/sudoku.ts`): settings parsing, clock, key mapping, grid rules and solver limits, results, undo history, checking and the puzzle validator. Current staging behaviour only; test-only, no product code change.
