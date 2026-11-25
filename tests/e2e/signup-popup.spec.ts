@@ -102,7 +102,7 @@ test('leaving the page while it is open counts as closing, so the wait starts ag
 // This test always runs; tests/unit/promo.test.ts pins the switch.
 test('with the promo panel switched off, a first visit gets the green pop-up after 10 seconds and no brown panel', async ({ page }) => {
   // promoDue clears the promo's remembered date, the state in which the brown panel would have come first.
-  await openAt(page, '/', { promoDue: true });
+  await openAt(page, '/', { promoDue: true, paused: true });
   await expect(page.locator('[data-promo]')).toHaveCount(0);
   await page.clock.runFor(9_000);
   await expect(popup(page)).toBeHidden();
