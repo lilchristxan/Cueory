@@ -2805,7 +2805,9 @@ html:has(dialog.mode-preview[open]) {
     font-weight: 700;
   }
 
-  .theme-slider-option:has(:focus-visible) {
+  /* :focus-within, not :has(:focus-visible): WebKit does not match :focus-visible on a radio moved by an arrow key, so the
+     ring never showed there. The radio is the only focusable thing in the segment, so this is the same place. */
+  .theme-slider-option:focus-within {
     outline: var(--focus-width) solid var(--color-focus);
     outline-offset: var(--focus-offset);
   }

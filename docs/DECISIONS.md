@@ -1211,3 +1211,33 @@ One line each, newest at the bottom. Reasons are kept short on purpose.
 - **D-191** (redesign) Copper accent added to the palette on 18 Nov 2026 by Christian, to match the redesign renderings; only for copper buttons, pills and accents; brand guide v1.0 itself is unchanged. Reason: the renderings' copper is not in guide v1.0.
 
 - **D-192** (P6) The home carousel shows only the vials that fit whole beside the front one (one each side on phones), instead of four each side running past the window's edges. Reason: lead's note on #888 (every label fully visible, no overlap at 390 and 1440).
+
+- **D-193** (#1027) GameFrame layout unifies header, dateline, and controls chrome across /play/pillo, /play/stat, /play/word-path, /play/crossword, /play/sudoku and /play/hello-cards while keeping existing puzzle boards and logic intact.
+
+- **D-194** (#1089) game tokens default to oxblood `#6E2019` and dark green `#0E5A3D` with Evening variants when the shared frame/token owner adds them; this Hello Cards board does not introduce those global tokens.
+
+- **D-195** (#1089) Vialo letters default to the locally hosted Bodoni Moda rather than device-dependent Times New Roman; not applicable to this board, recorded for the shared Games v2 review.
+
+- **D-196** (#1089) Vialo's non-colour pill cues default to solid shine, an inner ring band, and flat matte; not applicable to this board, recorded for the shared Games v2 review.
+
+- **D-197** (#1123) Cross-document view transitions off for launch (WebKit keyboard navigation stall, #1121)
+
+- **D-198** (#1138) D-190 resolved: Christian approved 'adhd friendly / less overwhelm, more focus' on the hero (23 Nov)
+
+- **D-199** (#1139) below 390 px the About headline scales with the screen and may be as small as 36 px (40 px at 320 px, about 48 px at 375 px); from 390 px up it stays above 44 px (lead approval, 23 Nov; Christian to confirm on staging)
+
+- **D-200** (#1140) the games dot pager draws 8 px dots in 44 x 44 buttons that sit side by side (about 46 px centre to centre), not 8 px apart as the pick read. Every button must be a full 44 px target with no overlap (review threads), and 8 px apart would force overlap.
+
+- **D-201** (#1140) the games dot pager draws its 8 px dots 16 px apart (the reading of Christian's pick was 8 px apart). At 8 px apart the clear hit areas are only 16 px wide, which fails the 24 px target-size check (WCAG 2.5.8, axe); 16 px apart passes it while each button keeps a 44 x 44 box.
+
+- **D-202** (#1143) the day streak counts days with any finished game (not only solved); the headline number follows how many games the page lists.
+
+- **D-203** (#1143) hub button says "play again" after a finished game until a saved-result view exists (game pages keep no finished round; only stats are saved).
+
+- **D-204** (#1144) phone letter-key size exception for vialo (Christian, 23 Nov). On phones a letter key may be at least 32 px wide and 52 px tall with at least 4 px between keys, as phone keyboards are; tablet and desktop keys keep 44 px. He approved it in chat after seeing both keyboards side by side.
+
+- **D-205** (#1144) screens narrower than 360 px (Christian to confirm). Ten 32 px keys with 4 px gaps need 356 px, so below 360 px the keys share the screen width: 28 px wide at 320 px, still 54 px tall, enter and delete 44 px wide. That phone's own keyboard has 26 px keys. The keyboard runs edge to edge on phones, so 360 px and wider keep at least 32 px (35 px at 390).
+
+- **D-206** (#1144) the key marks are finishes, not symbols (Games v2 README, D-pending 3). The ● ○ · symbols still show on the keys in high contrast.
+
+- **D-207** (#1145) game pages have no site header or building strip (Christian, 23 Nov; CLAUDE.md line about every page needs his edit)
