@@ -28,7 +28,7 @@ for (const { path, script } of games) {
     const held = new Promise<void>((resolve) => { release = resolve; });
     await page.route(script, async (route) => { await held; await route.continue(); });
     await page.goto(path, { waitUntil: 'domcontentloaded' });
-    await expect(page.getByTestId('game-frame-stats')).toBeAttached();
+    await expect(page.locator('astro-island[component-url*="GameFrameStats"]')).toBeAttached();
     const viewport = page.viewportSize()!.height;
     const frame = gameFrame(page);
     const footer = page.locator('footer').last();

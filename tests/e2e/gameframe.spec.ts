@@ -25,17 +25,12 @@ test.describe('GameFrame shared layout (Scope 1)', () => {
 
       // Stats
       const stats = page.locator('.game-frame-stats');
-      // Every game page shows its four stats in the left panel (Games v2, 23 Nov), framed controls or not.
-      await expect(stats).toBeVisible();
-      await expect(stats).toContainText(game.name === 'hello cards' ? 'questions asked' : '% solved');
-      await expect(stats).toContainText('played');
-      const statsIsland = page.locator('astro-island[component-url*="GameFrameStats"]');
-      if (game.name === 'hello cards') {
-        await expect(stats).toHaveText(/0\s*questions asked\s*0\s*current streak\s*0\s*best streak\s*0\s*played/);
-        await expect(statsIsland).toHaveCount(0);
-      } else {
-        await expect(statsIsland).toHaveCount(1);
-      }
+      // The four stats are for signed-in players only (2026-11-25): a signed-out visitor gets no panel, no empty box.
+      // The island still mounts (so it can record and, for a signed-in player, show them); it renders nothing.
+      const statsIsland = page.locator('astro-island[component-url*="GameFrameStats"]:not([ssr])');
+      await expect(statsIsland).toHaveCount(1);
+      await expect(stats).toHaveCount(0);
+      expect(await statsIsland.evaluate((node) => node.textContent)).toBe('');
 
       // Date line
       const dateLine = page.locator('.game-frame-dateline');

@@ -37,7 +37,7 @@ const { shown, starters } = page;
 ) : (
 <Layout title={helloCardsGame.name} description="Flip a card for a friendly conversation starter to use with patients, co-workers or classmates." noindex={page.noindex} promo={false} bareHeader={gamePagesBareHeader}>
     <div data-game-page="hello-cards">
-      <GameFrame game="hello-cards" staticNoScoreStats>
+      <GameFrame game="hello-cards">
         <Fragment slot="flag">
           <a
             href={flagMailto(site.contactEmail, Astro.url.pathname)}
