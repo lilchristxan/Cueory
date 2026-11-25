@@ -3159,15 +3159,23 @@ html:has(dialog.mode-preview[open]) {
     --vx: var(--w-x);
     --vb: var(--w-b);
     --vz: var(--w-z);
+    /* The drawn vial is --vw wide. Where the platter is scaled down, a side vial would be under the 44 px tap minimum, so
+       the button grows to --vtap (44 px divided by the track's scale) and the extra is padding: the picture, the label's
+       words and the foot shadow stay exactly where they were. */
+    --vwpx: calc(var(--vw) * var(--platter-px));
+    --vtap: calc(var(--tap-min) * 1.02 / var(--platter-scale)); /* 2% over, so the scale's rounding never leaves it a hair under 44 px */
+    --vpad: calc((max(var(--vwpx), var(--vtap)) - var(--vwpx)) / 2);
     position: absolute;
     inset-inline-start: 50%;
     inset-block-end: calc(var(--vb) * var(--platter-px));
-    inline-size: calc(var(--vw) * var(--platter-px));
+    box-sizing: border-box;
+    inline-size: max(var(--vwpx), var(--vtap));
+    padding-inline: var(--vpad);
     z-index: var(--vz);
     transform: translateX(calc(-50% + var(--vx) * var(--platter-px)));
     container-type: inline-size;
     display: block;
-    padding: 0;
+    padding-block: 0;
     border: 0;
     border-radius: calc(14 * var(--platter-px));
     background: none;
@@ -3178,6 +3186,7 @@ html:has(dialog.mode-preview[open]) {
     transition:
       transform var(--platter-glide),
       inline-size var(--platter-glide),
+      padding-inline var(--platter-glide),
       inset-block-end var(--platter-glide),
       translate 250ms ease,
       filter 250ms ease;
@@ -3206,7 +3215,7 @@ html:has(dialog.mode-preview[open]) {
   .platter-vial::before {
     content: '';
     position: absolute;
-    inset-inline: -8%;
+    inset-inline: calc(var(--vpad) - 0.08 * var(--vwpx));
     inset-block-end: -4.5%;
     block-size: 11%;
     border-radius: 50%;
@@ -3357,7 +3366,7 @@ html:has(dialog.mode-preview[open]) {
   .platter-label {
     position: absolute;
     inset-block: 33% 7%;
-    inset-inline: 3%;
+    inset-inline: calc(var(--vpad) + 0.03 * var(--vwpx));
     pointer-events: none;
     font-family: var(--font-body);
   }

@@ -1290,6 +1290,7 @@
 .home-stage {
   --stage-heading-width: none;
   --stage-accent-stroke: 0;
+  --stage-underline-drop: -.24em; /* the copper curve sits this far under the headline's box: low enough to clear the descender of the p in "simpler.", so no engine draws the letter against the copper (3:1 needed, copper on the word is only 2.6:1) */
   --stage-eyebrow-size: 1rem;
   --stage-eyebrow-gap: .8em;
   --stage-heading-gap: .25em;

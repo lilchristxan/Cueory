@@ -206,20 +206,19 @@ const landingUrl = kitLandingUrl(newsletter.landingUrl);
       margin-block-start: calc(var(--spacing) * 6);
     }
 
+    /* Two columns, not a flex row: the words take whatever is left (they may shrink to nothing), the form takes what it
+       needs but never more than the room, and its field gives way before the button can slide out over the panel's edge.
+       A flex row with an exact fit let WebKit and Firefox push the button 12 px past the padding. */
     .soon-card {
-      flex-wrap: nowrap;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, max-content);
       max-inline-size: var(--soon-card-max-width-landscape);
       padding: calc(var(--spacing) * 4.5) calc(var(--spacing) * 5);
       gap: calc(var(--spacing) * 3);
       border-radius: var(--soon-radius-landscape);
     }
 
-    .soon-copy {
-      flex: 1 1 auto;
-    }
-
     .soon-form {
-      flex: 0 0 auto;
       gap: calc(var(--spacing) * 3);
     }
 
@@ -237,7 +236,8 @@ const landingUrl = kitLandingUrl(newsletter.landingUrl);
     }
 
     .soon-input {
-      flex: 0 0 var(--soon-input-width-landscape);
+      flex: 0 1 auto;
+      inline-size: var(--soon-input-width-landscape); /* a width, not a flex basis, so the form's own width counts the whole 234 px field */
       min-block-size: var(--tap-min);
       font-size: var(--text-sm);
     }
