@@ -466,6 +466,13 @@
   --wordpath-ring: 2px;              /* the copper ring round a picked letter (WordPath.png shows about 2 px at 1440) */
   --wordpath-line: 3px;              /* the line that joins the letters of a word, from circle edge to circle edge */
   --wordpath-cell-max: 4.5rem;       /* a 6 × 8 board square's ceiling: 72 px, as large as a crossword square, so tablet and desktop boards are not oversized */
+  --wordpath-cue-size: 0.8125rem;    /* piccline's "today's cue" line on the Games v2 board: 13 px, 700, 1.5 px tracking */
+  --wordpath-cue-tracking: 0.09375rem; /* 1.5 px */
+  --wordpath-pill-size: 0.875rem;    /* the word pills under the 6 × 8 board: 14 px, 700 */
+  --wordpath-pill-pad-y: 0.5rem;     /* 8 px */
+  --wordpath-pill-pad-x: 0.875rem;   /* 14 px */
+  --wordpath-status-size: 0.8125rem; /* the "n of N words found" line: 13 px, as the Frame's stat labels */
+  --wordpath-corner-span: 22.625rem; /* the gear and "?" row is as wide as the letter circles (6 × 52 px + 5 × 10 px = 362 px) */
   --wordpath-columns: 11;            /* each puzzle overrides this with its validated grid width */
 }
 

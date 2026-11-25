@@ -354,7 +354,7 @@ export function PathBoard({ puzzle, name }: Props) {
         }
       />
       {printNote && <p className="mt-2 text-center text-sm text-ink-soft" data-testid="suture-print-note" data-print-hidden>{printNote}</p>}
-      <div className="wordpath-panel -mx-(--wordpath-bleed) mt-6 sm:mx-0 sm:px-(--spacing-stack)">
+      <div className="wordpath-panel -mx-(--wordpath-bleed) mt-6 sm:mx-0 sm:mt-0 sm:px-(--spacing-stack)">
       <div
         ref={board}
         role="grid"
@@ -362,7 +362,7 @@ export function PathBoard({ puzzle, name }: Props) {
         aria-describedby={help}
         aria-rowcount={puzzle.grid.length}
         aria-colcount={puzzle.grid[0]!.length}
-        className="wordpath-board relative mt-4 flex flex-col sm:mx-auto border-(length:--border-board) border-transparent text-ink sm:p-3"
+        className="wordpath-board relative mt-4 sm:mt-0 flex flex-col sm:mx-auto border-(length:--border-board) border-transparent text-ink sm:p-3"
       >
         {layout && (
           <svg className="wordpath-lines" aria-hidden="true" focusable="false" data-testid="suture-lines"
@@ -433,7 +433,7 @@ export function PathBoard({ puzzle, name }: Props) {
           <span key={i} className="wordpath-missing-pill" aria-hidden="true">?</span>
         ))}
       </div>
-      <p className="mt-3 text-center text-sm text-ink-soft" data-testid="suture-count" data-print-hidden>
+      <p className="wordpath-status mt-3 text-center text-ink-soft" data-testid="suture-count" data-print-hidden>
         {state.found.length} of {total} {total === 1 ? 'word' : 'words'} found · teal line: the word you are tracing
       </p>
       </div>

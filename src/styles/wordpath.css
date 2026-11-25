@@ -31,6 +31,9 @@
   }
 
   .wordpath-cue {
+    font-size: var(--wordpath-cue-size);
+    letter-spacing: var(--wordpath-cue-tracking);
+    line-height: 1.5;
     margin-block-end: calc(var(--spacing) * 3);
     color: var(--color-game-teal);
     text-align: center;
@@ -98,10 +101,10 @@
   .wordpath-active-pill,
   .wordpath-missing-pill {
     border-radius: var(--radius-pill);
-    padding: var(--spacing) calc(var(--spacing) * 3);
+    padding: var(--wordpath-pill-pad-y) var(--wordpath-pill-pad-x);
     overflow-wrap: anywhere;
     max-inline-size: 100%;
-    font-size: var(--text-sm);
+    font-size: var(--wordpath-pill-size);
     font-weight: 700;
   }
   .wordpath-found-pill {
@@ -148,6 +151,16 @@
         calc((100svh - var(--spacing) * 8 - var(--wordpath-board-edge)) * 6 / 8 + var(--wordpath-board-edge))
       )
     );
+  }
+  /* The board's panel carries no padding of its own (the circles' rim is the edge), and from tablet up the gear / print /
+     "?" row is as wide as the letter circles, as drawn. */
+  .wordpath[data-format="path"] .wordpath-panel { padding-block: 0; }
+  .wordpath-status { font-size: var(--wordpath-status-size); line-height: 1.5; }
+  @media (min-width: 48rem) {
+    .wordpath[data-format="path"] .game-header {
+      max-inline-size: var(--wordpath-corner-span);
+      margin-inline: auto;
+    }
   }
   .wordpath-row { display: grid; grid-template-columns: repeat(var(--wordpath-columns), minmax(var(--wordpath-cell-min), 1fr)); }
 }
