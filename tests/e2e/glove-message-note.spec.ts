@@ -293,3 +293,124 @@ test('a visitor who starts scrolling or moving while the photo loads gets the no
   await page.clock.runFor(4_000);
   await expect(note(page)).toBeVisible();
 });
+
+// The dim behind the note (Christian, 25 Nov 2026): the page dims while a note shows, and goes with it.
+const dim = (page: Page) => page.getByTestId('glove-note-dim');
+
+test('the page dims while the note shows and covers the whole window, header included', async ({ page }) => {
+  await openAt(page, '/');
+  await expect(dim(page)).toHaveCount(0);
+  await jump(page, 31);
+  await expect(note(page)).toBeVisible();
+  await expect(dim(page)).toHaveCount(1);
+  const view = page.viewportSize()!;
+  const box = (await dim(page).boundingBox())!;
+  expect(box.x).toBe(0);
+  expect(box.y).toBe(0);
+  expect(box.width).toBe(view.width);
+  expect(box.height).toBe(view.height);
+  await expect(dim(page)).toHaveAttribute('aria-hidden', 'true');
+  const background = await dim(page).evaluate((element) => getComputedStyle(element).backgroundColor);
+  expect(background).not.toBe('rgba(0, 0, 0, 0)');
+  expect(background).not.toBe('transparent');
+  // The note and its close button stay above the dim, fully bright, and the dim is not announced or focusable.
+  // (The rise animation takes a moment, so wait for it to finish before reading the opacity.)
+  await expect.poll(() => note(page).evaluate((element) => getComputedStyle(element).opacity)).toBe('1');
+  const closeButton = note(page).getByRole('button', { name: 'close glove note' });
+  const closeBox = (await closeButton.boundingBox())!;
+  expect(closeBox.width).toBeGreaterThanOrEqual(44);
+  expect(closeBox.height).toBeGreaterThanOrEqual(44);
+  const topAtClose = await page.evaluate(({ x, y }) => document.elementFromPoint(x, y)?.closest('[data-testid]')?.getAttribute('data-testid') ?? document.elementFromPoint(x, y)?.tagName, {
+    x: closeBox.x + closeBox.width / 2,
+    y: closeBox.y + closeBox.height / 2,
+  });
+  expect(topAtClose).toBe('glove-note');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  expect(await page.evaluate(() => document.activeElement === document.body)).toBe(true);
+});
+
+test('the close button removes the note and the dim', async ({ page }) => {
+  await openAt(page, '/');
+  await jump(page, 31);
+  await expect(dim(page)).toHaveCount(1);
+  await note(page).getByRole('button', { name: 'close glove note' }).click();
+  await expect(note(page)).toHaveCount(0);
+  await expect(dim(page)).toHaveCount(0);
+});
+
+test('Escape removes the note and the dim', async ({ page }) => {
+  await openAt(page, '/');
+  await jump(page, 31);
+  await expect(dim(page)).toHaveCount(1);
+  await page.keyboard.press('Escape');
+  await expect(note(page)).toHaveCount(0);
+  await expect(dim(page)).toHaveCount(0);
+});
+
+test('keyboard users can still reach the page behind the dim', async ({ page }) => {
+  await openAt(page, '/');
+  await jump(page, 31);
+  await expect(dim(page)).toHaveCount(1);
+  await page.keyboard.press('Tab');
+  const focusOutsideDim = await page.evaluate(() => document.activeElement !== document.body && !document.activeElement?.closest('[data-testid="glove-note-dim"]'));
+  expect(focusOutsideDim).toBe(true);
+  await page.keyboard.press('Escape');
+  await expect(dim(page)).toHaveCount(0);
+});
+
+test('clicking the dimmed page removes the note and the dim, and does not follow a link underneath', async ({ page }) => {
+  await openAt(page, '/');
+  await jump(page, 31);
+  await expect(dim(page)).toHaveCount(1);
+  // A link in the top-left corner of the page, under the dim; the click must not reach it.
+  await page.evaluate(() => {
+    const link = document.createElement('a');
+    link.href = '/about';
+    link.dataset.testid = 'under-dim-link';
+    link.textContent = 'under the dim';
+    link.style.cssText = 'position:fixed;left:0;top:0;width:120px;height:60px;z-index:1;background:white;color:black';
+    document.body.append(link);
+  });
+  await page.mouse.click(40, 30);
+  await expect(dim(page)).toHaveCount(0);
+  await expect(note(page)).toHaveCount(0);
+  await expect(page).not.toHaveURL(/\/about/);
+  expect(new URL(page.url()).pathname).toBe('/');
+});
+
+test('clicking the glove goes to the break ideas page', async ({ page }) => {
+  await openAt(page, '/');
+  await jump(page, 31);
+  await expect(dim(page)).toHaveCount(1);
+  await note(page).getByRole('link').click();
+  await expect(page).toHaveURL(/\/breaks$/);
+  await expect(dim(page)).toHaveCount(0);
+});
+
+test('there is no dim without JavaScript', async ({ browser }) => {
+  const context = await browser.newContext({ javaScriptEnabled: false });
+  const page = await context.newPage();
+  const response = await page.goto('/');
+  expect(response?.status()).toBe(200);
+  await expect(page.getByTestId('glove-note-dim')).toHaveCount(0);
+  await expect(page.getByTestId('glove-note')).toHaveCount(0);
+  await context.close();
+});
+
+test('the dim has no fade with reduced motion, and fades in otherwise', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await openAt(page, '/');
+  await jump(page, 31);
+  await expect(dim(page)).toHaveCount(1);
+  expect(await dim(page).evaluate((element) => getComputedStyle(element).animationName)).toBe('none');
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  expect(await dim(page).evaluate((element) => getComputedStyle(element).animationName)).not.toBe('none');
+});
+
+test('has no accessibility violations with the dim showing', async ({ page }) => {
+  await openAt(page, '/');
+  await jump(page, 31);
+  await expect(dim(page)).toHaveCount(1);
+  const results = await new AxeBuilder({ page }).include('[data-testid="glove-note"]').include('[data-testid="glove-note-dim"]').analyze();
+  expect(results.violations).toEqual([]);
+});

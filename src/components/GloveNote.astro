@@ -9,6 +9,9 @@
  * - The visit's clock and what was shown stay in this tab's session storage (`cueory-glove-note`, on /privacy).
  * - The list of messages is fetched (about 20 KB) only when a note is due, and only the one photo shown is loaded.
  *   Nothing is preloaded.
+ * - While it shows, the page behind dims (Christian, 25 Nov 2026). The dim goes with the note: the close button, Escape,
+ *   or a click or tap anywhere on the dimmed page (that click only dismisses). The dim is a plain layer built by the
+ *   script, so there is none without JavaScript, and nothing new is stored.
  * - It never takes focus. Escape or the close button dismisses it. The whole photo is one link: its name is the
  *   message plus "break idea". Reduced motion: no rise.
  * - Sounds: none yet. The recordings do not exist (src/scripts/notesound.ts keeps `filesExist` false until they do), so
@@ -42,8 +45,17 @@ const kind = pageKindFor(Astro.url.pathname);
     pointer-events: none;
   }
 
+  /* The dim over the whole page, header included. It is a sibling under the note inside the region. */
+  .glove-note-dim {
+    position: fixed;
+    inset: 0;
+    background-color: var(--glove-note-dim);
+    pointer-events: auto;
+  }
+
   .glove-note {
     position: relative;
+    z-index: 1;
     pointer-events: auto;
   }
 
@@ -77,6 +89,16 @@ const kind = pageKindFor(Astro.url.pathname);
 
   /* A gentle rise, only for visitors who haven't asked for reduced motion. */
   @media (prefers-reduced-motion: no-preference) {
+    .glove-note-dim {
+      animation: glove-note-dim-in var(--duration-base) ease-out;
+    }
+
+    @keyframes glove-note-dim-in {
+      from {
+        opacity: 0;
+      }
+    }
+
     .glove-note {
       animation: glove-note-in var(--duration-slow) ease-out;
     }

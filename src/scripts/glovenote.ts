@@ -89,9 +89,12 @@ export function startGloveNote(region: HTMLElement): void {
   };
 
   let open: HTMLElement | null = null;
+  let dim: HTMLElement | null = null;
   const close = () => {
     open?.remove();
+    dim?.remove();
     open = null;
+    dim = null;
   };
 
   // One selection and one photo load at a time: the once-a-second check must not start another while one is pending.
@@ -150,8 +153,17 @@ export function startGloveNote(region: HTMLElement): void {
       '<svg viewBox="0 0 24 24" class="size-6" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" /></svg>';
     closeButton.addEventListener('click', close);
     note.append(link, closeButton);
-    region.append(note);
+    // The page behind the note dims until the note is closed or the dimmed page is clicked or tapped (Christian,
+    // 25 Nov 2026). The layer is only for sight: hidden from screen readers, never focusable, and that click goes
+    // to the layer, so it dismisses the note without also activating whatever lies underneath.
+    const veil = document.createElement('div');
+    veil.className = 'glove-note-dim';
+    veil.dataset.testid = 'glove-note-dim';
+    veil.setAttribute('aria-hidden', 'true');
+    veil.addEventListener('click', close);
+    region.append(veil, note);
     open = note;
+    dim = veil;
     visit = recordShown(visit, { show: true, kind: 'message', gloveIndex }, Date.now(), gloves?.length ?? 0);
     writeVisit(storage, visit);
   };
