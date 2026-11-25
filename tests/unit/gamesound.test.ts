@@ -134,6 +134,19 @@ describe('game sound cues', () => {
     expect(tries).toHaveBeenCalledTimes(1);
   });
 
+  it('stays silent when the shared switch was turned off after the caller computed allowed = true', () => {
+    const { made } = installFakeAudio();
+    const handlers = new Map<string, (event: unknown) => void>();
+    vi.stubGlobal('window', { addEventListener: vi.fn((name: string, fn: (event: unknown) => void) => handlers.set(name, fn)), localStorage: { getItem: () => null } });
+    arm().get('pointerdown')!();
+    playGameCue('place', true);
+    expect(made.oscillators).toBe(1);
+    handlers.get('cueory:game-settings')!({ detail: { highContrast: false, motion: 'device', sound: false } });
+    vi.advanceTimersByTime(SAME_CUE_GAP_MS + 1);
+    playGameCue('place', true);
+    expect(made.oscillators).toBe(1);
+  });
+
   it('keeps every cue short and at a modest, audible level', () => {
     for (const [name, notes] of Object.entries(CUES) as [GameCue, typeof CUES[GameCue]][]) {
       const end = Math.max(...notes.map((note) => note.at + note.length));

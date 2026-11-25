@@ -97,7 +97,8 @@ export function armGameSound(doc: Document | undefined = typeof document === 'un
 /** Plays a cue if `allowed`, the page has had a real gesture, and the tab is visible. Never throws. */
 export function playGameCue(cue: GameCue, allowed = true): void {
   try {
-    if (!allowed || !unlocked || !context) return;
+    // The caller's value can be stale (a cue after an await); the live shared switch must agree too.
+    if (!allowed || !unlocked || !context || !switchOn()) return;
     if (typeof document !== 'undefined' && document.hidden) return;
     const now = Date.now();
     const before = lastPlayed.get(cue);
