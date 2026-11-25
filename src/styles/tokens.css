@@ -107,12 +107,15 @@
   --game-frame-pill-width: 3.875rem;     /* 62px */
   --game-frame-pill-height: 1.625rem;    /* 26px */
   --game-frame-step-num-size: 1.75rem;   /* 28px */
-  --game-frame-grid-major: 45rem 31.25rem; /* 720px 500px */
-  --game-frame-grid-mid: 5rem 5rem;      /* 80px 80px */
-  --game-frame-grid-minor: 0.5rem 0.5rem; /* 8px 8px */
+  /* Graph-paper backdrop: odd whole-pixel pitches so a line sits on the centre pixel of every tile and the pattern
+     mirrors about the stronger centre cross. 81 = 9 x 9, so every ninth fine line is a medium line. */
+  --game-frame-grid-mid: 81px;
+  --game-frame-grid-minor: 9px;
   --game-frame-line: 1px;
   --game-frame-grid-line: 1px;
-  --game-frame-grid-pos: -0.5px -0.5px;
+  --game-frame-grid-minor-color: color-mix(in srgb, var(--color-copper-deep) 6%, transparent);
+  --game-frame-grid-mid-color: color-mix(in srgb, var(--color-copper-deep) 16%, transparent);
+  --game-frame-grid-center-color: color-mix(in srgb, var(--color-copper-deep) 45%, transparent);
   --game-frame-logo-height: 1.25rem;     /* 20px */
   --game-frame-logo-width: 6rem;         /* 96px */
   --game-frame-emblem-radius: 1.125rem;  /* 18px */
@@ -417,7 +420,7 @@
   --footer-pad-top-landscape: 0;       /* 20 px / 57 px on a phone turned sideways */
   --footer-pad-bottom-landscape: 0.8125rem;
   --footer-link-gap: 1.125rem;         /* 18 px between the links' 44 px boxes puts the words where the board has them */
-  --footer-link-gap-phone: 0.75rem;    /* the five links fit the 302 px between the flag and the chevron */
+  --footer-link-gap-phone: 0.5rem;     /* the five links share the 302 px between the flag and the chevron; 8 px leaves about 20 px to spare, so a slightly wider font still keeps one centred row */
   --footer-link-size: 0.875rem;        /* 14 px */
   --footer-link-size-landscape: 0.8125rem; /* 13 px */
   --footer-link-line: 1.5;            /* Lato keeps 1.5; the link boxes are 44 px tall anyway, so the row does not grow */

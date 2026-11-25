@@ -66,7 +66,15 @@ async function inspectArt(page: Page) {
       if (!img.getClientRects().length || getComputedStyle(img).display === 'none') continue;
       const rect = img.getBoundingClientRect();
       if (rect.width < 4) continue;
-      await img.decode().catch(() => {});
+      // Wait for the file itself, not img.decode(): in WebKit decode() never settles for a lazy image that has not
+      // started loading, which hung this check on the home page in Evening.
+      if (!img.complete) {
+        img.loading = 'eager';
+        await new Promise<void>((done) => {
+          img.addEventListener('load', () => done(), { once: true });
+          img.addEventListener('error', () => done(), { once: true });
+        });
+      }
       const g = ground(img);
       const canvas = document.createElement('canvas');
       canvas.width = 160;
