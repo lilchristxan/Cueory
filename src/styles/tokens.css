@@ -387,7 +387,7 @@
   --footer-pad-top-landscape: 0;       /* 20 px / 57 px on a phone turned sideways */
   --footer-pad-bottom-landscape: 0.8125rem;
   --footer-link-gap: 1.125rem;         /* 18 px between the links' 44 px boxes puts the words where the board has them */
-  --footer-link-gap-phone: 0.75rem;    /* the five links fit the 302 px between the flag and the chevron */
+  --footer-link-gap-phone: 0.5rem;     /* the five links share the 302 px between the flag and the chevron; 8 px leaves about 20 px to spare, so a slightly wider font still keeps one centred row */
   --footer-link-size: 0.875rem;        /* 14 px */
   --footer-link-size-landscape: 0.8125rem; /* 13 px */
   --footer-link-line: 1.5;            /* Lato keeps 1.5; the link boxes are 44 px tall anyway, so the row does not grow */
