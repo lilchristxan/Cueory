@@ -36,8 +36,11 @@ export function useGameHelp(topic: HelpTopic): GameHelpState {
   // First visit to this game on this device (docs/GAMES-PARITY.md, D-177): open the same "?" dialog once. The saved
   // "seen" mark is read here, after hydration, so the first client render matches the server HTML.
   useEffect(() => {
-    if (helpSeen(browserStorage(), content.game)) return;
-    markHelpSeen(browserStorage(), content.game);
+    const storage = browserStorage();
+    if (!storage || helpSeen(storage, content.game)) return;
+    markHelpSeen(storage, content.game);
+    // Blocked storage can't remember the mark: don't open a dialog over the game on every load.
+    if (!helpSeen(storage, content.game)) return;
     setFirstVisit(true);
     setOpen(true);
   }, [content.game]);

@@ -9,7 +9,7 @@ import SiteFooter from '../components/SiteFooter.astro';
 import SiteHeader from '../components/SiteHeader.astro';
 import { offline, promo as promoSettings, site } from '../config/site';
 import { socialImageMeta } from '../config/socialimages';
-import { isGamePath, popupAllowedOn } from '../scripts/signuppopup';
+import { popupAllowedOn } from '../scripts/signuppopup';
 import { themeHeadScript } from '../scripts/theme';
 
 interface Props {
@@ -68,8 +68,7 @@ const socialImageInfo = socialImageUrl.origin === new URL(site.url).origin ? soc
 if (!socialImageInfo) throw new Error(`Layout: ${socialImagePath} is not a share card listed in src/config/socialimages.ts`);
 const isStudy = variant === 'study';
 const isHome = variant === 'home';
-// Never over a game in play (/play/<game>): the panel covered board cells. The /play hub still shows it.
-const showPromo = promoSettings.show && promo && !isStudy && !isGamePath(Astro.url.pathname);
+const showPromo = promoSettings.show && promo && !isStudy;
 // The launch-updates pop-up (lane 14): the same pages as the promo panel, never on lesson, study or game screens.
 const showSignupPopup = promo && !isStudy && popupAllowedOn(Astro.url.pathname);
 // The title a page has in site search results (D-49): its own title, and "home" for the home page.

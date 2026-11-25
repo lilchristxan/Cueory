@@ -81,10 +81,15 @@ test.describe('tachyyy', () => {
   });
 });
 
-test('the launch-list promo panel is not on a game page', async ({ page }: { page: Page }) => {
+test('the launch-list promo panel does not open over a game in play', async ({ page }) => {
   for (const path of ['/play/vialo', '/play/sudoku', '/play/piccline']) {
+    await page.clock.install({ time: new Date('2026-11-11T09:00:00') });
+    await page.addInitScript(() => { try { localStorage.removeItem('cueory-promo-seen'); } catch { /* blocked */ } });
     await page.goto(path);
     await expect(page.locator('.game-frame, [data-game-page]').first()).toBeVisible();
-    await expect(page.locator('[data-promo]')).toHaveCount(0);
+    await page.clock.runFor(30_000);
+    await page.mouse.wheel(0, 2000);
+    await page.clock.runFor(2_000);
+    await expect(page.getByTestId('promo')).toBeHidden();
   }
 });
