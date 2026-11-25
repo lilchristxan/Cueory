@@ -3,7 +3,7 @@ import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from 
 import { browserStorage } from '../scripts/storage';
 import { localDay, reportRound } from './gameresults';
 import { printGame } from './gameprint';
-import { GameHelpCard, useGameHelp } from './GameHelp';
+import { useGameHelp } from './GameHelp';
 import GameHeader from './GameHeader';
 import ResultBrandMark from './ResultBrandMark';
 import { dayLabel } from './daily';
@@ -11,7 +11,7 @@ import { playSolvedTone } from './solvetone';
 import { useSharedGameSettings } from './GameSettings.tsx';
 import PrintLogo from './PrintLogo';
 import {
-  announceFirstEntry, arrow, autocheckAll, backspace, check, clueLeavesGrid, countsForStreak, currentWord, deleteLetter, emptyState, enter, getResult,
+  announceFirstEntry, arrow, autocheckAll, crosswordLevelLabels, backspace, check, clueLeavesGrid, countsForStreak, currentWord, deleteLetter, emptyState, enter, getResult,
   isFilledWrong, isLocked, isSolved, loadCrosswordSettings, moveClue, nextWord, numbering, parsePuzzle, previousWord,
   reveal, saveCrosswordSettings, selectCell, selectOrToggleCell, words,
   type CrosswordSettings, type CuewordPuzzle, type CuewordState, type CuewordWord, type Direction, type HelpScope,
@@ -123,11 +123,11 @@ function Board({ puzzle, name, framed = false }: Props) {
     reportRound({
       game: 'cueword', day: localDay(today), solved: true, tries: state.assists, streak,
       card: {
-        game: 'cueword', name, date: dayLabel(today), level: gameResult.level,
-        shareResult: `${gameResult.level} · solved in ${elapsedText(gameResult.seconds)}${helped ? ' with help' : ''}`,
+        game: 'cueword', name, date: dayLabel(today), level: crosswordLevelLabels[gameResult.level],
+        shareResult: `${crosswordLevelLabels[gameResult.level]} · solved in ${elapsedText(gameResult.seconds)}${helped ? ' with help' : ''}`,
         result: 'solved', summary: helped ? "you completed today's crossword with help." : "you completed today's crossword.",
         stats: [
-          { label: 'level', value: gameResult.level },
+          { label: 'level', value: crosswordLevelLabels[gameResult.level] },
           { label: 'time', value: elapsedText(gameResult.seconds) },
           { label: 'help', value: helped ? 'used' : 'none' },
         ],
@@ -279,7 +279,6 @@ function Board({ puzzle, name, framed = false }: Props) {
         </div>
       </div>
 
-      <GameHelpCard help={howToPlay} name={name} />
 
       {asking && (
         <div className="crossword-warning crossword-no-print" role="alertdialog" aria-labelledby={warning + '-title'} aria-describedby={warning} data-testid="crossword-warning"
@@ -446,7 +445,7 @@ function Board({ puzzle, name, framed = false }: Props) {
       {solved && (
         <div ref={result} tabIndex={-1} className="crossword-result mt-6 rounded-md border border-control p-4" data-testid="cueword-result" role="status">
           <p className="text-lg font-medium">solved.</p>
-          <p className="mt-2">{gameResult.level} · {elapsedText(gameResult.seconds)}</p>
+          <p className="mt-2">{crosswordLevelLabels[gameResult.level]} · {elapsedText(gameResult.seconds)}</p>
           <p className="crossword-badge mt-2" data-testid="crossword-badge" data-badge={helped ? 'helped' : 'clean'}>
             <span aria-hidden="true">{helped ? '◇' : '◆'} </span>
             {helped ? 'solved with help' : 'solved without help'}

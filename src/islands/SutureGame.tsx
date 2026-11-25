@@ -3,7 +3,7 @@ import { useEffect, useId, useRef, useState, type KeyboardEvent, type PointerEve
 import { dayLabel } from './daily';
 import { localDay, reportRound } from './gameresults';
 import { printGame } from './gameprint';
-import { GameHelpCard, useGameHelp } from './GameHelp';
+import { useGameHelp } from './GameHelp';
 import GameHeader from './GameHeader';
 import PicclineCue from './PicclineCue';
 import { site } from '../config/site';
@@ -156,7 +156,6 @@ function Board({ puzzle, name }: Props) {
           </button>
         }
       />
-      <GameHelpCard help={howToPlay} name={name} />
       <div className="wordpath-panel -mx-(--wordpath-bleed) mt-6 sm:mx-0 sm:px-(--spacing-stack)">
       <div
         className="wordpath-board-scroll mt-4"

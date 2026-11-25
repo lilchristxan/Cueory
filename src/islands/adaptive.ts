@@ -178,6 +178,10 @@ export function conceptStatus(
     } else if (summary.level === 2) {
       status = 'getting there';
       description = `'${concept}' is getting there.`;
+    } else if (!summary.attempts.some(({ attempt, question }) => attempt.right && question.level === 3)) {
+      // Level 3 is earned from lower levels; "got it" also needs a right answer at level 3 itself.
+      status = 'getting there';
+      description = `'${concept}' is getting there.`;
     } else {
       status = 'got it';
       description = `'${concept}' is going well.`;

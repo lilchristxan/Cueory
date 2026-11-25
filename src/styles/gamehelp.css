@@ -61,64 +61,11 @@
     overflow-wrap: anywhere;
   }
 
-  .game-help-first {
-    margin-block: calc(var(--spacing) * 4);
-    padding: calc(var(--spacing) * 5);
-    border: var(--border-game-settings) solid var(--color-line);
-    border-radius: var(--radius-lg);
-    background: var(--color-page);
-    color: var(--color-ink);
-    text-align: start;
-    overflow-wrap: anywhere;
-  }
-
   .game-help-subheading {
     margin-block-start: calc(var(--spacing) * 5);
     font-size: var(--text-lg);
     line-height: var(--text-lg--line-height);
     font-weight: 600;
-  }
-
-  .game-help-first .game-help-subheading {
-    margin-block-start: 0;
-    text-align: center;
-  }
-
-  /* The heading is a toggle: plain text on tablet and desktop, a 44 px folded row with a +/- mark on a phone. */
-  .game-help-first-toggle {
-    display: block;
-    inline-size: 100%;
-    min-block-size: var(--tap-min);
-    padding: 0;
-    background: none;
-    border: 0;
-    color: inherit;
-    font: inherit;
-    text-align: center;
-    cursor: pointer;
-  }
-  .game-help-first-toggle:focus-visible {
-    outline: var(--focus-width) solid var(--color-focus);
-    outline-offset: var(--focus-offset);
-  }
-  .game-help-first-chevron {
-    display: none;
-  }
-  /* A card that folds (phones; the game frame's stylesheet decides) is one line until its heading opens it. */
-  .game-help-first[data-folds='true'] {
-    padding-block: calc(var(--spacing) * 2);
-  }
-  .game-help-first[data-folds='true'] .game-help-first-toggle {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: calc(var(--spacing) * 3);
-    text-align: start;
-    font-size: var(--text-base);
-  }
-  .game-help-first[data-folds='true'] .game-help-first-chevron {
-    display: inline;
-    font-size: var(--text-xl);
   }
 
   .game-help-line {
@@ -185,12 +132,5 @@
 
   .game-help-action:hover {
     background: var(--color-surface);
-  }
-}
-
-/* The rules card is for the screen; a printed puzzle stays the puzzle. */
-@media print {
-  .game-help-first {
-    display: none !important;
   }
 }

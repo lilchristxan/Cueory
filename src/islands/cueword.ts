@@ -90,6 +90,9 @@ export function hasShortEntries(grid: readonly string[]): boolean {
   return [...across, ...down].some((entry) => entry.length > 0 && entry.length < 3);
 }
 
+/** The words people read and hear for each level (Christian, 23 Nov 2026). The ids stay easy, mid and hard in saved data. */
+export const crosswordLevelLabels: Readonly<Record<CrosswordLevel, string>> = { easy: 'small', mid: 'medium', hard: 'large' };
+
 export function levelSize(level: CrosswordLevel): 5 | 7 | 15 {
   return crosswordLevels.find((option) => option.level === level)!.size;
 }

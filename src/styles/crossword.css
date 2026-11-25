@@ -43,6 +43,10 @@
   .crossword-board[data-level="hard"] { max-inline-size: none; }
   .crossword-row { display: flex; gap: var(--crossword-gap); }
   .crossword-cell, .crossword-gap { inline-size: var(--crossword-cell); block-size: var(--crossword-cell); flex: none; }
+  /* A selected square scrolls fully into view with room for its focus ring. Without the margin, a page laid out
+     between whole pixels left a hairline of the square under the edge of the screen (the scroll stops on a whole
+     pixel), and the ring itself was cut off there. */
+  .crossword-cell { scroll-margin: calc(var(--focus-width) + var(--focus-offset)); }
   /* Blocked squares are striped, not a solid fill like the selected square, so the two differ by pattern as well as
      color (Christian's brief). */
   .crossword-gap { background: repeating-linear-gradient(-45deg, var(--color-ink) 0 var(--crossword-hatch), var(--color-surface) var(--crossword-hatch) calc(var(--crossword-hatch) * 2)); }

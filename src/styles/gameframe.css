@@ -1,3 +1,5 @@
+@reference "./global.css";
+
 /*
   Games v2 Shared Frame Styles (docs/design/games-v2/README.md)
   Tokens only. Every target at least 44px. Works across 390, 820, and 1440 widths.
@@ -54,23 +56,27 @@
   width: 100%;
 }
 
-/* The page's "flag or comment" button sits in the header row between "games" and the logo, not in a row of its own. */
+/* The page's "flag or comment" button belongs to the frame's header, not to a row above the frame. The desktop sidebar
+   is only 191 px inside, which cannot hold "games", a 44 px flag and the logo at its full width side by side, so there
+   "games" and the logo share the first line and the flag sits on a line of its own under them. On tablets and phones
+   (the compact layout below) all three share one row. */
+.game-frame-sidebar-top {
+  flex-wrap: wrap;
+  row-gap: calc(var(--spacing) * 1);
+}
 .game-frame-flag-slot {
   display: flex;
   align-items: center;
-  justify-content: center;
-  flex: 1 1 auto;
+  justify-content: flex-start;
+  order: 1;
+  flex: 0 0 100%;
 }
 .game-frame-flag-slot:empty {
   display: none;
 }
-/* The desktop sidebar is only 192 px inside, so "games", the flag and the logo share it with no side padding on "games". */
-.game-frame-sidebar-top .game-frame-back {
-  padding-inline: 0;
-}
-.game-frame-flag-slot {
-  flex: 0 0 auto;
-  margin-inline: calc(var(--spacing) * 1);
+/* The logo never gives up width to its neighbours. */
+.game-frame-logo-wrap {
+  flex: none;
 }
 
 .game-frame-back {
@@ -199,7 +205,34 @@
   height: var(--game-frame-wordmark-height);
   width: auto;
   max-width: 100%;
+}
+
+/* Daytime and Evening wordmark art, switched as the site switches its other logos (global.css .logo-day / .logo-evening):
+   the device setting, unless the visitor picked Light or Dark in the footer; print always shows the Daytime art. */
+.game-frame-wordmark-evening {
+  display: none;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .game-frame-wordmark-day {
+    display: none;
+  }
+  :root:not([data-theme="light"]) .game-frame-wordmark-evening {
+    display: block;
+  }
+}
+:root[data-theme="dark"] .game-frame-wordmark-day {
+  display: none;
+}
+:root[data-theme="dark"] .game-frame-wordmark-evening {
   display: block;
+}
+@media print {
+  .game-frame-wordmark-day {
+    display: block !important;
+  }
+  .game-frame-wordmark-evening {
+    display: none !important;
+  }
 }
 
 .game-frame-serif-title {
@@ -220,12 +253,6 @@
   line-height: 1.5;
   color: var(--color-ink);
   text-align: center;
-}
-
-.game-frame-divider {
-  height: var(--game-frame-line);
-  background-color: var(--game-frame-border);
-  width: 100%;
 }
 
 /* ---------------- Stats in Left Panel ---------------- */
@@ -556,6 +583,97 @@
   max-width: var(--game-frame-max-board-showcase);
 }
 
+/* ---------------- Card deck (right edge) ---------------- */
+.game-deck {
+  position: relative;
+}
+.game-deck-list {
+  position: relative;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  inline-size: calc(var(--game-deck-card-width) - var(--game-deck-slide) + var(--game-deck-reveal));
+  block-size: calc(var(--game-deck-card-height) + var(--game-deck-step) * 5);
+}
+.game-deck-item {
+  position: absolute;
+  inset-inline-end: calc(-1 * (var(--game-deck-card-width) - var(--game-deck-reveal)));
+  inline-size: var(--game-deck-card-width);
+  block-size: var(--game-deck-card-height);
+}
+.game-deck-item:nth-child(1) { inset-block-start: 0; rotate: -8deg; }
+.game-deck-item:nth-child(2) { inset-block-start: var(--game-deck-step); rotate: -5deg; }
+.game-deck-item:nth-child(3) { inset-block-start: calc(var(--game-deck-step) * 2); rotate: -2deg; }
+.game-deck-item:nth-child(4) { inset-block-start: calc(var(--game-deck-step) * 3); rotate: 1deg; }
+.game-deck-item:nth-child(5) { inset-block-start: calc(var(--game-deck-step) * 4); rotate: 4deg; }
+/* The item (the hit area) stays put; only the card inside it slides. */
+.game-deck-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  inline-size: 100%;
+  block-size: 100%;
+  box-sizing: border-box;
+  padding: calc(var(--spacing) * 3);
+  background: var(--color-page);
+  border: var(--game-frame-line) solid var(--color-line);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--game-frame-btn-shadow);
+  color: var(--color-ink);
+  text-decoration: none;
+  transition: transform 0.2s ease;
+}
+.game-deck-item:hover .game-deck-card,
+.game-deck-card:focus-visible {
+  transform: translateX(calc(-1 * var(--game-deck-slide)));
+}
+.game-deck-card:focus-visible {
+  outline: var(--focus-width) solid var(--color-focus);
+  outline-offset: var(--focus-offset);
+}
+.game-deck-card.is-closed {
+  border-style: dashed;
+  color: var(--color-ink-soft);
+}
+.game-deck-name {
+  font-family: var(--font-display);
+  font-size: var(--game-frame-how-font-size);
+  line-height: 1.5;
+  text-align: center;
+}
+.game-deck-corner {
+  position: absolute;
+  font-size: var(--game-frame-dateline-size);
+  line-height: 1.5;
+  color: var(--color-ink-soft);
+}
+.game-deck-corner {
+  display: inline-flex;
+  align-items: center;
+  gap: calc(var(--spacing) * 1.5);
+}
+.game-deck-icon,
+.game-deck-glyph {
+  inline-size: var(--game-deck-icon-size);
+  block-size: var(--game-deck-icon-size);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  flex: none;
+}
+.game-deck-corner-top {
+  inset-block-start: calc(var(--spacing) * 3);
+  inset-inline-start: calc(var(--spacing) * 3);
+}
+.game-deck-corner-bottom {
+  inset-block-end: calc(var(--spacing) * 3);
+  inset-inline-end: calc(var(--spacing) * 3);
+  rotate: 180deg;
+}
+
 /* ---------------- Deck and Footer Slots ---------------- */
 .game-frame-deck-slot {
   position: absolute;
@@ -571,15 +689,64 @@
   z-index: 10;
 }
 
+/* ---------------- Deck breakpoint ---------------- */
+/* The fanned deck at the right edge fits only from 70rem (1120 px); below it the other games are a plain row under the
+   board. The width is the Tailwind breakpoint --breakpoint-deck (tokens.css) used through @variant, so there is one source.
+   This is the only rule block that moved from the 64rem layout query; the sidebar and column layout still switch at 64rem. */
+@variant max-deck {
+  /* From 64rem to 70rem the sidebar and the column are still side by side; the row of cards gets its own full-width line under them, so the game keeps its width. */
+  @variant lg {
+    .game-frame-layout {
+      flex-wrap: wrap;
+    }
+  }
+  /* The deck has no room beside the board below 70rem (1120 px, token --breakpoint-deck in tokens.css), so the other games are a row of plain cards under the stats. */
+  .game-frame-deck-slot {
+    order: 5;
+    inline-size: 100%;
+    box-sizing: border-box;
+    position: static;
+    transform: none;
+    padding: 0 calc(var(--spacing) * 3) calc(var(--spacing) * 8);
+  }
+  .game-deck-list {
+    display: flex;
+    gap: calc(var(--spacing) * 3);
+    inline-size: auto;
+    block-size: auto;
+  }
+  .game-deck-item,
+  .game-deck-item:nth-child(n) {
+    position: static;
+    rotate: none;
+    flex: 1 1 0;
+    min-inline-size: 0;
+    inline-size: auto;
+    block-size: calc(var(--game-frame-btn-size) * 2);
+  }
+  .game-deck-item:hover .game-deck-card,
+  .game-deck-card:focus-visible {
+    transform: none;
+  }
+  .game-deck-corner {
+    display: none;
+  }
+}
+
 /* ---------------- Responsive: Tablet and Mobile ---------------- */
 @media (width < 64rem) {
   .game-frame-sidebar-top .game-frame-back {
     padding-inline: calc(var(--spacing) * 3);
   }
 
+  .game-frame-sidebar-top {
+    flex-wrap: nowrap;
+  }
+
   .game-frame-flag-slot {
+    order: 0;
     flex: 1 1 auto;
-    margin-inline: 0;
+    justify-content: center;
   }
 
   .game-frame-layout {
@@ -687,23 +854,67 @@
     --wordpath-bleed: calc(var(--spacing) * 4);
   }
 
-  .game-frame-deck-slot {
-    position: static;
-    transform: none;
-    width: 100%;
-    margin-top: calc(var(--spacing) * 6);
+  /*
+    One compact top area, derived from the desktop panel (Games v2). The sidebar stops being a box and its parts are
+    placed one under another: row 1 is "games", the game's wordmark centred and the flag; row 2 (inside the main area)
+    is the gear, the date line and the "?". No second logo, tagline or icon. Then the board and its controls, and the
+    four stats in one strip underneath.
+  */
+  .game-frame-layout {
     display: flex;
+    flex-direction: column;
+  }
+  .game-frame-sidebar {
+    display: contents;
+  }
+  .game-frame-sidebar-top {
+    order: 1;
+    padding: calc(var(--spacing) * 2) calc(var(--spacing) * 3) 0;
+    box-sizing: border-box;
+  }
+  /* Row 1: "games", the logo and the flag. Row 2: the game's icon and wordmark. The tagline waits for the desktop panel. */
+  .game-frame-back { order: 1; }
+  .game-frame-logo-wrap { order: 2; }
+  .game-frame-flag-slot {
+    order: 3;
+    flex: 0 0 auto;
+    justify-content: flex-end;
+  }
+  .game-frame-game-badge {
+    order: 2;
+    flex-direction: row;
     justify-content: center;
+    gap: calc(var(--spacing) * 3);
+    margin: 0;
+    padding-inline: calc(var(--spacing) * 3);
+  }
+  .game-frame-tagline {
+    display: none;
+  }
+  .game-frame-main {
+    order: 3;
+    padding-block-start: calc(var(--spacing) * 2);
+  }
+  .game-frame-board {
+    order: 3;
+  }
+  .game-frame-controls-row {
+    margin-block-end: calc(var(--spacing) * 3);
+  }
+  /* The date line has its own line above the controls. */
+  .game-frame-dateline {
+    margin-block-end: calc(var(--spacing) * 2);
+  }
+  .game-frame-stats {
+    order: 4;
+    inline-size: 100%;
+    box-sizing: border-box;
+    margin-block-end: calc(var(--spacing) * 6);
+    padding-inline: calc(var(--spacing) * 3);
   }
 }
 
 @media (width < 30rem) {
-  /* Phones start the first-visit rules folded so the board comes first. GameHelp.tsx reads this flag, so the
-     breakpoint is written only here. */
-  .game-frame {
-    --game-help-first-fold: 1;
-  }
-
   .game-frame-sidebar {
     padding: calc(var(--spacing) * 2.5) calc(var(--spacing) * 3);
     gap: calc(var(--spacing) * 2);
@@ -761,6 +972,9 @@
 
 /* ---------------- Print Media ---------------- */
 @media print {
+  /* The page title is screen-reader only on screen (the wordmark is in the left panel); a printed puzzle shows it. */
+  /* (the screen-reader-only look is the not-print:sr-only utility on the element, so print needs no override) */
+
   .game-frame-sidebar,
   .game-frame-dateline,
   .game-frame-controls-row,
@@ -792,5 +1006,12 @@
     margin: 0 !important;
     width: 100% !important;
     max-width: none !important;
+  }
+}
+
+/* The board title supplies the accessible heading on screen and its full artwork in print. */
+@media screen {
+  .game-frame-title img[aria-hidden="true"] {
+    display: none;
   }
 }

@@ -1,0 +1,1 @@
+status: in review · task-launch/seo-sitemap · /play/vialo and /play/piccline are indexable and in the sitemap; playable games come from games.ts. /play/pillo and /play/word-path are noindex legacy routes with canonicals to their replacements. /about stays noindex (founder placeholder text).

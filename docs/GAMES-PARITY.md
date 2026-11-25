@@ -49,6 +49,7 @@ Rules already match. Add only what is missing (check first, do not rebuild):
 - Phone: the grid scrolls inside its own box (the page never scrolls sideways), plus a clue-list view.
 - Streak: an unassisted solve within 48 hours of the puzzle date counts. Check or Reveal still counts as solved, but shows a different badge (with a text label) and doesn't extend the streak. Warn before the first Check or Reveal.
 - A filled grid with no success message must tell the player “something's not right yet”.
+- Sizes: the three choices are named small, medium and large (Christian, 23 Nov 2026), with one puzzle per size per day. The internal ids stay easy, mid and hard so saved progress keeps working. The crossword's size picker is a segmented control, not the board's slider.
 
 ## All games
 

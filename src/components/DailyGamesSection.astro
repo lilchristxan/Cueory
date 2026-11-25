@@ -29,6 +29,16 @@ const tachyyyGame = {
   line: 'fifteen fast clinical questions in 30 seconds. how sharp are you on shift today?',
 } as const;
 
+// One pager dot per card, in card order; the name is read out with its place in the row.
+const pagerGames = [
+  gameName('vialo'),
+  tachyyyGame.name,
+  gameName('piccline'),
+  gameName('cueword'),
+  gameName('triage'),
+  helloCardsGame.name,
+];
+
 const helloEntries = await getCollection('hello-cards');
 const helloCardsAvailable = helloCardsPage(
   helloEntries.map(({ data }) => data),
@@ -37,7 +47,7 @@ const helloCardsAvailable = helloCardsPage(
 ).shown;
 ---
 
-<section id="daily-games" class="scene scene-play scroll-mt-section py-section" aria-labelledby="games-heading">
+<section id="daily-games" class="scene scene-play scroll-mt-section py-section-phone sm:py-section" aria-labelledby="games-heading">
   <div class="games-container games-stage" role="region" aria-roledescription="carousel" aria-label="daily games" data-games-carousel data-carousel-state="settled" data-testid="games-stage" data-reveal-section>
     <div class="games-header">
       <div class="games-nav-slot games-nav-prev">
@@ -264,6 +274,12 @@ const helloCardsAvailable = helloCardsPage(
       </div>
     </div>
 
+    <div class="games-pager" role="group" aria-label="choose a game">
+      {pagerGames.map((game, idx) => (
+        <button type="button" class="games-dot" data-games-dot aria-label={`${game}, ${idx + 1} of ${pagerGames.length}`} aria-current={idx === 0 ? 'true' : undefined}></button>
+      ))}
+    </div>
+
     <p class="games-date-note" data-testid="daily-games-day" data-daily-games-date aria-live="polite" aria-atomic="true">
       the date changes at midnight on your device. some sample puzzles repeat.
     </p>
@@ -293,11 +309,13 @@ const helloCardsAvailable = helloCardsPage(
     flex-direction: column;
     gap: var(--game-container-gap);
     width: 100%;
+    /* The final board keeps the heading row and the cards inside one 1280 px column (arrows at its two ends). */
+    max-width: var(--game-section-max-width);
+    margin-inline: auto;
   }
 
   .games-stage {
     padding: var(--game-stage-padding);
-    background: var(--color-silk-base);
     color: var(--color-ink);
   }
 
@@ -347,6 +365,17 @@ const helloCardsAvailable = helloCardsPage(
 
   .gs-nav:hover {
     background: var(--game-nav-bg-hover);
+  }
+
+  /* The final board draws these as the same copper-glow discs as the vial shelf's arrows. */
+  .gs-nav {
+    border-color: var(--cueory-copper-start);
+    background: var(--cueory-copper-glow);
+    color: var(--cueory-copper-ink);
+  }
+
+  .gs-nav:hover {
+    background: var(--cueory-copper-shine);
   }
 
   .gs-nav:focus-visible {
@@ -399,6 +428,97 @@ const helloCardsAvailable = helloCardsPage(
     outline-offset: var(--focus-offset);
   }
 
+  /*
+    Phones (HomeV2 parity): the same stack as on desktop (heading, line, cards, date note, "play today's"), with the
+    arrows beside "play today's" so they sit by the thumb and nothing floats above the cards. The header steps aside
+    (display: contents) so its pieces can take their places in the container's grid.
+  */
+  @media (max-width: 47.99em) {
+    /* The section rises 10 px. Keep its track on whole pixels during the reveal so a
+       392 px card retains both of its edges while scrolling on a phone. */
+    .games-stage[data-reveal="shown"] {
+      transition-timing-function: ease-out, steps(10, end);
+    }
+
+    .games-stage {
+      padding: var(--game-stage-padding-phone);
+    }
+
+    .games-container {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr) auto;
+      grid-template-areas:
+        "heading heading heading"
+        "subtitle subtitle subtitle"
+        "car car car"
+        "pager pager pager"
+        "note note note"
+        "prev action next";
+      align-items: center;
+      justify-items: center;
+    }
+
+    .games-header {
+      display: contents;
+    }
+
+    .games-header > .games-heading {
+      grid-area: heading;
+    }
+
+    .games-header > .games-subtitle {
+      grid-area: subtitle;
+      margin-block-end: 0;
+    }
+
+    .gcar {
+      grid-area: car;
+      inline-size: 100%;
+    }
+
+    .games-pager {
+      grid-area: pager;
+    }
+
+    .games-date-note {
+      grid-area: note;
+    }
+
+    .games-nav-prev {
+      grid-area: prev;
+      justify-self: start;
+    }
+
+    .games-nav-next {
+      grid-area: next;
+      justify-self: end;
+    }
+
+    /* At very large text the arrows grow too, so the button may wrap instead of pushing the page sideways. */
+    .games-stage-action {
+      grid-area: action;
+      min-width: 0;
+      padding-block: calc(var(--spacing) * 2);
+      padding-inline: calc(var(--spacing) * 3);
+      flex-wrap: wrap;
+      text-align: center;
+    }
+
+    .games-nav-slot .gs-nav {
+      width: var(--game-nav-size-phone);
+      height: var(--game-nav-size-phone);
+      min-width: var(--game-nav-size-phone);
+      min-height: var(--game-nav-size-phone);
+    }
+
+    /* Body text on a phone is at least 16 px. */
+    .games-date-note {
+      font-size: var(--text-base);
+      line-height: var(--text-base--line-height);
+    }
+
+  }
+
   @media (min-width: 48em) {
     .games-header {
       grid-template-columns: minmax(auto, var(--game-nav-size)) minmax(0, 1fr) minmax(auto, var(--game-nav-size));
@@ -414,6 +534,52 @@ const helloCardsAvailable = helloCardsPage(
     .games-nav-next {
       justify-self: end;
     }
+  }
+
+  /* Dot pager (Christian, 23 Nov): one dot per position, 8 px dots, the current one a 26 x 8 px pill. Each dot is a real
+     button whose whole 44 x 44 box takes the tap; the dot itself is drawn inside it by ::after. The boxes sit side by
+     side with a hair of space (never overlapping, never clipped), and the row wraps instead of scrolling sideways at large text. */
+  .games-pager {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    column-gap: var(--game-pager-gap);
+  }
+
+  .games-dot {
+    position: relative;
+    flex: none;
+    inline-size: var(--tap-min);
+    block-size: var(--tap-min);
+    padding: 0;
+    border: 0;
+    background: none;
+    cursor: pointer;
+  }
+
+  .games-dot::after {
+    content: '';
+    position: absolute;
+    inset-block-start: 50%;
+    inset-inline-start: 50%;
+    inline-size: var(--game-pager-dot);
+    block-size: var(--game-pager-dot);
+    border-radius: var(--radius-pill);
+    background-color: var(--color-line);
+    transform: translate(-50%, -50%);
+  }
+
+  .games-dot[aria-current='true']::after {
+    inline-size: var(--game-pager-pill);
+    background-color: var(--color-ink);
+  }
+
+  /* Keyboard focus: a round ring just inside the whole 44 px box, so nothing clips it. */
+  .games-dot:focus-visible {
+    border-radius: var(--radius-pill);
+    outline: var(--focus-width) solid var(--color-copper-deep);
+    outline-offset: calc(-1 * var(--focus-width));
   }
 
   .games-date-note {
@@ -616,6 +782,10 @@ const helloCardsAvailable = helloCardsPage(
   /* At enlarged text on a phone, the rem-sized playing card must contract to the carousel viewport. Keep the
    * decorative offscreen track clipped, but never clip the active card's name, description or status. */
   @media (max-width: 40em) {
+    .gtrack {
+      gap: var(--game-track-gap-phone);
+    }
+
     .gcard {
       width: clamp(var(--game-card-phone-min-width), calc(100% - var(--game-card-phone-inline-inset)), var(--game-card-width));
       height: auto;
@@ -626,7 +796,8 @@ const helloCardsAvailable = helloCardsPage(
     .gface {
       width: calc(100% - (2 * var(--game-card-padding)));
       height: auto;
-      min-height: 0;
+      /* The desktop face's height, so the name, line and status sit where they do on desktop (status at the foot). */
+      min-height: var(--game-face-height);
       min-width: 0;
     }
 

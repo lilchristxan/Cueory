@@ -234,80 +234,147 @@
   }
 
   /*
-    The letter keys look and lie out like the crossword's (Christian, 2026-11-17): plain squared keys a to z in rows
-    that wrap, each at least 44 × 44, with ⌫ and enter in the same style on their own row. Each key still shows the best
-    mark its letter has had, as a color and its symbol. Nothing is squeezed: at any width or text size the rows wrap.
+    The letter keys (Christian, 23 Nov 2026): three q-w-e-r-t-y rows of raised key caps, like a phone or laptop
+    keyboard, so they read as keys you can press. Row two sits half a key in. Enter starts row three and delete ends it;
+    each is one and a half keys wide, so row three is as wide as row one. A key shows the best mark its letter has had
+    by its finish as well as its colour: in place is a green cap with a lit top edge, elsewhere in the word is an
+    oxblood cap with a light ring inside its edge, and a letter that is not in the word sits down flat and struck
+    through. Each key's name says the same in words. Tablet and desktop keys are 46 by 54 px. On a phone ten keys share
+    the row, so a letter key is about 33 px wide and 54 px tall, as phone keyboards are (Christian's approved exception
+    to the 44 px rule for these keys, D-pending).
   */
   .vialo-keys {
+    container-type: inline-size;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: calc(var(--spacing) * 3);
-    max-inline-size: var(--pillo-keys-width);
+    gap: var(--vialo-key-row-gap);
+    inline-size: 100%;
+    max-inline-size: calc(var(--vialo-key-width) * 10 + var(--vialo-key-gap) * 9);
     margin-inline: auto;
   }
 
-  /* On a tablet or desktop the game column is wider than the pack: the pack, its status line and the keys are centred
-     in it, like the other daily boards. */
-  @media (width >= 40rem) {
-    .vialo-top,
-    .vialo-pack,
-    .vialo-keys {
-      margin-inline: auto;
-    }
-  }
-
+  /* A letter key is as wide as a tenth of the keyboard allows, and never wider than its drawn size. */
   .vialo-key-row {
+    --vialo-key-space: var(--vialo-key-gap);
+    --vialo-key-size: min(var(--vialo-key-width), (100cqi - 9 * var(--vialo-key-space)) / 10);
     display: flex;
-    flex-wrap: wrap;
     justify-content: center;
-    gap: var(--spacing);
+    gap: var(--vialo-key-space);
   }
 
   .vialo-key {
+    --vialo-key-lip-now: var(--vialo-key-lip-color);
     position: relative;
     display: inline-flex;
-    flex-direction: column;
+    flex: none;
     align-items: center;
     justify-content: center;
-    min-inline-size: var(--tap-min);
-    min-block-size: var(--tap-min);
-    padding-inline: calc(var(--spacing) * 3);
-    border: var(--border-pillo-key) solid var(--color-control);
-    border-radius: var(--radius-md);
-    line-height: var(--text-sm--line-height);
+    inline-size: var(--vialo-key-size);
+    block-size: var(--vialo-key-height);
+    padding: 0;
+    border: var(--border-pillo-key) solid var(--vialo-key-edge);
+    border-radius: var(--vialo-key-radius);
+    background-image: linear-gradient(180deg, var(--vialo-key-face-top), var(--vialo-key-face-bottom));
+    box-shadow: 0 var(--vialo-key-lip) 0 var(--vialo-key-lip-now), var(--shadow-vialo-key);
     color: var(--color-ink);
-    background-color: var(--color-page);
+    font-size: var(--vialo-key-letter);
+    font-weight: 700;
+    line-height: var(--text-sm--line-height);
+    cursor: pointer;
+    user-select: none;
+    touch-action: manipulation;
+    transition: transform var(--duration-fast) var(--ease-emphasis);
   }
 
-  /* On a phone the letter keys drop their side padding (still 44 px square), so seven fit a row and the keyboard is
-     one row shorter. */
+  /* Pressed: the cap drops onto its lip. */
+  .vialo-key:active {
+    transform: translateY(var(--vialo-key-press));
+    box-shadow: 0 calc(var(--vialo-key-lip) - var(--vialo-key-press)) 0 var(--vialo-key-lip-now);
+  }
+
+  /* Enter and delete: wider, a shade darker, so they read as the two action keys. */
+  .vialo-key-wide {
+    inline-size: calc(var(--vialo-key-size) * 1.5 + var(--vialo-key-space) * 0.5);
+    background-image: linear-gradient(180deg, var(--vialo-key-action-top), var(--vialo-key-action-bottom));
+    font-size: var(--vialo-key-word);
+  }
+
+  .vialo-key-icon {
+    inline-size: var(--vialo-key-icon);
+    block-size: auto;
+  }
+
+  /* Phones: the keyboard runs from edge to edge of the screen, as a phone's own keyboard does, with a narrower gap
+     and a slightly smaller letter. vialo's frame is already edge to edge (game pages have no page gutter), and the keys span the whole frame
+     whatever padding sits in between, so a letter key is 35 px wide at 390 px, 33.5 at 375 and 32 at 360. Below 360 px
+     ten keys cannot be 32 px without scrolling sideways, so they share the width (28 px at 320 px). */
   @media (width < 40rem) {
+    .game-page-frame[data-game-page="vialo"] {
+      container: vialo-page / inline-size;
+    }
+
+    .vialo-keys {
+      --vialo-keys-span: calc(100cqi - var(--vialo-key-edge-gap) * 2);
+      inline-size: var(--vialo-keys-span);
+      max-inline-size: none;
+      margin-inline: calc((100% - var(--vialo-keys-span)) / 2) 0;
+    }
+
+    .vialo-key-row {
+      --vialo-key-space: var(--vialo-key-gap-phone);
+    }
+
     .vialo-key:not(.vialo-key-wide) {
-      padding-inline: 0;
+      font-size: var(--vialo-key-letter-phone);
     }
   }
 
   .vialo-key.vialo-here {
-    border-color: var(--color-pillo-ring);
-    color: var(--color-on-pillo-here);
-    background-color: var(--color-pillo-here);
+    --vialo-key-lip-now: var(--vialo-key-here-lip);
+    border-color: var(--vialo-key-here-lip);
+    background-image: linear-gradient(180deg, var(--vialo-key-here-top), var(--vialo-key-here-bottom));
+    box-shadow:
+      inset 0 var(--border-pillo-key) 0 var(--vialo-key-shine),
+      0 var(--vialo-key-lip) 0 var(--vialo-key-lip-now),
+      var(--shadow-vialo-key);
+    color: var(--vialo-key-on-mark);
   }
 
   .vialo-key.vialo-elsewhere {
-    color: var(--color-on-pillo-elsewhere);
-    background-color: var(--color-pillo-elsewhere);
+    --vialo-key-lip-now: var(--vialo-key-elsewhere-lip);
+    border-color: var(--vialo-key-elsewhere-lip);
+    background-image: linear-gradient(180deg, var(--vialo-key-elsewhere-top), var(--vialo-key-elsewhere-bottom));
+    color: var(--vialo-key-on-mark);
   }
 
-  /* Not in the word: no fill, a thin edge and a faded letter, so the keys still to try stand out. */
-  .vialo-key.vialo-absent {
-    border-color: var(--color-line);
-    color: var(--color-ink-soft);
-    background-color: var(--color-page);
+  /* Elsewhere in the word: a light ring inside the key's edge, so it differs from "in place" by more than colour. */
+  .vialo-key.vialo-elsewhere::after {
+    content: "";
+    position: absolute;
+    inset: var(--vialo-key-ring-gap);
+    border: var(--vialo-key-ring) solid var(--vialo-key-ring-color);
+    border-radius: calc(var(--vialo-key-radius) - var(--vialo-key-ring-gap));
+    pointer-events: none;
+  }
+
+  /* Not in the word: the key sits down flat, with no lip and its letter struck through, so the keys still to try
+     stand out. It can still be pressed. */
+  .vialo-key.vialo-absent,
+  .vialo-key.vialo-absent:active {
+    border-color: var(--vialo-key-absent-edge);
+    background-color: var(--vialo-key-absent);
+    background-image: none;
     box-shadow: none;
+    transform: translateY(var(--vialo-key-rest));
+    color: var(--color-ink-soft);
+    text-decoration-line: line-through;
+    text-decoration-thickness: var(--vialo-key-strike);
   }
 
+  /* The ● ○ · symbols show on the keys only in high contrast; the finishes above carry the marks otherwise. */
   .vialo-key-mark {
+    display: none;
     font-size: var(--pillo-mark);
     line-height: var(--text-sm--line-height);
   }
@@ -320,10 +387,9 @@
     border-radius: var(--radius-lg);
   }
 
-  /* In pillo's help (the ? dialog and the first-visit card) the legend sits in the same column as the steps. It lives
+  /* In pillo's help (the ? dialog) the legend sits in the same column as the steps. It lives
      here, not in gamehelp.css, so other games' pages never load pillo selectors. */
-  .game-help .vialo-legend,
-  .game-help-first .vialo-legend {
+  .game-help .vialo-legend {
     max-inline-size: none;
     margin-block-start: calc(var(--spacing) * 4);
   }
@@ -450,15 +516,35 @@
   .vialo-contrast .vialo-pill.vialo-elsewhere,
   .vialo-contrast .vialo-key.vialo-elsewhere {
     background-color: var(--color-page);
+    background-image: none;
     color: var(--color-ink);
     box-shadow: inset 0 0 0 var(--pillo-contrast-rim) var(--color-ink);
   }
   .vialo-contrast .vialo-pill.vialo-absent,
   .vialo-contrast .vialo-key.vialo-absent {
     background-color: var(--color-page);
+    background-image: none;
     color: var(--color-ink);
     border: var(--border-pillo-key) dashed var(--color-ink);
     box-shadow: none;
+  }
+  /* High contrast keys: plain Espresso and Ivory, no gradient or ring, and each marked key shows its symbol. */
+  .vialo-contrast .vialo-key {
+    flex-direction: column;
+    background-image: none;
+    background-color: var(--color-page);
+    border-color: var(--color-ink);
+  }
+  .vialo-contrast .vialo-key.vialo-here {
+    background-color: var(--color-ink);
+    color: var(--color-page);
+    box-shadow: 0 var(--vialo-key-lip) 0 var(--vialo-key-lip-now);
+  }
+  .vialo-contrast .vialo-key.vialo-elsewhere::after {
+    display: none;
+  }
+  .vialo-contrast .vialo-key-mark {
+    display: inline;
   }
   .vialo-contrast .vialo-pill::before {
     display: none;
@@ -472,6 +558,10 @@
   @media (prefers-reduced-motion: reduce) {
     .vialo-pill.vialo-typed {
       animation: none;
+      transition: none;
+    }
+
+    .vialo-key {
       transition: none;
     }
   }

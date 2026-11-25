@@ -11,7 +11,6 @@ import { trappedFocusIndex } from './gamesettings';
  *
  *   const help = useGameHelp('triage');
  *   <GameHelpButton help={help} name="sudoku" className="sudoku-icon-button" />  // the "?" and its dialog
- *   <GameHelpCard help={help} name="sudoku" />                                    // the rules, on the first visit only
  *
  * The dialog traps focus, closes with Escape, the × or "got it", and gives focus back to the "?" button.
  */
@@ -132,36 +131,4 @@ export function GameHelpButton({ help, name, className, extra }: { help: GameHel
     </button>
     <GameHelpDialog help={help} name={name} extra={extra} />
   </>;
-}
-
-/** Phones start with the rules folded, so the board is the first thing on screen. The game frame's stylesheet owns the
- *  breakpoint and raises a flag on the frame (gameframe.css), so no screen width is written here. */
-function foldsOnThisScreen(): boolean {
-  if (typeof document === 'undefined') return false;
-  const frame = document.querySelector('.game-frame');
-  return frame !== null && getComputedStyle(frame).getPropertyValue('--game-help-first-fold').trim() === '1';
-}
-
-/** The rules above the board on a game's first visit. "got it" (or the "?") puts them away for good on this device.
- *  On a phone the card starts folded to one 44 px line so the board stays first; the heading opens it. */
-export function GameHelpCard({ help, name, extra }: { help: GameHelpState; name: string; extra?: ReactNode }) {
-  const id = useId();
-  const [folds] = useState(foldsOnThisScreen);
-  const [open, setOpen] = useState(!folds);
-  if (!help.firstVisit) return null;
-  return <section className="game-help-first" aria-labelledby={`${id}-title`} data-testid="game-help-first" data-open={open} data-folds={folds}>
-    <h3 id={`${id}-title`} className="game-help-subheading game-help-first-heading">
-      <button type="button" className="game-help-first-toggle" aria-expanded={open} aria-controls={`${id}-body`} onClick={() => setOpen((now) => !now)}>
-        new to {name}? here's how to play
-        <span className="game-help-first-chevron" aria-hidden="true">{open ? '\u2212' : '+'}</span>
-      </button>
-    </h3>
-    <div id={`${id}-body`} hidden={!open}>
-      {gameLine(help.content) && <p className="game-help-line">{gameLine(help.content)}</p>}
-      {extra}
-      <PlaySteps content={help.content} />
-      <p className="game-help-note">the ? button shows this again, with every setting.</p>
-      <div className="game-help-actions"><button type="button" className="game-help-action" onClick={help.dismiss}>got it</button></div>
-    </div>
-  </section>;
 }

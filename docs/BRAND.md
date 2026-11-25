@@ -100,6 +100,14 @@ Added 20 Nov 2026 by Christian's decision for the daily games rebrand. Teal is f
 | --- | --- | --- | --- | --- |
 | Piccline accent | Teal / Teal Light | `#2F7A78` | `#4FB3AE` | piccline only; cursive wordmark and board loop |
 | Vialo unlit cell | Dim | `#5A463A` | `#5A463A` | unlit cells on vialo dark icon tile |
+| Letter in place | Dark Green | `#0E5A3D` | `#3F8A68` | game marks only; light step `#3F8A68` / `#52A781`, deep step `#053321` / `#0E5A3D` |
+| Letter elsewhere | Oxblood | `#6E2019` | `#A0413A` | game marks only; light step `#A0413A` / `#C25951`, deep step `#4A100D` / `#6E2019` |
+
+Dark Green and Oxblood (D-184) mark a letter on a game board and on that game's letter keys, and nothing else: never
+text, buttons or backgrounds on marketing or study screens. Christian chose them on the canvas on 20 Nov 2026 and
+picked the vialo board and its raised keys that use them on 23 Nov 2026. A marked key keeps the Daytime values in
+Evening and carries a white letter, so the letter stays at least 5:1 in both palettes. Colour is never the only mark:
+each state also has its own finish and its own name for screen readers.
 
 Fonts: Sacramento (SIL Open Font License) is used for the piccline wordmark outlines only (notice in `public/fonts/sacramento-OFL.txt`).
 

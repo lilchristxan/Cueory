@@ -4,7 +4,7 @@ import { useEffect, useId, useLayoutEffect, useRef, useState, type KeyboardEvent
 import { dayLabel } from './daily';
 import { localDay, reportRound } from './gameresults';
 import { printGame } from './gameprint';
-import { GameHelpCard, useGameHelp } from './GameHelp';
+import { useGameHelp } from './GameHelp';
 import GameHeader from './GameHeader';
 import PicclineCue from './PicclineCue';
 import { site } from '../config/site';
@@ -354,7 +354,6 @@ export function PathBoard({ puzzle, name }: Props) {
         }
       />
       {printNote && <p className="mt-2 text-center text-sm text-ink-soft" data-testid="suture-print-note" data-print-hidden>{printNote}</p>}
-      <GameHelpCard help={howToPlay} name={name} />
       <div className="wordpath-panel -mx-(--wordpath-bleed) mt-6 sm:mx-0 sm:px-(--spacing-stack)">
       <div
         ref={board}

@@ -2,11 +2,11 @@
 import Layout from '../../layouts/Layout.astro';
 import GamePage from '../../components/GamePage.astro';
 import SudokuGame from '../../islands/SudokuGame';
-import { dailyGames } from '../../config/games';
+import { dailyGames, gamePagesBareHeader } from '../../config/games';
 
 const game = dailyGames.find((item) => item.id === 'triage')!;
 ---
-<Layout title={game.name} description={game.line} socialImage="/share/games-scene.png">
+<Layout title={game.name} description={game.line} socialImage="/share/games-scene.png" bareHeader={gamePagesBareHeader}>
 <GamePage game={game} framed>
   <label slot="controls" class="sr-only" for="game-frame-sudoku-difficulty">difficulty</label>
   <select slot="controls" id="game-frame-sudoku-difficulty" data-testid="game-frame-sudoku-difficulty" aria-label="difficulty" class="game-frame-select">
@@ -89,7 +89,22 @@ const game = dailyGames.find((item) => item.id === 'triage')!;
 
   :global(.sudoku-toolbar) {
     padding-block: var(--spacing);
-    inline-size: min(calc(100% + var(--sudoku-box-line)), var(--sudoku-board-width));
+    --toolbar-width: min(calc(100% + var(--sudoku-box-line)), var(--sudoku-board-width));
+    inline-size: var(--toolbar-width);
+  }
+
+  /* Center each row from a whole CSS pixel. Fractional origins otherwise cause Firefox
+   * to report a 44px pause button as just under 44px when it computes the two edges. */
+  @supports (margin-inline-start: round(nearest, 1%, 1%)) {
+    :global(.game-frame-board:has(.sudoku-section)) {
+      align-self: flex-start;
+      margin-inline-start: round(nearest, max(0%, (100% - var(--game-frame-max-board)) / 2), var(--sudoku-line));
+    }
+
+    :global(.sudoku-toolbar) {
+      align-self: flex-start;
+      margin-inline-start: round(nearest, (100% - var(--toolbar-width)) / 2, var(--sudoku-line));
+    }
   }
 
   /* The pseudo-element starts at the padding edge. Leave room for Firefox to round
