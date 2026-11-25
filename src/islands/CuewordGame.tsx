@@ -10,6 +10,7 @@ import { dayLabel } from './daily';
 import { playSolvedTone } from './solvetone';
 import { useSharedGameSettings } from './GameSettings.tsx';
 import PrintLogo from './PrintLogo';
+import { loadCuewordSave, saveCuewordProgress } from './cuewordsave';
 import {
   announceFirstEntry, arrow, autocheckAll, crosswordLevelLabels, backspace, check, clueLeavesGrid, countsForStreak, currentWord, deleteLetter, emptyState, enter, getResult,
   isFilledWrong, isLocked, isSolved, loadCrosswordSettings, moveClue, nextWord, numbering, parsePuzzle, previousWord,
@@ -50,19 +51,21 @@ function cellLabel(state: CuewordState, cell: number, r: number, c: number, word
 }
 
 function Board({ puzzle, name, framed = false }: Props) {
-  const [state, setState] = useState(() => emptyState(puzzle));
+  const [today] = useState(() => new Date());
+  // A board played earlier today on this device comes back as it was (a finished one stays finished); a new day starts fresh.
+  const [restored] = useState(() => loadCuewordSave(puzzle, localDay(today), browserStorage()));
+  const [state, setState] = useState(() => restored?.state ?? emptyState(puzzle));
   const [settings, setSettings] = useState<CrosswordSettings>(() => loadCrosswordSettings(browserStorage()));
   // Pencil mode is gone (Christian's brief, 2026-11-17): every letter is a pen letter.
   const pencil = false;
   const [paused, setPaused] = useState(false);
-  const [elapsed, setElapsed] = useState(0);
+  const [elapsed, setElapsed] = useState(restored?.elapsed ?? 0);
   const [warned, setWarned] = useState(false);
   const [asking, setAsking] = useState<Help | null>(null);
   const [showList, setShowList] = useState(false);
   const [openMenu, setOpenMenu] = useState<'check' | 'reveal' | null>(null);
   const [said, setSaid] = useState('');
-  const [today] = useState(() => new Date());
-  const [counts, setCounts] = useState(true);
+  const [counts, setCounts] = useState(restored ? restored.state.assists === 0 : true);
   const cells = useRef(new Map<number, HTMLButtonElement>());
   const focusGrid = useRef(false);
   const result = useRef<HTMLDivElement>(null);
@@ -93,6 +96,10 @@ function Board({ puzzle, name, framed = false }: Props) {
   }, [solved, paused]);
 
   useEffect(() => { saveCrosswordSettings(browserStorage(), settings); }, [settings]);
+  // Autosave: written only at the moment of a real player action that changes the board (a letter, erase, check, reveal,
+  // autocheck) or pauses the clock, with the new state. Nothing writes on mount, on restore, on leaving or on a timer, so
+  // an untouched board never writes or deletes anything, and a tab that did nothing cannot overwrite another tab's progress.
+  const persist = (next: CuewordState) => saveCuewordProgress(puzzle, localDay(today), { state: next, elapsed }, browserStorage());
 
   useEffect(() => {
     if (solved) result.current?.focus();
@@ -112,7 +119,8 @@ function Board({ puzzle, name, framed = false }: Props) {
   useEffect(() => { if (anyEntry) announceFirstEntry(window, localDay(today)); }, [anyEntry, today]);
   useEffect(() => { if (asking) confirmButton.current?.focus(); }, [asking]);
 
-  const reported = useRef(false);
+  // A board that reopens already finished was reported the day it was finished, so it is not reported again.
+  const reported = useRef(restored ? isSolved(restored.state) : false);
   useEffect(() => {
     if (!solved || reported.current) return;
     reported.current = true;
@@ -139,6 +147,8 @@ function Board({ puzzle, name, framed = false }: Props) {
   const update = (next: CuewordState, focus = true) => {
     focusGrid.current = focus;
     setState(next);
+    // Moving the cursor alone changes nothing worth saving.
+    if (next.entries.join('|') !== state.entries.join('|') || next.checks.join('|') !== state.checks.join('|') || next.cued.join() !== state.cued.join() || next.assists !== state.assists) persist(next);
   };
 
   const closeMenus = () => { for (const menu of menus.current.values()) menu.open = false; setOpenMenu(null); };
@@ -182,6 +192,8 @@ function Board({ puzzle, name, framed = false }: Props) {
     if (solved) return;
     setSaid(paused ? 'puzzle resumed.' : 'puzzle paused. your letters are hidden until you resume.');
     if (paused) focusGrid.current = true;
+    // Pausing keeps the clock with the board, but a board nobody has touched writes nothing.
+    if (!paused && (state.entries.some(Boolean) || state.assists > 0)) persist(state);
     setPaused(!paused);
   };
 

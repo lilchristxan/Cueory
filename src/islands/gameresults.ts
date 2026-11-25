@@ -1,3 +1,4 @@
+import { forgetSavedBoards } from './gamesavekeys';
 /**
  * Private daily-game stats (D-76). Each game reports a finished round and the stats panel keeps it. The record itself (first result of each game and day; pillo's and word path's
  * streaks are worked out from it, and the crossword keeps a streak flag; Task 719, #722, Task 721) is the helper's logic in ./gamestats, and results older than 400 days are dropped by today's date.
@@ -354,6 +355,7 @@ export function deleteStats(storage: KeyValueStorage | undefined): boolean {
     if (!storage) return false;
     storage.removeItem(SUDOKU_STATS_STORAGE_KEY);
     storage.removeItem(STATS_STORAGE_KEY);
+    forgetSavedBoards(storage);
     return true;
   } catch {
     return false;

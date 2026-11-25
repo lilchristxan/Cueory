@@ -12,6 +12,7 @@ import { DEFAULT_SUDOKU_SETTINGS, GAME_PROGRESS_EVENT, LEVEL_LABELS, sudokuProgr
 import { reportRound, SUDOKU_STATS_STORAGE_KEY, sudokuRoundResult } from './gameresults';
 import { keepSudokuSolve, loadSudokuStats, sudokuLevelStats, sudokuTime, type SavedSudokuStats } from './sudokustats';
 import PrintLogo from './PrintLogo';
+import { loadSudokuSave, saveSudokuProgress, untouched } from './sudokusave';
 
 const LEVELS: SudokuLevel[] = ['easy', 'medium', 'hard'];
 const NUMBERS = [1, 2, 3, 4, 5, 6, 7, 8, 9];
@@ -165,13 +166,25 @@ export default function SudokuGame({ framed = false }: { framed?: boolean } = {}
   }, [framed, paused]);
 
   useEffect(() => {
+    // A board played earlier today on this device (this level) comes back as it was; a finished one stays finished.
+    const saved = loadSudokuSave(puzzle.puzzle, day, level, browserStorage());
     const fresh = newSudokuBoard(puzzle.puzzle);
-    ownNotes.current = [...fresh.notes];
-    setBoard(settings.autoCandidates ? withAutoNotes(fresh) : fresh); setHistory([]); setChecked(new Set());
+    ownNotes.current = saved?.own ? [...saved.own] : [...fresh.notes];
+    setBoard(saved ? saved.board : settings.autoCandidates ? withAutoNotes(fresh) : fresh); setHistory([]); setChecked(new Set());
     setSelected(firstOpen(puzzle.puzzle));
-    setSeconds(0); setErrors(0); setPaused(false); setAuto(settings.autoCandidates);
-    setSaid(`${LEVEL_LABELS[level]} puzzle ready. ${LEVEL_RULES[level].givens} given numbers.`); reported.current = false;
+    setSeconds(saved?.seconds ?? 0); setErrors(saved?.errors ?? 0); setPaused(false); setAuto(saved ? saved.auto : settings.autoCandidates);
+    reported.current = Boolean(saved) && saved!.board.entries.every((value, index) => value === puzzle.solution[index]);
+    setSaid(saved ? `${LEVEL_LABELS[level]} puzzle restored.` : `${LEVEL_LABELS[level]} puzzle ready. ${LEVEL_RULES[level].givens} given numbers.`);
   }, [puzzle]);
+
+  // Autosave: written only at the moment of a real player action (a move, undo, auto pencil marks, pause), by the handler
+  // that makes it, with the new state. Nothing writes on mount, on restore, on leaving or on a timer, so an untouched
+  // board never writes or deletes anything, and a tab that did nothing cannot overwrite another tab's progress.
+  const persist = (next: SudokuBoard, nextErrors: number, nextAuto: boolean, skipIfUntouched = false) => {
+    const progress = { board: next, seconds, errors: nextErrors, auto: nextAuto, own: ownNotes.current };
+    if (skipIfUntouched && untouched(progress, puzzle.puzzle)) return;
+    saveSudokuProgress(puzzle.puzzle, day, level, progress, browserStorage());
+  };
 
   useEffect(() => {
     if (paused || solved) return;
@@ -218,6 +231,8 @@ export default function SudokuGame({ framed = false }: { framed?: boolean } = {}
 
 
   const togglePause = () => {
+    // Pausing is a player action: the clock is kept with the board (but an untouched board writes nothing).
+    if (!paused) persist(board, errors, auto, true);
     setPaused((current) => !current);
     setSaid(paused ? 'puzzle resumed.' : 'puzzle paused. every number is hidden until you press play.');
   };
@@ -238,7 +253,7 @@ export default function SudokuGame({ framed = false }: { framed?: boolean } = {}
   }, [solved]);
 
   /** Every edit goes through the one pure rule and is pushed to the undo history when it changes something. */
-  const apply = (action: SudokuBoardAction): SudokuBoard | undefined => {
+  const apply = (action: SudokuBoardAction, wrongEntry = false): SudokuBoard | undefined => {
     if (paused || solved) return;
     const next = editSudokuBoard(board, puzzle.puzzle, selected, action, auto);
     if (!next) {
@@ -247,6 +262,7 @@ export default function SudokuGame({ framed = false }: { framed?: boolean } = {}
     }
     setHistory((past) => pushSudokuHistory(past, board));
     setBoard(next);
+    persist(next, errors + (wrongEntry ? 1 : 0), auto);
     if (!started.current) {
       started.current = true;
       window.dispatchEvent(new CustomEvent(GAME_PROGRESS_EVENT, { detail: sudokuProgressDetail(day) }));
@@ -263,8 +279,8 @@ export default function SudokuGame({ framed = false }: { framed?: boolean } = {}
       if (next) setSaid(noteDigits(next.notes[selected]!).includes(value) ? `pencil mark ${value} added.` : `pencil mark ${value} removed.`);
       return;
     }
-    if (!apply({ kind: 'enter', value })) return;
     const isWrong = value !== puzzle.solution[selected];
+    if (!apply({ kind: 'enter', value }, isWrong && settings.checkGuesses)) return;
     if (isWrong && settings.checkGuesses) setErrors((count) => count + 1);
     setSaid(isWrong && settings.checkGuesses ? `${value} is not right for ${where(selected)}. error added.` : `${value} entered.`);
   };
@@ -282,6 +298,7 @@ export default function SudokuGame({ framed = false }: { framed?: boolean } = {}
     const step = undoSudoku(history);
     if (!step) { setSaid('nothing to undo.'); return; }
     setBoard(step.board); setHistory(step.history);
+    persist(step.board, errors, auto);
     setSaid('last move undone.');
   };
   const switchMode = (next?: SudokuMode) => {
@@ -295,13 +312,16 @@ export default function SudokuGame({ framed = false }: { framed?: boolean } = {}
     setAuto(on);
     if (!paused && !solved) {
       setHistory((past) => pushSudokuHistory(past, board));
+      let next: SudokuBoard;
       if (on) {
         ownNotes.current = [...notes];
-        setBoard(withAutoNotes(board));
+        next = withAutoNotes(board);
       } else {
         // Turning auto off takes its candidates away and brings back the player's own, on squares still empty.
-        setBoard({ entries: [...entries], marks: new Set(marks), notes: ownNotes.current.map((mask, index) => (entries[index] || marks.has(index) ? 0 : mask)) });
+        next = { entries: [...entries], marks: new Set(marks), notes: ownNotes.current.map((mask, index) => (entries[index] || marks.has(index) ? 0 : mask)) };
       }
+      setBoard(next);
+      persist(next, errors, on);
     }
     setSaid(on ? 'auto pencil marks on. every empty square shows its possible numbers.' : 'auto pencil marks off. your own pencil marks are back, and undo brings the automatic ones back.');
   };
