@@ -174,3 +174,67 @@ test.describe('on-screen delete and enter keys', () => {
     });
   }
 });
+
+// Christian (25 Nov 2026): when a game ends the word of the day is not shown, to sight or to screen readers.
+test('after a lost game the answer appears nowhere in the visible text or accessible names', async ({ page }) => {
+  for (const word of ['plant', 'lemon', 'music', 'pilot', 'coast', 'trial']) {
+    await typeOnScreen(page, word);
+    await page.keyboard.press('Enter');
+  }
+  const result = page.getByTestId('vialo-result');
+  await expect(result).toBeVisible();
+  await expect(result).toContainText('out of guesses');
+  await expect(result).toContainText('next word in');
+  // Fixed day 1 Nov 2026: the word of the day is grace.
+  const everything = await page.evaluate(() => {
+    const names = Array.from(document.querySelectorAll('[aria-label], [title], [alt]'), (node) => `${node.getAttribute('aria-label')} ${node.getAttribute('title')} ${node.getAttribute('alt')}`);
+    return `${document.body.innerText}\n${document.body.textContent}\n${names.join('\n')}`;
+  });
+  expect(everything).not.toMatch(/the word was/i);
+  expect(everything).not.toMatch(/\bgrace\b/i);
+});
+
+// Christian (25 Nov 2026): the board uses only white, oxblood and dark green, the same as the keys, in Light and Evening.
+for (const scheme of ['light', 'dark'] as const) {
+  test(`board pills and help example pills use only white, oxblood and dark green (${scheme})`, async ({ page }) => {
+    await page.emulateMedia({ colorScheme: scheme });
+    await typeOnScreen(page, 'crane');
+    await key(page, 'enter').click();
+    await expect(guesses(page)).toHaveCount(1);
+    await typeOnScreen(page, 'plant');
+    await key(page, 'enter').click();
+    await expect(guesses(page)).toHaveCount(2);
+    await page.getByTestId('game-help-button').click();
+    await expect(page.getByTestId('vialo-legend')).toBeVisible();
+    const colours = await page.evaluate(() => {
+      const probe = document.createElement('span');
+      document.body.append(probe);
+      const resolve = (token: string) => {
+        probe.style.backgroundColor = `var(${token})`;
+        return getComputedStyle(probe).backgroundColor;
+      };
+      const read = (selector: string) => Array.from(document.querySelectorAll(selector), (pill) => getComputedStyle(pill).backgroundColor);
+      const result = {
+        green: resolve('--game-dark-green'),
+        oxblood: resolve('--game-oxblood'),
+        espresso: resolve('--color-pillo-here'),
+        tan: resolve('--color-pillo-elsewhere'),
+        here: read('.vialo-pill.vialo-here'),
+        elsewhere: read('.vialo-pill.vialo-elsewhere'),
+        absent: read('.vialo-pill.vialo-absent'),
+        all: read('.vialo-pill'),
+      };
+      probe.remove();
+      return result;
+    });
+    expect(colours.here.length).toBeGreaterThan(1);
+    expect(colours.elsewhere.length).toBeGreaterThan(1);
+    for (const colour of colours.here) expect(colour).toBe(colours.green);
+    for (const colour of colours.elsewhere) expect(colour).toBe(colours.oxblood);
+    for (const colour of colours.absent) expect(colour).toBe('rgb(255, 255, 255)');
+    for (const colour of colours.all) {
+      expect(colour).not.toBe(colours.espresso);
+      expect(colour).not.toBe(colours.tan);
+    }
+  });
+}
