@@ -1222,6 +1222,7 @@
   --sudoku-cell-max: 5.25rem;
   --sudoku-cell-board: 2.875rem;       /* Christian's board: 46 px squares on desktop and landscape tablet */
   --sudoku-board-radius: 0.625rem;     /* the grid's corners on his board (10 px) */
+  --sudoku-board-inner-radius: max(0px, calc(var(--sudoku-board-radius) - var(--sudoku-box-line))); /* the corner squares' radius: the board's radius inside its outer line */
   --sudoku-pad-radius: 0.625rem;       /* the number keys' corners (10 px) */
   --sudoku-pad-text: 1.1875rem;        /* number keys: 19 px bold */
   --sudoku-pill-text: 0.9375rem;       /* Pencil, Undo and Hint: 15 px bold */
