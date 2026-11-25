@@ -128,6 +128,9 @@ const landingUrl = kitLandingUrl(newsletter.landingUrl);
     box-sizing: border-box;
     min-inline-size: 0;
     min-block-size: var(--soon-input-height);
+    /* Tabbing here scrolls the page just enough to show the box; a margin keeps it clear of the window's edge
+       instead of landing flush (or a fraction of a pixel past it) on it. */
+    scroll-margin-block: calc(var(--spacing) * 4);
     padding-inline: calc(var(--spacing) * 4);
     border: var(--border-soon-input) solid var(--color-control);
     border-radius: var(--radius-pill);
