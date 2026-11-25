@@ -1,0 +1,2 @@
+status: piccline daily rotation uses only board-format puzzles (rotation of 5), so 24 Nov and every sixth day no longer play the older 11 by 11 word search; /play/word-path keeps all samples.
+decision: D-pending · The daily piccline rotates through "format": "path" samples only; the older word-search sample stays in /content for the legacy /play/word-path route. Reason: the board is the game Christian wants played.

@@ -21,7 +21,7 @@ const samples = await wordPathSamples();
       <span class="wordpath-label mt-2 text-center text-ink-soft">word path</span>
     </h1>
     <section class="mt-6" aria-labelledby="piccline-heading">
-      <SutureToday client:only="react" puzzles={samples} name="piccline" />
+      <SutureToday client:only="react" puzzles={samples} name="piccline" boardOnly />
       <noscript><p>piccline needs JavaScript.</p></noscript>
     </section>
   </GamePage>
