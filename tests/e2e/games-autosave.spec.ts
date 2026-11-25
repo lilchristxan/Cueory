@@ -200,13 +200,17 @@ test.describe('untouched tabs never write or delete a save', () => {
     await page.addInitScript(() => {
       const calls: string[] = [];
       (window as unknown as { saveCalls: string[] }).saveCalls = calls;
-      for (const name of ['setItem', 'removeItem'] as const) {
-        const real = Storage.prototype[name];
-        Storage.prototype[name] = function (this: Storage, key: string, ...rest: string[]) {
-          if (/^cueory-.*-save$/.test(key)) calls.push(`${name} ${key}`);
-          return (real as (...args: string[]) => void).call(this, key, ...rest);
-        } as typeof real;
-      }
+      const watched = (key: string) => /^cueory-.*-save$/.test(key);
+      const realSet = Storage.prototype.setItem;
+      Storage.prototype.setItem = function (this: Storage, key: string, value: string) {
+        if (watched(key)) calls.push(`setItem ${key}`);
+        return realSet.call(this, key, value);
+      };
+      const realRemove = Storage.prototype.removeItem;
+      Storage.prototype.removeItem = function (this: Storage, key: string) {
+        if (watched(key)) calls.push(`removeItem ${key}`);
+        return realRemove.call(this, key);
+      };
     });
     for (const path of ['/play/vialo', '/play/sudoku', '/play/crossword']) {
       await open(page, path);
