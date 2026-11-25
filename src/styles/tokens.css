@@ -846,7 +846,10 @@
   --popup-button-hover: #e4eebf; /* the button on hover */
   --popup-button-ink: #26492a;   /* text on the button */
   --popup-width: 30rem;          /* the pop-up is at most this wide */
-  --glove-note-width: 22rem;     /* the message-glove note is at most this wide (photos are 720 px, about 2x) */
+  --glove-note-width: 36rem;     /* the message-glove note is at most this wide on a standard screen (the photos are 720 px, so about 1.25x room) */
+  --glove-note-width-dense: 22.5rem; /* on a sharp screen (1.5 or more device pixels per pixel): 720 px photo at 2x, never blurrier */
+  --glove-note-min-share: 0.86;  /* the note is at least this share of the window's shorter side, unless the width limit above is reached first */
+  --glove-note-margin: calc(var(--spacing) * 4); /* the note keeps at least this much clear of every window edge */
   --glove-note-drop-shadow: drop-shadow(0 0.5rem 1rem rgb(var(--shadow-tint) / 0.25)); /* soft shadow that follows the glove's outline */
   --layer-glove-note: 60;        /* above the page and the header, so the dim covers all of it; native dialogs sit above */
   --glove-note-dim: rgb(var(--shadow-tint) / var(--scrim-alpha)); /* the page behind a glove note: the side panel's dim (Espresso tint in Daytime, Charcoal-dark in Evening) */

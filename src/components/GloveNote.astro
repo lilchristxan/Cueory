@@ -2,7 +2,7 @@
 /**
  * The message-glove note (Christian, 24 Nov 2026; D-94 glove notes, rules in src/islands/stickynote.ts): every 30
  * minutes of the visit, on every page except games and the never-pages, a photo of a gloved hand with a short
- * handwritten message rises into the corner and links to /breaks (break ideas).
+ * handwritten message rises to the centre of the screen and links to /breaks (break ideas).
  *
  * - This file is only the empty polite live region (aria-live="polite"; not role="status", so pages that already have a status message keep exactly one) the note is put into, plus its look. The page
  *   script below asks `decideNote` (pure, unit tested) once a second whether a note is due and which glove.
@@ -35,14 +35,33 @@ const kind = pageKindFor(Astro.url.pathname);
 </script>
 
 <style is:global>
+  /* The region fills the window (dynamic height, so a phone's browser bars never push the glove off centre) and
+     centres the note, keeping a margin and the device's safe areas clear on every side. It takes no clicks itself. */
   .glove-note-region {
+    --glove-note-cap: var(--glove-note-width);
+    --glove-note-inset-inline: max(var(--glove-note-margin), env(safe-area-inset-left, 0px), env(safe-area-inset-right, 0px));
+    --glove-note-inset-block: max(var(--glove-note-margin), env(safe-area-inset-top, 0px), env(safe-area-inset-bottom, 0px));
     position: fixed;
-    inset-inline-end: calc(var(--spacing) * 4);
-    inset-block-end: calc(var(--spacing) * 4);
+    inset-block-start: 0;
+    inset-inline-start: 0;
+    inline-size: 100%;
+    block-size: 100dvh;
     z-index: var(--layer-glove-note);
-    inline-size: min(calc(100% - var(--spacing) * 8), var(--glove-note-width));
-    /* The empty live region takes no clicks; only the note does. */
+    display: grid;
+    place-items: center;
+    place-content: center;
+    padding-inline: var(--glove-note-inset-inline);
+    padding-block: var(--glove-note-inset-block);
+    box-sizing: border-box;
     pointer-events: none;
+  }
+
+  /* The photos are 720 px wide: on a screen with 1.5 or more device pixels per CSS pixel the note stops at the size where
+     the photo is still sharp (never upscaled past its natural size at 2x). */
+  @media (min-resolution: 1.5dppx) {
+    .glove-note-region {
+      --glove-note-cap: var(--glove-note-width-dense);
+    }
   }
 
   /* The dim over the whole page, header included. It is a sibling under the note inside the region. */
@@ -69,10 +88,13 @@ const kind = pageKindFor(Astro.url.pathname);
     outline-offset: var(--focus-offset);
   }
 
+  /* Natural size, scaled down to fit the window (width and height both capped, ratio kept) with the margin around. */
   .glove-note-image {
     display: block;
-    inline-size: 100%;
+    inline-size: auto;
     block-size: auto;
+    max-inline-size: min(var(--glove-note-cap), 100dvw - 2 * var(--glove-note-inset-inline));
+    max-block-size: calc(100dvh - 2 * var(--glove-note-inset-block));
     filter: var(--glove-note-drop-shadow);
   }
 

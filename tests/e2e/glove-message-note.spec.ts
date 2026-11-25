@@ -351,9 +351,22 @@ test('keyboard users can still reach the page behind the dim', async ({ page }) 
   await openAt(page, '/');
   await jump(page, 31);
   await expect(dim(page)).toHaveCount(1);
+  const menuButton = page.getByRole('button', { name: /menu/i }).first();
+  // Tab until the header's menu button has focus: a named control of the page, not the glove, so focus is not trapped.
+  for (let step = 0; step < 15; step += 1) {
+    await page.keyboard.press('Tab');
+    if (await menuButton.evaluate((element) => element === document.activeElement)) break;
+  }
+  await expect(menuButton).toBeFocused();
+  await expect(note(page)).toBeVisible();
+  await expect(dim(page)).toHaveCount(1);
+  // Shift+Tab goes back to the control before it, and Tab returns to the menu button.
+  await page.keyboard.press('Shift+Tab');
+  await expect(menuButton).not.toBeFocused();
+  expect(await page.evaluate(() => document.activeElement !== document.body && !document.activeElement?.closest('[data-testid="glove-note"]'))).toBe(true);
   await page.keyboard.press('Tab');
-  const focusOutsideDim = await page.evaluate(() => document.activeElement !== document.body && !document.activeElement?.closest('[data-testid="glove-note-dim"]'));
-  expect(focusOutsideDim).toBe(true);
+  await expect(menuButton).toBeFocused();
+  await expect(note(page)).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(dim(page)).toHaveCount(0);
 });
@@ -414,3 +427,57 @@ test('has no accessibility violations with the dim showing', async ({ page }) =>
   const results = await new AxeBuilder({ page }).include('[data-testid="glove-note"]').include('[data-testid="glove-note-dim"]').analyze();
   expect(results.violations).toEqual([]);
 });
+
+// The glove sits in the middle of the window at every size and orientation (Christian, 25 Nov 2026).
+const centredSizes = [
+  { name: 'phone portrait', width: 390, height: 844 },
+  { name: 'phone landscape', width: 844, height: 390 },
+  { name: 'tablet portrait', width: 820, height: 1180 },
+  { name: 'tablet landscape', width: 1180, height: 820 },
+  { name: 'desktop', width: 1440, height: 900 },
+];
+
+for (const size of centredSizes) {
+  test(`the glove is centred, fully inside the window and never scrolls sideways: ${size.name} ${size.width}x${size.height}`, async ({ page }) => {
+    await page.setViewportSize({ width: size.width, height: size.height });
+    await openAt(page, '/');
+    await jump(page, 31);
+    await expect(note(page)).toBeVisible();
+    // Wait for the rise animation to finish so the box is at rest (reduced motion has none).
+    await expect.poll(() => note(page).evaluate((element) => getComputedStyle(element).opacity)).toBe('1');
+    await page.waitForTimeout(600);
+    const box = (await note(page).boundingBox())!;
+    const centreX = box.x + box.width / 2;
+    const centreY = box.y + box.height / 2;
+    // 1 px across; 2 px down, because the photo's height is a fraction of a pixel and the window's own rounding adds up to one more.
+    expect(Math.abs(centreX - size.width / 2)).toBeLessThanOrEqual(1);
+    expect(Math.abs(centreY - size.height / 2)).toBeLessThanOrEqual(2);
+    // Fully inside, with a margin (the 1 rem token is 16 px; at least 12 px is demanded here).
+    expect(box.x).toBeGreaterThanOrEqual(12);
+    expect(box.y).toBeGreaterThanOrEqual(12);
+    expect(box.x + box.width).toBeLessThanOrEqual(size.width - 12);
+    expect(box.y + box.height).toBeLessThanOrEqual(size.height - 12);
+    // The close button is whole, at least 44 x 44, inside the window and inside the glove's box.
+    const closeBox = (await note(page).getByRole('button', { name: 'close glove note' }).boundingBox())!;
+    expect(closeBox.width).toBeGreaterThanOrEqual(44);
+    expect(closeBox.height).toBeGreaterThanOrEqual(44);
+    expect(closeBox.x).toBeGreaterThanOrEqual(box.x - 1);
+    expect(closeBox.y).toBeGreaterThanOrEqual(box.y - 1);
+    expect(closeBox.x + closeBox.width).toBeLessThanOrEqual(box.x + box.width + 1);
+    expect(closeBox.y + closeBox.height).toBeLessThanOrEqual(box.y + box.height + 1);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+    // Big enough to read: at least the token's share of the window's shorter side, unless the token's width limit
+    // (lower on a sharp screen, so the 720 px photo is never blurred) is reached first. 2 px for rounding.
+    const { share, cap } = await page.getByTestId('glove-note-region').evaluate((region) => {
+      const probe = document.createElement('div');
+      probe.style.inlineSize = getComputedStyle(region).getPropertyValue('--glove-note-cap');
+      region.append(probe);
+      const capPx = probe.getBoundingClientRect().width;
+      probe.remove();
+      return { share: Number(getComputedStyle(region).getPropertyValue('--glove-note-min-share')), cap: capPx };
+    });
+    expect(share).toBeGreaterThan(0.5);
+    const expected = Math.min(share * Math.min(size.width, size.height), cap);
+    expect(box.width).toBeGreaterThanOrEqual(expected - 2);
+  });
+}
