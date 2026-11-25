@@ -1,1 +1,0 @@
-status: Adds the public half of the Cueory backup key (made on Christian's Mac on Nov 23) to `.github/age/backup-recipients.txt` so the nightly production backup can encrypt, plus a unit test that the file holds exactly one public key and no secret key. Christian asked for backups on (Nov 23, 8:01 a.m.).
