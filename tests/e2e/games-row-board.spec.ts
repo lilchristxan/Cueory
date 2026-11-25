@@ -36,7 +36,7 @@ for (const size of sizes) {
           const r = el.getBoundingClientRect();
           return { left: r.left, right: r.right, top: r.top + scrollY, bottom: r.bottom + scrollY, width: r.width, height: r.height };
         };
-        const cards = [...document.querySelectorAll('#games-track .gcard')].map(rect);
+        const cards = [...document.querySelectorAll('#games-track .gcard:not([data-game-clone])')].map(rect);
         const dot = document.querySelector('.games-dot');
         const dotBox = rect(dot);
         const dotSize = (() => { const s = getComputedStyle(dot as Element, '::after'); return { w: parseFloat(s.width), h: parseFloat(s.height) }; })();
@@ -113,7 +113,7 @@ test('on a phone the active card is centred with a peek on both sides, and the r
     });
     const page = await context.newPage();
     await page.goto('/');
-    const cards = page.locator('#games-track .gcard');
+    const cards = page.locator('#games-track .gcard:not([data-game-clone])');
     const next = page.locator('[data-games-next]');
     await next.click();
     await expect(cards.nth(1)).toHaveClass(/on/);
@@ -124,11 +124,11 @@ test('on a phone the active card is centred with a peek on both sides, and the r
     // A peek of the card before (right edge inside the screen) and the card after (left edge inside the screen).
     expect((first?.x ?? 0) + (first?.width ?? 0)).toBeGreaterThan(40);
     expect(third?.x ?? 999).toBeLessThan(390 - 40);
-    // Last card: right edge sits 16 px in from the screen's edge.
+    // Last card: centred like every other card (the row is a circle, so it no longer stops 16 px in from the screen's edge).
     for (let i = 0; i < 4; i += 1) await next.click();
     await expect(cards.nth(5)).toHaveClass(/on/);
     const last = await cards.nth(5).boundingBox();
-    expect(Math.abs(390 - ((last?.x ?? 0) + (last?.width ?? 0)) - 16)).toBeLessThanOrEqual(TOLERANCE);
+    expect(Math.abs((last?.x ?? 0) - 70)).toBeLessThanOrEqual(TOLERANCE);
     expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0);
   } finally {
     await context.close();
