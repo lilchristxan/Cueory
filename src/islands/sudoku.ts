@@ -343,6 +343,17 @@ export function candidates(grid: SudokuGrid, index: number): number[] {
   return DIGITS.filter((digit) => !used.has(digit));
 }
 
+/**
+ * The digits (1 to 9) that already fill nine squares of the board, givens and the player's own entries alike. Wrong
+ * entries count, because the pad cannot tell a wrong digit from a right one without checking for the player. Pencil
+ * marks and x marks are not entries, so they never count. A digit that appears more than nine times is also done.
+ */
+export function placedDigits(entries: SudokuGrid): Set<number> {
+  const counts = Array<number>(10).fill(0);
+  for (const value of entries) if (Number.isInteger(value) && value >= 1 && value <= 9) counts[value]!++;
+  return new Set(DIGITS.filter((digit) => counts[digit]! >= 9));
+}
+
 export function conflictIndices(grid: SudokuGrid): number[] {
   if (grid.length !== CELLS) return [];
   const conflicts = new Set<number>();
