@@ -1304,6 +1304,17 @@
   --play-hub-total-min: 4rem;           /* a total wraps to the next line below this width, never overflows */
   --play-hub-headline-size: 3rem;       /* the panel headline (48 px: "new every" has to fit the 400 px panel) */
   --play-hub-headline-size-phone: 2.5rem;
+  /* The icon tile of a hub row with no icon file: the home page card's pip (the --game-pip-* tokens, which only the home page's carousel sees), same values */
+  --play-hub-pip-radius: 0.8125rem;
+  --play-hub-pip-shadow: 0 6px 14px rgb(62 44 35 / 0.22);
+  --play-hub-pip-bg: #eadccf;
+  --play-hub-pip-ink: #3e2c23;
+  --play-hub-pip-line: #cbb8a4;
+  --play-hub-pip-xgrid-size: 0.625rem;
+  --play-hub-pip-xgrid-gap: 0.125rem;
+  --play-hub-pip-sudoku-size: 1.75rem;
+  --play-hub-pip-hello-size: 1.5rem;
+  --play-hub-account-reserve: 7.125rem;    /* the totals or the account bar in the left panel: room for either, kept while the session check runs */
   /* room kept for the stats panel (browser-only) until it renders; the game rows render on the server */
   --play-hub-stats-reserve: 34rem;      /* the stats panel at every width (at least 550 px) */
 }

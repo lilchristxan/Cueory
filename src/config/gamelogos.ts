@@ -1,0 +1,58 @@
+/**
+ * Every game's logo artwork, in one place (Christian, 2026-11-25). The home page's game carousel
+ * (src/components/DailyGamesSection.astro), the /play hub rows (src/islands/PlayStatus.tsx) and the game pages'
+ * sidebar (src/components/GameFrame.astro) must show the same artwork, so the first two read this module and
+ * tests/unit/game-logos.test.ts asserts it equals what GameFrame uses, game by game. The files are Christian's
+ * artwork: plain images, never redrawn, recoloured, filtered or cropped.
+ *
+ * `icon` and `wordmark` are what the game page and the hub draw: the Daytime file, and the Evening file for the dark
+ * palette. `card` is what the carousel draws. Its cards are cream in both palettes, so it always draws Daytime art
+ * (dark ink) and never the ivory Evening wordmark, which would vanish on cream.
+ */
+export interface GameImageLogo {
+  kind: 'image';
+  icon: { day: string; evening: string };
+  /** The wordmark's two versions and its natural size (the viewBox of the files). */
+  wordmark: { day: string; evening: string; width: number; height: number };
+  /** What the home carousel's card draws. */
+  card: { icon: string; wordmark: string };
+}
+/** A game with no image: a glyph in the tile (a drawn grid, a "9", an italic "hi") and its name in the serif font. */
+export interface GameGlyphLogo {
+  kind: 'grid' | 'text';
+  text?: string;
+  italic?: boolean;
+}
+export type GameLogoKey = 'vialo' | 'tachyyy' | 'piccline' | 'crossword' | 'sudoku' | 'helloCards';
+
+const vialoIcon = '/design/games-v2/assets/vialo-icon-silver-oxblood.svg';
+
+export const gameLogos = {
+  vialo: {
+    kind: 'image',
+    icon: { day: vialoIcon, evening: vialoIcon },
+    wordmark: { day: '/design/games-v2/assets/vialo-wordmark-oxblood-v3.svg', evening: '/brand/games/vialo-wordmark-dark.svg', width: 4326, height: 1620 },
+    card: { icon: vialoIcon, wordmark: '/design/games-v2/assets/vialo-wordmark-oxblood-v3.svg' },
+  },
+  tachyyy: {
+    kind: 'image',
+    icon: { day: '/brand/games/tachyyy-light.svg', evening: '/brand/games/tachyyy-dark.svg' },
+    wordmark: { day: '/brand/games/tachyyy-wordmark-light.svg', evening: '/brand/games/tachyyy-wordmark-dark.svg', width: 5729, height: 2100 },
+    // The one place the card differs from the game page: the cream card needs the dark tile (the light tile is cream too).
+    card: { icon: '/brand/games/tachyyy-dark.svg', wordmark: '/brand/games/tachyyy-wordmark-light.svg' },
+  },
+  piccline: {
+    kind: 'image',
+    icon: { day: '/brand/games/piccline-dark.svg', evening: '/brand/games/piccline-dark.svg' },
+    wordmark: { day: '/brand/games/piccline-wordmark-light.svg', evening: '/brand/games/piccline-wordmark-dark.svg', width: 5060, height: 2555 },
+    card: { icon: '/brand/games/piccline-dark.svg', wordmark: '/brand/games/piccline-wordmark-light.svg' },
+  },
+  crossword: { kind: 'grid' },
+  sudoku: { kind: 'text', text: '9' },
+  helloCards: { kind: 'text', text: 'hi', italic: true },
+} as const satisfies Readonly<Record<GameLogoKey, GameImageLogo | GameGlyphLogo>>;
+
+/** The image art of a game that has some (vialo, tachyyy, piccline). */
+export function imageLogo(key: 'vialo' | 'tachyyy' | 'piccline'): GameImageLogo {
+  return gameLogos[key];
+}

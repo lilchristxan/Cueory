@@ -42,17 +42,18 @@ describe('the /play hub rows (option B)', () => {
     expect(html).toContain(line('cueword').replace(/'/g, '&#x27;'));
   });
 
-  it('uses the wordmark artwork for vialo and a serif name for the others', () => {
+  it('uses the shared logo artwork (src/config/gamelogos.ts) for vialo and a serif name for the others', () => {
     const html = render(true);
-    expect(html).toContain('vialo-wordmark-oxblood-v3.svg');
-    expect(html).toContain('vialo-wordmark-dark.svg');
+    expect(html).toContain('src="/design/games-v2/assets/vialo-wordmark-oxblood-v3.svg"');
+    expect(html).toContain('src="/brand/games/vialo-wordmark-dark.svg"');
+    expect(html).toContain('src="/design/games-v2/assets/vialo-icon-silver-oxblood.svg"');
+    expect(html).toContain('alt="vialo"');
     expect(html).toMatch(/display[^>]*>crossword</);
   });
 
-  it('renders the totals as dashes on the server', () => {
+  it('draws nothing but an empty holder for the totals on the server, until the session check has resolved', () => {
     const html = renderToStaticMarkup(createElement(PlayTotals));
-    expect(html.match(/aria-hidden="true">–</g)).toHaveLength(4);
-    expect(html).not.toMatch(/>0</);
+    expect(html).toBe('<div class="play-hub-account-slot"></div>');
   });
 });
 

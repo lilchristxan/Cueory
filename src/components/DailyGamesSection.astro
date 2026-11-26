@@ -16,6 +16,7 @@
  */
 import { getCollection } from 'astro:content';
 import { gameName, helloCardsGame, helloCardsIndexWhenApproved } from '../config/games';
+import { gameLogos, imageLogo } from '../config/gamelogos';
 import { crosswordShown, pageBuildEnv } from '../config/crossword';
 import { draftsAllowed } from '../islands/anatomylab';
 import { helloCardsPage } from '../islands/hello-cards';
@@ -72,10 +73,10 @@ const helloCardsAvailable = helloCardsPage(
       <div id="games-track" class="gtrack" data-games-track>
         <!-- Card 1: Vialo -->
         <a href="/play/vialo" class="gcard on" data-game-card="vialo" aria-label={`${gameName('vialo')}: guess the five-letter word in six tries`}>
-          <img class="gpip tl" src="/brand/games/vialo-dark.svg" alt="" aria-hidden="true" width="52" height="52" loading="lazy" decoding="async" />
+          <img class="gpip tl" src={imageLogo('vialo').card.icon} alt="" aria-hidden="true" width="52" height="52" loading="lazy" decoding="async" />
           <span class="gface">
             <span class="gname">
-              <img src="/brand/games/vialo-wordmark-light.svg" alt={gameName('vialo')} width="168" height="60" loading="lazy" decoding="async" />
+              <img src={imageLogo('vialo').card.wordmark} alt={gameName('vialo')} width="168" height="60" loading="lazy" decoding="async" />
             </span>
             <span class="gdesc">guess the five-letter word in six tries.</span>
             <span class="gstatus" data-game-status="vialo">
@@ -100,15 +101,15 @@ const helloCardsAvailable = helloCardsPage(
               </span>
             </span>
           </span>
-          <img class="gpip br" src="/brand/games/vialo-dark.svg" alt="" aria-hidden="true" width="52" height="52" loading="lazy" decoding="async" />
+          <img class="gpip br" src={imageLogo('vialo').card.icon} alt="" aria-hidden="true" width="52" height="52" loading="lazy" decoding="async" />
         </a>
 
         <!-- Card 2: Tachyyy -->
         <a href="/play/tachyyy" class="gcard" data-game-card="tachyyy" aria-label={`${tachyyyGame.name}: quick questions against the clock`}>
-          <img class="gpip tl" src="/brand/games/tachyyy-dark.svg" alt="" aria-hidden="true" width="52" height="52" loading="lazy" decoding="async" />
+          <img class="gpip tl" src={imageLogo('tachyyy').card.icon} alt="" aria-hidden="true" width="52" height="52" loading="lazy" decoding="async" />
           <span class="gface">
             <span class="gname">
-              <img src="/brand/games/tachyyy-wordmark-light.svg" alt={tachyyyGame.name} width="168" height="60" loading="lazy" decoding="async" />
+              <img src={imageLogo('tachyyy').card.wordmark} alt={tachyyyGame.name} width="168" height="60" loading="lazy" decoding="async" />
             </span>
             <span class="gdesc">quick questions against the clock.</span>
             {tachyyyAvailable ? (
@@ -128,15 +129,15 @@ const helloCardsAvailable = helloCardsPage(
               </span>
             </span>
           </span>
-          <img class="gpip br" src="/brand/games/tachyyy-dark.svg" alt="" aria-hidden="true" width="52" height="52" loading="lazy" decoding="async" />
+          <img class="gpip br" src={imageLogo('tachyyy').card.icon} alt="" aria-hidden="true" width="52" height="52" loading="lazy" decoding="async" />
         </a>
 
         <!-- Card 3: Piccline -->
         <a href="/play/piccline" class="gcard" data-game-card="piccline" aria-label={`${gameName('piccline')}: trace hidden words through the letters`}>
-          <img class="gpip tl" src="/brand/games/piccline-dark.svg" alt="" aria-hidden="true" width="52" height="52" loading="lazy" decoding="async" />
+          <img class="gpip tl" src={imageLogo('piccline').card.icon} alt="" aria-hidden="true" width="52" height="52" loading="lazy" decoding="async" />
           <span class="gface">
             <span class="gname">
-              <img src="/brand/games/piccline-wordmark-light.svg" alt={gameName('piccline')} width="168" height="60" loading="lazy" decoding="async" />
+              <img src={imageLogo('piccline').card.wordmark} alt={gameName('piccline')} width="168" height="60" loading="lazy" decoding="async" />
             </span>
             <span class="gdesc">trace hidden words through the letters.</span>
             <span class="gstatus" data-game-status="piccline">
@@ -153,7 +154,7 @@ const helloCardsAvailable = helloCardsPage(
               </span>
             </span>
           </span>
-          <img class="gpip br" src="/brand/games/piccline-dark.svg" alt="" aria-hidden="true" width="52" height="52" loading="lazy" decoding="async" />
+          <img class="gpip br" src={imageLogo('piccline').card.icon} alt="" aria-hidden="true" width="52" height="52" loading="lazy" decoding="async" />
         </a>
 
         <!-- Card 4: Crossword -->
@@ -221,7 +222,7 @@ const helloCardsAvailable = helloCardsPage(
 
         <!-- Card 5: Sudoku -->
         <a href="/play/sudoku" class="gcard" data-game-card="sudoku" aria-label={`${gameName('triage')}: a calm numbers break`}>
-          <span class="gpip tl gpip-sudoku" aria-hidden="true">9</span>
+          <span class="gpip tl gpip-sudoku" aria-hidden="true">{gameLogos.sudoku.text}</span>
           <span class="gface">
             <span class="gname">
               <span class="serif">{gameName('triage')}</span>
@@ -244,12 +245,12 @@ const helloCardsAvailable = helloCardsPage(
               </span>
             </span>
           </span>
-          <span class="gpip br gpip-sudoku" aria-hidden="true">9</span>
+          <span class="gpip br gpip-sudoku" aria-hidden="true">{gameLogos.sudoku.text}</span>
         </a>
 
         <!-- Card 6: Hello cards -->
         <a href="/play/hello-cards" class="gcard" data-game-card="hello cards" aria-label={`${helloCardsGame.name}: flip a card, start a conversation`}>
-          <span class="gpip tl gpip-hello" aria-hidden="true">hi</span>
+          <span class="gpip tl gpip-hello" aria-hidden="true">{gameLogos.helloCards.text}</span>
           <span class="gface">
             <span class="gname">
               <span class="serif">{helloCardsGame.name}</span>
@@ -269,7 +270,7 @@ const helloCardsAvailable = helloCardsPage(
               </span>
             </span>
           </span>
-          <span class="gpip br gpip-hello" aria-hidden="true">hi</span>
+          <span class="gpip br gpip-hello" aria-hidden="true">{gameLogos.helloCards.text}</span>
         </a>
       </div>
     </div>

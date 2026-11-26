@@ -50,12 +50,16 @@ export async function followStatsAuth(
   }
 }
 
-/** True only for a signed-in visitor, once the browser's session check has resolved. */
-export function useStatsVisible(
+/**
+ * The gate's three answers: `undefined` while the first session check is still running, then true (signed in) or false
+ * (signed out, accounts off, or a failed read). A panel that must not flash either state while it waits (the /play
+ * hub's totals) reads this; everything else uses `useStatsVisible`.
+ */
+export function useStatsGate(
   read: () => Promise<SessionState> = getSessionState,
   getClient: () => Promise<object | null> = getSupabase,
-): boolean {
-  const [visible, setVisible] = useState(false);
+): boolean | undefined {
+  const [visible, setVisible] = useState<boolean | undefined>(undefined);
   useEffect(() => {
     let active = true;
     // Only the newest answer counts: a session read that was already on its way must not overwrite a newer read or a
@@ -85,4 +89,12 @@ export function useStatsVisible(
     };
   }, [read, getClient]);
   return visible;
+}
+
+/** True only for a signed-in visitor, once the browser's session check has resolved. */
+export function useStatsVisible(
+  read: () => Promise<SessionState> = getSessionState,
+  getClient: () => Promise<object | null> = getSupabase,
+): boolean {
+  return useStatsGate(read, getClient) === true;
 }

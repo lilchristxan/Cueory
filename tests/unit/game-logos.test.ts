@@ -1,0 +1,131 @@
+import { readFileSync } from 'node:fs';
+import { createElement } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
+import { describe, expect, it } from 'vitest';
+// The .tsx extension is explicit: on a case-insensitive disk a bare 'PlayStatus' would resolve to playstatus.ts first.
+import PlayStatus from '../../src/islands/PlayStatus.tsx';
+import { gameLogos, type GameLogoKey } from '../../src/config/gamelogos';
+import { hubLines } from '../../src/config/homegames';
+
+// One logo source (src/config/gamelogos.ts) feeds the home carousel and the /play hub, and must equal what the game
+// pages' sidebar (src/components/GameFrame.astro) uses, so the three cannot drift. GameFrame is read, never changed.
+const frame = readFileSync(new URL('../../src/components/GameFrame.astro', import.meta.url), 'utf8');
+/** The text of one game's entry in GameFrame's `configs` table. */
+function frameConfig(id: string): string {
+  const start = frame.indexOf(`  ${id.includes('-') ? `'${id}'` : id}: {\n    id: '${id}'`);
+  if (start === -1) throw new Error(`GameFrame has no ${id} config`);
+  const end = frame.indexOf('\n  },', start);
+  return frame.slice(start, end);
+}
+const frameValue = (config: string, key: string) => config.match(new RegExp(`${key}: '([^']+)'`))?.[1];
+
+// The verify script builds dist/ before unit tests, so the carousel side is read from the real built home page.
+const home = readFileSync(new URL('../../dist/index.html', import.meta.url), 'utf8');
+
+/** carousel card id (data-game-card) and hub art key, per game, in the carousel's order. */
+const games: ReadonlyArray<{ card: string; art: GameLogoKey; id: string }> = [
+  { card: 'vialo', art: 'vialo', id: 'vialo' },
+  { card: 'tachyyy', art: 'tachyyy', id: 'tachyyy' },
+  { card: 'piccline', art: 'piccline', id: 'suture' },
+  { card: 'crossword', art: 'crossword', id: 'cueword' },
+  { card: 'sudoku', art: 'sudoku', id: 'triage' },
+  { card: 'hello cards', art: 'helloCards', id: 'hello-cards' },
+];
+
+function cardMarkup(card: string): string {
+  const match = home.match(new RegExp(`<a\\b[^>]*data-game-card="${card}"[^>]*>[\\s\\S]*?</a>`));
+  if (!match) throw new Error(`the built home page has no ${card} card`);
+  return match[0];
+}
+const srcs = (markup: string) => [...markup.matchAll(/<img\b[^>]*\bsrc="([^"]+)"/g)].map((m) => m[1]!);
+
+const hub = renderToStaticMarkup(
+  createElement(PlayStatus, {
+    games: games.map(({ art, id }) => ({
+      id: id as 'vialo',
+      testId: id,
+      name: id,
+      line: hubLines.vialo,
+      href: `/play/${id}`,
+      open: true,
+      art,
+    })),
+  }),
+);
+function rowMarkup(id: string): string {
+  const start = hub.indexOf(`data-testid="play-status-${id}"`);
+  const next = hub.indexOf('data-testid="play-status-', start + 1);
+  return hub.slice(start, next === -1 ? undefined : next);
+}
+
+describe('the /play hub rows draw the same game artwork as the home page carousel', () => {
+  for (const { card, art, id } of games) {
+    it(`${card}: same icon and wordmark files, or the same glyph and serif name`, () => {
+      const cardHtml = cardMarkup(card);
+      const row = rowMarkup(id);
+      const cardFiles = srcs(cardHtml);
+      const rowFiles = srcs(row);
+      const source = gameLogos[art];
+      if (source.kind === 'image') {
+        // The carousel draws its icon twice (top-left and upside down at the bottom right) and the wordmark once.
+        expect(cardFiles).toEqual([source.card.icon, source.card.wordmark, source.card.icon]);
+        // The hub draws the icon (one file, or Daytime then Evening) and the wordmark's Daytime then Evening files.
+        const icons = source.icon.day === source.icon.evening ? [source.icon.day] : [source.icon.day, source.icon.evening];
+        expect(rowFiles).toEqual([...icons, source.wordmark.day, source.wordmark.evening]);
+        // Same file, never resized by attribute into another shape: natural width and height are set.
+        expect(row).toContain(`width="${source.wordmark.width}" height="${source.wordmark.height}"`);
+        expect(row.match(/<img\b[^>]*>/g)!.every((tag) => /\bwidth="\d+"/.test(tag) && /\bheight="\d+"/.test(tag))).toBe(true);
+      } else {
+        // No artwork on the card: no image on the hub row either, and the same glyph in the tile.
+        expect(cardFiles).toEqual([]);
+        expect(rowFiles).toEqual([]);
+        if (source.kind === 'text') {
+          expect(cardHtml).toContain(`>${source.text}</span>`);
+          expect(row).toContain(`>${source.text}</span>`);
+        }
+      }
+    });
+  }
+});
+
+describe('the shared logo source equals what the game pages use (GameFrame.astro)', () => {
+  const frameIds: ReadonlyArray<readonly [GameLogoKey, string]> = [['vialo', 'pulse'], ['tachyyy', 'stat'], ['piccline', 'suture']];
+  for (const [key, id] of frameIds) {
+    it(`${key}: same wordmark files, and the hub's icon files`, () => {
+      const config = frameConfig(id);
+      const source = gameLogos[key];
+      if (source.kind !== 'image') throw new Error('image art expected');
+      expect(frameValue(config, 'wordmarkSrc')).toBe(source.wordmark.day);
+      expect(frameValue(config, 'wordmarkEveningSrc')).toBe(source.wordmark.evening);
+      if (key === 'tachyyy') {
+        // GameFrame draws the tachyyy icon as a Daytime/Evening pair, outside its configs table.
+        expect(frame).toContain(`class="logo-day" src="${source.icon.day}"`);
+        expect(frame).toContain(`class="logo-evening" src="${source.icon.evening}"`);
+      } else {
+        expect(frameValue(config, 'iconSrc')).toBe(source.icon.day);
+        expect(source.icon.evening).toBe(source.icon.day);
+      }
+    });
+    it(`${key}: the carousel's wordmark is the game page's Daytime wordmark (the card is cream in both palettes)`, () => {
+      const source = gameLogos[key];
+      if (source.kind !== 'image') throw new Error('image art expected');
+      expect(source.card.wordmark).toBe(source.wordmark.day);
+    });
+  }
+  it('names the one difference: the carousel card draws tachyyy\'s dark tile, the game page its light one by day', () => {
+    const differing = frameIds.filter(([key]) => {
+      const source = gameLogos[key];
+      return source.kind === 'image' && source.card.icon !== source.icon.day;
+    }).map(([key]) => key);
+    expect(differing).toEqual(['tachyyy']);
+  });
+  it('has the same glyphs as the game page for crossword, sudoku and hello cards', () => {
+    expect(frameConfig('cueword')).toContain("iconType: 'grid'");
+    expect(frameConfig('triage')).toContain("iconType: '9'");
+    expect(frameConfig('hello-cards')).toContain("iconType: 'hi'");
+    expect(frame).toContain('game-frame-emblem-9">9<');
+    expect(frame).toContain('game-frame-emblem-hi">hi<');
+    expect(gameLogos.sudoku.text).toBe('9');
+    expect(gameLogos.helloCards.text).toBe('hi');
+  });
+});

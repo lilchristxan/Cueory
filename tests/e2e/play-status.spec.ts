@@ -59,27 +59,26 @@ for (const size of [{ width: 390, height: 844 }, { width: 820, height: 1180 }, {
       await expect(row(page, 'suture').getByRole('link')).toHaveText('play');
     });
 
-    test('the four totals read what this browser kept, and are dashes until then', async ({ page }) => {
-      await RESULTS([
-        { game: 'pulse', day: '2026-11-01', solved: true, tries: 4 },
-        { game: 'pulse', day: '2026-10-31', solved: true, tries: 3 },
-        { game: 'triage', day: '2026-10-31', solved: false, tries: 2 },
-        { game: 'suture', day: '2026-10-29', solved: true, tries: 0 },
-      ])(page);
+    test('a signed-out visitor sees the copper "create an account" bar in place of the totals, on one line', async ({ page }) => {
+      // The built site runs signed out (accounts are off in a test build). The signed-in totals are covered, with a stand-in
+      // session, by play-totals-gate.spec.ts. Saved results stay recorded either way.
+      await RESULTS([{ game: 'pulse', day: '2026-11-01', solved: true, tries: 4 }])(page);
       await page.goto('/play');
-      await expect(page.getByTestId('play-total-played')).toHaveText('4');
-      await expect(page.getByTestId('play-total-solved')).toHaveText('75%');
-      await expect(page.getByTestId('play-total-day-streak')).toHaveText('2');
-      await expect(page.getByTestId('play-total-best-streak')).toHaveText('2');
+      const bar = page.getByTestId('play-account-bar');
+      const link = bar.getByRole('link', { name: 'create an account' });
+      await expect(link).toBeVisible();
+      await expect(link).toHaveClass(/copper-button/);
+      await expect(link).toHaveAttribute('href', /^\/(#signup|signup)$/);
+      await expect(bar.locator('#play-account-note')).toHaveText('to save your daily game stats');
+      await expect(page.getByTestId('play-totals')).toHaveCount(0);
+      await expect(page.getByTestId('play-total-played')).toHaveCount(0);
+      const box = (await link.boundingBox())!;
+      expect(box.height).toBeGreaterThanOrEqual(44);
+      expect(box.height).toBeLessThan(60); // one line of text, never two
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
     });
   });
 }
-
-test('totals show dashes, not zeros, when nothing is kept yet', async ({ page }) => {
-  await page.goto('/play');
-  await expect(page.getByTestId('play-total-played')).toHaveText('0');
-  await expect(page.getByTestId('play-total-solved')).toHaveText('–');
-});
 
 test('a game closed in this build says "coming soon" with no button and no link', async ({ page }) => {
   await page.goto('/play');

@@ -18,7 +18,8 @@ describe('game stats are shown only to a signed-in visitor (2026-11-25)', () => 
 
   it('defaults to hidden before the check resolves and shows the create-an-account bar instead of stats', () => {
     const hook = read('src/islands/gamestatsgate.ts');
-    expect(hook).toContain('useState(false)');
+    expect(hook).toContain('useState<boolean | undefined>(undefined)');
+    expect(hook).toContain('return useStatsGate(read, getClient) === true;');
     const panel = read('src/islands/GameFrameStats.tsx');
     expect(panel).toContain('const visible = useStatsVisible();');
     expect(panel).toContain('if (!visible) {');
