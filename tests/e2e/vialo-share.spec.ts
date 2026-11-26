@@ -334,6 +334,19 @@ test.describe('the solve timer', () => {
     await expect(time(page)).toHaveText('time: 0:05');
   });
 
+  test('stops at "print anyway" (the forfeit event) too: the time shown no longer changes (Codex on #1229)', async ({ page }) => {
+    await open(page);
+    await field(page).pressSequentially('g');
+    await page.clock.fastForward(7_000);
+    await expect(time(page)).toHaveText('time: 0:07');
+    await page.evaluate(() => window.dispatchEvent(new CustomEvent('cueory:vialo-forfeited', { detail: { day: '2026-11-01' } })));
+    await expect(page.getByTestId('vialo-result')).toContainText('out of guesses');
+    await page.clock.fastForward(60_000);
+    await expect(time(page)).toHaveText('time: 0:07');
+    await page.clock.fastForward(60_000);
+    await expect(time(page)).toHaveText('time: 0:07');
+  });
+
   test('is not announced as it ticks, and "show the timer" hides it without moving the board', async ({ page }) => {
     await open(page);
     expect(await time(page).evaluate((el) => el.closest('[aria-live]') === null && !el.hasAttribute('aria-live'))).toBe(true);

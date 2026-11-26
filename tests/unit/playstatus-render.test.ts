@@ -71,9 +71,9 @@ describe('the hub totals and words', () => {
   it('words each status in lowercase', () => {
     expect(statusWords('not-started', '')).toBe('new today');
     expect(statusWords('in-progress', '')).toBe('in progress');
-    expect(playedLabel('vialo', stats[0])).toBe('played · solved in 4');
-    expect(playedLabel('triage', stats[1])).toBe('played · not solved');
-    expect(playedLabel('suture', stats[3])).toBe('played · solved');
+    expect(playedLabel('vialo', stats[0])).toBe('solved in 4');
+    expect(playedLabel('triage', stats[1])).toBe('not solved');
+    expect(playedLabel('suture', stats[3])).toBe('solved');
   });
   it('claims only the number of games listed', () => {
     expect(hubHeadline(6)).toBe('six games, new every day.');

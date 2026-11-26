@@ -40,6 +40,7 @@ import GameHeader from './GameHeader';
 import { useSharedGameSettings } from './GameSettings.tsx';
 import { playGameCue } from './gamesound';
 import { browserStorage } from '../scripts/storage';
+import { FORFEIT_EVENT } from '../scripts/printgate';
 import { VIALO_KEY_ROWS } from './vialokeys';
 import { newTimer, pauseTimer, resumeTimer, startTimer, stopTimer, timerElapsed, type SolveTimer } from './vialotimer';
 import { site } from '../config/site';
@@ -181,6 +182,18 @@ export default function VialoGame({ puzzles }: Props) {
     return () => document.removeEventListener('keydown', listener);
   }, []);
 
+  // "print anyway" on an unfinished game (src/islands/VialoPrint.tsx): today is already stored as not solved, so the game on
+  // screen ends as lost too and cannot then be won.
+  useEffect(() => {
+    const forfeit = (event: Event) => {
+      // Only the game of the day that was forfeited: a tab left open past midnight keeps its own day's round.
+      if ((event as CustomEvent<{ day?: string }>).detail?.day !== day) return;
+      setState((now) => (now.status === 'playing' ? { ...now, status: 'out' } : now));
+    };
+    window.addEventListener(FORFEIT_EVENT, forfeit);
+    return () => window.removeEventListener(FORFEIT_EVENT, forfeit);
+  }, [day]);
+
   useEffect(() => {
     void loadWordList().then((list) => {
       words.current = list;
@@ -223,6 +236,13 @@ export default function VialoGame({ puzzles }: Props) {
 
   useEffect(() => {
     if (state.status === 'playing') return;
+    // The one place the clock stops: every way out of "playing" lands here (a last guess, and "print anyway" through
+    // the forfeit event), so a finished board's time never keeps counting (Codex on #1229).
+    if (!timer.current.stopped) {
+      timer.current = stopTimer(timer.current, Date.now());
+      setTimerRunning(false);
+      if (state.status === 'solved' && timer.current.started) setSolveMs(timerElapsed(timer.current, Date.now()));
+    }
     result.current?.focus();
     if (reported.current) return;
     reported.current = true;
@@ -264,11 +284,6 @@ export default function VialoGame({ puzzles }: Props) {
     }
     const next = playGuess(state, word, list);
     setState(next);
-    if (next.status !== 'playing') {
-      timer.current = stopTimer(timer.current, Date.now());
-      setTimerRunning(false);
-      if (next.status === 'solved' && timer.current.started) setSolveMs(timerElapsed(timer.current, Date.now()));
-    }
     // The row's marks are shown the moment it is accepted, so a cue for the reveal tells nothing new.
     playGameCue(next.status === 'solved' ? 'solved' : next.status === 'out' ? 'invalid' : 'place', soundAllowed());
     if (state.guesses.length === 0) {
