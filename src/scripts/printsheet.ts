@@ -1,6 +1,7 @@
 import { localDay, type SavedStats } from '../islands/gameresults';
 import { sameGame } from '../islands/gamestats';
 import { dayNumber, playablePuzzles, puzzleForDay } from '../islands/pulse';
+import { SHEET_IMAGE_WAIT_MS } from './printwait';
 
 export interface SheetPuzzle { word: string }
 export interface Keeper { word: string; number: number; date: string }
@@ -21,13 +22,21 @@ export function keeperFor(puzzles: readonly SheetPuzzle[], saved: SavedStats, no
   return { word: puzzle.word, number: dayNumber(now) + 1, date };
 }
 
-const SHEET_IMAGE_WAIT_MS = 1500;
-
 /** Waits (briefly) until the sheet's pictures have loaded, so none is missing when the print dialog draws the pages. */
 export async function sheetImagesReady(root: Document = document): Promise<void> {
   const images = [...root.querySelectorAll<HTMLImageElement>('[data-print-sheet] img')];
   for (const image of images) image.loading = 'eager';
-  const loaded = Promise.all(images.map((image) => (image.complete ? Promise.resolve() : image.decode().catch(() => undefined))));
+  // Each picture is fetched by a fresh Image and waited for by its own load or error event. That does not depend on how an
+  // engine reports `complete` or `decode()` for a lazy picture that never started (Safari can say "complete" early); the
+  // fetched file then sits in the browser's cache for the real picture.
+  const loaded = Promise.all(images.map((image) => new Promise<void>((resolve) => {
+    const source = image.currentSrc || image.src;
+    if (!source) { resolve(); return; }
+    const probe = new Image();
+    probe.onload = () => resolve();
+    probe.onerror = () => resolve();
+    probe.src = source;
+  })));
   // Never hold the print dialog back for long: a picture that is slow still prints, as the browser has it.
   await Promise.race([loaded, new Promise((resolve) => window.setTimeout(resolve, SHEET_IMAGE_WAIT_MS))]);
 }
