@@ -40,7 +40,7 @@ const showStat = draftsAllowed(helloEnv);
 const game = (id: 'vialo' | 'cueword' | 'triage' | 'suture') => dailyGames.find((entry) => entry.id === id)!;
 const showCrossword = crosswordShown(helloEnv);
 const hubGames = [
-  { id: 'vialo' as const, testId: 'pulse', name: game('vialo').name, line: hubLines.vialo, href: gamePages.vialo, open: true, art: 'vialo' as const, print: '/play/vialo/print' },
+  { id: 'vialo' as const, testId: 'pulse', name: game('vialo').name, line: hubLines.vialo, href: gamePages.vialo, open: true, art: 'vialo' as const, print: true },
   { id: 'tachyyy' as const, testId: 'tachyyy', name: tachyyyGame.name, line: hubLines.tachyyy, href: tachyyyGame.href, open: showStat, art: 'tachyyy' as const, linkTestId: 'tachyyy-link' },
   { id: 'suture' as const, testId: 'suture', name: game('suture').name, line: hubLines.piccline, href: gamePages.suture, open: true, art: 'piccline' as const },
   { id: 'cueword' as const, testId: 'cueword', name: game('cueword').name, line: hubLines.crossword, href: gamePages.cueword, open: showCrossword },

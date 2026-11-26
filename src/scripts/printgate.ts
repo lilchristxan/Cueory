@@ -52,3 +52,24 @@ export function printAnyway(storage: KeyValueStorage | undefined, game: 'vialo',
   open();
   return true;
 }
+
+/** The event a game frame's printer button sends on `document`; detail.game names the game. */
+export const PRINT_EVENT = 'cueory:print';
+/** Sent on `window` after a forfeit, so the game on screen ends as lost for today. */
+export const FORFEIT_EVENT = 'cueory:vialo-forfeited';
+
+export type PrintGame = 'vialo';
+
+/** Where each game's print entry lives: its own game page, which opens the print step when it loads. No personal data in it. */
+export const PRINT_PAGES: Readonly<Record<PrintGame, string>> = { vialo: '/play/vialo#print' };
+
+/** True when the game can print and this browser holds today's result for it (read it again at the moment of pressing). */
+export function canPrintToday(storage: KeyValueStorage | undefined, game: PrintGame, day: string): boolean {
+  const saved = loadStats(storage, day);
+  return saved.on && game in PRINT_PAGES && isFinished(saved.stats, game, day);
+}
+
+/** Opens a game's print step: from a page that has no sheet, go to the game page; from the game page, send the event. */
+export function openPrint(game: PrintGame, go: (href: string) => void = (href) => window.location.assign(href)): void {
+  go(PRINT_PAGES[game]);
+}

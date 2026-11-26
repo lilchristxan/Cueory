@@ -39,8 +39,8 @@ for (const size of [{ width: 390, height: 844 }, { width: 820, height: 1180 }, {
         await expect(link).toHaveAttribute('href', href);
         await expect(link).toHaveAttribute('aria-label', `play ${name}`);
         expect((await link.boundingBox())!.height).toBeGreaterThanOrEqual(44);
-        // Only vialo has a paper sheet so far: its row also offers print.
-        await expect(row(page, game).getByRole('button', { name: `print for a patient (${name})` })).toHaveCount(game === 'pulse' ? 1 : 0);
+        // A game that is not finished offers only play: no print button.
+        await expect(row(page, game).getByRole('button', { name: `print for a patient (${name})` })).toHaveCount(0);
       }
       await expect(page.getByTestId('play-status-note')).toHaveCount(0);
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
@@ -55,7 +55,7 @@ for (const size of [{ width: 390, height: 844 }, { width: 820, height: 1180 }, {
       await page.goto('/play');
       await expect(row(page, 'pulse')).toHaveAttribute('data-status', 'done');
       await expect(words(page, 'pulse')).toHaveText('solved in 4');
-      // Played: no replay link, only the print button (a finished game prints without a warning).
+      // Played: no replay link, only the print button (print is offered only for a finished game).
       await expect(row(page, 'pulse').getByRole('link')).toHaveCount(0);
       const print = row(page, 'pulse').getByRole('button', { name: 'print for a patient (vialo)' });
       await expect(print).toHaveText('print for a patient');

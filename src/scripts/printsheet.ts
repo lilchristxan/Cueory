@@ -1,7 +1,6 @@
-import { loadStats, localDay, type SavedStats } from '../islands/gameresults';
+import { localDay, type SavedStats } from '../islands/gameresults';
 import { sameGame } from '../islands/gamestats';
 import { dayNumber, playablePuzzles, puzzleForDay } from '../islands/pulse';
-import { browserStorage } from './storage';
 
 export interface SheetPuzzle { word: string }
 export interface Keeper { word: string; number: number; date: string }
@@ -22,22 +21,27 @@ export function keeperFor(puzzles: readonly SheetPuzzle[], saved: SavedStats, no
   return { word: puzzle.word, number: dayNumber(now) + 1, date };
 }
 
-/** The "print" buttons: open the browser's print dialog. An external file, so no inline script. */
-export function wirePrintButtons(root: Document = document, print: () => void = () => window.print()): void {
-  for (const button of root.querySelectorAll<HTMLButtonElement>('[data-print-sheet]')) {
-    button.addEventListener('click', () => print());
-  }
+/** Waits until the sheet's pictures have loaded, so none is missing when the print dialog draws the pages. */
+export async function sheetImagesReady(root: Document = document): Promise<void> {
+  const images = [...root.querySelectorAll<HTMLImageElement>('[data-print-sheet] img')];
+  for (const image of images) image.loading = 'eager';
+  await Promise.all(images.map((image) => (image.complete ? Promise.resolve() : image.decode().catch(() => undefined))));
 }
 
-/** Fills the word box on page 2 when today's game is finished; leaves the "finish today's vialo" line otherwise. */
-export function showKeeperWord(root: Document = document, now: Date = new Date()): void {
-  const box = root.querySelector<HTMLElement>('[data-keeper]');
+/** Fills the word box on page 2 for printing. Nothing is in the page before this. */
+export function fillKeeper(keeper: Keeper, root: Document = document): void {
+  const box = root.querySelector<HTMLElement>('[data-print-sheet] [data-keeper]');
   if (!box) return;
-  let puzzles: SheetPuzzle[] = [];
-  try { puzzles = JSON.parse(box.dataset.puzzles ?? '[]') as SheetPuzzle[]; } catch { return; }
-  const keeper = keeperFor(puzzles, loadStats(browserStorage(), localDay(now)), now);
-  if (!keeper) return;
   box.querySelector('[data-keeper-word]')!.textContent = keeper.word;
   box.querySelector('[data-keeper-date]')!.textContent = `${keeper.date} · #${keeper.number}`;
   box.dataset.keeper = 'ready';
+}
+
+/** Takes the word out of the page again once printing is over. */
+export function clearKeeper(root: Document = document): void {
+  const box = root.querySelector<HTMLElement>('[data-print-sheet] [data-keeper]');
+  if (!box) return;
+  box.querySelector('[data-keeper-word]')!.textContent = '';
+  box.querySelector('[data-keeper-date]')!.textContent = '';
+  box.dataset.keeper = 'locked';
 }

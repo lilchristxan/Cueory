@@ -81,7 +81,6 @@ const initialJsBudget = {
   'play/pillo.html': 119797,
   'play/sudoku.html': 122156,
   'play/vialo.html': 124013,
-  'play/vialo/print.html': 98049, // the flag or comment control (React) is on every page; the sheet's own script is under 1 KB
   'play/word-path.html': 120824,
   'play/piccline.html': 120824, // Canonical Piccline keeps Word Path's same game bundle baseline.
   'preview/admin-flags.html': 92161,

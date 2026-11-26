@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { decidePrint, forfeitToday, isFinished, printAnyway } from '../../src/scripts/printgate';
+import { canPrintToday, decidePrint, forfeitToday, isFinished, openPrint, PRINT_PAGES, printAnyway } from '../../src/scripts/printgate';
 
 function memory(initial?: string) {
   const data = new Map<string, string>(initial === undefined ? [] : [['cueory-game-stats', initial]]);
@@ -40,5 +40,16 @@ describe('print gate', () => {
     const full = { getItem: () => null, setItem: () => { throw new Error('quota'); }, removeItem: () => {} };
     expect(printAnyway(full, 'vialo', '2026-11-01', 6, () => { opened += 1; })).toBe(false);
     expect(opened).toBe(1);
+  });
+  it('offers print from the hub only when today has a stored result, and opens the game page with the print mark', () => {
+    const kept = (day: string) => JSON.stringify({ version: 1, results: [{ game: 'pulse', day, solved: false, tries: 6 }] });
+    expect(canPrintToday(memory(kept('2026-11-01')), 'vialo', '2026-11-01')).toBe(true);
+    expect(canPrintToday(memory(kept('2026-10-31')), 'vialo', '2026-11-01')).toBe(false);
+    expect(canPrintToday(memory(), 'vialo', '2026-11-01')).toBe(false);
+    expect(canPrintToday(undefined, 'vialo', '2026-11-01')).toBe(false);
+    const seen: string[] = [];
+    openPrint('vialo', (href) => seen.push(href));
+    expect(seen).toEqual(['/play/vialo#print']);
+    expect(PRINT_PAGES.vialo).not.toMatch(/[?&=]/);
   });
 });

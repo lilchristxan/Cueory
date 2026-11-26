@@ -38,6 +38,7 @@ import GameHeader from './GameHeader';
 import { useSharedGameSettings } from './GameSettings.tsx';
 import { playGameCue } from './gamesound';
 import { browserStorage } from '../scripts/storage';
+import { FORFEIT_EVENT } from '../scripts/printgate';
 import { VIALO_KEY_ROWS } from './vialokeys';
 
 interface Puzzle {
@@ -157,6 +158,18 @@ export default function VialoGame({ puzzles }: Props) {
     document.addEventListener('keydown', listener);
     return () => document.removeEventListener('keydown', listener);
   }, []);
+
+  // "print anyway" on an unfinished game (src/islands/VialoPrint.tsx): today is already stored as not solved, so the game on
+  // screen ends as lost too and cannot then be won.
+  useEffect(() => {
+    const forfeit = (event: Event) => {
+      // Only the game of the day that was forfeited: a tab left open past midnight keeps its own day's round.
+      if ((event as CustomEvent<{ day?: string }>).detail?.day !== day) return;
+      setState((now) => (now.status === 'playing' ? { ...now, status: 'out' } : now));
+    };
+    window.addEventListener(FORFEIT_EVENT, forfeit);
+    return () => window.removeEventListener(FORFEIT_EVENT, forfeit);
+  }, [day]);
 
   useEffect(() => {
     void loadWordList().then((list) => {

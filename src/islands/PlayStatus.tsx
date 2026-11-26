@@ -2,8 +2,7 @@ import { useEffect, useState } from 'react';
 import { browserStorage } from '../scripts/storage';
 import { GAME_RESULT_EVENT, GAME_STATS_CHANGED_EVENT, heldRounds, loadStats, localDay, STATS_STORAGE_KEY, type SavedStats } from './gameresults';
 import { sameGame } from './gamestats';
-import PrintWarning from './PrintWarning';
-import { isFinished, printAnyway, requestPrint } from '../scripts/printgate';
+import { canPrintToday, openPrint } from '../scripts/printgate';
 import { playedLabel, statusWords } from './playhub';
 import { GAME_PROGRESS_EVENT, readHeard, statusFor, type GameId, type HeardToday } from './playstatus';
 
@@ -30,8 +29,8 @@ interface Row {
   linkTestId?: string;
   /** hello cards: how many cards it has, shown instead of a daily status. */
   cards?: number;
-  /** The game's printable paper sheet. A game with one offers "print" (a warning first while it is unfinished); a played game with none shows its status only. */
-  print?: string;
+  /** The game's printable paper sheet. A finished game with one offers "print for a patient"; an unfinished one shows only "play"; a played game with none shows its status only. */
+  print?: boolean;
 }
 
 interface Props {
@@ -57,7 +56,7 @@ const ICON: Readonly<Record<Art, { day: string; evening: string }>> = {
 
 const BUTTON = 'inline-flex min-h-11 min-w-24 items-center justify-center rounded-pill border-2 px-6 font-bold no-underline after:absolute after:inset-0';
 const PLAY = `${BUTTON} border-button bg-button text-on-button hover:border-button-hover hover:bg-button-hover`;
-/** A game played today is not replayed (Christian, 2026-11-25): its row offers its paper sheet instead. A game that is not finished warns before printing. D-pending. */
+/** A game played today is not replayed (Christian, 2026-11-25): its row offers its paper sheet instead. D-pending. */
 export const PRINT = 'print for a patient';
 /** The print button sits above the row's whole-row link so it stays its own target. */
 const PRINT_BUTTON = 'relative z-10 inline-flex min-h-11 min-w-24 items-center justify-center py-1 text-center leading-tight @4xl:whitespace-nowrap rounded-pill border-2 border-ink bg-transparent px-6 font-bold text-ink hover:bg-surface';
@@ -105,9 +104,6 @@ export default function PlayStatus({ games }: Props) {
   const [loaded, setLoaded] = useState(false);
   const [today, setToday] = useState('');
   const [saved, setSaved] = useState<SavedStats>({ on: false, stats: [] });
-  /** The game whose print is waiting on the "print before you finish?" warning, and the button to give focus back to. */
-  const [warning, setWarning] = useState<Row | undefined>(undefined);
-  const [saveError, setSaveError] = useState('');
   const [heard, setHeard] = useState<HeardToday>({ started: new Set(), finished: new Set() });
 
   useEffect(() => {
@@ -150,43 +146,22 @@ export default function PlayStatus({ games }: Props) {
     };
   }, []);
 
-  const openSheet = (row: Row) => window.location.assign(row.print!);
   /**
-   * Both print steps read the local day and today's stored result afresh, never the day cached when the page loaded: a tab
-   * left open across midnight (or a dialog opened just before it) must store the loss for the same day the sheet reveals.
+   * Print is offered only for a finished game, and the stored result is read again at the moment of pressing: if the day
+   * rolled over since the page loaded and the new day has no result, no sheet opens and the row refreshes (the button goes).
    */
-  const nowFinished = (id: Row['id']) => {
-    const day = localDay(new Date());
-    return { day, finished: isFinished(loadStats(browserStorage(), day).stats, id, day) };
-  };
-  /** Print: a finished game opens its sheet straight away; an unfinished one warns first (src/scripts/printgate.ts). */
   const print = (row: Row) => {
-    const { finished } = nowFinished(row.id);
-    requestPrint({ finished, keepsResults: saved.on }, () => openSheet(row), () => { setSaveError(''); setWarning(row); });
-  };
-  /**
-   * "print anyway": today is recorded as not solved before any answer shows. If midnight passed while the dialog was
-   * open, "today" is the new day: the forfeit goes on that day when its game is unfinished (that is the word the sheet
-   * will reveal), and nothing is recorded when it is already finished.
-   */
-  const confirmPrint = () => {
-    const row = warning!;
-    const { day } = nowFinished(row.id);
+    const day = localDay(new Date());
+    if (row.id === 'vialo' && canPrintToday(browserStorage(), row.id, day)) {
+      openPrint(row.id);
+      return;
+    }
     setToday(day);
-    const ok = printAnyway(browserStorage(), 'vialo', day, 6, () => openSheet(row));
-    // The day could not be saved: keep the dialog open and say so; nothing opens and nothing changes.
-    if (!ok) setSaveError("couldn't save that on this device. finish the game to print the keeper's copy.");
+    setSaved(loadStats(browserStorage(), day));
   };
 
   return (
     <section aria-labelledby="today-status-heading" data-testid="play-status">
-      <PrintWarning
-        open={warning !== undefined}
-        error={saveError}
-        onFinish={() => { const row = warning!; setWarning(undefined); window.location.assign(row.href); }}
-        onPrint={confirmPrint}
-        onCancel={() => setWarning(undefined)}
-      />
       <h2 id="today-status-heading" className="sr-only">today</h2>
       <ul className="flex flex-col gap-3 @4xl:gap-0 @4xl:border-b @4xl:border-line">
         {games.map((row) => {
@@ -198,10 +173,10 @@ export default function PlayStatus({ games }: Props) {
           if (!row.open) words = 'coming soon';
           else if (!daily) words = row.cards === undefined ? undefined : `${row.cards} cards`;
           else if (status) words = statusWords(status, playedLabel(row.id, result));
-          // Played today: no replay, so no "play". A game with a paper sheet offers "print" whether or not it is finished.
+          // Played today: no replay, so no "play". Only a finished game that has a paper sheet offers "print for a patient".
           const played = status === 'done';
           const showPlay = row.open && !played;
-          const showPrint = row.open && Boolean(row.print);
+          const showPrint = row.open && Boolean(row.print) && played;
           return (
             <li
               key={row.id}
