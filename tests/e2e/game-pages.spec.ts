@@ -116,8 +116,8 @@ test('a finished vialo on its own page opens the result dialog and keeps stats o
 });
 
 for (const game of [
-  { path: '/play/sudoku', name: 'sudoku', testId: 'sudoku', print: 'print this puzzle' },
-  { path: '/play/crossword', name: 'crossword', testId: 'cueword', print: 'print this puzzle' },
+  { path: '/play/sudoku', name: 'sudoku', testId: 'sudoku', print: 'print' },
+  { path: '/play/crossword', name: 'crossword', testId: 'cueword', print: 'print' },
   { path: '/play/word-path', name: 'piccline', testId: 'suture', print: 'print' },
 ] as const) {
   test(`printing ${game.name} from its own page prints only the game`, async ({ page }) => {

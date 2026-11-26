@@ -3,6 +3,7 @@ import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from 
 import { browserStorage } from '../scripts/storage';
 import { localDay, reportRound } from './gameresults';
 import { printGame } from './gameprint';
+import { usePrintRequest } from './useprintrequest';
 import { useGameHelp } from './GameHelp';
 import GameHeader from './GameHeader';
 import ResultBrandMark from './ResultBrandMark';
@@ -195,6 +196,8 @@ function Board({ puzzle, name, framed = false }: Props) {
 
   // The shared print helper (Task 641): marks the page for the crossword's print rules and clears the mark after printing.
   const printPuzzle = () => printGame('crossword');
+  // The Frame's printer button announces the print; this is what the old corner button ran.
+  usePrintRequest('crossword', printPuzzle);
 
   const key = (event: KeyboardEvent<HTMLDivElement>) => {
     if (solved || paused || event.ctrlKey || event.metaKey) return;
@@ -256,11 +259,6 @@ function Board({ puzzle, name, framed = false }: Props) {
                 ))}
               </fieldset>
             </div>
-          }
-          end={
-            <button type="button" className="corner-button corner-button-quiet" aria-label="print this puzzle" onClick={printPuzzle}>
-              <svg aria-hidden="true" viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M6 9V3h12v6"/><rect x="3" y="9" width="18" height="9" rx="2"/><path d="M7 14h10v7H7z"/></svg>
-            </button>
           }
         />
       </div>

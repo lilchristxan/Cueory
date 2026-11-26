@@ -40,13 +40,13 @@ for (const [width, height] of [[320, 700], [390, 844], [820, 1180], [1440, 900]]
       for (let i = 1; i < tops.length; i++) expect(tops[i]!, `part ${i} below part ${i - 1}`).toBeGreaterThanOrEqual(tops[i - 1]!);
       await expect(section).not.toContainText('fill every row');
 
-      // Frame-owned gear/help and Sudoku-owned pause/print remain four 44px controls across two intended rows.
-      const frameButtons = frameControls(page).getByRole('button');
+      // Frame-owned gear, printer and help, and Sudoku's own pause button: four 44px controls across two intended rows.
+      const frameButtons = frameControls(page).getByRole('button').filter({ hasNot: page.locator('.game-frame-hint-close') });
       const localButtons = toolbar(page).getByRole('button');
-      await expect(frameButtons).toHaveCount(2);
-      await expect(localButtons).toHaveCount(2);
-      expect(await frameButtons.evaluateAll((list) => list.map((button) => button.getAttribute('aria-label')))).toEqual(['sudoku settings', 'how to play sudoku']);
-      expect(await localButtons.evaluateAll((list) => list.map((button) => button.getAttribute('aria-label')))).toEqual(['pause puzzle', 'print this puzzle']);
+      await expect(frameButtons).toHaveCount(3);
+      await expect(localButtons).toHaveCount(1);
+      expect(await frameButtons.evaluateAll((list) => list.map((button) => button.getAttribute('aria-label')))).toEqual(['sudoku settings', 'print', 'how to play sudoku']);
+      expect(await localButtons.evaluateAll((list) => list.map((button) => button.getAttribute('aria-label')))).toEqual(['pause puzzle']);
       const boxes = await page.locator('.game-frame-corner button, [data-testid="sudoku-toolbar"] button').evaluateAll((list) => list.map((button) => button.getBoundingClientRect().toJSON() as DOMRect));
       for (const box of boxes) {
         expect(box.width).toBeGreaterThanOrEqual(44);
@@ -181,7 +181,6 @@ for (const [width, height] of [[320, 700], [390, 844]] as const) {
     await page.setViewportSize({ width, height });
     await page.goto('/play/sudoku');
     const pause = toolbar(page).getByRole('button', { name: 'pause puzzle' });
-    const print = toolbar(page).getByRole('button', { name: 'print this puzzle' });
     const gear = frameControls(page).getByTestId('game-frame-gear');
     const help = frameControls(page).getByRole('button', { name: 'how to play sudoku' });
     await pause.scrollIntoViewIfNeeded();
@@ -193,10 +192,11 @@ for (const [width, height] of [[320, 700], [390, 844]] as const) {
       expect(boxes.every(({ box }) => box.width >= 44 && box.height >= 44)).toBe(true);
       return boxes;
     };
-    const local = await rowEdges([pause, print]);
-    const shared = await rowEdges([gear, help]);
-    expect(local.map(({ label }) => label)).toEqual(['pause puzzle', 'print this puzzle']);
-    expect(shared.map(({ label }) => label)).toEqual(['sudoku settings', 'how to play sudoku']);
+    const print = frameControls(page).getByTestId('game-frame-print');
+    const local = await rowEdges([pause]);
+    const shared = await rowEdges([gear, print, help]);
+    expect(local.map(({ label }) => label)).toEqual(['pause puzzle']);
+    expect(shared.map(({ label }) => label)).toEqual(['sudoku settings', 'print', 'how to play sudoku']);
 
     // The pause pseudo-hit is a local-row guarantee. Sample its declared vertical reach, not the shared Frame row.
     const pausePoint = await pause.evaluate((button) => {

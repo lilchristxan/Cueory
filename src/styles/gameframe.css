@@ -388,7 +388,12 @@
    are. The Frame's head keeps the room (its date line is as tall as they are), so nothing lies under them. */
 .game-frame-main {
   --game-frame-corner-inset-now: var(--game-frame-corner-inset);
-  --game-frame-corner-clear: calc(var(--game-frame-corner-inset-now) + var(--game-frame-btn-size) * 2 + var(--game-frame-corner-gap));
+  --game-frame-corner-buttons: 2;
+  --game-frame-corner-clear: calc(var(--game-frame-corner-inset-now) + var(--game-frame-btn-size) * var(--game-frame-corner-buttons) + var(--game-frame-corner-gap) * (var(--game-frame-corner-buttons) - 1));
+}
+/* A game that can print has a third button, the printer, between the gear and the "?". */
+.game-frame-main:has(.game-frame-print) {
+  --game-frame-corner-buttons: 3;
 }
 .game-frame-corner {
   position: absolute;
@@ -456,6 +461,105 @@
   stroke-width: var(--game-frame-gear-stroke);
   stroke-linecap: round;
   stroke-linejoin: round;
+}
+
+/* The printer is drawn like the gear: an outline in currentColor, the same weight. */
+.game-frame-print-icon {
+  width: var(--game-frame-gear-size);
+  height: var(--game-frame-gear-size);
+  fill: none;
+  stroke: currentColor;
+  stroke-width: var(--game-frame-gear-stroke);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* ---------------- "print a copy for your patients!" bubble ----------------
+   Hangs under the printer button, right edge level with the button pair, tail up at the printer. A light speech bubble
+   with a thin ink outline and a solid offset shadow (the comic look Christian drew). */
+.game-frame-hint {
+  position: absolute;
+  inset-block-start: calc(100% + var(--game-frame-hint-gap));
+  inset-inline-end: 0;
+  inline-size: var(--game-frame-hint-width);
+  box-sizing: border-box;
+  padding: calc(var(--spacing) * 2.5) calc(var(--game-frame-btn-size) + var(--spacing)) calc(var(--spacing) * 2.5) calc(var(--spacing) * 4);
+  background: var(--color-page);
+  color: var(--color-ink);
+  border: var(--game-frame-hint-line) solid var(--color-ink);
+  border-radius: var(--game-frame-hint-radius);
+  box-shadow: var(--game-frame-hint-offset) var(--game-frame-hint-offset) 0 var(--color-ink);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  text-align: start;
+  opacity: 1;
+  transition: opacity var(--game-frame-hint-fade) ease;
+  z-index: 20;
+}
+.game-frame-hint[data-phase="fading"] {
+  opacity: 0;
+}
+.game-frame-hint::before,
+.game-frame-hint::after {
+  content: "";
+  position: absolute;
+  inset-inline-end: calc(var(--game-frame-btn-size) * 1.5 + var(--game-frame-corner-gap) - var(--game-frame-hint-tail));
+  inline-size: 0;
+  block-size: 0;
+  border-inline: var(--game-frame-hint-tail) solid transparent;
+}
+.game-frame-hint::before {
+  inset-block-start: calc(-2 * var(--game-frame-hint-tail) - var(--game-frame-hint-line));
+  border-block-end: calc(2 * var(--game-frame-hint-tail)) solid var(--color-ink);
+}
+.game-frame-hint::after {
+  inset-block-start: calc(-2 * var(--game-frame-hint-tail) + var(--game-frame-hint-line) * 0.5);
+  border-block-end: calc(2 * var(--game-frame-hint-tail)) solid var(--color-page);
+}
+.game-frame-hint-text {
+  display: block;
+}
+/* The x is a 44 px target at the bubble's top right corner; its drawing is small. */
+.game-frame-hint-close {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-end: 0;
+  inline-size: var(--game-frame-btn-size);
+  block-size: var(--game-frame-btn-size);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--color-ink);
+  cursor: pointer;
+}
+.game-frame-hint-close:focus-visible {
+  outline: var(--focus-width) solid var(--color-copper-deep);
+  outline-offset: calc(var(--focus-offset) * -1);
+}
+.game-frame-hint-x {
+  inline-size: calc(var(--spacing) * 4);
+  block-size: calc(var(--spacing) * 4);
+  fill: none;
+  stroke: currentColor;
+  stroke-width: var(--game-frame-gear-stroke);
+  stroke-linecap: round;
+}
+/* While the bubble shows it may need room above the date line and the game; the Frame sets the height (PrintHint.tsx). */
+.game-frame-hint-room {
+  order: -1;
+  block-size: var(--game-frame-hint-room, 0px);
+  inline-size: 100%;
+  flex: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .game-frame-hint {
+    transition: none;
+  }
 }
 
 .game-frame-controls-middle {
