@@ -93,3 +93,21 @@ export function savePicclineBoard(puzzle: SuturePathPuzzle, day: string, state: 
     if (text.length <= MAX_SAVE_LENGTH) storage.setItem(PICCLINE_SAVE_KEY, text);
   } catch { /* storage blocked or full: the game still plays, it just is not remembered */ }
 }
+
+/**
+ * Saves only the solve time of an already saved board, leaving every other field as stored. A tab that is hidden or left
+ * calls this, not savePicclineBoard: its own copy of the board may be older than what another tab saved since (Codex on
+ * #1230), and writing that copy back would erase a word found there. The larger time wins, so a quieter tab never
+ * shortens it. With no saved board for today there is nothing to attach the time to, and nothing is written.
+ */
+export function savePicclineMs(puzzle: SuturePathPuzzle, day: string, ms: number, storage: KeyValueStorage | undefined = browserStorage()): void {
+  if (!storage || !(ms >= 0) || ms > MAX_MS) return;
+  try {
+    const boards = boardsFor(read(storage), day);
+    const board = boards[puzzle.id];
+    if (!isObject(board)) return;
+    const stored = whole(board.ms, MAX_MS) ? board.ms : 0;
+    const text = JSON.stringify({ v: PICCLINE_SAVE_VERSION, owner: PICCLINE_OWNER, day, boards: { ...boards, [puzzle.id]: { ...board, ms: Math.max(stored, Math.round(ms)) } } });
+    if (text.length <= MAX_SAVE_LENGTH) storage.setItem(PICCLINE_SAVE_KEY, text);
+  } catch { /* storage blocked or full: the time is simply not remembered */ }
+}

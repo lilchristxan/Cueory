@@ -18,7 +18,7 @@ import { newTimer, pauseTimer, resumeTimer, startTimer, stopTimer, timerElapsed,
 import PicclineCue from './PicclineCue';
 import { site } from '../config/site';
 import { shake } from './SutureGame';
-import { loadPicclineMs, loadPicclineSave, savePicclineBoard } from './picclinesave';
+import { loadPicclineMs, loadPicclineSave, savePicclineBoard, savePicclineMs } from './picclinesave';
 import type { Cell } from './suture';
 import {
   announceProgress, backspace, cellView, cuesUsed, firstWordFound, clearPicked, extend, hintsLeft, MIN_WORD, parsePathPuzzle, pathCellLabel, pathDone, pathShareLine,
@@ -187,7 +187,8 @@ export function PathBoard({ puzzle, name }: Props) {
     // another page never understates the solve time.
     const saveNow = () => {
       if (!timer.current.started) return;
-      savePicclineBoard(puzzle, localDay(today), current.current, undefined, timerElapsed(timer.current, Date.now()));
+      // Time only: this tab's board may be older than what another tab saved, and must not overwrite it.
+      savePicclineMs(puzzle, localDay(today), timerElapsed(timer.current, Date.now()));
     };
     const onVisibility = () => {
       const now = Date.now();
