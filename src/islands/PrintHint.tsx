@@ -51,10 +51,12 @@ export default function PrintHint() {
   /** x and Escape end it at once; only running out of time fades it. */
   const closing = useRef(false);
 
-  const makeRoom = useCallback(() => {
+  /** `fresh` starts again from no extra room: the layout changed, so the room worked out for the old one no longer applies. */
+  const makeRoom = useCallback((fresh = false) => {
     const node = bubble.current;
     const main = node?.closest<HTMLElement>('.game-frame-main');
     if (!node || !main) return;
+    if (fresh) main.style.removeProperty('--game-frame-hint-room');
     const gap = parseFloat(getComputedStyle(node).scrollMarginTop) || 0;
     let tries = 0;
     const step = () => {
@@ -105,10 +107,22 @@ export default function PrintHint() {
     holds.current = createHintHolds(countdown);
     countdown.start();
     makeRoom();
+    // The layout can change while the bubble shows (a phone turned, a desktop window narrowed to the phone layout, where
+    // the date line moves under the buttons): work the room out again from nothing.
+    const frame = bubble.current?.closest<HTMLElement>('.game-frame-main');
+    let lastWidth = frame?.getBoundingClientRect().width;
+    const observer = new ResizeObserver(() => {
+      const width = frame?.getBoundingClientRect().width;
+      if (width === lastWidth) return;
+      lastWidth = width;
+      makeRoom(true);
+    });
+    if (frame) observer.observe(frame);
     const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') { closing.current = true; countdown.close(); } };
     document.addEventListener('keydown', onKey);
     return () => {
       document.removeEventListener('keydown', onKey);
+      observer.disconnect();
       countdown.pause();
       timer.current = null;
       holds.current = null;

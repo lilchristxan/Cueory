@@ -296,3 +296,21 @@ test('/play/vialo: a printer press before the game has loaded is answered once i
   await expect(page.getByRole('dialog')).toHaveCount(1);
   expect(await page.evaluate(() => (window as unknown as { printed?: number }).printed ?? 0)).toBe(0);
 });
+
+test('narrowing the window to the phone layout while the bubble shows leaves it clear of the date line and the game', async ({ page }) => {
+  // Real time here (the page's animation frames do the re-measuring); the bubble stays for ten seconds, far longer than this takes.
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/play/vialo');
+  await expect(hint(page)).toBeVisible();
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(hint(page)).toBeVisible();
+  await expect.poll(() => page.evaluate(() => {
+    const rect = (node: Element) => { const r = node.getBoundingClientRect(); return { left: r.left, right: r.right, top: r.top, bottom: r.bottom }; };
+    const bubble = rect(document.querySelector('[data-testid="print-hint"]')!);
+    const range = document.createRange();
+    range.selectNodeContents(document.querySelector('.game-frame-dateline')!);
+    const boxes = [...range.getClientRects()].map((r) => ({ left: r.left, right: r.right, top: r.top, bottom: r.bottom }));
+    boxes.push(rect(document.querySelector('.vialo-pack')!));
+    return boxes.some((b) => bubble.left < b.right && bubble.right > b.left && bubble.top < b.bottom && bubble.bottom > b.top);
+  })).toBe(false);
+});
