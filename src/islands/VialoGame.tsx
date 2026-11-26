@@ -39,6 +39,7 @@ import GameHeader from './GameHeader';
 import { useSharedGameSettings } from './GameSettings.tsx';
 import { playGameCue } from './gamesound';
 import { browserStorage } from '../scripts/storage';
+import { FORFEIT_EVENT } from '../scripts/printgate';
 import { VIALO_KEY_ROWS } from './vialokeys';
 
 interface Puzzle {
@@ -162,6 +163,18 @@ export default function VialoGame({ puzzles, framed = false }: Props) {
     document.addEventListener('keydown', listener);
     return () => document.removeEventListener('keydown', listener);
   }, []);
+
+  // "print anyway" on an unfinished game (src/islands/VialoPrint.tsx): today is already stored as not solved, so the game on
+  // screen ends as lost too and cannot then be won.
+  useEffect(() => {
+    const forfeit = (event: Event) => {
+      // Only the game of the day that was forfeited: a tab left open past midnight keeps its own day's round.
+      if ((event as CustomEvent<{ day?: string }>).detail?.day !== day) return;
+      setState((now) => (now.status === 'playing' ? { ...now, status: 'out' } : now));
+    };
+    window.addEventListener(FORFEIT_EVENT, forfeit);
+    return () => window.removeEventListener(FORFEIT_EVENT, forfeit);
+  }, [day]);
 
   useEffect(() => {
     void loadWordList().then((list) => {
@@ -334,7 +347,8 @@ export default function VialoGame({ puzzles, framed = false }: Props) {
       />
       <p className="sr-only" data-testid="vialo-status">guess the {WORD_LENGTH}-letter word · {leftWords}</p>
 
-      <div className="vialo-pack mt-4">
+      <div className="vialo-pack-wrap mt-4">
+      <div className="vialo-pack">
         <ol className="vialo-board" aria-label="your guesses">
           {state.guesses.map((guess, row) => (
             <li key={row} className={rowClass(row)} aria-label={`guess ${row + 1}: ${guess.word}. ${guessInWords(guess)}`}>
@@ -389,6 +403,7 @@ export default function VialoGame({ puzzles, framed = false }: Props) {
             </div>
           );
         })}
+      </div>
       </div>
 
       <p id="vialo-hint" className="sr-only">

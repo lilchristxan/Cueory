@@ -64,7 +64,13 @@
       repeating-linear-gradient(45deg, var(--pillo-hatch-color) 0 var(--pillo-hatch-width), var(--pillo-hatch-clear) var(--pillo-hatch-width) var(--pillo-hatch-gap));
     background-size: 100% 100%, auto;
     background-repeat: no-repeat, repeat;
-    box-shadow: var(--shadow-pillo-pack);
+    clip-path: var(--vialo-art-clip);
+  }
+
+  /* The pack is clipped to the foil, which would also clip a box-shadow, so the shadow is a filter on this wrapper. */
+  .vialo-pack-wrap {
+    display: flow-root;
+    filter: var(--filter-pillo-pack);
   }
 
   .vialo-pack::before {
@@ -167,23 +173,18 @@
   }
 
   /*
-    A committed letter carries its mark under it (● in its place, ○ somewhere else, · not in the word), so the three
-    results differ by shape and not by color alone, in Light and Evening. The row's spoken label already names them,
-    so the drawn mark adds nothing for a screen reader.
+    The three results differ by more than colour without any mark under the letter: "elsewhere" carries a thin light
+    ring inside the capsule's edge (the same ring the "elsewhere" key has), "in place" is the plain solid green and
+    "not in the word" the plain white pill. The row's spoken label already names each result.
   */
-  .vialo-pill:is(.vialo-here, .vialo-elsewhere, .vialo-absent) .vialo-letter {
-    transform: translateY(var(--pillo-letter-lift));
-  }
-  .vialo-pill:is(.vialo-here, .vialo-elsewhere, .vialo-absent)::after {
+  .vialo-pill.vialo-elsewhere::after {
+    content: "";
     position: absolute;
-    inset-block-end: var(--pillo-mark-drop);
-    font-size: var(--pillo-mark);
-    line-height: var(--text-sm--line-height);
+    inset: var(--vialo-pill-ring-gap);
+    border: var(--vialo-pill-ring) solid var(--vialo-pill-ring-color);
+    border-radius: inherit;
     pointer-events: none;
   }
-  .vialo-pill.vialo-here::after { content: "\25CF" / ""; }
-  .vialo-pill.vialo-elsewhere::after { content: "\25CB" / ""; }
-  .vialo-pill.vialo-absent::after { content: "\00B7" / ""; }
 
   @keyframes vialo-pop {
     from {
@@ -531,6 +532,7 @@
     background-color: var(--color-page);
     background-image: none;
     border: var(--border-pillo-legend) solid var(--color-ink);
+    clip-path: none;
   }
   .vialo-contrast .vialo-pill.vialo-elsewhere,
   .vialo-contrast .vialo-key.vialo-elsewhere {
@@ -568,15 +570,20 @@
   .vialo-contrast .vialo-pill::before {
     display: none;
   }
+  /* High contrast tells the results apart by their rims (solid, double, dashed), so the inner ring is not drawn. */
+  .vialo-contrast .vialo-pill::after {
+    display: none;
+  }
   .vialo-contrast .vialo-mark,
-  .vialo-contrast .vialo-pill::after,
   .vialo-contrast .vialo-key-mark {
     font-size: var(--pillo-mark-contrast);
     font-weight: 700;
   }
 
   @media (forced-colors: active) {
-    .vialo-pack { background-image: none; }
+    .vialo-pack { background-image: none; clip-path: none; }
+    .vialo-pack-wrap { filter: none; }
+    .vialo-pill::after { display: none; }
     .vialo-pocket > .vialo-pill { border: var(--border-pillo-key) solid CanvasText; }
     .vialo-pill.vialo-here { border: var(--pillo-contrast-rim) solid CanvasText; }
     .vialo-pill.vialo-elsewhere { border: var(--pillo-contrast-rim) double CanvasText; }
@@ -600,6 +607,7 @@
 @media print {
   .vialo-pack,
   .vialo-strip {
+    clip-path: none;
     background-image:
       repeating-linear-gradient(45deg, var(--pillo-hatch-color) 0 var(--pillo-hatch-width), var(--pillo-hatch-clear) var(--pillo-hatch-width) var(--pillo-hatch-gap)),
       repeating-linear-gradient(-45deg, var(--pillo-hatch-color) 0 var(--pillo-hatch-width), var(--pillo-hatch-clear) var(--pillo-hatch-width) var(--pillo-hatch-gap));

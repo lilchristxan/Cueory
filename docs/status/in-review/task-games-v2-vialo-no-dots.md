@@ -1,0 +1,2 @@
+status: Games v2, Vialo drops the dots and circles under the letters; "in the word, wrong place" is now the red pill with a thin light inner ring (stacked on the foil-card PR).
+decision: D-pending (Games v2) Vialo's non-colour cue is a thin light inner ring on the red pill, not a mark under the letter (green and white pills carry none; high contrast keeps its rims). Reason: Christian dislikes marks under letters; colour is still never the only signal.

@@ -197,6 +197,11 @@
   --vialo-art-width-per-height: 1.0424; /* 1230 / 1180 as a plain number, so the pack's width can follow the window's height */
   --vialo-board-reserve: 25.5rem;       /* 408px: the page above the pack plus the keys below it, so pack, guess strip and keys fit a 900px-high desktop window without scrolling */
   --vialo-board-min: 20rem;             /* 320px: the pack never gets narrower than this on a short window */
+  /* The artwork file has a baked ivory mat (and soft shadow) around the foil card. The pack is clipped to the
+     foil so only the card shows. Measured from the 1230 x 1180 file: foil spans x 21 to 1208 and y 16 to 1155,
+     corner radius about 55px; the cut sits 2px inside that so the file's light rim highlight and antialiased edge
+     are hidden too (x 23 to 1206, y 18 to 1153, radius 60). Top, right, bottom, left, then the corner radius. */
+  --vialo-art-clip: inset(1.525% 1.951% 2.288% 1.870% round 4.878% / 5.085%);
   --vialo-art-top: 4.64%;
   --vialo-art-sides: 4.5% 4.58%;
   --vialo-art-row-ratio: 1118.4 / 170.6;
@@ -526,6 +531,54 @@
   --print-figure: 13cm;         /* an anatomy worksheet's picture on paper: leaves room for the numbered list below */
   --worksheet-blank: 1.75rem;   /* the height of a write-in line on an anatomy worksheet */
 
+  /* ---------- Paper sheets (printed from a game page): page 1 the game, page 2 how to play. Large print for readers who find small print hard: the pack and keys fill the printable area. Outlines only, so nothing needs background graphics. Sized in inches and points so the same CSS fits US Letter and A4. ---------- */
+  --sheet-ink-soft: #6b5243;    /* Bronze: captions and footers (--color-ink-soft by day; paper is Daytime even in Evening) */
+  --sheet-ink: #3e2c23;         /* Espresso: text on paper (--color-ink by day) */
+  --sheet-oxblood: #6e2019;     /* the game's oxblood by day: pack, wells, keys, labels, marks */
+  --sheet-oxblood-light: #a0413a;
+  --sheet-margin: 0.5in;        /* every side: most home printers cannot print closer. The page rule is zero, so the browser prints no web address or date */
+  --sheet-foot-space: 0.3in;    /* room kept above the bottom margin for the footer line */
+  --sheet-icon-large: 0.62in;   /* the logo on page 1 takes only the room it needs */
+  --sheet-wordmark-large: 0.56in;
+  --sheet-icon-small: 0.45in;   /* the logo on page 2 */
+  --sheet-wordmark-small: 0.4in;
+  --sheet-logo-gap: 0.18in;
+  --sheet-gap: 0.14in;
+  --sheet-pack-width: 6.7in;    /* the pack: 89% of Letter's 7.5 in printable width, 92% of A4's 7.27 in; the height budget of Letter (10 in) is what binds */
+  --sheet-pack-pad: 0.16in;
+  --sheet-pack-radius: 0.22in;
+  --sheet-cell-ratio: 1 / 0.7;       /* a pack cell (width / height) */
+  --sheet-well-width: 86%;           /* the outlined pill inside a cell */
+  --sheet-well-ratio: 0.86 / 0.56;   /* the pill's proportions */
+  --sheet-line: 1.5pt;          /* every solid outline: at least 1.5 pt so it survives low-quality printers */
+  --sheet-dash: 1.1pt;          /* the dashed cell dividers */
+  --sheet-mark-line: 2.25pt;    /* the three pen marks in the legend */
+  --sheet-key-gap: 0.09in;
+  --sheet-key-height: 0.62in;
+  --sheet-key-radius: 0.1in;
+  --sheet-key-letter: 28pt;     /* a letter in a printed key, bold */
+  --sheet-keys-top: 0.2in;      /* space between the pack and the keys */
+  --sheet-text: 16pt;           /* the steps on page 2 */
+  --sheet-small: 13pt;
+  --sheet-label: 14pt;
+  --sheet-foot: 10pt;
+  --sheet-line-height: 1.5;
+  --sheet-heading: 32pt;        /* "how to play", set in Bodoni Moda */
+  --sheet-steps-indent: 1.2em;  /* how far the numbered steps on page 2 are indented, room for the numbers */
+  --sheet-word: 54pt;           /* the word of the day */
+  --sheet-word-tracking: 0.18em;
+  --sheet-steps-width: 7in;
+  --sheet-step-gap: 0.12in;
+  --sheet-sample: 0.6in;        /* a sample letter in the legend */
+  --sheet-sample-letter: 26pt;
+  --sheet-legend-gap: 0.3in;
+  --sheet-box-pad-block: 0.2in;
+  --sheet-box-pad-inline: 0.6in;
+  --sheet-box-bottom: 0.45in;   /* the word box sits in the lower part of page 2, above the footer */
+  --sheet-label-pad-block: 0.04in;
+  --sheet-label-pad-inline: 0.2in;
+  --sheet-dialog-width: min(calc(100vw - 2rem), 28rem); /* the "print before you finish?" dialog */
+
   /* ---------- Motion (D-41 brand bar: 150–400 ms, soft not bouncy, always off under reduced-motion) ---------- */
   --ease-soft: cubic-bezier(0.4, 0, 0.2, 1);     /* gentle UI transitions */
   --ease-emphasis: cubic-bezier(0.2, 0, 0, 1);   /* snappier entrances */
@@ -647,6 +700,7 @@
   --pillo-mark-contrast: 0.875rem;      /* high contrast: the larger ● ○ · under a letter */
   --pillo-bar-min: 1.75rem;             /* the shortest bar in the guess distribution, so its count fits */
   --shadow-pillo-pack: 0 1px 2px rgb(var(--shadow-tint) / 0.12), 0 14px 30px rgb(var(--shadow-tint) / 0.16);
+  --filter-pillo-pack: drop-shadow(0 1px 1px rgb(var(--shadow-tint) / 0.12)) drop-shadow(0 14px 15px rgb(var(--shadow-tint) / 0.16)); /* the same shadow as a filter, because the pack is clipped to its foil (blur radii halved: a filter blur is a standard deviation) */
   --shadow-pillo-pocket: inset 0 2px 4px rgb(var(--shadow-tint) / 0.2), inset 0 -1px 1px rgb(var(--shadow-tint) / 0.06);
   --shadow-pillo-pill: 0 2px 3px rgb(var(--shadow-tint) / 0.28), inset 0 -3px 4px rgb(var(--shadow-tint) / 0.14);
   /* pillo's game mark (Task 138): its name in Bodoni Moda with the brand cruet (public/brand/v1/cruet-*) at its top
@@ -694,6 +748,9 @@
   --vialo-key-elsewhere-bottom: #6e2019;
   --vialo-key-elsewhere-lip: #4a100d;
   --vialo-key-on-mark: #ffffff;         /* the letter on a green or oxblood key */
+  --vialo-pill-ring: 2px;               /* the light ring inside an "elsewhere" pill on the board, as on its key */
+  --vialo-pill-ring-gap: 3px;           /* how far that ring sits inside the pill's edge */
+  --vialo-pill-ring-color: var(--vialo-key-ring-color);
   --vialo-key-ring-color: rgb(255 255 255 / 0.6);
   --vialo-key-shine: rgb(255 255 255 / 0.35);  /* the lit top edge of a green key */
   --shadow-vialo-key: 0 8px 12px rgb(var(--shadow-tint) / 0.13);
@@ -1298,7 +1355,7 @@
   --play-hub-panel-width: 25rem;        /* the left panel on desktop (400 px) */
   --play-hub-split: var(--play-hub-panel-width) 1fr; /* desktop: left panel, then the rows */
   --play-hub-cols-stacked: auto minmax(0, 1fr); /* phone and tablet row: tile, then the wordmark; line and status row span both */
-  --play-hub-cols: 4rem 12.5rem 1fr 11rem 7.5rem; /* desktop row: icon tile, wordmark, line, status, button */
+  --play-hub-cols: 4rem 12.5rem 1fr 9rem 13rem; /* desktop row: icon tile, wordmark, line, status, buttons (play and "print for a patient" stack) */
   --play-hub-tile: 4rem;                /* the game's icon tile (64 px) */
   --play-hub-tile-icon: 2.875rem;       /* the artwork inside the tile (46 px) */
   --play-hub-wordmark-height: 2.625rem; /* wordmark artwork (42 px) */
