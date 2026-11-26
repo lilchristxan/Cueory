@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { loadStats, localDay } from './gameresults';
 import { browserStorage } from '../scripts/storage';
-import { FORFEIT_EVENT, PRINT_EVENT, isFinished, printAnyway, requestPrint, type PrintGame } from '../scripts/printgate';
+import { FORFEIT_EVENT, PRINT_EVENT, claimPrint, isFinished, printAnyway, requestPrint, type PrintGame } from '../scripts/printgate';
 import { sheetImagesReady } from '../scripts/printsheet';
 
 /** How long printing stays switched off if the browser never says the print is over. */
@@ -70,7 +70,9 @@ export function useGamePrint(options: GamePrintOptions) {
 
   useEffect(() => {
     const onPrint = (event: Event) => {
-      if ((event as CustomEvent<{ game?: string }>).detail?.game === latest.current.game) request();
+      if ((event as CustomEvent<{ game?: string }>).detail?.game !== latest.current.game) return;
+      claimPrint(latest.current.game);
+      request();
     };
     document.addEventListener(PRINT_EVENT, onPrint);
     // Tells the page (and the tests) that a print request will now be heard: the island loads after the page does.
@@ -79,6 +81,10 @@ export function useGamePrint(options: GamePrintOptions) {
     if (window.location.hash === '#print') {
       // From the hub: do it once, and take the mark out of the address.
       window.history.replaceState(null, '', window.location.pathname + window.location.search);
+      claimPrint(latest.current.game);
+      request();
+    } else if (claimPrint(latest.current.game)) {
+      // The button was pressed before this island was listening: answer it now, once.
       request();
     }
     return () => {
