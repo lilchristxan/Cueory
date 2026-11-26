@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState, type MouseEvent } from 'react';
 import { dayLabel } from './daily';
 import { showFocusRing } from './focusring';
+import { playGameCue } from './gamesound';
+import { useSharedGameSettings } from './GameSettings';
 import { helloResultCard, showResultCard } from './gameresults';
 import {
   HELLO_CATEGORY_LABELS,
@@ -33,6 +35,7 @@ export default function HelloCards({ starters }: { starters: readonly HelloStart
   const [favorites, setFavorites] = useState<ReadonlySet<string>>(() => new Set());
   const [notice, setNotice] = useState('');
   const [ready, setReady] = useState(false);
+  const { soundAllowed } = useSharedGameSettings();
   const cardRef = useRef<HTMLButtonElement>(null);
   const [today, setToday] = useState(() => new Date());
   const dayRef = useRef(dayIndex(today));
@@ -107,6 +110,9 @@ export default function HelloCards({ starters }: { starters: readonly HelloStart
     if (!current) return;
     const next = !flipped;
     setFlipped(next);
+    // The finish tone is for the fifth new card of the day, the moment the "congrats" panel appears.
+    const finishes = next && !revealedToday.has(current.id) && flipsToday === 4;
+    playGameCue(finishes ? 'solved' : next ? 'place' : 'remove', soundAllowed());
     if (next && !revealedToday.has(current.id)) {
       setRevealedToday((previous) => new Set(previous).add(current.id));
       setFlipsToday((previous) => Math.min(5, previous + 1));

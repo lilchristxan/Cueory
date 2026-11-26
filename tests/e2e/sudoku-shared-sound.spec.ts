@@ -59,8 +59,13 @@ test('game sounds turned off in the sudoku dialog keep the solve silent even whe
     };
     const counted = window as unknown as { tones: number; AudioContext: unknown };
     counted.tones = 0;
+    // The first tap (the gear below) happens while sounds are still on, so the shared sound module makes its audio
+    // context then. This stand-in therefore counts scheduled sounds (oscillators started), not contexts made.
     counted.AudioContext = class {
-      constructor() { counted.tones += 1; throw new Error('no audio in tests'); }
+      state = 'running'; currentTime = 0; destination = {};
+      resume() { return Promise.resolve(); }
+      createGain() { return { connect() {}, gain: { setValueAtTime() {}, linearRampToValueAtTime() {}, exponentialRampToValueAtTime() {} } }; }
+      createOscillator() { return { type: '', frequency: { value: 0 }, connect() {}, start() { counted.tones += 1; }, stop() {} }; }
     };
   });
   await page.goto('/play/sudoku');

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import ResultBrandMark from './ResultBrandMark';
+import { playGameCue, soundSwitchOn } from './gamesound';
 import { showResultCard, statResultCard } from './gameresults';
 import {
   LOW_SECONDS,
@@ -98,6 +99,8 @@ export default function StatGame({ questions, sampleKey, game = 'stat' }: Props)
   const resultRef = useRef<HTMLDivElement>(null);
   const heard = useRef({ index: -1, left: STAT_SECONDS });
   const reportedRound = useRef<number | null>(null);
+  // Answers stay hidden until the end, so the only cues are neutral: picking, locking in and finishing (never right or wrong).
+  // tachyyy has no sound setting of its own, so the shared "game sounds" switch alone decides (read at the moment of the cue).
 
   const left = phase === 'playing' ? secondsLeft(state, now) : STAT_SECONDS;
   const question = questions[state.index];
@@ -153,6 +156,7 @@ export default function StatGame({ questions, sampleKey, game = 'stat' }: Props)
   useEffect(() => {
     if (phase !== 'playing' || state.status !== 'over') return;
     setPhase('grading');
+    playGameCue('solved', soundSwitchOn());
     setSaid('all fifteen done. checking your answers.');
     let live = true;
     gradeRound(questions, state.answers, grader).then(
@@ -178,12 +182,14 @@ export default function StatGame({ questions, sampleKey, game = 'stat' }: Props)
   const pick = (letter: StatLetter) => {
     if (phase !== 'playing') return;
     setState((current) => pickAnswer(advanceTime(current, questions, Date.now()), letter));
+    playGameCue('place', soundSwitchOn());
     setSaid(`${letterLabel(letter)} selected.`);
   };
 
   const next = () => {
     if (phase !== 'playing') return;
     const time = Date.now();
+    playGameCue('place', soundSwitchOn());
     setNow(time);
     setState((current) => nextQuestion(current, questions, time));
   };
