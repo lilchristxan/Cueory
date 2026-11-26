@@ -47,10 +47,19 @@ test('the Vialo blister artwork carries the live pills and their spoken marks', 
   await expect(committed.locator('.vialo-elsewhere').first()).toHaveCSS('box-shadow', /inset/);
   await expect(committed.locator('.vialo-absent').first()).toHaveCSS('background-image', 'none');
 
-  // Colour is never the only signal: in normal mode each result also carries its own mark under the letter.
-  const marks = await pockets.evaluateAll((pills) => pills.map((pill) => getComputedStyle(pill, '::after').content.split(' / ')[0]));
-  expect(marks).toEqual(['"\u25CB"', '"\u25CF"', '"\u25CF"', '"\u00B7"', '"\u25CF"']);
-  expect(new Set(marks).size).toBe(3);
+  // Colour is never the only signal: in normal mode "elsewhere" (red) carries a thin light inner ring, "in place"
+  // (green) and "not in the word" (white) carry none, and no mark of any kind is drawn under a letter.
+  const after = await pockets.evaluateAll((pills) =>
+    pills.map((pill) => {
+      const style = getComputedStyle(pill, '::after');
+      return { content: style.content, ring: style.borderTopWidth, position: style.position, letterShift: getComputedStyle(pill.querySelector('.vialo-letter')!).transform };
+    }),
+  );
+  expect(after.map((a) => a.content !== 'none' && a.content !== 'normal')).toEqual([true, false, false, false, false]);
+  expect(after[0]).toMatchObject({ content: '""', ring: '2px', position: 'absolute' });
+  // Letters sit centred in the pill: nothing was lifted to make room for a mark.
+  for (const a of after) expect(a.letterShift).toBe('none');
+  expect(await committed.locator('.vialo-pill').evaluateAll((pills) => pills.map((p) => p.textContent))).toEqual([...'crane']);
 
   await page.emulateMedia({ reducedMotion: 'reduce' });
   expect(await committed.locator('.vialo-here').first().evaluate((pill) => getComputedStyle(pill, '::before').animationName)).toBe('none');
