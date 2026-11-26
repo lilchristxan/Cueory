@@ -64,7 +64,13 @@
       repeating-linear-gradient(45deg, var(--pillo-hatch-color) 0 var(--pillo-hatch-width), var(--pillo-hatch-clear) var(--pillo-hatch-width) var(--pillo-hatch-gap));
     background-size: 100% 100%, auto;
     background-repeat: no-repeat, repeat;
-    box-shadow: var(--shadow-pillo-pack);
+    clip-path: var(--vialo-art-clip);
+  }
+
+  /* The pack is clipped to the foil, which would also clip a box-shadow, so the shadow is a filter on this wrapper. */
+  .vialo-pack-wrap {
+    display: flow-root;
+    filter: var(--filter-pillo-pack);
   }
 
   .vialo-pack::before {
@@ -531,6 +537,7 @@
     background-color: var(--color-page);
     background-image: none;
     border: var(--border-pillo-legend) solid var(--color-ink);
+    clip-path: none;
   }
   .vialo-contrast .vialo-pill.vialo-elsewhere,
   .vialo-contrast .vialo-key.vialo-elsewhere {
@@ -576,7 +583,8 @@
   }
 
   @media (forced-colors: active) {
-    .vialo-pack { background-image: none; }
+    .vialo-pack { background-image: none; clip-path: none; }
+    .vialo-pack-wrap { filter: none; }
     .vialo-pocket > .vialo-pill { border: var(--border-pillo-key) solid CanvasText; }
     .vialo-pill.vialo-here { border: var(--pillo-contrast-rim) solid CanvasText; }
     .vialo-pill.vialo-elsewhere { border: var(--pillo-contrast-rim) double CanvasText; }
@@ -600,6 +608,7 @@
 @media print {
   .vialo-pack,
   .vialo-strip {
+    clip-path: none;
     background-image:
       repeating-linear-gradient(45deg, var(--pillo-hatch-color) 0 var(--pillo-hatch-width), var(--pillo-hatch-clear) var(--pillo-hatch-width) var(--pillo-hatch-gap)),
       repeating-linear-gradient(-45deg, var(--pillo-hatch-color) 0 var(--pillo-hatch-width), var(--pillo-hatch-clear) var(--pillo-hatch-width) var(--pillo-hatch-gap));

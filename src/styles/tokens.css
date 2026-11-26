@@ -192,6 +192,11 @@
   --vialo-art-width-per-height: 1.0424; /* 1230 / 1180 as a plain number, so the pack's width can follow the window's height */
   --vialo-board-reserve: 25.5rem;       /* 408px: the page above the pack plus the keys below it, so pack, guess strip and keys fit a 900px-high desktop window without scrolling */
   --vialo-board-min: 20rem;             /* 320px: the pack never gets narrower than this on a short window */
+  /* The artwork file has a baked ivory mat (and soft shadow) around the foil card. The pack is clipped to the
+     foil so only the card shows. Measured from the 1230 x 1180 file: foil spans x 21 to 1208 and y 16 to 1155,
+     corner radius about 55px; the cut sits 2px inside that so the file's light rim highlight and antialiased edge
+     are hidden too (x 23 to 1206, y 18 to 1153, radius 60). Top, right, bottom, left, then the corner radius. */
+  --vialo-art-clip: inset(1.525% 1.951% 2.288% 1.870% round 4.878% / 5.085%);
   --vialo-art-top: 4.64%;
   --vialo-art-sides: 4.5% 4.58%;
   --vialo-art-row-ratio: 1118.4 / 170.6;
@@ -690,6 +695,7 @@
   --pillo-mark-contrast: 0.875rem;      /* high contrast: the larger ● ○ · under a letter */
   --pillo-bar-min: 1.75rem;             /* the shortest bar in the guess distribution, so its count fits */
   --shadow-pillo-pack: 0 1px 2px rgb(var(--shadow-tint) / 0.12), 0 14px 30px rgb(var(--shadow-tint) / 0.16);
+  --filter-pillo-pack: drop-shadow(0 1px 1px rgb(var(--shadow-tint) / 0.12)) drop-shadow(0 14px 15px rgb(var(--shadow-tint) / 0.16)); /* the same shadow as a filter, because the pack is clipped to its foil (blur radii halved: a filter blur is a standard deviation) */
   --shadow-pillo-pocket: inset 0 2px 4px rgb(var(--shadow-tint) / 0.2), inset 0 -1px 1px rgb(var(--shadow-tint) / 0.06);
   --shadow-pillo-pill: 0 2px 3px rgb(var(--shadow-tint) / 0.28), inset 0 -3px 4px rgb(var(--shadow-tint) / 0.14);
   /* pillo's game mark (Task 138): its name in Bodoni Moda with the brand cruet (public/brand/v1/cruet-*) at its top

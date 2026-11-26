@@ -344,7 +344,8 @@ export default function VialoGame({ puzzles }: Props) {
       />
       <p className="sr-only" data-testid="vialo-status">guess the {WORD_LENGTH}-letter word · {leftWords}</p>
 
-      <div className="vialo-pack mt-4">
+      <div className="vialo-pack-wrap mt-4">
+      <div className="vialo-pack">
         <ol className="vialo-board" aria-label="your guesses">
           {state.guesses.map((guess, row) => (
             <li key={row} className={rowClass(row)} aria-label={`guess ${row + 1}: ${guess.word}. ${guessInWords(guess)}`}>
@@ -399,6 +400,7 @@ export default function VialoGame({ puzzles }: Props) {
             </div>
           );
         })}
+      </div>
       </div>
 
       <p id="vialo-hint" className="sr-only">
