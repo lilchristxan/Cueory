@@ -157,9 +157,11 @@ describe("wordpill's artwork (the game formerly called vialo; Christian's design
   it('has the same letters in Light and Evening; Evening only adds the thin ivory rim', () => {
     const paths = (svg: string) => [...svg.matchAll(/<path d="([^"]+)"/g)].map((m) => m[1]);
     expect(paths(evening)).toEqual(paths(day));
-    expect(day).toContain('stroke="#0e5a3d" stroke-width="2"');
+    // The Daytime wordmark uses the brand's deep game green so it passes the contrast guard (2.49 with the regular green).
+    expect(day).toContain('stroke="#053321" stroke-width="2"');
+    expect(day).toContain('fill="#053321"');
     expect(evening).toContain('stroke="#f9f5ef" stroke-width="2"');
-    expect(evening.replace('stroke="#f9f5ef"', 'stroke="#0e5a3d"').replace('wordpill-clip-evening', 'wordpill-clip-day').replaceAll('wordpill-clip-evening', 'wordpill-clip-day')).toBe(day);
+    expect(evening.replace('stroke="#f9f5ef"', 'stroke="#053321"').replace('fill="#0e5a3d"', 'fill="#053321"').replaceAll('wordpill-clip-evening', 'wordpill-clip-day')).toBe(day);
   });
 
   it('is the wordmark and icon on every surface: Evening art on the hub and game page, Daytime on the cream carousel', () => {

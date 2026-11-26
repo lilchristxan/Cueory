@@ -22,6 +22,9 @@ OUT = os.path.join(ROOT, "public/design/games-v2/assets")
 FONTS = "/usr/share/fonts/truetype/liberation"
 
 GREEN = "#0e5a3d"
+# The Daytime wordmark uses the brand's deep game green (--game-dark-green-deep): with the regular green the wordmark
+# measured 2.49 against the Daytime page in the contrast guard (needs 3); this measures about 3.1. Icon and Evening keep GREEN.
+GREEN_DEEP = "#053321"
 IVORY = "#f9f5ef"
 OXBLOOD = "#6e2019"
 WHITE = "#ffffff"
@@ -52,22 +55,22 @@ def text_path(face, text, size, centre_x, baseline):
     return " ".join(p for p in parts if p)
 
 
-def capsule(x, y, w, h, split, rim, tag):
+def capsule(x, y, w, h, split, rim, tag, green=GREEN):
     r = h / 2
     return (
         f'<defs><clipPath id="{tag}"><rect x="{x}" y="{y}" width="{w}" height="{h}" rx="{r:g}"/></clipPath></defs>'
-        f'<g clip-path="url(#{tag})"><rect x="{x}" y="{y}" width="{split - x:g}" height="{h}" fill="{GREEN}"/>'
+        f'<g clip-path="url(#{tag})"><rect x="{x}" y="{y}" width="{split - x:g}" height="{h}" fill="{green}"/>'
         f'<rect x="{split}" y="{y}" width="{x + w - split:g}" height="{h}" fill="{IVORY}"/></g>'
         f'<rect x="{x}" y="{y}" width="{w}" height="{h}" rx="{r:g}" fill="none" stroke="{rim}" stroke-width="2"/>'
     )
 
 
-def wordmark(rim, title, tag):
+def wordmark(rim, title, tag, green=GREEN):
     word = text_path(REGULAR, "word", 62, 100, 69)
     pill = text_path(BOLD, "pill", 62, 226, 69)
     return (
         f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 100" role="img" aria-label="{title}">'
-        f"{capsule(2, 2, 296, 96, 170, rim, tag)}"
+        f"{capsule(2, 2, 296, 96, 170, rim, tag, green)}"
         f'<path d="{word}" fill="{WHITE}"/><path d="{pill}" fill="{OXBLOOD}"/></svg>\n'
     )
 
@@ -84,7 +87,7 @@ def icon():
 
 
 FILES = {
-    "wordpill-wordmark-light.svg": wordmark(GREEN, "wordpill", "wordpill-clip-day"),
+    "wordpill-wordmark-light.svg": wordmark(GREEN_DEEP, "wordpill", "wordpill-clip-day", GREEN_DEEP),
     "wordpill-wordmark-dark.svg": wordmark(IVORY, "wordpill", "wordpill-clip-evening"),
     "wordpill-icon-l1.svg": icon(),
 }
