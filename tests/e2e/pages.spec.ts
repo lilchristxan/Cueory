@@ -362,8 +362,8 @@ for (const path of [...new Set(pages)]) {
 
     const res = await page.goto(path);
     expect(res?.status()).toBe(200);
-    // A focused study screen (learn mode; Christian, 2026-11-26) has no site header and no notice strip: only its own bar.
-    const focused = /\/learn-mode$/.test(path);
+    // A focused study screen (learn mode and cards; Christian, 2026-11-26) has no site header and no notice strip: only its own bar.
+    const focused = /\/(learn-mode|cards)$/.test(path);
     const notice = page.getByTestId('building-notice');
     if (focused) await expect(notice).toHaveCount(0);
     else {
