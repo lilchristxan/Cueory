@@ -10,16 +10,38 @@
 export type ViewPreset = 'front' | 'back' | 'left' | 'right' | 'top';
 
 /**
- * The preset views, in button order. The names follow the model's own frame, set once for every system by
+ * The words for each view. Christian's three: anterior (the model's front), posterior (its back) and lateral (a side).
+ * Nothing else about the body is named here. "lateral, opposite" is the other side from "lateral". "top" and
+ * "bottom" were already in the lab.
+ */
+export const VIEW_WORDS: Readonly<Record<ViewPreset | 'bottom', string>> = {
+  front: 'anterior',
+  back: 'posterior',
+  left: 'lateral',
+  right: 'lateral, opposite',
+  top: 'top',
+  bottom: 'bottom',
+};
+
+/**
+ * The preset views, in button order. The ids follow the model's own frame, set once for every system by
  * scripts/build-anatomy.mjs: glTF +y up, the model facing +z, and +x the body's left (BodyParts3D's coordinate system).
- * So "left side" looks at the body's left side, whichever way the student has turned it.
+ * So "lateral" looks at the body's left side, whichever way the student has turned it, and "lateral, opposite" at the
+ * right side.
  */
 export const VIEW_PRESETS: ReadonlyArray<{ id: ViewPreset; label: string; key: string }> = [
-  { id: 'front', label: 'front', key: '1' },
-  { id: 'back', label: 'back', key: '2' },
-  { id: 'left', label: 'left side', key: '3' },
-  { id: 'right', label: 'right side', key: '4' },
-  { id: 'top', label: 'top', key: '5' },
+  { id: 'front', label: VIEW_WORDS.front, key: '1' },
+  { id: 'back', label: VIEW_WORDS.back, key: '2' },
+  { id: 'left', label: VIEW_WORDS.left, key: '3' },
+  { id: 'right', label: VIEW_WORDS.right, key: '4' },
+  { id: 'top', label: VIEW_WORDS.top, key: '5' },
+];
+
+/** The three views in the orientation panel, in order. Pressing "lateral" again turns to the opposite side. */
+export const ORIENTATIONS: ReadonlyArray<{ id: 'front' | 'back' | 'left'; label: string }> = [
+  { id: 'front', label: VIEW_WORDS.front },
+  { id: 'back', label: VIEW_WORDS.back },
+  { id: 'left', label: VIEW_WORDS.left },
 ];
 
 /**
@@ -144,3 +166,23 @@ export function linkedStructureId(
   if (loadedSystemKey !== systemKey || (focus.system && focus.system !== systemKey)) return null;
   return focus.structure && found.includes(focus.structure) ? focus.structure : null;
 }
+
+/**
+ * The structures a "find it" round can ask for by tapping the model. The skin is drawn as an outline that a tap
+ * passes through whenever anything else is showing (src/islands/anatomyscene.ts), so it cannot be answered then and is
+ * left out of the round. Alone, the skin is solid and stays in.
+ */
+export function tappableIds(visible: readonly string[], outlined: ReadonlySet<string>): string[] {
+  const inner = visible.filter((id) => !outlined.has(id));
+  return inner.length > 0 ? inner : [...visible];
+}
+
+/**
+ * A saved view stores the camera, visibility and selection, not how far the structures are spread apart, so it can
+ * only be saved while they are together; opening a saved view always brings them back together first.
+ */
+export function spreadBlocksSaving(spread: number): boolean {
+  return spread > 0;
+}
+
+export const SPREAD_SAVE_NOTE = 'bring the structures back together to save a view.';

@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { isDesktopOfEachEngine } from './projects';
+import { openLabPanels } from './anatomy-lab-panels';
 
 /**
  * Synthetic fixture: cause a rejected initial GLB to settle in the same
@@ -47,6 +48,7 @@ test('ignores an initial model failure from the previous body system', async ({ 
   try {
     await page.goto('/preview/anatomy-lab?fixture');
     await page.getByRole('button', { name: 'open the anatomy lab' }).click();
+    await openLabPanels(page);
     await expect.poll(
       () => page.evaluate(() => (window as typeof window & { __anatomyFixtureHeld?: boolean }).__anatomyFixtureHeld),
       { timeout: 20_000 },

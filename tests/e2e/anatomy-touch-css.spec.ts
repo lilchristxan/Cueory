@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { openLabPanels } from './anatomy-lab-panels';
 
 /**
  * The 3D canvas must keep touch gestures on the model even if inline styles
@@ -8,6 +9,7 @@ import { expect, test } from '@playwright/test';
 test('anatomy canvas keeps touch-action from its stylesheet, not only inline styles', async ({ page }) => {
   await page.goto('/preview/anatomy-lab?fixture');
   await page.getByRole('button', { name: 'open the anatomy lab' }).click();
+  await openLabPanels(page);
 
   const canvas = page.locator('canvas');
   await expect(canvas).toBeVisible({ timeout: 15_000 });

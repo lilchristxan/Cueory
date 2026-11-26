@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { openLabPanels } from './anatomy-lab-panels';
 
 /**
  * The whole-body anatomy catalog has over 1,200 source structures. The first view must not render
@@ -7,6 +8,7 @@ import { expect, test } from '@playwright/test';
 test('whole-body catalog shows a bounded list, then moves focus to the first newly revealed structure', async ({ page }) => {
   await page.goto('/preview/anatomy-lab');
   await page.getByRole('button', { name: 'open the anatomy lab' }).click();
+  await openLabPanels(page);
   await expect(page.locator('canvas')).toBeVisible({ timeout: 15_000 });
   // The combined system is added once the viewer reaches "open", not during WebGL startup.
   await expect(page.locator('canvas')).toBeFocused({ timeout: 15_000 });
@@ -36,6 +38,7 @@ test('whole-body catalog shows a bounded list, then moves focus to the first new
 test('switching body systems clears the previous system\'s structure search', async ({ page }) => {
   await page.goto('/preview/anatomy-lab?fixture');
   await page.getByRole('button', { name: 'open the anatomy lab' }).click();
+  await openLabPanels(page);
   await expect(page.locator('canvas')).toBeFocused({ timeout: 15_000 });
 
   const picker = page.getByRole('group', { name: 'body system' });

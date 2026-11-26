@@ -1,5 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
+import { openLabPanels } from './anatomy-lab-panels';
 
 /**
  * The anatomy lab's study tools, integration (Task 178): breadcrumb and siblings on the name card, show nearby,
@@ -15,6 +16,7 @@ const axeTags = ['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa'];
 async function openLab(page: Page) {
   await page.goto(URL);
   await page.getByRole('button', { name: 'open the anatomy lab' }).click();
+  await openLabPanels(page);
   await expect(page.locator('canvas').first()).toBeVisible({ timeout: 15_000 });
   await expect(page.getByRole('button', { name: 'fixture cube A', exact: true })).toBeEnabled({ timeout: 20_000 });
 }
