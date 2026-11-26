@@ -77,8 +77,7 @@ export function loadPicclineSave(puzzle: SuturePathPuzzle, day: string, storage:
 
 /** The solve timer's milliseconds saved with today's board, or undefined for none (an older save, or never started). */
 export function loadPicclineMs(puzzle: SuturePathPuzzle, day: string, storage: KeyValueStorage | undefined = browserStorage()): number | undefined {
-  const board = boardsFor(read(storage), day)[puzzle.id];
-  const ms = isObject(board) ? board.ms : undefined;
+  const ms = (boardsFor(read(storage), day)[puzzle.id] as { ms?: unknown } | undefined)?.ms;
   return whole(ms, MAX_MS) ? ms : undefined;
 }
 
@@ -101,15 +100,13 @@ export function savePicclineBoard(puzzle: SuturePathPuzzle, day: string, state: 
  * shortens it. A board that is already complete keeps its time as it is. With no saved board for today there is nothing to attach the time to, and nothing is written.
  */
 export function savePicclineMs(puzzle: SuturePathPuzzle, day: string, ms: number, storage: KeyValueStorage | undefined = browserStorage()): void {
-  if (!storage || !(ms >= 0) || ms > MAX_MS) return;
   try {
     const boards = boardsFor(read(storage), day);
     const board = boards[puzzle.id];
-    if (!isObject(board)) return;
-    // A finished board already holds its final, stopped time: a tab still running on an older copy must not inflate it.
-    if (Array.isArray(board.found) && board.found.length >= puzzle.words.length) return;
-    const stored = whole(board.ms, MAX_MS) ? board.ms : 0;
-    const text = JSON.stringify({ v: PICCLINE_SAVE_VERSION, owner: PICCLINE_OWNER, day, boards: { ...boards, [puzzle.id]: { ...board, ms: Math.max(stored, Math.round(ms)) } } });
+    const time = Math.round(ms);
+    // A finished board keeps its stopped time; no saved board has nothing to attach a time to.
+    if (!storage || !isObject(board) || !Array.isArray(board.found) || board.found.length >= puzzle.words.length || !whole(time, MAX_MS)) return;
+    const text = JSON.stringify({ v: PICCLINE_SAVE_VERSION, owner: PICCLINE_OWNER, day, boards: { ...boards, [puzzle.id]: { ...board, ms: Math.max(whole(board.ms, MAX_MS) ? board.ms : 0, time) } } });
     if (text.length <= MAX_SAVE_LENGTH) storage.setItem(PICCLINE_SAVE_KEY, text);
   } catch { /* storage blocked or full: the time is simply not remembered */ }
 }

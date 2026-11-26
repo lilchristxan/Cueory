@@ -1,4 +1,9 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
+import { heldRounds, loadStats, localDay } from './gameresults';
+import { dailyStats, recordResult, type GameStats } from './gamestats';
+import { useStatsVisible } from './gamestatsgate';
+import { useRefreshOnStatsChange } from './finishstatsrefresh';
+import { browserStorage } from '../scripts/storage';
 import { gameName } from '../config/games';
 import { buildShareUrl } from './share';
 import ShareDialog from './ShareDialog';
@@ -30,8 +35,6 @@ export interface PicclineShareProps {
   solveMs: number | undefined;
   /** The player's local date for this puzzle. */
   date: Date;
-  /** The numbers the stats panel shows; undefined for a signed-out player (their sticker shows the time only). */
-  account: { winPercent: number; streak: number } | undefined;
   /** The one-line result the game already shows. */
   resultLine: string;
   siteUrl: string;
@@ -48,8 +51,25 @@ const GAME: ShareGame = {
 
 const LABELS: Record<PicclineStickerKind, string> = { centered: 'portrait sticker', 'lower-third': 'landscape sticker' };
 
+/**
+ * The numbers the stats panel shows, read here (not in the board) so the board's first load does not carry the stats
+ * code. Read when the card mounts and again whenever the stats record changes (forget all, another tab).
+ */
+function readAccount(): { winPercent: number; streak: number } | undefined {
+  const day = localDay(new Date());
+  const saved = loadStats(browserStorage(), day);
+  if (!saved.on) return undefined;
+  const all = heldRounds().reduce<GameStats>((kept, round) => recordResult(kept, round), saved.stats);
+  const stats = dailyStats(all, 'suture', day, 1);
+  return { winPercent: stats.winPercent, streak: stats.currentStreak };
+}
+
 export default function PicclineShare(props: PicclineShareProps) {
-  const { open, onClose, found, solveMs, date, account, resultLine, siteUrl } = props;
+  const { open, onClose, found, solveMs, date, resultLine, siteUrl } = props;
+  const statsVisible = useStatsVisible();
+  const [read, setRead] = useState(readAccount);
+  useRefreshOnStatsChange(true, () => setRead(readAccount()));
+  const account = statsVisible ? read : undefined;
   const stats = useMemo(() => picclineStats({ solveMs, found: found.length, total: found.length, account }), [solveMs, found, account]);
   const input = useMemo(() => ({ found, date: stickerDate(date), stats }), [found, date, stats]);
   const payload: SharePayload = useMemo(() => ({ title: gameName('piccline'), text: resultLine, url: buildShareUrl('suture', siteUrl) }), [resultLine, siteUrl]);

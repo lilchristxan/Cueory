@@ -2,17 +2,13 @@ import '../styles/wordpath.css';
 import PrintLogo from './PrintLogo';
 import { lazy, Suspense, useEffect, useId, useLayoutEffect, useRef, useState, type KeyboardEvent, type PointerEvent } from 'react';
 import { dayLabel } from './daily';
-import { heldRounds, loadStats, localDay, reportRound } from './gameresults';
+import { localDay, reportRound } from './gameresults';
 import { printGame } from './gameprint';
 import { usePrintRequest } from './useprintrequest';
 import { useGameHelp } from './GameHelp';
 import GameHeader from './GameHeader';
 import { playGameCue } from './gamesound';
 import { useSharedGameSettings } from './GameSettings';
-import { useStatsVisible } from './gamestatsgate';
-import { dailyStats, recordResult, type DailyStats, type GameStats } from './gamestats';
-import { browserStorage } from '../scripts/storage';
-import { useRefreshOnStatsChange } from './finishstatsrefresh';
 import { formatSolveTime } from './vialotimer';
 import { newTimer, pauseTimer, resumeTimer, startTimer, stopTimer, timerElapsed, type SolveTimer } from './vialotimer';
 import PicclineCue from './PicclineCue';
@@ -31,15 +27,6 @@ const PicclineShare = lazy(() => import('./PicclineShare'));
 
 interface Props { puzzle: SuturePathPuzzle; name: string; framed?: boolean }
 
-type FinishStats = { on: false } | { on: true; stats: DailyStats };
-
-/** The same numbers the stats panel shows, read once the board is finished (only if the player turned stats on). */
-function finishStats(day: string): FinishStats {
-  const saved = loadStats(browserStorage(), day);
-  if (!saved.on) return { on: false };
-  const all = heldRounds().reduce<GameStats>((kept, round) => recordResult(kept, round), saved.stats);
-  return { on: true, stats: dailyStats(all, 'suture', day, 1) };
-}
 const printFoot = new URL(site.url).host;
 const button = 'min-h-11 min-w-11 rounded-md border border-control bg-page px-4 py-2 text-ink disabled:opacity-50';
 
@@ -138,7 +125,6 @@ export function PathBoard({ puzzle, name, framed = false }: Props) {
   const [printNote, setPrintNote] = useState('');
   const quietClickUntil = useRef(0);
   const { soundAllowed, settings: prefs, update: updateShared } = useSharedGameSettings();
-  const statsVisible = useStatsVisible();
   const sound = useRef(true);
   sound.current = soundAllowed();
   const help = useId();
@@ -150,17 +136,16 @@ export function PathBoard({ puzzle, name, framed = false }: Props) {
   // tab. It is saved with the board, so a reload carries on from where it was.
   const savedMs = useState(() => loadPicclineMs(puzzle, localDay(today)))[0];
   const timer = useRef<SolveTimer>(
-    restored && !pathDone(restored, puzzle) && savedMs !== undefined
-      ? { elapsed: savedMs, since: typeof document !== 'undefined' && !document.hidden ? Date.now() : undefined, started: true, stopped: false }
-      : restored && pathDone(restored, puzzle)
-        ? { elapsed: savedMs ?? 0, since: undefined, started: savedMs !== undefined, stopped: true }
+    restoredDone
+      ? { elapsed: savedMs ?? 0, since: undefined, started: savedMs !== undefined, stopped: true }
+      : restored && savedMs !== undefined
+        ? { elapsed: savedMs, since: document.hidden ? undefined : Date.now(), started: true, stopped: false }
         : newTimer(),
   );
   const [timerRunning, setTimerRunning] = useState(() => timer.current.started && !timer.current.stopped);
-  const [solveMs, setSolveMs] = useState<number | undefined>(restored && pathDone(restored, puzzle) ? savedMs : undefined);
+  const [solveMs, setSolveMs] = useState<number | undefined>(restoredDone ? savedMs : undefined);
   const [, setTick] = useState(0);
-  const [finish, setFinish] = useState<FinishStats>({ on: false });
-  const [shareReady, setShareReady] = useState(Boolean(restored && pathDone(restored, puzzle)));
+  const [shareReady, setShareReady] = useState(restoredDone);
   const [shareOpen, setShareOpen] = useState(false);
   const shareButton = useRef<HTMLButtonElement>(null);
   const shared = pathShareLine(state, puzzle, dayLabel(today), name);
@@ -174,7 +159,7 @@ export function PathBoard({ puzzle, name, framed = false }: Props) {
       timer.current = startTimer(timer.current, now, !document.hidden);
       setTimerRunning(true);
     }
-    if (pathDone(next, puzzle) && !timer.current.stopped && timer.current.started) {
+    if (pathDone(next, puzzle) && timer.current.started && !timer.current.stopped) {
       timer.current = stopTimer(timer.current, now);
       setTimerRunning(false);
       setSolveMs(timerElapsed(timer.current, now));
@@ -217,9 +202,6 @@ export function PathBoard({ puzzle, name, framed = false }: Props) {
   }, [shareReady]);
 
   useEffect(() => { if (done && !restoredDone) result.current?.focus(); }, [done]);
-  // A board that reopens finished still offers its share card, with today's numbers.
-  useEffect(() => { if (restored && pathDone(restored, puzzle)) setFinish(finishStats(localDay(new Date()))); }, []);
-  useRefreshOnStatsChange(shareReady, () => setFinish(finishStats(localDay(new Date()))));
 
   // Measure every letter's circle, again whenever the board changes size (rotation, text size, a narrower window).
   useLayoutEffect(() => {
@@ -266,7 +248,6 @@ export function PathBoard({ puzzle, name, framed = false }: Props) {
       hints: cuesUsed(state),
       specialFirst: specialFoundFirst(state, puzzle),
     });
-    setFinish(finishStats(localDay(new Date())));
     setShareReady(true);
   }, [done]);
 
@@ -447,7 +428,7 @@ export function PathBoard({ puzzle, name, framed = false }: Props) {
           <fieldset>
             <legend>{name}</legend>
             <label className="game-settings-option">
-              <span>show the timer<small>a quiet time line above the board. your solve time still goes on your sticker if you hide it.</small></span>
+              <span>show the timer</span>
               <input type="checkbox" checked={prefs.showTimer} onChange={() => updateShared({ showTimer: !prefs.showTimer })} data-testid="suture-show-timer" />
             </label>
           </fieldset>
@@ -596,7 +577,6 @@ export function PathBoard({ puzzle, name, framed = false }: Props) {
                 found={state.found.map((index) => puzzle.words[index]!.special)}
                 solveMs={solveMs}
                 date={today}
-                account={statsVisible && finish.on ? { winPercent: finish.stats.winPercent, streak: finish.stats.currentStreak } : undefined}
                 resultLine={shared}
                 siteUrl={site.url}
               />
