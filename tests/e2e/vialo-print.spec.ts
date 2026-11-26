@@ -347,14 +347,29 @@ test('two print requests during the picture wait print once, keep the word fille
   await expect.poll(() => printed(page)).toBe(2);
 });
 
-test('a picture that never arrives holds the print back only for the capped wait', async ({ page }) => {
+test('a picture that never arrives holds the print back for the capped wait, and no longer', async ({ page }) => {
   await finish(page);
-  await page.route('**/vialo-wordmark-oxblood-v3.svg', () => new Promise<void>(() => { /* never answered */ }));
+  let seen = false;
+  await page.route('**/vialo-wordmark-oxblood-v3.svg', () => {
+    seen = true;
+    return new Promise<void>(() => { /* never answered */ });
+  });
+  // The page's clock is controlled, so the wait is measured by the clock and not by how fast the engine runs.
+  await page.clock.install({ time: new Date('2026-11-01T15:00:00') });
   await page.goto('/play/vialo');
-  await press(page);
+  await expect(page.getByTestId('print-sheet')).toHaveAttribute('data-print-ready', 'true');
+  await page.clock.pauseAt(new Date('2026-11-01T15:00:05'));
+  await page.evaluate(() => document.dispatchEvent(new CustomEvent('cueory:print', { detail: { game: 'vialo' } })));
+  // The never-answered picture was asked for and the keeper box is filled, but nothing prints while the wait runs.
+  await expect.poll(() => seen).toBe(true);
   await expect(keeper(page)).toHaveAttribute('data-keeper', 'ready');
-  // The cap (1.5 s) ends the wait, and the sheet prints as the browser has it.
+  await page.clock.runFor(SHEET_IMAGE_WAIT_MS - 100);
+  expect(await printed(page)).toBe(0);
+  // Past the cap, the sheet prints as the browser has it, exactly once.
+  await page.clock.runFor(200);
   await expect.poll(() => printed(page)).toBe(1);
+  await page.clock.runFor(SHEET_IMAGE_WAIT_MS * 2);
+  expect(await printed(page)).toBe(1);
 });
 
 test('a second request while the warning is open does not stack a second print', async ({ page }) => {
