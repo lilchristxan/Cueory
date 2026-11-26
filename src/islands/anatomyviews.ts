@@ -173,8 +173,16 @@ export function linkedStructureId(
  * left out of the round. Alone, the skin is solid and stays in.
  */
 export function tappableIds(visible: readonly string[], outlined: ReadonlySet<string>): string[] {
-  const inner = visible.filter((id) => !outlined.has(id));
-  return inner.length > 0 ? inner : [...visible];
+  return tappableRound(visible, visible, outlined);
+}
+
+/**
+ * The same rule for a round that asks about `pool` while `shown` is what will be on screen (a review round shows its
+ * whole queue first): an outlined structure is left out whenever anything not outlined is shown.
+ */
+export function tappableRound(pool: readonly string[], shown: readonly string[], outlined: ReadonlySet<string>): string[] {
+  const innerShown = shown.some((id) => !outlined.has(id));
+  return innerShown ? pool.filter((id) => !outlined.has(id)) : [...pool];
 }
 
 /**
