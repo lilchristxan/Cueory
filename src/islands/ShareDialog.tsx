@@ -15,7 +15,7 @@ import {
   type SharePayload,
 } from './vialosharing';
 import { formatCountdown } from './vialosticker';
-import { DIALOG_TAB_STOPS, trapTarget, type ShareGame, type ShareSticker } from './sharedialogmodel';
+import { DIALOG_TAB_STOPS, stickersFor, trapTarget, type ShareGame, type ShareSticker } from './sharedialogmodel';
 
 /*
   The completion dialog (Christian's design, 25 Nov 2026), shared by the daily games. It opens over the play area when a
@@ -52,9 +52,14 @@ function Icon({ path, filled }: { path: string; filled?: boolean }) {
 }
 
 export default function ShareDialog({ game, open, onClose, description, payload, makeStickers, stickersKey }: ShareDialogProps) {
-  const [stickers, setStickers] = useState<ShareSticker[]>([]);
+  // The parent re-renders (the countdown, tab changes) with a new onClose each time: the modal setup must not re-run.
+  const latestOnClose = useRef(onClose);
+  latestOnClose.current = onClose;
+  // What was drawn, and the stickersKey it was drawn for. A drawing for an older key is never used: the stats on it
+  // (win percent, streak) may no longer be the player's to share, e.g. after signing out in another tab.
+  const [drawn, setDrawn] = useState<{ key: string; list: ShareSticker[] } | undefined>(undefined);
+  const [failedKey, setFailedKey] = useState<string | undefined>(undefined);
   const [chosen, setChosen] = useState<string | undefined>(undefined);
-  const [failed, setFailed] = useState(false);
   const [status, setStatus] = useState('');
   const [left, setLeft] = useState(() => formatCountdown(untilNextPuzzle(new Date())));
   const [fileShare, setFileShare] = useState<boolean | undefined>(undefined);
@@ -67,6 +72,8 @@ export default function ShareDialog({ game, open, onClose, description, payload,
   const wasOpen = useRef(false);
 
   const nav: Navigator | undefined = typeof navigator === 'undefined' ? undefined : navigator;
+  const stickers = useMemo(() => stickersFor(drawn, stickersKey), [drawn, stickersKey]);
+  const failed = failedKey === stickersKey;
   const current = stickers.find((s) => s.id === chosen) ?? stickers[0];
   const file = current?.file ?? null;
   const id = game.game;
@@ -77,11 +84,11 @@ export default function ShareDialog({ game, open, onClose, description, payload,
     void makeStickers().then(
       (made) => {
         if (!live) return;
-        setStickers(made);
-        setFailed(made.length === 0 || made.every((s) => !s.file));
+        setDrawn({ key: stickersKey, list: made });
+        setFailedKey(made.length === 0 || made.every((s) => !s.file) ? stickersKey : undefined);
       },
       () => {
-        if (live) setFailed(true);
+        if (live) setFailedKey(stickersKey);
       },
     );
     return () => {
@@ -124,7 +131,7 @@ export default function ShareDialog({ game, open, onClose, description, payload,
       if (event.key === 'Escape') {
         event.preventDefault();
         setMenuOpen(false);
-        onClose();
+        latestOnClose.current();
         return;
       }
       if (event.key !== 'Tab') return;
@@ -142,7 +149,7 @@ export default function ShareDialog({ game, open, onClose, description, payload,
       restoreInert();
       setMenuOpen(false);
     };
-  }, [open, onClose]);
+  }, [open]);
 
   const closeMenu = useCallback((focusButton: boolean) => {
     setMenuOpen(false);
@@ -244,12 +251,12 @@ export default function ShareDialog({ game, open, onClose, description, payload,
         className={`share-dialog share-dialog-${id} always-daytime`}
         data-testid="share-dialog"
       >
-        <img className="share-dialog-corner share-dialog-corner-top" src={game.cornerSrc} alt="" aria-hidden="true" width="48" height="48" />
-        <img className="share-dialog-corner share-dialog-corner-bottom" src={game.cornerSrc} alt="" aria-hidden="true" width="48" height="48" />
+        <img className="share-dialog-corner share-dialog-corner-top" src={game.cornerSrc} alt="" aria-hidden="true" width="48" height="48" loading="lazy" />
+        <img className="share-dialog-corner share-dialog-corner-bottom" src={game.cornerSrc} alt="" aria-hidden="true" width="48" height="48" loading="lazy" />
         <button type="button" className="share-dialog-close" aria-label="close" onClick={onClose} data-testid="share-dialog-close">
           <span aria-hidden="true">×</span>
         </button>
-        <img className="share-dialog-wordmark" src={game.wordmarkSrc} alt={game.wordmarkAlt} />
+        <img className="share-dialog-wordmark" src={game.wordmarkSrc} alt={game.wordmarkAlt} width="160" height="60" loading="lazy" />
 
         <p id={`share-dialog-description-${id}`} className="sr-only" data-testid="share-dialog-description">{description}</p>
 

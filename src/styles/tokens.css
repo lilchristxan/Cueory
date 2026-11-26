@@ -986,6 +986,7 @@
   --vialo-sticker-pack-shadow: rgba(20, 13, 8, 0.28);
   --vialo-sticker-pill-shade: rgba(62, 44, 35, 0.22);
   --vialo-sticker-pill-lift: rgba(62, 44, 35, 0.28);
+  --vialo-sticker-ring-scale: 2;        /* the board's "elsewhere" ring, scaled up to the sticker's bigger pills */
   --vialo-sticker-pill-gloss: rgba(249, 245, 239, 0.9);
   --vialo-sticker-here-light: rgb(63, 138, 104);
   --vialo-sticker-here-mid: rgb(14, 90, 61);
@@ -1026,7 +1027,7 @@
   --share-dialog-chosen-shadow: 0 0.5rem 1.375rem rgb(94 26 22 / 0.12);
   --share-dialog-wordmark-gap: 1.625rem;   /* 26 px under the wordmark */
   --share-dialog-section-gap: 1.625rem;
-  --share-dialog-picker-ratio: 1fr 1.28fr;
+  --share-dialog-option-min: 17.5rem;      /* 280 px: two stickers sit side by side from a card about 600 px wide */
   --share-dialog-action-gap: 0.875rem;     /* 14 px */
   --share-dialog-button-pad: 0.75rem 1.75rem;
   --share-dialog-menu-width: 16rem;        /* 256 px: "share on facebook" and its new-tab arrow on one line */

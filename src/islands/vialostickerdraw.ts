@@ -16,6 +16,7 @@ import {
   type StickerInput,
   type StickerKind,
   type TextLine,
+  hasRing,
 } from './vialosticker';
 
 const ARTWORK_URL = '/design/pillo-blister-board.webp';
@@ -38,6 +39,8 @@ export interface StickerPalette {
   pillShade: string;
   pillLift: string;
   pillGloss: string;
+  /** The thin light ring inside an "elsewhere" pill (the board's own ring, scaled up to the sticker), so colour is not the only signal. */
+  ring: { color: string; width: number; gap: number };
   pill: Record<Exclude<CellKind, 'empty'>, readonly [string, string, string]>;
   body: string;
   display: string;
@@ -60,6 +63,11 @@ export function readStickerPalette(root: Element = document.documentElement): St
     pillShade: get('--vialo-sticker-pill-shade'),
     pillLift: get('--vialo-sticker-pill-lift'),
     pillGloss: get('--vialo-sticker-pill-gloss'),
+    ring: {
+      color: get('--vialo-pill-ring-color'),
+      width: (Number.parseFloat(get('--vialo-pill-ring')) || 0) * (Number.parseFloat(get('--vialo-sticker-ring-scale')) || 1),
+      gap: (Number.parseFloat(get('--vialo-pill-ring-gap')) || 0) * (Number.parseFloat(get('--vialo-sticker-ring-scale')) || 1),
+    },
     pill: { here: pill('here'), elsewhere: pill('elsewhere'), absent: pill('absent') },
     body: get('--font-body'),
     display: get('--font-display'),
@@ -81,7 +89,7 @@ function loadImage(src: string): Promise<HTMLImageElement> {
  */
 async function loadWordmark(fetcher: typeof fetch): Promise<HTMLImageElement> {
   const response = await fetcher(WORDMARK_URL);
-  if (!response.ok) throw new Error('could not load the vialo wordmark');
+  if (!response.ok) throw new Error('could not load the wordmark');
   const text = await response.text();
   const sized = text.replace('<svg ', '<svg width="4326" height="1620" ');
   return loadImage(`data:image/svg+xml;charset=utf-8,${encodeURIComponent(sized)}`);
@@ -256,7 +264,7 @@ function insetShadow(ctx: CanvasRenderingContext2D, p: PillRect, dy: number, blu
   ctx.restore();
 }
 
-function drawPill(ctx: CanvasRenderingContext2D, p: PillRect, palette: StickerPalette, unit: number) {
+export function drawPill(ctx: CanvasRenderingContext2D, p: PillRect, palette: StickerPalette, unit: number) {
   if (p.kind === 'empty') return;
   const colours = palette.pill[p.kind];
   // Shadow depths in Christian's CSS, at his 480 px pack (a 960 px pack here): drop 0 3 5, inset 0 -4 7 and 0 3 4.
@@ -279,6 +287,17 @@ function drawPill(ctx: CanvasRenderingContext2D, p: PillRect, palette: StickerPa
   ctx.restore();
   insetShadow(ctx, p, -8 * unit, 14 * unit, palette.pillShade);
   insetShadow(ctx, p, 6 * unit, 8 * unit, palette.pillGloss);
+  if (hasRing(p.kind)) drawRing(ctx, p, palette.ring);
+}
+
+/** The ring inside the capsule's edge: its outer edge sits `gap` in, and it is `width` thick, as on the board. */
+function drawRing(ctx: CanvasRenderingContext2D, p: PillRect, ring: StickerPalette['ring']) {
+  ctx.save();
+  capsule(ctx, p, -(ring.gap + ring.width / 2));
+  ctx.lineWidth = ring.width;
+  ctx.strokeStyle = ring.color;
+  ctx.stroke();
+  ctx.restore();
 }
 
 // ---------- the sticker ----------

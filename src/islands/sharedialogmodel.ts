@@ -49,3 +49,12 @@ export function trapTarget(count: number, current: number, shift: boolean): numb
   if (!shift && current === count - 1) return 0;
   return undefined;
 }
+
+/**
+ * The stickers that may be shown or shared right now: only those drawn for the current stickersKey. Once the key
+ * changes (the player signs out in another tab, the stats switch off) the old drawing, with its win percent and
+ * streak, is unavailable until the new one resolves, and for good if the new draw fails.
+ */
+export function stickersFor(drawn: { key: string; list: ShareSticker[] } | undefined, key: string): ShareSticker[] {
+  return drawn && drawn.key === key ? drawn.list : [];
+}

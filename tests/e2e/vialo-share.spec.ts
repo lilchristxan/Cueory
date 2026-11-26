@@ -353,6 +353,28 @@ test.describe('the solve timer', () => {
 });
 
 test.describe('the share card is a modal dialog over the board', () => {
+  test('a parent re-render keeps focus where it is and the share menu open', async ({ page }) => {
+    await open(page, () => {
+      Object.defineProperty(navigator, 'canShare', { configurable: true, value: () => false });
+    });
+    await finish(page);
+    await page.getByTestId('share-dialog-share').click();
+    const menu = page.getByTestId('share-dialog-menu');
+    await expect(menu).toBeVisible();
+    await page.keyboard.press('ArrowDown');
+    const focused = await page.evaluate(() => document.activeElement?.textContent ?? '');
+    // The game re-renders on every visibility change (and each minute for the countdown): the page tells it twice.
+    await page.evaluate(() => {
+      document.dispatchEvent(new Event('visibilitychange'));
+      document.dispatchEvent(new Event('visibilitychange'));
+    });
+    await page.waitForTimeout(100);
+    await expect(menu).toBeVisible();
+    await expect(page.getByTestId('share-dialog-share')).toHaveAttribute('aria-expanded', 'true');
+    expect(await page.evaluate(() => document.activeElement?.textContent ?? '')).toBe(focused);
+    expect(await page.evaluate(() => document.activeElement?.closest('[data-testid="share-dialog-menu"]') !== null)).toBe(true);
+  });
+
   test('opens by itself, takes focus, traps Tab, closes with Escape and gives focus back to the share button', async ({ page }) => {
     await open(page);
     const card = await finish(page);

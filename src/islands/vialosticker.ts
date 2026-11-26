@@ -6,6 +6,7 @@
  * was drawn at half that size in CSS pixels, so the measurements below are his, doubled; they were read from his
  * files in a browser (element boxes), not estimated from the pictures.
  */
+import { gameName } from '../config/games';
 import type { Mark } from './pulse';
 
 export type StickerKind = 'centered' | 'lower-third';
@@ -41,6 +42,11 @@ const ROW_CENTRES = [0.12299, 0.267, 0.41099, 0.555, 0.699, 0.843] as const;
 const PILL_SIZE = { width: 0.131998, height: 0.091997 } as const;
 
 export type CellKind = Mark | 'empty';
+
+/** Pills tell their result apart by more than colour: only "elsewhere" carries the thin inset ring (as on the board). */
+export function hasRing(kind: CellKind): boolean {
+  return kind === 'elsewhere';
+}
 
 export interface PillRect {
   /** Centre, export pixels. */
@@ -285,10 +291,10 @@ export function stickerStats(input: StickerStatsInput): StickerStat[] {
 export function stickerDescription(input: StickerInput, solved: boolean, tries: number, maxTries: number): string {
   const stats = input.stats.map((s) => `${s.label} ${s.value}`).join(', ');
   const result = solved ? `solved in ${tries} of ${maxTries}` : `not solved in ${maxTries}`;
-  return `vialo sticker, ${input.date}: ${result}${stats ? `, ${stats}` : ''}. pills show each guess by colour, with no letters.`;
+  return `${gameName('vialo')} sticker, ${input.date}: ${result}${stats ? `, ${stats}` : ''}. pills show each guess by colour, and the ones in the wrong place have a ring, with no letters.`;
 }
 
 export function stickerFileName(kind: StickerKind, date: Date): string {
   const pad = (n: number) => String(n).padStart(2, '0');
-  return `vialo-${STICKER_NAMES[kind]}-${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}.png`;
+  return `${gameName('vialo')}-${STICKER_NAMES[kind]}-${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}.png`;
 }

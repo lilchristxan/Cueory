@@ -1,4 +1,5 @@
 import { useCallback, useMemo } from 'react';
+import { gameName } from '../config/games';
 import type { Mark } from './pulse';
 import { buildShareUrl } from './share';
 import ShareDialog from './ShareDialog';
@@ -42,11 +43,11 @@ export interface VialoShareProps {
 
 const GAME: ShareGame = {
   game: 'vialo',
-  title: 'share your vialo result',
+  title: `share your ${gameName('vialo')} result`,
   wordmarkSrc: '/design/games-v2/assets/vialo-wordmark-oxblood-v3.svg',
-  wordmarkAlt: 'vialo',
+  wordmarkAlt: gameName('vialo'),
   cornerSrc: '/design/games-v2/assets/vialo-icon-silver-oxblood.svg',
-  countdownLabel: 'next vialo in',
+  countdownLabel: `next ${gameName('vialo')} in`,
 };
 
 const LABELS: Record<StickerKind, string> = { centered: 'portrait sticker', 'lower-third': 'landscape sticker' };
@@ -55,7 +56,7 @@ export default function VialoShare(props: VialoShareProps) {
   const { open, onClose, rows, solved, tries, maxTries, solveMs, date, account, resultLine, siteUrl } = props;
   const stats = useMemo(() => stickerStats({ solved, tries, maxTries, solveMs, account }), [solved, tries, maxTries, solveMs, account]);
   const input = useMemo(() => ({ rows, date: stickerDate(date), stats }), [rows, date, stats]);
-  const payload: SharePayload = useMemo(() => ({ title: 'vialo', text: resultLine, url: buildShareUrl('vialo', siteUrl) }), [resultLine, siteUrl]);
+  const payload: SharePayload = useMemo(() => ({ title: gameName('vialo'), text: resultLine, url: buildShareUrl('vialo', siteUrl) }), [resultLine, siteUrl]);
   const description = `${resultLine}. ${stickerDescription(input, solved, tries, maxTries)}`;
   const stickersKey = JSON.stringify(input);
 

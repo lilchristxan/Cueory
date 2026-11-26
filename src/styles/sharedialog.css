@@ -53,6 +53,8 @@
     margin: auto;
     flex: none;
     padding: var(--share-dialog-pad-block);
+    /* Room under the countdown for the bottom-right icon, so they never overlap on a narrow card. */
+    padding-block-end: calc(var(--share-dialog-corner-icon) + var(--share-dialog-corner-inset) * 1.5);
     background: var(--color-page);
     border: var(--share-dialog-border) solid var(--color-line);
     border-radius: var(--share-dialog-radius);
@@ -82,21 +84,14 @@
   .share-dialog-picker {
     display: grid;
     inline-size: 100%;
-    grid-template-columns: 1fr;
+    /* Two columns where they fit (each at least this wide), one on a phone. */
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--share-dialog-option-min)), 1fr));
     gap: var(--share-dialog-gap);
     margin: 0 0 var(--share-dialog-section-gap);
     padding: 0;
     border: 0;
   }
 
-  @media (width >= 40rem) {
-    .share-dialog-picker { grid-template-columns: var(--share-dialog-picker-ratio); }
-  }
-
-  /* On a phone the bottom-right icon would sit on the countdown, so the card keeps room under it. */
-  @media (width < 40rem) {
-    .share-dialog { padding-block-end: calc(var(--share-dialog-corner-icon) + var(--share-dialog-corner-inset) * 2); }
-  }
 
   .share-dialog-option {
     position: relative;
