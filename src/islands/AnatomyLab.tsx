@@ -18,6 +18,11 @@ import { boxesFromMeshes, expandNearby, nearbyStructures } from './anatomynearby
 import { canSpeak, speak, stop as stopSpeaking } from './anatomyspeech';
 import { groupIndex, indexHeading, indexStep, inspectorRows, leaderSegment } from './anatomyinspector';
 import { flagMailto } from '../scripts/footer';
+import {
+  backspace as roundBackspace, currentTarget, hintLetter, nextQuestion,
+  roundFinished, setFirstLetters, setNearby, showAnswer, skipQuestion, startRound, typeLetter, type StudyRound,
+} from './anatomyround';
+import { StudyCells, StudyEntryPanel, StudyRoundSide, usesTouch, type StudyChoice } from './AnatomyStudyRound';
 import { site } from '../config/site';
 import { createAnatomyStudy, createReviewQueueRequestGuard, createSavedViewsRequestGuard, createStudyIdentityGuard, queueFromQuizMisses, type AnatomyStudyClient, type ReviewQueueRow, type SavedViewRow, type StudyIdentitySnapshot } from './anatomystudy';
 import { getSupabase } from './supabaseclient';
@@ -297,6 +302,9 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
   const [labelsOn, setLabelsOn] = useState(false);
   const [quiz, setQuiz] = useState<QuizState | null>(null);
   const [recall, setRecall] = useState<RecallState | null>(null);
+  const [round, setRound] = useState<StudyRound | null>(null);
+  // Names stay off the screen (labels, search, list, card) while a name is being recalled or tested.
+  const namesHidden = recall !== null || (round !== null && round.mode === 'test' && !roundFinished(round));
   const [typed, setTyped] = useState('');
   const [alone, setAlone] = useState(false);
   const aloneSavedRef = useRef<ReadonlySet<string>>(new Set());
@@ -338,6 +346,15 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
   const [orientation, setOrientation] = useState<ViewPreset | 'free' | null>('front');
   const [thumbs, setThumbs] = useState<Partial<Record<'front' | 'back' | 'left', string>>>({});
   const [spread, setSpread] = useState(0);
+  // The study round (Task 178, redesign part 3): learn it / test it over the selected group, or find it.
+  const orientationRef = useRef(orientation);
+  orientationRef.current = orientation;
+  const [studyChoice, setStudyChoice] = useState<StudyChoice>('learn');
+  const [studyLocation, setStudyLocation] = useState<{ url: string; marks: ReadonlyMap<string, { x: number; y: number }>; word: string | null } | null>(null);
+  const studyStartRef = useRef(0);
+  const studyGroupRef = useRef<{ name: string; ids: string[] } | null>(null);
+  const studySavedHiddenRef = useRef<ReadonlySet<string>>(new Set());
+  const [touchKeys] = useState(usesTouch);
   // The ring round the selection and the leader line to the inspector card are moved by hand on every frame.
   const stageRef = useRef<HTMLDivElement>(null);
   const ringRef = useRef<HTMLDivElement>(null);
@@ -424,8 +441,8 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
   const toRestore = lazy ? lazyRestore(layers, hidden) : nextToRestore(layers, hidden);
   const layerGapNote = system?.key === WHOLE_BODY_KEY ? unavailableLayersNote(system.structures) : null;
   const labelIds = useMemo(
-    () => (labelsOn && !quiz && !recall ? labelsToShow(visible, selected) : []),
-    [labelsOn, quiz, recall, visible, selected],
+    () => (labelsOn && !quiz && !namesHidden ? labelsToShow(visible, selected) : []),
+    [labelsOn, quiz, namesHidden, visible, selected],
   );
   labelIdsRef.current = labelIds;
 
@@ -1237,7 +1254,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
   const pickStructure = useCallback(
     (id: string | null) => {
       // "name it" asks about the highlighted structure: a tap must not move the highlight (or announce a name).
-      if (recall) return;
+      if (recall || round) return;
       if (quiz && quiz.target) {
         if (!id) return;
         // Once the answer is shown or found, further clicks must not move the highlight off the target.
@@ -1252,7 +1269,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
       setSelected((current) => (id === null ? null : current === id ? current : id));
       if (id) setAnnounce(`selected ${names.get(id) ?? id}`);
     },
-    [quiz, recall, names, recordMiss],
+    [quiz, recall, round, names, recordMiss],
   );
 
   const onPointerDown = (e: ReactPointerEvent<HTMLCanvasElement>) => {
@@ -1275,7 +1292,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
     // mouse click, touch contact or pen-tip release can select a structure.
     if (!p || p.id !== e.pointerId || p.moved || e.button !== 0) return;
     // In quizzes, choose the nearest hit rather than favoring a previous selection.
-    if (recall) return;
+    if (recall || round) return;
     const id = sceneRef.current?.pick(e.clientX, e.clientY, quiz === null) ?? null;
     if (id && tapAction(mode, quiz !== null && quiz.target !== null) === 'hide') {
       // Hide mode: the tap hides the structure and selects nothing. Undo brings it back.
@@ -1371,6 +1388,29 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
     setSystemKey(key);
   };
 
+  // The asked structure is the highlighted one; "show nearby" brings the structures around it back, and off puts them away.
+  const studyTargetNow = round ? currentTarget(round) : null;
+  const studyNearbyNow = round?.nearby ?? false;
+  const studyActive = round !== null;
+  useEffect(() => {
+    const group = studyGroupRef.current;
+    const scene = sceneRef.current;
+    if (!studyActive || !group || !system) return;
+    if (studyTargetNow) setSelected(studyTargetNow);
+    const keep = new Set(group.ids);
+    const base = new Set(system.structures.map((structure) => structure.id).filter((id) => !keep.has(id)));
+    visibilityIntent.bump();
+    if (studyNearbyNow && studyTargetNow && scene) {
+      const boxes = boxesFromMeshes([...scene.boundsById()].map(([id, box]) => ({ id, box })));
+      const near = nearbyStructures(boxes, studyTargetNow, NEARBY_LIMIT).map((n) => n.id);
+      setHidden(expandNearby(base, near));
+    } else {
+      setHidden(base);
+    }
+    // Frame what is left showing, once the scene has taken the new visibility.
+    if (scene) window.requestAnimationFrame(() => sceneRef.current?.viewPreset(orientationRef.current === 'back' || orientationRef.current === 'left' ? orientationRef.current : 'front'));
+  }, [studyActive, studyTargetNow, studyNearbyNow, system, visibilityIntent]);
+
   // The ring and leader follow the selection while it can be seen and no test is hiding its name.
   const markedId = modelReady && selected !== null && foundSet.has(selected) && !hidden.has(selected) && !quiz && !recall ? selected : null;
   useEffect(() => {
@@ -1381,6 +1421,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
   // ── Quiz ──────────────────────────────────────────────────────────────────────────────────────────────────────────
   const quizPool = useMemo(() => tappableIds(visible, skinIds), [visible, skinIds]);
   const toggleQuiz = () => {
+    stopStudy();
     if (quiz) {
       setQuiz(null);
       setRecall(null);
@@ -1406,6 +1447,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
     setSelected(null);
   };
   const toggleRecall = () => {
+    stopStudy();
     if (recall) {
       stopRecall();
       return;
@@ -1626,7 +1668,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
 
   // ── Study tools on the name card and around it (Task 178, integration) ───────────────────────────────────────────
   const selectedIndex = selected && selectedStructure
-    ? groupIndex(system.structures, selected, selectedGroup, (structure) => structureTree(system, structure) === selectedTree)
+    ? groupIndex(system.structures, selected, selectedStructure.group, (structure) => structureTree(system, structure) === selectedTree)
     : null;
   const crumbs = selected
     ? breadcrumbRows(breadcrumb(system.structures, selected, selectedTree), system.structures, selected)
@@ -1637,6 +1679,69 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
   const reviewPool = reviewQuizPool(queued, foundSet);
   // The whole body is never a comparison: it is several models at once, past the per-model budget twice over.
   const compareOptions = system.key === WHOLE_BODY_KEY ? [] : systems.filter((s) => s.key !== system.key && s.key !== WHOLE_BODY_KEY && !s.model.layerFiles);
+
+  // ── Study round (learn it / test it / find it over the selected group) ───────────────────────────────────────────
+  const groupIds = selectedIndex ? selectedIndex.items.map((item) => item.id).filter((id) => foundSet.has(id)) : [];
+  const allBut = (keep: readonly string[]) => {
+    const kept = new Set(keep);
+    return new Set(system.structures.map((structure) => structure.id).filter((id) => !kept.has(id)));
+  };
+  const stopStudy = () => {
+    if (!round) return;
+    visibilityIntent.bump();
+    setHidden(studySavedHiddenRef.current);
+    setRound(null);
+    setStudyLocation(null);
+    studyGroupRef.current = null;
+    setSelected(null);
+  };
+  const beginStudy = () => {
+    const scene = sceneRef.current;
+    if (!scene || !ready || !selectedIndex || groupIds.length === 0) return;
+    setAnnounce('');
+    if (studyChoice === 'find') {
+      // The same "find it" as everywhere else, over this group: only structures a tap can reach are asked.
+      const shown = [...new Set([...visible, ...groupIds])];
+      const reachable = new Set(tappableIds(shown, skinIds));
+      const pool = groupIds.filter((id) => reachable.has(id));
+      if (pool.length === 0) {
+        setAnnounce('these structures cannot be tapped while other structures are showing. hide the others to practise them.');
+        return;
+      }
+      stopRecall();
+      changeVisibility((v) => ({ hidden: expandNearby(v.hidden, pool), faded: v.faded }));
+      setSelected(null);
+      setQuiz(startQuiz(pool, Math.random));
+      setAnnounce(`find it: ${pool.length} structures from this group.`);
+      return;
+    }
+    stopRecall();
+    setQuiz(null);
+    setLabelsOn(false);
+    // The location picture is taken now, with everything the student was looking at, before the group is set apart.
+    const preset = orientation === 'back' || orientation === 'left' ? orientation : 'front';
+    const url = scene.thumbnail(preset, 136, 216);
+    setStudyLocation(url ? { url, marks: scene.thumbnailMarks(preset, 136, 216, groupIds), word: VIEW_WORDS[preset] } : null);
+    studySavedHiddenRef.current = hidden;
+    studyGroupRef.current = { name: selectedIndex.group, ids: groupIds };
+    visibilityIntent.bump();
+    setHidden(allBut(groupIds));
+    studyStartRef.current = Date.now();
+    setRound(startRound(studyChoice, groupIds));
+  };
+  const studyTarget = round ? currentTarget(round) : null;
+  const officialOf = (id: string) => names.get(id) ?? id;
+  const studyStep = (change: (current: StudyRound, id: string) => StudyRound) =>
+    setRound((current) => {
+      const id = current ? currentTarget(current) : null;
+      return current && id ? change(current, id) : current;
+    });
+  const againStudy = () => {
+    const group = studyGroupRef.current;
+    if (!group || !round) return;
+    studyStartRef.current = Date.now();
+    setRound(startRound(round.mode, group.ids));
+  };
 
   /** Reveals the structures nearest the selected one (by box centers), as one undoable change. */
   const showNearby = () => {
@@ -1680,6 +1785,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
   /** A "find it" round over the review queue only: every queued structure is shown first, then asked about. */
   const startReviewQuiz = () => {
     if (reviewPool.length === 0 || !ready) return;
+    stopStudy();
     stopRecall();
     changeVisibility((v) => ({ hidden: expandNearby(v.hidden, reviewPool), faded: v.faded }));
     setSelected(null);
@@ -1817,7 +1923,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
             </p>
           </div>
           <div className="flex min-w-0 flex-1 items-center justify-end gap-2">
-            {!recall && (
+            {!namesHidden && (
               <div className="min-w-0 flex-1 sm:max-w-sm">
                 <label htmlFor="anatomy-search" className="sr-only">find a structure by name or source ID</label>
                 <input
@@ -1886,7 +1992,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
             <div className="lab-decor lab-ring lab-ring-soft bottom-12 left-1/2 hidden h-20 w-1/2 -translate-x-1/2 md:block" aria-hidden="true" />
             <div className="lab-decor lab-ring lab-ring-faint bottom-8 left-1/2 hidden h-28 w-2/3 -translate-x-1/2 md:block" aria-hidden="true" />
             <div className="lab-decor lab-scale top-1/6 left-1/4 hidden h-(--lab-scale-height) w-5 lg:block" aria-hidden="true" />
-            <div className={compareSystem ? 'grid h-full grid-cols-2 pt-2 pb-32 lg:pb-28 lg:pr-(--lab-inspector-clear) lg:pl-(--lab-rail-clear)' : 'h-full pt-2 pb-32 lg:pb-28'} data-testid="anatomy-views-row">
+            <div className={`${compareSystem ? 'grid h-full grid-cols-2 pt-2 lg:pr-(--lab-inspector-clear) lg:pl-(--lab-rail-clear)' : 'h-full pt-2'} ${round ? 'pb-8 lg:pb-(--lab-round-clear)' : 'pb-32 lg:pb-28'}`} data-testid="anatomy-views-row">
               <div className="relative h-full">
                 <canvas
                   ref={canvasRef}
@@ -1999,6 +2105,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
           )}
             </div>
 
+            {!round && (
             <div className="lab-glass absolute inset-x-0 bottom-3 z-10 mx-auto flex w-fit max-w-full items-center gap-3 p-2 pr-4" role="group" aria-label="bottom bar">
               <button
                 type="button"
@@ -2034,7 +2141,25 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
                 more
               </button>
             </div>
+            )}
           </div>
+
+          {round && (
+            <div className="lab-glass relative mx-3 mt-3 p-4 lg:absolute lg:inset-x-auto lg:right-(--lab-inspector-clear) lg:bottom-3 lg:left-(--lab-rail-clear) lg:z-10 lg:m-0" data-testid="anatomy-round-stage">
+              <StudyCells
+                round={round}
+                official={studyTarget ? officialOf(studyTarget) : null}
+                touch={touchKeys}
+                onLetter={(key) => studyStep((round, id) => typeLetter(round, key, officialOf(id)))}
+                onBackspace={() => studyStep((round, id) => roundBackspace(round, officialOf(id)))}
+                onHint={() => studyStep((round, id) => hintLetter(round, officialOf(id)))}
+                onShow={() => studyStep((round) => showAnswer(round))}
+                onSkip={() => studyStep((round) => skipQuestion(round))}
+                onNext={() => studyStep((round) => nextQuestion(round))}
+                onAgain={againStudy}
+              />
+            </div>
+          )}
 
           <div className="flex flex-wrap gap-2 p-3 lg:hidden" role="group" aria-label="panels">
             {([['orientation', 'orientation'], ['systems', 'body systems'], ['structures', 'structures']] as const).map(([key, label]) => (
@@ -2190,13 +2315,13 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
           </div>
 
           <div className="contents lg:pointer-events-none lg:absolute lg:inset-y-5 lg:right-5 lg:z-10 lg:flex lg:w-(--lab-inspector-width) lg:flex-col lg:gap-3 lg:overflow-y-auto">
-          {selectedName && !quiz && !recall && (
+          {selectedName && !quiz && !namesHidden && (
             <section className="lab-glass mx-3 mb-3 p-4 lg:pointer-events-auto lg:m-0" aria-labelledby="anatomy-name-card">
               <p className="lab-cap flex justify-between gap-3"><span>selected structure</span><span className="lab-id" data-testid="anatomy-card-id">{selected}</span></p>
               <h2 id="anatomy-name-card" className="lab-name">{selectedName}</h2>
               {selectedStructure && (
                 <dl data-testid="anatomy-card-rows">
-                  {inspectorRows(selectedStructure, system.title, system.model.release, selectedGroup).map((row) => (
+                  {inspectorRows(selectedStructure, system.title, system.model.release, selectedStructure.group).map((row) => (
                     <div key={row.label} className="lab-kv"><dt className="lab-cap">{row.label}</dt><dd className="m-0 text-right">{row.value}</dd></div>
                   ))}
                 </dl>
@@ -2285,7 +2410,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
               </div>
             </section>
           )}
-          {selectedName && !quiz && !recall && selectedIndex && (
+          {selectedName && !quiz && !namesHidden && !round && selectedIndex && (
             <div role="group" className="lab-glass mx-3 mb-3 p-4 lg:pointer-events-auto lg:m-0" aria-labelledby="anatomy-index-heading" data-testid="anatomy-index">
               <h2 id="anatomy-index-heading" className="lab-cap">{indexHeading(selectedIndex)}</h2>
               <ul className="lab-index mt-2 space-y-1">
@@ -2313,11 +2438,36 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
               </ul>
             </div>
           )}
-        <section id="lab-panel-structures" className="lab-glass mx-3 mb-3 hidden space-y-3 p-4 data-open:block lg:pointer-events-auto lg:m-0 lg:flex lg:min-h-0 lg:flex-1 lg:flex-col" data-open={panels.structures || undefined} aria-labelledby="anatomy-list-heading">
+          {round ? (
+            <StudyRoundSide
+              round={round}
+              names={names}
+              groupName={studyGroupRef.current?.name ?? ''}
+              startedAt={studyStartRef.current}
+              onClose={stopStudy}
+              onFirstLetters={(on) => studyStep((round) => setFirstLetters(round, on))}
+              onNearby={(on) => studyStep((round) => setNearby(round, on))}
+              thumb={studyLocation?.url}
+              viewWord={studyLocation?.word ?? null}
+              dot={studyTarget ? (studyLocation?.marks.get(studyTarget) ?? null) : null}
+            />
+          ) : (
+            selectedName && !quiz && !namesHidden && selectedIndex && (
+              <StudyEntryPanel
+                choice={studyChoice}
+                onChoice={setStudyChoice}
+                count={groupIds.length}
+                disabled={!ready || groupIds.length === 0}
+                onBegin={beginStudy}
+                groupName={selectedIndex.group}
+              />
+            )
+          )}
+        <section id="lab-panel-structures" className="lab-glass mx-3 mb-3 hidden space-y-3 p-4 data-open:block lg:pointer-events-auto lg:m-0 lg:flex lg:min-h-(--lab-list-min) lg:flex-1 lg:flex-col" data-open={panels.structures || undefined} aria-labelledby="anatomy-list-heading">
           <h2 id="anatomy-list-heading" className="lab-cap">structures</h2>
-          {recall ? (
+          {namesHidden ? (
             <p className="text-sm text-ink-soft" data-testid="anatomy-list-paused">
-              the list is put away during name it, so it doesn't give the answer away. stop name it to see it again.
+              the list is put away while a name is hidden, so it doesn't give the answer away. stop {recall ? 'name it' : 'the round'} to see it again.
             </p>
           ) : (<>
           <p className="text-sm text-ink-soft" aria-live="polite">

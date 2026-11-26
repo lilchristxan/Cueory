@@ -345,4 +345,143 @@
   .lab-leader line[data-on] {
     display: block;
   }
+
+  /* The study round (Task 178, redesign part 3). */
+  .lab-seg {
+    display: flex;
+    gap: calc(var(--spacing) * 1);
+    padding: calc(var(--spacing) * 1);
+    border-radius: var(--radius-pill);
+    border: var(--lab-edge) solid var(--lab-edge-dim);
+    background: var(--lab-well);
+  }
+  .lab-seg button {
+    flex: 1;
+    min-height: calc(var(--spacing) * 11);
+    border-radius: var(--radius-pill);
+    border: var(--lab-edge) solid transparent;
+    background: transparent;
+    color: var(--lab-sand);
+    font-size: var(--lab-button-size);
+    cursor: pointer;
+  }
+  .lab-seg button[aria-pressed='true'] {
+    background: var(--lab-copper-fill);
+    color: var(--lab-charcoal);
+    font-weight: 700;
+    border-color: var(--lab-copper-glow);
+  }
+  .lab-switch {
+    gap: calc(var(--spacing) * 3);
+  }
+  .lab-switch[aria-checked='true'] {
+    border-color: var(--lab-copper-glow);
+    background: var(--lab-row-on);
+  }
+  .lab-stat {
+    display: flex;
+    align-items: baseline;
+    gap: calc(var(--spacing) * 3);
+    margin: 0;
+    padding: calc(var(--spacing) * 2) calc(var(--spacing) * 4);
+    border-radius: var(--radius-pill);
+    border: var(--lab-edge) solid var(--lab-edge-dim);
+    font-variant-numeric: tabular-nums;
+  }
+  .lab-row[data-state='done'] {
+    color: var(--lab-ivory);
+  }
+  .lab-row[data-state='now'] {
+    border-color: var(--lab-ring);
+    background: var(--lab-row-on);
+    color: var(--lab-ivory);
+  }
+  .lab-row[data-state='later'] .lab-state {
+    letter-spacing: var(--lab-caption-tracking);
+  }
+  .lab-location-frame {
+    position: relative;
+    width: var(--lab-thumb-width);
+    margin-top: calc(var(--spacing) * 2);
+  }
+  .lab-location-dot {
+    position: absolute;
+    display: block;
+    width: var(--lab-location-dot);
+    height: var(--lab-location-dot);
+    margin: calc(var(--lab-location-dot) / -2) 0 0 calc(var(--lab-location-dot) / -2);
+    border-radius: 50%;
+    border: calc(var(--lab-edge) * 2) solid var(--lab-copper-glow);
+    background: var(--lab-charcoal);
+  }
+  .lab-cells {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: calc(var(--spacing) * 2) var(--lab-word-gap);
+    padding: calc(var(--spacing) * 2);
+    border-radius: var(--lab-radius-row);
+  }
+  .lab-word {
+    display: flex;
+    gap: var(--lab-cell-gap);
+  }
+  .lab-cell {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--lab-cell-size-small);
+    height: var(--lab-cell-size);
+    border-radius: var(--lab-radius-row);
+    border: var(--lab-edge) solid var(--lab-edge-dim);
+    border-bottom-width: calc(var(--lab-edge) * 3);
+    background: var(--lab-well);
+    color: var(--lab-ivory);
+    font-size: var(--lab-cell-size-large);
+    font-weight: 700;
+  }
+  .lab-cell[data-from='first'],
+  .lab-cell[data-from='hint'] {
+    border-style: dashed;
+    color: var(--lab-copper-glow);
+  }
+  .lab-cell[data-from='shown'] {
+    color: var(--lab-sand);
+  }
+  .lab-cell[data-current] {
+    border-color: var(--lab-copper-glow);
+    border-bottom-color: var(--lab-copper-shine);
+  }
+  .lab-cell[data-wrong]:not([data-from='empty']) {
+    border-style: double;
+    border-width: calc(var(--lab-edge) * 3);
+  }
+  .lab-cells:focus-visible {
+    outline: calc(var(--lab-edge) * 2) solid var(--lab-copper-shine);
+    outline-offset: calc(var(--lab-edge) * 2);
+  }
+  .lab-keys {
+    display: grid;
+    gap: calc(var(--spacing) * 1);
+    justify-items: center;
+  }
+  .lab-key-row {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: calc(var(--spacing) * 1);
+  }
+  .lab-key {
+    min-width: calc(var(--spacing) * 11);
+    min-height: calc(var(--spacing) * 11);
+    border-radius: var(--lab-radius-row);
+    border: var(--lab-edge) solid var(--lab-ring);
+    background: var(--lab-well);
+    color: var(--lab-ivory);
+    font-size: var(--lab-button-size);
+    cursor: pointer;
+  }
+  .lab-key-wide {
+    padding: 0 calc(var(--spacing) * 5);
+  }
 }

@@ -1724,7 +1724,15 @@
   --lab-id-size: 0.75em;           /* source ids (they are letters and digits, so Lato at a small size) */
   --lab-selring-size: 3.5rem;      /* the ring round the selected structure */
   --lab-leader-width: 0.0625rem;   /* the leader line from the ring to the card */
-  --lab-index-height: 14rem;       /* the index list scrolls inside this height */
+  --lab-list-min: 16rem;           /* the structure list never shrinks below this; the rail scrolls instead */
+  --lab-index-height: 10rem;       /* the index list scrolls inside this height */
+  --lab-cell-size: 2.75rem;        /* the height of an answer cell */
+  --lab-study-clear: 17rem;        /* room under the model for the answer cells while a round runs */
+  --lab-cell-gap: 0.25rem;         /* between cells of a word */
+  --lab-word-gap: 1.25rem;         /* between words */
+  --lab-cell-size-small: 2.25rem;  /* the width of an answer cell */
+  --lab-cell-size-large: 1.5em;    /* the letter in a cell */
+  --lab-location-dot: 0.75rem;     /* the dot on the location picture */
   --lab-page-max: 90rem;           /* the lab's page is wider than the reading width: it is an instrument, not text */
   --lab-rail-width: 16.5rem;       /* orientation, systems and layers */
   --lab-inspector-width: 22.5rem;  /* selected structure and the structure list */
