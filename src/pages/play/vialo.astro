@@ -3,6 +3,8 @@ import Layout from '../../layouts/Layout.astro';
 import GamePage from '../../components/GamePage.astro';
 import VialoTitle from '../../components/VialoTitle.astro';
 import VialoGame from '../../islands/VialoGame';
+import VialoPrintSheet from '../../components/VialoPrintSheet.astro';
+import VialoPrint from '../../islands/VialoPrint';
 import { dailyGames, gamePagesBareHeader } from '../../config/games';
 import { pilloSamples } from '../../config/gamesamples';
 
@@ -17,4 +19,7 @@ const samples = await pilloSamples();
     <noscript><p>{game.name} needs JavaScript.</p></noscript>
   </section>
 </GamePage>
+<VialoPrintSheet />
+<VialoPrint client:only="react" puzzles={samples} />
+<noscript><p>printing the {game.name} sheet needs JavaScript.</p></noscript>
 </Layout>
