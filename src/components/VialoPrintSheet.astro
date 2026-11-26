@@ -1,0 +1,66 @@
+---
+/**
+ * vialo's paper sheet (Christian, 2026-11-25), a print-only block on the game page: hidden on screen, and when the page
+ * is printed only this prints, as exactly two pages. Page 1 is the guesser's copy (branding, empty pill pack, alphabet),
+ * page 2 the keeper's copy (how to play, a fold line, the word of the day). The word is NOT in the markup: it is
+ * filled in at print time, and only when printing is allowed (src/islands/VialoPrint.tsx, src/scripts/printsheet.ts).
+ * Text: src/config/vialo-print.ts. Look: src/styles/print-sheet.css (shared by every game's sheet).
+ */
+import PrintSheetPage from './PrintSheetPage.astro';
+import { vialoSheet as t } from '../config/vialo-print';
+import { VIALO_KEY_ROWS } from '../islands/vialokeys';
+import { GUESSES, WORD_LENGTH } from '../islands/pulse';
+import '../styles/print-sheet.css';
+
+const rows = Array.from({ length: GUESSES }, (_, row) => row);
+const columns = Array.from({ length: WORD_LENGTH }, (_, column) => column);
+// The current vialo artwork (the same files the /play hub shows).
+const wordmark = '/design/games-v2/assets/vialo-wordmark-oxblood-v3.svg';
+const icon = '/design/games-v2/assets/vialo-icon-silver-oxblood.svg';
+---
+<div class="sheet-print" data-print-sheet="vialo" data-testid="print-sheet">
+  <PrintSheetPage page={1} name={t.name} icon={icon} wordmark={wordmark} wordmarkWidth={4326} wordmarkHeight={1620} label={t.copyGuesser} caption={t.caption} footer={t.footerOne} testid="sheet-page-1">
+    <div class="sheet-pack" role="img" aria-label={t.boardLabel} data-testid="sheet-board">
+      {rows.map(() => columns.map(() => <span class="sheet-cell"><span class="sheet-well"></span></span>))}
+    </div>
+    <div class="sheet-keys" role="img" aria-label={t.keysLabel} data-testid="sheet-keys">
+      {VIALO_KEY_ROWS.map((row) => (
+        <div class="sheet-key-row" aria-hidden="true">
+          {Array.from(row, (letter) => <span class="sheet-key" data-testid="sheet-key">{letter}</span>)}
+        </div>
+      ))}
+    </div>
+  </PrintSheetPage>
+
+  <PrintSheetPage page={2} name={t.name} icon={icon} wordmark={wordmark} wordmarkWidth={4326} wordmarkHeight={1620} label={t.copyKeeper} caption={t.keeperLine} footer={t.footerTwo} testid="sheet-page-2">
+    <h2 class="sheet-heading">{t.howHeading}</h2>
+    <ol class="sheet-steps">
+      {t.steps.map((step, index) => (
+        <li>
+          {step}
+          {index === t.markStep && (
+            <ul class="sheet-legend" data-testid="sheet-legend">
+              {t.marks.map((mark) => (
+                <li>
+                  <span class={`sheet-sample sheet-mark-${mark.kind}`} role="img" aria-label={mark.label}>
+                    <span aria-hidden="true">{t.sampleLetter}</span>
+                  </span>
+                  <span aria-hidden="true">{mark.words}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </li>
+      ))}
+    </ol>
+    <p class="sheet-fold" data-testid="sheet-fold">{t.foldLabel}</p>
+    <div class="sheet-keeper" data-keeper="locked" data-testid="sheet-keeper">
+      <p class="sheet-locked">{t.locked}</p>
+      <div class="sheet-reveal">
+        <p class="sheet-small">{t.wordLabel}</p>
+        <p class="sheet-word display" data-keeper-word></p>
+        <p class="sheet-small" data-keeper-date></p>
+      </div>
+    </div>
+  </PrintSheetPage>
+</div>
