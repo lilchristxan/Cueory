@@ -238,7 +238,7 @@ test.describe('printing an unfinished game', () => {
       await held;
       await route.continue();
     });
-    await page.goto('/play/vialo#print');
+    await page.goto('/play/vialo#print', { waitUntil: 'domcontentloaded' });
     await expect.poll(() => asked).toBe(true);
     await expect(warning(page)).toBeVisible();
     await warning(page).getByRole('button', { name: 'print anyway' }).click();
@@ -374,7 +374,7 @@ test('with BOTH the Frame controls and the print island delayed, one press print
   const islandHeld = new Promise<void>((resolve) => { releaseIsland = resolve; });
   await page.route('**/_astro/GameFrameControls*.js', async (route) => { await frameHeld; await route.continue(); });
   await page.route('**/_astro/VialoPrint*.js', async (route) => { await islandHeld; await route.continue(); });
-  await page.goto('/play/vialo');
+  await page.goto('/play/vialo', { waitUntil: 'domcontentloaded' });
   releaseFrame();
   const button = page.getByTestId('game-frame-print');
   await expect(button).toBeVisible();

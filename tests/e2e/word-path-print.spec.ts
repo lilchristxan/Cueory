@@ -253,7 +253,7 @@ test.describe('printing an unfinished board', () => {
       await held;
       await route.continue();
     });
-    await page.goto('/play/piccline');
+    await page.goto('/play/piccline', { waitUntil: 'domcontentloaded' });
     const button = page.getByTestId('game-frame-print');
     await expect(button).toBeVisible();
     await expect.poll(() => asked).toBe(true);
@@ -280,7 +280,7 @@ test.describe('printing an unfinished board', () => {
     const islandHeld = new Promise<void>((resolve) => { releaseIsland = resolve; });
     await page.route('**/_astro/GameFrameControls*.js', async (route) => { await frameHeld; await route.continue(); });
     await page.route('**/_astro/PicclineForfeit*.js', async (route) => { await islandHeld; await route.continue(); });
-    await page.goto('/play/piccline');
+    await page.goto('/play/piccline', { waitUntil: 'domcontentloaded' });
     releaseFrame();
     const button = page.getByTestId('game-frame-print');
     await expect(button).toBeVisible();
@@ -300,7 +300,7 @@ test.describe('printing an unfinished board', () => {
       await held;
       await route.continue();
     });
-    await page.goto('/play/piccline');
+    await page.goto('/play/piccline', { waitUntil: 'domcontentloaded' });
     const button = page.getByTestId('game-frame-print');
     await expect(button).toBeVisible();
     await button.click();

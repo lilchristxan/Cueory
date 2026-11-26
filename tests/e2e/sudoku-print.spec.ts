@@ -299,7 +299,7 @@ test('a press before the print island has loaded is remembered and answered once
     await held;
     await route.continue();
   });
-  await page.goto('/play/sudoku');
+  await page.goto('/play/sudoku', { waitUntil: 'domcontentloaded' });
   const button = page.getByTestId('game-frame-print');
   await expect(button).toBeVisible();
   await expect.poll(() => asked).toBe(true);
@@ -352,7 +352,7 @@ test('switching level while the answers load prints, and forfeits, only the leve
     await held;
     await route.continue();
   });
-  await page.goto('/play/sudoku');
+  await page.goto('/play/sudoku', { waitUntil: 'domcontentloaded' });
   await ready(page);
   await press(page);
   await warning(page).getByRole('button', { name: 'print anyway' }).click();
@@ -381,7 +381,7 @@ test('a forfeit confirmed before the game has loaded still ends that level once 
     await held;
     await route.continue();
   });
-  await page.goto('/play/sudoku#print');
+  await page.goto('/play/sudoku#print', { waitUntil: 'domcontentloaded' });
   await expect.poll(() => asked).toBe(true);
   await expect(warning(page)).toBeVisible();
   await warning(page).getByRole('button', { name: 'print anyway' }).click();
@@ -420,7 +420,7 @@ test('with BOTH the Frame controls and the print island delayed, one press print
   const islandHeld = new Promise<void>((resolve) => { releaseIsland = resolve; });
   await page.route('**/_astro/GameFrameControls*.js', async (route) => { await frameHeld; await route.continue(); });
   await page.route('**/_astro/SudokuPrint*.js', async (route) => { await islandHeld; await route.continue(); });
-  await page.goto('/play/sudoku');
+  await page.goto('/play/sudoku', { waitUntil: 'domcontentloaded' });
   releaseFrame();
   const button = page.getByTestId('game-frame-print');
   await expect(button).toBeVisible();
