@@ -4,6 +4,8 @@ import { useEffect, useId, useLayoutEffect, useRef, useState, type KeyboardEvent
 import { dayLabel } from './daily';
 import { localDay, reportRound } from './gameresults';
 import { FORFEIT_EVENT, rememberedForfeits } from '../scripts/printgate';
+import { printGame } from './gameprint';
+import { usePrintRequest } from './useprintrequest';
 import { useGameHelp } from './GameHelp';
 import GameHeader from './GameHeader';
 import { playGameCue } from './gamesound';
@@ -14,7 +16,7 @@ import { shake } from './SutureGame';
 import { loadPicclineSave, savePicclineBoard } from './picclinesave';
 import type { Cell } from './suture';
 import {
-  announceProgress, backspace, cellView, cuesUsed, firstWordFound, clearPicked, extend, hintsLeft, MIN_WORD, parsePathPuzzle, pathCellLabel, pathDone, pathShareLine,
+  announceProgress, backspace, printBoard, cellView, cuesUsed, firstWordFound, clearPicked, extend, hintsLeft, MIN_WORD, parsePathPuzzle, pathCellLabel, pathDone, pathShareLine,
   pickedWord, specialFoundFirst, startPath, submit, submitInWords, takeHint, WORDS_PER_HINT, wordsToNextHint,
   type CellLook, type PathState, type SuturePathPuzzle,
 } from './suturepath';
@@ -23,6 +25,8 @@ interface Props {
   puzzle: SuturePathPuzzle;
   name: string;
   framed?: boolean;
+  /** True where the page has piccline's own print sheet (/play/piccline); its print entry answers the Frame's printer. The older word path route keeps the older print. */
+  printable?: boolean;
 }
 const printFoot = new URL(site.url).host;
 const button = 'min-h-11 min-w-11 rounded-md border border-control bg-page px-4 py-2 text-ink disabled:opacity-50';
@@ -101,7 +105,13 @@ function cellAt(board: HTMLElement | null, x: number, y: number): Cell | null {
   return dx * dx + dy * dy <= 0.6 ? cellOf(target) : null;
 }
 
-export function PathBoard({ puzzle, name, framed = false }: Props) {
+/** Answers the Frame's printer on the older word path route only; the hook lives here so it registers only where it is needed. */
+function LegacyPrint({ handler }: { handler: () => void }) {
+  usePrintRequest('suture', handler);
+  return null;
+}
+
+export function PathBoard({ puzzle, name, framed = false, printable = false }: Props) {
   const [today] = useState(() => new Date());
   // A board played earlier today on this device comes back as it was (a finished one stays finished); a new day starts fresh.
   const [restored] = useState(() => loadPicclineSave(puzzle, localDay(today)));
@@ -127,6 +137,7 @@ export function PathBoard({ puzzle, name, framed = false }: Props) {
   const done = pathDone(state, puzzle);
   // Set below: once a print forfeits the day, the board on screen can no longer be played.
   const [forfeited, setForfeited] = useState(false);
+  const [printNote, setPrintNote] = useState('');
   const locked = done || forfeited;
   const total = puzzle.words.length;
   const shared = pathShareLine(state, puzzle, dayLabel(today), name);
@@ -320,6 +331,18 @@ export function PathBoard({ puzzle, name, framed = false }: Props) {
     catch { setCopied(shared); }
   };
 
+  /** The older word path route (no print sheet): printing an unfinished board counts as using a cue (once), and the player is told so in one line. */
+  const printPuzzle = () => {
+    const next = printBoard(current.current, puzzle);
+    if (next !== current.current) {
+      apply(next);
+      const note = 'printing before you finish counts as a cue, so today won\'t count as solved without cues.';
+      setPrintNote(note);
+      setSaid(note);
+    }
+    printGame('suture');
+  };
+
   // "print anyway" on an unfinished board (usegameprint.ts): today is already stored as not solved, so the board on screen
   // ends too (not saved: a reload starts a fresh board, and the stored first result of the day stands).
   useEffect(() => {
@@ -374,6 +397,8 @@ export function PathBoard({ puzzle, name, framed = false }: Props) {
         name={name}
         help={howToPlay}
       />
+      {printNote && <p className="mt-2 text-center text-sm text-ink-soft" data-testid="suture-print-note" data-print-hidden>{printNote}</p>}
+      {!printable && <LegacyPrint handler={printPuzzle} />}
       {forfeited && <p className="mt-2 text-center text-sm text-ink-soft" data-testid="suture-forfeit-note" data-print-hidden>you printed before finishing, so today counts as not solved.</p>}
       <div className="wordpath-panel -mx-(--wordpath-bleed) mt-6 sm:mx-0 sm:mt-0 sm:px-(--spacing-stack)">
       <div
@@ -506,9 +531,9 @@ export function PathBoard({ puzzle, name, framed = false }: Props) {
 }
 
 /** A board puzzle from the page, checked again here so a broken one shows a plain message instead of a broken game. */
-export default function SuturePathBoard({ puzzle, name, framed = false }: Props) {
+export default function SuturePathBoard({ puzzle, name, framed = false, printable = false }: Props) {
   try {
     const parsed = parsePathPuzzle(puzzle);
-    return <PathBoard key={JSON.stringify(parsed)} puzzle={parsed} name={name} framed={framed} />;
+    return <PathBoard key={JSON.stringify(parsed)} puzzle={parsed} name={name} framed={framed} printable={printable} />;
   } catch { return <p role="alert">this puzzle could not be loaded. please try again later.</p>; }
 }

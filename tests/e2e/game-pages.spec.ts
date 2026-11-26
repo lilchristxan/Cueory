@@ -120,7 +120,8 @@ test('a finished vialo on its own page opens the result dialog and keeps stats o
 for (const game of [
   { path: '/play/sudoku', name: 'sudoku', testId: 'sudoku', print: 'print' },
   { path: '/play/crossword', name: 'crossword', testId: 'cueword', print: 'print' },
-  // piccline prints its own two-page sheet from /play/piccline (word-path-print.spec.ts); the older /play/word-path route has no print button.
+  // piccline prints its own two-page sheet from /play/piccline (word-path-print.spec.ts); the older /play/word-path route keeps the older print.
+  { path: '/play/word-path', name: 'piccline', testId: 'suture', print: 'print' },
 ] as const) {
   test(`printing ${game.name} from its own page prints only the game`, async ({ page }) => {
     await page.addInitScript(() => {

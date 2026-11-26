@@ -169,9 +169,9 @@ const currentConfig: GameConfig = configs[key] ?? configs.pulse!;
 const controlName = game === 'vialo' ? 'vialo' : key === 'suture' ? 'piccline' : currentConfig.name;
 
 // The games that can print from their own page get the Frame's printer button (it announces cueory:print with this id).
-// Vialo and piccline print their own two-page sheets (their print islands answer); sudoku and crossword print what they printed before.
-// The older word path route has no sheet, so no printer.
-const printId = game === 'vialo' ? 'vialo' : key === 'triage' ? 'sudoku' : key === 'cueword' ? 'crossword' : key === 'suture' && game === 'piccline' ? 'suture' : undefined;
+// Vialo and piccline print their own two-page sheets (their print islands answer); sudoku and crossword print what they printed before,
+// and so does the older word path route.
+const printId = game === 'vialo' ? 'vialo' : key === 'triage' ? 'sudoku' : key === 'cueword' ? 'crossword' : key === 'suture' ? 'suture' : undefined;
 
 const activeTagline = propTagline ?? currentConfig.defaultTagline;
 const activeSteps = propHowSteps ?? currentConfig.defaultSteps;

@@ -332,11 +332,14 @@ test.describe('printing an unfinished board', () => {
   });
 });
 
-test('the older word path route has no print button', async ({ page }) => {
+test('the older word path route keeps its older print (the Frame printer, no two-page sheet)', async ({ page }) => {
   await page.goto('/play/word-path');
   await expect(game(page)).toBeVisible();
-  await expect(page.getByTestId('game-frame-print')).toHaveCount(0);
+  await expect(page.getByTestId('game-frame-print')).toBeVisible();
   await expect(page.getByTestId('print-sheet')).toHaveCount(0);
+  await page.getByTestId('game-frame-print').click();
+  await expect.poll(() => printed(page)).toBe(1);
+  await expect(page.getByTestId('suture-print-note')).toHaveCount(1);
 });
 
 test.describe('from /play', () => {
