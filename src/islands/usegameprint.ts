@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { loadStats, localDay } from './gameresults';
 import { browserStorage } from '../scripts/storage';
-import { FORFEIT_EVENT, PRINT_EVENT, claimPrint, isFinished, printAnyway, requestPrint, type PrintGame } from '../scripts/printgate';
+import { PRINT_EVENT, announceForfeit, claimPrint, isFinished, printAnyway, requestPrint, type PrintGame } from '../scripts/printgate';
 import { sheetImagesReady } from '../scripts/printsheet';
 
 /** How long printing stays switched off if the browser never says the print is over. */
@@ -19,8 +19,11 @@ export interface GamePrintOptions {
   finished?: (day: string) => boolean;
   /** Extra detail sent with the forfeit event (sudoku names the level). */
   forfeitDetail?: () => Record<string, unknown>;
-  /** Puts today's answers into the sheet. Called only when printing is allowed, and finished before the print opens. */
-  prepare: (now: Date) => void | Promise<void>;
+  /**
+   * Puts today's answers into the sheet. `answers` is true only when a finished or forfeited result was actually
+   * confirmed for this print; when results cannot be read or kept (storage blocked) the sheet still prints, without answers.
+   */
+  prepare: (now: Date, answers: boolean) => void | Promise<void>;
   /** Takes the answers out again once the print is over (or on any failure). */
   release: () => void;
 }
@@ -38,6 +41,8 @@ export function useGamePrint(options: GamePrintOptions) {
   const [error, setError] = useState('');
   const opener = useRef<Element | null>(null);
   const busy = useRef(false);
+  // Set only when this print's finish-or-forfeit gate was confirmed, so unreadable results can never reveal the answers.
+  const answersOk = useRef(false);
   const latest = useRef(options);
   latest.current = options;
 
@@ -51,7 +56,7 @@ export function useGamePrint(options: GamePrintOptions) {
       busy.current = false;
     };
     try {
-      await latest.current.prepare(new Date());
+      await latest.current.prepare(new Date(), answersOk.current);
       await sheetImagesReady();
       window.addEventListener('afterprint', done, { once: true });
       // Some browsers never send afterprint: let go after two minutes so printing cannot stay switched off.
@@ -67,7 +72,9 @@ export function useGamePrint(options: GamePrintOptions) {
     const { game } = latest.current;
     const day = localDay(new Date());
     const saved = loadStats(browserStorage(), day);
-    requestPrint({ finished: latest.current.finished ? latest.current.finished(day) : isFinished(saved.stats, game, day), keepsResults: saved.on }, () => void print(), () => {
+    const finished = saved.on && (latest.current.finished ? latest.current.finished(day) : isFinished(saved.stats, game, day));
+    answersOk.current = finished;
+    requestPrint({ finished, keepsResults: saved.on }, () => void print(), () => {
       busy.current = true;
       setError('');
       opener.current = document.activeElement;
@@ -109,7 +116,8 @@ export function useGamePrint(options: GamePrintOptions) {
     const { game, forfeitTries } = latest.current;
     const day = localDay(new Date());
     const ok = printAnyway(browserStorage(), game, day, forfeitTries, () => {
-      window.dispatchEvent(new CustomEvent(FORFEIT_EVENT, { detail: { ...latest.current.forfeitDetail?.(), game, day } }));
+      answersOk.current = true;
+      announceForfeit(game, day, latest.current.forfeitDetail?.());
       setWarning(false);
       busy.current = false;
       void print();

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { browserStorage } from '../scripts/storage';
-import { FORFEIT_EVENT, sendPrint } from '../scripts/printgate';
+import { FORFEIT_EVENT, rememberedForfeits, sendPrint } from '../scripts/printgate';
 import { GameHelpButton, GameHelpDialog, useGameHelp } from './GameHelp';
 import { gameName } from '../config/games';
 import { deleteStats, forgetHeldRounds, localDay, reportStatsChanged, showResultCard, sudokuResultCard } from './gameresults';
@@ -177,6 +177,9 @@ export default function SudokuGame({ framed = false }: { framed?: boolean } = {}
         setPaused(false);
       }
     };
+    // A forfeit confirmed before this game was listening is remembered on the page (printgate.ts): apply it now.
+    const earlier = rememberedForfeits('triage', day).filter((value): value is SudokuLevel => value === 'easy' || value === 'medium' || value === 'hard');
+    if (earlier.length > 0) setLostLevels((current) => new Set([...current, ...earlier]));
     window.addEventListener(FORFEIT_EVENT, onForfeit);
     return () => window.removeEventListener(FORFEIT_EVENT, onForfeit);
   }, [day]);

@@ -58,6 +58,30 @@ export const PRINT_EVENT = 'cueory:print';
 /** Sent on `window` after a forfeit (detail: { game, day }), so the game on screen ends as lost for that day. */
 export const FORFEIT_EVENT = 'cueory:game-forfeited';
 
+const FORFEIT_MEMORY_ATTR = 'data-print-forfeits';
+
+/**
+ * Announces a forfeit ("print anyway" on an unfinished game): remembers it on the page for this visit and sends
+ * FORFEIT_EVENT. A game's board can load after the print entry, so it also reads the memory when it starts
+ * (`rememberedForfeits`); a forfeit confirmed before the board is listening is never lost.
+ */
+export function announceForfeit(game: PrintGame, day: string, extra: Record<string, unknown> = {}): void {
+  const level = typeof extra.level === 'string' ? extra.level : '';
+  const root = document.documentElement;
+  const list = (root.getAttribute(FORFEIT_MEMORY_ATTR) ?? '').split(' ').filter(Boolean);
+  const entry = `${game}|${day}|${level}`;
+  if (!list.includes(entry)) root.setAttribute(FORFEIT_MEMORY_ATTR, [...list, entry].join(' '));
+  window.dispatchEvent(new CustomEvent(FORFEIT_EVENT, { detail: { ...extra, game, day } }));
+}
+
+/** The levels forfeited this visit for that game and day (an empty string for a game without levels); empty when none. */
+export function rememberedForfeits(game: PrintGame, day: string): string[] {
+  return (document.documentElement.getAttribute(FORFEIT_MEMORY_ATTR) ?? '').split(' ')
+    .map((entry) => entry.split('|'))
+    .filter((parts) => parts[0] === game && parts[1] === day)
+    .map((parts) => parts[2] ?? '');
+}
+
 const PENDING_PRINT_ATTR = 'data-print-pending';
 
 /**

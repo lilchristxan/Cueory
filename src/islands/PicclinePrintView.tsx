@@ -41,13 +41,13 @@ export default function PicclinePrint({ puzzles }: Props) {
   const print = useGamePrint({
     game: 'piccline',
     forfeitTries: 0,
-    prepare: async (now) => {
+    prepare: async (now, withAnswers) => {
       const [{ AnswersPage }, { BoardPage }] = await Promise.all([import('./PicclineAnswers'), import('./PicclineSheetParts')]);
       flushSync(() => {
         setBoardView(() => BoardPage);
         setAnswersView(() => AnswersPage);
         setPuzzle(today(puzzles, now));
-        setAnswers(true);
+        setAnswers(withAnswers);
       });
     },
     release: () => setAnswers(false),

@@ -76,7 +76,7 @@ export default function SudokuPrint() {
       return levelFinished(today, authorized.current);
     },
     forfeitDetail: () => ({ level: authorized.current }),
-    prepare: async (now) => {
+    prepare: async (now, withAnswers) => {
       const [loadedRules, loadedParts, { AnswersPage }] = await Promise.all([import('./sudoku'), import('./SudokuSheetParts'), import('./SudokuAnswers')]);
       flushSync(() => {
         setRules(loadedRules);
@@ -84,7 +84,7 @@ export default function SudokuPrint() {
         setAnswersView(() => AnswersPage);
         setDay(localDay(now));
         setPinned(authorized.current);
-        setAnswers(true);
+        setAnswers(withAnswers);
       });
     },
     release: () => {

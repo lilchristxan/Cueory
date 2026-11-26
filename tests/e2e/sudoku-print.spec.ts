@@ -371,3 +371,39 @@ test('switching level while the answers load prints, and forfeits, only the leve
   await picker(page).selectOption('easy');
   await expect(board(page).getByTestId('sudoku-forfeit-note')).toBeVisible();
 });
+
+test('a forfeit confirmed before the game has loaded still ends that level once it does', async ({ page }) => {
+  let release!: () => void;
+  const held = new Promise<void>((resolve) => { release = resolve; });
+  let asked = false;
+  await page.route('**/_astro/SudokuGame*.js', async (route) => {
+    asked = true;
+    await held;
+    await route.continue();
+  });
+  await page.goto('/play/sudoku#print');
+  await expect.poll(() => asked).toBe(true);
+  await expect(warning(page)).toBeVisible();
+  await warning(page).getByRole('button', { name: 'print anyway' }).click();
+  await expect.poll(() => printed(page)).toBe(1);
+  release();
+  await expect(board(page).getByTestId('sudoku-forfeit-note')).toBeVisible();
+  await expect(board(page).getByRole('button', { name: '1', exact: true })).toBeDisabled();
+});
+
+test('when results cannot be read, the sheet prints but the answers stay locked and the level stays playable', async ({ page }) => {
+  await page.addInitScript((key) => {
+    const real = Storage.prototype.getItem;
+    Storage.prototype.getItem = function (name: string) {
+      if (name === key) throw new Error('storage blocked');
+      return real.call(this, name);
+    };
+  }, DAY_KEY);
+  await page.goto('/play/sudoku');
+  await press(page);
+  await expect.poll(() => printed(page)).toBe(1);
+  await expect(warning(page)).toHaveCount(0);
+  await expect(keeper(page)).toHaveAttribute('data-keeper', 'locked');
+  await expect(page.getByTestId('sheet-solved-grid')).toHaveCount(0);
+  await expect(board(page).getByRole('button', { name: '1', exact: true })).toBeEnabled();
+});

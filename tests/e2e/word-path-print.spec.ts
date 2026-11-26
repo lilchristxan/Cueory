@@ -221,6 +221,46 @@ test.describe('printing an unfinished board', () => {
     await expect(warning(page)).toHaveCount(0);
   });
 
+  test('when results cannot be read, the sheet prints but the answers stay locked and the board stays playable', async ({ page }) => {
+    // Only the saved results fail to read; everything else in storage works.
+    await page.addInitScript((key) => {
+      const real = Storage.prototype.getItem;
+      Storage.prototype.getItem = function (name: string) {
+        if (name === key) throw new Error('storage blocked');
+        return real.call(this, name);
+      };
+    }, STATS_KEY);
+    await page.goto('/play/piccline');
+    await press(page);
+    await expect.poll(() => printed(page)).toBe(1);
+    await expect(warning(page)).toHaveCount(0);
+    await expect(keeper(page)).toHaveAttribute('data-keeper', 'locked');
+    await expect(page.getByTestId('sheet-path')).toHaveCount(0);
+    await expect(page.getByTestId('sheet-answers')).toHaveCount(0);
+    await expect(game(page).locator('button[data-cell]').first()).toBeEnabled();
+  });
+
+  test('a forfeit confirmed before the board has loaded still ends the board once it does', async ({ page }) => {
+    // Hold the board's own file (the print entry loads first), open the page from the hub link, and print anyway.
+    let release!: () => void;
+    const held = new Promise<void>((resolve) => { release = resolve; });
+    let asked = false;
+    await page.route('**/_astro/SutureToday*.js', async (route) => {
+      asked = true;
+      await held;
+      await route.continue();
+    });
+    await page.goto('/play/piccline#print');
+    await expect.poll(() => asked).toBe(true);
+    await expect(warning(page)).toBeVisible();
+    await warning(page).getByRole('button', { name: 'print anyway' }).click();
+    await expect.poll(() => printed(page)).toBe(1);
+    expect(await game(page).count()).toBe(0);
+    release();
+    await expect(game(page).getByTestId('suture-forfeit-note')).toBeVisible();
+    await expect(game(page).locator('button[data-cell]').first()).toBeDisabled();
+  });
+
   test('a press before the print island has loaded is remembered and answered once, when it is ready', async ({ page }) => {
     // Hold the print island's file, so the board and its printer button are up while nothing is listening yet.
     let release!: () => void;
