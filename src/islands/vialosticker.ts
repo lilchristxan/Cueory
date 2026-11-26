@@ -92,6 +92,8 @@ export interface TextLine {
   family: 'body' | 'display';
   align: 'left' | 'center';
   letterSpacing: number;
+  /** The widest this line may be; a longer one is drawn smaller to fit (sudoku's landscape date line). */
+  maxWidth?: number;
 }
 
 export interface StickerLayout {

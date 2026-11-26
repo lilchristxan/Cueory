@@ -94,15 +94,11 @@ export function createHintHolds(timer: Pick<HintTimer, 'pause' | 'resume'>): Hin
 export interface Box { left: number; right: number; top: number; bottom: number }
 
 /**
- * How far the board has to move down so the bubble, which hangs under the corner buttons, does not lie over anything.
- * Obstacles the bubble does not share a column with do not count. 0 when the bubble already has free space.
+ * True when the bubble is on screen sideways and lies over none of the obstacles, with `gap` of clear space round it.
+ * Nothing on the page moves to make this true: a bubble that does not fit is simply not shown.
  */
-export function roomNeeded(bubble: Box, obstacles: readonly Box[], gap: number): number {
-  let room = 0;
-  for (const box of obstacles) {
-    const shares = box.left < bubble.right && box.right > bubble.left;
-    const reaches = box.bottom > bubble.top && box.top < bubble.bottom + gap;
-    if (shares && reaches) room = Math.max(room, bubble.bottom + gap - box.top);
-  }
-  return room;
+export function fitsClear(bubble: Box, obstacles: readonly Box[], gap: number, viewWidth: number): boolean {
+  if (bubble.left < 0 || bubble.right > viewWidth) return false;
+  return !obstacles.some((box) =>
+    box.left < bubble.right + gap && box.right > bubble.left - gap && box.top < bubble.bottom + gap && box.bottom > bubble.top - gap);
 }

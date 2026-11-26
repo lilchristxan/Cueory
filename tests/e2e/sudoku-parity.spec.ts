@@ -131,9 +131,8 @@ test('sudoku stats are always kept (no switch), show each level, and "forget all
   }
   await expect(game(page).getByTestId('sudoku-result')).toBeVisible();
   // The finished-game dialog is modal (the page behind it is inert and cannot scroll), so close it first.
-  const resultDialog = page.getByTestId('game-result-dialog');
-  await expect(resultDialog.getByRole('button', { name: 'close results' })).toBeFocused();
-  await resultDialog.getByRole('button', { name: 'close results' }).click();
+  await expect(page.getByTestId('share-dialog')).toBeFocused();
+  await page.getByTestId('share-dialog-close').click();
   await expect(live(page)).toContainText('added to your sudoku stats.');
   expect(await page.evaluate(() => (window as unknown as { seenProgress: unknown[] }).seenProgress)).toEqual([{ game: 'triage', day: '2026-11-01' }]);
   // The shared stats record counts the solve too, and the framed page keeps its persistence island mounted.
