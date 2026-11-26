@@ -34,7 +34,7 @@ export function StudyEntryPanel({
 }) {
   const blurb = STUDY_CHOICES.find((c) => c.key === choice)!.blurb;
   return (
-    <div role="group" className="lab-glass mx-3 mb-3 space-y-3 p-4 lg:pointer-events-auto lg:m-0" aria-labelledby="anatomy-study-heading" data-testid="anatomy-study">
+    <div role="group" className="lab-glass lab-solid mx-3 mb-3 space-y-3 p-4 lg:pointer-events-auto lg:m-0" aria-labelledby="anatomy-study-heading" data-testid="anatomy-study">
       <h2 id="anatomy-study-heading" className="lab-cap">study this group · {groupName}</h2>
       <div role="group" aria-label="how to study" className="lab-seg">
         {STUDY_CHOICES.map((c) => (
@@ -84,7 +84,7 @@ export function StudyRoundSide({
   const test = round.mode === 'test';
   const rows = roundRows(round);
   return (
-    <div className="lab-glass mx-3 mb-3 space-y-3 p-4 lg:pointer-events-auto lg:m-0" data-testid="anatomy-study-side" role="group" aria-labelledby="anatomy-study-title">
+    <div className="lab-glass lab-solid mx-3 mb-3 space-y-3 p-4 lg:pointer-events-auto lg:m-0" data-testid="anatomy-study-side" role="group" aria-labelledby="anatomy-study-title">
       <div className="flex items-start justify-between gap-3">
         <div>
           <h2 id="anatomy-study-title" className="lab-name m-0">{groupName} · {test ? 'test it' : 'learn it'}</h2>
@@ -158,7 +158,7 @@ export function StudyCells({
   }, [target, settled, round.feedback]);
   if (!official || !target) {
     return (
-      <div className="lab-glass space-y-3 p-4 text-center" data-testid="anatomy-study-done" role="status">
+      <div className="lab-glass lab-solid space-y-3 p-4 text-center" data-testid="anatomy-study-done" role="status">
         <p>round done: {round.done.length} answered, {round.rightFirstTime} right on the first try.</p>
         <button type="button" className="lab-btn lab-btn-primary" onClick={onAgain}>start the round again</button>
       </div>

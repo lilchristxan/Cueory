@@ -62,6 +62,26 @@ describe('first letters and hints', () => {
     expect(cells[2]!.letter).toBe('s');
     expect(round.streak).toBe(0);
   });
+  it('a wrong letter typed before a hint can still be taken back, and the hinted cell stays', () => {
+    let round = type(startRound('test', ['A']), 'x');
+    round = hintLetter(round, NAMES.A!);
+    const back = backspace(round, NAMES.A!);
+    const cells = answerCells(back, NAMES.A!).flat();
+    expect(cells.slice(0, 3).map((c) => c.from)).toEqual(['empty', 'hint', 'empty']);
+    expect(cells[1]!.letter).toBe('e');
+    // The next letter fills the emptied cell, not the one after the hint.
+    const fixed = type(back, 't');
+    expect(answerCells(fixed, NAMES.A!).flat().slice(0, 3).map((c) => c.letter)).toEqual(['t', 'e', '']);
+    // And a hint asked while a cell is empty goes into that cell.
+    const hinted = hintLetter(back, NAMES.A!);
+    expect(answerCells(hinted, NAMES.A!).flat().slice(0, 2).map((c) => c.letter)).toEqual(['t', 'e']);
+  });
+  it('a full answer built round a hint is judged on every cell', () => {
+    let round = type(startRound('test', ['A']), 'x');
+    round = hintLetter(round, NAMES.A!);
+    round = type(backspace(round, NAMES.A!), 'tstcube');
+    expect(round.feedback).toBe('right');
+  });
   it('a hint keeps the first letters in place, and a hint is test-only', () => {
     const on = setFirstLetters(startRound('test', ['A']), true);
     const hinted = hintLetter(on, NAMES.A!);
@@ -87,6 +107,21 @@ describe('missed names come back once', () => {
     expect(round.queue).toEqual(['A']);
     round = skipQuestion(round);
     expect(round.queue).toEqual([]);
+    expect(roundFinished(round)).toBe(true);
+  });
+  it('a name answered wrongly, then corrected, comes back once', () => {
+    let round = type(startRound('test', ['A', 'B']), 'testcubx');
+    round = type(backspace(round, NAMES.A!), 'e');
+    expect(round.feedback).toBe('right');
+    round = nextQuestion(round);
+    expect(round.queue).toEqual(['B', 'A']);
+    expect(round.requeued).toEqual(['A']);
+    // Coming back, it is asked clean, and a second correct answer does not send it round again.
+    round = nextQuestion(type(nextQuestion(type(round, 'testslabtwo')), 'testcube'));
+    expect(roundFinished(round)).toBe(true);
+  });
+  it('a name answered right the first time does not come back', () => {
+    const round = nextQuestion(type(startRound('test', ['A']), 'testcube'));
     expect(roundFinished(round)).toBe(true);
   });
   it('show answer settles the question as missed, and next moves on', () => {

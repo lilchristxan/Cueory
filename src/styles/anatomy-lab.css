@@ -59,6 +59,13 @@
     color: var(--lab-ivory);
   }
 
+  /* Study text (the question, the answer cells, the feedback) sits on a plain opaque panel: no gradient, no blur. */
+  .lab-glass.lab-solid {
+    background: var(--lab-panel-solid);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+
   /* The thin copper edge: a 1-pixel gradient ring drawn with a mask, so the glass stays see-through inside it. */
   .lab-glass::before {
     content: '';

@@ -76,4 +76,16 @@ describe('anatomy lab: the dark look', () => {
     expect(bar).not.toMatch(/translate|transform|left-1\/2/);
     expect(bar).toMatch(/inset-x-0[^"]*mx-auto|mx-auto[^"]*inset-x-0/);
   });
+
+  it('puts study text on a plain opaque panel: no gradient and no blur behind the question, cells or feedback', () => {
+    const round = read('src/islands/AnatomyStudyRound.tsx');
+    // Every study panel (the entry, the side panel, the finished card) and the answer-cell container are solid.
+    expect((round.match(/className="lab-glass lab-solid /g) ?? []).length).toBe(3);
+    expect(labSource).toMatch(/className="lab-glass lab-solid relative[^"]*"[^>]*data-testid="anatomy-round/);
+    const solid = labCss.match(/\.lab-glass\.lab-solid \{([^}]*)\}/)![1]!;
+    expect(solid).toMatch(/background:\s*var\(--lab-panel-solid\)/);
+    expect(solid).not.toMatch(/gradient/);
+    expect(solid).toMatch(/backdrop-filter:\s*none/);
+    expect(tokens.match(/--lab-panel-solid:([^;]*);/)![1]).not.toMatch(/transparent|rgba/);
+  });
 });

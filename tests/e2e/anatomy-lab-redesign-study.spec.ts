@@ -54,6 +54,18 @@ test.describe('anatomy lab study round', () => {
     await expect(entry(page).getByRole('button', { name: 'begin · 2 structures' })).toBeEnabled();
   });
 
+  test('switching body system ends the round, so the old group does not hide the new system', async ({ page }) => {
+    await openLab(page);
+    await begin(page, 'test it');
+    await expect(side(page)).toBeVisible();
+    const rows = page.getByRole('group', { name: 'body system' }).getByRole('button');
+    const other = rows.and(page.locator('[aria-pressed="false"]')).first();
+    await other.click();
+    await expect(side(page)).toHaveCount(0);
+    await expect(cells(page)).toHaveCount(0);
+    await expect(page.getByTestId('anatomy-study-done')).toHaveCount(0);
+  });
+
   test('learn it: the name is shown, and typing it moves on', async ({ page }) => {
     await openLab(page);
     await begin(page, 'learn it');
@@ -92,7 +104,10 @@ test.describe('anatomy lab study round', () => {
     await page.getByRole('button', { name: 'show answer' }).click();
     await expect(feedback(page)).toContainText('the name is: fixture cube B. it comes back later in the round.');
     await page.getByRole('button', { name: 'next', exact: true }).click();
-    // The missed name comes back once: a third question, then the round is done.
+    // The first name was answered wrongly before it came right, and the second was shown: each comes back once, so
+    // there are four questions in all, and the round is done after those.
+    await expect(page.getByTestId('anatomy-study-position')).toHaveText('structure 3 of 4');
+    await page.getByRole('button', { name: 'skip' }).click();
     await expect(page.getByTestId('anatomy-study-position')).toHaveText('structure 3 of 3');
     await page.getByRole('button', { name: 'skip' }).click();
     await expect(page.getByTestId('anatomy-study-done')).toBeVisible();

@@ -30,11 +30,14 @@ export interface StudyRound {
   feedback: StudyFeedback;
   /** The current question used a hint, "show answer" or a wrong try: it cannot build the streak. */
   helped: boolean;
+  /** The current question was answered wrongly at least once, so it comes back once even if it is then corrected. */
+  wrongTry?: boolean;
   streak: number;
   rightFirstTime: number;
 }
 
-export interface Entry { letter: string; from: 'typed' | 'hint' }
+/** A 'blank' keeps a hinted cell in place after the typed letter before it was taken back; the next letter fills it. */
+export interface Entry { letter: string; from: 'typed' | 'hint' | 'blank' }
 
 export interface StudyCell {
   letter: string;
@@ -87,7 +90,7 @@ export function answerCells(round: StudyRound, official: string): StudyCell[][] 
   }
   empty.forEach((cell, index) => {
     const entry = round.entries[index];
-    if (entry) {
+    if (entry && entry.from !== 'blank') {
       cell.from = entry.from;
       cell.letter = entry.letter;
     }
@@ -105,7 +108,7 @@ function openLetters(round: StudyRound, official: string): string[] {
 
 /** How many cells are still empty. */
 function room(round: StudyRound, official: string): number {
-  return Math.max(0, openLetters(round, official).length - round.entries.length);
+  return Math.max(0, openLetters(round, official).length - round.entries.filter((entry) => entry.from !== 'blank').length);
 }
 
 const isSettled = (round: StudyRound) => round.feedback === 'right' || round.feedback === 'shown';
@@ -125,7 +128,13 @@ function judge(round: StudyRound, official: string): StudyRound {
       rightFirstTime: clean ? round.rightFirstTime + 1 : round.rightFirstTime,
     };
   }
-  return { ...round, feedback: 'wrong', helped: true, streak: 0 };
+  return { ...round, feedback: 'wrong', helped: true, wrongTry: true, streak: 0 };
+}
+
+/** Puts an entry in the first blank cell, or after the last one when none is blank. */
+function fillNext(entries: Entry[], entry: Entry): Entry[] {
+  const blank = entries.findIndex((item) => item.from === 'blank');
+  return blank < 0 ? [...entries, entry] : entries.map((item, index) => (index === blank ? entry : item));
 }
 
 /** One letter (or digit) typed. Anything else, or a settled question, changes nothing. */
@@ -134,15 +143,18 @@ export function typeLetter(round: StudyRound, key: string, official: string): St
   const letter = normalizeSearch(key);
   if (letter.length !== 1) return round;
   if (room(round, official) === 0) return round;
-  return judge({ ...round, entries: [...round.entries, { letter, from: 'typed' }] }, official);
+  return judge({ ...round, entries: fillNext(round.entries, { letter, from: 'typed' }) }, official);
 }
 
-/** Takes back the last letter the student typed; a letter a hint gave stays. */
+/** Takes back the last letter the student typed. A letter a hint gave stays where it is, even after it. */
 export function backspace(round: StudyRound, official: string): StudyRound {
   if (isSettled(round)) return round;
-  const last = round.entries[round.entries.length - 1];
-  if (!last || last.from !== 'typed') return round;
-  return judge({ ...round, entries: round.entries.slice(0, -1) }, official);
+  let at = -1;
+  round.entries.forEach((entry, index) => { if (entry.from === 'typed') at = index; });
+  if (at < 0) return round;
+  let entries = round.entries.map((entry, index) => (index === at ? { letter: '', from: 'blank' as const } : entry));
+  while (entries.length > 0 && entries[entries.length - 1]!.from === 'blank') entries = entries.slice(0, -1);
+  return judge({ ...round, entries }, official);
 }
 
 /** "hint: next letter": fills the next empty cell with the right letter. It counts as help. */
@@ -151,9 +163,10 @@ export function hintLetter(round: StudyRound, official: string): StudyRound {
   if (room(round, official) === 0) return round;
   // The cells that are not first letters, in order: the next one is where the hint goes.
   const open = openLetters(round, official);
-  const letter = open[round.entries.length];
+  const blank = round.entries.findIndex((entry) => entry.from === 'blank');
+  const letter = open[blank < 0 ? round.entries.length : blank];
   if (letter === undefined) return round;
-  return judge({ ...round, entries: [...round.entries, { letter, from: 'hint' }], helped: true, streak: 0 }, official);
+  return judge({ ...round, entries: fillNext(round.entries, { letter, from: 'hint' }), helped: true, streak: 0 }, official);
 }
 
 function requeue(round: StudyRound, id: string): StudyRound {
@@ -172,7 +185,9 @@ export function showAnswer(round: StudyRound): StudyRound {
 export function nextQuestion(round: StudyRound): StudyRound {
   const id = currentTarget(round);
   if (!id || !isSettled(round)) return round;
-  return reset({ ...round, queue: round.queue.slice(1), done: [...round.done, id] });
+  // A name that was answered wrongly first (or needed help) before it came right comes back once, like a shown one.
+  const missed = round.wrongTry && round.feedback === 'right' ? requeue(round, id) : round;
+  return reset({ ...missed, queue: missed.queue.slice(1), done: [...missed.done, id] });
 }
 
 /** "skip": a missed name that comes back once, then the next question. */
@@ -185,7 +200,7 @@ export function skipQuestion(round: StudyRound): StudyRound {
 }
 
 function reset(round: StudyRound): StudyRound {
-  return { ...round, entries: [], feedback: null, helped: false };
+  return { ...round, entries: [], feedback: null, helped: false, wrongTry: false };
 }
 
 export function setFirstLetters(round: StudyRound, on: boolean): StudyRound {

@@ -1730,6 +1730,7 @@
   --lab-glass-top: color-mix(in srgb, var(--lab-walnut) 62%, transparent);
   --lab-glass-bottom: color-mix(in srgb, var(--lab-charcoal) 66%, transparent);
   --lab-glass-blur: 1.125rem;
+  --lab-panel-solid: color-mix(in srgb, var(--lab-walnut) 82%, var(--lab-charcoal)); /* plain opaque panel behind study text: no gradient, no blur, nothing showing through */
   --lab-edge: 1px;
   --lab-edge-bright: color-mix(in srgb, var(--lab-copper-glow) 75%, transparent);
   --lab-edge-mid: color-mix(in srgb, var(--lab-copper-deep) 30%, transparent);

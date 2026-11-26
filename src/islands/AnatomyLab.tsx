@@ -1371,6 +1371,10 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
     setCompareKey('');
     setQuiz(null);
     setRecall(null);
+    // A study round belongs to the old system's group: its ids would hide everything in the new one.
+    setRound(null);
+    setStudyLocation(null);
+    studyGroupRef.current = null;
     setAlone(false);
     setPending(new Set());
     setLayerError(null);
@@ -2152,7 +2156,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
           </div>
 
           {round && (
-            <div className="lab-glass relative mx-3 mt-3 p-4 lg:absolute lg:inset-x-auto lg:right-(--lab-inspector-clear) lg:bottom-3 lg:left-(--lab-rail-clear) lg:z-10 lg:m-0" data-testid="anatomy-round-stage">
+            <div className="lab-glass lab-solid relative mx-3 mt-3 p-4 lg:absolute lg:inset-x-auto lg:right-(--lab-inspector-clear) lg:bottom-3 lg:left-(--lab-rail-clear) lg:z-10 lg:m-0" data-testid="anatomy-round-stage">
               <StudyCells
                 round={round}
                 official={studyTarget ? officialOf(studyTarget) : null}
