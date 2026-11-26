@@ -1,4 +1,5 @@
 import '../styles/vialo.css';
+import { useRefreshOnStatsChange } from './finishstatsrefresh';
 import { lazy, Suspense, useEffect, useMemo, useRef, useState, type CSSProperties, type FormEvent } from 'react';
 import {
   cleanGuess,
@@ -193,6 +194,8 @@ export default function VialoGame({ puzzles }: Props) {
     const timer = window.setTimeout(() => setShareOpen(true), delay);
     return () => window.clearTimeout(timer);
   }, [shareReady]);
+
+  useRefreshOnStatsChange(shareReady, () => setFinish(finishStats(localDay(new Date()))));
 
   useEffect(() => {
     const onVisibility = () => {
