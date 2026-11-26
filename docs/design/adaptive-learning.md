@@ -43,12 +43,12 @@ In spaced practice, call a card mastered only after two correct reviews on separ
 
 ## Initial simulation
 
-2,000 fixed synthetic student seeds per scheduler, each with 24 cards over 45 calendar days. The schedules share the same simulated attendance, daily cap and response draws. Their simulated memory strengthens according to a separate model that uses the time since the previous answer. The recall column is the mean probability at seven days after each card's last practice. Workload includes first answers and reviews, averaged over every calendar day.
+2,000 fixed synthetic student seeds per scheduler, each with 24 cards over 45 calendar days. The schedules share the same simulated attendance, daily cap and response draws. Their simulated memory strengthens according to a separate model that uses the time since the previous answer. The recall column is the mean probability on a shared follow-up day, seven days after the 45-day study period ends. For each card, the calculation includes all the time since that card's last practice. Workload includes first answers and reviews, averaged over every calendar day.
 
-| Scheduler | Modeled 7-day recall | Answers per day | Days to first whole-deck mastery, among those who reached it | Never observed at whole-deck mastery by day 45 |
+| Scheduler | Modeled recall at the 7-day follow-up | Answers per day | Days to first whole-deck mastery, among those who reached it | Never observed at whole-deck mastery by day 45 |
 | --- | ---: | ---: | ---: | ---: |
-| Adaptive | 94.21% | 5.70 | 24.15 | 26.00% |
-| Existing ladder | 89.77% | 4.63 | No observations | 100.00% |
+| Adaptive | 90.14% | 5.70 | 24.15 | 26.00% |
+| Existing ladder | 83.11% | 4.63 | No observations | 100.00% |
 
 Both groups use the same Cueory mastery rule for this measurement. Requiring all cards to meet the 80% recall threshold at once favors schedules that review more frequently. The table illustrates that trade-off and cannot establish better learning or predict an exam result. These runs use no exam date; the calendar and exam rules have separate tests.
 
