@@ -1189,6 +1189,13 @@
   }
 }
 
+/* Piccline's wordmark is drawn larger than its box (global.css); in the sidebar it sits close under the game icon, so it
+   grows less here and its tall letters stay clear of the icon. */
+.game-frame-wordmark-img[src$="piccline-wordmark-light.svg"],
+.game-frame-wordmark-img[src$="piccline-wordmark-dark.svg"] {
+  scale: var(--piccline-wordmark-scale-sidebar);
+}
+
 /* Artwork that has a Daytime and an Evening file (the cueory logo and the game wordmarks) follows the site's chosen
    theme, never the device alone: the same rules as .logo-day and .logo-evening in global.css. Follow device
    (no data-theme) uses the device setting; with no JavaScript there is no pick, so it also follows the device. */

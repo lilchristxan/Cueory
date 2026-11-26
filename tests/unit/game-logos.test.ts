@@ -178,10 +178,10 @@ describe("vialo's Evening wordmark: the Daytime path unchanged, with a 1 px gold
 });
 
 describe("piccline's wordmark is drawn larger so it stands a little above the others' (Christian, 2026-11-25)", () => {
-  it('scales both of its files by one token, 10 to 15 percent, in every place', () => {
+  it('scales both of its files by one token (its lowercase is a third of its box, so well above the others' 10 to 15 percent), in every place', () => {
     const scale = Number(tokens.match(/--piccline-wordmark-scale:\s*([\d.]+)/)![1]);
     expect(scale).toBeGreaterThanOrEqual(1.1);
-    expect(scale).toBeLessThanOrEqual(1.15);
+    expect(scale).toBeLessThanOrEqual(1.6);
     expect(globalCss).toContain('img[src$="piccline-wordmark-light.svg"],\n  img[src$="piccline-wordmark-dark.svg"] {\n    scale: var(--piccline-wordmark-scale);');
     const source = gameLogos.piccline;
     if (source.kind !== 'image') throw new Error('image art expected');

@@ -101,4 +101,10 @@
     line-height: 1.5;
     text-align: center;
   }
+
+  /* A wordmark drawn larger than its box (piccline's, global.css) grows to the right from the row's left edge, not both
+     ways, so it never reaches back toward the icon. */
+  .play-hub-wordmark img {
+    transform-origin: left center;
+  }
 }

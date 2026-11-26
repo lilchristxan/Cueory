@@ -90,3 +90,50 @@ for (const scheme of ['light', 'dark'] as const) {
     });
   });
 }
+
+// Piccline's wordmark is drawn larger than its box (global.css), so check it still has its room: it must not reach into
+// its neighbours (icon, description, tagline), nor past the viewport or its container.
+
+
+test('piccline\'s larger wordmark collides with nothing: card, hub row and game sidebar', async ({ page }) => {
+  await page.goto('/');
+  const card = await page.evaluate(() => {
+    const el = document.querySelector('[data-game-card="piccline"]')!;
+    const img = el.querySelector<HTMLImageElement>('.gname img')!;
+    const w = img.getBoundingClientRect();
+    const others = ['.gdesc', '.gpip'].flatMap((s) => Array.from(el.querySelectorAll(s)).map((n) => n.getBoundingClientRect()));
+    const face = el.querySelector('.gface')!.getBoundingClientRect();
+    const hit = others.some((o) => w.left < o.right - 0.5 && w.right > o.left + 0.5 && w.top < o.bottom - 0.5 && w.bottom > o.top + 0.5);
+    return { hit, inside: w.left >= face.left - 0.5 && w.right <= face.right + 0.5 };
+  });
+  expect(card.hit, 'home card: wordmark touches the description or a pip').toBe(false);
+  expect(card.inside, 'home card: wordmark stays inside the card face').toBe(true);
+
+  await page.goto('/play');
+  const hub = await page.evaluate(() => {
+    const row = document.querySelector('[data-testid="play-status-suture"]')!;
+    const imgs = Array.from(row.querySelectorAll<HTMLImageElement>('.play-hub-wordmark img')).filter((i) => getComputedStyle(i).display !== 'none');
+    const w = imgs[0]!.getBoundingClientRect();
+    const tile = row.querySelector('.play-hub-pip')!.getBoundingClientRect();
+    const line = row.querySelector(':scope > p')!.getBoundingClientRect();
+    const r = row.getBoundingClientRect();
+    return { clearOfTile: w.left >= tile.right, clearOfLine: w.right <= line.left + 0.5 || w.top >= line.bottom || w.bottom <= line.top, inside: w.top >= r.top && w.bottom <= r.bottom };
+  });
+  expect(hub.clearOfTile, 'hub: wordmark clear of the icon tile').toBe(true);
+  expect(hub.clearOfLine, 'hub: wordmark clear of the description').toBe(true);
+  expect(hub.inside, 'hub: wordmark inside its row').toBe(true);
+
+  await page.goto('/play/piccline');
+  const side = await page.evaluate(() => {
+    const img = Array.from(document.querySelectorAll<HTMLImageElement>('.game-frame-sidebar .game-frame-wordmark-img')).find((i) => getComputedStyle(i).display !== 'none')!;
+    const w = img.getBoundingClientRect();
+    const sb = document.querySelector('.game-frame-sidebar')!.getBoundingClientRect();
+    const near = ['.game-frame-icon-wrap', '.game-frame-tagline'].map((s) => document.querySelector(s)!.getBoundingClientRect());
+    const hit = near.some((o) => w.left < o.right - 0.5 && w.right > o.left + 0.5 && w.top < o.bottom - 0.5 && w.bottom > o.top + 0.5);
+    // On phone and tablet the sidebar is a layout-only wrapper with no box of its own: the viewport is the limit there.
+    const [left, right] = sb.width > 0 ? [sb.left, sb.right] : [0, window.innerWidth];
+    return { hit, inside: w.left >= left - 0.5 && w.right <= right + 0.5 };
+  });
+  expect(side.hit, 'sidebar: wordmark touches the icon or the tagline').toBe(false);
+  expect(side.inside, 'sidebar: wordmark stays inside the sidebar').toBe(true);
+});

@@ -146,14 +146,16 @@ export const accountHref = accountLaunch(accountsOpen).accountHref;
  * left panel). Open accounts: an account link. While accounts are closed `accountHref` is the launch-updates form, so the
  * bar uses the site's own launch wording ("join the launch list", as the promo panel does) and says why.
  */
-export function accountStatsCta(open: boolean) {
+export function accountStatsCta(open: boolean, signup: 'form' | 'landing' | 'pending' = 'form') {
   const launch = accountLaunch(open);
-  return open
-    ? { href: launch.accountHref, label: 'create an account', note: 'to save your daily game stats' }
-    : { href: launch.accountHref, label: launch.promoJoinLabel, note: 'accounts open soon' };
+  if (open) return { href: launch.accountHref, label: 'create an account', note: 'to save your daily game stats' };
+  // Closed, and the launch-updates box has neither Kit's form nor its landing page (ComingSoon shows only "sign ups open
+  // soon."): there is nothing to complete at /#signup, so the bar is a plain message, with no link.
+  if (signup === 'pending') return { href: '', label: 'sign ups open soon.', note: '' };
+  return { href: launch.accountHref, label: launch.promoJoinLabel, note: 'accounts open soon' };
 }
 
-export const statsCta = accountStatsCta(accountsOpen);
+export const statsCta = accountStatsCta(accountsOpen, signupState(newsletter.formAction, newsletter.landingUrl));
 
 /**
  * Whether the home hero shows its quiet join link. It leads to a real next step only once accounts are open or the

@@ -88,7 +88,7 @@ function Name({ row }: { row: Row }) {
   const { wordmark } = art;
   // Only one of the two images is displayed at a time (global.css .logo), so the name is read out once, as on the card.
   return (
-    <span className="logo block h-(--play-hub-wordmark-height-phone) @4xl:h-(--play-hub-wordmark-height)">
+    <span className="logo play-hub-wordmark block h-(--play-hub-wordmark-height-phone) @4xl:h-(--play-hub-wordmark-height)">
       <img className="logo-day h-full w-auto max-w-full object-contain object-left" src={wordmark.day} alt={row.name} loading="lazy" width={wordmark.width} height={wordmark.height} decoding="async" />
       <img className="logo-evening h-full w-auto max-w-full object-contain object-left" src={wordmark.evening} alt={row.name} loading="lazy" width={wordmark.width} height={wordmark.height} decoding="async" />
     </span>

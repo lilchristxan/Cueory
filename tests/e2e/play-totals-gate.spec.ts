@@ -9,11 +9,13 @@ import { readFileSync } from 'node:fs';
 // (src/islands/supabaseclient.ts) is replaced by an in-page stand-in. Nothing is added to the app for tests.
 
 let fixtureCode: string;
+let pendingCode: string;
 let fixtureCss: string[];
 test.beforeAll(async () => {
   const html = readFileSync('dist/play.html', 'utf8');
   fixtureCss = [...html.matchAll(/<link[^>]+rel="stylesheet"[^>]+href="([^"]+\.css)"/g)].map((m) => m[1]!);
   if (fixtureCss.length === 0) throw new Error('The production stylesheets were not found. Run npm run build.');
+  const bundle = async (pending: boolean) => {
   const result = await build({
     stdin: { contents: `
       import React from 'react';
@@ -24,7 +26,12 @@ test.beforeAll(async () => {
     bundle: true, write: false, format: 'iife', platform: 'browser', jsx: 'automatic',
     resolveExtensions: ['.ts', '.tsx', '.js', '.jsx', '.json'],
     define: { 'process.env.NODE_ENV': '"production"' },
-    plugins: [{ name: 'fixture-session', setup(builder) {
+    plugins: [...(pending ? [{ name: 'launch-box-pending', setup(builder: { onLoad: Function }) {
+      // The same site config with neither Kit's form nor its landing page: the launch box says only "sign ups open soon."
+      builder.onLoad({ filter: /src[\\/]config[\\/]site\.ts$/ }, (args: { path: string }) => ({
+        contents: readFileSync(args.path, 'utf8').replace(/formAction: '[^']*'/, "formAction: ''").replace(/landingUrl: '[^']*'/, "landingUrl: ''"), loader: 'ts',
+      }));
+    } }] : []), { name: 'fixture-session', setup(builder) {
       builder.onResolve({ filter: /\/supabaseclient(?:\.ts)?$/ }, () => ({ path: 'session', namespace: 'fixture' }));
       builder.onLoad({ filter: /.*/, namespace: 'fixture' }, () => ({ contents: `
         const params = new URLSearchParams(location.search);
@@ -44,12 +51,15 @@ test.beforeAll(async () => {
       `, loader: 'js' }));
     } }],
   });
-  fixtureCode = result.outputFiles[0]!.text;
+    return result.outputFiles[0]!.text;
+  };
+  fixtureCode = await bundle(false);
+  pendingCode = await bundle(true);
 });
 
 /** The hub's left panel with the totals island, and four results kept on this device. */
-async function open(page: Page, query: string) {
-  await page.route('**/__totals-fixture.js', (route) => route.fulfill({ contentType: 'application/javascript', body: fixtureCode }));
+async function open(page: Page, query: string, pending = false) {
+  await page.route('**/__totals-fixture.js', (route) => route.fulfill({ contentType: 'application/javascript', body: pending ? pendingCode : fixtureCode }));
   await page.route('**/__totals-fixture?*', (route) => route.fulfill({ contentType: 'text/html', body: `<!doctype html>
     <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
     <title>hub totals gate test</title>${fixtureCss.map((href) => `<link rel="stylesheet" href="${href}">`).join('')}</head>
@@ -154,5 +164,19 @@ test.describe('hub totals, not signed in', () => {
     await page.evaluate(() => (window as unknown as { fixtureAuth: (e: string, s: unknown) => void }).fixtureAuth('SIGNED_OUT', null));
     await expect(bar(page)).toBeVisible();
     expect(await slotHeight(page)).toBe(withTotals);
+  });
+});
+
+test.describe('hub bar, accounts closed and neither Kit form nor landing page', () => {
+  test('is a plain readable message: no link, nothing to tab to, the same room, no sideways scroll', async ({ page }) => {
+    await open(page, 'session=out', true);
+    await expect(page.getByTestId('play-account-message')).toHaveText('sign ups open soon.');
+    await expect(page.getByTestId('play-account-bar').getByRole('link')).toHaveCount(0);
+    await expect(page.getByTestId('play-account-bar').getByRole('button')).toHaveCount(0);
+    await expect(page.getByTestId('play-totals')).toHaveCount(0);
+    await page.keyboard.press('Tab');
+    await expect(page.locator('#panel :focus')).toHaveCount(0);
+    expect(await slotHeight(page)).toBeGreaterThan(0);
+    expect(await noSideways(page)).toBe(true);
   });
 });

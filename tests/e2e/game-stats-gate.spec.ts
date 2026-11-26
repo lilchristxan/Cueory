@@ -8,11 +8,13 @@ import { readFileSync } from 'node:fs';
 // (src/islands/supabaseclient.ts) is replaced by an in-page stand-in. Nothing is added to the app for tests.
 
 let fixtureCode: string;
+let pendingCode: string;
 let fixtureCss: string[];
 test.beforeAll(async () => {
   const html = readFileSync('dist/play/vialo.html', 'utf8');
   fixtureCss = [...html.matchAll(/<link[^>]+rel="stylesheet"[^>]+href="([^"]+\.css)"/g)].map((m) => m[1]!);
   if (fixtureCss.length === 0) throw new Error('The production stylesheets were not found. Run npm run build.');
+  const bundle = async (pending: boolean) => {
   const result = await build({
     stdin: { contents: `
       import React from 'react';
@@ -24,7 +26,12 @@ test.beforeAll(async () => {
     bundle: true, write: false, format: 'iife', platform: 'browser', jsx: 'automatic',
     resolveExtensions: ['.ts', '.tsx', '.js', '.jsx', '.json'],
     define: { 'process.env.NODE_ENV': '"production"' },
-    plugins: [{ name: 'fixture-session', setup(builder) {
+    plugins: [...(pending ? [{ name: 'launch-box-pending', setup(builder: { onLoad: Function }) {
+      // The same site config with neither Kit's form nor its landing page: the launch box says only "sign ups open soon."
+      builder.onLoad({ filter: /src[\\/]config[\\/]site\.ts$/ }, (args: { path: string }) => ({
+        contents: readFileSync(args.path, 'utf8').replace(/formAction: '[^']*'/, "formAction: ''").replace(/landingUrl: '[^']*'/, "landingUrl: ''"), loader: 'ts',
+      }));
+    } }] : []), { name: 'fixture-session', setup(builder) {
       builder.onResolve({ filter: /\/supabaseclient(?:\.ts)?$/ }, () => ({ path: 'session', namespace: 'fixture' }));
       builder.onLoad({ filter: /.*/, namespace: 'fixture' }, () => ({ contents: `
         const params = new URLSearchParams(location.search);
@@ -45,12 +52,15 @@ test.beforeAll(async () => {
       `, loader: 'js' }));
     } }],
   });
-  fixtureCode = result.outputFiles[0]!.text;
+    return result.outputFiles[0]!.text;
+  };
+  fixtureCode = await bundle(false);
+  pendingCode = await bundle(true);
 });
 
 /** Opens the frame's sidebar with the stats island and this device's saved results (today and yesterday, both solved). */
-async function open(page: Page, query: string, seedGame = 'vialo') {
-  await page.route('**/__stats-fixture.js', (route) => route.fulfill({ contentType: 'application/javascript', body: fixtureCode }));
+async function open(page: Page, query: string, seedGame = 'vialo', pending = false) {
+  await page.route('**/__stats-fixture.js', (route) => route.fulfill({ contentType: 'application/javascript', body: pending ? pendingCode : fixtureCode }));
   await page.route('**/__stats-fixture?*', (route) => route.fulfill({ contentType: 'text/html', body: `<!doctype html>
     <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
     <title>stats gate test</title>${fixtureCss.map((href) => `<link rel="stylesheet" href="${href}">`).join('')}</head>
@@ -183,4 +193,17 @@ test.describe('game stats panel, not signed in', () => {
       expect(await noSideways(page)).toBe(true);
     });
   }
+});
+
+test.describe('game stats bar, accounts closed and neither Kit form nor landing page', () => {
+  test('is a plain readable message: no link, nothing to tab to', async ({ page }) => {
+    await open(page, 'session=out', 'vialo', true);
+    await expect(page.getByTestId('game-frame-account-message')).toHaveText('sign ups open soon.');
+    await expect(bar(page).getByRole('link')).toHaveCount(0);
+    await expect(bar(page).getByRole('button')).toHaveCount(0);
+    await expect(panel(page)).toHaveCount(0);
+    await page.keyboard.press('Tab');
+    await expect(page.locator('.game-frame-sidebar :focus')).toHaveCount(0);
+    expect(await noSideways(page)).toBe(true);
+  });
 });

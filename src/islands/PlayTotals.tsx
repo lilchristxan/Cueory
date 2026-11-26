@@ -48,8 +48,8 @@ export default function PlayTotals() {
   if (!gate) {
     return (
       <div className="play-hub-account-slot" data-testid="play-account-bar">
-        <a href={statsCta.href} className="copper-button" aria-describedby="play-account-note">{statsCta.label}</a>
-        <p id="play-account-note" className="play-hub-account-note">{statsCta.note}</p>
+        {statsCta.href ? <a href={statsCta.href} className="copper-button" aria-describedby="play-account-note">{statsCta.label}</a> : <p className="play-hub-account-note" data-testid="play-account-message">{statsCta.label}</p>}
+        {statsCta.href && <p id="play-account-note" className="play-hub-account-note">{statsCta.note}</p>}
       </div>
     );
   }

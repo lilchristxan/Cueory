@@ -97,8 +97,8 @@ export default function GameFrameStats({ game }: Props) {
   // the same bar the page was built with, so a signed-out page never changes after load. It is also the static HTML.
   if (!visible) {
     return <div className="game-frame-account-bar" data-testid="game-frame-account-bar">
-        <a href={statsCta.href} className="copper-button" aria-describedby="game-frame-account-note">{statsCta.label}</a>
-        <p id="game-frame-account-note" className="game-frame-account-note">{statsCta.note}</p>
+        {statsCta.href ? <a href={statsCta.href} className="copper-button" aria-describedby="game-frame-account-note">{statsCta.label}</a> : <p className="game-frame-account-note" data-testid="game-frame-account-message">{statsCta.label}</p>}
+        {statsCta.href && <p id="game-frame-account-note" className="game-frame-account-note">{statsCta.note}</p>}
       </div>;
   }
 
