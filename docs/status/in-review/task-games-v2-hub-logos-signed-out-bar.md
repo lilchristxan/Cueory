@@ -1,0 +1,4 @@
+status: in review · task-games-v2/hub-logos-signed-out-bar · one shared logo source (src/config/gamelogos.ts) for the home carousel and the /play hub rows; vialo's new logo and Evening wordmark; tachyyy's light icon everywhere; piccline's wordmark drawn larger; the hub's left panel and the game sidebar show one slim copper bar (launch-list wording while accounts are closed) to signed-out players; the home vialo preview is a miniature of the live board
+decision: D-pending · the hub's totals show only to signed-in players, like the game frame's stats (Christian, 2026-11-25); recording is unchanged
+decision: D-pending · while accounts are closed the stats bar says "join the launch list" with "accounts open soon" (the promo panel's own wording), because its link is the launch-updates form; it says "create an account" once accounts open
+decision: D-pending · tachyyy's light icon tile on all branding, Light and Evening (Christian, 2026-11-25)

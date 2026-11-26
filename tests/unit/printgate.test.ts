@@ -49,7 +49,7 @@ describe('print gate', () => {
     expect(canPrintToday(undefined, 'vialo', '2026-11-01')).toBe(false);
     const seen: string[] = [];
     openPrint('vialo', (href) => seen.push(href));
-    expect(seen).toEqual(['/play/vialo#print']);
+    expect(seen).toEqual(['/play/wordpill#print']);
     expect(PRINT_PAGES.vialo).not.toMatch(/[?&=]/);
   });
 });

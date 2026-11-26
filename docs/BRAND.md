@@ -94,7 +94,7 @@ Text on copper is Charcoal `#1C1917`: 4.65:1 on Copper Deep, 7.15:1 on Copper, 1
 Shine. Ivory and Espresso fail 4.5:1 on the deeper stops, so they are not used on copper.
 
 ## Game accents
-Added 20 Nov 2026 by Christian's decision for the daily games rebrand. Teal is for piccline only. Dim is for the unlit board cells on vialo's dark icon.
+Added 20 Nov 2026 by Christian's decision for the daily games rebrand. Teal is for piccline only. Dim is for the unlit board cells on the old vialo dark icon (the game is now called wordpill; its ids and CSS keep the name vialo).
 
 | Role | Name | Daytime HEX | Evening HEX | Notes |
 | --- | --- | --- | --- | --- |
@@ -164,3 +164,7 @@ Christian's decision (2026-10-31), to match how younger students write.
   motion removes everything nonessential.
 - **Light / Dark / Follow device:** a switch in every page footer. Follow device is the default; a Light or Dark pick
   overrides the device and is remembered in the browser. Colors change; layout never does.
+
+## wordpill (formerly vialo), 26 Nov 2026
+
+Christian renamed vialo to wordpill and approved its artwork: wordmark B (a horizontal capsule, "word" in white on game green, "pill" in bold oxblood on ivory), icon L1 (the capsule shortened to "w | p" on an ivory tile) and, in Evening, the same art with a thin ivory rim (E1). The letters are outlines taken from Liberation Serif (SIL OFL), drawn by `scripts/generate-wordpill-art.py` into `public/design/games-v2/assets/`.

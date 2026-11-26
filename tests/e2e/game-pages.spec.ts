@@ -3,14 +3,14 @@ import { expect, test, type Page } from '@playwright/test';
 import { markPanelsSeen } from './clock';
 
 /**
- * Each daily game on its own page (Christian's decision, 2026-11-17): /play/vialo, /play/sudoku, /play/crossword and
+ * Each daily game on its own page (Christian's decision, 2026-11-17): /play/wordpill, /play/sudoku, /play/crossword and
  * /play/word-path. These were share landings; a shared result now opens the playable game. Each page has a link back
  * to all games, the game's name centred at the top, the shared settings, only its own game, its own stats and the
  * result dialog. The clock is 1 November 2026, the first sample day.
  */
 
 const games = [
-  { path: '/play/vialo', name: 'vialo', testId: 'vialo', id: 'vialo', framed: true },
+  { path: '/play/wordpill', name: 'wordpill', testId: 'vialo', id: 'vialo', framed: true },
   { path: '/play/sudoku', name: 'sudoku', testId: 'sudoku', id: 'triage', framed: true },
   { path: '/play/crossword', name: 'crossword', testId: 'cueword', id: 'cueword', framed: true },
   { path: '/play/word-path', name: 'piccline', testId: 'suture', id: 'suture', framed: true },
@@ -98,7 +98,7 @@ for (const game of games) {
 }
 
 test('a finished vialo on its own page opens the result dialog and keeps stats only for vialo', async ({ page }) => {
-  await page.goto('/play/vialo');
+  await page.goto('/play/wordpill');
   await expect(page.locator('astro-island[component-url*="VialoGame"]:not([ssr])')).toHaveCount(1); // hydrated before the first guess
   // Stats are always kept (2026-11-17): there is no switch to turn on, and a game page has no full stats panel (Games v2).
   await expect(page.getByTestId('game-stats')).toHaveCount(0);
@@ -114,7 +114,7 @@ test('a finished vialo on its own page opens the result dialog and keeps stats o
   // Only vialo has a result; the hub's panel lists the others as not played.
   expect(kept.results.filter((result: { game: string }) => result.game !== 'vialo')).toEqual([]);
   await page.goto('/play');
-  await expect(page.getByTestId('game-stats').getByRole('listitem').filter({ has: page.getByRole('heading', { name: 'vialo', exact: true }) })).toContainText('played 1 day, solved 1.');
+  await expect(page.getByTestId('game-stats').getByRole('listitem').filter({ has: page.getByRole('heading', { name: 'wordpill', exact: true }) })).toContainText('played 1 day, solved 1.');
 });
 
 for (const game of [

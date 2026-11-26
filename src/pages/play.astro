@@ -11,6 +11,7 @@ import GameStatsPanel from '../islands/GameStatsPanel';
 import HomeScreenTip from '../islands/HomeScreenTip';
 import PlayStatus from '../islands/PlayStatus.tsx';
 import PlayTotals from '../islands/PlayTotals';
+import { statsCta } from '../config/statscta';
 import { dailyGames, helloCardsGame, helloCardsIndexWhenApproved } from '../config/games';
 import { hubHeadline } from '../islands/playhub';
 import { hubLines } from '../config/homegames';
@@ -43,9 +44,9 @@ const hubGames = [
   { id: 'vialo' as const, testId: 'pulse', name: game('vialo').name, line: hubLines.vialo, href: gamePages.vialo, open: true, art: 'vialo' as const, printGame: 'vialo' as const },
   { id: 'tachyyy' as const, testId: 'tachyyy', name: tachyyyGame.name, line: hubLines.tachyyy, href: tachyyyGame.href, open: showStat, art: 'tachyyy' as const, linkTestId: 'tachyyy-link' },
   { id: 'suture' as const, testId: 'suture', name: game('suture').name, line: hubLines.piccline, href: gamePages.suture, open: true, art: 'piccline' as const, printGame: 'piccline' as const },
-  { id: 'cueword' as const, testId: 'cueword', name: game('cueword').name, line: hubLines.crossword, href: gamePages.cueword, open: showCrossword },
-  { id: 'triage' as const, testId: 'triage', name: game('triage').name, line: hubLines.sudoku, href: gamePages.triage, open: true, printGame: 'triage' as const },
-  { id: 'hello-cards' as const, testId: 'hello-cards', name: helloCardsGame.name, line: hubLines.helloCards, href: helloCardsGame.href, open: showHello, cards: showHello ? helloPage.starters.length : undefined, linkTestId: 'hello-cards-link' },
+  { id: 'cueword' as const, testId: 'cueword', name: game('cueword').name, line: hubLines.crossword, href: gamePages.cueword, open: showCrossword, art: 'crossword' as const },
+  { id: 'triage' as const, testId: 'triage', name: game('triage').name, line: hubLines.sudoku, href: gamePages.triage, open: true, art: 'sudoku' as const, printGame: 'triage' as const },
+  { id: 'hello-cards' as const, testId: 'hello-cards', name: helloCardsGame.name, line: hubLines.helloCards, href: helloCardsGame.href, open: showHello, art: 'helloCards' as const, cards: showHello ? helloPage.starters.length : undefined, linkTestId: 'hello-cards-link' },
 ];
 // The stats list leaves the crossword out while it is closed, like the rows' "coming soon" (site.ts crosswordOpen).
 const statsGames = (['vialo', 'cueword', 'triage', 'suture'] as const).filter((id) => showCrossword || id !== 'cueword');
@@ -80,7 +81,7 @@ const statsLinks = Object.fromEntries(statsGames.map((id) => [id, gamePages[id]]
         <p class="text-base text-ink-soft" data-testid="sample-note">
           for now these are sample puzzles with everyday words.
         </p>
-        <PlayTotals client:load />
+        <PlayTotals client:load cta={statsCta} />
       </section>
 
       <div class="@container min-w-0 @5xl:bg-page @5xl:px-16 @5xl:py-14">

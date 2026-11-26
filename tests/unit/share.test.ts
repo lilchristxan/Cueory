@@ -52,7 +52,7 @@ describe('share links go to the exact tool', () => {
   });
 
   it('strips a trailing slash and never adds tracking parameters', () => {
-    expect(buildShareUrl('vialo', `${SITE}/`)).toBe(`${SITE}/play/vialo`);
+    expect(buildShareUrl('vialo', `${SITE}/`)).toBe(`${SITE}/play/wordpill`);
     for (const tool of TOOLS) expect(new URL(buildShareUrl(tool, SITE)).search).toBe('');
   });
 });

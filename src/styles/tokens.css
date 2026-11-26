@@ -196,6 +196,9 @@
   --game-frame-sidebar-compact-emblem-radius: 0.75rem; /* 12px */
   --game-frame-sidebar-compact-emblem-cell: 0.5rem; /* 8px */
   --game-frame-sidebar-compact-wordmark-height: 2.25rem; /* 36px */
+  --game-frame-account-button-text: 0.9375rem; /* the sidebar's copper account button: 15 px, one line */
+  --game-frame-account-button-pad-x: 1rem;
+  --game-frame-account-button-pad-y: 0.625rem;
   --game-frame-stat-label-compact: 0.875rem; /* 14px, the smallest text on a game screen */
   --game-frame-stat-label-phone: 0.875rem; /* 14px */
 
@@ -917,11 +920,29 @@
     --game-demo-border: #cbb8a4;
     --game-demo-top: 6.5rem;
     --game-demo-vialo-grid-gap: 0.375rem;
-    --game-demo-vialo-row-gap: 0.3125rem;
-    --game-demo-vialo-cell-size: 1.75rem;
-    --game-demo-vialo-cell-border: 1.5px;
+    --game-demo-vialo-row-gap: 0.1875rem;
+    --game-demo-vialo-strip-padding: 0.5rem;
+    --game-demo-vialo-cell-width: 1.675rem;   /* an oblong capsule, 1.49 times wider than tall, as the live board's pills (67.7 by 45.3 px) */
+    --game-demo-vialo-cell-height: 1.125rem;
     --game-demo-vialo-font-size: 0.8125rem;
-    --game-demo-vialo-cell-bg: #f9f5ef;
+    --game-demo-vialo-ring: 1px;              /* the light ring inside a red pill, scaled down from the board's 2 px */
+    --game-demo-vialo-ring-gap: 2px;
+    --game-demo-vialo-ring-color: rgb(255 255 255 / 0.6);
+    /* The card stays light in Evening, so the board's Daytime foil and pill colours (the --game-oxblood, --game-dark-green,
+       --vialo-absent-* and --color-pillo-foil values by day) stay fixed here. */
+    --game-demo-vialo-foil: color-mix(in srgb, #6b5243 16%, #f9f5ef);
+    --game-demo-vialo-hatch: color-mix(in srgb, #3e2c23 7%, transparent);
+    --game-demo-vialo-hatch-clear: rgb(from #3e2c23 r g b / 0);
+    --game-demo-vialo-gloss: color-mix(in srgb, #f9f5ef 70%, transparent);
+    --game-demo-vialo-gloss-clear: rgb(from #f9f5ef r g b / 0);
+    --game-demo-vialo-green: #0e5a3d;
+    --game-demo-vialo-green-light: #3f8a68;
+    --game-demo-vialo-green-deep: #053321;
+    --game-demo-vialo-red: #6e2019;
+    --game-demo-vialo-red-light: #a0413a;
+    --game-demo-vialo-red-deep: #4a100d;
+    --game-demo-vialo-absent-face: #ffffff;
+    --game-demo-vialo-absent-ink: #6b5243;
     --game-demo-tachyyy-width: 10.625rem;
     --game-demo-tachyyy-radius: 0.75rem;
     --game-demo-tachyyy-padding: 0.625rem;
@@ -1529,6 +1550,20 @@
   --play-hub-total-min: 4rem;           /* a total wraps to the next line below this width, never overflows */
   --play-hub-headline-size: 3rem;       /* the panel headline (48 px: "new every" has to fit the 400 px panel) */
   --play-hub-headline-size-phone: 2.5rem;
+  /* The icon tile of a hub row with no icon file: the home page card's pip (the --game-pip-* tokens, which only the home page's carousel sees), same values */
+  --play-hub-pip-radius: 0.8125rem;
+  --play-hub-pip-shadow: 0 6px 14px rgb(62 44 35 / 0.22);
+  --play-hub-pip-bg: #eadccf;
+  --play-hub-pip-ink: #3e2c23;
+  --play-hub-pip-line: #cbb8a4;
+  --play-hub-pip-xgrid-size: 0.625rem;
+  --play-hub-pip-xgrid-gap: 0.125rem;
+  --play-hub-pip-sudoku-size: 1.75rem;
+  --play-hub-pip-hello-size: 1.5rem;
+  --piccline-wordmark-scale: 1.5;       /* piccline is a thin script whose lowercase is only about a third of the box height, so its wordmark is drawn 50 percent larger than its box (the most that fits the card, hub row and sidebar) */
+  --piccline-wordmark-scale-sidebar: 1.3; /* the same, in the game page's sidebar, where it sits close under the icon */
+  --piccline-wordmark-scale-deck: 1.02; /* the same, on the game deck's cards: the name label is only about 28px tall, and 1.03 is the most that stays inside it at every width from 390 to 1119px */
+  --play-hub-account-reserve: 7.125rem;    /* the totals or the account bar in the left panel: room for either, kept while the session check runs */
   /* room kept for the stats panel (browser-only) until it renders; the game rows render on the server */
   --play-hub-stats-reserve: 34rem;      /* the stats panel at every width (at least 550 px) */
 }

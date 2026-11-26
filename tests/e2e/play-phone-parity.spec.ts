@@ -12,7 +12,7 @@ test.beforeEach(async ({ page }) => {
   });
 });
 
-for (const [path, name] of [['/play/vialo', 'vialo'], ['/play/sudoku', 'sudoku'], ['/play/piccline', 'piccline']] as const) {
+for (const [path, name] of [['/play/wordpill', 'wordpill'], ['/play/sudoku', 'sudoku'], ['/play/piccline', 'piccline']] as const) {
   test(`${name}: on a phone there is no rules card in front of the board, and the board is in the first screen`, async ({ page }, info) => {
     test.skip(info.project.name.includes('desktop') || info.project.name.includes('tablet'), 'phone layout');
     await page.goto(path);
@@ -27,8 +27,8 @@ for (const [path, name] of [['/play/vialo', 'vialo'], ['/play/sudoku', 'sudoku']
 
 test('vialo: the help legend keeps each swatch and its label on one line', async ({ page }, info) => {
   test.skip(info.project.name.includes('desktop') || info.project.name.includes('tablet'), 'phone layout');
-  await page.goto('/play/vialo');
-  await page.getByRole('button', { name: 'how to play vialo' }).click();
+  await page.goto('/play/wordpill');
+  await page.getByRole('button', { name: 'how to play wordpill' }).click();
   const rows = page.getByTestId('game-help').getByTestId('vialo-legend').locator('li');
   await expect(rows).toHaveCount(3);
   for (let i = 0; i < 3; i += 1) {
@@ -40,7 +40,7 @@ test('vialo: the help legend keeps each swatch and its label on one line', async
 });
 
 test('game pages: the flag button sits in the frame header with "games" and the logo, and the logo keeps its width', async ({ page }, info) => {
-  await page.goto('/play/vialo');
+  await page.goto('/play/wordpill');
   const flag = page.locator('a[data-game-flag]');
   const back = page.getByTestId('all-games-link');
   const logo = page.locator('.game-frame-logo-wrap');
@@ -73,7 +73,7 @@ test('game pages: the flag button sits in the frame header with "games" and the 
 // and 52 px tall, as phone keyboards are (his approved exception, D-pending); everywhere else keys keep 44 px.
 // tests/e2e/vialo-keys.spec.ts checks the layout, the gaps and the marks.
 test('vialo: every key is a comfortable target for its screen', async ({ page }, info) => {
-  await page.goto('/play/vialo');
+  await page.goto('/play/wordpill');
   const keys = page.getByRole('group', { name: 'letters' }).getByRole('button');
   // Wait for the whole keyboard (26 letters, enter and delete), so the loop below can never run over nothing.
   await expect(keys).toHaveCount(28);

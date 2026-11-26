@@ -80,7 +80,8 @@ const initialJsBudget = {
   'play/crossword.html': 121556,
   'play/pillo.html': 119797,
   'play/sudoku.html': 122156,
-  'play/vialo.html': 124013,
+  'play/wordpill.html': 124013, // renamed from vialo (2026-11-26): the same game bundle
+  'play/vialo.html': 84678, // the old address: a small page that sends visitors to /play/wordpill; measured from a local build
   'play/word-path.html': 120824,
   'play/piccline.html': 120824, // Canonical Piccline keeps Word Path's same game bundle baseline.
   'preview/admin-flags.html': 92161,
@@ -290,7 +291,7 @@ describe.skipIf(!existsSync(dist))('built site', () => {
       expect(html, `${page}: canonical`).toContain(`rel="canonical" href="https://cueory.app/`);
       expect(meta(html, 'og:title'), `${page}: og:title`).toBe(title);
       expect(meta(html, 'og:description'), `${page}: og:description`).toBe(description);
-      const gameImage = page === 'play.html' || /^play\/(pillo|vialo|piccline|crossword|word-path|sudoku)\.html$/.test(page);
+      const gameImage = page === 'play.html' || /^play\/(pillo|wordpill|piccline|crossword|word-path|sudoku)\.html$/.test(page);
       const expectedOgImage = gameImage ? 'https://cueory.app/share/games-scene.png' : 'https://cueory.app/share/study-ivory.png';
       expect(meta(html, 'og:image'), `${page}: og:image`).toBe(expectedOgImage);
       expect(existsSync(join(dist, gameImage ? 'share/games-scene.png' : 'share/study-ivory.png')), `${page}: og:image file`).toBe(true);

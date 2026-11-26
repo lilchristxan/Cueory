@@ -36,7 +36,7 @@ async function setUp(page: Page, sound: boolean) {
 
 const games: { name: string; path: string; ready: (page: Page) => Promise<void>; move: (page: Page) => Promise<void> }[] = [
   {
-    name: 'vialo', path: '/play/vialo',
+    name: 'vialo', path: '/play/wordpill',
     ready: (page) => expect(page.getByTestId('vialo')).toBeVisible(),
     move: (page) => page.getByTestId('vialo').getByRole('group', { name: 'letters' }).getByRole('button', { name: 'q', exact: true }).click(),
   },

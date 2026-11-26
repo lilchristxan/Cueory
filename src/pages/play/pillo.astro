@@ -9,7 +9,7 @@ import { pilloSamples } from '../../config/gamesamples';
 const game = { ...dailyGames[0]!, id: 'pulse' as const, name: 'pillo' };
 const samples = await pilloSamples();
 ---
-<Layout title={game.name} description={game.line} socialImage="/share/games-scene.png" noindex={true} canonicalTo="/play/vialo" bareHeader={gamePagesBareHeader}>
+<Layout title={game.name} description={game.line} socialImage="/share/games-scene.png" noindex={true} canonicalTo="/play/wordpill" bareHeader={gamePagesBareHeader}>
 <GamePage game={game} framed>
   <h1 slot="title" id="pulse-heading" class="display mt-4 text-center text-title wrap-anywhere sm:text-title-lg"><PilloTitle name={game.name} /></h1>
   <section class="mt-6" aria-labelledby="pulse-heading">

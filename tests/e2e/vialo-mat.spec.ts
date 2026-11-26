@@ -86,7 +86,7 @@ for (const scheme of ['light', 'dark'] as const) {
       await markPanelsSeen(page);
       await page.emulateMedia({ colorScheme: scheme, reducedMotion: 'reduce' });
       await page.setViewportSize({ width, height });
-      await page.goto('/play/vialo');
+      await page.goto('/play/wordpill');
       const pack = page.locator('.vialo-pack');
       await expect(pack).toBeVisible();
       await expect(page.locator('.vialo-keys .vialo-key-row').first()).toBeVisible();
@@ -207,7 +207,7 @@ test('the artwork check fails when the artwork file does not load', async ({ pag
   await markPanelsSeen(page);
   await page.emulateMedia({ colorScheme: 'light', reducedMotion: 'reduce' });
   await page.route('**/design/pillo-blister-board.webp', (route) => route.abort());
-  await page.goto('/play/vialo');
+  await page.goto('/play/wordpill');
   const pack = page.locator('.vialo-pack');
   await expect(pack).toBeVisible();
   await pack.evaluate((node) => node.scrollIntoView({ block: 'center' }));

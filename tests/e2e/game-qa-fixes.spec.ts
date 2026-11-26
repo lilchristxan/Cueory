@@ -6,7 +6,7 @@ import { recordCspEvents, withoutWebkitSelectReports } from './csp-allow';
 // before the fix. Games with a first-visit dialog start from empty storage; the rest of the suite starts as a returning
 // player (playwright.config.ts).
 
-const PAGES = ['/play/vialo', '/play/piccline', '/play/sudoku', '/play/crossword', '/play/tachyyy', '/play/hello-cards'];
+const PAGES = ['/play/wordpill', '/play/piccline', '/play/sudoku', '/play/crossword', '/play/tachyyy', '/play/hello-cards'];
 
 function yesterday(): string {
   const date = new Date(Date.now() - 24 * 3600 * 1000);
@@ -43,7 +43,7 @@ test.describe('returning player with saved stats', () => {
 });
 
 test.describe('first visit', () => {
-  for (const path of ['/play/vialo', '/play/sudoku', '/play/crossword', '/play/piccline']) {
+  for (const path of ['/play/wordpill', '/play/sudoku', '/play/crossword', '/play/piccline']) {
     test(`${path} shows the rules once`, async ({ page }) => {
       await page.goto(path);
       const dialog = page.getByTestId('game-help');
@@ -94,7 +94,7 @@ test.describe('tachyyy', () => {
 test('the launch-list promo panel does not open over a game in play', async ({ page }) => {
   // Rules already seen, so no dialog is open and only the game-in-play guard in PromoPanel.astro holds the panel back.
   await markGameRulesSeen(page);
-  for (const path of ['/play/vialo', '/play/sudoku', '/play/piccline']) {
+  for (const path of ['/play/wordpill', '/play/sudoku', '/play/piccline']) {
     await page.clock.install({ time: new Date('2026-11-11T09:00:00') });
     await page.addInitScript(() => { try { localStorage.removeItem('cueory-promo-seen'); } catch { /* blocked */ } });
     await page.goto(path);

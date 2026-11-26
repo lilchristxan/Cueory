@@ -16,6 +16,7 @@
  */
 import { getCollection } from 'astro:content';
 import { gameName, helloCardsGame, helloCardsIndexWhenApproved } from '../config/games';
+import { gameLogos, imageLogo } from '../config/gamelogos';
 import { crosswordShown, pageBuildEnv } from '../config/crossword';
 import { draftsAllowed } from '../islands/anatomylab';
 import { helloCardsPage } from '../islands/hello-cards';
@@ -71,11 +72,11 @@ const helloCardsAvailable = helloCardsPage(
     <div class="gcar" data-games-car>
       <div id="games-track" class="gtrack" data-games-track>
         <!-- Card 1: Vialo -->
-        <a href="/play/vialo" class="gcard on" data-game-card="vialo" aria-label={`${gameName('vialo')}: guess the five-letter word in six tries`}>
-          <img class="gpip tl" src="/brand/games/vialo-dark.svg" alt="" aria-hidden="true" width="52" height="52" loading="lazy" decoding="async" />
+        <a href="/play/wordpill" class="gcard on" data-game-card="vialo" aria-label={`${gameName('vialo')}: guess the five-letter word in six tries`}>
+          <img class="gpip tl" src={imageLogo('vialo').card.icon} alt="" aria-hidden="true" width="52" height="52" loading="lazy" decoding="async" />
           <span class="gface">
             <span class="gname">
-              <img src="/brand/games/vialo-wordmark-light.svg" alt={gameName('vialo')} width="168" height="60" loading="lazy" decoding="async" />
+              <img src={imageLogo('vialo').card.wordmark} alt={gameName('vialo')} width="168" height="60" loading="lazy" decoding="async" />
             </span>
             <span class="gdesc">guess the five-letter word in six tries.</span>
             <span class="gstatus" data-game-status="vialo">
@@ -84,31 +85,31 @@ const helloCardsAvailable = helloCardsPage(
             <span class="gdemo" aria-hidden="true">
               <span class="vialo-grid">
                 <span class="vialo-row">
-                  <span class="gc d-0">C</span>
-                  <span class="gc cu d-30">A</span>
-                  <span class="gc d-60">R</span>
-                  <span class="gc d-90">E</span>
-                  <span class="gc cu d-120">S</span>
+                  <span class="gc gc-absent d-0">C</span>
+                  <span class="gc gc-absent d-30">A</span>
+                  <span class="gc gc-here d-60">R</span>
+                  <span class="gc gc-elsewhere d-90">E</span>
+                  <span class="gc gc-elsewhere d-120">S</span>
                 </span>
                 <span class="vialo-row">
-                  <span class="gc d-180">N</span>
-                  <span class="gc d-210">U</span>
-                  <span class="gc d-240">R</span>
-                  <span class="gc d-270">S</span>
-                  <span class="gc d-300">E</span>
+                  <span class="gc gc-here d-180">N</span>
+                  <span class="gc gc-here d-210">U</span>
+                  <span class="gc gc-here d-240">R</span>
+                  <span class="gc gc-here d-270">S</span>
+                  <span class="gc gc-here d-300">E</span>
                 </span>
               </span>
             </span>
           </span>
-          <img class="gpip br" src="/brand/games/vialo-dark.svg" alt="" aria-hidden="true" width="52" height="52" loading="lazy" decoding="async" />
+          <img class="gpip br" src={imageLogo('vialo').card.icon} alt="" aria-hidden="true" width="52" height="52" loading="lazy" decoding="async" />
         </a>
 
         <!-- Card 2: Tachyyy -->
         <a href="/play/tachyyy" class="gcard" data-game-card="tachyyy" aria-label={`${tachyyyGame.name}: quick questions against the clock`}>
-          <img class="gpip tl" src="/brand/games/tachyyy-dark.svg" alt="" aria-hidden="true" width="52" height="52" loading="lazy" decoding="async" />
+          <img class="gpip tl" src={imageLogo('tachyyy').card.icon} alt="" aria-hidden="true" width="52" height="52" loading="lazy" decoding="async" />
           <span class="gface">
             <span class="gname">
-              <img src="/brand/games/tachyyy-wordmark-light.svg" alt={tachyyyGame.name} width="168" height="60" loading="lazy" decoding="async" />
+              <img src={imageLogo('tachyyy').card.wordmark} alt={tachyyyGame.name} width="168" height="60" loading="lazy" decoding="async" />
             </span>
             <span class="gdesc">quick questions against the clock.</span>
             {tachyyyAvailable ? (
@@ -128,15 +129,15 @@ const helloCardsAvailable = helloCardsPage(
               </span>
             </span>
           </span>
-          <img class="gpip br" src="/brand/games/tachyyy-dark.svg" alt="" aria-hidden="true" width="52" height="52" loading="lazy" decoding="async" />
+          <img class="gpip br" src={imageLogo('tachyyy').card.icon} alt="" aria-hidden="true" width="52" height="52" loading="lazy" decoding="async" />
         </a>
 
         <!-- Card 3: Piccline -->
         <a href="/play/piccline" class="gcard" data-game-card="piccline" aria-label={`${gameName('piccline')}: trace hidden words through the letters`}>
-          <img class="gpip tl" src="/brand/games/piccline-dark.svg" alt="" aria-hidden="true" width="52" height="52" loading="lazy" decoding="async" />
+          <img class="gpip tl" src={imageLogo('piccline').card.icon} alt="" aria-hidden="true" width="52" height="52" loading="lazy" decoding="async" />
           <span class="gface">
             <span class="gname">
-              <img src="/brand/games/piccline-wordmark-light.svg" alt={gameName('piccline')} width="168" height="60" loading="lazy" decoding="async" />
+              <img src={imageLogo('piccline').card.wordmark} alt={gameName('piccline')} width="168" height="60" loading="lazy" decoding="async" />
             </span>
             <span class="gdesc">trace hidden words through the letters.</span>
             <span class="gstatus" data-game-status="piccline">
@@ -153,7 +154,7 @@ const helloCardsAvailable = helloCardsPage(
               </span>
             </span>
           </span>
-          <img class="gpip br" src="/brand/games/piccline-dark.svg" alt="" aria-hidden="true" width="52" height="52" loading="lazy" decoding="async" />
+          <img class="gpip br" src={imageLogo('piccline').card.icon} alt="" aria-hidden="true" width="52" height="52" loading="lazy" decoding="async" />
         </a>
 
         <!-- Card 4: Crossword -->
@@ -221,7 +222,7 @@ const helloCardsAvailable = helloCardsPage(
 
         <!-- Card 5: Sudoku -->
         <a href="/play/sudoku" class="gcard" data-game-card="sudoku" aria-label={`${gameName('triage')}: a calm numbers break`}>
-          <span class="gpip tl gpip-sudoku" aria-hidden="true">9</span>
+          <span class="gpip tl gpip-sudoku" aria-hidden="true">{gameLogos.sudoku.text}</span>
           <span class="gface">
             <span class="gname">
               <span class="serif">{gameName('triage')}</span>
@@ -244,12 +245,12 @@ const helloCardsAvailable = helloCardsPage(
               </span>
             </span>
           </span>
-          <span class="gpip br gpip-sudoku" aria-hidden="true">9</span>
+          <span class="gpip br gpip-sudoku" aria-hidden="true">{gameLogos.sudoku.text}</span>
         </a>
 
         <!-- Card 6: Hello cards -->
         <a href="/play/hello-cards" class="gcard" data-game-card="hello cards" aria-label={`${helloCardsGame.name}: flip a card, start a conversation`}>
-          <span class="gpip tl gpip-hello" aria-hidden="true">hi</span>
+          <span class="gpip tl gpip-hello" aria-hidden="true">{gameLogos.helloCards.text}</span>
           <span class="gface">
             <span class="gname">
               <span class="serif">{helloCardsGame.name}</span>
@@ -269,7 +270,7 @@ const helloCardsAvailable = helloCardsPage(
               </span>
             </span>
           </span>
-          <span class="gpip br gpip-hello" aria-hidden="true">hi</span>
+          <span class="gpip br gpip-hello" aria-hidden="true">{gameLogos.helloCards.text}</span>
         </a>
       </div>
     </div>
@@ -899,10 +900,21 @@ const helloCardsAvailable = helloCardsPage(
     animation-play-state: running !important;
   }
 
-  /* Vialo Demo */
+  /* Vialo Demo: a miniature of the live board (src/styles/vialo.css). Oblong capsule pills in a strip of the same grey
+     blister foil, drawn in CSS from the board's own tokens; the card stays light in Evening, so the foil and the pill
+     colours are the Daytime ones (--game-demo-vialo-*). The guess is CARES against NURSE: in place is green, elsewhere in
+     the word is red with a thin light ring inside its edge, not in the word is white, so colour is never the only signal. The first look at rest (and under reduced motion) is the finished rows. */
   .vialo-grid {
     display: grid;
     gap: var(--game-demo-vialo-grid-gap);
+    padding: var(--game-demo-vialo-strip-padding);
+    border-radius: var(--radius-md);
+    background-color: var(--game-demo-vialo-foil);
+    background-image:
+      linear-gradient(135deg, var(--game-demo-vialo-gloss), var(--game-demo-vialo-gloss-clear) 45%),
+      repeating-linear-gradient(45deg, var(--game-demo-vialo-hatch) 0 var(--pillo-hatch-width), var(--game-demo-vialo-hatch-clear) var(--pillo-hatch-width) var(--pillo-hatch-gap)),
+      repeating-linear-gradient(-45deg, var(--game-demo-vialo-hatch) 0 var(--pillo-hatch-width), var(--game-demo-vialo-hatch-clear) var(--pillo-hatch-width) var(--pillo-hatch-gap));
+    box-shadow: var(--shadow-pillo-pack);
   }
 
   .vialo-row {
@@ -911,36 +923,54 @@ const helloCardsAvailable = helloCardsPage(
   }
 
   .gc {
-    width: var(--game-demo-vialo-cell-size);
-    height: var(--game-demo-vialo-cell-size);
+    --gc-face: var(--game-demo-vialo-green);
+    --gc-image: radial-gradient(ellipse 120% 140% at 30% 20%, color-mix(in srgb, var(--game-demo-vialo-green-light) 38%, var(--game-demo-vialo-green-deep)), var(--game-demo-vialo-green) 55%, var(--game-demo-vialo-green-deep));
+    --gc-ink: var(--game-frame-pill-text-color);
+    --gc-ring: var(--game-demo-vialo-ring-color);
+    position: relative;
+    width: var(--game-demo-vialo-cell-width);
+    height: var(--game-demo-vialo-cell-height);
     border-radius: var(--radius-pill);
-    border: var(--game-demo-vialo-cell-border) solid var(--game-demo-border);
-    background: var(--game-demo-vialo-cell-bg);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-family: var(--font-body);
-    font-weight: 700;
+    display: grid;
+    place-items: center;
+    font-family: var(--vialo-pill-font);
     font-size: var(--game-demo-vialo-font-size);
-    color: transparent;
+    line-height: 1;
     box-sizing: border-box;
+    color: var(--gc-ink);
+    background-color: var(--gc-face);
+    background-image: var(--gc-image);
+    box-shadow: var(--shadow-pillo-pill);
     animation: gfill 4.8s ease-in-out infinite;
   }
 
-  .gc.cu {
-    animation-name: gfillc;
+  .gc.gc-elsewhere {
+    --gc-face: var(--game-demo-vialo-red);
+    --gc-image: radial-gradient(ellipse 120% 140% at 30% 20%, color-mix(in srgb, var(--game-demo-vialo-red-light) 80%, var(--game-demo-vialo-red)), var(--game-demo-vialo-red) 55%, var(--game-demo-vialo-red-deep));
   }
 
+  .gc.gc-absent {
+    --gc-face: var(--game-demo-vialo-absent-face);
+    --gc-image: none;
+    --gc-ink: var(--game-demo-vialo-absent-ink);
+  }
+
+  /* Elsewhere in the word: a thin light ring inside the pill's edge (as on the live board and its key), so red differs from
+     green by more than colour. Green and white carry no mark. */
+  .gc.gc-elsewhere::before {
+    content: "";
+    position: absolute;
+    inset: var(--game-demo-vialo-ring-gap);
+    border: var(--game-demo-vialo-ring) solid var(--gc-ring);
+    border-radius: inherit;
+    pointer-events: none;
+  }
+
+  /* Each pocket starts empty (the foil's well) and its pill drops in. */
   @keyframes gfill {
-    0%, 8% { background: var(--game-demo-vialo-cell-bg); border-color: var(--game-demo-border); color: transparent; }
-    18%, 86% { background: var(--game-demo-active-bg); border-color: var(--game-demo-active-bg); color: var(--game-card-on-dark); }
-    100% { background: var(--game-demo-vialo-cell-bg); border-color: var(--game-demo-border); color: transparent; }
-  }
-
-  @keyframes gfillc {
-    0%, 8% { background: var(--game-demo-vialo-cell-bg); border-color: var(--game-demo-border); color: transparent; }
-    18%, 86% { background: var(--color-copper-glow); border-color: var(--color-copper-deep); color: var(--game-card-ink); }
-    100% { background: var(--game-demo-vialo-cell-bg); border-color: var(--game-demo-border); color: transparent; }
+    0%, 8% { background-image: none; background-color: transparent; color: transparent; box-shadow: var(--shadow-pillo-pocket); --gc-ring: transparent; }
+    18%, 86% { background-image: var(--gc-image); background-color: var(--gc-face); color: var(--gc-ink); box-shadow: var(--shadow-pillo-pill); --gc-ring: var(--game-demo-vialo-ring-color); }
+    100% { background-image: none; background-color: transparent; color: transparent; box-shadow: var(--shadow-pillo-pocket); --gc-ring: transparent; }
   }
 
   /* Tachyyy Demo */
@@ -1310,7 +1340,6 @@ const helloCardsAvailable = helloCardsPage(
     .gdesc,
     .gstatus,
     .gc,
-    .gc.cu,
     .tbar i,
     .tch.ok,
     .pgrid polyline,

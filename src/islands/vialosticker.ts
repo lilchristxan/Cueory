@@ -6,6 +6,7 @@
  * was drawn at half that size in CSS pixels, so the measurements below are his, doubled; they were read from his
  * files in a browser (element boxes), not estimated from the pictures.
  */
+import { imageLogo } from '../config/gamelogos';
 import { formatSolveTime } from './vialotimer';
 import { gameName } from '../config/games';
 import type { Mark } from './pulse';
@@ -113,8 +114,8 @@ export interface StickerLayout {
   footer: TextLine;
 }
 
-/** Wordmark: 77 CSS px tall, with the SVG's 4326 x 1620 ratio. */
-const WORDMARK_RATIO = 4326 / 1620;
+/** Wordmark: 77 CSS px tall, with the artwork's own ratio (src/config/gamelogos.ts). */
+const WORDMARK_RATIO = imageLogo('vialo').wordmark.width / imageLogo('vialo').wordmark.height;
 const WORDMARK_HEIGHT = 154;
 const PACK_RATIO = FOIL.width / FOIL.height;
 

@@ -6,7 +6,7 @@ import { crosswordOpen } from './site';
  * crossword, the crosswordOpen switch (site.ts) is on. Coming-soon games stay out, so the sitemap follows that config.
  */
 const gamePageById: readonly { id: DailyGame['id']; path: string; open: boolean }[] = [
-  { id: 'vialo', path: '/play/vialo', open: true },
+  { id: 'vialo', path: '/play/wordpill', open: true },
   { id: 'cueword', path: '/play/crossword', open: crosswordOpen },
   { id: 'triage', path: '/play/sudoku', open: true },
   { id: 'suture', path: '/play/piccline', open: true },

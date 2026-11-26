@@ -12,7 +12,7 @@ const routes = [
   '/play/piccline',
   '/play/word-path',
   '/play/pillo',
-  '/play/vialo',
+  '/play/wordpill',
   '/play/crossword',
   '/play/stat',
   '/play/hello-cards',

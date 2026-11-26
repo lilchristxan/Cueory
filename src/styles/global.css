@@ -714,6 +714,15 @@
     display: block;
   }
 
+  /* Piccline's wordmark (Christian, 2026-11-25: "it looks smaller than the others"). It is a thin script, so at the same
+     box height its letters look smaller than vialo's and tachyyy's. Both files fill their box (the ink is 97 percent of
+     its height, so there is no padding to compensate for); the image is drawn larger about its centre instead, which
+     leaves the layout where it was. Every place that shows the wordmark (home card, hub row, game page, deck) is covered. */
+  img[src$="piccline-wordmark-light.svg"],
+  img[src$="piccline-wordmark-dark.svg"] {
+    scale: var(--piccline-wordmark-scale);
+  }
+
   .logo img {
     display: block;
     width: 100%;

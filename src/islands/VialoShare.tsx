@@ -1,5 +1,6 @@
 import { useCallback, useMemo } from 'react';
 import { gameName } from '../config/games';
+import { imageLogo } from '../config/gamelogos';
 import type { Mark } from './pulse';
 import { buildShareUrl } from './share';
 import ShareDialog from './ShareDialog';
@@ -20,7 +21,7 @@ import type { StickerAssets, StickerPalette } from './vialostickerdraw';
 
 /*
   Vialo's use of the shared share dialog: it supplies the two sticker drawings, the wordmark and icon files and the
-  words. Loaded (with the canvas drawing code) only after a game ends, so /play/vialo's first load does not grow.
+  words. Loaded (with the canvas drawing code) only after a game ends, so /play/wordpill's first load does not grow.
 */
 
 export interface VialoShareProps {
@@ -45,9 +46,9 @@ export interface VialoShareProps {
 const GAME: ShareGame = {
   game: 'vialo',
   title: `share your ${gameName('vialo')} result`,
-  wordmarkSrc: '/design/games-v2/assets/vialo-wordmark-oxblood-v3.svg',
+  wordmarkSrc: imageLogo('vialo').wordmark.day,
   wordmarkAlt: gameName('vialo'),
-  cornerSrc: '/design/games-v2/assets/vialo-icon-silver-oxblood.svg',
+  cornerSrc: imageLogo('vialo').icon.day,
   countdownLabel: `next ${gameName('vialo')} in`,
 };
 

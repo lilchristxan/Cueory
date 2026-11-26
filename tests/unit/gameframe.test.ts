@@ -124,7 +124,7 @@ describe('GameFrame (Scope 1)', () => {
     // Stats are signed-in only (2026-11-25): no static zeros in the page markup, the island draws the panel itself.
     expect(frame).not.toContain('staticNoScoreStats');
     expect(frame).not.toContain('class="game-frame-stats"');
-    expect(frame).toContain('<GameFrameStats client:load game={currentConfig.id} />');
+    expect(frame).toContain('<GameFrameStats client:load game={currentConfig.id} cta={statsCta} />');
     expect(helloCards).toContain('<GameFrame game="hello-cards">');
     expect(page).toContain('framed = false');
     // The four stats sit in the frame's left panel on every game page, so no separate stats block follows the frame.

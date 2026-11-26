@@ -52,7 +52,7 @@ test('appears on a lesson page too', async ({ page }) => {
 });
 
 test('never appears on a game page', async ({ page }) => {
-  await openAt(page, '/play/vialo');
+  await openAt(page, '/play/wordpill');
   await jump(page, 31);
   await page.waitForTimeout(1_500);
   await expect(note(page)).toHaveCount(0);

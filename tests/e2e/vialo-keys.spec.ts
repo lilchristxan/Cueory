@@ -11,7 +11,7 @@ test.beforeEach(async ({ page }) => {
       // If storage is unavailable, the game still provides its visible help control.
     }
   });
-  await page.goto('/play/vialo');
+  await page.goto('/play/wordpill');
   await expect(page.getByTestId('vialo')).toBeVisible();
 });
 
