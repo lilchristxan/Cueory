@@ -190,7 +190,7 @@
      against the pack width (outside the well grid) or the individual cell width (inside it). */
   --vialo-art-ratio: 1230 / 1180;
   --vialo-art-width-per-height: 1.0424; /* 1230 / 1180 as a plain number, so the pack's width can follow the window's height */
-  --vialo-board-reserve: 25.5rem;       /* 408px: the page above the pack plus the keys below it, so pack, guess strip and keys fit a 900px-high desktop window without scrolling */
+  --vialo-board-reserve: 26.5rem;       /* 424px (was 408; +16 for the timer line and its gap): the page above the pack plus the keys below it, so pack, guess strip and keys fit a 900px-high desktop window without scrolling */
   --vialo-board-min: 20rem;             /* 320px: the pack never gets narrower than this on a short window */
   /* The artwork file has a baked ivory mat (and soft shadow) around the foil card. The pack is clipped to the
      foil so only the card shows. Measured from the 1230 x 1180 file: foil spans x 21 to 1208 and y 16 to 1155,
@@ -1017,6 +1017,99 @@
   --export-label-pad-x: 0.5;
   --export-label-pad-y: 0.15;
   --export-label-room: 0.26;
+}
+
+
+/* ---------- Vialo share (Christian's designs, 25 Nov 2026) ----------
+   The sticker is an exported picture, so its colours are the same in Daytime and Evening: these are declared once and
+   never overridden below. Canvas code reads them with getComputedStyle (src/islands/vialostickerdraw.ts). */
+:root {
+  --vialo-sticker-oxblood: #5e1a16;
+  --vialo-sticker-espresso: #3e2c23;
+  --vialo-sticker-copper: rgba(184, 115, 72, 0.9);
+  --vialo-sticker-outline: rgba(249, 245, 239, 0.62);
+  --vialo-sticker-wordmark-outline: rgba(249, 245, 239, 0.45);
+  --vialo-sticker-divider-halo: rgba(249, 245, 239, 0.5);
+  --vialo-sticker-pack-rim: rgba(61, 58, 56, 0.45);
+  --vialo-sticker-pack-shadow: rgba(20, 13, 8, 0.28);
+  --vialo-sticker-pill-shade: rgba(62, 44, 35, 0.22);
+  --vialo-sticker-pill-lift: rgba(62, 44, 35, 0.28);
+  --vialo-sticker-ring-scale: 2;        /* the board's "elsewhere" ring, scaled up to the sticker's bigger pills */
+  --vialo-sticker-pill-gloss: rgba(249, 245, 239, 0.9);
+  --vialo-sticker-here-light: rgb(63, 138, 104);
+  --vialo-sticker-here-mid: rgb(14, 90, 61);
+  --vialo-sticker-here-deep: rgb(5, 51, 33);
+  --vialo-sticker-elsewhere-light: rgb(160, 65, 58);
+  --vialo-sticker-elsewhere-mid: rgb(110, 32, 25);
+  --vialo-sticker-elsewhere-deep: rgb(74, 16, 13);
+  --vialo-sticker-absent-light: rgb(255, 255, 255);
+  --vialo-sticker-absent-mid: rgb(249, 245, 239);
+  --vialo-sticker-absent-deep: rgb(234, 220, 207);
+
+  /* The share card around it (always Daytime, see .always-daytime). */
+  --share-dialog-scrim-pad: 1rem;          /* room around the card on every screen */
+  --share-dialog-max-width: 51.25rem;      /* 820 px */
+  --share-dialog-radius: 1.625rem;         /* 26 px */
+  --share-dialog-border: 1.5px;
+  --share-dialog-pad-block: 2.5rem 2rem;   /* 40 px above and below, 32 px at the sides */
+  --share-dialog-corner-icon: 3rem;        /* 48 px */
+  --share-dialog-corner-inset: 1.375rem;   /* 22 px */
+  --share-dialog-corner-radius: 0.75rem;   /* 12 px */
+  --share-dialog-wordmark-height: 3.375rem; /* 54 px */
+  --share-dialog-gap: 1.125rem;            /* 18 px */
+  --share-dialog-option-pad: 1.25rem 1.125rem;
+  --share-dialog-option-radius: 1.125rem;  /* 18 px */
+  --share-dialog-option-border: 1.5px;
+  --share-dialog-option-border-chosen: 2px;
+  --share-dialog-check: 1rem;              /* 16 px checkerboard square */
+  --share-dialog-ground: #fbf8f4;
+  --share-dialog-ground-check: rgba(62, 44, 35, 0.055);
+  --share-dialog-option-rim: rgba(184, 115, 72, 0.35);
+  --share-dialog-icon-box: var(--tap-min);
+  --share-dialog-icon-size: 1.375rem;      /* 22 px */
+  --share-dialog-icon-gap: 0.5rem;
+  --share-dialog-button-border: 1.5px;
+  --share-dialog-mark-size: 1.5rem;        /* 24 px chosen-sticker tick */
+  --share-dialog-shadow: 0 1.5rem 4rem rgb(var(--shadow-tint) / 0.14);
+  --share-dialog-corner-shadow: 0 0.25rem 0.75rem rgb(var(--shadow-tint) / 0.16);
+  --share-dialog-chosen-shadow: 0 0.5rem 1.375rem rgb(94 26 22 / 0.12);
+  --share-dialog-wordmark-gap: 1.625rem;   /* 26 px under the wordmark */
+  --share-dialog-section-gap: 1.625rem;
+  --share-dialog-option-min: 17.5rem;      /* 280 px: two stickers sit side by side from a card about 600 px wide */
+  --share-dialog-action-gap: 0.875rem;     /* 14 px */
+  --share-dialog-button-pad: 0.75rem 1.75rem;
+  --share-dialog-menu-width: 16rem;        /* 256 px: "share on facebook" and its new-tab arrow on one line */
+  --share-dialog-menu-shadow: 0 0.75rem 1.75rem rgb(var(--shadow-tint) / 0.2);
+  --share-dialog-menu-icon: 1.25rem;       /* 20 px */
+  --vialo-timer-line: 1.5;                /* body text is never tighter than 1.5 (docs/BRAND.md) */
+  --vialo-timer-height: 1.5em;            /* one text-sm line at that spacing, kept even when the timer is hidden so the board never moves */
+  --vialo-timer-gap: 0.25rem;
+  --vialo-timer-gap-below: 0.5rem;        /* keeps the timer text clear of the foil card's edge */
+}
+
+/*
+  ---------- An always-Daytime surface ----------
+  A surface that keeps the Daytime palette in Evening too (Christian, 25 Nov 2026: the vialo share card looks the same
+  in both). Put the class on the surface's root: everything inside reads these Daytime values, whatever the page's
+  theme. The page around it keeps following the theme. Same values as the Daytime block above.
+*/
+.always-daytime {
+  --color-page: #f9f5ef;
+  --color-surface: #eadccf;
+  --color-soft: #d3b7a1;
+  --color-highlight: #8b6f5b;
+  --color-ink: #3e2c23;
+  --color-ink-soft: #6b5243;
+  --color-line: #d3b7a1;
+  --color-control: #6b5243;
+  --color-button: #3e2c23;
+  --color-button-hover: #6b5243;
+  --color-on-button: #f9f5ef;
+  --color-focus: #6b5243;
+  --game-oxblood: #6e2019;
+  --shadow-tint: 62 44 35;
+  color: var(--color-ink);
+  color-scheme: light;
 }
 
 /*

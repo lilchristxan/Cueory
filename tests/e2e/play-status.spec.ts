@@ -118,7 +118,7 @@ test('a started round shows in progress, and vialo finished on its own page show
   await field.fill('grace');
   await field.press('Enter');
   await expect(page.getByTestId('vialo-result')).toContainText('solved.');
-  await page.getByTestId('game-result-dialog').getByRole('button', { name: 'close results' }).click();
+  await page.getByTestId('share-dialog').getByRole('button', { name: 'close', exact: true }).click();
   await page.getByRole('link', { name: 'all games' }).click();
   await expect(row(page, 'pulse')).toHaveAttribute('data-status', 'done');
   await expect(row(page, 'pulse').getByRole('link')).toHaveCount(0);
