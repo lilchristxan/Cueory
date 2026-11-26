@@ -20,7 +20,7 @@ test('pillo high contrast is the shared switch in the gear\'s dialog, remembered
   const pillo = page.getByTestId('pulse');
   await expect(pillo).toBeVisible();
   // One dialog from the gear (Christian's brief): pillo's own settings and the shared ones, so one high contrast switch.
-  const gear = pillo.getByRole('button', { name: 'pillo settings' });
+  const gear = page.getByRole('button', { name: 'pillo settings' });
   const dialog = page.getByRole('dialog', { name: 'pillo settings' });
   await gear.click();
   await expect(dialog.getByRole('checkbox', { name: /high contrast/ })).toHaveCount(1);
@@ -48,7 +48,7 @@ test('pillo high contrast is the shared switch in the gear\'s dialog, remembered
   await page.keyboard.press('Escape');
   await page.reload();
   await expect(page.getByTestId('pulse')).toHaveClass(/pillo-contrast/);
-  await page.getByTestId('pulse').getByRole('button', { name: 'pillo settings' }).click();
+  await page.getByRole('button', { name: 'pillo settings' }).click();
   await expect(dialog.getByRole('checkbox', { name: /high contrast/ })).toBeChecked();
   await page.keyboard.press('Escape');
   await page.goto('/play/crossword');

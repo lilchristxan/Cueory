@@ -110,7 +110,7 @@ test('Enter on a word that is not in the list shows the message and submits noth
 
 test('Enter and Backspace do nothing while the how-to-play dialog is open', async ({ page }) => {
   await typeOnScreen(page, 'crane');
-  await page.getByTestId('game-help-button').click();
+  await page.getByTestId('game-frame-help-button').click();
   await expect(page.getByRole('dialog')).toBeVisible();
   await page.keyboard.press('Enter');
   await page.keyboard.press('Backspace');
@@ -234,7 +234,7 @@ for (const scheme of ['light', 'dark'] as const) {
     await typeOnScreen(page, 'plant');
     await key(page, 'enter').click();
     await expect(guesses(page)).toHaveCount(2);
-    await page.getByTestId('game-help-button').click();
+    await page.getByTestId('game-frame-help-button').click();
     await expect(page.getByTestId('vialo-legend')).toBeVisible();
     const colours = await page.evaluate(() => {
       const probe = document.createElement('span');
@@ -272,7 +272,7 @@ for (const scheme of ['light', 'dark'] as const) {
 // "on-screen keyboard only" (settings): only the letter keys below type. The physical keyboard must not add, delete
 // or submit, but Enter or Space on a focused key still activates that key.
 async function keysOnlyOn(page: Page) {
-  await page.getByTestId('vialo').getByRole('button', { name: 'vialo settings' }).click();
+  await page.getByRole('button', { name: 'vialo settings' }).click();
   const settings = page.getByRole('dialog', { name: 'vialo settings' });
   await settings.getByRole('switch', { name: /on-screen keyboard only/ }).click();
   await page.keyboard.press('Escape');

@@ -9,7 +9,7 @@ async function open(page: Page, path = '/play/word-path') {
   await page.clock.setFixedTime(new Date('2026-11-01T15:00:00'));
   await markPanelsSeen(page);
   await page.goto(path);
-  await page.getByTestId('game-settings-button').click();
+  await page.getByTestId('game-frame-gear').click();
   const dialog = page.getByRole('dialog');
   await expect(dialog).toBeVisible();
   return dialog;
@@ -113,7 +113,7 @@ test('the choice is remembered after a reload and shown in the footer switch bot
   await page.keyboard.press('Escape');
   await page.reload();
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
-  await page.getByTestId('game-settings-button').click();
+  await page.getByTestId('game-frame-gear').click();
   await expect(page.getByRole('dialog').getByRole('radio', { name: 'dark mode' })).toBeChecked();
   await page.keyboard.press('Escape');
   // Footer to panel: pick light in the footer, then open the panel again.
@@ -123,7 +123,7 @@ test('the choice is remembered after a reload and shown in the footer switch bot
     input.dispatchEvent(new Event('change', { bubbles: true }));
   });
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
-  await page.getByTestId('game-settings-button').click();
+  await page.getByTestId('game-frame-gear').click();
   await expect(page.getByRole('dialog').getByRole('radio', { name: 'light mode' })).toBeChecked();
 });
 
@@ -192,7 +192,7 @@ for (const path of GAME_PAGES) {
     await markPanelsSeen(page);
     const response = await page.goto(path);
     expect(response!.status()).toBeLessThan(400);
-    const gear = page.getByTestId('game-settings-button').or(page.getByTestId('game-frame-gear'));
+    const gear = page.getByTestId('game-frame-gear');
     await gear.first().click();
     const theme = page.getByRole('dialog').getByRole('group', { name: 'theme' });
     await expect(theme.getByRole('radio')).toHaveCount(3);

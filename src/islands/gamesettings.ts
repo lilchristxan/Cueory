@@ -23,12 +23,15 @@ export interface SharedGameSettings {
   highContrast: boolean;
   motion: MotionChoice;
   sound: boolean;
+  /** Vialo's "time: m:ss" line on the board (Christian, 25 Nov 2026). On by default; the timer still runs when hidden. */
+  showTimer: boolean;
 }
 
 export const DEFAULT_GAME_SETTINGS: Readonly<SharedGameSettings> = Object.freeze({
   highContrast: false,
   motion: 'device',
   sound: true,
+  showTimer: true,
 });
 
 export const MOTION_ROWS: ReadonlyArray<{ value: MotionChoice; label: string; detail: string }> = [
@@ -51,6 +54,7 @@ export function parseGameSettings(raw: string | null | undefined): SharedGameSet
     highContrast: typeof saved.highContrast === 'boolean' ? saved.highContrast : DEFAULT_GAME_SETTINGS.highContrast,
     motion: saved.motion === 'reduce' || saved.motion === 'device' ? saved.motion : DEFAULT_GAME_SETTINGS.motion,
     sound: typeof saved.sound === 'boolean' ? saved.sound : DEFAULT_GAME_SETTINGS.sound,
+    showTimer: typeof saved.showTimer === 'boolean' ? saved.showTimer : DEFAULT_GAME_SETTINGS.showTimer,
   };
 }
 
@@ -65,7 +69,8 @@ export function loadGameSettings(storage: KeyValueStorage | undefined): SharedGa
 function isDefault(settings: SharedGameSettings): boolean {
   return settings.highContrast === DEFAULT_GAME_SETTINGS.highContrast
     && settings.motion === DEFAULT_GAME_SETTINGS.motion
-    && settings.sound === DEFAULT_GAME_SETTINGS.sound;
+    && settings.sound === DEFAULT_GAME_SETTINGS.sound
+    && settings.showTimer === DEFAULT_GAME_SETTINGS.showTimer;
 }
 
 /** Defaults are not stored, so a visitor who never changes anything has nothing saved. Blocked storage is ignored. */
@@ -74,6 +79,8 @@ export function saveGameSettings(storage: KeyValueStorage | undefined, settings:
     if (isDefault(settings)) storage?.removeItem(GAME_SETTINGS_STORAGE_KEY);
     else storage?.setItem(GAME_SETTINGS_STORAGE_KEY, JSON.stringify({
       highContrast: settings.highContrast, motion: settings.motion, sound: settings.sound,
+      // Written only when turned off, so the record stays the same shape for everyone who never touches it.
+      ...(settings.showTimer ? {} : { showTimer: false }),
     }));
   } catch {
     // Not remembered; the change still applies to this page.
