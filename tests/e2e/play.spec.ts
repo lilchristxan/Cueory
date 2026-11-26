@@ -884,6 +884,7 @@ test.describe('daily games: private stats (D-76), always kept (2026-11-17)', () 
   const solveOnItsPage = async (page: Page) => {
     await page.goto('/play/vialo');
     await expect(page.getByTestId('vialo')).toBeVisible();
+    await expect(page.locator('astro-island[component-url*="VialoGame"]:not([ssr])')).toHaveCount(1); // hydrated before the first guess
     await solveVialo(page);
   };
   test.beforeEach(async ({ page }) => {

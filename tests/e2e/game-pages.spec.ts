@@ -99,6 +99,7 @@ for (const game of games) {
 
 test('a finished vialo on its own page opens the result dialog and keeps stats only for vialo', async ({ page }) => {
   await page.goto('/play/vialo');
+  await expect(page.locator('astro-island[component-url*="VialoGame"]:not([ssr])')).toHaveCount(1); // hydrated before the first guess
   // Stats are always kept (2026-11-17): there is no switch to turn on, and a game page has no full stats panel (Games v2).
   await expect(page.getByTestId('game-stats')).toHaveCount(0);
   const field = page.getByLabel('your guess', { exact: true });
