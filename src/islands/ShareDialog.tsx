@@ -1,5 +1,5 @@
 import '../styles/sharedialog.css';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { untilNextPuzzle } from './pulse';
 import { inertOutside, lockPageScroll } from './gameresults';
@@ -120,13 +120,28 @@ export default function ShareDialog({ game, open, onClose, description, payload,
     return () => window.clearInterval(timer);
   }, [open]);
 
-  // Modal: the page behind is inert and cannot scroll; focus moves in, is trapped, and goes back when it closes.
+  // Focus moves into the card as soon as it is shown, before the browser paints (a layout effect, so no timer and nothing
+  // that waits for the stickers). Safari's engine can drop a focus() call made in the same task that un-hid the card and
+  // made the page behind inert, so if it did not land, it is asked once more on the next frame.
+  useLayoutEffect(() => {
+    if (!open) return;
+    const target = card.current;
+    target?.focus({ preventScroll: true });
+    if (!target || document.activeElement === target) return;
+    const frame = window.requestAnimationFrame(() => {
+      if (document.activeElement !== target && !target.contains(document.activeElement)) target.focus({ preventScroll: true });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [open]);
+
+  // Modal: the page behind is inert and cannot scroll; focus is trapped, and goes back when it closes.
   useEffect(() => {
     if (!open || !scrim.current) return;
     wasOpen.current = true;
     const restoreInert = inertOutside(scrim.current, document.body);
     const restoreScroll = lockPageScroll(document.documentElement, document.body, window);
-    card.current?.focus();
+    // Making the page inert can move focus off the card (the engine falls back to the page): put it back on the card.
+    if (document.activeElement !== card.current && !card.current?.contains(document.activeElement)) card.current?.focus({ preventScroll: true });
     const key = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         event.preventDefault();
