@@ -1104,9 +1104,9 @@
 
 /* Narrow screens (640 px and under): the date line and the buttons cannot share a line without the date wrapping, so the
    pair has its own row at the top and the date line, on one line, sits under it. */
-@media (width < 40rem) {
+@variant max-sm {
   .game-frame-main {
-    --game-frame-corner-clear: 0px;
+    --game-frame-corner-clear: calc(var(--spacing) * 0);
   }
   .game-frame-head {
     padding-block-start: calc(var(--game-frame-corner-inset-now) + var(--game-frame-btn-size) + var(--game-frame-corner-gap));
