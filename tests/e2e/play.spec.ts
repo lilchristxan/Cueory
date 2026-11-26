@@ -526,19 +526,18 @@ test.describe('daily games: sudoku (Task 625)', () => {
     const editable = grid(page).locator('[data-given="false"]').first();
     await editable.click();
     await page.keyboard.press('1');
+    // Print now asks the page's own two-page sheet (sudoku-print.spec.ts): an unfinished level warns first, and "print anyway"
+    // prints a sheet that holds only the given numbers and cueory.app on page 1, with everything else on the page left out.
     await page.evaluate(() => { window.print = () => {}; });
     await game(page).getByRole('button', { name: 'print this puzzle' }).click();
-    await expect(page.locator('html')).toHaveAttribute('data-print-game', 'sudoku');
+    await page.getByRole('dialog', { name: 'print before you finish?' }).getByRole('button', { name: 'print anyway' }).click();
     await page.emulateMedia({ media: 'print' });
     await expect(page.getByTestId('pulse')).toBeHidden();
-    await expect(game(page).locator('.sudoku-title-row')).toBeHidden();
-    await expect(editable.locator('> *')).toBeHidden();
-    await expect(grid(page).locator('[data-given="true"]').first()).toBeVisible();
-    await expect(game(page).locator('.sudoku-print-footer')).toHaveText('cueory.app');
-    await expect(game(page).locator('.sudoku-print-footer')).toBeVisible();
-
-    await page.evaluate(() => window.dispatchEvent(new Event('afterprint')));
-    await expect(page.locator('html')).not.toHaveAttribute('data-print-game', /.+/);
+    await expect(game(page)).toBeHidden();
+    const sheetGrid = page.getByTestId('sheet-sudoku');
+    await expect(sheetGrid).toBeVisible();
+    await expect(sheetGrid.locator('.sheet-given')).toHaveCount(40);
+    await expect(page.getByTestId('sheet-page-1')).toContainText('cueory.app');
   });
 
   test('solves the puzzle, focuses the result and emits the Worker 2 result hook', async ({ page }) => {
