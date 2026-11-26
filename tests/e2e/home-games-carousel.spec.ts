@@ -7,8 +7,8 @@ test.describe('home games carousel (Home v2 Lane 5)', () => {
   test('keyboard navigation: arrow keys slide and wrap cards with visible focus', async ({ page }, testInfo) => {
     test.skip(!isDesktopOfEachEngine(testInfo), 'runs once per browser engine');
 
-    await page.goto('/');
     await markPanelsSeen(page);
+    await page.goto('/');
     const section = page.locator('#daily-games');
     await section.scrollIntoViewIfNeeded();
 
@@ -65,8 +65,8 @@ test.describe('home games carousel (Home v2 Lane 5)', () => {
   test('button controls: previous and next buttons slide and wrap cards', async ({ page }, testInfo) => {
     test.skip(!isDesktopOfEachEngine(testInfo), 'runs once per browser engine');
 
-    await page.goto('/');
     await markPanelsSeen(page);
+    await page.goto('/');
     const section = page.locator('#daily-games');
     await section.scrollIntoViewIfNeeded();
 
@@ -92,8 +92,10 @@ test.describe('home games carousel (Home v2 Lane 5)', () => {
 
   // The row is a circle (Christian, 2026-11-25): after the last game comes the first, before the first comes the last.
   const openLoop = async (page: import('@playwright/test').Page) => {
-    await page.goto('/');
+    // Before the page loads: the mark is an init script, so it only applies to pages opened after it. Added after the
+    // load it did nothing, and the launch-updates pop-up opened 10 seconds in and covered the arrows.
     await markPanelsSeen(page);
+    await page.goto('/');
     const section = page.locator('#daily-games');
     await section.scrollIntoViewIfNeeded();
     const carousel = section.locator('[data-games-carousel]');
@@ -284,8 +286,8 @@ test.describe('home games carousel (Home v2 Lane 5)', () => {
   test('hover and focus plays looping demo, paused when idle', async ({ page }, testInfo) => {
     test.skip(!isDesktopOfEachEngine(testInfo), 'runs once per browser engine');
 
-    await page.goto('/');
     await markPanelsSeen(page);
+    await page.goto('/');
     const section = page.locator('#daily-games');
     await section.scrollIntoViewIfNeeded();
 
@@ -336,8 +338,8 @@ test.describe('home games carousel (Home v2 Lane 5)', () => {
     });
     try {
       const page = await context.newPage();
-      await page.goto('/');
       await markPanelsSeen(page);
+      await page.goto('/');
 
       const section = page.locator('#daily-games');
       await section.scrollIntoViewIfNeeded();
@@ -374,8 +376,8 @@ test.describe('home games carousel (Home v2 Lane 5)', () => {
     });
     try {
       const page = await context.newPage();
-      await page.goto('/');
       await markPanelsSeen(page);
+      await page.goto('/');
 
       const section = page.locator('#daily-games');
       await section.scrollIntoViewIfNeeded();
@@ -420,8 +422,8 @@ test.describe('home games carousel (Home v2 Lane 5)', () => {
     });
     try {
       const page = await context.newPage();
-      await page.goto('/');
       await markPanelsSeen(page);
+      await page.goto('/');
 
       const section = page.locator('#daily-games');
       await section.scrollIntoViewIfNeeded();
@@ -486,8 +488,8 @@ test.describe('home games carousel (Home v2 Lane 5)', () => {
       }
     }, today);
 
-    await page.goto('/');
     await markPanelsSeen(page);
+    await page.goto('/');
     const section = page.locator('#daily-games');
     await section.scrollIntoViewIfNeeded();
 
@@ -509,8 +511,8 @@ test.describe('home games carousel (Home v2 Lane 5)', () => {
     });
     try {
       const page = await context.newPage();
-      await page.goto('/');
       await markPanelsSeen(page);
+      await page.goto('/');
 
       const section = page.locator('#daily-games');
       await section.scrollIntoViewIfNeeded();
@@ -536,8 +538,8 @@ test.describe('home games carousel (Home v2 Lane 5)', () => {
   test('large default font size (32px): step and extent scale dynamically and reach all cards', async ({ page }, testInfo) => {
     test.skip(!isDesktopOfEachEngine(testInfo), 'runs once per browser engine');
 
-    await page.goto('/');
     await markPanelsSeen(page);
+    await page.goto('/');
 
     // Set 32px root font size (simulates 200% text zoom)
     await page.evaluate(() => document.documentElement.style.setProperty('font-size', '32px', 'important'));
@@ -585,8 +587,8 @@ test.describe('home games carousel (Home v2 Lane 5)', () => {
         } catch {}
       });
       const page = await context.newPage();
-      await page.goto('/');
       await markPanelsSeen(page);
+      await page.goto('/');
 
       // Set 32px root font size (simulates 200% text zoom on mobile)
       await page.evaluate(() => document.documentElement.style.setProperty('font-size', '32px', 'important'));

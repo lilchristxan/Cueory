@@ -17,8 +17,6 @@ interface Props {
   framed?: boolean;
   /** True only where a framed island receives the Frame's named control events. */
   bridge?: boolean;
-  /** Renders the standard no-score rows without a stats island for a route that persists no game history. */
-  staticNoScoreStats?: boolean;
   /** Shows the four stats in the panel even where the page keeps its own controls (framed off). Default: with framed. */
   stats?: boolean;
 }
@@ -32,7 +30,6 @@ const {
   showcase = false,
   framed = true,
   bridge = false,
-  staticNoScoreStats = false,
   stats: showStats,
 } = Astro.props;
 
@@ -282,27 +279,9 @@ const activeDateLine = propDateLine ?? formatGameDateLine(new Date());
         <p class="game-frame-tagline">{activeTagline}</p>
       </div>
 
-      <!-- Most framed routes hydrate their saved history; no-score callers keep the same sidebar rows as static markup. -->
-      {(showStats ?? framed) && <div class="game-frame-stats" data-testid="game-frame-stats" aria-label="your stats">
-        {staticNoScoreStats ? <>
-          <div class="game-frame-stat">
-            <span class="game-frame-stat-value">0</span>
-            <span class="game-frame-stat-label">questions asked</span>
-          </div>
-          <div class="game-frame-stat">
-            <span class="game-frame-stat-value">0</span>
-            <span class="game-frame-stat-label">current streak</span>
-          </div>
-          <div class="game-frame-stat">
-            <span class="game-frame-stat-value">0</span>
-            <span class="game-frame-stat-label">best streak</span>
-          </div>
-          <div class="game-frame-stat">
-            <span class="game-frame-stat-value">0</span>
-            <span class="game-frame-stat-label">played</span>
-          </div>
-        </> : <GameFrameStats client:load game={currentConfig.id} />}
-      </div>}
+      <!-- The four stats are drawn by the island itself, and only for a signed-in visitor (nothing is rendered, and no gap
+           kept, for anyone else). They are still recorded in this browser either way. -->
+      {(showStats ?? framed) && <GameFrameStats client:load game={currentConfig.id} />}
     </aside>
 
     <!-- Center area -->

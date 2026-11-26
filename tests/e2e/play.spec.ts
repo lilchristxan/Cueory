@@ -293,27 +293,26 @@ test.describe('daily games: pillo settings and finish screen (Task 719)', () => 
     const result = page.getByTestId('pulse-result');
     await expect(result).toContainText('solved.');
     await expect(result).toContainText('cueory pillo, sun 1 nov: solved in 2 of 6');
-    const stats = page.getByTestId('pulse-stats');
-    for (const [label, value] of [['played', '2'], ['win %', '100'], ['current streak', '2'], ['longest streak', '2']]) {
-      await expect(stats.locator('.pillo-stat').filter({ hasText: label })).toContainText(value);
-    }
-    await expect(stats.getByRole('list', { name: 'guesses it took' }).getByRole('listitem')).toHaveCount(6);
-    await expect(page.getByTestId('pulse-today-row')).toContainText('2');
-    await expect(page.getByTestId('pulse-today-row')).toContainText('today');
+    // Stats numbers are for signed-in players only (2026-11-25): a signed-out finish screen keeps the result, share and
+    // countdown but no stats block. The round is still recorded on this device (checked in the next test).
+    await expect(page.getByTestId('pulse-stats')).toHaveCount(0);
+    await expect(page.getByTestId('pulse-today-row')).toHaveCount(0);
     await expect(page.getByTestId('pulse-next')).toHaveText('next word in 9 h.');
     const results = await axe(page);
     expect(results.violations.map((v) => `${v.id}: ${v.help}`)).toEqual([]);
   });
 
-  test('stats are always kept: the finish screen shows them without turning anything on', async ({ page }) => {
+  test('stats are always kept on the device, and the signed-out finish screen does not show them', async ({ page }) => {
     // 2026-11-17: there is no "keep my stats" switch any more.
     await expect(page.getByTestId('game-stats').getByRole('switch')).toHaveCount(0);
     await field(page).fill('grace');
     await field(page).press('Enter');
     await close(page);
-    await expect(page.getByTestId('pulse-stats')).not.toContainText('stats are off');
-    await expect(page.getByTestId('pulse-stats')).toContainText('played');
-    await expect(page.getByTestId('pulse-today-row')).toContainText('today');
+    await expect(page.getByTestId('pulse-result')).toBeVisible();
+    await expect(page.getByTestId('pulse-stats')).toHaveCount(0);
+    await expect(page.getByTestId('pulse-today-row')).toHaveCount(0);
+    const stored = JSON.parse((await page.evaluate(() => localStorage.getItem('cueory-game-stats')))!);
+    expect(stored.results).toHaveLength(1);
   });
 });
 
@@ -918,8 +917,8 @@ test.describe('daily games: private stats (D-76), always kept (2026-11-17)', () 
     await expect(vialoStats(page)).toContainText('played 1 day, solved 1.');
     // Playing the same day again changes nothing: the first result of the day counts.
     await solveOnItsPage(page);
-    // A game page has no stats panel, so the frame's status line tells a screen-reader user.
-    await expect(page.getByTestId('game-frame-stats-status')).toHaveText("vialo: today's first game is already in your stats.");
+    // A signed-out game page shows no stats panel and so announces nothing about stats (2026-11-25).
+    await expect(page.getByTestId('game-frame-stats-status')).toHaveCount(0);
     await openHub(page);
     await expect(vialoStats(page)).toContainText('played 1 day, solved 1.');
     expect(JSON.parse((await kept(page))!).results).toHaveLength(1);
@@ -1009,11 +1008,11 @@ test.describe('daily games: private stats (D-76), always kept (2026-11-17)', () 
     expect(await kept(page)).toBeNull();
 
     release();
-    // The round is kept as soon as the chunk has loaded, and the frame says so to a screen reader.
+    // The round is kept as soon as the chunk has loaded. A signed-out page says nothing about stats.
     await expect.poll(async () => JSON.parse((await kept(page)) ?? '{"results":[]}').results).toEqual([
       { game: 'vialo', day: '2026-11-01', solved: true, tries: 1 },
     ]);
-    await expect(page.getByTestId('game-frame-stats-status')).toHaveText('vialo added to your stats.');
+    await expect(page.getByTestId('game-frame-stats-status')).toHaveCount(0);
     await openHub(page);
     await expect(vialoStats(page)).toContainText('played 1 day, solved 1.');
   });
@@ -1057,8 +1056,8 @@ test.describe('daily games: private stats (D-76), always kept (2026-11-17)', () 
     await page.reload();
     await expect(panel(page)).toContainText("this browser won't keep them (private browsing or blocked site data).");
     await solveOnItsPage(page);
-    await expect(page.getByTestId('game-frame-stats-status')).toHaveText("this browser won't keep stats, so this game wasn't kept.");
-    await expect(page.getByTestId('vialo-stats')).toContainText("this browser won't keep stats");
+    await expect(page.getByTestId('game-frame-stats-status')).toHaveCount(0);
+    await expect(page.getByTestId('vialo-stats')).toHaveCount(0);
   });
 
   test('anything older than 400 days is deleted when daily games open', async ({ page }) => {

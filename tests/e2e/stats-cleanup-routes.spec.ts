@@ -24,8 +24,10 @@ for (const path of ['/play', '/play/pillo', '/play/sudoku']) {
       } catch { /* optional storage */ }
     }, { old, recent });
     await page.goto(path);
-    const routeSurface = path === '/play' ? page.getByTestId('game-stats').getByRole('heading', { name: 'your stats' }) : page.getByTestId('game-frame-stats');
-    await expect(routeSurface).toBeVisible();
+    // A signed-out game page has no stats panel (2026-11-25); its island is the proof the page has loaded.
+    const routeSurface = path === '/play' ? page.getByTestId('game-stats').getByRole('heading', { name: 'your stats' }) : page.locator('astro-island[component-url*="GameFrameStats"]:not([ssr])');
+    if (path === '/play') await expect(routeSurface).toBeVisible();
+    else { await expect(routeSurface).toHaveCount(1); await expect(page.getByTestId('game-frame-stats')).toHaveCount(0); }
     await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('cueory-sudoku-stats') ?? 'null')?.solves))
       .toEqual([recent]);
   });
@@ -43,8 +45,10 @@ for (const path of ['/play', '/play/pillo', '/play/sudoku']) {
       } catch { /* optional storage */ }
     }, old);
     await page.goto(path);
-    const routeSurface = path === '/play' ? page.getByTestId('game-stats').getByRole('heading', { name: 'your stats' }) : page.getByTestId('game-frame-stats');
-    await expect(routeSurface).toBeVisible();
+    // A signed-out game page has no stats panel (2026-11-25); its island is the proof the page has loaded.
+    const routeSurface = path === '/play' ? page.getByTestId('game-stats').getByRole('heading', { name: 'your stats' }) : page.locator('astro-island[component-url*="GameFrameStats"]:not([ssr])');
+    if (path === '/play') await expect(routeSurface).toBeVisible();
+    else { await expect(routeSurface).toHaveCount(1); await expect(page.getByTestId('game-frame-stats')).toHaveCount(0); }
     await expect.poll(() => page.evaluate(() => localStorage.getItem('cueory-sudoku-stats'))).toBeNull();
   });
 }
