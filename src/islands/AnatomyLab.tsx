@@ -33,6 +33,8 @@ import {
   linkedStructureId,
   presetDirection,
   tappableIds,
+  spreadBlocksSaving,
+  SPREAD_SAVE_NOTE,
   type ViewPreset,
 } from './anatomyviews';
 import {
@@ -1634,6 +1636,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
   const saveView = () => {
     const scene = sceneRef.current;
     if (!scene || !ready || savingViewBusy(savingViews, system.key)) return;
+    if (spreadBlocksSaving(spread)) { setAnnounce(SPREAD_SAVE_NOTE); return; }
     const key = system.key;
     const identity = identityGuard.snapshot();
     if (!activeUserId || identity.userId !== activeUserId) return;
@@ -1702,6 +1705,8 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
     setQuiz(null);
     changeVisibility(() => restored);
     setSelected(selectedId);
+    // A saved view is always the assembled arrangement, so bring the structures back together first.
+    changeSpread(0);
     scene.applyCameraState(cameraToWorldFrame(camera, posture));
     if (!loader || missingFiles.length === 0) {
       setAnnounce(`opened the view "${view.name}".`);
@@ -2433,9 +2438,11 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
                           className="mt-1 block min-h-11 w-full rounded-md border border-control bg-page px-3 text-ink"
                         />
                       </label>
-                      <button type="submit" className={secondaryButton} disabled={!ready || savingViewBusy(savingViews, system.key) || viewName.trim().length === 0}>
+                      <button type="submit" className={secondaryButton} disabled={!ready || savingViewBusy(savingViews, system.key) || viewName.trim().length === 0 || spreadBlocksSaving(spread)}
+                        aria-describedby={spreadBlocksSaving(spread) ? 'anatomy-save-spread-note' : undefined}>
                         save this view
                       </button>
+                      {spreadBlocksSaving(spread) && <p id="anatomy-save-spread-note" className="w-full text-sm text-ink-soft">{SPREAD_SAVE_NOTE}</p>}
                     </form>
                     {currentSavedViews.length === 0 ? (
                       <p className="text-sm text-ink-soft">no saved views for {system.title} yet.</p>

@@ -176,3 +176,13 @@ export function tappableIds(visible: readonly string[], outlined: ReadonlySet<st
   const inner = visible.filter((id) => !outlined.has(id));
   return inner.length > 0 ? inner : [...visible];
 }
+
+/**
+ * A saved view stores the camera, visibility and selection, not how far the structures are spread apart, so it can
+ * only be saved while they are together; opening a saved view always brings them back together first.
+ */
+export function spreadBlocksSaving(spread: number): boolean {
+  return spread > 0;
+}
+
+export const SPREAD_SAVE_NOTE = 'bring the structures back together to save a view.';

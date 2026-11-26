@@ -10,6 +10,8 @@ import {
   isViewPreset,
   presetDirection,
   tappableIds,
+  spreadBlocksSaving,
+  SPREAD_SAVE_NOTE,
 } from '../../src/islands/anatomyviews';
 
 describe('anatomy lab preset views', () => {
@@ -143,5 +145,24 @@ describe('tappableIds (a find-it round never asks for an outlined structure that
   });
   it('is empty when nothing is visible', () => {
     expect(tappableIds([], skin)).toEqual([]);
+  });
+});
+
+describe('saved views and spread structures', () => {
+  it('only lets a view be saved while the structures are together', () => {
+    expect(spreadBlocksSaving(0)).toBe(false);
+    expect(spreadBlocksSaving(0.01)).toBe(true);
+    expect(spreadBlocksSaving(1)).toBe(true);
+  });
+  it('tells the student what to do, in plain words', () => {
+    expect(SPREAD_SAVE_NOTE).toBe('bring the structures back together to save a view.');
+  });
+  it('the lab brings structures together when a view opens and blocks saving while spread', async () => {
+    const { readFile } = await import('node:fs/promises');
+    const source = await readFile('src/islands/AnatomyLab.tsx', 'utf8');
+    const open = source.slice(source.indexOf('const openView ='), source.indexOf('const deleteView ='));
+    expect(open).toMatch(/changeSpread\(0\);\s*\n\s*scene\.applyCameraState/);
+    const save = source.slice(source.indexOf('const saveView ='), source.indexOf('const openView ='));
+    expect(save).toContain('spreadBlocksSaving(spread)');
   });
 });
