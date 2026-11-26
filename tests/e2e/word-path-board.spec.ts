@@ -69,8 +69,9 @@ test.describe('word path: board format (#722)', () => {
     const cue = game(page).getByRole('heading', { level: 3, name: sample.clue });
     await expect(cue).toBeVisible();
     const cueBox = (await cue.boundingBox())!;
-    const gearBox = (await game(page).getByTestId('game-settings-button').boundingBox())!;
-    expect(cueBox.y + cueBox.height).toBeLessThanOrEqual(gearBox.y);
+    // The gear now sits in the Frame's top right corner, level with the date line, so the cue is under it.
+    const gearBox = (await page.getByTestId('game-frame-gear').boundingBox())!;
+    expect(cueBox.y).toBeGreaterThanOrEqual(gearBox.y + gearBox.height);
     await expect(game(page).locator('.wordpath-missing-pill')).toHaveCount(total);
     await expect(game(page)).toContainText(`find all ${total} answers. one of them, the thread, names the theme`);
     await expect(game(page)).toContainText('sample puzzle');

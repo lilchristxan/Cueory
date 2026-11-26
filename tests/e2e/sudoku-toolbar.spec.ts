@@ -10,7 +10,7 @@ test.beforeEach(async ({ page }) => { await markGameRulesSeen(page); });
 
 const game = (page: Page) => page.getByTestId('sudoku');
 const toolbar = (page: Page) => game(page).getByTestId('sudoku-toolbar');
-const frameControls = (page: Page) => page.locator('.game-frame-controls-row');
+const frameControls = (page: Page) => page.locator('.game-frame-corner');
 
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
@@ -47,7 +47,7 @@ for (const [width, height] of [[320, 700], [390, 844], [820, 1180], [1440, 900]]
       await expect(localButtons).toHaveCount(2);
       expect(await frameButtons.evaluateAll((list) => list.map((button) => button.getAttribute('aria-label')))).toEqual(['sudoku settings', 'how to play sudoku']);
       expect(await localButtons.evaluateAll((list) => list.map((button) => button.getAttribute('aria-label')))).toEqual(['pause puzzle', 'print this puzzle']);
-      const boxes = await page.locator('.game-frame-controls-row button, [data-testid="sudoku-toolbar"] button').evaluateAll((list) => list.map((button) => button.getBoundingClientRect().toJSON() as DOMRect));
+      const boxes = await page.locator('.game-frame-corner button, [data-testid="sudoku-toolbar"] button').evaluateAll((list) => list.map((button) => button.getBoundingClientRect().toJSON() as DOMRect));
       for (const box of boxes) {
         expect(box.width).toBeGreaterThanOrEqual(44);
         expect(box.height).toBeGreaterThanOrEqual(44);
