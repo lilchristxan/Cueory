@@ -16,7 +16,9 @@ import AnatomyLabCover from './AnatomyLabCover';
 import { breadcrumb, siblings } from './anatomyhierarchy';
 import { boxesFromMeshes, expandNearby, nearbyStructures } from './anatomynearby';
 import { canSpeak, speak, stop as stopSpeaking } from './anatomyspeech';
-import { groupIndex, indexHeading, indexStep, inspectorRows, leaderSegment, pageFlagButton } from './anatomyinspector';
+import { groupIndex, indexHeading, indexStep, inspectorRows, leaderSegment } from './anatomyinspector';
+import { flagMailto } from '../scripts/footer';
+import { site } from '../config/site';
 import { createAnatomyStudy, createReviewQueueRequestGuard, createSavedViewsRequestGuard, createStudyIdentityGuard, queueFromQuizMisses, type AnatomyStudyClient, type ReviewQueueRow, type SavedViewRow, type StudyIdentitySnapshot } from './anatomystudy';
 import { getSupabase } from './supabaseclient';
 import { STRUCTURE_PAGE_SIZE, visibleStructureGroups } from './anatomy-list-window';
@@ -342,8 +344,6 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
   const leaderRef = useRef<SVGLineElement>(null);
   const markedIdRef = useRef<string | null>(null);
   const indexItemRefs = useRef<Array<HTMLButtonElement | null>>([]);
-  // The inspector's "flag or comment" presses the page's own flag; it is offered only where the page has one.
-  const [flagAvailable, setFlagAvailable] = useState(false);
   const labRef = useRef<HTMLDivElement>(null);
   const speechOn = useMemo(() => canSpeak(), []);
   const generation = useMemo(() => createGeneration(), []);
@@ -1371,8 +1371,6 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
     setSystemKey(key);
   };
 
-  useEffect(() => { setFlagAvailable(pageFlagButton(document) !== null); }, [selected]);
-
   // The ring and leader follow the selection while it can be seen and no test is hiding its name.
   const markedId = modelReady && selected !== null && foundSet.has(selected) && !hidden.has(selected) && !quiz && !recall ? selected : null;
   useEffect(() => {
@@ -2259,11 +2257,13 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
                 <button type="button" className={secondaryButton} onClick={() => changeVisibility((v) => hideStructure(v, selected!))}>
                   {hidden.has(selected!) ? 'show' : 'hide'}
                 </button>
-                {flagAvailable && (
-                  <button type="button" className={secondaryButton} onClick={() => pageFlagButton(document)?.click()}>
-                    flag or comment
-                  </button>
-                )}
+                <a
+                  href={flagMailto(site.contactEmail, window.location.pathname)}
+                  data-game-flag
+                  className={secondaryButton}
+                >
+                  flag or comment
+                </a>
                 <button
                   type="button"
                   className={secondaryButton}

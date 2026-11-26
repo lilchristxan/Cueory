@@ -82,12 +82,3 @@ export function leaderSegment(center: Point, radius: number, target: Point): Seg
   if (!(length > radius)) return null;
   return { x1: center.x + (dx / length) * radius, y1: center.y + (dy / length) * radius, x2: target.x, y2: target.y };
 }
-
-/**
- * The page's own "flag or comment" button (the footer's), if the page has one. The inspector's button presses it, so
- * there is one flag form on the page and this file never builds a second.
- */
-export function pageFlagButton(root: Pick<ParentNode, 'querySelector'>): HTMLButtonElement | null {
-  const button = root.querySelector('#footer-flag button[aria-label="flag or comment"]');
-  return typeof HTMLButtonElement !== 'undefined' && button instanceof HTMLButtonElement ? button : null;
-}

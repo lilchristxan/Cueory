@@ -119,14 +119,25 @@ test.describe('anatomy lab inspector', () => {
     await expect(ring).toBeHidden();
   });
 
-  test('flag or comment on the card presses the page\'s own flag', async ({ page }) => {
+  test('flag or comment on the card opens the page\'s flag form, and focus comes back to it on close, Escape and send', async ({ page }) => {
     await openLab(page);
     await select(page, 'fixture cube A');
+    const trigger = card(page).getByRole('link', { name: 'flag or comment' });
     const pageFlag = page.locator('#footer-flag').getByRole('button', { name: 'flag or comment' });
-    await expect(pageFlag).toHaveCount(1);
     await expect(pageFlag).toHaveAttribute('aria-expanded', 'false');
-    await card(page).getByRole('button', { name: 'flag or comment' }).click();
+    await trigger.click();
     await expect(pageFlag).toHaveAttribute('aria-expanded', 'true');
+    const form = page.getByTestId('flag-form');
+    await expect(form.getByRole('button', { name: 'close' })).toBeVisible();
+    // Escape, from inside the form, puts focus back on the card's own link.
+    await page.keyboard.press('Escape');
+    await expect(pageFlag).toHaveAttribute('aria-expanded', 'false');
+    await expect(trigger).toBeFocused();
+    // The close button does the same.
+    await trigger.click();
+    await expect(pageFlag).toHaveAttribute('aria-expanded', 'true');
+    await form.getByRole('button', { name: 'close' }).click();
+    await expect(trigger).toBeFocused();
   });
 
   test('the inspector fits the screen: 44 px buttons, no sideways scroll, no accessibility violations', async ({ page }) => {

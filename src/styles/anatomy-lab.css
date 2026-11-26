@@ -41,7 +41,6 @@
   .lab-title {
     font-size: var(--lab-title-size);
     font-weight: 700;
-    line-height: 1.3;
   }
 
   /* Small tracked captions: "orientation", "body systems", the dataset line. */
@@ -300,7 +299,6 @@
     margin: calc(var(--spacing) * 2) 0 calc(var(--spacing) * 3);
     font-size: var(--lab-name-size);
     font-weight: 700;
-    line-height: 1.25;
     color: var(--lab-ivory);
   }
   .lab-id {

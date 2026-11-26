@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { groupIndex, indexHeading, indexStep, inspectorRows, leaderSegment, pageFlagButton } from '../../src/islands/anatomyinspector';
+import { groupIndex, indexHeading, indexStep, inspectorRows, leaderSegment } from '../../src/islands/anatomyinspector';
 
 // Names here are made-up test labels, not anatomy.
 const structures = [
@@ -75,14 +75,5 @@ describe('leaderSegment', () => {
   });
   it('draws nothing when the card is inside the ring', () => {
     expect(leaderSegment({ x: 0, y: 0 }, 10, { x: 3, y: 4 })).toBeNull();
-  });
-});
-
-describe('pageFlagButton', () => {
-  it('looks only for the footer flag button, never another button, and is null without one', () => {
-    const calls: string[] = [];
-    const root = { querySelector: (selector: string) => { calls.push(selector); return null; } };
-    expect(pageFlagButton(root)).toBeNull();
-    expect(calls).toEqual(['#footer-flag button[aria-label="flag or comment"]']);
   });
 });
