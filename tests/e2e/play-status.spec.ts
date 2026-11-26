@@ -39,12 +39,14 @@ for (const size of [{ width: 390, height: 844 }, { width: 820, height: 1180 }, {
         await expect(link).toHaveAttribute('href', href);
         await expect(link).toHaveAttribute('aria-label', `play ${name}`);
         expect((await link.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+        // A game that is not finished offers only play: no print button.
+        await expect(row(page, game).getByRole('button', { name: `print for a patient (${name})` })).toHaveCount(0);
       }
       await expect(page.getByTestId('play-status-note')).toHaveCount(0);
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
     });
 
-    test('a finished game shows "played" and an outlined result button; yesterday does not count', async ({ page }) => {
+    test('a finished game shows "played" and no replay: vialo offers an outlined print button, the others show status only; yesterday does not count', async ({ page }) => {
       await RESULTS([
         { game: 'pulse', day: '2026-11-01', solved: true, tries: 4 },
         { game: 'triage', day: '2026-11-01', solved: false, tries: 2 },
@@ -52,9 +54,20 @@ for (const size of [{ width: 390, height: 844 }, { width: 820, height: 1180 }, {
       ])(page);
       await page.goto('/play');
       await expect(row(page, 'pulse')).toHaveAttribute('data-status', 'done');
-      await expect(words(page, 'pulse')).toHaveText('played · solved in 4');
-      await expect(row(page, 'pulse').getByRole('link')).toHaveText('play again');
-      await expect(words(page, 'triage')).toHaveText('played · not solved');
+      await expect(words(page, 'pulse')).toHaveText('solved in 4');
+      // Played: no replay link, only the print button (print is offered only for a finished game).
+      await expect(row(page, 'pulse').getByRole('link')).toHaveCount(0);
+      const print = row(page, 'pulse').getByRole('button', { name: 'print for a patient (vialo)' });
+      await expect(print).toHaveText('print for a patient');
+      const printBox = (await print.boundingBox())!;
+      expect(printBox.height).toBeGreaterThanOrEqual(44);
+      // The long label stays on one line at 820 and 1440, and may wrap at 390 without clipping.
+      if (size.width >= 820) expect(printBox.height).toBeLessThan(56);
+      expect(await print.evaluate((el) => el.scrollWidth <= el.clientWidth + 1)).toBe(true);
+
+      await expect(words(page, 'triage')).toHaveText('not solved');
+      await expect(row(page, 'triage').getByRole('link')).toHaveCount(0);
+      await expect(page.getByText('play again')).toHaveCount(0);
       await expect(words(page, 'suture')).toHaveText('new today');
       await expect(row(page, 'suture').getByRole('link')).toHaveText('play');
     });
@@ -108,7 +121,9 @@ test('a started round shows in progress, and vialo finished on its own page show
   await page.getByTestId('game-result-dialog').getByRole('button', { name: 'close results' }).click();
   await page.getByRole('link', { name: 'all games' }).click();
   await expect(row(page, 'pulse')).toHaveAttribute('data-status', 'done');
-  await expect(row(page, 'pulse').getByRole('link')).toHaveText('play again');
+  await expect(row(page, 'pulse').getByRole('link')).toHaveCount(0);
+  await expect(row(page, 'pulse').getByRole('button', { name: 'print for a patient (vialo)' })).toBeVisible();
+  await expect(page.getByText('play again')).toHaveCount(0);
 });
 
 test('a browser that cannot save shows no totals and every open game as play', async ({ page }) => {
