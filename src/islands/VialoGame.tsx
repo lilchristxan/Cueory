@@ -1,5 +1,6 @@
 import '../styles/vialo.css';
-import { useEffect, useMemo, useRef, useState, type CSSProperties, type FormEvent } from 'react';
+import { useRefreshOnStatsChange } from './finishstatsrefresh';
+import { lazy, Suspense, useEffect, useMemo, useRef, useState, type CSSProperties, type FormEvent } from 'react';
 import {
   cleanGuess,
   dayNumber,
@@ -41,6 +42,18 @@ import { playGameCue } from './gamesound';
 import { browserStorage } from '../scripts/storage';
 import { FORFEIT_EVENT } from '../scripts/printgate';
 import { VIALO_KEY_ROWS } from './vialokeys';
+import { newTimer, pauseTimer, resumeTimer, startTimer, stopTimer, timerElapsed, type SolveTimer } from './vialotimer';
+import { site } from '../config/site';
+import { revealDelayMs } from './sharedialogmodel';
+
+// The share card and its canvas drawing code load only once a game has ended.
+const VialoShare = lazy(() => import('./VialoShare'));
+
+/** "0:42": whole seconds, rounded down. Kept here (not imported from the sticker module) so the first load stays small. */
+function clock(ms: number): string {
+  const total = Math.max(0, Math.floor(ms / 1000));
+  return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`;
+}
 
 interface Puzzle {
   word: string;
@@ -54,7 +67,6 @@ interface Props {
   framed?: boolean;
 }
 
-const primaryButton = 'rounded-pill bg-button px-5 py-2.5 text-on-button hover:bg-button-hover';
 const columns = Array.from({ length: WORD_LENGTH }, (_, i) => i);
 
 type FinishStats = { on: false } | { on: true; stats: DailyStats; todayRow: number | undefined };
@@ -144,12 +156,20 @@ export default function VialoGame({ puzzles, framed = false }: Props) {
   const [problem, setProblem] = useState('');
   const howToPlay = useGameHelp('vialo');
   const [said, setSaid] = useState('');
-  const [copied, setCopied] = useState('');
-  const { settings: shared, soundAllowed } = useSharedGameSettings();
+  const { settings: shared, soundAllowed, update: updateShared, reduceMotion } = useSharedGameSettings();
   const contrast = shared.highContrast;
   const [keysOnly, setKeysOnly] = useState(false);
   const [finish, setFinish] = useState<FinishStats>({ on: false });
   const [wait, setWait] = useState('');
+  // The solve timer (Christian, 25 Nov 2026): starts at the first letter, stops at the final guess, pauses while the
+  // tab is hidden. In memory only. Ticking re-renders once a second and only while it runs and is shown.
+  const timer = useRef<SolveTimer>(newTimer());
+  const [timerRunning, setTimerRunning] = useState(false);
+  const [, setTick] = useState(0);
+  const [solveMs, setSolveMs] = useState<number | undefined>(undefined);
+  const [shareReady, setShareReady] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
+  const shareButton = useRef<HTMLButtonElement>(null);
   const result = useRef<HTMLDivElement>(null);
   const reported = useRef(false);
   const words = useRef<ReadonlySet<string> | undefined>(undefined);
@@ -182,6 +202,32 @@ export default function VialoGame({ puzzles, framed = false }: Props) {
     });
   }, []);
 
+  // The share card opens over the board once the last pill has landed (at once with reduced motion).
+  useEffect(() => {
+    if (!shareReady) return;
+    const delay = revealDelayMs(reduceMotion, getComputedStyle(document.documentElement).getPropertyValue('--duration-fast'));
+    const timer = window.setTimeout(() => setShareOpen(true), delay);
+    return () => window.clearTimeout(timer);
+  }, [shareReady]);
+
+  useRefreshOnStatsChange(shareReady, () => setFinish(finishStats(localDay(new Date()))));
+
+  useEffect(() => {
+    const onVisibility = () => {
+      const now = Date.now();
+      timer.current = document.hidden ? pauseTimer(timer.current, now) : resumeTimer(timer.current, now);
+      setTick((n) => n + 1);
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => document.removeEventListener('visibilitychange', onVisibility);
+  }, []);
+
+  useEffect(() => {
+    if (!timerRunning || !shared.showTimer) return;
+    const id = window.setInterval(() => setTick((n) => n + 1), 1000);
+    return () => window.clearInterval(id);
+  }, [timerRunning, shared.showTimer]);
+
   useEffect(() => {
     if (state.status === 'playing') return;
     const tick = () => setWait(waitInWords(untilNextPuzzle(new Date())));
@@ -192,6 +238,13 @@ export default function VialoGame({ puzzles, framed = false }: Props) {
 
   useEffect(() => {
     if (state.status === 'playing') return;
+    // The one place the clock stops: every way out of "playing" lands here (a last guess, and "print anyway" through
+    // the forfeit event), so a finished board's time never keeps counting (Codex on #1229).
+    if (!timer.current.stopped) {
+      timer.current = stopTimer(timer.current, Date.now());
+      setTimerRunning(false);
+      if (state.status === 'solved' && timer.current.started) setSolveMs(timerElapsed(timer.current, Date.now()));
+    }
     result.current?.focus();
     if (reported.current) return;
     reported.current = true;
@@ -205,19 +258,9 @@ export default function VialoGame({ puzzles, framed = false }: Props) {
       solved,
       tries,
       ...(offDay ? { offDay: true as const } : {}),
-      card: {
-        game: 'vialo',
-        name: gameName('vialo'),
-        date: dayLabel(today),
-        result: solved ? `${tries} / ${GUESSES}` : 'not solved',
-        shareResult: solved ? `${tries}/${GUESSES}` : `x/${GUESSES}`,
-        summary: solved ? "you found today's word." : "today's word is ready for another try tomorrow.",
-        stats: [{ label: 'guesses', value: `${tries}` }],
-        nextMessage: `next word in ${waitInWords(untilNextPuzzle(new Date()))}.`,
-        path: '/play/vialo',
-      },
     });
     setFinish(finishStats(localDay(new Date())));
+    setShareReady(true);
   }, [state.status]);
 
   if (!puzzle) return <p>no puzzle today.</p>;
@@ -264,6 +307,10 @@ export default function VialoGame({ puzzles, framed = false }: Props) {
 
   const type = (value: string) => {
     const clean = cleanGuess(value).slice(0, WORD_LENGTH);
+    if (clean.length > 0 && !timer.current.started) {
+      timer.current = startTimer(timer.current, Date.now(), !document.hidden);
+      setTimerRunning(true);
+    }
     if (clean.length !== text.length) playGameCue(clean.length > text.length ? 'place' : 'remove', soundAllowed());
     setText(clean);
     setProblem('');
@@ -290,16 +337,6 @@ export default function VialoGame({ puzzles, framed = false }: Props) {
     } else if (/^[a-z]$/i.test(event.key)) {
       event.preventDefault();
       type(text + event.key);
-    }
-  };
-
-  const share = async () => {
-    const line = vialoShareText(state, dayLabel(today));
-    try {
-      await navigator.clipboard.writeText(line);
-      setCopied(`copied: ${line}`);
-    } catch {
-      setCopied(line);
     }
   };
 
@@ -332,6 +369,12 @@ export default function VialoGame({ puzzles, framed = false }: Props) {
                 }
               />
               <Setting
+                label="show the timer"
+                on={shared.showTimer}
+                onChange={() => updateShared({ showTimer: !shared.showTimer })}
+                note="a quiet time line above the board. your solve time still goes on your sticker if you hide it."
+              />
+              <Setting
                 label="on-screen keyboard only"
                 on={keysOnly}
                 onChange={() => {
@@ -347,7 +390,11 @@ export default function VialoGame({ puzzles, framed = false }: Props) {
       />
       <p className="sr-only" data-testid="vialo-status">guess the {WORD_LENGTH}-letter word · {leftWords}</p>
 
-      <div className="vialo-pack-wrap mt-4">
+      <p className="vialo-time" data-testid="vialo-time">
+        {shared.showTimer && <span>time: {clock(timerElapsed(timer.current, Date.now()))}</span>}
+      </p>
+
+      <div className="vialo-pack-wrap">
       <div className="vialo-pack">
         <ol className="vialo-board" aria-label="your guesses">
           {state.guesses.map((guess, row) => (
@@ -465,10 +512,42 @@ export default function VialoGame({ puzzles, framed = false }: Props) {
             {state.status === 'solved' ? 'solved.' : 'out of guesses. the game is over.'}
           </p>
           <p className="mt-1 text-ink-soft">{vialoShareText(state, dayLabel(today))}</p>
-          <button type="button" className={`${primaryButton} mt-4`} onClick={share}>
-            copy my result
-          </button>
-          {copied && <p className="mt-2 text-sm text-ink-soft">{copied}</p>}
+          {solveMs !== undefined && (
+            <p className="mt-1 text-ink-soft" data-testid="vialo-solve-time">
+              solve time {clock(solveMs)}.
+            </p>
+          )}
+          {shareReady && (
+            <>
+              <button
+                ref={shareButton}
+                type="button"
+                className="mt-4 min-h-(--tap-min) rounded-pill bg-button px-5 py-2.5 text-on-button hover:bg-button-hover"
+                onClick={() => setShareOpen(true)}
+                data-testid="vialo-share-open"
+              >
+                share
+              </button>
+              <Suspense fallback={null}>
+                <VialoShare
+                  open={shareOpen}
+                  onClose={() => {
+                    setShareOpen(false);
+                    requestAnimationFrame(() => shareButton.current?.focus());
+                  }}
+                  rows={state.guesses.map((guess) => guess.marks)}
+                  solved={state.status === 'solved'}
+                  tries={GUESSES - guessesLeft(state)}
+                  maxTries={GUESSES}
+                  solveMs={solveMs}
+                  date={today}
+                  account={statsVisible && finish.on ? { winPercent: finish.stats.winPercent, streak: finish.stats.currentStreak } : undefined}
+                  resultLine={vialoShareText(state, dayLabel(today))}
+                  siteUrl={site.url}
+                />
+              </Suspense>
+            </>
+          )}
 
           {statsVisible && <section className="vialo-stats mt-6" aria-labelledby="vialo-stats-heading" data-testid="vialo-stats">
             <h3 id="vialo-stats-heading" className="font-semibold">

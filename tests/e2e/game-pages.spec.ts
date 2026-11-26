@@ -104,8 +104,9 @@ test('a finished vialo on its own page opens the result dialog and keeps stats o
   const field = page.getByLabel('your guess', { exact: true });
   await field.fill('grace');
   await field.press('Enter');
-  await expect(page.getByTestId('game-result-dialog')).toBeVisible();
-  await page.getByTestId('game-result-dialog').getByRole('button', { name: 'close results' }).click();
+  // Vialo's own share card opens over the board (Christian, 25 Nov 2026), in place of the shared results dialog.
+  await expect(page.getByTestId('share-dialog')).toBeVisible();
+  await page.getByTestId('share-dialog').getByRole('button', { name: 'close', exact: true }).click();
   await expect(page.getByTestId('vialo-result')).toContainText('solved.');
   const kept = JSON.parse((await page.evaluate(() => localStorage.getItem('cueory-game-stats')))!);
   expect(kept.results).toContainEqual(expect.objectContaining({ game: 'vialo', day: '2026-11-01', solved: true, tries: 1 }));

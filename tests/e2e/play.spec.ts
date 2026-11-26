@@ -849,12 +849,11 @@ test.describe('daily games: private stats (D-76), always kept (2026-11-17)', () 
     await field(page).fill('grace');
     await field(page).press('Enter');
     await expect(page.getByTestId('vialo-result')).toContainText('solved.');
-    const resultDialog = page.getByTestId('game-result-dialog');
-    await expect(resultDialog.getByRole('button', { name: 'close results' })).toBeFocused();
-    await resultDialog.getByRole('button', { name: 'close results' }).click();
-    // The dialog hands focus back to the result on the next frame (requestAnimationFrame). Wait for it: focusing a
-    // control before then loses that focus to the late return, and a key press then goes nowhere (CI on #836).
-    await expect(page.getByTestId('vialo-result')).toBeFocused();
+    // Vialo's own share card opens over the board (Christian, 25 Nov 2026); closing it returns focus to its "share" button.
+    const card = page.getByTestId('share-dialog');
+    await expect(card).toBeFocused();
+    await card.getByRole('button', { name: 'close', exact: true }).click();
+    await expect(page.getByTestId('vialo-share-open')).toBeFocused();
   };
   const holdPanel = async (page: Page) => {
     let release = () => {};
