@@ -54,4 +54,20 @@ describe('on-device adaptive progress', () => {
     expect(Object.hasOwn(saved.cards, 'constructor')).toBe(false);
     expect(Object.keys(saved.cards)).toHaveLength(498);
   });
+
+  it('bounds progress across many decks as well as within a single deck', () => {
+    const deck = {
+      revision: 'r1',
+      cards: Object.fromEntries(Array.from({ length: 500 }, (_, n) => [`card-${n}`, card])),
+      concepts: Object.fromEntries(Array.from({ length: 500 }, (_, n) => [`concept-${n}`, concept])),
+    };
+    const progress = migrateAdaptiveProgress({
+      version: 1,
+      decks: Object.fromEntries(Array.from({ length: 40 }, (_, n) => [`deck-${n}`, deck])),
+    })!;
+    const stored = Object.values(progress.decks);
+    expect(stored).toHaveLength(5);
+    expect(stored.flatMap(value => Object.keys(value.cards))).toHaveLength(2_500);
+    expect(stored.flatMap(value => Object.keys(value.concepts))).toHaveLength(800);
+  });
 });

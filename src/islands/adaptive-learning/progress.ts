@@ -29,6 +29,10 @@ type Fields = Record<string, unknown>;
 const ID = /^[a-z0-9][a-z0-9-]{0,63}$/;
 const MAX_DECKS = 100;
 const MAX_ENTRIES = 500;
+// Keep the pilot's progress payload comfortably below typical browser quotas,
+// including when a student has opened many decks.
+const MAX_TOTAL_CARDS = 2_500;
+const MAX_TOTAL_CONCEPTS = 800;
 
 function fields(input: unknown): Fields | undefined {
   return input && typeof input === 'object' && !Array.isArray(input) ? input as Fields : undefined;
@@ -85,13 +89,18 @@ export function migrateAdaptiveProgress(input: unknown): StoredAdaptiveProgress 
   if (input === undefined || input === null) return { version: 1, decks: {} };
   const source = fields(input);
   if (source?.version !== 1) return;
+  let cardsLeft = MAX_TOTAL_CARDS;
+  let conceptsLeft = MAX_TOTAL_CONCEPTS;
   const decks = checkedRecord(source.decks, MAX_DECKS, ({ revision, cards, concepts }) => {
     if (typeof revision !== 'string' || !ID.test(revision)) return;
-    return {
-      revision,
-      cards: checkedRecord(cards, MAX_ENTRIES, readCard),
-      concepts: checkedRecord(concepts, MAX_ENTRIES, readConcept),
-    };
+    const storedCards = checkedRecord(cards, Math.min(MAX_ENTRIES, cardsLeft), readCard);
+    const storedConcepts = checkedRecord(concepts, Math.min(MAX_ENTRIES, conceptsLeft), readConcept);
+    const cardCount = Object.keys(storedCards).length;
+    const conceptCount = Object.keys(storedConcepts).length;
+    cardsLeft -= cardCount;
+    conceptsLeft -= conceptCount;
+    if (cardCount === 0 && conceptCount === 0) return;
+    return { revision, cards: storedCards, concepts: storedConcepts };
   });
   return { version: 1, decks };
 }
