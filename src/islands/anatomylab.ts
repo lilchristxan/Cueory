@@ -552,6 +552,15 @@ function overlaps(a: Box, b: Box, gap: number): boolean {
 }
 
 /**
+ * Which side of the model's middle an anchor is on. An anchor within half a pixel of the middle counts as on the
+ * right, so the sub-pixel noise of a camera that came back to the same place (reset view) can never flip its side.
+ */
+const SIDE_TOLERANCE = 0.5;
+function onLeft(x: number, mid: number): boolean {
+  return x < mid - SIDE_TOLERANCE;
+}
+
+/**
  * Places labels in two columns, one each side of the model (or of the view's middle). Each label goes to the side of
  * its anchor; inside a column the labels keep their anchors' top-to-bottom order and are pushed apart just enough not
  * to overlap, so a column holds as many labels as its height allows. When a column is too full, the label whose
@@ -580,7 +589,7 @@ export function placeLabels(anchors: readonly LabelAnchor[], options: LayoutOpti
       a.width > 0 && a.height > 0 &&
       a.width + 2 * margin <= width && a.height + 2 * margin <= height)
     .sort(byOrder);
-  const side = { left: usable.filter((a) => a.x < mid), right: usable.filter((a) => a.x >= mid) };
+  const side = { left: usable.filter((a) => onLeft(a.x, mid)), right: usable.filter((a) => !onLeft(a.x, mid)) };
   const need = (list: LabelAnchor[]) => list.reduce((sum, a) => sum + a.height, 0) + gap * Math.max(0, list.length - 1);
   for (const [here, there] of [['left', 'right'], ['right', 'left']] as const) {
     while (need(side[here]) > room) {
@@ -896,7 +905,7 @@ export function labelRoomFor(
   if (!Number.isFinite(pictureWidth) || pictureWidth <= 0) return { left: 0, right: 0 };
   const widest = (list: ReadonlyArray<{ width: number }>) => list.reduce((most, a) => Math.max(most, a.width), 0);
   const share = (w: number) => (w > 0 ? (w + extra) / pictureWidth : 0);
-  return { left: share(widest(anchors.filter((a) => a.x < mid))), right: share(widest(anchors.filter((a) => a.x >= mid))) };
+  return { left: share(widest(anchors.filter((a) => onLeft(a.x, mid)))), right: share(widest(anchors.filter((a) => !onLeft(a.x, mid)))) };
 }
 
 /** Wrap words and split an oversized unbroken word without losing any source characters. */
