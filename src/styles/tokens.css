@@ -1724,6 +1724,7 @@
   --lab-id-size: 0.75em;           /* source ids (they are letters and digits, so Lato at a small size) */
   --lab-selring-size: 3.5rem;      /* the ring round the selected structure */
   --lab-leader-width: 0.0625rem;   /* the leader line from the ring to the card */
+  --lab-list-min: 16rem;           /* the structure list never shrinks below this; the rail scrolls instead */
   --lab-index-height: 14rem;       /* the index list scrolls inside this height */
   --lab-page-max: 90rem;           /* the lab's page is wider than the reading width: it is an instrument, not text */
   --lab-rail-width: 16.5rem;       /* orientation, systems and layers */

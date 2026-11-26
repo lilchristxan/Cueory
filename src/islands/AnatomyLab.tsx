@@ -2313,7 +2313,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
               </ul>
             </div>
           )}
-        <section id="lab-panel-structures" className="lab-glass mx-3 mb-3 hidden space-y-3 p-4 data-open:block lg:pointer-events-auto lg:m-0 lg:flex lg:min-h-0 lg:flex-1 lg:flex-col" data-open={panels.structures || undefined} aria-labelledby="anatomy-list-heading">
+        <section id="lab-panel-structures" className="lab-glass mx-3 mb-3 hidden space-y-3 p-4 data-open:block lg:pointer-events-auto lg:m-0 lg:flex lg:min-h-(--lab-list-min) lg:flex-1 lg:flex-col" data-open={panels.structures || undefined} aria-labelledby="anatomy-list-heading">
           <h2 id="anatomy-list-heading" className="lab-cap">structures</h2>
           {recall ? (
             <p className="text-sm text-ink-soft" data-testid="anatomy-list-paused">
