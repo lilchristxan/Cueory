@@ -1055,6 +1055,11 @@
     margin-block-end: calc(var(--spacing) * 6);
     padding-inline: calc(var(--spacing) * 3);
   }
+  /* The copper button's soft shadow reaches a few pixels above it. Here the bar sits directly under the play area, so
+     this gap keeps the shadow off the play area's paper (its grid must stay untouched, edge to edge). */
+  .game-frame-account-bar {
+    margin-block-start: calc(var(--spacing) * 5);
+  }
 }
 
 @media (width < 30rem) {
