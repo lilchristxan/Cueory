@@ -44,8 +44,6 @@ export function shake(element: HTMLElement | null) {
 }
 
 function Board({ puzzle, name, framed = false }: Props) {
-  // The Frame's printer button announces the print; this is what the old print button ran.
-  usePrintRequest('suture', () => printGame('suture'));
   const [state, setState] = useState(() => startSuture(puzzle));
   const [focused, setFocused] = useState(0);
   const [said, setSaid] = useState('');
