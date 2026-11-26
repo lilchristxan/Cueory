@@ -8,7 +8,6 @@ import { dailyStats, recordResult, type DailyStats, type GameStats } from './gam
 import { useStatsVisible } from './gamestatsgate';
 import { dayLabel } from './daily';
 import { site } from '../config/site';
-import { revealDelayMs } from './sharedialogmodel';
 import { useRefreshOnStatsChange } from './finishstatsrefresh';
 import { GameSettingsDialog, useSharedGameSettings } from './GameSettings.tsx';
 import { announceFrameListening, frameHelpButton, GAME_FRAME_HELP_EVENT, GAME_FRAME_HELP_READY_EVENT, GAME_FRAME_SETTINGS_EVENT } from './GameFrameControls';
@@ -79,7 +78,7 @@ export default function SudokuGame({ framed = false }: { framed?: boolean } = {}
   const restoreForgetAllFocus = useRef(false);
   const solvedResult = useRef<HTMLDivElement>(null);
   const statsVisible = useStatsVisible();
-  const { reduceMotion } = useSharedGameSettings();
+  useSharedGameSettings();
   const [finish, setFinish] = useState<FinishStats>({ on: false });
   const [shareReady, setShareReady] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
@@ -229,12 +228,9 @@ export default function SudokuGame({ framed = false }: { framed?: boolean } = {}
     setSaid(`solved in ${result.time} with ${errors} ${errors === 1 ? 'error' : 'errors'}.${now.on ? ' added to your sudoku stats.' : ''}`);
   }, [solved, day, level, seconds, errors, settings.playSound]);
 
-  // The share card opens over the board once the solve has landed (at once with reduced motion).
+  // The share card opens as soon as the solve is recorded: state, not a timer (the short wait is a CSS entrance delay on the card).
   useEffect(() => {
-    if (!shareReady) return;
-    const delay = revealDelayMs(reduceMotion, getComputedStyle(document.documentElement).getPropertyValue('--duration-fast'));
-    const id = window.setTimeout(() => setShareOpen(true), delay);
-    return () => window.clearTimeout(id);
+    if (shareReady) setShareOpen(true);
   }, [shareReady]);
 
   useRefreshOnStatsChange(shareReady, () => setFinish(finishStats(localDay(new Date()))), [SUDOKU_STATS_STORAGE_KEY]);
