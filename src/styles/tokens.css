@@ -986,6 +986,20 @@
   --vialo-sticker-pack-shadow: rgba(20, 13, 8, 0.28);
   --vialo-sticker-pill-shade: rgba(62, 44, 35, 0.22);
   --vialo-sticker-pill-lift: rgba(62, 44, 35, 0.28);
+  /* Sudoku's share stickers and card (always Daytime, never overridden for Evening). */
+  --sudoku-sticker-espresso: #3e2c23;
+  --sudoku-sticker-peach: rgb(230, 196, 167);     /* the cells as pictured in Christian's PNG (his CSS says #dfb897 and #3e2c23, but his picture is lighter) */
+  --sudoku-sticker-dark: rgb(80, 58, 47);
+  --sudoku-sticker-cream: #f9f5ef;
+  --sudoku-sticker-line: rgba(62, 44, 35, 0.3);   /* the thin lines between cells */
+  --sudoku-sticker-lift: rgba(30, 20, 14, 0.22);
+  --sudoku-sticker-halo: rgba(249, 245, 239, 0.5);
+  --sudoku-sticker-tile: #eae0d4;                 /* the "9" corner tiles on the card */
+  --sudoku-sticker-tile-edge: #d1c1af;
+  --share-dialog-tile-border: 1.2px;
+  --share-dialog-tile-size: 1.625rem;             /* 26 px */
+  --share-dialog-wordmark-text-size: 3.25rem;     /* 52 px */
+  --share-dialog-wordmark-text-tracking: 0.0375rem;
   /* Piccline share stickers (always Daytime, never overridden for Evening): the word of the day is teal, the others brown. */
   --picc-sticker-teal-light: rgb(66, 150, 147);
   --picc-sticker-teal-mid: rgb(47, 122, 120);
