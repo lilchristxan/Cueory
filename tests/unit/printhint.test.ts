@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { createHintHolds, createHintTimer, HINT_VISIBLE_MS, roomNeeded } from '../../src/islands/printhint';
+import { createHintHolds, createHintTimer, fitsClear, HINT_VISIBLE_MS } from '../../src/islands/printhint';
 import { printEventGame, PRINT_EVENT, registerPrintListener, requestPrint, resetPrintRequests, unregisterPrintListener } from '../../src/islands/gameprintevent';
 
 describe('print hint countdown', () => {
@@ -108,13 +108,21 @@ describe('hover, focus and touch hold the countdown independently', () => {
   });
 });
 
-describe('room under the corner buttons', () => {
+describe('does the bubble fit without moving anything', () => {
   const bubble = { left: 200, right: 380, top: 66, bottom: 136 };
-  it('is 0 when nothing is under the bubble', () => {
-    expect(roomNeeded(bubble, [{ left: 0, right: 150, top: 60, bottom: 200 }, { left: 250, right: 300, top: 300, bottom: 400 }], 8)).toBe(0);
+  it('fits when nothing is near it', () => {
+    expect(fitsClear(bubble, [{ left: 0, right: 150, top: 60, bottom: 200 }, { left: 250, right: 300, top: 300, bottom: 400 }], 8, 400)).toBe(true);
   });
-  it('is how far the board must move down to clear the bubble', () => {
-    expect(roomNeeded(bubble, [{ left: 20, right: 370, top: 80, bottom: 500 }], 8)).toBe(136 + 8 - 80);
+  it('does not fit over the date line or the game', () => {
+    expect(fitsClear(bubble, [{ left: 20, right: 370, top: 80, bottom: 500 }], 8, 400)).toBe(false);
+  });
+  it('does not fit when it is closer than the clearance', () => {
+    expect(fitsClear(bubble, [{ left: 200, right: 380, top: 140, bottom: 160 }], 8, 400)).toBe(false);
+    expect(fitsClear(bubble, [{ left: 200, right: 380, top: 150, bottom: 160 }], 8, 400)).toBe(true);
+  });
+  it('does not fit when it runs off the screen', () => {
+    expect(fitsClear(bubble, [], 8, 300)).toBe(false);
+    expect(fitsClear({ ...bubble, left: -1 }, [], 8, 400)).toBe(false);
   });
 });
 

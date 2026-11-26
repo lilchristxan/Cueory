@@ -29,8 +29,12 @@ test('opens as a focus-trapped dialog that Escape closes, returning focus to its
   expect(closeBox!.width).toBeGreaterThanOrEqual(44);
   expect(closeBox!.height).toBeGreaterThanOrEqual(44);
 
+  // The last stop is now piccline's own "show the timer" switch (the game's own settings follow the shared ones).
+  await page.keyboard.press('Shift+Tab');
+  await expect(dialog.getByRole('checkbox', { name: /show the timer/ })).toBeFocused();
   await page.keyboard.press('Shift+Tab');
   await expect(dialog.getByRole('checkbox', { name: /game sounds/ })).toBeFocused();
+  await page.keyboard.press('Tab');
   await page.keyboard.press('Tab');
   await expect(close).toBeFocused();
   for (let step = 0; step < 8; step++) {

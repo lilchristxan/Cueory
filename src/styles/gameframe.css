@@ -559,13 +559,6 @@
   stroke-width: var(--game-frame-gear-stroke);
   stroke-linecap: round;
 }
-/* While the bubble shows it may need room above the date line and the game; the Frame sets the height (PrintHint.tsx). */
-.game-frame-hint-room {
-  order: -1;
-  block-size: var(--game-frame-hint-room);
-  inline-size: 100%;
-  flex: none;
-}
 @media (prefers-reduced-motion: reduce) {
   .game-frame-hint {
     transition: none;

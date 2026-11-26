@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { createHintHolds, createHintTimer, HINT_SHOW_AFTER_MS, roomNeeded, type Box, type HintHolds, type HintTimer } from './printhint';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { createHintHolds, createHintTimer, fitsClear, HINT_SHOW_AFTER_MS, type Box, type HintHolds, type HintTimer } from './printhint';
 
 /** The things on a game page that the hint must never lie over: the date line's text, the cue, the game's drawn parts. */
 const OBSTACLES = [
@@ -13,9 +13,9 @@ const OBSTACLES = [
   '.game-frame-board svg',
   '.game-frame-board canvas',
   '.game-frame-board .vialo-pack',
-  '.game-frame-board h2',
-  '.game-frame-board h3',
-  '.game-frame-board p',
+  '.game-frame-board h2:not(.sr-only)',
+  '.game-frame-board h3:not(.sr-only)',
+  '.game-frame-board p:not(.sr-only)',
 ].join(', ');
 
 function obstacleBoxes(self: HTMLElement): Box[] {
@@ -38,8 +38,10 @@ function obstacleBoxes(self: HTMLElement): Box[] {
 /**
  * "print a copy for your patients!" (Christian, 25 Nov): a speech bubble that hangs under the printer button, tail up at
  * it. It appears a moment after the page loads, takes no focus, fades out by itself after ten seconds, closes at once on
- * x or Escape, and waits while it is hovered, focused or touched. Nothing is stored: it shows once per page load. If the
- * bubble would lie over the date line or the game, the Frame makes room for it above them for as long as it shows.
+ * x or Escape, and waits while it is hovered, focused or touched. Nothing is stored: it shows once per page load. Nothing
+ * on the page ever moves because of it: it is a pure overlay, shown only where it lies over neither the date line nor the
+ * game (checked before it is painted and again when the layout changes). Where it does not fit it is not shown at all;
+ * the printer button is still there.
  */
 export default function PrintHint() {
   const [phase, setPhase] = useState<'waiting' | 'shown' | 'fading' | 'gone'>('waiting');
@@ -51,47 +53,28 @@ export default function PrintHint() {
   /** x and Escape end it at once; only running out of time fades it. */
   const closing = useRef(false);
 
-  /** `fresh` starts again from no extra room: the layout changed, so the room worked out for the old one no longer applies. */
-  const makeRoom = useCallback((fresh = false) => {
+  /** True when the bubble, where it hangs now, lies over nothing and is on screen. */
+  const fits = () => {
     const node = bubble.current;
-    const main = node?.closest<HTMLElement>('.game-frame-main');
-    if (!node || !main) return;
-    if (fresh) main.style.removeProperty('--game-frame-hint-room');
+    if (!node) return false;
+    const rect = node.getBoundingClientRect();
     const gap = parseFloat(getComputedStyle(node).scrollMarginTop) || 0;
-    let tries = 0;
-    const step = () => {
-      const rect = node.getBoundingClientRect();
-      const need = roomNeeded({ left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom }, obstacleBoxes(node), gap);
-      if (need > 0.5 && tries < 6) {
-        const now = parseFloat(main.style.getPropertyValue('--game-frame-hint-room')) || 0;
-        main.style.setProperty('--game-frame-hint-room', `${Math.ceil(now + need)}px`);
-        tries += 1;
-        requestAnimationFrame(step);
-      }
-    };
-    requestAnimationFrame(step);
-  }, []);
+    return fitsClear({ left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom }, obstacleBoxes(node), gap, document.documentElement.clientWidth);
+  };
 
   /** A finger or key already on the game before the bubble is due means the player is playing: no bubble, so nothing moves under them. */
   const touched = useRef(false);
-  /** True while a pointer is held down, so making room is put back only after the gesture ends. */
-  const pressed = useRef(false);
 
   useEffect(() => {
     reduced.current = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const onDown = () => { touched.current = true; pressed.current = true; };
-    const onUp = () => { pressed.current = false; };
+    const onDown = () => { touched.current = true; };
     const onKeyDown = () => { touched.current = true; };
     document.addEventListener('pointerdown', onDown, true);
-    document.addEventListener('pointerup', onUp, true);
-    document.addEventListener('pointercancel', onUp, true);
     document.addEventListener('keydown', onKeyDown, true);
     const show = setTimeout(() => setPhase(touched.current ? 'gone' : 'shown'), HINT_SHOW_AFTER_MS);
     return () => {
       clearTimeout(show);
       document.removeEventListener('pointerdown', onDown, true);
-      document.removeEventListener('pointerup', onUp, true);
-      document.removeEventListener('pointercancel', onUp, true);
       document.removeEventListener('keydown', onKeyDown, true);
     };
   }, []);
@@ -106,16 +89,10 @@ export default function PrintHint() {
     timer.current = countdown;
     holds.current = createHintHolds(countdown);
     countdown.start();
-    makeRoom();
-    // The layout can change while the bubble shows (a phone turned, a desktop window narrowed to the phone layout, where
-    // the date line moves under the buttons): work the room out again from nothing.
+    // The layout can change while the bubble shows (a phone turned, a window narrowed, the game finishing loading): if it no longer fits, it goes.
     const frame = bubble.current?.closest<HTMLElement>('.game-frame-main');
-    let lastWidth = frame?.getBoundingClientRect().width;
     const observer = new ResizeObserver(() => {
-      const width = frame?.getBoundingClientRect().width;
-      if (width === lastWidth) return;
-      lastWidth = width;
-      makeRoom(true);
+      if (!fits()) { closing.current = true; countdown.close(); }
     });
     if (frame) observer.observe(frame);
     const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') { closing.current = true; countdown.close(); } };
@@ -127,7 +104,7 @@ export default function PrintHint() {
       timer.current = null;
       holds.current = null;
     };
-  }, [phase, makeRoom]);
+  }, [phase]);
 
   useEffect(() => {
     if (phase !== 'fading') return;
@@ -135,15 +112,9 @@ export default function PrintHint() {
     return () => clearTimeout(done);
   }, [phase]);
 
-  useEffect(() => {
-    if (phase !== 'gone') return;
-    const release = () => document.querySelector<HTMLElement>('.game-frame-main')?.style.removeProperty('--game-frame-hint-room');
-    if (!pressed.current) { release(); return; }
-    // Mid-gesture (a drag across the board): put the room back when the finger lifts, not under it.
-    const later = () => { release(); document.removeEventListener('pointerup', later, true); document.removeEventListener('pointercancel', later, true); };
-    document.addEventListener('pointerup', later, true);
-    document.addEventListener('pointercancel', later, true);
-    return () => { document.removeEventListener('pointerup', later, true); document.removeEventListener('pointercancel', later, true); };
+  /** Before the first paint: a bubble that would lie over anything is never shown. */
+  useLayoutEffect(() => {
+    if (phase === 'shown' && !fits()) setPhase('gone');
   }, [phase]);
 
   /** If the bubble goes away while something inside it has focus, focus goes to the printer button, never to the page. */

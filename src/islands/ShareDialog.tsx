@@ -15,7 +15,7 @@ import {
   type SharePayload,
 } from './vialosharing';
 import { formatCountdown } from './vialosticker';
-import { DIALOG_TAB_STOPS, stickersFor, trapTarget, type ShareGame, type ShareSticker } from './sharedialogmodel';
+import { DIALOG_TAB_STOPS, stickersFor, trapTarget, yieldToBrowser, type ShareGame, type ShareSticker } from './sharedialogmodel';
 
 /*
   The completion dialog (Christian's design, 25 Nov 2026), shared by the daily games. It opens over the play area when a
@@ -81,7 +81,7 @@ export default function ShareDialog({ game, open, onClose, description, payload,
   // Draw the stickers (again if the stats change). The dialog stays mounted while closed, so reopening is instant.
   useEffect(() => {
     let live = true;
-    void makeStickers().then(
+    void yieldToBrowser().then(() => (live ? makeStickers() : [])).then(
       (made) => {
         if (!live) return;
         setDrawn({ key: stickersKey, list: made });
@@ -266,12 +266,25 @@ export default function ShareDialog({ game, open, onClose, description, payload,
         className={`share-dialog share-dialog-${id} always-daytime`}
         data-testid="share-dialog"
       >
-        <img className="share-dialog-corner share-dialog-corner-top" src={game.cornerSrc} alt="" aria-hidden="true" width="48" height="48" loading="lazy" />
-        <img className="share-dialog-corner share-dialog-corner-bottom" src={game.cornerSrc} alt="" aria-hidden="true" width="48" height="48" loading="lazy" />
+        {game.cornerSrc ? (
+          <>
+            <img className="share-dialog-corner share-dialog-corner-top" src={game.cornerSrc} alt="" aria-hidden="true" width="48" height="48" loading="lazy" />
+            <img className="share-dialog-corner share-dialog-corner-bottom" src={game.cornerSrc} alt="" aria-hidden="true" width="48" height="48" loading="lazy" />
+          </>
+        ) : (
+          <>
+            <span className="share-dialog-corner share-dialog-corner-tile share-dialog-corner-top" aria-hidden="true">{game.cornerText}</span>
+            <span className="share-dialog-corner share-dialog-corner-tile share-dialog-corner-bottom" aria-hidden="true">{game.cornerText}</span>
+          </>
+        )}
         <button type="button" className="share-dialog-close" aria-label="close" onClick={onClose} data-testid="share-dialog-close">
           <span aria-hidden="true">×</span>
         </button>
-        <img className="share-dialog-wordmark" src={game.wordmarkSrc} alt={game.wordmarkAlt} width="160" height="60" loading="lazy" />
+        {game.wordmarkSrc ? (
+          <img className="share-dialog-wordmark" src={game.wordmarkSrc} alt={game.wordmarkAlt} width="160" height="60" loading="lazy" />
+        ) : (
+          <p className="share-dialog-wordmark share-dialog-wordmark-text">{game.wordmarkAlt}</p>
+        )}
 
         <p id={`share-dialog-description-${id}`} className="sr-only" data-testid="share-dialog-description">{description}</p>
 

@@ -41,7 +41,6 @@
   .lab-title {
     font-size: var(--lab-title-size);
     font-weight: 700;
-    line-height: 1.3;
   }
 
   /* Small tracked captions: "orientation", "body systems", the dataset line. */
@@ -58,6 +57,13 @@
     -webkit-backdrop-filter: blur(var(--lab-glass-blur));
     backdrop-filter: blur(var(--lab-glass-blur));
     color: var(--lab-ivory);
+  }
+
+  /* Study text (the question, the answer cells, the feedback) sits on a plain opaque panel: no gradient, no blur. */
+  .lab-glass.lab-solid {
+    background: var(--lab-panel-solid);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
   }
 
   /* The thin copper edge: a 1-pixel gradient ring drawn with a mask, so the glass stays see-through inside it. */
@@ -293,5 +299,203 @@
     padding: calc(var(--spacing) * 2) 0;
     border-top: var(--lab-edge) solid var(--lab-hair);
     font-size: var(--lab-row-size);
+  }
+
+  /* The inspector (Task 178, redesign part 2). */
+  .lab-name {
+    margin: calc(var(--spacing) * 2) 0 calc(var(--spacing) * 3);
+    font-size: var(--lab-name-size);
+    font-weight: 700;
+    color: var(--lab-ivory);
+  }
+  .lab-id {
+    font-size: var(--lab-id-size);
+    color: var(--lab-sand);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: var(--lab-label-tracking);
+  }
+  .lab-index {
+    max-height: var(--lab-index-height);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  .lab-selring {
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 5;
+    width: var(--lab-selring-size);
+    height: var(--lab-selring-size);
+    border-radius: 50%;
+    border: calc(var(--lab-edge) * 2) solid var(--lab-copper-glow);
+    box-shadow: 0 0 0 var(--lab-edge) var(--lab-charcoal);
+    pointer-events: none;
+    display: none;
+  }
+  .lab-selring[data-on] {
+    display: block;
+  }
+  .lab-leader {
+    position: absolute;
+    inset: 0;
+    z-index: 5;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    overflow: visible;
+  }
+  .lab-leader line {
+    stroke: var(--lab-copper-glow);
+    stroke-width: var(--lab-leader-width);
+    display: none;
+  }
+  .lab-leader line[data-on] {
+    display: block;
+  }
+
+  /* The study round (Task 178, redesign part 3). */
+  .lab-seg {
+    display: flex;
+    gap: calc(var(--spacing) * 1);
+    padding: calc(var(--spacing) * 1);
+    border-radius: var(--radius-pill);
+    border: var(--lab-edge) solid var(--lab-edge-dim);
+    background: var(--lab-well);
+  }
+  .lab-seg button {
+    flex: 1;
+    min-height: calc(var(--spacing) * 11);
+    border-radius: var(--radius-pill);
+    border: var(--lab-edge) solid transparent;
+    background: transparent;
+    color: var(--lab-sand);
+    font-size: var(--lab-button-size);
+    cursor: pointer;
+  }
+  .lab-seg button[aria-pressed='true'] {
+    background: var(--lab-copper-fill);
+    color: var(--lab-charcoal);
+    font-weight: 700;
+    border-color: var(--lab-copper-glow);
+  }
+  .lab-switch {
+    gap: calc(var(--spacing) * 3);
+  }
+  .lab-switch[aria-checked='true'] {
+    border-color: var(--lab-copper-glow);
+    background: var(--lab-row-on);
+  }
+  .lab-stat {
+    display: flex;
+    align-items: baseline;
+    gap: calc(var(--spacing) * 3);
+    margin: 0;
+    padding: calc(var(--spacing) * 2) calc(var(--spacing) * 4);
+    border-radius: var(--radius-pill);
+    border: var(--lab-edge) solid var(--lab-edge-dim);
+    font-variant-numeric: tabular-nums;
+  }
+  .lab-row[data-state='done'] {
+    color: var(--lab-ivory);
+  }
+  .lab-row[data-state='now'] {
+    border-color: var(--lab-ring);
+    background: var(--lab-row-on);
+    color: var(--lab-ivory);
+  }
+  .lab-row[data-state='later'] .lab-state {
+    letter-spacing: var(--lab-caption-tracking);
+  }
+  .lab-location-frame {
+    position: relative;
+    width: var(--lab-thumb-width);
+    margin-top: calc(var(--spacing) * 2);
+  }
+  .lab-location-layer {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+    pointer-events: none;
+  }
+  .lab-location-dot {
+    r: calc(var(--lab-location-dot) / 2);
+    fill: var(--lab-charcoal);
+    stroke: var(--lab-copper-glow);
+    stroke-width: calc(var(--lab-edge) * 2);
+  }
+  .lab-cells {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: calc(var(--spacing) * 2) var(--lab-word-gap);
+    padding: calc(var(--spacing) * 2);
+    border-radius: var(--lab-radius-row);
+  }
+  .lab-word {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    max-width: 100%;
+    gap: var(--lab-cell-gap);
+  }
+  .lab-cell {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--lab-cell-size-small);
+    height: var(--lab-cell-size);
+    border-radius: var(--lab-radius-row);
+    border: var(--lab-edge) solid var(--lab-edge-dim);
+    border-bottom-width: calc(var(--lab-edge) * 3);
+    background: var(--lab-well);
+    color: var(--lab-ivory);
+    font-size: var(--lab-cell-size-large);
+    font-weight: 700;
+  }
+  .lab-cell[data-from='first'],
+  .lab-cell[data-from='hint'] {
+    border-style: dashed;
+    color: var(--lab-copper-glow);
+  }
+  .lab-cell[data-from='shown'] {
+    color: var(--lab-sand);
+  }
+  .lab-cell[data-current] {
+    border-color: var(--lab-copper-glow);
+    border-bottom-color: var(--lab-copper-shine);
+  }
+  .lab-cell[data-wrong]:not([data-from='empty']) {
+    border-style: double;
+    border-width: calc(var(--lab-edge) * 3);
+  }
+  .lab-cells:focus-visible {
+    outline: calc(var(--lab-edge) * 2) solid var(--lab-copper-shine);
+    outline-offset: calc(var(--lab-edge) * 2);
+  }
+  .lab-keys {
+    display: grid;
+    gap: calc(var(--spacing) * 1);
+    justify-items: center;
+  }
+  .lab-key-row {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: calc(var(--spacing) * 1);
+  }
+  .lab-key {
+    min-width: calc(var(--spacing) * 11);
+    min-height: calc(var(--spacing) * 11);
+    border-radius: var(--lab-radius-row);
+    border: var(--lab-edge) solid var(--lab-ring);
+    background: var(--lab-well);
+    color: var(--lab-ivory);
+    font-size: var(--lab-button-size);
+    cursor: pointer;
+  }
+  .lab-key-wide {
+    padding: 0 calc(var(--spacing) * 5);
   }
 }

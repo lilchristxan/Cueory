@@ -7,6 +7,7 @@
  * files in a browser (element boxes), not estimated from the pictures.
  */
 import { imageLogo } from '../config/gamelogos';
+import { formatSolveTime } from './vialotimer';
 import { gameName } from '../config/games';
 import type { Mark } from './pulse';
 
@@ -92,6 +93,8 @@ export interface TextLine {
   family: 'body' | 'display';
   align: 'left' | 'center';
   letterSpacing: number;
+  /** The widest this line may be; a longer one is drawn smaller to fit (sudoku's landscape date line). */
+  maxWidth?: number;
 }
 
 export interface StickerLayout {
@@ -111,7 +114,7 @@ export interface StickerLayout {
   footer: TextLine;
 }
 
-/** Wordmark: 77 CSS px tall, with the SVG's 4326 x 1620 ratio. */
+/** Wordmark: 77 CSS px tall, with the artwork's own ratio (src/config/gamelogos.ts). */
 const WORDMARK_RATIO = imageLogo('vialo').wordmark.width / imageLogo('vialo').wordmark.height;
 const WORDMARK_HEIGHT = 154;
 const PACK_RATIO = FOIL.width / FOIL.height;
@@ -234,11 +237,8 @@ export function stickerLayout(kind: StickerKind, input: StickerInput): StickerLa
 
 // ---------- wording ----------
 
-/** "0:42", "12:05". Whole seconds, rounded down; never negative. */
-export function formatSolveTime(ms: number): string {
-  const total = Math.max(0, Math.floor(ms / 1000));
-  return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`;
-}
+// formatSolveTime lives with the timer (vialotimer.ts) so a board page does not load the sticker module just to print a time.
+export { formatSolveTime };
 
 /** "08:42:15" until local midnight. */
 export function formatCountdown(ms: number): string {

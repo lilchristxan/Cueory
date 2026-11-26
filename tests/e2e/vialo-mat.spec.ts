@@ -90,11 +90,6 @@ for (const scheme of ['light', 'dark'] as const) {
       const pack = page.locator('.vialo-pack');
       await expect(pack).toBeVisible();
       await expect(page.locator('.vialo-keys .vialo-key-row').first()).toBeVisible();
-      // The "print a copy for your patients!" bubble appears a moment after load and, while it shows, the Frame makes room
-      // for it, which moves the card. This test looks at the resting card, so it waits for the bubble and closes it (Escape).
-      await expect(page.getByTestId('print-hint')).toBeVisible();
-      await page.keyboard.press('Escape');
-      await expect(page.getByTestId('print-hint')).toHaveCount(0);
       await pack.evaluate((node) => node.scrollIntoView({ block: 'center' }));
       await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
 

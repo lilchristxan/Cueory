@@ -16,9 +16,9 @@ import {
   type PillRect,
   type StickerInput,
   type StickerKind,
-  type TextLine,
   hasRing,
 } from './vialosticker';
+import { canvasFile, drawDate, drawDividers, drawFooter, drawStats, drawWordmark, fontString, loadImage, loadWordmark, type PaintPalette } from './stickerpaint';
 
 const ARTWORK_URL = '/design/pillo-blister-board.webp';
 const WORDMARK = imageLogo('vialo').wordmark;
@@ -29,13 +29,7 @@ export interface StickerAssets {
   wordmark: HTMLImageElement;
 }
 
-export interface StickerPalette {
-  oxblood: string;
-  espresso: string;
-  copper: string;
-  outline: string;
-  wordmarkOutline: string;
-  dividerHalo: string;
+export interface StickerPalette extends PaintPalette {
   packRim: string;
   packShadow: string;
   pillShade: string;
@@ -44,8 +38,6 @@ export interface StickerPalette {
   /** The thin light ring inside an "elsewhere" pill (the board's own ring, scaled up to the sticker), so colour is not the only signal. */
   ring: { color: string; width: number; gap: number };
   pill: Record<Exclude<CellKind, 'empty'>, readonly [string, string, string]>;
-  body: string;
-  display: string;
 }
 
 /** Reads the sticker's tokens. They are never overridden for Evening, so the answer is the same in both themes. */
@@ -54,7 +46,7 @@ export function readStickerPalette(root: Element = document.documentElement): St
   const get = (name: string) => style.getPropertyValue(name).trim();
   const pill = (kind: string) => [get(`--vialo-sticker-${kind}-light`), get(`--vialo-sticker-${kind}-mid`), get(`--vialo-sticker-${kind}-deep`)] as const;
   return {
-    oxblood: get('--vialo-sticker-oxblood'),
+    accent: get('--vialo-sticker-oxblood'),
     espresso: get('--vialo-sticker-espresso'),
     copper: get('--vialo-sticker-copper'),
     outline: get('--vialo-sticker-outline'),
@@ -76,29 +68,8 @@ export function readStickerPalette(root: Element = document.documentElement): St
   };
 }
 
-function loadImage(src: string): Promise<HTMLImageElement> {
-  return new Promise((resolve, reject) => {
-    const image = new Image();
-    image.onload = () => resolve(image);
-    image.onerror = () => reject(new Error(`could not load ${src}`));
-    image.src = src;
-  });
-}
-
-/**
- * The wordmark SVG only has a viewBox. Some browsers will not draw such an SVG to a canvas without a size, so it is
- * given one here and handed over as a data: URL (our CSP allows data: images, not blob: ones).
- */
-async function loadWordmark(fetcher: typeof fetch): Promise<HTMLImageElement> {
-  const response = await fetcher(WORDMARK_URL);
-  if (!response.ok) throw new Error('could not load the wordmark');
-  const text = await response.text();
-  const sized = text.replace('<svg ', `<svg width="${WORDMARK.width}" height="${WORDMARK.height}" `);
-  return loadImage(`data:image/svg+xml;charset=utf-8,${encodeURIComponent(sized)}`);
-}
-
 export async function loadStickerAssets(fetcher: typeof fetch = fetch): Promise<StickerAssets> {
-  const [artwork, wordmark] = await Promise.all([loadImage(ARTWORK_URL), loadWordmark(fetcher)]);
+  const [artwork, wordmark] = await Promise.all([loadImage(ARTWORK_URL), loadWordmark(WORDMARK_URL, WORDMARK.width, WORDMARK.height, fetcher)]);
   return { artwork, wordmark };
 }
 
@@ -110,85 +81,6 @@ export async function waitForStickerFonts(palette: StickerPalette): Promise<void
     document.fonts.load(fontString(600, 62, palette.display)),
   ]);
   await document.fonts.ready;
-}
-
-// ---------- text ----------
-
-function fontString(weight: number, size: number, family: string): string {
-  return `${weight} ${size}px ${family}`;
-}
-
-function fontFor(line: TextLine, palette: StickerPalette): string {
-  return fontString(line.weight, line.size, line.family === 'display' ? palette.display : palette.body);
-}
-
-type SpacedContext = CanvasRenderingContext2D & { letterSpacing?: string };
-
-function hasSpacing(ctx: SpacedContext): boolean {
-  return 'letterSpacing' in ctx;
-}
-
-function textWidth(ctx: SpacedContext, text: string, spacing: number): number {
-  if (hasSpacing(ctx)) {
-    ctx.letterSpacing = `${spacing}px`;
-    const width = ctx.measureText(text).width;
-    ctx.letterSpacing = '0px';
-    return width;
-  }
-  return ctx.measureText(text).width + spacing * text.length;
-}
-
-/** Strokes then fills, like `paint-order: stroke fill` with a centred stroke: only the outer half of the line shows. */
-function paintText(ctx: SpacedContext, text: string, x: number, baseline: number, spacing: number, fill: string, stroke: string | undefined, strokeWidth: number) {
-  const native = hasSpacing(ctx);
-  ctx.textBaseline = 'alphabetic';
-  ctx.textAlign = 'left';
-  const run = (draw: (t: string, px: number, py: number) => void) => {
-    if (native) {
-      ctx.letterSpacing = `${spacing}px`;
-      draw(text, x, baseline);
-      ctx.letterSpacing = '0px';
-      return;
-    }
-    let cursor = x;
-    for (const char of text) {
-      draw(char, cursor, baseline);
-      cursor += ctx.measureText(char).width + spacing;
-    }
-  };
-  if (stroke && strokeWidth > 0) {
-    ctx.lineJoin = 'round';
-    ctx.lineWidth = strokeWidth;
-    ctx.strokeStyle = stroke;
-    run((t, px, py) => ctx.strokeText(t, px, py));
-  }
-  ctx.fillStyle = fill;
-  run((t, px, py) => ctx.fillText(t, px, py));
-}
-
-function baselineOf(ctx: CanvasRenderingContext2D, line: TextLine): number {
-  const m = ctx.measureText(line.text);
-  const ascent = m.fontBoundingBoxAscent ?? line.size * 0.8;
-  const descent = m.fontBoundingBoxDescent ?? line.size * 0.2;
-  return line.y + (line.lineHeight - (ascent + descent)) / 2 + ascent;
-}
-
-function leftOf(ctx: SpacedContext, line: TextLine): number {
-  return line.align === 'center' ? line.x - textWidth(ctx, line.text, line.letterSpacing) / 2 : line.x;
-}
-
-/**
- * Bodoni Moda changes its letter shapes with its size (optical sizing), and the browser picks the shape from the
- * font-size it is given. Christian's design was drawn at half size, so display-face lines are drawn at half size under
- * a 2x transform: the same letter shapes his picture has.
- */
-function paintDisplay(ctx: SpacedContext, line: TextLine, palette: StickerPalette, fill: string, stroke: string, strokeWidth: number) {
-  const half: TextLine = { ...line, x: line.x / 2, y: line.y / 2, lineHeight: line.lineHeight / 2, size: line.size / 2, letterSpacing: line.letterSpacing / 2 };
-  ctx.save();
-  ctx.scale(2, 2);
-  ctx.font = fontFor(half, palette);
-  paintText(ctx, half.text, leftOf(ctx, half), baselineOf(ctx, half), half.letterSpacing, fill, stroke, strokeWidth / 2);
-  ctx.restore();
 }
 
 // ---------- shapes ----------
@@ -307,28 +199,9 @@ function drawRing(ctx: CanvasRenderingContext2D, p: PillRect, ring: StickerPalet
 /** Draws the whole sticker onto a canvas that is already the export size. */
 export function drawSticker(ctx: CanvasRenderingContext2D, kind: StickerKind, input: StickerInput, assets: StickerAssets, palette: StickerPalette): void {
   const layout = stickerLayout(kind, input);
-  const spaced = ctx as SpacedContext;
   ctx.clearRect(0, 0, layout.width, layout.height);
-
-  // Wordmark with Christian's hairline light outline: a pale copy of the artwork 0.8 px off in four directions.
-  {
-    const { x, y, width, height } = layout.wordmark;
-    const scratch = document.createElement('canvas');
-    scratch.width = Math.ceil(width);
-    scratch.height = Math.ceil(height);
-    const s = scratch.getContext('2d')!;
-    s.drawImage(assets.wordmark, 0, 0, scratch.width, scratch.height);
-    s.globalCompositeOperation = 'source-in';
-    s.fillStyle = palette.wordmarkOutline;
-    s.fillRect(0, 0, scratch.width, scratch.height);
-    for (const [dx, dy] of [[0.8, 0], [-0.8, 0], [0, 0.8], [0, -0.8]] as const) ctx.drawImage(scratch, x + dx, y + dy, scratch.width, scratch.height);
-    ctx.drawImage(assets.wordmark, x, y, width, height);
-  }
-
-  // The date line has no outline.
-  const date = layout.date;
-  ctx.font = fontFor(date, palette);
-  paintText(spaced, date.text, leftOf(spaced, date), baselineOf(ctx, date), date.letterSpacing, palette.espresso, undefined, 0);
+  drawWordmark(ctx, layout.wordmark, assets.wordmark, palette.wordmarkOutline);
+  drawDate(ctx, layout.date, palette);
 
   // The foil card: shadow, the artwork cropped to the foil, the wells' pills, then a hairline rim.
   const { pack } = layout;
@@ -352,33 +225,9 @@ export function drawSticker(ctx: CanvasRenderingContext2D, kind: StickerKind, in
   ctx.stroke();
   ctx.restore();
 
-  // Copper dividers with a faint light halo.
-  for (const d of layout.dividers) {
-    ctx.fillStyle = palette.dividerHalo;
-    ctx.fillRect(d.x - 1, d.y - 1, d.width + 2, d.height + 2);
-    ctx.fillStyle = palette.copper;
-    ctx.fillRect(d.x, d.y, d.width, d.height);
-  }
-
-  // Stats.
-  layout.statValues.forEach((value, i) => {
-    const label = layout.statLabels[i]!;
-    ctx.font = fontFor(value, palette);
-    const valueLeft = leftOf(spaced, value);
-    const valueBaseline = baselineOf(ctx, value);
-    paintText(spaced, value.text, valueLeft, valueBaseline, 0, palette.oxblood, palette.outline, 1);
-    const valueWidth = textWidth(spaced, value.text, 0);
-    ctx.font = fontFor(label, palette);
-    if (layout.labelBesideValue) {
-      paintText(spaced, label.text, valueLeft + valueWidth + 20, valueBaseline, 0, palette.espresso, palette.outline, 1);
-    } else {
-      paintText(spaced, label.text, leftOf(spaced, label), baselineOf(ctx, label), 0, palette.espresso, palette.outline, 1);
-    }
-  });
-
-  // Site line.
-  const footer = layout.footer;
-  paintDisplay(spaced, footer, palette, palette.oxblood, palette.outline, 0.6);
+  drawDividers(ctx, layout.dividers, palette);
+  drawStats(ctx, layout.statValues, layout.statLabels, layout.labelBesideValue, palette);
+  drawFooter(ctx, layout.footer, palette);
 }
 
 /** A new canvas at the export size with the sticker drawn on it. */
@@ -392,8 +241,4 @@ export function renderSticker(kind: StickerKind, input: StickerInput, assets: St
 }
 
 /** The sticker as a PNG file; null if the browser cannot encode one. */
-export function stickerFile(canvas: HTMLCanvasElement, name: string): Promise<File | null> {
-  return new Promise((resolve) => {
-    canvas.toBlob((blob) => resolve(blob ? new File([blob], name, { type: 'image/png' }) : null), 'image/png');
-  });
-}
+export const stickerFile = canvasFile;

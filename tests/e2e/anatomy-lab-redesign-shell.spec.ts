@@ -157,8 +157,14 @@ test.describe('anatomy lab shell: bottom bar', () => {
     await labels.click();
     const overlay = page.getByTestId('anatomy-labels');
     await expect(overlay.locator(':scope > span').first()).toBeVisible();
+    // Measured from the 3D view's own corner: focusing the slider can scroll the page (by a different amount in
+    // each engine), and that moves every label on the screen without moving it in the view.
     const spots = () => overlay.locator(':scope > span').evaluateAll((spans) =>
-      spans.map((span) => `${span.textContent}@${Math.round(span.getBoundingClientRect().x)},${Math.round(span.getBoundingClientRect().y)}`).sort().join('|'));
+      spans.map((span) => {
+        const box = span.getBoundingClientRect();
+        const frame = span.parentElement!.getBoundingClientRect();
+        return `${span.textContent}@${Math.round(box.x - frame.x)},${Math.round(box.y - frame.y)}`;
+      }).sort().join('|'));
     const together = await spots();
 
     const slider = bar.getByRole('slider', { name: /spread structures apart/ });
