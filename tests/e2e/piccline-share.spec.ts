@@ -163,6 +163,15 @@ test.describe('the solve timer', () => {
     expect(await page.getByTestId('share-dialog-description').textContent()).toMatch(/solve time \d+:\d\d/);
   });
 
+  test('thinking time since the last move is kept when the page is left or reloaded', async ({ page }) => {
+    await open(page);
+    await playWord(page, 1);
+    // No move for half a minute (the page's clock, not a sleep), then the page is reloaded.
+    await page.clock.fastForward(30_000);
+    await page.reload();
+    await expect(page.getByTestId('suture-time')).toHaveText(/^time: 0:(3\d|4\d)$/);
+  });
+
   test('a reload mid-game carries the time on, and a finished board reopens with its solve time', async ({ page }) => {
     await open(page);
     await playWord(page, 1);
@@ -172,6 +181,8 @@ test.describe('the solve timer', () => {
     await expect(page.getByTestId('suture-time')).toHaveText(/^time: 0:(0[7-9]|1\d)$/);
     for (const index of order.slice(2)) await playWord(page, index);
     await expect(page.getByTestId('suture-result')).toBeVisible();
+    // A game that was reloaded part-way and then finished still gets its card.
+    await expect(page.getByTestId('share-dialog')).toBeVisible();
     const solve = await page.getByTestId('suture-solve-time').textContent();
     await page.keyboard.press('Escape');
     await page.reload();

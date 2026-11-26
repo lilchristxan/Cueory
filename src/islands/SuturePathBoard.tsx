@@ -121,6 +121,8 @@ export function PathBoard({ puzzle, name }: Props) {
   // A board played earlier today on this device comes back as it was (a finished one stays finished); a new day starts fresh.
   const [restored] = useState(() => loadPicclineSave(puzzle, localDay(today)));
   const [state, setState] = useState<PathState>(() => restored ?? startPath());
+  /** The board was already complete when the page opened: no card is thrown at the player again ("share" still offers it). */
+  const restoredDone = Boolean(restored && pathDone(restored, puzzle));
   const current = useRef(state);
   const [focused, setFocused] = useState(0);
   const [said, setSaid] = useState('');
@@ -180,13 +182,24 @@ export function PathBoard({ puzzle, name }: Props) {
   };
 
   useEffect(() => {
+    // Thinking time since the last move is saved when the tab is hidden or the page is left, so a reload or a trip to
+    // another page never understates the solve time.
+    const saveNow = () => {
+      if (!timer.current.started) return;
+      savePicclineBoard(puzzle, localDay(today), current.current, undefined, timerElapsed(timer.current, Date.now()));
+    };
     const onVisibility = () => {
       const now = Date.now();
       timer.current = document.hidden ? pauseTimer(timer.current, now) : resumeTimer(timer.current, now);
+      if (document.hidden) saveNow();
       setTick((n) => n + 1);
     };
     document.addEventListener('visibilitychange', onVisibility);
-    return () => document.removeEventListener('visibilitychange', onVisibility);
+    window.addEventListener('pagehide', saveNow);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibility);
+      window.removeEventListener('pagehide', saveNow);
+    };
   }, []);
 
   useEffect(() => {
@@ -197,13 +210,13 @@ export function PathBoard({ puzzle, name }: Props) {
 
   // The share card opens by itself once the last answer has landed (right away with reduced motion).
   useEffect(() => {
-    if (!shareReady || restored) return;
+    if (!shareReady || restoredDone) return;
     const delay = revealDelayMs(reduceMotion, getComputedStyle(document.documentElement).getPropertyValue('--duration-fast'));
     const id = window.setTimeout(() => setShareOpen(true), delay);
     return () => window.clearTimeout(id);
   }, [shareReady]);
 
-  useEffect(() => { if (done && !restored) result.current?.focus(); }, [done]);
+  useEffect(() => { if (done && !restoredDone) result.current?.focus(); }, [done]);
   // A board that reopens finished still offers its share card, with today's numbers.
   useEffect(() => { if (restored && pathDone(restored, puzzle)) setFinish(finishStats(localDay(new Date()))); }, []);
 
