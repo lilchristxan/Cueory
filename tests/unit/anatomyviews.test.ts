@@ -10,6 +10,7 @@ import {
   isViewPreset,
   presetDirection,
   tappableIds,
+  tappableRound,
   spreadBlocksSaving,
   SPREAD_SAVE_NOTE,
 } from '../../src/islands/anatomyviews';
@@ -164,5 +165,30 @@ describe('saved views and spread structures', () => {
     expect(open).toMatch(/changeSpread\(0\);\s*\n\s*scene\.applyCameraState/);
     const save = source.slice(source.indexOf('const saveView ='), source.indexOf('const openView ='));
     expect(save).toContain('spreadBlocksSaving(spread)');
+  });
+});
+
+describe('tappableRound (a review round shows its queue first)', () => {
+  const skin = new Set(['S1']);
+  it('drops a queued outlined structure when anything else will be showing', () => {
+    expect(tappableRound(['S1', 'A'], ['S1', 'A', 'B'], skin)).toEqual(['A']);
+    expect(tappableRound(['S1'], ['S1', 'B'], skin)).toEqual([]);
+  });
+  it('keeps it when nothing else will be showing, where it is solid and tappable', () => {
+    expect(tappableRound(['S1'], ['S1'], skin)).toEqual(['S1']);
+  });
+  it('agrees with tappableIds for a round over what is visible', () => {
+    expect(tappableRound(['S1', 'A'], ['S1', 'A'], skin)).toEqual(tappableIds(['S1', 'A'], skin));
+  });
+});
+
+describe('review rounds use the same tap rule (the review queue needs a signed-in student, so it has no browser test)', () => {
+  it('startReviewQuiz asks only what a tap can reach and says so when nothing is left', async () => {
+    const { readFileSync } = await import('node:fs');
+    const source = readFileSync('src/islands/AnatomyLab.tsx', 'utf8');
+    const start = source.slice(source.indexOf('const startReviewQuiz ='), source.indexOf('const saveView ='));
+    expect(start).toContain('tappableRound(reviewPool,');
+    expect(start).toContain('startQuiz(round, Math.random)');
+    expect(start).toContain('round.length === 0');
   });
 });
