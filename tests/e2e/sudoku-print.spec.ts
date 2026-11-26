@@ -288,3 +288,31 @@ test.describe('from /play', () => {
     await expect(todayRow(page).getByRole('button', { name: /print for a patient/ })).toHaveCount(0);
   });
 });
+
+test('a press before the print island has loaded is remembered and answered once, when it is ready', async ({ page }) => {
+  // Hold the print island's file, so the board and its printer button are up while nothing is listening yet.
+  let release!: () => void;
+  const held = new Promise<void>((resolve) => { release = resolve; });
+  let asked = false;
+  await page.route('**/_astro/SudokuPrint*.js', async (route) => {
+    asked = true;
+    await held;
+    await route.continue();
+  });
+  await page.goto('/play/sudoku');
+  const button = board(page).getByRole('button', { name: 'print this puzzle' });
+  await expect(button).toBeVisible();
+  await expect.poll(() => asked).toBe(true);
+  await expect(sheet(page)).not.toHaveAttribute('data-print-ready', 'true');
+  await button.click();
+  await expect(warning(page)).toHaveCount(0);
+  release();
+  await expect(warning(page)).toBeVisible();
+  await expect(page.getByRole('dialog')).toHaveCount(1);
+  expect(await printed(page)).toBe(0);
+  await warning(page).getByRole('button', { name: 'finish the game first' }).click();
+  await expect(warning(page)).toBeHidden();
+  // The remembered press was used up: the dialog does not come back by itself.
+  await expect(sheet(page)).toHaveAttribute('data-print-ready', 'true');
+  await expect(warning(page)).toHaveCount(0);
+});

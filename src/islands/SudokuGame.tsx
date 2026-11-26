@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { browserStorage } from '../scripts/storage';
-import { FORFEIT_EVENT, PRINT_EVENT } from '../scripts/printgate';
+import { FORFEIT_EVENT, sendPrint } from '../scripts/printgate';
 import { GameHelpButton, GameHelpDialog, useGameHelp } from './GameHelp';
 import { gameName } from '../config/games';
 import { deleteStats, forgetHeldRounds, localDay, reportStatsChanged, showResultCard, sudokuResultCard } from './gameresults';
@@ -403,7 +403,7 @@ export default function SudokuGame({ framed = false }: { framed?: boolean } = {}
     if (key === 'autoCandidates') toggleAuto(next.autoCandidates);
   };
   // Both print buttons ask the page's print sheet (src/islands/SudokuPrint.tsx), which warns first when the level is not finished.
-  const printPuzzle = () => document.dispatchEvent(new CustomEvent(PRINT_EVENT, { detail: { game: 'triage' } }));
+  const printPuzzle = () => sendPrint('triage');
   const runFromSettings = (action: () => void) => {
     setSettingsOpen(false);
     action();
