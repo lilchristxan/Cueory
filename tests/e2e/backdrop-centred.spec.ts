@@ -86,13 +86,6 @@ test.describe('game backdrop and board are centred in the play area', () => {
         await page.goto(route);
         await page.waitForLoadState('networkidle');
         await expect(page.locator('.game-frame-board')).toBeVisible();
-        // A game that can print shows its "print a copy for your patients!" bubble a moment after load and, while it shows,
-        // the Frame makes room for it. This test measures the resting layout, so it waits for the bubble and closes it (Escape).
-        if (await page.getByTestId('game-frame-print').count() > 0) {
-          await expect(page.getByTestId('print-hint')).toBeVisible();
-          await page.keyboard.press('Escape');
-          await expect(page.getByTestId('print-hint')).toHaveCount(0);
-        }
 
         for (const scheme of schemes) {
           await page.emulateMedia({ colorScheme: scheme });

@@ -390,7 +390,7 @@ test.describe('anatomy lab: worksheet', () => {
   test('numbers only what is showing, and says why when nothing is', async ({ page }) => {
     await openLab(page);
     await list(page).getByRole('button', { name: 'fixture cube A', exact: true }).click();
-    await page.getByRole('button', { name: 'show only this' }).click();
+    await page.getByRole('button', { name: 'isolate' }).click();
     await page.getByRole('button', { name: 'make a worksheet' }).click();
     await expect(sheet(page)).toBeVisible({ timeout: 20_000 });
     const rows = sheet(page).getByRole('list', { name: 'names to fill in' }).getByRole('listitem');

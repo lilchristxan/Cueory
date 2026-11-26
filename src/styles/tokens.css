@@ -142,7 +142,6 @@
   --game-frame-hint-line: 1.5px;
   --game-frame-hint-fade: 0.4s;
   --print-hint-clearance: 0.5rem;        /* 8px of clear space kept between the bubble and the date line or the game */
-  --game-frame-hint-room: 0rem;          /* the Frame raises this for as long as the bubble needs clear space above the game */
   --game-frame-corner-buttons: 2;        /* buttons in the corner pair: the gear and the "?", plus the printer on a game that prints */
   --game-frame-how-font-size: 1.25rem;   /* 20px */
   --game-frame-popover-radius: 1.25rem;  /* 20px */
@@ -1069,6 +1068,20 @@
   --vialo-sticker-pack-shadow: rgba(20, 13, 8, 0.28);
   --vialo-sticker-pill-shade: rgba(62, 44, 35, 0.22);
   --vialo-sticker-pill-lift: rgba(62, 44, 35, 0.28);
+  /* Sudoku's share stickers and card (always Daytime, never overridden for Evening). */
+  --sudoku-sticker-espresso: #3e2c23;
+  --sudoku-sticker-peach: rgb(230, 196, 167);     /* the cells as pictured in Christian's PNG (his CSS says #dfb897 and #3e2c23, but his picture is lighter) */
+  --sudoku-sticker-dark: rgb(80, 58, 47);
+  --sudoku-sticker-cream: #f9f5ef;
+  --sudoku-sticker-line: rgba(62, 44, 35, 0.3);   /* the thin lines between cells */
+  --sudoku-sticker-lift: rgba(30, 20, 14, 0.22);
+  --sudoku-sticker-halo: rgba(249, 245, 239, 0.5);
+  --sudoku-sticker-tile: #eae0d4;                 /* the "9" corner tiles on the card */
+  --sudoku-sticker-tile-edge: #d1c1af;
+  --share-dialog-tile-border: 1.2px;
+  --share-dialog-tile-size: 1.625rem;             /* 26 px */
+  --share-dialog-wordmark-text-size: 3.25rem;     /* 52 px */
+  --share-dialog-wordmark-text-tracking: 0.0375rem;
   /* Piccline share stickers (always Daytime, never overridden for Evening): the word of the day is teal, the others brown. */
   --picc-sticker-teal-light: rgb(66, 150, 147);
   --picc-sticker-teal-mid: rgb(47, 122, 120);
@@ -1716,6 +1729,7 @@
   --lab-skin* ones for the lights and the skin outline.
 */
 :root {
+  --lab-bar-button: 3rem;        /* the bottom bar buttons: one layout step above the 44 px tap minimum, because Firefox reads an exactly-44 px box as 43.99997 */
   --lab-charcoal: #1c1917;       /* Charcoal — the stage, and text on copper */
   --lab-walnut: #3a2d24;         /* Walnut   — glass panels */
   --lab-bronze: #6b5243;         /* Bronze   — hairlines (never text) */
@@ -1762,6 +1776,12 @@
   --lab-button-size: 0.9375em;     /* lab buttons */
   --lab-round-size: 1.125em;       /* round arrow and zoom buttons */
   --lab-row-size: 0.875em;         /* system rows and key/value lines */
+  --lab-name-size: 1.5em;          /* the selected structure's name on the inspector card */
+  --lab-id-size: 0.75em;           /* source ids (they are letters and digits, so Lato at a small size) */
+  --lab-selring-size: 3.5rem;      /* the ring round the selected structure */
+  --lab-leader-width: 0.0625rem;   /* the leader line from the ring to the card */
+  --lab-list-min: 16rem;           /* the structure list never shrinks below this; the rail scrolls instead */
+  --lab-index-height: 14rem;       /* the index list scrolls inside this height */
   --lab-page-max: 90rem;           /* the lab's page is wider than the reading width: it is an instrument, not text */
   --lab-rail-width: 16.5rem;       /* orientation, systems and layers */
   --lab-inspector-width: 22.5rem;  /* selected structure and the structure list */
