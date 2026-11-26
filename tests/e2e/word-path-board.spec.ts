@@ -66,8 +66,7 @@ test.beforeEach(async ({ page }) => {
 test.describe('word path: board format (#722)', () => {
   test('the clue is the title, on a 6 by 8 board, with submit, clear and cue buttons', async ({ page }) => {
     await expect(game(page)).toHaveAttribute('data-format', 'path');
-    // The cue is in the Frame's cue slot, above the board, like every framed game's.
-    const cue = page.getByRole('heading', { level: 3, name: sample.clue });
+    const cue = game(page).getByRole('heading', { level: 3, name: sample.clue });
     await expect(cue).toBeVisible();
     const cueBox = (await cue.boundingBox())!;
     // The gear now sits in the Frame's top right corner, level with the date line, so the cue is under it.

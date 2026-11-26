@@ -939,12 +939,11 @@
        column simply gets a little narrower between 1120 and 1340 px). */
     --game-frame-main-pl: var(--game-frame-main-pr);
   }
-  /* The wide crossword grid and the 720 px showcase boards must keep their full width (the plain row below 1120 px does), so
-     they cannot take the symmetric reserve. They keep the usual even padding: centred on the play area at full width. Their
-     box reaches under the fanned cards, but the drawn game does not (game-deck.spec.ts checks the real outlines). */
+  /* The wide crossword grid and the 720 px showcase boards keep their full width (the plain row below 1120 px does) and
+     their print button sits at the board's edge, which must not slide under a fanned card. So they keep the lopsided
+     reserve: only the right side gives room to the cards, and they sit left of centre between 1120 and 1340 px. */
   .game-frame-main:has(.game-frame-board.is-wide, .game-frame-board.is-showcase) {
-    --game-frame-main-pl: calc(var(--spacing) * 6);
-    --game-frame-main-pr: calc(var(--spacing) * 6);
+    --game-frame-main-pl: round(nearest, clamp(var(--game-deck-reserve-start), calc(var(--game-deck-reserve-start) + (100vw - var(--breakpoint-deck)) * var(--game-deck-reserve-start-slope)), calc(var(--spacing) * 6)), var(--game-frame-grid-line));
   }
 }
 
@@ -1017,6 +1016,12 @@
 
 /* ---------------- Responsive: Tablet and Mobile ---------------- */
 @media (width < 64rem) {
+  /* Stacked layout: the game sits right under the header and the free height goes below it. Centring it between the two
+     would move the board by half of any change in its own height (a line of status text appearing, say). */
+  .game-frame-main {
+    grid-template-rows: auto auto minmax(auto, 1fr);
+  }
+
   .game-frame-sidebar-top .game-frame-back {
     --game-frame-main-pl: calc(var(--spacing) * 3);
     --game-frame-main-pr: calc(var(--spacing) * 3);
@@ -1217,6 +1222,19 @@
   }
   .game-frame-dateline {
     min-block-size: 0;
+  }
+  /* A game with its own control (the sudoku difficulty menu) puts it on that same top row, left of the buttons, so the
+     row is no taller than the buttons alone: the head keeps only the corner's inset above it. */
+  .game-frame-head:has(.game-frame-controls-middle:not(:empty)) {
+    padding-block-start: var(--game-frame-corner-inset-now);
+  }
+  .game-frame-controls-row {
+    order: -1;
+    align-self: flex-start;
+    justify-content: flex-start;
+    inline-size: calc(100% - var(--game-frame-corner-inset-now) - var(--game-frame-btn-size) * var(--game-frame-corner-buttons) - var(--game-frame-corner-gap) * var(--game-frame-corner-buttons));
+    min-block-size: var(--game-frame-btn-size);
+    margin-block-end: var(--game-frame-corner-gap);
   }
 }
 
