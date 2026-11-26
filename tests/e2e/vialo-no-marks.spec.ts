@@ -48,18 +48,39 @@ for (const scheme of ['light', 'dark'] as const) {
   });
 }
 
-test('the how-to-play legend shows the ring on the red sample and describes it in words', async ({ page }) => {
-  await fixClock(page, new Date('2026-11-01T15:00:00'));
-  await page.goto('/play/vialo');
-  await page.getByTestId('vialo').getByRole('button', { name: 'how to play vialo' }).click();
-  const dialog = page.getByRole('dialog', { name: 'how to play vialo' });
-  await expect(dialog).toContainText('red with a thin light ring inside it');
-  const rings = await dialog.getByTestId('vialo-legend').locator('.vialo-pill').evaluateAll((nodes) =>
-    nodes.map((pill) => getComputedStyle(pill, '::after').content === '""'),
-  );
-  expect(rings).toEqual([false, true, false]);
-  await expect(dialog.getByTestId('vialo-legend').getByRole('listitem')).toHaveText([/in its place$/, /in the word, somewhere else$/, /not in the word$/]);
-});
+// The help says what each result looks like in the standard look and names the cues that replace the ring in high
+// contrast and forced colours, so it is true in every mode; the legend samples match the mode that is on.
+for (const highContrast of [false, true]) {
+  test(`the how-to-play help is true for ${highContrast ? 'high contrast' : 'the standard look'}`, async ({ page }) => {
+    if (highContrast) {
+      await page.addInitScript(() => localStorage.setItem('cueory-game-settings', JSON.stringify({ highContrast: true })));
+    }
+    await fixClock(page, new Date('2026-11-01T15:00:00'));
+    await page.goto('/play/vialo');
+    await page.getByTestId('vialo').getByRole('button', { name: 'how to play vialo' }).click();
+    const dialog = page.getByRole('dialog', { name: 'how to play vialo' });
+    await expect(dialog).toContainText('in the standard look, solid green is in its place, red with a thin light ring inside it');
+    await expect(dialog).toContainText('with high contrast on, there is no ring: in its place stays solid');
+    await expect(dialog).toContainText('a thick solid outline');
+    await expect(dialog).toContainText('a dashed outline');
+    await expect(dialog).toContainText('forced colours on your device show them as solid, double and dashed outlines');
+    const samples = dialog.getByTestId('vialo-legend').locator('.vialo-pill');
+    await expect(dialog.getByTestId('vialo-legend').getByRole('listitem')).toHaveText([/in its place$/, /in the word, somewhere else$/, /not in the word$/]);
+    const look = await samples.evaluateAll((nodes) =>
+      nodes.map((pill) => ({
+        ring: getComputedStyle(pill, '::after').content === '""' && getComputedStyle(pill, '::after').display !== 'none',
+        rim: / 0px 0px 0px 3px inset|inset 0px 0px 0px 3px/.test(getComputedStyle(pill).boxShadow),
+        dashed: getComputedStyle(pill).borderTopStyle === 'dashed',
+      })),
+    );
+    // Standard: the ring on the red sample only. High contrast: no ring; a thick rim on red and a dashed border on white.
+    expect(look.map((l) => l.ring)).toEqual(highContrast ? [false, false, false] : [false, true, false]);
+    if (highContrast) {
+      expect(look.map((l) => l.rim)).toEqual([false, true, false]);
+      expect(look.map((l) => l.dashed)).toEqual([false, false, true]);
+    }
+  });
+}
 
 test('high contrast draws no inner ring and no mark under the letter either', async ({ page }) => {
   await page.addInitScript(() => {

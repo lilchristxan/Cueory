@@ -562,18 +562,7 @@
 }
 
 .game-frame-pill-oxblood {
-  position: relative;
   background: radial-gradient(120% 140% at 30% 20%, var(--game-oxblood-light) 0%, var(--game-oxblood) 55%, var(--game-oxblood-deep) 100%);
-}
-
-/* "Right letter, wrong spot" carries the same thin light inner ring as the red pill on the board. */
-.game-frame-pill-oxblood::after {
-  content: "";
-  position: absolute;
-  inset: var(--vialo-pill-ring-gap);
-  border: var(--vialo-pill-ring) solid var(--vialo-pill-ring-color);
-  border-radius: inherit;
-  pointer-events: none;
 }
 
 .game-frame-pill-ivory {
