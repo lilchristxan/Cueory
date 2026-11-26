@@ -44,7 +44,7 @@ const hubGames = [
   { id: 'tachyyy' as const, testId: 'tachyyy', name: tachyyyGame.name, line: hubLines.tachyyy, href: tachyyyGame.href, open: showStat, art: 'tachyyy' as const, linkTestId: 'tachyyy-link' },
   { id: 'suture' as const, testId: 'suture', name: game('suture').name, line: hubLines.piccline, href: gamePages.suture, open: true, art: 'piccline' as const, printGame: 'piccline' as const },
   { id: 'cueword' as const, testId: 'cueword', name: game('cueword').name, line: hubLines.crossword, href: gamePages.cueword, open: showCrossword },
-  { id: 'triage' as const, testId: 'triage', name: game('triage').name, line: hubLines.sudoku, href: gamePages.triage, open: true },
+  { id: 'triage' as const, testId: 'triage', name: game('triage').name, line: hubLines.sudoku, href: gamePages.triage, open: true, printGame: 'triage' as const },
   { id: 'hello-cards' as const, testId: 'hello-cards', name: helloCardsGame.name, line: hubLines.helloCards, href: helloCardsGame.href, open: showHello, cards: showHello ? helloPage.starters.length : undefined, linkTestId: 'hello-cards-link' },
 ];
 // The stats list leaves the crossword out while it is closed, like the rows' "coming soon" (site.ts crosswordOpen).

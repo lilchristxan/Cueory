@@ -12,6 +12,13 @@ export interface GamePrintOptions {
   game: PrintGame;
   /** Stored with a forfeited day (vialo: its six tries used; piccline: no wrong words counted). */
   forfeitTries: number;
+  /**
+   * Whether today's game is finished, when the shared day record is not enough (sudoku has one puzzle per level, so it
+   * answers for the level on screen). Read fresh on every request. Omit to use the day record.
+   */
+  finished?: (day: string) => boolean;
+  /** Extra detail sent with the forfeit event (sudoku names the level). */
+  forfeitDetail?: () => Record<string, unknown>;
   /** Puts today's answers into the sheet. Called only when printing is allowed, and finished before the print opens. */
   prepare: (now: Date) => void | Promise<void>;
   /** Takes the answers out again once the print is over (or on any failure). */
@@ -60,7 +67,7 @@ export function useGamePrint(options: GamePrintOptions) {
     const { game } = latest.current;
     const day = localDay(new Date());
     const saved = loadStats(browserStorage(), day);
-    requestPrint({ finished: isFinished(saved.stats, game, day), keepsResults: saved.on }, () => void print(), () => {
+    requestPrint({ finished: latest.current.finished ? latest.current.finished(day) : isFinished(saved.stats, game, day), keepsResults: saved.on }, () => void print(), () => {
       busy.current = true;
       setError('');
       opener.current = document.activeElement;
@@ -96,7 +103,7 @@ export function useGamePrint(options: GamePrintOptions) {
     const { game, forfeitTries } = latest.current;
     const day = localDay(new Date());
     const ok = printAnyway(browserStorage(), game, day, forfeitTries, () => {
-      window.dispatchEvent(new CustomEvent(FORFEIT_EVENT, { detail: { game, day } }));
+      window.dispatchEvent(new CustomEvent(FORFEIT_EVENT, { detail: { ...latest.current.forfeitDetail?.(), game, day } }));
       setWarning(false);
       busy.current = false;
       void print();
