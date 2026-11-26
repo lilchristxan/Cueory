@@ -255,3 +255,24 @@ test('no bubble if the player has already started playing, so nothing moves unde
   await expect(hint(page)).toHaveCount(0);
   await expect(page.getByTestId('print-hint-status')).toHaveText('');
 });
+
+for (const { path, script } of [
+  { path: '/play/sudoku', script: /\/_astro\/SudokuGame\.[\w-]+\.js$/ },
+  { path: '/play/crossword', script: /\/_astro\/CuewordToday\.[\w-]+\.js$/ },
+  { path: '/play/piccline', script: /\/_astro\/SutureToday\.[\w-]+\.js$/ },
+] as const) {
+  test(`${path}: a printer press before the game has loaded is answered once the game arrives`, async ({ page }) => {
+    let release!: () => void;
+    const held = new Promise<void>((resolve) => { release = resolve; });
+    await page.route(script, async (route) => { await held; await route.continue(); });
+    await page.addInitScript(() => { window.print = () => { (window as unknown as { printed: number }).printed = ((window as unknown as { printed?: number }).printed ?? 0) + 1; }; });
+    await page.goto(path, { waitUntil: 'domcontentloaded' });
+    await awake(page);
+    await page.getByTestId('game-frame-print').click();
+    expect(await page.evaluate(() => (window as unknown as { printed?: number }).printed ?? 0)).toBe(0);
+    release();
+    await expect.poll(() => page.evaluate(() => (window as unknown as { printed?: number }).printed ?? 0)).toBe(1);
+    await page.waitForLoadState('networkidle');
+    expect(await page.evaluate(() => (window as unknown as { printed?: number }).printed ?? 0)).toBe(1);
+  });
+}

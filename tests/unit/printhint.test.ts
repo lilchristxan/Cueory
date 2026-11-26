@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createHintHolds, createHintTimer, HINT_VISIBLE_MS, roomNeeded } from '../../src/islands/printhint';
-import { printEventGame, PRINT_EVENT, requestPrint } from '../../src/islands/gameprintevent';
+import { printEventGame, PRINT_EVENT, registerPrintListener, requestPrint, resetPrintRequests, unregisterPrintListener } from '../../src/islands/gameprintevent';
 
 describe('print hint countdown', () => {
   beforeEach(() => { vi.useFakeTimers(); });
@@ -127,5 +127,27 @@ describe('the print event', () => {
     expect(printEventGame(seen[0]!)).toBe('vialo');
     expect(printEventGame(new CustomEvent(PRINT_EVENT, { detail: 5 }))).toBeUndefined();
     expect(printEventGame(new Event(PRINT_EVENT))).toBeUndefined();
+  });
+});
+
+describe('a print pressed before the game loaded', () => {
+  const target = { dispatchEvent: () => true };
+  afterEach(() => resetPrintRequests());
+  it('is remembered once and answered when the game registers', () => {
+    requestPrint('sudoku', target);
+    requestPrint('sudoku', target);
+    expect(registerPrintListener('sudoku')).toBe(true);
+    unregisterPrintListener('sudoku');
+    expect(registerPrintListener('sudoku')).toBe(false);
+  });
+  it('is not remembered when a game is already listening', () => {
+    registerPrintListener('crossword');
+    requestPrint('crossword', target);
+    expect(registerPrintListener('crossword')).toBe(false);
+  });
+  it('is kept per game', () => {
+    requestPrint('suture', target);
+    expect(registerPrintListener('sudoku')).toBe(false);
+    expect(registerPrintListener('suture')).toBe(true);
   });
 });

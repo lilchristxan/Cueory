@@ -55,7 +55,7 @@ export default function PrintHint() {
     const node = bubble.current;
     const main = node?.closest<HTMLElement>('.game-frame-main');
     if (!node || !main) return;
-    const gap = 8;
+    const gap = parseFloat(getComputedStyle(node).scrollMarginTop) || 0;
     let tries = 0;
     const step = () => {
       const rect = node.getBoundingClientRect();

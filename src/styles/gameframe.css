@@ -492,6 +492,8 @@
   font-size: var(--text-sm);
   line-height: 1.5;
   text-align: start;
+  /* The clearance is read back from here (PrintHint.tsx) so layout and collision checks share one value. */
+  scroll-margin: var(--print-hint-clearance);
   opacity: 1;
   transition: opacity var(--game-frame-hint-fade) ease;
   z-index: 20;
