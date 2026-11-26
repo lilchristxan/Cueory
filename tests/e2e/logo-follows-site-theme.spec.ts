@@ -103,8 +103,8 @@ async function inspectArt(page: Page) {
 }
 
 // Files built for the Daytime ground (dark ink) and for the Evening ground (light ink).
-const dayFile = /logo-full-light|emblem-light|wordmark-light|oxblood|light-bar|logo-pillo/;
-const eveningFile = /logo-full-dark|emblem-dark|wordmark-dark/;
+const dayFile = /logo-full-light|emblem-light|wordmark-light|oxblood(?!-v3-evening)|light-bar|logo-pillo/;
+const eveningFile = /logo-full-dark|emblem-dark|wordmark-dark|oxblood-v3-evening/;
 
 test.describe('logo and wordmark artwork follows the site theme, not only the device', () => {
   test.beforeEach(({}, info) => {
