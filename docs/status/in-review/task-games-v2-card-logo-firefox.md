@@ -1,0 +1,1 @@
+status: in review · task-games-v2/card-logo-firefox · the home game cards' wordmark image has a definite height at the landscape-phone size (844 x 390), so Firefox no longer draws piccline's enlarged wordmark 4 px past the card; same picture, same place in Chromium
