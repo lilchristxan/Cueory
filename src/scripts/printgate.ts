@@ -66,6 +66,7 @@ const FORFEIT_MEMORY_ATTR = 'data-print-forfeits';
  * (`rememberedForfeits`); a forfeit confirmed before the board is listening is never lost.
  */
 export function announceForfeit(game: PrintGame, day: string, extra: Record<string, unknown> = {}): void {
+  if (typeof document === 'undefined' || typeof window === 'undefined') return;
   const level = typeof extra.level === 'string' ? extra.level : '';
   const root = document.documentElement;
   const list = (root.getAttribute(FORFEIT_MEMORY_ATTR) ?? '').split(' ').filter(Boolean);
@@ -76,6 +77,7 @@ export function announceForfeit(game: PrintGame, day: string, extra: Record<stri
 
 /** The levels forfeited this visit for that game and day (an empty string for a game without levels); empty when none. */
 export function rememberedForfeits(game: PrintGame, day: string): string[] {
+  if (typeof document === 'undefined') return [];
   return (document.documentElement.getAttribute(FORFEIT_MEMORY_ATTR) ?? '').split(' ')
     .map((entry) => entry.split('|'))
     .filter((parts) => parts[0] === game && parts[1] === day)
@@ -90,12 +92,14 @@ const PENDING_PRINT_ATTR = 'data-print-pending';
  * `claimPrint` the moment it starts listening: the press is never lost, and it prints (or warns) exactly once.
  */
 export function sendPrint(game: PrintGame): void {
+  if (typeof document === 'undefined') return;
   document.documentElement.setAttribute(PENDING_PRINT_ATTR, game);
   document.dispatchEvent(new CustomEvent(PRINT_EVENT, { detail: { game } }));
 }
 
 /** True once for each remembered request for this game, and forgets it. Called when a request is heard and when a sheet starts listening. */
 export function claimPrint(game: PrintGame): boolean {
+  if (typeof document === 'undefined') return false;
   if (document.documentElement.getAttribute(PENDING_PRINT_ATTR) !== game) return false;
   document.documentElement.removeAttribute(PENDING_PRINT_ATTR);
   return true;
