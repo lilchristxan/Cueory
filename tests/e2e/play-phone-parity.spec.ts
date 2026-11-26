@@ -87,16 +87,11 @@ test('vialo: every key is a comfortable target for its screen', async ({ page },
   }
 });
 
-test('sudoku: the four stats labels beside the board are at least 14 px on a phone and a tablet', async ({ page }, info) => {
+test('sudoku: a signed-out visitor sees no stats block beside the board (the signed-in 14 px label size is checked in game-stats-gate.spec.ts)', async ({ page }, info) => {
   test.skip(info.project.name.includes('desktop'), 'phone and tablet layout; the desktop sidebar keeps its own size');
   await page.goto('/play/sudoku');
-  const labels = page.getByTestId('game-frame-stats').locator('.game-frame-stat-label');
-  await expect(labels).toHaveCount(4);
-  for (let i = 0; i < 4; i += 1) {
-    await expect(labels.nth(i)).toBeVisible();
-    const size = await labels.nth(i).evaluate((node) => Number.parseFloat(getComputedStyle(node).fontSize));
-    expect(size).toBeGreaterThanOrEqual(14);
-  }
+  await expect(page.locator('astro-island[component-url*="GameFrameStats"]:not([ssr])')).toHaveCount(1);
+  await expect(page.getByTestId('game-frame-stats')).toHaveCount(0);
 });
 
 test('games that are not open yet show one short card with a back button', async ({ page }) => {
