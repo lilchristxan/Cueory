@@ -34,6 +34,8 @@ export interface StudyRound {
   wrongTry?: boolean;
   streak: number;
   rightFirstTime: number;
+  /** Counts every question transition (start, next, skip, a name coming back), so the same name asked again is a new question. */
+  seq: number;
 }
 
 /** A 'blank' keeps a hinted cell in place after the typed letter before it was taken back; the next letter fills it. */
@@ -66,6 +68,7 @@ export function startRound(mode: StudyMode, ids: readonly string[]): StudyRound 
     helped: false,
     streak: 0,
     rightFirstTime: 0,
+    seq: 0,
   };
 }
 
@@ -212,7 +215,7 @@ export function skipQuestion(round: StudyRound): StudyRound {
 }
 
 function reset(round: StudyRound): StudyRound {
-  return { ...round, entries: [], feedback: null, helped: false, wrongTry: false };
+  return { ...round, entries: [], feedback: null, helped: false, wrongTry: false, seq: round.seq + 1 };
 }
 
 export function setFirstLetters(round: StudyRound, on: boolean): StudyRound {

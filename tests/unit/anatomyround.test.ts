@@ -185,3 +185,20 @@ describe('describeAnswer (what a screen reader hears of the cells)', () => {
     expect(heard).toBe('word 1: p, l, a, i, n');
   });
 });
+
+describe('question sequence number', () => {
+  it('goes up on every question change, even when the same name is asked again', () => {
+    let round = startRound('test', ['A']);
+    expect(round.seq).toBe(0);
+    round = skipQuestion(round);
+    expect(currentTarget(round)).toBe('A');
+    expect(round.seq).toBe(1);
+    round = nextQuestion(type(round, 'testcube'));
+    expect(round.seq).toBe(2);
+  });
+  it('stays put while the same question is being answered', () => {
+    const round = type(startRound('test', ['A']), 'tes');
+    expect(round.seq).toBe(0);
+    expect(hintLetter(round, NAMES.A!).seq).toBe(0);
+  });
+});

@@ -164,6 +164,33 @@ test.describe('anatomy lab study round', () => {
     expect((await new AxeBuilder({ page }).withTags(axeTags).analyze()).violations).toEqual([]);
   });
 
+  test('skipping the last question, which comes back as the same name, puts the keyboard on the cells', async ({ page }) => {
+    await openLab(page);
+    await begin(page, 'test it');
+    await typeName(page, 'fixturecubea');
+    await expect(feedback(page)).toContainText('right: fixture cube A.');
+    await page.getByRole('button', { name: 'next', exact: true }).click();
+    await expect(page.getByTestId('anatomy-study-position')).toHaveText('structure 2 of 2');
+    // B is the last one left and has not come back yet: skipping asks B again.
+    await page.getByRole('button', { name: 'skip' }).click();
+    await expect(page.getByTestId('anatomy-study-position')).toHaveText('structure 2 of 2');
+    await expect(cells(page)).toBeFocused();
+    await page.keyboard.type('f');
+    await expect(cells(page).locator('[data-from="typed"]')).toHaveCount(1);
+  });
+
+  test('while a round runs it decides the selection: the card has no clear selection, isolate or hide', async ({ page }) => {
+    await openLab(page);
+    await begin(page, 'learn it');
+    await expect(side(page)).toBeVisible();
+    for (const name of ['clear selection', 'isolate', 'hide', 'show', 'fade this', 'show nearby']) {
+      await expect(page.getByRole('button', { name, exact: true }).filter({ visible: true })).toHaveCount(0);
+    }
+    // The asked structure stays the one shown, whatever the layers do.
+    const layers = page.getByRole('group', { name: 'layers, skin to bone' });
+    await expect(layers).toContainText('1 of 3 showing');
+  });
+
   test('learn it: the name is shown, and typing it moves on', async ({ page }) => {
     await openLab(page);
     await begin(page, 'learn it');

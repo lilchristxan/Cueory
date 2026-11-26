@@ -158,7 +158,7 @@ export function StudyCells({
   useEffect(() => {
     if (round.feedback === null && target) box.current?.focus();
     else if (settled) nextButton.current?.focus();
-  }, [target, settled, round.feedback]);
+  }, [round.seq, target, settled, round.feedback]);
   if (!official || !target) {
     return (
       <div className="lab-glass lab-solid space-y-3 p-4 text-center" data-testid="anatomy-study-done" role="status">

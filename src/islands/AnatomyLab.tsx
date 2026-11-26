@@ -1409,39 +1409,46 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
     setSystemKey(key);
   };
 
-  // The asked structure is the highlighted one; "show nearby" brings the structures around it back, and off puts them away.
+  // While a round runs, the round is the single source of truth for what is selected and what is showing: the asked
+  // structure is selected and visible, and only its group (plus "show nearby") is showing. Anything else that changes
+  // the selection or the visibility (clear selection, a layer toggle, peeling, isolate or hide) is put straight back.
   const studyTargetNow = round ? currentTarget(round) : null;
   const studyNearbyNow = round?.nearby ?? false;
+  const studySeqNow = round?.seq ?? 0;
   const studyActive = round !== null;
+  const studyFrameKeyRef = useRef('');
   useEffect(() => {
     const group = studyGroupRef.current;
     const scene = sceneRef.current;
-    if (!studyActive || !group || !system) return;
-    if (studyTargetNow) setSelected(studyTargetNow);
+    if (!studyActive || !group || !system) {
+      studyFrameKeyRef.current = '';
+      return;
+    }
+    if (studyTargetNow && selected !== studyTargetNow) setSelected(studyTargetNow);
     const keep = new Set(group.ids);
     const base = new Set(system.structures.map((structure) => structure.id).filter((id) => !keep.has(id)));
-    visibilityIntent.bump();
+    let wanted = base;
     if (studyNearbyNow && studyTargetNow && scene) {
       const boxes = boxesFromMeshes([...scene.boundsById()].map(([id, box]) => ({ id, box })));
       const near = nearbyStructures(boxes, studyTargetNow, NEARBY_LIMIT).map((n) => n.id);
-      setHidden(expandNearby(base, near));
-    } else {
-      setHidden(base);
+      wanted = expandNearby(base, near);
     }
-    // Frame what is left showing, once the scene has taken the new visibility.
-    if (scene) window.requestAnimationFrame(() => sceneRef.current?.viewPreset(orientationRef.current === 'back' || orientationRef.current === 'left' ? orientationRef.current : 'front'));
-  }, [studyActive, studyTargetNow, studyNearbyNow, system, visibilityIntent]);
-
-  // A layer toggle or peel can hide the structure being asked about: it stays showing while a round runs, as in "name it".
-  useEffect(() => {
-    if (!studyActive || !studyTargetNow || !hidden.has(studyTargetNow)) return;
-    setHidden((current) => {
-      if (!current.has(studyTargetNow)) return current;
-      const next = new Set(current);
-      next.delete(studyTargetNow);
-      return next;
-    });
-  }, [studyActive, studyTargetNow, hidden]);
+    if (studyTargetNow && wanted.has(studyTargetNow)) {
+      wanted = new Set(wanted);
+      wanted.delete(studyTargetNow);
+    }
+    const same = wanted.size === hidden.size && [...wanted].every((id) => hidden.has(id));
+    if (!same) {
+      visibilityIntent.bump();
+      setHidden(wanted);
+    }
+    // Frame what is left showing, once per question (not each time something drifts and is put back).
+    const frameKey = `${studySeqNow}|${studyTargetNow}|${studyNearbyNow}`;
+    if (scene && studyFrameKeyRef.current !== frameKey) {
+      studyFrameKeyRef.current = frameKey;
+      window.requestAnimationFrame(() => sceneRef.current?.viewPreset(orientationRef.current === 'back' || orientationRef.current === 'left' ? orientationRef.current : 'front'));
+    }
+  }, [studyActive, studyTargetNow, studyNearbyNow, studySeqNow, system, hidden, selected, visibilityIntent]);
 
   // The ring and leader follow the selection while it can be seen and no test is hiding its name.
   const markedId = modelReady && selected !== null && foundSet.has(selected) && !hidden.has(selected) && !quiz && !recall ? selected : null;
@@ -2418,12 +2425,14 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
                 </details>
               )}
               <div className="mt-3 flex flex-wrap gap-2">
+                {!round && (<>
                 <button type="button" className={secondaryButton} onClick={() => { visibilityIntent.bump(); setHidden(onlyThis(system.structures.map((s) => s.id), selected!)); }}>
                   isolate
                 </button>
                 <button type="button" className={secondaryButton} onClick={() => changeVisibility((v) => hideStructure(v, selected!))}>
                   {hidden.has(selected!) ? 'show' : 'hide'}
                 </button>
+                </>)}
                 <a
                   href={flagMailto(site.contactEmail, window.location.pathname)}
                   data-game-flag
@@ -2431,6 +2440,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
                 >
                   flag or comment
                 </a>
+                {!round && (<>
                 <button
                   type="button"
                   className={secondaryButton}
@@ -2445,10 +2455,11 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
                 <button type="button" className={secondaryButton} disabled={!ready || !foundSet.has(selected!)} onClick={showNearby}>
                   show nearby
                 </button>
+                </>)}
                 {speechOn && (
                   <button type="button" className={secondaryButton} onClick={sayIt}>say it</button>
                 )}
-                <button type="button" className={secondaryButton} onClick={() => setSelected(null)}>clear selection</button>
+                {!round && <button type="button" className={secondaryButton} onClick={() => setSelected(null)}>clear selection</button>}
               </div>
             </section>
           )}
