@@ -912,12 +912,6 @@
 
 /* ---------------- Responsive: Tablet and Mobile ---------------- */
 @media (width < 64rem) {
-  /* Stacked layout: the game sits right under the header and the free height goes below it. Centring it between the two
-     would move the board by half of any change in its own height (a line of status text appearing, say). */
-  .game-frame-main {
-    grid-template-rows: auto auto minmax(auto, 1fr);
-  }
-
   .game-frame-sidebar-top .game-frame-back {
     --game-frame-main-pl: calc(var(--spacing) * 3);
     --game-frame-main-pr: calc(var(--spacing) * 3);
