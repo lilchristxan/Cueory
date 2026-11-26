@@ -16,7 +16,7 @@ Use [Settles and Meeder's half-life model](https://aclanthology.org/P16-1174/), 
 
 Space reviews using the relationship between delay and retention tested by [Cepeda and colleagues](https://doi.org/10.1111/j.1467-9280.2008.02209.x). Use the first whole local-calendar interval that brings predicted recall to or below 80%, with a one-day minimum and a 14-day maximum in this pilot. A missed card is due tomorrow. Keep the existing 1, 3, 7 and 14 day Review ladder as the baseline for comparison (Task 4 and D-87); keep account review rows on that ladder. The 80% target and caps are unverified product defaults.
 
-If a future exam is set, bring long intervals forward to at most the day before it, while leaving at least one day between scheduled reviews. If there is no such day left, offer due study today and avoid suggesting an extra session on the exam date. After that date, normal intervals resume. Enforce the same practice-session limit near the exam and leave work visible if too many cards are due. A calendar-day input keeps time-zone changes and daylight-saving shifts out of the date rules. The design does not assume a student's exam timetable records when they are available to study.
+If a future exam is set, bring long intervals forward to at most the day before it, while leaving at least one day between scheduled reviews. If no day remains between the answer and the exam, keep the ordinary due date rather than scheduling an extra exam session. After that date, normal intervals resume. Enforce the same practice-session limit near the exam and leave work visible if too many cards are due. A calendar-day input keeps time-zone changes and daylight-saving shifts out of the date rules. The design does not assume a student's exam timetable records when they are available to study.
 
 ## Which item comes next
 
@@ -37,9 +37,28 @@ In spaced practice, call a card mastered only after two correct reviews on separ
 ## Validation and release boundaries
 
 - Unit and seeded property tests cover clock boundaries, missing items, very small decks, no immediate repeats, the session cap and the effect of a correct answer on the next interval.
-- A reproducible simulation compares the engine with the existing review ladder over thousands of synthetic runs. Use simulated recall curves independent of the engine, and a separate fixed-gap recall probe. Report recall, work per calendar day, and time to the mastery rule including the share that never reaches it. Results are pending. Simulation is a check of behavior under assumptions and says nothing about actual student outcomes.
+- A reproducible simulation compares the engine with the existing review ladder over thousands of synthetic runs. Use simulated recall curves independent of the engine, and a separate fixed-gap recall probe. Report recall, work per calendar day, and time to the mastery rule including the share that never reaches it. See the initial synthetic results below. Simulation is a check of behavior under assumptions and says nothing about actual student outcomes.
 - A hidden, non-indexed preview on the locked staging site may use the existing labeled sample deck. Keep it behind the same preview pruning rules as other draft routes. The first study-mode connection is default-off and must pass the built-answer-keys guard. The preview may use public flashcard backs. Reviewed bank items still depend on server-side checking and return only the allowed result to the engine, per D-33 and D-86.
 - The engine imports no browser or network code. No database change or new dependency is needed for the standalone pilot. Account sync and using the reviewed bank stay separate from the pilot.
+
+## Initial simulation
+
+2,000 fixed synthetic student seeds per scheduler, each with 24 cards over 45 calendar days. The schedules share the same simulated attendance, daily cap and response draws. Their simulated memory strengthens according to a separate model that uses the time since the previous answer. The recall column is the mean probability at seven days after each card's last practice. Workload includes first answers and reviews, averaged over every calendar day.
+
+| Scheduler | Modeled 7-day recall | Answers per day | Days to first whole-deck mastery, among those who reached it | Never observed at whole-deck mastery by day 45 |
+| --- | ---: | ---: | ---: | ---: |
+| Adaptive | 94.21% | 5.70 | 24.15 | 26.00% |
+| Existing ladder | 89.77% | 4.63 | No observations | 100.00% |
+
+Both groups use the same Cueory mastery rule for this measurement. Requiring all cards to meet the 80% recall threshold at once favors schedules that review more frequently. The table illustrates that trade-off and cannot establish better learning or predict an exam result. These runs use no exam date; the calendar and exam rules have separate tests.
+
+To reproduce once the engine branch lands, use the installed dependencies:
+
+```sh
+mkdir -p work/adaptive
+./node_modules/.bin/esbuild scripts/simulate-adaptive-learning.ts --bundle --platform=node --outfile=work/adaptive/simulation.cjs
+node work/adaptive/simulation.cjs
+```
 
 ## Progress log
 
