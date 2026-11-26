@@ -10,10 +10,10 @@ import { markPanelsSeen } from './clock';
  */
 
 const games = [
-  { path: '/play/vialo', name: 'vialo', testId: 'vialo', id: 'vialo', framed: false },
+  { path: '/play/vialo', name: 'vialo', testId: 'vialo', id: 'vialo', framed: true },
   { path: '/play/sudoku', name: 'sudoku', testId: 'sudoku', id: 'triage', framed: true },
   { path: '/play/crossword', name: 'crossword', testId: 'cueword', id: 'cueword', framed: true },
-  { path: '/play/word-path', name: 'piccline', testId: 'suture', id: 'suture', framed: false },
+  { path: '/play/word-path', name: 'piccline', testId: 'suture', id: 'suture', framed: true },
 ] as const;
 const others = (testId: string) => games.map((game) => game.testId).filter((other) => other !== testId);
 
@@ -99,6 +99,7 @@ for (const game of games) {
 
 test('a finished vialo on its own page opens the result dialog and keeps stats only for vialo', async ({ page }) => {
   await page.goto('/play/vialo');
+  await expect(page.locator('astro-island[component-url*="VialoGame"]:not([ssr])')).toHaveCount(1); // hydrated before the first guess
   // Stats are always kept (2026-11-17): there is no switch to turn on, and a game page has no full stats panel (Games v2).
   await expect(page.getByTestId('game-stats')).toHaveCount(0);
   const field = page.getByLabel('your guess', { exact: true });

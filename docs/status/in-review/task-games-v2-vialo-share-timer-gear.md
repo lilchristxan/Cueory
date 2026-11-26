@@ -1,0 +1,1 @@
+status: Test-only fix on staging: vialo's "show the timer" test opened settings with the old in-page button, which vialo no longer has since #1227 made it a framed game; it now uses the frame's gear (game-frame-gear), still opening settings and flipping the switch the way a player does. Not a product bug. It passed on #1229's own CI only because #1227 had not merged yet.

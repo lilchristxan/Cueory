@@ -153,7 +153,7 @@ test.describe('the solve timer', () => {
     await open(page);
     const board = game(page).locator('[role="grid"]');
     const before = (await board.boundingBox())!;
-    await page.getByTestId('game-settings-button').click();
+    await page.getByTestId('game-frame-gear').click();
     await page.getByTestId('suture-show-timer').uncheck();
     await page.keyboard.press('Escape');
     await expect(page.getByTestId('suture-time')).toHaveText('');

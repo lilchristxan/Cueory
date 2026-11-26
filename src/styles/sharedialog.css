@@ -20,6 +20,18 @@
 
   .share-dialog-scrim[hidden] { display: none; }
 
+  /* The card fades in after a short wait, so the last pill is seen landing first. Decoration only: the card is open (and
+     focused) the moment it is shown, and reduced motion (device or the games' own setting) removes the wait and fade. */
+  @media (prefers-reduced-motion: no-preference) {
+    :root:not([data-game-motion="reduce"]) .share-dialog-scrim:not([hidden]) {
+      animation: share-dialog-reveal var(--duration-fast) ease-out calc(var(--duration-fast) * 2) both;
+    }
+  }
+  @keyframes share-dialog-reveal {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
   .share-dialog-close {
     position: absolute;
     inset-block-start: var(--share-dialog-corner-inset);

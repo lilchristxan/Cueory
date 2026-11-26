@@ -11,7 +11,6 @@ import { useSharedGameSettings } from './GameSettings';
 import { useStatsVisible } from './gamestatsgate';
 import { dailyStats, recordResult, type DailyStats, type GameStats } from './gamestats';
 import { browserStorage } from '../scripts/storage';
-import { revealDelayMs } from './sharedialogmodel';
 import { useRefreshOnStatsChange } from './finishstatsrefresh';
 import { formatSolveTime } from './vialotimer';
 import { newTimer, pauseTimer, resumeTimer, startTimer, stopTimer, timerElapsed, type SolveTimer } from './vialotimer';
@@ -29,7 +28,7 @@ import {
 
 const PicclineShare = lazy(() => import('./PicclineShare'));
 
-interface Props { puzzle: SuturePathPuzzle; name: string }
+interface Props { puzzle: SuturePathPuzzle; name: string; framed?: boolean }
 
 type FinishStats = { on: false } | { on: true; stats: DailyStats };
 
@@ -117,7 +116,7 @@ function cellAt(board: HTMLElement | null, x: number, y: number): Cell | null {
   return dx * dx + dy * dy <= 0.6 ? cellOf(target) : null;
 }
 
-export function PathBoard({ puzzle, name }: Props) {
+export function PathBoard({ puzzle, name, framed = false }: Props) {
   const [today] = useState(() => new Date());
   // A board played earlier today on this device comes back as it was (a finished one stays finished); a new day starts fresh.
   const [restored] = useState(() => loadPicclineSave(puzzle, localDay(today)));
@@ -137,7 +136,7 @@ export function PathBoard({ puzzle, name }: Props) {
   const [finger, setFinger] = useState<{ x: number; y: number } | null>(null);
   const [printNote, setPrintNote] = useState('');
   const quietClickUntil = useRef(0);
-  const { soundAllowed, settings: prefs, update: updateShared, reduceMotion } = useSharedGameSettings();
+  const { soundAllowed, settings: prefs, update: updateShared } = useSharedGameSettings();
   const statsVisible = useStatsVisible();
   const sound = useRef(true);
   sound.current = soundAllowed();
@@ -210,12 +209,10 @@ export function PathBoard({ puzzle, name }: Props) {
     return () => window.clearInterval(id);
   }, [timerRunning, prefs.showTimer]);
 
-  // The share card opens by itself once the last answer has landed (right away with reduced motion).
+  // The share card opens by itself as soon as the board is finished: state, not a timer (the short wait is a CSS
+  // entrance delay on the card, removed by reduced motion). A board that reopens finished does not throw it again.
   useEffect(() => {
-    if (!shareReady || restoredDone) return;
-    const delay = revealDelayMs(reduceMotion, getComputedStyle(document.documentElement).getPropertyValue('--duration-fast'));
-    const id = window.setTimeout(() => setShareOpen(true), delay);
-    return () => window.clearTimeout(id);
+    if (shareReady && !restoredDone) setShareOpen(true);
   }, [shareReady]);
 
   useEffect(() => { if (done && !restoredDone) result.current?.focus(); }, [done]);
@@ -440,6 +437,7 @@ export function PathBoard({ puzzle, name }: Props) {
       {/* The corner row (Christian's brief): the gear at the top left (word path has no settings of its own, so it holds
           the shared ones); print and the "?" at the top right. */}
       <GameHeader
+        framed={framed}
         name={name}
         help={howToPlay}
         settings={
@@ -619,9 +617,9 @@ export function PathBoard({ puzzle, name }: Props) {
 }
 
 /** A board puzzle from the page, checked again here so a broken one shows a plain message instead of a broken game. */
-export default function SuturePathBoard({ puzzle, name }: Props) {
+export default function SuturePathBoard({ puzzle, name, framed = false }: Props) {
   try {
     const parsed = parsePathPuzzle(puzzle);
-    return <PathBoard key={JSON.stringify(parsed)} puzzle={parsed} name={name} />;
+    return <PathBoard key={JSON.stringify(parsed)} puzzle={parsed} name={name} framed={framed} />;
   } catch { return <p role="alert">this puzzle could not be loaded. please try again later.</p>; }
 }

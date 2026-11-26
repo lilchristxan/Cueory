@@ -44,7 +44,6 @@ import { FORFEIT_EVENT } from '../scripts/printgate';
 import { VIALO_KEY_ROWS } from './vialokeys';
 import { newTimer, pauseTimer, resumeTimer, startTimer, stopTimer, timerElapsed, type SolveTimer } from './vialotimer';
 import { site } from '../config/site';
-import { revealDelayMs } from './sharedialogmodel';
 
 // The share card and its canvas drawing code load only once a game has ended.
 const VialoShare = lazy(() => import('./VialoShare'));
@@ -63,6 +62,8 @@ interface Puzzle {
 interface Props {
   /** Sample puzzles: the page picks one for the visitor's own date. */
   puzzles: Puzzle[];
+  /** The page's Frame owns the gear and the "?" (GameFrame, top right of the play area); this game keeps only the dialogs. */
+  framed?: boolean;
 }
 
 const columns = Array.from({ length: WORD_LENGTH }, (_, i) => i);
@@ -140,7 +141,7 @@ function Pocket({ letter, mark, typed, next }: { letter?: string; mark?: Mark; t
   );
 }
 
-export default function VialoGame({ puzzles }: Props) {
+export default function VialoGame({ puzzles, framed = false }: Props) {
   // The finish screen's played, win % and streak numbers are for signed-in players only; they are still recorded here.
   const statsVisible = useStatsVisible();
   const today = useMemo(() => new Date(), []);
@@ -154,7 +155,7 @@ export default function VialoGame({ puzzles }: Props) {
   const [problem, setProblem] = useState('');
   const howToPlay = useGameHelp('vialo');
   const [said, setSaid] = useState('');
-  const { settings: shared, soundAllowed, update: updateShared, reduceMotion } = useSharedGameSettings();
+  const { settings: shared, soundAllowed, update: updateShared } = useSharedGameSettings();
   const contrast = shared.highContrast;
   const [keysOnly, setKeysOnly] = useState(false);
   const [finish, setFinish] = useState<FinishStats>({ on: false });
@@ -200,12 +201,11 @@ export default function VialoGame({ puzzles }: Props) {
     });
   }, []);
 
-  // The share card opens over the board once the last pill has landed (at once with reduced motion).
+  // The share card opens as soon as the game is over: opening is state, not a timer or an animation event (a timer under
+  // a slow or faked clock, or an animationend that never fires, left it closed in Safari's engine). The short wait for
+  // the last pill to land is a CSS entrance delay on the card (sharedialog.css), which reduced motion removes.
   useEffect(() => {
-    if (!shareReady) return;
-    const delay = revealDelayMs(reduceMotion, getComputedStyle(document.documentElement).getPropertyValue('--duration-fast'));
-    const timer = window.setTimeout(() => setShareOpen(true), delay);
-    return () => window.clearTimeout(timer);
+    if (shareReady) setShareOpen(true);
   }, [shareReady]);
 
   useRefreshOnStatsChange(shareReady, () => setFinish(finishStats(localDay(new Date()))));
@@ -347,6 +347,7 @@ export default function VialoGame({ puzzles }: Props) {
   return (
     <div className={`vialo${contrast ? ' vialo-contrast' : ''}`} data-testid="vialo">
       <GameHeader
+        framed={framed}
         name={gameName('vialo')}
         help={howToPlay}
         helpExtra={<VialoLegend />}

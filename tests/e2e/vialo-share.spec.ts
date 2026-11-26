@@ -12,6 +12,8 @@ async function open(page: Page, init?: () => void) {
   if (init) await page.addInitScript(init);
   await page.goto('/play/vialo');
   await expect(page.getByTestId('vialo')).toBeVisible();
+  // Hydrated before the first guess: one typed into the server-drawn page is lost when the game takes over (slow engines).
+  await expect(page.locator('astro-island[component-url*="VialoGame"]:not([ssr])')).toHaveCount(1);
 }
 const field = (page: Page) => page.getByLabel('your guess', { exact: true });
 async function guess(page: Page, word: string) {
@@ -353,7 +355,8 @@ test.describe('the solve timer', () => {
     // Positions on the page (not the screen), so a scroll caused by the settings dialog does not count as the board moving.
     const where = () => page.locator('.vialo-pack').evaluate((el) => { const r = el.getBoundingClientRect(); return { x: r.x + scrollX, y: r.y + scrollY, height: r.height }; });
     const before = await where();
-    await page.getByTestId('game-settings-button').click();
+    // Vialo is framed (#1227): the settings gear is the frame's corner button, as on every framed game.
+    await page.getByTestId('game-frame-gear').click();
     const toggle = page.getByRole('switch', { name: /show the timer/ });
     await expect(toggle).toHaveAttribute('aria-checked', 'true');
     await toggle.click();
