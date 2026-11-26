@@ -21,7 +21,10 @@ test.describe('promo panel switched off (promo.show is false)', () => {
 
   test('is never rendered or shown on any marketing page, even with nothing remembered, after a delay or a scroll', async ({ page }) => {
     for (const path of ['/', '/about', '/support', '/privacy', '/courses']) {
-      await page.goto(path);
+      // The page itself must have loaded: an error page has no promo markup either, and would pass the checks below.
+      const response = await page.goto(path);
+      expect(response?.status(), `${path}: status`).toBe(200);
+      expect(new URL(page.url()).pathname.replace(/(.)\/$/, '$1'), `${path}: final address`).toBe(path);
       await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
       await wait(page, 10_000);
       await expect(page.locator('[data-promo]'), path).toHaveCount(0);
