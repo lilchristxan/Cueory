@@ -4,7 +4,7 @@ import { fixClock } from './clock';
 test('the Vialo blister artwork carries the live pills and their spoken marks', async ({ page }) => {
   await fixClock(page, new Date('2026-11-01T15:00:00'));
   const artwork = page.waitForResponse((response) => new URL(response.url()).pathname === '/design/pillo-blister-board.webp');
-  await page.goto('/play/vialo');
+  await page.goto('/play/wordpill');
   const pack = page.locator('.vialo-pack');
   await expect(pack).toBeVisible();
   expect((await artwork).ok()).toBe(true);
@@ -71,7 +71,7 @@ test('Vialo preserves three distinct result outlines when both contrast settings
   await page.addInitScript(() => {
     localStorage.setItem('cueory-game-settings', JSON.stringify({ highContrast: true }));
   });
-  await page.goto('/play/vialo');
+  await page.goto('/play/wordpill');
   const game = page.getByTestId('vialo');
   await expect(game).toHaveClass(/vialo-contrast/);
   expect(await page.evaluate(() => matchMedia('(forced-colors: active)').matches)).toBe(true);

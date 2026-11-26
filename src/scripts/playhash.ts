@@ -4,11 +4,11 @@
  * `gamePageForHash`, so it can be unit tested; loaded by src/pages/play.astro as a bundled module (no inline script).
  */
 const HASH_PAGES: Readonly<Record<string, string>> = Object.freeze({
-  'vialo-heading': '/play/vialo',
-  vialo: '/play/vialo',
-  'pulse-heading': '/play/vialo',
-  pillo: '/play/vialo',
-  pulse: '/play/vialo',
+  'vialo-heading': '/play/wordpill',
+  vialo: '/play/wordpill',
+  'pulse-heading': '/play/wordpill',
+  pillo: '/play/wordpill',
+  pulse: '/play/wordpill',
   'triage-heading': '/play/sudoku',
   'sudoku-heading': '/play/sudoku',
   sudoku: '/play/sudoku',

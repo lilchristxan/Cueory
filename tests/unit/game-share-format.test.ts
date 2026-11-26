@@ -60,7 +60,7 @@ describe('all /play game shares use plain one-line words (Task 229)', () => {
         expect(line).toBe(line.toLowerCase());
         if (game.id === 'vialo') {
           expect(line).toMatch(/^[\x20-\x7e\u00b7]+$/);
-          expect(line.startsWith(`vialo · ${day} · `)).toBe(true);
+          expect(line.startsWith(`wordpill · ${day} · `)).toBe(true);
           expect(line.endsWith(' · cueory.app')).toBe(true);
         } else {
           expect(line).toMatch(/^[\x20-\x7e]+$/);

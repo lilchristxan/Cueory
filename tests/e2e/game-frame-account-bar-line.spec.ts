@@ -14,7 +14,7 @@ test.beforeEach(async ({ page }) => {
 for (const scheme of ['light', 'dark'] as const) {
   test(`the game page's account button is a single line, at least 44 px tall, with no sideways scroll (${scheme})`, async ({ page }) => {
     await page.emulateMedia({ colorScheme: scheme });
-    await page.goto('/play/vialo');
+    await page.goto('/play/wordpill');
     const link = page.getByTestId('game-frame-account-bar').getByRole('link');
     await expect(link).toBeVisible();
     const m = await link.evaluate((node) => {

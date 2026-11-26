@@ -326,7 +326,7 @@ test.describe('the /play hub (each game on its own page, 2026-11-17)', () => {
     await expect(page.getByTestId('play-date')).toHaveText('sun 1 nov');
     await expect(page.getByTestId('play-date')).toHaveAttribute('datetime', '2026-11-01');
     // Option B (2026-11-23): one row per open game, its button the row's one link; a closed game has no link.
-    for (const [name, path, testId] of [['vialo', '/play/vialo', 'pulse'], ['sudoku', '/play/sudoku', 'triage'], ['piccline', '/play/piccline', 'suture']]) {
+    for (const [name, path, testId] of [['wordpill', '/play/wordpill', 'pulse'], ['sudoku', '/play/sudoku', 'triage'], ['piccline', '/play/piccline', 'suture']]) {
       const card = page.getByTestId(`play-status-${testId}`).getByRole('link');
       await expect(card).toHaveText('play');
       await expect(card).toHaveAttribute('href', path);
@@ -348,9 +348,9 @@ test.describe('daily games on the home page (D-61)', () => {
     const section = page.locator('#daily-games');
     await expect(section.locator('[data-game-card]')).toHaveCount(6);
     const vialoLink = section.locator('[data-game-card="vialo"]');
-    await expect(vialoLink).toHaveAttribute('href', '/play/vialo');
+    await expect(vialoLink).toHaveAttribute('href', '/play/wordpill');
     await vialoLink.click();
-    await expect(page).toHaveURL(/\/play\/vialo$/);
+    await expect(page).toHaveURL(/\/play\/wordpill$/);
   });
 });
 
@@ -843,7 +843,7 @@ test.describe('daily games: private stats (D-76), always kept (2026-11-17)', () 
   const panel = (page: Page) => page.getByTestId('game-stats');
   const kept = (page: Page) => page.evaluate(() => localStorage.getItem('cueory-game-stats'));
   const vialoStats = (page: Page) =>
-    panel(page).getByRole('listitem').filter({ has: page.getByRole('heading', { name: 'vialo', exact: true }) });
+    panel(page).getByRole('listitem').filter({ has: page.getByRole('heading', { name: 'wordpill', exact: true }) });
   // Today's word on 1 November is "grace", so one guess solves it.
   const solveVialo = async (page: Page) => {
     await field(page).fill('grace');
@@ -883,7 +883,7 @@ test.describe('daily games: private stats (D-76), always kept (2026-11-17)', () 
     await expect(panel(page).getByRole('heading', { name: 'your stats' })).toBeVisible();
   };
   const solveOnItsPage = async (page: Page) => {
-    await page.goto('/play/vialo');
+    await page.goto('/play/wordpill');
     await expect(page.getByTestId('vialo')).toBeVisible();
     await solveVialo(page);
   };
@@ -929,11 +929,11 @@ test.describe('daily games: private stats (D-76), always kept (2026-11-17)', () 
     await openHub(page);
     await expect(vialoStats(page)).toContainText('played 1 day, solved 1.');
 
-    await panel(page).getByRole('button', { name: 'forget vialo' }).focus();
+    await panel(page).getByRole('button', { name: 'forget wordpill' }).focus();
     const before = await state(page);
     await page.keyboard.press('Enter');
     await expect(vialoStats(page), `before Enter: ${before}`).toContainText('not played yet.');
-    await expect(panel(page).getByRole('heading', { name: 'vialo', exact: true })).toBeFocused();
+    await expect(panel(page).getByRole('heading', { name: 'wordpill', exact: true })).toBeFocused();
     // Nothing left, so the record is deleted, not written empty (Codex on #831).
     expect(await kept(page)).toBeNull();
 
@@ -970,7 +970,7 @@ test.describe('daily games: private stats (D-76), always kept (2026-11-17)', () 
   test('a round waiting for the stats panel to load is dropped when another tab forgets stats', async ({ page, context }) => {
     const release = await holdPanel(page);
     // The held script must not hold up the page's load event (WebKit waits for it); the page's own checks below wait.
-    await page.goto('/play/vialo', { waitUntil: 'domcontentloaded' });
+    await page.goto('/play/wordpill', { waitUntil: 'domcontentloaded' });
     await expect(page.getByTestId('vialo')).toBeVisible();
     await solveVialo(page);
     // Held: nothing is in storage yet.
@@ -979,7 +979,7 @@ test.describe('daily games: private stats (D-76), always kept (2026-11-17)', () 
     // Another tab: finish vialo there (kept at once), then forget all stats on the hub.
     const other = await context.newPage();
     await fixClock(other, new Date('2026-11-01T15:00:00'));
-    await other.goto('/play/vialo');
+    await other.goto('/play/wordpill');
     await solveVialo(other);
     await other.goto('/play');
     await expect(vialoStats(other)).toContainText('played 1 day, solved 1.');
@@ -1001,7 +1001,7 @@ test.describe('daily games: private stats (D-76), always kept (2026-11-17)', () 
 
   test('a round finished before the stats panel has loaded still counts', async ({ page }) => {
     const release = await holdPanel(page);
-    await page.goto('/play/vialo', { waitUntil: 'domcontentloaded' });
+    await page.goto('/play/wordpill', { waitUntil: 'domcontentloaded' });
     await expect(page.getByTestId('vialo')).toBeVisible();
     await solveVialo(page);
     expect(await kept(page)).toBeNull();
@@ -1019,7 +1019,7 @@ test.describe('daily games: private stats (D-76), always kept (2026-11-17)', () 
   test('a page back from the back/forward cache drops a round it was holding', async ({ page }) => {
     const release = await holdPanel(page);
     // The held stats script must not hold up the page's load event (WebKit waits for it); the page's own checks below wait.
-    await page.goto('/play/vialo', { waitUntil: 'domcontentloaded' });
+    await page.goto('/play/wordpill', { waitUntil: 'domcontentloaded' });
     await expect(page.getByTestId('vialo')).toBeVisible();
     await solveVialo(page);
     // As if another tab forgot the stats while this page was away: a cached page hears no one's storage changes.
@@ -1104,8 +1104,8 @@ test.describe('daily games without JavaScript', () => {
     ]);
     await expect(page.getByTestId('sample-note')).toBeVisible();
     // The rows are rendered on the server, so every open game is a plain link here.
-    for (const path of ['/play/vialo', '/play/sudoku', '/play/piccline']) await expect(page.getByTestId('play-status').locator(`a[href="${path}"]`)).toHaveText('play');
-    for (const [path, name] of [['/play/vialo', 'vialo'], ['/play/sudoku', 'sudoku'], ['/play/crossword', 'crossword'], ['/play/piccline', 'piccline']]) {
+    for (const path of ['/play/wordpill', '/play/sudoku', '/play/piccline']) await expect(page.getByTestId('play-status').locator(`a[href="${path}"]`)).toHaveText('play');
+    for (const [path, name] of [['/play/wordpill', 'wordpill'], ['/play/sudoku', 'sudoku'], ['/play/crossword', 'crossword'], ['/play/piccline', 'piccline']]) {
       await page.goto(path);
       // Every game opens the shared settings from its own gear (sudoku too, #823), so no page has a separate button.
       await expect(page.locator('noscript p').filter({ hasText: `${name} needs JavaScript.` })).toHaveText(`${name} needs JavaScript.`);

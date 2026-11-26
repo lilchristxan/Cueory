@@ -1392,7 +1392,6 @@
   --play-hub-pip-xgrid-gap: 0.125rem;
   --play-hub-pip-sudoku-size: 1.75rem;
   --play-hub-pip-hello-size: 1.5rem;
-  --vialo-evening-wordmark-scale: 1.0741; /* the Evening wordmark's padded canvas over the Daytime one: 1740 / 1620 */
   --piccline-wordmark-scale: 1.5;       /* piccline is a thin script whose lowercase is only about a third of the box height, so its wordmark is drawn 50 percent larger than its box (the most that fits the card, hub row and sidebar) */
   --piccline-wordmark-scale-sidebar: 1.3; /* the same, in the game page's sidebar, where it sits close under the icon */
   --piccline-wordmark-scale-deck: 1.02; /* the same, on the game deck's cards: the name label is only about 28px tall, and 1.03 is the most that stays inside it at every width from 390 to 1119px */

@@ -13,7 +13,7 @@ interface Props {
 
 /**
  * vialo's print entry (Christian, 2026-11-25). A printer button (the game frame's) sends `cueory:print`; so does opening
- * /play/vialo#print from the hub. A finished game prints at once. An unfinished one warns first: "print anyway" records
+ * /play/wordpill#print from the hub. A finished game prints at once. An unfinished one warns first: "print anyway" records
  * today as not solved, ends the game on screen as lost, and only then fills the word into the sheet and prints. The word
  * is in the page only while printing. The day and the stored result are read fresh at each step.
  */

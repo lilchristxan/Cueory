@@ -7,7 +7,7 @@ import { fixClock } from './clock';
 
 async function guessCrane(page: Page) {
   await fixClock(page, new Date('2026-11-01T15:00:00'));
-  await page.goto('/play/vialo');
+  await page.goto('/play/wordpill');
   const pack = page.locator('.vialo-pack');
   await pack.getByLabel('your guess', { exact: true }).fill('crane');
   await pack.getByLabel('your guess', { exact: true }).press('Enter');
@@ -56,9 +56,9 @@ for (const highContrast of [false, true]) {
       await page.addInitScript(() => localStorage.setItem('cueory-game-settings', JSON.stringify({ highContrast: true })));
     }
     await fixClock(page, new Date('2026-11-01T15:00:00'));
-    await page.goto('/play/vialo');
-    await page.getByTestId('vialo').getByRole('button', { name: 'how to play vialo' }).click();
-    const dialog = page.getByRole('dialog', { name: 'how to play vialo' });
+    await page.goto('/play/wordpill');
+    await page.getByTestId('vialo').getByRole('button', { name: 'how to play wordpill' }).click();
+    const dialog = page.getByRole('dialog', { name: 'how to play wordpill' });
     await expect(dialog).toContainText('in the standard look, solid green is in its place, red with a thin light ring inside it');
     await expect(dialog).toContainText('with high contrast on, there is no ring: in its place stays solid');
     await expect(dialog).toContainText('a thick solid outline');

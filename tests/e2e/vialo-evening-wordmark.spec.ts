@@ -1,11 +1,11 @@
 import { expect, test, type Page } from '@playwright/test';
 import { markGameRulesSeen } from './clock';
 
-// Vialo's Evening wordmark (Christian): the Daytime path in dark red with a 1 px gold outline. The file's canvas is padded
-// so the outline is not clipped and the image is scaled back up (global.css), so the letters must take exactly the
-// Daytime wordmark's box in Light and Evening, on the game page's sidebar and on the /play hub.
-const EVENING = '/design/games-v2/assets/vialo-wordmark-oxblood-v3-evening.svg';
-const DAY = '/design/games-v2/assets/vialo-wordmark-oxblood-v3.svg';
+// wordpill's Evening wordmark (the game formerly called vialo; Christian approved the thin ivory rim, 2026-11-26) is the Daytime
+// artwork with a different rim colour in a canvas of the same size, so it must take exactly the Daytime wordmark's box in Light
+// and Evening, on the game page's sidebar and on the /play hub.
+const EVENING = '/design/games-v2/assets/wordpill-wordmark-dark.svg';
+const DAY = '/design/games-v2/assets/wordpill-wordmark-light.svg';
 
 test.beforeEach(async ({ page }) => {
   await markGameRulesSeen(page);
@@ -28,10 +28,10 @@ const lettersBox = (page: Page, selector: string) =>
   });
 
 for (const [name, path, selector] of [
-  ['the game page sidebar', '/play/vialo', '.game-frame-wordmark-img'],
+  ['the game page sidebar', '/play/wordpill', '.game-frame-wordmark-img'],
   ['the /play hub row', '/play', '[data-testid="play-status-pulse"] .logo img'],
 ] as const) {
-  test(`${name}: Evening uses the outlined wordmark, with the same letter box as Light (within 1 px)`, async ({ page }) => {
+  test(`${name}: Evening uses the rimmed wordmark, with the same letter box as Light (within 1 px)`, async ({ page }) => {
     await page.emulateMedia({ colorScheme: 'light' });
     await page.goto(path);
     await page.locator(selector).first().waitFor({ state: 'attached' });

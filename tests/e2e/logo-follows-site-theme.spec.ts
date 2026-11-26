@@ -20,7 +20,7 @@ const pages = [
   '/',
   '/about',
   '/play',
-  '/play/vialo',
+  '/play/wordpill',
   '/play/tachyyy',
   '/play/piccline',
   '/play/word-path',

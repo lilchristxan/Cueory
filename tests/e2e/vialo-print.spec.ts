@@ -33,7 +33,7 @@ const keeper = (page: Page) => page.getByTestId('sheet-keeper');
 
 test('the sheet is hidden on screen and holds no word in the page', async ({ page }) => {
   await finish(page);
-  await page.goto('/play/vialo');
+  await page.goto('/play/wordpill');
   await expect(sheet(page)).toBeHidden();
   expect((await sheet(page).innerHTML()).toLowerCase()).not.toContain('grace');
   await expect(keeper(page)).toHaveAttribute('data-keeper', 'locked');
@@ -41,13 +41,13 @@ test('the sheet is hidden on screen and holds no word in the page', async ({ pag
 
 test('page 1 has the branding, an empty 5 by 6 pack and the 26 letter keys, and never the word', async ({ page }) => {
   await finish(page);
-  await page.goto('/play/vialo');
+  await page.goto('/play/wordpill');
   await page.emulateMedia({ media: 'print' });
   const one = page.getByTestId('sheet-page-1');
   await expect(one.getByTestId('sheet-label')).toHaveText("guesser's copy");
   await expect(page.getByTestId('sheet-label')).toHaveCount(2);
   const brand = one.getByTestId('sheet-page-1-brand');
-  await expect(brand.getByRole('img', { name: 'vialo' })).toHaveAttribute('src', '/design/games-v2/assets/vialo-wordmark-oxblood-v3.svg');
+  await expect(brand.getByRole('img', { name: 'wordpill' })).toHaveAttribute('src', '/design/games-v2/assets/wordpill-wordmark-light.svg');
   await expect(brand.locator('img')).toHaveCount(2);
   await expect(one).toContainText('guess the five-letter word in six tries.');
   await expect(one).toContainText('cueory.app · page 1 of 2');
@@ -71,7 +71,7 @@ test('page 1 has the branding, an empty 5 by 6 pack and the 26 letter keys, and 
 
 test('printing a finished game fills page 2 with the steps, the pen marks and the word, and prints once', async ({ page }) => {
   await finish(page);
-  await page.goto('/play/vialo');
+  await page.goto('/play/wordpill');
   await press(page);
   await expect.poll(() => printed(page)).toBe(1);
   await expect(warning(page)).toHaveCount(0);
@@ -106,11 +106,11 @@ test('printing a finished game fills page 2 with the steps, the pen marks and th
 });
 
 test("in print only the sheet prints, and a Ctrl+P without the gate still shows no word", async ({ page }) => {
-  await page.goto('/play/vialo');
+  await page.goto('/play/wordpill');
   await page.emulateMedia({ media: 'print' });
   await expect(sheet(page)).toBeVisible();
   await expect(page.locator('main > :not(.sheet-print)').first()).toBeHidden();
-  await expect(keeper(page)).toContainText("finish today's vialo to print the keeper's copy");
+  await expect(keeper(page)).toContainText("finish today's wordpill to print the keeper's copy");
   expect((await page.locator('body').innerText()).toLowerCase()).not.toContain('grace');
 });
 
@@ -119,7 +119,7 @@ for (const format of ['A4', 'Letter'] as const) {
     test(`it prints as exactly two ${format} pages (${state})`, async ({ page, browserName }, info) => {
       test.skip(browserName !== 'chromium', 'page.pdf is Chromium only');
       if (state === 'ready') await finish(page);
-      await page.goto('/play/vialo');
+      await page.goto('/play/wordpill');
       if (state === 'ready') {
         await press(page);
         await expect(keeper(page)).toHaveAttribute('data-keeper', 'ready');
@@ -138,7 +138,7 @@ for (const format of ['A4', 'Letter'] as const) {
 for (const paper of [{ name: 'Letter', width: 816, height: 1056 }, { name: 'A4', width: 794, height: 1123 }]) {
   test(`large print on ${paper.name}: the pack fills the width and the key letters are big`, async ({ page }) => {
     await page.setViewportSize({ width: paper.width, height: paper.height });
-    await page.goto('/play/vialo');
+    await page.goto('/play/wordpill');
     await page.emulateMedia({ media: 'print' });
     const m = await page.evaluate(() => {
       const one = document.querySelector('[data-testid="sheet-page-1"]')!;
@@ -159,7 +159,7 @@ for (const paper of [{ name: 'Letter', width: 816, height: 1056 }, { name: 'A4',
 }
 
 test('on paper the pack, wells and keys are outlined, not filled', async ({ page }) => {
-  await page.goto('/play/vialo');
+  await page.goto('/play/wordpill');
   await page.emulateMedia({ media: 'print' });
   const style = await page.evaluate(() => {
     const border = (selector: string) => parseFloat(getComputedStyle(document.querySelector(selector)!).borderTopWidth);
@@ -175,7 +175,7 @@ test('on paper the pack, wells and keys are outlined, not filled', async ({ page
 });
 
 test('the game page keeps its flag control and the sheet adds no heading or control on screen', async ({ page }) => {
-  await page.goto('/play/vialo');
+  await page.goto('/play/wordpill');
   await expect(page.getByRole('link', { name: /flag or comment/ }).first()).toBeVisible();
   await expect(page.getByRole('heading', { level: 1 })).toHaveCount(1);
   const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa']).analyze();
@@ -184,7 +184,7 @@ test('the game page keeps its flag control and the sheet adds no heading or cont
 
 test.describe('printing an unfinished game', () => {
   test('warns first, and cancelling changes nothing', async ({ page }) => {
-    await page.goto('/play/vialo');
+    await page.goto('/play/wordpill');
     await press(page);
     const dialog = warning(page);
     await expect(dialog).toBeVisible();
@@ -202,7 +202,7 @@ test.describe('printing an unfinished game', () => {
   });
 
   test('"finish the game first" just closes the dialog; the game stays playable', async ({ page }) => {
-    await page.goto('/play/vialo');
+    await page.goto('/play/wordpill');
     await press(page);
     await warning(page).getByRole('button', { name: 'finish the game first' }).click();
     await expect(warning(page)).toBeHidden();
@@ -214,7 +214,7 @@ test.describe('printing an unfinished game', () => {
   });
 
   test('"print anyway" records today as not solved, ends the game on screen as lost, then prints with the word', async ({ page }) => {
-    await page.goto('/play/vialo');
+    await page.goto('/play/wordpill');
     await press(page);
     await warning(page).getByRole('button', { name: 'print anyway' }).click();
     await expect.poll(() => printed(page)).toBe(1);
@@ -236,7 +236,7 @@ test.describe('printing an unfinished game', () => {
         return set.call(this, key, value);
       };
     });
-    await page.goto('/play/vialo');
+    await page.goto('/play/wordpill');
     await press(page);
     await warning(page).getByRole('button', { name: 'print anyway' }).click();
     await expect(page.getByRole('alert').filter({ hasText: "couldn't save that on this device" })).toHaveText("couldn't save that on this device. finish the game to print the keeper's copy.");
@@ -247,7 +247,7 @@ test.describe('printing an unfinished game', () => {
 
   test('the forfeit goes on the new day when midnight passes while the warning is open', async ({ page }) => {
     await page.clock.setFixedTime(new Date('2026-11-01T23:59:50'));
-    await page.goto('/play/vialo');
+    await page.goto('/play/wordpill');
     await press(page);
     await expect(warning(page)).toBeVisible();
     await page.clock.setFixedTime(new Date('2026-11-02T00:00:20'));
@@ -263,16 +263,16 @@ test.describe('from /play', () => {
   test('a finished game offers print for a patient, which opens the game page and prints', async ({ page }) => {
     await finish(page);
     await page.goto('/play');
-    await expect(todayRow(page).getByRole('link', { name: 'play vialo' })).toHaveCount(0);
-    await todayRow(page).getByRole('button', { name: 'print for a patient (vialo)' }).click();
-    await expect(page).toHaveURL(/\/play\/vialo$/);
+    await expect(todayRow(page).getByRole('link', { name: 'play wordpill' })).toHaveCount(0);
+    await todayRow(page).getByRole('button', { name: 'print for a patient (wordpill)' }).click();
+    await expect(page).toHaveURL(/\/play\/wordpill$/);
     await expect.poll(() => printed(page)).toBe(1);
     await expect(keeper(page).locator('[data-keeper-word]')).toHaveText('grace');
   });
 
   test('an unfinished game shows only play, no print button', async ({ page }) => {
     await page.goto('/play');
-    await expect(todayRow(page).getByRole('link', { name: 'play vialo' })).toBeVisible();
+    await expect(todayRow(page).getByRole('link', { name: 'play wordpill' })).toBeVisible();
     await expect(page.getByRole('button', { name: /print for a patient/ })).toHaveCount(0);
   });
 
@@ -286,18 +286,18 @@ test.describe('from /play', () => {
     await page.clock.setFixedTime(new Date('2026-11-01T23:59:50'));
     await finish(page);
     await page.goto('/play');
-    const print = todayRow(page).getByRole('button', { name: 'print for a patient (vialo)' });
+    const print = todayRow(page).getByRole('button', { name: 'print for a patient (wordpill)' });
     await expect(print).toBeVisible();
     await page.clock.setFixedTime(new Date('2026-11-02T00:00:20'));
     await print.click();
     await expect(page).toHaveURL(/\/play$/);
     await expect(page.getByRole('button', { name: /print for a patient/ })).toHaveCount(0);
-    await expect(todayRow(page).getByRole('link', { name: 'play vialo' })).toBeVisible();
+    await expect(todayRow(page).getByRole('link', { name: 'play wordpill' })).toBeVisible();
   });
 
   test('the warning fits at 390 and has no axe problems', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
-    await page.goto('/play/vialo');
+    await page.goto('/play/wordpill');
     await press(page);
     const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa']).analyze();
     expect(results.violations.map((v) => `${v.id}: ${v.help}`)).toEqual([]);
@@ -314,12 +314,12 @@ test('two print requests during the picture wait print once, keep the word fille
   let release!: () => void;
   const held = new Promise<void>((resolve) => { release = resolve; });
   let seen = false;
-  await page.route('**/vialo-wordmark-oxblood-v3.svg', async (route) => {
+  await page.route('**/wordpill-wordmark-light.svg', async (route) => {
     seen = true;
     await held;
     await route.continue();
   });
-  await page.goto('/play/vialo');
+  await page.goto('/play/wordpill');
   await press(page);
   // The held picture was asked for, the keeper box is filled, and nothing has printed yet: still preparing.
   await expect.poll(() => seen).toBe(true);
@@ -341,7 +341,7 @@ test('two print requests during the picture wait print once, keep the word fille
 });
 
 test('a second request while the warning is open does not stack a second print', async ({ page }) => {
-  await page.goto('/play/vialo');
+  await page.goto('/play/wordpill');
   await press(page);
   await expect(warning(page)).toBeVisible();
   await press(page);

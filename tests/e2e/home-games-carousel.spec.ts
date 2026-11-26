@@ -35,7 +35,7 @@ test.describe('home games carousel (Home v2 Lane 5)', () => {
     await expect(secondCard).toBeFocused();
     await expect(secondCard).toHaveClass(/on/);
 
-    // ArrowLeft moves back to first card (vialo)
+    // ArrowLeft moves back to first card (wordpill)
     await page.keyboard.press('ArrowLeft');
     await expect(firstCard).toBeFocused();
     await expect(firstCard).toHaveClass(/on/);
@@ -449,12 +449,12 @@ test.describe('home games carousel (Home v2 Lane 5)', () => {
       // Simulate touch swipe right on car element (dx > 40)
       await swipe(100, 300);
 
-      // Moves back to index 0 (vialo)
+      // Moves back to index 0 (wordpill)
       await expect(cards.nth(0)).toHaveClass(/on/);
 
       // Tap card navigates to game page
       await cards.nth(0).click();
-      await expect(page).toHaveURL(/\/play\/vialo\/?$/);
+      await expect(page).toHaveURL(/\/play\/wordpill\/?$/);
     } finally {
       await context.close();
     }

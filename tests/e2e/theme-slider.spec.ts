@@ -185,7 +185,7 @@ test('no sideways scroll at 320 px with 32 px root text', async ({ page }) => {
   await expect(dialog.getByRole('group', { name: 'theme' }).getByRole('radio', { name: 'follow device' })).toBeChecked();
 });
 
-const GAME_PAGES = ['/play/vialo', '/play/sudoku', '/play/word-path', '/play/crossword', '/play/tachyyy', '/play/hello-cards', '/play/pillo', '/play/stat'];
+const GAME_PAGES = ['/play/wordpill', '/play/sudoku', '/play/word-path', '/play/crossword', '/play/tachyyy', '/play/hello-cards', '/play/pillo', '/play/stat'];
 for (const path of GAME_PAGES) {
   test(`${path} opens the panel with the slider`, async ({ page }) => {
     await page.clock.setFixedTime(new Date('2026-11-01T15:00:00'));

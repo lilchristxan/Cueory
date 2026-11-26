@@ -19,7 +19,7 @@ async function ink(page: Page, scope: string): Promise<Ink[]> {
   return page.evaluate(async (scopeSelector) => {
     const out: { game: string; inkH: number; inkW: number }[] = [];
     for (const img of Array.from(document.querySelectorAll<HTMLImageElement>(`${scopeSelector} img`))) {
-      const match = new URL(img.src).pathname.match(/(vialo|tachyyy|piccline)-wordmark/);
+      const match = new URL(img.src).pathname.match(/(vialo|wordpill|tachyyy|piccline)-wordmark/);
       if (!match || getComputedStyle(img).display === 'none') continue;
       img.loading = 'eager';
       if (!img.complete) await new Promise<void>((done) => { img.addEventListener('load', () => done(), { once: true }); img.addEventListener('error', () => done(), { once: true }); });
@@ -78,15 +78,15 @@ for (const scheme of ['light', 'dark'] as const) {
       expect(await noSideways(page)).toBe(true);
     });
 
-    test('game pages: the sidebar wordmark of piccline is at least as tall as vialo\'s and tachyyy\'s', async ({ page }) => {
+    test('game pages: the sidebar wordmark of piccline is at least as tall as wordpill\'s and tachyyy\'s', async ({ page }) => {
       const heights: Record<string, number> = {};
-      for (const [game, path] of [['vialo', '/play/vialo'], ['tachyyy', '/play/tachyyy'], ['piccline', '/play/piccline']] as const) {
+      for (const [game, path] of [['wordpill', '/play/wordpill'], ['tachyyy', '/play/tachyyy'], ['piccline', '/play/piccline']] as const) {
         await page.goto(path);
         const found = await ink(page, '.game-frame-sidebar .game-frame-wordmark-wrap');
         heights[game] = Math.max(...found.filter((i) => i.game === game).map((i) => i.inkH));
         expect(await noSideways(page), path).toBe(true);
       }
-      expect(heights.piccline).toBeGreaterThanOrEqual(Math.max(heights.vialo!, heights.tachyyy!));
+      expect(heights.piccline).toBeGreaterThanOrEqual(Math.max(heights.wordpill!, heights.tachyyy!));
     });
   });
 }

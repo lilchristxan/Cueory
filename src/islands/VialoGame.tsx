@@ -212,7 +212,7 @@ export default function VialoGame({ puzzles }: Props) {
         summary: solved ? "you found today's word." : "today's word is ready for another try tomorrow.",
         stats: [{ label: 'guesses', value: `${tries}` }],
         nextMessage: `next word in ${waitInWords(untilNextPuzzle(new Date()))}.`,
-        path: '/play/vialo',
+        path: '/play/wordpill',
       },
     });
     setFinish(finishStats(localDay(new Date())));

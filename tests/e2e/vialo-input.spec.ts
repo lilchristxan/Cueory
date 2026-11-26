@@ -5,7 +5,7 @@ import { fixClock } from './clock';
 // mouse, touch and keyboard activation of the on-screen keys.
 test.beforeEach(async ({ page }) => {
   await fixClock(page, new Date('2026-11-01T15:00:00'));
-  await page.goto('/play/vialo');
+  await page.goto('/play/wordpill');
   await expect(page.getByTestId('vialo')).toBeVisible();
 });
 
@@ -83,11 +83,11 @@ test('Backspace never touches submitted rows and Enter on a short row submits no
 
 test('Backspace on the page does not navigate back', async ({ page }) => {
   await page.goto('/');
-  await page.goto('/play/vialo');
+  await page.goto('/play/wordpill');
   await typeOnScreen(page, 'ab');
   await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
   await page.keyboard.press('Backspace');
-  await expect(page).toHaveURL(/\/play\/vialo$/);
+  await expect(page).toHaveURL(/\/play\/wordpill$/);
   await expect(typed(page)).toHaveText(['a']);
 });
 
@@ -272,8 +272,8 @@ for (const scheme of ['light', 'dark'] as const) {
 // "on-screen keyboard only" (settings): only the letter keys below type. The physical keyboard must not add, delete
 // or submit, but Enter or Space on a focused key still activates that key.
 async function keysOnlyOn(page: Page) {
-  await page.getByTestId('vialo').getByRole('button', { name: 'vialo settings' }).click();
-  const settings = page.getByRole('dialog', { name: 'vialo settings' });
+  await page.getByTestId('vialo').getByRole('button', { name: 'wordpill settings' }).click();
+  const settings = page.getByRole('dialog', { name: 'wordpill settings' });
   await settings.getByRole('switch', { name: /on-screen keyboard only/ }).click();
   await page.keyboard.press('Escape');
   await expect(settings).toBeHidden();

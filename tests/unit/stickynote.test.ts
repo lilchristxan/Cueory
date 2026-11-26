@@ -230,7 +230,7 @@ describe('glove note: message gloves every 30 minutes', () => {
   });
 
   it('classifies paths: games, never pages, study, marketing and the rest', () => {
-    for (const path of ['/play', '/play/', '/play/vialo', '/play/vialo.html', '/play.html', '/play/sudoku/']) {
+    for (const path of ['/play', '/play/', '/play/wordpill', '/play/wordpill.html', '/play.html', '/play/sudoku/']) {
       expect(pageKindFor(path), path).toBe('game');
     }
     for (const path of ['/start', '/start.html', '/subscribed', '/subscribed/', '/admin', '/admin/flags', '/privacy', '/privacy.html', '/breaks', '/breaks.html']) {

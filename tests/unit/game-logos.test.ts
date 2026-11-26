@@ -1,4 +1,5 @@
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
@@ -139,41 +140,50 @@ describe('the shared logo source equals what the game pages use (GameFrame.astro
   });
 });
 
-describe("vialo's Evening wordmark: the Daytime path unchanged, with a 1 px gold outline", () => {
+describe("wordpill's artwork (the game formerly called vialo; Christian's designs B and L1, 2026-11-26)", () => {
   const dir = new URL('../../public/design/games-v2/assets/', import.meta.url);
-  const day = readFileSync(new URL('vialo-wordmark-oxblood-v3.svg', dir), 'utf8');
-  const evening = readFileSync(new URL('vialo-wordmark-oxblood-v3-evening.svg', dir), 'utf8');
-  const pathOf = (svg: string) => svg.match(/<path d="([^"]+)"/)![1];
-  const box = (svg: string) => svg.match(/viewBox="([^"]+)"/)![1]!.split(' ').map(Number) as [number, number, number, number];
+  const read = (name: string) => readFileSync(new URL(name, dir), 'utf8');
+  const day = read('wordpill-wordmark-light.svg');
+  const evening = read('wordpill-wordmark-dark.svg');
+  const icon = read('wordpill-icon-l1.svg');
 
-  it('has the same single path and fill, plus the outline', () => {
-    expect(pathOf(evening)).toBe(pathOf(day));
-    expect(evening.match(/<path /g)).toHaveLength(1);
-    expect(evening).toContain('fill="#5E1914"');
-    expect(evening).toContain('stroke="#d9976a"');
-    expect(evening).toContain('stroke-width="1"');
-    expect(evening).toContain('vector-effect="non-scaling-stroke"');
-    expect(evening).toContain('stroke-linejoin="round"');
+  it('is drawn in outlines only: no live text, so it looks the same everywhere', () => {
+    for (const svg of [day, evening, icon]) {
+      expect(svg).not.toMatch(/<text|font-family|<image/);
+      expect(svg.match(/<path /g)).toHaveLength(2);
+    }
   });
 
-  it('pads the canvas evenly around the Daytime one, in its proportions, and the scale token undoes the padding', () => {
-    const [dx, dy, dw, dh] = box(day);
-    const [ex, ey, ew, eh] = box(evening);
-    expect(ex).toBeLessThan(dx);
-    expect(ey).toBeLessThan(dy);
-    expect(ex + ew - (dx + dw)).toBe(-ex); // the same margin on both sides
-    expect(ey + eh - (dy + dh)).toBe(-ey);
-    expect(Math.abs(ew / eh - dw / dh)).toBeLessThan(0.001); // same proportions: same box at the same CSS height
-    const scale = Number(tokens.match(/--vialo-evening-wordmark-scale:\s*([\d.]+)/)![1]);
-    expect(Math.abs(scale - eh / dh)).toBeLessThan(0.0002);
-    expect(globalCss).toContain('img[src$="vialo-wordmark-oxblood-v3-evening.svg"] {\n    scale: var(--vialo-evening-wordmark-scale);');
+  it('has the same letters in Light and Evening; Evening only adds the thin ivory rim', () => {
+    const paths = (svg: string) => [...svg.matchAll(/<path d="([^"]+)"/g)].map((m) => m[1]);
+    expect(paths(evening)).toEqual(paths(day));
+    expect(day).toContain('stroke="#0e5a3d" stroke-width="2"');
+    expect(evening).toContain('stroke="#f9f5ef" stroke-width="2"');
+    expect(evening.replace('stroke="#f9f5ef"', 'stroke="#0e5a3d"').replace('wordpill-clip-evening', 'wordpill-clip-day').replaceAll('wordpill-clip-evening', 'wordpill-clip-day')).toBe(day);
   });
 
-  it('is vialo\'s Evening wordmark on the hub and the game page, and the carousel (cream in both palettes) keeps Daytime', () => {
-    expect(gameLogos.vialo.wordmark.evening).toBe('/design/games-v2/assets/vialo-wordmark-oxblood-v3-evening.svg');
-    expect(gameLogos.vialo.wordmark.day).toBe('/design/games-v2/assets/vialo-wordmark-oxblood-v3.svg');
+  it('is the wordmark and icon on every surface: Evening art on the hub and game page, Daytime on the cream carousel', () => {
+    expect(gameLogos.vialo.wordmark).toEqual({ day: '/design/games-v2/assets/wordpill-wordmark-light.svg', evening: '/design/games-v2/assets/wordpill-wordmark-dark.svg', width: 300, height: 100 });
+    expect(gameLogos.vialo.icon.day).toBe('/design/games-v2/assets/wordpill-icon-l1.svg');
+    expect(gameLogos.vialo.icon.evening).toBe(gameLogos.vialo.icon.day);
     expect(gameLogos.vialo.card.wordmark).toBe(gameLogos.vialo.wordmark.day);
+    expect(frameValue(frameConfig('pulse'), 'wordmarkSrc')).toBe(gameLogos.vialo.wordmark.day);
     expect(frameValue(frameConfig('pulse'), 'wordmarkEveningSrc')).toBe(gameLogos.vialo.wordmark.evening);
+    expect(frameValue(frameConfig('pulse'), 'iconSrc')).toBe(gameLogos.vialo.icon.day);
+    expect(frameValue(frameConfig('pulse'), 'brandName')).toBe('wordpill');
+  });
+
+  it('leaves no built page or stylesheet pointing at the old vialo artwork (the files stay in the repo for now)', () => {
+    const oldArt = /vialo-(?:wordmark|icon)[\w-]*\.svg|brand\/games\/vialo-/;
+    const walk = (dirUrl: URL): string[] =>
+      readdirSync(dirUrl, { withFileTypes: true }).flatMap((entry) => {
+        const child = new URL(entry.name + (entry.isDirectory() ? '/' : ''), dirUrl);
+        return entry.isDirectory() ? walk(child) : /\.(html|css)$/.test(entry.name) ? [fileURLToPath(child)] : [];
+      });
+    const files = walk(new URL('../../dist/', import.meta.url));
+    expect(files.length).toBeGreaterThan(10);
+    const offenders = files.filter((file) => oldArt.test(readFileSync(file, 'utf8')));
+    expect(offenders).toEqual([]);
   });
 });
 

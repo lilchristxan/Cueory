@@ -11,7 +11,7 @@ import { hubHeadline, hubTotals, playedLabel, statusWords } from '../../src/isla
 
 const line = (id: 'vialo' | 'cueword') => ({ vialo: hubLines.vialo, cueword: hubLines.crossword })[id];
 const games = (crosswordOpen: boolean) => [
-  { id: 'vialo' as const, testId: 'pulse', name: 'vialo', line: line('vialo'), href: gamePages.vialo, open: true, art: 'vialo' as const },
+  { id: 'vialo' as const, testId: 'pulse', name: 'wordpill', line: line('vialo'), href: gamePages.vialo, open: true, art: 'vialo' as const },
   { id: 'cueword' as const, testId: 'cueword', name: 'crossword', line: line('cueword'), href: gamePages.cueword, open: crosswordOpen },
   { id: 'hello-cards' as const, testId: 'hello-cards', name: helloCardsGame.name, line: helloCardsGame.line, href: helloCardsGame.href, open: false },
 ];
@@ -30,8 +30,8 @@ describe('the /play hub rows (option B)', () => {
   it('links an open game once, from its play button, and shows a dash until the browser has been read', () => {
     const html = render(true);
     expect(html).toContain('href="/play/crossword"');
-    expect(html.match(/href="\/play\/vialo"/g)).toHaveLength(1);
-    expect(html).toContain('aria-label="play vialo"');
+    expect(html.match(/href="\/play\/wordpill"/g)).toHaveLength(1);
+    expect(html).toContain('aria-label="play wordpill"');
     expect(html).toContain('<span aria-hidden="true">–</span>');
     expect(html).not.toContain('new today');
   });
@@ -44,10 +44,10 @@ describe('the /play hub rows (option B)', () => {
 
   it('uses the shared logo artwork (src/config/gamelogos.ts) for vialo and a serif name for the others', () => {
     const html = render(true);
-    expect(html).toContain('src="/design/games-v2/assets/vialo-wordmark-oxblood-v3.svg"');
-    expect(html).toContain('src="/design/games-v2/assets/vialo-wordmark-oxblood-v3-evening.svg"');
-    expect(html).toContain('src="/design/games-v2/assets/vialo-icon-silver-oxblood.svg"');
-    expect(html).toContain('alt="vialo"');
+    expect(html).toContain('src="/design/games-v2/assets/wordpill-wordmark-light.svg"');
+    expect(html).toContain('src="/design/games-v2/assets/wordpill-wordmark-dark.svg"');
+    expect(html).toContain('src="/design/games-v2/assets/wordpill-icon-l1.svg"');
+    expect(html).toContain('alt="wordpill"');
     expect(html).toMatch(/display[^>]*>crossword</);
   });
 

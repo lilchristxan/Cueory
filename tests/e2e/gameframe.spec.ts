@@ -98,7 +98,7 @@ test.describe('GameFrame shared layout (Scope 1)', () => {
 });
 
 test.describe('game page frame (Games v2, 23 Nov)', () => {
-  for (const path of ['/play/vialo', '/play/sudoku', '/play/piccline']) {
+  for (const path of ['/play/wordpill', '/play/sudoku', '/play/piccline']) {
     test(`${path}: no site menu bar or building strip, the other open games as deck cards, a skip link`, async ({ page }) => {
       await page.goto(path);
       await expect(page.locator('header')).toHaveCount(0);
@@ -116,7 +116,7 @@ test.describe('game page frame (Games v2, 23 Nov)', () => {
 // The fanned deck fits only from 70rem (1120 px; --game-deck-breakpoint). Below it the other games are a plain row of
 // cards under the board, and nothing lies over the game; from it the deck sits at the right edge.
 test.describe('deck or plain row by width (--breakpoint-deck)', () => {
-  for (const path of ['/play/vialo', '/play/sudoku', '/play/word-path']) {
+  for (const path of ['/play/wordpill', '/play/sudoku', '/play/word-path']) {
     for (const [width, deck] of [[1024, false], [1056, false], [1100, false], [1119, false], [1120, true], [1280, true]] as const) {
       test(`${path} at ${width} px shows ${deck ? 'the deck' : 'the plain row'}`, async ({ page }) => {
         await page.setViewportSize({ width, height: 900 });
@@ -143,7 +143,7 @@ test.describe('deck or plain row by width (--breakpoint-deck)', () => {
 // Same spot on every game page (Christian's canvas comment): at 1440 the frame spans the whole window, so the deck slot's
 // right edge is the window's right edge on all six games, tachyyy and hello cards included (drafts build).
 test.describe('the frame spans the window on every game page', () => {
-  for (const path of ['/play/vialo', '/play/sudoku', '/play/piccline', '/play/crossword', '/play/tachyyy', '/play/hello-cards']) {
+  for (const path of ['/play/wordpill', '/play/sudoku', '/play/piccline', '/play/crossword', '/play/tachyyy', '/play/hello-cards']) {
     test(`${path} at 1440 px: the deck slot ends at the window's right edge`, async ({ page }) => {
       await page.setViewportSize({ width: 1440, height: 900 });
       await page.goto(path);
@@ -175,7 +175,7 @@ test.describe('sudoku controls land on whole pixels', () => {
 // Between 64rem and 70rem the sidebar and the column are side by side and the deck is a plain row. The row gets its own
 // full-width line under them, so the game keeps the width it has at 1120 and the cards never sit beside it (review on #1145).
 test.describe('plain row of cards under the game, game keeps its size (1024 to 1119 px)', () => {
-  for (const path of ['/play/vialo', '/play/sudoku', '/play/piccline']) {
+  for (const path of ['/play/wordpill', '/play/sudoku', '/play/piccline']) {
     test(`${path}: the board is as wide as at 1120 px and the cards are below it`, async ({ page }) => {
       await page.setViewportSize({ width: 1120, height: 900 });
       await page.goto(path);
@@ -202,7 +202,7 @@ test.describe('plain row of cards under the game, game keeps its size (1024 to 1
 // art (device setting, or the footer's Light/Dark pick), never by recolouring (review of the Evening picture).
 test.describe('the left panel wordmark in Evening', () => {
   const wordmarks = [
-    { path: '/play/vialo', day: '/design/games-v2/assets/vialo-wordmark-oxblood-v3.svg', evening: '/design/games-v2/assets/vialo-wordmark-oxblood-v3-evening.svg' },
+    { path: '/play/wordpill', day: '/design/games-v2/assets/wordpill-wordmark-light.svg', evening: '/design/games-v2/assets/wordpill-wordmark-dark.svg' },
     { path: '/play/tachyyy', day: '/brand/games/tachyyy-wordmark-light.svg', evening: '/brand/games/tachyyy-wordmark-dark.svg' },
     { path: '/play/piccline', day: '/brand/games/piccline-wordmark-light.svg', evening: '/brand/games/piccline-wordmark-dark.svg' },
   ];

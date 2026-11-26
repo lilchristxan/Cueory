@@ -714,14 +714,6 @@
     display: block;
   }
 
-  /* Vialo's Evening wordmark (public/design/games-v2/assets/vialo-wordmark-oxblood-v3-evening.svg) is the Daytime path
-     unchanged, plus a 1 px gold outline, in a canvas padded on every side (in the Daytime art's own proportions) so the
-     outline is never clipped. The padding would shrink the letters, so the image is scaled back up about its centre:
-     the letters then have exactly the Daytime wordmark's size and place, and nothing in the layout moves between themes. */
-  img[src$="vialo-wordmark-oxblood-v3-evening.svg"] {
-    scale: var(--vialo-evening-wordmark-scale);
-  }
-
   /* Piccline's wordmark (Christian, 2026-11-25: "it looks smaller than the others"). It is a thin script, so at the same
      box height its letters look smaller than vialo's and tachyyy's. Both files fill their box (the ink is 97 percent of
      its height, so there is no padding to compensate for); the image is drawn larger about its centre instead, which

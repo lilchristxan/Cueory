@@ -10,6 +10,7 @@
 import { crosswordShown, pageBuildEnv } from '../config/crossword';
 import { deckOrder, type DeckGameId } from '../config/gamedeck';
 import { draftsAllowed } from '../islands/anatomylab';
+import { gameName } from '../config/games';
 import { imageLogo } from '../config/gamelogos';
 
 interface Props {
@@ -32,7 +33,7 @@ interface DeckGame {
   glyph?: string;
 }
 const games: Record<DeckGameId, DeckGame> = {
-  pulse: { name: 'vialo', href: '/play/vialo', open: true, art: imageLogo('vialo').icon, wordmark: imageLogo('vialo').wordmark },
+  pulse: { name: gameName('vialo'), href: '/play/wordpill', open: true, art: imageLogo('vialo').icon, wordmark: imageLogo('vialo').wordmark },
   'hello-cards': { name: 'hello cards', href: '/play/hello-cards', open: drafts, glyph: 'hi' },
   triage: { name: 'sudoku', href: '/play/sudoku', open: true, glyph: '9' },
   cueword: { name: 'crossword', href: '/play/crossword', open: crosswordShown(env), glyph: '+' },

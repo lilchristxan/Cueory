@@ -27,14 +27,15 @@ export interface GameGlyphLogo {
 }
 export type GameLogoKey = 'vialo' | 'tachyyy' | 'piccline' | 'crossword' | 'sudoku' | 'helloCards';
 
-const vialoIcon = '/design/games-v2/assets/vialo-icon-silver-oxblood.svg';
+// The game's players-facing name is wordpill (Christian, 2026-11-26); the key, ids and storage keys stay `vialo`.
+const vialoIcon = '/design/games-v2/assets/wordpill-icon-l1.svg';
 
 export const gameLogos = {
   vialo: {
     kind: 'image',
     icon: { day: vialoIcon, evening: vialoIcon },
-    wordmark: { day: '/design/games-v2/assets/vialo-wordmark-oxblood-v3.svg', evening: '/design/games-v2/assets/vialo-wordmark-oxblood-v3-evening.svg', width: 4326, height: 1620 },
-    card: { icon: vialoIcon, wordmark: '/design/games-v2/assets/vialo-wordmark-oxblood-v3.svg' },
+    wordmark: { day: '/design/games-v2/assets/wordpill-wordmark-light.svg', evening: '/design/games-v2/assets/wordpill-wordmark-dark.svg', width: 300, height: 100 },
+    card: { icon: vialoIcon, wordmark: '/design/games-v2/assets/wordpill-wordmark-light.svg' },
   },
   tachyyy: {
     kind: 'image',

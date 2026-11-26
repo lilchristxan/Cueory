@@ -11,7 +11,7 @@ let fixtureCode: string;
 let pendingCode: string;
 let fixtureCss: string[];
 test.beforeAll(async () => {
-  const html = readFileSync('dist/play/vialo.html', 'utf8');
+  const html = readFileSync('dist/play/wordpill.html', 'utf8');
   fixtureCss = [...html.matchAll(/<link[^>]+rel="stylesheet"[^>]+href="([^"]+\.css)"/g)].map((m) => m[1]!);
   if (fixtureCss.length === 0) throw new Error('The production stylesheets were not found. Run npm run build.');
   const bundle = async (pending: boolean) => {
