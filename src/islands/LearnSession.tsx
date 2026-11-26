@@ -31,7 +31,7 @@ const secondaryButton =
 // The summary card: a plain surface with the soft card shadow (Task 77). Study screens stay plain.
 const cardClass = 'rounded-xl border border-line bg-surface px-6 py-10 shadow-card sm:px-10';
 // One panel holds the prompt, the answers and the buttons (Christian, 2026-11-26): a focused card on the plain page.
-const panelClass = 'mt-6 rounded-xl border border-line bg-page px-5 py-6 shadow-card sm:px-8 sm:py-8';
+const panelClass = 'mt-6 rounded-2xl border border-line bg-page px-5 py-6 shadow-card sm:px-8 sm:py-8';
 const bubble = 'inline-flex h-10 min-w-10 shrink-0 items-center justify-center rounded-pill px-2 text-sm font-medium';
 /** The progress row is cut into at most this many pieces. */
 const MAX_SEGMENTS = 6;
@@ -223,11 +223,11 @@ export default function LearnSession({ cards, lessonHref = '/learn/study-skills'
               <span>{step === 'see' ? 'card' : 'term'}</span>
               <SpeakButton text={spoken} />
             </div>
-            <p data-testid="learn-prompt" className="mt-2 mb-10 wrap-anywhere text-2xl">
+            <p data-testid="learn-prompt" className="mt-3 mb-14 wrap-anywhere text-xl">
               {card.front}
             </p>
             <p className="flex flex-wrap items-center gap-x-3 gap-y-1">
-              <span data-testid="learn-step" className="text-sm font-medium text-ink-soft">
+              <span data-testid="learn-step" className="text-sm font-medium text-ink-soft lowercase">
                 {stepLabel[step]}
               </span>
               {retry && (
@@ -274,7 +274,7 @@ export default function LearnSession({ cards, lessonHref = '/learn/study-skills'
         </div>
 
         {step === 'choose' && (
-          <ul aria-label="Answers" className="mt-4 grid gap-3 sm:grid-cols-2">
+          <ul aria-label="Answers" className="mt-4 grid gap-3.5 sm:auto-rows-fr sm:grid-cols-2">
             {state.choices.map((choice) => {
               const picked = result?.given === choice;
               const isAnswer = choice === index;
@@ -282,7 +282,7 @@ export default function LearnSession({ cards, lessonHref = '/learn/study-skills'
               // After a pick, the answer gets a tick and a dark border, a wrong pick a cross; the words below each say
               // which is which, so the state never depends on the border or icon alone.
               const tone = !result
-                ? 'border-control hover:bg-surface'
+                ? 'border-line hover:bg-surface'
                 : isAnswer
                   ? 'border-ink ring-1 ring-ink'
                   : picked
@@ -295,10 +295,10 @@ export default function LearnSession({ cards, lessonHref = '/learn/study-skills'
                     onClick={() => act((s) => choose(s, cards, choice))}
                     disabled={result !== null}
                     aria-pressed={result ? picked : undefined}
-                    className={`press flex h-full min-h-(--tap-min) w-full items-start gap-3 rounded-xl border bg-page px-5 py-4 text-left text-lg text-ink disabled:cursor-default ${tone}`}
+                    className={`press flex h-full min-h-15 w-full items-center gap-3 rounded-xl border bg-page px-5 py-4 text-left text-ink disabled:cursor-default ${tone}`}
                   >
                     {result && (isAnswer || picked) && (
-                      <span className="mt-1.5 flex shrink-0">
+                      <span className="flex shrink-0">
                         <ResultIcon correct={isAnswer} />
                       </span>
                     )}
@@ -343,7 +343,7 @@ export default function LearnSession({ cards, lessonHref = '/learn/study-skills'
           </form>
         )}
 
-        <div className="mt-stack flex flex-wrap items-center gap-3">
+        <div className="mt-6 flex flex-wrap items-center gap-3">
           {step === 'see' && !state.revealed && (
             <button type="button" onClick={() => act((s) => reveal(s, cards))} className={primaryButton}>
               Show answer
@@ -374,9 +374,6 @@ export default function LearnSession({ cards, lessonHref = '/learn/study-skills'
         </div>
       </div>
 
-      <p className="mt-section text-sm text-ink-soft">
-        Anything you miss comes back a little later, until you know every card. Nothing is saved yet.
-      </p>
     </div>
   );
 }
