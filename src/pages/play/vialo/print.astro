@@ -22,7 +22,7 @@ const puzzles = JSON.stringify((await pilloSamples()).map(({ word }) => ({ word 
 const wordmark = '/design/games-v2/assets/vialo-wordmark-oxblood-v3.svg';
 const icon = '/design/games-v2/assets/vialo-icon-silver-oxblood.svg';
 ---
-<Layout title={t.title} description={t.description} noindex promo={false} hideFlag>
+<Layout title={t.title} description={t.description} noindex promo={false}>
   <div class="sheet">
     <div class="sheet-bar" data-print-hidden>
       <a class="sheet-link" href="/play" data-testid="back-to-games">{t.backLink}</a>

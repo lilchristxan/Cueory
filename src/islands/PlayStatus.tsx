@@ -3,7 +3,7 @@ import { browserStorage } from '../scripts/storage';
 import { GAME_RESULT_EVENT, GAME_STATS_CHANGED_EVENT, heldRounds, loadStats, localDay, STATS_STORAGE_KEY, type SavedStats } from './gameresults';
 import { sameGame } from './gamestats';
 import PrintWarning from './PrintWarning';
-import { printAnyway, requestPrint } from '../scripts/printgate';
+import { isFinished, printAnyway, requestPrint } from '../scripts/printgate';
 import { playedLabel, statusWords } from './playhub';
 import { GAME_PROGRESS_EVENT, readHeard, statusFor, type GameId, type HeardToday } from './playstatus';
 
@@ -107,6 +107,7 @@ export default function PlayStatus({ games }: Props) {
   const [saved, setSaved] = useState<SavedStats>({ on: false, stats: [] });
   /** The game whose print is waiting on the "print before you finish?" warning, and the button to give focus back to. */
   const [warning, setWarning] = useState<Row | undefined>(undefined);
+  const [saveError, setSaveError] = useState('');
   const [heard, setHeard] = useState<HeardToday>({ started: new Set(), finished: new Set() });
 
   useEffect(() => {
@@ -150,21 +151,38 @@ export default function PlayStatus({ games }: Props) {
   }, []);
 
   const openSheet = (row: Row) => window.location.assign(row.print!);
-  /** Print: a finished game opens its sheet straight away; an unfinished one warns first (src/scripts/printgate.ts). */
-  const print = (row: Row, finished: boolean) => {
-    requestPrint({ finished, keepsResults: saved.on }, () => openSheet(row), () => setWarning(row));
+  /**
+   * Both print steps read the local day and today's stored result afresh, never the day cached when the page loaded: a tab
+   * left open across midnight (or a dialog opened just before it) must store the loss for the same day the sheet reveals.
+   */
+  const nowFinished = (id: Row['id']) => {
+    const day = localDay(new Date());
+    return { day, finished: isFinished(loadStats(browserStorage(), day).stats, id, day) };
   };
-  /** "print anyway": today is recorded as not solved before any answer shows. */
+  /** Print: a finished game opens its sheet straight away; an unfinished one warns first (src/scripts/printgate.ts). */
+  const print = (row: Row) => {
+    const { finished } = nowFinished(row.id);
+    requestPrint({ finished, keepsResults: saved.on }, () => openSheet(row), () => { setSaveError(''); setWarning(row); });
+  };
+  /**
+   * "print anyway": today is recorded as not solved before any answer shows. If midnight passed while the dialog was
+   * open, "today" is the new day: the forfeit goes on that day when its game is unfinished (that is the word the sheet
+   * will reveal), and nothing is recorded when it is already finished.
+   */
   const confirmPrint = () => {
     const row = warning!;
-    setWarning(undefined);
-    printAnyway(browserStorage(), 'vialo', today, 6, () => openSheet(row));
+    const { day } = nowFinished(row.id);
+    setToday(day);
+    const ok = printAnyway(browserStorage(), 'vialo', day, 6, () => openSheet(row));
+    // The day could not be saved: keep the dialog open and say so; nothing opens and nothing changes.
+    if (!ok) setSaveError("couldn't save that on this device. finish the game to print the keeper's copy.");
   };
 
   return (
     <section aria-labelledby="today-status-heading" data-testid="play-status">
       <PrintWarning
         open={warning !== undefined}
+        error={saveError}
         onFinish={() => { const row = warning!; setWarning(undefined); window.location.assign(row.href); }}
         onPrint={confirmPrint}
         onCancel={() => setWarning(undefined)}
@@ -210,7 +228,7 @@ export default function PlayStatus({ games }: Props) {
                       </a>
                     )}
                     {showPrint && (
-                      <button type="button" className={PRINT_BUTTON} aria-label={`${PRINT} (${row.name})`} data-testid={`print-${row.testId}`} onClick={() => print(row, played)}>
+                      <button type="button" className={PRINT_BUTTON} aria-label={`${PRINT} (${row.name})`} data-testid={`print-${row.testId}`} onClick={() => print(row)}>
                         {PRINT}
                       </button>
                     )}

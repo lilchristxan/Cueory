@@ -46,8 +46,9 @@ export function requestPrint(entry: PrintEntry, open: () => void, warn: () => vo
   else warn();
 }
 
-/** Step 2, on "print anyway": record today as not solved first, and only then open the sheet. */
-export function printAnyway(storage: KeyValueStorage | undefined, game: 'vialo', day: string, tries: number, open: () => void): void {
-  forfeitToday(storage, game, day, tries);
+/** Step 2, on "print anyway": record today as not solved first, and only then open the sheet. False (and nothing opens) when the record could not be saved. */
+export function printAnyway(storage: KeyValueStorage | undefined, game: 'vialo', day: string, tries: number, open: () => void): boolean {
+  if (!forfeitToday(storage, game, day, tries)) return false;
   open();
+  return true;
 }

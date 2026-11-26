@@ -229,3 +229,81 @@ test.describe('printing from /play', () => {
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   });
 });
+
+test('the flag or comment control stays on screen and is not printed', async ({ page }) => {
+  await page.goto('/play/vialo/print');
+  const flag = page.getByRole('button', { name: 'flag or comment', exact: true });
+  await expect(flag).toBeVisible();
+  await page.emulateMedia({ media: 'print' });
+  await expect(flag).toBeHidden();
+});
+
+test.describe('the revealed keeper word on screen', () => {
+  for (const size of [{ width: 390, height: 844 }, { width: 820, height: 1180 }]) {
+    test(`fits without sideways scroll at ${size.width} px`, async ({ page }) => {
+      await page.setViewportSize(size);
+      await finish(page);
+      await page.goto('/play/vialo/print');
+      const word = page.getByTestId('sheet-keeper').locator('[data-keeper-word]');
+      await expect(word).toHaveText('grace');
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+      const fits = await page.evaluate(() => {
+        const box = document.querySelector('[data-testid="sheet-keeper"]')!.getBoundingClientRect();
+        const text = document.querySelector('[data-keeper-word]')!;
+        const range = document.createRange();
+        range.selectNodeContents(text);
+        const r = range.getBoundingClientRect();
+        return r.left >= box.left && r.right <= box.right && box.right <= window.innerWidth;
+      });
+      expect(fits).toBe(true);
+    });
+  }
+});
+
+test('a save that fails keeps the warning open with a plain message, and nothing opens or changes', async ({ page }) => {
+  await page.addInitScript(() => {
+    const set = Storage.prototype.setItem;
+    Storage.prototype.setItem = function (key: string, value: string) {
+      if (key === 'cueory-game-stats') throw new DOMException('full', 'QuotaExceededError');
+      return set.call(this, key, value);
+    };
+  });
+  await page.goto('/play');
+  await todayRow(page).getByRole('button', { name: 'print for a patient (vialo)' }).click();
+  await page.getByRole('button', { name: 'print anyway' }).click();
+  const alert = page.getByRole('alert');
+  await expect(alert).toHaveText("couldn't save that on this device. finish the game to print the keeper's copy.");
+  await expect(page.getByRole('dialog', { name: 'print before you finish?' })).toBeVisible();
+  await expect(page).toHaveURL(/\/play$/);
+  expect(await stored(page)).toBeNull();
+});
+
+test('a forfeited day stays not solved even if the game is then played and solved', async ({ page }) => {
+  await page.goto('/play');
+  await todayRow(page).getByRole('button', { name: 'print for a patient (vialo)' }).click();
+  await page.getByRole('button', { name: 'print anyway' }).click();
+  await expect(page).toHaveURL(/\/play\/vialo\/print$/);
+  await page.goto('/play/vialo');
+  const field = page.getByLabel('your guess', { exact: true });
+  await field.fill('grace');
+  await field.press('Enter');
+  await expect(page.getByTestId('vialo-result')).toContainText('solved.');
+  await page.goto('/play');
+  await expect(page.getByTestId('play-status-words').first()).toHaveText('not solved');
+  expect((await stored(page)).results).toEqual([expect.objectContaining({ game: 'vialo', solved: false })]);
+});
+
+test('the forfeit goes on the new day when midnight passes while the warning is open', async ({ page }) => {
+  await page.clock.setFixedTime(new Date('2026-11-01T23:59:50'));
+  await page.goto('/play');
+  await todayRow(page).getByRole('button', { name: 'print for a patient (vialo)' }).click();
+  await expect(page.getByRole('dialog', { name: 'print before you finish?' })).toBeVisible();
+  await page.clock.setFixedTime(new Date('2026-11-02T00:00:20'));
+  await page.getByRole('button', { name: 'print anyway' }).click();
+  await expect(page).toHaveURL(/\/play\/vialo\/print$/);
+  expect((await stored(page)).results).toEqual([expect.objectContaining({ game: 'vialo', day: '2026-11-02', solved: false })]);
+  const keeper = page.getByTestId('sheet-keeper');
+  await expect(keeper).toHaveAttribute('data-keeper', 'ready');
+  await expect(keeper.locator('[data-keeper-date]')).toHaveText('monday, november 2nd · #2');
+  await expect(keeper.locator('[data-keeper-word]')).not.toHaveText('grace');
+});

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { decidePrint, forfeitToday, isFinished } from '../../src/scripts/printgate';
+import { decidePrint, forfeitToday, isFinished, printAnyway } from '../../src/scripts/printgate';
 
 function memory(initial?: string) {
   const data = new Map<string, string>(initial === undefined ? [] : [['cueory-game-stats', initial]]);
@@ -32,5 +32,13 @@ describe('print gate', () => {
     expect(forfeitToday(undefined, 'vialo', '2026-11-01', 6)).toBe(false);
     const store = { getItem: () => null, setItem: () => { throw new Error('full'); }, removeItem: () => {} };
     expect(forfeitToday(store, 'vialo', '2026-11-01', 6)).toBe(false);
+  });
+  it('print anyway opens the sheet only when the forfeit was saved', () => {
+    let opened = 0;
+    expect(printAnyway(memory(), 'vialo', '2026-11-01', 6, () => { opened += 1; })).toBe(true);
+    expect(opened).toBe(1);
+    const full = { getItem: () => null, setItem: () => { throw new Error('quota'); }, removeItem: () => {} };
+    expect(printAnyway(full, 'vialo', '2026-11-01', 6, () => { opened += 1; })).toBe(false);
+    expect(opened).toBe(1);
   });
 });

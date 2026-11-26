@@ -554,7 +554,15 @@
   --sheet-label: 12.5pt;
   --sheet-foot: 10pt;
   --sheet-heading: 30pt;        /* "how to play", set in Bodoni Moda */
-  --sheet-word: 54pt;           /* the word of the day */
+  --sheet-word: 54pt;           /* the word of the day, on paper */
+  --sheet-word-screen: clamp(2.25rem, 13vw, 3.375rem); /* the same word on a phone or tablet screen: never wider than the box */
+  --sheet-sample-letter: 20pt;  /* the sample letter under each pen mark */
+  --sheet-box-pad-screen: calc(var(--spacing) * 4); /* the word box's side padding on screen */
+  --sheet-line-height: 1.5;
+  --sheet-word-tracking: 0.18em;
+  --sheet-cell-ratio: 1.05 / 0.82;   /* a pack cell (width / height) */
+  --sheet-well-ratio: 0.86 / 0.56;   /* a pill outline inside it */
+  --sheet-key-ratio: 52 / 60;        /* a letter key */
   --sheet-steps-width: 15.7cm;
   --sheet-step-gap: 0.36cm;
   --sheet-sample: 1.17cm;       /* a sample letter in the legend */
