@@ -70,4 +70,10 @@ describe('anatomy lab: the dark look', () => {
   it('has no font but Lato (the interface font token) on the stage', () => {
     expect(labCss).not.toMatch(/font-family:\s+(?!var\(--font-body\))/);
   });
+
+  it('centres the bottom bar without a transform, so its controls measure a true 44 px in every engine', () => {
+    const bar = labSource.match(/className="([^"]*)" role="group" aria-label="bottom bar"/)![1]!;
+    expect(bar).not.toMatch(/translate|transform|left-1\/2/);
+    expect(bar).toMatch(/inset-x-0[^"]*mx-auto|mx-auto[^"]*inset-x-0/);
+  });
 });
