@@ -41,7 +41,6 @@
   .lab-title {
     font-size: var(--lab-title-size);
     font-weight: 700;
-    line-height: 1.3;
   }
 
   /* Small tracked captions: "orientation", "body systems", the dataset line. */
@@ -293,5 +292,57 @@
     padding: calc(var(--spacing) * 2) 0;
     border-top: var(--lab-edge) solid var(--lab-hair);
     font-size: var(--lab-row-size);
+  }
+
+  /* The inspector (Task 178, redesign part 2). */
+  .lab-name {
+    margin: calc(var(--spacing) * 2) 0 calc(var(--spacing) * 3);
+    font-size: var(--lab-name-size);
+    font-weight: 700;
+    color: var(--lab-ivory);
+  }
+  .lab-id {
+    font-size: var(--lab-id-size);
+    color: var(--lab-sand);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: var(--lab-label-tracking);
+  }
+  .lab-index {
+    max-height: var(--lab-index-height);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  .lab-selring {
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 5;
+    width: var(--lab-selring-size);
+    height: var(--lab-selring-size);
+    border-radius: 50%;
+    border: calc(var(--lab-edge) * 2) solid var(--lab-copper-glow);
+    box-shadow: 0 0 0 var(--lab-edge) var(--lab-charcoal);
+    pointer-events: none;
+    display: none;
+  }
+  .lab-selring[data-on] {
+    display: block;
+  }
+  .lab-leader {
+    position: absolute;
+    inset: 0;
+    z-index: 5;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    overflow: visible;
+  }
+  .lab-leader line {
+    stroke: var(--lab-copper-glow);
+    stroke-width: var(--lab-leader-width);
+    display: none;
+  }
+  .lab-leader line[data-on] {
+    display: block;
   }
 }

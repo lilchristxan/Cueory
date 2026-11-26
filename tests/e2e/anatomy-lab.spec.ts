@@ -398,7 +398,7 @@ test.describe('anatomy lab', () => {
     await page.getByRole('button', { name: 'show fixture cube B' }).press('Enter');
     await expect(cubeB).not.toContainText('(hidden)');
 
-    await card.getByRole('button', { name: 'show only this' }).press('Enter');
+    await card.getByRole('button', { name: 'isolate' }).press('Enter');
     await page.getByLabel('find a structure').fill('');
     await expect(list(page).getByRole('button', { name: /\(hidden\)/ })).toHaveCount(4);
     await page.getByRole('button', { name: 'show all' }).press('Enter');
@@ -533,7 +533,7 @@ test.describe('anatomy lab', () => {
     test.skip(!isDesktopOfEachEngine(info), 'one text-size reflow check per browser engine');
     await openLab(page);
     await page.getByRole('button', { name: 'fixture cube A', exact: true }).click();
-    await page.getByRole('button', { name: 'show only this' }).click();
+    await page.getByRole('button', { name: 'isolate' }).click();
     await page.getByRole('button', { name: 'labels' }).click();
     const label = page.getByTestId('anatomy-labels').locator(':scope > span');
     await expect(label).toHaveCount(1);
@@ -1117,7 +1117,7 @@ test.describe('anatomy lab whole body loads layers on demand', () => {
     await expect(list(page).getByRole('button', { name: 'heart (hidden)', exact: true })).toBeEnabled();
     await list(page).getByRole('button', { name: 'heart (hidden)', exact: true }).click();
     await list(page).getByRole('button', { name: 'show heart', exact: true }).click();
-    await page.getByRole('region', { name: 'heart' }).getByRole('button', { name: 'show only this' }).click();
+    await page.getByRole('region', { name: 'heart' }).getByRole('button', { name: 'isolate' }).click();
 
     const quiz = page.getByRole('region', { name: 'find it' });
     await quiz.getByRole('button', { name: 'start the quiz' }).click();

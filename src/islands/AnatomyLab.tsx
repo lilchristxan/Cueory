@@ -16,6 +16,9 @@ import AnatomyLabCover from './AnatomyLabCover';
 import { breadcrumb, siblings } from './anatomyhierarchy';
 import { boxesFromMeshes, expandNearby, nearbyStructures } from './anatomynearby';
 import { canSpeak, speak, stop as stopSpeaking } from './anatomyspeech';
+import { groupIndex, indexHeading, indexStep, inspectorRows, leaderSegment } from './anatomyinspector';
+import { flagMailto } from '../scripts/footer';
+import { site } from '../config/site';
 import { createAnatomyStudy, createReviewQueueRequestGuard, createSavedViewsRequestGuard, createStudyIdentityGuard, queueFromQuizMisses, type AnatomyStudyClient, type ReviewQueueRow, type SavedViewRow, type StudyIdentitySnapshot } from './anatomystudy';
 import { getSupabase } from './supabaseclient';
 import { STRUCTURE_PAGE_SIZE, visibleStructureGroups } from './anatomy-list-window';
@@ -336,6 +339,12 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
   const [orientation, setOrientation] = useState<ViewPreset | 'free' | null>('front');
   const [thumbs, setThumbs] = useState<Partial<Record<'front' | 'back' | 'left', string>>>({});
   const [spread, setSpread] = useState(0);
+  // The ring round the selection and the leader line to the inspector card are moved by hand on every frame.
+  const stageRef = useRef<HTMLDivElement>(null);
+  const ringRef = useRef<HTMLDivElement>(null);
+  const leaderRef = useRef<SVGLineElement>(null);
+  const markedIdRef = useRef<string | null>(null);
+  const indexItemRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const labRef = useRef<HTMLDivElement>(null);
   const speechOn = useMemo(() => canSpeak(), []);
   const generation = useMemo(() => createGeneration(), []);
@@ -422,7 +431,42 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
   labelIdsRef.current = labelIds;
 
   // ── Labels follow the camera: re-laid out after every frame the scene draws ──────────────────────────────────────
+  const updateSelectionMark = useCallback(() => {
+    const ring = ringRef.current;
+    const line = leaderRef.current;
+    const stage = stageRef.current;
+    const canvas = canvasRef.current;
+    if (!ring || !line || !stage || !canvas) return;
+    const off = () => { ring.removeAttribute('data-on'); line.removeAttribute('data-on'); };
+    const id = markedIdRef.current;
+    const point = id ? sceneRef.current?.locate([id])[0] : undefined;
+    const box = canvas.getBoundingClientRect();
+    if (!point || point.x < 0 || point.y < 0 || point.x > box.width || point.y > box.height) { off(); return; }
+    const frame = stage.getBoundingClientRect();
+    const center = { x: box.left - frame.left + point.x, y: box.top - frame.top + point.y };
+    ring.setAttribute('data-on', '');
+    const radius = ring.offsetWidth / 2;
+    ring.style.transform = `translate(${center.x - radius}px, ${center.y - radius}px)`;
+    // The leader only draws where the card floats beside the model (desktop); below that the card sits under it.
+    const heading = document.getElementById('anatomy-name-card');
+    const card = heading?.closest('section');
+    const floating = !!card?.parentElement && getComputedStyle(card.parentElement).position === 'absolute';
+    if (!heading || !card || !floating) { line.removeAttribute('data-on'); return; }
+    const cardBox = card.getBoundingClientRect();
+    const headingBox = heading.getBoundingClientRect();
+    const segment = leaderSegment(center, radius, { x: cardBox.left - frame.left, y: headingBox.top - frame.top + headingBox.height / 2 });
+    if (!segment) { line.removeAttribute('data-on'); return; }
+    line.setAttribute('x1', String(segment.x1));
+    line.setAttribute('y1', String(segment.y1));
+    line.setAttribute('x2', String(segment.x2));
+    line.setAttribute('y2', String(segment.y2));
+    line.setAttribute('data-on', '');
+  }, []);
+  const updateSelectionMarkRef = useRef(updateSelectionMark);
+  updateSelectionMarkRef.current = updateSelectionMark;
+
   const updateLabels = useCallback(() => {
+    updateSelectionMarkRef.current();
     const scene = sceneRef.current;
     const canvas = canvasRef.current;
     const ids = labelIdsRef.current;
@@ -1328,6 +1372,13 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
     setSystemKey(key);
   };
 
+  // The ring and leader follow the selection while it can be seen and no test is hiding its name.
+  const markedId = modelReady && selected !== null && foundSet.has(selected) && !hidden.has(selected) && !quiz && !recall ? selected : null;
+  useEffect(() => {
+    markedIdRef.current = markedId;
+    updateSelectionMarkRef.current();
+  }, [markedId, panels, moreOpen, compareSystem, spread]);
+
   // ── Quiz ──────────────────────────────────────────────────────────────────────────────────────────────────────────
   const quizPool = useMemo(() => tappableIds(visible, skinIds), [visible, skinIds]);
   const toggleQuiz = () => {
@@ -1575,6 +1626,9 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
   const canFocus = ready && selected !== null && foundSet.has(selected) && !hidden.has(selected);
 
   // ── Study tools on the name card and around it (Task 178, integration) ───────────────────────────────────────────
+  const selectedIndex = selected && selectedStructure
+    ? groupIndex(system.structures, selected, selectedGroup, (structure) => structureTree(system, structure) === selectedTree)
+    : null;
   const crumbs = selected
     ? breadcrumbRows(breadcrumb(system.structures, selected, selectedTree), system.structures, selected)
     : [];
@@ -1830,7 +1884,9 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
             </div>
           )}
 
-        <div className="relative flex flex-col lg:block lg:h-(--lab-stage-height)" data-testid="anatomy-stage">
+        <div ref={stageRef} className="relative flex flex-col lg:block lg:h-(--lab-stage-height)" data-testid="anatomy-stage">
+          <div ref={ringRef} className="lab-selring" aria-hidden="true" data-testid="anatomy-selection-ring" />
+          <svg className="lab-leader hidden lg:block" aria-hidden="true" data-testid="anatomy-leader"><line ref={leaderRef} /></svg>
           <div className="relative h-(--lab-stage-height-small) lg:absolute lg:inset-0 lg:h-auto">
             <div className="lab-decor lab-pool bottom-16 left-1/2 h-12 w-1/3 -translate-x-1/2" aria-hidden="true" />
             <div className="lab-decor lab-ring bottom-15 left-1/2 hidden h-14 w-1/3 -translate-x-1/2 md:block" aria-hidden="true" />
@@ -2143,7 +2199,15 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
           <div className="contents lg:pointer-events-none lg:absolute lg:inset-y-5 lg:right-5 lg:z-10 lg:flex lg:w-(--lab-inspector-width) lg:flex-col lg:gap-3 lg:overflow-y-auto">
           {selectedName && !quiz && !recall && (
             <section className="lab-glass mx-3 mb-3 p-4 lg:pointer-events-auto lg:m-0" aria-labelledby="anatomy-name-card">
-              <h2 id="anatomy-name-card" className="text-lg text-ink">{selectedName}</h2>
+              <p className="lab-cap flex justify-between gap-3"><span>selected structure</span><span className="lab-id" data-testid="anatomy-card-id">{selected}</span></p>
+              <h2 id="anatomy-name-card" className="lab-name">{selectedName}</h2>
+              {selectedStructure && (
+                <dl data-testid="anatomy-card-rows">
+                  {inspectorRows(selectedStructure, system.title, system.model.release, selectedGroup).map((row) => (
+                    <div key={row.label} className="lab-kv"><dt className="lab-cap">{row.label}</dt><dd className="m-0 text-right">{row.value}</dd></div>
+                  ))}
+                </dl>
+              )}
               {crumbs.length > 1 ? (
                 <nav aria-label="where it sits" className="mt-1">
                   <ol className="flex flex-wrap items-center gap-x-1 text-sm text-ink-soft" data-testid="anatomy-breadcrumb">
@@ -2195,11 +2259,18 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
               )}
               <div className="mt-3 flex flex-wrap gap-2">
                 <button type="button" className={secondaryButton} onClick={() => { visibilityIntent.bump(); setHidden(onlyThis(system.structures.map((s) => s.id), selected!)); }}>
-                  show only this
+                  isolate
                 </button>
                 <button type="button" className={secondaryButton} onClick={() => changeVisibility((v) => hideStructure(v, selected!))}>
-                  {hidden.has(selected!) ? 'show it' : 'hide it'}
+                  {hidden.has(selected!) ? 'show' : 'hide'}
                 </button>
+                <a
+                  href={flagMailto(site.contactEmail, window.location.pathname)}
+                  data-game-flag
+                  className={secondaryButton}
+                >
+                  flag or comment
+                </a>
                 <button
                   type="button"
                   className={secondaryButton}
@@ -2221,7 +2292,35 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
               </div>
             </section>
           )}
-        <section id="lab-panel-structures" className="lab-glass mx-3 mb-3 hidden space-y-3 p-4 data-open:block lg:pointer-events-auto lg:m-0 lg:flex lg:min-h-0 lg:flex-1 lg:flex-col" data-open={panels.structures || undefined} aria-labelledby="anatomy-list-heading">
+          {selectedName && !quiz && !recall && selectedIndex && (
+            <div role="group" className="lab-glass mx-3 mb-3 p-4 lg:pointer-events-auto lg:m-0" aria-labelledby="anatomy-index-heading" data-testid="anatomy-index">
+              <h2 id="anatomy-index-heading" className="lab-cap">{indexHeading(selectedIndex)}</h2>
+              <ul className="lab-index mt-2 space-y-1">
+                {selectedIndex.items.map((item, position) => (
+                  <li key={item.id}>
+                    <button
+                      type="button"
+                      ref={(node) => { indexItemRefs.current[position] = node; }}
+                      aria-pressed={selected === item.id}
+                      disabled={!ready || !foundSet.has(item.id)}
+                      onClick={() => pickStructure(item.id)}
+                      onKeyDown={(e) => {
+                        const next = indexStep(e.key, position, selectedIndex.items.length);
+                        if (next === null) return;
+                        e.preventDefault();
+                        indexItemRefs.current[next]?.focus();
+                      }}
+                      className="lab-row w-full"
+                    >
+                      <span>{item.text}</span>
+                      <span className="lab-id">{item.id}</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        <section id="lab-panel-structures" className="lab-glass mx-3 mb-3 hidden space-y-3 p-4 data-open:block lg:pointer-events-auto lg:m-0 lg:flex lg:min-h-(--lab-list-min) lg:flex-1 lg:flex-col" data-open={panels.structures || undefined} aria-labelledby="anatomy-list-heading">
           <h2 id="anatomy-list-heading" className="lab-cap">structures</h2>
           {recall ? (
             <p className="text-sm text-ink-soft" data-testid="anatomy-list-paused">
