@@ -35,4 +35,13 @@
     block-size: calc(var(--spacing) * 6);
   }
 
+  /* The same outline gear as the Frame's corner button (GearIcon.tsx). */
+  .game-header-gear-icon {
+    fill: none;
+    stroke: currentColor;
+    stroke-width: var(--game-frame-gear-stroke);
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
 }

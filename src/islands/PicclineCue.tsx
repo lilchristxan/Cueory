@@ -7,8 +7,9 @@ export default function PicclineCue({ id, text }: { id: string; text: string }) 
   const [slot, setSlot] = useState<HTMLElement | null>(null);
   useLayoutEffect(() => {
     const frame = anchor.current?.closest('.game-frame-main');
-    // Framed routes server-render their own corner row. Other routes keep the cue above the island's own row.
-    if (frame?.querySelector('.game-frame-controls-row')) {
+    // Only a route that fills the Frame's cue slot itself moves the cue there (none does today: the corner buttons are
+    // the Frame's, and the cue stays inside the game, above the board).
+    if (frame?.querySelector('[data-frame-cue-portal]')) {
       setSlot(frame.querySelector<HTMLElement>('.game-frame-cue-slot'));
     }
   }, []);

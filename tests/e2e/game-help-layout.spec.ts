@@ -61,9 +61,7 @@ for (const [width, height] of screens) {
       for (const game of games) {
         await page.goto(game.path);
         await page.evaluate((size) => document.documentElement.style.setProperty('font-size', `${size}px`, 'important'), font);
-        const button = game.framed
-          ? page.getByTestId('game-frame-help-button')
-          : page.getByTestId(game.testId).getByRole('button', { name: `how to play ${game.name}` });
+        const button = page.getByTestId('game-frame-help-button');
         test.skip(game.name === 'crossword' && await button.count() === 0, 'crossword Help is not rendered in this build');
         await button.click();
         const dialog = page.getByRole('dialog', { name: `how to play ${game.name}` });
@@ -117,7 +115,7 @@ test('pillo\'s marks are explained in its help, not below the board', async ({ p
   const pillo = page.getByTestId('pulse');
   await expect(pillo.getByRole('list', { name: 'your guesses' })).toBeAttached();
   await expect(pillo.getByTestId('pillo-legend')).toHaveCount(0);
-  await pillo.getByRole('button', { name: 'how to play pillo' }).click();
+  await page.getByRole('button', { name: 'how to play pillo' }).click();
   const legend = page.getByRole('dialog', { name: 'how to play pillo' }).getByRole('list', { name: 'what the marks mean' });
   // Each row is the drawn pill (its symbol inside it) and the symbol again in words beside it.
   await expect(legend.getByRole('listitem')).toHaveText([/● in its place$/, /○ in the word, somewhere else$/, /· not in the word$/]);
@@ -126,7 +124,7 @@ test('pillo\'s marks are explained in its help, not below the board', async ({ p
 
 test('pillo\'s help lists only hard mode and on-screen keyboard under its own settings', async ({ page }) => {
   await page.goto('/play/pillo');
-  await page.getByTestId('pulse').getByRole('button', { name: 'how to play pillo' }).click();
+  await page.getByRole('button', { name: 'how to play pillo' }).click();
   const terms = page.getByRole('dialog', { name: 'how to play pillo' }).locator('.game-help-settings dt');
   await expect(terms).toHaveText(['hard mode', 'on-screen keyboard only']);
 });
