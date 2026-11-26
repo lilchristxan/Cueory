@@ -36,6 +36,8 @@ async function measure(page: Page) {
       keysCx: (keyLeft + keyRight) / 2,
       gear: box(document.querySelector('[data-testid="game-frame-gear"]')),
       help: box(document.querySelector('[data-testid="game-frame-help-button"]')),
+      row: [...document.querySelectorAll('.game-frame-corner > button, .game-frame-corner .game-frame-how-wrap > button')].map((button) => box(button)),
+      names: [...document.querySelectorAll('.game-frame-corner > button, .game-frame-corner .game-frame-how-wrap > button')].map((button) => button.getAttribute('data-testid')),
       text,
       deck: [...document.querySelectorAll('.game-deck-item')].map((item) => box(item)),
       noSideways: document.documentElement.scrollWidth <= document.documentElement.clientWidth,
@@ -70,8 +72,17 @@ for (const [width, height] of sizes) {
       expect(Math.abs(m.gear.top - m.help.top)).toBeLessThanOrEqual(0.5);
       expect(Math.abs(m.gear.cy - m.help.cy)).toBeLessThanOrEqual(0.5);
       // Settings on the left, "?" on the right, side by side.
-      expect(m.gear.right).toBeLessThanOrEqual(m.help.left);
-      expect(m.help.left - m.gear.right).toBeLessThanOrEqual(12);
+      // Settings, printer, "?" in that order, side by side, 8 px apart.
+      expect(m.names).toEqual(['game-frame-gear', 'game-frame-print', 'game-frame-help-button']);
+      for (let i = 1; i < m.row.length; i++) {
+        expect(m.row[i]!.left - m.row[i - 1]!.right).toBeGreaterThanOrEqual(0);
+        expect(m.row[i]!.left - m.row[i - 1]!.right).toBeLessThanOrEqual(12);
+      }
+      for (const button of m.row) {
+        expect(Math.abs(button.width - m.gear.width)).toBeLessThanOrEqual(0.5);
+        expect(Math.abs(button.height - m.gear.height)).toBeLessThanOrEqual(0.5);
+        expect(Math.abs(button.top - m.gear.top)).toBeLessThanOrEqual(0.5);
+      }
       // In the corner, within the page padding (24 px) of the play area's top and right edges.
       expect(m.area.right - m.help.right).toBeGreaterThanOrEqual(8);
       expect(m.area.right - m.help.right).toBeLessThanOrEqual(24);
@@ -79,8 +90,7 @@ for (const [width, height] of sizes) {
       expect(m.gear.top - m.area.top).toBeLessThanOrEqual(24);
 
       // Nothing lies under them: not the date line's text, not the board, not a deck card.
-      const buttons = [m.gear, m.help];
-      for (const button of buttons) {
+      for (const button of m.row) {
         for (const line of m.text) expect(overlaps(button, line), 'date line').toBe(false);
         expect(overlaps(button, m.pack), 'board').toBe(false);
         for (const card of m.deck) expect(overlaps(button, card), 'deck card').toBe(false);
@@ -139,6 +149,7 @@ for (const path of framedRoutes) {
             area: r(document.querySelector('.game-frame-main')),
             gear: r(document.querySelector('[data-testid="game-frame-gear"]')),
             help: r(document.querySelector('[data-testid="game-frame-help-button"]')),
+            row: [...document.querySelectorAll('.game-frame-corner > button, .game-frame-corner .game-frame-how-wrap > button')].map((button) => r(button)),
             text: [...range.getClientRects()].map((t) => ({ left: t.left, right: t.right, top: t.top, bottom: t.bottom })),
             noSideways: document.documentElement.scrollWidth <= document.documentElement.clientWidth,
           };
@@ -150,27 +161,30 @@ for (const path of framedRoutes) {
         expect(Math.abs(m.gear.width - m.help.width)).toBeLessThanOrEqual(0.5);
         expect(Math.abs(m.gear.height - m.help.height)).toBeLessThanOrEqual(0.5);
         expect(Math.abs(m.gear.top - m.help.top)).toBeLessThanOrEqual(0.5);
-        expect(m.gear.right).toBeLessThanOrEqual(m.help.left);
-        expect(m.help.left - m.gear.right).toBeLessThanOrEqual(12);
+        // Gear first, "?" last, anything between (the printer) side by side on the same line.
+        expect(m.row.length).toBeGreaterThanOrEqual(2);
+        for (let i = 1; i < m.row.length; i++) {
+          expect(m.row[i]!.left - m.row[i - 1]!.right).toBeGreaterThanOrEqual(0);
+          expect(m.row[i]!.left - m.row[i - 1]!.right).toBeLessThanOrEqual(12);
+          expect(Math.abs(m.row[i]!.top - m.row[0]!.top)).toBeLessThanOrEqual(0.5);
+          expect(m.row[i]!.width).toBeGreaterThanOrEqual(43.9);
+          expect(m.row[i]!.height).toBeGreaterThanOrEqual(43.9);
+        }
         expect(m.area.right - m.help.right).toBeGreaterThanOrEqual(8);
         expect(m.area.right - m.help.right).toBeLessThanOrEqual(24);
         expect(m.gear.top - m.area.top).toBeGreaterThanOrEqual(8);
         expect(m.gear.top - m.area.top).toBeLessThanOrEqual(24);
         expect(m.text.length, 'date line is one line').toBe(1);
-        for (const button of [m.gear, m.help]) expect(overlaps(button, m.text[0]!), 'date line').toBe(false);
+        for (const button of m.row) expect(overlaps(button, m.text[0]!), 'date line').toBe(false);
         expect(m.noSideways).toBe(true);
       });
     }
   }
 }
 
-// The board column is on the play area's centre line at every size. The 720 px showcase boards (piccline, word path) and
-// the wide crossword carry a print button at the board's edge, which must not slide under the fanned cards, so between
-// 1120 and 1340 px they keep a lopsided reserve and sit left of centre there; those widths are not in their list.
-const edgeButtons = new Set(['/play/piccline', '/play/word-path', '/play/crossword']);
+// The board column is on the play area's centre line at every size, on every framed game route.
 for (const path of framedRoutes) {
   for (const [width, height] of sizes) {
-    if (edgeButtons.has(path) && width >= 1120 && width < 1340) continue;
     test(`${path} at ${width}x${height}: board column centred on the play area`, async ({ page }) => {
       await page.setViewportSize({ width, height });
       await page.goto(path);

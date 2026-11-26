@@ -101,7 +101,7 @@ test('a drag draws a line on to the finger and the board never scrolls the page'
 
 test('printing an unfinished board counts as a cue and says so in one line', async ({ page }) => {
   await expect(game(page).getByTestId('suture-print-note')).toHaveCount(0);
-  await game(page).getByTestId('suture-print').click();
+  await page.getByTestId('game-frame-print').click();
   expect(await page.evaluate(() => (window as unknown as { printed: number }).printed)).toBe(1);
   const note = game(page).getByTestId('suture-print-note');
   await expect(note).toHaveText("printing before you finish counts as a cue, so today won't count as solved without cues.");
