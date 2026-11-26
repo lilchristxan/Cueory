@@ -1953,7 +1953,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
             <div className="lab-glass absolute inset-x-0 bottom-3 z-10 mx-auto flex w-fit max-w-full items-center gap-3 p-2 pr-4" role="group" aria-label="bottom bar">
               <button
                 type="button"
-                className={secondaryButton}
+                className={`${secondaryButton} min-h-(--lab-bar-button)`}
                 aria-pressed={labelsOn}
                 disabled={!ready || quiz !== null || recall !== null}
                 onClick={() => setLabelsOn((on) => !on)}
@@ -1977,7 +1977,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
               </div>
               <button
                 type="button"
-                className={secondaryButton}
+                className={`${secondaryButton} min-h-(--lab-bar-button)`}
                 aria-expanded={moreOpen}
                 aria-controls="lab-more"
                 onClick={() => setMoreOpen((open) => !open)}
@@ -2996,7 +2996,7 @@ function LabelOverlay({
           key={p.id}
           data-behind={p.behind ? '' : undefined}
           className={`absolute flex flex-col justify-center rounded-md border bg-page px-2 text-sm leading-normal whitespace-nowrap text-ink ${p.behind ? 'border-dashed border-ink-soft' : 'border-line'}`}
-          style={{ left: `${p.x}px`, top: `${p.y}px`, width: `${p.width}px`, height: `${p.height}px` }}
+          style={{ left: `${Math.round(p.x)}px`, top: `${Math.round(p.y)}px`, width: `${p.width}px`, height: `${p.height}px` }}
         >
           {p.lines.map((line, i) => (
             <span key={i} className="block">
