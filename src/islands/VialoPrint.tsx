@@ -71,12 +71,18 @@ export default function VialoPrint({ puzzles }: Props) {
       if ((event as CustomEvent<{ game?: string }>).detail?.game === 'vialo') request();
     };
     document.addEventListener(PRINT_EVENT, onPrint);
+    // Tells the page (and the tests) that a print request will now be heard: this island loads after the page does.
+    const sheetRoot = document.querySelector('[data-print-sheet]');
+    sheetRoot?.setAttribute('data-print-ready', 'true');
     if (window.location.hash === '#print') {
       // From the hub: do it once, and take the mark out of the address.
       window.history.replaceState(null, '', window.location.pathname + window.location.search);
       request();
     }
-    return () => document.removeEventListener(PRINT_EVENT, onPrint);
+    return () => {
+      document.removeEventListener(PRINT_EVENT, onPrint);
+      sheetRoot?.removeAttribute('data-print-ready');
+    };
   }, []);
 
   const confirm = () => {

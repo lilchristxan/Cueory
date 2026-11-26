@@ -22,7 +22,11 @@ const finish = (page: Page) => page.addInitScript((value) => localStorage.setIte
 const stored = (page: Page) => page.evaluate((key) => JSON.parse(localStorage.getItem(key) ?? 'null'), STATS_KEY);
 const printed = (page: Page) => page.evaluate(() => (window as unknown as { printed: number }).printed);
 const todayRow = (page: Page) => page.getByTestId('play-status-pulse');
-const press = (page: Page) => page.evaluate(() => document.dispatchEvent(new CustomEvent('cueory:print', { detail: { game: 'vialo' } })));
+// The print island loads after the page, so wait until it says it is listening (data-print-ready) before pressing.
+const press = async (page: Page) => {
+  await expect(page.getByTestId('print-sheet')).toHaveAttribute('data-print-ready', 'true');
+  await page.evaluate(() => document.dispatchEvent(new CustomEvent('cueory:print', { detail: { game: 'vialo' } })));
+};
 const warning = (page: Page) => page.getByRole('dialog', { name: 'print before you finish?' });
 const sheet = (page: Page) => page.getByTestId('print-sheet');
 const keeper = (page: Page) => page.getByTestId('sheet-keeper');
