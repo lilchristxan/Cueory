@@ -54,6 +54,9 @@
     /* The pack is as wide as the frame allows, but never so tall that the keys below it drop under the fold: a
        keyboard user tabbing to the last key would otherwise scroll the page (and wake the promo panel). */
     max-inline-size: min(var(--game-frame-max-board), max(var(--vialo-board-min), calc((100dvh - var(--vialo-board-reserve)) * var(--vialo-art-width-per-height))));
+    /* Centred in the game column on the same line as the keyboard; without this the pack sat against the left edge
+       whenever the column was wider than the pack (about 600 to 1000 px windows). */
+    margin-inline: auto;
     aspect-ratio: var(--vialo-art-ratio);
     border-radius: var(--radius-lg);
     background-color: var(--pillo-foil-color);
@@ -101,7 +104,7 @@
   .vialo-pill.vialo-here {
     /* A dark shoulder keeps the white letter legible throughout the shine, including in Evening. */
     --vialo-cap-shoulder: color-mix(in srgb, var(--game-dark-green-light) 38%, var(--game-dark-green-deep));
-    --vialo-cap-face: color-mix(in srgb, var(--game-dark-green) 55%, var(--game-dark-green-deep));
+    --vialo-cap-face: var(--game-dark-green);
     color: var(--game-frame-pill-text-color);
     background-color: var(--vialo-cap-face);
     background-image: radial-gradient(ellipse 120% 140% at 30% 20%, var(--vialo-cap-shoulder), var(--vialo-cap-face) 55%, var(--game-dark-green-deep));

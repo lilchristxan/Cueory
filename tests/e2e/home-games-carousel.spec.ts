@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { isDesktopOfEachEngine } from './projects';
+import AxeBuilder from '@axe-core/playwright';
 import { markPanelsSeen } from './clock';
 
 test.describe('home games carousel (Home v2 Lane 5)', () => {
@@ -87,6 +88,197 @@ test.describe('home games carousel (Home v2 Lane 5)', () => {
     await prevBtn.click();
     const activeCards = section.locator('[data-game-card].on');
     await expect(activeCards).toHaveCount(1);
+  });
+
+  // The row is a circle (Christian, 2026-11-25): after the last game comes the first, before the first comes the last.
+  const openLoop = async (page: import('@playwright/test').Page) => {
+    await page.goto('/');
+    await markPanelsSeen(page);
+    const section = page.locator('#daily-games');
+    await section.scrollIntoViewIfNeeded();
+    const carousel = section.locator('[data-games-carousel]');
+    await expect(carousel).toHaveAttribute('data-carousel-state', 'settled');
+    return { section, carousel, cards: section.locator('[data-game-card]'), dots: section.locator('[data-games-dot]') };
+  };
+
+  const expectFront = async (
+    s: Awaited<ReturnType<typeof openLoop>>,
+    index: number,
+  ) => {
+    await expect(s.cards.nth(index)).toHaveClass(/on/);
+    await expect(s.section.locator('[data-game-card].on')).toHaveCount(1);
+    await expect(s.dots.nth(index)).toHaveAttribute('aria-current', 'true');
+    await expect(s.section.locator('[data-games-dot][aria-current="true"]')).toHaveCount(1);
+    await expect(s.carousel).toHaveAttribute('data-carousel-state', 'settled');
+    // The front card is really on screen, inside the row.
+    const box = await s.cards.nth(index).boundingBox();
+    const row = await s.section.locator('[data-games-car]').boundingBox();
+    expect(box && row && box.x >= row.x - 1 && box.x + box.width <= row.x + row.width + 1, JSON.stringify({ index, box, row })).toBe(true);
+  };
+
+  test('loop: the next button goes round forever, every game becomes the front card, and the dots follow', async ({ page }, testInfo) => {
+    test.skip(!isDesktopOfEachEngine(testInfo), 'runs once per browser engine');
+    const s = await openLoop(page);
+    await expectFront(s, 0);
+    for (let step = 1; step <= 13; step += 1) {
+      await s.section.locator('[data-games-next]').click();
+      await expectFront(s, step % 6);
+    }
+  });
+
+  test('loop: the previous button goes round backwards from the first game to the last and on', async ({ page }, testInfo) => {
+    test.skip(!isDesktopOfEachEngine(testInfo), 'runs once per browser engine');
+    const s = await openLoop(page);
+    for (let step = 1; step <= 13; step += 1) {
+      await s.section.locator('[data-games-prev]').click();
+      await expectFront(s, (((-step) % 6) + 6) % 6);
+    }
+  });
+
+  test('loop: crossing the join is one step of movement, never a rewind across the cards', async ({ page }, testInfo) => {
+    test.skip(!isDesktopOfEachEngine(testInfo), 'runs once per browser engine');
+    const s = await openLoop(page);
+    const track = s.section.locator('[data-games-track]');
+    const x = () => track.evaluate((el) => new DOMMatrixReadOnly(getComputedStyle(el).transform).m41);
+    for (let i = 0; i < 5; i += 1) await s.section.locator('[data-games-next]').click();
+    await expectFront(s, 5);
+    const atLast = await x();
+    await s.section.locator('[data-games-next]').click();
+    await expectFront(s, 0);
+    // Settled on the first game: the row is back at the position it started in, with no animation left running.
+    expect(await x()).toBeCloseTo(0, 0);
+    expect(atLast).toBeLessThan(0);
+    // Mid-slide across the join the row moves by at most one step (the sample is taken straight after the press).
+    await s.section.locator('[data-games-prev]').click();
+    await expectFront(s, 5);
+    const step = Math.abs(atLast) / 5;
+    await s.section.locator('[data-games-next]').click();
+    const midSlide = await x();
+    expect(Math.abs(midSlide - atLast)).toBeLessThanOrEqual(step + 1);
+  });
+
+  test('loop: arrow keys go round both ways and focus follows the front card', async ({ page }, testInfo) => {
+    test.skip(!isDesktopOfEachEngine(testInfo), 'runs once per browser engine');
+    const s = await openLoop(page);
+    await s.cards.nth(0).focus();
+    for (let step = 1; step <= 7; step += 1) {
+      await page.keyboard.press('ArrowRight');
+      await expectFront(s, step % 6);
+      await expect(s.cards.nth(step % 6)).toBeFocused();
+    }
+    for (let step = 1; step <= 8; step += 1) {
+      await page.keyboard.press('ArrowLeft');
+      await expectFront(s, (((1 - step) % 6) + 6) % 6);
+    }
+  });
+
+  test('loop: every dot opens its game, going the short way round', async ({ page }, testInfo) => {
+    test.skip(!isDesktopOfEachEngine(testInfo), 'runs once per browser engine');
+    const s = await openLoop(page);
+    await expect(s.dots).toHaveCount(6);
+    for (const index of [5, 0, 4, 1, 3, 2, 5, 0]) {
+      await s.dots.nth(index).click();
+      await expectFront(s, index);
+      await expect(s.dots.nth(index)).toHaveAttribute('aria-label', new RegExp(`, ${index + 1} of 6$`));
+    }
+  });
+
+  test('loop: look-alike cards are hidden from screen readers, not tabbable, and the real cards are one set', async ({ page }, testInfo) => {
+    test.skip(!isDesktopOfEachEngine(testInfo), 'runs once per browser engine');
+    const s = await openLoop(page);
+    const clones = s.section.locator('[data-game-clone]');
+    expect(await clones.count()).toBeGreaterThan(0);
+    for (const clone of await clones.all()) {
+      await expect(clone).toHaveAttribute('aria-hidden', 'true');
+      await expect(clone).toHaveAttribute('tabindex', '-1');
+      await expect(clone).not.toHaveAttribute('data-game-card', /.*/);
+    }
+    // Exactly one real set: six cards that are announced, each a different game.
+    await expect(s.cards).toHaveCount(6);
+    await expect(s.section.locator('a[data-game-card]:not([aria-hidden])')).toHaveCount(6);
+    // Tabbing through the row visits each real card once and never a look-alike.
+    await s.cards.nth(0).focus();
+    const visited: string[] = [];
+    for (let i = 0; i < 12; i += 1) {
+      await page.keyboard.press('Tab');
+      const info = await page.evaluate(() => {
+        const el = document.activeElement as HTMLElement | null;
+        return { clone: !!el?.closest('[data-game-clone]'), id: el?.getAttribute('data-game-card') ?? '' };
+      });
+      expect(info.clone).toBe(false);
+      if (info.id) visited.push(info.id);
+    }
+    expect(new Set(visited).size).toBe(visited.length);
+    // The names read out are one per game: "N of 6" on the dots, none on look-alikes.
+    await expect(s.section.locator('[data-games-dot]')).toHaveCount(6);
+    await expect(s.section.locator('[data-game-clone] [aria-label]')).toHaveCount(0);
+  });
+
+  test('loop: reduced motion still wraps, with no sliding', async ({ browser }, testInfo) => {
+    test.skip(!isDesktopOfEachEngine(testInfo), 'runs once per browser engine');
+    const context = await browser.newContext({ baseURL: testInfo.project.use.baseURL, reducedMotion: 'reduce' });
+    try {
+      const page = await context.newPage();
+      const s = await openLoop(page);
+      const track = s.section.locator('[data-games-track]');
+      await s.section.locator('[data-games-prev]').click();
+      await expectFront(s, 5);
+      // The site's reduced-motion rule leaves 0.01 ms, which is no visible slide.
+      expect(await track.evaluate((el) => Number.parseFloat(getComputedStyle(el).transitionDuration))).toBeLessThan(0.001);
+      await s.section.locator('[data-games-next]').click();
+      await expectFront(s, 0);
+      await s.section.locator('[data-games-next]').click();
+      await expectFront(s, 1);
+    } finally {
+      await context.close();
+    }
+  });
+
+  test('loop: touch swipe goes round both ways across the join (phone)', async ({ browser }, testInfo) => {
+    test.skip(!isDesktopOfEachEngine(testInfo), 'runs once per browser engine');
+    const context = await browser.newContext({
+      baseURL: testInfo.project.use.baseURL,
+      viewport: { width: 390, height: 844 },
+      hasTouch: true,
+      isMobile: true,
+    });
+    try {
+      const page = await context.newPage();
+      const s = await openLoop(page);
+      const car = s.section.locator('[data-games-car]');
+      const swipe = async (startX: number, endX: number) => {
+        const start = { identifier: 0, clientX: startX, clientY: 200 };
+        const move = { identifier: 0, clientX: (startX + endX) / 2, clientY: 200 };
+        const end = { identifier: 0, clientX: endX, clientY: 200 };
+        await car.dispatchEvent('touchstart', { touches: [start], targetTouches: [start], changedTouches: [start] });
+        await car.dispatchEvent('touchmove', { touches: [move], targetTouches: [move], changedTouches: [move] });
+        await car.dispatchEvent('touchend', { touches: [], targetTouches: [], changedTouches: [end] });
+      };
+      await swipe(100, 300); // swipe right from the first game: back to the last
+      await expectFront(s, 5);
+      await swipe(300, 100); // swipe left from the last game: forward to the first
+      await expectFront(s, 0);
+      for (let step = 1; step <= 7; step += 1) {
+        await swipe(300, 100);
+        await expectFront(s, step % 6);
+      }
+      expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0);
+    } finally {
+      await context.close();
+    }
+  });
+
+  test('loop: status badges also fill the look-alike cards, and the page has no axe violations with the loop in place', async ({ page }, testInfo) => {
+    test.skip(!isDesktopOfEachEngine(testInfo), 'runs once per browser engine');
+    const s = await openLoop(page);
+    await s.section.locator('[data-games-prev]').click();
+    await expectFront(s, 5);
+    const results = await new AxeBuilder({ page })
+      .include('#daily-games')
+      .withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa'])
+      .analyze();
+    expect(results.violations).toEqual([]);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0);
   });
 
   test('hover and focus plays looping demo, paused when idle', async ({ page }, testInfo) => {

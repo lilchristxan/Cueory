@@ -1,6 +1,6 @@
 /**
  * Daily games carousel on Home v2 (nurse's station games).
- * Wraps 6 playing cards (280x392), handles previous/next buttons, arrow keys, touch swipe,
+ * Loops 6 playing cards (280x392) in a circle (look-alike cards on each side, swapped silently at the join), handles previous/next buttons, arrow keys, touch swipe, dots,
  * and maintains data-carousel-state="settled|turning".
  */
 import { msUntilLocalMidnight } from '../islands/localmidnight';
@@ -22,6 +22,29 @@ function matchesGame(cardGameId: string, resultGame: string | undefined): boolea
 export function wrapPosition(index: number, count: number): number {
   if (count <= 0) return 0;
   return ((Math.trunc(index) % count) + count) % count;
+}
+
+/**
+ * The shortest way round the circle from one position to another: a whole number of steps in (-count/2, count/2].
+ * A tie (exactly half way round) goes forward. Dots and focus use it so a jump across the join never rewinds the row.
+ */
+export function shortestDelta(from: number, to: number, count: number): number {
+  if (count <= 0) return 0;
+  const forward = wrapPosition(to - from, count);
+  return forward * 2 > count ? forward - count : forward;
+}
+
+/**
+ * The row keeps one set of look-alike cards on each side of the real ones, so a virtual position may run from
+ * -count to 2 * count - 1 and still show a card. True when a position is inside that range.
+ */
+export function fitsClones(virtual: number, count: number): boolean {
+  return count > 0 && virtual >= -count && virtual < 2 * count;
+}
+
+/** True when a virtual position sits on a look-alike card and must be silently swapped for the real one once settled. */
+export function needsSnap(virtual: number, count: number): boolean {
+  return count > 0 && (virtual < 0 || virtual >= count);
 }
 
 /** True when the row is too narrow for two whole cards, so the active card is centred (phones in portrait). */
@@ -67,9 +90,9 @@ export function hydrateGameStatuses(root: HTMLElement): void {
       }
     }
 
-    const statusEls = root.querySelectorAll<HTMLElement>('[data-game-status]');
+    const statusEls = root.querySelectorAll<HTMLElement>('[data-game-status], [data-clone-status]');
     statusEls.forEach((el) => {
-      const gameId = el.getAttribute('data-game-status');
+      const gameId = el.getAttribute('data-game-status') ?? el.getAttribute('data-clone-status');
       if (!gameId) return;
       const done =
         Boolean(today) &&
@@ -99,7 +122,39 @@ export function initGamesCarousel(): void {
   if (!track || !car || cards.length === 0) return;
 
   let activeIndex = 0;
+  // The position the row is showing. It runs past either end onto the look-alike cards (see below) and is swapped
+  // for the matching real position, with no animation, once the slide has settled.
+  let virtualIndex = 0;
+  let moved = false;
   const count = cards.length;
+
+  // The row is a circle: one set of look-alike cards sits before the real ones and one after, so going on from the
+  // last card slides in the first, and going back from the first slides in the last. The look-alikes are hidden from
+  // screen readers, cannot be tabbed to and carry no card marker, so there is still exactly one real set of cards.
+  const makeClone = (card: HTMLAnchorElement): HTMLAnchorElement => {
+    const clone = card.cloneNode(true) as HTMLAnchorElement;
+    clone.removeAttribute('data-game-card');
+    clone.removeAttribute('aria-label');
+    clone.classList.remove('on');
+    clone.setAttribute('aria-hidden', 'true');
+    clone.setAttribute('data-game-clone', '');
+    clone.tabIndex = -1;
+    clone.querySelectorAll<HTMLElement>('[data-game-status]').forEach((el) => {
+      el.setAttribute('data-clone-status', el.getAttribute('data-game-status') ?? '');
+      el.removeAttribute('data-game-status');
+    });
+    return clone;
+  };
+  if (count > 1) {
+    const before = document.createDocumentFragment();
+    const after = document.createDocumentFragment();
+    cards.forEach((card) => {
+      before.appendChild(makeClone(card));
+      after.appendChild(makeClone(card));
+    });
+    track.insertBefore(before, cards[0]);
+    track.appendChild(after);
+  }
 
   const motionQuery = typeof window.matchMedia === 'function'
     ? window.matchMedia('(prefers-reduced-motion: reduce)')
@@ -125,8 +180,51 @@ export function initGamesCarousel(): void {
     return cardWidth + computedGap;
   };
 
-  const updatePosition = (newIndex: number) => {
-    activeIndex = wrapPosition(newIndex, count);
+  /** The row's offset for a virtual position, with the real first card at 0 (the look-alikes before it sit at negative x). */
+  const offsetFor = (virtual: number, step: number): number => {
+    const carWidth = car.clientWidth || 320;
+    const cardWidth = cards[0]?.offsetWidth ?? 0;
+    // Where fewer than two whole cards fit (phones in portrait), the active card is centred with a peek of its
+    // neighbours on both sides, as on the board; elsewhere it stands at the row's left edge.
+    if (centresActiveCard(carWidth, cardWidth, step)) {
+      // The board's first sight of the row (nothing touched yet) keeps the first card at the row's left padding with a
+      // peek of the next; once the visitor moves, every card, the first included, is centred.
+      if (!moved && virtual === 0) return 0;
+      const paddingLeft = parseFloat(getComputedStyle(car).paddingLeft) || 0;
+      return virtual * step + paddingLeft - (carWidth - cardWidth) / 2;
+    }
+    return virtual * step;
+  };
+
+  const paint = (virtual: number, animate: boolean) => {
+    const step = getStep();
+    // Pull the track left by the look-alikes before the real cards so the real first card sits where it always did.
+    // The same amount is added back on the other side so the track keeps the row's width (percent card widths stay put).
+    track.style.marginInlineStart = count > 1 ? `-${count * step}px` : '';
+    track.style.marginInlineEnd = count > 1 ? `${count * step}px` : '';
+    track.style.transition = animate ? 'transform 0.55s cubic-bezier(0.2, 0.7, 0.2, 1)' : 'none';
+    track.style.transform = `translateX(${-offsetFor(virtual, step)}px)`;
+  };
+
+  /** Swaps a look-alike position for the real one, instantly: the two look the same, so nothing visibly moves. */
+  const settle = () => {
+    if (transitionTimer !== undefined) window.clearTimeout(transitionTimer);
+    transitionTimer = undefined;
+    if (needsSnap(virtualIndex, count)) {
+      virtualIndex = activeIndex;
+      paint(virtualIndex, false);
+      void track.offsetWidth; // apply the unanimated jump before any later slide starts
+    }
+    setState('settled');
+  };
+
+  /** Moves the row by a whole number of cards (positive goes forward, negative back; 0 repaints in place). */
+  const move = (delta: number, animate = true) => {
+    // Past the look-alikes, swap to the real position first (only after many quick presses in a row).
+    if (!fitsClones(virtualIndex + delta, count)) settle();
+    virtualIndex += Math.trunc(delta);
+    if (delta !== 0) moved = true;
+    activeIndex = wrapPosition(virtualIndex, count);
 
     cards.forEach((card, idx) => {
       card.classList.toggle('on', idx === activeIndex);
@@ -138,79 +236,61 @@ export function initGamesCarousel(): void {
       else dot.removeAttribute('aria-current');
     });
 
-    const step = getStep();
-    const carWidth = car.clientWidth || 320;
-    const totalScroll = track.scrollWidth || count * step;
-    // scrollWidth is measured from the track's content edge while the viewport's clientWidth includes its
-    // horizontal padding. Account for the padding on both sides so the final card ends exactly at the row's padding.
-    const carStyle = getComputedStyle(car);
-    const paddingRight = parseFloat(carStyle.paddingRight) || 0;
-    const paddingLeftEdge = parseFloat(carStyle.paddingLeft) || 0;
-    const maxScroll = Math.max(0, totalScroll - carWidth + paddingRight + paddingLeftEdge);
-
-    let offset = activeIndex * step;
-    // Where fewer than two whole cards fit (phones in portrait), the active card is centred with a peek of its
-    // neighbours on both sides, as on the board; the first and last cards stop at the row's ends.
-    if (centresActiveCard(carWidth, cards[0]?.offsetWidth ?? 0, step)) {
-      const paddingLeft = parseFloat(getComputedStyle(car).paddingLeft) || 0;
-      offset = activeIndex * step + paddingLeft - (carWidth - (cards[0]?.offsetWidth ?? 0)) / 2;
-    }
-    if (offset > maxScroll) offset = maxScroll;
-    if (offset < 0) offset = 0;
-
     setState('turning');
-    if (isReducedMotion()) {
-      track.style.transition = 'none';
-      track.style.transform = `translateX(-${offset}px)`;
-      setState('settled');
+    if (isReducedMotion() || !animate) {
+      paint(virtualIndex, false);
+      settle();
     } else {
-      track.style.transition = 'transform 0.55s cubic-bezier(0.2, 0.7, 0.2, 1)';
-      track.style.transform = `translateX(-${offset}px)`;
-
+      paint(virtualIndex, true);
       if (transitionTimer !== undefined) window.clearTimeout(transitionTimer);
-      transitionTimer = window.setTimeout(() => {
-        setState('settled');
-      }, 600);
+      transitionTimer = window.setTimeout(settle, 600);
     }
+  };
+
+  /** Moves to a real card by the shortest way round the circle. */
+  const goTo = (index: number, animate = true) => {
+    move(shortestDelta(activeIndex, index, count), animate);
   };
 
   track.addEventListener('transitionend', (e) => {
     if (e.target === track && e.propertyName === 'transform') {
-      if (transitionTimer !== undefined) window.clearTimeout(transitionTimer);
-      setState('settled');
+      settle();
     }
   });
 
   prevBtn?.addEventListener('click', () => {
-    updatePosition(activeIndex - 1);
+    move(-1);
   });
 
   nextBtn?.addEventListener('click', () => {
-    updatePosition(activeIndex + 1);
+    move(1);
   });
 
   dots.forEach((dot, idx) => {
     dot.addEventListener('click', () => {
-      updatePosition(idx);
+      goTo(idx);
     });
   });
 
   root.addEventListener('keydown', (e) => {
     if (e.key === 'ArrowRight') {
       e.preventDefault();
-      updatePosition(activeIndex + 1);
-      cards[activeIndex]?.focus();
+      move(1);
+      cards[activeIndex]?.focus({ preventScroll: true });
     } else if (e.key === 'ArrowLeft') {
       e.preventDefault();
-      updatePosition(activeIndex - 1);
-      cards[activeIndex]?.focus();
+      move(-1);
+      cards[activeIndex]?.focus({ preventScroll: true });
     }
   });
 
   cards.forEach((card, idx) => {
     card.addEventListener('focus', () => {
+      // A browser may scroll the clipped row to show a focused card; the row moves by its own transform instead.
+      car.scrollLeft = 0;
       if (idx !== activeIndex) {
-        updatePosition(idx);
+        // Keyboard focus must be on screen the moment it lands, so this move does not slide.
+        goTo(idx, false);
       }
     });
   });
@@ -247,9 +327,9 @@ export function initGamesCarousel(): void {
     const dy = touch.clientY - startY;
     if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy)) {
       if (dx < 0) {
-        updatePosition(activeIndex + 1);
+        move(1);
       } else {
-        updatePosition(activeIndex - 1);
+        move(-1);
       }
     }
   }, { passive: true });
@@ -299,9 +379,19 @@ export function initGamesCarousel(): void {
   });
 
   window.addEventListener('resize', () => {
-    updatePosition(activeIndex);
+    settle();
+    move(0);
   }, { passive: true });
 
+  // Text size, fonts and window size all change the card step: repaint in place, without a slide, whenever it does.
+  if (typeof ResizeObserver === 'function') {
+    new ResizeObserver(() => {
+      settle();
+      paint(virtualIndex, false);
+    }).observe(cards[0]);
+  }
+
+  paint(virtualIndex, false);
   setState('settled');
 }
 

@@ -8,6 +8,7 @@ import type { Progress } from '../scripts/progress';
 import type { KeyValueStorage } from '../scripts/storage';
 import type { ExportData } from './exportdata';
 import { isPkceVerifierKey } from './supabaseclient';
+import { DELETE_RETURN_PATH, reauthHref } from './deletereauth';
 import { DELETE_REAUTH, DELETE_REAUTH_CODE, DELETE_SIGNED_OUT, studentMessage } from './rpcerrors';
 
 // Keep the download and confirmation contracts together, including the actual saved Progress record.
@@ -131,11 +132,7 @@ export function afterDeletion(storage: KeyValueStorage | undefined): DeletionSto
 
 /** The server enforces ten minutes since a genuine authentication event in the signed AMR claim, not JWT iat. */
 export const DELETE_MAX_SIGN_IN_AGE_SECONDS = 600;
-export const DELETE_RETURN_PATH = '/account#delete';
-
-export function reauthHref(returnTo: string = DELETE_RETURN_PATH): string {
-  return '/signin?next=' + encodeURIComponent(returnTo);
-}
+export { DELETE_RETURN_PATH, reauthHref };
 
 /** Client-side display hint only. The database verifies the Supabase-signed claims independently. */
 function tokenPayload(accessToken: unknown): Record<string, unknown> | undefined {

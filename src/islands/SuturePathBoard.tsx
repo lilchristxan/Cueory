@@ -6,6 +6,8 @@ import { localDay, reportRound } from './gameresults';
 import { printGame } from './gameprint';
 import { useGameHelp } from './GameHelp';
 import GameHeader from './GameHeader';
+import { playGameCue } from './gamesound';
+import { useSharedGameSettings } from './GameSettings';
 import PicclineCue from './PicclineCue';
 import { site } from '../config/site';
 import { shake } from './SutureGame';
@@ -114,6 +116,9 @@ export function PathBoard({ puzzle, name }: Props) {
   const [finger, setFinger] = useState<{ x: number; y: number } | null>(null);
   const [printNote, setPrintNote] = useState('');
   const quietClickUntil = useRef(0);
+  const { soundAllowed } = useSharedGameSettings();
+  const sound = useRef(true);
+  sound.current = soundAllowed();
   const help = useId();
   const howToPlay = useGameHelp('suture');
   const title = useId();
@@ -198,11 +203,17 @@ export function PathBoard({ puzzle, name }: Props) {
     if (firstWordFound(before, next.state)) announceProgress(localDay(today));
     setSaid(submitInWords(next.state, puzzle, next.outcome));
     if (next.outcome.kind === 'unknown') shake(board.current);
+    // Only what the game already says in words and marks: a word found (or the finish), an extra word, or a word it refuses.
+    const kind = next.outcome.kind;
+    if (kind === 'found') playGameCue(pathDone(next.state, puzzle) ? 'solved' : 'good', sound.current);
+    else if (kind === 'extra') playGameCue('good', sound.current);
+    else if (kind !== 'empty') playGameCue('invalid', sound.current);
   };
 
   const add = (cell: Cell) => {
     const next = extend(current.current, puzzle, cell);
     if (next.outcome === 'ignored') return false;
+    playGameCue('place', sound.current);
     apply(next.state);
     return true;
   };
@@ -252,6 +263,7 @@ export function PathBoard({ puzzle, name }: Props) {
 
   const clear = () => {
     if (!current.current.picked.length) return;
+    playGameCue('remove', sound.current);
     apply(clearPicked(current.current));
     setSaid('pick cleared.');
   };
@@ -279,6 +291,7 @@ export function PathBoard({ puzzle, name }: Props) {
     if (event.key === 'Backspace') {
       if (!current.current.picked.length) return;
       event.preventDefault();
+      playGameCue('remove', sound.current);
       apply(backspace(current.current));
       setSaid(current.current.picked.length ? `picked: ${pickedWord(current.current, puzzle).toLowerCase()}` : 'pick cleared.');
       return;
