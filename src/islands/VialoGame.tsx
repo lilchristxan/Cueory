@@ -40,7 +40,7 @@ import GameHeader from './GameHeader';
 import { useSharedGameSettings } from './GameSettings.tsx';
 import { playGameCue } from './gamesound';
 import { browserStorage } from '../scripts/storage';
-import { FORFEIT_EVENT, rememberedForfeits } from '../scripts/printgate';
+import { FORFEIT_EVENT, rememberedForfeits } from './forfeitmemory';
 
 /** The event vialo heard before the shared one; still accepted, with just the day in its detail. */
 const VIALO_FORFEIT_EVENT = 'cueory:vialo-forfeited';

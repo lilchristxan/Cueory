@@ -209,10 +209,10 @@ test.describe('word path: board format (#722)', () => {
     await tapAndSubmit(page, thread.path);
     for (const word of themes) await tapAndSubmit(page, word.path);
     await expect(live(page)).toHaveText(new RegExp(`${total} of ${total}\\. board complete\\.$`));
-    const resultDialog = page.getByTestId('game-result-dialog');
-    await resultDialog.getByRole('button', { name: 'close results' }).click();
+    // The share card (Christian's designs, 25 Nov 2026) replaces the old results dialog; closing it returns to "share".
+    await page.getByTestId('share-dialog-close').click();
+    await expect(page.getByTestId('suture-share-open')).toBeFocused();
     const result = page.getByTestId('suture-result');
-    await expect(result).toBeFocused();
     await expect(result).toContainText(`cueory piccline, sun 1 nov: found ${total} of ${total} answers, the thread 1st, 0 cues.`);
     const kept = JSON.parse((await page.evaluate(() => localStorage.getItem('cueory-game-stats')))!);
     expect(kept.results).toContainEqual({ game: 'suture', day: '2026-11-01', solved: true, tries: 0, hints: 0, specialFirst: true });

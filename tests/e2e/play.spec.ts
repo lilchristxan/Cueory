@@ -554,11 +554,11 @@ test.describe('daily games: sudoku (Task 625)', () => {
       await cells(page).nth(index).click();
       await page.keyboard.press(String(daily.solution[index]));
     }
-    const resultDialog = page.getByTestId('game-result-dialog');
-    await expect(resultDialog.getByRole('button', { name: 'close results' })).toBeFocused();
-    await resultDialog.getByRole('button', { name: 'close results' }).click();
+    // The share card opens over the board; closing it hands focus to the result's share button.
+    await expect(page.getByTestId('share-dialog')).toBeFocused();
+    await page.getByTestId('share-dialog-close').click();
     const result = page.getByTestId('sudoku-result');
-    await expect(result).toBeFocused();
+    await expect(page.getByTestId('sudoku-share-open')).toBeFocused();
     await expect(result).toContainText('solved.');
     await expect(result).toContainText('0 errors');
     for (const copy of await result.locator('p').all()) {

@@ -8,6 +8,15 @@ vi.mock('react', () => ({
   useState: (initial: unknown) => [typeof initial === 'function' ? initial() : initial, () => undefined],
   useRef: (initial: unknown) => ({ current: initial }),
   useEffect: (effect: () => void | (() => void)) => { hooks.effects.push(effect); },
+  lazy: () => () => null,
+  useCallback: (callback: unknown) => callback,
+  Suspense: () => null,
+}));
+
+// The shared settings hook touches the document; the island only needs its reduce-motion flag here.
+vi.mock('../../src/islands/GameSettings.tsx', () => ({
+  useSharedGameSettings: () => ({ reduceMotion: true }),
+  GameSettingsDialog: () => null,
 }));
 
 vi.mock('../../src/islands/sudoku', async (importOriginal) => {
@@ -20,7 +29,7 @@ vi.mock('../../src/islands/sudoku', async (importOriginal) => {
 });
 
 import SudokuGame from '../../src/islands/SudokuGame';
-import { discardPendingResultCard, forgetHeldRounds, GAME_RESULT_CARD_EVENT, GAME_RESULT_EVENT, heldRounds, takePendingResultCards, type GameResultCard, type RoundResult } from '../../src/islands/gameresults';
+import { forgetHeldRounds, GAME_RESULT_CARD_EVENT, GAME_RESULT_EVENT, heldRounds, takePendingResultCards, type GameResultCard, type RoundResult } from '../../src/islands/gameresults';
 
 afterEach(() => {
   hooks.effects.length = 0;
@@ -30,40 +39,12 @@ afterEach(() => {
 });
 
 describe('Sudoku completion before result-host hydration', () => {
-  it('retains one display-only result for a host that subscribes later', () => {
-    vi.stubGlobal('window', new EventTarget());
-    takePendingResultCards();
-    const cleanups: (() => void)[] = [];
-    try {
-      SudokuGame();
-      for (const effect of hooks.effects) {
-        const cleanup = effect();
-        if (cleanup) cleanups.push(cleanup);
-      }
-      const pending = takePendingResultCards();
-      expect(pending).toHaveLength(1);
-      expect(pending[0]).toMatchObject({
-        game: 'sudoku', name: 'sudoku', level: 'easy', result: 'solved', path: '/play/sudoku',
-        stats: [{ label: 'time', value: '00:00' }, { label: 'errors', value: '0' }],
-      });
-      expect(pending[0]).not.toHaveProperty('entries');
-      expect(pending[0]).not.toHaveProperty('solution');
-      expect(takePendingResultCards()).toEqual([]);
-    } finally {
-      for (const cleanup of cleanups.reverse()) cleanup();
-    }
-  });
-
-  it('delivers once to an already mounted host without retaining a duplicate card', () => {
+  it('no longer sends the old result card: the share dialog opened by the island replaces it', () => {
     const target = new EventTarget();
     vi.stubGlobal('window', target);
     takePendingResultCards();
     const received: GameResultCard[] = [];
-    target.addEventListener(GAME_RESULT_CARD_EVENT, (event) => {
-      const card = (event as CustomEvent<GameResultCard>).detail;
-      received.push(card);
-      discardPendingResultCard(card);
-    });
+    target.addEventListener(GAME_RESULT_CARD_EVENT, (event) => received.push((event as CustomEvent<GameResultCard>).detail));
     const cleanups: (() => void)[] = [];
     try {
       SudokuGame();
@@ -71,8 +52,7 @@ describe('Sudoku completion before result-host hydration', () => {
         const cleanup = effect();
         if (cleanup) cleanups.push(cleanup);
       }
-      expect(received).toHaveLength(1);
-      expect(received[0]).toMatchObject({ game: 'sudoku', level: 'easy', result: 'solved' });
+      expect(received).toEqual([]);
       expect(takePendingResultCards()).toEqual([]);
     } finally {
       for (const cleanup of cleanups.reverse()) cleanup();

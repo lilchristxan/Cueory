@@ -11,6 +11,17 @@
   page, and the word path part of it still prints clean (print.css hides [data-print-hidden], shows [data-print-only]).
 */
 @layer components {
+  /* The quiet solve timer above the board; its line stays even when hidden so the board never moves. */
+  .wordpath-time {
+    block-size: var(--vialo-timer-height);
+    margin: var(--vialo-timer-gap) 0 var(--vialo-timer-gap-below);
+    font-size: var(--text-sm);
+    line-height: var(--vialo-timer-line);
+    text-align: center;
+    color: var(--color-ink-soft);
+    font-variant-numeric: tabular-nums;
+  }
+
   /* The frosted panel around the board (WordPath.png): the shared glass tokens, rounded like the other panels. */
   .wordpath-panel {
     padding-block: var(--spacing-stack);

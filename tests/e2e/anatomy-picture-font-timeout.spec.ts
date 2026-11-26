@@ -1,6 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import { expect, test } from '@playwright/test';
 import { isDesktopOfEachEngine } from './projects';
+import { openLabPanels } from './anatomy-lab-panels';
 
 type FontLoadSpy = {
   requests: string[];
@@ -50,6 +51,7 @@ test('exports an Anatomy Lab PNG when both browser font requests stall', async (
   });
   expect(fontSpyInstalled, 'FontFaceSet.load spy stays installed after navigation').toBe(true);
   await page.getByRole('button', { name: 'open the anatomy lab' }).click();
+  await openLabPanels(page);
   await expect(page.getByRole('button', { name: 'fixture cube A', exact: true }))
     .toBeEnabled({ timeout: 20_000 });
 

@@ -1,0 +1,3 @@
+status: Sudoku share card (Christian's designs, 25 Nov 2026), on the shared dialog from the vialo PR: two canvas-drawn transparent PNG stickers around one fixed, decorative nine by nine pattern (no digits, so nothing of the puzzle is given away), the level on the date line, share / save to gallery / copy sticker, and signed-in-only stats (solve time, percent solved, day streak; signed out shows the solve time only); replaces the old results dialog after a solved sudoku. Stacked on task-games-v2/piccline-share-stickers.
+
+D-pending: share dialogs follow Christian's supplied designs, serif included (Bodoni Moda in the sudoku dialog wordmark and corner tiles, and on every sticker footer), even though D-41 limits Bodoni to marketing headings.

@@ -4,6 +4,7 @@
   /* One accent per game; the card re-declares the Daytime palette (.always-daytime), so these are Daytime values. */
   .share-dialog-vialo { --share-dialog-accent: var(--game-oxblood); }
   .share-dialog-piccline { --share-dialog-accent: var(--color-game-teal); }
+  .share-dialog-sudoku { --share-dialog-accent: var(--sudoku-sticker-espresso); }
 
   /* The dim layer over the play area while the card is open: the glove note's layer and dim, not a second scale. */
   .share-dialog-scrim {
@@ -91,6 +92,32 @@
     block-size: var(--share-dialog-wordmark-height);
     inline-size: auto;
     margin-block-end: var(--share-dialog-wordmark-gap);
+  }
+
+  .share-dialog-corner-tile {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--sudoku-sticker-tile);
+    border: var(--share-dialog-tile-border) solid var(--sudoku-sticker-tile-edge);
+    font-family: var(--font-display);
+    font-size: var(--share-dialog-tile-size);
+    color: var(--sudoku-sticker-espresso);
+  }
+
+  .share-dialog-wordmark-text {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: var(--share-dialog-wordmark-text-size);
+    line-height: 1;
+    letter-spacing: var(--share-dialog-wordmark-text-tracking);
+    color: var(--sudoku-sticker-espresso);
+    text-transform: lowercase;
+  }
+
+  .share-dialog-piccline .share-dialog-wordmark {
+    block-size: var(--share-dialog-wordmark-height-piccline);
+    margin-block-end: var(--share-dialog-wordmark-gap-piccline);
   }
 
   .share-dialog-picker {

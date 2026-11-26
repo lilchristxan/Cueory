@@ -2,12 +2,15 @@ import '../styles/wordpath.css';
 import { useEffect, useId, useRef, useState, type KeyboardEvent, type PointerEvent } from 'react';
 import { dayLabel } from './daily';
 import { localDay, reportRound } from './gameresults';
+import { printGame } from './gameprint';
+import { usePrintRequest } from './useprintrequest';
 import { useGameHelp } from './GameHelp';
 import GameHeader from './GameHeader';
 import PicclineCue from './PicclineCue';
 import { site } from '../config/site';
 import { announceProgress } from './suturepath';
 import PrintLogo from './PrintLogo';
+
 import { cellLabel, clearPick, foundWord, isDone, moveCursor, outcomeInWords, parsePuzzle, pick, printableWords, selection, shareLine, startSuture, type Cell, type SuturePuzzle } from './suture';
 
 interface Props { puzzle: SuturePuzzle; name: string; framed?: boolean }
@@ -44,6 +47,8 @@ export function shake(element: HTMLElement | null) {
 }
 
 function Board({ puzzle, name, framed = false }: Props) {
+  // The Frame's printer button announces the print; this is what the old print button ran.
+  usePrintRequest('suture', () => printGame('suture'));
   const [state, setState] = useState(() => startSuture(puzzle));
   const [focused, setFocused] = useState(0);
   const [said, setSaid] = useState('');

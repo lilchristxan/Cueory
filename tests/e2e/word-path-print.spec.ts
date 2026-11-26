@@ -240,33 +240,15 @@ test.describe('printing an unfinished board', () => {
     await expect(game(page).locator('button[data-cell]').first()).toBeEnabled();
   });
 
-  test('a forfeit confirmed before the board has loaded still ends the board once it does', async ({ page }) => {
-    // Hold the board's own file (the print entry loads first), open the page from the hub link, and print anyway.
-    let release!: () => void;
-    const held = new Promise<void>((resolve) => { release = resolve; });
-    let asked = false;
-    await page.route('**/_astro/SutureToday*.js', async (route) => {
-      asked = true;
-      await held;
-      await route.continue();
-    });
-    await page.goto('/play/piccline#print');
-    await expect.poll(() => asked).toBe(true);
-    await expect(warning(page)).toBeVisible();
-    await warning(page).getByRole('button', { name: 'print anyway' }).click();
-    await expect.poll(() => printed(page)).toBe(1);
-    expect(await game(page).count()).toBe(0);
-    release();
-    await expect(game(page).getByTestId('suture-forfeit-note')).toBeVisible();
-    await expect(game(page).locator('button[data-cell]').first()).toBeDisabled();
-  });
+  // A forfeit cannot be confirmed before piccline's board hears it: the print entry and the part that hears a forfeit load
+  // together (PicclineForfeit), so the forfeit note test above covers it.
 
   test('a press before the print island has loaded is remembered and answered once, when it is ready', async ({ page }) => {
     // Hold the print island's file, so the board and its printer button are up while nothing is listening yet.
     let release!: () => void;
     const held = new Promise<void>((resolve) => { release = resolve; });
     let asked = false;
-    await page.route('**/_astro/PicclinePrint*.js', async (route) => {
+    await page.route('**/_astro/PicclineForfeit*.js', async (route) => {
       asked = true;
       await held;
       await route.continue();
@@ -297,7 +279,7 @@ test.describe('printing an unfinished board', () => {
     const frameHeld = new Promise<void>((resolve) => { releaseFrame = resolve; });
     const islandHeld = new Promise<void>((resolve) => { releaseIsland = resolve; });
     await page.route('**/_astro/GameFrameControls*.js', async (route) => { await frameHeld; await route.continue(); });
-    await page.route('**/_astro/PicclinePrint*.js', async (route) => { await islandHeld; await route.continue(); });
+    await page.route('**/_astro/PicclineForfeit*.js', async (route) => { await islandHeld; await route.continue(); });
     await page.goto('/play/piccline');
     releaseFrame();
     const button = page.getByTestId('game-frame-print');
@@ -314,7 +296,7 @@ test.describe('printing an unfinished board', () => {
     await finish(page);
     let release!: () => void;
     const held = new Promise<void>((resolve) => { release = resolve; });
-    await page.route('**/_astro/PicclinePrint*.js', async (route) => {
+    await page.route('**/_astro/PicclineForfeit*.js', async (route) => {
       await held;
       await route.continue();
     });
@@ -332,11 +314,14 @@ test.describe('printing an unfinished board', () => {
   });
 });
 
-test('the older word path route has no print button', async ({ page }) => {
+test('the older word path route keeps its older print (the Frame printer, no two-page sheet)', async ({ page }) => {
   await page.goto('/play/word-path');
   await expect(game(page)).toBeVisible();
-  await expect(page.getByTestId('game-frame-print')).toHaveCount(0);
+  await expect(page.getByTestId('game-frame-print')).toBeVisible();
   await expect(page.getByTestId('print-sheet')).toHaveCount(0);
+  await page.getByTestId('game-frame-print').click();
+  await expect.poll(() => printed(page)).toBe(1);
+  await expect(page.getByTestId('suture-print-note')).toHaveCount(1);
 });
 
 test.describe('from /play', () => {
