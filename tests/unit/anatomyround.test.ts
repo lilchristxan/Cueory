@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  answerCells, backspace, currentTarget, formatClock, hintLetter, nameWords, nextQuestion, roundFinished, roundRows,
+  answerCells, backspace, describeAnswer, currentTarget, formatClock, hintLetter, nameWords, nextQuestion, roundFinished, roundRows,
   setFirstLetters, setNearby, showAnswer, skipQuestion, startRound, typeLetter, type StudyRound,
 } from '../../src/islands/anatomyround';
 
@@ -164,5 +164,24 @@ describe('streak, rows and clock', () => {
     const round = startRound('test', ['A']);
     expect(setNearby(round, true).nearby).toBe(true);
     expect(setNearby(round, false)).toBe(round);
+  });
+});
+
+describe('describeAnswer (what a screen reader hears of the cells)', () => {
+  it('says blank for empty cells and marks given letters', () => {
+    let round = type(startRound('test', ['A']), 'x');
+    round = hintLetter(round, NAMES.A!);
+    const heard = describeAnswer(answerCells(round, NAMES.A!));
+    expect(heard).toBe('word 1: x, e (hint), blank, blank. word 2: blank, blank, blank, blank');
+  });
+  it('never contains an unrevealed letter, and first letters are marked', () => {
+    const round = setFirstLetters(startRound('test', ['A']), true);
+    const heard = describeAnswer(answerCells(round, NAMES.A!));
+    expect(heard).toBe('word 1: t (first letter), blank, blank, blank. word 2: c (first letter), blank, blank, blank');
+    expect(heard).not.toMatch(/\b[esu]\b/);
+  });
+  it('speaks the whole answer once it is shown', () => {
+    const heard = describeAnswer(answerCells(showAnswer(startRound('test', ['C'])), NAMES.C!));
+    expect(heard).toBe('word 1: p, l, a, i, n');
   });
 });

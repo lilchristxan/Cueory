@@ -128,6 +128,42 @@ test.describe('anatomy lab study round', () => {
     await expect(cells(page)).toHaveCount(0);
   });
 
+  test('layer toggles and peeling cannot hide the structure being asked about', async ({ page }) => {
+    await openLab(page);
+    await begin(page, 'test it');
+    const layers = page.getByRole('group', { name: 'layers, skin to bone' });
+    // The round shows only the asked structure. Hiding its layer, by button or by peeling, must leave it showing.
+    await expect(layers).toContainText('1 of 3 showing');
+    await layers.getByRole('button', { name: 'organs (2)', exact: true }).click();
+    await expect(layers).toContainText('1 of 3 showing');
+    const peel = layers.getByRole('button', { name: /^peel a layer/ });
+    while (await peel.isEnabled()) {
+      await peel.click();
+      await expect(layers).toContainText('1 of 3 showing');
+    }
+  });
+
+  test('the cells are spoken, a hint is announced, and the answer is not in the accessibility tree before it is shown', async ({ page }) => {
+    await openLab(page);
+    await begin(page, 'test it');
+    const answer = page.getByTestId('anatomy-study-answer');
+    const status = page.getByTestId('anatomy-study-status');
+    await expect(cells(page)).toHaveAttribute('aria-label', /^type the name: 12 letters in 3 words\. word 1: blank, /);
+    expect(await answer.ariaSnapshot()).not.toMatch(/fixture|cube/i);
+    // The bottom bar (labels, more and the worksheet) is put away while a round runs, so nothing can draw or print the names.
+    await expect(page.getByRole('button', { name: 'labels', exact: true })).toHaveCount(0);
+    await typeName(page, 'f');
+    await expect(cells(page)).toHaveAttribute('aria-label', /word 1: f, blank/);
+    await expect(status).toContainText('1 of 12 letters. word 1: f, blank');
+    await page.getByRole('button', { name: 'hint: next letter' }).click();
+    await expect(status).toContainText('i (hint)');
+    await expect(cells(page)).toHaveAttribute('aria-label', /word 1: f, i \(hint\), blank/);
+    expect(await answer.ariaSnapshot()).not.toMatch(/fixture cube/i);
+    await side(page).getByRole('switch', { name: /first letters/ }).click();
+    await expect(status).toContainText('f (first letter)');
+    expect((await new AxeBuilder({ page }).withTags(axeTags).analyze()).violations).toEqual([]);
+  });
+
   test('learn it: the name is shown, and typing it moves on', async ({ page }) => {
     await openLab(page);
     await begin(page, 'learn it');

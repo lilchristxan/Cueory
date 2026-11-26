@@ -4,7 +4,7 @@
  * their keys. The state lives in anatomyround.ts; this file only draws it and passes presses back.
  */
 import { useEffect, useRef, useState, type KeyboardEvent, type RefObject } from 'react';
-import { answerCells, currentTarget, formatClock, roundFinished, roundRows, type StudyMode, type StudyRound } from './anatomyround';
+import { answerCells, currentTarget, describeAnswer, formatClock, roundFinished, roundRows, type StudyMode, type StudyRound } from './anatomyround';
 
 export type StudyChoice = StudyMode | 'find';
 
@@ -176,6 +176,8 @@ export function StudyCells({
     if (event.key === 'Enter' && settled) { event.preventDefault(); onNext(); return; }
     if (event.key.length === 1 && /[a-z0-9]/i.test(event.key)) { event.preventDefault(); onLetter(event.key); }
   };
+  // What the cells hold so far, in words: the cells themselves are pictures and are hidden from a screen reader.
+  const spoken = describeAnswer(cells);
   const nextEmpty = cells.flat().findIndex((cell) => cell.from === 'empty');
   let position = -1;
   return (
@@ -185,7 +187,7 @@ export function StudyCells({
         ref={box}
         role="group"
         tabIndex={0}
-        aria-label={`type the name: ${total} letters in ${cells.length} ${cells.length === 1 ? 'word' : 'words'}`}
+        aria-label={`type the name: ${total} letters in ${cells.length} ${cells.length === 1 ? 'word' : 'words'}. ${spoken}`}
         className="lab-cells"
         onKeyDown={onKey}
         data-testid="anatomy-cells"
@@ -211,7 +213,7 @@ export function StudyCells({
         ))}
       </div>
       <p className="sr-only" role="status" aria-live="polite" data-testid="anatomy-study-status">
-        {round.feedback === 'right' ? 'right.' : round.feedback === 'shown' ? `the name is ${official}.` : round.feedback === 'wrong' ? 'not quite. take a letter back and try again.' : `${filled} of ${total} letters.`}
+        {round.feedback === 'right' ? 'right.' : round.feedback === 'shown' ? `the name is ${official}.` : round.feedback === 'wrong' ? `not quite. take a letter back and try again. ${spoken}` : `${filled} of ${total} letters. ${spoken}`}
       </p>
       <p className="text-center text-sm" data-testid="anatomy-study-feedback">
         {round.feedback === 'right' && <><span aria-hidden="true">✓ </span>right: {official}.</>}

@@ -1432,6 +1432,17 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
     if (scene) window.requestAnimationFrame(() => sceneRef.current?.viewPreset(orientationRef.current === 'back' || orientationRef.current === 'left' ? orientationRef.current : 'front'));
   }, [studyActive, studyTargetNow, studyNearbyNow, system, visibilityIntent]);
 
+  // A layer toggle or peel can hide the structure being asked about: it stays showing while a round runs, as in "name it".
+  useEffect(() => {
+    if (!studyActive || !studyTargetNow || !hidden.has(studyTargetNow)) return;
+    setHidden((current) => {
+      if (!current.has(studyTargetNow)) return current;
+      const next = new Set(current);
+      next.delete(studyTargetNow);
+      return next;
+    });
+  }, [studyActive, studyTargetNow, hidden]);
+
   // The ring and leader follow the selection while it can be seen and no test is hiding its name.
   const markedId = modelReady && selected !== null && foundSet.has(selected) && !hidden.has(selected) && !quiz && !recall ? selected : null;
   useEffect(() => {
@@ -1747,6 +1758,8 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
     studyGroupRef.current = { name: selectedIndex.group, ids: groupIds };
     visibilityIntent.bump();
     setHidden(allBut(groupIds));
+    // A made worksheet lists the names: it cannot stay open under a test.
+    if (studyChoice === 'test') setWorksheet(null);
     studyStartRef.current = Date.now();
     setRound(startRound(studyChoice, groupIds));
   };
@@ -2139,7 +2152,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
                 type="button"
                 className={`${secondaryButton} min-h-(--lab-bar-button)`}
                 aria-pressed={labelsOn}
-                disabled={!ready || quiz !== null || recall !== null}
+                disabled={!ready || quiz !== null || namesHidden}
                 onClick={() => setLabelsOn((on) => !on)}
               >
                 labels
@@ -3116,7 +3129,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
             <button
               type="button"
               className={secondaryButton}
-              disabled={!ready || worksheetBusy || recall !== null || exporting !== null}
+              disabled={!ready || worksheetBusy || namesHidden || exporting !== null}
               onClick={() => void makeWorksheet()}
             >
               make a worksheet

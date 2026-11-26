@@ -98,6 +98,18 @@ export function answerCells(round: StudyRound, official: string): StudyCell[][] 
   return cells;
 }
 
+/**
+ * The answer as a screen reader hears it: each word's cells in order, a letter where one is filled and "blank" where
+ * not, with where a letter came from when it was given. Only cells already filled (typed, hinted, first letters, or
+ * the shown answer) have a letter at all, so an unrevealed letter can never be in this text.
+ */
+export function describeAnswer(cells: readonly (readonly StudyCell[])[]): string {
+  const given: Record<StudyCell['from'], string> = { empty: '', first: ' (first letter)', hint: ' (hint)', typed: '', shown: '' };
+  return cells
+    .map((word, index) => `word ${index + 1}: ${word.map((cell) => (cell.from === 'empty' ? 'blank' : `${cell.letter}${given[cell.from]}`)).join(', ')}`)
+    .join('. ');
+}
+
 /** The letters of the official name, in order, as the cells hold them. */
 const officialLetters = (official: string): string[] => [...nameWords(official).join('')];
 
