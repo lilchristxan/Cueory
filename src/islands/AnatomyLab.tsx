@@ -1943,7 +1943,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
           )}
             </div>
 
-            <div className="lab-glass absolute bottom-3 left-1/2 z-10 flex max-w-full -translate-x-1/2 items-center gap-3 p-2 pr-4" role="group" aria-label="bottom bar">
+            <div className="lab-glass absolute inset-x-0 bottom-3 z-10 mx-auto flex w-fit max-w-full items-center gap-3 p-2 pr-4" role="group" aria-label="bottom bar">
               <button
                 type="button"
                 className={secondaryButton}
