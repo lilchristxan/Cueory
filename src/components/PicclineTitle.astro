@@ -7,6 +7,10 @@ interface Props {
   name?: string;
 }
 
+import { imageLogo } from '../config/gamelogos';
+
+const art = imageLogo('piccline').wordmark;
+const boxWidth = Math.round((art.width / art.height) * 100);
 const { name = 'piccline' } = Astro.props;
 ---
 
@@ -15,20 +19,20 @@ const { name = 'piccline' } = Astro.props;
   <span class="logo flex items-center" aria-hidden="true">
     <img
       class="logo-day h-10 sm:h-12 w-auto"
-      src="/brand/games/piccline-wordmark-light.svg"
+      src={art.day}
       alt=""
       aria-hidden="true"
-      width="248"
+      width={boxWidth}
       height="100"
       loading="lazy"
       decoding="async"
     />
     <img
       class="logo-evening h-10 sm:h-12 w-auto"
-      src="/brand/games/piccline-wordmark-dark.svg"
+      src={art.evening}
       alt=""
       aria-hidden="true"
-      width="248"
+      width={boxWidth}
       height="100"
       loading="lazy"
       decoding="async"

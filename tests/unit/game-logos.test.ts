@@ -4,7 +4,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 // The .tsx extension is explicit: on a case-insensitive disk a bare 'PlayStatus' would resolve to playstatus.ts first.
 import PlayStatus from '../../src/islands/PlayStatus.tsx';
-import { gameLogos, type GameLogoKey } from '../../src/config/gamelogos';
+import { gameLogos, imageLogo, type GameLogoKey } from '../../src/config/gamelogos';
 import { hubLines } from '../../src/config/homegames';
 
 // One logo source (src/config/gamelogos.ts) feeds the home carousel and the /play hub, and must equal what the game
@@ -187,5 +187,35 @@ describe("piccline's wordmark is drawn larger so it stands a little above the ot
     if (source.kind !== 'image') throw new Error('image art expected');
     expect(source.wordmark.day.endsWith('piccline-wordmark-light.svg')).toBe(true);
     expect(source.wordmark.evening.endsWith('piccline-wordmark-dark.svg')).toBe(true);
+  });
+});
+
+describe('the game deck on a game page shows the same art as the carousel, hub and sidebar (Christian, 2026-11-25)', () => {
+  const deckSource = readFileSync(new URL('../../src/components/GameDeck.astro', import.meta.url), 'utf8');
+  const deckPage = readFileSync(new URL('../../dist/play/sudoku.html', import.meta.url), 'utf8');
+  const deckItem = (id: string) => {
+    const match = deckPage.match(new RegExp(`<li class="game-deck-item"[^>]*data-game="${id}"[\\s\\S]*?</li>`));
+    if (!match) throw new Error(`the built sudoku page has no ${id} deck card`);
+    return match[0];
+  };
+
+  it('builds no logo path of its own', () => {
+    expect(deckSource).not.toMatch(/\/brand\/games|games-v2\/assets|\.svg/);
+    expect(deckSource).toContain("from '../config/gamelogos'");
+  });
+
+  for (const [key, id] of [['vialo', 'pulse'], ['piccline', 'suture']] as const) {
+    it(`${key}: the deck's icon and wordmark files are gamelogos' files, Light and Evening`, () => {
+      const source = imageLogo(key);
+      const found = new Set(srcs(deckItem(id)));
+      expect(found).toEqual(new Set([...Object.values(source.deckIcon ?? source.icon), source.wordmark.day, source.wordmark.evening]));
+    });
+  }
+
+  it('tachyyy (a draft game, so on the page only when drafts are shown): its deck art is gamelogos\' light icon and wordmarks', () => {
+    const page = readFileSync(new URL('../../dist/play/sudoku.html', import.meta.url), 'utf8');
+    if (!page.includes('data-game="stat"')) return;
+    const found = new Set(srcs(deckItem('stat')));
+    expect(found).toEqual(new Set([gameLogos.tachyyy.icon.day, gameLogos.tachyyy.wordmark.day, gameLogos.tachyyy.wordmark.evening]));
   });
 });

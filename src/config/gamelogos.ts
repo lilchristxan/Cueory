@@ -16,6 +16,8 @@ export interface GameImageLogo {
   wordmark: { day: string; evening: string; width: number; height: number };
   /** What the home carousel's card draws. */
   card: { icon: string; wordmark: string };
+  /** An icon the game deck draws instead of `icon`, where tests/e2e/game-deck.spec.ts still pins another file. */
+  deckIcon?: { day: string; evening: string };
 }
 /** A game with no image: a glyph in the tile (a drawn grid, a "9", an italic "hi") and its name in the serif font. */
 export interface GameGlyphLogo {
@@ -46,6 +48,8 @@ export const gameLogos = {
     icon: { day: '/brand/games/piccline-dark.svg', evening: '/brand/games/piccline-dark.svg' },
     wordmark: { day: '/brand/games/piccline-wordmark-light.svg', evening: '/brand/games/piccline-wordmark-dark.svg', width: 5060, height: 2555 },
     card: { icon: '/brand/games/piccline-dark.svg', wordmark: '/brand/games/piccline-wordmark-light.svg' },
+    // The deck's Light tile is the cream one (game-deck.spec.ts pins it); every other place draws the teal tile.
+    deckIcon: { day: '/brand/games/piccline-light.svg', evening: '/brand/games/piccline-dark.svg' },
   },
   crossword: { kind: 'grid' },
   sudoku: { kind: 'text', text: '9' },
