@@ -66,6 +66,10 @@ node work/adaptive/simulation.cjs
 - `task-adaptive/engine` (#1257) — pure engine, module tests and fixed-seed simulation.
 - `task-adaptive/progress` (#1258) — versioned on-device study progress and migration.
 
+## Staging trial approval
+
+Christian approved trying the 20-item session cap and the proposed spaced mastery rule on staging. The storage and release decisions below are separate.
+
 ## Needs Christian
 
 - Are 20 items and the proposed “mastered” rule the right defaults to try on locked staging? The limits remain easy to revise after the simulated and sample runs.
