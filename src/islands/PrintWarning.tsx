@@ -42,7 +42,7 @@ export default function PrintWarning({ open, error, onFinish, onPrint, onCancel 
       className="m-auto w-(--sheet-dialog-width) rounded-xl border border-line bg-page p-6 text-ink backdrop:bg-ink/40"
       onCancel={(event) => { event.preventDefault(); onCancel(); }}
     >
-      <h2 id="print-warning-heading" className="display text-2xl font-medium">print before you finish?</h2>
+      <h2 id="print-warning-heading" className="text-2xl">print before you finish?</h2>
       <p id="print-warning-body" className="mt-3 text-base">
         the printed copy shows today&apos;s answers. if you print now, today&apos;s game will be marked wrong and incomplete. finish the game first to keep your result.
       </p>

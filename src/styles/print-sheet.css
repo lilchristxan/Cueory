@@ -119,7 +119,7 @@
 
   /* Page 2: how to play. */
   .sheet-heading { font-family: var(--font-display); font-weight: 500; font-size: var(--sheet-heading); line-height: 1.2; margin-block: var(--sheet-gap) !important; text-align: center; }
-  .sheet-steps { box-sizing: border-box; inline-size: 100%; max-inline-size: var(--sheet-steps-width); margin: 0; padding-inline-start: 1.2em; list-style: decimal; font-size: var(--sheet-text); }
+  .sheet-steps { box-sizing: border-box; inline-size: 100%; max-inline-size: var(--sheet-steps-width); margin: 0; padding-inline-start: var(--sheet-steps-indent); list-style: decimal; font-size: var(--sheet-text); }
   .sheet-page-two .sheet-steps { flex: 1 0 auto; }
   .sheet-steps > li + li { margin-block-start: var(--sheet-step-gap); }
   .sheet-legend { list-style: none; margin: var(--sheet-step-gap) 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--sheet-gap) var(--sheet-legend-gap); font-size: var(--sheet-label); }

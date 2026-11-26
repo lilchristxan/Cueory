@@ -302,3 +302,38 @@ test.describe('from /play', () => {
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   });
 });
+
+test('two print requests during the picture wait print once, keep the word filled, and release after the print', async ({ page }) => {
+  await finish(page);
+  // Pictures take a second to decode, so both requests arrive while the sheet is still being prepared.
+  await page.addInitScript(() => {
+    HTMLImageElement.prototype.decode = () => new Promise<void>((resolve) => setTimeout(resolve, 1000));
+  });
+  await page.goto('/play/vialo');
+  await press(page);
+  await press(page);
+  await expect(keeper(page)).toHaveAttribute('data-keeper', 'ready');
+  await expect.poll(() => printed(page)).toBe(1);
+  await page.waitForTimeout(500);
+  expect(await printed(page)).toBe(1);
+  await expect(keeper(page).locator('[data-keeper-word]')).toHaveText('grace');
+  // A request while the print is still open is ignored too.
+  await press(page);
+  expect(await printed(page)).toBe(1);
+  await page.evaluate(() => window.dispatchEvent(new Event('afterprint')));
+  await expect(keeper(page)).toHaveAttribute('data-keeper', 'locked');
+  // Released: the next request prints again.
+  await press(page);
+  await expect.poll(() => printed(page)).toBe(2);
+});
+
+test('a second request while the warning is open does not stack a second print', async ({ page }) => {
+  await page.goto('/play/vialo');
+  await press(page);
+  await expect(warning(page)).toBeVisible();
+  await press(page);
+  expect(await printed(page)).toBe(0);
+  await warning(page).getByRole('button', { name: 'finish the game first' }).click();
+  await press(page);
+  await expect(warning(page)).toBeVisible();
+});

@@ -5,6 +5,8 @@ import { browserStorage } from '../scripts/storage';
 import { FORFEIT_EVENT, PRINT_EVENT, isFinished, printAnyway, requestPrint } from '../scripts/printgate';
 import { clearKeeper, fillKeeper, keeperFor, sheetImagesReady, type SheetPuzzle } from '../scripts/printsheet';
 
+const PRINT_RELEASE_MS = 120_000;
+
 interface Props {
   puzzles: readonly SheetPuzzle[];
 }
@@ -20,23 +22,48 @@ export default function VialoPrint({ puzzles }: Props) {
   const [error, setError] = useState('');
   const opener = useRef<Element | null>(null);
 
+  // One print at a time: set while the sheet is being prepared and until the print is over, and while the warning is
+  // open, so a second request cannot fill or clear the same keeper box (Codex on #1222).
+  const busy = useRef(false);
+
   const print = async () => {
-    const now = new Date();
-    const keeper = keeperFor(puzzles, loadStats(browserStorage(), localDay(now)), now);
-    if (keeper) fillKeeper(keeper);
-    await sheetImagesReady();
-    window.addEventListener('afterprint', () => clearKeeper(), { once: true });
-    window.print();
+    busy.current = true;
+    let fallback = 0;
+    const release = () => {
+      window.clearTimeout(fallback);
+      window.removeEventListener('afterprint', release);
+      clearKeeper();
+      busy.current = false;
+    };
+    try {
+      const now = new Date();
+      const keeper = keeperFor(puzzles, loadStats(browserStorage(), localDay(now)), now);
+      if (keeper) fillKeeper(keeper);
+      await sheetImagesReady();
+      window.addEventListener('afterprint', release, { once: true });
+      // Some browsers never send afterprint: let go after two minutes so printing cannot stay switched off.
+      fallback = window.setTimeout(release, PRINT_RELEASE_MS);
+      window.print();
+    } catch {
+      release();
+    }
   };
 
   const request = () => {
+    if (busy.current) return;
     const day = localDay(new Date());
     const saved = loadStats(browserStorage(), day);
     requestPrint({ finished: isFinished(saved.stats, 'vialo', day), keepsResults: saved.on }, () => void print(), () => {
+      busy.current = true;
       setError('');
       opener.current = document.activeElement;
       setWarning(true);
     });
+  };
+
+  const closeWarning = () => {
+    busy.current = false;
+    setWarning(false);
   };
 
   useEffect(() => {
@@ -57,6 +84,7 @@ export default function VialoPrint({ puzzles }: Props) {
     const ok = printAnyway(browserStorage(), 'vialo', day, 6, () => {
       window.dispatchEvent(new CustomEvent(FORFEIT_EVENT, { detail: { day } }));
       setWarning(false);
+      busy.current = false;
       void print();
     });
     // The day could not be saved: keep the dialog open and say so; nothing prints and nothing changes.
@@ -67,9 +95,9 @@ export default function VialoPrint({ puzzles }: Props) {
     <PrintWarning
       open={warning}
       error={error}
-      onFinish={() => setWarning(false)}
+      onFinish={closeWarning}
       onPrint={confirm}
-      onCancel={() => setWarning(false)}
+      onCancel={closeWarning}
     />
   );
 }

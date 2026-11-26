@@ -554,6 +554,7 @@
   --sheet-foot: 10pt;
   --sheet-line-height: 1.5;
   --sheet-heading: 32pt;        /* "how to play", set in Bodoni Moda */
+  --sheet-steps-indent: 1.2em;  /* how far the numbered steps on page 2 are indented, room for the numbers */
   --sheet-word: 54pt;           /* the word of the day */
   --sheet-word-tracking: 0.18em;
   --sheet-steps-width: 7in;
