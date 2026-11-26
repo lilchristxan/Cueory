@@ -10,6 +10,7 @@ import PicclineCue from './PicclineCue';
 import { site } from '../config/site';
 import { announceProgress } from './suturepath';
 import PrintLogo from './PrintLogo';
+
 import { cellLabel, clearPick, foundWord, isDone, moveCursor, outcomeInWords, parsePuzzle, pick, printableWords, selection, shareLine, startSuture, type Cell, type SuturePuzzle } from './suture';
 
 interface Props { puzzle: SuturePuzzle; name: string; framed?: boolean }

@@ -229,6 +229,25 @@ test.describe('printing an unfinished game', () => {
     await expect(page.getByTestId('play-status-words').first()).toHaveText('not solved');
   });
 
+  test('a forfeit confirmed before the game has loaded still ends the game once it does', async ({ page }) => {
+    let release!: () => void;
+    const held = new Promise<void>((resolve) => { release = resolve; });
+    let asked = false;
+    await page.route('**/_astro/VialoGame*.js', async (route) => {
+      asked = true;
+      await held;
+      await route.continue();
+    });
+    await page.goto('/play/vialo#print');
+    await expect.poll(() => asked).toBe(true);
+    await expect(warning(page)).toBeVisible();
+    await warning(page).getByRole('button', { name: 'print anyway' }).click();
+    await expect.poll(() => printed(page)).toBe(1);
+    release();
+    await expect(page.getByTestId('vialo-result')).toBeVisible();
+    await expect(page.getByLabel('your guess', { exact: true })).toHaveCount(0);
+  });
+
   test('a save that fails keeps the warning open with a plain message, and nothing prints or changes', async ({ page }) => {
     await page.addInitScript(() => {
       const set = Storage.prototype.setItem;
@@ -345,6 +364,26 @@ test('two print requests during the picture wait print once, keep the word fille
   // Released: the next request prints again.
   await press(page);
   await expect.poll(() => printed(page)).toBe(2);
+});
+
+test('with BOTH the Frame controls and the print island delayed, one press prints exactly once', async ({ page }) => {
+  await finish(page);
+  let releaseFrame!: () => void;
+  let releaseIsland!: () => void;
+  const frameHeld = new Promise<void>((resolve) => { releaseFrame = resolve; });
+  const islandHeld = new Promise<void>((resolve) => { releaseIsland = resolve; });
+  await page.route('**/_astro/GameFrameControls*.js', async (route) => { await frameHeld; await route.continue(); });
+  await page.route('**/_astro/VialoPrint*.js', async (route) => { await islandHeld; await route.continue(); });
+  await page.goto('/play/vialo');
+  releaseFrame();
+  const button = page.getByTestId('game-frame-print');
+  await expect(button).toBeVisible();
+  await button.click();
+  expect(await printed(page)).toBe(0);
+  releaseIsland();
+  await expect.poll(() => printed(page)).toBe(1);
+  await expect(sheet(page)).toHaveAttribute('data-print-ready', 'true');
+  expect(await printed(page)).toBe(1);
 });
 
 test('a picture that never arrives holds the print back for the capped wait, and no longer', async ({ page }) => {
