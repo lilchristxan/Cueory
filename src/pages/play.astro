@@ -41,11 +41,11 @@ const showStat = draftsAllowed(helloEnv);
 const game = (id: 'vialo' | 'cueword' | 'triage' | 'suture') => dailyGames.find((entry) => entry.id === id)!;
 const showCrossword = crosswordShown(helloEnv);
 const hubGames = [
-  { id: 'vialo' as const, testId: 'pulse', name: game('vialo').name, line: hubLines.vialo, href: gamePages.vialo, open: true, art: 'vialo' as const, print: true },
+  { id: 'vialo' as const, testId: 'pulse', name: game('vialo').name, line: hubLines.vialo, href: gamePages.vialo, open: true, art: 'vialo' as const, printGame: 'vialo' as const },
   { id: 'tachyyy' as const, testId: 'tachyyy', name: tachyyyGame.name, line: hubLines.tachyyy, href: tachyyyGame.href, open: showStat, art: 'tachyyy' as const, linkTestId: 'tachyyy-link' },
-  { id: 'suture' as const, testId: 'suture', name: game('suture').name, line: hubLines.piccline, href: gamePages.suture, open: true, art: 'piccline' as const },
+  { id: 'suture' as const, testId: 'suture', name: game('suture').name, line: hubLines.piccline, href: gamePages.suture, open: true, art: 'piccline' as const, printGame: 'piccline' as const },
   { id: 'cueword' as const, testId: 'cueword', name: game('cueword').name, line: hubLines.crossword, href: gamePages.cueword, open: showCrossword, art: 'crossword' as const },
-  { id: 'triage' as const, testId: 'triage', name: game('triage').name, line: hubLines.sudoku, href: gamePages.triage, open: true, art: 'sudoku' as const },
+  { id: 'triage' as const, testId: 'triage', name: game('triage').name, line: hubLines.sudoku, href: gamePages.triage, open: true, art: 'sudoku' as const, printGame: 'triage' as const },
   { id: 'hello-cards' as const, testId: 'hello-cards', name: helloCardsGame.name, line: hubLines.helloCards, href: helloCardsGame.href, open: showHello, art: 'helloCards' as const, cards: showHello ? helloPage.starters.length : undefined, linkTestId: 'hello-cards-link' },
 ];
 // The stats list leaves the crossword out while it is closed, like the rows' "coming soon" (site.ts crosswordOpen).

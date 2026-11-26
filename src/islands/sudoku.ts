@@ -500,7 +500,7 @@ export function getResult(input: {
 /* ---------- Parity play tools (#720): levels, modes, candidates, undo, check, validator ---------- */
 
 /** What each level is called on screen. The stored id stays `medium` so seeds and saved results never change. */
-export const LEVEL_LABELS: Readonly<Record<SudokuLevel, string>> = { easy: 'easy', medium: 'medium', hard: 'hard' };
+export { LEVEL_LABELS } from './sudokulevels';
 
 /**
  * The event /play's daily status listens for (PR #761): sent once, on the player's first move of the day, so the list

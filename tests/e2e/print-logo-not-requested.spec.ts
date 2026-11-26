@@ -5,7 +5,8 @@ test.beforeEach(async ({ page }) => { await markGameRulesSeen(page); });
 
 // The print-only logo is not requested on screen (Firefox aborted the hidden request and the console sweep counted
 // it), and under print its background resolves to the logo and the request succeeds.
-for (const path of ['/play/sudoku', '/play/crossword', '/play/word-path']) {
+// Sudoku prints through its own sheet now (tests/e2e/sudoku-print.spec.ts checks that sheet's logo).
+for (const path of ['/play/crossword', '/play/word-path']) {
   test(`${path}: the print logo is not requested on screen and loads for print`, async ({ page }) => {
     const requested: string[] = [];
     const failed: string[] = [];

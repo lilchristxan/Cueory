@@ -13,19 +13,24 @@ import { formatSolveTime } from './vialotimer';
 import { newTimer, pauseTimer, resumeTimer, startTimer, stopTimer, timerElapsed, type SolveTimer } from './vialotimer';
 import PicclineCue from './PicclineCue';
 import { site } from '../config/site';
-import { shake } from './SutureGame';
 import { loadPicclineMs, loadPicclineSave, savePicclineBoard, savePicclineMs } from './picclinesave';
 import type { Cell } from './suture';
 import {
-  announceProgress, backspace, cellView, cuesUsed, firstWordFound, clearPicked, extend, hintsLeft, MIN_WORD, parsePathPuzzle, pathCellLabel, pathDone, pathShareLine,
-  printBoard,
+  announceProgress, backspace, printBoard, cellView, cuesUsed, firstWordFound, clearPicked, extend, hintsLeft, MIN_WORD, parsePathPuzzle, pathCellLabel, pathDone, pathShareLine,
   pickedWord, specialFoundFirst, startPath, submit, submitInWords, takeHint, WORDS_PER_HINT, wordsToNextHint,
-  type CellLook, type PathState, type SuturePathPuzzle,
+  type CellLook, type PathState, type SuturePathPuzzle, type WordPathPuzzle,
 } from './suturepath';
 
 const PicclineShare = lazy(() => import('./PicclineShare'));
+const PicclineForfeit = lazy(() => import('./PicclineForfeit'));
 
-interface Props { puzzle: SuturePathPuzzle; name: string; framed?: boolean }
+interface Props {
+  puzzle: SuturePathPuzzle;
+  name: string;
+  framed?: boolean;
+  /** Set where the page has piccline's own print sheet (/play/piccline): all the samples, for the print entry, which answers the Frame's printer. The older word path route keeps the older print. */
+  printPuzzles?: WordPathPuzzle[];
+}
 
 const printFoot = new URL(site.url).host;
 const button = 'min-h-11 min-w-11 rounded-md border border-control bg-page px-4 py-2 text-ink disabled:opacity-50';
@@ -104,7 +109,13 @@ function cellAt(board: HTMLElement | null, x: number, y: number): Cell | null {
   return dx * dx + dy * dy <= 0.6 ? cellOf(target) : null;
 }
 
-export function PathBoard({ puzzle, name, framed = false }: Props) {
+/** Answers the Frame's printer on the older word path route only (the hook is here so it registers only where it is needed). */
+function LegacyPrint({ before }: { before: () => void }) {
+  usePrintRequest('suture', () => { before(); printGame('suture'); });
+  return null;
+}
+
+export function PathBoard({ puzzle, name, framed = false, printPuzzles }: Props) {
   const [today] = useState(() => new Date());
   // A board played earlier today on this device comes back as it was (a finished one stays finished); a new day starts fresh.
   const [restored] = useState(() => loadPicclineSave(puzzle, localDay(today)));
@@ -122,7 +133,6 @@ export function PathBoard({ puzzle, name, framed = false }: Props) {
   const [layout, setLayout] = useState<Layout | null>(null);
   /** While a finger or mouse drags, where it is inside the board, so the line can follow it. */
   const [finger, setFinger] = useState<{ x: number; y: number } | null>(null);
-  const [printNote, setPrintNote] = useState('');
   const quietClickUntil = useRef(0);
   const { soundAllowed, settings: prefs, update: updateShared } = useSharedGameSettings();
   const sound = useRef(true);
@@ -131,6 +141,10 @@ export function PathBoard({ puzzle, name, framed = false }: Props) {
   const howToPlay = useGameHelp('suture');
   const title = useId();
   const done = pathDone(state, puzzle);
+  // Set below: once a print forfeits the day, the board on screen can no longer be played.
+  const [forfeited, setForfeited] = useState(false);
+  const [printNote, setPrintNote] = useState('');
+  const locked = done || forfeited;
   const total = puzzle.words.length;
   // The solve timer (Christian, 25 Nov 2026): starts at the first letter, stops at the last answer, pauses in a hidden
   // tab. It is saved with the board, so a reload carries on from where it was.
@@ -257,7 +271,7 @@ export function PathBoard({ puzzle, name, framed = false }: Props) {
     apply(next.state);
     if (firstWordFound(before, next.state)) announceProgress(localDay(today));
     setSaid(submitInWords(next.state, puzzle, next.outcome));
-    if (next.outcome.kind === 'unknown') shake(board.current);
+    if (next.outcome.kind === 'unknown') { const target = board.current; void import('./SutureGame').then(({ shake }) => shake(target)); }
     // Only what the game already says in words and marks: a word found (or the finish), an extra word, or a word it refuses.
     const kind = next.outcome.kind;
     if (kind === 'found') playGameCue(pathDone(next.state, puzzle) ? 'solved' : 'good', sound.current);
@@ -370,7 +384,7 @@ export function PathBoard({ puzzle, name, framed = false }: Props) {
     catch { setCopied(shared); }
   };
 
-  /** Printing an unfinished board counts as using a cue (once), and the player is told so in one line. */
+  /** The older word path route (no print sheet): printing an unfinished board counts as using a cue (once), and the player is told so in one line. */
   const printPuzzle = () => {
     const next = printBoard(current.current, puzzle);
     if (next !== current.current) {
@@ -379,10 +393,10 @@ export function PathBoard({ puzzle, name, framed = false }: Props) {
       setPrintNote(note);
       setSaid(note);
     }
-    printGame('suture');
   };
-  // The Frame's printer button announces the print; this is what the old print button ran.
-  usePrintRequest('suture', printPuzzle);
+
+  // "print anyway" on an unfinished board (usegameprint.ts): today is already stored as not solved, so the board on screen
+  // ends too (not saved: a reload starts a fresh board, and the stored first result of the day stands). PicclineForfeit hears it.
 
   // The lines that join each found answer and the word being picked, from circle edge to circle edge.
   const lines: Line[] = [];
@@ -435,6 +449,8 @@ export function PathBoard({ puzzle, name, framed = false }: Props) {
         }
       />
       {printNote && <p className="mt-2 text-center text-sm text-ink-soft" data-testid="suture-print-note" data-print-hidden>{printNote}</p>}
+      {!printPuzzles && <LegacyPrint before={printPuzzle} />}
+      {printPuzzles && <Suspense fallback={null}><PicclineForfeit day={localDay(today)} puzzles={printPuzzles} onForfeit={() => setForfeited(true)} /></Suspense>}
       <p className="wordpath-time" data-testid="suture-time">
         {prefs.showTimer && <span>time: {formatSolveTime(timerElapsed(timer.current, Date.now()))}</span>}
       </p>
@@ -469,7 +485,7 @@ export function PathBoard({ puzzle, name, framed = false }: Props) {
                     ref={(element) => { if (element) buttons.current.set(index, element); else buttons.current.delete(index); }}
                     type="button"
                     tabIndex={index === focused ? 0 : -1}
-                    disabled={done}
+                    disabled={locked}
                     aria-label={pathCellLabel(state, puzzle, cell)}
                     data-cell={`${r},${c}`}
                     data-look={view.look}
@@ -522,10 +538,10 @@ export function PathBoard({ puzzle, name, framed = false }: Props) {
       </p>
       </div>
       <div className="mt-2 flex flex-wrap justify-center gap-2" data-print-hidden>
-        <button type="button" className={button} disabled={done || state.picked.length === 0} onClick={send} data-testid="suture-submit">submit</button>
-        <button type="button" className={button} disabled={done || state.picked.length === 0} onClick={clear} data-testid="suture-clear">clear</button>
+        <button type="button" className={button} disabled={locked || state.picked.length === 0} onClick={send} data-testid="suture-submit">submit</button>
+        <button type="button" className={button} disabled={locked || state.picked.length === 0} onClick={clear} data-testid="suture-clear">clear</button>
         <span className="inline-flex items-center">
-          <button type="button" className={button} disabled={done} onClick={hint} data-testid="suture-hint" aria-describedby={`${title}-hint`}>
+          <button type="button" className={button} disabled={locked} onClick={hint} data-testid="suture-hint" aria-describedby={`${title}-hint`}>
             cue{left > 0 ? ` (${left})` : ''}
           </button>
           {/* Three pips fill as other words are found: a filled disc is a word found, an outline is one still to find, and the
@@ -591,9 +607,9 @@ export function PathBoard({ puzzle, name, framed = false }: Props) {
 }
 
 /** A board puzzle from the page, checked again here so a broken one shows a plain message instead of a broken game. */
-export default function SuturePathBoard({ puzzle, name, framed = false }: Props) {
+export default function SuturePathBoard({ puzzle, name, framed = false, printPuzzles }: Props) {
   try {
     const parsed = parsePathPuzzle(puzzle);
-    return <PathBoard key={JSON.stringify(parsed)} puzzle={parsed} name={name} framed={framed} />;
+    return <PathBoard key={JSON.stringify(parsed)} puzzle={parsed} name={name} framed={framed} printPuzzles={printPuzzles} />;
   } catch { return <p role="alert">this puzzle could not be loaded. please try again later.</p>; }
 }

@@ -1,0 +1,33 @@
+---
+/**
+ * piccline's paper sheet (Christian, 2026-11-25), a print-only block on the game page: hidden on screen, and when the page
+ * is printed only this prints, as exactly two pages. Page 1 is the guesser's copy (branding, the cue, the letter board and
+ * numbered lines), page 2 the keeper's copy (how to play, a fold line, the answers drawn on the board). Today's puzzle is
+ * chosen in the browser, so the board is drawn into the empty slots by src/islands/PicclinePrintView.tsx, and the answers only
+ * at print time, and only when printing is allowed. Text: src/config/piccline-print.ts. Look: src/styles/print-sheet.css.
+ */
+import PrintSheetPage from './PrintSheetPage.astro';
+import { picclineSheet as t } from '../config/piccline-print';
+import '../styles/print-sheet.css';
+
+// The same artwork the /play hub shows: the teal icon and the daytime wordmark.
+const wordmark = '/brand/games/piccline-wordmark-light.svg';
+const icon = '/brand/games/piccline-dark.svg';
+---
+<div class="sheet-print" data-print-sheet="piccline" data-testid="print-sheet">
+  <PrintSheetPage page={1} name={t.name} icon={icon} wordmark={wordmark} wordmarkWidth={5060} wordmarkHeight={2555} label={t.copyGuesser} caption={t.caption} footer={t.footerOne} testid="sheet-page-1">
+    <div data-sheet-slot="board" data-testid="sheet-board"></div>
+  </PrintSheetPage>
+
+  <PrintSheetPage page={2} name={t.name} icon={icon} wordmark={wordmark} wordmarkWidth={5060} wordmarkHeight={2555} label={t.copyKeeper} caption={t.keeperLine} footer={t.footerTwo} testid="sheet-page-2">
+    <h2 class="sheet-heading">{t.howHeading}</h2>
+    <ol class="sheet-steps">
+      {t.steps.map((step) => <li>{step}</li>)}
+    </ol>
+    <p class="sheet-fold" data-testid="sheet-fold">{t.foldLabel}</p>
+    <div class="sheet-answers" data-keeper="locked" data-testid="sheet-keeper">
+      <p class="sheet-locked">{t.locked}</p>
+      <div data-sheet-slot="answers"></div>
+    </div>
+  </PrintSheetPage>
+</div>

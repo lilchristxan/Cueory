@@ -170,7 +170,8 @@ const currentConfig: GameConfig = configs[key] ?? configs.pulse!;
 const controlName = game === 'vialo' ? currentConfig.brandName : key === 'suture' ? 'piccline' : currentConfig.name;
 
 // The games that can print from their own page get the Frame's printer button (it announces cueory:print with this id).
-// Vialo's sheet comes with its print-to-share work; sudoku, crossword and piccline print what they printed before.
+// Vialo and piccline print their own two-page sheets (their print islands answer); sudoku and crossword print what they printed before,
+// and so does the older word path route.
 const printId = game === 'vialo' ? 'vialo' : key === 'triage' ? 'sudoku' : key === 'cueword' ? 'crossword' : key === 'suture' ? 'suture' : undefined;
 
 const activeTagline = propTagline ?? currentConfig.defaultTagline;

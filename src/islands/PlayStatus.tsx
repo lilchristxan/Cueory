@@ -3,7 +3,7 @@ import { browserStorage } from '../scripts/storage';
 import { GAME_RESULT_EVENT, GAME_STATS_CHANGED_EVENT, heldRounds, loadStats, localDay, STATS_STORAGE_KEY, type SavedStats } from './gameresults';
 import { sameGame } from './gamestats';
 import { gameLogos, type GameLogoKey } from '../config/gamelogos';
-import { canPrintToday, openPrint } from '../scripts/printgate';
+import { canPrintToday, openPrint, type PrintGame } from '../scripts/printgate';
 import { playedLabel, statusWords } from './playhub';
 import { GAME_PROGRESS_EVENT, readHeard, statusFor, type GameId, type HeardToday } from './playstatus';
 
@@ -29,7 +29,7 @@ interface Row {
   /** hello cards: how many cards it has, shown instead of a daily status. */
   cards?: number;
   /** The game's printable paper sheet. A finished game with one offers "print for a patient"; an unfinished one shows only "play"; a played game with none shows its status only. */
-  print?: boolean;
+  printGame?: PrintGame;
 }
 
 interface Props {
@@ -158,8 +158,8 @@ export default function PlayStatus({ games }: Props) {
    */
   const print = (row: Row) => {
     const day = localDay(new Date());
-    if (row.id === 'vialo' && canPrintToday(browserStorage(), row.id, day)) {
-      openPrint(row.id);
+    if (row.printGame && canPrintToday(browserStorage(), row.printGame, day)) {
+      openPrint(row.printGame);
       return;
     }
     setToday(day);
@@ -182,7 +182,7 @@ export default function PlayStatus({ games }: Props) {
           // Played today: no replay, so no "play". Only a finished game that has a paper sheet offers "print for a patient".
           const played = status === 'done';
           const showPlay = row.open && !played;
-          const showPrint = row.open && Boolean(row.print) && played;
+          const showPrint = row.open && Boolean(row.printGame) && played;
           return (
             <li
               key={row.id}

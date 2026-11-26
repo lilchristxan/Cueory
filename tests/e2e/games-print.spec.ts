@@ -3,7 +3,7 @@ import { markPanelsSeen } from './clock';
 
 // Printing the daily games. pillo's foil keeps no gradient that fades to clear black (Safari's full-page screenshot
 // and PDF export drew that as a solid black triangle), and on paper the shine is left out. Each printed puzzle
-// (crossword, sudoku, word path) starts with the cueory logo, centred, above the puzzle.
+// (crossword, word path) starts with the cueory logo, centred, above the puzzle.
 
 test.use({ viewport: { width: 816, height: 1056 } });
 
@@ -49,7 +49,7 @@ test('pillo foil and pill shine never fade to clear black, and print without the
 
 for (const [game, area, path] of [
   ['crossword', '[data-game-print="crossword"]', '/play/crossword'],
-  ['sudoku', '.sudoku-section', '/play/sudoku'],
+  // Sudoku prints through its own sheet now: its logo is checked in tests/e2e/sudoku-print.spec.ts.
   ['suture', '[data-print-area="suture"]', '/play/word-path'],
 ] as const) {
   test(`printed ${game} starts with the cueory logo, centred`, async ({ page }) => {

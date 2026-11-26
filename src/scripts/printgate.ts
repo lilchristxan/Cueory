@@ -23,7 +23,7 @@ export function isFinished(stats: GameStats, game: string, day: string): boolean
  * Records today's game as not solved. The first result of a day is the one kept (recordResult), so a later replay
  * cannot change it. Returns false when the browser won't keep it. Nothing is changed unless the save succeeds.
  */
-export function forfeitToday(storage: KeyValueStorage | undefined, game: 'vialo', day: string, tries: number): boolean {
+export function forfeitToday(storage: KeyValueStorage | undefined, game: PrintGame, day: string, tries: number): boolean {
   const saved = loadStats(storage, day);
   if (!saved.on) return false;
   if (isFinished(saved.stats, game, day)) return true;
@@ -47,7 +47,7 @@ export function requestPrint(entry: PrintEntry, open: () => void, warn: () => vo
 }
 
 /** Step 2, on "print anyway": record today as not solved first, and only then open the sheet. False (and nothing opens) when the record could not be saved. */
-export function printAnyway(storage: KeyValueStorage | undefined, game: 'vialo', day: string, tries: number, open: () => void): boolean {
+export function printAnyway(storage: KeyValueStorage | undefined, game: PrintGame, day: string, tries: number, open: () => void): boolean {
   if (!forfeitToday(storage, game, day, tries)) return false;
   open();
   return true;
@@ -55,13 +55,29 @@ export function printAnyway(storage: KeyValueStorage | undefined, game: 'vialo',
 
 /** The event a game frame's printer button sends on `document`; detail.game names the game. */
 export const PRINT_EVENT = 'cueory:print';
-/** Sent on `window` after a forfeit, so the game on screen ends as lost for today. */
-export const FORFEIT_EVENT = 'cueory:vialo-forfeited';
+import { FORFEIT_EVENT, FORFEIT_MEMORY_ATTR } from '../islands/forfeitmemory';
+export { FORFEIT_EVENT, rememberedForfeits } from '../islands/forfeitmemory';
 
-export type PrintGame = 'vialo';
+/**
+ * Announces a forfeit ("print anyway" on an unfinished game): remembers it on the page for this visit and sends
+ * FORFEIT_EVENT. A game's board can load after the print entry, so it also reads the memory when it starts
+ * (`rememberedForfeits`); a forfeit confirmed before the board is listening is never lost.
+ */
+export function announceForfeit(game: PrintGame, day: string, extra: Record<string, unknown> = {}): void {
+  if (typeof document === 'undefined' || typeof window === 'undefined') return;
+  const level = typeof extra.level === 'string' ? extra.level : '';
+  const root = document.documentElement;
+  const list = (root.getAttribute(FORFEIT_MEMORY_ATTR) ?? '').split(' ').filter(Boolean);
+  const entry = `${game}|${day}|${level}`;
+  if (!list.includes(entry)) root.setAttribute(FORFEIT_MEMORY_ATTR, [...list, entry].join(' '));
+  window.dispatchEvent(new CustomEvent(FORFEIT_EVENT, { detail: { ...extra, game, day } }));
+}
+
+/** The games that have a paper sheet. Each is the id the results are stored under (piccline's older id is suture, the same history). */
+export type PrintGame = 'vialo' | 'piccline' | 'triage';
 
 /** Where each game's print entry lives: its own game page, which opens the print step when it loads. No personal data in it. */
-export const PRINT_PAGES: Readonly<Record<PrintGame, string>> = { vialo: '/play/wordpill#print' };
+export const PRINT_PAGES: Readonly<Record<PrintGame, string>> = { vialo: '/play/wordpill#print', piccline: '/play/piccline#print', triage: '/play/sudoku#print' };
 
 /** True when the game can print and this browser holds today's result for it (read it again at the moment of pressing). */
 export function canPrintToday(storage: KeyValueStorage | undefined, game: PrintGame, day: string): boolean {

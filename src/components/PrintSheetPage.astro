@@ -10,7 +10,8 @@ interface Props {
   /** The game's name, the wordmark's text alternative. */
   name: string;
   /** The game's icon and wordmark artwork. */
-  icon: string;
+  /** Omitted for a game that has no icon artwork of its own: the page then carries only the wordmark. */
+  icon?: string;
   wordmark: string;
   wordmarkWidth: number;
   wordmarkHeight: number;
@@ -25,7 +26,7 @@ const { page, name, icon, wordmark, wordmarkWidth, wordmarkHeight, label, captio
 ---
 <section class:list={['sheet-page', page === 1 ? 'sheet-page-one' : 'sheet-page-two', extra]} data-testid={testid}>
   <p class="sheet-brand" data-testid={`${testid}-brand`}>
-    <img class="sheet-icon" src={icon} alt="" aria-hidden="true" width="100" height="100" loading="lazy" decoding="async" />
+    {icon && <img class="sheet-icon" src={icon} alt="" aria-hidden="true" width="100" height="100" loading="lazy" decoding="async" />}
     <img class="sheet-wordmark" src={wordmark} alt={name} width={wordmarkWidth} height={wordmarkHeight} loading="lazy" decoding="async" />
   </p>
   <p class="sheet-label" data-testid="sheet-label">{label}</p>
