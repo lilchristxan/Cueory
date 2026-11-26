@@ -167,7 +167,8 @@ export default function VialoGame({ puzzles }: Props) {
   useEffect(() => {
     const forfeit = (event: Event) => {
       // Only the game of the day that was forfeited: a tab left open past midnight keeps its own day's round.
-      if ((event as CustomEvent<{ day?: string }>).detail?.day !== day) return;
+      const detail = (event as CustomEvent<{ game?: string; day?: string }>).detail;
+      if (detail?.game !== 'vialo' || detail.day !== day) return;
       setState((now) => (now.status === 'playing' ? { ...now, status: 'out' } : now));
     };
     window.addEventListener(FORFEIT_EVENT, forfeit);
