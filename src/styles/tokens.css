@@ -1336,6 +1336,7 @@
   --play-hub-pip-sudoku-size: 1.75rem;
   --play-hub-pip-hello-size: 1.5rem;
   --vialo-evening-wordmark-scale: 1.0741; /* the Evening wordmark's padded canvas over the Daytime one: 1740 / 1620 */
+  --piccline-wordmark-scale: 1.1;       /* piccline's wordmark drawn 10 percent larger than its box, so its ink stands a little above the other games' */
   --play-hub-account-reserve: 7.125rem;    /* the totals or the account bar in the left panel: room for either, kept while the session check runs */
   /* room kept for the stats panel (browser-only) until it renders; the game rows render on the server */
   --play-hub-stats-reserve: 34rem;      /* the stats panel at every width (at least 550 px) */
