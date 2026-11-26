@@ -1611,6 +1611,8 @@
   --lab-page-max: 90rem;           /* the lab's page is wider than the reading width: it is an instrument, not text */
   --lab-rail-width: 16.5rem;       /* orientation, systems and layers */
   --lab-inspector-width: 22.5rem;  /* selected structure and the structure list */
+  --lab-rail-clear: calc(var(--lab-rail-width) + 2.25rem);       /* left rail plus its inset and a gap: where the models may start */
+  --lab-inspector-clear: calc(var(--lab-inspector-width) + 2.25rem); /* right panel plus its inset and a gap: where the models must stop */
   --lab-rail-gap: 0.75rem;
   --lab-edge-inset: 1.25rem;       /* a panel's distance from the stage edge */
   --lab-stage-height: min(56rem, 100dvh);

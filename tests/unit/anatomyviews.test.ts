@@ -9,6 +9,7 @@ import {
   initialSystemKey,
   isViewPreset,
   presetDirection,
+  tappableIds,
 } from '../../src/islands/anatomyviews';
 
 describe('anatomy lab preset views', () => {
@@ -126,5 +127,21 @@ describe('anatomy lab lesson links', () => {
     expect(initialSystemKey(keys, { system: 'three', structure: null })).toBe('one');
     expect(initialSystemKey(keys, { system: null, structure: null })).toBe('one');
     expect(initialSystemKey([], { system: 'two', structure: null })).toBe('');
+  });
+});
+
+describe('tappableIds (a find-it round never asks for an outlined structure that a tap cannot reach)', () => {
+  const skin = new Set(['S1']);
+  it('leaves the skin out while anything else is showing', () => {
+    expect(tappableIds(['S1', 'A', 'B'], skin)).toEqual(['A', 'B']);
+  });
+  it('keeps the skin when it is the only thing showing, where it is solid and tappable', () => {
+    expect(tappableIds(['S1'], skin)).toEqual(['S1']);
+  });
+  it('keeps everything when there is no outline', () => {
+    expect(tappableIds(['A', 'B'], new Set())).toEqual(['A', 'B']);
+  });
+  it('is empty when nothing is visible', () => {
+    expect(tappableIds([], skin)).toEqual([]);
   });
 });

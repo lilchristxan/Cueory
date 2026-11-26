@@ -188,6 +188,29 @@ test.describe('anatomy lab shell: bottom bar', () => {
 });
 
 test.describe('anatomy lab shell: layout', () => {
+  test('comparing two models leaves both clear of every panel', async ({ page }) => {
+    await openLab(page);
+    const pick = page.getByTestId('anatomy-tools').getByLabel('compare with…');
+    await expect(pick).toBeEnabled();
+    await pick.selectOption({ index: 1 });
+    const compare = page.getByTestId('anatomy-compare');
+    await expect(compare).toBeVisible();
+    const canvases = [page.locator('canvas').first(), compare.locator('canvas')];
+    for (const canvas of canvases) await canvas.scrollIntoViewIfNeeded();
+    const overlaps = await page.evaluate(() => {
+      const canvasBoxes = [...document.querySelectorAll('[data-testid="anatomy-views-row"] canvas')].map((c) => c.getBoundingClientRect());
+      const panels = [...document.querySelectorAll('[data-testid="anatomy-lab"] .lab-glass')]
+        .map((panel) => panel.getBoundingClientRect())
+        .filter((box) => box.width > 0 && box.height > 0);
+      const hit = (a: DOMRect, b: DOMRect) => a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
+      return canvasBoxes.map((canvas) => panels.filter((panel) => hit(canvas, panel)).length);
+    });
+    expect(overlaps).toHaveLength(2);
+    expect(overlaps, 'panels over each canvas').toEqual([0, 0]);
+    // Both models keep a usable width, not a sliver.
+    for (const canvas of canvases) expect((await canvas.boundingBox())!.width).toBeGreaterThanOrEqual(160);
+  });
+
   test('desktop shows the panels beside the model; phone and tablet fold them into drawers on 44 px buttons', async ({ page }, info) => {
     await openClosedLab(page);
     const orientation = page.getByRole('region', { name: 'orientation' });

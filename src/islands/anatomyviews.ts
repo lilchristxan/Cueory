@@ -166,3 +166,13 @@ export function linkedStructureId(
   if (loadedSystemKey !== systemKey || (focus.system && focus.system !== systemKey)) return null;
   return focus.structure && found.includes(focus.structure) ? focus.structure : null;
 }
+
+/**
+ * The structures a "find it" round can ask for by tapping the model. The skin is drawn as an outline that a tap
+ * passes through whenever anything else is showing (src/islands/anatomyscene.ts), so it cannot be answered then and is
+ * left out of the round. Alone, the skin is solid and stays in.
+ */
+export function tappableIds(visible: readonly string[], outlined: ReadonlySet<string>): string[] {
+  const inner = visible.filter((id) => !outlined.has(id));
+  return inner.length > 0 ? inner : [...visible];
+}

@@ -32,6 +32,7 @@ import {
   initialSystemKey,
   linkedStructureId,
   presetDirection,
+  tappableIds,
   type ViewPreset,
 } from './anatomyviews';
 import {
@@ -1325,7 +1326,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
   };
 
   // ── Quiz ──────────────────────────────────────────────────────────────────────────────────────────────────────────
-  const quizPool = visible;
+  const quizPool = useMemo(() => tappableIds(visible, skinIds), [visible, skinIds]);
   const toggleQuiz = () => {
     if (quiz) {
       setQuiz(null);
@@ -1824,7 +1825,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
             <div className="lab-decor lab-ring lab-ring-soft bottom-12 left-1/2 hidden h-20 w-1/2 -translate-x-1/2 md:block" aria-hidden="true" />
             <div className="lab-decor lab-ring lab-ring-faint bottom-8 left-1/2 hidden h-28 w-2/3 -translate-x-1/2 md:block" aria-hidden="true" />
             <div className="lab-decor lab-scale top-1/6 left-1/4 hidden h-(--lab-scale-height) w-5 lg:block" aria-hidden="true" />
-            <div className={compareSystem ? 'grid h-full grid-cols-2 pt-2 pb-20' : 'h-full pt-2 pb-20'} data-testid="anatomy-views-row">
+            <div className={compareSystem ? 'grid h-full grid-cols-2 pt-2 pb-32 lg:pb-28 lg:pr-(--lab-inspector-clear) lg:pl-(--lab-rail-clear)' : 'h-full pt-2 pb-32 lg:pb-28'} data-testid="anatomy-views-row">
               <div className="relative h-full">
                 <canvas
                   ref={canvasRef}
