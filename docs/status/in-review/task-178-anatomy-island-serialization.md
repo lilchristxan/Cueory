@@ -1,0 +1,1 @@
+status: Give the Anatomy Lab system identifier its own name in Astro island props and restore the internal identifier on hydration. This keeps the draft preview compatible with the unchanged built answer-key guard.
