@@ -64,6 +64,7 @@ node work/adaptive/simulation.cjs
 
 - `task-adaptive/design` (#1256) — proposed model, release boundaries and research references.
 - `task-adaptive/engine` (#1257) — pure engine, module tests and fixed-seed simulation.
+- `task-adaptive/progress` (#1258) — versioned on-device study progress and migration.
 
 ## Needs Christian
 
