@@ -1291,9 +1291,14 @@ const helloCardsAvailable = helloCardsPage(
       min-width: 0;
     }
 
+    /* A definite height, drawn with object-fit: contain, instead of height:auto under two max limits: Firefox does not apply
+       max-height through the aspect ratio to an image that is a flex item, so a wide wordmark (piccline, drawn 1.5 times
+       larger) came out 4 px past the card there. The picture is the same size and place; only its box is now fixed. */
     .gname img {
       max-width: var(--game-wordmark-landscape-max-width);
+      height: var(--game-wordmark-landscape-max-height);
       max-height: var(--game-wordmark-landscape-max-height);
+      object-fit: contain;
     }
 
     .gname span {
