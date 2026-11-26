@@ -39,7 +39,7 @@
   }
 
   .lab-title {
-    font-size: 1.1875em;
+    font-size: var(--lab-title-size);
     font-weight: 700;
     line-height: 1.3;
   }
@@ -87,7 +87,7 @@
     border: var(--lab-edge) solid var(--lab-ring);
     background: transparent;
     color: var(--lab-ivory);
-    font-size: 0.9375em;
+    font-size: var(--lab-button-size);
     line-height: 1.5;
     white-space: nowrap;
     cursor: pointer;
@@ -117,7 +117,7 @@
     border-radius: 50%;
     width: calc(var(--spacing) * 11);
     height: calc(var(--spacing) * 11);
-    font-size: 1.125em;
+    font-size: var(--lab-round-size);
     background: linear-gradient(160deg, var(--lab-glass-top), var(--lab-glass-bottom));
   }
 
@@ -147,7 +147,7 @@
     border: var(--lab-edge) solid transparent;
     background: transparent;
     color: var(--lab-sand);
-    font-size: 0.875em;
+    font-size: var(--lab-row-size);
     text-align: left;
     cursor: pointer;
   }
@@ -180,7 +180,7 @@
   .lab-state {
     margin-left: auto;
     font-size: var(--lab-caption-size);
-    letter-spacing: 0.14em;
+    letter-spacing: var(--lab-label-tracking);
     color: var(--lab-sand);
   }
 
@@ -255,7 +255,7 @@
     margin-top: calc(var(--spacing) * 1.5);
     text-align: center;
     font-size: var(--lab-caption-size);
-    letter-spacing: 0.14em;
+    letter-spacing: var(--lab-label-tracking);
     color: var(--lab-sand);
   }
   .lab-thumb-label[data-on='true'] {
@@ -292,6 +292,6 @@
     gap: calc(var(--spacing) * 3);
     padding: calc(var(--spacing) * 2) 0;
     border-top: var(--lab-edge) solid var(--lab-hair);
-    font-size: 0.875em;
+    font-size: var(--lab-row-size);
   }
 }

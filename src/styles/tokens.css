@@ -1706,6 +1706,11 @@
   --lab-dot: 0.75rem;
   --lab-caption-size: 0.75rem;     /* 12 px: the small tracked captions */
   --lab-caption-tracking: 0.2em;
+  --lab-label-tracking: 0.14em;    /* tracked labels under thumbnails and on/off words */
+  --lab-title-size: 1.1875em;      /* the lab's title */
+  --lab-button-size: 0.9375em;     /* lab buttons */
+  --lab-round-size: 1.125em;       /* round arrow and zoom buttons */
+  --lab-row-size: 0.875em;         /* system rows and key/value lines */
   --lab-page-max: 90rem;           /* the lab's page is wider than the reading width: it is an instrument, not text */
   --lab-rail-width: 16.5rem;       /* orientation, systems and layers */
   --lab-inspector-width: 22.5rem;  /* selected structure and the structure list */
