@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { isDesktopOfEachEngine } from './projects';
+import { openLabPanels } from './anatomy-lab-panels';
 
 /**
  * Synthetic fixture only: delay the PNG canvas callback so a system-picker
@@ -27,6 +28,7 @@ test('switching systems invalidates the previous PNG before React effects', asyn
 
   await page.goto('/preview/anatomy-lab?fixture');
   await page.getByRole('button', { name: 'open the anatomy lab' }).click();
+  await openLabPanels(page);
   const fixture = page.getByRole('button', { name: 'fixture cube A', exact: true });
   await expect(fixture).toBeEnabled({ timeout: 20_000 });
 
@@ -60,6 +62,7 @@ test('switching systems during font preparation skips the obsolete PNG render', 
   test.skip(!isDesktopOfEachEngine(info), 'one font-preparation race check per browser engine');
   await page.goto('/preview/anatomy-lab?fixture');
   await page.getByRole('button', { name: 'open the anatomy lab' }).click();
+  await openLabPanels(page);
   await expect(page.getByRole('button', { name: 'fixture cube A', exact: true }))
     .toBeEnabled({ timeout: 20_000 });
   const picker = page.getByRole('group', { name: 'body system' }).getByRole('button');

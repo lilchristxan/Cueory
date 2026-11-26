@@ -1,0 +1,297 @@
+/*
+  The anatomy lab's dark instrument look (Task 178). Only the lab uses it, in Light and in Evening (the tokens and the
+  decision are in src/styles/tokens.css, "Anatomy lab"). Every value here is a --lab-* token or a spacing multiple;
+  layout that changes with the screen width is in the components' Tailwind classes (lg:, md:), not in this file.
+  Nothing here animates: state changes are instant, so reduced motion has nothing to switch off.
+*/
+@layer components {
+  .anatomy-lab {
+    position: relative;
+    overflow: hidden;
+    border-radius: var(--lab-radius-panel);
+    border: var(--lab-edge) solid var(--lab-edge-dim);
+    color: var(--lab-ivory);
+    font-family: var(--font-body);
+    line-height: 1.5;
+    background:
+      linear-gradient(180deg, var(--lab-stage-sheen), transparent 38%),
+      radial-gradient(ellipse 30% 58% at 50% 48%, var(--lab-stage-halo) 0%, var(--lab-stage-halo-edge) 46%, transparent 74%),
+      linear-gradient(var(--lab-grid-line) var(--lab-edge), transparent var(--lab-edge)) 0 0 / var(--lab-grid-size) var(--lab-grid-size),
+      linear-gradient(90deg, var(--lab-grid-line) var(--lab-edge), transparent var(--lab-edge)) 0 0 / var(--lab-grid-size) var(--lab-grid-size),
+      radial-gradient(ellipse at 50% 38%, var(--lab-stage-mid) 0%, var(--lab-stage-dark) 70%);
+  }
+
+  /* One focus look on the dark stage: a copper-shine ring, 3:1 or better against the stage and the glass. */
+  .anatomy-lab :focus-visible {
+    outline: calc(var(--lab-edge) * 2) solid var(--lab-copper-shine);
+    outline-offset: calc(var(--lab-edge) * 2);
+  }
+
+  .lab-topbar {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: calc(var(--spacing) * 3);
+    min-height: var(--lab-topbar-height);
+    padding: calc(var(--spacing) * 3) calc(var(--spacing) * 4);
+    border-bottom: var(--lab-edge) solid var(--lab-hair);
+  }
+
+  .lab-title {
+    font-size: var(--lab-title-size);
+    font-weight: 700;
+    line-height: 1.3;
+  }
+
+  /* Small tracked captions: "orientation", "body systems", the dataset line. */
+  .lab-cap {
+    font-size: var(--lab-caption-size);
+    letter-spacing: var(--lab-caption-tracking);
+    color: var(--lab-sand);
+  }
+
+  .lab-glass {
+    position: relative;
+    border-radius: var(--lab-radius-panel);
+    background: linear-gradient(160deg, var(--lab-glass-top), var(--lab-glass-bottom));
+    -webkit-backdrop-filter: blur(var(--lab-glass-blur));
+    backdrop-filter: blur(var(--lab-glass-blur));
+    color: var(--lab-ivory);
+  }
+
+  /* The thin copper edge: a 1-pixel gradient ring drawn with a mask, so the glass stays see-through inside it. */
+  .lab-glass::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    padding: var(--lab-edge);
+    border-radius: inherit;
+    background: linear-gradient(150deg, var(--lab-edge-bright), var(--lab-edge-mid) 35%, var(--lab-edge-dim) 70%, var(--lab-edge-bright));
+    -webkit-mask: linear-gradient(black 0 0) content-box, linear-gradient(black 0 0);
+    -webkit-mask-composite: xor;
+    mask: linear-gradient(black 0 0) content-box exclude, linear-gradient(black 0 0);
+    pointer-events: none;
+  }
+
+  /* Pills and round buttons. Selected = copper fill with Charcoal text AND aria-pressed; never colour alone. */
+  .lab-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: calc(var(--spacing) * 2);
+    min-height: calc(var(--spacing) * 11);
+    min-width: calc(var(--spacing) * 11);
+    padding: 0 calc(var(--spacing) * 4);
+    border-radius: var(--radius-pill);
+    border: var(--lab-edge) solid var(--lab-ring);
+    background: transparent;
+    color: var(--lab-ivory);
+    font-size: var(--lab-button-size);
+    line-height: 1.5;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+  .lab-btn:hover:not(:disabled):not([aria-disabled='true']) {
+    background: var(--lab-row-on);
+    border-color: var(--lab-copper-glow);
+  }
+  .lab-btn[aria-pressed='true'],
+  .lab-btn-primary {
+    border-color: transparent;
+    background: var(--lab-copper-fill);
+    color: var(--lab-charcoal);
+    font-weight: 700;
+  }
+  .lab-btn-primary:hover:not(:disabled) {
+    background: var(--lab-copper-fill);
+    filter: brightness(1.06);
+  }
+  .lab-btn:disabled,
+  .lab-btn[aria-disabled='true'] {
+    opacity: 0.6;
+    cursor: default;
+  }
+  .lab-round {
+    padding: 0;
+    border-radius: 50%;
+    width: calc(var(--spacing) * 11);
+    height: calc(var(--spacing) * 11);
+    font-size: var(--lab-round-size);
+    background: linear-gradient(160deg, var(--lab-glass-top), var(--lab-glass-bottom));
+  }
+
+  /* Text fields (the search box, the view name). */
+  .lab-field {
+    min-height: calc(var(--spacing) * 11);
+    width: 100%;
+    padding: 0 calc(var(--spacing) * 4);
+    border-radius: var(--radius-pill);
+    border: var(--lab-edge) solid var(--lab-ring);
+    background: var(--lab-well);
+    color: var(--lab-ivory);
+  }
+  .lab-field::placeholder {
+    color: var(--lab-sand);
+  }
+
+  /* A row of a list: body system, layer, structure. */
+  .lab-row {
+    display: flex;
+    align-items: center;
+    gap: calc(var(--spacing) * 3);
+    width: 100%;
+    min-height: calc(var(--spacing) * 11);
+    padding: 0 calc(var(--spacing) * 3);
+    border-radius: var(--lab-radius-row);
+    border: var(--lab-edge) solid transparent;
+    background: transparent;
+    color: var(--lab-sand);
+    font-size: var(--lab-row-size);
+    text-align: left;
+    cursor: pointer;
+  }
+  .lab-row:hover:not(:disabled) {
+    background: var(--lab-row-on);
+  }
+  .lab-row[aria-pressed='true'] {
+    color: var(--lab-ivory);
+    background: var(--lab-row-on);
+    border-color: var(--lab-ring);
+  }
+  .lab-row:disabled {
+    opacity: 0.6;
+    cursor: default;
+  }
+  /* The dot: filled when on, hollow when off. The word "on" or "off" always sits beside it. */
+  .lab-dot {
+    flex: none;
+    width: var(--lab-dot);
+    height: var(--lab-dot);
+    border-radius: 50%;
+    border: calc(var(--lab-edge) * 1.5) solid var(--lab-sand);
+    background: transparent;
+  }
+  .lab-row[aria-pressed='true'] .lab-dot {
+    background: var(--lab-copper-glow);
+    border-color: var(--lab-copper-glow);
+    box-shadow: 0 0 var(--lab-dot) var(--lab-copper);
+  }
+  .lab-state {
+    margin-left: auto;
+    font-size: var(--lab-caption-size);
+    letter-spacing: var(--lab-label-tracking);
+    color: var(--lab-sand);
+  }
+
+  /* The stage: platform rings, height scale, canvas. All decoration is aria-hidden and ignores pointers. */
+  .lab-decor {
+    position: absolute;
+    pointer-events: none;
+  }
+  .lab-ring {
+    border-radius: 50%;
+    border: var(--lab-edge) solid var(--lab-ring);
+  }
+  .lab-ring-soft {
+    border-color: var(--lab-ring-soft);
+  }
+  .lab-ring-faint {
+    border-style: dashed;
+    border-color: var(--lab-ring-faint);
+  }
+  .lab-pool {
+    border-radius: 50%;
+    background: radial-gradient(ellipse, var(--lab-pool), transparent 70%);
+  }
+  /* The height scale: a hairline with a short tick every step and a long one every fifth. */
+  .lab-scale {
+    background:
+      repeating-linear-gradient(
+        180deg,
+        var(--lab-tick) 0 var(--lab-edge),
+        transparent var(--lab-edge) var(--lab-scale-step)
+      ) 0 0 / var(--lab-scale-tick) 100% no-repeat,
+      repeating-linear-gradient(
+        180deg,
+        var(--lab-tick-long) 0 var(--lab-edge),
+        transparent var(--lab-edge) calc(var(--lab-scale-step) * 5)
+      ) 0 0 / var(--lab-scale-tick-long) 100% no-repeat;
+    border-left: var(--lab-edge) solid var(--lab-ring-soft);
+  }
+  .lab-canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    touch-action: none;
+    background: transparent;
+  }
+  .lab-canvas:focus-visible {
+    outline-offset: calc(var(--lab-edge) * -3);
+  }
+
+  /* Thumbnails in the orientation panel. */
+  .lab-thumb {
+    display: block;
+    width: var(--lab-thumb-width);
+    height: var(--lab-thumb-height);
+    padding: 0;
+    overflow: hidden;
+    border-radius: calc(var(--lab-radius-row) * 1.2);
+    border: var(--lab-edge) solid var(--lab-edge-dim);
+    background: var(--lab-well);
+  }
+  .lab-thumb img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+  button[aria-pressed='true'] > .lab-thumb {
+    border-color: var(--lab-copper-glow);
+    box-shadow: 0 0 calc(var(--lab-dot) * 1.5) var(--lab-glow), inset 0 0 0 var(--lab-edge) var(--lab-ring);
+  }
+  .lab-thumb-label {
+    margin-top: calc(var(--spacing) * 1.5);
+    text-align: center;
+    font-size: var(--lab-caption-size);
+    letter-spacing: var(--lab-label-tracking);
+    color: var(--lab-sand);
+  }
+  .lab-thumb-label[data-on='true'] {
+    color: var(--lab-copper-shine);
+    font-weight: 700;
+  }
+
+  .lab-slider {
+    width: 100%;
+    accent-color: var(--lab-copper);
+    min-height: calc(var(--spacing) * 6);
+  }
+
+  /* A sheet's grab bar and the bottom dock's buttons (phone and tablet). */
+  .lab-dock {
+    display: flex;
+    align-items: center;
+    gap: calc(var(--spacing) * 2);
+    padding: calc(var(--spacing) * 2);
+    border-radius: var(--radius-pill);
+  }
+  .lab-sheet {
+    max-height: var(--lab-sheet-height);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  .lab-divider {
+    border-top: var(--lab-edge) solid var(--lab-hair);
+  }
+  .lab-kv {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: calc(var(--spacing) * 3);
+    padding: calc(var(--spacing) * 2) 0;
+    border-top: var(--lab-edge) solid var(--lab-hair);
+    font-size: var(--lab-row-size);
+  }
+}

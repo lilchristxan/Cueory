@@ -35,6 +35,19 @@ describe('Anatomy Lab scene token readers', () => {
     expect(readColors({} as HTMLElement).dimAlpha).toBe(0.2);
   });
 
+  it('readColors reads the lab\'s rim lights and skin outline, and switches the rim off when the tokens are missing', () => {
+    stubStyle({
+      '--lab-rim': ' #d9976a ', '--lab-rim-strength': '3.2', '--lab-rim-soft': '#f6d3ae', '--lab-rim-soft-strength': '2.4',
+      '--lab-skin-outline': '#f6d3ae', '--lab-skin-outline-power': '2.6', '--lab-skin-outline-alpha': '0.55',
+    });
+    expect(readColors({} as HTMLElement)).toMatchObject({
+      rim: '#d9976a', rimStrength: 3.2, rimSoft: '#f6d3ae', rimSoftStrength: 2.4,
+      skinOutline: '#f6d3ae', skinOutlinePower: 2.6, skinOutlineAlpha: 0.55,
+    });
+    stubStyle({});
+    expect(readColors({} as HTMLElement)).toMatchObject({ rim: '', rimStrength: 0, rimSoftStrength: 0, skinOutlinePower: 2.6 });
+  });
+
   it('readExportTokens parses every size as a number', () => {
     stubStyle(Object.fromEntries(EXPORT_NAMES.map((n, i) => [n, `${i + 1}px`])));
     const t = readExportTokens({} as HTMLElement);
@@ -52,7 +65,7 @@ describe('Anatomy Lab scene token readers', () => {
 
   it('every token the readers ask for is defined in tokens.css', () => {
     const css = readFileSync('src/styles/tokens.css', 'utf8');
-    for (const name of [...EXPORT_NAMES, '--model-dim-alpha', '--color-model', '--color-model-alt', '--color-model-selected', '--font-body']) {
+    for (const name of [...EXPORT_NAMES, '--model-dim-alpha', '--lab-rim', '--lab-rim-strength', '--lab-rim-soft', '--lab-rim-soft-strength', '--lab-skin-outline', '--lab-skin-outline-power', '--lab-skin-outline-alpha', '--color-model', '--color-model-alt', '--color-model-selected', '--font-body']) {
       expect(css, name).toMatch(new RegExp(`${name}\\s*:`));
     }
   });
