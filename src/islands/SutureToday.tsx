@@ -12,6 +12,8 @@ interface Props {
   name: string;
   /** The daily piccline plays board-format puzzles only; the legacy /play/word-path route keeps the older word search. */
   boardOnly?: boolean;
+  /** The page's Frame owns the gear and the "?"; the board keeps only the dialogs. */
+  framed?: boolean;
 }
 
 /**
@@ -19,10 +21,10 @@ interface Props {
  * games, and hands it to the board. Rendered only in the browser (client:only), so "today" is the visitor's day.
  * A board-format puzzle (#722, "format": "path") gets the path board; an older word search keeps its own game.
  */
-export default function SutureToday({ puzzles, name, boardOnly = false }: Props) {
+export default function SutureToday({ puzzles, name, boardOnly = false, framed = false }: Props) {
   // /play hands over each sample's theme or clue itself, so nothing more is looked up here.
   const puzzle = useMemo(() => puzzleForDay(boardOnly ? boardPuzzles(puzzles) : puzzles, dayNumber(new Date())), [puzzles, boardOnly]);
   if (!puzzle) return <p>no puzzle today.</p>;
-  if (isPathPuzzle(puzzle)) return <SuturePathBoard puzzle={puzzle} name={name} printable={boardOnly} />;
-  return <SutureGame puzzle={puzzle as SuturePuzzle} name={name} />;
+  if (isPathPuzzle(puzzle)) return <SuturePathBoard puzzle={puzzle} name={name} framed={framed} printable={boardOnly} />;
+  return <SutureGame puzzle={puzzle as SuturePuzzle} name={name} framed={framed} />;
 }

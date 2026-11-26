@@ -20,7 +20,7 @@ const blocked: KeyValueStorage = {
 
 describe('shared game settings storage', () => {
   it('defaults to normal contrast, following the device for motion, and sound on', () => {
-    expect(DEFAULT_GAME_SETTINGS).toEqual({ highContrast: false, motion: 'device', sound: true });
+    expect(DEFAULT_GAME_SETTINGS).toEqual({ highContrast: false, motion: 'device', sound: true, showTimer: true });
     expect(loadGameSettings(new MemoryStorage())).toEqual(DEFAULT_GAME_SETTINGS);
     expect(loadGameSettings(undefined)).toEqual(DEFAULT_GAME_SETTINGS);
     expect(loadGameSettings(blocked)).toEqual(DEFAULT_GAME_SETTINGS);
@@ -28,15 +28,19 @@ describe('shared game settings storage', () => {
 
   it('round-trips a change and stores nothing for the defaults', () => {
     const storage = new MemoryStorage();
-    saveGameSettings(storage, { highContrast: true, motion: 'reduce', sound: false });
+    saveGameSettings(storage, { highContrast: true, motion: 'reduce', sound: false, showTimer: true });
+    // showTimer is written only when it is off, so the record keeps its old shape for everyone who never touches it.
     expect(JSON.parse(storage.getItem(GAME_SETTINGS_STORAGE_KEY)!)).toEqual({ highContrast: true, motion: 'reduce', sound: false });
-    expect(loadGameSettings(storage)).toEqual({ highContrast: true, motion: 'reduce', sound: false });
+    saveGameSettings(storage, { highContrast: true, motion: 'reduce', sound: false, showTimer: false });
+    expect(JSON.parse(storage.getItem(GAME_SETTINGS_STORAGE_KEY)!)).toEqual({ highContrast: true, motion: 'reduce', sound: false, showTimer: false });
+    saveGameSettings(storage, { highContrast: true, motion: 'reduce', sound: false, showTimer: true });
+    expect(loadGameSettings(storage)).toEqual({ highContrast: true, motion: 'reduce', sound: false, showTimer: true });
     saveGameSettings(storage, { ...DEFAULT_GAME_SETTINGS });
     expect(storage.data.size).toBe(0);
   });
 
   it('ignores blocked storage when saving', () => {
-    expect(() => saveGameSettings(blocked, { highContrast: true, motion: 'device', sound: true })).not.toThrow();
+    expect(() => saveGameSettings(blocked, { highContrast: true, motion: 'device', sound: true, showTimer: true })).not.toThrow();
   });
 
   it.each([
@@ -50,8 +54,8 @@ describe('shared game settings storage', () => {
 
   it('keeps valid fields and defaults the unknown ones, one by one', () => {
     expect(parseGameSettings(JSON.stringify({ highContrast: 'yes', motion: 'fast', sound: false, extra: 1 })))
-      .toEqual({ highContrast: false, motion: 'device', sound: false });
-    expect(parseGameSettings(JSON.stringify({ highContrast: true }))).toEqual({ highContrast: true, motion: 'device', sound: true });
+      .toEqual({ highContrast: false, motion: 'device', sound: false, showTimer: true });
+    expect(parseGameSettings(JSON.stringify({ highContrast: true }))).toEqual({ highContrast: true, motion: 'device', sound: true, showTimer: true });
   });
 });
 
@@ -73,9 +77,9 @@ describe('motion and sound', () => {
 describe('applyGameSettings', () => {
   it('marks <html> for high contrast and reduced motion, and clears the marks again', () => {
     const root = { dataset: {} as DOMStringMap };
-    applyGameSettings(root, { highContrast: true, motion: 'reduce', sound: true }, false);
+    applyGameSettings(root, { highContrast: true, motion: 'reduce', sound: true, showTimer: true }, false);
     expect(root.dataset).toEqual({ gameContrast: 'high', gameMotion: 'reduce' });
-    applyGameSettings(root, { highContrast: false, motion: 'device', sound: true }, true);
+    applyGameSettings(root, { highContrast: false, motion: 'device', sound: true, showTimer: true }, true);
     expect(root.dataset).toEqual({ gameMotion: 'reduce' });
     applyGameSettings(root, { ...DEFAULT_GAME_SETTINGS }, false);
     expect(root.dataset).toEqual({});

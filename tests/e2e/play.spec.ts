@@ -235,7 +235,7 @@ test.describe('daily games: pillo settings and finish screen (Task 719)', () => 
 
   test('hard mode switches only before the first guess, and then holds shown letters', async ({ page }) => {
     // pillo's settings open from the gear at the top left (Christian's brief), in a dialog that holds the shared ones too.
-    const gear = page.getByTestId('pulse').getByRole('button', { name: 'pillo settings' });
+    const gear = page.getByRole('button', { name: 'pillo settings' });
     const settings = page.getByRole('dialog', { name: 'pillo settings' });
     const hard = settings.getByRole('switch', { name: /hard mode/ });
     await gear.click();
@@ -257,7 +257,7 @@ test.describe('daily games: pillo settings and finish screen (Task 719)', () => 
   });
 
   test('on-screen keyboard only removes the typing field, and high contrast still passes axe', async ({ page }) => {
-    await page.getByTestId('pulse').getByRole('button', { name: 'pillo settings' }).click();
+    await page.getByRole('button', { name: 'pillo settings' }).click();
     const settings = page.getByRole('dialog', { name: 'pillo settings' });
     await settings.getByRole('switch', { name: /on-screen keyboard only/ }).click();
     await expect(field(page)).toHaveCount(0);
@@ -848,12 +848,11 @@ test.describe('daily games: private stats (D-76), always kept (2026-11-17)', () 
     await field(page).fill('grace');
     await field(page).press('Enter');
     await expect(page.getByTestId('vialo-result')).toContainText('solved.');
-    const resultDialog = page.getByTestId('game-result-dialog');
-    await expect(resultDialog.getByRole('button', { name: 'close results' })).toBeFocused();
-    await resultDialog.getByRole('button', { name: 'close results' }).click();
-    // The dialog hands focus back to the result on the next frame (requestAnimationFrame). Wait for it: focusing a
-    // control before then loses that focus to the late return, and a key press then goes nowhere (CI on #836).
-    await expect(page.getByTestId('vialo-result')).toBeFocused();
+    // Vialo's own share card opens over the board (Christian, 25 Nov 2026); closing it returns focus to its "share" button.
+    const card = page.getByTestId('share-dialog');
+    await expect(card).toBeFocused();
+    await card.getByRole('button', { name: 'close', exact: true }).click();
+    await expect(page.getByTestId('vialo-share-open')).toBeFocused();
   };
   const holdPanel = async (page: Page) => {
     let release = () => {};
