@@ -828,8 +828,7 @@ test.describe('daily games: word path (D-71)', () => {
     await page.goto('/play/word-path');
     // The legacy address keeps working and shows the game under its new name (the tachyyy/piccline rebrand, #1006).
     await expect(page.getByRole('heading', { level: 1, name: 'piccline' })).toBeVisible();
-    // The cue is in the Frame's cue slot, above the board, like every framed game's.
-    await expect(page.getByRole('heading', { level: 3, name: 'a calm study break' })).toBeVisible();
+    await expect(page.getByTestId('suture').getByRole('heading', { level: 3, name: 'a calm study break' })).toBeVisible();
     await expect(page.getByTestId('suture')).toContainText('sample puzzle');
     await expect(page.getByTestId('suture').getByRole('gridcell')).toHaveCount(48);
     await expect(page.getByRole('heading', { name: 'coming soon' })).toHaveCount(0);
