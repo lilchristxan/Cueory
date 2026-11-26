@@ -9,6 +9,7 @@ import { nextReview, type Review } from '../src/islands/review';
 
 const STUDENTS = 2_000;
 const DAYS = 45;
+const FOLLOW_UP_DAY = DAYS - 1 + 7;
 const CARDS = 24;
 const FIRST_DAY = dayNumber('2028-01-01');
 const preferredLevels = new Map<string, PracticeItem['level']>();
@@ -40,8 +41,8 @@ function clock(day: number) {
   return { day: calendarDay(calendar), now: (calendar + 0.5) * DAY_MS };
 }
 
-function recall(card: SyntheticCard, delay: number): number {
-  return card.lastDay === undefined ? 0.55 : 2 ** (-delay / card.trueHalfLife);
+function recallOn(card: SyntheticCard, day: number): number {
+  return card.lastDay === undefined ? 0.55 : 2 ** (-(day - card.lastDay) / card.trueHalfLife);
 }
 
 function runStudent(student: number, scheme: 'adaptive' | 'ladder', totals: Totals): void {
@@ -75,7 +76,7 @@ function runStudent(student: number, scheme: 'adaptive' | 'ladder', totals: Tota
       const index = Number(next.id);
       const card = deck[index]!;
       const delay = day - (card.lastDay ?? day);
-      const correct = draw(student, day, index) < recall(card, delay);
+      const correct = draw(student, day, index) < recallOn(card, day);
       card.memory = recordAnswer(card.memory, correct, today);
       card.history.push({ day: today.day, result: correct ? 'knew' : 'missed' });
       evidence.set(card.item.concept, recordConceptAnswer(evidence.get(card.item.concept), correct, today));
@@ -92,7 +93,7 @@ function runStudent(student: number, scheme: 'adaptive' | 'ladder', totals: Tota
       dayMastered = day + 1;
     }
   }
-  for (const card of deck) totals.probeRecall += recall(card, 7);
+  for (const card of deck) totals.probeRecall += recallOn(card, FOLLOW_UP_DAY);
   if (dayMastered !== undefined) {
     totals.masteryDays += dayMastered;
     totals.mastered++;
@@ -106,7 +107,7 @@ for (const scheme of ['adaptive', 'ladder'] as const) {
     scheme,
     students: STUDENTS,
     calendarDays: DAYS,
-    recallAtSevenDays: (totals.probeRecall / (STUDENTS * CARDS)).toFixed(4),
+    recallAtSevenDayFollowUp: (totals.probeRecall / (STUDENTS * CARDS)).toFixed(4),
     answersPerCalendarDay: (totals.reviews / (STUDENTS * DAYS)).toFixed(2),
     daysToMasteryAmongThoseReachingIt: totals.mastered ? (totals.masteryDays / totals.mastered).toFixed(2) : null,
     shareNotAtMastery: (1 - totals.mastered / STUDENTS).toFixed(4),
