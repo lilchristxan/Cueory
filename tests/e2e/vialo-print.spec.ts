@@ -305,17 +305,26 @@ test.describe('from /play', () => {
 
 test('two print requests during the picture wait print once, keep the word filled, and release after the print', async ({ page }) => {
   await finish(page);
-  // Pictures take a second to decode, so both requests arrive while the sheet is still being prepared.
-  await page.addInitScript(() => {
-    HTMLImageElement.prototype.decode = () => new Promise<void>((resolve) => setTimeout(resolve, 1000));
+  // Hold one sheet picture's response. The pictures are lazy until the first request sets them eager, so the held
+  // picture is incomplete and the first request has to wait for it: that is the "preparing" phase.
+  let release!: () => void;
+  const held = new Promise<void>((resolve) => { release = resolve; });
+  let seen = false;
+  await page.route('**/vialo-wordmark-oxblood-v3.svg', async (route) => {
+    seen = true;
+    await held;
+    await route.continue();
   });
   await page.goto('/play/vialo');
   await press(page);
-  await press(page);
+  // The held picture was asked for, the keeper box is filled, and nothing has printed yet: still preparing.
+  await expect.poll(() => seen).toBe(true);
   await expect(keeper(page)).toHaveAttribute('data-keeper', 'ready');
+  expect(await printed(page)).toBe(0);
+  await press(page);
+  expect(await printed(page)).toBe(0);
+  release();
   await expect.poll(() => printed(page)).toBe(1);
-  await page.waitForTimeout(500);
-  expect(await printed(page)).toBe(1);
   await expect(keeper(page).locator('[data-keeper-word]')).toHaveText('grace');
   // A request while the print is still open is ignored too.
   await press(page);
