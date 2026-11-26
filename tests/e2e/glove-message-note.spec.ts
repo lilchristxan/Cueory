@@ -293,3 +293,191 @@ test('a visitor who starts scrolling or moving while the photo loads gets the no
   await page.clock.runFor(4_000);
   await expect(note(page)).toBeVisible();
 });
+
+// The dim behind the note (Christian, 25 Nov 2026): the page dims while a note shows, and goes with it.
+const dim = (page: Page) => page.getByTestId('glove-note-dim');
+
+test('the page dims while the note shows and covers the whole window, header included', async ({ page }) => {
+  await openAt(page, '/');
+  await expect(dim(page)).toHaveCount(0);
+  await jump(page, 31);
+  await expect(note(page)).toBeVisible();
+  await expect(dim(page)).toHaveCount(1);
+  const view = page.viewportSize()!;
+  const box = (await dim(page).boundingBox())!;
+  expect(box.x).toBe(0);
+  expect(box.y).toBe(0);
+  expect(box.width).toBe(view.width);
+  expect(box.height).toBe(view.height);
+  await expect(dim(page)).toHaveAttribute('aria-hidden', 'true');
+  const background = await dim(page).evaluate((element) => getComputedStyle(element).backgroundColor);
+  expect(background).not.toBe('rgba(0, 0, 0, 0)');
+  expect(background).not.toBe('transparent');
+  // The note and its close button stay above the dim, fully bright, and the dim is not announced or focusable.
+  // (The rise animation takes a moment, so wait for it to finish before reading the opacity.)
+  await expect.poll(() => note(page).evaluate((element) => getComputedStyle(element).opacity)).toBe('1');
+  const closeButton = note(page).getByRole('button', { name: 'close glove note' });
+  const closeBox = (await closeButton.boundingBox())!;
+  expect(closeBox.width).toBeGreaterThanOrEqual(44);
+  expect(closeBox.height).toBeGreaterThanOrEqual(44);
+  const topAtClose = await page.evaluate(({ x, y }) => document.elementFromPoint(x, y)?.closest('[data-testid]')?.getAttribute('data-testid') ?? document.elementFromPoint(x, y)?.tagName, {
+    x: closeBox.x + closeBox.width / 2,
+    y: closeBox.y + closeBox.height / 2,
+  });
+  expect(topAtClose).toBe('glove-note');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  expect(await page.evaluate(() => document.activeElement === document.body)).toBe(true);
+});
+
+test('the close button removes the note and the dim', async ({ page }) => {
+  await openAt(page, '/');
+  await jump(page, 31);
+  await expect(dim(page)).toHaveCount(1);
+  await note(page).getByRole('button', { name: 'close glove note' }).click();
+  await expect(note(page)).toHaveCount(0);
+  await expect(dim(page)).toHaveCount(0);
+});
+
+test('Escape removes the note and the dim', async ({ page }) => {
+  await openAt(page, '/');
+  await jump(page, 31);
+  await expect(dim(page)).toHaveCount(1);
+  await page.keyboard.press('Escape');
+  await expect(note(page)).toHaveCount(0);
+  await expect(dim(page)).toHaveCount(0);
+});
+
+test('keyboard users can still reach the page behind the dim', async ({ page }) => {
+  await openAt(page, '/');
+  await jump(page, 31);
+  await expect(dim(page)).toHaveCount(1);
+  const menuButton = page.getByRole('button', { name: /menu/i }).first();
+  // Tab until the header's menu button has focus: a named control of the page, not the glove, so focus is not trapped.
+  for (let step = 0; step < 15; step += 1) {
+    await page.keyboard.press('Tab');
+    if (await menuButton.evaluate((element) => element === document.activeElement)) break;
+  }
+  await expect(menuButton).toBeFocused();
+  await expect(note(page)).toBeVisible();
+  await expect(dim(page)).toHaveCount(1);
+  // Shift+Tab goes back to the control before it, and Tab returns to the menu button.
+  await page.keyboard.press('Shift+Tab');
+  await expect(menuButton).not.toBeFocused();
+  expect(await page.evaluate(() => document.activeElement !== document.body && !document.activeElement?.closest('[data-testid="glove-note"]'))).toBe(true);
+  await page.keyboard.press('Tab');
+  await expect(menuButton).toBeFocused();
+  await expect(note(page)).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(dim(page)).toHaveCount(0);
+});
+
+test('clicking the dimmed page removes the note and the dim, and does not follow a link underneath', async ({ page }) => {
+  await openAt(page, '/');
+  await jump(page, 31);
+  await expect(dim(page)).toHaveCount(1);
+  // A link in the top-left corner of the page, under the dim; the click must not reach it.
+  await page.evaluate(() => {
+    const link = document.createElement('a');
+    link.href = '/about';
+    link.dataset.testid = 'under-dim-link';
+    link.textContent = 'under the dim';
+    link.style.cssText = 'position:fixed;left:0;top:0;width:120px;height:60px;z-index:1;background:white;color:black';
+    document.body.append(link);
+  });
+  await page.mouse.click(40, 30);
+  await expect(dim(page)).toHaveCount(0);
+  await expect(note(page)).toHaveCount(0);
+  await expect(page).not.toHaveURL(/\/about/);
+  expect(new URL(page.url()).pathname).toBe('/');
+});
+
+test('clicking the glove goes to the break ideas page', async ({ page }) => {
+  await openAt(page, '/');
+  await jump(page, 31);
+  await expect(dim(page)).toHaveCount(1);
+  await note(page).getByRole('link').click();
+  await expect(page).toHaveURL(/\/breaks$/);
+  await expect(dim(page)).toHaveCount(0);
+});
+
+test('there is no dim without JavaScript', async ({ browser }) => {
+  const context = await browser.newContext({ javaScriptEnabled: false });
+  const page = await context.newPage();
+  const response = await page.goto('/');
+  expect(response?.status()).toBe(200);
+  await expect(page.getByTestId('glove-note-dim')).toHaveCount(0);
+  await expect(page.getByTestId('glove-note')).toHaveCount(0);
+  await context.close();
+});
+
+test('the dim has no fade with reduced motion, and fades in otherwise', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await openAt(page, '/');
+  await jump(page, 31);
+  await expect(dim(page)).toHaveCount(1);
+  expect(await dim(page).evaluate((element) => getComputedStyle(element).animationName)).toBe('none');
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  expect(await dim(page).evaluate((element) => getComputedStyle(element).animationName)).not.toBe('none');
+});
+
+test('has no accessibility violations with the dim showing', async ({ page }) => {
+  await openAt(page, '/');
+  await jump(page, 31);
+  await expect(dim(page)).toHaveCount(1);
+  const results = await new AxeBuilder({ page }).include('[data-testid="glove-note"]').include('[data-testid="glove-note-dim"]').analyze();
+  expect(results.violations).toEqual([]);
+});
+
+// The glove sits in the middle of the window at every size and orientation (Christian, 25 Nov 2026).
+const centredSizes = [
+  { name: 'phone portrait', width: 390, height: 844 },
+  { name: 'phone landscape', width: 844, height: 390 },
+  { name: 'tablet portrait', width: 820, height: 1180 },
+  { name: 'tablet landscape', width: 1180, height: 820 },
+  { name: 'desktop', width: 1440, height: 900 },
+];
+
+for (const size of centredSizes) {
+  test(`the glove is centred, fully inside the window and never scrolls sideways: ${size.name} ${size.width}x${size.height}`, async ({ page }) => {
+    await page.setViewportSize({ width: size.width, height: size.height });
+    await openAt(page, '/');
+    await jump(page, 31);
+    await expect(note(page)).toBeVisible();
+    // Wait for the rise animation to finish so the box is at rest (reduced motion has none).
+    await expect.poll(() => note(page).evaluate((element) => getComputedStyle(element).opacity)).toBe('1');
+    await page.waitForTimeout(600);
+    const box = (await note(page).boundingBox())!;
+    const centreX = box.x + box.width / 2;
+    const centreY = box.y + box.height / 2;
+    // 1 px across; 2 px down, because the photo's height is a fraction of a pixel and the window's own rounding adds up to one more.
+    expect(Math.abs(centreX - size.width / 2)).toBeLessThanOrEqual(1);
+    expect(Math.abs(centreY - size.height / 2)).toBeLessThanOrEqual(2);
+    // Fully inside, with a margin (the 1 rem token is 16 px; at least 12 px is demanded here).
+    expect(box.x).toBeGreaterThanOrEqual(12);
+    expect(box.y).toBeGreaterThanOrEqual(12);
+    expect(box.x + box.width).toBeLessThanOrEqual(size.width - 12);
+    expect(box.y + box.height).toBeLessThanOrEqual(size.height - 12);
+    // The close button is whole, at least 44 x 44, inside the window and inside the glove's box.
+    const closeBox = (await note(page).getByRole('button', { name: 'close glove note' }).boundingBox())!;
+    expect(closeBox.width).toBeGreaterThanOrEqual(44);
+    expect(closeBox.height).toBeGreaterThanOrEqual(44);
+    expect(closeBox.x).toBeGreaterThanOrEqual(box.x - 1);
+    expect(closeBox.y).toBeGreaterThanOrEqual(box.y - 1);
+    expect(closeBox.x + closeBox.width).toBeLessThanOrEqual(box.x + box.width + 1);
+    expect(closeBox.y + closeBox.height).toBeLessThanOrEqual(box.y + box.height + 1);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+    // Big enough to read: at least the token's share of the window's shorter side, unless the token's width limit
+    // (lower on a sharp screen, so the 720 px photo is never blurred) is reached first. 2 px for rounding.
+    const { share, cap } = await page.getByTestId('glove-note-region').evaluate((region) => {
+      const probe = document.createElement('div');
+      probe.style.inlineSize = getComputedStyle(region).getPropertyValue('--glove-note-cap');
+      region.append(probe);
+      const capPx = probe.getBoundingClientRect().width;
+      probe.remove();
+      return { share: Number(getComputedStyle(region).getPropertyValue('--glove-note-min-share')), cap: capPx };
+    });
+    expect(share).toBeGreaterThan(0.5);
+    const expected = Math.min(share * Math.min(size.width, size.height), cap);
+    expect(box.width).toBeGreaterThanOrEqual(expected - 2);
+  });
+}

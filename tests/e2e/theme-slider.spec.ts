@@ -169,7 +169,14 @@ for (const scheme of ['light', 'dark'] as const) {
 
 test('no sideways scroll at 320 px with 32 px root text', async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 640 });
-  await page.addInitScript(() => { document.documentElement.style.fontSize = '32px'; });
+  // The rules-seen mark is added first: WebKit runs every init script as one bootstrap script, and one that throws
+  // (documentElement does not exist yet there) stops the ones after it, so the first-visit rules dialog opened over the gear.
+  await markPanelsSeen(page);
+  await page.addInitScript(() => {
+    const apply = () => { document.documentElement.style.fontSize = '32px'; };
+    if (document.documentElement) apply();
+    else document.addEventListener('readystatechange', apply, { once: true });
+  });
   const dialog = await open(page);
   const card = dialog.locator('.game-settings');
   expect(await card.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);

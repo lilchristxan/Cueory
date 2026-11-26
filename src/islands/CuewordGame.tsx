@@ -7,6 +7,7 @@ import { useGameHelp } from './GameHelp';
 import GameHeader from './GameHeader';
 import ResultBrandMark from './ResultBrandMark';
 import { dayLabel } from './daily';
+import { playGameCue } from './gamesound';
 import { playSolvedTone } from './solvetone';
 import { useSharedGameSettings } from './GameSettings.tsx';
 import PrintLogo from './PrintLogo';
@@ -185,7 +186,12 @@ function Board({ puzzle, name, framed = false }: Props) {
     setPaused(!paused);
   };
 
-  const typeLetter = (letter: string) => update(enter(state, letter, settings, pencil));
+  /** A soft tick when a square's letter really changed (the shared "game sounds" switch applies; the solve tone has its own setting). */
+  const entryCue = (next: CuewordState, cue: 'place' | 'remove') => {
+    if (next.entries.some((value, index) => value !== state.entries[index])) playGameCue(cue, soundAllowed());
+    return next;
+  };
+  const typeLetter = (letter: string) => update(entryCue(enter(state, letter, settings, pencil), 'place'));
 
   // The shared print helper (Task 641): marks the page for the crossword's print rules and clears the mark after printing.
   const printPuzzle = () => printGame('crossword');
@@ -196,9 +202,9 @@ function Board({ puzzle, name, framed = false }: Props) {
     if (event.altKey && event.key === 'ArrowLeft') next = previousWord(state);
     else if (event.altKey && event.key === 'ArrowRight') next = nextWord(state);
     else if (event.altKey) return;
-    else if (/^[a-z]$/i.test(event.key)) next = enter(state, event.key, settings, pencil);
-    else if (event.key === 'Backspace') next = backspace(state);
-    else if (event.key === 'Delete') next = deleteLetter(state);
+    else if (/^[a-z]$/i.test(event.key)) next = entryCue(enter(state, event.key, settings, pencil), 'place');
+    else if (event.key === 'Backspace') next = entryCue(backspace(state), 'remove');
+    else if (event.key === 'Delete') next = entryCue(deleteLetter(state), 'remove');
     else if (event.key === 'Tab') {
       // Tab on the last clue (Shift+Tab on the first) is left to the browser, so focus leaves the grid: no keyboard trap.
       const delta = event.shiftKey ? -1 : 1;
@@ -391,7 +397,7 @@ function Board({ puzzle, name, framed = false }: Props) {
             {[...'abcdefghijklmnopqrstuvwxyz'].map((letter) => <button type="button" key={letter} className={letterButton} onClick={() => typeLetter(letter)}>{letter}</button>)}
           </div>
           <div className="mt-3 flex justify-center">
-            <button ref={eraseButton} type="button" className={quietButton} onClick={() => update(backspace(state))}>erase</button>
+            <button ref={eraseButton} type="button" className={quietButton} onClick={() => update(entryCue(backspace(state), 'remove'))}>erase</button>
           </div>
         </div>
       )}
