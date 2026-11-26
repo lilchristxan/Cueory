@@ -229,6 +229,25 @@ test.describe('printing an unfinished game', () => {
     await expect(page.getByTestId('play-status-words').first()).toHaveText('not solved');
   });
 
+  test('a forfeit confirmed before the game has loaded still ends the game once it does', async ({ page }) => {
+    let release!: () => void;
+    const held = new Promise<void>((resolve) => { release = resolve; });
+    let asked = false;
+    await page.route('**/_astro/VialoGame*.js', async (route) => {
+      asked = true;
+      await held;
+      await route.continue();
+    });
+    await page.goto('/play/vialo#print');
+    await expect.poll(() => asked).toBe(true);
+    await expect(warning(page)).toBeVisible();
+    await warning(page).getByRole('button', { name: 'print anyway' }).click();
+    await expect.poll(() => printed(page)).toBe(1);
+    release();
+    await expect(page.getByTestId('vialo-result')).toBeVisible();
+    await expect(page.getByLabel('your guess', { exact: true })).toHaveCount(0);
+  });
+
   test('a save that fails keeps the warning open with a plain message, and nothing prints or changes', async ({ page }) => {
     await page.addInitScript(() => {
       const set = Storage.prototype.setItem;

@@ -40,7 +40,7 @@ import GameHeader from './GameHeader';
 import { useSharedGameSettings } from './GameSettings.tsx';
 import { playGameCue } from './gamesound';
 import { browserStorage } from '../scripts/storage';
-import { FORFEIT_EVENT } from '../scripts/printgate';
+import { FORFEIT_EVENT, rememberedForfeits } from '../scripts/printgate';
 import { VIALO_KEY_ROWS } from './vialokeys';
 import { newTimer, pauseTimer, resumeTimer, startTimer, stopTimer, timerElapsed, type SolveTimer } from './vialotimer';
 import { site } from '../config/site';
@@ -193,6 +193,8 @@ export default function VialoGame({ puzzles, framed = false }: Props) {
       if (detail?.game !== 'vialo' || detail.day !== day) return;
       setState((now) => (now.status === 'playing' ? { ...now, status: 'out' } : now));
     };
+    // A forfeit confirmed before the game was listening is remembered on the page (printgate.ts).
+    if (rememberedForfeits('vialo', day).length > 0) setState((now) => (now.status === 'playing' ? { ...now, status: 'out' } : now));
     window.addEventListener(FORFEIT_EVENT, forfeit);
     return () => window.removeEventListener(FORFEIT_EVENT, forfeit);
   }, [day]);

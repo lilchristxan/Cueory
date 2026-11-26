@@ -3,7 +3,7 @@ import PrintLogo from './PrintLogo';
 import { useEffect, useId, useLayoutEffect, useRef, useState, type KeyboardEvent, type PointerEvent } from 'react';
 import { dayLabel } from './daily';
 import { localDay, reportRound } from './gameresults';
-import { FORFEIT_EVENT, sendPrint } from '../scripts/printgate';
+import { FORFEIT_EVENT, rememberedForfeits, sendPrint } from '../scripts/printgate';
 import { useGameHelp } from './GameHelp';
 import GameHeader from './GameHeader';
 import { playGameCue } from './gamesound';
@@ -332,6 +332,8 @@ export function PathBoard({ puzzle, name, framed = false, printable }: Props) {
       const detail = (event as CustomEvent<{ game?: string; day?: string }>).detail;
       if (detail?.game === 'piccline' && detail.day === localDay(today)) setForfeited(true);
     };
+    // A forfeit confirmed before this board was listening is remembered on the page (printgate.ts).
+    if (rememberedForfeits('piccline', localDay(today)).length > 0) setForfeited(true);
     window.addEventListener(FORFEIT_EVENT, onForfeit);
     return () => window.removeEventListener(FORFEIT_EVENT, onForfeit);
   }, [today]);
