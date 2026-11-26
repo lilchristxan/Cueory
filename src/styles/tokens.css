@@ -1033,7 +1033,8 @@
   --share-dialog-menu-width: 16rem;        /* 256 px: "share on facebook" and its new-tab arrow on one line */
   --share-dialog-menu-shadow: 0 0.75rem 1.75rem rgb(var(--shadow-tint) / 0.2);
   --share-dialog-menu-icon: 1.25rem;       /* 20 px */
-  --vialo-timer-height: 1.25rem;          /* one text-sm line, kept even when the timer is hidden so the board never moves */
+  --vialo-timer-line: 1.5;                /* body text is never tighter than 1.5 (docs/BRAND.md) */
+  --vialo-timer-height: 1.5em;            /* one text-sm line at that spacing, kept even when the timer is hidden so the board never moves */
   --vialo-timer-gap: 0.25rem;
   --vialo-timer-gap-below: 0.5rem;        /* keeps the timer text clear of the foil card's edge */
 }

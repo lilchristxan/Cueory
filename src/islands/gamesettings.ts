@@ -78,7 +78,9 @@ export function saveGameSettings(storage: KeyValueStorage | undefined, settings:
   try {
     if (isDefault(settings)) storage?.removeItem(GAME_SETTINGS_STORAGE_KEY);
     else storage?.setItem(GAME_SETTINGS_STORAGE_KEY, JSON.stringify({
-      highContrast: settings.highContrast, motion: settings.motion, sound: settings.sound, showTimer: settings.showTimer,
+      highContrast: settings.highContrast, motion: settings.motion, sound: settings.sound,
+      // Written only when turned off, so the record stays the same shape for everyone who never touches it.
+      ...(settings.showTimer ? {} : { showTimer: false }),
     }));
   } catch {
     // Not remembered; the change still applies to this page.

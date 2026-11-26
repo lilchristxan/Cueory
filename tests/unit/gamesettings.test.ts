@@ -29,7 +29,11 @@ describe('shared game settings storage', () => {
   it('round-trips a change and stores nothing for the defaults', () => {
     const storage = new MemoryStorage();
     saveGameSettings(storage, { highContrast: true, motion: 'reduce', sound: false, showTimer: true });
-    expect(JSON.parse(storage.getItem(GAME_SETTINGS_STORAGE_KEY)!)).toEqual({ highContrast: true, motion: 'reduce', sound: false, showTimer: true });
+    // showTimer is written only when it is off, so the record keeps its old shape for everyone who never touches it.
+    expect(JSON.parse(storage.getItem(GAME_SETTINGS_STORAGE_KEY)!)).toEqual({ highContrast: true, motion: 'reduce', sound: false });
+    saveGameSettings(storage, { highContrast: true, motion: 'reduce', sound: false, showTimer: false });
+    expect(JSON.parse(storage.getItem(GAME_SETTINGS_STORAGE_KEY)!)).toEqual({ highContrast: true, motion: 'reduce', sound: false, showTimer: false });
+    saveGameSettings(storage, { highContrast: true, motion: 'reduce', sound: false, showTimer: true });
     expect(loadGameSettings(storage)).toEqual({ highContrast: true, motion: 'reduce', sound: false, showTimer: true });
     saveGameSettings(storage, { ...DEFAULT_GAME_SETTINGS });
     expect(storage.data.size).toBe(0);

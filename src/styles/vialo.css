@@ -606,7 +606,7 @@
     block-size: var(--vialo-timer-height);
     margin: var(--vialo-timer-gap) 0 var(--vialo-timer-gap-below);
     font-size: var(--text-sm);
-    line-height: var(--vialo-timer-height);
+    line-height: var(--vialo-timer-line);
     text-align: center;
     color: var(--color-ink-soft);
     font-variant-numeric: tabular-nums;
