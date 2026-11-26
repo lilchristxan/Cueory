@@ -133,8 +133,17 @@
   --game-frame-gear-stroke: 2;           /* outline weight of the gear, level with the bold "?" beside it */
   --game-frame-corner-inset: 1rem;       /* 16px: the gear and "?" sit this far in from the play area's top and right edges */
   --game-frame-corner-inset-phone: 0.75rem; /* 12px on phones, the same as the play area's side padding there */
-  --game-frame-corner-gap: 0.5rem;       /* 8px between the gear and the "?" */
-  --game-frame-corner-buttons: 2;        /* how many buttons are in the corner pair: the gear and the "?" */
+  --game-frame-corner-gap: 0.5rem;       /* 8px between the corner buttons */
+  --game-frame-hint-width: 12rem;        /* 192px: the "print a copy for your patients!" bubble */
+  --game-frame-hint-gap: 0.625rem;       /* 10px from the buttons to the bubble: the tail's height */
+  --game-frame-hint-tail: 0.625rem;      /* 10px: half the tail's width */
+  --game-frame-hint-radius: 1.75rem;     /* 28px */
+  --game-frame-hint-offset: 0.25rem;     /* 4px: the solid shadow's offset down and to the right */
+  --game-frame-hint-line: 1.5px;
+  --game-frame-hint-fade: 0.4s;
+  --print-hint-clearance: 0.5rem;        /* 8px of clear space kept between the bubble and the date line or the game */
+  --game-frame-hint-room: 0rem;          /* the Frame raises this for as long as the bubble needs clear space above the game */
+  --game-frame-corner-buttons: 2;        /* buttons in the corner pair: the gear and the "?", plus the printer on a game that prints */
   --game-frame-how-font-size: 1.25rem;   /* 20px */
   --game-frame-popover-radius: 1.25rem;  /* 20px */
   --game-frame-popover-padding: 1.25rem 1.375rem; /* 20px 22px */
@@ -1689,3 +1698,110 @@
 /* Very narrow screens or enlarged text (the page is under 21 rem wide: 336 px at the normal text size): the logo sits on a
    row of its own under the corner buttons (SiteHeader.astro), so the hero starts a row lower. */
 @media (width < 21rem) { :root { --hero-top-clear: 6.9rem; } }
+
+/*
+  ---------- Anatomy lab: the dark instrument look (Task 178; Christian approved 2026-11-26, D-pending in
+  docs/status/in-review/task-178-lab-redesign-shell.md) ----------
+  The lab, and only the lab, uses this look in both Light and Evening until a Daytime version is designed. Every
+  colour is an exact Evening-palette or copper-accent colour from docs/BRAND.md; the glass, rim and stage tints are
+  mixes of those, never new colours. Named --lab-*, not --color-*, so the palette tests keep reading only the
+  two palettes. src/styles/anatomy-lab.css uses these tokens; src/islands/anatomyscene.ts reads the --lab-rim* and
+  --lab-skin* ones for the lights and the skin outline.
+*/
+:root {
+  --lab-charcoal: #1c1917;       /* Charcoal — the stage, and text on copper */
+  --lab-walnut: #3a2d24;         /* Walnut   — glass panels */
+  --lab-bronze: #6b5243;         /* Bronze   — hairlines (never text) */
+  --lab-sand: #cbb8a4;           /* Sand     — secondary text */
+  --lab-ivory: #f9f5ef;          /* Ivory    — primary text */
+  --lab-copper-deep: #b87348;    /* Copper Deep, Copper, Copper Glow, Copper Shine: the copper accent */
+  --lab-copper: #d9976a;
+  --lab-copper-glow: #f6d3ae;
+  --lab-copper-shine: #fff0de;
+
+  /* Stage and glass */
+  --lab-stage-dark: var(--lab-charcoal);
+  --lab-stage-mid: color-mix(in srgb, var(--lab-charcoal) 82%, var(--lab-walnut));
+  --lab-stage-halo: color-mix(in srgb, var(--lab-copper) 24%, transparent);
+  --lab-stage-halo-edge: color-mix(in srgb, var(--lab-copper-deep) 8%, transparent);
+  --lab-stage-sheen: color-mix(in srgb, var(--lab-copper-shine) 7%, transparent);
+  --lab-grid-line: color-mix(in srgb, var(--lab-copper-glow) 3%, transparent);
+  --lab-grid-size: 2.5rem;
+  --lab-glass-top: color-mix(in srgb, var(--lab-walnut) 62%, transparent);
+  --lab-glass-bottom: color-mix(in srgb, var(--lab-charcoal) 66%, transparent);
+  --lab-glass-blur: 1.125rem;
+  --lab-edge: 1px;
+  --lab-edge-bright: color-mix(in srgb, var(--lab-copper-glow) 75%, transparent);
+  --lab-edge-mid: color-mix(in srgb, var(--lab-copper-deep) 30%, transparent);
+  --lab-edge-dim: color-mix(in srgb, var(--lab-bronze) 55%, transparent);
+  --lab-hair: color-mix(in srgb, var(--lab-copper-glow) 16%, transparent);
+  --lab-ring: color-mix(in srgb, var(--lab-copper-glow) 50%, transparent);
+  --lab-ring-soft: color-mix(in srgb, var(--lab-copper-glow) 22%, transparent);
+  --lab-ring-faint: color-mix(in srgb, var(--lab-copper-glow) 14%, transparent);
+  --lab-tick: color-mix(in srgb, var(--lab-copper-glow) 45%, transparent);
+  --lab-tick-long: color-mix(in srgb, var(--lab-copper-glow) 80%, transparent);
+  --lab-glow: color-mix(in srgb, var(--lab-copper) 55%, transparent);
+  --lab-pool: color-mix(in srgb, var(--lab-copper) 42%, transparent);
+  --lab-well: color-mix(in srgb, var(--lab-charcoal) 55%, transparent);
+  --lab-row-on: color-mix(in srgb, var(--lab-copper-glow) 10%, transparent);
+  --lab-copper-fill: linear-gradient(180deg, var(--lab-copper-shine), var(--lab-copper-glow) 45%, var(--lab-copper));
+  --lab-radius-panel: 1.125rem;
+  --lab-radius-row: 0.625rem;
+  --lab-dot: 0.75rem;
+  --lab-caption-size: 0.75rem;     /* 12 px: the small tracked captions */
+  --lab-caption-tracking: 0.2em;
+  --lab-label-tracking: 0.14em;    /* tracked labels under thumbnails and on/off words */
+  --lab-title-size: 1.1875em;      /* the lab's title */
+  --lab-button-size: 0.9375em;     /* lab buttons */
+  --lab-round-size: 1.125em;       /* round arrow and zoom buttons */
+  --lab-row-size: 0.875em;         /* system rows and key/value lines */
+  --lab-page-max: 90rem;           /* the lab's page is wider than the reading width: it is an instrument, not text */
+  --lab-rail-width: 16.5rem;       /* orientation, systems and layers */
+  --lab-inspector-width: 22.5rem;  /* selected structure and the structure list */
+  --lab-rail-clear: calc(var(--lab-rail-width) + 2.25rem);       /* left rail plus its inset and a gap: where the models may start */
+  --lab-inspector-clear: calc(var(--lab-inspector-width) + 2.25rem); /* right panel plus its inset and a gap: where the models must stop */
+  --lab-rail-gap: 0.75rem;
+  --lab-edge-inset: 1.25rem;       /* a panel's distance from the stage edge */
+  --lab-stage-height: min(56rem, 100dvh);
+  --lab-stage-height-small: min(60rem, 82dvh);
+  --lab-topbar-height: 4.5rem;
+  --lab-thumb-width: 4.25rem;
+  --lab-thumb-height: 6.75rem;
+  --lab-sheet-height: 72dvh;
+  --lab-scale-height: 68%;
+  --lab-scale-tick: 0.625rem;
+  --lab-scale-tick-long: 1.125rem;
+  --lab-scale-step: 4.9%;
+
+  /* The 3D model's light (read by anatomyscene.ts): rim lights from behind in copper, and the skin's outline. */
+  --lab-rim: var(--lab-copper);
+  --lab-rim-soft: var(--lab-copper-glow);
+  --lab-rim-strength: 3.2;
+  --lab-rim-soft-strength: 2.4;
+  --lab-skin-outline: var(--lab-copper-glow);
+  --lab-skin-outline-power: 2.6;
+  --lab-skin-outline-alpha: 0.55;
+  /* Structures in the lab: pale bone-like tones for contrast on the dark stage, selected in copper. All Linen,
+     Taupe, Copper and their mixes. */
+  --lab-model: #eadccf;
+  --lab-model-alt: #d3b7a1;
+  --lab-model-selected: var(--lab-copper);
+}
+
+/* The lab alone keeps the dark instrument look in Light and in Evening: the colour tokens its components use are
+   re-pointed here, so every text-ink, bg-surface and border-line inside the lab reads the Evening palette. */
+.anatomy-lab {
+  color-scheme: dark;
+  --color-page: var(--lab-charcoal);
+  --color-surface: var(--lab-walnut);
+  --color-ink: var(--lab-ivory);
+  --color-ink-soft: var(--lab-sand);
+  --color-line: var(--lab-bronze);
+  --color-control: var(--lab-sand);
+  --color-button: var(--lab-sand);
+  --color-button-hover: var(--lab-bronze);
+  --color-on-button: var(--lab-charcoal);
+  --color-model: var(--lab-model);
+  --color-model-alt: var(--lab-model-alt);
+  --color-model-selected: var(--lab-model-selected);
+}

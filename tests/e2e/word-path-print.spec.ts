@@ -14,7 +14,7 @@ const sample = JSON.parse(readFileSync(new URL('../../content/games/suture/sampl
 
 const axe = (page: Page) => new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa']).analyze();
 const game = (page: Page) => page.getByTestId('suture');
-const printButton = (page: Page) => game(page).getByRole('button', { name: 'print', exact: true });
+const printButton = (page: Page) => page.getByTestId('game-frame-print');
 const cell = (page: Page, [row, col]: Cell) => game(page).locator(`button[data-cell="${row},${col}"]`);
 
 test.beforeEach(async ({ page }) => {
@@ -34,26 +34,28 @@ test.beforeEach(async ({ page }) => {
 const printed = (page: Page) => page.evaluate(() => (window as unknown as { printed: number }).printed);
 
 test.describe('piccline: print for a patient (Task 641)', () => {
-  test('a round print button, at least 44 × 44, at the top right of the board, below the Frame\'s gear and "?"', async ({ page }) => {
+  test('a round print button, at least 44 × 44, in the Frame\'s corner between the gear and the "?"', async ({ page }) => {
     await expect(printButton(page)).toBeVisible();
     const box = (await printButton(page).boundingBox())!;
     expect(box.width).toBeGreaterThanOrEqual(44);
     expect(box.height).toBeGreaterThanOrEqual(44);
     await expect(printButton(page)).toHaveCSS('border-top-left-radius', /^(?:[2-9]\d|\d{3,})(?:\.\d+)?px$/);
-    // The gear and "?" are the Frame's pair in the play area's corner; print stays at the board's top right edge, under them.
-    const area = (await game(page).boundingBox())!;
+    // The Frame's corner holds the gear, then print, then the "?", side by side on one row.
+    const gear = (await page.getByTestId('game-frame-gear').boundingBox())!;
     const help = (await page.getByTestId('game-frame-help-button').boundingBox())!;
-    expect(box.x + box.width).toBeGreaterThan(area.x + area.width - 2);
-    expect(box.y).toBeGreaterThanOrEqual(help.y + help.height);
+    expect(gear.x + gear.width).toBeLessThanOrEqual(box.x);
+    expect(box.x + box.width).toBeLessThanOrEqual(help.x);
+    expect(help.x - (box.x + box.width)).toBeLessThanOrEqual(12);
+    expect(Math.abs(box.y - help.y)).toBeLessThanOrEqual(1);
     // The print-only word list and footer stay off screen.
     await expect(page.getByTestId('suture-print-words')).toBeHidden();
     await expect(page.getByTestId('suture-print-foot')).toBeHidden();
   });
 
   test('the keyboard reaches the print button, and enter prints', async ({ page }) => {
-    // The Frame's gear and "?" come first, then the board's own row with print. So shift+tab from the first letter lands on print.
-    await cell(page, [0, 0]).focus();
-    await page.keyboard.press('Shift+Tab');
+    // The Frame's corner buttons are in the tab order before the board: gear, then print, then the "?".
+    await page.getByTestId('game-frame-gear').focus();
+    await page.keyboard.press('Tab');
     await expect(printButton(page)).toBeFocused();
     await page.keyboard.press('Enter');
     expect(await printed(page)).toBe(1);

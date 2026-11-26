@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { isDesktopOfEachEngine } from './projects';
+import { openLabPanels } from './anatomy-lab-panels';
 
 const LICENSE_URL = 'https://creativecommons.org/licenses/by/4.0/';
 // The exporter uses a 48px margin at the 1080px reference size and scales it
@@ -59,6 +60,7 @@ test('exported anatomy picture credit is complete, visible and model-specific', 
 
   await page.goto('/preview/anatomy-lab?fixture');
   await page.getByRole('button', { name: 'open the anatomy lab' }).click();
+  await openLabPanels(page);
   await expect(page.getByRole('button', { name: 'fixture cube A', exact: true }))
     .toBeEnabled({ timeout: 20_000 });
 
