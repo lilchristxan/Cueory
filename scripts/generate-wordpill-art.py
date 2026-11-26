@@ -9,10 +9,15 @@ components and CSS never use them.
                                oxblood on ivory, with a 2-unit green outline.
   wordpill-wordmark-dark.svg   Evening wordmark: the same artwork with a thin ivory rim round the capsule (E1, approved
                                by Christian, 2026-11-26).
-  wordpill-icon-l1.svg         The icon: the capsule shortened to "w | p" on an ivory rounded tile.
+  wordpill-icon-l1.svg         The icon: the capsule shortened to "wp", on its own (no tile), filling the frame.
+
+Christian, 2026-11-26 (second pass): wordpill is one word, so the whole word is centred in the capsule by its ink, "word"
+and "pill" sit at a normal letter gap, and the colour line falls exactly on the left edge of the p (no ivory before it).
+The icon lost its ivory tile and its letters grew; it follows the same rule.
 """
 import os
 
+from fontTools.pens.boundsPen import BoundsPen
 from fontTools.pens.svgPathPen import SVGPathPen
 from fontTools.pens.transformPen import TransformPen
 from fontTools.ttLib import TTFont
@@ -65,23 +70,58 @@ def capsule(x, y, w, h, split, rim, tag, green=GREEN):
     )
 
 
+def ink(face, ch, size):
+    """A glyph's inked left edge, inked right edge and advance, in drawing units at `size`."""
+    font, glyphs, cmap, upem = face
+    name = cmap[ord(ch)]
+    pen = BoundsPen(glyphs)
+    glyphs[name].draw(pen)
+    left, _, right, _ = pen.bounds
+    return left * size / upem, right * size / upem, font["hmtx"][name][0] * size / upem
+
+
+def advance(face, text, size):
+    font, _, cmap, upem = face
+    return sum(font["hmtx"][cmap[ord(ch)]][0] for ch in text) * size / upem
+
+
+def joined(first_face, first, second_face, second, size, centre, gap):
+    """Where two runs go so that, read as one word, their ink is centred on `centre` with `gap` between the two runs' ink.
+
+    Returns the centre of each run (for text_path) and the x of the second run's first inked edge, where the colour line goes.
+    """
+    first_width, second_width = advance(first_face, first, size), advance(second_face, second, size)
+    lead = ink(first_face, first[0], size)[0]
+    _, last_right, last_advance = ink(first_face, first[-1], size)
+    second_lead = ink(second_face, second[0], size)[0]
+    _, end_right, end_advance = ink(second_face, second[-1], size)
+    first_ink = first_width - lead - (last_advance - last_right)
+    second_ink = second_width - second_lead - (end_advance - end_right)
+    left = centre - (first_ink + gap + second_ink) / 2
+    first_x = left - lead
+    line = left + first_ink + gap
+    second_x = line - second_lead
+    return first_x + first_width / 2, second_x + second_width / 2, round(line, 2)
+
+
 def wordmark(rim, title, tag, green=GREEN):
-    word = text_path(REGULAR, "word", 62, 100, 69)
-    pill = text_path(BOLD, "pill", 62, 226, 69)
+    word_centre, pill_centre, line = joined(REGULAR, "word", BOLD, "pill", 62, 150, 3)
+    word = text_path(REGULAR, "word", 62, word_centre, 69)
+    pill = text_path(BOLD, "pill", 62, pill_centre, 69)
     return (
         f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 100" role="img" aria-label="{title}">'
-        f"{capsule(2, 2, 296, 96, 170, rim, tag, green)}"
+        f"{capsule(2, 2, 296, 96, line, rim, tag, green)}"
         f'<path d="{word}" fill="{WHITE}"/><path d="{pill}" fill="{OXBLOOD}"/></svg>\n'
     )
 
 
 def icon():
-    w = text_path(REGULAR, "w", 30, 33, 60)
-    p = text_path(BOLD, "p", 30, 65, 59)
+    w_centre, p_centre, line = joined(REGULAR, "w", BOLD, "p", 42, 50, 4.5)
+    w = text_path(REGULAR, "w", 42, w_centre, 64)
+    p = text_path(BOLD, "p", 42, p_centre, 62.5)
     return (
         '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-label="wordpill">'
-        f'<rect width="100" height="100" rx="23" fill="{IVORY}"/>'
-        f"{capsule(14, 31, 72, 38, 50, GREEN, 'wordpill-icon-clip')}"
+        f"{capsule(3, 23, 94, 54, line, GREEN, 'wordpill-icon-clip')}"
         f'<path d="{w}" fill="{WHITE}"/><path d="{p}" fill="{OXBLOOD}"/></svg>\n'
     )
 
