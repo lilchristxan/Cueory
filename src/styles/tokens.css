@@ -569,18 +569,24 @@
   --sheet-box-bottom: 0.45in;   /* the word box sits in the lower part of page 2, above the footer */
   --sheet-label-pad-block: 0.04in;
   --sheet-label-pad-inline: 0.2in;
-  --sheet-grid-cell: 0.88in;    /* piccline page 1: each of the 6 × 8 letter squares; the Letter page's height (7.8 in for the board) is what binds */
-  --sheet-grid-dot: 0.76in;     /* the circle round a letter */
-  --sheet-grid-letter: 30pt;
-  --sheet-grid-cell-small: 0.5in; /* the same board on page 2, with the answers drawn through it */
-  --sheet-grid-dot-small: 0.38in;
-  --sheet-grid-letter-small: 16pt;
+  --sheet-grid-cell: 0.8in;    /* piccline page 1: each of the 6 × 8 letter squares: 4.8 in wide, which leaves the words to find 2.2 in beside it on A4 */
+  --sheet-grid-dot: 0.68in;     /* the circle round a letter */
+  --sheet-grid-letter: 28pt;
+  --sheet-grid-cell-small: 0.47in; /* the same board on page 2, with the answers drawn through it */
+  --sheet-grid-dot-small: 0.35in;
+  --sheet-grid-letter-small: 15pt;
   --sheet-spread-gap: 0.25in;
   --sheet-path-line: 4pt;       /* an answer's path on page 2 */
   --sheet-path-dash: 10pt 6pt;  /* the thread's path is dashed, so it differs in more than colour */
-  --sheet-number-pad: 0.02in 0.06in;
-  --sheet-blank-height: 0.38in; /* a write-in line on page 1 */
-  --sheet-blank-gap: 0.2in;
+  --sheet-number: 9pt;          /* the number where an answer's path starts on page 2, in the cell's top left corner, outside the circle */
+  --sheet-number-pad: 0.01in 0.02in;
+  --sheet-number-offset: -0.04in;
+  --sheet-list-word: 18pt;      /* the words to find on page 1 */
+  --sheet-list-tracking: 0.04em;
+  --sheet-list-gap: 0.14in;
+  --sheet-list-space: 0.2in;
+  --sheet-box-size: 0.28in;     /* a tick box */
+  --sheet-box-radius: 0.04in;
   --sheet-dialog-width: min(calc(100vw - 2rem), 28rem); /* the "print before you finish?" dialog */
 
   /* ---------- Motion (D-41 brand bar: 150–400 ms, soft not bouncy, always off under reduced-motion) ---------- */

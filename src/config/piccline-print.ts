@@ -7,23 +7,28 @@ import { gameName } from './games';
 
 const name = gameName('piccline');
 
+/** The few words the board's page draws in the browser: kept apart so the page's first load carries no more text than it needs. */
+export const picclineBoardText = {
+  clueLabel: "today's cue",
+  boardLabel: 'letter board, 6 columns by 8 rows',
+  listTitle: (count: number) => `${count} ${count === 1 ? 'word' : 'words'} to find`,
+} as const;
+
 export const picclineSheet = {
+  ...picclineBoardText,
   name,
   copyGuesser: "guesser's copy",
   copyKeeper: "keeper's copy",
-  caption: "find the answers on the board. draw a line through each one's letters.",
+  caption: 'find each word on the board. draw a line through its letters and tick it off.',
   footerOne: 'cueory.app · page 1 of 2',
   footerTwo: 'cueory.app · page 2 of 2',
   keeperLine: 'knows the answers and checks each one · keep this copy away from the guesser',
-  clueLabel: "today's cue",
-  boardLabel: 'letter board, 6 columns by 8 rows',
-  listTitle: (count: number) => `${count} ${count === 1 ? 'answer' : 'answers'} to find. write each on a line.`,
   howHeading: 'how to play',
   steps: [
     "two players. the guesser gets the guesser's copy. the keeper keeps this copy hidden.",
     'every letter belongs to exactly one answer. one answer, the thread, names the theme and runs from one side of the board to the other.',
     'an answer runs through touching letters: up, down, sideways or diagonally. it can turn, and it never uses the same letter twice.',
-    'the guesser draws a line through the letters of each answer found, and writes it on a numbered line.',
+    'the guesser draws a line through the letters of each answer found, and ticks its word off the list.',
   ],
   foldLabel: 'fold to hide answers',
   answersLabel: 'answers',

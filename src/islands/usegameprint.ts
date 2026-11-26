@@ -13,7 +13,7 @@ export interface GamePrintOptions {
   /** Stored with a forfeited day (vialo: its six tries used; piccline: no wrong words counted). */
   forfeitTries: number;
   /** Puts today's answers into the sheet. Called only when printing is allowed, and finished before the print opens. */
-  prepare: (now: Date) => void;
+  prepare: (now: Date) => void | Promise<void>;
   /** Takes the answers out again once the print is over (or on any failure). */
   release: () => void;
 }
@@ -44,7 +44,7 @@ export function useGamePrint(options: GamePrintOptions) {
       busy.current = false;
     };
     try {
-      latest.current.prepare(new Date());
+      await latest.current.prepare(new Date());
       await sheetImagesReady();
       window.addEventListener('afterprint', done, { once: true });
       // Some browsers never send afterprint: let go after two minutes so printing cannot stay switched off.

@@ -1,6 +1,11 @@
 import type { Cell } from './suture';
 import type { SuturePathPuzzle } from './suturepath';
-import { picclineSheet as t } from '../config/piccline-print';
+import { picclineBoardText as t } from '../config/piccline-print';
+
+/** The answers in the order both pages list them: alphabetical, so the list never shows which one is the thread. */
+export function listOrder(puzzle: SuturePathPuzzle): number[] {
+  return puzzle.words.map((_, index) => index).sort((a, b) => puzzle.words[a]!.answer.localeCompare(puzzle.words[b]!.answer));
+}
 
 /** The letter board as printed circles; with `answers`, every answer's path is drawn through it and numbered where it starts. */
 export function SheetGrid({ puzzle, answers = false }: { puzzle: SuturePathPuzzle; answers?: boolean }) {
@@ -9,7 +14,7 @@ export function SheetGrid({ puzzle, answers = false }: { puzzle: SuturePathPuzzl
   const middle = ([row, column]: Cell) => `${column + 0.5},${row + 0.5}`;
   // The number of the answer that starts in each cell (only on the answers board).
   const starts = new Map<string, number>();
-  if (answers) puzzle.words.forEach((word, index) => starts.set(`${word.path[0]![0]},${word.path[0]![1]}`, index + 1));
+  if (answers) listOrder(puzzle).forEach((word, position) => starts.set(`${puzzle.words[word]!.path[0]![0]},${puzzle.words[word]!.path[0]![1]}`, position + 1));
   return (
     <div className={answers ? 'sheet-grid sheet-grid-small' : 'sheet-grid'} role="img" aria-label={t.boardLabel} data-testid={answers ? 'sheet-answer-grid' : 'sheet-grid'}>
       {answers && (
@@ -29,7 +34,7 @@ export function SheetGrid({ puzzle, answers = false }: { puzzle: SuturePathPuzzl
   );
 }
 
-/** Page 1: the cue, the board, and one numbered write-in line per answer. */
+/** Page 1: the cue, the board, and the words to find with a tick box each. */
 export function BoardPage({ puzzle }: { puzzle: SuturePathPuzzle }) {
   return (
     <>
@@ -38,33 +43,13 @@ export function BoardPage({ puzzle }: { puzzle: SuturePathPuzzle }) {
         <SheetGrid puzzle={puzzle} />
         <div className="sheet-list">
           <p className="sheet-list-title">{t.listTitle(puzzle.words.length)}</p>
-          <ol className="sheet-list-blanks" data-testid="sheet-lines">
-            {puzzle.words.map((_, index) => (
-              <li key={index}><span className="sheet-list-number">{index + 1}</span><span className="sheet-list-blank" /></li>
+          <ul className="sheet-list-checks" data-testid="sheet-words">
+            {listOrder(puzzle).map((index) => (
+              <li key={index}><span className="sheet-box" aria-hidden="true" /><span className="sheet-list-word">{puzzle.words[index]!.answer.toUpperCase()}</span></li>
             ))}
-          </ol>
+          </ul>
         </div>
       </div>
     </>
-  );
-}
-
-/** Page 2, below the fold: the board with the answers drawn on it, and the answers in order. */
-export function AnswersPage({ puzzle }: { puzzle: SuturePathPuzzle }) {
-  return (
-    <div className="sheet-spread" data-testid="sheet-answers">
-      <SheetGrid puzzle={puzzle} answers />
-      <div className="sheet-list">
-        <p className="sheet-list-title">{t.answersLabel}</p>
-        <ol className="sheet-list-answers" data-testid="sheet-answer-list">
-          {puzzle.words.map((word, index) => (
-            <li key={index} aria-label={t.pathLabel(index + 1, word.answer.toLowerCase())}>
-              <span className="sheet-list-number">{index + 1}</span>
-              <span>{word.answer.toLowerCase()}{word.special && <span className="sheet-list-tag"> · {t.threadTag}</span>}</span>
-            </li>
-          ))}
-        </ol>
-      </div>
-    </div>
   );
 }

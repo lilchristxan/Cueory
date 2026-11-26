@@ -3,7 +3,7 @@ import PrintLogo from './PrintLogo';
 import { useEffect, useId, useLayoutEffect, useRef, useState, type KeyboardEvent, type PointerEvent } from 'react';
 import { dayLabel } from './daily';
 import { localDay, reportRound } from './gameresults';
-import { printGame } from './gameprint';
+import { FORFEIT_EVENT, PRINT_EVENT } from '../scripts/printgate';
 import { useGameHelp } from './GameHelp';
 import GameHeader from './GameHeader';
 import { playGameCue } from './gamesound';
@@ -15,12 +15,16 @@ import { loadPicclineSave, savePicclineBoard } from './picclinesave';
 import type { Cell } from './suture';
 import {
   announceProgress, backspace, cellView, cuesUsed, firstWordFound, clearPicked, extend, hintsLeft, MIN_WORD, parsePathPuzzle, pathCellLabel, pathDone, pathShareLine,
-  printBoard,
   pickedWord, specialFoundFirst, startPath, submit, submitInWords, takeHint, WORDS_PER_HINT, wordsToNextHint,
   type CellLook, type PathState, type SuturePathPuzzle,
 } from './suturepath';
 
-interface Props { puzzle: SuturePathPuzzle; name: string }
+interface Props {
+  puzzle: SuturePathPuzzle;
+  name: string;
+  /** The page has piccline's print sheet (/play/piccline). The older word path route does not, so it shows no print button. */
+  printable?: boolean;
+}
 const printFoot = new URL(site.url).host;
 const button = 'min-h-11 min-w-11 rounded-md border border-control bg-page px-4 py-2 text-ink disabled:opacity-50';
 
@@ -98,7 +102,7 @@ function cellAt(board: HTMLElement | null, x: number, y: number): Cell | null {
   return dx * dx + dy * dy <= 0.6 ? cellOf(target) : null;
 }
 
-export function PathBoard({ puzzle, name }: Props) {
+export function PathBoard({ puzzle, name, printable }: Props) {
   const [today] = useState(() => new Date());
   // A board played earlier today on this device comes back as it was (a finished one stays finished); a new day starts fresh.
   const [restored] = useState(() => loadPicclineSave(puzzle, localDay(today)));
@@ -114,7 +118,6 @@ export function PathBoard({ puzzle, name }: Props) {
   const [layout, setLayout] = useState<Layout | null>(null);
   /** While a finger or mouse drags, where it is inside the board, so the line can follow it. */
   const [finger, setFinger] = useState<{ x: number; y: number } | null>(null);
-  const [printNote, setPrintNote] = useState('');
   const quietClickUntil = useRef(0);
   const { soundAllowed } = useSharedGameSettings();
   const sound = useRef(true);
@@ -123,6 +126,9 @@ export function PathBoard({ puzzle, name }: Props) {
   const howToPlay = useGameHelp('suture');
   const title = useId();
   const done = pathDone(state, puzzle);
+  // Set below: once a print forfeits the day, the board on screen can no longer be played.
+  const [forfeited, setForfeited] = useState(false);
+  const locked = done || forfeited;
   const total = puzzle.words.length;
   const shared = pathShareLine(state, puzzle, dayLabel(today), name);
   const word = pickedWord(state, puzzle).toLowerCase();
@@ -315,17 +321,19 @@ export function PathBoard({ puzzle, name }: Props) {
     catch { setCopied(shared); }
   };
 
-  /** Printing an unfinished board counts as using a cue (once), and the player is told so in one line. */
-  const printPuzzle = () => {
-    const next = printBoard(current.current, puzzle);
-    if (next !== current.current) {
-      apply(next);
-      const note = 'printing before you finish counts as a cue, so today won\'t count as solved without cues.';
-      setPrintNote(note);
-      setSaid(note);
-    }
-    printGame('suture');
-  };
+  /** The printer button asks the page's print sheet (src/islands/PicclinePrint.tsx): it warns first when the board is not finished. */
+  const printPuzzle = () => document.dispatchEvent(new CustomEvent(PRINT_EVENT, { detail: { game: 'piccline' } }));
+
+  // "print anyway" on an unfinished board (usegameprint.ts): today is already stored as not solved, so the board on screen
+  // ends too (not saved: a reload starts a fresh board, and the stored first result of the day stands).
+  useEffect(() => {
+    const onForfeit = (event: Event) => {
+      const detail = (event as CustomEvent<{ game?: string; day?: string }>).detail;
+      if (detail?.game === 'piccline' && detail.day === localDay(today)) setForfeited(true);
+    };
+    window.addEventListener(FORFEIT_EVENT, onForfeit);
+    return () => window.removeEventListener(FORFEIT_EVENT, onForfeit);
+  }, [today]);
 
   // The lines that join each found answer and the word being picked, from circle edge to circle edge.
   const lines: Line[] = [];
@@ -366,7 +374,7 @@ export function PathBoard({ puzzle, name }: Props) {
       <GameHeader
         name={name}
         help={howToPlay}
-        end={
+        end={printable ? (
           <button type="button" className="wordpath-round" aria-label="print" data-testid="suture-print" onClick={printPuzzle}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
               <path d="M6 9V3h12v6" />
@@ -374,9 +382,9 @@ export function PathBoard({ puzzle, name }: Props) {
               <path d="M7 14h10v7H7z" />
             </svg>
           </button>
-        }
+        ) : undefined}
       />
-      {printNote && <p className="mt-2 text-center text-sm text-ink-soft" data-testid="suture-print-note" data-print-hidden>{printNote}</p>}
+      {forfeited && <p className="mt-2 text-center text-sm text-ink-soft" data-testid="suture-forfeit-note" data-print-hidden>you printed before finishing, so today counts as not solved.</p>}
       <div className="wordpath-panel -mx-(--wordpath-bleed) mt-6 sm:mx-0 sm:mt-0 sm:px-(--spacing-stack)">
       <div
         ref={board}
@@ -408,7 +416,7 @@ export function PathBoard({ puzzle, name }: Props) {
                     ref={(element) => { if (element) buttons.current.set(index, element); else buttons.current.delete(index); }}
                     type="button"
                     tabIndex={index === focused ? 0 : -1}
-                    disabled={done}
+                    disabled={locked}
                     aria-label={pathCellLabel(state, puzzle, cell)}
                     data-cell={`${r},${c}`}
                     data-look={view.look}
@@ -461,10 +469,10 @@ export function PathBoard({ puzzle, name }: Props) {
       </p>
       </div>
       <div className="mt-2 flex flex-wrap justify-center gap-2" data-print-hidden>
-        <button type="button" className={button} disabled={done || state.picked.length === 0} onClick={send} data-testid="suture-submit">submit</button>
-        <button type="button" className={button} disabled={done || state.picked.length === 0} onClick={clear} data-testid="suture-clear">clear</button>
+        <button type="button" className={button} disabled={locked || state.picked.length === 0} onClick={send} data-testid="suture-submit">submit</button>
+        <button type="button" className={button} disabled={locked || state.picked.length === 0} onClick={clear} data-testid="suture-clear">clear</button>
         <span className="inline-flex items-center">
-          <button type="button" className={button} disabled={done} onClick={hint} data-testid="suture-hint" aria-describedby={`${title}-hint`}>
+          <button type="button" className={button} disabled={locked} onClick={hint} data-testid="suture-hint" aria-describedby={`${title}-hint`}>
             cue{left > 0 ? ` (${left})` : ''}
           </button>
           {/* Three pips fill as other words are found: a filled disc is a word found, an outline is one still to find, and the
@@ -508,9 +516,9 @@ export function PathBoard({ puzzle, name }: Props) {
 }
 
 /** A board puzzle from the page, checked again here so a broken one shows a plain message instead of a broken game. */
-export default function SuturePathBoard({ puzzle, name }: Props) {
+export default function SuturePathBoard({ puzzle, name, printable = false }: Props) {
   try {
     const parsed = parsePathPuzzle(puzzle);
-    return <PathBoard key={JSON.stringify(parsed)} puzzle={parsed} name={name} />;
+    return <PathBoard key={JSON.stringify(parsed)} puzzle={parsed} name={name} printable={printable} />;
   } catch { return <p role="alert">this puzzle could not be loaded. please try again later.</p>; }
 }

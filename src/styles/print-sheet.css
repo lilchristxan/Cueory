@@ -205,7 +205,7 @@
   .sheet-paths { position: absolute; inset: 0; inline-size: 100%; block-size: 100%; }
   .sheet-path { fill: none; stroke: var(--sheet-accent); stroke-width: var(--sheet-path-line); stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
   .sheet-path-thread { stroke-dasharray: var(--sheet-path-dash); }
-  .sheet-grid-number { position: absolute; inset-block-start: 0; inset-inline-start: 0; font-size: var(--sheet-foot); font-weight: 700; line-height: 1; padding: var(--sheet-number-pad); background: var(--print-paper); border: var(--sheet-line) solid var(--sheet-accent); border-radius: var(--radius-pill); }
+  .sheet-grid-number { position: absolute; inset-block-start: var(--sheet-number-offset); inset-inline-start: var(--sheet-number-offset); font-size: var(--sheet-number); font-weight: 700; line-height: 1; padding: var(--sheet-number-pad); background: var(--print-paper); color: var(--sheet-ink); z-index: 1; }
 
   .sheet-list ol { list-style: none; margin: 0; padding: 0; }
   .sheet-grid-cell { position: relative; z-index: 1; }
@@ -213,8 +213,10 @@
   .sheet-list-title { margin-block-end: var(--sheet-gap) !important; font-size: var(--sheet-small); color: var(--sheet-ink-soft) !important; }
   .sheet-list li { display: flex; align-items: baseline; gap: var(--sheet-key-gap); font-size: var(--sheet-text); }
   .sheet-list-number { flex: none; font-weight: 700; min-inline-size: 1.4em; }
-  .sheet-list-blank { flex: 1; min-inline-size: 0; border-block-end: var(--sheet-line) solid var(--sheet-accent); block-size: var(--sheet-blank-height); }
-  .sheet-list-blanks li + li { margin-block-start: var(--sheet-blank-gap); }
+  .sheet-list-checks li { align-items: center; gap: var(--sheet-list-gap); font-size: var(--sheet-list-word); font-weight: 700; letter-spacing: var(--sheet-list-tracking); }
+  .sheet-list-checks li + li { margin-block-start: var(--sheet-list-space); }
+  .sheet-list-word { min-inline-size: 0; overflow-wrap: anywhere; }
+  .sheet-box { flex: none; box-sizing: border-box; inline-size: var(--sheet-box-size); block-size: var(--sheet-box-size); border: var(--sheet-line) solid var(--sheet-accent); border-radius: var(--sheet-box-radius); }
   .sheet-list-answers li + li { margin-block-start: var(--sheet-step-gap); }
   .sheet-list-tag { font-size: var(--sheet-small); color: var(--sheet-ink-soft); }
 

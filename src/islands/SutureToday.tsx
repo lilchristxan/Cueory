@@ -23,6 +23,6 @@ export default function SutureToday({ puzzles, name, boardOnly = false }: Props)
   // /play hands over each sample's theme or clue itself, so nothing more is looked up here.
   const puzzle = useMemo(() => puzzleForDay(boardOnly ? boardPuzzles(puzzles) : puzzles, dayNumber(new Date())), [puzzles, boardOnly]);
   if (!puzzle) return <p>no puzzle today.</p>;
-  if (isPathPuzzle(puzzle)) return <SuturePathBoard puzzle={puzzle} name={name} />;
+  if (isPathPuzzle(puzzle)) return <SuturePathBoard puzzle={puzzle} name={name} printable={boardOnly} />;
   return <SutureGame puzzle={puzzle as SuturePuzzle} name={name} />;
 }

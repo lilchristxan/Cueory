@@ -5,8 +5,7 @@ import { markPanelsSeen } from './clock';
 /**
  * Word path's 6 × 8 board (sample-01, 1 November 2026): straight lines join the letters of the word being picked and
  * of every found answer, from the edge of one circle to the edge of the next; picked letters show no order numbers; a
- * drag draws a line on to the finger and never scrolls the page; and printing before the board is finished counts as a
- * cue, with a one-line note.
+ * drag draws a line on to the finger and never scrolls the page. (Printing has its own spec: word-path-print.spec.ts.)
  */
 type Cell = [number, number];
 const sample = JSON.parse(readFileSync(new URL('../../content/games/suture/sample-01.json', import.meta.url), 'utf8')) as {
@@ -97,17 +96,6 @@ test('a drag draws a line on to the finger and the board never scrolls the page'
   await expect(cell(page, other.path[1]!)).toHaveAttribute('data-look', 'picked');
   await page.mouse.up();
   expect(await page.evaluate(() => window.scrollY)).toBe(scrollBefore);
-});
-
-test('printing an unfinished board counts as a cue and says so in one line', async ({ page }) => {
-  await expect(game(page).getByTestId('suture-print-note')).toHaveCount(0);
-  await game(page).getByTestId('suture-print').click();
-  expect(await page.evaluate(() => (window as unknown as { printed: number }).printed)).toBe(1);
-  const note = game(page).getByTestId('suture-print-note');
-  await expect(note).toHaveText("printing before you finish counts as a cue, so today won't count as solved without cues.");
-  await expect(game(page).getByTestId('suture-live')).toHaveText("printing before you finish counts as a cue, so today won't count as solved without cues.");
-  // Earned cues are not spent by printing.
-  await expect(game(page).getByTestId('suture-hint')).toHaveText('cue');
 });
 
 for (const scheme of ['light', 'dark'] as const) {

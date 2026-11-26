@@ -2,7 +2,6 @@ import '../styles/wordpath.css';
 import { useEffect, useId, useRef, useState, type KeyboardEvent, type PointerEvent } from 'react';
 import { dayLabel } from './daily';
 import { localDay, reportRound } from './gameresults';
-import { printGame } from './gameprint';
 import { useGameHelp } from './GameHelp';
 import GameHeader from './GameHeader';
 import PicclineCue from './PicclineCue';
@@ -146,15 +145,6 @@ function Board({ puzzle, name }: Props) {
       <GameHeader
         name={name}
         help={howToPlay}
-        end={
-          <button type="button" className="wordpath-round" aria-label="print" data-testid="suture-print" onClick={() => printGame('suture')}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
-              <path d="M6 9V3h12v6" />
-              <rect x="3" y="9" width="18" height="9" rx="2" />
-              <path d="M7 14h10v7H7z" />
-            </svg>
-          </button>
-        }
       />
       <div className="wordpath-panel -mx-(--wordpath-bleed) mt-6 sm:mx-0 sm:px-(--spacing-stack)">
       <div
