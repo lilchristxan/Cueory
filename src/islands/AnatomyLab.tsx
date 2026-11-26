@@ -1788,16 +1788,16 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
     if (reviewPool.length === 0 || !ready) return;
     stopStudy();
     // The queue is shown first, so the skin is an outline (and cannot be tapped) if anything else is showing then.
-    const reachable = tappableRound(reviewPool, [...new Set([...visible, ...reviewPool])], skinIds);
-    if (reachable.length === 0) {
+    const round = tappableRound(reviewPool, [...new Set([...visible, ...reviewPool])], skinIds);
+    if (round.length === 0) {
       setAnnounce('the structures in your review queue cannot be tapped while other structures are showing. hide the others to practise them.');
       return;
     }
     stopRecall();
     changeVisibility((v) => ({ hidden: expandNearby(v.hidden, reviewPool), faded: v.faded }));
     setSelected(null);
-    setQuiz(startQuiz(reachable, Math.random));
-    setAnnounce(`find it: ${reachable.length} structures from your review queue.`);
+    setQuiz(startQuiz(round, Math.random));
+    setAnnounce(`find it: ${round.length} structures from your review queue.`);
   };
 
   const saveView = () => {
