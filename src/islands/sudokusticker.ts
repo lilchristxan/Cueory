@@ -99,8 +99,8 @@ function centered(input: SudokuStickerInput): SudokuLayout {
   };
 }
 
-/** Space kept between the text column and the right edge of the landscape sticker. */
-const TEXT_RIGHT_MARGIN = 0;
+/** Space kept between the text column and the right edge of the landscape sticker, so a fitted line never touches the edge. */
+const TEXT_RIGHT_MARGIN = 40;
 
 function lowerThird(input: SudokuStickerInput): SudokuLayout {
   const { width, height } = SUDOKU_STICKER_SIZE['lower-third'];

@@ -67,7 +67,8 @@ describe('the sudoku stickers', () => {
 describe('long date lines on the landscape sticker (Codex on #1233)', () => {
   it('give the date line the width left in the text column, so a long line is drawn smaller, not clipped', () => {
     const long = sudokuLayout('lower-third', { dateLine: 'wednesday, september 30th · medium', stats: [] });
-    expect(long.date.maxWidth).toBe(SUDOKU_STICKER_SIZE['lower-third'].width - long.date.x);
-    expect(long.date.maxWidth).toBe(732);
+    // 732 px are left of the column; 40 px are kept clear of the right edge.
+    expect(long.date.maxWidth).toBe(SUDOKU_STICKER_SIZE['lower-third'].width - long.date.x - 40);
+    expect(long.date.maxWidth).toBe(692);
   });
 });

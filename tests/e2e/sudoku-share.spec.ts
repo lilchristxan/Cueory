@@ -208,7 +208,7 @@ test('a long date line on the landscape sticker is drawn to fit: nothing touches
   await expect(page.getByTestId('share-dialog-description')).toContainText('wednesday, september 30th · medium');
   await page.getByTestId('share-dialog-option-landscape').click();
   const saved = await download(page, 'share-dialog-save');
-  // The date line sits at y 241 to 291; the last 4 columns of the picture must be empty there.
+  // The date line sits at y 241 to 291; the last 4 columns of the picture must be empty there (fitted text keeps 40 px clear).
   const strip = await inspect(page, saved.path, [[1596, 255], [1597, 265], [1598, 275], [1599, 285]]);
   expect(strip.points.map((p) => p[3])).toEqual([0, 0, 0, 0]);
 });
