@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { expect, test } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { markPanelsSeen } from './clock';
@@ -305,5 +307,9 @@ test('the forfeit goes on the new day when midnight passes while the warning is 
   const keeper = page.getByTestId('sheet-keeper');
   await expect(keeper).toHaveAttribute('data-keeper', 'ready');
   await expect(keeper.locator('[data-keeper-date]')).toHaveText('monday, november 2nd · #2');
-  await expect(keeper.locator('[data-keeper-word]')).not.toHaveText('grace');
+  // The word must be the second day's own public sample (not blank, not another day's): read it from the checked-in file.
+  const secondDay = JSON.parse(readFileSync(resolve('content/games/pulse/sample-02.json'), 'utf8')) as { word: string };
+  expect(secondDay.word).toMatch(/^[a-z]{5}$/);
+  expect(secondDay.word).not.toBe('grace');
+  await expect(keeper.locator('[data-keeper-word]')).toHaveText(secondDay.word);
 });
