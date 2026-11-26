@@ -10,6 +10,9 @@ import PicclineCue from './PicclineCue';
 import { site } from '../config/site';
 import { announceProgress } from './suturepath';
 import PrintLogo from './PrintLogo';
+import { shake } from './shake';
+
+export { shake };
 import { cellLabel, clearPick, foundWord, isDone, moveCursor, outcomeInWords, parsePuzzle, pick, printableWords, selection, shareLine, startSuture, type Cell, type SuturePuzzle } from './suture';
 
 interface Props { puzzle: SuturePuzzle; name: string; framed?: boolean }
@@ -21,30 +24,6 @@ const columnClass: Record<number, string> = {
   6: 'wordpath-cols-6', 7: 'wordpath-cols-7', 8: 'wordpath-cols-8',
   9: 'wordpath-cols-9', 10: 'wordpath-cols-10', 11: 'wordpath-cols-11',
 };
-/**
- * A gentle sideways shake for a wrong pick, through the Web Animations API, so no stylesheet is injected (the CSP allows
- * none) and the distance and timing come from the design tokens. Nothing moves when the device asks for reduced motion.
- */
-export function shake(element: HTMLElement | null) {
-  if (!element || typeof element.animate !== 'function') return;
-  const motion = window.matchMedia?.('(prefers-reduced-motion: reduce)');
-  if (motion?.matches) return;
-  const tokens = getComputedStyle(element);
-  const step = tokens.getPropertyValue('--spacing').trim();
-  const duration = Number.parseFloat(tokens.getPropertyValue('--duration-base'));
-  if (!step || !Number.isFinite(duration)) return;
-  const away = (sign: number) => ({ translate: `calc(${step} * ${sign}) 0` });
-  const animation = element.animate([{ translate: '0 0' }, away(-1), away(1), away(-1), { translate: '0 0' }], { duration, easing: 'ease-in-out' });
-  // A preference change must also stop a shake that has already started.
-  const stop = (event: MediaQueryListEvent) => {
-    if (event.matches) animation.cancel();
-  };
-  const cleanup = () => motion?.removeEventListener('change', stop);
-  motion?.addEventListener('change', stop);
-  // Cancellation rejects finished; handle both paths and release the media listener.
-  void animation.finished.then(cleanup, cleanup);
-}
-
 function Board({ puzzle, name, framed = false }: Props) {
   // The Frame's printer button announces the print; this is what the old print button ran.
   usePrintRequest('suture', () => printGame('suture'));

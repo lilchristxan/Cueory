@@ -1,9 +1,11 @@
-import { useMemo } from 'react';
-import SutureGame from './SutureGame';
+import { lazy, Suspense, useMemo } from 'react';
 import SuturePathBoard from './SuturePathBoard';
 import type { SuturePuzzle } from './suture';
 import { boardPuzzles, isPathPuzzle, type WordPathPuzzle } from './suturepath';
 import { dayNumber, puzzleForDay } from './pulse';
+
+// The older word search game loads only on the route that can show it; piccline's board never needs it.
+const SutureGame = lazy(() => import('./SutureGame'));
 
 interface Props {
   /** Sample puzzles (D-71): the page hands over all of them, and today's is picked from the visitor's own date. */
@@ -25,6 +27,6 @@ export default function SutureToday({ puzzles, name, boardOnly = false, framed =
   // /play hands over each sample's theme or clue itself, so nothing more is looked up here.
   const puzzle = useMemo(() => puzzleForDay(boardOnly ? boardPuzzles(puzzles) : puzzles, dayNumber(new Date())), [puzzles, boardOnly]);
   if (!puzzle) return <p>no puzzle today.</p>;
-  if (isPathPuzzle(puzzle)) return <SuturePathBoard puzzle={puzzle} name={name} framed={framed} printable={boardOnly} />;
-  return <SutureGame puzzle={puzzle as SuturePuzzle} name={name} framed={framed} />;
+  if (isPathPuzzle(puzzle)) return <SuturePathBoard puzzle={puzzle} name={name} framed={framed} printPuzzles={boardOnly ? puzzles : undefined} />;
+  return <Suspense fallback={null}><SutureGame puzzle={puzzle as SuturePuzzle} name={name} framed={framed} /></Suspense>;
 }

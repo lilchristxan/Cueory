@@ -55,10 +55,8 @@ export function printAnyway(storage: KeyValueStorage | undefined, game: PrintGam
 
 /** The event a game frame's printer button sends on `document`; detail.game names the game. */
 export const PRINT_EVENT = 'cueory:print';
-/** Sent on `window` after a forfeit (detail: { game, day }), so the game on screen ends as lost for that day. */
-export const FORFEIT_EVENT = 'cueory:game-forfeited';
-
-const FORFEIT_MEMORY_ATTR = 'data-print-forfeits';
+import { FORFEIT_EVENT, FORFEIT_MEMORY_ATTR } from '../islands/forfeitmemory';
+export { FORFEIT_EVENT, rememberedForfeits } from '../islands/forfeitmemory';
 
 /**
  * Announces a forfeit ("print anyway" on an unfinished game): remembers it on the page for this visit and sends
@@ -73,15 +71,6 @@ export function announceForfeit(game: PrintGame, day: string, extra: Record<stri
   const entry = `${game}|${day}|${level}`;
   if (!list.includes(entry)) root.setAttribute(FORFEIT_MEMORY_ATTR, [...list, entry].join(' '));
   window.dispatchEvent(new CustomEvent(FORFEIT_EVENT, { detail: { ...extra, game, day } }));
-}
-
-/** The levels forfeited this visit for that game and day (an empty string for a game without levels); empty when none. */
-export function rememberedForfeits(game: PrintGame, day: string): string[] {
-  if (typeof document === 'undefined') return [];
-  return (document.documentElement.getAttribute(FORFEIT_MEMORY_ATTR) ?? '').split(' ')
-    .map((entry) => entry.split('|'))
-    .filter((parts) => parts[0] === game && parts[1] === day)
-    .map((parts) => parts[2] ?? '');
 }
 
 /** The games that have a paper sheet. Each is the id the results are stored under (piccline's older id is suture, the same history). */

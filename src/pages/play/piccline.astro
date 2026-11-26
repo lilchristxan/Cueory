@@ -8,7 +8,6 @@ import GamePage from '../../components/GamePage.astro';
 import PicclineTitle from '../../components/PicclineTitle.astro';
 import SutureToday from '../../islands/SutureToday';
 import PicclineSheet from '../../components/PicclineSheet.astro';
-import PicclinePrint from '../../islands/PicclinePrint';
 import { dailyGames, gamePagesBareHeader } from '../../config/games';
 import { wordPathSamples } from '../../config/gamesamples';
 
@@ -28,6 +27,5 @@ const samples = await wordPathSamples();
     </section>
   </GamePage>
   <PicclineSheet />
-  <PicclinePrint client:only="react" puzzles={samples} />
   <noscript><p>printing the {game.name} sheet needs JavaScript.</p></noscript>
 </Layout>

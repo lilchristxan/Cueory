@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { loadStats, localDay } from './gameresults';
 import { browserStorage } from '../scripts/storage';
 import { announceForfeit, isFinished, printAnyway, requestPrint, type PrintGame } from '../scripts/printgate';
-import { usePrintRequest } from './useprintrequest';
+import { PRINT_EVENT, printEventGame, registerPrintListener, unregisterPrintListener } from './gameprintevent';
 import { sheetImagesReady } from '../scripts/printsheet';
 
 /** How long printing stays switched off if the browser never says the print is over. */
@@ -80,7 +80,18 @@ export function useGamePrint(options: GamePrintOptions) {
 
   // The Frame's printer button announces the print by the game's page id (gameprintevent.ts). A press made before this entry
   // was listening is remembered there and answered once, here, the moment it registers.
-  usePrintRequest(latest.current.printId ?? latest.current.game, request);
+  // (The same listening as usePrintRequest, written out here so the board's own copy of that hook stays in the board's file.)
+  useEffect(() => {
+    const id = latest.current.printId ?? latest.current.game;
+    const onPrint = (event: Event) => { if (printEventGame(event) === id) request(); };
+    document.addEventListener(PRINT_EVENT, onPrint);
+    if (registerPrintListener(id)) request();
+    return () => {
+      document.removeEventListener(PRINT_EVENT, onPrint);
+      unregisterPrintListener(id);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     // Tells the page (and the tests) that a print request will now be heard: the island loads after the page does.

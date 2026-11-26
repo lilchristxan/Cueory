@@ -3,7 +3,6 @@ import PrintLogo from './PrintLogo';
 import { lazy, Suspense, useEffect, useId, useLayoutEffect, useRef, useState, type KeyboardEvent, type PointerEvent } from 'react';
 import { dayLabel } from './daily';
 import { localDay, reportRound } from './gameresults';
-import { FORFEIT_EVENT, rememberedForfeits } from '../scripts/printgate';
 import { printGame } from './gameprint';
 import { usePrintRequest } from './useprintrequest';
 import { useGameHelp } from './GameHelp';
@@ -14,23 +13,24 @@ import { formatSolveTime } from './vialotimer';
 import { newTimer, pauseTimer, resumeTimer, startTimer, stopTimer, timerElapsed, type SolveTimer } from './vialotimer';
 import PicclineCue from './PicclineCue';
 import { site } from '../config/site';
-import { shake } from './SutureGame';
+import { shake } from './shake';
 import { loadPicclineMs, loadPicclineSave, savePicclineBoard, savePicclineMs } from './picclinesave';
 import type { Cell } from './suture';
 import {
   announceProgress, backspace, printBoard, cellView, cuesUsed, firstWordFound, clearPicked, extend, hintsLeft, MIN_WORD, parsePathPuzzle, pathCellLabel, pathDone, pathShareLine,
   pickedWord, specialFoundFirst, startPath, submit, submitInWords, takeHint, WORDS_PER_HINT, wordsToNextHint,
-  type CellLook, type PathState, type SuturePathPuzzle,
+  type CellLook, type PathState, type SuturePathPuzzle, type WordPathPuzzle,
 } from './suturepath';
 
 const PicclineShare = lazy(() => import('./PicclineShare'));
+const PicclineForfeit = lazy(() => import('./PicclineForfeit'));
 
 interface Props {
   puzzle: SuturePathPuzzle;
   name: string;
   framed?: boolean;
-  /** True where the page has piccline's own print sheet (/play/piccline); its print entry answers the Frame's printer. The older word path route keeps the older print. */
-  printable?: boolean;
+  /** Set where the page has piccline's own print sheet (/play/piccline): all the samples, for the print entry, which answers the Frame's printer. The older word path route keeps the older print. */
+  printPuzzles?: WordPathPuzzle[];
 }
 
 const printFoot = new URL(site.url).host;
@@ -110,13 +110,13 @@ function cellAt(board: HTMLElement | null, x: number, y: number): Cell | null {
   return dx * dx + dy * dy <= 0.6 ? cellOf(target) : null;
 }
 
-/** Answers the Frame's printer on the older word path route only; the hook lives here so it registers only where it is needed. */
-function LegacyPrint({ handler }: { handler: () => void }) {
-  usePrintRequest('suture', handler);
+/** Answers the Frame's printer on the older word path route only (the hook is here so it registers only where it is needed). */
+function LegacyPrint({ before }: { before: () => void }) {
+  usePrintRequest('suture', () => { before(); printGame('suture'); });
   return null;
 }
 
-export function PathBoard({ puzzle, name, framed = false, printable = false }: Props) {
+export function PathBoard({ puzzle, name, framed = false, printPuzzles }: Props) {
   const [today] = useState(() => new Date());
   // A board played earlier today on this device comes back as it was (a finished one stays finished); a new day starts fresh.
   const [restored] = useState(() => loadPicclineSave(puzzle, localDay(today)));
@@ -394,21 +394,10 @@ export function PathBoard({ puzzle, name, framed = false, printable = false }: P
       setPrintNote(note);
       setSaid(note);
     }
-    printGame('suture');
   };
 
   // "print anyway" on an unfinished board (usegameprint.ts): today is already stored as not solved, so the board on screen
-  // ends too (not saved: a reload starts a fresh board, and the stored first result of the day stands).
-  useEffect(() => {
-    const onForfeit = (event: Event) => {
-      const detail = (event as CustomEvent<{ game?: string; day?: string }>).detail;
-      if (detail?.game === 'piccline' && detail.day === localDay(today)) setForfeited(true);
-    };
-    // A forfeit confirmed before this board was listening is remembered on the page (printgate.ts).
-    if (rememberedForfeits('piccline', localDay(today)).length > 0) setForfeited(true);
-    window.addEventListener(FORFEIT_EVENT, onForfeit);
-    return () => window.removeEventListener(FORFEIT_EVENT, onForfeit);
-  }, [today]);
+  // ends too (not saved: a reload starts a fresh board, and the stored first result of the day stands). PicclineForfeit hears it.
 
   // The lines that join each found answer and the word being picked, from circle edge to circle edge.
   const lines: Line[] = [];
@@ -461,8 +450,8 @@ export function PathBoard({ puzzle, name, framed = false, printable = false }: P
         }
       />
       {printNote && <p className="mt-2 text-center text-sm text-ink-soft" data-testid="suture-print-note" data-print-hidden>{printNote}</p>}
-      {!printable && <LegacyPrint handler={printPuzzle} />}
-      {forfeited && <p className="mt-2 text-center text-sm text-ink-soft" data-testid="suture-forfeit-note" data-print-hidden>you printed before finishing, so today counts as not solved.</p>}
+      {!printPuzzles && <LegacyPrint before={printPuzzle} />}
+      {printPuzzles && <Suspense fallback={null}><PicclineForfeit day={localDay(today)} puzzles={printPuzzles} onForfeit={() => setForfeited(true)} /></Suspense>}
       <p className="wordpath-time" data-testid="suture-time">
         {prefs.showTimer && <span>time: {formatSolveTime(timerElapsed(timer.current, Date.now()))}</span>}
       </p>
@@ -619,9 +608,9 @@ export function PathBoard({ puzzle, name, framed = false, printable = false }: P
 }
 
 /** A board puzzle from the page, checked again here so a broken one shows a plain message instead of a broken game. */
-export default function SuturePathBoard({ puzzle, name, framed = false, printable = false }: Props) {
+export default function SuturePathBoard({ puzzle, name, framed = false, printPuzzles }: Props) {
   try {
     const parsed = parsePathPuzzle(puzzle);
-    return <PathBoard key={JSON.stringify(parsed)} puzzle={parsed} name={name} framed={framed} printable={printable} />;
+    return <PathBoard key={JSON.stringify(parsed)} puzzle={parsed} name={name} framed={framed} printPuzzles={printPuzzles} />;
   } catch { return <p role="alert">this puzzle could not be loaded. please try again later.</p>; }
 }
