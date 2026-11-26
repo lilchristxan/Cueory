@@ -1,0 +1,3 @@
+status: in review · task-games-v2/hub-logos-signed-out-bar · one shared logo source (src/config/gamelogos.ts) for the home carousel and the /play hub rows; the hub's left panel shows the copper "create an account" bar to signed-out players in place of the totals; the home vialo card now shows the current logo and a preview that is a miniature of the live board (stacked on #1214)
+decision: D-pending · the hub's totals show only to signed-in players, like the game frame's stats (Christian, 2026-11-25); recording is unchanged
+decision: D-pending · tachyyy's icon on the home card stays the dark tile (the cream card would hide the light one) while the game page and hub use the light tile by day; Christian to choose
