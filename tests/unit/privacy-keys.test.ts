@@ -70,8 +70,11 @@ describe.skipIf(!existsSync(privacyPath))('privacy page browser storage disclosu
     expect(text).toContain('That saved place expires after 14 days.');
     expect(KEEP_DAYS).toBe(400);
     expect(text).toContain('deletes general results and sudoku solve times older than 400 days');
-    expect(promo.rememberDays).toBe(30);
-    expect(text).toContain('so it can stay out of the way for 30 days');
+    // The launch-list panel is retired (promo.show is false): the page says its old record is no longer used, and no
+    // longer promises a 30-day wait that nothing enforces.
+    expect(promo.show).toBe(false);
+    expect(text).toContain('it is no longer used, and clearing Cueory’s site data removes it');
+    expect(text).not.toContain('so it can stay out of the way for 30 days');
     expect(DAYS_NEEDED).toBe(3);
     expect(text).toContain('up to three dates on which you finished a puzzle');
     expect(BREAK_STORAGE_MAX_AGE_MS).toBe(2 * 60 * 60 * 1000);

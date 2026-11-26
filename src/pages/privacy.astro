@@ -69,12 +69,13 @@ const mail = `mailto:${email}`;
       screen, it can remember up to three dates on which you finished a puzzle and whether you dismissed that suggestion.
     </p>
     <p>
-      There are two reminders about the email list. Your browser saves when the launch-list panel appeared so it can stay
-      out of the way for 30 days. On eligible pages, a separate signup pop-up may appear after 10 seconds of viewing. The
+      Older versions of Cueory showed a launch-list panel that may have left a date in your browser under
+      <code>cueory-promo-seen</code>; it is no longer used, and clearing Cueory’s site data removes it. On eligible pages,
+      a signup pop-up about the email list may appear after 10 seconds of viewing. The
       browser saves the time under <code>cueory-signup-popup-seen</code> when it shows the pop-up and updates the time
       when you close it, follow its link or leave the page while it is open. It uses that time to keep the pop-up away for three hours.
       Lessons and game boards do not show the pop-up. Seeing a reminder does not subscribe you. Clearing Cueory’s site
-      data removes both reminder records.
+      data removes these records.
     </p>
     <p>
       Some features are still being built. Where enabled, glove notes remember which notes appeared in this tab, when the

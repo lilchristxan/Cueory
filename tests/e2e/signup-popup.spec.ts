@@ -98,15 +98,17 @@ test('leaving the page while it is open counts as closing, so the wait starts ag
   await expect(popup(page)).toBeHidden();
 });
 
-test('stays away on a page where the once-only promo panel is due', async ({ page }) => {
-  await openAt(page, '/', { promoDue: true });
-  await page.clock.runFor(15_000);
-  await expect(page.getByTestId('promo')).toBeVisible();
+// The brown promo panel (D-59) is switched off (Christian, 2026-11-25): the green pop-up is the only marketing pop-up.
+// This test always runs; tests/unit/promo.test.ts pins the switch.
+test('with the promo panel switched off, a first visit gets the green pop-up after 10 seconds and no brown panel', async ({ page }) => {
+  // promoDue clears the promo's remembered date, the state in which the brown panel would have come first.
+  await openAt(page, '/', { promoDue: true, paused: true });
+  await expect(page.locator('[data-promo]')).toHaveCount(0);
+  await page.clock.runFor(9_000);
   await expect(popup(page)).toBeHidden();
-  // Closing the promo panel doesn't bring the pop-up on this page either.
-  await page.getByTestId('promo').getByRole('button', { name: 'close' }).click();
-  await page.clock.runFor(15_000);
-  await expect(popup(page)).toBeHidden();
+  await page.clock.runFor(2_000);
+  await expect(popup(page)).toBeVisible();
+  await expect(page.getByTestId('promo')).toHaveCount(0);
 });
 
 // Rule (coordinator's decision on #832): once a "flag or comment" report has been opened on a page, the pop-up is
