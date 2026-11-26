@@ -820,11 +820,28 @@
     --game-demo-border: #cbb8a4;
     --game-demo-top: 6.5rem;
     --game-demo-vialo-grid-gap: 0.375rem;
-    --game-demo-vialo-row-gap: 0.3125rem;
-    --game-demo-vialo-cell-size: 1.75rem;
-    --game-demo-vialo-cell-border: 1.5px;
+    --game-demo-vialo-row-gap: 0.1875rem;
+    --game-demo-vialo-strip-padding: 0.5rem;
+    --game-demo-vialo-cell-width: 1.625rem;   /* an oblong capsule, 1.3 times wider than tall, as the live board's pills */
+    --game-demo-vialo-cell-height: 1.25rem;
     --game-demo-vialo-font-size: 0.8125rem;
-    --game-demo-vialo-cell-bg: #f9f5ef;
+    --game-demo-vialo-mark-size: 0.4375rem;
+    --game-demo-vialo-mark-pad: 0.0625rem;
+    /* The card stays light in Evening, so the board's Daytime foil and pill colours (the --game-oxblood, --game-dark-green,
+       --vialo-absent-* and --color-pillo-foil values by day) stay fixed here. */
+    --game-demo-vialo-foil: color-mix(in srgb, #6b5243 16%, #f9f5ef);
+    --game-demo-vialo-hatch: color-mix(in srgb, #3e2c23 7%, transparent);
+    --game-demo-vialo-hatch-clear: rgb(from #3e2c23 r g b / 0);
+    --game-demo-vialo-gloss: color-mix(in srgb, #f9f5ef 70%, transparent);
+    --game-demo-vialo-gloss-clear: rgb(from #f9f5ef r g b / 0);
+    --game-demo-vialo-green: #0e5a3d;
+    --game-demo-vialo-green-light: #3f8a68;
+    --game-demo-vialo-green-deep: #053321;
+    --game-demo-vialo-red: #6e2019;
+    --game-demo-vialo-red-light: #a0413a;
+    --game-demo-vialo-red-deep: #4a100d;
+    --game-demo-vialo-absent-face: #ffffff;
+    --game-demo-vialo-absent-ink: #6b5243;
     --game-demo-tachyyy-width: 10.625rem;
     --game-demo-tachyyy-radius: 0.75rem;
     --game-demo-tachyyy-padding: 0.625rem;
