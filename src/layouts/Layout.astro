@@ -50,11 +50,13 @@ interface Props {
    * the top of the screen. One switch for every game page: src/components/GamePage.astro passes it. Off by default.
    */
   bareHeader?: boolean;
+  /** With bareHeader: still show the building notice (a focused study screen keeps the notice but has no site header). */
+  keepNotice?: boolean;
   /** The page lays out its own full width (the /play hub, option B): no page-width cap or side padding on <main>. */
   wide?: boolean;
 }
 
-const { title, description = site.description, variant = 'default', noindex = false, canonicalTo, promo = true, flagItem, hideFlag = false, socialImage: socialImagePath = '/share/study-ivory.png', accountsOff = false, bareHeader = false, wide = false } = Astro.props;
+const { title, description = site.description, variant = 'default', noindex = false, canonicalTo, promo = true, flagItem, hideFlag = false, socialImage: socialImagePath = '/share/study-ivory.png', accountsOff = false, bareHeader = false, keepNotice = false, wide = false } = Astro.props;
 // Browser-tab titles use the lowercase brand voice: "privacy · cueory" (D-47).
 const fullTitle = title === site.name || title === site.wordmarkName ? site.wordmarkName : `${title} · ${site.wordmarkName}`;
 // Astro's static file build may expose /index.html or /privacy.html as the pathname.
@@ -128,7 +130,7 @@ const searchTitle = isHome ? 'home' : title;
     >
       skip to content
     </a>
-    {!bareHeader && <BuildingNotice />}
+    {(!bareHeader || keepNotice) && <BuildingNotice />}
     {
       bareHeader ? null : isHome ? (
         <div class="home-header-wrap relative z-20 h-0">

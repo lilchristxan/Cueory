@@ -31,7 +31,7 @@ const secondaryButton =
 // The summary card: a plain surface with the soft card shadow (Task 77). Study screens stay plain.
 const cardClass = 'rounded-xl border border-line bg-surface px-6 py-10 shadow-card sm:px-10';
 // One panel holds the prompt, the answers and the buttons (Christian, 2026-11-26): a focused card on the plain page.
-const panelClass = 'relative mt-stack rounded-xl border border-line bg-page px-5 py-6 shadow-card sm:px-8 sm:py-8';
+const panelClass = 'mt-6 rounded-xl border border-line bg-page px-5 py-6 shadow-card sm:px-8 sm:py-8';
 const bubble = 'inline-flex h-10 min-w-10 shrink-0 items-center justify-center rounded-pill px-2 text-sm font-medium';
 /** The progress row is cut into at most this many pieces. */
 const MAX_SEGMENTS = 6;
@@ -149,7 +149,7 @@ export default function LearnSession({ cards, lessonHref = '/learn/study-skills'
       </span>
       {Array.from({ length: segments }, (_, i) => [
         i === countAfter ? count : null,
-        <div key={i} className="progress-track min-w-0 flex-1" data-testid="learn-segment">
+        <div key={i} className="progress-track h-3 min-w-0 flex-1" data-testid="learn-segment">
           <div
             ref={(el) => {
               fillRefs.current[i] = el;
@@ -213,28 +213,28 @@ export default function LearnSession({ cards, lessonHref = '/learn/study-skills'
       {progressBar}
 
       <div className={panelClass} data-testid="learn-panel">
-        {/* The listen button sits in the panel's top corner, level with the card's first line. */}
-        <div className="absolute end-3 top-3 sm:end-5 sm:top-5">
-          <SpeakButton text={spoken} />
-        </div>
-        {retry && (
-          <p className="mb-3">
-            <span data-testid="learn-retry" className="rounded-pill bg-surface px-3 py-0.5 text-sm text-ink">
-              let's try again
-            </span>
-          </p>
-        )}
         {/*
           The deck's one live region stays in the page; the card inside it is drawn fresh for every card and step, so
           it rises in after each action. Under reduced motion it simply appears.
         */}
         <div aria-live="polite">
           <div key={`${index}-${step}`} ref={cardRef} tabIndex={-1} data-testid="learn-card" className={`${enter}rounded-lg`}>
-            <p data-testid="learn-step" className="pe-12 text-sm text-ink-soft">
-              {stepLabel[step]}
-            </p>
-            <p data-testid="learn-prompt" className="mt-3 wrap-anywhere text-xl">
+            <div className="flex min-h-(--tap-min) items-center gap-1 text-sm text-ink-soft">
+              <span>{step === 'see' ? 'card' : 'term'}</span>
+              <SpeakButton text={spoken} />
+            </div>
+            <p data-testid="learn-prompt" className="mt-2 mb-10 wrap-anywhere text-2xl">
               {card.front}
+            </p>
+            <p className="flex flex-wrap items-center gap-x-3 gap-y-1">
+              <span data-testid="learn-step" className="text-sm font-medium text-ink-soft">
+                {stepLabel[step]}
+              </span>
+              {retry && (
+                <span data-testid="learn-retry" className="rounded-pill bg-surface px-3 py-0.5 text-sm text-ink">
+                  let's try again
+                </span>
+              )}
             </p>
 
             {step === 'see' && state.revealed && (
@@ -274,7 +274,7 @@ export default function LearnSession({ cards, lessonHref = '/learn/study-skills'
         </div>
 
         {step === 'choose' && (
-          <ul aria-label="Answers" className="mt-8 grid gap-3 sm:grid-cols-2">
+          <ul aria-label="Answers" className="mt-4 grid gap-3 sm:grid-cols-2">
             {state.choices.map((choice) => {
               const picked = result?.given === choice;
               const isAnswer = choice === index;
@@ -314,7 +314,7 @@ export default function LearnSession({ cards, lessonHref = '/learn/study-skills'
         )}
 
         {(step === 'type' || step === 'fill') && !result && (
-          <form onSubmit={check} noValidate className="mt-8">
+          <form onSubmit={check} noValidate className="mt-4">
             <label htmlFor={inputId} className="block text-sm text-ink-soft">
               {step === 'fill' ? 'The missing words' : 'Your answer'}
             </label>
