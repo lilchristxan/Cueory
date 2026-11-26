@@ -388,7 +388,6 @@
    are. The Frame's head keeps the room (its date line is as tall as they are), so nothing lies under them. */
 .game-frame-main {
   --game-frame-corner-inset-now: var(--game-frame-corner-inset);
-  --game-frame-corner-buttons: 2;
   --game-frame-corner-clear: calc(var(--game-frame-corner-inset-now) + var(--game-frame-btn-size) * var(--game-frame-corner-buttons) + var(--game-frame-corner-gap) * (var(--game-frame-corner-buttons) - 1));
 }
 /* A game that can print has a third button, the printer, between the gear and the "?". */
@@ -1018,12 +1017,6 @@
 
 /* ---------------- Responsive: Tablet and Mobile ---------------- */
 @media (width < 64rem) {
-  /* Stacked layout: the game sits right under the header and the free height goes below it. Centring it between the two
-     would move the board by half of any change in its own height (a line of status text appearing, say). */
-  .game-frame-main {
-    grid-template-rows: auto auto minmax(auto, 1fr);
-  }
-
   .game-frame-sidebar-top .game-frame-back {
     --game-frame-main-pl: calc(var(--spacing) * 3);
     --game-frame-main-pr: calc(var(--spacing) * 3);

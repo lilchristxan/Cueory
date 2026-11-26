@@ -142,6 +142,7 @@
   --game-frame-hint-line: 1.5px;
   --game-frame-hint-fade: 0.4s;
   --game-frame-hint-room: 0rem;          /* the Frame raises this for as long as the bubble needs clear space above the game */
+  --game-frame-corner-buttons: 2;        /* buttons in the corner pair: the gear and the "?", plus the printer on a game that prints */
   --game-frame-how-font-size: 1.25rem;   /* 20px */
   --game-frame-popover-radius: 1.25rem;  /* 20px */
   --game-frame-popover-padding: 1.25rem 1.375rem; /* 20px 22px */
