@@ -6,6 +6,7 @@
  * was drawn at half that size in CSS pixels, so the measurements below are his, doubled; they were read from his
  * files in a browser (element boxes), not estimated from the pictures.
  */
+import { formatSolveTime } from './vialotimer';
 import { gameName } from '../config/games';
 import type { Mark } from './pulse';
 
@@ -233,11 +234,8 @@ export function stickerLayout(kind: StickerKind, input: StickerInput): StickerLa
 
 // ---------- wording ----------
 
-/** "0:42", "12:05". Whole seconds, rounded down; never negative. */
-export function formatSolveTime(ms: number): string {
-  const total = Math.max(0, Math.floor(ms / 1000));
-  return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`;
-}
+// formatSolveTime lives with the timer (vialotimer.ts) so a board page does not load the sticker module just to print a time.
+export { formatSolveTime };
 
 /** "08:42:15" until local midnight. */
 export function formatCountdown(ms: number): string {
