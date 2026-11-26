@@ -2,7 +2,7 @@ import { useCallback, useMemo } from 'react';
 import type { Mark } from './pulse';
 import { buildShareUrl } from './share';
 import ShareDialog from './ShareDialog';
-import type { ShareGame, ShareSticker } from './sharedialog';
+import type { ShareGame, ShareSticker } from './sharedialogmodel';
 import type { SharePayload } from './vialosharing';
 import {
   STICKER_KINDS,

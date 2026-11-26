@@ -42,7 +42,7 @@ import { browserStorage } from '../scripts/storage';
 import { VIALO_KEY_ROWS } from './vialokeys';
 import { newTimer, pauseTimer, resumeTimer, startTimer, stopTimer, timerElapsed, type SolveTimer } from './vialotimer';
 import { site } from '../config/site';
-import { revealDelayMs } from './sharedialog';
+import { revealDelayMs } from './sharedialogmodel';
 
 // The share card and its canvas drawing code load only once a game has ended.
 const VialoShare = lazy(() => import('./VialoShare'));

@@ -190,7 +190,7 @@
      against the pack width (outside the well grid) or the individual cell width (inside it). */
   --vialo-art-ratio: 1230 / 1180;
   --vialo-art-width-per-height: 1.0424; /* 1230 / 1180 as a plain number, so the pack's width can follow the window's height */
-  --vialo-board-reserve: 26rem;         /* 416px (was 408; +8 for the timer line): the page above the pack plus the keys below it, so pack, guess strip and keys fit a 900px-high desktop window without scrolling */
+  --vialo-board-reserve: 26.5rem;       /* 424px (was 408; +16 for the timer line and its gap): the page above the pack plus the keys below it, so pack, guess strip and keys fit a 900px-high desktop window without scrolling */
   --vialo-board-min: 20rem;             /* 320px: the pack never gets narrower than this on a short window */
   /* The artwork file has a baked ivory mat (and soft shadow) around the foil card. The pack is clipped to the
      foil so only the card shows. Measured from the 1230 x 1180 file: foil spans x 21 to 1208 and y 16 to 1155,
@@ -1034,6 +1034,7 @@
   --share-dialog-menu-icon: 1.25rem;       /* 20 px */
   --vialo-timer-height: 1.25rem;          /* one text-sm line, kept even when the timer is hidden so the board never moves */
   --vialo-timer-gap: 0.25rem;
+  --vialo-timer-gap-below: 0.5rem;        /* keeps the timer text clear of the foil card's edge */
 }
 
 /*

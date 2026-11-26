@@ -238,6 +238,9 @@
     font-variant-numeric: tabular-nums;
   }
 
+  /* The card itself takes focus when it opens (so a screen reader reads it); that needs no ring, its controls have theirs. */
+  .share-dialog:focus-visible { outline: none; }
+
   /* The site's focus rule squares off a focused control's corners; these keep their own shapes. */
   .share-dialog-button:focus-visible { border-radius: var(--radius-pill); }
   .share-dialog-option:focus-visible { border-radius: var(--share-dialog-option-radius); }

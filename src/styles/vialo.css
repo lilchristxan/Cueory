@@ -604,7 +604,7 @@
 
   .vialo-time {
     block-size: var(--vialo-timer-height);
-    margin: var(--vialo-timer-gap) 0 0;
+    margin: var(--vialo-timer-gap) 0 var(--vialo-timer-gap-below);
     font-size: var(--text-sm);
     line-height: var(--vialo-timer-height);
     text-align: center;

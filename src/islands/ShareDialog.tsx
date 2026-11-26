@@ -15,7 +15,7 @@ import {
   type SharePayload,
 } from './vialosharing';
 import { formatCountdown } from './vialosticker';
-import { DIALOG_TAB_STOPS, trapTarget, type ShareGame, type ShareSticker } from './sharedialog';
+import { DIALOG_TAB_STOPS, trapTarget, type ShareGame, type ShareSticker } from './sharedialogmodel';
 
 /*
   The completion dialog (Christian's design, 25 Nov 2026), shared by the daily games. It opens over the play area when a
