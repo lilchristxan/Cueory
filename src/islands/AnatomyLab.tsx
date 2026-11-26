@@ -2286,7 +2286,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
             </section>
           )}
           {selectedName && !quiz && !recall && selectedIndex && (
-            <section className="lab-glass mx-3 mb-3 p-4 lg:pointer-events-auto lg:m-0" aria-labelledby="anatomy-index-heading" data-testid="anatomy-index">
+            <div role="group" className="lab-glass mx-3 mb-3 p-4 lg:pointer-events-auto lg:m-0" aria-labelledby="anatomy-index-heading" data-testid="anatomy-index">
               <h2 id="anatomy-index-heading" className="lab-cap">{indexHeading(selectedIndex)}</h2>
               <ul className="lab-index mt-2 space-y-1">
                 {selectedIndex.items.map((item, position) => (
@@ -2311,7 +2311,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
                   </li>
                 ))}
               </ul>
-            </section>
+            </div>
           )}
         <section id="lab-panel-structures" className="lab-glass mx-3 mb-3 hidden space-y-3 p-4 data-open:block lg:pointer-events-auto lg:m-0 lg:flex lg:min-h-0 lg:flex-1 lg:flex-col" data-open={panels.structures || undefined} aria-labelledby="anatomy-list-heading">
           <h2 id="anatomy-list-heading" className="lab-cap">structures</h2>
