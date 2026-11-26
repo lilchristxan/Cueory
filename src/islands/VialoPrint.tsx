@@ -3,6 +3,7 @@ import { loadStats, localDay } from './gameresults';
 import PrintWarning from './PrintWarning';
 import { browserStorage } from '../scripts/storage';
 import { FORFEIT_EVENT, PRINT_EVENT, isFinished, printAnyway, requestPrint } from '../scripts/printgate';
+import { registerPrintListener, unregisterPrintListener } from './gameprintevent';
 import { clearKeeper, fillKeeper, keeperFor, sheetImagesReady, type SheetPuzzle } from '../scripts/printsheet';
 
 const PRINT_RELEASE_MS = 120_000;
@@ -74,6 +75,10 @@ export default function VialoPrint({ puzzles }: Props) {
     // Tells the page (and the tests) that a print request will now be heard: this island loads after the page does.
     const sheetRoot = document.querySelector('[data-print-sheet]');
     sheetRoot?.setAttribute('data-print-ready', 'true');
+    // A printer press made before this island loaded was remembered by the Frame; answer it now, once. The same gate
+    // as any press follows: a finished game prints, an unfinished one warns first, and the picture wait is in print().
+    const pressedEarlier = registerPrintListener('vialo');
+    if (pressedEarlier) request();
     if (window.location.hash === '#print') {
       // From the hub: do it once, and take the mark out of the address.
       window.history.replaceState(null, '', window.location.pathname + window.location.search);
@@ -81,6 +86,7 @@ export default function VialoPrint({ puzzles }: Props) {
     }
     return () => {
       document.removeEventListener(PRINT_EVENT, onPrint);
+      unregisterPrintListener('vialo');
       sheetRoot?.removeAttribute('data-print-ready');
     };
   }, []);

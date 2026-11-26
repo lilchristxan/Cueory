@@ -133,8 +133,17 @@
   --game-frame-gear-stroke: 2;           /* outline weight of the gear, level with the bold "?" beside it */
   --game-frame-corner-inset: 1rem;       /* 16px: the gear and "?" sit this far in from the play area's top and right edges */
   --game-frame-corner-inset-phone: 0.75rem; /* 12px on phones, the same as the play area's side padding there */
-  --game-frame-corner-gap: 0.5rem;       /* 8px between the gear and the "?" */
-  --game-frame-corner-buttons: 2;        /* how many buttons are in the corner pair: the gear and the "?" */
+  --game-frame-corner-gap: 0.5rem;       /* 8px between the corner buttons */
+  --game-frame-hint-width: 12rem;        /* 192px: the "print a copy for your patients!" bubble */
+  --game-frame-hint-gap: 0.625rem;       /* 10px from the buttons to the bubble: the tail's height */
+  --game-frame-hint-tail: 0.625rem;      /* 10px: half the tail's width */
+  --game-frame-hint-radius: 1.75rem;     /* 28px */
+  --game-frame-hint-offset: 0.25rem;     /* 4px: the solid shadow's offset down and to the right */
+  --game-frame-hint-line: 1.5px;
+  --game-frame-hint-fade: 0.4s;
+  --print-hint-clearance: 0.5rem;        /* 8px of clear space kept between the bubble and the date line or the game */
+  --game-frame-hint-room: 0rem;          /* the Frame raises this for as long as the bubble needs clear space above the game */
+  --game-frame-corner-buttons: 2;        /* buttons in the corner pair: the gear and the "?", plus the printer on a game that prints */
   --game-frame-how-font-size: 1.25rem;   /* 20px */
   --game-frame-popover-radius: 1.25rem;  /* 20px */
   --game-frame-popover-padding: 1.25rem 1.375rem; /* 20px 22px */
