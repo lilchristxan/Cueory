@@ -155,8 +155,15 @@ for (const width of [390, 700, 812, 1024, 1440]) {
         return box.left + box.width / 2;
       };
       const packNode = document.querySelector('.vialo-pack')!;
+      // The pack is clipped to the foil card (the artwork's uneven ivory mat is hidden), so the centre that matters
+      // is the visible card's: the box's centre moved by half the difference of the left and right clip insets.
+      const [, right, , left] = [...getComputedStyle(packNode).clipPath.matchAll(/(-?\d+(?:\.\d+)?)%/g)].map((m) => Number(m[1]) / 100);
+      const visible = (node: Element) => {
+        const box = node.getBoundingClientRect();
+        return box.left + box.width * (left + (1 - right)) / 2;
+      };
       return {
-        pack: centre(packNode),
+        pack: visible(packNode),
         keys: centre(document.querySelector('.vialo-keys .vialo-key-row')!),
         column: centre(packNode.parentElement!),
       };
