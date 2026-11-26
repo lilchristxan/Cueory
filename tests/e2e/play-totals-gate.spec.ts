@@ -124,15 +124,15 @@ test.describe('hub totals, not signed in', () => {
       await expect(page.locator('.play-hub-account-slot')).toBeAttached();
       await expect(bar(page)).toHaveCount(0);
       const before = await belowTop(page);
-      const link = bar(page).getByRole('link', { name: 'create an account' });
+      const link = bar(page).getByRole('link', { name: 'join the launch list' });
       await expect(link).toBeVisible();
       expect(await belowTop(page)).toBe(before);
       await expect(totals(page)).toHaveCount(0);
       await expect(link).toHaveClass(/copper-button/);
-      await expect(link).toHaveText('create an account');
+      await expect(link).toHaveText('join the launch list');
       await expect(link).toHaveAttribute('href', /^\/(#signup|signup)$/);
       await expect(link).toHaveAttribute('aria-describedby', 'play-account-note');
-      await expect(page.locator('#play-account-note')).toHaveText('to save your daily game stats');
+      await expect(page.locator('#play-account-note')).toHaveText('accounts open soon');
       const box = (await link.boundingBox())!;
       expect(box.height).toBeGreaterThanOrEqual(44);
       expect(box.height).toBeLessThan(60); // one line of text, never two

@@ -36,10 +36,10 @@ export const gameLogos = {
   },
   tachyyy: {
     kind: 'image',
-    icon: { day: '/brand/games/tachyyy-light.svg', evening: '/brand/games/tachyyy-dark.svg' },
+    icon: { day: '/brand/games/tachyyy-light.svg', evening: '/brand/games/tachyyy-light.svg' },
     wordmark: { day: '/brand/games/tachyyy-wordmark-light.svg', evening: '/brand/games/tachyyy-wordmark-dark.svg', width: 5729, height: 2100 },
-    // The one place the card differs from the game page: the cream card needs the dark tile (the light tile is cream too).
-    card: { icon: '/brand/games/tachyyy-dark.svg', wordmark: '/brand/games/tachyyy-wordmark-light.svg' },
+    // Christian (2026-11-25): the light tile on all branding, in Light and Evening, card included.
+    card: { icon: '/brand/games/tachyyy-light.svg', wordmark: '/brand/games/tachyyy-wordmark-light.svg' },
   },
   piccline: {
     kind: 'image',

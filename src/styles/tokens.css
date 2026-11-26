@@ -183,6 +183,9 @@
   --game-frame-sidebar-compact-emblem-radius: 0.75rem; /* 12px */
   --game-frame-sidebar-compact-emblem-cell: 0.5rem; /* 8px */
   --game-frame-sidebar-compact-wordmark-height: 2.25rem; /* 36px */
+  --game-frame-account-button-text: 0.9375rem; /* the sidebar's copper account button: 15 px, one line */
+  --game-frame-account-button-pad-x: 1rem;
+  --game-frame-account-button-pad-y: 0.625rem;
   --game-frame-stat-label-compact: 0.875rem; /* 14px, the smallest text on a game screen */
   --game-frame-stat-label-phone: 0.875rem; /* 14px */
 

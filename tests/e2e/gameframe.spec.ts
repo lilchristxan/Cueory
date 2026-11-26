@@ -36,8 +36,8 @@ test.describe('GameFrame shared layout (Scope 1)', () => {
       // In the stats' place a signed-out visitor gets the copper bar and its one line (2026-11-25).
       const bar = page.getByTestId('game-frame-account-bar');
       await expect(bar).toBeVisible();
-      await expect(bar.getByRole('link', { name: 'create an account' })).toHaveAttribute('href', /^\/(#signup|signup)$/);
-      await expect(bar).toContainText('to save your daily game stats');
+      await expect(bar.getByRole('link', { name: 'join the launch list' })).toHaveAttribute('href', /^\/(#signup|signup)$/);
+      await expect(bar).toContainText('accounts open soon');
       expect((await bar.getByRole('link').boundingBox())!.height).toBeGreaterThanOrEqual(44);
 
       // Date line

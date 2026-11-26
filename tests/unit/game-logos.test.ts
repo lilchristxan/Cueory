@@ -115,12 +115,18 @@ describe('the shared logo source equals what the game pages use (GameFrame.astro
       expect(source.card.wordmark).toBe(source.wordmark.day);
     });
   }
-  it('names the one difference: the carousel card draws tachyyy\'s dark tile, the game page its light one by day', () => {
+  it('has no difference left: every surface draws the same icon file, in both palettes (tachyyy uses its light tile everywhere, 2026-11-25)', () => {
     const differing = frameIds.filter(([key]) => {
       const source = gameLogos[key];
       return source.kind === 'image' && source.card.icon !== source.icon.day;
     }).map(([key]) => key);
-    expect(differing).toEqual(['tachyyy']);
+    expect(differing).toEqual([]);
+    for (const key of ['vialo', 'tachyyy', 'piccline'] as const) {
+      const source = gameLogos[key];
+      if (source.kind !== 'image') throw new Error('image art expected');
+      expect(source.icon.evening).toBe(source.icon.day);
+    }
+    expect(gameLogos.tachyyy.icon.day).toBe('/brand/games/tachyyy-light.svg');
   });
   it('has the same glyphs as the game page for crossword, sudoku and hello cards', () => {
     expect(frameConfig('cueword')).toContain("iconType: 'grid'");

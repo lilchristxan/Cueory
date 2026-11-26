@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { followStatsAuth, statsVisibleFor } from '../../src/islands/gamestatsgate';
+import { accountLaunch, accountStatsCta } from '../../src/config/site';
 
 const root = resolve(__dirname, '../..');
 const read = (path: string) => readFileSync(resolve(root, path), 'utf-8');
@@ -23,8 +24,9 @@ describe('game stats are shown only to a signed-in visitor (2026-11-25)', () => 
     const panel = read('src/islands/GameFrameStats.tsx');
     expect(panel).toContain('const visible = useStatsVisible();');
     expect(panel).toContain('if (!visible) {');
-    expect(panel).toContain('create an account');
-    expect(panel).toContain('to save your daily game stats');
+    expect(panel).toContain('{statsCta.label}');
+    expect(panel).toContain('{statsCta.note}');
+    expect(read('src/islands/PlayTotals.tsx')).toContain('{statsCta.label}');
   });
 
   it('still records and tracks stats while hidden: the listeners sit above the early return', () => {
@@ -76,5 +78,15 @@ describe('game stats are shown only to a signed-in visitor (2026-11-25)', () => 
       expect(hook).toContain('followStatsAuth(getClient');
       expect(hook).toContain('stop?.();');
     });
+  });
+});
+
+describe('the account bar says what is true in each launch state', () => {
+  it('open accounts: an account link, with the stats line', () => {
+    expect(accountStatsCta(true)).toEqual({ href: '/signup', label: 'create an account', note: 'to save your daily game stats' });
+  });
+  it('closed accounts: the launch list (the launch-updates form), in the promo panel\'s own words', () => {
+    expect(accountStatsCta(false)).toEqual({ href: '/#signup', label: 'join the launch list', note: 'accounts open soon' });
+    expect(accountStatsCta(false).label).toBe(accountLaunch(false).promoJoinLabel);
   });
 });

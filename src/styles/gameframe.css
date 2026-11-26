@@ -230,6 +230,15 @@
   width: 100%;
 }
 
+/* One slim line (Christian, 2026-11-25): the label never wraps, so the bar stays a bar in the narrow desktop sidebar. */
+.game-frame-account-bar .copper-button {
+  white-space: nowrap;
+  padding-block: var(--game-frame-account-button-pad-y);
+  padding-inline: var(--game-frame-account-button-pad-x);
+  font-size: var(--game-frame-account-button-text);
+  line-height: 1.5;
+}
+
 .game-frame-account-note {
   margin: 0;
   color: var(--color-ink-soft);

@@ -59,17 +59,17 @@ for (const size of [{ width: 390, height: 844 }, { width: 820, height: 1180 }, {
       await expect(row(page, 'suture').getByRole('link')).toHaveText('play');
     });
 
-    test('a signed-out visitor sees the copper "create an account" bar in place of the totals, on one line', async ({ page }) => {
+    test('a signed-out visitor sees the copper launch-list bar in place of the totals, on one line', async ({ page }) => {
       // The built site runs signed out (accounts are off in a test build). The signed-in totals are covered, with a stand-in
       // session, by play-totals-gate.spec.ts. Saved results stay recorded either way.
       await RESULTS([{ game: 'pulse', day: '2026-11-01', solved: true, tries: 4 }])(page);
       await page.goto('/play');
       const bar = page.getByTestId('play-account-bar');
-      const link = bar.getByRole('link', { name: 'create an account' });
+      const link = bar.getByRole('link', { name: 'join the launch list' });
       await expect(link).toBeVisible();
       await expect(link).toHaveClass(/copper-button/);
       await expect(link).toHaveAttribute('href', /^\/(#signup|signup)$/);
-      await expect(bar.locator('#play-account-note')).toHaveText('to save your daily game stats');
+      await expect(bar.locator('#play-account-note')).toHaveText('accounts open soon');
       await expect(page.getByTestId('play-totals')).toHaveCount(0);
       await expect(page.getByTestId('play-total-played')).toHaveCount(0);
       const box = (await link.boundingBox())!;

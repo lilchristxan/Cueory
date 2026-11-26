@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { browserStorage } from '../scripts/storage';
 import { GAME_STATS_CHANGED_EVENT, loadStats, localDay, STATS_STORAGE_KEY, type SavedStats } from './gameresults';
-import { accountHref } from '../config/site';
+import { statsCta } from '../config/site';
 import { useStatsGate } from './gamestatsgate';
 import { hubTotals } from './playhub';
 
@@ -9,8 +9,9 @@ import { hubTotals } from './playhub';
  * The left panel's foot on the /play hub (Christian, 2026-11-25). A signed-in visitor sees the four totals: played,
  * solved, day streak, best streak, across every game. They are worked out in the browser from the results this browser
  * keeps and are never sent anywhere (recording is unchanged for everyone; only the display is gated). Anyone else
- * (signed out, accounts off, or a failed session check) sees the same copper "create an account" bar the game frame
- * shows, with "to save your daily game stats" under it. Nothing is drawn until the session check has resolved, inside a
+ * (signed out, accounts off, or a failed session check) sees the same copper bar the game frame shows ("create an account"
+ * with "to save your daily game stats" under it once accounts are open; the launch-list wording until then, see
+ * accountStatsCta in site.ts). Nothing is drawn until the session check has resolved, inside a
  * holder that keeps the room either answer takes, so nothing flashes and nothing below moves. Signed in, the totals
  * stay dashes until the page has read the browser (and a browser that cannot save shows none), so no zero jumps to a
  * real number.
@@ -47,8 +48,8 @@ export default function PlayTotals() {
   if (!gate) {
     return (
       <div className="play-hub-account-slot" data-testid="play-account-bar">
-        <a href={accountHref} className="copper-button" aria-describedby="play-account-note">create an account</a>
-        <p id="play-account-note" className="play-hub-account-note">to save your daily game stats</p>
+        <a href={statsCta.href} className="copper-button" aria-describedby="play-account-note">{statsCta.label}</a>
+        <p id="play-account-note" className="play-hub-account-note">{statsCta.note}</p>
       </div>
     );
   }

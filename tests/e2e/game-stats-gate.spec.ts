@@ -160,7 +160,7 @@ test.describe('game stats panel, not signed in', () => {
   for (const query of ['session=out', 'session=fail']) {
     test(`shows the copper create-an-account bar instead (${query}), and nothing moves when the check resolves`, async ({ page }) => {
       await open(page, `${query}&wait=400`);
-      const link = bar(page).getByRole('link', { name: 'create an account' });
+      const link = bar(page).getByRole('link', { name: 'join the launch list' });
       await expect(link).toBeVisible();
       const sidebar = page.locator('.game-frame-sidebar');
       const before = await sidebar.evaluate((node) => node.getBoundingClientRect().height);
@@ -170,10 +170,10 @@ test.describe('game stats panel, not signed in', () => {
       await expect(page.getByTestId('game-frame-stats-status')).toHaveCount(0);
       expect(await sidebar.evaluate((node) => node.getBoundingClientRect().height)).toBe(before);
       // Exact words, a real address, one accessible name with the line as its description, a 44 px target.
-      await expect(link).toHaveText('create an account');
+      await expect(link).toHaveText('join the launch list');
       await expect(link).toHaveAttribute('href', /^\/(#signup|signup)$/);
       await expect(link).toHaveAttribute('aria-describedby', 'game-frame-account-note');
-      await expect(page.locator('#game-frame-account-note')).toHaveText('to save your daily game stats');
+      await expect(page.locator('#game-frame-account-note')).toHaveText('accounts open soon');
       expect(await page.locator('#game-frame-account-note').evaluate((n) => getComputedStyle(n).fontStyle)).toBe('normal');
       const box = (await link.boundingBox())!;
       expect(box.height).toBeGreaterThanOrEqual(44);
