@@ -138,9 +138,16 @@ export function drawWordmark(ctx: CanvasRenderingContext2D, box: Box, wordmark: 
 }
 
 /** The date line: plain, no outline. */
-export function drawDate(ctx: CanvasRenderingContext2D, date: TextLine, palette: PaintPalette): void {
+export function drawDate(ctx: CanvasRenderingContext2D, line: TextLine, palette: PaintPalette): void {
   const spaced = ctx as SpacedContext;
+  let date = line;
   ctx.font = fontFor(date, palette);
+  const width = line.maxWidth ? textWidth(spaced, line.text, line.letterSpacing) : 0;
+  if (line.maxWidth && width > line.maxWidth) {
+    const scale = line.maxWidth / width;
+    date = { ...line, size: line.size * scale, letterSpacing: line.letterSpacing * scale };
+    ctx.font = fontFor(date, palette);
+  }
   paintText(spaced, date.text, leftOf(spaced, date), baselineOf(ctx, date), date.letterSpacing, palette.espresso, undefined, 0);
 }
 

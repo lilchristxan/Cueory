@@ -18,12 +18,15 @@ export interface ShareSticker {
 /** What a game feeds the dialog. */
 export interface ShareGame {
   /** Selects the accent (sharedialog.css) and the test ids. */
-  game: 'vialo' | 'piccline';
+  game: 'vialo' | 'piccline' | 'sudoku';
   /** "share your vialo result" */
   title: string;
-  wordmarkSrc: string;
+  /** The wordmark picture; a game whose wordmark is plain type (sudoku) leaves it out and its name is set in type. */
+  wordmarkSrc?: string;
   wordmarkAlt: string;
-  cornerSrc: string;
+  /** The corner icon picture; sudoku's is a tile with a letter or number in it instead. */
+  cornerSrc?: string;
+  cornerText?: string;
   /** "next vialo in": the countdown to local midnight follows it. */
   countdownLabel: string;
 }
