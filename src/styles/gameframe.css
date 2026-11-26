@@ -759,6 +759,10 @@
   inline-size: auto;
   max-inline-size: none;
 }
+.game-deck-wordmark[src$="piccline-wordmark-light.svg"],
+.game-deck-wordmark[src$="piccline-wordmark-dark.svg"] {
+  scale: var(--piccline-wordmark-scale-deck);
+}
 .game-deck-wordmark-top {
   block-size: var(--game-deck-logo-top);
 }
