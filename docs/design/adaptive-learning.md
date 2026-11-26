@@ -72,7 +72,6 @@ Christian approved trying the 20-item session cap and the proposed spaced master
 
 ## Needs Christian
 
-- Are 20 items and the proposed “mastered” rule the right defaults to try on locked staging? The limits remain easy to revise after the simulated and sample runs.
 - Should the exam plan include an optional lighter day before the exam? The pilot uses its usual session cap.
 - If signed-in sync becomes necessary, decide what state should be shared between devices and whether the existing review rows can represent it. A new storage field, policy, or export or privacy change needs a separate approved design. The pilot needs none of these.
 - Whether to enable the first default-off integration after trying the labeled sample deck remains a separate release decision.
