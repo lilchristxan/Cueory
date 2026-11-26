@@ -695,6 +695,9 @@
   --vialo-key-elsewhere-bottom: #6e2019;
   --vialo-key-elsewhere-lip: #4a100d;
   --vialo-key-on-mark: #ffffff;         /* the letter on a green or oxblood key */
+  --vialo-pill-ring: 2px;               /* the light ring inside an "elsewhere" pill on the board, as on its key */
+  --vialo-pill-ring-gap: 3px;           /* how far that ring sits inside the pill's edge */
+  --vialo-pill-ring-color: var(--vialo-key-ring-color);
   --vialo-key-ring-color: rgb(255 255 255 / 0.6);
   --vialo-key-shine: rgb(255 255 255 / 0.35);  /* the lit top edge of a green key */
   --shadow-vialo-key: 0 8px 12px rgb(var(--shadow-tint) / 0.13);

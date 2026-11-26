@@ -50,7 +50,7 @@ export const GAME_HELP: Readonly<Record<HelpTopic, GameHelpContent>> = Object.fr
     play: [
       `guess the ${WORD_LENGTH}-letter word in ${GUESSES} guesses. there's one word a day.`,
       'type a word and press enter, or tap the letters below the board.',
-      `after each guess every letter gets a mark: ${MARK_SYMBOL.here} in its place, ${MARK_SYMBOL.elsewhere} in the word but somewhere else, ${MARK_SYMBOL.absent} not in the word. the letter keys show the same marks.`,
+      'after each guess every letter is shown on its pill: solid green is in its place, red with a thin light ring inside it is in the word but somewhere else, and plain white is not in the word. the letter keys show the same.',
       'a letter you use twice is marked twice only if the word has it twice.',
       "a word that isn't in the word list doesn't use up a guess.",
       'when you finish you see your result, a one-line share and the time until the next word.',
