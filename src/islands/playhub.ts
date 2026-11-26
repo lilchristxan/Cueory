@@ -52,11 +52,11 @@ export function hubTotals(stats: GameStats, today: string): HubTotals {
   };
 }
 
-/** What a finished game says: "played · solved in 4" (vialo keeps its guesses), "played · solved" or "played · not solved". */
+/** What a finished game says: "solved in 4" (vialo keeps its guesses), "solved" or "not solved" (the print button beside it says the rest, Christian 2026-11-25). */
 export function playedLabel(game: string, result: GameResult | undefined): string {
   if (!result) return 'played';
-  if (!result.solved) return 'played · not solved';
-  return sameGame(game, 'vialo') && result.tries > 0 ? `played · solved in ${result.tries}` : 'played · solved';
+  if (!result.solved) return 'not solved';
+  return sameGame(game, 'vialo') && result.tries > 0 ? `solved in ${result.tries}` : 'solved';
 }
 
 /** The row's status words, in the site's lowercase voice. Colour is never the only signal. */

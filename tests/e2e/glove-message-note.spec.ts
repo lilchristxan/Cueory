@@ -161,6 +161,9 @@ test('has 44 px targets, a visible focus ring, never scrolls sideways and stays 
   await openAt(page, '/');
   await jump(page, 31);
   await expect(note(page)).toBeVisible();
+  // The note rises into place for a moment. Measure after the rise has finished: while it runs the sub-pixel position
+  // makes a 44 px button read 43.99998 px (seen once in CI).
+  await note(page).evaluate((element) => Promise.all(element.getAnimations().map((animation) => animation.finished)).then(() => undefined));
   const close = note(page).getByRole('button', { name: 'close glove note' });
   const closeBox = (await close.boundingBox())!;
   expect(closeBox.width).toBeGreaterThanOrEqual(44);

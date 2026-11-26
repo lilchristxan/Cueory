@@ -1,0 +1,2 @@
+status: in review · task-games-v2/print-to-share · /play offers "print for a patient" only for a finished game; vialo has a two-page paper sheet (guesser's copy and keeper's copy) that shows the word only after today's game is finished
+decision: D-pending · a finished daily game offers "print for a patient" instead of "play again", and vialo prints a two-person paper sheet; printed game sheets keep the serif (Bodoni Moda) for the sheet heading and the answer word as a recorded exception to the marketing-headings-only rule, everything else stays Lato (Christian, 2026-11-25)
