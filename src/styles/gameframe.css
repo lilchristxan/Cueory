@@ -348,12 +348,21 @@
   flex-direction: column;
   align-items: center;
   inline-size: 100%;
-  padding-block-start: var(--game-frame-main-pt);
+  /* The date line shares a centre line with the corner buttons, so the head starts at the corner's inset. */
+  padding-block-start: var(--game-frame-corner-inset);
   box-sizing: border-box;
 }
 
 .game-frame-dateline {
   margin: 0 0 calc(var(--spacing) * 6);
+  /* One line with the corner buttons: as tall as they are, centred on them, and kept clear of them on both sides so the
+     text stays centred on the board and never runs under a button. It wraps rather than overlap. */
+  min-block-size: var(--game-frame-btn-size);
+  padding-inline: min(var(--game-frame-corner-clear), 30%);
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   font-size: var(--game-frame-dateline-size);
   line-height: var(--game-frame-dateline-lh);
   color: var(--color-ink-soft);
@@ -372,17 +381,39 @@
   text-align: center;
 }
 
-/* ---------------- Controls Row above Board ---------------- */
+/* ---------------- Corner buttons (top right of the play area) ----------------
+   The gear and the "?" are one pair, the same on every game: side by side in the top right corner of the play area (the
+   column right of the sidebar, or the whole width where there is no sidebar), gear on the left, "?" on the right, one
+   centre line, one size. They are lifted out of the column so neither the board's width nor the deck decides where they
+   are. The Frame's head keeps the room (its date line is as tall as they are), so nothing lies under them. */
+.game-frame-main {
+  --game-frame-corner-inset-now: var(--game-frame-corner-inset);
+  --game-frame-corner-clear: calc(var(--game-frame-corner-inset-now) + var(--game-frame-btn-size) * 2 + var(--game-frame-corner-gap));
+}
+.game-frame-corner {
+  position: absolute;
+  inset-block-start: var(--game-frame-corner-inset-now);
+  inset-inline-end: var(--game-frame-corner-inset-now);
+  display: flex;
+  align-items: center;
+  gap: var(--game-frame-corner-gap);
+  z-index: 15;
+}
+
+/* The row for a game's own controls (the sudoku difficulty menu), centred above the board. Empty on most games. */
 .game-frame-controls-row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   width: 100%;
   max-width: var(--game-frame-max-board);
-  gap: calc(var(--spacing) * 4);
   margin-bottom: calc(var(--spacing) * 4);
   position: relative;
   z-index: 15;
+}
+
+.game-frame-controls-row:has(> .game-frame-controls-middle:empty) {
+  display: none;
 }
 
 .game-frame-controls-row.is-wide {
@@ -422,7 +453,7 @@
   height: var(--game-frame-gear-size);
   fill: none;
   stroke: currentColor;
-  stroke-width: 1.6;
+  stroke-width: var(--game-frame-gear-stroke);
   stroke-linecap: round;
   stroke-linejoin: round;
 }
@@ -799,8 +830,16 @@
    never sits under a card. The usual padding is back by --game-deck-reserve-until. */
 @variant deck {
   .game-frame-main {
-    --game-frame-main-pl: round(nearest, clamp(var(--game-deck-reserve-start), calc(var(--game-deck-reserve-start) + (100vw - var(--breakpoint-deck)) * var(--game-deck-reserve-start-slope)), calc(var(--spacing) * 6)), var(--game-frame-grid-line));
     --game-frame-main-pr: round(nearest, clamp(calc(var(--spacing) * 6), calc(calc(var(--spacing) * 6) + (var(--game-deck-reserve-until) - 100vw) * var(--game-deck-reserve-slope)), var(--game-deck-reserve-end)), var(--game-frame-grid-line));
+    /* The same room on the left, so the board and its keyboard sit on the middle of the play area at every width (the board
+       column simply gets a little narrower between 1120 and 1340 px). */
+    --game-frame-main-pl: var(--game-frame-main-pr);
+  }
+  /* The wide crossword grid and the 720 px showcase boards keep their full width (the plain row below 1120 px does) and
+     their print button sits at the board's edge, which must not slide under a fanned card. So they keep the lopsided
+     reserve: only the right side gives room to the cards, and they sit left of centre between 1120 and 1340 px. */
+  .game-frame-main:has(.game-frame-board.is-wide, .game-frame-board.is-showcase) {
+    --game-frame-main-pl: round(nearest, clamp(var(--game-deck-reserve-start), calc(var(--game-deck-reserve-start) + (100vw - var(--breakpoint-deck)) * var(--game-deck-reserve-start-slope)), calc(var(--spacing) * 6)), var(--game-frame-grid-line));
   }
 }
 
@@ -1062,7 +1101,38 @@
   }
 }
 
+/* Narrow screens (640 px and under): the date line and the buttons cannot share a line without the date wrapping, so the
+   pair has its own row at the top and the date line, on one line, sits under it. */
+@variant max-sm {
+  .game-frame-main {
+    --game-frame-corner-clear: calc(var(--spacing) * 0);
+  }
+  .game-frame-head {
+    padding-block-start: calc(var(--game-frame-corner-inset-now) + var(--game-frame-btn-size) + var(--game-frame-corner-gap));
+  }
+  .game-frame-dateline {
+    min-block-size: 0;
+  }
+  /* A game with its own control (the sudoku difficulty menu) puts it on that same top row, left of the buttons, so the
+     row is no taller than the buttons alone: the head keeps only the corner's inset above it. */
+  .game-frame-head:has(.game-frame-controls-middle:not(:empty)) {
+    padding-block-start: var(--game-frame-corner-inset-now);
+  }
+  .game-frame-controls-row {
+    order: -1;
+    align-self: flex-start;
+    justify-content: flex-start;
+    inline-size: calc(100% - var(--game-frame-corner-inset-now) - var(--game-frame-btn-size) * var(--game-frame-corner-buttons) - var(--game-frame-corner-gap) * var(--game-frame-corner-buttons));
+    min-block-size: var(--game-frame-btn-size);
+    margin-block-end: var(--game-frame-corner-gap);
+  }
+}
+
 @media (width < 30rem) {
+  .game-frame-main {
+    --game-frame-corner-inset-now: var(--game-frame-corner-inset-phone);
+  }
+
   .game-frame-sidebar {
     padding: calc(var(--spacing) * 2.5) calc(var(--spacing) * 3);
     gap: calc(var(--spacing) * 2);

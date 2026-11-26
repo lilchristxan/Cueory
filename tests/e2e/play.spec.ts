@@ -235,7 +235,7 @@ test.describe('daily games: pillo settings and finish screen (Task 719)', () => 
 
   test('hard mode switches only before the first guess, and then holds shown letters', async ({ page }) => {
     // pillo's settings open from the gear at the top left (Christian's brief), in a dialog that holds the shared ones too.
-    const gear = page.getByTestId('pulse').getByRole('button', { name: 'pillo settings' });
+    const gear = page.getByRole('button', { name: 'pillo settings' });
     const settings = page.getByRole('dialog', { name: 'pillo settings' });
     const hard = settings.getByRole('switch', { name: /hard mode/ });
     await gear.click();
@@ -257,7 +257,7 @@ test.describe('daily games: pillo settings and finish screen (Task 719)', () => 
   });
 
   test('on-screen keyboard only removes the typing field, and high contrast still passes axe', async ({ page }) => {
-    await page.getByTestId('pulse').getByRole('button', { name: 'pillo settings' }).click();
+    await page.getByRole('button', { name: 'pillo settings' }).click();
     const settings = page.getByRole('dialog', { name: 'pillo settings' });
     await settings.getByRole('switch', { name: /on-screen keyboard only/ }).click();
     await expect(field(page)).toHaveCount(0);

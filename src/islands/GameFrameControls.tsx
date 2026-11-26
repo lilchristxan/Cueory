@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { GameSettingsDialog } from './GameSettings.tsx';
+import GearIcon from './GearIcon';
 
 interface Props {
   gameName: string;
@@ -110,8 +111,9 @@ export default function GameFrameControls({ gameName, steps, hasPillLegend = fal
   };
 
   return (
-    <div className={`game-frame-controls-row${wide ? ' is-wide' : ''}`} data-print-hidden>
-      {/* Settings (gear) sits at top-left of the board */}
+    <>
+    {/* The two corner buttons sit together at the top right of the play area (gameframe.css): settings, then "?". */}
+    <div className="game-frame-corner" data-print-hidden>
       <button
         ref={gearRef}
         type="button"
@@ -121,18 +123,10 @@ export default function GameFrameControls({ gameName, steps, hasPillLegend = fal
         data-testid="game-frame-gear"
         onClick={() => open(GAME_FRAME_SETTINGS_EVENT, gearRef.current)}
       >
-        <svg viewBox="0 0 24 24" className="game-frame-gear-icon" aria-hidden="true" focusable="false">
-          <circle cx="12" cy="12" r="3" />
-          <path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1" />
-        </svg>
+        <GearIcon className="game-frame-gear-icon" />
       </button>
 
-      {/* Middle slot for game-specific controls (e.g. crossword slider, hello-cards dots) */}
-      <div className="game-frame-controls-middle">
-        {children}
-      </div>
-
-      {/* The ? sits at top-right of the board */}
+      {/* The ? sits to the right of the gear, at the very corner */}
       {bridge ? (
         <button
           ref={helpBtnRef}
@@ -178,7 +172,14 @@ export default function GameFrameControls({ gameName, steps, hasPillLegend = fal
           </div>
         </div>
       )}
-      {!bridge && <GameSettingsDialog open={settingsOpen} onClose={() => setSettingsOpen(false)} title={`${gameName} settings`} returnFocusTo={gearRef} />}
     </div>
+    {/* Game-specific controls (the sudoku difficulty menu) keep their own row above the board, centred on it. */}
+    <div className={`game-frame-controls-row${wide ? ' is-wide' : ''}`} data-print-hidden>
+      <div className="game-frame-controls-middle">
+        {children}
+      </div>
+    </div>
+    {!bridge && <GameSettingsDialog open={settingsOpen} onClose={() => setSettingsOpen(false)} title={`${gameName} settings`} returnFocusTo={gearRef} />}
+    </>
   );
 }

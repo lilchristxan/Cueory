@@ -1,6 +1,7 @@
 import '../styles/gameheader.css';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { GameSettingsDialog } from './GameSettings.tsx';
+import GearIcon from './GearIcon';
 import { GameHelpButton, GameHelpDialog, type GameHelpState } from './GameHelp';
 import { announceFrameListening, frameHelpButton, GAME_FRAME_HELP_EVENT, GAME_FRAME_HELP_READY_EVENT, GAME_FRAME_SETTINGS_EVENT } from './GameFrameControls';
 
@@ -68,10 +69,7 @@ export default function GameHeader({ name, help, helpExtra, settings, end, frame
         data-testid="game-settings-button"
         onClick={() => setOpen(true)}
       >
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
-          <circle cx="12" cy="12" r="3" />
-          <path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1" />
-        </svg>
+        <GearIcon className="game-header-gear-icon" />
       </button>
       <div className="game-header-end">
         {end}

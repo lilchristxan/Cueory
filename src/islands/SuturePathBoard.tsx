@@ -29,7 +29,7 @@ import {
 
 const PicclineShare = lazy(() => import('./PicclineShare'));
 
-interface Props { puzzle: SuturePathPuzzle; name: string }
+interface Props { puzzle: SuturePathPuzzle; name: string; framed?: boolean }
 
 type FinishStats = { on: false } | { on: true; stats: DailyStats };
 
@@ -117,7 +117,7 @@ function cellAt(board: HTMLElement | null, x: number, y: number): Cell | null {
   return dx * dx + dy * dy <= 0.6 ? cellOf(target) : null;
 }
 
-export function PathBoard({ puzzle, name }: Props) {
+export function PathBoard({ puzzle, name, framed = false }: Props) {
   const [today] = useState(() => new Date());
   // A board played earlier today on this device comes back as it was (a finished one stays finished); a new day starts fresh.
   const [restored] = useState(() => loadPicclineSave(puzzle, localDay(today)));
@@ -440,6 +440,7 @@ export function PathBoard({ puzzle, name }: Props) {
       {/* The corner row (Christian's brief): the gear at the top left (word path has no settings of its own, so it holds
           the shared ones); print and the "?" at the top right. */}
       <GameHeader
+        framed={framed}
         name={name}
         help={howToPlay}
         settings={
@@ -619,9 +620,9 @@ export function PathBoard({ puzzle, name }: Props) {
 }
 
 /** A board puzzle from the page, checked again here so a broken one shows a plain message instead of a broken game. */
-export default function SuturePathBoard({ puzzle, name }: Props) {
+export default function SuturePathBoard({ puzzle, name, framed = false }: Props) {
   try {
     const parsed = parsePathPuzzle(puzzle);
-    return <PathBoard key={JSON.stringify(parsed)} puzzle={parsed} name={name} />;
+    return <PathBoard key={JSON.stringify(parsed)} puzzle={parsed} name={name} framed={framed} />;
   } catch { return <p role="alert">this puzzle could not be loaded. please try again later.</p>; }
 }

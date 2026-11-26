@@ -15,7 +15,7 @@ test.beforeEach(async ({ page }) => {
 
 test('opens as a focus-trapped dialog that Escape closes, returning focus to its button', async ({ page }) => {
   await page.goto('/play/word-path');
-  const button = page.getByTestId('game-settings-button');
+  const button = page.getByTestId('game-frame-gear');
   await expect(button).toBeVisible();
   const box = await button.boundingBox();
   expect(box!.width).toBeGreaterThanOrEqual(44);
@@ -52,7 +52,7 @@ test('high contrast, reduced motion and sound are remembered and applied to the 
   await page.goto('/play/word-path');
   const html = page.locator('html');
   await expect(html).not.toHaveAttribute('data-game-contrast', /.*/);
-  await page.getByTestId('game-settings-button').click();
+  await page.getByTestId('game-frame-gear').click();
   const dialog = page.getByRole('dialog', { name: 'piccline settings' });
   await dialog.getByRole('checkbox', { name: /high contrast/ }).check();
   await dialog.getByRole('group', { name: 'motion' }).getByRole('radio', { name: /always reduce/ }).check();
@@ -72,7 +72,7 @@ test('high contrast, reduced motion and sound are remembered and applied to the 
   await expect(html).toHaveAttribute('data-game-contrast', 'high');
   await expect(html).toHaveAttribute('data-game-motion', 'reduce');
 
-  await page.getByTestId('game-settings-button').click();
+  await page.getByTestId('game-frame-gear').click();
   await dialog.getByRole('checkbox', { name: /high contrast/ }).uncheck();
   await dialog.getByRole('group', { name: 'motion' }).getByRole('radio', { name: /follow device/ }).check();
   await dialog.getByRole('checkbox', { name: /game sounds/ }).check();
@@ -84,15 +84,15 @@ test('high contrast, reduced motion and sound are remembered and applied to the 
 test('reduced motion follows the device by default', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.goto('/play/word-path');
-  await expect(page.getByTestId('game-settings-button')).toBeVisible();
+  await expect(page.getByTestId('game-frame-gear')).toBeVisible();
   await expect(page.locator('html')).toHaveAttribute('data-game-motion', 'reduce');
-  await page.getByTestId('game-settings-button').click();
+  await page.getByTestId('game-frame-gear').click();
   await expect(page.getByRole('dialog').getByRole('group', { name: 'motion' }).getByRole('radio', { name: /follow device/ })).toBeChecked();
 });
 
 test('the theme slider drives the site theme switch', async ({ page }) => {
   await page.goto('/play/word-path');
-  await page.getByTestId('game-settings-button').click();
+  await page.getByTestId('game-frame-gear').click();
   const theme = page.getByRole('dialog').getByRole('group', { name: 'theme' });
   await theme.getByRole('radio', { name: /dark mode/ }).check();
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
@@ -105,7 +105,7 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 1440, height: 900 
   test(`fits the screen without sideways scrolling at ${viewport.width}px`, async ({ page }) => {
     await page.setViewportSize(viewport);
     await page.goto('/play/word-path');
-    await page.getByTestId('game-settings-button').click();
+    await page.getByTestId('game-frame-gear').click();
     const box = await page.locator('.game-settings').boundingBox();
     expect(box!.x).toBeGreaterThanOrEqual(0);
     expect(box!.x + box!.width).toBeLessThanOrEqual(viewport.width);
