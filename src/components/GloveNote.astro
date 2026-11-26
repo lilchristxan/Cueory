@@ -109,7 +109,7 @@ const kind = pageKindFor(Astro.url.pathname);
     outline-offset: var(--focus-offset);
   }
 
-  /* A gentle rise, only for visitors who haven't asked for reduced motion. */
+  /* A gentle fade-in (no sliding: a box moving by fractions of a pixel makes Firefox read its 44 px close button as 43.99998), only for visitors who haven't asked for reduced motion. */
   @media (prefers-reduced-motion: no-preference) {
     .glove-note-dim {
       animation: glove-note-dim-in var(--duration-base) ease-out;
@@ -128,7 +128,6 @@ const kind = pageKindFor(Astro.url.pathname);
     @keyframes glove-note-in {
       from {
         opacity: 0;
-        translate: 0 var(--rise-reveal);
       }
     }
   }

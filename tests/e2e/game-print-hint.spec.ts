@@ -4,7 +4,8 @@ import { expect, test, type Page } from '@playwright/test';
  * The printer button and its "print a copy for your patients!" bubble (Christian, 25 Nov). The button sits in the Frame's
  * corner between the gear and the "?" on every game page that can print, and announces `cueory:print` for the game's own
  * code to answer. The bubble shows once per page load, fades after ten seconds, closes on x or Escape, waits while it is
- * hovered or focused, and never covers the date line, the game or the other corner buttons.
+ * hovered or focused, and never covers the date line, the game or the other corner buttons. It is a pure overlay: nothing
+ * on the page moves because of it, and where it would not fit without covering something it is not shown at all.
  */
 const printing = [
   { path: '/play/vialo', id: 'vialo' },
@@ -38,18 +39,25 @@ async function awake(page: Page) {
   await expect(page.locator('astro-island[component-url*="GameFrameControls"]')).not.toHaveAttribute('ssr', '');
 }
 
-/** Loads the page on a clock the test drives, and lets the bubble appear. */
-async function openWithClock(page: Page, path: string) {
+/**
+ * Loads the page on a clock the test drives, and lets the bubble appear. The bubble only shows where it fits without
+ * covering anything or moving anything, which is not on a phone-sized screen, so these tests look at it on a wide window.
+ */
+async function openWithClock(page: Page, path: string, size = { width: 1440, height: 900 }, mustShow = true) {
+  await page.setViewportSize(size);
   await freezeClock(page);
   await page.goto(path);
   await expect(page.getByTestId('game-frame-print')).toBeVisible();
   await awake(page);
   await page.clock.runFor(1100);
-  await expect(hint(page)).toBeVisible();
+  if (mustShow) await expect(hint(page)).toBeVisible();
 }
 
 for (const { path, id } of printing) {
   test(`${path}: the printer button sits between the gear and the "?" and announces the print for ${id}`, async ({ page }) => {
+    // The press reaches the game, which prints; the house pattern is to stand in for window.print and count the calls
+    // (Firefox blocks the page on a real call).
+    await page.addInitScript(() => { window.print = () => { (window as unknown as { printed: number }).printed = ((window as unknown as { printed?: number }).printed ?? 0) + 1; }; });
     await page.goto(path);
     const print = page.getByTestId('game-frame-print');
     await expect(print).toBeVisible();
@@ -76,6 +84,10 @@ for (const { path, id } of printing) {
       setTimeout(() => resolve(seen), 50);
     }));
     expect(heard).toEqual([{ game: id }]);
+    // Vialo's unfinished game asks first, so it has not printed; the others print once, from the press.
+    const printed = () => page.evaluate(() => (window as unknown as { printed?: number }).printed ?? 0);
+    if (id === 'vialo') expect(await printed()).toBe(0);
+    else await expect.poll(printed).toBe(1);
   });
 
   test(`${path}: the bubble appears after the page loads, says its words once and takes no focus`, async ({ page }) => {
@@ -194,6 +206,7 @@ test('reduced motion: the bubble just disappears, with no fade', async ({ page }
 });
 
 test('the bubble remembers nothing: no storage key is added, and it shows again on the next load', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
   await freezeClock(page);
   await page.goto('/play/vialo');
   await expect(page.getByTestId('game-frame-print')).toBeVisible();
@@ -215,11 +228,10 @@ for (const [width, height] of [[390, 844], [820, 1180], [1440, 900]] as const) {
   for (const scheme of ['light', 'dark'] as const) {
     for (const { path } of printing) {
       test(`${path} at ${width}x${height} (${scheme === 'light' ? 'light' : 'evening'}): the bubble covers neither the date line, the game nor the other buttons, and stays on screen`, async ({ page }) => {
-        await page.setViewportSize({ width, height });
         await page.emulateMedia({ colorScheme: scheme });
-        await openWithClock(page, path);
-        // Let the Frame finish making room for it.
-        await page.clock.runFor(400);
+        await openWithClock(page, path, { width, height }, false);
+        // Where it would not fit it is not shown (the next block of tests); where it is shown, it covers nothing.
+        if (await hint(page).count() === 0) return;
         const found = await page.evaluate(() => {
           const rect = (node: Element) => { const r = node.getBoundingClientRect(); return { left: r.left, right: r.right, top: r.top, bottom: r.bottom }; };
           const bubble = rect(document.querySelector('[data-testid="print-hint"]')!);
@@ -246,6 +258,7 @@ for (const [width, height] of [[390, 844], [820, 1180], [1440, 900]] as const) {
 }
 
 test('no bubble if the player has already started playing, so nothing moves under their finger', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
   await freezeClock(page);
   await page.goto('/play/vialo');
   await awake(page);
@@ -297,20 +310,76 @@ test('/play/vialo: a printer press before the game has loaded is answered once i
   expect(await page.evaluate(() => (window as unknown as { printed?: number }).printed ?? 0)).toBe(0);
 });
 
-test('narrowing the window to the phone layout while the bubble shows leaves it clear of the date line and the game', async ({ page }) => {
-  // Real time here (the page's animation frames do the re-measuring); the bubble stays for ten seconds, far longer than this takes.
-  await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto('/play/vialo');
-  await expect(hint(page)).toBeVisible();
+test('narrowing the window to the phone layout while the bubble shows: it closes or stays clear, and nothing is added to the page for it', async ({ page }) => {
+  await openWithClock(page, '/play/vialo');
   await page.setViewportSize({ width: 390, height: 844 });
-  await expect(hint(page)).toBeVisible();
-  await expect.poll(() => page.evaluate(() => {
-    const rect = (node: Element) => { const r = node.getBoundingClientRect(); return { left: r.left, right: r.right, top: r.top, bottom: r.bottom }; };
-    const bubble = rect(document.querySelector('[data-testid="print-hint"]')!);
-    const range = document.createRange();
-    range.selectNodeContents(document.querySelector('.game-frame-dateline')!);
-    const boxes = [...range.getClientRects()].map((r) => ({ left: r.left, right: r.right, top: r.top, bottom: r.bottom }));
-    boxes.push(rect(document.querySelector('.vialo-pack')!));
-    return boxes.some((b) => bubble.left < b.right && bubble.right > b.left && bubble.top < b.bottom && bubble.bottom > b.top);
-  })).toBe(false);
+  // The page's resize observer does the re-checking on its own; the clock only has to carry the bubble's close on.
+  await expect.poll(async () => {
+    await page.clock.runFor(500);
+    return page.evaluate(() => {
+      const bubble = document.querySelector('[data-testid="print-hint"]');
+      if (!bubble) return false;
+      const rect = (node: Element) => { const r = node.getBoundingClientRect(); return { left: r.left, right: r.right, top: r.top, bottom: r.bottom }; };
+      const mine = rect(bubble);
+      const range = document.createRange();
+      range.selectNodeContents(document.querySelector('.game-frame-dateline')!);
+      const boxes = [...range.getClientRects()].map((r) => ({ left: r.left, right: r.right, top: r.top, bottom: r.bottom }));
+      boxes.push(rect(document.querySelector('.vialo-pack')!));
+      return boxes.some((b) => mine.left < b.right && mine.right > b.left && mine.top < b.bottom && mine.bottom > b.top);
+    });
+  }).toBe(false);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
 });
+
+test('where the bubble would have to cover something it is not shown at all, and the printer button stays', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await freezeClock(page);
+  await page.goto('/play/vialo');
+  await expect(page.getByTestId('game-frame-print')).toBeVisible();
+  await awake(page);
+  // Something the bubble must never lie over, right where it would hang (fixed, so nothing else moves).
+  await page.evaluate(() => {
+    const print = document.querySelector('[data-testid="game-frame-print"]')!.getBoundingClientRect();
+    const block = document.createElement('h2');
+    block.textContent = 'in the way';
+    block.style.cssText = `position:fixed;left:0;right:0;top:${print.bottom}px;height:200px;margin:0;pointer-events:none`;
+    document.querySelector('.game-frame-board')!.append(block);
+  });
+  await page.clock.runFor(1500);
+  await expect(hint(page)).toHaveCount(0);
+  await expect(page.getByTestId('game-frame-print')).toBeVisible();
+  await page.clock.runFor(12_000);
+  await expect(hint(page)).toHaveCount(0);
+});
+
+for (const [width, height] of [[390, 844], [820, 1180], [1440, 900]] as const) {
+  for (const { path } of printing) {
+    test(`${path} at ${width}x${height}: nothing on the page moves before, while or after the bubble shows`, async ({ page }) => {
+      await page.setViewportSize({ width, height });
+      await freezeClock(page);
+      await page.goto(path);
+      await expect(page.getByTestId('game-frame-print')).toBeVisible();
+      await awake(page);
+      await page.waitForLoadState('networkidle');
+      const boxes = () => page.evaluate(() => {
+        const rect = (node: Element | null) => { if (!node) return null; const r = node.getBoundingClientRect(); return [r.x, r.y, r.width, r.height]; };
+        return {
+          board: rect(document.querySelector('.game-frame-board')),
+          pack: rect(document.querySelector('.vialo-pack')),
+          dateline: rect(document.querySelector('.game-frame-dateline')),
+          corner: rect(document.querySelector('.game-frame-corner')),
+          main: rect(document.querySelector('.game-frame-main')),
+          height: document.documentElement.scrollHeight,
+        };
+      });
+      const before = await boxes();
+      await page.clock.runFor(1100);
+      await page.clock.runFor(500);
+      expect(await boxes()).toEqual(before);
+      await page.clock.runFor(10_000);
+      await page.clock.runFor(1000);
+      await expect(hint(page)).toHaveCount(0);
+      expect(await boxes()).toEqual(before);
+    });
+  }
+}

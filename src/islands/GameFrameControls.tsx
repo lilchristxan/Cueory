@@ -196,7 +196,6 @@ export default function GameFrameControls({ gameName, steps, hasPillLegend = fal
       )}
       {printId && <PrintHint />}
     </div>
-    {printId && <div className="game-frame-hint-room" aria-hidden="true" />}
     {/* Game-specific controls (the sudoku difficulty menu) keep their own row above the board, centred on it. */}
     <div className={`game-frame-controls-row${wide ? ' is-wide' : ''}`} data-print-hidden>
       <div className="game-frame-controls-middle">
