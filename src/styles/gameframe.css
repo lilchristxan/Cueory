@@ -815,10 +815,12 @@
        column simply gets a little narrower between 1120 and 1340 px). */
     --game-frame-main-pl: var(--game-frame-main-pr);
   }
-  /* The wide crossword grid and the 720 px showcase boards cannot give up that much width (the plain row below 1120 px keeps them at
-     full width, and so do these), so they keep the lopsided reserve: only the right side gives room to the cards. */
+  /* The wide crossword grid and the 720 px showcase boards must keep their full width (the plain row below 1120 px does), so
+     they cannot take the symmetric reserve. They keep the usual even padding: centred on the play area at full width. Their
+     box reaches under the fanned cards, but the drawn game does not (game-deck.spec.ts checks the real outlines). */
   .game-frame-main:has(.game-frame-board.is-wide, .game-frame-board.is-showcase) {
-    --game-frame-main-pl: round(nearest, clamp(var(--game-deck-reserve-start), calc(var(--game-deck-reserve-start) + (100vw - var(--breakpoint-deck)) * var(--game-deck-reserve-start-slope)), calc(var(--spacing) * 6)), var(--game-frame-grid-line));
+    --game-frame-main-pl: calc(var(--spacing) * 6);
+    --game-frame-main-pr: calc(var(--spacing) * 6);
   }
 }
 
@@ -1071,6 +1073,20 @@
     box-sizing: border-box;
     margin-block-end: calc(var(--spacing) * 6);
     padding-inline: calc(var(--spacing) * 3);
+  }
+}
+
+/* Narrow screens (640 px and under): the date line and the buttons cannot share a line without the date wrapping, so the
+   pair has its own row at the top and the date line, on one line, sits under it. */
+@media (width < 40rem) {
+  .game-frame-main {
+    --game-frame-corner-clear: 0px;
+  }
+  .game-frame-head {
+    padding-block-start: calc(var(--game-frame-corner-inset-now) + var(--game-frame-btn-size) + var(--game-frame-corner-gap));
+  }
+  .game-frame-dateline {
+    min-block-size: 0;
   }
 }
 

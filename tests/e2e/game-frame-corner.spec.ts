@@ -61,7 +61,10 @@ for (const [width, height] of sizes) {
       expect(Math.abs(m.pack.cx - m.keysCx), 'pack centre vs keyboard centre').toBeLessThanOrEqual(1);
 
       // Same size (44 px tap targets), same top, one centre line.
-      expect(m.gear.width).toBeGreaterThanOrEqual(43.9);
+      for (const button of [m.gear, m.help]) {
+        expect(button.width).toBeGreaterThanOrEqual(43.9);
+        expect(button.height).toBeGreaterThanOrEqual(43.9);
+      }
       expect(Math.abs(m.gear.width - m.help.width)).toBeLessThanOrEqual(0.5);
       expect(Math.abs(m.gear.height - m.help.height)).toBeLessThanOrEqual(0.5);
       expect(Math.abs(m.gear.top - m.help.top)).toBeLessThanOrEqual(0.5);
@@ -82,6 +85,8 @@ for (const [width, height] of sizes) {
         expect(overlaps(button, m.pack), 'board').toBe(false);
         for (const card of m.deck) expect(overlaps(button, card), 'deck card').toBe(false);
       }
+      // The date line stays on one line, clear of the buttons (on a phone the pair has its own row above it).
+      expect(m.text.length, 'date line is one line').toBe(1);
       expect(m.noSideways).toBe(true);
     });
   }
@@ -115,40 +120,53 @@ test('the gear and the ? open their dialogs and give focus back, from the new co
   await expect(page.getByRole('button', { name: 'how to play vialo' })).toBeFocused();
 });
 
-// Every other framed game: the same corner pair at every size.
-const others = ['/play/pillo', '/play/sudoku', '/play/piccline', '/play/word-path', '/play/tachyyy', '/play/hello-cards'];
-for (const path of others) {
+// Every other framed game route: the same corner pair at every size, in both palettes.
+const others = ['/play/pillo', '/play/sudoku', '/play/piccline', '/play/word-path', '/play/tachyyy', '/play/stat', '/play/hello-cards'];
+const framedRoutes = [...others, '/play/crossword'];
+for (const path of framedRoutes) {
   for (const [width, height] of sizes) {
-    test(`${path} at ${width}x${height}: corner pair in the play area's top right`, async ({ page }) => {
-      await page.setViewportSize({ width, height });
-      await page.goto(path);
-      await expect(page.getByTestId('game-frame-gear')).toBeVisible();
-      const m = await page.evaluate(() => {
-        const r = (n: Element | null) => { const b = n!.getBoundingClientRect(); return { left: b.left, right: b.right, top: b.top, width: b.width, height: b.height }; };
-        return {
-          area: r(document.querySelector('.game-frame-main')),
-          gear: r(document.querySelector('[data-testid="game-frame-gear"]')),
-          help: r(document.querySelector('[data-testid="game-frame-help-button"]')),
-          noSideways: document.documentElement.scrollWidth <= document.documentElement.clientWidth,
-        };
+    for (const scheme of ['light', 'dark'] as const) {
+      test(`${path} at ${width}x${height} (${scheme === 'light' ? 'light' : 'evening'}): corner pair in the play area's top right`, async ({ page }) => {
+        await page.setViewportSize({ width, height });
+        await page.emulateMedia({ colorScheme: scheme });
+        await page.goto(path);
+        await expect(page.getByTestId('game-frame-gear')).toBeVisible();
+        const m = await page.evaluate(() => {
+          const r = (n: Element | null) => { const b = n!.getBoundingClientRect(); return { left: b.left, right: b.right, top: b.top, width: b.width, height: b.height }; };
+          const range = document.createRange();
+          range.selectNodeContents(document.querySelector('.game-frame-dateline')!);
+          return {
+            area: r(document.querySelector('.game-frame-main')),
+            gear: r(document.querySelector('[data-testid="game-frame-gear"]')),
+            help: r(document.querySelector('[data-testid="game-frame-help-button"]')),
+            text: [...range.getClientRects()].map((t) => ({ left: t.left, right: t.right, top: t.top, bottom: t.bottom })),
+            noSideways: document.documentElement.scrollWidth <= document.documentElement.clientWidth,
+          };
+        });
+        for (const button of [m.gear, m.help]) {
+          expect(button.width).toBeGreaterThanOrEqual(43.9);
+          expect(button.height).toBeGreaterThanOrEqual(43.9);
+        }
+        expect(Math.abs(m.gear.width - m.help.width)).toBeLessThanOrEqual(0.5);
+        expect(Math.abs(m.gear.height - m.help.height)).toBeLessThanOrEqual(0.5);
+        expect(Math.abs(m.gear.top - m.help.top)).toBeLessThanOrEqual(0.5);
+        expect(m.gear.right).toBeLessThanOrEqual(m.help.left);
+        expect(m.help.left - m.gear.right).toBeLessThanOrEqual(12);
+        expect(m.area.right - m.help.right).toBeGreaterThanOrEqual(8);
+        expect(m.area.right - m.help.right).toBeLessThanOrEqual(24);
+        expect(m.gear.top - m.area.top).toBeGreaterThanOrEqual(8);
+        expect(m.gear.top - m.area.top).toBeLessThanOrEqual(24);
+        expect(m.text.length, 'date line is one line').toBe(1);
+        for (const button of [m.gear, m.help]) expect(overlaps(button, m.text[0]!), 'date line').toBe(false);
+        expect(m.noSideways).toBe(true);
       });
-      expect(Math.abs(m.gear.width - m.help.width)).toBeLessThanOrEqual(0.5);
-      expect(Math.abs(m.gear.top - m.help.top)).toBeLessThanOrEqual(0.5);
-      expect(m.gear.right).toBeLessThanOrEqual(m.help.left);
-      expect(m.area.right - m.help.right).toBeLessThanOrEqual(24);
-      expect(m.gear.top - m.area.top).toBeLessThanOrEqual(24);
-      expect(m.noSideways).toBe(true);
-    });
+    }
   }
 }
 
-// The board column is on the play area's centre line at every size. The 720 px showcase boards (piccline, word path) and
-// the crossword keep the lopsided reserve for the fanned cards between 1120 and 1340 px (gameframe.css), so those widths
-// are not in their list; the crossword is not in this list at all (reported in the pull request).
-const showcase = new Set(['/play/piccline', '/play/word-path']);
-for (const path of others) {
+// The board column is on the play area's centre line at every size, on every framed game route.
+for (const path of framedRoutes) {
   for (const [width, height] of sizes) {
-    if (showcase.has(path) && width >= 1120 && width < 1340) continue;
     test(`${path} at ${width}x${height}: board column centred on the play area`, async ({ page }) => {
       await page.setViewportSize({ width, height });
       await page.goto(path);
