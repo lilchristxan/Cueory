@@ -63,6 +63,8 @@ interface Puzzle {
 interface Props {
   /** Sample puzzles: the page picks one for the visitor's own date. */
   puzzles: Puzzle[];
+  /** The page's Frame owns the gear and the "?" (GameFrame, top right of the play area); this game keeps only the dialogs. */
+  framed?: boolean;
 }
 
 const columns = Array.from({ length: WORD_LENGTH }, (_, i) => i);
@@ -140,7 +142,7 @@ function Pocket({ letter, mark, typed, next }: { letter?: string; mark?: Mark; t
   );
 }
 
-export default function VialoGame({ puzzles }: Props) {
+export default function VialoGame({ puzzles, framed = false }: Props) {
   // The finish screen's played, win % and streak numbers are for signed-in players only; they are still recorded here.
   const statsVisible = useStatsVisible();
   const today = useMemo(() => new Date(), []);
@@ -347,6 +349,7 @@ export default function VialoGame({ puzzles }: Props) {
   return (
     <div className={`vialo${contrast ? ' vialo-contrast' : ''}`} data-testid="vialo">
       <GameHeader
+        framed={framed}
         name={gameName('vialo')}
         help={howToPlay}
         helpExtra={<VialoLegend />}
