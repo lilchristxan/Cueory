@@ -99,6 +99,7 @@ for (const game of games) {
 
 test('a finished vialo on its own page opens the result dialog and keeps stats only for vialo', async ({ page }) => {
   await page.goto('/play/vialo');
+  await expect(page.locator('astro-island[component-url*="VialoGame"]:not([ssr])')).toHaveCount(1); // hydrated before the first guess
   // Stats are always kept (2026-11-17): there is no switch to turn on, and a game page has no full stats panel (Games v2).
   await expect(page.getByTestId('game-stats')).toHaveCount(0);
   const field = page.getByLabel('your guess', { exact: true });
@@ -118,7 +119,7 @@ test('a finished vialo on its own page opens the result dialog and keeps stats o
 
 for (const game of [
   // sudoku and piccline print their own two-page sheets from their own pages (sudoku-print.spec.ts, word-path-print.spec.ts).
-  { path: '/play/crossword', name: 'crossword', testId: 'cueword', print: 'print this puzzle' },
+  { path: '/play/crossword', name: 'crossword', testId: 'cueword', print: 'print' },
   // piccline prints its own two-page sheet from /play/piccline (word-path-print.spec.ts); the older /play/word-path route has no print button.
 ] as const) {
   test(`printing ${game.name} from its own page prints only the game`, async ({ page }) => {

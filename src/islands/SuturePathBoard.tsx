@@ -3,7 +3,7 @@ import PrintLogo from './PrintLogo';
 import { useEffect, useId, useLayoutEffect, useRef, useState, type KeyboardEvent, type PointerEvent } from 'react';
 import { dayLabel } from './daily';
 import { localDay, reportRound } from './gameresults';
-import { FORFEIT_EVENT, rememberedForfeits, sendPrint } from '../scripts/printgate';
+import { FORFEIT_EVENT, rememberedForfeits } from '../scripts/printgate';
 import { useGameHelp } from './GameHelp';
 import GameHeader from './GameHeader';
 import { playGameCue } from './gamesound';
@@ -23,8 +23,6 @@ interface Props {
   puzzle: SuturePathPuzzle;
   name: string;
   framed?: boolean;
-  /** The page has piccline's print sheet (/play/piccline). The older word path route does not, so it shows no print button. */
-  printable?: boolean;
 }
 const printFoot = new URL(site.url).host;
 const button = 'min-h-11 min-w-11 rounded-md border border-control bg-page px-4 py-2 text-ink disabled:opacity-50';
@@ -103,7 +101,7 @@ function cellAt(board: HTMLElement | null, x: number, y: number): Cell | null {
   return dx * dx + dy * dy <= 0.6 ? cellOf(target) : null;
 }
 
-export function PathBoard({ puzzle, name, framed = false, printable }: Props) {
+export function PathBoard({ puzzle, name, framed = false }: Props) {
   const [today] = useState(() => new Date());
   // A board played earlier today on this device comes back as it was (a finished one stays finished); a new day starts fresh.
   const [restored] = useState(() => loadPicclineSave(puzzle, localDay(today)));
@@ -322,9 +320,6 @@ export function PathBoard({ puzzle, name, framed = false, printable }: Props) {
     catch { setCopied(shared); }
   };
 
-  /** The printer button asks the page's print sheet (src/islands/PicclinePrintView.tsx): it warns first when the board is not finished. */
-  const printPuzzle = () => sendPrint('piccline');
-
   // "print anyway" on an unfinished board (usegameprint.ts): today is already stored as not solved, so the board on screen
   // ends too (not saved: a reload starts a fresh board, and the stored first result of the day stands).
   useEffect(() => {
@@ -378,15 +373,6 @@ export function PathBoard({ puzzle, name, framed = false, printable }: Props) {
         framed={framed}
         name={name}
         help={howToPlay}
-        end={printable ? (
-          <button type="button" className="wordpath-round" aria-label="print" data-testid="suture-print" onClick={printPuzzle}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
-              <path d="M6 9V3h12v6" />
-              <rect x="3" y="9" width="18" height="9" rx="2" />
-              <path d="M7 14h10v7H7z" />
-            </svg>
-          </button>
-        ) : undefined}
       />
       {forfeited && <p className="mt-2 text-center text-sm text-ink-soft" data-testid="suture-forfeit-note" data-print-hidden>you printed before finishing, so today counts as not solved.</p>}
       <div className="wordpath-panel -mx-(--wordpath-bleed) mt-6 sm:mx-0 sm:mt-0 sm:px-(--spacing-stack)">
@@ -520,9 +506,9 @@ export function PathBoard({ puzzle, name, framed = false, printable }: Props) {
 }
 
 /** A board puzzle from the page, checked again here so a broken one shows a plain message instead of a broken game. */
-export default function SuturePathBoard({ puzzle, name, framed = false, printable = false }: Props) {
+export default function SuturePathBoard({ puzzle, name, framed = false }: Props) {
   try {
     const parsed = parsePathPuzzle(puzzle);
-    return <PathBoard key={JSON.stringify(parsed)} puzzle={parsed} name={name} framed={framed} printable={printable} />;
+    return <PathBoard key={JSON.stringify(parsed)} puzzle={parsed} name={name} framed={framed} />;
   } catch { return <p role="alert">this puzzle could not be loaded. please try again later.</p>; }
 }

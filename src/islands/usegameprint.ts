@@ -1,15 +1,18 @@
 import { useEffect, useRef, useState } from 'react';
 import { loadStats, localDay } from './gameresults';
 import { browserStorage } from '../scripts/storage';
-import { PRINT_EVENT, announceForfeit, claimPrint, isFinished, printAnyway, requestPrint, type PrintGame } from '../scripts/printgate';
+import { announceForfeit, isFinished, printAnyway, requestPrint, type PrintGame } from '../scripts/printgate';
+import { usePrintRequest } from './useprintrequest';
 import { sheetImagesReady } from '../scripts/printsheet';
 
 /** How long printing stays switched off if the browser never says the print is over. */
 export const PRINT_RELEASE_MS = 120_000;
 
 export interface GamePrintOptions {
-  /** Which game's `cueory:print` event this listens for, and which game's result it records on "print anyway". */
+  /** Which game's result it records on "print anyway". */
   game: PrintGame;
+  /** The id the Frame's printer button announces for this game's page (gameprintevent.ts). Omit when it is the same as `game`. */
+  printId?: string;
   /** Stored with a forfeited day (vialo: its six tries used; piccline: no wrong words counted). */
   forfeitTries: number;
   /**
@@ -84,29 +87,20 @@ export function useGamePrint(options: GamePrintOptions) {
     });
   };
 
+  // The Frame's printer button announces the print by the game's page id (gameprintevent.ts). A press made before this entry
+  // was listening is remembered there and answered once, here, the moment it registers.
+  usePrintRequest(latest.current.printId ?? latest.current.game, request);
+
   useEffect(() => {
-    const onPrint = (event: Event) => {
-      if ((event as CustomEvent<{ game?: string }>).detail?.game !== latest.current.game) return;
-      claimPrint(latest.current.game);
-      request();
-    };
-    document.addEventListener(PRINT_EVENT, onPrint);
     // Tells the page (and the tests) that a print request will now be heard: the island loads after the page does.
     const sheetRoot = document.querySelector('[data-print-sheet]');
     sheetRoot?.setAttribute('data-print-ready', 'true');
     if (window.location.hash === '#print') {
       // From the hub: do it once, and take the mark out of the address.
       window.history.replaceState(null, '', window.location.pathname + window.location.search);
-      claimPrint(latest.current.game);
-      request();
-    } else if (claimPrint(latest.current.game)) {
-      // The button was pressed before this island was listening: answer it now, once.
       request();
     }
-    return () => {
-      document.removeEventListener(PRINT_EVENT, onPrint);
-      sheetRoot?.removeAttribute('data-print-ready');
-    };
+    return () => sheetRoot?.removeAttribute('data-print-ready');
   }, []);
 
   const closeWarning = () => {

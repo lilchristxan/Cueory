@@ -29,7 +29,7 @@ const todayRow = (page: Page) => page.getByTestId('play-status-suture');
 // The print island loads after the page, so wait until it says it is listening (data-print-ready) before pressing.
 const press = async (page: Page) => {
   await expect(sheet(page)).toHaveAttribute('data-print-ready', 'true');
-  await page.evaluate(() => document.dispatchEvent(new CustomEvent('cueory:print', { detail: { game: 'piccline' } })));
+  await page.evaluate(() => document.dispatchEvent(new CustomEvent('cueory:print', { detail: { game: 'suture' } })));
 };
 
 test.beforeEach(async ({ page }) => {
@@ -191,7 +191,7 @@ test.describe('printing an unfinished board', () => {
   test('the printer button opens the warning; "print anyway" records not solved, ends the board and prints', async ({ page }) => {
     await page.goto('/play/piccline');
     await expect(sheet(page)).toHaveAttribute('data-print-ready', 'true');
-    await game(page).getByTestId('suture-print').click();
+    await page.getByTestId('game-frame-print').click();
     await expect(warning(page)).toBeVisible();
     await warning(page).getByRole('button', { name: 'print anyway' }).click();
     await expect.poll(() => printed(page)).toBe(1);
@@ -216,7 +216,7 @@ test.describe('printing an unfinished board', () => {
     await finish(page);
     await page.goto('/play/piccline');
     await expect(sheet(page)).toHaveAttribute('data-print-ready', 'true');
-    await game(page).getByTestId('suture-print').click();
+    await page.getByTestId('game-frame-print').click();
     await expect.poll(() => printed(page)).toBe(1);
     await expect(warning(page)).toHaveCount(0);
   });
@@ -272,7 +272,7 @@ test.describe('printing an unfinished board', () => {
       await route.continue();
     });
     await page.goto('/play/piccline');
-    const button = game(page).getByTestId('suture-print');
+    const button = page.getByTestId('game-frame-print');
     await expect(button).toBeVisible();
     await expect.poll(() => asked).toBe(true);
     await expect(sheet(page)).not.toHaveAttribute('data-print-ready', 'true');
@@ -290,6 +290,26 @@ test.describe('printing an unfinished board', () => {
     await expect(warning(page)).toHaveCount(0);
   });
 
+  test('with BOTH the Frame controls and the print island delayed, one press prints exactly once', async ({ page }) => {
+    await finish(page);
+    let releaseFrame!: () => void;
+    let releaseIsland!: () => void;
+    const frameHeld = new Promise<void>((resolve) => { releaseFrame = resolve; });
+    const islandHeld = new Promise<void>((resolve) => { releaseIsland = resolve; });
+    await page.route('**/_astro/GameFrameControls*.js', async (route) => { await frameHeld; await route.continue(); });
+    await page.route('**/_astro/PicclinePrint*.js', async (route) => { await islandHeld; await route.continue(); });
+    await page.goto('/play/piccline');
+    releaseFrame();
+    const button = page.getByTestId('game-frame-print');
+    await expect(button).toBeVisible();
+    await button.click();
+    expect(await printed(page)).toBe(0);
+    releaseIsland();
+    await expect.poll(() => printed(page)).toBe(1);
+    await expect(sheet(page)).toHaveAttribute('data-print-ready', 'true');
+    expect(await printed(page)).toBe(1);
+  });
+
   test('a finished board pressed before the print island has loaded prints once when it is ready', async ({ page }) => {
     await finish(page);
     let release!: () => void;
@@ -299,7 +319,7 @@ test.describe('printing an unfinished board', () => {
       await route.continue();
     });
     await page.goto('/play/piccline');
-    const button = game(page).getByTestId('suture-print');
+    const button = page.getByTestId('game-frame-print');
     await expect(button).toBeVisible();
     await button.click();
     await button.click();
@@ -315,7 +335,7 @@ test.describe('printing an unfinished board', () => {
 test('the older word path route has no print button', async ({ page }) => {
   await page.goto('/play/word-path');
   await expect(game(page)).toBeVisible();
-  await expect(game(page).getByTestId('suture-print')).toHaveCount(0);
+  await expect(page.getByTestId('game-frame-print')).toHaveCount(0);
   await expect(page.getByTestId('print-sheet')).toHaveCount(0);
 });
 

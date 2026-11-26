@@ -70,6 +70,7 @@ export default function SudokuPrint() {
 
   const print = useGamePrint({
     game: 'triage',
+    printId: 'sudoku',
     forfeitTries: 0,
     finished: (today) => {
       authorized.current = levelNow();

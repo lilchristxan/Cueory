@@ -40,6 +40,7 @@ export default function PicclinePrint({ puzzles }: Props) {
   const [warned, setWarned] = useState(false);
   const print = useGamePrint({
     game: 'piccline',
+    printId: 'suture',
     forfeitTries: 0,
     prepare: async (now, withAnswers) => {
       const [{ AnswersPage }, { BoardPage }] = await Promise.all([import('./PicclineAnswers'), import('./PicclineSheetParts')]);

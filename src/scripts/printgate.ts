@@ -84,27 +84,6 @@ export function rememberedForfeits(game: PrintGame, day: string): string[] {
     .map((parts) => parts[2] ?? '');
 }
 
-const PENDING_PRINT_ATTR = 'data-print-pending';
-
-/**
- * Asks a game's sheet to print. A game page's print island loads after the page does, so a press can come before the
- * island is listening. The request is therefore also remembered on the page, and the island picks it up with
- * `claimPrint` the moment it starts listening: the press is never lost, and it prints (or warns) exactly once.
- */
-export function sendPrint(game: PrintGame): void {
-  if (typeof document === 'undefined') return;
-  document.documentElement.setAttribute(PENDING_PRINT_ATTR, game);
-  document.dispatchEvent(new CustomEvent(PRINT_EVENT, { detail: { game } }));
-}
-
-/** True once for each remembered request for this game, and forgets it. Called when a request is heard and when a sheet starts listening. */
-export function claimPrint(game: PrintGame): boolean {
-  if (typeof document === 'undefined') return false;
-  if (document.documentElement.getAttribute(PENDING_PRINT_ATTR) !== game) return false;
-  document.documentElement.removeAttribute(PENDING_PRINT_ATTR);
-  return true;
-}
-
 /** The games that have a paper sheet. Each is the id the results are stored under (piccline's older id is suture, the same history). */
 export type PrintGame = 'vialo' | 'piccline' | 'triage';
 

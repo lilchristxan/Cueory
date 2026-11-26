@@ -32,7 +32,7 @@ const todayRow = (page: Page) => page.getByTestId('play-status-triage');
 // The print island loads after the page, so wait until it says it is listening (data-print-ready) before pressing.
 const press = async (page: Page) => {
   await expect(sheet(page)).toHaveAttribute('data-print-ready', 'true');
-  await page.evaluate(() => document.dispatchEvent(new CustomEvent('cueory:print', { detail: { game: 'triage' } })));
+  await page.evaluate(() => document.dispatchEvent(new CustomEvent('cueory:print', { detail: { game: 'sudoku' } })));
 };
 const ready = async (page: Page) => {
   await expect(sheet(page)).toHaveAttribute('data-print-ready', 'true');
@@ -194,7 +194,7 @@ test.describe('printing an unfinished level', () => {
   test('"print anyway" records the day as not solved, ends the level on screen and prints', async ({ page }) => {
     await page.goto('/play/sudoku');
     await expect(sheet(page)).toHaveAttribute('data-print-ready', 'true');
-    await board(page).getByRole('button', { name: 'print this puzzle' }).click();
+    await page.getByTestId('game-frame-print').click();
     await warning(page).getByRole('button', { name: 'print anyway' }).click();
     await expect.poll(() => printed(page)).toBe(1);
     expect(await stored(page, DAY_KEY)).toEqual(dayRecord(false));
@@ -265,7 +265,7 @@ test.describe('printing an unfinished level', () => {
     await finish(page);
     await page.goto('/play/sudoku');
     await expect(sheet(page)).toHaveAttribute('data-print-ready', 'true');
-    await board(page).getByRole('button', { name: 'print this puzzle' }).click();
+    await page.getByTestId('game-frame-print').click();
     await expect.poll(() => printed(page)).toBe(1);
     await expect(warning(page)).toHaveCount(0);
   });
@@ -300,7 +300,7 @@ test('a press before the print island has loaded is remembered and answered once
     await route.continue();
   });
   await page.goto('/play/sudoku');
-  const button = board(page).getByRole('button', { name: 'print this puzzle' });
+  const button = page.getByTestId('game-frame-print');
   await expect(button).toBeVisible();
   await expect.poll(() => asked).toBe(true);
   await expect(sheet(page)).not.toHaveAttribute('data-print-ready', 'true');
@@ -410,4 +410,24 @@ test('when results cannot be read, the sheet prints but the answers stay locked 
   await expect(keeper(page)).toHaveAttribute('data-keeper', 'locked');
   await expect(page.getByTestId('sheet-solved-grid')).toHaveCount(0);
   await expect(board(page).getByRole('button', { name: '1', exact: true })).toBeEnabled();
+});
+
+test('with BOTH the Frame controls and the print island delayed, one press prints exactly once', async ({ page }) => {
+  await finish(page);
+  let releaseFrame!: () => void;
+  let releaseIsland!: () => void;
+  const frameHeld = new Promise<void>((resolve) => { releaseFrame = resolve; });
+  const islandHeld = new Promise<void>((resolve) => { releaseIsland = resolve; });
+  await page.route('**/_astro/GameFrameControls*.js', async (route) => { await frameHeld; await route.continue(); });
+  await page.route('**/_astro/SudokuPrint*.js', async (route) => { await islandHeld; await route.continue(); });
+  await page.goto('/play/sudoku');
+  releaseFrame();
+  const button = page.getByTestId('game-frame-print');
+  await expect(button).toBeVisible();
+  await button.click();
+  expect(await printed(page)).toBe(0);
+  releaseIsland();
+  await expect.poll(() => printed(page)).toBe(1);
+  await expect(sheet(page)).toHaveAttribute('data-print-ready', 'true');
+  expect(await printed(page)).toBe(1);
 });

@@ -529,7 +529,7 @@ test.describe('daily games: sudoku (Task 625)', () => {
     // Print now asks the page's own two-page sheet (sudoku-print.spec.ts): an unfinished level warns first, and "print anyway"
     // prints a sheet that holds only the given numbers and cueory.app on page 1, with everything else on the page left out.
     await page.evaluate(() => { window.print = () => {}; });
-    await game(page).getByRole('button', { name: 'print this puzzle' }).click();
+    await page.getByTestId('game-frame-print').click();
     await page.getByRole('dialog', { name: 'print before you finish?' }).getByRole('button', { name: 'print anyway' }).click();
     await page.emulateMedia({ media: 'print' });
     await expect(page.getByTestId('pulse')).toBeHidden();
@@ -683,7 +683,7 @@ test.describe('daily games: crossword levels (Task 627)', () => {
     await board(page).getByRole('button', { name: '1, row 1, column 2, 1 across, empty' }).click();
     await page.keyboard.type('a');
     await page.evaluate(() => { window.print = () => undefined; });
-    await board(page).getByRole('button', { name: 'print this puzzle' }).click();
+    await page.getByTestId('game-frame-print').click();
     await expect(page.locator('html')).toHaveAttribute('data-print-game', 'crossword');
     await page.emulateMedia({ media: 'print' });
     await expect(page.locator('#pulse-heading')).toBeHidden();
@@ -810,7 +810,7 @@ test.describe('daily games: crossword levels (Task 627)', () => {
   test('printing a hard board removes scroll containment', async ({ page }) => {
     await page.getByTestId('crossword-levels').getByRole('button', { name: 'large, 15 by 15' }).click();
     await page.evaluate(() => { window.print = () => undefined; });
-    await board(page).getByRole('button', { name: 'print this puzzle' }).click();
+    await page.getByTestId('game-frame-print').click();
     await page.emulateMedia({ media: 'print' });
     const region = board(page).getByRole('region', { name: 'crossword board scroll area' });
     await expect(region).toHaveCSS('overflow-x', 'visible');
@@ -883,6 +883,7 @@ test.describe('daily games: private stats (D-76), always kept (2026-11-17)', () 
   const solveOnItsPage = async (page: Page) => {
     await page.goto('/play/vialo');
     await expect(page.getByTestId('vialo')).toBeVisible();
+    await expect(page.locator('astro-island[component-url*="VialoGame"]:not([ssr])')).toHaveCount(1); // hydrated before the first guess
     await solveVialo(page);
   };
   test.beforeEach(async ({ page }) => {

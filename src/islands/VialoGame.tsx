@@ -47,7 +47,6 @@ const VIALO_FORFEIT_EVENT = 'cueory:vialo-forfeited';
 import { VIALO_KEY_ROWS } from './vialokeys';
 import { newTimer, pauseTimer, resumeTimer, startTimer, stopTimer, timerElapsed, type SolveTimer } from './vialotimer';
 import { site } from '../config/site';
-import { revealDelayMs } from './sharedialogmodel';
 
 // The share card and its canvas drawing code load only once a game has ended.
 const VialoShare = lazy(() => import('./VialoShare'));
@@ -159,7 +158,7 @@ export default function VialoGame({ puzzles, framed = false }: Props) {
   const [problem, setProblem] = useState('');
   const howToPlay = useGameHelp('vialo');
   const [said, setSaid] = useState('');
-  const { settings: shared, soundAllowed, update: updateShared, reduceMotion } = useSharedGameSettings();
+  const { settings: shared, soundAllowed, update: updateShared } = useSharedGameSettings();
   const contrast = shared.highContrast;
   const [keysOnly, setKeysOnly] = useState(false);
   const [finish, setFinish] = useState<FinishStats>({ on: false });
@@ -213,12 +212,11 @@ export default function VialoGame({ puzzles, framed = false }: Props) {
     });
   }, []);
 
-  // The share card opens over the board once the last pill has landed (at once with reduced motion).
+  // The share card opens as soon as the game is over: opening is state, not a timer or an animation event (a timer under
+  // a slow or faked clock, or an animationend that never fires, left it closed in Safari's engine). The short wait for
+  // the last pill to land is a CSS entrance delay on the card (sharedialog.css), which reduced motion removes.
   useEffect(() => {
-    if (!shareReady) return;
-    const delay = revealDelayMs(reduceMotion, getComputedStyle(document.documentElement).getPropertyValue('--duration-fast'));
-    const timer = window.setTimeout(() => setShareOpen(true), delay);
-    return () => window.clearTimeout(timer);
+    if (shareReady) setShareOpen(true);
   }, [shareReady]);
 
   useRefreshOnStatsChange(shareReady, () => setFinish(finishStats(localDay(new Date()))));

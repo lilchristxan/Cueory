@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { browserStorage } from '../scripts/storage';
-import { FORFEIT_EVENT, rememberedForfeits, sendPrint } from '../scripts/printgate';
+import { FORFEIT_EVENT, rememberedForfeits } from '../scripts/printgate';
+import { requestPrint } from './gameprintevent';
 import { GameHelpButton, GameHelpDialog, useGameHelp } from './GameHelp';
 import { gameName } from '../config/games';
 import { deleteStats, forgetHeldRounds, localDay, reportStatsChanged, showResultCard, sudokuResultCard } from './gameresults';
@@ -404,8 +405,8 @@ export default function SudokuGame({ framed = false }: { framed?: boolean } = {}
     setSettings(next);
     if (key === 'autoCandidates') toggleAuto(next.autoCandidates);
   };
-  // Both print buttons ask the page's print sheet (src/islands/SudokuPrint.tsx), which warns first when the level is not finished.
-  const printPuzzle = () => sendPrint('triage');
+  // The Frame's printer button and "print this puzzle" in the settings both announce the print; the page's print sheet
+  // (src/islands/SudokuPrint.tsx) answers, and warns first when the level is not finished.
   const runFromSettings = (action: () => void) => {
     setSettingsOpen(false);
     action();
@@ -425,7 +426,6 @@ export default function SudokuGame({ framed = false }: { framed?: boolean } = {}
         <button type="button" className="sudoku-icon-button sudoku-pause-button" aria-label={paused ? 'resume puzzle' : 'pause puzzle'} disabled={over} onClick={togglePause}>{paused
           ? <svg viewBox="0 0 24 24" className="size-6" aria-hidden="true" focusable="false"><path d="M8.5 6.5v11l9-5.5z" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" /></svg>
           : <svg viewBox="0 0 24 24" className="size-6" aria-hidden="true" focusable="false"><path d="M9 6.5v11M15 6.5v11" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /></svg>}</button>
-        <button type="button" className="sudoku-icon-button print-control" aria-label="print this puzzle" onClick={printPuzzle}><svg viewBox="0 0 24 24" className="size-6" aria-hidden="true" focusable="false"><path d="M7 9V4h10v5M7 17H5.5A2.5 2.5 0 0 1 3 14.5v-3A2.5 2.5 0 0 1 5.5 9h13a2.5 2.5 0 0 1 2.5 2.5v3a2.5 2.5 0 0 1-2.5 2.5H17M7 14h10v6H7z" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" /></svg></button>
         {!framed && <button type="button" className="sudoku-icon-button" aria-label="sudoku stats" aria-expanded={statsOpen} onClick={openStats}><svg viewBox="0 0 24 24" className="size-6" aria-hidden="true" focusable="false"><path d="M5 20V11M12 20V5M19 20v-6" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /></svg></button>}
         {!framed && <GameHelpButton help={help} name={gameName('triage')} className="sudoku-icon-button" />}
         {!framed && statsOpen && <div className="sudoku-how sudoku-stats" role="region" aria-label="sudoku stats" data-testid="sudoku-stats">
@@ -514,7 +514,7 @@ export default function SudokuGame({ framed = false }: { framed?: boolean } = {}
           <button type="button" className="sudoku-tool-button" onClick={() => runFromSettings(clearCell)} disabled={paused || over}>clear cell</button>
           <button type="button" className="sudoku-tool-button" onClick={() => runFromSettings(checkPuzzle)} disabled={paused || over}>check puzzle</button>
           <button type="button" className="sudoku-tool-button" onClick={() => runFromSettings(togglePause)} disabled={over}>{paused ? 'resume puzzle' : 'pause puzzle'}</button>
-          <button type="button" className="sudoku-tool-button" onClick={() => runFromSettings(() => requestAnimationFrame(printPuzzle))}>print this puzzle</button>
+          <button type="button" className="sudoku-tool-button" onClick={() => runFromSettings(() => requestAnimationFrame(() => requestPrint('sudoku')))}>print this puzzle</button>
         </div>
       </fieldset>
       <fieldset>
