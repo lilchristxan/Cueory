@@ -1709,6 +1709,7 @@
   --lab-skin* ones for the lights and the skin outline.
 */
 :root {
+  --lab-bar-button: 3rem;        /* the bottom bar buttons: one layout step above the 44 px tap minimum, because Firefox reads an exactly-44 px box as 43.99997 */
   --lab-charcoal: #1c1917;       /* Charcoal — the stage, and text on copper */
   --lab-walnut: #3a2d24;         /* Walnut   — glass panels */
   --lab-bronze: #6b5243;         /* Bronze   — hairlines (never text) */
