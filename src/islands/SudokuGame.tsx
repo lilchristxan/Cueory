@@ -406,7 +406,7 @@ export default function SudokuGame({ framed = false }: { framed?: boolean } = {}
     if (key === 'autoCandidates') toggleAuto(next.autoCandidates);
   };
   // The Frame's printer button and "print this puzzle" in the settings both announce the print; the page's print sheet
-  // (src/islands/SudokuPrint.tsx) answers, and warns first when the level is not finished.
+  // (src/islands/SudokuPrintView.tsx) answers, and warns first when the level is not finished.
   const runFromSettings = (action: () => void) => {
     setSettingsOpen(false);
     action();
