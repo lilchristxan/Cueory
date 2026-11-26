@@ -606,6 +606,12 @@
   --sheet-list-space: 0.2in;
   --sheet-box-size: 0.28in;     /* a tick box */
   --sheet-box-radius: 0.04in;
+  --sheet-sudoku-cell: 0.78in;  /* sudoku page 1: each of the 81 squares, so the grid is 7 in wide, as big as Letter's height and A4's width allow */
+  --sheet-sudoku-digit: 36pt;   /* a number in the big grid, bold */
+  --sheet-sudoku-cell-small: 0.4in;  /* the solved grid on page 2 */
+  --sheet-sudoku-digit-small: 18pt;
+  --sheet-sudoku-thin: 1.5pt;   /* the lines between squares */
+  --sheet-sudoku-thick: 3.5pt;  /* the box lines and the grid's outer edge */
   --sheet-dialog-width: min(calc(100vw - 2rem), 28rem); /* the "print before you finish?" dialog */
 
   /* ---------- Motion (D-41 brand bar: 150–400 ms, soft not bouncy, always off under reduced-motion) ---------- */

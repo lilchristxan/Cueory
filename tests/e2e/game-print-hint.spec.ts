@@ -87,8 +87,8 @@ for (const { path, id } of printing) {
     // Vialo's unfinished game asks first, so it has not printed; the others print once, from the press.
     const printed = () => page.evaluate(() => (window as unknown as { printed?: number }).printed ?? 0);
     if (id === 'vialo') expect(await printed()).toBe(0);
-    else if (path === '/play/piccline') {
-      // Piccline's unfinished board asks first too (its two-page sheet shows the answers): the warning shows once, nothing
+    else if (path === '/play/piccline' || path === '/play/sudoku') {
+      // Piccline's and sudoku's unfinished boards ask first too (their two-page sheets show the answers): the warning shows once, nothing
       // prints until "print anyway", then it prints exactly once.
       const warning = page.getByRole('dialog', { name: 'print before you finish?' });
       await expect(warning).toBeVisible();
@@ -278,7 +278,6 @@ test('no bubble if the player has already started playing, so nothing moves unde
 });
 
 for (const { path, script } of [
-  { path: '/play/sudoku', script: /\/_astro\/SudokuGame\.[\w-]+\.js$/ },
   { path: '/play/crossword', script: /\/_astro\/CuewordToday\.[\w-]+\.js$/ },
 ] as const) {
   test(`${path}: a printer press before the game has loaded is answered once the game arrives`, async ({ page }) => {
@@ -296,6 +295,29 @@ for (const { path, script } of [
     expect(await page.evaluate(() => (window as unknown as { printed?: number }).printed ?? 0)).toBe(1);
   });
 }
+
+test('/play/sudoku: a printer press before the game has loaded is answered once the game arrives (warning once, then one print)', async ({ page }) => {
+  let release!: () => void;
+  const held = new Promise<void>((resolve) => { release = resolve; });
+  await page.route(/\/_astro\/SudokuGame\.[\w-]+\.js$/, async (route) => { await held; await route.continue(); });
+  await page.addInitScript(() => { window.print = () => { (window as unknown as { printed: number }).printed = ((window as unknown as { printed?: number }).printed ?? 0) + 1; }; });
+  const printed = () => page.evaluate(() => (window as unknown as { printed?: number }).printed ?? 0);
+  await page.goto('/play/sudoku', { waitUntil: 'domcontentloaded' });
+  await awake(page);
+  await page.getByTestId('game-frame-print').click();
+  expect(await printed()).toBe(0);
+  release();
+  // Today's level is not finished, so the answer is the warning, shown once, and nothing prints until "print anyway".
+  const warning = page.getByRole('dialog', { name: 'print before you finish?' });
+  await expect(warning).toBeVisible();
+  await page.waitForLoadState('networkidle');
+  await expect(page.getByRole('dialog')).toHaveCount(1);
+  expect(await printed()).toBe(0);
+  await warning.getByRole('button', { name: 'print anyway' }).click();
+  await expect.poll(printed).toBe(1);
+  await page.waitForLoadState('networkidle');
+  expect(await printed()).toBe(1);
+});
 
 test('/play/piccline: a printer press before the game has loaded is answered once the game arrives (warning once, then one print)', async ({ page }) => {
   let release!: () => void;
