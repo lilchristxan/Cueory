@@ -111,4 +111,13 @@ describe('piccline autosave (device only)', () => {
     savePicclineMs(puzzle, '2026-11-25', 5000, storage);
     expect(loadPicclineMs(puzzle, '2026-11-24', storage)).toBe(1000);
   });
+
+  it('never changes the time of a board that is already complete (Codex on #1230)', () => {
+    const storage = memory();
+    const finished: PathState = { ...startPath(), found: puzzle.words.map((_, i) => i) };
+    savePicclineBoard(puzzle, '2026-11-24', finished, storage, 61_000);
+    // An older tab that was still running leaves with a larger time on its clock.
+    savePicclineMs(puzzle, '2026-11-24', 300_000, storage);
+    expect(loadPicclineMs(puzzle, '2026-11-24', storage)).toBe(61_000);
+  });
 });
