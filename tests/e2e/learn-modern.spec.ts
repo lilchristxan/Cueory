@@ -117,9 +117,13 @@ for (const size of sizes) {
 
 test('the progress bar fills as cards are recalled today', async ({ page }) => {
   await page.goto(LEARN_URL);
-  const fill = page.locator('.progress-track .progress-fill');
-  const length = () => fill.evaluate((el) => getComputedStyle(el).getPropertyValue('--progress').trim());
-  await expect.poll(length).toBe('0');
+  // The row is cut into one piece per card (three here), with the count after the full pieces and the total at the end.
+  const fills = page.locator('.progress-track .progress-fill');
+  const lengths = () => fills.evaluateAll((els) => els.map((el) => getComputedStyle(el).getPropertyValue('--progress').trim()));
+  await expect(fills).toHaveCount(3);
+  await expect.poll(lengths).toEqual(['0', '0', '0']);
+  await expect(page.getByTestId('learn-count')).toHaveText('0');
+  await expect(page.getByTestId('learn-total')).toHaveText('3');
 
   await reachChoice(page);
   const card = await cardOnScreen(page);
@@ -139,7 +143,8 @@ test('the progress bar fills as cards are recalled today', async ({ page }) => {
   }
   await expect(page.getByText('recalled today 1 of 3')).toBeVisible();
   await expect(page.getByRole('progressbar', { name: 'Cards recalled today' })).toHaveAttribute('aria-valuenow', '1');
-  await expect.poll(length).toBe(String(1 / 3));
+  await expect.poll(lengths).toEqual(['1', '0', '0']);
+  await expect(page.getByTestId('learn-count')).toHaveText('1');
 });
 
 test('a wrong choice says so in words, with a cross, and names the right answer', async ({ page }) => {
@@ -249,3 +254,117 @@ for (const size of sizes) {
     });
   }
 }
+
+test("don't know? counts as a miss, shows the answer, and the card comes back saying let's try again", async ({ page }) => {
+  await page.goto(LEARN_URL);
+  await reachChoice(page);
+  const card = await cardOnScreen(page);
+  const front = (await page.getByTestId('learn-prompt').textContent()) ?? '';
+  await expect(page.getByTestId('learn-retry')).toHaveCount(0);
+  await page.getByRole('button', { name: "don't know?" }).click();
+  const feedback = page.getByTestId('learn-feedback');
+  await expect(feedback).toContainText('Not quite.');
+  await expect(feedback).toContainText(`The answer: ${card.back}`);
+  await expect(page.getByRole('button', { name: "don't know?" })).toHaveCount(0);
+  await expect(page.getByTestId('learn-card')).toBeFocused();
+  await page.getByRole('button', { name: 'Continue' }).click();
+  // Play the cards in between by their first step only, until the missed card is back on its choose step.
+  for (let turn = 0; turn < 8; turn++) {
+    const now = await cardOnScreen(page);
+    const step = await stepOf(page);
+    const nowFront = (await page.getByTestId('learn-prompt').textContent()) ?? '';
+    if (nowFront === front && step === 'Choose the answer') break;
+    if (step === 'New card') {
+      await page.getByRole('button', { name: 'Show answer' }).click();
+      await page.getByRole('button', { name: 'Next card' }).click();
+    } else if (step === 'Choose the answer') {
+      await answers(page).getByRole('button', { name: now.back, exact: true }).click();
+      await page.getByRole('button', { name: 'Continue' }).click();
+    } else {
+      await page.getByRole('textbox').fill(step === 'Fill in the blank' ? now.blank! : now.back);
+      await page.getByRole('button', { name: 'Check' }).click();
+      await page.getByRole('button', { name: 'Continue' }).click();
+    }
+  }
+  await expect(page.getByTestId('learn-prompt')).toHaveText(front);
+  await expect(page.getByTestId('learn-retry')).toHaveText("let's try again");
+});
+
+test('the answers sit two across on a wide screen and one per row on a phone, inside the panel', async ({ page }) => {
+  for (const size of sizes) {
+    await page.setViewportSize({ width: size.width, height: size.height });
+    await page.goto(LEARN_URL);
+    await reachChoice(page);
+    const boxes = await answers(page).getByRole('button').evaluateAll((els) => els.map((el) => el.getBoundingClientRect().toJSON()));
+    expect(boxes.length).toBeGreaterThanOrEqual(2);
+    const sameRow = Math.abs(boxes[0]!.top - boxes[1]!.top) < 2;
+    expect(sameRow).toBe(size.width >= 640);
+    for (const box of boxes) expect(box.height).toBeGreaterThanOrEqual(44);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
+  }
+});
+
+test('the listen button reads the card with an on-device voice, stops on a second press, and is hidden without one', async ({ page }) => {
+  // A stand-in speech engine: one remote voice (never used) and one on-device voice.
+  await page.addInitScript(() => {
+    const spoken: { text: string; voice: string }[] = [];
+    let live: { onend: (() => void) | null } | null = null;
+    class Utterance {
+      voice: { name: string } | null = null;
+      lang = '';
+      onend: (() => void) | null = null;
+      onerror: (() => void) | null = null;
+      constructor(public text: string) {}
+    }
+    const voices = (window as unknown as { __voices?: unknown[] }).__voices ?? [
+      { name: 'Cloud Natural', lang: 'en-US', localService: false, default: true, voiceURI: 'cloud' },
+      { name: 'Local Enhanced', lang: 'en-US', localService: true, default: false, voiceURI: 'local' },
+    ];
+    const synth = {
+      getVoices: () => voices,
+      speak: (u: Utterance) => { spoken.push({ text: u.text, voice: u.voice?.name ?? '' }); live = u; },
+      cancel: () => { live = null; },
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    };
+    Object.defineProperty(window, 'speechSynthesis', { value: synth, configurable: true });
+    Object.defineProperty(window, 'SpeechSynthesisUtterance', { value: Utterance, configurable: true });
+    (window as unknown as { __spoken: typeof spoken }).__spoken = spoken;
+  });
+  await page.goto(LEARN_URL);
+  const front = (await page.getByTestId('learn-prompt').textContent()) ?? '';
+  const listen = page.getByRole('button', { name: 'read this card aloud' });
+  await expect(listen).toHaveAttribute('aria-pressed', 'false');
+  expect(await page.evaluate(() => (window as unknown as { __spoken: unknown[] }).__spoken.length)).toBe(0);
+  await listen.focus();
+  await page.keyboard.press('Enter');
+  expect(await page.evaluate(() => (window as unknown as { __spoken: unknown[] }).__spoken)).toEqual([{ text: front, voice: 'Local Enhanced' }]);
+  const stop = page.getByRole('button', { name: 'stop reading' });
+  await expect(stop).toHaveAttribute('aria-pressed', 'true');
+  await stop.click();
+  await expect(page.getByRole('button', { name: 'read this card aloud' })).toHaveAttribute('aria-pressed', 'false');
+});
+
+test('with only a remote voice, or no speech at all, there is no listen button', async ({ page }) => {
+  await page.addInitScript(() => {
+    const synth = { getVoices: () => [{ name: 'Cloud', lang: 'en-US', localService: false, default: true, voiceURI: 'cloud' }], speak: () => {}, cancel: () => {}, addEventListener: () => {}, removeEventListener: () => {} };
+    Object.defineProperty(window, 'speechSynthesis', { value: synth, configurable: true });
+  });
+  await page.goto(LEARN_URL);
+  await expect(page.getByTestId('learn-card')).toBeVisible();
+  await expect(page.getByTestId('speak-button')).toHaveCount(0);
+});
+
+test('the close button goes back to the lesson and the menu lists the other ways to study', async ({ page }) => {
+  await page.goto(LEARN_URL);
+  const menu = page.getByTestId('learn-switch');
+  await menu.locator('summary').click();
+  await expect(menu.getByRole('link', { name: 'cards', exact: true })).toBeVisible();
+  await expect(menu.getByRole('link', { name: 'learn', exact: true })).toHaveCount(0);
+  const close = page.getByRole('link', { name: 'close learn mode' });
+  const box = (await close.boundingBox())!;
+  expect(box.width).toBeGreaterThanOrEqual(44);
+  expect(box.height).toBeGreaterThanOrEqual(44);
+  await close.click();
+  await expect(page).toHaveURL(/\/learn\/study-skills$/);
+});

@@ -171,8 +171,18 @@ export function submit(state: LearnState, cards: readonly LearnCard[], typed: st
 /** "I was right": after a typed answer was marked wrong, the student counts it as right (a typo, say). */
 export function overrule(state: LearnState, cards: readonly LearnCard[]): LearnState {
   const step = stepOf(state, cards);
-  if (!state.result || state.result.correct || (step !== 'type' && step !== 'fill')) return state;
+  if (!state.result || state.result.correct || state.result.given === '' || (step !== 'type' && step !== 'fill')) return state;
   return { ...state, result: { ...state.result, correct: true, overruled: true } };
+}
+
+/**
+ * "don't know?": on a choose, type or fill step, the student gives up on the card. It counts as a miss, the answer is
+ * shown, and the card comes back like any other miss. `given` is -1 (no answer picked) or '' (nothing typed).
+ */
+export function giveUp(state: LearnState, cards: readonly LearnCard[]): LearnState {
+  const step = stepOf(state, cards);
+  if (state.queue[0] === undefined || step === null || step === 'see' || state.result) return state;
+  return { ...state, result: { correct: false, given: step === 'choose' ? -1 : '', overruled: false } };
 }
 
 /** True when the student can move on from the card on screen. */
