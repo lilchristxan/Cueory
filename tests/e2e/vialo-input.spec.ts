@@ -48,10 +48,20 @@ async function sampleKeyDiagnostics(page: Page, testInfo: TestInfo, label: strin
       return out;
     };
     const frames: unknown[] = [];
+    let last = performance.now();
     for (let i = 0; i < 12; i += 1) {
       await new Promise((resolve) => requestAnimationFrame(resolve));
+      const now = performance.now();
+      const gap = Math.round(now - last);
+      last = now;
+      const centre = keyEl ? keyEl.getBoundingClientRect() : null;
+      const top = centre ? document.elementFromPoint(centre.x + centre.width / 2, centre.y + centre.height / 2) : null;
+      const dialog = document.querySelector('[role="dialog"]');
+      const scrimStyle = dialog?.parentElement ? getComputedStyle(dialog.parentElement) : null;
       const cs = keyEl ? getComputedStyle(keyEl) : null;
       frames.push({
+        gap, topAtKey: top ? `${top.tagName.toLowerCase()}.${String(top.className).split(' ')[0]}` : null,
+        dialogOpacity: scrimStyle?.opacity, dialogPe: scrimStyle?.pointerEvents, dialogHidden: dialog?.parentElement?.hidden,
         key: box(keyEl), pack: box(packEl), scroll: Math.round(window.scrollY),
         disabled: (keyEl as HTMLButtonElement | null)?.disabled, ariaDisabled: keyEl?.getAttribute('aria-disabled'),
         vis: cs?.visibility, pe: cs?.pointerEvents, op: cs?.opacity, anims: anims(keyEl),

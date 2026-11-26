@@ -15,7 +15,7 @@ import {
   type SharePayload,
 } from './vialosharing';
 import { formatCountdown } from './vialosticker';
-import { DIALOG_TAB_STOPS, stickersFor, trapTarget, type ShareGame, type ShareSticker } from './sharedialogmodel';
+import { DIALOG_TAB_STOPS, stickersFor, trapTarget, yieldToBrowser, type ShareGame, type ShareSticker } from './sharedialogmodel';
 
 /*
   The completion dialog (Christian's design, 25 Nov 2026), shared by the daily games. It opens over the play area when a
@@ -81,7 +81,7 @@ export default function ShareDialog({ game, open, onClose, description, payload,
   // Draw the stickers (again if the stats change). The dialog stays mounted while closed, so reopening is instant.
   useEffect(() => {
     let live = true;
-    void makeStickers().then(
+    void yieldToBrowser().then(() => (live ? makeStickers() : [])).then(
       (made) => {
         if (!live) return;
         setDrawn({ key: stickersKey, list: made });

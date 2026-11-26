@@ -3,6 +3,7 @@ import { gameName } from '../config/games';
 import type { Mark } from './pulse';
 import { buildShareUrl } from './share';
 import ShareDialog from './ShareDialog';
+import { yieldToBrowser } from './sharedialogmodel';
 import type { ShareGame, ShareSticker } from './sharedialogmodel';
 import type { SharePayload } from './vialosharing';
 import {
@@ -67,6 +68,7 @@ export default function VialoShare(props: VialoShareProps) {
     const assets: StickerAssets = await draw.loadStickerAssets();
     const made: ShareSticker[] = [];
     for (const kind of STICKER_KINDS) {
+      await yieldToBrowser();
       const canvas = draw.renderSticker(kind, input, assets, palette);
       made.push({
         id: STICKER_NAMES[kind],
