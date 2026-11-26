@@ -173,26 +173,26 @@
 
 @media print {
   /* piccline: the letter board with a numbered list beside it (page 1), and the board with every answer's path drawn through it (page 2). */
+  [data-sheet-slot] { inline-size: 100%; }
   .sheet-clue { margin-block: 0 var(--sheet-gap) !important; font-size: var(--sheet-text); font-weight: 700; text-align: center; }
-  .sheet-spread { display: flex; align-items: flex-start; justify-content: center; gap: var(--sheet-spread-gap); inline-size: 100%; }
-  .sheet-grid { position: relative; display: grid; grid-template-columns: repeat(6, var(--sheet-grid-cell)); flex: none; }
-  .sheet-grid-small { grid-template-columns: repeat(6, var(--sheet-grid-cell-small)); }
+  .sheet-spread { container-type: inline-size; display: flex; align-items: flex-start; justify-content: center; gap: var(--sheet-spread-gap); inline-size: 100%; }
+  .sheet-grid { --sheet-square: min(var(--sheet-grid-cell-max), calc((100cqi - var(--sheet-list-min) - var(--sheet-spread-gap)) / 6)); position: relative; display: grid; grid-template-columns: repeat(6, var(--sheet-square)); flex: none; }
+  .sheet-grid-small { --sheet-square: var(--sheet-grid-cell-small); grid-template-columns: repeat(6, var(--sheet-square)); }
   .sheet-grid-cell {
     box-sizing: border-box;
     display: flex;
     align-items: center;
     justify-content: center;
-    inline-size: var(--sheet-grid-cell);
-    block-size: var(--sheet-grid-cell);
+    inline-size: var(--sheet-square);
+    block-size: var(--sheet-square);
   }
-  .sheet-grid-small .sheet-grid-cell { inline-size: var(--sheet-grid-cell-small); block-size: var(--sheet-grid-cell-small); }
   .sheet-grid-letter {
     box-sizing: border-box;
     display: flex;
     align-items: center;
     justify-content: center;
-    inline-size: var(--sheet-grid-dot);
-    block-size: var(--sheet-grid-dot);
+    inline-size: var(--sheet-grid-dot-share);
+    block-size: var(--sheet-grid-dot-share);
     border: var(--sheet-line) solid var(--sheet-accent);
     border-radius: 50%;
     background: var(--print-paper); /* covers the path's line, so it runs from circle to circle */

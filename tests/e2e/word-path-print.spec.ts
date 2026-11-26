@@ -143,7 +143,7 @@ for (const paper of [{ name: 'Letter', width: 816, height: 1056 }, { name: 'A4',
         gridWidth: grid.width, gridBottom: grid.bottom, gridRight: grid.right, footOne: footOne.top, pageWidth: one.width,
         letter: px('[data-testid="sheet-grid"] .sheet-grid-letter', 'font-size'), word: px('.sheet-list-word', 'font-size'),
         circle: px('[data-testid="sheet-grid"] .sheet-grid-letter', 'border-top-width'), boxLine: px('.sheet-box', 'border-top-width'),
-        path: px('.sheet-path', 'stroke-width'), answersBottom: answers.bottom, footTwo: footTwo.top, scrollWidth: document.documentElement.scrollWidth,
+        path: px('.sheet-path', 'stroke-width'), start: px('.sheet-grid-number', 'font-size'), answersBottom: answers.bottom, footTwo: footTwo.top, scrollWidth: document.documentElement.scrollWidth,
         list: box('[data-testid="sheet-words"]').right,
       };
     });
@@ -152,6 +152,8 @@ for (const paper of [{ name: 'Letter', width: 816, height: 1056 }, { name: 'A4',
     expect(m.circle).toBeGreaterThanOrEqual(1.5 * 96 / 72 - 0.1);
     expect(m.boxLine).toBeGreaterThanOrEqual(1.5 * 96 / 72 - 0.1);
     expect(m.path).toBeGreaterThanOrEqual(1.5 * 96 / 72);
+    // The numbers where the paths start are readable: 12 pt or more.
+    expect(m.start).toBeGreaterThanOrEqual(12 * 96 / 72 - 0.1);
     // Page 1's board is big: at least 4.75 in wide, inside the margins, above the footer. The words sit inside the page.
     expect(m.gridWidth).toBeGreaterThanOrEqual(4.75 * 96);
     expect(m.gridRight).toBeLessThanOrEqual(m.pageWidth);
