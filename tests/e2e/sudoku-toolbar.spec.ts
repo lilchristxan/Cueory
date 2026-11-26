@@ -41,7 +41,7 @@ for (const [width, height] of [[320, 700], [390, 844], [820, 1180], [1440, 900]]
       await expect(section).not.toContainText('fill every row');
 
       // Frame-owned gear, printer and help, and Sudoku's own pause button: four 44px controls across two intended rows.
-      const frameButtons = frameControls(page).getByRole('button').filter({ hasNot: page.locator('.game-frame-hint-close') });
+      const frameButtons = frameControls(page).locator('button:not(.game-frame-hint-close)');
       const localButtons = toolbar(page).getByRole('button');
       await expect(frameButtons).toHaveCount(3);
       await expect(localButtons).toHaveCount(1);
