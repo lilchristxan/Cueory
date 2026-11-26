@@ -117,4 +117,9 @@ describe('once-only promo panel (D-59)', () => {
     const subscribed = readFileSync(new URL('../../src/pages/subscribed.astro', import.meta.url), 'utf8');
     expect(subscribed).toContain('promo={false}');
   });
+
+  it('stays switched off: the green launch-updates pop-up is the only marketing pop-up (Christian, 2026-11-25)', () => {
+    // Independent of the browser tests: turning the panel back on needs Christian's say-so and a change to this test.
+    expect(promo.show).toBe(false);
+  });
 });
