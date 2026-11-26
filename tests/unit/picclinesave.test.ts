@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { loadPicclineSave, PICCLINE_SAVE_KEY, savePicclineBoard } from '../../src/islands/picclinesave';
+import { loadPicclineMs, loadPicclineSave, PICCLINE_SAVE_KEY, savePicclineBoard, savePicclineMs } from '../../src/islands/picclinesave';
 import { parsePathPuzzle, startPath, type PathState } from '../../src/islands/suturepath';
 import { storageKeys } from '../../src/config/storage-keys';
 import type { KeyValueStorage } from '../../src/scripts/storage';
@@ -86,5 +86,38 @@ describe('piccline autosave (device only)', () => {
     savePicclineBoard(puzzle, '2026-11-24', { ...startPath(), misses: 2 }, storage);
     expect(loadPicclineSave(puzzle, '2026-11-24', storage)!.misses).toBe(2);
     expect(storageKeys.some((key) => key.name === PICCLINE_SAVE_KEY && key.onDeletion === 'cleared')).toBe(true);
+  });
+
+  it('a hidden or left tab saves only the time, so an older tab never erases a word another tab found (Codex on #1230)', () => {
+    const storage = memory();
+    // Tab A saved its board earlier; tab B then found two words and saved a newer board with 9 s.
+    savePicclineBoard(puzzle, '2026-11-24', startPath(), storage, 4000);
+    savePicclineBoard(puzzle, '2026-11-24', played(), storage, 9000);
+    // Tab A, still showing the old board, is left with 6 s on its clock.
+    savePicclineMs(puzzle, '2026-11-24', 6000, storage);
+    expect(loadPicclineSave(puzzle, '2026-11-24', storage)).toEqual(played());
+    expect(loadPicclineMs(puzzle, '2026-11-24', storage)).toBe(9000);
+    // A longer time from the quieter tab is kept; the board is still the newer one.
+    savePicclineMs(puzzle, '2026-11-24', 12000, storage);
+    expect(loadPicclineMs(puzzle, '2026-11-24', storage)).toBe(12000);
+    expect(loadPicclineSave(puzzle, '2026-11-24', storage)).toEqual(played());
+  });
+
+  it('saves no time where there is no saved board, or on another day', () => {
+    const storage = memory();
+    savePicclineMs(puzzle, '2026-11-24', 5000, storage);
+    expect(storage.data.size).toBe(0);
+    savePicclineBoard(puzzle, '2026-11-24', played(), storage, 1000);
+    savePicclineMs(puzzle, '2026-11-25', 5000, storage);
+    expect(loadPicclineMs(puzzle, '2026-11-24', storage)).toBe(1000);
+  });
+
+  it('never changes the time of a board that is already complete (Codex on #1230)', () => {
+    const storage = memory();
+    const finished: PathState = { ...startPath(), found: puzzle.words.map((_, i) => i) };
+    savePicclineBoard(puzzle, '2026-11-24', finished, storage, 61_000);
+    // An older tab that was still running leaves with a larger time on its clock.
+    savePicclineMs(puzzle, '2026-11-24', 300_000, storage);
+    expect(loadPicclineMs(puzzle, '2026-11-24', storage)).toBe(61_000);
   });
 });

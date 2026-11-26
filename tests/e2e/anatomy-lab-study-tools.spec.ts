@@ -1,5 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
+import { openLabPanels } from './anatomy-lab-panels';
 
 /**
  * The anatomy lab's study tools, part A (Task 178): tap modes, visibility history, fading, camera presets and recall
@@ -13,6 +14,7 @@ const axeTags = ['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa'];
 async function openLab(page: Page) {
   await page.goto(URL);
   await page.getByRole('button', { name: 'open the anatomy lab' }).click();
+  await openLabPanels(page);
   await expect(page.locator('canvas')).toBeVisible({ timeout: 15_000 });
   await expect(page.getByRole('button', { name: 'fixture cube A', exact: true })).toBeEnabled({ timeout: 20_000 });
 }
@@ -142,7 +144,7 @@ test.describe('anatomy lab study tools', () => {
     await expect(cubeA).not.toContainText('(faded)');
   });
 
-  test('camera presets: six views, focus on selected, and lying down, with reduced motion', async ({ page }) => {
+  test('camera presets: six views (anterior, posterior, lateral, lateral opposite, top, bottom), focus on selected, and lying down, with reduced motion', async ({ page }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await openLab(page);
     await page.getByRole('button', { name: 'labels', exact: true }).click();
@@ -150,13 +152,14 @@ test.describe('anatomy lab study tools', () => {
     const pointD = overlay.locator(':scope > span', { hasText: 'fixture point D' });
     await expect(pointD).not.toContainText('(behind)');
 
-    for (const name of ['front', 'back', 'left', 'right', 'top', 'bottom']) {
+    // The lab's words for the views: anterior, posterior and lateral (Christian's), then "lateral, opposite", top, bottom.
+    for (const name of ['anterior', 'posterior', 'lateral', 'lateral, opposite', 'top', 'bottom']) {
       await tools(page).getByRole('button', { name, exact: true }).click();
       await expect(live(page)).toHaveText(`view: ${name}.`);
     }
     // From below, the eight-sided shape D (above cube A) is hidden behind A: marked in words.
     await expect(pointD).toContainText('(behind)');
-    await tools(page).getByRole('button', { name: 'front', exact: true }).click();
+    await tools(page).getByRole('button', { name: 'anterior', exact: true }).click();
     await expect(pointD).not.toContainText('(behind)');
 
     const focus = tools(page).getByRole('button', { name: 'focus on selected' });
@@ -175,7 +178,7 @@ test.describe('anatomy lab study tools', () => {
     await lying.click();
     await expect(lying).toHaveAttribute('aria-pressed', 'true');
     await expect(standing).toHaveAttribute('aria-pressed', 'false');
-    await expect(live(page)).toHaveText('the model lies on its back, seen from above.');
+    await expect(live(page)).toHaveText('the model lies down, seen from above.');
     // Lying on its back and seen from above, the model shows its front: every shape is labeled, nothing is behind.
     await expect(overlay.locator(':scope > span')).toHaveCount(NAMES.length - 1);
     await expect(overlay.locator(':scope > span[data-behind]')).toHaveCount(0);

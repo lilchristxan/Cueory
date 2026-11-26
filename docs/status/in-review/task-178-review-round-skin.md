@@ -1,0 +1,1 @@
+status: Task 178, review rounds respect the skin outline: a "find it: review queue" round no longer asks for a queued structure that is drawn as an outline (and cannot be tapped) because other structures are showing; if nothing tappable is left it says so. No database change.

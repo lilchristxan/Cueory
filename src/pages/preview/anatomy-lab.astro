@@ -28,8 +28,8 @@ const hasSystems = lab.systems.length > 0 || lab.fixture !== null;
 const modelBytes = modelBytesFor(lab.systems, new URL('../../../public/', import.meta.url));
 ---
 
-<Layout title="preview: anatomy lab" description="Preview of the anatomy lab." variant="study" noindex>
-  <div class="mx-auto max-w-page space-y-8 pt-8 pb-section">
+<Layout title="preview: anatomy lab" description="Preview of the anatomy lab." variant="study" noindex wide>
+  <div class="mx-auto max-w-(--lab-page-max) space-y-8 px-gutter pt-8 pb-section">
     <div>
       <p class="text-sm text-ink-soft">preview · not linked from the site</p>
       <h1 class="mt-2 text-2xl">anatomy lab</h1>
