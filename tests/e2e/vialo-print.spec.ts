@@ -358,7 +358,9 @@ test('a picture that never arrives holds the print back for the capped wait, and
   await page.clock.install({ time: new Date('2026-11-01T15:00:00') });
   await page.goto('/play/vialo');
   await expect(page.getByTestId('print-sheet')).toHaveAttribute('data-print-ready', 'true');
-  await page.clock.pauseAt(new Date('2026-11-01T15:00:05'));
+  // Pause a little after the page's own time now (read here, so a slow start cannot leave the target in the past).
+  const pageNow = await page.evaluate(() => Date.now());
+  await page.clock.pauseAt(new Date(pageNow + 1000));
   await page.evaluate(() => document.dispatchEvent(new CustomEvent('cueory:print', { detail: { game: 'vialo' } })));
   // The never-answered picture was asked for and the keeper box is filled, but nothing prints while the wait runs.
   await expect.poll(() => seen).toBe(true);
