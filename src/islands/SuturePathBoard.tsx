@@ -11,7 +11,6 @@ import { useSharedGameSettings } from './GameSettings';
 import { useStatsVisible } from './gamestatsgate';
 import { dailyStats, recordResult, type DailyStats, type GameStats } from './gamestats';
 import { browserStorage } from '../scripts/storage';
-import { revealDelayMs } from './sharedialogmodel';
 import { useRefreshOnStatsChange } from './finishstatsrefresh';
 import { formatSolveTime } from './vialotimer';
 import { newTimer, pauseTimer, resumeTimer, startTimer, stopTimer, timerElapsed, type SolveTimer } from './vialotimer';
@@ -137,7 +136,7 @@ export function PathBoard({ puzzle, name, framed = false }: Props) {
   const [finger, setFinger] = useState<{ x: number; y: number } | null>(null);
   const [printNote, setPrintNote] = useState('');
   const quietClickUntil = useRef(0);
-  const { soundAllowed, settings: prefs, update: updateShared, reduceMotion } = useSharedGameSettings();
+  const { soundAllowed, settings: prefs, update: updateShared } = useSharedGameSettings();
   const statsVisible = useStatsVisible();
   const sound = useRef(true);
   sound.current = soundAllowed();
@@ -210,12 +209,10 @@ export function PathBoard({ puzzle, name, framed = false }: Props) {
     return () => window.clearInterval(id);
   }, [timerRunning, prefs.showTimer]);
 
-  // The share card opens by itself once the last answer has landed (right away with reduced motion).
+  // The share card opens by itself as soon as the board is finished: state, not a timer (the short wait is a CSS
+  // entrance delay on the card, removed by reduced motion). A board that reopens finished does not throw it again.
   useEffect(() => {
-    if (!shareReady || restoredDone) return;
-    const delay = revealDelayMs(reduceMotion, getComputedStyle(document.documentElement).getPropertyValue('--duration-fast'));
-    const id = window.setTimeout(() => setShareOpen(true), delay);
-    return () => window.clearTimeout(id);
+    if (shareReady && !restoredDone) setShareOpen(true);
   }, [shareReady]);
 
   useEffect(() => { if (done && !restoredDone) result.current?.focus(); }, [done]);
