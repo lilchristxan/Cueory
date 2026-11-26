@@ -1,0 +1,1 @@
+status: wordpill art second pass (christian, 2026-11-26): the word is centred in the pill as one word, the colour line sits on the left edge of the p, and the wp icon drops its ivory tile and grows to fill its frame.
