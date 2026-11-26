@@ -1,0 +1,246 @@
+/* The vialo share card (Christian's design, 25 Nov 2026). It always uses the Daytime look, in Evening too: the root
+   carries .always-daytime (tokens.css), which re-declares the Daytime palette for everything inside. */
+@layer components {
+  /* One accent per game; the card re-declares the Daytime palette (.always-daytime), so these are Daytime values. */
+  .share-dialog-vialo { --share-dialog-accent: var(--game-oxblood); }
+  .share-dialog-piccline { --share-dialog-accent: var(--color-game-teal); }
+
+  /* The dim layer over the play area while the card is open: the glove note's layer and dim, not a second scale. */
+  .share-dialog-scrim {
+    position: fixed;
+    inset: 0;
+    z-index: var(--layer-glove-note);
+    display: flex;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: var(--share-dialog-scrim-pad);
+    background: var(--glove-note-dim);
+  }
+
+  .share-dialog-scrim[hidden] { display: none; }
+
+  .share-dialog-close {
+    position: absolute;
+    inset-block-start: var(--share-dialog-corner-inset);
+    inset-inline-end: var(--share-dialog-corner-inset);
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    inline-size: var(--tap-min);
+    block-size: var(--tap-min);
+    margin: calc(var(--share-dialog-corner-inset) / -4);
+    padding: 0;
+    border: 0;
+    border-radius: var(--radius-pill);
+    background: transparent;
+    color: var(--color-ink-soft);
+    font-size: var(--text-xl);
+    line-height: 1;
+    cursor: pointer;
+  }
+
+  .share-dialog-close:hover { background: var(--color-surface); color: var(--color-ink); }
+  .share-dialog-close:focus-visible { border-radius: var(--radius-pill); }
+
+  .share-dialog {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    inline-size: 100%;
+    max-inline-size: var(--share-dialog-max-width);
+    margin: auto;
+    flex: none;
+    padding: var(--share-dialog-pad-block);
+    background: var(--color-page);
+    border: var(--share-dialog-border) solid var(--color-line);
+    border-radius: var(--share-dialog-radius);
+    box-shadow: var(--share-dialog-shadow);
+    text-align: center;
+    font-family: var(--font-body);
+  }
+
+  .share-dialog-corner {
+    position: absolute;
+    inline-size: var(--share-dialog-corner-icon);
+    block-size: var(--share-dialog-corner-icon);
+    border-radius: var(--share-dialog-corner-radius);
+    box-shadow: var(--share-dialog-corner-shadow);
+    pointer-events: none;
+  }
+
+  .share-dialog-corner-top { inset-block-start: var(--share-dialog-corner-inset); inset-inline-start: var(--share-dialog-corner-inset); }
+  .share-dialog-corner-bottom { inset-block-end: var(--share-dialog-corner-inset); inset-inline-end: var(--share-dialog-corner-inset); transform: rotate(180deg); }
+
+  .share-dialog-wordmark {
+    block-size: var(--share-dialog-wordmark-height);
+    inline-size: auto;
+    margin-block-end: var(--share-dialog-wordmark-gap);
+  }
+
+  .share-dialog-picker {
+    display: grid;
+    inline-size: 100%;
+    grid-template-columns: 1fr;
+    gap: var(--share-dialog-gap);
+    margin: 0 0 var(--share-dialog-section-gap);
+    padding: 0;
+    border: 0;
+  }
+
+  @media (width >= 40rem) {
+    .share-dialog-picker { grid-template-columns: var(--share-dialog-picker-ratio); }
+  }
+
+  /* On a phone the bottom-right icon would sit on the countdown, so the card keeps room under it. */
+  @media (width < 40rem) {
+    .share-dialog { padding-block-end: calc(var(--share-dialog-corner-icon) + var(--share-dialog-corner-inset) * 2); }
+  }
+
+  .share-dialog-option {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-block-size: var(--tap-min);
+    padding: var(--share-dialog-option-pad);
+    color: var(--color-ink);
+    background-color: var(--share-dialog-ground);
+    background-image:
+      linear-gradient(45deg, var(--share-dialog-ground-check) 25%, transparent 25%),
+      linear-gradient(-45deg, var(--share-dialog-ground-check) 25%, transparent 25%),
+      linear-gradient(45deg, transparent 75%, var(--share-dialog-ground-check) 75%),
+      linear-gradient(-45deg, transparent 75%, var(--share-dialog-ground-check) 75%);
+    background-size: var(--share-dialog-check) var(--share-dialog-check);
+    background-position: 0 0, 0 calc(var(--share-dialog-check) / 2), calc(var(--share-dialog-check) / 2) calc(var(--share-dialog-check) / -2), calc(var(--share-dialog-check) / -2) 0;
+    border: var(--share-dialog-option-border) solid var(--share-dialog-option-rim);
+    border-radius: var(--share-dialog-option-radius);
+    cursor: pointer;
+  }
+
+  .share-dialog-option:hover { border-color: var(--share-dialog-accent); }
+
+  .share-dialog-option[aria-pressed="true"] {
+    border: var(--share-dialog-option-border-chosen) solid var(--share-dialog-accent);
+    box-shadow: var(--share-dialog-chosen-shadow);
+  }
+
+  .share-dialog-option canvas {
+    display: block;
+    max-inline-size: 100%;
+    block-size: auto;
+  }
+
+  /* Selected is shown by a tick and the word as well as the outline, so colour is never the only cue. */
+  .share-dialog-tick {
+    position: absolute;
+    inset-block-start: calc(var(--share-dialog-option-border-chosen) * 2);
+    inset-inline-end: calc(var(--share-dialog-option-border-chosen) * 2);
+    display: none;
+    align-items: center;
+    gap: var(--vialo-timer-gap);
+    padding: var(--vialo-timer-gap) calc(var(--vialo-timer-gap) * 2);
+    border-radius: var(--radius-pill);
+    background: var(--share-dialog-accent);
+    color: var(--color-on-button);
+    font-size: var(--text-sm);
+    line-height: var(--text-sm--line-height);
+  }
+
+  .share-dialog-option[aria-pressed="true"] .share-dialog-tick { display: inline-flex; }
+  .share-dialog-tick svg { inline-size: var(--share-dialog-menu-icon); block-size: var(--share-dialog-menu-icon); }
+
+  .share-dialog-actions {
+    position: relative;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: var(--share-dialog-action-gap);
+    margin-block-end: var(--share-dialog-gap);
+  }
+
+  .share-dialog-button {
+    min-block-size: var(--tap-min);
+    min-inline-size: var(--tap-min);
+    padding: var(--share-dialog-button-pad);
+    border-radius: var(--radius-pill);
+    font-family: var(--font-body);
+    font-size: var(--text-base);
+    line-height: var(--text-base--line-height);
+    cursor: pointer;
+  }
+
+  .share-dialog-primary {
+    background: var(--share-dialog-accent);
+    color: var(--color-on-button);
+    border: var(--share-dialog-button-border) solid var(--share-dialog-accent);
+  }
+
+  .share-dialog-secondary {
+    background: transparent;
+    color: var(--color-ink);
+    border: var(--share-dialog-button-border) solid var(--color-control);
+  }
+
+  .share-dialog-button:disabled { opacity: 0.55; cursor: default; }
+
+  .share-dialog-menu {
+    position: absolute;
+    inset-block-start: 100%;
+    inset-inline-start: 0;
+    z-index: 2;
+    inline-size: var(--share-dialog-menu-width);
+    margin: var(--vialo-timer-gap) 0 0;
+    padding: var(--vialo-timer-gap);
+    list-style: none;
+    text-align: start;
+    background: var(--color-page);
+    border: var(--share-dialog-option-border) solid var(--color-line);
+    border-radius: var(--share-dialog-corner-radius);
+    box-shadow: var(--share-dialog-menu-shadow);
+  }
+
+  .share-dialog-menu-item {
+    display: flex;
+    align-items: center;
+    gap: calc(var(--vialo-timer-gap) * 3);
+    inline-size: 100%;
+    min-block-size: var(--tap-min);
+    padding: 0 calc(var(--vialo-timer-gap) * 3);
+    border: 0;
+    border-radius: var(--share-dialog-corner-radius);
+    background: transparent;
+    color: var(--color-ink);
+    font-family: var(--font-body);
+    font-size: var(--text-base);
+    text-decoration: none;
+    cursor: pointer;
+  }
+
+  .share-dialog-menu-item:hover,
+  .share-dialog-menu-item:focus-visible { background: var(--color-surface); }
+  .share-dialog-menu-item svg { flex: none; inline-size: var(--share-dialog-menu-icon); block-size: var(--share-dialog-menu-icon); }
+
+  .share-dialog-status {
+    min-block-size: var(--vialo-timer-height);
+    margin: 0 0 var(--vialo-timer-gap);
+    font-size: var(--text-sm);
+    line-height: var(--text-sm--line-height);
+    color: var(--color-ink-soft);
+  }
+
+  .share-dialog-countdown {
+    margin: 0;
+    color: var(--color-ink-soft);
+    font-size: var(--text-base);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* The site's focus rule squares off a focused control's corners; these keep their own shapes. */
+  .share-dialog-button:focus-visible { border-radius: var(--radius-pill); }
+  .share-dialog-option:focus-visible { border-radius: var(--share-dialog-option-radius); }
+  .share-dialog-menu-item:focus-visible { border-radius: var(--share-dialog-corner-radius); }
+
+}

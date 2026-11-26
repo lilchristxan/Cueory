@@ -601,6 +601,16 @@
       transition: none;
     }
   }
+
+  .vialo-time {
+    block-size: var(--vialo-timer-height);
+    margin: var(--vialo-timer-gap) 0 0;
+    font-size: var(--text-sm);
+    line-height: var(--vialo-timer-height);
+    text-align: center;
+    color: var(--color-ink-soft);
+    font-variant-numeric: tabular-nums;
+  }
 }
 
 /* On paper the foil keeps its plain grey and fine cross-hatch; the shine is a screen effect and is left out. */
