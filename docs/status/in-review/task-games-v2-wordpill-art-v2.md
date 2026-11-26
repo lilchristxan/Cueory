@@ -1,1 +1,2 @@
-status: wordpill art second pass (christian, 2026-11-26): the word is centred in the pill as one word, the colour line sits on the left edge of the p, and the wp icon drops its ivory tile and grows to fill its frame.
+status: wordpill art second pass (christian, 2026-11-26): the name stands on its own as one word (deep green "word", bold oxblood "pill"; ivory and light oxblood in evening), and the icon is "wp" in a larger dark-glass capsule with no tile and a one-pixel ivory hairline.
+decision: D-pending · wordpill art W1 + H1 glass: the capsule's glass shades and the evening "pill" ink (#e0958c) are lighter and darker steps of the game's green, ivory and oxblood, used only inside the artwork files (christian chose them from renders, 2026-11-26).

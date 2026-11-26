@@ -140,7 +140,7 @@ describe('the shared logo source equals what the game pages use (GameFrame.astro
   });
 });
 
-describe("wordpill's artwork (the game formerly called vialo; Christian's designs B and L1, 2026-11-26)", () => {
+describe("wordpill's artwork (the game formerly called vialo; Christian's glass capsule, 2026-11-26)", () => {
   const dir = new URL('../../public/design/games-v2/assets/', import.meta.url);
   const read = (name: string) => readFileSync(new URL(name, dir), 'utf8');
   const day = read('wordpill-wordmark-light.svg');
@@ -154,14 +154,25 @@ describe("wordpill's artwork (the game formerly called vialo; Christian's design
     }
   });
 
-  it('has the same letters in Light and Evening; Evening only adds the thin ivory rim', () => {
+  it('has the same letters in Light and Evening, with no capsule round the name; only the two inks change', () => {
     const paths = (svg: string) => [...svg.matchAll(/<path d="([^"]+)"/g)].map((m) => m[1]);
+    const inks = (svg: string) => [...svg.matchAll(/<path d="[^"]+" fill="([^"]+)"/g)].map((m) => m[1]);
     expect(paths(evening)).toEqual(paths(day));
-    // The Daytime wordmark uses the brand's deep game green so it passes the contrast guard (2.49 with the regular green).
-    expect(day).toContain('stroke="#053321" stroke-width="2"');
-    expect(day).toContain('fill="#053321"');
-    expect(evening).toContain('stroke="#f9f5ef" stroke-width="2"');
-    expect(evening.replace('stroke="#f9f5ef"', 'stroke="#053321"').replace('fill="#0e5a3d"', 'fill="#053321"').replaceAll('wordpill-clip-evening', 'wordpill-clip-day')).toBe(day);
+    expect(inks(day)).toEqual(['#053321', '#6e2019']);
+    expect(inks(evening)).toEqual(['#f9f5ef', '#e0958c']);
+    for (const svg of [day, evening]) expect(svg).not.toMatch(/<rect|<clipPath|<filter/);
+  });
+
+  it('draws the icon as a glass capsule with a one-pixel ivory hairline round it', () => {
+    expect(icon).toContain('stroke="#f9f5ef" stroke-width="1" vector-effect="non-scaling-stroke"');
+    expect(icon).toMatch(/<linearGradient id="glass"/);
+  });
+
+  it('keeps its frame: the wordmark is 300 by 100 and the icon 100 by 100, with no tile behind the icon', () => {
+    expect(day).toContain('viewBox="0 0 300 100"');
+    expect(evening).toContain('viewBox="0 0 300 100"');
+    expect(icon).toContain('viewBox="0 0 100 100"');
+    expect(icon).not.toContain('<rect width="100" height="100"');
   });
 
   it('is the wordmark and icon on every surface: Evening art on the hub and game page, Daytime on the cream carousel', () => {
