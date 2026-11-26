@@ -58,15 +58,23 @@ export function useStatsVisible(
   const [visible, setVisible] = useState(false);
   useEffect(() => {
     let active = true;
+    // Only the newest answer counts: a session read that was already on its way must not overwrite a newer read or a
+    // newer sign-in/sign-out event (for example a slow "signed in" read landing after the visitor signed out).
+    let latest = 0;
     const check = () => {
-      void statsVisibleFor(read).then((value) => { if (active) setVisible(value); });
+      const mine = ++latest;
+      void statsVisibleFor(read).then((value) => { if (active && mine === latest) setVisible(value); });
     };
     const onPageShow = (event: PageTransitionEvent) => {
       if (event.persisted) check();
     };
     check();
     let stop: (() => void) | null = null;
-    void followStatsAuth(getClient, (signedIn) => { if (active) setVisible(signedIn); }).then((unsubscribe) => {
+    void followStatsAuth(getClient, (signedIn) => {
+      if (!active) return;
+      latest += 1;
+      setVisible(signedIn);
+    }).then((unsubscribe) => {
       if (active) stop = unsubscribe; else unsubscribe();
     });
     window.addEventListener('pageshow', onPageShow);

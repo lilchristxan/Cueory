@@ -38,6 +38,7 @@ test.beforeAll(async () => {
         export async function getSessionState() {
           const wait = Number(params.get('wait') ?? 0);
           if (wait) await new Promise((resolve) => setTimeout(resolve, wait));
+          window.fixtureReadDone = true;
           if (params.get('session') === 'fail') throw new Error('session-private-detail');
           return params.get('session') === 'in' ? { signedIn: true, userId: 'u-1', email: 'a@example.com' } : { signedIn: false };
         }
@@ -100,6 +101,18 @@ test.describe('game stats panel, signed in', () => {
     await expect(panel(page)).toHaveCount(0);
     await expect(panel(page)).toBeVisible();
     await expect(value(page, 'played')).toHaveText('2');
+  });
+
+  test('a slow signed-in session read that lands after sign-out does not bring the stats back', async ({ page }) => {
+    await open(page, 'session=in&wait=700');
+    await page.waitForFunction(() => Boolean((window as unknown as { fixtureAuth?: unknown }).fixtureAuth));
+    expect(await page.evaluate(() => (window as unknown as { fixtureReadDone?: boolean }).fixtureReadDone === true)).toBe(false);
+    await page.evaluate(() => (window as unknown as { fixtureAuth: (e: string, s: unknown) => void }).fixtureAuth('SIGNED_OUT', null));
+    await expect(bar(page)).toBeVisible();
+    await page.waitForFunction(() => (window as unknown as { fixtureReadDone?: boolean }).fixtureReadDone === true);
+    await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+    await expect(panel(page)).toHaveCount(0);
+    await expect(bar(page)).toBeVisible();
   });
 
   test('follows sign-out and sign-in from another tab without a reload', async ({ page }) => {
