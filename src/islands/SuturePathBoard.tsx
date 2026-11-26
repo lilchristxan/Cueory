@@ -4,6 +4,7 @@ import { useEffect, useId, useLayoutEffect, useRef, useState, type KeyboardEvent
 import { dayLabel } from './daily';
 import { localDay, reportRound } from './gameresults';
 import { printGame } from './gameprint';
+import { usePrintRequest } from './useprintrequest';
 import { useGameHelp } from './GameHelp';
 import GameHeader from './GameHeader';
 import { playGameCue } from './gamesound';
@@ -326,6 +327,8 @@ export function PathBoard({ puzzle, name, framed = false }: Props) {
     }
     printGame('suture');
   };
+  // The Frame's printer button announces the print; this is what the old print button ran.
+  usePrintRequest('suture', printPuzzle);
 
   // The lines that join each found answer and the word being picked, from circle edge to circle edge.
   const lines: Line[] = [];
@@ -367,15 +370,6 @@ export function PathBoard({ puzzle, name, framed = false }: Props) {
         framed={framed}
         name={name}
         help={howToPlay}
-        end={
-          <button type="button" className="wordpath-round" aria-label="print" data-testid="suture-print" onClick={printPuzzle}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
-              <path d="M6 9V3h12v6" />
-              <rect x="3" y="9" width="18" height="9" rx="2" />
-              <path d="M7 14h10v7H7z" />
-            </svg>
-          </button>
-        }
       />
       {printNote && <p className="mt-2 text-center text-sm text-ink-soft" data-testid="suture-print-note" data-print-hidden>{printNote}</p>}
       <div className="wordpath-panel -mx-(--wordpath-bleed) mt-6 sm:mx-0 sm:mt-0 sm:px-(--spacing-stack)">
