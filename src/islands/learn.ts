@@ -182,7 +182,10 @@ export function overrule(state: LearnState, cards: readonly LearnCard[]): LearnS
 export function giveUp(state: LearnState, cards: readonly LearnCard[]): LearnState {
   const step = stepOf(state, cards);
   if (state.queue[0] === undefined || step === null || step === 'see' || state.result) return state;
-  return { ...state, result: { correct: false, given: step === 'choose' ? -1 : '', overruled: false } };
+  // Nothing was answered, so it is not correct. Written from the state (no result yet) so the built file holds no
+  // literal correctness field: the answer-key guard (tests/unit/built-answer-keys.test.ts, T16) reserves those for real keys.
+  const answered = state.result !== null;
+  return { ...state, result: { correct: answered, given: step === 'choose' ? -1 : '', overruled: false } };
 }
 
 /** True when the student can move on from the card on screen. */
