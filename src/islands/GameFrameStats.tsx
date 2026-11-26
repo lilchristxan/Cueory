@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { browserStorage } from '../scripts/storage';
 import { currentStatsStatus, GAME_STATS_CHANGED_EVENT, GAME_STATS_STATUS_EVENT, loadStats, localDay } from './gameresults';
 import { currentStreak, dailyStats, longestStreak, wordPathSummary, type GameId, type GameStats } from './gamestats';
+import { accountHref } from '../config/site';
+import { useStatsVisible } from './gamestatsgate';
 import { GUESSES } from './pulse';
 
 interface Props {
@@ -62,6 +64,8 @@ function computeStats(game: string, stats: GameStats, today: string): StatValues
 }
 
 export default function GameFrameStats({ game }: Props) {
+  // Hidden until a signed-in session is confirmed. Stats keep being recorded and tracked below either way.
+  const visible = useStatsVisible();
   const [status, setStatus] = useState(currentStatsStatus);
   // Start from zeros so the first client render matches the server HTML; saved stats load in the effect below.
   const [stats, setStats] = useState<StatValues>(() => computeStats(game, [], localDay(new Date())));
@@ -89,7 +93,16 @@ export default function GameFrameStats({ game }: Props) {
     };
   }, [game]);
 
-  return <>
+  // Everyone who is not confirmed signed in (signed out, accounts closed, no JavaScript, or the check still running) sees
+  // the same bar the page was built with, so a signed-out page never changes after load. It is also the static HTML.
+  if (!visible) {
+    return <div className="game-frame-account-bar" data-testid="game-frame-account-bar">
+        <a href={accountHref} className="copper-button" aria-describedby="game-frame-account-note">create an account</a>
+        <p id="game-frame-account-note" className="game-frame-account-note">to save your daily game stats</p>
+      </div>;
+  }
+
+  return <div className="game-frame-stats" data-testid="game-frame-stats" aria-label="your stats">
       {status && <p className="game-frame-stats-status" data-testid="game-frame-stats-status" role="status" aria-live="polite">{status}</p>}
       <div className="game-frame-stat">
         <span className="game-frame-stat-value">{stats.winPercent}</span>
@@ -107,5 +120,5 @@ export default function GameFrameStats({ game }: Props) {
         <span className="game-frame-stat-value">{stats.played}</span>
         <span className="game-frame-stat-label">played</span>
       </div>
-    </>;
+    </div>;
 }

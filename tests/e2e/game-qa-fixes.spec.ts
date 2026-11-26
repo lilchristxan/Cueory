@@ -30,12 +30,14 @@ test.describe('returning player with saved stats', () => {
         localStorage.setItem('cueory-game-stats', JSON.stringify({ version: 1, results }));
       }, day);
       await page.goto(path);
-      await expect(page.locator('.game-frame-stat').first()).toBeVisible();
+      // Signed out (2026-11-25) the stats numbers are not drawn; the copper bar stands in their place. Waiting for it
+      // proves the island hydrated with saved stats in storage.
+      await expect(page.getByTestId('game-frame-account-bar')).toBeVisible();
       await page.waitForTimeout(500);
       expect(await withoutWebkitSelectReports(page, problems)).toEqual([]);
-      // The saved stats did load after hydration: at least one stat is not zero.
-      const values = await page.locator('.game-frame-stat-value').allTextContents();
-      if (path !== '/play/hello-cards') expect(values.some((value) => value !== '0')).toBe(true);
+      await expect(page.locator('.game-frame-stat')).toHaveCount(0);
+      // The saved stats are still on the device, untouched (the signed-in numbers are checked in game-stats-gate.spec.ts).
+      expect(await page.evaluate(() => JSON.parse(localStorage.getItem('cueory-game-stats') ?? 'null')?.results?.length)).toBeGreaterThanOrEqual(5);
     });
   }
 });

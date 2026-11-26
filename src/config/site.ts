@@ -178,8 +178,12 @@ export const menuSmallLinks = [
  * sign-up; until then it goes to the launch-updates signup (`accountHref`).
  */
 export const promo = {
-  /** Set to false to turn the panel off on every page. */
-  show: true,
+  /**
+   * Set to false to turn the panel off on every page. It is off (Christian, 2026-11-25): the green launch-updates
+   * pop-up (SignupPopup.astro, D-156) is the only marketing pop-up. Set it back to true to bring the panel back; the
+   * green pop-up then stays away on a page where the panel is due, as before.
+   */
+  show: false,
   delaySeconds: 5,
   rememberDays: 30,
   heading: 'welcome to cueory.',

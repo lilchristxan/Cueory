@@ -117,9 +117,8 @@ test.describe('crossword parity (Task 721)', () => {
     await closeResultDialog(page);
     await expect(board(page).getByTestId('crossword-badge')).toHaveText(/solved without help/);
     await expect(board(page).getByTestId('crossword-streak-note')).toContainText('extends your streak');
-    // Moved from the legacy page stats panel to the Frame sidebar.
-    const currentStreak = frameStats(page).locator('.game-frame-stat').filter({ hasText: 'current streak' });
-    await expect(currentStreak.locator('.game-frame-stat-value')).toHaveText('1');
+    // The sidebar numbers are for signed-in players only (2026-11-25); a signed-out page has no stats panel.
+    await expect(frameStats(page)).toHaveCount(0);
     const kept = JSON.parse((await page.evaluate(() => localStorage.getItem('cueory-game-stats')))!);
     expect(kept.results).toContainEqual({ game: 'cueword', day: '2026-11-01', solved: true, tries: 0, streak: true });
   });
