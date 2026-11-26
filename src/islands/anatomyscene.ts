@@ -232,6 +232,8 @@ export interface LabScene {
   setSpread(fraction: number): void;
   /** A small picture of the visible model from a preset view, as a data: URL, or null with nothing to draw. */
   thumbnail(preset: ViewPreset, width: number, height: number): string | null;
+  /** Where each structure's center falls in such a picture, 0 to 1 across and down; structures not loaded are left out. */
+  thumbnailMarks(preset: ViewPreset, width: number, height: number, ids: readonly string[]): Map<string, { x: number; y: number }>;
   /** Every loaded structure's world-space box (min and max corners), for "what is nearby" (Task 178). */
   boundsById(): Map<string, { min: { x: number; y: number; z: number }; max: { x: number; y: number; z: number } }>;
   /** Where the camera is, what it looks at and which way is up, as plain number triples (saved views, compare view). */
@@ -904,7 +906,8 @@ export function createLabScene({ canvas, reducedMotion, colors: initialColors, p
   thumbnailTarget.texture.colorSpace = THREE.SRGBColorSpace;
   const thumbnailCamera = new THREE.PerspectiveCamera(35, 1, 0.1, 1000);
 
-  function thumbnail(preset: ViewPreset, width: number, height: number): string | null {
+  /** Points the spare camera at the visible model from a preset view; null with nothing to draw. */
+  function frameThumbnail(preset: ViewPreset, width: number, height: number): THREE.PerspectiveCamera | null {
     const box = visibleBox();
     if (!box || !root || width < 1 || height < 1) return null;
     const center = box.getCenter(new THREE.Vector3());
@@ -921,6 +924,27 @@ export function createLabScene({ canvas, reducedMotion, colors: initialColors, p
     cam.position.set(position.x, position.y, position.z);
     cam.up.copy(UP);
     cam.lookAt(center);
+    cam.updateMatrixWorld(true);
+    return cam;
+  }
+
+  /** Where each structure's center falls in a thumbnail of the visible model (0 to 1 across and down). */
+  function thumbnailMarks(preset: ViewPreset, width: number, height: number, ids: readonly string[]) {
+    const cam = frameThumbnail(preset, width, height);
+    const out = new Map<string, { x: number; y: number }>();
+    if (!cam) return out;
+    for (const id of ids) {
+      const box = boxes.get(id);
+      if (!box || (meshesById.get(id)?.length ?? 0) === 0) continue;
+      const point = box.getCenter(new THREE.Vector3()).project(cam);
+      out.set(id, { x: (point.x + 1) / 2, y: (1 - point.y) / 2 });
+    }
+    return out;
+  }
+
+  function thumbnail(preset: ViewPreset, width: number, height: number): string | null {
+    const cam = frameThumbnail(preset, width, height);
+    if (!cam) return null;
     // The lights live in the main camera's frame; borrow them so this picture is lit as if it were the view.
     const lights = [key, rimLight, rimLight.target, rimSoftLight, rimSoftLight.target];
     scene.add(cam);
@@ -1263,6 +1287,7 @@ export function createLabScene({ canvas, reducedMotion, colors: initialColors, p
       applySpread();
     },
     thumbnail,
+    thumbnailMarks,
     boundsById,
     cameraState,
     applyCameraState,
