@@ -11,6 +11,7 @@ import GameStatsPanel from '../islands/GameStatsPanel';
 import HomeScreenTip from '../islands/HomeScreenTip';
 import PlayStatus from '../islands/PlayStatus.tsx';
 import PlayTotals from '../islands/PlayTotals';
+import { statsCta } from '../config/statscta';
 import { dailyGames, helloCardsGame, helloCardsIndexWhenApproved } from '../config/games';
 import { hubHeadline } from '../islands/playhub';
 import { hubLines } from '../config/homegames';
@@ -80,7 +81,7 @@ const statsLinks = Object.fromEntries(statsGames.map((id) => [id, gamePages[id]]
         <p class="text-base text-ink-soft" data-testid="sample-note">
           for now these are sample puzzles with everyday words.
         </p>
-        <PlayTotals client:load />
+        <PlayTotals client:load cta={statsCta} />
       </section>
 
       <div class="@container min-w-0 @5xl:bg-page @5xl:px-16 @5xl:py-14">

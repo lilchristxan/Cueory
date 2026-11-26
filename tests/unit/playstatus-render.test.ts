@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 // The .tsx extension is explicit: on a case-insensitive disk a bare 'PlayStatus' would resolve to playstatus.ts first.
 import PlayStatus from '../../src/islands/PlayStatus.tsx';
 import PlayTotals from '../../src/islands/PlayTotals';
+import { statsCta } from '../../src/config/statscta';
 import { helloCardsGame } from '../../src/config/games';
 import { gamePages } from '../../src/config/game-pages';
 import { hubLines } from '../../src/config/homegames';
@@ -52,7 +53,7 @@ describe('the /play hub rows (option B)', () => {
   });
 
   it('draws nothing but an empty holder for the totals on the server, until the session check has resolved', () => {
-    const html = renderToStaticMarkup(createElement(PlayTotals));
+    const html = renderToStaticMarkup(createElement(PlayTotals, { cta: statsCta }));
     expect(html).toBe('<div class="play-hub-account-slot"></div>');
   });
 });
